@@ -353,7 +353,7 @@ export default defineConfig({
 - [ ] **Step 4.7: 创建 .env**
 
 ```bash
-VITE_APP_TITLE=应急水利门户
+VITE_APP_TITLE=工贸统一登录门户
 ```
 
 - [ ] **Step 4.8: 创建 .env.development**
@@ -1333,7 +1333,7 @@ const appStore = useAppStore()
 
 <template>
   <div class="sidebar-content">
-    <h1 v-if="!appStore.sidebarCollapsed">应急水利</h1>
+    <h1 v-if="!appStore.sidebarCollapsed">工贸统一登录</h1>
     <button @click="appStore.toggleSidebar">折叠</button>
   </div>
 </template>
@@ -1389,7 +1389,7 @@ const userStore = useUserStore()
 ```typescript
 // src/locales/zh-CN.ts
 export default {
-  app: { title: '应急水利门户' },
+  app: { title: '工贸统一登录门户' },
   common: { confirm: '确认', cancel: '取消', retry: '重试', loading: '加载中...' },
   auth: { login: '登录', logout: '退出', username: '用户名', password: '密码' },
   menu: { dashboard: '仪表盘', user: '用户管理' },
@@ -1966,7 +1966,7 @@ app.mount('#app')
   <meta charset="UTF-8" />
   <link rel="icon" href="/favicon.ico" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>应急水利门户</title>
+  <title>工贸统一登录门户</title>
 </head>
 <body>
   <div id="app"></div>

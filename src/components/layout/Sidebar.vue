@@ -5,7 +5,7 @@ const appStore = useAppStore()
 
 <template>
   <div class="sidebar-content">
-    <h1 v-if="!appStore.sidebarCollapsed">应急水利</h1>
+    <h1 v-if="!appStore.sidebarCollapsed">工贸统一登录</h1>
     <button @click="appStore.toggleSidebar">折叠</button>
   </div>
 </template>
