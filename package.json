@@ -50,6 +50,7 @@
     "eslint-plugin-vue": "^10.9.2",
     "husky": "^9.1.7",
     "jsdom": "^29.1.1",
+    "lint-staged": "^17.0.8",
     "npm-run-all2": "^9.0.2",
     "prettier": "^3.9.5",
     "sass": "^1.101.0",
