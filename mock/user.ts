@@ -7,7 +7,11 @@ export default [
   {
     url: '/api/user/list',
     method: 'get',
-    response: async ({ query }: { query: { page?: string; pageSize?: string; keyword?: string } }) => {
+    response: async ({
+      query,
+    }: {
+      query: { page?: string; pageSize?: string; keyword?: string }
+    }) => {
       await delay()
       const page = Number(query.page) || 1
       const pageSize = Number(query.pageSize) || 10

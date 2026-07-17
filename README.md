@@ -9,6 +9,7 @@
 工贸统一登录方向的中后台门户前端基线，支持多业务模块（认证、用户管理、仪表盘）、中后台交互模式（表格、表单、权限控制）、不依赖后端即可独立跑通业务流程。
 
 **设计原则**：
+
 - **模块独立**：每个业务模块可独立开发、独立测试、独立部署
 - **状态清晰**：全局 vs 模块状态边界明确，无交叉依赖
 - **防御性 UI**：每个异步组件显式处理 Loading / Error / Empty
@@ -19,21 +20,21 @@
 
 ## 🛠️ 技术栈
 
-| 维度 | 选型 | 版本 |
-|------|------|------|
-| 核心框架 | Vue | ^3.5.38 |
-| 构建工具 | Vite | ^8.0.16 |
-| 语言 | TypeScript | ~6.0.0（strict 模式）|
-| 包管理器 | pnpm | >=11.x |
-| Node 要求 | - | >=22.18 或 >=24.12 |
-| UI 组件库 | Element Plus | ^2.14.3 |
-| 原子化 CSS | UnoCSS | ^66.7.5（兼容 SCSS/LESS/原生 CSS）|
-| 状态管理 | Pinia | ^3.0.4 |
-| 路由 | Vue Router | ^5.1.0 |
-| 国际化 | Vue I18n | ^11.4.6 |
-| 网络层 | Axios | ^1.18.1 |
-| API Mock | vite-plugin-mock | ^3.0.2 |
-| 测试框架 | Vitest | ^4.1.9 + @vue/test-utils + jsdom |
+| 维度       | 选型             | 版本                               |
+| ---------- | ---------------- | ---------------------------------- |
+| 核心框架   | Vue              | ^3.5.38                            |
+| 构建工具   | Vite             | ^8.0.16                            |
+| 语言       | TypeScript       | ~6.0.0（strict 模式）              |
+| 包管理器   | pnpm             | >=11.x                             |
+| Node 要求  | -                | >=22.18 或 >=24.12                 |
+| UI 组件库  | Element Plus     | ^2.14.3                            |
+| 原子化 CSS | UnoCSS           | ^66.7.5（兼容 SCSS/LESS/原生 CSS） |
+| 状态管理   | Pinia            | ^3.0.4                             |
+| 路由       | Vue Router       | ^5.1.0                             |
+| 国际化     | Vue I18n         | ^11.4.6                            |
+| 网络层     | Axios            | ^1.18.1                            |
+| API Mock   | vite-plugin-mock | ^3.0.2                             |
+| 测试框架   | Vitest           | ^4.1.9 + @vue/test-utils + jsdom   |
 
 ---
 
@@ -55,13 +56,13 @@
 
 ### 2. 模块边界铁律（强制）
 
-| 层级 | 允许引用 | 不允许引用 |
-|------|---------|-----------|
-| `modules/<m>/views` | 本模块 components / composables / utils / api | 其他模块内部 |
-| `modules/<m>/components` | 本模块 views / composables / utils | 其他模块 |
-| `modules/<m>/store` | 本模块 api / types | 其他模块 store |
-| `components/common` | utils / enums / types | 任何 modules/ 内容 |
-| `store/modules`（全局）| api / utils / enums | modules/ 内容 |
+| 层级                     | 允许引用                                      | 不允许引用         |
+| ------------------------ | --------------------------------------------- | ------------------ |
+| `modules/<m>/views`      | 本模块 components / composables / utils / api | 其他模块内部       |
+| `modules/<m>/components` | 本模块 views / composables / utils            | 其他模块           |
+| `modules/<m>/store`      | 本模块 api / types                            | 其他模块 store     |
+| `components/common`      | utils / enums / types                         | 任何 modules/ 内容 |
+| `store/modules`（全局）  | api / utils / enums                           | modules/ 内容      |
 
 > 模块间通信通过 `modules/<m>/index.ts` 暴露的对外接口，**禁止直接 import 内部文件**。
 
@@ -113,11 +114,13 @@ utils/      ← validate.ts      └── index.ts（对外接口）
 ### 这样组织带来什么好处？
 
 #### 1. 模块高度内聚
+
 - **改一个模块的所有改动集中在一个目录** → Code Review 看一个目录就懂全貌
 - **删除模块 = 删除一个目录**（无残留）
 - **新人接手** = 看 `modules/<m>/` 就能理解该业务的完整结构
 
 #### 2. 依赖方向严格单向
+
 ```
        ┌─────────────────────────┐
        │      modules/            │  ← 业务模块（最高层）
@@ -132,40 +135,47 @@ utils/      ← validate.ts      └── index.ts（对外接口）
        │  composables/  types/   │  ← 基础设施
        └─────────────────────────┘
 ```
+
 **禁止规则**（已在 spec §5 强制）：
+
 - `components/common/` **不引用**任何 `modules/` 内容
 - `modules/<m>/` **不直接 import** 其他 `modules/<m>/` 内部
 - 模块间通信**只能**通过 `modules/<m>/index.ts` 暴露的对外接口
 
 **带来的好处**：
+
 - 重构一个模块不会引发连锁反应（边界已被切断）
 - Code Review 时违规引用一目了然
 - 替换实现时只需保证 `index.ts` 接口不变
 
 #### 3. 全局/模块双层状态管理
-| 层 | 路径 | 放什么 | 不放什么 |
-|----|------|--------|---------|
-| 全局 | `store/modules/` | 跨模块共享：`app`（侧边栏/语言）、`user`（token/profile/权限） | 任何业务状态 |
-| 模块私有 | `modules/<m>/store/` | 业务状态：列表筛选、表单临时态、详情缓存 | 跨模块共享数据 |
+
+| 层       | 路径                 | 放什么                                                         | 不放什么       |
+| -------- | -------------------- | -------------------------------------------------------------- | -------------- |
+| 全局     | `store/modules/`     | 跨模块共享：`app`（侧边栏/语言）、`user`（token/profile/权限） | 任何业务状态   |
+| 模块私有 | `modules/<m>/store/` | 业务状态：列表筛选、表单临时态、详情缓存                       | 跨模块共享数据 |
 
 **好处**：避免单个超大 store（"store 越长越难维护"），同时防止业务状态污染全局（命名冲突、误用）。
 
 #### 4. 技术栈替换零侵入
+
 目录边界限定了每个技术决策的影响范围：
 
-| 想做的事 | 改的位置 | 业务模块影响 |
-|---------|---------|-------------|
-| Pinia → Redux | `store/` | 零（业务模块不直接 import 全局 store 内部）|
-| Element Plus → Ant Design Vue | `components/common/` + `main.ts` | 零（业务模块只用 `common/` 封装）|
-| Axios → Fetch | `api/http.ts` | 零（业务模块只调 `api/modules/*.ts`）|
-| UnoCSS → Tailwind | `uno.config.ts` + 全局样式 | 零 |
+| 想做的事                      | 改的位置                         | 业务模块影响                                |
+| ----------------------------- | -------------------------------- | ------------------------------------------- |
+| Pinia → Redux                 | `store/`                         | 零（业务模块不直接 import 全局 store 内部） |
+| Element Plus → Ant Design Vue | `components/common/` + `main.ts` | 零（业务模块只用 `common/` 封装）           |
+| Axios → Fetch                 | `api/http.ts`                    | 零（业务模块只调 `api/modules/*.ts`）       |
+| UnoCSS → Tailwind             | `uno.config.ts` + 全局样式       | 零                                          |
 
 #### 5. 并行开发友好
+
 - 不同成员负责不同模块，几乎无 merge conflict
 - 模块 owner 边界清晰（PR 审查范围一目了然）
 - 离职交接 = 移交一个目录
 
 #### 6. 测试边界清晰（与目录一一对应）
+
 - **工具级单测**：`utils/format.spec.ts`、`storage.spec.ts`
 - **Hook 测试**：`composables/useRequest.spec.ts`
 - **组件级单测**：`components/common/AsyncState.spec.ts`
@@ -203,10 +213,10 @@ gm-portal-fe/
 
 ### 环境要求
 
-| 工具 | 版本要求 |
-|------|---------|
+| 工具    | 版本要求           |
+| ------- | ------------------ |
 | Node.js | >=22.18 或 >=24.12 |
-| pnpm | >=11.x |
+| pnpm    | >=11.x             |
 
 ### 快速开始
 
@@ -226,32 +236,83 @@ pnpm dev
 
 ### 常用脚本
 
-| 命令 | 用途 |
-|------|------|
-| `pnpm dev` | 启动开发服务器（带 HMR）|
-| `pnpm build` | 生产构建（含 type-check）|
-| `pnpm preview` | 预览构建产物 |
-| `pnpm test` | 运行单元测试（一次性）|
-| `pnpm test:watch` | 单元测试 watch 模式 |
-| `pnpm test:coverage` | 测试覆盖率报告 |
-| `pnpm test:ui` | 单元测试 UI 模式 |
-| `pnpm type-check` | TypeScript 类型检查 |
+| 命令                 | 用途                      |
+| -------------------- | ------------------------- |
+| `pnpm dev`           | 启动开发服务器（带 HMR）  |
+| `pnpm build`         | 生产构建（含 type-check） |
+| `pnpm preview`       | 预览构建产物              |
+| `pnpm test`          | 运行单元测试（一次性）    |
+| `pnpm test:watch`    | 单元测试 watch 模式       |
+| `pnpm test:coverage` | 测试覆盖率报告            |
+| `pnpm test:ui`       | 单元测试 UI 模式          |
+| `pnpm type-check`    | TypeScript 类型检查       |
 
 ### Mock 数据
 
 开发模式默认启用 vite-plugin-mock（`VITE_USE_MOCK=true`），内置 4 个 mock 模块：
 
-| 模块 | 接口 | 默认账号 |
-|------|------|---------|
-| auth | `/api/auth/login`、`/api/auth/profile`、`/api/auth/logout` | admin / 123456 |
-| user | `/api/user/list`、`/api/user/:id` | - |
-| dashboard | `/api/dashboard/stats` | - |
+| 模块      | 接口                                                       | 默认账号       |
+| --------- | ---------------------------------------------------------- | -------------- |
+| auth      | `/api/auth/login`、`/api/auth/profile`、`/api/auth/logout` | admin / 123456 |
+| user      | `/api/user/list`、`/api/user/:id`                          | -              |
+| dashboard | `/api/dashboard/stats`                                     | -              |
 
 切换真实后端：修改 `.env.development` 中 `VITE_USE_MOCK=false` 并配置 `VITE_API_BASE_URL`。
 
 ### 国际化
 
 当前支持 `zh-CN`（默认）和 `en-US`，切换通过 `useAppStore().setLocale()`。
+
+---
+
+## 📐 代码规范
+
+### 工具栈
+
+- **ESLint 10** + flat config（`eslint.config.mjs`）+ Vue 官方推荐配置
+- **Prettier 3.9** 统一格式
+- 规则组合：`pluginVue['flat/essential']` + `@vue/eslint-config-typescript` + `@vue/eslint-config-prettier/skip-formatting`
+
+### 常用脚本
+
+| 命令                | 用途                       |
+| ------------------- | -------------------------- |
+| `pnpm lint`         | ESLint 检查（不修改）      |
+| `pnpm lint:fix`     | ESLint 自动修复             |
+| `pnpm format`       | Prettier 自动格式化         |
+| `pnpm format:check` | Prettier 检查（CI 用）     |
+
+### 配置文件
+
+| 文件                  | 说明                                                          |
+| --------------------- | ------------------------------------------------------------- |
+| `eslint.config.mjs`   | ESLint flat config（Vue/TS/Prettier 三层组合）                |
+| `.prettierrc.json`    | Prettier 主配置（semi/singleQuote/printWidth 等）             |
+| `.prettierignore`     | Prettier 忽略文件（dist、node_modules、coverage、文档目录） |
+
+### 项目级规则覆盖
+
+| 规则                                | 配置                              | 原因                                |
+| ----------------------------------- | --------------------------------- | ----------------------------------- |
+| `vue/multi-word-component-names`    | `off`                             | 保留 Header/Sidebar/Login 等简洁命名 |
+| `@typescript-eslint/no-unused-vars` | `varsIgnorePattern: '^_'`         | 允许 `_p` 等有意忽略的解构模式       |
+
+### Prettier 风格
+
+- `semi: false`（无分号）
+- `singleQuote: true`（单引号）
+- `trailingComma: "all"`（所有可能的位置加尾逗号）
+- `printWidth: 100`（每行最多 100 字符）
+- `vueIndentScriptAndStyle: false`（Vue 的 `<script>` 和 `<style>` 不缩进）
+
+### 与 Husky 集成
+
+| Hook        | 命令             | 作用                         |
+| ----------- | ---------------- | ---------------------------- |
+| pre-commit  | `pnpm type-check` | 防止 TS 类型错误入库        |
+| pre-push    | `pnpm test`       | 防止测试不通过的代码推送    |
+
+> 注：lint 未集成到 pre-commit，避免每次 commit 等待。开发期手动 `pnpm lint:fix`，CI 阶段跑 `pnpm lint`。
 
 ---
 
@@ -267,11 +328,11 @@ pnpm build
 
 ### 环境变量
 
-| 变量 | 说明 | 默认值 |
-|------|------|--------|
-| `VITE_APP_TITLE` | 应用标题 | 工贸统一登录门户 |
-| `VITE_API_BASE_URL` | API 基础 URL | `/api` |
-| `VITE_USE_MOCK` | 是否启用 Mock（dev 默认 true）| `false` |
+| 变量                | 说明                           | 默认值           |
+| ------------------- | ------------------------------ | ---------------- |
+| `VITE_APP_TITLE`    | 应用标题                       | 工贸统一登录门户 |
+| `VITE_API_BASE_URL` | API 基础 URL                   | `/api`           |
+| `VITE_USE_MOCK`     | 是否启用 Mock（dev 默认 true） | `false`          |
 
 ### Nginx 配置示例
 
@@ -366,6 +427,7 @@ pnpm test:coverage     # 覆盖率报告（输出到 coverage/）
 ```
 
 测试文件与源码同级（`foo.ts` 对应 `foo.spec.ts`），覆盖：
+
 - `utils/` — format、storage、validate
 - `composables/` — useRequest
 - `components/common/` — AsyncState
@@ -376,11 +438,11 @@ pnpm test:coverage     # 覆盖率报告（输出到 coverage/）
 
 ## 📚 相关文档
 
-| 文档 | 路径 |
-|------|------|
+| 文档     | 路径                                                                |
+| -------- | ------------------------------------------------------------------- |
 | 设计文档 | `docs/superpowers/specs/2026-07-17-vue3-vite-ts-scaffold-design.md` |
-| 实施计划 | `docs/superpowers/plans/2026-07-17-vue3-vite-ts-scaffold.md` |
-| 变更日志 | `CHANGELOG.md` |
+| 实施计划 | `docs/superpowers/plans/2026-07-17-vue3-vite-ts-scaffold.md`        |
+| 变更日志 | `CHANGELOG.md`                                                      |
 
 ---
 

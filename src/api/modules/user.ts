@@ -19,8 +19,7 @@ export const userApi = {
   getList: (params: UserListParams) =>
     request<Pagination<UserItem>>({ url: '/api/user/list', method: 'get', params }),
 
-  getById: (id: number) =>
-    request<UserItem>({ url: `/api/user/${id}`, method: 'get' }),
+  getById: (id: number) => request<UserItem>({ url: `/api/user/${id}`, method: 'get' }),
 
   create: (data: Omit<UserItem, 'id' | 'createdAt'>) =>
     request<UserItem>({ url: '/api/user', method: 'post', data }),
@@ -28,6 +27,5 @@ export const userApi = {
   update: (id: number, data: Partial<UserItem>) =>
     request<UserItem>({ url: `/api/user/${id}`, method: 'put', data }),
 
-  remove: (id: number) =>
-    request<void>({ url: `/api/user/${id}`, method: 'delete' }),
+  remove: (id: number) => request<void>({ url: `/api/user/${id}`, method: 'delete' }),
 }

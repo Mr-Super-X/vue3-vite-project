@@ -10,7 +10,8 @@ export const useUserStore = defineStore('user', () => {
   const isLoggedIn = computed(() => !!token.value)
 
   async function login(credentials: LoginPayload) {
-    const { token: t, profile: p } = await authApi.login(credentials)
+    // _p: login 返回的 profile 被有意忽略，统一由 fetchProfile() 后续拉取最新权限
+    const { token: t, profile: _p } = await authApi.login(credentials)
     token.value = t
     localStorage.setItem('token', t)
     await fetchProfile()

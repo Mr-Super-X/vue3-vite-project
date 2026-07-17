@@ -16,7 +16,7 @@ interface UseRequestReturn<T, P extends unknown[]> {
 // 三态请求封装：loading / error / data，配合 AsyncState 组件使用
 export function useRequest<T, P extends unknown[] = []>(
   fetcher: (...args: P) => Promise<T>,
-  options: UseRequestOptions = {}
+  options: UseRequestOptions = {},
 ): UseRequestReturn<T, P> {
   const data = ref<T | null>(null) as Ref<T | null>
   const loading = ref(false)

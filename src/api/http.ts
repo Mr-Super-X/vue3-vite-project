@@ -31,14 +31,18 @@ instance.interceptors.response.use(
   (error) => {
     const status = error.response?.status
     const msg =
-      status === HttpStatus.UNAUTHORIZED ? '请先登录' :
-      status === HttpStatus.FORBIDDEN ? '无权限访问' :
-      status === HttpStatus.NOT_FOUND ? '资源不存在' :
-      status === HttpStatus.SERVER_ERROR ? '服务器错误' :
-      '网络异常，请稍后重试'
+      status === HttpStatus.UNAUTHORIZED
+        ? '请先登录'
+        : status === HttpStatus.FORBIDDEN
+          ? '无权限访问'
+          : status === HttpStatus.NOT_FOUND
+            ? '资源不存在'
+            : status === HttpStatus.SERVER_ERROR
+              ? '服务器错误'
+              : '网络异常，请稍后重试'
     ElMessage.error(msg)
     return Promise.reject(error)
-  }
+  },
 )
 
 export function request<T>(config: AxiosRequestConfig): Promise<T> {

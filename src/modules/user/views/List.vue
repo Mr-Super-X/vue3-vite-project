@@ -4,7 +4,7 @@ import { userApi } from '@/api/modules/user'
 import AsyncState from '@/components/common/AsyncState.vue'
 
 const { data, loading, error, isEmpty, execute } = useRequest(() =>
-  userApi.getList({ page: 1, pageSize: 10 })
+  userApi.getList({ page: 1, pageSize: 10 }),
 )
 </script>
 

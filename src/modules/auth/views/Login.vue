@@ -42,5 +42,7 @@ async function handleSubmit() {
 </template>
 
 <style scoped>
-.login-card { width: 400px; }
+.login-card {
+  width: 400px;
+}
 </style>

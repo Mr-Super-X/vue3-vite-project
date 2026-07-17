@@ -20,12 +20,7 @@ export default mergeConfig(
         provider: 'v8',
         reporter: ['text', 'html', 'lcov'],
         include: ['src/**/*.{ts,vue}'],
-        exclude: [
-          'src/**/__tests__/**',
-          'src/**/index.ts',
-          'src/main.ts',
-          'src/types/**',
-        ],
+        exclude: ['src/**/__tests__/**', 'src/**/index.ts', 'src/main.ts', 'src/types/**'],
         thresholds: { lines: 70, functions: 70, branches: 60, statements: 70 },
       },
     },

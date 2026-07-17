@@ -11,5 +11,8 @@ const userStore = useUserStore()
 </template>
 
 <style scoped>
-.header-content { padding: 0 var(--spacing-md); height: 100%; }
+.header-content {
+  padding: 0 var(--spacing-md);
+  height: 100%;
+}
 </style>

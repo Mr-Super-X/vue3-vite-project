@@ -27,8 +27,22 @@ const appStore = useAppStore()
   grid-template-rows: var(--header-height) 1fr;
   height: 100vh;
 }
-.sidebar { grid-area: sidebar; width: var(--sidebar-width); background: #001529; color: #fff; }
-.sidebar.collapsed { width: var(--sidebar-collapsed-width); }
-.header { grid-area: header; border-bottom: 1px solid #eee; }
-.main { grid-area: main; padding: var(--spacing-md); overflow: auto; }
+.sidebar {
+  grid-area: sidebar;
+  width: var(--sidebar-width);
+  background: #001529;
+  color: #fff;
+}
+.sidebar.collapsed {
+  width: var(--sidebar-collapsed-width);
+}
+.header {
+  grid-area: header;
+  border-bottom: 1px solid #eee;
+}
+.main {
+  grid-area: main;
+  padding: var(--spacing-md);
+  overflow: auto;
+}
 </style>

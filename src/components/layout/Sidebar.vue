@@ -11,5 +11,7 @@ const appStore = useAppStore()
 </template>
 
 <style scoped>
-.sidebar-content { padding: var(--spacing-md); }
+.sidebar-content {
+  padding: var(--spacing-md);
+}
 </style>

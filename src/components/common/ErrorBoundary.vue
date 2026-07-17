@@ -5,7 +5,9 @@ onErrorCaptured((err) => {
   error.value = err instanceof Error ? err : new Error(String(err))
   return false
 })
-function reset() { error.value = null }
+function reset() {
+  error.value = null
+}
 </script>
 
 <template>
