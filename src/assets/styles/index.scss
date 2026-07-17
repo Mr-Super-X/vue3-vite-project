@@ -1,0 +1,7 @@
+@use './reset.css';
+@use './variables.css';
+
+// Element Plus 主题变量（按需覆盖）
+:root {
+  --el-color-primary: var(--color-primary);
+}
