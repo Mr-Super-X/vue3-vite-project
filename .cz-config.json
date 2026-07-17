@@ -1,0 +1,54 @@
+{
+  "types": [
+    { "value": "feat", "name": "feat:     ✨ 新功能（A new feature）" },
+    { "value": "fix", "name": "fix:      🐛 修复 bug（A bug fix）" },
+    { "value": "docs", "name": "docs:     📝 文档变更（Documentation only changes）" },
+    {
+      "value": "style",
+      "name": "style:    💄 格式（Changes that do not affect the meaning of the code）"
+    },
+    {
+      "value": "refactor",
+      "name": "refactor: ♻️  重构（A code change that neither fixes a bug nor adds a feature）"
+    },
+    { "value": "perf", "name": "perf:     ⚡️ 性能（A code change that improves performance）" },
+    {
+      "value": "test",
+      "name": "test:     ✅ 测试（Adding missing tests or correcting existing tests）"
+    },
+    {
+      "value": "build",
+      "name": "build:    📦 构建（Changes that affect the build system or external dependencies）"
+    },
+    {
+      "value": "ci",
+      "name": "ci:       🔧 CI 配置（Changes to CI configuration files and scripts）"
+    },
+    {
+      "value": "chore",
+      "name": "chore:    🔨 杂项（Other changes that don't modify src or test files）"
+    },
+    { "value": "revert", "name": "revert:   ⏪ 回滚（Reverts a previous commit）" }
+  ],
+  "scopes": [
+    { "name": "api" },
+    { "name": "auth" },
+    { "name": "components" },
+    { "name": "dashboard" },
+    { "name": "deps" },
+    { "name": "docs" },
+    { "name": "eslint" },
+    { "name": "hooks" },
+    { "name": "i18n" },
+    { "name": "lint" },
+    { "name": "modules" },
+    { "name": "router" },
+    { "name": "store" },
+    { "name": "styles" },
+    { "name": "user" },
+    { "name": "utils" }
+  ],
+  "allowCustomScopes": true,
+  "allowBreakingChanges": ["feat", "fix"],
+  "subjectLimit": 72
+}

@@ -17,6 +17,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "commit": "git add . && cz",
+    "commitlint": "commitlint --edit",
     "prepare": "husky"
   },
   "dependencies": {
@@ -64,5 +66,19 @@
   "engines": {
     "node": "^22.18.0 || >=24.12.0",
     "pnpm": ">=11.0.0 < 12.0.0"
+  },
+  "lint-staged": {
+    "*.{ts,vue}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,scss,css,yml,yaml}": [
+      "prettier --write"
+    ]
+  },
+  "config": {
+    "commitizen": {
+      "path": "cz-customizable"
+    }
   }
 }

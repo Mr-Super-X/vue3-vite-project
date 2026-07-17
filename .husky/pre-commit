@@ -1,1 +1,4 @@
+# 暂存区文件先自动格式化 + ESLint fix（lint-staged 仅处理变更文件，不全库扫描）
+pnpm lint-staged
+# 全局类型检查（防止 lint-staged 漏掉的文件引入类型错误）
 pnpm type-check
