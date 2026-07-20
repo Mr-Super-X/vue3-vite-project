@@ -92,6 +92,35 @@ export default defineConfig({
     sourcemap: false,
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
+      // 显式启用 tree-shaking（true = rolldown 默认推荐配置：移除未引用的 export、合并变量声明、移除未使用参数）
+      // 注：Vite 8 用 rolldown 替代 rollup，类型只接受 boolean | TreeshakingOptions，不再支持 'recommended' 字符串
+      treeshake: true,
+
+      // 如果后续需要精细化定制（如标记纯函数、保留 console.log、处理 polyfill 副作用等），
+      // 可改为 TreeshakingOptions 对象。常用字段说明：
+      //
+      //   manualPureFunctions: ['composedPath', 'foo', 'bar']
+      //     // 告知打包器"这函数无副作用"，更激进摇树。
+      //     // 适用：utils/ 里有多个 export，但部分未被使用。
+      //
+      //   moduleSideEffects: (id) => boolean
+      //     // 动态判断某模块是否有副作用（false = 可摇，true = 保留）。
+      //     // 适用：项目里引入了修改全局变量的 polyfill 或 polyfill.io 的垫片。
+      //     //   例：if (id.includes('polyfill/')) return true
+      //
+      //   annotations: true
+      //     // 读取 /*#__PURE__*/ 注释作为摇树提示（手动控制粒度）。
+      //     // 适用：第三方库摇不掉，但你可以用注释告诉打包器"这调用无副作用"。
+      //
+      //   joinVars: true
+      //     // 合并多个变量声明（如 const a = 1; const b = 2; → const a = 1, b = 2;）。
+      //     // 收益：减少代码体积，但可能影响 source map 可读性。
+      //
+      //   correctVarValueBeforeDeclaration: false（默认 false，建议生产开启）
+      //     // 提前计算变量值（如 const x = 1 + 2; → const x = 3;）。
+      //     // 收益：减少运行时计算，但对 source map 不友好。
+      //
+      // 完整字段见 @rolldown/types 或 node_modules/.pnpm/rolldown@1.1.5/.../define-config-BhJ90aEv.d.mts
       output: {
         // 手动拆分第三方库（vendor chunk）→ 利用浏览器强缓存
         // 业务代码 (src/) 变化时只更新业务 chunk，第三方库 chunk 命中缓存

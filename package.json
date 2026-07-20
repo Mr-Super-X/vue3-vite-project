@@ -73,6 +73,10 @@
     "node": "^22.18.0 || >=24.12.0",
     "pnpm": ">=11.0.0 < 12.0.0"
   },
+  "sideEffects": [
+    "*.css",
+    "*.scss"
+  ],
   "config": {
     "commitizen": {
       "path": "cz-customizable"
