@@ -9,6 +9,22 @@ import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import { viteMockServe } from 'vite-plugin-mock'
+import { visualizer } from 'rollup-plugin-visualizer'
+
+// 第三方库 vendor chunk 分组配置（顺序敏感——先匹配先返回）
+// 新增分组只需在此处追加一项，无需修改 manualChunks 内部逻辑
+const vendorChunks: ReadonlyArray<{ name: string; patterns: ReadonlyArray<string> }> = [
+  {
+    // Vue 核心：vue / vue-router / pinia / @vue/*
+    name: 'vendor-vue',
+    patterns: ['/vue/', '/pinia/', '/@vue/'],
+  },
+  {
+    // UI 库：element-plus / @element-plus/icons-vue / unplugin-vue-components
+    name: 'vendor-ui',
+    patterns: ['/element-plus/', '/unplugin-vue-components/'],
+  },
+]
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -32,6 +48,18 @@ export default defineConfig({
       enable: process.env.NODE_ENV !== 'production',
       watchFiles: true,
     }),
+    // 包体积分析（默认关闭，通过 ANALYZE=true 启用）
+    // peerDeps 支持 rolldown 1.x（Vite 8 用），无需额外配置
+    ...(process.env.ANALYZE === 'true'
+      ? [
+          visualizer({
+            filename: 'dist/stats.html',
+            gzipSize: true,
+            brotliSize: true,
+            template: 'treemap', // 树状图，模块层级清晰
+          }),
+        ]
+      : []),
   ],
   resolve: {
     alias: {
@@ -69,14 +97,10 @@ export default defineConfig({
         // 业务代码 (src/) 变化时只更新业务 chunk，第三方库 chunk 命中缓存
         // 注：Vite 8 用 rolldown 替代 rollup，manualChunks 必须是函数（不能是对象）
         manualChunks(id) {
+          // 业务代码不归 vendor
           if (!id.includes('node_modules')) return undefined
-          // Vue 核心：vue / vue-router / pinia / @vue/*
-          if (id.includes('/vue/') || id.includes('/pinia/') || id.includes('/@vue/')) {
-            return 'vendor-vue'
-          }
-          // UI 库：element-plus / @element-plus/icons-vue / unplugin-vue-components
-          if (id.includes('/element-plus/') || id.includes('/unplugin-vue-components/')) {
-            return 'vendor-ui'
+          for (const { name, patterns } of vendorChunks) {
+            if (patterns.some((pattern) => id.includes(pattern))) return name
           }
           // 其他第三方库：axios / vue-i18n / 等
           return 'vendor-utils'
