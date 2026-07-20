@@ -63,5 +63,25 @@ export default defineConfig({
     target: 'es2022',
     sourcemap: false,
     chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        // 手动拆分第三方库（vendor chunk）→ 利用浏览器强缓存
+        // 业务代码 (src/) 变化时只更新业务 chunk，第三方库 chunk 命中缓存
+        // 注：Vite 8 用 rolldown 替代 rollup，manualChunks 必须是函数（不能是对象）
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined
+          // Vue 核心：vue / vue-router / pinia / @vue/*
+          if (id.includes('/vue/') || id.includes('/pinia/') || id.includes('/@vue/')) {
+            return 'vendor-vue'
+          }
+          // UI 库：element-plus / @element-plus/icons-vue / unplugin-vue-components
+          if (id.includes('/element-plus/') || id.includes('/unplugin-vue-components/')) {
+            return 'vendor-ui'
+          }
+          // 其他第三方库：axios / vue-i18n / 等
+          return 'vendor-utils'
+        },
+      },
+    },
   },
 })
