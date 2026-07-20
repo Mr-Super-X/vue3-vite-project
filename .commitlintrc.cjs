@@ -2,9 +2,14 @@
 // type 必须在 types 列表中，subject 不超过 72 字符
 module.exports = {
   extends: ['@commitlint/config-conventional'],
-  // 跳过包含 "init" 的 commit（如 init: 初始化项目、init: 重构脚手架 等）
+  // 跳过包含 "init" 或 "merge" 的 commit
+  // - init: 初始化项目、init: 重构脚手架 等
+  // - merge: git merge 产生的自动提交（无需校验）
   // 注意：commitlint 21 ignores 必须返回 boolean[]（数组里包函数）
-  ignores: [(commit) => commit.includes('init')],
+  ignores: [
+    (commit) => commit.includes('init'),
+    (commit) => commit.includes('merge'),
+  ],
   // 自定义中文输出 formatter
   formatter: './scripts/commitlint-formatter.cjs',
   rules: {

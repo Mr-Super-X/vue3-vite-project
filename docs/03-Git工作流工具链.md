@@ -35,8 +35,8 @@ pnpm commit              ← 交互式（cz-customizable 启动问答）
    └── pnpm type-check      ← 全项目类型检查
    ↓
 [husky commit-msg 触发]
-   └── pnpm exec commitlint --edit "$1"  ← 校验 Angular 规范
-       ├── 拒绝：无 type 前缀、空 subject、错误 type
+   └── pnpm exec commitlint --edit "$1"  ← 校验 Angular 规范（中文输出）
+       ├── 拒绝：无 type 前缀、空 subject、错误 type → 中文错误提示
        └── 通过：feat/fix/docs/style/refactor/perf/test/build/ci/chore/revert
    ↓
 ✅ commit 完成
@@ -90,10 +90,14 @@ pnpm test
 ### `.commitlintrc.cjs`（commitlint 21）
 
 ```js
-// commitlint 配置：基于 @commitlint/config-conventional（Angular 规范）
-// type 必须在 types 列表中，subject 不超过 72 字符
 module.exports = {
   extends: ['@commitlint/config-conventional'],
+  // 跳过包含 "init" 的 commit（如 init: 初始化项目、init: 重构脚手架 等）
+  // commitlint 21 ignores 必须返回 boolean[]（数组里包函数）
+  ignores: [(commit) => commit.includes('init')],
+  // 自定义中文输出 formatter（官方支持的相对路径方式）
+  // 源码：@commitlint/load/lib/load.js resolveFormatter() 支持 './my-formatter.js'
+  formatter: './scripts/commitlint-formatter.cjs',
   rules: {
     // 关键：不允许空 type（commitlint 默认放过"无 type 前缀"消息，加这条才严格）
     'type-empty': [2, 'never'],
@@ -107,6 +111,71 @@ module.exports = {
 
 **type 列表**（11 种，Angular 规范）：
 `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
+
+### `scripts/commitlint-formatter.cjs`（自定义中文 formatter）
+
+> 📋 **官方依据**：`@commitlint/load/lib/load.js` line 10-15 注释明说支持相对路径 `./my-formatter.js`；`@commitlint/cli/lib/cli.js` line 432-438 的 `loadFormatter()` 函数优先级：`--format` flag > `config.formatter` > 默认 `@commitlint/format`。
+
+**输出示例**（错误 commit）：
+
+```
+⧗ 输入的 commit 信息：
+  wrongtype: bad
+
+✖ 找到 1 个错误：
+
+  ✖ type 不在允许列表
+    type must be one of [build(构建相关), chore(其他杂项), ci(持续集成),
+    docs(文档变更), feat(新增功能), fix(修复缺陷), perf(性能优化),
+    refactor(代码重构), revert(回滚提交), style(代码格式), test(测试用例)]
+```
+
+**输出示例**（标题超长）：
+
+```
+⧗ 输入的 commit 信息：
+  feat: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa...
+
+✖ 找到 1 个错误：
+
+  ✖ 标题过长
+    标题不能超过 72 字符, 当前长度 106 字符
+```
+
+**输出示例**（init 跳过 → 通过）：
+
+```
+✓ commit 信息符合 Angular 规范
+```
+
+**核心设计**：
+
+| 模块                                 | 作用                                                          |
+| ------------------------------------ | ------------------------------------------------------------- |
+| `RULE_LABELS`                        | 13 条 commitlint 规则名 → 中文标签映射                        |
+| `TYPE_NAMES`                         | 11 种 type → 中文名（含 emoji 友好的简短标签）                |
+| `translateMessage(msg, ruleName)`    | 动态翻译错误消息（type-enum 列表 + header-max-length 完整句） |
+| `format(report, options)`            | commitlint 主函数，返回格式化字符串                           |
+| `try { pc = require('picocolors') }` | 颜色降级（picocolors 不可用时纯文本）                         |
+
+**颜色方案**：
+
+| 颜色     | 用途                              |
+| -------- | --------------------------------- |
+| 红色 `✖` | 错误                              |
+| 黄色 `⚠` | 警告                              |
+| 绿色 `✓` | 通过                              |
+| 灰色     | 输入的 commit message（辅助展示） |
+
+**导出兼容**：
+
+```js
+module.exports = format
+module.exports.format = format // 兼容 default export
+module.exports.default = format // 兼容 import default
+```
+
+> commitlint 21 通过 `dynamicImport()` 加载（`@commitlint/cli/lib/cli.js:436`），三种导出方式都能识别。
 
 ### `.cz-config.json`（commitizen 4 + cz-customizable 7）
 
@@ -183,6 +252,27 @@ pnpm install
 2. 跑 `npm run preinstall` 能看到红色框吗？
 3. 如果跑 `npm install` 先崩在 dependency resolution（看不到红色框），先解决 npm 解析问题（见 #4）
 
+### 6. 自定义 commitlint formatter 不生效
+
+**症状**：commitlint 仍输出英文（"type may not be empty"）
+
+**检查清单**：
+
+1. `.commitlintrc.cjs` 有 `formatter: './scripts/commitlint-formatter.cjs'` 吗？
+2. `scripts/commitlint-formatter.cjs` 存在吗？导出 `format` 函数吗？
+3. 直接跑 `echo "wrongtype: bad" | pnpm exec commitlint` 看输出是中文还是英文？
+4. 如果英文，看 `node ./scripts/commitlint-formatter.cjs` 单独是否能加载（require 错误通常显示路径问题）
+
+**扩展 formatter 翻译规则**：编辑 `scripts/commitlint-formatter.cjs` 的 `RULE_LABELS` 字典，加新规则即可：
+
+```js
+const RULE_LABELS = {
+  'type-empty': 'type 不能为空',
+  // 加新规则：
+  'body-max-length': 'body 总长过长',
+}
+```
+
 ---
 
 ## 📝 commitizen 配置详解（`.cz-config.json`）
@@ -232,4 +322,6 @@ pnpm install
 - 代码质量：`docs/02-代码质量工具链.md`
 - 工具兼容性踩坑：`docs/01-工具兼容性问题踩坑记录.md`
 - commitlint 官方：https://github.com/conventional-changelog/commitlint
+- commitlint formatter API：https://commitlint.js.org/api/format
+- commitlint load 源码：`@commitlint/load/lib/load.js` resolveFormatter()
 - cz-customizable 官方：https://github.com/leonardoanalista/cz-customizable
