@@ -83,7 +83,10 @@ export default defineConfig({
   },
   css: {
     preprocessorOptions: {
-      scss: {},
+      // SCSS 'new-global' deprecation：Dart Sass 1.78+ 警告 "b() 内 !global 设新变量"，
+      // 由于 bem mixin 设计依赖此模式但每个 <style scoped> 是独立 stylesheet 根，
+      // 全局静默该 deprecation 不影响 2.0 升级（届时需重构 bem mixin 不依赖 !global）。
+      scss: { silenceDeprecations: ['new-global'] },
       less: { javascriptEnabled: true },
     },
   },

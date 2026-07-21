@@ -28,6 +28,14 @@
 //   .user-card.is-active { color: blue; }
 // =====================================================================
 
+// 块名状态变量：b() 内设置 !global，e/m/is/when 读取。
+// 在 stylesheet 根声明 !default 是 Sass 1.78+ 强制要求：
+//   "As of Dart Sass 2.0.0, !global assignments won't be able to declare new variables."
+//   "Recommendation: add `$B: null` at the stylesheet root."
+// @use 这个文件的 stylesheet 不需要重复声明（namespace 内共享），
+// 但 @include b() 的 stylesheet 必须有 $B 声明，或 vite 配置 silenceDeprecations。
+$B: null !default;
+
 // 块（Block）— 注册当前块名并打开嵌套作用域。
 // 子选择器（e/m/is/when）会基于块名拼接。
 @mixin b($block) {
