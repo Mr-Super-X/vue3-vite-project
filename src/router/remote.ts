@@ -14,7 +14,7 @@
 
 import type { RouteRecordRaw } from 'vue-router'
 import { menuApi } from '@/api/modules/menu'
-import { COMPONENT_REGISTRY } from './component-registry'
+import { COMPONENT_REGISTRY } from './auto-register'
 import type { RouteName, RemoteMenuItem } from './types'
 
 /**
@@ -49,9 +49,7 @@ function convertMenu(menu: RemoteMenuItem[]): RouteRecordRaw[] {
 function convertItem(item: RemoteMenuItem): RouteRecordRaw | null {
   const loader = COMPONENT_REGISTRY[item.name as RouteName]
   if (!loader) {
-    console.warn(
-      `[router/remote] 未注册的路由 name: ${item.name}（需在 component-registry.ts 中添加）`
-    )
+    console.warn(`[router/remote] 未注册的路由 name: ${item.name}（routes/index.ts 中未声明）`)
     return null
   }
 

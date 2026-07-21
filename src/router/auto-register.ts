@@ -46,3 +46,36 @@ const modules = import.meta.glob<RouteModuleExport>('/src/modules/**/routes/inde
 export const autoRegisteredRoutes: RouteRecordRaw[] = Object.values(modules).flatMap(
   (m) => m.default
 )
+
+/**
+ * 路由 name → 视图组件 loader 的映射（从 autoRegisteredRoutes 派生）。
+ *
+ * 设计要点：
+ *   - 替代了原本的 src/router/component-registry.ts
+ *   - 单一 source of truth：路由配置 routes/index.ts
+ *   - 新增业务路由**只需在 routes/index.ts 写一次**（无需同步 component-registry）
+ *   - 类型：Record<string, ...>，避免 auto-register 反向依赖 RouteName 联合类型
+ *   - 远程菜单（router/remote.ts）通过此映射按 name 查找 component loader
+ *
+ * 边界处理：
+ *   - 跳过无 name 或无 component 的路由（如 layout 包裹层、catch-all 兜底）
+ *   - 重复 name 时 console.warn + 后注册覆盖前者
+ *   - 递归处理 routes.children（嵌套路由同样提取）
+ */
+export const COMPONENT_REGISTRY: Record<string, () => Promise<unknown>> = (() => {
+  const map: Record<string, () => Promise<unknown>> = {}
+  const visit = (routes: RouteRecordRaw[]): void => {
+    for (const route of routes) {
+      if (route.name && route.component) {
+        const name = String(route.name)
+        if (map[name]) {
+          console.warn(`[router/auto-register] 重复的路由 name: ${name}（后注册会覆盖）`)
+        }
+        map[name] = route.component as () => Promise<unknown>
+      }
+      if (route.children?.length) visit(route.children)
+    }
+  }
+  visit(autoRegisteredRoutes)
+  return map
+})()
