@@ -1,0 +1,89 @@
+// =====================================================================
+// BEM mixin · 编程式 BEM 命名拼接（Element Plus / Ant Design Vue 同款）
+// =====================================================================
+// 命名规则：
+//   Block      → .user-card           （连字符式小写）
+//   Element    → .user-card__avatar   （双下划线）
+//   Modifier   → .user-card--featured （双连字符）
+//   State      → .is-active / .is-disabled（用 `is` mixin，按 BEM 扩展约定）
+//   状态修饰   → .theme-light（用 `when` mixin，非 BEM 但常见于 Vue 生态）
+//
+// 用法：
+//   @use '@/assets/styles/mixins/bem' as *;
+//   .user-card {
+//     @include b(user-card) {
+//       padding: 16px;
+//       @include e(avatar)  { width: 40px; }
+//       @include e(name)    { font-weight: 600; }
+//       @include m(featured) { border: 2px solid gold; }
+//       @include is(active)  { color: blue; }
+//     }
+//   }
+//
+// 编译产物（与手写 BEM 字符串完全一致）：
+//   .user-card { padding: 16px; }
+//   .user-card__avatar { width: 40px; }
+//   .user-card__name { font-weight: 600; }
+//   .user-card--featured { border: 2px solid gold; }
+//   .user-card.is-active { color: blue; }
+// =====================================================================
+
+// 块（Block）— 注册当前块名并打开嵌套作用域。
+// 子选择器（e/m/is/when）会基于块名拼接。
+@mixin b($block) {
+  $B: $block !global; // 保存到全局，供后续 mixin 读取
+  .#{$block} {
+    @content;
+  }
+}
+
+// 元素（Element）— 拼成 `.block__element`。
+// 必须放在 @include b() 内部使用。
+@mixin e($element) {
+  @if $B == null {
+    @error 'bem mixin: @include e() 必须在 @include b() 内部使用';
+  }
+  .#{$B}__#{$element} {
+    @content;
+  }
+}
+
+// 修饰符（Modifier）— 拼成 `.block--modifier`。
+// 必须放在 @include b() 内部使用。
+@mixin m($modifier) {
+  @if $B == null {
+    @error 'bem mixin: @include m() 必须在 @include b() 内部使用';
+  }
+  .#{$B}--#{$modifier} {
+    @content;
+  }
+}
+
+// 状态（State，BEM 扩展）— 拼成 `.block.is-state`。
+// Vue 中常通过 :class="{ 'is-active': isActive }" 切换。
+@mixin is($state) {
+  @if $B == null {
+    @error 'bem mixin: @include is() 必须在 @include b() 内部使用';
+  }
+  .#{$B}.is-#{$state} {
+    @content;
+  }
+}
+
+// 主题 / 场景前缀（Vue 生态常见）— 拼成 `.block--when-suffix`。
+// 例：@include when(light) → .block--when-light
+//     @include when(dark)  → .block--when-dark
+@mixin when($suffix) {
+  @if $B == null {
+    @error 'bem mixin: @include when() 必须在 @include b() 内部使用';
+  }
+  .#{$B}--when-#{$suffix} {
+    @content;
+  }
+}
+
+// 全局重置（仅供测试或重置块名作用域时使用）。
+// 正常组件开发不需要调用。
+@mixin reset-block {
+  $B: null !global;
+}
