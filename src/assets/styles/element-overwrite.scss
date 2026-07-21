@@ -1,0 +1,16 @@
+// Element Plus 主题变量覆盖
+//
+// 把项目 variables.css 的 CSS 变量映射到 Element Plus 主题变量，
+// 主题切换时 Element Plus 组件自动跟随。
+//
+// 加载位置：index.scss（仅此一处），保证在 variables.css 之后被加载。
+//
+// 详见 docs/04-构建与测试工具.md §Element Plus 主题
+
+:root {
+  --el-color-primary: var(--color-primary);
+  --el-color-success: var(--color-success);
+  --el-color-warning: var(--color-warning);
+  --el-color-danger: var(--color-danger);
+  --el-color-info: var(--color-info);
+}

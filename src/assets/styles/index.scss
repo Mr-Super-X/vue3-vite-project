@@ -1,8 +1,24 @@
-@use './reset.css';
-@use './variables.css';
-@use './transition.scss';
+// 全局样式入口
+//
+// 加载顺序约定（从基础到覆盖，后加载可覆盖先加载）：
+//   1. reset.css          浏览器默认样式重置（最基础）
+//   2. variables.css      项目级 CSS 变量（颜色/间距/圆角/尺寸）
+//   3. transition.scss    全局过渡动画（@keyframes + 过渡工具类）
+//   4. element-plus.scss  Element Plus 主题变量覆盖（依赖 variables.css）
+//   5. custom.scss        项目自定义全局样式（最后加载，优先级最高）
+//
+// 添加新全局样式文件的规则：
+//   - 越基础越靠前（reset / variables）
+//   - 主题覆盖放在自定义样式之前
+//   - 自定义样式永远放最后
+//
+// 注意：mixin 工具不进此入口（SCSS module 不允许 @use 两次），
+// 按需在 SFC <style> 中 @use '@/assets/styles/mixins/xxx'。
+//
+// 引用入口：src/main.ts（唯一一处，main.ts 中只需导入本文件）
 
-// Element Plus 主题变量（按需覆盖）
-:root {
-  --el-color-primary: var(--color-primary);
-}
+@use './reset.css';
+@use './variables.scss';
+@use './transition.scss';
+@use './element-overwrite.scss';
+@use './custom.scss';

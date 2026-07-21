@@ -1,0 +1,97 @@
+// 全局过渡动画
+//
+// 包含：
+// 1. 全局 @keyframes（淡入淡出 / 滑入滑出 / 缩放）
+// 2. 过渡工具类（与 @keyframes 配合使用）
+//
+// 用法：
+//   <div class="gm-transition-fade gm-fade-in">...</div>
+//   <div :class="['gm-slide-up', isOpen ? 'gm-fade-in' : 'gm-fade-out']">...</div>
+//
+// 注意：
+// - mixin 工具不在此文件（避免 SFC @use 时重复输出 CSS），
+//   按需在 SFC <style> 中 @use '@/assets/styles/mixins/transitions'
+// - Vue Transition 组件的 enter-active-class / leave-active-class 也可引用这些类名
+
+// ─── 全局动画 keyframes ────────────────────────────────────────
+
+@keyframes gm-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes gm-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes gm-slide-up {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes gm-slide-down {
+  from {
+    transform: translateY(-8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes gm-zoom-in {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+// ─── 过渡工具类（与 keyframes 配合）─────────────────────────────
+
+// 淡入淡出过渡（搭配 .gm-fade-in / .gm-fade-out 使用）
+.gm-transition-fade {
+  transition: opacity 0.2s ease-in-out;
+}
+
+// 滑入滑出过渡（搭配 .gm-slide-up / .gm-slide-down 使用）
+.gm-transition-slide {
+  transition:
+    transform 0.2s ease-out,
+    opacity 0.2s ease-out;
+}
+
+// 缩放过渡（搭配 .gm-zoom-in 使用）
+.gm-transition-scale {
+  transition:
+    transform 0.2s ease-out,
+    opacity 0.2s ease-out;
+}
+
+// 通用：尊重用户的 prefers-reduced-motion 设置
+@media (prefers-reduced-motion: reduce) {
+  .gm-transition-fade,
+  .gm-transition-slide,
+  .gm-transition-scale {
+    transition: none;
+  }
+}
