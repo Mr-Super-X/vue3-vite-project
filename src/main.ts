@@ -3,7 +3,7 @@ import App from './App.vue'
 import router from './router'
 import pinia from './store'
 import i18n from './locales'
-import { setupDirectives } from './directives'
+import Directives from '@/directives'
 import GlobalComponents from '@/components'
 
 // 浏览器基线统一（必须在所有自定义样式之前）。
@@ -19,7 +19,7 @@ app.use(pinia)
 app.use(router)
 app.use(i18n)
 app.use(GlobalComponents)
-setupDirectives(app)
+app.use(Directives)
 
 // 全局错误兜底
 app.config.errorHandler = (err, _instance, info) => {
