@@ -1,6 +1,39 @@
 import { fileURLToPath, URL } from 'node:url'
 
 import { defineConfig } from 'vite'
+
+/**
+ * src 下子目录别名映射（与 tsconfig.app.json paths 配置保持同步）
+ *
+ * key: alias 名（裸别名 + /* 两种用法）；value: src 下的子目录名
+ * 维护规则：新增子目录时同时改本表 + tsconfig.app.json
+ */
+const SRC_DIR_ALIASES = {
+  '@': '',
+  '@api': 'api',
+  '@assets': 'assets',
+  '@components': 'components',
+  '@composables': 'composables',
+  '@directives': 'directives',
+  '@enums': 'enums',
+  '@layouts': 'layouts',
+  '@locales': 'locales',
+  '@modules': 'modules',
+  '@plugins': 'plugins',
+  '@router': 'router',
+  '@store': 'store',
+  '@types': 'types',
+  '@utils': 'utils',
+} as const
+
+/** 把 SRC_DIR_ALIASES 解析为 vite resolve.alias 格式 */
+function resolveSrcDirAliases(): Record<string, string> {
+  const map: Record<string, string> = {}
+  for (const [alias, sub] of Object.entries(SRC_DIR_ALIASES)) {
+    map[alias] = fileURLToPath(new URL(`./src/${sub}`, import.meta.url))
+  }
+  return map
+}
 import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
 import vueDevTools from 'vite-plugin-vue-devtools'
@@ -62,25 +95,7 @@ export default defineConfig({
       : []),
   ],
   resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
-      // src 下子目录别名（告别 ../../../utils/... 这种繁琐相对路径）
-      // 与 tsconfig.app.json 的 paths 配置保持同步
-      '@api': fileURLToPath(new URL('./src/api', import.meta.url)),
-      '@assets': fileURLToPath(new URL('./src/assets', import.meta.url)),
-      '@components': fileURLToPath(new URL('./src/components', import.meta.url)),
-      '@composables': fileURLToPath(new URL('./src/composables', import.meta.url)),
-      '@directives': fileURLToPath(new URL('./src/directives', import.meta.url)),
-      '@enums': fileURLToPath(new URL('./src/enums', import.meta.url)),
-      '@layouts': fileURLToPath(new URL('./src/layouts', import.meta.url)),
-      '@locales': fileURLToPath(new URL('./src/locales', import.meta.url)),
-      '@modules': fileURLToPath(new URL('./src/modules', import.meta.url)),
-      '@plugins': fileURLToPath(new URL('./src/plugins', import.meta.url)),
-      '@router': fileURLToPath(new URL('./src/router', import.meta.url)),
-      '@store': fileURLToPath(new URL('./src/store', import.meta.url)),
-      '@types': fileURLToPath(new URL('./src/types', import.meta.url)),
-      '@utils': fileURLToPath(new URL('./src/utils', import.meta.url)),
-    },
+    alias: resolveSrcDirAliases(),
   },
   css: {
     preprocessorOptions: {

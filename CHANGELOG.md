@@ -87,6 +87,12 @@
   - `tsconfig.app.json` paths 同时加 `"@plugins/*": ["./src/plugins/*"]` 和 `"@plugins": ["./src/plugins/index.ts"]`（裸 alias 与 vite 一致）
   - `src/main.ts` 改 `import Plugins from '@/plugins'` → `import Plugins from '@plugins'`，实际使用新 alias
   - 顺带补全 `@directives` 裸 alias（之前只有 `@directives/*`），保持项目内 alias 一致性
+- 优化 alias 重复代码 + 补全所有裸 alias：
+  - **vite.config.ts 提取 SRC_DIR_ALIASES 常量 + resolveSrcDirAliases 函数**：
+    消除 `fileURLToPath(new URL('./src/...', import.meta.url))` 重复 14 次；单一 SRC_DIR_ALIASES 配置 + 函数生成 vite 期望的 Record 格式
+  - **tsconfig.app.json 补全 14 个裸 alias**（`@api`、`@components`、`@composables`、`@directives`、`@enums`、`@layouts`、`@locales`、`@modules`、`@plugins`、`@router`、`@store`、`@types`、`@utils` + `@`）：每个 alias 都有 `XXX` 裸 + `XXX/*` glob 两种映射，与 vite alias 一致
+  - 解决 `import GlobalComponents from '@components'` 报 ts(2307) 找不到模块的问题
+  - 维护说明：新增 src 子目录时同时更新 SRC_DIR_ALIASES（vite）+ tsconfig.app.json paths（TypeScript）
 
 ## v1.0.0 - 2026-07-17
 
