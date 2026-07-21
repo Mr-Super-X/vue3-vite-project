@@ -5,6 +5,7 @@ import pinia from './store'
 import i18n from './locales'
 import Directives from '@/directives'
 import GlobalComponents from '@/components'
+import Plugins from '@/plugins'
 
 // 浏览器基线统一（必须在所有自定义样式之前）。
 // 详见 https://necolas.github.io/normalize.css/
@@ -20,14 +21,6 @@ app.use(router)
 app.use(i18n)
 app.use(GlobalComponents)
 app.use(Directives)
-
-// 全局错误兜底
-app.config.errorHandler = (err, _instance, info) => {
-  console.error('[Vue Error]', err, info)
-}
-
-window.addEventListener('unhandledrejection', (event) => {
-  console.error('[Unhandled Rejection]', event.reason)
-})
+app.use(Plugins)
 
 app.mount('#app')
