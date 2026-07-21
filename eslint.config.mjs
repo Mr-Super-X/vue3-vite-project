@@ -18,6 +18,7 @@ export default [
       '**/node_modules/**',
       '**/.husky/**',
       '**/mock/**',
+      '**/scripts/**/*.cjs'
     ],
   },
   ...pluginVue.configs['flat/essential'],

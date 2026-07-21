@@ -20,21 +20,22 @@
 
 ## 🛠️ 技术栈
 
-| 维度       | 选型             | 版本                               |
-| ---------- | ---------------- | ---------------------------------- |
-| 核心框架   | Vue              | ^3.5.38                            |
-| 构建工具   | Vite             | ^8.0.16                            |
-| 语言       | TypeScript       | ~6.0.0（strict 模式）              |
-| 包管理器   | pnpm             | >=11.x                             |
-| Node 要求  | -                | >=22.18 或 >=24.12                 |
-| UI 组件库  | Element Plus     | ^2.14.3                            |
-| 原子化 CSS | UnoCSS           | ^66.7.5（兼容 SCSS/LESS/原生 CSS） |
-| 状态管理   | Pinia            | ^3.0.4                             |
-| 路由       | Vue Router       | ^5.1.0                             |
-| 国际化     | Vue I18n         | ^11.4.6                            |
-| 网络层     | Axios            | ^1.18.1                            |
-| API Mock   | vite-plugin-mock | ^3.0.2                             |
-| 测试框架   | Vitest           | ^4.1.9 + @vue/test-utils + jsdom   |
+| 维度         | 选型                        | 版本                                |
+| ------------ | --------------------------- | ----------------------------------- |
+| 核心框架     | Vue                         | ^3.5.38                             |
+| 构建工具     | Vite                        | ^8.0.16                             |
+| 语言         | TypeScript                  | ~6.0.0（strict 模式）               |
+| 包管理器     | pnpm                        | >=11.x                              |
+| Node 要求    | -                           | >=22.18 或 >=24.12                  |
+| UI 组件库    | Element Plus                | ^2.14.3                             |
+| 原子化 CSS   | UnoCSS                      | ^66.7.5（兼容 SCSS/LESS/原生 CSS）  |
+| 状态管理     | Pinia                       | ^3.0.4                              |
+| 路由         | Vue Router                  | ^5.1.0                              |
+| 国际化       | Vue I18n                    | ^11.4.6                             |
+| 网络层       | Axios                       | ^1.18.1                             |
+| API Mock     | vite-plugin-mock            | ^3.0.2                              |
+| 测试框架     | Vitest                      | ^4.1.9 + @vue/test-utils + jsdom    |
+| Pinia 持久化 | pinia-plugin-persistedstate | ^4.7.1（仅 store 字段 pick 持久化） |
 
 ---
 
@@ -190,20 +191,31 @@ gm-portal-fe/
 ├── src/
 │   ├── api/             # 网络层（http.ts + modules/）
 │   ├── assets/          # 静态资源（styles/、icons/）
+│   │   └── styles/      # 全局样式：reset / variables / theme / transition / element-overwrite / custom + mixins/
 │   ├── components/      # common/（无业务）+ layout/（布局）+ business/（跨模块）
-│   ├── composables/     # useRequest、useTable、useAuth
+│   ├── composables/     # useRequest、useTable、useTheme
 │   ├── directives/      # v-permission（占位）
 │   ├── enums/           # httpEnum、roleEnum
 │   ├── layouts/         # default/ + blank/
 │   ├── locales/         # zh-CN、en-US
 │   ├── modules/         # auth、user、dashboard、error
-│   ├── router/          # modules/ + guards/ + index.ts
-│   ├── store/           # 全局：app、user
+│   │                    # 每个模块含 views/ + store/ + components/ + routes/index.ts（自动注册）
+│   ├── router/          # 自动注册 + 白名单 + 远程菜单 + 守卫
+│   │   ├── index.ts                  # 入口：autoRegisteredRoutes + fallbackRoute
+│   │   ├── auto-register.ts          # import.meta.glob 扫描 src/modules/**/routes/index.ts
+│   │   ├── fallback.ts               # catch-all 404（单独注册保证最后）
+│   │   ├── config.ts                 # 菜单模式（local/remote，默认 remote）
+│   │   ├── whitelist.ts              # 路由 name 白名单
+│   │   ├── types.ts                  # RouteName 联合类型 + RemoteMenuItem 协议
+│   │   ├── component-registry.ts     # 路由 name → 视图组件映射
+│   │   ├── remote.ts                 # 远程菜单加载 + JSON → RouteRecordRaw 转换
+│   │   └── guards/auth.ts            # 白名单 + 登录态 + 远程加载 + 权限校验
+│   ├── store/           # 全局：app、user、theme（含持久化）
 │   ├── types/           # global、env、auto-imports、components
-│   ├── utils/           # format、storage、validate
+│   ├── utils/           # format、storage、validate、bem（BEM 运行时工具）
 │   └── App.vue / main.ts
-├── mock/                # vite-plugin-mock 数据
-├── docs/superpowers/    # spec + plan 文档
+├── mock/                # vite-plugin-mock 数据（含 menu 远程菜单）
+├── docs/                # 项目规范文档（05-07 见 §📚 相关文档）
 └── 配置文件             # vite.config.ts / tsconfig*.json / uno.config.ts / vitest.config.ts
 ```
 
@@ -236,28 +248,87 @@ pnpm dev
 
 ### 常用脚本
 
-| 命令                 | 用途                      |
-| -------------------- | ------------------------- |
-| `pnpm dev`           | 启动开发服务器（带 HMR）  |
-| `pnpm build`         | 生产构建（含 type-check） |
-| `pnpm preview`       | 预览构建产物              |
-| `pnpm test`          | 运行单元测试（一次性）    |
-| `pnpm test:watch`    | 单元测试 watch 模式       |
-| `pnpm test:coverage` | 测试覆盖率报告            |
-| `pnpm test:ui`       | 单元测试 UI 模式          |
-| `pnpm type-check`    | TypeScript 类型检查       |
+| 命令                 | 用途                                              |
+| -------------------- | ------------------------------------------------- |
+| `pnpm dev`           | 启动开发服务器（默认 remote 菜单模式）            |
+| `pnpm dev:local`     | 启动开发服务器（切到 local 菜单模式，无接口可用） |
+| `pnpm build`         | 生产构建（含 type-check）                         |
+| `pnpm preview`       | 预览构建产物                                      |
+| `pnpm analyze`       | 生产构建 + 生成包体积分析报告（dist/stats.html）  |
+| `pnpm test`          | 运行单元测试（一次性）                            |
+| `pnpm test:watch`    | 单元测试 watch 模式                               |
+| `pnpm test:coverage` | 测试覆盖率报告                                    |
+| `pnpm test:ui`       | 单元测试 UI 模式                                  |
+| `pnpm type-check`    | TypeScript 类型检查                               |
+| `pnpm lint`          | ESLint 检查全项目                                 |
+| `pnpm lint:fix`      | ESLint 自动修复                                   |
+| `pnpm format`        | Prettier 格式化全项目                             |
 
 ### Mock 数据
 
-开发模式默认启用 vite-plugin-mock（`VITE_USE_MOCK=true`），内置 4 个 mock 模块：
+开发模式默认启用 vite-plugin-mock（`VITE_USE_MOCK=true`），内置 mock 模块：
 
 | 模块      | 接口                                                       | 默认账号       |
 | --------- | ---------------------------------------------------------- | -------------- |
 | auth      | `/api/auth/login`、`/api/auth/profile`、`/api/auth/logout` | admin / 123456 |
 | user      | `/api/user/list`、`/api/user/:id`                          | -              |
 | dashboard | `/api/dashboard/stats`                                     | -              |
+| menu      | `/api/menu`（远程菜单 JSON，详见 docs/07-路由模块设计.md） | -              |
 
 切换真实后端：修改 `.env.development` 中 `VITE_USE_MOCK=false` 并配置 `VITE_API_BASE_URL`。
+
+### 路由架构（自动注册）
+
+业务模块的路由**无需在 `src/router/` 任何文件中手动 import**——在 `src/modules/<feature>/routes/index.ts` 声明后，`auto-register.ts` 通过 Vite `import.meta.glob` 自动扫描并注册。
+
+新增业务模块的标准流程（5 步，**不改 router 目录**）：
+
+```ts
+// 1. 写视图组件 src/modules/order/views/List.vue
+// 2. 声明路由 src/modules/order/routes/index.ts
+const routes: RouteRecordRaw[] = [
+  {
+    path: '/order',
+    component: () => import('@/layouts/default/index.vue'),
+    children: [
+      {
+        path: 'list',
+        name: 'OrderList',
+        component: () => import('../views/List.vue'),
+        meta: { title: '订单管理', requiresAuth: true, permissions: ['order:view'] },
+      },
+    ],
+  },
+]
+// 3. router/types.ts 追加 RouteName
+// 4. router/component-registry.ts 追加同名映射
+// 5. 完成 —— 路由自动可用
+```
+
+> **默认菜单模式**：dev = `remote`（贴近生产，需 mock 接口），`pnpm dev:local` 切到 `local`（无需接口）。
+> **白名单**：跳过登录 + 权限校验，按**路由 name** 匹配（`router/whitelist.ts`）。
+>
+> 详见 `docs/07-路由模块设计.md`。
+
+### 样式管理（BEM + 双主题）
+
+- **BEM 命名规范**：Block = `gm-block`（或 `c-{name}`），Element = `__element`，Modifier = `--modifier`，State = `is-{state}`（运行时由 `is()` 生成）
+- **运行时工具**：`createNamespace('xxx')` 返回 `{ b, e, m, be, bm, em, bem, is }`，组件用 `const bem = createNamespace('header-bar')` + `:class="[bem.b(), bem.e('user')]"`
+- **编译期 mixin**：`@use '@/assets/styles/mixins/bem' as *` 在 SFC `<style lang="scss">` 中用 `@include b / e / m / is` 拼接
+- **双主题**：浅色 + 深色 + 跟随系统，切换 API `useTheme().toggleMode()`（Pinia store + localStorage 持久化）
+
+```vue
+<script setup lang="ts">
+import { useTheme } from '@composables/useTheme'
+const { isDark, toggleMode } = useTheme()
+</script>
+
+<template>
+  <button @click="toggleMode">{{ isDark ? '☀️' : '🌙' }}</button>
+</template>
+```
+
+> 详见 `docs/05-BEM样式规范.md` 与 `docs/06-主题管理规范.md`。
 
 ### 国际化
 
@@ -275,27 +346,27 @@ pnpm dev
 
 ### 常用脚本
 
-| 命令                | 用途                       |
-| ------------------- | -------------------------- |
-| `pnpm lint`         | ESLint 检查（不修改）      |
-| `pnpm lint:fix`     | ESLint 自动修复             |
-| `pnpm format`       | Prettier 自动格式化         |
-| `pnpm format:check` | Prettier 检查（CI 用）     |
+| 命令                | 用途                   |
+| ------------------- | ---------------------- |
+| `pnpm lint`         | ESLint 检查（不修改）  |
+| `pnpm lint:fix`     | ESLint 自动修复        |
+| `pnpm format`       | Prettier 自动格式化    |
+| `pnpm format:check` | Prettier 检查（CI 用） |
 
 ### 配置文件
 
-| 文件                  | 说明                                                          |
-| --------------------- | ------------------------------------------------------------- |
-| `eslint.config.mjs`   | ESLint flat config（Vue/TS/Prettier 三层组合）                |
-| `.prettierrc.json`    | Prettier 主配置（semi/singleQuote/printWidth 等）             |
-| `.prettierignore`     | Prettier 忽略文件（dist、node_modules、coverage、文档目录） |
+| 文件                | 说明                                                        |
+| ------------------- | ----------------------------------------------------------- |
+| `eslint.config.mjs` | ESLint flat config（Vue/TS/Prettier 三层组合）              |
+| `.prettierrc.json`  | Prettier 主配置（semi/singleQuote/printWidth 等）           |
+| `.prettierignore`   | Prettier 忽略文件（dist、node_modules、coverage、文档目录） |
 
 ### 项目级规则覆盖
 
-| 规则                                | 配置                              | 原因                                |
-| ----------------------------------- | --------------------------------- | ----------------------------------- |
-| `vue/multi-word-component-names`    | `off`                             | 保留 Header/Sidebar/Login 等简洁命名 |
-| `@typescript-eslint/no-unused-vars` | `varsIgnorePattern: '^_'`         | 允许 `_p` 等有意忽略的解构模式       |
+| 规则                                | 配置                      | 原因                                 |
+| ----------------------------------- | ------------------------- | ------------------------------------ |
+| `vue/multi-word-component-names`    | `off`                     | 保留 Header/Sidebar/Login 等简洁命名 |
+| `@typescript-eslint/no-unused-vars` | `varsIgnorePattern: '^_'` | 允许 `_p` 等有意忽略的解构模式       |
 
 ### Prettier 风格
 
@@ -307,10 +378,10 @@ pnpm dev
 
 ### 与 Husky 集成
 
-| Hook        | 命令             | 作用                         |
-| ----------- | ---------------- | ---------------------------- |
-| pre-commit  | `pnpm type-check` | 防止 TS 类型错误入库        |
-| pre-push    | `pnpm test`       | 防止测试不通过的代码推送    |
+| Hook       | 命令              | 作用                     |
+| ---------- | ----------------- | ------------------------ |
+| pre-commit | `pnpm type-check` | 防止 TS 类型错误入库     |
+| pre-push   | `pnpm test`       | 防止测试不通过的代码推送 |
 
 > 注：lint 未集成到 pre-commit，避免每次 commit 等待。开发期手动 `pnpm lint:fix`，CI 阶段跑 `pnpm lint`。
 
@@ -438,11 +509,30 @@ pnpm test:coverage     # 覆盖率报告（输出到 coverage/）
 
 ## 📚 相关文档
 
+### 项目规范
+
+| 文档             | 路径                                | 说明                                             |
+| ---------------- | ----------------------------------- | ------------------------------------------------ |
+| 工具兼容性踩坑   | `docs/01-工具兼容性问题踩坑记录.md` | npm/pnpm/Node 兼容性问题 + 解决方案              |
+| 代码质量工具链   | `docs/02-代码质量工具链.md`         | ESLint 10 + Prettier 3.9 + lint-staged 17        |
+| Git 工作流工具链 | `docs/03-Git工作流工具链.md`        | Husky + commitlint + cz-customizable             |
+| 构建与测试工具   | `docs/04-构建与测试工具.md`         | Vite 8 + Vitest 4 + UnoCSS 66 + alias 14 项      |
+| BEM 样式规范     | `docs/05-BEM样式规范.md`            | 命名约定 + 样式隔离三层防线 + mixin + 运行时工具 |
+| 主题管理规范     | `docs/06-主题管理规范.md`           | 双主题架构 + CSS 变量速查 + useTheme API         |
+| 路由模块设计     | `docs/07-路由模块设计.md`           | 自动注册 + 白名单 + 远程菜单 + 5 步新增流程      |
+
+### 设计 / 计划
+
 | 文档     | 路径                                                                |
 | -------- | ------------------------------------------------------------------- |
 | 设计文档 | `docs/superpowers/specs/2026-07-17-vue3-vite-ts-scaffold-design.md` |
 | 实施计划 | `docs/superpowers/plans/2026-07-17-vue3-vite-ts-scaffold.md`        |
-| 变更日志 | `CHANGELOG.md`                                                      |
+
+### 变更日志
+
+| 文档           | 路径       |
+| -------------- | ---------- |
+| `CHANGELOG.md` | 项目根目录 |
 
 ---
 

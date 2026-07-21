@@ -1,13 +1,14 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import authRoutes from './modules/auth'
-import dashboardRoutes from './modules/dashboard'
-import userRoutes from './modules/user'
-import errorRoutes from './modules/error'
+import { autoRegisteredRoutes } from './auto-register'
+import { fallbackRoute } from './fallback'
 import { setupAuthGuard } from './guards/auth'
 
+// 路由注册顺序：
+//   1. autoRegisteredRoutes：业务模块（src/modules/**/routes/index.ts），自动扫描
+//   2. fallbackRoute：catch-all 404 兜底（必须在最后，单独注册避免字典序问题）
 export const router = createRouter({
   history: createWebHistory(),
-  routes: [...authRoutes, ...dashboardRoutes, ...userRoutes, ...errorRoutes],
+  routes: [...autoRegisteredRoutes, fallbackRoute],
 })
 
 setupAuthGuard(router)
