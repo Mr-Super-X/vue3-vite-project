@@ -12,5 +12,5 @@ export const menuApi = {
   /**
    * 获取当前用户的可见菜单树（按角色权限过滤后）
    */
-  getMenu: () => request<RemoteMenuItem[]>({ url: '/api/menu', method: 'get' }),
+  getMenu: () => request<RemoteMenuItem[]>({ url: '/menu', method: 'get' }),
 }

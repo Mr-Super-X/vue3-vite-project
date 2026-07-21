@@ -15,10 +15,9 @@ export interface UserProfile {
 }
 
 export const authApi = {
-  login: (data: LoginPayload) =>
-    request<LoginResult>({ url: '/api/auth/login', method: 'post', data }),
+  login: (data: LoginPayload) => request<LoginResult>({ url: '/auth/login', method: 'post', data }),
 
-  fetchProfile: () => request<UserProfile>({ url: '/api/auth/profile', method: 'get' }),
+  fetchProfile: () => request<UserProfile>({ url: '/auth/profile', method: 'get' }),
 
-  logout: () => request<void>({ url: '/api/auth/logout', method: 'post' }),
+  logout: () => request<void>({ url: '/auth/logout', method: 'post' }),
 }

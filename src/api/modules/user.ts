@@ -17,15 +17,15 @@ export interface UserListParams {
 
 export const userApi = {
   getList: (params: UserListParams) =>
-    request<Pagination<UserItem>>({ url: '/api/user/list', method: 'get', params }),
+    request<Pagination<UserItem>>({ url: '/user/list', method: 'get', params }),
 
-  getById: (id: number) => request<UserItem>({ url: `/api/user/${id}`, method: 'get' }),
+  getById: (id: number) => request<UserItem>({ url: `/user/${id}`, method: 'get' }),
 
   create: (data: Omit<UserItem, 'id' | 'createdAt'>) =>
-    request<UserItem>({ url: '/api/user', method: 'post', data }),
+    request<UserItem>({ url: '/user', method: 'post', data }),
 
   update: (id: number, data: Partial<UserItem>) =>
-    request<UserItem>({ url: `/api/user/${id}`, method: 'put', data }),
+    request<UserItem>({ url: `/user/${id}`, method: 'put', data }),
 
-  remove: (id: number) => request<void>({ url: `/api/user/${id}`, method: 'delete' }),
+  remove: (id: number) => request<void>({ url: `/user/${id}`, method: 'delete' }),
 }

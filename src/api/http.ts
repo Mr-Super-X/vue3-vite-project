@@ -3,8 +3,12 @@ import { ElMessage } from 'element-plus'
 import { BusinessCode, HttpStatus } from '@/enums/httpEnum'
 import type { ApiResponse } from './types/api.d'
 
+// 单一来源：所有 API url 都不带 /api 前缀，由 baseURL 统一拼装。
+// 避免因 .env 或调用方误写双 /api 导致 404（如 /api/api/auth/login）。
+const API_BASE_URL = '/api'
+
 const instance: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  baseURL: API_BASE_URL,
   timeout: 15000,
 })
 
@@ -42,7 +46,7 @@ instance.interceptors.response.use(
               : '网络异常，请稍后重试'
     ElMessage.error(msg)
     return Promise.reject(error)
-  },
+  }
 )
 
 export function request<T>(config: AxiosRequestConfig): Promise<T> {
