@@ -5,10 +5,10 @@ import type { ApiResponse } from './types/api.d'
 
 // 单一来源：所有 API url 都不带 /api 前缀，由 baseURL 统一拼装。
 // 避免因 .env 或调用方误写双 /api 导致 404（如 /api/api/auth/login）。
-const API_BASE_URL = '/api'
+const getAPIBaseURL = () => import.meta.env.VITE_API_BASE_URL
 
 const instance: AxiosInstance = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: getAPIBaseURL(),
   timeout: 15000,
 })
 
