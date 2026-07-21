@@ -18,8 +18,13 @@ import Cookies from 'js-cookie'
  * 如需 cookie 形式 token。两套并存不冲突（key 不同：'token' vs `${APP_NAMESPACE}:token`）。
  */
 
-/** 应用命名空间（隔离多项目共用同一 storage 域） */
-const APP_NAMESPACE = import.meta.env.VITE_APP_TITLE || 'gm-portal-fe'
+/**
+ * 应用命名空间（隔离多项目共用同一 storage 域）
+ * 数据源：独立的 VITE_STORAGE_NAMESPACE（与展示用的 VITE_APP_TITLE 解耦），
+ * fallback 硬编码 'gm-portal-fe' 兜底。
+ * 配置示例（.env.development）：VITE_STORAGE_NAMESPACE=gm-portal-fe
+ */
+const APP_NAMESPACE = import.meta.env.VITE_STORAGE_NAMESPACE || 'gm-portal-fe'
 
 /** 给业务 key 加 namespace 前缀 */
 function setKey(key: string): string {

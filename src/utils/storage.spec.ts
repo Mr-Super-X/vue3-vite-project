@@ -2,9 +2,9 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Cookies from 'js-cookie'
 import { Local, Session, clearCookies } from './storage'
 
-// 测试期间 vitest 加载 .env.development，VITE_APP_TITLE 是真实应用名（"工贸统一登录门户"）。
-// 为避免硬编码，namespace 用 import.meta.env 动态拼接，与 storage.ts 实现同步。
-const APP_NAMESPACE = (import.meta.env.VITE_APP_TITLE || 'gm-portal-fe') + ':'
+// 测试期间 vitest 加载 .env.development，VITE_STORAGE_NAMESPACE 是配置的 storage
+// 隔离标识（如 'gm-portal-fe'）。fallback 'gm-portal-fe' 与 storage.ts 保持一致。
+const APP_NAMESPACE = (import.meta.env.VITE_STORAGE_NAMESPACE || 'gm-portal-fe') + ':'
 
 // 清理 storage 状态避免跨用例污染
 beforeEach(() => {
