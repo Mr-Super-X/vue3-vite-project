@@ -1,12 +1,14 @@
 import type { MockMethod } from 'vite-plugin-mock'
-import { delay } from './_utils'
 
+// 注意：mock response 必须是**同步函数**。
+// vite-plugin-mock 中间件用 JSON.stringify(...) 序列化返回值，
+// 若返回 Promise 会被序列化为 "{}"。需要延迟请用配置项 timeout（单位 ms）。
 export default [
   {
     url: '/api/auth/login',
     method: 'post',
-    response: async ({ body }: { body: { username: string; password: string } }) => {
-      await delay()
+    timeout: 200,
+    response: ({ body }: { body: { username: string; password: string } }) => {
       if (body.username === 'admin' && body.password === '123456') {
         return {
           code: 0,
@@ -20,13 +22,11 @@ export default [
   {
     url: '/api/auth/profile',
     method: 'get',
-    response: async () => {
-      await delay(100)
-      return {
-        code: 0,
-        message: 'ok',
-        data: { id: 1, name: 'Admin', permissions: ['dashboard:view', 'user:view', 'user:edit'] },
-      }
-    },
+    timeout: 100,
+    response: () => ({
+      code: 0,
+      message: 'ok',
+      data: { id: 1, name: 'Admin', permissions: ['dashboard:view', 'user:view', 'user:edit'] },
+    }),
   },
 ] as MockMethod[]

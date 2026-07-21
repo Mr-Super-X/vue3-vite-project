@@ -1,17 +1,15 @@
 import type { MockMethod } from 'vite-plugin-mock'
-import { delay } from './_utils'
 
+// 注意：mock response 必须是**同步函数**。详见 mock/auth.ts 顶部注释。
 export default [
   {
     url: '/api/dashboard/stats',
     method: 'get',
-    response: async () => {
-      await delay(200)
-      return {
-        code: 0,
-        message: 'ok',
-        data: { userCount: 128, onlineCount: 12, todayVisits: 256 },
-      }
-    },
+    timeout: 200,
+    response: () => ({
+      code: 0,
+      message: 'ok',
+      data: { userCount: 128, onlineCount: 12, todayVisits: 256 },
+    }),
   },
 ] as MockMethod[]
