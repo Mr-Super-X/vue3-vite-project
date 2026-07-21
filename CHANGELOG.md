@@ -82,6 +82,11 @@
   - `src/plugins/index.ts`：插件统一注册入口（export default install），与 directives/index.ts 同范式
   - `src/main.ts` 改用 `app.use(Plugins)`，删去散落的 `app.config.errorHandler` + `unhandledrejection` 监听代码（8 行 → 0 行）
   - 插件化后 main.ts 更整洁；错误处理逻辑集中化；为未来 Sentry/analytics 等扩展点提供清晰接入点
+- 加 `@plugins` alias（与 `@directives` 同范式）：
+  - `vite.config.ts` resolve.alias 加 `'@plugins': fileURLToPath(new URL('./src/plugins', ...))`，按字母序插在 `@modules` 之后
+  - `tsconfig.app.json` paths 同时加 `"@plugins/*": ["./src/plugins/*"]` 和 `"@plugins": ["./src/plugins/index.ts"]`（裸 alias 与 vite 一致）
+  - `src/main.ts` 改 `import Plugins from '@/plugins'` → `import Plugins from '@plugins'`，实际使用新 alias
+  - 顺带补全 `@directives` 裸 alias（之前只有 `@directives/*`），保持项目内 alias 一致性
 
 ## v1.0.0 - 2026-07-17
 

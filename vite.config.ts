@@ -75,6 +75,7 @@ export default defineConfig({
       '@layouts': fileURLToPath(new URL('./src/layouts', import.meta.url)),
       '@locales': fileURLToPath(new URL('./src/locales', import.meta.url)),
       '@modules': fileURLToPath(new URL('./src/modules', import.meta.url)),
+      '@plugins': fileURLToPath(new URL('./src/plugins', import.meta.url)),
       '@router': fileURLToPath(new URL('./src/router', import.meta.url)),
       '@store': fileURLToPath(new URL('./src/store', import.meta.url)),
       '@types': fileURLToPath(new URL('./src/types', import.meta.url)),
