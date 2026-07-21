@@ -2,7 +2,7 @@
 //
 // 设计要点：
 //   - 仅返回业务路由 name（不返回组件路径，避免泄露前端源码结构）
-//   - 由前端 src/router/component-registry.ts 维护 name → 组件的映射
+//   - 由前端 src/router/auto-register.ts 派生 COMPONENT_REGISTRY（name → 组件）
 //   - 后端按用户角色过滤可见菜单，前端无需再校验可见性
 
 import { request } from '../http'
