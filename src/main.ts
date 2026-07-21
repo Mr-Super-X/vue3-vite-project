@@ -6,6 +6,9 @@ import i18n from './locales'
 import { setupDirectives } from './directives'
 import GlobalComponents from '@/components'
 
+// 浏览器基线统一（必须在所有自定义样式之前）。
+// 详见 https://necolas.github.io/normalize.css/
+import 'normalize.css'
 import 'element-plus/dist/index.css'
 import 'virtual:uno.css'
 import '@/assets/styles/index.scss'
