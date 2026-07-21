@@ -4,6 +4,7 @@ import router from './router'
 import pinia from './store'
 import i18n from './locales'
 import { setupDirectives } from './directives'
+import GlobalComponents from '@/components'
 
 import 'element-plus/dist/index.css'
 import 'virtual:uno.css'
@@ -14,6 +15,7 @@ const app = createApp(App)
 app.use(pinia)
 app.use(router)
 app.use(i18n)
+app.use(GlobalComponents)
 setupDirectives(app)
 
 // 全局错误兜底
