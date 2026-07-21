@@ -3,8 +3,8 @@ import App from './App.vue'
 import router from './router'
 import pinia from './store'
 import i18n from './locales'
-import Directives from '@/directives'
-import GlobalComponents from '@/components'
+import Directives from '@directives'
+import GlobalComponents from '@components'
 import Plugins from '@plugins'
 
 // 浏览器基线统一（必须在所有自定义样式之前）。
