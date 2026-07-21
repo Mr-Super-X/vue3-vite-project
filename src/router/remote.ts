@@ -55,14 +55,28 @@ function convertItem(item: RemoteMenuItem): RouteRecordRaw | null {
     return null
   }
 
+  // 后端 hidden: true → 转换为前端约定的 meta.visible: false
+  // 守卫（guards/auth.ts）检查到 visible: false 时跳 /404，
+  // 实现"菜单不可见 → 路由不可访问"的双轨收紧。
+  let meta: RouteRecordRaw['meta'] | undefined
+  if (item.meta) {
+    if (item.meta.hidden) {
+      // 删除 hidden 字段，加 visible: false 标记
+      const { hidden: _hidden, ...rest } = item.meta
+      meta = { ...rest, visible: false }
+    } else {
+      meta = item.meta
+    }
+  }
+
   // 注意：tsconfig 启用了 exactOptionalPropertyTypes，
   // `meta?: RouteMeta` 与 `meta: RouteMeta | undefined` 不兼容。
-  // 用条件展开：仅在 item.meta 实际存在时才设置 meta 属性（不显式赋 undefined）。
+  // 用条件展开：仅在 meta 实际存在时才设置 meta 属性（不显式赋 undefined）。
   return {
     path: item.path,
     name: item.name,
     component: loader as RouteRecordRaw['component'],
-    ...(item.meta ? { meta: item.meta } : {}),
+    ...(meta ? { meta } : {}),
     ...(item.children ? { children: convertMenu(item.children) } : {}),
   } as RouteRecordRaw
 }

@@ -3,6 +3,8 @@
 // - whitelist.ts 用 RouteName 校验白名单拼写
 // - component-registry.ts 用 RouteName 校验 key 拼写
 // - 新增路由时必须在此追加，否则 TS 报错
+//
+// 校验脚本：scripts/check-routes.ts（pnpm check:routes）
 
 import type { RouteMeta } from 'vue-router'
 
@@ -25,10 +27,17 @@ export type RouteName =
  *   - name 是业务路由名，对应 component-registry 的 key（前端可校验）
  *   - 不返回 component 路径（避免泄露前端源码结构）
  *   - children 嵌套支持多级菜单
+ *   - hidden: true → 前端转换为 meta.visible: false（守卫拦截）
  */
 export interface RemoteMenuItem {
   name: RouteName
   path: string
-  meta?: RouteMeta
+  meta?: RouteMeta & {
+    /**
+     * 后端标记菜单是否隐藏。后端用 `hidden: true`（行业惯例），
+     * 前端转换为 `meta.visible: false`（统一内部约定）。
+     */
+    hidden?: boolean
+  }
   children?: RemoteMenuItem[]
 }

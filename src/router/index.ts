@@ -13,4 +13,19 @@ export const router = createRouter({
 
 setupAuthGuard(router)
 
+// 路由加载错误全局捕获
+// 触发场景：
+//   1. 动态 import 失败（语法错误、循环依赖、chunks 加载失败）
+//   2. 路由解析异常（如 component 字段无效）
+// 行为：跳 /500 错误页，避免用户看到空白屏
+router.onError((error) => {
+  console.error('[router] 路由加载失败:', error)
+  // 避免在 500 页面本身加载失败时无限递归
+  if (router.currentRoute.value.path !== '/500') {
+    router.push('/500').catch(() => {
+      console.error('[router] 跳 /500 也失败:', error)
+    })
+  }
+})
+
 export default router
