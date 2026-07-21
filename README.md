@@ -33,7 +33,10 @@
 | 路由         | Vue Router                  | ^5.1.0                              |
 | 国际化       | Vue I18n                    | ^11.4.6                             |
 | 网络层       | Axios                       | ^1.18.1                             |
+| 浏览器基线   | normalize.css               | ^8.0.1                              |
+| 日期工具     | dayjs                       | ^1.11.21                            |
 | API Mock     | vite-plugin-mock            | ^3.0.2                              |
+| Storage 工具 | js-cookie                   | ^3.0.8                              |
 | 测试框架     | Vitest                      | ^4.1.9 + @vue/test-utils + jsdom    |
 | Pinia 持久化 | pinia-plugin-persistedstate | ^4.7.1（仅 store 字段 pick 持久化） |
 
@@ -41,37 +44,54 @@
 
 ## 🏗️ 架构设计
 
-### 1. Feature-Sliced 风格
+### 1. Feature-Sliced 风格 + 模块化范式
 
 ```
-全局层（仅跨模块共享）        业务模块层（独立自治）
-├── store/modules/             ├── modules/auth/
-│   ├── app.ts  侧边栏/语言  │   ├── views/Login.vue
-│   └── user.ts token/权限    │   ├── components/
-├── api/http.ts                │   ├── store/index.ts
-├── components/common/          │   └── index.ts（对外接口）
-│   └── AsyncState 三态组件   │
-└── layouts/                  └── modules/user/
-                                └── modules/dashboard/
+全局层（跨模块共享）         业务模块层（独立自治）
+├── components/common/      ├── modules/auth/
+│   ├── AsyncState          │   ├── views/Login.vue
+│   ├── ErrorBoundary       │   ├── components/
+│   └── ...                 │   ├── store/
+├── directives/             │   └── routes/index.ts（自动注册）
+│   ├── _utils.ts            │
+│   ├── inputDebounce.*     └── modules/user/
+│   ├── buttonDebounce.*    └── modules/dashboard/
+│   ├── permission.*
+├── plugins/
+│   ├── errorHandler.*      ← Vue 插件（install 模式）
+│   └── index.ts            ← 统一注册入口
+├── utils/
+│   ├── storage.ts / dayjs.ts / bem.ts / _utils.ts
+│   └── ...
+├── store/modules/          ← 跨模块共享 Pinia
+│   ├── app.ts              ← 侧边栏/语言/全局 loading
+│   ├── user.ts             ← token/profile/权限
+│   ├── theme.ts            ← 主题模式（持久化）
+│   └── router.ts           ← 路由 UI 状态
+└── layouts/                ← 路由级布局（blank/default）
 ```
+
+> **模块化范式（v1.0.0+）**：`directives/` 与 `plugins/` 均采用 `export default { install(app) {...} }` 模式，每个模块独立 `.d.ts` 类型文件，`index.ts` 统一注册入口。main.ts 集中 `app.use()` 接入。详见 [`docs/08-模块化架构总览.md`](docs/08-模块化架构总览.md)。
 
 ### 2. 模块边界铁律（强制）
 
-| 层级                     | 允许引用                                      | 不允许引用         |
-| ------------------------ | --------------------------------------------- | ------------------ |
-| `modules/<m>/views`      | 本模块 components / composables / utils / api | 其他模块内部       |
-| `modules/<m>/components` | 本模块 views / composables / utils            | 其他模块           |
-| `modules/<m>/store`      | 本模块 api / types                            | 其他模块 store     |
-| `components/common`      | utils / enums / types                         | 任何 modules/ 内容 |
-| `store/modules`（全局）  | api / utils / enums                           | modules/ 内容      |
+| 层级                       | 允许引用                                      | 不允许引用         |
+| -------------------------- | --------------------------------------------- | ------------------ |
+| `modules/<m>/views`        | 本模块 components / composables / utils / api | 其他模块内部       |
+| `modules/<m>/components`   | 本模块 views / composables / utils            | 其他模块           |
+| `modules/<m>/store`        | 本模块 api / types                            | 其他模块 store     |
+| `components/common`        | utils / enums / types / store/modules         | 任何 modules/ 内容 |
+| `store/modules`（全局）    | api / utils / enums                           | modules/ 内容      |
+| `directives/` / `plugins/` | utils / enums / types / store/modules         | modules/ 内容      |
 
 > 模块间通信通过 `modules/<m>/index.ts` 暴露的对外接口，**禁止直接 import 内部文件**。
 
 ### 3. 状态管理分层
 
-- **全局 store/modules/**：仅跨模块共享（app 侧边栏/语言、user token/profile/权限）
+- **全局 store/modules/**：仅跨模块共享（app 侧边栏/语言、user token/profile/权限、theme 主题、router 路由状态）
 - **模块私有 store**：归 `modules/<m>/store/`，业务状态不污染全局
 - **Pinia Setup Store 风格**：更接近 composables 心智，便于复用
+- **持久化**：`pinia-plugin-persistedstate` 仅对 store 字段 `pick` 持久化（避免整体写 localStorage）
 
 ### 4. 防御性 UI 三态
 
@@ -85,11 +105,22 @@
 
 `useRequest` composable 自动提供 `{ data, loading, error, isEmpty, execute }` 三态封装。
 
-### 5. 错误处理全局兜底
+### 5. 错误处理全局兜底（plugins/errorHandler 插件）
 
-- HTTP 拦截器：401 跳转登录、403/404/500 错误页、500+ Toast
-- ErrorBoundary 组件：捕获子组件渲染错误
-- 全局 `unhandledrejection` 监听 Promise 拒绝
+- **统一接管 3 类错误**：Vue 组件错误 / window 全局 JS 错误 / 未捕获 Promise 拒绝
+- **dev/prod 智能**：`logToConsole` 默认 dev=true / prod=false
+- **Sentry 扩展点**：`report(error, { source, extra })` 回调，生产环境对接日志服务
+- **API 错误**（HTTP 状态码）：HTTP 拦截器仍负责（401 跳登录、403/404/500 错误页、500+ Toast）
+
+```ts
+// main.ts
+import Plugins from '@plugins'
+app.use(Plugins, {
+  errorHandler: {
+    report: (error, ctx) => Sentry.captureException(error, { tags: ctx }),
+  },
+})
+```
 
 ---
 
@@ -107,7 +138,7 @@ components/  ← Button.vue     modules/auth/
 views/      ← Login.vue        ├── views/Login.vue
 stores/     ← user.ts          ├── components/LoginForm.vue
 api/        ← auth.ts          ├── store/index.ts
-utils/      ← validate.ts      └── index.ts（对外接口）
+utils/      ← validate.ts      └── routes/index.ts（自动注册）
            ↑
          散落 4 处              ↑ 集中 1 处
 ```
@@ -130,33 +161,26 @@ utils/      ← validate.ts      └── index.ts（对外接口）
        ┌─────────────────────────┐
        │  components/common/      │  ← 通用组件
        │  api/  utils/  enums/    │
+       │  directives/  plugins/   │  ← 模块化基础设施
        └──────────┬──────────────┘
                   ↓
        ┌─────────────────────────┐
-       │  composables/  types/   │  ← 基础设施
+       │  composables/  types/   │  ← 框架无关基础设施
        └─────────────────────────┘
 ```
 
-**禁止规则**（已在 spec §5 强制）：
+**禁止规则**：
 
-- `components/common/` **不引用**任何 `modules/` 内容
+- `components/common/` / `directives/` / `plugins/` **不引用**任何 `modules/` 内容
 - `modules/<m>/` **不直接 import** 其他 `modules/<m>/` 内部
 - 模块间通信**只能**通过 `modules/<m>/index.ts` 暴露的对外接口
 
-**带来的好处**：
-
-- 重构一个模块不会引发连锁反应（边界已被切断）
-- Code Review 时违规引用一目了然
-- 替换实现时只需保证 `index.ts` 接口不变
-
 #### 3. 全局/模块双层状态管理
 
-| 层       | 路径                 | 放什么                                                         | 不放什么       |
-| -------- | -------------------- | -------------------------------------------------------------- | -------------- |
-| 全局     | `store/modules/`     | 跨模块共享：`app`（侧边栏/语言）、`user`（token/profile/权限） | 任何业务状态   |
-| 模块私有 | `modules/<m>/store/` | 业务状态：列表筛选、表单临时态、详情缓存                       | 跨模块共享数据 |
-
-**好处**：避免单个超大 store（"store 越长越难维护"），同时防止业务状态污染全局（命名冲突、误用）。
+| 层       | 路径                 | 放什么                                                                                                        | 不放什么       |
+| -------- | -------------------- | ------------------------------------------------------------------------------------------------------------- | -------------- |
+| 全局     | `store/modules/`     | 跨模块共享：`app`（侧边栏/语言）、`user`（token/profile/权限）、`theme`（主题模式）、`router`（路由 UI 状态） | 任何业务状态   |
+| 模块私有 | `modules/<m>/store/` | 业务状态：列表筛选、表单临时态、详情缓存                                                                      | 跨模块共享数据 |
 
 #### 4. 技术栈替换零侵入
 
@@ -168,6 +192,7 @@ utils/      ← validate.ts      └── index.ts（对外接口）
 | Element Plus → Ant Design Vue | `components/common/` + `main.ts` | 零（业务模块只用 `common/` 封装）           |
 | Axios → Fetch                 | `api/http.ts`                    | 零（业务模块只调 `api/modules/*.ts`）       |
 | UnoCSS → Tailwind             | `uno.config.ts` + 全局样式       | 零                                          |
+| v-inputDebounce 自定义实现    | `directives/_utils.ts`           | 零（业务模块只通过 v-inputDebounce 用）     |
 
 #### 5. 并行开发友好
 
@@ -177,10 +202,10 @@ utils/      ← validate.ts      └── index.ts（对外接口）
 
 #### 6. 测试边界清晰（与目录一一对应）
 
-- **工具级单测**：`utils/format.spec.ts`、`storage.spec.ts`
+- **工具级单测**：`utils/dayjs.spec.ts`、`utils/storage.spec.ts`
 - **Hook 测试**：`composables/useRequest.spec.ts`
 - **组件级单测**：`components/common/AsyncState.spec.ts`
-- **模块级集成测试**：未来可在 `modules/<m>/__tests__/` 添加
+- **集成测测**：`components/global-plugin.spec.ts`、`router/auto-register.spec.ts`
 
 ---
 
@@ -192,30 +217,46 @@ gm-portal-fe/
 │   ├── api/             # 网络层（http.ts + modules/）
 │   ├── assets/          # 静态资源（styles/、icons/）
 │   │   └── styles/      # 全局样式：reset / variables / theme / transition / element-overwrite / custom + mixins/
-│   ├── components/      # common/（无业务）+ layout/（布局）+ business/（跨模块）
-│   ├── composables/     # useRequest、useTable、useTheme
-│   ├── directives/      # v-permission（占位）
+│   ├── components/      # common/（通用无业务）+ layout/（布局）
+│   │   ├── common/      # AsyncState / ErrorBoundary
+│   │   ├── layout/      # Header / Sidebar
+│   │   └── index.ts     # install 模式自动注册 common/ 下的 .vue
+│   ├── composables/     # useRequest、useTheme
+│   ├── directives/      # 自定义指令（install 模式 + .d.ts 分离）
+│   │   ├── _utils.ts      # 通用 debounce + isFunction
+│   │   ├── inputDebounce.{ts,d.ts}    # v-inputDebounce 输入防抖
+│   │   ├── buttonDebounce.{ts,d.ts}   # v-buttonDebounce 点击防抖
+│   │   ├── permission.{ts,d.ts}       # v-permission 权限
+│   │   └── index.ts      # install 模式统一注册
 │   ├── enums/           # httpEnum、roleEnum
 │   ├── layouts/         # default/ + blank/
 │   ├── locales/         # zh-CN、en-US
 │   ├── modules/         # auth、user、dashboard、error
 │   │                    # 每个模块含 views/ + store/ + components/ + routes/index.ts（自动注册）
+│   ├── plugins/         # Vue 插件（install 模式 + .d.ts 分离）
+│   │   ├── errorHandler.{ts,d.ts}    # 全局错误处理
+│   │   └── index.ts      # 统一注册入口（PluginsOptions 聚合）
 │   ├── router/          # 自动注册 + 白名单 + 远程菜单 + 守卫
 │   │   ├── index.ts                  # 入口：autoRegisteredRoutes + fallbackRoute
-│   │   ├── auto-register.ts          # import.meta.glob 扫描 src/modules/**/routes/index.ts
+│   │   ├── auto-register.ts          # import.meta.glob 扫描 + COMPONENT_REGISTRY 派生
 │   │   ├── fallback.ts               # catch-all 404（单独注册保证最后）
 │   │   ├── config.ts                 # 菜单模式（local/remote，默认 remote）
 │   │   ├── whitelist.ts              # 路由 name 白名单
 │   │   ├── types.ts                  # RouteName 联合类型 + RemoteMenuItem 协议
-│   │   ├── component-registry.ts     # 路由 name → 视图组件映射
 │   │   ├── remote.ts                 # 远程菜单加载 + JSON → RouteRecordRaw 转换
 │   │   └── guards/auth.ts            # 白名单 + 登录态 + 远程加载 + 权限校验
-│   ├── store/           # 全局：app、user、theme（含持久化）
+│   ├── store/           # 全局：app、user、theme（含持久化）、router
 │   ├── types/           # global、env、auto-imports、components
-│   ├── utils/           # format、storage、validate、bem（BEM 运行时工具）
+│   ├── utils/           # 通用工具（纯函数 + Vitest 单测）
+│   │   ├── storage.{ts,spec.ts}      # Local/Session/clearCookies（命名空间隔离）
+│   │   ├── dayjs.{ts,spec.ts}        # 5 个工具函数（formatDate/formatRelative/...）
+│   │   ├── bem.ts                    # createNamespace 运行时 BEM 工具
+│   │   └── _internal/naming.ts       # mixin 名称规则
 │   └── App.vue / main.ts
-├── mock/                # vite-plugin-mock 数据（含 menu 远程菜单）
-├── docs/                # 项目规范文档（05-07 见 §📚 相关文档）
+├── mock/                # vite-plugin-mock 数据
+│   ├── auth.ts / user.ts / dashboard.ts  # 接口 mock
+│   └── index.ts          # 聚合导出（vite-plugin-mock 自动扫描）
+├── docs/                # 项目规范文档
 └── 配置文件             # vite.config.ts / tsconfig*.json / uno.config.ts / vitest.config.ts
 ```
 
@@ -240,29 +281,33 @@ cd gm-portal-fe
 # 2. 安装依赖
 pnpm install
 
-# 3. 启动开发服务器（默认 http://localhost:5173/）
+# 3. 启动开发服务器（默认 http://localhost:5173/，remote 菜单模式）
 pnpm dev
+# 或切到 local 模式（无需接口）
+pnpm dev:local
 ```
 
 启动后访问 `http://localhost:5173/login`，输入默认账号 **admin / 123456** 登录。
 
 ### 常用脚本
 
-| 命令                 | 用途                                              |
-| -------------------- | ------------------------------------------------- |
-| `pnpm dev`           | 启动开发服务器（默认 remote 菜单模式）            |
-| `pnpm dev:local`     | 启动开发服务器（切到 local 菜单模式，无接口可用） |
-| `pnpm build`         | 生产构建（含 type-check）                         |
-| `pnpm preview`       | 预览构建产物                                      |
-| `pnpm analyze`       | 生产构建 + 生成包体积分析报告（dist/stats.html）  |
-| `pnpm test`          | 运行单元测试（一次性）                            |
-| `pnpm test:watch`    | 单元测试 watch 模式                               |
-| `pnpm test:coverage` | 测试覆盖率报告                                    |
-| `pnpm test:ui`       | 单元测试 UI 模式                                  |
-| `pnpm type-check`    | TypeScript 类型检查                               |
-| `pnpm lint`          | ESLint 检查全项目                                 |
-| `pnpm lint:fix`      | ESLint 自动修复                                   |
-| `pnpm format`        | Prettier 格式化全项目                             |
+| 命令                   | 用途                                               |
+| ---------------------- | -------------------------------------------------- |
+| `pnpm dev`             | 启动开发服务器（默认 remote 菜单模式）             |
+| `pnpm dev:local`       | 启动开发服务器（切到 local 菜单模式，无接口可用）  |
+| `pnpm build`           | 生产构建（含 type-check:full）                     |
+| `pnpm preview`         | 预览构建产物                                       |
+| `pnpm analyze`         | 生产构建 + 生成包体积分析报告（dist/stats.html）   |
+| `pnpm test`            | 运行单元测试（一次性）                             |
+| `pnpm test:watch`      | 单元测试 watch 模式                                |
+| `pnpm test:coverage`   | 测试覆盖率报告                                     |
+| `pnpm test:ui`         | 单元测试 UI 模式                                   |
+| `pnpm type-check`      | TypeScript 类型检查（增量，husky pre-commit 用）   |
+| `pnpm type-check:full` | TypeScript 类型检查（强制重建 .tsbuildinfo 缓存）  |
+| `pnpm check:routes`    | 校验 RouteName/component-registry/whitelist 一致性 |
+| `pnpm lint`            | ESLint 检查全项目                                  |
+| `pnpm lint:fix`        | ESLint 自动修复                                    |
+| `pnpm format`          | Prettier 格式化全项目                              |
 
 ### Mock 数据
 
@@ -273,7 +318,8 @@ pnpm dev
 | auth      | `/api/auth/login`、`/api/auth/profile`、`/api/auth/logout` | admin / 123456 |
 | user      | `/api/user/list`、`/api/user/:id`                          | -              |
 | dashboard | `/api/dashboard/stats`                                     | -              |
-| menu      | `/api/menu`（远程菜单 JSON，详见 docs/07-路由模块设计.md） | -              |
+
+> `/api/menu`（远程菜单）在 remote 模式下由守卫调用，未提供 mock 时返回空数组回退到 local 模式。如需完整 remote 模式调试，可在 `mock/` 下加 `menu.ts` 补充 mock。
 
 切换真实后端：修改 `.env.development` 中 `VITE_USE_MOCK=false` 并配置 `VITE_API_BASE_URL`。
 
@@ -281,7 +327,7 @@ pnpm dev
 
 业务模块的路由**无需在 `src/router/` 任何文件中手动 import**——在 `src/modules/<feature>/routes/index.ts` 声明后，`auto-register.ts` 通过 Vite `import.meta.glob` 自动扫描并注册。
 
-新增业务模块的标准流程（5 步，**不改 router 目录**）：
+新增业务模块的标准流程（**3 步，无需改 router 目录**）：
 
 ```ts
 // 1. 写视图组件 src/modules/order/views/List.vue
@@ -300,13 +346,13 @@ const routes: RouteRecordRaw[] = [
     ],
   },
 ]
-// 3. router/types.ts 追加 RouteName
-// 4. router/component-registry.ts 追加同名映射
-// 5. 完成 —— 路由自动可用
+// 3. 在 router/types.ts 追加 RouteName 联合类型条目
+// 完成 —— 路由自动可用，remote 模式自动可用（component 由 auto-register 派生）
 ```
 
 > **默认菜单模式**：dev = `remote`（贴近生产，需 mock 接口），`pnpm dev:local` 切到 `local`（无需接口）。
 > **白名单**：跳过登录 + 权限校验，按**路由 name** 匹配（`router/whitelist.ts`）。
+> **COMPONENT_REGISTRY**：从 `autoRegisteredRoutes` 递归提取 `(name, component)` 派生，remote 模式按 name 查找组件 loader。新增路由无需在多处同步。
 >
 > 详见 `docs/07-路由模块设计.md`。
 
@@ -333,6 +379,43 @@ const { isDark, toggleMode } = useTheme()
 ### 国际化
 
 当前支持 `zh-CN`（默认）和 `en-US`，切换通过 `useAppStore().setLocale()`。
+
+### 模块化范式（directives / plugins）
+
+新增自定义指令：
+
+```ts
+// src/directives/xxx.d.ts
+export type ElHTMLElement = HTMLElement
+export interface XxxBinding { value: (...args: unknown[]) => void; arg?: string }
+
+// src/directives/xxx.ts
+export default {
+  install(app: App) {
+    app.directive<ElHTMLElement, XxxBinding['value']>('xxx', {
+      mounted(el, binding) { ... }
+    })
+  }
+}
+
+// src/directives/index.ts
+import xxx from './xxx'
+const install = (app: App) => app.use(xxx)
+export default install
+```
+
+新增全局插件同形（参考 `src/plugins/errorHandler.ts`）。
+
+main.ts 集中接入：
+
+```ts
+import Directives from '@directives'
+import Plugins from '@plugins'
+app.use(Directives)
+app.use(Plugins, { errorHandler: { report: ... } })
+```
+
+> 详见 [`docs/08-模块化架构总览.md`](docs/08-模块化架构总览.md)。
 
 ---
 
@@ -378,12 +461,14 @@ const { isDark, toggleMode } = useTheme()
 
 ### 与 Husky 集成
 
-| Hook       | 命令              | 作用                     |
-| ---------- | ----------------- | ------------------------ |
-| pre-commit | `pnpm type-check` | 防止 TS 类型错误入库     |
-| pre-push   | `pnpm test`       | 防止测试不通过的代码推送 |
+| Hook       | 命令                   | 作用                       |
+| ---------- | ---------------------- | -------------------------- |
+| pre-commit | `pnpm type-check`      | 防止 TS 类型错误入库       |
+| pre-commit | `pnpm type-check:full` | （build 时）强制重建缓存   |
+| pre-commit | lint-staged            | prettier + eslint 自动修复 |
+| pre-push   | `pnpm test`            | 防止测试不通过的代码推送   |
 
-> 注：lint 未集成到 pre-commit，避免每次 commit 等待。开发期手动 `pnpm lint:fix`，CI 阶段跑 `pnpm lint`。
+> 注：lint 未集成到 pre-commit 的**全量检查**（避免每次 commit 等待），开发期手动 `pnpm lint:fix`，CI 阶段跑 `pnpm lint`。
 
 ---
 
@@ -399,11 +484,15 @@ pnpm build
 
 ### 环境变量
 
-| 变量                | 说明                           | 默认值           |
-| ------------------- | ------------------------------ | ---------------- |
-| `VITE_APP_TITLE`    | 应用标题                       | 工贸统一登录门户 |
-| `VITE_API_BASE_URL` | API 基础 URL                   | `/api`           |
-| `VITE_USE_MOCK`     | 是否启用 Mock（dev 默认 true） | `false`          |
+| 变量                     | 说明                                                  | 默认值           |
+| ------------------------ | ----------------------------------------------------- | ---------------- |
+| `VITE_APP_TITLE`         | 应用标题（浏览器 tab / login 欢迎语）                 | 工贸统一登录门户 |
+| `VITE_API_BASE_URL`      | API 基础 URL（baseURL，前缀统一管理）                 | `/api`           |
+| `VITE_USE_MOCK`          | 是否启用 Mock（dev 默认 true）                        | `false`          |
+| `VITE_MENU_SOURCE`       | 菜单加载模式（`local` / `remote`，dev 默认 `remote`） | `remote`         |
+| `VITE_STORAGE_NAMESPACE` | storage 命名空间（隔离多项目共用 localStorage）       | `gm-portal-fe`   |
+
+> 环境变量读取：项目内显式通过 `import.meta.env.VITE_XXX` 访问。`baseURL` / `storage namespace` 单一来源在 `src/api/http.ts` 和 `src/utils/storage.ts`，不在各业务模块分散。
 
 ### Nginx 配置示例
 
@@ -499,9 +588,10 @@ pnpm test:coverage     # 覆盖率报告（输出到 coverage/）
 
 测试文件与源码同级（`foo.ts` 对应 `foo.spec.ts`），覆盖：
 
-- `utils/` — format、storage、validate
+- `utils/` — dayjs、storage、bem
 - `composables/` — useRequest
 - `components/common/` — AsyncState
+- `components/`（自动注册） — global-plugin
 
 覆盖率阈值：lines/functions 70%，branches 60%（脚手架阶段宽松，业务阶段建议提到 80%）。
 
@@ -511,15 +601,16 @@ pnpm test:coverage     # 覆盖率报告（输出到 coverage/）
 
 ### 项目规范
 
-| 文档             | 路径                                | 说明                                             |
-| ---------------- | ----------------------------------- | ------------------------------------------------ |
-| 工具兼容性踩坑   | `docs/01-工具兼容性问题踩坑记录.md` | npm/pnpm/Node 兼容性问题 + 解决方案              |
-| 代码质量工具链   | `docs/02-代码质量工具链.md`         | ESLint 10 + Prettier 3.9 + lint-staged 17        |
-| Git 工作流工具链 | `docs/03-Git工作流工具链.md`        | Husky + commitlint + cz-customizable             |
-| 构建与测试工具   | `docs/04-构建与测试工具.md`         | Vite 8 + Vitest 4 + UnoCSS 66 + alias 14 项      |
-| BEM 样式规范     | `docs/05-BEM样式规范.md`            | 命名约定 + 样式隔离三层防线 + mixin + 运行时工具 |
-| 主题管理规范     | `docs/06-主题管理规范.md`           | 双主题架构 + CSS 变量速查 + useTheme API         |
-| 路由模块设计     | `docs/07-路由模块设计.md`           | 自动注册 + 白名单 + 远程菜单 + 5 步新增流程      |
+| 文档               | 路径                                | 说明                                                          |
+| ------------------ | ----------------------------------- | ------------------------------------------------------------- |
+| 工具兼容性踩坑     | `docs/01-工具兼容性问题踩坑记录.md` | npm/pnpm/Node 兼容性问题 + 解决方案                           |
+| 代码质量工具链     | `docs/02-代码质量工具链.md`         | ESLint 10 + Prettier 3.9 + lint-staged 17                     |
+| Git 工作流工具链   | `docs/03-Git工作流工具链.md`        | Husky + commitlint + cz-customizable                          |
+| 构建与测试工具     | `docs/04-构建与测试工具.md`         | Vite 8 + Vitest 4 + UnoCSS 66 + alias 系统                    |
+| BEM 样式规范       | `docs/05-BEM样式规范.md`            | 命名约定 + 样式隔离三层防线 + mixin + 运行时工具              |
+| 主题管理规范       | `docs/06-主题管理规范.md`           | 双主题架构 + CSS 变量速查 + useTheme API                      |
+| 路由模块设计       | `docs/07-路由模块设计.md`           | 自动注册 + 白名单 + 远程菜单 + 3 步新增流程                   |
+| **模块化架构总览** | `docs/08-模块化架构总览.md`         | 4 块公共范式（directives/plugins/components/utils）+ 扩展流程 |
 
 ### 设计 / 计划
 
