@@ -1,30 +1,22 @@
 import type { App } from 'vue'
+import { debounce, isFunction } from './_utils'
+import type { ElHTMLElement, ButtonDebounceBinding } from './buttonDebounce.d'
 
 /**
- * v-buttonDebounce="onClick"         默认 500ms 节流（防止重复点击）
+ * v-buttonDebounce="onClick"        默认 500ms 防抖
  * v-buttonDebounce:1000="onClick"    自定义 1000ms
  *
- * 实现：click 事件触发时若距上次调用 < delay 则阻止 + 不调用 handler。
- * 与 v-inputDebounce 的区别：input 是 trailing edge 防抖（最后次生效），
- * button 是 leading edge 节流（首次生效，后续丢弃）。
+ * 实现：trailing edge 防抖（点击后延迟 500ms 才真正调用 handler，期间重复点击会重置计时）。
+ * 与 inputDebounce 共用 _utils.debounce 工具，保证项目内行为一致。
  */
 export default {
   install(app: App) {
-    app.directive<HTMLElement, (e: Event) => void>('buttonDebounce', {
+    app.directive<ElHTMLElement, ButtonDebounceBinding['value']>('buttonDebounce', {
       mounted(el, binding) {
         const delay = Number(binding.arg) || 500
-        let lastInvoke = -Infinity
-
-        el.addEventListener('click', (e: Event) => {
-          const now = Date.now()
-          if (now - lastInvoke < delay) {
-            e.stopImmediatePropagation()
-            e.preventDefault()
-            return
-          }
-          lastInvoke = now
-          binding.value?.(e)
-        })
+        if (!isFunction(binding.value)) return
+        // debounce 工厂返回的事件处理函数：throttles click events
+        el.addEventListener('click', debounce(binding.value, delay))
       },
     })
   },
