@@ -10,10 +10,11 @@
 
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios'
 import { ElMessage } from 'element-plus'
-import { BusinessCode, HttpStatus } from '@/enums/httpEnum'
+import { BusinessCode } from '@/enums/httpEnum'
 import { Session, clearCookies } from '@/utils/storage'
 import type { ApiResponse } from './types/api.d'
 import { ApiError } from './types/error'
+import { resolveHttpStatusMessage } from './http-errors'
 
 const getAPIBaseURL = () => import.meta.env.VITE_API_BASE_URL
 
@@ -68,16 +69,7 @@ const onResponseRejected = (error: {
   message?: string
 }): never => {
   const status = error.response?.status
-  const message =
-    status === HttpStatus.UNAUTHORIZED
-      ? '请先登录'
-      : status === HttpStatus.FORBIDDEN
-        ? '无权限访问'
-        : status === HttpStatus.NOT_FOUND
-          ? '资源不存在'
-          : status === HttpStatus.SERVER_ERROR
-            ? '服务器错误'
-            : '网络异常，请稍后重试'
+  const message = resolveHttpStatusMessage(status)
   ElMessage.error(message)
   throw new ApiError({
     code: status ?? -1,
