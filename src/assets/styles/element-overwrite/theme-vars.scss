@@ -10,7 +10,7 @@
 // （依赖 variables.scss 的 $color-* SCSS 变量做编译期计算）
 
 @use 'sass:color';
-@use './variables' as *;
+@use '../variables' as *;
 
 // 灯色阶 mixin（集中管理，避免 5 色 × 5 阶 重复）
 // light-3/5/7/8/9 对应：30%/50%/70%/80%/90% 混入白色
