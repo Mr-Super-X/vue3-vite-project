@@ -251,10 +251,12 @@ gm-portal-fe/
 │   │   ├── storage.{ts,spec.ts}      # Local/Session/clearCookies（命名空间隔离）
 │   │   ├── dayjs.{ts,spec.ts}        # 5 个工具函数（formatDate/formatRelative/...）
 │   │   ├── bem.ts                    # createNamespace 运行时 BEM 工具
-│   │   └── _internal/naming.ts       # mixin 名称规则
+│   │   ├── format.ts / validate.ts / safeAsync.ts / consoleBadge.ts / autoImport.ts
+│   │   └── _utils/*                   # （内部工具，按需放）
+│   │       └── （注意：`src/components/common/_internal/naming.ts` 是组件命名工具，仅 components 模块内部使用）
 │   └── App.vue / main.ts
 ├── mock/                # vite-plugin-mock 数据
-│   ├── auth.ts / user.ts / dashboard.ts  # 接口 mock
+│   ├── auth.ts / user.ts / dashboard.ts / menu.ts  # 接口 mock
 │   └── index.ts          # 聚合导出（vite-plugin-mock 自动扫描）
 ├── docs/                # 项目规范文档
 └── 配置文件             # vite.config.ts / tsconfig*.json / uno.config.ts / vitest.config.ts
@@ -318,8 +320,9 @@ pnpm dev:local
 | auth      | `/api/auth/login`、`/api/auth/profile`、`/api/auth/logout` | admin / 123456 |
 | user      | `/api/user/list`、`/api/user/:id`                          | -              |
 | dashboard | `/api/dashboard/stats`                                     | -              |
+| menu      | `/api/menu`（返回 Dashboard + UserList 两条）              | -              |
 
-> `/api/menu`（远程菜单）在 remote 模式下由守卫调用，未提供 mock 时返回空数组回退到 local 模式。如需完整 remote 模式调试，可在 `mock/` 下加 `menu.ts` 补充 mock。
+> `/api/menu`（远程菜单）在 remote 模式下由守卫调用。已内置 mock（Dashboard + UserList），无需额外配置即可跑通端到端流程。
 
 切换真实后端：修改 `.env.development` 中 `VITE_USE_MOCK=false` 并配置 `VITE_API_BASE_URL`。
 
@@ -455,7 +458,7 @@ app.use(Plugins, { errorHandler: { report: ... } })
 
 - `semi: false`（无分号）
 - `singleQuote: true`（单引号）
-- `trailingComma: "all"`（所有可能的位置加尾逗号）
+- `trailingComma: "es5"`（兼容 ES5 的位置加尾逗号）
 - `printWidth: 100`（每行最多 100 字符）
 - `vueIndentScriptAndStyle: false`（Vue 的 `<script>` 和 `<style>` 不缩进）
 

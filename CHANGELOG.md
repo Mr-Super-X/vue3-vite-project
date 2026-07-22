@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Changed
+
+- 文档清扫（docs cleanup）：
+  - **README.md**：(1) Prettier 风格表 `trailingComma` 由 `"all"` 改为实际值 `"es5"`；(2) Mock 数据表加 `menu` 模块（`/api/menu`，remote 模式守卫依赖项）；(3) 目录树中 `src/utils/` 补全 `format / validate / safeAsync / consoleBadge / autoImport` 五个工具模块；(4) 移除错误归属 `src/utils/_internal/naming.ts`（实际位于 `src/components/common/_internal/naming.ts`，是 components 内部工具），改为跨模块位置说明
+  - **docs/04-构建与测试工具.md**：(1) `vite.config.ts` 配置示例重写为当前真实版本——`alias` 改用 `SRC_DIR_ALIASES` 常量 + `resolveSrcDirAliases()` 函数抽象；`manualChunks` 从 if 链重构为顶部 `vendorChunks` 配置数组 + 遍历模式（与 CHANGELOG 早期重构对齐）；同时含 `treeshake: true` / `silenceDeprecations: ['new-global']` / `visualizer` 实际启用分支；(2) `tsconfig.app.json` 路径展示从单条 `"@/*"` 扩展为 14 对双映射（含裸 alias + glob）；(3) `uno.config.ts` 移除已删除的 `flex-center` / `flex-between` shortcuts（已迁移到 `custom.scss`）；(4) Vitest 版本 `^4.1.10` 修正为 `^4.1.9`；(5) 测试清单从"6 个文件"扩展为"25+ 文件 / 87 用例"清单（含 14 个新 api spec 等）
+  - **docs/05-BEM样式规范.md**：文件组织段重写为当前真实目录树（`variables.css` → `variables.scss`，补 `theme.scss` / `transition.scss` / `element-overwrite.scss` / `custom.scss` / `mixins/{bem,transitions,responsive}.scss`）；`UserCard.vue` 示例路径从虚构的 `src/components/user/` 改为实际可用的 `src/modules/user/components/` 或 `src/components/common/`
+  - **docs/07-路由模块设计.md**：(1) 架构图删除已删除的 `src/router/component-registry.ts` 行，明确 `auto-register.ts` 同时承担"自动注册 + COMPONENT_REGISTRY 派生"两个职责；(2) "📦 组件注册表"整段重写——把"`component-registry.ts` 文件 + Record<RouteName,...>"示例替换为"`auto-register.ts` 从 `autoRegisteredRoutes` 递归派生 `Record<string,...>`"实际实现，并给出旧版已删除的说明；(3) 底部源码清单同步删除 `component-registry.ts` 引用
+  - **docs/08-模块化架构总览.md**：目录树 `src/utils/` 描述补全（加 `format / validate / safeAsync / consoleBadge / autoImport`）；新增 `src/components/common/_internal/` 内部目录说明（修正确认 `_internal/naming.ts` 的归属）
+  - **docs/02-代码质量工具链.md**：`eslint.config.mjs` ignores 列表补全实际生效的 `'**/scripts/**/*.cjs'` 项
+
 ### Added
 
 - 新增 `src/api/global-abort.ts`：`GlobalAbortController` 单例 + `chainSignals(...signals)` 合并工具（无信号返回占位 / 单个透传 / 多个 `AbortSignal.any()`），用于 logout 时统一取消所有在途请求

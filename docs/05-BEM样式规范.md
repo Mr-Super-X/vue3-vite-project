@@ -106,7 +106,7 @@
 ### 完整使用示例
 
 ```vue
-<!-- src/components/user/UserCard.vue -->
+<!-- src/modules/user/components/UserCard.vue 或 src/components/common/UserCard.vue -->
 <script setup lang="ts">
 interface Props {
   featured?: boolean
@@ -235,14 +235,23 @@ defineProps<Props>()
 
 ```
 src/assets/styles/
-├── index.scss              # 入口：按顺序 @use reset/variables
-├── reset.css               # CSS Reset
-├── variables.css           # CSS 变量（颜色/间距/圆角/尺寸）
+├── index.scss              # 入口：按顺序 @use reset/variables/theme/transition/element-overwrite/custom
+├── reset.css               # 浏览器基线重置（normalize.css 替代）+ 全局滚动条样式
+├── variables.scss          # 主题无关变量（品牌色 / 间距 / 圆角 / 字号 / 字重 / 行高 / 阴影 / z-index / 动画时长 / 缓动）
+├── theme.scss              # 主题感知变量（背景 / 文字 / 边框，light + dark 双主题）
+├── transition.scss         # 全局过渡动画（5 个 @keyframes + 3 个过渡工具类 + reduced-motion 适配）
+├── element-overwrite.scss  # Element Plus 5 个主色 × 5 个灯色阶 = 25 个 CSS 变量覆盖
+├── custom.scss             # 复合场景工具类（.gm-flex-center / .gm-flex-between / .gm-ellipsis-* 等）
 └── mixins/
-    └── bem.scss            # BEM mixin（编程式 BEM 工具）
+    ├── bem.scss            # BEM 编程式 mixin（编译期拼接）
+    ├── transitions.scss    # 过渡 mixin（3 个）
+    └── responsive.scss     # 响应式断点 mixin（gm-responsive / gm-responsive-down）
 
-src/components/<group>/<Name>.vue
-└── <style lang="scss" scoped>  # 组件作用域样式（使用 @use 引入 bem mixin）
+src/components/
+├── common/<Name>.vue       # 通用组件（自动注册为全局组件）
+└── layout/<Name>.vue       # 路由级布局组件
+
+components/*.vue 内 <style lang="scss" scoped>  # 组件作用域样式（@use bem/transitions 等 mixin）
 ```
 
 ### 规则
