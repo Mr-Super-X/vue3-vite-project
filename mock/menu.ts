@@ -13,7 +13,7 @@ export default [
     method: 'get',
     timeout: 200,
     response: () => ({
-      code: 0,
+      code: 200,
       message: 'ok',
       data: [
         { name: 'Dashboard', path: '/dashboard' },

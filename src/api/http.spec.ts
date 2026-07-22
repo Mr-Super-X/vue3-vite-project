@@ -146,15 +146,34 @@ describe('http.ts 拦截器契约', () => {
   })
 
   describe('响应拦截器 — 业务码', () => {
-    it('code === SUCCESS 时透传响应（解包下沉到 request<T>）', () => {
+    it('HTTP 200 + 业务码 200 时透传响应', () => {
       const handler = getResponseHandler()
       const response = {
+        status: 200,
         data: { code: BusinessCode.SUCCESS, message: 'ok', data: { id: 1 } },
         config: { url: '/x' },
       }
       const result = handler.onFulfilled(response as AxiosResponse<ApiResponse<unknown>>)
-      // 拦截器不再解包，直接返回原响应
       expect(result).toBe(response)
+    })
+
+    it('HTTP 非 200（如 201）即使业务码 200 也视为失败', () => {
+      const handler = getResponseHandler()
+      let captured: unknown
+      try {
+        handler.onFulfilled({
+          status: 201,
+          data: { code: BusinessCode.SUCCESS, message: 'created', data: { id: 1 } },
+          config: { url: '/x' },
+        } as AxiosResponse<ApiResponse<unknown>>)
+      } catch (e) {
+        captured = e
+      }
+      expect(isApiError(captured)).toBe(true)
+      if (isApiError(captured)) {
+        expect(captured.message).toBe('created')
+        expect(captured.code).toBe(BusinessCode.SUCCESS)
+      }
     })
 
     it('业务码 UNAUTHORIZED 时清 token + 跳登录 + 抛 ApiError', () => {
@@ -168,6 +187,7 @@ describe('http.ts 拦截器契约', () => {
       let captured: unknown
       try {
         handler.onFulfilled({
+          status: 200,
           data: { code: BusinessCode.UNAUTHORIZED, message: 'expired', data: null },
           config: { url: '/x' },
         } as AxiosResponse<ApiResponse<unknown>>)
@@ -189,6 +209,7 @@ describe('http.ts 拦截器契约', () => {
       let captured: unknown
       try {
         handler.onFulfilled({
+          status: 200,
           data: { code: 5001, message: '业务异常', data: null },
           config: { url: '/x' },
         } as AxiosResponse<ApiResponse<unknown>>)

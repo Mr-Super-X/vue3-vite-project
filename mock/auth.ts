@@ -11,7 +11,7 @@ export default [
     response: ({ body }: { body: { username: string; password: string } }) => {
       if (body.username === 'admin' && body.password === '123456') {
         return {
-          code: 0,
+          code: 200,
           message: 'ok',
           data: { token: 'mock-jwt-' + Date.now(), profile: { id: 1, name: 'Admin' } },
         }
@@ -24,7 +24,7 @@ export default [
     method: 'get',
     timeout: 100,
     response: () => ({
-      code: 0,
+      code: 200,
       message: 'ok',
       data: { id: 1, name: 'Admin', permissions: ['dashboard:view', 'user:view', 'user:edit'] },
     }),
@@ -33,6 +33,6 @@ export default [
     url: '/api/auth/logout',
     method: 'post',
     timeout: 100,
-    response: () => ({ code: 0, message: 'ok', data: null }),
+    response: () => ({ code: 200, message: 'ok', data: null }),
   },
 ] as MockMethod[]

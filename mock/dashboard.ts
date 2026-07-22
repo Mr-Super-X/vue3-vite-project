@@ -7,7 +7,7 @@ export default [
     method: 'get',
     timeout: 200,
     response: () => ({
-      code: 0,
+      code: 200,
       message: 'ok',
       data: { userCount: 128, onlineCount: 12, todayVisits: 256 },
     }),

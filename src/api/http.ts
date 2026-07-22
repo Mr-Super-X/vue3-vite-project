@@ -47,34 +47,69 @@ instance.interceptors.request.use((config) => {
   return config
 })
 
-// 响应拦截器：副作用 + 抛 ApiError，不做数据解包。
-// 签名是 AxiosResponse -> AxiosResponse，天然满足 axios 类型约束，
+// 业务码响应处理：副作用（toast + 401 跳转）+ 抛 ApiError。
 // 解包责任下沉到 request<T>() 的 .then，避免拦截器里逃类型。
+
+/**
+ * 构造 ApiError：body 缺失时走 fallback（code=-1, message=fallback）。
+ */
+const buildApiError = (
+  body: ApiResponse<unknown> | null | undefined,
+  response: AxiosResponse<ApiResponse<unknown>>,
+  fallbackMessage: string
+): ApiError =>
+  new ApiError({
+    code: body?.code ?? -1,
+    message: body?.message || fallbackMessage,
+    url: response.config.url,
+  })
+
+/**
+ * 401 业务码：清 token + 跳登录页。
+ */
+function handleUnauthorized(
+  body: ApiResponse<unknown>,
+  response: AxiosResponse<ApiResponse<unknown>>
+): never {
+  const message = body.message || '登录已过期，请重新登录'
+  ElMessage.error(message)
+  Session.remove('token')
+  clearCookies()
+  window.location.href = '/login'
+  throw buildApiError(body, response, message)
+}
+
+/**
+ * 其他业务错误：toast 提示 + 抛 ApiError。
+ */
+function handleGenericError(
+  body: ApiResponse<unknown> | null | undefined,
+  response: AxiosResponse<ApiResponse<unknown>>
+): never {
+  const message = body?.message || '请求失败'
+  ElMessage.error(message)
+  throw buildApiError(body, response, message)
+}
+
+// 业务码 → 副作用处理器查表。
+// 命中：调对应 handler；未命中：走 handleGenericError。
+// 新增业务码处理时只需在此追加一行（与 HTTP status 策略表对称）。
+const BUSINESS_CODE_HANDLERS: Record<
+  number,
+  (body: ApiResponse<unknown>, response: AxiosResponse<ApiResponse<unknown>>) => never
+> = {
+  [BusinessCode.UNAUTHORIZED]: handleUnauthorized,
+}
+
 const onResponseFulfilled = (
   response: AxiosResponse<ApiResponse<unknown>>
 ): AxiosResponse<ApiResponse<unknown>> => {
   const body = response.data
-  if (body?.code === BusinessCode.UNAUTHORIZED) {
-    ElMessage.error(body.message || '登录已过期，请重新登录')
-    Session.remove('token')
-    clearCookies()
-    window.location.href = '/login'
-    throw new ApiError({
-      code: body.code,
-      message: body.message ?? 'unauthorized',
-      url: response.config.url,
-    })
-  }
-  if (body && body.code !== BusinessCode.SUCCESS) {
-    const message = body.message || '请求失败'
-    ElMessage.error(message)
-    throw new ApiError({
-      code: body.code ?? -1,
-      message,
-      url: response.config.url,
-    })
-  }
-  return response
+  // 成功条件：HTTP 200 + 业务码 200（与后端 v2 约定对齐）
+  if (response.status === 200 && body?.code === BusinessCode.SUCCESS) return response
+  const handler = BUSINESS_CODE_HANDLERS[body?.code ?? -1]
+  if (handler) return handler(body, response)
+  return handleGenericError(body, response)
 }
 
 const onResponseRejected = (error: {

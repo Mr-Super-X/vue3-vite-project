@@ -11,7 +11,7 @@ export enum HttpStatus {
 }
 
 export enum BusinessCode {
-  SUCCESS = 0,
+  SUCCESS = 200,
   UNAUTHORIZED = 401,
   FORBIDDEN = 403,
 }
