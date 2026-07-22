@@ -26,7 +26,11 @@ export default [
     response: () => ({
       code: 200,
       message: 'ok',
-      data: { id: 1, name: 'Admin', permissions: ['dashboard:view', 'user:view', 'user:edit'] },
+      data: {
+        id: 1,
+        name: 'Admin',
+        permissions: ['dashboard:view', 'user:view', 'user:edit', 'orders:view', 'reports:view'],
+      },
     }),
   },
   {

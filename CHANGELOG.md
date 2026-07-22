@@ -2,7 +2,30 @@
 
 ## Unreleased
 
+### Added
+
+- **路由优化（13 项改进全部实施）**：
+  - 扩展 `AppRouteMeta` 类型：在 `src/router/types.ts` 加 `declare module 'vue-router'` 块，`RouteMeta` 获得 `title / titleKey / icon / requiresAuth / permissions / visible / keepAlive / breadcrumb` 字段的自动补全 + 索引签名
+  - 新增业务模块 orders + reports（含 4 个新路由：`OrdersList` / `OrdersDetail` / `Reports` + `OrdersList` 嵌套子页），演示多级菜单 + 权限码 + `meta.visible: false` 隐藏菜单场景
+  - `scripts/check-routes.ts` 扩展为 5 个校验（A/B/C/D/E），覆盖白名单 ⊆ 声明、双向路由 name 一致、系统白名单必在、最终汇总
+  - 新增 `src/router/error-boundary.ts`：抽离 `router.onError` 回调，统一跳 `/500` 与防递归入口（`SERVER_ERROR_PATH` 常量）
+  - 新增 `src/router/guards/{visibility,login,permission,remote-menu,composable}.ts`：把 5 段守卫拆为独立可测纯函数 + `composeGuards` 编排器，`auth.ts` 简化为统一调度入口
+  - 新增 `src/composables/useAuth.ts` + `useAuth.spec.ts`：组合式权限 API（`hasPerm` AND 语义 / `hasAnyPerm` ANY 语义）
+  - 新增 `src/directives/auth.ts` + `auth.d.ts`：v-auth 指令（支持 `:any.disabled` / `:any.remove` 修饰符），自动响应权限变化
+  - 新增 `src/router/helpers.ts`：`resolveRouteTitle`（titleKey → i18n → title → name fallback 链）+ `extractRoutePermissions` + `extractRouteIcon`
+  - 新增 `src/composables/useRouter.ts`：业务侧路由高层 API（`pushByName<RouteName>` / `pushWithTitle` / `back` / `addDynamicRoute` / `withErrorToast`）
+  - `src/router/remote.ts` 加 retry + timeout 包装：`fetchRemoteRoutes({ retries=2, timeoutMs=5000, baseDelay=300 })`，调用 `withRetry`
+  - `src/router/permission.ts` 实现真逻辑（之前是占位 `console.info`）：用 `useAuth()` 替换占位实现，支持 `v-permission:any` 修饰符
+  - `src/router/config.ts` 加 `historyMode` (`web|hash`) + `base` 子路径配置，支持 `.env.production` 的 `VITE_HISTORY_MODE` / `VITE_BASE` 覆盖
+  - 新增 `docs/research/2026-07-22-unplugin-vue-router-survey.md`：file-based 路由方案调研，结论当前不建议迁移（远程菜单动态注入丢失是核心反对理由）
+
 ### Changed
+
+- `resetRouterState` 重命名为 `resetAuthGuardState`（更准确的语义）；同步更新 `src/store/modules/user.ts` 调用方 + `user.spec.ts` mock
+- `src/api/modules/menu.ts` 接口签名支持配置项：`menuApi.getMenu({ timeout: 5000 })`
+- `src/modules/auth/route/` 演示 mock 升级：`mock/auth.ts` profile permissions 加 `orders:view` + `reports:view`；`mock/menu.ts` 改为 4 种典型场景：单级菜单 / 多级菜单（Orders 嵌套 OrdersDetail）/ 隐藏菜单（hidden → visible:false）
+
+### 文档
 
 - 文档清扫（docs cleanup）：
   - **README.md**：(1) Prettier 风格表 `trailingComma` 由 `"all"` 改为实际值 `"es5"`；(2) Mock 数据表加 `menu` 模块（`/api/menu`，remote 模式守卫依赖项）；(3) 目录树中 `src/utils/` 补全 `format / validate / safeAsync / consoleBadge / autoImport` 五个工具模块；(4) 移除错误归属 `src/utils/_internal/naming.ts`（实际位于 `src/components/common/_internal/naming.ts`，是 components 内部工具），改为跨模块位置说明

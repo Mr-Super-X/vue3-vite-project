@@ -34,21 +34,21 @@ vi.mock('@/api/global-abort', () => ({
   },
 }))
 vi.mock('@/router/guards/auth', () => ({
-  resetRouterState: vi.fn(),
+  resetAuthGuardState: vi.fn(),
 }))
 
 import { useUserStore } from './user'
 import { authApi } from '@/api/modules/auth'
 import { Session, clearCookies } from '@/utils/storage'
 import { globalAbort } from '@/api/global-abort'
-import { resetRouterState } from '@/router/guards/auth'
+import { resetAuthGuardState } from '@/router/guards/auth'
 
 const mockAuthLogout = authApi.logout as ReturnType<typeof vi.fn>
 const mockSessionRemove = Session.remove as ReturnType<typeof vi.fn>
 const mockClearCookies = clearCookies as ReturnType<typeof vi.fn>
 const mockGlobalAbortAbort = globalAbort.abort as ReturnType<typeof vi.fn>
 const mockGlobalAbortReset = globalAbort.reset as ReturnType<typeof vi.fn>
-const mockResetRouter = resetRouterState as ReturnType<typeof vi.fn>
+const mockResetRouter = resetAuthGuardState as ReturnType<typeof vi.fn>
 
 beforeEach(() => {
   setActivePinia(createPinia())

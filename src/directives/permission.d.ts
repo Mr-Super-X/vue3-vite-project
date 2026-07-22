@@ -9,13 +9,15 @@ export type ElHTMLElement = HTMLElement
 /**
  * v-permission 指令的 binding 类型
  *
- * 用法：v-permission="['user:edit']" 或 v-permission:any="['user:edit']"
- * - value：需要的权限列表（任意一个匹配即通过；AND/OR 由后续实现决定）
- * - arg：可选模式（'all' / 'any' 等）
- * - modifiers：修饰符对象（如 .has 改 has 操作）
+ * 用法：
+ *   v-permission="'user:edit'"                 // 单权限
+ *   v-permission="['user:view','user:edit']"   // 多权限（AND 语义，全部满足）
+ *   v-permission:any="['a','b']"                // 多权限（ANY 语义，任一满足）
+ *
+ * - value：单个权限码字符串 或 权限码数组
+ * - arg：':any' 修饰符切到 ANY 语义
  */
 export interface PermissionBinding {
-  value: string[]
+  value: string | string[]
   arg?: string
-  modifiers?: Record<string, boolean>
 }

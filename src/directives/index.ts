@@ -15,7 +15,8 @@ import { autoImport } from '@/utils/autoImport'
  * 注册的指令（v- 前缀）：
  * - v-inputDebounce:    input 输入防抖（v-inputDebounce:1000="onInput"）
  * - v-buttonDebounce:   button 点击节流防重（v-buttonDebounce:500="onClick"）
- * - v-permission:       权限控制（v-permission="['user:edit']"）
+ * - v-permission:       占位权限控制（v-permission="['user:edit']"，P2 阶段实装真实逻辑）
+ * - v-auth:             完整权限指令（v-auth="'user:view'" / v-auth:any.disabled="['a','b']"）
  *
  * 未来新增指令：直接在 src/directives/ 下添加 v-xxx.ts 即可，
  * 无需在本文件 import，也无需修改 main.ts。

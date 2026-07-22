@@ -4,7 +4,7 @@ import { router } from '@/router'
 import { authApi, type LoginPayload, type UserProfile } from '@/api/modules/auth'
 import { Session, clearCookies } from '@/utils/storage'
 import { globalAbort } from '@/api/global-abort'
-import { resetRouterState } from '@/router/guards/auth'
+import { resetAuthGuardState } from '@/router/guards/auth'
 import { useRouterStore } from './router'
 
 export const useUserStore = defineStore('user', () => {
@@ -42,7 +42,7 @@ export const useUserStore = defineStore('user', () => {
     profile.value = null
     permissions.value = []
     globalAbort.abort('logout')
-    resetRouterState()
+    resetAuthGuardState()
     const routerStore = useRouterStore()
     if (typeof routerStore.$reset === 'function') {
       routerStore.$reset()
