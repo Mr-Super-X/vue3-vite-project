@@ -330,33 +330,65 @@ pnpm dev:local
 
 业务模块的路由**无需在 `src/router/` 任何文件中手动 import**——在 `src/modules/<feature>/routes/index.ts` 声明后，`auto-register.ts` 通过 Vite `import.meta.glob` 自动扫描并注册。
 
-新增业务模块的标准流程（**3 步，无需改 router 目录**）：
+#### Layout 速选（先决定用哪个）
+
+| Layout      | 组件                          | 视觉特征                 | 适用场景                          |
+| ----------- | ----------------------------- | ------------------------ | --------------------------------- |
+| **default** | `@/layouts/default/index.vue` | 左侧 Sidebar + 顶 Header | 业务页（Dashboard / 列表 / 表单） |
+| **blank**   | `@/layouts/blank/index.vue`   | 居中、无侧栏无顶栏       | 登录页 / 注册页 / 第三方回调      |
+
+#### 新增业务模块的 3 步流程（无需改 router 目录）
 
 ```ts
 // 1. 写视图组件 src/modules/order/views/List.vue
+<template><div>订单列表</div></template>
+
 // 2. 声明路由 src/modules/order/routes/index.ts
 const routes: RouteRecordRaw[] = [
   {
     path: '/order',
-    component: () => import('@/layouts/default/index.vue'),
+    component: () => import('@/layouts/default/index.vue'),  // ← 选 default
     children: [
       {
         path: 'list',
         name: 'OrderList',
         component: () => import('../views/List.vue'),
-        meta: { title: '订单管理', requiresAuth: true, permissions: ['order:view'] },
+        meta: { title: '订单管理', icon: 'list', requiresAuth: true, permissions: ['order:view'] },
       },
     ],
   },
 ]
-// 3. 在 router/types.ts 追加 RouteName 联合类型条目
+
+// 3. 在 src/router/types.ts 追加 RouteName 联合类型条目
 // 完成 —— 路由自动可用，remote 模式自动可用（component 由 auto-register 派生）
 ```
+
+#### 创建 blank layout 页面（登录页 / 注册页）
+
+```ts
+// 与上面唯一区别：换 layout + 加白名单
+{
+  path: '/login',
+  component: () => import('@/layouts/blank/index.vue'),  // ← 选 blank
+  children: [{
+    path: '',
+    name: 'Login',
+    component: () => import('../views/Login.vue'),
+    meta: { title: '登录', requiresAuth: false },
+  }],
+}
+// 别忘了 src/router/whitelist.ts 加 'Login'
+```
+
+#### 自检
+
+新增路由后跑 `pnpm check:routes` 自动验证 5 个一致性校验（whitelist ⊆ 声明 / 双向 name 一致 / 系统路由必在白名单）。
+
+> **更多模板**（动态参数 `:id` / 多级菜单嵌套 / i18n titleKey / v-auth 双层防护 / keepAlive / breadcrumb）：见 [`docs/07-路由模块设计.md`](docs/07-路由模块设计.md) §「新增路由的标准流程」。
 
 > **默认菜单模式**：dev = `remote`（贴近生产，需 mock 接口），`pnpm dev:local` 切到 `local`（无需接口）。
 > **白名单**：跳过登录 + 权限校验，按**路由 name** 匹配（`router/whitelist.ts`）。
 > **COMPONENT_REGISTRY**：从 `autoRegisteredRoutes` 递归提取 `(name, component)` 派生，remote 模式按 name 查找组件 loader。新增路由无需在多处同步。
->
 > 详见 `docs/07-路由模块设计.md`。
 
 ### 样式管理（BEM + 双主题）

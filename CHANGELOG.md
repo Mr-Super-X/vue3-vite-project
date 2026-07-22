@@ -19,6 +19,16 @@
   - `src/router/config.ts` 加 `historyMode` (`web|hash`) + `base` 子路径配置，支持 `.env.production` 的 `VITE_HISTORY_MODE` / `VITE_BASE` 覆盖
   - 新增 `docs/research/2026-07-22-unplugin-vue-router-survey.md`：file-based 路由方案调研，结论当前不建议迁移（远程菜单动态注入丢失是核心反对理由）
 
+### 文档
+
+- `README.md` § 路由架构（自动注册）扩充：新增「Layout 速选」对照表 + blank layout 页面模板示例 + 「自检」步骤指路到 docs/07
+- `docs/07-路由模块设计.md` § 新增路由的标准流程 大幅扩充：
+  - 新增 §0️⃣ **Layout 选择速查**：default vs blank 视觉特征 + 适用场景 + 是否需要白名单
+  - 新增 §3️⃣ 五个模板：default 业务页 / blank 登录页 / 动态路由参数 / 多级菜单 / i18n titleKey
+  - 新增 §5️⃣ 路由 + v-auth 双层权限防护示例
+  - 新增 §6️⃣ keepAlive / breadcrumb 等可选 meta 字段用法
+  - 新增 §✅ 完成度自检段：自动跑 `pnpm check:routes` 验证 5 个一致性校验
+
 ### Changed
 
 - `resetRouterState` 重命名为 `resetAuthGuardState`（更准确的语义）；同步更新 `src/store/modules/user.ts` 调用方 + `user.spec.ts` mock
