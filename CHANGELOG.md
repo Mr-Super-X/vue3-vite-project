@@ -4,6 +4,17 @@
 
 ### Added
 
+- 新增 `src/api/types/error.ts`：`ApiError` 类与 `isApiError` 类型守卫，统一承载 `code / status / message / url / cause`，调用方 `err instanceof ApiError` 即可 narrowing
+- 新增 `src/api/cancel.ts`：`createAbort()` / `withAbort()` / `linkAbort()` 三件套，基于原生 `AbortController`；`linkAbort` 支持外部信号与本地信号联动（路由切换 + 组件卸载双触发取消）
+- 新增 `src/api/retry.ts`：`withRetry(fn, opts)` 指数退避重试（默认 retries=2, baseDelay=300ms, backoff=2）+ `isIdempotent()` 判定。仅对 GET/HEAD/OPTIONS 或显式 `idempotent: true` 启用，避免写操作被无脑重试
+- 新增 `src/api/deduper.ts`：`withDedup(fn, opts)` 时间窗口同参请求合并。**默认仅 GET/HEAD 合并**（写请求白名单），调用方可通过 `dedup: 'never' | 'auto' | number` 覆盖窗口时长或关闭
+- 新增 4 个 `*.spec.ts`：`cancel.spec.ts`（8 用例）/ `retry.spec.ts`（10 用例）/ `deduper.spec.ts`（11 用例）/ `http.spec.ts`（11 用例，含 axios mock + ApiError 单元 + 拦截器契约）
+- 新增 `docs/superpowers/specs/2026-07-22-request-layer-eval-design.md` 与 `plans/2026-07-22-request-layer-eval.md`：本次重构的设计说明 + 实施计划
+
+### Changed
+
+- 改造 `src/api/http.ts`：(1) token 来源从 `localStorage.getItem('token')` 切换为 `Session.get<string>('token')`，对齐 `utils/storage.ts` 的命名空间约定（生产环境自动 secure + sameSite=lax）；(2) 响应拦截器不再用 `as never` 逃类型——拆为 `onResponseFulfilled(response) => response`（副作用：toast + 401 跳转 + 抛 ApiError），数据解包 `body.data` 下沉到 `request<T>()` 的 `.then`，axios 拦截器签名天然满足；(3) 所有抛出错误归一为 `ApiError`，HTTP 401 业务码也调用 `Session.remove('token')` + `clearCookies()` 清理遗留凭证；(4) `request<T>` 业务侧 API 保持不变，`modules/*.ts` **零迁移**
+
 - 新增 `docs/01-工具兼容性问题踩坑记录.md`：项目级工具兼容性知识库，记录 npm vs pnpm 符号链接不兼容等问题的根因、复现步骤与解决方案
 - 新增 `src/assets/styles/mixins/bem.scss`：BEM 编程式 mixin 工具（`b`/`e`/`m`/`is`/`when`/`reset-block`），编译产物与手写 BEM 字符串完全等价，支持嵌套作用域自动拼接 Block 前缀
 - 新增 `docs/05-BEM样式规范.md`：BEM 命名约定、样式隔离三层防线（`scoped` + SCSS `@use` + BEM 命名空间）、文件组织、评审 Checklist、FAQ
