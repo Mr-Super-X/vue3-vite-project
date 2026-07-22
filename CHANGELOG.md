@@ -4,6 +4,22 @@
 
 ### Added
 
+- 新增 `src/api/global-abort.ts`：`GlobalAbortController` 单例 + `chainSignals(...signals)` 合并工具（无信号返回占位 / 单个透传 / 多个 `AbortSignal.any()`），用于 logout 时统一取消所有在途请求
+- 新增 `src/composables/useLogout.ts`：封装 ElMessageBox.confirm 二次确认 + `loggingOut` ref + `userStore.logout()` 调用，Header 与 Dashboard 复用
+- 新增 `src/api/global-abort.spec.ts`：12 个用例覆盖 chainSignals（7 边界）+ globalAbort 单例（5 行为）
+- 新增 `src/composables/useLogout.spec.ts`：4 个用例覆盖确认取消 / 成功路径 / store 抛错 / 初始 loading
+- 新增 `src/store/modules/user.spec.ts`：2 个用例覆盖 logout 成功路径（全栈清理 + 跳转）与失败路径（不执行任何清理）
+
+### Changed
+
+- 改造 `src/store/modules/user.ts`：logout() 改 async 悲观语义（先 await 后端 /auth/logout，失败由 http.ts 拦截器 toast + 抛 ApiError 中断；成功才清本地状态）。清理顺序：Session.remove('token') → clearCookies() → 清 ref → globalAbort.abort('logout') → resetRouterState() → useRouterStore().$reset() → router.push('/login')
+- 改造 `src/api/http.ts` 请求拦截器：合并 per-request signal 与 `globalAbort.signal`，logout 时统一取消所有在途请求（axios GenericAbortSignal 与标准 AbortSignal 的结构差异通过 `as unknown as` 处理，运行时完全兼容）
+- 改造 `src/components/layout/Header.vue`：复用 `useLogout()` composable，绑定 `confirmLogout` + `loggingOut` loading
+- 改造 `src/modules/dashboard/views/Index.vue`：顶部右上加 `退出登录` 按钮（type=warning plain），同样绑定 useLogout
+- 改造 `mock/auth.ts`：新增 `/api/auth/logout` mock 条目（之前缺失，导致真实 dev 调用 404）
+- 新增 `mock/menu.ts` + 改造 `mock/index.ts`：新增 `/api/menu` mock 条目（之前缺失，remote 模式下守卫拉菜单请求落到 vite-plugin-mock SPA fallback 返回 HTML index.html，路由守卫捕获 console.warn + 保持 local 菜单，但首次登录体验断裂）；返回 Dashboard + UserList 两条
+- 改造 `src/locales/{zh-CN,en-US}.ts`：在 `auth` 段加 `logoutConfirm` / `logoutConfirmButton` / `logoutCancelButton` / `logoutTitle` 翻译键
+
 - 新增 `src/api/types/error.ts`：`ApiError` 类与 `isApiError` 类型守卫，统一承载 `code / status / message / url / cause`，调用方 `err instanceof ApiError` 即可 narrowing
 - 新增 `src/api/cancel.ts`：`createAbort()` / `withAbort()` / `linkAbort()` 三件套，基于原生 `AbortController`；`linkAbort` 支持外部信号与本地信号联动（路由切换 + 组件卸载双触发取消）
 - 新增 `src/api/retry.ts`：`withRetry(fn, opts)` 指数退避重试（默认 retries=2, baseDelay=300ms, backoff=2）+ `isIdempotent()` 判定。仅对 GET/HEAD/OPTIONS 或显式 `idempotent: true` 启用，避免写操作被无脑重试

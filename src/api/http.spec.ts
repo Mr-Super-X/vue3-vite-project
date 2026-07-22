@@ -4,6 +4,7 @@ import { BusinessCode } from '@/enums/httpEnum'
 import { ApiError, isApiError } from './types/error'
 import type { AxiosResponse } from 'axios'
 import type { ApiResponse } from './types/api.d'
+import { globalAbort } from './global-abort'
 
 /**
  * 通过 mock axios 把 http.ts 拦截器逻辑剥离出来验证。
@@ -125,6 +126,22 @@ describe('http.ts 拦截器契约', () => {
       const headers = new Map<string, string>()
       handler.onFulfilled({ headers })
       expect(headers.get('Authorization')).toBe('Bearer mock-jwt-xyz')
+    })
+
+    it('请求拦截器合并 globalAbort signal：abort 后 cfg.signal 也中止', () => {
+      const handler = getRequestHandler()
+      const ctrl = new AbortController()
+      const cfg: { headers: Map<string, string>; signal?: AbortSignal } = {
+        headers: new Map<string, string>(),
+      }
+      handler.onFulfilled(cfg)
+      // 通过触发 globalAbort 验证合并后的 signal 是否同步中止
+      // 这里用 cfg.signal.aborted 直接断言，不再依赖类型层面的 abort
+      expect(cfg.signal?.aborted).toBe(false)
+      globalAbort.abort('http-spec-test')
+      expect(cfg.signal?.aborted).toBe(true)
+      ctrl.abort()
+      globalAbort.reset()
     })
   })
 

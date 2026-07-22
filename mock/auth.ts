@@ -29,4 +29,10 @@ export default [
       data: { id: 1, name: 'Admin', permissions: ['dashboard:view', 'user:view', 'user:edit'] },
     }),
   },
+  {
+    url: '/api/auth/logout',
+    method: 'post',
+    timeout: 100,
+    response: () => ({ code: 0, message: 'ok', data: null }),
+  },
 ] as MockMethod[]

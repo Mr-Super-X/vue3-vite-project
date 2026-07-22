@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { useUserStore } from '@/store/modules/user'
 import { createNamespace } from '@utils/bem'
+import { useUserStore } from '@/store/modules/user'
+import { useLogout } from '@/composables/useLogout'
 
 const userStore = useUserStore()
 // 运行时 BEM 命名空间：生成 gm-header-bar / gm-header-bar__user / gm-header-bar__action / is-logged-out
 // 与 <style> 块的 SCSS mixin 命名完全对齐，便于阅读与维护。
 const bem = createNamespace('header-bar')
+const { loggingOut, confirmLogout } = useLogout()
 </script>
 
 <template>
@@ -13,7 +15,9 @@ const bem = createNamespace('header-bar')
     <span :class="bem.e('user')">
       {{ userStore.profile?.name ?? '游客' }}
     </span>
-    <el-button :class="bem.e('action')" text @click="userStore.logout">退出</el-button>
+    <el-button :class="bem.e('action')" text :loading="loggingOut" @click="confirmLogout">
+      退出
+    </el-button>
   </div>
 </template>
 
