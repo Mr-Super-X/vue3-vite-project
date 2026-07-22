@@ -1,6 +1,6 @@
 // 路由自动注册
 //
-// 自动扫描 src/modules/**/routes/index.ts 并注册到全局路由。
+// 自动扫描 src/modules/<dir>/routes/index.ts 并注册到全局路由。
 // 业务模块无需在 router/index.ts 中手动 import —— 新增页面后自动生效。
 //
 // 使用 Vite import.meta.glob 特性（构建期扫描，不影响运行时性能）：
@@ -20,6 +20,7 @@
 //   （scripts/check-routes.ts 可一键校验 3 处一致性）
 
 import type { RouteRecordRaw } from 'vue-router'
+import { autoImport } from '@/utils/autoImport'
 
 interface RouteModuleExport {
   default: RouteRecordRaw[]
@@ -43,10 +44,6 @@ const modules = import.meta.glob<RouteModuleExport>('/src/modules/**/routes/inde
   eager: true,
 })
 
-export const autoRegisteredRoutes: RouteRecordRaw[] = Object.values(modules).flatMap(
-  (m) => m.default
-)
-
 /**
  * 路由 name → 视图组件 loader 的映射（从 autoRegisteredRoutes 派生）。
  *
@@ -62,6 +59,11 @@ export const autoRegisteredRoutes: RouteRecordRaw[] = Object.values(modules).fla
  *   - 重复 name 时 console.warn + 后注册覆盖前者
  *   - 递归处理 routes.children（嵌套路由同样提取）
  */
+export const autoRegisteredRoutes: RouteRecordRaw[] = autoImport({
+  modules,
+  transform: (_, m) => m.default,
+}).flat()
+
 export const COMPONENT_REGISTRY: Record<string, () => Promise<unknown>> = (() => {
   const map: Record<string, () => Promise<unknown>> = {}
   const visit = (routes: RouteRecordRaw[]): void => {
