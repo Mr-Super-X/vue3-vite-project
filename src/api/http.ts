@@ -6,7 +6,7 @@
 // - token 来源统一走 utils/storage.ts 的 Session，与项目命名空间约定一致；
 //   Session.get('token') 在生产环境自动 secure + sameSite=lax
 // - 所有抛出错误归一为 ApiError，调用方 `err instanceof ApiError` 即可 narrowing
-// - 可选能力（cancel/retry/merge/pageAdapter）拆到独立模块，request<T> 保持简单，业务层零迁移
+// - 可选能力（cancel/retry/merge/pageAdapter/cache/request-id）拆到独立模块，request<T> 保持简单，业务层零迁移
 
 import axios, {
   type AxiosInstance,
@@ -27,15 +27,18 @@ import {
   _getRequestFieldMap,
   _getResponseFieldMap,
 } from './page-adapter'
+import { generateRequestId, REQUEST_ID_HEADER } from './request-id'
+import { cacheGet, cacheSet, buildCacheKey } from './cache'
 
 /**
- * 扩展 AxiosRequestConfig：标记分页列表请求（一次性的可插拔能力）。
+ * 扩展 AxiosRequestConfig：标记分页列表请求 / 内存缓存（一次性的可插拔能力）。
  *
  * 设计要点：
  * - 业务模块调用 request<T> 时，对列表接口加 usePageAdapter: true 即可
  * - http.ts 请求拦截器自动从 params 抽 page/pageSize 调 buildBackendPageQuery 注入
  * - http.ts request<T> 自动把后端响应包装为 Pagination<T>
- * - 默认（不传）行为零变化；只有需要分页时才加这个标记
+ * - 对 GET 接口加 cache: { ttl } 可启用内存缓存（TTL 内相同请求不重复发）
+ * - 默认（不传标记）行为零变化
  *
  * 字段映射由 page-adapter.ts 模块级 configurePaginationAdapter() 配置，
  * 一次设置全局生效，零业务改动。
@@ -48,7 +51,17 @@ import {
  *   params: { page: 1, pageSize: 20, keyword: 'x' },
  *   usePageAdapter: true,
  * })
- * // page 类型为 Pagination<EquipmentItem>，无需手动调 build/adapt
+ * ```
+ *
+ * @example GET 缓存
+ * ```ts
+ * const page = await request<Pagination<EquipmentItem>>({
+ *   url: '/equipment/list',
+ *   method: 'get',
+ *   params: { page: 1, pageSize: 20 },
+ *   usePageAdapter: true,
+ *   cache: { ttl: 30 },  // 30 秒内不重复请求
+ * })
  * ```
  *
  * @example 非列表请求（不传标记，行为不变）
@@ -63,6 +76,15 @@ declare module 'axios' {
      * 设为 true 后请求/响应自动按 page-adapter 约定转换；非列表请求不传此字段。
      */
     usePageAdapter?: boolean
+    /**
+     * GET 请求内存缓存（TTL 毫秒）。
+     * 仅 GET 方法生效；POST/PUT/PATCH/DELETE 不缓存。
+     * 可选自定义 key（默认按 method + url + params 生成）。
+     */
+    cache?: {
+      ttl: number
+      key?: string
+    }
   }
 }
 
@@ -138,10 +160,27 @@ function applyPageAdapterParams(config: AxiosRequestConfig): void {
   }
 }
 
+/**
+ * 注入 X-Request-ID header：用于前后端日志串联。
+ * 在 config 上挂载 requestId，响应拦截器读取后端回传值用于日志。
+ */
+function applyRequestIdHeader(config: AxiosRequestConfig): void {
+  if (!config.headers) return
+  const id = generateRequestId()
+  ;(config as AxiosRequestConfig & { requestId?: string }).requestId = id
+  const headers = config.headers as { set?: unknown }
+  if (typeof headers.set === 'function') {
+    ;(headers as { set: (k: string, v: string) => void }).set(REQUEST_ID_HEADER, id)
+  } else {
+    ;(config.headers as Record<string, string>)[REQUEST_ID_HEADER] = id
+  }
+}
+
 instance.interceptors.request.use((config) => {
   applyAuthHeader(config)
   applyAbortSignal(config)
   applyPageAdapterParams(config)
+  applyRequestIdHeader(config)
   return config
 })
 
@@ -235,6 +274,7 @@ instance.interceptors.response.use(onResponseFulfilled, onResponseRejected)
  * 业务侧 modules/*.ts 通过此函数调用，零迁移成本。
  *
  * 分页请求：传 `usePageAdapter: true` 后自动转换入参 + 适配响应为 Pagination<T>。
+ * GET 缓存：传 `cache: { ttl }` 后 TTL 内同 key 请求不重复发。
  *
  * @example 非列表请求（默认行为）
  * ```ts
@@ -251,8 +291,28 @@ instance.interceptors.response.use(onResponseFulfilled, onResponseRejected)
  * })
  * // page 类型为 Pagination<EquipmentItem>，业务侧直接用
  * ```
+ *
+ * @example GET 缓存
+ * ```ts
+ * const page = await request<Pagination<EquipmentItem>>({
+ *   url: '/equipment/list',
+ *   method: 'get',
+ *   params: { page: 1, pageSize: 20 },
+ *   usePageAdapter: true,
+ *   cache: { ttl: 30_000 },  // 30 秒内相同请求不重复发
+ * })
+ * ```
  */
 export async function request<T>(config: AxiosRequestConfig): Promise<T> {
+  const method = (config.method ?? 'get').toLowerCase()
+
+  // 缓存命中：直接返回（仅 GET）
+  if (config.cache && method === 'get') {
+    const key = config.cache.key ?? buildCacheKey(method, config.url ?? '', config.params)
+    const cached = cacheGet<T>(key)
+    if (cached !== null) return cached
+  }
+
   const res = await instance.request<ApiResponse<unknown>, AxiosResponse<ApiResponse<unknown>>>(
     config
   )
@@ -261,6 +321,13 @@ export async function request<T>(config: AxiosRequestConfig): Promise<T> {
     // 分页响应自动适配为 Pagination<T>
     data = adaptBackendPage(data as Record<string, unknown>, _getResponseFieldMap()) as unknown
   }
+
+  // 缓存写入（仅 GET）
+  if (config.cache && method === 'get') {
+    const key = config.cache.key ?? buildCacheKey(method, config.url ?? '', config.params)
+    cacheSet(key, data, config.cache.ttl)
+  }
+
   return data as T
 }
 
