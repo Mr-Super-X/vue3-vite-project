@@ -6,7 +6,7 @@
 // - token 来源统一走 utils/storage.ts 的 Session，与项目命名空间约定一致；
 //   Session.get('token') 在生产环境自动 secure + sameSite=lax
 // - 所有抛出错误归一为 ApiError，调用方 `err instanceof ApiError` 即可 narrowing
-// - 可选能力（cancel/retry/merge/pageAdapter/cache/request-id）拆到独立模块，request<T> 保持简单，业务层零迁移
+// - 可选能力（cancel/retry/merge/pageAdapter/cache/request-id/token-refresh）拆到独立模块，request<T> 保持简单，业务层零迁移
 
 import axios, {
   type AxiosInstance,
@@ -29,6 +29,7 @@ import {
 } from './page-adapter'
 import { generateRequestId, REQUEST_ID_HEADER } from './request-id'
 import { cacheGet, cacheSet, buildCacheKey } from './cache'
+import { getValidToken, _getCurrentConfig } from './token-refresh'
 
 /**
  * 扩展 AxiosRequestConfig：标记分页列表请求 / 内存缓存（一次性的可插拔能力）。
@@ -77,14 +78,18 @@ declare module 'axios' {
      */
     usePageAdapter?: boolean
     /**
-     * GET 请求内存缓存（TTL 毫秒）。
-     * 仅 GET 方法生效；POST/PUT/PATCH/DELETE 不缓存。
-     * 可选自定义 key（默认按 method + url + params 生成）。
+     * GET 请求内存缓存（TTL 秒）。
+     * 设计：单位为秒，与 Redis EXPIRE / HTTP cache-control 一致。
      */
     cache?: {
       ttl: number
       key?: string
     }
+    /**
+     * 内部标记：token-refresh 重试机制使用，避免无限循环。
+     * 业务模块不应设置此字段。
+     */
+    _retried?: boolean
   }
 }
 
@@ -101,19 +106,12 @@ const instance: AxiosInstance = axios.create({
 
 /**
  * 注入 Bearer Token：从 Session 读取 token 写入 Authorization 头。
- * Session.get('token') 在生产环境自动 secure + sameSite=lax，
- * 与 utils/storage.ts 的 token 存储约定一致。
- *
- * headers 可能是 AxiosHeaders 实例或 plain object，分别处理：
- * - AxiosHeaders：有 set() 方法
- * - plain object：直接属性赋值
  */
 function applyAuthHeader(config: AxiosRequestConfig): void {
   const token = Session.get<string>('token')
   if (typeof token !== 'string' || token.length === 0 || !config.headers) return
   const value = `Bearer ${token}`
   const headers = config.headers as { set?: unknown }
-  // AxiosHeaders 实例有 set() 方法；plain object 走属性赋值
   if (typeof headers.set === 'function') {
     ;(headers as { set: (k: string, v: string) => void }).set('Authorization', value)
   } else {
@@ -123,8 +121,6 @@ function applyAuthHeader(config: AxiosRequestConfig): void {
 
 /**
  * 合并请求 signal 与 globalAbort signal：logout 时 globalAbort.abort() 会取消所有在途请求。
- * 类型 cast：axios 的 GenericAbortSignal 是 AbortSignal 的结构子集，
- * 运行时 AbortSignal 完全兼容 GenericAbortSignal，仅 TS 类型层不可推导。
  */
 function applyAbortSignal(config: AxiosRequestConfig): void {
   config.signal = chainSignals(
@@ -134,9 +130,7 @@ function applyAbortSignal(config: AxiosRequestConfig): void {
 }
 
 /**
- * 分页请求自动转换：抽出 page/pageSize 调 buildBackendPageQuery 注入，
- * 业务侧 params 中其他过滤字段原样保留。
- * 字段映射由 configurePaginationAdapter 全局控制，零业务改动。
+ * 分页请求自动转换：抽出 page/pageSize 调 buildBackendPageQuery 注入。
  */
 function applyPageAdapterParams(config: AxiosRequestConfig): void {
   if (!config.usePageAdapter || !config.params || typeof config.params !== 'object') {
@@ -146,8 +140,6 @@ function applyPageAdapterParams(config: AxiosRequestConfig): void {
   const page = typeof rawParams.page === 'number' ? rawParams.page : undefined
   const pageSize = typeof rawParams.pageSize === 'number' ? rawParams.pageSize : undefined
   const { page: _p, pageSize: _ps, ...rest } = rawParams
-  // 条件 spread：仅在 page/pageSize 有值时透传，
-  // 避免 `undefined` 触发 exactOptionalPropertyTypes 报错
   config.params = {
     ...buildBackendPageQuery(
       {
@@ -161,13 +153,11 @@ function applyPageAdapterParams(config: AxiosRequestConfig): void {
 }
 
 /**
- * 注入 X-Request-ID header：用于前后端日志串联。
- * 在 config 上挂载 requestId，响应拦截器读取后端回传值用于日志。
+ * 注入 X-Request-ID header。
  */
 function applyRequestIdHeader(config: AxiosRequestConfig): void {
   if (!config.headers) return
   const id = generateRequestId()
-  ;(config as AxiosRequestConfig & { requestId?: string }).requestId = id
   const headers = config.headers as { set?: unknown }
   if (typeof headers.set === 'function') {
     ;(headers as { set: (k: string, v: string) => void }).set(REQUEST_ID_HEADER, id)
@@ -184,12 +174,12 @@ instance.interceptors.request.use((config) => {
   return config
 })
 
-// 响应拦截器：副作用 + 抛 ApiError，不做数据解包。
-// 签名是 AxiosResponse -> AxiosResponse，天然满足 axios 类型约束，
-// 解包责任下沉到 request<T>() 的 .then，避免拦截器里逃类型。
+// ────────────────────────────────────────────────────────────────────
+// 响应拦截器辅助函数
+// ────────────────────────────────────────────────────────────────────
 
 /**
- * 构造 ApiError：body 缺失时走 fallback（code=-1, message=fallback）。
+ * 构造 ApiError：body 缺失时走 fallback。
  */
 const buildApiError = (
   body: ApiResponse<unknown> | null | undefined,
@@ -203,22 +193,23 @@ const buildApiError = (
   })
 
 /**
- * 401 业务码：清 token + 跳登录页。
+ * 401 业务码：纯抛 ApiError；不做 toast/logout/redirect。
+ *
+ * 副作用由 request<T>() 包裹层统一处理：
+ * - 成功 refresh + retry → 静默重发
+ * - refresh 失败 → performLogout() + 抛出原 ApiError
+ *
+ * 这样能避免"直接调用 handleUnauthorized 时与 retry 流程副作用不一致"。
  */
 function handleUnauthorized(
   body: ApiResponse<unknown>,
   response: AxiosResponse<ApiResponse<unknown>>
 ): never {
-  const message = body.message || '登录已过期，请重新登录'
-  ElMessage.error(message)
-  Session.remove('token')
-  clearCookies()
-  window.location.href = '/login'
-  throw buildApiError(body, response, message)
+  throw buildApiError(body, response, body.message || '登录已过期')
 }
 
 /**
- * 其他业务错误：toast 提示 + 抛 ApiError。
+ * 其他业务错误：toast + 抛 ApiError。
  */
 function handleGenericError(
   body: ApiResponse<unknown> | null | undefined,
@@ -229,9 +220,18 @@ function handleGenericError(
   throw buildApiError(body, response, message)
 }
 
+/**
+ * 登出副作用：toast + 清 token + 跳登录页。
+ * 由 refresh 失败流程调用。
+ */
+function performLogout(): void {
+  ElMessage.error('登录已过期，请重新登录')
+  Session.remove('token')
+  clearCookies()
+  window.location.href = '/login'
+}
+
 // 业务码 → 副作用处理器查表。
-// 命中：调对应 handler；未命中：走 handleGenericError。
-// 新增业务码处理时只需在此追加一行（与 HTTP status 策略表对称）。
 const BUSINESS_CODE_HANDLERS: Record<
   number,
   (body: ApiResponse<unknown>, response: AxiosResponse<ApiResponse<unknown>>) => never
@@ -243,7 +243,6 @@ const onResponseFulfilled = (
   response: AxiosResponse<ApiResponse<unknown>>
 ): AxiosResponse<ApiResponse<unknown>> => {
   const body = response.data
-  // 成功条件：HTTP 200 + 业务码 200（与后端 v2 约定对齐）
   if (response.status === 200 && body?.code === BusinessCode.SUCCESS) return response
   const handler = BUSINESS_CODE_HANDLERS[body?.code ?? -1]
   if (handler) return handler(body, response)
@@ -269,39 +268,26 @@ const onResponseRejected = (error: {
 
 instance.interceptors.response.use(onResponseFulfilled, onResponseRejected)
 
+// ────────────────────────────────────────────────────────────────────
+// request<T>()：业务侧统一入口（含 token-refresh 重试 + 缓存 + 分页适配）
+// ────────────────────────────────────────────────────────────────────
+
+/**
+ * 检查 URL 是否指向 refresh 端点（避免 refresh 自身 401 触发循环）。
+ */
+function isRefreshRequestUrl(url: string | undefined): boolean {
+  if (!url) return false
+  const refreshUrl = _getCurrentConfig().url
+  return url.endsWith(refreshUrl) || url.includes(refreshUrl)
+}
+
 /**
  * 基础请求：返回 `body.data` 字段对应的强类型 T，错误归一为 ApiError。
- * 业务侧 modules/*.ts 通过此函数调用，零迁移成本。
  *
- * 分页请求：传 `usePageAdapter: true` 后自动转换入参 + 适配响应为 Pagination<T>。
- * GET 缓存：传 `cache: { ttl }` 后 TTL 内同 key 请求不重复发。
- *
- * @example 非列表请求（默认行为）
- * ```ts
- * const user = await request<User>({ url: '/user/1', method: 'get' })
- * ```
- *
- * @example 列表请求（自动转换）
- * ```ts
- * const page = await request<Pagination<EquipmentItem>>({
- *   url: '/equipment/list',
- *   method: 'get',
- *   params: { page: 1, pageSize: 20, keyword: 'x' },
- *   usePageAdapter: true,  // ← 入参自动转 pageIndex/pageSize + 响应自动包装为 Pagination<T>
- * })
- * // page 类型为 Pagination<EquipmentItem>，业务侧直接用
- * ```
- *
- * @example GET 缓存
- * ```ts
- * const page = await request<Pagination<EquipmentItem>>({
- *   url: '/equipment/list',
- *   method: 'get',
- *   params: { page: 1, pageSize: 20 },
- *   usePageAdapter: true,
- *   cache: { ttl: 30_000 },  // 30 秒内相同请求不重复发
- * })
- * ```
+ * 包含以下自动能力：
+ * - 401 自动 refresh + retry（除非 refresh 端点本身）
+ * - GET 缓存（TTL 秒内同 key 请求不重复发）
+ * - 分页自动适配（usePageAdapter: true）
  */
 export async function request<T>(config: AxiosRequestConfig): Promise<T> {
   const method = (config.method ?? 'get').toLowerCase()
@@ -313,22 +299,46 @@ export async function request<T>(config: AxiosRequestConfig): Promise<T> {
     if (cached !== null) return cached
   }
 
-  const res = await instance.request<ApiResponse<unknown>, AxiosResponse<ApiResponse<unknown>>>(
-    config
-  )
-  let data = res.data.data
-  if (config.usePageAdapter) {
-    // 分页响应自动适配为 Pagination<T>
-    data = adaptBackendPage(data as Record<string, unknown>, _getResponseFieldMap()) as unknown
-  }
+  try {
+    const res = await instance.request<ApiResponse<unknown>, AxiosResponse<ApiResponse<unknown>>>(
+      config
+    )
+    let data = res.data.data
+    if (config.usePageAdapter) {
+      data = adaptBackendPage(data as Record<string, unknown>, _getResponseFieldMap()) as unknown
+    }
 
-  // 缓存写入（仅 GET）
-  if (config.cache && method === 'get') {
-    const key = config.cache.key ?? buildCacheKey(method, config.url ?? '', config.params)
-    cacheSet(key, data, config.cache.ttl)
-  }
+    if (config.cache && method === 'get') {
+      const key = config.cache.key ?? buildCacheKey(method, config.url ?? '', config.params)
+      cacheSet(key, data, config.cache.ttl)
+    }
 
-  return data as T
+    return data as T
+  } catch (err) {
+    // 401 自动 refresh + retry（仅一次）
+    if (
+      err instanceof ApiError &&
+      (err.code === 401 || err.code === BusinessCode.UNAUTHORIZED) &&
+      !config._retried &&
+      !isRefreshRequestUrl(config.url)
+    ) {
+      try {
+        const newToken = await getValidToken()
+        config._retried = true
+        // 更新 Authorization header
+        if (config.headers) {
+          const headers = config.headers as Record<string, string>
+          headers.Authorization = `Bearer ${newToken}`
+        }
+        // 递归调用：_retried=true 防止无限循环
+        return await request<T>(config)
+      } catch {
+        // refresh 失败：登出 + 抛出原 ApiError
+        performLogout()
+      }
+    }
+    throw err
+  }
 }
 
 /**

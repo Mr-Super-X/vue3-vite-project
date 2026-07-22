@@ -35,4 +35,14 @@ export default [
     timeout: 100,
     response: () => ({ code: 200, message: 'ok', data: null }),
   },
+  {
+    url: '/api/auth/refresh',
+    method: 'post',
+    timeout: 100,
+    response: () => ({
+      code: 200,
+      message: 'ok',
+      data: { token: 'mock-jwt-refreshed-' + Date.now() },
+    }),
+  },
 ] as MockMethod[]

@@ -176,7 +176,7 @@ describe('http.ts 拦截器契约', () => {
       }
     })
 
-    it('业务码 UNAUTHORIZED 时清 token + 跳登录 + 抛 ApiError', () => {
+    it('业务码 UNAUTHORIZED 时仅抛 ApiError（side effects 由 request<T> 包裹层处理）', () => {
       const handler = getResponseHandler()
       Object.defineProperty(window, 'location', {
         value: { href: '' },
@@ -200,8 +200,9 @@ describe('http.ts 拦截器契约', () => {
         expect(captured.code).toBe(BusinessCode.UNAUTHORIZED)
         expect(captured.url).toBe('/x')
       }
-      expect(window.location.href).toContain('/login')
-      expect(Cookies.get('token')).toBeUndefined()
+      // 不做 side effects（不跳转、不清 token）—— 留给 request<T> 决定是 refresh 还是 logout
+      expect(window.location.href).not.toContain('/login')
+      expect(Cookies.get('token')).toBe('old-token')
     })
 
     it('业务码失败时抛 ApiError 并保留 message', () => {
