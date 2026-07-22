@@ -9,7 +9,7 @@
  */
 
 /** 通用事件处理函数类型 */
-type EventHandler = (this: HTMLElement, event: Event) => void
+export type EventHandler = (this: HTMLElement, event: Event) => void
 
 /**
  * 防抖函数工厂
@@ -40,4 +40,27 @@ export function debounce(click: EventHandler, timeout: number): EventHandler {
  */
 export function isFunction(param: unknown): param is (...args: unknown[]) => unknown {
   return Object.prototype.toString.call(param) === '[object Function]'
+}
+
+/**
+ * BFS 查找元素树中第一个 INPUT 元素。
+ *
+ * 用途：v-inputDebounce 兼容 Element Plus 等封装组件（如 el-input 内部包了 INPUT）。
+ * 直接绑 el 不会触发原生 input 事件，需要找到子 INPUT 才行。
+ *
+ * @param el 起始元素（通常是 v-inputDebounce 指令绑定的元素）
+ * @returns 找到的 INPUT 元素；未找到返回 null
+ */
+export function findInput(el: Element | null): HTMLInputElement | null {
+  if (!el) return null
+  const queue: Element[] = [el]
+  while (queue.length > 0) {
+    const current = queue.shift() as Element
+    if (current.tagName === 'INPUT') return current as HTMLInputElement
+    // 使用 children（仅 Element 节点），跳过文本/注释节点
+    for (const child of Array.from(current.children)) {
+      queue.push(child)
+    }
+  }
+  return null
 }

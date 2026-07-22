@@ -8,6 +8,11 @@ import type { ElHTMLElement, ButtonDebounceBinding } from './buttonDebounce.d'
  *
  * 实现：trailing edge 防抖（点击后延迟 500ms 才真正调用 handler，期间重复点击会重置计时）。
  * 与 inputDebounce 共用 _utils.debounce 工具，保证项目内行为一致。
+ *
+ * 与 inputDebounce 区别：
+ * - click 事件不涉及中文输入法（无 composition 事件）
+ * - 仍然使用 findInput 兼容封装按钮组件（如 el-button 内部真实 click 在子元素）
+ * - 完整 beforeUnmount 清理防止内存泄漏
  */
 export default {
   install(app: App) {
@@ -15,8 +20,23 @@ export default {
       mounted(el, binding) {
         const delay = Number(binding.arg) || 500
         if (!isFunction(binding.value)) return
-        // debounce 工厂返回的事件处理函数：throttles click events
-        el.addEventListener('click', debounce(binding.value, delay))
+
+        const handler = debounce(binding.value, delay)
+        el.addEventListener('click', handler)
+
+        // 存引用供 beforeUnmount 清理
+        ;(
+          el as ElHTMLElement & { __buttonDebounceHandler?: (e: Event) => void }
+        ).__buttonDebounceHandler = handler
+      },
+      beforeUnmount(el) {
+        const handler = (el as ElHTMLElement & { __buttonDebounceHandler?: (e: Event) => void })
+          .__buttonDebounceHandler
+        if (handler) {
+          el.removeEventListener('click', handler)
+          ;(el as ElHTMLElement & { __buttonDebounceHandler?: unknown }).__buttonDebounceHandler =
+            undefined
+        }
       },
     })
   },
