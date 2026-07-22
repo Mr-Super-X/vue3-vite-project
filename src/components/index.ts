@@ -19,7 +19,7 @@ export default {
 
     autoImport({
       modules,
-      // 第一层过滤：_internal/ 等目录排除
+      // 业务特定排除（_internal 等目录）
       filter: (filepath) => isExcluded(filepath),
       transform: (filepath, mod) => {
         // 第二层过滤：组件 default 缺失（异常文件）

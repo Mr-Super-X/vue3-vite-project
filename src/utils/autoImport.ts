@@ -6,10 +6,16 @@
  * - 本 helper 只负责 filter + transform，逻辑可单测覆盖
  * - 适用于：路由聚合、组件注册、指令安装、插件加载等场景
  *
- * @example 路由聚合
+ * ⚠️ 重要：spec/test 文件必须在 import.meta.glob 的 **pattern 层级** 排除（`<dir>/*.spec.ts` 用 ! 前缀），
+ * 不能依赖 filter 阶段——因为 import.meta.glob + eager:true 在加载时已 import 所有匹配文件，
+ * filter 只决定是否处理，**无法阻止加载**。filter 阶段排除只能作为业务特定补充。
+ *
+ * @example 路由聚合（glob pattern 用 ! 排除 spec）
  * ```ts
- * // 注：实际 glob 模式带通配符（避免在 JSDoc 内书写以免提前关闭注释）
- * const modules = import.meta.glob<RouteModuleExport>('/src/modules/MODULE/routes/index.ts', { eager: true })
+ * const modules = import.meta.glob<RouteModuleExport>(
+ *   ['/src/modules/DIR/routes/index.ts', '!/src/modules/DIR/routes/*.spec.ts'],
+ *   { eager: true }
+ * )
  * export const autoRegisteredRoutes = autoImport({
  *   modules,
  *   transform: (_, m) => m.default,
@@ -18,18 +24,23 @@
  *
  * @example Vue 组件注册
  * ```ts
- * // 注：glob 模式带通配符（避免在 JSDoc 内书写以免提前关闭注释）
- * const modules = import.meta.glob<{ default: Component }>('./common/COMPONENT.{vue,Vue}', { eager: true })
+ * const modules = import.meta.glob<{ default: Component }>(
+ *   ['./common/COMPONENT.{vue,Vue}', '!./common/<dir>/*.spec.ts'],
+ *   { eager: true }
+ * )
  * for (const _ of autoImport({
  *   modules,
- *   filter: (path) => isExcluded(path),
+ *   filter: (path) => isExcluded(path),  // filter 只做业务特定排除
  *   transform: (path, mod) => app.component(deriveName(path), mod.default),
  * })) {}
  * ```
  *
  * @example 指令安装
  * ```ts
- * const modules = import.meta.glob<DirectiveModule>('./*.ts', { eager: true })
+ * const modules = import.meta.glob<DirectiveModule>(
+ *   ['./*.ts', '!./<dir>/*.spec.ts'],  // spec 在加载阶段就排除
+ *   { eager: true }
+ * )
  * export default (app: App) => {
  *   autoImport({
  *     modules,
@@ -46,6 +57,8 @@ export interface AutoImportOptions<M, R = void> {
   /**
    * 跳过模块的过滤器（基于路径）。
    * 返回 true 跳过；返回 false 继续处理。
+   * ⚠️ 注意：filter 在 transform 阶段执行，无法阻止文件加载。
+   * 测试文件排除请在 glob pattern 层级完成（`!./DIR/*.spec.ts`）。
    */
   filter?: (path: string) => boolean
   /**

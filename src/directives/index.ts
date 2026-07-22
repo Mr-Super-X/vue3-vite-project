@@ -8,6 +8,7 @@ import { autoImport } from '@/utils/autoImport'
  * - Vite 适配：import.meta.glob 替代 webpack require.context
  * - 自动跳过 index.ts 自身和下划线开头的内部工具文件（如 _utils.ts）
  * - 自动跳过 .d.ts 类型声明文件
+ * - 自动跳过 .spec.ts 单测文件（加载会执行 vi.mock 等 vitest 代码导致运行时崩溃）
  * - 指令文件必须 default export `{ install(app) }`（与项目内现有指令一致）
  * - 业务侧零改动：新增 v-foo.ts 后无需修改本文件
  *
@@ -24,10 +25,13 @@ interface DirectiveModule {
 }
 
 // Vite equivalent of webpack require.context：
-// 1. 扫描同目录所有 .ts 文件
+// 1. 扫描同目录所有 .ts 文件，但显式排除单测（!./**/*.spec.ts）
+//    ⚠️ 关键：filter 在 transform 时机执行，但 import.meta.glob 已先 import
+//    必须用 glob 否定模式（! 前缀）才能在加载阶段就跳过 spec 文件，
+//    否则 vitest 代码（vi.mock/describe）在 runtime 加载会崩溃
 // 2. eager 模式：同步导入（Vite 编译时已 inline）
 // 3. 泛型指定模块 default export 形状
-const modules = import.meta.glob<DirectiveModule>('./*.ts', { eager: true })
+const modules = import.meta.glob<DirectiveModule>(['./*.ts', '!./**/*.spec.ts'], { eager: true })
 
 /**
  * Vue 3 插件：注册所有指令到 app。
@@ -35,7 +39,11 @@ const modules = import.meta.glob<DirectiveModule>('./*.ts', { eager: true })
 const install = (app: App): void => {
   autoImport({
     modules,
-    filter: (path) => path.endsWith('/index.ts') || path.includes('/_') || path.endsWith('.d.ts'),
+    filter: (path) =>
+      // 自身：递归依赖会导致循环
+      path.endsWith('/index.ts') ||
+      // 下划线开头：内部工具（如 _utils.ts），非指令
+      path.includes('/_'),
     transform: (path, mod) => {
       const plugin = mod.default
       if (plugin && typeof plugin.install === 'function') {
