@@ -41,24 +41,33 @@ export default [
             permissions: ['user:view'],
           },
         },
-        // 3. 多级菜单（一级菜单 Orders 嵌套二级页面）
+        // 3. 多级菜单（父级 Orders 一级菜单 + 嵌套 OrdersList / OrdersDetail）
         {
-          name: 'OrdersList',
-          path: '/orders/list',
+          name: 'Orders',
+          path: '/orders',
           meta: {
             title: '订单管理',
             icon: 'list',
             permissions: ['orders:view'],
           },
           children: [
+            // 二级菜单：订单列表
+            {
+              name: 'OrdersList',
+              path: '/orders/list',
+              meta: {
+                title: '订单列表',
+                permissions: ['orders:view'],
+              },
+            },
+            // 二级菜单：订单详情（菜单隐藏，需直接 URL 访问）
             {
               name: 'OrdersDetail',
               path: '/orders/detail/:id',
               meta: {
                 title: '订单详情',
-                icon: 'document',
                 permissions: ['orders:view'],
-                hidden: true, // 详情页菜单隐藏，需直接 URL 访问
+                hidden: true,
               },
             },
           ],

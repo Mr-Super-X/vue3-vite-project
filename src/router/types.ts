@@ -64,6 +64,7 @@ export type RouteName =
   | 'Login'
   | 'Dashboard'
   | 'UserList'
+  | 'Orders'
   | 'OrdersList'
   | 'OrdersDetail'
   | 'Reports'

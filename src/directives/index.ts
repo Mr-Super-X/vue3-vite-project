@@ -26,13 +26,16 @@ interface DirectiveModule {
 }
 
 // Vite equivalent of webpack require.context：
-// 1. 扫描同目录所有 .ts 文件，但显式排除单测（!./**/*.spec.ts）
+// 1. 扫描同目录所有 .ts 文件，但显式排除：
+//    - !./**/*.spec.ts  单测（避免 vitest 代码在 runtime 加载崩溃）
+//    - !./**/*.d.ts    类型声明（无运行时内容，被 glob 误匹配会触发"非标准模块"警告）
 //    ⚠️ 关键：filter 在 transform 时机执行，但 import.meta.glob 已先 import
-//    必须用 glob 否定模式（! 前缀）才能在加载阶段就跳过 spec 文件，
-//    否则 vitest 代码（vi.mock/describe）在 runtime 加载会崩溃
+//    必须用 glob 否定模式（! 前缀）才能在加载阶段就跳过这些文件。
 // 2. eager 模式：同步导入（Vite 编译时已 inline）
 // 3. 泛型指定模块 default export 形状
-const modules = import.meta.glob<DirectiveModule>(['./*.ts', '!./**/*.spec.ts'], { eager: true })
+const modules = import.meta.glob<DirectiveModule>(['./*.ts', '!./**/*.spec.ts', '!./**/*.d.ts'], {
+  eager: true,
+})
 
 /**
  * Vue 3 插件：注册所有指令到 app。
@@ -56,5 +59,9 @@ const install = (app: App): void => {
     },
   })
 }
+
+// 防御：未来若加新指令，filter 仍兜底跳过 index.ts / _* 等非指令文件；
+// 若 transform 触发"非标准模块"警告，说明有 .ts 文件未被 glob 排除模式覆盖，
+// 优先考虑扩展 glob 排除（!./**/*.x.ts）而不是放任警告噪音。
 
 export default install

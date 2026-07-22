@@ -34,6 +34,8 @@
 - `resetRouterState` 重命名为 `resetAuthGuardState`（更准确的语义）；同步更新 `src/store/modules/user.ts` 调用方 + `user.spec.ts` mock
 - `src/api/modules/menu.ts` 接口签名支持配置项：`menuApi.getMenu({ timeout: 5000 })`
 - `src/modules/auth/route/` 演示 mock 升级：`mock/auth.ts` profile permissions 加 `orders:view` + `reports:view`；`mock/menu.ts` 改为 4 种典型场景：单级菜单 / 多级菜单（Orders 嵌套 OrdersDetail）/ 隐藏菜单（hidden → visible:false）
+- **多级菜单真正可用**：`src/router/types.ts` 加 `'Orders'` RouteName；`src/modules/orders/routes/index.ts` 加 `name: 'Orders'` 父级路由（layout + children 结构），让 sidebar 能正确渲染「订单管理」一级菜单 + 「订单列表」二级菜单；`mock/menu.ts` 改为以 `Orders` 为父级菜单项携带 `OrdersList` / `OrdersDetail` children。`pnpm check:routes` 10 个 RouteName 双向一致通过
+- **修复 directives 控制台噪音警告**：`src/directives/index.ts` 的 `import.meta.glob` 模式从 `['./*.ts', '!./**/*.spec.ts']` 扩展为 `['./*.ts', '!./**/*.spec.ts', '!./**/*.d.ts']`，避免 `.d.ts` 类型声明文件被当作指令模块加载，触发 `[directives] 跳过非标准模块：./auth.d.ts` 等 4 条 console.warn
 
 ### 文档
 
