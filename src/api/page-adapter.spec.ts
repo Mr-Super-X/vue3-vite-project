@@ -1,10 +1,28 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, afterEach } from 'vitest'
 import {
   adaptBackendPage,
   buildBackendPageQuery,
+  configurePaginationAdapter,
+  _getRequestFieldMap,
+  _getResponseFieldMap,
   type PageQueryFieldMap,
   type PageResponseFieldMap,
 } from './page-adapter'
+
+/**
+ * 注意：configurePaginationAdapter 是模块级副作用，会改变 _getRequestFieldMap /
+ * _getResponseFieldMap 的返回值。每个 describe 块内根据需要设置/恢复默认配置。
+ */
+const ORIGINAL_REQUEST = { ..._getRequestFieldMap() }
+const ORIGINAL_RESPONSE = { ..._getResponseFieldMap() }
+
+afterEach(() => {
+  // 恢复 v2 默认值，避免跨用例污染
+  configurePaginationAdapter({
+    request: ORIGINAL_REQUEST,
+    response: ORIGINAL_RESPONSE,
+  })
+})
 
 describe('adaptBackendPage（默认 v2 字段）', () => {
   it('records/current/size 映射到 Pagination 字段', () => {
@@ -88,8 +106,8 @@ describe('adaptBackendPage（自定义字段映射）', () => {
 
   it('部分覆盖字段映射：只改 listField，其他走默认', () => {
     const raw = {
-      data: [{ id: 1 }], // 用 data 字段
-      records: [{ id: 99 }], // 默认字段也存在但被忽略
+      data: [{ id: 1 }],
+      records: [{ id: 99 }],
       total: 5,
       size: 10,
       current: 1,
@@ -104,7 +122,6 @@ describe('adaptBackendPage（自定义字段映射）', () => {
       records: [{ id: 1 }],
       size: 10,
       current: 1,
-      // total 缺失
     }
     expect(adaptBackendPage(raw).total).toBe(0)
   })
@@ -172,6 +189,69 @@ describe('buildBackendPageQuery（自定义字段映射）', () => {
     expect(buildBackendPageQuery({ page: 3, pageSize: 15 }, fieldMap)).toEqual({
       p: 3,
       limit: 15,
+    })
+  })
+})
+
+describe('configurePaginationAdapter（全局配置）', () => {
+  it('默认返回 v2 字段映射', () => {
+    expect(_getRequestFieldMap()).toEqual({
+      pageField: 'pageIndex',
+      pageSizeField: 'pageSize',
+    })
+    expect(_getResponseFieldMap()).toEqual({
+      listField: 'records',
+      pageField: 'current',
+      pageSizeField: 'size',
+      totalField: 'total',
+    })
+  })
+
+  it('覆盖请求字段映射后生效', () => {
+    configurePaginationAdapter({ request: { pageField: 'p' } })
+    expect(_getRequestFieldMap().pageField).toBe('p')
+    // 未覆盖的字段保持默认
+    expect(_getRequestFieldMap().pageSizeField).toBe('pageSize')
+  })
+
+  it('覆盖响应字段映射后生效', () => {
+    configurePaginationAdapter({ response: { listField: 'items' } })
+    expect(_getResponseFieldMap().listField).toBe('items')
+    expect(_getResponseFieldMap().pageField).toBe('current')
+  })
+
+  it('同时覆盖请求和响应字段映射', () => {
+    configurePaginationAdapter({
+      request: { pageField: 'p', pageSizeField: 'limit' },
+      response: { listField: 'items', totalField: 'total_records' },
+    })
+    expect(_getRequestFieldMap()).toEqual({
+      pageField: 'p',
+      pageSizeField: 'limit',
+    })
+    expect(_getResponseFieldMap()).toEqual({
+      listField: 'items',
+      pageField: 'current',
+      pageSizeField: 'size',
+      totalField: 'total_records',
+    })
+  })
+
+  it('配置生效后 buildBackendPageQuery 自动用新映射', () => {
+    configurePaginationAdapter({ request: { pageField: 'p' } })
+    expect(buildBackendPageQuery({ page: 1, pageSize: 10 })).toEqual({
+      p: 1,
+      pageSize: 10,
+    })
+  })
+
+  it('配置生效后 adaptBackendPage 自动用新映射', () => {
+    configurePaginationAdapter({ response: { listField: 'items' } })
+    expect(adaptBackendPage({ items: [{ id: 1 }], current: 1, size: 10, total: 1 })).toEqual({
+      list: [{ id: 1 }],
+      page: 1,
+      pageSize: 10,
+      total: 1,
     })
   })
 })

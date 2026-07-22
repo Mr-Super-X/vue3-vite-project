@@ -6,7 +6,7 @@
 // - token 来源统一走 utils/storage.ts 的 Session，与项目命名空间约定一致；
 //   Session.get('token') 在生产环境自动 secure + sameSite=lax
 // - 所有抛出错误归一为 ApiError，调用方 `err instanceof ApiError` 即可 narrowing
-// - 可选能力（cancel/retry/merge）拆到独立模块，request<T> 保持简单，业务层零迁移
+// - 可选能力（cancel/retry/merge/pageAdapter）拆到独立模块，request<T> 保持简单，业务层零迁移
 
 import axios, {
   type AxiosInstance,
@@ -21,6 +21,50 @@ import type { ApiResponse } from './types/api.d'
 import { ApiError } from './types/error'
 import { resolveHttpStatusMessage } from './http-errors'
 import { globalAbort, chainSignals } from './global-abort'
+import {
+  buildBackendPageQuery,
+  adaptBackendPage,
+  _getRequestFieldMap,
+  _getResponseFieldMap,
+} from './page-adapter'
+
+/**
+ * 扩展 AxiosRequestConfig：标记分页列表请求（一次性的可插拔能力）。
+ *
+ * 设计要点：
+ * - 业务模块调用 request<T> 时，对列表接口加 usePageAdapter: true 即可
+ * - http.ts 请求拦截器自动从 params 抽 page/pageSize 调 buildBackendPageQuery 注入
+ * - http.ts request<T> 自动把后端响应包装为 Pagination<T>
+ * - 默认（不传）行为零变化；只有需要分页时才加这个标记
+ *
+ * 字段映射由 page-adapter.ts 模块级 configurePaginationAdapter() 配置，
+ * 一次设置全局生效，零业务改动。
+ *
+ * @example 列表请求（自动转换）
+ * ```ts
+ * const page = await request<Pagination<EquipmentItem>>({
+ *   url: '/equipment/list',
+ *   method: 'get',
+ *   params: { page: 1, pageSize: 20, keyword: 'x' },
+ *   usePageAdapter: true,
+ * })
+ * // page 类型为 Pagination<EquipmentItem>，无需手动调 build/adapt
+ * ```
+ *
+ * @example 非列表请求（不传标记，行为不变）
+ * ```ts
+ * const user = await request<User>({ url: '/user/1', method: 'get' })
+ * ```
+ */
+declare module 'axios' {
+  export interface AxiosRequestConfig {
+    /**
+     * 标记为分页列表请求（仅对列表接口生效）。
+     * 设为 true 后请求/响应自动按 page-adapter 约定转换；非列表请求不传此字段。
+     */
+    usePageAdapter?: boolean
+  }
+}
 
 const getAPIBaseURL = () => import.meta.env.VITE_API_BASE_URL
 
@@ -29,25 +73,80 @@ const instance: AxiosInstance = axios.create({
   timeout: 15000,
 })
 
-instance.interceptors.request.use((config) => {
-  // Session.get('token') 在生产环境强制 secure + sameSite=lax，
-  // 与 utils/storage.ts 的 token 存储约定一致。
+// ────────────────────────────────────────────────────────────────────
+// 请求拦截器辅助函数（按职责拆分；interceptor 本身只做编排）
+// ────────────────────────────────────────────────────────────────────
+
+/**
+ * 注入 Bearer Token：从 Session 读取 token 写入 Authorization 头。
+ * Session.get('token') 在生产环境自动 secure + sameSite=lax，
+ * 与 utils/storage.ts 的 token 存储约定一致。
+ *
+ * headers 可能是 AxiosHeaders 实例或 plain object，分别处理：
+ * - AxiosHeaders：有 set() 方法
+ * - plain object：直接属性赋值
+ */
+function applyAuthHeader(config: AxiosRequestConfig): void {
   const token = Session.get<string>('token')
-  if (typeof token === 'string' && token.length > 0) {
-    config.headers.set('Authorization', `Bearer ${token}`)
+  if (typeof token !== 'string' || token.length === 0 || !config.headers) return
+  const value = `Bearer ${token}`
+  const headers = config.headers as { set?: unknown }
+  // AxiosHeaders 实例有 set() 方法；plain object 走属性赋值
+  if (typeof headers.set === 'function') {
+    ;(headers as { set: (k: string, v: string) => void }).set('Authorization', value)
+  } else {
+    ;(config.headers as Record<string, string>)['Authorization'] = value
   }
-  // 合并 per-request signal 与 globalAbort signal；
-  // logout 时 globalAbort.abort() 会取消所有在途请求。
-  // 类型 cast：axios 的 GenericAbortSignal 是 AbortSignal 的结构子集，
-  // 运行时 AbortSignal 完全兼容 GenericAbortSignal，仅 TS 类型层不可推导。
+}
+
+/**
+ * 合并请求 signal 与 globalAbort signal：logout 时 globalAbort.abort() 会取消所有在途请求。
+ * 类型 cast：axios 的 GenericAbortSignal 是 AbortSignal 的结构子集，
+ * 运行时 AbortSignal 完全兼容 GenericAbortSignal，仅 TS 类型层不可推导。
+ */
+function applyAbortSignal(config: AxiosRequestConfig): void {
   config.signal = chainSignals(
     config.signal as unknown as AbortSignal | undefined,
     globalAbort.signal as AbortSignal | undefined
   ) as GenericAbortSignal
+}
+
+/**
+ * 分页请求自动转换：抽出 page/pageSize 调 buildBackendPageQuery 注入，
+ * 业务侧 params 中其他过滤字段原样保留。
+ * 字段映射由 configurePaginationAdapter 全局控制，零业务改动。
+ */
+function applyPageAdapterParams(config: AxiosRequestConfig): void {
+  if (!config.usePageAdapter || !config.params || typeof config.params !== 'object') {
+    return
+  }
+  const rawParams = config.params as Record<string, unknown>
+  const page = typeof rawParams.page === 'number' ? rawParams.page : undefined
+  const pageSize = typeof rawParams.pageSize === 'number' ? rawParams.pageSize : undefined
+  const { page: _p, pageSize: _ps, ...rest } = rawParams
+  // 条件 spread：仅在 page/pageSize 有值时透传，
+  // 避免 `undefined` 触发 exactOptionalPropertyTypes 报错
+  config.params = {
+    ...buildBackendPageQuery(
+      {
+        ...(page !== undefined ? { page } : {}),
+        ...(pageSize !== undefined ? { pageSize } : {}),
+      },
+      _getRequestFieldMap()
+    ),
+    ...rest,
+  }
+}
+
+instance.interceptors.request.use((config) => {
+  applyAuthHeader(config)
+  applyAbortSignal(config)
+  applyPageAdapterParams(config)
   return config
 })
 
-// 业务码响应处理：副作用（toast + 401 跳转）+ 抛 ApiError。
+// 响应拦截器：副作用 + 抛 ApiError，不做数据解包。
+// 签名是 AxiosResponse -> AxiosResponse，天然满足 axios 类型约束，
 // 解包责任下沉到 request<T>() 的 .then，避免拦截器里逃类型。
 
 /**
@@ -134,10 +233,35 @@ instance.interceptors.response.use(onResponseFulfilled, onResponseRejected)
 /**
  * 基础请求：返回 `body.data` 字段对应的强类型 T，错误归一为 ApiError。
  * 业务侧 modules/*.ts 通过此函数调用，零迁移成本。
+ *
+ * 分页请求：传 `usePageAdapter: true` 后自动转换入参 + 适配响应为 Pagination<T>。
+ *
+ * @example 非列表请求（默认行为）
+ * ```ts
+ * const user = await request<User>({ url: '/user/1', method: 'get' })
+ * ```
+ *
+ * @example 列表请求（自动转换）
+ * ```ts
+ * const page = await request<Pagination<EquipmentItem>>({
+ *   url: '/equipment/list',
+ *   method: 'get',
+ *   params: { page: 1, pageSize: 20, keyword: 'x' },
+ *   usePageAdapter: true,  // ← 入参自动转 pageIndex/pageSize + 响应自动包装为 Pagination<T>
+ * })
+ * // page 类型为 Pagination<EquipmentItem>，业务侧直接用
+ * ```
  */
 export async function request<T>(config: AxiosRequestConfig): Promise<T> {
-  const res = await instance.request<ApiResponse<T>, AxiosResponse<ApiResponse<T>>>(config)
-  return res.data.data
+  const res = await instance.request<ApiResponse<unknown>, AxiosResponse<ApiResponse<unknown>>>(
+    config
+  )
+  let data = res.data.data
+  if (config.usePageAdapter) {
+    // 分页响应自动适配为 Pagination<T>
+    data = adaptBackendPage(data as Record<string, unknown>, _getResponseFieldMap()) as unknown
+  }
+  return data as T
 }
 
 /**
