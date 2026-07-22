@@ -1,5 +1,6 @@
 import type { App } from 'vue'
 import type { ErrorHandlerOptions, ErrorSource } from './errorHandler.d'
+import { _bindErrorHandler } from '@/utils/safeAsync'
 
 /**
  * 全局错误处理插件
@@ -14,6 +15,8 @@ import type { ErrorHandlerOptions, ErrorSource } from './errorHandler.d'
  * - options.report：预留 Sentry/自建日志服务扩展点（未传时仅 console 输出）
  * - logToConsole：dev 默认 true / prod 默认 false
  * - 错误规范化：非 Error 实例包装为 Error（统一类型）
+ * - 与 safeAsync 工具集成：install 时同步注入 report 函数，
+ *   让 safeAsync 包装的非 HTTP 错误也走同一上报通道
  *
  * 用法：
  * ```ts
@@ -26,6 +29,9 @@ import type { ErrorHandlerOptions, ErrorSource } from './errorHandler.d'
 export default {
   install(app: App, options: ErrorHandlerOptions = {}): void {
     const { report, logToConsole = import.meta.env.DEV } = options
+
+    // 将 report 函数桥接到 safeAsync 模块，使两类错误走同一上报通道
+    _bindErrorHandler(options)
 
     /** 错误统一规范化与上报 */
     const handle = (err: unknown, source: ErrorSource, extra?: unknown): void => {

@@ -4,11 +4,12 @@
 /**
  * 错误来源标识
  *
- * - 'vue'：Vue 组件渲染 / 生命周期 / 自定义指令等抛出的错误（app.config.errorHandler）
- * - 'window.error'：window 全局 JS 错误（语法错误、未捕获异常等）
- * - 'unhandledrejection'：未捕获的 Promise 拒绝
+ * - 已知值（errorHandler 内部使用）：'vue' | 'window.error' | 'unhandledrejection'
+ * - 业务自定义：任意字符串（如 'parse-config'、'third-party-sdk'）
+ *
+ * 设为 string 而非 union 是为了支持 safeAsync 等工具自由传入上下文标签。
  */
-export type ErrorSource = 'vue' | 'window.error' | 'unhandledrejection'
+export type ErrorSource = string
 
 /**
  * 错误上下文（透传给 report 回调）
