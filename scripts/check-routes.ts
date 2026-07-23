@@ -72,7 +72,7 @@ function extractRouteNames(content: string): string[] {
 //     'Dashboard',
 //   ])
 function extractWhitelist(content: string): string[] {
-  const setMatch = content.match(/new Set<RouteName>\s*\(\s*\[([^\]]+)\]/s)
+  const setMatch = content.match(/new Set<[^>]+>\s*\(\s*\[([^\]]+)\]/s)
   if (!setMatch) return []
   const items = setMatch[1]
   // 提取 'Name' 形式（忽略注释和空格）
@@ -97,13 +97,28 @@ const REQUIRED_WHITELIST: ReadonlySet<string> = new Set([
   'ServerError',
 ])
 
+/**
+ * 一致性豁免前缀——以这些字符串开头的路由 name 跳过 A/C/E 三处一致性校验。
+ *
+ * 适用场景：动态/可选模块（demo 路由由 src/modules/demo 自动派生，
+ * 在 src/router/types.ts 的 RouteName 联合类型和 whitelist 中**故意不枚举**）。
+ * 新增同类模块时只需在此追加前缀，无需在多处手动维护。
+ */
+const EXEMPT_PREFIXES: readonly string[] = ['Demo']
+
+function isExempt(name: string): boolean {
+  return EXEMPT_PREFIXES.some((prefix) => name.startsWith(prefix))
+}
+
 let errors = 0
 const checks: Array<[string, boolean]> = [
-  // A. whitelist 元素必须在 RouteName 中
-  ...[...whitelistedNames].map((name): [string, boolean] => [
-    `[A] whitelist 中的 '${name}' 必须存在于 RouteName 联合类型中（当前${declaredNames.has(name) ? '✓' : '✗ 缺失'}）`,
-    declaredNames.has(name),
-  ]),
+  // A. whitelist 元素必须在 RouteName 中（豁免前缀跳过此检查）
+  ...[...whitelistedNames]
+    .filter((name) => !isExempt(name))
+    .map((name): [string, boolean] => [
+      `[A] whitelist 中的 '${name}' 必须存在于 RouteName 联合类型中（当前${declaredNames.has(name) ? '✓' : '✗ 缺失'}）`,
+      declaredNames.has(name),
+    ]),
 
   // B. RouteName 声明必须有 route 实现（防止声明了但忘了写路由）
   ...[...declaredNames].map((name): [string, boolean] => [
@@ -111,11 +126,13 @@ const checks: Array<[string, boolean]> = [
     implementedNames.has(name),
   ]),
 
-  // C. route 实现必须有 RouteName 声明（防止写路由忘了声明）
-  ...[...implementedNames].map((name): [string, boolean] => [
-    `[C] src/modules/*/routes/*.ts 中实现了 name '${name}' 但 RouteName 联合类型未声明`,
-    declaredNames.has(name),
-  ]),
+  // C. route 实现必须有 RouteName 声明（豁免前缀跳过此检查）
+  ...[...implementedNames]
+    .filter((name) => !isExempt(name))
+    .map((name): [string, boolean] => [
+      `[C] src/modules/*/routes/*.ts 中实现了 name '${name}' 但 RouteName 联合类型未声明`,
+      declaredNames.has(name),
+    ]),
 
   // D. 系统级白名单必须存在（任何项目都必须能匿名访问的兜底）
   ...[...REQUIRED_WHITELIST].map((name): [string, boolean] => [
@@ -123,11 +140,21 @@ const checks: Array<[string, boolean]> = [
     whitelistedNames.has(name),
   ]),
 
-  // E. 双向一致性最终汇总（一条总览行，便于一眼判断）
+  // E. 双向一致性最终汇总（豁免前缀不参与对比，汇总行也排除豁免项的计数）
   [
-    `[E] 双向一致性：declaredNames(${declaredNames.size}) ≡ implementedNames(${implementedNames.size})`,
-    declaredNames.size === implementedNames.size &&
-      [...declaredNames].every((n) => implementedNames.has(n)),
+    (() => {
+      const declaredEffective = [...declaredNames].filter((n) => !isExempt(n))
+      const implementedEffective = [...implementedNames].filter((n) => !isExempt(n))
+      return `[E] 双向一致性：declaredNames(${declaredEffective.length}) ≡ implementedNames(${implementedEffective.length})（已豁免前缀: ${EXEMPT_PREFIXES.join(', ')}）`
+    })(),
+    (() => {
+      const declaredEffective = new Set([...declaredNames].filter((n) => !isExempt(n)))
+      const implementedEffective = new Set([...implementedNames].filter((n) => !isExempt(n)))
+      return (
+        declaredEffective.size === implementedEffective.size &&
+        [...declaredEffective].every((n) => implementedEffective.has(n))
+      )
+    })(),
   ],
 ]
 

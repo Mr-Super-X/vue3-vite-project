@@ -6,26 +6,32 @@
 // 为什么用 name 而不是 path：
 //   - 路由 path 可能变化（如 `/login` → `/signin`），name 更稳定
 //   - 后端菜单可能用任意 path 注入，按 name 校验更可控
-//   - 类型安全（RouteName 联合类型约束，新增 name 必须显式声明）
 //
 // 注意：白名单路由仍建议挂载 layout（避免裸路由破布局）
+//
+// 自动吸收 demo 路由名：dev 模式从 src/modules/demo/routes 展开，
+// prod 构建时 Vite 静态替换 import.meta.env.DEV 为 false，
+// `...(false ? demoRouteNames : [])` 被 Rollup 优化为 `...[]` 并消除，
+// demo 字符串不进入生产包。scripts/check-routes.ts 已对 'Demo' 前缀做一致性豁免。
 
-import type { RouteName } from './types'
+import { routeNames as demoRouteNames } from '@/modules/demo/routes'
 
 /**
- * 白名单路由集合。增删白名单只需修改此处。
+ * 白名单路由集合。增删只需修改下方字面量数组。
  *
  * @example 业务路由加入白名单
  * ```ts
- * // 预览页跳过权限（任何人可访问，无需登录）
- * 'Preview' as RouteName,
+ * // 在字面量数组中追加即可：
+ * 'Preview',
  * ```
  */
-export const ROUTE_WHITE_LIST: ReadonlySet<RouteName> = new Set<RouteName>([
+export const ROUTE_WHITE_LIST: ReadonlySet<string> = new Set<string>([
   'Login', // 登录页
   'Forbidden', // 403 无权限
   'NotFound', // 404 页面
   'ServerError', // 500 页面
+  // dev 模式追加 demo 路由；prod 整个 spread 被 Rollup 消除
+  ...(import.meta.env.DEV ? demoRouteNames : []),
 ])
 
 /**
@@ -37,5 +43,5 @@ export const ROUTE_WHITE_LIST: ReadonlySet<RouteName> = new Set<RouteName>([
  */
 export function isWhiteListed(routeName: unknown): boolean {
   if (typeof routeName !== 'string') return false
-  return ROUTE_WHITE_LIST.has(routeName as RouteName)
+  return ROUTE_WHITE_LIST.has(routeName)
 }
