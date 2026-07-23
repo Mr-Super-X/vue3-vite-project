@@ -73,8 +73,9 @@ function defaultReporter(metric: Metric): void {
   if (!import.meta.env.DEV) return
 
   const color = RATING_COLOR[metric.rating]
-  // 徽章左半（label）固定深灰，右半（value）按评级变色——立即看出好坏
-  showBadge(`性能监控 - Web Vitals · ${metric.name}`, formatMetricValue(metric), '#1f2937', color)
+  // label 用深紫（性能监控语义），与 GlobalComponents（深灰）拉开视觉差；
+  // value 按评级变色——一眼分得清"系统组件注册"与"性能指标"两类日志
+  showBadge(`性能监控 · Web Vitals · ${metric.name}`, formatMetricValue(metric), '#6b21a8', color)
 }
 
 /** 路由表：把字符串 name 映射到 web-vitals 的注册函数。避免 switch 串到 install 主体。 */

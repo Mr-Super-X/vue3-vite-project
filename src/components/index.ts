@@ -2,6 +2,7 @@
 import type { App, Component } from 'vue'
 import { isExcluded, resolveComponentName } from './common/_internal/naming'
 import { autoImport } from '@/utils/autoImport'
+import { showBadge } from '@/utils/consoleBadge'
 
 /**
  * 在 Vite 构建时同步内联 common 下所有 .vue 模块
@@ -16,6 +17,7 @@ export default {
     let registered = 0
     let skipped = 0
     const registeredNames = new Set<string>()
+    const skippedReasons: string[] = [] // 收集跳过组件的 filepath 或 name，便于排查
 
     autoImport({
       modules,
@@ -26,6 +28,7 @@ export default {
         const component = mod.default
         if (!component) {
           skipped++
+          skippedReasons.push(`${filepath} (无 default export)`)
           return
         }
         // 第三层过滤：组件名重复
@@ -33,6 +36,7 @@ export default {
         if (registeredNames.has(name)) {
           console.warn(`[GlobalComponents] 重复的组件名 "${name}"，跳过: ${filepath}`)
           skipped++
+          skippedReasons.push(`${name} (重名 → ${filepath})`)
           return
         }
         app.component(name, component)
@@ -42,7 +46,13 @@ export default {
     })
 
     if (import.meta.env.DEV) {
-      console.info(`[GlobalComponents] 注册 ${registered} 个组件（跳过 ${skipped} 个）`)
+      // dev 模式用 GitHub 风格徽章汇总；标签深灰与 Web Vitals（深紫）拉开
+      showBadge('GlobalComponents · 已注册', `${registered} 个`, '#1f2937', '#0e9f6e')
+      showBadge('GlobalComponents · 已跳过', `${skipped} 个`, '#1f2937', '#6b7280')
+
+      if (skippedReasons.length > 0) {
+        console.warn('[GlobalComponents] 跳过详情：\n  - ' + skippedReasons.join('\n  - '))
+      }
     }
   },
 }
