@@ -81,7 +81,10 @@ function goHome() {
   grid-template-columns: 200px minmax(0, 1fr) 180px;
   gap: 24px;
   align-items: start;
-  min-height: 100%;
+  // 强制占满视口高度（减去 default-layout 的 64px header + 上下 padding），
+  // 避免 demo 内容少时容器塌陷导致 sidebar / toc 看起来"居中"——
+  // 也保证切换路由时容器高度不变，sticky sidebar / toc 不会因为高度差抖动。
+  min-height: calc(100vh - 96px);
 
   &__sidebar,
   &__toc {
