@@ -6,7 +6,7 @@ import type { MockMethod } from 'vite-plugin-mock'
  * 远程菜单 mock：与 src/router/types.ts 的 RemoteMenuItem[] 契约一致。
  *
  * 覆盖 4 种典型场景：
- *   1. 单级菜单（Dashboard）—— 顶层页面，无需权限
+ *   1. 单级菜单（Home）—— 顶层页面，无需权限
  *   2. 单级菜单（UserList）—— 顶层业务页 + 权限码
  *   3. 多级菜单（Orders → OrdersList / OrdersDetail）—— 一级菜单 + 嵌套子页面
  *   4. 隐藏菜单（Reports）—— 后端 hidden:true 转换后，前端 meta.visible:false
@@ -27,8 +27,8 @@ export default [
       data: [
         // 1. 顶层页面（无需权限）
         {
-          name: 'Dashboard',
-          path: '/dashboard',
+          name: 'Home',
+          path: '/home',
           meta: { title: '仪表盘', icon: 'odometer' },
         },
         // 2. 顶层业务页（带权限码）
