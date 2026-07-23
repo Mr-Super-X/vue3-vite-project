@@ -9,7 +9,7 @@
 //  - withErrorToast: 把 router.push 失败包装为 toast（避免裸 Promise rejection）
 //
 // 设计要点：
-//  - 与 vue-router 的 useRouter() 共存，本 composable 用 useAppRouter() 别名避免命名冲突
+//  - 文件名 useAppRouter.ts 与导出名 useAppRouter 一致，区别于 vue-router 的 useRouter
 //  - 不在 store 添加 router mutation（保持 router 单例由 vue-router 管）
 //  - 所有 async 操作都 catch 错误并 toast，避免上层每处重复 try/catch
 

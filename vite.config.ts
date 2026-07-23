@@ -67,7 +67,18 @@ export default defineConfig({
     vueDevTools(),
     UnoCSS(),
     AutoImport({
-      imports: ['vue', 'vue-router', 'pinia'],
+      imports: [
+        'vue',
+        'vue-router',
+        'pinia',
+        // 业务侧高频 composables（详见 src/composables/*）
+        // 显式列名不走 dirs 自动扫描——避免误扫到同目录的 *.spec.ts（vitest 解析会异常）
+        // useAppRouter 是项目自研的路由高层 API（区别于 vue-router 自带的 useRouter）
+        { from: '@/composables/useAuth', imports: [{ name: 'useAuth' }] },
+        { from: '@/composables/useLogout', imports: [{ name: 'useLogout' }] },
+        { from: '@/composables/useRequest', imports: [{ name: 'useRequest' }] },
+        { from: '@/composables/useAppRouter', imports: [{ name: 'useAppRouter' }] },
+      ],
       resolvers: [ElementPlusResolver()],
       dts: 'src/types/auto-imports.d.ts',
     }),
