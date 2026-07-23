@@ -17,6 +17,7 @@
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
     "check:routes": "node --experimental-strip-types scripts/check-routes.ts",
+    "new-module": "node --experimental-strip-types scripts/new-module.ts",
     "analyze": "cross-env ANALYZE=true pnpm build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

@@ -4,6 +4,13 @@
 
 ### Added
 
+- **新手指引 + 模块脚手架（提升新人上手效率）**：
+  - 新增 `scripts/new-module.ts` + `pnpm new-module <kebab-name>` 命令：一键生成 6 个骨架文件（`views/Index.vue` + `routes/index.ts` + `store/index.ts` + `apis/index.ts` + `index.ts` + `components/.gitkeep`），自动追加 RouteName 到 `src/router/types.ts` 联合类型（消除过去"加新模块需手动改 3 处"的负担）。幂等保证（重复执行不会重复追加）
+  - 骨架 `apis/index.ts` 与现有 `src/api/modules/*.ts` 互斥（脚手架默认放 `apis/`，按需迁移）；脚手架提供 `PascalItem` 类型 + `<name>Api.getList` 占位方法，注释引导按业务补全
+  - writeSkeleton 拆为 6 个 build 函数（每个 ≤ 50 行），符合 §一.4 函数 ≤ 80 行约束
+  - 新增 `docs/10-新手指引.md`（351 行，30 分钟 5 任务）：clone + dev:local → 加静态页（用 new-module）→ 加完整业务页（权限 + 异步三态 + i18n + 表单）→ 加 API + mock → 调 5 类常见问题（401/主题/远程菜单/数据格式/build 404）。任务 3.2 同步指向 `apis/index.ts` 而非 `src/api/modules/`
+  - `README.md` 加新同事入口链接 + 常用脚本表加 `pnpm new-module` + 相关文档表加 `docs/09-10` 索引
+  - 跑通手动验证：3 轮回归（`nop-test` 触发 bug 修复 + `nop-demo` 验证功能 + `nop-v2` 验证 apis 骨架 + 重构回归）→ 6 文件就位 + types.ts 同步 'NopXxx' → `pnpm check:routes` 双向一致通过 → 测试目录清理 + types.ts 备份还原，git diff 干净
 - **路由优化（13 项改进全部实施）**：
   - 扩展 `AppRouteMeta` 类型：在 `src/router/types.ts` 加 `declare module 'vue-router'` 块，`RouteMeta` 获得 `title / titleKey / icon / requiresAuth / permissions / visible / keepAlive / breadcrumb` 字段的自动补全 + 索引签名
   - 新增业务模块 orders + reports（含 4 个新路由：`OrdersList` / `OrdersDetail` / `Reports` + `OrdersList` 嵌套子页），演示多级菜单 + 权限码 + `meta.visible: false` 隐藏菜单场景
