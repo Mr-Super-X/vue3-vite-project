@@ -43,6 +43,8 @@ declare module 'vue-router' {
     keepAlive?: boolean
     /** 面包屑是否展示（侧边栏无关，紧凑型页面用 false） */
     breadcrumb?: boolean
+    /** 多页签固定（设为 true 后 tags-view 该 tag 不显示关闭按钮且不可关闭，如 Dashboard） */
+    affix?: boolean
     /** 业务自定义字段透传（adapter / 标签页 / 对话框路由等） */
     [key: string]: unknown
   }

@@ -5,6 +5,7 @@ import { fallbackRoute } from './fallback'
 import { setupAuthGuard } from './guards/auth'
 import { setupRouterErrorBoundary } from './error-boundary'
 import { ROUTER_CONFIG } from './config'
+import { useTagsViewStore } from '@/store/modules/tags-view'
 
 // 根路径重定向：访问 / 时跳到首页（仪表盘）
 //
@@ -42,5 +43,11 @@ setupAuthGuard(router)
 
 // 错误边界：动态 import 失败 / 路由解析异常 → 跳 /500 错误页（见 error-boundary.ts）
 setupRouterErrorBoundary(router)
+
+// 多页签：每次路由切换后自动加入 visitedViews（layout 中通过 keep-alive :include 联动 cache）
+// 注意：必须在 setupAuthGuard 后调用，否则未登录的 redirect 会污染 visitedViews
+router.afterEach((to) => {
+  useTagsViewStore().addRouteView(to)
+})
 
 export default router

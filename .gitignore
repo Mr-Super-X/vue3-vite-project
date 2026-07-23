@@ -46,3 +46,4 @@ __screenshots__/
 .omc/sessions/
 .omc/notepad.md
 src/types/components.d.ts
+src/types/auto-imports.d.ts

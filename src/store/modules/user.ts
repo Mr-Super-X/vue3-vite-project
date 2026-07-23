@@ -5,6 +5,7 @@ import { authApi, type LoginPayload, type UserProfile } from '@/api/modules/auth
 import { Session, clearCookies } from '@/utils/storage'
 import { globalAbort } from '@/api/global-abort'
 import { resetAuthGuardState } from '@/router/guards/auth'
+import { useDictStore } from './dict'
 import { useRouterStore } from './router'
 
 export const useUserStore = defineStore('user', () => {
@@ -19,6 +20,12 @@ export const useUserStore = defineStore('user', () => {
     token.value = t
     Session.set('token', t)
     await fetchProfile()
+    // 登录成功后预加载常用字典（失败不阻塞登录流程，5min TTL 兜底）
+    try {
+      await useDictStore().preloadDict()
+    } catch {
+      /* 静默 */
+    }
   }
 
   async function fetchProfile() {

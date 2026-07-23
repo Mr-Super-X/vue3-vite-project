@@ -11,6 +11,29 @@
   - 新增 `docs/10-新手指引.md`（351 行，30 分钟 5 任务）：clone + dev:local → 加静态页（用 new-module）→ 加完整业务页（权限 + 异步三态 + i18n + 表单）→ 加 API + mock → 调 5 类常见问题（401/主题/远程菜单/数据格式/build 404）。任务 3.2 同步指向 `apis/index.ts` 而非 `src/api/modules/`
   - `README.md` 加新同事入口链接 + 常用脚本表加 `pnpm new-module` + 相关文档表加 `docs/09-10` 索引
   - 跑通手动验证：3 轮回归（`nop-test` 触发 bug 修复 + `nop-demo` 验证功能 + `nop-v2` 验证 apis 骨架 + 重构回归）→ 6 文件就位 + types.ts 同步 'NopXxx' → `pnpm check:routes` 双向一致通过 → 测试目录清理 + types.ts 备份还原，git diff 干净
+- **多页签 tags-view（中后台体验提升）**：
+  - 新增 `src/store/modules/tags-view.ts` Setup Store：`visitedViews / cachedViews + addView/removeView/closeOthers/closeAll`；`meta.affix=true` 的路由（如 Dashboard）固定不可关。`addRouteView(to)` 给 `router.afterEach` 调用
+  - 新增 `src/components/common/TagsView/index.vue`：横排可滚动 + 单击切换 + 中键/右键菜单关闭 + affix 隐藏关闭按钮；BEM 命名空间 `gm-tags-view`
+  - 改 `src/router/types.ts`：RouteMeta 加 `affix?: boolean` 字段
+  - 改 `src/layouts/default/index.vue`：在 Header 与 RouterView 之间插 `<TagsView />` + 给 RouterView 包 `<keep-alive :include="cachedViews">`
+  - 改 `src/router/index.ts`：`router.afterEach` 调 `addRouteView(to)`（必须在 `setupAuthGuard` 之后，避免未登录 redirect 污染 visitedViews）
+  - 改 `src/modules/dashboard/routes/index.ts`：`meta.affix=true`（Dashboard 固定）
+  - 新增 `src/store/modules/tags-view.spec.ts`：9 用例覆盖 addView 去重/同 name path 更新、removeView affix 拒绝、closeOthers 保留 current+affix、closeAll 仅保留 affix
+  - **不**持久化 visitedViews（避免换账号看到旧 tab）；5/30 TTL 缓存由各层独立管
+- **字典系统（中后台常见需求基建）**：
+  - 新增 `src/api/modules/dict.ts`：`getByType(type)` 接口 + `DictEntry` 类型（`value/label/[key:string]: unknown` 索引签名支持 `color/disabled` 扩展字段）；HTTP 层 30s TTL 缓存
+  - 新增 `src/store/modules/dict.ts` Setup Store：业务层 5min TTL（`STORE_TTL_MS` 常量） + 并发去重（同一字典同时 fetch 复用同一 promise） + `getLabel(type, value)` 未命中兜底 `String(value)` + `clear()`
+  - 新增 `src/composables/useDict.ts`：`useDict(type)` 返回 `{ options, loading, getLabel, refresh }`（options 是 reactive computed）；setup 阶段 lazy fetch + onMounted 兜底 SSR 场景
+  - 改 `src/store/modules/user.ts`：登录成功后 await `preloadDict()`（失败静默），常用字典（`user_status / role`）首屏即用
+  - 新增 `mock/dict.ts`：user_status / role / order_status 3 条典型数据，dev 立即可用
+  - `PRELOAD_DICT_KEYS` 常量暴露，登录后守卫 / 用户 store 引用
+  - 新增 `src/store/modules/dict.spec.ts`（13 用例）+ `src/composables/useDict.spec.ts`（5 用例）：覆盖首次/缓存命中/force/并发去重/失败清理/getLabel 兜底/clear
+  - 新增 `docs/11-字典使用规范.md`（217 行）：三层架构速查 + 业务侧用法（el-select / el-table / refresh）+ 缓存策略表 + 预加载 vs 按需懒加载 + 后端协议 + 7 条常见坑
+  - **设计取舍**：业务层缓存 vs 网络层缓存并存 —— 网络层防 429 / 雪崩（30s），业务层防重复 await（5min）；两者改 TTL 各自调对应常量
+- **基础设施清理：unplugin 自动生成的 .d.ts 不再触发 diff**：
+  - `src/types/auto-imports.d.ts`（unplugin-auto-import 生成）：之前没加入 .gitignore，每次新增 composable/store 触发大量 diff → 加入 `.gitignore` + `git rm --cached` 从仓库移除（本地文件保留；dev/build 时 unplugin 重新生成）
+  - `src/types/components.d.ts`（unplugin-vue-components 生成）：已在 `.gitignore` 但仍被追踪，新增组件时同样触发 diff → `git rm --cached` 从仓库移除（与上面闭环同理）
+  - 工作流闭环：团队 clone → 首次 `pnpm dev` / `pnpm build` 时 unplugin 自动按需生成各自的 .d.ts 文件；不再有"加 1 个组件 = 改 .d.ts"的人工维护
 - **路由优化（13 项改进全部实施）**：
   - 扩展 `AppRouteMeta` 类型：在 `src/router/types.ts` 加 `declare module 'vue-router'` 块，`RouteMeta` 获得 `title / titleKey / icon / requiresAuth / permissions / visible / keepAlive / breadcrumb` 字段的自动补全 + 索引签名
   - 新增业务模块 orders + reports（含 4 个新路由：`OrdersList` / `OrdersDetail` / `Reports` + `OrdersList` 嵌套子页），演示多级菜单 + 权限码 + `meta.visible: false` 隐藏菜单场景
