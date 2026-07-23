@@ -25,6 +25,7 @@
 
 import type { App } from 'vue'
 import { onCLS, onINP, onLCP, onTTFB, type Metric } from 'web-vitals'
+import { showBadge } from '@utils/consoleBadge'
 
 /** 4 项核心指标；FCP 可选加入（开发期调试用） */
 export type WebVitalName = 'LCP' | 'INP' | 'CLS' | 'TTFB'
@@ -47,14 +48,33 @@ export interface WebVitalsOptions {
 const ALL_METRICS: ReadonlyArray<WebVitalName> = ['LCP', 'INP', 'CLS', 'TTFB']
 
 /**
- * 默认 reporter：dev 模式 console.info 便于观察；prod 模式 noop。
+ * 默认 reporter：dev 模式用 showBadge 输出 GitHub 风格徽章，按 rating 切换颜色；
+ * prod 模式 noop。
+ *
  * 设计取舍：未接入端点前不让数据"偷偷打到某处"，避免未审查数据外发。
  */
+
+/** 评级 → 颜色（参考 web.dev web vitals 阈值配色）。 */
+const RATING_COLOR: Record<Metric['rating'], string> = {
+  good: '#0e9f6e', // 绿（≥ good 阈值）
+  'needs-improvement': '#eab308', // 黄（介于 good 与 poor 之间）
+  poor: '#dc2626', // 红（≥ poor 阈值）
+}
+
+/** 指标名 → 单位（CLS 是无单位分数，其余为毫秒）。 */
+function formatMetricValue(metric: Metric): string {
+  const unit = metric.name === 'CLS' ? '' : 'ms'
+  // CLS 保留 2 位小数（如 0.04），其余整数毫秒
+  const rounded = Math.round(metric.value * 100) / 100
+  return unit ? `${rounded}${unit}` : `${rounded}`
+}
+
 function defaultReporter(metric: Metric): void {
-  if (import.meta.env.DEV) {
-    // metric.value 数字、metric.rating ('good'/'needs-improvement'/'poor')、metric.id
-    console.info(`[WebVitals] ${metric.name}=${Math.round(metric.value)} (${metric.rating})`)
-  }
+  if (!import.meta.env.DEV) return
+
+  const color = RATING_COLOR[metric.rating]
+  // 徽章左半（label）固定深灰，右半（value）按评级变色——立即看出好坏
+  showBadge(`性能监控 - Web Vitals · ${metric.name}`, formatMetricValue(metric), '#1f2937', color)
 }
 
 /** 路由表：把字符串 name 映射到 web-vitals 的注册函数。避免 switch 串到 install 主体。 */
