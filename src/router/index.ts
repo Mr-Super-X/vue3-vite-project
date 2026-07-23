@@ -1,13 +1,30 @@
 import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router'
+import type { RouteRecordRaw } from 'vue-router'
 import { autoRegisteredRoutes } from './auto-register'
 import { fallbackRoute } from './fallback'
 import { setupAuthGuard } from './guards/auth'
 import { setupRouterErrorBoundary } from './error-boundary'
 import { ROUTER_CONFIG } from './config'
 
+// 根路径重定向：访问 / 时跳到首页（仪表盘）
+//
+// 为什么不放 fallback：fallback 是 catch-all（/:pathMatch(.*)*），会把 / 也吞掉
+// 跳到 /404 — 与"打开站点应该看到首页"的预期不符
+//
+// 为什么不放业务模块的 routes/index.ts：根路径不属于任何业务模块，
+// 是全局级入口，集中在 router/ 目录管理
+//
+// 守卫行为：redirect 后 vue-router 会对 /dashboard 重新触发守卫链
+// （白名单 → 可见性 → 登录态 → 远程菜单 → 权限），未登录用户最终会跳 /login
+const rootRedirect: RouteRecordRaw = {
+  path: '/',
+  redirect: '/dashboard',
+}
+
 // 路由注册顺序：
-//   1. autoRegisteredRoutes：业务模块（src/modules/**/routes/index.ts），自动扫描
-//   2. fallbackRoute：catch-all 404 兜底（必须在最后，单独注册避免字典序问题）
+//   1. rootRedirect      根路径 → 首页（先匹配，避免被 fallback 拦截）
+//   2. autoRegisteredRoutes：业务模块（src/modules/**/routes/index.ts），自动扫描
+//   3. fallbackRoute：catch-all 404 兜底（必须在最后，单独注册避免字典序问题）
 //
 // history 模式由 ROUTER_CONFIG.historyMode 决定：
 //   - web：主流，URL 干净（需要后端 SPA fallback）
@@ -18,7 +35,7 @@ export const router = createRouter({
     ROUTER_CONFIG.historyMode === 'hash'
       ? createWebHashHistory(ROUTER_CONFIG.base)
       : createWebHistory(ROUTER_CONFIG.base),
-  routes: [...autoRegisteredRoutes, fallbackRoute],
+  routes: [rootRedirect, ...autoRegisteredRoutes, fallbackRoute],
 })
 
 setupAuthGuard(router)
