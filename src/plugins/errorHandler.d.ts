@@ -1,6 +1,8 @@
 // errorHandler 插件类型定义（与 errorHandler.ts 配套）
 // 分离类型到 .d.ts：与 directives 同范式
 
+import type { WebVitalsOptions } from './webVitals'
+
 /**
  * 错误来源标识
  *
@@ -43,4 +45,6 @@ export interface ErrorHandlerOptions {
  */
 export interface PluginsOptions {
   errorHandler?: ErrorHandlerOptions | false
+  /** Web Vitals 上报（不传则默认 dev console.log / prod noop；传 false 完全关闭） */
+  webVitals?: WebVitalsOptions | false
 }
