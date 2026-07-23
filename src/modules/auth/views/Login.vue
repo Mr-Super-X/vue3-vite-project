@@ -16,7 +16,7 @@ async function handleSubmit() {
   try {
     await userStore.login(form)
     ElMessage.success('登录成功')
-    const redirect = (route.query.redirect as string) ?? '/dashboard'
+    const redirect = (route.query.redirect as string) ?? '/home'
     router.push(redirect)
   } finally {
     loading.value = false

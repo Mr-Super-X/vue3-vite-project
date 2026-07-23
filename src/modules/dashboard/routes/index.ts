@@ -6,12 +6,12 @@ import type { RouteRecordRaw } from 'vue-router'
 
 const routes: RouteRecordRaw[] = [
   {
-    path: '/dashboard',
+    path: '/home',
     component: () => import('@/layouts/portal/index.vue'),
     children: [
       {
         path: '',
-        name: 'Dashboard',
+        name: 'Home',
         component: () => import('../views/home/Index.vue'),
         meta: { title: '仪表盘', icon: 'odometer', requiresAuth: true, affix: true },
       },

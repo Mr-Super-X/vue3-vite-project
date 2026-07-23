@@ -5,7 +5,7 @@
 //   - 横排可滚动（横向 overflow-x），支持任意数量 tab
 //   - 单击切换（不跳自己）
 //   - 中键 / 右键菜单关闭（菜单含"关闭其他 / 关闭全部"）
-//   - affix=true 的 tag 不显示关闭按钮且不可关（如 Dashboard）
+//   - affix=true 的 tag 不显示关闭按钮且不可关（如 Home）
 //   - 关闭 active tag 后自动跳到最后一个 visited
 
 import { computed, ref } from 'vue'

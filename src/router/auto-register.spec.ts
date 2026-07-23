@@ -4,7 +4,7 @@ import { COMPONENT_REGISTRY } from './auto-register'
 describe('COMPONENT_REGISTRY（从 autoRegisteredRoutes 派生）', () => {
   it('含 routes/index.ts 中声明的所有业务路由 name', () => {
     expect(COMPONENT_REGISTRY.Login).toBeDefined()
-    expect(COMPONENT_REGISTRY.Dashboard).toBeDefined()
+    expect(COMPONENT_REGISTRY.Home).toBeDefined()
     expect(COMPONENT_REGISTRY.UserList).toBeDefined()
   })
 

@@ -15,8 +15,8 @@ import type { RouteLocationNormalized } from 'vue-router'
 
 function makeTag(overrides: Partial<TagView> = {}): TagView {
   return {
-    name: 'Dashboard',
-    path: '/dashboard',
+    name: 'Home',
+    path: '/home',
     title: '仪表盘',
     affix: false,
     ...overrides,
@@ -76,15 +76,15 @@ describe('useTagsViewStore', () => {
 
     it('affix tag 拒绝删除', () => {
       const store = useTagsViewStore()
-      const dashboard = makeTag({ name: 'Dashboard', affix: true })
+      const dashboard = makeTag({ name: 'Home', affix: true })
       store.addView(dashboard)
       store.addView(makeTag({ name: 'A' }))
 
       const ok = store.removeView(dashboard)
 
       expect(ok).toBe(false)
-      expect(store.visitedViews.map((v) => v.name)).toEqual(['Dashboard', 'A'])
-      expect(store.cachedViews).toEqual(['Dashboard', 'A'])
+      expect(store.visitedViews.map((v) => v.name)).toEqual(['Home', 'A'])
+      expect(store.cachedViews).toEqual(['Home', 'A'])
     })
 
     it('删除不存在的 tag 返回 false', () => {
@@ -97,29 +97,29 @@ describe('useTagsViewStore', () => {
   describe('closeOthers', () => {
     it('保留 current + 所有 affix tag', () => {
       const store = useTagsViewStore()
-      store.addView(makeTag({ name: 'Dashboard', affix: true, path: '/dashboard' }))
+      store.addView(makeTag({ name: 'Home', affix: true, path: '/home' }))
       store.addView(makeTag({ name: 'A', path: '/a' }))
       store.addView(makeTag({ name: 'B', path: '/b' }))
       store.addView(makeTag({ name: 'C', path: '/c' }))
 
       store.closeOthers(makeTag({ name: 'B' }))
 
-      expect(store.visitedViews.map((v) => v.name)).toEqual(['Dashboard', 'B'])
-      expect(store.cachedViews).toEqual(['Dashboard', 'B'])
+      expect(store.visitedViews.map((v) => v.name)).toEqual(['Home', 'B'])
+      expect(store.cachedViews).toEqual(['Home', 'B'])
     })
   })
 
   describe('closeAll', () => {
     it('仅保留 affix tag', () => {
       const store = useTagsViewStore()
-      store.addView(makeTag({ name: 'Dashboard', affix: true }))
+      store.addView(makeTag({ name: 'Home', affix: true }))
       store.addView(makeTag({ name: 'A' }))
       store.addView(makeTag({ name: 'B' }))
 
       store.closeAll()
 
-      expect(store.visitedViews.map((v) => v.name)).toEqual(['Dashboard'])
-      expect(store.cachedViews).toEqual(['Dashboard'])
+      expect(store.visitedViews.map((v) => v.name)).toEqual(['Home'])
+      expect(store.cachedViews).toEqual(['Home'])
     })
   })
 
@@ -133,7 +133,7 @@ describe('useTagsViewStore', () => {
 
     it('带 meta.affix === true 的路由标记为 affix', () => {
       const store = useTagsViewStore()
-      store.addRouteView(makeRoute('Dashboard', { title: 'Dashboard', affix: true }))
+      store.addRouteView(makeRoute('Home', { title: 'Home', affix: true }))
       expect(store.visitedViews[0]?.affix).toBe(true)
     })
   })

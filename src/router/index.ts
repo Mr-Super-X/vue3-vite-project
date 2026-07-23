@@ -15,11 +15,11 @@ import { useTagsViewStore } from '@/store/modules/tags-view'
 // 为什么不放业务模块的 routes/index.ts：根路径不属于任何业务模块，
 // 是全局级入口，集中在 router/ 目录管理
 //
-// 守卫行为：redirect 后 vue-router 会对 /dashboard 重新触发守卫链
+// 守卫行为：redirect 后 vue-router 会对 /home 重新触发守卫链
 // （白名单 → 可见性 → 登录态 → 远程菜单 → 权限），未登录用户最终会跳 /login
 const rootRedirect: RouteRecordRaw = {
   path: '/',
-  redirect: '/dashboard',
+  redirect: '/home',
 }
 
 // 路由注册顺序：

@@ -5,7 +5,7 @@ import { useUserStore } from '@/store/modules/user'
 /**
  * 退出登录 composable。
  * 封装 ElMessageBox.confirm 二次确认 + loading 态 + store.logout 调用。
- * Header.vue 与 Dashboard Index.vue 复用。
+ * Header.vue 与 Home Index.vue 复用。
  */
 export function useLogout() {
   const userStore = useUserStore()

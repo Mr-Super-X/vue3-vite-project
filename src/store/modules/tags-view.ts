@@ -3,7 +3,7 @@
 // 设计要点：
 //   - visitedViews: 已访问路由的 UI 渲染列表（按访问顺序）
 //   - cachedViews: 实际进入 keep-alive 的 name 列表（与 visitedViews 同步，但排除已关闭的非 affix）
-//   - affix: meta.affix === true 的路由（如 Dashboard）始终保留，用户无法关闭
+//   - affix: meta.affix === true 的路由（如 Home）始终保留，用户无法关闭
 //   - 不持久化：避免换账号看到上个账号的 tab（设计取舍）
 //
 // 路由参数变化策略（如 /user/1 → /user/2）：
@@ -21,7 +21,7 @@ export interface TagView {
   path: string
   /** 渲染名（meta.title || name） */
   title: string
-  /** meta.affix === true 时为固定 tag（如 Dashboard），不可关闭 */
+  /** meta.affix === true 时为固定 tag（如 Home），不可关闭 */
   affix?: boolean
 }
 
