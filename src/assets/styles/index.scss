@@ -23,4 +23,5 @@
 @use './theme.scss';
 @use './transition.scss';
 @use './element-overwrite/index.scss';
+@use '@/portal/styles/portal-tokens.scss';
 @use './custom.scss';
