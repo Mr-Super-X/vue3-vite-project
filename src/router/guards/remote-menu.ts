@@ -14,6 +14,7 @@
 import type { RouteLocationNormalized, RouteLocationRaw, Router } from 'vue-router'
 import type { useUserStore } from '@/store/modules/user'
 import type { useRouterStore } from '@/store/modules/router'
+import { showBadge } from '@utils/consoleBadge'
 import { ROUTER_CONFIG } from '../config'
 import { fetchRemoteRoutes } from '../remote'
 
@@ -57,9 +58,11 @@ export async function ensureRemoteMenuLoaded(
     const remoteRoutes = await fetchRemoteRoutes()
     if (remoteRoutes.length === 0) {
       console.warn('[router] remote 菜单为空（接口失败或返回空），保持 local 菜单')
+      // 徽章：label 蓝色（路由/导航语义，与 GlobalComponents 灰 / Web Vitals 紫拉开）
+      showBadge('Router · 远程菜单', '0 个 · fallback', '#2563eb', '#9ca3af')
     } else {
       remoteRoutes.forEach((r) => router.addRoute(r))
-      console.info(`[router] 远程菜单已注入：${remoteRoutes.length} 个路由`)
+      showBadge('Router · 远程菜单', `已注入 ${remoteRoutes.length} 个`, '#2563eb', '#0e9f6e')
     }
     dynamicLoaded = true
     // 重新触发守卫（此时路由已注册，可正常匹配 + 应用可见性检查）
