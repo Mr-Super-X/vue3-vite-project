@@ -7,12 +7,12 @@ import type { RouteRecordRaw } from 'vue-router'
 const routes: RouteRecordRaw[] = [
   {
     path: '/dashboard',
-    component: () => import('@/layouts/default/index.vue'),
+    component: () => import('@/layouts/portal/index.vue'),
     children: [
       {
         path: '',
         name: 'Dashboard',
-        component: () => import('../views/Index.vue'),
+        component: () => import('../views/home/Index.vue'),
         meta: { title: '仪表盘', icon: 'odometer', requiresAuth: true, affix: true },
       },
     ],
