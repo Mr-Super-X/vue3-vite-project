@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { usePortalOverviewStore } from '@/modules/dashboard/store/portal-overview'
+import { usePortalOverviewStore } from '@/modules/home/store/portal-overview'
 import OverviewCard from './OverviewCard.vue'
 import OverviewCardSkeleton from './OverviewCardSkeleton.vue'
 import OverviewErrorState from './OverviewErrorState.vue'

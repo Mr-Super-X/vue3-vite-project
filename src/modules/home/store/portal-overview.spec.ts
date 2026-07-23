@@ -2,7 +2,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { usePortalOverviewStore } from './portal-overview'
 import * as apiModule from '@/api/modules/portal-overview'
-import type { OverviewCardDto } from '@/modules/dashboard/types/portal-overview'
+import type { OverviewCardDto } from '@/modules/home/types/portal-overview'
 
 describe('usePortalOverviewStore', () => {
   beforeEach(() => {

@@ -1,4 +1,4 @@
-// dashboard 模块路由
+// home 模块路由
 //
 // 自动注册：被 src/router/auto-register.ts 扫描到，无需手动 import。
 
@@ -12,7 +12,7 @@ const routes: RouteRecordRaw[] = [
       {
         path: '',
         name: 'Home',
-        component: () => import('../views/home/Index.vue'),
+        component: () => import('../views/Index.vue'),
         meta: { title: '仪表盘', icon: 'odometer', requiresAuth: true, affix: true },
       },
     ],

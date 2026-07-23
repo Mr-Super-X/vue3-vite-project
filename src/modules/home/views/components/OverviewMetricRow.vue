@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { OverviewMetricDto } from '@/modules/dashboard/types/portal-overview'
+import type { OverviewMetricDto } from '@/modules/home/types/portal-overview'
 
 const props = defineProps<{
   metric: OverviewMetricDto

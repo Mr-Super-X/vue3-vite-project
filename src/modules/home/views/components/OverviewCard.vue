@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import * as ElIcons from '@element-plus/icons-vue'
 import type { Component } from 'vue'
 import OverviewMetricRow from './OverviewMetricRow.vue'
-import type { OverviewCardDto } from '@/modules/dashboard/types/portal-overview'
+import type { OverviewCardDto } from '@/modules/home/types/portal-overview'
 
 const props = defineProps<{
   title: string

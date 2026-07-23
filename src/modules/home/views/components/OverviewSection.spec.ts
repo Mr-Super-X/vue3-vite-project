@@ -4,8 +4,8 @@ import { setActivePinia, createPinia } from 'pinia'
 import OverviewSection from './OverviewSection.vue'
 import OverviewCardSkeleton from './OverviewCardSkeleton.vue'
 import OverviewCard from './OverviewCard.vue'
-import { usePortalOverviewStore } from '@/modules/dashboard/store/portal-overview'
-import type { OverviewCardDto } from '@/modules/dashboard/types/portal-overview'
+import { usePortalOverviewStore } from '@/modules/home/store/portal-overview'
+import type { OverviewCardDto } from '@/modules/home/types/portal-overview'
 
 // 沿用 Phase 3 store spec 的手写 pinia 模式（项目未装 @pinia/testing）
 function mountSection(opts: {
