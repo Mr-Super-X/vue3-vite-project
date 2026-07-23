@@ -72,10 +72,12 @@ function formatMetricValue(metric: Metric): string {
 function defaultReporter(metric: Metric): void {
   if (!import.meta.env.DEV) return
 
-  const color = RATING_COLOR[metric.rating]
-  // label 用深紫（性能监控语义），与 GlobalComponents（深灰）拉开视觉差；
-  // value 按评级变色——一眼分得清"系统组件注册"与"性能指标"两类日志
-  showBadge(`性能监控 · Web Vitals · ${metric.name}`, formatMetricValue(metric), '#6b21a8', color)
+  const rating = metric.rating
+  const color = RATING_COLOR[rating]
+  // value 同时含数值 + 评级文字（不要只靠颜色，颜色不便于读屏与复制）
+  const value = `${formatMetricValue(metric)} · ${rating}`
+  // label 用深紫（性能监控语义），与 GlobalComponents（深灰）拉开视觉差
+  showBadge(`性能监控 · Web Vitals · ${metric.name}`, value, '#6b21a8', color)
 }
 
 /** 路由表：把字符串 name 映射到 web-vitals 的注册函数。避免 switch 串到 install 主体。 */
