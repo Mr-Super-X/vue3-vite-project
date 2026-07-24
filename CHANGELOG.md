@@ -56,6 +56,16 @@
   - `src/router/config.ts` 加 `historyMode` (`web|hash`) + `base` 子路径配置，支持 `.env.production` 的 `VITE_HISTORY_MODE` / `VITE_BASE` 覆盖
   - 新增 `docs/research/2026-07-22-unplugin-vue-router-survey.md`：file-based 路由方案调研，结论当前不建议迁移（远程菜单动态注入丢失是核心反对理由）
 
+### Changed
+
+- **ESLint 强制使用项目封装（业务代码拦截）**：
+  - `eslint.config.mjs` 追加 `app/business-wrap-rule` 块：`no-restricted-imports` 拦截业务目录（`src/modules/**` + `src/components/**` + `src/views/**`）的 `useRouter` from `vue-router` 与 `axios` 包，warning 级别（不阻塞构建）
+  - 拦截提示文案引导到 `@composables/useAppRouter` / `@composables/useRequest` / `@api/_http` 三个推荐替代
+  - 白名单天然生效：`src/composables/**` / `src/router/**` / `src/plugins/**` / `src/main.ts` / `*.spec.ts` 不受限
+  - 6 个业务文件同步重构：`Sidebar.vue` + `TagsView/index.vue` + `OverviewCard.vue` + `Login.vue` + `DocLayout.vue` + `DemoFrame.vue`，改用 `useAppRouter` 的 `router` 实例（vue-router 原生 API 兼容）。`useRoute` 保留（读取当前路由状态不在拦截范围）
+  - 文档同步：docs/10-新手指引.md 新增 3.7 强制使用封装小节、docs/18-代码组织决策表.md 加决策行
+  - 完整设计见 `docs/superpowers/specs/2026-07-24-eslint-wrap-rule-design.md` + 实施计划 `docs/superpowers/plans/2026-07-24-eslint-wrap-rule-plan.md`
+
 ### feat(portal) — 2026-07-23
 
 新增政府门户首页 Layout：`/dashboard` 切换至 PortalLayout（顶部蓝 banner + 横向导航 + Hero 搜索 + 数据总览 5 卡 + 系统链接 footer + AI 占位浮窗）。与现有 admin layout 双 layout 并存，业务子页零影响。
