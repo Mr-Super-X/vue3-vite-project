@@ -1,5 +1,5 @@
 import type { MockMethod } from 'vite-plugin-mock'
-import type { OverviewCardDto } from '@/modules/dashboard/types/portal-overview'
+import type { OverviewCardDto } from '@/modules/home/types/portal-overview'
 
 const MOCK_CARDS: OverviewCardDto[] = [
   {
@@ -73,7 +73,7 @@ const MOCK_CARDS: OverviewCardDto[] = [
 // 注意：mock response 必须是同步函数；200ms timeout 模拟接口延迟，便于观察 Loading 骨架
 export default [
   {
-    url: '/portal/overview',
+    url: '/api/portal/overview',
     method: 'get',
     timeout: 200,
     response: () => ({ code: 200, message: 'ok', data: MOCK_CARDS }),

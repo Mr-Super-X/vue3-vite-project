@@ -12,19 +12,20 @@
 
 ## File Structure
 
-| 文件 | 类型 | 责任 |
-|------|------|------|
-| `src/router/auto-register.ts` | 修改 | 派生 `COMPONENT_REGISTRY`（在 autoRegisteredRoutes 之后） |
-| `src/router/auto-register.spec.ts` | 新建 | 4 个测试 case 验证派生正确性 |
-| `src/router/component-registry.ts` | **删除** | — |
-| `src/router/remote.ts` | 修改 | import 路径改为 `./auto-register`；warn 文案简化 |
-| `src/router/types.ts` | 修改 | 注释更新（移除 component-registry 引用） |
-| `src/api/modules/menu.ts` | 修改 | 注释更新 |
-| `scripts/check-routes.ts` | 修改 | 删除 component-registry 校验项 |
-| `CHANGELOG.md` | 修改 | 追加 refactor 条目 |
-| `docs/07-路由模块设计.md` | 修改 | "新增路由流程" 改为 1 步 |
+| 文件                               | 类型     | 责任                                                      |
+| ---------------------------------- | -------- | --------------------------------------------------------- |
+| `src/router/auto-register.ts`      | 修改     | 派生 `COMPONENT_REGISTRY`（在 autoRegisteredRoutes 之后） |
+| `src/router/auto-register.spec.ts` | 新建     | 4 个测试 case 验证派生正确性                              |
+| `src/router/component-registry.ts` | **删除** | —                                                         |
+| `src/router/remote.ts`             | 修改     | import 路径改为 `./auto-register`；warn 文案简化          |
+| `src/router/types.ts`              | 修改     | 注释更新（移除 component-registry 引用）                  |
+| `src/api/modules/menu.ts`          | 修改     | 注释更新                                                  |
+| `scripts/check-routes.ts`          | 修改     | 删除 component-registry 校验项                            |
+| `CHANGELOG.md`                     | 修改     | 追加 refactor 条目                                        |
+| `docs/07-路由模块设计.md`          | 修改     | "新增路由流程" 改为 1 步                                  |
 
 不修改：
+
 - `src/router/index.ts` / `config.ts` / `whitelist.ts` / `fallback.ts` / `guards/*`
 - `src/modules/**/routes/index.ts`（routes 配置不动）
 
@@ -33,6 +34,7 @@
 ## Task 1: 写 auto-register.spec.ts 派生测试（先行失败）
 
 **Files:**
+
 - Create: `src/router/auto-register.spec.ts`
 
 - [ ] **Step 1: 写测试**
@@ -87,6 +89,7 @@ git commit -m "test(router): 添加 COMPONENT_REGISTRY 派生的单测（先行�
 ## Task 2: 在 auto-register.ts 添加 COMPONENT_REGISTRY 派生
 
 **Files:**
+
 - Modify: `src/router/auto-register.ts`（在 `autoRegisteredRoutes` 导出后追加派生代码）
 
 - [ ] **Step 1: 在文件末尾追加派生代码**
@@ -156,11 +159,13 @@ RouteName 联合类型导致循环依赖。"
 ## Task 3: 删除独立的 component-registry.ts
 
 **Files:**
+
 - Delete: `src/router/component-registry.ts`
 
 - [ ] **Step 1: 用 git rm 删除文件**
 
 Run:
+
 ```bash
 cd "D:/work/应急水利/应急/gm-portal-fe"
 git rm src/router/component-registry.ts
@@ -181,6 +186,7 @@ git commit -m "refactor(router): 删除独立的 component-registry.ts
 ## Task 4: 修改 remote.ts 的 import + warn 文案
 
 **Files:**
+
 - Modify: `src/router/remote.ts:17`（改 import）
 - Modify: `src/router/remote.ts:52-55`（改 warn 文案）
 
@@ -203,22 +209,19 @@ import { COMPONENT_REGISTRY } from './auto-register'
 定位 `src/router/remote.ts` 第 52-55 行的 `console.warn(...)`：
 
 ```ts
-console.warn(
-  `[router/remote] 未注册的路由 name: ${item.name}（需在 component-registry.ts 中添加）`
-)
+console.warn(`[router/remote] 未注册的路由 name: ${item.name}（需在 component-registry.ts 中添加）`)
 ```
 
 改为：
 
 ```ts
-console.warn(
-  `[router/remote] 未注册的路由 name: ${item.name}（routes/index.ts 中未声明）`
-)
+console.warn(`[router/remote] 未注册的路由 name: ${item.name}（routes/index.ts 中未声明）`)
 ```
 
 - [ ] **Step 3: 验证**
 
 Run:
+
 ```bash
 cd "D:/work/应急水利/应急/gm-portal-fe"
 pnpm type-check 2>&1 | tail -5
@@ -239,6 +242,7 @@ git commit -m "refactor(router): remote.ts import 改为 auto-register，warn �
 ## Task 5: 更新 types.ts 注释
 
 **Files:**
+
 - Modify: `src/router/types.ts`（注释更新）
 
 - [ ] **Step 1: 修改文件顶部注释**
@@ -326,6 +330,7 @@ git commit -m "docs(router): types.ts 注释更新，移除 component-registry �
 ## Task 6: 更新 api/modules/menu.ts 注释
 
 **Files:**
+
 - Modify: `src/api/modules/menu.ts:5`（注释）
 
 - [ ] **Step 1: 改注释**
@@ -355,6 +360,7 @@ git commit -m "docs(api): menu.ts 注释更新，指向 auto-register 派生"
 ## Task 7: 简化 scripts/check-routes.ts
 
 **Files:**
+
 - Modify: `scripts/check-routes.ts`（删除 component-registry 校验项）
 
 - [ ] **Step 1: 改顶部说明注释**
@@ -436,6 +442,7 @@ component-registry.ts 已合并到 auto-register.ts 派生，不再需要独立�
 ## Task 8: 更新 docs/07-路由模块设计.md
 
 **Files:**
+
 - Modify: `docs/07-路由模块设计.md`（"新增路由流程"改为 1 步）
 
 - [ ] **Step 1: 定位流程说明**
@@ -448,21 +455,23 @@ component-registry.ts 已合并到 auto-register.ts 派生，不再需要独立�
 
 ```markdown
 新增业务模块的标准流程（无需改 router 目录）：
-  1. 创建 src/modules/<feature>/routes/index.ts
-  2. 在 types.ts 追加 RouteName
-  3. 在 component-registry.ts 追加同名映射
-  4. 完成 —— 路由自动可用
-  （scripts/check-routes.ts 可一键校验 3 处一致性）
+
+1. 创建 src/modules/<feature>/routes/index.ts
+2. 在 types.ts 追加 RouteName
+3. 在 component-registry.ts 追加同名映射
+4. 完成 —— 路由自动可用
+   （scripts/check-routes.ts 可一键校验 3 处一致性）
 ```
 
 改为：
 
 ```markdown
 新增业务模块的标准流程（无需改 router 目录）：
-  1. 在 src/modules/<feature>/routes/index.ts 写路由（含 name + component）
-  2. 在 src/router/types.ts 的 RouteName 联合类型追加
-  3. 完成 —— 路由自动可用，remote 模式自动可用
-  （scripts/check-routes.ts 校验 RouteName + whitelist 一致性）
+
+1. 在 src/modules/<feature>/routes/index.ts 写路由（含 name + component）
+2. 在 src/router/types.ts 的 RouteName 联合类型追加
+3. 完成 —— 路由自动可用，remote 模式自动可用
+   （scripts/check-routes.ts 校验 RouteName + whitelist 一致性）
 
 注：原 component-registry.ts 步骤已移除（已合并到 auto-register.ts 派生）。
 ```
@@ -480,6 +489,7 @@ git commit -m "docs(router): docs/07 新增路由流程从 3 步改为 1 步"
 ## Task 9: 更新 CHANGELOG.md
 
 **Files:**
+
 - Modify: `CHANGELOG.md`（追加 refactor 条目）
 
 - [ ] **Step 1: 在顶部追加条目**
@@ -569,6 +579,7 @@ Expected: 200 / 正常响应
 ## Self-Review Summary
 
 **1. Spec coverage:**
+
 - G1 消除双重维护 ✅ Task 3 + Task 4
 - G2 单一 source of truth ✅ Task 2
 - G3 1 处改动 ✅ Task 2 + Task 8
@@ -580,6 +591,7 @@ Expected: 200 / 正常响应
 **3. Type consistency:** `COMPONENT_REGISTRY: Record<string, () => Promise<unknown>>` 在 Task 2 定义、Task 1 引用、Task 4 消费，签名一致；`autoRegisteredRoutes` 在 Task 2 末尾复用，原定义不变。
 
 **4. Pitfalls noticed & fixed:**
+
 - Task 1 单独 commit 测试文件：husky 会在 Task 1 commit 时因 `COMPONENT_REGISTRY` 缺失而失败 TS 检查 —— 用户已接受合并 commit 模式（参见上次 common 组件任务的处理），如果需要可改为 Task 1+2 合并 commit
 - Task 3 单独删除 component-registry.ts：Task 3 commit 时 `remote.ts` 仍 import 该文件，会破坏 build —— 已注明"Task 3 完成后立即执行 Task 4"（同一 subagent 串行执行无影响）
 - Task 7 的 `pnpm check:routes` 验证：依赖 RouteName + whitelist 仍能解析，验证脚本不需 import component-registry 文件

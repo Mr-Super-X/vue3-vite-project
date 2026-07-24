@@ -11,6 +11,6 @@ export default {
     username: '用户名',
     password: '密码',
   },
-  menu: { dashboard: '仪表盘', user: '用户管理' },
+  menu: { home: '首页', user: '用户管理' },
   error: { '403': '无权访问', '404': '页面不存在', '500': '服务器错误' },
 }

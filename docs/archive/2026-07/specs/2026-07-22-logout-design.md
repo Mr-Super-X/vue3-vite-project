@@ -7,15 +7,15 @@
 
 ### 现状问题
 
-| # | 问题 | 位置 |
-|---|---|---|
-| 1 | `logout()` 不调后端 `/auth/logout` 接口 | `src/store/modules/user.ts:26-31` |
-| 2 | 裸 `localStorage.removeItem('token')`，绕开 `utils/storage.ts` 约定（不调 `Session.remove('token')` + `clearCookies()`） | 同上 |
-| 3 | 不重置路由模块级状态（`dynamicLoaded` / `currentToken`） | `src/router/guards/auth.ts:26-27` |
-| 4 | 不取消进行中的请求 → 退出后接口响应到达处理器可能跳两次登录页 | — |
-| 5 | Header 退出按钮无确认弹窗（误触即退）+ 无 loading 态 | `src/components/layout/Header.vue:15` |
-| 6 | Dashboard 页面无退出入口 | `src/modules/dashboard/views/Index.vue` |
-| 7 | mock 缺失 `/api/auth/logout` | `mock/auth.ts` |
+| #   | 问题                                                                                                                     | 位置                                    |
+| --- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------- |
+| 1   | `logout()` 不调后端 `/auth/logout` 接口                                                                                  | `src/store/modules/user.ts:26-31`       |
+| 2   | 裸 `localStorage.removeItem('token')`，绕开 `utils/storage.ts` 约定（不调 `Session.remove('token')` + `clearCookies()`） | 同上                                    |
+| 3   | 不重置路由模块级状态（`dynamicLoaded` / `currentToken`）                                                                 | `src/router/guards/auth.ts:26-27`       |
+| 4   | 不取消进行中的请求 → 退出后接口响应到达处理器可能跳两次登录页                                                            | —                                       |
+| 5   | Header 退出按钮无确认弹窗（误触即退）+ 无 loading 态                                                                     | `src/components/layout/Header.vue:15`   |
+| 6   | Dashboard 页面无退出入口                                                                                                 | `src/modules/dashboard/views/Index.vue` |
+| 7   | mock 缺失 `/api/auth/logout`                                                                                             | `mock/auth.ts`                          |
 
 ### 设计目标
 
@@ -94,7 +94,7 @@ export const globalAbort = new GlobalAbortController()
 export function chainSignals(...signals: (AbortSignal | undefined)[]): AbortSignal {
   const filtered = signals.filter((s): s is AbortSignal => s !== undefined)
   if (filtered.length === 0) {
-    return new AbortController().signal  // 永不 abort 的占位
+    return new AbortController().signal // 永不 abort 的占位
   }
   if (filtered.length === 1) return filtered[0]!
   return AbortSignal.any(filtered)
@@ -152,7 +152,7 @@ export const useUserStore = defineStore('user', () => {
    * 2. 成功才清本地状态 + 跳转登录页
    */
   async function logout(): Promise<void> {
-    await authApi.logout()  // 失败由 http.ts 拦截器统一处理（toast + 抛 ApiError）
+    await authApi.logout() // 失败由 http.ts 拦截器统一处理（toast + 抛 ApiError）
     Session.remove('token')
     clearCookies()
     token.value = ''
@@ -223,12 +223,7 @@ const { loggingOut, confirmLogout } = useLogout()
 <template>
   <div :class="[bem.b(), 'flex-between', bem.is('logged-out', false)]">
     <span :class="bem.e('user')">Admin</span>
-    <el-button
-      :class="bem.e('action')"
-      :loading="loggingOut"
-      text
-      @click="confirmLogout"
-    >
+    <el-button :class="bem.e('action')" :loading="loggingOut" text @click="confirmLogout">
       退出
     </el-button>
   </div>
@@ -276,15 +271,15 @@ logout: {
 
 ## 五、错误处理矩阵
 
-| 场景 | 行为 | 用户感知 |
-|---|---|---|
-| 用户在 ElMessageBox 点取消 | `loggingOut` 不变，不调 store.logout | 无变化 |
-| `/auth/logout` 业务码非 0 | 拦截器 toast + 抛 ApiError；store.logout 中断；本地状态保留 | 弹错误提示，留原页 |
-| 网络中断 / 15s 超时 | 拦截器 toast "网络异常"；同上 | 弹错误提示，留原页 |
-| 双击退出 | 第二次点击时 `loggingOut === true`，按钮 disabled | 无感 |
-| 退出后浏览器后退 | 路由守卫（`isLoggedIn === false`）→ 跳 /login | 自然拦截 |
-| 退出时 in-flight 请求 | `globalAbort.abort()` → axios 抛 cancel error，调用方 catch 静默 | 退干净 |
-| theme-mode / i18n locale | 不动 | 用户偏好保留 |
+| 场景                       | 行为                                                             | 用户感知           |
+| -------------------------- | ---------------------------------------------------------------- | ------------------ |
+| 用户在 ElMessageBox 点取消 | `loggingOut` 不变，不调 store.logout                             | 无变化             |
+| `/auth/logout` 业务码非 0  | 拦截器 toast + 抛 ApiError；store.logout 中断；本地状态保留      | 弹错误提示，留原页 |
+| 网络中断 / 15s 超时        | 拦截器 toast "网络异常"；同上                                    | 弹错误提示，留原页 |
+| 双击退出                   | 第二次点击时 `loggingOut === true`，按钮 disabled                | 无感               |
+| 退出后浏览器后退           | 路由守卫（`isLoggedIn === false`）→ 跳 /login                    | 自然拦截           |
+| 退出时 in-flight 请求      | `globalAbort.abort()` → axios 抛 cancel error，调用方 catch 静默 | 退干净             |
+| theme-mode / i18n locale   | 不动                                                             | 用户偏好保留       |
 
 ## 六、验证清单
 
@@ -299,11 +294,11 @@ logout: {
 
 ## 七、风险与回退
 
-| 风险 | 缓解 |
-|---|---|
-| `useRouterStore().reset()` 不存在或语义不一致 | 先看实现；若不匹配则只调 `resetRouterState()`，不调 store.reset |
-| `AbortSignal.any()` 浏览器兼容 | target 浏览器均为现代浏览器（Chrome 100+ / Firefox 100+ / Safari 15+），无需 polyfill |
-| `globalAbort` 单例状态泄漏 | 仅在 logout 时调用 `.abort()`，下次登录后请求自然通过新 controller |
+| 风险                                          | 缓解                                                                                  |
+| --------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `useRouterStore().reset()` 不存在或语义不一致 | 先看实现；若不匹配则只调 `resetRouterState()`，不调 store.reset                       |
+| `AbortSignal.any()` 浏览器兼容                | target 浏览器均为现代浏览器（Chrome 100+ / Firefox 100+ / Safari 15+），无需 polyfill |
+| `globalAbort` 单例状态泄漏                    | 仅在 logout 时调用 `.abort()`，下次登录后请求自然通过新 controller                    |
 
 回退方案：
 

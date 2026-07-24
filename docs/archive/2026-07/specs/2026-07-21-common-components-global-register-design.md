@@ -2,13 +2,13 @@
 
 > **变更摘要**：通过 `src/components/index.ts` 实现的 Vue 插件，运行时扫描 `components/common/**` 下所有 `.vue` 文件并 `app.component()` 注册到全局，模板里可直接 `<AsyncState>` / `<ErrorBoundary>` 使用；同时新增 `src/types/components.d.ts` 让 IDE 模板里能补全组件。
 
-| 属性 | 值 |
-|------|-----|
-| 项目代号 | gm-portal-fe |
-| 创建日期 | 2026-07-21 |
-| 版本 | v1.0.0 |
-| 状态 | 设计已批准，待 writing-plans |
-| 目标读者 | 前端开发 |
+| 属性     | 值                           |
+| -------- | ---------------------------- |
+| 项目代号 | gm-portal-fe                 |
+| 创建日期 | 2026-07-21                   |
+| 版本     | v1.0.0                       |
+| 状态     | 设计已批准，待 writing-plans |
+| 目标读者 | 前端开发                     |
 
 ---
 
@@ -34,21 +34,21 @@ import ErrorBoundary from '@/components/common/ErrorBoundary.vue'
 
 ### 1.2 目标
 
-| # | 目标 |
-|---|------|
-| G1 | `components/common/**` 下所有 `.vue` 自动注册到 Vue 全局，无需 `import` 即可在模板使用 |
-| G2 | 命名约定：保留 SFC `name`，缺失时用文件名 PascalCase |
-| G3 | 提供排除规则：`_` 或 `.` 开头的文件名视为内部组件跳过 |
-| G4 | 集成到 IDE：模板里有类型补全（通过 `vue.GlobalComponents` 声明增强） |
-| G5 | 已存在的 `AsyncState.vue` / `ErrorBoundary.vue` 不需要任何修改 |
+| #   | 目标                                                                                   |
+| --- | -------------------------------------------------------------------------------------- |
+| G1  | `components/common/**` 下所有 `.vue` 自动注册到 Vue 全局，无需 `import` 即可在模板使用 |
+| G2  | 命名约定：保留 SFC `name`，缺失时用文件名 PascalCase                                   |
+| G3  | 提供排除规则：`_` 或 `.` 开头的文件名视为内部组件跳过                                  |
+| G4  | 集成到 IDE：模板里有类型补全（通过 `vue.GlobalComponents` 声明增强）                   |
+| G5  | 已存在的 `AsyncState.vue` / `ErrorBoundary.vue` 不需要任何修改                         |
 
 ### 1.3 非目标
 
-| # | 不做什么 |
-|---|---------|
-| N1 | 不扫描 `components/common/` 之外的其他子目录（layout / modules / 其他业务组件按现有规则走） |
-| N2 | 不强制组件必须有 `name`（fallback 文件名） |
-| N3 | 不做按需懒加载（`AsyncState` / `ErrorBoundary` 是底层同步组件，先 eager 内联） |
+| #   | 不做什么                                                                                    |
+| --- | ------------------------------------------------------------------------------------------- |
+| N1  | 不扫描 `components/common/` 之外的其他子目录（layout / modules / 其他业务组件按现有规则走） |
+| N2  | 不强制组件必须有 `name`（fallback 文件名）                                                  |
+| N3  | 不做按需懒加载（`AsyncState` / `ErrorBoundary` 是底层同步组件，先 eager 内联）              |
 
 ---
 
@@ -58,12 +58,12 @@ import ErrorBoundary from '@/components/common/ErrorBoundary.vue'
 
 新增/改动文件：
 
-| 文件 | 类型 | 说明 |
-|------|------|------|
-| `src/components/index.ts` | 新建 | Vue 插件入口；`install` 时扫描 + 注册 |
+| 文件                        | 类型 | 说明                                      |
+| --------------------------- | ---- | ----------------------------------------- |
+| `src/components/index.ts`   | 新建 | Vue 插件入口；`install` 时扫描 + 注册     |
 | `src/types/components.d.ts` | 新建 | `vue.GlobalComponents` 类型增强；模板补全 |
-| `src/main.ts` | 修改 | 增加 `app.use(GlobalComponents)` |
-| `src/components/common/` | 不改 | 现有文件自动纳入扫描 |
+| `src/main.ts`               | 修改 | 增加 `app.use(GlobalComponents)`          |
+| `src/components/common/`    | 不改 | 现有文件自动纳入扫描                      |
 
 ### 2.2 注册流程
 
@@ -96,12 +96,12 @@ install(app)              ← 插件 install 钩子
 
 ### 2.3 排除规则
 
-| 文件路径 | 是否注册 | 原因 |
-|----------|---------|------|
-| `common/AsyncState.vue` | ✅ | 默认 |
-| `common/SubDir/Bar.vue` | ✅ | 递归扫描，子目录也算 |
-| `common/_internal/Tooltip.vue` | ❌ | `_` 开头，内部使用 |
-| `common/.temp/Foo.vue` | ❌ | `.` 开头，IDE/工具链隐藏 |
+| 文件路径                       | 是否注册 | 原因                     |
+| ------------------------------ | -------- | ------------------------ |
+| `common/AsyncState.vue`        | ✅       | 默认                     |
+| `common/SubDir/Bar.vue`        | ✅       | 递归扫描，子目录也算     |
+| `common/_internal/Tooltip.vue` | ❌       | `_` 开头，内部使用       |
+| `common/.temp/Foo.vue`         | ❌       | `.` 开头，IDE/工具链隐藏 |
 
 实现：
 
@@ -117,7 +117,10 @@ function isExcluded(filepath: string): boolean {
 ```ts
 function resolveComponentName(filepath: string, explicitName?: string): string {
   if (explicitName) return explicitName
-  const base = filepath.split('/').pop()!.replace(/\.vue$/i, '')
+  const base = filepath
+    .split('/')
+    .pop()!
+    .replace(/\.vue$/i, '')
   return base // 文件名 PascalCase 已等价
 }
 ```
@@ -135,10 +138,7 @@ function resolveComponentName(filepath: string, explicitName?: string): string {
 import type { App, Component } from 'vue'
 
 // 同步扫描所有 common 下的 .vue 文件（Vite 原生，eager: true 构建时内联）
-const modules = import.meta.glob<{ default: Component }>(
-  './common/**/*.{vue,Vue}',
-  { eager: true },
-)
+const modules = import.meta.glob<{ default: Component }>('./common/**/*.{vue,Vue}', { eager: true })
 
 function isExcluded(filepath: string): boolean {
   const basename = filepath.split('/').pop() ?? ''
@@ -147,7 +147,10 @@ function isExcluded(filepath: string): boolean {
 
 function resolveComponentName(filepath: string, explicitName?: string): string {
   if (explicitName) return explicitName
-  const base = filepath.split('/').pop()!.replace(/\.vue$/i, '')
+  const base = filepath
+    .split('/')
+    .pop()!
+    .replace(/\.vue$/i, '')
   return base
 }
 
@@ -203,8 +206,8 @@ app.use(GlobalComponents)
 // 让模板里 <AsyncState> <ErrorBoundary> 走 TS 类型推导
 declare module 'vue' {
   export interface GlobalComponents {
-    AsyncState: typeof import('@/components/common/AsyncState.vue')['default']
-    ErrorBoundary: typeof import('@/components/common/ErrorBoundary.vue')['default']
+    AsyncState: (typeof import('@/components/common/AsyncState.vue'))['default']
+    ErrorBoundary: (typeof import('@/components/common/ErrorBoundary.vue'))['default']
   }
 }
 export {}
@@ -254,13 +257,13 @@ describe('GlobalComponents plugin', () => {
 
 ## 5. 边界与错误处理
 
-| 场景 | 行为 |
-|------|------|
-| 同名组件重复 | `console.warn` + 跳过（后注册的让位给先注册的） |
-| SFC 无 `name` 字段 | 用文件 basename fallback，不报错 |
-| 模块无 `default` export | 跳过（不影响后续模块） |
-| 空 common 目录 | 注册 0 个，DEV 模式日志告知 |
-| `common/_xxx.vue` | 跳过，DEV 模式计入 `skipped` |
+| 场景                    | 行为                                            |
+| ----------------------- | ----------------------------------------------- |
+| 同名组件重复            | `console.warn` + 跳过（后注册的让位给先注册的） |
+| SFC 无 `name` 字段      | 用文件 basename fallback，不报错                |
+| 模块无 `default` export | 跳过（不影响后续模块）                          |
+| 空 common 目录          | 注册 0 个，DEV 模式日志告知                     |
+| `common/_xxx.vue`       | 跳过，DEV 模式计入 `skipped`                    |
 
 ---
 
@@ -275,16 +278,17 @@ describe('GlobalComponents plugin', () => {
 
 ## 7. 实施产物清单
 
-| 序号 | 文件 | 改动 |
-|------|------|------|
-| 1 | `src/components/index.ts` | 新建（约 50 行） |
-| 2 | `src/types/components.d.ts` | 新建（约 12 行） |
-| 3 | `src/main.ts` | 新增 2 行 import + `app.use` |
-| 4 | `src/components/__tests__/global-components.spec.ts` | 新建（约 40 行） |
-| 5 | `CHANGELOG.md` | 追加一条 feat |
-| 6 | `docs/superpowers/specs/` | 本设计文档 |
+| 序号 | 文件                                                 | 改动                         |
+| ---- | ---------------------------------------------------- | ---------------------------- |
+| 1    | `src/components/index.ts`                            | 新建（约 50 行）             |
+| 2    | `src/types/components.d.ts`                          | 新建（约 12 行）             |
+| 3    | `src/main.ts`                                        | 新增 2 行 import + `app.use` |
+| 4    | `src/components/__tests__/global-components.spec.ts` | 新建（约 40 行）             |
+| 5    | `CHANGELOG.md`                                       | 追加一条 feat                |
+| 6    | `docs/superpowers/specs/`                            | 本设计文档                   |
 
 不修改：
+
 - `src/components/common/AsyncState.vue` / `ErrorBoundary.vue`
 - `vite.config.ts`（保持 unplugin-vue-components 现有配置不动）
 
@@ -292,12 +296,12 @@ describe('GlobalComponents plugin', () => {
 
 ## 8. 风险评估
 
-| 风险 | 等级 | 缓解 |
-|------|------|------|
-| 全局组件与 Element Plus 命名冲突 | 低 | 现有 common 组件名（`AsyncState`、`ErrorBoundary`）与 EP 不冲突；若日后冲突，重名检测会 warn |
-| `import.meta.glob` 在 build 后无新增组件 | 低 | `.vue` 是静态文件，新增 common 文件后 `vite dev/build` 会触发 glob 重新扫描 |
-| 类型声明手工维护成本 | 中 | `types/components.d.ts` 需手动添加新组件名；后续可考虑自动生成（不在本次范围） |
+| 风险                                     | 等级 | 缓解                                                                                         |
+| ---------------------------------------- | ---- | -------------------------------------------------------------------------------------------- |
+| 全局组件与 Element Plus 命名冲突         | 低   | 现有 common 组件名（`AsyncState`、`ErrorBoundary`）与 EP 不冲突；若日后冲突，重名检测会 warn |
+| `import.meta.glob` 在 build 后无新增组件 | 低   | `.vue` 是静态文件，新增 common 文件后 `vite dev/build` 会触发 glob 重新扫描                  |
+| 类型声明手工维护成本                     | 中   | `types/components.d.ts` 需手动添加新组件名；后续可考虑自动生成（不在本次范围）               |
 
 ---
 
-*文档版本：v1.0.0 | 生成日期：2026-07-21*
+_文档版本：v1.0.0 | 生成日期：2026-07-21_

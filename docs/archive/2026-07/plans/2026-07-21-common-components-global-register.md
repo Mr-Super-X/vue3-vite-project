@@ -12,16 +12,17 @@
 
 ## File Structure
 
-| 文件 | 类型 | 责任 |
-|------|------|------|
-| `src/components/index.ts` | 新建 | Vue 插件主体：扫描 common/**、排除、命名解析、注册 |
-| `src/types/components.d.ts` | 新建 | `vue.GlobalComponents` 类型增强；模板补全 |
-| `src/components/common/_pure-fn.spec.ts` | 新建 | 纯函数单测（`isExcluded` / `resolveComponentName`） |
-| `src/components/common/global-plugin.spec.ts` | 新建 | 插件集成测：mount 宿主组件验证 `<AsyncState>` 模板可用 |
-| `src/main.ts` | 修改 | 新增 `import GlobalComponents from '@/components'` + `app.use(...)` |
-| `CHANGELOG.md` | 修改 | 追加一条 feat |
+| 文件                                          | 类型 | 责任                                                                |
+| --------------------------------------------- | ---- | ------------------------------------------------------------------- |
+| `src/components/index.ts`                     | 新建 | Vue 插件主体：扫描 common/**、排除、命名解析、注册                  |
+| `src/types/components.d.ts`                   | 新建 | `vue.GlobalComponents` 类型增强；模板补全                           |
+| `src/components/common/_pure-fn.spec.ts`      | 新建 | 纯函数单测（`isExcluded` / `resolveComponentName`）                 |
+| `src/components/common/global-plugin.spec.ts` | 新建 | 插件集成测：mount 宿主组件验证 `<AsyncState>` 模板可用              |
+| `src/main.ts`                                 | 修改 | 新增 `import GlobalComponents from '@/components'` + `app.use(...)` |
+| `CHANGELOG.md`                                | 修改 | 追加一条 feat                                                       |
 
 不修改：
+
 - `src/components/common/AsyncState.vue` / `ErrorBoundary.vue`
 - `vite.config.ts`（已有的 `unplugin-vue-components` 不动）
 
@@ -30,6 +31,7 @@
 ## Task 1: 纯函数 `isExcluded` 与 `resolveComponentName` 单测（先行失败）
 
 **Files:**
+
 - Create: `src/components/common/index.spec.ts`
 
 - [ ] **Step 1: 写测试**
@@ -41,7 +43,8 @@ import { isExcluded, resolveComponentName } from './_internal/naming'
 describe('isExcluded', () => {
   it('默认 common 文件名不被排除', () => {
     expect(isExcluded('./AsyncState.vue')).toBe(false)
-3  })
+    3
+  })
   it('以 _ 开头的文件被排除', () => {
     expect(isExcluded('./_Internal.vue')).toBe(true)
   })
@@ -86,6 +89,7 @@ git commit -m "test(components): 添加 _internal/naming 纯函数单测（先�
 ## Task 2: 实现 `src/components/common/_internal/naming.ts`
 
 **Files:**
+
 - Create: `src/components/common/_internal/naming.ts`
 - Modify: `src/components/common/index.spec.ts`（现在会通过）
 
@@ -108,7 +112,10 @@ export function isExcluded(filepath: string): boolean {
  */
 export function resolveComponentName(filepath: string, explicitName?: string): string {
   if (explicitName) return explicitName
-  const base = filepath.split('/').pop()!.replace(/\.vue$/i, '')
+  const base = filepath
+    .split('/')
+    .pop()!
+    .replace(/\.vue$/i, '')
   return base
 }
 ```
@@ -132,6 +139,7 @@ git commit -m "feat(components): 实现 _internal/naming 纯函数"
 ## Task 3: Vue 插件主体 `src/components/index.ts`
 
 **Files:**
+
 - Create: `src/components/index.ts`
 
 - [ ] **Step 1: 写插件实现**
@@ -145,10 +153,7 @@ import { isExcluded, resolveComponentName } from './common/_internal/naming'
  * 在 Vite 构建时同步内联 common 下所有 .vue 模块
  * eager: true 让导入在 build/dev 时立即求值，运行时无异步开销
  */
-const modules = import.meta.glob<{ default: Component }>(
-  './common/**/*.{vue,Vue}',
-  { eager: true },
-)
+const modules = import.meta.glob<{ default: Component }>('./common/**/*.{vue,Vue}', { eager: true })
 
 export default {
   install(app: App) {
@@ -201,6 +206,7 @@ git commit -m "feat(components): 实现 Vue 插件扫描并注册 common 下的�
 ## Task 4: 插件集成测试（mount 宿主组件验证 `<AsyncState>` 可用）
 
 **Files:**
+
 - Create: `src/components/global-plugin.spec.ts`
 
 - [ ] **Step 1: 写测试**
@@ -219,8 +225,7 @@ describe('GlobalComponents plugin', () => {
   it('app.use 后，模板里 <AsyncState> 可解析并渲染', () => {
     const Host = defineComponent({
       setup() {
-        return () =>
-          h(AsyncStateCmp, { loading: true, error: null, isEmpty: false })
+        return () => h(AsyncStateCmp, { loading: true, error: null, isEmpty: false })
       },
     })
     // 验证组件对象存在（插件 install 的对象对比）
@@ -305,6 +310,7 @@ git commit -m "test(components): 添加 GlobalComponents 插件集成测"
 ## Task 5: 在 `src/main.ts` 接入插件
 
 **Files:**
+
 - Modify: `src/main.ts:1-30`（在 `app.use(i18n)` 之后、`app.mount('#app')` 之前加 2 行）
 
 - [ ] **Step 1: 修改 main.ts**
@@ -332,7 +338,7 @@ const app = createApp(App)
 app.use(pinia)
 app.use(router)
 app.use(i18n)
-app.use(GlobalComponents)        // ← 新增
+app.use(GlobalComponents) // ← 新增
 setupDirectives(app)
 ```
 
@@ -368,6 +374,7 @@ git commit -m "feat(main): 接入 GlobalComponents 插件，自动注册 common 
 ## Task 6: 类型声明 `src/types/components.d.ts`
 
 **Files:**
+
 - Create: `src/types/components.d.ts`
 
 - [ ] **Step 1: 创建文件**
@@ -377,8 +384,8 @@ git commit -m "feat(main): 接入 GlobalComponents 插件，自动注册 common 
 // 让模板里 <AsyncState> <ErrorBoundary> 走 TS 推导
 declare module 'vue' {
   export interface GlobalComponents {
-    AsyncState: typeof import('@/components/common/AsyncState.vue')['default']
-    ErrorBoundary: typeof import('@/components/common/ErrorBoundary.vue')['default']
+    AsyncState: (typeof import('@/components/common/AsyncState.vue'))['default']
+    ErrorBoundary: (typeof import('@/components/common/ErrorBoundary.vue'))['default']
   }
 }
 export {}
@@ -405,6 +412,7 @@ git commit -m "feat(types): 增强 vue.GlobalComponents 声明支持 common 全�
 ## Task 7: 更新 `CHANGELOG.md`
 
 **Files:**
+
 - Modify: `CHANGELOG.md`（顶部追加一条）
 
 - [ ] **Step 1: 在 CHANGELOG 顶部新增条目**
@@ -477,6 +485,7 @@ git commit -m "chore: 验证 common 全局注册排除规则（冒烟）"
 ## Self-Review Summary
 
 **1. Spec coverage：**
+
 - G1 自动注册 ✅ Task 3 / Task 5
 - G2 naming fallback ✅ Task 2
 - G3 排除规则 ✅ Task 1 / Task 2 / Task 8
@@ -488,6 +497,7 @@ git commit -m "chore: 验证 common 全局注册排除规则（冒烟）"
 **3. Type consistency：** `isExcluded` / `resolveComponentName` 在 Task 1 → Task 2 → Task 3 全程签名一致；`GlobalComponents.install` 在 Task 3 定义、Task 4 调用、Task 5 注入 main，签名匹配。
 
 **4. Pitfalls noticed & fixed：**
+
 - `_internal/naming.ts` 用 `_` 前缀 → 确认不会被自身插件误注册
 - 集成测涉及 Element Plus 依赖，Task 4 提供了 fakeApp fallback 方案防止 mount 失败
 - Task 4 测试模块用了 `defineComponent`，避免 SFC 编译器未开启时的解析问题

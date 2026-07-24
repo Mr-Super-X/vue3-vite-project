@@ -4,16 +4,16 @@
 
 ## 一、阶段拆分
 
-| 阶段 | 任务 | 产物 | 状态 |
-|---|---|---|---|
-| 0 | 备份 + manifest | `.claude/backups/request-layer-2026-07-22/` | ✅ |
-| 1 | 新增 `src/api/types/error.ts` | ApiError + isApiError | ✅ |
-| 2 | 新增 `src/api/cancel.ts` | createAbort + withAbort + linkAbort | ✅ |
-| 3 | 新增 `src/api/retry.ts` | withRetry + isIdempotent | ✅ |
-| 4 | 新增 `src/api/deduper.ts` | withDedup + shouldDedup + dedupKey | ✅ |
-| 5 | 改造 `src/api/http.ts` | token 切换 + 类型强化 + ApiError 归一 | ✅ |
-| 6 | 补充 `*.spec.ts` 4 个文件 | 39/39 测试通过 | ✅ |
-| 7 | 更新 CHANGELOG + 新增 specs/plans | 文档归档 | ✅ |
+| 阶段 | 任务                              | 产物                                        | 状态 |
+| ---- | --------------------------------- | ------------------------------------------- | ---- |
+| 0    | 备份 + manifest                   | `.claude/backups/request-layer-2026-07-22/` | ✅   |
+| 1    | 新增 `src/api/types/error.ts`     | ApiError + isApiError                       | ✅   |
+| 2    | 新增 `src/api/cancel.ts`          | createAbort + withAbort + linkAbort         | ✅   |
+| 3    | 新增 `src/api/retry.ts`           | withRetry + isIdempotent                    | ✅   |
+| 4    | 新增 `src/api/deduper.ts`         | withDedup + shouldDedup + dedupKey          | ✅   |
+| 5    | 改造 `src/api/http.ts`            | token 切换 + 类型强化 + ApiError 归一       | ✅   |
+| 6    | 补充 `*.spec.ts` 4 个文件         | 39/39 测试通过                              | ✅   |
+| 7    | 更新 CHANGELOG + 新增 specs/plans | 文档归档                                    | ✅   |
 
 ## 二、自检结果
 

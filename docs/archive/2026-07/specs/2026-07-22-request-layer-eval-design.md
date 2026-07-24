@@ -41,13 +41,13 @@ src/api/
 
 ### 1. `http.ts` 类型强化
 
-| 旧 | 新 |
-|---|---|
-| `((response) => { ... }) as never` | 拆为 `onResponseFulfilled(response): AxiosResponse<...>`，签名天然满足 axios 类型 |
-| 数据解包在拦截器 | 数据解包下沉到 `request<T>()` 的 `.then(res => res.data.data)`，职责清晰 |
-| 错误抛裸 `Error` | 统一抛 `ApiError`（code/status/message/url/cause） |
-| `localStorage.getItem('token')` | `Session.get<string>('token')`，对齐 storage 命名空间 |
-| HTTP 401 仅 `localStorage.removeItem('token')` | 同时 `Session.remove('token')` + `clearCookies()` |
+| 旧                                             | 新                                                                                |
+| ---------------------------------------------- | --------------------------------------------------------------------------------- |
+| `((response) => { ... }) as never`             | 拆为 `onResponseFulfilled(response): AxiosResponse<...>`，签名天然满足 axios 类型 |
+| 数据解包在拦截器                               | 数据解包下沉到 `request<T>()` 的 `.then(res => res.data.data)`，职责清晰          |
+| 错误抛裸 `Error`                               | 统一抛 `ApiError`（code/status/message/url/cause）                                |
+| `localStorage.getItem('token')`                | `Session.get<string>('token')`，对齐 storage 命名空间                             |
+| HTTP 401 仅 `localStorage.removeItem('token')` | 同时 `Session.remove('token')` + `clearCookies()`                                 |
 
 ### 2. `deduper.ts` 写请求白名单
 
@@ -83,10 +83,10 @@ linkAbort(ext, local)       // 外部信号触发本地 abort
 
 ```ts
 class ApiError extends Error {
-  code: number                    // 业务码或 HTTP 状态码
-  status: number | undefined      // HTTP 状态码（业务错误时为 undefined）
+  code: number // 业务码或 HTTP 状态码
+  status: number | undefined // HTTP 状态码（业务错误时为 undefined）
   url: string | undefined
-  cause: unknown                  // 原始 axios 错误
+  cause: unknown // 原始 axios 错误
 }
 ```
 

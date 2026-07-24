@@ -295,7 +295,7 @@ const RULE_LABELS = {
 
 ### 25 种 scope 选项
 
-合并自：项目特定（api、auth、dashboard 等）+ 通用前端（views、router、components 等）+ 兜底（other、custom）
+合并自：项目特定（api、auth、home 等）+ 通用前端（views、router、components 等）+ 兜底（other、custom）
 
 每个 scope 格式：`{ value, name: "value       (描述)" }`
 

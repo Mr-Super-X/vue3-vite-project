@@ -7,14 +7,14 @@
 
 ### 现状问题
 
-| # | 问题 | 位置 |
-|---|---|---|
-| 1 | 现有 default layout 是 admin 风格（深色侧边栏 + 顶部 + 多页签），与"政府门户首页"的视觉风格严重不符 | `src/layouts/default/index.vue:14-32` |
-| 2 | Header 仅显示用户名 + 退出按钮，无法承载"我的消息/待办/头像"信息卡 | `src/components/layout/Header.vue:14-22` |
-| 3 | Sidebar 仅显示标题 + 折叠按钮，无法承载横向顶部导航 | `src/components/layout/Sidebar.vue:8-10` |
-| 4 | Dashboard 首页只有 3 张简单 el-card，没有"数据总览"等门户必备元素 | `src/modules/dashboard/views/Index.vue:15-31` |
-| 5 | 缺少 AI 浮窗、热门搜索、问候语等门户组件 | — |
-| 6 | 系统链接与版权没有结构化承载 | — |
+| #   | 问题                                                                                                | 位置                                          |
+| --- | --------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| 1   | 现有 default layout 是 admin 风格（深色侧边栏 + 顶部 + 多页签），与"政府门户首页"的视觉风格严重不符 | `src/layouts/default/index.vue:14-32`         |
+| 2   | Header 仅显示用户名 + 退出按钮，无法承载"我的消息/待办/头像"信息卡                                  | `src/components/layout/Header.vue:14-22`      |
+| 3   | Sidebar 仅显示标题 + 折叠按钮，无法承载横向顶部导航                                                 | `src/components/layout/Sidebar.vue:8-10`      |
+| 4   | Dashboard 首页只有 3 张简单 el-card，没有"数据总览"等门户必备元素                                   | `src/modules/dashboard/views/Index.vue:15-31` |
+| 5   | 缺少 AI 浮窗、热门搜索、问候语等门户组件                                                            | —                                             |
+| 6   | 系统链接与版权没有结构化承载                                                                        | —                                             |
 
 ### 设计目标
 
@@ -144,6 +144,7 @@ src/portal/
 ```
 
 **路径说明**：
+
 - `src/modules/dashboard/store/` 而非 `stores/`：与现有 `src/modules/dashboard/store/index.ts` 单数约定一致
 - `mock/` 在项目根而非 `src/api/mock/`：与现有 `mock/dashboard.ts` 等同级（vite-plugin-mock 默认扫描路径）
 - `src/modules/dashboard/types/` 是本次新建目录，未来其他模块的 DTO 也可复用此模式
@@ -162,8 +163,8 @@ src/modules/dashboard/views/Index.vue       # 删除（原 dashboard 首页改�
 ```ts
 // === HeroSection.vue ===
 interface HeroSectionProps {
-  titleArt?: string                          // 左侧装饰图（本次用占位）
-  slogan?: string                            // 默认走 config/hero.ts
+  titleArt?: string // 左侧装饰图（本次用占位）
+  slogan?: string // 默认走 config/hero.ts
   hotSearches: string[]
   searchTypes: SearchTypeOption[]
   modelValueSearchType: string
@@ -177,7 +178,10 @@ interface HotSearchTagsProps {
 }
 
 // === SearchBar.vue ===
-interface SearchTypeOption { label: string; value: string }
+interface SearchTypeOption {
+  label: string
+  value: string
+}
 interface SearchBarProps {
   types: SearchTypeOption[]
   modelValueType: string
@@ -256,7 +260,7 @@ const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false'
 export const portalOverviewApi = {
   async getOverview(): Promise<OverviewCardDto[]> {
     if (USE_MOCK) {
-      await new Promise(r => setTimeout(r, 200))   // 模拟网络延迟
+      await new Promise((r) => setTimeout(r, 200)) // 模拟网络延迟
       return getMockOverview()
     }
     const { data } = await request.get<OverviewCardDto[]>('/api/portal/overview')
@@ -316,14 +320,15 @@ export interface FooterLinkGroup {
 
 ### 4.1 OverviewSection 三态
 
-| 状态 | 触发条件 | UI |
-|---|---|---|
-| Loading | `store.loading === true` | 5 个 `OverviewCardSkeleton`（静态骨架，不闪烁） |
-| Error | `store.error !== null` | `OverviewErrorState`：图标 + "数据加载失败" + 错误提示 + 重试按钮 |
-| Empty | `cards.length === 0` 且无 error | `OverviewEmptyState`：图标 + "暂无数据" + 提示文字 |
-| Normal | 上述皆否 | 5 张 `OverviewCard` |
+| 状态    | 触发条件                        | UI                                                                |
+| ------- | ------------------------------- | ----------------------------------------------------------------- |
+| Loading | `store.loading === true`        | 5 个 `OverviewCardSkeleton`（静态骨架，不闪烁）                   |
+| Error   | `store.error !== null`          | `OverviewErrorState`：图标 + "数据加载失败" + 错误提示 + 重试按钮 |
+| Empty   | `cards.length === 0` 且无 error | `OverviewEmptyState`：图标 + "暂无数据" + 提示文字                |
+| Normal  | 上述皆否                        | 5 张 `OverviewCard`                                               |
 
 **关键约束**：
+
 - Loading 与 Empty **视觉明确区分**（骨架 vs 插画），不能都用 v-if 一刀切
 - Error 必须有可操作的**重试按钮**（emit retry → store.fetch）
 - `error.message` 只展示后端业务文案，不暴露堆栈
@@ -331,13 +336,13 @@ export interface FooterLinkGroup {
 
 ### 4.2 其他组件
 
-| 组件 | Loading | Error | Empty |
-|---|---|---|---|
-| HeroSection | 不适用（hotSearches 来自 config） | — | 热门搜索数组为空 → "暂无热门搜索" |
-| PortalHeaderNav 用户卡 | `userStore.profile` 未就绪 → 骨架头像 | 异常 → 全局错误页 | 用户名为空 → 降级显示"游客" |
-| DateGreeting | 不适用（用 new Date()） | — | — |
-| PortalAiWidget | 不适用（仅 ElMessage 反馈） | — | — |
-| SearchBar | 点击搜索 → 按钮 loading | — | 关键词为空 → 按钮 disabled |
+| 组件                   | Loading                               | Error             | Empty                             |
+| ---------------------- | ------------------------------------- | ----------------- | --------------------------------- |
+| HeroSection            | 不适用（hotSearches 来自 config）     | —                 | 热门搜索数组为空 → "暂无热门搜索" |
+| PortalHeaderNav 用户卡 | `userStore.profile` 未就绪 → 骨架头像 | 异常 → 全局错误页 | 用户名为空 → 降级显示"游客"       |
+| DateGreeting           | 不适用（用 new Date()）               | —                 | —                                 |
+| PortalAiWidget         | 不适用（仅 ElMessage 反馈）           | —                 | —                                 |
+| SearchBar              | 点击搜索 → 按钮 loading               | —                 | 关键词为空 → 按钮 disabled        |
 
 ---
 
@@ -391,24 +396,24 @@ pnpm test:coverage             # 覆盖率（门槛 80%）
 
 ### 6.1 影响面
 
-| 范围 | 影响 |
-|---|---|
+| 范围                                    | 影响                       |
+| --------------------------------------- | -------------------------- |
 | `src/modules/dashboard/routes/index.ts` | 1 行修改（component 路径） |
-| `src/layouts/default/` | 零影响 |
-| `src/components/layout/` | 零影响 |
-| `src/router/index.ts` | 零影响 |
-| 路由守卫 / 全局状态 / 错误边界 | 零影响 |
-| 其他业务页（orders / reports） | 零影响 |
+| `src/layouts/default/`                  | 零影响                     |
+| `src/components/layout/`                | 零影响                     |
+| `src/router/index.ts`                   | 零影响                     |
+| 路由守卫 / 全局状态 / 错误边界          | 零影响                     |
+| 其他业务页（orders / reports）          | 零影响                     |
 
 ### 6.2 风险与缓解
 
-| 风险 | 缓解 |
-|---|---|
-| 默认 layout 残留导致用户视觉困惑 | 路由明确指向新 layout，文档化 |
-| 5 张卡 mock 数据与后端真实返回结构不一致 | 后端文档就绪前，DTO 与 mock 共用 type，零漂移 |
-| PortalLayout 与 DefaultLayout 视觉冲突（如未来误用） | 通过路由文件物理隔离 |
-| Store 单例污染（重复进入首页） | 仅暴露 `fetch()`，不缓存命中判断；如需缓存，引入 `hasFetched` |
-| 测试覆盖率不达标 | 关键 store + 三态组件已列入测试清单 |
+| 风险                                                 | 缓解                                                          |
+| ---------------------------------------------------- | ------------------------------------------------------------- |
+| 默认 layout 残留导致用户视觉困惑                     | 路由明确指向新 layout，文档化                                 |
+| 5 张卡 mock 数据与后端真实返回结构不一致             | 后端文档就绪前，DTO 与 mock 共用 type，零漂移                 |
+| PortalLayout 与 DefaultLayout 视觉冲突（如未来误用） | 通过路由文件物理隔离                                          |
+| Store 单例污染（重复进入首页）                       | 仅暴露 `fetch()`，不缓存命中判断；如需缓存，引入 `hasFetched` |
+| 测试覆盖率不达标                                     | 关键 store + 三态组件已列入测试清单                           |
 
 ---
 
@@ -417,22 +422,23 @@ pnpm test:coverage             # 覆盖率（门槛 80%）
 ```scss
 // src/portal/styles/portal-tokens.scss
 :root {
-  --card-law-bg:     #E8F1FF;   // 执法监管
-  --card-monitor-bg: #FFEBE6;   // 监测预警
-  --card-safety-bg:  #E8F8EE;   // 安评监管
-  --card-training-bg:#FFF4E0;   // 培训监管
-  --card-hazard-bg:  #FFE8E8;   // 隐患排查
+  --card-law-bg: #e8f1ff; // 执法监管
+  --card-monitor-bg: #ffebe6; // 监测预警
+  --card-safety-bg: #e8f8ee; // 安评监管
+  --card-training-bg: #fff4e0; // 培训监管
+  --card-hazard-bg: #ffe8e8; // 隐患排查
 
-  --banner-grad-from: #1B5BC9;  // banner 渐变起点
-  --banner-grad-to:   #5B9BF0;  // banner 渐变终点
+  --banner-grad-from: #1b5bc9; // banner 渐变起点
+  --banner-grad-to: #5b9bf0; // banner 渐变终点
 
-  --trend-up:   #F56C6C;         // 上升（红色，警示）
-  --trend-down: #67C23A;         // 下降（绿色，向好）
+  --trend-up: #f56c6c; // 上升（红色，警示）
+  --trend-down: #67c23a; // 下降（绿色，向好）
   --trend-flat: #909399;
 }
 ```
 
 **图标选择（Element Plus 已装）**：
+
 - 执法监管 → `odometer`
 - 监测预警 → `warning-filled`
 - 安评监管 → `document-checked`
@@ -441,11 +447,11 @@ pnpm test:coverage             # 覆盖率（门槛 80%）
 
 **趋势箭头与颜色映射（按截图严格一致）**：
 
-| `trend` 值 | 箭头 | 颜色 |
-|---|---|---|
-| `up` | ▲ | 红 `#F56C6C` |
-| `down` | ▼ | 绿 `#67C23A` |
-| `flat` | — | 灰 `#909399` |
+| `trend` 值 | 箭头 | 颜色         |
+| ---------- | ---- | ------------ |
+| `up`       | ▲    | 红 `#F56C6C` |
+| `down`     | ▼    | 绿 `#67C23A` |
+| `flat`     | —    | 灰 `#909399` |
 
 注意：颜色仅反映**方向**，不反映**好坏**。例如「执法计划完成率 ▲ 3.9%」是好事，但箭头仍为红色。判断好坏由业务方决定，本设计只负责视觉一致。
 

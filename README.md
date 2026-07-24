@@ -316,18 +316,18 @@ pnpm dev:local
 
 ### Mock 数据
 
-开发模式默认启用 vite-plugin-mock（`VITE_USE_MOCK=true`），内置 mock 模块：
+开发模式默认启用 vite-plugin-mock（由 `vite.config.ts` 按 `NODE_ENV !== 'production'` 控制），内置 mock 模块：
 
-| 模块      | 接口                                                       | 默认账号       |
-| --------- | ---------------------------------------------------------- | -------------- |
-| auth      | `/api/auth/login`、`/api/auth/profile`、`/api/auth/logout` | admin / 123456 |
-| user      | `/api/user/list`、`/api/user/:id`                          | -              |
-| dashboard | `/api/dashboard/stats`                                     | -              |
-| menu      | `/api/menu`（返回 Home + UserList 两条）                   | -              |
+| 模块            | 接口                                                       | 默认账号       |
+| --------------- | ---------------------------------------------------------- | -------------- |
+| auth            | `/api/auth/login`、`/api/auth/profile`、`/api/auth/logout` | admin / 123456 |
+| user            | `/api/user/list`、`/api/user/:id`                          | -              |
+| menu            | `/api/menu`（远程菜单）                                    | -              |
+| portal-overview | `/api/portal/overview`（首页数据总览）                     | -              |
 
 > `/api/menu`（远程菜单）在 remote 模式下由守卫调用。已内置 mock（Home + UserList），无需额外配置即可跑通端到端流程。
 
-切换真实后端：修改 `.env.development` 中 `VITE_USE_MOCK=false` 并配置 `VITE_API_BASE_URL`。
+生产构建不启用 vite-plugin-mock；联调真实后端时配置 `VITE_API_BASE_URL`，并使用 `pnpm build && pnpm preview` 验证生产路径。菜单加载方式仍由 `VITE_MENU_SOURCE` 控制。
 
 ### 路由架构（自动注册）
 
@@ -522,13 +522,14 @@ pnpm build
 
 ### 环境变量
 
-| 变量                     | 说明                                                  | 默认值           |
-| ------------------------ | ----------------------------------------------------- | ---------------- |
-| `VITE_APP_TITLE`         | 应用标题（浏览器 tab / login 欢迎语）                 | 工贸统一登录门户 |
-| `VITE_API_BASE_URL`      | API 基础 URL（baseURL，前缀统一管理）                 | `/api`           |
-| `VITE_USE_MOCK`          | 是否启用 Mock（dev 默认 true）                        | `false`          |
-| `VITE_MENU_SOURCE`       | 菜单加载模式（`local` / `remote`，dev 默认 `remote`） | `remote`         |
-| `VITE_STORAGE_NAMESPACE` | storage 命名空间（隔离多项目共用 localStorage）       | `gm-portal-fe`   |
+| 变量                     | 说明                                                             | 默认值           |
+| ------------------------ | ---------------------------------------------------------------- | ---------------- |
+| `VITE_APP_TITLE`         | 应用标题配置（当前默认文案由 `src/locales/` 与路由 `meta` 提供） | 工贸统一登录门户 |
+| `VITE_API_BASE_URL`      | API 基础 URL（baseURL，前缀统一管理）                            | `/api`           |
+| `VITE_MENU_SOURCE`       | 菜单加载模式（`local` / `remote`，未设置时默认 `remote`）        | `remote`         |
+| `VITE_HISTORY_MODE`      | 路由历史模式（`web` / `hash`，用于子路径或静态托管部署）         | `web`            |
+| `VITE_BASE`              | 路由部署基础路径（必须以 `/` 开头和结尾）                        | `/`              |
+| `VITE_STORAGE_NAMESPACE` | storage 命名空间（隔离多项目共用 localStorage）                  | `gm-portal-fe`   |
 
 > 环境变量读取：项目内显式通过 `import.meta.env.VITE_XXX` 访问。`baseURL` / `storage namespace` 单一来源在 `src/api/http.ts` 和 `src/utils/storage.ts`，不在各业务模块分散。
 
@@ -652,12 +653,16 @@ pnpm test:coverage     # 覆盖率报告（输出到 coverage/）
 | 组件示例站点开发指引 | `docs/09-组件示例站点开发指引.md`   | dev-only demo 模块，1 文件 1 demo + 自动 API 提取             |
 | **新手指引**         | `docs/10-新手指引.md`               | 30 分钟 5 任务：clone → 加模块 → 加 API → 调常见问题          |
 
-### 设计 / 计划
+### 设计 / 计划（已归档）
 
-| 文档     | 路径                                                                |
-| -------- | ------------------------------------------------------------------- |
-| 设计文档 | `docs/superpowers/specs/2026-07-17-vue3-vite-ts-scaffold-design.md` |
-| 实施计划 | `docs/superpowers/plans/2026-07-17-vue3-vite-ts-scaffold.md`        |
+历史设计与计划按月归档到 `docs/archive/`，仅作为时间线追溯；最新规范请直接读 `docs/01-12` 与 README 当前章节。
+
+| 目录                             | 内容                               |
+| -------------------------------- | ---------------------------------- |
+| `docs/archive/2026-07/`          | 2026-07 期间的设计 + 计划 + 调研   |
+| `docs/archive/2026-07/specs/`    | 设计文档（按日期命名）             |
+| `docs/archive/2026-07/plans/`    | 实施计划（按日期命名）             |
+| `docs/archive/2026-07/research/` | 调研报告（如 unplugin-vue-router） |
 
 ### 变更日志
 

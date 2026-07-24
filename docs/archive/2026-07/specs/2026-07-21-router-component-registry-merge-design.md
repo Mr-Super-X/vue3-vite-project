@@ -2,13 +2,13 @@
 
 > **变更摘要**：删除独立的 `src/router/component-registry.ts`，改为在 `auto-register.ts` 中从 `autoRegisteredRoutes` 派生 `COMPONENT_REGISTRY`。消除"路由配置 + 组件映射"双重维护，让 `routes/index.ts` 成为唯一 source of truth。新增路由从 3 处改动（routes/index.ts + types.ts + component-registry.ts）简化为 1 处（routes/index.ts）。
 
-| 属性 | 值 |
-|------|-----|
-| 项目代号 | gm-portal-fe |
-| 创建日期 | 2026-07-21 |
-| 版本 | v1.0.0 |
-| 状态 | 设计已批准，待 writing-plans |
-| 目标读者 | 前端开发、Code Review |
+| 属性     | 值                           |
+| -------- | ---------------------------- |
+| 项目代号 | gm-portal-fe                 |
+| 创建日期 | 2026-07-21                   |
+| 版本     | v1.0.0                       |
+| 状态     | 设计已批准，待 writing-plans |
+| 目标读者 | 前端开发、Code Review        |
 
 ---
 
@@ -45,27 +45,28 @@ export const COMPONENT_REGISTRY: Record<RouteName, () => Promise<unknown>> = {
 ```
 
 **两者指向同一份 .vue 文件**：
+
 - `auth/views/Login.vue`（实际代码）
 - 但在 `auth/routes/index.ts` 和 `component-registry.ts` 各写一次 loader
 
 ### 1.2 目标
 
-| # | 目标 |
-|---|------|
-| G1 | 消除 component-registry 与 routes/index.ts 的双重维护 |
-| G2 | 让 routes/index.ts 成为 name → component 映射的唯一 source of truth |
-| G3 | 新增业务路由从"3 处改动"降为"1 处改动"（仅 routes/index.ts） |
-| G4 | 后端 JSON → 视图组件的桥接逻辑保持（remote.ts 行为不变） |
-| G5 | types.ts 的 RouteName 联合类型约束保留（type safety 不退化） |
+| #   | 目标                                                                |
+| --- | ------------------------------------------------------------------- |
+| G1  | 消除 component-registry 与 routes/index.ts 的双重维护               |
+| G2  | 让 routes/index.ts 成为 name → component 映射的唯一 source of truth |
+| G3  | 新增业务路由从"3 处改动"降为"1 处改动"（仅 routes/index.ts）        |
+| G4  | 后端 JSON → 视图组件的桥接逻辑保持（remote.ts 行为不变）            |
+| G5  | types.ts 的 RouteName 联合类型约束保留（type safety 不退化）        |
 
 ### 1.3 非目标
 
-| # | 不做什么 |
-|---|---------|
-| N1 | 不改 auto-register.ts 的扫描逻辑（仍扫 routes/index.ts） |
-| N2 | 不改 remote.ts 的业务流程（仍按 name 找 component） |
-| N3 | 不重命名 RouteName / autoRegisteredRoutes 等已有 export |
-| N4 | 不做"运行时校验 routes/index.ts 必须有 name + component"的硬约束（lint 层面后续议题） |
+| #   | 不做什么                                                                              |
+| --- | ------------------------------------------------------------------------------------- |
+| N1  | 不改 auto-register.ts 的扫描逻辑（仍扫 routes/index.ts）                              |
+| N2  | 不改 remote.ts 的业务流程（仍按 name 找 component）                                   |
+| N3  | 不重命名 RouteName / autoRegisteredRoutes 等已有 export                               |
+| N4  | 不做"运行时校验 routes/index.ts 必须有 name + component"的硬约束（lint 层面后续议题） |
 
 ---
 
@@ -124,16 +125,16 @@ export const COMPONENT_REGISTRY: Record<string, () => Promise<unknown>> = (() =>
 
 ## 3. 改动清单
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `src/router/component-registry.ts` | **删除** | 整体删除（29 行） |
-| `src/router/auto-register.ts` | 修改 | 在 `autoRegisteredRoutes` 后追加 `COMPONENT_REGISTRY` 派生 |
-| `src/router/remote.ts` | 修改 | import 路径改 `./auto-register`；warn 文案简化 |
-| `src/router/types.ts` | 修改 | 注释更新（移除 component-registry 引用） |
-| `src/api/modules/menu.ts` | 修改 | 注释更新 |
-| `scripts/check-routes.ts` | 修改 | 删除 component-registry 校验项；保留 RouteName + whitelist 校验 |
-| `CHANGELOG.md` | 修改 | 追加 refactor 条目 |
-| `docs/07-路由模块设计.md` | 修改 | "新增路由流程" 从 3 步改为 1 步 |
+| 文件                               | 操作     | 说明                                                            |
+| ---------------------------------- | -------- | --------------------------------------------------------------- |
+| `src/router/component-registry.ts` | **删除** | 整体删除（29 行）                                               |
+| `src/router/auto-register.ts`      | 修改     | 在 `autoRegisteredRoutes` 后追加 `COMPONENT_REGISTRY` 派生      |
+| `src/router/remote.ts`             | 修改     | import 路径改 `./auto-register`；warn 文案简化                  |
+| `src/router/types.ts`              | 修改     | 注释更新（移除 component-registry 引用）                        |
+| `src/api/modules/menu.ts`          | 修改     | 注释更新                                                        |
+| `scripts/check-routes.ts`          | 修改     | 删除 component-registry 校验项；保留 RouteName + whitelist 校验 |
+| `CHANGELOG.md`                     | 修改     | 追加 refactor 条目                                              |
+| `docs/07-路由模块设计.md`          | 修改     | "新增路由流程" 从 3 步改为 1 步                                 |
 
 ### 3.1 `src/router/auto-register.ts` 新增内容
 
@@ -181,12 +182,14 @@ export const COMPONENT_REGISTRY: Record<string, () => Promise<unknown>> = (() =>
 ### 3.3 `scripts/check-routes.ts` 改动
 
 删除以下校验项：
+
 - `registryContent = readRouterFile('component-registry.ts')`（行 64）
 - "RouteName 中每个 name 都必须在 component-registry 中"（行 73-77）
 - "component-registry 中每个 key 都必须在 RouteName 中"（行 78-82）
 - `console.log('component-registry 映射：...')`（行 104）
 
 **保留**：
+
 - RouteName 联合类型解析
 - 与 whitelist 一致性校验
 - scripts/check-routes.ts 顶部的"组件注册表必要性"说明改为"routes/index.ts 一致性"
@@ -198,7 +201,7 @@ export const COMPONENT_REGISTRY: Record<string, () => Promise<unknown>> = (() =>
 - // component-registry.ts 用 RouteName 校验 key 拼写
 - // 新增路由时必须在此追加，否则 TS 报错
 + // 新增路由时必须在此追加，否则 TS 报错
-+ // 
++ //
 + // 注：原 component-registry.ts 已合并到 auto-register.ts 派生，
 + // 无需再单独维护 name → component 映射。
 
@@ -272,44 +275,44 @@ describe('COMPONENT_REGISTRY（派生自 autoRegisteredRoutes）', () => {
 
 ## 5. 边界与错误处理
 
-| 场景 | 行为 |
-|------|------|
-| routes 中 name 重复 | 派生时 `console.warn` + 后注册覆盖前者 |
-| routes 中无 name 字段 | 跳过（不加入 COMPONENT_REGISTRY） |
-| routes 中无 component 字段 | 跳过（不加入 COMPONENT_REGISTRY） |
+| 场景                            | 行为                                        |
+| ------------------------------- | ------------------------------------------- |
+| routes 中 name 重复             | 派生时 `console.warn` + 后注册覆盖前者      |
+| routes 中无 name 字段           | 跳过（不加入 COMPONENT_REGISTRY）           |
+| routes 中无 component 字段      | 跳过（不加入 COMPONENT_REGISTRY）           |
 | 后端返回 routes 中未声明的 name | remote.ts warn + 跳过该菜单项（保持原行为） |
-| `Record<string, ...>` 弱类型 | 接受；运行期保证 key 来自 routes/index.ts |
+| `Record<string, ...>` 弱类型    | 接受；运行期保证 key 来自 routes/index.ts   |
 
 ---
 
 ## 6. 风险评估
 
-| 风险 | 等级 | 缓解 |
-|------|------|------|
-| 删除 component-registry.ts 后有遗漏 import | 低 | Grep 验证：`remote.ts:17` 是唯一 import 点，spec 阶段已确认 |
-| `Record<string, ...>` 弱类型降低 TS 保护 | 中 | 用户已确认接受；运行期 routes/index.ts 保证 key 有效 |
-| 派生逻辑在 routes 含 children 时漏掉 | 中 | 实现已递归处理 children；单测覆盖 |
-| 现有 `scripts/check-routes.ts` 调用方依赖 component-registry 校验 | 低 | 该脚本仅 pnpm check:routes 内部使用，无外部依赖 |
-| `auto-imports.d.ts` / `components.d.ts` 等自动生成文件被影响 | 低 | 与本次改动无关，auto-register.ts 不涉及 |
+| 风险                                                              | 等级 | 缓解                                                        |
+| ----------------------------------------------------------------- | ---- | ----------------------------------------------------------- |
+| 删除 component-registry.ts 后有遗漏 import                        | 低   | Grep 验证：`remote.ts:17` 是唯一 import 点，spec 阶段已确认 |
+| `Record<string, ...>` 弱类型降低 TS 保护                          | 中   | 用户已确认接受；运行期 routes/index.ts 保证 key 有效        |
+| 派生逻辑在 routes 含 children 时漏掉                              | 中   | 实现已递归处理 children；单测覆盖                           |
+| 现有 `scripts/check-routes.ts` 调用方依赖 component-registry 校验 | 低   | 该脚本仅 pnpm check:routes 内部使用，无外部依赖             |
+| `auto-imports.d.ts` / `components.d.ts` 等自动生成文件被影响      | 低   | 与本次改动无关，auto-register.ts 不涉及                     |
 
 ---
 
 ## 7. 实施产物清单
 
-| 序号 | 文件 | 改动 |
-|------|------|------|
-| 1 | `src/router/component-registry.ts` | **删除** |
-| 2 | `src/router/auto-register.ts` | 修改（追加 COMPONENT_REGISTRY 派生） |
-| 3 | `src/router/remote.ts` | 修改（改 1 行 import + warn 文案） |
-| 4 | `src/router/types.ts` | 修改（注释更新） |
-| 5 | `src/api/modules/menu.ts` | 修改（注释更新） |
-| 6 | `scripts/check-routes.ts` | 修改（删除 component-registry 校验项） |
-| 7 | `src/router/auto-register.spec.ts` | 新建（4 个测试） |
-| 8 | `CHANGELOG.md` | 追加 refactor 条目 |
-| 9 | `docs/07-路由模块设计.md` | 更新"新增路由流程" |
+| 序号 | 文件                               | 改动                                   |
+| ---- | ---------------------------------- | -------------------------------------- |
+| 1    | `src/router/component-registry.ts` | **删除**                               |
+| 2    | `src/router/auto-register.ts`      | 修改（追加 COMPONENT_REGISTRY 派生）   |
+| 3    | `src/router/remote.ts`             | 修改（改 1 行 import + warn 文案）     |
+| 4    | `src/router/types.ts`              | 修改（注释更新）                       |
+| 5    | `src/api/modules/menu.ts`          | 修改（注释更新）                       |
+| 6    | `scripts/check-routes.ts`          | 修改（删除 component-registry 校验项） |
+| 7    | `src/router/auto-register.spec.ts` | 新建（4 个测试）                       |
+| 8    | `CHANGELOG.md`                     | 追加 refactor 条目                     |
+| 9    | `docs/07-路由模块设计.md`          | 更新"新增路由流程"                     |
 
 预计代码变更：+约 35 行 / -约 30 行
 
 ---
 
-*文档版本：v1.0.0 | 生成日期：2026-07-21*
+_文档版本：v1.0.0 | 生成日期：2026-07-21_

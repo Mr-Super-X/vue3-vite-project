@@ -5,6 +5,7 @@
 **Goal:** 为 `/dashboard` 路由新增政府门户风格的 PortalLayout（含顶部蓝 banner、横向导航、数据总览 5 卡、AI 浮窗），与现有 admin layout 双 layout 并存。
 
 **Architecture:**
+
 - 新建 `src/layouts/portal/` 提供头尾固定的壳；内容区走 `<RouterView/>` slot 化，便于未来其他门户页复用。
 - 数据通过 `src/modules/dashboard/store/portal-overview.ts`（Pinia setup store）+ `src/api/modules/portal-overview.ts`（mock/真接口双通道）+ `mock/portal-overview.ts` 三层解耦。
 - 类型契约集中在 `src/modules/dashboard/types/portal-overview.ts`，配置常量在 `src/portal/config/`。
@@ -19,6 +20,7 @@
 ### Task 0.1：建立备份
 
 **Files:**
+
 - Create: `.claude/backups/portal-home-2026-07-23/manifest.txt`
 
 - [ ] **Step 1：创建备份目录**
@@ -78,6 +80,7 @@ D:\work\应急水利\应急\gm-portal-fe\docs\superpowers\specs\2026-07-23-porta
 ### Task 1.1：定义 DTO 类型
 
 **Files:**
+
 - Create: `src/modules/dashboard/types/portal-overview.ts`
 
 - [ ] **Step 1：写文件**
@@ -120,6 +123,7 @@ git commit -m "feat(portal-types): 定义数据总览 DTO 类型"
 ### Task 1.2：定义 Portal 配置类型
 
 **Files:**
+
 - Create: `src/portal/config/types.ts`
 
 - [ ] **Step 1：写文件**
@@ -170,6 +174,7 @@ git commit -m "feat(portal-config): 定义 portal 配置项类型"
 ### Task 1.3：定义 nav 配置
 
 **Files:**
+
 - Create: `src/portal/config/nav.ts`
 
 - [ ] **Step 1：写文件**
@@ -198,6 +203,7 @@ git commit -m "feat(portal-config): 配置顶部横向导航"
 ### Task 1.4：定义 hero 配置
 
 **Files:**
+
 - Create: `src/portal/config/hero.ts`
 
 - [ ] **Step 1：写文件**
@@ -229,6 +235,7 @@ git commit -m "feat(portal-config): 配置 hero 区数据"
 ### Task 1.5：定义 footer 配置
 
 **Files:**
+
 - Create: `src/portal/config/footer.ts`
 
 - [ ] **Step 1：写文件**
@@ -275,6 +282,7 @@ git commit -m "feat(portal-config): 配置 footer 数据"
 ### Task 1.6：定义 portal 样式 token
 
 **Files:**
+
 - Create: `src/portal/styles/portal-tokens.scss`
 
 - [ ] **Step 1：写文件**
@@ -325,6 +333,7 @@ git commit -m "feat(portal-styles): 定义 portal 视觉 token"
 ### Task 2.1：写 mock 数据
 
 **Files:**
+
 - Create: `mock/portal-overview.ts`
 
 - [ ] **Step 1：写文件**
@@ -342,7 +351,13 @@ const MOCK_CARDS: OverviewCardDto[] = [
     metrics: [
       { label: '检查总数', unit: '(项)', value: 1959, trend: 'down', trendText: '同比 ▼ 8.5%' },
       { label: '执法计划完成率', unit: '(%)', value: 89, trend: 'up', trendText: '同比 ▲ 3.9%' },
-      { label: '行政处罚总金额', unit: '(万元)', value: 6592, trend: 'up', trendText: '同比 ▲ 8.8%' },
+      {
+        label: '行政处罚总金额',
+        unit: '(万元)',
+        value: 6592,
+        trend: 'up',
+        trendText: '同比 ▲ 8.8%',
+      },
     ],
     viewDetailPath: '/law-enforcement',
   },
@@ -422,6 +437,7 @@ git commit -m "feat(mock): 数据总览 mock 接口"
 ### Task 2.2：API 抽象层
 
 **Files:**
+
 - Create: `src/api/modules/portal-overview.ts`
 
 - [ ] **Step 1：写文件**
@@ -437,11 +453,9 @@ const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false'
 export const portalOverviewApi = {
   async getOverview(): Promise<OverviewCardDto[]> {
     if (USE_MOCK) {
-      await new Promise(r => setTimeout(r, 200))
+      await new Promise((r) => setTimeout(r, 200))
     }
-    const { data } = await request.get<{ data: OverviewCardDto[] }>(
-      '/api/portal/overview',
-    )
+    const { data } = await request.get<{ data: OverviewCardDto[] }>('/api/portal/overview')
     return data.data
   },
 }
@@ -468,6 +482,7 @@ git commit -m "feat(api): portal-overview API 抽象层（mock/真接口双通�
 ### Task 3.1：写 store 失败测试
 
 **Files:**
+
 - Create: `src/modules/dashboard/store/portal-overview.spec.ts`
 
 - [ ] **Step 1：写测试**
@@ -503,9 +518,7 @@ describe('usePortalOverviewStore', () => {
   })
 
   it('fetch 失败：写入 error, cards 清空, loading 收尾', async () => {
-    vi.spyOn(apiModule.portalOverviewApi, 'getOverview').mockRejectedValue(
-      new Error('网络异常'),
-    )
+    vi.spyOn(apiModule.portalOverviewApi, 'getOverview').mockRejectedValue(new Error('网络异常'))
     const store = usePortalOverviewStore()
     await store.fetch()
     expect(store.error?.message).toBe('网络异常')
@@ -516,9 +529,9 @@ describe('usePortalOverviewStore', () => {
   it('fetch 期间 loading=true', async () => {
     let resolve!: (v: OverviewCardDto[]) => void
     vi.spyOn(apiModule.portalOverviewApi, 'getOverview').mockReturnValue(
-      new Promise(r => {
+      new Promise((r) => {
         resolve = r
-      }),
+      })
     )
     const store = usePortalOverviewStore()
     const p = store.fetch()
@@ -529,9 +542,7 @@ describe('usePortalOverviewStore', () => {
   })
 
   it('非 Error 类型抛出被规范化为 Error 实例', async () => {
-    vi.spyOn(apiModule.portalOverviewApi, 'getOverview').mockRejectedValue(
-      '字符串异常',
-    )
+    vi.spyOn(apiModule.portalOverviewApi, 'getOverview').mockRejectedValue('字符串异常')
     const store = usePortalOverviewStore()
     await store.fetch()
     expect(store.error).toBeInstanceOf(Error)
@@ -550,6 +561,7 @@ Expected: FAIL（`./portal-overview` 模块不存在）
 ### Task 3.2：写 store 实现
 
 **Files:**
+
 - Create: `src/modules/dashboard/store/portal-overview.ts`
 
 - [ ] **Step 1：写文件**
@@ -602,6 +614,7 @@ git commit -m "feat(portal-store): 数据总览 Pinia store（含 5 项状态机
 ### Task 4.1：PortalTopBar（顶部蓝 banner）
 
 **Files:**
+
 - Create: `src/layouts/portal/components/PortalTopBar.vue`
 
 - [ ] **Step 1：写文件**
@@ -620,7 +633,8 @@ git commit -m "feat(portal-store): 数据总览 Pinia store（含 5 项状态机
         <div class="portal-top-bar__title-wrap">
           <h1 class="portal-top-bar__title">省工贸安全监管和监测预警系统</h1>
           <p class="portal-top-bar__subtitle">
-            Provincial industrial and trade safety supervision and monitoring and early warning system
+            Provincial industrial and trade safety supervision and monitoring and early warning
+            system
           </p>
         </div>
       </div>
@@ -634,11 +648,7 @@ git commit -m "feat(portal-store): 数据总览 Pinia store（含 5 项状态机
 
 <style lang="scss" scoped>
 .portal-top-bar {
-  background: linear-gradient(
-    135deg,
-    var(--banner-grad-from) 0%,
-    var(--banner-grad-to) 100%
-  );
+  background: linear-gradient(135deg, var(--banner-grad-from) 0%, var(--banner-grad-to) 100%);
   color: #fff;
   height: var(--portal-banner-h);
 
@@ -701,6 +711,7 @@ git commit -m "feat(portal-layout): PortalTopBar 顶部蓝 banner"
 ### Task 4.2：PortalHeaderNav（横向导航 + 用户信息卡）
 
 **Files:**
+
 - Create: `src/layouts/portal/components/PortalHeaderNav.vue`
 
 - [ ] **Step 1：写文件**
@@ -720,7 +731,7 @@ const navItems = computed(() =>
   PORTAL_NAV.map((item: PortalNavItem) => ({
     ...item,
     active: item.path === route.path,
-  })),
+  }))
 )
 </script>
 
@@ -828,6 +839,7 @@ git commit -m "feat(portal-layout): PortalHeaderNav 横向导航 + 用户信息�
 ### Task 4.3：PortalAiWidget（AI 浮窗）
 
 **Files:**
+
 - Create: `src/layouts/portal/components/PortalAiWidget.vue`
 
 - [ ] **Step 1：写文件**
@@ -843,12 +855,7 @@ function onClick(): void {
 </script>
 
 <template>
-  <button
-    type="button"
-    class="portal-ai-widget"
-    aria-label="打开 AI 助手"
-    @click="onClick"
-  >
+  <button type="button" class="portal-ai-widget" aria-label="打开 AI 助手" @click="onClick">
     <span class="portal-ai-widget__icon" aria-hidden="true">🤖</span>
     <span class="portal-ai-widget__label">
       <span class="portal-ai-widget__name">小安智能</span>
@@ -910,6 +917,7 @@ git commit -m "feat(portal-layout): PortalAiWidget 占位浮窗"
 ### Task 4.4：PortalFooter（系统链接 + 版权）
 
 **Files:**
+
 - Create: `src/layouts/portal/components/PortalFooter.vue`
 
 - [ ] **Step 1：写文件**
@@ -923,11 +931,7 @@ import { FOOTER_GROUPS, FOOTER_COPYRIGHT } from '@/portal/config/footer'
   <footer class="portal-footer">
     <div class="portal-footer__inner">
       <div class="portal-footer__groups">
-        <div
-          v-for="(group, idx) in FOOTER_GROUPS"
-          :key="idx"
-          class="portal-footer__group"
-        >
+        <div v-for="(group, idx) in FOOTER_GROUPS" :key="idx" class="portal-footer__group">
           <h4 v-if="group.title" class="portal-footer__group-title">
             {{ group.title }}
           </h4>
@@ -1013,6 +1017,7 @@ git commit -m "feat(portal-layout): PortalFooter 系统链接 + 版权"
 ### Task 4.5：PortalLayout 壳（组合所有 layout 子组件）
 
 **Files:**
+
 - Create: `src/layouts/portal/index.vue`
 
 - [ ] **Step 1：写文件**
@@ -1075,6 +1080,7 @@ git commit -m "feat(portal-layout): PortalLayout 壳（顶部+nav+slot+footer+AI
 ### Task 5.1：HotSearchTags
 
 **Files:**
+
 - Create: `src/modules/dashboard/views/home/components/HotSearchTags.vue`
 
 - [ ] **Step 1：写文件**
@@ -1148,6 +1154,7 @@ git commit -m "feat(portal-home): HotSearchTags 热门搜索标签"
 ### Task 5.2：SearchBar（TDD）
 
 **Files:**
+
 - Create: `src/modules/dashboard/views/home/components/SearchBar.vue`
 - Create: `src/modules/dashboard/views/home/components/SearchBar.spec.ts`
 
@@ -1220,8 +1227,7 @@ const emit = defineEmits<{
   (e: 'submit'): void
 }>()
 
-const canSubmit = (): boolean =>
-  !props.loading && props.modelValueKeyword.trim().length > 0
+const canSubmit = (): boolean => !props.loading && props.modelValueKeyword.trim().length > 0
 
 function onSubmit(): void {
   if (canSubmit()) emit('submit')
@@ -1245,12 +1251,7 @@ function onSubmit(): void {
       :placeholder="placeholder"
       @input="emit('update:modelValueKeyword', ($event.target as HTMLInputElement).value)"
     />
-    <button
-      type="button"
-      class="search-bar__btn"
-      :disabled="!canSubmit()"
-      @click="onSubmit"
-    >
+    <button type="button" class="search-bar__btn" :disabled="!canSubmit()" @click="onSubmit">
       搜索
     </button>
   </div>
@@ -1314,6 +1315,7 @@ git commit -m "feat(portal-home): SearchBar 搜索栏（含 4 项测试）"
 ### Task 5.3：HeroSection（组合 HotSearchTags + SearchBar）
 
 **Files:**
+
 - Create: `src/modules/dashboard/views/home/components/HeroSection.vue`
 
 - [ ] **Step 1：写文件**
@@ -1429,6 +1431,7 @@ git commit -m "feat(portal-home): HeroSection 大标题+标语+搜索"
 ### Task 5.4：DateGreeting（问候语 + 日期）
 
 **Files:**
+
 - Create: `src/modules/dashboard/views/home/components/DateGreeting.vue`
 
 - [ ] **Step 1：写文件**
@@ -1445,7 +1448,7 @@ const props = withDefaults(
   {
     greeting: '下午时间，只有奋斗的人生才称得上幸福的人生！',
     date: () => new Date(),
-  },
+  }
 )
 
 const formattedDate = computed(() => {
@@ -1496,6 +1499,7 @@ git commit -m "feat(portal-home): DateGreeting 问候语 + 日期"
 ### Task 6.1：OverviewCardSkeleton
 
 **Files:**
+
 - Create: `src/modules/dashboard/views/home/components/OverviewCardSkeleton.vue`
 
 - [ ] **Step 1：写文件**
@@ -1564,6 +1568,7 @@ git commit -m "feat(portal-home): OverviewCardSkeleton 加载骨架"
 ### Task 6.2：OverviewErrorState
 
 **Files:**
+
 - Create: `src/modules/dashboard/views/home/components/OverviewErrorState.vue`
 
 - [ ] **Step 1：写文件**
@@ -1620,6 +1625,7 @@ git commit -m "feat(portal-home): OverviewErrorState 错误态"
 ### Task 6.3：OverviewEmptyState
 
 **Files:**
+
 - Create: `src/modules/dashboard/views/home/components/OverviewEmptyState.vue`
 
 - [ ] **Step 1：写文件**
@@ -1672,6 +1678,7 @@ git commit -m "feat(portal-home): OverviewEmptyState 空态"
 ### Task 6.4：OverviewMetricRow
 
 **Files:**
+
 - Create: `src/modules/dashboard/views/home/components/OverviewMetricRow.vue`
 
 - [ ] **Step 1：写文件**
@@ -1764,6 +1771,7 @@ git commit -m "feat(portal-home): OverviewMetricRow 单行指标"
 ### Task 6.5：OverviewCard
 
 **Files:**
+
 - Create: `src/modules/dashboard/views/home/components/OverviewCard.vue`
 
 - [ ] **Step 1：写文件**
@@ -1785,8 +1793,7 @@ const props = defineProps<{
 
 const router = useRouter()
 
-const IconComponent = (): unknown =>
-  (ElIcons as Record<string, unknown>)[props.iconName] ?? null
+const IconComponent = (): unknown => (ElIcons as Record<string, unknown>)[props.iconName] ?? null
 
 function onView(): void {
   if (props.viewDetailPath) router.push(props.viewDetailPath)
@@ -1804,19 +1811,10 @@ function onView(): void {
       <h3 class="ov-card__title">{{ title }}</h3>
     </header>
     <div class="ov-card__body">
-      <OverviewMetricRow
-        v-for="(m, idx) in metrics"
-        :key="idx"
-        :metric="m"
-      />
+      <OverviewMetricRow v-for="(m, idx) in metrics" :key="idx" :metric="m" />
     </div>
     <footer class="ov-card__foot">
-      <button
-        v-if="viewDetailPath"
-        type="button"
-        class="ov-card__view"
-        @click="onView"
-      >
+      <button v-if="viewDetailPath" type="button" class="ov-card__view" @click="onView">
         {{ title }} ▶
       </button>
     </footer>
@@ -1886,6 +1884,7 @@ git commit -m "feat(portal-home): OverviewCard 单张数据卡片"
 ### Task 6.6：OverviewSection（含 TDD，三态分发）
 
 **Files:**
+
 - Create: `src/modules/dashboard/views/home/components/OverviewSection.vue`
 - Create: `src/modules/dashboard/views/home/components/OverviewSection.spec.ts`
 
@@ -1992,11 +1991,7 @@ const { cards, loading, error } = storeToRefs(store)
       <OverviewCardSkeleton v-for="i in 5" :key="i" />
     </div>
 
-    <OverviewErrorState
-      v-else-if="error"
-      :message="error.message"
-      @retry="store.fetch()"
-    />
+    <OverviewErrorState v-else-if="error" :message="error.message" @retry="store.fetch()" />
 
     <OverviewEmptyState v-else-if="cards.length === 0" />
 
@@ -2091,6 +2086,7 @@ git commit -m "feat(portal-home): OverviewSection 数据总览容器（含 4 项
 ### Task 7.1：Home Index 页面
 
 **Files:**
+
 - Create: `src/modules/dashboard/views/home/Index.vue`
 
 - [ ] **Step 1：写文件**
@@ -2143,6 +2139,7 @@ git commit -m "feat(portal-home): home/Index.vue 组合页面"
 ### Task 7.2：删除旧 Index.vue + 切换路由
 
 **Files:**
+
 - Delete: `src/modules/dashboard/views/Index.vue`
 - Modify: `src/modules/dashboard/routes/index.ts`
 
@@ -2199,6 +2196,7 @@ git commit -m "refactor(routes): /dashboard 切换至 PortalLayout"
 ### Task 7.3：CHANGELOG
 
 **Files:**
+
 - Modify: `CHANGELOG.md`
 
 - [ ] **Step 1：在最新章节追加一条**
@@ -2237,6 +2235,7 @@ pnpm dev
 ```
 
 手动验证清单：
+
 - [ ] 首页 5 张数据卡渲染正确
 - [ ] Loading 骨架出现（断网时）
 - [ ] Error 态 + 重试按钮（mock 报错时）
@@ -2253,16 +2252,16 @@ pnpm dev
 
 ## 总结
 
-| Phase | 任务数 | 文件数 |
-|---|---|---|
-| 0 备份 | 1 | 1 |
-| 1 基础 | 6 | 6 |
-| 2 Mock/API | 2 | 2 |
-| 3 Store | 2 | 2 |
-| 4 Layout 壳 | 5 | 5 |
-| 5 Hero | 4 | 4 |
-| 6 Overview | 6 | 6（含 2 测试文件） |
-| 7 路由 + 验证 | 4 | 1（CHANGELOG）|
-| **总计** | **30** | **27（含 3 测试文件）** |
+| Phase         | 任务数 | 文件数                  |
+| ------------- | ------ | ----------------------- |
+| 0 备份        | 1      | 1                       |
+| 1 基础        | 6      | 6                       |
+| 2 Mock/API    | 2      | 2                       |
+| 3 Store       | 2      | 2                       |
+| 4 Layout 壳   | 5      | 5                       |
+| 5 Hero        | 4      | 4                       |
+| 6 Overview    | 6      | 6（含 2 测试文件）      |
+| 7 路由 + 验证 | 4      | 1（CHANGELOG）          |
+| **总计**      | **30** | **27（含 3 测试文件）** |
 
 预计总任务量 ≈ 30 步，每步 2-5 分钟，预计总耗时 2-4 小时（不含 dev 启动验证等待）。

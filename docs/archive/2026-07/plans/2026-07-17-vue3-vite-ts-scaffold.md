@@ -11,6 +11,7 @@
 **Spec Reference:** `docs/superpowers/specs/2026-07-17-vue3-vite-ts-scaffold-design.md`
 
 **Prerequisites:**
+
 - Node.js >= 20.19 或 >= 22.12
 - pnpm >= 9.x
 - 项目根目录：`D:\work\应急水利\应急\gm-portal-fe`
@@ -19,33 +20,34 @@
 
 ## 任务总览
 
-| # | 任务 | 类型 |
-|---|------|------|
-| 1 | 环境准备与验证 | 配置 |
-| 2 | 初始化 create-vue 基础模板 | 脚手架 |
-| 3 | 安装并验证全部依赖 | 配置 |
-| 4 | 配置文件（tsconfig、vite、uno、env、vitest） | 配置 |
-| 5 | utils/（format、storage、validate）+ 单测 | TDD |
-| 6 | enums/（httpEnum、roleEnum） | 配置 |
-| 7 | composables/useRequest + 单测 | TDD |
-| 8 | types/（global、env） | 配置 |
-| 9 | assets/styles/（reset、variables、index.scss） | 配置 |
-| 10 | api/（types、http、modules/auth、modules/user） | 实现 |
-| 11 | directives/（permission 占位） | 占位 |
-| 12 | store/（app、user、index） | 实现 |
-| 13 | components/common/（AsyncState、ErrorBoundary）+ 单测 | TDD |
-| 14 | layouts/（default、blank） | 实现 |
-| 15 | locales/（zh-CN、en-US、index） | 实现 |
-| 16 | modules/（error、auth、user、dashboard） | 实现 |
-| 17 | router/（modules、guards、index） | 实现 |
-| 18 | mock/（auth、user、dashboard、_utils） | 实现 |
-| 19 | 预置示例测试 + 最终验证 | 验证 |
+| #   | 任务                                                  | 类型   |
+| --- | ----------------------------------------------------- | ------ |
+| 1   | 环境准备与验证                                        | 配置   |
+| 2   | 初始化 create-vue 基础模板                            | 脚手架 |
+| 3   | 安装并验证全部依赖                                    | 配置   |
+| 4   | 配置文件（tsconfig、vite、uno、env、vitest）          | 配置   |
+| 5   | utils/（format、storage、validate）+ 单测             | TDD    |
+| 6   | enums/（httpEnum、roleEnum）                          | 配置   |
+| 7   | composables/useRequest + 单测                         | TDD    |
+| 8   | types/（global、env）                                 | 配置   |
+| 9   | assets/styles/（reset、variables、index.scss）        | 配置   |
+| 10  | api/（types、http、modules/auth、modules/user）       | 实现   |
+| 11  | directives/（permission 占位）                        | 占位   |
+| 12  | store/（app、user、index）                            | 实现   |
+| 13  | components/common/（AsyncState、ErrorBoundary）+ 单测 | TDD    |
+| 14  | layouts/（default、blank）                            | 实现   |
+| 15  | locales/（zh-CN、en-US、index）                       | 实现   |
+| 16  | modules/（error、auth、user、dashboard）              | 实现   |
+| 17  | router/（modules、guards、index）                     | 实现   |
+| 18  | mock/（auth、user、dashboard、_utils）                | 实现   |
+| 19  | 预置示例测试 + 最终验证                               | 验证   |
 
 ---
 
 ## Task 1: 环境准备与验证
 
 **Files:**
+
 - 无文件创建（仅验证环境）
 
 - [ ] **Step 1.1: 检查 Node 版本**
@@ -86,6 +88,7 @@ pwd
 ## Task 2: 初始化 create-vue 基础模板
 
 **Files:**
+
 - 创建：整个项目骨架（package.json、vite.config.ts、tsconfig.json、src/、index.html 等）
 - 删除：默认 src/components/、src/assets/、src/views/（后续按 spec 重建）
 
@@ -132,6 +135,7 @@ timeout 10 pnpm dev
 ## Task 3: 安装并验证全部依赖
 
 **Files:**
+
 - 修改：`package.json`
 
 - [ ] **Step 3.1: 安装 Element Plus 与自动按需插件**
@@ -190,6 +194,7 @@ pnpm list --depth 0
 ```
 
 预期：包含以下包：
+
 - `vue`, `vue-router`, `pinia`, `element-plus`, `@element-plus/icons-vue`
 - `vue-i18n`, `axios`, `unocss`, `vite-plugin-mock`
 - 开发依赖：`vite`, `typescript`, `vue-tsc`, `sass`, `vitest`, `@vue/test-utils`, `jsdom`, `@vitest/coverage-v8`, `unplugin-vue-components`, `unplugin-auto-import`, `@types/node`
@@ -199,6 +204,7 @@ pnpm list --depth 0
 ## Task 4: 配置文件
 
 **Files:**
+
 - 修改：`tsconfig.json`、`tsconfig.app.json`
 - 创建：`tsconfig.node.json`、`vite.config.ts`、`uno.config.ts`、`vitest.config.ts`、`.env`、`.env.development`、`.env.production`
 
@@ -207,10 +213,7 @@ pnpm list --depth 0
 ```json
 {
   "files": [],
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
-  ],
+  "references": [{ "path": "./tsconfig.app.json" }, { "path": "./tsconfig.node.json" }],
   "compilerOptions": {
     "strict": true,
     "noUncheckedIndexedAccess": true,
@@ -400,6 +403,7 @@ pnpm type-check
 ## Task 5: utils/ + 单测（TDD）
 
 **Files:**
+
 - 创建：`src/utils/format.ts`、`src/utils/storage.ts`、`src/utils/validate.ts`
 - 测试：`src/utils/format.spec.ts`、`src/utils/storage.spec.ts`、`src/utils/validate.spec.ts`
 
@@ -619,8 +623,7 @@ export const isEmail = (s: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test
 export const isPhone = (s: string): boolean => /^1[3-9]\d{9}$/.test(s)
 
 // 简化版：仅校验格式（18 位 + 末位 X/x）
-export const isIdCard = (s: string): boolean =>
-  /^\d{17}[\dXx]$/.test(s) || /^\d{15}$/.test(s)
+export const isIdCard = (s: string): boolean => /^\d{17}[\dXx]$/.test(s) || /^\d{15}$/.test(s)
 ```
 
 - [ ] **Step 5.3.4: 运行测试，预期 PASS**
@@ -634,6 +637,7 @@ pnpm test src/utils/validate.spec.ts
 ## Task 6: enums/
 
 **Files:**
+
 - 创建：`src/enums/httpEnum.ts`、`src/enums/roleEnum.ts`
 
 - [ ] **Step 6.1: 创建 httpEnum.ts**
@@ -689,6 +693,7 @@ export const ROLE_LABELS: Record<RoleEnum, string> = {
 ## Task 7: composables/useRequest + 单测（TDD）
 
 **Files:**
+
 - 创建：`src/composables/useRequest.ts`
 - 测试：`src/composables/useRequest.spec.ts`
 
@@ -797,6 +802,7 @@ pnpm test src/composables/useRequest.spec.ts
 ## Task 8: types/
 
 **Files:**
+
 - 创建：`src/types/global.d.ts`、`src/types/env.d.ts`
 - 自动生成：`src/types/auto-imports.d.ts`、`src/types/components.d.ts`（dev 时自动）
 
@@ -834,17 +840,45 @@ interface ImportMeta {
 ## Task 9: assets/styles/
 
 **Files:**
+
 - 创建：`src/assets/styles/reset.css`、`src/assets/styles/variables.css`、`src/assets/styles/index.scss`
 
 - [ ] **Step 9.1: 创建 reset.css**
 
 ```css
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; font-family: system-ui, -apple-system, sans-serif; }
-a { color: inherit; text-decoration: none; }
-button { cursor: pointer; border: none; background: none; font: inherit; }
-ul, ol { list-style: none; }
-img { max-width: 100%; display: block; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+html,
+body {
+  height: 100%;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font: inherit;
+}
+ul,
+ol {
+  list-style: none;
+}
+img {
+  max-width: 100%;
+  display: block;
+}
 ```
 
 - [ ] **Step 9.2: 创建 variables.css**
@@ -889,6 +923,7 @@ img { max-width: 100%; display: block; }
 ## Task 10: api/ 层
 
 **Files:**
+
 - 创建：`src/api/types/api.d.ts`、`src/api/http.ts`、`src/api/modules/auth.ts`、`src/api/modules/user.ts`
 
 - [ ] **Step 10.1: 创建 api.d.ts（响应包装）**
@@ -945,11 +980,15 @@ instance.interceptors.response.use(
   (error) => {
     const status = error.response?.status
     const msg =
-      status === HttpStatus.UNAUTHORIZED ? '请先登录' :
-      status === HttpStatus.FORBIDDEN ? '无权限访问' :
-      status === HttpStatus.NOT_FOUND ? '资源不存在' :
-      status === HttpStatus.SERVER_ERROR ? '服务器错误' :
-      '网络异常，请稍后重试'
+      status === HttpStatus.UNAUTHORIZED
+        ? '请先登录'
+        : status === HttpStatus.FORBIDDEN
+          ? '无权限访问'
+          : status === HttpStatus.NOT_FOUND
+            ? '资源不存在'
+            : status === HttpStatus.SERVER_ERROR
+              ? '服务器错误'
+              : '网络异常，请稍后重试'
     ElMessage.error(msg)
     return Promise.reject(error)
   }
@@ -969,19 +1008,27 @@ export default instance
 import { request } from '../http'
 import type { ApiResponse } from '../types/api.d'
 
-export interface LoginPayload { username: string; password: string }
-export interface LoginResult { token: string; profile: { id: number; name: string } }
-export interface UserProfile { id: number; name: string; permissions: string[] }
+export interface LoginPayload {
+  username: string
+  password: string
+}
+export interface LoginResult {
+  token: string
+  profile: { id: number; name: string }
+}
+export interface UserProfile {
+  id: number
+  name: string
+  permissions: string[]
+}
 
 export const authApi = {
   login: (data: LoginPayload) =>
     request<LoginResult>({ url: '/api/auth/login', method: 'post', data }),
 
-  fetchProfile: () =>
-    request<UserProfile>({ url: '/api/auth/profile', method: 'get' }),
+  fetchProfile: () => request<UserProfile>({ url: '/api/auth/profile', method: 'get' }),
 
-  logout: () =>
-    request<void>({ url: '/api/auth/logout', method: 'post' }),
+  logout: () => request<void>({ url: '/api/auth/logout', method: 'post' }),
 }
 
 // 显式导出 ApiResponse 类型以避免 auto-import 误删
@@ -1013,8 +1060,7 @@ export const userApi = {
   getList: (params: UserListParams) =>
     request<Pagination<UserItem>>({ url: '/api/user/list', method: 'get', params }),
 
-  getById: (id: number) =>
-    request<UserItem>({ url: `/api/user/${id}`, method: 'get' }),
+  getById: (id: number) => request<UserItem>({ url: `/api/user/${id}`, method: 'get' }),
 
   create: (data: Omit<UserItem, 'id' | 'createdAt'>) =>
     request<UserItem>({ url: '/api/user', method: 'post', data }),
@@ -1022,8 +1068,7 @@ export const userApi = {
   update: (id: number, data: Partial<UserItem>) =>
     request<UserItem>({ url: `/api/user/${id}`, method: 'put', data }),
 
-  remove: (id: number) =>
-    request<void>({ url: `/api/user/${id}`, method: 'delete' }),
+  remove: (id: number) => request<void>({ url: `/api/user/${id}`, method: 'delete' }),
 }
 ```
 
@@ -1032,6 +1077,7 @@ export const userApi = {
 ## Task 11: directives/
 
 **Files:**
+
 - 创建：`src/directives/permission.ts`、`src/directives/index.ts`
 
 - [ ] **Step 11.1: 创建 permission.ts（占位）**
@@ -1070,6 +1116,7 @@ export function setupDirectives(app: App): void {
 ## Task 12: store/
 
 **Files:**
+
 - 创建：`src/store/modules/app.ts`、`src/store/modules/user.ts`、`src/store/index.ts`
 
 - [ ] **Step 12.1: 创建 app.ts**
@@ -1084,9 +1131,15 @@ export const useAppStore = defineStore('app', () => {
   const globalLoading = ref(false)
   const locale = ref<'zh-CN' | 'en-US'>('zh-CN')
 
-  function toggleSidebar() { sidebarCollapsed.value = !sidebarCollapsed.value }
-  function setGlobalLoading(v: boolean) { globalLoading.value = v }
-  function setLocale(l: 'zh-CN' | 'en-US') { locale.value = l }
+  function toggleSidebar() {
+    sidebarCollapsed.value = !sidebarCollapsed.value
+  }
+  function setGlobalLoading(v: boolean) {
+    globalLoading.value = v
+  }
+  function setLocale(l: 'zh-CN' | 'en-US') {
+    locale.value = l
+  }
 
   return { sidebarCollapsed, globalLoading, locale, toggleSidebar, setGlobalLoading, setLocale }
 })
@@ -1149,6 +1202,7 @@ export * from './modules/user'
 ## Task 13: components/common/（AsyncState、ErrorBoundary）
 
 **Files:**
+
 - 创建：`src/components/common/AsyncState.vue`、`src/components/common/ErrorBoundary.vue`
 - 测试：`src/components/common/AsyncState.spec.ts`
 
@@ -1260,7 +1314,9 @@ onErrorCaptured((err) => {
   error.value = err instanceof Error ? err : new Error(String(err))
   return false
 })
-function reset() { error.value = null }
+function reset() {
+  error.value = null
+}
 </script>
 
 <template>
@@ -1278,6 +1334,7 @@ function reset() { error.value = null }
 ## Task 14: layouts/
 
 **Files:**
+
 - 创建：`src/layouts/default/index.vue`、`src/layouts/blank/index.vue`
 
 - [ ] **Step 14.1: 创建 default/index.vue**
@@ -1311,10 +1368,24 @@ const appStore = useAppStore()
   grid-template-rows: var(--header-height) 1fr;
   height: 100vh;
 }
-.sidebar { grid-area: sidebar; width: var(--sidebar-width); background: #001529; color: #fff; }
-.sidebar.collapsed { width: var(--sidebar-collapsed-width); }
-.header { grid-area: header; border-bottom: 1px solid #eee; }
-.main { grid-area: main; padding: var(--spacing-md); overflow: auto; }
+.sidebar {
+  grid-area: sidebar;
+  width: var(--sidebar-width);
+  background: #001529;
+  color: #fff;
+}
+.sidebar.collapsed {
+  width: var(--sidebar-collapsed-width);
+}
+.header {
+  grid-area: header;
+  border-bottom: 1px solid #eee;
+}
+.main {
+  grid-area: main;
+  padding: var(--spacing-md);
+  overflow: auto;
+}
 </style>
 ```
 
@@ -1339,7 +1410,9 @@ const appStore = useAppStore()
 </template>
 
 <style scoped>
-.sidebar-content { padding: var(--spacing-md); }
+.sidebar-content {
+  padding: var(--spacing-md);
+}
 </style>
 ```
 
@@ -1358,7 +1431,10 @@ const userStore = useUserStore()
 </template>
 
 <style scoped>
-.header-content { padding: 0 var(--spacing-md); height: 100%; }
+.header-content {
+  padding: 0 var(--spacing-md);
+  height: 100%;
+}
 </style>
 ```
 
@@ -1373,7 +1449,13 @@ const userStore = useUserStore()
 </template>
 
 <style scoped>
-.blank-layout { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #f5f7fa; }
+.blank-layout {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f7fa;
+}
 </style>
 ```
 
@@ -1382,6 +1464,7 @@ const userStore = useUserStore()
 ## Task 15: locales/
 
 **Files:**
+
 - 创建：`src/locales/zh-CN.ts`、`src/locales/en-US.ts`、`src/locales/index.ts`
 
 - [ ] **Step 15.1: 创建 zh-CN.ts**
@@ -1433,6 +1516,7 @@ export default i18n
 ## Task 16: modules/（error、auth、user、dashboard）
 
 **Files:**
+
 - 创建：`src/modules/error/views/{Forbidden,NotFound,ServerError}.vue`
 - 创建：`src/modules/auth/views/Login.vue`、`src/modules/auth/store/index.ts`、`src/modules/auth/index.ts`
 - 创建：`src/modules/user/views/List.vue`、`src/modules/user/store/index.ts`、`src/modules/user/index.ts`
@@ -1503,7 +1587,9 @@ async function handleSubmit() {
 </template>
 
 <style scoped>
-.login-card { width: 400px; }
+.login-card {
+  width: 400px;
+}
 </style>
 ```
 
@@ -1516,8 +1602,12 @@ import { ref } from 'vue'
 // 当前仅占位，业务扩展时填入
 export const useAuthStore = defineStore('module-auth', () => {
   const loginAttempts = ref(0)
-  function incrementAttempts() { loginAttempts.value++ }
-  function resetAttempts() { loginAttempts.value = 0 }
+  function incrementAttempts() {
+    loginAttempts.value++
+  }
+  function resetAttempts() {
+    loginAttempts.value = 0
+  }
   return { loginAttempts, incrementAttempts, resetAttempts }
 })
 ```
@@ -1563,8 +1653,12 @@ import type { UserItem } from '@/api/modules/user'
 export const useUserListStore = defineStore('module-user-list', () => {
   const keyword = ref('')
   const selectedRows = ref<UserItem[]>([])
-  function setKeyword(k: string) { keyword.value = k }
-  function clearSelection() { selectedRows.value = [] }
+  function setKeyword(k: string) {
+    keyword.value = k
+  }
+  function clearSelection() {
+    selectedRows.value = []
+  }
   return { keyword, selectedRows, setKeyword, clearSelection }
 })
 ```
@@ -1612,6 +1706,7 @@ export { useDashboardStore } from './store'
 ## Task 17: router/
 
 **Files:**
+
 - 创建：`src/router/modules/auth.ts`、`src/router/modules/dashboard.ts`、`src/router/modules/user.ts`、`src/router/modules/error.ts`、`src/router/guards/auth.ts`、`src/router/index.ts`
 
 - [ ] **Step 17.1: 创建各模块路由**
@@ -1687,9 +1782,24 @@ export default routes
 import type { RouteRecordRaw } from 'vue-router'
 
 const routes: RouteRecordRaw[] = [
-  { path: '/403', name: 'Forbidden', component: () => import('@/modules/error/views/Forbidden.vue'), meta: { title: '403' } },
-  { path: '/404', name: 'NotFound', component: () => import('@/modules/error/views/NotFound.vue'), meta: { title: '404' } },
-  { path: '/500', name: 'ServerError', component: () => import('@/modules/error/views/ServerError.vue'), meta: { title: '500' } },
+  {
+    path: '/403',
+    name: 'Forbidden',
+    component: () => import('@/modules/error/views/Forbidden.vue'),
+    meta: { title: '403' },
+  },
+  {
+    path: '/404',
+    name: 'NotFound',
+    component: () => import('@/modules/error/views/NotFound.vue'),
+    meta: { title: '404' },
+  },
+  {
+    path: '/500',
+    name: 'ServerError',
+    component: () => import('@/modules/error/views/ServerError.vue'),
+    meta: { title: '500' },
+  },
   { path: '/:pathMatch(.*)*', redirect: '/404' },
 ]
 
@@ -1761,6 +1871,7 @@ export default router
 ## Task 18: mock/
 
 **Files:**
+
 - 创建：`mock/_utils.ts`、`mock/auth.ts`、`mock/user.ts`、`mock/dashboard.ts`、`mock/index.ts`
 
 - [ ] **Step 18.1: 创建工具**
@@ -1840,7 +1951,11 @@ export default [
   {
     url: '/api/user/list',
     method: 'get',
-    response: async ({ query }: { query: { page?: string; pageSize?: string; keyword?: string } }) => {
+    response: async ({
+      query,
+    }: {
+      query: { page?: string; pageSize?: string; keyword?: string }
+    }) => {
       await delay()
       const page = Number(query.page) || 1
       const pageSize = Number(query.pageSize) || 10
@@ -1904,6 +2019,7 @@ export default [...auth, ...user, ...dashboard]
 ## Task 19: 最终验证
 
 **Files:**
+
 - 修改：`src/main.ts`（添加 i18n、directives、错误兜底）
 - 创建：`src/App.vue`（根组件）
 
@@ -1962,16 +2078,16 @@ app.mount('#app')
 <!-- index.html -->
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-  <meta charset="UTF-8" />
-  <link rel="icon" href="/favicon.ico" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>工贸统一登录门户</title>
-</head>
-<body>
-  <div id="app"></div>
-  <script type="module" src="/src/main.ts"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>工贸统一登录门户</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
 </html>
 ```
 
@@ -2015,6 +2131,7 @@ pnpm build
 ## v1.0.0 - 2026-07-17
 
 ### Added
+
 - 初始化 Vue 3 + Vite 6 + TS 脚手架（基于 create-vue 改造）
 - Feature-Sliced 风格目录结构
 - Element Plus 2.8 + UnoCSS 0.65
@@ -2029,6 +2146,7 @@ pnpm build
 - 模块边界铁律（spec §5）
 
 ### Tech
+
 - Node.js >= 20.19 / >= 22.12
 - pnpm >= 9.x
 - TypeScript strict 模式
@@ -2060,14 +2178,14 @@ pnpm build
 
 ## 附录：CLAUDE.md 规则自检
 
-| 条款 | 状态 |
-|------|------|
-| §一.3 函数 ≤80 行 | ✅ |
-| §一.6 单文件 ≤400 行 | ✅ |
-| §三.2 单文件简单修改 | N/A（脚手架创建） |
-| §三.3 多文件给方案 | ✅ |
-| §四 防御性 UI | ✅ AsyncState + useRequest |
-| §五 注释规范 | ✅ Why 注释 |
-| §六 npm 包验证 | 📋 实施阶段执行 `pnpm view` |
-| §七 沟通规则 | ✅ |
-| §七 非 git 仓库备份 | 📋 实施前创建 `.claude/backups/` |
+| 条款                 | 状态                             |
+| -------------------- | -------------------------------- |
+| §一.3 函数 ≤80 行    | ✅                               |
+| §一.6 单文件 ≤400 行 | ✅                               |
+| §三.2 单文件简单修改 | N/A（脚手架创建）                |
+| §三.3 多文件给方案   | ✅                               |
+| §四 防御性 UI        | ✅ AsyncState + useRequest       |
+| §五 注释规范         | ✅ Why 注释                      |
+| §六 npm 包验证       | 📋 实施阶段执行 `pnpm view`      |
+| §七 沟通规则         | ✅                               |
+| §七 非 git 仓库备份  | 📋 实施前创建 `.claude/backups/` |

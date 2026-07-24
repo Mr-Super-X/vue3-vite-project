@@ -11,6 +11,6 @@ export default {
     username: 'Username',
     password: 'Password',
   },
-  menu: { dashboard: 'Dashboard', user: 'User Management' },
+  menu: { home: 'Home', user: 'User Management' },
   error: { '403': 'Forbidden', '404': 'Not Found', '500': 'Server Error' },
 }
