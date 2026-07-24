@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { reactive } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useUserStore } from '@/store/modules/user'
 import { ElMessage } from 'element-plus'
+import { useAppRouter } from '@composables/useAppRouter'
 
-const router = useRouter()
+const { router } = useAppRouter()
 const route = useRoute()
 const userStore = useUserStore()
 
