@@ -34,7 +34,7 @@
   - 新增 `web-vitals@6.0.0` 依赖（Google 官方库，已用 `npm view` 验证版本）
   - 新增 `src/plugins/webVitals.ts` + `webVitals.d.ts`：4 项核心指标（LCP / INP / CLS / TTFB）+ `install` 模式聚合到 `src/plugins/index.ts`
   - 设计：dev 模式 `console.info` 输出便于即时观察；prod 模式默认 **noop（不上报任何端点）**
-  - **上报 endpoint 待接入**——业务方后续在 `main.ts` 传 `options.webVitals.report` 自定义（4 种接入示例见 `docs/12-web-vitals使用规范.md` § 3：Sentry / Ga4 / 自有 APM sendBeacon / 仅本地）
+  - **上报 endpoint 待接入**——业务方后续在 `main.ts` 传 `options.webVitals.report` 自定义（4 种接入示例见 `docs/12-web-vitals性能监控使用规范.md` § 3：Sentry / Ga4 / 自有 APM sendBeacon / 仅本地）
   - 上报协议选型、关闭方式、自测指引全部文档化；本次不实现端点上报代码（"采集 vs 上报"解耦，前端不预设 URL/协议，由运维与可观测性团队约定）
   - `PluginsOptions.webVitals?: WebVitalsOptions | false` 类型扩展，与 `errorHandler` 同构（默认启用 / 传 false 关闭）
 - **基础设施清理：unplugin 自动生成的 .d.ts 不再触发 diff**：

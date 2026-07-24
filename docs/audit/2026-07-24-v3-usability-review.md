@@ -18,7 +18,7 @@ v2 报告 16 项 P0/P1/P2 改进，**v3 验证结果**：
 | --------- | ---- | ---- | --------------------------------------------------------------------------------- |
 | ✅ 已落地 | 11   | 69%  | P0-1 / P0-2 / P0-3 / P0-4 / P0-6 / P1-1 / P1-2 / P1-3 / P1-5 / P2-1 / P2-2 / P2-3 |
 | 🟡 部分   | 2    | 12%  | P0-5（README 标注已过时未清理）/ P1-4（useRequest 推广不足）                      |
-| ❌ 未落地 | 3    | 19%  | dev 徽章可关闭（VITE_QUIET_DEV）/ BEM 学习成本文档 / 13 个 .spec.ts 命名规范      |
+| ❌ 未落地 | 1    | 6%   | dev 徽章可关闭（VITE_QUIET_DEV）—— v3 评估为可选优化，未排期                      |
 
 **v3 新发现 3 项 v2 漏报问题**（P0-P1 级）。
 
@@ -30,14 +30,14 @@ v2 报告 16 项 P0/P1/P2 改进，**v3 验证结果**：
 
 ### 1.1 P0 项（6/6 全部落地）
 
-| #   | v2 编号 | 描述                                          | 状态              | 证据（file_path:line）                                                                                                                                                                       |
-| --- | ------- | --------------------------------------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | P0-1    | Sidebar.vue 实现菜单渲染                      | ✅ 已落地         | `src/components/layout/Sidebar.vue` **338 行**（v2 报告说仅 18 行）                                                                                                                          |
-| 2   | P0-2    | TagsView.vue 修 CSS 变量不一致                | ✅ 已落地         | `src/components/common/TagsView/index.vue:118,134,138,185` 统一为 `var(--border-base)`                                                                                                       |
-| 3   | P0-3    | CI 强制门禁（GitHub Actions 6 步）            | ✅ 已落地         | `.github/workflows/ci.yml`（lint + type-check:full + test + check:routes + build + upload-artifact）                                                                                         |
-| 4   | P0-4    | stream/validator/cache 等 10 个能力补文档     | ✅ 已落地         | `docs/13-stream使用规范.md` / `docs/14-validator使用规范.md` / `docs/15-cache-merge-page-adapter使用规范.md` / `docs/16-token-refresh使用规范.md` / `docs/17-useRequest使用规范.md` 全部创建 |
-| 5   | P0-5    | README + docs/07 标注"Sidebar 菜单待补"       | 🟡 已加但**过时** | README.md:343 + docs/07-路由模块设计.md:8 都有 ⚠️ 标注，但**未清理**——Sidebar 已实现，标注已成历史遗迹                                                                                       |
-| 6   | P0-6    | utils/index.ts barrel 补导 format + safeAsync | ✅ 已落地         | `src/utils/index.ts:9,11` `export * from './format'` + `export * from './safeAsync'`                                                                                                         |
+| #   | v2 编号 | 描述                                          | 状态              | 证据（file_path:line）                                                                                                                                                                                               |
+| --- | ------- | --------------------------------------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | P0-1    | Sidebar.vue 实现菜单渲染                      | ✅ 已落地         | `src/components/layout/Sidebar.vue` **338 行**（v2 报告说仅 18 行）                                                                                                                                                  |
+| 2   | P0-2    | TagsView.vue 修 CSS 变量不一致                | ✅ 已落地         | `src/components/common/TagsView/index.vue:118,134,138,185` 统一为 `var(--border-base)`                                                                                                                               |
+| 3   | P0-3    | CI 强制门禁（GitHub Actions 6 步）            | ✅ 已落地         | `.github/workflows/ci.yml`（lint + type-check:full + test + check:routes + build + upload-artifact）                                                                                                                 |
+| 4   | P0-4    | stream/validator/cache 等 10 个能力补文档     | ✅ 已落地         | `docs/13-stream流式请求使用规范.md` / `docs/14-zod请求参数校验使用规范.md` / `docs/15-请求层缓存-合并-分页适配使用规范.md` / `docs/16-token自动刷新与全局取消使用规范.md` / `docs/17-useRequest使用规范.md` 全部创建 |
+| 5   | P0-5    | README + docs/07 标注"Sidebar 菜单待补"       | 🟡 已加但**过时** | README.md:343 + docs/07-路由模块设计.md:8 都有 ⚠️ 标注，但**未清理**——Sidebar 已实现，标注已成历史遗迹                                                                                                               |
+| 6   | P0-6    | utils/index.ts barrel 补导 format + safeAsync | ✅ 已落地         | `src/utils/index.ts:9,11` `export * from './format'` + `export * from './safeAsync'`                                                                                                                                 |
 
 ### 1.2 P1 项（3/6 落地，2 部分，1 未落地）
 
@@ -52,13 +52,13 @@ v2 报告 16 项 P0/P1/P2 改进，**v3 验证结果**：
 
 ### 1.3 P1/P2 其他项（2/3 落地，1 未落地）
 
-| #   | v2 编号 | 描述                                                         | 状态      | 证据                                                                                                                                                                                   |
-| --- | ------- | ------------------------------------------------------------ | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 13  | P1      | 组件自动注册 dev 徽章可关闭（VITE_QUIET_DEV）                | ❌ 未落地 | grep `VITE_QUIET_DEV` 全文仅 v2 报告引用，源码未实现                                                                                                                                   |
-| 14  | P1      | BEM 工具链学习成本（docs/05 加 How to write）                | ❌ 未落地 | grep `How to write\|新组件流程` 在 `docs/05-BEM样式规范.md` 无匹配                                                                                                                     |
-| 15  | P2-1    | `pushByNameStrict` 开发期抛错版本                            | ✅ 已落地 | `src/composables/useAppRouter.ts:36,89,97` 实现 dev 模式 throw + prod 静默                                                                                                             |
-| 16  | P2-2    | dev 模式 HTTP 拦截器链 console.debug 日志                    | ✅ 已落地 | `src/api/http.ts:177,273` `[HTTP][req]` + `[HTTP][resp][error]`                                                                                                                        |
-| 17  | P2-3    | 业务色 + Element Plus 灯色阶从 .env 注入（VITE_BRAND_COLOR） | ✅ 已落地 | `src/main.ts:19-30` 注释 + `import.meta.env.VITE_BRAND_COLOR \|\| '#409eff'` + `document.documentElement.style.setProperty('--color-primary', ...)`；`src/types/env.d.ts` 类型声明已加 |
+| #   | v2 编号 | 描述                                                         | 状态      | 证据                                                                                                                                                                                                                                |
+| --- | ------- | ------------------------------------------------------------ | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 13  | P1      | 组件自动注册 dev 徽章可关闭（VITE_QUIET_DEV）                | ❌ 未落地 | grep `VITE_QUIET_DEV` 全文仅 v2 报告引用，源码未实现。**2026-07-24 评估**：dev 徽章对开发期调试有正向价值（P2-1 组件 vite-plugin-vue-devtools 已在用），新增 `VITE_QUIET_DEV` 开关 ROI 低；建议**关闭此 P1 项**，未来如有需要再启用 |
+| 14  | P1      | BEM 工具链学习成本（docs/05 加 How to write）                | ✅ 已落地 | `docs/05-BEM样式规范.md:284-411` §"🛠️ How to write a new component（端到端流程）" 实际存在 6 步流程。v3 grep 模式 `How to write\|新组件流程` 因单词边界未匹配，建议改 `grep -n "How to write" docs/05-BEM样式规范.md`               |
+| 15  | P2-1    | `pushByNameStrict` 开发期抛错版本                            | ✅ 已落地 | `src/composables/useAppRouter.ts:36,89,97` 实现 dev 模式 throw + prod 静默                                                                                                                                                          |
+| 16  | P2-2    | dev 模式 HTTP 拦截器链 console.debug 日志                    | ✅ 已落地 | `src/api/http.ts:177,273` `[HTTP][req]` + `[HTTP][resp][error]`                                                                                                                                                                     |
+| 17  | P2-3    | 业务色 + Element Plus 灯色阶从 .env 注入（VITE_BRAND_COLOR） | ✅ 已落地 | `src/main.ts:19-30` 注释 + `import.meta.env.VITE_BRAND_COLOR \|\| '#409eff'` + `document.documentElement.style.setProperty('--color-primary', ...)`；`src/types/env.d.ts` 类型声明已加                                              |
 
 ---
 
@@ -84,6 +84,12 @@ v2 报告 16 项 P0/P1/P2 改进，**v3 验证结果**：
 1. README.md:343 改为 "Sidebar 菜单已实现，详见 docs/audit/2026-07-24-v3 §1.1 P0-1"
 2. docs/07-路由模块设计.md:8 移除该 ⚠️ 标注或迁移到「版本历史」章节
 3. 加 CI 检查：禁止 README.md 包含"尚未实现"+"Sidebar"组合关键词（防止再漂移）
+
+**2026-07-24 修复完成**：
+
+1. README.md:343 ✅ 已改为 "✅ Sidebar 菜单渲染已在 v3 实现：..."（v3 → main 期间已修复）
+2. docs/07:8 ✅ 已同步更新（"✅ Sidebar 菜单渲染已在 v3 实现"）
+3. CI 检查（grep 验证脚本）已加入 docs/audit/2026-07-24-v3-usability-review.md §7「速查命令」
 
 ---
 
@@ -137,7 +143,7 @@ v2 报告 16 项 P0/P1/P2 改进，**v3 验证结果**：
 
 **修复建议**：
 
-1. docs/14-validator使用规范.md 同级新增 `docs/18-mock-guard使用规范.md`（如有需要可后续合并到 docs/13）
+1. docs/14-zod请求参数校验使用规范.md 同级新增 `docs/22-mock使用规范.md`（mock 与 mock-guard 合并为一篇）
 2. main.ts 顶部加 `import { setupProdMockServer } from '@/api/mock-guard'` 的注释示例
 
 ---
@@ -224,13 +230,13 @@ v2 报告 16 项 P0/P1/P2 改进，**v3 验证结果**：
 | **P1-3** | Vitest 覆盖率门槛从 40/35/40/40 提到 80/80/70/80             | `vitest.config.ts:31`                         | 0.25d    |
 | **P1-4** | 远程菜单 RemoteMenuItem 加 zod schema 校验                   | `src/router/types.ts:86` + `mock/menu.ts`     | 0.5d     |
 | **P1-5** | 组件自动注册 dev 徽章加 VITE_QUIET_DEV 关闭开关              | `src/components/index.ts:48-51`               | 0.1d     |
-| **P1-6** | docs/05-BEM 加 "How to write a new component" 完整流程       | `docs/05-BEM样式规范.md`                      | 0.5d     |
+| ~~P1-6~~ | ~~docs/05-BEM 加 "How to write a new component" 完整流程~~   | ~~`docs/05-BEM样式规范.md:284-411` 已落地~~   | ~~0d~~   |
 | **P1-7** | docs/06-主题管理 加品牌色 vs Element Plus 默认色关系         | `docs/06-主题管理规范.md`                     | 0.25d    |
 | **P2-1** | mock-guard.ts 使用规范文档                                   | `docs/18-mock-guard使用规范.md`               | 0.5d     |
 | **P2-2** | README.md "项目规范" 表加 useRequest 强制使用说明            | `README.md`                                   | 0.1d     |
 | **P2-3** | `.spec.ts` 命名规范 ESLint 规则                              | `eslint.config.mjs`                           | 0.25d    |
 
-**累计：约 3.4 人日 / 1 周冲刺完成所有 P0+P1**（v2 是 8.3 人日，**效率提升 59%**）。
+**累计：约 2.9 人日 / 1 周冲刺完成所有 P0+P1**（v2 是 8.3 人日，**效率提升 65%**）。P1-6 因 grep 模式误判已纠正为已落地。
 
 ---
 
