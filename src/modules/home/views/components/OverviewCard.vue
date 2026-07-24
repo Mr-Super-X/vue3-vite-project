@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
 import * as ElIcons from '@element-plus/icons-vue'
 import type { Component } from 'vue'
 import OverviewMetricRow from './OverviewMetricRow.vue'
 import type { OverviewCardDto } from '@/modules/home/types/portal-overview'
+import { useAppRouter } from '@composables/useAppRouter'
 
 const props = defineProps<{
   title: string
@@ -15,7 +15,7 @@ const props = defineProps<{
   viewDetailPath?: string | undefined
 }>()
 
-const router = useRouter()
+const { router } = useAppRouter()
 
 // iconName 取自静态 config；找不到时返回 null 让 <component> 不渲染
 const iconComponent = computed<Component | null>(() => {
