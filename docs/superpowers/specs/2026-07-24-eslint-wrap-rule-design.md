@@ -24,7 +24,7 @@ src/modules/demo/components/DemoFrame.vue
 
 ### 1.2 目标
 
-- ✅ 业务代码必须使用 `useAppRouter` 替代 `vue-router` 的 `useRouter`/`useRoute`
+- ✅ 业务代码必须使用 `useAppRouter` 替代 `vue-router` 的 `useRouter`；`useRoute` 是 vue-router 的"读取当前路由状态"标准 API（route.path / route.name / route.query），暂不限制
 - ✅ 业务代码禁止直接 `import axios`（正确的途径是 `@composables/useRequest` 或 `@api/_http`）
 - ✅ 违规时给 warning（不阻塞构建），提示文案引导到正确封装
 - ✅ 白名单：基础设施代码（composables/router/plugins/main.ts/测试）天然不受约束
@@ -75,8 +75,8 @@ src/modules/demo/components/DemoFrame.vue
         patterns: [
           {
             group: ['vue-router'],
-            importNames: ['useRouter', 'useRoute'],
-            message: '业务代码禁止直接使用 vue-router 的 useRouter/useRoute，请改用 @composables/useAppRouter',
+            importNames: ['useRouter'],
+            message: '业务代码禁止直接使用 vue-router 的 useRouter，请改用 @composables/useAppRouter',
           },
           {
             group: ['axios', 'axios/*'],
