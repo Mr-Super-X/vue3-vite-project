@@ -340,7 +340,7 @@ pnpm dev:local
 | **default** | `@/layouts/default/index.vue` | 左侧 Sidebar + 顶 Header | 业务页（首页 / 列表 / 表单） |
 | **blank**   | `@/layouts/blank/index.vue`   | 居中、无侧栏无顶栏       | 登录页 / 注册页 / 第三方回调 |
 
-> ⚠️ **2026-07-24 审计发现**：`default` Layout 的 Sidebar 菜单渲染**尚未实现**（`Sidebar.vue` 仅 18 行占位）。当前路由自动注册 + 远程菜单加载均已完成，但**侧边栏不会自动显示菜单项**。新业务模块的菜单需要补实现 `Sidebar.vue` 后才会显示，详见 `docs/audit/2026-07-24-usability-review.md` P0-1。
+> ✅ Sidebar 菜单渲染已在 v3 实现：从 `router.getRoutes()` 自动派生 + 多级递归 + i18n + 折叠态联动（`src/components/layout/Sidebar.vue`，338 行）。新业务模块的菜单只需按 `modules/<m>/routes/index.ts` 声明路由即自动出现，无需手动维护菜单列表。
 
 #### 新增业务模块的 3 步流程（无需改 router 目录）
 

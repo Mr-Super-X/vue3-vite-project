@@ -10,15 +10,15 @@
 //      ─ apis/index.ts（模块本地 API 层，与 src/api/modules/<name>.ts 互斥）
 //      ─ index.ts（对外接口 stub）
 //      ─ components/.gitkeep（占位，让 components/ 目录被 git 跟踪）
-//   3. 可选选项：--with-mock / --with-store / --with-i18n 一次性补齐模板
+//   3. 可选选项：--with-mock / --with-store / --with-i18n / --with-request 一次性补齐模板
 //   4. 输出下一步建议（mock / check:routes / 权限码）
 //
 // 设计变更（2026-07-24 方案 A）：
 //   - 移除 RouteName 联合类型追加逻辑（types.ts RouteName 改为 string alias）
 //   - 新增模块零成本：写 routes/index.ts 即可，auto-register 自动捕获
 //
-// 用法：pnpm new-module <kebab-case-name> [--with-mock] [--with-store] [--with-i18n]
-// 例如：pnpm new-module orders --with-mock --with-i18n
+// 用法：pnpm new-module <kebab-case-name> [--with-mock] [--with-store] [--with-i18n] [--with-request]
+// 例如：pnpm new-module orders --with-mock --with-i18n --with-request
 //
 // 默认生成 default layout（业务页通用）。blank layout（登录页/注册页）请参考
 // src/modules/auth/routes/index.ts 手工写。
@@ -43,10 +43,12 @@ interface ModuleOptions {
   withStore: boolean
   /** 在 locales/{zh-CN,en-US}.ts 的 menu 段加 'menu.<name>' 翻译键 */
   withI18n: boolean
+  /** 生成 composables/use<Name>List.ts（useRequest 三态封装 + AsyncState 模板） */
+  withRequest: boolean
 }
 
 /**
- * 解析并校验 argv 输入。支持选项 --with-mock / --with-store / --with-i18n。
+ * 解析并校验 argv 输入。支持选项 --with-mock / --with-store / --with-i18n / --with-request。
  * 错误时 process.exit(1)。
  * @returns 规范化后的 kebab-case 名 + PascalCase 名 + 选项
  */
@@ -56,9 +58,9 @@ function parseNameArg(argv: string[]): { name: string; pascal: string; options: 
   const name = positional[0]
   if (!name) {
     console.error(
-      '✖ 用法: pnpm new-module <kebab-case-name> [--with-mock] [--with-store] [--with-i18n]'
+      '✖ 用法: pnpm new-module <kebab-case-name> [--with-mock] [--with-store] [--with-i18n] [--with-request]'
     )
-    console.error('  示例: pnpm new-module orders --with-mock --with-i18n')
+    console.error('  示例: pnpm new-module orders --with-mock --with-i18n --with-request')
     process.exit(1)
   }
   if (!/^[a-z][a-z0-9-]*$/.test(name)) {
@@ -71,6 +73,7 @@ function parseNameArg(argv: string[]): { name: string; pascal: string; options: 
     withMock: flags.has('--with-mock'),
     withStore: flags.has('--with-store'),
     withI18n: flags.has('--with-i18n'),
+    withRequest: flags.has('--with-request'),
   }
   return { name, pascal: kebabToPascal(name), options }
 }
@@ -373,6 +376,35 @@ function syncI18nKeys(name: string, pascal: string): void {
   }
 }
 
+/**
+ * composables/use<Name>List.ts：useRequest 三态封装。
+ *
+ * 适用场景：一次性请求（不跨组件共享）→ 用 useRequest 而不是 Pinia store。
+ * 跨组件共享请用 --with-store（生成 store 完整骨架）。
+ *
+ * 参考 docs/17-useRequest使用规范.md 与 src/modules/user/views/List.vue（真实使用范例）。
+ */
+function buildRequestComposable(name: string, pascal: string): string {
+  return `import { useRequest } from '@/composables/useRequest'
+import { ${name}Api, type ${pascal}ListParams, type ${pascal}ListResponse } from '../apis'
+
+/**
+ * ${pascal} 列表请求（三态：loading / error / empty）。
+ *
+ * 用法（在 views/Index.vue）：
+ *   const { data, loading, error, isEmpty, execute } = use${pascal}List({ page: 1, pageSize: 10 })
+ *
+ * 详见 docs/17-useRequest使用规范.md。
+ */
+export function use${pascal}List(params: ${pascal}ListParams) {
+  return useRequest<${pascal}ListResponse>(
+    () => ${name}Api.getList(params),
+    { immediate: true }
+  )
+}
+`
+}
+
 /** 串接：建目录 + 按映射写文件 + 打印成功行。 */
 function writeSkeleton(
   name: string,
@@ -404,6 +436,14 @@ function writeSkeleton(
 
   if (options.withI18n) {
     syncI18nKeys(name, pascal)
+  }
+
+  if (options.withRequest) {
+    const composableDir = join(moduleDir, 'composables')
+    mkdirSync(composableDir, { recursive: true })
+    const composablePath = join(composableDir, `use${pascal}List.ts`)
+    writeFileSync(composablePath, buildRequestComposable(name, pascal), 'utf-8')
+    console.log(`  ✓ composables/use${pascal}List.ts`)
   }
 }
 

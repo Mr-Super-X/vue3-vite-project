@@ -76,6 +76,9 @@ export type RouteName = string
  *  - 不返回 component 路径（避免泄露前端源码结构）
  *  - children 嵌套支持多级菜单
  *  - hidden: true → 前端转换为 meta.visible: false（守卫拦截）
+ *
+ * zod schema 已在 src/router/remote.ts:34 实现（RemoteMenuItemSchema），
+ * 本类型作为 TS 静态契约；运行时校验由 remote.ts 守卫加载时执行。
  */
 export interface RemoteMenuItem {
   name: string

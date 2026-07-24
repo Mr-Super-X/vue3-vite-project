@@ -20,41 +20,51 @@ import { COMPONENT_REGISTRY } from './auto-register'
 import type { RouteName, RemoteMenuItem } from './types'
 
 /**
- * 远程菜单 Zod schema（2026-07-24 审计补齐）。
+ * 远程菜单 Zod schema（2026-07-24 审计补齐 + 修复递归嵌套 bug + 修复 strict TS 冲突）。
  *
  * 用途：fetchRemoteRoutes 拿到的后端 JSON 用此 schema 校验整体结构，
  * 失败 console.warn + 逐项校验兜底（容错优先）。
  *
- * 设计取舍：
+ * 设计要点：
+ *   - 基础形状（remoteMenuItemBase）= 普通 z.object，无 children 字段
+ *   - 递归形状 = base.extend({ children: z.array(自身).optional() }) 通过 z.lazy
+ *   - 顶层 array 容器（remoteMenuArraySchema）= z.array(item)
+ *   - 类型标注用 z.ZodType<unknown>（zod 推断）—— 避免与 RemoteMenuItem interface 在
+ *     exactOptionalPropertyTypes 严格 TS 下的 meta?: undefined 冲突
+ *   - parse 后用 `as RemoteMenuItem[]` 类型断言兜底（zod 已运行时校验，安全）
  *   - 用 z.string() 替代 RouteName 联合类型校验（zod 对 string union 处理麻烦，
  *     name 不在 COMPONENT_REGISTRY 时 convertItem 也会跳过 + warn，等价兜底）
  *   - meta.passthrough() 允许业务自定义字段
- *   - children 递归用 z.lazy() 处理嵌套菜单
  */
-const RemoteMenuItemSchema: z.ZodType<RemoteMenuItem[]> = z.lazy(() =>
-  z.array(
-    z.object({
-      name: z.string(),
-      path: z.string().min(1),
-      meta: z
-        .object({
-          hidden: z.boolean().optional(),
-          title: z.string().optional(),
-          titleKey: z.string().optional(),
-          icon: z.string().optional(),
-          requiresAuth: z.boolean().optional(),
-          permissions: z.array(z.string()).optional(),
-          visible: z.boolean().optional(),
-          keepAlive: z.boolean().optional(),
-          breadcrumb: z.boolean().optional(),
-          affix: z.boolean().optional(),
-        })
-        .passthrough()
-        .optional(),
-      children: z.array(RemoteMenuItemSchema).optional(),
-    }) as unknown as z.ZodType<RemoteMenuItem>
-  )
+const remoteMenuItemBase = z.object({
+  name: z.string(),
+  path: z.string().min(1),
+  meta: z
+    .object({
+      hidden: z.boolean().optional(),
+      title: z.string().optional(),
+      titleKey: z.string().optional(),
+      icon: z.string().optional(),
+      requiresAuth: z.boolean().optional(),
+      permissions: z.array(z.string()).optional(),
+      visible: z.boolean().optional(),
+      keepAlive: z.boolean().optional(),
+      breadcrumb: z.boolean().optional(),
+      affix: z.boolean().optional(),
+    })
+    .passthrough()
+    .optional(),
+})
+
+/** 单个菜单项的 zod schema（递归 children）。 */
+const RemoteMenuItemSchema: z.ZodType<unknown> = z.lazy(() =>
+  remoteMenuItemBase.extend({
+    children: z.array(RemoteMenuItemSchema).optional(),
+  })
 )
+
+/** 顶层菜单数组 schema（用于校验 fetchRemoteRoutes 拿到的整体 JSON）。 */
+const remoteMenuArraySchema = z.array(RemoteMenuItemSchema)
 
 /**
  * 远程菜单加载的默认参数（可被 fetchRemoteRoutes 调用方覆盖）。
@@ -114,7 +124,7 @@ export async function fetchRemoteRoutes(
  * 失败时不影响菜单加载（与旧行为兼容），仅 console.warn 便于排查。
  */
 function validateAndConvertMenu(raw: unknown): RouteRecordRaw[] {
-  const result = RemoteMenuItemSchema.safeParse(raw)
+  const result = remoteMenuArraySchema.safeParse(raw)
   if (!result.success) {
     console.warn(
       '[router/remote] 菜单 JSON 格式异常，使用部分可用项:',
@@ -124,14 +134,15 @@ function validateAndConvertMenu(raw: unknown): RouteRecordRaw[] {
     if (Array.isArray(raw)) {
       const valid: RemoteMenuItem[] = []
       for (const item of raw) {
-        const single = RemoteMenuItemSchema.safeParse([item])
+        const single = RemoteMenuItemSchema.safeParse(item)
         if (single.success) valid.push(item as RemoteMenuItem)
       }
       return convertMenu(valid)
     }
     return []
   }
-  return convertMenu(result.data)
+  // zod 已运行时校验，类型断言兜底（避免与 RemoteMenuItem interface 的 meta?: 不含 undefined 冲突）
+  return convertMenu(result.data as RemoteMenuItem[])
 }
 
 /**

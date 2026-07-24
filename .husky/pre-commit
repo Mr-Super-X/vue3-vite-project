@@ -2,3 +2,5 @@
 pnpm lint-staged
 # 全局类型检查（防止 lint-staged 漏掉的文件引入类型错误）
 pnpm type-check
+# 路由一致性检查（RouteName 联合类型 + whitelist + 实际 routes 三者一致，防止漏改）
+pnpm check:routes

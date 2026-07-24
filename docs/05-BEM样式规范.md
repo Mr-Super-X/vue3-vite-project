@@ -281,6 +281,137 @@ components/*.vue 内 <style lang="scss" scoped>  # 组件作用域样式（@use 
 
 ---
 
+## 🛠️ How to write a new component（端到端流程）
+
+> 新人首次写业务组件的完整流程。从命名到评审，6 步可走完。
+
+### Step 1：定 Block 名（kebab-case）
+
+```
+✅ user-card / order-list / data-table
+❌ UserCard / userCard / usercard / card
+```
+
+Block 名就是组件的"作用域根"，**全局唯一**（不要用 `card` / `button` 这种通用名）。
+
+### Step 2：创建组件文件
+
+```
+src/components/<block-name>/  （通用组件）
+或
+src/modules/<m>/components/<block-name>/  （模块私有组件）
+├── index.vue
+└── <block-name>.spec.ts  （可选，复杂组件才加）
+```
+
+> Vue 文件名用 kebab-case（如 `user-card.vue`），与 Block 名一致。
+
+### Step 3：SFC 三段结构模板
+
+```vue
+<script setup lang="ts">
+// 1. props/emits 用 interface（§五 TS 用法）
+interface UserCardProps {
+  user: { id: number; name: string; avatar?: string }
+  variant?: 'default' | 'compact'
+}
+const props = withDefaults(defineProps<UserCardProps>(), { variant: 'default' })
+
+// 2. 状态用 ref；不要在 computed 内改 ref
+const collapsed = ref(false)
+
+// 3. emit 用 defineEmits<T>()
+const emit = defineEmits<{ select: [id: number] }>()
+</script>
+
+<template>
+  <!-- 4. BEM 类名：block / element / modifier -->
+  <div :class="[bem.b(), bem.m(`variant-${props.variant}`)]">
+    <img :class="bem.e('avatar')" :src="user.avatar" />
+    <h3 :class="bem.e('name')">{{ user.name }}</h3>
+    <button
+      :class="[bem.e('action'), bem.is('collapsed', collapsed)]"
+      @click="emit('select', user.id)"
+    >
+      查看
+    </button>
+  </div>
+</template>
+
+<style lang="scss" scoped>
+// 5. 编译期 mixin（嵌套多时推荐）
+@use '@/assets/styles/mixins/bem' as *;
+
+@include b('user-card') {
+  display: flex;
+  gap: 12px;
+
+  &__avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+  }
+
+  &__name {
+    margin: 0;
+    font-size: var(--font-size-md);
+  }
+
+  &__action {
+    padding: 4px 12px;
+    border: 1px solid var(--border-base);
+    background: var(--bg-primary);
+    cursor: pointer;
+
+    @include is('collapsed') {
+      padding: 2px 8px;
+      font-size: 12px;
+    }
+  }
+
+  // 6. Modifier：仅调整外观，不改 DOM
+  @include m('variant-compact') {
+    gap: 8px;
+
+    &__avatar {
+      width: 32px;
+      height: 32px;
+    }
+  }
+}
+</style>
+```
+
+### Step 4：3 个最常见反例
+
+| #   | 反例                                                          | 正确做法                                                    |
+| --- | ------------------------------------------------------------- | ----------------------------------------------------------- |
+| 1   | `class="user-card-avatar"`（混 kebab-case 和 BEM）            | `class="user-card__avatar"`（BEM 双下划线）                 |
+| 2   | `<div class="user-card__header__title">`（3 层 Element 嵌套） | 拆为多个 Block（如 `user-card__header` + `header__title`）  |
+| 3   | `<div :class="{ 'is-active': active }">`（直接写 is-）        | `:class="bem.is('active', active)"`（运行时由 `is()` 生成） |
+
+### Step 5：跨组件复用 → 抽到 variables.css
+
+```scss
+// ❌ 在组件内散落
+.user-card {
+  --avatar-size: 48px;
+}
+
+// ✅ 抽到 src/assets/styles/variables.scss（§样式隔离三层防线）
+$avatar-size-default: 48px;
+```
+
+### Step 6：跑 `pnpm check:routes` + ESLint + 单测
+
+```bash
+pnpm lint:fix        # ESLint 自动修复 + 检查 BEM 命名
+pnpm test --run      # 若有 <block>.spec.ts 跑单测
+pnpm check:routes    # 如果改了 routes/* 跑一致性
+```
+
+---
+
 ## ❓ FAQ
 
 ### Q1：为什么不用 Stylelint 强制 BEM？

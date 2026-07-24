@@ -12,7 +12,8 @@ import type { MockMethod } from 'vite-plugin-mock'
  *   4. 隐藏菜单（Reports）—— 后端 hidden:true 转换后，前端 meta.visible:false
  *
  * 路由守卫在 remote 模式下会调此接口拉菜单并 router.addRoute() 注入。
- * 未列在 src/router/types.ts RouteName 联合类型中的 name 会被守卫 warn + 跳过。
+ * 拉到的 JSON 由 src/router/remote.ts:34 的 RemoteMenuItemSchema（zod）运行时校验；
+ * 校验失败时守卫 console.warn + 逐项校验兜底（容错优先），不影响菜单加载。
  *
  * 字段说明详见 src/router/types.ts 中的 RemoteMenuItem 接口注释。
  */
