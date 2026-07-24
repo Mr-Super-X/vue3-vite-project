@@ -21,10 +21,11 @@
 //   - 远程菜单注入的路由会通过 router.getRoutes() 自动出现，无需特殊处理
 
 import { computed, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import * as ElIcons from '@element-plus/icons-vue'
 import { useAppStore } from '@/store/modules/app'
+import { useAppRouter } from '@composables/useAppRouter'
 import { resolveRouteTitle, extractRouteIcon } from '@/router/helpers'
 
 interface MenuItem {
@@ -35,7 +36,7 @@ interface MenuItem {
 }
 
 const appStore = useAppStore()
-const router = useRouter()
+const { router } = useAppRouter()
 const route = useRoute()
 const { t } = useI18n()
 
