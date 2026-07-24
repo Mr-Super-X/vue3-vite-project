@@ -9,12 +9,13 @@
 //   - 关闭 active tag 后自动跳到最后一个 visited
 
 import { computed, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useTagsViewStore, type TagView } from '@/store/modules/tags-view'
 import { createNamespace } from '@utils/bem'
+import { useAppRouter } from '@composables/useAppRouter'
 
 const route = useRoute()
-const router = useRouter()
+const { router } = useAppRouter()
 const store = useTagsViewStore()
 // 运行时 BEM 命名空间：gm-tags-view / __item / __title / __close / __menu
 const bem = createNamespace('tags-view')
