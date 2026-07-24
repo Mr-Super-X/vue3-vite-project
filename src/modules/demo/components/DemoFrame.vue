@@ -5,8 +5,8 @@
  * 用途：每个组件示例页都用它包裹，提供标题、简介、主内容三段式结构。
  * 不提供"在编辑器打开组件"按钮（项目未配置 vite-plugin-vue-inspector）。
  */
-import { useRouter } from 'vue-router'
 import { ArrowLeft } from '@element-plus/icons-vue'
+import { useAppRouter } from '@composables/useAppRouter'
 
 defineProps<{
   /** 组件名（顶部大标题） */
@@ -17,7 +17,7 @@ defineProps<{
   introductions?: string[]
 }>()
 
-const router = useRouter()
+const { router } = useAppRouter()
 
 /**
  * 返回 demo 首页。
