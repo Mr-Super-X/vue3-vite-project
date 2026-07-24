@@ -18,6 +18,14 @@ import PortalAiWidget from './components/PortalAiWidget.vue'
   </div>
 </template>
 
+<style lang="scss">
+/*
+  注入portal-layout组件的全局样式变量（主题色、间距、圆角、尺寸、字体、阴影、动画等等），
+  注意： 这里不能给style加scoped，否则portal-layout组件的子组件无法使用这些变量
+*/
+@use './styles/portal-tokens.scss' as *;
+</style>
+
 <style lang="scss" scoped>
 .portal-layout {
   display: flex;

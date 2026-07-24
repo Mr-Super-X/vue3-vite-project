@@ -2,8 +2,8 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUserStore } from '@/store/modules/user'
-import { PORTAL_NAV } from '@/portal/config/nav'
-import type { PortalNavItem } from '@/portal/config/types'
+import { PORTAL_NAV } from '@/layouts/portal/config/nav'
+import type { PortalNavItem } from '@/layouts/portal/config/types'
 
 const userStore = useUserStore()
 const route = useRoute()

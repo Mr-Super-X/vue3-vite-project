@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { FOOTER_GROUPS, FOOTER_COPYRIGHT } from '@/portal/config/footer'
+import { FOOTER_GROUPS, FOOTER_COPYRIGHT } from '@/layouts/portal/config/footer'
 </script>
 
 <template>

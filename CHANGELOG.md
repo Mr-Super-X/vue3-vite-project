@@ -110,6 +110,11 @@
 - **Mock 路径修复**：`mock/portal-overview.ts` 的首页类型 import 从已删除的 `@/modules/dashboard` 同步为 `@/modules/home`；Mock 接口 URL 从 `/portal/overview` 同步为 `/api/portal/overview`（与 `VITE_API_BASE_URL=/api` 一致）。
 - **i18n 文案同步**：`src/locales/{zh-CN,en-US}.ts` 的 `menu.dashboard` 重命名为 `menu.home`（与 `RouteName='Home'` / 导航 key='home' 一致），并更新中文文案 `'仪表盘' → '首页'`。
 - **历史设计/计划归档**：`docs/superpowers/{specs,plans,research}/` 下 13 份历史文档（2026-07-17~24）迁移到 `docs/archive/2026-07/`，新增归档索引 `docs/archive/2026-07/README.md`；`docs/superpowers/` 空目录删除；README 设计/计划表更新为归档索引。
+- **架构一致性回拨**：`src/portal/{config,styles}/` 迁入 `src/modules/home/{config,styles}/`（`nav.ts` / `hero.ts` / `footer.ts` / `types.ts` / `portal-tokens.scss`），5 处 import 同步更新（`PortalHeaderNav.vue` / `PortalFooter.vue` / `HeroSection.vue` / `SearchBar.vue` / `src/assets/styles/index.scss`），`src/portal/` 空目录删除。`PortalLayout` 仍保留在 `src/layouts/portal/`（路由层是 layout 职责，不属于业务模块）。
+- **按消费方拆分布局**：
+  - 公共 `nav.ts` / `footer.ts` / `PortalNavItem` / `FooterLinkGroup` 迁回 `src/layouts/portal/config/`（PortalLayout 的公共配置）
+  - home 特有 `hero.ts` / `SearchTypeOption` 保留在 `src/modules/home/config/`，`HeroConfig` 内联到 `hero.ts`（仅自身消费）
+  - 视觉 token 拆分：`src/layouts/portal/styles/portal-tokens.scss`（banner 渐变 + 布局常量 + portal-bg）只给 PortalLayout 容器用；`src/modules/home/styles/portal-tokens.scss`（5 张卡片底色 + 趋势色）只给 home 的 Overview 组件用；`src/assets/styles/index.scss` 按依赖顺序两文件都 `@use`
 - `README.md` § 路由架构（自动注册）扩充：新增「Layout 速选」对照表 + blank layout 页面模板示例 + 「自检」步骤指路到 docs/07
 - `docs/07-路由模块设计.md` § 新增路由的标准流程 大幅扩充：
   - 新增 §0️⃣ **Layout 选择速查**：default vs blank 视觉特征 + 适用场景 + 是否需要白名单

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { SearchTypeOption } from '@/portal/config/types'
+import type { SearchTypeOption } from '@/modules/home/config/types'
 
 const props = defineProps<{
   types: SearchTypeOption[]

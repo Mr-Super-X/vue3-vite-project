@@ -1,5 +1,8 @@
 import type { RouteRecordName } from 'vue-router'
 
+/**
+ * 顶部导航项（PortalHeaderNav 使用）
+ */
 export interface PortalNavItem {
   key: string
   label: string
@@ -8,19 +11,10 @@ export interface PortalNavItem {
   active?: boolean
 }
 
-export interface SearchTypeOption {
-  label: string
-  value: string
-}
-
+/**
+ * 底部链接分组（PortalFooter 使用）
+ */
 export interface FooterLinkGroup {
   title: string
   links: { label: string; href: string }[]
-}
-
-export interface HeroConfig {
-  slogan: string
-  hotSearches: string[]
-  searchTypes: SearchTypeOption[]
-  searchPlaceholder: string
 }

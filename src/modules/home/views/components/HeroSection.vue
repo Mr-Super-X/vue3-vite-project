@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import HotSearchTags from './HotSearchTags.vue'
 import SearchBar from './SearchBar.vue'
-import { HERO_CONFIG } from '@/portal/config/hero'
+import { HERO_CONFIG } from '@/modules/home/config/hero'
 
 const searchType = ref(HERO_CONFIG.searchTypes[0]!.value)
 const keyword = ref('')
