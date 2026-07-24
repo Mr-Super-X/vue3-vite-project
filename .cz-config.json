@@ -25,7 +25,7 @@
     { "value": "assets", "name": "assets         (样式/图片/媒体资源相关)" },
     { "value": "components", "name": "components     (组件相关)" },
     { "value": "constant", "name": "constant       (常量相关)" },
-    { "value": "dashboard", "name": "dashboard      (仪表盘相关)" },
+    { "value": "home", "name": "home           (首页相关)" },
     { "value": "deps", "name": "deps           (依赖更新)" },
     { "value": "docs", "name": "docs           (文档相关)" },
     { "value": "eslint", "name": "eslint         (ESLint 配置)" },

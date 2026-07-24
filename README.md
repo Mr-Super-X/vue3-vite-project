@@ -8,7 +8,7 @@
 
 ## 📋 项目简介
 
-工贸统一登录方向的中后台门户前端基线，支持多业务模块（认证、用户管理、仪表盘）、中后台交互模式（表格、表单、权限控制）、不依赖后端即可独立跑通业务流程。
+工贸统一登录方向的中后台门户前端基线，支持多业务模块（认证、用户管理、首页）、中后台交互模式（表格、表单、权限控制）、不依赖后端即可独立跑通业务流程。
 
 **设计原则**：
 
@@ -57,7 +57,7 @@
 ├── directives/             │   └── routes/index.ts（自动注册）
 │   ├── _utils.ts            │
 │   ├── inputDebounce.*     └── modules/user/
-│   ├── buttonDebounce.*    └── modules/dashboard/
+│   ├── buttonDebounce.*    └── modules/home/
 │   ├── permission.*
 ├── plugins/
 │   ├── errorHandler.*      ← Vue 插件（install 模式）
@@ -233,7 +233,7 @@ gm-portal-fe/
 │   ├── enums/           # httpEnum、roleEnum
 │   ├── layouts/         # default/ + blank/
 │   ├── locales/         # zh-CN、en-US
-│   ├── modules/         # auth、user、dashboard、error
+│   ├── modules/         # auth、user、home、error
 │   │                    # 每个模块含 views/ + store/ + components/ + routes/index.ts（自动注册）
 │   ├── plugins/         # Vue 插件（install 模式 + .d.ts 分离）
 │   │   ├── errorHandler.{ts,d.ts}    # 全局错误处理
@@ -258,7 +258,7 @@ gm-portal-fe/
 │   │       └── （注意：`src/components/common/_internal/naming.ts` 是组件命名工具，仅 components 模块内部使用）
 │   └── App.vue / main.ts
 ├── mock/                # vite-plugin-mock 数据
-│   ├── auth.ts / user.ts / dashboard.ts / menu.ts  # 接口 mock
+│   ├── auth.ts / user.ts / menu.ts / portal-overview.ts  # 接口 mock
 │   └── index.ts          # 聚合导出（vite-plugin-mock 自动扫描）
 ├── docs/                # 项目规范文档
 └── 配置文件             # vite.config.ts / tsconfig*.json / uno.config.ts / vitest.config.ts
@@ -323,9 +323,9 @@ pnpm dev:local
 | auth      | `/api/auth/login`、`/api/auth/profile`、`/api/auth/logout` | admin / 123456 |
 | user      | `/api/user/list`、`/api/user/:id`                          | -              |
 | dashboard | `/api/dashboard/stats`                                     | -              |
-| menu      | `/api/menu`（返回 Dashboard + UserList 两条）              | -              |
+| menu      | `/api/menu`（返回 Home + UserList 两条）                   | -              |
 
-> `/api/menu`（远程菜单）在 remote 模式下由守卫调用。已内置 mock（Dashboard + UserList），无需额外配置即可跑通端到端流程。
+> `/api/menu`（远程菜单）在 remote 模式下由守卫调用。已内置 mock（Home + UserList），无需额外配置即可跑通端到端流程。
 
 切换真实后端：修改 `.env.development` 中 `VITE_USE_MOCK=false` 并配置 `VITE_API_BASE_URL`。
 
@@ -335,10 +335,10 @@ pnpm dev:local
 
 #### Layout 速选（先决定用哪个）
 
-| Layout      | 组件                          | 视觉特征                 | 适用场景                          |
-| ----------- | ----------------------------- | ------------------------ | --------------------------------- |
-| **default** | `@/layouts/default/index.vue` | 左侧 Sidebar + 顶 Header | 业务页（Dashboard / 列表 / 表单） |
-| **blank**   | `@/layouts/blank/index.vue`   | 居中、无侧栏无顶栏       | 登录页 / 注册页 / 第三方回调      |
+| Layout      | 组件                          | 视觉特征                 | 适用场景                     |
+| ----------- | ----------------------------- | ------------------------ | ---------------------------- |
+| **default** | `@/layouts/default/index.vue` | 左侧 Sidebar + 顶 Header | 业务页（首页 / 列表 / 表单） |
+| **blank**   | `@/layouts/blank/index.vue`   | 居中、无侧栏无顶栏       | 登录页 / 注册页 / 第三方回调 |
 
 #### 新增业务模块的 3 步流程（无需改 router 目录）
 

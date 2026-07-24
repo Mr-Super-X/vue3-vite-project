@@ -62,6 +62,48 @@
 
 新增 26 个文件，修改 2 个文件，删除 1 个文件。
 
+### refactor(home) — 2026-07-23
+
+仪表盘路由 + 模块重命名为"首页"，对齐 `src/portal/config/nav.ts` 首页项 key='home' 的语义。
+
+#### 路由重命名（commit `4a04bd8`）
+
+- `src/modules/dashboard/routes/index.ts`：`path: '/dashboard'` → `path: '/home'`，`name: 'Dashboard'` → `name: 'Home'`
+- `src/router/index.ts` 根路径 `redirect: '/dashboard'` → `redirect: '/home'`
+- `src/modules/auth/views/Login.vue` 登录 fallback → `'/home'`
+- `src/portal/config/nav.ts` 顶部 nav 首页项路径 → `'/home'`
+- `src/router/types.ts` `RouteName` 联合 `'Dashboard'` → `'Home'`
+- 注释同步：`src/store/modules/tags-view.ts`（2 处）/ `TagsView/index.vue` / `useLogout.ts` / `router/index.ts`
+- 测试 fixture 同步：`auto-register.spec.ts` + `tags-view.spec.ts` 共 10 处
+
+#### 模块目录重命名 + views 去嵌套（commit `25d9b47`）
+
+- 整个 `src/modules/dashboard/` 迁移至 `src/modules/home/`
+- `store/index.ts`：`useDashboardStore` → `useHomeStore`，pinia id `'module-dashboard'` → `'module-home'`
+- `views/` 平铺：原 `views/home/Index.vue` → `views/Index.vue`，原 `views/home/components/*` → `views/components/*`（与 orders / reports / user / error / auth 模块平铺结构对齐）
+- import 路径（9 处）：`@/modules/dashboard` → `@/modules/home`
+- 路由 lazy import：`'../views/home/Index.vue'` → `'../views/Index.vue'`
+- git 自动识别 19 个 rename + 1 个 import 路径改动 = 21 files / 13 insertions / 13 deletions
+
+#### mock 远程菜单同步（commit `dd45ed2`）
+
+- `mock/menu.ts` `name: 'Dashboard'` → `name: 'Home'`，`path: '/dashboard'` → `path: '/home'`
+- 修复 `fetchRemoteRoutes()` 触发的 `remote.ts:85` "未注册的路由 name" 警告（mock 与 `RouteName='Home'` 联合类型对齐）
+
+#### 文档 + 配置同步
+
+- `README.md`：模块结构树 / 模块列表 / mock 模块列表 / 远程菜单 mock 描述 / Layout 表格 5 处同步
+- `docs/07-路由模块设计.md`：目录树 / `RouteName` 联合示例 / 远程菜单 JSON 示例 / 典型搭配 / `back()` fallback 6 处同步
+- `docs/research/2026-07-22-unplugin-vue-router-survey.md`：模块列表 dashboard → home
+- `.cz-config.json`：commitizen scope `dashboard` → `home`
+- 删除 `mock/dashboard.ts`（提供 `/api/dashboard/stats` 死代码接口，全项目无引用）
+
+#### 验证
+
+- `pnpm type-check` 无错误
+- `pnpm test --run`：36 files / 343 tests 100% PASS
+- `pnpm check:routes`：路由一致性通过
+
 ### 文档
 
 - `README.md` § 路由架构（自动注册）扩充：新增「Layout 速选」对照表 + blank layout 页面模板示例 + 「自检」步骤指路到 docs/07

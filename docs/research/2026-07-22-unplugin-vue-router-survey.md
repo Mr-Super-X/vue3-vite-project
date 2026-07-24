@@ -43,7 +43,7 @@ src/router/
     ├── remote-menu.ts        # 远程菜单加载 + dynamicLoaded 状态
     └── composable.ts         # composeGuards 工具
 
-src/modules/{auth,user,dashboard,error,orders,reports}/routes/index.ts
+src/modules/{auth,user,home,error,orders,reports}/routes/index.ts
 ```
 
 > 业务模块**显式声明**路由数组（routes/index.ts），通过 glob 聚合。当前 6 个业务模块约 7 个路由。
