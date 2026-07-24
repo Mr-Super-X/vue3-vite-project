@@ -13,10 +13,48 @@
 //   { name: RouteName; path: string; meta?: RouteMeta; children?: RemoteMenuItem[] }
 
 import type { RouteRecordRaw } from 'vue-router'
+import { z } from 'zod'
 import { menuApi } from '@/api/modules/menu'
 import { withRetry } from '@/api/retry'
 import { COMPONENT_REGISTRY } from './auto-register'
 import type { RouteName, RemoteMenuItem } from './types'
+
+/**
+ * 远程菜单 Zod schema（2026-07-24 审计补齐）。
+ *
+ * 用途：fetchRemoteRoutes 拿到的后端 JSON 用此 schema 校验整体结构，
+ * 失败 console.warn + 逐项校验兜底（容错优先）。
+ *
+ * 设计取舍：
+ *   - 用 z.string() 替代 RouteName 联合类型校验（zod 对 string union 处理麻烦，
+ *     name 不在 COMPONENT_REGISTRY 时 convertItem 也会跳过 + warn，等价兜底）
+ *   - meta.passthrough() 允许业务自定义字段
+ *   - children 递归用 z.lazy() 处理嵌套菜单
+ */
+const RemoteMenuItemSchema: z.ZodType<RemoteMenuItem[]> = z.lazy(() =>
+  z.array(
+    z.object({
+      name: z.string(),
+      path: z.string().min(1),
+      meta: z
+        .object({
+          hidden: z.boolean().optional(),
+          title: z.string().optional(),
+          titleKey: z.string().optional(),
+          icon: z.string().optional(),
+          requiresAuth: z.boolean().optional(),
+          permissions: z.array(z.string()).optional(),
+          visible: z.boolean().optional(),
+          keepAlive: z.boolean().optional(),
+          breadcrumb: z.boolean().optional(),
+          affix: z.boolean().optional(),
+        })
+        .passthrough()
+        .optional(),
+      children: z.array(RemoteMenuItemSchema).optional(),
+    }) as unknown as z.ZodType<RemoteMenuItem>
+  )
+)
 
 /**
  * 远程菜单加载的默认参数（可被 fetchRemoteRoutes 调用方覆盖）。
@@ -59,11 +97,41 @@ export async function fetchRemoteRoutes(
       retries,
       baseDelay,
     })
-    return convertMenu(menu)
+    return validateAndConvertMenu(menu)
   } catch (err) {
     console.warn('[router/remote] 接口加载菜单失败（已重试）:', err)
     return []
   }
+}
+
+/**
+ * 用 Zod schema 校验后端返回的菜单数组，校验通过后转 Vue Router 路由。
+ *
+ * 行为：
+ *   - 整体校验失败（如返回非数组）→ console.warn + 返回空数组
+ *   - 单个 item 校验失败 → 该 item 被跳过（不影响其他）
+ *
+ * 失败时不影响菜单加载（与旧行为兼容），仅 console.warn 便于排查。
+ */
+function validateAndConvertMenu(raw: unknown): RouteRecordRaw[] {
+  const result = RemoteMenuItemSchema.safeParse(raw)
+  if (!result.success) {
+    console.warn(
+      '[router/remote] 菜单 JSON 格式异常，使用部分可用项:',
+      result.error.issues.slice(0, 5)
+    )
+    // 尽力而为：尝试逐项校验（容错）
+    if (Array.isArray(raw)) {
+      const valid: RemoteMenuItem[] = []
+      for (const item of raw) {
+        const single = RemoteMenuItemSchema.safeParse([item])
+        if (single.success) valid.push(item as RemoteMenuItem)
+      }
+      return convertMenu(valid)
+    }
+    return []
+  }
+  return convertMenu(result.data)
 }
 
 /**

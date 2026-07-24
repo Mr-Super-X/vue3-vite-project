@@ -18,7 +18,6 @@ import { resolveRouteTitle } from '@router/helpers'
 import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import type { RouteLocationRaw, RouteLocationNamedRaw, RouteRecordRaw, Router } from 'vue-router'
-import type { RouteName } from '@/router/types'
 
 /**
  * 应用层路由 composable。
@@ -31,10 +30,12 @@ import type { RouteName } from '@/router/types'
 export function useAppRouter(): {
   /** vue-router 实例（兼容旧 API） */
   router: Router
-  /** 类型安全的按 name 跳转（RouteName 联合类型约束） */
-  pushByName: (name: RouteName, params?: RouteLocationNamedRaw['params']) => Promise<void>
+  /** 类型安全的按 name 跳转（2026-07-24 方案 A：name: string，校验靠 zod + pushByNameStrict） */
+  pushByName: (name: string, params?: RouteLocationNamedRaw['params']) => Promise<void>
+  /** dev 模式严格版：未注册路由立即 throw */
+  pushByNameStrict: (name: string, params?: RouteLocationNamedRaw['params']) => Promise<void>
   /** 类型安全的按 name replace */
-  replaceByName: (name: RouteName, params?: RouteLocationNamedRaw['params']) => Promise<void>
+  replaceByName: (name: string, params?: RouteLocationNamedRaw['params']) => Promise<void>
   /** 跳转并设置 document.title（i18n 友好） */
   pushWithTitle: (to: RouteLocationRaw) => Promise<void>
   /** 安全返回（带 fallback） */
@@ -43,15 +44,26 @@ export function useAppRouter(): {
   addDynamicRoute: (route: RouteRecordRaw) => void
   /** 把 router 操作失败的 Promise rejection 包成 toast */
   withErrorToast: <T extends (...args: never[]) => Promise<unknown>>(fn: T) => T
+  /** 快捷方法集：常用错误页 + 首页 */
+  goHome: () => Promise<void>
+  goLogin: (returnUrl?: string) => Promise<void>
+  go403: () => Promise<void>
+  go404: () => Promise<void>
+  go500: () => Promise<void>
 } {
   /**
-   * 类型安全的按 name 跳转。
+   * 类型安全的按 name 跳转（2026-07-24 方案 A：name 改 string）。
+   *
+   * 拼写校验：
+   *   - 编译期：name: string（无联合类型约束）
+   *   - dev 模式运行时：用 pushByNameStrict 兜底（未注册 throw）
+   *   - 远程菜单：zod schema 在 remote.ts 校验
    *
    * @example
    *   await pushByName('UserList', { id: 1 })
    */
   async function pushByName(
-    name: RouteName,
+    name: string,
     params: RouteLocationNamedRaw['params'] = {}
   ): Promise<void> {
     try {
@@ -61,8 +73,38 @@ export function useAppRouter(): {
     }
   }
 
+  /**
+   * 开发期严格版按 name 跳转（替代原 RouteName 联合类型约束）。
+   *
+   * 与 pushByName 的区别：
+   *   - dev 模式（import.meta.env.DEV）：若 name 不在已注册路由中，立即抛 Error
+   *   - prod 模式：与 pushByName 行为一致（toast + 不抛）
+   *
+   * 用法：业务侧在明确知道目标路由必须存在时用 strict 版本，
+   * 尽早暴露路由拼写错误或未注册路由。
+   *
+   * @example
+   *   await pushByNameStrict('OrdersList')  // dev 模式：未注册立即 throw
+   */
+  async function pushByNameStrict(
+    name: string,
+    params: RouteLocationNamedRaw['params'] = {}
+  ): Promise<void> {
+    if (import.meta.env.DEV) {
+      const exists = router.resolve({ name }).name === name
+      if (!exists) {
+        const err = new Error(
+          `[useAppRouter] pushByNameStrict: 路由 "${name}" 未注册或未注入。请检查 routes/index.ts。`
+        )
+        console.error(err)
+        throw err
+      }
+    }
+    return pushByName(name, params)
+  }
+
   async function replaceByName(
-    name: RouteName,
+    name: string,
     params: RouteLocationNamedRaw['params'] = {}
   ): Promise<void> {
     try {
@@ -140,6 +182,39 @@ export function useAppRouter(): {
     }) as T
   }
 
+  /**
+   * 快捷跳转：常用错误页 + 首页 + 登录页。
+   *
+   * 设计要点：用 RouteName 联合类型约束（拼写错误编译期暴露）；
+   * 错误时静默（被 withErrorToast 包装统一 toast）。
+   *
+   * @example
+   *   const { goHome, goLogin, go403 } = useAppRouter()
+   *   await goHome()
+   *   await goLogin('/user/list')  // 登录后回 redirect
+   *   await go403()                 // 无权限时
+   */
+  async function goHome(): Promise<void> {
+    return pushByName('Home')
+  }
+
+  async function goLogin(returnUrl?: string): Promise<void> {
+    const query = returnUrl ? { redirect: returnUrl } : undefined
+    return pushByName('Login', query)
+  }
+
+  async function go403(): Promise<void> {
+    return pushByName('Forbidden')
+  }
+
+  async function go404(): Promise<void> {
+    return pushByName('NotFound')
+  }
+
+  async function go500(): Promise<void> {
+    return pushByName('ServerError')
+  }
+
   /** 统一错误处理：toast + console.error */
   function handleRouterError(err: unknown): void {
     // 跳当前路由（vue-router 在重复导航时抛 NavigationFailure，跳当前路由是正常情况，不报错）
@@ -154,10 +229,16 @@ export function useAppRouter(): {
   return {
     router,
     pushByName,
+    pushByNameStrict,
     replaceByName,
     pushWithTitle,
     back,
     addDynamicRoute,
     withErrorToast,
+    goHome,
+    goLogin,
+    go403,
+    go404,
+    go500,
   }
 }

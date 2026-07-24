@@ -10,11 +10,11 @@
 
 import type { RouteLocationNormalized, RouteLocationRaw } from 'vue-router'
 import type { useUserStore } from '@/store/modules/user'
+import { Session } from '@/utils/storage'
 
 type UserStore = ReturnType<typeof useUserStore>
 
 const LOGIN_PATH = '/login'
-const TOKEN_STORAGE_KEY = 'token'
 
 /**
  * 检查登录态，未登录或 token 已过期（fetchProfile 失败）则跳登录页。
@@ -27,8 +27,10 @@ export async function checkLoginState(
 ): Promise<RouteLocationRaw | null> {
   if (userStore.isLoggedIn) return null
 
-  // 未登录 → 从 localStorage 恢复 token（HMR / hard refresh 场景）
-  const token = localStorage.getItem(TOKEN_STORAGE_KEY)
+  // 未登录 → 从 Session 恢复 token（HMR / hard refresh 场景）
+  // Session.get('token') 在 prod 自动走 cookie（HttpOnly + secure + sameSite=lax）
+  // dev 模式 HttpOnly 不可读时退化为可读 cookie（storage.ts 兼容）
+  const token = Session.get<string>('token')
   if (!token) {
     return { path: LOGIN_PATH, query: { redirect: to.fullPath } }
   }

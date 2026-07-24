@@ -15,6 +15,20 @@ import 'element-plus/dist/index.css'
 import 'virtual:uno.css'
 import '@/assets/styles/index.scss'
 
+/**
+ * 业务品牌色注入（2026-07-24 审计补齐 P2-3）。
+ *
+ * 在 createApp 之前应用：避免组件挂载后 CSS 变量未生效导致首屏闪烁。
+ * 优先级：VITE_BRAND_COLOR > 默认 #409eff（Element Plus 默认蓝）。
+ *
+ * 配合 element-overwrite/index.scss 的灯色阶 mixin，
+ * 业务侧改品牌色即可全局生效（含 Element Plus 按钮/标签等组件）。
+ */
+const brandColor = import.meta.env.VITE_BRAND_COLOR || '#409eff'
+if (typeof document !== 'undefined') {
+  document.documentElement.style.setProperty('--color-primary', brandColor)
+}
+
 // Prod 模式防御层：vite-plugin-mock 在 prod 自动失效，本函数为扩展点
 assertNoMockInProd()
 

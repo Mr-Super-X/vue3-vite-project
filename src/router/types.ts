@@ -1,12 +1,14 @@
-// 路由类型定义（集中管理所有路由的 name 与 meta）
+// 路由类型定义
 //
-// - whitelist.ts 用 RouteName 校验白名单拼写
-// - components/meta <RouteView> + Header / Sidebar 通过 `to.meta.title` 等自动补全
-// - 新增路由时必须在此追加 RouteName，否则 TS 报错
-// - 注：原 component-registry.ts 已合并到 auto-register.ts 派生，
-//   无需再单独维护 name → component 映射。
+// 设计变更（2026-07-24 方案 A）：
+//   - 移除 RouteName 联合类型（单一事实源是 routes/index.ts）
+//   - auto-register.ts 通过 import.meta.glob 派生所有 name
+//   - 拼写校验靠 zod runtime（remote.ts）+ pushByNameStrict dev 校验
+//   - 不再有"加新模块要同步 types.ts"的负担
 //
 // 校验脚本：scripts/check-routes.ts（pnpm check:routes）
+//   - 不再读 RouteName 联合
+//   - 改为校验"whitelist ⊆ 实际 routes name + 系统路由必存在"
 
 import type { RouteMeta } from 'vue-router'
 
@@ -54,25 +56,17 @@ declare module 'vue-router' {
 export type AppRouteMeta = RouteMeta
 
 /**
- * 业务路由 name 联合类型。
+ * 路由 name 类型（2026-07-24 方案 A 简化为 string）。
  *
- * 命名约定：与路由配置中的 `name` 字段一致。
- * 新增路由时：
- *   1. 在 src/modules/<feature>/routes/index.ts 中定义 name
- *   2. 在此联合类型追加
- *   完成后路由自动可用，remote 模式自动可用（component 由 auto-register.ts 派生）
+ * 原本是联合类型（10 个 RouteName 字面量），移除原因：
+ *   - 单一事实源是 src/modules/<feature>/routes/index.ts，无需在 types.ts 重复声明
+ *   - 新增业务模块零成本接入（无需手动追加联合类型）
+ *   - 拼写校验靠 zod runtime 校验 + pushByNameStrict dev 模式 throw
+ *
+ * 仍保留此类型别名：业务侧既有用法（useAppRouter 等）无需改动，
+ * 未来若重新引入联合类型也只需改这一行。
  */
-export type RouteName =
-  | 'Login'
-  | 'Home'
-  | 'UserList'
-  | 'Orders'
-  | 'OrdersList'
-  | 'OrdersDetail'
-  | 'Reports'
-  | 'Forbidden'
-  | 'NotFound'
-  | 'ServerError'
+export type RouteName = string
 
 /**
  * 后端返回的菜单项 JSON 格式（与后端约定）。
@@ -84,7 +78,7 @@ export type RouteName =
  *  - hidden: true → 前端转换为 meta.visible: false（守卫拦截）
  */
 export interface RemoteMenuItem {
-  name: RouteName
+  name: string
   path: string
   meta?: AppRouteMeta & {
     /**

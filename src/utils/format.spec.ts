@@ -1,15 +1,15 @@
 import { describe, it, expect } from 'vitest'
-import { formatDate, formatMoney, truncate } from './format'
+import { formatDateOnly, formatMoney, truncate } from './format'
 
-describe('formatDate', () => {
+describe('formatDateOnly', () => {
   it('formats ISO date to YYYY-MM-DD', () => {
-    expect(formatDate('2026-07-17T10:00:00Z')).toBe('2026-07-17')
+    expect(formatDateOnly('2026-07-17T10:00:00Z')).toBe('2026-07-17')
   })
   it('returns "-" for invalid input', () => {
-    expect(formatDate('invalid')).toBe('-')
+    expect(formatDateOnly('invalid')).toBe('-')
   })
   it('handles Date object', () => {
-    expect(formatDate(new Date('2026-01-01T00:00:00Z'))).toBe('2026-01-01')
+    expect(formatDateOnly(new Date('2026-01-01T00:00:00Z'))).toBe('2026-01-01')
   })
 })
 

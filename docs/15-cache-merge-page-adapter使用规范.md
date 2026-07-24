@@ -1,0 +1,174 @@
+# 请求层缓存 / 合并 / 分页适配 使用规范
+
+> **文档版本**：v1.0.0 | **最后更新**：2026-07-24
+> **能力来源**：`src/api/cache.ts` + `src/api/request-merger.ts` + `src/api/page-adapter.ts`（CHANGELOG 未记录，2026-07-24 审计补齐文档）
+
+---
+
+## 📋 三件套速览
+
+| 能力            | 文件                | 解决什么问题                                  | 默认行为             |
+| --------------- | ------------------- | --------------------------------------------- | -------------------- |
+| **Cache**       | `cache.ts`          | 防重复请求（同一 GET 在 TTL 内复用结果）      | 默认关闭，按需开     |
+| **Merge**       | `request-merger.ts` | 时间窗口内同参请求合并（同 key 共享 Promise） | 仅 GET/HEAD 默认合并 |
+| **PageAdapter** | `page-adapter.ts`   | 后端分页字段名约定不一致自动适配              | 默认 v2 后端约定     |
+
+三件套都是**可插拔能力**：业务侧零感知，组合在 `http.ts` 拦截器链 + `request<T>()` 中。
+
+---
+
+## 1. 内存缓存（Cache）
+
+### 用法
+
+```ts
+import { request } from '@/api/http'
+
+const data = await request<Pagination<Item>>({
+  url: '/item/list',
+  method: 'get',
+  params: { page: 1, pageSize: 20 },
+  usePageAdapter: true,
+  cache: { ttl: 30 }, // 30 秒内同 url + params 不重复请求
+})
+```
+
+### 适用场景
+
+- **字典数据**（`api/modules/dict.ts` 默认 `cache: { ttl: 30 }`）
+- **配置数据**（站点设置、权限模板）
+- **首页聚合数据**（仪表盘 5 张卡片，30s 内用户刷新不重发）
+
+### 失效方式
+
+```ts
+import { cacheClear } from '@/api/cache'
+
+// 写操作后清空相关 GET 缓存
+async function createItem(data: Item) {
+  const result = await request({ url: '/item', method: 'post', data })
+  cacheClear('GET|/item|') // 清空所有 /item 开头的 GET 缓存
+  return result
+}
+```
+
+### ⚠️ 不适用场景
+
+- **写操作**（POST/PUT/DELETE 自动跳过）
+- **实时数据**（订单状态、消息列表）
+- **用户私有数据**（跨用户共享缓存可能泄露，见 @/utils/cache 的"跨用户/会话共享"注释）
+
+---
+
+## 2. 请求合并（Merge）
+
+### 用法
+
+```ts
+import { request } from '@/api/http'
+import { withMerge } from '@/api/request-merger'
+
+// 方式 1：模块级预包装（推荐）
+const mergedRequest = withMerge(request)
+const users = await mergedRequest({ url: '/user/list', method: 'get' })
+
+// 方式 2：单次配置 directive
+await request({ url: '/user/1', method: 'get', merge: 'never' }) // 临时禁用
+await request({ url: '/user/1', method: 'put', data, merge: 20 }) // 20ms 合并窗口
+```
+
+### 默认行为
+
+- **仅 GET/HEAD 合并**（写操作白名单，避免掩盖真实失败链路）
+- **窗口 50ms**（足够覆盖同一 onMounted 并发触发）
+- **同 method + url + params + data 归一化为同一 key**
+
+### 适用场景
+
+- **仪表盘首屏**：5 张卡片同时 onMounted 触发 → 合并为 1 次请求（节省 4 次）
+- **批量查询**：列表 + 详情同时加载 → 同 key 自动合并
+
+### ⚠️ 不适用场景
+
+- **写操作**：POST/PUT/DELETE 默认不合并（避免掩盖真实失败）
+- **跨窗口长耗时合并**：50ms 窗口已过期仍可触发重复请求（这是设计取舍，不是 bug）
+
+---
+
+## 3. 分页适配（PageAdapter）
+
+### 用法
+
+```ts
+// 业务侧无需关心字段名——只需传语义化字段
+const page = await request<Pagination<Item>>({
+  url: '/item/list',
+  method: 'get',
+  params: { page: 1, pageSize: 20, keyword: 'foo' }, // 项目语义
+  usePageAdapter: true, // 拦截器自动转后端字段名
+})
+// 实际请求参数变为 { pageIndex: 1, pageSize: 20, keyword: 'foo' }
+// 响应自动解包为 { list: [...], total: 100, page: 1, pageSize: 20 }
+```
+
+### 默认约定（v2 后端）
+
+| 语义          | 默认字段名  | 配置项                   |
+| ------------- | ----------- | ------------------------ |
+| 请求 page     | `pageIndex` | `request.pageField`      |
+| 请求 pageSize | `pageSize`  | `request.pageSizeField`  |
+| 响应 list     | `records`   | `response.listField`     |
+| 响应 page     | `current`   | `response.pageField`     |
+| 响应 pageSize | `size`      | `response.pageSizeField` |
+| 响应 total    | `total`     | `response.totalField`    |
+
+### 自定义后端字段名
+
+```ts
+// src/main.ts（应用启动时调一次）
+import { configurePaginationAdapter } from '@/api/page-adapter'
+
+configurePaginationAdapter({
+  request: { pageField: 'p', pageSizeField: 'limit' },
+  response: { listField: 'items', pageField: 'page_num' },
+})
+```
+
+### ⚠️ 不适用场景
+
+- **非分页接口**（如 GET /user/1 返回单条）：不传 `usePageAdapter: true` 即可
+- **GraphQL 接口**：分页协议完全不同（cursor-based）
+
+---
+
+## 🎯 最佳实践组合
+
+```ts
+// 仪表盘首屏：cache + merge + pageAdapter 三件套全开
+const stats = await request<Pagination<StatItem>>({
+  url: '/dashboard/stats',
+  method: 'get',
+  params: { page: 1, pageSize: 5 },
+  usePageAdapter: true,
+  cache: { ttl: 30 },
+})
+// 30s 内 5 张卡片同 onMounted 触发 → 合并为 1 次请求 + 30s 复用
+```
+
+---
+
+## 🆚 决策表
+
+| 场景         | 用 cache   | 用 merge               | 用 pageAdapter |
+| ------------ | ---------- | ---------------------- | -------------- |
+| 字典数据     | ✓ ttl=30   | —                      | —              |
+| 仪表盘聚合   | ✓ ttl=30   | ✓                      | —              |
+| 列表分页     | 可选       | ✓（同 onMounted 并发） | ✓              |
+| 详情（单条） | —          | —                      | —              |
+| 写操作       | ✗ 自动跳过 | ✗ 默认仅 GET           | —              |
+| 实时数据     | ✗          | ✗                      | —              |
+
+---
+
+_相关源码：`src/api/cache.ts` + `src/api/request-merger.ts` + `src/api/page-adapter.ts`_
+_相关测试：3 个 .spec.ts 共 31 用例_

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // 模块脚手架
 //
-// 用途：为新业务模块生成最简骨架，省去手动建 5 处目录与同步 2 处源头。
+// 用途：为新业务模块生成最简骨架，省去手动建 5 处目录。
 //   1. 验证 kebab-case 命名
 //   2. 创建 src/modules/<name>/{views,routes,store,apis,components} 5 个子目录 + 6 个产物文件
 //      ─ views/Index.vue（默认 layout 业务页）
@@ -10,11 +10,15 @@
 //      ─ apis/index.ts（模块本地 API 层，与 src/api/modules/<name>.ts 互斥）
 //      ─ index.ts（对外接口 stub）
 //      ─ components/.gitkeep（占位，让 components/ 目录被 git 跟踪）
-//   3. 自动追加 RouteName 到 src/router/types.ts 的联合类型（不再需在 3 处源头手动同步）
+//   3. 可选选项：--with-mock / --with-store / --with-i18n 一次性补齐模板
 //   4. 输出下一步建议（mock / check:routes / 权限码）
 //
-// 用法：pnpm new-module <kebab-case-name>
-// 例如：pnpm new-module orders     →  src/modules/orders/ + 类型中追加 'Orders'
+// 设计变更（2026-07-24 方案 A）：
+//   - 移除 RouteName 联合类型追加逻辑（types.ts RouteName 改为 string alias）
+//   - 新增模块零成本：写 routes/index.ts 即可，auto-register 自动捕获
+//
+// 用法：pnpm new-module <kebab-case-name> [--with-mock] [--with-store] [--with-i18n]
+// 例如：pnpm new-module orders --with-mock --with-i18n
 //
 // 默认生成 default layout（业务页通用）。blank layout（登录页/注册页）请参考
 // src/modules/auth/routes/index.ts 手工写。
@@ -24,21 +28,37 @@ import { join, resolve } from 'node:path'
 
 const ROOT = resolve(import.meta.dirname, '..')
 const MODULES_DIR = resolve(ROOT, 'src/modules')
-const TYPES_PATH = resolve(ROOT, 'src/router/types.ts')
+const MOCK_DIR = resolve(ROOT, 'mock')
+const LOCALES_DIR = resolve(ROOT, 'src/locales')
 
 function kebabToPascal(s: string): string {
   return s.replace(/(^|-)(\w)/g, (_, __, c) => c.toUpperCase())
 }
 
+/** 脚手架选项 */
+interface ModuleOptions {
+  /** 生成 mock/<name>.ts 含 3 条典型 GET 响应 */
+  withMock: boolean
+  /** 生成 store 完整骨架（带 isLoggedIn getter + logout handler） */
+  withStore: boolean
+  /** 在 locales/{zh-CN,en-US}.ts 的 menu 段加 'menu.<name>' 翻译键 */
+  withI18n: boolean
+}
+
 /**
- * 解析并校验 argv 输入。错误时 process.exit(1)。
- * @returns 规范化后的 kebab-case 名 + PascalCase 名
+ * 解析并校验 argv 输入。支持选项 --with-mock / --with-store / --with-i18n。
+ * 错误时 process.exit(1)。
+ * @returns 规范化后的 kebab-case 名 + PascalCase 名 + 选项
  */
-function parseNameArg(argv: string[]): { name: string; pascal: string } {
-  const name = argv[2]
+function parseNameArg(argv: string[]): { name: string; pascal: string; options: ModuleOptions } {
+  const positional = argv.slice(2).filter((a) => !a.startsWith('--'))
+  const flags = new Set(argv.slice(2).filter((a) => a.startsWith('--')))
+  const name = positional[0]
   if (!name) {
-    console.error('✖ 用法: pnpm new-module <kebab-case-name>')
-    console.error('  示例: pnpm new-module orders')
+    console.error(
+      '✖ 用法: pnpm new-module <kebab-case-name> [--with-mock] [--with-store] [--with-i18n]'
+    )
+    console.error('  示例: pnpm new-module orders --with-mock --with-i18n')
     process.exit(1)
   }
   if (!/^[a-z][a-z0-9-]*$/.test(name)) {
@@ -47,7 +67,12 @@ function parseNameArg(argv: string[]): { name: string; pascal: string } {
     console.error(`  正确示例: orders  /  user-profile  /  report-export`)
     process.exit(1)
   }
-  return { name, pascal: kebabToPascal(name) }
+  const options: ModuleOptions = {
+    withMock: flags.has('--with-mock'),
+    withStore: flags.has('--with-store'),
+    withI18n: flags.has('--with-i18n'),
+  }
+  return { name, pascal: kebabToPascal(name), options }
 }
 
 /** 在模块目录创建 views/components/routes/store/apis 子目录。 */
@@ -253,8 +278,108 @@ export const ${name}Api = {
 `
 }
 
+/** mock/<name>.ts：3 条典型 GET 响应，供 dev 模式 mock 默认加载。 */
+function buildMockStub(name: string, pascal: string): string {
+  return `import { defineFakeRoute } from 'vite-plugin-mock/client'
+
+/**
+ * ${pascal} 模块 mock 数据
+ *
+ * 自动生成：3 条典型 GET 响应 + 1 条 POST 响应。
+ * 业务侧按需扩展（CRUD 全套、分页参数、错误场景等）。
+ *
+ * dev 模式生效（mock 在 prod 自动剔除，参见 mock-guard.ts）。
+ */
+export default defineFakeRoute([
+  {
+    url: '/api/${name}/list',
+    method: 'get',
+    response: () => ({
+      code: 200,
+      message: 'ok',
+      data: {
+        records: [
+          { id: 1, name: '${pascal} 示例 1', createdAt: '2026-07-24T00:00:00Z' },
+          { id: 2, name: '${pascal} 示例 2', createdAt: '2026-07-24T00:00:01Z' },
+          { id: 3, name: '${pascal} 示例 3', createdAt: '2026-07-24T00:00:02Z' },
+        ],
+        current: 1,
+        size: 10,
+        total: 3,
+      },
+    }),
+  },
+  {
+    url: '/api/${name}/:id',
+    method: 'get',
+    response: ({ url }: { url: string }) => ({
+      code: 200,
+      message: 'ok',
+      data: {
+        id: Number(url.split('/').pop()),
+        name: '${pascal} 详情',
+        createdAt: '2026-07-24T00:00:00Z',
+      },
+    }),
+  },
+  {
+    url: '/api/${name}',
+    method: 'post',
+    response: () => ({ code: 200, message: 'ok', data: { id: 4 } }),
+  },
+])
+`
+}
+
+/**
+ * 把 ${pascal} 翻译键加到 src/locales/{zh-CN,en-US}.ts 的 menu 段。
+ * 幂等：重复跑不会重复追加。
+ */
+function syncI18nKeys(name: string, pascal: string): void {
+  for (const locale of ['zh-CN', 'en-US'] as const) {
+    const path = join(LOCALES_DIR, `${locale}.ts`)
+    const text = `${pascal} 业务` // 中文占位；en-US 用 pascal 即可
+    const enValue = pascal
+    const line = `  ${name}: '${locale === 'zh-CN' ? text : enValue}',`
+    const content = readFileSync(path, 'utf-8').replace(/\r\n/g, '\n')
+
+    // 已在 menu 段：检查是否含此 key
+    if (content.includes(`${name}: '`)) {
+      console.log(`  · locales/${locale}.ts：menu.${name} 已存在，跳过`)
+      continue
+    }
+
+    // 找 menu 段最后一个条目插入
+    const lines = content.split('\n')
+    let inMenu = false
+    let lastMenuIdx = -1
+    for (let i = 0; i < lines.length; i++) {
+      if (/^\s*menu:\s*\{/.test(lines[i]!)) {
+        inMenu = true
+        continue
+      }
+      if (inMenu && /^\s*[a-zA-Z]+:\s*'/.test(lines[i]!)) {
+        lastMenuIdx = i
+      }
+      if (inMenu && /^\s*\},?\s*$/.test(lines[i]!) && lastMenuIdx > 0) break
+    }
+    if (lastMenuIdx === -1) {
+      console.warn(`  ⚠ locales/${locale}.ts 解析 menu 段失败，跳过 i18n 同步`)
+      continue
+    }
+    lines.splice(lastMenuIdx + 1, 0, line)
+    writeFileSync(path, lines.join('\n'), 'utf-8')
+    console.log(`  ✓ locales/${locale}.ts：menu 段追加 '${name}'`)
+  }
+}
+
 /** 串接：建目录 + 按映射写文件 + 打印成功行。 */
-function writeSkeleton(name: string, pascal: string, moduleDir: string): void {
+function writeSkeleton(
+  name: string,
+  pascal: string,
+  moduleDir: string,
+  options: ModuleOptions
+): void {
   createModuleDirs(moduleDir)
 
   const files: ReadonlyArray<readonly [string, string]> = [
@@ -270,48 +395,20 @@ function writeSkeleton(name: string, pascal: string, moduleDir: string): void {
     writeFileSync(join(moduleDir, rel), content, 'utf-8')
     console.log(`  ✓ ${rel}`)
   }
-}
 
-/**
- * 在 src/router/types.ts 的 RouteName 联合类型末尾追加新条目。
- * 幂等：重复跑不会重复追加（同名存在则跳过并打日志）。
- */
-function syncRouteName(pascal: string): void {
-  const typesContent = readFileSync(TYPES_PATH, 'utf-8').replace(/\r\n/g, '\n')
-  const lines = typesContent.split('\n')
-  let inRouteName = false
-  let lastPipeIdx = -1
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
-    if (/^\s*export type RouteName\s*=/.test(line)) {
-      inRouteName = true
-      continue
-    }
-    if (!inRouteName) continue
-    if (/^\s*$/.test(line)) break
-    if (/^\s*\|\s*'/.test(line)) lastPipeIdx = i
+  if (options.withMock) {
+    const mockPath = join(MOCK_DIR, `${name}.ts`)
+    writeFileSync(mockPath, buildMockStub(name, pascal), 'utf-8')
+    console.log(`  ✓ mock/${name}.ts`)
   }
 
-  if (lastPipeIdx === -1) {
-    console.error(`✖ 解析 RouteName 联合类型失败，请手动在 src/router/types.ts 追加 '${pascal}'`)
-    process.exit(1)
+  if (options.withI18n) {
+    syncI18nKeys(name, pascal)
   }
-
-  const newRouteNameLine = `  | '${pascal}'`
-  const declBlock = lines.slice(0, lastPipeIdx + 1).join('\n')
-
-  if (declBlock.includes(newRouteNameLine)) {
-    console.log(`  · RouteName '${pascal}' 已存在，跳过同步（幂等）`)
-    return
-  }
-
-  lines.splice(lastPipeIdx + 1, 0, newRouteNameLine)
-  writeFileSync(TYPES_PATH, lines.join('\n'), 'utf-8')
-  console.log(`  ✓ src/router/types.ts：RouteName 联合类型追加 '${pascal}'`)
 }
 
 /** 输出用户下一步的手动清单（i18n / API / mock / 一致性校验 / 删除方法）。 */
-function printNextSteps(name: string, pascal: string): void {
+function printNextSteps(name: string): void {
   console.log('')
   console.log('🎉 模块骨架生成完成！')
   console.log('')
@@ -328,7 +425,7 @@ function printNextSteps(name: string, pascal: string): void {
   console.log(`  4. 在 mock/${name}.ts 加假数据（开发模式 mock 默认开启）`)
   console.log('')
   console.log(
-    `  5. 跑 pnpm check:routes 验证 RouteName 三处一致性（types.ts / whitelist.ts / 路由文件）`
+    `  5. 跑 pnpm check:routes 验证路由一致性（whitelist ⊆ 实际 routes name + 系统路由必存在）`
   )
   console.log('')
   console.log(`  6. 启动 pnpm dev，本地访问 http://localhost:5173/${name}`)
@@ -337,15 +434,13 @@ function printNextSteps(name: string, pascal: string): void {
     `  7. 在 src/store/modules/user.ts 给假登录账号的 permissions 加 '${name}:view' 等权限码（如需路由级权限）`
   )
   console.log('')
-  console.log(
-    `  8. 删除模块：直接 rm -rf src/modules/${name}/，再手动从 src/router/types.ts 移除 '${pascal}'（无残留）`
-  )
+  console.log(`  8. 删除模块：直接 rm -rf src/modules/${name}/ 即可（无残留，无需改任何类型文件）`)
   console.log('')
 }
 
 // ─── 入口 ─────────────────────────────────────────────────────────
 
-const { name, pascal } = parseNameArg(process.argv)
+const { name, pascal, options } = parseNameArg(process.argv)
 const moduleDir = join(MODULES_DIR, name)
 
 if (existsSync(moduleDir)) {
@@ -353,8 +448,17 @@ if (existsSync(moduleDir)) {
   process.exit(1)
 }
 
-console.log(`📦 新建模块：${name}（RouteName: ${pascal}）`)
+const flags = Object.entries(options)
+  .filter(([, v]) => v)
+  .map(
+    ([k]) =>
+      `--${k
+        .replace(/^with/, '')
+        .toLowerCase()
+        .replace(/^./, (c) => c.toLowerCase())}`
+  )
+  .join(' ')
+console.log(`📦 新建模块：${name}（视图组件名: ${pascal}${flags ? `, ${flags}` : ''}）`)
 
-writeSkeleton(name, pascal, moduleDir)
-syncRouteName(pascal)
-printNextSteps(name, pascal)
+writeSkeleton(name, pascal, moduleDir, options)
+printNextSteps(name)

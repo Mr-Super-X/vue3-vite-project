@@ -340,6 +340,8 @@ pnpm dev:local
 | **default** | `@/layouts/default/index.vue` | 左侧 Sidebar + 顶 Header | 业务页（首页 / 列表 / 表单） |
 | **blank**   | `@/layouts/blank/index.vue`   | 居中、无侧栏无顶栏       | 登录页 / 注册页 / 第三方回调 |
 
+> ⚠️ **2026-07-24 审计发现**：`default` Layout 的 Sidebar 菜单渲染**尚未实现**（`Sidebar.vue` 仅 18 行占位）。当前路由自动注册 + 远程菜单加载均已完成，但**侧边栏不会自动显示菜单项**。新业务模块的菜单需要补实现 `Sidebar.vue` 后才会显示，详见 `docs/audit/2026-07-24-usability-review.md` P0-1。
+
 #### 新增业务模块的 3 步流程（无需改 router 目录）
 
 ```ts
@@ -640,18 +642,31 @@ pnpm test:coverage     # 覆盖率报告（输出到 coverage/）
 
 ### 项目规范
 
-| 文档                 | 路径                                | 说明                                                          |
-| -------------------- | ----------------------------------- | ------------------------------------------------------------- |
-| 工具兼容性踩坑       | `docs/01-工具兼容性问题踩坑记录.md` | npm/pnpm/Node 兼容性问题 + 解决方案                           |
-| 代码质量工具链       | `docs/02-代码质量工具链.md`         | ESLint 10 + Prettier 3.9 + lint-staged 17                     |
-| Git 工作流工具链     | `docs/03-Git工作流工具链.md`        | Husky + commitlint + cz-customizable                          |
-| 构建与测试工具       | `docs/04-构建与测试工具.md`         | Vite 8 + Vitest 4 + UnoCSS 66 + alias 系统                    |
-| BEM 样式规范         | `docs/05-BEM样式规范.md`            | 命名约定 + 样式隔离三层防线 + mixin + 运行时工具              |
-| 主题管理规范         | `docs/06-主题管理规范.md`           | 双主题架构 + CSS 变量速查 + useTheme API                      |
-| 路由模块设计         | `docs/07-路由模块设计.md`           | 自动注册 + 白名单 + 远程菜单 + 3 步新增流程                   |
-| **模块化架构总览**   | `docs/08-模块化架构总览.md`         | 4 块公共范式（directives/plugins/components/utils）+ 扩展流程 |
-| 组件示例站点开发指引 | `docs/09-组件示例站点开发指引.md`   | dev-only demo 模块，1 文件 1 demo + 自动 API 提取             |
-| **新手指引**         | `docs/10-新手指引.md`               | 30 分钟 5 任务：clone → 加模块 → 加 API → 调常见问题          |
+| 文档                   | 路径                                          | 说明                                                          |
+| ---------------------- | --------------------------------------------- | ------------------------------------------------------------- |
+| 工具兼容性踩坑         | `docs/01-工具兼容性问题踩坑记录.md`           | npm/pnpm/Node 兼容性问题 + 解决方案                           |
+| 代码质量工具链         | `docs/02-代码质量工具链.md`                   | ESLint 10 + Prettier 3.9 + lint-staged 17                     |
+| Git 工作流工具链       | `docs/03-Git工作流工具链.md`                  | Husky + commitlint + cz-customizable                          |
+| 构建与测试工具         | `docs/04-构建与测试工具.md`                   | Vite 8 + Vitest 4 + UnoCSS 66 + alias 系统                    |
+| BEM 样式规范           | `docs/05-BEM样式规范.md`                      | 命名约定 + 样式隔离三层防线 + mixin + 运行时工具              |
+| 主题管理规范           | `docs/06-主题管理规范.md`                     | 双主题架构 + CSS 变量速查 + useTheme API                      |
+| 路由模块设计           | `docs/07-路由模块设计.md`                     | 自动注册 + 白名单 + 远程菜单 + 3 步新增流程                   |
+| **模块化架构总览**     | `docs/08-模块化架构总览.md`                   | 4 块公共范式（directives/plugins/components/utils）+ 扩展流程 |
+| 组件示例站点开发指引   | `docs/09-组件示例站点开发指引.md`             | dev-only demo 模块，1 文件 1 demo + 自动 API 提取             |
+| **新手指引**           | `docs/10-新手指引.md`                         | 30 分钟 5 任务：clone → 加模块 → 加 API → 调常见问题          |
+| 字典使用规范           | `docs/11-字典使用规范.md`                     | 三层架构速查 + 业务侧用法 + 缓存策略 + 7 条常见坑             |
+| Web Vitals 使用规范    | `docs/12-web-vitals使用规范.md`               | LCP/INP/CLS/TTFB 采集 + 4 种上报端点接入示例                  |
+| **流式请求规范**       | `docs/13-stream使用规范.md`                   | SSE / NDJSON / auto 三格式 + 取消联动 + vs request 对比       |
+| **Zod 校验规范**       | `docs/14-validator使用规范.md`                | requestValidated + Zod schema + 失败行为 + 进阶用法           |
+| **缓存/合并/分页适配** | `docs/15-cache-merge-page-adapter使用规范.md` | cache + merge + pageAdapter 三件套速查 + 决策表               |
+| **Token 刷新与取消**   | `docs/16-token-refresh使用规范.md`            | 401 自动 refresh + globalAbort + AbortController 工具三件套   |
+| **useRequest 三态**    | `docs/17-useRequest使用规范.md`               | VueUse 风格三态请求封装 + 与 AsyncState 组合 + 决策表         |
+
+### 架构评估
+
+| 文档                          | 路径                                        | 说明                                                                 |
+| ----------------------------- | ------------------------------------------- | -------------------------------------------------------------------- |
+| **架构易用性评估（2026-07）** | `docs/audit/2026-07-24-usability-review.md` | 5 大模块（路由 / 状态 / API / UI / 工具 / 文档）DX 评估 + 优先级矩阵 |
 
 ### 设计 / 计划（已归档）
 
@@ -663,6 +678,7 @@ pnpm test:coverage     # 覆盖率报告（输出到 coverage/）
 | `docs/archive/2026-07/specs/`    | 设计文档（按日期命名）             |
 | `docs/archive/2026-07/plans/`    | 实施计划（按日期命名）             |
 | `docs/archive/2026-07/research/` | 调研报告（如 unplugin-vue-router） |
+| `docs/audit/`                    | 周期性架构评估报告（按日期命名）   |
 
 ### 变更日志
 

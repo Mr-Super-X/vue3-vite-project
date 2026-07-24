@@ -115,7 +115,7 @@ function menuAction(action: 'close-others' | 'close-all'): void {
   height: var(--tags-view-height, 36px);
   padding: 0 var(--spacing-md);
   background: var(--bg-secondary, #fafafa);
-  border-bottom: 1px solid var(--border-color, #eee);
+  border-bottom: 1px solid var(--border-base, #dcdfe6);
   user-select: none;
 
   &__scroll {
@@ -130,8 +130,8 @@ function menuAction(action: 'close-others' | 'close-all'): void {
     align-items: center;
     gap: 4px;
     padding: 4px 8px;
-    background: #fff;
-    border: 1px solid var(--border-color, #e4e7ed);
+    background: var(--bg-base, #fff);
+    border: 1px solid var(--border-base, #dcdfe6);
     border-radius: 4px;
     cursor: pointer;
     font-size: 12px;
@@ -181,10 +181,10 @@ function menuAction(action: 'close-others' | 'close-all'): void {
     margin: 0;
     padding: 4px 0;
     list-style: none;
-    background: #fff;
-    border: 1px solid var(--border-color, #e4e7ed);
+    background: var(--bg-base, #fff);
+    border: 1px solid var(--border-base, #dcdfe6);
     border-radius: 4px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md, 0 2px 8px rgba(0, 0, 0, 0.1));
 
     li {
       padding: 6px 16px;

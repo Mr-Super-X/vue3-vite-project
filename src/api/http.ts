@@ -171,6 +171,18 @@ instance.interceptors.request.use((config) => {
   applyAbortSignal(config)
   applyPageAdapterParams(config)
   applyRequestIdHeader(config)
+  // dev 模式调试日志（2026-07-24 审计补齐）：拦截器链逐步追踪，
+  // 排查"哪个阶段抛错 / 是否注入 token / pageAdapter 是否正确转换"
+  if (import.meta.env.DEV) {
+    console.debug('[HTTP][req]', {
+      method: (config.method ?? 'get').toUpperCase(),
+      url: config.url,
+      params: config.params,
+      usePageAdapter: config.usePageAdapter,
+      cache: config.cache,
+      signal: !!config.signal,
+    })
+  }
   return config
 })
 
@@ -256,6 +268,14 @@ const onResponseRejected = (error: {
 }): never => {
   const status = error.response?.status
   const message = resolveHttpStatusMessage(status)
+  // dev 模式调试日志（2026-07-24 审计补齐）：记录网络/超时/状态码异常
+  if (import.meta.env.DEV) {
+    console.debug('[HTTP][resp][error]', {
+      url: error.config?.url,
+      status,
+      message,
+    })
+  }
   ElMessage.error(message)
   throw new ApiError({
     code: status ?? -1,
