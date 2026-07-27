@@ -7,7 +7,8 @@
     "requireCleanWorkingDir": true,
     "pushRepo": "origin",
     "pushArgs": "--follow-tags",
-    "requireCommits": true
+    "requireCommits": true,
+    "requireUpstream": true
   },
   "hooks": {
     "before:init": ["pnpm type-check"],
