@@ -295,26 +295,28 @@ pnpm dev:local
 
 ### 常用脚本
 
-| 命令                   | 用途                                                       |
-| ---------------------- | ---------------------------------------------------------- |
-| `pnpm dev`             | 启动开发服务器（默认 remote 菜单模式）                     |
-| `pnpm dev:local`       | 启动开发服务器（切到 local 菜单模式，无接口可用）          |
-| `pnpm build`           | 生产构建（含 type-check:full）                             |
-| `pnpm preview`         | 预览构建产物                                               |
-| `pnpm analyze`         | 生产构建 + 生成包体积分析报告（dist/stats.html）           |
-| `pnpm test`            | 运行单元测试（一次性）                                     |
-| `pnpm test:watch`      | 单元测试 watch 模式                                        |
-| `pnpm test:coverage`   | 测试覆盖率报告                                             |
-| `pnpm test:ui`         | 单元测试 UI 模式                                           |
-| `pnpm type-check`      | TypeScript 类型检查（增量，husky pre-commit 用）           |
-| `pnpm type-check:full` | TypeScript 类型检查（强制重建 .tsbuildinfo 缓存）          |
-| `pnpm check:routes`    | 校验 RouteName/component-registry/whitelist 一致性         |
-| `pnpm new-module`      | 一键生成业务模块骨架（kebab-case 名 → routes/store/views） |
-| `pnpm lint`            | ESLint 检查全项目                                          |
-| `pnpm lint:fix`        | ESLint 自动修复                                            |
-| `pnpm format`          | Prettier 格式化全项目                                      |
-| `pnpm commit`          | 交互式 commit（仅提交不推送）                              |
-| `pnpm push`            | **推荐**：一站式提交并推送（add + cz + push）              |
+| 命令                   | 用途                                                            |
+| ---------------------- | --------------------------------------------------------------- |
+| `pnpm dev`             | 启动开发服务器（默认 remote 菜单模式）                          |
+| `pnpm dev:local`       | 启动开发服务器（切到 local 菜单模式，无接口可用）               |
+| `pnpm build`           | 生产构建（含 type-check:full）                                  |
+| `pnpm preview`         | 预览构建产物                                                    |
+| `pnpm analyze`         | 生产构建 + 生成包体积分析报告（dist/stats.html）                |
+| `pnpm test`            | 运行单元测试（一次性）                                          |
+| `pnpm test:watch`      | 单元测试 watch 模式                                             |
+| `pnpm test:coverage`   | 测试覆盖率报告                                                  |
+| `pnpm test:ui`         | 单元测试 UI 模式                                                |
+| `pnpm type-check`      | TypeScript 类型检查（增量，husky pre-commit 用）                |
+| `pnpm type-check:full` | TypeScript 类型检查（强制重建 .tsbuildinfo 缓存）               |
+| `pnpm check:routes`    | 校验 RouteName/component-registry/whitelist 一致性              |
+| `pnpm new-module`      | 一键生成业务模块骨架（kebab-case 名 → routes/store/views）      |
+| `pnpm lint`            | ESLint 检查全项目                                               |
+| `pnpm lint:fix`        | ESLint 自动修复                                                 |
+| `pnpm format`          | Prettier 格式化全项目                                           |
+| `pnpm commit`          | 交互式 commit（仅提交不推送）                                   |
+| `pnpm push`            | **推荐**：一站式提交并推送（add + cz + push）                   |
+| `pnpm release`         | **发布版本**：bump + CHANGELOG + tag + push（master/release/*） |
+| `pnpm release:dry`     | 发布预览：dry-run 模式（0 副作用，任意分支）                    |
 
 ### Mock 数据
 
