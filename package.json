@@ -93,5 +93,9 @@
     "commitizen": {
       "path": "cz-customizable"
     }
+  },
+  "repository": {
+    "type": "git",
+    "url": "ssh://git@gitlab.dg.com:10086/hyywsybb/hyyfb/YJSLYFZX/an_quan_jian_ce/qdfw/gm-portal-fe.git"
   }
 }
