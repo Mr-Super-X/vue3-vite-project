@@ -685,9 +685,3 @@ pnpm test:coverage     # 覆盖率报告（输出到 coverage/）
 | 文档           | 路径       |
 | -------------- | ---------- |
 | `CHANGELOG.md` | 项目根目录 |
-
----
-
-## 📝 License
-
-MIT
