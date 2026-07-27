@@ -25,6 +25,8 @@
     "format:check": "prettier --check .",
     "commit": "git add . && cz",
     "push": "git add . && cz && git push",
+    "release": "release-it",
+    "release:dry": "release-it --dry-run",
     "commitlint": "commitlint --edit",
     "prepare": "husky"
   },
