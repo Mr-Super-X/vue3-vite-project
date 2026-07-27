@@ -6,6 +6,7 @@
     "requireBranch": ["master", "release/*"],
     "requireCleanWorkingDir": true,
     "pushRepo": "origin",
+    "pushArgs": "--follow-tags",
     "requireCommits": true
   },
   "hooks": {
