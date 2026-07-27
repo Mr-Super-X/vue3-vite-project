@@ -7,14 +7,16 @@
 
 ## 📋 工具一览
 
-| 工具                | 版本    | 作用                       | 触发时机                    |
-| ------------------- | ------- | -------------------------- | --------------------------- |
-| **only-allow**      | ^1.2.2  | 强制只使用 pnpm            | `preinstall` 钩子           |
-| **husky**           | ^9.1.7  | Git hooks 管理             | git 操作触发                |
-| **lint-staged**     | ^17.0.8 | 暂存区文件检查/格式化      | pre-commit                  |
-| **commitlint**      | ^21.2.1 | 校验 commit message 格式   | commit-msg                  |
-| **commitizen**      | ^4.3.2  | 交互式生成规范 commit      | `pnpm commit` / `pnpm push` |
-| **cz-customizable** | ^7.5.4  | 自定义 commitizen 提问流程 | commitizen 调用             |
+| 工具                                   | 版本    | 作用                                                    | 触发时机                            |
+| -------------------------------------- | ------- | ------------------------------------------------------- | ----------------------------------- |
+| **only-allow**                         | ^1.2.2  | 强制只使用 pnpm                                         | `preinstall` 钩子                   |
+| **husky**                              | ^9.1.7  | Git hooks 管理                                          | git 操作触发                        |
+| **lint-staged**                        | ^17.0.8 | 暂存区文件检查/格式化                                   | pre-commit                          |
+| **commitlint**                         | ^21.2.1 | 校验 commit message 格式                                | commit-msg                          |
+| **commitizen**                         | ^4.3.2  | 交互式生成规范 commit                                   | `pnpm commit` / `pnpm push`         |
+| **cz-customizable**                    | ^7.5.4  | 自定义 commitizen 提问流程                              | commitizen 调用                     |
+| **release-it**                         | ^21.0.0 | 版本发布编排（bump + tag + push）                       | `pnpm release` / `pnpm release:dry` |
+| **@release-it/conventional-changelog** | ^12.0.0 | release-it 插件：CHANGELOG 按 conventional commits 生成 | release-it 内部调用                 |
 
 ---
 
@@ -329,3 +331,89 @@ const RULE_LABELS = {
 - commitlint formatter API：https://commitlint.js.org/api/format
 - commitlint load 源码：`@commitlint/load/lib/load.js` resolveFormatter()
 - cz-customizable 官方：https://github.com/leonardoanalista/cz-customizable
+
+## 🚀 Release 流程
+
+> **覆盖工具**：release-it 21 + @release-it/conventional-changelog 12
+
+### 工具职责
+
+| 工具                                   | 职责                                                                                                          |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **release-it**                         | 版本发布编排：校验分支 → 询问版本 → bump → 调插件 → commit → tag → push                                       |
+| **@release-it/conventional-changelog** | CHANGELOG 生成：读取 git log → 按 conventional commit 分类（11 种 type + 中文 emoji 双轨）→ 重写 CHANGELOG.md |
+
+### 配置文件
+
+| 配置文件           | 作用                                                                           |
+| ------------------ | ------------------------------------------------------------------------------ |
+| `.release-it.json` | release-it 主配置（git / hooks / plugins 内嵌 conventional-changelog presets） |
+
+### 完整流程
+
+```
+$ pnpm release
+  ↓
+[release-it] 启动
+  ↓
+校验分支 ∈ {master, release/*} + 工作区干净
+  ↓
+交互式询问新版本号（推荐 patch / minor / major）
+  ↓
+hook: before:init    → pnpm type-check
+  ↓
+hook: before:release → pnpm test --run
+  ↓
+update version（package.json）
+  ↓
+[@release-it/conventional-changelog 插件] 重写 CHANGELOG.md
+  ↓
+git commit -m "chore(release): v${version}"
+  ↓
+git tag v${version} -m "Release v${version}"
+  ↓
+git push origin HEAD + git push origin v${version}
+  ↓
+[${version} released]
+```
+
+### 常用命令
+
+| 命令               | 作用                                   |
+| ------------------ | -------------------------------------- |
+| `pnpm release`     | 真实发布（master / release/* 分支）    |
+| `pnpm release:dry` | 预览发布流程（0 副作用，任意分支可用） |
+
+### 错误分支
+
+| 场景                     | 行为                                                |
+| ------------------------ | --------------------------------------------------- |
+| 不在 master / release/*  | 报错 `Must be on branch master,release/*`，exit 1   |
+| 工作区有未提交改动       | 报错 `Please commit or stash changes first`，exit 1 |
+| type-check 失败          | 报错（hook before:init），exit 1                    |
+| test 失败                | 报错（hook before:release），exit 1                 |
+| 自上次 tag 后无新 commit | 报错，exit 1                                        |
+| tag v1.0.0 已存在        | 报错，exit 1，需手动选新版本号                      |
+
+### 关键设计决策
+
+- 范围：仅 Git 流程（不集成 GitLab Release API / npm publish）
+- 配置文件用 JSON 格式（与 `.commitlintrc` / `.lintstagedrc` 风格一致，避免 `package.json:type=module` 反复踩坑）
+- 保留 `pnpm push`（职责边界：`push` = 单 commit 推送；`release` = 版本发布）
+- 使用 `@release-it/conventional-changelog` 插件（替代 auto-changelog，集成更深）
+- commitUrlFormat 用 GitLab 风格 `/-/commit/{{hash}}`（项目远程是 GitLab，不是 GitHub）
+
+### 故障排查
+
+#### 1. requireBranch 报错 "Must be on branch master,release/*"
+
+**根因**：数组 `["master", "release/*"]` 被 release-it 21 内部 `castArray` 拼成字符串后传给 `wildcard-match`，但 wildcard-match 把它当单 pattern，错误信息说 "Must be on branch master,release/*"（数组被 toString 拼接）。
+
+**解决**：改用 single string + comma-separated OR：`"requireBranch": "master,release/*"`（wildcard-match 官方支持的 OR 语法）。
+
+### 相关文档
+
+- 设计：`docs/superpowers/specs/2026-07-27-release-it-auto-changelog-design.md`
+- 计划：`docs/superpowers/plans/2026-07-27-release-it-auto-changelog.md`
+- release-it 官方：https://github.com/release-it/release-it
+- @release-it/conventional-changelog：https://github.com/release-it/conventional-changelog
