@@ -1,4 +1,6 @@
-# gm-portal-fe 项目级 Claude Code 工作流
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 > 本文档是 `~/.claude/CLAUDE.md` 的项目级补充。所有全局规则（§一～§十一）自动适用，遇到冲突以**本文档为准**。
 >
@@ -6,21 +8,99 @@
 
 ---
 
-## §1 项目概述
+## Commands
 
-| 属性         | 值                                                                           |
-| ------------ | ---------------------------------------------------------------------------- |
-| 项目名       | `gm-portal-fe`（工贸统一登录门户前端基线）                                   |
-| 技术栈       | Vue 3.5 + TypeScript 6 + Vite 8 + Pinia 3 + Element Plus 2.14 + Vue Router 5 |
-| 包管理       | **pnpm ≥ 11**（`preinstall` 已硬强制 `only-allow pnpm`）                     |
-| Node 版本    | `≥ 22.18` 或 `≥ 24.12`（见 `package.json:engines`）                          |
-| 新人入门     | `docs/10-新手指引.md`（30 分钟 5 任务）                                      |
-| 代码归属判断 | `docs/18-代码组织决策表.md`                                                  |
-| 变更记录     | `CHANGELOG.md`（功能性变更必同步，仅 typo 免记）                             |
+| 任务                                   | 命令                                                         |
+| -------------------------------------- | ------------------------------------------------------------ |
+| 安装依赖                               | `pnpm install`                                               |
+| 启动 dev（远程菜单模式，默认）         | `pnpm dev`                                                   |
+| 启动 dev（本地菜单模式，无需后端联调） | `pnpm dev:local`                                             |
+| 启动 dev（启用浏览器 DevTools）        | `vite`（含 vite-plugin-vue-devtools）                        |
+| 跑全部单测                             | `pnpm test`                                                  |
+| 跑单测（watch 模式）                   | `pnpm test:watch`                                            |
+| 跑单个测试文件                         | `pnpm test <path>`（如 `pnpm test src/utils/dayjs.spec.ts`） |
+| 单测覆盖率（含 UI 报告）               | `pnpm test:coverage` / `pnpm test:ui`                        |
+| 类型校验（增量）                       | `pnpm type-check`                                            |
+| 类型校验（强制全量，build 前必跑）     | `pnpm type-check:full`                                       |
+| 构建生产包                             | `pnpm build`                                                 |
+| 预览生产包                             | `pnpm preview`                                               |
+| 包体积分析（输出 dist/stats.html）     | `pnpm analyze`                                               |
+| Lint 检查                              | `pnpm lint`                                                  |
+| Lint 自动修复                          | `pnpm lint:fix`                                              |
+| Prettier 格式化                        | `pnpm format` / `pnpm format:check`                          |
+| 路由一致性校验（CI 阶段强制）          | `pnpm check:routes`                                          |
+| 新建业务模块（自动生成 6 个骨架文件）  | `pnpm new-module <kebab-name>`                               |
+| Commit（cz-customizable）              | `pnpm commit`                                                |
+
+**环境要求**：Node `>=22.18` 或 `>=24.12`，pnpm `>=11.x`（`package.json:engines` + `preinstall` 硬强制 `only-allow pnpm`）。
 
 ---
 
-## §2 ⚠️ src/ 架构保护条款（最高优先级）
+## §1 Architecture
+
+Feature-Sliced 风格的中后台门户前端（`gm-portal-fe`，工贸统一登录门户）：Vue 3.5 + TypeScript 6 + Vite 8 + Pinia 3 + Element Plus 2.14 + Vue Router 5。
+
+### 1.1 分层视角
+
+```text
+全局层（跨模块共享）                业务模块层（独立自治）
+├── api/                            ├── modules/auth/
+├── components/common/              ├── modules/home/
+├── composables/                    ├── modules/orders/
+├── directives/                     ├── modules/reports/
+├── enums/                          ├── modules/user/
+├── layouts/                        ├── modules/demo/
+├── locales/                        └── modules/error/
+├── plugins/                          每模块：views/ + routes/ + store/
+├── router/                                      + apis/ + components/
+├── store/modules/                                + index.ts
+├── types/
+└── utils/（与框架解耦）
+```
+
+### 1.2 模块边界铁律（强制）
+
+| 层级                       | 允许引用                                      | 不允许引用           |
+| -------------------------- | --------------------------------------------- | -------------------- |
+| `modules/<m>/views`        | 本模块 components / composables / utils / api | 其他模块内部         |
+| `modules/<m>/components`   | 本模块 views / composables / utils            | 其他模块             |
+| `modules/<m>/store`        | 本模块 api / types                            | 其他模块 store       |
+| `components/common`        | utils / enums / types / store/modules         | 任何 `modules/` 内容 |
+| `store/modules`（全局）    | api / utils / enums                           | `modules/` 内容      |
+| `directives/` / `plugins/` | utils / enums / types / store/modules         | `modules/` 内容      |
+
+模块间通信通过 `modules/<m>/index.ts` 对外接口暴露，**禁止直接 import 其他模块内部文件**。
+
+### 1.3 状态管理分层
+
+- **全局 `store/modules/`**：仅跨模块共享（`app` 侧边栏/语言、`user` token/profile/权限、`theme` 主题持久化、`router` UI 状态）
+- **模块私有 store**：归 `modules/<m>/store/`，业务状态不污染全局
+- **风格**：Pinia Setup Store（接近 composables 心智，便于复用）
+- **持久化**：`pinia-plugin-persistedstate` 仅对 store 字段 `pick` 持久化（避免整体写 localStorage）
+
+### 1.4 防御性 UI（每个异步组件强制三态）
+
+`useRequest` composable 自动提供 `{ data, loading, error, isEmpty, execute }`，包装到 `<AsyncState>` 组件：
+
+```vue
+<AsyncState :loading="loading" :error="error" :is-empty="isEmpty" @retry="execute">
+  <UserTable :rows="data ?? []" />
+</AsyncState>
+```
+
+### 1.5 业务代码强制封装（ESLint `no-restricted-imports` 自动 warning）
+
+业务代码**禁止**直接 `import { useRouter } from 'vue-router'` 或 `import axios from 'axios'`，**必须**用项目封装：
+
+| 场景                        | 必须用                                             |
+| --------------------------- | -------------------------------------------------- |
+| 路由（跳转/参数/back）      | `@composables/useAppRouter`                        |
+| 网络请求（三态 + 错误处理） | `@composables/useRequest`                          |
+| 权限（AND / ANY 语义）      | `@composables/useAuth`（`hasPerm` / `hasAnyPerm`） |
+
+---
+
+## §2 ⚠️ src/ Architecture Lockdown（最高优先级）
 
 ### 2.1 当前基线快照（2026-07-27）
 
@@ -82,25 +162,26 @@
 
 ---
 
-## §3 项目特有约束
+## §4 Project Constraints
 
-| #   | 约束                                                                            | 落地方式                                                  |
-| --- | ------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| 1   | 包管理强制 pnpm，禁止 npm/yarn                                                  | `package.json:scripts.preinstall` → `only-allow pnpm`     |
-| 2   | 新增业务模块**必须**用 `pnpm new-module <kebab-name>`                           | `scripts/new-module.ts`（自动追加 RouteName 联合类型）    |
-| 3   | 业务代码**必须**用 `@composables/useAppRouter` + `@composables/useRequest` 封装 | `eslint.config.mjs:no-restricted-imports`（自动 warning） |
-| 4   | 模块间通信必须走 `modules/<m>/index.ts` 对外接口                                | `docs/18` §3 边界                                         |
-| 5   | `common` 组件不得 `import` 自 `modules/`（保护 tree-shake）                     | `docs/18` §3 边界                                         |
-| 6   | `utils/` 不得依赖 Vue/Pinia（与框架解耦）                                       | `docs/18` §3 边界                                         |
-| 7   | `store/` 不存网络请求中间态（loading 放组件 / composable）                      | `docs/18` §3 边界                                         |
-| 8   | 一致性校验：`pnpm check:routes`（路由双向一致）                                 | CI 阶段强制                                               |
-| 9   | 类型校验：`pnpm type-check`（必过 build 前）                                    | `package.json:scripts.type-check:full`                    |
-| 10  | 任何第三方 npm 包引用前必先 `npm view <pkg>` 验证                               | 全局规则 §七                                              |
-| 11  | 新增 composable / store / 类型，**必须**带 `.spec.ts` 单测（覆盖率 ≥ 80%）      | 全局规则 §六 + §七                                        |
+| #   | 约束                                                              | 落地方式                                              |
+| --- | ----------------------------------------------------------------- | ----------------------------------------------------- |
+| 1   | 包管理强制 pnpm                                                   | `package.json:scripts.preinstall` → `only-allow pnpm` |
+| 2   | 新增业务模块**必须**用 `pnpm new-module <kebab-name>`             | `scripts/new-module.ts`（自动追加 RouteName）         |
+| 3   | 业务代码**必须**用 `useAppRouter` / `useRequest` / `useAuth` 封装 | ESLint `no-restricted-imports`                        |
+| 4   | 模块间通信走 `modules/<m>/index.ts`                               | 见 §1.2 模块边界铁律                                  |
+| 5   | `common` 组件不得 `import` 自 `modules/`                          | 保护 tree-shake                                       |
+| 6   | `utils/` 不得依赖 Vue/Pinia                                       | 与框架解耦                                            |
+| 7   | `store/` 不存网络请求中间态                                       | loading 放组件 / composable                           |
+| 8   | 路由一致性校验：`pnpm check:routes`                               | CI 阶段强制                                           |
+| 9   | 类型校验：`pnpm type-check:full`（build 前必过）                  | `package.json:scripts`                                |
+| 10  | 第三方 npm 包引用前必先 `npm view <pkg>` 验证                     | 全局规则                                              |
+| 11  | 新增 composable / store / 类型必须带 `.spec.ts`（覆盖率 ≥ 80%）   | Vitest                                                |
+| 12  | 功能性变更同步 `CHANGELOG.md`（仅 typo 免记）                     | 项目约定                                              |
 
 ---
 
-## §4 工作流锚点
+## §5 Workflow Quick-Reference
 
 | 场景                                                                  | 入口                                                                                                 |
 | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
@@ -113,18 +194,6 @@
 
 ---
 
-## §5 与全局 CLAUDE.md 的关系
-
-| 章节                                        | 来源                                                | 适用                                                         |
-| ------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------ |
-| §一 输出前自检（17 项 + 合规简报）          | `~/.claude/CLAUDE.md` §一                           | 自动适用                                                     |
-| §二 禁止行为（12 条）                       | `~/.claude/CLAUDE.md` §二                           | 自动适用                                                     |
-| §三 分级工作流                              | `~/.claude/CLAUDE.md` §三                           | 自动适用                                                     |
-| §四～§九 前端/注释/Agent/工程纪律/调试/文档 | `~/.claude/CLAUDE.md` §四～§九 + `@rules/zh/*`      | 自动适用                                                     |
-| §十～§十一 OMC + Superpowers/gstack         | `~/.claude/CLAUDE.md` §十～§十一 + `@CLAUDE-omc.md` | 自动适用                                                     |
-| **本文档 §1～§5**                           | 项目级补充                                          | 仅本项目                                                     |
-| **本文档 §2（src/ 架构保护）**              | 项目级补充                                          | **最高优先级**，覆盖全局 §三"先探索后动手"中"自由修改"的部分 |
-
 ---
 
-**承诺**：本文档生效后，所有对 `src/` 的写操作按 §2 流程执行——§2.3 例外（用户明确指定文件路径）直接实施；其他必须先输出 §2.4 修改申请并等用户单独批准。每次任务完成时，合规简报需附加「src/ 写操作清单」（§2.5）。
+**承诺**：所有对 `src/` 的写操作按 §2 src/ Architecture Lockdown 执行——§2.3 例外条款（用户明确指定文件路径）直接实施；其他必须先输出 §2.4 修改申请并等用户单独批准。每次任务完成的合规简报需附「src/ 写操作清单」（§2.5）。
