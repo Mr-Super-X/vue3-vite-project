@@ -10,27 +10,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-| 任务                                   | 命令                                                         |
-| -------------------------------------- | ------------------------------------------------------------ |
-| 安装依赖                               | `pnpm install`                                               |
-| 启动 dev（远程菜单模式，默认）         | `pnpm dev`                                                   |
-| 启动 dev（本地菜单模式，无需后端联调） | `pnpm dev:local`                                             |
-| 启动 dev（启用浏览器 DevTools）        | `vite`（含 vite-plugin-vue-devtools）                        |
-| 跑全部单测                             | `pnpm test`                                                  |
-| 跑单测（watch 模式）                   | `pnpm test:watch`                                            |
-| 跑单个测试文件                         | `pnpm test <path>`（如 `pnpm test src/utils/dayjs.spec.ts`） |
-| 单测覆盖率（含 UI 报告）               | `pnpm test:coverage` / `pnpm test:ui`                        |
-| 类型校验（增量）                       | `pnpm type-check`                                            |
-| 类型校验（强制全量，build 前必跑）     | `pnpm type-check:full`                                       |
-| 构建生产包                             | `pnpm build`                                                 |
-| 预览生产包                             | `pnpm preview`                                               |
-| 包体积分析（输出 dist/stats.html）     | `pnpm analyze`                                               |
-| Lint 检查                              | `pnpm lint`                                                  |
-| Lint 自动修复                          | `pnpm lint:fix`                                              |
-| Prettier 格式化                        | `pnpm format` / `pnpm format:check`                          |
-| 路由一致性校验（CI 阶段强制）          | `pnpm check:routes`                                          |
-| 新建业务模块（自动生成 6 个骨架文件）  | `pnpm new-module <kebab-name>`                               |
-| 提交并推送（add + cz + push 一站式）   | `pnpm push`                                                  |
+| 任务                                      | 命令                                                         |
+| ----------------------------------------- | ------------------------------------------------------------ |
+| 安装依赖                                  | `pnpm install`                                               |
+| 启动 dev（远程菜单模式，默认）            | `pnpm dev`                                                   |
+| 启动 dev（本地菜单模式，无需后端联调）    | `pnpm dev:local`                                             |
+| 启动 dev（启用浏览器 DevTools）           | `vite`（含 vite-plugin-vue-devtools）                        |
+| 跑全部单测                                | `pnpm test`                                                  |
+| 跑单测（watch 模式）                      | `pnpm test:watch`                                            |
+| 跑单个测试文件                            | `pnpm test <path>`（如 `pnpm test src/utils/dayjs.spec.ts`） |
+| 单测覆盖率（含 UI 报告）                  | `pnpm test:coverage` / `pnpm test:ui`                        |
+| 类型校验（增量）                          | `pnpm type-check`                                            |
+| 类型校验（强制全量，build 前必跑）        | `pnpm type-check:full`                                       |
+| 构建生产包                                | `pnpm build`                                                 |
+| 预览生产包                                | `pnpm preview`                                               |
+| 包体积分析（输出 dist/stats.html）        | `pnpm analyze`                                               |
+| Lint 检查                                 | `pnpm lint`                                                  |
+| Lint 自动修复                             | `pnpm lint:fix`                                              |
+| Prettier 格式化                           | `pnpm format` / `pnpm format:check`                          |
+| 路由一致性校验（CI 阶段强制）             | `pnpm check:routes`                                          |
+| 新建业务模块（自动生成 6 个骨架文件）     | `pnpm new-module <kebab-name>`                               |
+| 提交并推送（add + cz + push 一站式）      | `pnpm push`                                                  |
+| 发布版本（bump + CHANGELOG + tag + push） | `pnpm release`                                               |
+| 发布预览（dry-run，0 副作用）             | `pnpm release:dry`                                           |
 
 **环境要求**：Node `>=22.18` 或 `>=24.12`，pnpm `>=11.x`（`package.json:engines` + `preinstall` 硬强制 `only-allow pnpm`）。
 
