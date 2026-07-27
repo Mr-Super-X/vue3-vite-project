@@ -3,7 +3,7 @@
     "commitMessage": "chore(release): v${version}",
     "tagName": "v${version}",
     "tagAnnotation": "Release v${version}",
-    "requireBranch": "master,release/*",
+    "requireBranch": ["master", "release/*"],
     "requireCleanWorkingDir": true,
     "pushRepo": "origin",
     "requireCommits": true
