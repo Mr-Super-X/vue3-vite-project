@@ -105,6 +105,11 @@ export default defineConfig({
         ]
       : []),
   ],
+  server: {
+    // 项目固定使用 5174 端口（与默认 5173 错开，避免与并行项目端口冲突）
+    port: 5174,
+    strictPort: true, // 5174 被占用时直接报错而非自动找下一个端口，避免端口混淆
+  },
   resolve: {
     alias: resolveSrcDirAliases(),
   },
