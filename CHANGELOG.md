@@ -1,5 +1,218 @@
 # Changelog
 
+## 1.0.0 (2026-07-27)
+
+### ⚠ BREAKING CHANGES
+
+* **auth:** 401处理不再自动跳转登录页和清除token，
+  改由request<T>决定是刷新还是登出。
+
+  feat(http): 实现token自动刷新重试机制
+
+  - 添加token-refresh模块，支持并发去重的token刷新
+  - request<T>自动检测401错误并尝试刷新token后重试
+  - 支持配置化refresh端点和响应解析逻辑
+  - 保留原有缓存和分页适配功能
+
+  test(token-refresh): 添加完整的刷新功能测试
+
+  包含基础刷新、失败处理、并发去重和自定义配置的测试用例
+* **webVitals:** 开发环境下的 Web Vitals 输出格式已更改
+* **styles:** element-overwrite.scss已重命名为theme-vars.scss并移至子目录
+
+### ✨ Features | 新特性
+
+* 集成 web-vitals 性能采集 + 注释预留上报端点 ([9509c98](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/9509c98bc2a55905ab1554c5ed11f3f634522dc5))
+* 添加流式请求和数据验证功能 ([5c9d0f6](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/5c9d0f637a61fa9112bc5703bd910e2e7f72c51c))
+* 添加项目仓库配置 ([52fe04e](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/52fe04e2db48380f7c7858de9ab5a116c2e7f495))
+* 添加CI工作流配置和API文档规范 ([dd7233c](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/dd7233caeffae0902fb42b1f7f57b1ed90949b05))
+* 添加demo模块和代码高亮功能 ([3a570df](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/3a570df6389d55d372db195618b08d01b3e48749))
+* 新增多页签功能和字典系统 ([c01671f](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/c01671fa668e27a7c1ace197f7e626592d33132a))
+* 新增模块脚手架和新手指引文档 ([f0c5c48](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/f0c5c4830b9595ca40de052604b805f97f156ea7))
+* **api:** 请求层重构增加取消、重试、去重功能 ([9c297f1](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/9c297f15fb7a5a5747eec5f4c5183737a709beaf))
+* **api:** 数据总览 API 抽象层 ([577135c](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/577135c767851b3dffe921c5271324658de136c8))
+* **api:** 添加分页适配器功能支持 ([e5db6fe](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/e5db6fe3693ffb65fd33754bf455d7bd9a86235f))
+* **api:** 添加GET请求内存缓存和请求ID追踪功能 ([056e8f7](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/056e8f7e039f4179253e9eb13a4bca05a2e8d671))
+* **api:** 添加HTTP状态码错误消息处理功能 ([5ba3bf6](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/5ba3bf6f649a5ece329a368e1fee38bbb56876f3))
+* **api:** 统一业务码为200并完善分页适配器 ([89e1194](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/89e1194e9e2b5131189519c34541e15fbcf585af))
+* **api:** page-adapter 支持自定义字段映射配置 ([a267ad4](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/a267ad49e849b536b4b590c39dfabd2c997772eb))
+* **auth:** 添加token刷新接口模拟 ([415bc61](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/415bc61aa492a047bd800ee20df038a2db920679))
+* **auth:** 重构退出登录流程支持全局请求取消和悲观语义 ([cba82bf](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/cba82bf0aa702064b08ba8327002ef296325caa8))
+* **auto-changelog:** 新增 .auto-changelog.json 配置 ([255efa3](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/255efa354cfe7b3c0e116a085087eb612ab88f96))
+* **bem:** 新增BEM样式规范及相关工具链 ([4fd7ca7](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/4fd7ca79c0518c7bd786b6ab54fbe452c5c913c1))
+* **build:** 添加 TypeScript 路径别名配置 ([913ae55](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/913ae552df448448577fe6e2e1b17264afb689aa))
+* **build:** 添加一站式提交推送命令 pnpm push ([15a7ca8](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/15a7ca8f801a8f28460d809b8a14756f5ec35360))
+* **build:** 引入 rollup-plugin-visualizer 分析打包体积 ([f093a9f](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/f093a9f5b5063f033b99057a2d3bbaebe9803fb3))
+* **components:** 实现 isExcluded / resolveComponentName 纯函数 ([27b1fae](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/27b1fae1bd0837d384b1c0b08948f76d39014326))
+* **components:** 实现 Vue 插件扫描并注册 common 下的所有组件 ([d874bd1](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/d874bd1b8ddf2a5ff29fc13b06822d66a50ddb27))
+* **components:** 添加组件注册统计和跳过详情日志 ([3a072ad](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/3a072ad5b74dcf1e0cd244d5ae48819d6c850734))
+* **config:** 添加存储命名空间配置 ([47c41fc](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/47c41fce405f208945fada752e62c9ae3b7ed2c6))
+* **core:** 修改应用标题并支持动态API基础URL ([e89f832](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/e89f83230c3f873e2a8bebc71981d19eaa68e6d3))
+* **deps:** 引入 normalize.css 与 dayjs，统一浏览器基线 ([70440cb](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/70440cb5ac89322fada487a85d8fcc064c8b59a5))
+* **deps:** 注入 release-it@21 + auto-changelog@2 ([7f090bb](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/7f090bbe3ba84e6353bcbd89bb5392bd02695693))
+* **directives:** 添加防抖工具函数测试并增强inputDebounce兼容性 ([47f82d7](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/47f82d7acfc2c4b077fd3107af3499cefb68b87c))
+* **errorHandler:** 支持 safeAsync 工具集成统一错误上报 ([dd2c9ee](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/dd2c9eeccdddbae113431b155a5b1eba8e99de86))
+* **eslint:** 业务目录强制使用 useAppRouter 与 useRequest 封装 ([5d0c170](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/5d0c1709417e4df4a227c79def5db32239a2a5ed))
+* **husky:** 添加路由一致性检查到 pre-commit 钩子 ([5dedaff](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/5dedaff33afa01c6dfff08a0c0a5adc5cef5a258))
+* **main:** 接入 GlobalComponents 插件，自动注册 common 下的组件 ([02b3648](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/02b3648ca4f15bdc77ab0b98d9bbbef61270d711))
+* **mock:** 数据总览 mock 接口 ([5044488](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/5044488bf30276ed1da169afd8859e6d3d0aaad0))
+* **plugins:** 新增 src/plugins/ 模块 + errorHandler 插件 ([d61892c](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/d61892c99806305eea7f2d87ff732ac216e815e9))
+* **portal-config:** 定义 portal 配置项类型 ([10ce7a8](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/10ce7a8ce96fb1895385adbd37fc0b3f86f8c018))
+* **portal-config:** 配置 footer 数据 ([433e869](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/433e8693286d0a8b7f3b22028b61eb816a85c04f))
+* **portal-config:** 配置 hero 区数据 ([d02d2a3](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/d02d2a396f201be77327443974a57a4e9bac9add))
+* **portal-config:** 配置顶部横向导航 ([04336c9](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/04336c92abf95731b7d37b200ec4f2e04c39738c))
+* **portal-home:** date-greeting 问候语 + 日期 ([b6530ee](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/b6530ee22850729b38d44e26d8b100b1e85b8d9f))
+* **portal-home:** hero-section 大标题+标语+搜索 ([a81f93b](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/a81f93bd92a78537d865926cda1e240cc1d9bfe3))
+* **portal-home:** home/Index.vue 组合页面 ([71d4403](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/71d4403548f1779e430dd75bc5b9025b615d6129))
+* **portal-home:** hot-search-tags 热门搜索标签 ([057569b](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/057569bf6f75b3b5cb6498f41496ef1bf40b5fa4))
+* **portal-home:** overview-card 单张数据卡片 ([487d9a6](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/487d9a6bc000b2b0f75bcb8afb8c412779f0cf53))
+* **portal-home:** overview-card-skeleton 加载骨架 ([fcc44a2](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/fcc44a2b0524a934b40ccd4d3163364f77d5cc8c))
+* **portal-home:** overview-empty-state 空态 ([91d7561](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/91d7561e9e12c32d2c92465e83d05a9954fe4449))
+* **portal-home:** overview-error-state 错误态 ([7dd6286](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/7dd62869de99566c5135de45c7e0cdf73b8ad2d2))
+* **portal-home:** overview-metric-row 单行指标 ([2c63560](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/2c6356072acd5f6498c7c68ee9ec770f4ab19096))
+* **portal-home:** overview-section 数据总览容器（含 4 项三态测试） ([1180925](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/11809258c047102d5acf7f591a1365b3890e67f7))
+* **portal-home:** search-bar 搜索栏（含 4 项测试） ([188d1ee](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/188d1eeb97079c5fb5af679374211c8fab0393a4))
+* **portal-layout:** portal-ai-widget 占位浮窗 ([d6e3917](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/d6e391700369ff6212ccac9c6ae9d028fd1e4821))
+* **portal-layout:** portal-footer 系统链接 + 版权 ([0780227](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/07802273f89fbf8ae03173018f7744a33f96fa18))
+* **portal-layout:** portal-header-nav 横向导航 + 用户信息卡 ([ec45ae2](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/ec45ae2bf836039b6ae1e10a74909e998c5403cd))
+* **portal-layout:** portal-layout 壳（顶部+nav+slot+footer+ai 浮窗） ([f17ff72](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/f17ff7253c47fb16ee68384f1cc637f74e94c06b))
+* **portal-layout:** portal-top-bar 顶部蓝 banner ([19b14b9](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/19b14b9ea06b6f039be89cc3cce81475d041b3e0))
+* **portal-store:** 数据总览 Pinia store（含 5 项状态机测试） ([28a2422](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/28a24225a1049909f21a63a2d21349aa824e9eaa))
+* **portal-styles:** 定义 portal 视觉 token ([de40ead](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/de40eadb0dbfeecd4bb08d78ebed0f90a1c72039))
+* **portal-types:** 定义数据总览 DTO 类型 ([53295dc](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/53295dcd7a3281015ce59738af995b9a5fab3345))
+* **release-it:** 替换 auto-changelog 为 conventional-changelog 插件 ([239808f](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/239808fcff4e1aefae27db3fca8e5e2e369797a9))
+* **release-it:** 新增 .release-it.json 配置 ([7ac44da](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/7ac44daa028270f1419dd2443bc0b52a1bdbcdb6))
+* **router:** 路由模块重构支持自动注册和远程菜单加载 ([db1c05b](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/db1c05b7d776dca12ed7f1046cdb08617fcd00f0))
+* **router:** 实现多级菜单父子路由结构 ([70bce7c](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/70bce7cdc72898af885010de99543d9fdd473923))
+* **router:** 添加根路径重定向至仪表盘 ([a2034ce](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/a2034cea352e5ee577583f8f0786e12804647fe6))
+* **router:** 添加路由配置一致性校验工具和改进错误处理 ([2df3db5](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/2df3db5936e19010c089c1a06b4fde0546208c20))
+* **router:** 完成路由模块13项优化改进 ([272e413](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/272e413736366caf1284583289b09e84d905c350))
+* **scripts:** 添加 pnpm release / pnpm release:dry 脚本 ([3939021](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/3939021a1648da80c84c253490d56ca9b8e0f575))
+* **styles:** 新增主题系统并重构样式文件结构 ([e208180](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/e2081805ba15e0f0ba2a44c707e0a7659cdcfe06))
+* **styles:** 新增Element Plus样式覆盖目录结构 ([a06f8c6](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/a06f8c6fcd8d83e8b940156861beef815a0d2507))
+* **theme:** 添加主题切换功能和CSS变量体系 ([97ce7b6](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/97ce7b674da93944ef0a057fa743347e2460cfab))
+* **useRequest:** 支持 watch 选项和请求取消功能 ([443a865](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/443a8655d7d0ad66281e0c6043de97db18f1b9ef))
+* **utils:** 添加控制台badge徽章工具函数 ([45d0258](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/45d025849ceb81103565ff600610fe41075b0d35))
+* **utils:** 重写 storage.ts 为 Local/Session/clearCookies 三件套 ([f30e1e7](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/f30e1e7f4f03261d3f99bd19c0ddf52831d86cb7))
+* **utils:** dayjs 通用封装，基础格式化 + 12 个单测 ([caf4ed3](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/caf4ed3dcaf0330a81942049c79383e338dc53a6))
+* **vite:** 配置手动代码分割优化打包策略 ([0187403](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/0187403d555e73e9096ba856eafd792d888ba45e))
+* **webVitals:** 使用控制台徽章优化开发环境性能指标展示 ([8295cbc](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/8295cbc7faf1bd819087395377f75f8642b9e5eb))
+
+### 🐛 Bug Fixes | Bug 修复
+
+* **api:** 统一 url 前缀由 baseURL 管理，修复 /api/api 重复 ([c4eeadf](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/c4eeadf17a7ec0853e3f723e77fe0983b9ce3dcf))
+* **directives:** 修复指令加载时因.spec.ts文件导致的运行时崩溃 ([61f166c](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/61f166cacb0a385519a5aed8010eea86c475edec))
+* **layout:** 修复布局组件样式问题并更新类型定义 ([e7a6cca](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/e7a6cca0d16ff4b978af07084f55b58bd384e3ad))
+* **mock:** 远程菜单 mock 中 Dashboard 同步改为 Home ([dd45ed2](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/dd45ed2902aef3cce2ebf870b936ea9edf09da7b))
+* **mock:** mock response 改同步函数，修复全部返回 {} ([599b5a1](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/599b5a1777ead0912038ee557da09f4510b01197))
+* **release-it:** requireBranch 改回 wildcard-match 数组 ([4463ab2](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/4463ab2539c3e3e4e8ca52b2479ea12337fb6717))
+* **release-it:** requireBranch 改用 wildcard-match 兼容字符串 ([f778838](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/f778838bde5d6d60ef66e7065901be6695894f0d))
+* **scss:** 修 Dart Sass 1.78+ new-global deprecation 警告 ([964446c](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/964446c034b5bcbf2a5b40408b1350af561f9277))
+* **utils:** 修 storage 6 项缺陷（命名空间隔离 + 安全 + 健壮性） ([2e44389](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/2e4438971814e04eade4f7faf751a7835008cc09))
+* **web-vitals:** 徽章 value 补全评级文字（修复仅靠颜色反馈） ([a276446](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/a2764468b8141341c357eabfff3964321a2e5ac4))
+
+### 📦 Chores | 其余更新
+
+* 初始化 Vue 3 + Vite 8 + TS 6 脚手架 v1.0.0 ([db06d2b](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/db06d2bc129d481b4a4c8fe28c4e10edfcdc2383))
+* 集成 commitlint + commitizen 严格 Angular 规范校验 ([5086ff1](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/5086ff199482325b7d6d4c8e970ef15d82729cc2))
+* 集成 ESLint 10 + Prettier 3.9 统一代码规范 ([a50d3b0](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/a50d3b0ecc95d6a33dff7f168df207120ce62ff9))
+* 集成 husky 9 (pre-commit type-check + pre-push test) ([29ca805](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/29ca8050746288f91ee39ae6667b667ad629b45f))
+* 加 [@plugins](https://gitlab.dg.com/plugins) alias 配套同步 tsconfig/vite/main ([417c9b6](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/417c9b6a018aaaddfe109aad36fca92a9e4b64bd))
+* 配置 commitlint 中文输出格式并启用 engine-strict ([c5d4b16](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/c5d4b1662aebee908a2c3a1ef067ce18f5cf984f))
+* 配置代码提交规范工具链 ([73498c1](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/73498c189fc400da0a1b35ddd332d97654a336c4))
+* 添加 lint-staged 配置文件并迁移配置到独立文件 ([84ac7a2](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/84ac7a2ec51a2e6bc1e4c296c052559c7ec1a40e))
+* 移除 unplugin 自动生成的 components.d.ts 与 .gitignore 规则 ([ec336b2](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/ec336b205daebdd83ddba130c7df3ed30b28f2d4))
+* **build:** 添加.omc到.gitignore文件 ([e93c8e1](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/e93c8e14d7fe266d8993e7029e1f8bff51595433))
+* **commitlint:** 添加 merge 提交忽略规则并完善中文 formatter 文档 ([14125cd](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/14125cd487a611727faa396008ce270fd208429f))
+* **config:** 更新 commitizen 配置并添加工具链文档 ([b8d6a63](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/b8d6a63145fd4f52d0be3ef0c1b681f41867229b))
+* **config:** 更新 Prettier 配置以改进代码格式化 ([934649d](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/934649def56fa9f2e90d47f1c503c2e655177280))
+* **config:** 迁移 commitizen 配置并完善 pre-commit 钩子 ([caaf37f](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/caaf37f6b7337d32e633ee47e4ae2ff501de3a66))
+* **counter:** 删除无用目录 ([02495b1](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/02495b1f825fef116e6967e523577d4620f682ea))
+* **hooks:** 验证 lint-staged + commitlint + commitizen 完整工作流 ([a4f2b36](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/a4f2b36aa3e59f6ba6410bec0fc1280ddf30dd37))
+
+### 📝 Documentation | 文档修改
+
+* **03-git:** 工具链配置详解新增 release 流程章节 ([d184064](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/d184064dd4ec8912860f2b0ed4d7f530bd505042))
+* **08:** 新增模块化架构总览文档 ([017939f](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/017939f52e1eeaabd6a43353d7b104273971fa70))
+* 更新文档 ([aa27815](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/aa278150da42202663e3b1a6bb15e34c78602a96))
+* 更新文档中的构建配置和工具链说明 ([6d23321](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/6d23321b2d717077314b8f16d0ea66c882023c33))
+* 添加 .editorconfig 配置说明 ([468e923](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/468e923ba14b929f934c0da8111068945d120f9e))
+* 新增工具兼容性问题踩坑记录文档 ([ea83be1](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/ea83be175e45aae1d75ad4288fd009c8e89b0f52))
+* 仪表盘 → 首页 文档与配置同步 ([0b0d7c5](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/0b0d7c5ac6040268a7747215930ef14ae0a15cba))
+* **api:** menu.ts 注释更新，指向 auto-register 派生 ([d0d8b20](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/d0d8b20a013064d622a85a717f0c806cdc7d1159))
+* **changelog:** 更新 web-vitals 使用规范文档路径 ([d821420](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/d8214209c4a4ea907651e20622c959897a706c69))
+* **changelog:** 记录 common 组件全局注册功能 ([0d1f0a2](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/0d1f0a2ab0dd80bcc45c78d96e487ffdca7ed873))
+* **changelog:** 记录 component-registry 合并到 auto-register 的重构 ([bcf8bbc](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/bcf8bbc792d1ce153334c756fd602062662317c6))
+* **changelog:** 记录 ESLint 强制封装规则与 6 文件重构 ([e83d3ee](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/e83d3ee902eb498eac94166d72716d32f3011b8e))
+* **changelog:** 记录 portal 首页 layout 重构 ([5a86bd4](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/5a86bd45dca2a2700bc54f0d4d07691b1909fdd1))
+* **CLAUDE.md:** 更新文档生效分支为master ([9bfe7f0](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/9bfe7f0b188abce373d856be0e3a208262b5c5bc))
+* **CLAUDE:** 更新项目级Claude工作流文档 ([3e5ba52](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/3e5ba52c1d3d0b6977898c4d7c1de2b2461e32b4))
+* **CLAUDE:** commands 表新增 pnpm release / pnpm release:dry ([aa46415](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/aa46415ab861aae61884b7c5771540d2c153c3de))
+* **decision-table:** 补充业务代码必须用封装的决策项 ([a32b398](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/a32b3989ebb0c2d45f54bb156bff43a3d99bd1e3))
+* **demo:** 添加组件示例站点开发指引文档 ([a397dd3](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/a397dd32f25a272fdca72770cbdf33f686907bc8))
+* **guide:** 新手指引补充强制使用封装的 ESLint 规则说明 ([c15af96](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/c15af96b7559135934c2a73d0cd2a749ad28842d))
+* **plans:** 添加 components/common 全局注册的实施计划 ([42d63ca](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/42d63cae42906fdc2343070d687c02414c411872))
+* **plans:** 添加路由 component-registry 合并到 auto-register 的实施计划 ([62678a4](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/62678a43f5eb946daaebb28b21f68dd106d38d7e))
+* **plans:** 新增 release-it + auto-changelog 实施计划 ([18b799b](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/18b799b9c1932a7a2498d77a0b94d954832d6894))
+* **portal-plan:** 新增门户首页 Layout 重构实施计划（30 任务） ([ed09b87](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/ed09b8788eef8c79384db09d366d7c830a8ac320))
+* **portal:** 新增门户首页 Layout 重构设计文档 ([11f69c2](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/11f69c2fd31e56dc5bca4b703e86d363a6e8f630))
+* **prettier:** 更新代码格式化配置文档 ([3421f00](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/3421f004c6e7239db3e1e5a13da65aaa9c519e03))
+* **project:** 添加项目级 Claude Code 工作流规范 ([6a3ede5](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/6a3ede50333ddc167db2d53e28dc71e82268c63d))
+* readme 全面更新同步本轮重构状态 ([395ab15](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/395ab15444baff167f70997fe4c5df17a57154f7))
+* **README:** 常用脚本表新增 pnpm release / pnpm release:dry ([df75b74](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/df75b741cb883181ced25ceef7fe91220968b35b))
+* **readme:** 更新项目文档为工贸统一登录门户 ([fbe8e16](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/fbe8e16ac11fe595192367ad0bb61b72237a0ee3))
+* **readme:** 同步更新文档与当前代码状态 ([d1a5d91](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/d1a5d91e6132c848c342bd8b1d2ac6bd5179a06c))
+* **README:** 移除License部分 ([4a14190](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/4a14190434f92b07c1860987df701e66fced7f46))
+* **router:** 完善路由文档和新增标准流程指南 ([d6a2412](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/d6a2412a92ef8933a5ce0f2a1e393b8ecc294965))
+* **router:** docs/07 新增路由流程从 3 步改为 1 步 ([7031038](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/703103817e52be4c50b685b8d1ac398518f145a0))
+* **router:** types.ts 注释更新，移除 component-registry 引用 ([6118111](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/61181116356eddfaf4947dc941f823b3ff36e783))
+* **specs:** 添加 components/common 全局组件自动注册的设计文档 ([209ce32](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/209ce32c4e36089470fb33e9df4c44660f2b26af))
+* **specs:** 添加路由 component-registry 合并到 auto-register 的设计文档 ([3bbdc2d](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/3bbdc2dd6f2e9076833a17dcd93cf74430eb25e5))
+* **specs:** 新增 release-it + auto-changelog 集成设计文档 ([1a537a5](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/1a537a5b333c8a14f9b607f911b718deded9cac3))
+* **superspec:** 添加 ESLint 强制封装规则设计文档 ([c036e17](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/c036e173bc4650b8aea0578f0d1030aac0f41a23))
+* **superspec:** 移除 useRoute 拦截，澄清业务约束范围 ([59af208](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/59af2084169a1a4b961d87a2947661834ad7da20))
+* **theme:** 新增主题管理规范文档并完善BEM工具 ([74b8b1f](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/74b8b1fa6b2ca30bcdebf2228f89752336ab4e8c))
+* **utils:** 添加utils模块统一导出说明 ([127e047](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/127e04756e0d71710bdf320925e162305953f97f))
+
+### 💄 Styles | 代码格式调整
+
+* **styles:** 更新全局样式重置文件并添加过渡动画支持 ([49861ba](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/49861badbfce045ad7221225901483d761d0f5fb))
+
+### ♻ Code Refactoring | 代码重构
+
+* **arch:** 按照消费方重新拆分布局配置和样式token ([0329a5f](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/0329a5f41bc0f1c9c809864608c2b790118ee224))
+* **build:** 提取 SRC_DIR_ALIASES + 补全所有裸 alias ([22a3aab](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/22a3aab65bb204a67cdbe7760af1b13b6ae0b4d5))
+* **components|directives|router:** 使用 autoImport 工具函数重构自动化注册逻辑 ([fde8d2c](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/fde8d2ce6b2a1316dd16724613aef61a9f00ee29))
+* **composables:** 重命名useRouter为useAppRouter并优化类型定义 ([8bd4a19](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/8bd4a193dbbfa0c8ad5538a70bd67e5c83c2b714))
+* **console:** 远程菜单注入结果用 consoleBadge 徽章化 ([d021a9c](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/d021a9c0f61a01dd483a7f75f29c39796ac8c875))
+* **demo-frame:** 改用 useAppRouter 替代 useRouter ([994afb8](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/994afb89ecc14c6efdf8686a0a19ebd6a387d17b))
+* **directives:** 改 install 注册模式，新增 inputDebounce/buttonDebounce ([6528cea](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/6528ceacce44d78aa8d0ad6f23b738dc6b4fdd13))
+* **directives:** 指令按范式重构（debounce 工具 + .d.ts 类型分离） ([039a11a](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/039a11a00a4a642d409e824e98d75dfad1131f2b))
+* **directives:** permission 改 install 模式 + 类型文件分离 ([50f2392](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/50f23926aa21c1c93420fb8bd038132631dc62d2))
+* **doc-layout:** 改用 useAppRouter 替代 useRouter ([e552510](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/e552510f4ac79fdb0cddcd2854154c3ab8dba6b6))
+* **login:** 改用 useAppRouter 替代 useRouter ([85dbff9](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/85dbff9b51e0c2f110840cc00df80be379685627))
+* **main:** 更新导入路径别名 ([b88abcf](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/b88abcfbfe45133f4abec17645992602522104ad))
+* **mock:** 删除 dashboard 死代码 mock ([a1d2842](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/a1d2842b8d5920af6176642e12e073cbc2586025))
+* **modules:** dashboard 模块重命名为 home，views 去嵌套 ([25d9b47](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/25d9b4798f8de41eca2af963781a1748d7942330))
+* **overview-card:** 改用 useAppRouter 替代 useRouter ([f68bf52](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/f68bf527e6b1cd22dd11d4fb2b3b02a084bc2c53))
+* **router:** 合并 component-registry 到 auto-register 派生 ([67eecff](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/67eecff004db5cb9d75ca715a044f0bfdc60f13b))
+* **routes:** /dashboard 切换至 PortalLayout ([947dbe0](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/947dbe012000ff9c4c165dbf459b75041c79efe3))
+* **routes:** 仪表盘路由从 /dashboard 改名为 /home ([4a04bd8](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/4a04bd87c7833b2184ea4c501dc3a9f900cee327))
+* **scripts:** check-routes 移除 component-registry 校验项 ([1db51c4](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/1db51c4ffe00275233e2244d1bfe250b412a80b3))
+* **sidebar:** 改用 useAppRouter 替代 useRouter ([67a2195](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/67a2195c5295db046f793ac2980261ade7c67181))
+* **styles:** 重构全局样式管理和BEM工具 ([e45ec94](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/e45ec940bdf17a2ca53f0b89d975ebac92980591))
+* **tags-view:** 改用 useAppRouter 替代 useRouter ([b8c6f55](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/b8c6f55dccd3053c7e055cd41db36fec7a276db5))
+* **utils:** storage 命名空间改用 VITE_STORAGE_NAMESPACE ([2214048](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/2214048b551a05a0ceed812d938e71c8ead33b52))
+
+### ✅ Tests | 测试用例
+
+* **components:** 添加 GlobalComponents 插件集成测 ([ed21634](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/ed2163440a6260447109a90af9cf8638ddcbdb16))
+* verify lint-staged auto-format ([8c15d79](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/8c15d792feb8b2a84ffca5f5013de00ecb81f036))
+
+### 👷‍ Build System | 构建
+
+* **vite:** 配置 tree-shaking 优化和副作用处理 ([6043c6f](https://gitlab.dg.com/10086/hyywsybb/hyyfb/commit/6043c6fe6558d901abf01c3780a75b7b0bb49395))
+
 ## Unreleased
 
 ### Added
