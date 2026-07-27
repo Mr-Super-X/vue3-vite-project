@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > 本文档是 `~/.claude/CLAUDE.md` 的项目级补充。所有全局规则（§一～§十一）自动适用，遇到冲突以**本文档为准**。
 >
-> **文档版本**：v1.0.0 | **生成日期**：2026-07-27 | **生效分支**：`feature/engine-optimization`
+> **文档版本**：v1.0.0 | **生成日期**：2026-07-27 | **生效分支**：`master`
 
 ---
 
