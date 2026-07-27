@@ -313,6 +313,8 @@ pnpm dev:local
 | `pnpm lint`            | ESLint 检查全项目                                          |
 | `pnpm lint:fix`        | ESLint 自动修复                                            |
 | `pnpm format`          | Prettier 格式化全项目                                      |
+| `pnpm commit`          | 交互式 commit（仅提交不推送）                              |
+| `pnpm push`            | **推荐**：一站式提交并推送（add + cz + push）              |
 
 ### Mock 数据
 
@@ -509,6 +511,18 @@ app.use(Plugins, { errorHandler: { report: ... } })
 | pre-push   | `pnpm test`            | 防止测试不通过的代码推送   |
 
 > 注：lint 未集成到 pre-commit 的**全量检查**（避免每次 commit 等待），开发期手动 `pnpm lint:fix`，CI 阶段跑 `pnpm lint`。
+
+### Git 工作流
+
+**推荐使用 `pnpm push` 一站式提交并推送**，封装在 `package.json:scripts.push`：
+
+| 命令                               | 行为                                         | 适用场景                               |
+| ---------------------------------- | -------------------------------------------- | -------------------------------------- |
+| `pnpm push`                        | `git add .` + `cz`（交互式问答）+ `git push` | **推荐**：开发完成后一键提交并推送     |
+| `pnpm commit`                      | `git add .` + `cz`                           | 仅需本地提交、暂不推送（如阶段性保存） |
+| `git commit -m "..."` + `git push` | 传统两步                                     | 已写好完整 commit message 时           |
+
+> `pnpm push` 仍受 husky `pre-commit`（lint-staged + type-check）与 `pre-push`（`pnpm test`）约束，提交失败会被自动拦截。
 
 ---
 

@@ -24,6 +24,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "commit": "git add . && cz",
+    "push": "git add . && cz && git push",
     "commitlint": "commitlint --edit",
     "prepare": "husky"
   },

@@ -7,14 +7,14 @@
 
 ## 📋 工具一览
 
-| 工具                | 版本    | 作用                       | 触发时机          |
-| ------------------- | ------- | -------------------------- | ----------------- |
-| **only-allow**      | ^1.2.2  | 强制只使用 pnpm            | `preinstall` 钩子 |
-| **husky**           | ^9.1.7  | Git hooks 管理             | git 操作触发      |
-| **lint-staged**     | ^17.0.8 | 暂存区文件检查/格式化      | pre-commit        |
-| **commitlint**      | ^21.2.1 | 校验 commit message 格式   | commit-msg        |
-| **commitizen**      | ^4.3.2  | 交互式生成规范 commit      | `pnpm commit`     |
-| **cz-customizable** | ^7.5.4  | 自定义 commitizen 提问流程 | commitizen 调用   |
+| 工具                | 版本    | 作用                       | 触发时机                    |
+| ------------------- | ------- | -------------------------- | --------------------------- |
+| **only-allow**      | ^1.2.2  | 强制只使用 pnpm            | `preinstall` 钩子           |
+| **husky**           | ^9.1.7  | Git hooks 管理             | git 操作触发                |
+| **lint-staged**     | ^17.0.8 | 暂存区文件检查/格式化      | pre-commit                  |
+| **commitlint**      | ^21.2.1 | 校验 commit message 格式   | commit-msg                  |
+| **commitizen**      | ^4.3.2  | 交互式生成规范 commit      | `pnpm commit` / `pnpm push` |
+| **cz-customizable** | ^7.5.4  | 自定义 commitizen 提问流程 | commitizen 调用             |
 
 ---
 
@@ -28,7 +28,9 @@ git add .
    ↓
 git commit -m "..."      ← 传统方式
    或
-pnpm commit              ← 交互式（cz-customizable 启动问答）
+pnpm commit              ← 交互式（仅提交，不推送）
+   或
+pnpm push                ← 推荐：一站式（add + cz + push）
    ↓
 [husky pre-commit 触发]
    ├── pnpm lint-staged     ← 对暂存文件跑 eslint --fix + prettier --write
@@ -52,7 +54,8 @@ pnpm commit              ← 交互式（cz-customizable 启动问答）
 {
   "scripts": {
     "preinstall": "npx only-allow pnpm", // ← 拦截非 pnpm 安装
-    "commit": "git add . && cz", // ← 交互式提交
+    "commit": "git add . && cz", // ← 交互式提交（仅 commit，不推送）
+    "push": "git add . && cz && git push", // ← 推荐：一站式提交并推送
     "commitlint": "commitlint --edit",
     "prepare": "husky", // ← git hooks 自动启用
   },
@@ -195,13 +198,14 @@ shamefully-hoist=true
 
 ## 🎮 常用命令
 
-| 命令                           | 作用                                |
-| ------------------------------ | ----------------------------------- |
-| `pnpm install`                 | 安装依赖（被 only-allow 强制）      |
-| `git commit -m "feat: 新功能"` | 传统提交（被 commitlint 校验）      |
-| `pnpm commit`                  | 交互式提交（cz-customizable 启动）  |
-| `git cz`                       | commitizen 别名（同 `pnpm commit`） |
-| `pnpm commitlint`              | 手动校验（默认读 COMMIT_EDITMSG）   |
+| 命令                           | 作用                                          |
+| ------------------------------ | --------------------------------------------- |
+| `pnpm install`                 | 安装依赖（被 only-allow 强制）                |
+| `git commit -m "feat: 新功能"` | 传统提交（被 commitlint 校验）                |
+| `pnpm commit`                  | 交互式提交（仅 commit，不推送）               |
+| `pnpm push`                    | **推荐**：一站式提交并推送（add + cz + push） |
+| `git cz`                       | commitizen 别名（同 `pnpm commit`）           |
+| `pnpm commitlint`              | 手动校验（默认读 COMMIT_EDITMSG）             |
 
 ---
 
