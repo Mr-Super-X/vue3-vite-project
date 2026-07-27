@@ -320,7 +320,7 @@ pnpm dev:local
 
 ### Mock 数据
 
-开发模式默认启用 vite-plugin-mock（由 `vite.config.ts` 按 `NODE_ENV !== 'production'` 控制），内置 mock 模块：
+开发模式默认启用 vite-plugin-mock（由 `vite.config.ts` 按 `VITE_USE_MOCK !== 'false'` 控制，2026-07-27 切换；用户 clone 后未建 `.env.development` 时默认开，与原行为一致），内置 mock 模块：
 
 | 模块            | 接口                                                       | 默认账号       |
 | --------------- | ---------------------------------------------------------- | -------------- |
@@ -331,7 +331,7 @@ pnpm dev:local
 
 > `/api/menu`（远程菜单）在 remote 模式下由守卫调用。已内置 mock（Home + UserList），无需额外配置即可跑通端到端流程。
 
-生产构建不启用 vite-plugin-mock；联调真实后端时配置 `VITE_API_BASE_URL`，并使用 `pnpm build && pnpm preview` 验证生产路径。菜单加载方式仍由 `VITE_MENU_SOURCE` 控制。
+生产构建不启用 vite-plugin-mock（`VITE_USE_MOCK` 未设或非 `'false'` 即关闭——vite build 时 dotenv 不读取 `.env.development`，故 prod 自然落入"关闭"分支）；联调真实后端时同时设 `VITE_USE_MOCK=false` + `VITE_API_BASE_URL=<真实后端 URL>`，并使用 `pnpm build && pnpm preview` 验证生产路径。菜单加载方式仍由 `VITE_MENU_SOURCE` 控制。
 
 ### 路由架构（自动注册）
 
@@ -540,14 +540,17 @@ pnpm build
 
 ### 环境变量
 
-| 变量                     | 说明                                                             | 默认值           |
-| ------------------------ | ---------------------------------------------------------------- | ---------------- |
-| `VITE_APP_TITLE`         | 应用标题配置（当前默认文案由 `src/locales/` 与路由 `meta` 提供） | 工贸统一登录门户 |
-| `VITE_API_BASE_URL`      | API 基础 URL（baseURL，前缀统一管理）                            | `/api`           |
-| `VITE_MENU_SOURCE`       | 菜单加载模式（`local` / `remote`，未设置时默认 `remote`）        | `remote`         |
-| `VITE_HISTORY_MODE`      | 路由历史模式（`web` / `hash`，用于子路径或静态托管部署）         | `web`            |
-| `VITE_BASE`              | 路由部署基础路径（必须以 `/` 开头和结尾）                        | `/`              |
-| `VITE_STORAGE_NAMESPACE` | storage 命名空间（隔离多项目共用 localStorage）                  | `gm-portal-fe`   |
+| 变量                     | 说明                                                                                                                         | 默认值           |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `VITE_APP_TITLE`         | 应用标题首屏占位（`src/main.ts` 初始化；登录后由路由 `meta.title` 覆盖）                                                     | 工贸统一登录门户 |
+| `VITE_API_BASE_URL`      | API 基础 URL（baseURL，前缀统一管理）                                                                                        | `/api`           |
+| `VITE_USE_MOCK`          | mock 数据开关（`vite.config.ts` viteMockServe 读取；`true`/未设=启用，`false`=关闭用于联调真后端）                           | dev 默认开启     |
+| `VITE_MENU_SOURCE`       | 菜单加载模式（`local` / `remote`，未设置时默认 `remote`）                                                                    | `remote`         |
+| `VITE_HISTORY_MODE`      | 路由历史模式（`web` / `hash`，用于子路径或静态托管部署）                                                                     | `web`            |
+| `VITE_BASE`              | 路由部署基础路径（必须以 `/` 开头和结尾）                                                                                    | `/`              |
+| `VITE_STORAGE_NAMESPACE` | storage 命名空间（隔离多项目共用 localStorage）                                                                              | `gm-portal-fe`   |
+| `VITE_BRAND_COLOR`       | 业务品牌色（HEX，覆盖 Element Plus 默认蓝 `#409eff`，含灯色阶联动，详见 [docs/06-主题管理规范.md](docs/06-主题管理规范.md)） | `#409eff`        |
+| `VITE_QUIET_DEV`         | 关闭 dev 模式 GlobalComponents 自动注册徽章（专注调试时减少噪音，详见 `src/components/index.ts`）                            | 不设 = 输出徽章  |
 
 > 环境变量读取：项目内显式通过 `import.meta.env.VITE_XXX` 访问。`baseURL` / `storage namespace` 单一来源在 `src/api/http.ts` 和 `src/utils/storage.ts`，不在各业务模块分散。
 

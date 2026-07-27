@@ -86,10 +86,13 @@ export default defineConfig({
       resolvers: [ElementPlusResolver()],
       dts: 'src/types/components.d.ts',
     }),
-    // 仅在 dev/test 环境启用 mock（生产构建剔除）
+    // mock 启用开关由 VITE_USE_MOCK 控制（2026-07-27 切换）。
+    // dev 默认开启：用户 clone 后未建 .env 时，VITE_USE_MOCK=undefined，
+    // `!== 'false'` 判定为 true，与原 NODE_ENV 行为一致。
+    // 联调真实后端：在 .env.development 设 VITE_USE_MOCK=false。
     viteMockServe({
       mockPath: 'mock',
-      enable: process.env.NODE_ENV !== 'production',
+      enable: process.env.VITE_USE_MOCK !== 'false',
       watchFiles: true,
     }),
     // 包体积分析（默认关闭，通过 ANALYZE=true 启用）

@@ -248,17 +248,19 @@ import { viteMockServe } from 'vite-plugin-mock'
 
 plugins: [
   viteMockServe({
-    mockPath: 'mock',                       // mock 文件目录
-    enable: process.env.NODE_ENV !== 'production', // 仅 dev 启用
-    watchFiles: true,                       // mock 文件变更热更新
+    mockPath: 'mock',                          // mock 文件目录
+    enable: process.env.VITE_USE_MOCK !== 'false', // dev 默认开启（2026-07-27 切换）
+    watchFiles: true,                          // mock 文件变更热更新
   }),
 ],
 ```
 
 **注意**：
 
-- `enable: NODE_ENV !== 'production'` 保证 prod 打包不包含 mock
+- `enable: VITE_USE_MOCK !== 'false'` 保证 prod 打包不包含 mock（vite build 不读 `.env.development`，自然落入"关闭"分支）
 - `watchFiles: true` 让 mock 修改实时生效（无需重启 dev server）
+- dev 默认开启：clone 后未建 `.env.development` 时 `VITE_USE_MOCK=undefined` → `!== 'false'` 判定为 true，mock 自动启用
+- 联调真后端：在 `.env.development` 设 `VITE_USE_MOCK=false` + `VITE_API_BASE_URL=<真实后端地址>`
 
 ---
 
