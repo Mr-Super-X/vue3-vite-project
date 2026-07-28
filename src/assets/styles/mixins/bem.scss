@@ -2,11 +2,17 @@
 // BEM mixin · 编程式 BEM 命名拼接（Element Plus / Ant Design Vue 同款）
 // =====================================================================
 // 命名规则：
-//   Block      → .user-card           （连字符式小写）
+//   Block      → .user-card           （连字符式小写，前缀由 $BEM_PREFIX 注入）
 //   Element    → .user-card__avatar   （双下划线）
 //   Modifier   → .user-card--featured （双连字符）
 //   State      → .is-active / .is-disabled（用 `is` mixin，按 BEM 扩展约定）
 //   状态修饰   → .theme-light（用 `when` mixin，非 BEM 但常见于 Vue 生态）
+//
+// 前缀来源（与 src/utils/bem.ts 的 createNamespace 共享同一来源）：
+//   1. vite.config.ts 在 css.preprocessorOptions.scss.additionalData 注入：
+//        $BEM_PREFIX: 'gm';          // 取自 process.env.VITE_BEM_PREFIX
+//   2. 本文件用 `!default` 提供兜底 'gm'，未注入时仍可工作（向后兼容）
+//   3. 单元测试或手写 SCSS 也可不注入，直接依赖 !default 兜底值
 //
 // 用法：
 //   @use '@/assets/styles/mixins/bem' as *;
@@ -26,7 +32,17 @@
 //   .user-card__name { font-weight: 600; }
 //   .user-card--featured { border: 2px solid gold; }
 //   .user-card.is-active { color: blue; }
+//
+// 等价于 src/utils/bem.ts 的运行时拼接：
+//   const bem = createNamespace('user-card')
+//   bem.b()       // 'gm-user-card'
+//   bem.e('avatar') // 'gm-user-card__avatar'
 // =====================================================================
+
+// 前缀变量：被 vite.config.ts 的 additionalData 注入实际值；未注入时回退 'gm'。
+// 用 `!default` 保证「调用方/注入方先声明，本文件兜底」的优先级。
+// 空字符串场景：调用方设置 $BEM_PREFIX: '' 时，b() 输出无前缀的 .user-card。
+$BEM_PREFIX: 'gm' !default;
 
 // 块名状态变量：b() 内设置 !global，e/m/is/when 读取。
 // 在 stylesheet 根声明 !default 是 Sass 1.78+ 强制要求：
@@ -40,7 +56,10 @@ $B: null !default;
 // 子选择器（e/m/is/when）会基于块名拼接。
 @mixin b($block) {
   $B: $block !global; // 保存到全局，供后续 mixin 读取
-  .#{$block} {
+  // 拼接前缀：空串/null 时直接输出 block，避免出现 .-.user-card 这类多余连字符。
+  // 用 SCSS 内置 if() 保持单行；模板字符串 '#{}-#{}' 由 Sass 解析为静态字符串。
+  $full: if($BEM_PREFIX == '' or $BEM_PREFIX == null, $block, '#{$BEM_PREFIX}-#{$block}');
+  .#{$full} {
     @content;
   }
 }

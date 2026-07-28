@@ -43,7 +43,7 @@ const userStore = useUserStore()
 </template>
 
 <style lang="scss">
-.gm-portal-header {
+.#{$BEM_PREFIX}-portal-header {
   width: 100%;
   height: var(--portal-header-h);
   background: url('@/layouts/portal/images/layout-head-bg.png') center bottom / 1920px 180px

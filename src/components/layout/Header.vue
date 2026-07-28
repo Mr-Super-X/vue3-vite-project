@@ -26,9 +26,13 @@ const { loggingOut, confirmLogout } = useLogout()
 // - SCSS mixin：编译期拼接 CSS（静态样式）
 // - 运行时 BEM：JS 字符串拼接（动态 :class 切换）
 // 两套工具使用同一套类名，互不冲突。
-@use '@/assets/styles/mixins/bem' as *;
-
-@include b(gm-header-bar) {
+//
+// 前缀由 vite.config.ts 通过 additionalData 注入 $BEM_PREFIX，默认 'gm'。
+// 想改全站类名前缀：改 .env 中的 VITE_BEM_PREFIX 即可，TS/JS 与 SCSS 同步生效。
+//
+// 注意：bem mixin 由 additionalData 中的 `@use ... with` 引入，本文件不要再 @use 'bem'，
+// 否则 sass 会报重复引入错误。
+@include b(header-bar) {
   padding: 0 var(--spacing-md);
   height: 100%;
 
@@ -45,7 +49,7 @@ const { loggingOut, confirmLogout } = useLogout()
   }
 
   @include is(logged-out) {
-    .gm-header-bar__user {
+    .#{$BEM_PREFIX}-header-bar__user {
       color: var(--el-text-color-placeholder);
     }
   }

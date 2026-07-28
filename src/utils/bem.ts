@@ -5,16 +5,23 @@
 // - 本工具：在运行时拼接类名并返回字符串（适合 :class / class 动态控制场景）
 //
 // 命名规则（对齐 Element Plus / Vant 等 Vue 生态主流约定）：
-// - Block：      `gm-{name}`            （gm 前缀：项目私有组件标识）
-// - Block 后缀： `gm-{name}-{suffix}`   （同一 Block 的多个变体）
-// - Element：    `gm-{name}__{element}`
-// - Modifier：   `gm-{name}--{modifier}`
-// - State：      `is-{state}`          （独立类名，通过 `is()` 生成）
+// - Block：      `{prefix}-{name}`            （前缀来自 `VITE_BEM_PREFIX`，默认 `gm`）
+// - Block 后缀： `{prefix}-{name}-{suffix}`   （同一 Block 的多个变体）
+// - Element：    `{prefix}-{name}__{element}`
+// - Modifier：   `{prefix}-{name}--{modifier}`
+// - State：      `is-{state}`                 （独立类名，通过 `is()` 生成）
+//
+// 前缀可通过环境变量 `VITE_BEM_PREFIX` 调整（如改为 `''` 输出无前缀类名）。
+// SCSS 端同名变量由 vite.config.ts 的 `additionalData` 同步注入，保证两套工具输出对齐。
+
+// 模块加载时一次性读取 env，避免每次 createNamespace 重复解引用 import.meta.env。
+// vitest 默认不注入 VITE_* 变量，单测中用 vi.stubEnv('VITE_BEM_PREFIX', 'custom') mock。
+const BEM_PREFIX: string = import.meta.env.VITE_BEM_PREFIX ?? 'gm'
 
 /**
  * 创建 BEM 类名命名空间。
  *
- * @param name Block 名（不含 `gm-` 前缀），如 `'button'`
+ * @param name Block 名（不含前缀），如 `'button'`
  * @returns 一组拼接函数：`b / e / m / be / bm / em / bem / is`
  *
  * @example
@@ -41,7 +48,8 @@
  * ```
  */
 export function createNamespace(name: string) {
-  const prefixName = `gm-${name}`
+  // 空字符串前缀 → 直接用 name，避免出现 '-button' 这种多余连字符。
+  const prefixName = BEM_PREFIX ? `${BEM_PREFIX}-${name}` : name
   return createBEM(prefixName)
 }
 

@@ -126,7 +126,20 @@ export default defineConfig({
       // SCSS 'new-global' deprecation：Dart Sass 1.78+ 警告 "b() 内 !global 设新变量"，
       // 由于 bem mixin 设计依赖此模式但每个 <style scoped> 是独立 stylesheet 根，
       // 全局静默该 deprecation 不影响 2.0 升级（届时需重构 bem mixin 不依赖 !global）。
-      scss: { silenceDeprecations: ['new-global'] },
+      //
+      // additionalData 注入到每个 <style lang="scss"> / .scss 文件开头，让 bem mixin
+      // 通过 $BEM_PREFIX 自动拼前缀；与 src/utils/bem.ts 的 import.meta.env.VITE_BEM_PREFIX
+      // 共享同一来源（环境变量，未设置时回退 'gm' 保持向后兼容）。
+      //
+      // 关键技术点：sass 的 @use 模块化语义要求「变量只在 module 内部定义」，
+      // 如果调用方 namespace 也声明 $BEM_PREFIX，会报 "This module and the new module
+      // both define" 编译错误。解决方案：用 sass 的 with 语法把变量值注入到 bem 模块
+      // 内部的 !default 兜底；bem.scss 内部用 !default，未传时回退 'gm'（单测/手写 SCSS）。
+      // 调用方文件因此**不要再**写 @use 'bem'，避免重复引入——由本 additionalData 统一引入。
+      scss: {
+        silenceDeprecations: ['new-global'],
+        additionalData: `@use '@/assets/styles/mixins/bem' as * with ($BEM_PREFIX: '${process.env.VITE_BEM_PREFIX ?? 'gm'}');\n`,
+      },
       less: { javascriptEnabled: true },
     },
   },

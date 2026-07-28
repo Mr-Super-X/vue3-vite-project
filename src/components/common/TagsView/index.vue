@@ -108,9 +108,12 @@ function menuAction(action: 'close-others' | 'close-all'): void {
 </template>
 
 <style lang="scss" scoped>
-@use '@/assets/styles/mixins/bem' as *;
-
-@include b(gm-tags-view) {
+// 前缀由 vite.config.ts 通过 additionalData 注入 $BEM_PREFIX（默认 'gm'）。
+// 想改全站 BEM 前缀：改 .env 中的 VITE_BEM_PREFIX 即可，TS/JS 与 SCSS 同步生效。
+//
+// 注意：bem mixin 由 additionalData 中的 `@use ... with` 引入，本文件不要再 @use 'bem'，
+// 否则 sass 会报重复引入错误。
+@include b(tags-view) {
   display: flex;
   align-items: center;
   height: var(--tags-view-height, 36px);

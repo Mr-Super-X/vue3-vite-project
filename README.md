@@ -540,17 +540,18 @@ pnpm build
 
 ### 环境变量
 
-| 变量                     | 说明                                                                                                                         | 默认值           |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| `VITE_APP_TITLE`         | 应用标题首屏占位（`src/main.ts` 初始化；登录后由路由 `meta.title` 覆盖）                                                     | 工贸统一登录门户 |
-| `VITE_API_BASE_URL`      | API 基础 URL（baseURL，前缀统一管理）                                                                                        | `/api`           |
-| `VITE_USE_MOCK`          | mock 数据开关（`vite.config.ts` viteMockServe 读取；`true`/未设=启用，`false`=关闭用于联调真后端）                           | dev 默认开启     |
-| `VITE_MENU_SOURCE`       | 菜单加载模式（`local` / `remote`，未设置时默认 `remote`）                                                                    | `remote`         |
-| `VITE_HISTORY_MODE`      | 路由历史模式（`web` / `hash`，用于子路径或静态托管部署）                                                                     | `web`            |
-| `VITE_BASE`              | 路由部署基础路径（必须以 `/` 开头和结尾）                                                                                    | `/`              |
-| `VITE_STORAGE_NAMESPACE` | storage 命名空间（隔离多项目共用 localStorage）                                                                              | `gm-portal-fe`   |
-| `VITE_BRAND_COLOR`       | 业务品牌色（HEX，覆盖 Element Plus 默认蓝 `#409eff`，含灯色阶联动，详见 [docs/06-主题管理规范.md](docs/06-主题管理规范.md)） | `#409eff`        |
-| `VITE_QUIET_DEV`         | 关闭 dev 模式 GlobalComponents 自动注册徽章（专注调试时减少噪音，详见 `src/components/index.ts`）                            | 不设 = 输出徽章  |
+| 变量                     | 说明                                                                                                                                                          | 默认值           |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `VITE_APP_TITLE`         | 应用标题首屏占位（`src/main.ts` 初始化；登录后由路由 `meta.title` 覆盖）                                                                                      | 工贸统一登录门户 |
+| `VITE_API_BASE_URL`      | API 基础 URL（baseURL，前缀统一管理）                                                                                                                         | `/api`           |
+| `VITE_USE_MOCK`          | mock 数据开关（`vite.config.ts` viteMockServe 读取；`true`/未设=启用，`false`=关闭用于联调真后端）                                                            | dev 默认开启     |
+| `VITE_MENU_SOURCE`       | 菜单加载模式（`local` / `remote`，未设置时默认 `remote`）                                                                                                     | `remote`         |
+| `VITE_HISTORY_MODE`      | 路由历史模式（`web` / `hash`，用于子路径或静态托管部署）                                                                                                      | `web`            |
+| `VITE_BASE`              | 路由部署基础路径（必须以 `/` 开头和结尾）                                                                                                                     | `/`              |
+| `VITE_STORAGE_NAMESPACE` | storage 命名空间（隔离多项目共用 localStorage）                                                                                                               | `gm-portal-fe`   |
+| `VITE_BRAND_COLOR`       | 业务品牌色（HEX，覆盖 Element Plus 默认蓝 `#409eff`，含灯色阶联动，详见 [docs/06-主题管理规范.md](docs/06-主题管理规范.md)）                                  | `#409eff`        |
+| `VITE_QUIET_DEV`         | 关闭 dev 模式 GlobalComponents 自动注册徽章（专注调试时减少噪音，详见 `src/components/index.ts`）                                                             | 不设 = 输出徽章  |
+| `VITE_BEM_PREFIX`        | BEM 类名前缀（同时影响 TS 端 `createNamespace` 与 SCSS `bem mixin`；改一处即全站类名同步切换，详见 `src/utils/bem.ts` + `src/assets/styles/mixins/bem.scss`） | `gm`             |
 
 > 环境变量读取：项目内显式通过 `import.meta.env.VITE_XXX` 访问。`baseURL` / `storage namespace` 单一来源在 `src/api/http.ts` 和 `src/utils/storage.ts`，不在各业务模块分散。
 
