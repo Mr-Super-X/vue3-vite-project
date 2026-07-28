@@ -1,26 +1,21 @@
 <script setup lang="ts">
 // 门户头部：背景图 + 品牌区（logo + 标语）+ 导航区（菜单 + 当前用户）
 // 整图规格：1920x180（src/layouts/portal/images/layout-head-bg.png），内容宽度 1400，在 1920 视口下左右各 260 留白
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
 import { useUserStore } from '@/store/modules/user'
 import { PORTAL_NAV } from '@/layouts/portal/config/nav'
-import type { PortalNavItem } from '@/layouts/portal/config/types'
+import PortalNav from './PortalNav.vue'
+
+const bem = createNamespace('portal-header')
 
 const userStore = useUserStore()
-const route = useRoute()
-
-const navItems = computed<PortalNavItem[]>(() =>
-  PORTAL_NAV.map((item) => ({ ...item, active: item.path === route.path }))
-)
 </script>
 
 <template>
-  <header class="portal-header" role="banner">
-    <div class="portal-header__inner">
-      <a class="portal-header__brand" href="/" aria-label="省工贸安全监管和监测预警系统">
+  <header :class="bem.b()" role="banner">
+    <div :class="bem.e('inner')">
+      <a :class="bem.e('brand')" href="/" aria-label="省工贸安全监管和监测预警系统">
         <img
-          class="portal-header__logo"
+          :class="bem.e('logo')"
           src="@/layouts/portal/images/logo.png"
           alt=""
           width="671"
@@ -28,36 +23,27 @@ const navItems = computed<PortalNavItem[]>(() =>
         />
       </a>
       <img
-        class="portal-header__slogan"
+        :class="bem.e('slogan')"
         src="@/layouts/portal/images/biaoyu.png"
         alt=""
         width="252"
         height="80"
       />
 
-      <nav class="portal-header__nav" aria-label="主导航">
-        <ul class="portal-header__menu">
-          <li
-            v-for="item in navItems"
-            :key="item.key"
-            :class="['portal-header__item', { active: item.active }]"
-          >
-            <a :href="item.path">{{ item.label }}</a>
-            <span v-if="item.active" class="portal-header__indicator" aria-hidden="true" />
-          </li>
-        </ul>
-        <div class="portal-header__user">
-          <span class="portal-header__avatar">{{ userStore.profile?.name?.charAt(0) ?? '?' }}</span>
-          <span class="portal-header__name">{{ userStore.profile?.name ?? '游客' }}</span>
-          <span class="portal-header__caret" aria-hidden="true">▾</span>
+      <nav :class="bem.e('nav')" aria-label="主导航">
+        <PortalNav :items="PORTAL_NAV" />
+        <div :class="bem.e('user')">
+          <span :class="bem.e('avatar')">{{ userStore.profile?.name?.charAt(0) ?? '?' }}</span>
+          <span :class="bem.e('name')">{{ userStore.profile?.name ?? '游客' }}</span>
+          <span :class="bem.e('caret')" aria-hidden="true">▾</span>
         </div>
       </nav>
     </div>
   </header>
 </template>
 
-<style lang="scss" scoped>
-.portal-header {
+<style lang="scss">
+.gm-portal-header {
   width: 100%;
   height: var(--portal-header-h);
   background: url('@/layouts/portal/images/layout-head-bg.png') center bottom / 1920px 180px
@@ -104,52 +90,6 @@ const navItems = computed<PortalNavItem[]>(() =>
     align-items: center;
     justify-content: space-between;
     border-top: 1px solid var(--portal-divider);
-  }
-
-  &__menu {
-    display: flex;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  &__item {
-    position: relative;
-    height: 44px;
-    line-height: 44px;
-    margin-right: 80px;
-    font-size: 20px;
-    font-family: 'PingFang SC', 'Alibaba PuHuiTi', sans-serif;
-
-    &:last-child {
-      margin-right: 0;
-    }
-
-    a {
-      color: rgba(255, 255, 255, 0.8);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    &.active a {
-      color: #fff;
-      font-weight: 500;
-    }
-
-    &:hover a {
-      color: #fff;
-    }
-  }
-
-  &__indicator {
-    position: absolute;
-    left: 50%;
-    bottom: 0;
-    width: 40px;
-    height: 4px;
-    border-radius: 2px;
-    background: #fff;
-    transform: translateX(-50%);
   }
 
   &__user {

@@ -79,6 +79,8 @@ export default defineConfig({
         { from: '@/composables/useLogout', imports: [{ name: 'useLogout' }] },
         { from: '@/composables/useRequest', imports: [{ name: 'useRequest' }] },
         { from: '@/composables/useAppRouter', imports: [{ name: 'useAppRouter' }] },
+        // 业务侧高频 utils（详见 src/utils/*）
+        { from: '@/utils/bem', imports: [{ name: 'createNamespace' }] },
       ],
       resolvers: [ElementPlusResolver()],
       dts: 'src/types/auto-imports.d.ts',
