@@ -159,9 +159,9 @@ function handleSelect(index: string): void {
     }
   }
 
-  // 折叠箭头颜色与父级保持一致
+  // 折叠箭头隐藏
   :deep(.el-sub-menu__icon-arrow) {
-    color: rgba(255, 255, 255, 0.8);
+    display: none;
   }
 
   &__label {
