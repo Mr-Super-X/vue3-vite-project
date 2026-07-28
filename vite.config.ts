@@ -43,6 +43,7 @@ import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import { viteMockServe } from 'vite-plugin-mock'
 import { visualizer } from 'rollup-plugin-visualizer'
+import { cleanMockBundled } from './scripts/vite-plugin-clean-mock'
 
 // 第三方库 vendor chunk 分组配置（顺序敏感——先匹配先返回）
 // 新增分组只需在此处追加一项，无需修改 manualChunks 内部逻辑
@@ -95,6 +96,8 @@ export default defineConfig({
       enable: process.env.VITE_USE_MOCK !== 'false',
       watchFiles: true,
     }),
+    // 清理 vite-plugin-mock 在 mock/ 生成的 _*.bundled_*.mjs 临时文件
+    cleanMockBundled(),
     // 包体积分析（默认关闭，通过 ANALYZE=true 启用）
     // peerDeps 支持 rolldown 1.x（Vite 8 用），无需额外配置
     ...(process.env.ANALYZE === 'true'

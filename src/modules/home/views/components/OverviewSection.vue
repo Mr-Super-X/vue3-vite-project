@@ -1,55 +1,139 @@
 <script setup lang="ts">
+// 数据总览：标题 + 周期切换 + 2+3 卡片网格
+// 规格：标题 24px 高 + 周期 28px 高 / 第一行 2 卡 688x170 / 第二行 3 卡 450x170
+import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { usePortalOverviewStore } from '@/modules/home/store/portal-overview'
 import OverviewCard from './OverviewCard.vue'
 import OverviewCardSkeleton from './OverviewCardSkeleton.vue'
 import OverviewErrorState from './OverviewErrorState.vue'
 import OverviewEmptyState from './OverviewEmptyState.vue'
+import type { OverviewCardDto } from '@/modules/home/types/portal-overview'
+
+interface OverviewCardView extends OverviewCardDto {
+  iconPath: string
+}
 
 const store = usePortalOverviewStore()
 const { cards, loading, error } = storeToRefs(store)
+
+const period = ref<'custom' | 'month' | 'quarter' | 'year'>('month')
+const periods = [
+  { key: 'custom', label: '自定义' },
+  { key: 'month', label: '本月' },
+  { key: 'quarter', label: '本季' },
+  { key: 'year', label: '本年' },
+] as const
+
+// 将 5 张卡片拆分到两行：第一行 2 张（更大），第二行 3 张（更小）
+const row1 = computed<OverviewCardView[]>(() =>
+  cards.value.slice(0, 2).map((c) => ({ ...c, iconPath: cardIconPath(c.code) }))
+)
+const row2 = computed<OverviewCardView[]>(() =>
+  cards.value.slice(2, 5).map((c) => ({ ...c, iconPath: cardIconPath(c.code) }))
+)
+
+// card.code → 图标资源路径（data-overview-01..05.png，存于 modules/home/images）
+function cardIconPath(code: string): string {
+  switch (code) {
+    case 'law':
+      return '../../images/data-overview-01.png'
+    case 'monitor':
+      return '../../images/data-overview-02.png'
+    case 'safety':
+      return '../../images/data-overview-03.png'
+    case 'training':
+      return '../../images/data-overview-04.png'
+    case 'hazard':
+      return '../../images/data-overview-05.png'
+    default:
+      return '../../images/data-overview-01.png'
+  }
+}
 </script>
 
 <template>
   <section class="overview" aria-labelledby="overview-title">
     <header class="overview__header">
       <h2 id="overview-title" class="overview__heading">
-        <span class="overview__dot" aria-hidden="true" />
+        <img
+          class="overview__icon"
+          src="@/modules/home/images/data-overview-01.png"
+          alt=""
+          width="24"
+          height="24"
+        />
         数据总览
       </h2>
       <div class="overview__period">
-        <button type="button" class="overview__chip">自定义</button>
-        <button type="button" class="overview__chip active">本月</button>
-        <button type="button" class="overview__chip">本季</button>
-        <button type="button" class="overview__chip">本年</button>
+        <button
+          type="button"
+          :class="['overview__custom', { active: period === 'custom' }]"
+          @click="period = 'custom'"
+        >
+          自定义
+          <span class="overview__custom-icon" aria-hidden="true">📅</span>
+        </button>
+        <div class="overview__segment" role="tablist">
+          <button
+            v-for="p in periods.slice(1)"
+            :key="p.key"
+            type="button"
+            role="tab"
+            :class="['overview__chip', { active: period === p.key }]"
+            @click="period = p.key"
+          >
+            {{ p.label }}
+          </button>
+        </div>
       </div>
     </header>
 
-    <div v-if="loading" class="overview__grid">
-      <OverviewCardSkeleton v-for="i in 5" :key="i" />
+    <div v-if="loading" class="overview__rows">
+      <div class="overview__row overview__row--first">
+        <OverviewCardSkeleton v-for="i in 2" :key="`r1s-${i}`" />
+      </div>
+      <div class="overview__row overview__row--second">
+        <OverviewCardSkeleton v-for="i in 3" :key="`r2s-${i}`" />
+      </div>
     </div>
 
     <OverviewErrorState v-else-if="error" :message="error!.message" @retry="store.fetch()" />
 
     <OverviewEmptyState v-else-if="cards.length === 0" />
 
-    <div v-else class="overview__grid">
-      <OverviewCard
-        v-for="card in cards"
-        :key="card.code"
-        :title="card.title"
-        :icon-name="card.iconName"
-        :icon-bg="card.iconBg"
-        :metrics="card.metrics"
-        :view-detail-path="card.viewDetailPath"
-      />
+    <div v-else class="overview__rows">
+      <div class="overview__row overview__row--first">
+        <OverviewCard
+          v-for="card in row1"
+          :key="card.code"
+          :title="card.title"
+          :icon-path="card.iconPath"
+          :icon-bg="card.iconBg"
+          :metrics="card.metrics"
+          :view-detail-path="card.viewDetailPath"
+        />
+      </div>
+      <div class="overview__row overview__row--second">
+        <OverviewCard
+          v-for="card in row2"
+          :key="card.code"
+          :title="card.title"
+          :icon-path="card.iconPath"
+          :icon-bg="card.iconBg"
+          :metrics="card.metrics"
+          :view-detail-path="card.viewDetailPath"
+        />
+      </div>
     </div>
   </section>
 </template>
 
 <style lang="scss" scoped>
 .overview {
-  margin: 24px 0;
+  max-width: var(--portal-max-width);
+  margin: 0 auto;
+  padding: 44px 0 24px;
 
   &__header {
     display: flex;
@@ -60,46 +144,89 @@ const { cards, loading, error } = storeToRefs(store)
 
   &__heading {
     margin: 0;
-    font-size: 20px;
-    color: #303133;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 8px;
+    font-size: 24px;
+    font-weight: 500;
+    color: #000;
+    line-height: 34px;
   }
 
-  &__dot {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--el-color-primary);
+  &__icon {
+    width: 24px;
+    height: 24px;
   }
 
   &__period {
     display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__custom {
+    width: 140px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     gap: 8px;
+    background: #fff;
+    border: 1px solid #e6e6e6;
+    border-radius: 4px;
+    color: #8c8c8c;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  &__custom-icon {
+    font-size: 12px;
+  }
+
+  &__segment {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid #e6e6e6;
+    border-radius: 4px;
+    overflow: hidden;
+    background: #fff;
   }
 
   &__chip {
-    padding: 4px 12px;
+    width: 44px;
+    height: 28px;
     background: #fff;
-    border: 1px solid #dcdfe6;
-    border-radius: 4px;
-    font-size: 13px;
-    color: #606266;
+    color: #8c8c8c;
+    border: none;
+    font-size: 14px;
+    font-weight: 400;
     cursor: pointer;
+    line-height: 24px;
 
     &.active {
-      background: #ecf5ff;
-      border-color: #409eff;
-      color: #409eff;
+      background: rgba(22, 119, 255, 0.1);
+      color: #1677ff;
+      font-weight: 500;
     }
   }
 
-  &__grid {
+  &__rows {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  &__row {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 16px;
+    gap: 24px;
+
+    &--first {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    &--second {
+      grid-template-columns: repeat(3, 1fr);
+    }
   }
 }
 </style>

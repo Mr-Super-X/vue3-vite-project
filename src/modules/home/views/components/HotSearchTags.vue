@@ -30,23 +30,28 @@ defineEmits<{
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  font-size: 13px;
+  font-size: 14px;
 
   &__label {
-    color: #909399;
+    color: #262626;
+    line-height: 20px;
   }
 
   &__tag {
-    padding: 4px 12px;
-    background: #f0f6ff;
-    border: 1px solid #d6e8ff;
-    border-radius: 4px;
-    color: #409eff;
+    padding: 2px 0;
+    background: rgba(0, 0, 0, 0.15);
+    border: none;
+    border-radius: 2px;
+    color: #fff;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 14px;
+    line-height: 20px;
+    min-width: 56px;
+    padding: 0 8px;
+    height: 24px;
 
     &.active {
-      background: #409eff;
+      background: #016be6;
       color: #fff;
     }
   }

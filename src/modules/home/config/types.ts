@@ -5,3 +5,11 @@ export interface SearchTypeOption {
   label: string
   value: string
 }
+
+/**
+ * 首页底部链接分组（HomeFooter 使用）
+ */
+export interface FooterLinkGroup {
+  title: string
+  links: { label: string; href: string }[]
+}

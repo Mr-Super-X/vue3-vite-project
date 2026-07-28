@@ -1,4 +1,6 @@
 <script setup lang="ts">
+// 时间问候条：全宽 #F2F2F2 背景，左侧钟表图标 + 标语 + 日期
+// 规格：y=480..546 / 图标 18x18 / 标语 304x20 / 日期 130x17
 import { computed } from 'vue'
 
 const props = withDefaults(
@@ -23,24 +25,53 @@ const formattedDate = computed(() => {
 </script>
 
 <template>
-  <div class="date-greeting">
-    <span class="date-greeting__icon" aria-hidden="true">☕</span>
-    <p class="date-greeting__text">{{ greeting }}</p>
-    <p class="date-greeting__date">{{ formattedDate }}</p>
-  </div>
+  <section class="date-greeting" aria-label="时间问候">
+    <div class="date-greeting__inner">
+      <img
+        class="date-greeting__icon"
+        src="@/modules/home/images/rest-time.png"
+        alt=""
+        width="18"
+        height="18"
+      />
+      <p class="date-greeting__text">{{ greeting }}</p>
+      <p class="date-greeting__date">{{ formattedDate }}</p>
+    </div>
+  </section>
 </template>
 
 <style lang="scss" scoped>
 .date-greeting {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 16px 0;
-  font-size: 13px;
-  color: #606266;
+  width: 100%;
+  background: #f2f2f2;
+
+  &__inner {
+    max-width: var(--portal-max-width);
+    margin: 0 auto;
+    padding: 15px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
 
   &__icon {
-    font-size: 16px;
+    position: absolute;
+    width: 18px;
+    height: 18px;
+  }
+
+  &__text {
+    margin: 0 0 0 24px;
+    font-size: 14px;
+    color: #0d1c28;
+    line-height: 20px;
+  }
+
+  &__date {
+    margin: 0 0 0 24px;
+    font-size: 12px;
+    color: #727475;
+    line-height: 17px;
   }
 }
 </style>

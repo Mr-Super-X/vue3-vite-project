@@ -1,26 +1,10 @@
-// 政府门户首页 Portal 视觉 token
-// 目的：为 PortalLayout 提供卡片底色、banner 渐变、趋势色等不与主题冲突的常量
+// Portal 视觉 token
+// 用途：portal-layout 全局 CSS 变量；门户首页专属的卡片底色/趋势色由 home 模块自管
 
 :root {
-  // 数据卡片底色（与 Element Plus 主题解耦，portal 专属）
-  --card-law-bg: #e8f1ff; // 执法监管
-  --card-monitor-bg: #ffebe6; // 监测预警
-  --card-safety-bg: #e8f8ee; // 安评监管
-  --card-training-bg: #fff4e0; // 培训监管
-  --card-hazard-bg: #ffe8e8; // 隐患排查
-
-  // 顶部 banner 渐变
-  --banner-grad-from: #1b5bc9;
-  --banner-grad-to: #5b9bf0;
-
-  // 趋势色（按 spec：▲ 红 / ▼ 绿，颜色仅反映方向，不反映好坏）
-  --trend-up: #f56c6c;
-  --trend-down: #67c23a;
-  --trend-flat: #909399;
-
   // 布局常量
+  --portal-max-width: 1400px; // 内容区宽度（设计稿 1920 artboard，左右各 260px 留白）
+  --portal-header-h: 180px; // 顶部 = 品牌区(80px) + 间距(56px) + 导航区(44px)
   --portal-bg: #f5f7fa;
-  --portal-max-width: 1280px;
-  --portal-header-h: 64px;
-  --portal-banner-h: 144px;
+  --portal-divider: rgba(255, 255, 255, 0.2);
 }

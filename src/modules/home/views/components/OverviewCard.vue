@@ -1,14 +1,15 @@
 <script setup lang="ts">
+// 数据总览卡片（2+3 布局共用）
+// 规格：左 130px 色块区 + 右 metrics 列表（每行 42px 高）
+// iconPath 由父组件按 card.code 拼好真实 URL 传入，避免模板里动态拼接 webpack 别名
 import { computed } from 'vue'
-import * as ElIcons from '@element-plus/icons-vue'
-import type { Component } from 'vue'
 import OverviewMetricRow from './OverviewMetricRow.vue'
 import type { OverviewCardDto } from '@/modules/home/types/portal-overview'
 import { useAppRouter } from '@composables/useAppRouter'
 
 const props = defineProps<{
   title: string
-  iconName: string
+  iconPath: string
   iconBg: string
   metrics: OverviewCardDto['metrics']
   // 允许显式 undefined 透传，避开 exactOptionalPropertyTypes 严格模式
@@ -16,12 +17,7 @@ const props = defineProps<{
 }>()
 
 const { router } = useAppRouter()
-
-// iconName 取自静态 config；找不到时返回 null 让 <component> 不渲染
-const iconComponent = computed<Component | null>(() => {
-  const found = (ElIcons as Record<string, unknown>)[props.iconName]
-  return (found as Component | undefined) ?? null
-})
+const iconSrc = computed(() => new URL(props.iconPath, import.meta.url).href)
 
 function onView(): void {
   if (props.viewDetailPath) router.push(props.viewDetailPath)
@@ -30,71 +26,81 @@ function onView(): void {
 
 <template>
   <article class="ov-card" data-test="card">
-    <header class="ov-card__head">
-      <div class="ov-card__icon" :style="{ background: iconBg }">
-        <el-icon :size="24" color="#fff">
-          <component :is="iconComponent" v-if="iconComponent" />
-        </el-icon>
-      </div>
+    <div class="ov-card__art" :style="{ background: iconBg }">
+      <img class="ov-card__icon" :src="iconSrc" :alt="title" width="48" height="48" />
       <h3 class="ov-card__title">{{ title }}</h3>
-    </header>
+      <button v-if="viewDetailPath" type="button" class="ov-card__view" @click="onView">
+        <span class="ov-card__view-arrow" aria-hidden="true">▶</span>
+      </button>
+    </div>
     <div class="ov-card__body">
       <OverviewMetricRow v-for="(m, idx) in metrics" :key="idx" :metric="m" />
     </div>
-    <footer class="ov-card__foot">
-      <button v-if="viewDetailPath" type="button" class="ov-card__view" @click="onView">
-        {{ title }} ▶
-      </button>
-    </footer>
   </article>
 </template>
 
 <style lang="scss" scoped>
 .ov-card {
   background: #fff;
-  border-radius: 8px;
-  border: 1px solid #ebeef5;
-  padding: 16px;
+  border-radius: 4px;
+  box-shadow: 4px 4px 16px 0 rgba(0, 0, 0, 0.05);
+  padding: 6px;
   display: flex;
-  flex-direction: column;
+  gap: 0;
+  height: 170px;
 
-  &__head {
+  &__art {
+    flex: 0 0 130px;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 12px;
+    padding: 16px 0 14px;
+    border-radius: 4px;
+    position: relative;
   }
 
   &__icon {
     width: 48px;
     height: 48px;
-    border-radius: 8px;
-    display: grid;
-    place-items: center;
+    margin-bottom: 8px;
   }
 
   &__title {
     margin: 0;
-    font-size: 16px;
-    color: #303133;
+    font-size: 20px;
+    font-weight: 500;
+    color: #000;
+    line-height: 28px;
+  }
+
+  &__view {
+    position: absolute;
+    right: 6px;
+    bottom: 6px;
+    width: 20px;
+    height: 20px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    padding: 0;
+  }
+
+  &__view-arrow {
+    display: inline-block;
+    font-size: 10px;
+    color: #000;
+    transform: rotate(-90deg);
   }
 
   &__body {
     flex: 1;
-  }
-
-  &__foot {
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px dashed #ebeef5;
-  }
-
-  &__view {
-    background: none;
-    border: none;
-    color: #409eff;
-    cursor: pointer;
-    font-size: 13px;
+    padding: 8px 16px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
   }
 }
 </style>

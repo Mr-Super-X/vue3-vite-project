@@ -39,8 +39,13 @@ __screenshots__/
 # Vite
 *.timestamp-*-*.mjs
 
+# vite-plugin-mock 打包缓存（运行时自动清理，提交兜底屏蔽）
+mock/_*.bundled_*.mjs
+mock/_*.bundled_*.cjs
+
 # Local backup and OMC runtime state
 .claude/backups/
+.claude/tmp/
 .claude/scheduled_tasks.lock
 .omc/state/
 .omc/sessions/

@@ -33,6 +33,7 @@ function onSubmit(): void {
         {{ t.label }}
       </option>
     </select>
+    <span class="search-bar__divider" aria-hidden="true" />
     <input
       class="search-bar__input"
       :value="modelValueKeyword"
@@ -48,37 +49,60 @@ function onSubmit(): void {
 <style lang="scss" scoped>
 .search-bar {
   display: flex;
-  gap: 8px;
-  align-items: center;
+  align-items: stretch;
+  width: 874px;
+  height: 56px;
+  background: #fff;
+  border-radius: 4px;
+  overflow: hidden;
 
   &__select {
-    height: 40px;
-    padding: 0 12px;
-    border: 1px solid #dcdfe6;
-    border-radius: 4px;
-    background: #fff;
+    appearance: none;
+    background: transparent;
+    border: none;
+    padding: 0 12px 0 14px;
+    font-size: 14px;
+    color: #727475;
+    cursor: pointer;
+    min-width: 80px;
+  }
+
+  &__divider {
+    width: 1px;
+    align-self: center;
+    height: 20px;
+    background: #d8d8d8;
   }
 
   &__input {
     flex: 1;
-    height: 40px;
-    padding: 0 12px;
-    border: 1px solid #dcdfe6;
-    border-radius: 4px;
-    background: #fff;
+    border: none;
+    outline: none;
+    padding: 0 16px;
+    font-size: 14px;
+    color: #303133;
+    background: transparent;
+
+    &::placeholder {
+      color: #727475;
+    }
   }
 
   &__btn {
-    height: 40px;
-    padding: 0 24px;
-    background: #409eff;
+    width: 74px;
+    background: rgba(1, 107, 230, 0.6);
     color: #fff;
     border: none;
-    border-radius: 4px;
+    font-size: 18px;
     cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover:not(:disabled) {
+      background: #016be6;
+    }
 
     &:disabled {
-      background: #a0cfff;
+      opacity: 0.6;
       cursor: not-allowed;
     }
   }

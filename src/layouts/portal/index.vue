@@ -1,44 +1,34 @@
 <script setup lang="ts">
-import PortalTopBar from './components/PortalTopBar.vue'
-import PortalHeaderNav from './components/PortalHeaderNav.vue'
-import PortalFooter from './components/PortalFooter.vue'
-import PortalAiWidget from './components/PortalAiWidget.vue'
+// PortalLayout：限定门户专用头部 + 路由出口
+// 职责：只负责头部（由 PortalHeader 单组件承担，含品牌区与导航区），以及一行内边距留空。
+//      导航以下的所有内容（首页 hero、时间问候、数据总览、底部、AI 助手等）由 home 模块自管。
+import PortalHeader from './components/PortalHeader.vue'
 </script>
 
 <template>
   <div class="portal-layout">
-    <PortalTopBar />
-    <PortalHeaderNav />
+    <PortalHeader />
     <main class="portal-layout__main">
-      <!-- 内容区由路由决定（RouterView 即为默认 slot，未来 portal 子页可复用同一壳） -->
       <RouterView />
     </main>
-    <PortalFooter />
-    <PortalAiWidget />
   </div>
 </template>
 
 <style lang="scss">
-/*
-  注入portal-layout组件的全局样式变量（主题色、间距、圆角、尺寸、字体、阴影、动画等等），
-  注意： 这里不能给style加scoped，否则portal-layout组件的子组件无法使用这些变量
-*/
+// 非 scoped：portal-tokens 提供的 CSS 变量需对子组件可见
 @use './styles/portal-tokens.scss' as *;
 </style>
 
 <style lang="scss" scoped>
 .portal-layout {
-  display: flex;
-  flex-direction: column;
   min-height: 100vh;
   background: var(--portal-bg);
+  display: flex;
+  flex-direction: column;
 
   &__main {
-    max-width: var(--portal-max-width);
-    width: 100%;
-    margin: 0 auto;
-    padding: 24px var(--spacing-lg);
     flex: 1;
+    width: 100%;
   }
 }
 </style>

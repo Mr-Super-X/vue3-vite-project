@@ -36,6 +36,7 @@ function mountSection(opts: {
 describe('OverviewSection 三态分发', () => {
   it('Loading：渲染 5 个骨架', () => {
     const w = mountSection({ loading: true })
+    // 2 + 3 两行布局
     expect(w.findAllComponents(OverviewCardSkeleton)).toHaveLength(5)
   })
 
@@ -55,7 +56,7 @@ describe('OverviewSection 三态分发', () => {
         code: 'law',
         title: '执法监管',
         iconName: 'odometer',
-        iconBg: 'var(--x)',
+        iconBg: 'rgba(1, 107, 230, 0.10)',
         metrics: [],
       },
     ]
