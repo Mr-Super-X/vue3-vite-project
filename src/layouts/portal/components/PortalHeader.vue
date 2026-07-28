@@ -44,11 +44,15 @@ const userStore = useUserStore()
 
 <style lang="scss">
 .#{$BEM_PREFIX}-portal-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--portal-z-index-header);
   width: 100%;
   height: var(--portal-header-h);
   background: url('@/layouts/portal/images/layout-head-bg.png') center bottom / 1920px 180px
     no-repeat;
   color: #fff;
+  border-bottom: 1px solid var(--portal-divider);
 
   &__inner {
     position: relative;
@@ -89,7 +93,6 @@ const userStore = useUserStore()
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-top: 1px solid var(--portal-divider);
   }
 
   &__user {

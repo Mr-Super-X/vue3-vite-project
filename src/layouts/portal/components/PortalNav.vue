@@ -8,6 +8,8 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { PortalNavItem, PortalNavSubItem } from '@/layouts/portal/config/types'
 
+const bem = createNamespace('portal-nav')
+
 const props = defineProps<{
   items: PortalNavItem[]
 }>()
@@ -66,7 +68,7 @@ function handleSelect(index: string): void {
 
 <template>
   <el-menu
-    class="portal-nav"
+    :class="bem.b()"
     mode="horizontal"
     :default-active="activeIndex"
     :ellipsis="false"
@@ -76,7 +78,7 @@ function handleSelect(index: string): void {
     <template v-for="item in items" :key="item.key">
       <el-sub-menu v-if="item.children?.length" :index="item.key as any">
         <template #title>
-          <span class="portal-nav__label">{{ item.label }}</span>
+          <span :class="bem.e('label')">{{ item.label }}</span>
         </template>
         <el-menu-item
           v-for="child in item.children"
@@ -88,14 +90,14 @@ function handleSelect(index: string): void {
       </el-sub-menu>
 
       <el-menu-item v-else :index="item.key">
-        <span class="portal-nav__label">{{ item.label }}</span>
+        <span :class="bem.e('label')">{{ item.label }}</span>
       </el-menu-item>
     </template>
   </el-menu>
 </template>
 
 <style lang="scss" scoped>
-.portal-nav {
+.#{$BEM_PREFIX}-portal-nav {
   // 顶部导航透明背景（叠在 header 蓝渐变上）
   background: transparent;
   border-bottom: none;
@@ -107,8 +109,8 @@ function handleSelect(index: string): void {
 
   :deep(.el-menu-item),
   :deep(.el-sub-menu__title) {
-    height: 44px;
-    line-height: 44px;
+    height: 52px;
+    line-height: 52px;
     padding: 0 !important;
     margin-right: 80px;
     color: rgba(255, 255, 255, 0.8);

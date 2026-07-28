@@ -27,8 +27,8 @@ function onSubmit(): void {
   <section class="hero" aria-label="门户主页横幅">
     <div class="hero__inner">
       <div class="hero__art">
-        <h2 class="hero__title">安全第一 预防为主</h2>
-        <p class="hero__slogan">{{ HERO_CONFIG.slogan }}</p>
+        <!-- <h2 class="hero__title">安全第一 预防为主</h2> -->
+        <!-- <p class="hero__slogan">{{ HERO_CONFIG.slogan }}</p> -->
       </div>
       <div class="hero__panel">
         <NoticePanel />
@@ -102,8 +102,8 @@ function onSubmit(): void {
 
   &__search {
     position: absolute;
-    left: 0;
-    bottom: 16px;
+    left: 25px;
+    bottom: 60px;
     width: 874px;
     display: flex;
     flex-direction: column;

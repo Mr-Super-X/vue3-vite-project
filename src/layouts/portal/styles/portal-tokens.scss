@@ -7,4 +7,5 @@
   --portal-header-h: 180px; // 顶部 = 品牌区(80px) + 间距(56px) + 导航区(44px)
   --portal-bg: #f5f7fa;
   --portal-divider: rgba(255, 255, 255, 0.2);
+  --portal-z-index-header: 1000; // 顶部导航栏 z-index
 }
