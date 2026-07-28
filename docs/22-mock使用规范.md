@@ -390,14 +390,14 @@ vi.mock('@/api/modules/user', () => ({
 
 ## 14. 常见坑
 
-| 症状                                | 原因                                                        | 解法                                   |
-| ----------------------------------- | ----------------------------------------------------------- | -------------------------------------- |
-| mock 修改后没生效                   | dev server 未重启 + watchFiles 未开                         | `vite.config.ts` 加 `watchFiles: true` |
-| prod 包包含 mock 残留               | 用了 vite-plugin-mock 但未 `NODE_ENV !== 'production'` 守卫 | 检查 `vite.config.ts`                  |
-| async body 不生效                   | vite-plugin-mock 不支持 async                               | 改用同步 + `timeout: ms`               |
-| params 是字符串                     | URL 动态参数永远是 string                                   | `Number(params.id)` 手动转             |
-| 后端字段名改了但前端没改            | mock 与生产 schema 漂移                                     | 用 Zod schema 共享类型                 |
-| 远程菜单 mock 报"未注册的路由 name" | name 不在 COMPONENT_REGISTRY                                | 先在 modules/<m>/routes/index.ts 声明  |
+| 症状                                | 原因                                                                                                    | 解法                                   |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| mock 修改后没生效                   | dev server 未重启 + watchFiles 未开                                                                     | `vite.config.ts` 加 `watchFiles: true` |
+| prod 包包含 mock 残留               | vite build 不读 `.env.development`，未设/非 `'false'` 自动关闭；如遇 prod mock 残留，多半是代码静态引用 | 检查 `vite.config.ts` 的 `enable` 契约 |
+| async body 不生效                   | vite-plugin-mock 不支持 async                                                                           | 改用同步 + `timeout: ms`               |
+| params 是字符串                     | URL 动态参数永远是 string                                                                               | `Number(params.id)` 手动转             |
+| 后端字段名改了但前端没改            | mock 与生产 schema 漂移                                                                                 | 用 Zod schema 共享类型                 |
+| 远程菜单 mock 报"未注册的路由 name" | name 不在 COMPONENT_REGISTRY                                                                            | 先在 modules/<m>/routes/index.ts 声明  |
 
 ## 🔗 相关文档
 

@@ -89,7 +89,7 @@
 
 ## 🧰 SCSS mixin（推荐写法）
 
-> 工具文件：`src/assets/styles/mixins/bem.scss`（已落地，~70 行）
+> 工具文件：`src/assets/styles/mixins/bem.scss`（已落地，约 90 行）
 > 与手写 BEM 字符串 100% 等价，仅是更优雅的书写方式。
 
 ### mixin 一览
