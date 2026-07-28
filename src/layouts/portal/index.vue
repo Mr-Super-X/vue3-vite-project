@@ -3,12 +3,14 @@
 // 职责：只负责头部（由 PortalHeader 单组件承担，含品牌区与导航区），以及一行内边距留空。
 //      导航以下的所有内容（首页 hero、时间问候、数据总览、底部、AI 助手等）由 home 模块自管。
 import PortalHeader from './components/PortalHeader.vue'
+
+const bem = createNamespace('portal-layout')
 </script>
 
 <template>
-  <div class="portal-layout">
+  <div :class="bem.b()">
     <PortalHeader />
-    <main class="portal-layout__main">
+    <main :class="bem.e('main')">
       <RouterView />
     </main>
   </div>
@@ -20,7 +22,7 @@ import PortalHeader from './components/PortalHeader.vue'
 </style>
 
 <style lang="scss" scoped>
-.portal-layout {
+.#{$BEM_PREFIX}-portal-layout {
   min-height: 100vh;
   background: var(--portal-bg);
   display: flex;
