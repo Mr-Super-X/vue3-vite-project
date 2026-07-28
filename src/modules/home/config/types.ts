@@ -7,9 +7,9 @@ export interface SearchTypeOption {
 }
 
 /**
- * 首页底部链接分组（HomeFooter 使用）
+ * 首页底部单个链接（HomeFooter 使用）
  */
-export interface FooterLinkGroup {
-  title: string
-  links: { label: string; href: string }[]
+export interface FooterLink {
+  label: string
+  href: string
 }

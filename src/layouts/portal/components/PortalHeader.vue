@@ -2,12 +2,21 @@
 // 门户头部：背景图 + 品牌区（logo + 标语）+ 导航区（菜单 + 当前用户）
 // 整图规格：1920x180（src/layouts/portal/images/layout-head-bg.png），内容宽度 1400，在 1920 视口下左右各 260 留白
 import { useUserStore } from '@/store/modules/user'
+import { useLogout } from '@composables/useLogout'
+import { ArrowDown, SwitchButton } from '@element-plus/icons-vue'
 import { PORTAL_NAV } from '@/layouts/portal/config/nav'
 import PortalNav from './PortalNav.vue'
 
 const bem = createNamespace('portal-header')
 
 const userStore = useUserStore()
+const { loggingOut, confirmLogout } = useLogout()
+
+async function onCommand(cmd: string) {
+  if (cmd === 'logout') {
+    await confirmLogout()
+  }
+}
 </script>
 
 <template>
@@ -32,11 +41,21 @@ const userStore = useUserStore()
 
       <nav :class="bem.e('nav')" aria-label="主导航">
         <PortalNav :items="PORTAL_NAV" />
-        <div :class="bem.e('user')">
-          <span :class="bem.e('avatar')">{{ userStore.profile?.name?.charAt(0) ?? '?' }}</span>
-          <span :class="bem.e('name')">{{ userStore.profile?.name ?? '游客' }}</span>
-          <span :class="bem.e('caret')" aria-hidden="true">▾</span>
-        </div>
+        <el-dropdown :class="bem.e('dropdown')" trigger="click" @command="onCommand">
+          <div :class="bem.e('user')" tabindex="0" role="button" aria-haspopup="menu">
+            <span :class="bem.e('avatar')">{{ userStore.profile?.name?.charAt(0) ?? '?' }}</span>
+            <span :class="bem.e('name')">{{ userStore.profile?.name ?? '游客' }}</span>
+            <el-icon :class="bem.e('caret')"><ArrowDown /></el-icon>
+          </div>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="logout" :disabled="loggingOut">
+                <el-icon class="el-icon--left"><SwitchButton /></el-icon>
+                <span>{{ loggingOut ? '退出中...' : $t('auth.logout') }}</span>
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </nav>
     </div>
   </header>
@@ -95,12 +114,24 @@ const userStore = useUserStore()
     justify-content: space-between;
   }
 
+  &__dropdown {
+    display: inline-flex;
+  }
+
   &__user {
     display: flex;
     align-items: center;
     gap: 8px;
-    cursor: pointer;
+    padding: 0 12px;
+    border-radius: 4px;
     font-size: 14px;
+    transition: background 0.2s ease;
+    outline: none;
+
+    &:hover,
+    &:focus-visible {
+      background: rgba(255, 255, 255, 0.08);
+    }
   }
 
   &__avatar {
@@ -120,8 +151,23 @@ const userStore = useUserStore()
   }
 
   &__caret {
+    display: inline-flex;
+    align-items: center;
     color: rgba(255, 255, 255, 0.6);
     font-size: 12px;
+    transition: transform 0.2s ease;
+  }
+
+  &__dropdown:hover &__caret,
+  &__dropdown:focus-within &__caret {
+    transform: rotate(180deg);
+  }
+
+  :deep(.el-dropdown-menu__item:not(.is-disabled)) {
+    &:hover {
+      background: rgba(56, 189, 248, 0.15) !important;
+      color: #fff !important;
+    }
   }
 }
 </style>

@@ -483,6 +483,16 @@
   - 解决 `import GlobalComponents from '@components'` 报 ts(2307) 找不到模块的问题
   - 维护说明：新增 src 子目录时同时更新 SRC_DIR_ALIASES（vite）+ tsconfig.app.json paths（TypeScript）
 
+### refactor(home) — 2026-07-28
+
+HomeFooter 系统链接改为平铺一行 5 个布局，去掉分组容器。
+
+- `src/modules/home/config/types.ts`：`FooterLinkGroup` 重构为 `FooterLink`（单个链接 `{ label; href }`），去除 `title + links` 分组结构
+- `src/modules/home/config/footer.ts`：`FOOTER_GROUPS` 数组替换为 `FOOTER_LINKS` 平铺数组，合并原两组 10 条链接保持原顺序与重复项（确保 5×2 网格无空缺）
+- `src/modules/home/views/components/HomeFooter.vue`：模板从嵌套两层 `v-for`（group → column → link）改为单层 `v-for`；CSS `__column` 容器样式移除，链接样式合并到 `__item`；`__list` grid 保持 `repeat(5, 1fr)` 不变，10 个链接自动排成两行
+
+无上下游影响：`FOOTER_GROUPS` / `FooterLinkGroup` 仅在 `HomeFooter.vue` 内部使用（已 Grep 确认），`Index.vue` 仅引用组件本身。
+
 ## v1.0.0 - 2026-07-17
 
 ### Added

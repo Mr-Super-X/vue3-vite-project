@@ -1,25 +1,19 @@
 <script setup lang="ts">
 // 首页底部：全宽色块 + 横向链接矩阵 + 版权信息
 // 规格：源自 MeaXure 1920 artboard；上块 (links) y=994..1216 / 下块 (copyright) y=1216..1288
-import { FOOTER_GROUPS, FOOTER_COPYRIGHT, FOOTER_BEIAN } from '@/modules/home/config/footer'
+import { FOOTER_LINKS, FOOTER_COPYRIGHT, FOOTER_BEIAN } from '@/modules/home/config/footer'
 </script>
 
 <template>
   <footer class="home-footer">
     <section class="home-footer__links">
       <div class="home-footer__links-inner">
-        <div class="home-footer__group">
-          <h4 class="home-footer__group-title">系统链接</h4>
-          <ul class="home-footer__list">
-            <li v-for="(group, gi) in FOOTER_GROUPS" :key="gi">
-              <ul class="home-footer__column">
-                <li v-for="(link, li) in group.links" :key="`${gi}-${li}`">
-                  <a :href="link.href" target="_blank" rel="noopener">{{ link.label }}</a>
-                </li>
-              </ul>
-            </li>
-          </ul>
-        </div>
+        <h4 class="home-footer__group-title">系统链接</h4>
+        <ul class="home-footer__list">
+          <li v-for="(link, li) in FOOTER_LINKS" :key="li" class="home-footer__item">
+            <a :href="link.href" target="_blank" rel="noopener">{{ link.label }}</a>
+          </li>
+        </ul>
       </div>
     </section>
     <section class="home-footer__copyright">
@@ -66,17 +60,11 @@ import { FOOTER_GROUPS, FOOTER_COPYRIGHT, FOOTER_BEIAN } from '@/modules/home/co
     padding: 0;
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 0 33px;
+    row-gap: 16px;
+    column-gap: 33px;
   }
 
-  &__column {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-
+  &__item {
     a {
       color: #45484b;
       font-size: 12px;
