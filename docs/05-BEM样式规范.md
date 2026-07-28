@@ -89,25 +89,95 @@
 
 ## 🧰 SCSS mixin（推荐写法）
 
-> 工具文件：`src/assets/styles/mixins/bem.scss`（已落地，约 90 行）
+> 工具文件：`src/assets/styles/mixins/bem.scss`（已落地，约 110 行）
+> 与 `src/utils/bem.ts` 的 `createNamespace()` 共享同一套前缀机制（详见下方"前缀可配置"章节）。
 > 与手写 BEM 字符串 100% 等价，仅是更优雅的书写方式。
 
 ### mixin 一览
 
-| mixin           | 用途                       | 生成示例                         |
-| --------------- | -------------------------- | -------------------------------- |
-| `b($block)`     | 注册 Block 并打开作用域    | `.user-card { ... }`             |
-| `e($element)`   | 注册 Element               | `.user-card__avatar { ... }`     |
-| `m($modifier)`  | 注册 Block 修饰符          | `.user-card--featured { ... }`   |
-| `is($state)`    | 注册 State（BEM 扩展）     | `.user-card.is-active { ... }`   |
-| `when($suffix)` | 注册主题/场景前缀          | `.user-card--when-light { ... }` |
-| `reset-block`   | 重置块名作用域（仅测试用） | —                                |
+| mixin           | 用途                                      | 生成示例                                          |
+| --------------- | ----------------------------------------- | ------------------------------------------------- |
+| `b($block)`     | 注册 Block 并打开作用域（**自动加前缀**） | `.gm-user-card { ... }`（前缀来自 `$BEM_PREFIX`） |
+| `e($element)`   | 注册 Element（基于当前 Block）            | `.gm-user-card__avatar { ... }`                   |
+| `m($modifier)`  | 注册 Block 修饰符                         | `.gm-user-card--featured { ... }`                 |
+| `is($state)`    | 注册 State（BEM 扩展）                    | `.gm-user-card.is-active { ... }`                 |
+| `when($suffix)` | 注册主题/场景前缀                         | `.gm-user-card--when-light { ... }`               |
+| `reset-block`   | 重置块名作用域（仅测试用）                | —                                                 |
+
+> **重要**：`b($block)` 的 `$block` 参数**只传基础名**（如 `user-card`），不要传完整前缀（如 `gm-user-card`）——前缀由 `$BEM_PREFIX` 自动拼接，否则会出现 `.gm-gm-user-card` 这种重复前缀。
+
+### 前缀可配置：`VITE_BEM_PREFIX`
+
+项目使用 **`gm-` 前缀**标识私有组件（与 Element Plus 的 `el-`、Vant 的 `van-` 同源约定），前缀值由环境变量 `VITE_BEM_PREFIX` 控制，默认 `gm`。两套 BEM 工具**共享同一来源**，改一处即全站生效：
+
+| 工具              | 文件                                     | 读取方式                                                     |
+| ----------------- | ---------------------------------------- | ------------------------------------------------------------ |
+| 运行时 TS 工具    | `src/utils/bem.ts` → `createNamespace()` | `import.meta.env.VITE_BEM_PREFIX ?? 'gm'`                    |
+| 编译期 SCSS mixin | `src/assets/styles/mixins/bem.scss`      | 由 vite additionalData 用 sass `with` 语法注入 `$BEM_PREFIX` |
+
+**vite 注入实现**（`vite.config.ts`）：
+
+```ts
+scss: {
+  silenceDeprecations: ['new-global', 'if-function'],
+  additionalData: `@use '@/assets/styles/mixins/bem' as * with ($BEM_PREFIX: '${process.env.VITE_BEM_PREFIX ?? 'gm'}');\n`,
+}
+```
+
+#### 两套工具等价示例
+
+```ts
+// 运行时（TS）
+const bem = createNamespace('user-card')
+bem.b() // 'gm-user-card'
+bem.e('name') // 'gm-user-card__name'
+bem.is('active', true) // 'is-active'
+```
+
+```scss
+// 编译期（SCSS）—— 与上面 TS 输出完全等价
+@include b(user-card) {
+  @include e(name) { ... }
+  @include is(active) { ... }
+}
+// 产物：
+//   .gm-user-card { ... }
+//   .gm-user-card__name { ... }
+//   .gm-user-card.is-active { ... }
+```
+
+#### 调用方使用要点
+
+| 规则                                                                   | 原因                                                                                                                             |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| ❌ **不要**在 `<style>` 中写 `@use '@/assets/styles/mixins/bem' as *;` | vite additionalData 已经通过 `@use ... with` 注入，重复引入会报 sass 编译错误                                                    |
+| ❌ **不要**硬编码 `.gm-user-card` 等完整类名                           | 改 `VITE_BEM_PREFIX` 后硬编码失效，JS 端 `bem.b()` 会输出新前缀但 CSS 选择器不动 → 样式丢失。PortalHeader.vue 改造前就是这种隐患 |
+| ❌ **不要**给 mixin 传完整前缀名 `@include b(gm-user-card)`            | 会输出 `.gm-gm-user-card` 重复前缀                                                                                               |
+| ✅ 只传基础名 + 用 mixin / `createNamespace`                           | 两套工具自动用同一前缀                                                                                                           |
+
+#### 切换前缀的完整流程
+
+```bash
+# 1. 改 .env（或 .env.development / .env.production）
+echo "VITE_BEM_PREFIX=app" >> .env
+
+# 2. 重启 dev（vite env 变更需要重启）
+pnpm dev
+
+# 3. 验证：浏览器 DevTools 搜 .app-user-card 应能匹配所有自定义组件类名
+```
+
+**何时改前缀**：项目被多个门户复用（OEM 场景）、对外发布组件库、需要避免与其他 `gm-` 前缀项目类名冲突时。日常开发**不需要**改，保持默认 `gm` 即可。
 
 ### 完整使用示例
 
 ```vue
 <!-- src/modules/user/components/UserCard.vue 或 src/components/common/UserCard.vue -->
 <script setup lang="ts">
+// createNamespace 已在 vite.config.ts 中通过 AutoImport 全局化，无需手动 import
+// （详见 src/types/auto-imports.d.ts 与 vite.config.ts 的 AutoImport.imports 配置）
+const bem = createNamespace('user-card')
+
 interface Props {
   featured?: boolean
   loading?: boolean
@@ -116,90 +186,102 @@ defineProps<Props>()
 </script>
 
 <template>
-  <div class="user-card" :class="{ 'is-loading': loading, 'is-featured': featured }">
-    <img class="user-card__avatar" :src="user.avatar" />
-    <h3 class="user-card__name">{{ user.name }}</h3>
-    <button class="user-card__action">关注</button>
+  <div :class="[bem.b(), bem.is('loading', loading), bem.is('featured', featured)]">
+    <img :class="bem.e('avatar')" :src="user.avatar" />
+    <h3 :class="bem.e('name')">{{ user.name }}</h3>
+    <button :class="bem.e('action')">关注</button>
   </div>
 </template>
 
 <style lang="scss" scoped>
-@use '@/assets/styles/mixins/bem' as *;
+// 注意：不要再写 @use 'bem' as * —— vite.config.ts 的 additionalData 已通过
+// `@use ... with` 注入，本文件写 @use 会报 sass 重复引入错误。
+// b() / e() / m() / is() mixin 在 additionalData 注入后可直接使用。
 
-.user-card {
-  @include b(user-card) {
-    padding: var(--spacing-md);
-    border: 1px solid #eee;
-    border-radius: var(--radius-md);
+@include b(user-card) {
+  padding: var(--spacing-md);
+  border: 1px solid #eee;
+  border-radius: var(--radius-md);
 
-    @include e(avatar) {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
+  @include e(avatar) {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+  }
+
+  @include e(name) {
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  @include e(action) {
+    padding: 4px 12px;
+    cursor: pointer;
+
+    // Element 也可以挂 Modifier
+    @include m(primary) {
+      background: var(--color-primary);
+      color: #fff;
     }
+  }
 
-    @include e(name) {
-      font-size: 16px;
-      font-weight: 600;
-    }
+  @include is(loading) {
+    opacity: 0.6;
+    pointer-events: none;
+  }
 
-    @include e(action) {
-      padding: 4px 12px;
-      cursor: pointer;
-
-      // Element 也可以挂 Modifier
-      @include m(primary) {
-        background: var(--color-primary);
-        color: #fff;
-      }
-    }
-
-    @include is(loading) {
-      opacity: 0.6;
-      pointer-events: none;
-    }
-
-    @include is(featured) {
-      border-color: gold;
-    }
+  @include is(featured) {
+    border-color: gold;
   }
 }
 </style>
 ```
 
-**编译产物（与手写 BEM 字符串完全一致）**：
+**编译产物（运行时拼接 + SCSS 编译输出 `.gm-user-card` 前缀）**：
+
+```html
+<!-- template 渲染出的 class（来自 createNamespace） -->
+<div class="gm-user-card is-loading">
+  <img class="gm-user-card__avatar" />
+  <h3 class="gm-user-card__name">张三</h3>
+  <button class="gm-user-card__action">关注</button>
+</div>
+```
 
 ```css
-.user-card[data-v-xxx] {
+/* <style> 编译后的 CSS（来自 bem mixin + $BEM_PREFIX 注入） */
+.gm-user-card[data-v-xxx] {
   padding: 16px;
   border: 1px solid #eee;
   border-radius: 8px;
 }
-.user-card__avatar[data-v-xxx] {
+.gm-user-card__avatar[data-v-xxx] {
   width: 40px;
   height: 40px;
   border-radius: 50%;
 }
-.user-card__name[data-v-xxx] {
+.gm-user-card__name[data-v-xxx] {
   font-size: 16px;
   font-weight: 600;
 }
-.user-card__action[data-v-xxx] {
+.gm-user-card__action[data-v-xxx] {
   padding: 4px 12px;
   cursor: pointer;
 }
-.user-card__action--primary[data-v-xxx] {
+.gm-user-card__action--primary[data-v-xxx] {
   background: #409eff;
   color: #fff;
 }
-.user-card.is-loading[data-v-xxx] {
+.gm-user-card.is-loading[data-v-xxx] {
   opacity: 0.6;
   pointer-events: none;
 }
-.user-card.is-featured[data-v-xxx] {
+.gm-user-card.is-featured[data-v-xxx] {
   border-color: gold;
 }
 ```
+
+> 两套工具输出**完全等价**——JS 拼接的类名与 SCSS 编译的 CSS 选择器自动对齐。改 `VITE_BEM_PREFIX=app` 后 `.gm-user-card` 全站变 `.app-user-card`，无需任何代码改动。
 
 ---
 
@@ -322,10 +404,14 @@ const collapsed = ref(false)
 
 // 3. emit 用 defineEmits<T>()
 const emit = defineEmits<{ select: [id: number] }>()
+
+// 4. BEM 命名空间（createNamespace 已通过 vite AutoImport 全局化，无需 import）。
+//    只传基础名，前缀由 $BEM_PREFIX（默认 gm）自动拼接。
+const bem = createNamespace('user-card')
 </script>
 
 <template>
-  <!-- 4. BEM 类名：block / element / modifier -->
+  <!-- 5. BEM 类名：block / element / modifier / state（运行时拼接，自动带前缀） -->
   <div :class="[bem.b(), bem.m(`variant-${props.variant}`)]">
     <img :class="bem.e('avatar')" :src="user.avatar" />
     <h3 :class="bem.e('name')">{{ user.name }}</h3>
@@ -339,10 +425,11 @@ const emit = defineEmits<{ select: [id: number] }>()
 </template>
 
 <style lang="scss" scoped>
-// 5. 编译期 mixin（嵌套多时推荐）
-@use '@/assets/styles/mixins/bem' as *;
-
-@include b('user-card') {
+// 6. SCSS mixin（编译期拼接 CSS）。注意：本文件**不要**写 @use 'bem'，
+//    vite additionalData 已通过 `@use ... with $BEM_PREFIX: 'gm'` 注入，
+//    再写会报 sass 重复引入错误。
+//    b() 只传基础名 user-card，前缀由 $BEM_PREFIX 自动拼 → .gm-user-card
+@include b(user-card) {
   display: flex;
   gap: 12px;
 
@@ -363,14 +450,14 @@ const emit = defineEmits<{ select: [id: number] }>()
     background: var(--bg-primary);
     cursor: pointer;
 
-    @include is('collapsed') {
+    @include is(collapsed) {
       padding: 2px 8px;
       font-size: 12px;
     }
   }
 
-  // 6. Modifier：仅调整外观，不改 DOM
-  @include m('variant-compact') {
+  // 7. Modifier：仅调整外观，不改 DOM
+  @include m(variant-compact) {
     gap: 8px;
 
     &__avatar {
@@ -420,7 +507,7 @@ pnpm check:routes    # 如果改了 routes/* 跑一致性
 
 ### Q2：Element Plus 的 BEM 怎么对齐？
 
-**A**：Element Plus 类名是 `el-button`、`el-button--primary`、`el-button__content`，与本规范完全兼容。本项目自定义组件建议也使用类似的"短前缀"约定（如 `user-card` 而非 `gm-user-card`）。
+**A**：Element Plus 类名是 `el-button`、`el-button--primary`、`el-button__content`，与本规范完全兼容。本项目自定义组件使用 **`gm-` 前缀**（与 Element Plus 的 `el-` 同源约定），由环境变量 `VITE_BEM_PREFIX` 控制，默认 `gm`。完整 BEM 工具机制见下方"前缀可配置"章节。
 
 ### Q3：mixin 写法 vs 手写字符串，哪个好？
 

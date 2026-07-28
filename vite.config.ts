@@ -136,8 +136,17 @@ export default defineConfig({
       // both define" 编译错误。解决方案：用 sass 的 with 语法把变量值注入到 bem 模块
       // 内部的 !default 兜底；bem.scss 内部用 !default，未传时回退 'gm'（单测/手写 SCSS）。
       // 调用方文件因此**不要再**写 @use 'bem'，避免重复引入——由本 additionalData 统一引入。
+      //
+      // silenceDeprecations 白名单：
+      //   - 'new-global'：bem mixin 的 b() 内 $B: $block !global，Dart Sass 1.78+ 警告
+      //     "b() 内 !global 设新变量"。每个 <style scoped> 是独立 stylesheet 根，全局静默
+      //     不影响 2.0 升级（届时需重构 bem mixin 不依赖 !global）。
+      //   - 'if-function'：bem mixin 的 b() 内用 if($cond, $a, $b) 拼接前缀，Dart Sass 1.78+
+      //     标记 if-function 为 deprecation 但函数仍可用。改用 @if 块会让表达式级赋值退化为
+      //     block 级冗余代码，CSS 模式 if(...: ...; else:) 在 SCSS 文件中 sass 1.101 解析拒绝，
+      //     暂时静默该 deprecation。
       scss: {
-        silenceDeprecations: ['new-global'],
+        silenceDeprecations: ['new-global', 'if-function'],
         additionalData: `@use '@/assets/styles/mixins/bem' as * with ($BEM_PREFIX: '${process.env.VITE_BEM_PREFIX ?? 'gm'}');\n`,
       },
       less: { javascriptEnabled: true },
