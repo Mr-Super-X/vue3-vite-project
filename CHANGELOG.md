@@ -1,5 +1,11 @@
 # Changelog
 
+## 未发布
+
+### 🐛 Bug Fixes | 缺陷修复
+
+* **commitlint:** 补全常见规则错误详情的中文翻译，避免提交校验失败时混杂英文信息
+
 ## 1.0.0 (2026-07-27)
 
 ### ⚠ BREAKING CHANGES

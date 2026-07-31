@@ -48,8 +48,20 @@ const TYPE_NAMES = {
   revert: '回滚提交',
 }
 
+const RULE_MESSAGES = {
+  'type-empty': 'type 不能为空',
+  'subject-empty': 'subject 不能为空',
+  'scope-empty': 'scope 不能为空',
+  'body-leading-blank': 'body 前需要空行',
+  'footer-leading-blank': 'footer 前需要空行',
+  'subject-full-stop': 'subject 不能以句号结尾',
+  'subject-exclamation-mark': 'subject 不能以感叹号结尾',
+}
+
 // 把英文消息翻译为中文
 function translateMessage(msg, ruleName) {
+  if (RULE_MESSAGES[ruleName]) return RULE_MESSAGES[ruleName]
+
   let result = msg
 
   // type-enum：把 type 列表中的英文替换为"英文(中文)"
@@ -63,7 +75,10 @@ function translateMessage(msg, ruleName) {
   // header-max-length：完整翻译为中文
   if (ruleName === 'header-max-length') {
     result = result
-      .replace(/header must not be longer than (\d+) characters/, (_, n) => `标题不能超过 ${n} 字符`)
+      .replace(
+        /header must not be longer than (\d+) characters/,
+        (_, n) => `标题不能超过 ${n} 字符`
+      )
       .replace(/current length is (\d+)/, (_, n) => `当前长度 ${n} 字符`)
   }
 
