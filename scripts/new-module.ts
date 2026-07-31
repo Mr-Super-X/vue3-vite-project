@@ -92,7 +92,8 @@ function buildIndexVue(name: string, pascal: string): string {
   return `<script setup lang="ts">
 // 模块入口视图
 // 真实场景下常替换为 AsyncState + useRequest 的列表/表单/详情模板
-// 参考 src/modules/dashboard/views/Index.vue 了解 el-row + el-card 基本骨架
+// 参考 src/modules/user/views/List.vue 了解 useRequest + AsyncState + el-table 列表模板
+const bem = createNamespace('${name}')
 </script>
 
 <template>
@@ -102,10 +103,8 @@ function buildIndexVue(name: string, pascal: string): string {
   </div>
 </template>
 
-<style lang="scss" scoped>
-@use '@/assets/styles/mixins/bem' as *;
-
-@include b('${name}') {
+<style lang="scss">
+.#{$BEM_PREFIX}-${name} {
   padding: 16px;
 
   &__title {
@@ -215,7 +214,7 @@ export {}
  *   - 仅本模块使用（强内聚）：放本目录（脚手架默认，强烈推荐新模块用此）
  *   - 跨模块共享（多页面共用同一接口）：迁到 src/api/modules/<name>.ts
  *
- * 自动应用 http.ts 的 14 个基建（401 refresh、retry、cache、abort、pageAdapter 等）。
+ * 自动应用 http.ts 全部基建（401 refresh、retry、cache、abort、pageAdapter、request-id 等）。
  */
 function buildApisIndexTs(name: string, pascal: string): string {
   return `// ${pascal} 模块的 API 层（模块内强内聚版本）。
@@ -291,7 +290,7 @@ function buildMockStub(name: string, pascal: string): string {
  * 自动生成：3 条典型 GET 响应 + 1 条 POST 响应。
  * 业务侧按需扩展（CRUD 全套、分页参数、错误场景等）。
  *
- * dev 模式生效（mock 在 prod 自动剔除，参见 mock-guard.ts）。
+ * dev 模式生效（mock 在 prod 自动剔除，参见 src/api/mock-guard.ts）。
  */
 export default defineFakeRoute([
   {
