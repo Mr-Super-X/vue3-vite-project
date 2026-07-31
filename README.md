@@ -233,8 +233,9 @@ gm-portal-fe/
 │   ├── enums/           # httpEnum、roleEnum
 │   ├── layouts/         # default/ + blank/
 │   ├── locales/         # zh-CN、en-US
-│   ├── modules/         # auth、user、home、error
-│   │                    # 每个模块含 views/ + store/ + components/ + routes/index.ts（自动注册）
+│   ├── modules/         # auth、user、home、orders、reports、demo、error
+│   │                    # 每个模块含 views/ + routes/ + store/ + apis/ + components/ + index.ts
+│   │                    # 由 `pnpm new-module` 自动生成；删除用 `pnpm remove-module`
 │   ├── plugins/         # Vue 插件（install 模式 + .d.ts 分离）
 │   │   ├── errorHandler.{ts,d.ts}    # 全局错误处理
 │   │   └── index.ts      # 统一注册入口（PluginsOptions 聚合）
@@ -295,28 +296,29 @@ pnpm dev:local
 
 ### 常用脚本
 
-| 命令                   | 用途                                                            |
-| ---------------------- | --------------------------------------------------------------- |
-| `pnpm dev`             | 启动开发服务器（默认 remote 菜单模式）                          |
-| `pnpm dev:local`       | 启动开发服务器（切到 local 菜单模式，无接口可用）               |
-| `pnpm build`           | 生产构建（含 type-check:full）                                  |
-| `pnpm preview`         | 预览构建产物                                                    |
-| `pnpm analyze`         | 生产构建 + 生成包体积分析报告（dist/stats.html）                |
-| `pnpm test`            | 运行单元测试（一次性）                                          |
-| `pnpm test:watch`      | 单元测试 watch 模式                                             |
-| `pnpm test:coverage`   | 测试覆盖率报告                                                  |
-| `pnpm test:ui`         | 单元测试 UI 模式                                                |
-| `pnpm type-check`      | TypeScript 类型检查（增量，husky pre-commit 用）                |
-| `pnpm type-check:full` | TypeScript 类型检查（强制重建 .tsbuildinfo 缓存）               |
-| `pnpm check:routes`    | 校验 RouteName/component-registry/whitelist 一致性              |
-| `pnpm new-module`      | 一键生成业务模块骨架（kebab-case 名 → routes/store/views）      |
-| `pnpm lint`            | ESLint 检查全项目                                               |
-| `pnpm lint:fix`        | ESLint 自动修复                                                 |
-| `pnpm format`          | Prettier 格式化全项目                                           |
-| `pnpm commit`          | 交互式 commit（仅提交不推送）                                   |
-| `pnpm push`            | **推荐**：一站式提交并推送（add + cz + push）                   |
-| `pnpm release`         | **发布版本**：bump + CHANGELOG + tag + push（master/release/*） |
-| `pnpm release:dry`     | 发布预览：dry-run 模式（0 副作用，任意分支）                    |
+| 命令                   | 用途                                                               |
+| ---------------------- | ------------------------------------------------------------------ |
+| `pnpm dev`             | 启动开发服务器（默认 remote 菜单模式）                             |
+| `pnpm dev:local`       | 启动开发服务器（切到 local 菜单模式，无接口可用）                  |
+| `pnpm build`           | 生产构建（含 type-check:full）                                     |
+| `pnpm preview`         | 预览构建产物                                                       |
+| `pnpm analyze`         | 生产构建 + 生成包体积分析报告（dist/stats.html）                   |
+| `pnpm test`            | 运行单元测试（一次性）                                             |
+| `pnpm test:watch`      | 单元测试 watch 模式                                                |
+| `pnpm test:coverage`   | 测试覆盖率报告                                                     |
+| `pnpm test:ui`         | 单元测试 UI 模式                                                   |
+| `pnpm type-check`      | TypeScript 类型检查（增量，husky pre-commit 用）                   |
+| `pnpm type-check:full` | TypeScript 类型检查（强制重建 .tsbuildinfo 缓存）                  |
+| `pnpm check:routes`    | 校验 RouteName/component-registry/whitelist 一致性                 |
+| `pnpm new-module`      | 一键生成业务模块骨架（kebab-case 名 → routes/store/views/apis）    |
+| `pnpm remove-module`   | 一键移除业务模块（默认 dry-run + y/N 确认；CI / 管道传 `--force`） |
+| `pnpm lint`            | ESLint 检查全项目                                                  |
+| `pnpm lint:fix`        | ESLint 自动修复                                                    |
+| `pnpm format`          | Prettier 格式化全项目                                              |
+| `pnpm commit`          | 交互式 commit（仅提交不推送）                                      |
+| `pnpm push`            | **推荐**：一站式提交并推送（add + cz + push）                      |
+| `pnpm release`         | **发布版本**：bump + CHANGELOG + tag + push（master/release/*）    |
+| `pnpm release:dry`     | 发布预览：dry-run 模式（0 副作用，任意分支）                       |
 
 ### Mock 数据
 
@@ -368,8 +370,8 @@ const routes: RouteRecordRaw[] = [
   },
 ]
 
-// 3. 在 src/router/types.ts 追加 RouteName 联合类型条目
-// 完成 —— 路由自动可用，remote 模式自动可用（component 由 auto-register 派生）
+// 3. 完成 —— 路由自动可用（auto-register 扫描 routes/index.ts），remote 模式自动可用
+//    无需在 src/router/ 任何文件手动 import 或追加类型（types.ts RouteName 已是 string alias）
 ```
 
 #### 创建 blank layout 页面（登录页 / 注册页）
