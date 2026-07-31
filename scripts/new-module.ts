@@ -217,6 +217,8 @@ export {}
  * 自动应用 http.ts 全部基建（401 refresh、retry、cache、abort、pageAdapter、request-id 等）。
  */
 function buildApisIndexTs(name: string, pascal: string): string {
+  // camelCase 由 pascal 派生，避免 kebab-case 名字（如 `kebab-case-test`）生成非法 TS 标识符
+  const camel = pascal.charAt(0).toLowerCase() + pascal.slice(1)
   return `// ${pascal} 模块的 API 层（模块内强内聚版本）。
 //
 // 与 src/api/modules/${name}.ts 互斥：
@@ -254,7 +256,7 @@ export interface ${pascal}ListResponse {
  * 命名约定：函数名小驼峰，对象名 \`\${name}Api\`（与项目 src/api/modules/*.ts 风格一致）。
  * 全部走 \`request<T>()\`，由 http.ts 拦截器链统一注入 token / 401 retry / 缓存 / 分页适配等。
  */
-export const ${name}Api = {
+export const ${camel}Api = {
   /** 列表查询（自动分页转换 + GET 缓存 + 401 自动 refresh 重试） */
   getList: (params: ${pascal}ListParams) =>
     request<${pascal}ListResponse>({
@@ -342,34 +344,59 @@ function syncI18nKeys(name: string, pascal: string): void {
     const path = join(LOCALES_DIR, `${locale}.ts`)
     const text = `${pascal} 业务` // 中文占位；en-US 用 pascal 即可
     const enValue = pascal
-    const line = `  ${name}: '${locale === 'zh-CN' ? text : enValue}',`
+    // kebab-case 等含 `-` 的 key 在 TS 对象字面量里必须加引号，否则 vue-tsc 编译失败
+    const keyText = /^[$_a-zA-Z][$_\w]*$/.test(name) ? name : `'${name}'`
+    const newEntry = `${keyText}: '${locale === 'zh-CN' ? text : enValue}'`
     const content = readFileSync(path, 'utf-8').replace(/\r\n/g, '\n')
 
-    // 已在 menu 段：检查是否含此 key
-    if (content.includes(`${name}: '`)) {
+    // 幂等：重复跑不会重复追加。兼容含 `-` 的 key（syncI18nKeys 会自动加引号包裹）
+    if (content.includes(`${name}:`) || content.includes(`'${name}':`)) {
       console.log(`  · locales/${locale}.ts：menu.${name} 已存在，跳过`)
       continue
     }
 
-    // 找 menu 段最后一个条目插入
     const lines = content.split('\n')
-    let inMenu = false
-    let lastMenuIdx = -1
-    for (let i = 0; i < lines.length; i++) {
-      if (/^\s*menu:\s*\{/.test(lines[i]!)) {
-        inMenu = true
-        continue
-      }
-      if (inMenu && /^\s*[a-zA-Z]+:\s*'/.test(lines[i]!)) {
-        lastMenuIdx = i
-      }
-      if (inMenu && /^\s*\},?\s*$/.test(lines[i]!) && lastMenuIdx > 0) break
-    }
-    if (lastMenuIdx === -1) {
-      console.warn(`  ⚠ locales/${locale}.ts 解析 menu 段失败，跳过 i18n 同步`)
+    const menuStartIdx = lines.findIndex((l) => /^\s*menu:\s*\{/.test(l))
+    if (menuStartIdx === -1) {
+      console.warn(`  ⚠ locales/${locale}.ts 未找到 menu 段，跳过 i18n 同步`)
       continue
     }
-    lines.splice(lastMenuIdx + 1, 0, line)
+    const menuStartLine = lines[menuStartIdx]!
+
+    // 兼容单行 / 多行 menu 段，统一在闭合 `}` 前插入新 key。
+    // 单行：menu: { key: 'v', ... }, —— 字符串替换在 `}` 前注入（兼容空段与非空段）
+    // 多行：
+    //   menu: {
+    //     key: 'v',
+    //   },
+    //   —— 找结束行 `}`，在它之前 splice 插入
+    if (/^\s*menu:\s*\{.*\}\s*,?\s*$/.test(menuStartLine)) {
+      lines[menuStartIdx] = menuStartLine.replace(
+        /^(\s*menu:\s*\{)(.*?)(\s*\},?\s*)$/,
+        (_, head, body, tail) => {
+          const trimmed = body.trim()
+          // 空段：`menu: { },` → `menu: { newKey },`
+          // 非空段：`menu: { a: 'v' },` → `menu: { a: 'v', newKey },`
+          return trimmed === ''
+            ? `${head} ${newEntry}${tail}`
+            : `${head}${body.replace(/,?\s*$/, '')}, ${newEntry}${tail}`
+        }
+      )
+    } else {
+      let menuEndIdx = -1
+      for (let i = menuStartIdx + 1; i < lines.length; i++) {
+        if (/^\s*\},?\s*$/.test(lines[i]!)) {
+          menuEndIdx = i
+          break
+        }
+      }
+      if (menuEndIdx === -1) {
+        console.warn(`  ⚠ locales/${locale}.ts menu 段未闭合，跳过 i18n 同步`)
+        continue
+      }
+      lines.splice(menuEndIdx, 0, `  ${newEntry},`)
+    }
+
     writeFileSync(path, lines.join('\n'), 'utf-8')
     console.log(`  ✓ locales/${locale}.ts：menu 段追加 '${name}'`)
   }
@@ -473,7 +500,9 @@ function printNextSteps(name: string): void {
     `  7. 在 src/store/modules/user.ts 给假登录账号的 permissions 加 '${name}:view' 等权限码（如需路由级权限）`
   )
   console.log('')
-  console.log(`  8. 删除模块：直接 rm -rf src/modules/${name}/ 即可（无残留，无需改任何类型文件）`)
+  console.log(
+    `  8. 删除模块：跑 pnpm remove-module ${name}（默认交互确认；CI / 管道环境传 --force）`
+  )
   console.log('')
 }
 
