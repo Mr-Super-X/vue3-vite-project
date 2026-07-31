@@ -3,7 +3,7 @@
 // - menuSource：菜单加载方式（local = 本地静态；remote = 接口动态）
 //   - 默认 = remote（贴近生产，强制走接口）
 //   - 切换 local：通过 `pnpm dev:local` 命令（自动设 VITE_MENU_SOURCE=local）
-//   - 也可手动设环境变量 VITE_MENU_SOURCE=local|remote 覆盖
+//   - **pnpm dev:local（cross-env）优先级高于 .env**——完整优先级矩阵与机制详见 docs/07 §环境变量优先级矩阵
 //
 // - historyMode：history 模式（web = createWebHistory；hash = createWebHashHistory）
 //   - 默认 = web（主流，URL 干净）
