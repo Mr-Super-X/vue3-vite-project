@@ -6,41 +6,41 @@ describe('createNamespace', () => {
 
   describe('b()', () => {
     it('返回基础 block 类名', () => {
-      expect(bem.b()).toBe('gm-button')
+      expect(bem.b()).toBe('vv-button')
     })
 
-    it('带 blockSuffix 返回 gm-button-group', () => {
-      expect(bem.b('group')).toBe('gm-button-group')
+    it('带 blockSuffix 返回 vv-button-group', () => {
+      expect(bem.b('group')).toBe('vv-button-group')
     })
 
     it('空字符串后缀等价于无后缀', () => {
-      expect(bem.b('')).toBe('gm-button')
+      expect(bem.b('')).toBe('vv-button')
     })
   })
 
   describe('e()', () => {
     it('返回 element 类名', () => {
-      expect(bem.e('icon')).toBe('gm-button__icon')
+      expect(bem.e('icon')).toBe('vv-button__icon')
     })
 
-    it('空字符串返回空字符串（避免 gm-button__）', () => {
+    it('空字符串返回空字符串（避免 vv-button__）', () => {
       expect(bem.e('')).toBe('')
     })
   })
 
   describe('m()', () => {
     it('返回 modifier 类名', () => {
-      expect(bem.m('large')).toBe('gm-button--large')
+      expect(bem.m('large')).toBe('vv-button--large')
     })
 
-    it('空字符串返回空字符串（避免 gm-button--）', () => {
+    it('空字符串返回空字符串（避免 vv-button--）', () => {
       expect(bem.m('')).toBe('')
     })
   })
 
   describe('be()', () => {
     it('返回 block + element 类名', () => {
-      expect(bem.be('group', 'icon')).toBe('gm-button-group__icon')
+      expect(bem.be('group', 'icon')).toBe('vv-button-group__icon')
     })
 
     it('任一参数缺失返回空字符串', () => {
@@ -52,7 +52,7 @@ describe('createNamespace', () => {
 
   describe('bm()', () => {
     it('返回 block + modifier 类名', () => {
-      expect(bem.bm('group', 'large')).toBe('gm-button-group--large')
+      expect(bem.bm('group', 'large')).toBe('vv-button-group--large')
     })
 
     it('任一参数缺失返回空字符串', () => {
@@ -63,7 +63,7 @@ describe('createNamespace', () => {
 
   describe('em()', () => {
     it('返回 element + modifier 类名', () => {
-      expect(bem.em('icon', 'large')).toBe('gm-button__icon--large')
+      expect(bem.em('icon', 'large')).toBe('vv-button__icon--large')
     })
 
     it('任一参数缺失返回空字符串', () => {
@@ -74,7 +74,7 @@ describe('createNamespace', () => {
 
   describe('bem()', () => {
     it('返回 block + element + modifier 类名', () => {
-      expect(bem.bem('group', 'icon', 'large')).toBe('gm-button-group__icon--large')
+      expect(bem.bem('group', 'icon', 'large')).toBe('vv-button-group__icon--large')
     })
 
     it('任一参数缺失返回空字符串', () => {
@@ -102,13 +102,13 @@ describe('createNamespace', () => {
   })
 
   describe('createNamespace 前缀', () => {
-    it('始终以 gm- 开头', () => {
-      expect(createNamespace('foo').b()).toBe('gm-foo')
+    it('始终以 vv- 开头', () => {
+      expect(createNamespace('foo').b()).toBe('vv-foo')
     })
 
     it('支持自定义 name（含连字符的复合名）', () => {
-      expect(createNamespace('user-card').b()).toBe('gm-user-card')
-      expect(createNamespace('login-form').e('submit')).toBe('gm-login-form__submit')
+      expect(createNamespace('user-card').b()).toBe('vv-user-card')
+      expect(createNamespace('login-form').e('submit')).toBe('vv-login-form__submit')
     })
   })
 
@@ -124,13 +124,13 @@ describe('createNamespace', () => {
       vi.unstubAllEnvs()
     })
 
-    it('未设置 VITE_BEM_PREFIX 时回退默认 gm-', async () => {
+    it('未设置 VITE_BEM_PREFIX 时回退默认 vv-', async () => {
       const mod = await import('./bem')
-      expect(mod.createNamespace('foo').b()).toBe('gm-foo')
-      expect(mod.createNamespace('foo').e('bar')).toBe('gm-foo__bar')
+      expect(mod.createNamespace('foo').b()).toBe('vv-foo')
+      expect(mod.createNamespace('foo').e('bar')).toBe('vv-foo__bar')
     })
 
-    it('自定义前缀会替换 gm-', async () => {
+    it('自定义前缀会替换 vv-', async () => {
       vi.stubEnv('VITE_BEM_PREFIX', 'app')
       const mod = await import('./bem')
       expect(mod.createNamespace('button').b()).toBe('app-button')

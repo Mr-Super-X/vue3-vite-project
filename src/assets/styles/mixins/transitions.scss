@@ -3,10 +3,10 @@
 // 用法：
 //   @use '@/assets/styles/mixins/transitions' as *;
 //   .my-element {
-//     @include gm-transition-fade;
+//     @include vv-transition-fade;
 //   }
 //   .my-element--slide {
-//     @include gm-transition-slide('up', 0.3s);
+//     @include vv-transition-slide('up', 0.3s);
 //   }
 //
 // 注意：本文件只包含 mixin，不输出任何 CSS 类。
@@ -15,7 +15,7 @@
 /// 淡入淡出过渡
 ///
 /// @param {Time} $duration [0.2s] 过渡时长
-@mixin gm-transition-fade($duration: 0.2s) {
+@mixin vv-transition-fade($duration: 0.2s) {
   transition: opacity $duration ease-in-out;
 }
 
@@ -23,7 +23,7 @@
 ///
 /// @param {'up' | 'down'} $direction ['up'] 滑入方向
 /// @param {Time} $duration [0.2s] 过渡时长
-@mixin gm-transition-slide($direction: 'up', $duration: 0.2s) {
+@mixin vv-transition-slide($direction: 'up', $duration: 0.2s) {
   $_translate: if($direction == 'down', translateY(-8px), translateY(8px));
   transition:
     transform $duration ease-out,
@@ -40,7 +40,7 @@
 ///
 /// @param {Number} $from [0.95] 起始缩放
 /// @param {Time} $duration [0.2s] 过渡时长
-@mixin gm-transition-scale($from: 0.95, $duration: 0.2s) {
+@mixin vv-transition-scale($from: 0.95, $duration: 0.2s) {
   transition:
     transform $duration ease-out,
     opacity $duration ease-out;

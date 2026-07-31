@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 在 gm-portal-fe 集成 release-it + auto-changelog，实现「bump 版本 → 生成 CHANGELOG → 打 tag → 推 tag」一站式 release 流程。
+**Goal:** 在 vue3-vite-project 集成 release-it + auto-changelog，实现「bump 版本 → 生成 CHANGELOG → 打 tag → 推 tag」一站式 release 流程。
 
 **Architecture:** release-it 21 作为 orchestrator 编排流程（校验分支 → 询问版本 → 调 auto-changelog → 打 tag → 推 tag），auto-changelog 2 作为 CHANGELOG 生成器读取 git log 按 conventional commits 自动分类。配置全部 JSON 化（与 `.commitlintrc` / `.lintstagedrc` 风格一致），避免 `package.json:type=module` 反复踩坑。
 

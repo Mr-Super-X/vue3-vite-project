@@ -26,7 +26,7 @@ const { isLoadingRemoteMenu } = storeToRefs(routerStore)
 </template>
 
 <style>
-/* 路由过渡动画（全局 fade 效果，与 transition.scss 中 @keyframes gm-fade-in 配合） */
+/* 路由过渡动画（全局 fade 效果，与 transition.scss 中 @keyframes vv-fade-in 配合） */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.2s ease-in-out;

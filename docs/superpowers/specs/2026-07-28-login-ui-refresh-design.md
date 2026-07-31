@@ -116,7 +116,7 @@
 
 | 元素 | 字号 | 字重 | 颜色 |
 |------|------|------|------|
-| 主标题"工贸统一登录门户" | 24px | 600 | `var(--login-text-primary)` |
+| 主标题"企业中后台管理" | 24px | 600 | `var(--login-text-primary)` |
 | 副标题"应急指挥 · 数据中台" | 13px | 400 | `var(--login-text-secondary)` |
 | 表单 label | 13px | 500 | `var(--login-text-secondary)` |
 | 输入文字 | 14px | 400 | `var(--login-text-primary)` |
@@ -150,7 +150,7 @@ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Micr
 │                                          │
 │        ┌──────────────────┐             │
 │        │   🔷 LOGO         │             │
-│        │   工贸统一登录门户 │             │
+│        │   企业中后台管理 │             │
 │        │   应急指挥·数据中台│             │
 │        │   ──────────      │             │
 │        │   账号            │             │
@@ -287,7 +287,7 @@ const { bem, BEM_PREFIX } = createNamespace('auth-login')
     <el-card :class="bem.e('card')" shadow="never">
       <div :class="bem.e('brand')">
         <div :class="bem.e('logo')" />
-        <h1 :class="bem.e('title')">工贸统一登录门户</h1>
+        <h1 :class="bem.e('title')">企业中后台管理</h1>
         <p :class="bem.e('subtitle')">应急指挥 · 数据中台</p>
       </div>
 

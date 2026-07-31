@@ -41,7 +41,7 @@ export function cleanMockBundled(): Plugin {
   }
 
   return {
-    name: 'gm-portal:clean-mock-bundled',
+    name: 'vv-portal:clean-mock-bundled',
     apply: 'serve',
     configureServer() {
       cleanupOnce()

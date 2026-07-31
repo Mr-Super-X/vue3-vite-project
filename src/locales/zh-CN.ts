@@ -1,5 +1,5 @@
 export default {
-  app: { title: '工贸统一登录门户' },
+  app: { title: '企业中后台管理' },
   common: { confirm: '确认', cancel: '取消', retry: '重试', loading: '加载中...' },
   auth: {
     login: '登录',

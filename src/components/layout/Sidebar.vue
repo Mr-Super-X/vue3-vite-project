@@ -142,60 +142,60 @@ function handleParentClick(item: MenuItem): void {
 </script>
 
 <template>
-  <aside class="gm-sidebar" :class="{ collapsed: appStore.sidebarCollapsed }">
-    <div class="gm-sidebar__brand">
+  <aside class="vv-sidebar" :class="{ collapsed: appStore.sidebarCollapsed }">
+    <div class="vv-sidebar__brand">
       <h1 v-if="!appStore.sidebarCollapsed">工贸统一登录</h1>
     </div>
 
-    <nav class="gm-sidebar__nav">
+    <nav class="vv-sidebar__nav">
       <template v-for="item in menuItems" :key="item.path">
         <!-- 多级菜单 -->
-        <div v-if="item.children && item.children.length > 0" class="gm-sidebar__group">
+        <div v-if="item.children && item.children.length > 0" class="vv-sidebar__group">
           <div
-            class="gm-sidebar__parent"
+            class="vv-sidebar__parent"
             :class="{ active: isActive(item.path) }"
             @click="handleParentClick(item)"
           >
-            <el-icon v-if="item.icon" class="gm-sidebar__icon">
+            <el-icon v-if="item.icon" class="vv-sidebar__icon">
               <component :is="resolveIcon(item.icon)" />
             </el-icon>
-            <span v-if="!appStore.sidebarCollapsed" class="gm-sidebar__title">
+            <span v-if="!appStore.sidebarCollapsed" class="vv-sidebar__title">
               {{ item.title }}
             </span>
-            <span v-if="!appStore.sidebarCollapsed" class="gm-sidebar__caret">
+            <span v-if="!appStore.sidebarCollapsed" class="vv-sidebar__caret">
               {{ openMenus.has(item.path) ? '▾' : '▸' }}
             </span>
           </div>
           <ul
             v-show="openMenus.has(item.path) && !appStore.sidebarCollapsed"
-            class="gm-sidebar__sublist"
+            class="vv-sidebar__sublist"
           >
             <li v-for="child in item.children" :key="child.path">
               <router-link
                 :to="child.path"
-                class="gm-sidebar__link"
+                class="vv-sidebar__link"
                 :class="{ active: isActive(child.path) }"
               >
-                <el-icon v-if="child.icon" class="gm-sidebar__icon">
+                <el-icon v-if="child.icon" class="vv-sidebar__icon">
                   <component :is="resolveIcon(child.icon)" />
                 </el-icon>
-                <span class="gm-sidebar__title">{{ child.title }}</span>
+                <span class="vv-sidebar__title">{{ child.title }}</span>
               </router-link>
             </li>
           </ul>
         </div>
 
         <!-- 一级菜单 -->
-        <div v-else class="gm-sidebar__group">
+        <div v-else class="vv-sidebar__group">
           <router-link
             :to="item.path"
-            class="gm-sidebar__parent"
+            class="vv-sidebar__parent"
             :class="{ active: isActive(item.path) }"
           >
-            <el-icon v-if="item.icon" class="gm-sidebar__icon">
+            <el-icon v-if="item.icon" class="vv-sidebar__icon">
               <component :is="resolveIcon(item.icon)" />
             </el-icon>
-            <span v-if="!appStore.sidebarCollapsed" class="gm-sidebar__title">
+            <span v-if="!appStore.sidebarCollapsed" class="vv-sidebar__title">
               {{ item.title }}
             </span>
           </router-link>
@@ -203,8 +203,8 @@ function handleParentClick(item: MenuItem): void {
       </template>
     </nav>
 
-    <div class="gm-sidebar__footer">
-      <button class="gm-sidebar__toggle" @click="appStore.toggleSidebar">
+    <div class="vv-sidebar__footer">
+      <button class="vv-sidebar__toggle" @click="appStore.toggleSidebar">
         {{ appStore.sidebarCollapsed ? '»' : '«' }}
       </button>
     </div>
@@ -212,7 +212,7 @@ function handleParentClick(item: MenuItem): void {
 </template>
 
 <style scoped>
-.gm-sidebar {
+.vv-sidebar {
   display: flex;
   flex-direction: column;
   width: var(--sidebar-width, 220px);
@@ -221,38 +221,38 @@ function handleParentClick(item: MenuItem): void {
   color: #bfcbd9;
   transition: width 200ms ease;
 }
-.gm-sidebar.collapsed {
+.vv-sidebar.collapsed {
   width: var(--sidebar-collapsed-width, 64px);
 }
 
-.gm-sidebar__brand {
+.vv-sidebar__brand {
   padding: 16px;
   border-bottom: 1px solid #1f3a5a;
   color: #fff;
 }
-.gm-sidebar__brand h1 {
+.vv-sidebar__brand h1 {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
 }
 
-.gm-sidebar__nav {
+.vv-sidebar__nav {
   flex: 1;
   overflow-y: auto;
   padding: 8px 0;
 }
-.gm-sidebar__nav::-webkit-scrollbar {
+.vv-sidebar__nav::-webkit-scrollbar {
   width: 4px;
 }
-.gm-sidebar__nav::-webkit-scrollbar-thumb {
+.vv-sidebar__nav::-webkit-scrollbar-thumb {
   background: #1f3a5a;
 }
 
-.gm-sidebar__group {
+.vv-sidebar__group {
   margin-bottom: 2px;
 }
 
-.gm-sidebar__parent {
+.vv-sidebar__parent {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -263,44 +263,44 @@ function handleParentClick(item: MenuItem): void {
   font-size: 14px;
   transition: background 150ms;
 }
-.gm-sidebar__parent:hover {
+.vv-sidebar__parent:hover {
   background: #1f3a5a;
   color: #fff;
 }
-.gm-sidebar__parent.active {
+.vv-sidebar__parent.active {
   background: #1890ff;
   color: #fff;
 }
 
-.gm-sidebar__icon {
+.vv-sidebar__icon {
   flex-shrink: 0;
   width: 18px;
   height: 18px;
 }
 
-.gm-sidebar__title {
+.vv-sidebar__title {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.gm-sidebar__caret {
+.vv-sidebar__caret {
   font-size: 10px;
   opacity: 0.7;
 }
 
-.gm-sidebar__sublist {
+.vv-sidebar__sublist {
   list-style: none;
   margin: 0;
   padding: 0;
   background: #000c17;
 }
-.gm-sidebar__sublist li {
+.vv-sidebar__sublist li {
   margin: 0;
 }
 
-.gm-sidebar__link {
+.vv-sidebar__link {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -310,20 +310,20 @@ function handleParentClick(item: MenuItem): void {
   font-size: 13px;
   transition: background 150ms;
 }
-.gm-sidebar__link:hover {
+.vv-sidebar__link:hover {
   background: #1f3a5a;
   color: #fff;
 }
-.gm-sidebar__link.active {
+.vv-sidebar__link.active {
   background: #1890ff;
   color: #fff;
 }
 
-.gm-sidebar__footer {
+.vv-sidebar__footer {
   padding: 12px;
   border-top: 1px solid #1f3a5a;
 }
-.gm-sidebar__toggle {
+.vv-sidebar__toggle {
   width: 100%;
   padding: 6px;
   background: transparent;
@@ -332,7 +332,7 @@ function handleParentClick(item: MenuItem): void {
   cursor: pointer;
   border-radius: 4px;
 }
-.gm-sidebar__toggle:hover {
+.vv-sidebar__toggle:hover {
   background: #1f3a5a;
   color: #fff;
 }

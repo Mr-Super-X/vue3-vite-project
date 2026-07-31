@@ -14,7 +14,7 @@
 
 - Node.js >= 20.19 或 >= 22.12
 - pnpm >= 9.x
-- 项目根目录：`D:\work\应急水利\应急\gm-portal-fe`
+- 项目根目录：`D:\work\应急水利\应急\vue3-vite-project`
 
 ---
 
@@ -69,7 +69,7 @@ pnpm --version
 - [ ] **Step 1.3: 确认项目目录为空**
 
 ```bash
-ls D:\work\应急水利\应急\gm-portal-fe
+ls D:\work\应急水利\应急\vue3-vite-project
 ```
 
 预期：仅含 `.omc/` 目录，无 `package.json`、`src/` 等。
@@ -77,11 +77,11 @@ ls D:\work\应急水利\应急\gm-portal-fe
 - [ ] **Step 1.4: 确认 cwd**
 
 ```bash
-cd D:\work\应急水利\应急\gm-portal-fe
+cd D:\work\应急水利\应急\vue3-vite-project
 pwd
 ```
 
-预期：`/d/work/应急水利/应急/gm-portal-fe`
+预期：`/d/work/应急水利/应急/vue3-vite-project`
 
 ---
 
@@ -95,7 +95,7 @@ pwd
 - [ ] **Step 2.1: 执行 create-vue（精简选项）**
 
 ```bash
-cd D:\work\应急水利\应急\gm-portal-fe
+cd D:\work\应急水利\应急\vue3-vite-project
 pnpm create vue@latest . -- --typescript --router --pinia --no-jsx --no-vitest --no-e2e --no-eslint --no-prettier --no-playwright
 ```
 
@@ -104,7 +104,7 @@ pnpm create vue@latest . -- --typescript --router --pinia --no-jsx --no-vitest -
 - [ ] **Step 2.2: 删除默认 src/components/ 和 src/assets/**
 
 ```bash
-cd D:\work\应急水利\应急\gm-portal-fe
+cd D:\work\应急水利\应急\vue3-vite-project
 rm -rf src/components src/assets
 ```
 
@@ -356,7 +356,7 @@ export default defineConfig({
 - [ ] **Step 4.7: 创建 .env**
 
 ```bash
-VITE_APP_TITLE=工贸统一登录门户
+VITE_APP_TITLE=企业中后台管理
 ```
 
 - [ ] **Step 4.8: 创建 .env.development**
@@ -1472,7 +1472,7 @@ const userStore = useUserStore()
 ```typescript
 // src/locales/zh-CN.ts
 export default {
-  app: { title: '工贸统一登录门户' },
+  app: { title: '企业中后台管理' },
   common: { confirm: '确认', cancel: '取消', retry: '重试', loading: '加载中...' },
   auth: { login: '登录', logout: '退出', username: '用户名', password: '密码' },
   menu: { dashboard: '仪表盘', user: '用户管理' },
@@ -2082,7 +2082,7 @@ app.mount('#app')
     <meta charset="UTF-8" />
     <link rel="icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>工贸统一登录门户</title>
+    <title>企业中后台管理</title>
   </head>
   <body>
     <div id="app"></div>

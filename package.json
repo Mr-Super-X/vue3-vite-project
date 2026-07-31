@@ -1,5 +1,5 @@
 {
-  "name": "gm-portal-fe",
+  "name": "vue3-vite-project",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -102,6 +102,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "ssh://git@gitlab.dg.com:10086/hyywsybb/hyyfb/YJSLYFZX/an_quan_jian_ce/qdfw/gm-portal-fe.git"
+    "url": "git@github.com:Mr-Super-X/vue3-vite-project.git"
   }
 }

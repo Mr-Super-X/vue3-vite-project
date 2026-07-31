@@ -79,7 +79,7 @@ describe('PortalHeader 退出登录入口', () => {
       global: { mocks: { $t: mockT } },
       attachTo: document.body,
     })
-    const trigger = w.find('.gm-portal-header__user')
+    const trigger = w.find('.vv-portal-header__user')
     expect(trigger.exists()).toBe(true)
     await trigger.trigger('click')
     await nextTick()
@@ -93,7 +93,7 @@ describe('PortalHeader 退出登录入口', () => {
       global: { mocks: { $t: mockT } },
       attachTo: document.body,
     })
-    const trigger = w.find('.gm-portal-header__user')
+    const trigger = w.find('.vv-portal-header__user')
     await trigger.trigger('click')
     await nextTick()
     const dropdownItem = document.querySelector('.el-dropdown-menu__item') as HTMLElement | null
@@ -109,7 +109,7 @@ describe('PortalHeader 退出登录入口', () => {
       global: { mocks: { $t: mockT } },
       attachTo: document.body,
     })
-    const trigger = w.find('.gm-portal-header__user')
+    const trigger = w.find('.vv-portal-header__user')
     await trigger.trigger('click')
     await nextTick()
     const dropdownItem = document.querySelector('.el-dropdown-menu__item')

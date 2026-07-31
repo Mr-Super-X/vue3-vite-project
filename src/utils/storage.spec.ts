@@ -3,8 +3,8 @@ import Cookies from 'js-cookie'
 import { Local, Session, clearCookies } from './storage'
 
 // 测试期间 vitest 加载 .env.development，VITE_STORAGE_NAMESPACE 是配置的 storage
-// 隔离标识（如 'gm-portal-fe'）。fallback 'gm-portal-fe' 与 storage.ts 保持一致。
-const APP_NAMESPACE = (import.meta.env.VITE_STORAGE_NAMESPACE || 'gm-portal-fe') + ':'
+// 隔离标识（如 'vue3-vite-project'）。fallback 'vue3-vite-project' 与 storage.ts 保持一致。
+const APP_NAMESPACE = (import.meta.env.VITE_STORAGE_NAMESPACE || 'vue3-vite-project') + ':'
 
 // 清理 storage 状态避免跨用例污染
 beforeEach(() => {

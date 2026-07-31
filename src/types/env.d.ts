@@ -38,7 +38,7 @@ interface ImportMetaEnv {
   /**
    * 路由部署基础路径（`src/router/config.ts` 读取）。
    * 必须以 `/` 开头与结尾（vue-router basename 要求）；留空或未设时默认 `/`。
-   * @example 子路径部署：VITE_BASE=/gm-portal-fe/
+   * @example 子路径部署：VITE_BASE=/vue3-vite-project/
    */
   readonly VITE_BASE?: string
   /**

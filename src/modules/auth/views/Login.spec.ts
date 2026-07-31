@@ -41,7 +41,7 @@ describe('Login.vue（深色科技感重构）', () => {
   it('1. 渲染默认结构：品牌区 + 表单 + 按钮 + 版权', () => {
     const w = mount(Login)
     expect(w.find('h1').exists()).toBe(true)
-    expect(w.text()).toContain('工贸统一登录门户')
+    expect(w.text()).toContain('企业中后台管理')
     expect(w.findAll('input').length).toBeGreaterThanOrEqual(2)
     expect(w.find('button').exists()).toBe(true)
     expect(w.text()).toContain('© 2026')
@@ -116,7 +116,7 @@ describe('Login.vue（深色科技感重构）', () => {
     // 等 validate 异步完成 + loading=true
     await flushPromises()
     // 用 BEM class 精准定位提交按钮（排除密码显隐按钮）
-    const submitBtn = w.find('button.gm-auth-login__submit')
+    const submitBtn = w.find('button.vv-auth-login__submit')
     expect(submitBtn.exists()).toBe(true)
     expect(submitBtn.attributes('disabled')).toBeDefined()
     resolveLogin({ token: 'xxx' })

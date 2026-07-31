@@ -1,4 +1,4 @@
-# 工贸统一登录门户 (gm-portal-fe)
+# 企业中后台管理 (vue3-vite-project)
 
 基于 Vue 3 + Vite 8 + TypeScript 6 的中后台脚手架，Feature-Sliced 风格，支持模块独立开发、不依赖后端即可联调。
 
@@ -214,7 +214,7 @@ utils/      ← validate.ts      └── routes/index.ts（自动注册）
 ## 📂 目录结构
 
 ```
-gm-portal-fe/
+vue3-vite-project/
 ├── src/
 │   ├── api/             # 网络层（http.ts + modules/）
 │   ├── assets/          # 静态资源（styles/、icons/）
@@ -280,8 +280,8 @@ gm-portal-fe/
 
 ```bash
 # 1. 克隆项目
-git clone <your-repo-url> gm-portal-fe
-cd gm-portal-fe
+git clone <your-repo-url> vue3-vite-project
+cd vue3-vite-project
 
 # 2. 安装依赖
 pnpm install
@@ -404,7 +404,7 @@ const routes: RouteRecordRaw[] = [
 
 ### 样式管理（BEM + 双主题）
 
-- **BEM 命名规范**：Block = `gm-block`（或 `c-{name}`），Element = `__element`，Modifier = `--modifier`，State = `is-{state}`（运行时由 `is()` 生成）
+- **BEM 命名规范**：Block = `vv-block`（或 `c-{name}`），Element = `__element`，Modifier = `--modifier`，State = `is-{state}`（运行时由 `is()` 生成）
 - **运行时工具**：`createNamespace('xxx')` 返回 `{ b, e, m, be, bm, em, bem, is }`，组件用 `const bem = createNamespace('header-bar')` + `:class="[bem.b(), bem.e('user')]"`
 - **编译期 mixin**：`@use '@/assets/styles/mixins/bem' as *` 在 SFC `<style lang="scss">` 中用 `@include b / e / m / is` 拼接
 - **双主题**：浅色 + 深色 + 跟随系统，切换 API `useTheme().toggleMode()`（Pinia store + localStorage 持久化）
@@ -542,18 +542,18 @@ pnpm build
 
 ### 环境变量
 
-| 变量                     | 说明                                                                                                                                                          | 默认值           |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| `VITE_APP_TITLE`         | 应用标题首屏占位（`src/main.ts` 初始化；登录后由路由 `meta.title` 覆盖）                                                                                      | 工贸统一登录门户 |
-| `VITE_API_BASE_URL`      | API 基础 URL（baseURL，前缀统一管理）                                                                                                                         | `/api`           |
-| `VITE_USE_MOCK`          | mock 数据开关（`vite.config.ts` viteMockServe 读取；`true`/未设=启用，`false`=关闭用于联调真后端）                                                            | dev 默认开启     |
-| `VITE_MENU_SOURCE`       | 菜单加载模式（`local` / `remote`，未设置时默认 `remote`）                                                                                                     | `remote`         |
-| `VITE_HISTORY_MODE`      | 路由历史模式（`web` / `hash`，用于子路径或静态托管部署）                                                                                                      | `web`            |
-| `VITE_BASE`              | 路由部署基础路径（必须以 `/` 开头和结尾）                                                                                                                     | `/`              |
-| `VITE_STORAGE_NAMESPACE` | storage 命名空间（隔离多项目共用 localStorage）                                                                                                               | `gm-portal-fe`   |
-| `VITE_BRAND_COLOR`       | 业务品牌色（HEX，覆盖 Element Plus 默认蓝 `#409eff`，含灯色阶联动，详见 [docs/06-主题管理规范.md](docs/06-主题管理规范.md)）                                  | `#409eff`        |
-| `VITE_QUIET_DEV`         | 关闭 dev 模式 GlobalComponents 自动注册徽章（专注调试时减少噪音，详见 `src/components/index.ts`）                                                             | 不设 = 输出徽章  |
-| `VITE_BEM_PREFIX`        | BEM 类名前缀（同时影响 TS 端 `createNamespace` 与 SCSS `bem mixin`；改一处即全站类名同步切换，详见 `src/utils/bem.ts` + `src/assets/styles/mixins/bem.scss`） | `gm`             |
+| 变量                     | 说明                                                                                                                                                          | 默认值              |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| `VITE_APP_TITLE`         | 应用标题首屏占位（`src/main.ts` 初始化；登录后由路由 `meta.title` 覆盖）                                                                                      | 企业中后台管理      |
+| `VITE_API_BASE_URL`      | API 基础 URL（baseURL，前缀统一管理）                                                                                                                         | `/api`              |
+| `VITE_USE_MOCK`          | mock 数据开关（`vite.config.ts` viteMockServe 读取；`true`/未设=启用，`false`=关闭用于联调真后端）                                                            | dev 默认开启        |
+| `VITE_MENU_SOURCE`       | 菜单加载模式（`local` / `remote`，未设置时默认 `remote`）                                                                                                     | `remote`            |
+| `VITE_HISTORY_MODE`      | 路由历史模式（`web` / `hash`，用于子路径或静态托管部署）                                                                                                      | `web`               |
+| `VITE_BASE`              | 路由部署基础路径（必须以 `/` 开头和结尾）                                                                                                                     | `/`                 |
+| `VITE_STORAGE_NAMESPACE` | storage 命名空间（隔离多项目共用 localStorage）                                                                                                               | `vue3-vite-project` |
+| `VITE_BRAND_COLOR`       | 业务品牌色（HEX，覆盖 Element Plus 默认蓝 `#409eff`，含灯色阶联动，详见 [docs/06-主题管理规范.md](docs/06-主题管理规范.md)）                                  | `#409eff`           |
+| `VITE_QUIET_DEV`         | 关闭 dev 模式 GlobalComponents 自动注册徽章（专注调试时减少噪音，详见 `src/components/index.ts`）                                                             | 不设 = 输出徽章     |
+| `VITE_BEM_PREFIX`        | BEM 类名前缀（同时影响 TS 端 `createNamespace` 与 SCSS `bem mixin`；改一处即全站类名同步切换，详见 `src/utils/bem.ts` + `src/assets/styles/mixins/bem.scss`） | `vv`                |
 
 > 环境变量读取：项目内显式通过 `import.meta.env.VITE_XXX` 访问。`baseURL` / `storage namespace` 单一来源在 `src/api/http.ts` 和 `src/utils/storage.ts`，不在各业务模块分散。
 
@@ -563,7 +563,7 @@ pnpm build
 server {
   listen 80;
   server_name your-domain.com;
-  root /var/www/gm-portal-fe/dist;
+  root /var/www/vue3-vite-project/dist;
   index index.html;
 
   # SPA fallback（Vue Router history 模式）
@@ -611,8 +611,8 @@ CMD ["nginx", "-g", "daemon off;"]
 
 ```bash
 # 构建并运行
-docker build -t gm-portal-fe:1.0.0 .
-docker run -d --name gm-portal-fe -p 8080:80 gm-portal-fe:1.0.0
+docker build -t vue3-vite-project:1.0.0 .
+docker run -d --name vue3-vite-project -p 8080:80 vue3-vite-project:1.0.0
 ```
 
 ### CI/CD（GitHub Actions 示例）

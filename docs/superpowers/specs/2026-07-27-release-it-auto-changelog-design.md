@@ -55,7 +55,7 @@
 |---|------|------|----------|
 | D1 | Release 范围 | 仅 Git / 完整 GitLab Release / 仅 dry-run | **仅 Git 流程** |
 | D2 | CHANGELOG 格式 | 完全交给 auto-changelog / 保留手写 / 混合 | **完全交给 auto-changelog** |
-| D3 | Tag 格式 | v1.0.0 / 1.0.0 / gm-portal-fe-v1.0.0 | **v1.0.0** |
+| D3 | Tag 格式 | v1.0.0 / 1.0.0 / vue3-vite-project-v1.0.0 | **v1.0.0** |
 | D4 | 与 pnpm push 关系 | 新增独立 / 集成 / 替换 | **新增独立 `pnpm release`** |
 | D5 | bump 策略 | 手动交互 / 自动推断 / 手动+auto hint | **手动交互式输入** |
 | D6 | 可发布分支 | 仅 master / 任意 / master+release/* | **master + release/*** |

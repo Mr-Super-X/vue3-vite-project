@@ -1,7 +1,7 @@
 # unplugin-vue-router 调研报告
 
 > **调研日期**：2026-07-22
-> **调研人**：gm-portal-fe 项目组
+> **调研人**：vue3-vite-project 项目组
 > **目的**：评估是否值得把当前 glob-based 自动注册（`src/router/auto-register.ts`）迁移到 `unplugin-vue-router`（file-based 路由生成）
 > **结论（TL;DR）**：❌ 当前阶段**不建议迁移**。理由见 §6。
 

@@ -140,7 +140,7 @@ export const useThemeStore = defineStore(
   },
   {
     persist: {
-      key: 'gm-portal-fe:theme-mode',
+      key: 'vue3-vite-project:theme-mode',
       pick: ['mode'], // ← 仅持久化 mode，isDark/computed 不存
     },
   }
@@ -162,7 +162,7 @@ export const useThemeStore = defineStore(
 ```ts
 // key 前缀隔离多项目共用 localStorage
 persist: {
-  key: (storeId) => `gm-portal-fe:${storeId}`,
+  key: (storeId) => `vue3-vite-project:${storeId}`,
 }
 ```
 
@@ -262,8 +262,8 @@ describe('useThemeStore', () => {
   it('pick 字段持久化', () => {
     const store = useThemeStore()
     store.setMode('light')
-    // localStorage 应包含 'gm-portal-fe:theme-mode'
-    expect(localStorage.getItem('gm-portal-fe:theme-mode')).toContain('light')
+    // localStorage 应包含 'vue3-vite-project:theme-mode'
+    expect(localStorage.getItem('vue3-vite-project:theme-mode')).toContain('light')
   })
 })
 ```
@@ -334,7 +334,7 @@ export const useUserStore = defineStore(
   },
   {
     persist: {
-      key: 'gm-portal-fe:user-token',
+      key: 'vue3-vite-project:user-token',
       pick: ['token'], // ← 只持久化 token；profile 每次重新拉
     },
   }
@@ -371,7 +371,7 @@ export const useUserStore = defineStore(
 □ 1. 新增 store 已判断放全局 vs 模块私有？
 □ 2. 使用 Setup Store 风格（不是 Options Store）？
 □ 3. 持久化 pick 字段已明确（不存 computed / 不存临时态）？
-□ 4. 命名空间已加（gm-portal-fe:<key>）？
+□ 4. 命名空间已加（vue3-vite-project:<key>）？
 □ 5. 跨 store 调用通过对外接口（不 import 内部）？
 □ 6. 含异步行为的 store 已 try/catch + errorHandler.report？
 □ 7. logout 类清理函数已调 dictStore.clear() 等清理？
@@ -395,4 +395,4 @@ export const useUserStore = defineStore(
 
 ---
 
-_文档版本：v1.0.0 | 编写日期：2026-07-24 | 配套项目版本：gm-portal-fe 0.x_
+_文档版本：v1.0.0 | 编写日期：2026-07-24 | 配套项目版本：vue3-vite-project 0.x_

@@ -97,22 +97,22 @@
 
 | mixin           | 用途                                      | 生成示例                                          |
 | --------------- | ----------------------------------------- | ------------------------------------------------- |
-| `b($block)`     | 注册 Block 并打开作用域（**自动加前缀**） | `.gm-user-card { ... }`（前缀来自 `$BEM_PREFIX`） |
-| `e($element)`   | 注册 Element（基于当前 Block）            | `.gm-user-card__avatar { ... }`                   |
-| `m($modifier)`  | 注册 Block 修饰符                         | `.gm-user-card--featured { ... }`                 |
-| `is($state)`    | 注册 State（BEM 扩展）                    | `.gm-user-card.is-active { ... }`                 |
-| `when($suffix)` | 注册主题/场景前缀                         | `.gm-user-card--when-light { ... }`               |
+| `b($block)`     | 注册 Block 并打开作用域（**自动加前缀**） | `.vv-user-card { ... }`（前缀来自 `$BEM_PREFIX`） |
+| `e($element)`   | 注册 Element（基于当前 Block）            | `.vv-user-card__avatar { ... }`                   |
+| `m($modifier)`  | 注册 Block 修饰符                         | `.vv-user-card--featured { ... }`                 |
+| `is($state)`    | 注册 State（BEM 扩展）                    | `.vv-user-card.is-active { ... }`                 |
+| `when($suffix)` | 注册主题/场景前缀                         | `.vv-user-card--when-light { ... }`               |
 | `reset-block`   | 重置块名作用域（仅测试用）                | —                                                 |
 
-> **重要**：`b($block)` 的 `$block` 参数**只传基础名**（如 `user-card`），不要传完整前缀（如 `gm-user-card`）——前缀由 `$BEM_PREFIX` 自动拼接，否则会出现 `.gm-gm-user-card` 这种重复前缀。
+> **重要**：`b($block)` 的 `$block` 参数**只传基础名**（如 `user-card`），不要传完整前缀（如 `vv-user-card`）——前缀由 `$BEM_PREFIX` 自动拼接，否则会出现 `.vv-vv-user-card` 这种重复前缀。
 
 ### 前缀可配置：`VITE_BEM_PREFIX`
 
-项目使用 **`gm-` 前缀**标识私有组件（与 Element Plus 的 `el-`、Vant 的 `van-` 同源约定），前缀值由环境变量 `VITE_BEM_PREFIX` 控制，默认 `gm`。两套 BEM 工具**共享同一来源**，改一处即全站生效：
+项目使用 **`vv-` 前缀**标识私有组件（与 Element Plus 的 `el-`、Vant 的 `van-` 同源约定），前缀值由环境变量 `VITE_BEM_PREFIX` 控制，默认 `vv`。两套 BEM 工具**共享同一来源**，改一处即全站生效：
 
 | 工具              | 文件                                     | 读取方式                                                     |
 | ----------------- | ---------------------------------------- | ------------------------------------------------------------ |
-| 运行时 TS 工具    | `src/utils/bem.ts` → `createNamespace()` | `import.meta.env.VITE_BEM_PREFIX ?? 'gm'`                    |
+| 运行时 TS 工具    | `src/utils/bem.ts` → `createNamespace()` | `import.meta.env.VITE_BEM_PREFIX ?? 'vv'`                    |
 | 编译期 SCSS mixin | `src/assets/styles/mixins/bem.scss`      | 由 vite additionalData 用 sass `with` 语法注入 `$BEM_PREFIX` |
 
 **vite 注入实现**（`vite.config.ts`）：
@@ -120,7 +120,7 @@
 ```ts
 scss: {
   silenceDeprecations: ['new-global', 'if-function'],
-  additionalData: `@use '@/assets/styles/mixins/bem' as * with ($BEM_PREFIX: '${process.env.VITE_BEM_PREFIX ?? 'gm'}');\n`,
+  additionalData: `@use '@/assets/styles/mixins/bem' as * with ($BEM_PREFIX: '${process.env.VITE_BEM_PREFIX ?? 'vv'}');\n`,
 }
 ```
 
@@ -129,8 +129,8 @@ scss: {
 ```ts
 // 运行时（TS）
 const bem = createNamespace('user-card')
-bem.b() // 'gm-user-card'
-bem.e('name') // 'gm-user-card__name'
+bem.b() // 'vv-user-card'
+bem.e('name') // 'vv-user-card__name'
 bem.is('active', true) // 'is-active'
 ```
 
@@ -141,9 +141,9 @@ bem.is('active', true) // 'is-active'
   @include is(active) { ... }
 }
 // 产物：
-//   .gm-user-card { ... }
-//   .gm-user-card__name { ... }
-//   .gm-user-card.is-active { ... }
+//   .vv-user-card { ... }
+//   .vv-user-card__name { ... }
+//   .vv-user-card.is-active { ... }
 ```
 
 #### 调用方使用要点
@@ -151,8 +151,8 @@ bem.is('active', true) // 'is-active'
 | 规则                                                                   | 原因                                                                                                                             |
 | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | ❌ **不要**在 `<style>` 中写 `@use '@/assets/styles/mixins/bem' as *;` | vite additionalData 已经通过 `@use ... with` 注入，重复引入会报 sass 编译错误                                                    |
-| ❌ **不要**硬编码 `.gm-user-card` 等完整类名                           | 改 `VITE_BEM_PREFIX` 后硬编码失效，JS 端 `bem.b()` 会输出新前缀但 CSS 选择器不动 → 样式丢失。PortalHeader.vue 改造前就是这种隐患 |
-| ❌ **不要**给 mixin 传完整前缀名 `@include b(gm-user-card)`            | 会输出 `.gm-gm-user-card` 重复前缀                                                                                               |
+| ❌ **不要**硬编码 `.vv-user-card` 等完整类名                           | 改 `VITE_BEM_PREFIX` 后硬编码失效，JS 端 `bem.b()` 会输出新前缀但 CSS 选择器不动 → 样式丢失。PortalHeader.vue 改造前就是这种隐患 |
+| ❌ **不要**给 mixin 传完整前缀名 `@include b(vv-user-card)`            | 会输出 `.vv-vv-user-card` 重复前缀                                                                                               |
 | ✅ 只传基础名 + 用 mixin / `createNamespace`                           | 两套工具自动用同一前缀                                                                                                           |
 
 #### 切换前缀的完整流程
@@ -167,7 +167,7 @@ pnpm dev
 # 3. 验证：浏览器 DevTools 搜 .app-user-card 应能匹配所有自定义组件类名
 ```
 
-**何时改前缀**：项目被多个门户复用（OEM 场景）、对外发布组件库、需要避免与其他 `gm-` 前缀项目类名冲突时。日常开发**不需要**改，保持默认 `gm` 即可。
+**何时改前缀**：项目被多个门户复用（OEM 场景）、对外发布组件库、需要避免与其他 `vv-` 前缀项目类名冲突时。日常开发**不需要**改，保持默认 `vv` 即可。
 
 ### 完整使用示例
 
@@ -237,51 +237,51 @@ defineProps<Props>()
 </style>
 ```
 
-**编译产物（运行时拼接 + SCSS 编译输出 `.gm-user-card` 前缀）**：
+**编译产物（运行时拼接 + SCSS 编译输出 `.vv-user-card` 前缀）**：
 
 ```html
 <!-- template 渲染出的 class（来自 createNamespace） -->
-<div class="gm-user-card is-loading">
-  <img class="gm-user-card__avatar" />
-  <h3 class="gm-user-card__name">张三</h3>
-  <button class="gm-user-card__action">关注</button>
+<div class="vv-user-card is-loading">
+  <img class="vv-user-card__avatar" />
+  <h3 class="vv-user-card__name">张三</h3>
+  <button class="vv-user-card__action">关注</button>
 </div>
 ```
 
 ```css
 /* <style> 编译后的 CSS（来自 bem mixin + $BEM_PREFIX 注入） */
-.gm-user-card[data-v-xxx] {
+.vv-user-card[data-v-xxx] {
   padding: 16px;
   border: 1px solid #eee;
   border-radius: 8px;
 }
-.gm-user-card__avatar[data-v-xxx] {
+.vv-user-card__avatar[data-v-xxx] {
   width: 40px;
   height: 40px;
   border-radius: 50%;
 }
-.gm-user-card__name[data-v-xxx] {
+.vv-user-card__name[data-v-xxx] {
   font-size: 16px;
   font-weight: 600;
 }
-.gm-user-card__action[data-v-xxx] {
+.vv-user-card__action[data-v-xxx] {
   padding: 4px 12px;
   cursor: pointer;
 }
-.gm-user-card__action--primary[data-v-xxx] {
+.vv-user-card__action--primary[data-v-xxx] {
   background: #409eff;
   color: #fff;
 }
-.gm-user-card.is-loading[data-v-xxx] {
+.vv-user-card.is-loading[data-v-xxx] {
   opacity: 0.6;
   pointer-events: none;
 }
-.gm-user-card.is-featured[data-v-xxx] {
+.vv-user-card.is-featured[data-v-xxx] {
   border-color: gold;
 }
 ```
 
-> 两套工具输出**完全等价**——JS 拼接的类名与 SCSS 编译的 CSS 选择器自动对齐。改 `VITE_BEM_PREFIX=app` 后 `.gm-user-card` 全站变 `.app-user-card`，无需任何代码改动。
+> 两套工具输出**完全等价**——JS 拼接的类名与 SCSS 编译的 CSS 选择器自动对齐。改 `VITE_BEM_PREFIX=app` 后 `.vv-user-card` 全站变 `.app-user-card`，无需任何代码改动。
 
 ---
 
@@ -323,11 +323,11 @@ src/assets/styles/
 ├── theme.scss              # 主题感知变量（背景 / 文字 / 边框，light + dark 双主题）
 ├── transition.scss         # 全局过渡动画（5 个 @keyframes + 3 个过渡工具类 + reduced-motion 适配）
 ├── element-overwrite.scss  # Element Plus 5 个主色 × 5 个灯色阶 = 25 个 CSS 变量覆盖
-├── custom.scss             # 复合场景工具类（.gm-flex-center / .gm-flex-between / .gm-ellipsis-* 等）
+├── custom.scss             # 复合场景工具类（.vv-flex-center / .vv-flex-between / .vv-ellipsis-* 等）
 └── mixins/
     ├── bem.scss            # BEM 编程式 mixin（编译期拼接）
     ├── transitions.scss    # 过渡 mixin（3 个）
-    └── responsive.scss     # 响应式断点 mixin（gm-responsive / gm-responsive-down）
+    └── responsive.scss     # 响应式断点 mixin（vv-responsive / vv-responsive-down）
 
 src/components/
 ├── common/<Name>.vue       # 通用组件（自动注册为全局组件）
@@ -426,9 +426,9 @@ const bem = createNamespace('user-card')
 
 <style lang="scss" scoped>
 // 6. SCSS mixin（编译期拼接 CSS）。注意：本文件**不要**写 @use 'bem'，
-//    vite additionalData 已通过 `@use ... with $BEM_PREFIX: 'gm'` 注入，
+//    vite additionalData 已通过 `@use ... with $BEM_PREFIX: 'vv'` 注入，
 //    再写会报 sass 重复引入错误。
-//    b() 只传基础名 user-card，前缀由 $BEM_PREFIX 自动拼 → .gm-user-card
+//    b() 只传基础名 user-card，前缀由 $BEM_PREFIX 自动拼 → .vv-user-card
 @include b(user-card) {
   display: flex;
   gap: 12px;
@@ -507,7 +507,7 @@ pnpm check:routes    # 如果改了 routes/* 跑一致性
 
 ### Q2：Element Plus 的 BEM 怎么对齐？
 
-**A**：Element Plus 类名是 `el-button`、`el-button--primary`、`el-button__content`，与本规范完全兼容。本项目自定义组件使用 **`gm-` 前缀**（与 Element Plus 的 `el-` 同源约定），由环境变量 `VITE_BEM_PREFIX` 控制，默认 `gm`。完整 BEM 工具机制见下方"前缀可配置"章节。
+**A**：Element Plus 类名是 `el-button`、`el-button--primary`、`el-button__content`，与本规范完全兼容。本项目自定义组件使用 **`vv-` 前缀**（与 Element Plus 的 `el-` 同源约定），由环境变量 `VITE_BEM_PREFIX` 控制，默认 `vv`。完整 BEM 工具机制见下方"前缀可配置"章节。
 
 ### Q3：mixin 写法 vs 手写字符串，哪个好？
 

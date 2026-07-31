@@ -4,10 +4,10 @@
 //   @use '@/assets/styles/mixins/responsive' as *;
 //   .my-grid {
 //     grid-template-columns: 1fr;
-//     @include gm-responsive(md) {
+//     @include vv-responsive(md) {
 //       grid-template-columns: repeat(2, 1fr);
 //     }
-//     @include gm-responsive(lg) {
+//     @include vv-responsive(lg) {
 //       grid-template-columns: repeat(3, 1fr);
 //     }
 //   }
@@ -25,7 +25,7 @@
 /// 响应式断点（min-width 向上匹配，移动端优先）
 ///
 /// @param {'sm' | 'md' | 'lg' | 'xl' | '2xl'} $breakpoint 断点名
-@mixin gm-responsive($breakpoint) {
+@mixin vv-responsive($breakpoint) {
   @if $breakpoint == sm {
     @media (min-width: 640px) {
       @content;
@@ -54,7 +54,7 @@
 /// 反向响应式（max-width，向下匹配）
 ///
 /// @param {'sm' | 'md' | 'lg' | 'xl' | '2xl'} $breakpoint 断点名
-@mixin gm-responsive-down($breakpoint) {
+@mixin vv-responsive-down($breakpoint) {
   @if $breakpoint == sm {
     @media (max-width: 639px) {
       @content;

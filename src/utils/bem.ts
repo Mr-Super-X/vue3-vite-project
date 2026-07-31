@@ -5,7 +5,7 @@
 // - 本工具：在运行时拼接类名并返回字符串（适合 :class / class 动态控制场景）
 //
 // 命名规则（对齐 Element Plus / Vant 等 Vue 生态主流约定）：
-// - Block：      `{prefix}-{name}`            （前缀来自 `VITE_BEM_PREFIX`，默认 `gm`）
+// - Block：      `{prefix}-{name}`            （前缀来自 `VITE_BEM_PREFIX`，默认 `vv`）
 // - Block 后缀： `{prefix}-{name}-{suffix}`   （同一 Block 的多个变体）
 // - Element：    `{prefix}-{name}__{element}`
 // - Modifier：   `{prefix}-{name}--{modifier}`
@@ -16,7 +16,7 @@
 
 // 模块加载时一次性读取 env，避免每次 createNamespace 重复解引用 import.meta.env。
 // vitest 默认不注入 VITE_* 变量，单测中用 vi.stubEnv('VITE_BEM_PREFIX', 'custom') mock。
-const BEM_PREFIX: string = import.meta.env.VITE_BEM_PREFIX ?? 'gm'
+const BEM_PREFIX: string = import.meta.env.VITE_BEM_PREFIX ?? 'vv'
 
 /**
  * 创建 BEM 类名命名空间。
@@ -28,14 +28,14 @@ const BEM_PREFIX: string = import.meta.env.VITE_BEM_PREFIX ?? 'gm'
  * ```ts
  * const bem = createNamespace('button')
  *
- * bem.b()                    // 'gm-button'
- * bem.b('group')             // 'gm-button-group'
- * bem.e('icon')              // 'gm-button__icon'
- * bem.m('large')             // 'gm-button--large'
- * bem.be('group', 'icon')    // 'gm-button-group__icon'
- * bem.bm('group', 'large')   // 'gm-button-group--large'
- * bem.em('icon', 'large')    // 'gm-button__icon--large'
- * bem.bem('group', 'icon', 'large') // 'gm-button-group__icon--large'
+ * bem.b()                    // 'vv-button'
+ * bem.b('group')             // 'vv-button-group'
+ * bem.e('icon')              // 'vv-button__icon'
+ * bem.m('large')             // 'vv-button--large'
+ * bem.be('group', 'icon')    // 'vv-button-group__icon'
+ * bem.bm('group', 'large')   // 'vv-button-group--large'
+ * bem.em('icon', 'large')    // 'vv-button__icon--large'
+ * bem.bem('group', 'icon', 'large') // 'vv-button-group__icon--large'
  * bem.is('loading', true)    // 'is-loading'
  * bem.is('loading', false)   // ''
  * ```
@@ -62,8 +62,8 @@ function createBEM(prefixName: string) {
      *
      * @example
      * ```ts
-     * bem.b()          // 'gm-button'
-     * bem.b('group')   // 'gm-button-group'
+     * bem.b()          // 'vv-button'
+     * bem.b('group')   // 'vv-button-group'
      * ```
      */
     b(blockSuffix: string = ''): string {
@@ -71,11 +71,11 @@ function createBEM(prefixName: string) {
     },
 
     /**
-     * 生成 Element 类名 `gm-{name}__{element}`。
+     * 生成 Element 类名 `vv-{name}__{element}`。
      *
      * @example
      * ```ts
-     * bem.e('icon')    // 'gm-button__icon'
+     * bem.e('icon')    // 'vv-button__icon'
      * ```
      */
     e(element: string = ''): string {
@@ -83,11 +83,11 @@ function createBEM(prefixName: string) {
     },
 
     /**
-     * 生成 Block Modifier 类名 `gm-{name}--{modifier}`。
+     * 生成 Block Modifier 类名 `vv-{name}--{modifier}`。
      *
      * @example
      * ```ts
-     * bem.m('large')   // 'gm-button--large'
+     * bem.m('large')   // 'vv-button--large'
      * ```
      */
     m(modifier: string = ''): string {
@@ -95,11 +95,11 @@ function createBEM(prefixName: string) {
     },
 
     /**
-     * 生成 Block + Element 类名 `gm-{name}-{blockSuffix}__{element}`。
+     * 生成 Block + Element 类名 `vv-{name}-{blockSuffix}__{element}`。
      *
      * @example
      * ```ts
-     * bem.be('group', 'icon')   // 'gm-button-group__icon'
+     * bem.be('group', 'icon')   // 'vv-button-group__icon'
      * ```
      */
     be(blockSuffix: string = '', element: string = ''): string {
@@ -107,11 +107,11 @@ function createBEM(prefixName: string) {
     },
 
     /**
-     * 生成 Block + Modifier 类名 `gm-{name}-{blockSuffix}--{modifier}`。
+     * 生成 Block + Modifier 类名 `vv-{name}-{blockSuffix}--{modifier}`。
      *
      * @example
      * ```ts
-     * bem.bm('group', 'large')  // 'gm-button-group--large'
+     * bem.bm('group', 'large')  // 'vv-button-group--large'
      * ```
      */
     bm(blockSuffix: string = '', modifier: string = ''): string {
@@ -119,11 +119,11 @@ function createBEM(prefixName: string) {
     },
 
     /**
-     * 生成 Element + Modifier 类名 `gm-{name}__{element}--{modifier}`。
+     * 生成 Element + Modifier 类名 `vv-{name}__{element}--{modifier}`。
      *
      * @example
      * ```ts
-     * bem.em('icon', 'large')   // 'gm-button__icon--large'
+     * bem.em('icon', 'large')   // 'vv-button__icon--large'
      * ```
      */
     em(element: string = '', modifier: string = ''): string {
@@ -131,11 +131,11 @@ function createBEM(prefixName: string) {
     },
 
     /**
-     * 生成 Block + Element + Modifier 三段类名 `gm-{name}-{blockSuffix}__{element}--{modifier}`。
+     * 生成 Block + Element + Modifier 三段类名 `vv-{name}-{blockSuffix}__{element}--{modifier}`。
      *
      * @example
      * ```ts
-     * bem.bem('group', 'icon', 'large')  // 'gm-button-group__icon--large'
+     * bem.bem('group', 'icon', 'large')  // 'vv-button-group__icon--large'
      * ```
      */
     bem(blockSuffix: string = '', element: string = '', modifier: string = ''): string {
@@ -167,9 +167,9 @@ function createBEM(prefixName: string) {
 /**
  * 拼接单个 BEM 类名（内部函数，不直接导出）。
  *
- * 各参数为空字符串时跳过对应分隔符，避免出现 `gm-button--` 这类尾部连字符。
+ * 各参数为空字符串时跳过对应分隔符，避免出现 `vv-button--` 这类尾部连字符。
  *
- * @param prefixName  前缀名（已含 `gm-`），如 `gm-button`
+ * @param prefixName  前缀名（已含 `vv-`），如 `vv-button`
  * @param blockSuffix Block 后缀（变体名），可空
  * @param element     Element 名，可空
  * @param modifier    Modifier 名，可空

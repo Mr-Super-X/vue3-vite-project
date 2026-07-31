@@ -88,7 +88,7 @@ describe('Login.vue（深色科技感重构）', () => {
   it('1. 渲染默认结构：品牌区 + 表单 + 按钮 + 版权', () => {
     const w = mount(Login)
     expect(w.find('h1').exists()).toBe(true)
-    expect(w.text()).toContain('工贸统一登录门户')
+    expect(w.text()).toContain('企业中后台管理')
     expect(w.findAll('input').length).toBeGreaterThanOrEqual(2)
     expect(w.find('button[type="button"]').exists()).toBe(true)
     expect(w.text()).toContain('© 2026')
@@ -259,7 +259,7 @@ async function handleSubmit() {
           <span :class="bem.e('logo-piece')" />
           <span :class="bem.e('logo-piece')" />
         </div>
-        <h1 :class="bem.e('title')">工贸统一登录门户</h1>
+        <h1 :class="bem.e('title')">企业中后台管理</h1>
         <p :class="bem.e('subtitle')">应急指挥 · 数据中台</p>
       </div>
 
@@ -715,7 +715,7 @@ pnpm test src/modules/auth/views/Login.spec.ts --run
 预期：7 个测试**全部通过**。
 
 如有失败，按 [失败排查] 检查：
-- 元素找不到 → 检查 `:class` BEM 拼写（`bem.e('card')` → `gm-auth-login__card`）
+- 元素找不到 → 检查 `:class` BEM 拼写（`bem.e('card')` → `vv-auth-login__card`）
 - 元素 type 错误 → 检查 `<button>` 标签 vs `el-button`
 - vi.mock 未生效 → 检查 `vi.mock` 必须在 import 之前
 
@@ -762,7 +762,7 @@ pnpm test --run
 - [ ] **Step 1: 启动 dev server（后台）**
 
 ```bash
-cd "D:/work/应急水利/应急/gm-portal-fe" && pnpm dev:local
+cd "D:/work/应急水利/应急/vue3-vite-project" && pnpm dev:local
 ```
 
 预期：Vite 启动，`http://localhost:5173` 可访问。
@@ -823,7 +823,7 @@ mcp__chrome-devtools__take_screenshot()
 - [ ] **Step 1: git status 确认变更范围**
 
 ```bash
-cd "D:/work/应急水利/应急/gm-portal-fe" && git status --short
+cd "D:/work/应急水利/应急/vue3-vite-project" && git status --short
 ```
 
 预期：仅 2 个文件变动（Login.vue 修改 + Login.spec.ts 新增），无意外文件被改。
@@ -831,7 +831,7 @@ cd "D:/work/应急水利/应急/gm-portal-fe" && git status --short
 - [ ] **Step 2: git add + commit（按项目规范，单独行加 metadata）**
 
 ```bash
-cd "D:/work/应急水利/应急/gm-portal-fe" && \
+cd "D:/work/应急水利/应急/vue3-vite-project" && \
   git add "src/modules/auth/views/Login.vue" "src/modules/auth/views/Login.spec.ts" && \
   git commit -m "feat(auth): 登录页深色科技感重构 + 增强交互
 

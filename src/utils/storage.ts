@@ -28,10 +28,10 @@ import Cookies from 'js-cookie'
 /**
  * 应用命名空间（隔离多项目共用同一 storage 域）
  * 数据源：独立的 VITE_STORAGE_NAMESPACE（与展示用的 VITE_APP_TITLE 解耦），
- * fallback 硬编码 'gm-portal-fe' 兜底。
- * 配置示例（.env.development）：VITE_STORAGE_NAMESPACE=gm-portal-fe
+ * fallback 硬编码 'vue3-vite-project' 兜底。
+ * 配置示例（.env.development）：VITE_STORAGE_NAMESPACE=vue3-vite-project
  */
-const APP_NAMESPACE = import.meta.env.VITE_STORAGE_NAMESPACE || 'gm-portal-fe'
+const APP_NAMESPACE = import.meta.env.VITE_STORAGE_NAMESPACE || 'vue3-vite-project'
 
 /** 给业务 key 加 namespace 前缀 */
 function setKey(key: string): string {

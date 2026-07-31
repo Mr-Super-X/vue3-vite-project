@@ -132,7 +132,7 @@ describe('PortalHeader 退出登录入口', () => {
       global: { mocks: { $t: mockT } },
     })
     // 点击 trigger 区（__user 内部任意子元素）
-    const trigger = w.find('.gm-portal-header__user')
+    const trigger = w.find('.vv-portal-header__user')
     expect(trigger.exists()).toBe(true)
     await trigger.trigger('click')
     await nextTick()
@@ -147,7 +147,7 @@ describe('PortalHeader 退出登录入口', () => {
       global: { mocks: { $t: mockT } },
       attachTo: document.body, // 让 el-dropdown 渲染到 document
     })
-    const trigger = w.find('.gm-portal-header__user')
+    const trigger = w.find('.vv-portal-header__user')
     await trigger.trigger('click')
     await nextTick()
     const dropdownItem = document.querySelector('.el-dropdown-menu__item') as HTMLElement
@@ -163,7 +163,7 @@ describe('PortalHeader 退出登录入口', () => {
       global: { mocks: { $t: mockT } },
       attachTo: document.body,
     })
-    const trigger = w.find('.gm-portal-header__user')
+    const trigger = w.find('.vv-portal-header__user')
     await trigger.trigger('click')
     await nextTick()
     const dropdownItem = document.querySelector('.el-dropdown-menu__item')
@@ -380,7 +380,7 @@ pnpm test --run
 - [ ] **Step 1: 启动 dev server**
 
 ```bash
-cd "D:/work/应急水利/应急/gm-portal-fe" && pnpm dev:local
+cd "D:/work/应急水利/应急/vue3-vite-project" && pnpm dev:local
 ```
 
 预期：Vite 启动，端口 5173 或 5174 可访问。
@@ -388,7 +388,7 @@ cd "D:/work/应急水利/应急/gm-portal-fe" && pnpm dev:local
 - [ ] **Step 2: 访问 /home（已登录态），截图用户区**
 
 ```javascript
-mcp__chrome-devtools__new_page({ url: "http://localhost:5173/gm-portal-fe/home" })
+mcp__chrome-devtools__new_page({ url: "http://localhost:5173/vue3-vite-project/home" })
 mcp__chrome-devtools__resize_page({ width: 1440, height: 900 })
 mcp__chrome-devtools__take_screenshot()
 ```

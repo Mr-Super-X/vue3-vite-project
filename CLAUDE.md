@@ -40,7 +40,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## §1 Architecture
 
-Feature-Sliced 风格的中后台门户前端（`gm-portal-fe`，工贸统一登录门户）：Vue 3.5 + TypeScript 6 + Vite 8 + Pinia 3 + Element Plus 2.14 + Vue Router 5。
+Feature-Sliced 风格的中后台门户前端（`vue3-vite-project`，企业中后台管理）：Vue 3.5 + TypeScript 6 + Vite 8 + Pinia 3 + Element Plus 2.14 + Vue Router 5。
 
 ### 1.1 分层视角
 
