@@ -82,11 +82,15 @@ export default defineConfig({
         // 业务侧高频 utils（详见 src/utils/*）
         { from: '@/utils/bem', imports: [{ name: 'createNamespace' }] },
       ],
-      resolvers: [ElementPlusResolver()],
+      resolvers: [
+        // importStyle: 'css' —— 组件/API（ElMessage 等）样式按需自动注入，
+        // main.ts 不再全量引入 element-plus/dist/index.css（gzip 省 ~30KB）
+        ElementPlusResolver({ importStyle: 'css' }),
+      ],
       dts: 'src/types/auto-imports.d.ts',
     }),
     Components({
-      resolvers: [ElementPlusResolver()],
+      resolvers: [ElementPlusResolver({ importStyle: 'css' })],
       dts: 'src/types/components.d.ts',
     }),
     // mock 启用开关由 VITE_USE_MOCK 控制（2026-07-27 切换）。

@@ -2,7 +2,61 @@
 
 ## 未发布
 
+### ⚠ BREAKING CHANGES
+
+* **auth:** 认证体系改为 httpOnly cookie 模式（2026-08-12 架构改造）
+  - 凭证 token 由后端 `Set-Cookie: HttpOnly` 下发，前端 JS 不再读取/存储 token；
+    登录态改为 sessionStorage 登录标记（`auth`）供守卫同步判断
+  - `http.ts` 删除 Bearer header 注入，axios 实例启用 `withCredentials`；
+    跨域后端 CORS 需配 `Access-Control-Allow-Credentials`
+  - `token-refresh.ts` 契约变更：`getValidToken(): Promise<string>` →
+    `refreshSession(): Promise<void>`；`extractToken`/`fetchToken` 配置项移除，
+    改为 `refresh` 自定义函数
+  - `api/modules/auth.ts`：`LoginResult` 不再包含 `token` 字段
+  - `store/modules/user.ts`：`token` 字段改为 `authenticated`（boolean）；
+    `logout()` 改乐观退出（先清本地再 fire-and-forget 通知后端，后端失败不再抛错）；
+    新增 `resetLocalState()`；跳转职责上移至 `useLogout`/守卫（斩断 store→router 循环依赖）
+  - `utils/storage.ts`：删除 `clearCookies` 导出与 token cookie 特殊通路
+    （HttpOnly cookie 前端不可删，由后端 `Max-Age=0` 清除）
+* **styles:** Element Plus 样式改按需加载（`ElementPlusResolver({ importStyle: 'css' })`），
+  `main.ts` 不再全量引入 `element-plus/dist/index.css`（gzip 省 ~15KB）；
+  `ElMessage`/`ElMessageBox` 等 API 禁止显式 import，由 unplugin-auto-import 注入并自动带样式
+
+### ✨ Features | 新特性
+
+* **test:** 新增 guards/{login,visibility,permission,composable,remote-menu} 与
+  plugins/{errorHandler,webVitals} 共 7 个 spec；覆盖率 45%→52%，
+  门槛从 40/35/40/40 提升至 50/45/48/50
+* **types:** 环境变量类型声明归并至 `src/types/env.d.ts` 单一事实源（补全 VITE_BEM_PREFIX）
+* **http:** 401 重试流程新增测试覆盖（refresh 成功重发/失败登出/refresh 端点防循环）
+
 ### 🐛 Bug Fixes | 缺陷修复
+
+* **auth:** Login.vue 从 548 行降至 137 行（样式抽离 `modules/auth/styles/login.scss`
+  与 `login-bg.scss`，符合单文件行数铁律）
+* **http:** `performLogout` 硬编码 `window.location.href='/login'` 改为动态 import router
+  跳转，修复子路径部署（VITE_BASE）下 404 的问题
+* **router:** 修复 remote 菜单模式下首页仅渲染布局、内容组件空白的问题：
+  `ensureRemoteMenuLoaded` 注入远程路由时，vue-router addRoute 的同名替换规则会
+  把本地"布局+children"嵌套结构中的子路由从 matcher 移除，导致 layout 内层
+  RouterView 无匹配。改为同名路由不替换（本地 routes/index.ts 是结构单一事实源），
+  仅合并远程 meta（后端 hidden → visible:false 控制保留），远程独有路由才注入
+* **home:** 修复数据总览卡片图标裂图：`OverviewSection` 的 `cardIconPath` 返回
+  运行时相对路径字符串（`'../../images/x.png'`），动态 :src 不走 vite 资源管线，
+  浏览器按页面 URL 解析在子路径部署下必 404。改为静态 import 图片资源
+  （构建期生成带 hash 的 URL，base 自动适配）
+* **app:** 修复登录页点击登录时闪屏：App.vue 的 AsyncState 在远程菜单加载期间
+  无差别把整个 RouterView 替换成骨架屏，页面间跳转时当前页（登录页）被瞬间
+  替换造成闪白。改为仅当当前导航无任何路由匹配（route.matched 为空，即首次
+  进入等待远程路由注入的场景）时才显示骨架屏，跳转中保持当前页面
+* **login:** 修复 hard refresh 后守卫直接放行导致 profile 为空的问题
+  （改为有标记且 profile 缺失时先 fetchProfile 校验凭证）
+* **html:** index.html 默认标题改为「企业中后台管理」并补 `lang="zh-CN"`
+* **docs:** 修复 storage.ts 与实际代码不符的腐烂注释；
+  模块骨架文档对齐现实（CLAUDE.md/docs/08 改为"按需包含"；docs/16 升级 v2.0）
+* **chore:** 删除 lint-staged 验证遗留文件 `src/__test_lint_staged.ts`
+
+### 🐛 Bug Fixes | 缺陷修复（历史）
 
 * **commitlint:** 补全常见规则错误详情的中文翻译，避免提交校验失败时混杂英文信息
 

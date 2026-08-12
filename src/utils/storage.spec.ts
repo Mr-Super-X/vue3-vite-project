@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import Cookies from 'js-cookie'
-import { Local, Session, clearCookies } from './storage'
+import { Local, Session } from './storage'
 
 // 测试期间 vitest 加载 .env.development，VITE_STORAGE_NAMESPACE 是配置的 storage
 // 隔离标识（如 'vue3-vite-project'）。fallback 'vue3-vite-project' 与 storage.ts 保持一致。
@@ -10,13 +9,11 @@ const APP_NAMESPACE = (import.meta.env.VITE_STORAGE_NAMESPACE || 'vue3-vite-proj
 beforeEach(() => {
   window.localStorage.clear()
   window.sessionStorage.clear()
-  clearCookies()
 })
 
 afterEach(() => {
   window.localStorage.clear()
   window.sessionStorage.clear()
-  clearCookies()
   vi.restoreAllMocks()
 })
 
@@ -81,21 +78,19 @@ describe('storage 工具', () => {
     })
   })
 
-  describe('Session（sessionStorage 包装 + token 走 cookie）', () => {
-    it('普通 key 走 sessionStorage', () => {
+  describe('Session（sessionStorage 包装）', () => {
+    it('普通 key 走 sessionStorage 命名空间', () => {
       Session.set('lastVisited', '/dashboard')
       expect(Session.get('lastVisited')).toBe('/dashboard')
       expect(window.sessionStorage.getItem(APP_NAMESPACE + 'lastVisited')).not.toBeNull()
-      // 不应写入 cookie
-      expect(Cookies.get(APP_NAMESPACE + 'lastVisited')).toBeUndefined()
     })
 
-    it('token 走 cookie 而非 sessionStorage', () => {
-      Session.set('token', 'mock-jwt-123')
-      // 写入 cookie
-      expect(Cookies.get('token')).toBe('mock-jwt-123')
-      // 不应写入 sessionStorage（token 走 cookie 路径，与 namespace 无关）
-      expect(window.sessionStorage.getItem('token')).toBeNull()
+    it('登录标记 auth 的写入/读取/清除', () => {
+      // httpOnly 模式：'auth' 只是普通命名空间 key，不含凭证信息
+      Session.set('auth', true)
+      expect(Session.get<boolean>('auth')).toBe(true)
+      Session.remove('auth')
+      expect(Session.get('auth')).toBeNull()
     })
 
     it('普通对象能 round-trip', () => {
@@ -103,16 +98,10 @@ describe('storage 工具', () => {
       expect(Session.get('userProfile')).toEqual({ id: 1, name: 'Admin' })
     })
 
-    it('remove 普通 key 走 sessionStorage.removeItem', () => {
+    it('remove 移除指定 key', () => {
       Session.set('foo', 'bar')
       Session.remove('foo')
       expect(window.sessionStorage.getItem(APP_NAMESPACE + 'foo')).toBeNull()
-    })
-
-    it('remove token 走 Cookies.remove', () => {
-      Session.set('token', 'mock-jwt-123')
-      Session.remove('token')
-      expect(Cookies.get('token')).toBeUndefined()
     })
 
     it('Session.get 不存在的 key 返回 null', () => {
@@ -138,40 +127,6 @@ describe('storage 工具', () => {
         expect(window.sessionStorage.getItem(APP_NAMESPACE + 'mine')).toBeNull()
         expect(window.sessionStorage.getItem('other-app:foo')).toBe('other-value')
       })
-    })
-  })
-
-  describe('clearCookies', () => {
-    it('清除所有 cookie（用 js-cookie API）', () => {
-      Cookies.set('a', '1')
-      Cookies.set('b', '2')
-      clearCookies()
-      expect(Cookies.get('a')).toBeUndefined()
-      expect(Cookies.get('b')).toBeUndefined()
-    })
-
-    it('无 cookie 时不抛错', () => {
-      expect(() => clearCookies()).not.toThrow()
-    })
-
-    it('对每条 cookie 尝试多个常见 path 兜底删除（js-cookie 内部调用）', () => {
-      // 注：jsdom 不支持跨 path 访问 cookie（path=/api 的 cookie 在 path=/ 页面不可见），
-      // 所以无法端到端测真实删除效果，改测 clearCookies 内部 js-cookie.remove 的调用模式。
-      document.cookie = 'test-cookie=1'
-      const removeSpy = vi.spyOn(Cookies, 'remove')
-      clearCookies()
-      // 验证对每条 cookie 调用了 4 次 remove（path: '/'、'/api'、''、无参）
-      const testCalls = removeSpy.mock.calls.filter(([name]) => name === 'test-cookie')
-      expect(testCalls.length).toBe(4)
-    })
-  })
-
-  describe('Session token cookie 安全属性', () => {
-    it('dev 环境（import.meta.env.PROD=false）不强制 secure', () => {
-      // dev 模式 PROD=false，应允许 http 写入
-      Session.set('token', 'dev-token')
-      // 写入成功（js-cookie dev 时即使 secure=true 也会写但读会受限）
-      expect(Cookies.get('token')).toBe('dev-token')
     })
   })
 })

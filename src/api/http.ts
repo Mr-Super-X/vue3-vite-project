@@ -3,8 +3,8 @@
 // - 拦截器职责单一：响应只管副作用（toast + 401 跳转）+ 抛 ApiError
 // - 业务码解包与 data 提取下沉到 request<T>()，拦截器签名天然满足 AxiosInterceptorFulfilled 类型
 //   （AxiosResponse -> AxiosResponse），避免使用 `as any` / `as never` 逃类型
-// - token 来源统一走 utils/storage.ts 的 Session，与项目命名空间约定一致；
-//   Session.get('token') 在生产环境自动 secure + sameSite=lax
+// - 认证模式（2026-08-12 httpOnly 改造）：凭证 token 由后端 Set-Cookie: HttpOnly 下发，
+//   前端 JS 不可读；请求靠 withCredentials 让浏览器自动携带 cookie，不再注入 Bearer header
 // - 所有抛出错误归一为 ApiError，调用方 `err instanceof ApiError` 即可 narrowing
 // - 可选能力（cancel/retry/merge/pageAdapter/cache/request-id/token-refresh）拆到独立模块，request<T> 保持简单，业务层零迁移
 
@@ -14,9 +14,9 @@ import axios, {
   type AxiosResponse,
   type GenericAbortSignal,
 } from 'axios'
-import { ElMessage } from 'element-plus'
+// ElMessage 由 unplugin-auto-import 注入（importStyle 自动带样式，勿显式 import）
 import { BusinessCode } from '@/enums/httpEnum'
-import { Session, clearCookies } from '@/utils/storage'
+import { Session } from '@/utils/storage'
 import type { ApiResponse } from './types/api.d'
 import { ApiError } from './types/error'
 import { resolveHttpStatusMessage } from './http-errors'
@@ -29,7 +29,7 @@ import {
 } from './page-adapter'
 import { generateRequestId, REQUEST_ID_HEADER } from './request-id'
 import { cacheGet, cacheSet, buildCacheKey } from './cache'
-import { getValidToken, _getCurrentConfig } from './token-refresh'
+import { refreshSession, _getCurrentConfig } from './token-refresh'
 
 /**
  * 扩展 AxiosRequestConfig：标记分页列表请求 / 内存缓存（一次性的可插拔能力）。
@@ -98,26 +98,13 @@ const getAPIBaseURL = () => import.meta.env.VITE_API_BASE_URL
 const instance: AxiosInstance = axios.create({
   baseURL: getAPIBaseURL(),
   timeout: 15000,
+  // httpOnly 凭证：跨域时浏览器自动携带 cookie；后端 CORS 需配 Access-Control-Allow-Credentials
+  withCredentials: true,
 })
 
 // ────────────────────────────────────────────────────────────────────
 // 请求拦截器辅助函数（按职责拆分；interceptor 本身只做编排）
 // ────────────────────────────────────────────────────────────────────
-
-/**
- * 注入 Bearer Token：从 Session 读取 token 写入 Authorization 头。
- */
-function applyAuthHeader(config: AxiosRequestConfig): void {
-  const token = Session.get<string>('token')
-  if (typeof token !== 'string' || token.length === 0 || !config.headers) return
-  const value = `Bearer ${token}`
-  const headers = config.headers as { set?: unknown }
-  if (typeof headers.set === 'function') {
-    ;(headers as { set: (k: string, v: string) => void }).set('Authorization', value)
-  } else {
-    ;(config.headers as Record<string, string>)['Authorization'] = value
-  }
-}
 
 /**
  * 合并请求 signal 与 globalAbort signal：logout 时 globalAbort.abort() 会取消所有在途请求。
@@ -167,12 +154,11 @@ function applyRequestIdHeader(config: AxiosRequestConfig): void {
 }
 
 instance.interceptors.request.use((config) => {
-  applyAuthHeader(config)
   applyAbortSignal(config)
   applyPageAdapterParams(config)
   applyRequestIdHeader(config)
   // dev 模式调试日志（2026-07-24 审计补齐）：拦截器链逐步追踪，
-  // 排查"哪个阶段抛错 / 是否注入 token / pageAdapter 是否正确转换"
+  // 排查"哪个阶段抛错 / pageAdapter 是否正确转换"
   if (import.meta.env.DEV) {
     console.debug('[HTTP][req]', {
       method: (config.method ?? 'get').toUpperCase(),
@@ -233,14 +219,19 @@ function handleGenericError(
 }
 
 /**
- * 登出副作用：toast + 清 token + 跳登录页。
- * 由 refresh 失败流程调用。
+ * 登出副作用：toast + 清登录标记 + 跳登录页。
+ * 由 refresh 失败流程调用（凭证彻底失效，无法续期）。
+ *
+ * 动态 import router：打破静态循环依赖（http → router → guards → store → api），
+ * 且子路径部署时走 vue-router 的 base 配置，不再硬编码绝对路径。
+ * 凭证 cookie（HttpOnly）前端删不掉，由后端 logout/refresh 失效处理；
+ * 前端只清无敏感信息的登录标记。
  */
-function performLogout(): void {
+async function performLogout(): Promise<void> {
   ElMessage.error('登录已过期，请重新登录')
-  Session.remove('token')
-  clearCookies()
-  window.location.href = '/login'
+  Session.remove('auth')
+  const { router } = await import('@/router')
+  await router.push('/login')
 }
 
 // 业务码 → 副作用处理器查表。
@@ -335,7 +326,8 @@ export async function request<T>(config: AxiosRequestConfig): Promise<T> {
 
     return data as T
   } catch (err) {
-    // 401 自动 refresh + retry（仅一次）
+    // 401 自动 refresh + retry（仅一次）：
+    // refreshSession 成功后新凭证已由后端 Set-Cookie 写入，重发原请求自动携带
     if (
       err instanceof ApiError &&
       (err.code === 401 || err.code === BusinessCode.UNAUTHORIZED) &&
@@ -343,18 +335,13 @@ export async function request<T>(config: AxiosRequestConfig): Promise<T> {
       !isRefreshRequestUrl(config.url)
     ) {
       try {
-        const newToken = await getValidToken()
+        await refreshSession()
         config._retried = true
-        // 更新 Authorization header
-        if (config.headers) {
-          const headers = config.headers as Record<string, string>
-          headers.Authorization = `Bearer ${newToken}`
-        }
         // 递归调用：_retried=true 防止无限循环
         return await request<T>(config)
       } catch {
         // refresh 失败：登出 + 抛出原 ApiError
-        performLogout()
+        await performLogout()
       }
     }
     throw err

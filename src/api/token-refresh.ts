@@ -1,14 +1,15 @@
 import axios from 'axios'
-import { Session } from '@/utils/storage'
 
 /**
- * Token 自动刷新管理器（单例）。
+ * 会话续期管理器（单例，httpOnly 模式）。
  *
  * 设计要点：
  * - 并发去重：同一时刻只发一个 refresh 请求；并发 401 共享结果
- * - 配置化：endpoint + request/response transformers 可配（后端契约确定后调整）
- * - 默认约定：POST /auth/refresh + 空 body + 从 body.data.token 提取新 token
- * - 失败传播：refresh 失败时抛出，由调用方（http.ts）决定后续行为（清 token + 跳登录页）
+ * - httpOnly 凭证：refresh 成功后新 token 由后端 `Set-Cookie: HttpOnly` 自动写入，
+ *   前端 JS 拿不到也无需拿到 token 字符串——refreshSession 只负责"让凭证续期"，
+ *   续期成功后调用方直接重发原请求（cookie 自动携带新凭证）
+ * - 配置化：endpoint + 自定义 refresh 函数可配（后端契约确定后调整）
+ * - 失败传播：refresh 失败时抛出，由调用方（http.ts）决定后续行为（清标记 + 跳登录页）
  *
  * 注意：当前 refresh 接口契约暂未与后端确认，默认实现是占位。
  * 后端契约确定后，仅需修改 configureTokenRefresh 配置参数即可。
@@ -17,41 +18,34 @@ import { Session } from '@/utils/storage'
 const getAPIBaseURL = () => import.meta.env.VITE_API_BASE_URL
 
 /**
- * Token 刷新配置。
+ * 会话续期配置。
  *
  * 后端契约确定后调整：
  * - url：refresh 接口路径
- * - fetchToken：自定义请求函数（默认 axios POST）
- * - extractToken：从响应中提取新 token
+ * - refresh：自定义请求函数（默认 axios POST + withCredentials）
  */
 export interface TokenRefreshConfig {
   /** refresh 接口路径（相对于 baseURL） */
   url: string
-  /** 自定义 fetch 函数（默认使用 axios POST） */
-  fetchToken?: () => Promise<unknown>
-  /** 从响应数据中提取新 token（默认 body.data.token） */
-  extractToken?: (data: unknown) => string | null
+  /** 自定义 refresh 函数（默认使用 axios POST；成功即视为凭证已续期） */
+  refresh?: () => Promise<unknown>
 }
 
-const DEFAULT_CONFIG: Required<Omit<TokenRefreshConfig, 'fetchToken' | 'extractToken'>> & {
-  fetchToken: () => Promise<unknown>
-  extractToken: (data: unknown) => string | null
-} = {
+const DEFAULT_CONFIG: Required<TokenRefreshConfig> = {
   url: '/auth/refresh',
-  fetchToken: async () => {
+  refresh: async () => {
     // baseURL 在 vitest jsdom 环境可能为 undefined，降级为空串避免路径拼接异常
     // url 使用 currentConfig.url（运行时读取）确保 configureTokenRefresh 改动生效
+    // withCredentials：refresh 需携带旧 cookie（凭证），成功后后端 Set-Cookie 新凭证
     const baseURL = getAPIBaseURL() ?? ''
-    const res = await axios.post(`${baseURL}${currentConfig.url}`, {}, { timeout: 15000 })
-    return res.data
-  },
-  extractToken: (data: unknown) => {
-    if (data && typeof data === 'object') {
-      const body = data as { data?: { token?: unknown } }
-      const token = body.data?.token
-      return typeof token === 'string' ? token : null
-    }
-    return null
+    await axios.post(
+      `${baseURL}${currentConfig.url}`,
+      {},
+      {
+        timeout: 15000,
+        withCredentials: true,
+      }
+    )
   },
 }
 
@@ -71,31 +65,30 @@ export function configureTokenRefresh(config: Partial<TokenRefreshConfig>): void
   currentConfig = {
     ...currentConfig,
     ...(config.url !== undefined ? { url: config.url } : {}),
-    ...(config.fetchToken !== undefined ? { fetchToken: config.fetchToken } : {}),
-    ...(config.extractToken !== undefined ? { extractToken: config.extractToken } : {}),
+    ...(config.refresh !== undefined ? { refresh: config.refresh } : {}),
   }
 }
 
 /**
  * 单例刷新状态：保存正在进行的 refresh Promise（用于并发去重）
  */
-let refreshingPromise: Promise<string> | null = null
+let refreshingPromise: Promise<void> | null = null
 
 /**
- * 获取有效的 access token：
+ * 让当前会话凭证续期：
  * - 若当前已有 refresh 在飞：等待其完成并复用结果
- * - 否则：发起新的 refresh 请求，存储新 token，返回
+ * - 否则：发起新的 refresh 请求（成功后凭证已由后端 Set-Cookie 更新）
  *
  * 失败时抛出错误，调用方决定后续行为。
  *
  * 循环防护：http.ts 调用时检查 config.url 是否为 refresh 端点，是则跳过本函数。
  */
-export async function getValidToken(): Promise<string> {
+export async function refreshSession(): Promise<void> {
   if (!refreshingPromise) {
     refreshingPromise = doRefresh()
   }
   try {
-    return await refreshingPromise
+    await refreshingPromise
   } catch (err) {
     // 失败时清空状态，让下次重试可以重新发起
     refreshingPromise = null
@@ -103,16 +96,10 @@ export async function getValidToken(): Promise<string> {
   }
 }
 
-async function doRefresh(): Promise<string> {
-  const data = await currentConfig.fetchToken()
-  const token = currentConfig.extractToken(data)
-  if (!token) {
-    throw new Error('[token-refresh] refresh response has no token')
-  }
-  Session.set('token', token)
+async function doRefresh(): Promise<void> {
+  await currentConfig.refresh()
   // 成功完成后再清空 refreshingPromise（保证并发请求都能拿到结果）
   refreshingPromise = null
-  return token
 }
 
 /** @internal 测试用：清空 refresh 状态 */

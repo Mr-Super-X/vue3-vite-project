@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import Cookies from 'js-cookie'
 import { BusinessCode } from '@/enums/httpEnum'
 import { ApiError, isApiError } from './types/error'
 import type { AxiosResponse } from 'axios'
@@ -60,6 +59,22 @@ vi.mock('axios', async () => {
   }
 })
 
+// httpOnly 模式：refreshSession 由 token-refresh 模块提供，mock 掉以控制 401 流程
+const { mockRefreshSession, mockRouterPush } = vi.hoisted(() => ({
+  mockRefreshSession: vi.fn(),
+  mockRouterPush: vi.fn().mockResolvedValue(undefined),
+}))
+
+vi.mock('./token-refresh', () => ({
+  refreshSession: mockRefreshSession,
+  _getCurrentConfig: () => ({ url: '/auth/refresh', refresh: vi.fn() }),
+}))
+
+// performLogout 通过动态 import('@/router') 拿实例跳转（httpOnly 改造后不再硬编码路径）
+vi.mock('@/router', () => ({
+  router: { push: mockRouterPush },
+}))
+
 // 必须在 mock 之后；动态 import 让 mock 生效
 const httpModule = await import('./http')
 const { request } = httpModule
@@ -82,14 +97,14 @@ const getResponseHandler = () => {
 beforeEach(() => {
   window.localStorage.clear()
   window.sessionStorage.clear()
-  Cookies.remove('token', { path: '/' })
+  mockRefreshSession.mockReset()
+  mockRouterPush.mockReset().mockResolvedValue(undefined)
   vi.clearAllMocks()
 })
 
 afterEach(() => {
   window.localStorage.clear()
   window.sessionStorage.clear()
-  Cookies.remove('token', { path: '/' })
   vi.restoreAllMocks()
 })
 
@@ -113,19 +128,11 @@ describe('ApiError', () => {
 
 describe('http.ts 拦截器契约', () => {
   describe('请求拦截器', () => {
-    it('Session 没有 token 时不写入 Authorization', () => {
+    it('httpOnly 模式：不注入 Authorization header（凭证由 cookie 自动携带）', () => {
       const handler = getRequestHandler()
       const headers = new Map<string, string>()
       handler.onFulfilled({ headers })
       expect(headers.get('Authorization')).toBeUndefined()
-    })
-
-    it('Session 有 token 时写入 Bearer Authorization', () => {
-      const handler = getRequestHandler()
-      Cookies.set('token', 'mock-jwt-xyz')
-      const headers = new Map<string, string>()
-      handler.onFulfilled({ headers })
-      expect(headers.get('Authorization')).toBe('Bearer mock-jwt-xyz')
     })
 
     it('请求拦截器合并 globalAbort signal：abort 后 cfg.signal 也中止', () => {
@@ -178,11 +185,6 @@ describe('http.ts 拦截器契约', () => {
 
     it('业务码 UNAUTHORIZED 时仅抛 ApiError（side effects 由 request<T> 包裹层处理）', () => {
       const handler = getResponseHandler()
-      Object.defineProperty(window, 'location', {
-        value: { href: '' },
-        writable: true,
-      })
-      Cookies.set('token', 'old-token')
 
       let captured: unknown
       try {
@@ -200,9 +202,9 @@ describe('http.ts 拦截器契约', () => {
         expect(captured.code).toBe(BusinessCode.UNAUTHORIZED)
         expect(captured.url).toBe('/x')
       }
-      // 不做 side effects（不跳转、不清 token）—— 留给 request<T> 决定是 refresh 还是 logout
-      expect(window.location.href).not.toContain('/login')
-      expect(Cookies.get('token')).toBe('old-token')
+      // 拦截器层不做 side effects（不跳转、不清标记、不 refresh）——留给 request<T> 决定
+      expect(mockRouterPush).not.toHaveBeenCalled()
+      expect(mockRefreshSession).not.toHaveBeenCalled()
     })
 
     it('业务码失败时抛 ApiError 并保留 message', () => {
@@ -280,6 +282,54 @@ describe('http.ts 拦截器契约', () => {
       const result = await request<{ id: number }>({ url: '/x' })
       expect(requestMock).toHaveBeenCalledWith({ url: '/x' })
       expect(result).toEqual({ id: 1 })
+    })
+
+    it('401 时自动 refreshSession 并重发原请求（httpOnly：无需更新 header）', async () => {
+      const requestMock = httpInstance.request as ReturnType<typeof vi.fn>
+      requestMock.mockReset()
+      // 第一次：401（业务码 UNAUTHORIZED）
+      requestMock.mockRejectedValueOnce(
+        new ApiError({ code: BusinessCode.UNAUTHORIZED, message: 'expired', url: '/x' })
+      )
+      // 第二次（refresh 成功后重发）：成功
+      requestMock.mockResolvedValueOnce({
+        data: { code: 0, message: 'ok', data: { id: 2 } },
+      })
+      mockRefreshSession.mockResolvedValueOnce(undefined)
+
+      const result = await request<{ id: number }>({ url: '/x' })
+
+      expect(mockRefreshSession).toHaveBeenCalledTimes(1)
+      expect(requestMock).toHaveBeenCalledTimes(2)
+      expect(result).toEqual({ id: 2 })
+      // 未触发登出
+      expect(mockRouterPush).not.toHaveBeenCalled()
+    })
+
+    it('refresh 失败时清登录标记并跳登录页（performLogout）', async () => {
+      const requestMock = httpInstance.request as ReturnType<typeof vi.fn>
+      requestMock.mockReset()
+      requestMock.mockRejectedValueOnce(
+        new ApiError({ code: 401, message: 'unauthorized', status: 401, url: '/x' })
+      )
+      mockRefreshSession.mockRejectedValueOnce(new Error('refresh failed'))
+
+      await expect(request({ url: '/x' })).rejects.toThrow('unauthorized')
+
+      expect(mockRefreshSession).toHaveBeenCalledTimes(1)
+      expect(mockRouterPush).toHaveBeenCalledWith('/login')
+    })
+
+    it('refresh 端点自身的 401 不触发 refresh（防循环）', async () => {
+      const requestMock = httpInstance.request as ReturnType<typeof vi.fn>
+      requestMock.mockReset()
+      requestMock.mockRejectedValueOnce(
+        new ApiError({ code: 401, message: 'unauthorized', status: 401, url: '/auth/refresh' })
+      )
+
+      await expect(request({ url: '/auth/refresh', method: 'post' })).rejects.toThrow()
+
+      expect(mockRefreshSession).not.toHaveBeenCalled()
     })
   })
 })

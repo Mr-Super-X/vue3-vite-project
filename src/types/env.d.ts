@@ -1,6 +1,8 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
+  /** BEM 类名前缀；空串表示无前缀。详见 src/utils/bem.ts。 */
+  readonly VITE_BEM_PREFIX?: string
   readonly VITE_APP_TITLE: string
   readonly VITE_API_BASE_URL: string
   /**
