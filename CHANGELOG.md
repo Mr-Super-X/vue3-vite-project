@@ -55,6 +55,12 @@
 * **docs:** 修复 storage.ts 与实际代码不符的腐烂注释；
   模块骨架文档对齐现实（CLAUDE.md/docs/08 改为"按需包含"；docs/16 升级 v2.0）
 * **chore:** 删除 lint-staged 验证遗留文件 `src/__test_lint_staged.ts`
+* **ci:** 修复 CI 五道门禁（Lint/TypeCheck/Test/CheckRoutes/Build）永不触发：
+  workflow 分支过滤 `main` → `[master, develop]`，与仓库实际默认分支一致
+  （2026-08-12 架构审查发现，仓库无 main 分支）
+* **docs:** README 技术选型表 js-cookie 定位修正——httpOnly 改造后 src 已无引用，
+  重新定位为「仅非敏感 cookie 偏好场景预留，严禁存凭证」并标注安全边界；
+  `remote-menu.ts` 远程 meta 合并处补充 vue-router 升级回归验证 + 非响应式警告注释
 
 ### 🐛 Bug Fixes | 缺陷修复（历史）
 

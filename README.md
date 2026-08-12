@@ -22,25 +22,25 @@
 
 ## 🛠️ 技术栈
 
-| 维度         | 选型                        | 版本                                |
-| ------------ | --------------------------- | ----------------------------------- |
-| 核心框架     | Vue                         | ^3.5.38                             |
-| 构建工具     | Vite                        | ^8.0.16                             |
-| 语言         | TypeScript                  | ~6.0.0（strict 模式）               |
-| 包管理器     | pnpm                        | >=11.x                              |
-| Node 要求    | -                           | >=22.18 或 >=24.12                  |
-| UI 组件库    | Element Plus                | ^2.14.3                             |
-| 原子化 CSS   | UnoCSS                      | ^66.7.5（兼容 SCSS/LESS/原生 CSS）  |
-| 状态管理     | Pinia                       | ^3.0.4                              |
-| 路由         | Vue Router                  | ^5.1.0                              |
-| 国际化       | Vue I18n                    | ^11.4.6                             |
-| 网络层       | Axios                       | ^1.18.1                             |
-| 浏览器基线   | normalize.css               | ^8.0.1                              |
-| 日期工具     | dayjs                       | ^1.11.21                            |
-| API Mock     | vite-plugin-mock            | ^3.0.2                              |
-| Storage 工具 | js-cookie                   | ^3.0.8                              |
-| 测试框架     | Vitest                      | ^4.1.9 + @vue/test-utils + jsdom    |
-| Pinia 持久化 | pinia-plugin-persistedstate | ^4.7.1（仅 store 字段 pick 持久化） |
+| 维度         | 选型                        | 版本                                                                                  |
+| ------------ | --------------------------- | ------------------------------------------------------------------------------------- |
+| 核心框架     | Vue                         | ^3.5.38                                                                               |
+| 构建工具     | Vite                        | ^8.0.16                                                                               |
+| 语言         | TypeScript                  | ~6.0.0（strict 模式）                                                                 |
+| 包管理器     | pnpm                        | >=11.x                                                                                |
+| Node 要求    | -                           | >=22.18 或 >=24.12                                                                    |
+| UI 组件库    | Element Plus                | ^2.14.3                                                                               |
+| 原子化 CSS   | UnoCSS                      | ^66.7.5（兼容 SCSS/LESS/原生 CSS）                                                    |
+| 状态管理     | Pinia                       | ^3.0.4                                                                                |
+| 路由         | Vue Router                  | ^5.1.0                                                                                |
+| 国际化       | Vue I18n                    | ^11.4.6                                                                               |
+| 网络层       | Axios                       | ^1.18.1                                                                               |
+| 浏览器基线   | normalize.css               | ^8.0.1                                                                                |
+| 日期工具     | dayjs                       | ^1.11.21                                                                              |
+| API Mock     | vite-plugin-mock            | ^3.0.2                                                                                |
+| Cookie 工具  | js-cookie                   | ^3.0.8（仅非敏感偏好场景预留；凭证走 httpOnly cookie，JS 不可读写，严禁用其存 token） |
+| 测试框架     | Vitest                      | ^4.1.9 + @vue/test-utils + jsdom                                                      |
+| Pinia 持久化 | pinia-plugin-persistedstate | ^4.7.1（仅 store 字段 pick 持久化）                                                   |
 
 ---
 

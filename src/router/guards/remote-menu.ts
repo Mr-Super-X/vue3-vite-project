@@ -74,6 +74,12 @@ export async function ensureRemoteMenuLoaded(
         // 的双轨收紧仍然生效）；远程独有的新路由才注入。
         if (r.name && router.hasRoute(r.name)) {
           const existing = router.getRoutes().find((record) => record.name === r.name)
+          // 注意（2026-08-12 架构审查补齐）：Object.assign 直接改写 vue-router matcher
+          // 内部的 RouteRecord 对象，绕过了公开 API——
+          //   1. 依赖 matcher 内部结构，属未公开行为：升级 vue-router 大版本时
+          //      必须回归验证「远程 meta 合并后路由仍正常匹配」
+          //   2. 合并是非响应式的：已渲染的菜单/页签不会随 meta 变化自动更新，
+          //      仅对后续导航生效；若未来需要"菜单实时收紧"需改为重渲染方案
           if (existing && r.meta) Object.assign(existing.meta, r.meta)
           continue
         }
