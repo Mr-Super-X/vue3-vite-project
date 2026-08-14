@@ -21,7 +21,7 @@ const bem = createNamespace('portal-layout')
 @use './styles/portal-tokens.scss' as *;
 </style>
 
-<style lang="scss" scoped>
+<style lang="scss">
 .#{$BEM_PREFIX}-portal-layout {
   min-height: 100vh;
   background: var(--portal-bg);

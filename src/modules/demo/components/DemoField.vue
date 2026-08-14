@@ -103,15 +103,17 @@ async function copyCode() {
     console.warn('[DemoField] 复制失败，请手动选中复制:', err)
   }
 }
+
+const bem = createNamespace('demo-field')
 </script>
 
 <template>
-  <div class="demo-field">
-    <div v-if="$slots.default" class="demo-field__demo">
+  <div :class="bem.b()">
+    <div v-if="$slots.default" :class="bem.e('demo')">
       <slot />
     </div>
 
-    <div class="demo-field__toolbar">
+    <div :class="bem.e('toolbar')">
       <el-button
         link
         size="small"
@@ -120,7 +122,7 @@ async function copyCode() {
       >
         {{ expanded ? '隐藏代码' : '显示代码' }}
       </el-button>
-      <div class="demo-field__spacer" />
+      <div :class="bem.e('spacer')" />
       <el-button link size="small" :icon="copied ? Check : DocumentCopy" @click="copyCode">
         {{ copied ? '已复制' : '复制' }}
       </el-button>
@@ -133,15 +135,15 @@ async function copyCode() {
       @before-leave="beforeLeave"
       @leave="leave"
     >
-      <div v-show="expanded" class="demo-field__code-wrap">
-        <pre class="demo-field__pre"><code v-html="highlighted" /></pre>
+      <div v-show="expanded" :class="bem.e('code-wrap')">
+        <pre :class="bem.e('pre')"><code v-html="highlighted" /></pre>
       </div>
     </Transition>
   </div>
 </template>
 
-<style lang="scss" scoped>
-.demo-field {
+<style lang="scss">
+.#{$BEM_PREFIX}-demo-field {
   border: 1px solid var(--el-border-color-lighter, #ebeef5);
   border-radius: 8px;
   overflow: hidden;

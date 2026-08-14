@@ -3,6 +3,9 @@
 // 规格：364x252 / AVATAR 32x32 / 标签页 18px 高亮蓝
 import { ref } from 'vue'
 
+// BEM 工具由 unplugin-auto-import 自动注入，无须显式 import
+const bem = createNamespace('notice-panel')
+
 interface NoticeTab {
   key: 'notice' | 'message'
   label: string
@@ -31,51 +34,51 @@ const activeTab = ref<NoticeTab['key']>('notice')
 </script>
 
 <template>
-  <div class="notice-panel">
-    <header class="notice-panel__header">
-      <span class="notice-panel__avatar">
+  <div :class="bem.b()">
+    <header :class="bem.e('header')">
+      <span :class="bem.e('avatar')">
         <img src="@/modules/home/images/avatar-male.png" alt="" width="32" height="32" />
       </span>
-      <span class="notice-panel__name">黄晓阳</span>
-      <span class="notice-panel__divider" aria-hidden="true" />
+      <span :class="bem.e('name')">黄晓阳</span>
+      <span :class="bem.e('divider')" aria-hidden="true" />
       <button
         v-for="tab in TABS"
         :key="tab.key"
         type="button"
-        :class="['notice-panel__count', { active: activeTab === tab.key }]"
+        :class="[bem.e('count'), bem.is('active', activeTab === tab.key)]"
         @click="activeTab = tab.key"
       >
-        <span class="notice-panel__count-label">{{ tab.label }}</span>
-        <span class="notice-panel__count-num" :style="{ color: tab.countColor }">
+        <span :class="bem.e('count-label')">{{ tab.label }}</span>
+        <span :class="bem.e('count-num')" :style="{ color: tab.countColor }">
           {{ tab.count }}
         </span>
       </button>
     </header>
 
-    <nav class="notice-panel__tabs" aria-label="通知分类">
+    <nav :class="bem.e('tabs')" aria-label="通知分类">
       <button
         v-for="tab in TABS"
         :key="tab.key"
         type="button"
-        :class="['notice-panel__tab', { active: activeTab === tab.key }]"
+        :class="[bem.e('tab'), bem.is('active', activeTab === tab.key)]"
         @click="activeTab = tab.key"
       >
         {{ tab.label }}
-        <span v-if="activeTab === tab.key" class="notice-panel__tab-bar" aria-hidden="true" />
+        <span v-if="activeTab === tab.key" :class="bem.e('tab-bar')" aria-hidden="true" />
       </button>
     </nav>
 
-    <ul class="notice-panel__list">
-      <li v-for="(n, i) in NOTICES" :key="i" class="notice-panel__item">
-        <span class="notice-panel__dot" aria-hidden="true" />
-        <span class="notice-panel__text">{{ n.text }}</span>
+    <ul :class="bem.e('list')">
+      <li v-for="(n, i) in NOTICES" :key="i" :class="bem.e('item')">
+        <span :class="bem.e('dot')" aria-hidden="true" />
+        <span :class="bem.e('text')">{{ n.text }}</span>
       </li>
     </ul>
   </div>
 </template>
 
-<style lang="scss" scoped>
-.notice-panel {
+<style lang="scss">
+.#{$BEM_PREFIX}-notice-panel {
   background: #fff;
   border-radius: 4px;
   padding: 16px 16px 0;
@@ -130,7 +133,7 @@ const activeTab = ref<NoticeTab['key']>('notice')
     padding: 0;
     cursor: pointer;
 
-    &.active .notice-panel__count-label {
+    &.is-active .#{$BEM_PREFIX}-notice-panel__count-label {
       color: #0d1c28;
       font-weight: 500;
     }
@@ -167,7 +170,7 @@ const activeTab = ref<NoticeTab['key']>('notice')
     cursor: pointer;
     line-height: 25px;
 
-    &.active {
+    &.is-active {
       color: #016be6;
       font-weight: 500;
     }

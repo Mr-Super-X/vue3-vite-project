@@ -7,7 +7,7 @@ import { useUserStore } from '@/store/modules/user'
 import { useAppRouter } from '@/composables/useAppRouter'
 
 // BEM 工具由 unplugin-auto-import 自动注入，无须显式 import
-const bem = createNamespace('auth-login')
+const bem = createNamespace('login')
 
 const { router } = useAppRouter()
 const route = useRoute()

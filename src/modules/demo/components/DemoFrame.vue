@@ -26,28 +26,30 @@ const { router } = useAppRouter()
 function goBack() {
   router.push('/demo')
 }
+
+const bem = createNamespace('demo-frame')
 </script>
 
 <template>
-  <section class="demo-frame">
-    <header class="demo-frame__header">
-      <el-button link :icon="ArrowLeft" class="demo-frame__back" @click="goBack">返回</el-button>
-      <h1 class="demo-frame__title">{{ title }}</h1>
-      <code v-if="source" class="demo-frame__source">{{ source }}</code>
+  <section :class="bem.b()">
+    <header :class="bem.e('header')">
+      <el-button link :icon="ArrowLeft" :class="bem.e('back')" @click="goBack">返回</el-button>
+      <h1 :class="bem.e('title')">{{ title }}</h1>
+      <code v-if="source" :class="bem.e('source')">{{ source }}</code>
     </header>
 
-    <ul v-if="introductions?.length" class="demo-frame__intro">
+    <ul v-if="introductions?.length" :class="bem.e('intro')">
       <li v-for="(line, i) in introductions" :key="i">{{ line }}</li>
     </ul>
 
-    <div class="demo-frame__body">
+    <div :class="bem.e('body')">
       <slot />
     </div>
   </section>
 </template>
 
-<style lang="scss" scoped>
-.demo-frame {
+<style lang="scss">
+.#{$BEM_PREFIX}-demo-frame {
   display: flex;
   flex-direction: column;
   gap: 16px;

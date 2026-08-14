@@ -2,29 +2,32 @@
 // 首页底部：全宽色块 + 横向链接矩阵 + 版权信息
 // 规格：源自 MeaXure 1920 artboard；上块 (links) y=994..1216 / 下块 (copyright) y=1216..1288
 import { FOOTER_LINKS, FOOTER_COPYRIGHT, FOOTER_BEIAN } from '@/modules/home/config/footer'
+
+// BEM 工具由 unplugin-auto-import 自动注入，无须显式 import
+const bem = createNamespace('home-footer')
 </script>
 
 <template>
-  <footer class="home-footer">
-    <section class="home-footer__links">
-      <div class="home-footer__links-inner">
-        <h4 class="home-footer__group-title">系统链接</h4>
-        <ul class="home-footer__list">
-          <li v-for="(link, li) in FOOTER_LINKS" :key="li" class="home-footer__item">
+  <footer :class="bem.b()">
+    <section :class="bem.e('links')">
+      <div :class="bem.e('links-inner')">
+        <h4 :class="bem.e('group-title')">系统链接</h4>
+        <ul :class="bem.e('list')">
+          <li v-for="(link, li) in FOOTER_LINKS" :key="li" :class="bem.e('item')">
             <a :href="link.href" target="_blank" rel="noopener">{{ link.label }}</a>
           </li>
         </ul>
       </div>
     </section>
-    <section class="home-footer__copyright">
-      <p class="home-footer__line">{{ FOOTER_COPYRIGHT }}</p>
-      <p class="home-footer__line">{{ FOOTER_BEIAN }}</p>
+    <section :class="bem.e('copyright')">
+      <p :class="bem.e('line')">{{ FOOTER_COPYRIGHT }}</p>
+      <p :class="bem.e('line')">{{ FOOTER_BEIAN }}</p>
     </section>
   </footer>
 </template>
 
-<style lang="scss" scoped>
-.home-footer {
+<style lang="scss">
+.#{$BEM_PREFIX}-home-footer {
   color: #666;
   font-size: 12px;
 

@@ -9,6 +9,9 @@ import OverviewSection from '../components/OverviewSection.vue'
 import HomeFooter from '../components/HomeFooter.vue'
 import HomeAiWidget from '../components/HomeAiWidget.vue'
 
+// BEM 工具由 unplugin-auto-import 自动注入，无须显式 import
+const bem = createNamespace('home-index')
+
 const store = usePortalOverviewStore()
 
 onMounted(() => {
@@ -17,7 +20,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="home">
+  <div :class="bem.b()">
     <HeroSection />
     <DateGreeting />
     <OverviewSection />
@@ -26,8 +29,8 @@ onMounted(() => {
   </div>
 </template>
 
-<style lang="scss" scoped>
-.home {
+<style lang="scss">
+.#{$BEM_PREFIX}-home-index {
   display: flex;
   flex-direction: column;
   min-height: 100vh;

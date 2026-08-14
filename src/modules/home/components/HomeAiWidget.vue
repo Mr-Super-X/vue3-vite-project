@@ -1,23 +1,26 @@
 <script setup lang="ts">
 // 首页 AI 助手挂件：右下角悬浮气泡，提示文案 + 触发提示
 // ElMessage 由 unplugin-auto-import 注入（importStyle 自动带样式，勿显式 import）
+// BEM 工具由 unplugin-auto-import 自动注入，无须显式 import
+const bem = createNamespace('home-ai-widget')
+
 function onClick(): void {
   ElMessage.info('AI 助手即将上线')
 }
 </script>
 
 <template>
-  <button type="button" class="home-ai" aria-label="打开 AI 助手" @click="onClick">
-    <span class="home-ai__robot" aria-hidden="true">🤖</span>
-    <span class="home-ai__copy">
-      <span class="home-ai__title">小安智能</span>
-      <span class="home-ai__hint">你可以对我说本月全省检查合计是多少？</span>
+  <button type="button" :class="bem.b()" aria-label="打开 AI 助手" @click="onClick">
+    <span :class="bem.e('robot')" aria-hidden="true">🤖</span>
+    <span :class="bem.e('copy')">
+      <span :class="bem.e('title')">小安智能</span>
+      <span :class="bem.e('hint')">你可以对我说本月全省检查合计是多少？</span>
     </span>
   </button>
 </template>
 
-<style lang="scss" scoped>
-.home-ai {
+<style lang="scss">
+.#{$BEM_PREFIX}-home-ai-widget {
   position: fixed;
   right: 24px;
   bottom: 96px;

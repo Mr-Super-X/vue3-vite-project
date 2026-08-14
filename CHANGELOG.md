@@ -62,6 +62,39 @@
   重新定位为「仅非敏感 cookie 偏好场景预留，严禁存凭证」并标注安全边界；
   `remote-menu.ts` 远程 meta 合并处补充 vue-router 升级回归验证 + 非响应式警告注释
 
+### ✨ Features | 新特性
+
+* **components:** 全量 BEM 命名空间改造（CLAUDE.md §3 新增规范）
+
+  - 41 个 `.vue` 文件统一为 sass 插值写法：根选择器
+    `.#{$BEM_PREFIX}-<kebab-case>` + `&__elem` / `&--mod` 嵌套；模板 class 全部走
+    `bem.b()` / `bem.e()` / `bem.em()` / `bem.is()` 拼装；`createNamespace`
+    由 `unplugin-auto-import` 自动注入，禁止 `import` 任何来源
+  - 配套 CLAUDE.md §3 新增「组件 BEM 编写规范（强约束）」4 小节
+    （§3.1 完整模板、§3.2 强制约定 8 条、§3.3 反模式 6 条、§3.4 验证机制）
+
+### 🐛 Bug Fixes | 缺陷修复
+
+* **styles:** 删除全部 22 处 `:deep()` 伪类（依赖 BEM 命名空间隔离穿透 element-plus）
+  - `login.scss` 12 处、`PortalNav.vue` 8 处、`PortalHeader.vue` 1 处、`Header.vue` 1 处
+  - 根因：`:deep()` 是 Vue scoped 专用穿透伪类，按 §3 去掉 `scoped` 后失效，
+    浏览器忽略导致 element-plus 表单/导航样式整片丢失
+* **components:** `createNamespace` 大小写统一——21 个文件由 PascalCase
+  (`'OrdersList'`、`'HomeFooter'` 等) 改为 kebab-case (`'orders-list'`、`'home-footer'`)
+  - 根因：HTML class 大小写敏感，`vv-OrdersList` 与 sass 编译产物 `.vv-orders-list`
+    不匹配 → 整片样式失效
+  - 转换规则：PascalCase 每个大写字母前加 `-` 后全小写
+* **app:** 恢复 `App.vue` 防御性三态（`ErrorBoundary` + `AsyncState` +
+  `Transition` + `showRemoteMenuLoading` 计算属性）—— BEM 改造时被简化
+  过度删除，违反 §1.4 防御性 UI 约束
+* **home:** 修复 `OverviewSection` 2+3 卡片网格布局被破坏
+  - 根因：`bem.m('first')` 生成 block modifier `vv-overview-section--first`，
+    与 sass 嵌套 `&__row { &--first { ... } }` 展开的 element modifier
+    `.vv-overview-section__row--first` 不匹配 → grid-template-columns 未生效
+  - 修复：`bem.m()` → `bem.em('row', 'xxx')`（4 处）
+* **docs:** CLAUDE.md §3 新增反模式 #6（PascalCase createNamespace）
+  + §3.2 第 2 条强调"kebab-case 与 sass 根选择器严格对齐"
+
 ### 🐛 Bug Fixes | 缺陷修复（历史）
 
 * **commitlint:** 补全常见规则错误详情的中文翻译，避免提交校验失败时混杂英文信息

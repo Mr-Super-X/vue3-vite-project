@@ -2,7 +2,7 @@
 // 由 login.scss @use 引入；bem 模块复用入口已配置实例
 @use '@/assets/styles/mixins/bem' as *;
 
-.#{$BEM_PREFIX}-auth-login {
+.#{$BEM_PREFIX}-login {
   &__bg {
     position: absolute;
     inset: 0;

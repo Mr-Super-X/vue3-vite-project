@@ -43,22 +43,23 @@ const sidebarItems = computed<SidebarItem[]>(() => {
 function goHome() {
   router.push('/')
 }
+
+const bem = createNamespace('doc-layout')
 </script>
 
 <template>
-  <div class="doc-layout">
-    <aside class="doc-layout__sidebar">
-      <button class="doc-layout__home" type="button" @click="goHome">
-        <el-icon class="doc-layout__home-icon"><Back /></el-icon>
+  <div :class="bem.b()">
+    <aside :class="bem.e('sidebar')">
+      <button :class="bem.e('home')" type="button" @click="goHome">
+        <el-icon :class="bem.e('home-icon')"><Back /></el-icon>
         <span>返回首页</span>
       </button>
-      <h3 class="doc-layout__group-title">组件</h3>
-      <ul class="doc-layout__nav">
+      <h3 :class="bem.e('group-title')">组件</h3>
+      <ul :class="bem.e('nav')">
         <li v-for="item in sidebarItems" :key="item.name">
           <RouterLink
             :to="item.path"
-            class="doc-layout__link"
-            :class="{ 'is-active': route.name === item.name }"
+            :class="[bem.e('link'), bem.is('active', route.name === item.name)]"
           >
             {{ item.title }}
           </RouterLink>
@@ -66,18 +67,18 @@ function goHome() {
       </ul>
     </aside>
 
-    <main class="doc-layout__main">
+    <main :class="bem.e('main')">
       <slot />
     </main>
 
-    <aside class="doc-layout__toc">
+    <aside :class="bem.e('toc')">
       <slot name="toc" />
     </aside>
   </div>
 </template>
 
-<style lang="scss" scoped>
-.doc-layout {
+<style lang="scss">
+.#{$BEM_PREFIX}-doc-layout {
   display: grid;
   grid-template-columns: 200px minmax(0, 1fr) 180px;
   gap: 24px;

@@ -96,7 +96,7 @@ function handleSelect(index: string): void {
   </el-menu>
 </template>
 
-<style lang="scss" scoped>
+<style lang="scss">
 .#{$BEM_PREFIX}-portal-nav {
   // 顶部导航透明背景（叠在 header 蓝渐变上）
   background: transparent;
@@ -107,8 +107,8 @@ function handleSelect(index: string): void {
   --el-menu-hover-color: #fff;
   --el-menu-active-color: #fff;
 
-  :deep(.el-menu-item),
-  :deep(.el-sub-menu__title) {
+  .el-menu-item,
+  .el-sub-menu__title {
     height: 52px;
     line-height: 52px;
     padding: 0 !important;
@@ -124,27 +124,27 @@ function handleSelect(index: string): void {
     }
   }
 
-  :deep(.el-menu-item:last-child),
-  :deep(.el-sub-menu:last-child > .el-sub-menu__title) {
+  .el-menu-item:last-child,
+  .el-sub-menu:last-child > .el-sub-menu__title {
     margin-right: 0;
   }
 
   // 激活态：白色下划线 + 中间对齐
-  :deep(.el-menu-item.is-active) {
+  .el-menu-item.is-active {
     color: #fff;
     font-weight: 500;
     border-bottom: 4px solid #fff;
     border-radius: 0;
   }
 
-  :deep(.el-sub-menu.is-active > .el-sub-menu__title) {
+  .el-sub-menu.is-active > .el-sub-menu__title {
     color: #fff;
     border-bottom: 4px solid #fff;
     border-radius: 0;
   }
 
   // 弹层子菜单样式
-  :deep(.el-menu--horizontal .el-menu .el-menu-item) {
+  .el-menu--horizontal .el-menu .el-menu-item {
     height: 40px;
     line-height: 40px;
     margin-right: 0;
@@ -160,7 +160,7 @@ function handleSelect(index: string): void {
   }
 
   // 折叠箭头隐藏
-  :deep(.el-sub-menu__icon-arrow) {
+  .el-sub-menu__icon-arrow {
     display: none;
   }
 

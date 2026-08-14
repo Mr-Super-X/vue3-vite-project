@@ -7,6 +7,9 @@ import OverviewMetricRow from './OverviewMetricRow.vue'
 import type { OverviewCardDto } from '@/modules/home/types/portal-overview'
 import { useAppRouter } from '@composables/useAppRouter'
 
+// BEM 工具由 unplugin-auto-import 自动注入，无须显式 import
+const bem = createNamespace('overview-card')
+
 const props = defineProps<{
   title: string
   iconPath: string
@@ -25,22 +28,22 @@ function onView(): void {
 </script>
 
 <template>
-  <article class="ov-card" data-test="card">
-    <div class="ov-card__art" :style="{ background: iconBg }">
-      <img class="ov-card__icon" :src="iconSrc" :alt="title" width="48" height="48" />
-      <h3 class="ov-card__title">{{ title }}</h3>
-      <button v-if="viewDetailPath" type="button" class="ov-card__view" @click="onView">
-        <span class="ov-card__view-arrow" aria-hidden="true">▶</span>
+  <article :class="bem.b()" data-test="card">
+    <div :class="bem.e('art')" :style="{ background: iconBg }">
+      <img :class="bem.e('icon')" :src="iconSrc" :alt="title" width="48" height="48" />
+      <h3 :class="bem.e('title')">{{ title }}</h3>
+      <button v-if="viewDetailPath" type="button" :class="bem.e('view')" @click="onView">
+        <span :class="bem.e('view-arrow')" aria-hidden="true">▶</span>
       </button>
     </div>
-    <div class="ov-card__body">
+    <div :class="bem.e('body')">
       <OverviewMetricRow v-for="(m, idx) in metrics" :key="idx" :metric="m" />
     </div>
   </article>
 </template>
 
-<style lang="scss" scoped>
-.ov-card {
+<style lang="scss">
+.#{$BEM_PREFIX}-overview-card {
   background: #fff;
   border-radius: 4px;
   box-shadow: 4px 4px 16px 0 rgba(0, 0, 0, 0.05);

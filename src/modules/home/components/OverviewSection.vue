@@ -17,6 +17,9 @@ import iconSafety from '@/modules/home/images/data-overview-03.png'
 import iconTraining from '@/modules/home/images/data-overview-04.png'
 import iconHazard from '@/modules/home/images/data-overview-05.png'
 
+// BEM 工具由 unplugin-auto-import 自动注入，无须显式 import
+const bem = createNamespace('overview-section')
+
 // card.code → 图标资源（data-overview-01..05.png，存于 modules/home/images）
 const CARD_ICONS: Record<string, string> = {
   law: iconLaw,
@@ -51,11 +54,11 @@ const row2 = computed<OverviewCardView[]>(() =>
 </script>
 
 <template>
-  <section class="overview" aria-labelledby="overview-title">
-    <header class="overview__header">
-      <h2 id="overview-title" class="overview__heading">
+  <section :class="bem.b()" aria-labelledby="overview-title">
+    <header :class="bem.e('header')">
+      <h2 id="overview-title" :class="bem.e('heading')">
         <img
-          class="overview__icon"
+          :class="bem.e('icon')"
           src="@/modules/home/images/data-overview-01.png"
           alt=""
           width="24"
@@ -63,22 +66,22 @@ const row2 = computed<OverviewCardView[]>(() =>
         />
         数据总览
       </h2>
-      <div class="overview__period">
+      <div :class="bem.e('period')">
         <button
           type="button"
-          :class="['overview__custom', { active: period === 'custom' }]"
+          :class="[bem.e('custom'), bem.is('active', period === 'custom')]"
           @click="period = 'custom'"
         >
           自定义
-          <span class="overview__custom-icon" aria-hidden="true">📅</span>
+          <span :class="bem.e('custom-icon')" aria-hidden="true">📅</span>
         </button>
-        <div class="overview__segment" role="tablist">
+        <div :class="bem.e('segment')" role="tablist">
           <button
             v-for="p in periods.slice(1)"
             :key="p.key"
             type="button"
             role="tab"
-            :class="['overview__chip', { active: period === p.key }]"
+            :class="[bem.e('chip'), bem.is('active', period === p.key)]"
             @click="period = p.key"
           >
             {{ p.label }}
@@ -87,11 +90,11 @@ const row2 = computed<OverviewCardView[]>(() =>
       </div>
     </header>
 
-    <div v-if="loading" class="overview__rows">
-      <div class="overview__row overview__row--first">
+    <div v-if="loading" :class="bem.e('rows')">
+      <div :class="[bem.e('row'), bem.em('row', 'first')]">
         <OverviewCardSkeleton v-for="i in 2" :key="`r1s-${i}`" />
       </div>
-      <div class="overview__row overview__row--second">
+      <div :class="[bem.e('row'), bem.em('row', 'second')]">
         <OverviewCardSkeleton v-for="i in 3" :key="`r2s-${i}`" />
       </div>
     </div>
@@ -100,8 +103,8 @@ const row2 = computed<OverviewCardView[]>(() =>
 
     <OverviewEmptyState v-else-if="cards.length === 0" />
 
-    <div v-else class="overview__rows">
-      <div class="overview__row overview__row--first">
+    <div v-else :class="bem.e('rows')">
+      <div :class="[bem.e('row'), bem.em('row', 'first')]">
         <OverviewCard
           v-for="card in row1"
           :key="card.code"
@@ -112,7 +115,7 @@ const row2 = computed<OverviewCardView[]>(() =>
           :view-detail-path="card.viewDetailPath"
         />
       </div>
-      <div class="overview__row overview__row--second">
+      <div :class="[bem.e('row'), bem.em('row', 'second')]">
         <OverviewCard
           v-for="card in row2"
           :key="card.code"
@@ -127,8 +130,8 @@ const row2 = computed<OverviewCardView[]>(() =>
   </section>
 </template>
 
-<style lang="scss" scoped>
-.overview {
+<style lang="scss">
+.#{$BEM_PREFIX}-overview-section {
   max-width: var(--portal-max-width);
   margin: 0 auto;
   padding: 44px 0 24px;
@@ -201,7 +204,7 @@ const row2 = computed<OverviewCardView[]>(() =>
     cursor: pointer;
     line-height: 24px;
 
-    &.active {
+    &.is-active {
       background: rgba(22, 119, 255, 0.1);
       color: #1677ff;
       font-weight: 500;

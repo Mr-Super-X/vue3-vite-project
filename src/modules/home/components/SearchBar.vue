@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import type { SearchTypeOption } from '@/modules/home/config/types'
 
+// BEM 工具由 unplugin-auto-import 自动注入，无须显式 import
+const bem = createNamespace('search-bar')
+
 const props = defineProps<{
   types: SearchTypeOption[]
   modelValueType: string
@@ -23,9 +26,9 @@ function onSubmit(): void {
 </script>
 
 <template>
-  <div class="search-bar">
+  <div :class="bem.b()">
     <select
-      class="search-bar__select"
+      :class="bem.e('select')"
       :value="modelValueType"
       @change="emit('update:modelValueType', ($event.target as HTMLSelectElement).value)"
     >
@@ -33,21 +36,21 @@ function onSubmit(): void {
         {{ t.label }}
       </option>
     </select>
-    <span class="search-bar__divider" aria-hidden="true" />
+    <span :class="bem.e('divider')" aria-hidden="true" />
     <input
-      class="search-bar__input"
+      :class="bem.e('input')"
       :value="modelValueKeyword"
       :placeholder="placeholder"
       @input="emit('update:modelValueKeyword', ($event.target as HTMLInputElement).value)"
     />
-    <button type="button" class="search-bar__btn" :disabled="!canSubmit()" @click="onSubmit">
+    <button type="button" :class="bem.e('btn')" :disabled="!canSubmit()" @click="onSubmit">
       搜索
     </button>
   </div>
 </template>
 
-<style lang="scss" scoped>
-.search-bar {
+<style lang="scss">
+.#{$BEM_PREFIX}-search-bar {
   display: flex;
   align-items: stretch;
   width: 874px;

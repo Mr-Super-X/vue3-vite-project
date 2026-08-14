@@ -1,21 +1,24 @@
 <script setup lang="ts">
 import { CircleCloseFilled } from '@element-plus/icons-vue'
 
+// BEM 工具由 unplugin-auto-import 自动注入，无须显式 import
+const bem = createNamespace('overview-error-state')
+
 defineProps<{ message: string }>()
 defineEmits<{ (e: 'retry'): void }>()
 </script>
 
 <template>
-  <div class="ov-error" role="alert">
+  <div :class="bem.b()" role="alert">
     <el-icon :size="48" color="#F56C6C"><CircleCloseFilled /></el-icon>
-    <p class="ov-error__title">数据加载失败</p>
-    <p class="ov-error__detail">{{ message }}</p>
+    <p :class="bem.e('title')">数据加载失败</p>
+    <p :class="bem.e('detail')">{{ message }}</p>
     <el-button type="primary" @click="$emit('retry')">重新加载</el-button>
   </div>
 </template>
 
-<style lang="scss" scoped>
-.ov-error {
+<style lang="scss">
+.#{$BEM_PREFIX}-overview-error-state {
   background: #fff;
   border-radius: 8px;
   padding: 48px;

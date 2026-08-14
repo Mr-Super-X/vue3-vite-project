@@ -1,10 +1,10 @@
 // 登录页样式（从 Login.vue 抽离，控制单文件行数 ≤400 的项目铁律）
-// BEM 根类：.#{$BEM_PREFIX}-auth-login
+// BEM 根类：.#{$BEM_PREFIX}-login（与 Login.vue 的 createNamespace('Login') 对应）
 // 作为 @use 子模块不会获得 additionalData 注入，需自行引入 bem（不带 with，复用入口已配置的实例）
 @use '@/assets/styles/mixins/bem' as *;
 @use './login-bg.scss';
 
-.#{$BEM_PREFIX}-auth-login {
+.#{$BEM_PREFIX}-login {
   // ====== CSS 变量（仅本组件作用域） ======
   --login-bg-base: #0a1428;
   --login-bg-deep: #050b1a;
@@ -64,7 +64,7 @@
       background: rgba(15, 23, 42, 0.95) !important;
     }
 
-    :deep(.el-card__body) {
+    .el-card__body {
       padding: 40px 36px 32px;
     }
   }
@@ -141,7 +141,7 @@
 
   // ====== 表单 ======
   &__form {
-    :deep(.el-form-item__label) {
+    .el-form-item__label {
       color: var(--login-text-secondary);
       font-size: 13px;
       font-weight: 500;
@@ -149,7 +149,7 @@
       line-height: 1.4;
     }
 
-    :deep(.el-input__wrapper) {
+    .el-input__wrapper {
       background: var(--login-input-bg) !important;
       border-radius: 8px !important;
       box-shadow: 0 0 0 1px var(--login-input-border) inset !important;
@@ -158,28 +158,28 @@
       min-height: 44px;
     }
 
-    :deep(.el-input__wrapper:hover) {
+    .el-input__wrapper:hover {
       box-shadow: 0 0 0 1px var(--login-accent-glow) inset !important;
     }
 
-    :deep(.el-input__wrapper.is-focus) {
+    .el-input__wrapper.is-focus {
       box-shadow:
         0 0 0 1px var(--login-accent) inset,
         0 0 0 3px var(--login-input-focus) !important;
     }
 
-    :deep(.el-input__inner) {
+    .el-input__inner {
       color: var(--login-text-primary) !important;
       height: 36px;
       font-size: 14px;
     }
 
-    :deep(.el-input__inner::placeholder) {
+    .el-input__inner::placeholder {
       color: var(--login-text-muted);
     }
 
-    :deep(.el-input__prefix-inner > .el-icon),
-    :deep(.el-input__prefix .el-icon) {
+    .el-input__prefix-inner > .el-icon,
+    .el-input__prefix .el-icon {
       color: var(--login-text-secondary);
     }
   }
@@ -221,12 +221,12 @@
     justify-content: space-between;
     margin: 0 0 20px;
 
-    :deep(.el-checkbox__label) {
+    .el-checkbox__label {
       color: var(--login-text-secondary);
       font-size: 13px;
     }
 
-    :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
+    .el-checkbox__input.is-checked .el-checkbox__inner {
       background: var(--login-accent) !important;
       border-color: var(--login-accent) !important;
     }
@@ -316,7 +316,7 @@
   @media (max-width: 480px) {
     padding: 6vh 16px 24px;
 
-    &__card :deep(.el-card__body) {
+    &__card .el-card__body {
       padding: 28px 24px 24px;
     }
 

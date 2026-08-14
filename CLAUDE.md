@@ -175,7 +175,7 @@ Feature-Sliced 风格的中后台门户前端（`vue3-vite-project`，企业中�
 <script setup lang="ts">
 // BEM 工具（createNamespace / bem / $BEM_PREFIX）由 unplugin-auto-import 自动注入，
 // 在 <script setup> 与 <style lang="scss"> 中全局可用，无须显式 import
-const bem = createNamespace('FormEngine') // PascalCase，组件名
+const bem = createNamespace('form-engine') // kebab-case，必须与 sass 根选择器 .#{$BEM_PREFIX}-form-engine 严格对齐
 </script>
 
 <template>
@@ -201,26 +201,29 @@ const bem = createNamespace('FormEngine') // PascalCase，组件名
 
 ### 3.2 强制约定
 
-| #   | 项                             | 约束                                                                                                               |
-| --- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| 1   | `createNamespace` / `bem` 来源 | 由 `unplugin-auto-import` 自动注入到 `<script setup>` 全局作用域，**禁止** `import { createNamespace } from '...'` |
-| 2   | `bem` 实例声明                 | `const bem = createNamespace('组件名')`，组件名 PascalCase（如 `FormEngine`、`AsyncState`）                        |
-| 3   | 模板 class 拼装                | 必须通过 `bem.b()` / `bem.e()` / `bem.m()` / `bem.is()` / `bem.has()` 拼装，**禁止**硬编码前缀字符串               |
-| 4   | `<style>` 块 `lang` 属性       | 必填 `lang="scss"`，用于解析 `$BEM_PREFIX` Sass 变量                                                               |
-| 5   | `<style>` 块 `scoped` 属性     | **禁止添加**——命名空间隔离由 BEM 接管，scoped 是冗余                                                               |
-| 6   | 根选择器写法                   | 必须 `.#{$BEM_PREFIX}-组件名-kebab-case`（如 `.#{$BEM_PREFIX}-form-engine`），与 `bem` 实例一一对应                |
-| 7   | 嵌套占位符                     | element 用 `&__xxx`、modifier 用 `&--yyy`、状态用 `&.is-xxx` / `&.has-xxx`，禁止重复拼接前缀                       |
-| 8   | BEM 默认前缀                   | `vv`（即 `$BEM_PREFIX` 默认值），由 `unplugin-auto-import` 注入                                                    |
+| #   | 项                             | 约束                                                                                                                                                                                                                                                                    |
+| --- | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `createNamespace` / `bem` 来源 | 由 `unplugin-auto-import` 自动注入到 `<script setup>` 全局作用域，**禁止** `import { createNamespace } from '...'`                                                                                                                                                      |
+| 2   | `bem` 实例声明                 | `const bem = createNamespace('<kebab-case>')`，组件名必须是 **kebab-case**（如 `form-engine`、`async-state`），与 sass 根选择器 `.#{$BEM_PREFIX}-<kebab-case>` **严格对齐**——HTML class 与 CSS 选择器大小写敏感，不一致将导致整片样式失效                               |
+| 3   | 模板 class 拼装                | 必须通过 `bem.b()` / `bem.e()` / `bem.m()` / `bem.is()` / `bem.has()` 拼装，**禁止**硬编码前缀字符串                                                                                                                                                                    |
+| 4   | `<style>` 块 `lang` 属性       | 必填 `lang="scss"`，用于解析 `$BEM_PREFIX` Sass 变量                                                                                                                                                                                                                    |
+| 5   | `<style>` 块 `scoped` 属性     | **禁止添加**——命名空间隔离由 BEM 接管，scoped 是冗余                                                                                                                                                                                                                    |
+| 6   | 根选择器写法                   | 必须 `.#{$BEM_PREFIX}-组件名-kebab-case`（如 `.#{$BEM_PREFIX}-form-engine`），与 `bem` 实例一一对应                                                                                                                                                                     |
+| 7   | 嵌套占位符                     | element 用 `&__xxx`、modifier 用 `&--yyy`、状态用 `&.is-xxx` / `&.has-xxx`，禁止重复拼接前缀                                                                                                                                                                            |
+| 8   | BEM 默认前缀                   | `vv`（即 `$BEM_PREFIX` 默认值），由 `unplugin-auto-import` 注入                                                                                                                                                                                                         |
+| 9   | `bem.m()` vs `bem.em()` 选择   | **block modifier** 用 `bem.m('xxx')` → `vv-<block>--xxx`（作用于整个组件，如卡片整体 `'shimmer'`）；**element modifier** 用 `bem.em('elem', 'xxx')` → `vv-<block>__elem--xxx`（作用于某个元素，如 `__row--first`）。误用会导致 class 与 sass 嵌套选择器不匹配，样式失效 |
 
 ### 3.3 反模式（禁止出现）
 
-| #   | 反模式                                                              | 禁止原因                                                |
-| --- | ------------------------------------------------------------------- | ------------------------------------------------------- |
-| 1   | `<script setup>` 中 `import { createNamespace } from '@/utils/bem'` | 与自动注入冲突，会重复声明                              |
-| 2   | `<style scoped>` / `<style scoped lang="scss">`                     | BEM 已接管隔离，scoped 是冗余且会破坏 `&` 编译          |
-| 3   | `<style>` 不写 `lang="scss"`                                        | 无法解析 `$BEM_PREFIX` Sass 变量，根选择器失效          |
-| 4   | 模板或样式中硬编码 `vv-xxx` / `.vv-form-engine__header` 等字符串    | 与 `bem.b()` / `bem.e()` 拼出的 class 不一致 → 样式漂移 |
-| 5   | 同一组件出现两份 `bem` 实例声明                                     | 命名空间分裂，会造成样式不生效                          |
+| #   | 反模式                                                                           | 禁止原因                                                                                                                                                                                                         |
+| --- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `<script setup>` 中 `import { createNamespace } from '@/utils/bem'`              | 与自动注入冲突，会重复声明                                                                                                                                                                                       |
+| 2   | `<style scoped>` / `<style scoped lang="scss">`                                  | BEM 已接管隔离，scoped 是冗余且会破坏 `&` 编译                                                                                                                                                                   |
+| 3   | `<style>` 不写 `lang="scss"`                                                     | 无法解析 `$BEM_PREFIX` Sass 变量，根选择器失效                                                                                                                                                                   |
+| 4   | 模板或样式中硬编码 `vv-xxx` / `.vv-form-engine__header` 等字符串                 | 与 `bem.b()` / `bem.e()` 拼出的 class 不一致 → 样式漂移                                                                                                                                                          |
+| 5   | 同一组件出现两份 `bem` 实例声明                                                  | 命名空间分裂，会造成样式不生效                                                                                                                                                                                   |
+| 6   | `createNamespace('PascalCase')`（如 `'OrdersList'`、`'HomeFooter'`）             | HTML class 大小写敏感，`vv-OrdersList` 与 sass 编译产物 `.vv-orders-list` 不匹配 → 整片样式失效。**必须用 kebab-case**（`'orders-list'`、`'home-footer'`），转换规则：`PascalCase` 每个大写字母前加 `-` 后全小写 |
+| 7   | `bem.m('xxx')` 误用于 element 修饰（如 `bem.m('first')` 当 m 用于 `__row` 元素） | `bem.m()` 生成 `vv-<block>--xxx`（block modifier），与 sass 嵌套 `&__row { &--first { ... } }` 展开的 `vv-<block>__row--first`（element modifier）不匹配 → grid 等布局失效。**应当用 `bem.em('row', 'first')`**  |
 
 ### 3.4 验证机制
 

@@ -3,10 +3,13 @@
 //
 // 注：本视图不在菜单中渲染（hidden: true 由 mock 改为 visible: false），
 // 但路由仍存在。业务场景：运营报表不希望出现在侧边栏，但客服可以通过邮件链接直达。
+
+// BEM 工具由 unplugin-auto-import 自动注入，无须显式 import
+const bem = createNamespace('reports-index')
 </script>
 
 <template>
-  <div class="reports-index">
+  <div :class="bem.b()">
     <h2>运营报表</h2>
     <p>隐藏菜单（hidden: true → meta.visible: false），需手动输入 URL 访问。</p>
     <p>
@@ -16,8 +19,8 @@
   </div>
 </template>
 
-<style lang="scss" scoped>
-.reports-index {
+<style lang="scss">
+.#{$BEM_PREFIX}-reports-index {
   padding: 24px;
 }
 </style>
