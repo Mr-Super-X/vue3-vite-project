@@ -1,7 +1,10 @@
 # Token 自动刷新与全局取消 使用规范
 
-> **文档版本**：v1.0.0 | **最后更新**：2026-07-24
-> **能力来源**：`src/api/token-refresh.ts` + `src/api/global-abort.ts` + `src/api/cancel.ts`（CHANGELOG 未记录，2026-07-24 审计补齐文档）
+> **文档版本**：v2.0.0 | **最后更新**：2026-08-12
+> **能力来源**：`src/api/token-refresh.ts` + `src/api/global-abort.ts` + `src/api/cancel.ts`
+> **v2.0 变更（httpOnly 认证改造）**：凭证 token 改由后端 `Set-Cookie: HttpOnly` 下发，
+> 前端 JS 不再读取/存储 token；refresh 契约从 `getValidToken(): Promise<string>`
+> 变为 `refreshSession(): Promise<void>`（续期成功后重发请求自动携带新 cookie）。
 
 ---
 
@@ -15,18 +18,32 @@
 
 ---
 
-## 1. Token 自动刷新
+## 1. Token 自动刷新（httpOnly 模式）
+
+### 认证模型
+
+```
+登录：POST /auth/login → 后端 Set-Cookie: token=...; HttpOnly; SameSite=Lax
+       前端仅写 sessionStorage 登录标记（key: auth，无敏感信息）供守卫同步判断
+请求：axios withCredentials → 浏览器自动携带 cookie，前端不经手 token
+刷新：401 → refreshSession()（并发去重）→ 后端 Set-Cookie 新 token → 原请求重发
+登出：乐观退出——先清本地标记/状态，后端 logout（Set-Cookie: Max-Age=0）fire-and-forget
+```
+
+**后端接入要求**：跨域部署时 CORS 必须配置 `Access-Control-Allow-Credentials: true`，
+且 `Access-Control-Allow-Origin` 不能用 `*`（需明确 origin）。
 
 ### 默认配置
 
 ```ts
 // token-refresh.ts 默认行为
 url: '/auth/refresh' // 相对 baseURL
-fetchToken: () => axios.post(`${baseURL}/auth/refresh`, {})
-extractToken: (data) => data?.data?.token ?? null
+refresh: () => axios.post(`${baseURL}/auth/refresh`, {}, { withCredentials: true })
 ```
 
-业务侧**零感知**：`request<T>()` 检测到 401 时自动 refresh 一次（`_retried` 标记防循环），成功后用新 token 重发原请求；refresh 失败则走 `performLogout()`（toast + 清 token + 跳 /login）。
+业务侧**零感知**：`request<T>()` 检测到 401 时自动 `refreshSession()` 一次（`_retried` 标记防循环），
+成功后重发原请求（cookie 自动携带新凭证，无需更新 header）；refresh 失败则走
+`performLogout()`（toast + 清登录标记 + 动态 import router 跳 /login）。
 
 ### 自定义 refresh 端点
 
@@ -36,18 +53,12 @@ import { configureTokenRefresh } from '@/api/token-refresh'
 
 configureTokenRefresh({
   url: '/v2/auth/refresh-token',
-  fetchToken: async () => {
-    // 自定义请求逻辑（如带 refresh_token cookie）
-    const res = await fetch('/api/v2/auth/refresh-token', {
+  refresh: async () => {
+    // 自定义请求逻辑；成功（不抛错）即视为凭证已续期
+    await fetch('/api/v2/auth/refresh-token', {
       method: 'POST',
       credentials: 'include',
     })
-    return res.json()
-  },
-  extractToken: (data) => {
-    // 自定义 token 提取路径
-    const body = data as { access_token?: string }
-    return body.access_token ?? null
   },
 })
 ```

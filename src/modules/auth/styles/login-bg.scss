@@ -1,0 +1,92 @@
+// 登录页背景层动效（从 login.scss 二次抽离：单文件 ≤400 行铁律）
+// 由 login.scss @use 引入；bem 模块复用入口已配置实例
+@use '@/assets/styles/mixins/bem' as *;
+
+.#{$BEM_PREFIX}-auth-login {
+  &__bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  &__bg-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--login-bg-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--login-bg-grid) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+    -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+  }
+
+  &__bg-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(120px);
+    will-change: transform;
+  }
+
+  &__bg-orb--a {
+    top: -10%;
+    left: -5%;
+    width: 500px;
+    height: 500px;
+    background: rgba(56, 189, 248, 0.15);
+    animation: login-float-a 16s ease-in-out infinite alternate;
+  }
+
+  &__bg-orb--b {
+    bottom: -15%;
+    right: -10%;
+    width: 480px;
+    height: 480px;
+    background: rgba(99, 102, 241, 0.12);
+    animation: login-float-b 20s ease-in-out infinite alternate;
+  }
+
+  &__bg-orb--c {
+    top: 50%;
+    left: 50%;
+    width: 300px;
+    height: 300px;
+    transform: translate(-50%, -50%);
+    background: rgba(14, 165, 233, 0.1);
+    animation: login-float-c 12s ease-in-out infinite alternate;
+  }
+
+  @keyframes login-float-a {
+    from {
+      transform: translate(0, 0);
+    }
+    to {
+      transform: translate(60px, 40px);
+    }
+  }
+  @keyframes login-float-b {
+    from {
+      transform: translate(0, 0);
+    }
+    to {
+      transform: translate(-50px, -30px);
+    }
+  }
+  @keyframes login-float-c {
+    from {
+      transform: translate(-50%, -50%) scale(1);
+    }
+    to {
+      transform: translate(-50%, -50%) scale(1.2);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__bg-orb--a,
+    &__bg-orb--b,
+    &__bg-orb--c {
+      animation: none;
+    }
+  }
+}

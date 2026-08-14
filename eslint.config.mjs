@@ -31,8 +31,7 @@ export default [
     name: 'app/business-wrap-rule',
     files: [
       'src/modules/**/*.{ts,vue}',
-      'src/components/**/*.{ts,vue}',
-      'src/views/**/*.{ts,vue}',
+      'src/components/**/*.{ts,vue}'
     ],
     rules: {
       'no-restricted-imports': [

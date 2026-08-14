@@ -1,7 +1,6 @@
 <script setup lang="ts">
 // 首页 AI 助手挂件：右下角悬浮气泡，提示文案 + 触发提示
-import { ElMessage } from 'element-plus'
-
+// ElMessage 由 unplugin-auto-import 注入（importStyle 自动带样式，勿显式 import）
 function onClick(): void {
   ElMessage.info('AI 助手即将上线')
 }

@@ -53,9 +53,10 @@ Feature-Sliced 风格的中后台门户前端（`vue3-vite-project`，企业中�
 ├── enums/                          ├── modules/user/
 ├── layouts/                        ├── modules/demo/
 ├── locales/                        └── modules/error/
-├── plugins/                          每模块：views/ + routes/ + store/
-├── router/                                      + apis/ + components/
-├── store/modules/                                + index.ts
+├── plugins/                          模块按需要包含：views/ + routes/
+├── router/                                      + store/ + apis/ + components/
+├── store/modules/                               + config/ + styles/ + index.ts
+├── types/                                       （非 6 件套强制，见 docs/08）
 ├── types/
 └── utils/（与框架解耦）
 ```
@@ -108,23 +109,23 @@ Feature-Sliced 风格的中后台门户前端（`vue3-vite-project`，企业中�
 
 `src/` 下 15 个一级目录的职责如下。任何变更都会破坏现有约定，**未经用户明确批准，禁止任何形式的增、删、改、移动、重命名**：
 
-| #   | 目录           | 职责                                                                                                                                      |
-| --- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `api/`         | 跨模块网络请求基建（`http`/`cache`/`retry`/`token-refresh` 等）+ `api/modules/` 跨模块共享接口                                            |
-| 2   | `components/`  | 全局通用组件（`common/`）+ 布局相关组件（`layout/`）                                                                                      |
-| 3   | `composables/` | 业务侧组合式函数封装（`useAppRouter`/`useRequest`/`useAuth` 等）                                                                          |
-| 4   | `directives/`  | 自定义指令（`v-inputDebounce`/`v-buttonDebounce`/`v-permission` 等）                                                                      |
-| 5   | `enums/`       | 枚举常量（`httpEnum`/`roleEnum` 等）                                                                                                      |
-| 6   | `layouts/`     | 布局组件（`default`/`blank`/`portal`）                                                                                                    |
-| 7   | `locales/`     | 国际化文案（`zh-CN`/`en-US`）                                                                                                             |
-| 8   | `modules/`     | 业务模块（`auth`/`home`/`orders`/`reports`/`user`/`demo`/`error`），每模块含 `views/`+`routes/`+`store/`+`apis/`+`components/`+`index.ts` |
-| 9   | `plugins/`     | Vue 插件（`errorHandler`/`webVitals` 等）                                                                                                 |
-| 10  | `router/`      | 路由配置 + 守卫 + 自动注册 + 白名单 + 远程菜单                                                                                            |
-| 11  | `store/`       | Pinia 根配置 + `modules/` 全局 Store                                                                                                      |
-| 12  | `types/`       | TS 全局类型 + `.d.ts`                                                                                                                     |
-| 13  | `utils/`       | 纯函数工具（`dayjs`/`format`/`bem`/`storage` 等，与框架解耦）                                                                             |
-| 14  | `App.vue`      | 根组件                                                                                                                                    |
-| 15  | `main.ts`      | 应用入口                                                                                                                                  |
+| #   | 目录           | 职责                                                                                                                                                    |
+| --- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `api/`         | 跨模块网络请求基建（`http`/`cache`/`retry`/`token-refresh` 等）+ `api/modules/` 跨模块共享接口                                                          |
+| 2   | `components/`  | 全局通用组件（`common/`）+ 布局相关组件（`layout/`）                                                                                                    |
+| 3   | `composables/` | 业务侧组合式函数封装（`useAppRouter`/`useRequest`/`useAuth` 等）                                                                                        |
+| 4   | `directives/`  | 自定义指令（`v-inputDebounce`/`v-buttonDebounce`/`v-permission` 等）                                                                                    |
+| 5   | `enums/`       | 枚举常量（`httpEnum`/`roleEnum` 等）                                                                                                                    |
+| 6   | `layouts/`     | 布局组件（`default`/`blank`/`portal`）                                                                                                                  |
+| 7   | `locales/`     | 国际化文案（`zh-CN`/`en-US`）                                                                                                                           |
+| 8   | `modules/`     | 业务模块（`auth`/`home`/`orders`/`reports`/`user`/`demo`/`error`），按需要含 `views/`+`routes/`+`store/`+`apis/`+`components/`+`index.ts`（见 docs/08） |
+| 9   | `plugins/`     | Vue 插件（`errorHandler`/`webVitals` 等）                                                                                                               |
+| 10  | `router/`      | 路由配置 + 守卫 + 自动注册 + 白名单 + 远程菜单                                                                                                          |
+| 11  | `store/`       | Pinia 根配置 + `modules/` 全局 Store                                                                                                                    |
+| 12  | `types/`       | TS 全局类型 + `.d.ts`                                                                                                                                   |
+| 13  | `utils/`       | 纯函数工具（`dayjs`/`format`/`bem`/`storage` 等，与框架解耦）                                                                                           |
+| 14  | `App.vue`      | 根组件                                                                                                                                                  |
+| 15  | `main.ts`      | 应用入口                                                                                                                                                |
 
 ### 2.2 禁止行为（最严格）
 

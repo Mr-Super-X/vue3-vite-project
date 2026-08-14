@@ -9,6 +9,22 @@ import OverviewCardSkeleton from './OverviewCardSkeleton.vue'
 import OverviewErrorState from './OverviewErrorState.vue'
 import OverviewEmptyState from './OverviewEmptyState.vue'
 import type { OverviewCardDto } from '@/modules/home/types/portal-overview'
+// 卡片图标必须静态 import（走 vite 资源管线生成带 hash 的 URL）。
+// 动态 src 字符串（如 '../../images/x.png'）浏览器按页面 URL 解析，子路径部署下必 404
+import iconLaw from '@/modules/home/images/data-overview-01.png'
+import iconMonitor from '@/modules/home/images/data-overview-02.png'
+import iconSafety from '@/modules/home/images/data-overview-03.png'
+import iconTraining from '@/modules/home/images/data-overview-04.png'
+import iconHazard from '@/modules/home/images/data-overview-05.png'
+
+// card.code → 图标资源（data-overview-01..05.png，存于 modules/home/images）
+const CARD_ICONS: Record<string, string> = {
+  law: iconLaw,
+  monitor: iconMonitor,
+  safety: iconSafety,
+  training: iconTraining,
+  hazard: iconHazard,
+}
 
 interface OverviewCardView extends OverviewCardDto {
   iconPath: string
@@ -27,29 +43,11 @@ const periods = [
 
 // 将 5 张卡片拆分到两行：第一行 2 张（更大），第二行 3 张（更小）
 const row1 = computed<OverviewCardView[]>(() =>
-  cards.value.slice(0, 2).map((c) => ({ ...c, iconPath: cardIconPath(c.code) }))
+  cards.value.slice(0, 2).map((c) => ({ ...c, iconPath: CARD_ICONS[c.code] ?? iconLaw }))
 )
 const row2 = computed<OverviewCardView[]>(() =>
-  cards.value.slice(2, 5).map((c) => ({ ...c, iconPath: cardIconPath(c.code) }))
+  cards.value.slice(2, 5).map((c) => ({ ...c, iconPath: CARD_ICONS[c.code] ?? iconLaw }))
 )
-
-// card.code → 图标资源路径（data-overview-01..05.png，存于 modules/home/images）
-function cardIconPath(code: string): string {
-  switch (code) {
-    case 'law':
-      return '../../images/data-overview-01.png'
-    case 'monitor':
-      return '../../images/data-overview-02.png'
-    case 'safety':
-      return '../../images/data-overview-03.png'
-    case 'training':
-      return '../../images/data-overview-04.png'
-    case 'hazard':
-      return '../../images/data-overview-05.png'
-    default:
-      return '../../images/data-overview-01.png'
-  }
-}
 </script>
 
 <template>

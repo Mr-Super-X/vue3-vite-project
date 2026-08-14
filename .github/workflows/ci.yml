@@ -1,14 +1,14 @@
 name: CI
 
 # 触发条件：
-#   - push 到 main（主分支每次合入必跑）
-#   - PR 同步到 main 时（PR 合入前必跑）
+#   - push 到 master（主分支每次合入必跑）
+#   - PR 同步到 master 时（PR 合入前必跑）
 # 任何条件失败 → 阻止合入
 on:
   push:
-    branches: [main]
+    branches: [master, develop]
   pull_request:
-    branches: [main]
+    branches: [master, develop]
 
 # 取消同 branch 上的旧 workflow（节省 CI 时间）
 concurrency:

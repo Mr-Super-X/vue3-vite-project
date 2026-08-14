@@ -15,7 +15,7 @@
 
 import { router } from '@router'
 import { resolveRouteTitle } from '@router/helpers'
-import { ElMessage } from 'element-plus'
+// ElMessage 由 unplugin-auto-import 注入（importStyle 自动带样式，勿显式 import）
 import { useI18n } from 'vue-i18n'
 import type { RouteLocationRaw, RouteLocationNamedRaw, RouteRecordRaw, Router } from 'vue-router'
 

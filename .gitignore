@@ -52,3 +52,4 @@ mock/_*.bundled_*.cjs
 .omc/notepad.md
 src/types/components.d.ts
 src/types/auto-imports.d.ts
+.gstack/
