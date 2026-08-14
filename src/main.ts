@@ -10,8 +10,9 @@ import { assertNoMockInProd } from '@/api/mock-guard'
 
 // 浏览器基线统一（必须在所有自定义样式之前）。
 // 详见 https://necolas.github.io/normalize.css/
+// Element Plus 样式由 vite.config.ts 的 ElementPlusResolver({ importStyle: 'css' })
+// 按组件/API 自动注入（2026-08-12 按需化），不再全量引入 index.css。
 import 'normalize.css'
-import 'element-plus/dist/index.css'
 import 'virtual:uno.css'
 import '@/assets/styles/index.scss'
 

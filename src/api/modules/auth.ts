@@ -4,8 +4,11 @@ export interface LoginPayload {
   username: string
   password: string
 }
+/**
+ * 登录响应（httpOnly 模式）：
+ * 凭证 token 由后端 Set-Cookie 下发，响应体不再携带 token。
+ */
 export interface LoginResult {
-  token: string
   profile: { id: number; name: string }
 }
 export interface UserProfile {
