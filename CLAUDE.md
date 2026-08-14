@@ -165,6 +165,71 @@ Feature-Sliced 风格的中后台门户前端（`vue3-vite-project`，企业中�
 
 ---
 
+## §3 组件 BEM 编写规范（强约束）
+
+> 所有 `.vue` 单文件组件必须按本节编写，与 §2 同为不可妥协硬规则。
+
+### 3.1 完整模板
+
+```vue
+<script setup lang="ts">
+// BEM 工具（createNamespace / bem / $BEM_PREFIX）由 unplugin-auto-import 自动注入，
+// 在 <script setup> 与 <style lang="scss"> 中全局可用，无须显式 import
+const bem = createNamespace('FormEngine') // PascalCase，组件名
+</script>
+
+<template>
+  <div :class="bem.b()">
+    <!-- 类名必须通过 bem.b() / bem.e() / bem.m() / bem.is() / bem.has() 拼装，
+         禁止硬编码 'vv-form-engine' 等前缀字符串 -->
+    <header :class="bem.e('header')">...</header>
+  </div>
+</template>
+
+<style lang="scss">
+.#{$BEM_PREFIX}-form-engine {
+  /* 不写 scoped —— 命名空间隔离由 BEM 完成 */
+  &__header {
+    /* element */
+  }
+  &--primary {
+    /* modifier */
+  }
+}
+</style>
+```
+
+### 3.2 强制约定
+
+| #   | 项                             | 约束                                                                                                               |
+| --- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| 1   | `createNamespace` / `bem` 来源 | 由 `unplugin-auto-import` 自动注入到 `<script setup>` 全局作用域，**禁止** `import { createNamespace } from '...'` |
+| 2   | `bem` 实例声明                 | `const bem = createNamespace('组件名')`，组件名 PascalCase（如 `FormEngine`、`AsyncState`）                        |
+| 3   | 模板 class 拼装                | 必须通过 `bem.b()` / `bem.e()` / `bem.m()` / `bem.is()` / `bem.has()` 拼装，**禁止**硬编码前缀字符串               |
+| 4   | `<style>` 块 `lang` 属性       | 必填 `lang="scss"`，用于解析 `$BEM_PREFIX` Sass 变量                                                               |
+| 5   | `<style>` 块 `scoped` 属性     | **禁止添加**——命名空间隔离由 BEM 接管，scoped 是冗余                                                               |
+| 6   | 根选择器写法                   | 必须 `.#{$BEM_PREFIX}-组件名-kebab-case`（如 `.#{$BEM_PREFIX}-form-engine`），与 `bem` 实例一一对应                |
+| 7   | 嵌套占位符                     | element 用 `&__xxx`、modifier 用 `&--yyy`、状态用 `&.is-xxx` / `&.has-xxx`，禁止重复拼接前缀                       |
+| 8   | BEM 默认前缀                   | `vv`（即 `$BEM_PREFIX` 默认值），由 `unplugin-auto-import` 注入                                                    |
+
+### 3.3 反模式（禁止出现）
+
+| #   | 反模式                                                              | 禁止原因                                                |
+| --- | ------------------------------------------------------------------- | ------------------------------------------------------- |
+| 1   | `<script setup>` 中 `import { createNamespace } from '@/utils/bem'` | 与自动注入冲突，会重复声明                              |
+| 2   | `<style scoped>` / `<style scoped lang="scss">`                     | BEM 已接管隔离，scoped 是冗余且会破坏 `&` 编译          |
+| 3   | `<style>` 不写 `lang="scss"`                                        | 无法解析 `$BEM_PREFIX` Sass 变量，根选择器失效          |
+| 4   | 模板或样式中硬编码 `vv-xxx` / `.vv-form-engine__header` 等字符串    | 与 `bem.b()` / `bem.e()` 拼出的 class 不一致 → 样式漂移 |
+| 5   | 同一组件出现两份 `bem` 实例声明                                     | 命名空间分裂，会造成样式不生效                          |
+
+### 3.4 验证机制
+
+- 每次新增 / 修改 `.vue` 文件前，**逐条**比对 §3.2、§3.3
+- 合规简报必须附「本次 BEM 规范核查清单」：本次涉及的 `.vue` 文件路径 + §3.2 每条判定结果
+- `pnpm lint` / `pnpm type-check:full` 已无法自动检测此类违规时，以人工核查清单为准
+
+---
+
 ## §4 Project Constraints
 
 | #   | 约束                                                              | 落地方式                                              |
