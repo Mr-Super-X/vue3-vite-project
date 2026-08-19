@@ -147,6 +147,59 @@ AutoImport **未覆盖**以下内容，仍必须写 import：
 
 > **新增可自动注入的标识符**：编辑 `vite.config.ts` 的 `AutoImport.imports` 数组 + 重启 dev server，**无须**为每个组件手动加 import。
 
+### 1.6.1 不常见 API 必须加来源注释
+
+> AutoImport 让标识符"凭空可用"，但读者看到 `useAppRouter()` / `storeToRefs()` 这类**不常见的标识符**时，会下意识去找 `import` 语句——找不到就困惑：这是哪里来的？是不是漏了 import？
+>
+> **约定**：当使用的 AutoImport 标识符不属于日常一眼能认出的"高频 API"时，必须在第一次出现处加一行注释说明来源包，让读者无需跳到 `auto-imports.d.ts` 也能理解。
+
+#### 高频 API（无须注释）
+
+| 来源         | 高频标识符（看一眼能认出）                                         |
+| ------------ | ------------------------------------------------------------------ |
+| `vue`        | `ref`、`reactive`、`computed`、`watch`、`onMounted`、`defineProps` |
+| `vue-router` | `useRoute`、`useRouter`（路由组件模板里常见）                      |
+| `pinia`      | `defineStore`（每个 store 文件第一行）                             |
+
+#### 不常见 API（必须加注释）
+
+| 标识符（举例）                                             | 来源包提示（注释怎么写）                       |
+| ---------------------------------------------------------- | ---------------------------------------------- |
+| `RouterLink`、`RouterView`、`useLink`                      | `// vue-router 组件`                           |
+| `storeToRefs`、`acceptHMRUpdate`                           | `// pinia 工具`                                |
+| `useAppRouter`、`useRequest`、`useAuth`、`useLogout`       | `// 项目 composable @composables/*`            |
+| `createNamespace`                                          | `// 项目 BEM 工具 @utils/bem（vite 自动注入）` |
+| `watchEffect`、`nextTick`、`onErrorCaptured`、`shallowRef` | `// vue（生命周期/底层 API）`                  |
+
+#### 注释格式与位置
+
+- **位置**：在 `.vue` 的 `<script setup>` 第一行（`createNamespace` 之后）或该标识符第一次出现处的上方 1 行
+- **格式**：1 行简短注释（**不超过 40 字**），说明"来自哪个包"即可
+
+#### 示例：正确写法
+
+```ts
+const bem = createNamespace('user-card')
+// 以下均为 unplugin-auto-import 全局注入（详见 CLAUDE.md §1.6）
+const router = useAppRouter() // 项目 composable @composables/useAppRouter
+const route = useRoute() // vue-router
+const count = ref(0)
+const { data } = storeToRefs(useUserStore()) // pinia 工具
+```
+
+#### 错误示例
+
+```ts
+// ❌ 不加注释——读者看到 storeToRefs 不认识会困惑
+const { data } = storeToRefs(useUserStore())
+
+// ❌ 注释过长——失去意义，应当保持简短
+// pinia 的 storeToRefs 用于把 store state 转成响应式引用，是把 store 的 state/getter 解构出来的标准工具
+const { data } = storeToRefs(useUserStore())
+```
+
+> **例外**：业务模块的 `import { useUserStore } from '@/store/modules/user'` 本身就有路径注释（IDE hover 显示），无需额外标注。
+
 ---
 
 ## §2 ⚠️ src/ Architecture Lockdown（最高优先级）
