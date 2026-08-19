@@ -101,6 +101,52 @@ Feature-Sliced 风格的中后台门户前端（`vue3-vite-project`，企业中�
 | 网络请求（三态 + 错误处理） | `@composables/useRequest`                          |
 | 权限（AND / ANY 语义）      | `@composables/useAuth`（`hasPerm` / `hasAnyPerm`） |
 
+### 1.6 AutoImport 自动导入（无须显式 `import`）
+
+> `vite.config.ts` 第 70-91 行通过 `unplugin-auto-import` 配置了**5 类**自动注入到 `<script setup>` 全局作用域（详见 `src/types/auto-imports.d.ts`）。
+> **写代码时这些内容无须再写 `import` 语句**——会自动可用。
+
+| 类别                 | 来源              | 自动注入的标识符（示例）                                                                                                                      |
+| -------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Vue 核心**         | `'vue'`           | `ref`、`reactive`、`computed`、`watch`、`watchEffect`、`onMounted`、`onUnmounted`、`nextTick`、`defineProps`、`defineEmits`、`defineModel` 等 |
+| **Vue Router**       | `'vue-router'`    | `useRoute`、`useRouter`、`useLink`、`RouterLink`、`RouterView` 等                                                                             |
+| **Pinia**            | `'pinia'`         | `defineStore`、`storeToRefs`、`acceptHMRUpdate` 等                                                                                            |
+| **业务 composables** | `@/composables/*` | `useAppRouter`、`useRequest`、`useAuth`、`useLogout` 等（详见 `vite.config.ts` 第 78-81 行）                                                  |
+| **业务 utils**       | `@/utils/bem`     | `createNamespace`（详见 `vite.config.ts` 第 83 行）                                                                                           |
+
+#### 正确示例
+
+```ts
+// ✅ script setup 块无须 import，直接使用
+const bem = createNamespace('user-card')
+const router = useAppRouter()
+const route = useRoute()
+const count = ref(0)
+const { data } = storeToRefs(useUserStore())
+```
+
+```ts 错误示例（禁止）
+// ❌ 冗余 import：与 AutoImport 冲突，导致重复声明警告
+import { ref, computed } from 'vue'
+import { useRoute } from 'vue-router'
+import { createNamespace } from '@/utils/bem'
+import { useAppRouter } from '@/composables/useAppRouter'
+```
+
+#### 仍需显式 import 的内容
+
+AutoImport **未覆盖**以下内容，仍必须写 import：
+
+| 类型             | 示例                                                          | 原因                                                                         |
+| ---------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| 第三方 UI 库组件 | `import { User, Lock } from '@element-plus/icons-vue'`        | element-plus 用 `unplugin-vue-components` 按需注入，与 AutoImport 是两套机制 |
+| 第三方工具库     | `import dayjs from 'dayjs'`                                   | 不在 AutoImport 配置列表中                                                   |
+| 项目内业务模块   | `import AsyncState from '@/components/common/AsyncState.vue'` | 业务组件按需 import（具体路径由模块边界铁律 §1.2 决定）                      |
+| 类型导入         | `import type { UserProfile } from '@/api/modules/auth'`       | 类型 import 不参与运行时，但 TS 编译器需要                                   |
+| SCSS / 资源文件  | `import './styles/login.scss'`（在 `<style>` 中用 `@use`）    | CSS 走 vite 资源管线，与 JS AutoImport 解耦                                  |
+
+> **新增可自动注入的标识符**：编辑 `vite.config.ts` 的 `AutoImport.imports` 数组 + 重启 dev server，**无须**为每个组件手动加 import。
+
 ---
 
 ## §2 ⚠️ src/ Architecture Lockdown（最高优先级）
