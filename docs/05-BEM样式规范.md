@@ -1,7 +1,9 @@
 # BEM 样式规范
 
-> **文档版本**：v1.0.0 | **最后更新**：2026-07-21
-> **覆盖范围**：BEM 命名约定、样式隔离策略、SCSS mixin 使用、文件组织、代码评审清单
+> **文档版本**：v2.1.0 | **最后更新**：2026-08-19
+> **覆盖范围**：BEM 命名约定、`createNamespace` 使用、style 块编写（**两种方案**：sass 插值 vs SCSS mixin）、样式隔离策略、文件组织、代码评审清单
+> **v2.1 变更**：把 SCSS mixin 写法从"v1 弃用"提升为**备选方案**，与 sass 插值写法并列，开发者按场景灵活选择
+> **v2 重大变更**：样式隔离改为 BEM 命名空间单一防线，`<style>` 块一律不写 `scoped`
 
 ---
 
@@ -34,23 +36,11 @@
 - **语义**：可独立复用的功能模块，对应一个 Vue 组件
 - **示例**：`user-card`、`login-form`、`header-bar`、`sidebar-menu`
 
-```scss
-.user-card {
-  /* ... */
-}
-```
-
 ### 2. Element（元素）
 
 - **格式**：`block__element`（双下划线连接）
 - **语义**：Block 的组成部件，离开 Block 无意义
 - **示例**：`user-card__avatar`、`login-form__submit`、`header-bar__title`
-
-```scss
-.user-card__avatar {
-  /* ... */
-}
-```
 
 ### 3. Modifier（修饰符）
 
@@ -58,23 +48,11 @@
 - **语义**：改变外观/状态/主题，不改变结构
 - **示例**：`user-card--featured`、`login-form__submit--loading`、`header-bar--dark`
 
-```scss
-.user-card--featured {
-  /* ... */
-}
-```
-
 ### 4. State（状态，BEM 扩展）
 
 - **格式**：`is-{state}`（前缀 `is-`，避免与 Modifier 混淆）
 - **语义**：运行时状态（active、disabled、loading、focused）
-- **应用方式**：通过 Vue 的 `:class="{ 'is-active': isActive }"` 切换
-
-```scss
-.user-card.is-active {
-  /* ... */
-}
-```
+- **应用方式**：通过 Vue 的 `:class="{ 'is-active': isActive }"` 切换（`bem.is()` 运行时生成）
 
 ### 5. 命名禁区
 
@@ -87,120 +65,266 @@
 
 ---
 
-## 🧰 SCSS mixin（推荐写法）
+## 🛠️ 优先使用 `createNamespace()` 创建 BEM（必读）
 
-> 工具文件：`src/assets/styles/mixins/bem.scss`（已落地，约 110 行）
-> 与 `src/utils/bem.ts` 的 `createNamespace()` 共享同一套前缀机制（详见下方"前缀可配置"章节）。
-> 与手写 BEM 字符串 100% 等价，仅是更优雅的书写方式。
+> `createNamespace()` 来自 `src/utils/bem.ts`（约 190 行）。
+> 由 `unplugin-auto-import`（`vite.config.ts` 第 83 行）自动注入到 `<script setup>` **全局作用域**。
+> 禁止 `import { createNamespace } from '@utils/bem'`——会与自动注入冲突。
 
-### mixin 一览
+### API 一览（运行时拼接类名）
 
-| mixin           | 用途                                      | 生成示例                                          |
-| --------------- | ----------------------------------------- | ------------------------------------------------- |
-| `b($block)`     | 注册 Block 并打开作用域（**自动加前缀**） | `.vv-user-card { ... }`（前缀来自 `$BEM_PREFIX`） |
-| `e($element)`   | 注册 Element（基于当前 Block）            | `.vv-user-card__avatar { ... }`                   |
-| `m($modifier)`  | 注册 Block 修饰符                         | `.vv-user-card--featured { ... }`                 |
-| `is($state)`    | 注册 State（BEM 扩展）                    | `.vv-user-card.is-active { ... }`                 |
-| `when($suffix)` | 注册主题/场景前缀                         | `.vv-user-card--when-light { ... }`               |
-| `reset-block`   | 重置块名作用域（仅测试用）                | —                                                 |
+| 方法                                | 用途                            | 输出示例                            |
+| ----------------------------------- | ------------------------------- | ----------------------------------- |
+| `bem.b()`                           | Block 根类名                    | `'vv-user-card'`                    |
+| `bem.b('group')`                    | Block 后缀（变体根）            | `'vv-user-card-group'`              |
+| `bem.e('name')`                     | Element                         | `'vv-user-card__name'`              |
+| `bem.m('large')`                    | Block Modifier                  | `'vv-user-card--large'`             |
+| `bem.em('name', 'large')`           | Element Modifier                | `'vv-user-card__name--large'`       |
+| `bem.be('group', 'icon')`           | Block + Element                 | `'vv-user-card-group__icon'`        |
+| `bem.bm('group', 'large')`          | Block + Modifier                | `'vv-user-card-group--large'`       |
+| `bem.bem('group', 'icon', 'large')` | 三段                            | `'vv-user-card-group__icon--large'` |
+| `bem.is('active', state)`           | State（真返回类名，假返回空串） | `'is-active'` 或 `''`               |
 
-> **重要**：`b($block)` 的 `$block` 参数**只传基础名**（如 `user-card`），不要传完整前缀（如 `vv-user-card`）——前缀由 `$BEM_PREFIX` 自动拼接，否则会出现 `.vv-vv-user-card` 这种重复前缀。
-
-### 前缀可配置：`VITE_BEM_PREFIX`
-
-项目使用 **`vv-` 前缀**标识私有组件（与 Element Plus 的 `el-`、Vant 的 `van-` 同源约定），前缀值由环境变量 `VITE_BEM_PREFIX` 控制，默认 `vv`。两套 BEM 工具**共享同一来源**，改一处即全站生效：
-
-| 工具              | 文件                                     | 读取方式                                                     |
-| ----------------- | ---------------------------------------- | ------------------------------------------------------------ |
-| 运行时 TS 工具    | `src/utils/bem.ts` → `createNamespace()` | `import.meta.env.VITE_BEM_PREFIX ?? 'vv'`                    |
-| 编译期 SCSS mixin | `src/assets/styles/mixins/bem.scss`      | 由 vite additionalData 用 sass `with` 语法注入 `$BEM_PREFIX` |
-
-**vite 注入实现**（`vite.config.ts`）：
-
-```ts
-scss: {
-  silenceDeprecations: ['new-global', 'if-function'],
-  additionalData: `@use '@/assets/styles/mixins/bem' as * with ($BEM_PREFIX: '${process.env.VITE_BEM_PREFIX ?? 'vv'}');\n`,
-}
-```
-
-#### 两套工具等价示例
-
-```ts
-// 运行时（TS）
-const bem = createNamespace('user-card')
-bem.b() // 'vv-user-card'
-bem.e('name') // 'vv-user-card__name'
-bem.is('active', true) // 'is-active'
-```
-
-```scss
-// 编译期（SCSS）—— 与上面 TS 输出完全等价
-@include b(user-card) {
-  @include e(name) { ... }
-  @include is(active) { ... }
-}
-// 产物：
-//   .vv-user-card { ... }
-//   .vv-user-card__name { ... }
-//   .vv-user-card.is-active { ... }
-```
-
-#### 调用方使用要点
-
-| 规则                                                                   | 原因                                                                                                                             |
-| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| ❌ **不要**在 `<style>` 中写 `@use '@/assets/styles/mixins/bem' as *;` | vite additionalData 已经通过 `@use ... with` 注入，重复引入会报 sass 编译错误                                                    |
-| ❌ **不要**硬编码 `.vv-user-card` 等完整类名                           | 改 `VITE_BEM_PREFIX` 后硬编码失效，JS 端 `bem.b()` 会输出新前缀但 CSS 选择器不动 → 样式丢失。PortalHeader.vue 改造前就是这种隐患 |
-| ❌ **不要**给 mixin 传完整前缀名 `@include b(vv-user-card)`            | 会输出 `.vv-vv-user-card` 重复前缀                                                                                               |
-| ✅ 只传基础名 + 用 mixin / `createNamespace`                           | 两套工具自动用同一前缀                                                                                                           |
-
-#### 切换前缀的完整流程
-
-```bash
-# 1. 改 .env（或 .env.development / .env.production）
-echo "VITE_BEM_PREFIX=app" >> .env
-
-# 2. 重启 dev（vite env 变更需要重启）
-pnpm dev
-
-# 3. 验证：浏览器 DevTools 搜 .app-user-card 应能匹配所有自定义组件类名
-```
-
-**何时改前缀**：项目被多个门户复用（OEM 场景）、对外发布组件库、需要避免与其他 `vv-` 前缀项目类名冲突时。日常开发**不需要**改，保持默认 `vv` 即可。
-
-### 完整使用示例
+### 完整使用模板
 
 ```vue
-<!-- src/modules/user/components/UserCard.vue 或 src/components/common/UserCard.vue -->
+<!-- src/modules/user/components/UserCard.vue -->
 <script setup lang="ts">
-// createNamespace 已在 vite.config.ts 中通过 AutoImport 全局化，无需手动 import
-// （详见 src/types/auto-imports.d.ts 与 vite.config.ts 的 AutoImport.imports 配置）
+// createNamespace 由 unplugin-auto-import 自动注入（vite.config.ts 第 83 行），
+// 无须显式 import。BEM 前缀来自 import.meta.env.VITE_BEM_PREFIX ?? 'vv'。
 const bem = createNamespace('user-card')
-
-interface Props {
-  featured?: boolean
-  loading?: boolean
-}
-defineProps<Props>()
 </script>
 
 <template>
-  <div :class="[bem.b(), bem.is('loading', loading), bem.is('featured', featured)]">
+  <div :class="[bem.b(), bem.is('featured', featured), bem.is('loading', loading)]">
     <img :class="bem.e('avatar')" :src="user.avatar" />
     <h3 :class="bem.e('name')">{{ user.name }}</h3>
     <button :class="bem.e('action')">关注</button>
   </div>
 </template>
 
-<style lang="scss" scoped>
-// 注意：不要再写 @use 'bem' as * —— vite.config.ts 的 additionalData 已通过
-// `@use ... with` 注入，本文件写 @use 会报 sass 重复引入错误。
-// b() / e() / m() / is() mixin 在 additionalData 注入后可直接使用。
+<style lang="scss">
+// 详见下方"style 块编写规范"章节
+.#{$BEM_PREFIX}-user-card {
+  padding: 16px;
 
+  &__avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+  }
+}
+</style>
+```
+
+**编译/运行产物**：
+
+```html
+<!-- template 渲染的 class（来自 bem.b() 等） -->
+<div class="vv-user-card is-featured is-loading">
+  <img class="vv-user-card__avatar" />
+  <h3 class="vv-user-card__name">张三</h3>
+  <button class="vv-user-card__action">关注</button>
+</div>
+```
+
+```css
+/* <style lang="scss"> 编译后的 CSS（来自 sass 插值 + vite additionalData 注入 $BEM_PREFIX） */
+.vv-user-card {
+  padding: 16px;
+}
+.vv-user-card__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+```
+
+两套工具输出**完全等价**——JS 拼接的类名与 SCSS 编译的 CSS 选择器自动对齐。改 `VITE_BEM_PREFIX=app` 后 `.vv-user-card` 全站变 `.app-user-card`，无需任何代码改动。
+
+### createNamespace name 命名约定（关键）
+
+| 规则                     | 原因                                                                                            |
+| ------------------------ | ----------------------------------------------------------------------------------------------- |
+| ✅ **必须 kebab-case**   | 与 sass 根选择器 `.#{$BEM_PREFIX}-<kebab>` 严格对齐——HTML class 与 CSS 选择器大小写敏感         |
+| ❌ **禁止 PascalCase**   | `createNamespace('OrdersList')` → `'vv-OrdersList'`，与 `.vv-orders-list` 不匹配 → 整片样式失效 |
+| ✅ **全项目唯一**        | 不要用 `card` / `button` 这种通用 Block 名（与 Element Plus / UnoCSS 工具类冲突）               |
+| ✅ **与 Vue 文件名一致** | `<user-card>.vue` → `createNamespace('user-card')`                                              |
+
+转换示例：
+
+| ❌ PascalCase          | ✅ kebab-case            |
+| ---------------------- | ------------------------ |
+| `OrdersList`           | `orders-list`            |
+| `HomeFooter`           | `home-footer`            |
+| `OverviewCardSkeleton` | `overview-card-skeleton` |
+| `UserLogin`            | `user-login`             |
+
+---
+
+## 🎨 style 块编写规范
+
+> 提供**两种等价写法**供灵活选择：① sass 插值写法（推荐，简单场景）② SCSS mixin 写法（备选，嵌套深的复杂组件更清晰）。两种写法运行时产物完全等价。
+
+---
+
+### 方案 A：sass 插值写法（推荐）
+
+> 适用：大多数业务组件（嵌套 ≤ 3 层、选择器数量 ≤ 10 个）。
+
+#### 必须遵守 4 条
+
+| #   | 项                                                 | 说明                                                           |
+| --- | -------------------------------------------------- | -------------------------------------------------------------- |
+| 1   | 必须 `lang="scss"`                                 | 用于解析 `$BEM_PREFIX` sass 变量与 sass 语法                   |
+| 2   | **不写** `scoped`                                  | 详见下方"为什么不写 scoped"                                    |
+| 3   | 根选择器必须用 sass 插值 `.#{$BEM_PREFIX}-<kebab>` | 与 `bem.b()` 输出的类名一一对应；改 `VITE_BEM_PREFIX` 自动同步 |
+| 4   | element/modifier 用 `&__xxx` / `&--yyy` 嵌套       | 沿用 BEM 嵌套写法，sass 编译为完整类名                         |
+
+#### 为什么不写 `scoped`（3 条核心理由）
+
+1. **BEM 命名空间本身已是隔离层**
+   `.vv-user-card` 类名带 `vv-` 前缀，不可能与其他组件或第三方样式冲突。`scoped` 给元素加 `[data-v-xxx]` 属性选择器是**冗余**的——BEM 命名已经实现了同样强度的隔离。
+
+2. **`scoped` 与 element-plus 穿透需求矛盾**
+   Vue 3 的 `:deep(.el-button)` 伪类**只在 scoped 块中**有意义（用于穿透子组件 scoped）。无 scoped 时 `:deep()` 是**非法 CSS 选择器**，浏览器直接忽略 → element-plus 表单/按钮样式穿透失败 → 整片样式丢失。这是 BEM 改造后反复出现的真实回归。
+
+3. **`scoped` 会破坏 sass `&` 嵌套**
+   vue-loader 在编译 scoped 时会给 `&` 加属性后缀，对 `@include b() {}` 嵌套的影响可控，但对手写 sass 嵌套 `&__xxx` 会引入额外属性选择器。在 sass 插值写法下保持纯 BEM 命名更简单可控。
+
+#### 完整 style 块示例（方案 A）
+
+```vue
+<style lang="scss">
+// 根选择器：必用 sass 插值，与 createNamespace(name) 中的 name 一一对应
+.#{$BEM_PREFIX}-user-card {
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-md);
+
+  // Element：用 &__xxx 嵌套占位符
+  &__avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+  }
+
+  &__name {
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  &__action {
+    padding: 4px 12px;
+    cursor: pointer;
+    background: var(--el-color-primary);
+    color: #fff;
+
+    // Element Modifier：&__xxx--yyy
+    &--primary {
+      background: var(--el-color-primary);
+    }
+  }
+
+  // Block Modifier：用 &--yyy
+  &--featured {
+    border-color: gold;
+  }
+
+  // State：用 &.is-xxx（与 bem.is() 输出对齐）
+  &.is-loading {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+}
+</style>
+```
+
+**编译产物**：
+
+```css
+.vv-user-card {
+  padding: 16px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+}
+.vv-user-card__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+.vv-user-card__name {
+  font-size: 16px;
+  font-weight: 600;
+}
+.vv-user-card__action {
+  padding: 4px 12px;
+  cursor: pointer;
+  background: #409eff;
+  color: #fff;
+}
+.vv-user-card__action--primary {
+  background: #409eff;
+}
+.vv-user-card--featured {
+  border-color: gold;
+}
+.vv-user-card.is-loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+```
+
+#### 方案 A 反模式（禁止）
+
+| #   | 反例                                                     | 原因                                                                                   |
+| --- | -------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| 1   | `<style lang="scss" scoped>` 或 `<style scoped>`         | 详见上方"为什么不写 scoped"。BEM 命名空间已隔离，scoped 冗余且与 `:deep()` 冲突        |
+| 2   | 硬编码 `.vv-user-card { ... }`（不带 `#{$BEM_PREFIX}-`） | 改 `VITE_BEM_PREFIX` 后失效，JS 端输出新前缀但 CSS 选择器不动 → 样式丢失               |
+| 3   | `@use '@/assets/styles/mixins/bem' as *;`                | vite additionalData 已通过 `@use ... with` 注入，重复引入会报 sass 编译错误            |
+| 4   | `:deep(.el-button) { ... }`                              | 无 scoped 时 `:deep()` 非法，浏览器忽略。靠 BEM 命名空间隔离即可穿透 element-plus 组件 |
+
+---
+
+### 方案 B：SCSS mixin 写法（备选）
+
+> 适用：组件嵌套深度 ≥ 3 层、选择器数量多、需要复用现有 mixin 的场景。两种方案运行时产物完全等价（`.vv-` 前缀拼接 + sass `&` 编译）。
+
+#### 何时优先选方案 B
+
+- 同一组件选择器数量 ≥ 20 个，sass 插值写法嵌套层级深、视觉臃肿
+- 习惯 SCSS mixin 心智模型（团队历史习惯）
+- 需要与 `src/assets/styles/mixins/bem.scss` 现存 mixin 复用
+
+#### 何时仍选方案 A
+
+- 新写的简单组件（≤10 个选择器）
+- 团队以 sass 插值为默认风格（更直观、不依赖项目私有 mixin）
+- 直接用 createNamespace 命名约定更顺手的场景
+
+#### SCSS mixin 一览（来自 `src/assets/styles/mixins/bem.scss`）
+
+| mixin             | 用途                                      | 生成示例                                          |
+| ----------------- | ----------------------------------------- | ------------------------------------------------- |
+| `b($block)`       | 注册 Block 并打开作用域（**自动加前缀**） | `.vv-user-card { ... }`（前缀来自 `$BEM_PREFIX`） |
+| `e($element)`     | 注册 Element（基于当前 Block）            | `.vv-user-card__avatar { ... }`                   |
+| `m($modifier)`    | 注册 Block 修饰符                         | `.vv-user-card--featured { ... }`                 |
+| `em($elem, $mod)` | 注册 Element 修饰符                       | `.vv-user-card__avatar--large { ... }`            |
+| `is($state)`      | 注册 State（BEM 扩展）                    | `.vv-user-card.is-active { ... }`                 |
+| `when($suffix)`   | 注册主题/场景前缀                         | `.vv-user-card--when-light { ... }`               |
+| `reset-block`     | 重置块名作用域（仅测试用）                | —                                                 |
+
+> **重要**：`b($block)` 的 `$block` 参数**只传基础名**（如 `user-card`），不要传完整前缀（如 `vv-user-card`）——前缀由 `$BEM_PREFIX` 自动拼接，否则会出现 `.vv-vv-user-card` 这种重复前缀。
+
+#### 完整 style 块示例（方案 B）
+
+```vue
+<style lang="scss">
+// b() / e() / m() / is() mixin 由 vite additionalData 通过 `@use ... with` 注入。
+// 本文件不要再写 @use 'bem' as * —— 重复引入会报 sass 编译错误。
 @include b(user-card) {
   padding: var(--spacing-md);
-  border: 1px solid #eee;
+  border: 1px solid var(--border-base);
   border-radius: var(--radius-md);
 
   @include e(avatar) {
@@ -217,99 +341,138 @@ defineProps<Props>()
   @include e(action) {
     padding: 4px 12px;
     cursor: pointer;
+    background: var(--el-color-primary);
+    color: #fff;
 
-    // Element 也可以挂 Modifier
-    @include m(primary) {
-      background: var(--color-primary);
-      color: #fff;
+    // Element Modifier
+    @include em(action, primary) {
+      background: var(--el-color-primary);
     }
   }
 
+  // Block Modifier
+  @include m(featured) {
+    border-color: gold;
+  }
+
+  // State
   @include is(loading) {
     opacity: 0.6;
     pointer-events: none;
-  }
-
-  @include is(featured) {
-    border-color: gold;
   }
 }
 </style>
 ```
 
-**编译产物（运行时拼接 + SCSS 编译输出 `.vv-user-card` 前缀）**：
-
-```html
-<!-- template 渲染出的 class（来自 createNamespace） -->
-<div class="vv-user-card is-loading">
-  <img class="vv-user-card__avatar" />
-  <h3 class="vv-user-card__name">张三</h3>
-  <button class="vv-user-card__action">关注</button>
-</div>
-```
+**编译产物**（与方案 A 完全等价）：
 
 ```css
-/* <style> 编译后的 CSS（来自 bem mixin + $BEM_PREFIX 注入） */
-.vv-user-card[data-v-xxx] {
+.vv-user-card {
   padding: 16px;
   border: 1px solid #eee;
   border-radius: 8px;
 }
-.vv-user-card__avatar[data-v-xxx] {
+.vv-user-card__avatar {
   width: 40px;
   height: 40px;
   border-radius: 50%;
 }
-.vv-user-card__name[data-v-xxx] {
+.vv-user-card__name {
   font-size: 16px;
   font-weight: 600;
 }
-.vv-user-card__action[data-v-xxx] {
+.vv-user-card__action {
   padding: 4px 12px;
   cursor: pointer;
-}
-.vv-user-card__action--primary[data-v-xxx] {
   background: #409eff;
   color: #fff;
 }
-.vv-user-card.is-loading[data-v-xxx] {
+.vv-user-card__action--primary {
+  background: #409eff;
+}
+.vv-user-card--featured {
+  border-color: gold;
+}
+.vv-user-card.is-loading {
   opacity: 0.6;
   pointer-events: none;
 }
-.vv-user-card.is-featured[data-v-xxx] {
-  border-color: gold;
-}
 ```
 
-> 两套工具输出**完全等价**——JS 拼接的类名与 SCSS 编译的 CSS 选择器自动对齐。改 `VITE_BEM_PREFIX=app` 后 `.vv-user-card` 全站变 `.app-user-card`，无需任何代码改动。
+#### 方案 B 反模式（禁止）
+
+| #   | 反例                                                               | 原因                                                                        |
+| --- | ------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| 1   | `<style lang="scss" scoped>` 或 `<style scoped>`                   | 与方案 A 同理，BEM 命名空间已隔离                                           |
+| 2   | `@include b(vv-user-card)`（传完整前缀）                           | 会输出 `.vv-vv-user-card` 重复前缀                                          |
+| 3   | `@use '@/assets/styles/mixins/bem' as *;`（在 style 块中重复引入） | vite additionalData 已通过 `@use ... with` 注入，重复引入会报 sass 编译错误 |
+| 4   | `:deep(.el-button) { ... }`                                        | 无 scoped 时 `:deep()` 非法                                                 |
 
 ---
 
-## 🛡️ 样式隔离三层防线
+### 方案 A vs 方案 B 对比
 
-> **目标**：任意位置使用，样式都不被污染。
+| 维度         | 方案 A sass 插值（推荐）       | 方案 B SCSS mixin（备选）       |
+| ------------ | ------------------------------ | ------------------------------- |
+| 心智成本     | ✅ 零成本（标准 sass 语法）    | ⚠️ 需记 mixin 名（b/e/m/em/is） |
+| 调试类名     | ✅ 直接看到（sass 编译后展开） | ⚠️ 编译后才能看                 |
+| IDE 高亮兼容 | ✅ 原生 sass 支持              | ⚠️ 部分 IDE 不识别 mixin 调用   |
+| 嵌套可读性   | ⚠️ 嵌套深时视觉臃肿            | ✅ 优秀（mixin 嵌套自带作用域） |
+| 大型组件适用 | ⚠️ 选 ≥20 个时累赘             | ✅ 嵌套清晰                     |
+| **运行产物** | 完全等价                       | 完全等价                        |
 
-| 防线                             | 机制                                             | 作用                           |
-| -------------------------------- | ------------------------------------------------ | ------------------------------ |
-| **第一层**：Vue `<style scoped>` | 编译器自动给选择器追加 `[data-v-xxx]` 属性选择器 | 阻止当前组件样式泄漏到其他组件 |
-| **第二层**：SCSS `@use` 模块化   | 顶层样式用 `@use './reset.css'`，避免全局污染    | 阻止文件级全局变量泄漏         |
-| **第三层**：BEM 命名             | 类名自带 Block 前缀，无冲突空间                  | 即使 scoped 失效，类名也不冲突 |
+**建议**：
 
-### 为什么需要三层
+- 简单组件（≤10 选择器、嵌套 ≤3 层）→ 选方案 A（默认推荐）
+- 复杂组件（选 ≥20、嵌套 ≥3 层、复用 mixin）→ 选方案 B
+- 同一项目内**不必统一**——按场景选最合适的，但建议团队内部形成大致倾向（如默认 A、复杂场景 B）
 
-| 单一防线失败场景                                   | 三层防线的兜底                                    |
-| -------------------------------------------------- | ------------------------------------------------- |
-| `scoped` 不隔离子组件根元素（`<slot>` 透传根元素） | BEM 命名让父子组件类名不冲突                      |
-| 全局 reset.css 修改了 `*` 选择器                   | BEM Block 名空间隔离了用户 reset 误伤             |
-| 第三方组件库（如 Element Plus）类名冲突            | Element Plus 自身用 BEM，本项目也用 BEM，统一约定 |
+---
 
-### 何时不用 scoped
+### 前缀可配置：`VITE_BEM_PREFIX`（两种方案共享）
 
-| 场景                  | 处理                                                 |
-| --------------------- | ---------------------------------------------------- |
-| 全局 reset / 工具类   | 放在 `src/assets/styles/`，**不写 scoped**           |
-| Element Plus 主题覆盖 | 放在 `src/assets/styles/index.scss`，**不写 scoped** |
-| 第三方组件样式穿透    | 用 `:deep(.el-button) { ... }`，仅限必要时           |
+| 工具                     | 文件                                     | 读取方式                                                     |
+| ------------------------ | ---------------------------------------- | ------------------------------------------------------------ |
+| 运行时 TS 工具           | `src/utils/bem.ts` → `createNamespace()` | `import.meta.env.VITE_BEM_PREFIX ?? 'vv'`                    |
+| 编译期 SCSS 插值 / mixin | `<style lang="scss">` 块                 | 由 vite additionalData 用 sass `with` 语法注入 `$BEM_PREFIX` |
+
+**vite 注入实现**（`vite.config.ts` 第 154 行）：
+
+```ts
+scss: {
+  additionalData: `@use '@/assets/styles/mixins/bem' as * with ($BEM_PREFIX: '${process.env.VITE_BEM_PREFIX ?? 'vv'}');\n`,
+}
+```
+
+`$BEM_PREFIX` 在每个 `<style lang="scss">` 块编译时自动可用，**无需**手动 `@use`。
+
+---
+
+## 🛡️ 样式隔离策略（BEM 命名空间为唯一防线）
+
+| 防线                                     | 机制                                                | 作用                                       |
+| ---------------------------------------- | --------------------------------------------------- | ------------------------------------------ |
+| **第一层（也是唯一层）**：BEM 命名       | 类名自带 Block 前缀（`vv-`）+ Element/Modifier 后缀 | 类名全局唯一，不可能冲突                   |
+| ~~第二层~~（已弃用）：`<style scoped>`   | ~~vue-loader 加 `[data-v-xxx]` 属性选择器~~         | ~~已被 BEM 命名取代，且与 `:deep()` 冲突~~ |
+| ~~第三层~~（已弃用）：SCSS `@use` 模块化 | ~~顶层 reset 隔离~~                                 | ~~BEM 命名已足够，无需额外隔离~~           |
+
+### 为什么只需要 BEM 命名一层
+
+| 单层 BEM 的兜底场景                        | 兜底机制                                            |
+| ------------------------------------------ | --------------------------------------------------- |
+| 父子组件同名 class（如都有 `.title`）      | BEM 命名让 `.vv-parent__title` ≠ `.vv-child__title` |
+| 子组件根元素透传（`<slot>`）               | BEM 类名仍带组件前缀，不会污染                      |
+| 第三方库样式（如 Element Plus `el-` 冲突） | Element Plus 自身用 BEM，统一约定                   |
+| 全局 `*` 重置误伤                          | 重置只影响 `html` / `body`，不进入 BEM 命名的组件类 |
+
+### 何时写全局样式（放在 `src/assets/styles/`）
+
+| 场景                       | 处理                                                         |
+| -------------------------- | ------------------------------------------------------------ |
+| 全局 reset / 工具类        | 放在 `src/assets/styles/`，**不写 scoped**（无 BEM 命名）    |
+| Element Plus 主题覆盖      | 放在 `src/assets/styles/element-overwrite.scss`              |
+| 路由过渡 / fade keyframes  | 放在 `src/assets/styles/transition.scss`                     |
+| **禁止** Element Plus 穿透 | ❌ 禁止写 `:deep(.el-button)`——去掉 scoped 后 `:deep()` 非法 |
 
 ---
 
@@ -325,21 +488,19 @@ src/assets/styles/
 ├── element-overwrite.scss  # Element Plus 5 个主色 × 5 个灯色阶 = 25 个 CSS 变量覆盖
 ├── custom.scss             # 复合场景工具类（.vv-flex-center / .vv-flex-between / .vv-ellipsis-* 等）
 └── mixins/
-    ├── bem.scss            # BEM 编程式 mixin（编译期拼接）
+    ├── bem.scss            # BEM mixin（仅 v1 过渡用，v2 已弃用，保留以兼容旧组件）
     ├── transitions.scss    # 过渡 mixin（3 个）
     └── responsive.scss     # 响应式断点 mixin（vv-responsive / vv-responsive-down）
 
 src/components/
 ├── common/<Name>.vue       # 通用组件（自动注册为全局组件）
 └── layout/<Name>.vue       # 路由级布局组件
-
-components/*.vue 内 <style lang="scss" scoped>  # 组件作用域样式（@use bem/transitions 等 mixin）
 ```
 
 ### 规则
 
 1. **全局样式只放在 `src/assets/styles/`**：禁止在组件中写"全局生效"的样式
-2. **组件样式写在 SFC 内**：禁止拆出独立 `.scss` 文件（除非组件库对外发布）
+2. **组件样式写在 SFC 内**：禁止拆出独立 `.scss` 文件（除非组件库对外发布，且行数超过 400）
 3. **跨组件复用的样式 → 抽到全局 `variables.css`**：禁止在组件内 `:root { --xxx: ... }` 散落定义
 
 ---
@@ -349,23 +510,29 @@ components/*.vue 内 <style lang="scss" scoped>  # 组件作用域样式（@use 
 > 代码评审时，对涉及样式的 PR 必须逐条过。
 
 ```
-□ 1. 命名是否符合 BEM（Block__Element--Modifier / is-{state}）？
-□ 2. Element 是否仅在所属 Block 内部使用？
-□ 3. Modifier 是否仅调整外观（未改变 DOM 结构）？
-□ 4. 是否滥用 Element 嵌套 Element（__a__b）？
-□ 5. <style> 块是否加了 lang="scss" scoped？
-□ 6. 是否使用了 @use 而非 @import？
-□ 7. 跨组件复用的值是否抽到 variables.css？
-□ 8. 是否避开了命名禁区（缩写 / camelCase / 单字母）？
-□ 9. 是否避免了深层嵌套（>4 层需重构成多个 Block）？
-□ 10. 是否避免了 .is-* 被硬编码到模板（应通过 :class 切换）？
+□  1. 命名是否符合 BEM（Block__Element--Modifier / is-{state}）？
+□  2. createNamespace name 是否 kebab-case（不是 PascalCase）？
+□  3. createNamespace name 是否与 sass 根选择器 .#{$BEM_PREFIX}-name 一致？
+□  4. Element 是否仅在所属 Block 内部使用？
+□  5. Modifier 是否仅调整外观（未改变 DOM 结构）？
+□  6. 是否滥用 Element 嵌套 Element（__a__b）？
+□  7. <style> 块是否 lang="scss"？
+□  8. <style> 块是否无 scoped？
+□  9. 方案 A：根选择器是否用 .#{$BEM_PREFIX}-<kebab> 形式（不带硬编码前缀）？
+□ 10. 方案 A：element/modifier 是否用 &__xxx / &--yyy 嵌套（不写重复前缀）？
+□ 11. 方案 B：是否用 @include b(block-name) { @include e(elem) { ... } }（不传完整前缀）？
+□ 12. 方案 B：是否避免在 <style> 内 @use '@/assets/styles/mixins/bem' as *;（vite 已注入）？
+□ 13. 是否避开了命名禁区（缩写 / camelCase / PascalCase Block 名）？
+□ 14. 是否避免了深层嵌套（>4 层需重构成多个 Block）？
+□ 15. 是否避免了 .is-* 被硬编码到模板（应通过 bem.is() 切换）？
+□ 16. 是否避免了 :deep() 伪类（无 scoped 时 :deep() 非法）？
 ```
 
 ---
 
 ## 🛠️ How to write a new component（端到端流程）
 
-> 新人首次写业务组件的完整流程。从命名到评审，6 步可走完。
+> 新人首次写业务组件的完整流程。从命名到评审，5 步可走完。
 
 ### Step 1：定 Block 名（kebab-case）
 
@@ -388,11 +555,11 @@ src/modules/<m>/components/<block-name>/  （模块私有组件）
 
 > Vue 文件名用 kebab-case（如 `user-card.vue`），与 Block 名一致。
 
-### Step 3：SFC 三段结构模板
+### Step 3：SFC 三段结构模板（v2 规范）
 
 ```vue
 <script setup lang="ts">
-// 1. props/emits 用 interface（§五 TS 用法）
+// 1. props/emits 用 interface（详见 CLAUDE.md §四 TS 用法）
 interface UserCardProps {
   user: { id: number; name: string; avatar?: string }
   variant?: 'default' | 'compact'
@@ -405,8 +572,8 @@ const collapsed = ref(false)
 // 3. emit 用 defineEmits<T>()
 const emit = defineEmits<{ select: [id: number] }>()
 
-// 4. BEM 命名空间（createNamespace 已通过 vite AutoImport 全局化，无需 import）。
-//    只传基础名，前缀由 $BEM_PREFIX（默认 gm）自动拼接。
+// 4. createNamespace（已通过 vite AutoImport 全局化，无需 import）。
+//    只传基础名（kebab-case），前缀由 $BEM_PREFIX（默认 vv）自动拼接。
 const bem = createNamespace('user-card')
 </script>
 
@@ -424,12 +591,12 @@ const bem = createNamespace('user-card')
   </div>
 </template>
 
-<style lang="scss" scoped>
-// 6. SCSS mixin（编译期拼接 CSS）。注意：本文件**不要**写 @use 'bem'，
-//    vite additionalData 已通过 `@use ... with $BEM_PREFIX: 'vv'` 注入，
-//    再写会报 sass 重复引入错误。
-//    b() 只传基础名 user-card，前缀由 $BEM_PREFIX 自动拼 → .vv-user-card
-@include b(user-card) {
+<style lang="scss">
+// 6. sass 插值写法（v2 规范，v1 mixin 已弃用）
+//    根选择器用 .#{$BEM_PREFIX}-<kebab>，element/modifier 用 & 嵌套。
+//    本文件不要写 @use 'bem'——vite additionalData 已注入 $BEM_PREFIX。
+//    禁止加 scoped（BEM 命名空间已是隔离层，加 scoped 反而与 :deep() 冲突）。
+.#{$BEM_PREFIX}-user-card {
   display: flex;
   gap: 12px;
 
@@ -450,14 +617,14 @@ const bem = createNamespace('user-card')
     background: var(--bg-primary);
     cursor: pointer;
 
-    @include is(collapsed) {
-      padding: 2px 8px;
-      font-size: 12px;
+    &--primary {
+      background: var(--el-color-primary);
+      color: #fff;
     }
   }
 
-  // 7. Modifier：仅调整外观，不改 DOM
-  @include m(variant-compact) {
+  // 7. Block Modifier：仅调整外观，不改 DOM
+  &--variant-compact {
     gap: 8px;
 
     &__avatar {
@@ -465,31 +632,28 @@ const bem = createNamespace('user-card')
       height: 32px;
     }
   }
+
+  // 8. State：用 &.is-xxx（与 bem.is() 输出对齐）
+  &.is-collapsed {
+    .#{$BEM_PREFIX}-user-card__action {
+      padding: 2px 8px;
+      font-size: 12px;
+    }
+  }
 }
 </style>
 ```
 
-### Step 4：3 个最常见反例
+### Step 4：4 个最常见反例
 
-| #   | 反例                                                          | 正确做法                                                    |
-| --- | ------------------------------------------------------------- | ----------------------------------------------------------- |
-| 1   | `class="user-card-avatar"`（混 kebab-case 和 BEM）            | `class="user-card__avatar"`（BEM 双下划线）                 |
-| 2   | `<div class="user-card__header__title">`（3 层 Element 嵌套） | 拆为多个 Block（如 `user-card__header` + `header__title`）  |
-| 3   | `<div :class="{ 'is-active': active }">`（直接写 is-）        | `:class="bem.is('active', active)"`（运行时由 `is()` 生成） |
+| #   | 反例                                                          | 正确做法                                                   |
+| --- | ------------------------------------------------------------- | ---------------------------------------------------------- |
+| 1   | `createNamespace('UserCard')`（PascalCase）                   | `createNamespace('user-card')`（kebab-case）               |
+| 2   | `class="user-card-avatar"`（混 kebab 和 BEM）                 | `class="vv-user-card__avatar"`（bem.e() 生成）             |
+| 3   | `<div class="user-card__header__title">`（3 层 Element 嵌套） | 拆为多个 Block（如 `user-card__header` + `header__title`） |
+| 4   | `<style scoped>` 或 `:deep(.el-button)`                       | 去掉 scoped，依赖 BEM 命名空间隔离穿透第三方组件           |
 
-### Step 5：跨组件复用 → 抽到 variables.css
-
-```scss
-// ❌ 在组件内散落
-.user-card {
-  --avatar-size: 48px;
-}
-
-// ✅ 抽到 src/assets/styles/variables.scss（§样式隔离三层防线）
-$avatar-size-default: 48px;
-```
-
-### Step 6：跑 `pnpm check:routes` + ESLint + 单测
+### Step 5：跑 `pnpm check:routes` + ESLint + 单测
 
 ```bash
 pnpm lint:fix        # ESLint 自动修复 + 检查 BEM 命名
@@ -501,31 +665,40 @@ pnpm check:routes    # 如果改了 routes/* 跑一致性
 
 ## ❓ FAQ
 
-### Q1：为什么不用 Stylelint 强制 BEM？
+### Q1：为什么 BEM 命名就足够隔离，不用 `scoped`？
 
-**A**：项目先前决策不引入 Stylelint（详见 `docs/01-工具兼容性问题踩坑记录.md`）。本规范通过代码评审 + ESLint + 文档确保。
+**A**：三方面原因，详见上方"为什么不写 scoped"章节。核心：**BEM 命名空间本身就是隔离层**，`scoped` 加的 `[data-v-xxx]` 属性选择器是冗余的，反而与 `:deep()` 伪类冲突（`:deep()` 仅在 scoped 中有效）。
 
 ### Q2：Element Plus 的 BEM 怎么对齐？
 
-**A**：Element Plus 类名是 `el-button`、`el-button--primary`、`el-button__content`，与本规范完全兼容。本项目自定义组件使用 **`vv-` 前缀**（与 Element Plus 的 `el-` 同源约定），由环境变量 `VITE_BEM_PREFIX` 控制，默认 `vv`。完整 BEM 工具机制见下方"前缀可配置"章节。
+**A**：Element Plus 类名是 `el-button`、`el-button--primary`、`el-button__content`，与本规范完全兼容。本项目自定义组件使用 **`vv-` 前缀**（与 Element Plus 的 `el-` 同源约定），由环境变量 `VITE_BEM_PREFIX` 控制，默认 `vv`。
 
-### Q3：mixin 写法 vs 手写字符串，哪个好？
+### Q3：sass 插值写法 vs SCSS mixin 写法，哪个好？
 
-| 维度       | mixin            | 手写字符串  |
-| ---------- | ---------------- | ----------- |
-| 嵌套可读性 | ✅ 优秀          | ⚠️ 一般     |
-| 调试类名   | ⚠️ 编译后才能看  | ✅ 直接看到 |
-| 心智成本   | ⚠️ 需记 mixin 名 | ✅ 零成本   |
+| 维度         | 方案 A sass 插值（推荐）       | 方案 B SCSS mixin（备选）       |
+| ------------ | ------------------------------ | ------------------------------- |
+| 调试类名     | ✅ 直接看到（sass 编译后展开） | ⚠️ 编译后才能看                 |
+| 心智成本     | ✅ 零成本（标准 sass 语法）    | ⚠️ 需记 mixin 名（b/e/m/em/is） |
+| IDE 高亮兼容 | ✅ 原生 sass 支持              | ⚠️ 部分 IDE 不识别 mixin 调用   |
+| 嵌套可读性   | ⚠️ 嵌套深时视觉臃肿            | ✅ 优秀（mixin 嵌套自带作用域） |
+| 大型组件适用 | ⚠️ 选 ≥20 个时累赘             | ✅ 嵌套清晰                     |
+| **运行产物** | 完全等价                       | 完全等价                        |
 
-**建议**：新组件优先用 mixin（嵌套多时优势明显），简单组件（≤3 个选择器）手写字符串更轻量。
+详见 §🎨"方案 A vs 方案 B 对比"章节。两种写法运行时产物完全等价，按场景灵活选择。
 
-### Q4：什么时候用 `is()`，什么时候用 `m()`？
+**建议**：
 
-| 场景                                      | mixin    | 说明                  |
-| ----------------------------------------- | -------- | --------------------- |
-| 运行时状态切换（loading/active/disabled） | `is()`   | 通过 Vue 响应式切换   |
-| 主题/场景（light/dark/compact）           | `when()` | 通过根类或属性切换    |
-| 视觉变体（primary/success/warning）       | `m()`    | 通常由 props 静态决定 |
+- 简单组件（≤10 选择器）→ 方案 A
+- 复杂组件（选 ≥20、嵌套深）→ 方案 B
+
+### Q4：什么时候用 `bem.is()`，什么时候用 `bem.m()`？
+
+| 场景                                      | 方法       | 说明                  |
+| ----------------------------------------- | ---------- | --------------------- |
+| 运行时状态切换（loading/active/disabled） | `bem.is()` | 通过 Vue 响应式切换   |
+| 视觉变体（primary/success/warning）       | `bem.m()`  | 通常由 props 静态决定 |
+
+注意：`bem.is('active', true)` 返回 `'is-active'`，`bem.is('active', false)` 返回 `''`（空串，Vue 自动忽略）。
 
 ### Q5：UnoCSS 原子类与 BEM 冲突吗？
 
@@ -545,8 +718,10 @@ pnpm check:routes    # 如果改了 routes/* 跑一致性
 
 ## 🔗 相关文档
 
+- **CLAUDE.md §3 组件 BEM 编写规范（强约束）**：项目级别硬规则，详细列出强制约定 9 条 + 反模式 7 条
 - 工具链：`docs/04-构建与测试工具.md` §Sass 配置
 - 代码评审：`docs/02-代码质量工具链.md` §ESLint flat config
 - 设计规范：`docs/superpowers/specs/2026-07-17-vue3-vite-ts-scaffold-design.md`
-- BEM 工具：`src/assets/styles/mixins/bem.scss`
-- 示范组件：`src/components/layout/Header.vue`
+- BEM 运行时工具：`src/utils/bem.ts`
+- BEM mixin（方案 B）：`src/assets/styles/mixins/bem.scss`
+- 示范组件：`src/components/layout/Header.vue`、`src/components/common/AsyncState.vue`
