@@ -12,7 +12,6 @@
  * 安全：v-html 渲染 hljs 输出的 HTML。hljs 输出只含 span class，
  * demo 模块的代码源是项目自身 .vue 文件（受信任），不构成 XSS。
  */
-import { ref, computed } from 'vue'
 import { DocumentCopy, Check, ArrowDown, ArrowUp } from '@element-plus/icons-vue'
 import hljs from 'highlight.js/lib/core'
 import xml from 'highlight.js/lib/languages/xml'

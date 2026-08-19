@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { useUserStore } from '@/store/modules/user'
-import { useLogout } from '@/composables/useLogout'
 
 const userStore = useUserStore()
 // 运行时 BEM 命名空间：生成 vv-header-bar / vv-header-bar__user / vv-header-bar__action / is-logged-out

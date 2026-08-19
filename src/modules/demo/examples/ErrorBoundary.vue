@@ -5,7 +5,6 @@
  * 关键设计：BoomChild 用 props.shouldThrow 控制抛错（不闭包 ref），
  * ErrorBoundary 的 "恢复" 按钮 emit('reset')，demo 父组件同步清 shouldThrow。
  */
-import { ref, defineComponent, h } from 'vue'
 import ErrorBoundary from '@/components/common/ErrorBoundary.vue'
 import errorBoundarySource from '@/components/common/ErrorBoundary.vue?raw'
 import DemoFrame from '../components/DemoFrame.vue'

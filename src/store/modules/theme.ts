@@ -11,9 +11,6 @@
 //
 // 推荐在组件中使用 useTheme() composable（@composables/useTheme），更简洁。
 
-import { defineStore } from 'pinia'
-import { ref } from 'vue'
-
 /** 主题模式：light（强制浅色）/ dark（强制深色）/ auto（跟随系统） */
 export type ThemeMode = 'light' | 'dark' | 'auto'
 

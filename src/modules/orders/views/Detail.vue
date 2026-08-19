@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { useRoute } from 'vue-router'
-
 // 订单详情页（演示动态路由参数 :id）
 const route = useRoute()
 

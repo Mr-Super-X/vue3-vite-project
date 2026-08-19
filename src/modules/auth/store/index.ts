@@ -1,6 +1,3 @@
-import { defineStore } from 'pinia'
-import { ref } from 'vue'
-
 export const useAuthStore = defineStore('module-auth', () => {
   const loginAttempts = ref(0)
   function incrementAttempts() {

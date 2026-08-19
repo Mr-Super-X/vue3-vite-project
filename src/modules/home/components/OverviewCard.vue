@@ -2,7 +2,6 @@
 // 数据总览卡片（2+3 布局共用）
 // 规格：左 130px 色块区 + 右 metrics 列表（每行 42px 高）
 // iconPath 由父组件按 card.code 拼好真实 URL 传入，避免模板里动态拼接 webpack 别名
-import { computed } from 'vue'
 import OverviewMetricRow from './OverviewMetricRow.vue'
 import type { OverviewCardDto } from '@/modules/home/types/portal-overview'
 import { useAppRouter } from '@composables/useAppRouter'

@@ -1,5 +1,3 @@
-import { defineStore } from 'pinia'
-import { ref } from 'vue'
 import type { UserItem } from '@/api/modules/user'
 
 export const useUserListStore = defineStore('module-user-list', () => {

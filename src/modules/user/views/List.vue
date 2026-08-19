@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useRequest } from '@/composables/useRequest'
 import { userApi } from '@/api/modules/user'
 import AsyncState from '@/components/common/AsyncState.vue'
 

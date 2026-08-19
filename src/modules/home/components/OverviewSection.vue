@@ -1,8 +1,6 @@
 <script setup lang="ts">
 // 数据总览：标题 + 周期切换 + 2+3 卡片网格
 // 规格：标题 24px 高 + 周期 28px 高 / 第一行 2 卡 688x170 / 第二行 3 卡 450x170
-import { computed, ref } from 'vue'
-import { storeToRefs } from 'pinia'
 import { usePortalOverviewStore } from '@/modules/home/store/portal-overview'
 import OverviewCard from './OverviewCard.vue'
 import OverviewCardSkeleton from './OverviewCardSkeleton.vue'

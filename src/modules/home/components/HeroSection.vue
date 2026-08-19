@@ -1,7 +1,6 @@
 <script setup lang="ts">
 // 首页 Hero 区：背景图 + 左 banner + 右通知公告
 // 规格：1920x300 背景图，1400 内容区，左侧 banner 922x252，右侧通知卡片 364x252
-import { ref } from 'vue'
 import HotSearchTags from './HotSearchTags.vue'
 import SearchBar from './SearchBar.vue'
 import NoticePanel from './NoticePanel.vue'

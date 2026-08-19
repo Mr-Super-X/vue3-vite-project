@@ -1,7 +1,6 @@
 <script setup lang="ts">
 // 通知公告侧栏：用户名 + 消息/待办计数 + 公告/消息双 tab + 公告列表
 // 规格：364x252 / AVATAR 32x32 / 标签页 18px 高亮蓝
-import { ref } from 'vue'
 
 // BEM 工具由 unplugin-auto-import 自动注入，无须显式 import
 const bem = createNamespace('notice-panel')

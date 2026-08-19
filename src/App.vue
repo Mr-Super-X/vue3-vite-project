@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { storeToRefs } from 'pinia'
-import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useRouterStore } from '@store/modules/router'
 import ErrorBoundary from '@/components/common/ErrorBoundary.vue'

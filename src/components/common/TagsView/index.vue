@@ -8,8 +8,6 @@
 //   - affix=true 的 tag 不显示关闭按钮且不可关（如 Home）
 //   - 关闭 active tag 后自动跳到最后一个 visited
 
-import { computed, ref } from 'vue'
-import { useRoute } from 'vue-router'
 import { useTagsViewStore, type TagView } from '@/store/modules/tags-view'
 import { useAppRouter } from '@composables/useAppRouter'
 

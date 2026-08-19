@@ -11,8 +11,6 @@
  *
  * 边界：sidebar 在内容超长时保持 sticky；toc 同理。
  */
-import { computed } from 'vue'
-import { useRoute, RouterLink } from 'vue-router'
 import { Back } from '@element-plus/icons-vue'
 import { useAppRouter } from '@composables/useAppRouter'
 
