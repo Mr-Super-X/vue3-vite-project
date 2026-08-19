@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { useAppStore } from '@/store/modules/app'
 import { useTagsViewStore } from '@/store/modules/tags-view'
-import Sidebar from '@/components/layout/Sidebar.vue'
-import Header from '@/components/layout/Header.vue'
+import Sidebar from './components/Sidebar.vue'
+import Header from './components/Header.vue'
 import TagsView from '@/components/common/TagsView/index.vue'
 const appStore = useAppStore()
 const tagsViewStore = useTagsViewStore()

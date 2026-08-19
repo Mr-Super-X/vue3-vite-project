@@ -62,6 +62,17 @@
   重新定位为「仅非敏感 cookie 偏好场景预留，严禁存凭证」并标注安全边界；
   `remote-menu.ts` 远程 meta 合并处补充 vue-router 升级回归验证 + 非响应式警告注释
 
+### ♻ Refactor | 重构
+
+* **layouts:** 落实「layout 自包含」架构原则（2026-08-19）
+  - `Header.vue` / `Sidebar.vue` 从 `src/components/layout/` 迁移到
+    `src/layouts/default/components/`（layout 私有）
+  - 删除整个 `src/components/layout/` 目录（避免被 unplugin-vue-components
+    注册为全局组件污染命名空间；`components.d.ts` 自动移除 Header/Sidebar 声明）
+  - `src/layouts/default/index.vue` import 路径改为相对路径 `./components/*`
+  - CLAUDE.md §1.2 模块边界铁律新增 `layouts/<m>/` 行（自包含白名单 +
+    禁止跨目录到 `@/components/`）；§2.1 现状快照同步收紧 components/ 职责
+
 ### ✨ Features | 新特性
 
 * **components:** 全量 BEM 命名空间改造（CLAUDE.md §3 新增规范）
