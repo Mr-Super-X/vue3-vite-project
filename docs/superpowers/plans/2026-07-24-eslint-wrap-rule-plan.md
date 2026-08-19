@@ -704,3 +704,7 @@ git commit -m "docs(changelog): 记录 ESLint 强制封装规则与 6 文件重�
 | 警告淹没真实错误 | 仅 2 条规则，IDE 易于过滤 |
 
 **回滚方案：** 12 个 commit 提交前都在 cursor worktree，验证不通过 → 回退到 spec commit (`c036e17`) 即可。
+
+---
+
+> **2026-08-19 架构变更**：本文档中提到的 `src/components/layout/Header.vue` / `src/components/layout/Sidebar.vue` 已迁移至 `src/layouts/default/components/`（layout 自包含重构）。详见 `CHANGELOG.md`「♻ Refactor | 重构」分组。

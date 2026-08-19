@@ -724,4 +724,4 @@ pnpm check:routes    # 如果改了 routes/* 跑一致性
 - 设计规范：`docs/superpowers/specs/2026-07-17-vue3-vite-ts-scaffold-design.md`
 - BEM 运行时工具：`src/utils/bem.ts`
 - BEM mixin（方案 B）：`src/assets/styles/mixins/bem.scss`
-- 示范组件：`src/components/layout/Header.vue`、`src/components/common/AsyncState.vue`
+- 示范组件：`src/layouts/default/components/Header.vue`、`src/components/common/AsyncState.vue`
