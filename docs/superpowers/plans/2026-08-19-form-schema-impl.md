@@ -195,7 +195,7 @@ export interface XFormProps {
 
 /** XForm 实例方法 */
 export interface XFormExpose {
-  getRef(key: string): Component | HTMLElement | null
+  getRef(key: string): ComponentPublicInstance | HTMLElement | null
   getNames(includesIgnore?: boolean): string[]
   validate(): Promise<boolean>
   clearValidate(): void
@@ -476,35 +476,31 @@ git commit -m "feat(form-schema): 新增 use-validate 静态校验 composable"
 ```typescript
 // src/components/form-schema/element-plus-adapter.spec.ts
 import { describe, it, expect } from 'vitest'
-import { resolveElComponent } from './element-plus-adapter'
+import { resolveElComponentName } from './element-plus-adapter'
 
-describe('resolveElComponent(name, userComponents?)', () => {
-  it('resolves "Input" to ElInput from default map', () => {
-    // 通过 require 模拟 ElInput（避免引入整个 element-plus）
-    const FakeElInput = { name: 'ElInput', __isEl: true } as never
-    const map: Record<string, unknown> = { Input: FakeElInput }
-    // resolveElComponent(name) 在内部需要查到 Input -> ElInput
-    const result = resolveElComponent('Input')
-    // 由于实际查找逻辑会用到 ElementPlus 全局组件，这里只验证返回类型
-    expect(result === null || typeof result === 'object').toBe(true)
+describe('resolveElComponentName(name, userComponentKeys?)', () => {
+  it('resolves "Input" to "ElInput" from default map', () => {
+    expect(resolveElComponentName('Input')).toBe('ElInput')
   })
 
-  it('user components override default map', () => {
-    const CustomInput = { name: 'CustomInput' }
-    const result = resolveElComponent('Input', { Input: CustomInput as never })
-    expect(result).toBe(CustomInput)
+  it('user components override default map (returns original name)', () => {
+    expect(resolveElComponentName('MyInput', ['MyInput'])).toBe('MyInput')
   })
 
-  it('returns null for unknown component', () => {
-    const result = resolveElComponent('UnknownXYZ')
-    expect(result).toBeNull()
+  it('returns null for unknown component (not in default map and not ElXxx)', () => {
+    expect(resolveElComponentName('UnknownXYZ')).toBeNull()
   })
 
   it('passes through ElXxx native names directly', () => {
-    // 通过 user map 模拟 ElInput 已被 element-plus 注册
-    const ElInput = { name: 'ElInput' }
-    const result = resolveElComponent('ElInput', { ElInput: ElInput as never })
-    expect(result).toBe(ElInput)
+    expect(resolveElComponentName('ElInput')).toBe('ElInput')
+    expect(resolveElComponentName('ElSelect')).toBe('ElSelect')
+  })
+
+  it('resolves various built-in shortcuts', () => {
+    expect(resolveElComponentName('Select')).toBe('ElSelect')
+    expect(resolveElComponentName('Switch')).toBe('ElSwitch')
+    expect(resolveElComponentName('DatePicker')).toBe('ElDatePicker')
+    expect(resolveElComponentName('InputNumber')).toBe('ElInputNumber')
   })
 })
 ```
@@ -521,56 +517,62 @@ pnpm test src/components/form-schema/element-plus-adapter.spec.ts
 
 ```typescript
 // src/components/form-schema/element-plus-adapter.ts
-import type { Component } from 'vue'
-import { ElInput, ElSelect, ElOption, ElSwitch, ElDatePicker, ElRadioGroup, ElRadio, ElCheckboxGroup, ElCheckbox, ElCascader, ElInputNumber, ElSlider } from 'element-plus'
 
 /**
- * Element Plus 组件名 → 组件对象的内置映射
- * 用户可通过 XForm 的 components prop 覆盖或追加
+ * Schema 字符串快捷名 → Element Plus 全局注册名 的内置映射
+ *
+ * 为什么不直接 import element-plus 组件：
+ *   - 违反 CLAUDE.md §1.6 项目按需加载约定（unplugin-vue-components）
+ *   - 增加 bundle size
+ *   - 运行时通过 vue 的 resolveComponent() 从全局注册表中查
  */
-const DEFAULT_COMPONENT_MAP: Record<string, Component> = {
-  Input: ElInput,
-  Select: ElSelect,
-  Option: ElOption,
-  Switch: ElSwitch,
-  DatePicker: ElDatePicker,
-  RadioGroup: ElRadioGroup,
-  Radio: ElRadio,
-  CheckboxGroup: ElCheckboxGroup,
-  Checkbox: ElCheckbox,
-  Cascader: ElCascader,
-  InputNumber: ElInputNumber,
-  Slider: ElSlider,
+const DEFAULT_COMPONENT_MAP: Record<string, string> = {
+  Input: 'ElInput',
+  Select: 'ElSelect',
+  Option: 'ElOption',
+  Switch: 'ElSwitch',
+  DatePicker: 'ElDatePicker',
+  RadioGroup: 'ElRadioGroup',
+  Radio: 'ElRadio',
+  CheckboxGroup: 'ElCheckboxGroup',
+  Checkbox: 'ElCheckbox',
+  Cascader: 'ElCascader',
+  InputNumber: 'ElInputNumber',
+  Slider: 'ElSlider',
 }
 
 /**
- * 解析 schema.component 字符串到具体 Element Plus 组件
+ * 解析 schema.component 字符串到最终组件名（用于 resolveComponent 查找）
  *
  * 解析顺序：
- *   1. userComponents 显式注入（最高优先级）
- *   2. DEFAULT_COMPONENT_MAP 内置映射（如 Input → ElInput）
- *   3. 直接字符串名（ElInput 等已是 ElXxx 形态）
+ *   1. userComponents 显式注入的 key 命中 → 返回原 name（调用方走 user map）
+ *   2. DEFAULT_COMPONENT_MAP 内置映射命中（如 Input → 'ElInput'）
+ *   3. 直接返回原 name（ElInput 等已是 ElXxx 形态）
  *
  * 返回 null 时调用方应降级为 <div> 占位
+ *
+ * 返回 string 时调用方应使用 resolveComponent(name) 获取真实组件
  */
-export function resolveElComponent(
+export function resolveElComponentName(
   name: string,
-  userComponents?: Record<string, Component>,
-): Component | null {
-  if (userComponents && name in userComponents) {
-    return userComponents[name] ?? null
+  userComponentKeys?: string[],
+): string | null {
+  if (userComponentKeys && userComponentKeys.includes(name)) {
+    return name // 调用方走 user map
   }
   if (name in DEFAULT_COMPONENT_MAP) {
     return DEFAULT_COMPONENT_MAP[name] ?? null
   }
-  if (name.startsWith('El') && userComponents && name in userComponents) {
-    return userComponents[name] ?? null
+  if (name.startsWith('El')) {
+    return name
   }
   return null
 }
+
+export { DEFAULT_COMPONENT_MAP }
 ```
 
-> ⚠️ **注意**：实际项目里 element-plus 全局注册后，组件也可通过 `resolveComponent(name)`（vue 内置）查找。本文件只处理「内置快捷名」解析，运行时 fallback 由 XForm.vue 用 `resolveComponent` 处理。
+> ✅ **架构调整**：adapter 不返回 Component 对象，只返回组件名字符串。运行时由 XForm.vue 用 vue 内置 `resolveComponent(name)` 查找真实组件。这避免了直接 import element-plus 增加 bundle。
 
 ### Step 4：运行测试验证通过
 
@@ -986,8 +988,8 @@ git commit -m "feat(form-schema): 新增 use-reaction 反应式编排 composable
 
 ```typescript
 // src/components/form-schema/composables/use-schema-renderer.spec.ts
-import { describe, it, expect, effectScope } from 'vitest'
-import { ref } from 'vue'
+import { describe, it, expect } from 'vitest'
+import { effectScope, ref } from 'vue'
 import { useSchemaRenderer } from './use-schema-renderer'
 
 describe('useSchemaRenderer(opts)', () => {
@@ -1322,6 +1324,7 @@ import type { SchemaNode, XFormProps, XFormExpose } from './types'
 import { useSchemaRenderer } from './composables/use-schema-renderer'
 import { validate, validateWithZod } from './composables/use-validate'
 import { resolveElComponent } from './element-plus-adapter'
+// 注：实际实施时改为 resolveElComponentName（适配 P5 修复后签名）
 import { resolveFunctionExpression, scanForForbidden } from './composables/use-expression'
 
 const props = defineProps<XFormProps>()
@@ -1374,6 +1377,9 @@ function renderNode(node: SchemaNode | string): unknown {
   let ResolvedComp: Component | null = null
   if (componentName) {
     ResolvedComp = resolveElComponent(componentName, props.components) ?? null
+    // 注：P5 修复后改为：
+    // const finalName = resolveElComponentName(componentName, Object.keys(props.components ?? {}))
+    // ResolvedComp = finalName ? resolveComponent(finalName) : null
     if (!ResolvedComp) {
       // 兜底：用 vue resolveComponent 查全局
       ResolvedComp = resolveDynamic(componentName, props.components)
@@ -1493,7 +1499,7 @@ onMounted(async () => {
   await nextTick()
 })
 
-defineExpose<XFormExpose>({
+defineExpose({
   getRef,
   getNames,
   validate: validateForm,
@@ -1501,39 +1507,7 @@ defineExpose<XFormExpose>({
   resetFields,
   scrollToField,
   validateWithZod: validateFormWithZod,
-})
-</script>
-
-<template>
-  <ElConfigProvider>
-    <div :class="bem.b()">
-      <ElForm ref="elFormRef" :model="props.model">
-        <renderNode :node="reactiveSchema" />
-      </ElForm>
-    </div>
-  </ElConfigProvider>
-</template>
-
-<script lang="ts">
-// 占位：实际 renderNode 通过模板里 render 函数实现
-import { h } from 'vue'
-</script>
-
-<style lang="scss">
-.#{$BEM_PREFIX}-x-form {
-  // 命名空间由 BEM 接管，scoped 禁止添加
-}
-</style>
-```
-
-> ⚠️ **实施注意**：上面 XForm.vue 是模板化骨架，**实际实现时**请按 `script setup` 风格合并两个 `<script>` 块。`renderNode` 必须通过 `h()` 函数实现，不能用模板字符串（`<renderNode>` 不存在）。
-
-**正确实现参考**：
-
-```vue
-<script setup lang="ts">
-import { h, computed, ref, watch as vueWatch } from 'vue'
-// ... 其余 imports
+} satisfies XFormExpose)
 </script>
 
 <template>
@@ -1545,17 +1519,39 @@ import { h, computed, ref, watch as vueWatch } from 'vue'
     </div>
   </ElConfigProvider>
 </template>
+
+<style lang="scss">
+.#{$BEM_PREFIX}-x-form {
+  // 命名空间由 BEM 接管，scoped 禁止添加
+}
+</style>
 ```
 
-把 `renderNode` 改为返回 `h()` 调用结果，并用 `<component :is="...">` 渲染。如果递归复杂，可改为：
+> ✅ **关键修复**：
+> - Vue 3.5 `defineExpose` 不支持泛型，改用 `defineExpose({...} satisfies XFormExpose)`（保留类型检查 + 不使用尖括号泛型）
+> - 删除原计划中的第二个 `<script lang="ts">` 块（违反 Vue SFC 规范）
+> - 模板中的 `<renderNode>` 替换为 `<component :is="renderToComponent(reactiveSchema)" />`
+> - `renderToComponent` 函数在 `<script setup>` 中通过 `h()` 实现递归
 
-```typescript
-function renderToComponent(node: SchemaNode | SchemaNode[] | string) {
-  if (Array.isArray(node)) return node.map((n) => renderToComponent(n))
+**完整 XForm.vue 实现参考**（实施时按此结构）：
+
+```vue
+<script setup lang="ts">
+import { h, computed, ref, watch as vueWatch, onMounted, nextTick, resolveComponent } from 'vue'
+import { ElForm, ElFormItem, ElRow, ElCol, ElConfigProvider } from 'element-plus'
+// ... 其他类型 + composable imports
+
+// ... props 定义、bem 定义、normalizedSchema、useSchemaRenderer 调用、elFormRef
+
+// 递归渲染主函数（替代 renderNode）
+function renderToComponent(node: SchemaNode | SchemaNode[] | string | undefined | null) {
+  if (node === null || node === undefined) return null
   if (typeof node === 'string') return node
-  // ...完整递归逻辑
+  if (Array.isArray(node)) return node.map(renderToComponent)
+  // ... 单节点处理（formItem / row / col / 兜底）
   return h(...)
 }
+</script>
 ```
 
 ### Step 4：运行测试验证通过
@@ -1629,7 +1625,7 @@ import XForm from './XForm.vue'
 
 export { validate, validateWithZod } from './composables/use-validate'
 export { resolveFunctionExpression } from './composables/use-expression'
-export { resolveElComponent } from './element-plus-adapter'
+export { resolveElComponentName } from './element-plus-adapter'
 export type {
   SchemaNode,
   XFormProps,
@@ -1732,7 +1728,7 @@ pnpm build
   - 沿用 element-plus async-validator + 可zod 顶层校验双轨
   - 支持全量 14 字段 schema DSL（component/props/on/children/name/label/rules/formItem/modelProp/row/column/col/reaction/directives/slots/ignore/hidden/key）
   - 实例方法：`getRef` / `getNames` / `validate` / `clearValidate` / `resetFields` / `scrollToField` / `validateWithZod`
-  - 命名导出 `validate(schema, opts?)` / `validateWithZod(zodSchema, formData)` / `resolveElComponent` / `resolveFunctionExpression`
+  - 命名导出 `validate(schema, opts?)` / `validateWithZod(zodSchema, formData)` / `resolveElComponentName` / `resolveFunctionExpression`
   - 文件清单：`src/components/form-schema/{types,XForm}.{ts,vue}` + `composables/{use-validate,use-expression,use-reaction,use-schema-renderer}.ts` + `element-plus-adapter.ts` + `index.ts`
   - 9 文件全部含对应 .spec.ts 单元测试，覆盖率 ≥80%
 ```
