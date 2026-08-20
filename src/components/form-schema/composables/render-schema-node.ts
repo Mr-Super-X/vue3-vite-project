@@ -309,7 +309,11 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
         : () => opts.render(node.children as never) as never
       return h(
         Comp as never,
-        { ...node.props, ...(node.key !== undefined && { key: node.key }) } as never,
+        {
+          ...node.props,
+          ...(node.disabled !== undefined ? { disabled: node.disabled } : {}),
+          ...(node.key !== undefined && { key: node.key }),
+        } as never,
         slotMap
       ) as never
     }
@@ -338,6 +342,7 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
                   {
                     ...eventBindings,
                     ...node.props,
+                    ...(node.disabled !== undefined ? { disabled: node.disabled } : {}),
                     ...(node.key !== undefined && { key: node.key }),
                   } as never,
                   { default: () => renderChildren(node.children, opts.render) as never }
@@ -378,6 +383,7 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
         {
           ...eventBindings,
           ...node.props,
+          ...(node.disabled !== undefined ? { disabled: node.disabled } : {}),
           ...(node.key !== undefined && { key: node.key }),
         } as never,
         { default: () => renderChildren(node.children, opts.render) as never }

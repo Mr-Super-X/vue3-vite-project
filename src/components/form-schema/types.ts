@@ -134,7 +134,7 @@ export interface ColConfig {
 }
 
 /**
- * 节点定义（schema DSL 全量 16 字段）
+ * 节点定义（schema DSL 全量 17 字段）
  * - component 节点构造器（字符串=查找，Component 对象=直接使用）
  * - props     节点属性
  * - on        事件定义（回调或 {{ fn }} 表达式）
@@ -151,6 +151,7 @@ export interface ColConfig {
  * - directives 自定义指令
  * - kind      节点类型（'array' = 数组容器）
  * - array     数组容器配置（kind='array' 时必填）
+ * - disabled  字段禁用状态（支持反应式;数组节点仅控制容器按钮）
  *
  * 建议优先使用 `SchemaNodeFor<C>` 泛型版本：按 component 字段推导 props 类型
  * 例如：`const node: SchemaNodeFor<'Input'> = { component: 'Input', props: { placeholder: 'x' } }`
@@ -177,6 +178,11 @@ export interface SchemaNode {
   key?: string | number
   kind?: 'array'
   array?: ArrayNodeConfig
+  /** 字段禁用状态（支持反应式：boolean / 函数 / 函数表达式）
+   *  - 数组节点：仅控制容器按钮（行内控件需通过 reaction 自行级联）
+   *  - props.disabled 优先级更高：用户显式写在 props 里的 disabled 会覆盖本字段
+   *  - el-form 自动跳过 disabled 字段的校验（async-validator 行为） */
+  disabled?: ReactionValue<boolean>
 }
 
 /**

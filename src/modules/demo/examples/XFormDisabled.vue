@@ -1,0 +1,170 @@
+<script setup lang="ts">
+/**
+ * 演示 SchemaNode.disabled(支持反应式)
+ *
+ * 场景：
+ * 1. 静态 disabled：readonly 字段(只读,业务标识)
+ * 2. 反应式 disabled：业务模式开关联动字段 disabled
+ *   - 同意条款时,「不同意原因」禁用(同意了就不需要填原因)
+ *   - 选「海运」时,「空运保价」禁用(海运不走保价)
+ */
+import { reactive, ref } from 'vue'
+import { ElMessage } from 'element-plus'
+import XForm from '@/components/form-schema/XForm.vue'
+import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import { xInput } from '@/components/form-schema/builders'
+import DemoFrame from '../components/DemoFrame.vue'
+import DemoField from '../components/DemoField.vue'
+import DocLayout from '../layouts/DocLayout.vue'
+import xFormSource from './XFormDisabled.vue?raw'
+
+const bem = createNamespace('demo-dgm-form-disabled')
+
+const schema: SchemaNode = {
+  children: [
+    // 1. 静态 disabled —— 业务标识(用户名不可改,展示用)
+    xInput('username')
+      .label('用户名（静态 disabled，业务标识）')
+      .prop('placeholder', 'admin')
+      .disabled(true)
+      .defaultValue('admin')
+      .build() as SchemaNode,
+
+    // 2. 反应式 disabled —— 同意条款联动「不同意原因」
+    {
+      label: '是否同意条款',
+      name: 'agree',
+      component: 'Switch',
+    },
+    {
+      label: '不同意原因',
+      name: 'reason',
+      component: 'Input',
+      props: { placeholder: '请说明不同意的理由', clearable: true },
+      reaction: {
+        // 同意条款时,"不同意原因"业务上无意义,禁用该字段
+        disabled: (m: Record<string, unknown>) => Boolean(m.agree),
+      },
+    },
+
+    // 3. 反应式 disabled —— 运输方式联动空运保价
+    {
+      label: '运输方式',
+      name: 'shippingMode',
+      component: 'Select',
+      props: {
+        placeholder: '请选择运输方式',
+        clearable: true,
+        options: [
+          { value: 'sea', label: '海运' },
+          { value: 'air', label: '空运' },
+        ],
+      },
+    },
+    {
+      label: '空运保价金额',
+      name: 'insuranceAmount',
+      component: 'InputNumber',
+      props: { min: 0, precision: 2, placeholder: '海运时不适用' },
+      reaction: {
+        // 选海运时,空运保价无意义,禁用
+        disabled: (m: Record<string, unknown>) => m.shippingMode === 'sea',
+      },
+    },
+  ],
+}
+
+const model = reactive<Record<string, unknown>>({
+  username: 'admin',
+  agree: false,
+  reason: '',
+  shippingMode: '',
+  insuranceAmount: 0,
+})
+
+const formRef = ref<XFormExpose | null>(null)
+
+async function onSave() {
+  if (!formRef.value) return
+  const valid = await formRef.value.validate()
+  if (!valid) {
+    ElMessage.error('校验失败，请检查红字提示')
+    return
+  }
+  ElMessage({
+    message: '保存成功：\n' + JSON.stringify(model, null, 2),
+    type: 'success',
+    duration: 0,
+    showClose: true,
+  })
+}
+
+function onReset() {
+  formRef.value?.resetFields()
+}
+
+async function copySchema() {
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(schema, null, 2))
+    ElMessage.success('schema 已复制到剪贴板')
+  } catch {
+    ElMessage.error('复制失败，请手动选择')
+  }
+}
+</script>
+
+<template>
+  <DocLayout>
+    <DemoFrame
+      title="disabled 字段状态（支持反应式）"
+      source="src/components/form-schema/XForm.vue"
+      :introductions="[
+        'SchemaNode 新增 disabled: ReactionValue<boolean> 字段,支持 3 种粒度:',
+        '1. 静态 disabled：xInput(\'username\').disabled(true) — 字段始终禁用(如业务标识字段)',
+        '2. 反应式 disabled：开关状态联动——「同意条款」=true 时,「不同意原因」字段禁用',
+        '3. 反应式 disabled：业务模式联动——「海运」时,「空运保价金额」字段禁用',
+        'disabled 字段由 el-form 自动跳过校验;model 中值仍保留,可正常提交',
+      ]"
+    >
+      <section id="demo-disabled">
+        <DemoField label="disabled 链式与反应式" :code="xFormSource">
+          <XForm ref="formRef" :schema="schema" :model="model" />
+          <div :class="bem.e('actions')">
+            <el-button @click="onReset">重置</el-button>
+            <el-button type="primary" @click="onSave">保存</el-button>
+            <el-button @click="copySchema">复制 schema</el-button>
+          </div>
+          <div :class="bem.e('state')">
+            <div>当前 model：</div>
+            <pre>{{ JSON.stringify(model, null, 2) }}</pre>
+          </div>
+        </DemoField>
+      </section>
+    </DemoFrame>
+  </DocLayout>
+</template>
+
+<style lang="scss">
+.#{$BEM_PREFIX}-demo-dgm-form-disabled {
+  &__actions {
+    margin-top: 16px;
+    display: flex;
+    gap: 8px;
+  }
+
+  &__state {
+    margin-top: 16px;
+    font-size: 12px;
+    color: #909399;
+
+    pre {
+      background: #f5f7fa;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-family: 'Menlo', 'Consolas', monospace;
+      overflow-x: auto;
+      margin: 4px 0;
+    }
+  }
+}
+</style>

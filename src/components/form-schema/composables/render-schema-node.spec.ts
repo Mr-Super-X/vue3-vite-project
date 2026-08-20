@@ -110,3 +110,57 @@ describe('useRenderSchemaNode 数组分支 (kind === "array")', () => {
     expect(result).toBeDefined()
   })
 })
+
+describe('useRenderSchemaNode disabled 透传', () => {
+  it('node.disabled=true 时,渲染返回 VNode 不抛错', () => {
+    const { opts } = makeOpts({ model: { email: '' } })
+    const render = useRenderSchemaNode(opts)
+    const node: SchemaNode = {
+      component: 'Input',
+      name: 'email',
+      disabled: true,
+    }
+    const result = render(node)
+    expect(result).toBeDefined()
+  })
+
+  it('node.disabled 为函数时,不立即调用(留待反应式调度)', () => {
+    const { opts } = makeOpts()
+    const render = useRenderSchemaNode(opts)
+    const disabledFn = vi.fn((m: Record<string, unknown>) => !m.agree)
+    const node: SchemaNode = {
+      component: 'Input',
+      name: 'reason',
+      disabled: disabledFn as never,
+    }
+    const result = render(node)
+    expect(result).toBeDefined()
+    // disabledFn 不应在 render 阶段被调用（由 reaction watchEffect 调度）
+    expect(disabledFn).not.toHaveBeenCalled()
+  })
+
+  it('未设置 node.disabled 时不影响其他 props', () => {
+    const { opts } = makeOpts()
+    const render = useRenderSchemaNode(opts)
+    const node: SchemaNode = {
+      component: 'Input',
+      name: 'email',
+      props: { placeholder: 'test' },
+    }
+    const result = render(node)
+    expect(result).toBeDefined()
+  })
+
+  it('数组节点 disabled=true 时,渲染返回 VNode 不抛错', () => {
+    const { opts } = makeOpts({ model: { items: [{}] } })
+    const render = useRenderSchemaNode(opts)
+    const node: SchemaNode = {
+      kind: 'array',
+      name: 'items',
+      disabled: true,
+      array: { itemSchema: { component: 'Input', name: 'sku' } },
+    }
+    const result = render(node)
+    expect(result).toBeDefined()
+  })
+})

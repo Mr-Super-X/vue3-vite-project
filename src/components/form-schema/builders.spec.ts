@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ArrayBuilder, xArray } from './builders'
+import { ArrayBuilder, xArray, xInput } from './builders'
 import type { SchemaNode } from './types'
 
 describe('xArray(name) / ArrayBuilder', () => {
@@ -106,5 +106,43 @@ describe('xArray(name) / ArrayBuilder', () => {
       .item({ component: 'Select', name: 'second' })
       .build()
     expect((node.array?.itemSchema as SchemaNode).component).toBe('Select')
+  })
+})
+
+describe('xInput() .disabled() 链式', () => {
+  it('.disabled(true) 静态禁用', () => {
+    const node = xInput('email').disabled(true).build()
+    expect(node.disabled).toBe(true)
+  })
+
+  it('.disabled(false) 显式启用', () => {
+    const node = xInput('email').disabled(false).build()
+    expect(node.disabled).toBe(false)
+  })
+
+  it('.disabled 函数(运行时计算)', () => {
+    const fn = (m: Record<string, unknown>) => !m.agree
+    const node = xInput('reason').disabled(fn).build()
+    expect(typeof node.disabled).toBe('function')
+    // 模拟 model 计算结果
+    expect((node.disabled as (m: Record<string, unknown>) => boolean)({ agree: false })).toBe(true)
+    expect((node.disabled as (m: Record<string, unknown>) => boolean)({ agree: true })).toBe(false)
+  })
+
+  it('.disabled 函数表达式字符串', () => {
+    const node = xInput('reason').disabled('{{ (m) => !m.agree }}').build()
+    expect(node.disabled).toBe('{{ (m) => !m.agree }}')
+  })
+
+  it('链式调用与其他方法混合', () => {
+    const node = xInput('email').label('邮箱').disabled(true).placeholder('a@b.com').build()
+    expect(node.disabled).toBe(true)
+    expect(node.label).toBe('邮箱')
+    expect(node.props?.placeholder).toBe('a@b.com')
+  })
+
+  it('未设置时 disabled 字段为 undefined', () => {
+    const node = xInput('email').build()
+    expect(node.disabled).toBeUndefined()
   })
 })

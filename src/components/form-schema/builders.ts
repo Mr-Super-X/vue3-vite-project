@@ -12,7 +12,14 @@
  *
  * 这样 IDE 在链式调用时自动补全 props 字段名 + 校验 props 值类型
  */
-import type { SchemaNode, SchemaNodeFor, ComponentName, PropsByComponent, RuleItem } from './types'
+import type {
+  SchemaNode,
+  SchemaNodeFor,
+  ComponentName,
+  PropsByComponent,
+  RuleItem,
+  ReactionValue,
+} from './types'
 
 /** 链式构建器基类（泛型：绑死 component 名 + props 类型） */
 class NodeBuilder<C extends ComponentName, P = PropsByComponent[C]> {
@@ -42,6 +49,12 @@ class NodeBuilder<C extends ComponentName, P = PropsByComponent[C]> {
   prop(key: string, value: unknown): this {
     const n = this.node as { props?: Record<string, unknown> }
     n.props = { ...(n.props ?? {}), [key]: value }
+    return this
+  }
+
+  /** 字段禁用状态 —— 支持反应式（boolean / 函数 / 函数表达式） */
+  disabled(v: ReactionValue<boolean>): this {
+    ;(this.node as { disabled?: ReactionValue<boolean> }).disabled = v
     return this
   }
 
@@ -105,6 +118,9 @@ function makeBuilder<C extends ComponentName>(
     }
     prop(k: string, v: unknown) {
       return this._b.prop(k, v)
+    }
+    disabled(v: ReactionValue<boolean>) {
+      return this._b.disabled(v)
     }
     required(m?: string) {
       return this._b.required(m)
