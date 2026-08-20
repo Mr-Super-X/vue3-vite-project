@@ -45,6 +45,17 @@ export interface RuleItem {
   message?: string
   validator?: (rule: unknown, value: unknown, cb: (err?: Error) => void) => void
   trigger?: 'blur' | 'change' | (string | string[])[]
+  /** 跨字段依赖：声明当前规则依赖的其他字段名（取自同 model，支持 lodash 路径解析如 'items[0].qty'）
+   *  - 单字段依赖：dependsOn: 'password'
+   *  - 多字段依赖：dependsOn: ['password', 'confirmPassword']
+   *  仅与 crossValidator 配合使用；单独写无意义 */
+  dependsOn?: string | string[]
+  /** 跨字段校验函数（纯函数形式，替代 async-validator 的 callback validator）
+   *  - 第 1 个参数：当前字段 value（lodash get 取自 model）
+   *  - 后续参数：按 dependsOn 声明顺序传入依赖字段的 value
+   *  - 返回 true 表示通过；返回 string 作为错误信息
+   *  失败时由 form-schema 统一把 message 写入对应 form-item，无需 callback */
+  crossValidator?: (value: unknown, ...dependsOnValues: unknown[]) => true | string
 }
 
 /** reaction 字段值：字面量 / 函数 / 函数表达式字符串 */
@@ -263,10 +274,14 @@ export interface XFormExpose {
   getRef(key: string): ComponentPublicInstance | HTMLElement | null
   getNames(includesIgnore?: boolean): string[]
   validate(): Promise<boolean>
+  /** 详细校验：含 el-form 字段内规则错误 + 跨字段 crossValidator 错误（keyPath + message） */
+  validateDetail(): ValidateResult
   clearValidate(): void
   resetFields(): void
   scrollToField(name: string): void
   validateWithZod(): { success: boolean; errors: import('zod').ZodError | null }
+  /** 手动写入某个字段的错误信息（用于服务端 422 等场景） */
+  setFieldError(name: string, message: string): void
   /** 数组节点操作：push 一项（仅 ArrayNode 用） */
   addItem(name: string, init?: Record<string, unknown>): void
   /** 数组节点操作：删除指定行（仅 ArrayNode 用） */

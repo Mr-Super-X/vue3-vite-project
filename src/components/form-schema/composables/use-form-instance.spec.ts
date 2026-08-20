@@ -369,4 +369,64 @@ describe('useFormInstance(model, zodSchema)', () => {
       expect(mock.clearValidate).toHaveBeenCalled()
     })
   })
+
+  describe('setFieldError(name, message)', () => {
+    it('writes message to matching elFormRef.fields entry', () => {
+      const fields = [
+        { prop: 'email', validateMessage: '' },
+        { prop: 'password', validateMessage: '' },
+      ]
+      const mockEf = { fields, clearValidate: vi.fn(), validate: vi.fn() }
+      const { setFieldError, elFormRef } = useFormInstance(
+        () => ({}),
+        () => undefined
+      )
+      elFormRef.value = mockEf as never
+      setFieldError('email', '邮箱格式错误')
+      expect(fields[0]?.validateMessage).toBe('邮箱格式错误')
+      expect(fields[1]?.validateMessage).toBe('')
+    })
+
+    it('is silent when field not found (e.g. array 节点动态变化期间)', () => {
+      const fields = [{ prop: 'email', validateMessage: '' }]
+      const mockEf = { fields, clearValidate: vi.fn(), validate: vi.fn() }
+      const { setFieldError, elFormRef } = useFormInstance(
+        () => ({}),
+        () => undefined
+      )
+      elFormRef.value = mockEf as never
+      expect(() => setFieldError('nonexistent', 'err')).not.toThrow()
+      expect(fields[0]?.validateMessage).toBe('')
+    })
+
+    it('is silent when elFormRef is null', () => {
+      const { setFieldError } = useFormInstance(
+        () => ({}),
+        () => undefined
+      )
+      expect(() => setFieldError('a', 'b')).not.toThrow()
+    })
+
+    it('is silent when fields array is missing', () => {
+      const mockEf = { clearValidate: vi.fn(), validate: vi.fn() }
+      const { setFieldError, elFormRef } = useFormInstance(
+        () => ({}),
+        () => undefined
+      )
+      elFormRef.value = mockEf as never
+      expect(() => setFieldError('a', 'b')).not.toThrow()
+    })
+
+    it('supports nested path (items[0].qty) for array items', () => {
+      const fields = [{ prop: 'items[0].qty', validateMessage: '' }]
+      const mockEf = { fields, clearValidate: vi.fn(), validate: vi.fn() }
+      const { setFieldError, elFormRef } = useFormInstance(
+        () => ({}),
+        () => undefined
+      )
+      elFormRef.value = mockEf as never
+      setFieldError('items[0].qty', '数量必须大于 0')
+      expect(fields[0]?.validateMessage).toBe('数量必须大于 0')
+    })
+  })
 })

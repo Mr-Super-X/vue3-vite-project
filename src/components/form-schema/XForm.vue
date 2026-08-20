@@ -1,17 +1,18 @@
 <script setup lang="ts">
 import { computed, ref, watch, type VNode } from 'vue'
 import { get, set } from 'lodash-es'
-import 'element-plus/dist/index.css'
-import { ElConfigProvider, ElForm, ElRow, ElCol } from 'element-plus'
-import type { SchemaNode, XFormProps, XFormExpose } from './types'
 import { useSchemaRenderer } from './composables/use-schema-renderer'
-import { validate } from './composables/use-validate'
+import { validate, runCrossFieldValidation } from './composables/use-validate'
 import { scanForForbidden } from './composables/use-scan-forbidden'
 import { withHidden } from './composables/with-hidden'
 import { applyDirectives } from './composables/apply-directives'
 import { useFormInstance } from './composables/use-form-instance'
 import { useRenderSchemaNode } from './composables/render-schema-node'
 import XFormDebugBanner from './XFormDebugBanner.vue'
+import type { ValidateResult } from './types'
+import 'element-plus/dist/index.css'
+import { ElConfigProvider, ElForm, ElRow, ElCol } from 'element-plus'
+import type { SchemaNode, XFormProps, XFormExpose } from './types'
 
 const props = defineProps<XFormProps>()
 const bem = createNamespace('x-form')
@@ -70,7 +71,6 @@ const { reactiveSchema } = useSchemaRenderer({
 const {
   elFormRef,
   getRef,
-  validateForm,
   clearValidate,
   resetFields,
   scrollToField,
@@ -78,10 +78,55 @@ const {
   addItem,
   removeItem,
   moveItem,
+  setFieldError,
 } = useFormInstance(
   () => props.model,
   () => props.zodSchema
 )
+
+/**
+ * XForm 校验入口：先跑 el-form 字段内规则（失败直接 false），成功后跑跨字段校验
+ * - 跨字段校验失败时把错误写入对应 form-item（用户在 UI 看到）
+ * - 跨字段失败同时 console.error 列出所有错误 keyPath + message,便于调试
+ * - el-form 未挂载时降级只跑跨字段校验（开发场景）
+ */
+function validateForm(): Promise<boolean> {
+  return new Promise((resolve) => {
+    const m = props.model
+    if (!m) return resolve(true)
+    const ef = elFormRef.value
+    if (!ef?.validate) {
+      const result = runCrossFieldValidation(props.schema, m)
+      applyCrossErrors(result)
+      return resolve(result.isValid)
+    }
+    Promise.resolve(
+      ef.validate((valid: boolean) => {
+        if (!valid) return resolve(false)
+        const result = runCrossFieldValidation(props.schema, m)
+        applyCrossErrors(result)
+        resolve(result.isValid)
+      })
+    ).catch(() => resolve(false))
+  })
+}
+
+/** 把跨字段校验失败的错误写入对应 el-form-item（用户在 UI 看到），并 console.error 列出全部 */
+function applyCrossErrors(result: ValidateResult): void {
+  if (result.isValid) return
+  for (const err of result.errors) {
+    const fieldPath = err.keyPath[err.keyPath.length - 1]
+    if (typeof fieldPath === 'string') setFieldError(fieldPath, err.message)
+  }
+  console.error('[XForm] cross field validation failed:', result.errors)
+}
+
+/** 详细校验（同步）：仅返回跨字段校验结果（不含 el-form 字段内错误——el-form 错误请用 validate() 拿） */
+function validateDetail(): ValidateResult {
+  const m = props.model
+  if (!m) return { isValid: true, errors: [] }
+  return runCrossFieldValidation(props.schema, m)
+}
 
 // 顶层节点列表（直接从 reactiveSchema 派生，含 reaction 修改后能触发重渲染）
 const topLevelNodes = computed<SchemaNode[]>(() => {
@@ -158,10 +203,12 @@ defineExpose({
   getRef,
   getNames,
   validate: validateForm,
+  validateDetail,
   clearValidate,
   resetFields,
   scrollToField,
   validateWithZod: validateFormWithZod,
+  setFieldError,
   addItem,
   removeItem,
   moveItem,

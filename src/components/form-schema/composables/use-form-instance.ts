@@ -93,6 +93,30 @@ export function useFormInstance(
     elFormRef.value?.clearValidate?.()
   }
 
+  /**
+   * 手动设置某个字段的错误信息(el-form-item 自动展示红字提示)
+   * - 必须同时设置 validateState = 'error' + validateMessage = '...'
+   *   只设 message 不设 state,el-form-item 不渲染红字
+   * - 通过 elFormRef.fields 数组按 prop 名找到对应 form-item
+   * - fields 中的 field 来自 el-form-item 的 reactive 包装,属性赋值会触发 UI 更新
+   * - 找不到对应字段时静默跳过(常见于 array 节点动态变化期间)
+   */
+  function setFieldError(name: string, message: string): void {
+    const ef = elFormRef.value as unknown as {
+      fields?: Array<{
+        prop?: string
+        validateState?: '' | 'validating' | 'success' | 'error'
+        validateMessage?: string
+      }>
+    } | null
+    if (!ef?.fields) return
+    const field = ef.fields.find((f) => f.prop === name)
+    if (field) {
+      field.validateState = 'error'
+      field.validateMessage = message
+    }
+  }
+
   return {
     elFormRef,
     getRef,
@@ -104,5 +128,6 @@ export function useFormInstance(
     addItem,
     removeItem,
     moveItem,
+    setFieldError,
   }
 }
