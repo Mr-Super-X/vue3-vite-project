@@ -92,6 +92,11 @@ const bem = createNamespace('doc-layout')
     top: 16px;
     max-height: calc(100vh - 32px);
     overflow-y: auto;
+    padding: 16px;
+  }
+
+  &__main {
+    padding: 16px;
   }
 
   &__home {
