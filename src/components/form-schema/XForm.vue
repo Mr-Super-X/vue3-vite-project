@@ -28,6 +28,10 @@ import { validate } from './composables/use-validate'
 import { scanForForbidden } from './composables/use-scan-forbidden'
 import { renderToComponentWithGrid } from './composables/render-with-grid'
 import { useFormInstance } from './composables/use-form-instance'
+import { buildVModelBindings } from './composables/build-vmodel-bindings'
+import { buildOnBindings } from './composables/build-on-bindings'
+import { withHidden } from './composables/with-hidden'
+import { applyDirectives } from './composables/apply-directives'
 
 const props = defineProps<XFormProps>()
 const bem = createNamespace('x-form')
@@ -164,6 +168,15 @@ function renderChildren(children: SchemaNode['children']): VNode | string | VNod
   return renderToComponent(children)
 }
 
+/** node.col 栅格包装：col:false → 不包；col:{span:24} → ElCol span=24 */
+function wrapWithElCol(node: SchemaNode, inner: VNode): VNode {
+  if (node.col === false) return inner
+  if (node.col === undefined) return inner
+  const span = node.col && typeof node.col === 'object' ? (node.col.span ?? 24) : 24
+  const offset = node.col && typeof node.col === 'object' ? node.col.offset : undefined
+  return h(ElCol as never, { span, offset } as never, { default: () => inner }) as VNode
+}
+
 function renderToComponent(
   node: SchemaNode | SchemaNode[] | string | undefined | null
 ): VNode | string | VNode[] | undefined {
@@ -172,16 +185,25 @@ function renderToComponent(
   if (Array.isArray(node)) return node.map(renderToComponent) as VNode[]
   if (node.ignore) return undefined
 
+  // hidden: 与 ignore 区分——hidden 创建节点但 display:none
+  if (node.hidden) {
+    const inner = renderToComponentInner(node)
+    if (inner && typeof inner !== 'string' && !Array.isArray(inner)) {
+      return withHidden(inner)
+    }
+  }
+
+  const result = renderToComponentInner(node)
+  if (!result || typeof result === 'string' || Array.isArray(result)) return result as never
+  return applyDirectives(result, node.directives)
+}
+
+function renderToComponentInner(node: SchemaNode): VNode | string | VNode[] | undefined {
   const Comp = resolveComponentFor(node.component, props.components)
-  const vModelBindings: Record<string, unknown> =
-    node.name !== undefined && props.model
-      ? {
-          modelValue: props.model[node.name],
-          'onUpdate:modelValue': (v: unknown) => {
-            ;(props.model as Record<string, unknown>)[node.name as string] = v
-          },
-        }
-      : {}
+  const eventBindings = {
+    ...buildVModelBindings(node, props.model, props.beforeChange),
+    ...buildOnBindings(node, props.model),
+  }
   // 视觉容器（Card 等）：有 slots/children 但无 name → 用组件容器包 slots + default
   if (Comp && (node.slots || node.children !== undefined) && !node.name) {
     const slotMap: Record<string, () => unknown> = {}
@@ -211,16 +233,18 @@ function renderToComponent(
       } as never,
       Comp
         ? {
-            default: () =>
-              h(
+            default: () => {
+              const inner = h(
                 Comp as never,
                 {
-                  ...vModelBindings,
+                  ...eventBindings,
                   ...node.props,
                   ...(node.key !== undefined && { key: node.key }),
                 } as never,
                 { default: () => renderChildren(node.children) as never }
-              ),
+              )
+              return wrapWithElCol(node, inner)
+            },
           }
         : undefined
     ) as never
@@ -248,10 +272,17 @@ function renderToComponent(
     ) as never
   }
   if (!Comp) return undefined
-  return h(
-    Comp as never,
-    { ...vModelBindings, ...node.props, ...(node.key !== undefined && { key: node.key }) } as never,
-    { default: () => renderChildren(node.children) as never }
+  return wrapWithElCol(
+    node,
+    h(
+      Comp as never,
+      {
+        ...eventBindings,
+        ...node.props,
+        ...(node.key !== undefined && { key: node.key }),
+      } as never,
+      { default: () => renderChildren(node.children) as never }
+    ) as VNode
   )
 }
 
