@@ -6,6 +6,7 @@ import {
   ElRow,
   ElCol,
   ElCard,
+  ElButton,
   ElInput,
   ElSelect,
   ElOption,
@@ -104,11 +105,194 @@ export interface RenderSchemaNodeOptions {
   beforeChange: XFormProps['beforeChange']
   rules: XFormProps['rules']
   render: RenderFn
+  /** ArrayNode 命令式操作（来自 XFormExpose） */
+  arrayActions?: {
+    addItem: (name: string, init?: Record<string, unknown>) => void
+    removeItem: (name: string, index: number) => void
+    moveItem: (name: string, from: number, to: number) => void
+  }
+}
+
+/**
+ * 把子 schema 的 name 路径前缀化,让 el-form 能按 list.0.qty 形式做嵌套校验
+ * - 递归处理 children / formItem.slots / slots
+ * - 子节点为空 / 字符串时原样返回
+ */
+function rewriteNamePath(
+  sub: SchemaNode | SchemaNode[] | string | undefined,
+  prefix: string,
+  sep: string
+): SchemaNode | SchemaNode[] | string | undefined {
+  if (sub === undefined || sub === null) return sub
+  if (typeof sub === 'string') return sub
+  if (Array.isArray(sub)) {
+    return sub.map((s) => rewriteNamePath(s, prefix, sep) as SchemaNode)
+  }
+  const cloned: SchemaNode = { ...sub }
+  if (cloned.name) cloned.name = `${prefix}${sep}${cloned.name}`
+  if (cloned.children !== undefined) {
+    cloned.children = rewriteNamePath(cloned.children, prefix, sep) as never
+  }
+  if (cloned.slots) {
+    const newSlots: Record<string, SchemaNode | SchemaNode[] | string | undefined> = {}
+    for (const [k, v] of Object.entries(cloned.slots)) {
+      if (v && typeof v === 'object') {
+        newSlots[k] = rewriteNamePath(v, prefix, sep) as never
+      } else {
+        newSlots[k] = v
+      }
+    }
+    cloned.slots = newSlots
+  }
+  if (cloned.formItem && typeof cloned.formItem === 'object' && cloned.formItem.slots) {
+    const newFormItemSlots: Record<string, SchemaNode | SchemaNode[] | string | undefined> = {}
+    for (const [k, v] of Object.entries(cloned.formItem.slots)) {
+      if (v && typeof v === 'object') {
+        newFormItemSlots[k] = rewriteNamePath(v, prefix, sep) as never
+      } else {
+        newFormItemSlots[k] = v
+      }
+    }
+    cloned.formItem = { ...cloned.formItem, slots: newFormItemSlots }
+  }
+  return cloned
+}
+
+/**
+ * 渲染数组节点(kind === 'array')
+ * - 外层 ElCard + 标题 + 添加按钮(顶部)
+ * - 每行 ElFormItem(继承父数组节点的 label) + itemSchema 渲染 + 行尾按钮(上移/下移/删除)
+ * - min/max 边界禁用对应按钮
+ */
+function renderArrayNode(node: SchemaNode, opts: RenderSchemaNodeOptions): VNode | undefined {
+  if (!node.array) return undefined
+  const listName = node.name
+  if (!listName) return undefined
+  const cfg = node.array
+  // el-form prop 路径必须用 items[0].qty 语法(方括号包裹数字索引),不能用 items.0.qty
+  // 数组索引固定为 [i] 语法不可配置;对象内部嵌套仍用 '.' 分隔
+  const sep = '.'
+  const showActions = cfg.showActions ?? true
+  const showAdd = typeof showActions === 'object' ? showActions.add !== false : showActions
+  const showRemove = typeof showActions === 'object' ? showActions.remove !== false : showActions
+  const showMove = typeof showActions === 'object' ? showActions.move !== false : showActions
+  const labelAdd = cfg.labels?.add ?? '添加'
+  const labelRemove = cfg.labels?.remove ?? '删除'
+  const labelUp = cfg.labels?.moveUp ?? '上移'
+  const labelDown = cfg.labels?.moveDown ?? '下移'
+
+  const listRaw = opts.model?.[listName]
+  const list: unknown[] = Array.isArray(listRaw) ? listRaw : []
+  const min = cfg.minItems ?? 0
+  const max = cfg.maxItems ?? Infinity
+
+  const renderRow = (row: unknown, index: number): VNode => {
+    // 行容器:每个数组元素克隆 itemSchema 并把 name 路径前缀化为 items[i].subName
+    // 注意数组索引必须用 [i] 语法（el-form prop 路径要求），不能写 items.i.qty
+    const rewritten = rewriteNamePath(cfg.itemSchema, `${listName}[${index}]`, sep)
+    const inner = rewritten ? opts.render(rewritten as SchemaNode) : undefined
+    return h(
+      'div',
+      {
+        key: `array-${listName}-${index}`,
+        class: `${node.component?.toLowerCase() ?? 'array-node'}__row`,
+      } as never,
+      {
+        default: () => [
+          h('div', { class: 'array-node__row-body' } as never, {
+            default: () => (inner && !Array.isArray(inner) ? [inner] : (inner as never)),
+          }) as VNode,
+          h('div', { class: 'array-node__row-actions' } as never, {
+            default: () =>
+              [
+                showMove &&
+                  h(
+                    ElButton as never,
+                    {
+                      size: 'small',
+                      disabled: index === 0,
+                      onClick: () => opts.arrayActions?.moveItem(listName, index, index - 1),
+                    } as never,
+                    { default: () => labelUp }
+                  ),
+                showMove &&
+                  h(
+                    ElButton as never,
+                    {
+                      size: 'small',
+                      disabled: index >= list.length - 1,
+                      onClick: () => opts.arrayActions?.moveItem(listName, index, index + 1),
+                    } as never,
+                    { default: () => labelDown }
+                  ),
+                showRemove &&
+                  h(
+                    ElButton as never,
+                    {
+                      size: 'small',
+                      type: 'danger',
+                      disabled: list.length <= min,
+                      onClick: () => opts.arrayActions?.removeItem(listName, index),
+                    } as never,
+                    { default: () => labelRemove }
+                  ),
+              ].filter(Boolean) as never,
+          }) as VNode,
+        ],
+      }
+    ) as VNode
+  }
+
+  return h(
+    ElCard as never,
+    {
+      shadow: 'never',
+      class: 'array-node',
+      ...(node.props ?? {}),
+    } as never,
+    {
+      default: () => [
+        h('div', { class: 'array-node__header' } as never, {
+          default: () =>
+            [
+              h('span', { class: 'array-node__title' } as never, {
+                default: () => cfg.title ?? node.label ?? listName,
+              }) as VNode,
+              showAdd &&
+                h(
+                  ElButton as never,
+                  {
+                    type: 'primary',
+                    size: 'small',
+                    disabled: list.length >= max,
+                    onClick: () => opts.arrayActions?.addItem(listName),
+                  } as never,
+                  { default: () => labelAdd }
+                ),
+            ].filter(Boolean) as never,
+        }) as VNode,
+        h('div', { class: 'array-node__body' } as never, {
+          default: () =>
+            list.length === 0
+              ? [
+                  h('div', { class: 'array-node__empty' } as never, {
+                    default: () => '暂无数据,点击右上角「添加」按钮新增',
+                  }) as VNode,
+                ]
+              : (list.map((row, i) => renderRow(row, i)) as never),
+        }) as VNode,
+      ],
+    }
+  ) as VNode
 }
 
 /** 渲染单个 schema 节点为 VNode：含视觉容器 / formItem / row / 默认 4 个分支 */
 export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
   function renderToComponentInner(node: SchemaNode): VNode | string | VNode[] | undefined {
+    // 数组节点走独立分支（不参与 formItem/row/Col 默认分支）
+    if (node.kind === 'array') {
+      return renderArrayNode(node, opts)
+    }
     const Comp = resolveComponentFor(node.component, opts.components)
     const eventBindings = {
       ...buildVModelBindings(node, opts.model, opts.beforeChange),

@@ -214,6 +214,75 @@ class CardBuilderExt extends CardBuilder {
   }
 }
 
+/**
+ * 数组节点构建器（独立于 makeBuilder,因为不绑 el 组件 props）
+ * 链式 API：item / initialLength / minItems / maxItems / showActions / labels / title
+ * build() 返回 SchemaNode —— props 类型不推导(数组节点本身不带 props)
+ */
+export class ArrayBuilder {
+  node: SchemaNode = { kind: 'array', array: { itemSchema: {} as SchemaNode } }
+
+  constructor(name: string) {
+    this.node.name = name
+  }
+
+  item(itemSchema: SchemaNode | SchemaNode[]): this {
+    if (!this.node.array) this.node.array = { itemSchema }
+    else this.node.array.itemSchema = itemSchema
+    return this
+  }
+
+  initialLength(n: number): this {
+    if (!this.node.array) this.node.array = { itemSchema: {} as SchemaNode }
+    this.node.array.initialLength = n
+    return this
+  }
+
+  minItems(n: number): this {
+    if (!this.node.array) this.node.array = { itemSchema: {} as SchemaNode }
+    this.node.array.minItems = n
+    return this
+  }
+
+  maxItems(n: number): this {
+    if (!this.node.array) this.node.array = { itemSchema: {} as SchemaNode }
+    this.node.array.maxItems = n
+    return this
+  }
+
+  showActions(flag: boolean | { add?: boolean; remove?: boolean; move?: boolean }): this {
+    if (!this.node.array) this.node.array = { itemSchema: {} as SchemaNode }
+    this.node.array.showActions = flag
+    return this
+  }
+
+  labels(opts: { add?: string; remove?: string; moveUp?: string; moveDown?: string }): this {
+    if (!this.node.array) this.node.array = { itemSchema: {} as SchemaNode }
+    this.node.array.labels = opts
+    return this
+  }
+
+  title(t: string): this {
+    if (!this.node.array) this.node.array = { itemSchema: {} as SchemaNode }
+    this.node.array.title = t
+    return this
+  }
+
+  label(l: string): this {
+    this.node.label = l
+    return this
+  }
+
+  reaction(r: NonNullable<SchemaNode['reaction']>): this {
+    this.node.reaction = r
+    return this
+  }
+
+  build(): SchemaNode {
+    return this.node
+  }
+}
+
 /** 入口：链式构建 schema（返回类型带 props 推导） */
 export const xInput = (name: string) => new InputBuilderExt(name)
 export const xSelect = (name: string) => new SelectBuilderExt(name)
@@ -235,6 +304,7 @@ export const xCascader = (name: string) => new CascaderBuilder(name)
 export const xInputNumber = (name: string) => new InputNumberBuilder(name)
 export const xSlider = (name: string) => new SliderBuilder(name)
 export const xCard = (name: string) => new CardBuilderExt(name)
+export const xArray = (name: string) => new ArrayBuilder(name)
 
 /**
  * 用法示例（编译时类型校验）：

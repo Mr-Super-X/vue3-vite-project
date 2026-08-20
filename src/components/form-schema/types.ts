@@ -78,6 +78,35 @@ export interface FormItemConfig {
   [key: string]: unknown
 }
 
+/** 数组节点配置（kind: 'array' 时使用） */
+export interface ArrayNodeConfig {
+  /** 每行渲染的子 schema —— 同一份 schema 套到 model[name] 的每个数组元素 */
+  itemSchema: SchemaNode | SchemaNode[]
+  /** model 未定义时的初始行数（默认 1） */
+  initialLength?: number
+  /** 行数下限（达下限时禁用删除按钮，校验也会读取该值） */
+  minItems?: number
+  /** 行数上限（达上限时禁用新增按钮，校验也会读取该值） */
+  maxItems?: number
+  /** 操作按钮显隐（默认全开；传对象可分别控制 add/remove/move） */
+  showActions?:
+    | boolean
+    | {
+        add?: boolean
+        remove?: boolean
+        move?: boolean
+      }
+  /** 操作按钮文案（默认 添加/删除/上移/下移） */
+  labels?: {
+    add?: string
+    remove?: string
+    moveUp?: string
+    moveDown?: string
+  }
+  /** 容器标题（默认不渲染表头） */
+  title?: string
+}
+
 /** 栅格（el-row） */
 export interface RowConfig {
   gutter?: number
@@ -94,7 +123,7 @@ export interface ColConfig {
 }
 
 /**
- * 节点定义（schema DSL 全量 14 字段）
+ * 节点定义（schema DSL 全量 16 字段）
  * - component 节点构造器（字符串=查找，Component 对象=直接使用）
  * - props     节点属性
  * - on        事件定义（回调或 {{ fn }} 表达式）
@@ -109,6 +138,8 @@ export interface ColConfig {
  * - col       栅格列配置（span / offset 等）
  * - reaction  响应式配置（基于 watchEffect）
  * - directives 自定义指令
+ * - kind      节点类型（'array' = 数组容器）
+ * - array     数组容器配置（kind='array' 时必填）
  *
  * 建议优先使用 `SchemaNodeFor<C>` 泛型版本：按 component 字段推导 props 类型
  * 例如：`const node: SchemaNodeFor<'Input'> = { component: 'Input', props: { placeholder: 'x' } }`
@@ -133,6 +164,8 @@ export interface SchemaNode {
   ignore?: boolean
   hidden?: boolean
   key?: string | number
+  kind?: 'array'
+  array?: ArrayNodeConfig
 }
 
 /**
@@ -182,6 +215,8 @@ export type PropsByComponent = {
   Slider: ElSliderProps
   Card: ElCardProps
   FormItem: ElFormItemProps
+  // 数组节点不绑 el 组件,内部独立渲染 —— props 类型留空占位
+  ArrayNode: Record<string, unknown>
 }
 
 /** 支持类型推导的 component 名 */
@@ -232,6 +267,12 @@ export interface XFormExpose {
   resetFields(): void
   scrollToField(name: string): void
   validateWithZod(): { success: boolean; errors: import('zod').ZodError | null }
+  /** 数组节点操作：push 一项（仅 ArrayNode 用） */
+  addItem(name: string, init?: Record<string, unknown>): void
+  /** 数组节点操作：删除指定行（仅 ArrayNode 用） */
+  removeItem(name: string, index: number): void
+  /** 数组节点操作：行位置调整（仅 ArrayNode 用） */
+  moveItem(name: string, from: number, to: number): void
 }
 
 /** validate() 入参 */

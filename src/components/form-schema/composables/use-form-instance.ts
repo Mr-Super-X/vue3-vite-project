@@ -52,6 +52,47 @@ export function useFormInstance(
     return validateWithZod(zs, model() ?? {})
   }
 
+  /**
+   * 数组操作：在 model[name] 末尾追加一项
+   * - 如果 model[name] 不是数组则先初始化为 []
+   * - init 缺省时 push 空对象 {}
+   * - 操作后清空校验：避免删除行/移动行后被删项的红色错误提示残留
+   */
+  function addItem(name: string, init?: Record<string, unknown>): void {
+    const m = model()
+    if (!m) return
+    if (!Array.isArray(m[name])) m[name] = []
+    ;(m[name] as unknown[]).push(init ?? {})
+    elFormRef.value?.clearValidate?.()
+  }
+
+  /**
+   * 数组操作：删除 model[name][index]
+   * - 越界 / 非数组时静默跳过（命令式 API 容错优先）
+   */
+  function removeItem(name: string, index: number): void {
+    const m = model()
+    if (!m || !Array.isArray(m[name])) return
+    const arr = m[name] as unknown[]
+    if (index < 0 || index >= arr.length) return
+    arr.splice(index, 1)
+    elFormRef.value?.clearValidate?.()
+  }
+
+  /**
+   * 数组操作：把 model[name][from] 移到 [to]
+   * - from === to 或非数组/越界均静默跳过
+   */
+  function moveItem(name: string, from: number, to: number): void {
+    const m = model()
+    if (!m || !Array.isArray(m[name])) return
+    const arr = m[name] as unknown[]
+    if (from < 0 || from >= arr.length || to < 0 || to >= arr.length || from === to) return
+    const [item] = arr.splice(from, 1)
+    arr.splice(to, 0, item)
+    elFormRef.value?.clearValidate?.()
+  }
+
   return {
     elFormRef,
     getRef,
@@ -60,5 +101,8 @@ export function useFormInstance(
     resetFields,
     scrollToField,
     validateFormWithZod,
+    addItem,
+    removeItem,
+    moveItem,
   }
 }

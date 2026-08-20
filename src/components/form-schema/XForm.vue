@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch, type VNode } from 'vue'
+import { get, set } from 'lodash-es'
 import 'element-plus/dist/index.css'
 import { ElConfigProvider, ElForm, ElRow, ElCol } from 'element-plus'
 import type { SchemaNode, XFormProps, XFormExpose } from './types'
@@ -34,9 +35,9 @@ function applyDefaults(
   if (
     node.name !== undefined &&
     node.defaultValue !== undefined &&
-    model[node.name] === undefined
+    get(model, node.name) === undefined
   ) {
-    model[node.name] = node.defaultValue
+    set(model, node.name, node.defaultValue)
   }
   if (node.children) applyDefaults(node.children, model)
 }
@@ -74,6 +75,9 @@ const {
   resetFields,
   scrollToField,
   validateFormWithZod,
+  addItem,
+  removeItem,
+  moveItem,
 } = useFormInstance(
   () => props.model,
   () => props.zodSchema
@@ -125,6 +129,11 @@ const renderInner = useRenderSchemaNode({
   beforeChange: props.beforeChange,
   rules: props.rules,
   render: renderToComponent,
+  arrayActions: {
+    addItem: (name: string, init?: Record<string, unknown>) => addItem(name, init),
+    removeItem: (name: string, index: number) => removeItem(name, index),
+    moveItem: (name: string, from: number, to: number) => moveItem(name, from, to),
+  },
 })
 
 function getNames(includesIgnore = false): string[] {
@@ -153,6 +162,9 @@ defineExpose({
   resetFields,
   scrollToField,
   validateWithZod: validateFormWithZod,
+  addItem,
+  removeItem,
+  moveItem,
 } satisfies XFormExpose)
 </script>
 

@@ -25,6 +25,11 @@ export function containsReaction(schema: SchemaNode | SchemaNode[]): boolean {
         for (const slot of Object.values(fi.slots as Record<string, unknown>)) traverse(slot)
       }
     }
+    // 数组节点（kind: 'array'）：递归遍历 itemSchema 子树，避免 itemSchema 内部 reaction 被漏判
+    if (o.kind === 'array' && o.array && typeof o.array === 'object') {
+      const itemSchema = (o.array as Record<string, unknown>).itemSchema
+      traverse(itemSchema)
+    }
   }
 }
 
@@ -70,6 +75,15 @@ export function applyReactions(
     for (const slot of Object.values(node.formItem.slots)) {
       if (slot && typeof slot === 'object' && !Array.isArray(slot))
         applyReactions(slot, model, stoppers)
+    }
+  }
+  // 数组节点（kind: 'array'）：递归遍历 itemSchema 子树，注册内嵌 reaction
+  if (node.kind === 'array' && node.array) {
+    const itemSchema = node.array.itemSchema
+    if (Array.isArray(itemSchema)) {
+      itemSchema.forEach((c) => applyReactions(c, model, stoppers))
+    } else if (itemSchema && typeof itemSchema === 'object') {
+      applyReactions(itemSchema, model, stoppers)
     }
   }
 }

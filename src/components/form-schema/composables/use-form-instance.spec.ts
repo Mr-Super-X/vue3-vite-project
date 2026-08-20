@@ -191,4 +191,182 @@ describe('useFormInstance(model, zodSchema)', () => {
       expect(result.errors).not.toBeNull()
     })
   })
+
+  describe('addItem(name, init?)', () => {
+    it('appends empty object when model[name] is undefined', () => {
+      const modelStore = {} as Record<string, unknown>
+      const { addItem, elFormRef } = useFormInstance(
+        () => modelStore,
+        () => undefined
+      )
+      elFormRef.value = createMockElForm() as never
+      addItem('items')
+      expect(modelStore.items).toEqual([{}])
+    })
+
+    it('appends to existing array', () => {
+      const modelStore: Record<string, unknown> = { items: [{ a: 1 }] }
+      const { addItem } = useFormInstance(
+        () => modelStore,
+        () => undefined
+      )
+      addItem('items', { b: 2 })
+      expect(modelStore.items).toEqual([{ a: 1 }, { b: 2 }])
+    })
+
+    it('initializes to [] when model[name] exists but is not array', () => {
+      const modelStore: Record<string, unknown> = { items: 'oops' as never }
+      const { addItem } = useFormInstance(
+        () => modelStore,
+        () => undefined
+      )
+      addItem('items')
+      expect(Array.isArray(modelStore.items)).toBe(true)
+      expect(modelStore.items).toEqual([{}])
+    })
+
+    it('does nothing when model is undefined', () => {
+      const { addItem } = useFormInstance(
+        () => undefined,
+        () => undefined
+      )
+      expect(() => addItem('items')).not.toThrow()
+    })
+
+    it('calls elFormRef.clearValidate after push (avoid stale errors)', () => {
+      const modelStore: Record<string, unknown> = { items: [] }
+      const { addItem, elFormRef } = useFormInstance(
+        () => modelStore,
+        () => undefined
+      )
+      const mock = createMockElForm()
+      elFormRef.value = mock as never
+      addItem('items')
+      expect(mock.clearValidate).toHaveBeenCalled()
+    })
+  })
+
+  describe('removeItem(name, index)', () => {
+    it('removes the item at given index', () => {
+      const modelStore: Record<string, unknown> = { items: [{ a: 1 }, { a: 2 }, { a: 3 }] }
+      const { removeItem } = useFormInstance(
+        () => modelStore,
+        () => undefined
+      )
+      removeItem('items', 1)
+      expect(modelStore.items).toEqual([{ a: 1 }, { a: 3 }])
+    })
+
+    it('is silent when index is out of range', () => {
+      const modelStore: Record<string, unknown> = { items: [{ a: 1 }] }
+      const { removeItem } = useFormInstance(
+        () => modelStore,
+        () => undefined
+      )
+      expect(() => removeItem('items', 5)).not.toThrow()
+      expect(() => removeItem('items', -1)).not.toThrow()
+      expect(modelStore.items).toEqual([{ a: 1 }])
+    })
+
+    it('is silent when model[name] is not array', () => {
+      const modelStore: Record<string, unknown> = { items: 'oops' as never }
+      const { removeItem } = useFormInstance(
+        () => modelStore,
+        () => undefined
+      )
+      expect(() => removeItem('items', 0)).not.toThrow()
+    })
+
+    it('is silent when model is undefined', () => {
+      const { removeItem } = useFormInstance(
+        () => undefined,
+        () => undefined
+      )
+      expect(() => removeItem('items', 0)).not.toThrow()
+    })
+
+    it('calls elFormRef.clearValidate after removal', () => {
+      const modelStore: Record<string, unknown> = { items: [{ a: 1 }] }
+      const { removeItem, elFormRef } = useFormInstance(
+        () => modelStore,
+        () => undefined
+      )
+      const mock = createMockElForm()
+      elFormRef.value = mock as never
+      removeItem('items', 0)
+      expect(mock.clearValidate).toHaveBeenCalled()
+    })
+  })
+
+  describe('moveItem(name, from, to)', () => {
+    it('moves item from index to index', () => {
+      const modelStore: Record<string, unknown> = { items: [{ a: 1 }, { a: 2 }, { a: 3 }] }
+      const { moveItem } = useFormInstance(
+        () => modelStore,
+        () => undefined
+      )
+      moveItem('items', 0, 2)
+      expect(modelStore.items).toEqual([{ a: 2 }, { a: 3 }, { a: 1 }])
+    })
+
+    it('moves in reverse direction', () => {
+      const modelStore: Record<string, unknown> = { items: [{ a: 1 }, { a: 2 }, { a: 3 }] }
+      const { moveItem } = useFormInstance(
+        () => modelStore,
+        () => undefined
+      )
+      moveItem('items', 2, 0)
+      expect(modelStore.items).toEqual([{ a: 3 }, { a: 1 }, { a: 2 }])
+    })
+
+    it('is silent when from === to', () => {
+      const modelStore: Record<string, unknown> = { items: [{ a: 1 }, { a: 2 }] }
+      const { moveItem } = useFormInstance(
+        () => modelStore,
+        () => undefined
+      )
+      moveItem('items', 1, 1)
+      expect(modelStore.items).toEqual([{ a: 1 }, { a: 2 }])
+    })
+
+    it('is silent when indices are out of range', () => {
+      const modelStore: Record<string, unknown> = { items: [{ a: 1 }] }
+      const { moveItem } = useFormInstance(
+        () => modelStore,
+        () => undefined
+      )
+      expect(() => moveItem('items', -1, 0)).not.toThrow()
+      expect(() => moveItem('items', 0, 5)).not.toThrow()
+      expect(modelStore.items).toEqual([{ a: 1 }])
+    })
+
+    it('is silent when model[name] is not array', () => {
+      const modelStore: Record<string, unknown> = { items: 'oops' as never }
+      const { moveItem } = useFormInstance(
+        () => modelStore,
+        () => undefined
+      )
+      expect(() => moveItem('items', 0, 1)).not.toThrow()
+    })
+
+    it('is silent when model is undefined', () => {
+      const { moveItem } = useFormInstance(
+        () => undefined,
+        () => undefined
+      )
+      expect(() => moveItem('items', 0, 1)).not.toThrow()
+    })
+
+    it('calls elFormRef.clearValidate after move', () => {
+      const modelStore: Record<string, unknown> = { items: [{ a: 1 }, { a: 2 }] }
+      const { moveItem, elFormRef } = useFormInstance(
+        () => modelStore,
+        () => undefined
+      )
+      const mock = createMockElForm()
+      elFormRef.value = mock as never
+      moveItem('items', 0, 1)
+      expect(mock.clearValidate).toHaveBeenCalled()
+    })
+  })
 })
