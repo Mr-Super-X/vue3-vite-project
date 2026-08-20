@@ -4,6 +4,25 @@
 
 ### ✨ Features | 新特性
 
+* **form-schema-engine v3**（提升使用体验）
+  - **dev 模式 UI 错误提示**：`XFormDebugBanner` 组件，右下角悬浮显示 schema 校验错误与安全扫描结果（keyPath + message），可在右下角折叠 / 关闭
+  - **`defaultValue` 字段**：schema 节点写 `defaultValue` 自动填充到 model（仅在 model 字段未定义时），无需手动写 `Object.assign(model, defaults)`
+  - **fbuilder 链式 API**（`builders.ts`）：`xInput('email').label('邮箱').required().placeholder().defaultValue().build()` 链式构建 schema，降低书写样板代码
+  - **最小可运行示例**（`XFormMinimumDemo.vue`）：5 分钟上手 XForm，5 字段表单 + 校验 + 提交反馈
+  - **demo 复制 schema 按钮**：3 个复刻 demo（Base/Nested/Reaction）顶部加 "复制 schema" 按钮，一键 `navigator.clipboard.writeText()` 到剪贴板
+  - **README + 决策指南 + 故障排查**（共 3 个新文档）
+    - `src/components/form-schema/README.md`：30 秒上手 + props / 实例方法 / schema 字段 / 链式构建器 / reaction / 决策指南 / 故障排查速查
+    - `docs/24-XForm选型决策指南.md`：XForm vs element-plus 原生 vs FormRender 选型决策
+    - `docs/25-XForm故障排查表.md`：8 类常见错误速查（输入无反应 / 校验不触发 / 反应式不响应 / directive 不生效 / 栅格不生效 / 样式不对 / 性能问题）
+* **form-schema-engine v2**（补齐 6 项 dgm-formschema 缺失功能 + 重构）
+  - `node.beforeChange` 字段粒度拦截（同步返回值替换 / Promise resolve 后更新 / reject 跳过）
+  - `node.on` 事件回调（函数 / `{{ (m) => ... }}` 函数表达式）
+  - `node.modelProp` 自定义 v-model 属性名
+  - `node.col` 子节点 ElCol 栅格
+  - `node.hidden` vs `node.ignore` 区分（hidden 创建但 display:none；ignore 完全不创建）
+  - `node.directives` 自定义指令（vue withDirectives 包装）
+  - `node.formItem` 对象配置（component / props 透传）
+  - XForm.vue 重构：从 330 行降至 144 行（-54%），renderToComponentInner 抽到独立 composable `render-schema-node.ts`
 * **form-schema-engine**: 新增 `<XForm>` 全局组件，支持动态表单渲染
   - 完整 fork `@digitalgd/dgm-formschema` 渲染核心，替换私有设计系统 `@digitalgd/dgm-design` 为 Element Plus
   - 用 `new Function` 沙箱替代 `eval`，含 dev 模式关键字黑名单扫描
