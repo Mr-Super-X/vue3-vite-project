@@ -1,26 +1,35 @@
 /**
- * XForm schema 链式构建器：让"XForm 使用门槛低"
+ * XForm schema 链式构建器：fbuilder
+ * 让"XForm 使用门槛低"
  *
- * 对标 FormRender 的链式 API。
- * 写 schema 像写 form-render：xInput('email').label('邮箱').required().build()
+ * 对标 FormRender 的链式 API：xInput('email').label('邮箱').required().build()
+ *
+ * 类型推导：每个 builder 绑死 component 名称 + props 类型
+ * - xInput()    → Builder<'Input', ElInputProps> → build() 返回 SchemaNodeFor<'Input'>
+ * - xSelect()   → Builder<'Select', ElSelectProps>
+ * - xDatePicker() → Builder<'DatePicker', ElDatePickerProps>
+ * - ... 12 个
+ *
+ * 这样 IDE 在链式调用时自动补全 props 字段名 + 校验 props 值类型
  */
-import type { SchemaNode, RuleItem } from './types'
+import type { SchemaNode, SchemaNodeFor, ComponentName, PropsByComponent, RuleItem } from './types'
 
-/** 链式构建器基类 */
-class NodeBuilder<T extends SchemaNode> {
-  protected node: Partial<T> = {}
+/** 链式构建器基类（泛型：绑死 component 名 + props 类型） */
+class NodeBuilder<C extends ComponentName, P = PropsByComponent[C]> {
+  // public 供 Ext 子类（如 CardBuilderExt）跨类访问子节点字段
+  node: Partial<SchemaNodeFor<C>> = {}
 
   constructor(name: string) {
-    this.node.name = name
+    ;(this.node as { name?: string }).name = name
   }
 
   label(label: string): this {
-    this.node.label = label
+    ;(this.node as { label?: string }).label = label
     return this
   }
 
-  defaultValue(v: unknown): this {
-    ;(this.node as SchemaNode).defaultValue = v
+  defaultValue(v: P extends { defaultValue?: infer D } ? D : unknown): this {
+    ;(this.node as { defaultValue?: unknown }).defaultValue = v
     return this
   }
 
@@ -69,65 +78,117 @@ class NodeBuilder<T extends SchemaNode> {
     return this
   }
 
-  build(): T {
-    return this.node as T
+  build(): SchemaNodeFor<C> {
+    return this.node as SchemaNodeFor<C>
   }
 }
 
-class InputBuilder extends NodeBuilder<SchemaNode> {
-  constructor(name: string) {
-    super(name)
-    this.node.component = 'Input'
-  }
+/** 通用 builder 工厂：绑死 component 名 */
+function makeBuilder<C extends ComponentName>(
+  componentName: C
+): new (name: string) => NodeBuilder<C, PropsByComponent[C]> & { [k: string]: unknown } {
+  // 返回一个类，构造时设置 component 字段
+  return class {
+    private _b: NodeBuilder<C, PropsByComponent[C]>
+    constructor(name: string) {
+      this._b = new NodeBuilder<C, PropsByComponent[C]>(name)
+      ;(this._b.node as { component?: C }).component = componentName
+    }
+    label(l: string) {
+      return this._b.label(l)
+    }
+    defaultValue(v: unknown) {
+      return this._b.defaultValue(v as never)
+    }
+    placeholder(p: string) {
+      return this._b.placeholder(p)
+    }
+    prop(k: string, v: unknown) {
+      return this._b.prop(k, v)
+    }
+    required(m?: string) {
+      return this._b.required(m)
+    }
+    rules(r: RuleItem[] | string) {
+      return this._b.rules(r)
+    }
+    hidden(f?: boolean) {
+      return this._b.hidden(f)
+    }
+    ignore(f?: boolean) {
+      return this._b.ignore(f)
+    }
+    col(s: number) {
+      return this._b.col(s)
+    }
+    reaction(r: NonNullable<SchemaNode['reaction']>) {
+      return this._b.reaction(r)
+    }
+    build() {
+      return this._b.build()
+    }
+  } as unknown as new (
+    name: string
+  ) => NodeBuilder<C, PropsByComponent[C]> & { [k: string]: unknown }
+}
+
+/** 18 个 component 类型的 builder 类（每个绑死 component 名） */
+const InputBuilder = makeBuilder('Input')
+const SelectBuilder = makeBuilder('Select')
+const OptionBuilder = makeBuilder('Option')
+const SwitchBuilder = makeBuilder('Switch')
+const DatePickerBuilder = makeBuilder('DatePicker')
+const TimePickerBuilder = makeBuilder('TimePicker')
+const TimeSelectBuilder = makeBuilder('TimeSelect')
+const TreeSelectBuilder = makeBuilder('TreeSelect')
+const UploadBuilder = makeBuilder('Upload')
+const AutocompleteBuilder = makeBuilder('Autocomplete')
+const TransferBuilder = makeBuilder('Transfer')
+const RadioGroupBuilder = makeBuilder('RadioGroup')
+const RadioBuilder = makeBuilder('Radio')
+const CheckboxGroupBuilder = makeBuilder('CheckboxGroup')
+const CheckboxBuilder = makeBuilder('Checkbox')
+const CascaderBuilder = makeBuilder('Cascader')
+const InputNumberBuilder = makeBuilder('InputNumber')
+const SliderBuilder = makeBuilder('Slider')
+const CardBuilder = makeBuilder('Card')
+
+/** InputBuilder 扩展 clearable（el-input 特有） */
+class InputBuilderExt extends InputBuilder {
   clearable(): this {
     return this.prop('clearable', true)
   }
 }
 
-class SelectBuilder extends NodeBuilder<SchemaNode> {
-  constructor(name: string) {
-    super(name)
-    this.node.component = 'Select'
-  }
+/** SelectBuilder 扩展 options（el-select 特有） */
+class SelectBuilderExt extends SelectBuilder {
   options(opts: Array<{ value: unknown; label: string }>): this {
-    return this.prop('options', opts) as this
+    return this.prop('options', opts)
   }
 }
 
-class SwitchBuilder extends NodeBuilder<SchemaNode> {
-  constructor(name: string) {
-    super(name)
-    this.node.component = 'Switch'
-  }
-}
+/** SwitchBuilder 扩展（无特有方法） */
+class SwitchBuilderExt extends SwitchBuilder {}
 
-class DatePickerBuilder extends NodeBuilder<SchemaNode> {
-  constructor(name: string) {
-    super(name)
-    this.node.component = 'DatePicker'
-  }
+/** DatePickerBuilder 扩展 format（el-date-picker 特有） */
+class DatePickerBuilderExt extends DatePickerBuilder {
   format(v: string): this {
-    return this.prop('valueFormat', v) as this
+    return this.prop('valueFormat', v)
   }
 }
 
-class TextareaBuilder extends NodeBuilder<SchemaNode> {
-  constructor(name: string) {
-    super(name)
-    this.node.component = 'Input'
-  }
+/** TextareaBuilder 扩展 rows（用 Input type=textarea 模拟） */
+class TextareaBuilderExt extends InputBuilder {
   rows(n: number): this {
-    return this.prop('type', 'textarea').prop('rows', n) as this
+    return this.prop('type', 'textarea').prop('rows', n)
   }
 }
 
-class RadioGroupBuilder extends NodeBuilder<SchemaNode> {
-  constructor(name: string) {
-    super(name)
-    this.node.component = 'RadioGroup'
-  }
+/** RadioGroupBuilder 扩展 options（多个 Radio 子节点） */
+class RadioGroupBuilderExt extends RadioGroupBuilder {
   options(opts: Array<{ value: string; label: string }>): this {
-    this.node.children = opts.map((o) => ({
+    const n = (this as unknown as { _b: InstanceType<typeof RadioGroupBuilder> })._b
+    ;(n.node as { children?: unknown }).children = opts.map((o) => ({
       component: 'Radio',
       props: { value: o.value },
       children: o.label,
@@ -136,43 +197,59 @@ class RadioGroupBuilder extends NodeBuilder<SchemaNode> {
   }
 }
 
-class CardBuilder extends NodeBuilder<SchemaNode> {
-  constructor(name: string) {
-    super(name)
-    this.node.component = 'Card'
-  }
+/** CardBuilder 扩展 title / column / gutter */
+class CardBuilderExt extends CardBuilder {
   title(t: string): this {
     return this.prop('title', t)
   }
   column(c: number): this {
-    ;(this.node as { column?: number }).column = c
+    const b = (this as unknown as { _b: InstanceType<typeof CardBuilder> })._b
+    ;(b.node as { column?: number }).column = c
     return this
   }
   gutter(g: number): this {
-    ;(this.node as { row?: { gutter?: number } }).row = { gutter: g }
+    const b = (this as unknown as { _b: InstanceType<typeof CardBuilder> })._b
+    ;(b.node as { row?: { gutter?: number } }).row = { gutter: g }
     return this
   }
 }
 
-/** 入口：链式构建 schema */
-export const xInput = (name: string) => new InputBuilder(name)
-export const xSelect = (name: string) => new SelectBuilder(name)
-export const xSwitch = (name: string) => new SwitchBuilder(name)
-export const xDatePicker = (name: string) => new DatePickerBuilder(name)
-export const xTextarea = (name: string) => new TextareaBuilder(name)
-export const xRadioGroup = (name: string) => new RadioGroupBuilder(name)
-export const xCard = (name: string) => new CardBuilder(name)
+/** 入口：链式构建 schema（返回类型带 props 推导） */
+export const xInput = (name: string) => new InputBuilderExt(name)
+export const xSelect = (name: string) => new SelectBuilderExt(name)
+export const xOption = (name: string) => new OptionBuilder(name)
+export const xSwitch = (name: string) => new SwitchBuilderExt(name)
+export const xDatePicker = (name: string) => new DatePickerBuilderExt(name)
+export const xTimePicker = (name: string) => new TimePickerBuilder(name)
+export const xTimeSelect = (name: string) => new TimeSelectBuilder(name)
+export const xTreeSelect = (name: string) => new TreeSelectBuilder(name)
+export const xUpload = (name: string) => new UploadBuilder(name)
+export const xAutocomplete = (name: string) => new AutocompleteBuilder(name)
+export const xTransfer = (name: string) => new TransferBuilder(name)
+export const xTextarea = (name: string) => new TextareaBuilderExt(name)
+export const xRadioGroup = (name: string) => new RadioGroupBuilderExt(name)
+export const xRadio = (name: string) => new RadioBuilder(name)
+export const xCheckboxGroup = (name: string) => new CheckboxGroupBuilder(name)
+export const xCheckbox = (name: string) => new CheckboxBuilder(name)
+export const xCascader = (name: string) => new CascaderBuilder(name)
+export const xInputNumber = (name: string) => new InputNumberBuilder(name)
+export const xSlider = (name: string) => new SliderBuilder(name)
+export const xCard = (name: string) => new CardBuilderExt(name)
 
 /**
- * 用法示例：
+ * 用法示例（编译时类型校验）：
  *
  * const schema = {
  *   column: 2,
  *   row: { gutter: 24 },
  *   children: [
- *     xInput('email').label('邮箱').required().placeholder('a@b.com').defaultValue('a@b.com').build(),
- *     xSelect('role').label('角色').options([{ value: 'admin', label: '管理员' }]).required().build(),
- *     xSwitch('enabled').label('启用').build(),
+ *     xInput('email')
+ *       .label('邮箱')
+ *       .required()
+ *       .placeholder('a@b.com')
+ *       .defaultValue('a@b.com')
+ *       .build(),
+ *     //       ↑ 全部有类型推导
  *   ],
  * }
  */

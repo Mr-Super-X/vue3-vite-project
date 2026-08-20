@@ -6,6 +6,12 @@ import type {
   ElOption,
   ElSwitch,
   ElDatePicker,
+  ElTimePicker,
+  ElTimeSelect,
+  ElTreeSelect,
+  ElUpload,
+  ElAutocomplete,
+  ElTransfer,
   ElRadioGroup,
   ElRadio,
   ElCheckboxGroup,
@@ -13,6 +19,8 @@ import type {
   ElCascader,
   ElInputNumber,
   ElSlider,
+  ElCard,
+  ElFormItem,
 } from 'element-plus'
 
 /**
@@ -136,6 +144,12 @@ type ElSelectProps = ComponentProps<typeof ElSelect>
 type ElOptionProps = ComponentProps<typeof ElOption>
 type ElSwitchProps = ComponentProps<typeof ElSwitch>
 type ElDatePickerProps = ComponentProps<typeof ElDatePicker>
+type ElTimePickerProps = ComponentProps<typeof ElTimePicker>
+type ElTimeSelectProps = ComponentProps<typeof ElTimeSelect>
+type ElTreeSelectProps = ComponentProps<typeof ElTreeSelect>
+type ElUploadProps = ComponentProps<typeof ElUpload>
+type ElAutocompleteProps = ComponentProps<typeof ElAutocomplete>
+type ElTransferProps = ComponentProps<typeof ElTransfer>
 type ElRadioGroupProps = ComponentProps<typeof ElRadioGroup>
 type ElRadioProps = ComponentProps<typeof ElRadio>
 type ElCheckboxGroupProps = ComponentProps<typeof ElCheckboxGroup>
@@ -143,6 +157,8 @@ type ElCheckboxProps = ComponentProps<typeof ElCheckbox>
 type ElCascaderProps = ComponentProps<typeof ElCascader>
 type ElInputNumberProps = ComponentProps<typeof ElInputNumber>
 type ElSliderProps = ComponentProps<typeof ElSlider>
+type ElCardProps = ComponentProps<typeof ElCard>
+type ElFormItemProps = ComponentProps<typeof ElFormItem>
 
 /** 快捷名 → 对应组件 props 类型的映射 */
 export type PropsByComponent = {
@@ -151,6 +167,12 @@ export type PropsByComponent = {
   Option: ElOptionProps
   Switch: ElSwitchProps
   DatePicker: ElDatePickerProps
+  TimePicker: ElTimePickerProps
+  TimeSelect: ElTimeSelectProps
+  TreeSelect: ElTreeSelectProps
+  Upload: ElUploadProps
+  Autocomplete: ElAutocompleteProps
+  Transfer: ElTransferProps
   RadioGroup: ElRadioGroupProps
   Radio: ElRadioProps
   CheckboxGroup: ElCheckboxGroupProps
@@ -158,6 +180,8 @@ export type PropsByComponent = {
   Cascader: ElCascaderProps
   InputNumber: ElInputNumberProps
   Slider: ElSliderProps
+  Card: ElCardProps
+  FormItem: ElFormItemProps
 }
 
 /** 支持类型推导的 component 名 */
