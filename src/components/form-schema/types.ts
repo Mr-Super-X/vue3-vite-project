@@ -90,6 +90,7 @@ export interface SchemaNode {
   rules?: string | RuleItem | Array<string | RuleItem>
   formItem?: boolean | FormItemConfig
   modelProp?: string
+  defaultValue?: unknown
   row?: RowConfig
   column?: number
   col?: boolean | ColConfig

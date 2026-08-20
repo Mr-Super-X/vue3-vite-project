@@ -1,0 +1,177 @@
+# XForm
+
+> 基于 schema DSL 的动态表单组件 · 对标 `@digitalgd/dgm-formschema`
+
+## 30 秒上手
+
+```vue
+<XForm :schema="schema" :model="form" />
+```
+
+```ts
+const form = reactive({ email: '' })
+
+const schema = {
+  component: 'Input',
+  name: 'email',
+  label: '邮箱',
+  defaultValue: 'a@b.com',
+  rules: [{ required: true, type: 'email', message: '请输入有效邮箱' }],
+}
+```
+
+完整 demo 在 `/demo/x-form-minimum-demo`。
+
+---
+
+## props
+
+| 属性           | 类型                                           | 必填 | 说明                                     |
+| -------------- | ---------------------------------------------- | ---- | ---------------------------------------- |
+| `schema`       | `SchemaNode \| SchemaNode[]`                   | ✅   | 表单 schema                              |
+| `model`        | `Record<string, unknown>`                      |      | 响应式数据对象（需用 `reactive()` 包装） |
+| `components`   | `Record<string, Component>`                    |      | 自定义组件映射                           |
+| `rules`        | `Record<string, RuleItem>`                     |      | 校验规则命名引用                         |
+| `directives`   | `Record<string, Directive>`                    |      | 自定义指令映射                           |
+| `beforeChange` | `(item, newVal, oldVal) => unknown \| Promise` |      | 字段值变化前拦截                         |
+
+---
+
+## 实例方法（ref 引用）
+
+```vue
+<XForm ref="formRef" :schema="schema" :model="form" />
+```
+
+```ts
+const formRef = ref()
+
+formRef.value?.validate((valid) => console.log(valid))
+formRef.value?.resetFields()
+formRef.value?.clearValidate()
+formRef.value?.scrollToField('email')
+formRef.value?.getNames() // → ['email', 'name', ...]
+formRef.value?.getRef('email') // → Component | HTMLElement | null
+formRef.value?.validateWithZod() // → { success, errors }
+```
+
+---
+
+## schema 字段（14 个）
+
+| 字段           | 类型                                                 | 说明                                            |
+| -------------- | ---------------------------------------------------- | ----------------------------------------------- |
+| `component`    | `string`                                             | 组件名（短名 `'Input'` / 全名 `'ElInput'`）     |
+| `props`        | `Record<string, unknown>`                            | 组件 props                                      |
+| `on`           | `Record<string, Function \| string>`                 | 事件回调（string 是 `{{ (m) => ... }}` 表达式） |
+| `children`     | `SchemaNode \| SchemaNode[] \| string`               | 子节点                                          |
+| `label`        | `string`                                             | 标签文字                                        |
+| `name`         | `string`                                             | 字段名（双向绑定的 key）                        |
+| `key`          | `string \| number`                                   | 唯一标识                                        |
+| `rules`        | `string \| RuleItem \| Array`                        | 校验规则                                        |
+| `defaultValue` | `unknown`                                            | 字段初值（model 缺时填入）                      |
+| `modelProp`    | `string`                                             | 自定义 v-model 属性名（默认 `modelValue`）      |
+| `row`          | `RowConfig`                                          | 栅格行（gutter）                                |
+| `column`       | `number`                                             | 每行栅格数                                      |
+| `col`          | `boolean \| { span, offset }`                        | 子节点栅格列                                    |
+| `hidden`       | `boolean`                                            | 节点隐藏（仍创建，display:none）                |
+| `ignore`       | `boolean`                                            | 跳过渲染                                        |
+| `reaction`     | `ReactionConfig`                                     | 反应式联动                                      |
+| `directives`   | `DirectiveConfig[]`                                  | 自定义指令                                      |
+| `slots`        | `Record<string, SchemaNode>`                         | 具名插槽                                        |
+| `formItem`     | `boolean \| { component, props, directives, slots }` | 自定义 form-item 包装                           |
+
+---
+
+## 链式构建器（fbuilder）
+
+```ts
+import {
+  xInput,
+  xSelect,
+  xSwitch,
+  xDatePicker,
+  xTextarea,
+  xRadioGroup,
+  xCard,
+} from '@/components/form-schema/builders'
+
+const schema = {
+  column: 2,
+  row: { gutter: 24 },
+  children: [
+    xInput('email').label('邮箱').required().placeholder('a@b.com').defaultValue('a@b.com').build(),
+    xSelect('role')
+      .label('角色')
+      .options([
+        { value: 'admin', label: '管理员' },
+        { value: 'user', label: '用户' },
+      ])
+      .required()
+      .build(),
+    xSwitch('enabled').label('启用').build(),
+    xDatePicker('birthday').label('生日').format('YYYY-MM-DD').build(),
+  ],
+}
+```
+
+---
+
+## reaction（响应式联动）
+
+```ts
+{
+  component: 'Input',
+  name: 'path',
+  label: '路径',
+  reaction: {
+    disabled: (m) => !m.enablePath,                          // 字段值
+    rules: (m) => m.enablePath ? 'required' : undefined,      // 校验
+    props: { placeholder: (m) => m.enablePath ? '请输入' : '' }, // 组件 props
+    label: (m) => m.enablePath ? '路径（必填）' : '路径',  // label
+    hidden: (m) => !m.enablePath,                             // 隐藏
+  },
+}
+```
+
+---
+
+## 决策指南
+
+**何时用 XForm / 何时用 element-plus 原生：**
+
+| 场景                               | 推荐                  |
+| ---------------------------------- | --------------------- |
+| 简单表单（< 5 字段）固定结构       | **element-plus 原生** |
+| 动态 schema（来自后端 / 配置文件） | **XForm**             |
+| 复杂联动（> 3 字段互相关联）       | **XForm**             |
+| 复用校验规则                       | **XForm**             |
+| 跨组件共享表单状态                 | **XForm**             |
+| 性能关键（> 100 字段）             | **element-plus 原生** |
+| 多语言 + 动态 schema               | **XForm**             |
+
+---
+
+## 故障排查
+
+| 现象             | 原因                                    | 修复                                 |
+| ---------------- | --------------------------------------- | ------------------------------------ |
+| 输入无反应       | `model` 不是 reactive 包装              | 用 `reactive({})` 包装               |
+| 输入无反应       | 节点缺 `name` 字段                      | 添加 `name: 'fieldId'`               |
+| 校验不触发       | `rules` 是字符串但未在 props.rules 注册 | 配置 props.rules                     |
+| 反应式不响应     | reaction 函数体未引用 `model`           | `reaction: { disabled: (m) => ... }` |
+| directive 不生效 | directive 名未注册到 vue app            | 用 `app.directive()` 全局注册        |
+| 样式不对         | 直接 import 绕过了 CSS 自动注入         | XForm 内部已 import CSS              |
+
+dev 模式下 XFormDebugBanner 会自动在右下角浮窗显示 schema 校验错误。
+
+---
+
+## 示例
+
+| 路由                        | 内容                                 |
+| --------------------------- | ------------------------------------ |
+| `/demo/x-form-minimum-demo` | 最小可运行示例（5 分钟上手）         |
+| `/demo/x-form-base`         | 基础用法（5 字段 + 校验 + 重置）     |
+| `/demo/x-form-nested`       | 复杂布局（Card 容器 + slots + 嵌套） |
+| `/demo/x-form-reaction`     | 反应式联动（3 种场景）               |

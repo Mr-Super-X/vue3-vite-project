@@ -1,6 +1,9 @@
 <script setup lang="ts">
 /**
  * 复刻 datact-web/demo/pages/form/reaction.vue —— 响应式联动
+ */
+import { ElMessage } from 'element-plus'
+/**
  *
  * 演示 reaction 三种联动：
  * 1. ignoreControl → field1.ignore（控制显隐）
@@ -64,6 +67,15 @@ const schema: SchemaNode = {
 }
 
 const model = reactive<Record<string, unknown>>({ ignoreControl: false, ruleControl: false })
+
+async function copySchema() {
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(schema, null, 2))
+    ElMessage.success('schema 已复制到剪贴板')
+  } catch {
+    ElMessage.error('复制失败，请手动选择')
+  }
+}
 </script>
 
 <template>
@@ -81,6 +93,7 @@ const model = reactive<Record<string, unknown>>({ ignoreControl: false, ruleCont
       <section id="demo-reaction">
         <DemoField label="响应式联动" :code="xFormSource">
           <XForm :schema="schema" :model="model" />
+          <el-button @click="copySchema" class="mt-2">复制 schema</el-button>
           <div :class="bem.e('state')">
             当前状态：
             <code>{{ JSON.stringify(model) }}</code>

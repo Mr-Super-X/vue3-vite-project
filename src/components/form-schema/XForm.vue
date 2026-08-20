@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch, type VNode } from 'vue'
+import { computed, ref, watch, type VNode } from 'vue'
 import 'element-plus/dist/index.css'
 import { ElConfigProvider, ElForm, ElRow, ElCol } from 'element-plus'
 import type { SchemaNode, XFormProps, XFormExpose } from './types'
@@ -10,18 +10,48 @@ import { withHidden } from './composables/with-hidden'
 import { applyDirectives } from './composables/apply-directives'
 import { useFormInstance } from './composables/use-form-instance'
 import { useRenderSchemaNode } from './composables/render-schema-node'
+import XFormDebugBanner from './XFormDebugBanner.vue'
 
 const props = defineProps<XFormProps>()
 const bem = createNamespace('x-form')
 
-if (import.meta.env.DEV) {
+// Dev-only 错误状态（暴露给 XFormDebugBanner）
+const validateErrors = ref<Array<{ keyPath: (string | number)[]; message: string }>>([])
+const forbiddenErrors = ref<string[]>([])
+const showDebugBanner = ref(import.meta.env.DEV)
+
+/** 应用 schema 节点 defaultValue 到 model（仅在 model 字段未定义时填充） */
+function applyDefaults(
+  node: SchemaNode | SchemaNode[] | string | undefined,
+  model: Record<string, unknown> | undefined
+) {
+  if (!model) return
+  if (typeof node === 'string' || node === undefined || node === null) return
+  if (Array.isArray(node)) {
+    node.forEach((n) => applyDefaults(n, model))
+    return
+  }
+  if (
+    node.name !== undefined &&
+    node.defaultValue !== undefined &&
+    model[node.name] === undefined
+  ) {
+    model[node.name] = node.defaultValue
+  }
+  if (node.children) applyDefaults(node.children, model)
+}
+
+if (showDebugBanner.value) {
   watch(
     () => props.schema,
     (val) => {
       const normalized = Array.isArray(val) ? ({ children: val } as SchemaNode) : val
+      applyDefaults(normalized, props.model)
       const { isValid, errors } = validate(normalized)
+      validateErrors.value = isValid ? [] : errors
       if (!isValid) console.error('[XForm] schema validation failed:', errors)
       const forbidden = scanForForbidden(normalized)
+      forbiddenErrors.value = forbidden
       if (forbidden.length > 0) {
         console.error('[XForm][SECURITY] forbidden identifiers in expressions:', forbidden)
       }
@@ -144,6 +174,11 @@ defineExpose({
       </ElForm>
     </div>
   </ElConfigProvider>
+  <XFormDebugBanner
+    v-if="showDebugBanner"
+    :validate-errors="validateErrors"
+    :forbidden-errors="forbiddenErrors"
+  />
 </template>
 
 <style lang="scss">

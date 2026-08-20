@@ -120,6 +120,15 @@ function onSave() {
 function onReset() {
   formRef.value?.resetFields()
 }
+
+async function copySchema() {
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(schema, null, 2))
+    ElMessage.success('schema 已复制到剪贴板')
+  } catch {
+    ElMessage.error('复制失败，请手动选择')
+  }
+}
 </script>
 
 <template>
@@ -140,6 +149,7 @@ function onReset() {
           <div :class="bem.e('actions')">
             <el-button @click="onReset">重置</el-button>
             <el-button type="primary" @click="onSave">保存</el-button>
+            <el-button @click="copySchema">复制 schema</el-button>
           </div>
         </DemoField>
       </section>

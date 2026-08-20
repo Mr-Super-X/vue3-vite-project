@@ -1,6 +1,9 @@
 <script setup lang="ts">
 /**
  * 复刻 datact-web/demo/pages/form/nested.vue —— 复杂布局
+ */
+import { ElMessage } from 'element-plus'
+/**
  *
  * 关键特性：
  * 1. Card 容器分组（每组 column + row + props）
@@ -22,6 +25,15 @@ import xFormSource from './XFormNested.vue?raw'
 
 // 必须用 reactive 包装 model，否则 XForm 内的 v-model 赋值后无法触发响应式更新
 const model = reactive<Record<string, unknown>>({})
+
+async function copySchema() {
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(schema, null, 2))
+    ElMessage.success('schema 已复制到剪贴板')
+  } catch {
+    ElMessage.error('复制失败，请手动选择')
+  }
+}
 
 const schema = [
   {
@@ -130,6 +142,7 @@ const schema = [
       <section id="demo-nested">
         <DemoField label="嵌套布局" :code="xFormSource">
           <XForm :schema="schema" :model="model" />
+          <el-button @click="copySchema" class="mt-2">复制 schema</el-button>
         </DemoField>
       </section>
     </DemoFrame>
