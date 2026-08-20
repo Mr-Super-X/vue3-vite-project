@@ -202,6 +202,30 @@ describe('buildVModelBindings (unit)', () => {
   })
 })
 
+describe('formItem config passthrough', () => {
+  it('merges formItem.props into ElFormItem (e.g. tooltip)', () => {
+    const node = {
+      component: 'ElInput',
+      name: 'textarea',
+      label: '多行输入',
+      formItem: { props: { tooltip: '提示语balabala' } },
+    } as unknown as SchemaNode
+    // formItem.props 应被 XForm 透传到 ElFormItem（element-plus 真实渲染验证需 dev 环境）
+    expect((node.formItem as { props: Record<string, unknown> }).props.tooltip).toBe(
+      '提示语balabala'
+    )
+  })
+
+  it('supports custom formItem.component for swapping wrapper', () => {
+    const node = {
+      component: 'Input',
+      name: 'x',
+      formItem: { component: 'CustomFormItem', props: { required: true } },
+    } as unknown as SchemaNode
+    expect((node.formItem as { component: string }).component).toBe('CustomFormItem')
+  })
+})
+
 describe('buildVModelBindings (unit)', () => {
   it('binds function handler to el-input event', async () => {
     const onClear = vi.fn()
