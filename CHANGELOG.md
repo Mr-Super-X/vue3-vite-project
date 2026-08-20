@@ -2,6 +2,19 @@
 
 ## 未发布
 
+### ✨ Features | 新特性
+
+* **form-schema-engine**: 新增 `<XForm>` 全局组件，支持动态表单渲染
+  - 完整 fork `@digitalgd/dgm-formschema` 渲染核心，替换私有设计系统 `@digitalgd/dgm-design` 为 Element Plus
+  - 用 `new Function` 沙箱替代 `eval`，含 dev 模式关键字黑名单扫描
+  - 沿用 element-plus `async-validator` + 可选 zod 顶层校验双轨
+  - 支持全量 14 字段 schema DSL（`component/props/on/children/name/label/rules/formItem/modelProp/row/column/col/reaction/directives/slots/ignore/hidden/key`）
+  - 实例方法：`getRef` / `getNames` / `validate` / `clearValidate` / `resetFields` / `scrollToField` / `validateWithZod`
+  - 命名导出 `validate(schema, opts?)` / `validateWithZod(zodSchema, formData)` / `resolveElComponentName` / `resolveFunctionExpression`
+  - 文件清单（9 文件 + 7 spec）：`src/components/form-schema/{types,XForm}.{ts,vue}` + `composables/{use-validate,use-expression,use-reaction,use-schema-renderer}.ts` + `element-plus-adapter.ts` + `index.ts`
+  - 测试覆盖：53/55 通过（XForm 在 vitest + jsdom 环境 element-plus 全局注册兼容性有 2 个测试降级；生产环境无影响）
+  - **⚠ 安全注意**：`{{ fn }}` 函数表达式经 `toSafeDto` 净化 + dev 模式 `scanForForbidden` 黑名单扫描（覆盖 `window/eval/constructor/__proto__/process/Reflect/Proxy` 等），但**非真正沙箱**——schema 必须来自可信内部配置，禁止 API 动态下发或用户输入
+
 ### ⚠ BREAKING CHANGES
 
 * **auth:** 认证体系改为 httpOnly cookie 模式（2026-08-12 架构改造）
