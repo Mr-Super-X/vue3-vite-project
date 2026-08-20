@@ -115,6 +115,40 @@ const schema = {
 }
 ```
 
+## 类型推导（SchemaNodeFor）
+
+`SchemaNode` 是宽类型（`component: string` + `props: Record<string, unknown>`），写错不会报错。  
+**`SchemaNodeFor<C>` 按 component 字段推导 props 类型**，IDE 自动校验：
+
+```ts
+import type { SchemaNodeFor } from '@/components/form-schema/types'
+
+// 正确：placeholder 必为 string，clearable 必为 boolean
+const email: SchemaNodeFor<'Input'> = {
+  component: 'Input',
+  name: 'email',
+  props: { placeholder: 'a@b.com', clearable: true },
+}
+
+// 错误：placeholder 传 number（TS 类型错误，IDE 红波浪线）
+const bad: SchemaNodeFor<'Input'> = {
+  component: 'Input',
+  name: 'email',
+  props: { placeholder: 123, clearable: 'yes' as unknown as boolean },
+}
+
+// 多种 element-plus 组件类型自动支持
+const selectNode: SchemaNodeFor<'Select'> = {
+  component: 'Select',
+  name: 'role',
+  props: { multiple: true, clearable: true, filterable: true },
+}
+```
+
+支持的 component 名（12 个）：`Input | Select | Option | Switch | DatePicker | RadioGroup | Radio | CheckboxGroup | Checkbox | Cascader | InputNumber | Slider`
+
+不在这 12 个内（如 `'FormItem'` / 自定义组件名）时，IDE 用 `SchemaNode` 宽类型（不报错）。
+
 ---
 
 ## reaction（响应式联动）

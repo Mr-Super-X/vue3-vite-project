@@ -1,5 +1,27 @@
 import type { ComponentPublicInstance, Directive } from 'vue'
 import type { ZodType } from 'zod'
+import type {
+  ElInput,
+  ElSelect,
+  ElOption,
+  ElSwitch,
+  ElDatePicker,
+  ElRadioGroup,
+  ElRadio,
+  ElCheckboxGroup,
+  ElCheckbox,
+  ElCascader,
+  ElInputNumber,
+  ElSlider,
+} from 'element-plus'
+
+/**
+ * 从 element-plus 组件构造器中提取 props 类型
+ * 利用 vue 3 ComponentCustomOptions['props'] 的派生
+ */
+type ComponentProps<T> = T extends new (...args: never[]) => infer R
+  ? NonNullable<R extends { $props: infer P } ? P : never>
+  : NonNullable<T extends { props: infer P } ? P : never>
 
 /** 事件回调 */
 export type EventFn = (value: unknown, ...args: unknown[]) => unknown
@@ -79,6 +101,9 @@ export interface ColConfig {
  * - col       栅格列配置（span / offset 等）
  * - reaction  响应式配置（基于 watchEffect）
  * - directives 自定义指令
+ *
+ * 建议优先使用 `SchemaNodeFor<C>` 泛型版本：按 component 字段推导 props 类型
+ * 例如：`const node: SchemaNodeFor<'Input'> = { component: 'Input', props: { placeholder: 'x' } }`
  */
 export interface SchemaNode {
   component?: string
@@ -100,6 +125,63 @@ export interface SchemaNode {
   ignore?: boolean
   hidden?: boolean
   key?: string | number
+}
+
+/**
+ * element-plus 业务组件 props 类型提取（vue 3.5+ ComponentProps）
+ * 用于 SchemaNodeFor 泛型按 component 字段推导 props 类型
+ */
+type ElInputProps = ComponentProps<typeof ElInput>
+type ElSelectProps = ComponentProps<typeof ElSelect>
+type ElOptionProps = ComponentProps<typeof ElOption>
+type ElSwitchProps = ComponentProps<typeof ElSwitch>
+type ElDatePickerProps = ComponentProps<typeof ElDatePicker>
+type ElRadioGroupProps = ComponentProps<typeof ElRadioGroup>
+type ElRadioProps = ComponentProps<typeof ElRadio>
+type ElCheckboxGroupProps = ComponentProps<typeof ElCheckboxGroup>
+type ElCheckboxProps = ComponentProps<typeof ElCheckbox>
+type ElCascaderProps = ComponentProps<typeof ElCascader>
+type ElInputNumberProps = ComponentProps<typeof ElInputNumber>
+type ElSliderProps = ComponentProps<typeof ElSlider>
+
+/** 快捷名 → 对应组件 props 类型的映射 */
+export type PropsByComponent = {
+  Input: ElInputProps
+  Select: ElSelectProps
+  Option: ElOptionProps
+  Switch: ElSwitchProps
+  DatePicker: ElDatePickerProps
+  RadioGroup: ElRadioGroupProps
+  Radio: ElRadioProps
+  CheckboxGroup: ElCheckboxGroupProps
+  Checkbox: ElCheckboxProps
+  Cascader: ElCascaderProps
+  InputNumber: ElInputNumberProps
+  Slider: ElSliderProps
+}
+
+/** 支持类型推导的 component 名 */
+export type ComponentName = keyof PropsByComponent
+
+/**
+ * 按 component 字段推导 props 类型的 SchemaNode 泛型
+ *
+ * 用法：
+ * ```ts
+ * const email: SchemaNodeFor<'Input'> = {
+ *   component: 'Input',
+ *   name: 'email',
+ *   props: { placeholder: 'a@b.com', clearable: true },
+ * }
+ * // props: { placeholder: 123 }  // ❌ TS 类型错误
+ * ```
+ */
+export type SchemaNodeFor<C extends ComponentName = ComponentName> = Omit<
+  SchemaNode,
+  'component' | 'props'
+> & {
+  component: C
+  props?: PropsByComponent[C]
 }
 
 /** XForm 组件 props */
