@@ -1,4 +1,4 @@
-import { h, resolveComponent, type VNode, type ComponentPublicInstance } from 'vue'
+import { h, resolveComponent, type VNode, type ComponentPublicInstance, type Ref } from 'vue'
 import {
   ElConfigProvider,
   ElForm,
@@ -30,6 +30,7 @@ import type { SchemaNode, XFormProps, ColConfig } from '../types'
 import { buildVModelBindings } from './build-vmodel-bindings'
 import { buildOnBindings } from './build-on-bindings'
 import { renderToComponentWithGrid } from './render-with-grid'
+import { buildAutocompleteFetcher } from './use-async-options'
 
 type RenderFn = (
   node: SchemaNode | SchemaNode[] | string | undefined | null
@@ -199,11 +200,11 @@ export interface RenderSchemaNodeOptions {
   /** v-model 值写入后主动触发(node + 新值)—— 用于跨字段校验,绕过 watch 不可靠问题 */
   onValueChange?: (node: SchemaNode, newValue: unknown) => void
   /**
-   * 当前响应式断点(xs/sm/md/lg/xl),由 XForm.vue 注入 useCurrentBreakpoint()
-   * render-schema-node 根据当前断点拍平 col.responsive / row.responsive 的字段
-   * 未提供时回退到响应式对象中最接近的较小断点(默认 sm → md 找不到时取 sm)
+   * 当前响应式断点(xs/sm/md/lg/xl),由 XForm.vue 注入 useCurrentBreakpoint() 的 ref
+   * render-schema-node 在渲染时读取 .value，按当前断点拍平 col.responsive / row.responsive
+   * 未提供时回退到响应式对象中最接近的较小断点
    */
-  currentBreakpoint?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
+  currentBreakpoint?: Ref<'xs' | 'sm' | 'md' | 'lg' | 'xl'>
 }
 
 /**
@@ -287,7 +288,7 @@ function renderArrayNode(node: SchemaNode, opts: RenderSchemaNodeOptions): VNode
     const inner = rewritten
       ? opts.render({
           ...(rewritten as object),
-          col: mergeColResponsive((rewritten as SchemaNode).col, opts.currentBreakpoint),
+          col: mergeColResponsive((rewritten as SchemaNode).col, opts.currentBreakpoint?.value),
         } as SchemaNode)
       : undefined
     return h(
@@ -394,6 +395,16 @@ function getComponentDefaultProps(
   return componentProps?.[node.component] ?? {}
 }
 
+/** 构造 Autocomplete 异步选项所需的 props（Select/Cascader/TreeSelect 已在 use-schema-renderer 注入 options/data） */
+function buildAsyncProps(node: SchemaNode): Record<string, unknown> {
+  if (!node.asyncOptions) return {}
+  const name = typeof node.component === 'string' ? node.component : null
+  if (name !== 'Autocomplete' && name !== 'ElAutocomplete') return {}
+  return {
+    fetchSuggestions: buildAutocompleteFetcher(node.asyncOptions),
+  }
+}
+
 /** 渲染单个 schema 节点为 VNode：含视觉容器 / formItem / row / 默认 4 个分支 */
 export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
   function renderToComponentInner(node: SchemaNode): VNode | string | VNode[] | undefined {
@@ -411,6 +422,7 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
       ...buildVModelBindings(node, opts.model, opts.beforeChange, opts.onValueChange),
       ...buildOnBindings(node, opts.model),
     }
+    const asyncProps = buildAsyncProps(node)
     // 视觉容器（Card 等）
     if (Comp && (node.slots || node.children !== undefined) && !node.name) {
       const slotMap: Record<string, () => unknown> = {}
@@ -425,6 +437,7 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
         {
           ...getComponentDefaultProps(node, opts.componentProps),
           ...node.props,
+          ...asyncProps,
           ...(node.disabled !== undefined ? { disabled: node.disabled } : {}),
           ...(node.key !== undefined && { key: node.key }),
         } as never,
@@ -486,12 +499,13 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
                     ...eventBindings,
                     ...getComponentDefaultProps(node, opts.componentProps),
                     ...node.props,
+                    ...asyncProps,
                     ...(node.disabled !== undefined ? { disabled: node.disabled } : {}),
                     ...(node.key !== undefined && { key: node.key }),
                   } as never,
                   { default: defaultSlot, ...extraSlots }
                 )
-                return wrapWithElCol(node, inner, opts.currentBreakpoint)
+                return wrapWithElCol(node, inner, opts.currentBreakpoint?.value)
               },
             }
           : undefined
@@ -535,11 +549,13 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
           ...eventBindings,
           ...getComponentDefaultProps(node, opts.componentProps),
           ...node.props,
+          ...asyncProps,
           ...(node.disabled !== undefined ? { disabled: node.disabled } : {}),
           ...(node.key !== undefined && { key: node.key }),
         } as never,
         { default: () => renderChildren(node.children, opts.render) as never }
-      ) as VNode
+      ) as VNode,
+      opts.currentBreakpoint?.value
     )
   }
   return renderToComponentInner

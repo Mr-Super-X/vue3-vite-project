@@ -184,6 +184,46 @@ const node: SchemaNodeFor<'MyInput'> = {
 
 ---
 
+## asyncOptions（异步选项）
+
+`Select`、`Cascader`、`TreeSelect`、`Autocomplete` 支持内置异步数据源：
+
+```ts
+{
+  component: 'Select',
+  name: 'city',
+  asyncOptions: {
+    source: async () => fetch('/api/cities').then(r => r.json()),
+    transform: (raw: Array<{ id: number; name: string }>) =>
+      raw.map((item) => ({ label: item.name, value: item.id })),
+  },
+}
+```
+
+带依赖联动：
+
+```ts
+{
+  component: 'Select',
+  name: 'district',
+  asyncOptions: {
+    source: async () => fetch(`/api/districts?city=${form.city}`).then(r => r.json()),
+    deps: 'city',
+    transform: (raw) => raw.map((item: { name: string }) => ({ label: item.name, value: item.name })),
+  },
+}
+```
+
+| 字段        | 说明                                                                 |
+| ----------- | -------------------------------------------------------------------- |
+| `source`    | 返回选项数组的函数，支持 Promise；Autocomplete 可接收可选 query 参数 |
+| `immediate` | 是否立即请求（默认 true）                                            |
+| `deps`      | 依赖字段路径，变化时重新请求                                         |
+| `transform` | 把 source 结果转为 `{ label, value }` 数组                           |
+| `onError`   | 请求失败回调                                                         |
+
+---
+
 ## reaction（响应式联动）
 
 ```ts

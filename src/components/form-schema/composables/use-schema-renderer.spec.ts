@@ -101,6 +101,62 @@ describe('useSchemaRenderer(opts)', () => {
     expect(() => scope.stop()).not.toThrow()
   })
 
+  it('clones schema as reactive when asyncOptions present and injects fetched options', async () => {
+    const schema = ref<SchemaNode>({
+      component: 'Select',
+      name: 'city',
+      asyncOptions: {
+        source: async () => [
+          { id: 1, name: 'A' },
+          { id: 2, name: 'B' },
+        ],
+        transform: (raw) =>
+          (raw as Array<{ id: number; name: string }>).map((item) => ({
+            label: item.name,
+            value: item.id,
+          })),
+      },
+    })
+    const formData = ref({})
+    const scope = effectScope()
+    let reactiveSchema: ReturnType<typeof useSchemaRenderer>['reactiveSchema'] | undefined
+    scope.run(() => {
+      reactiveSchema = useSchemaRenderer({
+        schema,
+        components: ref(undefined),
+        formData,
+      }).reactiveSchema
+    })
+    await new Promise((r) => setTimeout(r, 0))
+    const rs = reactiveSchema!.value as SchemaNode
+    expect(rs.props?.options).toEqual([
+      { label: 'A', value: 1 },
+      { label: 'B', value: 2 },
+    ])
+    scope.stop()
+  })
+
+  it('clones schema as reactive when asyncOptions present (does not preserve identity)', () => {
+    const original: SchemaNode = {
+      component: 'Select',
+      name: 'city',
+      asyncOptions: { source: async () => [] },
+    }
+    const schema = ref(original)
+    const formData = ref({})
+    const scope = effectScope()
+    scope.run(() => {
+      const { reactiveSchema } = useSchemaRenderer({
+        schema,
+        components: ref(undefined),
+        formData,
+      })
+      // asyncOptions 会修改 node.props，需要 reactive 克隆，不能保留原对象引用
+      expect(reactiveSchema.value).not.toBe(original)
+    })
+    scope.stop()
+  })
+
   it('handles schema as array (auto-wraps with children)', () => {
     const schema = ref([{ component: 'Input' }])
     const formData = ref({})

@@ -70,8 +70,6 @@ const { reactiveSchema } = useSchemaRenderer({
   schema: computed(() => props.schema),
   components: computed(() => props.components) as never,
   formData: computed(() => props.model ?? {}) as never,
-  // P2-1:响应式断点注入
-  currentBreakpoint: useCurrentBreakpoint() as Ref<string>,
 })
 
 const {
@@ -266,7 +264,7 @@ const renderInner = useRenderSchemaNode({
     triggerCrossFieldValidator(node, 'change')
   },
   // P2-1:响应式断点感知(响应式 ColConfig 拍平)
-  currentBreakpoint: currentBreakpoint.value,
+  currentBreakpoint: currentBreakpoint,
 })
 
 function getNames(includesIgnore = false): string[] {

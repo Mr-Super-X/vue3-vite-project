@@ -185,6 +185,20 @@ export interface ColConfig {
   }
 }
 
+/** 异步选项配置：为 Select/Cascader/TreeSelect/Autocomplete 等提供内置远程数据能力 */
+export interface AsyncOptionsConfig<T = unknown> {
+  /** 数据源函数，返回原始数据数组（支持 Promise）；Autocomplete 场景可接收可选 query 参数 */
+  source: (query?: string) => Promise<T[]> | T[]
+  /** 是否在节点创建时立即请求（默认 true） */
+  immediate?: boolean
+  /** 依赖字段路径（lodash 路径），任一依赖变化时重新请求 */
+  deps?: string | string[]
+  /** 数据转换：把 source 返回的原始数组转为组件需要的 { label, value } 数组 */
+  transform?: (raw: T[]) => Array<{ label: string; value: unknown }>
+  /** 请求出错时回调（默认仅写入内部 error 状态） */
+  onError?: (err: unknown) => void
+}
+
 /**
  * 节点定义（schema DSL 全量 17 字段）
  * - component 节点构造器（字符串=查找，Component 对象=直接使用）
@@ -201,6 +215,7 @@ export interface ColConfig {
  * - col       栅格列配置（span / offset 等）
  * - reaction  响应式配置（基于 watchEffect）
  * - directives 自定义指令
+ * - asyncOptions 异步选项数据源
  * - kind      节点类型（'array' = 数组容器）
  * - array     数组容器配置（kind='array' 时必填）
  * - disabled  字段禁用状态（支持反应式;数组节点仅控制容器按钮）
@@ -230,6 +245,8 @@ export interface SchemaNode {
   col?: boolean | ColConfig
   reaction?: ReactionConfig
   directives?: DirectiveConfig[]
+  /** 异步选项数据源（Select/Cascader/TreeSelect/Autocomplete） */
+  asyncOptions?: AsyncOptionsConfig
   slots?: Record<string, SchemaNode | SchemaNode[] | string | undefined>
   ignore?: boolean
   hidden?: boolean
