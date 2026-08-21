@@ -36,6 +36,43 @@ export const DEFAULT_COMPONENT_MAP: Record<string, string> = {
   Form: 'ElForm',
 }
 
+/** 把快捷名形式的默认 props 同时展开为 ElXxx 形式，兼容 schema 中两种写法 */
+function expandComponentProps(
+  base: Record<string, Record<string, unknown>>
+): Record<string, Record<string, unknown>> {
+  const result: Record<string, Record<string, unknown>> = {}
+  for (const [key, props] of Object.entries(base)) {
+    result[key] = { ...props }
+    const elName = DEFAULT_COMPONENT_MAP[key]
+    if (elName) result[elName] = { ...props }
+  }
+  return result
+}
+
+/** 内置默认组件 props：按组件名注入，节点级 props 可覆盖 */
+const BASE_DEFAULT_COMPONENT_PROPS: Record<string, Record<string, unknown>> = {
+  Input: { clearable: true },
+  Select: { clearable: true },
+  Cascader: { clearable: true },
+  DatePicker: { clearable: true },
+  TimePicker: { clearable: true },
+  TimeSelect: { clearable: true },
+  TreeSelect: { clearable: true },
+  Autocomplete: { clearable: true },
+}
+
+/**
+ * 默认组件 props：按组件名注入，节点级 props 可覆盖。
+ * 目前仅对支持 clearable 的 Element Plus 表单组件默认开启 clearable。
+ *
+ * 键同时支持快捷名（如 'Input'）和 Element Plus 全名（如 'ElInput'），
+ * 因此 schema 中写 component: 'Input' 或 component: 'ElInput' 都能命中。
+ */
+export const DEFAULT_COMPONENT_PROPS: Record<
+  string,
+  Record<string, unknown>
+> = expandComponentProps(BASE_DEFAULT_COMPONENT_PROPS)
+
 /**
  * 解析 schema.component 字符串到最终组件名（供 resolveComponent 查找）
  *

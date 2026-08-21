@@ -331,6 +331,15 @@ export interface XFormProps {
     oldValue: unknown
   ) => unknown | Promise<unknown>
   zodSchema?: ZodType
+  /**
+   * 按组件名注入默认 props，节点级 props 可覆盖。
+   * 例如: { Input: { clearable: true }, Select: { clearable: true, filterable: true } }
+   * 仅对 string component 生效;直接传 Component 对象时由组件自身控制。
+   *
+   * 注:XForm 内部已维护一份默认 DEFAULT_COMPONENT_PROPS（对支持 clearable 的 EL 组件默认开启 clearable）。
+   * 该字段会与内置默认合并，用户传入的同名组件配置会按组件名覆盖内置默认值。
+   */
+  componentProps?: Record<string, Record<string, unknown>>
 }
 
 /** XForm 组件实例方法 */

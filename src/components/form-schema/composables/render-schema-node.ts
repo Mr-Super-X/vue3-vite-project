@@ -183,6 +183,7 @@ export interface RenderSchemaNodeOptions {
   components: XFormProps['components']
   beforeChange: XFormProps['beforeChange']
   rules: XFormProps['rules']
+  componentProps?: XFormProps['componentProps']
   render: RenderFn
   /** ArrayNode 命令式操作（来自 XFormExpose） */
   arrayActions?: {
@@ -384,6 +385,15 @@ function renderArrayNode(node: SchemaNode, opts: RenderSchemaNodeOptions): VNode
   ) as VNode
 }
 
+/** 取节点对应组件的默认 props；仅对 string component 生效，对象组件无默认注入 */
+function getComponentDefaultProps(
+  node: SchemaNode,
+  componentProps?: Record<string, Record<string, unknown>>
+): Record<string, unknown> {
+  if (typeof node.component !== 'string') return {}
+  return componentProps?.[node.component] ?? {}
+}
+
 /** 渲染单个 schema 节点为 VNode：含视觉容器 / formItem / row / 默认 4 个分支 */
 export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
   function renderToComponentInner(node: SchemaNode): VNode | string | VNode[] | undefined {
@@ -413,6 +423,7 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
       return h(
         Comp as never,
         {
+          ...getComponentDefaultProps(node, opts.componentProps),
           ...node.props,
           ...(node.disabled !== undefined ? { disabled: node.disabled } : {}),
           ...(node.key !== undefined && { key: node.key }),
@@ -473,6 +484,7 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
                   Comp as never,
                   {
                     ...eventBindings,
+                    ...getComponentDefaultProps(node, opts.componentProps),
                     ...node.props,
                     ...(node.disabled !== undefined ? { disabled: node.disabled } : {}),
                     ...(node.key !== undefined && { key: node.key }),
@@ -521,6 +533,7 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
         Comp as never,
         {
           ...eventBindings,
+          ...getComponentDefaultProps(node, opts.componentProps),
           ...node.props,
           ...(node.disabled !== undefined ? { disabled: node.disabled } : {}),
           ...(node.key !== undefined && { key: node.key }),

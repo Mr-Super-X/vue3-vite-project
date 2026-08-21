@@ -17,10 +17,10 @@ const ElRowStub = { name: 'ElRow', template: '<div class="el-row"><slot /></div>
 const ElColStub = { name: 'ElCol', template: '<div class="el-col"><slot /></div>' }
 const InputStub = {
   name: 'ElInput',
-  props: ['modelValue'],
+  props: ['modelValue', 'clearable'],
   emits: ['update:modelValue'],
   template:
-    '<input class="el-input-stub" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+    '<input class="el-input-stub" :value="modelValue" :data-clearable="clearable" @input="$emit(\'update:modelValue\', $event.target.value)" />',
 }
 const ElConfigProviderStub = { name: 'ElConfigProvider', template: '<div><slot /></div>' }
 
@@ -116,6 +116,72 @@ describe('XForm.vue', () => {
     await nextTick()
     const exposed = wrapper.vm as unknown as XFormExpose
     expect(exposed.getNames()).toEqual(['a'])
+  })
+
+  it('componentProps 按组件名注入默认 props', async () => {
+    const wrapper = mountXForm({
+      schema: [
+        { component: 'ElInput', name: 'a' },
+        { component: 'ElInput', name: 'b' },
+      ] as unknown as SchemaNode[],
+      componentProps: { ElInput: { clearable: true } },
+      components: { ElInput: InputStub },
+    } as never)
+    const inputs = wrapper.findAllComponents(InputStub)
+    expect(inputs).toHaveLength(2)
+    expect(inputs[0]!.props('clearable')).toBe(true)
+    expect(inputs[1]!.props('clearable')).toBe(true)
+  })
+
+  it('节点级 props 覆盖 componentProps 默认 props', async () => {
+    const wrapper = mountXForm({
+      schema: [
+        { component: 'ElInput', name: 'a', props: { clearable: false } },
+      ] as unknown as SchemaNode[],
+      componentProps: { ElInput: { clearable: true } },
+      components: { ElInput: InputStub },
+    } as never)
+    const input = wrapper.findComponent(InputStub)
+    expect(input.props('clearable')).toBe(false)
+  })
+
+  it('未配置 componentProps 时自动注入内置默认 props', async () => {
+    const wrapper = mountXForm({
+      schema: [{ component: 'ElInput', name: 'a' }] as unknown as SchemaNode[],
+      components: { ElInput: InputStub },
+    } as never)
+    const input = wrapper.findComponent(InputStub)
+    expect(input.props('clearable')).toBe(true)
+  })
+
+  it('未配置 componentProps 时快捷名 Input 也能命中内置默认 props', async () => {
+    const wrapper = mountXForm({
+      schema: [{ component: 'Input', name: 'a' }] as unknown as SchemaNode[],
+      components: { ElInput: InputStub },
+    } as never)
+    const input = wrapper.findComponent(InputStub)
+    expect(input.props('clearable')).toBe(true)
+  })
+
+  it('用户传入 componentProps 按组件名覆盖内置默认 props', async () => {
+    const wrapper = mountXForm({
+      schema: [{ component: 'ElInput', name: 'a' }] as unknown as SchemaNode[],
+      componentProps: { ElInput: { clearable: false } },
+      components: { ElInput: InputStub },
+    } as never)
+    const input = wrapper.findComponent(InputStub)
+    expect(input.props('clearable')).toBe(false)
+  })
+
+  it('用户传入未匹配组件的 componentProps 不影响默认行为', async () => {
+    const wrapper = mountXForm({
+      schema: [{ component: 'ElInput', name: 'a' }] as unknown as SchemaNode[],
+      componentProps: { Select: { filterable: true } },
+      components: { ElInput: InputStub },
+    } as never)
+    const input = wrapper.findComponent(InputStub)
+    // Input 仍按内置默认获得 clearable；Select 配置不影响 Input
+    expect(input.props('clearable')).toBe(true)
   })
 
   it('getNames() with includesIgnore=true returns all', async () => {

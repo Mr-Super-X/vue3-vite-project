@@ -10,6 +10,7 @@ import { applyDirectives } from './composables/apply-directives'
 import { useFormInstance } from './composables/use-form-instance'
 import { useRenderSchemaNode } from './composables/render-schema-node'
 import { matchTrigger } from './composables/match-trigger'
+import { DEFAULT_COMPONENT_PROPS } from './element-plus-adapter'
 import XFormDebugBanner from './XFormDebugBanner.vue'
 import type { ValidateResult } from './types'
 import 'element-plus/dist/index.css'
@@ -239,11 +240,18 @@ function renderToComponent(
 // useSchemaRenderer 内部 watch + 重渲染(整个 form 重新 mount)——简单可靠
 const currentBreakpoint = useCurrentBreakpoint()
 
+/** 合并内置默认 props 与用户传入配置：用户按组件名覆盖默认 */
+const mergedComponentProps = computed(() => ({
+  ...DEFAULT_COMPONENT_PROPS,
+  ...props.componentProps,
+}))
+
 const renderInner = useRenderSchemaNode({
   model: props.model,
   components: props.components,
   beforeChange: props.beforeChange,
   rules: props.rules,
+  componentProps: mergedComponentProps.value,
   render: renderToComponent,
   arrayActions: {
     addItem: (name: string, init?: Record<string, unknown>) => addItem(name, init),
