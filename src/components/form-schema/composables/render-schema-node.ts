@@ -111,6 +111,13 @@ export interface RenderSchemaNodeOptions {
     removeItem: (name: string, index: number) => void
     moveItem: (name: string, from: number, to: number) => void
   }
+  /** 字段事件触发跨字段校验(node + 事件类型) */
+  triggerCrossFieldValidator?: (
+    node: SchemaNode,
+    eventType: 'blur' | 'change'
+  ) => Promise<void> | void
+  /** v-model 值写入后主动触发(node + 新值)—— 用于跨字段校验,绕过 watch 不可靠问题 */
+  onValueChange?: (node: SchemaNode, newValue: unknown) => void
 }
 
 /**
@@ -295,7 +302,7 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
     }
     const Comp = resolveComponentFor(node.component, opts.components)
     const eventBindings = {
-      ...buildVModelBindings(node, opts.model, opts.beforeChange),
+      ...buildVModelBindings(node, opts.model, opts.beforeChange, opts.onValueChange),
       ...buildOnBindings(node, opts.model),
     }
     // 视觉容器（Card 等）
@@ -325,12 +332,30 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
         ? (resolveComponentFor(fi.component, opts.components) ?? ElFormItem)
         : ElFormItem
       const fiProps = fi?.props ?? {}
+      // 跨字段校验在 blur 时主动触发(否则 trigger: 'blur' 对 crossValidator 无效,
+      // 见 P0-4 文档说明)。triggerCrossFieldValidator 由 XForm.vue 注入,
+      // 内部读 model 跑 cross rules,成功清空错误,失败 setFieldError 红字
+      const triggerFn = opts.triggerCrossFieldValidator
+      const onBlur =
+        triggerFn && node.name
+          ? () => {
+              triggerFn(node, 'blur')
+            }
+          : undefined
+      const onChange =
+        triggerFn && node.name
+          ? () => {
+              triggerFn(node, 'change')
+            }
+          : undefined
       return h(
         FormItemComp as never,
         {
           label: node.label,
           prop: node.name,
           rules: compileRules(node.rules, opts.rules) as never,
+          ...(onBlur ? { onBlur } : {}),
+          ...(onChange ? { onChange } : {}),
           ...fiProps,
           ...(node.name || node.key ? { key: `fi-${node.name ?? node.key}` } : {}),
         } as never,

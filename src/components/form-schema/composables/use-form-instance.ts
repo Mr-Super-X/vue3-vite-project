@@ -1,4 +1,4 @@
-import { ref, type ComponentPublicInstance } from 'vue'
+import { ref, nextTick, type ComponentPublicInstance } from 'vue'
 import { validateWithZod } from './use-validate'
 import type { ZodType } from 'zod'
 
@@ -95,13 +95,17 @@ export function useFormInstance(
 
   /**
    * 手动设置某个字段的错误信息(el-form-item 自动展示红字提示)
-   * - 必须同时设置 validateState = 'error' + validateMessage = '...'
-   *   只设 message 不设 state,el-form-item 不渲染红字
+   * - 必须同时设置 validateState + validateMessage,只设 message 不设 state,el-form-item 不渲染红字
+   * - state 默认为 'error';校验中可传 'validating' 显示 loading 图标
    * - 通过 elFormRef.fields 数组按 prop 名找到对应 form-item
    * - fields 中的 field 来自 el-form-item 的 reactive 包装,属性赋值会触发 UI 更新
    * - 找不到对应字段时静默跳过(常见于 array 节点动态变化期间)
    */
-  function setFieldError(name: string, message: string): void {
+  function setFieldError(
+    name: string,
+    message: string,
+    state: '' | 'validating' | 'success' | 'error' = 'error'
+  ): void {
     const ef = elFormRef.value as unknown as {
       fields?: Array<{
         prop?: string
@@ -110,11 +114,32 @@ export function useFormInstance(
       }>
     } | null
     if (!ef?.fields) return
-    const field = ef.fields.find((f) => f.prop === name)
-    if (field) {
-      field.validateState = 'error'
-      field.validateMessage = message
-    }
+    const idx = ef.fields.findIndex((f) => f.prop === name)
+    if (idx < 0) return
+    const field = ef.fields[idx]
+    if (!field) return
+    // 1. 写入 validateState / validateMessage(formItem reactive 属性本身)
+    field.validateState = state
+    field.validateMessage = message
+    // 2. element-plus 2.x 内部 elForm.fields 是 shallowRef:
+    //    shallowRef 不追踪内部元素 reactive 变化,只追踪 .value 引用替换。
+    //    因此单纯写 fields[i].X 不会触发 UI 重渲染。
+    //    nextTick 后通过 splice 重建数组引用,强制 shallowRef trigger。
+    //    (参考: https://github.com/element-plus/element-plus/blob/main/packages/components/form/src/form.vue)
+    nextTick(() => {
+      const arr = ef.fields
+      if (!arr) return
+      // splice 替换全部:保持元素引用 + 替换数组引用,触发 shallowRef 响应
+      arr.splice(0, arr.length, ...arr)
+    })
+  }
+
+  /**
+   * 手动标记某个字段为校验中(el-form-item 显示 loading 图标)
+   * 典型用法:跨字段异步校验期间展示 loading,完成后用 setFieldError 切到 error 或 clearValidate 清空
+   */
+  function setFieldValidating(name: string): void {
+    setFieldError(name, '', 'validating')
   }
 
   return {
@@ -129,5 +154,6 @@ export function useFormInstance(
     removeItem,
     moveItem,
     setFieldError,
+    setFieldValidating,
   }
 }

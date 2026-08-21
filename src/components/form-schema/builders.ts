@@ -58,6 +58,35 @@ class NodeBuilder<C extends ComponentName, P = PropsByComponent[C]> {
     return this
   }
 
+  /** callback 风格 validator(async-validator 兼容,同步或异步均可)
+   *  - 多次调用会 push 多个 rule 到 rules 数组
+   *  - 典型 async 用法:fn 内部调用 cb(new Error(...)) 或 cb() 表示失败/通过 */
+  validator(
+    fn: (rule: unknown, value: unknown, cb: (err?: Error) => void) => void,
+    trigger: 'blur' | 'change' = 'blur'
+  ): this {
+    const n = this.node as { rules?: string | RuleItem | Array<string | RuleItem> }
+    const arr = Array.isArray(n.rules) ? n.rules : n.rules !== undefined ? [n.rules] : []
+    arr.push({ validator: fn as never, trigger })
+    n.rules = arr as never
+    return this
+  }
+
+  /** async 风格 validator 简写 —— 内部自动包成 callback 风格
+   *  - fn 必须**内部**调 cb(成功 cb() / 失败 cb(Error))
+   *  - 包装层不主动调 cb(避免覆盖 fn 内部调用)
+   *  - 仅在 fn 抛错/返回 rejected Promise 时调 cb(Error),防止 fn 忘记调 cb 导致 el-form 永久等待 */
+  asyncValidator(
+    fn: (rule: unknown, value: unknown, cb: (err?: Error) => void) => Promise<unknown>,
+    trigger: 'blur' | 'change' = 'blur'
+  ): this {
+    return this.validator((rule, value, cb) => {
+      fn(rule, value, cb).catch((err: unknown) =>
+        cb(err instanceof Error ? err : new Error(String(err)))
+      )
+    }, trigger)
+  }
+
   required(message = '必填'): this {
     const n = this.node as { rules?: RuleItem[] | string }
     if (Array.isArray(n.rules)) n.rules.push({ required: true, message, trigger: 'blur' })
@@ -121,6 +150,18 @@ function makeBuilder<C extends ComponentName>(
     }
     disabled(v: ReactionValue<boolean>) {
       return this._b.disabled(v)
+    }
+    validator(
+      fn: (rule: unknown, value: unknown, cb: (err?: Error) => void) => void,
+      trigger: 'blur' | 'change' = 'blur'
+    ) {
+      return this._b.validator(fn, trigger)
+    }
+    asyncValidator(
+      fn: (rule: unknown, value: unknown, cb: (err?: Error) => void) => Promise<unknown>,
+      trigger: 'blur' | 'change' = 'blur'
+    ) {
+      return this._b.asyncValidator(fn, trigger)
     }
     required(m?: string) {
       return this._b.required(m)

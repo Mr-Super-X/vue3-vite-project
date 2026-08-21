@@ -44,18 +44,24 @@ export interface RuleItem {
   max?: number | string
   message?: string
   validator?: (rule: unknown, value: unknown, cb: (err?: Error) => void) => void
-  trigger?: 'blur' | 'change' | (string | string[])[]
+  trigger?: 'blur' | 'change' | 'manual' | (string | string[])[]
+  /** async-validator 内置类型校验,如 'string' / 'email' / 'url' / 'number' 等 */
+  type?: string
   /** 跨字段依赖：声明当前规则依赖的其他字段名（取自同 model，支持 lodash 路径解析如 'items[0].qty'）
    *  - 单字段依赖：dependsOn: 'password'
    *  - 多字段依赖：dependsOn: ['password', 'confirmPassword']
    *  仅与 crossValidator 配合使用；单独写无意义 */
   dependsOn?: string | string[]
-  /** 跨字段校验函数（纯函数形式，替代 async-validator 的 callback validator）
+  /** 跨字段校验函数（替代 async-validator 的 callback validator，支持同步/异步）
    *  - 第 1 个参数：当前字段 value（lodash get 取自 model）
    *  - 后续参数：按 dependsOn 声明顺序传入依赖字段的 value
    *  - 返回 true 表示通过；返回 string 作为错误信息
+   *  - 返回 Promise<true | string> 支持异步校验（远程接口等场景），validateForm 会 await
    *  失败时由 form-schema 统一把 message 写入对应 form-item，无需 callback */
-  crossValidator?: (value: unknown, ...dependsOnValues: unknown[]) => true | string
+  crossValidator?: (
+    value: unknown,
+    ...dependsOnValues: unknown[]
+  ) => true | string | Promise<true | string>
 }
 
 /** reaction 字段值：字面量 / 函数 / 函数表达式字符串 */
@@ -281,13 +287,19 @@ export interface XFormExpose {
   getNames(includesIgnore?: boolean): string[]
   validate(): Promise<boolean>
   /** 详细校验：含 el-form 字段内规则错误 + 跨字段 crossValidator 错误（keyPath + message） */
-  validateDetail(): ValidateResult
+  validateDetail(): Promise<ValidateResult>
   clearValidate(): void
   resetFields(): void
   scrollToField(name: string): void
   validateWithZod(): { success: boolean; errors: import('zod').ZodError | null }
   /** 手动写入某个字段的错误信息（用于服务端 422 等场景） */
-  setFieldError(name: string, message: string): void
+  setFieldError(
+    name: string,
+    message: string,
+    state?: '' | 'validating' | 'success' | 'error'
+  ): void
+  /** 手动标记某个字段为校验中（el-form-item 显示 loading 图标） */
+  setFieldValidating(name: string): void
   /** 数组节点操作：push 一项（仅 ArrayNode 用） */
   addItem(name: string, init?: Record<string, unknown>): void
   /** 数组节点操作：删除指定行（仅 ArrayNode 用） */

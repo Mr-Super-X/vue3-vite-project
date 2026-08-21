@@ -164,3 +164,89 @@ describe('useRenderSchemaNode disabled 透传', () => {
     expect(result).toBeDefined()
   })
 })
+
+describe('useRenderSchemaNode blur/change 触发 crossValidator', () => {
+  // 找 form-item 的 onBlur / onChange 触发器
+  function findTrigger(vnode: unknown, type: 'onBlur' | 'onChange'): (() => void) | undefined {
+    if (!vnode || typeof vnode !== 'object') return undefined
+    const v = vnode as { props?: Record<string, unknown> }
+    return v.props?.[type] as (() => void) | undefined
+  }
+
+  it('form-item 同时挂 onBlur 和 onChange', () => {
+    const triggerFn = vi.fn()
+    const { opts } = makeOpts({ model: { a: 1, b: 2 } })
+    opts.triggerCrossFieldValidator = triggerFn
+    const render = useRenderSchemaNode(opts)
+    const node: SchemaNode = {
+      component: 'Input',
+      name: 'a',
+      rules: [
+        {
+          dependsOn: ['b'],
+          crossValidator: () => true as const,
+        },
+      ],
+    }
+    const result = render(node)
+    expect(findTrigger(result, 'onBlur')).toBeDefined()
+    expect(findTrigger(result, 'onChange')).toBeDefined()
+  })
+
+  it('blur 触发器传入 eventType="blur"', () => {
+    const triggerFn = vi.fn()
+    const { opts } = makeOpts({ model: { a: 1, b: 2 } })
+    opts.triggerCrossFieldValidator = triggerFn
+    const render = useRenderSchemaNode(opts)
+    const node: SchemaNode = {
+      component: 'Input',
+      name: 'a',
+      rules: [{ dependsOn: ['b'], crossValidator: () => true as const }],
+    }
+    const result = render(node)
+    findTrigger(result, 'onBlur')!()
+    expect(triggerFn).toHaveBeenCalledWith(node, 'blur')
+  })
+
+  it('change 触发器传入 eventType="change"', () => {
+    const triggerFn = vi.fn()
+    const { opts } = makeOpts({ model: { a: 1, b: 2 } })
+    opts.triggerCrossFieldValidator = triggerFn
+    const render = useRenderSchemaNode(opts)
+    const node: SchemaNode = {
+      component: 'Input',
+      name: 'a',
+      rules: [{ dependsOn: ['b'], crossValidator: () => true as const }],
+    }
+    const result = render(node)
+    findTrigger(result, 'onChange')!()
+    expect(triggerFn).toHaveBeenCalledWith(node, 'change')
+  })
+
+  it('未提供 triggerCrossFieldValidator 时不挂两个监听器(零开销)', () => {
+    const { opts } = makeOpts({ model: { email: '' } })
+    const render = useRenderSchemaNode(opts)
+    const node: SchemaNode = {
+      component: 'Input',
+      name: 'email',
+      rules: [{ dependsOn: ['b'], crossValidator: () => true as const }],
+    }
+    const result = render(node)
+    expect(findTrigger(result, 'onBlur')).toBeUndefined()
+    expect(findTrigger(result, 'onChange')).toBeUndefined()
+  })
+
+  it('无 name 的节点不挂两个监听器(无法定位字段)', () => {
+    const triggerFn = vi.fn()
+    const { opts } = makeOpts()
+    opts.triggerCrossFieldValidator = triggerFn
+    const render = useRenderSchemaNode(opts)
+    const node: SchemaNode = {
+      component: 'Card',
+      rules: [{ dependsOn: ['x'], crossValidator: () => 'fail' }],
+    }
+    const result = render(node)
+    expect(findTrigger(result, 'onBlur')).toBeUndefined()
+    expect(findTrigger(result, 'onChange')).toBeUndefined()
+  })
+})

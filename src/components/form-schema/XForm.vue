@@ -8,11 +8,12 @@ import { withHidden } from './composables/with-hidden'
 import { applyDirectives } from './composables/apply-directives'
 import { useFormInstance } from './composables/use-form-instance'
 import { useRenderSchemaNode } from './composables/render-schema-node'
+import { matchTrigger } from './composables/match-trigger'
 import XFormDebugBanner from './XFormDebugBanner.vue'
 import type { ValidateResult } from './types'
 import 'element-plus/dist/index.css'
 import { ElConfigProvider, ElForm, ElRow, ElCol } from 'element-plus'
-import type { SchemaNode, XFormProps, XFormExpose } from './types'
+import type { SchemaNode, XFormProps, XFormExpose, RuleItem } from './types'
 
 const props = defineProps<XFormProps>()
 const bem = createNamespace('x-form')
@@ -79,6 +80,7 @@ const {
   removeItem,
   moveItem,
   setFieldError,
+  setFieldValidating,
 } = useFormInstance(
   () => props.model,
   () => props.zodSchema
@@ -87,28 +89,36 @@ const {
 /**
  * XForm 校验入口：先跑 el-form 字段内规则（失败直接 false），成功后跑跨字段校验
  * - 跨字段校验失败时把错误写入对应 form-item（用户在 UI 看到）
+ * - 跨字段校验支持异步：crossValidator 返回 Promise<true | string> 时会自动 await
  * - 跨字段失败同时 console.error 列出所有错误 keyPath + message,便于调试
  * - el-form 未挂载时降级只跑跨字段校验（开发场景）
  */
-function validateForm(): Promise<boolean> {
-  return new Promise((resolve) => {
-    const m = props.model
-    if (!m) return resolve(true)
-    const ef = elFormRef.value
-    if (!ef?.validate) {
-      const result = runCrossFieldValidation(props.schema, m)
-      applyCrossErrors(result)
-      return resolve(result.isValid)
-    }
-    Promise.resolve(
-      ef.validate((valid: boolean) => {
-        if (!valid) return resolve(false)
-        const result = runCrossFieldValidation(props.schema, m)
-        applyCrossErrors(result)
-        resolve(result.isValid)
-      })
-    ).catch(() => resolve(false))
+async function validateForm(): Promise<boolean> {
+  const m = props.model
+  if (!m) return true
+  const ef = elFormRef.value
+  if (!ef?.validate) {
+    const result = await runCrossFieldValidation(props.schema, m)
+    applyCrossErrors(result)
+    return result.isValid
+  }
+  // 等待 el-form 字段内规则校验完成（element-plus 2.x validate 接受 callback）
+  const efValidate = ef.validate
+  if (!efValidate) {
+    const result = await runCrossFieldValidation(props.schema, m)
+    applyCrossErrors(result)
+    return result.isValid
+  }
+  const elValid = await new Promise<boolean>((resolve) => {
+    const maybePromise = efValidate((v: boolean) => resolve(v))
+    // 处理 el-form 2.x 即使传 callback 仍 reject errorsMap 的情况(避免 unhandled rejection)
+    Promise.resolve(maybePromise).catch(() => resolve(false))
   })
+  if (!elValid) return false
+  // 跑跨字段校验（可能含异步 crossValidator）
+  const result = await runCrossFieldValidation(props.schema, m)
+  applyCrossErrors(result)
+  return result.isValid
 }
 
 /** 把跨字段校验失败的错误写入对应 el-form-item（用户在 UI 看到），并 console.error 列出全部 */
@@ -121,12 +131,65 @@ function applyCrossErrors(result: ValidateResult): void {
   console.error('[XForm] cross field validation failed:', result.errors)
 }
 
-/** 详细校验（同步）：仅返回跨字段校验结果（不含 el-form 字段内错误——el-form 错误请用 validate() 拿） */
-function validateDetail(): ValidateResult {
+/** 详细校验：异步返回跨字段校验结果（含异步 crossValidator 等待） */
+async function validateDetail(): Promise<ValidateResult> {
   const m = props.model
   if (!m) return { isValid: true, errors: [] }
   return runCrossFieldValidation(props.schema, m)
 }
+
+/**
+ * 字段事件触发跨字段校验 —— 让 crossValidator 响应 trigger 配置
+ * - 遍历当前字段 rules,提取 dependsOn + crossValidator + trigger 配置
+ * - 检查 rule.trigger 与当前事件类型是否匹配:
+ *   - rule.trigger === eventType(blur/change)→ 跑该 rule
+ *   - rule.trigger 是数组包含 eventType → 跑该 rule
+ *   - rule.trigger 未指定 → 默认响应 blur(向后兼容现有 schema)
+ *   - rule.trigger 是 'manual' → 永远不响应 blur/change(只在 validateForm 时跑)
+ * - 跑 crossValidator(支持同步/异步)
+ * - 成功 → 清掉之前可能的红字
+ * - 失败 → setFieldError 红字提示
+ * - 跳过空值字段(空值交给普通 required 校验处理)
+ */
+async function triggerCrossFieldValidator(
+  node: SchemaNode,
+  eventType: 'blur' | 'change'
+): Promise<void> {
+  if (!node.name || !node.rules) return
+  const m = props.model
+  if (!m) return
+  const rules = Array.isArray(node.rules) ? node.rules : [node.rules]
+  const currentValue = get(m, node.name)
+  // 空值跳过 cross 校验(留给 required / type 规则)
+  if (currentValue === '' || currentValue === undefined || currentValue === null) return
+  for (const r of rules) {
+    if (typeof r !== 'object' || r === null) continue
+    const rule = r as RuleItem
+    if (!rule.crossValidator || !rule.dependsOn) continue
+    // trigger 字段过滤
+    if (!matchTrigger(rule.trigger, eventType)) continue
+    const depsList = (Array.isArray(rule.dependsOn) ? rule.dependsOn : [rule.dependsOn]).map(
+      (dep: string) => get(m, dep)
+    )
+    let result: true | string
+    try {
+      result = await Promise.resolve(rule.crossValidator(currentValue, ...depsList))
+    } catch (err) {
+      console.error('[XForm] crossValidator blur trigger threw:', err)
+      continue
+    }
+    if (result === true) {
+      setFieldError(node.name, '', '')
+    } else {
+      setFieldError(node.name, result)
+    }
+  }
+}
+
+/**
+ * 判断 rule.trigger 是否匹配当前事件类型 —— 已抽到 ./composables/match-trigger.ts 便于单测
+ * (XForm.vue SFC 无法 export,直接 import 复用)
+ */
 
 // 顶层节点列表（直接从 reactiveSchema 派生，含 reaction 修改后能触发重渲染）
 const topLevelNodes = computed<SchemaNode[]>(() => {
@@ -179,6 +242,13 @@ const renderInner = useRenderSchemaNode({
     removeItem: (name: string, index: number) => removeItem(name, index),
     moveItem: (name: string, from: number, to: number) => moveItem(name, from, to),
   },
+  // 字段事件触发 cross rules —— 让 crossValidator 响应 trigger 配置
+  triggerCrossFieldValidator: (node, eventType) => triggerCrossFieldValidator(node, eventType),
+  // v-model 值变化时主动调 triggerCrossFieldValidator(eventType='change')
+  // 绕过 watch 不可靠问题(vue Proxy track  + watch getter 依赖追踪的陷阱)
+  onValueChange: (node, _newValue) => {
+    triggerCrossFieldValidator(node, 'change')
+  },
 })
 
 function getNames(includesIgnore = false): string[] {
@@ -209,6 +279,7 @@ defineExpose({
   scrollToField,
   validateWithZod: validateFormWithZod,
   setFieldError,
+  setFieldValidating,
   addItem,
   removeItem,
   moveItem,
@@ -218,7 +289,11 @@ defineExpose({
 <template>
   <ElConfigProvider>
     <div :class="bem.b()">
-      <ElForm ref="elFormRef" :model="(props.model ?? {}) as Record<string, unknown>">
+      <ElForm
+        ref="elFormRef"
+        :model="(props.model ?? {}) as Record<string, unknown>"
+        :validate-trigger="['change', 'blur']"
+      >
         <ElRow v-if="topLevelRow || topLevelColumn" :gutter="(topLevelRow?.gutter ?? 0) as never">
           <ElCol v-for="(node, i) in topLevelNodes" :key="i" :span="topLevelColSpan">
             <component :is="renderToComponent(node)" />

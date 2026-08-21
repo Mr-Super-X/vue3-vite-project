@@ -6,6 +6,16 @@
  * 1. 密码 = 确认密码（dependsOn: ['password']）
  * 2. 开始日期 ≤ 结束日期（双向：互相依赖）
  * 3. 主联系人 / 备用联系人不能同时为空（A xor B）
+ *
+ * ⚠️ 已知限制（element-plus 2.14 shallowRef 内部响应式限制）:
+ * - 密码 / 确认密码等 Input 字段:失焦立即实时校验 ✅
+ * - 日期 / Select / Cascader 等复杂控件:跨字段红字**只在点击保存时显示**(失焦不显示)
+ *   - v-model 写入 + crossValidator 跑通,但 element-plus 2.x 内部 setFieldError 不触发 UI 重渲染
+ *   - 这是 element-plus 自身的实现限制,form-schema 已尽力(提供 v-model 主动触发 + nextTick splice)
+ *   - 后续可通过升级 element-plus 或改造 setFieldError 集成方式解决
+ *
+ * 实际校验仍生效:点击「保存」时 validateForm() 跑 el-form.validate + runCrossFieldValidation,
+ * 失败时 setFieldError 写入错误 + toast 提示
  */
 import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
@@ -23,6 +33,11 @@ const CONTACT_OPTIONS = [
   { value: 'phone', label: '手机' },
   { value: 'wechat', label: '微信' },
 ]
+
+/** 共享校验函数 —— validator 和 crossValidator 共用同一份逻辑,避免漂移 */
+function checkPasswordMatch(value: unknown, password: unknown): true | string {
+  return value === password || '两次密码不一致'
+}
 
 const schema: SchemaNode = {
   column: 2,
@@ -42,12 +57,20 @@ const schema: SchemaNode = {
       props: { type: 'password', placeholder: '再次输入密码', clearable: true },
       rules: [
         { required: true, message: '请再次输入密码', trigger: 'blur' },
+        // blur 触发的单字段校验 —— 实时反馈(走 el-form validate 流程)
+        {
+          validator: (_rule: unknown, value: unknown, cb: (err?: Error) => void) => {
+            const result = checkPasswordMatch(value, model.password)
+            cb(result === true ? undefined : new Error(result))
+          },
+          trigger: 'blur',
+        },
+        // 提交时跨字段兜底 —— crossValidator 仅在 validateForm() 入口触发
+        // 保留是为了：1) 提交时再过一遍最新值;2) 演示 crossValidator 用法
         {
           dependsOn: ['password'],
-          // 返回 true = 通过；返回 string = 错误信息
           crossValidator: (value: unknown, password: unknown) =>
-            value === password || '两次密码不一致',
-          trigger: 'blur',
+            checkPasswordMatch(value, password),
         },
       ],
     },
@@ -56,7 +79,22 @@ const schema: SchemaNode = {
       name: 'startDate',
       component: 'DatePicker',
       props: { valueFormat: 'YYYY-MM-DD', placeholder: '选择开始日期' },
-      rules: [{ required: true, message: '请选择开始日期', trigger: 'change' }],
+      rules: [
+        { required: true, message: '请选择开始日期', trigger: 'change' },
+        // 反向校验:startDate 失焦时检查 startDate ≤ endDate
+        // 注:crossValidator 只在该字段失焦时跑,所以 startDate 失焦时
+        // 只有 startDate 自己会红字 —— endDate 不会自动反向红字
+        // (实现"改 A 让 B 自动红字"需要 reaction 联动,P1 阶段)
+        {
+          dependsOn: ['endDate'],
+          crossValidator: (value: unknown, endDate: unknown) =>
+            !value ||
+            !endDate ||
+            (value as string) <= (endDate as string) ||
+            '开始日期不能晚于结束日期',
+          trigger: 'change',
+        },
+      ],
     },
     {
       label: '结束日期',
@@ -131,9 +169,9 @@ async function onSave() {
   })
 }
 
-/** 演示 validateDetail：同步返回所有跨字段错误（用于调试或自定义展示） */
-function onInspectDetail() {
-  const detail = formRef.value?.validateDetail()
+/** 演示 validateDetail：异步返回所有跨字段错误（用于调试或自定义展示） */
+async function onInspectDetail() {
+  const detail = await formRef.value?.validateDetail()
   if (!detail) return
   if (detail.isValid) {
     ElMessage.success('跨字段校验通过')

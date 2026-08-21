@@ -1,6 +1,11 @@
 import { describe, it, expect, vi } from 'vitest'
 import { z } from 'zod'
-import { validate, validateWithZod, runCrossFieldValidation } from './use-validate'
+import {
+  validate,
+  validateWithZod,
+  runCrossFieldValidation,
+  collectCrossRuleFields,
+} from './use-validate'
 
 describe('validate(schema, opts?)', () => {
   it('returns isValid=true for valid schema', () => {
@@ -107,14 +112,14 @@ describe('validateWithZod(zodSchema, formData)', () => {
 })
 
 describe('runCrossFieldValidation(schema, model)', () => {
-  it('returns isValid=true when no crossValidator rules', () => {
+  it('returns isValid=true when no crossValidator rules', async () => {
     const schema = { component: 'Input', name: 'email' }
-    const result = runCrossFieldValidation(schema, { email: 'a@b.com' })
+    const result = await runCrossFieldValidation(schema, { email: 'a@b.com' })
     expect(result.isValid).toBe(true)
     expect(result.errors).toEqual([])
   })
 
-  it('passes when crossValidator returns true', () => {
+  it('passes when crossValidator returns true', async () => {
     const schema = {
       component: 'Input',
       name: 'confirmPassword',
@@ -127,10 +132,10 @@ describe('runCrossFieldValidation(schema, model)', () => {
       ],
     }
     const model = { password: 'abc', confirmPassword: 'abc' }
-    expect(runCrossFieldValidation(schema, model).isValid).toBe(true)
+    expect((await runCrossFieldValidation(schema, model)).isValid).toBe(true)
   })
 
-  it('fails with returned message when crossValidator returns string', () => {
+  it('fails with returned message when crossValidator returns string', async () => {
     const schema = {
       component: 'Input',
       name: 'confirmPassword',
@@ -143,14 +148,14 @@ describe('runCrossFieldValidation(schema, model)', () => {
       ],
     }
     const model = { password: 'abc', confirmPassword: 'xyz' }
-    const result = runCrossFieldValidation(schema, model)
+    const result = await runCrossFieldValidation(schema, model)
     expect(result.isValid).toBe(false)
     expect(result.errors).toHaveLength(1)
     expect(result.errors[0]?.message).toBe('两次密码不一致')
     expect(result.errors[0]?.keyPath).toContain('confirmPassword')
   })
 
-  it('handles multiple dependsOn fields (array form)', () => {
+  it('handles multiple dependsOn fields (array form)', async () => {
     const schema = {
       component: 'Input',
       name: 'c',
@@ -162,12 +167,12 @@ describe('runCrossFieldValidation(schema, model)', () => {
         },
       ],
     }
-    expect(runCrossFieldValidation(schema, { a: 1, b: 2, c: 3 }).isValid).toBe(true)
-    const fail = runCrossFieldValidation(schema, { a: 1, b: 2, c: 1 })
+    expect((await runCrossFieldValidation(schema, { a: 1, b: 2, c: 3 })).isValid).toBe(true)
+    const fail = await runCrossFieldValidation(schema, { a: 1, b: 2, c: 1 })
     expect(fail.isValid).toBe(false)
   })
 
-  it('handles single dependsOn (string form)', () => {
+  it('handles single dependsOn (string form)', async () => {
     const schema = {
       component: 'Input',
       name: 'b',
@@ -179,11 +184,11 @@ describe('runCrossFieldValidation(schema, model)', () => {
         },
       ],
     }
-    expect(runCrossFieldValidation(schema, { a: 1, b: 2 }).isValid).toBe(true)
-    expect(runCrossFieldValidation(schema, { a: 5, b: 2 }).isValid).toBe(false)
+    expect((await runCrossFieldValidation(schema, { a: 1, b: 2 })).isValid).toBe(true)
+    expect((await runCrossFieldValidation(schema, { a: 5, b: 2 })).isValid).toBe(false)
   })
 
-  it('expands array nodes: applies itemSchema rules per array element', () => {
+  it('expands array nodes: applies itemSchema rules per array element', async () => {
     const schema = {
       component: 'Card',
       children: [
@@ -210,18 +215,18 @@ describe('runCrossFieldValidation(schema, model)', () => {
       items: [{ min: 1 }, { min: 2 }, { min: 3 }],
       max: 5,
     }
-    expect(runCrossFieldValidation(schema, model).isValid).toBe(true)
+    expect((await runCrossFieldValidation(schema, model)).isValid).toBe(true)
 
     const failModel = {
       items: [{ min: 1 }, { min: 9 }],
       max: 5,
     }
-    const result = runCrossFieldValidation(schema, failModel)
+    const result = await runCrossFieldValidation(schema, failModel)
     expect(result.isValid).toBe(false)
     expect(result.errors[0]?.keyPath).toContain('items[1].min')
   })
 
-  it('skips rules that have crossValidator but no dependsOn', () => {
+  it('skips rules that have crossValidator but no dependsOn', async () => {
     const schema = {
       component: 'Input',
       name: 'a',
@@ -232,11 +237,11 @@ describe('runCrossFieldValidation(schema, model)', () => {
         } as never,
       ],
     }
-    const result = runCrossFieldValidation(schema, { a: null })
+    const result = await runCrossFieldValidation(schema, { a: null })
     expect(result.isValid).toBe(true)
   })
 
-  it('console.error and skips rule when crossValidator throws', () => {
+  it('console.error and skips rule when crossValidator throws', async () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const schema = {
       component: 'Input',
@@ -250,13 +255,13 @@ describe('runCrossFieldValidation(schema, model)', () => {
         },
       ],
     }
-    const result = runCrossFieldValidation(schema, { a: 1, b: 2 })
+    const result = await runCrossFieldValidation(schema, { a: 1, b: 2 })
     expect(result.isValid).toBe(true)
     expect(spy).toHaveBeenCalled()
     spy.mockRestore()
   })
 
-  it('aggregates multiple errors', () => {
+  it('aggregates multiple errors', async () => {
     const schema = {
       component: 'Card',
       children: [
@@ -276,11 +281,11 @@ describe('runCrossFieldValidation(schema, model)', () => {
         },
       ],
     }
-    const result = runCrossFieldValidation(schema, { a: 1, b: 2, c: 3, d: 4 })
+    const result = await runCrossFieldValidation(schema, { a: 1, b: 2, c: 3, d: 4 })
     expect(result.errors).toHaveLength(2)
   })
 
-  it('uses lodash path resolution (keys with dots)', () => {
+  it('uses lodash path resolution (keys with dots)', async () => {
     const schema = {
       component: 'Input',
       name: 'items[0].qty',
@@ -293,12 +298,12 @@ describe('runCrossFieldValidation(schema, model)', () => {
       ],
     }
     const model = { items: [{ qty: 3 }], maxQty: 5 }
-    expect(runCrossFieldValidation(schema, model).isValid).toBe(true)
-    const fail = runCrossFieldValidation(schema, { items: [{ qty: 9 }], maxQty: 5 })
+    expect((await runCrossFieldValidation(schema, model)).isValid).toBe(true)
+    const fail = await runCrossFieldValidation(schema, { items: [{ qty: 9 }], maxQty: 5 })
     expect(fail.isValid).toBe(false)
   })
 
-  it('skips crossValidator when node has no name', () => {
+  it('skips crossValidator when node has no name', async () => {
     const schema = {
       component: 'Card',
       children: [
@@ -309,7 +314,183 @@ describe('runCrossFieldValidation(schema, model)', () => {
         },
       ],
     }
-    const result = runCrossFieldValidation(schema, { a: 1 })
+    const result = await runCrossFieldValidation(schema, { a: 1 })
     expect(result.isValid).toBe(true)
+  })
+
+  // ============ 异步 crossValidator 测试 ============
+
+  it('awaits crossValidator returning Promise<true>', async () => {
+    const schema = {
+      component: 'Input',
+      name: 'username',
+      rules: [
+        {
+          dependsOn: 'reserved',
+          crossValidator: async (value: unknown) => {
+            await new Promise((r) => setTimeout(r, 10))
+            return (value === 'admin' ? '用户名已保留' : true) as true | string
+          },
+        },
+      ],
+    }
+    expect(
+      (await runCrossFieldValidation(schema, { username: 'admin', reserved: '' })).isValid
+    ).toBe(false)
+    expect((await runCrossFieldValidation(schema, { username: 'foo', reserved: '' })).isValid).toBe(
+      true
+    )
+  })
+
+  it('console.error and skips when async crossValidator rejects', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const schema = {
+      component: 'Input',
+      name: 'a',
+      rules: [
+        {
+          dependsOn: 'b',
+          crossValidator: async () => {
+            throw new Error('remote down')
+          },
+        },
+      ],
+    }
+    const result = await runCrossFieldValidation(schema, { a: 1, b: 2 })
+    expect(result.isValid).toBe(true)
+    expect(spy).toHaveBeenCalled()
+    spy.mockRestore()
+  })
+
+  it('awaits multiple async crossValidators sequentially', async () => {
+    const order: string[] = []
+    const schema = {
+      component: 'Card',
+      children: [
+        {
+          component: 'Input',
+          name: 'a',
+          rules: [
+            {
+              dependsOn: 'b',
+              crossValidator: async () => {
+                await new Promise((r) => setTimeout(r, 5))
+                order.push('a')
+                return true as const
+              },
+            },
+          ],
+        },
+        {
+          component: 'Input',
+          name: 'c',
+          rules: [
+            {
+              dependsOn: 'd',
+              crossValidator: async () => {
+                await new Promise((r) => setTimeout(r, 5))
+                order.push('c')
+                return true as const
+              },
+            },
+          ],
+        },
+      ],
+    }
+    await runCrossFieldValidation(schema, { a: 1, b: 2, c: 3, d: 4 })
+    expect(order).toEqual(['a', 'c'])
+  })
+})
+
+describe('collectCrossRuleFields(schema)', () => {
+  it('空 schema 返回空数组', () => {
+    expect(collectCrossRuleFields({ component: 'Input', name: 'a' })).toEqual([])
+    expect(collectCrossRuleFields(undefined)).toEqual([])
+    expect(collectCrossRuleFields('text')).toEqual([])
+  })
+
+  it('顶层节点含 cross rule 被收集', () => {
+    const schema = {
+      component: 'Input',
+      name: 'a',
+      rules: [{ dependsOn: ['b'], crossValidator: () => true as const }],
+    }
+    expect(collectCrossRuleFields(schema)).toEqual([schema])
+  })
+
+  it('无 cross rule 的节点不收集', () => {
+    const schema = {
+      component: 'Input',
+      name: 'a',
+      rules: [{ required: true }], // 无 crossValidator
+    }
+    expect(collectCrossRuleFields(schema)).toEqual([])
+  })
+
+  it('递归 children 中的 cross rule 节点', () => {
+    const a = {
+      component: 'Input',
+      name: 'a',
+      rules: [{ dependsOn: ['b'], crossValidator: () => true as const }],
+    }
+    const schema = {
+      children: [a, { component: 'Input', name: 'b' }],
+    }
+    expect(collectCrossRuleFields(schema)).toEqual([a])
+  })
+
+  it('递归 array.itemSchema 中的 cross rule 节点', () => {
+    const item = {
+      component: 'Input',
+      name: 'qty',
+      rules: [{ dependsOn: ['max'], crossValidator: () => true as const }],
+    }
+    const schema = {
+      children: [
+        {
+          kind: 'array' as const,
+          name: 'items',
+          array: { itemSchema: item },
+        },
+      ],
+    }
+    expect(collectCrossRuleFields(schema)).toEqual([item])
+  })
+
+  it('收集多个 cross rule 节点', () => {
+    const a = {
+      component: 'Input',
+      name: 'a',
+      rules: [{ dependsOn: ['b'], crossValidator: () => true as const }],
+    }
+    const c = {
+      component: 'Input',
+      name: 'c',
+      rules: [{ dependsOn: ['d'], crossValidator: () => true as const }],
+    }
+    const schema = {
+      children: [a, { component: 'Input', name: 'b' }, c],
+    }
+    expect(collectCrossRuleFields(schema)).toHaveLength(2)
+    expect(collectCrossRuleFields(schema)).toContain(a)
+    expect(collectCrossRuleFields(schema)).toContain(c)
+  })
+
+  it('无 name 的节点即使有 cross rule 也不收集(无法定位字段)', () => {
+    const schema = {
+      component: 'Card',
+      // 无 name
+      rules: [{ dependsOn: ['x'], crossValidator: () => 'fail' }],
+    }
+    expect(collectCrossRuleFields(schema)).toEqual([])
+  })
+
+  it('数组 schema 自动 wrap children 后递归', () => {
+    const a = {
+      component: 'Input',
+      name: 'a',
+      rules: [{ dependsOn: ['b'], crossValidator: () => true as const }],
+    }
+    expect(collectCrossRuleFields([a])).toEqual([a])
   })
 })

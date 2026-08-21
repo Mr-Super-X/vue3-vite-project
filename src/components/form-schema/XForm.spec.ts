@@ -3,6 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { reactive, nextTick } from 'vue'
 import type { SchemaNode, XFormExpose } from './types'
 import XForm from './XForm.vue'
+import XFormSource from './XForm.vue?raw'
 
 const ElFormStub = {
   name: 'ElForm',
@@ -272,5 +273,39 @@ describe('buildVModelBindings (unit)', () => {
       model,
     } as never)
     expect(wrapper.exists()).toBe(true)
+  })
+})
+
+describe('XForm.vue validate-trigger 回归保护', () => {
+  /**
+   * 防止有人把 XForm.vue 的 :validate-trigger="['change', 'blur']" 删掉或改回默认值,
+   * 那会导致 blur 失焦不自动校验,async validator 的 loading 图标不会显示,
+   * 用户必须点保存才能触发校验(P0-4 发现的 bug)。
+   *
+   * 这是源码级静态断言：保护模板里的配置不被误删
+   * - vitest 下用 ?raw 导入 XForm.vue 源文件,不依赖 fs/path 解析
+   * - regex 匹配要求 :validate-trigger="['change', 'blur']" 完整存在
+   */
+  it("XForm.vue 模板必须包含 :validate-trigger=\"['change', 'blur']\"", () => {
+    expect(XFormSource).toMatch(
+      /validate-trigger\s*=\s*["']\[\s*['"]change['"]\s*,\s*['"]blur['"]\s*\]['"]/
+    )
+  })
+
+  /**
+   * 补充断言:确保 validate-trigger 是绑在 <ElForm> 标签上,而非其他标签
+   * - 解析 XForm.vue 模板,找到 <ElForm ... > 标签起始行,验证 validate-trigger 在该标签的属性里
+   * - 防止有人把 :validate-trigger 误移到 <ElFormItem> 或其他标签
+   */
+  it(':validate-trigger 必须绑在 <ElForm> 标签上(而非 form-item 或其他)', () => {
+    // 找到 <ElForm 起始的多行标签
+    // 注意:模板属性里可能有泛型 `Record<string, unknown>` 的 `>`,会被简单 regex 误判为标签结束
+    // 用 `\n\s+>` 匹配换行后带缩进的 `>`(即标签结束位置)
+    const elFormMatch = XFormSource.match(/<ElForm\b[\s\S]*?\n\s+>/)
+    expect(elFormMatch).not.toBeNull()
+    const elFormTag = elFormMatch![0]
+    expect(elFormTag).toMatch(
+      /validate-trigger\s*=\s*["']\[\s*['"]change['"]\s*,\s*['"]blur['"]\s*\]['"]/
+    )
   })
 })

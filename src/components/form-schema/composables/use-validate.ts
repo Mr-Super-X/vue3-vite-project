@@ -67,28 +67,32 @@ export function validateWithZod(
  * 运行时跨字段校验 —— 遍历 schema 中含 crossValidator 的节点（含 array.itemSchema 展开）
  * - 普通节点：node.name 直接用 lodash get 取 model 值
  * - 数组节点：按 model[name] 当前长度展开每个数组元素，把 itemSchema 内子节点 name 重写为 items[i].subName
- * - 失败时（crossValidator 返回非 true）收集到 errors
+ * - crossValidator 支持同步或异步：返回值可为 true / string / Promise<true | string>
+ * - 失败时（返回非 true）收集到 errors
  * - crossValidator 抛错时 console.error 并跳过(避免一条错误规则阻断整张表单)
+ * - 异步函数统一用 Promise.resolve 包一层：同步值通过 Promise.resolve 立即 resolve,不增加等待时间
  */
-export function runCrossFieldValidation(
+export async function runCrossFieldValidation(
   schema: SchemaNode | SchemaNode[] | string | undefined,
   model: Record<string, unknown>
-): ValidateResult {
+): Promise<ValidateResult> {
   const errors: ValidateResult['errors'] = []
-  traverseCross(schema, model, [], errors)
+  await traverseCross(schema, model, [], errors)
   return { isValid: errors.length === 0, errors }
 }
 
-function traverseCross(
+async function traverseCross(
   node: SchemaNode | SchemaNode[] | string | undefined,
   model: Record<string, unknown>,
   keyPath: (string | number)[],
   errors: ValidateResult['errors']
-): void {
+): Promise<void> {
   if (!node) return
   if (typeof node === 'string') return
   if (Array.isArray(node)) {
-    node.forEach((n, i) => traverseCross(n, model, [...keyPath, i], errors))
+    for (let i = 0; i < node.length; i++) {
+      await traverseCross(node[i], model, [...keyPath, i], errors)
+    }
     return
   }
 
@@ -96,58 +100,62 @@ function traverseCross(
   if (node.kind === 'array' && node.array && node.name) {
     const listRaw = model[node.name]
     if (Array.isArray(listRaw)) {
-      listRaw.forEach((_row, i) => {
-        traverseArrayItem(node.array!.itemSchema, `${node.name}[${i}]`, model, errors)
-      })
+      for (let i = 0; i < listRaw.length; i++) {
+        await traverseArrayItem(node.array!.itemSchema, `${node.name}[${i}]`, model, errors)
+      }
     }
     return
   }
 
   // 普通节点：检查 rules 内的 crossValidator
   if (node.rules && node.name) {
-    runNodeCrossRules(node, model, keyPath, errors)
+    await runNodeCrossRules(node, model, keyPath, errors)
   }
 
   // 递归 children / formItem.slots
   if (node.children) {
     if (Array.isArray(node.children)) {
-      node.children.forEach((c, i) => traverseCross(c, model, [...keyPath, 'children', i], errors))
+      for (let i = 0; i < node.children.length; i++) {
+        await traverseCross(node.children[i], model, [...keyPath, 'children', i], errors)
+      }
     } else if (typeof node.children === 'object') {
-      traverseCross(node.children, model, [...keyPath, 'children'], errors)
+      await traverseCross(node.children, model, [...keyPath, 'children'], errors)
     }
   }
   if (node.formItem && typeof node.formItem === 'object' && node.formItem.slots) {
     for (const [k, v] of Object.entries(node.formItem.slots)) {
       if (v && typeof v === 'object') {
-        traverseCross(v, model, [...keyPath, 'formItem', 'slots', k], errors)
+        await traverseCross(v, model, [...keyPath, 'formItem', 'slots', k], errors)
       }
     }
   }
 }
 
-function traverseArrayItem(
+async function traverseArrayItem(
   sub: SchemaNode | SchemaNode[] | string | undefined,
   prefix: string,
   model: Record<string, unknown>,
   errors: ValidateResult['errors']
-): void {
+): Promise<void> {
   if (!sub) return
   if (typeof sub === 'string') return
   if (Array.isArray(sub)) {
-    sub.forEach((s) => traverseArrayItem(s, prefix, model, errors))
+    for (const s of sub) {
+      await traverseArrayItem(s, prefix, model, errors)
+    }
     return
   }
   // 把子节点 name 拼成 items[i].subName 形式
   const rewritten: SchemaNode = sub.name ? { ...sub, name: `${prefix}.${sub.name}` } : sub
-  traverseCross(rewritten, model, [], errors)
+  await traverseCross(rewritten, model, [], errors)
 }
 
-function runNodeCrossRules(
+async function runNodeCrossRules(
   node: SchemaNode,
   model: Record<string, unknown>,
   keyPath: (string | number)[],
   errors: ValidateResult['errors']
-): void {
+): Promise<void> {
   const rules = node.rules
   if (!rules) return
   const arr = Array.isArray(rules) ? rules : [rules]
@@ -162,13 +170,64 @@ function runNodeCrossRules(
     )
     let result: true | string
     try {
-      result = rule.crossValidator(value, ...depsList)
+      // 兼容同步和异步返回值
+      result = await Promise.resolve(rule.crossValidator(value, ...depsList))
     } catch (err) {
       console.error('[XForm] crossValidator threw:', err)
       continue
     }
     if (result !== true) {
       errors.push({ keyPath: [...keyPath, node.name], message: result })
+    }
+  }
+}
+
+/**
+ * 收集 schema 中所有含 cross rule 的字段节点
+ * - 递归 children / formItem.slots / slots / array.itemSchema
+ * - 用于 XForm setup 时为这些字段建立独立 watcher(model 变化触发 cross rules)
+ */
+export function collectCrossRuleFields(
+  schema: SchemaNode | SchemaNode[] | string | undefined
+): SchemaNode[] {
+  const result: SchemaNode[] = []
+  traverse(schema, [], (n) => {
+    if (!n.rules || !n.name) return
+    const arr = Array.isArray(n.rules) ? n.rules : [n.rules]
+    const hasCross = arr.some(
+      (r) => typeof r === 'object' && r !== null && 'crossValidator' in r && 'dependsOn' in r
+    )
+    if (hasCross) result.push(n)
+  })
+  return result
+
+  function traverse(
+    node: SchemaNode | SchemaNode[] | string | undefined,
+    keyPath: (string | number)[],
+    visit: (n: SchemaNode) => void
+  ): void {
+    if (!node || typeof node === 'string') return
+    if (Array.isArray(node)) {
+      node.forEach((c, i) => traverse(c, [...keyPath, i], visit))
+      return
+    }
+    visit(node)
+    if (node.kind === 'array' && node.array) {
+      traverse(node.array.itemSchema, [...keyPath, 'array', 'itemSchema'], visit)
+    }
+    if (node.children) {
+      if (Array.isArray(node.children)) {
+        node.children.forEach((c, i) => traverse(c, [...keyPath, 'children', i], visit))
+      } else if (typeof node.children === 'object') {
+        traverse(node.children, [...keyPath, 'children'], visit)
+      }
+    }
+    if (node.formItem && typeof node.formItem === 'object' && node.formItem.slots) {
+      for (const [k, v] of Object.entries(node.formItem.slots)) {
+        if (v && typeof v === 'object') {
+          traverse(v, [...keyPath, 'formItem', 'slots', k], visit)
+        }
+      }
     }
   }
 }

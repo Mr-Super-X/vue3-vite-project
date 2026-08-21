@@ -146,3 +146,86 @@ describe('xInput() .disabled() 链式', () => {
     expect(node.disabled).toBeUndefined()
   })
 })
+
+describe('xInput() .validator() / .asyncValidator() 链式', () => {
+  it('.validator(fn) 添加 callback 风格 validator', () => {
+    const fn = (_rule: unknown, _value: unknown, _cb: (err?: Error) => void) => {}
+    const node = xInput('email').validator(fn).build()
+    const rules = node.rules as Array<{ validator: unknown; trigger: string }>
+    expect(rules).toHaveLength(1)
+    expect(rules[0]?.validator).toBe(fn)
+    expect(rules[0]?.trigger).toBe('blur')
+  })
+
+  it('.validator(fn, trigger) 自定义 trigger', () => {
+    const fn = (_rule: unknown, _value: unknown, _cb: (err?: Error) => void) => {}
+    const node = xInput('email').validator(fn, 'change').build()
+    const rules = node.rules as Array<{ trigger: string }>
+    expect(rules[0]?.trigger).toBe('change')
+  })
+
+  it('.validator 多次调用 push 多条 rule', () => {
+    const fn1 = (_rule: unknown, _value: unknown, _cb: (err?: Error) => void) => {}
+    const fn2 = (_rule: unknown, _value: unknown, _cb: (err?: Error) => void) => {}
+    const node = xInput('email').validator(fn1).validator(fn2).build()
+    const rules = node.rules as Array<{ validator: unknown }>
+    expect(rules).toHaveLength(2)
+  })
+
+  it('.asyncValidator(fn) 把 Promise 返回值包成 cb 风格', async () => {
+    const asyncFn = async (_rule: unknown, value: unknown, cb: (err?: Error) => void) => {
+      await new Promise((r) => setTimeout(r, 5))
+      cb(value === 'admin' ? new Error('用户名已被占用') : undefined)
+    }
+    const node = xInput('username').asyncValidator(asyncFn).build()
+    const rules = node.rules as Array<{
+      validator: (rule: unknown, value: unknown, cb: (err?: Error) => void) => void
+    }>
+    expect(rules).toHaveLength(1)
+
+    // 测试通过路径
+    await new Promise<void>((resolve) => {
+      rules[0]!.validator({}, 'foo', (err) => {
+        expect(err).toBeUndefined()
+        resolve()
+      })
+    })
+
+    // 测试失败路径
+    await new Promise<void>((resolve) => {
+      rules[0]!.validator({}, 'admin', (err) => {
+        expect(err).toBeInstanceOf(Error)
+        expect((err as Error).message).toBe('用户名已被占用')
+        resolve()
+      })
+    })
+  })
+
+  it('.asyncValidator 拒绝(rejected Promise) 转成 Error 传给 cb', async () => {
+    const asyncFn = async (_rule: unknown, _value: unknown, cb: (err?: Error) => void) => {
+      throw new Error('network down')
+      // // unreachable
+      cb()
+    }
+    const node = xInput('username').asyncValidator(asyncFn).build()
+    const rules = node.rules as Array<{
+      validator: (rule: unknown, value: unknown, cb: (err?: Error) => void) => void
+    }>
+    await new Promise<void>((resolve) => {
+      rules[0]!.validator({}, 'foo', (err) => {
+        expect(err).toBeInstanceOf(Error)
+        expect((err as Error).message).toBe('network down')
+        resolve()
+      })
+    })
+  })
+
+  it('.asyncValidator 和 .required 等其他链式方法可组合', () => {
+    const fn = async (_r: unknown, _v: unknown, _cb: (err?: Error) => void) => {}
+    const node = xInput('email').required().asyncValidator(fn, 'change').build()
+    const rules = node.rules as Array<Record<string, unknown>>
+    expect(rules.length).toBeGreaterThanOrEqual(2)
+    expect(rules.some((r) => r.required)).toBe(true)
+    expect(rules.some((r) => r.trigger === 'change')).toBe(true)
+  })
+})
