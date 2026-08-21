@@ -16,7 +16,7 @@ import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import xFormSource from './XFormReaction.vue?raw'
 
-const bem = createNamespace('demo-dgm-form-reaction')
+const bem = createNamespace('demo-x-form-reaction')
 
 // 模拟远程搜索:返回基于 keyword 的 mock 结果(中英文都支持)
 function mockRemoteSearch(keyword: string): string[] {
@@ -208,7 +208,7 @@ async function copySchema() {
 </template>
 
 <style lang="scss">
-.#{$BEM_PREFIX}-demo-dgm-form-reaction {
+.#{$BEM_PREFIX}-demo-x-form-reaction {
   &__actions {
     margin-top: 16px;
     display: flex;

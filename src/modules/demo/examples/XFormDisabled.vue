@@ -18,7 +18,7 @@ import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import xFormSource from './XFormDisabled.vue?raw'
 
-const bem = createNamespace('demo-dgm-form-disabled')
+const bem = createNamespace('demo-x-form-disabled')
 
 const schema: SchemaNode = {
   children: [
@@ -145,7 +145,7 @@ async function copySchema() {
 </template>
 
 <style lang="scss">
-.#{$BEM_PREFIX}-demo-dgm-form-disabled {
+.#{$BEM_PREFIX}-demo-x-form-disabled {
   &__actions {
     margin-top: 16px;
     display: flex;

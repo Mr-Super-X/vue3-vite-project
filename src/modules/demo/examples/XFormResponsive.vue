@@ -27,7 +27,7 @@ import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import xFormSource from './XFormResponsive.vue?raw'
 
-const bem = createNamespace('demo-dgm-form-responsive')
+const bem = createNamespace('demo-x-form-responsive')
 
 // ============== 响应式断点(仅 demo 显示用) ==============
 const currentBreakpoint = ref<'xs' | 'sm' | 'md' | 'lg' | 'xl'>('md')
@@ -226,7 +226,7 @@ async function copySchema() {
 </template>
 
 <style lang="scss">
-.#{$BEM_PREFIX}-demo-dgm-form-responsive {
+.#{$BEM_PREFIX}-demo-x-form-responsive {
   &__actions {
     margin-top: 16px;
     display: flex;

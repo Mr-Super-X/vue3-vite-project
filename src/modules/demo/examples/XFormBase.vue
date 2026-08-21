@@ -21,7 +21,7 @@ import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import xFormSource from './XFormBase.vue?raw'
 
-const bem = createNamespace('demo-dgm-form-base')
+const bem = createNamespace('demo-x-form-base')
 
 // —— 字典数据（mock 远程接口） ——
 const SELECT_OPTIONS = [
@@ -158,7 +158,7 @@ async function copySchema() {
 </template>
 
 <style lang="scss">
-.#{$BEM_PREFIX}-demo-dgm-form-base {
+.#{$BEM_PREFIX}-demo-x-form-base {
   &__actions {
     margin-top: 16px;
     display: flex;

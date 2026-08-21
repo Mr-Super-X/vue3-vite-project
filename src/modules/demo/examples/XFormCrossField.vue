@@ -26,7 +26,7 @@ import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import xFormSource from './XFormCrossField.vue?raw'
 
-const bem = createNamespace('demo-dgm-form-cross-field')
+const bem = createNamespace('demo-x-form-cross-field')
 
 const CONTACT_OPTIONS = [
   { value: 'email', label: '邮箱' },
@@ -233,7 +233,7 @@ async function copySchema() {
 </template>
 
 <style lang="scss">
-.#{$BEM_PREFIX}-demo-dgm-form-cross-field {
+.#{$BEM_PREFIX}-demo-x-form-cross-field {
   &__actions {
     margin-top: 16px;
     display: flex;

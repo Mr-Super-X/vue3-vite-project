@@ -21,7 +21,7 @@ import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import xFormSource from './XFormServerError.vue?raw'
 
-const bem = createNamespace('demo-dgm-form-server-error')
+const bem = createNamespace('demo-x-form-server-error')
 
 // P2-1:响应式断点显示
 const currentBreakpoint = ref<'xs' | 'sm' | 'md' | 'lg' | 'xl'>('md')
@@ -217,7 +217,7 @@ async function copySchema() {
 </template>
 
 <style lang="scss">
-.#{$BEM_PREFIX}-demo-dgm-form-server-error {
+.#{$BEM_PREFIX}-demo-x-form-server-error {
   &__actions {
     margin-top: 16px;
     display: flex;

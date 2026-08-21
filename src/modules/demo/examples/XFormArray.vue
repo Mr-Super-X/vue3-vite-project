@@ -18,7 +18,7 @@ import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import xFormSource from './XFormArray.vue?raw'
 
-const bem = createNamespace('demo-dgm-form-array')
+const bem = createNamespace('demo-x-form-array')
 
 // 商品字典（mock 远程接口）
 const PRODUCT_OPTIONS = [
@@ -156,7 +156,7 @@ async function copySchema() {
 </template>
 
 <style lang="scss">
-.#{$BEM_PREFIX}-demo-dgm-form-array {
+.#{$BEM_PREFIX}-demo-x-form-array {
   &__summary {
     margin-top: 16px;
     display: flex;

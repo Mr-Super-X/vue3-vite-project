@@ -20,7 +20,7 @@ import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import xFormSource from './XFormBuilder.vue?raw'
 
-const bem = createNamespace('demo-dgm-form-builder')
+const bem = createNamespace('demo-x-form-builder')
 
 // ============== Cascader 数据(省/市/区) ==============
 const CASCADER_DATA = [
@@ -270,7 +270,7 @@ async function copySchema() {
 </template>
 
 <style lang="scss">
-.#{$BEM_PREFIX}-demo-dgm-form-builder {
+.#{$BEM_PREFIX}-demo-x-form-builder {
   &__actions {
     margin-top: 16px;
     display: flex;

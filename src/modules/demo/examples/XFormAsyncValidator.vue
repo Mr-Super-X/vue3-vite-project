@@ -17,7 +17,7 @@ import DemoFrame from '../components/DemoFrame.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import xFormSource from './XFormAsyncValidator.vue?raw'
 
-const bem = createNamespace('demo-dgm-form-async')
+const bem = createNamespace('demo-x-form-async')
 
 // 模拟远程接口（用户名唯一性）
 function checkUsernameAvailable(name: string): Promise<true | string> {
@@ -167,7 +167,7 @@ async function copySchema() {
 </template>
 
 <style lang="scss">
-.#{$BEM_PREFIX}-demo-dgm-form-async {
+.#{$BEM_PREFIX}-demo-x-form-async {
   &__actions {
     margin-top: 16px;
     display: flex;
