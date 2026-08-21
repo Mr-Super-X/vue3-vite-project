@@ -1,4 +1,5 @@
-import { watchEffect } from 'vue'
+import { watch } from 'vue'
+import { debounce, throttle } from 'lodash-es'
 import type { SchemaNode } from '../types'
 import { applyReactionFields } from './apply-reaction-fields'
 
@@ -33,7 +34,11 @@ export function containsReaction(schema: SchemaNode | SchemaNode[]): boolean {
   }
 }
 
-/** 应用 reaction：按需注册 watchEffect（仅函数/函数表达式字符串）；求值错误 → console.error */
+/** 应用 reaction：按需注册 watchEffect（仅函数/函数表达式字符串）；求值错误 → console.error
+ *  支持 strategy: 'sync' | 'debounce' | 'throttle' + delay
+ *  - 'sync'(默认):依赖变化立即同步执行
+ *  - 'debounce':依赖停止变化 delay ms 后执行一次（适合远程搜索）
+ *  - 'throttle':delay ms 内最多执行一次（适合实时保存） */
 export function applyReactions(
   node: SchemaNode,
   model: Record<string, unknown>,
@@ -47,13 +52,36 @@ export function applyReactions(
       (v) => typeof v === 'function' || (typeof v === 'string' && v.startsWith('{{'))
     )
     if (hasDynamic) {
-      const stop = watchEffect(() => {
+      const strategy = reactionConfig.strategy ?? 'sync'
+      const delay = typeof reactionConfig.delay === 'number' ? reactionConfig.delay : 0
+      const runner = (): void => {
         try {
           applyReactionFields(node, reactionConfig, model)
         } catch (err) {
           console.error('[XForm] reaction evaluation error:', err)
         }
-      })
+      }
+      let stop: () => void
+      if (strategy === 'debounce' && delay > 0) {
+        const debounced = debounce(runner, delay)
+        // watch deep 订阅 model:任意字段变化触发 debounced
+        stop = watch(
+          () => model,
+          () => debounced(),
+          { deep: true }
+        )
+      } else if (strategy === 'throttle' && delay > 0) {
+        const throttled = throttle(runner, delay)
+        stop = watch(
+          () => model,
+          () => throttled(),
+          { deep: true }
+        )
+      } else {
+        // sync(默认):保持向后兼容 —— setup 时立即同步跑一次 + watch 订阅后续变化
+        runner()
+        stop = watch(() => model, runner, { deep: true })
+      }
       stoppers.push(stop)
     } else {
       applyReactionFields(node, reactionConfig, model)

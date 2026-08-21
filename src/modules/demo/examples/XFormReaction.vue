@@ -1,18 +1,16 @@
 <script setup lang="ts">
 /**
- * 复刻 datact-web/demo/pages/form/reaction.vue —— 响应式联动
- */
-import { ElMessage } from 'element-plus'
-/**
+ * 演示 reaction 防抖 / 节流
  *
- * 演示 reaction 三种联动：
- * 1. ignoreControl → field1.ignore（控制显隐）
- * 2. ruleControl → field2.label + rules（控制标签 + 校验）
- * 3. ruleControl → field2.props.optionType（控制 RadioGroup 按钮 / 普通模式）
+ * 场景：
+ * 1. 远程搜索(debounce):输入搜索词 → 300ms 后才触发远程接口,避免每字符都请求
+ * 2. 自动保存节流(throttle):model 任意字段变化 → 最多 1 秒一次自动保存
+ * 3. 普通反应式(default sync):开关切换 → 立即更新显示
  */
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
-import type { SchemaNode } from '@/components/form-schema/types'
+import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
@@ -20,60 +18,134 @@ import xFormSource from './XFormReaction.vue?raw'
 
 const bem = createNamespace('demo-dgm-form-reaction')
 
+// 模拟远程搜索:返回基于 keyword 的 mock 结果(中英文都支持)
+function mockRemoteSearch(keyword: string): string[] {
+  if (!keyword) return []
+  const FRUITS = [
+    '苹果 Apple',
+    '香蕉 Banana',
+    '樱桃 Cherry',
+    '椰枣 Date',
+    '接骨木果 Elderberry',
+    '无花果 Fig',
+    '葡萄 Grape',
+    '哈密瓜 Hami melon',
+    '西瓜 Watermelon',
+  ]
+  const lower = keyword.toLowerCase()
+  return FRUITS.filter((f) => f.toLowerCase().includes(lower))
+}
+
+// 计数器:debounce / throttle 演示用 —— 必须放在 model 外部!
+// ⚠️ 如果写到 model.X,会触发 deep watch 重跑 reaction,造成死循环(searchCallCount 一直 +1)
+const searchCallCount = ref(0)
+const saveCallCount = ref(0)
+
+// 反应式结果存储 —— 必须在 model 外部!
+// ⚠️ reaction 函数如果写入 model.X(被 watch deep 监听),会导致死循环:
+//   watch deep → reaction 跑 → 写 model.X → watch 再触发 → reaction 再跑 → +1 +1 +1...
+// 把 reaction 的副作用(搜索结果/保存时间)写到 model 外的 reactive,避开 watch 路径
+const reactionStore = reactive<{ searchResults: string[]; lastSavedAt: string }>({
+  searchResults: [],
+  lastSavedAt: '',
+})
+
 const schema: SchemaNode = {
-  column: 2,
-  row: { gutter: 24 },
+  column: 1,
   children: [
+    // 1. debounce 远程搜索:输入框 + reaction 同步搜索结果到 model.searchResults
     {
-      label: '联动表单项的显隐',
-      name: 'ignoreControl',
-      component: 'Switch',
-    },
-    {
-      label: '显示了',
-      name: 'field1',
+      label: '搜索水果（debounce 300ms）',
+      name: 'keyword',
       component: 'Input',
+      props: { placeholder: '输入 fruit 名称', clearable: true },
+      // reaction: 高频输入场景用 debounce —— 停止输入 300ms 后才跑
       reaction: {
-        ignore: (model: Record<string, unknown>) => !model.ignoreControl,
+        strategy: 'debounce',
+        delay: 300,
+        searchResults: () => {
+          // ⚠️ 计数器必须写到 model 外部 ref,不能写到 model.searchCallCount
+          // 否则 deep watch 会监听自身写入,造成死循环
+          searchCallCount.value++
+          // 搜索结果也必须写到 model 外部(reactionStore),否则死循环
+          reactionStore.searchResults = mockRemoteSearch(model.keyword as string)
+          return reactionStore.searchResults
+        },
       },
-      props: { placeholder: '切换开关控制我的显示', clearable: true },
     },
+
+    // 2. throttle 自动保存:model 任何字段变化 → 最多 1 秒一次
     {
-      label: '联动表单项的校验规则、标签和属性',
-      name: 'ruleControl',
+      label: '备注（throttle 1s 自动保存）',
+      name: 'note',
+      component: 'Input',
+      props: { type: 'textarea', placeholder: '任意输入', rows: 2 },
+      reaction: {
+        strategy: 'throttle',
+        delay: 1000,
+        lastSavedAt: () => {
+          // 计数器写到外部 ref,避免 watch 死循环
+          saveCallCount.value++
+          // 保存时间也写到外部 store
+          reactionStore.lastSavedAt = new Date().toLocaleTimeString()
+          return reactionStore.lastSavedAt
+        },
+      },
+    },
+
+    // 3. 普通反应式(default sync):开关 → 立即更新显示
+    {
+      label: '启用通知',
+      name: 'enableNotify',
       component: 'Switch',
     },
     {
-      component: 'RadioGroup',
-      name: 'field2',
-      children: [
-        { component: 'Radio', props: { value: 'a' }, children: 'A' },
-        { component: 'Radio', props: { value: 'b' }, children: 'B' },
-      ],
+      label: '通知类型',
+      name: 'notifyType',
+      component: 'Select',
+      props: {
+        placeholder: '选择通知类型',
+        clearable: true,
+        options: [
+          { value: 'email', label: '邮件' },
+          { value: 'sms', label: '短信' },
+          { value: 'push', label: 'App 推送' },
+        ],
+      },
+      // 3. 默认 sync 反应式联动(P0-3 disabled 字段):开关联动禁用
+      // 开关 off → Select 变灰禁用(视觉立即感知);开关 on → Select 启用
       reaction: {
-        label: (model: Record<string, unknown>) => (model.ruleControl ? '必填' : '非必填'),
-        rules: (model: Record<string, unknown>) =>
-          (model.ruleControl ? 'required' : undefined) as
-            | string
-            | import('@/components/form-schema/types').RuleItem
-            | Array<string | import('@/components/form-schema/types').RuleItem>
-            | undefined,
-        props: {
-          optionType: (model: Record<string, unknown>) => (model.ruleControl ? 'button' : ''),
-        },
+        disabled: (m: Record<string, unknown>) => !m.enableNotify,
       },
     },
   ],
 }
 
-const model = reactive<Record<string, unknown>>({ ignoreControl: false, ruleControl: false })
+const model = reactive<Record<string, unknown>>({
+  keyword: '',
+  note: '',
+  enableNotify: true,
+  notifyType: 'email', // 默认选邮件,演示 enabled 状态
+})
+
+const formRef = ref<XFormExpose | null>(null)
+
+async function onSave() {
+  if (!formRef.value) return
+  const valid = await formRef.value.validate()
+  if (!valid) {
+    ElMessage.error('校验失败')
+    return
+  }
+  ElMessage.success('保存成功')
+}
 
 async function copySchema() {
   try {
     await navigator.clipboard.writeText(JSON.stringify(schema, null, 2))
     ElMessage.success('schema 已复制到剪贴板')
   } catch {
-    ElMessage.error('复制失败，请手动选择')
+    ElMessage.error('复制失败')
   }
 }
 </script>
@@ -81,22 +153,53 @@ async function copySchema() {
 <template>
   <DocLayout>
     <DemoFrame
-      title="响应式联动（3 种 reaction）"
+      title="反应式防抖 / 节流（strategy + delay）"
       source="src/components/form-schema/XForm.vue"
       :introductions="[
-        '三个 reaction 联动示例：',
-        '1. ignoreControl → field1.ignore（开关切换控制 field1 显示/隐藏）',
-        '2. ruleControl → field2.label + rules（开关切换控制标签文字和是否必填）',
-        '3. ruleControl → field2.props.optionType（开关切换控制 RadioGroup 按钮 / 普通模式）',
+        'ReactionConfig 新增 strategy + delay 字段,支持 reaction 函数被高频调用场景:',
+        '1. 远程搜索 debounce 300ms:输入「苹果」,连续打字 5 字符只触发 1 次远程(mockRemoteSearch)',
+        '2. 自动保存 throttle 1s:输入备注时,1 秒内多次 input 只触发 1 次 lastSavedAt',
+        '3. 默认 sync:开关切换通知,通知类型 Select 立即禁用/启用(P0-3 disabled 反应式联动)',
+        '注意:searchCallCount / saveCallCount 显示在 model 区域,直观看到防抖/节流效果',
       ]"
     >
       <section id="demo-reaction">
-        <DemoField label="响应式联动" :code="xFormSource">
-          <XForm :schema="schema" :model="model" />
-          <el-button @click="copySchema" class="mt-2">复制 schema</el-button>
+        <DemoField label="防抖/节流" :code="xFormSource">
+          <XForm ref="formRef" :schema="schema" :model="model" />
+          <div :class="bem.e('actions')">
+            <el-button type="primary" @click="onSave">保存</el-button>
+            <el-button @click="copySchema">复制 schema</el-button>
+          </div>
           <div :class="bem.e('state')">
-            当前状态：
-            <code>{{ JSON.stringify(model) }}</code>
+            <div>当前 model：</div>
+            <pre>{{ JSON.stringify(model, null, 2) }}</pre>
+
+            <!-- 搜索结果:输入框正下方实时显示,更醒目 -->
+            <div v-if="model.keyword" :class="bem.e('results')">
+              <strong>搜索结果({{ reactionStore.searchResults.length }} 项):</strong>
+              <span v-if="reactionStore.searchResults.length > 0">
+                <el-tag
+                  v-for="item in reactionStore.searchResults"
+                  :key="item"
+                  :class="bem.e('tag')"
+                  size="small"
+                >
+                  {{ item }}
+                </el-tag>
+              </span>
+              <span v-else style="color: #909399">无匹配(试试输入"苹果"/"Apple"/"ban")</span>
+            </div>
+
+            <div :class="bem.e('counter')">
+              <strong>搜索调用次数(每输入一词 debounce 300ms 后 +1):</strong>
+              {{ searchCallCount }}
+              <br />
+              <strong>保存触发次数(每输入 throttle 1s 后 +1):</strong>
+              {{ saveCallCount }}
+              <br />
+              <strong>最近一次保存时间:</strong>
+              {{ reactionStore.lastSavedAt || '(尚未保存)' }}
+            </div>
           </div>
         </DemoField>
       </section>
@@ -106,16 +209,56 @@ async function copySchema() {
 
 <style lang="scss">
 .#{$BEM_PREFIX}-demo-dgm-form-reaction {
+  &__actions {
+    margin-top: 16px;
+    display: flex;
+    gap: 8px;
+  }
+
   &__state {
     margin-top: 16px;
     font-size: 12px;
     color: #909399;
 
-    code {
+    pre {
       background: #f5f7fa;
-      padding: 2px 6px;
-      border-radius: 3px;
+      padding: 8px 12px;
+      border-radius: 4px;
       font-family: 'Menlo', 'Consolas', monospace;
+      overflow-x: auto;
+      margin: 4px 0;
+    }
+  }
+
+  &__results {
+    margin-top: 12px;
+    padding: 8px 12px;
+    background: #fdf6ec;
+    border-radius: 4px;
+    font-size: 13px;
+
+    strong {
+      color: #e6a23c;
+      margin-right: 8px;
+    }
+  }
+
+  &__tag {
+    margin-right: 4px;
+    margin-bottom: 4px;
+  }
+
+  &__counter {
+    margin-top: 12px;
+    padding: 8px 12px;
+    background: #ecf5ff;
+    border-radius: 4px;
+    font-size: 13px;
+    line-height: 1.8;
+
+    strong {
+      color: #409eff;
+      margin-right: 4px;
     }
   }
 }

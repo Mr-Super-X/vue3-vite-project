@@ -73,6 +73,14 @@ export interface ReactionConfig {
   props?: Record<string, ReactionValue<unknown>>
   label?: ReactionValue<string>
   hidden?: ReactionValue<boolean>
+  /** 反应式调度策略
+   *  - 'sync'(默认):依赖变化立即同步执行 reaction 函数
+   *  - 'debounce':依赖停止变化 delay ms 后执行一次(适合远程搜索等高频输入)
+   *  - 'throttle':delay ms 内最多执行一次(适合实时保存等)
+   *  strategy / delay 在 use-reaction 中解析,不会写入 node */
+  strategy?: 'sync' | 'debounce' | 'throttle'
+  /** debounce / throttle 延迟(ms);strategy !== 'sync' 时生效 */
+  delay?: number
   // 其他可覆盖字段（开闭原则：未知字段透传）
   [key: string]: unknown
 }
