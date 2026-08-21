@@ -171,7 +171,13 @@ export interface ColConfig {
  * 例如：`const node: SchemaNodeFor<'Input'> = { component: 'Input', props: { placeholder: 'x' } }`
  */
 export interface SchemaNode {
-  component?: string
+  /**
+   * 组件 —— 支持两种形式:
+   *  - string:组件名(如 'Input' / 'ElButton'),走 EL_COMPONENT_MAP 解析
+   *  - Component 对象:直接传入 Vue 组件实例/选项对象(无需在 XForm 的 components prop 注册)
+   * 推荐:string 形式 + XForm 集中注册;slots 内的 trigger 元素也支持直接传 Component 对象
+   */
+  component?: string | object
   props?: Record<string, unknown>
   on?: Record<string, EventFn | FunctionExpression>
   children?: SchemaNode | SchemaNode[] | string

@@ -1,5 +1,16 @@
 import { describe, it, expect } from 'vitest'
-import { ArrayBuilder, xArray, xInput } from './builders'
+import {
+  ArrayBuilder,
+  xArray,
+  xInput,
+  xTimePicker,
+  xTimeSelect,
+  xUpload,
+  xTransfer,
+  xTreeSelect,
+  xCascader,
+  xAutocomplete,
+} from './builders'
 import type { SchemaNode } from './types'
 
 describe('xArray(name) / ArrayBuilder', () => {
@@ -227,5 +238,112 @@ describe('xInput() .validator() / .asyncValidator() 链式', () => {
     expect(rules.length).toBeGreaterThanOrEqual(2)
     expect(rules.some((r) => r.required)).toBe(true)
     expect(rules.some((r) => r.trigger === 'change')).toBe(true)
+  })
+})
+
+describe('xTimePicker / xTimeSelect 链式', () => {
+  it('xTimePicker.format / valueFormat / range 写入 props', () => {
+    const node = xTimePicker('start').format('HH:mm:ss').valueFormat('HH:mm:ss').range().build()
+    expect(node.component).toBe('TimePicker')
+    expect(node.props?.format).toBe('HH:mm:ss')
+    expect(node.props?.valueFormat).toBe('HH:mm:ss')
+    expect(node.props?.isRange).toBe(true)
+  })
+
+  it('xTimeSelect.start / end / step / format 写入 props', () => {
+    const node = xTimeSelect('shift')
+      .start('08:00')
+      .end('18:00')
+      .step('00:30')
+      .format('HH:mm')
+      .build()
+    expect(node.component).toBe('TimeSelect')
+    expect(node.props?.start).toBe('08:00')
+    expect(node.props?.end).toBe('18:00')
+    expect(node.props?.step).toBe('00:30')
+    expect(node.props?.format).toBe('HH:mm')
+  })
+})
+
+describe('xUpload 链式', () => {
+  it('.action / .accept / .multiple / .drag / .listType 写入 props', () => {
+    const node = xUpload('avatar')
+      .action('/api/upload')
+      .accept('image/*')
+      .multiple()
+      .drag()
+      .listType('picture-card')
+      .build()
+    expect(node.component).toBe('Upload')
+    expect(node.props?.action).toBe('/api/upload')
+    expect(node.props?.accept).toBe('image/*')
+    expect(node.props?.multiple).toBe(true)
+    expect(node.props?.drag).toBe(true)
+    expect(node.props?.listType).toBe('picture-card')
+  })
+})
+
+describe('xTransfer 链式', () => {
+  it('.data / .titles / .filterable / .buttonTexts 写入 props', () => {
+    const data = [
+      { key: 1, label: '选项1' },
+      { key: 2, label: '选项2' },
+    ]
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const node = (xTransfer('perms') as any)
+      .data(data)
+      .titles('未分配', '已分配')
+      .filterable()
+      .buttonTexts('向左', '向右')
+      .build() as SchemaNode
+    expect(node.component).toBe('Transfer')
+    expect(node.props?.data).toBe(data)
+    expect(node.props?.titles).toEqual(['未分配', '已分配'])
+    expect(node.props?.filterable).toBe(true)
+    expect(node.props?.['button-texts']).toEqual(['向左', '向右'])
+  })
+})
+
+describe('xTreeSelect 链式', () => {
+  it('.data / .multiple / .checkStrictly / .nodeKey / .props 写入 props', () => {
+    const tree = [{ id: 1, label: '根', children: [{ id: 2, label: '子' }] }]
+    const node = xTreeSelect('dept').data(tree).multiple().checkStrictly().nodeKey('id').build()
+    expect(node.component).toBe('TreeSelect')
+    expect(node.props?.data).toBe(tree)
+    expect(node.props?.multiple).toBe(true)
+    expect(node.props?.checkStrictly).toBe(true)
+    expect(node.props?.nodeKey).toBe('id')
+  })
+})
+
+describe('xCascader 链式', () => {
+  it('.options / .showAllLevels / .separator 写入 props', () => {
+    const options = [{ value: 1, label: '北京', children: [{ value: 11, label: '海淀' }] }]
+    const node = xCascader('city').options(options).showAllLevels().separator(' / ').build()
+    expect(node.component).toBe('Cascader')
+    expect(node.props?.options).toBe(options)
+    expect(node.props?.showAllLevels).toBe(true)
+    expect(node.props?.separator).toBe(' / ')
+  })
+})
+
+describe('xAutocomplete 链式', () => {
+  it('.fetchSuggestions / .triggerOnFocus / .placement 写入 props', () => {
+    const fn = (qs: string, cb: (s: Array<{ value: string }>) => void) =>
+      cb([{ value: `${qs}-1` }, { value: `${qs}-2` }])
+    // 类型推断:makeBuilder cast 链路 + [k: string]: unknown 让后续链式类型推断成 never
+    // 运行时方法真实存在(原型链继承),用 as any 绕过 TS 类型检查
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ac = xAutocomplete('search') as any
+    const built = ac
+      .fetchSuggestions(fn as never)
+      .triggerOnFocus()
+      .placement('bottom-start')
+      .build()
+    const node: SchemaNode = built
+    expect(node.component).toBe('Autocomplete')
+    expect(typeof node.props?.fetchSuggestions).toBe('function')
+    expect(node.props?.triggerOnFocus).toBe(true)
+    expect(node.props?.placement).toBe('bottom-start')
   })
 })

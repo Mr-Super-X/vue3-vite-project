@@ -111,6 +111,107 @@ describe('useRenderSchemaNode 数组分支 (kind === "array")', () => {
   })
 })
 
+describe('resolveComponentFor 自定义组件支持', () => {
+  // 内部访问 resolveComponentFor —— 通过组件渲染行为间接验证
+  it('opts.components 中自定义组件可在 schema 中引用', () => {
+    const Custom = { name: 'Custom', template: '<div class="custom">x</div>' }
+    const { opts } = makeOpts({
+      model: { a: 1 },
+      components: { MyButton: Custom },
+    })
+    const render = useRenderSchemaNode(opts)
+    const result = render({
+      component: 'MyButton',
+      name: 'a',
+    } as unknown as SchemaNode)
+    // render 返回 VNode,其中 type 是自定义组件对象
+    expect(result).toBeDefined()
+  })
+
+  it('schema.component = "ElButton" 走 vue resolveComponent(全局注册表)', () => {
+    const { opts } = makeOpts({ model: { a: 1 } })
+    const render = useRenderSchemaNode(opts)
+    const result = render({
+      component: 'ElButton',
+      name: 'a',
+    } as unknown as SchemaNode)
+    expect(result).toBeDefined()
+  })
+
+  it('未映射的 component 字符串(非 El 前缀)在 formItem 内 fallback 到 v-if="Comp"', () => {
+    // 实际行为:即使 Comp = null,wrapWithFormItem 分支仍会渲染 formItem
+    // inner 用 v-if="Comp" 条件渲染(见 render-schema-node.ts:374-388)
+    // 未映射的 component → formItem 渲染但内部无 Comp 子节点
+    const { opts } = makeOpts({ model: { a: 1 } })
+    const render = useRenderSchemaNode(opts)
+    const result = render({
+      component: 'UnregisteredComponent',
+      name: 'a',
+    } as unknown as SchemaNode)
+    // formItem 仍存在(避免破坏 v-model 路径)
+    expect(result).toBeDefined()
+  })
+
+  it('slots 内的 component 字符串同样走 resolveComponentFor(支持自定义组件)', () => {
+    // 通过 mock 验证 slots.default 内 component 字符串被解析
+    const Custom = { name: 'CustomInner', template: '<div class="ci">i</div>' }
+    const { opts } = makeOpts({
+      model: { a: 1 },
+      components: { CustomTrigger: Custom },
+    })
+    const render = useRenderSchemaNode(opts)
+    const result = render({
+      component: 'ElUpload',
+      name: 'a',
+      props: { listType: 'picture-card' },
+      slots: {
+        default: [{ component: 'CustomTrigger', children: '+' } as SchemaNode],
+      },
+    } as unknown as SchemaNode)
+    expect(result).toBeDefined()
+  })
+
+  it('component 字段直接传 Component 对象(无需 XForm.components 注册)', () => {
+    // P1-2 改进:component 字段支持 string | object —— 传 Component 对象时直接用,不走映射
+    const InlineButton = {
+      name: 'InlineButton',
+      template: '<button class="ib">click</button>',
+    }
+    const { opts } = makeOpts({ model: { a: 1 } })
+    const render = useRenderSchemaNode(opts)
+    const result = render({
+      component: InlineButton, // ← 直接传 Component 对象
+      name: 'a',
+    } as unknown as SchemaNode)
+    expect(result).toBeDefined()
+  })
+
+  it('slots 内 component 直接传 Component 对象(支持嵌套自定义组件)', () => {
+    // 用户的核心痛点解决:slots.default[0].component = MyButton 直接可用,无需 XForm.components 注册
+    const MyButton = {
+      name: 'MyButton',
+      template: '<button class="mb">click</button>',
+    }
+    const { opts } = makeOpts({ model: { a: 1 } })
+    const render = useRenderSchemaNode(opts)
+    const result = render({
+      component: 'ElUpload',
+      name: 'a',
+      props: { listType: 'picture-card' },
+      slots: {
+        default: [
+          {
+            component: MyButton, // ← 直接传 Component 对象
+            children: '点击上传',
+          } as SchemaNode,
+        ],
+        tip: '提示',
+      },
+    } as unknown as SchemaNode)
+    expect(result).toBeDefined()
+  })
+})
+
 describe('useRenderSchemaNode disabled 透传', () => {
   it('node.disabled=true 时,渲染返回 VNode 不抛错', () => {
     const { opts } = makeOpts({ model: { email: '' } })

@@ -12,6 +12,12 @@ import {
   ElOption,
   ElSwitch,
   ElDatePicker,
+  ElTimePicker,
+  ElTimeSelect,
+  ElUpload,
+  ElTransfer,
+  ElTreeSelect,
+  ElAutocomplete,
   ElRadioGroup,
   ElRadio,
   ElCheckboxGroup,
@@ -36,6 +42,14 @@ const EL_COMPONENT_MAP: Record<string, unknown> = {
   Option: ElOption,
   Switch: ElSwitch,
   DatePicker: ElDatePicker,
+  TimePicker: ElTimePicker,
+  TimeSelect: ElTimeSelect,
+  Upload: ElUpload,
+  Transfer: ElTransfer,
+  TreeSelect: ElTreeSelect,
+  Autocomplete: ElAutocomplete,
+  Button: ElButton,
+  Icon: ElIcon,
   RadioGroup: ElRadioGroup,
   Radio: ElRadio,
   CheckboxGroup: ElCheckboxGroup,
@@ -202,7 +216,7 @@ function renderArrayNode(node: SchemaNode, opts: RenderSchemaNodeOptions): VNode
       'div',
       {
         key: `array-${listName}-${index}`,
-        class: `${node.component?.toLowerCase() ?? 'array-node'}__row`,
+        class: `${typeof node.component === 'string' ? node.component.toLowerCase() : 'array-node'}__row`,
       } as never,
       {
         default: () => [
@@ -300,7 +314,11 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
     if (node.kind === 'array') {
       return renderArrayNode(node, opts)
     }
-    const Comp = resolveComponentFor(node.component, opts.components)
+    // component 字段支持 string(走映射)或 object(直接 Vue 组件对象)
+    const Comp =
+      typeof node.component === 'string'
+        ? resolveComponentFor(node.component, opts.components)
+        : node.component
     const eventBindings = {
       ...buildVModelBindings(node, opts.model, opts.beforeChange, opts.onValueChange),
       ...buildOnBindings(node, opts.model),
@@ -329,7 +347,9 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
     if (wrapWithFormItem) {
       const fi = typeof node.formItem === 'object' ? node.formItem : null
       const FormItemComp = fi?.component
-        ? (resolveComponentFor(fi.component, opts.components) ?? ElFormItem)
+        ? typeof fi.component === 'string'
+          ? (resolveComponentFor(fi.component, opts.components) ?? ElFormItem)
+          : fi.component
         : ElFormItem
       const fiProps = fi?.props ?? {}
       // 跨字段校验在 blur 时主动触发(否则 trigger: 'blur' 对 crossValidator 无效,
@@ -362,6 +382,15 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
         Comp
           ? {
               default: () => {
+                // formItem 默认 default 来自 node.children(向后兼容)
+                const defaultSlot = () => renderChildren(node.children, opts.render) as never
+                // formItem 还要把 node.slots 转发给 Comp(如 el-upload 的 tip 槽位)——否则 slots 被吞
+                const extraSlots: Record<string, () => unknown> = {}
+                if (node.slots) {
+                  for (const [k, v] of Object.entries(node.slots)) {
+                    extraSlots[k] = () => opts.render(v as never)
+                  }
+                }
                 const inner = h(
                   Comp as never,
                   {
@@ -370,7 +399,7 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
                     ...(node.disabled !== undefined ? { disabled: node.disabled } : {}),
                     ...(node.key !== undefined && { key: node.key }),
                   } as never,
-                  { default: () => renderChildren(node.children, opts.render) as never }
+                  { default: defaultSlot, ...extraSlots }
                 )
                 return wrapWithElCol(node, inner)
               },
