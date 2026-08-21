@@ -100,7 +100,16 @@ function wrapWithElCol(node: SchemaNode, inner: VNode): VNode {
   if (node.col === undefined) return inner
   const span = node.col && typeof node.col === 'object' ? (node.col.span ?? 24) : 24
   const offset = node.col && typeof node.col === 'object' ? node.col.offset : undefined
-  return h(ElCol as never, { span, offset } as never, { default: () => inner }) as VNode
+  const responsive = node.col && typeof node.col === 'object' ? node.col.responsive : undefined
+  return h(
+    ElCol as never,
+    {
+      span,
+      offset,
+      ...(responsive ? { responsive } : {}),
+    } as never,
+    { default: () => inner }
+  ) as VNode
 }
 
 function renderChildren(
@@ -421,7 +430,14 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
           default: () =>
             h(
               ElCol as never,
-              { span: colSpan, ...(node.key !== undefined && { key: node.key }) } as never,
+              {
+                span: colSpan,
+                // 数组节点 col.responsive 透传(element-plus 响应式)
+                ...(node.col && typeof node.col === 'object' && node.col.responsive
+                  ? { responsive: node.col.responsive }
+                  : {}),
+                ...(node.key !== undefined && { key: node.key }),
+              } as never,
               {
                 default: () => opts.render(node.children as never),
               }
