@@ -13,6 +13,7 @@ import { matchTrigger } from './composables/match-trigger'
 import XFormDebugBanner from './XFormDebugBanner.vue'
 import type { ValidateResult } from './types'
 import 'element-plus/dist/index.css'
+import './styles/element-form-overwrite.scss'
 import { ElConfigProvider, ElForm, ElRow, ElCol } from 'element-plus'
 import type { SchemaNode, XFormProps, XFormExpose, RuleItem } from './types'
 

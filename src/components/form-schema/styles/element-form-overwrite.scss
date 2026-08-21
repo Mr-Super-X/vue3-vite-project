@@ -1,0 +1,7 @@
+.#{$BEM_PREFIX}-x-form {
+  /* el-date-editor 样式覆盖 */
+  .el-date-editor.el-input,
+  .el-date-editor.el-input__wrapper {
+    width: 100%;
+  }
+}
