@@ -145,9 +145,42 @@ const selectNode: SchemaNodeFor<'Select'> = {
 }
 ```
 
-支持的 component 名（12 个）：`Input | Select | Option | Switch | DatePicker | RadioGroup | Radio | CheckboxGroup | Checkbox | Cascader | InputNumber | Slider`
+支持的 component 名（18 个内置）：`Input | Select | Option | Switch | DatePicker | TimePicker | TimeSelect | TreeSelect | Upload | Autocomplete | Transfer | RadioGroup | Radio | CheckboxGroup | Checkbox | Cascader | InputNumber | Slider | Card | FormItem`
 
-不在这 12 个内（如 `'FormItem'` / 自定义组件名）时，IDE 用 `SchemaNode` 宽类型（不报错）。
+自定义组件可通过 module augmentation 扩展类型推导（见下方“自定义组件类型扩展”）。
+
+## 自定义组件类型扩展
+
+如果业务写了自定义字段组件，可以让 `SchemaNodeFor` 和 builder 也识别它的 props：
+
+```ts
+// types/form-schema.d.ts
+import type { ComponentPropsRegistry } from '@/components/form-schema/types'
+
+interface MyInputProps {
+  prefix?: string
+  suffix?: string
+  modelValue?: string
+}
+
+declare module '@/components/form-schema/types' {
+  interface ComponentPropsRegistry {
+    MyInput: MyInputProps
+  }
+}
+```
+
+扩展后：
+
+```ts
+const node: SchemaNodeFor<'MyInput'> = {
+  component: 'MyInput',
+  name: 'keyword',
+  props: { prefix: 'Search:', suffix: '✓' }, // IDE 自动补全 + 类型校验
+}
+```
+
+> 注意：类型扩展仅影响 TS 推导，运行时仍需在 `XForm` 的 `components` prop 中注册：`<XForm :components="{ MyInput: MyInputComp }" />`。
 
 ---
 

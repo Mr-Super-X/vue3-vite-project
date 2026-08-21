@@ -268,8 +268,18 @@ type ElSliderProps = ComponentProps<typeof ElSlider>
 type ElCardProps = ComponentProps<typeof ElCard>
 type ElFormItemProps = ComponentProps<typeof ElFormItem>
 
-/** 快捷名 → 对应组件 props 类型的映射 */
-export type PropsByComponent = {
+/** 快捷名 → 对应组件 props 类型的映射（可声明合并）
+ *
+ * 消费方可通过 TypeScript module augmentation 扩展自定义组件：
+ * ```ts
+ * declare module '@/components/form-schema/types' {
+ *   interface ComponentPropsRegistry {
+ *     MyInput: MyInputProps
+ *   }
+ * }
+ * ```
+ */
+export interface ComponentPropsRegistry {
   Input: ElInputProps
   Select: ElSelectProps
   Option: ElOptionProps
@@ -294,8 +304,11 @@ export type PropsByComponent = {
   ArrayNode: Record<string, unknown>
 }
 
+/** 向后兼容别名，等效于 ComponentPropsRegistry */
+export type PropsByComponent = ComponentPropsRegistry
+
 /** 支持类型推导的 component 名 */
-export type ComponentName = keyof PropsByComponent
+export type ComponentName = keyof ComponentPropsRegistry
 
 /**
  * 按 component 字段推导 props 类型的 SchemaNode 泛型
@@ -315,7 +328,7 @@ export type SchemaNodeFor<C extends ComponentName = ComponentName> = Omit<
   'component' | 'props'
 > & {
   component: C
-  props?: PropsByComponent[C]
+  props?: ComponentPropsRegistry[C]
 }
 
 /** XForm 组件 props */

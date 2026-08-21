@@ -16,13 +16,13 @@ import type {
   SchemaNode,
   SchemaNodeFor,
   ComponentName,
-  PropsByComponent,
+  ComponentPropsRegistry,
   RuleItem,
   ReactionValue,
 } from './types'
 
 /** 链式构建器基类（泛型：绑死 component 名 + props 类型） */
-class NodeBuilder<C extends ComponentName, P = PropsByComponent[C]> {
+class NodeBuilder<C extends ComponentName, P = ComponentPropsRegistry[C]> {
   // public 供 Ext 子类（如 CardBuilderExt）跨类访问子节点字段
   node: Partial<SchemaNodeFor<C>> = {}
 
@@ -128,12 +128,12 @@ class NodeBuilder<C extends ComponentName, P = PropsByComponent[C]> {
 /** 通用 builder 工厂：绑死 component 名 */
 function makeBuilder<C extends ComponentName>(
   componentName: C
-): new (name: string) => NodeBuilder<C, PropsByComponent[C]> & { [k: string]: unknown } {
+): new (name: string) => NodeBuilder<C, ComponentPropsRegistry[C]> & { [k: string]: unknown } {
   // 返回一个类，构造时设置 component 字段
   return class {
-    private _b: NodeBuilder<C, PropsByComponent[C]>
+    private _b: NodeBuilder<C, ComponentPropsRegistry[C]>
     constructor(name: string) {
-      this._b = new NodeBuilder<C, PropsByComponent[C]>(name)
+      this._b = new NodeBuilder<C, ComponentPropsRegistry[C]>(name)
       ;(this._b.node as { component?: C }).component = componentName
     }
     // 关键:所有基础方法返回 `this`(makeBuilder 匿名 class 实例)而非 `this._b.xxx()` 的结果
@@ -203,7 +203,7 @@ function makeBuilder<C extends ComponentName>(
     }
   } as unknown as new (
     name: string
-  ) => NodeBuilder<C, PropsByComponent[C]> & { [k: string]: unknown }
+  ) => NodeBuilder<C, ComponentPropsRegistry[C]> & { [k: string]: unknown }
 }
 
 /** 18 个 component 类型的 builder 类（每个绑死 component 名） */
