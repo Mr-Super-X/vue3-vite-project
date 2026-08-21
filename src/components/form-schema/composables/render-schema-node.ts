@@ -26,7 +26,7 @@ import {
   ElInputNumber,
   ElSlider,
 } from 'element-plus'
-import type { SchemaNode, XFormProps } from '../types'
+import type { SchemaNode, XFormProps, ColConfig } from '../types'
 import { buildVModelBindings } from './build-vmodel-bindings'
 import { buildOnBindings } from './build-on-bindings'
 import { renderToComponentWithGrid } from './render-with-grid'
@@ -95,21 +95,77 @@ function compileRules(rules: SchemaNode['rules'], propsRules: XFormProps['rules'
     .filter((r): r is Record<string, unknown> => typeof r === 'object' && r !== null)
 }
 
-function wrapWithElCol(node: SchemaNode, inner: VNode): VNode {
+function wrapWithElCol(
+  node: SchemaNode,
+  inner: VNode,
+  currentBreakpoint?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
+): VNode {
   if (node.col === false) return inner
   if (node.col === undefined) return inner
-  const span = node.col && typeof node.col === 'object' ? (node.col.span ?? 24) : 24
-  const offset = node.col && typeof node.col === 'object' ? node.col.offset : undefined
-  const responsive = node.col && typeof node.col === 'object' ? node.col.responsive : undefined
+  // 响应式断点拍平:从 col.responsive[breakpoint] 取实际 span/offset
+  // 当前断点的具体配置优先;未匹配时回退到响应式对象第一个非 undefined 断点
+  const colObj = typeof node.col === 'object' ? node.col : null
+  const baseConfig = colObj?.responsive
+    ? pickBreakpointConfig(colObj.responsive, currentBreakpoint)
+    : null
+  const span = baseConfig?.span ?? colObj?.span ?? 24
+  const offset = baseConfig?.offset ?? colObj?.offset
   return h(
     ElCol as never,
     {
       span,
       offset,
-      ...(responsive ? { responsive } : {}),
+      // 始终保留 responsive 字段(若有)—— 调试或运行时切换保留
+      ...(colObj?.responsive ? { responsive: colObj.responsive } : {}),
     } as never,
     { default: () => inner }
   ) as VNode
+}
+
+/**
+ * 根据当前断点从响应式配置中选具体 ColConfig
+ * 优先级:xs < sm < md < lg < xl —— 当前断点优先,否则回退到较小断点
+ */
+function pickBreakpointConfig(
+  responsive: NonNullable<ColConfig['responsive']>,
+  current?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
+): { span?: number; offset?: number; push?: number; pull?: number } | undefined {
+  const order: Array<'xs' | 'sm' | 'md' | 'lg' | 'xl'> = ['xs', 'sm', 'md', 'lg', 'xl']
+  const currentIdx = current ? order.indexOf(current) : -1
+  // 优先当前断点,回退到较小断点
+  for (let i = currentIdx; i >= 0; i--) {
+    if (responsive[order[i]!]) return responsive[order[i]!]
+  }
+  // 当前断点之前都没有,取第一个非 undefined
+  for (const k of order) {
+    if (responsive[k]) return responsive[k]
+  }
+  return undefined
+}
+
+/**
+ * 合并 col + 响应式:返回拍平后的 ColConfig(纯 ColConfig,不含 responsive)
+ * 用于数组行透传(数组行不再透传 responsive,直接透传已选定的 span/offset)
+ */
+function mergeColResponsive(
+  col: SchemaNode['col'],
+  current?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
+): SchemaNode['col'] {
+  if (col === undefined || col === false) return col
+  if (typeof col !== 'object') return col
+  const responsive = col.responsive
+  if (!responsive) return col
+  const picked = pickBreakpointConfig(responsive, current)
+  if (!picked) return col
+  // exactOptionalPropertyTypes:true 不允许 undefined 字段 —— 显式用 Object.assign 构建
+  const merged: ColConfig = { ...col }
+  if (picked.span !== undefined) merged.span = picked.span
+  else if (merged.span === undefined) delete merged.span
+  if (picked.offset !== undefined) merged.offset = picked.offset
+  if (picked.push !== undefined) merged.push = picked.push
+  if (picked.pull !== undefined) merged.pull = picked.pull
+  delete (merged as { responsive?: unknown }).responsive
+  return merged
 }
 
 function renderChildren(
@@ -141,6 +197,12 @@ export interface RenderSchemaNodeOptions {
   ) => Promise<void> | void
   /** v-model 值写入后主动触发(node + 新值)—— 用于跨字段校验,绕过 watch 不可靠问题 */
   onValueChange?: (node: SchemaNode, newValue: unknown) => void
+  /**
+   * 当前响应式断点(xs/sm/md/lg/xl),由 XForm.vue 注入 useCurrentBreakpoint()
+   * render-schema-node 根据当前断点拍平 col.responsive / row.responsive 的字段
+   * 未提供时回退到响应式对象中最接近的较小断点(默认 sm → md 找不到时取 sm)
+   */
+  currentBreakpoint?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
 }
 
 /**
@@ -220,7 +282,13 @@ function renderArrayNode(node: SchemaNode, opts: RenderSchemaNodeOptions): VNode
     // 行容器:每个数组元素克隆 itemSchema 并把 name 路径前缀化为 items[i].subName
     // 注意数组索引必须用 [i] 语法（el-form prop 路径要求），不能写 items.i.qty
     const rewritten = rewriteNamePath(cfg.itemSchema, `${listName}[${index}]`, sep)
-    const inner = rewritten ? opts.render(rewritten as SchemaNode) : undefined
+    // 数组行的 col 响应式断点拍平(opts.currentBreakpoint 在外层 useRenderSchemaNode 闭包)
+    const inner = rewritten
+      ? opts.render({
+          ...(rewritten as object),
+          col: mergeColResponsive((rewritten as SchemaNode).col, opts.currentBreakpoint),
+        } as SchemaNode)
+      : undefined
     return h(
       'div',
       {
@@ -319,6 +387,7 @@ function renderArrayNode(node: SchemaNode, opts: RenderSchemaNodeOptions): VNode
 /** 渲染单个 schema 节点为 VNode：含视觉容器 / formItem / row / 默认 4 个分支 */
 export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
   function renderToComponentInner(node: SchemaNode): VNode | string | VNode[] | undefined {
+    // ← 注意:currentBreakpoint 已在外部捕获(闭包),通过 wrapWithElCol 传入
     // 数组节点走独立分支（不参与 formItem/row/Col 默认分支）
     if (node.kind === 'array') {
       return renderArrayNode(node, opts)
@@ -410,7 +479,7 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
                   } as never,
                   { default: defaultSlot, ...extraSlots }
                 )
-                return wrapWithElCol(node, inner)
+                return wrapWithElCol(node, inner, opts.currentBreakpoint)
               },
             }
           : undefined

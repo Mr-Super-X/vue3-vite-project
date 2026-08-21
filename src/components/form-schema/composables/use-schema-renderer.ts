@@ -8,6 +8,8 @@ interface UseSchemaRendererOptions {
   components: Ref<Record<string, unknown> | undefined>
   formData: Ref<Record<string, unknown>>
   beforeChange?: XFormProps['beforeChange']
+  /** P2-1:当前响应式断点 —— 断点变化时触发 schema 重渲染(响应式 ColConfig 拍平) */
+  currentBreakpoint?: Ref<string>
 }
 
 /**
@@ -39,6 +41,25 @@ export function useSchemaRenderer(opts: UseSchemaRendererOptions) {
     },
     { immediate: true, deep: true }
   )
+
+  // P2-1:响应式断点变化触发 schema 重渲染(响应式 ColConfig 拍平)
+  if (opts.currentBreakpoint) {
+    const bp = opts.currentBreakpoint
+    watch(
+      () => bp.value,
+      () => {
+        // 断点变化 → 重新走 schema watch handler(替换 reactiveSchema 引用触发重渲染)
+        const val = opts.schema.value
+        stoppers.forEach((s) => s())
+        stoppers.length = 0
+        const normalized = Array.isArray(val) ? ({ children: val } as SchemaNode) : val
+        const hasRx = containsReaction(normalized)
+        const cloned = hasRx ? reactive(cloneDeep(normalized)) : normalized
+        if (hasRx) traverse(cloned as SchemaNode, opts.formData.value, stoppers)
+        reactiveSchema.value = cloned
+      }
+    )
+  }
 
   onScopeDispose(() => {
     stoppers.forEach((s) => s())

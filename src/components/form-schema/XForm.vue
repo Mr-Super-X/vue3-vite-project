@@ -2,6 +2,7 @@
 import { computed, ref, watch, type VNode } from 'vue'
 import { get, set } from 'lodash-es'
 import { useSchemaRenderer } from './composables/use-schema-renderer'
+import { useCurrentBreakpoint } from './composables/use-current-breakpoint'
 import { validate, runCrossFieldValidation } from './composables/use-validate'
 import { scanForForbidden } from './composables/use-scan-forbidden'
 import { withHidden } from './composables/with-hidden'
@@ -67,6 +68,8 @@ const { reactiveSchema } = useSchemaRenderer({
   schema: computed(() => props.schema),
   components: computed(() => props.components) as never,
   formData: computed(() => props.model ?? {}) as never,
+  // P2-1:响应式断点注入
+  currentBreakpoint: useCurrentBreakpoint() as Ref<string>,
 })
 
 const {
@@ -231,6 +234,10 @@ function renderToComponent(
   return applyDirectives(result, node.directives)
 }
 
+// P2-1:响应式断点检测 —— viewport 变化时,响应式 ColConfig 自动拍平
+// useSchemaRenderer 内部 watch + 重渲染(整个 form 重新 mount)——简单可靠
+const currentBreakpoint = useCurrentBreakpoint()
+
 const renderInner = useRenderSchemaNode({
   model: props.model,
   components: props.components,
@@ -249,6 +256,8 @@ const renderInner = useRenderSchemaNode({
   onValueChange: (node, _newValue) => {
     triggerCrossFieldValidator(node, 'change')
   },
+  // P2-1:响应式断点感知(响应式 ColConfig 拍平)
+  currentBreakpoint: currentBreakpoint.value,
 })
 
 function getNames(includesIgnore = false): string[] {
