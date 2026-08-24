@@ -18,6 +18,7 @@ import {
   renderChildren,
   resolveComponentFor,
   wrapWithElCol,
+  mergeRowResponsive,
 } from './render-schema-node'
 import type { RenderSchemaNodeOptions } from './render-schema-node'
 
@@ -74,7 +75,10 @@ export function renderWithFormItem(
   }
   const asyncProps = buildAsyncProps(node)
 
-  return h(
+  // 阶段 2.4 修复(嵌套顺序):
+  // 正确嵌套: ElRow > ElCol > ElFormItem > Comp
+  // (el-form-item 不参与 24 栅格,必须放在 el-col 内部才能响应父 el-row 的 gutter)
+  const formItem = h(
     FormItemComp as never,
     {
       label: node.label,
@@ -95,7 +99,7 @@ export function renderWithFormItem(
                 extraSlots[k] = buildSlotFn(v, opts.render)
               }
             }
-            const inner = h(
+            return h(
               Comp as never,
               {
                 ...eventBindings,
@@ -107,11 +111,12 @@ export function renderWithFormItem(
               } as never,
               { default: defaultSlot, ...extraSlots }
             )
-            return wrapWithElCol(node, inner, opts.currentBreakpoint?.value)
           },
         }
       : undefined
-  ) as never
+  ) as VNode
+  // wrapWithElCol(ElCol) 包 formItem —— 正确嵌套顺序
+  return wrapWithElCol(node, formItem, opts.currentBreakpoint?.value)
 }
 
 /** 纯 row + column 布局（无 formItem 包装） */
@@ -122,9 +127,11 @@ export function renderWithRowColumn(node: SchemaNode, opts: RenderSchemaNodeOpti
       : node.column
         ? Math.floor(24 / node.column)
         : 24
+  // 阶段 2.4:row.responsive 拍平 —— 当前断点的 gutter/type/align/justify 覆盖基础配置
+  const mergedRow = mergeRowResponsive(node.row, opts.currentBreakpoint?.value)
   return h(
     ElRow as never,
-    { ...node.row, ...(node.key !== undefined && { key: node.key }) } as never,
+    { ...mergedRow, ...(node.key !== undefined && { key: node.key }) } as never,
     {
       default: () =>
         h(

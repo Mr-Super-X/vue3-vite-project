@@ -50,93 +50,73 @@ onUnmounted(() => {
 })
 
 const schema: SchemaNode = {
-  // Row 响应式:不同断点不同 gutter
+  // 阶段 2.4 增强:label-position 配置在 schema 顶层（自描述）
+  // 'top' 让 label 在 input 上方,避免挤占 col 宽度（响应式布局推荐）
+  labelPosition: 'top',
+  // Row 响应式:不同断点不同 gutter（差距拉大便于观察）+ justify 居中变化
+  // 注意：gutter 仅在"一行多列"时可见 —— xs 默认一行一列,sm+ 一行多列
   row: {
-    gutter: 16,
+    gutter: 32,
+    justify: 'start',
     responsive: {
-      xs: { gutter: 0 },
-      sm: { gutter: 8 },
-      md: { gutter: 16 },
-      lg: { gutter: 24 },
-      xl: { gutter: 32 },
+      xs: { gutter: 0, justify: 'start' }, // 手机:无间距,一行一列
+      sm: { gutter: 16, justify: 'start' }, // 平板:每行 4 字段
+      md: { gutter: 40, justify: 'center' }, // 中屏:每行 4 字段,居中
+      lg: { gutter: 60, justify: 'end' }, // 桌面:每行 4 字段,右对齐
+      xl: { gutter: 80, justify: 'space-between' }, // 大屏:每行 4 字段,两端分散
     },
   },
   children: [
-    // 1. 用户名 —— 手机 xs 占满,平板 12,桌面 6
+    // 4 个同行字段 —— xs 占满 24（一行一个）,sm+ 占 6（一行 4 个）使 gutter 可见
     {
       label: '用户名',
       name: 'username',
       component: 'Input',
-      col: {
-        responsive: {
-          xs: { span: 24 },
-          sm: { span: 12 },
-          md: { span: 6 },
-        },
-      },
+      col: { responsive: { xs: { span: 24 }, sm: { span: 6 } } },
     } as SchemaNode,
-
-    // 2. 邮箱 —— 桌面 12(右半边),手机占满
     {
       label: '邮箱',
       name: 'email',
       component: 'Input',
-      col: {
-        responsive: {
-          xs: { span: 24 },
-          sm: { span: 12 },
-          md: { span: 6 },
-        },
-      },
+      col: { responsive: { xs: { span: 24 }, sm: { span: 6 } } },
     } as SchemaNode,
-
-    // 3. 密码 —— 桌面居中(8/24 偏移)
     {
-      label: '密码',
-      name: 'password',
+      label: '电话',
+      name: 'phone',
       component: 'Input',
-      props: { type: 'password' },
-      col: {
-        responsive: {
-          xs: { span: 24 },
-          sm: { span: 24 },
-          md: { span: 12, offset: 6 },
-        },
-      },
+      col: { responsive: { xs: { span: 24 }, sm: { span: 6 } } },
     } as SchemaNode,
-
-    // 4. 备注 —— 全宽(响应式始终 span=24)
     {
-      label: '备注(全宽)',
-      name: 'note',
+      label: '地址',
+      name: 'address',
       component: 'Input',
-      props: { type: 'textarea', rows: 3 },
-      col: {
-        responsive: {
-          xs: { span: 24 },
-          sm: { span: 24 },
-          md: { span: 24 },
-        },
-      },
+      col: { responsive: { xs: { span: 24 }, sm: { span: 6 } } },
     } as SchemaNode,
-
-    // 5. 数组节点 —— 透传 col.responsive 到每行
+    // 第 2 行 4 字段
     {
-      kind: 'array',
-      name: 'contacts',
-      label: '联系人(响应式 col)',
-      array: {
-        itemSchema: {
-          component: 'Input',
-          col: {
-            responsive: {
-              xs: { span: 24 },
-              sm: { span: 12 },
-              md: { span: 8 },
-            },
-          },
-        } as SchemaNode,
-      },
+      label: '公司',
+      name: 'company',
+      component: 'Input',
+      col: { responsive: { xs: { span: 24 }, sm: { span: 6 } } },
+    } as SchemaNode,
+    {
+      label: '职位',
+      name: 'title',
+      component: 'Input',
+      col: { responsive: { xs: { span: 24 }, sm: { span: 6 } } },
+    } as SchemaNode,
+    {
+      label: '部门',
+      name: 'department',
+      component: 'Input',
+      col: { responsive: { xs: { span: 24 }, sm: { span: 6 } } },
+    } as SchemaNode,
+    {
+      label: '入职日期',
+      name: 'hireDate',
+      component: 'DatePicker',
+      props: { valueFormat: 'YYYY-MM-DD' },
+      col: { responsive: { xs: { span: 24 }, sm: { span: 6 } } },
     } as SchemaNode,
   ],
 }
@@ -144,9 +124,12 @@ const schema: SchemaNode = {
 const model = reactive<Record<string, unknown>>({
   username: '',
   email: '',
-  password: '',
-  note: '',
-  contacts: [{ name: '' }],
+  phone: '',
+  address: '',
+  company: '',
+  title: '',
+  department: '',
+  hireDate: '',
 })
 
 const formRef = ref<XFormExpose | null>(null)
@@ -205,7 +188,7 @@ async function copySchema() {
           <div :class="bem.e('state')">
             <div>
               <strong>当前断点:</strong>
-              <el-tag>{{ currentBreakpoint }}</el-tag>
+              <el-tag size="large" type="primary">{{ currentBreakpoint }}</el-tag>
               <span style="margin-left: 12px">
                 <strong>视口宽度:</strong>
                 {{ width }}px
@@ -213,8 +196,24 @@ async function copySchema() {
             </div>
             <div>
               <strong>说明:</strong>
-              请调整浏览器窗口大小,观察表单字段在桌面 / 平板 / 手机 下的布局变化(schema
-              配置的响应式断点会传给 el-row / el-col)。
+              请
+              <strong>调整浏览器窗口宽度</strong>
+              ,观察:
+              <ul>
+                <li>
+                  <strong>字段间距</strong>
+                  :xs=0 → sm=16 → md=40 → lg=60 → xl=80 (px)
+                </li>
+                <li>
+                  <strong>水平对齐</strong>
+                  :xs=左对齐 → md=居中 → lg=右对齐 → xl=两端分散
+                </li>
+                <li>
+                  <strong>字段宽度</strong>
+                  :col.responsive 控制 span(xs=24 占满 / md=6 占 1/4)
+                </li>
+              </ul>
+              resize 后立即可见字段间距和对齐方式变化。
             </div>
             <div>当前 model：</div>
             <pre>{{ JSON.stringify(model, null, 2) }}</pre>

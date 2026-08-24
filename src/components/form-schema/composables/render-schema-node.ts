@@ -35,7 +35,7 @@ import {
   ElSlider,
 } from 'element-plus'
 import { resolveComponent, h, type VNode, type ComponentPublicInstance, type Ref } from 'vue'
-import type { SchemaNode, XFormProps, ColConfig, SchemaSlot } from '../types'
+import type { SchemaNode, XFormProps, ColConfig, RowConfig, SchemaSlot } from '../types'
 import { buildVModelBindings } from './build-vmodel-bindings'
 import { buildOnBindings } from './build-on-bindings'
 import { buildAutocompleteFetcher } from './use-async-options'
@@ -120,8 +120,10 @@ export function wrapWithElCol(
     : null
   const span = baseConfig?.span ?? colObj?.span ?? 24
   const offset = baseConfig?.offset ?? colObj?.offset
+  // 关键修复:使用 ElCol 而非 ElFormItem —— ElFormItem 在 el-form 内响应栅格,
+  // 但 el-row 内的 gutter(padding-left/right)只对 ElCol 生效
   return h(
-    ElFormItem as never,
+    ElCol as never,
     {
       span,
       offset,
@@ -162,6 +164,24 @@ export function mergeColResponsive(
   if (picked.offset !== undefined) merged.offset = picked.offset
   if (picked.push !== undefined) merged.push = picked.push
   if (picked.pull !== undefined) merged.pull = picked.pull
+  delete (merged as { responsive?: unknown }).responsive
+  return merged
+}
+
+/**
+ * 阶段 2.4：row.responsive 拍平
+ * 与 mergeColResponsive 同逻辑 —— 但 row 没有 span/offset/push/pull,gutter/type/align/justify 是可选覆盖
+ */
+export function mergeRowResponsive(
+  row: RowConfig | undefined,
+  current?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
+): RowConfig | undefined {
+  if (!row) return row
+  const responsive = row.responsive
+  if (!responsive) return row
+  const picked = pickBreakpointConfig(responsive as never, current)
+  if (!picked) return row
+  const merged: RowConfig = { ...row, ...picked }
   delete (merged as { responsive?: unknown }).responsive
   return merged
 }

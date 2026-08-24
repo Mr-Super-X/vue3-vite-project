@@ -277,6 +277,16 @@ export interface SchemaNode {
    * （默认 permissionResolver 接受普通字符串字面量，可由用户注入 useAuth().hasPerm 实现权限码 → 状态映射）
    */
   permission?: ReactionValue<'view' | 'edit' | 'hidden'>
+  /**
+   * el-form label 位置（仅顶层 schema 生效，阶段 2.4 增强）：
+   * - 'left'（默认）：label 在 input 左侧
+   * - 'right'：label 在 input 右侧
+   * - 'top'：label 在 input 上方（响应式布局推荐，避免 label 挤占 col 宽度）
+   *
+   * 注：label-position 是 el-form 实例级属性,只能由顶层 schema 配置,
+   * 不能针对单个 el-form-item 设置（这是 element-plus 自身限制）
+   */
+  labelPosition?: 'left' | 'right' | 'top'
 }
 
 /**

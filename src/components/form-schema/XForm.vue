@@ -14,6 +14,7 @@ import { useServerError } from './composables/use-server-error'
 import { useRenderSchemaNode } from './composables/render-schema-node'
 import { matchTrigger } from './composables/match-trigger'
 import { DEFAULT_COMPONENT_MAP, DEFAULT_COMPONENT_PROPS } from './element-plus-adapter'
+import { mergeRowResponsive } from './composables/render-schema-node'
 import XFormDebugBanner from './XFormDebugBanner.vue'
 import type { ValidateResult } from './types'
 import 'element-plus/dist/index.css'
@@ -251,7 +252,8 @@ const topLevelNodes = computed<SchemaNode[]>(() => {
 const topLevelRow = computed(() => {
   const s = reactiveSchema.value
   if (Array.isArray(s) || s.children === undefined) return undefined
-  return s.row
+  // 阶段 2.4：row.responsive 拍平 —— 当前断点的 gutter/type/align/justify 覆盖基础配置
+  return mergeRowResponsive(s.row, currentBreakpoint.value)
 })
 const topLevelColumn = computed(() => {
   const s = reactiveSchema.value
@@ -261,6 +263,12 @@ const topLevelColumn = computed(() => {
 const topLevelColSpan = computed(() =>
   topLevelColumn.value ? Math.floor(24 / topLevelColumn.value) : 24
 )
+// 阶段 2.4 增强:顶层 schema 自描述 labelPosition（从 schema 顶层字段读取,而非 XForm props）
+const topLevelLabelPosition = computed<'left' | 'right' | 'top'>(() => {
+  const s = reactiveSchema.value
+  if (Array.isArray(s) || s.children === undefined) return 'left'
+  return s.labelPosition ?? 'left'
+})
 
 /** 节点渲染（外层：hidden / directives 包装） */
 function renderToComponent(
@@ -367,11 +375,17 @@ defineExpose({
         ref="elFormRef"
         :model="(props.model ?? {}) as Record<string, unknown>"
         :validate-trigger="['change', 'blur']"
+        :label-position="topLevelLabelPosition"
       >
-        <ElRow v-if="topLevelRow || topLevelColumn" :gutter="(topLevelRow?.gutter ?? 0) as never">
+        <!-- 阶段 2.4 修复：仅当顶层有 column 字段时,外层用 ElRow+ElCol 按 column 自动分配 span -->
+        <!-- 否则直接渲染节点（节点的 col.responsive 由内部 wrapWithElCol 响应式拍平） -->
+        <ElRow v-if="topLevelColumn" :gutter="(topLevelRow?.gutter ?? 0) as never">
           <ElCol v-for="(node, i) in topLevelNodes" :key="i" :span="topLevelColSpan">
             <component :is="renderToComponent(node)" />
           </ElCol>
+        </ElRow>
+        <ElRow v-else-if="topLevelRow" :gutter="(topLevelRow?.gutter ?? 0) as never">
+          <component v-for="(node, i) in topLevelNodes" :key="i" :is="renderToComponent(node)" />
         </ElRow>
         <component
           v-else
