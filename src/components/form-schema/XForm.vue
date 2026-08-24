@@ -9,6 +9,7 @@ import { withHidden } from './composables/with-hidden'
 import { applyDirectives } from './composables/apply-directives'
 import { useFormInstance } from './composables/use-form-instance'
 import { useCrossFieldTrigger } from './composables/use-cross-field-trigger'
+import { useFormDirty } from './composables/use-form-dirty'
 import { useRenderSchemaNode } from './composables/render-schema-node'
 import { matchTrigger } from './composables/match-trigger'
 import { DEFAULT_COMPONENT_MAP, DEFAULT_COMPONENT_PROPS } from './element-plus-adapter'
@@ -115,6 +116,15 @@ useCrossFieldTrigger({
   setFieldError: (name, message) => setFieldError(name, message),
   clearValidate: (names: string[]) => elFormRef.value?.clearValidate?.(names),
 })
+
+// 阶段 2.2：dirty 状态追踪
+// fieldNames 由 XForm 内置的 getNames() 提供（已遍历 schema 收集所有 name + key）
+const formDirty = useFormDirty({
+  model: () => props.model,
+  fieldNames: () => getNames(false), // 排除 ignore 字段
+})
+// 立即拍基线（model 加载完成即开始追踪，避免"未拍基线 = 全字段 dirty"假象）
+formDirty.resetDirty()
 
 /**
  * XForm 校验入口：先跑 el-form 字段内规则（失败直接 false），成功后跑跨字段校验
@@ -326,6 +336,10 @@ defineExpose({
   addItem,
   removeItem,
   moveItem,
+  isDirty: formDirty.isDirty,
+  getDirtyFields: formDirty.getDirtyFields,
+  isTouched: formDirty.isTouched,
+  resetDirty: formDirty.resetDirty,
 } satisfies XFormExpose)
 </script>
 

@@ -405,6 +405,14 @@ export interface XFormExpose {
   removeItem(name: string, index: number): void
   /** 数组节点操作：行位置调整（仅 ArrayNode 用） */
   moveItem(name: string, from: number, to: number): void
+  /** 阶段 2.2：dirty 状态 —— 任一字段与初始 snapshot 不同则为 dirty */
+  isDirty(): boolean
+  /** 阶段 2.2：返回所有 dirty 字段路径列表 */
+  getDirtyFields(): string[]
+  /** 阶段 2.2：指定字段是否被修改过 */
+  isTouched(name: string): boolean
+  /** 阶段 2.2：把当前状态标记为新基线（提交后归零 / 加载后初始化） */
+  resetDirty(): void
 }
 
 /** validate() 入参 */
