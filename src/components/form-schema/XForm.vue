@@ -21,6 +21,17 @@ import type { SchemaNode, XFormProps, XFormExpose, RuleItem } from './types'
 const props = defineProps<XFormProps>()
 const bem = createNamespace('x-form')
 
+// 阶段 1.2：model 缺时 dev mode 警告（提醒用户补传 reactive model）
+// 仅 DEV 触发，prod tree-shake 后零运行时开销
+if (import.meta.env.DEV) {
+  if (props.model === undefined) {
+    console.warn(
+      '[XForm] model prop 未传入。校验、默认值填充、reaction、dirty 追踪均不会生效。' +
+        '请传入 reactive() 包装的对象：const form = reactive({...})'
+    )
+  }
+}
+
 // Dev-only 错误状态（暴露给 XFormDebugBanner）
 const validateErrors = ref<Array<{ keyPath: (string | number)[]; message: string }>>([])
 const forbiddenErrors = ref<string[]>([])
