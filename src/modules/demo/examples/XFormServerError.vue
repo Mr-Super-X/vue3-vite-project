@@ -70,7 +70,11 @@ const schema: SchemaNode = {
       component: 'Input',
       props: { type: 'password' },
       col: { responsive: { xs: { span: 24 }, md: { span: 12 } } },
-      rules: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+      rules: [
+        { required: true, message: '请输入密码', trigger: 'blur' },
+        // 本地规则：密码至少 6 位 —— 失焦即校验，避免用户等到提交才发现弱密码
+        { min: 6, message: '密码长度不足,至少 6 位', trigger: 'blur' },
+      ],
     } as SchemaNode,
   ],
 }
@@ -94,29 +98,35 @@ const mockSaveToBackend = async (
   // 模拟 500ms 网络延迟
   await new Promise((r) => setTimeout(r, 500))
 
-  // 模拟各种 422 场景
+  // 模拟各种 422 场景 —— 每个错误独立触发,互不耦合
+  // 场景 1:用户名 admin → 仅报用户名已存在
   if (data.username === 'admin') {
     return {
       success: false,
-      errors: [
-        { field: 'username', message: '用户名已存在' },
-        { field: 'email', message: '该邮箱已被注册' },
-      ],
+      errors: [{ field: 'username', message: '用户名已存在' }],
     }
   }
+  // 场景 2:邮箱 admin@example.com → 仅报邮箱已被注册(独立的邮箱唯一性校验)
+  if (data.email === 'admin@example.com') {
+    return {
+      success: false,
+      errors: [{ field: 'email', message: '该邮箱已被注册' }],
+    }
+  }
+  // 场景 3:邮箱 test@spam.com → 仅报域名黑名单
   if (data.email === 'test@spam.com') {
     return {
       success: false,
       errors: [{ field: 'email', message: '该邮箱域名在黑名单中' }],
     }
   }
-  if (data.password === '123') {
+  if (data.password === '123456') {
+    // 前端 min:6 通过,但后端要求"必须含字母"——演示前后端规则不同时的映射
     return {
       success: false,
-      errors: [{ field: 'password', message: '密码强度不足,至少 6 位' }],
+      errors: [{ field: 'password', message: '密码强度不足,必须包含字母' }],
     }
   }
-  // 模拟服务端额外校验:密码 < 6 位也算强度不足(覆盖你输入 "233" 这种短密码)
   if (typeof data.password === 'string' && data.password.length < 6) {
     return {
       success: false,
@@ -140,15 +150,11 @@ async function onSave() {
     ElMessage.success('保存成功')
     return
   }
-  // 3. 后端 422 错误 → 映射到表单字段红字
-  if (result.errors && formRef.value) {
-    // 清空已有错误(避免旧错误残留)
-    formRef.value.clearValidate()
-    // 逐个设置错误
-    for (const err of result.errors) {
-      formRef.value.setFieldError(err.field, err.message)
-    }
-    ElMessage.error('保存失败,请根据红字提示修改')
+  // 3. 后端 422 错误 → 调用阶段 2.1 新增的 validateFromServer 适配器
+  //    一行替代原本 4 行循环（clearValidate + 逐个 setFieldError）
+  const count = formRef.value.validateFromServer(result)
+  if (count > 0) {
+    ElMessage.error(`保存失败,已映射 ${count} 个字段错误,请根据红字提示修改`)
   }
 }
 
@@ -202,9 +208,11 @@ async function copySchema() {
             <div>
               <strong>测试 422 错误场景:</strong>
               <ul>
-                <li>用户名=admin + 任意 email → 红字 "用户名已存在" / "该邮箱已被注册"</li>
+                <li>用户名=admin → 红字 "用户名已存在"</li>
+                <li>邮箱=admin@example.com → 红字 "该邮箱已被注册"</li>
                 <li>邮箱=test@spam.com → 红字 "该邮箱域名在黑名单中"</li>
-                <li>密码=123 → 红字 "密码强度不足,至少 6 位"</li>
+                <li>密码=123 → 前端失焦红字 "密码长度不足"（本地 min:6 规则）</li>
+                <li>密码=123456 → 前端通过，保存后红字 "必须包含字母"（后端额外规则）</li>
               </ul>
             </div>
             <div>当前 model：</div>

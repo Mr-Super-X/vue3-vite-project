@@ -12,6 +12,11 @@ export type ElFormInstance = {
   clearValidate?: (props?: string | string[]) => void
   resetFields?: () => void
   scrollToField?: (name: string) => void
+  /**
+   * 校验指定字段 —— element-plus 2.x 实际支持但 TS 类型声明不完整
+   * validateField(prop?: string | string[]): Promise<void>（校验失败 reject）
+   */
+  validateField?: (prop?: string | string[]) => Promise<void>
 }
 
 /**

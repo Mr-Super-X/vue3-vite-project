@@ -200,6 +200,12 @@ export interface RenderSchemaNodeOptions {
     node: SchemaNode,
     eventType: 'blur' | 'change'
   ) => Promise<void> | void
+  /**
+   * 触发 el-form 字段内 async-validator 校验（onBlur/onChange handler 需要手动调用）
+   * 为什么需要：覆盖 el-form-item 内部 emit 的 onBlur 后,el-form 不会自动跑字段内规则
+   * XForm 必须**显式**调用此函数才能保证字段内 min/max/required 等规则生效
+   */
+  validateField?: (name: string) => Promise<void>
   /** v-model 值写入后主动触发 */
   onValueChange?: (node: SchemaNode, newValue: unknown) => void
   /** 当前响应式断点 */

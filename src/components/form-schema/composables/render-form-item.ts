@@ -35,11 +35,38 @@ export function renderWithFormItem(
       : fi.component
     : ElFormItem
   const fiProps = fi?.props ?? {}
-  // 跨字段校验在 blur 时主动触发（否则 trigger: 'blur' 对 crossValidator 无效）——
-  // triggerCrossFieldValidator 由 XForm.vue 注入，跑完清错误或写 setFieldError 红字
+
+  // 跨字段校验在 blur/change 时主动触发
+  // 关键：onBlur/onChange handler 必须**同时**手动跑字段内 async-validator 校验
+  // 因为覆盖了 el-form-item 内部 emit 的 onBlur 后,el-form 不会自动跑字段内规则
+  //
+  // 零开销优化：仅当 triggerCrossFieldValidator 存在时才挂 handler
+  // ——否则 el-form-item 默认行为已自动跑字段内校验,无需覆盖
   const triggerFn = opts.triggerCrossFieldValidator
-  const onBlur = triggerFn && node.name ? () => triggerFn(node, 'blur') : undefined
-  const onChange = triggerFn && node.name ? () => triggerFn(node, 'change') : undefined
+  const validateField = opts.validateField
+
+  let onBlur: (() => Promise<void>) | undefined
+  let onChange: (() => Promise<void>) | undefined
+  if (triggerFn && node.name) {
+    // 提取到 const 变量 —— TS narrow 在 async function 边界外不传递,需要显式 const
+    const tf: NonNullable<typeof triggerFn> = triggerFn
+    const vf = validateField
+    const fieldName = node.name
+    async function runValidate(trigger: 'blur' | 'change'): Promise<void> {
+      // 1. 字段内 async-validator 校验
+      if (vf) {
+        try {
+          await vf(fieldName)
+        } catch {
+          // silent — 校验失败时错误已写入 form-item
+        }
+      }
+      // 2. 跨字段校验
+      await tf(node, trigger)
+    }
+    onBlur = () => runValidate('blur')
+    onChange = () => runValidate('change')
+  }
 
   const eventBindings = {
     ...buildVModelBindings(node, opts.model, opts.beforeChange, opts.onValueChange),

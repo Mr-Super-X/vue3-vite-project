@@ -10,6 +10,7 @@ import { applyDirectives } from './composables/apply-directives'
 import { useFormInstance } from './composables/use-form-instance'
 import { useCrossFieldTrigger } from './composables/use-cross-field-trigger'
 import { useFormDirty } from './composables/use-form-dirty'
+import { useServerError } from './composables/use-server-error'
 import { useRenderSchemaNode } from './composables/render-schema-node'
 import { matchTrigger } from './composables/match-trigger'
 import { DEFAULT_COMPONENT_MAP, DEFAULT_COMPONENT_PROPS } from './element-plus-adapter'
@@ -125,6 +126,13 @@ const formDirty = useFormDirty({
 })
 // 立即拍基线（model 加载完成即开始追踪，避免"未拍基线 = 全字段 dirty"假象）
 formDirty.resetDirty()
+
+// 阶段 2.1：服务端错误适配器
+const serverError = useServerError({
+  setFieldError: (name, message) => setFieldError(name, message),
+  clearValidate: (names) => elFormRef.value?.clearValidate?.(names),
+  knownFields: () => getNames(true), // 包含 ignore 字段（hidden 字段也可能有后端错误）
+})
 
 /**
  * XForm 校验入口：先跑 el-form 字段内规则（失败直接 false），成功后跑跨字段校验
@@ -295,6 +303,14 @@ const renderInner = useRenderSchemaNode({
   },
   // 字段事件触发 cross rules —— 让 crossValidator 响应 trigger 配置
   triggerCrossFieldValidator: (node, eventType) => triggerCrossFieldValidator(node, eventType),
+  // 触发 el-form 字段内 async-validator 校验 —— 覆盖 formItem onBlur 后必须手动调用
+  validateField: async (name: string) => {
+    try {
+      await elFormRef.value?.validateField?.(name)
+    } catch {
+      /* silent — 校验失败时错误已写入 form-item */
+    }
+  },
   // v-model 值变化时主动调 triggerCrossFieldValidator(eventType='change')
   // 绕过 watch 不可靠问题(vue Proxy track  + watch getter 依赖追踪的陷阱)
   onValueChange: (node, _newValue) => {
@@ -340,6 +356,7 @@ defineExpose({
   getDirtyFields: formDirty.getDirtyFields,
   isTouched: formDirty.isTouched,
   resetDirty: formDirty.resetDirty,
+  validateFromServer: serverError.validateFromServer,
 } satisfies XFormExpose)
 </script>
 
