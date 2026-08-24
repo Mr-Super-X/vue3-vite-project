@@ -266,6 +266,17 @@ export interface SchemaNode {
    *  - props.disabled 优先级更高：用户显式写在 props 里的 disabled 会覆盖本字段
    *  - el-form 自动跳过 disabled 字段的校验（async-validator 行为） */
   disabled?: ReactionValue<boolean>
+  /**
+   * 字段权限（阶段 2.3）：view / edit / hidden 三态
+   * - 'edit'：正常渲染为可编辑控件（默认值，不配置等同 edit）
+   * - 'view'：渲染为只读纯文本（model value 展示），跳过校验
+   * - 'hidden'：不渲染该字段（DOM 中不出现）
+   *
+   * 动态权限：函数形式 (model) => 'view' | 'edit' | 'hidden'，根据当前 model 动态决定
+   * 权限码形式：字符串 'user.edit' 等，需配合 XForm 的 permissionResolver 配置
+   * （默认 permissionResolver 接受普通字符串字面量，可由用户注入 useAuth().hasPerm 实现权限码 → 状态映射）
+   */
+  permission?: ReactionValue<'view' | 'edit' | 'hidden'>
 }
 
 /**

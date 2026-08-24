@@ -42,6 +42,7 @@ import { buildAutocompleteFetcher } from './use-async-options'
 import { renderArrayNode } from './render-array-node'
 import { renderVisualContainer } from './render-visual-container'
 import { renderWithFormItem, renderWithRowColumn } from './render-form-item'
+import { resolvePermission, renderViewPlaceholder } from './use-field-permission'
 
 type RenderFn = (
   node: SchemaNode | SchemaNode[] | string | undefined | null
@@ -210,6 +211,13 @@ export interface RenderSchemaNodeOptions {
   onValueChange?: (node: SchemaNode, newValue: unknown) => void
   /** 当前响应式断点 */
   currentBreakpoint?: Ref<'xs' | 'sm' | 'md' | 'lg' | 'xl'>
+  /**
+   * 权限码 → 状态 映射（阶段 2.3）
+   * 业务可注入 useAuth().hasPerm 实现的 resolver：
+   *   'user.edit' → hasPerm('user.edit') ? 'edit' : 'hidden'
+   * 默认 identity（字符串字面量直接返回）
+   */
+  permissionResolver?: (perm: string) => 'view' | 'edit' | 'hidden'
 }
 
 /** 取节点对应组件的默认 props；仅对 string component 生效 */
@@ -234,6 +242,40 @@ export function buildAsyncProps(node: SchemaNode): Record<string, unknown> {
 /** 主调度入口 —— 4 类分支委托给子模块 */
 export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
   function renderToComponentInner(node: SchemaNode): VNode | string | VNode[] | undefined {
+    // 阶段 2.3：权限 gate（位于最前面，所有渲染分支前）
+    // - hidden:不渲染,直接返回 undefined（DOM 中不出现）
+    // - view:渲染为纯文本占位,跳过 formItem 包装与校验
+    // - edit:正常走原有分支
+    const permission = resolvePermission(node, {
+      model: () => opts.model ?? {},
+      ...(opts.permissionResolver ? { permissionResolver: opts.permissionResolver } : {}),
+    })
+    if (permission === 'hidden') return undefined
+    if (permission === 'view' && node.name) {
+      // view 态:渲染 label + 纯文本占位（不包 formItem,不走校验）
+      return h(
+        'div',
+        {
+          key: `view-${node.name}`,
+          class: 'x-form-view-field',
+          'data-permission': 'view',
+        } as never,
+        {
+          default: () =>
+            [
+              node.label
+                ? h('label', { class: 'x-form-view-field__label' } as never, {
+                    default: () => `${node.label}：`,
+                  })
+                : null,
+              h('span', { class: 'x-form-view-field__value' } as never, {
+                default: () => renderViewPlaceholder(node, opts.model),
+              }),
+            ].filter(Boolean) as never,
+        }
+      ) as VNode
+    }
+
     // 1) 数组节点独立分支
     if (node.kind === 'array') {
       return renderArrayNode(node, opts)
