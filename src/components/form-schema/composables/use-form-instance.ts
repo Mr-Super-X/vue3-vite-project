@@ -5,7 +5,11 @@ import type { ZodType } from 'zod'
 /** 运行时方法对象（InstanceType<typeof ElForm> 会丢失 validate 等方法） */
 export type ElFormInstance = {
   validate?: (callback?: (valid: boolean) => void) => Promise<boolean>
-  clearValidate?: () => void
+  /**
+   * clearValidate 运行时支持 props?: string[] 参数（仅清除指定字段），
+   * 但 element-plus 2.x TS 类型声明为 () => void —— 这里用宽松签名补齐
+   */
+  clearValidate?: (props?: string | string[]) => void
   resetFields?: () => void
   scrollToField?: (name: string) => void
 }
@@ -118,19 +122,28 @@ export function useFormInstance(
     if (idx < 0) return
     const field = ef.fields[idx]
     if (!field) return
-    // 1. 写入 validateState / validateMessage(formItem reactive 属性本身)
+    // 1. 立即写入 validateState / validateMessage(formItem reactive 属性)
     field.validateState = state
     field.validateMessage = message
-    // 2. element-plus 2.x 内部 elForm.fields 是 shallowRef:
-    //    shallowRef 不追踪内部元素 reactive 变化,只追踪 .value 引用替换。
-    //    因此单纯写 fields[i].X 不会触发 UI 重渲染。
-    //    nextTick 后通过 splice 重建数组引用,强制 shallowRef trigger。
-    //    (参考: https://github.com/element-plus/element-plus/blob/main/packages/components/form/src/form.vue)
+    // 2. element-plus 2.x 内部 elForm.fields 写入后可能再次被字段内校验覆盖
+    //    (例如 el-input change 事件会触发字段内 async-validator 重跑 → success 状态覆盖 error)
+    //    nextTick 后再次写入,确保覆盖并触发 UI 重渲染
+    //    参考 https://github.com/element-plus/element-plus/blob/main/packages/components/form/src/form.vue
     nextTick(() => {
-      const arr = ef.fields
-      if (!arr) return
-      // splice 替换全部:保持元素引用 + 替换数组引用,触发 shallowRef 响应
-      arr.splice(0, arr.length, ...arr)
+      const ef2 = elFormRef.value as unknown as {
+        fields?: Array<{
+          prop?: string
+          validateState?: '' | 'validating' | 'success' | 'error'
+          validateMessage?: string
+        }>
+      } | null
+      if (!ef2?.fields) return
+      const idx2 = ef2.fields.findIndex((f) => f.prop === name)
+      if (idx2 < 0) return
+      const field2 = ef2.fields[idx2]
+      if (!field2) return
+      // 二次写入 + 用 Object.assign 触发 Proxy set trap,确保 UI 更新
+      Object.assign(field2, { validateState: state, validateMessage: message })
     })
   }
 

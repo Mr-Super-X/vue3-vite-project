@@ -8,6 +8,7 @@ import { scanForForbidden } from './composables/use-scan-forbidden'
 import { withHidden } from './composables/with-hidden'
 import { applyDirectives } from './composables/apply-directives'
 import { useFormInstance } from './composables/use-form-instance'
+import { useCrossFieldTrigger } from './composables/use-cross-field-trigger'
 import { useRenderSchemaNode } from './composables/render-schema-node'
 import { matchTrigger } from './composables/match-trigger'
 import { DEFAULT_COMPONENT_MAP, DEFAULT_COMPONENT_PROPS } from './element-plus-adapter'
@@ -105,6 +106,15 @@ const {
   () => props.model,
   () => props.zodSchema
 )
+
+// 阶段 1.1：反向跨字段实时校验 —— 任一字段变化 → 找出依赖它的 cross rules → 重跑写错误到目标字段
+// 关键修复：通过 el-form.clearValidate([prop]) 走官方清错流程，避开 element-plus 2.x shallowRef 陷阱
+useCrossFieldTrigger({
+  schema: () => props.schema,
+  model: () => props.model,
+  setFieldError: (name, message) => setFieldError(name, message),
+  clearValidate: (names: string[]) => elFormRef.value?.clearValidate?.(names),
+})
 
 /**
  * XForm 校验入口：先跑 el-form 字段内规则（失败直接 false），成功后跑跨字段校验
