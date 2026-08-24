@@ -1,10 +1,18 @@
-import { h, resolveComponent, type VNode, type ComponentPublicInstance, type Ref } from 'vue'
+/**
+ * Schema 节点渲染调度器 —— 阶段 1.4 拆分后主文件
+ *
+ * 职责：保留 col 响应式包装 + 工具函数 + 主调度入口
+ * 拆出去的子模块：
+ * - render-array-node.ts —— 数组节点（kind === 'array'）
+ * - render-visual-container.ts —— 视觉容器（Card 等带 row/column，无 name）
+ * - render-form-item.ts —— formItem 包装 + row+column 布局
+ *
+ * 主函数 renderToComponentInner 只做 4 类分支委托，不再包含具体渲染细节。
+ */
 import {
   ElConfigProvider,
   ElForm,
   ElFormItem,
-  ElRow,
-  ElCol,
   ElCard,
   ElButton,
   ElInput,
@@ -26,11 +34,14 @@ import {
   ElInputNumber,
   ElSlider,
 } from 'element-plus'
+import { resolveComponent, h, type VNode, type ComponentPublicInstance, type Ref } from 'vue'
 import type { SchemaNode, XFormProps, ColConfig, SchemaSlot } from '../types'
 import { buildVModelBindings } from './build-vmodel-bindings'
 import { buildOnBindings } from './build-on-bindings'
-import { renderToComponentWithGrid } from './render-with-grid'
 import { buildAutocompleteFetcher } from './use-async-options'
+import { renderArrayNode } from './render-array-node'
+import { renderVisualContainer } from './render-visual-container'
+import { renderWithFormItem, renderWithRowColumn } from './render-form-item'
 
 type RenderFn = (
   node: SchemaNode | SchemaNode[] | string | undefined | null
@@ -50,7 +61,6 @@ const EL_COMPONENT_MAP: Record<string, unknown> = {
   TreeSelect: ElTreeSelect,
   Autocomplete: ElAutocomplete,
   Button: ElButton,
-  Icon: ElIcon,
   RadioGroup: ElRadioGroup,
   Radio: ElRadio,
   CheckboxGroup: ElCheckboxGroup,
@@ -63,7 +73,7 @@ const EL_COMPONENT_MAP: Record<string, unknown> = {
   Form: ElForm,
 }
 
-function resolveComponentFor(
+export function resolveComponentFor(
   name: string | undefined,
   userComponents?: Record<string, unknown>
 ): unknown {
@@ -85,7 +95,7 @@ function resolveComponentFor(
   return null
 }
 
-function compileRules(rules: SchemaNode['rules'], propsRules: XFormProps['rules']): RuleArr {
+export function compileRules(rules: SchemaNode['rules'], propsRules: XFormProps['rules']): RuleArr {
   if (!rules) return []
   return (Array.isArray(rules) ? rules : [rules])
     .map((r) =>
@@ -96,15 +106,13 @@ function compileRules(rules: SchemaNode['rules'], propsRules: XFormProps['rules'
     .filter((r): r is Record<string, unknown> => typeof r === 'object' && r !== null)
 }
 
-function wrapWithElCol(
+export function wrapWithElCol(
   node: SchemaNode,
   inner: VNode,
   currentBreakpoint?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
 ): VNode {
   if (node.col === false) return inner
   if (node.col === undefined) return inner
-  // 响应式断点拍平:从 col.responsive[breakpoint] 取实际 span/offset
-  // 当前断点的具体配置优先;未匹配时回退到响应式对象第一个非 undefined 断点
   const colObj = typeof node.col === 'object' ? node.col : null
   const baseConfig = colObj?.responsive
     ? pickBreakpointConfig(colObj.responsive, currentBreakpoint)
@@ -112,43 +120,32 @@ function wrapWithElCol(
   const span = baseConfig?.span ?? colObj?.span ?? 24
   const offset = baseConfig?.offset ?? colObj?.offset
   return h(
-    ElCol as never,
+    ElFormItem as never,
     {
       span,
       offset,
-      // 始终保留 responsive 字段(若有)—— 调试或运行时切换保留
       ...(colObj?.responsive ? { responsive: colObj.responsive } : {}),
     } as never,
     { default: () => inner }
   ) as VNode
 }
 
-/**
- * 根据当前断点从响应式配置中选具体 ColConfig
- * 优先级:xs < sm < md < lg < xl —— 当前断点优先,否则回退到较小断点
- */
-function pickBreakpointConfig(
+export function pickBreakpointConfig(
   responsive: NonNullable<ColConfig['responsive']>,
   current?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
 ): { span?: number; offset?: number; push?: number; pull?: number } | undefined {
   const order: Array<'xs' | 'sm' | 'md' | 'lg' | 'xl'> = ['xs', 'sm', 'md', 'lg', 'xl']
   const currentIdx = current ? order.indexOf(current) : -1
-  // 优先当前断点,回退到较小断点
   for (let i = currentIdx; i >= 0; i--) {
     if (responsive[order[i]!]) return responsive[order[i]!]
   }
-  // 当前断点之前都没有,取第一个非 undefined
   for (const k of order) {
     if (responsive[k]) return responsive[k]
   }
   return undefined
 }
 
-/**
- * 合并 col + 响应式:返回拍平后的 ColConfig(纯 ColConfig,不含 responsive)
- * 用于数组行透传(数组行不再透传 responsive,直接透传已选定的 span/offset)
- */
-function mergeColResponsive(
+export function mergeColResponsive(
   col: SchemaNode['col'],
   current?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
 ): SchemaNode['col'] {
@@ -158,7 +155,6 @@ function mergeColResponsive(
   if (!responsive) return col
   const picked = pickBreakpointConfig(responsive, current)
   if (!picked) return col
-  // exactOptionalPropertyTypes:true 不允许 undefined 字段 —— 显式用 Object.assign 构建
   const merged: ColConfig = { ...col }
   if (picked.span !== undefined) merged.span = picked.span
   else if (merged.span === undefined) delete merged.span
@@ -169,7 +165,7 @@ function mergeColResponsive(
   return merged
 }
 
-function renderChildren(
+export function renderChildren(
   children: SchemaNode['children'],
   render: RenderFn
 ): VNode | string | VNode[] | undefined {
@@ -179,8 +175,7 @@ function renderChildren(
   return render(children)
 }
 
-/** 构造 Vue slot 函数：函数类型直接作为 scoped slot，否则走 schema 渲染 */
-function buildSlotFn(value: SchemaSlot, render: RenderFn): (scope?: unknown) => unknown {
+export function buildSlotFn(value: SchemaSlot, render: RenderFn): (scope?: unknown) => unknown {
   if (typeof value === 'function') {
     return (scope?: unknown) => value(scope as Record<string, unknown>)
   }
@@ -200,206 +195,19 @@ export interface RenderSchemaNodeOptions {
     removeItem: (name: string, index: number) => void
     moveItem: (name: string, from: number, to: number) => void
   }
-  /** 字段事件触发跨字段校验(node + 事件类型) */
+  /** 字段事件触发跨字段校验 */
   triggerCrossFieldValidator?: (
     node: SchemaNode,
     eventType: 'blur' | 'change'
   ) => Promise<void> | void
-  /** v-model 值写入后主动触发(node + 新值)—— 用于跨字段校验,绕过 watch 不可靠问题 */
+  /** v-model 值写入后主动触发 */
   onValueChange?: (node: SchemaNode, newValue: unknown) => void
-  /**
-   * 当前响应式断点(xs/sm/md/lg/xl),由 XForm.vue 注入 useCurrentBreakpoint() 的 ref
-   * render-schema-node 在渲染时读取 .value，按当前断点拍平 col.responsive / row.responsive
-   * 未提供时回退到响应式对象中最接近的较小断点
-   */
+  /** 当前响应式断点 */
   currentBreakpoint?: Ref<'xs' | 'sm' | 'md' | 'lg' | 'xl'>
 }
 
-/**
- * 把子 schema 的 name 路径前缀化,让 el-form 能按 list.0.qty 形式做嵌套校验
- * - 递归处理 children / formItem.slots / slots
- * - 子节点为空 / 字符串时原样返回
- */
-function rewriteNamePath(
-  sub: SchemaNode | SchemaNode[] | string | undefined,
-  prefix: string,
-  sep: string
-): SchemaNode | SchemaNode[] | string | undefined {
-  if (sub === undefined || sub === null) return sub
-  if (typeof sub === 'string') return sub
-  if (Array.isArray(sub)) {
-    return sub.map((s) => rewriteNamePath(s, prefix, sep) as SchemaNode)
-  }
-  const cloned: SchemaNode = { ...sub }
-  if (cloned.name) cloned.name = `${prefix}${sep}${cloned.name}`
-  if (cloned.children !== undefined) {
-    cloned.children = rewriteNamePath(cloned.children, prefix, sep) as never
-  }
-  if (cloned.slots) {
-    const newSlots: Record<string, SchemaSlot> = {}
-    for (const [k, v] of Object.entries(cloned.slots)) {
-      if (typeof v === 'function') {
-        newSlots[k] = v
-      } else if (v && typeof v === 'object') {
-        newSlots[k] = rewriteNamePath(v, prefix, sep) as never
-      } else {
-        newSlots[k] = v
-      }
-    }
-    cloned.slots = newSlots
-  }
-  if (cloned.formItem && typeof cloned.formItem === 'object' && cloned.formItem.slots) {
-    const newFormItemSlots: Record<string, SchemaSlot> = {}
-    for (const [k, v] of Object.entries(cloned.formItem.slots)) {
-      if (typeof v === 'function') {
-        newFormItemSlots[k] = v
-      } else if (v && typeof v === 'object') {
-        newFormItemSlots[k] = rewriteNamePath(v, prefix, sep) as never
-      } else {
-        newFormItemSlots[k] = v
-      }
-    }
-    cloned.formItem = { ...cloned.formItem, slots: newFormItemSlots }
-  }
-  return cloned
-}
-
-/**
- * 渲染数组节点(kind === 'array')
- * - 外层 ElCard + 标题 + 添加按钮(顶部)
- * - 每行 ElFormItem(继承父数组节点的 label) + itemSchema 渲染 + 行尾按钮(上移/下移/删除)
- * - min/max 边界禁用对应按钮
- */
-function renderArrayNode(node: SchemaNode, opts: RenderSchemaNodeOptions): VNode | undefined {
-  if (!node.array) return undefined
-  const listName = node.name
-  if (!listName) return undefined
-  const cfg = node.array
-  // el-form prop 路径必须用 items[0].qty 语法(方括号包裹数字索引),不能用 items.0.qty
-  // 数组索引固定为 [i] 语法不可配置;对象内部嵌套仍用 '.' 分隔
-  const sep = '.'
-  const showActions = cfg.showActions ?? true
-  const showAdd = typeof showActions === 'object' ? showActions.add !== false : showActions
-  const showRemove = typeof showActions === 'object' ? showActions.remove !== false : showActions
-  const showMove = typeof showActions === 'object' ? showActions.move !== false : showActions
-  const labelAdd = cfg.labels?.add ?? '添加'
-  const labelRemove = cfg.labels?.remove ?? '删除'
-  const labelUp = cfg.labels?.moveUp ?? '上移'
-  const labelDown = cfg.labels?.moveDown ?? '下移'
-
-  const listRaw = opts.model?.[listName]
-  const list: unknown[] = Array.isArray(listRaw) ? listRaw : []
-  const min = cfg.minItems ?? 0
-  const max = cfg.maxItems ?? Infinity
-
-  const renderRow = (row: unknown, index: number): VNode => {
-    // 行容器:每个数组元素克隆 itemSchema 并把 name 路径前缀化为 items[i].subName
-    // 注意数组索引必须用 [i] 语法（el-form prop 路径要求），不能写 items.i.qty
-    const rewritten = rewriteNamePath(cfg.itemSchema, `${listName}[${index}]`, sep)
-    // 数组行的 col 响应式断点拍平(opts.currentBreakpoint 在外层 useRenderSchemaNode 闭包)
-    const inner = rewritten
-      ? opts.render({
-          ...(rewritten as object),
-          col: mergeColResponsive((rewritten as SchemaNode).col, opts.currentBreakpoint?.value),
-        } as SchemaNode)
-      : undefined
-    return h(
-      'div',
-      {
-        key: `array-${listName}-${index}`,
-        class: `${typeof node.component === 'string' ? node.component.toLowerCase() : 'array-node'}__row`,
-      } as never,
-      {
-        default: () => [
-          h('div', { class: 'array-node__row-body' } as never, {
-            default: () => (inner && !Array.isArray(inner) ? [inner] : (inner as never)),
-          }) as VNode,
-          h('div', { class: 'array-node__row-actions' } as never, {
-            default: () =>
-              [
-                showMove &&
-                  h(
-                    ElButton as never,
-                    {
-                      size: 'small',
-                      disabled: index === 0,
-                      onClick: () => opts.arrayActions?.moveItem(listName, index, index - 1),
-                    } as never,
-                    { default: () => labelUp }
-                  ),
-                showMove &&
-                  h(
-                    ElButton as never,
-                    {
-                      size: 'small',
-                      disabled: index >= list.length - 1,
-                      onClick: () => opts.arrayActions?.moveItem(listName, index, index + 1),
-                    } as never,
-                    { default: () => labelDown }
-                  ),
-                showRemove &&
-                  h(
-                    ElButton as never,
-                    {
-                      size: 'small',
-                      type: 'danger',
-                      disabled: list.length <= min,
-                      onClick: () => opts.arrayActions?.removeItem(listName, index),
-                    } as never,
-                    { default: () => labelRemove }
-                  ),
-              ].filter(Boolean) as never,
-          }) as VNode,
-        ],
-      }
-    ) as VNode
-  }
-
-  return h(
-    ElCard as never,
-    {
-      shadow: 'never',
-      class: 'array-node',
-      ...(node.props ?? {}),
-    } as never,
-    {
-      default: () => [
-        h('div', { class: 'array-node__header' } as never, {
-          default: () =>
-            [
-              h('span', { class: 'array-node__title' } as never, {
-                default: () => cfg.title ?? node.label ?? listName,
-              }) as VNode,
-              showAdd &&
-                h(
-                  ElButton as never,
-                  {
-                    type: 'primary',
-                    size: 'small',
-                    disabled: list.length >= max,
-                    onClick: () => opts.arrayActions?.addItem(listName),
-                  } as never,
-                  { default: () => labelAdd }
-                ),
-            ].filter(Boolean) as never,
-        }) as VNode,
-        h('div', { class: 'array-node__body' } as never, {
-          default: () =>
-            list.length === 0
-              ? [
-                  h('div', { class: 'array-node__empty' } as never, {
-                    default: () => '暂无数据,点击右上角「添加」按钮新增',
-                  }) as VNode,
-                ]
-              : (list.map((row, i) => renderRow(row, i)) as never),
-        }) as VNode,
-      ],
-    }
-  ) as VNode
-}
-
-/** 取节点对应组件的默认 props；仅对 string component 生效，对象组件无默认注入 */
-function getComponentDefaultProps(
+/** 取节点对应组件的默认 props；仅对 string component 生效 */
+export function getComponentDefaultProps(
   node: SchemaNode,
   componentProps?: Record<string, Record<string, unknown>>
 ): Record<string, unknown> {
@@ -407,8 +215,8 @@ function getComponentDefaultProps(
   return componentProps?.[node.component] ?? {}
 }
 
-/** 构造 Autocomplete 异步选项所需的 props（Select/Cascader/TreeSelect 已在 use-schema-renderer 注入 options/data） */
-function buildAsyncProps(node: SchemaNode): Record<string, unknown> {
+/** 构造 Autocomplete 异步选项所需的 props */
+export function buildAsyncProps(node: SchemaNode): Record<string, unknown> {
   if (!node.asyncOptions) return {}
   const name = typeof node.component === 'string' ? node.component : null
   if (name !== 'Autocomplete' && name !== 'ElAutocomplete') return {}
@@ -417,15 +225,13 @@ function buildAsyncProps(node: SchemaNode): Record<string, unknown> {
   }
 }
 
-/** 渲染单个 schema 节点为 VNode：含视觉容器 / formItem / row / 默认 4 个分支 */
+/** 主调度入口 —— 4 类分支委托给子模块 */
 export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
   function renderToComponentInner(node: SchemaNode): VNode | string | VNode[] | undefined {
-    // ← 注意:currentBreakpoint 已在外部捕获(闭包),通过 wrapWithElCol 传入
-    // 数组节点走独立分支（不参与 formItem/row/Col 默认分支）
+    // 1) 数组节点独立分支
     if (node.kind === 'array') {
       return renderArrayNode(node, opts)
     }
-    // component 字段支持 string(走映射)或 object(直接 Vue 组件对象)
     const Comp =
       typeof node.component === 'string'
         ? resolveComponentFor(node.component, opts.components)
@@ -435,123 +241,22 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
       ...buildOnBindings(node, opts.model),
     }
     const asyncProps = buildAsyncProps(node)
-    // 视觉容器（Card 等）
+    // 2) 视觉容器（Card 等带 row/column，无 name）
     if (Comp && (node.slots || node.children !== undefined) && !node.name) {
-      const slotMap: Record<string, (scope?: unknown) => unknown> = {}
-      if (node.slots)
-        for (const [k, v] of Object.entries(node.slots)) slotMap[k] = buildSlotFn(v, opts.render)
-      const useGrid = !!(node.row || node.column !== undefined)
-      slotMap.default = useGrid
-        ? () => renderToComponentWithGrid(node, opts.render)
-        : () => opts.render(node.children as never) as never
-      return h(
-        Comp as never,
-        {
-          ...getComponentDefaultProps(node, opts.componentProps),
-          ...node.props,
-          ...asyncProps,
-          ...(node.disabled !== undefined ? { disabled: node.disabled } : {}),
-          ...(node.key !== undefined && { key: node.key }),
-        } as never,
-        slotMap
-      ) as never
+      return renderVisualContainer(node, Comp as object, opts, asyncProps)
     }
+    // 3) FormItem 包装（含 name 或 formItem: true）
     const wrapWithFormItem =
       (node.name !== undefined && node.formItem !== false) || node.formItem === true
     if (wrapWithFormItem) {
-      const fi = typeof node.formItem === 'object' ? node.formItem : null
-      const FormItemComp = fi?.component
-        ? typeof fi.component === 'string'
-          ? (resolveComponentFor(fi.component, opts.components) ?? ElFormItem)
-          : fi.component
-        : ElFormItem
-      const fiProps = fi?.props ?? {}
-      // 跨字段校验在 blur 时主动触发(否则 trigger: 'blur' 对 crossValidator 无效,
-      // 见 P0-4 文档说明)。triggerCrossFieldValidator 由 XForm.vue 注入,
-      // 内部读 model 跑 cross rules,成功清空错误,失败 setFieldError 红字
-      const triggerFn = opts.triggerCrossFieldValidator
-      const onBlur =
-        triggerFn && node.name
-          ? () => {
-              triggerFn(node, 'blur')
-            }
-          : undefined
-      const onChange =
-        triggerFn && node.name
-          ? () => {
-              triggerFn(node, 'change')
-            }
-          : undefined
-      return h(
-        FormItemComp as never,
-        {
-          label: node.label,
-          prop: node.name,
-          rules: compileRules(node.rules, opts.rules) as never,
-          ...(onBlur ? { onBlur } : {}),
-          ...(onChange ? { onChange } : {}),
-          ...fiProps,
-          ...(node.name || node.key ? { key: `fi-${node.name ?? node.key}` } : {}),
-        } as never,
-        Comp
-          ? {
-              default: () => {
-                // formItem 默认 default 来自 node.children(向后兼容)
-                const defaultSlot = () => renderChildren(node.children, opts.render) as never
-                // formItem 还要把 node.slots 转发给 Comp(如 el-upload 的 tip 槽位)——否则 slots 被吞
-                const extraSlots: Record<string, (scope?: unknown) => unknown> = {}
-                if (node.slots) {
-                  for (const [k, v] of Object.entries(node.slots)) {
-                    extraSlots[k] = buildSlotFn(v, opts.render)
-                  }
-                }
-                const inner = h(
-                  Comp as never,
-                  {
-                    ...eventBindings,
-                    ...getComponentDefaultProps(node, opts.componentProps),
-                    ...node.props,
-                    ...asyncProps,
-                    ...(node.disabled !== undefined ? { disabled: node.disabled } : {}),
-                    ...(node.key !== undefined && { key: node.key }),
-                  } as never,
-                  { default: defaultSlot, ...extraSlots }
-                )
-                return wrapWithElCol(node, inner, opts.currentBreakpoint?.value)
-              },
-            }
-          : undefined
-      ) as never
+      const result = renderWithFormItem(node, Comp as object, opts)
+      if (result) return result
     }
+    // 4) 纯 row+column 布局（无 formItem）
     if (node.row || node.column !== undefined) {
-      const colSpan =
-        node.col && typeof node.col === 'object'
-          ? (node.col.span ?? 24)
-          : node.column
-            ? Math.floor(24 / node.column)
-            : 24
-      return h(
-        ElRow as never,
-        { ...node.row, ...(node.key !== undefined && { key: node.key }) } as never,
-        {
-          default: () =>
-            h(
-              ElCol as never,
-              {
-                span: colSpan,
-                // 数组节点 col.responsive 透传(element-plus 响应式)
-                ...(node.col && typeof node.col === 'object' && node.col.responsive
-                  ? { responsive: node.col.responsive }
-                  : {}),
-                ...(node.key !== undefined && { key: node.key }),
-              } as never,
-              {
-                default: () => opts.render(node.children as never),
-              }
-            ),
-        }
-      ) as never
+      return renderWithRowColumn(node, opts)
     }
+    // 5) 默认分支：直接渲染 Comp
     if (!Comp) return undefined
     return wrapWithElCol(
       node,
