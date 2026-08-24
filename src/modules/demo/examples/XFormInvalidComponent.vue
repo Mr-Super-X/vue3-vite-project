@@ -1,0 +1,144 @@
+<script setup lang="ts">
+/**
+ * 演示：schema 组件名拼写错误校验（阶段 1.3 新增）
+ *
+ * 场景：
+ * 1. 已知 EL 组件短名（Input）→ 不警告
+ * 2. 已知 EL 组件全名（ElInput）→ 不警告（自动识别）
+ * 3. 拼写错误的组件名（Inpurt）→ 控制台 warn + Debug Banner 红条
+ * 4. 自定义组件未在 components prop 注册（MyInput）→ 警告
+ * 5. 自定义组件已在 components prop 注册 → 不警告
+ *
+ * 验证方法：
+ * - 打开 DevTools Console 查看 [XForm][validate] 警告
+ * - 右下角 Debug Banner（dev 模式）应显示红条 + 错误列表
+ */
+import { reactive } from 'vue'
+import { ElMessage, ElInput } from 'element-plus'
+import XForm from '@/components/form-schema/XForm.vue'
+import type { SchemaNode, XFormProps } from '@/components/form-schema/types'
+import DocLayout from '../layouts/DocLayout.vue'
+import DemoFrame from '../components/DemoFrame.vue'
+import DemoField from '../components/DemoField.vue'
+
+const bem = createNamespace('demo-x-form-invalid-component')
+
+// 场景代码片段（用于 DemoField 展示）
+const invalidComponentCode = `{
+  component: 'Inpurt', // 故意拼错
+  name: 'fieldC',
+  label: '拼写错误',
+}`
+const registeredComponentCode = `<XForm
+  :schema="schema"
+  :model="model"
+  :components="{ MyCustomInput: MyInputComp }"
+/>`
+
+/** 自定义组件（仅用于演示 userComponents 命中场景） */
+// 用真实的 ElInput 注入到 components prop，让 userComponents 命中且能正常渲染
+const customComponents: XFormProps['components'] = { MyCustomInput: ElInput }
+
+const model = reactive<Record<string, unknown>>({})
+
+/**
+ * 含 4 种场景的演示 schema
+ * - 字段 A：已知 EL 短名（Input）→ 通过
+ * - 字段 B：已知 EL 全名（ElInput）→ 通过
+ * - 字段 C：拼写错误（Inpurt）→ 警告
+ * - 字段 D：未注册的自定义组件（MyCustomInput 但未传）→ 警告
+ */
+const schema: SchemaNode = {
+  column: 1,
+  children: [
+    {
+      label: 'A. 已知 EL 短名',
+      name: 'fieldA',
+      component: 'Input',
+      props: { placeholder: '正常：Input 短名' },
+    },
+    {
+      label: 'B. 已知 EL 全名',
+      name: 'fieldB',
+      component: 'ElInput',
+      props: { placeholder: '正常：ElInput 全名也识别' },
+    },
+    {
+      label: 'C. 拼写错误（Inpurt）',
+      name: 'fieldC',
+      component: 'Inpurt', // 故意拼错
+      props: { placeholder: '应触发警告' },
+    },
+    {
+      label: 'D. 未注册自定义组件',
+      name: 'fieldD',
+      component: 'MyUnregisteredComp', // 未在 components prop 注册
+      props: { placeholder: '应触发警告' },
+    },
+  ],
+}
+
+/** 已注册自定义组件的对照组 */
+const registeredModel = reactive<Record<string, unknown>>({})
+const registeredSchema: SchemaNode = {
+  label: 'E. 已注册自定义组件（对照组）',
+  children: [
+    {
+      label: 'E. 已注册 MyCustomInput',
+      name: 'fieldE',
+      component: 'MyCustomInput', // 已在 components prop 注册
+      props: { placeholder: '正常：userComponents 命中' },
+    },
+  ],
+}
+
+function onSaveA() {
+  ElMessage.info(`提交 A/B 字段：${JSON.stringify(model)}`)
+}
+function onSaveE() {
+  ElMessage.info(`提交 E 字段：${JSON.stringify(registeredModel)}`)
+}
+</script>
+
+<template>
+  <DocLayout>
+    <DemoFrame
+      title="组件名校验（阶段 1.3）"
+      source="src/components/form-schema/composables/use-validate.ts"
+      :introductions="[
+        '演示 XForm 阶段 1.3 新增：schema component 字段拼写错误时，dev mode 触发 console.warn + Debug Banner 错误。',
+        '打开 DevTools Console 应看到 2 条 [XForm][validate] 警告（字段 C 和 D）。',
+        '右下角 Debug Banner（dev 模式）会显示红色错误条。',
+        '字段 A (Input)、B (ElInput)、E (MyCustomInput 已注册) 不应触发警告。',
+      ]"
+    >
+      <section id="demo-invalid-component">
+        <DemoField label="场景 1：含拼写错误组件名（预期 2 个警告）" :code="invalidComponentCode">
+          <div :class="bem.b()">
+            <XForm :schema="schema" :model="model" />
+            <el-button :class="bem.e('submit')" @click="onSaveA">提交</el-button>
+          </div>
+        </DemoField>
+
+        <DemoField label="场景 2：userComponents 已注册（无警告）" :code="registeredComponentCode">
+          <div :class="bem.b()">
+            <XForm
+              :schema="registeredSchema"
+              :model="registeredModel"
+              :components="customComponents"
+            />
+            <el-button :class="bem.e('submit')" @click="onSaveE">提交</el-button>
+          </div>
+        </DemoField>
+      </section>
+    </DemoFrame>
+  </DocLayout>
+</template>
+
+<style lang="scss">
+.#{$BEM_PREFIX}-demo-x-form-invalid-component {
+  &__submit {
+    margin-top: 16px;
+  }
+}
+</style>

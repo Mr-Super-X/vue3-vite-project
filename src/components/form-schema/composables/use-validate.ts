@@ -8,29 +8,66 @@ export function validate(
   options: ValidateOptions = {}
 ): ValidateResult {
   const errors: ValidateResult['errors'] = []
-  traverse(schema, [], errors, options.validateFirst ?? false)
+  traverse(schema, [], errors, {
+    validateFirst: options.validateFirst ?? false,
+    knownComponents: options.knownComponents,
+  })
   return { isValid: errors.length === 0, errors }
+}
+
+/**
+ * 把 builtin 短名集合展开为「短名 + ElXxx 全名」两个集合，方便校验组件名时兼容两种写法
+ * （与 element-plus-adapter.resolveElComponentName 的解析顺序对齐）
+ */
+function expandKnownComponents(known: ValidateOptions['knownComponents']): {
+  names: Set<string>
+} | null {
+  if (!known) return null
+  const names = new Set<string>()
+  for (const short of known.builtin) {
+    names.add(short)
+    names.add(`El${short}`)
+  }
+  if (known.user) for (const u of known.user) names.add(u)
+  return { names }
 }
 
 function traverse(
   node: unknown,
   keyPath: (string | number)[],
   errors: ValidateResult['errors'],
-  validateFirst: boolean
+  ctx: {
+    validateFirst: boolean
+    knownComponents?: ValidateOptions['knownComponents']
+  }
 ): void {
-  if (validateFirst && errors.length > 0) return
+  if (ctx.validateFirst && errors.length > 0) return
   if (node === null || typeof node !== 'object' || Array.isArray(node)) return
   const obj = node as Record<string, unknown>
 
   if ('component' in obj && obj.component !== undefined) {
     if (typeof obj.component !== 'string') {
       errors.push({ keyPath: [...keyPath, 'component'], message: 'component 必须是字符串' })
-      if (validateFirst) return
+      if (ctx.validateFirst) return
+    } else if (ctx.knownComponents) {
+      // 阶段 1.3：组件名有效性校验 —— 短名 + ElXxx 全名 + userComponents 三类必须命中其一
+      const known = expandKnownComponents(ctx.knownComponents)
+      if (known && !known.names.has(obj.component)) {
+        const msg = `未知组件名 "${obj.component}" —— 不在 EL 组件集或 userComponents 中（请检查拼写或确认是否已在 components prop 注册）`
+        if (import.meta.env.DEV) {
+          // dev 模式：console.warn 立即可见，prod 仅推 errors（debug banner 仅 dev 显示）
+          console.warn(
+            `[XForm][validate] ${msg}\n  keyPath: ${[...keyPath, 'component'].join('.')}`
+          )
+        }
+        errors.push({ keyPath: [...keyPath, 'component'], message: msg })
+        if (ctx.validateFirst) return
+      }
     }
   }
   if (obj.on && typeof obj.on === 'object' && !Array.isArray(obj.on)) {
     for (const [k, v] of Object.entries(obj.on as Record<string, unknown>)) {
-      if (validateFirst && errors.length > 0) return
+      if (ctx.validateFirst && errors.length > 0) return
       if (typeof v !== 'function' && typeof v !== 'string') {
         errors.push({ keyPath: [...keyPath, 'on', k], message: '事件回调必须为函数或函数表达式' })
       }
@@ -45,9 +82,9 @@ function traverse(
   if ('children' in obj && obj.children !== undefined) {
     const c = obj.children
     if (Array.isArray(c)) {
-      c.forEach((child, i) => traverse(child, [...keyPath, 'children', i], errors, validateFirst))
+      c.forEach((child, i) => traverse(child, [...keyPath, 'children', i], errors, ctx))
     } else if (typeof c === 'object' && c !== null) {
-      traverse(c, [...keyPath, 'children'], errors, validateFirst)
+      traverse(c, [...keyPath, 'children'], errors, ctx)
     } else if (typeof c !== 'string') {
       errors.push({ keyPath: [...keyPath, 'children'], message: 'children 类型非法' })
     }

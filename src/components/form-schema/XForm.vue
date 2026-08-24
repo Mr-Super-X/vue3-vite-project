@@ -10,7 +10,7 @@ import { applyDirectives } from './composables/apply-directives'
 import { useFormInstance } from './composables/use-form-instance'
 import { useRenderSchemaNode } from './composables/render-schema-node'
 import { matchTrigger } from './composables/match-trigger'
-import { DEFAULT_COMPONENT_PROPS } from './element-plus-adapter'
+import { DEFAULT_COMPONENT_MAP, DEFAULT_COMPONENT_PROPS } from './element-plus-adapter'
 import XFormDebugBanner from './XFormDebugBanner.vue'
 import type { ValidateResult } from './types'
 import 'element-plus/dist/index.css'
@@ -64,7 +64,13 @@ if (showDebugBanner.value) {
     (val) => {
       const normalized = Array.isArray(val) ? ({ children: val } as SchemaNode) : val
       applyDefaults(normalized, props.model)
-      const { isValid, errors } = validate(normalized)
+      // 阶段 1.3：组件名校验 —— 短名 + ElXxx 全名 + userComponents 三类必须命中其一
+      const { isValid, errors } = validate(normalized, {
+        knownComponents: {
+          builtin: new Set(Object.keys(DEFAULT_COMPONENT_MAP)),
+          user: new Set(Object.keys(props.components ?? {})),
+        },
+      })
       validateErrors.value = isValid ? [] : errors
       if (!isValid) console.error('[XForm] schema validation failed:', errors)
       const forbidden = scanForForbidden(normalized)

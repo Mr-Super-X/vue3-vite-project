@@ -410,6 +410,16 @@ export interface XFormExpose {
 /** validate() 入参 */
 export interface ValidateOptions {
   validateFirst?: boolean
+  /**
+   * 已知组件集 —— 用于组件名有效性校验（阶段 1.3）
+   * - builtin: EL 内置组件短名集合 (Input/Select/...)
+   * - user: 用户通过 XForm.components prop 注册的自定义组件名集合
+   * 任一缺失：仅校验另一类（不传则跳过组件名校验，保持向后兼容）
+   */
+  knownComponents?: {
+    builtin: Set<string>
+    user?: Set<string>
+  }
 }
 
 /** validate() 出参 */
