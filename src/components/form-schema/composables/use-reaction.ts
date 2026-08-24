@@ -18,12 +18,18 @@ export function containsReaction(schema: SchemaNode | SchemaNode[]): boolean {
     if (Array.isArray(o.children)) o.children.forEach(traverse)
     else if (o.children && typeof o.children === 'object') traverse(o.children)
     if (o.slots && typeof o.slots === 'object') {
-      for (const slot of Object.values(o.slots as Record<string, unknown>)) traverse(slot)
+      for (const slot of Object.values(o.slots as Record<string, unknown>)) {
+        if (typeof slot === 'function') continue
+        traverse(slot)
+      }
     }
     if (o.formItem && typeof o.formItem === 'object') {
       const fi = o.formItem as Record<string, unknown>
       if (fi.slots && typeof fi.slots === 'object') {
-        for (const slot of Object.values(fi.slots as Record<string, unknown>)) traverse(slot)
+        for (const slot of Object.values(fi.slots as Record<string, unknown>)) {
+          if (typeof slot === 'function') continue
+          traverse(slot)
+        }
       }
     }
     // 数组节点（kind: 'array'）：递归遍历 itemSchema 子树，避免 itemSchema 内部 reaction 被漏判
@@ -94,6 +100,7 @@ export function applyReactions(
   }
   if (node.slots) {
     for (const slot of Object.values(node.slots)) {
+      if (typeof slot === 'function') continue
       if (slot && typeof slot === 'object' && !Array.isArray(slot))
         applyReactions(slot, model, stoppers)
       else if (Array.isArray(slot)) slot.forEach((c) => applyReactions(c, model, stoppers))
@@ -101,6 +108,7 @@ export function applyReactions(
   }
   if (node.formItem && typeof node.formItem === 'object' && node.formItem.slots) {
     for (const slot of Object.values(node.formItem.slots)) {
+      if (typeof slot === 'function') continue
       if (slot && typeof slot === 'object' && !Array.isArray(slot))
         applyReactions(slot, model, stoppers)
     }

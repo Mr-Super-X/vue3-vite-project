@@ -7,7 +7,7 @@
     "preinstall": "npx only-allow pnpm",
     "dev": "vite",
     "dev:local": "cross-env VITE_MENU_SOURCE=local vite",
-    "build": "run-s type-check:full \"build-only {@}\" --",
+    "build": "run-s \"build-only {@}\" \"type-check:full\" --",
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",

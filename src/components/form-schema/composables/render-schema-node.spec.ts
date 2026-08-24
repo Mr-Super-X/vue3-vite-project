@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import type { SchemaNode } from '../types'
 import { useRenderSchemaNode } from './render-schema-node'
+import { h } from 'vue'
 
 /** 创建一个最小可用的 RenderSchemaNode options */
 function makeOpts(overrides: Partial<Parameters<typeof useRenderSchemaNode>[0]> = {}) {
@@ -444,5 +445,90 @@ describe('useRenderSchemaNode 响应式栅格(P1-3)', () => {
       },
     } as unknown as SchemaNode)
     expect(result).toBeDefined()
+  })
+})
+
+describe('useRenderSchemaNode slots 支持 render function / JSX', () => {
+  it('函数 slot 直接作为 Vue slot 函数,不再调用外部 render 回调', () => {
+    const slotFn = vi.fn(() => h('div', { class: 'slot-content' }, 'function slot'))
+    const { opts, renderSpy } = makeOpts({ model: { a: 1 } })
+    const render = useRenderSchemaNode(opts)
+    const node: SchemaNode = {
+      component: 'Card',
+      slots: {
+        header: slotFn as never,
+      },
+    }
+    const result = render(node) as { children?: Record<string, unknown> }
+    expect(renderSpy).not.toHaveBeenCalled()
+    expect(typeof (result.children as Record<string, () => unknown>)?.header).toBe('function')
+  })
+
+  it('scoped slot 接收 scope 参数并返回 VNode', () => {
+    const slotFn = vi.fn((scope?: Record<string, unknown>) =>
+      h('span', null, (scope?.label as string) ?? '')
+    )
+    const { opts } = makeOpts({ model: { a: 1 } })
+    const render = useRenderSchemaNode(opts)
+    const node: SchemaNode = {
+      component: 'Card',
+      slots: {
+        header: slotFn as never,
+      },
+    }
+    const result = render(node) as { children?: Record<string, (scope?: unknown) => unknown> }
+    const headerSlot = result.children?.header
+    expect(headerSlot).toBeDefined()
+    headerSlot?.({ label: 'scoped' })
+    expect(slotFn).toHaveBeenCalledWith({ label: 'scoped' })
+  })
+
+  it('JSX 产物(函数返回 VNode)作为 slot 可正常渲染', () => {
+    // JSX 编译后等价于 h() 调用,这里直接用 h 模拟 JSX 产物
+    const jsxSlot = () => h('div', { class: 'jsx-slot' }, 'jsx content')
+    const { opts } = makeOpts({ model: { a: 1 } })
+    const render = useRenderSchemaNode(opts)
+    const node: SchemaNode = {
+      component: 'Card',
+      slots: {
+        default: jsxSlot as never,
+      },
+    }
+    const result = render(node)
+    expect(result).toBeDefined()
+  })
+
+  it('formItem 包裹节点的 slots 同样支持函数 slot', () => {
+    const slotFn = vi.fn(() => h('div', { class: 'suffix' }, 'suffix slot'))
+    const { opts, renderSpy } = makeOpts({ model: { a: 1 } })
+    const render = useRenderSchemaNode(opts)
+    const node: SchemaNode = {
+      component: 'Input',
+      name: 'a',
+      slots: {
+        suffix: slotFn as never,
+      },
+    }
+    const result = render(node) as { children?: Record<string, unknown> }
+    // formItem 分支把 node.slots 转发给 Comp,不调用外部 render
+    expect(renderSpy).not.toHaveBeenCalled()
+    expect(result).toBeDefined()
+  })
+
+  it('slot 为字符串时保持现有行为(被包装为 slot 函数,调用时走外部 render)', () => {
+    const { opts, renderSpy } = makeOpts({ model: { a: 1 } })
+    const render = useRenderSchemaNode(opts)
+    const node: SchemaNode = {
+      component: 'Card',
+      slots: {
+        header: 'plain text' as never,
+      },
+    }
+    const result = render(node) as { children?: Record<string, () => unknown> }
+    // 渲染阶段不会立即执行 slot 函数
+    expect(renderSpy).not.toHaveBeenCalled()
+    // 手动调用 slot 函数后,会触发外部 render
+    result.children?.header?.()
+    expect(renderSpy).toHaveBeenCalledWith('plain text')
   })
 })

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { effectScope, ref } from 'vue'
+import { effectScope, ref, h } from 'vue'
 import type { SchemaNode } from '../types'
 import { useSchemaRenderer } from './use-schema-renderer'
 // SchemaNode import used by 'as SchemaNode' assertion below
@@ -170,6 +170,50 @@ describe('useSchemaRenderer(opts)', () => {
       const rs = reactiveSchema.value as SchemaNode
       expect(Array.isArray(rs.children)).toBe(true)
       expect(rs.component).toBeUndefined()
+    })
+    scope.stop()
+  })
+
+  it('函数 slot 不会触发 asyncOptions 路径(containsAsyncOptions 已跳过函数)', () => {
+    const headerSlot = () => h('div', null, 'slot')
+    const schema = ref<SchemaNode>({
+      component: 'Card',
+      slots: {
+        header: headerSlot as never,
+      },
+    })
+    const formData = ref({})
+    const scope = effectScope()
+    scope.run(() => {
+      const { reactiveSchema } = useSchemaRenderer({
+        schema,
+        components: ref(undefined),
+        formData,
+      })
+      // 关键:函数 slot 不应被 containsAsyncOptions 递归遍历,也不会被 reactive 包装替换
+      expect((reactiveSchema.value as SchemaNode).slots?.header).toBe(headerSlot)
+    })
+    scope.stop()
+  })
+
+  it('函数 slot 不会触发 reaction 路径(containsReaction 已跳过函数)', () => {
+    const headerSlot = () => h('div', null, 'slot')
+    const schema = ref<SchemaNode>({
+      component: 'Card',
+      slots: {
+        header: headerSlot as never,
+      },
+    })
+    const formData = ref({})
+    const scope = effectScope()
+    scope.run(() => {
+      const { reactiveSchema } = useSchemaRenderer({
+        schema,
+        components: ref(undefined),
+        formData,
+      })
+      // 关键:函数 slot 不应被 containsReaction 递归遍历,也不会被 reactive 包装替换
+      expect((reactiveSchema.value as SchemaNode).slots?.header).toBe(headerSlot)
     })
     scope.stop()
   })

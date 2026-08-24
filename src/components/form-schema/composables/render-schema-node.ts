@@ -26,7 +26,7 @@ import {
   ElInputNumber,
   ElSlider,
 } from 'element-plus'
-import type { SchemaNode, XFormProps, ColConfig } from '../types'
+import type { SchemaNode, XFormProps, ColConfig, SchemaSlot } from '../types'
 import { buildVModelBindings } from './build-vmodel-bindings'
 import { buildOnBindings } from './build-on-bindings'
 import { renderToComponentWithGrid } from './render-with-grid'
@@ -179,6 +179,14 @@ function renderChildren(
   return render(children)
 }
 
+/** 构造 Vue slot 函数：函数类型直接作为 scoped slot，否则走 schema 渲染 */
+function buildSlotFn(value: SchemaSlot, render: RenderFn): (scope?: unknown) => unknown {
+  if (typeof value === 'function') {
+    return (scope?: unknown) => value(scope as Record<string, unknown>)
+  }
+  return () => render(value as never)
+}
+
 export interface RenderSchemaNodeOptions {
   model: XFormProps['model']
   components: XFormProps['components']
@@ -228,9 +236,11 @@ function rewriteNamePath(
     cloned.children = rewriteNamePath(cloned.children, prefix, sep) as never
   }
   if (cloned.slots) {
-    const newSlots: Record<string, SchemaNode | SchemaNode[] | string | undefined> = {}
+    const newSlots: Record<string, SchemaSlot> = {}
     for (const [k, v] of Object.entries(cloned.slots)) {
-      if (v && typeof v === 'object') {
+      if (typeof v === 'function') {
+        newSlots[k] = v
+      } else if (v && typeof v === 'object') {
         newSlots[k] = rewriteNamePath(v, prefix, sep) as never
       } else {
         newSlots[k] = v
@@ -239,9 +249,11 @@ function rewriteNamePath(
     cloned.slots = newSlots
   }
   if (cloned.formItem && typeof cloned.formItem === 'object' && cloned.formItem.slots) {
-    const newFormItemSlots: Record<string, SchemaNode | SchemaNode[] | string | undefined> = {}
+    const newFormItemSlots: Record<string, SchemaSlot> = {}
     for (const [k, v] of Object.entries(cloned.formItem.slots)) {
-      if (v && typeof v === 'object') {
+      if (typeof v === 'function') {
+        newFormItemSlots[k] = v
+      } else if (v && typeof v === 'object') {
         newFormItemSlots[k] = rewriteNamePath(v, prefix, sep) as never
       } else {
         newFormItemSlots[k] = v
@@ -425,9 +437,9 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
     const asyncProps = buildAsyncProps(node)
     // 视觉容器（Card 等）
     if (Comp && (node.slots || node.children !== undefined) && !node.name) {
-      const slotMap: Record<string, () => unknown> = {}
+      const slotMap: Record<string, (scope?: unknown) => unknown> = {}
       if (node.slots)
-        for (const [k, v] of Object.entries(node.slots)) slotMap[k] = () => opts.render(v as never)
+        for (const [k, v] of Object.entries(node.slots)) slotMap[k] = buildSlotFn(v, opts.render)
       const useGrid = !!(node.row || node.column !== undefined)
       slotMap.default = useGrid
         ? () => renderToComponentWithGrid(node, opts.render)
@@ -487,10 +499,10 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
                 // formItem 默认 default 来自 node.children(向后兼容)
                 const defaultSlot = () => renderChildren(node.children, opts.render) as never
                 // formItem 还要把 node.slots 转发给 Comp(如 el-upload 的 tip 槽位)——否则 slots 被吞
-                const extraSlots: Record<string, () => unknown> = {}
+                const extraSlots: Record<string, (scope?: unknown) => unknown> = {}
                 if (node.slots) {
                   for (const [k, v] of Object.entries(node.slots)) {
-                    extraSlots[k] = () => opts.render(v as never)
+                    extraSlots[k] = buildSlotFn(v, opts.render)
                   }
                 }
                 const inner = h(

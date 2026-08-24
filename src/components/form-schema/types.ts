@@ -1,4 +1,4 @@
-import type { ComponentPublicInstance, Directive } from 'vue'
+import type { ComponentPublicInstance, Directive, VNode } from 'vue'
 import type { ZodType } from 'zod'
 import type {
   ElInput,
@@ -35,6 +35,14 @@ type ComponentProps<T> = T extends new (...args: never[]) => infer R
 export type EventFn = (value: unknown, ...args: unknown[]) => unknown
 /** 函数表达式：{{ ... }} 包裹的函数体字符串 */
 export type FunctionExpression = string
+
+/** slot 渲染函数：支持普通 slot / scoped slot；JSX 本质是其语法糖 */
+export type SlotRenderFn = (
+  scope?: Record<string, unknown>
+) => VNode | VNode[] | string | undefined | null
+
+/** Schema 节点支持的单个 slot 内容 */
+export type SchemaSlot = SchemaNode | SchemaNode[] | string | undefined | SlotRenderFn
 
 /** 校验规则（async-validator 兼容） */
 export interface RuleItem {
@@ -98,7 +106,7 @@ export interface FormItemConfig {
   component?: string
   props?: Record<string, unknown>
   directives?: DirectiveConfig[]
-  slots?: Record<string, SchemaNode | SchemaNode[] | string | undefined>
+  slots?: Record<string, SchemaSlot>
   rules?: SchemaNode['rules']
   [key: string]: unknown
 }
@@ -247,7 +255,7 @@ export interface SchemaNode {
   directives?: DirectiveConfig[]
   /** 异步选项数据源（Select/Cascader/TreeSelect/Autocomplete） */
   asyncOptions?: AsyncOptionsConfig
-  slots?: Record<string, SchemaNode | SchemaNode[] | string | undefined>
+  slots?: Record<string, SchemaSlot>
   ignore?: boolean
   hidden?: boolean
   key?: string | number
