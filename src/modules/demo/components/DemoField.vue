@@ -147,6 +147,7 @@ const bem = createNamespace('demo-field')
   border-radius: 8px;
   overflow: hidden;
   background: #fff;
+  margin-bottom: 20px;
 
   &__demo {
     padding: 16px;

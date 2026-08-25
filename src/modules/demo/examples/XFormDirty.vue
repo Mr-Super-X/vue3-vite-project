@@ -2,11 +2,23 @@
 /**
  * 演示：表单 dirty 状态追踪（阶段 2.2 新增）
  *
- * 场景：
- * 1. 加载表单 → isDirty() = false（无 snapshot）
- * 2. 点击"标记基线"(resetDirty) → isDirty() = false（snapshot 拍下）
- * 3. 修改任意字段 → isDirty() = true，getDirtyFields() 列出字段名
- * 4. 点击"标记基线" → isDirty() = false（snapshot 重拍）
+ * 【为什么需要这个】
+ * isDirty 用来回答"用户改了表单但没保存"这个问题，是关闭弹窗/路由切换
+ * 时弹出"未保存提示"、提交后重置 dirty 等 UX 保护的标准信号。
+ *
+ * 【XForm 启动行为】
+ * XForm 内部 useFormDirty 在 setup 末尾会自动调一次 resetDirty() 拍"空基线"。
+ * 所以：加载后直接改任意字段 → isDirty 立即变 true（无需手动拍基线）。
+ * 业务上常见拍基线时机：
+ *   - 加载远程数据完成后（基线 = 服务端返回值）
+ *   - 用户点保存成功后（基线 = 当前已保存值）
+ *   - 用户点"放弃修改"后（基线 = 原始值）
+ *
+ * 【本 demo 场景】
+ * 1. 加载表单 → isDirty = false（XForm 自动拍空基线）
+ * 2. 直接改字段 → isDirty = true（无需先点"标记基线"！）
+ * 3. 点击"标记基线" → isDirty = false（基线 = 当前已修改的值）
+ * 4. 再改字段 → isDirty = true（新基线下的修改）
  * 5. 模拟"未保存提示"：点击"关闭表单"，若 dirty 则 confirm
  *
  * 验证方法：
@@ -146,10 +158,11 @@ watch(
       source="src/components/form-schema/composables/use-form-dirty.ts"
       :introductions="[
         '演示 XForm 阶段 2.2 新增：isDirty / getDirtyFields / isTouched / resetDirty 方法。',
-        '1) 加载表单后 isDirty = false（lazy snapshot，未拍基线）',
-        '2) 点击「标记基线」后 snapshot 拍下，isDirty = false',
-        '3) 修改任意字段后 isDirty = true，getDirtyFields 列出字段',
-        '4) 「未保存提示」按钮模拟关闭表单场景',
+        '【背景】XForm 启动时 useFormDirty 会自动拍一次空基线，所以加载后直接改任意字段就触发 isDirty=true（无需先手动拍基线）。',
+        '1) 加载后直接改任意字段 → isDirty 立即为 true',
+        '2) 点击「标记基线」→ 重新拍当前 model 为新基线，isDirty 重置为 false',
+        '3) 再改字段 → isDirty = true（基于新基线）',
+        '4) 「未保存提示」按钮模拟关闭表单场景：dirty 时弹确认框',
       ]"
     >
       <section id="demo-dirty">
