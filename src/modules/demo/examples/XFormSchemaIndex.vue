@@ -28,6 +28,7 @@ import { useSchemaIndex } from '@/components/form-schema/composables/use-schema-
 import { scanForForbidden } from '@/components/form-schema/composables/use-scan-forbidden'
 import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
 import DemoField from '../components/DemoField.vue'
+import DemoFrame from '../components/DemoFrame.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 
 const bem = createNamespace('demo-x-form-schema-index')
@@ -337,179 +338,195 @@ const securityWarnings = computed(() => scanForForbidden(bigSchema.value))
 </script>
 
 <template>
-  <DocLayout
-    title="useSchemaIndex —— schema 元数据中央索引"
-    description="阶段 4.x 性能优化：替代每次 O(n) 全树遍历，O(1) Map 查表。XForm 内部已自动集成，外部业务可复用同一索引实例。"
-  >
-    <DemoField
-      title="运行时：动态生成 80+ 字段的表单 + 索引快照 + 操作面板"
-      description="下方 4 块组成一个完整 demo：① 索引快照（6 个 Map 实时反映）② 大型表单（必填 + 跨字段校验）③ 操作面板（dirty / server error / 跨字段 / 重建）"
-      :code="exampleSchemaCode"
+  <DocLayout>
+    <DemoFrame
+      title="useSchemaIndex —— schema 元数据中央索引"
+      source="src/components/form-schema/composables/use-schema-index.ts"
+      :introductions="[
+        '阶段 4.x 性能优化：替代每次 O(n) 全树遍历，6 个 Map/Set 的 O(1) 查表。XForm 内部已自动集成，外部业务可复用同一索引实例。',
+        '大 schema 验证：80+ 字段 + 跨字段校验 + dirty 基线 + server error 全链路走索引查表，实时观察索引快照。',
+        '安全辅助：scanForForbidden 扫描所有可执行字段（on / reaction / directives / slots）的危险标识符。',
+      ]"
     >
-      <div :class="bem.b()">
-        <div :class="bem.e('controls')">
-          <ElButton @click="rebuildSchema">重建 schema</ElButton>
-          <span :class="bem.e('stats')">
-            <ElTag type="info">节点数: {{ schemaSize }}</ElTag>
-            <ElTag type="success">构建耗时: {{ buildTime.toFixed(2) }} ms</ElTag>
-            <ElTag type="warning">扩展字段: {{ FIELD_COUNT }}</ElTag>
-          </span>
-        </div>
-
-        <div :class="bem.e('index')">
-          <h4>索引快照（实时反映 useSchemaIndex 状态）</h4>
-
-          <!-- 概念卡片：6 个 Map 各自的用途 -->
-          <div :class="bem.e('concept-cards')">
-            <div :class="bem.e('card')">
-              <strong>byName</strong>
-              <p>name → SchemaNode 映射（O(1) 查表）</p>
-              <p :class="bem.e('card-size')">{{ indexSnapshot.byNameSize }} 个节点</p>
-            </div>
-            <div :class="bem.e('card')">
-              <strong>fieldNames</strong>
-              <p>所有字段名（DFS 顺序，不含 ignore）</p>
-              <p :class="bem.e('card-size')">{{ indexSnapshot.fieldNames.length }} 个</p>
-            </div>
-            <div :class="bem.e('card')">
-              <strong>allNames</strong>
-              <p>含 ignore 字段（用于 server error 映射）</p>
-              <p :class="bem.e('card-size')">{{ indexSnapshot.allNames.length }} 个</p>
-            </div>
-            <div :class="bem.e('card')">
-              <strong>crossRules</strong>
-              <p>target → 跨字段规则列表（跨字段 watch 启动用）</p>
-              <p :class="bem.e('card-size')">{{ indexSnapshot.crossRulesSize }} 个目标字段</p>
-            </div>
-            <div :class="bem.e('card')">
-              <strong>reverseIndex</strong>
-              <p>依赖字段 → 受影响的目标字段（反向触发）</p>
-              <p :class="bem.e('card-size')">
-                {{ indexSnapshot.reverseEntries.length }} 条反向依赖
-              </p>
-            </div>
-            <div :class="bem.e('card')">
-              <strong>dependsOnMap</strong>
-              <p>目标字段 → 它依赖哪些字段（正向链）</p>
-              <p :class="bem.e('card-size')">{{ indexSnapshot.dependsOnMap.length }} 条依赖</p>
-            </div>
-          </div>
-
-          <details :class="bem.e('details')">
-            <summary>展开：crossRules / reverseIndex 详细条目</summary>
-            <div :class="bem.e('details-body')">
-              <div>
-                <strong>crossRules（target → rules）：</strong>
-                <ul>
-                  <li v-for="r in indexSnapshot.crossRulesList" :key="r.target">
-                    {{ r.target }} → {{ r.ruleCount }} 条规则
-                  </li>
-                </ul>
-              </div>
-              <div>
-                <strong>reverseIndex（dep → [targets]）：</strong>
-                <ul>
-                  <li v-for="e in indexSnapshot.reverseEntries" :key="e.dep">
-                    <code>{{ e.dep }}</code>
-                    → [{{ e.targets.join(', ') }}]
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </details>
-        </div>
-
-        <h4>大型表单（验证索引对跨字段 / dirty / server error 的支持）</h4>
-        <XForm ref="formRef" :schema="bigSchema" :model="formModel" />
-
-        <!-- 操作 + 状态一体面板：所见即所得 -->
-        <div :class="bem.e('panel')">
-          <div :class="bem.e('panel-section')">
-            <h4>① dirty 追踪（resetDirty + isDirty）</h4>
-            <div :class="bem.e('row')">
-              <ElButton @click="onMarkBaseline" type="primary">标记基线 (resetDirty)</ElButton>
-              <span :class="bem.e('stat')">
-                <strong>isDirty：</strong>
-                <ElTag :type="isDirty ? 'danger' : 'success'">{{ isDirty ? '是' : '否' }}</ElTag>
-              </span>
-              <span v-if="dirtyFields.length" :class="bem.e('stat')">
-                <strong>dirty 字段：</strong>
-                <ElTag v-for="f in dirtyFields" :key="f" type="warning" size="small">{{ f }}</ElTag>
-              </span>
-            </div>
-            <p :class="bem.e('hint')">
-              <strong>XForm 启动时已自动拍一次"空基线"</strong>
-              （setup 末尾的 resetDirty）， 所以"改任何字段"都立即触发
-              isDirty=true。"标记基线"按钮重新拍当前 model 为新基线（"我已确认此状态为起点"）。
-            </p>
-            <p :class="bem.e('hint')">
-              推荐流程：填必填字段 → 点"标记基线" → 再改任意字段 → isDirty=true
-            </p>
-          </div>
-
-          <div :class="bem.e('panel-section')">
-            <h4>② 服务端错误（validateFromServer）</h4>
-            <div :class="bem.e('row')">
-              <ElButton @click="onSimulateServerError" type="warning">
-                模拟 422（写 2 个错误）
-              </ElButton>
-              <ElButton @click="onSimulateServerSuccess" type="success">模拟 success=true</ElButton>
-              <ElButton @click="onClearServerError">清服务端错误</ElButton>
-            </div>
-            <p v-if="lastServerError" :class="bem.e('stat')">
-              <strong>最近响应：</strong>
-              success=
-              <ElTag :type="lastServerError.success ? 'success' : 'warning'">
-                {{ lastServerError.success }}
-              </ElTag>
-              字段数={{ lastServerError.fieldCount }}
-            </p>
-            <p :class="bem.e('hint')">
-              操作：先模拟 422（看到红字）→ 再点 success=true（红字一次性消失）
-            </p>
-          </div>
-
-          <div :class="bem.e('panel-section')">
-            <h4>③ 跨字段校验（el-form.validate）</h4>
-            <div :class="bem.e('row')">
-              <ElButton @click="onSave" type="primary">保存（本地校验）</ElButton>
-              <ElButton @click="onReset">重置字段</ElButton>
-            </div>
-            <p :class="bem.e('hint')">
-              操作：开始日期填 2026-08-20、结束日期填 2026-08-18 → 保存 →
-              触发"结束日期不能早于开始日期"
-            </p>
-          </div>
-
-          <div :class="bem.e('panel-section')">
-            <h4>④ 索引重建（schema 变化）</h4>
-            <div :class="bem.e('row')">
+      <section id="demo-schema-index">
+        <h4>运行时：动态生成 80+ 字段的表单 + 索引快照 + 操作面板</h4>
+        <p>
+          下方 4 块组成一个完整 demo：① 索引快照（6 个 Map 实时反映）② 大型表单（必填 +
+          跨字段校验）③ 操作面板（dirty / server error / 跨字段 / 重建）
+        </p>
+        <DemoField :code="exampleSchemaCode">
+          <div :class="bem.b()">
+            <div :class="bem.e('controls')">
               <ElButton @click="rebuildSchema">重建 schema</ElButton>
-              <span :class="bem.e('stat')">
-                节点数
-                <ElTag>{{ schemaSize }}</ElTag>
-                构建耗时
-                <ElTag type="success">{{ buildTime.toFixed(2) }} ms</ElTag>
+              <span :class="bem.e('stats')">
+                <ElTag type="info">节点数: {{ schemaSize }}</ElTag>
+                <ElTag type="success">构建耗时: {{ buildTime.toFixed(2) }} ms</ElTag>
+                <ElTag type="warning">扩展字段: {{ FIELD_COUNT }}</ElTag>
               </span>
             </div>
-            <p :class="bem.e('hint')">观察：重建后 byName 大小 / 索引快照 实时同步刷新</p>
-          </div>
-        </div>
-      </div>
-    </DemoField>
 
-    <DemoField
-      title="安全扫描（与 useSchemaIndex 配合的辅助工具）"
-      description="scanForForbidden 扫描所有可执行字段（on / reaction / directives / slots）的危险标识符"
-      :code="securityCode"
-    >
-      <p v-if="securityWarnings.length === 0" style="color: #67c23a">
-        ✓ 未发现危险标识符（window / document / eval / fetch / Function 等）
-      </p>
-      <ul v-else>
-        <li v-for="w in securityWarnings" :key="w" style="color: #f56c6c">{{ w }}</li>
-      </ul>
-    </DemoField>
+            <div :class="bem.e('index')">
+              <h4>索引快照（实时反映 useSchemaIndex 状态）</h4>
+
+              <!-- 概念卡片：6 个 Map 各自的用途 -->
+              <div :class="bem.e('concept-cards')">
+                <div :class="bem.e('card')">
+                  <strong>byName</strong>
+                  <p>name → SchemaNode 映射（O(1) 查表）</p>
+                  <p :class="bem.e('card-size')">{{ indexSnapshot.byNameSize }} 个节点</p>
+                </div>
+                <div :class="bem.e('card')">
+                  <strong>fieldNames</strong>
+                  <p>所有字段名（DFS 顺序，不含 ignore）</p>
+                  <p :class="bem.e('card-size')">{{ indexSnapshot.fieldNames.length }} 个</p>
+                </div>
+                <div :class="bem.e('card')">
+                  <strong>allNames</strong>
+                  <p>含 ignore 字段（用于 server error 映射）</p>
+                  <p :class="bem.e('card-size')">{{ indexSnapshot.allNames.length }} 个</p>
+                </div>
+                <div :class="bem.e('card')">
+                  <strong>crossRules</strong>
+                  <p>target → 跨字段规则列表（跨字段 watch 启动用）</p>
+                  <p :class="bem.e('card-size')">{{ indexSnapshot.crossRulesSize }} 个目标字段</p>
+                </div>
+                <div :class="bem.e('card')">
+                  <strong>reverseIndex</strong>
+                  <p>依赖字段 → 受影响的目标字段（反向触发）</p>
+                  <p :class="bem.e('card-size')">
+                    {{ indexSnapshot.reverseEntries.length }} 条反向依赖
+                  </p>
+                </div>
+                <div :class="bem.e('card')">
+                  <strong>dependsOnMap</strong>
+                  <p>目标字段 → 它依赖哪些字段（正向链）</p>
+                  <p :class="bem.e('card-size')">{{ indexSnapshot.dependsOnMap.length }} 条依赖</p>
+                </div>
+              </div>
+
+              <details :class="bem.e('details')">
+                <summary>展开：crossRules / reverseIndex 详细条目</summary>
+                <div :class="bem.e('details-body')">
+                  <div>
+                    <strong>crossRules（target → rules）：</strong>
+                    <ul>
+                      <li v-for="r in indexSnapshot.crossRulesList" :key="r.target">
+                        {{ r.target }} → {{ r.ruleCount }} 条规则
+                      </li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong>reverseIndex（dep → [targets]）：</strong>
+                    <ul>
+                      <li v-for="e in indexSnapshot.reverseEntries" :key="e.dep">
+                        <code>{{ e.dep }}</code>
+                        → [{{ e.targets.join(', ') }}]
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </details>
+            </div>
+
+            <h4>大型表单（验证索引对跨字段 / dirty / server error 的支持）</h4>
+            <XForm ref="formRef" :schema="bigSchema" :model="formModel" />
+
+            <!-- 操作 + 状态一体面板：所见即所得 -->
+            <div :class="bem.e('panel')">
+              <div :class="bem.e('panel-section')">
+                <h4>① dirty 追踪（resetDirty + isDirty）</h4>
+                <div :class="bem.e('row')">
+                  <ElButton @click="onMarkBaseline" type="primary">标记基线 (resetDirty)</ElButton>
+                  <span :class="bem.e('stat')">
+                    <strong>isDirty：</strong>
+                    <ElTag :type="isDirty ? 'danger' : 'success'">
+                      {{ isDirty ? '是' : '否' }}
+                    </ElTag>
+                  </span>
+                  <span v-if="dirtyFields.length" :class="bem.e('stat')">
+                    <strong>dirty 字段：</strong>
+                    <ElTag v-for="f in dirtyFields" :key="f" type="warning" size="small">
+                      {{ f }}
+                    </ElTag>
+                  </span>
+                </div>
+                <p :class="bem.e('hint')">
+                  <strong>XForm 启动时已自动拍一次"空基线"</strong>
+                  （setup 末尾的 resetDirty）， 所以"改任何字段"都立即触发
+                  isDirty=true。"标记基线"按钮重新拍当前 model 为新基线（"我已确认此状态为起点"）。
+                </p>
+                <p :class="bem.e('hint')">
+                  推荐流程：填必填字段 → 点"标记基线" → 再改任意字段 → isDirty=true
+                </p>
+              </div>
+
+              <div :class="bem.e('panel-section')">
+                <h4>② 服务端错误（validateFromServer）</h4>
+                <div :class="bem.e('row')">
+                  <ElButton @click="onSimulateServerError" type="warning">
+                    模拟 422（写 2 个错误）
+                  </ElButton>
+                  <ElButton @click="onSimulateServerSuccess" type="success">
+                    模拟 success=true
+                  </ElButton>
+                  <ElButton @click="onClearServerError">清服务端错误</ElButton>
+                </div>
+                <p v-if="lastServerError" :class="bem.e('stat')">
+                  <strong>最近响应：</strong>
+                  success=
+                  <ElTag :type="lastServerError.success ? 'success' : 'warning'">
+                    {{ lastServerError.success }}
+                  </ElTag>
+                  字段数={{ lastServerError.fieldCount }}
+                </p>
+                <p :class="bem.e('hint')">
+                  操作：先模拟 422（看到红字）→ 再点 success=true（红字一次性消失）
+                </p>
+              </div>
+
+              <div :class="bem.e('panel-section')">
+                <h4>③ 跨字段校验（el-form.validate）</h4>
+                <div :class="bem.e('row')">
+                  <ElButton @click="onSave" type="primary">保存（本地校验）</ElButton>
+                  <ElButton @click="onReset">重置字段</ElButton>
+                </div>
+                <p :class="bem.e('hint')">
+                  操作：开始日期填 2026-08-20、结束日期填 2026-08-18 → 保存 →
+                  触发"结束日期不能早于开始日期"
+                </p>
+              </div>
+
+              <div :class="bem.e('panel-section')">
+                <h4>④ 索引重建（schema 变化）</h4>
+                <div :class="bem.e('row')">
+                  <ElButton @click="rebuildSchema">重建 schema</ElButton>
+                  <span :class="bem.e('stat')">
+                    节点数
+                    <ElTag>{{ schemaSize }}</ElTag>
+                    构建耗时
+                    <ElTag type="success">{{ buildTime.toFixed(2) }} ms</ElTag>
+                  </span>
+                </div>
+                <p :class="bem.e('hint')">观察：重建后 byName 大小 / 索引快照 实时同步刷新</p>
+              </div>
+            </div>
+          </div>
+        </DemoField>
+      </section>
+
+      <section id="demo-schema-security">
+        <h4>安全扫描（与 useSchemaIndex 配合的辅助工具）</h4>
+        <p>scanForForbidden 扫描所有可执行字段（on / reaction / directives / slots）的危险标识符</p>
+        <DemoField :code="securityCode">
+          <p v-if="securityWarnings.length === 0" style="color: #67c23a">
+            ✓ 未发现危险标识符（window / document / eval / fetch / Function 等）
+          </p>
+          <ul v-else>
+            <li v-for="w in securityWarnings" :key="w" style="color: #f56c6c">{{ w }}</li>
+          </ul>
+        </DemoField>
+      </section>
+    </DemoFrame>
   </DocLayout>
 </template>
 

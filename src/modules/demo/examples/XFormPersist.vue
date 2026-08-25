@@ -16,6 +16,7 @@ import XForm from '@/components/form-schema/XForm.vue'
 import { useFormPersist } from '@/components/form-schema'
 import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
 import DemoField from '../components/DemoField.vue'
+import DemoFrame from '../components/DemoFrame.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import persistSource from './XFormPersist.vue?raw'
 
@@ -107,42 +108,47 @@ const lastSavedText = computed(() =>
 </script>
 
 <template>
-  <DocLayout
-    title="useFormPersist —— 表单草稿持久化"
-    description="model 防抖自动落盘 + beforeunload 刷新兜底；刷新后按需恢复，敏感字段 exclude 剔除。XForm 零改动，一行接入。"
-  >
-    <DemoField
-      title="草稿自动保存 + 刷新恢复 + 敏感字段剔除"
-      description="按页面顶部注释的验证流程操作。核心：刷新页面前 400ms 内的输入也不会丢（beforeunload 同步 flush）。"
-      :code="persistSource"
+  <DocLayout>
+    <DemoFrame
+      title="useFormPersist —— 表单草稿持久化"
+      source="src/components/form-schema/composables/use-form-persist.ts"
+      :introductions="[
+        'model 防抖（400ms）自动落盘 + beforeunload 同步 flush 兜底：刷新页面前 400ms 内的输入也不会丢。',
+        'exclude 敏感字段剔除（银行卡号不落 localStorage）；hasDraft / load / save / clear 按需恢复与手动补丁。',
+        '恢复草稿后 resetDirty() 拍基线，isDirty 从草稿起算；提交成功后 clear() 清草稿。',
+      ]"
     >
-      <div :class="bem.b()">
-        <div :class="bem.e('status')">
-          <ElTag :type="persist.hasDraft.value ? 'warning' : 'info'">
-            草稿：{{ persist.hasDraft.value ? '存在' : '无' }}
-          </ElTag>
-          <ElTag type="success">最后保存：{{ lastSavedText }}</ElTag>
-          <ElTag :type="isDirtyState ? 'danger' : 'success'">
-            isDirty：{{ isDirtyState ? '是' : '否' }}
-          </ElTag>
-        </div>
+      <section id="demo-x-form-persist">
+        <DemoField :code="persistSource">
+          <div :class="bem.b()">
+            <div :class="bem.e('status')">
+              <ElTag :type="persist.hasDraft.value ? 'warning' : 'info'">
+                草稿：{{ persist.hasDraft.value ? '存在' : '无' }}
+              </ElTag>
+              <ElTag type="success">最后保存：{{ lastSavedText }}</ElTag>
+              <ElTag :type="isDirtyState ? 'danger' : 'success'">
+                isDirty：{{ isDirtyState ? '是' : '否' }}
+              </ElTag>
+            </div>
 
-        <XForm ref="formRef" :schema="schema" :model="model" />
+            <XForm ref="formRef" :schema="schema" :model="model" />
 
-        <div :class="bem.e('actions')">
-          <ElButton type="primary" @click="onRestore">恢复草稿（load + resetDirty）</ElButton>
-          <ElButton @click="onClear">清除草稿（clear）</ElButton>
-          <ElButton type="success" @click="onSimulateSubmit">
-            模拟提交（clear + resetDirty）
-          </ElButton>
-        </div>
+            <div :class="bem.e('actions')">
+              <ElButton type="primary" @click="onRestore">恢复草稿（load + resetDirty）</ElButton>
+              <ElButton @click="onClear">清除草稿（clear）</ElButton>
+              <ElButton type="success" @click="onSimulateSubmit">
+                模拟提交（clear + resetDirty）
+              </ElButton>
+            </div>
 
-        <p :class="bem.e('hint')">
-          验证步骤：① 填用户名 + 银行卡号 → ② F5 刷新 → ③ 点"恢复草稿"： 用户名恢复、银行卡号不恢复
-          → ④ 点"模拟提交" → ⑤ 再刷新：草稿已无。
-        </p>
-      </div>
-    </DemoField>
+            <p :class="bem.e('hint')">
+              验证步骤：① 填用户名 + 银行卡号 → ② F5 刷新 → ③ 点"恢复草稿"：
+              用户名恢复、银行卡号不恢复 → ④ 点"模拟提交" → ⑤ 再刷新：草稿已无。
+            </p>
+          </div>
+        </DemoField>
+      </section>
+    </DemoFrame>
   </DocLayout>
 </template>
 
