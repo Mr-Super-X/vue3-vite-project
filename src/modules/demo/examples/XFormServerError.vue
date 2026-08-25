@@ -1,13 +1,13 @@
 <script setup lang="ts">
 /**
- * 演示 P2-2 setFieldError 服务端错误映射 + 配合 P2-1 响应式断点
+ * 演示 setFieldError 服务端错误映射 + 响应式断点
  *
  * 场景:
  * 1. 表单提交 → 后端返回 422 with errors[] (field, message)
  * 2. 前端解析 errors → 循环调用 XFormExpose.setFieldError(field, message)
  * 3. UI 显示红字(后端 422 自动映射)
  *
- * setFieldError API(P0-2 已实现):
+ * setFieldError API:
  *   formRef.value?.setFieldError('email', '该邮箱已注册')
  *
  * 注:本 demo 用 mock 模拟 fetch(不真实发请求),演示完整流程
@@ -23,7 +23,7 @@ import xFormSource from './XFormServerError.vue?raw'
 
 const bem = createNamespace('demo-x-form-server-error')
 
-// P2-1:响应式断点显示
+// 响应式断点显示
 const currentBreakpoint = ref<'xs' | 'sm' | 'md' | 'lg' | 'xl'>('md')
 const width = ref(0)
 const updateBreakpoint = () => {
@@ -44,7 +44,7 @@ onUnmounted(() => {
 })
 
 const schema: SchemaNode = {
-  // P2-1:响应式断点 —— 手机全宽,桌面 6/6/12
+  // 响应式断点 —— 手机全宽,桌面 6/6/12
   row: { gutter: 16, responsive: { xs: { gutter: 0 }, md: { gutter: 16 } } },
   children: [
     {
@@ -150,7 +150,7 @@ async function onSave() {
     ElMessage.success('保存成功')
     return
   }
-  // 3. 后端 422 错误 → 调用阶段 2.1 新增的 validateFromServer 适配器
+  // 3. 后端 422 错误 → 调用 validateFromServer 适配器
   //    一行替代原本 4 行循环（clearValidate + 逐个 setFieldError）
   const count = formRef.value.validateFromServer(result)
   if (count > 0) {
@@ -175,12 +175,11 @@ async function copySchema() {
 <template>
   <DocLayout>
     <DemoFrame
-      title="服务端错误映射（P2-2） + 响应式断点（P2-1）"
+      title="服务端错误映射 + 响应式断点"
       source="src/components/form-schema/XForm.vue"
       :introductions="[
-        'P2 完整闭环:',
-        '1. 响应式断点:RowConfig.responsive / ColConfig.responsive 透传,调整浏览器大小可看到布局变化',
-        '2. 服务端错误映射:模拟后端 422 响应,前端 setFieldError 映射红字',
+        '1. 响应式断点：RowConfig.responsive / ColConfig.responsive 透传，调整浏览器大小可看到布局变化',
+        '2. 服务端错误映射：模拟后端 422 响应，前端 setFieldError 映射红字',
         '3. 测试场景:',
         '   - 用户名=admin → 422:username/email 错误',
         '   - 邮箱=test@spam.com → 422:email 黑名单',
@@ -198,7 +197,7 @@ async function copySchema() {
           </div>
           <div :class="bem.e('state')">
             <div>
-              <strong>当前断点(P2-1):</strong>
+              <strong>当前断点:</strong>
               <el-tag>{{ currentBreakpoint }}</el-tag>
               <span style="margin-left: 12px">
                 <strong>视口宽度:</strong>

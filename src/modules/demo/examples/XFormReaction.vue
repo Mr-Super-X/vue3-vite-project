@@ -112,7 +112,7 @@ const schema: SchemaNode = {
           { value: 'push', label: 'App 推送' },
         ],
       },
-      // 3. 默认 sync 反应式联动(P0-3 disabled 字段):开关联动禁用
+      // 3. 默认 sync 反应式联动(disabled 字段):开关联动禁用
       // 开关 off → Select 变灰禁用(视觉立即感知);开关 on → Select 启用
       reaction: {
         disabled: (m: Record<string, unknown>) => !m.enableNotify,
@@ -156,10 +156,10 @@ async function copySchema() {
       title="反应式防抖 / 节流（strategy + delay）"
       source="src/components/form-schema/XForm.vue"
       :introductions="[
-        'ReactionConfig 新增 strategy + delay 字段,支持 reaction 函数被高频调用场景:',
+        'ReactionConfig 的 strategy + delay 字段，应对 reaction 函数被高频调用的场景：',
         '1. 远程搜索 debounce 300ms:输入「苹果」,连续打字 5 字符只触发 1 次远程(mockRemoteSearch)',
         '2. 自动保存 throttle 1s:输入备注时,1 秒内多次 input 只触发 1 次 lastSavedAt',
-        '3. 默认 sync:开关切换通知,通知类型 Select 立即禁用/启用(P0-3 disabled 反应式联动)',
+        '3. 默认 sync:开关切换通知,通知类型 Select 立即禁用/启用',
         '注意:searchCallCount / saveCallCount 显示在 model 区域,直观看到防抖/节流效果',
       ]"
     >

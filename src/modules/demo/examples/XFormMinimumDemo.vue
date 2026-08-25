@@ -39,9 +39,9 @@ function onSave() {
       title="XForm 最小可运行示例"
       source="src/components/form-schema/XForm.vue"
       :introductions="[
-        'XForm 最简用法：写 schema + 传 model + 渲梁。',
+        'XForm 最简用法：写 schema + 传 model + 渲染。',
         'defaultValue 会在挂载时自动填充到 model（如果未设置）。',
-        'rules 支原 async-validator 格式，必填 + 正则校验。',
+        'rules 支持 async-validator 格式，必填 + 正则校验。',
       ]"
     >
       <section id="demo-minimum">

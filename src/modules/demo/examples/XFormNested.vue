@@ -135,7 +135,7 @@ const schema = [
       source="src/components/form-schema/XForm.vue"
       :introductions="[
         '两个 Card 容器分组，分别 2 列 / 3 列栅格。',
-        'slots.title 自定义标题（图标 + 文本），slots.extra 自定义右上角（链接。)',
+        'slots.title 自定义标题（图标 + 文本），slots.extra 自定义右上角（链接）。',
         'field1 含嵌套 children：Input + 「一个链接」HTML 标签。',
       ]"
     >

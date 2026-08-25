@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 演示：反向跨字段实时校验（阶段 1.1 新增）
+ * 演示：反向跨字段实时校验
  *
  * 场景：
  * 1. 改 startDate → endDate 自动反向校验"开始日期不能晚于结束日期"
@@ -146,10 +146,10 @@ function clearDates() {
 <template>
   <DocLayout>
     <DemoFrame
-      title="反向跨字段实时校验（阶段 1.1）"
+      title="反向跨字段实时校验"
       source="src/components/form-schema/composables/use-cross-field-trigger.ts"
       :introductions="[
-        '演示 XForm 阶段 1.1 新增：任一字段变化 → 依赖它的 cross rules 自动重算并写错误到目标字段。',
+        '任一字段变化 → 依赖它的 cross rules 自动重算并写错误到目标字段。',
         '无需失焦、无需点保存 —— 改字段 A，依赖 B 的 crossValidator 自动触发，把红字写到目标字段。',
         `1) 改 startDate → endDate 自动校验结束日期不能早于开始日期`,
         `2) 改 endDate → startDate 自动校验开始日期不能晚于结束日期`,

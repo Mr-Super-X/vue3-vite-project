@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * P3-B 大 schema 性能演示
+ * 大 schema 性能演示
  * - 100+ 字段(模拟生产中后台)
  * - 控制台输出 mount / 输入响应 / reaction 耗时
  * - 浏览器 DevTools 可观察 100+ 输入框渲染 + 输入流畅度
@@ -65,7 +65,7 @@ async function onSave() {
       :title="`大 schema 性能测试（${FIELD_COUNT} 字段）`"
       source="src/components/form-schema/XForm.vue"
       :introductions="[
-        `P3-B 大 schema 性能测试:本 Demo 自动生成 ${FIELD_COUNT} 个 Input 字段 + 校验规则`,
+        `大 schema 性能测试:本 Demo 自动生成 ${FIELD_COUNT} 个 Input 字段 + 校验规则`,
         '观察项:',
         '  - 首次 mount 速度(控制台 perfInfo.mountTime)',
         '  - 输入任意字段的响应速度(无明显卡顿)',

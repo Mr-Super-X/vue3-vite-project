@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 演示：字段权限 view/edit/hidden 三态（阶段 2.3 新增）
+ * 演示：字段权限 view/edit/hidden 三态
  *
  * 场景：
  * 1. 用户名：view（只读纯文本，不可编辑）
@@ -132,10 +132,10 @@ function checkDOM() {
 <template>
   <DocLayout>
     <DemoFrame
-      title="字段权限 view/edit/hidden 三态（阶段 2.3）"
+      title="字段权限 view/edit/hidden 三态"
       source="src/components/form-schema/composables/use-field-permission.ts"
       :introductions="[
-        '演示 XForm 阶段 2.3 新增：字段级 view / edit / hidden 权限控制。',
+        '字段级 view / edit / hidden 权限控制。',
         '1) 用户名 view 态:渲染为只读纯文本',
         '2) 邮箱 edit 态:默认行为,正常可编辑',
         '3) 内部备注 hidden 态:不渲染该字段',

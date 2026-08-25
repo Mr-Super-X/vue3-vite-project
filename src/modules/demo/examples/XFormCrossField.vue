@@ -84,7 +84,7 @@ const schema: SchemaNode = {
         // 反向校验:startDate 失焦时检查 startDate ≤ endDate
         // 注:crossValidator 只在该字段失焦时跑,所以 startDate 失焦时
         // 只有 startDate 自己会红字 —— endDate 不会自动反向红字
-        // (实现"改 A 让 B 自动红字"需要 reaction 联动,P1 阶段)
+        // (实现"改 A 让 B 自动红字"需要 reaction 联动)
         {
           dependsOn: ['endDate'],
           crossValidator: (value: unknown, endDate: unknown) =>

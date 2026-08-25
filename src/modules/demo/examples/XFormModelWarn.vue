@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 演示：model prop 缺省时的 dev mode 警告（阶段 1.2 新增）
+ * 演示：model prop 缺省时的 dev mode 警告
  *
  * 场景：
  * 1. 不传 model prop → 控制台 warn（XForm 校验/默认值/reaction 全部失效）
@@ -43,10 +43,10 @@ function onSave(target: Record<string, unknown>, label: string) {
 <template>
   <DocLayout>
     <DemoFrame
-      title="model 缺省 dev 警告（阶段 1.2）"
+      title="model 缺省 dev 警告"
       source="src/components/form-schema/XForm.vue"
       :introductions="[
-        '演示 XForm 阶段 1.2 新增：model prop 未传入时，dev mode 触发 console.warn。',
+        'model prop 未传入时，dev mode 触发 console.warn。',
         '打开 DevTools Console 查看三个场景：',
         '1) 不传 model → [XForm] model prop 未传入 ...',
         '2) 传 reactive({}) → 合法（不警告，但字段始终为空）',

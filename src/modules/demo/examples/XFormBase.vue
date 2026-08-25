@@ -140,7 +140,6 @@ async function copySchema() {
         '基础表单：5 字段（输入框 / 选择框 / 字典 / 日期 / 多行输入）。',
         'column: 2 顶层栅格 + row.gutter: 24 列间距。',
         'rules 支持 「required」 + validator 函数。日期字段带自定义 validator：不能早于今天。',
-        'XSelect / XDict 私有组件已映射为 ElSelect + 硬编码字典选项。',
       ]"
     >
       <section id="demo-base">

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 演示 P1-3 响应式栅格
+ * 演示响应式栅格
  *
  * 场景：
  * 1. RowConfig.responsive:不同断点下 gutter / type / align / justify 不同
@@ -15,8 +15,8 @@
  * - xl: ≥ 1920px(大屏)
  *
  * 注:element-plus el-row 不自动监听 viewport resize 切换断点 —— 运行时响应式
- * 联动需要 XForm 内部 useResizeObserver 触发 schema 重渲染(P2 阶段)。
- * 本次 P1-3 仅支持 schema 字段透传,字段值会传给 el-row / el-col props。
+ * 联动需要 XForm 内部 useResizeObserver 触发 schema 重渲染。
+ * 本次仅支持 schema 字段透传,字段值会传给 el-row / el-col props。
  */
 import { reactive, ref, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
@@ -50,7 +50,7 @@ onUnmounted(() => {
 })
 
 const schema: SchemaNode = {
-  // 阶段 2.4 增强:label-position 配置在 schema 顶层（自描述）
+  // label-position 配置在 schema 顶层（自描述）
   // 'top' 让 label 在 input 上方,避免挤占 col 宽度（响应式布局推荐）
   labelPosition: 'top',
   // Row 响应式:不同断点不同 gutter（差距拉大便于观察）+ justify 居中变化
@@ -166,15 +166,12 @@ async function copySchema() {
 <template>
   <DocLayout>
     <DemoFrame
-      title="响应式栅格（P1-3）"
+      title="响应式栅格"
       source="src/components/form-schema/XForm.vue"
       :introductions="[
-        'P1-3 新增 RowConfig.responsive + ColConfig.responsive 字段:',
-        '1. RowConfig.responsive:不同断点下不同的 gutter / type / align / justify',
-        '2. ColConfig.responsive:不同断点下不同的 span / offset / push / pull',
-        '3. 数组节点 col.responsive 透传:每行 col 也支持响应式',
-        '断点(element-plus 标准 5 档):xs < 768 / sm < 992 / md < 1200 / lg < 1920 / xl ≥ 1920',
-        '注:el-row 不自动监听 viewport resize —— 运行时响应式联动需 P2 阶段 useResizeObserver',
+        'RowConfig.responsive / ColConfig.responsive：不同断点下不同的 gutter / span / offset 等布局参数。',
+        '断点（element-plus 标准 5 档）：xs < 768 / sm < 992 / md < 1200 / lg < 1920 / xl ≥ 1920',
+        '注：el-row 不自动监听 viewport resize，运行时联动需 XForm 内部 useResizeObserver。',
       ]"
     >
       <section id="demo-responsive">

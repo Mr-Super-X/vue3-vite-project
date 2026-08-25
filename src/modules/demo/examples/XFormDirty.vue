@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 演示：表单 dirty 状态追踪（阶段 2.2 新增）
+ * 演示：表单 dirty 状态追踪
  *
  * 【为什么需要这个】
  * isDirty 用来回答"用户改了表单但没保存"这个问题，是关闭弹窗/路由切换
@@ -154,15 +154,12 @@ watch(
 <template>
   <DocLayout>
     <DemoFrame
-      title="表单 dirty 状态追踪（阶段 2.2）"
+      title="表单 dirty 状态追踪"
       source="src/components/form-schema/composables/use-form-dirty.ts"
       :introductions="[
-        '演示 XForm 阶段 2.2 新增：isDirty / getDirtyFields / isTouched / resetDirty 方法。',
-        '【背景】XForm 启动时 useFormDirty 会自动拍一次空基线，所以加载后直接改任意字段就触发 isDirty=true（无需先手动拍基线）。',
-        '1) 加载后直接改任意字段 → isDirty 立即为 true',
-        '2) 点击「标记基线」→ 重新拍当前 model 为新基线，isDirty 重置为 false',
-        '3) 再改字段 → isDirty = true（基于新基线）',
-        '4) 「未保存提示」按钮模拟关闭表单场景：dirty 时弹确认框',
+        'isDirty / getDirtyFields / isTouched / resetDirty：回答「用户改了表单但没保存」的标准信号。',
+        'XForm 启动时自动拍一次空基线，加载后直接改任意字段即触发 isDirty=true。',
+        '「标记基线」把当前 model 设为新基线（提交后归零）；「关闭表单」模拟未保存提示。',
       ]"
     >
       <section id="demo-dirty">

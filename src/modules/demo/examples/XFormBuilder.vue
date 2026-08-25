@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 演示 P1-2 builder 控件补齐
+ * 演示 builder 控件补齐
  *
  * 场景(全部用对象字面量写法 —— makeBuilder 类型 cast 限制 + 链式 Ext 方法返回类型
  * 推断为 `never`,Demo 统一用 type-safe 的对象字面量演示):
@@ -242,13 +242,11 @@ async function copySchema() {
 <template>
   <DocLayout>
     <DemoFrame
-      title="builder 控件补齐（P1-2）"
+      title="builder 控件补齐"
       source="src/components/form-schema/XForm.vue"
       :introductions="[
-        'P1-2 新增 6 个 builder 类的链式方法:',
-        '1. xCascader / xUpload / xAutocomplete / xTimePicker / xTimeSelect / xTreeSelect / xTransfer 链式',
-        '2. 演示场景:Cascader 省/市 + Upload 图片上传 + Transfer 角色分配 + TimePicker/TimeSelect + Autocomplete + TreeSelect',
-        '注:Demo 统一用对象字面量(链式 makeBuilder cast 类型推断为 never 的问题在 P1-2 内已知,后续可优化 builder 工厂)',
+        '链式构建器覆盖更多组件：xCascader / xUpload / xAutocomplete / xTimePicker / xTimeSelect / xTreeSelect / xTransfer',
+        '演示场景：Cascader 省/市 + Upload 图片上传 + Transfer 角色分配 + TimePicker/TimeSelect + Autocomplete + TreeSelect',
       ]"
     >
       <section id="demo-builder">

@@ -343,7 +343,7 @@ const securityWarnings = computed(() => scanForForbidden(bigSchema.value))
       title="useSchemaIndex —— schema 元数据中央索引"
       source="src/components/form-schema/composables/use-schema-index.ts"
       :introductions="[
-        '阶段 4.x 性能优化：替代每次 O(n) 全树遍历，6 个 Map/Set 的 O(1) 查表。XForm 内部已自动集成，外部业务可复用同一索引实例。',
+        '把 schema 树遍历 O(n) 换成 6 个 Map/Set 的 O(1) 查表。XForm 内部已自动集成，外部业务可复用同一索引实例。',
         '大 schema 验证：80+ 字段 + 跨字段校验 + dirty 基线 + server error 全链路走索引查表，实时观察索引快照。',
         '安全辅助：scanForForbidden 扫描所有可执行字段（on / reaction / directives / slots）的危险标识符。',
       ]"

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 演示：schema 组件名拼写错误校验（阶段 1.3 新增）
+ * 演示：schema 组件名拼写错误校验
  *
  * 场景：
  * 1. 已知 EL 组件短名（Input）→ 不警告
@@ -103,10 +103,10 @@ function onSaveE() {
 <template>
   <DocLayout>
     <DemoFrame
-      title="组件名校验（阶段 1.3）"
+      title="组件名校验"
       source="src/components/form-schema/composables/use-validate.ts"
       :introductions="[
-        '演示 XForm 阶段 1.3 新增：schema component 字段拼写错误时，dev mode 触发 console.warn + Debug Banner 错误。',
+        'schema component 字段拼写错误时，dev mode 触发 console.warn + Debug Banner 错误。',
         '打开 DevTools Console 应看到 2 条 [XForm][validate] 警告（字段 C 和 D）。',
         '右下角 Debug Banner（dev 模式）会显示红色错误条。',
         '字段 A (Input)、B (ElInput)、E (MyCustomInput 已注册) 不应触发警告。',

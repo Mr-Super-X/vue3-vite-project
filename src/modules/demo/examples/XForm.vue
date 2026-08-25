@@ -10,11 +10,15 @@
  *   5. 自定义组件注入（components prop 覆盖内置映射）
  */
 import { ref, reactive, computed, h } from 'vue'
+import { z } from 'zod'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
+import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
+import DocToc from '../components/DocToc.vue'
+import { eventsItems, methodsItems, propsItems, slotsItems } from './xform-api'
 import xFormSource from './XForm.vue?raw'
 
 const bem = createNamespace('demo-x-form')
@@ -75,8 +79,10 @@ const reactiveSchema = computed<SchemaNode>(() => ({
 const basicFormRef = ref<{
   validate: (callback?: (valid: boolean) => void) => Promise<boolean>
   resetFields: () => void
+  validateWithZod: () => { success: boolean; errors: import('zod').ZodError | null }
 } | null>(null)
 const validateMsg = ref('')
+const zodMsg = ref('')
 
 function onSubmitBasic() {
   // element-plus 2.x 的 validate 失败时 reject errorsMap 对象
@@ -88,6 +94,20 @@ function onSubmitBasic() {
 function resetBasic() {
   basicFormRef.value?.resetFields()
   validateMsg.value = ''
+  zodMsg.value = ''
+}
+
+// —— zod 顶层校验（与 async-validator 双轨） ——
+const basicZodSchema = z.object({
+  name: z.string().min(1, '用户名必填'),
+  email: z.string().email('邮箱格式不正确'),
+})
+
+function onSubmitZod() {
+  const result = basicFormRef.value?.validateWithZod()
+  zodMsg.value = result?.success
+    ? '✅ zod 校验通过'
+    : `❌ ${result?.errors?.issues[0]?.message ?? '校验失败'}`
 }
 
 // —— 自定义组件注入示例（用 h() 函数，避免 vue runtime 不支持 template 编译） ——
@@ -121,6 +141,15 @@ const customSchema: SchemaNode = {
 
 // —— 当前显示区域切换 ——
 const activeKey = ref<'basic' | 'reactive' | 'custom'>('basic')
+
+// —— TOC 锚点导航 ——
+const tocItems = [
+  { id: 'demo-basic', label: '基础用法' },
+  { id: 'api-props', label: 'Props' },
+  { id: 'api-events', label: 'Events' },
+  { id: 'api-slots', label: 'Slots' },
+  { id: 'api-methods', label: '实例方法' },
+]
 </script>
 
 <template>
@@ -130,7 +159,6 @@ const activeKey = ref<'basic' | 'reactive' | 'custom'>('basic')
       source="src/components/form-schema/XForm.vue"
       :introductions="[
         '基于 schema DSL 的动态表单引擎，支持全量 14 字段（component / props / on / children / name / label / rules / reaction ...）。',
-        '底层 fork dgm-formschema，用 Element Plus 替换私有 dgm-design 设计系统。',
         '下方演示：基础渲染 / 反应式联动（Switch → path 联动）/ 自定义组件注入。',
       ]"
     >
@@ -145,43 +173,50 @@ const activeKey = ref<'basic' | 'reactive' | 'custom'>('basic')
           </div>
 
           <!-- 基础 -->
-          <XForm
-            v-if="activeKey === 'basic'"
-            ref="basicFormRef"
-            :schema="basicSchema"
-            :model="basicModel"
-          />
-          <div v-if="activeKey === 'basic'" :class="bem.e('buttons')">
-            <el-button type="primary" @click="onSubmitBasic">校验</el-button>
-            <el-button @click="resetBasic">重置</el-button>
-            <span :class="bem.e('msg')">{{ validateMsg }}</span>
-          </div>
+          <template v-if="activeKey === 'basic'">
+            <XForm
+              ref="basicFormRef"
+              :schema="basicSchema"
+              :model="basicModel"
+              :zod-schema="basicZodSchema"
+            />
+            <div :class="bem.e('buttons')">
+              <el-button type="primary" @click="onSubmitBasic">校验</el-button>
+              <el-button @click="onSubmitZod">zod 校验</el-button>
+              <el-button @click="resetBasic">重置</el-button>
+              <span :class="bem.e('msg')">{{ validateMsg }} {{ zodMsg }}</span>
+            </div>
+          </template>
 
           <!-- 反应式 -->
-          <!-- 反应式 -->
-          <XForm
-            v-else-if="activeKey === 'reactive'"
-            :schema="reactiveSchema"
-            :model="reactiveModel"
-          />
-          <div v-if="activeKey === 'reactive'" :class="bem.e('hint')">
-            提示：关闭「启用自定义路径」开关 → 路径字段自动禁用且非必填；开启 → 路径字段启用且必填。
-          </div>
+          <template v-else-if="activeKey === 'reactive'">
+            <XForm :schema="reactiveSchema" :model="reactiveModel" />
+            <div :class="bem.e('hint')">
+              提示：关闭「启用自定义路径」开关 → 路径字段自动禁用且非必填；开启 →
+              路径字段启用且必填。
+            </div>
+          </template>
 
           <!-- 自定义组件 -->
-          <XForm
-            v-else
-            :schema="customSchema"
-            :model="customModel"
-            :components="{ CustomTagInput }"
-          />
-          <div v-if="activeKey === 'custom'" :class="bem.e('hint')">
-            提示：通过 components prop 注入 CustomTagInput 组件覆盖默认映射。当前值：
-            <b>{{ customModel.tag || '（空）' }}</b>
-          </div>
+          <template v-else>
+            <XForm :schema="customSchema" :model="customModel" :components="{ CustomTagInput }" />
+            <div :class="bem.e('hint')">
+              提示：通过 components prop 注入 CustomTagInput 组件覆盖默认映射。当前值：
+              <b>{{ customModel.tag || '（空）' }}</b>
+            </div>
+          </template>
         </DemoField>
       </section>
+
+      <ApiTable title="Props" :items="propsItems" anchor="api-props" />
+      <ApiTable title="Events" :items="eventsItems" anchor="api-events" />
+      <ApiTable title="Slots" :items="slotsItems" anchor="api-slots" />
+      <ApiTable title="实例方法（ref）" :items="methodsItems" anchor="api-methods" />
     </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
   </DocLayout>
 </template>
 
