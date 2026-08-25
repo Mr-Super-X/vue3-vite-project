@@ -27,6 +27,11 @@ export function scanForForbidden(schema: SchemaNode | SchemaNode[]): string[] {
       return
     seen.add(node as object)
     count++
+    // 数组顶层：递归每个元素
+    if (Array.isArray(node)) {
+      for (const item of node) traverse(item, depth + 1)
+      return
+    }
     const obj = node as Record<string, unknown>
     scanField(obj.on, 'on')
     scanField(obj.reaction, 'reaction')
