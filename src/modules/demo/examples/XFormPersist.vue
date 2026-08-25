@@ -16,7 +16,9 @@ import XForm from '@/components/form-schema/XForm.vue'
 import { useFormPersist } from '@/components/form-schema'
 import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
 import DemoField from '../components/DemoField.vue'
+import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
+import { persistItems } from './xform-demos-api'
 import DocLayout from '../layouts/DocLayout.vue'
 import persistSource from './XFormPersist.vue?raw'
 
@@ -148,6 +150,8 @@ const lastSavedText = computed(() =>
           </div>
         </DemoField>
       </section>
+
+      <ApiTable title="useFormPersist API" :items="persistItems" anchor="api-persist" />
     </DemoFrame>
   </DocLayout>
 </template>

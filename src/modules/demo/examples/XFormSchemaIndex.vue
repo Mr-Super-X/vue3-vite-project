@@ -28,7 +28,9 @@ import { useSchemaIndex } from '@/components/form-schema/composables/use-schema-
 import { scanForForbidden } from '@/components/form-schema/composables/use-scan-forbidden'
 import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
 import DemoField from '../components/DemoField.vue'
+import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
+import { schemaIndexItems } from './xform-demos-api'
 import DocLayout from '../layouts/DocLayout.vue'
 
 const bem = createNamespace('demo-x-form-schema-index')
@@ -526,6 +528,8 @@ const securityWarnings = computed(() => scanForForbidden(bigSchema.value))
           </ul>
         </DemoField>
       </section>
+
+      <ApiTable title="useSchemaIndex 返回" :items="schemaIndexItems" anchor="api-schema-index" />
     </DemoFrame>
   </DocLayout>
 </template>

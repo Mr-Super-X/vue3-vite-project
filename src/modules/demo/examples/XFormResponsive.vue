@@ -22,7 +22,9 @@ import { reactive, ref, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
+import { responsiveItems } from './xform-demos-api'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import xFormSource from './XFormResponsive.vue?raw'
@@ -217,6 +219,8 @@ async function copySchema() {
           </div>
         </DemoField>
       </section>
+
+      <ApiTable title="responsive 配置" :items="responsiveItems" anchor="api-responsive" />
     </DemoFrame>
   </DocLayout>
 </template>

@@ -15,7 +15,9 @@ import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
+import { builderItems } from './xform-demos-api'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import xFormSource from './XFormBuilder.vue?raw'
@@ -263,6 +265,8 @@ async function copySchema() {
           </div>
         </DemoField>
       </section>
+
+      <ApiTable title="builder 链式方法" :items="builderItems" anchor="api-builder" />
     </DemoFrame>
   </DocLayout>
 </template>

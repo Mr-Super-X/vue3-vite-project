@@ -11,7 +11,9 @@ import { ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
+import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
+import { asyncOptionsItems } from './xform-demos-api'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import xFormSource from './XFormAsyncOptions.vue?raw'
@@ -155,6 +157,8 @@ async function copySchema() {
           </div>
         </DemoField>
       </section>
+
+      <ApiTable title="AsyncOptionsConfig" :items="asyncOptionsItems" anchor="api-async-options" />
     </DemoFrame>
   </DocLayout>
 </template>

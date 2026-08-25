@@ -13,7 +13,9 @@ import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
 import { xArray } from '@/components/form-schema/builders'
+import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
+import { arrayItems } from './xform-demos-api'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import xFormSource from './XFormArray.vue?raw'
@@ -151,6 +153,8 @@ async function copySchema() {
           </div>
         </DemoField>
       </section>
+
+      <ApiTable title="ArrayNodeConfig" :items="arrayItems" anchor="api-array" />
     </DemoFrame>
   </DocLayout>
 </template>

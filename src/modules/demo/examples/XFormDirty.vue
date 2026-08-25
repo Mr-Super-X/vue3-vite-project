@@ -29,7 +29,9 @@ import { reactive, ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
+import { dirtyMethods } from './xform-demos-api'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 
@@ -197,6 +199,8 @@ watch(
           </div>
         </DemoField>
       </section>
+
+      <ApiTable title="相关实例方法" :items="dirtyMethods" anchor="api-dirty" />
     </DemoFrame>
   </DocLayout>
 </template>
