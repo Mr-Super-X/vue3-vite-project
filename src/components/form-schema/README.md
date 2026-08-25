@@ -243,6 +243,47 @@ const node: SchemaNodeFor<'MyInput'> = {
 
 ---
 
+## 草稿持久化（useFormPersist）
+
+表单数据自动防抖落盘、刷新不丢、按需恢复。XForm 零改动：
+
+```ts
+import { useFormPersist } from '@/components/form-schema'
+
+const model = reactive<Record<string, unknown>>({})
+const persist = useFormPersist({
+  key: 'orders.create.draft', // 草稿唯一标识（经 storage namespace 隔离）
+  model,
+  exclude: ['password', 'card.cvv'], // 敏感字段不落盘（必配！）
+})
+
+// 挂载时按需恢复
+onMounted(() => {
+  if (persist.hasDraft.value) {
+    persist.load()
+    formRef.value?.resetDirty() // 草稿为新基线，isDirty 从草稿起算
+  }
+})
+
+// 提交成功后
+persist.clear()
+```
+
+| 配置            | 默认      | 说明                                        |
+| --------------- | --------- | ------------------------------------------- |
+| `key`           | 必填      | 草稿唯一标识，建议 `<模块>.<表单名>.draft`  |
+| `model`         | 必填      | 被监听的 reactive model                     |
+| `storage`       | `'local'` | `'session'` 关标签页失效                    |
+| `debounce`      | `400`     | 自动保存防抖 ms                             |
+| `exclude`       | `[]`      | 敏感字段 lodash 路径，序列化剔除            |
+| `restoreFilter` | —         | schema 升级后裁剪旧草稿；返回 null 丢弃草稿 |
+
+返回：`{ save, load, clear, hasDraft, lastSavedAt }`——`save()` 立即 flush；`load()` 恢复草稿（草稿保留，可反复恢复）；`clear()` 清除草稿。
+
+**已知限制**：File/Blob/函数等不可序列化值会退化丢失；多标签页并发编辑不同步（后写覆盖先写）；含密码/证件号等字段必须配置 `exclude`。
+
+---
+
 ## 决策指南
 
 **何时用 XForm / 何时用 element-plus 原生：**
@@ -280,5 +321,6 @@ dev 模式下 XFormDebugBanner 会自动在右下角浮窗显示 schema 校验�
 | --------------------------- | ------------------------------------ |
 | `/demo/x-form-minimum-demo` | 最小可运行示例（5 分钟上手）         |
 | `/demo/x-form-base`         | 基础用法（5 字段 + 校验 + 重置）     |
+| `/demo/x-form-persist`      | 草稿持久化（自动保存 + 刷新恢复）    |
 | `/demo/x-form-nested`       | 复杂布局（Card 容器 + slots + 嵌套） |
 | `/demo/x-form-reaction`     | 反应式联动（3 种场景）               |

@@ -2,6 +2,8 @@ import type { App, Component } from 'vue'
 import XForm from './XForm.vue'
 
 export { validate, validateWithZod } from './composables/use-validate'
+export { useFormPersist } from './composables/use-form-persist'
+export type { FormPersistOptions, FormPersistReturn } from './composables/use-form-persist'
 export { resolveFunctionExpression } from './composables/use-expression'
 export { resolveElComponentName } from './element-plus-adapter'
 export type {

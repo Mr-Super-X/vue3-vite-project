@@ -12,6 +12,7 @@
   - **fbuilder 链式 API**（`builders.ts`）：`xInput('email').label('邮箱').required().placeholder().defaultValue().build()` 链式构建 schema，降低书写样板代码
   - **最小可运行示例**（`XFormMinimumDemo.vue`）：5 分钟上手 XForm，5 字段表单 + 校验 + 提交反馈
   - **demo 复制 schema 按钮**：3 个复刻 demo（Base/Nested/Reaction）顶部加 "复制 schema" 按钮，一键 `navigator.clipboard.writeText()` 到剪贴板
+  - **表单草稿持久化**：`useFormPersist` composable，model 防抖（400ms）自动落盘 + `beforeunload` 同步 flush 刷新兜底；`hasDraft`/`load`/`save`/`clear` 按需恢复与手动补丁；`exclude` 敏感字段剔除（含嵌套路径）；`restoreFilter` 草稿裁剪适配 schema 升级；与 `resetDirty()` 基线衔接 isDirty 从草稿起算
   - **README + 决策指南 + 故障排查**（共 3 个新文档）
     - `src/components/form-schema/README.md`：30 秒上手 + props / 实例方法 / schema 字段 / 链式构建器 / reaction / 决策指南 / 故障排查速查
     - `docs/24-XForm选型决策指南.md`：XForm vs element-plus 原生 vs FormRender 选型决策
