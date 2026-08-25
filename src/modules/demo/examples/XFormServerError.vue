@@ -138,7 +138,7 @@ const mockSaveToBackend = async (
 
 async function onSave() {
   if (!formRef.value) return
-  // 1. 先做本地校验
+  // 1. 先做本地校验（基于当前输入；旧的服务端错误已在用户修改字段时自动清除）
   const valid = await formRef.value.validate()
   if (!valid) {
     ElMessage.error('本地校验失败')

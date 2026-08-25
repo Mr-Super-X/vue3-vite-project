@@ -21,7 +21,7 @@ import { isEqual, get } from 'lodash-es'
 export interface UseFormDirtyOptions {
   model: () => Record<string, unknown> | undefined
   /** 字段路径列表（lodash path，如 'items[0].qty'） */
-  fieldNames: () => string[]
+  fieldNames: () => readonly string[]
 }
 
 export interface UseFormDirtyReturn {

@@ -434,8 +434,14 @@ export interface XFormExpose {
   isTouched(name: string): boolean
   /** 阶段 2.2：把当前状态标记为新基线（提交后归零 / 加载后初始化） */
   resetDirty(): void
-  /** 阶段 2.1：把 422 响应映射到表单字段（自动清空已有错误并写入新错误） */
+  /**
+   * 阶段 2.1：把后端响应映射到表单字段
+   * - success=true：清空所有服务端错误（红字消失）
+   * - success=false + errors：清空涉及字段的错误 + 写入新错误
+   * - 仅传 errors 视为 success=false
+   */
   validateFromServer(response: {
+    success?: boolean
     errors?:
       Array<{ path?: string; field?: string; message?: string }> | Record<string, string | string[]>
   }): number

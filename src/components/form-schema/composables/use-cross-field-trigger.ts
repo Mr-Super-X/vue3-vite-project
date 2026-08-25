@@ -18,8 +18,7 @@
  */
 import { watch, type WatchStopHandle } from 'vue'
 import { get, isEqual } from 'lodash-es'
-import type { SchemaNode, RuleItem } from '../types'
-import { collectCrossRuleFields } from './use-validate'
+import type { RuleItem } from '../types'
 
 interface ReverseRule {
   /** 规则所属的目标字段（错误写入这里） */
@@ -29,28 +28,12 @@ interface ReverseRule {
   rule: RuleItem
 }
 
-function buildReverseIndex(schema: SchemaNode | SchemaNode[] | string | undefined): ReverseRule[] {
-  const out: ReverseRule[] = []
-  const fields = collectCrossRuleFields(schema ?? [])
-  for (const node of fields) {
-    if (!node.name || !node.rules) continue
-    const arr = Array.isArray(node.rules) ? node.rules : [node.rules]
-    for (const r of arr) {
-      if (typeof r !== 'object' || !r || !('crossValidator' in r) || !('dependsOn' in r)) continue
-      const rule = r as RuleItem
-      const raw = rule.dependsOn
-      const deps = (Array.isArray(raw) ? raw : [raw]).filter(
-        (d): d is string => typeof d === 'string'
-      )
-      if (deps.length === 0) continue
-      out.push({ target: node.name, deps, rule })
-    }
-  }
-  return out
-}
-
 export interface UseCrossFieldTriggerOptions {
-  schema: () => SchemaNode | SchemaNode[] | string | undefined
+  /**
+   * 跨字段规则的扁平数组 —— 由 XForm 通过 useSchemaIndex().crossRules 拍平后传入。
+   * XForm setup 时一次扁平，schema 整体替换时由 XForm 重新构造此函数返回值。
+   */
+  crossRules: () => ReverseRule[]
   model: () => Record<string, unknown> | undefined
   /** 写错误到 form-item（由 XForm 通过 useFormInstance.setFieldError 注入） */
   setFieldError: (name: string, message: string) => void
@@ -67,7 +50,7 @@ export function useCrossFieldTrigger(opts: UseCrossFieldTriggerOptions): {
    */
   trigger: (changedField: string) => void
 } {
-  let rules: ReverseRule[] = buildReverseIndex(opts.schema())
+  let rules: ReverseRule[] = opts.crossRules()
   const stops: WatchStopHandle[] = []
 
   /**
@@ -117,12 +100,12 @@ export function useCrossFieldTrigger(opts: UseCrossFieldTriggerOptions): {
     for (const w of toWrite) opts.setFieldError(w.name, w.message)
   }
 
-  // schema 变化时重建索引（如动态表单替换整体 schema）
+  // 跨字段规则重建（依赖 XForm 通过 opts.crossRules 传入；索引变化时该 getter 返回新数组）
   stops.push(
     watch(
-      () => opts.schema(),
-      () => {
-        rules = buildReverseIndex(opts.schema())
+      opts.crossRules,
+      (next) => {
+        rules = next
       },
       { immediate: true }
     )

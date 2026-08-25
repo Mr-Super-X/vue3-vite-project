@@ -21,6 +21,11 @@ interface ServerErrorItem {
 }
 
 export interface ServerErrorResponse {
+  /**
+   * 后端整体成功标记 —— true 时清空所有服务端错误（红字）。
+   * 后端 success=true 不应返回 errors；若同时存在，以 errors 为准（防御性处理）。
+   */
+  success?: boolean
   errors?: ServerErrorItem[] | Record<string, string | string[]>
 }
 
@@ -28,7 +33,7 @@ export interface UseServerErrorOptions {
   setFieldError: (name: string, message: string) => void
   clearValidate: (names?: string[]) => void
   /** 可选：限制只处理已知字段（默认不过滤，未知字段静默跳过） */
-  knownFields?: () => string[]
+  knownFields?: () => readonly string[]
 }
 
 export interface UseServerErrorReturn {
@@ -71,8 +76,17 @@ export function useServerError(opts: UseServerErrorOptions): UseServerErrorRetur
   }
 
   function validateFromServer(response: ServerErrorResponse): number {
+    // 提交成功：清空所有服务端错误（修复"success=true 后红字残留"问题）
+    // —— 后端 success=true 不应返回 errors；若同时存在仍走 errors 路径（防御性）
+    if (response.success && !response.errors) {
+      opts.clearValidate(undefined)
+      return 0
+    }
     const items = normalizeErrors(response.errors)
-    if (items.length === 0) return 0
+    if (items.length === 0) {
+      // 没有 errors 但 success 字段也未标记 —— 行为同原版：什么都不做
+      return 0
+    }
     // 已知字段过滤：未注册的字段静默跳过
     const known = opts.knownFields ? new Set(opts.knownFields()) : null
     const targets = known ? items.filter((it) => known.has(it.path)) : items

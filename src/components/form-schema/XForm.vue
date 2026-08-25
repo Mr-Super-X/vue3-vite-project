@@ -2,6 +2,7 @@
 import { computed, ref, watch, type VNode } from 'vue'
 import { get, set } from 'lodash-es'
 import { useSchemaRenderer } from './composables/use-schema-renderer'
+import { useSchemaIndex } from './composables/use-schema-index'
 import { useCurrentBreakpoint } from './composables/use-current-breakpoint'
 import { validate, runCrossFieldValidation } from './composables/use-validate'
 import { scanForForbidden } from './composables/use-scan-forbidden'
@@ -99,6 +100,12 @@ const { reactiveSchema, triggerRender } = useSchemaRenderer({
   formData: computed(() => props.model ?? {}) as never,
 })
 
+// 阶段 4.x：schema 元数据中央索引 —— 替代每次遍历 O(n) 的 getNames/collectCrossRuleFields
+// - fieldNames / allNames：供 useFormDirty / useServerError 复用 O(1) 查表
+// - crossRules：供 useCrossFieldTrigger 拍平使用
+// - schema 整体替换时自动重建；局部修改需手动调 reindex()
+const schemaIndex = useSchemaIndex(() => reactiveSchema.value)
+
 const {
   elFormRef,
   getRef,
@@ -119,18 +126,25 @@ const {
 
 // 阶段 1.1 + 3.1 修复：反向跨字段实时校验 —— 精确触发
 // onValueChange 调用 crossFieldTrigger.trigger(node.name) 只跑 deps 包含该字段的 rule
+// 跨字段规则从 schemaIndex.crossRules 拍平传入，schema 变化时自动跟随重建
 const crossFieldTrigger = useCrossFieldTrigger({
-  schema: () => props.schema,
+  crossRules: () => {
+    const out: Array<{ target: string; deps: string[]; rule: import('./types').RuleItem }> = []
+    for (const list of schemaIndex.crossRules.value.values()) {
+      for (const e of list) out.push({ target: e.target, deps: e.deps, rule: e.rule })
+    }
+    return out
+  },
   model: () => props.model,
   setFieldError: (name, message) => setFieldError(name, message),
   clearValidate: (names: string[]) => clearValidate(names),
 })
 
 // 阶段 2.2：dirty 状态追踪
-// fieldNames 由 XForm 内置的 getNames() 提供（已遍历 schema 收集所有 name + key）
+// fieldNames 直接从 schemaIndex 查表（O(1)），避免每次 model 变化都遍历 schema
 const formDirty = useFormDirty({
   model: () => props.model,
-  fieldNames: () => getNames(false), // 排除 ignore 字段
+  fieldNames: () => schemaIndex.fieldNames.value,
 })
 // 立即拍基线（model 加载完成即开始追踪，避免"未拍基线 = 全字段 dirty"假象）
 formDirty.resetDirty()
@@ -143,8 +157,10 @@ watch(fieldErrors, () => triggerRender(), { deep: true })
 // 阶段 2.1：服务端错误适配器
 const serverError = useServerError({
   setFieldError: (name, message) => setFieldError(name, message),
-  clearValidate: (names) => elFormRef.value?.clearValidate?.(names),
-  knownFields: () => getNames(true), // 包含 ignore 字段（hidden 字段也可能有后端错误）
+  // 用 useFormInstance 返回的 clearValidate（同步清 externalErrors + el-form 内部状态）
+  // 不直接用 elFormRef.value.clearValidate —— 它不清 externalErrors，导致 success 后红字残留
+  clearValidate,
+  knownFields: () => schemaIndex.allNames.value, // 包含 ignore 字段（hidden 字段也可能有后端错误）
 })
 
 /**
@@ -338,30 +354,24 @@ const renderInner = useRenderSchemaNode({
   },
   // v-model 值变化时主动调 triggerCrossFieldValidator(eventType='change')
   // + 阶段 3.1：精确触发反向校验（只跑 deps 包含 node.name 的 rules）
+  // + 阶段 2.1 修复：用户修改字段值时自动清除该字段的服务端错误（红字），
+  //   避免下次 validate() 因残留服务端错误误判失败
   onValueChange: (node, _newValue) => {
     triggerCrossFieldValidator(node, 'change')
-    if (node.name) crossFieldTrigger.trigger(node.name)
+    if (node.name) {
+      crossFieldTrigger.trigger(node.name)
+      // 自动清除服务端错误：用户重新输入即视为"已修正"，旧红字应失效
+      clearValidate([node.name])
+    }
   },
   // P2-1:响应式断点感知(响应式 ColConfig 拍平)
   currentBreakpoint: currentBreakpoint,
 })
 
+// getNames 现在直接查 schemaIndex 索引（O(1)），保留函数签名与原行为一致
 function getNames(includesIgnore = false): string[] {
-  const names: string[] = []
-  visit(reactiveSchema.value)
-  function visit(n: SchemaNode | SchemaNode[] | string): void {
-    if (typeof n === 'string') return
-    if (Array.isArray(n)) {
-      n.forEach(visit)
-      return
-    }
-    if (!includesIgnore && n.ignore) return
-    if (n.name) names.push(n.name)
-    else if (n.key) names.push(String(n.key))
-    if (Array.isArray(n.children)) n.children.forEach(visit)
-    else if (typeof n.children === 'object') visit(n.children as SchemaNode)
-  }
-  return names
+  // 返回新数组避免外部修改污染索引引用
+  return [...schemaIndex.getFieldNames(includesIgnore)]
 }
 
 defineExpose({
