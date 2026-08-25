@@ -238,6 +238,16 @@ export interface RenderSchemaNodeOptions {
    * 默认 identity（字符串字面量直接返回）
    */
   permissionResolver?: (perm: string) => 'view' | 'edit' | 'hidden'
+  /**
+   * 阶段 3.1：外部字段错误状态（由 XForm.vue 注入）
+   * 走 el-form-item 的 props.error + props.validateStatus 官方路径触发红字
+   * （避免直接修改 elForm.fields[i] 的隐患）
+   * key: 字段名;value: { error: string; validateStatus: '' | 'validating' | 'success' | 'error' }
+   */
+  externalErrors?: () => Record<
+    string,
+    { error: string; validateStatus: '' | 'validating' | 'success' | 'error' }
+  >
 }
 
 /** 取节点对应组件的默认 props；仅对 string component 生效 */

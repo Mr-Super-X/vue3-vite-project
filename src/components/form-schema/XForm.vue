@@ -41,6 +41,12 @@ const validateErrors = ref<Array<{ keyPath: (string | number)[]; message: string
 const forbiddenErrors = ref<string[]>([])
 const showDebugBanner = ref(import.meta.env.DEV)
 
+// 阶段 3.1：外部字段错误状态（走 element-plus 官方 props.error + props.validateStatus 路径）
+// 通过 ref 触发响应式，renderInner 读取后传给 form-item 的 props.error / props.validateStatus
+const fieldErrors = ref<Record<string, import('./composables/use-form-instance').FieldErrorState>>(
+  {}
+)
+
 /** 应用 schema 节点 defaultValue 到 model（仅在 model 字段未定义时填充） */
 function applyDefaults(
   node: SchemaNode | SchemaNode[] | string | undefined,
@@ -87,7 +93,7 @@ if (showDebugBanner.value) {
   )
 }
 
-const { reactiveSchema } = useSchemaRenderer({
+const { reactiveSchema, triggerRender } = useSchemaRenderer({
   schema: computed(() => props.schema),
   components: computed(() => props.components) as never,
   formData: computed(() => props.model ?? {}) as never,
@@ -107,16 +113,17 @@ const {
   setFieldValidating,
 } = useFormInstance(
   () => props.model,
-  () => props.zodSchema
+  () => props.zodSchema,
+  fieldErrors // 阶段 3.1：传入外部错误状态 ref，setFieldError 走 props 路径
 )
 
-// 阶段 1.1：反向跨字段实时校验 —— 任一字段变化 → 找出依赖它的 cross rules → 重跑写错误到目标字段
-// 关键修复：通过 el-form.clearValidate([prop]) 走官方清错流程，避开 element-plus 2.x shallowRef 陷阱
-useCrossFieldTrigger({
+// 阶段 1.1 + 3.1 修复：反向跨字段实时校验 —— 精确触发
+// onValueChange 调用 crossFieldTrigger.trigger(node.name) 只跑 deps 包含该字段的 rule
+const crossFieldTrigger = useCrossFieldTrigger({
   schema: () => props.schema,
   model: () => props.model,
   setFieldError: (name, message) => setFieldError(name, message),
-  clearValidate: (names: string[]) => elFormRef.value?.clearValidate?.(names),
+  clearValidate: (names: string[]) => clearValidate(names),
 })
 
 // 阶段 2.2：dirty 状态追踪
@@ -127,6 +134,11 @@ const formDirty = useFormDirty({
 })
 // 立即拍基线（model 加载完成即开始追踪，避免"未拍基线 = 全字段 dirty"假象）
 formDirty.resetDirty()
+
+// 阶段 3.1：fieldErrors 变化时强制 reactiveSchema 引用变化
+// 原因:topLevelNodes computed 依赖 reactiveSchema,只有引用变化才重算
+// triggerRef 通知但不修改引用,computed 命中缓存,模板不重渲染
+watch(fieldErrors, () => triggerRender(), { deep: true })
 
 // 阶段 2.1：服务端错误适配器
 const serverError = useServerError({
@@ -242,6 +254,9 @@ async function triggerCrossFieldValidator(
 
 // 顶层节点列表（直接从 reactiveSchema 派生，含 reaction 修改后能触发重渲染）
 const topLevelNodes = computed<SchemaNode[]>(() => {
+  // 阶段 3.1:读 fieldErrors.value 建立响应式依赖
+  // —— 否则 setFieldError 写 fieldErrors 后,computed 命中缓存,模板不重渲染
+  void Object.keys(fieldErrors.value).length
   const s = reactiveSchema.value
   if (Array.isArray(s)) return s as SchemaNode[]
   if (s.children !== undefined)
@@ -304,6 +319,8 @@ const renderInner = useRenderSchemaNode({
   rules: props.rules,
   componentProps: mergedComponentProps.value,
   render: renderToComponent,
+  // 阶段 3.1：把 fieldErrors 状态透传给 renderWithFormItem,走 element-plus 官方 props 路径
+  externalErrors: () => fieldErrors.value,
   arrayActions: {
     addItem: (name: string, init?: Record<string, unknown>) => addItem(name, init),
     removeItem: (name: string, index: number) => removeItem(name, index),
@@ -320,9 +337,10 @@ const renderInner = useRenderSchemaNode({
     }
   },
   // v-model 值变化时主动调 triggerCrossFieldValidator(eventType='change')
-  // 绕过 watch 不可靠问题(vue Proxy track  + watch getter 依赖追踪的陷阱)
+  // + 阶段 3.1：精确触发反向校验（只跑 deps 包含 node.name 的 rules）
   onValueChange: (node, _newValue) => {
     triggerCrossFieldValidator(node, 'change')
+    if (node.name) crossFieldTrigger.trigger(node.name)
   },
   // P2-1:响应式断点感知(响应式 ColConfig 拍平)
   currentBreakpoint: currentBreakpoint,
@@ -366,6 +384,15 @@ defineExpose({
   resetDirty: formDirty.resetDirty,
   validateFromServer: serverError.validateFromServer,
 } satisfies XFormExpose)
+
+// 调试钩子(仅 dev) — 通过 window.__xform_debug 直接调 setFieldError 验证 props 路径是否正常
+if (import.meta.env.DEV) {
+  ;(window as unknown as { __xform_debug?: unknown }).__xform_debug = {
+    setFieldError: (name: string, message: string) => setFieldError(name, message),
+    getFieldErrors: () => JSON.parse(JSON.stringify(fieldErrors.value)),
+    getModel: () => JSON.parse(JSON.stringify(props.model)),
+  }
+}
 </script>
 
 <template>
@@ -379,6 +406,10 @@ defineExpose({
       >
         <!-- 阶段 2.4 修复：仅当顶层有 column 字段时,外层用 ElRow+ElCol 按 column 自动分配 span -->
         <!-- 否则直接渲染节点（节点的 col.responsive 由内部 wrapWithElCol 响应式拍平） -->
+        <!-- 阶段 3.1:fieldErrors 变化时强制重渲染关键 —— 模板必须显式引用 fieldErrors -->
+        <!-- triggerRef 通知依赖但不修改引用,computed topLevelNodes 引用未变 → Vue 不会重渲染 -->
+        <!-- 显式绑定 fieldErrors 到 DOM 属性让模板建立响应式依赖,触发重渲染 -->
+        <div :data-field-errors="Object.keys(fieldErrors).join(',')" style="display: none"></div>
         <ElRow v-if="topLevelColumn" :gutter="(topLevelRow?.gutter ?? 0) as never">
           <ElCol v-for="(node, i) in topLevelNodes" :key="i" :span="topLevelColSpan">
             <component :is="renderToComponent(node)" />

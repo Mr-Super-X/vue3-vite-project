@@ -54,7 +54,21 @@ export function useSchemaRenderer(opts: UseSchemaRendererOptions) {
     asyncStoppers.length = 0
   })
 
-  return { reactiveSchema }
+  return {
+    reactiveSchema,
+    /**
+     * 阶段 3.1：强制触发 reactiveSchema 重渲染
+     * 关键:不仅 triggerRef 通知依赖,还要**改变 reactiveSchema 引用** —
+     * 否则顶层 computed topLevelNodes 重算但返回**同一引用**,Vue 不触发模板重渲染
+     * （Vue 3 优化：computed 返回值引用未变时依赖方不重新执行 render）
+     */
+    triggerRender: () => {
+      // 阶段 3.1 调试：标记被调用
+      ;(window as unknown as { __triggerRenderCalled?: number }).__triggerRenderCalled =
+        ((window as unknown as { __triggerRenderCalled?: number }).__triggerRenderCalled ?? 0) + 1
+      reactiveSchema.value = { ...reactiveSchema.value } as SchemaNode | SchemaNode[]
+    },
+  }
 }
 
 function traverse(

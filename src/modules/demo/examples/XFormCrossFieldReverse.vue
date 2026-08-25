@@ -100,6 +100,7 @@ const schema: SchemaNode = {
           dependsOn: ['password'],
           crossValidator: (value: unknown, password: unknown) =>
             value === password || '两次密码不一致',
+          trigger: 'blur',
         },
       ],
     },

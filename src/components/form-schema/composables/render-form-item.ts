@@ -38,35 +38,20 @@ export function renderWithFormItem(
   const fiProps = fi?.props ?? {}
 
   // 跨字段校验在 blur/change 时主动触发
-  // 关键：onBlur/onChange handler 必须**同时**手动跑字段内 async-validator 校验
-  // 因为覆盖了 el-form-item 内部 emit 的 onBlur 后,el-form 不会自动跑字段内规则
-  //
-  // 零开销优化：仅当 triggerCrossFieldValidator 存在时才挂 handler
-  // ——否则 el-form-item 默认行为已自动跑字段内校验,无需覆盖
+  // 字段内 async-validator 规则（required 等）由 el-form-item 内部 addValidateEvents 自动处理；
+  // 这里只额外触发 crossValidator，避免手动 validateField 与内部 validate 产生状态竞争覆盖。
   const triggerFn = opts.triggerCrossFieldValidator
-  const validateField = opts.validateField
 
   let onBlur: (() => Promise<void>) | undefined
   let onChange: (() => Promise<void>) | undefined
   if (triggerFn && node.name) {
-    // 提取到 const 变量 —— TS narrow 在 async function 边界外不传递,需要显式 const
     const tf: NonNullable<typeof triggerFn> = triggerFn
-    const vf = validateField
     const fieldName = node.name
-    async function runValidate(trigger: 'blur' | 'change'): Promise<void> {
-      // 1. 字段内 async-validator 校验
-      if (vf) {
-        try {
-          await vf(fieldName)
-        } catch {
-          // silent — 校验失败时错误已写入 form-item
-        }
-      }
-      // 2. 跨字段校验
-      await tf(node, trigger)
+    async function runCrossValidator(trigger: 'blur' | 'change'): Promise<void> {
+      await tf({ ...node, name: fieldName }, trigger)
     }
-    onBlur = () => runValidate('blur')
-    onChange = () => runValidate('change')
+    onBlur = () => runCrossValidator('blur')
+    onChange = () => runCrossValidator('change')
   }
 
   const eventBindings = {
@@ -75,15 +60,22 @@ export function renderWithFormItem(
   }
   const asyncProps = buildAsyncProps(node)
 
+  // 阶段 3.1：走 element-plus 官方 API 路径
+  // 通过 props.error + props.validateStatus 触发 el-form-item 红字
+  // （不直接修改 elForm.fields[i] —— 避免与 element-plus 内部状态机冲突）
+  const externalErrors = opts.externalErrors?.()
+  const ext = node.name && externalErrors ? externalErrors[node.name] : null
+
   // 阶段 2.4 修复(嵌套顺序):
   // 正确嵌套: ElRow > ElCol > ElFormItem > Comp
-  // (el-form-item 不参与 24 栅格,必须放在 el-col 内部才能响应父 el-row 的 gutter)
   const formItem = h(
     FormItemComp as never,
     {
       label: node.label,
       prop: node.name,
       rules: compileRules(node.rules, opts.rules) as never,
+      ...(ext?.error ? { error: ext.error } : {}),
+      ...(ext?.validateStatus ? { validateStatus: ext.validateStatus } : {}),
       ...(onBlur ? { onBlur } : {}),
       ...(onChange ? { onChange } : {}),
       ...fiProps,

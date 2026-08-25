@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
+import { ref } from 'vue'
 import { z } from 'zod'
 import { useFormInstance } from './use-form-instance'
 
@@ -371,35 +372,43 @@ describe('useFormInstance(model, zodSchema)', () => {
   })
 
   describe('setFieldError(name, message)', () => {
-    it('writes message to matching elFormRef.fields entry', () => {
-      const fields = [
-        { prop: 'email', validateMessage: '' },
-        { prop: 'password', validateMessage: '' },
-      ]
-      const mockEf = { fields, clearValidate: vi.fn(), validate: vi.fn() }
-      const { setFieldError, elFormRef } = useFormInstance(
+    // 阶段 3.1:setFieldError 改为走 externalErrors ref(官方 props 路径),
+    // 不再直接修改 elForm.fields[i]。测试相应更新:检查 externalErrors ref 值
+    it('writes message to externalErrors ref (走 element-plus 官方 props 路径)', () => {
+      const { setFieldError, externalErrors } = useFormInstance(
         () => ({}),
-        () => undefined
+        () => undefined,
+        ref({}) as never
       )
-      elFormRef.value = mockEf as never
       setFieldError('email', '邮箱格式错误')
-      expect(fields[0]?.validateMessage).toBe('邮箱格式错误')
-      expect(fields[1]?.validateMessage).toBe('')
+      expect(externalErrors!.value.email).toEqual({
+        error: '邮箱格式错误',
+        validateStatus: 'error',
+      })
     })
 
-    it('is silent when field not found (e.g. array 节点动态变化期间)', () => {
-      const fields = [{ prop: 'email', validateMessage: '' }]
-      const mockEf = { fields, clearValidate: vi.fn(), validate: vi.fn() }
-      const { setFieldError, elFormRef } = useFormInstance(
+    it('writes default validateStatus when state omitted', () => {
+      const { setFieldError, externalErrors } = useFormInstance(
         () => ({}),
-        () => undefined
+        () => undefined,
+        ref({}) as never
       )
-      elFormRef.value = mockEf as never
-      expect(() => setFieldError('nonexistent', 'err')).not.toThrow()
-      expect(fields[0]?.validateMessage).toBe('')
+      setFieldError('email', '错误信息')
+      expect(externalErrors!.value.email?.validateStatus).toBe('error')
     })
 
-    it('is silent when elFormRef is null', () => {
+    it('clears entry when message empty or state cleared', () => {
+      const { setFieldError, externalErrors } = useFormInstance(
+        () => ({}),
+        () => undefined,
+        ref({ email: { error: '旧', validateStatus: 'error' } }) as never
+      )
+      setFieldError('email', '')
+      expect(externalErrors!.value.email).toBeUndefined()
+    })
+
+    it('is silent when externalErrors ref not provided', () => {
+      // 不传 externalErrors 时 setFieldError 应为 no-op(兼容老调用)
       const { setFieldError } = useFormInstance(
         () => ({}),
         () => undefined
@@ -407,26 +416,17 @@ describe('useFormInstance(model, zodSchema)', () => {
       expect(() => setFieldError('a', 'b')).not.toThrow()
     })
 
-    it('is silent when fields array is missing', () => {
-      const mockEf = { clearValidate: vi.fn(), validate: vi.fn() }
-      const { setFieldError, elFormRef } = useFormInstance(
-        () => ({}),
-        () => undefined
-      )
-      elFormRef.value = mockEf as never
-      expect(() => setFieldError('a', 'b')).not.toThrow()
-    })
-
     it('supports nested path (items[0].qty) for array items', () => {
-      const fields = [{ prop: 'items[0].qty', validateMessage: '' }]
-      const mockEf = { fields, clearValidate: vi.fn(), validate: vi.fn() }
-      const { setFieldError, elFormRef } = useFormInstance(
+      const { setFieldError, externalErrors } = useFormInstance(
         () => ({}),
-        () => undefined
+        () => undefined,
+        ref({}) as never
       )
-      elFormRef.value = mockEf as never
       setFieldError('items[0].qty', '数量必须大于 0')
-      expect(fields[0]?.validateMessage).toBe('数量必须大于 0')
+      expect(externalErrors!.value['items[0].qty']).toEqual({
+        error: '数量必须大于 0',
+        validateStatus: 'error',
+      })
     })
   })
 })
