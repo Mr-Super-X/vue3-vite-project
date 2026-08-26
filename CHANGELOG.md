@@ -64,6 +64,14 @@
 
 ### 🐛 Bug Fixes | 缺陷修复
 
+* **form-schema:** 修复 `defaultValue` 生产环境静默失效（C1）
+  - 根因：`applyDefaults` 与 schema 校验、安全扫描同处 `showDebugBanner`（`import.meta.env.DEV`）门控的 watch 内——prod 构建下整个 watch 不注册，`defaultValue` 永不填充
+  - 修复：`applyDefaults` 拆出为独立 watcher（全环境生效）；schema 校验 + `scanForForbidden` 安全扫描保留在 dev 调试分支（纯诊断，无生产副作用）
+  - 防回归：XForm.spec 新增 3 个用例（defaultValue 填充 / 已有值不覆盖 / 源码级断言 applyDefaults 不在调试分支内）
+* **form-schema:** 修复 `trigger:'blur'` 的 crossValidator 永不触发（C2）
+  - 根因：失焦触发器以 `onBlur` 挂在 ElFormItem 根 div 上，而原生 `blur` 事件不冒泡——监听器从未被触发，属死代码
+  - 修复：改用可冒泡的 `focusout` 承载 blur 语义（`onFocusout`），schema 侧的 `trigger` 名称仍按 `'blur'` 上报，用户配置无感
+  - 防回归：XForm.spec 新增真实 ElForm 链路集成用例（原生冒泡 FocusEvent 触发 crossValidator）；render-schema-node.spec 5 个监听器断言同步改为 `onFocusout`
 * **form-schema:** 修复 `applyDirectives` 指令完全失效的问题
   - 根因：`withDirectives(vnode, {...})` 第二参数误传单个对象——Vue 内部按 `.length` 遍历 + 数组元组解构 `[dir, value, arg, modifiers]`，对象无 `length` 被静默跳过（不抛错不 warn），指令 `mounted` 等钩子从未执行
   - 修复：改为按元组数组 `[[dir, value, arg, modifiers]]` 传参；字符串指令名因 `XFormProps.directives` 注册表未接线，暂时跳过（仅支持直接传 Directive 对象）

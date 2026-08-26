@@ -1,6 +1,6 @@
 /**
  * FormItem 包装渲染（含 name 或 formItem: true 的节点）
- * - 外层包 el-form-item（label + prop + rules + onBlur/onChange 跨字段触发）
+ * - 外层包 el-form-item（label + prop + rules + onFocusout/onChange 跨字段触发）
  * - 内部渲染 Comp（v-model/on 事件 + 默认 props + node.props + async props + disabled + key）
  * - formItem 节点的 slots 转发给内部 Comp（如 el-upload 的 tip 槽位）
  * - 末尾 wrapWithElCol 应用 col 响应式断点
@@ -28,7 +28,7 @@ export function renderWithFormItem(
   opts: RenderSchemaNodeOptions
 ): VNode | undefined {
   // 即使 Comp = null（未映射组件），仍渲染 formItem —— 内部 v-if="Comp" 跳过子节点
-  // 保证 formItem 的 v-model/rules/onBlur 等 prop 路径不被打断
+  // 保证 formItem 的 v-model/rules/onFocusout 等 prop 路径不被打断
   const fi = typeof node.formItem === 'object' ? node.formItem : null
   const FormItemComp = fi?.component
     ? typeof fi.component === 'string'
@@ -42,7 +42,7 @@ export function renderWithFormItem(
   // 这里只额外触发 crossValidator，避免手动 validateField 与内部 validate 产生状态竞争覆盖。
   const triggerFn = opts.triggerCrossFieldValidator
 
-  let onBlur: (() => Promise<void>) | undefined
+  let onFocusout: (() => Promise<void>) | undefined
   let onChange: (() => Promise<void>) | undefined
   if (triggerFn && node.name) {
     const tf: NonNullable<typeof triggerFn> = triggerFn
@@ -50,7 +50,9 @@ export function renderWithFormItem(
     async function runCrossValidator(trigger: 'blur' | 'change'): Promise<void> {
       await tf({ ...node, name: fieldName }, trigger)
     }
-    onBlur = () => runCrossValidator('blur')
+    // 监听器挂在 ElFormItem 根 div 上，而原生 blur 不冒泡（此前用 onBlur 永不触发）；
+    // focusout 可冒泡，语义等价于"字段失焦"，schema 侧的 trigger 名仍按 'blur' 上报
+    onFocusout = () => runCrossValidator('blur')
     onChange = () => runCrossValidator('change')
   }
 
@@ -76,7 +78,7 @@ export function renderWithFormItem(
       rules: compileRules(node.rules, opts.rules) as never,
       ...(ext?.error ? { error: ext.error } : {}),
       ...(ext?.validateStatus ? { validateStatus: ext.validateStatus } : {}),
-      ...(onBlur ? { onBlur } : {}),
+      ...(onFocusout ? { onFocusout } : {}),
       ...(onChange ? { onChange } : {}),
       ...fiProps,
       ...(node.name || node.key ? { key: `fi-${node.name ?? node.key}` } : {}),

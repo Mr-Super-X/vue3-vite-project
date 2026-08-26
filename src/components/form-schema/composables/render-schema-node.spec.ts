@@ -292,14 +292,15 @@ describe('useRenderSchemaNode disabled 透传', () => {
 })
 
 describe('useRenderSchemaNode blur/change 触发 crossValidator', () => {
-  // 找 form-item 的 onBlur / onChange 触发器
-  function findTrigger(vnode: unknown, type: 'onBlur' | 'onChange'): (() => void) | undefined {
+  // 找 form-item 的 onFocusout / onChange 触发器
+  // 注：原生 blur 不冒泡，挂在 form-item 根节点上永不触发，故实现用可冒泡的 focusout 承载 blur 语义
+  function findTrigger(vnode: unknown, type: 'onFocusout' | 'onChange'): (() => void) | undefined {
     if (!vnode || typeof vnode !== 'object') return undefined
     const v = vnode as { props?: Record<string, unknown> }
     return v.props?.[type] as (() => void) | undefined
   }
 
-  it('form-item 同时挂 onBlur 和 onChange', () => {
+  it('form-item 同时挂 onFocusout 和 onChange', () => {
     const triggerFn = vi.fn()
     const { opts } = makeOpts({ model: { a: 1, b: 2 } })
     opts.triggerCrossFieldValidator = triggerFn
@@ -315,11 +316,11 @@ describe('useRenderSchemaNode blur/change 触发 crossValidator', () => {
       ],
     }
     const result = render(node)
-    expect(findTrigger(result, 'onBlur')).toBeDefined()
+    expect(findTrigger(result, 'onFocusout')).toBeDefined()
     expect(findTrigger(result, 'onChange')).toBeDefined()
   })
 
-  it('blur 触发器传入 eventType="blur"', () => {
+  it('focusout 触发器传入 eventType="blur"', () => {
     const triggerFn = vi.fn()
     const { opts } = makeOpts({ model: { a: 1, b: 2 } })
     opts.triggerCrossFieldValidator = triggerFn
@@ -330,7 +331,7 @@ describe('useRenderSchemaNode blur/change 触发 crossValidator', () => {
       rules: [{ dependsOn: ['b'], crossValidator: () => true as const }],
     }
     const result = render(node)
-    findTrigger(result, 'onBlur')!()
+    findTrigger(result, 'onFocusout')!()
     expect(triggerFn).toHaveBeenCalledWith(node, 'blur')
   })
 
@@ -358,7 +359,7 @@ describe('useRenderSchemaNode blur/change 触发 crossValidator', () => {
       rules: [{ dependsOn: ['b'], crossValidator: () => true as const }],
     }
     const result = render(node)
-    expect(findTrigger(result, 'onBlur')).toBeUndefined()
+    expect(findTrigger(result, 'onFocusout')).toBeUndefined()
     expect(findTrigger(result, 'onChange')).toBeUndefined()
   })
 
@@ -372,7 +373,7 @@ describe('useRenderSchemaNode blur/change 触发 crossValidator', () => {
       rules: [{ dependsOn: ['x'], crossValidator: () => 'fail' }],
     }
     const result = render(node)
-    expect(findTrigger(result, 'onBlur')).toBeUndefined()
+    expect(findTrigger(result, 'onFocusout')).toBeUndefined()
     expect(findTrigger(result, 'onChange')).toBeUndefined()
   })
 })

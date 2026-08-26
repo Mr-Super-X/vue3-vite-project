@@ -460,3 +460,76 @@ describe('XForm.vue scrollToError（校验失败自动滚动）', () => {
     expect(scrollIntoViewSpy).toHaveBeenCalled()
   })
 })
+
+describe('XForm.vue defaultValue 填充（C1 回归）', () => {
+  it('schema defaultValue 在挂载时填充到 model', async () => {
+    const model = reactive<Record<string, unknown>>({})
+    mountXForm({
+      schema: {
+        component: 'ElInput',
+        name: 'nickname',
+        defaultValue: '匿名',
+      } as unknown as SchemaNode,
+      model,
+    })
+    await flushPromises()
+    expect(model.nickname).toBe('匿名')
+  })
+
+  it('model 已有值时不被 defaultValue 覆盖', async () => {
+    const model = reactive<Record<string, unknown>>({ nickname: '已有值' })
+    mountXForm({
+      schema: {
+        component: 'ElInput',
+        name: 'nickname',
+        defaultValue: '匿名',
+      } as unknown as SchemaNode,
+      model,
+    })
+    await flushPromises()
+    expect(model.nickname).toBe('已有值')
+  })
+
+  /**
+   * 源码级静态断言（C1 根因）：applyDefaults 曾位于 showDebugBanner 门控的 watch 内，
+   * 导致 prod（DEV=false）下 defaultValue 永不填充。
+   * 此处断言调试分支内不再包含 applyDefaults 调用。
+   */
+  it('applyDefaults 调用不得位于 showDebugBanner 调试分支内', () => {
+    const debugBlock = XFormSource.match(/if \(showDebugBanner\.value\) \{[\s\S]*?\n\}/)
+    expect(debugBlock).not.toBeNull()
+    expect(debugBlock![0]).not.toMatch(/applyDefaults/)
+  })
+})
+
+describe('XForm.vue 失焦触发 crossValidator（C2 回归）', () => {
+  /**
+   * C2 根因：crossValidator 的 blur 触发器曾以 onBlur 挂在 ElFormItem 根 div 上，
+   * 而原生 blur 事件不冒泡 → trigger:'blur' 的 crossValidator 永不触发。
+   * 修复后改用可冒泡的 focusout 承载 blur 语义。
+   * 注意：VTU 的 trigger('focusout') 未必冒泡，这里直接派发原生冒泡事件模拟真实浏览器失焦。
+   */
+  it('输入框 focusout 冒泡到 form-item → 触发 blur 语义的 crossValidator', async () => {
+    const crossValidator = vi.fn(() => true as const)
+    const model = reactive({ a: 'x', b: 'y' })
+    const wrapper = mountXForm({
+      schema: {
+        children: [
+          { component: 'ElInput', name: 'b' },
+          {
+            component: 'ElInput',
+            name: 'a',
+            rules: [{ dependsOn: ['b'], crossValidator }],
+          },
+        ],
+      } as unknown as SchemaNode,
+      model,
+    })
+    await flushPromises()
+    const inputs = wrapper.findAll('.el-form-item input')
+    expect(inputs.length).toBe(2)
+    inputs[1]!.element.dispatchEvent(new FocusEvent('focusout', { bubbles: true }))
+    await flushPromises()
+    expect(crossValidator).toHaveBeenCalledWith('x', 'y')
+  })
+})

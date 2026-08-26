@@ -69,12 +69,22 @@ function applyDefaults(
   if (node.children) applyDefaults(node.children, model)
 }
 
+// defaultValue 填充是运行时行为而非调试诊断，必须全环境生效 ——
+// 此前它被 showDebugBanner 门控，导致 prod 下 defaultValue 静默失效
+watch(
+  () => props.schema,
+  (val) => {
+    const normalized = Array.isArray(val) ? ({ children: val } as SchemaNode) : val
+    applyDefaults(normalized, props.model)
+  },
+  { immediate: true, deep: true }
+)
+
 if (showDebugBanner.value) {
   watch(
     () => props.schema,
     (val) => {
       const normalized = Array.isArray(val) ? ({ children: val } as SchemaNode) : val
-      applyDefaults(normalized, props.model)
       // 阶段 1.3：组件名校验 —— 短名 + ElXxx 全名 + userComponents 三类必须命中其一
       const { isValid, errors } = validate(normalized, {
         knownComponents: {
