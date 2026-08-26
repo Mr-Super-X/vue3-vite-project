@@ -17,6 +17,10 @@
     - `src/components/form-schema/README.md`：30 秒上手 + props / 实例方法 / schema 字段 / 链式构建器 / reaction / 决策指南 / 故障排查速查
     - `docs/24-XForm选型决策指南.md`：XForm vs element-plus 原生 vs FormRender 选型决策
     - `docs/25-XForm故障排查表.md`：8 类常见错误速查（输入无反应 / 校验不触发 / 反应式不响应 / directive 不生效 / 栅格不生效 / 样式不对 / 性能问题）
+* **docs（XForm 文档重组）**
+  - 新增 `docs/24-XForm使用指南.md`：按当前代码逐项核对的完整使用指南（8 个 props / 19 个实例方法 / SchemaNode 25 字段 / 校验双轨（字段规则 + 跨字段 + Zod）/ reaction 调度策略 / 数组节点 / asyncOptions / permission 三态 / 服务端错误映射 / dirty 追踪 / useFormPersist / 22 个链式 builder / SchemaNodeFor 类型推导 / 响应式断点 / 选型决策 / 故障排查 / 22 个 demo 索引）
+  - 合并 `docs/26-XForm架构总览.md` + `docs/27-XForm决策记录-ADR.md` → `docs/25-XForm架构与决策记录.md`，修正过时数据：demo 8→22 个、测试 216→371 个；ADR-006（setFieldError 适配 shallowRef）标注已被阶段 3.1 官方 `props.error/validateStatus` 双路径取代
+  - 删除旧 `docs/24-XForm选型决策指南.md`、`docs/25-XForm故障排查表.md`（内容并入新的 24 号使用指南；修正过时条目：name 已支持 lodash 路径、`validate()` 返回 `Promise<boolean>` 而非 callback 签名）
 * **form-schema-engine v2**（补齐 6 项 dgm-formschema 缺失功能 + 重构）
   - `node.beforeChange` 字段粒度拦截（同步返回值替换 / Promise resolve 后更新 / reject 跳过）
   - `node.on` 事件回调（函数 / `{{ (m) => ... }}` 函数表达式）
