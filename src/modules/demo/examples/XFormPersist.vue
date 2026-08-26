@@ -20,6 +20,7 @@ import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import { persistItems } from './xform-demos-api'
 import DocLayout from '../layouts/DocLayout.vue'
+import DocToc from '../components/DocToc.vue'
 import persistSource from './XFormPersist.vue?raw'
 
 const bem = createNamespace('demo-x-form-persist')
@@ -107,6 +108,11 @@ const lastSavedText = computed(() =>
     ? '尚未保存'
     : new Date(persist.lastSavedAt.value).toLocaleTimeString()
 )
+
+const tocItems = [
+  { id: 'demo-x-form-persist', label: '草稿持久化演示' },
+  { id: 'api-persist', label: 'useFormPersist API' },
+]
 </script>
 
 <template>
@@ -153,6 +159,10 @@ const lastSavedText = computed(() =>
 
       <ApiTable title="useFormPersist API" :items="persistItems" anchor="api-persist" />
     </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
   </DocLayout>
 </template>
 

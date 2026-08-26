@@ -7,8 +7,11 @@ import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
+import ApiTable from '../components/ApiTable.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import DemoFrame from '../components/DemoFrame.vue'
+import DocToc from '../components/DocToc.vue'
+import { minimumItems } from './xform-demos-api'
 
 const bem = createNamespace('demo-x-form-minimum')
 
@@ -33,6 +36,11 @@ const schema: SchemaNode = {
 function onSave() {
   ElMessage.success(`提交成功：${JSON.stringify(model)}`)
 }
+
+const tocItems = [
+  { id: 'demo-minimum', label: '最小示例' },
+  { id: 'api-minimum', label: '最小示例三要素' },
+]
 </script>
 
 <template>
@@ -50,7 +58,13 @@ function onSave() {
         <XForm :schema="schema" :model="model" />
         <el-button type="primary" :class="bem.e('submit')" @click="onSave">提交</el-button>
       </section>
+
+      <ApiTable title="最小示例三要素" :items="minimumItems" anchor="api-minimum" />
     </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
   </DocLayout>
 </template>
 

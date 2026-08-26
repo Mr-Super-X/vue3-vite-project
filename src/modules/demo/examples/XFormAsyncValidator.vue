@@ -12,9 +12,12 @@ import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
 import { xInput } from '@/components/form-schema/builders'
+import ApiTable from '../components/ApiTable.vue'
 import DemoField from '../components/DemoField.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DocLayout from '../layouts/DocLayout.vue'
+import DocToc from '../components/DocToc.vue'
+import { asyncValidatorItems } from './xform-demos-api'
 import xFormSource from './XFormAsyncValidator.vue?raw'
 
 const bem = createNamespace('demo-x-form-async')
@@ -133,6 +136,11 @@ async function copySchema() {
     ElMessage.error('复制失败，请手动选择')
   }
 }
+
+const tocItems = [
+  { id: 'demo-async', label: '异步校验演示' },
+  { id: 'api-async-validator', label: '异步校验' },
+]
 </script>
 
 <template>
@@ -162,7 +170,13 @@ async function copySchema() {
           </div>
         </DemoField>
       </section>
+
+      <ApiTable title="异步校验" :items="asyncValidatorItems" anchor="api-async-validator" />
     </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
   </DocLayout>
 </template>
 

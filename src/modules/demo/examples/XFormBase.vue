@@ -11,9 +11,12 @@ import dayjs from 'dayjs'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
+import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
+import DocToc from '../components/DocToc.vue'
+import { ruleItems } from './xform-demos-api'
 import xFormSource from './XFormBase.vue?raw'
 
 const bem = createNamespace('demo-x-form-base')
@@ -134,6 +137,11 @@ async function copySchema() {
     ElMessage.error('复制失败，请手动选择')
   }
 }
+
+const tocItems = [
+  { id: 'demo-base', label: '基础用法演示' },
+  { id: 'api-rule', label: 'RuleItem 常用字段' },
+]
 </script>
 
 <template>
@@ -158,7 +166,13 @@ async function copySchema() {
           </div>
         </DemoField>
       </section>
+
+      <ApiTable title="RuleItem 常用字段" :items="ruleItems" anchor="api-rule" />
     </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
   </DocLayout>
 </template>
 

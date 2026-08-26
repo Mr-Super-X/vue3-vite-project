@@ -18,6 +18,7 @@ import DemoFrame from '../components/DemoFrame.vue'
 import { arrayItems } from './xform-demos-api'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
+import DocToc from '../components/DocToc.vue'
 import xFormSource from './XFormArray.vue?raw'
 
 const bem = createNamespace('demo-x-form-array')
@@ -118,6 +119,11 @@ async function copySchema() {
     ElMessage.error('复制失败，请手动选择')
   }
 }
+
+const tocItems = [
+  { id: 'demo-array', label: '订单明细演示' },
+  { id: 'api-array', label: 'ArrayNodeConfig' },
+]
 </script>
 
 <template>
@@ -156,6 +162,10 @@ async function copySchema() {
 
       <ApiTable title="ArrayNodeConfig" :items="arrayItems" anchor="api-array" />
     </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
   </DocLayout>
 </template>
 

@@ -27,6 +27,7 @@ import DemoFrame from '../components/DemoFrame.vue'
 import { responsiveItems } from './xform-demos-api'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
+import DocToc from '../components/DocToc.vue'
 import xFormSource from './XFormResponsive.vue?raw'
 
 const bem = createNamespace('demo-x-form-responsive')
@@ -163,6 +164,11 @@ async function copySchema() {
     ElMessage.error('复制失败')
   }
 }
+
+const tocItems = [
+  { id: 'demo-responsive', label: '响应式布局演示' },
+  { id: 'api-responsive', label: 'responsive 配置' },
+]
 </script>
 
 <template>
@@ -222,6 +228,10 @@ async function copySchema() {
 
       <ApiTable title="responsive 配置" :items="responsiveItems" anchor="api-responsive" />
     </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
   </DocLayout>
 </template>
 

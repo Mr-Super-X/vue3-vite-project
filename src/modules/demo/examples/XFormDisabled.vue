@@ -18,6 +18,7 @@ import DemoFrame from '../components/DemoFrame.vue'
 import { disabledItems } from './xform-demos-api'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
+import DocToc from '../components/DocToc.vue'
 import xFormSource from './XFormDisabled.vue?raw'
 
 const bem = createNamespace('demo-x-form-disabled')
@@ -113,6 +114,11 @@ async function copySchema() {
     ElMessage.error('复制失败，请手动选择')
   }
 }
+
+const tocItems = [
+  { id: 'demo-disabled', label: '禁用状态演示' },
+  { id: 'api-disabled', label: 'disabled 字段' },
+]
 </script>
 
 <template>
@@ -145,6 +151,10 @@ async function copySchema() {
 
       <ApiTable title="disabled 字段" :items="disabledItems" anchor="api-disabled" />
     </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
   </DocLayout>
 </template>
 

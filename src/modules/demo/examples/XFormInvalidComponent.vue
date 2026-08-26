@@ -17,9 +17,12 @@ import { reactive } from 'vue'
 import { ElMessage, ElInput } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode, XFormProps } from '@/components/form-schema/types'
+import ApiTable from '../components/ApiTable.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
+import DocToc from '../components/DocToc.vue'
+import { invalidComponentItems } from './xform-demos-api'
 
 const bem = createNamespace('demo-x-form-invalid-component')
 
@@ -98,6 +101,11 @@ function onSaveA() {
 function onSaveE() {
   ElMessage.info(`提交 E 字段：${JSON.stringify(registeredModel)}`)
 }
+
+const tocItems = [
+  { id: 'demo-invalid-component', label: '校验演示' },
+  { id: 'api-invalid-component', label: '组件名解析规则' },
+]
 </script>
 
 <template>
@@ -131,7 +139,17 @@ function onSaveE() {
           </div>
         </DemoField>
       </section>
+
+      <ApiTable
+        title="组件名解析规则"
+        :items="invalidComponentItems"
+        anchor="api-invalid-component"
+      />
     </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
   </DocLayout>
 </template>
 

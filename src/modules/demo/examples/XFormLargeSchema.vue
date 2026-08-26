@@ -9,9 +9,12 @@ import { reactive, ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
+import DocToc from '../components/DocToc.vue'
+import { largeSchemaItems } from './xform-demos-api'
 import xFormSource from './XFormLargeSchema.vue?raw'
 
 const FIELD_COUNT = 120
@@ -57,6 +60,11 @@ async function onSave() {
   }
   ElMessage.success('保存成功')
 }
+
+const tocItems = [
+  { id: 'demo-large-schema', label: '性能演示' },
+  { id: 'api-large-schema', label: '性能观察要点' },
+]
 </script>
 
 <template>
@@ -88,6 +96,12 @@ async function onSave() {
           </div>
         </DemoField>
       </section>
+
+      <ApiTable title="性能观察要点" :items="largeSchemaItems" anchor="api-large-schema" />
     </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
   </DocLayout>
 </template>

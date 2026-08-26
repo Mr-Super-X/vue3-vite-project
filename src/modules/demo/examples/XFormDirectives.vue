@@ -19,6 +19,7 @@ import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
+import DocToc from '../components/DocToc.vue'
 import { componentPropsItems, directivesItems, ruleRefItems } from './xform-demos-api'
 import xFormSource from './XFormDirectives.vue?raw'
 
@@ -114,6 +115,13 @@ async function onValidate() {
     ElMessage.error('校验失败，请检查红字提示')
   }
 }
+
+const tocItems = [
+  { id: 'demo-directives', label: '供应商录入演示' },
+  { id: 'api-directives', label: 'node.directives 节点指令' },
+  { id: 'api-component-props', label: 'componentProps 全局默认 props' },
+  { id: 'api-rule-ref', label: 'rules 命名引用' },
+]
 </script>
 
 <template>
@@ -151,6 +159,10 @@ async function onValidate() {
       />
       <ApiTable title="rules 命名引用" :items="ruleRefItems" anchor="api-rule-ref" />
     </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
   </DocLayout>
 </template>
 

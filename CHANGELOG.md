@@ -4,6 +4,10 @@
 
 ### ✨ Features | 新特性
 
+* **XForm demo 补充 DocToc 目录导航**（demo 模块）
+  - 14 个含 API 表格的 XForm demo 全部接入 DocToc（XFormArray / AsyncOptions / Builder / CrossField / Directives / Dirty / Disabled / Events / Grid / Persist / Reaction / Responsive / SchemaIndex / ServerError + 总览），锚点与 section / ApiTable 一一对应
+  - 补齐剩余 10 个 demo 的 ApiTable + DocToc：新增 ruleItems / minimumItems / nestedItems / slotTypeItems / modelWarnItems / largeSchemaItems / invalidComponentItems / reverseCrossItems / asyncValidatorItems 九组 API 数据（XFormFieldPermission 复用 permissionItems）
+  - 至此 25 个 XForm demo 全部具备「演示区 + API 表格 + 目录导航」完整结构
 * **XForm 栅格布局专项 demo + 原生 HTML 标签支持**
   - 新增 `XFormGrid.vue`：三种栅格配置方式对照（column 统一分配 / row + col.span 自定义列宽 / 布局容器节点分区），同一组字段切换查看布局差异，附栅格配置速查 API 表格
   - `SchemaNode.component` 支持原生 HTML 标签（全小写，如 `'a'` / `'span'` / `'div'`）：渲染层 `resolveComponentFor` 返回字符串标签名直接 h() 渲染，校验层白名单放行，组件名校验仍拦截未知 PascalCase 名（拼写错误）

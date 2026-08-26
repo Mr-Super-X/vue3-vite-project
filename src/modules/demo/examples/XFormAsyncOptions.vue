@@ -16,6 +16,7 @@ import DemoFrame from '../components/DemoFrame.vue'
 import { asyncOptionsItems } from './xform-demos-api'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
+import DocToc from '../components/DocToc.vue'
 import xFormSource from './XFormAsyncOptions.vue?raw'
 
 const bem = createNamespace('demo-x-form-async-options')
@@ -134,6 +135,11 @@ async function copySchema() {
     ElMessage.error('复制失败，请手动选择')
   }
 }
+
+const tocItems = [
+  { id: 'demo-async-options', label: '异步数据源演示' },
+  { id: 'api-async-options', label: 'AsyncOptionsConfig' },
+]
 </script>
 
 <template>
@@ -160,6 +166,10 @@ async function copySchema() {
 
       <ApiTable title="AsyncOptionsConfig" :items="asyncOptionsItems" anchor="api-async-options" />
     </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
   </DocLayout>
 </template>
 

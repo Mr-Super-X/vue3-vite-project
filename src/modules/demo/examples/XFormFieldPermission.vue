@@ -18,9 +18,12 @@ import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
+import DocToc from '../components/DocToc.vue'
+import { permissionItems } from './xform-demos-api'
 
 const bem = createNamespace('demo-x-form-field-permission')
 
@@ -127,6 +130,11 @@ function checkDOM() {
   const hasAdmin = document.body.innerHTML.includes('管理备注')
   debugInfo.value = `DOM 检查：内部备注${hasInternal ? '存在（hidden 失败）' : '不存在（hidden 成功）'}；管理备注${hasAdmin ? '存在' : '不存在'}`
 }
+
+const tocItems = [
+  { id: 'demo-field-permission', label: '权限演示' },
+  { id: 'api-permission', label: 'permission 字段' },
+]
 </script>
 
 <template>
@@ -158,7 +166,13 @@ function checkDOM() {
           </div>
         </DemoField>
       </section>
+
+      <ApiTable title="permission 字段" :items="permissionItems" anchor="api-permission" />
     </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
   </DocLayout>
 </template>
 

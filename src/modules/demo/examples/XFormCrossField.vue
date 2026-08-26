@@ -26,6 +26,7 @@ import DemoFrame from '../components/DemoFrame.vue'
 import { crossFieldItems } from './xform-demos-api'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
+import DocToc from '../components/DocToc.vue'
 import xFormSource from './XFormCrossField.vue?raw'
 
 const bem = createNamespace('demo-x-form-cross-field')
@@ -199,6 +200,11 @@ async function copySchema() {
     ElMessage.error('复制失败，请手动选择')
   }
 }
+
+const tocItems = [
+  { id: 'demo-cross-field', label: '跨字段校验演示' },
+  { id: 'api-cross-field', label: 'RuleItem 跨字段' },
+]
 </script>
 
 <template>
@@ -233,6 +239,10 @@ async function copySchema() {
 
       <ApiTable title="RuleItem 跨字段" :items="crossFieldItems" anchor="api-cross-field" />
     </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
   </DocLayout>
 </template>
 

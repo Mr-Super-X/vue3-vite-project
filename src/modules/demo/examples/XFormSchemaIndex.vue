@@ -32,6 +32,7 @@ import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import { schemaIndexItems } from './xform-demos-api'
 import DocLayout from '../layouts/DocLayout.vue'
+import DocToc from '../components/DocToc.vue'
 
 const bem = createNamespace('demo-x-form-schema-index')
 
@@ -337,6 +338,12 @@ async function onReset(): Promise<void> {
 }
 // 安全扫描演示
 const securityWarnings = computed(() => scanForForbidden(bigSchema.value))
+
+const tocItems = [
+  { id: 'demo-schema-index', label: '索引快照演示' },
+  { id: 'demo-schema-security', label: '安全扫描演示' },
+  { id: 'api-schema-index', label: 'useSchemaIndex 返回' },
+]
 </script>
 
 <template>
@@ -531,6 +538,10 @@ const securityWarnings = computed(() => scanForForbidden(bigSchema.value))
 
       <ApiTable title="useSchemaIndex 返回" :items="schemaIndexItems" anchor="api-schema-index" />
     </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
   </DocLayout>
 </template>
 

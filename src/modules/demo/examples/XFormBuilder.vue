@@ -20,6 +20,7 @@ import DemoFrame from '../components/DemoFrame.vue'
 import { builderItems } from './xform-demos-api'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
+import DocToc from '../components/DocToc.vue'
 import xFormSource from './XFormBuilder.vue?raw'
 
 const bem = createNamespace('demo-x-form-builder')
@@ -239,6 +240,11 @@ async function copySchema() {
     ElMessage.error('复制失败')
   }
 }
+
+const tocItems = [
+  { id: 'demo-builder', label: '构建器演示' },
+  { id: 'api-builder', label: 'builder 链式方法' },
+]
 </script>
 
 <template>
@@ -268,6 +274,10 @@ async function copySchema() {
 
       <ApiTable title="builder 链式方法" :items="builderItems" anchor="api-builder" />
     </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
   </DocLayout>
 </template>
 

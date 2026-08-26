@@ -19,6 +19,7 @@ import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
+import DocToc from '../components/DocToc.vue'
 import { beforeChangeItems, onEventItems } from './xform-demos-api'
 import xFormSource from './XFormEvents.vue?raw'
 
@@ -156,6 +157,12 @@ async function onValidate() {
     ElMessage.error('校验失败，请检查红字提示')
   }
 }
+
+const tocItems = [
+  { id: 'demo-events', label: '订单录入演示' },
+  { id: 'api-before-change', label: 'beforeChange 值拦截' },
+  { id: 'api-on-events', label: 'node.on 字段事件' },
+]
 </script>
 
 <template>
@@ -186,6 +193,10 @@ async function onValidate() {
       <ApiTable title="beforeChange 值拦截" :items="beforeChangeItems" anchor="api-before-change" />
       <ApiTable title="node.on 字段事件" :items="onEventItems" anchor="api-on-events" />
     </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
   </DocLayout>
 </template>
 

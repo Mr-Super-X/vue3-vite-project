@@ -21,6 +21,7 @@ import DemoFrame from '../components/DemoFrame.vue'
 import { serverErrorMethods } from './xform-demos-api'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
+import DocToc from '../components/DocToc.vue'
 import xFormSource from './XFormServerError.vue?raw'
 
 const bem = createNamespace('demo-x-form-server-error')
@@ -172,6 +173,11 @@ async function copySchema() {
     ElMessage.error('复制失败')
   }
 }
+
+const tocItems = [
+  { id: 'demo-server-error', label: '服务端错误演示' },
+  { id: 'api-server-error', label: '相关实例方法' },
+]
 </script>
 
 <template>
@@ -224,6 +230,10 @@ async function copySchema() {
 
       <ApiTable title="相关实例方法" :items="serverErrorMethods" anchor="api-server-error" />
     </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
   </DocLayout>
 </template>
 

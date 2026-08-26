@@ -16,6 +16,7 @@ import DemoFrame from '../components/DemoFrame.vue'
 import { reactionItems } from './xform-demos-api'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
+import DocToc from '../components/DocToc.vue'
 import xFormSource from './XFormReaction.vue?raw'
 
 const bem = createNamespace('demo-x-form-reaction')
@@ -150,6 +151,11 @@ async function copySchema() {
     ElMessage.error('复制失败')
   }
 }
+
+const tocItems = [
+  { id: 'demo-reaction', label: '反应式联动演示' },
+  { id: 'api-reaction', label: 'ReactionConfig' },
+]
 </script>
 
 <template>
@@ -208,6 +214,10 @@ async function copySchema() {
 
       <ApiTable title="ReactionConfig" :items="reactionItems" anchor="api-reaction" />
     </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
   </DocLayout>
 </template>
 

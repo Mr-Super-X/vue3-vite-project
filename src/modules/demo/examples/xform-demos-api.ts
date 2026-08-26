@@ -409,6 +409,218 @@ export const gridItems: XFormApiItem[] = [
   },
 ]
 
+// XFormBase —— RuleItem 常用字段
+export const ruleItems: XFormApiItem[] = [
+  {
+    name: 'required',
+    type: 'boolean',
+    description: '必填校验（rules 写字符串 "required" 等价）',
+  },
+  {
+    name: 'pattern',
+    type: 'RegExp | string',
+    description: '正则校验（如订单号格式 /^ORD-\\d{6}$/）',
+  },
+  {
+    name: 'min / max',
+    type: 'number | string',
+    description: '长度 / 数值范围校验',
+  },
+  {
+    name: 'message',
+    type: 'string',
+    description: '校验失败提示文案',
+  },
+  {
+    name: 'validator',
+    type: '(rule, value, cb) => void',
+    description: '自定义校验函数（async-validator 回调式，cb(Error?) 报告结果）',
+  },
+  {
+    name: 'type',
+    type: 'string',
+    description: '内置类型校验：string / email / url / number 等',
+  },
+  {
+    name: 'trigger',
+    type: "'blur' | 'change' | 'manual'",
+    description: '校验触发时机',
+  },
+]
+
+// XFormMinimumDemo —— 最小示例三要素
+export const minimumItems: XFormApiItem[] = [
+  {
+    name: 'schema',
+    type: 'SchemaNode',
+    required: true,
+    description: '表单结构声明（component / name / label / rules）',
+  },
+  {
+    name: 'model',
+    type: 'Record<string, unknown>',
+    description: 'reactive() 包装的数据对象（校验 / 默认值 / reaction 依赖）',
+  },
+  {
+    name: 'defaultValue',
+    type: 'unknown',
+    description: '挂载时自动填充到 model（仅字段未定义时）',
+  },
+]
+
+// XFormNested —— Card 分组布局
+export const nestedItems: XFormApiItem[] = [
+  {
+    name: 'Card 容器分组',
+    type: "component: 'Card'",
+    description: '每个 Card 节点带 column + row + props，内部字段自动栅格化',
+  },
+  {
+    name: 'slots.header',
+    type: 'SchemaSlot',
+    description: 'ElCard 标题插槽（注意是 header，不是 title / extra）',
+  },
+  {
+    name: '嵌套 children',
+    type: 'SchemaNode[]',
+    description: 'FormItem 内嵌 Input + 原生标签（a / span）等混合内容',
+  },
+  {
+    name: 'column',
+    type: 'number',
+    description: '每行 N 列（2 / 3 等宽分配）',
+  },
+]
+
+// XFormSlots —— 插槽三种形式
+export const slotTypeItems: XFormApiItem[] = [
+  {
+    name: 'SchemaNode 形式',
+    type: 'SchemaNode | SchemaNode[]',
+    description: '按 schema 渲染子内容',
+  },
+  {
+    name: '字符串形式',
+    type: 'string',
+    description: '纯文本内容（走 schema 渲染）',
+  },
+  {
+    name: '函数形式',
+    type: '(scope?) => VNode',
+    description: 'render function / JSX 产物；scoped slot 接收 scope 参数',
+  },
+]
+
+// XFormModelWarn —— model prop 三种形态
+export const modelWarnItems: XFormApiItem[] = [
+  {
+    name: 'model 未传',
+    type: '—',
+    description: 'dev 模式 console.warn；校验 / 默认值 / reaction / dirty 追踪全部失效',
+  },
+  {
+    name: 'reactive({})',
+    type: '—',
+    description: '合法但未声明字段，提交为空',
+  },
+  {
+    name: 'reactive({ email: "" })',
+    type: '—',
+    description: '对照正常用法：字段需在 model 中预声明',
+  },
+]
+
+// XFormLargeSchema —— 性能观察要点
+export const largeSchemaItems: XFormApiItem[] = [
+  {
+    name: '字段规模',
+    type: '100+ 字段',
+    description: '模拟生产中后台长表单',
+  },
+  {
+    name: 'mount 耗时',
+    type: '控制台输出',
+    description: '首次渲染挂载时间（DevTools Performance 可复核）',
+  },
+  {
+    name: '输入响应',
+    type: '控制台输出',
+    description: '字段输入到 UI 更新的耗时',
+  },
+  {
+    name: 'reaction 开销',
+    type: '控制台输出',
+    description: '反应式联动触发重渲染耗时',
+  },
+]
+
+// XFormInvalidComponent —— 组件名解析规则
+export const invalidComponentItems: XFormApiItem[] = [
+  {
+    name: 'EL 短名',
+    type: "'Input'",
+    description: '合法（DEFAULT_COMPONENT_MAP 命中）',
+  },
+  {
+    name: 'EL 全名',
+    type: "'ElInput'",
+    description: '合法（自动识别 ElXxx 写法）',
+  },
+  {
+    name: '原生 HTML 标签',
+    type: "'a' / 'span'（全小写）",
+    description: '合法（直接原生渲染）',
+  },
+  {
+    name: '拼写错误',
+    type: "'Inpurt'",
+    description: 'dev 控制台 warn + Debug Banner 红条',
+  },
+  {
+    name: '未注册自定义组件',
+    type: "'MyInput'",
+    description: '需在 components prop 注册后才合法',
+  },
+]
+
+// XFormCrossFieldReverse —— 反向触发机制
+export const reverseCrossItems: XFormApiItem[] = [
+  {
+    name: 'dependsOn',
+    type: 'string | string[]',
+    description: '声明依赖字段（lodash 路径）',
+  },
+  {
+    name: '反向触发',
+    type: '—',
+    description: '依赖字段变化时自动重算所有 dependsOn 包含它的规则（无需手动 watch）',
+  },
+  {
+    name: '触发时机',
+    type: 'blur / change',
+    description: '与正向 trigger 一致；空值跳过（交给 required 处理）',
+  },
+]
+
+// XFormAsyncValidator —— 异步校验
+export const asyncValidatorItems: XFormApiItem[] = [
+  {
+    name: '异步 validator',
+    type: '(rule, value, cb) => void',
+    description: 'async-validator 回调式：远程接口返回后调用 cb(Error?)',
+  },
+  {
+    name: '异步 crossValidator',
+    type: '(...) => Promise<true | string>',
+    description: '跨字段异步校验，validate() 会 await',
+  },
+  {
+    name: 'loading 图标',
+    type: '—',
+    description: '异步校验期间 form-item 显示 loading（setFieldValidating）',
+  },
+]
+
 // XFormDirty —— 相关实例方法
 export const dirtyMethods: XFormApiItem[] = [
   { name: 'isDirty', type: '() => boolean', description: '是否有未保存修改（相对基线）' },

@@ -13,9 +13,12 @@ import { ElButton, ElIcon } from 'element-plus'
 import { Upload } from '@element-plus/icons-vue'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
+import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
+import DocToc from '../components/DocToc.vue'
+import { slotTypeItems } from './xform-demos-api'
 import xFormSlotsSource from './XFormSlots.vue?raw'
 
 const bem = createNamespace('demo-x-form-slots')
@@ -92,6 +95,11 @@ function onValidate() {
     msg.value = valid ? '✅ 校验通过' : '❌ 校验失败'
   })
 }
+
+const tocItems = [
+  { id: 'demo-slots', label: '插槽演示' },
+  { id: 'api-slots-type', label: '插槽三种形式' },
+]
 </script>
 
 <template>
@@ -114,7 +122,13 @@ function onValidate() {
           </div>
         </DemoField>
       </section>
+
+      <ApiTable title="插槽三种形式" :items="slotTypeItems" anchor="api-slots-type" />
     </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
   </DocLayout>
 </template>
 

@@ -14,9 +14,12 @@ import { ElMessage } from 'element-plus'
 import { reactive } from 'vue'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
+import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
+import DocToc from '../components/DocToc.vue'
+import { nestedItems } from './xform-demos-api'
 import xFormSource from './XFormNested.vue?raw'
 
 const bem = createNamespace('demo-x-form-nested')
@@ -165,6 +168,11 @@ const schema = [
     ],
   },
 ] as unknown as SchemaNode[]
+
+const tocItems = [
+  { id: 'demo-nested', label: '嵌套布局演示' },
+  { id: 'api-nested', label: 'Card 分组布局' },
+]
 </script>
 
 <template>
@@ -185,7 +193,13 @@ const schema = [
           <el-button @click="copySchema" class="mt-2">复制 schema</el-button>
         </DemoField>
       </section>
+
+      <ApiTable title="Card 分组布局" :items="nestedItems" anchor="api-nested" />
     </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
   </DocLayout>
 </template>
 

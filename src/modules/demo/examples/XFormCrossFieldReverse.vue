@@ -20,9 +20,12 @@ import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
+import DocToc from '../components/DocToc.vue'
+import { reverseCrossItems } from './xform-demos-api'
 
 const bem = createNamespace('demo-x-form-cross-field-reverse')
 
@@ -141,6 +144,11 @@ function clearDates() {
   model.startDate = ''
   model.endDate = ''
 }
+
+const tocItems = [
+  { id: 'demo-cross-field-reverse', label: '反向校验演示' },
+  { id: 'api-reverse-cross', label: '反向触发机制' },
+]
 </script>
 
 <template>
@@ -173,7 +181,13 @@ function clearDates() {
           </div>
         </DemoField>
       </section>
+
+      <ApiTable title="反向触发机制" :items="reverseCrossItems" anchor="api-reverse-cross" />
     </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
   </DocLayout>
 </template>
 

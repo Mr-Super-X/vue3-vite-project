@@ -18,6 +18,7 @@ import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
+import DocToc from '../components/DocToc.vue'
 import { gridItems } from './xform-demos-api'
 import xFormSource from './XFormGrid.vue?raw'
 
@@ -135,6 +136,11 @@ const MODE_HINTS: Record<typeof activeKey.value, string> = {
   container:
     '无 name 的节点带 row / column —— 渲染为纯栅格容器：上面 2 列分区放订单号 + 状态，下面 3 列分区放金额 + 日期 + 备注。适合按业务块分区组织长表单。',
 }
+
+const tocItems = [
+  { id: 'demo-grid', label: '栅格配置对照' },
+  { id: 'api-grid', label: '栅格配置速查' },
+]
 </script>
 
 <template>
@@ -164,6 +170,10 @@ const MODE_HINTS: Record<typeof activeKey.value, string> = {
 
       <ApiTable title="栅格配置速查" :items="gridItems" anchor="api-grid" />
     </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
   </DocLayout>
 </template>
 

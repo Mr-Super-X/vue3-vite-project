@@ -34,6 +34,7 @@ import DemoFrame from '../components/DemoFrame.vue'
 import { dirtyMethods } from './xform-demos-api'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
+import DocToc from '../components/DocToc.vue'
 
 const bem = createNamespace('demo-x-form-dirty')
 
@@ -151,6 +152,11 @@ watch(
   () => refreshDirtyState(),
   { deep: true }
 )
+
+const tocItems = [
+  { id: 'demo-dirty', label: '脏状态演示' },
+  { id: 'api-dirty', label: '相关实例方法' },
+]
 </script>
 
 <template>
@@ -202,6 +208,10 @@ watch(
 
       <ApiTable title="相关实例方法" :items="dirtyMethods" anchor="api-dirty" />
     </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
   </DocLayout>
 </template>
 
