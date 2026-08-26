@@ -170,7 +170,7 @@ flat config 的 `files` 字段只命中 3 个业务目录。**以下位置天然
 
 - ESLint flat config: https://eslint.org/docs/latest/use/configure/configuration-files
 - no-restricted-imports: https://eslint.org/docs/latest/rules/no-restricted-imports
-- 项目现有 `eslint.config.mjs`：见 `D:\work\应急水利\应急\vue3-vite-project\eslint.config.mjs`
+- 项目现有 `eslint.config.mjs`：见 `D:\personal\github\vue3工程模板\vue3-vite-project\eslint.config.mjs`
 - `useAppRouter` 实现：见 `src/composables/useAppRouter.ts`
 
 ---

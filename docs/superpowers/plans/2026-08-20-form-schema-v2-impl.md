@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 在 form-schema v1（commit `ba8879d`）基础上补齐 6 项缺失功能，使 XForm 与 dgm-formschema README 14 字段 DSL + 实例方法 + props 100% 对齐。
+**Goal:** 在 form-schema v1（commit `ba8879d`）基础上补齐 6 项缺失功能，使 XForm 与开源 form-schema README 14 字段 DSL + 实例方法 + props 100% 对齐。
 
 **Architecture:** 在 XForm.vue 的 `renderToComponent` 内部按 TDD 增量添加 6 项分支处理；按需抽 1-2 个辅助函数到独立 composable（避免 XForm.vue 超 300 行硬约束）。每项先写测试，再实现，再跑全量验证。
 
@@ -11,7 +11,7 @@
 **参考：**
 - Spec: `docs/superpowers/specs/2026-08-19-form-schema-design.md`
 - v1 Plan: `docs/superpowers/plans/2026-08-19-form-schema-impl.md`
-- 父参考: `D:\work\应急水利\datact-web\node_modules\@digitalgd\dgm-formschema\README.md`
+- 父参考: 开源 form-schema README（原内部项目 node_modules）
 
 ---
 

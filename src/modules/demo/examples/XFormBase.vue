@@ -1,11 +1,11 @@
 <script setup lang="ts">
 /**
- * 复刻 datact-web/demo/pages/form/base.vue —— 基础用法
+ * 参考开源 form-schema 实现的 demo（form/base.vue）—— 基础用法
  *
  * 字段：输入框 / 选择框 / 字典 / 日期 / 多行输入
  * 特性：column 2 列栅格 + rules（字符串 + validator 函数）
  *
- * 与原 datact-web 差异：
+ * 与原参考实现差异：
  * - XSelect → ElSelect + 硬编码选项（模拟远程 fetchOption）
  * - XDict   → ElSelect + 硬编码部门字典（模拟 code: 'user_dept_type'）
  * - Textarea → ElInput type="textarea"

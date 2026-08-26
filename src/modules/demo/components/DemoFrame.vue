@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 演示页统一容器（对标 datact-web demo/components/frame.vue 的简化版）
+ * 演示页统一容器（参考开源 form-schema 实现 demo 容器 frame.vue 的简化版）
  *
  * 用途：每个组件示例页都用它包裹，提供标题、简介、主内容三段式结构。
  * 不提供"在编辑器打开组件"按钮（项目未配置 vite-plugin-vue-inspector）。

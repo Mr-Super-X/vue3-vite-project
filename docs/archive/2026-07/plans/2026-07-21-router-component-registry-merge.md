@@ -68,13 +68,13 @@ describe('COMPONENT_REGISTRY（从 autoRegisteredRoutes 派生）', () => {
 
 - [ ] **Step 2: 跑测试，验证失败**
 
-Run: `cd "D:/work/应急水利/应急/vue3-vite-project" && pnpm test src/router/auto-register.spec.ts`
+Run: `cd "D:/personal/github/vue3工程模板/vue3-vite-project" && pnpm test src/router/auto-register.spec.ts`
 Expected: 失败（`COMPONENT_REGISTRY` 还不存在）
 
 - [ ] **Step 3: 提交（测试先行）**
 
 ```bash
-cd "D:/work/应急水利/应急/vue3-vite-project"
+cd "D:/personal/github/vue3工程模板/vue3-vite-project"
 git add src/router/auto-register.spec.ts
 git commit -m "test(router): 添加 COMPONENT_REGISTRY 派生的单测（先行失败）
 
@@ -133,7 +133,7 @@ export const COMPONENT_REGISTRY: Record<string, () => Promise<unknown>> = (() =>
 
 - [ ] **Step 2: 跑测试，验证通过**
 
-Run: `cd "D:/work/应急水利/应急/vue3-vite-project" && pnpm test src/router/auto-register.spec.ts`
+Run: `cd "D:/personal/github/vue3工程模板/vue3-vite-project" && pnpm test src/router/auto-register.spec.ts`
 Expected: 4/4 tests passed
 
 - [ ] **Step 3: 类型检查**
@@ -144,7 +144,7 @@ Expected: 通过
 - [ ] **Step 4: 提交**
 
 ```bash
-cd "D:/work/应急水利/应急/vue3-vite-project"
+cd "D:/personal/github/vue3工程模板/vue3-vite-project"
 git add src/router/auto-register.ts
 git commit -m "feat(router): 在 auto-register.ts 派生 COMPONENT_REGISTRY
 
@@ -167,7 +167,7 @@ RouteName 联合类型导致循环依赖。"
 Run:
 
 ```bash
-cd "D:/work/应急水利/应急/vue3-vite-project"
+cd "D:/personal/github/vue3工程模板/vue3-vite-project"
 git rm src/router/component-registry.ts
 ```
 
@@ -223,7 +223,7 @@ console.warn(`[router/remote] 未注册的路由 name: ${item.name}（routes/ind
 Run:
 
 ```bash
-cd "D:/work/应急水利/应急/vue3-vite-project"
+cd "D:/personal/github/vue3工程模板/vue3-vite-project"
 pnpm type-check 2>&1 | tail -5
 ```
 
@@ -232,7 +232,7 @@ Expected: 通过（删除 component-registry.ts 后所有 import 已修复）
 - [ ] **Step 4: 提交**
 
 ```bash
-cd "D:/work/应急水利/应急/vue3-vite-project"
+cd "D:/personal/github/vue3工程模板/vue3-vite-project"
 git add src/router/remote.ts
 git commit -m "refactor(router): remote.ts import 改为 auto-register，warn 文案更新"
 ```
@@ -319,7 +319,7 @@ git commit -m "refactor(router): remote.ts import 改为 auto-register，warn �
 - [ ] **Step 4: 类型检查 + 提交**
 
 ```bash
-cd "D:/work/应急水利/应急/vue3-vite-project"
+cd "D:/personal/github/vue3工程模板/vue3-vite-project"
 pnpm type-check
 git add src/router/types.ts
 git commit -m "docs(router): types.ts 注释更新，移除 component-registry 引用"
@@ -350,7 +350,7 @@ git commit -m "docs(router): types.ts 注释更新，移除 component-registry �
 - [ ] **Step 2: 提交**
 
 ```bash
-cd "D:/work/应急水利/应急/vue3-vite-project"
+cd "D:/personal/github/vue3工程模板/vue3-vite-project"
 git add src/api/modules/menu.ts
 git commit -m "docs(api): menu.ts 注释更新，指向 auto-register 派生"
 ```
@@ -420,7 +420,7 @@ console.log(`component-registry 映射：${registeredNames.size} 个`)
 - [ ] **Step 4: 验证**
 
 ```bash
-cd "D:/work/应急水利/应急/vue3-vite-project"
+cd "D:/personal/github/vue3工程模板/vue3-vite-project"
 pnpm check:routes 2>&1 | tail -10
 ```
 
@@ -429,7 +429,7 @@ Expected: 通过（不再有 component-registry 校验项，但 RouteName + whit
 - [ ] **Step 5: 提交**
 
 ```bash
-cd "D:/work/应急水利/应急/vue3-vite-project"
+cd "D:/personal/github/vue3工程模板/vue3-vite-project"
 git add scripts/check-routes.ts
 git commit -m "refactor(scripts): check-routes 移除 component-registry 校验项
 
@@ -479,7 +479,7 @@ component-registry.ts 已合并到 auto-register.ts 派生，不再需要独立�
 - [ ] **Step 3: 提交**
 
 ```bash
-cd "D:/work/应急水利/应急/vue3-vite-project"
+cd "D:/personal/github/vue3工程模板/vue3-vite-project"
 git add docs/07-路由模块设计.md
 git commit -m "docs(router): docs/07 新增路由流程从 3 步改为 1 步"
 ```
@@ -503,7 +503,7 @@ git commit -m "docs(router): docs/07 新增路由流程从 3 步改为 1 步"
 - [ ] **Step 2: 提交**
 
 ```bash
-cd "D:/work/应急水利/应急/vue3-vite-project"
+cd "D:/personal/github/vue3工程模板/vue3-vite-project"
 git add CHANGELOG.md
 git commit -m "docs(changelog): 记录 component-registry 合并到 auto-register 的重构"
 ```
@@ -515,7 +515,7 @@ git commit -m "docs(changelog): 记录 component-registry 合并到 auto-registe
 - [ ] **Step 1: 完整 lint**
 
 ```bash
-cd "D:/work/应急水利/应急/vue3-vite-project"
+cd "D:/personal/github/vue3工程模板/vue3-vite-project"
 pnpm lint
 ```
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 复刻 datact-web/demo/pages/form/nested.vue —— 复杂布局
+ * 参考开源 form-schema 实现的 demo（form/nested.vue）—— 复杂布局
  */
 import { ElMessage } from 'element-plus'
 /**
@@ -11,7 +11,7 @@ import { ElMessage } from 'element-plus'
  * 3. 嵌套 children（formItem 内含 input + 'a' HTML）
  * 4. 多列布局（column: 2 / 3）
  *
- * 与原 datact-web 差异：
+ * 与原参考实现差异：
  * - Card 组件用 ElCard（element-plus 内置）
  * - slots.title 用 Moon 图标替换（element-plus 无等效图标，用 '⚙️' 文本替代）
  */

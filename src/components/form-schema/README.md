@@ -1,6 +1,6 @@
 # XForm
 
-> 基于 schema DSL 的动态表单组件 · 对标 `@digitalgd/dgm-formschema`
+> 基于 schema DSL 的动态表单组件 · 参考开源 form-schema 实现
 
 ## 30 秒上手
 

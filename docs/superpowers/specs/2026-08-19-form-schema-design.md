@@ -1,7 +1,7 @@
 # Form Schema Engine 设计文档
 
-> 复刻 `@digitalgd/dgm-formschema` 动态表单能力到 `vue3-vite-project`，
-> 用 Element Plus 替换私有设计系统 `@digitalgd/dgm-design`，
+> 参考开源 form-schema 实现的动态表单能力，移植到 `vue3-vite-project`，
+> 用 Element Plus 替换原私有设计系统，
 > 在 `src/components/form-schema/` 下提供 `<XForm>` 全局组件。
 
 | 属性 | 值 |
@@ -10,7 +10,7 @@
 | 日期 | 2026-08-19 |
 | 状态 | 设计稿待用户复核 |
 | 关联项目 | `vue3-vite-project`（`D:\personal\github\vue3工程模板\vue3-vite-project`） |
-| 关联参考 | `@digitalgd/dgm-formschema@3.0.4`（私有 npm，不可达） + `datact-web/src/components/form/` 包装层 |
+| 关联参考 | 开源 form-schema 实现@3.0.4（私有 npm，不可达） + 原内部项目 `src/components/form/` 包装层 |
 | 关联分支 | `feature/engine-optimization` |
 
 ---
@@ -19,17 +19,17 @@
 
 ### 1.1 现状
 
-- `@digitalgd/dgm-formschema`（dgm-formschema）是一个 515 行单文件 + vue 编译产物的动态表单引擎，支持 schema DSL 递归构造 Vue 组件、内置 async-validator 风格校验、`reaction` 响应式系统、`{{ }}` 函数表达式解析、`getRef/getNames/validate/resetFields` 实例方法。
-- 包强耦合 `@digitalgd/dgm-design`（私有设计系统），公共 npm registry 不可达（`npm view` ETIMEDOUT）。
-- datact-web 项目通过极薄 wrapper（40 行 `XForm.vue`）使用该包：`v-bind="$attrs"` 透传 + 实例方法暴露 + dev 模式 `validate()` 自检。
-- 我的目标项目 `vue3-vite-project` 使用 **Element Plus 2.14.3**，且**无 dgm-formschema / dgm-design 依赖**，但已有 **zod 4.4.3** 可复用。
+- 开源 form-schema 实现是一个 515 行单文件 + vue 编译产物的动态表单引擎，支持 schema DSL 递归构造 Vue 组件、内置 async-validator 风格校验、`reaction` 响应式系统、`{{ }}` 函数表达式解析、`getRef/getNames/validate/resetFields` 实例方法。
+- 包强耦合原私有设计系统，公共 npm registry 不可达（`npm view` ETIMEDOUT）。
+- 原内部项目通过极薄 wrapper（40 行 `XForm.vue`）使用该包：`v-bind="$attrs"` 透传 + 实例方法暴露 + dev 模式 `validate()` 自检。
+- 我的目标项目 `vue3-vite-project` 使用 **Element Plus 2.14.3**，且**不依赖该 form-schema 包及其私有设计系统**，但已有 **zod 4.4.3** 可复用。
 
 ### 1.2 目标
 
-在 `src/components/form-schema/` 下交付一个**完整 fork dgm-formschema 渲染核心**的 TypeScript 实现：
+在 `src/components/form-schema/` 下交付一个**参考开源 form-schema 渲染核心**的 TypeScript 实现：
 
-1. 保留 dgm-formschema 全量 14 字段 schema DSL（component / props / on / children / name / label / rules / formItem / modelProp / row / column / col / reaction / directives / slots / ignore / hidden / key）。
-2. 替换底层设计系统：dgm-design → Element Plus（el-form / el-form-item / el-row / el-col）。
+1. 保留开源 form-schema 全量 14 字段 schema DSL（component / props / on / children / name / label / rules / formItem / modelProp / row / column / col / reaction / directives / slots / ignore / hidden / key）。
+2. 替换底层设计系统：原私有设计系统 → Element Plus（el-form / el-form-item / el-row / el-col）。
 3. 用 `new Function` 沙箱替代 `eval`（D2 安全决策）。
 4. 沿用 element-plus 原生 async-validator 体系，同时支持项目内 zod 顶层校验。
 5. 暴露 `<XForm>` 全局组件（自动注册到 `src/components/index.ts`）。
@@ -60,7 +60,7 @@
 | --- | -------------- | --------------------------------------- | ---------------------------------------- |
 | D1 | 复刻深度 | 完整 fork 515 行 + Element Plus 适配层 | 用户选定；最大化保留原逻辑 |
 | D2 | eval 替换 | `new Function('model', ` + `return (${expr})` + 仅暴露 model 参数 | 隔离上层 scope，保留 `{{ fn }}` 表达式能力 |
-| D3 | 组件解析 | 内置 element-plus 映射 + `components` prop 覆盖 | 与 dgm-formschema 原行为兼容 |
+| D3 | 组件解析 | 内置 element-plus 映射 + `components` prop 覆盖 | 与开源 form-schema 原行为兼容 |
 | D4 | 校验系统 | el-form-item async-validator + 可选 zod 顶层校验 | 沿用 element-plus 体系 + 复用项目 zod |
 | D5 | 目录归属 | `src/components/form-schema/` 一级目录 | 与展示型 common 组件隔离 |
 | D6 | DSL 字段范围 | 全量 14 字段（含 reaction / directives / slots） | 用户选定；最大化兼容性 |
@@ -587,9 +587,9 @@ pnpm build
 
 | 资源 | 路径 |
 |------|------|
-| dgm-formschema 包源码 | `D:\work\应急水利\datact-web\node_modules\@digitalgd\dgm-formschema\dist\index.js`（515 行） |
-| dgm-formschema README | `D:\work\应急水利\datact-web\node_modules\@digitalgd\dgm-formschema\README.md` |
-| datact-web 包装层 | `D:\work\应急水利\datact-web\src\components\form\form.vue` + `index.js` |
+| 开源 form-schema 包源码 | 原内部项目 node_modules 下（`dist/index.js`，515 行） |
+| 开源 form-schema README | 原内部项目 node_modules 下（`README.md`） |
+| 参考实现包装层 | 原内部项目 `src/components/form/form.vue` + `index.js` |
 | 项目级 CLAUDE.md | `D:\personal\github\vue3工程模板\vue3-vite-project\CLAUDE.md` |
 | 全局 §1.2 模块边界 | `~/.claude/rules/zh/frontend.md` |
 | 全局 §7 安全底线 | `~/.claude/CLAUDE.md` §七 |

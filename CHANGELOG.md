@@ -21,7 +21,7 @@
   - 新增 `docs/24-XForm使用指南.md`：按当前代码逐项核对的完整使用指南（8 个 props / 19 个实例方法 / SchemaNode 25 字段 / 校验双轨（字段规则 + 跨字段 + Zod）/ reaction 调度策略 / 数组节点 / asyncOptions / permission 三态 / 服务端错误映射 / dirty 追踪 / useFormPersist / 22 个链式 builder / SchemaNodeFor 类型推导 / 响应式断点 / 选型决策 / 故障排查 / 22 个 demo 索引）
   - 合并 `docs/26-XForm架构总览.md` + `docs/27-XForm决策记录-ADR.md` → `docs/25-XForm架构与决策记录.md`，修正过时数据：demo 8→22 个、测试 216→371 个；ADR-006（setFieldError 适配 shallowRef）标注已被阶段 3.1 官方 `props.error/validateStatus` 双路径取代
   - 删除旧 `docs/24-XForm选型决策指南.md`、`docs/25-XForm故障排查表.md`（内容并入新的 24 号使用指南；修正过时条目：name 已支持 lodash 路径、`validate()` 返回 `Promise<boolean>` 而非 callback 签名）
-* **form-schema-engine v2**（补齐 6 项 dgm-formschema 缺失功能 + 重构）
+* **form-schema-engine v2**（补齐 6 项开源 form-schema 缺失功能 + 重构）
   - `node.beforeChange` 字段粒度拦截（同步返回值替换 / Promise resolve 后更新 / reject 跳过）
   - `node.on` 事件回调（函数 / `{{ (m) => ... }}` 函数表达式）
   - `node.modelProp` 自定义 v-model 属性名
@@ -31,7 +31,7 @@
   - `node.formItem` 对象配置（component / props 透传）
   - XForm.vue 重构：从 330 行降至 144 行（-54%），renderToComponentInner 抽到独立 composable `render-schema-node.ts`
 * **form-schema-engine**: 新增 `<XForm>` 全局组件，支持动态表单渲染
-  - 完整 fork `@digitalgd/dgm-formschema` 渲染核心，替换私有设计系统 `@digitalgd/dgm-design` 为 Element Plus
+  - 参考开源 form-schema 渲染核心，用 Element Plus 替换原私有设计系统
   - 用 `new Function` 沙箱替代 `eval`，含 dev 模式关键字黑名单扫描
   - 沿用 element-plus `async-validator` + 可选 zod 顶层校验双轨
   - 支持全量 14 字段 schema DSL（`component/props/on/children/name/label/rules/formItem/modelProp/row/column/col/reaction/directives/slots/ignore/hidden/key`）

@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 在 `src/components/form-schema/` 下交付一个基于 Element Plus 的动态表单引擎，复刻 dgm-formschema 全量 14 字段 schema DSL，提供 `<XForm>` 全局组件。
+**Goal:** 在 `src/components/form-schema/` 下交付一个基于 Element Plus 的动态表单引擎，参考开源 form-schema 全量 14 字段 schema DSL，提供 `<XForm>` 全局组件。
 
-**Architecture:** 完整 fork dgm-formschema 515 行渲染核心，**用 Element Plus 替换私有设计系统 dgm-design**，**用 `new Function` 沙箱替代 `eval`**，沿用 async-validator + zod 双轨校验。9 文件按 CLAUDE.md §4「composable 一文件一能力」拆分。
+**Architecture:** 参考开源 form-schema 515 行渲染核心，**用 Element Plus 替换原私有设计系统**，**用 `new Function` 沙箱替代 `eval`**，沿用 async-validator + zod 双轨校验。9 文件按 CLAUDE.md §4「composable 一文件一能力」拆分。
 
 **Tech Stack:** Vue 3.5 + TypeScript 6 + Vite 8 + Element Plus 2.14 + zod 4.4 + Vitest 4 + Vue Test Utils 2.4
 
@@ -1723,7 +1723,7 @@ pnpm build
 
 ### Features
 - **form-schema-engine**：新增 `<XForm>` 全局组件，支持动态 schema DSL 渲染表单
-  - 完整 fork dgm-formschema 515 行渲染核心，替换私有 dgm-design 为 Element Plus
+  - 参考开源 form-schema 515 行渲染核心，用 Element Plus 替换原私有设计系统
   - 用 `new Function` 沙箱替代 `eval`，含 dev 模式关键字黑名单扫描
   - 沿用 element-plus async-validator + 可zod 顶层校验双轨
   - 支持全量 14 字段 schema DSL（component/props/on/children/name/label/rules/formItem/modelProp/row/column/col/reaction/directives/slots/ignore/hidden/key）

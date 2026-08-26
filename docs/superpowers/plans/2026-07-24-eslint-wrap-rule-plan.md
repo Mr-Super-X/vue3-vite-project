@@ -86,12 +86,12 @@ const { t } = useI18n()
 
 - [ ] **Step 2: 验证文件可被 ESLint 解析**
 
-Run: `cd D:\work\应急水利\应急\vue3-vite-project && pnpm eslint src/components/layout/Sidebar.vue`
+Run: `cd D:\personal\github\vue3工程模板\vue3-vite-project && pnpm eslint src/components/layout/Sidebar.vue`
 Expected: 0 error（ESLint 规则尚未配置，因此不会产生 warning）
 
 - [ ] **Step 3: 跑 type-check 验证**
 
-Run: `cd D:\work\应急水利\应急\vue3-vite-project && pnpm type-check`
+Run: `cd D:\personal\github\vue3工程模板\vue3-vite-project && pnpm type-check`
 Expected: 通过
 
 - [ ] **Step 4: commit**
@@ -593,7 +593,7 @@ Expected: 0 error, 0 warning
 
 - [ ] **Step 1: 找到"封装使用"相关章节**
 
-Run: `grep -n "封装" D:\work\应急水利\应急\vue3-vite-project\docs\10-新手指引.md`
+Run: `grep -n "封装" D:\personal\github\vue3工程模板\vue3-vite-project\docs\10-新手指引.md`
 或 Read 该文件确认结构。
 
 - [ ] **Step 2: 在合适章节末尾追加"强制使用封装"小节**
@@ -639,7 +639,7 @@ git commit -m "docs(guide): 新手文档补充强制使用封装的 ESLint 规�
 
 - [ ] **Step 1: 找到"是否封装"相关行**
 
-Run: `grep -n "封装\|composables" D:\work\应急水利\应急\vue3-vite-project\docs\18-代码组织决策表.md`
+Run: `grep -n "封装\|composables" D:\personal\github\vue3工程模板\vue3-vite-project\docs\18-代码组织决策表.md`
 
 - [ ] **Step 2: 新增一行决策项**
 
