@@ -621,6 +621,28 @@ export const asyncValidatorItems: XFormApiItem[] = [
   },
 ]
 
+// XFormScrollToError —— 校验失败自动滚动
+export const scrollToErrorItems: XFormApiItem[] = [
+  {
+    name: 'scrollToError',
+    type: 'boolean',
+    default: 'false',
+    description:
+      '校验失败自动滚动到第一个错误字段（透传 ElForm）：字段规则失败滚到第一个 .el-form-item.is-error，跨字段失败滚到第一个 cross 错误字段',
+  },
+  {
+    name: 'scrollIntoViewOptions',
+    type: 'ScrollIntoViewOptions | boolean',
+    default: 'true',
+    description: '滚动行为透传（如 { behavior: "smooth", block: "center" }）',
+  },
+  {
+    name: 'scrollToField(name)',
+    type: '实例方法',
+    description: '手动滚动到指定字段（透传 ElForm.scrollToField，依赖 formItem 的 prop 注册）',
+  },
+]
+
 // XFormDirty —— 相关实例方法
 export const dirtyMethods: XFormApiItem[] = [
   { name: 'isDirty', type: '() => boolean', description: '是否有未保存修改（相对基线）' },

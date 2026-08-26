@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { reactive, nextTick } from 'vue'
 import type { SchemaNode, XFormExpose } from './types'
@@ -373,5 +373,90 @@ describe('XForm.vue validate-trigger 回归保护', () => {
     expect(elFormTag).toMatch(
       /validate-trigger\s*=\s*["']\[\s*['"]change['"]\s*,\s*['"]blur['"]\s*\]['"]/
     )
+  })
+})
+
+describe('XForm.vue scrollToError（校验失败自动滚动）', () => {
+  // 注：XForm 模板的 <ElForm> 是 script setup 局部 import，全局 stub 不生效——
+  // 走真实 ElForm 链路，用 scrollIntoView polyfill 观察滚动调用（jsdom 未实现该方法）
+  let scrollIntoViewSpy: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    scrollIntoViewSpy = vi.fn()
+    Element.prototype.scrollIntoView =
+      scrollIntoViewSpy as unknown as typeof Element.prototype.scrollIntoView
+  })
+
+  afterEach(() => {
+    delete (Element.prototype as unknown as Record<string, unknown>).scrollIntoView
+  })
+
+  it('el-form 字段规则失败 + scrollToError → ElForm 原生滚动到错误字段', async () => {
+    const wrapper = mountXForm({
+      schema: {
+        children: [
+          {
+            component: 'ElInput',
+            name: 'licenseNo',
+            label: '许可证号',
+            rules: [{ required: true, message: '请输入许可证号' }],
+          },
+        ],
+      } as unknown as SchemaNode,
+      model: reactive({ licenseNo: '' }),
+      scrollToError: true,
+    })
+    await flushPromises()
+    const exposed = wrapper.vm as unknown as XFormExpose
+    const valid = await exposed.validate()
+    expect(valid).toBe(false)
+    await flushPromises() // 等滚动执行
+    expect(scrollIntoViewSpy).toHaveBeenCalled()
+  })
+
+  it('scrollToError=false → 校验失败不自动滚动', async () => {
+    const wrapper = mountXForm({
+      schema: {
+        children: [
+          {
+            component: 'ElInput',
+            name: 'licenseNo',
+            label: '许可证号',
+            rules: [{ required: true, message: '请输入许可证号' }],
+          },
+        ],
+      } as unknown as SchemaNode,
+      model: reactive({ licenseNo: '' }),
+      scrollToError: false,
+    })
+    await flushPromises()
+    const exposed = wrapper.vm as unknown as XFormExpose
+    const valid = await exposed.validate()
+    expect(valid).toBe(false)
+    await flushPromises()
+    expect(scrollIntoViewSpy).not.toHaveBeenCalled()
+  })
+
+  it('跨字段校验失败 + scrollToError → 滚动到第一个 cross 错误字段', async () => {
+    const wrapper = mountXForm({
+      schema: {
+        children: [
+          { component: 'ElInput', name: 'password' },
+          {
+            component: 'ElInput',
+            name: 'confirmPassword',
+            rules: [{ dependsOn: ['password'], crossValidator: () => '两次密码不一致' }],
+          },
+        ],
+      } as unknown as SchemaNode,
+      model: reactive({ password: 'a', confirmPassword: 'b' }),
+      scrollToError: true,
+    })
+    await flushPromises()
+    const exposed = wrapper.vm as unknown as XFormExpose
+    const valid = await exposed.validate()
+    expect(valid).toBe(false)
+    await flushPromises()
+    expect(scrollIntoViewSpy).toHaveBeenCalled()
   })
 })

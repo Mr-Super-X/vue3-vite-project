@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, type VNode } from 'vue'
+import { computed, ref, watch, nextTick, type VNode } from 'vue'
 import { get, set } from 'lodash-es'
 import { useSchemaRenderer } from './composables/use-schema-renderer'
 import { useSchemaIndex } from './composables/use-schema-index'
@@ -169,6 +169,8 @@ const serverError = useServerError({
  * - 跨字段校验支持异步：crossValidator 返回 Promise<true | string> 时会自动 await
  * - 跨字段失败同时 console.error 列出所有错误 keyPath + message,便于调试
  * - el-form 未挂载时降级只跑跨字段校验（开发场景）
+ * - scrollToError prop：字段规则失败由 ElForm 原生滚动（scrollToError 透传），
+ *   跨字段失败由 scrollToFirstError 滚动到第一个 cross 错误字段
  */
 async function validateForm(): Promise<boolean> {
   const m = props.model
@@ -177,6 +179,7 @@ async function validateForm(): Promise<boolean> {
   if (!ef?.validate) {
     const result = await runCrossFieldValidation(props.schema, m)
     applyCrossErrors(result)
+    scrollToFirstError(firstCrossErrorField(result))
     return result.isValid
   }
   // 等待 el-form 字段内规则校验完成（element-plus 2.x validate 接受 callback）
@@ -184,8 +187,10 @@ async function validateForm(): Promise<boolean> {
   if (!efValidate) {
     const result = await runCrossFieldValidation(props.schema, m)
     applyCrossErrors(result)
+    scrollToFirstError(firstCrossErrorField(result))
     return result.isValid
   }
+  // 字段规则失败时 ElForm 原生 scrollToError 已处理滚动（第一个 .el-form-item.is-error）
   const elValid = await new Promise<boolean>((resolve) => {
     const maybePromise = efValidate((v: boolean) => resolve(v))
     // 处理 el-form 2.x 即使传 callback 仍 reject errorsMap 的情况(避免 unhandled rejection)
@@ -195,7 +200,29 @@ async function validateForm(): Promise<boolean> {
   // 跑跨字段校验（可能含异步 crossValidator）
   const result = await runCrossFieldValidation(props.schema, m)
   applyCrossErrors(result)
+  scrollToFirstError(firstCrossErrorField(result))
   return result.isValid
+}
+
+/** 取跨字段校验结果中第一个错误的字段名（keyPath 末段） */
+function firstCrossErrorField(result: ValidateResult): string | null {
+  if (result.isValid) return null
+  const first = result.errors[0]
+  if (!first) return null
+  const field = first.keyPath[first.keyPath.length - 1]
+  return typeof field === 'string' ? field : null
+}
+
+/**
+ * 跨字段校验失败滚动到第一个错误字段
+ * - 字段规则失败的滚动由 ElForm 原生 scrollToError 处理，不走这里
+ * - scrollToError 开关控制；nextTick 等红字渲染后再滚动
+ */
+function scrollToFirstError(fieldName: string | null): void {
+  if (!fieldName || props.scrollToError === false) return
+  void nextTick(() => {
+    scrollToField(fieldName)
+  })
 }
 
 /** 把跨字段校验失败的错误写入对应 el-form-item（用户在 UI 看到），并 console.error 列出全部 */
@@ -413,6 +440,8 @@ if (import.meta.env.DEV) {
         :model="(props.model ?? {}) as Record<string, unknown>"
         :validate-trigger="['change', 'blur']"
         :label-position="topLevelLabelPosition"
+        :scroll-to-error="props.scrollToError"
+        :scroll-into-view-options="props.scrollIntoViewOptions ?? true"
       >
         <!-- 阶段 2.4 修复：仅当顶层有 column 字段时,外层用 ElRow+ElCol 按 column 自动分配 span -->
         <!-- 否则直接渲染节点（节点的 col.responsive 由内部 wrapWithElCol 响应式拍平） -->

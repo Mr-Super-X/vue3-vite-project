@@ -43,6 +43,7 @@ export const CN_NAMES: Record<string, string> = {
   XFormReaction: '反应式联动',
   XFormResponsive: '响应式布局',
   XFormSchemaIndex: '索引快照',
+  XFormScrollToError: '错误自动滚动',
   XFormServerError: '服务端错误',
   XFormSlots: '插槽系统',
   AsyncState: '异步状态容器',

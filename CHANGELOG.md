@@ -4,6 +4,11 @@
 
 ### ✨ Features | 新特性
 
+* **XForm 校验失败自动滚动（scrollToError）**
+  - 新增 `scrollToError` / `scrollIntoViewOptions` props：透传 element-plus ElForm 原生滚动能力——字段规则失败滚到第一个 `.el-form-item.is-error`；跨字段 crossValidator 失败由 XForm 内部滚动到第一个错误字段（keyPath 末段）
+  - 默认 false（与 element-plus 原生一致，不静默改变既有 validate() 行为）
+  - 新增 `XFormScrollToError.vue` demo：供应商入库登记长表单（10 字段），必填错误在视口外，开关对比滚动行为
+  - 测试：XForm.spec 新增 3 个用例（真实 ElForm 链路 + scrollIntoView polyfill），29/29 通过
 * **XForm demo 补充 DocToc 目录导航**（demo 模块）
   - 14 个含 API 表格的 XForm demo 全部接入 DocToc（XFormArray / AsyncOptions / Builder / CrossField / Directives / Dirty / Disabled / Events / Grid / Persist / Reaction / Responsive / SchemaIndex / ServerError + 总览），锚点与 section / ApiTable 一一对应
   - 补齐剩余 10 个 demo 的 ApiTable + DocToc：新增 ruleItems / minimumItems / nestedItems / slotTypeItems / modelWarnItems / largeSchemaItems / invalidComponentItems / reverseCrossItems / asyncValidatorItems 九组 API 数据（XFormFieldPermission 复用 permissionItems）

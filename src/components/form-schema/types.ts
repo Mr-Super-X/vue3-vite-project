@@ -392,6 +392,18 @@ export interface XFormProps {
   ) => unknown | Promise<unknown>
   zodSchema?: ZodType
   /**
+   * 校验失败自动滚动到第一个错误字段（透传 element-plus ElForm.scrollToError）
+   * - 字段规则失败：ElForm 原生滚动到第一个 .el-form-item.is-error
+   * - 跨字段 crossValidator 失败：XForm 内部滚动到第一个错误字段（keyPath 末段）
+   * - 默认 false（与 element-plus 原生默认一致，不静默改变既有 validate() 行为）
+   */
+  scrollToError?: boolean
+  /**
+   * 滚动行为选项（透传 element-plus ElForm.scrollIntoViewOptions，默认 true）
+   * 如 { behavior: 'smooth', block: 'center' }
+   */
+  scrollIntoViewOptions?: ScrollIntoViewOptions | boolean
+  /**
    * 按组件名注入默认 props，节点级 props 可覆盖。
    * 例如: { Input: { clearable: true }, Select: { clearable: true, filterable: true } }
    * 仅对 string component 生效;直接传 Component 对象时由组件自身控制。

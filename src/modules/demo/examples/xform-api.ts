@@ -57,6 +57,19 @@ export const propsItems: XFormApiItem[] = [
     type: 'Record<string, Record<string, unknown>>',
     description: '按组件名注入默认 props（节点级 props 可覆盖）',
   },
+  {
+    name: 'scrollToError',
+    type: 'boolean',
+    default: 'false',
+    description:
+      '校验失败自动滚动到第一个错误字段（透传 ElForm 原生能力，跨字段错误由 XForm 内部滚动）',
+  },
+  {
+    name: 'scrollIntoViewOptions',
+    type: 'ScrollIntoViewOptions | boolean',
+    default: 'true',
+    description: '滚动行为选项透传 ElForm',
+  },
 ]
 
 export const eventsItems: XFormApiItem[] = [
