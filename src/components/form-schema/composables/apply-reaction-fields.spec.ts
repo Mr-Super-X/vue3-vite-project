@@ -62,4 +62,34 @@ describe('applyReactionFields(node, reaction, model)', () => {
     // 返回值也赋给 node(保持 P0 兼容)
     expect((node as Record<string, unknown>).searchResults).toEqual(['Apple', 'Banana'])
   })
+
+  // ---- H5 回归：值未变化跳过写入 ----
+
+  it('元字段 deps 不写入 node（与 strategy/delay 同为调度元数据）', () => {
+    const node: SchemaNode = {} as SchemaNode
+    applyReactionFields(node, { deps: ['a'], label: '实际字段' }, {})
+    expect(node.label).toBe('实际字段')
+    expect((node as Record<string, unknown>).deps).toBeUndefined()
+  })
+
+  it('值未变化时跳过写入（保持原引用，避免多余响应式通知）', () => {
+    const node: SchemaNode = {} as SchemaNode
+    applyReactionFields(node, { label: '旧' }, {})
+    // 字面量重复写入相同值：内容相等，node 不变（无异常即正确，下方对象用例验证引用保持）
+    applyReactionFields(node, { label: '旧' }, {})
+    expect(node.label).toBe('旧')
+  })
+
+  it('对象值内容相等时保留首次写入的引用（不被同值新对象覆盖）', () => {
+    const node: SchemaNode = {} as SchemaNode
+    const first = { size: 'large' }
+    applyReactionFields(node, { props: first }, {})
+    const afterFirst = (node as Record<string, unknown>).props
+    applyReactionFields(node, { props: { size: 'large' } }, {})
+    // 同值新对象不应覆盖 —— 覆盖会产生一次无意义的响应式通知
+    expect((node as Record<string, unknown>).props).toBe(afterFirst)
+    // 值真正变化时正常覆盖
+    applyReactionFields(node, { props: { size: 'small' } }, {})
+    expect((node as Record<string, unknown>).props).toEqual({ size: 'small' })
+  })
 })

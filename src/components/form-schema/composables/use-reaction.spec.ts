@@ -219,4 +219,89 @@ describe('applyReactions(node, model, stoppers)', () => {
     scope.stop()
     stoppers.forEach((s) => s())
   })
+
+  // ---- H5 回归：deps 精确监听 + 循环联动预算 ----
+
+  it('声明 deps 时仅响应依赖路径变化（无关字段不触发）', async () => {
+    const runnerSpy = vi.fn()
+    const node = {
+      reaction: {
+        deps: ['a'],
+        label: (m: { a: number }) => {
+          runnerSpy()
+          return String(m.a)
+        },
+      },
+    } as unknown as SchemaNode
+    const model = reactive({ a: 1, b: 100 })
+    const stoppers: (() => void)[] = []
+    const scope = effectScope()
+    scope.run(() => {
+      applyReactions(node, model, stoppers)
+    })
+    // sync 模式 setup 立即跑一次
+    expect(runnerSpy).toHaveBeenCalledTimes(1)
+    model.b = 200 // 无关字段变化
+    await nextTick()
+    expect(runnerSpy).toHaveBeenCalledTimes(1)
+    model.a = 2 // 依赖字段变化
+    await nextTick()
+    expect(runnerSpy).toHaveBeenCalledTimes(2)
+    expect(node.label).toBe('2')
+    scope.stop()
+    stoppers.forEach((s) => s())
+  })
+
+  it('未声明 deps 时保持 deep watch 旧行为（任意字段变化都触发）', async () => {
+    const runnerSpy = vi.fn()
+    const node = {
+      reaction: {
+        label: (m: { a: number }) => {
+          runnerSpy()
+          return String(m.a)
+        },
+      },
+    } as unknown as SchemaNode
+    const model = reactive({ a: 1, b: 100 })
+    const stoppers: (() => void)[] = []
+    const scope = effectScope()
+    scope.run(() => {
+      applyReactions(node, model, stoppers)
+    })
+    expect(runnerSpy).toHaveBeenCalledTimes(1)
+    model.b = 200
+    await nextTick()
+    expect(runnerSpy).toHaveBeenCalledTimes(2)
+    scope.stop()
+    stoppers.forEach((s) => s())
+  })
+
+  it('reaction 写自身依赖构成环时，执行预算兜底（不卡死 + console.error 告警）', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const model = reactive({ a: 0 })
+    const node = {
+      reaction: {
+        deps: ['a'],
+        // 每次执行都改 a → 再次触发自身 watch → 无预算时无限循环
+        label: (m: { a: number }) => {
+          m.a++
+          return 'x'
+        },
+      },
+    } as unknown as SchemaNode
+    const stoppers: (() => void)[] = []
+    const scope = effectScope()
+    scope.run(() => {
+      applyReactions(node, model, stoppers)
+    })
+    model.a = 5 // 外部触发一次，引爆循环链
+    await nextTick()
+    await nextTick()
+    expect(errSpy).toHaveBeenCalledWith(expect.stringContaining('疑似循环联动'))
+    // 预算截断：初始 1 次 + 单 flush 上限 50 次，不可能无限增长
+    expect(model.a).toBeLessThanOrEqual(60)
+    scope.stop()
+    stoppers.forEach((s) => s())
+    errSpy.mockRestore()
+  })
 })

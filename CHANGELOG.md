@@ -64,6 +64,17 @@
 
 ### 🐛 Bug Fixes | 缺陷修复
 
+* **form-schema:** 安全扫描 `scanForForbidden` 覆盖补全（H1）
+  - 根因：仅扫描 `on`/`reaction` 第一层字符串值——`disabled`/`permission`（同为函数表达式字段）不扫、`array.itemSchema` 子树不递归、`reaction.props.x` 嵌套字符串逃逸，三条绕过路径
+  - 修复：扫描字段补齐 `disabled`/`permission`；值扫描改为任意深度递归（含数组/嵌套对象，WeakSet 防循环引用）；`traverse` 递归 `array.itemSchema`
+  - 黑名单扩充：`self/top/parent/frames/localStorage/sessionStorage/indexedDB/import/require/alert/prompt/confirm`；有意不收录 `open/location/navigator`（与常见表单字段同名，dev 诊断误报噪声大于收益）
+  - 防回归：use-scan-forbidden.spec 新增 6 个用例（permission/disabled/嵌套 reaction/itemSchema/新关键字/字段名不误报）
+* **form-schema:** reaction 联动性能与死循环治理（H5）
+  - 新增 `reaction.deps: string[]`（可选，向后兼容）：声明后仅精确 watch 依赖路径，不再 deep watch 整棵 model——大表单 N 字段 × M 联动时消除全量监听开销；未声明保持旧行为
+  - 新增循环联动执行预算：单 flush 内 reaction 最多执行 50 次（刻意低于 Vue 调度器递归上限 100，抢先拦截避免 "Maximum recursive updates exceeded" 未处理异常），超限 console.error 告警并跳过，把"页面卡死"降级为"可诊断错误"
+  - 表达式编译缓存：`resolveFunctionExpression` 按字符串缓存 `new Function` 结果（上限 500，含失败结果），消除渲染/联动期的重复编译
+  - `applyReactionFields` 值未变化时跳过写入（isEqual 比较），消除多余响应式通知
+  - 防回归：use-reaction.spec +3（deps 精确监听 / 未声明保持旧行为 / 循环预算兜底）、use-expression.spec +2（缓存命中同实例 / 非法表达式只报错一次）、apply-reaction-fields.spec +3（deps 元字段不写入 / 同值跳过 / 同值保留引用）
 * **form-schema:** 修复 `defaultValue` 生产环境静默失效（C1）
   - 根因：`applyDefaults` 与 schema 校验、安全扫描同处 `showDebugBanner`（`import.meta.env.DEV`）门控的 watch 内——prod 构建下整个 watch 不注册，`defaultValue` 永不填充
   - 修复：`applyDefaults` 拆出为独立 watcher（全环境生效）；schema 校验 + `scanForForbidden` 安全扫描保留在 dev 调试分支（纯诊断，无生产副作用）

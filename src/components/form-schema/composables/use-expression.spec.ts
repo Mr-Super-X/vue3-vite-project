@@ -31,6 +31,24 @@ describe('resolveFunctionExpression(raw)', () => {
     expect(spy).toHaveBeenCalled()
     spy.mockRestore()
   })
+
+  // ---- 编译缓存回归 ----
+
+  it('同一表达式命中缓存返回同一函数实例', () => {
+    const f1 = resolveFunctionExpression('{{ (m) => m.n * 2 }}')
+    const f2 = resolveFunctionExpression('{{ (m) => m.n * 2 }}')
+    expect(f1).not.toBeNull()
+    expect(f1).toBe(f2)
+    expect(f1!({ n: 3 })).toBe(6)
+  })
+
+  it('同一非法表达式只 console.error 一次（失败结果同样缓存）', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(resolveFunctionExpression('{{ @@ }}')).toBeNull()
+    expect(resolveFunctionExpression('{{ @@ }}')).toBeNull()
+    expect(spy).toHaveBeenCalledTimes(1)
+    spy.mockRestore()
+  })
 })
 
 describe('scanForForbidden(schema)', () => {

@@ -1,8 +1,9 @@
 import type { SchemaNode } from '../types'
+import { isEqual } from 'lodash-es'
 import { resolveFunctionExpression } from './use-expression'
 
 /** reaction 元字段 —— 仅用于 use-reaction 调度策略,不写入 node(避免序列化时带元数据) */
-const REACTION_META_KEYS = new Set(['strategy', 'delay'])
+const REACTION_META_KEYS = new Set(['strategy', 'delay', 'deps'])
 
 /**
  * 应用 reaction 字段：对每个 reaction 配置项求值后写入 node[field]
@@ -24,6 +25,10 @@ export function applyReactionFields(
     } else if (typeof raw === 'function') {
       value = (raw as (m: Record<string, unknown>) => unknown)(model)
     }
-    ;(node as Record<string, unknown>)[key] = value
+    const target = node as Record<string, unknown>
+    // 值未变化时跳过写入：reaction 会在 model 任意变化时重跑（未声明 deps 时），
+    // 无条件写入会产生多余的响应式通知，放大下游重渲染与联动链
+    if (isEqual(target[key], value)) continue
+    target[key] = value
   }
 }

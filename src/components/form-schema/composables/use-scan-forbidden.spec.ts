@@ -207,4 +207,57 @@ describe('scanForForbidden / 安全扫描', () => {
     // string 类型节点会被 scanField 跳过（只递归对象）
     expect(() => scanForForbidden(schema)).not.toThrow()
   })
+
+  // ---- H1 回归：扫描覆盖补全 ----
+
+  it('检测 permission 字段的函数表达式（此前漏扫）', () => {
+    const errors = scanForForbidden({
+      permission: '{{ () => window.alert(1) }}',
+    } as unknown as SchemaNode)
+    expect(errors.length).toBeGreaterThan(0)
+    expect(errors[0]).toMatch(/permission.*window/)
+  })
+
+  it('检测 disabled 字段的函数表达式（此前漏扫）', () => {
+    const errors = scanForForbidden({
+      disabled: '{{ () => document.cookie }}',
+    } as unknown as SchemaNode)
+    expect(errors.length).toBeGreaterThan(0)
+    expect(errors[0]).toMatch(/disabled.*document/)
+  })
+
+  it('递归扫描 reaction 嵌套对象值（reaction.props.x 逃逸路径）', () => {
+    const errors = scanForForbidden({
+      reaction: { props: { placeholder: '{{ () => eval("1") }}' } },
+    } as unknown as SchemaNode)
+    expect(errors.length).toBeGreaterThan(0)
+    expect(errors[0]).toMatch(/reaction\.props\.placeholder.*eval/)
+  })
+
+  it('递归扫描数组节点 array.itemSchema 子树（此前漏扫）', () => {
+    const errors = scanForForbidden({
+      kind: 'array',
+      array: {
+        itemSchema: { name: 'row', component: 'Input', on: { click: '{{ () => fetch("/x") }}' } },
+      },
+    } as unknown as SchemaNode)
+    expect(errors.length).toBeGreaterThan(0)
+  })
+
+  it('新增黑名单关键字：localStorage / sessionStorage / require / import', () => {
+    for (const kw of ['localStorage', 'sessionStorage', 'require', 'import']) {
+      const errors = scanForForbidden({
+        on: { click: `() => ${kw}.foo()` },
+      } as unknown as SchemaNode)
+      expect(errors.length, `keyword ${kw}`).toBeGreaterThan(0)
+    }
+  })
+
+  it('常见字段名不误报（model.location / model.open 等）', () => {
+    const errors = scanForForbidden({
+      on: { click: '{{ (m) => m.location }}' },
+      reaction: { label: '{{ (m) => (m.open ? "开" : "关") }}' },
+    } as unknown as SchemaNode)
+    expect(errors).toEqual([])
+  })
 })

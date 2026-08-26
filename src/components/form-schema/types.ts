@@ -89,6 +89,10 @@ export interface ReactionConfig {
   strategy?: 'sync' | 'debounce' | 'throttle'
   /** debounce / throttle 延迟(ms);strategy !== 'sync' 时生效 */
   delay?: number
+  /** 依赖字段路径列表（性能优化，如 ['a', 'b.c']）：
+   *  声明后仅精确 watch 这些路径；不声明则保持旧行为 —— deep watch 整棵 model，
+   *  任意字段变化都触发求值（大表单下 N 字段 × M 联动开销显著） */
+  deps?: string[]
   // 其他可覆盖字段（开闭原则：未知字段透传）
   [key: string]: unknown
 }
