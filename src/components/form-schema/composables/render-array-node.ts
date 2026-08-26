@@ -11,25 +11,53 @@ import type { SchemaNode } from '../types'
 import { mergeColResponsive } from './render-schema-node'
 import type { RenderSchemaNodeOptions } from './render-schema-node'
 
+// 行级稳定 key：按行对象身份（WeakMap）分配，而非 index。
+// index 作 key 时删/移一行会导致后续所有行重挂载（焦点丢失、内部组件状态与校验状态错位）；
+// 对象行在 splice/move 后身份不变 → key 稳定 → Vue 只移动 DOM 不重挂载。
+// 原始值行（string/number）无对象身份，退回 index（极少见场景）。
+// 模块级 WeakMap 跨渲染存活是必要的：renderRow 每次渲染重建，key 必须跨渲染稳定；
+// 行对象被 GC 时条目自动回收，不会泄漏。
+const rowKeyMap = new WeakMap<object, string>()
+let rowKeySeq = 0
+function rowKeyOf(row: unknown, index: number): string {
+  if (row !== null && typeof row === 'object') {
+    let k = rowKeyMap.get(row as object)
+    if (!k) {
+      k = `r${++rowKeySeq}`
+      rowKeyMap.set(row as object, k)
+    }
+    return k
+  }
+  return `i${index}`
+}
+
 /**
  * 把子 schema 的 name 路径前缀化,让 el-form 能按 list.0.qty 形式做嵌套校验
  * - 递归处理 children / formItem.slots / slots
  * - 子节点为空 / 字符串时原样返回
+ * - keyPrefix（可选）：按行对象身份生成 node.key —— name 是位置路径（校验用），
+ *   key 是身份标识（vnode diff 用）；不传则保持原行为（key 不受影响）
  */
 export function rewriteNamePath(
   sub: SchemaNode | SchemaNode[] | string | undefined,
   prefix: string,
-  sep: string
+  sep: string,
+  keyPrefix?: string
 ): SchemaNode | SchemaNode[] | string | undefined {
   if (sub === undefined || sub === null) return sub
   if (typeof sub === 'string') return sub
   if (Array.isArray(sub)) {
-    return sub.map((s) => rewriteNamePath(s, prefix, sep) as SchemaNode)
+    return sub.map((s) => rewriteNamePath(s, prefix, sep, keyPrefix) as SchemaNode)
   }
   const cloned: SchemaNode = { ...sub }
-  if (cloned.name) cloned.name = `${prefix}${sep}${cloned.name}`
+  const originalName = cloned.name
+  if (originalName) {
+    cloned.name = `${prefix}${sep}${originalName}`
+    // 用户显式配置的 key 优先；否则用行身份前缀派生稳定 key
+    if (keyPrefix && cloned.key === undefined) cloned.key = `${keyPrefix}${sep}${originalName}`
+  }
   if (cloned.children !== undefined) {
-    cloned.children = rewriteNamePath(cloned.children, prefix, sep) as never
+    cloned.children = rewriteNamePath(cloned.children, prefix, sep, keyPrefix) as never
   }
   if (cloned.slots) {
     const newSlots: Record<string, unknown> = {}
@@ -37,7 +65,7 @@ export function rewriteNamePath(
       if (typeof v === 'function') {
         newSlots[k] = v
       } else if (v && typeof v === 'object') {
-        newSlots[k] = rewriteNamePath(v, prefix, sep)
+        newSlots[k] = rewriteNamePath(v, prefix, sep, keyPrefix)
       } else {
         newSlots[k] = v
       }
@@ -50,7 +78,7 @@ export function rewriteNamePath(
       if (typeof v === 'function') {
         newFormItemSlots[k] = v
       } else if (v && typeof v === 'object') {
-        newFormItemSlots[k] = rewriteNamePath(v, prefix, sep)
+        newFormItemSlots[k] = rewriteNamePath(v, prefix, sep, keyPrefix)
       } else {
         newFormItemSlots[k] = v
       }
@@ -85,7 +113,16 @@ export function renderArrayNode(
   const max = cfg.maxItems ?? Infinity
 
   const renderRow = (row: unknown, index: number): VNode => {
-    const rewritten = rewriteNamePath(cfg.itemSchema, `${listName}[${index}]`, sep)
+    const rowKey = rowKeyOf(row, index)
+    // name 前缀 = 位置路径（el-form 校验用，随 index 走）；
+    // keyPrefix = 行对象身份（vnode key 用，随行数据走）——两者必须分离，
+    // 否则删/移行后内部 form-item 的 key（fi-items[0].qty）漂移，整行重挂载
+    const rewritten = rewriteNamePath(
+      cfg.itemSchema,
+      `${listName}[${index}]`,
+      sep,
+      `${listName}#${rowKey}`
+    )
     const inner = rewritten
       ? opts.render({
           ...(rewritten as object),
@@ -95,7 +132,7 @@ export function renderArrayNode(
     return h(
       'div',
       {
-        key: `array-${listName}-${index}`,
+        key: `array-${listName}-${rowKey}`,
         class: `${typeof node.component === 'string' ? node.component.toLowerCase() : 'array-node'}__row`,
       } as never,
       {

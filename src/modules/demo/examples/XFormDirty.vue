@@ -82,6 +82,20 @@ const schema: SchemaNode = {
       component: 'Input',
       props: { type: 'textarea', rows: 2, placeholder: '一句话介绍' },
     },
+    // 嵌套对象字段（H4 回归场景）：dirty 快照必须深拷贝，
+    // 原位修改 address.city 时 isDirty 应能检测到（活引用快照会漏检）
+    {
+      label: '城市',
+      name: 'address.city',
+      component: 'Input',
+      props: { placeholder: '嵌套字段 address.city', clearable: true },
+    },
+    {
+      label: '街道',
+      name: 'address.street',
+      component: 'Input',
+      props: { placeholder: '嵌套字段 address.street', clearable: true },
+    },
   ],
 }
 
@@ -90,6 +104,7 @@ const model = reactive<Record<string, unknown>>({
   email: '',
   age: 18,
   bio: '',
+  address: { city: '深圳', street: '' },
 })
 
 const formRef = ref<XFormExpose | null>(null)
@@ -142,13 +157,15 @@ const touchedStatus = computed(() => {
     email: formRef.value.isTouched('email'),
     age: formRef.value.isTouched('age'),
     bio: formRef.value.isTouched('bio'),
+    'address.city': formRef.value.isTouched('address.city'),
+    'address.street': formRef.value.isTouched('address.street'),
   }
 })
 
 /** 监听 model 变化 → 刷新 dirty 状态显示 */
 import { watch } from 'vue'
 watch(
-  () => [model.username, model.email, model.age, model.bio],
+  () => [model.username, model.email, model.age, model.bio, model.address],
   () => refreshDirtyState(),
   { deep: true }
 )
@@ -168,10 +185,14 @@ const tocItems = [
         'isDirty / getDirtyFields / isTouched / resetDirty：回答「用户改了表单但没保存」的标准信号。',
         'XForm 启动时自动拍一次空基线，加载后直接改任意字段即触发 isDirty=true。',
         '「标记基线」把当前 model 设为新基线（提交后归零）；「关闭表单」模拟未保存提示。',
+        '城市/街道是嵌套字段（address.city / address.street）：原位修改嵌套属性也必须被 dirty 检测到（快照深拷贝）。',
       ]"
     >
       <section id="demo-dirty">
-        <DemoField label="dirty 追踪：4 字段表单 + 实时状态显示" :code="dirtyCode">
+        <DemoField
+          label="dirty 追踪：6 字段表单（含 2 个嵌套字段）+ 实时状态显示"
+          :code="dirtyCode"
+        >
           <div :class="bem.b()">
             <XForm ref="formRef" :schema="schema" :model="model" />
             <div :class="bem.e('status')">
@@ -194,6 +215,8 @@ const tocItems = [
                   <li>email: {{ touchedStatus.email ? '✓' : '·' }}</li>
                   <li>age: {{ touchedStatus.age ? '✓' : '·' }}</li>
                   <li>bio: {{ touchedStatus.bio ? '✓' : '·' }}</li>
+                  <li>address.city: {{ touchedStatus['address.city'] ? '✓' : '·' }}</li>
+                  <li>address.street: {{ touchedStatus['address.street'] ? '✓' : '·' }}</li>
                 </ul>
               </div>
             </div>

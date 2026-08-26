@@ -121,6 +121,25 @@ const schema: SchemaNode = {
         disabled: (m: Record<string, unknown>) => !m.enableNotify,
       },
     },
+
+    // 4. hidden + 必填（H9 回归场景）：隐藏的必填字段不参与校验
+    // 关（默认）→ 发票抬头隐藏，点「保存」校验直接通过
+    // 开 → 发票抬头显示，留空点「保存」→ 报必填红字
+    {
+      label: '需要发票',
+      name: 'needInvoice',
+      component: 'Switch',
+    },
+    {
+      label: '发票抬头',
+      name: 'invoiceTitle',
+      component: 'Input',
+      props: { placeholder: '隐藏时留空也不阻塞提交', clearable: true },
+      rules: [{ required: true, message: '请输入发票抬头', trigger: 'blur' }],
+      reaction: {
+        hidden: (m: Record<string, unknown>) => !m.needInvoice,
+      },
+    },
   ],
 }
 
@@ -129,6 +148,8 @@ const model = reactive<Record<string, unknown>>({
   note: '',
   enableNotify: true,
   notifyType: 'email', // 默认选邮件,演示 enabled 状态
+  needInvoice: false,
+  invoiceTitle: '',
 })
 
 const formRef = ref<XFormExpose | null>(null)
@@ -168,6 +189,7 @@ const tocItems = [
         '1. 远程搜索 debounce 300ms:输入「苹果」,连续打字 5 字符只触发 1 次远程(mockRemoteSearch)',
         '2. 自动保存 throttle 1s:输入备注时,1 秒内多次 input 只触发 1 次 lastSavedAt',
         '3. 默认 sync:开关切换通知,通知类型 Select 立即禁用/启用',
+        '4. hidden 必填回归:关闭「需要发票」时发票抬头隐藏,留空点保存也通过;打开后留空保存报必填',
         '注意:searchCallCount / saveCallCount 显示在 model 区域,直观看到防抖/节流效果',
       ]"
     >

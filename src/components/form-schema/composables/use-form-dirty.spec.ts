@@ -18,6 +18,23 @@ describe('useFormDirty / 基础', () => {
     expect(dirty.getDirtyFields()).toEqual([])
   })
 
+  it('H4 回归：嵌套对象字段原位修改 → isDirty 检测到（快照深拷贝，不存活引用）', () => {
+    const model = reactive({ addr: { city: '深圳' } })
+    const dirty = useFormDirty({
+      model: () => model,
+      fieldNames: () => ['addr'],
+    })
+    dirty.resetDirty()
+    expect(dirty.isDirty()).toBe(false)
+    // 原位修改嵌套属性 —— 快照若存活 reactive 引用，isEqual 恒 true 导致漏检
+    model.addr.city = '广州'
+    expect(dirty.isDirty()).toBe(true)
+    expect(dirty.getDirtyFields()).toEqual(['addr'])
+    // 改回基线值 → 恢复非 dirty
+    model.addr.city = '深圳'
+    expect(dirty.isDirty()).toBe(false)
+  })
+
   it('未拍基线时 isTouched 返回 false', () => {
     const dirty = useFormDirty({
       model: () => ({ name: 'a' }),

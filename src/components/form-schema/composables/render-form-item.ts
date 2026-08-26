@@ -75,13 +75,19 @@ export function renderWithFormItem(
     {
       label: node.label,
       prop: node.name,
-      rules: compileRules(node.rules, opts.rules) as never,
+      // hidden 字段剥离 rules：隐藏必填项若参与校验会让 validate 恒 false，
+      // 且 scrollToError 会滚动到 display:none 的元素（用户看不到任何错误）。
+      // 保留 prop 注册（el-form-item 挂载时注册时机固定，动态增删 prop 不可靠），
+      // rules 为空即恒通过。hidden ≠ ignore：值仍保留在 model 中会提交
+      rules: node.hidden === true ? [] : (compileRules(node.rules, opts.rules) as never),
       ...(ext?.error ? { error: ext.error } : {}),
       ...(ext?.validateStatus ? { validateStatus: ext.validateStatus } : {}),
       ...(onFocusout ? { onFocusout } : {}),
       ...(onChange ? { onChange } : {}),
       ...fiProps,
-      ...(node.name || node.key ? { key: `fi-${node.name ?? node.key}` } : {}),
+      // key 优先级：node.key（身份标识，数组行内为行对象身份前缀）> node.name（校验路径，含位置索引）
+      // —— 若优先 name，数组删/移行后 fi-items[0].qty 漂移导致 form-item 重挂载
+      ...(node.name || node.key ? { key: `fi-${node.key ?? node.name}` } : {}),
     } as never,
     Comp
       ? {

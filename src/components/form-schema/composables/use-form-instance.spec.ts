@@ -57,12 +57,16 @@ describe('useFormInstance(model, zodSchema)', () => {
   })
 
   describe('validateForm()', () => {
-    it('resolves true when elFormRef is null', async () => {
+    it('resolves false + console.error when elFormRef is null（M2：不再静默通过）', async () => {
+      // 此前 resolve(true) 会把"配置/时序错误"伪装成"校验通过"，提交链路带病继续
+      const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
       const { validateForm } = useFormInstance(
         () => ({}),
         () => undefined
       )
-      await expect(validateForm()).resolves.toBe(true)
+      await expect(validateForm()).resolves.toBe(false)
+      expect(errSpy).toHaveBeenCalledWith(expect.stringContaining('el-form 实例未绑定'))
+      errSpy.mockRestore()
     })
 
     it('resolves true on validate callback (valid)', async () => {
@@ -234,16 +238,73 @@ describe('useFormInstance(model, zodSchema)', () => {
       expect(() => addItem('items')).not.toThrow()
     })
 
-    it('calls elFormRef.clearValidate after push (avoid stale errors)', () => {
+    it('addItem 追加不清任何校验态（末尾追加无索引位移，既有红字保留）', () => {
       const modelStore: Record<string, unknown> = { items: [] }
       const { addItem, elFormRef } = useFormInstance(
         () => modelStore,
         () => undefined
       )
-      const mock = createMockElForm()
+      const mock = {
+        ...createMockElForm(),
+        fields: [{ propString: { value: 'items[0].qty' } }],
+      }
       elFormRef.value = mock as never
       addItem('items')
-      expect(mock.clearValidate).toHaveBeenCalled()
+      expect(mock.clearValidate).not.toHaveBeenCalled()
+    })
+
+    it('M1：removeItem 只清理该数组子树的校验态，不误伤其他字段', () => {
+      const modelStore: Record<string, unknown> = { items: [{}, {}] }
+      const { removeItem, elFormRef } = useFormInstance(
+        () => modelStore,
+        () => undefined
+      )
+      const mock = {
+        ...createMockElForm(),
+        // 模拟 el-form 已注册的字段：两个 items 子树字段 + 一个无关字段
+        fields: [
+          { propString: { value: 'items[0].qty' } },
+          { propString: { value: 'items[1].qty' } },
+          { propString: { value: 'other' } },
+        ],
+      }
+      elFormRef.value = mock as never
+      removeItem('items', 0)
+      // 此前为无参调用（清空全表单）；现在只传 items 子树路径
+      expect(mock.clearValidate).toHaveBeenCalledWith(['items[0].qty', 'items[1].qty'])
+      expect(mock.clearValidate).not.toHaveBeenCalledWith()
+    })
+
+    it('M1：removeItem 只清被删行及之后的行，前面的行错误保留', () => {
+      const modelStore: Record<string, unknown> = { items: [{}, {}, {}] }
+      const { removeItem, elFormRef } = useFormInstance(
+        () => modelStore,
+        () => undefined
+      )
+      const mock = {
+        ...createMockElForm(),
+        fields: [
+          { propString: { value: 'items[0].qty' } },
+          { propString: { value: 'items[1].qty' } },
+          { propString: { value: 'items[2].qty' } },
+        ],
+      }
+      elFormRef.value = mock as never
+      removeItem('items', 1) // 删第 2 行 → 仅 items[1]/items[2] 路径失效
+      expect(mock.clearValidate).toHaveBeenCalledWith(['items[1].qty', 'items[2].qty'])
+    })
+
+    it('M1：一个匹配字段都提不到时不调用 clearValidate（EP 空数组=清全部）', () => {
+      // element-plus filterFields：clearValidate([]) 语义是清空全表单，必须守卫
+      const modelStore: Record<string, unknown> = { items: [{}] }
+      const { removeItem, elFormRef } = useFormInstance(
+        () => modelStore,
+        () => undefined
+      )
+      const mock = createMockElForm() // 无 fields 属性 → 提取不到任何字段名
+      elFormRef.value = mock as never
+      removeItem('items', 0)
+      expect(mock.clearValidate).not.toHaveBeenCalled()
     })
   })
 
@@ -292,10 +353,13 @@ describe('useFormInstance(model, zodSchema)', () => {
         () => modelStore,
         () => undefined
       )
-      const mock = createMockElForm()
+      const mock = {
+        ...createMockElForm(),
+        fields: [{ propString: { value: 'items[0].a' } }],
+      }
       elFormRef.value = mock as never
       removeItem('items', 0)
-      expect(mock.clearValidate).toHaveBeenCalled()
+      expect(mock.clearValidate).toHaveBeenCalledWith(['items[0].a'])
     })
   })
 
@@ -364,10 +428,13 @@ describe('useFormInstance(model, zodSchema)', () => {
         () => modelStore,
         () => undefined
       )
-      const mock = createMockElForm()
+      const mock = {
+        ...createMockElForm(),
+        fields: [{ propString: { value: 'items[0].a' } }, { propString: { value: 'items[1].a' } }],
+      }
       elFormRef.value = mock as never
       moveItem('items', 0, 1)
-      expect(mock.clearValidate).toHaveBeenCalled()
+      expect(mock.clearValidate).toHaveBeenCalledWith(['items[0].a', 'items[1].a'])
     })
   })
 

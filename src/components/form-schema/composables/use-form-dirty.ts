@@ -16,7 +16,7 @@
  * - fieldNames 由 XForm.vue 通过 getNames() 提供（已存在）
  */
 import { watch } from 'vue'
-import { isEqual, get } from 'lodash-es'
+import { isEqual, get, cloneDeep } from 'lodash-es'
 
 export interface UseFormDirtyOptions {
   model: () => Record<string, unknown> | undefined
@@ -43,7 +43,9 @@ export function useFormDirty(opts: UseFormDirtyOptions): UseFormDirtyReturn {
     if (!model) return
     initialSnapshot.clear()
     for (const name of opts.fieldNames()) {
-      initialSnapshot.set(name, get(model, name))
+      // 必须深拷贝：直接存 get() 结果会拿到嵌套对象/数组的活 reactive 引用，
+      // 用户原位修改（model.addr.city = x）时快照同步变化，isEqual 恒 true → dirty 漏检
+      initialSnapshot.set(name, cloneDeep(get(model, name)))
     }
     dirtyFields.clear()
   }

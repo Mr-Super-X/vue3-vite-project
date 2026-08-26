@@ -533,3 +533,61 @@ describe('XForm.vue 失焦触发 crossValidator（C2 回归）', () => {
     expect(crossValidator).toHaveBeenCalledWith('x', 'y')
   })
 })
+
+describe('XForm.vue hidden 字段校验语义（H9 回归）', () => {
+  it('hidden 必填字段不阻塞 validate（rules 剥离，恒通过）', async () => {
+    // 修复前：hidden 字段的 ElFormItem 带着 required rules 注册进 el-form，
+    // validate 恒 false 且 scrollToError 滚到 display:none 元素
+    const wrapper = mountXForm({
+      schema: {
+        children: [
+          {
+            component: 'ElInput',
+            name: 'visible',
+            rules: [{ required: true, message: '必填' }],
+          },
+          {
+            component: 'ElInput',
+            name: 'ghost',
+            hidden: true,
+            rules: [{ required: true, message: '隐藏必填' }],
+          },
+        ],
+      } as unknown as SchemaNode,
+      model: reactive({ visible: '有值', ghost: '' }),
+    })
+    await flushPromises()
+    const exposed = wrapper.vm as unknown as XFormExpose
+    await expect(exposed.validate()).resolves.toBe(true)
+  })
+
+  it('hidden 字段值仍保留在 model 中（hidden ≠ ignore）', async () => {
+    const model = reactive({ ghost: '保留我' })
+    mountXForm({
+      schema: {
+        component: 'ElInput',
+        name: 'ghost',
+        hidden: true,
+        rules: [{ required: true }],
+      } as unknown as SchemaNode,
+      model,
+    })
+    await flushPromises()
+    expect(model.ghost).toBe('保留我')
+  })
+
+  it('可见字段的必填校验不受 hidden 修复影响（仍然会失败）', async () => {
+    const wrapper = mountXForm({
+      schema: {
+        children: [
+          { component: 'ElInput', name: 'visible', rules: [{ required: true, message: '必填' }] },
+          { component: 'ElInput', name: 'ghost', hidden: true, rules: [{ required: true }] },
+        ],
+      } as unknown as SchemaNode,
+      model: reactive({ visible: '', ghost: '' }),
+    })
+    await flushPromises()
+    const exposed = wrapper.vm as unknown as XFormExpose
+    await expect(exposed.validate()).resolves.toBe(false)
+  })
+})

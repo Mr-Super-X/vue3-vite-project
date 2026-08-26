@@ -557,3 +557,25 @@ describe('useRenderSchemaNode slots 支持 render function / JSX', () => {
     expect(renderSpy).toHaveBeenCalledWith('plain text')
   })
 })
+
+describe('renderWithFormItem 的 key 优先级（H8 回归）', () => {
+  // node.key 是身份标识（数组行内由 keyPrefix 派生），node.name 是校验路径（含位置索引）。
+  // form-item 的 vnode key 必须用 key 优先，否则数组删/移行后 form-item 重挂载
+  it('node 同时有 key 和 name 时，form-item key 用 node.key', () => {
+    const { opts } = makeOpts({ model: { 'items[0].qty': 1 } as never })
+    const render = useRenderSchemaNode(opts)
+    const result = render({
+      component: 'Input',
+      name: 'items[0].qty',
+      key: 'items#r1.qty',
+    } as SchemaNode) as VNode
+    expect(result.key).toBe('fi-items#r1.qty')
+  })
+
+  it('node 只有 name 时，form-item key 退回 name（向后兼容）', () => {
+    const { opts } = makeOpts({ model: { a: 1 } })
+    const render = useRenderSchemaNode(opts)
+    const result = render({ component: 'Input', name: 'a' } as SchemaNode) as VNode
+    expect(result.key).toBe('fi-a')
+  })
+})

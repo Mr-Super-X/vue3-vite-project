@@ -64,6 +64,14 @@
 
 ### 🐛 Bug Fixes | 缺陷修复
 
+* **form-schema:** 状态正确性专项修复（H4 / H8 / H9 / M1 / M2）
+  - **H4 dirty 漏检**：`useFormDirty` 快照改 `cloneDeep`——此前存嵌套对象的活 reactive 引用，原位修改（`model.addr.city = x`）时快照同步变化，`isDirty` 恒漏检
+  - **M2 validate 静默通过**：`elFormRef` 未绑定时 `validateForm` 由静默 `resolve(true)` 改为 `resolve(false)` + console.error（配置/时序错误不再伪装成校验通过）
+  - **M1 clearValidate 误伤**：数组操作由无参 `clearValidate()`（清全表单）改为按行精确清理——`addItem` 末尾追加无索引位移，不再清理任何校验态（既有红字保留）；`removeItem`/`moveItem` 只清索引发生位移的行（被删/移动区间及之后），区间前行红字保留；找不到匹配字段时守卫不调用（element-plus `filterFields` 对空数组的语义是清全部）；走包装方法同步清理 externalErrors；新增 `extractFieldName` 辅助函数
+  - **H9 hidden 校验语义**：hidden 字段的 ElFormItem 剥离 rules（保留 prop 注册）——隐藏必填项不再阻塞 validate，scrollToError 不再滚到 display:none 元素；hidden ≠ ignore 语义不变（值仍保留在 model 中提交）
+  - **H8 数组行 key**：行容器 key 与行内 form-item key 均由位置索引改为按行对象身份派生——`renderArrayNode` 用模块级 WeakMap 给行对象分配稳定 ID；`rewriteNamePath` 新增 `keyPrefix` 参数把行身份注入 itemSchema 子树的 `node.key`；form-item 的 vnode key 优先级翻转为 `node.key ?? node.name`（name 保留作校验路径）。删除/移动行后剩余行 DOM 元素实例保持不变（不再重挂载、焦点/内部状态不丢失）；原始值行退回 index
+  - 防回归：use-form-dirty.spec +1（嵌套原位修改）、use-form-instance.spec 翻转 1 + 新增 3（子树清理范围 / 区间外保留 / 空匹配守卫）、render-array-node.spec +4（删行/移行 key 稳定 + keyPrefix 注入 + 显式 key 优先）、render-schema-node.spec +2（form-item key 优先级）、XForm.spec +3（hidden 必填不阻塞 / 值保留 / 可见字段不受影响）
+  - demo 场景补齐：XFormDirty 新增 2 个嵌套字段（address.city / address.street，H4 手动回归）；XFormReaction 新增「需要发票 → 发票抬头 hidden + 必填」场景（H9 手动回归）
 * **form-schema:** 安全扫描 `scanForForbidden` 覆盖补全（H1）
   - 根因：仅扫描 `on`/`reaction` 第一层字符串值——`disabled`/`permission`（同为函数表达式字段）不扫、`array.itemSchema` 子树不递归、`reaction.props.x` 嵌套字符串逃逸，三条绕过路径
   - 修复：扫描字段补齐 `disabled`/`permission`；值扫描改为任意深度递归（含数组/嵌套对象，WeakSet 防循环引用）；`traverse` 递归 `array.itemSchema`

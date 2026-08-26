@@ -48,10 +48,55 @@ export function useFormInstance(
   function validateForm(): Promise<boolean> {
     return new Promise((resolve) => {
       const ef = elFormRef.value
-      if (!ef?.validate) return resolve(true)
+      // 未绑定 el-form 时静默 resolve(true) 会把"配置/时序错误"伪装成"校验通过"，
+      // 提交链路会带着未校验的数据继续走 —— 按失败处理并给出可诊断的错误日志
+      if (!ef?.validate) {
+        console.error(
+          '[XForm] validate 调用时 el-form 实例未绑定（elFormRef 为空），已按校验失败处理'
+        )
+        return resolve(false)
+      }
       // element-plus 2.x 即使传 callback 仍 reject errorsMap（微任务），需 Promise.catch 接住
       Promise.resolve(ef.validate((valid: boolean) => resolve(valid))).catch(() => resolve(false))
     })
+  }
+
+  /** 从 el-form field 上下文提取字段路径名（优先 propString，兼容 ref/字符串两种形态） */
+  function extractFieldName(field: unknown): string | null {
+    const raw = toRaw(field) as {
+      prop?: string | Ref<string>
+      propString?: string | Ref<string>
+    }
+    const propString =
+      raw.propString && typeof raw.propString === 'object' && 'value' in raw.propString
+        ? raw.propString.value
+        : raw.propString
+    const prop =
+      raw.prop && typeof raw.prop === 'object' && 'value' in raw.prop ? raw.prop.value : raw.prop
+    const name = typeof propString === 'string' ? propString : prop
+    return typeof name === 'string' ? name : null
+  }
+
+  /**
+   * 数组删/移后按行清理失效的校验态 —— 此前直接调无参 clearValidate() 会清空
+   * 全表单错误（误伤其他字段的服务端/本地红字），且绕过 externalErrors 同步。
+   * 只清 fromIndex 及之后的行：错误是位置性的，索引位移后旧错误指向错位的行；
+   * fromIndex 之前的行索引未变，其错误仍然有效，必须保留。
+   */
+  function clearArraySubtree(name: string, fromIndex: number): void {
+    const ef = elFormRef.value as unknown as { fields?: unknown[] } | null
+    const escaped = name.replace(/[.*+?^${}()[\]\\]/g, '\\$&')
+    const rowReg = new RegExp(`^${escaped}\\[(\\d+)\\]`)
+    const names = (ef?.fields ?? []).map(extractFieldName).filter((n): n is string => {
+      if (n === null) return false
+      if (n === name || n.startsWith(`${name}.`)) return true
+      const m = n.match(rowReg)
+      return m !== null && Number(m[1]) >= fromIndex
+    })
+    // element-plus filterFields 对空数组的语义是"清全部字段"——
+    // 一个匹配都提不到时必须什么都不做，否则等于退回无参 clearValidate 的误伤行为
+    if (names.length === 0) return
+    clearValidate(names)
   }
 
   function clearValidate(names?: string[]): void {
@@ -80,13 +125,12 @@ export function useFormInstance(
     return validateWithZod(zs, model() ?? {})
   }
 
-  /** 数组操作：在 model[name] 末尾追加一项 */
+  /** 数组操作：在 model[name] 末尾追加一项（追加不产生索引位移，无需清理任何校验态） */
   function addItem(name: string, init?: Record<string, unknown>): void {
     const m = model()
     if (!m) return
     if (!Array.isArray(m[name])) m[name] = []
     ;(m[name] as unknown[]).push(init ?? {})
-    elFormRef.value?.clearValidate?.()
   }
 
   /** 数组操作：删除 model[name][index] */
@@ -96,7 +140,9 @@ export function useFormInstance(
     const arr = m[name] as unknown[]
     if (index < 0 || index >= arr.length) return
     arr.splice(index, 1)
-    elFormRef.value?.clearValidate?.()
+    // 被删行及之后的行索引位移（items[2].qty → items[1].qty），旧位置错误失效；
+    // 之前的行不受影响，红字保留
+    clearArraySubtree(name, index)
   }
 
   /** 数组操作：把 model[name][from] 移到 [to] */
@@ -107,7 +153,8 @@ export function useFormInstance(
     if (from < 0 || from >= arr.length || to < 0 || to >= arr.length || from === to) return
     const [item] = arr.splice(from, 1)
     arr.splice(to, 0, item)
-    elFormRef.value?.clearValidate?.()
+    // [min(from,to), max(from,to)] 区间内的行索引均变化，区间外不受影响
+    clearArraySubtree(name, Math.min(from, to))
   }
 
   /**

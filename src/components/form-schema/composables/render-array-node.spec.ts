@@ -7,8 +7,9 @@
  * - name 缺失时保持空
  */
 import { describe, it, expect } from 'vitest'
+import { h, type VNode } from 'vue'
 import type { SchemaNode } from '../types'
-import { rewriteNamePath } from './render-array-node'
+import { rewriteNamePath, renderArrayNode } from './render-array-node'
 
 describe('rewriteNamePath / 基本', () => {
   it('单节点 name 前缀化', () => {
@@ -115,5 +116,122 @@ describe('rewriteNamePath / 属性保持', () => {
     const out = rewriteNamePath(input, 'items[0]', '.') as SchemaNode
     expect(input.name).toBe('qty')
     expect(out).not.toBe(input)
+  })
+})
+
+describe('renderArrayNode / 行 key 稳定性（H8 回归）', () => {
+  function makeOpts(model: Record<string, unknown>) {
+    return {
+      model,
+      render: () => h('div'),
+      arrayActions: {
+        addItem: () => {},
+        removeItem: () => {},
+        moveItem: () => {},
+      },
+    } as never
+  }
+
+  function collectKeys(vnode: VNode | undefined, prefix: string): unknown[] {
+    // 结构无关的遍历：native 元素与组件的 children 规范化形态不同（数组 / slot 对象），
+    // 递归收集所有指定前缀的 key，避免依赖具体嵌套层级
+    const keys: unknown[] = []
+    const walk = (v: unknown): void => {
+      if (!v || typeof v !== 'object') return
+      if (Array.isArray(v)) {
+        v.forEach(walk)
+        return
+      }
+      const o = v as VNode
+      if (typeof o.key === 'string' && o.key.startsWith(prefix)) keys.push(o.key)
+      const ch = (o as unknown as Record<string, unknown>).children
+      if (Array.isArray(ch)) ch.forEach(walk)
+      else if (ch && typeof ch === 'object') {
+        for (const slot of Object.values(ch)) {
+          walk(typeof slot === 'function' ? (slot as () => unknown)() : slot)
+        }
+      }
+    }
+    walk(vnode)
+    return keys
+  }
+
+  const rowKeys = (v: VNode | undefined): unknown[] => collectKeys(v, 'array-items-')
+
+  const makeNode = (): SchemaNode =>
+    ({
+      name: 'items',
+      kind: 'array',
+      array: { itemSchema: { name: 'qty', component: 'Input' } },
+    }) as SchemaNode
+
+  it('删除首行后剩余行保持原 key（按行对象身份而非 index）', () => {
+    const rowA = { qty: 1 }
+    const rowB = { qty: 2 }
+    const rowC = { qty: 3 }
+    const model: Record<string, unknown> = { items: [rowA, rowB, rowC] }
+    const before = rowKeys(renderArrayNode(makeNode(), makeOpts(model)))
+    expect(before).toHaveLength(3)
+    // 删除首行：rowB/rowC 的 index 从 1,2 变为 0,1 —— index key 会全部重挂载，对象身份 key 不变
+    ;(model.items as unknown[]).splice(0, 1)
+    const after = rowKeys(renderArrayNode(makeNode(), makeOpts(model)))
+    expect(after).toEqual([before[1], before[2]])
+  })
+
+  it('移动行后 key 随行对象走（不随位置走）', () => {
+    const rowA = { qty: 1 }
+    const rowB = { qty: 2 }
+    const model: Record<string, unknown> = { items: [rowA, rowB] }
+    const before = rowKeys(renderArrayNode(makeNode(), makeOpts(model)))
+    ;(model.items as unknown[]).reverse()
+    const after = rowKeys(renderArrayNode(makeNode(), makeOpts(model)))
+    expect(after).toEqual([before[1], before[0]])
+  })
+
+  it('删除首行后行内节点获得身份派生 key（keyPrefix 注入 itemSchema 子树）', () => {
+    // renderArrayNode 的 render 回调收到的节点：name 是位置路径，key 是行身份路径
+    const rowA = { qty: 1 }
+    const rowB = { qty: 2 }
+    const model: Record<string, unknown> = { items: [rowA, rowB] }
+    const seen: Array<{ name: string | undefined; key: string | number | undefined }> = []
+    const opts = {
+      model,
+      render: (n: SchemaNode) => {
+        seen.push({ name: n.name, key: n.key })
+        return h('div')
+      },
+      arrayActions: { addItem: () => {}, removeItem: () => {}, moveItem: () => {} },
+    } as never
+    // 行渲染在 slot 函数里是惰性的，先走一遍 key 收集强制求值
+    rowKeys(renderArrayNode(makeNode(), opts))
+    expect(seen[0]).toEqual({
+      name: 'items[0].qty',
+      key: expect.stringMatching(/^items#r\d+\.qty$/),
+    })
+    expect(seen[1]).toEqual({
+      name: 'items[1].qty',
+      key: expect.stringMatching(/^items#r\d+\.qty$/),
+    })
+    expect(seen[0]!.key).not.toBe(seen[1]!.key)
+  })
+
+  it('rewriteNamePath 的 keyPrefix 派生稳定 key，用户显式 key 优先', () => {
+    const input: SchemaNode = {
+      name: 'qty',
+      component: 'Input',
+      children: [{ name: 'sub', component: 'Input', key: 'user-key' } as SchemaNode],
+    }
+    const out = rewriteNamePath(input, 'items[0]', '.', 'items#r9') as SchemaNode
+    expect(out.name).toBe('items[0].qty')
+    expect(out.key).toBe('items#r9.qty')
+    const child = (out.children as SchemaNode[])[0]!
+    expect(child.name).toBe('items[0].sub')
+    expect(child.key).toBe('user-key') // 用户显式 key 不被覆盖
+  })
+
+  it('rewriteNamePath 不传 keyPrefix 时不设置 key（向后兼容）', () => {
+    const out = rewriteNamePath({ name: 'qty', component: 'Input' }, 'items[0]', '.') as SchemaNode
+    expect(out.name).toBe('items[0].qty')
+    expect(out.key).toBeUndefined()
   })
 })
