@@ -4,6 +4,18 @@
 
 ### ✨ Features | 新特性
 
+* **XForm 栅格布局专项 demo + 原生 HTML 标签支持**
+  - 新增 `XFormGrid.vue`：三种栅格配置方式对照（column 统一分配 / row + col.span 自定义列宽 / 布局容器节点分区），同一组字段切换查看布局差异，附栅格配置速查 API 表格
+  - `SchemaNode.component` 支持原生 HTML 标签（全小写，如 `'a'` / `'span'` / `'div'`）：渲染层 `resolveComponentFor` 返回字符串标签名直接 h() 渲染，校验层白名单放行，组件名校验仍拦截未知 PascalCase 名（拼写错误）
+  - `XFormNested.vue` 改回原生标签演示（链接 / 图标），新增「原生标签」说明
+  - 已知布局限制写入 demo 提示：顶层 `column` 与节点级 `col.span` 混用无效（节点被锁进固定 span 的 ElCol），不等宽布局用 `row + col.span`
+* **XForm demo 补充与场景贴合改造**（demo 模块）
+  - 新增 `XFormEvents.vue`：演示 `beforeChange` 值拦截（同步替换 / Promise reject 跳过更新 / undefined 放行）与 `node.on` 字段事件（函数形式读写 model / `{{ fn }}` 沙箱表达式只读限制），场景为订单录入（订单号自动格式化 + 金额风控拦截 + 备注字数统计）
+  - 新增 `XFormDirectives.vue`：演示 `node.directives`（Directive 对象 + value/arg/modifiers）、`componentProps` 全局默认 props（节点级覆盖）、`rules` 命名引用（未命中退化为 required），场景为供应商录入
+  - `XFormBase.vue` 场景改为订单查询表单（订单号 / 状态 / 日期区间 / 备注），替换原通用字段
+  - `XFormNested.vue` 场景改为用户资料三 Card 分组（基本信息 / 联系方式 / 偏好设置），替换原 field1~field8，样式类名同步 BEM 化
+  - `XFormMinimumDemo.vue` 修复 `<style scoped>` + 非 BEM 类名违规（CLAUDE.md §3.3）
+  - `XForm.vue` 总览新增「SchemaNode 字段（DSL）」API 表格（补齐 modelProp 等 17 字段简表）
 * **form-schema-engine v3**（提升使用体验）
   - **自定义组件类型推导**：`ComponentPropsRegistry` 接口支持 TypeScript module augmentation，消费方扩展后 `SchemaNodeFor<'MyInput'>` 与 builder 可推导自定义组件 props；保留 `PropsByComponent` 别名向后兼容
   - **异步选项数据源**：`SchemaNode.asyncOptions` 支持 Select/Cascader/TreeSelect/Autocomplete 内置远程数据，含 `source/immediate/deps/transform/onError`，deps 变化自动重新请求
@@ -40,6 +52,14 @@
   - 文件清单（9 文件 + 7 spec）：`src/components/form-schema/{types,XForm}.{ts,vue}` + `composables/{use-validate,use-expression,use-reaction,use-schema-renderer}.ts` + `element-plus-adapter.ts` + `index.ts`
   - 测试覆盖：53/55 通过（XForm 在 vitest + jsdom 环境 element-plus 全局注册兼容性有 2 个测试降级；生产环境无影响）
   - **⚠ 安全注意**：`{{ fn }}` 函数表达式经 `toSafeDto` 净化 + dev 模式 `scanForForbidden` 黑名单扫描（覆盖 `window/eval/constructor/__proto__/process/Reflect/Proxy` 等），但**非真正沙箱**——schema 必须来自可信内部配置，禁止 API 动态下发或用户输入
+
+### 🐛 Bug Fixes | 缺陷修复
+
+* **form-schema:** 修复 `applyDirectives` 指令完全失效的问题
+  - 根因：`withDirectives(vnode, {...})` 第二参数误传单个对象——Vue 内部按 `.length` 遍历 + 数组元组解构 `[dir, value, arg, modifiers]`，对象无 `length` 被静默跳过（不抛错不 warn），指令 `mounted` 等钩子从未执行
+  - 修复：改为按元组数组 `[[dir, value, arg, modifiers]]` 传参；字符串指令名因 `XFormProps.directives` 注册表未接线，暂时跳过（仅支持直接传 Directive 对象）
+  - 防回归：`apply-directives.spec.ts` 新增真实渲染测试（mounted 钩子真实执行 + binding 的 value/arg/modifiers 透传），8/8 通过
+  - 附带修复 demo：`XFormDirectives.vue` 的 audit 指令改用内联 box-shadow 标橙——CSS 变量方案会被 element-plus `.el-input` 组件根变量定义重置
 
 ### ⚠ BREAKING CHANGES
 

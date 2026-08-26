@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import type { SchemaNode } from '../types'
-import { useRenderSchemaNode } from './render-schema-node'
-import { h } from 'vue'
+import { useRenderSchemaNode, resolveComponentFor } from './render-schema-node'
+import { h, type VNode } from 'vue'
 
 /** 创建一个最小可用的 RenderSchemaNode options */
 function makeOpts(overrides: Partial<Parameters<typeof useRenderSchemaNode>[0]> = {}) {
@@ -26,6 +26,30 @@ function makeOpts(overrides: Partial<Parameters<typeof useRenderSchemaNode>[0]> 
   }
   return { opts, renderSpy, addItem, removeItem, moveItem }
 }
+
+describe('resolveComponentFor 原生 HTML 标签', () => {
+  it('全小写标签名返回字符串标签名（h() 原生渲染）', () => {
+    expect(resolveComponentFor('a')).toBe('a')
+    expect(resolveComponentFor('span')).toBe('span')
+    expect(resolveComponentFor('div')).toBe('div')
+  })
+
+  it('PascalCase 未知组件名返回 null（保持原行为）', () => {
+    expect(resolveComponentFor('Inpurt')).toBeNull()
+  })
+
+  it('原生标签节点渲染为原生元素（无 name + children 走视觉容器分支）', () => {
+    const { opts } = makeOpts()
+    const render = useRenderSchemaNode(opts)
+    const result = render({
+      component: 'a',
+      children: '链接',
+      props: { href: '#' },
+    } as SchemaNode)
+    expect(result).toBeDefined()
+    expect((result as VNode).type).toBe('a')
+  })
+})
 
 describe('useRenderSchemaNode 数组分支 (kind === "array")', () => {
   it('数组节点走数组分支,渲染 1 次容器(不调用外部 render 回调)', () => {

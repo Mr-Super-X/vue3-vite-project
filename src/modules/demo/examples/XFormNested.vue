@@ -1,20 +1,16 @@
 <script setup lang="ts">
 /**
  * 参考开源 form-schema 实现的 demo（form/nested.vue）—— 复杂布局
- */
-import { ElMessage } from 'element-plus'
-/**
+ *
+ * 场景：用户资料 —— 三个 Card 分组（基本信息 / 联系方式 / 偏好设置）
  *
  * 关键特性：
  * 1. Card 容器分组（每组 column + row + props）
- * 2. slots.title / slots.extra 插槽系统
+ * 2. slots.header 插槽系统（ElCard 标题 API 是 header，无 title / extra 插槽）
  * 3. 嵌套 children（formItem 内含 input + 'a' HTML）
  * 4. 多列布局（column: 2 / 3）
- *
- * 与原参考实现差异：
- * - Card 组件用 ElCard（element-plus 内置）
- * - slots.title 用 Moon 图标替换（element-plus 无等效图标，用 '⚙️' 文本替代）
  */
+import { ElMessage } from 'element-plus'
 import { reactive } from 'vue'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
@@ -22,6 +18,8 @@ import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import xFormSource from './XFormNested.vue?raw'
+
+const bem = createNamespace('demo-x-form-nested')
 
 // 必须用 reactive 包装 model，否则 XForm 内的 v-model 赋值后无法触发响应式更新
 const model = reactive<Record<string, unknown>>({})
@@ -40,56 +38,90 @@ const schema = [
     component: 'Card',
     column: 2,
     row: { gutter: 24 },
-    props: { class: 'demo-card' },
+    props: { class: bem.e('card') },
     slots: {
-      title: [
-        { component: 'span', props: { class: 'demo-card__icon' }, children: '⚙️' },
-        ' 基本属性',
+      // ElCard 的标题 API 是 header（无 title / extra 插槽）——右上角链接用 float: right 放进 header
+      header: [
+        { component: 'span', props: { class: bem.e('card-icon') }, children: '👤' },
+        ' 基本信息',
+        {
+          component: 'a',
+          children: '更多',
+          props: { href: '#', class: bem.e('card-link'), style: 'float: right;' },
+        },
       ],
-      extra: { component: 'a', children: '更多', props: { href: '#' } },
     },
     children: [
       {
         component: 'FormItem',
         props: {
-          name: 'field1',
-          label: '附带额外元素',
+          name: 'nickname',
+          label: '昵称',
         },
         children: [
           {
-            name: 'field1',
+            name: 'nickname',
             component: 'Input',
             formItem: false,
             props: {
-              placeholder: '输入 field1',
+              placeholder: '输入昵称',
               clearable: true,
               style: 'width: calc(100% - 5em); margin-right: 1em;',
             },
           },
           {
             component: 'a',
-            children: '一个链接',
-            props: { href: '#', class: 'demo-card__link' },
+            children: '命名规范',
+            props: { href: '#', class: bem.e('card-link') },
           },
         ],
       },
       {
-        label: '字段2',
-        name: 'field2',
+        label: '真实姓名',
+        name: 'realName',
         component: 'Input',
-        props: { placeholder: '字段2', clearable: true },
+        props: { placeholder: '真实姓名', clearable: true },
       },
       {
-        label: '字段3',
-        name: 'field3',
+        label: '性别',
+        name: 'gender',
+        component: 'RadioGroup',
+        props: {
+          options: [
+            { value: 'male', label: '男' },
+            { value: 'female', label: '女' },
+          ],
+        },
+      },
+    ],
+  },
+  {
+    component: 'Card',
+    column: 2,
+    row: { gutter: 24 },
+    props: { header: '联系方式', class: bem.e('card') },
+    children: [
+      {
+        label: '手机号',
+        name: 'phone',
         component: 'Input',
-        props: { placeholder: '字段3', clearable: true },
+        props: { placeholder: '手机号', clearable: true },
       },
       {
-        label: '字段4',
-        name: 'field4',
+        label: '邮箱',
+        name: 'email',
         component: 'Input',
-        props: { placeholder: '字段4', clearable: true },
+        props: { placeholder: '邮箱', clearable: true },
+      },
+      {
+        label: '所在城市',
+        name: 'city',
+        component: 'Select',
+        props: {
+          placeholder: '请选择城市',
+          clearable: true,
+          options: ['广州市', '深圳市', '北京市', '上海市'].map((c) => ({ value: c, label: c })),
+        },
       },
     ],
   },
@@ -97,31 +129,38 @@ const schema = [
     component: 'Card',
     column: 3,
     row: { gutter: 24 },
-    props: { title: '补充属性', class: 'demo-card' },
+    props: { header: '偏好设置', class: bem.e('card') },
     children: [
       {
-        label: '字段5',
-        name: 'field5',
-        component: 'Input',
-        props: { placeholder: '字段5', clearable: true },
+        label: '界面语言',
+        name: 'language',
+        component: 'Select',
+        props: {
+          placeholder: '请选择语言',
+          clearable: true,
+          options: [
+            { value: 'zh-CN', label: '简体中文' },
+            { value: 'en-US', label: 'English' },
+          ],
+        },
       },
       {
-        label: '字段6',
-        name: 'field6',
-        component: 'Input',
-        props: { placeholder: '字段6', clearable: true },
+        label: '时区',
+        name: 'timezone',
+        component: 'Select',
+        props: {
+          placeholder: '请选择时区',
+          clearable: true,
+          options: [
+            { value: 'UTC+8', label: 'UTC+8 北京' },
+            { value: 'UTC+0', label: 'UTC+0 伦敦' },
+          ],
+        },
       },
       {
-        label: '字段7',
-        name: 'field7',
-        component: 'Input',
-        props: { placeholder: '字段7', clearable: true },
-      },
-      {
-        label: '字段8',
-        name: 'field8',
-        component: 'Input',
-        props: { placeholder: '字段8', clearable: true },
+        label: '接收通知',
+        name: 'notify',
+        component: 'Switch',
       },
     ],
   },
@@ -131,12 +170,13 @@ const schema = [
 <template>
   <DocLayout>
     <DemoFrame
-      title="复杂布局（Card 分组 + slots 插槽）"
+      title="复杂布局（用户资料 Card 分组）"
       source="src/components/form-schema/XForm.vue"
       :introductions="[
-        '两个 Card 容器分组，分别 2 列 / 3 列栅格。',
-        'slots.title 自定义标题（图标 + 文本），slots.extra 自定义右上角（链接）。',
-        'field1 含嵌套 children：Input + 「一个链接」HTML 标签。',
+        '三个 Card 分组：基本信息 / 联系方式 / 偏好设置，分别为 2 列 / 2 列 / 3 列栅格。',
+        'slots.header 自定义标题（图标 + 文本 + 右上角链接）——注意 ElCard 的标题 API 是 header，不是 title / extra。',
+        '昵称字段含嵌套 children：Input + 「命名规范」HTML 链接。',
+        'component 支持原生 HTML 标签（全小写，如 a / span）：直接渲染原生元素，适合链接、图标等轻量内容。',
       ]"
     >
       <section id="demo-nested">
@@ -150,14 +190,16 @@ const schema = [
 </template>
 
 <style lang="scss">
-.demo-card {
-  margin-bottom: 16px;
+.#{$BEM_PREFIX}-demo-x-form-nested {
+  &__card {
+    margin-bottom: 16px;
+  }
 
-  &__icon {
+  &__card-icon {
     margin-right: 4px;
   }
 
-  &__link {
+  &__card-link {
     color: #409eff;
     text-decoration: none;
 

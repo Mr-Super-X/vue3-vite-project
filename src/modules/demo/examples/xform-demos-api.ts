@@ -276,6 +276,139 @@ export const serverErrorMethods: XFormApiItem[] = [
   { name: 'clearValidate', type: '() => void', description: '清除全部字段校验状态' },
 ]
 
+// XFormEvents —— beforeChange 值拦截
+export const beforeChangeItems: XFormApiItem[] = [
+  {
+    name: 'beforeChange',
+    type: '(item, newVal, oldVal) => unknown | Promise',
+    description: '字段值写入 model 前拦截（XFormProps 级，按 item.name 分派）',
+  },
+  {
+    name: '同步返回非 undefined',
+    type: 'unknown',
+    description: '返回值替换新值写入 model（如自动格式化）',
+  },
+  {
+    name: 'Promise resolve',
+    type: 'unknown',
+    description: 'resolve 值写入 model（异步转换 / 校验后放行）',
+  },
+  {
+    name: 'Promise reject',
+    type: '—',
+    description: '跳过更新，model 保持旧值（输入框回弹）',
+  },
+  {
+    name: '返回 undefined',
+    type: '—',
+    description: '放行原值（默认行为）',
+  },
+]
+
+// XFormEvents —— node.on 字段事件
+export const onEventItems: XFormApiItem[] = [
+  {
+    name: 'node.on.<事件名>',
+    type: 'Function | {{ fn }}',
+    description: '字段级事件：键为组件事件名（change / input / blur…）',
+  },
+  {
+    name: '函数形式',
+    type: '(value, ...args) => void',
+    description: '推荐：闭包可直接读写真实 model（联动清空 / 字数统计）',
+  },
+  {
+    name: '表达式形式',
+    type: '{{ (m, ...args) => ... }}',
+    description: '沙箱隔离：m 为 model 只读副本；危险标识符（window / fetch…）被安全扫描拦截',
+  },
+]
+
+// XFormDirectives —— DirectiveConfig 节点指令
+export const directivesItems: XFormApiItem[] = [
+  {
+    name: 'directive',
+    type: 'Directive 对象',
+    required: true,
+    description: '带钩子的 Vue 指令定义（mounted / updated…），直接写在 schema 中',
+  },
+  { name: 'value', type: 'unknown', description: '指令绑定值（binding.value）' },
+  { name: 'arg', type: 'string', description: '指令参数（binding.arg）' },
+  {
+    name: 'modifiers',
+    type: 'Record<string, boolean>',
+    description: '修饰符（binding.modifiers，如 { strong: true }）',
+  },
+]
+
+// XFormDirectives —— componentProps 全局默认 props
+export const componentPropsItems: XFormApiItem[] = [
+  {
+    name: 'componentProps',
+    type: 'Record<string, Record<string, unknown>>',
+    description: '按组件名注入默认 props（XFormProps 级）',
+  },
+  {
+    name: '合并规则',
+    type: '—',
+    description: '与内置默认（clearable 等）合并；节点级 props 优先级最高，可覆盖全局默认',
+  },
+  {
+    name: '生效范围',
+    type: '—',
+    description: '仅 string component 生效；直接传 Component 对象时由组件自身控制',
+  },
+]
+
+// XFormDirectives —— rules 命名引用
+export const ruleRefItems: XFormApiItem[] = [
+  {
+    name: 'rules prop',
+    type: 'Record<string, RuleItem>',
+    description: '校验规则命名表（XFormProps 级），按名字复用跨表单规则',
+  },
+  {
+    name: 'node.rules 字符串',
+    type: 'string',
+    description: '查命名表：命中取对应 RuleItem；未命中退化为 required',
+  },
+]
+
+// XFormGrid —— 栅格配置速查
+export const gridItems: XFormApiItem[] = [
+  {
+    name: 'column',
+    type: 'number',
+    description: '每行固定 N 列，所有字段等宽（span = 24 / N）——最简配置',
+  },
+  {
+    name: 'row',
+    type: 'RowConfig',
+    description: '行配置：gutter 列间距 / type / align / justify；顶层或容器节点均可',
+  },
+  {
+    name: 'col',
+    type: 'boolean | ColConfig',
+    description: '节点级列配置：span 自由分配列宽 / offset / push / pull；col: false 不包栅格',
+  },
+  {
+    name: 'row + col.span 组合',
+    type: '—',
+    description: '顶层 row + 节点级 col.span：自由组合列宽（如 6 + 6 + 12、24 整行）',
+  },
+  {
+    name: '布局容器节点',
+    type: '无 name 节点 + row / column',
+    description: '渲染为纯 ElRow + ElCol 容器，可分区组织字段（按业务块分组）',
+  },
+  {
+    name: '⚠️ 混用限制',
+    type: '—',
+    description:
+      '顶层 column 会把节点锁进固定 span 的 ElCol，节点级 col.span 无法突破——不等宽布局用 row + col.span',
+  },
+]
+
 // XFormDirty —— 相关实例方法
 export const dirtyMethods: XFormApiItem[] = [
   { name: 'isDirty', type: '() => boolean', description: '是否有未保存修改（相对基线）' },

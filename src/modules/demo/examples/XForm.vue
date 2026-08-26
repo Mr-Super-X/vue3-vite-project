@@ -18,7 +18,7 @@ import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
-import { eventsItems, methodsItems, propsItems, slotsItems } from './xform-api'
+import { eventsItems, methodsItems, propsItems, schemaNodeItems, slotsItems } from './xform-api'
 import xFormSource from './XForm.vue?raw'
 
 const bem = createNamespace('demo-x-form')
@@ -146,6 +146,7 @@ const activeKey = ref<'basic' | 'reactive' | 'custom'>('basic')
 const tocItems = [
   { id: 'demo-basic', label: '基础用法' },
   { id: 'api-props', label: 'Props' },
+  { id: 'api-schema-node', label: 'SchemaNode 字段' },
   { id: 'api-events', label: 'Events' },
   { id: 'api-slots', label: 'Slots' },
   { id: 'api-methods', label: '实例方法' },
@@ -209,6 +210,7 @@ const tocItems = [
       </section>
 
       <ApiTable title="Props" :items="propsItems" anchor="api-props" />
+      <ApiTable title="SchemaNode 字段（DSL）" :items="schemaNodeItems" anchor="api-schema-node" />
       <ApiTable title="Events" :items="eventsItems" anchor="api-events" />
       <ApiTable title="Slots" :items="slotsItems" anchor="api-slots" />
       <ApiTable title="实例方法（ref）" :items="methodsItems" anchor="api-methods" />

@@ -2,14 +2,9 @@
 /**
  * 参考开源 form-schema 实现的 demo（form/base.vue）—— 基础用法
  *
- * 字段：输入框 / 选择框 / 字典 / 日期 / 多行输入
- * 特性：column 2 列栅格 + rules（字符串 + validator 函数）
- *
- * 与原参考实现差异：
- * - XSelect → ElSelect + 硬编码选项（模拟远程 fetchOption）
- * - XDict   → ElSelect + 硬编码部门字典（模拟 code: 'user_dept_type'）
- * - Textarea → ElInput type="textarea"
- * - dayjs 日期校验 → toLocaleDateString 比较
+ * 场景：订单查询表单（贴合 orders 模块）
+ * 字段：订单号 / 订单状态 / 下单日期区间 / 备注
+ * 特性：column 2 列栅格 + rules（'required' 字符串 + validator 函数）
  */
 import { ref, reactive } from 'vue'
 import dayjs from 'dayjs'
@@ -23,61 +18,70 @@ import xFormSource from './XFormBase.vue?raw'
 
 const bem = createNamespace('demo-x-form-base')
 
-// —— 字典数据（mock 远程接口） ——
-const SELECT_OPTIONS = [
-  { value: 'option1', label: '选项一' },
-  { value: 'option2', label: '选项二' },
-  { value: 'option3', label: '选项三' },
-]
-const DEPT_OPTIONS = [
-  { value: 'tech', label: '研发部' },
-  { value: 'product', label: '产品部' },
-  { value: 'design', label: '设计部' },
-  { value: 'ops', label: '运营部' },
+// —— 订单状态字典（mock 远程接口） ——
+const ORDER_STATUS_OPTIONS = [
+  { value: 'pending', label: '待支付' },
+  { value: 'paid', label: '已支付' },
+  { value: 'shipped', label: '已发货' },
+  { value: 'done', label: '已完成' },
+  { value: 'canceled', label: '已取消' },
 ]
 
 const schema: SchemaNode = {
-  column: 2,
+  // 顶层用 row 而非 column：顶层 column 会把每个节点包进固定 span 的 ElCol，
+  // 节点级 col.span 被外层半宽限制无法突破 —— 用 row + 节点级 col.span 分配列宽
   row: { gutter: 24 },
   children: [
     {
-      label: '输入框',
-      name: 'input',
-      rules: 'required',
+      label: '订单号',
+      name: 'orderNo',
+      col: { span: 6 },
+      rules: [
+        'required',
+        {
+          // ORD- 开头 + 6 位数字，如 ORD-202401
+          validator: (_rule: unknown, value: unknown, cb: (err?: Error) => void) => {
+            if (typeof value === 'string' && !/^ORD-\d{6}$/.test(value)) {
+              cb(new Error('订单号格式：ORD- 开头 + 6 位数字'))
+            } else {
+              cb()
+            }
+          },
+        },
+      ],
       component: 'Input',
-      props: { placeholder: '请输入', clearable: true },
+      props: { placeholder: '如 ORD-202401', clearable: true },
     },
     {
-      label: '选择框',
-      name: 'select',
+      label: '订单状态',
+      name: 'status',
+      col: { span: 18 },
+      component: 'Select',
+      props: {
+        placeholder: '请选择状态',
+        clearable: true,
+        options: ORDER_STATUS_OPTIONS,
+      },
+    },
+    {
+      label: '开始日期',
+      name: 'startDate',
+      col: { span: 12 },
       rules: 'required',
-      component: 'Select',
-      props: {
-        placeholder: '请选择',
-        clearable: true,
-        options: SELECT_OPTIONS, // 模拟 fetchOption.extractData
-      },
+      component: 'DatePicker',
+      props: { valueFormat: 'YYYY-MM-DD', placeholder: '选择开始日期' },
     },
     {
-      label: '字典',
-      name: 'dict',
-      component: 'Select',
-      props: {
-        placeholder: '请选择部门（来自字典 user_dept_type）',
-        clearable: true,
-        options: DEPT_OPTIONS,
-      },
-    },
-    {
-      label: '日期',
-      name: 'date',
+      label: '结束日期',
+      name: 'endDate',
+      col: { span: 12 },
       rules: [
         'required',
         {
           validator: (_rule: unknown, value: unknown, cb: (err?: Error) => void) => {
             const today = dayjs().format('YYYY-MM-DD')
-            if (typeof value === 'string' && value < today) {
-              cb(new Error('不能早于今天'))
+            if (typeof value === 'string' && value > today) {
+              cb(new Error('不能晚于今天'))
             } else {
               cb()
             }
@@ -85,13 +89,14 @@ const schema: SchemaNode = {
         },
       ],
       component: 'DatePicker',
-      props: { valueFormat: 'YYYY-MM-DD', placeholder: '选择日期' },
+      props: { valueFormat: 'YYYY-MM-DD', placeholder: '选择结束日期' },
     },
     {
-      label: '多行输入',
-      name: 'textarea',
+      label: '备注',
+      name: 'remark',
       component: 'Input',
-      props: { type: 'textarea', rows: 3, placeholder: '请输入多行文本' },
+      col: { span: 24 },
+      props: { type: 'textarea', rows: 3, placeholder: '备注信息（整行占满）' },
     },
   ],
 }
@@ -134,16 +139,17 @@ async function copySchema() {
 <template>
   <DocLayout>
     <DemoFrame
-      title="基础用法（5 字段 + 校验）"
+      title="基础用法（订单查询表单）"
       source="src/components/form-schema/XForm.vue"
       :introductions="[
-        '基础表单：5 字段（输入框 / 选择框 / 字典 / 日期 / 多行输入）。',
-        'column: 2 顶层栅格 + row.gutter: 24 列间距。',
-        'rules 支持 「required」 + validator 函数。日期字段带自定义 validator：不能早于今天。',
+        '订单查询表单：订单号 / 状态 / 日期区间 / 备注 5 字段。',
+        '顶层 row.gutter: 24 + 节点级 col.span 分配列宽：前 4 字段各 12 列，备注 24 列整行占满。',
+        '注意：顶层 column 会把每个节点包进固定 span 的 ElCol，节点级 col.span 无法突破半宽——混用列宽时用 row + col.span 组合。',
+        'rules 支持 「required」字符串 + validator 函数。订单号带格式校验，结束日期不能晚于今天。',
       ]"
     >
       <section id="demo-base">
-        <DemoField label="表单（2 列栅格）" :code="xFormSource">
+        <DemoField label="订单查询（2 列栅格）" :code="xFormSource">
           <XForm ref="formRef" :schema="schema" :model="model" />
           <div :class="bem.e('actions')">
             <el-button @click="onReset">重置</el-button>

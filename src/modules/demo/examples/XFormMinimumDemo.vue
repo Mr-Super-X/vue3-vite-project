@@ -10,6 +10,8 @@ import type { SchemaNode } from '@/components/form-schema/types'
 import DocLayout from '../layouts/DocLayout.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 
+const bem = createNamespace('demo-x-form-minimum')
+
 const model = reactive<Record<string, unknown>>({})
 
 const schema: SchemaNode = {
@@ -44,16 +46,18 @@ function onSave() {
         'rules 支持 async-validator 格式，必填 + 正则校验。',
       ]"
     >
-      <section id="demo-minimum">
+      <section id="demo-minimum" :class="bem.b()">
         <XForm :schema="schema" :model="model" />
-        <el-button type="primary" class="mt-4" @click="onSave">提交</el-button>
+        <el-button type="primary" :class="bem.e('submit')" @click="onSave">提交</el-button>
       </section>
     </DemoFrame>
   </DocLayout>
 </template>
 
-<style scoped>
-.mt-4 {
-  margin-top: 16px;
+<style lang="scss">
+.#{$BEM_PREFIX}-demo-x-form-minimum {
+  &__submit {
+    margin-top: 16px;
+  }
 }
 </style>

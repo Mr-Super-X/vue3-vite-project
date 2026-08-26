@@ -53,15 +53,18 @@ function traverse(
       // 阶段 1.3：组件名有效性校验 —— 短名 + ElXxx 全名 + userComponents 三类必须命中其一
       const known = expandKnownComponents(ctx.knownComponents)
       if (known && !known.names.has(obj.component)) {
-        const msg = `未知组件名 "${obj.component}" —— 不在 EL 组件集或 userComponents 中（请检查拼写或确认是否已在 components prop 注册）`
-        if (import.meta.env.DEV) {
-          // dev 模式：console.warn 立即可见，prod 仅推 errors（debug banner 仅 dev 显示）
-          console.warn(
-            `[XForm][validate] ${msg}\n  keyPath: ${[...keyPath, 'component'].join('.')}`
-          )
+        // 全小写 → 原生 HTML 标签（如 'a' / 'span'），渲染层直接作为 h() 标签名，视为合法
+        if (obj.component !== obj.component.toLowerCase()) {
+          const msg = `未知组件名 "${obj.component}" —— 不在 EL 组件集或 userComponents 中（请检查拼写或确认是否已在 components prop 注册）`
+          if (import.meta.env.DEV) {
+            // dev 模式：console.warn 立即可见，prod 仅推 errors（debug banner 仅 dev 显示）
+            console.warn(
+              `[XForm][validate] ${msg}\n  keyPath: ${[...keyPath, 'component'].join('.')}`
+            )
+          }
+          errors.push({ keyPath: [...keyPath, 'component'], message: msg })
+          if (ctx.validateFirst) return
         }
-        errors.push({ keyPath: [...keyPath, 'component'], message: msg })
-        if (ctx.validateFirst) return
       }
     }
   }

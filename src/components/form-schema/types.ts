@@ -233,10 +233,11 @@ export interface AsyncOptionsConfig<T = unknown> {
  */
 export interface SchemaNode {
   /**
-   * 组件 —— 支持两种形式:
-   *  - string:组件名(如 'Input' / 'ElButton'),走 EL_COMPONENT_MAP 解析
+   * 组件 —— 支持三种形式:
+   *  - EL 组件名:string（内置短名如 'Input' / 全名 'ElInput' / components prop 注册名）
+   *  - 原生 HTML 标签:string（全小写，如 'a' / 'span' / 'div'），直接渲染原生元素
    *  - Component 对象:直接传入 Vue 组件实例/选项对象(无需在 XForm 的 components prop 注册)
-   * 推荐:string 形式 + XForm 集中注册;slots 内的 trigger 元素也支持直接传 Component 对象
+   * 推荐:EL 组件用 string 形式 + XForm 集中注册;slots 内的 trigger 元素也支持直接传 Component 对象
    */
   component?: string | object
   props?: Record<string, unknown>

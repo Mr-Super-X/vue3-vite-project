@@ -93,6 +93,9 @@ export function resolveComponentFor(
       /* fallthrough */
     }
   }
+  // 原生 HTML 标签（全小写，如 'a' / 'span' / 'div'）→ 返回字符串标签名，
+  // h() 对字符串直接渲染原生元素（与 EL 组件名的 PascalCase/ElXxx 约定不冲突）
+  if (name === name.toLowerCase()) return name
   return null
 }
 

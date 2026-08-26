@@ -57,6 +57,30 @@ describe('validate(schema, opts?)', () => {
     expect(result.errors[0]?.keyPath).toEqual(['children', 1, 'component'])
   })
 
+  it('全小写原生 HTML 标签（a/span）通过组件名校验', () => {
+    const schema = {
+      children: [
+        { component: 'a', children: '链接' },
+        { component: 'span', children: '文本' },
+      ],
+    }
+    const result = validate(schema, {
+      knownComponents: { builtin: new Set(['Input']), user: new Set() },
+    })
+    expect(result.isValid).toBe(true)
+  })
+
+  it('未知 PascalCase 组件名（拼写错误）仍报错', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const schema = { component: 'Inpurt' }
+    const result = validate(schema, {
+      knownComponents: { builtin: new Set(['Input']), user: new Set() },
+    })
+    expect(result.isValid).toBe(false)
+    expect(result.errors[0]?.keyPath).toEqual(['component'])
+    warnSpy.mockRestore()
+  })
+
   it('with validateFirst:true stops on first error', () => {
     const schema = {
       component: 1 as unknown as never,

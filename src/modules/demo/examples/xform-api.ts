@@ -40,7 +40,7 @@ export const propsItems: XFormApiItem[] = [
   {
     name: 'directives',
     type: 'Record<string, Directive>',
-    description: '自定义指令映射（schema 节点 directives 按名引用）',
+    description: '自定义指令映射（预留：当前节点 directives 请直接传 Directive 对象）',
   },
   {
     name: 'beforeChange',
@@ -74,6 +74,104 @@ export const slotsItems: XFormApiItem[] = [
     type: 'SchemaSlot',
     description:
       'XForm 组件本身无插槽；字段插槽经 schema 节点 slots 配置，支持三种内容：SchemaNode / 字符串 / slot 函数（含 scoped slot）',
+  },
+]
+
+/** SchemaNode 字段（schema DSL 简表）—— 完整定义见 types.ts */
+export const schemaNodeItems: XFormApiItem[] = [
+  {
+    name: 'component',
+    type: 'string | Component',
+    required: true,
+    description: '组件名（内置 EL 短名 / components prop 注册名）或直接传组件对象',
+  },
+  {
+    name: 'name / label',
+    type: 'string',
+    description: '表单域绑定路径（支持 lodash 路径，如 items[0].qty）/ 字段标签',
+  },
+  {
+    name: 'props',
+    type: 'Record<string, unknown>',
+    description: '组件属性（节点级，覆盖 componentProps 全局默认）',
+  },
+  {
+    name: 'on',
+    type: 'Record<string, Function | {{ fn }}>',
+    description: '字段事件：键为组件事件名，值为回调函数或沙箱表达式',
+  },
+  {
+    name: 'children',
+    type: 'SchemaNode | SchemaNode[] | string',
+    description: '子节点递归（嵌套布局 / 组件内容）',
+  },
+  {
+    name: 'rules',
+    type: 'string | RuleItem | Array<string | RuleItem>',
+    description: '校验规则：async-validator 兼容；字符串先查 rules 命名表，未命中退化为 required',
+  },
+  {
+    name: 'formItem',
+    type: 'boolean | FormItemConfig',
+    description:
+      '是否包 el-form-item（false 裸渲染）；对象形式可自定义 FormItem 组件 / props / slots',
+  },
+  {
+    name: 'modelProp',
+    type: 'string',
+    default: "'modelValue'",
+    description: '自定义 v-model 双向绑定属性名（默认 modelValue / update:modelValue）',
+  },
+  {
+    name: 'defaultValue',
+    type: 'unknown',
+    description: '挂载时填充到 model（仅字段未定义时）',
+  },
+  {
+    name: 'row / column / col',
+    type: 'RowConfig | number | boolean | ColConfig',
+    description: '栅格：行配置（gutter / 对齐 / 断点）/ 每行列数 / 列配置（span / offset / 断点）',
+  },
+  {
+    name: 'reaction',
+    type: 'ReactionConfig',
+    description:
+      '反应式覆盖 hidden / disabled / rules / props / label，支持 sync / debounce / throttle',
+  },
+  {
+    name: 'directives',
+    type: 'DirectiveConfig[]',
+    description: '节点级自定义指令（directive 对象 + value / arg / modifiers）',
+  },
+  {
+    name: 'asyncOptions',
+    type: 'AsyncOptionsConfig',
+    description: '异步选项数据源（Select / Cascader / TreeSelect / Autocomplete）',
+  },
+  {
+    name: 'slots',
+    type: 'Record<string, SchemaSlot>',
+    description: '插槽：SchemaNode / 字符串 / slot 函数（含 scoped slot）',
+  },
+  {
+    name: 'disabled',
+    type: 'ReactionValue<boolean>',
+    description: '字段禁用（支持反应式），el-form 自动跳过禁用字段校验',
+  },
+  {
+    name: 'permission',
+    type: "ReactionValue<'view' | 'edit' | 'hidden'>",
+    description: '字段权限三态：view 只读纯文本 / edit 可编辑 / hidden 不渲染',
+  },
+  {
+    name: 'ignore / hidden / key',
+    type: 'boolean | boolean | string | number',
+    description: '忽略（不参与字段索引）/ 隐藏（渲染但不可见）/ 渲染 key',
+  },
+  {
+    name: 'kind + array',
+    type: "'array' + ArrayNodeConfig",
+    description: '数组容器节点：itemSchema 每行子 schema + 增删移 / minItems / maxItems',
   },
 ]
 
