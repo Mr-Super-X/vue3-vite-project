@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import { reactive, nextTick } from 'vue'
+import { h, reactive, nextTick } from 'vue'
 import type { SchemaNode, XFormExpose } from './types'
 import XForm from './XForm.vue'
 import XFormSource from './XForm.vue?raw'
@@ -665,5 +665,76 @@ describe('XForm.vue 异步 crossValidator 竞态防护（H3a 回归）', () => {
     await flushPromises()
     await new Promise((r) => setTimeout(r, 150))
     expect(item.querySelector('.el-form-item__error')?.textContent).toBe('新错误')
+  })
+})
+
+describe('XForm.vue 顶层 key 稳定性（B-1a 回归）', () => {
+  // 源码级静态断言：index key 会让 reaction 切 ignore/hidden 时因索引漂移重挂载（焦点丢失）
+  it('模板顶层 v-for 不再使用 index 作 key', () => {
+    expect(XFormSource).not.toMatch(/:key="i"/)
+    expect(XFormSource).toContain('node.key ?? node.name ?? i')
+  })
+})
+
+describe('XForm.vue renderOpts 快照同步（B4 回归）', () => {
+  it('父级替换 model 引用后，v-model 绑定跟随新引用（不再静默断裂）', async () => {
+    const modelA = reactive({ name: 'AAA' })
+    const modelB = reactive({ name: 'BBB' })
+    const wrapper = mountXForm({
+      schema: { component: 'ElInput', name: 'name' } as unknown as SchemaNode,
+      model: modelA,
+    })
+    await flushPromises()
+    expect((wrapper.find('input').element as HTMLInputElement).value).toBe('AAA')
+    await wrapper.setProps({ model: modelB } as never)
+    await flushPromises()
+    // B4 修复前：renderOpts 捕获 setup 期 modelA，替换后仍显示 AAA
+    expect((wrapper.find('input').element as HTMLInputElement).value).toBe('BBB')
+  })
+})
+
+describe('XForm.vue 字段级重渲隔离（B-2 核心回归）', () => {
+  it('输入字段 A 只重渲 A，字段 B 的渲染计数不变', async () => {
+    let renderCountA = 0
+    let renderCountB = 0
+    const makeCountingInput = (onRender: () => void) => ({
+      props: ['modelValue'],
+      emits: ['update:modelValue'],
+      setup(props: { modelValue?: unknown }, { emit }: { emit: (e: string, v: unknown) => void }) {
+        return () => {
+          onRender()
+          return h('input', {
+            class: 'count-input',
+            value: props.modelValue as string,
+            onInput: (e: Event) => emit('update:modelValue', (e.target as HTMLInputElement).value),
+          })
+        }
+      },
+    })
+    const CountA = makeCountingInput(() => renderCountA++)
+    const CountB = makeCountingInput(() => renderCountB++)
+    const model = reactive({ a: '', b: '' })
+    const wrapper = mountXForm({
+      schema: {
+        children: [
+          { component: 'CountA', name: 'a' },
+          { component: 'CountB', name: 'b' },
+        ],
+      } as unknown as SchemaNode,
+      model,
+      components: { CountA, CountB },
+    })
+    await flushPromises()
+    const baseA = renderCountA
+    const baseB = renderCountB
+    expect(baseA).toBeGreaterThan(0)
+    expect(baseB).toBeGreaterThan(0)
+    // 在字段 A 输入 → model.a 变化
+    const inputA = wrapper.findAll('input.count-input')[0]!
+    ;(inputA.element as HTMLInputElement).value = 'x'
+    await inputA.trigger('input')
+    await flushPromises()
+    expect(renderCountA).toBeGreaterThan(baseA) // A 重渲
+    expect(renderCountB).toBe(baseB) // B 不重渲（B-2 修复前：全表单重建，B 同步 +1）
   })
 })

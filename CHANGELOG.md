@@ -4,6 +4,13 @@
 
 ### ✨ Features | 新特性
 
+* **form-schema:** 渲染层重构 B-2 —— 字段级组件化（性能核心）
+  - 新增 `SchemaField.vue` 字段级渲染容器：`renderToComponent(node)` 从 XForm 模板 render effect 下沉到每个字段自己的 render effect——`get(model)` 追踪收敛到字段粒度，**输入单字段只重渲该字段**（此前任一按键触发全表单 vnode 重建）
+  - XForm 模板三分支（column / row / 直排）由 `<component :is>` 改为 `<SchemaField :node :render-fn>`；el-form 的 provide/inject 沿祖先链不受中间组件影响
+  - 配套 `optsEpoch` 换代计数器：父级替换 props 引用（model/components/rules 等）时 B4 watch bump，全字段 effect 失效重渲——保住 B-1 的快照同步语义（日常输入不 bump，字段隔离不受影响）
+  - 防回归：XForm.spec +1（渲染计数法证明：输入字段 A 时字段 B 渲染计数为 0 增量）
+
+
 * **XForm 校验失败自动滚动（scrollToError）**
   - 新增 `scrollToError` / `scrollIntoViewOptions` props：透传 element-plus ElForm 原生滚动能力——字段规则失败滚到第一个 `.el-form-item.is-error`；跨字段 crossValidator 失败由 XForm 内部滚动到第一个错误字段（keyPath 末段）
   - 默认 false（与 element-plus 原生一致，不静默改变既有 validate() 行为）
@@ -63,6 +70,12 @@
   - **⚠ 安全注意**：`{{ fn }}` 函数表达式经 `toSafeDto` 净化 + dev 模式 `scanForForbidden` 黑名单扫描（覆盖 `window/eval/constructor/__proto__/process/Reflect/Proxy` 等），但**非真正沙箱**——schema 必须来自可信内部配置，禁止 API 动态下发或用户输入
 
 ### 🐛 Bug Fixes | 缺陷修复
+
+* **form-schema:** 渲染层重构 B-1（key 稳定 + props 快照同步）
+  - 顶层三处 v-for 由 `:key="i"`（index）改为 `node.key ?? node.name ?? i`——reaction 切换 ignore/hidden 导致节点顺序变化时不再因索引漂移重挂载（焦点丢失）
+  - **B4 快照断裂**：`useRenderSchemaNode` 的 opts 提取为 `renderOpts` 变量 + watch 同步 `props.model/components/rules/beforeChange/componentProps` 最新引用——父级替换 model 引用后渲染绑定不再静默失效（render 闭包统一 opts.xxx 惰性读取，无需重建）
+  - 防回归：XForm.spec +2（源码断言禁 index key / setProps 替换 model 绑定跟随）
+
 
 * **form-schema:** HIGH 批次 A' 修复（H2/H3/H10，非渲染层 HIGH 清零）
   - **H2 校验跑旧规则**：`validateForm`/`validateDetail` 的 `runCrossFieldValidation` 由 `props.schema`（原始快照）改为 `reactiveSchema.value`——reaction 动态改写的 crossValidator 规则在表单级校验中真正生效

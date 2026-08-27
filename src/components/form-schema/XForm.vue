@@ -13,10 +13,12 @@ import { useCrossFieldTrigger } from './composables/use-cross-field-trigger'
 import { useFormDirty } from './composables/use-form-dirty'
 import { useServerError } from './composables/use-server-error'
 import { useRenderSchemaNode } from './composables/render-schema-node'
+import type { RenderSchemaNodeOptions } from './composables/render-schema-node'
 import { matchTrigger } from './composables/match-trigger'
 import { DEFAULT_COMPONENT_MAP, DEFAULT_COMPONENT_PROPS } from './element-plus-adapter'
 import { mergeRowResponsive } from './composables/render-schema-node'
 import XFormDebugBanner from './XFormDebugBanner.vue'
+import SchemaField from './SchemaField.vue'
 import type { ValidateResult } from './types'
 import 'element-plus/dist/index.css'
 import './styles/element-form-overwrite.scss'
@@ -350,6 +352,8 @@ const topLevelLabelPosition = computed<'left' | 'right' | 'top'>(() => {
 function renderToComponent(
   node: SchemaNode | SchemaNode[] | string | undefined | null
 ): VNode | string | VNode[] | undefined {
+  // 订阅 optsEpoch：B4 watch 在 props 引用换代时 bump 它，字段 effect 随之失效重渲
+  void optsEpoch.value
   if (node === null || node === undefined) return undefined
   if (typeof node === 'string') return node
   if (Array.isArray(node)) return node.map(renderToComponent) as VNode[]
@@ -373,7 +377,7 @@ const mergedComponentProps = computed(() => ({
   ...props.componentProps,
 }))
 
-const renderInner = useRenderSchemaNode({
+const renderOpts: RenderSchemaNodeOptions = {
   model: props.model,
   components: props.components,
   beforeChange: props.beforeChange,
@@ -411,7 +415,32 @@ const renderInner = useRenderSchemaNode({
   },
   // P2-1:响应式断点感知(响应式 ColConfig 拍平)
   currentBreakpoint: currentBreakpoint,
-})
+}
+
+const renderInner = useRenderSchemaNode(renderOpts)
+
+// B4 修复：renderOpts 在 setup 期捕获 props 快照，父级替换引用（model/components/rules 等）
+// 后渲染绑定静默断裂 —— render 闭包统一经 opts.xxx 惰性读取，watch 同步最新引用即可
+/** opts 换代计数器 —— 父级替换 props 引用时 bump，让所有 SchemaField 的 render effect 失效重渲 */
+const optsEpoch = ref(0)
+
+watch(
+  () => [
+    props.model,
+    props.components,
+    props.rules,
+    props.beforeChange,
+    mergedComponentProps.value,
+  ],
+  () => {
+    renderOpts.model = props.model
+    renderOpts.components = props.components
+    renderOpts.rules = props.rules
+    renderOpts.beforeChange = props.beforeChange
+    renderOpts.componentProps = mergedComponentProps.value
+    optsEpoch.value++ // props 引用换代（日常输入不触发，字段级重渲隔离不受影响）
+  }
+)
 
 // getNames 现在直接查 schemaIndex 索引（O(1)），保留函数签名与原行为一致
 function getNames(includesIgnore = false): string[] {
@@ -468,18 +497,28 @@ if (import.meta.env.DEV) {
         <!-- 显式绑定 fieldErrors 到 DOM 属性让模板建立响应式依赖,触发重渲染 -->
         <div :data-field-errors="Object.keys(fieldErrors).join(',')" style="display: none"></div>
         <ElRow v-if="topLevelColumn" :gutter="(topLevelRow?.gutter ?? 0) as never">
-          <ElCol v-for="(node, i) in topLevelNodes" :key="i" :span="topLevelColSpan">
-            <component :is="renderToComponent(node)" />
+          <ElCol
+            v-for="(node, i) in topLevelNodes"
+            :key="node.key ?? node.name ?? i"
+            :span="topLevelColSpan"
+          >
+            <SchemaField :node="node" :render-fn="renderToComponent" />
           </ElCol>
         </ElRow>
         <ElRow v-else-if="topLevelRow" :gutter="(topLevelRow?.gutter ?? 0) as never">
-          <component v-for="(node, i) in topLevelNodes" :key="i" :is="renderToComponent(node)" />
+          <SchemaField
+            v-for="(node, i) in topLevelNodes"
+            :key="node.key ?? node.name ?? i"
+            :node="node"
+            :render-fn="renderToComponent"
+          />
         </ElRow>
-        <component
+        <SchemaField
           v-else
           v-for="(node, i) in topLevelNodes"
-          :key="i"
-          :is="renderToComponent(node)"
+          :key="node.key ?? node.name ?? i"
+          :node="node"
+          :render-fn="renderToComponent"
         />
       </ElForm>
     </div>
