@@ -10,18 +10,17 @@
        schema.column = 1 → 全部 child 包在同一个 row 内，每个 child 一个 col-24，
          配合 ElRow 默认 flex-wrap: wrap 自动垂直堆叠（col-24 占 100% 宽度）
        schema.column = N → 一个 row 包 N 个 col-N 水平排列
-     所以 col 才是「同辈 Card 的真实边界」。
-     之前 .el-card + margin-bottom 被 .el-col + :last-child 误命中（全归 0），
-     > .el-form > * + * 在 column: 1 时不生效（只有一个 row）。
-     给 .el-row > .el-col + .el-col 加 margin-top：
-       column: 1 垂直堆叠 → margin-top 让相邻 col 间距生效
-       column: N 水平排列 → margin-top 在 flex 项里通常被吸收，不影响视觉 */
-  .el-row > .el-col + .el-col {
-    margin-top: 16px;
+     用 row-gap（flex-wrap 容器专属：只控制 wrap 后的行间距，不影响同 row 内 col
+     水平对齐）替代之前的 .el-row > .el-col + .el-col margin-top：
+       之前方案在 column: N 时给同 row 内第二个 col 加 margin-top 导致错位
+       row-gap 只对 wrap 后的多 row 生效（column: 1 垂直堆叠场景），
+       同 row 内 col 水平排列不受影响（gap 是行间距而非列间距）*/
+  .el-row {
+    row-gap: 16px;
   }
-  /* 嵌套 Card（在父 Card body 内）的 col 间距略小，与外层区分层次 */
-  .el-card .el-row > .el-col + .el-col {
-    margin-top: 12px;
+  /* 嵌套 Card（在父 Card body 内）的 row-gap 略小，与外层区分层次 */
+  .el-card .el-row {
+    row-gap: 12px;
   }
 
   /* ArrayNode 容器内部 header 与 body 间距：
