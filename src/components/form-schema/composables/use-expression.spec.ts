@@ -14,6 +14,20 @@ describe('resolveFunctionExpression(raw)', () => {
     expect(fn!({ x: 10 })).toBe(11)
   })
 
+  it('事件参数按位置透传到表达式第二个形参（build-on-bindings 回归）', () => {
+    const fn = resolveFunctionExpression<(m: unknown, v: unknown) => string>(
+      '{{ (m, v) => m.feeType + ":" + v }}'
+    )
+    expect(fn).not.toBeNull()
+    expect(fn!({ feeType: '费用' }, '其他')).toBe('费用:其他')
+  })
+
+  it('单参求值路径（reaction / permission / readonly）行为不变（向后兼容）', () => {
+    const fn = resolveFunctionExpression<(m: unknown) => boolean>('{{ (m) => m.on === true }}')
+    expect(fn).not.toBeNull()
+    expect(fn!({ on: true })).toBe(true)
+  })
+
   it('returns null for non-string input', () => {
     expect(resolveFunctionExpression(123 as unknown as string)).toBeNull()
     expect(resolveFunctionExpression(null as unknown as string)).toBeNull()

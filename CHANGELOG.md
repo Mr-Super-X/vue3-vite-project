@@ -2,6 +2,13 @@
 
 ## 未发布
 
+### 🐛 Bug Fixes | 问题修复
+
+* **form-schema:** `{{ fn }}` 表达式事件参数透传修复（编译模板单参硬编码）
+  - 根因：`use-expression.ts` 编译模板 `return (${expr})(model)` 固定单参调用，`node.on` 绑定展开的事件实参在内层被丢弃——`{{ (m, v) => ... }}` 的 `v` 恒为 `undefined`（既有 XFormEvents demo 与 API 文档承诺形态静默失效）
+  - 修复：编译模板改为 `(model, ...__rest__)` 多参调用；reaction / permission / readonly 等单参求值路径传空数组，行为完全向后兼容
+  - 防回归：use-expression.spec +2（事件参数按位透传 / 单参路径兼容）；由 XFormExpression demo 浏览器实测暴露
+
 ### ✨ Features | 新特性
 
 * **form-schema:** 新增 `{{ fn }}` 动态脚本表达式 demo（XFormExpression）

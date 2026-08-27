@@ -1,4 +1,4 @@
-// SECURITY：用 new Function 替代 eval，隔离上层作用域，仅暴露 model 参数
+// SECURITY：用 new Function 替代 eval，隔离上层作用域，仅暴露 model 只读副本与组件事件参数
 // model 经 toSafeDto 净化：排除函数 / 原型链 / 循环引用 / 危险字段
 // 实际安全边界依赖 schema 来源约束（仅项目内部硬编码）
 // 危险标识符扫描已抽到 ./use-scan-forbidden.ts
@@ -46,14 +46,20 @@ export function resolveFunctionExpression<T extends (...a: unknown[]) => unknown
   const cacheKey = `${fnsVersion}:${raw}`
   const hit = EXPRESSION_CACHE.get(cacheKey)
   if (hit !== undefined) return hit as T | null
-  let compiled: ((model: unknown) => unknown) | null = null
+  let compiled: ((model: unknown, ...rest: unknown[]) => unknown) | null = null
   try {
     // 白名单函数注入表达式作用域：表达式可直接引用注册名（如 formatDate）
     const names = Object.keys(EXPRESSION_FNS)
-    const fn = new Function('model', ...names, `return (${m[1].trim()})(model)`) as (
-      ...args: unknown[]
-    ) => unknown
-    compiled = (model: unknown) => fn(toSafeDto(model), ...names.map((n) => EXPRESSION_FNS[n]))
+    // __rest 透传组件事件参数（on 绑定第 2 起的实参）；reaction / permission 等
+    // 单参求值路径传入空数组，调用形态与旧版保持一致
+    const fn = new Function(
+      'model',
+      '__rest',
+      ...names,
+      `return (${m[1].trim()})(model, ...__rest)`
+    ) as (model: unknown, rest: unknown[], ...whitelist: unknown[]) => unknown
+    compiled = (model: unknown, ...rest: unknown[]) =>
+      fn(toSafeDto(model), rest, ...names.map((n) => EXPRESSION_FNS[n]))
   } catch (err) {
     console.error('[XForm] Invalid function expression:', raw, err)
   }
