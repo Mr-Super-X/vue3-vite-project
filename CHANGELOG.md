@@ -40,6 +40,14 @@
   - ApiTable 收录「reaction.deps 字段速查」，sidebar 注册「反应式联动·deps 动机」
 
 
+* **form-schema:** 新增全局 disabled / 全局 readonly demo
+  - XFormDisabled / XFormFieldPermission 仅演示字段级 disabled / permission；本批补顶层 schema.disabled / 顶层 schema.readonly 的 3 种写法 + 优先级对比
+  - XFormGlobalDisabled：顶层 disabled 写法 3 种（字面量 / 函数 / {{ fn }} 表达式）+ RadioGroup 切换模式 + lockAll 开关联动；Card ② 对比字段级 props.disabled 与 permission: hidden 优先级
+  - XFormGlobalReadonly：顶层 readonly 写法 3 种（字面量 / 函数 / {{ fn }} 表达式）+ 整表 view 化对比字段级 permission 三态
+  - 与 disabled 区别明确写出：disabled 字段仍渲染控件但不可编辑；readonly 字段渲染为纯文本（view 态），跳过校验
+  - ApiTable 收录两份速查表，sidebar 注册「全局禁用」「全局只读」
+
+
 * **form-schema:** P2-3 数组行拖拽排序（array.draggable）
   - `ArrayNodeConfig.draggable: true`：数组行开启 HTML5 拖拽换位——dragstart 记录源行、drop 调 `moveItem(from, to)` 更新 model（默认 false 不改变现有行为；与既有「上移/下移」按钮并存）
   - 复用 H8 的行对象身份 key：拖拽换位后行 DOM 移动而非重挂载

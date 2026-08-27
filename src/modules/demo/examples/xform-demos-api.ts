@@ -746,6 +746,68 @@ export const expressionSandboxItems: XFormApiItem[] = [
   },
 ]
 
+// XFormGlobalDisabled —— 顶层 schema.disabled 字段速查
+export const globalDisabledItems: XFormApiItem[] = [
+  {
+    name: '顶层 schema.disabled',
+    type: 'ReactionValue<boolean>',
+    description:
+      '写在顶层 schema 上 = 整体禁用整个表单（透传 el-form disabled，与 labelPosition 同模式）',
+  },
+  {
+    name: '字面量 / 函数 / {{ fn }} 表达式',
+    type: 'boolean | (m) => boolean | FunctionExpression',
+    description: '三种写法等价；不支持 reaction 对象写法（顶层字段不是 ReactionConfig）',
+  },
+  {
+    name: '字段级 props.disabled',
+    type: 'boolean',
+    description: '节点 props.disabled 优先级高于顶层 schema.disabled；可单独锁定某些字段',
+  },
+  {
+    name: 'permission: hidden',
+    type: "ReactionValue<'view' | 'edit' | 'hidden'>",
+    description: '最高优先级；hidden 字段不渲染 DOM，不受顶层 disabled 影响',
+  },
+  {
+    name: '校验行为',
+    type: '—',
+    description: 'el-form 自动跳过 disabled 字段的校验（async-validator 行为）',
+  },
+]
+
+// XFormGlobalReadonly —— 顶层 schema.readonly 字段速查
+export const globalReadonlyItems: XFormApiItem[] = [
+  {
+    name: '顶层 schema.readonly',
+    type: 'ReactionValue<boolean>',
+    description:
+      '写在顶层 schema 上 = 所有字段按 view 态纯文本展示（复用 permission: view 渲染链路，不包 form-item、不走校验）',
+  },
+  {
+    name: '字面量 / 函数 / {{ fn }} 表达式',
+    type: 'boolean | (m) => boolean | FunctionExpression',
+    description: '三种写法等价；与 XFormExpression Section ① 演示的 readonly 表达式形态一致',
+  },
+  {
+    name: '与全局 disabled 区别',
+    type: '—',
+    description:
+      'disabled 字段仍渲染控件但不可编辑；readonly 字段渲染为纯文本（view 态），跳过校验',
+  },
+  {
+    name: '字段级 permission',
+    type: "ReactionValue<'view' | 'edit' | 'hidden'>",
+    description:
+      'permission: edit 始终可编辑（覆盖顶层 readonly）；permission: view 始终纯文本；permission: hidden 不渲染',
+  },
+  {
+    name: '优先级',
+    type: 'hidden > readonly(view) > edit',
+    description: '隐藏 > 只读 > 可编辑；字段级 permission: edit 可强制覆盖顶层 readonly',
+  },
+]
+
 // XFormReactionDeps —— reaction.deps 三动机
 export const reactionDepsItems: XFormApiItem[] = [
   {
