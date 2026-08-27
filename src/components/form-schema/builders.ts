@@ -206,7 +206,7 @@ function makeBuilder<C extends ComponentName>(
   ) => NodeBuilder<C, ComponentPropsRegistry[C]> & { [k: string]: unknown }
 }
 
-/** 18 个 component 类型的 builder 类（每个绑死 component 名） */
+/** 19 个 component 类型的基础 builder 类（每个绑死 component 名；另有 Ext 扩展类与 ArrayBuilder） */
 const InputBuilder = makeBuilder('Input')
 const SelectBuilder = makeBuilder('Select')
 const OptionBuilder = makeBuilder('Option')

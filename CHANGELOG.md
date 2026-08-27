@@ -64,6 +64,13 @@
 
 ### 🐛 Bug Fixes | 缺陷修复
 
+* **form-schema:** 文档与 API 表面补齐（收官）
+  - README 修正：`validate` 误写为回调签名（实为 `Promise<boolean>`）；props 表补齐 `zodSchema/scrollToError/scrollIntoViewOptions/componentProps`；实例方法清单补齐 18 个（新增 validateDetail/setFieldError/setFieldValidating/validateFromServer/addItem/removeItem/moveItem/isDirty 系）
+  - README schema 字段表：标题「14 个」更正为 25 个，补齐 asyncOptions/kind/array/disabled/permission/labelPosition 六行；内置组件数「18 个」更正为 20 个；示例路由 `/demo/x-form-*` 更正为实际的 `/demo/xform-*`
+  - README reaction 章节补充 `deps` 精确监听与循环预算说明
+  - `index.ts` 补齐导出：具名 `XForm` 组件、`builders` 全部 21 个工厂函数、`useFormDirty`、`useSchemaIndex`/`buildIndex` 及相关类型
+  - 注释勘误：types.ts「全量 17 字段」→ 25；builders.ts「18 个 builder 类」→ 19
+  - 防回归：index.spec 新增导出完备性断言
 * **form-schema:** 状态正确性专项修复（H4 / H8 / H9 / M1 / M2）
   - **H4 dirty 漏检**：`useFormDirty` 快照改 `cloneDeep`——此前存嵌套对象的活 reactive 引用，原位修改（`model.addr.city = x`）时快照同步变化，`isDirty` 恒漏检
   - **M2 validate 静默通过**：`elFormRef` 未绑定时 `validateForm` 由静默 `resolve(true)` 改为 `resolve(false)` + console.error（配置/时序错误不再伪装成校验通过）

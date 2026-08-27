@@ -1,6 +1,13 @@
 import { describe, it, expect, vi } from 'vitest'
 import { createApp, type Component } from 'vue'
-import FormSchemaPlugin from './index'
+import FormSchemaPlugin, {
+  XForm,
+  useFormDirty,
+  useSchemaIndex,
+  buildIndex,
+  xInput,
+  xArray,
+} from './index'
 import { validate } from './composables/use-validate'
 import { resolveElComponentName } from './element-plus-adapter'
 
@@ -30,5 +37,14 @@ describe('FormSchemaPlugin', () => {
   it('default export is installable via app.use', () => {
     const app = createApp({})
     expect(() => app.use(FormSchemaPlugin)).not.toThrow()
+  })
+
+  it('具名导出 XForm 组件 / builders / useFormDirty / useSchemaIndex', () => {
+    expect(XForm).toBeDefined()
+    expect(typeof xInput).toBe('function')
+    expect(typeof xArray).toBe('function')
+    expect(typeof useFormDirty).toBe('function')
+    expect(typeof useSchemaIndex).toBe('function')
+    expect(typeof buildIndex).toBe('function')
   })
 })

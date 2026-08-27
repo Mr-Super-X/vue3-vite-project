@@ -20,20 +20,24 @@ const schema = {
 }
 ```
 
-完整 demo 在 `/demo/x-form-minimum-demo`。
+完整 demo 在 `/demo/xform-minimum-demo`。
 
 ---
 
 ## props
 
-| 属性           | 类型                                           | 必填 | 说明                                     |
-| -------------- | ---------------------------------------------- | ---- | ---------------------------------------- |
-| `schema`       | `SchemaNode \| SchemaNode[]`                   | ✅   | 表单 schema                              |
-| `model`        | `Record<string, unknown>`                      |      | 响应式数据对象（需用 `reactive()` 包装） |
-| `components`   | `Record<string, Component>`                    |      | 自定义组件映射                           |
-| `rules`        | `Record<string, RuleItem>`                     |      | 校验规则命名引用                         |
-| `directives`   | `Record<string, Directive>`                    |      | 自定义指令映射                           |
-| `beforeChange` | `(item, newVal, oldVal) => unknown \| Promise` |      | 字段值变化前拦截                         |
+| 属性                    | 类型                                           | 必填 | 说明                                                         |
+| ----------------------- | ---------------------------------------------- | ---- | ------------------------------------------------------------ |
+| `schema`                | `SchemaNode \| SchemaNode[]`                   | ✅   | 表单 schema                                                  |
+| `model`                 | `Record<string, unknown>`                      |      | 响应式数据对象（需用 `reactive()` 包装）                     |
+| `components`            | `Record<string, Component>`                    |      | 自定义组件映射                                               |
+| `rules`                 | `Record<string, RuleItem>`                     |      | 校验规则命名引用                                             |
+| `directives`            | `Record<string, Directive>`                    |      | 自定义指令映射                                               |
+| `beforeChange`          | `(item, newVal, oldVal) => unknown \| Promise` |      | 字段值变化前拦截                                             |
+| `zodSchema`             | `ZodType`                                      |      | zod 校验 schema（配合 `validateWithZod()`）                  |
+| `scrollToError`         | `boolean`                                      |      | 校验失败自动滚动到第一个错误字段（默认 false）               |
+| `scrollIntoViewOptions` | `ScrollIntoViewOptions \| boolean`             |      | 滚动行为选项（如 `{ behavior: 'smooth', block: 'center' }`） |
+| `componentProps`        | `Record<string, Record<string, unknown>>`      |      | 按组件名注入默认 props（节点级 props 可覆盖）                |
 
 ---
 
@@ -46,40 +50,64 @@ const schema = {
 ```ts
 const formRef = ref()
 
-formRef.value?.validate((valid) => console.log(valid))
+// 校验（Promise 风格，非回调）
+await formRef.value?.validate() // → boolean（el-form 字段规则 + 跨字段 crossValidator）
+await formRef.value?.validateDetail() // → { isValid, errors: [{ keyPath, message }] }
 formRef.value?.resetFields()
 formRef.value?.clearValidate()
 formRef.value?.scrollToField('email')
-formRef.value?.getNames() // → ['email', 'name', ...]
+formRef.value?.getNames() // → ['email', 'name', ...]（includesIgnore=true 含 ignore 字段）
 formRef.value?.getRef('email') // → Component | HTMLElement | null
-formRef.value?.validateWithZod() // → { success, errors }
+formRef.value?.validateWithZod() // → { success, errors }（需配合 zodSchema prop）
+
+// 服务端错误回显
+formRef.value?.setFieldError('email', '邮箱已被占用') // 手动写入字段错误（422 场景）
+formRef.value?.setFieldValidating('email') // 标记校验中（loading 图标）
+formRef.value?.validateFromServer({ success: false, errors: { email: '已被占用' } }) // → 写入的错误条数
+
+// 数组节点操作（仅 kind: 'array' 节点）
+formRef.value?.addItem('items', { qty: 1 }) // 末尾追加一行
+formRef.value?.removeItem('items', 0) // 删除指定行
+formRef.value?.moveItem('items', 0, 2) // 行位置调整
+
+// dirty 状态追踪
+formRef.value?.isDirty() // → boolean
+formRef.value?.getDirtyFields() // → ['email', 'address.city', ...]
+formRef.value?.isTouched('email') // → boolean
+formRef.value?.resetDirty() // 当前状态设为新基线（提交后归零）
 ```
 
 ---
 
-## schema 字段（14 个）
+## schema 字段（25 个）
 
-| 字段           | 类型                                                 | 说明                                            |
-| -------------- | ---------------------------------------------------- | ----------------------------------------------- |
-| `component`    | `string`                                             | 组件名（短名 `'Input'` / 全名 `'ElInput'`）     |
-| `props`        | `Record<string, unknown>`                            | 组件 props                                      |
-| `on`           | `Record<string, Function \| string>`                 | 事件回调（string 是 `{{ (m) => ... }}` 表达式） |
-| `children`     | `SchemaNode \| SchemaNode[] \| string`               | 子节点                                          |
-| `label`        | `string`                                             | 标签文字                                        |
-| `name`         | `string`                                             | 字段名（双向绑定的 key）                        |
-| `key`          | `string \| number`                                   | 唯一标识                                        |
-| `rules`        | `string \| RuleItem \| Array`                        | 校验规则                                        |
-| `defaultValue` | `unknown`                                            | 字段初值（model 缺时填入）                      |
-| `modelProp`    | `string`                                             | 自定义 v-model 属性名（默认 `modelValue`）      |
-| `row`          | `RowConfig`                                          | 栅格行（gutter）                                |
-| `column`       | `number`                                             | 每行栅格数                                      |
-| `col`          | `boolean \| { span, offset }`                        | 子节点栅格列                                    |
-| `hidden`       | `boolean`                                            | 节点隐藏（仍创建，display:none）                |
-| `ignore`       | `boolean`                                            | 跳过渲染                                        |
-| `reaction`     | `ReactionConfig`                                     | 反应式联动                                      |
-| `directives`   | `DirectiveConfig[]`                                  | 自定义指令                                      |
-| `slots`        | `Record<string, SchemaNode>`                         | 具名插槽                                        |
-| `formItem`     | `boolean \| { component, props, directives, slots }` | 自定义 form-item 包装                           |
+| 字段            | 类型                                                 | 说明                                                               |
+| --------------- | ---------------------------------------------------- | ------------------------------------------------------------------ |
+| `component`     | `string`                                             | 组件名（短名 `'Input'` / 全名 `'ElInput'`）                        |
+| `props`         | `Record<string, unknown>`                            | 组件 props                                                         |
+| `on`            | `Record<string, Function \| string>`                 | 事件回调（string 是 `{{ (m) => ... }}` 表达式）                    |
+| `children`      | `SchemaNode \| SchemaNode[] \| string`               | 子节点                                                             |
+| `label`         | `string`                                             | 标签文字                                                           |
+| `name`          | `string`                                             | 字段名（双向绑定的 key）                                           |
+| `key`           | `string \| number`                                   | 唯一标识                                                           |
+| `rules`         | `string \| RuleItem \| Array`                        | 校验规则                                                           |
+| `defaultValue`  | `unknown`                                            | 字段初值（model 缺时填入）                                         |
+| `modelProp`     | `string`                                             | 自定义 v-model 属性名（默认 `modelValue`）                         |
+| `row`           | `RowConfig`                                          | 栅格行（gutter）                                                   |
+| `column`        | `number`                                             | 每行栅格数                                                         |
+| `col`           | `boolean \| { span, offset }`                        | 子节点栅格列                                                       |
+| `hidden`        | `boolean`                                            | 节点隐藏（仍创建，display:none，不参与校验）                       |
+| `ignore`        | `boolean`                                            | 跳过渲染                                                           |
+| `reaction`      | `ReactionConfig`                                     | 反应式联动（支持 `deps` 精确监听依赖路径）                         |
+| `directives`    | `DirectiveConfig[]`                                  | 自定义指令                                                         |
+| `asyncOptions`  | `AsyncOptionsConfig`                                 | 异步选项数据源（Select/Cascader/TreeSelect/Autocomplete）          |
+| `slots`         | `Record<string, SchemaNode>`                         | 具名插槽                                                           |
+| `formItem`      | `boolean \| { component, props, directives, slots }` | 自定义 form-item 包装                                              |
+| `kind`          | `'array'`                                            | 节点类型（`'array'` = 数组容器）                                   |
+| `array`         | `ArrayNodeConfig`                                    | 数组容器配置（`kind: 'array'` 时必填）                             |
+| `disabled`      | `ReactionValue<boolean>`                             | 字段禁用（字面量 / 函数 / 表达式；el-form 跳过 disabled 字段校验） |
+| `permission`    | `ReactionValue<'view' \| 'edit' \| 'hidden'>`        | 字段权限三态（view 只读 / edit 可编辑 / hidden 不渲染）            |
+| `labelPosition` | `'left' \| 'right' \| 'top'`                         | label 位置（仅顶层 schema 生效）                                   |
 
 ---
 
@@ -145,7 +173,7 @@ const selectNode: SchemaNodeFor<'Select'> = {
 }
 ```
 
-支持的 component 名（18 个内置）：`Input | Select | Option | Switch | DatePicker | TimePicker | TimeSelect | TreeSelect | Upload | Autocomplete | Transfer | RadioGroup | Radio | CheckboxGroup | Checkbox | Cascader | InputNumber | Slider | Card | FormItem`
+支持的 component 名（20 个内置 + ArrayNode 占位）：`Input | Select | Option | Switch | DatePicker | TimePicker | TimeSelect | TreeSelect | Upload | Autocomplete | Transfer | RadioGroup | Radio | CheckboxGroup | Checkbox | Cascader | InputNumber | Slider | Card | FormItem`
 
 自定义组件可通过 module augmentation 扩展类型推导（见下方“自定义组件类型扩展”）。
 
@@ -241,6 +269,22 @@ const node: SchemaNodeFor<'MyInput'> = {
 }
 ```
 
+**调度策略**：`strategy: 'sync' | 'debounce' | 'throttle'` + `delay`（ms）。
+
+**性能优化 —— `deps` 精确监听**：默认情况下含动态值的 reaction 会 deep watch 整棵 model（任意字段变化都触发求值）。声明 `deps` 后仅监听指定路径：
+
+```ts
+{
+  name: 'total',
+  reaction: {
+    deps: ['qty', 'price'],                     // 只有这两个字段变化才重算
+    label: (m) => `合计：${m.qty * m.price}`,   // 配合 deps 后，函数内写 model 也安全（不会自触发）
+  },
+}
+```
+
+> 联动函数内写 model 是被允许的（副作用），但未声明 deps 时会触发自身 deep watch 形成循环风险——XForm 内置单批次执行预算（50 次/flush）兜底并 console.error 告警；声明 deps 可从根上避免。
+
 ---
 
 ## 草稿持久化（useFormPersist）
@@ -317,10 +361,10 @@ dev 模式下 XFormDebugBanner 会自动在右下角浮窗显示 schema 校验�
 
 ## 示例
 
-| 路由                        | 内容                                 |
-| --------------------------- | ------------------------------------ |
-| `/demo/x-form-minimum-demo` | 最小可运行示例（5 分钟上手）         |
-| `/demo/x-form-base`         | 基础用法（5 字段 + 校验 + 重置）     |
-| `/demo/x-form-persist`      | 草稿持久化（自动保存 + 刷新恢复）    |
-| `/demo/x-form-nested`       | 复杂布局（Card 容器 + slots + 嵌套） |
-| `/demo/x-form-reaction`     | 反应式联动（3 种场景）               |
+| 路由                       | 内容                                 |
+| -------------------------- | ------------------------------------ |
+| `/demo/xform-minimum-demo` | 最小可运行示例（5 分钟上手）         |
+| `/demo/xform-base`         | 基础用法（5 字段 + 校验 + 重置）     |
+| `/demo/xform-persist`      | 草稿持久化（自动保存 + 刷新恢复）    |
+| `/demo/xform-nested`       | 复杂布局（Card 容器 + slots + 嵌套） |
+| `/demo/xform-reaction`     | 反应式联动（防抖/节流/禁用/隐藏）    |

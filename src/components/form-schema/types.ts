@@ -212,7 +212,7 @@ export interface AsyncOptionsConfig<T = unknown> {
 }
 
 /**
- * 节点定义（schema DSL 全量 17 字段）
+ * 节点定义（schema DSL 全量 25 字段）
  * - component 节点构造器（字符串=查找，Component 对象=直接使用）
  * - props     节点属性
  * - on        事件定义（回调或 {{ fn }} 表达式）
