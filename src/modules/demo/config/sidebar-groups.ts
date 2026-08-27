@@ -44,6 +44,7 @@ export const CN_NAMES: Record<string, string> = {
   XFormNested: '复杂布局',
   XFormPersist: '草稿持久化',
   XFormReaction: '反应式联动',
+  XFormReactionAdvanced: '反应式联动·进阶',
   XFormResponsive: '响应式布局',
   XFormSchemaIndex: '索引快照',
   XFormScrollToError: '错误自动滚动',

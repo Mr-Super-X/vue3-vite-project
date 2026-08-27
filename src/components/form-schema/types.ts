@@ -78,7 +78,9 @@ export type ReactionValue<T> = T | ((model: Record<string, unknown>) => T) | Fun
 /** 反应式配置：覆盖节点的任意字段 */
 export interface ReactionConfig {
   rules?: ReactionValue<SchemaNode['rules']>
-  props?: Record<string, ReactionValue<unknown>>
+  // reaction.props 整体作为 ReactionValue：applyReactionFields 对函数/字符串求值后整体覆盖 node.props
+  // （不是「逐字段反应式」——use-reaction 第 14-34 行 applyReactionFields 是直接赋值 target[key] = value）
+  props?: ReactionValue<Record<string, unknown>>
   label?: ReactionValue<string>
   hidden?: ReactionValue<boolean>
   /** 反应式调度策略

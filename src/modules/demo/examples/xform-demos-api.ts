@@ -746,7 +746,45 @@ export const expressionSandboxItems: XFormApiItem[] = [
   },
 ]
 
-// XFormDetailFill —— 详情数据回填要点
+// XFormReactionAdvanced —— reaction 进阶字段速查
+export const reactionAdvancedItems: XFormApiItem[] = [
+  {
+    name: 'reaction.deps',
+    type: 'string[]',
+    description:
+      'lodash 路径数组，精确监听依赖字段；声明后 watch 从 deep watch 整棵 model 降级为浅比较指定路径，性能与精度双提升',
+  },
+  {
+    name: '反应式 props / label / placeholder',
+    type: 'ReactionValue<...>',
+    description:
+      '任意 node 字段都可反应式覆盖；注意 use-reaction 是直接赋值非合并，reaction.props 返回完整 props 对象（不要只返回差异字段）',
+  },
+  {
+    name: '反应式 rules',
+    type: 'ReactionValue<RuleItem[]>',
+    description:
+      '与 reaction 联动校验：值变化 → 自动重算规则（必填/正则/长度等）；也可单独用 {{ fn }} 表达式直接写在 node.rules 字段',
+  },
+  {
+    name: 'reaction._effect 副作用模式',
+    type: '() => undefined',
+    description:
+      '约定：使用 reaction 内 _effect 字段承载副作用函数，返回 undefined 让 isEqual 跳过写入节点字段；与 deps 配合避免自触发循环',
+  },
+  {
+    name: '数组行内嵌 reaction',
+    type: 'kind: array + itemSchema.reaction',
+    description:
+      'use-reaction 递归注册 itemSchema 子树；行内 deps 用相对路径（不写 array.rows.0.qty），lodash get 在行 model 子树生效',
+  },
+  {
+    name: '与 on.change 协同',
+    type: 'on.change 闭包',
+    description:
+      '显式副作用入口：上级字段 on.change 闭包写 model 清空下级字段，比 reaction 监听更可预测（每次必触发，不依赖 deps 配置）',
+  },
+]
 export const detailFillItems: XFormApiItem[] = [
   {
     name: 'Object.assign(model, detail)',

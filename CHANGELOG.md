@@ -22,6 +22,15 @@
   - 新增 `xform-detail-fill-mock.ts` mock 详情接口（A 已发货 / B 草稿 / FAIL 失败三条路径）；ApiTable 收录「回填要点速查」，sidebar 注册「详情数据回填」
 
 
+* **form-schema:** 新增 reaction 反应式联动·进阶 demo（XFormReactionAdvanced）
+  - XFormReaction 基础 4 场景（debounce / throttle / sync-disabled / sync-hidden）之外补 4 类复杂业务联动
+  - ① 计算字段 + `deps` 精确监听：反应式 `_effect` 闭包写 model（qty × price × discount = total），deps 精确监听 3 个字段切断自触发；与现有 XFormReaction 把计数器写到 model 外的 hack 写法形成对比
+  - ② 跨字段级联清空：上级 `on.change` 闭包清空下级；下级 `reaction.props` 按上级值查字典动态切 options（省/市/区 + 商品/型号）
+  - ③ 反应式 label / props / rules 联动：单个 reaction 节点同时改 label 与 props（注意：use-reaction 是赋值非合并）；`rules` 用 `{{ fn }}` 表达式与 reaction 协同控制动态校验
+  - ④ 数组行内嵌 reaction：行内 `deps` 用相对路径（不写 `array.rows.0.qty`），`lodash get` 在行 model 子树自动解析；「含税」切换控制税率字段显隐并参与小计计算
+  - 新增 `cascader-data.ts` 静态字典（省/市/区、商品/型号、度量单位、折扣等级），ApiTable 收录「reaction 进阶字段速查」，sidebar 注册「反应式联动·进阶」
+
+
 * **form-schema:** P2-3 数组行拖拽排序（array.draggable）
   - `ArrayNodeConfig.draggable: true`：数组行开启 HTML5 拖拽换位——dragstart 记录源行、drop 调 `moveItem(from, to)` 更新 model（默认 false 不改变现有行为；与既有「上移/下移」按钮并存）
   - 复用 H8 的行对象身份 key：拖拽换位后行 DOM 移动而非重挂载
