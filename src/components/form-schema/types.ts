@@ -52,7 +52,7 @@ export interface RuleItem {
   max?: number | string
   message?: string
   validator?: (rule: unknown, value: unknown, cb: (err?: Error) => void) => void
-  trigger?: 'blur' | 'change' | 'manual' | (string | string[])[]
+  trigger?: 'blur' | 'change' | 'manual' | string | string[]
   /** async-validator 内置类型校验,如 'string' / 'email' / 'url' / 'number' 等 */
   type?: string
   /** 跨字段依赖：声明当前规则依赖的其他字段名（取自同 model，支持 lodash 路径解析如 'items[0].qty'）

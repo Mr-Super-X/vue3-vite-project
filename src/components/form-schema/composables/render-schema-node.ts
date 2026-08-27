@@ -99,12 +99,23 @@ export function resolveComponentFor(
   return null
 }
 
+/** 命名字符串规则未注册时静默降级为必填，排障极其困难 —— 必须显式告警暴露（通常是拼写错误） */
+function warnUnknownRule(name: string): Record<string, unknown> {
+  // 'required' 是 DSL 惯用简写（rules: 'required' ≡ [{ required: true }]，文档化行为），
+  // 不属于拼写错误，静默放行；其余未命中名才告警
+  if (name === 'required') return { required: true }
+  console.error(
+    `[XForm] 命名校验规则 "${name}" 未在 props.rules 中注册，已降级为 { required: true }（请检查拼写或注册该规则）`
+  )
+  return { required: true }
+}
+
 export function compileRules(rules: SchemaNode['rules'], propsRules: XFormProps['rules']): RuleArr {
   if (!rules) return []
   return (Array.isArray(rules) ? rules : [rules])
     .map((r) =>
       typeof r === 'string'
-        ? (propsRules?.[r] ?? { required: true })
+        ? (propsRules?.[r] ?? warnUnknownRule(r))
         : (r as Record<string, unknown>)
     )
     .filter((r): r is Record<string, unknown> => typeof r === 'object' && r !== null)

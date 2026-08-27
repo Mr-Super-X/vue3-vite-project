@@ -8,11 +8,12 @@
  * 提取到独立文件便于单元测试,避免 XForm.vue SFC 无法 export 的限制
  */
 export function matchTrigger(
-  ruleTrigger: 'blur' | 'change' | 'manual' | (string | string[])[] | undefined,
+  ruleTrigger: 'blur' | 'change' | 'manual' | string | string[] | undefined,
   eventType: 'blur' | 'change'
 ): boolean {
   if (ruleTrigger === undefined) return eventType === 'blur'
   if (ruleTrigger === 'manual') return false
-  if (Array.isArray(ruleTrigger)) return ruleTrigger.includes(eventType)
+  // flat() 兼容类型修复前运行时可写入的嵌套数组（[['blur','change']]）
+  if (Array.isArray(ruleTrigger)) return ruleTrigger.flat().includes(eventType)
   return ruleTrigger === eventType
 }

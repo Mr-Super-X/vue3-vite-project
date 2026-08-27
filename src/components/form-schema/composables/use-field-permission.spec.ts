@@ -8,7 +8,7 @@
  * - undefined / null / 非预期值 → 默认 'edit'
  * - view 态占位渲染（undefined / null / '' / boolean / array / 字符串）
  */
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import type { SchemaNode } from '../types'
 import {
   resolvePermission,
@@ -64,8 +64,9 @@ describe('resolvePermission / 函数', () => {
     expect(resolvePermission(node, { model: () => ({}) })).toBe('invalid')
   })
 
-  it('函数抛错 → 不应影响调用（沙箱或 runtime 错误时）', () => {
-    // 函数抛错 → 调用栈冒泡，调用方应 try/catch
+  it('函数抛错 → 降级 edit + console.error（① 回归：不再冒泡炸掉渲染）', () => {
+    // 渲染管线没有 try/catch，权限求值必须在内部消化异常
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const node: SchemaNode = {
       name: 'a',
       component: 'Input',
@@ -73,7 +74,25 @@ describe('resolvePermission / 函数', () => {
         throw new Error('boom')
       },
     }
-    expect(() => resolvePermission(node, { model: () => ({}) })).toThrow('boom')
+    expect(resolvePermission(node, { model: () => ({}) })).toBe('edit')
+    expect(spy).toHaveBeenCalledWith(
+      '[XForm] permission evaluation failed:',
+      expect.anything(),
+      expect.any(Error)
+    )
+    spy.mockRestore()
+  })
+
+  it('表达式求值抛错 → 降级 edit + console.error（① 回归）', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const node: SchemaNode = {
+      name: 'a',
+      component: 'Input',
+      permission: '{{ () => { throw new Error("boom") } }}',
+    }
+    expect(resolvePermission(node, { model: () => ({}) })).toBe('edit')
+    expect(spy).toHaveBeenCalled()
+    spy.mockRestore()
   })
 })
 

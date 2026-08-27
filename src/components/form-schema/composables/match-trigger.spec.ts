@@ -69,3 +69,17 @@ describe('matchTrigger(ruleTrigger, eventType)', () => {
     })
   })
 })
+
+describe('历史嵌套数组兼容（⑧ 类型修复前运行时可写入）', () => {
+  it("trigger=[['blur','change']] 嵌套数组拍平后正常匹配", () => {
+    const nested = [['blur', 'change']] as unknown as string[]
+    expect(matchTrigger(nested, 'blur')).toBe(true)
+    expect(matchTrigger(nested, 'change')).toBe(true)
+  })
+
+  it("trigger=[['blur']] 嵌套数组只响应 blur", () => {
+    const nested = [['blur']] as unknown as string[]
+    expect(matchTrigger(nested, 'blur')).toBe(true)
+    expect(matchTrigger(nested, 'change')).toBe(false)
+  })
+})

@@ -35,27 +35,34 @@ export function resolvePermission(
 ): FieldPermission {
   const raw = node.permission
   if (raw === undefined || raw === null) return 'edit'
-  // 函数
-  if (typeof raw === 'function') {
-    const model = opts.model() ?? {}
-    return (raw as (m: Record<string, unknown>) => FieldPermission)(model) ?? 'edit'
-  }
-  // 字符串
-  if (typeof raw === 'string') {
-    // 1) 尝试函数表达式解析（与 reaction 一致）
-    const fn = resolveFunctionExpression(raw)
-    if (fn) {
+  // 权限求值抛错（函数 / 表达式 / resolver 内部异常）不能炸掉整表单渲染 ——
+  // 降级为 edit（最安全的可见可编辑态）并给出可诊断日志
+  try {
+    // 函数
+    if (typeof raw === 'function') {
       const model = opts.model() ?? {}
-      const result = (fn as (m: Record<string, unknown>) => unknown)(model)
-      if (result === 'view' || result === 'edit' || result === 'hidden') return result
+      return (raw as (m: Record<string, unknown>) => FieldPermission)(model) ?? 'edit'
     }
-    // 2) 字面量或权限码 —— 走 resolver 映射
-    const resolver = opts.permissionResolver ?? ((p: string) => p as FieldPermission)
-    const resolved = resolver(raw)
-    if (resolved === 'view' || resolved === 'edit' || resolved === 'hidden') return resolved
+    // 字符串
+    if (typeof raw === 'string') {
+      // 1) 尝试函数表达式解析（与 reaction 一致）
+      const fn = resolveFunctionExpression(raw)
+      if (fn) {
+        const model = opts.model() ?? {}
+        const result = (fn as (m: Record<string, unknown>) => unknown)(model)
+        if (result === 'view' || result === 'edit' || result === 'hidden') return result
+      }
+      // 2) 字面量或权限码 —— 走 resolver 映射
+      const resolver = opts.permissionResolver ?? ((p: string) => p as FieldPermission)
+      const resolved = resolver(raw)
+      if (resolved === 'view' || resolved === 'edit' || resolved === 'hidden') return resolved
+      return 'edit'
+    }
+    return 'edit'
+  } catch (err) {
+    console.error('[XForm] permission evaluation failed:', raw, err)
     return 'edit'
   }
-  return 'edit'
 }
 
 /**

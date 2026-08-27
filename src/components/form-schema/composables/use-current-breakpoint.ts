@@ -1,4 +1,8 @@
 import { ref, onMounted, onUnmounted, type Ref } from 'vue'
+import { throttle } from 'lodash-es'
+
+/** resize 事件节流间隔：断点只有 6 档，高频 resize 逐帧更新是浪费 */
+const RESIZE_THROTTLE_MS = 100
 
 /** element-plus 标准 5 档断点 */
 export type Breakpoint = 'xs' | 'sm' | 'md' | 'lg' | 'xl'
@@ -41,14 +45,18 @@ export function useCurrentBreakpoint(): Ref<Breakpoint> {
     current.value = 'xs'
   }
 
+  // resize 走节流版；挂载时的首次 update() 保持同步（保证首帧断点正确）
+  const throttledUpdate = throttle(update, RESIZE_THROTTLE_MS)
+
   onMounted(() => {
     update()
-    window.addEventListener('resize', update)
+    window.addEventListener('resize', throttledUpdate)
   })
 
   onUnmounted(() => {
     if (typeof window !== 'undefined') {
-      window.removeEventListener('resize', update)
+      window.removeEventListener('resize', throttledUpdate)
+      throttledUpdate.cancel() // 清掉 trailing 待执行，避免卸载后还写 ref
     }
   })
 

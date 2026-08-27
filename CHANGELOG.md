@@ -64,6 +64,15 @@
 
 ### 🐛 Bug Fixes | 缺陷修复
 
+* **form-schema:** MEDIUM 批次 A1 健壮性修复（①④⑦⑧）
+  - 附带修复 demo：`XFormFieldPermission` 的「检查 DOM」按钮误报——检查范围从 `document.body` 收窄到 XForm 容器（页面介绍/API 表格/源码展示均含字段名文本，旧实现恒真误报 hidden 失败）
+  - **① 权限求值崩溃**：`use-field-permission` 的函数/表达式/resolver 求值全程 try/catch——此前权限函数抛错会在渲染期炸掉整表单；现降级为 edit + console.error
+  - **④ 未知规则静默降级**：`compileRules` 对未注册的命名字符串规则 console.error 告警（此前拼写错误静默变 `{ required: true }`，排障困难）；`rules: 'required'` 简写为文档化行为，特判静默不告警
+  - **⑦ resize 无节流**：`useCurrentBreakpoint` 的 resize 监听改 throttle 100ms（挂载首次仍同步），卸载时 `cancel()` 清 trailing
+  - **⑧ trigger 类型笔误**：`RuleItem.trigger` 由 `(string|string[])[]`（允许嵌套数组）更正为 `string | string[]`；`matchTrigger` 用 `flat()` 兼容存量嵌套写法
+  - 防回归：use-field-permission.spec 翻转 1 + 新增 1、render-schema-node.spec +2、use-current-breakpoint.spec 重写 +2、match-trigger.spec +2
+
+
 * **form-schema:** 文档与 API 表面补齐（收官）
   - README 修正：`validate` 误写为回调签名（实为 `Promise<boolean>`）；props 表补齐 `zodSchema/scrollToError/scrollIntoViewOptions/componentProps`；实例方法清单补齐 18 个（新增 validateDetail/setFieldError/setFieldValidating/validateFromServer/addItem/removeItem/moveItem/isDirty 系）
   - README schema 字段表：标题「14 个」更正为 25 个，补齐 asyncOptions/kind/array/disabled/permission/labelPosition 六行；内置组件数「18 个」更正为 20 个；示例路由 `/demo/x-form-*` 更正为实际的 `/demo/xform-*`

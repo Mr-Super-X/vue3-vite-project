@@ -125,9 +125,13 @@ async function onSave() {
 }
 
 const debugInfo = ref('')
+const formWrapRef = ref<HTMLElement | null>(null)
 function checkDOM() {
-  const hasInternal = document.body.innerHTML.includes('内部备注')
-  const hasAdmin = document.body.innerHTML.includes('管理备注')
+  // 只查 XForm 渲染容器内的 DOM —— 页面介绍/API 表格/源码展示都含「内部备注」字样，
+  // 用 document.body 检查会恒真误报
+  const html = formWrapRef.value?.innerHTML ?? ''
+  const hasInternal = html.includes('内部备注')
+  const hasAdmin = html.includes('管理备注')
   debugInfo.value = `DOM 检查：内部备注${hasInternal ? '存在（hidden 失败）' : '不存在（hidden 成功）'}；管理备注${hasAdmin ? '存在' : '不存在'}`
 }
 
@@ -153,7 +157,9 @@ const tocItems = [
       <section id="demo-field-permission">
         <DemoField label="三态权限演示" :code="permissionCode">
           <div :class="bem.b()">
-            <XForm ref="formRef" :schema="schema" :model="model" />
+            <div ref="formWrapRef">
+              <XForm ref="formRef" :schema="schema" :model="model" />
+            </div>
             <div :class="bem.e('actions')">
               <el-button type="primary" @click="onSave">保存</el-button>
               <el-button @click="checkDOM">检查 DOM</el-button>

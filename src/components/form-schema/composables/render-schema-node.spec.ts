@@ -579,3 +579,40 @@ describe('renderWithFormItem 的 key 优先级（H8 回归）', () => {
     expect(result.key).toBe('fi-a')
   })
 })
+
+describe('compileRules 未知命名规则告警（④ 回归）', () => {
+  it('未注册的字符串规则 → console.error 告警 + 降级 { required: true }', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { compileRules } = awaitImport()
+    const out = compileRules('emialRule' as never, {})
+    expect(out).toEqual([{ required: true }])
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining('emialRule'))
+    spy.mockRestore()
+  })
+
+  it('已注册的字符串规则 → 正常解析且不告警', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { compileRules } = awaitImport()
+    const rule = { type: 'email', message: '格式错误' }
+    const out = compileRules('emailRule' as never, { emailRule: rule } as never)
+    expect(out).toEqual([rule])
+    expect(spy).not.toHaveBeenCalled()
+    spy.mockRestore()
+  })
+})
+
+// compileRules 是同步导出，直接引用（避免在 it 内 dynamic import）
+import { compileRules as __compileRules } from './render-schema-node'
+function awaitImport() {
+  return { compileRules: __compileRules }
+}
+
+describe("compileRules 'required' 简写（④ 修正回归）", () => {
+  it("rules: 'required' 是 DSL 惯用简写 → 静默降级，不告警", () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const out = __compileRules('required' as never, {})
+    expect(out).toEqual([{ required: true }])
+    expect(spy).not.toHaveBeenCalled()
+    spy.mockRestore()
+  })
+})
