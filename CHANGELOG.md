@@ -64,6 +64,13 @@
 
 ### 🐛 Bug Fixes | 缺陷修复
 
+* **form-schema:** HIGH 批次 A' 修复（H2/H3/H10，非渲染层 HIGH 清零）
+  - **H2 校验跑旧规则**：`validateForm`/`validateDetail` 的 `runCrossFieldValidation` 由 `props.schema`（原始快照）改为 `reactiveSchema.value`——reaction 动态改写的 crossValidator 规则在表单级校验中真正生效
+  - **H3 异步 crossValidator 竞态**：双路径加每字段序号令牌——`triggerCrossFieldValidator`（blur/change 路径）与 `useCrossFieldTrigger.run`（反向兜底路径）；连续触发时旧 Promise 后返回直接丢弃（同步结论也会让在途旧 Promise 失效）
+  - **H10 builders 丢命名规则**：`required()` 对字符串规则（命名引用）由整体覆盖改为保留引用并追加 required
+  - 防回归：builders.spec +3、use-cross-field-trigger.spec +1、XForm.spec +2（reaction 改写规则生效 / 连续 focusout 竞态丢弃）
+
+
 * **form-schema:** MEDIUM 批次 A3 状态与生命周期修复（③⑥，MEDIUM 批次收官）
   - **③ persist 草稿污染**：`useFormPersist` 新增 `schemaVersion` 选项——草稿写版本信封 `{ __v, data }`，版本不匹配/无信封的旧草稿 load 时自动丢弃（防 schema 升级后多余 key 污染 model）；`load()` 由 `Object.assign` 浅合并改为深合并——嵌套对象逐层合并保留 schema 新增字段默认值，数组/原始值整体替换（防按索引合并残留旧尾项）
   - **⑥ guardField watcher 泄漏**：`useFormInstance` 路径 B 守护在 watch 回调内创建的 watcher 脱离 setup effect scope（组件卸载后仍存活）——收集 stop 句柄，`onScopeDispose` 统一清理（`getCurrentScope` 守卫裸调用）

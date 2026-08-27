@@ -591,3 +591,79 @@ describe('XForm.vue hidden 字段校验语义（H9 回归）', () => {
     await expect(exposed.validate()).resolves.toBe(false)
   })
 })
+
+describe('XForm.vue validate 跑 reaction 改写后的规则（H2 回归）', () => {
+  it('reaction 动态写入 crossValidator 后 validate 用新规则（不再读 props.schema 旧快照）', async () => {
+    const model = reactive({ strict: false, a: 'x', b: 'y' })
+    const wrapper = mountXForm({
+      schema: {
+        children: [
+          { component: 'Switch', name: 'strict' },
+          { component: 'ElInput', name: 'a' },
+          {
+            component: 'ElInput',
+            name: 'b',
+            reaction: {
+              rules: (m: Record<string, unknown>) =>
+                m.strict
+                  ? [
+                      {
+                        dependsOn: ['a'],
+                        crossValidator: (v: unknown, a: unknown) =>
+                          v === a ? true : 'strict 模式下必须与 a 一致',
+                      },
+                    ]
+                  : [],
+            },
+          },
+        ],
+      } as unknown as SchemaNode,
+      model,
+    })
+    await flushPromises()
+    const exposed = wrapper.vm as unknown as XFormExpose
+    await expect(exposed.validate()).resolves.toBe(true)
+    model.strict = true
+    await flushPromises()
+    await expect(exposed.validate()).resolves.toBe(false)
+  })
+})
+
+describe('XForm.vue 异步 crossValidator 竞态防护（H3a 回归）', () => {
+  it('连续 focusout 时旧 Promise 后返回不覆盖新结果（序号令牌）', async () => {
+    let resolveOld!: (v: true | string) => void
+    let call = 0
+    const crossValidator = vi.fn(() => {
+      call++
+      return call === 1
+        ? new Promise<true | string>((r) => {
+            resolveOld = r
+          })
+        : ('新错误' as const)
+    })
+    const model = reactive({ a: 'x', b: 'y' })
+    const wrapper = mountXForm({
+      schema: {
+        children: [
+          { component: 'ElInput', name: 'b' },
+          { component: 'ElInput', name: 'a', rules: [{ dependsOn: ['b'], crossValidator }] },
+        ],
+      } as unknown as SchemaNode,
+      model,
+    })
+    await flushPromises()
+    const inputs = wrapper.findAll('.el-form-item input')
+    const target = inputs[1]!.element
+    target.dispatchEvent(new FocusEvent('focusout', { bubbles: true })) // 第一次：慢 Promise
+    target.dispatchEvent(new FocusEvent('focusout', { bubbles: true })) // 第二次：同步 '新错误'
+    await flushPromises()
+    // element-plus validateStateDebounced(100ms) 驱动 DOM 错误态显示，需等过该窗口
+    await new Promise((r) => setTimeout(r, 150))
+    const item = inputs[1]!.element.closest('.el-form-item')!
+    expect(item.querySelector('.el-form-item__error')?.textContent).toBe('新错误')
+    resolveOld(true) // 旧结果后返回 → 应被丢弃，红字保留
+    await flushPromises()
+    await new Promise((r) => setTimeout(r, 150))
+    expect(item.querySelector('.el-form-item__error')?.textContent).toBe('新错误')
+  })
+})

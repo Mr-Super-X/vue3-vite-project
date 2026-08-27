@@ -90,7 +90,9 @@ class NodeBuilder<C extends ComponentName, P = ComponentPropsRegistry[C]> {
   required(message = '必填'): this {
     const n = this.node as { rules?: RuleItem[] | string }
     if (Array.isArray(n.rules)) n.rules.push({ required: true, message, trigger: 'blur' })
-    else if (typeof n.rules === 'string') n.rules = [{ required: true, message, trigger: 'blur' }]
+    // 字符串是命名规则引用 —— 保留引用并追加 required（此前整体覆盖导致命名规则丢失 H10）
+    else if (typeof n.rules === 'string')
+      n.rules = [n.rules, { required: true, message, trigger: 'blur' }] as never
     else n.rules = [{ required: true, message, trigger: 'blur' }]
     return this
   }

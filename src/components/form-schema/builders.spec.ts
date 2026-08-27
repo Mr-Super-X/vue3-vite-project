@@ -347,3 +347,29 @@ describe('xAutocomplete 链式', () => {
     expect(node.props?.placement).toBe('bottom-start')
   })
 })
+
+describe('builder required() 追加语义（H10 回归）', () => {
+  it(".rules('emailRule').required() → 命名引用保留 + required 追加（不再整体覆盖）", () => {
+    const node = xInput('email')
+      .rules('emailRule' as never)
+      .required('邮箱必填')
+      .build()
+    expect(node.rules).toEqual([
+      'emailRule',
+      { required: true, message: '邮箱必填', trigger: 'blur' },
+    ])
+  })
+
+  it('.required() 无既有 rules → 单条 required（行为不变）', () => {
+    const node = xInput('email').required('必填').build()
+    expect(node.rules).toEqual([{ required: true, message: '必填', trigger: 'blur' }])
+  })
+
+  it('.required() 连续调用 → 数组 push 追加（行为不变）', () => {
+    const node = xInput('email').required('第一条').required('第二条').build()
+    expect(node.rules).toEqual([
+      { required: true, message: '第一条', trigger: 'blur' },
+      { required: true, message: '第二条', trigger: 'blur' },
+    ])
+  })
+})

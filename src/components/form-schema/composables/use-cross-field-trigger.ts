@@ -52,6 +52,8 @@ export function useCrossFieldTrigger(opts: UseCrossFieldTriggerOptions): {
 } {
   let rules: ReverseRule[] = opts.crossRules()
   const stops: WatchStopHandle[] = []
+  // 每字段序号令牌：异步 crossValidator 连续触发时，旧 Promise 后返回不得覆盖新结果（H3）
+  const targetSeqMap = new Map<string, number>()
 
   /**
    * 内部实现：跑 rules 的核心逻辑
@@ -80,10 +82,14 @@ export function useCrossFieldTrigger(opts: UseCrossFieldTriggerOptions): {
       const depsValues = r.deps.map((d) => get(model, d))
       const cv = r.rule.crossValidator
       if (!cv) continue
+      // 同步/异步结果都要 bump 序号：后续的同步结论同样能让在途旧 Promise 失效
+      const seq = (targetSeqMap.get(r.target) ?? 0) + 1
+      targetSeqMap.set(r.target, seq)
       const result = cv(value, ...depsValues)
       if (result instanceof Promise) {
         result
           .then((res) => {
+            if (seq !== targetSeqMap.get(r.target)) return // 已有更新的触发，丢弃过期结果
             if (res === true) opts.clearValidate([r.target])
             else opts.setFieldError(r.target, res)
           })

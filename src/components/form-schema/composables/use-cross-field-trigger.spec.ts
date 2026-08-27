@@ -447,3 +447,40 @@ describe('useCrossFieldTrigger / 卸载清理', () => {
     expect(setFieldError).not.toHaveBeenCalled()
   })
 })
+
+describe('useCrossFieldTrigger / 异步竞态防护（H3 回归）', () => {
+  it('旧 Promise 后返回不覆盖新结果（序号令牌）', async () => {
+    let resolveOld!: (v: true | string) => void
+    let call = 0
+    const rules: ReverseRule[] = [
+      {
+        target: 'b',
+        deps: ['a'],
+        rule: {
+          dependsOn: 'a',
+          crossValidator: () => {
+            call++
+            return call === 1
+              ? new Promise<true | string>((r) => {
+                  resolveOld = r
+                })
+              : '新错误'
+          },
+          trigger: 'change',
+        },
+      },
+    ]
+    const model = reactive({ a: '1', b: 'x' })
+    const opts = makeOpts(rules, () => model)
+    const { trigger } = useCrossFieldTrigger(opts)
+
+    trigger('a') // 第一次：慢 Promise
+    trigger('a') // 第二次：同步返回 '新错误'
+    await nextTick()
+    expect(opts.setFieldError).toHaveBeenCalledWith('b', '新错误')
+    opts.setFieldError.mockClear()
+    resolveOld(true) // 旧 Promise 后返回 → 应被丢弃
+    await nextTick()
+    expect(opts.setFieldError).not.toHaveBeenCalled()
+  })
+})

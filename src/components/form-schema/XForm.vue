@@ -187,7 +187,7 @@ async function validateForm(): Promise<boolean> {
   if (!m) return true
   const ef = elFormRef.value
   if (!ef?.validate) {
-    const result = await runCrossFieldValidation(props.schema, m, props.rules)
+    const result = await runCrossFieldValidation(reactiveSchema.value, m, props.rules)
     applyCrossErrors(result)
     scrollToFirstError(firstCrossErrorField(result))
     return result.isValid
@@ -195,7 +195,7 @@ async function validateForm(): Promise<boolean> {
   // 等待 el-form 字段内规则校验完成（element-plus 2.x validate 接受 callback）
   const efValidate = ef.validate
   if (!efValidate) {
-    const result = await runCrossFieldValidation(props.schema, m, props.rules)
+    const result = await runCrossFieldValidation(reactiveSchema.value, m, props.rules)
     applyCrossErrors(result)
     scrollToFirstError(firstCrossErrorField(result))
     return result.isValid
@@ -208,7 +208,7 @@ async function validateForm(): Promise<boolean> {
   })
   if (!elValid) return false
   // 跑跨字段校验（可能含异步 crossValidator）
-  const result = await runCrossFieldValidation(props.schema, m, props.rules)
+  const result = await runCrossFieldValidation(reactiveSchema.value, m, props.rules)
   applyCrossErrors(result)
   scrollToFirstError(firstCrossErrorField(result))
   return result.isValid
@@ -249,7 +249,7 @@ function applyCrossErrors(result: ValidateResult): void {
 async function validateDetail(): Promise<ValidateResult> {
   const m = props.model
   if (!m) return { isValid: true, errors: [] }
-  return runCrossFieldValidation(props.schema, m, props.rules)
+  return runCrossFieldValidation(reactiveSchema.value, m, props.rules)
 }
 
 /**
@@ -265,6 +265,10 @@ async function validateDetail(): Promise<ValidateResult> {
  * - 失败 → setFieldError 红字提示
  * - 跳过空值字段(空值交给普通 required 校验处理)
  */
+
+/** 每字段触发序号 —— 异步 crossValidator 竞态防护（H3）：连续 blur/change 时旧 Promise 不得覆盖新结果 */
+const crossTriggerSeq = new Map<string, number>()
+
 async function triggerCrossFieldValidator(
   node: SchemaNode,
   eventType: 'blur' | 'change'
@@ -272,6 +276,9 @@ async function triggerCrossFieldValidator(
   if (!node.name || !node.rules) return
   const m = props.model
   if (!m) return
+  // 序号令牌：连续 blur/change 触发时，旧 Promise 后返回不得覆盖新结果（H3）
+  const triggerSeq = (crossTriggerSeq.get(node.name) ?? 0) + 1
+  crossTriggerSeq.set(node.name, triggerSeq)
   const rules = Array.isArray(node.rules) ? node.rules : [node.rules]
   const currentValue = get(m, node.name)
   // 空值跳过 cross 校验(留给 required / type 规则)
@@ -292,6 +299,7 @@ async function triggerCrossFieldValidator(
       console.error('[XForm] crossValidator blur trigger threw:', err)
       continue
     }
+    if (triggerSeq !== crossTriggerSeq.get(node.name)) return // 已有更新的触发，丢弃过期结果
     if (result === true) {
       setFieldError(node.name, '', '')
     } else {
