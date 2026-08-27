@@ -46,6 +46,7 @@ export const CN_NAMES: Record<string, string> = {
   XFormScrollToError: '错误自动滚动',
   XFormServerError: '服务端错误',
   XFormSlots: '插槽系统',
+  XFormValidateField: '逐字段校验',
   AsyncState: '异步状态容器',
   ErrorBoundary: '错误边界',
 }

@@ -98,35 +98,31 @@ const FILLED_FIELDS: Array<{
   { name: 'confidentiality', label: '保密协议', value: '已签署' },
 ]
 
-const schema: SchemaNode = {
-  column: 2,
-  row: { gutter: 24 },
-  children: [
-    ...FILLED_FIELDS.map((f) => ({
-      label: f.label,
-      name: f.name,
-      component: f.component ?? 'Input',
-      defaultValue: f.value,
-      props: { placeholder: f.label, ...(f.options ? { options: f.options } : {}) },
-    })),
-    {
-      label: '生产许可证号',
-      name: 'licenseNo',
-      component: 'Input',
-      col: { span: 12 },
-      rules: [{ required: true, message: '请输入生产许可证号', trigger: 'blur' }],
-      props: { placeholder: '必填 —— 留空点校验，页面自动滚动到这里' },
-    },
-    {
-      label: '许可证到期日',
-      name: 'expiryDate',
-      component: 'DatePicker',
-      defaultValue: '2027-12-31',
-      col: { span: 12 },
-      props: { valueFormat: 'YYYY-MM-DD', placeholder: '选择到期日' },
-    },
-  ],
-}
+const schemaChildren: SchemaNode['children'] = [
+  ...FILLED_FIELDS.map((f) => ({
+    label: f.label,
+    name: f.name,
+    component: f.component ?? 'Input',
+    defaultValue: f.value,
+    props: { placeholder: f.label, ...(f.options ? { options: f.options } : {}) },
+  })),
+  {
+    label: '生产许可证号',
+    name: 'licenseNo',
+    component: 'Input',
+    col: { span: 12 },
+    rules: [{ required: true, message: '请输入生产许可证号', trigger: 'blur' }],
+    props: { placeholder: '必填 —— 留空点校验，页面自动滚动到这里' },
+  },
+  {
+    label: '许可证到期日',
+    name: 'expiryDate',
+    component: 'DatePicker',
+    defaultValue: '2027-12-31',
+    col: { span: 12 },
+    props: { valueFormat: 'YYYY-MM-DD', placeholder: '选择到期日' },
+  },
+]
 
 // 仅声明必填字段（留空作滚动目标）；其余字段由 schema defaultValue 挂载填充
 const model = reactive<Record<string, unknown>>({
@@ -137,6 +133,15 @@ const formRef = ref<XFormExpose | null>(null)
 
 // 滚动开关（开 → 校验失败自动滚动；关 → 只显示红字不滚动）
 const scrollToError = ref(true)
+
+// scrollToError / scrollIntoViewOptions 在 schema 顶层配置（与 labelPosition 同模式，仅顶层生效）
+const schema = computed<SchemaNode>(() => ({
+  scrollToError: scrollToError.value,
+  scrollIntoViewOptions: { behavior: 'smooth', block: 'center' },
+  column: 2,
+  row: { gutter: 24 },
+  children: schemaChildren,
+}))
 const lastResult = ref('')
 
 async function onValidate() {
@@ -166,7 +171,7 @@ const tocItems = [
       :introductions="[
         'scrollToError 开启时，validate() 失败自动滚动到第一个错误字段：字段规则失败由 element-plus ElForm 原生处理，跨字段失败由 XForm 内部滚动。',
         '演示：前 8 个字段已由 defaultValue 自动填充，仅「生产许可证号」必填留空 —— 点校验后页面滚动到底部红字字段。',
-        '切换开关后再次校验对比滚动行为差异。',
+        '切换开关后再次校验对比滚动行为差异。scrollToError / scrollIntoViewOptions 在 schema 顶层配置（同 labelPosition）。',
       ]"
     >
       <section id="demo-scroll-to-error">
@@ -177,13 +182,7 @@ const tocItems = [
             <el-button type="primary" @click="onValidate">校验</el-button>
             <span :class="bem.e('result')">{{ lastResult }}</span>
           </div>
-          <XForm
-            ref="formRef"
-            :schema="schema"
-            :model="model"
-            :scroll-to-error="scrollToError"
-            :scroll-into-view-options="{ behavior: 'smooth', block: 'center' }"
-          />
+          <XForm ref="formRef" :schema="schema" :model="model" />
         </DemoField>
       </section>
 

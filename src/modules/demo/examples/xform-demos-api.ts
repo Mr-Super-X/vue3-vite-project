@@ -654,3 +654,23 @@ export const dirtyMethods: XFormApiItem[] = [
     description: '把当前状态标记为新基线（提交后归零 / 加载后初始化）',
   },
 ]
+
+export const validateFieldItems: XFormApiItem[] = [
+  {
+    name: 'validateField(name)',
+    type: '(name: string | string[]) => Promise<boolean>',
+    description:
+      '逐字段校验（透传 ElForm.validateField）：成功 true；校验失败 / el-form 未绑定 false（失败时错误已由 el-form-item 展示，未绑定 console.error 不静默通过）',
+  },
+  {
+    name: 'resetFields(names?)',
+    type: '(names?: string | string[]) => void',
+    description:
+      '重置字段：不传 names 全量重置（清空所有值与 externalErrors）；传 names 部分重置——只清指定字段的值与对应服务端错误，其他字段及红字保留',
+  },
+  {
+    name: 'setFieldError(name, message, state?)',
+    type: '实例方法',
+    description: '手动写入字段错误（服务端 422 场景）——本 demo 用它模拟双字段红字',
+  },
+]

@@ -4,6 +4,21 @@
 
 ### ✨ Features | 新特性
 
+* **form-schema:** el-form 实例级配置统一收敛到顶层 schema（与 labelPosition 同模式）
+  - 新增 schema 顶层字段：`labelWidth`（label 宽度）、`scrollToError`（校验失败自动滚动）、`scrollIntoViewOptions`（滚动行为选项）——均仅顶层 schema 生效，数组形式 schema 不生效
+  - 调整：`scrollToError` / `scrollIntoViewOptions` 从 XForm props 迁移到 schema 顶层配置（**breaking**：props 写法不再生效，迁移到 schema）；整体 `disabled` 同为顶层 schema 配置
+  - `XFormScrollToError` demo 同步改为 schema 顶层配置（schema computed + 开关联动）
+  - 防回归：XForm.spec 3 个 scrollToError 用例迁移为 schema 驱动 + 新增 labelWidth 用例
+  - 新增 `XFormValidateField.vue` demo：validateField(name) 逐字段校验 + resetFields(names) 部分重置双场景演示（含模拟服务端 422 对比），ApiTable + DocToc 完整结构，sidebar 已注册
+
+
+* **form-schema:** P1 API 补齐（validateField / 整体 disabled / 部分重置）
+  - `XFormExpose.validateField(name)`：透传 el-form 逐字段校验——成功 `true`；校验失败/el-form 未绑定均 `false`（与 `validate()` 风格一致，未绑定时 console.error 不静默通过）
+  - 整体禁用：顶层 schema 配置 `disabled`（透传 el-form disabled，与 labelPosition 同模式）——支持字面量/函数/表达式/reaction 动态求值，表单内所有组件一次性置灰
+  - `resetFields(names?)`：支持部分重置——透传字段名给 el-form，且只清指定字段的 externalErrors（全量重置行为不变）
+  - 防回归：use-form-instance.spec +5、XForm.spec +3（整体禁用生效/默认不变/validateField 集成）
+
+
 * **form-schema:** 渲染层重构 B-2 —— 字段级组件化（性能核心）
   - 新增 `SchemaField.vue` 字段级渲染容器：`renderToComponent(node)` 从 XForm 模板 render effect 下沉到每个字段自己的 render effect——`get(model)` 追踪收敛到字段粒度，**输入单字段只重渲该字段**（此前任一按键触发全表单 vnode 重建）
   - XForm 模板三分支（column / row / 直排）由 `<component :is>` 改为 `<SchemaField :node :render-fn>`；el-form 的 provide/inject 沿祖先链不受中间组件影响

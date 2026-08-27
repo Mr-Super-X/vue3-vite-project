@@ -269,7 +269,9 @@ export interface SchemaNode {
   /** 字段禁用状态（支持反应式：boolean / 函数 / 函数表达式）
    *  - 数组节点：仅控制容器按钮（行内控件需通过 reaction 自行级联）
    *  - props.disabled 优先级更高：用户显式写在 props 里的 disabled 会覆盖本字段
-   *  - el-form 自动跳过 disabled 字段的校验（async-validator 行为） */
+   *  - el-form 自动跳过 disabled 字段的校验（async-validator 行为）
+   *  - 【顶层 schema 生效】写在顶层 schema 上 = 整体禁用整个表单（透传 el-form disabled，
+   *    与 labelPosition 同模式；函数/表达式/reaction 动态求值均支持） */
   disabled?: ReactionValue<boolean>
   /**
    * 字段权限（阶段 2.3）：view / edit / hidden 三态
@@ -292,6 +294,23 @@ export interface SchemaNode {
    * 不能针对单个 el-form-item 设置（这是 element-plus 自身限制）
    */
   labelPosition?: 'left' | 'right' | 'top'
+  /**
+   * el-form label 宽度（仅顶层 schema 生效，与 labelPosition 同模式）：
+   * 如 '120px' 或 120；数组形式 schema 无顶层节点，配置不生效
+   */
+  labelWidth?: string | number
+  /**
+   * 校验失败自动滚动到第一个错误字段（仅顶层 schema 生效，与 labelPosition 同模式）：
+   * - 字段规则失败：ElForm 原生滚动到第一个 .el-form-item.is-error
+   * - 跨字段 crossValidator 失败：XForm 内部滚动到第一个错误字段（keyPath 末段）
+   * - 默认 false（与 element-plus 原生一致）
+   */
+  scrollToError?: boolean
+  /**
+   * 滚动行为选项（仅顶层 schema 生效，与 labelPosition 同模式，默认 true）：
+   * 如 { behavior: 'smooth', block: 'center' }
+   */
+  scrollIntoViewOptions?: ScrollIntoViewOptions | boolean
 }
 
 /**
@@ -395,6 +414,8 @@ export interface XFormProps {
     oldValue: unknown
   ) => unknown | Promise<unknown>
   zodSchema?: ZodType
+  /** 整体禁用（透传 element-plus ElForm.disabled）：表单内所有组件一次性置灰 */
+  disabled?: boolean
   /**
    * 校验失败自动滚动到第一个错误字段（透传 element-plus ElForm.scrollToError）
    * - 字段规则失败：ElForm 原生滚动到第一个 .el-form-item.is-error
@@ -426,7 +447,10 @@ export interface XFormExpose {
   /** 详细校验：含 el-form 字段内规则错误 + 跨字段 crossValidator 错误（keyPath + message） */
   validateDetail(): Promise<ValidateResult>
   clearValidate(): void
-  resetFields(): void
+  /** 重置字段（不传 names 全量重置；传 names 部分重置并同步清理对应服务端错误） */
+  resetFields(names?: string | string[]): void
+  /** 校验指定字段（透传 el-form validateField）：成功 true；失败/未绑定 false */
+  validateField(name: string | string[]): Promise<boolean>
   scrollToField(name: string): void
   validateWithZod(): { success: boolean; errors: import('zod').ZodError | null }
   /** 手动写入某个字段的错误信息（用于服务端 422 等场景） */

@@ -394,6 +394,7 @@ describe('XForm.vue scrollToError（校验失败自动滚动）', () => {
   it('el-form 字段规则失败 + scrollToError → ElForm 原生滚动到错误字段', async () => {
     const wrapper = mountXForm({
       schema: {
+        scrollToError: true, // 顶层 schema 配置（同 labelPosition 模式）
         children: [
           {
             component: 'ElInput',
@@ -404,7 +405,6 @@ describe('XForm.vue scrollToError（校验失败自动滚动）', () => {
         ],
       } as unknown as SchemaNode,
       model: reactive({ licenseNo: '' }),
-      scrollToError: true,
     })
     await flushPromises()
     const exposed = wrapper.vm as unknown as XFormExpose
@@ -427,7 +427,6 @@ describe('XForm.vue scrollToError（校验失败自动滚动）', () => {
         ],
       } as unknown as SchemaNode,
       model: reactive({ licenseNo: '' }),
-      scrollToError: false,
     })
     await flushPromises()
     const exposed = wrapper.vm as unknown as XFormExpose
@@ -440,6 +439,7 @@ describe('XForm.vue scrollToError（校验失败自动滚动）', () => {
   it('跨字段校验失败 + scrollToError → 滚动到第一个 cross 错误字段', async () => {
     const wrapper = mountXForm({
       schema: {
+        scrollToError: true, // 顶层 schema 配置
         children: [
           { component: 'ElInput', name: 'password' },
           {
@@ -450,7 +450,6 @@ describe('XForm.vue scrollToError（校验失败自动滚动）', () => {
         ],
       } as unknown as SchemaNode,
       model: reactive({ password: 'a', confirmPassword: 'b' }),
-      scrollToError: true,
     })
     await flushPromises()
     const exposed = wrapper.vm as unknown as XFormExpose
@@ -458,6 +457,20 @@ describe('XForm.vue scrollToError（校验失败自动滚动）', () => {
     expect(valid).toBe(false)
     await flushPromises()
     expect(scrollIntoViewSpy).toHaveBeenCalled()
+  })
+})
+
+describe('XForm.vue schema 顶层 labelWidth（与 labelPosition 同模式）', () => {
+  it('labelWidth: 120 → el-form label 宽度生效', async () => {
+    const wrapper = mountXForm({
+      schema: {
+        labelWidth: 120,
+        children: [{ component: 'ElInput', name: 'a', label: '字段A' }],
+      } as unknown as SchemaNode,
+      model: reactive({ a: '' }),
+    })
+    await flushPromises()
+    expect(wrapper.find('.el-form-item__label').attributes('style')).toContain('width: 120px')
   })
 })
 
@@ -780,5 +793,71 @@ describe('XForm.vue schema 重建不重挂载（B-3 集成回归）', () => {
     expect(setupCountB).toBe(1) // 新字段正常挂载一次
     expect(wrapper.findAll('input.keep-a').length).toBe(1)
     expect(wrapper.findAll('input.keep-b').length).toBe(1)
+  })
+})
+
+describe('XForm.vue 整体 disabled（顶层 schema 配置，P1 回归）', () => {
+  it('schema 顶层 disabled=true → 表单内输入组件全部禁用', async () => {
+    const wrapper = mountXForm({
+      schema: {
+        disabled: true, // 整体禁用：在 schema 中配置（与 labelPosition 同模式），不在 XForm 标签上
+        children: [
+          { component: 'ElInput', name: 'a' },
+          { component: 'ElInput', name: 'b' },
+        ],
+      } as unknown as SchemaNode,
+      model: reactive({ a: '', b: '' }),
+    })
+    await flushPromises()
+    const inputs = wrapper.findAll('input')
+    expect(inputs.length).toBe(2)
+    for (const input of inputs) {
+      expect((input.element as HTMLInputElement).disabled).toBe(true)
+    }
+  })
+
+  it('顶层 disabled 为函数 → 按 model 动态求值（locked 切换生效）', async () => {
+    const model = reactive({ locked: false, a: '' })
+    const wrapper = mountXForm({
+      schema: {
+        disabled: (m: Record<string, unknown>) => Boolean(m.locked),
+        children: [{ component: 'ElInput', name: 'a' }],
+      } as unknown as SchemaNode,
+      model,
+    })
+    await flushPromises()
+    expect((wrapper.find('input').element as HTMLInputElement).disabled).toBe(false)
+    model.locked = true
+    await flushPromises()
+    expect((wrapper.find('input').element as HTMLInputElement).disabled).toBe(true)
+  })
+
+  it('未配置顶层 disabled → 输入组件可用（默认行为不变）', async () => {
+    const wrapper = mountXForm({
+      schema: { component: 'ElInput', name: 'a' } as unknown as SchemaNode,
+      model: reactive({ a: '' }),
+    })
+    await flushPromises()
+    expect((wrapper.find('input').element as HTMLInputElement).disabled).toBe(false)
+  })
+})
+
+describe('XForm.vue expose validateField（P1 回归）', () => {
+  it('validateField(name)：必填字段空值 false，填充后 true', async () => {
+    const model = reactive({ email: '' })
+    const wrapper = mountXForm({
+      schema: {
+        component: 'ElInput',
+        name: 'email',
+        rules: [{ required: true, message: '请输入邮箱' }],
+      } as unknown as SchemaNode,
+      model,
+    })
+    await flushPromises()
+    const exposed = wrapper.vm as unknown as XFormExpose
+    await expect(exposed.validateField('email')).resolves.toBe(false)
+    model.email = 'a@b.com'
+    await flushPromises()
+    await expect(exposed.validateField('email')).resolves.toBe(true)
   })
 })

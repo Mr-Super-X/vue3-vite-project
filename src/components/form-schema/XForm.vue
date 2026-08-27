@@ -13,6 +13,7 @@ import { useCrossFieldTrigger } from './composables/use-cross-field-trigger'
 import { useFormDirty } from './composables/use-form-dirty'
 import { useServerError } from './composables/use-server-error'
 import { useRenderSchemaNode } from './composables/render-schema-node'
+import { resolveFunctionExpression } from './composables/use-expression'
 import type { RenderSchemaNodeOptions } from './composables/render-schema-node'
 import { matchTrigger } from './composables/match-trigger'
 import { DEFAULT_COMPONENT_MAP, DEFAULT_COMPONENT_PROPS } from './element-plus-adapter'
@@ -123,6 +124,7 @@ const {
   getRef,
   clearValidate,
   resetFields,
+  validateField,
   scrollToField,
   validateFormWithZod,
   addItem,
@@ -231,7 +233,7 @@ function firstCrossErrorField(result: ValidateResult): string | null {
  * - scrollToError 开关控制；nextTick 等红字渲染后再滚动
  */
 function scrollToFirstError(fieldName: string | null): void {
-  if (!fieldName || props.scrollToError === false) return
+  if (!fieldName || !topLevelScrollToError.value) return
   void nextTick(() => {
     scrollToField(fieldName)
   })
@@ -341,6 +343,44 @@ const topLevelColumn = computed(() => {
 const topLevelColSpan = computed(() =>
   topLevelColumn.value ? Math.floor(24 / topLevelColumn.value) : 24
 )
+/** 自描述整体禁用（从 schema 顶层 disabled 字段读取，与 labelPosition 同模式，不在 XForm 标签上配置） */
+const topLevelDisabled = computed<boolean>(() => {
+  const s = reactiveSchema.value
+  if (Array.isArray(s)) return false // 数组形式无顶层节点字段
+  const d = s.disabled
+  if (d === undefined || d === null) return false
+  if (typeof d === 'boolean') return d
+  // 函数 / {{ }} 表达式 / reaction 写入的动态值：统一在此求值（computed 追踪 model 与 reactiveSchema）
+  if (typeof d === 'function')
+    return Boolean((d as (m: Record<string, unknown>) => unknown)(props.model ?? {}))
+  if (typeof d === 'string') {
+    const fn = resolveFunctionExpression<(m: unknown) => unknown>(d)
+    return fn ? Boolean(fn(props.model ?? {})) : false
+  }
+  return false
+})
+
+/** 自描述 labelWidth（仅顶层 schema 生效，与 labelPosition 同模式；'' 为 el-form 默认自动宽度） */
+const topLevelLabelWidth = computed<string | number>(() => {
+  const s = reactiveSchema.value
+  if (Array.isArray(s)) return ''
+  return s.labelWidth ?? ''
+})
+
+/** 自描述 scrollToError（仅顶层 schema 生效，默认 false 与 element-plus 一致） */
+const topLevelScrollToError = computed(() => {
+  const s = reactiveSchema.value
+  if (Array.isArray(s)) return false
+  return s.scrollToError ?? false
+})
+
+/** 自描述 scrollIntoViewOptions（仅顶层 schema 生效，默认 true） */
+const topLevelScrollIntoViewOptions = computed(() => {
+  const s = reactiveSchema.value
+  if (Array.isArray(s)) return true
+  return s.scrollIntoViewOptions ?? true
+})
+
 // 阶段 2.4 增强:顶层 schema 自描述 labelPosition（从 schema 顶层字段读取,而非 XForm props）
 const topLevelLabelPosition = computed<'left' | 'right' | 'top'>(() => {
   const s = reactiveSchema.value
@@ -455,6 +495,7 @@ defineExpose({
   validateDetail,
   clearValidate,
   resetFields,
+  validateField,
   scrollToField,
   validateWithZod: validateFormWithZod,
   setFieldError,
@@ -486,9 +527,11 @@ if (import.meta.env.DEV) {
         ref="elFormRef"
         :model="(props.model ?? {}) as Record<string, unknown>"
         :validate-trigger="['change', 'blur']"
+        :disabled="topLevelDisabled"
         :label-position="topLevelLabelPosition"
-        :scroll-to-error="props.scrollToError"
-        :scroll-into-view-options="props.scrollIntoViewOptions ?? true"
+        :label-width="topLevelLabelWidth"
+        :scroll-to-error="topLevelScrollToError"
+        :scroll-into-view-options="topLevelScrollIntoViewOptions"
       >
         <!-- 阶段 2.4 修复：仅当顶层有 column 字段时,外层用 ElRow+ElCol 按 column 自动分配 span -->
         <!-- 否则直接渲染节点（节点的 col.responsive 由内部 wrapWithElCol 响应式拍平） -->

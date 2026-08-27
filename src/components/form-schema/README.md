@@ -26,18 +26,17 @@ const schema = {
 
 ## props
 
-| 属性                    | 类型                                           | 必填 | 说明                                                         |
-| ----------------------- | ---------------------------------------------- | ---- | ------------------------------------------------------------ |
-| `schema`                | `SchemaNode \| SchemaNode[]`                   | ✅   | 表单 schema                                                  |
-| `model`                 | `Record<string, unknown>`                      |      | 响应式数据对象（需用 `reactive()` 包装）                     |
-| `components`            | `Record<string, Component>`                    |      | 自定义组件映射                                               |
-| `rules`                 | `Record<string, RuleItem>`                     |      | 校验规则命名引用                                             |
-| `directives`            | `Record<string, Directive>`                    |      | 自定义指令映射                                               |
-| `beforeChange`          | `(item, newVal, oldVal) => unknown \| Promise` |      | 字段值变化前拦截                                             |
-| `zodSchema`             | `ZodType`                                      |      | zod 校验 schema（配合 `validateWithZod()`）                  |
-| `scrollToError`         | `boolean`                                      |      | 校验失败自动滚动到第一个错误字段（默认 false）               |
-| `scrollIntoViewOptions` | `ScrollIntoViewOptions \| boolean`             |      | 滚动行为选项（如 `{ behavior: 'smooth', block: 'center' }`） |
-| `componentProps`        | `Record<string, Record<string, unknown>>`      |      | 按组件名注入默认 props（节点级 props 可覆盖）                |
+| 属性             | 类型                                           | 必填 | 说明                                           |
+| ---------------- | ---------------------------------------------- | ---- | ---------------------------------------------- |
+| `schema`         | `SchemaNode \| SchemaNode[]`                   | ✅   | 表单 schema                                    |
+| `model`          | `Record<string, unknown>`                      |      | 响应式数据对象（需用 `reactive()` 包装）       |
+| `components`     | `Record<string, Component>`                    |      | 自定义组件映射                                 |
+| `rules`          | `Record<string, RuleItem>`                     |      | 校验规则命名引用                               |
+| `directives`     | `Record<string, Directive>`                    |      | 自定义指令映射                                 |
+| `beforeChange`   | `(item, newVal, oldVal) => unknown \| Promise` |      | 字段值变化前拦截                               |
+| `zodSchema`      | `ZodType`                                      |      | zod 校验 schema（配合 `validateWithZod()`）    |
+| `scrollToError`  | `boolean`                                      |      | 校验失败自动滚动到第一个错误字段（默认 false） |
+| `componentProps` | `Record<string, Record<string, unknown>>`      |      | 按组件名注入默认 props（节点级 props 可覆盖）  |
 
 ---
 
@@ -53,7 +52,8 @@ const formRef = ref()
 // 校验（Promise 风格，非回调）
 await formRef.value?.validate() // → boolean（el-form 字段规则 + 跨字段 crossValidator）
 await formRef.value?.validateDetail() // → { isValid, errors: [{ keyPath, message }] }
-formRef.value?.resetFields()
+formRef.value?.resetFields() // 全量重置；resetFields(['email']) 部分重置
+await formRef.value?.validateField('email') // → boolean（校验指定字段，透传 el-form）
 formRef.value?.clearValidate()
 formRef.value?.scrollToField('email')
 formRef.value?.getNames() // → ['email', 'name', ...]（includesIgnore=true 含 ignore 字段）
@@ -81,33 +81,36 @@ formRef.value?.resetDirty() // 当前状态设为新基线（提交后归零）
 
 ## schema 字段（25 个）
 
-| 字段            | 类型                                                 | 说明                                                               |
-| --------------- | ---------------------------------------------------- | ------------------------------------------------------------------ |
-| `component`     | `string`                                             | 组件名（短名 `'Input'` / 全名 `'ElInput'`）                        |
-| `props`         | `Record<string, unknown>`                            | 组件 props                                                         |
-| `on`            | `Record<string, Function \| string>`                 | 事件回调（string 是 `{{ (m) => ... }}` 表达式）                    |
-| `children`      | `SchemaNode \| SchemaNode[] \| string`               | 子节点                                                             |
-| `label`         | `string`                                             | 标签文字                                                           |
-| `name`          | `string`                                             | 字段名（双向绑定的 key）                                           |
-| `key`           | `string \| number`                                   | 唯一标识                                                           |
-| `rules`         | `string \| RuleItem \| Array`                        | 校验规则                                                           |
-| `defaultValue`  | `unknown`                                            | 字段初值（model 缺时填入）                                         |
-| `modelProp`     | `string`                                             | 自定义 v-model 属性名（默认 `modelValue`）                         |
-| `row`           | `RowConfig`                                          | 栅格行（gutter）                                                   |
-| `column`        | `number`                                             | 每行栅格数                                                         |
-| `col`           | `boolean \| { span, offset }`                        | 子节点栅格列                                                       |
-| `hidden`        | `boolean`                                            | 节点隐藏（仍创建，display:none，不参与校验）                       |
-| `ignore`        | `boolean`                                            | 跳过渲染                                                           |
-| `reaction`      | `ReactionConfig`                                     | 反应式联动（支持 `deps` 精确监听依赖路径）                         |
-| `directives`    | `DirectiveConfig[]`                                  | 自定义指令                                                         |
-| `asyncOptions`  | `AsyncOptionsConfig`                                 | 异步选项数据源（Select/Cascader/TreeSelect/Autocomplete）          |
-| `slots`         | `Record<string, SchemaNode>`                         | 具名插槽                                                           |
-| `formItem`      | `boolean \| { component, props, directives, slots }` | 自定义 form-item 包装                                              |
-| `kind`          | `'array'`                                            | 节点类型（`'array'` = 数组容器）                                   |
-| `array`         | `ArrayNodeConfig`                                    | 数组容器配置（`kind: 'array'` 时必填）                             |
-| `disabled`      | `ReactionValue<boolean>`                             | 字段禁用（字面量 / 函数 / 表达式；el-form 跳过 disabled 字段校验） |
-| `permission`    | `ReactionValue<'view' \| 'edit' \| 'hidden'>`        | 字段权限三态（view 只读 / edit 可编辑 / hidden 不渲染）            |
-| `labelPosition` | `'left' \| 'right' \| 'top'`                         | label 位置（仅顶层 schema 生效）                                   |
+| 字段                    | 类型                                                 | 说明                                                                                                   |
+| ----------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `component`             | `string`                                             | 组件名（短名 `'Input'` / 全名 `'ElInput'`）                                                            |
+| `props`                 | `Record<string, unknown>`                            | 组件 props                                                                                             |
+| `on`                    | `Record<string, Function \| string>`                 | 事件回调（string 是 `{{ (m) => ... }}` 表达式）                                                        |
+| `children`              | `SchemaNode \| SchemaNode[] \| string`               | 子节点                                                                                                 |
+| `label`                 | `string`                                             | 标签文字                                                                                               |
+| `name`                  | `string`                                             | 字段名（双向绑定的 key）                                                                               |
+| `key`                   | `string \| number`                                   | 唯一标识                                                                                               |
+| `rules`                 | `string \| RuleItem \| Array`                        | 校验规则                                                                                               |
+| `defaultValue`          | `unknown`                                            | 字段初值（model 缺时填入）                                                                             |
+| `modelProp`             | `string`                                             | 自定义 v-model 属性名（默认 `modelValue`）                                                             |
+| `row`                   | `RowConfig`                                          | 栅格行（gutter）                                                                                       |
+| `column`                | `number`                                             | 每行栅格数                                                                                             |
+| `col`                   | `boolean \| { span, offset }`                        | 子节点栅格列                                                                                           |
+| `hidden`                | `boolean`                                            | 节点隐藏（仍创建，display:none，不参与校验）                                                           |
+| `ignore`                | `boolean`                                            | 跳过渲染                                                                                               |
+| `reaction`              | `ReactionConfig`                                     | 反应式联动（支持 `deps` 精确监听依赖路径）                                                             |
+| `directives`            | `DirectiveConfig[]`                                  | 自定义指令                                                                                             |
+| `asyncOptions`          | `AsyncOptionsConfig`                                 | 异步选项数据源（Select/Cascader/TreeSelect/Autocomplete）                                              |
+| `slots`                 | `Record<string, SchemaNode>`                         | 具名插槽                                                                                               |
+| `formItem`              | `boolean \| { component, props, directives, slots }` | 自定义 form-item 包装                                                                                  |
+| `kind`                  | `'array'`                                            | 节点类型（`'array'` = 数组容器）                                                                       |
+| `array`                 | `ArrayNodeConfig`                                    | 数组容器配置（`kind: 'array'` 时必填）                                                                 |
+| `disabled`              | `ReactionValue<boolean>`                             | 字段禁用（字面量 / 函数 / 表达式）；**顶层 schema 配置 = 整体禁用整个表单**（与 labelPosition 同模式） |
+| `permission`            | `ReactionValue<'view' \| 'edit' \| 'hidden'>`        | 字段权限三态（view 只读 / edit 可编辑 / hidden 不渲染）                                                |
+| `labelPosition`         | `'left' \| 'right' \| 'top'`                         | label 位置（仅顶层 schema 生效）                                                                       |
+| `labelWidth`            | `string \| number`                                   | label 宽度（仅顶层 schema 生效，如 '120px' 或 120）                                                    |
+| `scrollToError`         | `boolean`                                            | 校验失败自动滚动到第一个错误字段（仅顶层 schema 生效，默认 false）                                     |
+| `scrollIntoViewOptions` | `ScrollIntoViewOptions \| boolean`                   | 滚动行为选项（仅顶层 schema 生效，默认 true）                                                          |
 
 ---
 

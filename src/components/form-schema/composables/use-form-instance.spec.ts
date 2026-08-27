@@ -9,6 +9,7 @@ function createMockElForm() {
     validate: vi.fn(),
     clearValidate: vi.fn(),
     resetFields: vi.fn(),
+    validateField: vi.fn(),
     scrollToField: vi.fn(),
     $: {
       name: { name: 'ElInput' } as unknown,
@@ -529,5 +530,77 @@ describe('useFormInstance / guard watcher 泄漏修复（⑥ 回归）', () => {
     validateState.value = 'success'
     await nextTick()
     expect(validateState.value).toBe('success')
+  })
+})
+
+describe('useFormInstance / validateField（P1 回归）', () => {
+  it('校验成功 resolve true', async () => {
+    const { elFormRef, validateField } = useFormInstance(
+      () => ({}),
+      () => undefined
+    )
+    const mock = createMockElForm()
+    mock.validateField = vi.fn(() => Promise.resolve(true))
+    elFormRef.value = mock as never
+    await expect(validateField('email')).resolves.toBe(true)
+    expect(mock.validateField).toHaveBeenCalledWith('email')
+  })
+
+  it('校验失败（element-plus reject errorsMap）resolve false', async () => {
+    const { elFormRef, validateField } = useFormInstance(
+      () => ({}),
+      () => undefined
+    )
+    const mock = createMockElForm()
+    mock.validateField = vi.fn(() => Promise.reject(new Error('invalid')))
+    elFormRef.value = mock as never
+    await expect(validateField('email')).resolves.toBe(false)
+  })
+
+  it('el-form 未绑定 → false + console.error（不静默通过）', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { validateField } = useFormInstance(
+      () => ({}),
+      () => undefined
+    )
+    await expect(validateField('email')).resolves.toBe(false)
+    expect(errSpy).toHaveBeenCalledWith(expect.stringContaining('el-form 实例未绑定'))
+    errSpy.mockRestore()
+  })
+})
+
+describe('useFormInstance / resetFields(names) 部分重置（P1 回归）', () => {
+  it('透传 names 给 el-form，且只清指定字段的 externalErrors', () => {
+    const externalErrors = ref<Record<string, { error: string; validateStatus: string }>>({
+      a: { error: '错误A', validateStatus: 'error' },
+      b: { error: '错误B', validateStatus: 'error' },
+    })
+    const { elFormRef, resetFields } = useFormInstance(
+      () => ({}),
+      () => undefined,
+      externalErrors as never
+    )
+    const mock = createMockElForm()
+    elFormRef.value = mock as never
+    resetFields(['a'])
+    expect(mock.resetFields).toHaveBeenCalledWith(['a'])
+    expect(externalErrors.value.a).toBeUndefined() // 指定字段已清
+    expect(externalErrors.value.b).toBeDefined() // 其他字段保留
+  })
+
+  it('不传 names → 全量重置并清空 externalErrors（行为不变）', () => {
+    const externalErrors = ref<Record<string, { error: string; validateStatus: string }>>({
+      a: { error: '错误A', validateStatus: 'error' },
+    })
+    const { elFormRef, resetFields } = useFormInstance(
+      () => ({}),
+      () => undefined,
+      externalErrors as never
+    )
+    const mock = createMockElForm()
+    elFormRef.value = mock as never
+    resetFields()
+    expect(mock.resetFields).toHaveBeenCalledWith(undefined)
+    expect(externalErrors.value).toEqual({})
   })
 })

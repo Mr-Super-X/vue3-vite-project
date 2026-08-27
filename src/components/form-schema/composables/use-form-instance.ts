@@ -18,7 +18,7 @@ export type ElFormInstance = {
    * 但 element-plus 2.x TS 类型声明为 () => void —— 这里用宽松签名补齐
    */
   clearValidate?: (props?: string | string[]) => void
-  resetFields?: () => void
+  resetFields?: (props?: string | string[]) => void
   scrollToField?: (name: string) => void
   /**
    * 校验指定字段 —— element-plus 2.x 实际支持但 TS 类型声明不完整
@@ -117,10 +117,37 @@ export function useFormInstance(
     elFormRef.value?.clearValidate?.(names)
   }
 
-  function resetFields(): void {
-    // resetFields 同时清空 externalErrors
-    if (externalErrors) externalErrors.value = {}
-    elFormRef.value?.resetFields?.()
+  function resetFields(names?: string | string[]): void {
+    // 部分重置：只清指定字段的 externalErrors；全量重置才清空整个 externalErrors
+    if (externalErrors) {
+      if (names !== undefined) {
+        const list = Array.isArray(names) ? names : [names]
+        for (const n of list) delete externalErrors.value[n]
+      } else {
+        externalErrors.value = {}
+      }
+    }
+    elFormRef.value?.resetFields?.(names)
+  }
+
+  /**
+   * 校验指定字段（透传 el-form validateField）—— 与 validate() 风格一致返回 boolean：
+   * 成功 true；校验失败 / el-form 未绑定均 false（失败时错误已由 el-form-item 展示）
+   */
+  async function validateField(name: string | string[]): Promise<boolean> {
+    const ef = elFormRef.value
+    if (!ef?.validateField) {
+      console.error(
+        '[XForm] validateField 调用时 el-form 实例未绑定（elFormRef 为空），已按校验失败处理'
+      )
+      return false
+    }
+    try {
+      await ef.validateField(name)
+      return true
+    } catch {
+      return false // 校验失败：element-plus reject errorsMap，错误已写入 form-item
+    }
   }
 
   function scrollToField(name: string): void {
@@ -337,6 +364,7 @@ export function useFormInstance(
     validateForm,
     clearValidate,
     resetFields,
+    validateField,
     scrollToField,
     validateFormWithZod,
     addItem,
