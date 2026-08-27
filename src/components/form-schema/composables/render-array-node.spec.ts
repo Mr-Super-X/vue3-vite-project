@@ -6,7 +6,7 @@
  * - 嵌套 children / formItem.slots / slots
  * - name 缺失时保持空
  */
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { h, type VNode } from 'vue'
 import type { SchemaNode } from '../types'
 import { rewriteNamePath, renderArrayNode } from './render-array-node'
@@ -233,5 +233,94 @@ describe('renderArrayNode / 行 key 稳定性（H8 回归）', () => {
     const out = rewriteNamePath({ name: 'qty', component: 'Input' }, 'items[0]', '.') as SchemaNode
     expect(out.name).toBe('items[0].qty')
     expect(out.key).toBeUndefined()
+  })
+})
+
+describe('renderArrayNode / 拖拽排序（P2-3 回归）', () => {
+  function makeOpts(model: Record<string, unknown>) {
+    return {
+      model,
+      render: () => h('div'),
+      arrayActions: { addItem: () => {}, removeItem: () => {}, moveItem: () => {} },
+    } as never
+  }
+
+  function collectRows(vnode: VNode | undefined): VNode[] {
+    const rows: VNode[] = []
+    const walk = (v: unknown): void => {
+      if (!v || typeof v !== 'object') return
+      if (Array.isArray(v)) {
+        v.forEach(walk)
+        return
+      }
+      const o = v as VNode
+      const cls = (o.props as Record<string, unknown> | undefined)?.class
+      if (typeof cls === 'string' && cls.endsWith('__row')) rows.push(o)
+      const ch = (o as unknown as Record<string, unknown>).children
+      if (Array.isArray(ch)) ch.forEach(walk)
+      else if (ch && typeof ch === 'object') {
+        for (const slot of Object.values(ch)) {
+          walk(typeof slot === 'function' ? (slot as () => unknown)() : slot)
+        }
+      }
+    }
+    walk(vnode)
+    return rows
+  }
+
+  const makeDndNode = (draggable?: boolean): SchemaNode =>
+    ({
+      name: 'items',
+      kind: 'array',
+      array: {
+        ...(draggable !== undefined ? { draggable } : {}),
+        itemSchema: { name: 'qty', component: 'Input' },
+      },
+    }) as SchemaNode
+
+  it('draggable 未配置 → 行无拖拽属性（默认行为不变）', () => {
+    const model: Record<string, unknown> = { items: [{ qty: 1 }] }
+    const rows = collectRows(renderArrayNode(makeDndNode(), makeOpts(model)))
+    expect(rows).toHaveLength(1)
+    expect((rows[0]!.props as Record<string, unknown>).draggable).toBeUndefined()
+  })
+
+  it('draggable: true → 行挂 draggable=true 且 drop 调 moveItem(from, to)', () => {
+    const moveItem = vi.fn()
+    const model: Record<string, unknown> = { items: [{ qty: 1 }, { qty: 2 }] }
+    const opts = {
+      model,
+      render: () => h('div'),
+      arrayActions: { addItem: () => {}, removeItem: () => {}, moveItem },
+    } as never
+    const rows = collectRows(renderArrayNode(makeDndNode(true), opts))
+    expect(rows).toHaveLength(2)
+    const rowProps = rows[1]!.props as Record<string, unknown>
+    expect(rowProps.draggable).toBe(true)
+    // 模拟从第 1 行（index 0）拖到第 2 行（index 1）
+    const preventDefault = vi.fn()
+    ;(rowProps.onDrop as (e: unknown) => void)({
+      preventDefault,
+      dataTransfer: { getData: () => '0' },
+    })
+    expect(preventDefault).toHaveBeenCalled()
+    expect(moveItem).toHaveBeenCalledWith('items', 0, 1)
+  })
+
+  it('drop 到自身位置 → 不触发 moveItem', () => {
+    const moveItem = vi.fn()
+    const model: Record<string, unknown> = { items: [{ qty: 1 }, { qty: 2 }] }
+    const opts = {
+      model,
+      render: () => h('div'),
+      arrayActions: { addItem: () => {}, removeItem: () => {}, moveItem },
+    } as never
+    const rows = collectRows(renderArrayNode(makeDndNode(true), opts))
+    const rowProps = rows[1]!.props as Record<string, unknown>
+    ;(rowProps.onDrop as (e: unknown) => void)({
+      preventDefault: () => {},
+      dataTransfer: { getData: () => '1' }, // from === 目标 index
+    })
+    expect(moveItem).not.toHaveBeenCalled()
   })
 })

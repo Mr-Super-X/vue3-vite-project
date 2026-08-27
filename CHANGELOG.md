@@ -4,6 +4,26 @@
 
 ### ✨ Features | 新特性
 
+* **form-schema:** P2-3 数组行拖拽排序（array.draggable）
+  - `ArrayNodeConfig.draggable: true`：数组行开启 HTML5 拖拽换位——dragstart 记录源行、drop 调 `moveItem(from, to)` 更新 model（默认 false 不改变现有行为；与既有「上移/下移」按钮并存）
+  - 复用 H8 的行对象身份 key：拖拽换位后行 DOM 移动而非重挂载
+  - 防回归：render-array-node.spec +3（默认无拖拽属性 / drop 调 moveItem / 拖到自身不触发）
+
+
+* **form-schema:** P2-2 表达式白名单函数表（expressionFunctions）
+  - `XFormProps.expressionFunctions`：注册后 `{{ }}` 表达式可直接引用注册名，如 `{ formatDate: fn }` → `{{ (m) => formatDate(m.date) }}`——业务格式化/转换逻辑不必内联进 schema
+  - 实现：编译期把注册名注入 `new Function('model', ...names)` 作用域；编译缓存按 `fnsVersion` 失效（函数表变更旧缓存不命中）
+  - 与黑名单扫描互补（注册名来自可信应用代码，仍非真正沙箱）；模块级注册多实例共享，scope 销毁自动清空
+  - 防回归：use-expression.spec +3（注册可用 / 未注册 ReferenceError / 版本失效重编译）
+
+
+* **form-schema:** P2-1 整体 readonly 只读模式（顶层 schema 配置）
+  - schema 顶层新增 `readonly` 字段（与 disabled/labelPosition 同模式）：true 时所有字段按 view 态纯文本展示（复用 permission: 'view' 渲染链路，不包 formItem、不走校验）
+  - 优先级：hidden > readonly(view) > edit；支持字面量 / 函数 / 函数表达式 / reaction 动态求值（computed 追踪 model 自动切换）
+  - 字段级只读继续用 `permission: 'view'`（readonly 仅顶层生效，职责不重叠）
+  - 防回归：XForm.spec +4（静态只读 / 函数动态切换 / hidden 优先 / 默认不变）
+
+
 * **form-schema:** el-form 实例级配置统一收敛到顶层 schema（与 labelPosition 同模式）
   - 新增 schema 顶层字段：`labelWidth`（label 宽度）、`scrollToError`（校验失败自动滚动）、`scrollIntoViewOptions`（滚动行为选项）——均仅顶层 schema 生效，数组形式 schema 不生效
   - 调整：`scrollToError` / `scrollIntoViewOptions` 从 XForm props 迁移到 schema 顶层配置（**breaking**：props 写法不再生效，迁移到 schema）；整体 `disabled` 同为顶层 schema 配置

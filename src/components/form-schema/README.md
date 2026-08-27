@@ -26,17 +26,17 @@ const schema = {
 
 ## props
 
-| 属性             | 类型                                           | 必填 | 说明                                           |
-| ---------------- | ---------------------------------------------- | ---- | ---------------------------------------------- |
-| `schema`         | `SchemaNode \| SchemaNode[]`                   | ✅   | 表单 schema                                    |
-| `model`          | `Record<string, unknown>`                      |      | 响应式数据对象（需用 `reactive()` 包装）       |
-| `components`     | `Record<string, Component>`                    |      | 自定义组件映射                                 |
-| `rules`          | `Record<string, RuleItem>`                     |      | 校验规则命名引用                               |
-| `directives`     | `Record<string, Directive>`                    |      | 自定义指令映射                                 |
-| `beforeChange`   | `(item, newVal, oldVal) => unknown \| Promise` |      | 字段值变化前拦截                               |
-| `zodSchema`      | `ZodType`                                      |      | zod 校验 schema（配合 `validateWithZod()`）    |
-| `scrollToError`  | `boolean`                                      |      | 校验失败自动滚动到第一个错误字段（默认 false） |
-| `componentProps` | `Record<string, Record<string, unknown>>`      |      | 按组件名注入默认 props（节点级 props 可覆盖）  |
+| 属性                  | 类型                                           | 必填 | 说明                                                             |
+| --------------------- | ---------------------------------------------- | ---- | ---------------------------------------------------------------- |
+| `schema`              | `SchemaNode \| SchemaNode[]`                   | ✅   | 表单 schema                                                      |
+| `model`               | `Record<string, unknown>`                      |      | 响应式数据对象（需用 `reactive()` 包装）                         |
+| `components`          | `Record<string, Component>`                    |      | 自定义组件映射                                                   |
+| `rules`               | `Record<string, RuleItem>`                     |      | 校验规则命名引用                                                 |
+| `directives`          | `Record<string, Directive>`                    |      | 自定义指令映射                                                   |
+| `beforeChange`        | `(item, newVal, oldVal) => unknown \| Promise` |      | 字段值变化前拦截                                                 |
+| `zodSchema`           | `ZodType`                                      |      | zod 校验 schema（配合 `validateWithZod()`）                      |
+| `componentProps`      | `Record<string, Record<string, unknown>>`      |      | 按组件名注入默认 props（节点级 props 可覆盖）                    |
+| `expressionFunctions` | `Record<string, Function>`                     |      | 白名单函数表：{{ }} 表达式可直接引用注册名（模块级，多实例共享） |
 
 ---
 
@@ -79,7 +79,7 @@ formRef.value?.resetDirty() // 当前状态设为新基线（提交后归零）
 
 ---
 
-## schema 字段（25 个）
+## schema 字段（29 个）
 
 | 字段                    | 类型                                                 | 说明                                                                                                   |
 | ----------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
@@ -104,8 +104,9 @@ formRef.value?.resetDirty() // 当前状态设为新基线（提交后归零）
 | `slots`                 | `Record<string, SchemaNode>`                         | 具名插槽                                                                                               |
 | `formItem`              | `boolean \| { component, props, directives, slots }` | 自定义 form-item 包装                                                                                  |
 | `kind`                  | `'array'`                                            | 节点类型（`'array'` = 数组容器）                                                                       |
-| `array`                 | `ArrayNodeConfig`                                    | 数组容器配置（`kind: 'array'` 时必填）                                                                 |
+| `array`                 | `ArrayNodeConfig`                                    | 数组容器配置（`kind: 'array'` 时必填；`draggable: true` 开启行拖拽排序）                               |
 | `disabled`              | `ReactionValue<boolean>`                             | 字段禁用（字面量 / 函数 / 表达式）；**顶层 schema 配置 = 整体禁用整个表单**（与 labelPosition 同模式） |
+| `readonly`              | `ReactionValue<boolean>`                             | 整体只读（**仅顶层 schema 生效**）：所有字段按 view 态纯文本展示；字段级只读用 `permission: 'view'`    |
 | `permission`            | `ReactionValue<'view' \| 'edit' \| 'hidden'>`        | 字段权限三态（view 只读 / edit 可编辑 / hidden 不渲染）                                                |
 | `labelPosition`         | `'left' \| 'right' \| 'top'`                         | label 位置（仅顶层 schema 生效）                                                                       |
 | `labelWidth`            | `string \| number`                                   | label 宽度（仅顶层 schema 生效，如 '120px' 或 120）                                                    |

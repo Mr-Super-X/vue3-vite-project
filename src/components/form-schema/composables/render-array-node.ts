@@ -129,11 +129,34 @@ export function renderArrayNode(
           col: mergeColResponsive((rewritten as SchemaNode).col, opts.currentBreakpoint?.value),
         } as SchemaNode)
       : undefined
+    // P2-3 拖拽排序：draggable 开启时整行可拖（dragover 高亮目标行，drop 调 moveItem 换位）
+    const dndProps =
+      cfg.draggable === true
+        ? {
+            draggable: true,
+            onDragstart: (e: DragEvent) => {
+              e.dataTransfer?.setData('text/xform-array-row', String(index))
+              if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move'
+            },
+            onDragover: (e: DragEvent) => {
+              e.preventDefault() // 必须 preventDefault 才允许 drop
+              if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+            },
+            onDrop: (e: DragEvent) => {
+              e.preventDefault()
+              const from = Number(e.dataTransfer?.getData('text/xform-array-row'))
+              if (Number.isInteger(from) && from !== index) {
+                opts.arrayActions?.moveItem(listName, from, index)
+              }
+            },
+          }
+        : {}
     return h(
       'div',
       {
         key: `array-${listName}-${rowKey}`,
         class: `${typeof node.component === 'string' ? node.component.toLowerCase() : 'array-node'}__row`,
+        ...dndProps,
       } as never,
       {
         default: () => [

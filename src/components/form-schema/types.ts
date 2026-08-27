@@ -142,6 +142,8 @@ export interface ArrayNodeConfig {
   }
   /** 容器标题（默认不渲染表头） */
   title?: string
+  /** 行拖拽排序（默认 false）：开启后行可 HTML5 拖拽换位（调用 moveItem 更新 model） */
+  draggable?: boolean
 }
 
 /** Col 响应式断点(同 ColConfig 子字段) */
@@ -212,7 +214,7 @@ export interface AsyncOptionsConfig<T = unknown> {
 }
 
 /**
- * 节点定义（schema DSL 全量 25 字段）
+ * 节点定义（schema DSL 全量 29 字段）
  * - component 节点构造器（字符串=查找，Component 对象=直接使用）
  * - props     节点属性
  * - on        事件定义（回调或 {{ fn }} 表达式）
@@ -294,6 +296,14 @@ export interface SchemaNode {
    * 不能针对单个 el-form-item 设置（这是 element-plus 自身限制）
    */
   labelPosition?: 'left' | 'right' | 'top'
+  /**
+   * 整体只读模式（仅顶层 schema 生效，与 labelPosition/disabled 同模式）：
+   * - true 时所有字段按 view 态纯文本展示（复用 permission: 'view' 渲染链路，不包 formItem、不走校验）
+   * - hidden 优先级更高（hidden 字段仍不渲染）
+   * - 支持字面量 / 函数 / 函数表达式 / reaction 动态求值
+   * - 字段级只读请用 permission: 'view'（本字段仅顶层生效）
+   */
+  readonly?: ReactionValue<boolean>
   /**
    * el-form label 宽度（仅顶层 schema 生效，与 labelPosition 同模式）：
    * 如 '120px' 或 120；数组形式 schema 无顶层节点，配置不生效
@@ -414,8 +424,12 @@ export interface XFormProps {
     oldValue: unknown
   ) => unknown | Promise<unknown>
   zodSchema?: ZodType
-  /** 整体禁用（透传 element-plus ElForm.disabled）：表单内所有组件一次性置灰 */
-  disabled?: boolean
+  /**
+   * 白名单函数表：注册后 {{ }} 表达式可直接引用注册名
+   * 如 { formatDate: (v) => dayjs(v).format('YYYY-MM-DD') } → {{ (m) => formatDate(m.date) }}
+   * 注意：模块级注册（多实例共享），与黑名单扫描互补，非真正沙箱
+   */
+  expressionFunctions?: Record<string, (...args: never[]) => unknown>
   /**
    * 校验失败自动滚动到第一个错误字段（透传 element-plus ElForm.scrollToError）
    * - 字段规则失败：ElForm 原生滚动到第一个 .el-form-item.is-error

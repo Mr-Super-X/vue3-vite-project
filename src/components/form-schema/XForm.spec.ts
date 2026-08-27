@@ -861,3 +861,65 @@ describe('XForm.vue expose validateField（P1 回归）', () => {
     await expect(exposed.validateField('email')).resolves.toBe(true)
   })
 })
+
+describe('XForm.vue 整体 readonly 只读模式（顶层 schema 配置，P2-1 回归）', () => {
+  it('schema 顶层 readonly=true → 字段渲染为纯文本占位（无输入组件）', async () => {
+    const wrapper = mountXForm({
+      schema: {
+        readonly: true,
+        children: [
+          { component: 'ElInput', name: 'a', label: '字段A' },
+          { component: 'ElInput', name: 'b', label: '字段B' },
+        ],
+      } as unknown as SchemaNode,
+      model: reactive({ a: '值A', b: '值B' }),
+    })
+    await flushPromises()
+    expect(wrapper.findAll('input').length).toBe(0) // 无输入组件
+    expect(wrapper.findAll('[data-permission="view"]').length).toBe(2)
+    expect(wrapper.text()).toContain('值A')
+    expect(wrapper.text()).toContain('值B')
+  })
+
+  it('readonly 为函数 → 随 model 动态切换（输入态 ↔ 纯文本）', async () => {
+    const model = reactive({ locked: false, a: '值A' })
+    const wrapper = mountXForm({
+      schema: {
+        readonly: (m: Record<string, unknown>) => Boolean(m.locked),
+        children: [{ component: 'ElInput', name: 'a', label: '字段A' }],
+      } as unknown as SchemaNode,
+      model,
+    })
+    await flushPromises()
+    expect(wrapper.findAll('input').length).toBe(1) // 未锁定 → 可输入
+    model.locked = true
+    await flushPromises()
+    expect(wrapper.findAll('input').length).toBe(0) // 锁定 → 纯文本
+    expect(wrapper.text()).toContain('值A')
+  })
+
+  it('readonly + permission hidden → hidden 优先（DOM 不出现）', async () => {
+    const wrapper = mountXForm({
+      schema: {
+        readonly: true,
+        children: [
+          { component: 'ElInput', name: 'a', label: '可见只读' },
+          { component: 'ElInput', name: 'b', label: '隐藏字段', permission: 'hidden' },
+        ],
+      } as unknown as SchemaNode,
+      model: reactive({ a: '值A', b: '值B' }),
+    })
+    await flushPromises()
+    expect(wrapper.text()).toContain('可见只读')
+    expect(wrapper.text()).not.toContain('隐藏字段')
+  })
+
+  it('未配置 readonly → 输入组件正常（行为不变）', async () => {
+    const wrapper = mountXForm({
+      schema: { component: 'ElInput', name: 'a' } as unknown as SchemaNode,
+      model: reactive({ a: '' }),
+    })
+    await flushPromises()
+    expect(wrapper.findAll('input').length).toBe(1)
+  })
+})

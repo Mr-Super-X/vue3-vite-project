@@ -253,6 +253,11 @@ export interface RenderSchemaNodeOptions {
    */
   permissionResolver?: (perm: string) => 'view' | 'edit' | 'hidden'
   /**
+   * 整体只读（顶层 schema readonly 字段解析结果，由 XForm 注入）：
+   * 返回 true 时未 hidden 的字段一律按 view 态纯文本展示（hidden 优先级仍最高）
+   */
+  globalReadonly?: () => boolean
+  /**
    * 阶段 3.1：外部字段错误状态（由 XForm.vue 注入）
    * 走 el-form-item 的 props.error + props.validateStatus 官方路径触发红字
    * （避免直接修改 elForm.fields[i] 的隐患）
@@ -295,7 +300,9 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
       ...(opts.permissionResolver ? { permissionResolver: opts.permissionResolver } : {}),
     })
     if (permission === 'hidden') return undefined
-    if (permission === 'view' && node.name) {
+    // 整体只读（顶层 schema readonly）：未 hidden 的字段一律按 view 态展示（P2-1）
+    const readonly = opts.globalReadonly?.() === true
+    if ((permission === 'view' || readonly) && node.name) {
       // view 态:渲染 label + 纯文本占位（不包 formItem,不走校验）
       return h(
         'div',

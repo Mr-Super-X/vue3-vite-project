@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, nextTick, type VNode } from 'vue'
+import { computed, ref, watch, nextTick, type VNode, onScopeDispose } from 'vue'
 import { get, set } from 'lodash-es'
 import { useSchemaRenderer } from './composables/use-schema-renderer'
 import { useSchemaIndex } from './composables/use-schema-index'
@@ -13,7 +13,7 @@ import { useCrossFieldTrigger } from './composables/use-cross-field-trigger'
 import { useFormDirty } from './composables/use-form-dirty'
 import { useServerError } from './composables/use-server-error'
 import { useRenderSchemaNode } from './composables/render-schema-node'
-import { resolveFunctionExpression } from './composables/use-expression'
+import { resolveFunctionExpression, setExpressionFunctions } from './composables/use-expression'
 import type { RenderSchemaNodeOptions } from './composables/render-schema-node'
 import { matchTrigger } from './composables/match-trigger'
 import { DEFAULT_COMPONENT_MAP, DEFAULT_COMPONENT_PROPS } from './element-plus-adapter'
@@ -360,6 +360,22 @@ const topLevelDisabled = computed<boolean>(() => {
   return false
 })
 
+/** 自描述整体只读（从 schema 顶层 readonly 字段读取，与 disabled 同模式） */
+const topLevelReadonly = computed<boolean>(() => {
+  const s = reactiveSchema.value
+  if (Array.isArray(s)) return false // 数组形式无顶层节点字段
+  const d = s.readonly
+  if (d === undefined || d === null) return false
+  if (typeof d === 'boolean') return d
+  if (typeof d === 'function')
+    return Boolean((d as (m: Record<string, unknown>) => unknown)(props.model ?? {}))
+  if (typeof d === 'string') {
+    const fn = resolveFunctionExpression<(m: unknown) => unknown>(d)
+    return fn ? Boolean(fn(props.model ?? {})) : false
+  }
+  return false
+})
+
 /** 自描述 labelWidth（仅顶层 schema 生效，与 labelPosition 同模式；'' 为 el-form 默认自动宽度） */
 const topLevelLabelWidth = computed<string | number>(() => {
   const s = reactiveSchema.value
@@ -455,7 +471,17 @@ const renderOpts: RenderSchemaNodeOptions = {
   },
   // P2-1:响应式断点感知(响应式 ColConfig 拍平)
   currentBreakpoint: currentBreakpoint,
+  // P2-1：整体只读开关（顶层 schema readonly）—— permission gate 按 view 态渲染
+  globalReadonly: () => topLevelReadonly.value,
 }
+
+// P2-2：白名单函数表注册（模块级，scope 销毁时清空避免跨实例污染）
+watch(
+  () => props.expressionFunctions,
+  (fns) => setExpressionFunctions(fns as never),
+  { immediate: true }
+)
+onScopeDispose(() => setExpressionFunctions(undefined))
 
 const renderInner = useRenderSchemaNode(renderOpts)
 
