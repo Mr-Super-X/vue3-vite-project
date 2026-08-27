@@ -4,4 +4,45 @@
   .el-date-editor.el-input__wrapper {
     width: 100%;
   }
+
+  /* Card / Row / FormItem 等顶层 schema 节点同辈垂直间距：
+     关键洞察——element-plus + XForm 渲染逻辑：
+       schema.column = 1 → 全部 child 包在同一个 row 内，每个 child 一个 col-24，
+         配合 ElRow 默认 flex-wrap: wrap 自动垂直堆叠（col-24 占 100% 宽度）
+       schema.column = N → 一个 row 包 N 个 col-N 水平排列
+     所以 col 才是「同辈 Card 的真实边界」。
+     之前 .el-card + margin-bottom 被 .el-col + :last-child 误命中（全归 0），
+     > .el-form > * + * 在 column: 1 时不生效（只有一个 row）。
+     给 .el-row > .el-col + .el-col 加 margin-top：
+       column: 1 垂直堆叠 → margin-top 让相邻 col 间距生效
+       column: N 水平排列 → margin-top 在 flex 项里通常被吸收，不影响视觉 */
+  .el-row > .el-col + .el-col {
+    margin-top: 16px;
+  }
+  /* 嵌套 Card（在父 Card body 内）的 col 间距略小，与外层区分层次 */
+  .el-card .el-row > .el-col + .el-col {
+    margin-top: 12px;
+  }
+
+  /* ArrayNode 容器内部 header 与 body 间距：
+     array-node__header（标题区）与 array-node__body（行内容区）是 render-array-node
+     渲染的两个直接兄弟 div，无默认 margin，多个 array demo 视觉紧贴。
+     用兄弟选择器 + body 给 body 加 margin-top，避开嵌套 + last-child 陷阱 */
+  .array-node__header + .array-node__body {
+    margin-top: 16px;
+  }
+  /* ArrayNode header 内部布局：title 在左、添加/操作按钮在右。
+     默认是 inline 显示，title 与按钮之间无间距且 baseline 对齐不佳；
+     转 flex + align-items: center + gap 让 title 与所有右侧元素自动间距 12px */
+  .array-node__header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  /* ArrayNode body 内部 row 与 row 间距：
+     每个 row 是 array-node__row-body + array-node__row-actions 组成的 flex 容器；
+     兄弟选择器 + row 给同辈 row 之间加 12px 垂直间距，避开 :last-child 陷阱 */
+  .array-node__body > * + * {
+    margin-top: 12px;
+  }
 }
