@@ -680,3 +680,43 @@ export const validateFieldItems: XFormApiItem[] = [
     description: '手动写入字段错误（服务端 422 场景）——本 demo 用它模拟双字段红字',
   },
 ]
+
+// XFormDetailFill —— 详情数据回填要点
+export const detailFillItems: XFormApiItem[] = [
+  {
+    name: 'Object.assign(model, detail)',
+    type: '—',
+    description:
+      '整体一次写入：字段同帧落位，不经过组件 change 事件——node.on 的「联动清空」不会误伤回填数据',
+  },
+  {
+    name: 'resetDirty()',
+    type: '() => void',
+    description:
+      '首载挂载时拍空基线；原地切换订单 / 保存成功后必须手动重拍，否则 isDirty 把服务端差异误报为用户修改',
+  },
+  {
+    name: 'clearValidate()',
+    type: '() => void',
+    description:
+      'assign 后清除上次交互残留的红字（el-form-item 错误状态不随 model 值覆盖自动消失）',
+  },
+  {
+    name: 'asyncOptions.deps 回填时序',
+    type: 'string | string[]',
+    description:
+      '级联场景 city/district 同步写入后，区域 options 才随 deps watch 异步就绪——期间 Select 短暂显示裸 id，就绪后自动变名称',
+  },
+  {
+    name: 'reaction.hidden + 必填回填',
+    type: 'ReactionValue<boolean>',
+    description:
+      '隐藏字段的值静默保留在 model 中；hidden 必填不阻塞提交校验，重新显示后必填恢复生效',
+  },
+  {
+    name: '数组字段批量回填',
+    type: 'model.items = Row[]',
+    description:
+      'detail.items N 条直接写入 model，ArrayNode 渲染 N 行；array.initialLength 仅在字段未定义时生效',
+  },
+]

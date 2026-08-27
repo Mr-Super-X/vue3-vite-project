@@ -29,6 +29,7 @@ export const CN_NAMES: Record<string, string> = {
   XFormBuilder: '链式构建器',
   XFormCrossField: '跨字段校验',
   XFormCrossFieldReverse: '反向跨字段',
+  XFormDetailFill: '详情数据回填',
   XFormDirty: '脏状态追踪',
   XFormDirectives: '节点指令与全局配置',
   XFormDisabled: '禁用状态',

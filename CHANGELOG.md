@@ -4,6 +4,12 @@
 
 ### ✨ Features | 新特性
 
+* **form-schema:** 新增详情数据回填 demo（XFormDetailFill）
+  - 模拟订单编辑页标准链路：拉详情 → `Object.assign(model, detail)` 整体写入 → `clearValidate()` 清残留红字 → `resetDirty()` 重拍基线（isDirty 从服务端值起算）
+  - 覆盖 6 类联动复杂情况：级联回填时序（区域 options 就绪前显示裸 id，就绪后自动变名称）、hidden 字段回归（隐藏必填不阻塞校验）、只读联动（shipped 即灰）、数组批量回填、dirty 基线管理、AsyncState 三态防御（骨架屏 / Error 重试）
+  - 新增 `xform-detail-fill-mock.ts` mock 详情接口（A 已发货 / B 草稿 / FAIL 失败三条路径）；ApiTable 收录「回填要点速查」，sidebar 注册「详情数据回填」
+
+
 * **form-schema:** P2-3 数组行拖拽排序（array.draggable）
   - `ArrayNodeConfig.draggable: true`：数组行开启 HTML5 拖拽换位——dragstart 记录源行、drop 调 `moveItem(from, to)` 更新 model（默认 false 不改变现有行为；与既有「上移/下移」按钮并存）
   - 复用 H8 的行对象身份 key：拖拽换位后行 DOM 移动而非重挂载
