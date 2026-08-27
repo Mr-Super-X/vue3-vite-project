@@ -152,6 +152,10 @@ const tocItems = [
                 模拟提交（clear + resetDirty）
               </ElButton>
             </div>
+            <details :class="bem.e('model')">
+              <summary>查看完整 model（JSON）</summary>
+              <pre>{{ JSON.stringify(model, null, 2) }}</pre>
+            </details>
 
             <p :class="bem.e('hint')">
               验证步骤：① 填用户名 + 银行卡号 → ② F5 刷新 → ③ 点"恢复草稿"：
@@ -186,6 +190,22 @@ const tocItems = [
     margin-top: 12px;
     font-size: 13px;
     color: #909399;
+  }
+  &__model {
+    margin-top: 12px;
+    font-size: 12px;
+    summary {
+      cursor: pointer;
+      color: #6b7280;
+    }
+    pre {
+      background: #f5f7fa;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-family: 'Menlo', 'Consolas', monospace;
+      overflow-x: auto;
+      margin: 4px 0;
+    }
   }
 }
 </style>

@@ -165,6 +165,10 @@ const tocItems = [
           </div>
           <div :class="bem.e('hint')">{{ MODE_HINTS[activeKey] }}</div>
           <XForm :key="activeKey" :schema="currentSchema" :model="models[activeKey]" />
+          <details :class="bem.e('model')">
+            <summary>查看当前模式 model（JSON）</summary>
+            <pre>{{ JSON.stringify(models[activeKey], null, 2) }}</pre>
+          </details>
         </DemoField>
       </section>
 
@@ -190,6 +194,23 @@ const tocItems = [
     background: #f5f7fa;
     font-size: 13px;
     color: #606266;
+  }
+
+  &__model {
+    margin-top: 12px;
+    font-size: 12px;
+    summary {
+      cursor: pointer;
+      color: #6b7280;
+    }
+    pre {
+      background: #f5f7fa;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-family: 'Menlo', 'Consolas', monospace;
+      overflow-x: auto;
+      margin: 4px 0;
+    }
   }
 }
 </style>

@@ -439,6 +439,10 @@ const tocItems = [
 
             <h4>大型表单（验证索引对跨字段 / dirty / server error 的支持）</h4>
             <XForm ref="formRef" :schema="bigSchema" :model="formModel" />
+            <details :class="bem.e('model')">
+              <summary>查看完整 model（JSON）</summary>
+              <pre>{{ JSON.stringify(formModel, null, 2) }}</pre>
+            </details>
 
             <!-- 操作 + 状态一体面板：所见即所得 -->
             <div :class="bem.e('panel')">
@@ -658,6 +662,23 @@ const tocItems = [
     font-size: 12px;
     color: #909399;
     font-style: italic;
+  }
+  &__model {
+    margin-top: 12px;
+    font-size: 12px;
+    summary {
+      cursor: pointer;
+      color: #6b7280;
+    }
+    pre {
+      background: #f5f7fa;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-family: 'Menlo', 'Consolas', monospace;
+      overflow-x: auto;
+      margin: 4px 0;
+      max-height: 320px;
+    }
   }
   .tag {
     display: inline-block;

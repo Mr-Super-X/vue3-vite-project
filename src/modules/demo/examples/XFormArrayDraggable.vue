@@ -143,6 +143,10 @@ const tocItems = [
             <div>model.tasks 当前顺序（拖拽后实时刷新）：</div>
             <pre>{{ taskOrderText }}</pre>
           </div>
+          <details :class="bem.e('model')">
+            <summary>查看完整 model（JSON）</summary>
+            <pre>{{ JSON.stringify(model, null, 2) }}</pre>
+          </details>
         </DemoField>
       </section>
 
@@ -175,6 +179,23 @@ const tocItems = [
       border-radius: 4px;
       font-family: 'Menlo', 'Consolas', monospace;
       white-space: pre-wrap;
+      margin: 4px 0;
+    }
+  }
+
+  &__model {
+    margin-top: 12px;
+    font-size: 12px;
+    summary {
+      cursor: pointer;
+      color: #6b7280;
+    }
+    pre {
+      background: #f5f7fa;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-family: 'Menlo', 'Consolas', monospace;
+      overflow-x: auto;
       margin: 4px 0;
     }
   }

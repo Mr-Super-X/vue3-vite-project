@@ -148,6 +148,10 @@ const tocItems = [
           <div :class="bem.e('actions')">
             <el-button type="primary" @click="onValidate">校验</el-button>
           </div>
+          <details :class="bem.e('model')">
+            <summary>查看完整 model（JSON）</summary>
+            <pre>{{ JSON.stringify(model, null, 2) }}</pre>
+          </details>
         </DemoField>
       </section>
 
@@ -170,6 +174,22 @@ const tocItems = [
 .#{$BEM_PREFIX}-demo-x-form-directives {
   &__actions {
     margin-top: 16px;
+  }
+  &__model {
+    margin-top: 12px;
+    font-size: 12px;
+    summary {
+      cursor: pointer;
+      color: #6b7280;
+    }
+    pre {
+      background: #f5f7fa;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-family: 'Menlo', 'Consolas', monospace;
+      overflow-x: auto;
+      margin: 4px 0;
+    }
   }
 }
 </style>

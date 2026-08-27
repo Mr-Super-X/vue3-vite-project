@@ -17,6 +17,8 @@ import DocToc from '../components/DocToc.vue'
 import { largeSchemaItems } from './xform-demos-api'
 import xFormSource from './XFormLargeSchema.vue?raw'
 
+const bem = createNamespace('demo-x-form-large-schema')
+
 const FIELD_COUNT = 120
 const formRef = ref<XFormExpose | null>(null)
 
@@ -94,6 +96,10 @@ const tocItems = [
               <strong>{{ perfInfo.mountTime }}ms</strong>
             </span>
           </div>
+          <details :class="bem.e('model')">
+            <summary>查看完整 model（JSON，{{ perfInfo.fieldCount }} 字段）</summary>
+            <pre>{{ JSON.stringify(model, null, 2) }}</pre>
+          </details>
         </DemoField>
       </section>
 
@@ -105,3 +111,25 @@ const tocItems = [
     </template>
   </DocLayout>
 </template>
+
+<style lang="scss">
+.#{$BEM_PREFIX}-demo-x-form-large-schema {
+  &__model {
+    margin-top: 12px;
+    font-size: 12px;
+    summary {
+      cursor: pointer;
+      color: #6b7280;
+    }
+    pre {
+      background: #f5f7fa;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-family: 'Menlo', 'Consolas', monospace;
+      overflow-x: auto;
+      margin: 4px 0;
+      max-height: 320px;
+    }
+  }
+}
+</style>
