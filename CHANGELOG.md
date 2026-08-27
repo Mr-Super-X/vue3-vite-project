@@ -7,6 +7,8 @@
 * **form-schema:** P2-3 数组行拖拽排序（array.draggable）
   - `ArrayNodeConfig.draggable: true`：数组行开启 HTML5 拖拽换位——dragstart 记录源行、drop 调 `moveItem(from, to)` 更新 model（默认 false 不改变现有行为；与既有「上移/下移」按钮并存）
   - 复用 H8 的行对象身份 key：拖拽换位后行 DOM 移动而非重挂载
+  - `xArray().draggable(flag?)`：builder 补齐 ArrayNodeConfig 字段的链式方法（默认 true 可省参），防回归 builders.spec +4
+  - 新增 `XFormArrayDraggable.vue` demo：任务队列拖拽场景、「数据换位身份保持」观察点、model 顺序实时展示；sidebar 注册「数组行拖拽排序」，ApiTable 收录 `array.draggable`
   - 防回归：render-array-node.spec +3（默认无拖拽属性 / drop 调 moveItem / 拖到自身不触发）
 
 

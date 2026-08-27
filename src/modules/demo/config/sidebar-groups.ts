@@ -22,6 +22,7 @@ export const SIDEBAR_GROUPS: readonly SidebarGroupConfig[] = [
 export const CN_NAMES: Record<string, string> = {
   XForm: '用法总览',
   XFormArray: '数组节点',
+  XFormArrayDraggable: '数组行拖拽排序',
   XFormAsyncOptions: '异步选项',
   XFormAsyncValidator: '异步校验',
   XFormBase: '基础用法',

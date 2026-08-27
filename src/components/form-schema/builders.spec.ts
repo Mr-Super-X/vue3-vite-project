@@ -62,6 +62,16 @@ describe('xArray(name) / ArrayBuilder', () => {
     expect(node.array?.title).toBe('订单明细')
   })
 
+  it('.draggable defaults to true (enables row drag sorting)', () => {
+    const node = xArray('a').draggable().build()
+    expect(node.array?.draggable).toBe(true)
+  })
+
+  it('.draggable(false) explicitly disables row drag sorting', () => {
+    const node = xArray('a').draggable(false).build()
+    expect(node.array?.draggable).toBe(false)
+  })
+
   it('.label sets node.label (form field label)', () => {
     const node = xArray('a').label('订单明细').build()
     expect(node.label).toBe('订单明细')
@@ -82,6 +92,7 @@ describe('xArray(name) / ArrayBuilder', () => {
     expect(b.showActions(true)).toBe(b)
     expect(b.labels({})).toBe(b)
     expect(b.title('t')).toBe(b)
+    expect(b.draggable(true)).toBe(b)
     expect(b.label('l')).toBe(b)
     expect(b.reaction({})).toBe(b)
     expect(b.build()).toBeTypeOf('object')
@@ -94,6 +105,7 @@ describe('xArray(name) / ArrayBuilder', () => {
       .minItems(1)
       .maxItems(10)
       .title('订单明细')
+      .draggable()
       .build()
     expect(node.name).toBe('items')
     expect(node.kind).toBe('array')
@@ -103,6 +115,7 @@ describe('xArray(name) / ArrayBuilder', () => {
     expect(node.array?.minItems).toBe(1)
     expect(node.array?.maxItems).toBe(10)
     expect(node.array?.title).toBe('订单明细')
+    expect(node.array?.draggable).toBe(true)
   })
 
   it('ArrayBuilder can be instantiated directly (not via xArray)', () => {

@@ -457,6 +457,16 @@ export class ArrayBuilder {
     return this
   }
 
+  /**
+   * 行拖拽排序开关 —— 与 ArrayNodeConfig.draggable 对应
+   * 默认 true；开启后行可 HTML5 拖拽换位，drop 走 moveItem 更新 model
+   */
+  draggable(flag = true): this {
+    if (!this.node.array) this.node.array = { itemSchema: {} as SchemaNode }
+    this.node.array.draggable = flag
+    return this
+  }
+
   label(l: string): this {
     this.node.label = l
     return this

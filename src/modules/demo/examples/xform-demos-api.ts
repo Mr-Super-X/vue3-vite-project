@@ -83,6 +83,12 @@ export const arrayItems: XFormApiItem[] = [
     description: '操作按钮文案（默认 添加/删除/上移/下移）',
   },
   { name: 'array.title', type: 'string', description: '容器标题（默认不渲染表头）' },
+  {
+    name: 'array.draggable',
+    type: 'boolean',
+    default: 'false',
+    description: '行拖拽排序：开启后行可 HTML5 拖拽换位（drop 调 moveItem 更新 model）',
+  },
 ]
 
 // XFormReaction —— ReactionConfig 核心字段
