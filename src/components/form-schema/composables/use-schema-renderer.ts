@@ -1,5 +1,18 @@
 import { watch, ref, reactive, onScopeDispose, type Ref } from 'vue'
-import { cloneDeep } from 'lodash-es'
+import { cloneDeepWith } from 'lodash-es'
+
+/**
+ * identity-preserving clone（渲染层重构 B-3）：行为同 cloneDeep，但不深入 component 字段 ——
+ * 组件定义对象（options object）被深克隆后身份丢失，Vue 视为不同组件导致整字段 remount；
+ * 保持引用后配合顶层稳定 key（B-1），schema 重建时同 key 节点走 patch 而非 remount。
+ * 函数（reaction/validator/source）cloneDeep 本就按引用拷贝，无需特殊处理。
+ */
+function cloneSchema<T>(value: T): T {
+  return cloneDeepWith(value, (val, key) => {
+    if (key === 'component' && val !== null && typeof val === 'object') return val
+    return undefined // 其余字段走默认深克隆
+  })
+}
 import type { SchemaNode, XFormProps } from '../types'
 import { containsReaction, applyReactions } from './use-reaction'
 import { useAsyncOptions, resolveAsyncOptionsProp } from './use-async-options'
@@ -36,7 +49,7 @@ export function useSchemaRenderer(opts: UseSchemaRendererOptions) {
       const hasAsync = containsAsyncOptions(normalized)
       // 用 reactive 包装 cloned：reaction / asyncOptions 会修改 cloned.ignore / label / props 等内部属性，
       // vue 才能追踪到变化触发模板重渲染（plain object 不响应）
-      const cloned = hasRx || hasAsync ? reactive(cloneDeep(normalized)) : cloneDeep(normalized)
+      const cloned = hasRx || hasAsync ? reactive(cloneSchema(normalized)) : cloneSchema(normalized)
       // 注册异步选项 watcher（在 reaction traverse 之前，避免 reaction 覆盖 props）
       registerAsyncOptions(cloned, opts.formData, asyncStoppers)
       if (hasRx) {

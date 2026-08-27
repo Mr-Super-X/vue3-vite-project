@@ -738,3 +738,47 @@ describe('XForm.vue 字段级重渲隔离（B-2 核心回归）', () => {
     expect(renderCountB).toBe(baseB) // B 不重渲（B-2 修复前：全表单重建，B 同步 +1）
   })
 })
+
+describe('XForm.vue schema 重建不重挂载（B-3 集成回归）', () => {
+  it('对象形式组件 + setProps 加字段 → 既有字段 setup 计数不变（patch 而非 remount）', async () => {
+    // 两个字段用不同组件分别计数 —— 同组件计数无法区分"新字段正常 setup"与"旧字段 remount"
+    let setupCountA = 0
+    let setupCountB = 0
+    const CountInputA = {
+      props: ['modelValue'],
+      setup() {
+        setupCountA++
+        return () => h('input', { class: 'keep-a' })
+      },
+    }
+    const CountInputB = {
+      props: ['modelValue'],
+      setup() {
+        setupCountB++
+        return () => h('input', { class: 'keep-b' })
+      },
+    }
+    const model = reactive({ a: '', b: '' })
+    const wrapper = mountXForm({
+      schema: { children: [{ component: CountInputA, name: 'a' }] } as unknown as SchemaNode,
+      model,
+    })
+    await flushPromises()
+    expect(setupCountA).toBe(1)
+    // schema 引用整体替换（新增字段 b）→ 触发 useSchemaRenderer 重建
+    await wrapper.setProps({
+      schema: {
+        children: [
+          { component: CountInputA, name: 'a' },
+          { component: CountInputB, name: 'b' },
+        ],
+      } as unknown as SchemaNode,
+    } as never)
+    await flushPromises()
+    // B-3 修复前：cloneDeep 破坏 CountInputA 身份 → 既有字段 remount（setupCountA=2）
+    expect(setupCountA).toBe(1)
+    expect(setupCountB).toBe(1) // 新字段正常挂载一次
+    expect(wrapper.findAll('input.keep-a').length).toBe(1)
+    expect(wrapper.findAll('input.keep-b').length).toBe(1)
+  })
+})

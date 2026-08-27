@@ -71,6 +71,12 @@
 
 ### 🐛 Bug Fixes | 缺陷修复
 
+* **form-schema:** 渲染层重构 B-3 —— identity-preserving clone（渲染层 HIGH 清零，B 阶段收官）
+  - `useSchemaRenderer` 的 `cloneDeep` 替换为 `cloneSchema`（基于 `cloneDeepWith`）：不深入 `component` 字段——组件定义对象保持引用身份（此前每次 schema 重建都深克隆组件对象，Vue 视为不同组件导致整字段 remount）
+  - 与 B-1 稳定 key 配合：schema 整体替换（如动态增删字段）时同 key 节点走 patch 而非 remount
+  - 防回归：use-schema-renderer.spec +2（component/formItem.component 身份保持 + 其余字段仍深克隆）、XForm.spec +1（setProps 加字段后既有字段 setup 计数不变）
+
+
 * **form-schema:** 渲染层重构 B-1（key 稳定 + props 快照同步）
   - 顶层三处 v-for 由 `:key="i"`（index）改为 `node.key ?? node.name ?? i`——reaction 切换 ignore/hidden 导致节点顺序变化时不再因索引漂移重挂载（焦点丢失）
   - **B4 快照断裂**：`useRenderSchemaNode` 的 opts 提取为 `renderOpts` 变量 + watch 同步 `props.model/components/rules/beforeChange/componentProps` 最新引用——父级替换 model 引用后渲染绑定不再静默失效（render 闭包统一 opts.xxx 惰性读取，无需重建）

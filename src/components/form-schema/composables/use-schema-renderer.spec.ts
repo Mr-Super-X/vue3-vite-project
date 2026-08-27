@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { effectScope, ref, h } from 'vue'
+import { effectScope, ref, h, toRaw } from 'vue'
 import type { SchemaNode } from '../types'
 import { useSchemaRenderer } from './use-schema-renderer'
 // SchemaNode import used by 'as SchemaNode' assertion below
@@ -214,6 +214,57 @@ describe('useSchemaRenderer(opts)', () => {
       })
       // 关键:函数 slot 不应被 containsReaction 递归遍历,也不会被 reactive 包装替换
       expect((reactiveSchema.value as SchemaNode).slots?.header).toBe(headerSlot)
+    })
+    scope.stop()
+  })
+})
+
+describe('useSchemaRenderer / identity-preserving clone（B-3 回归）', () => {
+  it('component 对象字段保持引用身份（不被深克隆），其余字段仍深克隆', () => {
+    const CompObj = { name: 'MyComp', template: '<div />' }
+    const original = { component: CompObj, name: 'x', props: { a: 1 } }
+    const schema = ref(original as unknown as SchemaNode)
+    const scope = effectScope()
+    scope.run(() => {
+      const { reactiveSchema } = useSchemaRenderer({
+        schema,
+        components: ref(undefined),
+        formData: ref({}),
+      })
+      const cloned = reactiveSchema.value as unknown as {
+        component: unknown
+        props: { a: number }
+      }
+      // B-3：组件对象身份保持（修复前 cloneDeep 深克隆 → 新对象 → Vue 视为不同组件 remount）
+      expect(toRaw(cloned.component as object)).toBe(CompObj)
+      // 其余字段仍走深克隆（schema 变更隔离语义不变）
+      expect(toRaw(cloned.props)).not.toBe(original.props)
+      expect(cloned.props).toEqual({ a: 1 })
+    })
+    scope.stop()
+  })
+
+  it('嵌套 children / formItem.component 的组件对象同样保持身份', () => {
+    const Inner = { name: 'Inner', template: '<span />' }
+    const Fi = { name: 'Fi', template: '<div />' }
+    const original = {
+      children: [{ component: Inner, name: 'a' }],
+      formItem: { component: Fi },
+    }
+    const schema = ref(original as unknown as SchemaNode)
+    const scope = effectScope()
+    scope.run(() => {
+      const { reactiveSchema } = useSchemaRenderer({
+        schema,
+        components: ref(undefined),
+        formData: ref({}),
+      })
+      const cloned = reactiveSchema.value as unknown as {
+        children: Array<{ component: unknown }>
+        formItem: { component: unknown }
+      }
+      expect(toRaw(cloned.children[0]?.component as object)).toBe(Inner)
+      expect(toRaw(cloned.formItem.component as object)).toBe(Fi)
     })
     scope.stop()
   })
