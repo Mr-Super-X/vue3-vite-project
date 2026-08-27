@@ -34,6 +34,7 @@ export const CN_NAMES: Record<string, string> = {
   XFormDirectives: '节点指令与全局配置',
   XFormDisabled: '禁用状态',
   XFormEvents: '字段事件与值拦截',
+  XFormExpression: '动态脚本表达式',
   XFormFieldPermission: '字段权限',
   XFormGrid: '栅格布局',
   XFormInvalidComponent: '无效组件校验',

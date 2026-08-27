@@ -681,6 +681,71 @@ export const validateFieldItems: XFormApiItem[] = [
   },
 ]
 
+// XFormExpression —— {{ fn }} 动态脚本五类挂载位
+export const expressionItems: XFormApiItem[] = [
+  {
+    name: '顶层 readonly / disabled',
+    type: 'string',
+    description:
+      "'{{ (m) => m.locked }}' 整表只读/禁用：computed 追踪 model，表达式随依赖自动重算（hidden > readonly > edit 优先级不变）",
+  },
+  {
+    name: 'node.reaction.*',
+    type: 'ReactionValue<T>',
+    description:
+      'hidden / disabled / label / props / rules 均可接 {{ fn }}，求值结果写入节点对应字段（apply-reaction-fields）',
+  },
+  {
+    name: 'node.on.<事件名>',
+    type: '{{ (m, ...args) => void }}',
+    description:
+      '沙箱事件处理器：首参永远是 model 只读副本，第二个起才是组件事件参数——写成 (m, v) 两参占位缺一不可',
+  },
+  {
+    name: 'node.permission',
+    type: "{{ (m) => 'view' | 'edit' | 'hidden' }}",
+    description: '权限三态动态求值：admin 编辑 / viewer 只读纯文本（view 态跳过校验）',
+  },
+  {
+    name: 'expressionFunctions 注册名',
+    type: 'Record<string, Function>',
+    description:
+      '白名单函数被表达式按名字直接引用（本页 pushLog / toCurrency）；模块级注册多实例共享，函数表变更全量重编译',
+  },
+]
+
+// XFormExpression —— 沙箱上下文与安全边界
+export const expressionSandboxItems: XFormApiItem[] = [
+  {
+    name: 'model 入参',
+    type: 'toSafeDto 只读副本',
+    description:
+      '深净化副本：剔除函数/原型链、过滤 __proto__ 等危险键、循环引用保护；在表达式里写 m.xxx 不回写真实表单',
+  },
+  {
+    name: '无参形态 {{ () => ... }}',
+    type: '—',
+    description:
+      '箭头函数语法完全合法，但收不到任何参数——适合不依赖 model 的固定输出；需要读值必须显式声明形参',
+  },
+  {
+    name: '非法表达式',
+    type: '—',
+    description: '编译失败 console.error 并缓存 null，运行时静默跳过（不抛错、不阻塞渲染）',
+  },
+  {
+    name: '编译缓存',
+    type: 'Map ≤500 条',
+    description: '同一字符串复用编译产物；白名单函数表变更后旧缓存整体失效（fnsVersion）',
+  },
+  {
+    name: '选型建议',
+    type: '—',
+    description:
+      '读 model 做联动判断/动态文案 → {{ }} 表达式；需回写真实 model 或对接埋点 SDK → 原生函数形式闭包',
+  },
+]
+
 // XFormDetailFill —— 详情数据回填要点
 export const detailFillItems: XFormApiItem[] = [
   {
