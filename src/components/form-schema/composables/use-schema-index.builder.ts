@@ -65,7 +65,13 @@ export function buildIndex(schema: SchemaNode | SchemaNode[] | string | undefine
       const list = crossRules.get(target)
       if (list) list.push(entry)
       else crossRules.set(target, [entry])
-      dependsOnMap.set(target, deps)
+      // 同一 target 挂多条 cross rule 时合并 deps（去重）—— 直接 set 会被后者整条覆盖
+      const prevDeps = dependsOnMap.get(target)
+      if (prevDeps) {
+        for (const d of deps) if (!prevDeps.includes(d)) prevDeps.push(d)
+      } else {
+        dependsOnMap.set(target, [...deps])
+      }
       const trigger = (r as RuleItem).trigger
       if (trigger === 'manual') continue // manual 仅 validateForm 跑，不进反向索引
       for (const d of deps) {

@@ -187,7 +187,7 @@ async function validateForm(): Promise<boolean> {
   if (!m) return true
   const ef = elFormRef.value
   if (!ef?.validate) {
-    const result = await runCrossFieldValidation(props.schema, m)
+    const result = await runCrossFieldValidation(props.schema, m, props.rules)
     applyCrossErrors(result)
     scrollToFirstError(firstCrossErrorField(result))
     return result.isValid
@@ -195,7 +195,7 @@ async function validateForm(): Promise<boolean> {
   // 等待 el-form 字段内规则校验完成（element-plus 2.x validate 接受 callback）
   const efValidate = ef.validate
   if (!efValidate) {
-    const result = await runCrossFieldValidation(props.schema, m)
+    const result = await runCrossFieldValidation(props.schema, m, props.rules)
     applyCrossErrors(result)
     scrollToFirstError(firstCrossErrorField(result))
     return result.isValid
@@ -208,7 +208,7 @@ async function validateForm(): Promise<boolean> {
   })
   if (!elValid) return false
   // 跑跨字段校验（可能含异步 crossValidator）
-  const result = await runCrossFieldValidation(props.schema, m)
+  const result = await runCrossFieldValidation(props.schema, m, props.rules)
   applyCrossErrors(result)
   scrollToFirstError(firstCrossErrorField(result))
   return result.isValid
@@ -249,7 +249,7 @@ function applyCrossErrors(result: ValidateResult): void {
 async function validateDetail(): Promise<ValidateResult> {
   const m = props.model
   if (!m) return { isValid: true, errors: [] }
-  return runCrossFieldValidation(props.schema, m)
+  return runCrossFieldValidation(props.schema, m, props.rules)
 }
 
 /**

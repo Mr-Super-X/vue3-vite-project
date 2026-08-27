@@ -64,6 +64,13 @@
 
 ### 🐛 Bug Fixes | 缺陷修复
 
+* **form-schema:** MEDIUM 批次 A2 竞态与覆盖修复（②⑤⑨）
+  - **② async-options 竞态**：`useAsyncOptions` 加序号令牌——deps 快变时多个 in-flight 请求乱序返回，旧响应不再覆盖新数据；`stop()` 同步使在途响应失效
+  - **⑨ 字符串规则 crossValidator 漏执行**：`runCrossFieldValidation` 新增 `namedRules` 参数并下穿整个 traverse 链——命名规则里的 crossValidator 在表单级校验中不再被跳过；XForm 4 处调用点透传 `props.rules`
+  - **⑤ dependsOnMap 覆盖**：同一 target 挂多条 cross rule 时 deps 合并去重（此前后者 `set` 整条覆盖前者）
+  - 防回归：use-async-options.spec +2（乱序丢弃 / stop 失效）、use-validate.spec +2（命名规则执行 / 向后兼容）、use-schema-index.spec +1（deps 合并）
+
+
 * **form-schema:** MEDIUM 批次 A1 健壮性修复（①④⑦⑧）
   - 附带修复 demo：`XFormFieldPermission` 的「检查 DOM」按钮误报——检查范围从 `document.body` 收窄到 XForm 容器（页面介绍/API 表格/源码展示均含字段名文本，旧实现恒真误报 hidden 失败）
   - **① 权限求值崩溃**：`use-field-permission` 的函数/表达式/resolver 求值全程 try/catch——此前权限函数抛错会在渲染期炸掉整表单；现降级为 edit + console.error

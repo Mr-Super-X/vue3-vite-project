@@ -277,3 +277,23 @@ describe('useSchemaIndex / 响应式重建', () => {
     expect(idx.fieldNames.value).toEqual(['root', 'a'])
   })
 })
+
+describe('buildIndex / dependsOnMap 同 target 多 cross rule（⑤ 回归）', () => {
+  it('同一 target 的多条 cross rule 的 deps 合并去重，不被后者覆盖', () => {
+    const schema: SchemaNode = {
+      children: [
+        {
+          name: 'c',
+          component: 'Input',
+          rules: [
+            { dependsOn: ['a'], crossValidator: () => true },
+            { dependsOn: ['b'], crossValidator: () => true },
+          ],
+        },
+      ],
+    }
+    const idx = buildIndex(schema)
+    expect(idx.dependsOnMap.get('c')).toEqual(['a', 'b'])
+    expect(idx.crossRules.get('c')).toHaveLength(2)
+  })
+})

@@ -518,3 +518,30 @@ describe('collectCrossRuleFields(schema)', () => {
     expect(collectCrossRuleFields([a])).toEqual([a])
   })
 })
+
+describe('runCrossFieldValidation / 字符串命名规则解析（⑨ 回归）', () => {
+  it('rules 为字符串名时查 namedRules 执行 crossValidator', async () => {
+    const schema = {
+      children: [{ name: 'confirm', component: 'Input', rules: 'confirmRule' }],
+    } as never
+    const namedRules = {
+      confirmRule: {
+        dependsOn: ['password'],
+        crossValidator: (v: unknown, p: unknown) => (v === p ? true : '两次密码不一致'),
+      } as never,
+    }
+    const pass = await runCrossFieldValidation(schema, { password: 'a', confirm: 'a' }, namedRules)
+    expect(pass.isValid).toBe(true)
+    const fail = await runCrossFieldValidation(schema, { password: 'a', confirm: 'b' }, namedRules)
+    expect(fail.isValid).toBe(false)
+    expect(fail.errors[0]?.message).toBe('两次密码不一致')
+  })
+
+  it('未传 namedRules 时字符串规则跳过（向后兼容）', async () => {
+    const schema = {
+      children: [{ name: 'confirm', component: 'Input', rules: 'confirmRule' }],
+    } as never
+    const result = await runCrossFieldValidation(schema, { password: 'a', confirm: 'b' })
+    expect(result.isValid).toBe(true)
+  })
+})

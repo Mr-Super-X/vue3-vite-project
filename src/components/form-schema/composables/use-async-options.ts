@@ -37,20 +37,27 @@ export function useAsyncOptions(
     active = false
   })
 
+  // 序号令牌：deps 快变时多个 in-flight 请求乱序返回，旧响应会覆盖新数据 ——
+  // 每次发起自增序号，落地前校验，过期响应直接丢弃
+  let fetchSeq = 0
+
   async function fetch(): Promise<void> {
     if (!cfg) return
+    const mySeq = ++fetchSeq
     loading.value = true
     error.value = null
     try {
       const raw = await cfg.source()
+      if (mySeq !== fetchSeq) return // 已有更新的请求发起，丢弃过期响应
       data.value = cfg.transform ? cfg.transform(raw) : raw
     } catch (err) {
+      if (mySeq !== fetchSeq) return
       error.value = err
       if (active) {
         cfg.onError?.(err)
       }
     } finally {
-      loading.value = false
+      if (mySeq === fetchSeq) loading.value = false
     }
   }
 
@@ -68,7 +75,10 @@ export function useAsyncOptions(
     data,
     loading,
     error,
-    stop: () => stops.forEach((s) => s()),
+    stop: () => {
+      fetchSeq++ // 使在途请求的响应失效（stop 后不再写 state）
+      stops.forEach((s) => s())
+    },
   }
 }
 

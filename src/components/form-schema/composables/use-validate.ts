@@ -114,10 +114,12 @@ export function validateWithZod(
  */
 export async function runCrossFieldValidation(
   schema: SchemaNode | SchemaNode[] | string | undefined,
-  model: Record<string, unknown>
+  model: Record<string, unknown>,
+  /** 命名规则注册表（XForm props.rules）—— 字符串规则名里的 crossValidator 也需解析执行 */
+  namedRules?: Record<string, RuleItem>
 ): Promise<ValidateResult> {
   const errors: ValidateResult['errors'] = []
-  await traverseCross(schema, model, [], errors)
+  await traverseCross(schema, model, [], errors, namedRules)
   return { isValid: errors.length === 0, errors }
 }
 
@@ -125,13 +127,14 @@ async function traverseCross(
   node: SchemaNode | SchemaNode[] | string | undefined,
   model: Record<string, unknown>,
   keyPath: (string | number)[],
-  errors: ValidateResult['errors']
+  errors: ValidateResult['errors'],
+  namedRules?: Record<string, RuleItem>
 ): Promise<void> {
   if (!node) return
   if (typeof node === 'string') return
   if (Array.isArray(node)) {
     for (let i = 0; i < node.length; i++) {
-      await traverseCross(node[i], model, [...keyPath, i], errors)
+      await traverseCross(node[i], model, [...keyPath, i], errors, namedRules)
     }
     return
   }
@@ -141,7 +144,13 @@ async function traverseCross(
     const listRaw = model[node.name]
     if (Array.isArray(listRaw)) {
       for (let i = 0; i < listRaw.length; i++) {
-        await traverseArrayItem(node.array!.itemSchema, `${node.name}[${i}]`, model, errors)
+        await traverseArrayItem(
+          node.array!.itemSchema,
+          `${node.name}[${i}]`,
+          model,
+          errors,
+          namedRules
+        )
       }
     }
     return
@@ -149,23 +158,29 @@ async function traverseCross(
 
   // 普通节点：检查 rules 内的 crossValidator
   if (node.rules && node.name) {
-    await runNodeCrossRules(node, model, keyPath, errors)
+    await runNodeCrossRules(node, model, keyPath, errors, namedRules)
   }
 
   // 递归 children / formItem.slots
   if (node.children) {
     if (Array.isArray(node.children)) {
       for (let i = 0; i < node.children.length; i++) {
-        await traverseCross(node.children[i], model, [...keyPath, 'children', i], errors)
+        await traverseCross(
+          node.children[i],
+          model,
+          [...keyPath, 'children', i],
+          errors,
+          namedRules
+        )
       }
     } else if (typeof node.children === 'object') {
-      await traverseCross(node.children, model, [...keyPath, 'children'], errors)
+      await traverseCross(node.children, model, [...keyPath, 'children'], errors, namedRules)
     }
   }
   if (node.formItem && typeof node.formItem === 'object' && node.formItem.slots) {
     for (const [k, v] of Object.entries(node.formItem.slots)) {
       if (v && typeof v === 'object') {
-        await traverseCross(v, model, [...keyPath, 'formItem', 'slots', k], errors)
+        await traverseCross(v, model, [...keyPath, 'formItem', 'slots', k], errors, namedRules)
       }
     }
   }
@@ -175,33 +190,37 @@ async function traverseArrayItem(
   sub: SchemaNode | SchemaNode[] | string | undefined,
   prefix: string,
   model: Record<string, unknown>,
-  errors: ValidateResult['errors']
+  errors: ValidateResult['errors'],
+  namedRules?: Record<string, RuleItem>
 ): Promise<void> {
   if (!sub) return
   if (typeof sub === 'string') return
   if (Array.isArray(sub)) {
     for (const s of sub) {
-      await traverseArrayItem(s, prefix, model, errors)
+      await traverseArrayItem(s, prefix, model, errors, namedRules)
     }
     return
   }
   // 把子节点 name 拼成 items[i].subName 形式
   const rewritten: SchemaNode = sub.name ? { ...sub, name: `${prefix}.${sub.name}` } : sub
-  await traverseCross(rewritten, model, [], errors)
+  await traverseCross(rewritten, model, [], errors, namedRules)
 }
 
 async function runNodeCrossRules(
   node: SchemaNode,
   model: Record<string, unknown>,
   keyPath: (string | number)[],
-  errors: ValidateResult['errors']
+  errors: ValidateResult['errors'],
+  namedRules?: Record<string, RuleItem>
 ): Promise<void> {
   const rules = node.rules
   if (!rules) return
   const arr = Array.isArray(rules) ? rules : [rules]
   for (const r of arr) {
-    if (typeof r !== 'object' || r === null) continue
-    const rule = r as RuleItem
+    // 字符串规则名 → 查注册表解析（'required' 简写无 crossValidator，自然跳过）
+    const resolvedRule = typeof r === 'string' ? namedRules?.[r] : r
+    if (typeof resolvedRule !== 'object' || resolvedRule === null) continue
+    const rule = resolvedRule as RuleItem
     if (!rule.crossValidator || !rule.dependsOn) continue
     if (!node.name) continue
     const value = get(model, node.name)

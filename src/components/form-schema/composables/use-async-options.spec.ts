@@ -78,3 +78,49 @@ describe('useAsyncOptions', () => {
     expect(onError).toHaveBeenCalledWith(expect.any(Error))
   })
 })
+
+describe('useAsyncOptions / 竞态防护（② 回归）', () => {
+  it('乱序返回时旧响应被丢弃（序号令牌）', async () => {
+    // 第一次请求慢、第二次快 —— 旧响应后返回也不得覆盖新数据
+    let resolveFirst!: (v: string[]) => void
+    const first = new Promise<string[]>((r) => {
+      resolveFirst = r
+    })
+    let call = 0
+    const node: SchemaNode = {
+      component: 'Select',
+      asyncOptions: {
+        deps: 'city',
+        source: () => {
+          call++
+          return call === 1 ? first : Promise.resolve(['new'])
+        },
+      },
+    }
+    const model = ref({ city: 'a' })
+    const state = useAsyncOptions(node, model)
+    // 改 deps 触发第二次请求（快，立即 resolve）
+    model.value.city = 'b'
+    await nextTick()
+    await new Promise((r) => setTimeout(r, 0))
+    expect(call).toBe(2)
+    expect(state.data.value).toEqual(['new'])
+    // 第一次（旧）后返回 —— 应被丢弃
+    resolveFirst(['old'])
+    await new Promise((r) => setTimeout(r, 0))
+    expect(state.data.value).toEqual(['new'])
+  })
+
+  it('stop() 后在途响应不再写入 state', async () => {
+    let resolveReq!: (v: string[]) => void
+    const pending = new Promise<string[]>((r) => {
+      resolveReq = r
+    })
+    const node: SchemaNode = { component: 'Select', asyncOptions: { source: () => pending } }
+    const state = useAsyncOptions(node, ref({}))
+    state.stop()
+    resolveReq(['x'])
+    await new Promise((r) => setTimeout(r, 0))
+    expect(state.data.value).toEqual([])
+  })
+})
