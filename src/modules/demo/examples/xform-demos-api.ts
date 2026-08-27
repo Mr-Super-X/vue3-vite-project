@@ -746,6 +746,46 @@ export const expressionSandboxItems: XFormApiItem[] = [
   },
 ]
 
+// XFormReactionDeps —— reaction.deps 三动机
+export const reactionDepsItems: XFormApiItem[] = [
+  {
+    name: 'reaction.deps',
+    type: 'string[]',
+    description:
+      'lodash 路径数组，精确监听依赖字段；声明后 watch 从 deep watch 整棵 model 降级为浅比较指定路径',
+  },
+  {
+    name: 'A 模式：无 deps',
+    type: '—',
+    description:
+      '默认行为，deep watch 整棵 model；任意字段变化都会触发 reaction；大表单下成本与精度双输；reaction 内写 model 任何字段会自触发',
+  },
+  {
+    name: 'B 模式：写 deps',
+    type: 'string[]',
+    description:
+      '精确路径浅比较；仅 deps 命中路径变化触发 reaction；函数内写 model 安全（除非写入了 deps 路径内字段）',
+  },
+  {
+    name: 'deps 与反应式副作用',
+    type: '_effect 字段',
+    description:
+      'use-reaction 第 14-34 行 applyReactionFields 是直接赋值 node[field]；用 _effect 字段承载副作用（返回 undefined）让 isEqual 跳过写入',
+  },
+  {
+    name: '预算兜底',
+    type: 'MAX_CHAIN_PER_FLUSH = 50',
+    description:
+      '无 deps 时 reaction 写自身依赖构成环 → use-reaction 单 flush 内最多执行 50 次 → console.error 后跳过，把「卡死」降级为「可诊断错误」',
+  },
+  {
+    name: '选型决策',
+    type: '—',
+    description:
+      '计算字段 + 写 model 副作用 → 必写 deps；只读 model 做条件判断 → 写 deps 更稳；极简 demo 函数体内引用追踪够用 → 不写',
+  },
+]
+
 // XFormReactionAdvanced —— reaction 进阶字段速查
 export const reactionAdvancedItems: XFormApiItem[] = [
   {

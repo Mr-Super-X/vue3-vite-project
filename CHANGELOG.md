@@ -31,6 +31,15 @@
   - 新增 `cascader-data.ts` 静态字典（省/市/区、商品/型号、度量单位、折扣等级），ApiTable 收录「reaction 进阶字段速查」，sidebar 注册「反应式联动·进阶」
 
 
+* **form-schema:** 新增 reaction.deps 动机 demo（XFormReactionDeps）
+  - 与 XFormReactionAdvanced 演示「deps 怎么用」不同，本页专注「deps 为什么用」——三个使用动机对比
+  - ① deps 切断无关字段触发：默认 deep watch 整棵 model，distractor.* 任意字段变化都跑 reaction；声明 deps 后仅精确路径触发；观察 runCount 次数差异
+  - ② deps 切断循环联动：reaction 函数体写自身依赖字段时，无 deps 会无限循环触发——use-reaction 预算 MAX_CHAIN_PER_FLUSH=50 兜底 console.error；声明 deps 切断自触发
+  - ③ deps 路径声明（可读性）：同一段计算逻辑，无 deps 靠函数体内引用追踪（隐式），有 deps 显式列出依赖（推荐：重构安全 + 阅读一目了然）
+  - 顶部开关 A/B 模式切换（schema computed 重计算 → XForm 自动 watch 重新注册 reaction，旧 stoppers 清理）
+  - ApiTable 收录「reaction.deps 字段速查」，sidebar 注册「反应式联动·deps 动机」
+
+
 * **form-schema:** P2-3 数组行拖拽排序（array.draggable）
   - `ArrayNodeConfig.draggable: true`：数组行开启 HTML5 拖拽换位——dragstart 记录源行、drop 调 `moveItem(from, to)` 更新 model（默认 false 不改变现有行为；与既有「上移/下移」按钮并存）
   - 复用 H8 的行对象身份 key：拖拽换位后行 DOM 移动而非重挂载
