@@ -13,15 +13,18 @@ export function readDraft(key: string, kind: DraftStorageKind): Record<string, u
   return pickStore(kind).get<Record<string, unknown>>(key)
 }
 
-/** 写草稿：cloneDeep 剥离 reactive Proxy + omit 剔除敏感路径；异常仅 warn 不抛出 */
+/** 写草稿：cloneDeep 剥离 reactive Proxy + omit 剔除敏感路径；异常仅 warn 不抛出。
+ *  version 提供时写版本信封 { __v, data }（schema 升级后旧版本草稿由 load 方丢弃） */
 export function writeDraft(
   key: string,
   kind: DraftStorageKind,
   model: Record<string, unknown>,
-  exclude: string[]
+  exclude: string[],
+  version?: string | number
 ): void {
   try {
-    pickStore(kind).set(key, omit(cloneDeep(model) as Record<string, unknown>, exclude))
+    const body = omit(cloneDeep(model) as Record<string, unknown>, exclude)
+    pickStore(kind).set(key, version !== undefined ? { __v: version, data: body } : body)
   } catch (err) {
     console.warn(`[useFormPersist] 草稿写入失败 (key: ${key}):`, err)
   }

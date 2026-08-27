@@ -64,6 +64,13 @@
 
 ### 🐛 Bug Fixes | 缺陷修复
 
+* **form-schema:** MEDIUM 批次 A3 状态与生命周期修复（③⑥，MEDIUM 批次收官）
+  - **③ persist 草稿污染**：`useFormPersist` 新增 `schemaVersion` 选项——草稿写版本信封 `{ __v, data }`，版本不匹配/无信封的旧草稿 load 时自动丢弃（防 schema 升级后多余 key 污染 model）；`load()` 由 `Object.assign` 浅合并改为深合并——嵌套对象逐层合并保留 schema 新增字段默认值，数组/原始值整体替换（防按索引合并残留旧尾项）
+  - **⑥ guardField watcher 泄漏**：`useFormInstance` 路径 B 守护在 watch 回调内创建的 watcher 脱离 setup effect scope（组件卸载后仍存活）——收集 stop 句柄，`onScopeDispose` 统一清理（`getCurrentScope` 守卫裸调用）
+  - 防回归：use-form-persist.spec +6（版本匹配/不匹配/无信封/save 信封/深合并保留默认值/数组整体替换）、use-form-instance.spec +1（scope 销毁后不再纠正）
+  - 附带修复 demo：`XFormPersist` 的 `onRestore` 忽略 `load()` 返回值（版本不匹配丢弃草稿时用户看到"恢复成功"假象）——恢复失败时明确提示「草稿已失效，已自动清除」；移除验证实验残留的 `schemaVersion: 1` 配置
+
+
 * **form-schema:** MEDIUM 批次 A2 竞态与覆盖修复（②⑤⑨）
   - **② async-options 竞态**：`useAsyncOptions` 加序号令牌——deps 快变时多个 in-flight 请求乱序返回，旧响应不再覆盖新数据；`stop()` 同步使在途响应失效
   - **⑨ 字符串规则 crossValidator 漏执行**：`runCrossFieldValidation` 新增 `namedRules` 参数并下穿整个 traverse 链——命名规则里的 crossValidator 在表单级校验中不再被跳过；XForm 4 处调用点透传 `props.rules`

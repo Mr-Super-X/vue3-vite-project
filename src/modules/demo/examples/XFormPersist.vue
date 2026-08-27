@@ -84,7 +84,11 @@ function onRestore() {
     ElMessage.warning('当前没有草稿（先填几个字段刷新页面再试）')
     return
   }
-  persist.load()
+  const ok = persist.load()
+  if (!ok) {
+    ElMessage.warning('草稿已失效（版本不匹配或数据损坏），已自动清除')
+    return
+  }
   formRef.value?.resetDirty() // 草稿为新基线：isDirty 从草稿起算
   refreshDirty()
   ElMessage.success('草稿已恢复（银行卡号被 exclude 剔除）')

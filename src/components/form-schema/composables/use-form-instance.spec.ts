@@ -497,3 +497,37 @@ describe('useFormInstance(model, zodSchema)', () => {
     })
   })
 })
+
+describe('useFormInstance / guard watcher 泄漏修复（⑥ 回归）', () => {
+  it('scope 销毁后 guard watcher 不再纠正字段状态', async () => {
+    const { effectScope, nextTick, ref } = await import('vue')
+    const externalErrors = ref<Record<string, { error: string; validateStatus: string }>>({})
+    const validateState = ref('success')
+    const validateMessage = ref('')
+    const scope = effectScope()
+    scope.run(() => {
+      const inst = useFormInstance(
+        () => ({}),
+        () => undefined,
+        externalErrors as never
+      )
+      const mock = {
+        ...createMockElForm(),
+        fields: [{ propString: 'a', validateState, validateMessage }],
+      }
+      inst.elFormRef.value = mock as never
+    })
+    // 触发外层 watch → guardField 注册 inner watch
+    externalErrors.value = { a: { error: '服务端错误', validateStatus: 'error' } }
+    await nextTick()
+    // guard 生效验证：字段被改成 success 时应被纠正回 error
+    validateState.value = 'success'
+    await nextTick()
+    expect(validateState.value).toBe('error')
+    // 销毁 scope 后再改 —— 泄漏修复后不应再被纠正
+    scope.stop()
+    validateState.value = 'success'
+    await nextTick()
+    expect(validateState.value).toBe('success')
+  })
+})

@@ -44,7 +44,7 @@ describe('useFormPersist / 初始化', () => {
 })
 
 describe('useFormPersist / load 恢复', () => {
-  it('load() 浅合并草稿到 model 且返回 true、草稿保留', () => {
+  it('load() 合并草稿到 model 且返回 true、草稿保留', () => {
     Local.set(KEY, { name: '张三', age: 30 })
     const model = reactive<Record<string, unknown>>({ name: '', bio: '' })
     const persist = run({ key: KEY, model })
@@ -205,5 +205,70 @@ describe('useFormPersist / 刷新兜底与生命周期', () => {
     expect(Session.get(KEY)).toEqual({ name: '张三' })
     expect(Local.get(KEY)).toBeNull()
     vi.useRealTimers()
+  })
+})
+
+describe('useFormPersist / schemaVersion 版本信封（③ 回归）', () => {
+  it('版本匹配 → load 成功解包恢复', () => {
+    Local.set(KEY, { __v: 2, data: { name: '张三' } })
+    const model = reactive<Record<string, unknown>>({ name: '' })
+    const persist = run({ key: KEY, model, schemaVersion: 2 })
+    expect(persist.load()).toBe(true)
+    expect(model.name).toBe('张三')
+  })
+
+  it('版本不匹配（旧版草稿）→ 丢弃并清除 storage，不污染 model', () => {
+    Local.set(KEY, { __v: 1, data: { name: '旧值', staleKey: '污染字段' } })
+    const model = reactive<Record<string, unknown>>({ name: '' })
+    const persist = run({ key: KEY, model, schemaVersion: 2 })
+    expect(persist.load()).toBe(false)
+    expect(persist.hasDraft.value).toBe(false)
+    expect(Local.get(KEY)).toBeNull()
+    expect(model.name).toBe('')
+    expect(model.staleKey).toBeUndefined()
+  })
+
+  it('配置 schemaVersion 后存量无信封草稿 → 视为不匹配丢弃', () => {
+    Local.set(KEY, { name: '张三' }) // 旧格式（无版本信封）
+    const model = reactive<Record<string, unknown>>({ name: '' })
+    const persist = run({ key: KEY, model, schemaVersion: 1 })
+    expect(persist.load()).toBe(false)
+    expect(Local.get(KEY)).toBeNull()
+  })
+
+  it('save 后草稿带版本信封，版本一致可恢复', async () => {
+    const model = reactive<Record<string, unknown>>({ name: '李四' })
+    const persist = run({ key: KEY, model, schemaVersion: 3 })
+    persist.save()
+    expect(Local.get(KEY)).toEqual({ __v: 3, data: { name: '李四' } })
+    const model2 = reactive<Record<string, unknown>>({ name: '' })
+    const persist2 = run({ key: KEY, model: model2, schemaVersion: 3 })
+    expect(persist2.load()).toBe(true)
+    expect(model2.name).toBe('李四')
+  })
+})
+
+describe('useFormPersist / load 深合并（③ 回归）', () => {
+  it('嵌套对象逐层合并：schema 新增字段的默认值保留，旧值覆盖既有 key', () => {
+    // schema 升级后 model 新增 address.street 默认值；旧草稿只有 address.city
+    Local.set(KEY, { address: { city: '广州' } })
+    const model = reactive<Record<string, unknown>>({
+      address: { city: '深圳', street: '默认街道' },
+    })
+    const persist = run({ key: KEY, model })
+    expect(persist.load()).toBe(true)
+    const addr = model.address as Record<string, unknown>
+    expect(addr.city).toBe('广州') // 草稿覆盖
+    expect(addr.street).toBe('默认街道') // 浅合并会整棵替换丢失该默认值；深合并保留
+  })
+
+  it('数组字段整体替换：草稿数组更短时不残留旧尾项', () => {
+    Local.set(KEY, { items: [{ qty: 1 }] })
+    const model = reactive<Record<string, unknown>>({
+      items: [{ qty: 9 }, { qty: 8 }, { qty: 7 }],
+    })
+    const persist = run({ key: KEY, model })
+    expect(persist.load()).toBe(true)
+    expect(model.items).toEqual([{ qty: 1 }]) // 按索引深合并会残留 qty:8/7
   })
 })

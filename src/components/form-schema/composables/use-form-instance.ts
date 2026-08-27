@@ -1,4 +1,12 @@
-import { ref, toRaw, watch, type ComponentPublicInstance, type Ref } from 'vue'
+import {
+  getCurrentScope,
+  onScopeDispose,
+  ref,
+  toRaw,
+  watch,
+  type ComponentPublicInstance,
+  type Ref,
+} from 'vue'
 import { validateWithZod } from './use-validate'
 import type { ZodType } from 'zod'
 
@@ -201,6 +209,15 @@ export function useFormInstance(
   //    debounced 最终会跟随 validateState 显示 error，所以红字保留。
   if (externalErrors) {
     const watchedFields = new WeakSet<object>()
+    // guardField 在 watch 回调内创建 watcher —— 脱离 setup effect scope，组件卸载后仍存活（泄漏）。
+    // 收集 stop 句柄，scope 销毁时统一清理；getCurrentScope 守卫单测中无 scope 的裸调用
+    const guardStops: (() => void)[] = []
+    if (getCurrentScope()) {
+      onScopeDispose(() => {
+        for (const s of guardStops) s()
+        guardStops.length = 0
+      })
+    }
 
     const guardField = (field: object): void => {
       if (watchedFields.has(field)) return
@@ -227,17 +244,19 @@ export function useFormInstance(
       const vs = rawField.validateState
       const vm = rawField.validateMessage
       if (vs && typeof vs === 'object' && 'value' in vs) {
-        watch(
-          () => (vs as Ref<string>).value,
-          (newState) => {
-            const err = externalErrors.value?.[fieldName]
-            if (err?.error && newState !== 'error') {
-              ;(vs as Ref<string>).value = 'error'
-              if (vm && typeof vm === 'object' && 'value' in vm) {
-                ;(vm as Ref<string>).value = err.error
+        guardStops.push(
+          watch(
+            () => (vs as Ref<string>).value,
+            (newState) => {
+              const err = externalErrors.value?.[fieldName]
+              if (err?.error && newState !== 'error') {
+                ;(vs as Ref<string>).value = 'error'
+                if (vm && typeof vm === 'object' && 'value' in vm) {
+                  ;(vm as Ref<string>).value = err.error
+                }
               }
             }
-          }
+          )
         )
       }
     }
