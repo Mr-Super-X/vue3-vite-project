@@ -12,6 +12,11 @@
  */
 export const DEFAULT_COMPONENT_MAP: Record<string, string> = {
   Input: 'ElInput',
+  InputPassword: 'ElInput',
+  ElInputPassword: 'ElInput',
+  InputTextArea: 'ElInput',
+  ElInputTextArea: 'ElInput',
+  InputTag: 'ElInputTag',
   Select: 'ElSelect',
   Option: 'ElOption',
   Switch: 'ElSwitch',
@@ -22,6 +27,9 @@ export const DEFAULT_COMPONENT_MAP: Record<string, string> = {
   Transfer: 'ElTransfer',
   TreeSelect: 'ElTreeSelect',
   Autocomplete: 'ElAutocomplete',
+  ColorPicker: 'ElColorPicker',
+  Mention: 'ElMention',
+  Rate: 'ElRate',
   Button: 'ElButton',
   Icon: 'ElIcon',
   RadioGroup: 'ElRadioGroup',
@@ -44,7 +52,11 @@ function expandComponentProps(
   for (const [key, props] of Object.entries(base)) {
     result[key] = { ...props }
     const elName = DEFAULT_COMPONENT_MAP[key]
-    if (elName) result[elName] = { ...props }
+    if (elName) {
+      if (!(elName in result)) result[elName] = { ...props }
+      const fullName = `El${key}`
+      if (fullName in DEFAULT_COMPONENT_MAP) result[fullName] = { ...props }
+    }
   }
   return result
 }
@@ -52,6 +64,10 @@ function expandComponentProps(
 /** 内置默认组件 props：按组件名注入，节点级 props 可覆盖 */
 const BASE_DEFAULT_COMPONENT_PROPS: Record<string, Record<string, unknown>> = {
   Input: { clearable: true },
+  InputNumber: { controlsPosition: 'right' },
+  InputPassword: { type: 'password', showPassword: true },
+  InputTextArea: { type: 'textarea', showWordLimit: true },
+  InputTag: { clearable: true },
   Select: { clearable: true },
   Cascader: { clearable: true },
   DatePicker: { clearable: true },
@@ -63,7 +79,8 @@ const BASE_DEFAULT_COMPONENT_PROPS: Record<string, Record<string, unknown>> = {
 
 /**
  * 默认组件 props：按组件名注入，节点级 props 可覆盖。
- * 目前仅对支持 clearable 的 Element Plus 表单组件默认开启 clearable。
+ * 包含轻量输入 UX 默认值和 Input 语义 alias 默认值；不强制
+ * ColorPicker、Mention、Rate 的业务偏好。
  *
  * 键同时支持快捷名（如 'Input'）和 Element Plus 全名（如 'ElInput'），
  * 因此 schema 中写 component: 'Input' 或 component: 'ElInput' 都能命中。

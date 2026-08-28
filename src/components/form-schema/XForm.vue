@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, nextTick, type VNode, onScopeDispose } from 'vue'
+import { computed, ref, watch, nextTick, type VNode, onScopeDispose, onMounted } from 'vue'
 import { get, set } from 'lodash-es'
 import { useSchemaRenderer } from './composables/use-schema-renderer'
 import { useSchemaIndex } from './composables/use-schema-index'
@@ -74,14 +74,6 @@ function applyDefaults(
 
 // defaultValue 填充是运行时行为而非调试诊断，必须全环境生效 ——
 // 此前它被 showDebugBanner 门控，导致 prod 下 defaultValue 静默失效
-watch(
-  () => props.schema,
-  (val) => {
-    const normalized = Array.isArray(val) ? ({ children: val } as SchemaNode) : val
-    applyDefaults(normalized, props.model)
-  },
-  { immediate: true, deep: true }
-)
 
 if (showDebugBanner.value) {
   watch(
@@ -124,6 +116,7 @@ const {
   getRef,
   clearValidate,
   resetFields,
+  setInitialValues,
   validateField,
   scrollToField,
   validateFormWithZod,
@@ -137,6 +130,27 @@ const {
   () => props.zodSchema,
   fieldErrors // 阶段 3.1：传入外部错误状态 ref，setFieldError 走 props 路径
 )
+
+function normalizeSchema(val: SchemaNode | SchemaNode[]): SchemaNode {
+  return Array.isArray(val) ? ({ children: val } as SchemaNode) : val
+}
+
+/** 应用 defaultValue 并同步 ElForm 初始值快照 */
+function applyDefaultsAndSync(val: SchemaNode | SchemaNode[]): void {
+  const normalized = normalizeSchema(val)
+  applyDefaults(normalized, props.model)
+  // 关键：子组件 mount 时可能 emit 副作用值（如 ElRate 在 modelValue falsy 时 emit 0），
+  // 导致 ElForm 捕获错误的初始值。schema defaultValue 填充后立刻 setInitialValues，
+  // 使 resetFields 以 schema 定义的 defaultValue 为准。
+  setInitialValues(props.model ?? {})
+}
+
+watch(() => props.schema, applyDefaultsAndSync, { immediate: true, deep: true })
+
+onMounted(() => {
+  // setup 期 immediate watch 触发时 elFormRef 尚未绑定，mounted 后补同步一次初始值
+  applyDefaultsAndSync(props.schema)
+})
 
 // 阶段 1.1 + 3.1 修复：反向跨字段实时校验 —— 精确触发
 // onValueChange 调用 crossFieldTrigger.trigger(node.name) 只跑 deps 包含该字段的 rule

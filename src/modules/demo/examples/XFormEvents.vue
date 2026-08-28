@@ -93,7 +93,13 @@ const schema: SchemaNode = {
       label: '备注',
       name: 'remark',
       component: 'Input',
-      props: { type: 'textarea', rows: 3, placeholder: '最多 200 字', maxlength: 200 },
+      props: {
+        type: 'textarea',
+        rows: 3,
+        placeholder: '最多 200 字',
+        maxlength: 200,
+        showWordLimit: true,
+      },
       on: {
         // 函数形式：实时统计字数（v-model 已先行写入 model，这里读到的即最新值）
         input: (value: unknown) => {

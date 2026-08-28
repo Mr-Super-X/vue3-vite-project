@@ -25,6 +25,11 @@ export type ElFormInstance = {
    * validateField(prop?: string | string[]): Promise<void>（校验失败 reject）
    */
   validateField?: (prop?: string | string[]) => Promise<void>
+  /**
+   * 同步 ElForm 初始值快照 —— element-plus 2.x 内部方法，
+   * 用于 defaultValue 填充后防止子组件 mount 副作用（如 ElRate emit 0）导致 resetFields 基准值错乱。
+   */
+  setInitialValues?: (initModel: Record<string, unknown>) => void
 }
 
 /** 阶段 3.1：字段错误状态（走 element-plus 官方 props 路径） */
@@ -128,6 +133,15 @@ export function useFormInstance(
       }
     }
     elFormRef.value?.resetFields?.(names)
+  }
+
+  /**
+   * 同步 ElForm 初始值快照。
+   * 用于 schema defaultValue 填充后：防止子组件 mount 时副作用（如 ElRate 在 modelValue
+   * 为 falsy 时 emit 0）导致 ElForm 捕获到错误的初始值，进而使 resetFields 无法回到 defaultValue。
+   */
+  function setInitialValues(initModel: Record<string, unknown>): void {
+    elFormRef.value?.setInitialValues?.(initModel)
   }
 
   /**
@@ -364,6 +378,7 @@ export function useFormInstance(
     validateForm,
     clearValidate,
     resetFields,
+    setInitialValues,
     validateField,
     scrollToField,
     validateFormWithZod,

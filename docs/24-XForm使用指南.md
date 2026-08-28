@@ -67,7 +67,7 @@ const schema = {
 | `zodSchema`      | `ZodType`                                                         |      | Zod 校验模式，配合 `validateWithZod()`（§6.3）                                                                                     |
 | `componentProps` | `Record<string, Record<string, unknown>>`                         |      | 按组件名注入默认 props（键支持短名 `'Input'` 和全名 `'ElInput'`）。与内置默认合并，用户配置覆盖内置；**节点级 `props` 优先级最高** |
 
-**内置默认 props**：以下 8 个组件默认开启 `clearable: true`——`Input / Select / Cascader / DatePicker / TimePicker / TimeSelect / TreeSelect / Autocomplete`。想关掉某个组件：`<XForm :component-props="{ Select: { clearable: false } }" />`。
+**内置默认 props**：下表列出 XForm 的安全默认值；节点级 `props` 优先级最高，也可通过 XForm 的 `componentProps` 按组件名覆盖内置默认。
 
 ---
 
@@ -165,9 +165,22 @@ if (res.success) formRef.value?.resetDirty()
 `resolveElComponentName(name)` 按序尝试：
 
 1. 命中 `components` prop 注册的自定义组件名 → 直接用
-2. 命中内置短名映射（23 个：`Input / Select / Option / Switch / DatePicker / TimePicker / TimeSelect / Upload / Transfer / TreeSelect / Autocomplete / Button / Icon / RadioGroup / Radio / CheckboxGroup / Checkbox / Cascader / InputNumber / Slider / Card / FormItem / Form`）→ 转 `ElXxx` 全名
+2. 命中内置短名映射（29 个：`Input / Select / Option / Switch / DatePicker / TimePicker / TimeSelect / Upload / Transfer / TreeSelect / Autocomplete / Button / Icon / RadioGroup / Radio / CheckboxGroup / Checkbox / Cascader / InputNumber / InputPassword / InputTextArea / InputTag / ColorPicker / Mention / Rate / Slider / Card / FormItem / Form`）→ 转 `ElXxx` 全名
 3. 以 `El` 开头的全名 → 直通
 4. 全部未命中 → 降级渲染 `<div>` 占位（dev 模式 DebugBanner 会报 schema 校验错误）
+
+### 内置默认 props
+
+| 快捷名          | 默认 props                                  | 说明                                             |
+| --------------- | ------------------------------------------- | ------------------------------------------------ |
+| `Input`         | `{ clearable: true }`                       | 普通输入                                         |
+| `InputNumber`   | `{ controlsPosition: 'right' }`             | 不限制最小值                                     |
+| `InputPassword` | `{ type: 'password', showPassword: true }`  | 初始隐藏并允许切换                               |
+| `InputTextArea` | `{ type: 'textarea', showWordLimit: true }` | 多行输入，默认显示字数统计（需配合 `maxlength`） |
+| `InputTag`      | `{ clearable: true }`                       | `modelValue` 为 `string[]`                       |
+| `ColorPicker`   | 无                                          | 颜色和格式由节点配置                             |
+| `Mention`       | 无                                          | options 和 prefix 由节点配置                     |
+| `Rate`          | 无                                          | 星级、是否半星由节点配置                         |
 
 ---
 
@@ -469,12 +482,18 @@ const schema = {
 | `reaction(config)`                | 联动配置                                                             |
 | `build()`                         | 产出 `SchemaNodeFor<C>`                                              |
 
-### 12.2 22 个 builder 及特有方法
+### 12.2 28 个 builder 及特有方法
 
 | Builder                                                                                        | 特有链式方法                                                                                                         |
 | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | `xInput`                                                                                       | `clearable()`                                                                                                        |
 | `xTextarea`                                                                                    | `rows(n)`（type=textarea）                                                                                           |
+| `xInputPassword`                                                                               | —                                                                                                                    |
+| `xInputTextArea`                                                                               | —                                                                                                                    |
+| `xInputTag`                                                                                    | —                                                                                                                    |
+| `xColorPicker`                                                                                 | —                                                                                                                    |
+| `xMention`                                                                                     | —                                                                                                                    |
+| `xRate`                                                                                        | —                                                                                                                    |
 | `xSelect`                                                                                      | `options([{ value, label }])`                                                                                        |
 | `xOption` / `xSwitch` / `xInputNumber` / `xSlider` / `xRadio` / `xCheckbox` / `xCheckboxGroup` | —                                                                                                                    |
 | `xDatePicker`                                                                                  | `format(v)`（→ valueFormat）                                                                                         |
@@ -506,7 +525,7 @@ const email: SchemaNodeFor<'Input'> = {
 }
 ```
 
-内置 22 个组件名均支持推导（`ComponentPropsRegistry`）。自定义组件通过 module augmentation 扩展：
+内置 28 个组件名均支持推导（`ComponentPropsRegistry`）。运行时短名另有 Button、Icon、Form 等完整映射；自定义组件通过 module augmentation 扩展：
 
 ```ts
 // types/form-schema.d.ts

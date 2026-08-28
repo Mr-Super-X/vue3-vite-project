@@ -101,6 +101,73 @@ const schema: SchemaNode = {
       col: { span: 24 },
       props: { type: 'textarea', rows: 3, placeholder: '备注信息（整行占满）' },
     },
+    {
+      label: '密码',
+      name: 'pwd',
+      col: { span: 12 },
+      component: 'InputPassword',
+      rules: 'required',
+      defaultValue: 'secret-123',
+    },
+    {
+      label: '描述',
+      name: 'desc',
+      col: { span: 12 },
+      component: 'InputTextArea',
+      rules: 'required',
+      defaultValue: '这是 InputTextArea 别名的默认效果。',
+      props: {
+        rows: 4,
+        maxlength: 100,
+      },
+    },
+    {
+      label: '技能标签',
+      name: 'tags',
+      col: { span: 12 },
+      component: 'InputTag',
+      rules: 'required',
+      defaultValue: ['Vue', 'Element Plus'],
+    },
+    {
+      label: '主题色',
+      name: 'color',
+      col: { span: 12 },
+      component: 'ColorPicker',
+      rules: 'required',
+      defaultValue: '#1890ff',
+    },
+    {
+      label: '负责人',
+      name: 'owner',
+      col: { span: 12 },
+      component: 'Mention',
+      rules: 'required',
+      defaultValue: '@alice',
+      props: {
+        options: [
+          { value: 'alice', label: 'Alice' },
+          { value: 'bob', label: 'Bob' },
+        ],
+      },
+    },
+    {
+      label: '评分',
+      name: 'score',
+      col: { span: 12 },
+      component: 'Rate',
+      rules: { type: 'number', min: 1, message: '请选择评分', required: true },
+      // defaultValue: 4,
+    },
+    {
+      label: '最低价',
+      name: 'minPrice',
+      col: { span: 12 },
+      component: 'InputNumber',
+      rules: 'required',
+      defaultValue: 1,
+      props: { min: 0 },
+    },
   ],
 }
 
@@ -154,6 +221,7 @@ const tocItems = [
         '顶层 row.gutter: 24 + 节点级 col.span 分配列宽：前 4 字段各 12 列，备注 24 列整行占满。',
         '注意：顶层 column 会把每个节点包进固定 span 的 ElCol，节点级 col.span 无法突破半宽——混用列宽时用 row + col.span 组合。',
         'rules 支持 「required」字符串 + validator 函数。订单号带格式校验，结束日期不能晚于今天。',
+        '新增组件字段：密码 / 描述 / 技能标签 / 主题色 / 负责人 / 评分 / 最低价（验证 InputPassword/InputTextArea/InputTag/ColorPicker/Mention/Rate 别名、默认 props、节点覆盖与 v-model）。',
       ]"
     >
       <section id="demo-base">

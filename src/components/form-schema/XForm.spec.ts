@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { h, reactive, nextTick } from 'vue'
+import { ElRate, ElColorPicker, ElInputTag, ElMention } from 'element-plus'
 import type { SchemaNode, XFormExpose } from './types'
 import XForm from './XForm.vue'
 import XFormSource from './XForm.vue?raw'
@@ -17,10 +18,18 @@ const ElRowStub = { name: 'ElRow', template: '<div class="el-row"><slot /></div>
 const ElColStub = { name: 'ElCol', template: '<div class="el-col"><slot /></div>' }
 const InputStub = {
   name: 'ElInput',
-  props: ['modelValue', 'clearable'],
+  props: ['modelValue', 'type', 'showPassword', 'clearable'],
   emits: ['update:modelValue'],
   template:
-    '<input class="el-input-stub" :value="modelValue" :data-clearable="clearable" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+    '<input class="el-input-stub" :value="modelValue" :data-type="type" :data-show-password="showPassword" :data-clearable="clearable" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+}
+
+const InputNumberStub = {
+  name: 'ElInputNumber',
+  props: ['modelValue', 'controlsPosition', 'min'],
+  emits: ['update:modelValue'],
+  template:
+    '<input class="el-input-number-stub" :value="modelValue" :data-controls-position="controlsPosition" :data-min="min" />',
 }
 const ElConfigProviderStub = { name: 'ElConfigProvider', template: '<div><slot /></div>' }
 
@@ -35,6 +44,11 @@ function mountXForm(props: Record<string, unknown>, extraComponents: Record<stri
         ElRow: ElRowStub,
         ElCol: ElColStub,
         ElInput: InputStub,
+        ElInputNumber: InputNumberStub,
+        ElRate,
+        ElColorPicker,
+        ElInputTag,
+        ElMention,
         ...extraComponents,
       } as never,
     },
@@ -184,6 +198,34 @@ describe('XForm.vue', () => {
     expect(input.props('clearable')).toBe(true)
   })
 
+  it('内置别名默认 props 与 InputNumber 默认 props 可在 XForm 中生效', () => {
+    const wrapper = mountXForm({
+      schema: [
+        { component: 'InputPassword', name: 'password' },
+        { component: 'InputTextArea', name: 'remark' },
+        { component: 'InputNumber', name: 'qty' },
+        { component: 'InputNumber', name: 'price', props: { min: 0 } },
+      ] as unknown as SchemaNode[],
+      components: {
+        InputPassword: InputStub,
+        InputTextArea: InputStub,
+        InputNumber: InputNumberStub,
+      },
+    } as never)
+
+    const inputs = wrapper.findAll('.el-input-stub')
+    const numbers = wrapper.findAll('.el-input-number-stub')
+    expect(inputs).toHaveLength(2)
+    expect(numbers).toHaveLength(2)
+    expect(inputs[0]!.attributes('data-type')).toBe('password')
+    expect(inputs[0]!.attributes('data-show-password')).toBe('true')
+    expect(inputs[1]!.attributes('data-type')).toBe('textarea')
+    expect(numbers[0]!.attributes('data-controls-position')).toBe('right')
+    expect(numbers[0]!.attributes('data-min')).toBeUndefined()
+    expect(numbers[1]!.attributes('data-controls-position')).toBe('right')
+    expect(numbers[1]!.attributes('data-min')).toBe('0')
+  })
+
   it('getNames() with includesIgnore=true returns all', async () => {
     const wrapper = mountXForm({
       schema: {
@@ -197,6 +239,49 @@ describe('XForm.vue', () => {
     await nextTick()
     const exposed = wrapper.vm as unknown as XFormExpose
     expect(exposed.getNames(true).sort()).toEqual(['a', 'b'])
+  })
+})
+
+describe('XForm.vue resetFields 与 defaultValue', () => {
+  it('重置时字段应恢复到 defaultValue', async () => {
+    const model = reactive<Record<string, unknown>>({})
+    const wrapper = mountXForm({
+      schema: {
+        children: [
+          { component: 'Input', name: 'orderNo' },
+          { component: 'InputPassword', name: 'pwd', defaultValue: 'secret-123' },
+          { component: 'InputNumber', name: 'qty', defaultValue: 1 },
+          { component: 'Rate', name: 'score', defaultValue: 4 },
+          { component: 'ColorPicker', name: 'color', defaultValue: '#1890ff' },
+        ],
+      } as unknown as SchemaNode,
+      model,
+    })
+    await flushPromises()
+
+    // 默认值已填充
+    expect(model.pwd).toBe('secret-123')
+    expect(model.qty).toBe(1)
+    expect(model.score).toBe(4)
+    expect(model.color).toBe('#1890ff')
+
+    // 模拟用户修改
+    model.pwd = 'changed'
+    model.qty = 99
+    model.score = 3
+    model.color = '#ff0000'
+    await flushPromises()
+
+    // 重置
+    const exposed = wrapper.vm as unknown as XFormExpose
+    exposed.resetFields()
+    await flushPromises()
+
+    // 应恢复到 defaultValue
+    expect(model.pwd).toBe('secret-123')
+    expect(model.qty).toBe(1)
+    expect(model.score).toBe(4)
+    expect(model.color).toBe('#1890ff')
   })
 })
 

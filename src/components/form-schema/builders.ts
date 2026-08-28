@@ -208,7 +208,7 @@ function makeBuilder<C extends ComponentName>(
   ) => NodeBuilder<C, ComponentPropsRegistry[C]> & { [k: string]: unknown }
 }
 
-/** 19 个 component 类型的基础 builder 类（每个绑死 component 名；另有 Ext 扩展类与 ArrayBuilder） */
+/** 25 个 component 类型的基础 builder 类（每个绑死 component 名；另有 Ext 扩展类与 ArrayBuilder） */
 const InputBuilder = makeBuilder('Input')
 const SelectBuilder = makeBuilder('Select')
 const OptionBuilder = makeBuilder('Option')
@@ -226,6 +226,12 @@ const CheckboxGroupBuilder = makeBuilder('CheckboxGroup')
 const CheckboxBuilder = makeBuilder('Checkbox')
 const CascaderBuilder = makeBuilder('Cascader')
 const InputNumberBuilder = makeBuilder('InputNumber')
+const InputPasswordBuilder = makeBuilder('InputPassword')
+const InputTextAreaBuilder = makeBuilder('InputTextArea')
+const InputTagBuilder = makeBuilder('InputTag')
+const ColorPickerBuilder = makeBuilder('ColorPicker')
+const MentionBuilder = makeBuilder('Mention')
+const RateBuilder = makeBuilder('Rate')
 const SliderBuilder = makeBuilder('Slider')
 const CardBuilder = makeBuilder('Card')
 
@@ -501,6 +507,12 @@ export const xCheckboxGroup = (name: string) => new CheckboxGroupBuilder(name)
 export const xCheckbox = (name: string) => new CheckboxBuilder(name)
 export const xCascader = (name: string) => new CascaderBuilderExt(name)
 export const xInputNumber = (name: string) => new InputNumberBuilder(name)
+export const xInputPassword = (name: string) => new InputPasswordBuilder(name)
+export const xInputTextArea = (name: string) => new InputTextAreaBuilder(name)
+export const xInputTag = (name: string) => new InputTagBuilder(name)
+export const xColorPicker = (name: string) => new ColorPickerBuilder(name)
+export const xMention = (name: string) => new MentionBuilder(name)
+export const xRate = (name: string) => new RateBuilder(name)
 export const xSlider = (name: string) => new SliderBuilder(name)
 export const xCard = (name: string) => new CardBuilderExt(name)
 export const xArray = (name: string) => new ArrayBuilder(name)

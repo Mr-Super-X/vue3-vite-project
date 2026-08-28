@@ -124,6 +124,12 @@ import {
   xSwitch,
   xDatePicker,
   xTextarea,
+  xColorPicker,
+  xInputPassword,
+  xInputTag,
+  xInputTextArea,
+  xMention,
+  xRate,
   xRadioGroup,
   xCard,
 } from '@/components/form-schema/builders'
@@ -143,6 +149,12 @@ const schema = {
       .build(),
     xSwitch('enabled').label('启用').build(),
     xDatePicker('birthday').label('生日').format('YYYY-MM-DD').build(),
+    xInputPassword('password').label('密码').placeholder('请输入密码').build(),
+    xInputTextArea('remark').label('备注').prop('rows', 4).build(),
+    xInputTag('skills').label('技能').prop('max', 5).build(),
+    xColorPicker('theme').label('主题色').build(),
+    xMention('owner').label('负责人').build(),
+    xRate('score').label('评分').build(),
   ],
 }
 ```
@@ -177,9 +189,20 @@ const selectNode: SchemaNodeFor<'Select'> = {
 }
 ```
 
-支持的 component 名（20 个内置 + ArrayNode 占位）：`Input | Select | Option | Switch | DatePicker | TimePicker | TimeSelect | TreeSelect | Upload | Autocomplete | Transfer | RadioGroup | Radio | CheckboxGroup | Checkbox | Cascader | InputNumber | Slider | Card | FormItem`
+支持的 component 名（26 个内置 + ArrayNode 占位）：`Input | Select | Option | Switch | DatePicker | TimePicker | TimeSelect | TreeSelect | Upload | Autocomplete | Transfer | RadioGroup | Radio | CheckboxGroup | Checkbox | Cascader | InputNumber | InputPassword | InputTextArea | InputTag | ColorPicker | Mention | Rate | Slider | Card | FormItem`
 
 自定义组件可通过 module augmentation 扩展类型推导（见下方“自定义组件类型扩展”）。
+
+| 快捷名          | 默认 props                                  | 说明                                             |
+| --------------- | ------------------------------------------- | ------------------------------------------------ |
+| `Input`         | `{ clearable: true }`                       | 普通输入                                         |
+| `InputNumber`   | `{ controlsPosition: 'right' }`             | 不限制最小值                                     |
+| `InputPassword` | `{ type: 'password', showPassword: true }`  | 初始隐藏并允许切换                               |
+| `InputTextArea` | `{ type: 'textarea', showWordLimit: true }` | 多行输入，默认显示字数统计（需配合 `maxlength`） |
+| `InputTag`      | `{ clearable: true }`                       | `modelValue` 为 `string[]`                       |
+| `ColorPicker`   | 无                                          | 颜色和格式由节点配置                             |
+| `Mention`       | 无                                          | options 和 prefix 由节点配置                     |
+| `Rate`          | 无                                          | 星级、是否半星由节点配置                         |
 
 ## 自定义组件类型扩展
 

@@ -11,6 +11,10 @@ import type {
   ElTreeSelect,
   ElUpload,
   ElAutocomplete,
+  ElInputTag,
+  MentionProps,
+  ElColorPicker,
+  ElRate,
   ElTransfer,
   ElRadioGroup,
   ElRadio,
@@ -354,6 +358,10 @@ type ElTimeSelectProps = ComponentProps<typeof ElTimeSelect>
 type ElTreeSelectProps = ComponentProps<typeof ElTreeSelect>
 type ElUploadProps = ComponentProps<typeof ElUpload>
 type ElAutocompleteProps = ComponentProps<typeof ElAutocomplete>
+type ElInputTagProps = ComponentProps<typeof ElInputTag>
+type ElMentionProps = MentionProps
+type ElColorPickerProps = ComponentProps<typeof ElColorPicker>
+type ElRateProps = ComponentProps<typeof ElRate>
 type ElTransferProps = ComponentProps<typeof ElTransfer>
 type ElRadioGroupProps = ComponentProps<typeof ElRadioGroup>
 type ElRadioProps = ComponentProps<typeof ElRadio>
@@ -387,6 +395,12 @@ export interface ComponentPropsRegistry {
   TreeSelect: ElTreeSelectProps
   Upload: ElUploadProps
   Autocomplete: ElAutocompleteProps
+  InputPassword: ElInputProps
+  InputTextArea: ElInputProps
+  InputTag: ElInputTagProps
+  ColorPicker: ElColorPickerProps
+  Mention: ElMentionProps
+  Rate: ElRateProps
   Transfer: ElTransferProps
   RadioGroup: ElRadioGroupProps
   Radio: ElRadioProps

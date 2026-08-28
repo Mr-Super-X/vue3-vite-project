@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import type { SchemaNode } from '../types'
 import { useRenderSchemaNode, resolveComponentFor } from './render-schema-node'
+import { ElInput, ElInputTag, ElMention, ElColorPicker, ElRate } from 'element-plus'
 import { h, type VNode } from 'vue'
 
 /** 创建一个最小可用的 RenderSchemaNode options */
@@ -26,6 +27,97 @@ function makeOpts(overrides: Partial<Parameters<typeof useRenderSchemaNode>[0]> 
   }
   return { opts, renderSpy, addItem, removeItem, moveItem }
 }
+
+describe('resolveComponentFor 扩展内置表单组件', () => {
+  it.each([
+    ['InputPassword', ElInput],
+    ['ElInputPassword', ElInput],
+    ['InputTextArea', ElInput],
+    ['ElInputTextArea', ElInput],
+    ['InputTag', ElInputTag],
+    ['ElInputTag', ElInputTag],
+    ['ColorPicker', ElColorPicker],
+    ['ElColorPicker', ElColorPicker],
+    ['Mention', ElMention],
+    ['ElMention', ElMention],
+    ['Rate', ElRate],
+    ['ElRate', ElRate],
+  ] as Array<[string, unknown]>)('%s 解析为预期组件', (name, expected) => {
+    const { opts } = makeOpts({ model: { field: undefined } })
+    const render = useRenderSchemaNode(opts)
+    const result = render({ component: name, name: 'field', formItem: false } as SchemaNode)
+    expect((result as VNode).type).toBe(expected)
+  })
+
+  it('为六类值形态写入 model', () => {
+    const cases: Array<[string, unknown]> = [
+      ['InputPassword', 'secret'],
+      ['InputTextArea', 'line 1'],
+      ['InputTag', ['Vue', 'Element Plus']],
+      ['ColorPicker', null],
+      ['Mention', '@alice'],
+      ['Rate', 4],
+    ]
+
+    for (const [name, value] of cases) {
+      const model: Record<string, unknown> = {}
+      const { opts } = makeOpts({ model })
+      const render = useRenderSchemaNode(opts)
+      const result = render({ component: name, name: 'field', formItem: false } as SchemaNode)
+      const props = (result as VNode).props as Record<string, unknown>
+      const updateModelValue = props['onUpdate:modelValue']
+      expect(updateModelValue).toBeTypeOf('function')
+      ;(updateModelValue as (nextValue: unknown) => void)(value)
+      expect(model.field).toEqual(value)
+    }
+  })
+
+  it('默认 props 与 InputPassword 节点覆盖行为', () => {
+    const { opts } = makeOpts({
+      model: {},
+      componentProps: {
+        InputPassword: { type: 'password', showPassword: true },
+        ElInputPassword: { type: 'password', showPassword: true },
+        InputTextArea: { type: 'textarea' },
+        InputTag: { clearable: true },
+      },
+    })
+    const render = useRenderSchemaNode(opts)
+    const password = render({
+      component: 'InputPassword',
+      name: 'password',
+      formItem: false,
+    } as SchemaNode)
+    const passwordProps = (password as VNode).props as Record<string, unknown>
+    expect(passwordProps.type).toBe('password')
+    expect(passwordProps.showPassword).toBe(true)
+
+    const textarea = render({
+      component: 'InputTextArea',
+      name: 'remark',
+      formItem: false,
+    } as SchemaNode)
+    const textareaProps = (textarea as VNode).props as Record<string, unknown>
+    expect(textareaProps.type).toBe('textarea')
+
+    const inputTag = render({
+      component: 'InputTag',
+      name: 'skills',
+      formItem: false,
+    } as SchemaNode)
+    const inputTagProps = (inputTag as VNode).props as Record<string, unknown>
+    expect(inputTagProps.clearable).toBe(true)
+
+    const overridden = render({
+      component: 'InputPassword',
+      name: 'passwordOverride',
+      formItem: false,
+      props: { type: 'text' },
+    } as SchemaNode)
+    const overriddenProps = (overridden as VNode).props as Record<string, unknown>
+    expect(overriddenProps.type).toBe('text')
+  })
+})
 
 describe('resolveComponentFor 原生 HTML 标签', () => {
   it('全小写标签名返回字符串标签名（h() 原生渲染）', () => {

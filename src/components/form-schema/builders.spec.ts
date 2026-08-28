@@ -10,8 +10,55 @@ import {
   xTreeSelect,
   xCascader,
   xAutocomplete,
+  xColorPicker,
+  xInputPassword,
+  xInputTag,
+  xInputTextArea,
+  xMention,
+  xRate,
 } from './builders'
 import type { SchemaNode } from './types'
+
+describe('扩展内置组件 builder', () => {
+  it('返回正确的快捷名并支持通用 props 链式调用', () => {
+    expect(xInputPassword('password').label('密码').prop('clearable', true).build()).toMatchObject({
+      name: 'password',
+      component: 'InputPassword',
+      props: { clearable: true },
+    })
+    expect(
+      xInputTextArea('remark').label('备注').prop('autosize', { minRows: 2, maxRows: 6 }).build()
+    ).toMatchObject({
+      name: 'remark',
+      component: 'InputTextArea',
+      props: { autosize: { minRows: 2, maxRows: 6 } },
+    })
+    expect(xInputTag('skills').prop('max', 5).build()).toMatchObject({
+      name: 'skills',
+      component: 'InputTag',
+      props: { max: 5 },
+    })
+    expect(xColorPicker('theme').prop('showAlpha', true).build()).toMatchObject({
+      name: 'theme',
+      component: 'ColorPicker',
+      props: { showAlpha: true },
+    })
+    expect(
+      xMention('owner')
+        .prop('options', [{ value: 'alice', label: 'Alice' }])
+        .build()
+    ).toMatchObject({
+      name: 'owner',
+      component: 'Mention',
+      props: { options: [{ value: 'alice', label: 'Alice' }] },
+    })
+    expect(xRate('score').prop('allowHalf', true).build()).toMatchObject({
+      name: 'score',
+      component: 'Rate',
+      props: { allowHalf: true },
+    })
+  })
+})
 
 describe('xArray(name) / ArrayBuilder', () => {
   it('returns ArrayBuilder instance with name and kind set', () => {

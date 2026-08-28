@@ -16,7 +16,7 @@ export type {
 } from './composables/use-schema-index'
 export { resolveFunctionExpression } from './composables/use-expression'
 export { resolveElComponentName } from './element-plus-adapter'
-// 链式构建器全集（21 个工厂函数：xInput / xSelect / ... / xCard / xArray）
+// 链式构建器全集（27 个工厂函数：xInput / xSelect / ... / xRate / xArray）
 export * from './builders'
 export type {
   SchemaNode,

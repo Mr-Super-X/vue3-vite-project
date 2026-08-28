@@ -21,6 +21,12 @@
 
 ### ✨ Features | 新特性
 
+* **form-schema:** 扩展常用输入组件与默认配置
+  - 新增 `InputPassword`（`ElInput` 语义别名，默认隐藏并可切换）、`InputTextArea`（`ElInput` 语义别名）、`InputTag`、`ColorPicker`、`Mention`、`Rate` 六个内置组件及对应 `xXxx` builder
+  - 同步补齐 `Element Plus` 组件导入、快捷名/全名解析、`SchemaNodeFor` 类型推导、props 覆盖与 v-model 写回测试
+  - `InputNumber` 纳入内置默认配置，右侧控制器但**不**强制 `min: 0`；ColorPicker/Mention/Rate 不增加业务偏好默认值
+  - 回归验证：密码、文本域、标签数组、颜色 `string|null`、提及文本、评分数字均通过 adapter、renderer、XForm 与类型测试
+
 * **form-schema:** 新增 `{{ fn }}` 动态脚本表达式 demo（XFormExpression）
   - 一次覆盖五类挂载位：顶层 `readonly` 表达式（锁定单据整表 view 化）、`node.on.change` 事件表达式、`reaction.hidden` / `reaction.label` 反应式表达式（条件显隐 + 币种联动文案）、`node.permission` 权限三态表达式（admin 编辑 / viewer 只读）
   - 演示 `expressionFunctions` 白名单注入：`pushLog`（沙箱副作用受控出口，日志面板可视化执行）、`toCurrency`（业务格式化不内联进 schema）——并还原 `use-expression.ts` 编译缓存与 `toSafeDto` 净化的真实链路

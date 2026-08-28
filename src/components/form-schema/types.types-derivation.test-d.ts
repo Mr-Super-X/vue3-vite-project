@@ -55,6 +55,37 @@ const _radioGroupValid: SchemaNodeFor<'RadioGroup'> = {
 void _radioGroupValid
 
 // === ComponentName 类型应包含所有 12 个组件 ===
+const _inputPassword: SchemaNodeFor<'InputPassword'> = {
+  component: 'InputPassword',
+  props: { type: 'password', showPassword: true },
+}
+const _inputTextArea: SchemaNodeFor<'InputTextArea'> = {
+  component: 'InputTextArea',
+  props: { type: 'textarea', rows: 4 },
+}
+const _inputTag: SchemaNodeFor<'InputTag'> = {
+  component: 'InputTag',
+  props: { modelValue: ['Vue', 'Element Plus'], max: 5, clearable: true },
+}
+const _colorPicker: SchemaNodeFor<'ColorPicker'> = {
+  component: 'ColorPicker',
+  props: { modelValue: '#1890ff', colorFormat: 'hex', showAlpha: true },
+}
+const _mention: SchemaNodeFor<'Mention'> = {
+  component: 'Mention',
+  props: { modelValue: '@alice', options: [{ value: 'alice', label: 'Alice' }] },
+}
+const _rate: SchemaNodeFor<'Rate'> = {
+  component: 'Rate',
+  props: { modelValue: 4, allowHalf: true },
+}
+void _inputPassword
+void _inputTextArea
+void _inputTag
+void _colorPicker
+void _mention
+void _rate
+
 const _components: ComponentName = 'Input' // type-only test
 void _components
 
