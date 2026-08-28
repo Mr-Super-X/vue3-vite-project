@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup lang="tsx">
 /**
  * XForm 文件上传场景 demo
  *
@@ -14,7 +14,10 @@
  * 外加 3 类"产品觉得默认样式不好、需要定制"的自定义方案：
  * 8. 类名覆盖默认注入（不写 slots，只改外观）
  * 9. slots.default 完全接管触发区
- * 10. slots.file 自定义已上传项渲染
+ * 10. slots.file 自定义已上传项渲染 —— 同时给出 JSX 与 h() 两种等价写法
+ *
+ * script 块是 lang="tsx" 而非 lang="ts"：场景 10 的 JSX 写法需要它。
+ * 前置条件是 eslint.config.mjs 的 withVueTs 已声明 scriptLangs: ['ts', 'tsx']。
  */
 import { ref, reactive, h } from 'vue'
 import { ElMessage, ElIcon, ElButton } from 'element-plus'
@@ -199,17 +202,51 @@ function formatFileSize(size: number | undefined): string {
   return `${(size / 1024 / 1024).toFixed(2)} MB`
 }
 
-function removeCustomFile(target: UploadUserFile) {
-  const list = customModel.contractFiles as UploadUserFile[]
-  customModel.contractFiles = list.filter((f) => f !== target)
+function removeCustomFile(field: 'contractFiles' | 'quotationFiles', target: UploadUserFile) {
+  const list = customModel[field] as UploadUserFile[]
+  customModel[field] = list.filter((f) => f !== target)
 }
 
 /**
- * 场景 10 的自定义列表项渲染。
+ * 场景 10 的自定义列表项 —— JSX 写法。
+ *
  * ElUpload 的 slots.file 只替换 li 内部内容，li 外壳与 hover 动作条仍由 Element Plus 渲染，
  * 因此删除按钮要自己接 —— 内置的 ✕ 已被本插槽覆盖掉。
+ *
+ * 写 JSX 需注意（与 React 的差异）：
+ * - 属性写 class / onClick，不是 className；写错不报错但样式静默失效
+ * - JSX 里的组件不走 unplugin-vue-components 按需注入（那只覆盖 template），必须显式 import
+ * - 参数只能保持 scope?: Record<string, unknown>：写成 ({ file }: { file: UploadUserFile })
+ *   会因可选性不匹配而无法赋值给 SlotRenderFn
  */
-function renderCustomFileItem(scope?: Record<string, unknown>) {
+function renderFileItemJsx(scope?: Record<string, unknown>) {
+  const file = scope?.file as UploadUserFile | undefined
+  if (!file) return null
+  return (
+    <div class={bem.e('file-item')}>
+      <ElIcon class={bem.e('file-icon')}>
+        <Document />
+      </ElIcon>
+      <span class={bem.e('file-name')}>{file.name}</span>
+      <span class={bem.e('file-size')}>{formatFileSize(file.size)}</span>
+      <ElButton
+        link
+        type="danger"
+        size="small"
+        onClick={() => removeCustomFile('contractFiles', file)}
+      >
+        移除
+      </ElButton>
+    </div>
+  )
+}
+
+/**
+ * 场景 10 的自定义列表项 —— h() 写法，与 renderFileItemJsx 渲染结果完全等价。
+ * 两份都保留为可运行代码（而非注释掉一份），便于对照选型：
+ * 分支/循环多时 JSX 更易读，结构扁平时 h() 少一层语法转换、也不需要 lang="tsx"。
+ */
+function renderFileItemH(scope?: Record<string, unknown>) {
   const file = scope?.file as UploadUserFile | undefined
   if (!file) return null
   return h('div', { class: bem.e('file-item') }, [
@@ -218,7 +255,12 @@ function renderCustomFileItem(scope?: Record<string, unknown>) {
     h('span', { class: bem.e('file-size') }, formatFileSize(file.size)),
     h(
       ElButton,
-      { link: true, type: 'danger', size: 'small', onClick: () => removeCustomFile(file) },
+      {
+        link: true,
+        type: 'danger',
+        size: 'small',
+        onClick: () => removeCustomFile('quotationFiles', file),
+      },
       { default: () => '移除' }
     ),
   ])
@@ -282,10 +324,11 @@ const customSchema: SchemaNode = {
       },
     },
     // 10. slots.file 自定义已上传项（scoped slot：ElUpload 转发 { file, index }）
+    //     两个字段的渲染结果完全一致，只是一个用 JSX、一个用 h()，供写法对照
     {
-      label: '合同附件',
+      label: '合同附件（JSX 写法）',
       name: 'contractFiles',
-      col: { span: 24 },
+      col: { span: 12 },
       component: 'Upload',
       modelProp: 'fileList',
       props: {
@@ -294,8 +337,24 @@ const customSchema: SchemaNode = {
         httpRequest: mockUpload,
       },
       slots: {
-        file: renderCustomFileItem,
-        tip: '文件名、大小、移除按钮全部由 slots.file 自己渲染。',
+        file: renderFileItemJsx,
+        tip: '列表项由 JSX 渲染（需 script 块 lang="tsx"）。',
+      },
+    },
+    {
+      label: '报价单附件（h() 写法）',
+      name: 'quotationFiles',
+      col: { span: 12 },
+      component: 'Upload',
+      modelProp: 'fileList',
+      props: {
+        action: '#',
+        multiple: true,
+        httpRequest: mockUpload,
+      },
+      slots: {
+        file: renderFileItemH,
+        tip: '同样的列表项由 h() 渲染，不依赖 lang="tsx"。',
       },
     },
   ],
@@ -310,6 +369,14 @@ const customModel = reactive<Record<string, unknown>>({
       url: '#',
       status: 'success',
       size: 245_760,
+    } as UploadUserFile,
+  ],
+  quotationFiles: [
+    {
+      name: '报价单-Q3.xlsx',
+      url: '#',
+      status: 'success',
+      size: 51_200,
     } as UploadUserFile,
   ],
 })

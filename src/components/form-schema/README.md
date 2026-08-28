@@ -221,6 +221,7 @@ const selectNode: SchemaNodeFor<'Select'> = {
 - 需要换触发元素（自定义按钮文案 / 整块 drop 区）时写 `slots.default` 或 `children`，二者都优先于上表的默认注入。
 - 配了 `slots.trigger` 时不注入 —— ElUpload 会把 `default` 渲染到触发区之外（`element-plus/upload.vue:85`），注入会让页面多出一个孤立按钮。
 - 三种定制写法（类名覆盖 / `slots.default` 接管触发区 / `slots.file` 自定义列表项）见 `/demo/xform-upload` 的「自定义样式方案」小节。
+- 函数式插槽（`SlotRenderFn`）既可用 `h()` 也可用 JSX。JSX 需要所在 `.vue` 的 script 块为 `lang="tsx"`，并且 `eslint.config.mjs` 的 `withVueTs` 已声明 `scriptLangs: ['ts', 'tsx']`；两种写法的对照示例见该 demo 的场景 10。
 - **`el-form-item__content` 下那层无类名的 `<div>` 不是 XForm 加的**：它是 ElUpload 组件自身的模板根节点（`element-plus/upload.vue` 用它收拢 `upload-list` 与 `upload-content` 两个兄弟节点），XForm 侧无法移除。需要调整该层样式时用 `.el-form-item__content > div` 定位。
 
 ## 自定义组件类型扩展

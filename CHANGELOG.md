@@ -32,6 +32,17 @@
 
 ### ✨ Features | 新特性
 
+* **chore(eslint):** 迁移到 `withVueTs` 并放开 `.vue` 内的 tsx
+  - `eslint.config.mjs` 从 `vueTsEslintConfig()`（v14.9 前的 helper）迁到官方推荐的 `withVueTs(options, ...configs)` + `vueTsConfigs.recommended`
+  - 首参声明 `{ scriptLangs: ['ts', 'tsx'] }` —— 默认只允许 `lang="ts"`，demo 的 JSX 插槽示例需要 `lang="tsx"`
+  - 规则等级保持 `recommended` 不变（未升级 `recommendedTypeChecked`，那会给全项目引入类型感知规则并显著拖慢 lint，属独立议题）
+  - 类型感知未受损：本项目 eslint 从未启用 type-aware 规则，故 tsx 文件落入的 `disableTypeChecked` 名单为空集；`.vue` 类型安全由 `vue-tsc` 保证 —— 已反向验证（在 JSX 内插入 `formatFileSize(file.name)` 类型错误，`pnpm type-check:full` 精确报出 `XFormUpload.vue(231,56) TS2345`）
+
+* **demo:** XFormUpload 场景 10 给出 JSX 与 `h()` 两种等价写法
+  - 拆为「合同附件（JSX 写法）」+「报价单附件（h() 写法）」两个字段，渲染结果一致，两份均为可运行代码（不注释掉任何一份）
+  - `XFormUpload.vue` 的 script 块改为 `lang="tsx"`
+  - 选型建议写进注释：分支/循环多时 JSX 更易读；结构扁平时 `h()` 少一层语法转换，且不需要 `lang="tsx"`
+
 * **demo:** XFormUpload 补充自定义样式三方案
   - 新增「自定义样式方案」小节（`/demo/xform-upload#demo-upload-custom`），覆盖产品要求定制上传区外观时的三条路径
   - 方案 8 类名覆盖：schema 不动，靠 `formItem.props.class` 锁作用域 + `vv-x-form__upload-icon--drag` / `__upload-text` 改外观（不污染同页其他 Upload）
