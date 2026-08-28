@@ -1,7 +1,19 @@
 import { describe, it, expect, vi } from 'vitest'
 import type { SchemaNode } from '../types'
-import { useRenderSchemaNode, resolveComponentFor } from './render-schema-node'
-import { ElInput, ElInputTag, ElMention, ElColorPicker, ElRate } from 'element-plus'
+import {
+  useRenderSchemaNode,
+  resolveComponentFor,
+  buildUploadDefaultSlot,
+} from './render-schema-node'
+import {
+  ElInput,
+  ElInputTag,
+  ElMention,
+  ElColorPicker,
+  ElRate,
+  ElUpload,
+  ElIcon,
+} from 'element-plus'
 import { h, type VNode } from 'vue'
 
 /** 创建一个最小可用的 RenderSchemaNode options */
@@ -693,5 +705,75 @@ describe("compileRules 'required' 简写（④ 修正回归）", () => {
     expect(out).toEqual([{ required: true }])
     expect(spy).not.toHaveBeenCalled()
     spy.mockRestore()
+  })
+})
+
+describe('Upload picture-card 默认 Plus 图标插槽', () => {
+  it('picture-card Upload 无自定义插槽时自动注入 ElIcon + Plus', () => {
+    const node: SchemaNode = {
+      component: 'Upload',
+      name: 'avatar',
+      props: { listType: 'picture-card' },
+    }
+    const slot = buildUploadDefaultSlot(node, ElUpload, () => undefined)
+    const result = slot() as VNode
+    expect(result).toBeDefined()
+    expect(result.type).toBe(ElIcon)
+    const iconChild = (result.children as { default?: () => VNode })?.default?.() ?? result.children
+    expect(iconChild).toBeDefined()
+  })
+
+  it('picture-card Upload 已配置 slots.default 时优先使用用户插槽，不注入 Plus', () => {
+    const custom = vi.fn(() => h('div', { class: 'custom-trigger' }, '上传'))
+    const node: SchemaNode = {
+      component: 'Upload',
+      name: 'avatar',
+      props: { listType: 'picture-card' },
+      slots: { default: custom as never },
+    }
+    const slot = buildUploadDefaultSlot(node, ElUpload, custom)
+    const result = slot() as VNode
+    expect(custom).toHaveBeenCalled()
+    expect(result.type).toBe('div')
+  })
+
+  it('非 picture-card 的 Upload 不注入默认插槽', () => {
+    const node: SchemaNode = {
+      component: 'Upload',
+      name: 'files',
+      props: { listType: 'text' },
+    }
+    const slot = buildUploadDefaultSlot(node, ElUpload, () => undefined)
+    const result = slot()
+    expect(result).toBeUndefined()
+  })
+
+  it('listType=picture-card 但 component 未映射到 ElUpload 时不注入', () => {
+    const node: SchemaNode = {
+      component: 'Upload',
+      name: 'avatar',
+      props: { listType: 'picture-card' },
+    }
+    const slot = buildUploadDefaultSlot(node, null, () => undefined)
+    expect(slot()).toBeUndefined()
+  })
+
+  it('formItem 分支渲染 picture-card Upload 时包含默认插槽函数', () => {
+    const { opts } = makeOpts({ model: { avatar: [] } })
+    const render = useRenderSchemaNode(opts)
+    const node: SchemaNode = {
+      component: 'Upload',
+      name: 'avatar',
+      props: { listType: 'picture-card' },
+    }
+    // 无 col 时 wrapWithElCol 直接返回 ElFormItem
+    const formItemVNode = render(node) as VNode
+    expect(formItemVNode).toBeDefined()
+    const uploadVNode = (formItemVNode.children as { default?: () => VNode })?.default?.() as VNode
+    expect(uploadVNode?.type).toBe(ElUpload)
+    const defaultSlot = (uploadVNode.children as { default?: () => VNode })?.default
+    expect(defaultSlot).toBeDefined()
+    const iconVNode = defaultSlot?.() as VNode
+    expect(iconVNode?.type).toBe(ElIcon)
   })
 })

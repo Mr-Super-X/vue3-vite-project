@@ -928,6 +928,80 @@ export const reactionAdvancedItems: XFormApiItem[] = [
       '显式副作用入口：上级字段 on.change 闭包写 model 清空下级字段，比 reaction 监听更可预测（每次必触发，不依赖 deps 配置）',
   },
 ]
+// XFormUpload —— Upload 字段配置速查
+export const uploadItems: XFormApiItem[] = [
+  {
+    name: 'component',
+    type: "'Upload'",
+    required: true,
+    description: '声明为 ElUpload 组件',
+  },
+  {
+    name: 'modelProp',
+    type: "'fileList'",
+    description: '绑定 ElUpload 的 file-list（默认 modelValue 不适用，必须显式指定）',
+  },
+  {
+    name: 'props.action',
+    type: 'string',
+    description: '上传地址；demo 中配合 httpRequest 使用可无需真实后端',
+  },
+  {
+    name: 'props.accept',
+    type: 'string',
+    description: '接受的文件类型，如 image/* 或 .pdf,.doc',
+  },
+  {
+    name: 'props.multiple',
+    type: 'boolean',
+    default: 'false',
+    description: '是否允许多选文件',
+  },
+  {
+    name: 'props.limit',
+    type: 'number',
+    description: '最大允许上传文件数',
+  },
+  {
+    name: 'props.drag',
+    type: 'boolean',
+    default: 'false',
+    description: '是否启用拖拽上传',
+  },
+  {
+    name: 'props.listType',
+    type: "'text' | 'picture' | 'picture-card'",
+    default: "'text'",
+    description: '文件列表展示类型',
+  },
+  {
+    name: 'props.autoUpload',
+    type: 'boolean',
+    default: 'true',
+    description: 'false 时选择文件后不会自动上传，可随表单提交统一处理',
+  },
+  {
+    name: 'props.beforeUpload',
+    type: '(rawFile: UploadRawFile) => boolean | Promise<boolean>',
+    description: '上传前钩子，可拦截大小/格式不符的文件',
+  },
+  {
+    name: 'props.httpRequest',
+    type: '(options: UploadRequestOptions) => Promise<void>',
+    description: '自定义上传行为，适合对接项目统一封装的请求方法',
+  },
+  {
+    name: 'props.fileList / v-model:fileList',
+    type: 'UploadUserFile[]',
+    description: '已上传文件列表，用于回显；配合 modelProp: "fileList" 实现双向绑定',
+  },
+  {
+    name: 'slots.tip',
+    type: 'string | SchemaNode | (scope) => VNode',
+    description: 'ElUpload 的提示文案插槽',
+  },
+]
+
 export const detailFillItems: XFormApiItem[] = [
   {
     name: 'Object.assign(model, detail)',

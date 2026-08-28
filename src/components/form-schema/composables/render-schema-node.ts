@@ -37,7 +37,9 @@ import {
   ElColorPicker,
   ElRate,
   ElSlider,
+  ElIcon,
 } from 'element-plus'
+import { Plus } from '@element-plus/icons-vue'
 import { resolveComponent, h, type VNode, type ComponentPublicInstance, type Ref } from 'vue'
 import type { SchemaNode, XFormProps, ColConfig, RowConfig, SchemaSlot } from '../types'
 import { buildVModelBindings } from './build-vmodel-bindings'
@@ -222,6 +224,36 @@ export function renderChildren(
   return render(children)
 }
 
+/** 判断当前节点是否为 listType='picture-card' 的 ElUpload */
+export function isPictureCardUpload(node: SchemaNode, Comp: unknown): boolean {
+  const name = typeof node.component === 'string' ? node.component : ''
+  if (name !== 'Upload' && name !== 'ElUpload') return false
+  if (Comp !== ElUpload) return false
+  return node.props?.listType === 'picture-card'
+}
+
+/**
+ * 构建 Upload 默认插槽内容。
+ * 当用户未提供 default slot / children 且为 picture-card 时，自动注入 <el-icon><Plus /></el-icon>，
+ * 保证 picture-card 上传组件有默认上传图标，无需业务在 schema 中手动配置。
+ */
+export function buildUploadDefaultSlot(
+  node: SchemaNode,
+  Comp: unknown,
+  render: RenderFn
+): () => VNode | string | VNode[] | undefined {
+  return () => {
+    // 用户已自定义默认插槽时优先使用，不覆盖
+    if (node.slots?.default !== undefined) {
+      return render(node.slots.default as never) as never
+    }
+    const children = renderChildren(node.children, render) as never
+    if (children) return children
+    if (!isPictureCardUpload(node, Comp)) return children
+    return h(ElIcon, null, { default: () => h(Plus) }) as VNode
+  }
+}
+
 export function buildSlotFn(value: SchemaSlot, render: RenderFn): (scope?: unknown) => unknown {
   if (typeof value === 'function') {
     return (scope?: unknown) => value(scope as Record<string, unknown>)
@@ -381,7 +413,7 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
           ...(node.disabled !== undefined ? { disabled: node.disabled } : {}),
           ...(node.key !== undefined && { key: node.key }),
         } as never,
-        { default: () => renderChildren(node.children, opts.render) as never }
+        { default: buildUploadDefaultSlot(node, Comp, opts.render) as never }
       ) as VNode,
       opts.currentBreakpoint?.value
     )

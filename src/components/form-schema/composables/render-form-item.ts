@@ -15,7 +15,7 @@ import {
   compileRules,
   getComponentDefaultProps,
   buildAsyncProps,
-  renderChildren,
+  buildUploadDefaultSlot,
   resolveComponentFor,
   wrapWithElCol,
   mergeRowResponsive,
@@ -90,10 +90,12 @@ export function renderWithFormItem(
     Comp
       ? {
           default: () => {
-            const defaultSlot = () => renderChildren(node.children, opts.render) as never
+            const defaultSlot = buildUploadDefaultSlot(node, Comp, opts.render)
             const extraSlots: Record<string, (scope?: unknown) => unknown> = {}
             if (node.slots) {
               for (const [k, v] of Object.entries(node.slots)) {
+                // default 插槽已由 buildUploadDefaultSlot 统一处理，避免重复/覆盖
+                if (k === 'default') continue
                 extraSlots[k] = buildSlotFn(v, opts.render)
               }
             }

@@ -50,7 +50,7 @@ const schema = {
 | ------ | ----------------------------------------------------- | ------------------------------------------------------ |
 | 单节点 | `{ component: 'Input', name: 'email' }`               | 只渲染一个字段                                         |
 | 数组   | `[nodeA, nodeB]`                                      | 顺序渲染多个字段                                       |
-| 容器   | `{ column: 2, row: { gutter: 24 }, children: [...] }` | 带栅格布局；`labelPosition` 也只在此形态生效（见 §16） |
+| 容器   | `{ column: 2, row: { gutter: 24 }, children: [...] }` | 带栅格布局；`labelPosition` 也只在此形态生效（见 §15） |
 
 ---
 
@@ -143,7 +143,7 @@ if (res.success) formRef.value?.resetDirty()
 | 结构     | `kind` / `array` | `'array'` / `ArrayNodeConfig`                     | 数组容器节点（§8）                                                                                                    |
 | UI       | `label`          | `string`                                          | 标签文字                                                                                                              |
 | UI       | `col`            | `boolean \| ColConfig`                            | 栅格列：`{ span, offset, push, pull, responsive }`                                                                    |
-| UI       | `row`            | `RowConfig`                                       | 栅格行：`{ gutter, type, align, justify, responsive }`（见 §16）                                                      |
+| UI       | `row`            | `RowConfig`                                       | 栅格行：`{ gutter, type, align, justify, responsive }`（见 §15）                                                      |
 | UI       | `column`         | `number`                                          | 每行栅格数（顶层 schema 生效，自动平均分配 span）                                                                     |
 | 校验     | `rules`          | `string \| RuleItem \| Array<string \| RuleItem>` | 校验规则（§6.1）；字符串为 `props.rules` 命名引用                                                                     |
 | 校验     | `disabled`       | `ReactionValue<boolean>`                          | 禁用（支持布尔/函数/表达式）。`props.disabled` 显式写优先；数组节点仅控制容器按钮；el-form 自动跳过 disabled 字段校验 |
@@ -361,7 +361,107 @@ dev 模式下 XForm 自动对传入 schema 做此校验 + 表达式安全扫描�
 
 ---
 
-## 9. 字段权限（permission）
+## 9. 上传文件（Upload）
+
+XForm 内置 `Upload` 组件对应 Element Plus 的 `ElUpload`。由于 ElUpload 的双向绑定属性是 `file-list` 而不是 `modelValue`，**节点必须显式声明 `modelProp: 'fileList'`**，否则表单模型不会随上传列表变化。
+
+### 基础用法
+
+```ts
+{
+  component: 'Upload',
+  name: 'avatar',
+  label: '头像',
+  modelProp: 'fileList',          // 关键：绑定 ElUpload 的 file-list
+  props: {
+    action: '/api/upload',
+    accept: 'image/*',
+    limit: 1,
+    listType: 'picture-card',
+  },
+}
+```
+
+### 常见场景速查
+
+| 场景           | 关键配置                                                      |
+| -------------- | ------------------------------------------------------------- |
+| 单文件头像     | `limit: 1` + `accept: 'image/*'` + `listType: 'picture-card'` |
+| 多文件附件     | `multiple: true` + `limit: 5`                                 |
+| 拖拽上传       | `drag: true` + `multiple: true`                               |
+| 图片墙         | `listType: 'picture-card'` + `multiple: true`                 |
+| 手动上传       | `autoUpload: false`，选择文件后随表单一起提交                 |
+| 上传前校验     | `beforeUpload` 拦截大小 / 类型                                |
+| 已上传文件回显 | 给 `model.fileList` 预置 `UploadUserFile[]` 初始值            |
+
+### 自定义上传行为
+
+业务中通常不会把真实接口直接写在 `action`，而是使用 `httpRequest` 对接项目统一封装的请求方法：
+
+```ts
+{
+  component: 'Upload',
+  name: 'attachments',
+  modelProp: 'fileList',
+  props: {
+    multiple: true,
+    httpRequest: async (options) => {
+      const formData = new FormData()
+      formData.append('file', options.file)
+      const res = await fetch('/api/upload', { method: 'POST', body: formData })
+      const json = await res.json()
+      options.onSuccess?.(json)
+    },
+  },
+}
+```
+
+### 上传前校验示例
+
+```ts
+import type { UploadRawFile } from 'element-plus'
+
+function beforeUploadCheck(rawFile: UploadRawFile): boolean {
+  const isImage = ['image/jpeg', 'image/png'].includes(rawFile.type)
+  const isLt2M = rawFile.size / 1024 / 1024 < 2
+  if (!isImage) ElMessage.error('只接受 JPG/PNG 图片')
+  if (!isLt2M) ElMessage.error('图片大小不能超过 2MB')
+  return isImage && isLt2M
+}
+
+// schema 中
+props: {
+  beforeUpload: beforeUploadCheck
+}
+```
+
+### 已上传文件回显
+
+表单加载时直接把服务端返回的文件列表写入 model，ElUpload 会自动渲染为成功状态：
+
+```ts
+const model = reactive({
+  contract: [{ name: 'contract.pdf', url: '/files/contract.pdf', status: 'success' }],
+})
+```
+
+### 配置速查
+
+| 字段                 | 说明                                      |
+| -------------------- | ----------------------------------------- |
+| `modelProp`          | 必须设为 `'fileList'`                     |
+| `props.action`       | 上传地址；使用 `httpRequest` 时可填占位符 |
+| `props.accept`       | 接受的文件类型                            |
+| `props.multiple`     | 是否多选                                  |
+| `props.limit`        | 最大文件数                                |
+| `props.drag`         | 拖拽上传                                  |
+| `props.listType`     | `text / picture / picture-card`           |
+| `props.autoUpload`   | `false` 时手动触发或随表单提交            |
+| `props.beforeUpload` | 上传前拦截钩子                            |
+| `props.httpRequest`  | 自定义上传实现                            |
+| `slots.tip`          | 上传区域下方提示文案                      |
+
+## 10. 字段权限（permission）
 
 三态：`'edit'`（默认，可编辑）/ `'view'`（只读纯文本，跳过校验）/ `'hidden'`（不渲染，DOM 不出现）：
 
@@ -380,7 +480,7 @@ dev 模式下 XForm 自动对传入 schema 做此校验 + 表达式安全扫描�
 
 ---
 
-## 10. 脏状态追踪（dirty）
+## 11. 脏状态追踪（dirty）
 
 用于"离开页面未保存"提醒、仅提交变更字段等场景：
 
@@ -396,7 +496,7 @@ watch(
 formRef.value?.resetDirty()
 ```
 
-配合草稿恢复（§11）：
+配合草稿恢复（§12）：
 
 ```ts
 onMounted(() => {
@@ -409,7 +509,7 @@ onMounted(() => {
 
 ---
 
-## 11. 草稿持久化（useFormPersist）
+## 12. 草稿持久化（useFormPersist）
 
 ```ts
 import { useFormPersist } from '@/components/form-schema'
@@ -441,7 +541,7 @@ const persist = useFormPersist({
 
 ---
 
-## 12. 链式构建器
+## 13. 链式构建器
 
 > 复杂联动推荐对象字面量（可读性好）；类型安全要求高的场景用构建器。
 
@@ -464,7 +564,7 @@ const schema = {
 }
 ```
 
-### 12.1 基础链式方法（所有 builder 通用）
+### 13.1 基础链式方法（所有 builder 通用）
 
 | 方法                              | 说明                                                                 |
 | --------------------------------- | -------------------------------------------------------------------- |
@@ -482,7 +582,7 @@ const schema = {
 | `reaction(config)`                | 联动配置                                                             |
 | `build()`                         | 产出 `SchemaNodeFor<C>`                                              |
 
-### 12.2 28 个 builder 及特有方法
+### 13.2 28 个 builder 及特有方法
 
 | Builder                                                                                        | 特有链式方法                                                                                                         |
 | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
@@ -510,7 +610,7 @@ const schema = {
 
 ---
 
-## 13. 类型推导
+## 14. 类型推导
 
 `SchemaNode` 是宽类型（`props: Record<string, unknown>`），写错不会报错。**`SchemaNodeFor<C>` 按 component 字段推导 props 类型**：
 
@@ -540,9 +640,9 @@ declare module '@/components/form-schema/types' {
 
 ---
 
-## 14. 栅格与响应式
+## 15. 栅格与响应式
 
-### 14.1 顶层容器
+### 15.1 顶层容器
 
 ```ts
 const schema = {
@@ -553,13 +653,13 @@ const schema = {
 }
 ```
 
-### 14.2 节点级 col
+### 15.2 节点级 col
 
 ```ts
 { component: 'Input', name: 'remark', col: { span: 24, offset: 2 } }
 ```
 
-### 14.3 响应式断点（5 档）
+### 15.3 响应式断点（5 档）
 
 ```ts
 col: {
@@ -577,7 +677,7 @@ col: {
 
 ---
 
-## 15. 选型决策（XForm vs element-plus 原生）
+## 16. 选型决策（XForm vs element-plus 原生）
 
 | 场景                               | 推荐                  |
 | ---------------------------------- | --------------------- |
@@ -601,7 +701,7 @@ col: {
 
 ---
 
-## 16. 故障排查
+## 17. 故障排查
 
 | 现象                       | 原因                                      | 修复                                                                         |
 | -------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------- |
@@ -624,7 +724,7 @@ col: {
 
 ---
 
-## 17. 已知限制
+## 18. 已知限制
 
 | 限制                          | 说明                                                                                                                                     |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
@@ -636,7 +736,7 @@ col: {
 
 ---
 
-## 18. 示例索引（22 个 demo）
+## 19. 示例索引（23 个 demo）
 
 在线演示站点：`pnpm dev` → `/demo`（左侧「XForm 表单引擎」分组），路由 = `/demo/x-form-<kebab-case>`。
 
@@ -664,10 +764,11 @@ col: {
 | `/demo/x-form-large-schema`        | 大 schema 性能                                      |
 | `/demo/x-form-model-warn`          | model 缺失警告                                      |
 | `/demo/x-form-schema-index`        | 索引快照（getNames/getRef）                         |
+| `/demo/x-form-upload`              | 文件上传（单文件/多文件/拖拽/图片墙/校验/回显）     |
 
 ---
 
-## 19. 相关文档
+## 20. 相关文档
 
 - `docs/25-XForm架构与决策记录.md` — 架构分层 / 渲染管线 / ADR 决策 / 调试教训（维护者视角）
 - `docs/superpowers/specs/2026-08-19-form-schema-design.md` — 引擎设计稿
