@@ -252,13 +252,18 @@ const UPLOAD_ICON_CLASS = {
   drag: ['el-icon--upload', bem.e('upload-icon'), bem.em('upload-icon', 'drag')].join(' '),
 }
 const UPLOAD_DRAG_TEXT_CLASS = ['el-upload__text', bem.e('upload-text')].join(' ')
+const UPLOAD_BUTTON_CLASS = bem.e('upload-button')
 
 /**
  * 构建 Upload 默认插槽内容。
  * 用户未提供 default slot / children 时按类型注入默认触发区内容：
  * - `listType: 'picture-card'` → `<el-icon><Plus /></el-icon>`
  * - `drag: true` → `<el-icon class="el-icon--upload"><UploadFilled /></el-icon>` + 拖拽提示文案
- * 保证这两类上传组件无需业务在 schema 中手动配置触发元素。
+ * - 其余（text / picture）→ `<el-button>点击上传</el-button>`
+ *
+ * 为什么 text / picture 也必须兜底：ElUpload 的触发区**就是** default slot 本身
+ * （element-plus/upload-content.vue 非 drag 分支直接 `renderSlot($slots, 'default')`，不含任何内置 UI），
+ * 插槽为空时 `.el-upload--text` 是零高度空元素 —— 字段看起来没渲染、完全无法交互。
  *
  * 注意 DOM 结构：`el-form-item__content` 下会多出一层无类名的 `<div>`，它是 ElUpload 组件自身的
  * 模板根节点（element-plus/upload.vue 用它收拢 upload-list 与 upload-content 两个兄弟节点），
@@ -277,6 +282,9 @@ export function buildUploadDefaultSlot(
     }
     const children = renderChildren(node.children, render) as never
     if (children) return children
+    // 用了 slots.trigger 时 ElUpload 把 default 渲染在触发区之外（element-plus/upload.vue:85），
+    // 此时再注入默认内容会在触发区旁多出一个孤立按钮/图标
+    if (node.slots?.trigger !== undefined) return children
     if (isPictureCardUpload(node, Comp)) {
       return h(
         ElIcon,
@@ -291,6 +299,14 @@ export function buildUploadDefaultSlot(
         h(ElIcon, { class: UPLOAD_ICON_CLASS.drag }, { default: () => h(UploadFilled) }),
         h('div', { class: UPLOAD_DRAG_TEXT_CLASS }, '拖拽文件到这里或点击上传'),
       ] as VNode[]
+    }
+    // text / picture 兜底：触发区为空时字段不可见、不可点（详见函数 JSDoc）
+    if (isElUpload(node, Comp)) {
+      return h(
+        ElButton,
+        { class: UPLOAD_BUTTON_CLASS, type: 'primary' },
+        { default: () => '点击上传' }
+      ) as VNode
     }
     return children
   }

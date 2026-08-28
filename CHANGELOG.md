@@ -4,6 +4,12 @@
 
 ### 🐛 Bug Fixes | 问题修复
 
+* **form-schema:** `listType: 'text' | 'picture'` 的 Upload 字段完全不可交互
+  - 现象：`/demo/xform-upload` 页的「附件列表」「手动上传」「上传前校验」「已上传文件回显」四个字段看不到任何上传入口，点不动
+  - 根因：ElUpload 非 drag 分支的触发区**就是 default slot 本身**（`element-plus/upload-content.vue` 直接 `renderSlot($slots, 'default')`，无内置 UI），而 `buildUploadDefaultSlot` 只为 `picture-card` / `drag` 注入内容，默认 `listType: 'text'` 落到空插槽 → `.el-upload--text` 零高度空元素
+  - 修复：`isElUpload` 兜底分支注入 `<el-button type="primary" class="vv-x-form__upload-button">点击上传</el-button>`；`slots.default` / `children` 仍优先，业务自定义不受影响
+  - 防回归：render-schema-node.spec +3（text 兜底按钮类名与文案、picture 同样兜底、children 存在时不注入）
+
 * **form-schema:** A 模式（实时）下跨字段校验错误不显示
   - 根因：`XForm.vue` 的 `onValueChange` 先调 `crossFieldTrigger.trigger()` 再调 `clearValidate()`；`delay=0` 时 `crossValidator` 同步写入错误后，`clearValidate()` 立即把刚写入的错误清掉，导致表单不标红、无错误文字
   - 修复：调整顺序为先 `clearValidate([node.name])` 清除旧错误（含服务端错误），再 `crossFieldTrigger.trigger(node.name)` 重新写入新错误；B/C 模式因 debounce 延迟写入，行为保持不变

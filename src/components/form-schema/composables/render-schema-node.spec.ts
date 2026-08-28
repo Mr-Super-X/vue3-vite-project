@@ -14,6 +14,7 @@ import {
   ElRate,
   ElUpload,
   ElIcon,
+  ElButton,
 } from 'element-plus'
 import { h, type VNode } from 'vue'
 import { Plus, UploadFilled } from '@element-plus/icons-vue'
@@ -797,15 +798,41 @@ describe('Upload 默认触发区图标插槽（picture-card / drag）', () => {
     expect(result.type).toBe('div')
   })
 
-  it('既非 picture-card 也未开启 drag 的 Upload 不注入默认插槽', () => {
+  it('既非 picture-card 也未开启 drag 的 Upload 兜底注入「点击上传」按钮', () => {
     const node: SchemaNode = {
       component: 'Upload',
       name: 'files',
       props: { listType: 'text' },
     }
     const slot = buildUploadDefaultSlot(node, ElUpload, () => undefined)
-    const result = slot()
-    expect(result).toBeUndefined()
+    const result = slot() as VNode
+    // ElUpload 非 drag 分支的触发区就是 default slot 本身，空插槽 = 零高度不可交互
+    expect(result?.type).toBe(ElButton)
+    expect((result?.props as Record<string, unknown>)?.class).toBe('vv-x-form__upload-button')
+    expect((result?.children as { default?: () => unknown })?.default?.()).toBe('点击上传')
+  })
+
+  it('listType=picture 的 Upload 同样兜底注入按钮', () => {
+    const node: SchemaNode = {
+      component: 'Upload',
+      name: 'pics',
+      props: { listType: 'picture' },
+    }
+    expect((buildUploadDefaultSlot(node, ElUpload, () => undefined)() as VNode)?.type).toBe(
+      ElButton
+    )
+  })
+
+  it('Upload 已配置 children 时不注入兜底按钮', () => {
+    const node: SchemaNode = {
+      component: 'Upload',
+      name: 'files',
+      children: { component: 'ElButton', children: '选择文件' },
+    }
+    const render = vi.fn(() => h('button', null, '选择文件') as never)
+    const result = buildUploadDefaultSlot(node, ElUpload, render)() as VNode
+    expect(render).toHaveBeenCalled()
+    expect(result.type).toBe('button')
   })
 
   it('listType=picture-card 但 component 未映射到 ElUpload 时不注入', () => {

@@ -209,13 +209,16 @@ const selectNode: SchemaNodeFor<'Select'> = {
 
 未自定义 `slots.default`（也无 `children`）时，XForm 按类型注入默认触发区内容：
 
-| 节点配置                   | 注入内容                                                                      | 类名                                                                                                                      |
-| -------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `listType: 'picture-card'` | `<el-icon><Plus /></el-icon>`                                                 | `vv-x-form__upload-icon vv-x-form__upload-icon--picture-card`                                                             |
-| `drag: true`               | `<el-icon><UploadFilled /></el-icon>` + `<div>拖拽文件到这里或点击上传</div>` | 图标 `el-icon--upload vv-x-form__upload-icon vv-x-form__upload-icon--drag`；文案 `el-upload__text vv-x-form__upload-text` |
+| 节点配置                        | 注入内容                                                                      | 类名                                                                                                                      |
+| ------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `listType: 'picture-card'`      | `<el-icon><Plus /></el-icon>`                                                 | `vv-x-form__upload-icon vv-x-form__upload-icon--picture-card`                                                             |
+| `drag: true`                    | `<el-icon><UploadFilled /></el-icon>` + `<div>拖拽文件到这里或点击上传</div>` | 图标 `el-icon--upload vv-x-form__upload-icon vv-x-form__upload-icon--drag`；文案 `el-upload__text vv-x-form__upload-text` |
+| 其余（`text` 默认 / `picture`） | `<el-button type="primary">点击上传</el-button>`                              | `vv-x-form__upload-button`                                                                                                |
 
+- text / picture 必须兜底的原因：ElUpload 非 drag 分支的触发区**就是 default slot 本身**（`element-plus/upload-content.vue` 直接 `renderSlot($slots, 'default')`，不含任何内置 UI），插槽为空时 `.el-upload--text` 是零高度空元素，字段看起来没渲染、完全无法交互。
 - 两者同时开启时取 Plus —— picture-card 触发区仅 148px，UploadFilled 的官方 67px 大图标会溢出。
 - 保留 `el-icon--upload` / `el-upload__text` 是为了继承 Element Plus 官方拖拽区样式；`vv-x-form__upload-*` 类名供业务按类型精确覆盖，改其中一类不会误伤另一类。
+- 需要换触发元素（自定义按钮文案 / 整块 drop 区）时写 `slots.default` 或 `children`，二者都优先于上表的默认注入。
 - **`el-form-item__content` 下那层无类名的 `<div>` 不是 XForm 加的**：它是 ElUpload 组件自身的模板根节点（`element-plus/upload.vue` 用它收拢 `upload-list` 与 `upload-content` 两个兄弟节点），XForm 侧无法移除。需要调整该层样式时用 `.el-form-item__content > div` 定位。
 
 ## 自定义组件类型扩展
