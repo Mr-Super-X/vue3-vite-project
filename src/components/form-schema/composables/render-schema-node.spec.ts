@@ -4,6 +4,7 @@ import {
   useRenderSchemaNode,
   resolveComponentFor,
   buildUploadDefaultSlot,
+  buildUploadTipSlot,
 } from './render-schema-node'
 import {
   ElInput,
@@ -631,7 +632,7 @@ describe('useRenderSchemaNode slots 支持 render function / JSX', () => {
     expect(result).toBeDefined()
   })
 
-  it('slot 为字符串时保持现有行为(被包装为 slot 函数,调用时走外部 render)', () => {
+  it('slot 为字符串时直接返回字符串,不再调用外部 render', () => {
     const { opts, renderSpy } = makeOpts({ model: { a: 1 } })
     const render = useRenderSchemaNode(opts)
     const node: SchemaNode = {
@@ -643,9 +644,9 @@ describe('useRenderSchemaNode slots 支持 render function / JSX', () => {
     const result = render(node) as { children?: Record<string, () => unknown> }
     // 渲染阶段不会立即执行 slot 函数
     expect(renderSpy).not.toHaveBeenCalled()
-    // 手动调用 slot 函数后,会触发外部 render
-    result.children?.header?.()
-    expect(renderSpy).toHaveBeenCalledWith('plain text')
+    // 字符串 slot 直接返回原字符串,不走 render 回调
+    expect(result.children?.header?.()).toBe('plain text')
+    expect(renderSpy).not.toHaveBeenCalled()
   })
 })
 
@@ -775,5 +776,108 @@ describe('Upload picture-card 默认 Plus 图标插槽', () => {
     expect(defaultSlot).toBeDefined()
     const iconVNode = defaultSlot?.() as VNode
     expect(iconVNode?.type).toBe(ElIcon)
+  })
+
+  it('formItem 分支将 slots.tip 转发为 ElUpload 的具名 tip 插槽', () => {
+    const { opts } = makeOpts({ model: { avatar: [] } })
+    const render = useRenderSchemaNode(opts)
+    const node: SchemaNode = {
+      component: 'Upload',
+      name: 'avatar',
+      props: { listType: 'picture-card' },
+      slots: {
+        tip: '建议上传 1:1 正方形图片',
+      },
+    }
+    const formItemVNode = render(node) as VNode
+    const uploadVNode = (formItemVNode.children as { default?: () => VNode })?.default?.() as VNode
+    expect(uploadVNode?.type).toBe(ElUpload)
+    const children = uploadVNode.children as Record<string, () => unknown>
+    expect(children?.tip).toBeTypeOf('function')
+    const tipVNode = children?.tip?.() as VNode
+    expect(tipVNode?.type).toBe('div')
+    expect((tipVNode?.props as Record<string, unknown>)?.class).toBe('el-upload__tip')
+    expect(tipVNode?.children).toBe('建议上传 1:1 正方形图片')
+    // tip 不应落在 default 插槽中
+    expect(children?.default).toBeDefined()
+    expect((children?.default as () => VNode)()?.type).toBe(ElIcon)
+  })
+
+  it('text 类型 Upload 的 slots.tip 同样进入具名 tip 插槽', () => {
+    const { opts } = makeOpts({ model: { files: [] } })
+    const render = useRenderSchemaNode(opts)
+    const node: SchemaNode = {
+      component: 'Upload',
+      name: 'files',
+      slots: {
+        tip: '最多上传 5 个文件',
+      },
+    }
+    const formItemVNode = render(node) as VNode
+    const uploadVNode = (formItemVNode.children as { default?: () => VNode })?.default?.() as VNode
+    expect(uploadVNode?.type).toBe(ElUpload)
+    const children = uploadVNode.children as Record<string, () => unknown>
+    expect(children?.tip?.()).toBeTypeOf('object')
+    const textTipVNode = children?.tip?.() as VNode
+    expect(textTipVNode?.type).toBe('div')
+    expect((textTipVNode?.props as Record<string, unknown>)?.class).toBe('el-upload__tip')
+  })
+
+  it('slots.tip 为 SchemaNode 时仍进入具名 tip 插槽', () => {
+    const { opts, renderSpy } = makeOpts({ model: { avatar: [] } })
+    const render = useRenderSchemaNode(opts)
+    const tipNode: SchemaNode = {
+      component: 'div',
+      props: { class: 'el-upload__tip' },
+      children: '仅允许 JPG/PNG',
+    }
+    const node: SchemaNode = {
+      component: 'Upload',
+      name: 'avatar',
+      props: { listType: 'picture-card' },
+      slots: {
+        tip: tipNode,
+      },
+    }
+    const formItemVNode = render(node) as VNode
+    const uploadVNode = (formItemVNode.children as { default?: () => VNode })?.default?.() as VNode
+    expect(uploadVNode?.type).toBe(ElUpload)
+    const children = uploadVNode.children as Record<string, () => unknown>
+    expect(children?.tip).toBeTypeOf('function')
+    // mock render 会把 SchemaNode 渲染为固定 VNode，重点验证 render 收到了 tip 节点
+    children?.tip?.()
+    expect(renderSpy).toHaveBeenCalledWith(tipNode)
+  })
+})
+
+describe('buildUploadTipSlot', () => {
+  it('字符串 tip 自动包裹 el-upload__tip', () => {
+    const slot = buildUploadTipSlot('建议上传', () => undefined)
+    const vnode = slot?.() as VNode
+    expect(vnode?.type).toBe('div')
+    expect((vnode?.props as Record<string, unknown>)?.class).toBe('el-upload__tip')
+    expect(vnode?.children).toBe('建议上传')
+  })
+
+  it('函数 tip 保持原样，不强制包 wrapper', () => {
+    const slot = buildUploadTipSlot(
+      () => '函数返回值',
+      () => undefined
+    )
+    expect(slot?.()).toBe('函数返回值')
+  })
+
+  it('SchemaNode tip 走 renderChildren，不强制包 wrapper', () => {
+    const renderSpy = vi.fn(
+      (node) =>
+        ({
+          type: 'span',
+          props: { class: 'mock-render', 'data-node-name': (node as SchemaNode).name },
+        }) as never
+    )
+    const tipNode: SchemaNode = { component: 'span', children: '提示' }
+    const slot = buildUploadTipSlot(tipNode, renderSpy)
+    slot?.()
+    expect(renderSpy).toHaveBeenCalledWith(tipNode)
   })
 })

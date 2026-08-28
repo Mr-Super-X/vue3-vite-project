@@ -193,17 +193,17 @@ const selectNode: SchemaNodeFor<'Select'> = {
 
 自定义组件可通过 module augmentation 扩展类型推导（见下方“自定义组件类型扩展”）。
 
-| 快捷名          | 默认 props                                  | 说明                                                        |
-| --------------- | ------------------------------------------- | ----------------------------------------------------------- |
-| `Input`         | `{ clearable: true }`                       | 普通输入                                                    |
-| `InputNumber`   | `{ controlsPosition: 'right' }`             | 不限制最小值                                                |
-| `InputPassword` | `{ type: 'password', showPassword: true }`  | 初始隐藏并允许切换                                          |
-| `InputTextArea` | `{ type: 'textarea', showWordLimit: true }` | 多行输入，默认显示字数统计（需配合 `maxlength`）            |
-| `InputTag`      | `{ clearable: true }`                       | `modelValue` 为 `string[]`                                  |
-| `Upload`        | 无                                          | 需配合 `modelProp: 'fileList'` 绑定 ElUpload 的 `file-list` |
-| `ColorPicker`   | 无                                          | 颜色和格式由节点配置                                        |
-| `Mention`       | 无                                          | options 和 prefix 由节点配置                                |
-| `Rate`          | 无                                          | 星级、是否半星由节点配置                                    |
+| 快捷名          | 默认 props                                  | 说明                                                                                                                               |
+| --------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `Input`         | `{ clearable: true }`                       | 普通输入                                                                                                                           |
+| `InputNumber`   | `{ controlsPosition: 'right' }`             | 不限制最小值                                                                                                                       |
+| `InputPassword` | `{ type: 'password', showPassword: true }`  | 初始隐藏并允许切换                                                                                                                 |
+| `InputTextArea` | `{ type: 'textarea', showWordLimit: true }` | 多行输入，默认显示字数统计（需配合 `maxlength`）                                                                                   |
+| `InputTag`      | `{ clearable: true }`                       | `modelValue` 为 `string[]`                                                                                                         |
+| `Upload`        | 无                                          | 需配合 `modelProp: 'fileList'` 绑定 ElUpload 的 `file-list`；`listType: 'picture-card'` 未自定义 default slot 时自动注入 Plus 图标 |
+| `ColorPicker`   | 无                                          | 颜色和格式由节点配置                                                                                                               |
+| `Mention`       | 无                                          | options 和 prefix 由节点配置                                                                                                       |
+| `Rate`          | 无                                          | 星级、是否半星由节点配置                                                                                                           |
 
 ## 自定义组件类型扩展
 

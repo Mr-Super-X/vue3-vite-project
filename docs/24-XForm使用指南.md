@@ -382,6 +382,9 @@ XForm 内置 `Upload` 组件对应 Element Plus 的 `ElUpload`。由于 ElUpload
 }
 ```
 
+> **picture-card 默认图标**：当 `props.listType: 'picture-card'` 且未自定义 `slots.default` 时，XForm 会自动注入
+> `<el-icon><Plus /></el-icon>` 作为上传触发图标，无需在 schema 中手动配置。
+
 ### 常见场景速查
 
 | 场景           | 关键配置                                                      |
@@ -447,19 +450,20 @@ const model = reactive({
 
 ### 配置速查
 
-| 字段                 | 说明                                      |
-| -------------------- | ----------------------------------------- |
-| `modelProp`          | 必须设为 `'fileList'`                     |
-| `props.action`       | 上传地址；使用 `httpRequest` 时可填占位符 |
-| `props.accept`       | 接受的文件类型                            |
-| `props.multiple`     | 是否多选                                  |
-| `props.limit`        | 最大文件数                                |
-| `props.drag`         | 拖拽上传                                  |
-| `props.listType`     | `text / picture / picture-card`           |
-| `props.autoUpload`   | `false` 时手动触发或随表单提交            |
-| `props.beforeUpload` | 上传前拦截钩子                            |
-| `props.httpRequest`  | 自定义上传实现                            |
-| `slots.tip`          | 上传区域下方提示文案                      |
+| 字段                 | 说明                                                      |
+| -------------------- | --------------------------------------------------------- |
+| `modelProp`          | 必须设为 `'fileList'`                                     |
+| `props.action`       | 上传地址；使用 `httpRequest` 时可填占位符                 |
+| `props.accept`       | 接受的文件类型                                            |
+| `props.multiple`     | 是否多选                                                  |
+| `props.limit`        | 最大文件数                                                |
+| `props.drag`         | 拖拽上传                                                  |
+| `props.listType`     | `text / picture / picture-card`                           |
+| `props.autoUpload`   | `false` 时手动触发或随表单提交                            |
+| `props.beforeUpload` | 上传前拦截钩子                                            |
+| `props.httpRequest`  | 自定义上传实现                                            |
+| `slots.default`      | 自定义上传触发区；picture-card 未配置时自动显示 Plus 图标 |
+| `slots.tip`          | 上传区域下方提示文案                                      |
 
 ## 10. 字段权限（permission）
 

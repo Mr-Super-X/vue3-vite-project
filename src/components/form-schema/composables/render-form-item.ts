@@ -6,12 +6,13 @@
  * - 末尾 wrapWithElCol 应用 col 响应式断点
  */
 import { h, type VNode } from 'vue'
-import { ElFormItem, ElRow, ElCol } from 'element-plus'
+import { ElFormItem, ElRow, ElCol, ElUpload } from 'element-plus'
 import type { SchemaNode } from '../types'
 import { buildVModelBindings } from './build-vmodel-bindings'
 import { buildOnBindings } from './build-on-bindings'
 import {
   buildSlotFn,
+  buildUploadTipSlot,
   compileRules,
   getComponentDefaultProps,
   buildAsyncProps,
@@ -96,7 +97,12 @@ export function renderWithFormItem(
               for (const [k, v] of Object.entries(node.slots)) {
                 // default 插槽已由 buildUploadDefaultSlot 统一处理，避免重复/覆盖
                 if (k === 'default') continue
-                extraSlots[k] = buildSlotFn(v, opts.render)
+                // Upload 的 string tip 自动包 el-upload__tip，获得 Element Plus 默认提示样式
+                if (k === 'tip' && Comp === ElUpload) {
+                  extraSlots[k] = buildUploadTipSlot(v, opts.render)
+                } else {
+                  extraSlots[k] = buildSlotFn(v, opts.render)
+                }
               }
             }
             return h(

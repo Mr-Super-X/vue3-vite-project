@@ -245,7 +245,8 @@ export function buildUploadDefaultSlot(
   return () => {
     // 用户已自定义默认插槽时优先使用，不覆盖
     if (node.slots?.default !== undefined) {
-      return render(node.slots.default as never) as never
+      // 统一用 buildSlotFn 处理函数 / 字符串 / SchemaNode / SchemaNode[]
+      return buildSlotFn(node.slots.default, render)() as never
     }
     const children = renderChildren(node.children, render) as never
     if (children) return children
@@ -258,7 +259,28 @@ export function buildSlotFn(value: SchemaSlot, render: RenderFn): (scope?: unkno
   if (typeof value === 'function') {
     return (scope?: unknown) => value(scope as Record<string, unknown>)
   }
-  return () => render(value as never)
+  // 字符串 / SchemaNode / SchemaNode[] 统一走 renderChildren，
+  // 避免直接调用 renderToComponentInner 处理字符串时返回 undefined
+  return () => renderChildren(value as SchemaNode['children'], render)
+}
+
+/**
+ * 构建 Upload 的 tip 插槽内容。
+ * 当用户传入字符串时，自动包裹在 <div class="el-upload__tip"> 中，
+ * 使字符串 tip 默认获得 Element Plus 的提示文案样式；
+ * SchemaNode / 函数形式保持原样，由用户自行控制 wrapper。
+ */
+export function buildUploadTipSlot(
+  value: SchemaSlot,
+  render: RenderFn
+): (scope?: unknown) => unknown {
+  if (typeof value === 'function') {
+    return (scope?: unknown) => value(scope as Record<string, unknown>)
+  }
+  if (typeof value === 'string') {
+    return () => h('div', { class: 'el-upload__tip' }, value)
+  }
+  return () => renderChildren(value as SchemaNode['children'], render)
 }
 
 export interface RenderSchemaNodeOptions {
