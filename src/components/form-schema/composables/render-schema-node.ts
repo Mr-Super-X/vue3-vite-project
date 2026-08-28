@@ -39,8 +39,9 @@ import {
   ElSlider,
   ElIcon,
 } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, UploadFilled } from '@element-plus/icons-vue'
 import { resolveComponent, h, type VNode, type ComponentPublicInstance, type Ref } from 'vue'
+import { createNamespace } from '@/utils/bem'
 import type { SchemaNode, XFormProps, ColConfig, RowConfig, SchemaSlot } from '../types'
 import { buildVModelBindings } from './build-vmodel-bindings'
 import { buildOnBindings } from './build-on-bindings'
@@ -224,18 +225,44 @@ export function renderChildren(
   return render(children)
 }
 
-/** 判断当前节点是否为 listType='picture-card' 的 ElUpload */
-export function isPictureCardUpload(node: SchemaNode, Comp: unknown): boolean {
+/** schema 名与解析结果双向确认，避免业务用 components 覆盖 Upload 后误注入默认图标 */
+function isElUpload(node: SchemaNode, Comp: unknown): boolean {
   const name = typeof node.component === 'string' ? node.component : ''
   if (name !== 'Upload' && name !== 'ElUpload') return false
-  if (Comp !== ElUpload) return false
-  return node.props?.listType === 'picture-card'
+  return Comp === ElUpload
+}
+
+/** 判断当前节点是否为 listType='picture-card' 的 ElUpload */
+export function isPictureCardUpload(node: SchemaNode, Comp: unknown): boolean {
+  return isElUpload(node, Comp) && node.props?.listType === 'picture-card'
+}
+
+/** 判断当前节点是否为开启 drag 拖拽的 ElUpload */
+export function isDragUpload(node: SchemaNode, Comp: unknown): boolean {
+  return isElUpload(node, Comp) && Boolean(node.props?.drag)
 }
 
 /**
+ * 两类默认图标的 class —— 带 modifier 区分类型，业务覆盖样式时可精确命中其中一类。
+ * drag 额外保留 Element Plus 原生 `el-icon--upload` / `el-upload__text`，继承官方拖拽区图标与文案样式。
+ */
+const bem = createNamespace('x-form') // 与 XForm.vue 同一 block，保证注入的类名落在 XForm 命名空间下
+const UPLOAD_ICON_CLASS = {
+  pictureCard: [bem.e('upload-icon'), bem.em('upload-icon', 'picture-card')].join(' '),
+  drag: ['el-icon--upload', bem.e('upload-icon'), bem.em('upload-icon', 'drag')].join(' '),
+}
+const UPLOAD_DRAG_TEXT_CLASS = ['el-upload__text', bem.e('upload-text')].join(' ')
+
+/**
  * 构建 Upload 默认插槽内容。
- * 当用户未提供 default slot / children 且为 picture-card 时，自动注入 <el-icon><Plus /></el-icon>，
- * 保证 picture-card 上传组件有默认上传图标，无需业务在 schema 中手动配置。
+ * 用户未提供 default slot / children 时按类型注入默认触发区内容：
+ * - `listType: 'picture-card'` → `<el-icon><Plus /></el-icon>`
+ * - `drag: true` → `<el-icon class="el-icon--upload"><UploadFilled /></el-icon>` + 拖拽提示文案
+ * 保证这两类上传组件无需业务在 schema 中手动配置触发元素。
+ *
+ * 注意 DOM 结构：`el-form-item__content` 下会多出一层无类名的 `<div>`，它是 ElUpload 组件自身的
+ * 模板根节点（element-plus/upload.vue 用它收拢 upload-list 与 upload-content 两个兄弟节点），
+ * 不是 XForm 的包裹层，也无法从 XForm 侧移除；需要调整该层样式时用 `.el-form-item__content > div` 定位。
  */
 export function buildUploadDefaultSlot(
   node: SchemaNode,
@@ -250,8 +277,22 @@ export function buildUploadDefaultSlot(
     }
     const children = renderChildren(node.children, render) as never
     if (children) return children
-    if (!isPictureCardUpload(node, Comp)) return children
-    return h(ElIcon, null, { default: () => h(Plus) }) as VNode
+    if (isPictureCardUpload(node, Comp)) {
+      return h(
+        ElIcon,
+        { class: UPLOAD_ICON_CLASS.pictureCard },
+        { default: () => h(Plus) }
+      ) as VNode
+    }
+    // drag 排在 picture-card 之后：两者同时开启时卡片触发区仅 148px，
+    // UploadFilled 的官方 67px 大图标会溢出，此时保留 Plus 更合适
+    if (isDragUpload(node, Comp)) {
+      return [
+        h(ElIcon, { class: UPLOAD_ICON_CLASS.drag }, { default: () => h(UploadFilled) }),
+        h('div', { class: UPLOAD_DRAG_TEXT_CLASS }, '拖拽文件到这里或点击上传'),
+      ] as VNode[]
+    }
+    return children
   }
 }
 

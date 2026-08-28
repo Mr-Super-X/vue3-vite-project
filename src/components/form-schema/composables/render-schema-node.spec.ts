@@ -16,6 +16,7 @@ import {
   ElIcon,
 } from 'element-plus'
 import { h, type VNode } from 'vue'
+import { Plus, UploadFilled } from '@element-plus/icons-vue'
 
 /** 创建一个最小可用的 RenderSchemaNode options */
 function makeOpts(overrides: Partial<Parameters<typeof useRenderSchemaNode>[0]> = {}) {
@@ -709,7 +710,7 @@ describe("compileRules 'required' 简写（④ 修正回归）", () => {
   })
 })
 
-describe('Upload picture-card 默认 Plus 图标插槽', () => {
+describe('Upload 默认触发区图标插槽（picture-card / drag）', () => {
   it('picture-card Upload 无自定义插槽时自动注入 ElIcon + Plus', () => {
     const node: SchemaNode = {
       component: 'Upload',
@@ -720,8 +721,66 @@ describe('Upload picture-card 默认 Plus 图标插槽', () => {
     const result = slot() as VNode
     expect(result).toBeDefined()
     expect(result.type).toBe(ElIcon)
+    expect((result.props as Record<string, unknown>)?.class).toBe(
+      'vv-x-form__upload-icon vv-x-form__upload-icon--picture-card'
+    )
     const iconChild = (result.children as { default?: () => VNode })?.default?.() ?? result.children
-    expect(iconChild).toBeDefined()
+    expect((iconChild as VNode)?.type).toBe(Plus)
+  })
+
+  it('drag Upload 无自定义插槽时自动注入带 el-icon--upload 的 UploadFilled + 提示文案', () => {
+    const node: SchemaNode = {
+      component: 'Upload',
+      name: 'dragFiles',
+      props: { drag: true },
+    }
+    const slot = buildUploadDefaultSlot(node, ElUpload, () => undefined)
+    const [iconVNode, textVNode] = slot() as VNode[]
+    expect(iconVNode?.type).toBe(ElIcon)
+    expect((iconVNode?.props as Record<string, unknown>)?.class).toBe(
+      'el-icon--upload vv-x-form__upload-icon vv-x-form__upload-icon--drag'
+    )
+    const iconChild = (iconVNode?.children as { default?: () => VNode })?.default?.()
+    expect((iconChild as VNode)?.type).toBe(UploadFilled)
+    expect(textVNode?.type).toBe('div')
+    expect((textVNode?.props as Record<string, unknown>)?.class).toBe(
+      'el-upload__text vv-x-form__upload-text'
+    )
+    expect(textVNode?.children).toBe('拖拽文件到这里或点击上传')
+  })
+
+  it('picture-card 与 drag 同时开启时优先注入 Plus（大图标会溢出卡片区）', () => {
+    const node: SchemaNode = {
+      component: 'Upload',
+      name: 'wall',
+      props: { listType: 'picture-card', drag: true },
+    }
+    const result = buildUploadDefaultSlot(node, ElUpload, () => undefined)() as VNode
+    expect((result.props as Record<string, unknown>)?.class).toBe(
+      'vv-x-form__upload-icon vv-x-form__upload-icon--picture-card'
+    )
+  })
+
+  it('drag Upload 已配置 slots.default 时不注入 UploadFilled', () => {
+    const custom = vi.fn(() => h('div', { class: 'custom-drag-area' }, '拖到此处'))
+    const node: SchemaNode = {
+      component: 'Upload',
+      name: 'dragFiles',
+      props: { drag: true },
+      slots: { default: custom as never },
+    }
+    const result = buildUploadDefaultSlot(node, ElUpload, custom)() as VNode
+    expect(custom).toHaveBeenCalled()
+    expect(result.type).toBe('div')
+  })
+
+  it('drag=true 但 component 未映射到 ElUpload 时不注入', () => {
+    const node: SchemaNode = {
+      component: 'Upload',
+      name: 'dragFiles',
+      props: { drag: true },
+    }
+    expect(buildUploadDefaultSlot(node, null, () => undefined)()).toBeUndefined()
   })
 
   it('picture-card Upload 已配置 slots.default 时优先使用用户插槽，不注入 Plus', () => {
@@ -738,7 +797,7 @@ describe('Upload picture-card 默认 Plus 图标插槽', () => {
     expect(result.type).toBe('div')
   })
 
-  it('非 picture-card 的 Upload 不注入默认插槽', () => {
+  it('既非 picture-card 也未开启 drag 的 Upload 不注入默认插槽', () => {
     const node: SchemaNode = {
       component: 'Upload',
       name: 'files',

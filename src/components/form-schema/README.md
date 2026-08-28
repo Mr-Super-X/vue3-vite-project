@@ -193,17 +193,30 @@ const selectNode: SchemaNodeFor<'Select'> = {
 
 自定义组件可通过 module augmentation 扩展类型推导（见下方“自定义组件类型扩展”）。
 
-| 快捷名          | 默认 props                                  | 说明                                                                                                                               |
-| --------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `Input`         | `{ clearable: true }`                       | 普通输入                                                                                                                           |
-| `InputNumber`   | `{ controlsPosition: 'right' }`             | 不限制最小值                                                                                                                       |
-| `InputPassword` | `{ type: 'password', showPassword: true }`  | 初始隐藏并允许切换                                                                                                                 |
-| `InputTextArea` | `{ type: 'textarea', showWordLimit: true }` | 多行输入，默认显示字数统计（需配合 `maxlength`）                                                                                   |
-| `InputTag`      | `{ clearable: true }`                       | `modelValue` 为 `string[]`                                                                                                         |
-| `Upload`        | 无                                          | 需配合 `modelProp: 'fileList'` 绑定 ElUpload 的 `file-list`；`listType: 'picture-card'` 未自定义 default slot 时自动注入 Plus 图标 |
-| `ColorPicker`   | 无                                          | 颜色和格式由节点配置                                                                                                               |
-| `Mention`       | 无                                          | options 和 prefix 由节点配置                                                                                                       |
-| `Rate`          | 无                                          | 星级、是否半星由节点配置                                                                                                           |
+| 快捷名          | 默认 props                                  | 说明                                                                                                          |
+| --------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `Input`         | `{ clearable: true }`                       | 普通输入                                                                                                      |
+| `InputNumber`   | `{ controlsPosition: 'right' }`             | 不限制最小值                                                                                                  |
+| `InputPassword` | `{ type: 'password', showPassword: true }`  | 初始隐藏并允许切换                                                                                            |
+| `InputTextArea` | `{ type: 'textarea', showWordLimit: true }` | 多行输入，默认显示字数统计（需配合 `maxlength`）                                                              |
+| `InputTag`      | `{ clearable: true }`                       | `modelValue` 为 `string[]`                                                                                    |
+| `Upload`        | 无                                          | 需配合 `modelProp: 'fileList'` 绑定 ElUpload 的 `file-list`；默认触发区见下方「Upload 默认触发区与 DOM 结构」 |
+| `ColorPicker`   | 无                                          | 颜色和格式由节点配置                                                                                          |
+| `Mention`       | 无                                          | options 和 prefix 由节点配置                                                                                  |
+| `Rate`          | 无                                          | 星级、是否半星由节点配置                                                                                      |
+
+### Upload 默认触发区与 DOM 结构
+
+未自定义 `slots.default`（也无 `children`）时，XForm 按类型注入默认触发区内容：
+
+| 节点配置                   | 注入内容                                                                      | 类名                                                                                                                      |
+| -------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `listType: 'picture-card'` | `<el-icon><Plus /></el-icon>`                                                 | `vv-x-form__upload-icon vv-x-form__upload-icon--picture-card`                                                             |
+| `drag: true`               | `<el-icon><UploadFilled /></el-icon>` + `<div>拖拽文件到这里或点击上传</div>` | 图标 `el-icon--upload vv-x-form__upload-icon vv-x-form__upload-icon--drag`；文案 `el-upload__text vv-x-form__upload-text` |
+
+- 两者同时开启时取 Plus —— picture-card 触发区仅 148px，UploadFilled 的官方 67px 大图标会溢出。
+- 保留 `el-icon--upload` / `el-upload__text` 是为了继承 Element Plus 官方拖拽区样式；`vv-x-form__upload-*` 类名供业务按类型精确覆盖，改其中一类不会误伤另一类。
+- **`el-form-item__content` 下那层无类名的 `<div>` 不是 XForm 加的**：它是 ElUpload 组件自身的模板根节点（`element-plus/upload.vue` 用它收拢 `upload-list` 与 `upload-content` 两个兄弟节点），XForm 侧无法移除。需要调整该层样式时用 `.el-form-item__content > div` 定位。
 
 ## 自定义组件类型扩展
 

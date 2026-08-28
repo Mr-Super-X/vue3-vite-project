@@ -21,6 +21,13 @@
 
 ### ✨ Features | 新特性
 
+* **form-schema:** Upload 默认触发图标按类型区分（picture-card / drag）
+  - `drag: true` 且未自定义 default slot 时注入 `<el-icon class="el-icon--upload"><UploadFilled /></el-icon>` + `<div class="el-upload__text">拖拽文件到这里或点击上传</div>`，与 Element Plus 官方拖拽区视觉一致，业务无需在 schema 手写 trigger
+  - 两类默认内容统一挂 XForm 命名空间类名（图标 `vv-x-form__upload-icon` + `--picture-card` / `--drag` modifier，文案 `vv-x-form__upload-text`），便于业务样式覆盖时精确命中其中一类
+  - picture-card 与 drag 同时开启时取 Plus 小图标（卡片触发区仅 148px，67px 大图标会溢出）
+  - 文档补充：`el-form-item__content` 下那层无类名 `<div>` 是 ElUpload 自身模板根节点（收拢 upload-list 与 upload-content），非 XForm 包裹层、无法从 XForm 侧移除，需覆盖样式时用 `.el-form-item__content > div`
+  - 防回归：render-schema-node.spec +4（drag 注入类名/图标/文案、优先级、自定义 slot 不覆盖、非 ElUpload 不注入）
+
 * **form-schema:** 扩展常用输入组件与默认配置
   - 新增 `InputPassword`（`ElInput` 语义别名，默认隐藏并可切换）、`InputTextArea`（`ElInput` 语义别名）、`InputTag`、`ColorPicker`、`Mention`、`Rate` 六个内置组件及对应 `xXxx` builder
   - 同步补齐 `Element Plus` 组件导入、快捷名/全名解析、`SchemaNodeFor` 类型推导、props 覆盖与 v-model 写回测试
