@@ -484,3 +484,190 @@ describe('useCrossFieldTrigger / 异步竞态防护（H3 回归）', () => {
     expect(opts.setFieldError).not.toHaveBeenCalled()
   })
 })
+
+describe('useCrossFieldTrigger / debounce 调度', () => {
+  function makeOptsWithDebounce(
+    rules: ReverseRule[],
+    modelGetter: () => Record<string, unknown> | undefined,
+    defaultDebounceMs?: number
+  ): UseCrossFieldTriggerOptions & {
+    setFieldError: ReturnType<typeof vi.fn>
+    clearValidate: ReturnType<typeof vi.fn>
+  } {
+    const opts = makeOpts(rules, modelGetter) as UseCrossFieldTriggerOptions & {
+      setFieldError: ReturnType<typeof vi.fn>
+      clearValidate: ReturnType<typeof vi.fn>
+    }
+    if (defaultDebounceMs !== undefined) {
+      // getter 形式：内部把 number 包成 () => number 让 useCrossFieldTrigger 实时取值
+      ;(opts as { defaultDebounceMs?: () => number }).defaultDebounceMs = () => defaultDebounceMs
+    }
+    return opts
+  }
+
+  it('字段级 debounceMs: 500 → 连触发 5 次只跑 1 次 crossValidator', async () => {
+    vi.useFakeTimers()
+    const rules: ReverseRule[] = [
+      {
+        target: 'confirmPassword',
+        deps: ['password'],
+        rule: {
+          debounceMs: 500,
+          crossValidator: () => 'err',
+          dependsOn: 'password',
+          trigger: 'change',
+        },
+      },
+    ]
+    const model: Record<string, unknown> = { password: '1', confirmPassword: '1' }
+    const opts = makeOptsWithDebounce(rules, () => model)
+    const { trigger } = useCrossFieldTrigger(opts)
+
+    trigger('password')
+    trigger('password')
+    trigger('password')
+    trigger('password')
+    trigger('password')
+    // debounce 期内未到期：crossValidator 未跑
+    expect(opts.setFieldError).not.toHaveBeenCalled()
+    // 推进到 debounce 到期
+    vi.advanceTimersByTime(500)
+    expect(opts.setFieldError).toHaveBeenCalledTimes(1)
+    vi.useRealTimers()
+  })
+
+  it('全局 defaultDebounceMs: 300 → 字段未设 debounceMs 继承全局', async () => {
+    vi.useFakeTimers()
+    const rules: ReverseRule[] = [
+      {
+        target: 'target',
+        deps: ['a'],
+        // 字段级 debounceMs 未设 → 继承 defaultDebounceMs: 300
+        rule: { crossValidator: () => 'err', dependsOn: 'a', trigger: 'change' },
+      },
+    ]
+    const model: Record<string, unknown> = { a: '1', target: 'x' }
+    const opts = makeOptsWithDebounce(rules, () => model, 300)
+    const { trigger } = useCrossFieldTrigger(opts)
+
+    trigger('a')
+    trigger('a')
+    expect(opts.setFieldError).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(300)
+    expect(opts.setFieldError).toHaveBeenCalledTimes(1)
+    vi.useRealTimers()
+  })
+
+  it('字段级 debounceMs: 0 → 强制实时（覆盖全局 500ms）', () => {
+    // 同步路径不需要 fake timers
+    const rules: ReverseRule[] = [
+      {
+        target: 'target',
+        deps: ['a'],
+        rule: { debounceMs: 0, crossValidator: () => 'err', dependsOn: 'a', trigger: 'change' },
+      },
+    ]
+    const model: Record<string, unknown> = { a: '1', target: 'x' }
+    const opts = makeOptsWithDebounce(rules, () => model, 500) // 全局 500ms
+    const { trigger } = useCrossFieldTrigger(opts)
+
+    trigger('a')
+    expect(opts.setFieldError).toHaveBeenCalledTimes(1) // 立即执行
+  })
+})
+
+describe('useCrossFieldTrigger / 同 tick 双路径去重', () => {
+  // 真实时序：用户按键 → XForm.onValueChange 同步调 trigger(field)，
+  // 同一 tick 内 deep watch model 也 diff 出同一字段 → 两条路径都 run(field)。
+  // delay=0（实时模式）下若不去重，crossValidator 每键执行 2 次（demo counter 虚高）。
+  it('delay=0：trigger + model watch 同一 tick 触发同一字段 → crossValidator 只执行 1 次', async () => {
+    let call = 0
+    const rules: ReverseRule[] = [
+      {
+        target: 'confirmPassword',
+        deps: ['password'],
+        rule: {
+          debounceMs: 0,
+          crossValidator: () => {
+            call++
+            return 'err'
+          },
+          dependsOn: 'password',
+          trigger: 'change',
+        },
+      },
+    ]
+    const model = reactive<Record<string, unknown>>({ password: '1', confirmPassword: 'x' })
+    const opts = makeOpts(rules, () => model)
+    const { trigger } = useCrossFieldTrigger(opts)
+
+    trigger('password') // 路径 1：onValueChange 精确触发（同步）
+    model.password = '2' // 路径 2：同 tick 内 model 变化 → deep watch diff
+    await nextTick()
+
+    expect(call).toBe(1)
+  })
+
+  it('delay>0：同一 tick 双路径触发 → debounce 到期只执行 1 次', async () => {
+    vi.useFakeTimers()
+    let call = 0
+    const rules: ReverseRule[] = [
+      {
+        target: 'confirmPassword',
+        deps: ['password'],
+        rule: {
+          debounceMs: 500,
+          crossValidator: () => {
+            call++
+            return 'err'
+          },
+          dependsOn: 'password',
+          trigger: 'change',
+        },
+      },
+    ]
+    const model = reactive<Record<string, unknown>>({ password: '1', confirmPassword: 'x' })
+    const opts = makeOpts(rules, () => model)
+    const { trigger } = useCrossFieldTrigger(opts)
+
+    trigger('password')
+    model.password = '2'
+    await nextTick()
+    vi.advanceTimersByTime(500)
+
+    expect(call).toBe(1)
+    vi.useRealTimers()
+  })
+
+  it('去重只作用于同一 tick：下一 tick 字段再次变化 → 重新触发', async () => {
+    let call = 0
+    const rules: ReverseRule[] = [
+      {
+        target: 'confirmPassword',
+        deps: ['password'],
+        rule: {
+          debounceMs: 0,
+          crossValidator: () => {
+            call++
+            return 'err'
+          },
+          dependsOn: 'password',
+          trigger: 'change',
+        },
+      },
+    ]
+    const model = reactive<Record<string, unknown>>({ password: '1', confirmPassword: 'x' })
+    const opts = makeOpts(rules, () => model)
+    const { trigger } = useCrossFieldTrigger(opts)
+
+    trigger('password')
+    model.password = '2'
+    await nextTick()
+    expect(call).toBe(1)
+
+    // 下一 tick 用户继续输入：deep watch diff 应重新触发（去重不能吞掉真实变化）
+    model.password = '3'
+    await nextTick()
+    expect(call).toBe(2)
+  })
+})

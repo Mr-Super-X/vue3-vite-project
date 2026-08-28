@@ -547,6 +547,51 @@ describe('XForm.vue 失焦触发 crossValidator（C2 回归）', () => {
   })
 })
 
+describe('XForm.vue 实时模式 crossValidator 错误显示（D1 回归）', () => {
+  /**
+   * D1 根因：XForm.vue onValueChange 先 trigger 后 clearValidate，
+   * delay=0（实时模式）下 crossValidator 同步写入错误后，clearValidate 立即将其清除，
+   * 导致表单不标红、无错误文字。修复后顺序为先 clearValidate 再 trigger。
+   */
+  it('A 模式（debounce=0）输入确认密码时同步写入的 crossValidator 错误应保留', async () => {
+    const crossValidator = vi.fn((v: unknown, p: unknown) => (v === p ? true : '两次密码不一致'))
+    const model = reactive({ password: '123', confirmPassword: '' })
+    const wrapper = mountXForm({
+      schema: {
+        children: [
+          { component: 'ElInput', name: 'password' },
+          {
+            component: 'ElInput',
+            name: 'confirmPassword',
+            rules: [
+              {
+                dependsOn: 'password',
+                crossValidator,
+                trigger: 'change',
+              },
+            ],
+          },
+        ],
+      } as unknown as SchemaNode,
+      model,
+    })
+    await flushPromises()
+    const inputs = wrapper.findAll('.el-form-item input')
+    expect(inputs.length).toBe(2)
+    const confirmInput = inputs[1]!
+    ;(confirmInput.element as HTMLInputElement).value = '1'
+    await confirmInput.trigger('input')
+    await flushPromises()
+    expect(crossValidator).toHaveBeenCalledWith('1', '123')
+    const debug = (
+      window as unknown as {
+        __xform_debug?: { getFieldErrors: () => Record<string, { error?: string }> }
+      }
+    ).__xform_debug
+    expect(debug?.getFieldErrors().confirmPassword?.error).toBe('两次密码不一致')
+  })
+})
+
 describe('XForm.vue hidden 字段校验语义（H9 回归）', () => {
   it('hidden 必填字段不阻塞 validate（rules 剥离，恒通过）', async () => {
     // 修复前：hidden 字段的 ElFormItem 带着 required rules 注册进 el-form，

@@ -70,6 +70,14 @@ export interface RuleItem {
     value: unknown,
     ...dependsOnValues: unknown[]
   ) => true | string | Promise<true | string>
+  /**
+   * 跨字段校验的 debounce 时延（毫秒，覆盖 schema 顶层 debounceValidation）
+   * - 未设置：继承 schema.debounceValidation（默认 0 = 实时）
+   * - >0：依赖字段停止变化 delay ms 后跑一次 crossValidator（适合密码/确认密码高频输入场景）
+   * - 0：实时（每键触发）
+   * 仅对有 crossValidator 的规则生效；纯字段规则（required / pattern）走 element-plus 自身 trigger
+   */
+  debounceMs?: number
 }
 
 /** reaction 字段值：字面量 / 函数 / 函数表达式字符串 */
@@ -323,6 +331,13 @@ export interface SchemaNode {
    * 如 { behavior: 'smooth', block: 'center' }
    */
   scrollIntoViewOptions?: ScrollIntoViewOptions | boolean
+  /**
+   * 跨字段校验的全局默认 debounce 时延（毫秒，仅顶层 schema 生效）
+   * - 0（默认）：实时校验（每键触发 crossValidator）
+   * - >0：依赖字段停止变化 delay ms 后跑一次 crossValidator（高频输入场景减负）
+   * 字段级 rules[i].debounceMs 可覆盖本配置
+   */
+  debounceValidation?: number
 }
 
 /**

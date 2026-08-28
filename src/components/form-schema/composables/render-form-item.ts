@@ -37,23 +37,22 @@ export function renderWithFormItem(
     : ElFormItem
   const fiProps = fi?.props ?? {}
 
-  // 跨字段校验在 blur/change 时主动触发
+  // 跨字段校验调度分工：
+  // - change 场景由 useCrossFieldTrigger 统一接管（v-model 变化即触发，享受 debounceValidation），
+  //   此处不再挂 onChange —— 原生 change 冒泡 + onValueChange + debounce 三线并行使
+  //   crossValidator 每键重复执行（实时模式 3 次/键）
+  // - blur（失焦即校验）是 useCrossFieldTrigger 不覆盖的语义，由 focusout 监听承载
   // 字段内 async-validator 规则（required 等）由 el-form-item 内部 addValidateEvents 自动处理；
   // 这里只额外触发 crossValidator，避免手动 validateField 与内部 validate 产生状态竞争覆盖。
   const triggerFn = opts.triggerCrossFieldValidator
 
-  let onFocusout: (() => Promise<void>) | undefined
-  let onChange: (() => Promise<void>) | undefined
+  let onFocusout: (() => Promise<void> | void) | undefined
   if (triggerFn && node.name) {
     const tf: NonNullable<typeof triggerFn> = triggerFn
     const fieldName = node.name
-    async function runCrossValidator(trigger: 'blur' | 'change'): Promise<void> {
-      await tf({ ...node, name: fieldName }, trigger)
-    }
     // 监听器挂在 ElFormItem 根 div 上，而原生 blur 不冒泡（此前用 onBlur 永不触发）；
     // focusout 可冒泡，语义等价于"字段失焦"，schema 侧的 trigger 名仍按 'blur' 上报
-    onFocusout = () => runCrossValidator('blur')
-    onChange = () => runCrossValidator('change')
+    onFocusout = () => tf({ ...node, name: fieldName }, 'blur')
   }
 
   const eventBindings = {
@@ -83,7 +82,6 @@ export function renderWithFormItem(
       ...(ext?.error ? { error: ext.error } : {}),
       ...(ext?.validateStatus ? { validateStatus: ext.validateStatus } : {}),
       ...(onFocusout ? { onFocusout } : {}),
-      ...(onChange ? { onChange } : {}),
       ...fiProps,
       // key 优先级：node.key（身份标识，数组行内为行对象身份前缀）> node.name（校验路径，含位置索引）
       // —— 若优先 name，数组删/移行后 fi-items[0].qty 漂移导致 form-item 重挂载

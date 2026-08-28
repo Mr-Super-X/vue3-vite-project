@@ -746,6 +746,47 @@ export const expressionSandboxItems: XFormApiItem[] = [
   },
 ]
 
+// XFormValidationDebounce —— schema.debounceValidation + RuleItem.debounceMs
+export const debounceItems: XFormApiItem[] = [
+  {
+    name: '顶层 schema.debounceValidation',
+    type: 'number',
+    default: '0',
+    description:
+      '跨字段校验全局默认 debounce 时延（毫秒）：0 = 实时（每键触发），>0 = 停止变化 delay ms 后跑一次',
+  },
+  {
+    name: 'rules[i].debounceMs',
+    type: 'number',
+    description:
+      '字段级覆盖：0 = 强制实时，>0 = 自定义 delay。未设置则继承 schema.debounceValidation',
+  },
+  {
+    name: '作用范围',
+    type: '仅 crossValidator',
+    description:
+      '仅对跨字段校验函数生效；字段内 async-validator 规则（required/pattern/email）的触发由 trigger 控制（change/blur/manual）',
+  },
+  {
+    name: '远程搜索',
+    type: '—',
+    description:
+      '不属于校验范畴；asyncOptions 自身职责（建议另开 task 在 use-async-options 加 debounce 字段）',
+  },
+  {
+    name: 'async crossValidator',
+    type: 'Promise<true | string>',
+    description:
+      '异步跨字段校验（如远程查重）继承本次 debounce：依赖字段停止变化 delay ms 后才发起远程请求',
+  },
+  {
+    name: '与 trigger 关系',
+    type: '—',
+    description:
+      'trigger: manual 完全跳过反向触发；trigger: change + debounceValidation > 0 时按 delay 调度；trigger: blur 不影响（走 el-form 原生）',
+  },
+]
+
 // XFormGlobalDisabled —— 顶层 schema.disabled 字段速查
 export const globalDisabledItems: XFormApiItem[] = [
   {

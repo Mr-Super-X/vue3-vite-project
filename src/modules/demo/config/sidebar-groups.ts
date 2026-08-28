@@ -48,6 +48,7 @@ export const CN_NAMES: Record<string, string> = {
   XFormReactionDeps: '反应式联动·deps 动机',
   XFormGlobalDisabled: '全局禁用',
   XFormGlobalReadonly: '全局只读',
+  XFormValidationDebounce: '实时校验和debounce',
   XFormResponsive: '响应式布局',
   XFormSchemaIndex: '索引快照',
   XFormScrollToError: '错误自动滚动',

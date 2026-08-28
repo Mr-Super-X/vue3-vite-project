@@ -4,6 +4,16 @@
 
 ### 🐛 Bug Fixes | 问题修复
 
+* **form-schema:** A 模式（实时）下跨字段校验错误不显示
+  - 根因：`XForm.vue` 的 `onValueChange` 先调 `crossFieldTrigger.trigger()` 再调 `clearValidate()`；`delay=0` 时 `crossValidator` 同步写入错误后，`clearValidate()` 立即把刚写入的错误清掉，导致表单不标红、无错误文字
+  - 修复：调整顺序为先 `clearValidate([node.name])` 清除旧错误（含服务端错误），再 `crossFieldTrigger.trigger(node.name)` 重新写入新错误；B/C 模式因 debounce 延迟写入，行为保持不变
+  - 防回归：XForm.spec.ts +1（A 模式输入确认密码后 `fieldErrors` 保留错误）；浏览器实测 A/B/C 三模式均正常显示跨字段校验错误
+
+* **form-schema:** 跨字段校验 debounce 失效修复（三路径重复执行 crossValidator）
+  - 根因：同一次 change 存在三条并行执行路径——`onValueChange` 直调 `triggerCrossFieldValidator('change')`、ElFormItem 透传的原生 `onChange` 冒泡、`useCrossFieldTrigger` debounce 路径；前两者完全绕过 `debounceValidation`，且 debounce 路径内部 `trigger()` 与 deep watch model 对同字段双重同步执行（delay=0 时无去重）——实时模式每键执行 3 次（3 键 9 次）、500ms 模式 3 次，XFormValidationDebounce demo 三模式 counter 全部虚高
+  - 修复：change 校验统一收敛到 `useCrossFieldTrigger` 单一入口（享受 debounce）——移除 `onValueChange` 的直调与 form-item 的 `onChange` 监听（blur/focusout 语义保留）；`trigger()` 登记 `triggeredFields`，deep watch 同 tick diff 跳过已处理字段，窗口随每次 watch 回调关闭（不吞下一 tick 真实变化）
+  - 防回归：use-cross-field-trigger.spec +3（同 tick 双路径去重 delay=0/delay>0/跨 tick 重触发）；render-schema-node.spec 更新为「只挂 onFocusout 不挂 onChange」契约；浏览器实测 A/B/C 三模式 counter 均符合预期（9→3、3→1、1000ms 延迟生效）
+
 * **form-schema:** `{{ fn }}` 表达式事件参数透传修复（编译模板单参硬编码）
   - 根因：`use-expression.ts` 编译模板 `return (${expr})(model)` 固定单参调用，`node.on` 绑定展开的事件实参在内层被丢弃——`{{ (m, v) => ... }}` 的 `v` 恒为 `undefined`（既有 XFormEvents demo 与 API 文档承诺形态静默失效）
   - 修复：编译模板改为 `(model, ...__rest__)` 多参调用；reaction / permission / readonly 等单参求值路径传空数组，行为完全向后兼容
@@ -38,6 +48,14 @@
   - ③ deps 路径声明（可读性）：同一段计算逻辑，无 deps 靠函数体内引用追踪（隐式），有 deps 显式列出依赖（推荐：重构安全 + 阅读一目了然）
   - 顶部开关 A/B 模式切换（schema computed 重计算 → XForm 自动 watch 重新注册 reaction，旧 stoppers 清理）
   - ApiTable 收录「reaction.deps 字段速查」，sidebar 注册「反应式联动·deps 动机」
+
+
+* **form-schema:** 新增跨字段校验 debounce 调度 + 演示 demo
+  - 顶层 schema.debounceValidation + 字段级 RuleItem.debounceMs 双层配置：解决密码/确认密码、邮箱/确认邮箱等高频输入场景每键触发校验的视觉干扰
+  - use-cross-field-trigger 改造：runner 按 `${target}|${delayMs}` 缓存，0 = 实时同步执行、>0 = lodash.debounce 延迟；async crossValidator（远程查重等）继承本次 debounce
+  - 防回归：use-cross-field-trigger.spec.ts +3（字段级 debounceMs / 全局 defaultDebounceMs / 字段覆盖全局）；原 18 个用例全部向后兼容通过
+  - 新增 XFormValidationDebounce.vue demo：A 实时模式 / B 全局 500ms / C 字段级覆盖（混合 1000ms+0）三模式对比，counter 可视化连打 6 字符的校验触发次数
+  - ApiTable 收录「debounce 字段速查」，sidebar 注册「校验 debounce」
 
 
 * **form-schema:** 新增全局 disabled / 全局 readonly demo

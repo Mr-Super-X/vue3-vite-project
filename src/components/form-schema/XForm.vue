@@ -141,6 +141,15 @@ const {
 // 阶段 1.1 + 3.1 修复：反向跨字段实时校验 —— 精确触发
 // onValueChange 调用 crossFieldTrigger.trigger(node.name) 只跑 deps 包含该字段的 rule
 // 跨字段规则从 schemaIndex.crossRules 拍平传入，schema 变化时自动跟随重建
+// 阶段 X.Y：schema.debounceValidation 透传为 defaultDebounceMs，
+//   字段级 RuleItem.debounceMs 优先；0 = 实时（默认），>0 = 停止变化 delay ms 后跑一次
+const topLevelDebounceMs = computed<number>(() => {
+  const s = reactiveSchema.value
+  if (Array.isArray(s)) return 0 // 数组形式无顶层节点，关闭 debounce
+  return typeof s.debounceValidation === 'number' && s.debounceValidation >= 0
+    ? s.debounceValidation
+    : 0
+})
 const crossFieldTrigger = useCrossFieldTrigger({
   crossRules: () => {
     const out: Array<{ target: string; deps: string[]; rule: import('./types').RuleItem }> = []
@@ -152,6 +161,7 @@ const crossFieldTrigger = useCrossFieldTrigger({
   model: () => props.model,
   setFieldError: (name, message) => setFieldError(name, message),
   clearValidate: (names: string[]) => clearValidate(names),
+  defaultDebounceMs: () => topLevelDebounceMs.value,
 })
 
 // 阶段 2.2：dirty 状态追踪
@@ -457,16 +467,19 @@ const renderOpts: RenderSchemaNodeOptions = {
       /* silent — 校验失败时错误已写入 form-item */
     }
   },
-  // v-model 值变化时主动调 triggerCrossFieldValidator(eventType='change')
+  // v-model 值变化时的跨字段调度唯一入口是 crossFieldTrigger.trigger（享受 debounceValidation）。
+  // 不再调 triggerCrossFieldValidator('change')：它与 ElFormItem 透传的原生 change、
+  // debounce 路径三线并行，每键重复执行 crossValidator（实时模式 3 次/键，counter 虚高）
   // + 阶段 3.1：精确触发反向校验（只跑 deps 包含 node.name 的 rules）
   // + 阶段 2.1 修复：用户修改字段值时自动清除该字段的服务端错误（红字），
   //   避免下次 validate() 因残留服务端错误误判失败
   onValueChange: (node, _newValue) => {
-    triggerCrossFieldValidator(node, 'change')
     if (node.name) {
-      crossFieldTrigger.trigger(node.name)
-      // 自动清除服务端错误：用户重新输入即视为"已修正"，旧红字应失效
+      // 先清旧错误（含服务端错误），再触发跨字段校验重新写入新错误。
+      // 顺序关键：delay=0（实时模式）下 crossValidator 同步执行，
+      // 若先 trigger 后 clearValidate，刚写入的错误会被立即清除，导致 UI 不标红。
       clearValidate([node.name])
+      crossFieldTrigger.trigger(node.name)
     }
   },
   // P2-1:响应式断点感知(响应式 ColConfig 拍平)

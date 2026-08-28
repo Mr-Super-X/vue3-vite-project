@@ -291,7 +291,7 @@ describe('useRenderSchemaNode disabled 透传', () => {
   })
 })
 
-describe('useRenderSchemaNode blur/change 触发 crossValidator', () => {
+describe('useRenderSchemaNode blur 触发 crossValidator', () => {
   // 找 form-item 的 onFocusout / onChange 触发器
   // 注：原生 blur 不冒泡，挂在 form-item 根节点上永不触发，故实现用可冒泡的 focusout 承载 blur 语义
   function findTrigger(vnode: unknown, type: 'onFocusout' | 'onChange'): (() => void) | undefined {
@@ -300,7 +300,9 @@ describe('useRenderSchemaNode blur/change 触发 crossValidator', () => {
     return v.props?.[type] as (() => void) | undefined
   }
 
-  it('form-item 同时挂 onFocusout 和 onChange', () => {
+  // change 场景由 useCrossFieldTrigger 统一调度（v-model 变化即触发，享受 debounce），
+  // form-item 只承载 blur —— 挂 onChange 会导致 crossValidator 每键重复执行
+  it('form-item 只挂 onFocusout，不挂 onChange', () => {
     const triggerFn = vi.fn()
     const { opts } = makeOpts({ model: { a: 1, b: 2 } })
     opts.triggerCrossFieldValidator = triggerFn
@@ -317,7 +319,7 @@ describe('useRenderSchemaNode blur/change 触发 crossValidator', () => {
     }
     const result = render(node)
     expect(findTrigger(result, 'onFocusout')).toBeDefined()
-    expect(findTrigger(result, 'onChange')).toBeDefined()
+    expect(findTrigger(result, 'onChange')).toBeUndefined()
   })
 
   it('focusout 触发器传入 eventType="blur"', () => {
@@ -333,21 +335,6 @@ describe('useRenderSchemaNode blur/change 触发 crossValidator', () => {
     const result = render(node)
     findTrigger(result, 'onFocusout')!()
     expect(triggerFn).toHaveBeenCalledWith(node, 'blur')
-  })
-
-  it('change 触发器传入 eventType="change"', () => {
-    const triggerFn = vi.fn()
-    const { opts } = makeOpts({ model: { a: 1, b: 2 } })
-    opts.triggerCrossFieldValidator = triggerFn
-    const render = useRenderSchemaNode(opts)
-    const node: SchemaNode = {
-      component: 'Input',
-      name: 'a',
-      rules: [{ dependsOn: ['b'], crossValidator: () => true as const }],
-    }
-    const result = render(node)
-    findTrigger(result, 'onChange')!()
-    expect(triggerFn).toHaveBeenCalledWith(node, 'change')
   })
 
   it('未提供 triggerCrossFieldValidator 时不挂两个监听器(零开销)', () => {
