@@ -10,6 +10,11 @@
   - 修复：`isElUpload` 兜底分支注入 `<el-button type="primary" class="vv-x-form__upload-button">点击上传</el-button>`；`slots.default` / `children` 仍优先，业务自定义不受影响
   - 防回归：render-schema-node.spec +3（text 兜底按钮类名与文案、picture 同样兜底、children 存在时不注入）
 
+* **form-schema:** 配 `slots.trigger` 的 Upload 会多出一个孤立触发按钮
+  - 根因：ElUpload 在 `$slots.trigger` 存在时把 `$slots.default` 额外渲染到触发区之外（`element-plus/upload.vue:85`），而 XForm 恒向 ElUpload 传 default 插槽函数 —— 业务只写 trigger、不写 default 时会吃到引擎注入的默认内容
+  - 修复：`buildUploadDefaultSlot` 检测到 `slots.trigger` 即跳过默认注入
+  - 防回归：render-schema-node.spec +1
+
 * **form-schema:** A 模式（实时）下跨字段校验错误不显示
   - 根因：`XForm.vue` 的 `onValueChange` 先调 `crossFieldTrigger.trigger()` 再调 `clearValidate()`；`delay=0` 时 `crossValidator` 同步写入错误后，`clearValidate()` 立即把刚写入的错误清掉，导致表单不标红、无错误文字
   - 修复：调整顺序为先 `clearValidate([node.name])` 清除旧错误（含服务端错误），再 `crossFieldTrigger.trigger(node.name)` 重新写入新错误；B/C 模式因 debounce 延迟写入，行为保持不变
@@ -26,6 +31,13 @@
   - 防回归：use-expression.spec +2（事件参数按位透传 / 单参路径兼容）；由 XFormExpression demo 浏览器实测暴露
 
 ### ✨ Features | 新特性
+
+* **demo:** XFormUpload 补充自定义样式三方案
+  - 新增「自定义样式方案」小节（`/demo/xform-upload#demo-upload-custom`），覆盖产品要求定制上传区外观时的三条路径
+  - 方案 8 类名覆盖：schema 不动，靠 `formItem.props.class` 锁作用域 + `vv-x-form__upload-icon--drag` / `__upload-text` 改外观（不污染同页其他 Upload）
+  - 方案 9 `slots.default` 接管触发区：`component` 直接传组件对象（无需 `XForm.components` 注册）拼虚线卡片
+  - 方案 10 `slots.file` 自定义已上传项：文件图标 + 名称 + 大小 + 自接的移除按钮（内置 ✕ 被该插槽覆盖，需自行实现删除）
+  - 该 demo 页因内联 3 套 schema + 样式达 507 行，已与用户确认对本页放开组件行限
 
 * **form-schema:** Upload 默认触发图标按类型区分（picture-card / drag）
   - `drag: true` 且未自定义 default slot 时注入 `<el-icon class="el-icon--upload"><UploadFilled /></el-icon>` + `<div class="el-upload__text">拖拽文件到这里或点击上传</div>`，与 Element Plus 官方拖拽区视觉一致，业务无需在 schema 手写 trigger

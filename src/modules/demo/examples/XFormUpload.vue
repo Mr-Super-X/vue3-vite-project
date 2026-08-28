@@ -10,9 +10,15 @@
  * 5. 手动上传（autoUpload: false，随表单提交）
  * 6. 上传前校验（beforeUpload 大小 / 类型）
  * 7. 已上传文件回显（fileList 默认值）
+ *
+ * 外加 3 类"产品觉得默认样式不好、需要定制"的自定义方案：
+ * 8. 类名覆盖默认注入（不写 slots，只改外观）
+ * 9. slots.default 完全接管触发区
+ * 10. slots.file 自定义已上传项渲染
  */
-import { ref, reactive } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ref, reactive, h } from 'vue'
+import { ElMessage, ElIcon, ElButton } from 'element-plus'
+import { UploadFilled, Document } from '@element-plus/icons-vue'
 import type { UploadRawFile, UploadUserFile, UploadRequestOptions } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
@@ -186,6 +192,128 @@ const model = reactive<Record<string, unknown>>({
   ],
 })
 
+function formatFileSize(size: number | undefined): string {
+  if (size === undefined) return '未知大小'
+  if (size < 1024) return `${size} B`
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
+  return `${(size / 1024 / 1024).toFixed(2)} MB`
+}
+
+function removeCustomFile(target: UploadUserFile) {
+  const list = customModel.contractFiles as UploadUserFile[]
+  customModel.contractFiles = list.filter((f) => f !== target)
+}
+
+/**
+ * 场景 10 的自定义列表项渲染。
+ * ElUpload 的 slots.file 只替换 li 内部内容，li 外壳与 hover 动作条仍由 Element Plus 渲染，
+ * 因此删除按钮要自己接 —— 内置的 ✕ 已被本插槽覆盖掉。
+ */
+function renderCustomFileItem(scope?: Record<string, unknown>) {
+  const file = scope?.file as UploadUserFile | undefined
+  if (!file) return null
+  return h('div', { class: bem.e('file-item') }, [
+    h(ElIcon, { class: bem.e('file-icon') }, { default: () => h(Document) }),
+    h('span', { class: bem.e('file-name') }, file.name),
+    h('span', { class: bem.e('file-size') }, formatFileSize(file.size)),
+    h(
+      ElButton,
+      { link: true, type: 'danger', size: 'small', onClick: () => removeCustomFile(file) },
+      { default: () => '移除' }
+    ),
+  ])
+}
+
+const customSchema: SchemaNode = {
+  row: { gutter: 24 },
+  children: [
+    // 8. 类名覆盖：schema 不写 slots.default，保留引擎注入的图标 + 文案，只改外观。
+    //    formItem.props.class 透传到 el-form-item 根节点，把覆盖范围锁在本字段内，
+    //    不会污染页面上其他 Upload（如上方第 3 个「拖拽上传」字段）
+    {
+      label: '品牌色拖拽区',
+      name: 'brandedFiles',
+      col: { span: 12 },
+      component: 'Upload',
+      modelProp: 'fileList',
+      formItem: { props: { class: bem.e('branded') } },
+      props: {
+        action: '#',
+        drag: true,
+        multiple: true,
+        httpRequest: mockUpload,
+      },
+      slots: {
+        tip: '默认注入的图标与文案原样保留，仅靠 vv-x-form__upload-* 类名改外观。',
+      },
+    },
+    // 9. slots.default 完全接管触发区（component 可直接传组件对象，无需 XForm.components 注册）
+    {
+      label: '营业执照',
+      name: 'licenseFiles',
+      col: { span: 12 },
+      component: 'Upload',
+      modelProp: 'fileList',
+      props: {
+        action: '#',
+        accept: 'image/*',
+        limit: 1,
+        beforeUpload: beforeUploadCheck,
+        httpRequest: mockUpload,
+      },
+      slots: {
+        default: {
+          component: 'div',
+          props: { class: bem.e('license-trigger') },
+          children: [
+            { component: ElIcon, children: { component: UploadFilled } },
+            {
+              component: 'div',
+              props: { class: bem.e('license-title') },
+              children: '点击上传营业执照',
+            },
+            {
+              component: 'div',
+              props: { class: bem.e('license-hint') },
+              children: 'JPG / PNG，单文件 ≤ 2MB',
+            },
+          ],
+        },
+      },
+    },
+    // 10. slots.file 自定义已上传项（scoped slot：ElUpload 转发 { file, index }）
+    {
+      label: '合同附件',
+      name: 'contractFiles',
+      col: { span: 24 },
+      component: 'Upload',
+      modelProp: 'fileList',
+      props: {
+        action: '#',
+        multiple: true,
+        httpRequest: mockUpload,
+      },
+      slots: {
+        file: renderCustomFileItem,
+        tip: '文件名、大小、移除按钮全部由 slots.file 自己渲染。',
+      },
+    },
+  ],
+}
+
+const customModel = reactive<Record<string, unknown>>({
+  brandedFiles: [],
+  licenseFiles: [],
+  contractFiles: [
+    {
+      name: '框架协议-2026.pdf',
+      url: '#',
+      status: 'success',
+      size: 245_760,
+    } as UploadUserFile,
+  ],
+})
+
 const formRef = ref<{
   validate: (cb?: (valid: boolean) => void) => Promise<boolean>
   resetFields: () => void
@@ -210,6 +338,15 @@ function onReset() {
   formRef.value?.resetFields()
 }
 
+function onSaveCustom() {
+  ElMessage({
+    message: '定制表单数据：\n' + JSON.stringify(customModel, null, 2),
+    type: 'success',
+    duration: 0,
+    showClose: true,
+  })
+}
+
 async function copySchema() {
   try {
     await navigator.clipboard.writeText(JSON.stringify(schema, null, 2))
@@ -221,6 +358,7 @@ async function copySchema() {
 
 const tocItems = [
   { id: 'demo-upload', label: '上传场景演示' },
+  { id: 'demo-upload-custom', label: '自定义样式方案' },
   { id: 'api-upload', label: 'Upload 字段配置' },
 ]
 </script>
@@ -235,6 +373,7 @@ const tocItems = [
         '关键：ElUpload 的 v-model 属性是 file-list，所以节点必须配置 modelProp: \'fileList\'，否则双向绑定不生效。',
         '本页覆盖单文件头像、多文件附件、拖拽上传、图片墙、手动上传、上传前校验、已上传文件回显。',
         '所有上传均走 httpRequest 模拟接口，demo 无需真实后端即可看到上传成功效果。',
+        '触发区默认由 XForm 按类型注入（picture-card → Plus 图标、drag → 云朵图标 + 文案、其余 → 「点击上传」按钮）；产品要定制时用下方三种方案覆盖。',
       ]"
     >
       <section id="demo-upload">
@@ -244,6 +383,18 @@ const tocItems = [
             <el-button @click="onReset">重置</el-button>
             <el-button type="primary" @click="onSave">保存</el-button>
             <el-button @click="copySchema">复制 schema</el-button>
+          </div>
+        </DemoField>
+      </section>
+
+      <section id="demo-upload-custom">
+        <DemoField
+          label="自定义样式三方案（类名覆盖 / 自定义触发区 / 自定义列表项）"
+          :code="xFormSource"
+        >
+          <XForm :schema="customSchema" :model="customModel" />
+          <div :class="bem.e('actions')">
+            <el-button type="primary" @click="onSaveCustom">查看定制表单数据</el-button>
           </div>
         </DemoField>
       </section>
@@ -263,6 +414,101 @@ const tocItems = [
     margin-top: 16px;
     display: flex;
     gap: 8px;
+  }
+
+  // 方案 8：只覆盖类名，不碰 schema —— 作用域由 formItem.props.class 锁定在本字段
+  &__branded {
+    .el-upload-dragger {
+      border: 1px solid var(--el-color-primary-light-5);
+      border-radius: 12px;
+      background: linear-gradient(
+        160deg,
+        var(--el-color-primary-light-9),
+        var(--el-fill-color-blank)
+      );
+      transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
+
+      &:hover {
+        border-color: var(--el-color-primary);
+        box-shadow: 0 4px 16px rgb(64 158 255 / 18%);
+      }
+    }
+
+    .#{$BEM_PREFIX}-x-form__upload-icon--drag {
+      font-size: 42px;
+      color: var(--el-color-primary);
+    }
+
+    .#{$BEM_PREFIX}-x-form__upload-text {
+      font-weight: 600;
+      color: var(--el-color-primary-dark-2);
+    }
+  }
+
+  // 方案 9：slots.default 接管触发区后，外观完全由这里决定
+  &__license-trigger {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    width: 100%;
+    padding: 20px 16px;
+    border: 1px dashed var(--el-border-color);
+    border-radius: 8px;
+    color: var(--el-text-color-secondary);
+    transition:
+      border-color 0.2s,
+      color 0.2s;
+
+    &:hover {
+      border-color: var(--el-color-primary);
+      color: var(--el-color-primary);
+    }
+
+    .el-icon {
+      font-size: 28px;
+    }
+  }
+
+  &__license-title {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  &__license-hint {
+    font-size: 12px;
+    color: var(--el-text-color-placeholder);
+  }
+
+  // 方案 10：slots.file 自定义列表项
+  &__file-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: var(--el-fill-color-light);
+  }
+
+  &__file-icon {
+    color: var(--el-color-primary);
+  }
+
+  &__file-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__file-size {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
   }
 }
 </style>

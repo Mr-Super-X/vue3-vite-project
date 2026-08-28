@@ -835,6 +835,16 @@ describe('Upload 默认触发区图标插槽（picture-card / drag）', () => {
     expect(result.type).toBe('button')
   })
 
+  it('配置 slots.trigger 时不注入默认内容（否则触发区外会多出孤立按钮）', () => {
+    const node: SchemaNode = {
+      component: 'Upload',
+      name: 'files',
+      props: { drag: true },
+      slots: { trigger: { component: 'ElButton', children: '选择文件' } },
+    }
+    expect(buildUploadDefaultSlot(node, ElUpload, () => undefined)()).toBeUndefined()
+  })
+
   it('listType=picture-card 但 component 未映射到 ElUpload 时不注入', () => {
     const node: SchemaNode = {
       component: 'Upload',

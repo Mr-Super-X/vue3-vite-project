@@ -219,6 +219,8 @@ const selectNode: SchemaNodeFor<'Select'> = {
 - 两者同时开启时取 Plus —— picture-card 触发区仅 148px，UploadFilled 的官方 67px 大图标会溢出。
 - 保留 `el-icon--upload` / `el-upload__text` 是为了继承 Element Plus 官方拖拽区样式；`vv-x-form__upload-*` 类名供业务按类型精确覆盖，改其中一类不会误伤另一类。
 - 需要换触发元素（自定义按钮文案 / 整块 drop 区）时写 `slots.default` 或 `children`，二者都优先于上表的默认注入。
+- 配了 `slots.trigger` 时不注入 —— ElUpload 会把 `default` 渲染到触发区之外（`element-plus/upload.vue:85`），注入会让页面多出一个孤立按钮。
+- 三种定制写法（类名覆盖 / `slots.default` 接管触发区 / `slots.file` 自定义列表项）见 `/demo/xform-upload` 的「自定义样式方案」小节。
 - **`el-form-item__content` 下那层无类名的 `<div>` 不是 XForm 加的**：它是 ElUpload 组件自身的模板根节点（`element-plus/upload.vue` 用它收拢 `upload-list` 与 `upload-content` 两个兄弟节点），XForm 侧无法移除。需要调整该层样式时用 `.el-form-item__content > div` 定位。
 
 ## 自定义组件类型扩展
