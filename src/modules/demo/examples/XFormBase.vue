@@ -6,11 +6,12 @@
  * 字段：订单号 / 订单状态 / 下单日期区间 / 备注
  * 特性：column 2 列栅格 + rules（'required' 字符串 + validator 函数）
  */
-import { ref, reactive } from 'vue'
+import { reactive } from 'vue'
 import dayjs from 'dayjs'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
@@ -19,7 +20,11 @@ import DocToc from '../components/DocToc.vue'
 import { ruleItems } from './xform-demos-api'
 import xFormSource from './XFormBase.vue?raw'
 
-const bem = createNamespace('demo-x-form-base')
+const { formRef, bem, onReset, copySchema } = useXFormDemo({
+  name: 'base',
+  schema: () => schema,
+  model: () => model,
+})
 
 // —— 订单状态字典（mock 远程接口） ——
 const ORDER_STATUS_OPTIONS = [
@@ -172,36 +177,23 @@ const schema: SchemaNode = {
 }
 
 const model = reactive<Record<string, unknown>>({})
-const formRef = ref<{
-  validate: (cb?: (valid: boolean) => void) => Promise<boolean>
-  resetFields: () => void
-} | null>(null)
 
-function onSave() {
-  formRef.value?.validate((valid) => {
-    if (valid) {
-      ElMessage({
-        message: '保存成功：\n' + JSON.stringify(model, null, 2),
-        type: 'success',
-        duration: 0,
-        showClose: true,
-      })
-    } else {
-      ElMessage.error('校验失败，请检查字段')
-    }
-  })
-}
-
-function onReset() {
-  formRef.value?.resetFields()
-}
-
-async function copySchema() {
-  try {
-    await navigator.clipboard.writeText(JSON.stringify(schema, null, 2))
-    ElMessage.success('schema 已复制到剪贴板')
-  } catch {
-    ElMessage.error('复制失败，请手动选择')
+/**
+ * 自定义 onSave：展示 model JSON dump（XFormBase 演示需求）
+ * 其他 demo 若只需「validate + toast」可直接用 useXFormDemo 暴露的 onSave
+ */
+async function onSave() {
+  if (!formRef.value) return
+  const valid = await formRef.value.validate()
+  if (valid) {
+    ElMessage({
+      message: '保存成功：\n' + JSON.stringify(model, null, 2),
+      type: 'success',
+      duration: 0,
+      showClose: true,
+    })
+  } else {
+    ElMessage.error('校验失败，请检查字段')
   }
 }
 

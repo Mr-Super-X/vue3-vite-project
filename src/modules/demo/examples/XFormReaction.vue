@@ -7,10 +7,10 @@
  * 2. 自动保存节流(throttle):model 任意字段变化 → 最多 1 秒一次自动保存
  * 3. 普通反应式(default sync):开关切换 → 立即更新显示
  */
-import { reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { reactive } from 'vue'
 import XForm from '@/components/form-schema/XForm.vue'
-import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import type { SchemaNode } from '@/components/form-schema/types'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import { reactionItems } from './xform-demos-api'
@@ -19,7 +19,11 @@ import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
 import xFormSource from './XFormReaction.vue?raw'
 
-const bem = createNamespace('demo-x-form-reaction')
+const { formRef, bem, onSave, copySchema } = useXFormDemo({
+  name: 'reaction',
+  schema: () => schema,
+  model: () => model,
+})
 
 // 模拟远程搜索:返回基于 keyword 的 mock 结果(中英文都支持)
 function mockRemoteSearch(keyword: string): string[] {
@@ -152,26 +156,7 @@ const model = reactive<Record<string, unknown>>({
   invoiceTitle: '',
 })
 
-const formRef = ref<XFormExpose | null>(null)
-
-async function onSave() {
-  if (!formRef.value) return
-  const valid = await formRef.value.validate()
-  if (!valid) {
-    ElMessage.error('校验失败')
-    return
-  }
-  ElMessage.success('保存成功')
-}
-
-async function copySchema() {
-  try {
-    await navigator.clipboard.writeText(JSON.stringify(schema, null, 2))
-    ElMessage.success('schema 已复制到剪贴板')
-  } catch {
-    ElMessage.error('复制失败')
-  }
-}
+// onSave / copySchema / formRef / bem 由 useXFormDemo 统一提供（见 import 区上方）
 
 const tocItems = [
   { id: 'demo-reaction', label: '反应式联动演示' },

@@ -11,10 +11,11 @@
  * 5. Autocomplete(自动补全):props.fetchSuggestions/triggerOnFocus
  * 6. TreeSelect(树形选择):props.data/multiple
  */
-import { reactive, ref } from 'vue'
+import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
-import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import type { SchemaNode } from '@/components/form-schema/types'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import { builderItems } from './xform-demos-api'
@@ -23,7 +24,11 @@ import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
 import xFormSource from './XFormBuilder.vue?raw'
 
-const bem = createNamespace('demo-x-form-builder')
+const { formRef, bem, onReset, copySchema } = useXFormDemo({
+  name: 'builder',
+  schema: () => schema,
+  model: () => model,
+})
 
 // ============== Cascader 数据(省/市/区) ==============
 const CASCADER_DATA = [
@@ -211,8 +216,6 @@ const model = reactive<Record<string, unknown>>({
   dept: [],
 })
 
-const formRef = ref<XFormExpose | null>(null)
-
 async function onSave() {
   if (!formRef.value) return
   const valid = await formRef.value.validate()
@@ -226,19 +229,6 @@ async function onSave() {
     duration: 0,
     showClose: true,
   })
-}
-
-function onReset() {
-  formRef.value?.resetFields()
-}
-
-async function copySchema() {
-  try {
-    await navigator.clipboard.writeText(JSON.stringify(schema, null, 2))
-    ElMessage.success('schema 已复制到剪贴板')
-  } catch {
-    ElMessage.error('复制失败')
-  }
 }
 
 const tocItems = [
