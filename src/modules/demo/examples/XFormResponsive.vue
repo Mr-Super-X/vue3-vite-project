@@ -18,10 +18,11 @@
  * 联动需要 XForm 内部 useResizeObserver 触发 schema 重渲染。
  * 本次仅支持 schema 字段透传,字段值会传给 el-row / el-col props。
  */
-import { reactive, ref, onMounted, onUnmounted } from 'vue'
+import { reactive, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
-import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import type { SchemaNode } from '@/components/form-schema/types'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import { responsiveItems } from './xform-demos-api'
@@ -30,7 +31,11 @@ import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
 import xFormSource from './XFormResponsive.vue?raw'
 
-const bem = createNamespace('demo-x-form-responsive')
+const { formRef, bem, onReset, copySchema } = useXFormDemo({
+  name: 'responsive',
+  schema: () => schema,
+  model: () => model,
+})
 
 // ============== 响应式断点(仅 demo 显示用) ==============
 const currentBreakpoint = ref<'xs' | 'sm' | 'md' | 'lg' | 'xl'>('md')
@@ -135,7 +140,7 @@ const model = reactive<Record<string, unknown>>({
   hireDate: '',
 })
 
-const formRef = ref<XFormExpose | null>(null)
+// formRef / onReset / copySchema 由 useXFormDemo 统一提供（见 import 区下方）
 
 async function onSave() {
   if (!formRef.value) return
@@ -150,19 +155,6 @@ async function onSave() {
     duration: 0,
     showClose: true,
   })
-}
-
-function onReset() {
-  formRef.value?.resetFields()
-}
-
-async function copySchema() {
-  try {
-    await navigator.clipboard.writeText(JSON.stringify(schema, null, 2))
-    ElMessage.success('schema 已复制到剪贴板')
-  } catch {
-    ElMessage.error('复制失败')
-  }
 }
 
 const tocItems = [

@@ -12,10 +12,11 @@
  * 注意：crossValidator 走 use-cross-field-trigger 路径（享受 debounce）；
  *      element-plus 原生 async-validator（rule.validator）不走此路径，不受 debounce 影响
  */
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
-import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import type { SchemaNode } from '@/components/form-schema/types'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
@@ -23,6 +24,11 @@ import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
 import { debounceItems } from './xform-demos-api'
 import xFormSource from './XFormValidationDebounce.vue?raw'
+
+const { formRef, copySchema } = useXFormDemo({
+  name: 'validation-debounce',
+  schema: () => schema.value,
+})
 
 const bem = createNamespace('demo-x-form-validation-debounce')
 
@@ -126,21 +132,14 @@ const schema = computed<SchemaNode>(() => {
   }
 })
 
-const formRef = ref<XFormExpose | null>(null)
 async function onSave() {
-  if (!(await formRef.value?.validate())) {
+  if (!formRef.value) return
+  const valid = await formRef.value.validate()
+  if (!valid) {
     ElMessage.error('校验失败')
     return
   }
   ElMessage.success('保存成功')
-}
-async function copySchema() {
-  try {
-    await navigator.clipboard.writeText(JSON.stringify(schema.value, null, 2))
-    ElMessage.success('schema 已复制')
-  } catch {
-    ElMessage.error('复制失败')
-  }
 }
 
 const tocItems = [

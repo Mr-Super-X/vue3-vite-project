@@ -7,11 +7,12 @@
  * 2. 邮箱黑名单：asyncValidator 检查预定义黑名单,命中时返回错误信息
  * 3. 跨字段异步校验：crossValidator 返回 Promise,模拟"服务端密码强度比对"
  */
-import { reactive, ref } from 'vue'
+import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
-import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import type { SchemaNode } from '@/components/form-schema/types'
 import { xInput } from '@/components/form-schema/builders'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
 import DemoField from '../components/DemoField.vue'
 import DemoFrame from '../components/DemoFrame.vue'
@@ -20,7 +21,11 @@ import DocToc from '../components/DocToc.vue'
 import { asyncValidatorItems } from './xform-demos-api'
 import xFormSource from './XFormAsyncValidator.vue?raw'
 
-const bem = createNamespace('demo-x-form-async')
+const { formRef, bem, onReset, copySchema } = useXFormDemo({
+  name: 'async-validator',
+  schema: () => schema,
+  model: () => model,
+})
 
 // 模拟远程接口（用户名唯一性）
 function checkUsernameAvailable(name: string): Promise<true | string> {
@@ -107,8 +112,8 @@ const model = reactive<Record<string, unknown>>({
   password: '',
 })
 
-const formRef = ref<XFormExpose | null>(null)
-
+// formRef / onReset / copySchema 由 useXFormDemo 统一提供（见 import 区上方）
+// 自定义 onSave：要展示 model JSON dump
 async function onSave() {
   if (!formRef.value) return
   const valid = await formRef.value.validate()
@@ -122,19 +127,6 @@ async function onSave() {
     duration: 0,
     showClose: true,
   })
-}
-
-function onReset() {
-  formRef.value?.resetFields()
-}
-
-async function copySchema() {
-  try {
-    await navigator.clipboard.writeText(JSON.stringify(schema, null, 2))
-    ElMessage.success('schema 已复制到剪贴板')
-  } catch {
-    ElMessage.error('复制失败，请手动选择')
-  }
 }
 
 const tocItems = [

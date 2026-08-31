@@ -12,10 +12,11 @@
  *
  * 注:本 demo 用 mock 模拟 fetch(不真实发请求),演示完整流程
  */
-import { reactive, ref, onMounted, onUnmounted } from 'vue'
+import { reactive, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
-import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import type { SchemaNode } from '@/components/form-schema/types'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import { serverErrorMethods } from './xform-demos-api'
@@ -25,6 +26,11 @@ import DocToc from '../components/DocToc.vue'
 import xFormSource from './XFormServerError.vue?raw'
 
 const bem = createNamespace('demo-x-form-server-error')
+
+const { formRef, onReset, copySchema } = useXFormDemo({
+  name: 'server-error',
+  schema: () => schema,
+})
 
 // 响应式断点显示
 const currentBreakpoint = ref<'xs' | 'sm' | 'md' | 'lg' | 'xl'>('md')
@@ -87,8 +93,6 @@ const model = reactive<Record<string, unknown>>({
   email: '',
   password: '',
 })
-
-const formRef = ref<XFormExpose | null>(null)
 
 /**
  * 模拟后端 422 响应
@@ -158,19 +162,6 @@ async function onSave() {
   const count = formRef.value.validateFromServer(result)
   if (count > 0) {
     ElMessage.error(`保存失败,已映射 ${count} 个字段错误,请根据红字提示修改`)
-  }
-}
-
-function onReset() {
-  formRef.value?.resetFields()
-}
-
-async function copySchema() {
-  try {
-    await navigator.clipboard.writeText(JSON.stringify(schema, null, 2))
-    ElMessage.success('schema 已复制到剪贴板')
-  } catch {
-    ElMessage.error('复制失败')
   }
 }
 

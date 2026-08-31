@@ -8,11 +8,12 @@
  *   - 同意条款时,「不同意原因」禁用(同意了就不需要填原因)
  *   - 选「海运」时,「空运保价」禁用(海运不走保价)
  */
-import { reactive, ref } from 'vue'
+import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
-import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import type { SchemaNode } from '@/components/form-schema/types'
 import { xInput } from '@/components/form-schema/builders'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import { disabledItems } from './xform-demos-api'
@@ -22,6 +23,12 @@ import DocToc from '../components/DocToc.vue'
 import xFormSource from './XFormDisabled.vue?raw'
 
 const bem = createNamespace('demo-x-form-disabled')
+
+const { formRef, onReset, copySchema } = useXFormDemo({
+  name: 'disabled',
+  schema: () => schema,
+  model: () => model,
+})
 
 const schema: SchemaNode = {
   children: [
@@ -85,7 +92,7 @@ const model = reactive<Record<string, unknown>>({
   insuranceAmount: 0,
 })
 
-const formRef = ref<XFormExpose | null>(null)
+// formRef / onReset / copySchema 由 useXFormDemo 统一提供
 
 async function onSave() {
   if (!formRef.value) return
@@ -100,19 +107,6 @@ async function onSave() {
     duration: 0,
     showClose: true,
   })
-}
-
-function onReset() {
-  formRef.value?.resetFields()
-}
-
-async function copySchema() {
-  try {
-    await navigator.clipboard.writeText(JSON.stringify(schema, null, 2))
-    ElMessage.success('schema 已复制到剪贴板')
-  } catch {
-    ElMessage.error('复制失败，请手动选择')
-  }
 }
 
 const tocItems = [

@@ -12,10 +12,11 @@
  * reaction 函数副作用承载约定：使用 _effect 字段存放副作用函数，返回 undefined →
  * use-reaction 的 isEqual 比较 target._effect 与 undefined 相等 → 跳过写入节点字段
  */
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
-import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import type { SchemaNode } from '@/components/form-schema/types'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import {
   PROVINCES,
   CITIES_BY_PROVINCE,
@@ -39,7 +40,10 @@ import DocToc from '../components/DocToc.vue'
 import { reactionAdvancedItems } from './xform-demos-api'
 import xFormSource from './XFormReactionAdvanced.vue?raw'
 
-const bem = createNamespace('demo-x-form-reaction-advanced')
+const { formRef, bem, copySchema } = useXFormDemo({
+  name: 'reaction-advanced',
+  schema: () => schema,
+})
 
 const model = reactive({
   calc: { qty: 1, price: 100, discount: 1, total: 100, calcCount: 0 },
@@ -326,21 +330,16 @@ const grandSubtotal = computed(() =>
   model.arrayRows.reduce((s, r) => s + (r.subtotal || 0), 0).toFixed(2)
 )
 
-const formRef = ref<XFormExpose | null>(null)
+// formRef / copySchema 由 useXFormDemo 统一提供
+
 async function onSave() {
-  if (!(await formRef.value?.validate())) {
+  if (!formRef.value) return
+  const valid = await formRef.value.validate()
+  if (!valid) {
     ElMessage.error('校验失败')
     return
   }
   ElMessage.success('保存成功')
-}
-async function copySchema() {
-  try {
-    await navigator.clipboard.writeText(JSON.stringify(schema, null, 2))
-    ElMessage.success('schema 已复制')
-  } catch {
-    ElMessage.error('复制失败')
-  }
 }
 
 const tocItems = [

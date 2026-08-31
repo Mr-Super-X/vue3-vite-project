@@ -13,8 +13,9 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import AsyncState from '@/components/common/AsyncState.vue'
 import XForm from '@/components/form-schema/XForm.vue'
-import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import type { SchemaNode } from '@/components/form-schema/types'
 import { xArray } from '@/components/form-schema/builders'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
@@ -24,7 +25,10 @@ import { detailFillItems } from './xform-demos-api'
 import { fetchCities, fetchDistricts, fetchOrderDetail } from './xform-detail-fill-mock'
 import xFormSource from './XFormDetailFill.vue?raw'
 
-const bem = createNamespace('demo-x-form-detail-fill')
+const { formRef, bem } = useXFormDemo({
+  name: 'detail-fill',
+  schema: () => schema,
+})
 
 // 反应式函数复用引用：只读联动 / 发票隐藏
 const shippedDisabled = (m: Record<string, unknown>) => m.status === 'shipped'
@@ -159,7 +163,6 @@ const model = reactive<Record<string, unknown>>({
   remark: '',
 })
 
-const formRef = ref<XFormExpose | null>(null)
 const currentId = ref('ORD-A')
 const loading = ref(false)
 const error = ref<Error | null>(null)

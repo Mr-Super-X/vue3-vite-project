@@ -7,10 +7,11 @@
  * 2. 区域选择：依赖 city 字段，city 变化时自动重新加载
  * 3. 错误处理：演示 source 抛错时的 onError 回调
  */
-import { ref, reactive } from 'vue'
+import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import { asyncOptionsItems } from './xform-demos-api'
@@ -19,7 +20,11 @@ import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
 import xFormSource from './XFormAsyncOptions.vue?raw'
 
-const bem = createNamespace('demo-x-form-async-options')
+const { formRef, bem, onReset, copySchema } = useXFormDemo({
+  name: 'async-options',
+  schema: () => schema,
+  model: () => model,
+})
 
 // 模拟远程 API 延迟
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -103,36 +108,22 @@ const schema: SchemaNode = {
 }
 
 const model = reactive<Record<string, unknown>>({})
-const formRef = ref<{
-  validate: (cb?: (valid: boolean) => void) => Promise<boolean>
-  resetFields: () => void
-} | null>(null)
-
-function onSave() {
-  formRef.value?.validate((valid) => {
-    if (valid) {
-      ElMessage({
-        message: '保存成功：\n' + JSON.stringify(model, null, 2),
-        type: 'success',
-        duration: 0,
-        showClose: true,
-      })
-    } else {
-      ElMessage.error('校验失败，请检查字段')
-    }
-  })
-}
-
-function onReset() {
-  formRef.value?.resetFields()
-}
-
-async function copySchema() {
-  try {
-    await navigator.clipboard.writeText(JSON.stringify(schema, null, 2))
-    ElMessage.success('schema 已复制到剪贴板')
-  } catch {
-    ElMessage.error('复制失败，请手动选择')
+/**
+ * 自定义 onSave：要展示 model JSON dump（异步选项 demo 演示需求）
+ * 其他 demo 若只需「validate + toast」可直接用 useXFormDemo 暴露的 onSave
+ */
+async function onSave() {
+  if (!formRef.value) return
+  const valid = await formRef.value.validate()
+  if (valid) {
+    ElMessage({
+      message: '保存成功：\n' + JSON.stringify(model, null, 2),
+      type: 'success',
+      duration: 0,
+      showClose: true,
+    })
+  } else {
+    ElMessage.error('校验失败，请检查字段')
   }
 }
 

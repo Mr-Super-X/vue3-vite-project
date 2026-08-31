@@ -19,12 +19,13 @@
  * script 块是 lang="tsx" 而非 lang="ts"：场景 10 的 JSX 写法需要它。
  * 前置条件是 eslint.config.mjs 的 withVueTs 已声明 scriptLangs: ['ts', 'tsx']。
  */
-import { ref, reactive, h } from 'vue'
+import { reactive, h } from 'vue'
 import { ElMessage, ElIcon, ElButton } from 'element-plus'
 import { UploadFilled, Document } from '@element-plus/icons-vue'
 import type { UploadRawFile, UploadUserFile, UploadRequestOptions } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
@@ -33,7 +34,40 @@ import DocToc from '../components/DocToc.vue'
 import { uploadItems } from './xform-demos-api'
 import xFormSource from './XFormUpload.vue?raw'
 
-const bem = createNamespace('demo-x-form-upload')
+const { formRef, bem, copySchema } = useXFormDemo({
+  name: 'upload',
+  schema: () => schema,
+  model: () => model,
+})
+
+// onSave / onReset 由 useXFormDemo 标准实现 + 自定义 JSON dump
+async function onSave() {
+  if (!formRef.value) return
+  const valid = await formRef.value.validate()
+  if (valid) {
+    ElMessage({
+      message: '表单数据：\n' + JSON.stringify(model, null, 2),
+      type: 'success',
+      duration: 0,
+      showClose: true,
+    })
+  } else {
+    ElMessage.error('校验失败，请检查字段')
+  }
+}
+
+function onReset() {
+  formRef.value?.resetFields()
+}
+
+function onSaveCustom() {
+  ElMessage({
+    message: '定制表单数据：\n' + JSON.stringify(customModel, null, 2),
+    type: 'success',
+    duration: 0,
+    showClose: true,
+  })
+}
 
 /** mock 上传：本地模拟成功，避免 demo 依赖真实后端 */
 function mockUpload(options: UploadRequestOptions): Promise<void> {
@@ -380,48 +414,6 @@ const customModel = reactive<Record<string, unknown>>({
     } as UploadUserFile,
   ],
 })
-
-const formRef = ref<{
-  validate: (cb?: (valid: boolean) => void) => Promise<boolean>
-  resetFields: () => void
-} | null>(null)
-
-function onSave() {
-  formRef.value?.validate((valid) => {
-    if (valid) {
-      ElMessage({
-        message: '表单数据：\n' + JSON.stringify(model, null, 2),
-        type: 'success',
-        duration: 0,
-        showClose: true,
-      })
-    } else {
-      ElMessage.error('校验失败，请检查字段')
-    }
-  })
-}
-
-function onReset() {
-  formRef.value?.resetFields()
-}
-
-function onSaveCustom() {
-  ElMessage({
-    message: '定制表单数据：\n' + JSON.stringify(customModel, null, 2),
-    type: 'success',
-    duration: 0,
-    showClose: true,
-  })
-}
-
-async function copySchema() {
-  try {
-    await navigator.clipboard.writeText(JSON.stringify(schema, null, 2))
-    ElMessage.success('schema 已复制到剪贴板')
-  } catch {
-    ElMessage.error('复制失败，请手动选择')
-  }
-}
 
 const tocItems = [
   { id: 'demo-upload', label: '上传场景演示' },

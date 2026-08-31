@@ -17,10 +17,11 @@
  * 实际校验仍生效:点击「保存」时 validateForm() 跑 el-form.validate + runCrossFieldValidation,
  * 失败时 setFieldError 写入错误 + toast 提示
  */
-import { reactive, ref } from 'vue'
+import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
-import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import type { SchemaNode } from '@/components/form-schema/types'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import { crossFieldItems } from './xform-demos-api'
@@ -30,6 +31,12 @@ import DocToc from '../components/DocToc.vue'
 import xFormSource from './XFormCrossField.vue?raw'
 
 const bem = createNamespace('demo-x-form-cross-field')
+
+const { formRef, onReset, copySchema } = useXFormDemo({
+  name: 'cross-field',
+  schema: () => schema,
+  model: () => model,
+})
 
 const CONTACT_OPTIONS = [
   { value: 'email', label: '邮箱' },
@@ -155,8 +162,6 @@ const model = reactive<Record<string, unknown>>({
   backupContact: '',
 })
 
-const formRef = ref<XFormExpose | null>(null)
-
 async function onSave() {
   if (!formRef.value) return
   const valid = await formRef.value.validate()
@@ -185,19 +190,6 @@ async function onInspectDetail() {
       duration: 0,
       showClose: true,
     })
-  }
-}
-
-function onReset() {
-  formRef.value?.resetFields()
-}
-
-async function copySchema() {
-  try {
-    await navigator.clipboard.writeText(JSON.stringify(schema, null, 2))
-    ElMessage.success('schema 已复制到剪贴板')
-  } catch {
-    ElMessage.error('复制失败，请手动选择')
   }
 }
 

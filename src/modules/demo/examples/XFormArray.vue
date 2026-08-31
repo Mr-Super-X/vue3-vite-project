@@ -10,11 +10,12 @@
  * 3. 行内子 schema 嵌套渲染（row + column 栅格）
  * 4. 小计 = 数量 × 单价（在模板里展示,model 中存储原值）
  */
-import { reactive, computed, ref } from 'vue'
+import { reactive, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
-import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import type { SchemaNode } from '@/components/form-schema/types'
 import { xArray } from '@/components/form-schema/builders'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import { arrayItems } from './xform-demos-api'
@@ -24,6 +25,12 @@ import DocToc from '../components/DocToc.vue'
 import xFormSource from './XFormArray.vue?raw'
 
 const bem = createNamespace('demo-x-form-array')
+
+const { formRef, onReset, copySchema } = useXFormDemo({
+  name: 'array',
+  schema: () => schema,
+  model: () => model,
+})
 
 // 商品字典（mock 远程接口）
 const PRODUCT_OPTIONS = [
@@ -83,8 +90,6 @@ const model = reactive<Record<string, unknown>>({
   items: [{ product: 'sku-001', qty: 1, price: 89 }],
 })
 
-const formRef = ref<XFormExpose | null>(null)
-
 /** 每行小计（展示用,不在 schema 内） */
 const subtotals = computed(() => {
   const arr = (model.items as Array<{ qty?: number; price?: number }> | undefined) ?? []
@@ -107,19 +112,6 @@ async function onSave() {
     duration: 0,
     showClose: true,
   })
-}
-
-function onReset() {
-  formRef.value?.resetFields()
-}
-
-async function copySchema() {
-  try {
-    await navigator.clipboard.writeText(JSON.stringify(schema, null, 2))
-    ElMessage.success('schema 已复制到剪贴板')
-  } catch {
-    ElMessage.error('复制失败，请手动选择')
-  }
 }
 
 const tocItems = [
