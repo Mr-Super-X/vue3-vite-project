@@ -32,6 +32,24 @@
 
 ### ✨ Features | 新特性
 
+* **demo:** 修复 XFormStyleOverride 场景 5 数组节点：把字段从 array 节点 `children` 挪到 `itemSchema.children`
+  - 根因：array 节点的 `children` 是「数组自身字段」（通常不用），行内字段必须写在 `itemSchema.children` 里（render-array-node.ts:4 注释明确）
+  - 现象：原 schema 让 itemSchema.children 为空 → 渲染出 2 行「空行 + 上移/下移/删除按钮」，按钮看起来没操作目标
+  - 修复后：每行 2 个 input（姓名 + 级别）+ 3 个按钮，初始 model 数据（张三/P5、李四/P6）正确填入
+  - **根因**：XForm template 是 ElConfigProvider + 条件 XFormDebugBanner 两个 root，Vue 3 编译为 fragment 时父传的 `:class` 不会自动合并到根 div —— 所有 `<XForm class="xxx">` 的 demo class 实际丢失
+  - **修复**：`<script setup>` 加 `useAttrs()` + `defineOptions({ inheritAttrs: false })`，根 div 改 `<div :class="[bem.b(), attrs.class]">` 显式 merge。3 行核心改动
+  - **副作用清理**：XFormStyleOverride demo 删掉 6 个 wrapper，回到简洁 `<XForm :class="..." />`；style 从 descendant selector 改回 BEM 嵌套（XForm 根 div 现在能接住 demo class，无需 `.el-form` 锚点）
+  - **影响面**：所有使用 XForm 的页面受益，业务页将来用 `<XForm class="xxx">` 锁样式作用域不再踩坑
+  - **验证**：`pnpm lint` / `type-check:full` / `test src/components/form-schema`（511 用例）全绿
+
+* **demo:** XFormStyleOverride demo 6 场景 + 钩子清单表
+  - 6 个真实业务场景 + 1 张钩子清单表（XForm 自有钩子 + Element Plus 高频类 + CSS 主题变量，按稳定性分高/中/低三档）
+  - 路由 / sidebar 完全自动注册（`routes/index.ts` 的 `import.meta.glob` + `sidebar-groups.ts` 的 `CN_NAMES` 加 1 行），零侵入
+  - 6 个真实业务场景 + 1 张钩子清单表：紧凑表单 / 品牌化 / 错误提示不抖动 / 只读态 / 数组节点 / 主题色覆盖
+  - 每场景独立 XForm 实例 + class 锁作用域，互不污染；通过 `formItem.props.class` 还可锁单字段
+  - 钩子清单表覆盖 XForm 自有钩子、Element Plus 高频可覆盖类、CSS 主题变量三类，按稳定性分高/中/低三档
+  - 路由 / sidebar 完全自动注册（`routes/index.ts` 的 `import.meta.glob` + `sidebar-groups.ts` 的 `CN_NAMES` 加 1 行），零侵入
+
 * **chore(eslint):** 迁移到 `withVueTs` 并放开 `.vue` 内的 tsx
   - `eslint.config.mjs` 从 `vueTsEslintConfig()`（v14.9 前的 helper）迁到官方推荐的 `withVueTs(options, ...configs)` + `vueTsConfigs.recommended`
   - 首参声明 `{ scriptLangs: ['ts', 'tsx'] }` —— 默认只允许 `lang="ts"`，demo 的 JSX 插槽示例需要 `lang="tsx"`

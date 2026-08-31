@@ -1,5 +1,14 @@
 <script setup lang="ts">
-import { computed, ref, watch, nextTick, type VNode, onScopeDispose, onMounted } from 'vue'
+import {
+  computed,
+  ref,
+  watch,
+  nextTick,
+  type VNode,
+  onScopeDispose,
+  onMounted,
+  useAttrs,
+} from 'vue'
 import { get, set } from 'lodash-es'
 import { useSchemaRenderer } from './composables/use-schema-renderer'
 import { useSchemaIndex } from './composables/use-schema-index'
@@ -27,6 +36,15 @@ import { ElConfigProvider, ElForm, ElRow, ElCol } from 'element-plus'
 import type { SchemaNode, XFormProps, XFormExpose, RuleItem } from './types'
 
 const props = defineProps<XFormProps>()
+const attrs = useAttrs()
+// XForm 的 template 是 ElConfigProvider + 条件 XFormDebugBanner 两个 root，Vue 3 编译为
+// fragment 时父传的 :class 不会自动合并到根 div。关掉默认 fallthrough 后在根 div 显式
+// merge attrs.class，使 <XForm class="xxx"> 在所有使用场景都能正常生效
+defineOptions({ inheritAttrs: false })
+// template 引用：<div :class="[bem.b(), attrs.class]">
+// 标注仅供 IDE 索引，模板里的 attrs.class 实际由 Vue template compiler 解析（ts-plugin 不会扫描 template）
+const _attrsRef = attrs
+void _attrsRef
 const bem = createNamespace('x-form')
 
 // 阶段 1.2：model 缺时 dev mode 警告（提醒用户补传 reactive model）
@@ -575,7 +593,7 @@ if (import.meta.env.DEV) {
 
 <template>
   <ElConfigProvider>
-    <div :class="bem.b()">
+    <div :class="[bem.b(), attrs.class]">
       <ElForm
         ref="elFormRef"
         :model="(props.model ?? {}) as Record<string, unknown>"
