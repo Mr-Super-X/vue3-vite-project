@@ -82,7 +82,10 @@ const bem = createNamespace('doc-layout')
 </script>
 
 <template>
-  <div :class="bem.b()" :style="{ gridTemplateColumns: `${sidebarWidth}px minmax(0, 1fr) 180px` }">
+  <div
+    :class="bem.b()"
+    :style="{ gridTemplateColumns: `${sidebarWidth}px 0 minmax(0, 1fr) 180px` }"
+  >
     <aside :class="bem.e('sidebar')">
       <button :class="bem.e('home')" type="button" @click="goHome">
         <el-icon :class="bem.e('home-icon')"><Back /></el-icon>
@@ -115,8 +118,10 @@ const bem = createNamespace('doc-layout')
           </ul>
         </li>
       </ul>
-      <div :class="bem.e('resizer')" @mousedown="onResizerMousedown" />
     </aside>
+
+    <!-- 拖拽条放在 sidebar 与 main 之间的独立 grid 列，sticky 定位保证滚动时始终可见 -->
+    <div :class="bem.e('resizer')" @mousedown="onResizerMousedown" />
 
     <main :class="bem.e('main')">
       <slot />
@@ -131,8 +136,9 @@ const bem = createNamespace('doc-layout')
 <style lang="scss">
 .#{$BEM_PREFIX}-doc-layout {
   // grid-template-columns 由内联 style 动态控制（sidebar 宽度可拖拽）
+  // 四列：[sidebar | resizer(0宽) | main | toc]
   display: grid;
-  gap: 24px;
+  gap: 0;
   align-items: start;
   // 强制占满视口高度（减去 default-layout 的 64px header + 上下 padding），
   // 避免 demo 内容少时容器塌陷导致 sidebar / toc 看起来"居中"——
@@ -148,18 +154,27 @@ const bem = createNamespace('doc-layout')
     padding: 16px;
   }
 
+  &__toc {
+    margin-left: 24px;
+  }
+
   &__main {
     padding: 16px;
+    margin-left: 24px;
   }
 
   &__home {
+    // sticky 定位：sidebar 内容超长滚动时始终可见
+    position: sticky;
+    top: 0;
+    z-index: 2;
     display: flex;
     align-items: center;
     gap: 6px;
     width: 100%;
     margin-bottom: 16px;
     padding: 6px 10px;
-    background: transparent;
+    background: var(--el-bg-color, #fff);
     border: 1px solid var(--el-border-color-lighter, #ebeef5);
     border-radius: 4px;
     color: #606266;
@@ -234,13 +249,14 @@ const bem = createNamespace('doc-layout')
   }
 
   &__resizer {
-    // right: 0（不伸出 sidebar）——伸出会撑大 scrollWidth 触发横向滚动条
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
+    // 独立 grid 列，sticky 定位保证 sidebar 内部滚动或页面滚动时始终可见
+    position: sticky;
+    top: 16px;
+    align-self: start;
+    justify-self: end;
     z-index: 1;
     width: 6px;
+    height: calc(100vh - 32px);
     cursor: col-resize;
 
     &:hover {
