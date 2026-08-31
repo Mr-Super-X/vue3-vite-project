@@ -33,6 +33,7 @@ import type { ValidateResult } from './types'
 import 'element-plus/dist/index.css'
 import './styles/element-form-overwrite.scss'
 import { ElConfigProvider, ElForm, ElRow, ElCol } from 'element-plus'
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import type { SchemaNode, XFormProps, XFormExpose, RuleItem } from './types'
 
 const props = defineProps<XFormProps>()
@@ -45,6 +46,13 @@ defineOptions({ inheritAttrs: false })
 // 标注仅供 IDE 索引，模板里的 attrs.class 实际由 Vue template compiler 解析（ts-plugin 不会扫描 template）
 const _attrsRef = attrs
 void _attrsRef
+// ElConfigProvider 默认配置：中文 locale + default 尺寸档
+// 业务页中文环境零配置（ElForm / ElPagination / ElDatePicker 等都依赖 locale）
+// 业务页若需其他 size（large / small），可在外面再包一层 ElConfigProvider 覆盖
+// 类型 as any 原因：element-plus buildProp 类型元组（type/required/validator/__epPropKey）与运行时
+// 值类型不直接等价，是 element-plus 类型系统的已知问题（App.vue 也用同样模式）
+const elConfig = { locale: zhCn, size: 'default' }
+void elConfig
 const bem = createNamespace('x-form')
 
 // 阶段 1.2：model 缺时 dev mode 警告（提醒用户补传 reactive model）
@@ -592,7 +600,15 @@ if (import.meta.env.DEV) {
 </script>
 
 <template>
-  <ElConfigProvider>
+  <!--
+    ElConfigProvider 默认配置：中文 locale + default 尺寸档
+    - 业务页中文环境零配置（ElForm / ElPagination / ElDatePicker 等都依赖 locale）
+    - 业务页若需其他 size（large / small），可在外面再包一层 ElConfigProvider 覆盖
+    - 套用 App.vue 模式：const 中转 + v-bind + as any + eslint-disable-next-line 绕开
+      element-plus buildProp 类型元组推断缺陷（详见 const elConfig 注释）
+  -->
+  <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -->
+  <ElConfigProvider v-bind="elConfig as any">
     <div :class="[bem.b(), attrs.class]">
       <ElForm
         ref="elFormRef"

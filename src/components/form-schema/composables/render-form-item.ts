@@ -79,7 +79,8 @@ export function renderWithFormItem(
       // 且 scrollToError 会滚动到 display:none 的元素（用户看不到任何错误）。
       // 保留 prop 注册（el-form-item 挂载时注册时机固定，动态增删 prop 不可靠），
       // rules 为空即恒通过。hidden ≠ ignore：值仍保留在 model 中会提交
-      rules: node.hidden === true ? [] : (compileRules(node.rules, opts.rules) as never),
+      rules:
+        node.hidden === true ? [] : (compileRules(node.rules, opts.rules, node.label) as never),
       ...(ext?.error ? { error: ext.error } : {}),
       ...(ext?.validateStatus ? { validateStatus: ext.validateStatus } : {}),
       ...(onFocusout ? { onFocusout } : {}),

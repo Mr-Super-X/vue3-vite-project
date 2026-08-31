@@ -42,6 +42,19 @@
   - **影响面**：所有使用 XForm 的页面受益，业务页将来用 `<XForm class="xxx">` 锁样式作用域不再踩坑
   - **验证**：`pnpm lint` / `type-check:full` / `test src/components/form-schema`（511 用例）全绿
 
+* **form-schema:** compileRules 自动注入 required 默认 message「必填」
+  - 根因：xform-base 等 demo 用 schema 直接写法 `rules: ['required', ...]`，编译降级为 `{required: true}` 后无 message，async-validator 默认 message「orderNo is required」是英文；element-plus zhCn 不含 form.validateMessage.required 翻译，ElConfigProvider locale 改不了这一项
+  - 修复：`compileRules` 对 `{required: true && message === undefined}` 自动注入 `message: '必填'`。仅在缺 message 时注入，**用户显式 message 不覆盖**
+  - 与 builders.ts:90 `required(message = '必填')` 默认行为对齐
+  - 防回归：render-schema-node.spec.ts +6（对象写法注入、用户 message 不覆盖、required:false 不注入、其他字段保留、多条规则混合）
+- 增强：label 兜底拼接。compileRules 新增可选参数 `label?: string`，message 注入变成 `${label}必填`（如「订单号必填」），label 缺失时退化为「必填」保持向后兼容。render-form-item.ts 传 `node.label`
+  - 影响面：所有 `{required: true}` 无 message 的 rule 自动获得中文「必填」；schema 显式 message 不受影响
+  - `<ElConfigProvider v-bind="elConfig as any">` 套用 App.vue 模式：const 中转 + v-bind + as any + eslint-disable-next-line
+  - 业务页中文环境零配置（ElForm / ElPagination / ElDatePicker 等都依赖 locale），解决「业务页忘了装 locale」高频踩坑
+  - size='default' 写死；业务页若需 large / small 可在外面再包一层 ElConfigProvider 覆盖
+  - 类型 as any 原因：element-plus buildProp 类型元组（type/required/validator/__epPropKey）与运行时值类型不直接等价（App.vue 同样模式）
+  - 影响面：所有使用 XForm 的页面中文环境自动修复
+
 * **demo:** XFormStyleOverride demo 6 场景 + 钩子清单表
   - 6 个真实业务场景 + 1 张钩子清单表（XForm 自有钩子 + Element Plus 高频类 + CSS 主题变量，按稳定性分高/中/低三档）
   - 路由 / sidebar 完全自动注册（`routes/index.ts` 的 `import.meta.glob` + `sidebar-groups.ts` 的 `CN_NAMES` 加 1 行），零侵入

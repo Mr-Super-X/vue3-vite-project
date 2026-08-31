@@ -675,11 +675,11 @@ describe('renderWithFormItem 的 key 优先级（H8 回归）', () => {
 })
 
 describe('compileRules 未知命名规则告警（④ 回归）', () => {
-  it('未注册的字符串规则 → console.error 告警 + 降级 { required: true }', () => {
+  it('未注册的字符串规则 → console.error 告警 + 降级 { required: true, message: "必填" }', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { compileRules } = awaitImport()
     const out = compileRules('emialRule' as never, {})
-    expect(out).toEqual([{ required: true }])
+    expect(out).toEqual([{ required: true, message: '必填' }])
     expect(spy).toHaveBeenCalledWith(expect.stringContaining('emialRule'))
     spy.mockRestore()
   })
@@ -702,12 +702,66 @@ function awaitImport() {
 }
 
 describe("compileRules 'required' 简写（④ 修正回归）", () => {
-  it("rules: 'required' 是 DSL 惯用简写 → 静默降级，不告警", () => {
+  it("rules: 'required' 是 DSL 惯用简写 → 静默降级，不告警 + 自动注入 message", () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const out = __compileRules('required' as never, {})
-    expect(out).toEqual([{ required: true }])
+    expect(out).toEqual([{ required: true, message: '必填' }])
     expect(spy).not.toHaveBeenCalled()
     spy.mockRestore()
+  })
+})
+
+describe('compileRules 自动注入 required message（⑤ 新增）', () => {
+  it('对象 { required: true } 无 message → 自动注入「必填」', () => {
+    const out = __compileRules({ required: true } as never, {})
+    expect(out).toEqual([{ required: true, message: '必填' }])
+  })
+
+  it('对象 { required: true, message: "自定义" } → 保留用户 message', () => {
+    const out = __compileRules({ required: true, message: '订单号是必填的' } as never, {})
+    expect(out).toEqual([{ required: true, message: '订单号是必填的' }])
+  })
+
+  it('对象 { required: false } → 不注入 message（保留原样）', () => {
+    const out = __compileRules({ required: false, type: 'string' } as never, {})
+    expect(out).toEqual([{ required: false, type: 'string' }])
+  })
+
+  it('对象 { type: "email" } 无 required → 不注入', () => {
+    const out = __compileRules({ type: 'email', message: '邮箱格式' } as never, {})
+    expect(out).toEqual([{ type: 'email', message: '邮箱格式' }])
+  })
+
+  it('多条规则混合：只有 required 无 message 的被注入', () => {
+    const out = __compileRules(
+      [{ required: true }, { required: true, message: '用户写的' }, { type: 'email' }] as never,
+      {}
+    )
+    expect(out).toEqual([
+      { required: true, message: '必填' },
+      { required: true, message: '用户写的' },
+      { type: 'email' },
+    ])
+  })
+
+  it('其他字段保留：required + min + trigger 一起', () => {
+    const out = __compileRules({ required: true, min: 3, trigger: 'blur' } as never, {})
+    expect(out).toEqual([{ required: true, min: 3, trigger: 'blur', message: '必填' }])
+  })
+
+  it('传 label + required 无 message → 「<label>必填」', () => {
+    const out = __compileRules({ required: true } as never, {}, '订单号')
+    expect(out).toEqual([{ required: true, message: '订单号必填' }])
+  })
+
+  it('传 label + required 有 message → 保留用户 message（不覆盖）', () => {
+    const out = __compileRules({ required: true, message: '自定义' } as never, {}, '订单号')
+    expect(out).toEqual([{ required: true, message: '自定义' }])
+  })
+
+  it('字符串简写 "required" 传 label → 「<label>必填」', () => {
+    const out = __compileRules('required' as never, {}, '邮箱')
+    expect(out).toEqual([{ required: true, message: '邮箱必填' }])
   })
 })
 
