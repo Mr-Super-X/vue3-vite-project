@@ -12,6 +12,7 @@
  * 节点级 col.span 无法突破半宽 —— 需要不等宽布局时用「row + col.span」组合。
  */
 import { computed, reactive, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../composables/useXFormDemo'
@@ -20,10 +21,11 @@ import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
+import ModelPreview from '../components/ModelPreview.vue'
 import { gridItems } from './xform-demos-api'
 import xFormSource from './XFormGrid.vue?raw'
 
-const { bem } = useXFormDemo({
+const { bem, formRef, onReset } = useXFormDemo({
   name: 'grid',
   schema: () => currentSchema.value,
 })
@@ -145,6 +147,22 @@ const tocItems = [
   { id: 'demo-grid', label: '栅格配置对照' },
   { id: 'api-grid', label: '栅格配置速查' },
 ]
+
+/** 校验当前激活模式的表单（formRef 由 :key="activeKey" 在切换时强制重建） */
+function onSaveGrid() {
+  formRef.value
+    ?.validate()
+    .then((valid) => {
+      if (valid) {
+        ElMessage.success(`校验通过：${activeKey.value} 模式表单有效`)
+      } else {
+        ElMessage.error('校验失败，请检查红字字段')
+      }
+    })
+    .catch(() => {
+      ElMessage.error('校验异常')
+    })
+}
 </script>
 
 <template>
@@ -168,11 +186,20 @@ const tocItems = [
             </el-radio-group>
           </div>
           <div :class="bem.e('hint')">{{ MODE_HINTS[activeKey] }}</div>
-          <XForm :key="activeKey" :schema="currentSchema" :model="models[activeKey]" />
-          <details :class="bem.e('model')">
-            <summary>查看当前模式 model（JSON）</summary>
-            <pre>{{ JSON.stringify(models[activeKey], null, 2) }}</pre>
-          </details>
+          <XForm
+            ref="formRef"
+            :key="activeKey"
+            :schema="currentSchema"
+            :model="models[activeKey]"
+          />
+          <div :class="bem.e('form-actions')">
+            <el-button @click="onReset">重置字段</el-button>
+            <el-button type="primary" @click="onSaveGrid">校验/保存</el-button>
+          </div>
+          <ModelPreview
+            :model="models[activeKey]"
+            :summary="`查看完整 model（JSON，${activeKey}）`"
+          />
         </DemoField>
       </section>
 
@@ -191,6 +218,12 @@ const tocItems = [
     margin-bottom: 12px;
   }
 
+  &__form-actions {
+    margin-top: 16px;
+    display: flex;
+    gap: 8px;
+  }
+
   &__hint {
     margin-bottom: 16px;
     padding: 8px 12px;
@@ -198,23 +231,6 @@ const tocItems = [
     background: #f5f7fa;
     font-size: 13px;
     color: #606266;
-  }
-
-  &__model {
-    margin-top: 12px;
-    font-size: 12px;
-    summary {
-      cursor: pointer;
-      color: #6b7280;
-    }
-    pre {
-      background: #f5f7fa;
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-family: 'Menlo', 'Consolas', monospace;
-      overflow-x: auto;
-      margin: 4px 0;
-    }
   }
 }
 </style>

@@ -18,6 +18,7 @@ import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
 import xFormSource from './XFormReaction.vue?raw'
+import ModelPreview from '../components/ModelPreview.vue'
 
 const { formRef, bem, onSave, copySchema } = useXFormDemo({
   name: 'reaction',
@@ -186,8 +187,7 @@ const tocItems = [
             <el-button @click="copySchema">复制 schema</el-button>
           </div>
           <div :class="bem.e('state')">
-            <div>当前 model：</div>
-            <pre>{{ JSON.stringify(model, null, 2) }}</pre>
+            <ModelPreview :model="model" />
 
             <!-- 搜索结果:输入框正下方实时显示,更醒目 -->
             <div v-if="model.keyword" :class="bem.e('results')">
@@ -238,17 +238,6 @@ const tocItems = [
 
   &__state {
     margin-top: 16px;
-    font-size: 12px;
-    color: #909399;
-
-    pre {
-      background: #f5f7fa;
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-family: 'Menlo', 'Consolas', monospace;
-      overflow-x: auto;
-      margin: 4px 0;
-    }
   }
 
   &__results {

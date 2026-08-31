@@ -23,8 +23,9 @@ import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
 import { scrollToErrorItems } from './xform-demos-api'
 import xFormSource from './XFormScrollToError.vue?raw'
+import ModelPreview from '../components/ModelPreview.vue'
 
-const { bem, formRef } = useXFormDemo({
+const { bem, formRef, onReset, copySchema } = useXFormDemo({
   name: 'scroll-to-error',
   schema: () => schema.value,
 })
@@ -183,14 +184,13 @@ const tocItems = [
           <div :class="bem.e('actions')">
             <span :class="bem.e('switch-label')">自动滚动：</span>
             <el-switch v-model="scrollToError" />
+            <el-button @click="onReset">重置</el-button>
             <el-button type="primary" @click="onValidate">校验</el-button>
+            <el-button @click="copySchema">复制 schema</el-button>
             <span :class="bem.e('result')">{{ lastResult }}</span>
           </div>
           <XForm ref="formRef" :schema="schema" :model="model" />
-          <details :class="bem.e('model')">
-            <summary>查看完整 model（JSON）</summary>
-            <pre>{{ JSON.stringify(model, null, 2) }}</pre>
-          </details>
+          <ModelPreview :model="model" />
         </DemoField>
       </section>
 
@@ -224,23 +224,6 @@ const tocItems = [
   &__result {
     font-size: 13px;
     color: #909399;
-  }
-
-  &__model {
-    margin-top: 12px;
-    font-size: 12px;
-    summary {
-      cursor: pointer;
-      color: #6b7280;
-    }
-    pre {
-      background: #f5f7fa;
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-family: 'Menlo', 'Consolas', monospace;
-      overflow-x: auto;
-      margin: 4px 0;
-    }
   }
 }
 </style>

@@ -19,6 +19,7 @@ import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
 import { eventsItems, methodsItems, propsItems, schemaNodeItems, slotsItems } from './xform-api'
+import ModelPreview from '../components/ModelPreview.vue'
 import xFormSource from './XForm.vue?raw'
 
 const bem = createNamespace('demo-x-form')
@@ -187,6 +188,7 @@ const tocItems = [
               <el-button @click="resetBasic">重置</el-button>
               <span :class="bem.e('msg')">{{ validateMsg }} {{ zodMsg }}</span>
             </div>
+            <ModelPreview :model="basicModel" />
           </template>
 
           <!-- 反应式 -->
@@ -196,6 +198,7 @@ const tocItems = [
               提示：关闭「启用自定义路径」开关 → 路径字段自动禁用且非必填；开启 →
               路径字段启用且必填。
             </div>
+            <ModelPreview :model="reactiveModel" />
           </template>
 
           <!-- 自定义组件 -->
@@ -205,6 +208,7 @@ const tocItems = [
               提示：通过 components prop 注入 CustomTagInput 组件覆盖默认映射。当前值：
               <b>{{ customModel.tag || '（空）' }}</b>
             </div>
+            <ModelPreview :model="customModel" />
           </template>
         </DemoField>
       </section>

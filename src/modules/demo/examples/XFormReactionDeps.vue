@@ -23,8 +23,9 @@ import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
 import { reactionDepsItems } from './xform-demos-api'
 import xFormSource from './XFormReactionDeps.vue?raw'
+import ModelPreview from '../components/ModelPreview.vue'
 
-const { formRef, copySchema } = useXFormDemo({
+const { formRef, copySchema, onReset } = useXFormDemo({
   name: 'reaction-deps',
   schema: () => schema.value,
 })
@@ -217,6 +218,7 @@ const tocItems = [
         <DemoField label="三个动机对比（共享 model，开关切换 A/B）" :code="xFormSource">
           <XForm ref="formRef" :schema="schema" :model="model" />
           <div :class="bem.e('actions')">
+            <el-button @click="onReset">重置</el-button>
             <el-button type="primary" @click="onSave">校验</el-button>
             <el-button @click="copySchema">复制 schema</el-button>
           </div>
@@ -243,10 +245,7 @@ const tocItems = [
               </div>
             </div>
           </div>
-          <details :class="bem.e('model')">
-            <summary>查看完整 model（JSON）</summary>
-            <pre>{{ JSON.stringify(model, null, 2) }}</pre>
-          </details>
+          <ModelPreview :model="model" />
         </DemoField>
       </section>
       <ApiTable title="reaction.deps 字段速查" :items="reactionDepsItems" anchor="api-deps" />
@@ -301,22 +300,6 @@ const tocItems = [
     color: #6b7280;
     margin-top: 4px;
     line-height: 1.5;
-  }
-  &__model {
-    margin-top: 12px;
-    font-size: 12px;
-    summary {
-      cursor: pointer;
-      color: #6b7280;
-    }
-    pre {
-      background: #f5f7fa;
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-family: 'Menlo', 'Consolas', monospace;
-      overflow-x: auto;
-      margin: 4px 0;
-    }
   }
 }
 </style>

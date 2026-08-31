@@ -24,6 +24,7 @@ import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
 import DocToc from '../components/DocToc.vue'
 import { invalidComponentItems } from './xform-demos-api'
+import ModelPreview from '../components/ModelPreview.vue'
 
 const { bem } = useXFormDemo({
   name: 'invalid-component',
@@ -100,10 +101,10 @@ const registeredSchema: SchemaNode = {
 }
 
 function onSaveA() {
-  ElMessage.info(`提交 A/B 字段：${JSON.stringify(model)}`)
+  ElMessage.info('提交 A/B 字段（详见下方预览）')
 }
 function onSaveE() {
-  ElMessage.info(`提交 E 字段：${JSON.stringify(registeredModel)}`)
+  ElMessage.info('提交 E 字段（详见下方预览）')
 }
 
 const tocItems = [
@@ -129,6 +130,7 @@ const tocItems = [
           <div :class="bem.b()">
             <XForm :schema="schema" :model="model" />
             <el-button :class="bem.e('submit')" @click="onSaveA">提交</el-button>
+            <ModelPreview :model="model" />
           </div>
         </DemoField>
 
@@ -140,6 +142,7 @@ const tocItems = [
               :components="customComponents"
             />
             <el-button :class="bem.e('submit')" @click="onSaveE">提交</el-button>
+            <ModelPreview :model="registeredModel" />
           </div>
         </DemoField>
       </section>

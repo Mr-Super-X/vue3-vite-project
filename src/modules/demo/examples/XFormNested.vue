@@ -21,8 +21,9 @@ import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
 import { nestedItems } from './xform-demos-api'
 import xFormSource from './XFormNested.vue?raw'
+import ModelPreview from '../components/ModelPreview.vue'
 
-const { bem, copySchema } = useXFormDemo({
+const { bem, copySchema, onReset } = useXFormDemo({
   name: 'nested',
   schema: () => schema,
 })
@@ -184,11 +185,9 @@ const tocItems = [
       <section id="demo-nested">
         <DemoField label="嵌套布局" :code="xFormSource">
           <XForm :schema="schema" :model="model" />
+          <el-button @click="onReset" class="mt-2">重置</el-button>
           <el-button @click="copySchema" class="mt-2">复制 schema</el-button>
-          <details :class="bem.e('model')">
-            <summary>查看完整 model（JSON）</summary>
-            <pre>{{ JSON.stringify(model, null, 2) }}</pre>
-          </details>
+          <ModelPreview :model="model" />
         </DemoField>
       </section>
 
@@ -217,23 +216,6 @@ const tocItems = [
 
     &:hover {
       text-decoration: underline;
-    }
-  }
-
-  &__model {
-    margin-top: 12px;
-    font-size: 12px;
-    summary {
-      cursor: pointer;
-      color: #6b7280;
-    }
-    pre {
-      background: #f5f7fa;
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-family: 'Menlo', 'Consolas', monospace;
-      overflow-x: auto;
-      margin: 4px 0;
     }
   }
 }

@@ -32,7 +32,10 @@ import { xArray } from '@/components/form-schema/builders'
 import { useXFormDemo } from '../composables/useXFormDemo'
 import DocLayout from '../layouts/DocLayout.vue'
 import DemoFrame from '../components/DemoFrame.vue'
+import DemoField from '../components/DemoField.vue'
 import DocToc from '../components/DocToc.vue'
+import ModelPreview from '../components/ModelPreview.vue'
+import xFormSource from './XFormOrderCreate.vue?raw'
 
 // —— Mock 字典数据（真实项目从后端拉）——
 const STATUS_OPTIONS = [
@@ -243,7 +246,7 @@ const persist = useFormPersist({
 })
 
 // —— formRef + onReset 用 composable，onSave 自定义（要处理跨字段 + 模拟提交）——
-const { formRef, bem, onReset } = useXFormDemo({
+const { formRef, bem, onReset, copySchema } = useXFormDemo({
   name: 'order-create',
   schema: () => schema,
   model: () => model,
@@ -318,17 +321,21 @@ const tocItems = [
       ]"
     >
       <section id="demo-order-create">
-        <div :class="bem.b()">
-          <div :class="bem.e('toolbar')">
-            <el-button @click="onReset">重置字段</el-button>
-            <el-button type="warning" :disabled="!persist.hasDraft.value" @click="onRestoreDraft">
-              恢复草稿
-            </el-button>
-            <el-button type="primary" @click="onSave">保存订单</el-button>
-          </div>
+        <DemoField label="端到端业务演示：订单创建（拉详情 → 校验 → 提交）" :code="xFormSource">
+          <div :class="bem.b()">
+            <div :class="bem.e('toolbar')">
+              <el-button @click="onReset">重置字段</el-button>
+              <el-button type="warning" :disabled="!persist.hasDraft.value" @click="onRestoreDraft">
+                恢复草稿
+              </el-button>
+              <el-button type="primary" @click="onSave">保存订单</el-button>
+              <el-button @click="copySchema">复制 schema</el-button>
+            </div>
 
-          <XForm ref="formRef" :schema="schema" :model="model" />
-        </div>
+            <XForm ref="formRef" :schema="schema" :model="model" />
+            <ModelPreview :model="model" />
+          </div>
+        </DemoField>
       </section>
 
       <section id="demo-draft">

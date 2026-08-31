@@ -23,6 +23,7 @@ import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
 import xFormSource from './XFormArray.vue?raw'
+import ModelPreview from '../components/ModelPreview.vue'
 
 const bem = createNamespace('demo-x-form-array')
 
@@ -147,8 +148,8 @@ const tocItems = [
             </span>
           </div>
           <div :class="bem.e('state')">
-            <div>model.items（{{ Array.isArray(model.items) ? model.items.length : 0 }} 行）：</div>
-            <pre>{{ JSON.stringify(model, null, 2) }}</pre>
+            <div>model.items（{{ Array.isArray(model.items) ? model.items.length : 0 }} 行）</div>
+            <ModelPreview :model="model" />
             <div>小计：{{ subtotals.join(' / ') }}（元）</div>
           </div>
         </DemoField>
@@ -187,15 +188,6 @@ const tocItems = [
     margin-top: 16px;
     font-size: 12px;
     color: #909399;
-
-    pre {
-      background: #f5f7fa;
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-family: 'Menlo', 'Consolas', monospace;
-      overflow-x: auto;
-      margin: 4px 0;
-    }
   }
 }
 </style>

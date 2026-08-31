@@ -33,8 +33,9 @@ import DemoFrame from '../components/DemoFrame.vue'
 import { schemaIndexItems } from './xform-demos-api'
 import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
+import ModelPreview from '../components/ModelPreview.vue'
 
-const { bem, formRef } = useXFormDemo({
+const { bem, formRef, copySchema } = useXFormDemo({
   name: 'schema-index',
   schema: () => bigSchema.value,
 })
@@ -443,10 +444,7 @@ const tocItems = [
 
             <h4>大型表单（验证索引对跨字段 / dirty / server error 的支持）</h4>
             <XForm ref="formRef" :schema="bigSchema" :model="formModel" />
-            <details :class="bem.e('model')">
-              <summary>查看完整 model（JSON）</summary>
-              <pre>{{ JSON.stringify(formModel, null, 2) }}</pre>
-            </details>
+            <ModelPreview :model="formModel" />
 
             <!-- 操作 + 状态一体面板：所见即所得 -->
             <div :class="bem.e('panel')">
@@ -506,6 +504,7 @@ const tocItems = [
                 <div :class="bem.e('row')">
                   <ElButton @click="onSave" type="primary">保存（本地校验）</ElButton>
                   <ElButton @click="onReset">重置字段</ElButton>
+                  <ElButton @click="copySchema">复制 schema</ElButton>
                 </div>
                 <p :class="bem.e('hint')">
                   操作：开始日期填 2026-08-20、结束日期填 2026-08-18 → 保存 →
@@ -666,23 +665,6 @@ const tocItems = [
     font-size: 12px;
     color: #909399;
     font-style: italic;
-  }
-  &__model {
-    margin-top: 12px;
-    font-size: 12px;
-    summary {
-      cursor: pointer;
-      color: #6b7280;
-    }
-    pre {
-      background: #f5f7fa;
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-family: 'Menlo', 'Consolas', monospace;
-      overflow-x: auto;
-      margin: 4px 0;
-      max-height: 320px;
-    }
   }
   .tag {
     display: inline-block;

@@ -24,8 +24,9 @@ import DocToc from '../components/DocToc.vue'
 import { detailFillItems } from './xform-demos-api'
 import { fetchCities, fetchDistricts, fetchOrderDetail } from './xform-detail-fill-mock'
 import xFormSource from './XFormDetailFill.vue?raw'
+import ModelPreview from '../components/ModelPreview.vue'
 
-const { formRef, bem } = useXFormDemo({
+const { formRef, bem, onReset, copySchema } = useXFormDemo({
   name: 'detail-fill',
   schema: () => schema,
 })
@@ -253,6 +254,10 @@ const tocItems = [
               <el-button size="small" :loading="loading" @click="() => loadOrder()">
                 重新加载
               </el-button>
+              <el-button size="small" :disabled="loading" @click="onReset">重置</el-button>
+              <el-button size="small" :disabled="loading" @click="copySchema">
+                复制 schema
+              </el-button>
               <el-button type="primary" size="small" :disabled="loading" @click="onSave">
                 保存
               </el-button>
@@ -277,7 +282,7 @@ const tocItems = [
                   }}
                 </strong>
               </div>
-              <pre>{{ JSON.stringify(model, null, 2) }}</pre>
+              <ModelPreview :model="model" />
             </div>
           </div>
         </DemoField>
@@ -313,15 +318,6 @@ const tocItems = [
       &.is-dirty {
         color: #f56c6c;
       }
-    }
-
-    pre {
-      background: #f5f7fa;
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-family: 'Menlo', 'Consolas', monospace;
-      overflow-x: auto;
-      margin: 4px 0;
     }
   }
 }

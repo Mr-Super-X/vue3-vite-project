@@ -17,8 +17,9 @@ import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
 import { largeSchemaItems } from './xform-demos-api'
 import xFormSource from './XFormLargeSchema.vue?raw'
+import ModelPreview from '../components/ModelPreview.vue'
 
-const { bem, formRef } = useXFormDemo({
+const { formRef, onReset, copySchema } = useXFormDemo({
   name: 'large-schema',
   schema: () => schema,
 })
@@ -91,7 +92,9 @@ const tocItems = [
         <DemoField label="大 schema" :code="xFormSource">
           <XForm ref="formRef" :schema="schema" :model="model" />
           <div style="margin-top: 12px">
+            <el-button @click="onReset">重置</el-button>
             <el-button type="primary" @click="onSave">保存(测试 100 字段全量校验)</el-button>
+            <el-button @click="copySchema">复制 schema</el-button>
             <span style="margin-left: 16px; font-size: 12px; color: #909399">
               字段数:
               <strong>{{ perfInfo.fieldCount }}</strong>
@@ -99,10 +102,10 @@ const tocItems = [
               <strong>{{ perfInfo.mountTime }}ms</strong>
             </span>
           </div>
-          <details :class="bem.e('model')">
-            <summary>查看完整 model（JSON，{{ perfInfo.fieldCount }} 字段）</summary>
-            <pre>{{ JSON.stringify(model, null, 2) }}</pre>
-          </details>
+          <ModelPreview
+            :model="model"
+            :summary="`查看完整 model（JSON，${perfInfo.fieldCount} 字段）`"
+          />
         </DemoField>
       </section>
 
@@ -117,22 +120,5 @@ const tocItems = [
 
 <style lang="scss">
 .#{$BEM_PREFIX}-demo-x-form-large-schema {
-  &__model {
-    margin-top: 12px;
-    font-size: 12px;
-    summary {
-      cursor: pointer;
-      color: #6b7280;
-    }
-    pre {
-      background: #f5f7fa;
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-family: 'Menlo', 'Consolas', monospace;
-      overflow-x: auto;
-      margin: 4px 0;
-      max-height: 320px;
-    }
-  }
 }
 </style>

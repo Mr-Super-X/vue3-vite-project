@@ -39,8 +39,9 @@ import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
 import { reactionAdvancedItems } from './xform-demos-api'
 import xFormSource from './XFormReactionAdvanced.vue?raw'
+import ModelPreview from '../components/ModelPreview.vue'
 
-const { formRef, bem, copySchema } = useXFormDemo({
+const { formRef, bem, copySchema, onReset } = useXFormDemo({
   name: 'reaction-advanced',
   schema: () => schema,
 })
@@ -365,6 +366,7 @@ const tocItems = [
         <DemoField label="四个反应式分区（共享 model + formRef）" :code="xFormSource">
           <XForm ref="formRef" :schema="schema" :model="model" />
           <div :class="bem.e('actions')">
+            <el-button @click="onReset">重置</el-button>
             <el-button type="primary" @click="onSave">校验</el-button>
             <el-button @click="copySchema">复制 schema</el-button>
           </div>
@@ -382,10 +384,7 @@ const tocItems = [
               ¥{{ grandSubtotal }}
             </div>
           </div>
-          <details :class="bem.e('model')">
-            <summary>查看完整 model（JSON）</summary>
-            <pre>{{ JSON.stringify(model, null, 2) }}</pre>
-          </details>
+          <ModelPreview :model="model" />
         </DemoField>
       </section>
       <ApiTable
@@ -423,22 +422,6 @@ const tocItems = [
     strong {
       color: #2563eb;
       margin-right: 4px;
-    }
-  }
-  &__model {
-    margin-top: 12px;
-    font-size: 12px;
-    summary {
-      cursor: pointer;
-      color: #6b7280;
-    }
-    pre {
-      background: #f5f7fa;
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-family: 'Menlo', 'Consolas', monospace;
-      overflow-x: auto;
-      margin: 4px 0;
     }
   }
 }

@@ -23,8 +23,9 @@ import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
 import { componentPropsItems, directivesItems, ruleRefItems } from './xform-demos-api'
 import xFormSource from './XFormDirectives.vue?raw'
+import ModelPreview from '../components/ModelPreview.vue'
 
-const { bem, formRef } = useXFormDemo({
+const { bem, formRef, onReset, copySchema } = useXFormDemo({
   name: 'directives',
   schema: () => schema,
 })
@@ -150,12 +151,11 @@ const tocItems = [
             :component-props="componentProps"
           />
           <div :class="bem.e('actions')">
+            <el-button @click="onReset">重置</el-button>
             <el-button type="primary" @click="onValidate">校验</el-button>
+            <el-button @click="copySchema">复制 schema</el-button>
           </div>
-          <details :class="bem.e('model')">
-            <summary>查看完整 model（JSON）</summary>
-            <pre>{{ JSON.stringify(model, null, 2) }}</pre>
-          </details>
+          <ModelPreview :model="model" />
         </DemoField>
       </section>
 
@@ -178,22 +178,6 @@ const tocItems = [
 .#{$BEM_PREFIX}-demo-x-form-directives {
   &__actions {
     margin-top: 16px;
-  }
-  &__model {
-    margin-top: 12px;
-    font-size: 12px;
-    summary {
-      cursor: pointer;
-      color: #6b7280;
-    }
-    pre {
-      background: #f5f7fa;
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-family: 'Menlo', 'Consolas', monospace;
-      overflow-x: auto;
-      margin: 4px 0;
-    }
   }
 }
 </style>

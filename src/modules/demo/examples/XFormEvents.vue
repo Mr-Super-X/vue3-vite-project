@@ -23,8 +23,9 @@ import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
 import { beforeChangeItems, onEventItems } from './xform-demos-api'
 import xFormSource from './XFormEvents.vue?raw'
+import ModelPreview from '../components/ModelPreview.vue'
 
-const { bem, formRef } = useXFormDemo({
+const { bem, formRef, onReset, copySchema } = useXFormDemo({
   name: 'events',
   schema: () => schema,
 })
@@ -190,13 +191,12 @@ const tocItems = [
         <DemoField label="订单录入（事件 + 拦截）" :code="xFormSource">
           <XForm ref="formRef" :schema="schema" :model="model" :before-change="beforeChange" />
           <div :class="bem.e('actions')">
+            <el-button @click="onReset">重置</el-button>
             <el-button type="primary" @click="onValidate">校验</el-button>
+            <el-button @click="copySchema">复制 schema</el-button>
             <span :class="bem.e('remark-count')">备注字数：{{ remarkLength }} / 200</span>
           </div>
-          <div :class="bem.e('state')">
-            <div>当前 model：</div>
-            <pre>{{ JSON.stringify(model, null, 2) }}</pre>
-          </div>
+          <ModelPreview :model="model" />
         </DemoField>
       </section>
 
@@ -222,21 +222,6 @@ const tocItems = [
   &__remark-count {
     font-size: 13px;
     color: #909399;
-  }
-
-  &__state {
-    margin-top: 16px;
-    font-size: 12px;
-    color: #909399;
-
-    pre {
-      background: #f5f7fa;
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-family: 'Menlo', 'Consolas', monospace;
-      overflow-x: auto;
-      margin: 4px 0;
-    }
   }
 }
 </style>

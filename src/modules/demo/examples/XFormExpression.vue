@@ -25,8 +25,9 @@ import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
 import { expressionItems, expressionSandboxItems } from './xform-demos-api'
 import xFormSource from './XFormExpression.vue?raw'
+import ModelPreview from '../components/ModelPreview.vue'
 
-const { bem, formRef } = useXFormDemo({
+const { bem, formRef, onReset, copySchema } = useXFormDemo({
   name: 'expression',
   schema: () => schema,
 })
@@ -200,13 +201,12 @@ const tocItems = [
             :expression-functions="expressionFunctions"
           />
           <div :class="bem.e('actions')">
+            <el-button @click="onReset">重置</el-button>
             <el-button type="primary" @click="onValidate">校验</el-button>
+            <el-button @click="copySchema">复制 schema</el-button>
           </div>
           <div :class="bem.e('panels')">
-            <div :class="bem.e('state')">
-              <div>当前 model：</div>
-              <pre>{{ JSON.stringify(model, null, 2) }}</pre>
-            </div>
+            <ModelPreview :model="model" />
             <div :class="bem.e('logs')">
               <div>沙箱执行日志（白名单 pushLog 出口）：</div>
               <pre v-if="sandboxLogs.length">{{ sandboxLogs.join('\n') }}</pre>
@@ -267,7 +267,6 @@ const tocItems = [
     }
   }
 
-  &__state,
   &__logs {
     font-size: 12px;
     color: #909399;

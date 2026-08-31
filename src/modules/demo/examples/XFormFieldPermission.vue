@@ -27,8 +27,9 @@ import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
 import { permissionItems } from './xform-demos-api'
+import ModelPreview from '../components/ModelPreview.vue'
 
-const { bem, formRef } = useXFormDemo({
+const { bem, formRef, onReset, copySchema } = useXFormDemo({
   name: 'field-permission',
   schema: () => schema,
 })
@@ -167,12 +168,13 @@ const tocItems = [
               <XForm ref="formRef" :schema="schema" :model="model" />
             </div>
             <div :class="bem.e('actions')">
+              <el-button @click="onReset">重置</el-button>
               <el-button type="primary" @click="onSave">保存</el-button>
+              <el-button @click="copySchema">复制 schema</el-button>
               <el-button @click="checkDOM">检查 DOM</el-button>
             </div>
             <div :class="bem.e('debug')">
-              <div>当前 model：</div>
-              <pre>{{ JSON.stringify(model, null, 2) }}</pre>
+              <ModelPreview :model="model" />
               <div v-if="debugInfo" :class="bem.e('debug-info')">{{ debugInfo }}</div>
             </div>
           </div>
@@ -197,16 +199,6 @@ const tocItems = [
   }
   &__debug {
     margin-top: 16px;
-    font-size: 12px;
-    color: #909399;
-    pre {
-      background: #f5f7fa;
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-family: 'Menlo', 'Consolas', monospace;
-      overflow-x: auto;
-      margin: 4px 0;
-    }
   }
   &__debug-info {
     margin-top: 8px;

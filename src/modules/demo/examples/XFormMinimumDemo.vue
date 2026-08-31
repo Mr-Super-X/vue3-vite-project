@@ -12,9 +12,10 @@ import ApiTable from '../components/ApiTable.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DocToc from '../components/DocToc.vue'
+import ModelPreview from '../components/ModelPreview.vue'
 import { minimumItems } from './xform-demos-api'
 
-const { bem, copySchema } = useXFormDemo({
+const { bem, formRef, onReset, copySchema } = useXFormDemo({
   name: 'minimum',
   schema: () => schema,
 })
@@ -38,7 +39,7 @@ const schema: SchemaNode = {
 }
 
 function onSave() {
-  ElMessage.success(`提交成功：${JSON.stringify(model)}`)
+  ElMessage.success('提交成功')
 }
 
 const tocItems = [
@@ -59,9 +60,13 @@ const tocItems = [
       ]"
     >
       <section id="demo-minimum" :class="bem.b()">
-        <XForm :schema="schema" :model="model" />
-        <el-button type="primary" :class="bem.e('submit')" @click="onSave">提交</el-button>
-        <el-button :class="bem.e('copy')" @click="copySchema">复制 schema</el-button>
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onSave">提交</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <ModelPreview :model="model" />
       </section>
 
       <ApiTable title="最小示例三要素" :items="minimumItems" anchor="api-minimum" />
@@ -75,8 +80,10 @@ const tocItems = [
 
 <style lang="scss">
 .#{$BEM_PREFIX}-demo-x-form-minimum {
-  &__submit {
+  &__actions {
     margin-top: 16px;
+    display: flex;
+    gap: 8px;
   }
 }
 </style>

@@ -33,6 +33,7 @@ import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
 import { uploadItems } from './xform-demos-api'
 import xFormSource from './XFormUpload.vue?raw'
+import ModelPreview from '../components/ModelPreview.vue'
 
 const { formRef, bem, copySchema } = useXFormDemo({
   name: 'upload',
@@ -45,12 +46,7 @@ async function onSave() {
   if (!formRef.value) return
   const valid = await formRef.value.validate()
   if (valid) {
-    ElMessage({
-      message: '表单数据：\n' + JSON.stringify(model, null, 2),
-      type: 'success',
-      duration: 0,
-      showClose: true,
-    })
+    ElMessage.success('保存成功')
   } else {
     ElMessage.error('校验失败，请检查字段')
   }
@@ -61,12 +57,7 @@ function onReset() {
 }
 
 function onSaveCustom() {
-  ElMessage({
-    message: '定制表单数据：\n' + JSON.stringify(customModel, null, 2),
-    type: 'success',
-    duration: 0,
-    showClose: true,
-  })
+  ElMessage.success('定制表单数据已更新（详见下方预览）')
 }
 
 /** mock 上传：本地模拟成功，避免 demo 依赖真实后端 */
@@ -443,6 +434,7 @@ const tocItems = [
             <el-button type="primary" @click="onSave">保存</el-button>
             <el-button @click="copySchema">复制 schema</el-button>
           </div>
+          <ModelPreview :model="model" />
         </DemoField>
       </section>
 
@@ -455,6 +447,7 @@ const tocItems = [
           <div :class="bem.e('actions')">
             <el-button type="primary" @click="onSaveCustom">查看定制表单数据</el-button>
           </div>
+          <ModelPreview :model="customModel" />
         </DemoField>
       </section>
 

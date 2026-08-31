@@ -21,6 +21,7 @@ import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
 import { ruleItems } from './xform-demos-api'
 import xFormSource from './XFormBase.vue?raw'
+import ModelPreview from '../components/ModelPreview.vue'
 
 const { formRef, bem, onReset, copySchema } = useXFormDemo({
   name: 'base',
@@ -188,12 +189,7 @@ async function onSave() {
   if (!formRef.value) return
   const valid = await formRef.value.validate()
   if (valid) {
-    ElMessage({
-      message: '保存成功：\n' + JSON.stringify(model, null, 2),
-      type: 'success',
-      duration: 0,
-      showClose: true,
-    })
+    ElMessage.success('保存成功')
   } else {
     ElMessage.error('校验失败，请检查字段')
   }
@@ -226,6 +222,7 @@ const tocItems = [
             <el-button type="primary" @click="onSave">保存</el-button>
             <el-button @click="copySchema">复制 schema</el-button>
           </div>
+          <ModelPreview :model="model" />
         </DemoField>
       </section>
 

@@ -22,6 +22,7 @@ import { persistItems } from './xform-demos-api'
 import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
 import persistSource from './XFormPersist.vue?raw'
+import ModelPreview from '../components/ModelPreview.vue'
 
 const bem = createNamespace('demo-x-form-persist')
 
@@ -107,6 +108,22 @@ function onSimulateSubmit() {
   ElMessage.success('模拟提交成功：草稿已清除、dirty 已归零')
 }
 
+// 重置表单字段（与其他 demo 一致；本 demo 额外联动草稿清除）
+function onReset() {
+  formRef.value?.resetFields()
+  ElMessage.success('表单已重置')
+}
+
+// 复制当前 schema 到剪贴板（与其他 demo 一致；本 demo 不依赖 useXFormDemo，手写实现）
+async function copySchema() {
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(schema, null, 2))
+    ElMessage.success('schema 已复制到剪贴板')
+  } catch {
+    ElMessage.error('复制失败，请手动选择')
+  }
+}
+
 const lastSavedText = computed(() =>
   persist.lastSavedAt.value === null
     ? '尚未保存'
@@ -151,11 +168,10 @@ const tocItems = [
               <ElButton type="success" @click="onSimulateSubmit">
                 模拟提交（clear + resetDirty）
               </ElButton>
+              <ElButton @click="onReset">重置</ElButton>
+              <ElButton @click="copySchema">复制 schema</ElButton>
             </div>
-            <details :class="bem.e('model')">
-              <summary>查看完整 model（JSON）</summary>
-              <pre>{{ JSON.stringify(model, null, 2) }}</pre>
-            </details>
+            <ModelPreview :model="model" />
 
             <p :class="bem.e('hint')">
               验证步骤：① 填用户名 + 银行卡号 → ② F5 刷新 → ③ 点"恢复草稿"：
@@ -190,22 +206,6 @@ const tocItems = [
     margin-top: 12px;
     font-size: 13px;
     color: #909399;
-  }
-  &__model {
-    margin-top: 12px;
-    font-size: 12px;
-    summary {
-      cursor: pointer;
-      color: #6b7280;
-    }
-    pre {
-      background: #f5f7fa;
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-family: 'Menlo', 'Consolas', monospace;
-      overflow-x: auto;
-      margin: 4px 0;
-    }
   }
 }
 </style>

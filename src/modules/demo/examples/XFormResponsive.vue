@@ -30,6 +30,7 @@ import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
 import xFormSource from './XFormResponsive.vue?raw'
+import ModelPreview from '../components/ModelPreview.vue'
 
 const { formRef, bem, onReset, copySchema } = useXFormDemo({
   name: 'responsive',
@@ -212,8 +213,7 @@ const tocItems = [
               </ul>
               resize 后立即可见字段间距和对齐方式变化。
             </div>
-            <div>当前 model：</div>
-            <pre>{{ JSON.stringify(model, null, 2) }}</pre>
+            <ModelPreview :model="model" />
           </div>
         </DemoField>
       </section>
@@ -237,17 +237,6 @@ const tocItems = [
 
   &__state {
     margin-top: 16px;
-    font-size: 12px;
-    color: #909399;
-
-    pre {
-      background: #f5f7fa;
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-family: 'Menlo', 'Consolas', monospace;
-      overflow-x: auto;
-      margin: 4px 0;
-    }
   }
 }
 </style>

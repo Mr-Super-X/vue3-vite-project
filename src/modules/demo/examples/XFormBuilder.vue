@@ -23,6 +23,7 @@ import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
 import xFormSource from './XFormBuilder.vue?raw'
+import ModelPreview from '../components/ModelPreview.vue'
 
 const { formRef, bem, onReset, copySchema } = useXFormDemo({
   name: 'builder',
@@ -255,10 +256,7 @@ const tocItems = [
             <el-button @click="onReset">重置</el-button>
             <el-button @click="copySchema">复制 schema</el-button>
           </div>
-          <div :class="bem.e('state')">
-            <div>当前 model：</div>
-            <pre>{{ JSON.stringify(model, null, 2) }}</pre>
-          </div>
+          <ModelPreview :model="model" />
         </DemoField>
       </section>
 
@@ -277,21 +275,6 @@ const tocItems = [
     margin-top: 16px;
     display: flex;
     gap: 8px;
-  }
-
-  &__state {
-    margin-top: 16px;
-    font-size: 12px;
-    color: #909399;
-
-    pre {
-      background: #f5f7fa;
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-family: 'Menlo', 'Consolas', monospace;
-      overflow-x: auto;
-      margin: 4px 0;
-    }
   }
 }
 </style>

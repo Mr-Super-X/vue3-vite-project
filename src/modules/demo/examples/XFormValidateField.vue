@@ -19,6 +19,7 @@ import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
 import { validateFieldItems } from './xform-demos-api'
 import xFormSource from './XFormValidateField.vue?raw'
+import ModelPreview from '../components/ModelPreview.vue'
 
 const { bem, formRef } = useXFormDemo({
   name: 'validate-field',
@@ -154,10 +155,7 @@ const tocItems = [
             </div>
           </div>
 
-          <div :class="bem.e('state')">
-            <div>当前 model：</div>
-            <pre>{{ JSON.stringify(model, null, 2) }}</pre>
-          </div>
+          <ModelPreview :model="model" />
         </DemoField>
       </section>
 
@@ -208,21 +206,6 @@ const tocItems = [
     color: #909399;
     list-style: none;
     margin-left: -18px;
-  }
-
-  &__state {
-    margin-top: 16px;
-    font-size: 12px;
-    color: #909399;
-
-    pre {
-      background: #f5f7fa;
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-family: 'Menlo', 'Consolas', monospace;
-      overflow-x: auto;
-      margin: 4px 0;
-    }
   }
 }
 </style>
