@@ -13,6 +13,7 @@ import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import DemoFrame from '../components/DemoFrame.vue'
@@ -20,7 +21,10 @@ import DemoField from '../components/DemoField.vue'
 import DocToc from '../components/DocToc.vue'
 import { modelWarnItems } from './xform-demos-api'
 
-const bem = createNamespace('demo-x-form-model-warn')
+const { bem } = useXFormDemo({
+  name: 'model-warn',
+  schema: () => schema,
+})
 
 // 每个场景的代码片段（用于 DemoField 展示，方便复制对照）
 const scenario1Code = `<XForm :schema="schema" />\n// ⚠️ 控制台 warn：model prop 未传入`

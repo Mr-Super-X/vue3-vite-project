@@ -11,10 +11,11 @@
  *   4. beforeChange 异步拦截：金额 > 100000 模拟风控 reject → 跳过更新
  *   5. beforeChange 返回 undefined → 放行原值（默认行为）
  */
-import { reactive, ref } from 'vue'
+import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
-import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import type { SchemaNode } from '@/components/form-schema/types'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
@@ -23,7 +24,10 @@ import DocToc from '../components/DocToc.vue'
 import { beforeChangeItems, onEventItems } from './xform-demos-api'
 import xFormSource from './XFormEvents.vue?raw'
 
-const bem = createNamespace('demo-x-form-events')
+const { bem, formRef } = useXFormDemo({
+  name: 'events',
+  schema: () => schema,
+})
 
 // 风控上限（演示用常量）
 const AMOUNT_LIMIT = 100000
@@ -152,7 +156,7 @@ function beforeChange(
   return undefined
 }
 
-const formRef = ref<XFormExpose | null>(null)
+// formRef 由 useXFormDemo 统一提供
 const remarkLength = ref(0)
 
 async function onValidate() {

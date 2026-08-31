@@ -11,10 +11,11 @@
  *   3. 前 8 个字段带 defaultValue 挂载自动填充（非必填），licenseNo 必填留空作为滚动目标
  *   4. 跨字段错误同样参与自动滚动（XForm 内部按 keyPath 滚动，见 XFormCrossField demo）
  */
-import { reactive, ref } from 'vue'
+import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
-import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import type { SchemaNode } from '@/components/form-schema/types'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
@@ -23,7 +24,10 @@ import DocToc from '../components/DocToc.vue'
 import { scrollToErrorItems } from './xform-demos-api'
 import xFormSource from './XFormScrollToError.vue?raw'
 
-const bem = createNamespace('demo-x-form-scroll-to-error')
+const { bem, formRef } = useXFormDemo({
+  name: 'scroll-to-error',
+  schema: () => schema.value,
+})
 
 const CATEGORY_OPTIONS = ['电子元件', '五金配件', '包装材料'].map((c) => ({ value: c, label: c }))
 const WAREHOUSE_OPTIONS = ['华南一号仓', '华东二号仓', '华北三号仓'].map((w) => ({
@@ -129,7 +133,7 @@ const model = reactive<Record<string, unknown>>({
   licenseNo: '',
 })
 
-const formRef = ref<XFormExpose | null>(null)
+// formRef 由 useXFormDemo 统一提供
 
 // 滚动开关（开 → 校验失败自动滚动；关 → 只显示红字不滚动）
 const scrollToError = ref(true)

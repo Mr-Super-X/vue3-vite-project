@@ -14,7 +14,8 @@ import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { Directive } from 'vue'
 import XForm from '@/components/form-schema/XForm.vue'
-import type { SchemaNode, RuleItem, XFormExpose } from '@/components/form-schema/types'
+import type { SchemaNode, RuleItem } from '@/components/form-schema/types'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
@@ -23,7 +24,10 @@ import DocToc from '../components/DocToc.vue'
 import { componentPropsItems, directivesItems, ruleRefItems } from './xform-demos-api'
 import xFormSource from './XFormDirectives.vue?raw'
 
-const bem = createNamespace('demo-x-form-directives')
+const { bem, formRef } = useXFormDemo({
+  name: 'directives',
+  schema: () => schema,
+})
 
 /** 聚焦指令：mounted 后自动聚焦输入框（演示 Directive 对象 + 无 value/arg/modifiers） */
 const focusDirective: Directive<HTMLElement> = {
@@ -105,7 +109,7 @@ const model = reactive<Record<string, unknown>>({
   remark: '',
 })
 
-const formRef = ref<XFormExpose | null>(null)
+// formRef 由 useXFormDemo 统一提供
 
 async function onValidate() {
   const valid = await formRef.value?.validate()

@@ -16,10 +16,11 @@
  * - CrossField 演示正向触发（字段失焦时跑自己的 cross rules）
  * - CrossFieldReverse 演示反向触发（依赖方变化时目标字段自动重算）
  */
-import { reactive, ref } from 'vue'
+import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
-import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import type { SchemaNode } from '@/components/form-schema/types'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
@@ -27,7 +28,10 @@ import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
 import { reverseCrossItems } from './xform-demos-api'
 
-const bem = createNamespace('demo-x-form-cross-field-reverse')
+const { bem, formRef } = useXFormDemo({
+  name: 'cross-field-reverse',
+  schema: () => schema,
+})
 
 // 关键代码片段（用于 DemoField 展示）
 const reverseTriggerCode = `// 反向校验：endDate 变化 → 触发 startDate 红字
@@ -117,7 +121,7 @@ const model = reactive<Record<string, unknown>>({
   passwordConfirm: '',
 })
 
-const formRef = ref<XFormExpose | null>(null)
+// formRef 由 useXFormDemo 统一提供
 
 async function onSave() {
   if (!formRef.value) return

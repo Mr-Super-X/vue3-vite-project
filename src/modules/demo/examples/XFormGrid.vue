@@ -14,6 +14,7 @@
 import { computed, reactive, ref } from 'vue'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
@@ -22,7 +23,10 @@ import DocToc from '../components/DocToc.vue'
 import { gridItems } from './xform-demos-api'
 import xFormSource from './XFormGrid.vue?raw'
 
-const bem = createNamespace('demo-x-form-grid')
+const { bem } = useXFormDemo({
+  name: 'grid',
+  schema: () => currentSchema.value,
+})
 
 const ORDER_STATUS_OPTIONS = [
   { value: 'pending', label: '待支付' },

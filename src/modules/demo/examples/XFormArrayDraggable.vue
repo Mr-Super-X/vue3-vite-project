@@ -8,11 +8,12 @@
  * 3. 上下移按钮与拖拽共存，同一条 moveItem 数据通路
  * 4. minItems / maxItems 边界约束照常生效
  */
-import { reactive, ref } from 'vue'
+import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
-import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import type { SchemaNode } from '@/components/form-schema/types'
 import { xArray } from '@/components/form-schema/builders'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import { arrayItems } from './xform-demos-api'
@@ -21,7 +22,10 @@ import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
 import xFormSource from './XFormArrayDraggable.vue?raw'
 
-const bem = createNamespace('demo-x-form-array-draggable')
+const { bem, formRef, copySchema } = useXFormDemo({
+  name: 'array-draggable',
+  schema: () => schema,
+})
 
 /** 单行 schema：任务名 + 负责人 + 预估工时并排 */
 const taskItemSchema: SchemaNode = {
@@ -75,7 +79,7 @@ const model = reactive<Record<string, unknown>>({
   ],
 })
 
-const formRef = ref<XFormExpose | null>(null)
+// formRef 由 useXFormDemo 统一提供
 
 /** 当前任务顺序的只读文本（拖拽后随 model 实时刷新） */
 const taskOrderText = computed(() =>
@@ -101,15 +105,6 @@ async function onSave() {
 
 function onReset() {
   formRef.value?.resetFields()
-}
-
-async function copySchema() {
-  try {
-    await navigator.clipboard.writeText(JSON.stringify(schema, null, 2))
-    ElMessage.success('schema 已复制到剪贴板')
-  } catch {
-    ElMessage.error('复制失败，请手动选择')
-  }
 }
 
 const tocItems = [

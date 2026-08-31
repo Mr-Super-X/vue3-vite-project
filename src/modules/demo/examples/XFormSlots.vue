@@ -8,11 +8,12 @@
  *   3. JSX 产物：函数内部用 h() 模拟 JSX 编译结果
  *   4. 字符串 slot：保持现有行为，走 schema 渲染
  */
-import { ref, reactive, h } from 'vue'
+import { reactive, h } from 'vue'
 import { ElButton, ElIcon } from 'element-plus'
 import { Upload } from '@element-plus/icons-vue'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
@@ -21,7 +22,10 @@ import DocToc from '../components/DocToc.vue'
 import { slotTypeItems } from './xform-demos-api'
 import xFormSlotsSource from './XFormSlots.vue?raw'
 
-const bem = createNamespace('demo-x-form-slots')
+const { bem } = useXFormDemo({
+  name: 'slots',
+  schema: () => schema,
+})
 
 const model = reactive<Record<string, unknown>>({
   file: '',

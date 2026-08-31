@@ -17,6 +17,7 @@ import { reactive } from 'vue'
 import { ElMessage, ElInput } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode, XFormProps } from '@/components/form-schema/types'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import DemoFrame from '../components/DemoFrame.vue'
@@ -24,7 +25,10 @@ import DemoField from '../components/DemoField.vue'
 import DocToc from '../components/DocToc.vue'
 import { invalidComponentItems } from './xform-demos-api'
 
-const bem = createNamespace('demo-x-form-invalid-component')
+const { bem } = useXFormDemo({
+  name: 'invalid-component',
+  schema: () => schema,
+})
 
 // 场景代码片段（用于 DemoField 展示）
 const invalidComponentCode = `{

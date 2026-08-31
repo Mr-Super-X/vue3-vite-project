@@ -12,13 +12,17 @@
 import { reactive } from 'vue'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
 import xFormSource from './XFormStyleOverride.vue?raw'
 
-const bem = createNamespace('demo-x-form-style-override')
+const { bem } = useXFormDemo({
+  name: 'style-override',
+  schema: () => compactSchema,
+})
 
 // 6 个独立 model（互不干扰）
 const compactModel = reactive<Record<string, unknown>>({

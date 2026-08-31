@@ -7,13 +7,17 @@ import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DocToc from '../components/DocToc.vue'
 import { minimumItems } from './xform-demos-api'
 
-const bem = createNamespace('demo-x-form-minimum')
+const { bem, copySchema } = useXFormDemo({
+  name: 'minimum',
+  schema: () => schema,
+})
 
 const model = reactive<Record<string, unknown>>({})
 
@@ -57,6 +61,7 @@ const tocItems = [
       <section id="demo-minimum" :class="bem.b()">
         <XForm :schema="schema" :model="model" />
         <el-button type="primary" :class="bem.e('submit')" @click="onSave">提交</el-button>
+        <el-button :class="bem.e('copy')" @click="copySchema">复制 schema</el-button>
       </section>
 
       <ApiTable title="最小示例三要素" :items="minimumItems" anchor="api-minimum" />

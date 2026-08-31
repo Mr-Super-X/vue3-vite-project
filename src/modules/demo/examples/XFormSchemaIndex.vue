@@ -21,12 +21,12 @@
  * 7. 性能统计：节点数、构建耗时、索引大小
  */
 import { computed, reactive, ref, watch } from 'vue'
-import type { DefineComponent } from 'vue'
 import { ElButton, ElMessage, ElTag } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
 import { useSchemaIndex } from '@/components/form-schema/composables/use-schema-index'
 import { scanForForbidden } from '@/components/form-schema/composables/use-scan-forbidden'
 import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import DemoField from '../components/DemoField.vue'
 import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
@@ -34,7 +34,10 @@ import { schemaIndexItems } from './xform-demos-api'
 import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
 
-const bem = createNamespace('demo-x-form-schema-index')
+const { bem, formRef } = useXFormDemo({
+  name: 'schema-index',
+  schema: () => bigSchema.value,
+})
 
 // 演示代码片段：如何动态生成大 schema（80+ 字段）
 const exampleSchemaCode = `// 动态生成大 schema（60+ 字段）
@@ -261,11 +264,12 @@ const indexSnapshot = computed(() => {
 })
 
 // ─── formRef & 操作 ────────────────────────────────────────────
-const formRef = ref<DefineComponent<unknown, unknown, unknown> | null>(null)
+// formRef 由 useXFormDemo 统一提供
 const formModel = reactive<Record<string, unknown>>({})
 
 function getExpose(): XFormExpose | null {
-  return (formRef.value as unknown as { $?: { exposed?: XFormExpose } } | null)?.$?.exposed ?? null
+  // useXFormDemo 返回的 formRef 已是 XFormExpose，无需 cast
+  return formRef.value
 }
 
 const isDirty = ref(false)

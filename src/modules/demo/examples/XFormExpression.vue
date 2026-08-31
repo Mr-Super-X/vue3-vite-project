@@ -13,10 +13,11 @@
  *   6. expressionFunctions 白名单注入：pushLog / toCurrency 在表达式内直接引用
  */
 // BEM 工具由 unplugin-auto-import 全局注入（@utils/bem）
-import { reactive, ref } from 'vue'
+import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
-import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import type { SchemaNode } from '@/components/form-schema/types'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
@@ -25,7 +26,10 @@ import DocToc from '../components/DocToc.vue'
 import { expressionItems, expressionSandboxItems } from './xform-demos-api'
 import xFormSource from './XFormExpression.vue?raw'
 
-const bem = createNamespace('demo-x-form-expression')
+const { bem, formRef } = useXFormDemo({
+  name: 'expression',
+  schema: () => schema,
+})
 
 // 沙箱执行日志面板的数据源——表达式本身拿不到外部作用域，
 // 只能通过白名单函数作为受控出口把信息带出来（这正是演示点）
@@ -149,7 +153,7 @@ const expressionFunctions = {
     cur === 'USD' ? `$${Number(n ?? 0).toFixed(2)}` : `¥${Number(n ?? 0).toFixed(2)}`,
 }
 
-const formRef = ref<XFormExpose | null>(null)
+// formRef 由 useXFormDemo 统一提供
 
 async function onValidate() {
   const valid = await formRef.value?.validate()

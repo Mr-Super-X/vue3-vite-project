@@ -16,10 +16,11 @@
  * - 内部备注在 DOM 中找不到
  * - 角色切到 admin → 管理备注出现（可编辑）；切到 guest → 隐藏
  */
-import { reactive, ref } from 'vue'
+import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
-import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import type { SchemaNode } from '@/components/form-schema/types'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
@@ -27,7 +28,10 @@ import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
 import { permissionItems } from './xform-demos-api'
 
-const bem = createNamespace('demo-x-form-field-permission')
+const { bem, formRef } = useXFormDemo({
+  name: 'field-permission',
+  schema: () => schema,
+})
 
 // 关键代码片段（用于 DemoField 展示）
 const permissionCode = `// view 态:渲染为只读纯文本
@@ -114,7 +118,7 @@ const model = reactive<Record<string, unknown>>({
   adminNote: '',
 })
 
-const formRef = ref<XFormExpose | null>(null)
+// formRef 由 useXFormDemo 统一提供
 
 async function onSave() {
   if (!formRef.value) return

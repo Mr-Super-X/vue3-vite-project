@@ -5,10 +5,11 @@
  * - 控制台输出 mount / 输入响应 / reaction 耗时
  * - 浏览器 DevTools 可观察 100+ 输入框渲染 + 输入流畅度
  */
-import { reactive, ref, onMounted } from 'vue'
+import { reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
-import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import type { SchemaNode } from '@/components/form-schema/types'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
@@ -17,10 +18,12 @@ import DocToc from '../components/DocToc.vue'
 import { largeSchemaItems } from './xform-demos-api'
 import xFormSource from './XFormLargeSchema.vue?raw'
 
-const bem = createNamespace('demo-x-form-large-schema')
+const { bem, formRef } = useXFormDemo({
+  name: 'large-schema',
+  schema: () => schema,
+})
 
 const FIELD_COUNT = 120
-const formRef = ref<XFormExpose | null>(null)
 
 function buildSchema(count: number): SchemaNode {
   const children: SchemaNode[] = []

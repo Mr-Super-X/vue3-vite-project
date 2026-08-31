@@ -7,10 +7,11 @@
  * 2. resetFields(names)：模拟服务端 422 双字段红字后，只重置其中一个，
  *    另一个红字保留（全量 resetFields 会清掉所有）
  */
-import { reactive, ref } from 'vue'
+import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
-import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import type { SchemaNode } from '@/components/form-schema/types'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
@@ -19,7 +20,10 @@ import DocToc from '../components/DocToc.vue'
 import { validateFieldItems } from './xform-demos-api'
 import xFormSource from './XFormValidateField.vue?raw'
 
-const bem = createNamespace('demo-x-form-validate-field')
+const { bem, formRef } = useXFormDemo({
+  name: 'validate-field',
+  schema: () => schema,
+})
 
 const DEPT_OPTIONS = ['研发部', '产品部', '运营部'].map((d) => ({ value: d, label: d }))
 
@@ -67,7 +71,7 @@ const model = reactive<Record<string, unknown>>({
   hireDate: '',
 })
 
-const formRef = ref<XFormExpose | null>(null)
+// formRef 由 useXFormDemo 统一提供
 
 // ---- validateField(name) 演示 ----
 const fieldResults = ref<Record<string, string>>({})

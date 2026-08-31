@@ -10,10 +10,10 @@
  * 3. 嵌套 children（formItem 内含 input + 'a' HTML）
  * 4. 多列布局（column: 2 / 3）
  */
-import { ElMessage } from 'element-plus'
 import { reactive } from 'vue'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
+import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
@@ -22,19 +22,13 @@ import DocToc from '../components/DocToc.vue'
 import { nestedItems } from './xform-demos-api'
 import xFormSource from './XFormNested.vue?raw'
 
-const bem = createNamespace('demo-x-form-nested')
+const { bem, copySchema } = useXFormDemo({
+  name: 'nested',
+  schema: () => schema,
+})
 
 // 必须用 reactive 包装 model，否则 XForm 内的 v-model 赋值后无法触发响应式更新
 const model = reactive<Record<string, unknown>>({})
-
-async function copySchema() {
-  try {
-    await navigator.clipboard.writeText(JSON.stringify(schema, null, 2))
-    ElMessage.success('schema 已复制到剪贴板')
-  } catch {
-    ElMessage.error('复制失败，请手动选择')
-  }
-}
 
 const schema = [
   {
