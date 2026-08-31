@@ -2,6 +2,8 @@
 /**
  * 演示：字段权限 view/edit/hidden 三态
  *
+ * 🠶 三种"隐藏"语义对比（hidden / ignore / permission: 'hidden'）：见 docs/24-XForm使用指南.md §4.2
+ *
  * 场景：
  * 1. 用户名：view（只读纯文本，不可编辑）
  * 2. 邮箱：edit（可编辑，默认）

@@ -2,6 +2,8 @@
 /**
  * 演示 ArrayNode（数组容器）
  *
+ * 🠶 行内字段隐藏（如折叠未启用行）：见 docs/24-XForm使用指南.md §4.2
+ *
  * 场景：订单明细 — 多行项目（商品 + 数量 + 单价 + 小计），支持：
  * 1. 行内 addItem / removeItem / moveItem（上移/下移）
  * 2. minItems / maxItems 边界按钮禁用

@@ -2,6 +2,8 @@
 /**
  * 参考开源 form-schema 实现的 demo（form/base.vue）—— 基础用法
  *
+ * 🠶 三种"隐藏"语义对比（hidden / ignore / permission: 'hidden'）：见 docs/24-XForm使用指南.md §4.2
+ *
  * 场景：订单查询表单（贴合 orders 模块）
  * 字段：订单号 / 订单状态 / 下单日期区间 / 备注
  * 特性：column 2 列栅格 + rules（'required' 字符串 + validator 函数）
