@@ -1,11 +1,13 @@
 <script setup lang="ts">
 // 首页 Hero 区：背景图 + 左 banner + 右通知公告
 // 规格：1920x300 背景图，1400 内容区，左侧 banner 922x252，右侧通知卡片 364x252
-import { ref } from 'vue'
 import HotSearchTags from './HotSearchTags.vue'
 import SearchBar from './SearchBar.vue'
 import NoticePanel from './NoticePanel.vue'
 import { HERO_CONFIG } from '@/modules/home/config/hero'
+
+// BEM 工具由 unplugin-auto-import 自动注入，无须显式 import
+const bem = createNamespace('hero-section')
 
 const searchType = ref(HERO_CONFIG.searchTypes[0]!.value)
 const keyword = ref('')
@@ -24,16 +26,13 @@ function onSubmit(): void {
 </script>
 
 <template>
-  <section class="hero" aria-label="门户主页横幅">
-    <div class="hero__inner">
-      <div class="hero__art">
-        <!-- <h2 class="hero__title">安全第一 预防为主</h2> -->
-        <!-- <p class="hero__slogan">{{ HERO_CONFIG.slogan }}</p> -->
-      </div>
-      <div class="hero__panel">
+  <section :class="bem.b()" aria-label="门户主页横幅">
+    <div :class="bem.e('inner')">
+      <div :class="bem.e('art')" />
+      <div :class="bem.e('panel')">
         <NoticePanel />
       </div>
-      <div class="hero__search">
+      <div :class="bem.e('search')">
         <HotSearchTags :tags="HERO_CONFIG.hotSearches" :active="activeTag" @select="selectTag" />
         <SearchBar
           :types="HERO_CONFIG.searchTypes"
@@ -47,8 +46,8 @@ function onSubmit(): void {
   </section>
 </template>
 
-<style lang="scss" scoped>
-.hero {
+<style lang="scss">
+.#{$BEM_PREFIX}-hero-section {
   width: 100%;
   height: 300px;
   background: url('@/modules/home/images/home-head-bg.png') center / 1920px 300px no-repeat;
@@ -69,26 +68,6 @@ function onSubmit(): void {
     background: url('@/modules/home/images/hero-banner.png') center / 922px 252px no-repeat;
     border-radius: 4px;
     padding: 36px 40px 0;
-    color: #fff;
-  }
-
-  &__title {
-    margin: 0 0 14px;
-    font-size: 44px;
-    font-weight: 700;
-    line-height: 60px;
-    letter-spacing: 4px;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  }
-
-  &__slogan {
-    margin: 0;
-    display: inline-block;
-    padding: 6px 18px;
-    background: rgba(255, 255, 255, 0.32);
-    border-radius: 4px;
-    font-size: 18px;
-    line-height: 28px;
     color: #fff;
   }
 

@@ -1,12 +1,10 @@
 <script setup lang="ts">
 /**
- * 演示页统一容器（对标 datact-web demo/components/frame.vue 的简化版）
+ * 演示页统一容器（参考开源 form-schema 实现 demo 容器 frame.vue 的简化版）
  *
  * 用途：每个组件示例页都用它包裹，提供标题、简介、主内容三段式结构。
  * 不提供"在编辑器打开组件"按钮（项目未配置 vite-plugin-vue-inspector）。
  */
-import { ArrowLeft } from '@element-plus/icons-vue'
-import { useAppRouter } from '@composables/useAppRouter'
 
 defineProps<{
   /** 组件名（顶部大标题） */
@@ -17,37 +15,28 @@ defineProps<{
   introductions?: string[]
 }>()
 
-const { router } = useAppRouter()
-
-/**
- * 返回 demo 首页。
- * 用 push 而非 back()，避免历史栈缺失时（如从外部链接直接进入）落到意料外的页面。
- */
-function goBack() {
-  router.push('/demo')
-}
+const bem = createNamespace('demo-frame')
 </script>
 
 <template>
-  <section class="demo-frame">
-    <header class="demo-frame__header">
-      <el-button link :icon="ArrowLeft" class="demo-frame__back" @click="goBack">返回</el-button>
-      <h1 class="demo-frame__title">{{ title }}</h1>
-      <code v-if="source" class="demo-frame__source">{{ source }}</code>
+  <section :class="bem.b()">
+    <header :class="bem.e('header')">
+      <h1 :class="bem.e('title')">{{ title }}</h1>
+      <code v-if="source" :class="bem.e('source')">{{ source }}</code>
     </header>
 
-    <ul v-if="introductions?.length" class="demo-frame__intro">
+    <ul v-if="introductions?.length" :class="bem.e('intro')">
       <li v-for="(line, i) in introductions" :key="i">{{ line }}</li>
     </ul>
 
-    <div class="demo-frame__body">
+    <div :class="bem.e('body')">
       <slot />
     </div>
   </section>
 </template>
 
-<style lang="scss" scoped>
-.demo-frame {
+<style lang="scss">
+.#{$BEM_PREFIX}-demo-frame {
   display: flex;
   flex-direction: column;
   gap: 16px;

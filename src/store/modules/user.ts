@@ -1,5 +1,3 @@
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
 import { authApi, type LoginPayload, type UserProfile } from '@/api/modules/auth'
 import { Session } from '@/utils/storage'
 import { globalAbort } from '@/api/global-abort'

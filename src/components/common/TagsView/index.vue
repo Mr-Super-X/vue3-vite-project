@@ -8,10 +8,7 @@
 //   - affix=true 的 tag 不显示关闭按钮且不可关（如 Home）
 //   - 关闭 active tag 后自动跳到最后一个 visited
 
-import { computed, ref } from 'vue'
-import { useRoute } from 'vue-router'
 import { useTagsViewStore, type TagView } from '@/store/modules/tags-view'
-import { createNamespace } from '@utils/bem'
 import { useAppRouter } from '@composables/useAppRouter'
 
 const route = useRoute()
@@ -107,13 +104,13 @@ function menuAction(action: 'close-others' | 'close-all'): void {
   </div>
 </template>
 
-<style lang="scss" scoped>
+<style lang="scss">
 // 前缀由 vite.config.ts 通过 additionalData 注入 $BEM_PREFIX（默认 'vv'）。
 // 想改全站 BEM 前缀：改 .env 中的 VITE_BEM_PREFIX 即可，TS/JS 与 SCSS 同步生效。
 //
 // 注意：bem mixin 由 additionalData 中的 `@use ... with` 引入，本文件不要再 @use 'bem'，
 // 否则 sass 会报重复引入错误。
-@include b(tags-view) {
+.#{$BEM_PREFIX}-tags-view {
   display: flex;
   align-items: center;
   height: var(--tags-view-height, 36px);
@@ -153,7 +150,7 @@ function menuAction(action: 'close-others' | 'close-all'): void {
       border-color: var(--el-color-primary, #409eff);
     }
 
-    &.is-affix .vv-tags-view__close {
+    &.is-affix .#{$BEM_PREFIX}-tags-view__close {
       display: none;
     }
   }

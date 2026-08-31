@@ -163,7 +163,7 @@ async function onCommand(cmd: string) {
     transform: rotate(180deg);
   }
 
-  :deep(.el-dropdown-menu__item:not(.is-disabled)) {
+  .el-dropdown-menu__item:not(.is-disabled) {
     &:hover {
       background: rgba(56, 189, 248, 0.15) !important;
       color: #fff !important;

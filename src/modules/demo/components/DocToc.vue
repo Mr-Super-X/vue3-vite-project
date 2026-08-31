@@ -11,21 +11,23 @@ defineProps<{
   items: { id: string; label: string }[]
   title?: string
 }>()
+
+const bem = createNamespace('doc-toc')
 </script>
 
 <template>
-  <nav class="doc-toc" v-if="items.length">
-    <h3 class="doc-toc__title">{{ title ?? '本页导航' }}</h3>
-    <ul class="doc-toc__list">
+  <nav :class="bem.b()" v-if="items.length">
+    <h3 :class="bem.e('title')">{{ title ?? '本页导航' }}</h3>
+    <ul :class="bem.e('list')">
       <li v-for="item in items" :key="item.id">
-        <a :href="`#${item.id}`" class="doc-toc__link">{{ item.label }}</a>
+        <a :href="`#${item.id}`" :class="bem.e('link')">{{ item.label }}</a>
       </li>
     </ul>
   </nav>
 </template>
 
-<style lang="scss" scoped>
-.doc-toc {
+<style lang="scss">
+.#{$BEM_PREFIX}-doc-toc {
   font-size: 12px;
 
   &__title {

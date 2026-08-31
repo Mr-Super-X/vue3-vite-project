@@ -1,13 +1,10 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
-import { useRoute } from 'vue-router'
 // ElMessage 由 unplugin-auto-import 注入（importStyle 自动带样式，勿显式 import）
 import { User, Lock, View, Hide } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/modules/user'
-import { useAppRouter } from '@/composables/useAppRouter'
 
 // BEM 工具由 unplugin-auto-import 自动注入，无须显式 import
-const bem = createNamespace('auth-login')
+const bem = createNamespace('login')
 
 const { router } = useAppRouter()
 const route = useRoute()

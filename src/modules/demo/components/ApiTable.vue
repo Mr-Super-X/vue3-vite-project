@@ -28,44 +28,46 @@ defineProps<{
   /** section 锚点 id（用于 TOC 跳转） */
   anchor?: string
 }>()
+
+const bem = createNamespace('api-table')
 </script>
 
 <template>
   <!-- items 为空时不渲染——避免切换路由时 v-if 抖动
        （外部不要写 v-if，会导致 sticky sidebar/toc 重新计算位置） -->
-  <section v-if="items.length" class="api-table" :id="anchor">
-    <h2 class="api-table__title">{{ title }}</h2>
-    <div class="api-table__wrap">
-      <table class="api-table__table">
+  <section v-if="items.length" :class="bem.b()" :id="anchor">
+    <h2 :class="bem.e('title')">{{ title }}</h2>
+    <div :class="bem.e('wrap')">
+      <table :class="bem.e('table')">
         <thead>
           <tr>
-            <th class="api-table__col-name">名称</th>
-            <th class="api-table__col-type">类型</th>
-            <th class="api-table__col-default">默认值</th>
-            <th class="api-table__col-desc">说明</th>
+            <th :class="bem.e('col-name')">名称</th>
+            <th :class="bem.e('col-type')">类型</th>
+            <th :class="bem.e('col-default')">默认值</th>
+            <th :class="bem.e('col-desc')">说明</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="item in items" :key="item.name">
             <td>
-              <code class="api-table__name">{{ item.name }}</code>
+              <code :class="bem.e('name')">{{ item.name }}</code>
               <el-tag
                 v-if="item.required"
                 type="danger"
                 size="small"
                 effect="plain"
-                class="api-table__required"
+                :class="bem.e('required')"
               >
                 必填
               </el-tag>
             </td>
             <td>
-              <code class="api-table__type">{{ item.type ?? '—' }}</code>
+              <code :class="bem.e('type')">{{ item.type ?? '—' }}</code>
             </td>
             <td>
-              <code class="api-table__default">{{ item.default ?? '—' }}</code>
+              <code :class="bem.e('default')">{{ item.default ?? '—' }}</code>
             </td>
-            <td class="api-table__desc">{{ item.description }}</td>
+            <td :class="bem.e('desc')">{{ item.description }}</td>
           </tr>
         </tbody>
       </table>
@@ -73,8 +75,8 @@ defineProps<{
   </section>
 </template>
 
-<style lang="scss" scoped>
-.api-table {
+<style lang="scss">
+.#{$BEM_PREFIX}-api-table {
   margin: 24px 0;
   scroll-margin-top: 80px;
 

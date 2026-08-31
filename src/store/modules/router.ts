@@ -3,9 +3,6 @@
 // 管理路由相关的临时 UI 状态（如远程菜单加载状态、路由错误等）。
 // 与 userStore 分离的原因：路由 UI 状态与用户登录态生命周期不同，且不需要持久化。
 
-import { defineStore } from 'pinia'
-import { ref } from 'vue'
-
 /**
  * 路由 UI 状态。
  *

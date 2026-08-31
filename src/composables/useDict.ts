@@ -11,7 +11,7 @@
 // 首次调用会自动触发 lazy fetch，业务无需手动 await。
 // 多次实例化同一 key：复用 store 缓存（5min 内不发请求）。
 
-import { computed, onMounted, ref, type ComputedRef } from 'vue'
+import type { ComputedRef } from 'vue'
 import { useDictStore } from '@/store/modules/dict'
 import type { DictEntry } from '@/api/modules/dict'
 

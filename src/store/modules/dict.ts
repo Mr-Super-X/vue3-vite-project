@@ -11,8 +11,6 @@
 //
 // PRELOAD_DICT_KEYS：登录后立即拉的字典（修改此处即可）
 
-import { defineStore } from 'pinia'
-import { ref } from 'vue'
 import { dictApi, type DictEntry } from '@/api/modules/dict'
 
 /** 业务层缓存时间（毫秒）。比 http.ts 网络层 30s 更长，避免重复进入业务逻辑。 */

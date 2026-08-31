@@ -12,7 +12,6 @@
  * 安全：v-html 渲染 hljs 输出的 HTML。hljs 输出只含 span class，
  * demo 模块的代码源是项目自身 .vue 文件（受信任），不构成 XSS。
  */
-import { ref, computed } from 'vue'
 import { DocumentCopy, Check, ArrowDown, ArrowUp } from '@element-plus/icons-vue'
 import hljs from 'highlight.js/lib/core'
 import xml from 'highlight.js/lib/languages/xml'
@@ -103,15 +102,17 @@ async function copyCode() {
     console.warn('[DemoField] 复制失败，请手动选中复制:', err)
   }
 }
+
+const bem = createNamespace('demo-field')
 </script>
 
 <template>
-  <div class="demo-field">
-    <div v-if="$slots.default" class="demo-field__demo">
+  <div :class="bem.b()">
+    <div v-if="$slots.default" :class="bem.e('demo')">
       <slot />
     </div>
 
-    <div class="demo-field__toolbar">
+    <div :class="bem.e('toolbar')">
       <el-button
         link
         size="small"
@@ -120,7 +121,7 @@ async function copyCode() {
       >
         {{ expanded ? '隐藏代码' : '显示代码' }}
       </el-button>
-      <div class="demo-field__spacer" />
+      <div :class="bem.e('spacer')" />
       <el-button link size="small" :icon="copied ? Check : DocumentCopy" @click="copyCode">
         {{ copied ? '已复制' : '复制' }}
       </el-button>
@@ -133,19 +134,20 @@ async function copyCode() {
       @before-leave="beforeLeave"
       @leave="leave"
     >
-      <div v-show="expanded" class="demo-field__code-wrap">
-        <pre class="demo-field__pre"><code v-html="highlighted" /></pre>
+      <div v-show="expanded" :class="bem.e('code-wrap')">
+        <pre :class="bem.e('pre')"><code v-html="highlighted" /></pre>
       </div>
     </Transition>
   </div>
 </template>
 
-<style lang="scss" scoped>
-.demo-field {
+<style lang="scss">
+.#{$BEM_PREFIX}-demo-field {
   border: 1px solid var(--el-border-color-lighter, #ebeef5);
   border-radius: 8px;
   overflow: hidden;
   background: #fff;
+  margin-bottom: 20px;
 
   &__demo {
     padding: 16px;

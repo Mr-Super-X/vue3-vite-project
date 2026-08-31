@@ -63,14 +63,15 @@ Feature-Sliced 风格的中后台门户前端（`vue3-vite-project`，企业中�
 
 ### 1.2 模块边界铁律（强制）
 
-| 层级                       | 允许引用                                      | 不允许引用           |
-| -------------------------- | --------------------------------------------- | -------------------- |
-| `modules/<m>/views`        | 本模块 components / composables / utils / api | 其他模块内部         |
-| `modules/<m>/components`   | 本模块 views / composables / utils            | 其他模块             |
-| `modules/<m>/store`        | 本模块 api / types                            | 其他模块 store       |
-| `components/common`        | utils / enums / types / store/modules         | 任何 `modules/` 内容 |
-| `store/modules`（全局）    | api / utils / enums                           | `modules/` 内容      |
-| `directives/` / `plugins/` | utils / enums / types / store/modules         | `modules/` 内容      |
+| 层级                       | 允许引用                                                                                                         | 不允许引用                                       |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `modules/<m>/views`        | 本模块 components / composables / utils / api                                                                    | 其他模块内部                                     |
+| `modules/<m>/components`   | 本模块 views / composables / utils                                                                               | 其他模块                                         |
+| `modules/<m>/store`        | 本模块 api / types                                                                                               | 其他模块 store                                   |
+| `components/common`        | utils / enums / types / store/modules                                                                            | 任何 `modules/` 内容                             |
+| `layouts/<m>/`             | 本布局内 `components/` / `config/` / `images/` / `styles/` + utils / enums / types / store/modules / composables | `@/components/` 下任何内容、其他 `layouts/` 内容 |
+| `store/modules`（全局）    | api / utils / enums                                                                                              | `modules/` 内容                                  |
+| `directives/` / `plugins/` | utils / enums / types / store/modules                                                                            | `modules/` 内容                                  |
 
 模块间通信通过 `modules/<m>/index.ts` 对外接口暴露，**禁止直接 import 其他模块内部文件**。
 
@@ -101,31 +102,130 @@ Feature-Sliced 风格的中后台门户前端（`vue3-vite-project`，企业中�
 | 网络请求（三态 + 错误处理） | `@composables/useRequest`                          |
 | 权限（AND / ANY 语义）      | `@composables/useAuth`（`hasPerm` / `hasAnyPerm`） |
 
+### 1.6 AutoImport 自动导入（无须显式 `import`）
+
+> `vite.config.ts` 第 70-91 行通过 `unplugin-auto-import` 配置了**5 类**自动注入到 `<script setup>` 全局作用域（详见 `src/types/auto-imports.d.ts`）。
+> **写代码时这些内容无须再写 `import` 语句**——会自动可用。
+
+| 类别                 | 来源              | 自动注入的标识符（示例）                                                                                                                      |
+| -------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Vue 核心**         | `'vue'`           | `ref`、`reactive`、`computed`、`watch`、`watchEffect`、`onMounted`、`onUnmounted`、`nextTick`、`defineProps`、`defineEmits`、`defineModel` 等 |
+| **Vue Router**       | `'vue-router'`    | `useRoute`、`useRouter`、`useLink`、`RouterLink`、`RouterView` 等                                                                             |
+| **Pinia**            | `'pinia'`         | `defineStore`、`storeToRefs`、`acceptHMRUpdate` 等                                                                                            |
+| **业务 composables** | `@/composables/*` | `useAppRouter`、`useRequest`、`useAuth`、`useLogout` 等（详见 `vite.config.ts` 第 78-81 行）                                                  |
+| **业务 utils**       | `@/utils/bem`     | `createNamespace`（详见 `vite.config.ts` 第 83 行）                                                                                           |
+
+#### 正确示例
+
+```ts
+// ✅ script setup 块无须 import，直接使用
+const bem = createNamespace('user-card')
+const router = useAppRouter()
+const route = useRoute()
+const count = ref(0)
+const { data } = storeToRefs(useUserStore())
+```
+
+```ts 错误示例（禁止）
+// ❌ 冗余 import：与 AutoImport 冲突，导致重复声明警告
+import { ref, computed } from 'vue'
+import { useRoute } from 'vue-router'
+import { createNamespace } from '@/utils/bem'
+import { useAppRouter } from '@/composables/useAppRouter'
+```
+
+#### 仍需显式 import 的内容
+
+AutoImport **未覆盖**以下内容，仍必须写 import：
+
+| 类型             | 示例                                                          | 原因                                                                         |
+| ---------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| 第三方 UI 库组件 | `import { User, Lock } from '@element-plus/icons-vue'`        | element-plus 用 `unplugin-vue-components` 按需注入，与 AutoImport 是两套机制 |
+| 第三方工具库     | `import dayjs from 'dayjs'`                                   | 不在 AutoImport 配置列表中                                                   |
+| 项目内业务模块   | `import AsyncState from '@/components/common/AsyncState.vue'` | 业务组件按需 import（具体路径由模块边界铁律 §1.2 决定）                      |
+| 类型导入         | `import type { UserProfile } from '@/api/modules/auth'`       | 类型 import 不参与运行时，但 TS 编译器需要                                   |
+| SCSS / 资源文件  | `import './styles/login.scss'`（在 `<style>` 中用 `@use`）    | CSS 走 vite 资源管线，与 JS AutoImport 解耦                                  |
+
+> **新增可自动注入的标识符**：编辑 `vite.config.ts` 的 `AutoImport.imports` 数组 + 重启 dev server，**无须**为每个组件手动加 import。
+
+### 1.6.1 不常见 API 必须加来源注释
+
+> AutoImport 让标识符"凭空可用"，但读者看到 `useAppRouter()` / `storeToRefs()` 这类**不常见的标识符**时，会下意识去找 `import` 语句——找不到就困惑：这是哪里来的？是不是漏了 import？
+>
+> **约定**：当使用的 AutoImport 标识符不属于日常一眼能认出的"高频 API"时，必须在第一次出现处加一行注释说明来源包，让读者无需跳到 `auto-imports.d.ts` 也能理解。
+
+#### 高频 API（无须注释）
+
+| 来源         | 高频标识符（看一眼能认出）                                         |
+| ------------ | ------------------------------------------------------------------ |
+| `vue`        | `ref`、`reactive`、`computed`、`watch`、`onMounted`、`defineProps` |
+| `vue-router` | `useRoute`、`useRouter`（路由组件模板里常见）                      |
+| `pinia`      | `defineStore`（每个 store 文件第一行）                             |
+
+#### 不常见 API（必须加注释）
+
+| 标识符（举例）                                             | 来源包提示（注释怎么写）                       |
+| ---------------------------------------------------------- | ---------------------------------------------- |
+| `RouterLink`、`RouterView`、`useLink`                      | `// vue-router 组件`                           |
+| `storeToRefs`、`acceptHMRUpdate`                           | `// pinia 工具`                                |
+| `useAppRouter`、`useRequest`、`useAuth`、`useLogout`       | `// 项目 composable @composables/*`            |
+| `createNamespace`                                          | `// 项目 BEM 工具 @utils/bem（vite 自动注入）` |
+| `watchEffect`、`nextTick`、`onErrorCaptured`、`shallowRef` | `// vue（生命周期/底层 API）`                  |
+
+#### 注释格式与位置
+
+- **位置**：在 `.vue` 的 `<script setup>` 第一行（`createNamespace` 之后）或该标识符第一次出现处的上方 1 行
+- **格式**：1 行简短注释（**不超过 40 字**），说明"来自哪个包"即可
+
+#### 示例：正确写法
+
+```ts
+const bem = createNamespace('user-card')
+// 以下均为 unplugin-auto-import 全局注入（详见 CLAUDE.md §1.6）
+const router = useAppRouter() // 项目 composable @composables/useAppRouter
+const route = useRoute() // vue-router
+const count = ref(0)
+const { data } = storeToRefs(useUserStore()) // pinia 工具
+```
+
+#### 错误示例
+
+```ts
+// ❌ 不加注释——读者看到 storeToRefs 不认识会困惑
+const { data } = storeToRefs(useUserStore())
+
+// ❌ 注释过长——失去意义，应当保持简短
+// pinia 的 storeToRefs 用于把 store state 转成响应式引用，是把 store 的 state/getter 解构出来的标准工具
+const { data } = storeToRefs(useUserStore())
+```
+
+> **例外**：业务模块的 `import { useUserStore } from '@/store/modules/user'` 本身就有路径注释（IDE hover 显示），无需额外标注。
+
 ---
 
 ## §2 ⚠️ src/ Architecture Lockdown（最高优先级）
 
-### 2.1 当前基线快照（2026-07-27）
+### 2.1 当前基线快照（2026-08-19）
 
 `src/` 下 15 个一级目录的职责如下。任何变更都会破坏现有约定，**未经用户明确批准，禁止任何形式的增、删、改、移动、重命名**：
 
-| #   | 目录           | 职责                                                                                                                                                    |
-| --- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `api/`         | 跨模块网络请求基建（`http`/`cache`/`retry`/`token-refresh` 等）+ `api/modules/` 跨模块共享接口                                                          |
-| 2   | `components/`  | 全局通用组件（`common/`）+ 布局相关组件（`layout/`）                                                                                                    |
-| 3   | `composables/` | 业务侧组合式函数封装（`useAppRouter`/`useRequest`/`useAuth` 等）                                                                                        |
-| 4   | `directives/`  | 自定义指令（`v-inputDebounce`/`v-buttonDebounce`/`v-permission` 等）                                                                                    |
-| 5   | `enums/`       | 枚举常量（`httpEnum`/`roleEnum` 等）                                                                                                                    |
-| 6   | `layouts/`     | 布局组件（`default`/`blank`/`portal`）                                                                                                                  |
-| 7   | `locales/`     | 国际化文案（`zh-CN`/`en-US`）                                                                                                                           |
-| 8   | `modules/`     | 业务模块（`auth`/`home`/`orders`/`reports`/`user`/`demo`/`error`），按需要含 `views/`+`routes/`+`store/`+`apis/`+`components/`+`index.ts`（见 docs/08） |
-| 9   | `plugins/`     | Vue 插件（`errorHandler`/`webVitals` 等）                                                                                                               |
-| 10  | `router/`      | 路由配置 + 守卫 + 自动注册 + 白名单 + 远程菜单                                                                                                          |
-| 11  | `store/`       | Pinia 根配置 + `modules/` 全局 Store                                                                                                                    |
-| 12  | `types/`       | TS 全局类型 + `.d.ts`                                                                                                                                   |
-| 13  | `utils/`       | 纯函数工具（`dayjs`/`format`/`bem`/`storage` 等，与框架解耦）                                                                                           |
-| 14  | `App.vue`      | 根组件                                                                                                                                                  |
-| 15  | `main.ts`      | 应用入口                                                                                                                                                |
+| #   | 目录           | 职责                                                                                                                                                                                               |
+| --- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `api/`         | 跨模块网络请求基建（`http`/`cache`/`retry`/`token-refresh` 等）+ `api/modules/` 跨模块共享接口                                                                                                     |
+| 2   | `components/`  | 全局通用组件（`common/`）。**禁止**放置任何布局专用子组件（`Header` / `Sidebar` 等）—— 布局相关组件必须落在 `layouts/<m>/components/` 下随 layout 自包含                                           |
+| 3   | `composables/` | 业务侧组合式函数封装（`useAppRouter`/`useRequest`/`useAuth` 等）                                                                                                                                   |
+| 4   | `directives/`  | 自定义指令（`v-inputDebounce`/`v-buttonDebounce`/`v-permission` 等）                                                                                                                               |
+| 5   | `enums/`       | 枚举常量（`httpEnum`/`roleEnum` 等）                                                                                                                                                               |
+| 6   | `layouts/`     | 路由级布局基座（`default`/`blank`/`portal`）—— 每个 layout **自包含**，子组件放 `./components/`、配置放 `./config/`、资源放 `./images/`、样式放 `./styles/`；禁止跨目录到 `@/components/` 引用组件 |
+| 7   | `locales/`     | 国际化文案（`zh-CN`/`en-US`）                                                                                                                                                                      |
+| 8   | `modules/`     | 业务模块（`auth`/`home`/`orders`/`reports`/`user`/`demo`/`error`），按需要含 `views/`+`routes/`+`store/`+`apis/`+`components/`+`index.ts`（见 docs/08）                                            |
+| 9   | `plugins/`     | Vue 插件（`errorHandler`/`webVitals` 等）                                                                                                                                                          |
+| 10  | `router/`      | 路由配置 + 守卫 + 自动注册 + 白名单 + 远程菜单                                                                                                                                                     |
+| 11  | `store/`       | Pinia 根配置 + `modules/` 全局 Store                                                                                                                                                               |
+| 12  | `types/`       | TS 全局类型 + `.d.ts`                                                                                                                                                                              |
+| 13  | `utils/`       | 纯函数工具（`dayjs`/`format`/`bem`/`storage` 等，与框架解耦）                                                                                                                                      |
+| 14  | `App.vue`      | 根组件                                                                                                                                                                                             |
+| 15  | `main.ts`      | 应用入口                                                                                                                                                                                           |
 
 ### 2.2 禁止行为（最严格）
 
@@ -162,6 +262,74 @@ Feature-Sliced 风格的中后台门户前端（`vue3-vite-project`，企业中�
 ### 2.5 验证机制
 
 每次任务完成后，**必须**在合规简报中单独列出「本次对 src/ 的所有写操作清单」，由用户复核。无清单 = 未完成。
+
+---
+
+## §3 组件 BEM 编写规范（强约束）
+
+> 所有 `.vue` 单文件组件必须按本节编写，与 §2 同为不可妥协硬规则。
+
+### 3.1 完整模板
+
+```vue
+<script setup lang="ts">
+// BEM 工具（createNamespace / bem / $BEM_PREFIX）由 unplugin-auto-import 自动注入，
+// 在 <script setup> 与 <style lang="scss"> 中全局可用，无须显式 import
+const bem = createNamespace('form-engine') // kebab-case，必须与 sass 根选择器 .#{$BEM_PREFIX}-form-engine 严格对齐
+</script>
+
+<template>
+  <div :class="bem.b()">
+    <!-- 类名必须通过 bem.b() / bem.e() / bem.m() / bem.is() / bem.has() 拼装，
+         禁止硬编码 'vv-form-engine' 等前缀字符串 -->
+    <header :class="bem.e('header')">...</header>
+  </div>
+</template>
+
+<style lang="scss">
+.#{$BEM_PREFIX}-form-engine {
+  /* 不写 scoped —— 命名空间隔离由 BEM 完成 */
+  &__header {
+    /* element */
+  }
+  &--primary {
+    /* modifier */
+  }
+}
+</style>
+```
+
+### 3.2 强制约定
+
+| #   | 项                             | 约束                                                                                                                                                                                                                                                                    |
+| --- | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `createNamespace` / `bem` 来源 | 由 `unplugin-auto-import` 自动注入到 `<script setup>` 全局作用域，**禁止** `import { createNamespace } from '...'`                                                                                                                                                      |
+| 2   | `bem` 实例声明                 | `const bem = createNamespace('<kebab-case>')`，组件名必须是 **kebab-case**（如 `form-engine`、`async-state`），与 sass 根选择器 `.#{$BEM_PREFIX}-<kebab-case>` **严格对齐**——HTML class 与 CSS 选择器大小写敏感，不一致将导致整片样式失效                               |
+| 3   | 模板 class 拼装                | 必须通过 `bem.b()` / `bem.e()` / `bem.m()` / `bem.is()` / `bem.has()` 拼装，**禁止**硬编码前缀字符串                                                                                                                                                                    |
+| 4   | `<style>` 块 `lang` 属性       | 必填 `lang="scss"`，用于解析 `$BEM_PREFIX` Sass 变量                                                                                                                                                                                                                    |
+| 5   | `<style>` 块 `scoped` 属性     | **禁止添加**——命名空间隔离由 BEM 接管，scoped 是冗余                                                                                                                                                                                                                    |
+| 6   | 根选择器写法                   | 必须 `.#{$BEM_PREFIX}-组件名-kebab-case`（如 `.#{$BEM_PREFIX}-form-engine`），与 `bem` 实例一一对应                                                                                                                                                                     |
+| 7   | 嵌套占位符                     | element 用 `&__xxx`、modifier 用 `&--yyy`、状态用 `&.is-xxx` / `&.has-xxx`，禁止重复拼接前缀                                                                                                                                                                            |
+| 8   | BEM 默认前缀                   | `vv`（即 `$BEM_PREFIX` 默认值），由 `unplugin-auto-import` 注入                                                                                                                                                                                                         |
+| 9   | `bem.m()` vs `bem.em()` 选择   | **block modifier** 用 `bem.m('xxx')` → `vv-<block>--xxx`（作用于整个组件，如卡片整体 `'shimmer'`）；**element modifier** 用 `bem.em('elem', 'xxx')` → `vv-<block>__elem--xxx`（作用于某个元素，如 `__row--first`）。误用会导致 class 与 sass 嵌套选择器不匹配，样式失效 |
+
+### 3.3 反模式（禁止出现）
+
+| #   | 反模式                                                                           | 禁止原因                                                                                                                                                                                                         |
+| --- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `<script setup>` 中 `import { createNamespace } from '@/utils/bem'`              | 与自动注入冲突，会重复声明                                                                                                                                                                                       |
+| 2   | `<style scoped>` / `<style scoped lang="scss">`                                  | BEM 已接管隔离，scoped 是冗余且会破坏 `&` 编译                                                                                                                                                                   |
+| 3   | `<style>` 不写 `lang="scss"`                                                     | 无法解析 `$BEM_PREFIX` Sass 变量，根选择器失效                                                                                                                                                                   |
+| 4   | 模板或样式中硬编码 `vv-xxx` / `.vv-form-engine__header` 等字符串                 | 与 `bem.b()` / `bem.e()` 拼出的 class 不一致 → 样式漂移                                                                                                                                                          |
+| 5   | 同一组件出现两份 `bem` 实例声明                                                  | 命名空间分裂，会造成样式不生效                                                                                                                                                                                   |
+| 6   | `createNamespace('PascalCase')`（如 `'OrdersList'`、`'HomeFooter'`）             | HTML class 大小写敏感，`vv-OrdersList` 与 sass 编译产物 `.vv-orders-list` 不匹配 → 整片样式失效。**必须用 kebab-case**（`'orders-list'`、`'home-footer'`），转换规则：`PascalCase` 每个大写字母前加 `-` 后全小写 |
+| 7   | `bem.m('xxx')` 误用于 element 修饰（如 `bem.m('first')` 当 m 用于 `__row` 元素） | `bem.m()` 生成 `vv-<block>--xxx`（block modifier），与 sass 嵌套 `&__row { &--first { ... } }` 展开的 `vv-<block>__row--first`（element modifier）不匹配 → grid 等布局失效。**应当用 `bem.em('row', 'first')`**  |
+
+### 3.4 验证机制
+
+- 每次新增 / 修改 `.vue` 文件前，**逐条**比对 §3.2、§3.3
+- 合规简报必须附「本次 BEM 规范核查清单」：本次涉及的 `.vue` 文件路径 + §3.2 每条判定结果
+- `pnpm lint` / `pnpm type-check:full` 已无法自动检测此类违规时，以人工核查清单为准
 
 ---
 

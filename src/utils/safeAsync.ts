@@ -1,7 +1,7 @@
 /**
  * 运行时安全执行工具。
  *
- * 替代方案：参考 D:\work\应急水利\am-portal-mobile-yzy-fe\src\babels\async-add-try-catch-plugin
+ * 替代方案：参考原内部项目 async-add-try-catch-plugin 实现
  *
  * 与 Babel 编译时方案对比：
  * - Babel 方案：编译时给每个 await 包 try/catch（重复覆盖 http.ts 拦截器已处理的 90% 错误）

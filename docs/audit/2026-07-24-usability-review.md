@@ -406,3 +406,7 @@ localStorage.setItem('debug', 'gm:*')  # 启用详细日志
 ---
 
 _报告版本：v2.0 | 评估日期：2026-07-24 | 评估方式：完整代码通读 + 实测 | 下次评估建议：每季度一次_
+
+---
+
+> **2026-08-19 架构变更**：本文档中提到的 `src/components/layout/Header.vue` / `src/components/layout/Sidebar.vue` 已迁移至 `src/layouts/default/components/`（layout 自包含重构）。详见 `CHANGELOG.md`「♻ Refactor | 重构」分组。

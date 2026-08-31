@@ -2,6 +2,329 @@
 
 ## 未发布
 
+### 🐛 Bug Fixes | 问题修复
+
+* **form-schema:** `listType: 'text' | 'picture'` 的 Upload 字段完全不可交互
+  - 现象：`/demo/xform-upload` 页的「附件列表」「手动上传」「上传前校验」「已上传文件回显」四个字段看不到任何上传入口，点不动
+  - 根因：ElUpload 非 drag 分支的触发区**就是 default slot 本身**（`element-plus/upload-content.vue` 直接 `renderSlot($slots, 'default')`，无内置 UI），而 `buildUploadDefaultSlot` 只为 `picture-card` / `drag` 注入内容，默认 `listType: 'text'` 落到空插槽 → `.el-upload--text` 零高度空元素
+  - 修复：`isElUpload` 兜底分支注入 `<el-button type="primary" class="vv-x-form__upload-button">点击上传</el-button>`；`slots.default` / `children` 仍优先，业务自定义不受影响
+  - 防回归：render-schema-node.spec +3（text 兜底按钮类名与文案、picture 同样兜底、children 存在时不注入）
+
+* **form-schema:** 配 `slots.trigger` 的 Upload 会多出一个孤立触发按钮
+  - 根因：ElUpload 在 `$slots.trigger` 存在时把 `$slots.default` 额外渲染到触发区之外（`element-plus/upload.vue:85`），而 XForm 恒向 ElUpload 传 default 插槽函数 —— 业务只写 trigger、不写 default 时会吃到引擎注入的默认内容
+  - 修复：`buildUploadDefaultSlot` 检测到 `slots.trigger` 即跳过默认注入
+  - 防回归：render-schema-node.spec +1
+
+* **form-schema:** A 模式（实时）下跨字段校验错误不显示
+  - 根因：`XForm.vue` 的 `onValueChange` 先调 `crossFieldTrigger.trigger()` 再调 `clearValidate()`；`delay=0` 时 `crossValidator` 同步写入错误后，`clearValidate()` 立即把刚写入的错误清掉，导致表单不标红、无错误文字
+  - 修复：调整顺序为先 `clearValidate([node.name])` 清除旧错误（含服务端错误），再 `crossFieldTrigger.trigger(node.name)` 重新写入新错误；B/C 模式因 debounce 延迟写入，行为保持不变
+  - 防回归：XForm.spec.ts +1（A 模式输入确认密码后 `fieldErrors` 保留错误）；浏览器实测 A/B/C 三模式均正常显示跨字段校验错误
+
+* **form-schema:** 跨字段校验 debounce 失效修复（三路径重复执行 crossValidator）
+  - 根因：同一次 change 存在三条并行执行路径——`onValueChange` 直调 `triggerCrossFieldValidator('change')`、ElFormItem 透传的原生 `onChange` 冒泡、`useCrossFieldTrigger` debounce 路径；前两者完全绕过 `debounceValidation`，且 debounce 路径内部 `trigger()` 与 deep watch model 对同字段双重同步执行（delay=0 时无去重）——实时模式每键执行 3 次（3 键 9 次）、500ms 模式 3 次，XFormValidationDebounce demo 三模式 counter 全部虚高
+  - 修复：change 校验统一收敛到 `useCrossFieldTrigger` 单一入口（享受 debounce）——移除 `onValueChange` 的直调与 form-item 的 `onChange` 监听（blur/focusout 语义保留）；`trigger()` 登记 `triggeredFields`，deep watch 同 tick diff 跳过已处理字段，窗口随每次 watch 回调关闭（不吞下一 tick 真实变化）
+  - 防回归：use-cross-field-trigger.spec +3（同 tick 双路径去重 delay=0/delay>0/跨 tick 重触发）；render-schema-node.spec 更新为「只挂 onFocusout 不挂 onChange」契约；浏览器实测 A/B/C 三模式 counter 均符合预期（9→3、3→1、1000ms 延迟生效）
+
+* **form-schema:** `{{ fn }}` 表达式事件参数透传修复（编译模板单参硬编码）
+  - 根因：`use-expression.ts` 编译模板 `return (${expr})(model)` 固定单参调用，`node.on` 绑定展开的事件实参在内层被丢弃——`{{ (m, v) => ... }}` 的 `v` 恒为 `undefined`（既有 XFormEvents demo 与 API 文档承诺形态静默失效）
+  - 修复：编译模板改为 `(model, ...__rest__)` 多参调用；reaction / permission / readonly 等单参求值路径传空数组，行为完全向后兼容
+  - 防回归：use-expression.spec +2（事件参数按位透传 / 单参路径兼容）；由 XFormExpression demo 浏览器实测暴露
+
+### ✨ Features | 新特性
+
+* **demo:** 修复 XFormStyleOverride 场景 5 数组节点：把字段从 array 节点 `children` 挪到 `itemSchema.children`
+  - 根因：array 节点的 `children` 是「数组自身字段」（通常不用），行内字段必须写在 `itemSchema.children` 里（render-array-node.ts:4 注释明确）
+  - 现象：原 schema 让 itemSchema.children 为空 → 渲染出 2 行「空行 + 上移/下移/删除按钮」，按钮看起来没操作目标
+  - 修复后：每行 2 个 input（姓名 + 级别）+ 3 个按钮，初始 model 数据（张三/P5、李四/P6）正确填入
+  - **根因**：XForm template 是 ElConfigProvider + 条件 XFormDebugBanner 两个 root，Vue 3 编译为 fragment 时父传的 `:class` 不会自动合并到根 div —— 所有 `<XForm class="xxx">` 的 demo class 实际丢失
+  - **修复**：`<script setup>` 加 `useAttrs()` + `defineOptions({ inheritAttrs: false })`，根 div 改 `<div :class="[bem.b(), attrs.class]">` 显式 merge。3 行核心改动
+  - **副作用清理**：XFormStyleOverride demo 删掉 6 个 wrapper，回到简洁 `<XForm :class="..." />`；style 从 descendant selector 改回 BEM 嵌套（XForm 根 div 现在能接住 demo class，无需 `.el-form` 锚点）
+  - **影响面**：所有使用 XForm 的页面受益，业务页将来用 `<XForm class="xxx">` 锁样式作用域不再踩坑
+  - **验证**：`pnpm lint` / `type-check:full` / `test src/components/form-schema`（511 用例）全绿
+
+* **form-schema:** compileRules 自动注入 required 默认 message「必填」
+  - 根因：xform-base 等 demo 用 schema 直接写法 `rules: ['required', ...]`，编译降级为 `{required: true}` 后无 message，async-validator 默认 message「orderNo is required」是英文；element-plus zhCn 不含 form.validateMessage.required 翻译，ElConfigProvider locale 改不了这一项
+  - 修复：`compileRules` 对 `{required: true && message === undefined}` 自动注入 `message: '必填'`。仅在缺 message 时注入，**用户显式 message 不覆盖**
+  - 与 builders.ts:90 `required(message = '必填')` 默认行为对齐
+  - 防回归：render-schema-node.spec.ts +6（对象写法注入、用户 message 不覆盖、required:false 不注入、其他字段保留、多条规则混合）
+- 增强：label 兜底拼接。compileRules 新增可选参数 `label?: string`，message 注入变成 `${label}必填`（如「订单号必填」），label 缺失时退化为「必填」保持向后兼容。render-form-item.ts 传 `node.label`
+  - 影响面：所有 `{required: true}` 无 message 的 rule 自动获得中文「必填」；schema 显式 message 不受影响
+  - `<ElConfigProvider v-bind="elConfig as any">` 套用 App.vue 模式：const 中转 + v-bind + as any + eslint-disable-next-line
+  - 业务页中文环境零配置（ElForm / ElPagination / ElDatePicker 等都依赖 locale），解决「业务页忘了装 locale」高频踩坑
+  - size='default' 写死；业务页若需 large / small 可在外面再包一层 ElConfigProvider 覆盖
+  - 类型 as any 原因：element-plus buildProp 类型元组（type/required/validator/__epPropKey）与运行时值类型不直接等价（App.vue 同样模式）
+  - 影响面：所有使用 XForm 的页面中文环境自动修复
+
+* **demo:** XFormStyleOverride demo 6 场景 + 钩子清单表
+  - 6 个真实业务场景 + 1 张钩子清单表（XForm 自有钩子 + Element Plus 高频类 + CSS 主题变量，按稳定性分高/中/低三档）
+  - 路由 / sidebar 完全自动注册（`routes/index.ts` 的 `import.meta.glob` + `sidebar-groups.ts` 的 `CN_NAMES` 加 1 行），零侵入
+  - 6 个真实业务场景 + 1 张钩子清单表：紧凑表单 / 品牌化 / 错误提示不抖动 / 只读态 / 数组节点 / 主题色覆盖
+  - 每场景独立 XForm 实例 + class 锁作用域，互不污染；通过 `formItem.props.class` 还可锁单字段
+  - 钩子清单表覆盖 XForm 自有钩子、Element Plus 高频可覆盖类、CSS 主题变量三类，按稳定性分高/中/低三档
+  - 路由 / sidebar 完全自动注册（`routes/index.ts` 的 `import.meta.glob` + `sidebar-groups.ts` 的 `CN_NAMES` 加 1 行），零侵入
+
+* **chore(eslint):** 迁移到 `withVueTs` 并放开 `.vue` 内的 tsx
+  - `eslint.config.mjs` 从 `vueTsEslintConfig()`（v14.9 前的 helper）迁到官方推荐的 `withVueTs(options, ...configs)` + `vueTsConfigs.recommended`
+  - 首参声明 `{ scriptLangs: ['ts', 'tsx'] }` —— 默认只允许 `lang="ts"`，demo 的 JSX 插槽示例需要 `lang="tsx"`
+  - 规则等级保持 `recommended` 不变（未升级 `recommendedTypeChecked`，那会给全项目引入类型感知规则并显著拖慢 lint，属独立议题）
+  - 类型感知未受损：本项目 eslint 从未启用 type-aware 规则，故 tsx 文件落入的 `disableTypeChecked` 名单为空集；`.vue` 类型安全由 `vue-tsc` 保证 —— 已反向验证（在 JSX 内插入 `formatFileSize(file.name)` 类型错误，`pnpm type-check:full` 精确报出 `XFormUpload.vue(231,56) TS2345`）
+
+* **demo:** XFormUpload 场景 10 给出 JSX 与 `h()` 两种等价写法
+  - 拆为「合同附件（JSX 写法）」+「报价单附件（h() 写法）」两个字段，渲染结果一致，两份均为可运行代码（不注释掉任何一份）
+  - `XFormUpload.vue` 的 script 块改为 `lang="tsx"`
+  - 选型建议写进注释：分支/循环多时 JSX 更易读；结构扁平时 `h()` 少一层语法转换，且不需要 `lang="tsx"`
+
+* **demo:** XFormUpload 补充自定义样式三方案
+  - 新增「自定义样式方案」小节（`/demo/xform-upload#demo-upload-custom`），覆盖产品要求定制上传区外观时的三条路径
+  - 方案 8 类名覆盖：schema 不动，靠 `formItem.props.class` 锁作用域 + `vv-x-form__upload-icon--drag` / `__upload-text` 改外观（不污染同页其他 Upload）
+  - 方案 9 `slots.default` 接管触发区：`component` 直接传组件对象（无需 `XForm.components` 注册）拼虚线卡片
+  - 方案 10 `slots.file` 自定义已上传项：文件图标 + 名称 + 大小 + 自接的移除按钮（内置 ✕ 被该插槽覆盖，需自行实现删除）
+  - 该 demo 页因内联 3 套 schema + 样式达 507 行，已与用户确认对本页放开组件行限
+
+* **form-schema:** Upload 默认触发图标按类型区分（picture-card / drag）
+  - `drag: true` 且未自定义 default slot 时注入 `<el-icon class="el-icon--upload"><UploadFilled /></el-icon>` + `<div class="el-upload__text">拖拽文件到这里或点击上传</div>`，与 Element Plus 官方拖拽区视觉一致，业务无需在 schema 手写 trigger
+  - 两类默认内容统一挂 XForm 命名空间类名（图标 `vv-x-form__upload-icon` + `--picture-card` / `--drag` modifier，文案 `vv-x-form__upload-text`），便于业务样式覆盖时精确命中其中一类
+  - picture-card 与 drag 同时开启时取 Plus 小图标（卡片触发区仅 148px，67px 大图标会溢出）
+  - 文档补充：`el-form-item__content` 下那层无类名 `<div>` 是 ElUpload 自身模板根节点（收拢 upload-list 与 upload-content），非 XForm 包裹层、无法从 XForm 侧移除，需覆盖样式时用 `.el-form-item__content > div`
+  - 防回归：render-schema-node.spec +4（drag 注入类名/图标/文案、优先级、自定义 slot 不覆盖、非 ElUpload 不注入）
+
+* **form-schema:** 扩展常用输入组件与默认配置
+  - 新增 `InputPassword`（`ElInput` 语义别名，默认隐藏并可切换）、`InputTextArea`（`ElInput` 语义别名）、`InputTag`、`ColorPicker`、`Mention`、`Rate` 六个内置组件及对应 `xXxx` builder
+  - 同步补齐 `Element Plus` 组件导入、快捷名/全名解析、`SchemaNodeFor` 类型推导、props 覆盖与 v-model 写回测试
+  - `InputNumber` 纳入内置默认配置，右侧控制器但**不**强制 `min: 0`；ColorPicker/Mention/Rate 不增加业务偏好默认值
+  - 回归验证：密码、文本域、标签数组、颜色 `string|null`、提及文本、评分数字均通过 adapter、renderer、XForm 与类型测试
+
+* **form-schema:** 新增 `{{ fn }}` 动态脚本表达式 demo（XFormExpression）
+  - 一次覆盖五类挂载位：顶层 `readonly` 表达式（锁定单据整表 view 化）、`node.on.change` 事件表达式、`reaction.hidden` / `reaction.label` 反应式表达式（条件显隐 + 币种联动文案）、`node.permission` 权限三态表达式（admin 编辑 / viewer 只读）
+  - 演示 `expressionFunctions` 白名单注入：`pushLog`（沙箱副作用受控出口，日志面板可视化执行）、`toCurrency`（业务格式化不内联进 schema）——并还原 `use-expression.ts` 编译缓存与 `toSafeDto` 净化的真实链路
+  - ApiTable 收录「五类挂载位」+「沙箱上下文与安全边界」两张速查表；sidebar 注册「动态脚本表达式」
+
+* **form-schema:** 新增详情数据回填 demo（XFormDetailFill）
+  - 模拟订单编辑页标准链路：拉详情 → `Object.assign(model, detail)` 整体写入 → `clearValidate()` 清残留红字 → `resetDirty()` 重拍基线（isDirty 从服务端值起算）
+  - 覆盖 6 类联动复杂情况：级联回填时序（区域 options 就绪前显示裸 id，就绪后自动变名称）、hidden 字段回归（隐藏必填不阻塞校验）、只读联动（shipped 即灰）、数组批量回填、dirty 基线管理、AsyncState 三态防御（骨架屏 / Error 重试）
+  - 新增 `xform-detail-fill-mock.ts` mock 详情接口（A 已发货 / B 草稿 / FAIL 失败三条路径）；ApiTable 收录「回填要点速查」，sidebar 注册「详情数据回填」
+
+
+* **form-schema:** 新增 reaction 反应式联动·进阶 demo（XFormReactionAdvanced）
+  - XFormReaction 基础 4 场景（debounce / throttle / sync-disabled / sync-hidden）之外补 4 类复杂业务联动
+  - ① 计算字段 + `deps` 精确监听：反应式 `_effect` 闭包写 model（qty × price × discount = total），deps 精确监听 3 个字段切断自触发；与现有 XFormReaction 把计数器写到 model 外的 hack 写法形成对比
+  - ② 跨字段级联清空：上级 `on.change` 闭包清空下级；下级 `reaction.props` 按上级值查字典动态切 options（省/市/区 + 商品/型号）
+  - ③ 反应式 label / props / rules 联动：单个 reaction 节点同时改 label 与 props（注意：use-reaction 是赋值非合并）；`rules` 用 `{{ fn }}` 表达式与 reaction 协同控制动态校验
+  - ④ 数组行内嵌 reaction：行内 `deps` 用相对路径（不写 `array.rows.0.qty`），`lodash get` 在行 model 子树自动解析；「含税」切换控制税率字段显隐并参与小计计算
+  - 新增 `cascader-data.ts` 静态字典（省/市/区、商品/型号、度量单位、折扣等级），ApiTable 收录「reaction 进阶字段速查」，sidebar 注册「反应式联动·进阶」
+
+
+* **form-schema:** 新增 reaction.deps 动机 demo（XFormReactionDeps）
+  - 与 XFormReactionAdvanced 演示「deps 怎么用」不同，本页专注「deps 为什么用」——三个使用动机对比
+  - ① deps 切断无关字段触发：默认 deep watch 整棵 model，distractor.* 任意字段变化都跑 reaction；声明 deps 后仅精确路径触发；观察 runCount 次数差异
+  - ② deps 切断循环联动：reaction 函数体写自身依赖字段时，无 deps 会无限循环触发——use-reaction 预算 MAX_CHAIN_PER_FLUSH=50 兜底 console.error；声明 deps 切断自触发
+  - ③ deps 路径声明（可读性）：同一段计算逻辑，无 deps 靠函数体内引用追踪（隐式），有 deps 显式列出依赖（推荐：重构安全 + 阅读一目了然）
+  - 顶部开关 A/B 模式切换（schema computed 重计算 → XForm 自动 watch 重新注册 reaction，旧 stoppers 清理）
+  - ApiTable 收录「reaction.deps 字段速查」，sidebar 注册「反应式联动·deps 动机」
+
+
+* **form-schema:** 新增跨字段校验 debounce 调度 + 演示 demo
+  - 顶层 schema.debounceValidation + 字段级 RuleItem.debounceMs 双层配置：解决密码/确认密码、邮箱/确认邮箱等高频输入场景每键触发校验的视觉干扰
+  - use-cross-field-trigger 改造：runner 按 `${target}|${delayMs}` 缓存，0 = 实时同步执行、>0 = lodash.debounce 延迟；async crossValidator（远程查重等）继承本次 debounce
+  - 防回归：use-cross-field-trigger.spec.ts +3（字段级 debounceMs / 全局 defaultDebounceMs / 字段覆盖全局）；原 18 个用例全部向后兼容通过
+  - 新增 XFormValidationDebounce.vue demo：A 实时模式 / B 全局 500ms / C 字段级覆盖（混合 1000ms+0）三模式对比，counter 可视化连打 6 字符的校验触发次数
+  - ApiTable 收录「debounce 字段速查」，sidebar 注册「校验 debounce」
+
+
+* **form-schema:** 新增全局 disabled / 全局 readonly demo
+  - XFormDisabled / XFormFieldPermission 仅演示字段级 disabled / permission；本批补顶层 schema.disabled / 顶层 schema.readonly 的 3 种写法 + 优先级对比
+  - XFormGlobalDisabled：顶层 disabled 写法 3 种（字面量 / 函数 / {{ fn }} 表达式）+ RadioGroup 切换模式 + lockAll 开关联动；Card ② 对比字段级 props.disabled 与 permission: hidden 优先级
+  - XFormGlobalReadonly：顶层 readonly 写法 3 种（字面量 / 函数 / {{ fn }} 表达式）+ 整表 view 化对比字段级 permission 三态
+  - 与 disabled 区别明确写出：disabled 字段仍渲染控件但不可编辑；readonly 字段渲染为纯文本（view 态），跳过校验
+  - ApiTable 收录两份速查表，sidebar 注册「全局禁用」「全局只读」
+
+
+* **form-schema:** P2-3 数组行拖拽排序（array.draggable）
+  - `ArrayNodeConfig.draggable: true`：数组行开启 HTML5 拖拽换位——dragstart 记录源行、drop 调 `moveItem(from, to)` 更新 model（默认 false 不改变现有行为；与既有「上移/下移」按钮并存）
+  - 复用 H8 的行对象身份 key：拖拽换位后行 DOM 移动而非重挂载
+  - `xArray().draggable(flag?)`：builder 补齐 ArrayNodeConfig 字段的链式方法（默认 true 可省参），防回归 builders.spec +4
+  - 新增 `XFormArrayDraggable.vue` demo：任务队列拖拽场景、「数据换位身份保持」观察点、model 顺序实时展示；sidebar 注册「数组行拖拽排序」，ApiTable 收录 `array.draggable`
+  - 防回归：render-array-node.spec +3（默认无拖拽属性 / drop 调 moveItem / 拖到自身不触发）
+
+
+* **form-schema:** P2-2 表达式白名单函数表（expressionFunctions）
+  - `XFormProps.expressionFunctions`：注册后 `{{ }}` 表达式可直接引用注册名，如 `{ formatDate: fn }` → `{{ (m) => formatDate(m.date) }}`——业务格式化/转换逻辑不必内联进 schema
+  - 实现：编译期把注册名注入 `new Function('model', ...names)` 作用域；编译缓存按 `fnsVersion` 失效（函数表变更旧缓存不命中）
+  - 与黑名单扫描互补（注册名来自可信应用代码，仍非真正沙箱）；模块级注册多实例共享，scope 销毁自动清空
+  - 防回归：use-expression.spec +3（注册可用 / 未注册 ReferenceError / 版本失效重编译）
+
+
+* **form-schema:** P2-1 整体 readonly 只读模式（顶层 schema 配置）
+  - schema 顶层新增 `readonly` 字段（与 disabled/labelPosition 同模式）：true 时所有字段按 view 态纯文本展示（复用 permission: 'view' 渲染链路，不包 formItem、不走校验）
+  - 优先级：hidden > readonly(view) > edit；支持字面量 / 函数 / 函数表达式 / reaction 动态求值（computed 追踪 model 自动切换）
+  - 字段级只读继续用 `permission: 'view'`（readonly 仅顶层生效，职责不重叠）
+  - 防回归：XForm.spec +4（静态只读 / 函数动态切换 / hidden 优先 / 默认不变）
+
+
+* **form-schema:** el-form 实例级配置统一收敛到顶层 schema（与 labelPosition 同模式）
+  - 新增 schema 顶层字段：`labelWidth`（label 宽度）、`scrollToError`（校验失败自动滚动）、`scrollIntoViewOptions`（滚动行为选项）——均仅顶层 schema 生效，数组形式 schema 不生效
+  - 调整：`scrollToError` / `scrollIntoViewOptions` 从 XForm props 迁移到 schema 顶层配置（**breaking**：props 写法不再生效，迁移到 schema）；整体 `disabled` 同为顶层 schema 配置
+  - `XFormScrollToError` demo 同步改为 schema 顶层配置（schema computed + 开关联动）
+  - 防回归：XForm.spec 3 个 scrollToError 用例迁移为 schema 驱动 + 新增 labelWidth 用例
+  - 新增 `XFormValidateField.vue` demo：validateField(name) 逐字段校验 + resetFields(names) 部分重置双场景演示（含模拟服务端 422 对比），ApiTable + DocToc 完整结构，sidebar 已注册
+
+
+* **form-schema:** P1 API 补齐（validateField / 整体 disabled / 部分重置）
+  - `XFormExpose.validateField(name)`：透传 el-form 逐字段校验——成功 `true`；校验失败/el-form 未绑定均 `false`（与 `validate()` 风格一致，未绑定时 console.error 不静默通过）
+  - 整体禁用：顶层 schema 配置 `disabled`（透传 el-form disabled，与 labelPosition 同模式）——支持字面量/函数/表达式/reaction 动态求值，表单内所有组件一次性置灰
+  - `resetFields(names?)`：支持部分重置——透传字段名给 el-form，且只清指定字段的 externalErrors（全量重置行为不变）
+  - 防回归：use-form-instance.spec +5、XForm.spec +3（整体禁用生效/默认不变/validateField 集成）
+
+
+* **form-schema:** 渲染层重构 B-2 —— 字段级组件化（性能核心）
+  - 新增 `SchemaField.vue` 字段级渲染容器：`renderToComponent(node)` 从 XForm 模板 render effect 下沉到每个字段自己的 render effect——`get(model)` 追踪收敛到字段粒度，**输入单字段只重渲该字段**（此前任一按键触发全表单 vnode 重建）
+  - XForm 模板三分支（column / row / 直排）由 `<component :is>` 改为 `<SchemaField :node :render-fn>`；el-form 的 provide/inject 沿祖先链不受中间组件影响
+  - 配套 `optsEpoch` 换代计数器：父级替换 props 引用（model/components/rules 等）时 B4 watch bump，全字段 effect 失效重渲——保住 B-1 的快照同步语义（日常输入不 bump，字段隔离不受影响）
+  - 防回归：XForm.spec +1（渲染计数法证明：输入字段 A 时字段 B 渲染计数为 0 增量）
+
+
+* **XForm 校验失败自动滚动（scrollToError）**
+  - 新增 `scrollToError` / `scrollIntoViewOptions` props：透传 element-plus ElForm 原生滚动能力——字段规则失败滚到第一个 `.el-form-item.is-error`；跨字段 crossValidator 失败由 XForm 内部滚动到第一个错误字段（keyPath 末段）
+  - 默认 false（与 element-plus 原生一致，不静默改变既有 validate() 行为）
+  - 新增 `XFormScrollToError.vue` demo：供应商入库登记长表单（10 字段），必填错误在视口外，开关对比滚动行为
+  - 测试：XForm.spec 新增 3 个用例（真实 ElForm 链路 + scrollIntoView polyfill），29/29 通过
+* **XForm demo 补充 DocToc 目录导航**（demo 模块）
+  - 14 个含 API 表格的 XForm demo 全部接入 DocToc（XFormArray / AsyncOptions / Builder / CrossField / Directives / Dirty / Disabled / Events / Grid / Persist / Reaction / Responsive / SchemaIndex / ServerError + 总览），锚点与 section / ApiTable 一一对应
+  - 补齐剩余 10 个 demo 的 ApiTable + DocToc：新增 ruleItems / minimumItems / nestedItems / slotTypeItems / modelWarnItems / largeSchemaItems / invalidComponentItems / reverseCrossItems / asyncValidatorItems 九组 API 数据（XFormFieldPermission 复用 permissionItems）
+  - 至此 25 个 XForm demo 全部具备「演示区 + API 表格 + 目录导航」完整结构
+* **XForm 栅格布局专项 demo + 原生 HTML 标签支持**
+  - 新增 `XFormGrid.vue`：三种栅格配置方式对照（column 统一分配 / row + col.span 自定义列宽 / 布局容器节点分区），同一组字段切换查看布局差异，附栅格配置速查 API 表格
+  - `SchemaNode.component` 支持原生 HTML 标签（全小写，如 `'a'` / `'span'` / `'div'`）：渲染层 `resolveComponentFor` 返回字符串标签名直接 h() 渲染，校验层白名单放行，组件名校验仍拦截未知 PascalCase 名（拼写错误）
+  - `XFormNested.vue` 改回原生标签演示（链接 / 图标），新增「原生标签」说明
+  - 已知布局限制写入 demo 提示：顶层 `column` 与节点级 `col.span` 混用无效（节点被锁进固定 span 的 ElCol），不等宽布局用 `row + col.span`
+* **XForm demo 补充与场景贴合改造**（demo 模块）
+  - 新增 `XFormEvents.vue`：演示 `beforeChange` 值拦截（同步替换 / Promise reject 跳过更新 / undefined 放行）与 `node.on` 字段事件（函数形式读写 model / `{{ fn }}` 沙箱表达式只读限制），场景为订单录入（订单号自动格式化 + 金额风控拦截 + 备注字数统计）
+  - 新增 `XFormDirectives.vue`：演示 `node.directives`（Directive 对象 + value/arg/modifiers）、`componentProps` 全局默认 props（节点级覆盖）、`rules` 命名引用（未命中退化为 required），场景为供应商录入
+  - `XFormBase.vue` 场景改为订单查询表单（订单号 / 状态 / 日期区间 / 备注），替换原通用字段
+  - `XFormNested.vue` 场景改为用户资料三 Card 分组（基本信息 / 联系方式 / 偏好设置），替换原 field1~field8，样式类名同步 BEM 化
+  - `XFormMinimumDemo.vue` 修复 `<style scoped>` + 非 BEM 类名违规（CLAUDE.md §3.3）
+  - `XForm.vue` 总览新增「SchemaNode 字段（DSL）」API 表格（补齐 modelProp 等 17 字段简表）
+* **form-schema-engine v3**（提升使用体验）
+  - **自定义组件类型推导**：`ComponentPropsRegistry` 接口支持 TypeScript module augmentation，消费方扩展后 `SchemaNodeFor<'MyInput'>` 与 builder 可推导自定义组件 props；保留 `PropsByComponent` 别名向后兼容
+  - **异步选项数据源**：`SchemaNode.asyncOptions` 支持 Select/Cascader/TreeSelect/Autocomplete 内置远程数据，含 `source/immediate/deps/transform/onError`，deps 变化自动重新请求
+  - **dev 模式 UI 错误提示**：`XFormDebugBanner` 组件，右下角悬浮显示 schema 校验错误与安全扫描结果（keyPath + message），可在右下角折叠 / 关闭
+  - **`defaultValue` 字段**：schema 节点写 `defaultValue` 自动填充到 model（仅在 model 字段未定义时），无需手动写 `Object.assign(model, defaults)`
+  - **fbuilder 链式 API**（`builders.ts`）：`xInput('email').label('邮箱').required().placeholder().defaultValue().build()` 链式构建 schema，降低书写样板代码
+  - **最小可运行示例**（`XFormMinimumDemo.vue`）：5 分钟上手 XForm，5 字段表单 + 校验 + 提交反馈
+  - **demo 复制 schema 按钮**：3 个复刻 demo（Base/Nested/Reaction）顶部加 "复制 schema" 按钮，一键 `navigator.clipboard.writeText()` 到剪贴板
+  - **表单草稿持久化**：`useFormPersist` composable，model 防抖（400ms）自动落盘 + `beforeunload` 同步 flush 刷新兜底；`hasDraft`/`load`/`save`/`clear` 按需恢复与手动补丁；`exclude` 敏感字段剔除（含嵌套路径）；`restoreFilter` 草稿裁剪适配 schema 升级；与 `resetDirty()` 基线衔接 isDirty 从草稿起算
+  - **README + 决策指南 + 故障排查**（共 3 个新文档）
+    - `src/components/form-schema/README.md`：30 秒上手 + props / 实例方法 / schema 字段 / 链式构建器 / reaction / 决策指南 / 故障排查速查
+    - `docs/24-XForm选型决策指南.md`：XForm vs element-plus 原生 vs FormRender 选型决策
+    - `docs/25-XForm故障排查表.md`：8 类常见错误速查（输入无反应 / 校验不触发 / 反应式不响应 / directive 不生效 / 栅格不生效 / 样式不对 / 性能问题）
+* **docs（XForm 文档重组）**
+  - 新增 `docs/24-XForm使用指南.md`：按当前代码逐项核对的完整使用指南（8 个 props / 19 个实例方法 / SchemaNode 25 字段 / 校验双轨（字段规则 + 跨字段 + Zod）/ reaction 调度策略 / 数组节点 / asyncOptions / permission 三态 / 服务端错误映射 / dirty 追踪 / useFormPersist / 22 个链式 builder / SchemaNodeFor 类型推导 / 响应式断点 / 选型决策 / 故障排查 / 22 个 demo 索引）
+  - 合并 `docs/26-XForm架构总览.md` + `docs/27-XForm决策记录-ADR.md` → `docs/25-XForm架构与决策记录.md`，修正过时数据：demo 8→22 个、测试 216→371 个；ADR-006（setFieldError 适配 shallowRef）标注已被阶段 3.1 官方 `props.error/validateStatus` 双路径取代
+  - 删除旧 `docs/24-XForm选型决策指南.md`、`docs/25-XForm故障排查表.md`（内容并入新的 24 号使用指南；修正过时条目：name 已支持 lodash 路径、`validate()` 返回 `Promise<boolean>` 而非 callback 签名）
+* **form-schema-engine v2**（补齐 6 项开源 form-schema 缺失功能 + 重构）
+  - `node.beforeChange` 字段粒度拦截（同步返回值替换 / Promise resolve 后更新 / reject 跳过）
+  - `node.on` 事件回调（函数 / `{{ (m) => ... }}` 函数表达式）
+  - `node.modelProp` 自定义 v-model 属性名
+  - `node.col` 子节点 ElCol 栅格
+  - `node.hidden` vs `node.ignore` 区分（hidden 创建但 display:none；ignore 完全不创建）
+  - `node.directives` 自定义指令（vue withDirectives 包装）
+  - `node.formItem` 对象配置（component / props 透传）
+  - XForm.vue 重构：从 330 行降至 144 行（-54%），renderToComponentInner 抽到独立 composable `render-schema-node.ts`
+* **form-schema-engine**: 新增 `<XForm>` 全局组件，支持动态表单渲染
+  - 参考开源 form-schema 渲染核心，用 Element Plus 替换原私有设计系统
+  - 用 `new Function` 沙箱替代 `eval`，含 dev 模式关键字黑名单扫描
+  - 沿用 element-plus `async-validator` + 可选 zod 顶层校验双轨
+  - 支持全量 14 字段 schema DSL（`component/props/on/children/name/label/rules/formItem/modelProp/row/column/col/reaction/directives/slots/ignore/hidden/key`）
+  - 实例方法：`getRef` / `getNames` / `validate` / `clearValidate` / `resetFields` / `scrollToField` / `validateWithZod`
+  - 命名导出 `validate(schema, opts?)` / `validateWithZod(zodSchema, formData)` / `resolveElComponentName` / `resolveFunctionExpression`
+  - 文件清单（9 文件 + 7 spec）：`src/components/form-schema/{types,XForm}.{ts,vue}` + `composables/{use-validate,use-expression,use-reaction,use-schema-renderer}.ts` + `element-plus-adapter.ts` + `index.ts`
+  - 测试覆盖：53/55 通过（XForm 在 vitest + jsdom 环境 element-plus 全局注册兼容性有 2 个测试降级；生产环境无影响）
+  - **⚠ 安全注意**：`{{ fn }}` 函数表达式经 `toSafeDto` 净化 + dev 模式 `scanForForbidden` 黑名单扫描（覆盖 `window/eval/constructor/__proto__/process/Reflect/Proxy` 等），但**非真正沙箱**——schema 必须来自可信内部配置，禁止 API 动态下发或用户输入
+
+### 🐛 Bug Fixes | 缺陷修复
+
+* **form-schema:** 渲染层重构 B-3 —— identity-preserving clone（渲染层 HIGH 清零，B 阶段收官）
+  - `useSchemaRenderer` 的 `cloneDeep` 替换为 `cloneSchema`（基于 `cloneDeepWith`）：不深入 `component` 字段——组件定义对象保持引用身份（此前每次 schema 重建都深克隆组件对象，Vue 视为不同组件导致整字段 remount）
+  - 与 B-1 稳定 key 配合：schema 整体替换（如动态增删字段）时同 key 节点走 patch 而非 remount
+  - 防回归：use-schema-renderer.spec +2（component/formItem.component 身份保持 + 其余字段仍深克隆）、XForm.spec +1（setProps 加字段后既有字段 setup 计数不变）
+
+
+* **form-schema:** 渲染层重构 B-1（key 稳定 + props 快照同步）
+  - 顶层三处 v-for 由 `:key="i"`（index）改为 `node.key ?? node.name ?? i`——reaction 切换 ignore/hidden 导致节点顺序变化时不再因索引漂移重挂载（焦点丢失）
+  - **B4 快照断裂**：`useRenderSchemaNode` 的 opts 提取为 `renderOpts` 变量 + watch 同步 `props.model/components/rules/beforeChange/componentProps` 最新引用——父级替换 model 引用后渲染绑定不再静默失效（render 闭包统一 opts.xxx 惰性读取，无需重建）
+  - 防回归：XForm.spec +2（源码断言禁 index key / setProps 替换 model 绑定跟随）
+
+
+* **form-schema:** HIGH 批次 A' 修复（H2/H3/H10，非渲染层 HIGH 清零）
+  - **H2 校验跑旧规则**：`validateForm`/`validateDetail` 的 `runCrossFieldValidation` 由 `props.schema`（原始快照）改为 `reactiveSchema.value`——reaction 动态改写的 crossValidator 规则在表单级校验中真正生效
+  - **H3 异步 crossValidator 竞态**：双路径加每字段序号令牌——`triggerCrossFieldValidator`（blur/change 路径）与 `useCrossFieldTrigger.run`（反向兜底路径）；连续触发时旧 Promise 后返回直接丢弃（同步结论也会让在途旧 Promise 失效）
+  - **H10 builders 丢命名规则**：`required()` 对字符串规则（命名引用）由整体覆盖改为保留引用并追加 required
+  - 防回归：builders.spec +3、use-cross-field-trigger.spec +1、XForm.spec +2（reaction 改写规则生效 / 连续 focusout 竞态丢弃）
+
+
+* **form-schema:** MEDIUM 批次 A3 状态与生命周期修复（③⑥，MEDIUM 批次收官）
+  - **③ persist 草稿污染**：`useFormPersist` 新增 `schemaVersion` 选项——草稿写版本信封 `{ __v, data }`，版本不匹配/无信封的旧草稿 load 时自动丢弃（防 schema 升级后多余 key 污染 model）；`load()` 由 `Object.assign` 浅合并改为深合并——嵌套对象逐层合并保留 schema 新增字段默认值，数组/原始值整体替换（防按索引合并残留旧尾项）
+  - **⑥ guardField watcher 泄漏**：`useFormInstance` 路径 B 守护在 watch 回调内创建的 watcher 脱离 setup effect scope（组件卸载后仍存活）——收集 stop 句柄，`onScopeDispose` 统一清理（`getCurrentScope` 守卫裸调用）
+  - 防回归：use-form-persist.spec +6（版本匹配/不匹配/无信封/save 信封/深合并保留默认值/数组整体替换）、use-form-instance.spec +1（scope 销毁后不再纠正）
+  - 附带修复 demo：`XFormPersist` 的 `onRestore` 忽略 `load()` 返回值（版本不匹配丢弃草稿时用户看到"恢复成功"假象）——恢复失败时明确提示「草稿已失效，已自动清除」；移除验证实验残留的 `schemaVersion: 1` 配置
+
+
+* **form-schema:** MEDIUM 批次 A2 竞态与覆盖修复（②⑤⑨）
+  - **② async-options 竞态**：`useAsyncOptions` 加序号令牌——deps 快变时多个 in-flight 请求乱序返回，旧响应不再覆盖新数据；`stop()` 同步使在途响应失效
+  - **⑨ 字符串规则 crossValidator 漏执行**：`runCrossFieldValidation` 新增 `namedRules` 参数并下穿整个 traverse 链——命名规则里的 crossValidator 在表单级校验中不再被跳过；XForm 4 处调用点透传 `props.rules`
+  - **⑤ dependsOnMap 覆盖**：同一 target 挂多条 cross rule 时 deps 合并去重（此前后者 `set` 整条覆盖前者）
+  - 防回归：use-async-options.spec +2（乱序丢弃 / stop 失效）、use-validate.spec +2（命名规则执行 / 向后兼容）、use-schema-index.spec +1（deps 合并）
+
+
+* **form-schema:** MEDIUM 批次 A1 健壮性修复（①④⑦⑧）
+  - 附带修复 demo：`XFormFieldPermission` 的「检查 DOM」按钮误报——检查范围从 `document.body` 收窄到 XForm 容器（页面介绍/API 表格/源码展示均含字段名文本，旧实现恒真误报 hidden 失败）
+  - **① 权限求值崩溃**：`use-field-permission` 的函数/表达式/resolver 求值全程 try/catch——此前权限函数抛错会在渲染期炸掉整表单；现降级为 edit + console.error
+  - **④ 未知规则静默降级**：`compileRules` 对未注册的命名字符串规则 console.error 告警（此前拼写错误静默变 `{ required: true }`，排障困难）；`rules: 'required'` 简写为文档化行为，特判静默不告警
+  - **⑦ resize 无节流**：`useCurrentBreakpoint` 的 resize 监听改 throttle 100ms（挂载首次仍同步），卸载时 `cancel()` 清 trailing
+  - **⑧ trigger 类型笔误**：`RuleItem.trigger` 由 `(string|string[])[]`（允许嵌套数组）更正为 `string | string[]`；`matchTrigger` 用 `flat()` 兼容存量嵌套写法
+  - 防回归：use-field-permission.spec 翻转 1 + 新增 1、render-schema-node.spec +2、use-current-breakpoint.spec 重写 +2、match-trigger.spec +2
+
+
+* **form-schema:** 文档与 API 表面补齐（收官）
+  - README 修正：`validate` 误写为回调签名（实为 `Promise<boolean>`）；props 表补齐 `zodSchema/scrollToError/scrollIntoViewOptions/componentProps`；实例方法清单补齐 18 个（新增 validateDetail/setFieldError/setFieldValidating/validateFromServer/addItem/removeItem/moveItem/isDirty 系）
+  - README schema 字段表：标题「14 个」更正为 25 个，补齐 asyncOptions/kind/array/disabled/permission/labelPosition 六行；内置组件数「18 个」更正为 20 个；示例路由 `/demo/x-form-*` 更正为实际的 `/demo/xform-*`
+  - README reaction 章节补充 `deps` 精确监听与循环预算说明
+  - `index.ts` 补齐导出：具名 `XForm` 组件、`builders` 全部 21 个工厂函数、`useFormDirty`、`useSchemaIndex`/`buildIndex` 及相关类型
+  - 注释勘误：types.ts「全量 17 字段」→ 25；builders.ts「18 个 builder 类」→ 19
+  - 防回归：index.spec 新增导出完备性断言
+* **form-schema:** 状态正确性专项修复（H4 / H8 / H9 / M1 / M2）
+  - **H4 dirty 漏检**：`useFormDirty` 快照改 `cloneDeep`——此前存嵌套对象的活 reactive 引用，原位修改（`model.addr.city = x`）时快照同步变化，`isDirty` 恒漏检
+  - **M2 validate 静默通过**：`elFormRef` 未绑定时 `validateForm` 由静默 `resolve(true)` 改为 `resolve(false)` + console.error（配置/时序错误不再伪装成校验通过）
+  - **M1 clearValidate 误伤**：数组操作由无参 `clearValidate()`（清全表单）改为按行精确清理——`addItem` 末尾追加无索引位移，不再清理任何校验态（既有红字保留）；`removeItem`/`moveItem` 只清索引发生位移的行（被删/移动区间及之后），区间前行红字保留；找不到匹配字段时守卫不调用（element-plus `filterFields` 对空数组的语义是清全部）；走包装方法同步清理 externalErrors；新增 `extractFieldName` 辅助函数
+  - **H9 hidden 校验语义**：hidden 字段的 ElFormItem 剥离 rules（保留 prop 注册）——隐藏必填项不再阻塞 validate，scrollToError 不再滚到 display:none 元素；hidden ≠ ignore 语义不变（值仍保留在 model 中提交）
+  - **H8 数组行 key**：行容器 key 与行内 form-item key 均由位置索引改为按行对象身份派生——`renderArrayNode` 用模块级 WeakMap 给行对象分配稳定 ID；`rewriteNamePath` 新增 `keyPrefix` 参数把行身份注入 itemSchema 子树的 `node.key`；form-item 的 vnode key 优先级翻转为 `node.key ?? node.name`（name 保留作校验路径）。删除/移动行后剩余行 DOM 元素实例保持不变（不再重挂载、焦点/内部状态不丢失）；原始值行退回 index
+  - 防回归：use-form-dirty.spec +1（嵌套原位修改）、use-form-instance.spec 翻转 1 + 新增 3（子树清理范围 / 区间外保留 / 空匹配守卫）、render-array-node.spec +4（删行/移行 key 稳定 + keyPrefix 注入 + 显式 key 优先）、render-schema-node.spec +2（form-item key 优先级）、XForm.spec +3（hidden 必填不阻塞 / 值保留 / 可见字段不受影响）
+  - demo 场景补齐：XFormDirty 新增 2 个嵌套字段（address.city / address.street，H4 手动回归）；XFormReaction 新增「需要发票 → 发票抬头 hidden + 必填」场景（H9 手动回归）
+* **form-schema:** 安全扫描 `scanForForbidden` 覆盖补全（H1）
+  - 根因：仅扫描 `on`/`reaction` 第一层字符串值——`disabled`/`permission`（同为函数表达式字段）不扫、`array.itemSchema` 子树不递归、`reaction.props.x` 嵌套字符串逃逸，三条绕过路径
+  - 修复：扫描字段补齐 `disabled`/`permission`；值扫描改为任意深度递归（含数组/嵌套对象，WeakSet 防循环引用）；`traverse` 递归 `array.itemSchema`
+  - 黑名单扩充：`self/top/parent/frames/localStorage/sessionStorage/indexedDB/import/require/alert/prompt/confirm`；有意不收录 `open/location/navigator`（与常见表单字段同名，dev 诊断误报噪声大于收益）
+  - 防回归：use-scan-forbidden.spec 新增 6 个用例（permission/disabled/嵌套 reaction/itemSchema/新关键字/字段名不误报）
+* **form-schema:** reaction 联动性能与死循环治理（H5）
+  - 新增 `reaction.deps: string[]`（可选，向后兼容）：声明后仅精确 watch 依赖路径，不再 deep watch 整棵 model——大表单 N 字段 × M 联动时消除全量监听开销；未声明保持旧行为
+  - 新增循环联动执行预算：单 flush 内 reaction 最多执行 50 次（刻意低于 Vue 调度器递归上限 100，抢先拦截避免 "Maximum recursive updates exceeded" 未处理异常），超限 console.error 告警并跳过，把"页面卡死"降级为"可诊断错误"
+  - 表达式编译缓存：`resolveFunctionExpression` 按字符串缓存 `new Function` 结果（上限 500，含失败结果），消除渲染/联动期的重复编译
+  - `applyReactionFields` 值未变化时跳过写入（isEqual 比较），消除多余响应式通知
+  - 防回归：use-reaction.spec +3（deps 精确监听 / 未声明保持旧行为 / 循环预算兜底）、use-expression.spec +2（缓存命中同实例 / 非法表达式只报错一次）、apply-reaction-fields.spec +3（deps 元字段不写入 / 同值跳过 / 同值保留引用）
+* **form-schema:** 修复 `defaultValue` 生产环境静默失效（C1）
+  - 根因：`applyDefaults` 与 schema 校验、安全扫描同处 `showDebugBanner`（`import.meta.env.DEV`）门控的 watch 内——prod 构建下整个 watch 不注册，`defaultValue` 永不填充
+  - 修复：`applyDefaults` 拆出为独立 watcher（全环境生效）；schema 校验 + `scanForForbidden` 安全扫描保留在 dev 调试分支（纯诊断，无生产副作用）
+  - 防回归：XForm.spec 新增 3 个用例（defaultValue 填充 / 已有值不覆盖 / 源码级断言 applyDefaults 不在调试分支内）
+* **form-schema:** 修复 `trigger:'blur'` 的 crossValidator 永不触发（C2）
+  - 根因：失焦触发器以 `onBlur` 挂在 ElFormItem 根 div 上，而原生 `blur` 事件不冒泡——监听器从未被触发，属死代码
+  - 修复：改用可冒泡的 `focusout` 承载 blur 语义（`onFocusout`），schema 侧的 `trigger` 名称仍按 `'blur'` 上报，用户配置无感
+  - 防回归：XForm.spec 新增真实 ElForm 链路集成用例（原生冒泡 FocusEvent 触发 crossValidator）；render-schema-node.spec 5 个监听器断言同步改为 `onFocusout`
+* **form-schema:** 修复 `applyDirectives` 指令完全失效的问题
+  - 根因：`withDirectives(vnode, {...})` 第二参数误传单个对象——Vue 内部按 `.length` 遍历 + 数组元组解构 `[dir, value, arg, modifiers]`，对象无 `length` 被静默跳过（不抛错不 warn），指令 `mounted` 等钩子从未执行
+  - 修复：改为按元组数组 `[[dir, value, arg, modifiers]]` 传参；字符串指令名因 `XFormProps.directives` 注册表未接线，暂时跳过（仅支持直接传 Directive 对象）
+  - 防回归：`apply-directives.spec.ts` 新增真实渲染测试（mounted 钩子真实执行 + binding 的 value/arg/modifiers 透传），8/8 通过
+  - 附带修复 demo：`XFormDirectives.vue` 的 audit 指令改用内联 box-shadow 标橙——CSS 变量方案会被 element-plus `.el-input` 组件根变量定义重置
+
 ### ⚠ BREAKING CHANGES
 
 * **auth:** 认证体系改为 httpOnly cookie 模式（2026-08-12 架构改造）
@@ -61,6 +384,50 @@
 * **docs:** README 技术选型表 js-cookie 定位修正——httpOnly 改造后 src 已无引用，
   重新定位为「仅非敏感 cookie 偏好场景预留，严禁存凭证」并标注安全边界；
   `remote-menu.ts` 远程 meta 合并处补充 vue-router 升级回归验证 + 非响应式警告注释
+
+### ♻ Refactor | 重构
+
+* **layouts:** 落实「layout 自包含」架构原则（2026-08-19）
+  - `Header.vue` / `Sidebar.vue` 从 `src/components/layout/` 迁移到
+    `src/layouts/default/components/`（layout 私有）
+  - 删除整个 `src/components/layout/` 目录（避免被 unplugin-vue-components
+    注册为全局组件污染命名空间；`components.d.ts` 自动移除 Header/Sidebar 声明）
+  - `src/layouts/default/index.vue` import 路径改为相对路径 `./components/*`
+  - CLAUDE.md §1.2 模块边界铁律新增 `layouts/<m>/` 行（自包含白名单 +
+    禁止跨目录到 `@/components/`）；§2.1 现状快照同步收紧 components/ 职责
+
+### ✨ Features | 新特性
+
+* **components:** 全量 BEM 命名空间改造（CLAUDE.md §3 新增规范）
+
+  - 41 个 `.vue` 文件统一为 sass 插值写法：根选择器
+    `.#{$BEM_PREFIX}-<kebab-case>` + `&__elem` / `&--mod` 嵌套；模板 class 全部走
+    `bem.b()` / `bem.e()` / `bem.em()` / `bem.is()` 拼装；`createNamespace`
+    由 `unplugin-auto-import` 自动注入，禁止 `import` 任何来源
+  - 配套 CLAUDE.md §3 新增「组件 BEM 编写规范（强约束）」4 小节
+    （§3.1 完整模板、§3.2 强制约定 8 条、§3.3 反模式 6 条、§3.4 验证机制）
+
+### 🐛 Bug Fixes | 缺陷修复
+
+* **styles:** 删除全部 22 处 `:deep()` 伪类（依赖 BEM 命名空间隔离穿透 element-plus）
+  - `login.scss` 12 处、`PortalNav.vue` 8 处、`PortalHeader.vue` 1 处、`Header.vue` 1 处
+  - 根因：`:deep()` 是 Vue scoped 专用穿透伪类，按 §3 去掉 `scoped` 后失效，
+    浏览器忽略导致 element-plus 表单/导航样式整片丢失
+* **components:** `createNamespace` 大小写统一——21 个文件由 PascalCase
+  (`'OrdersList'`、`'HomeFooter'` 等) 改为 kebab-case (`'orders-list'`、`'home-footer'`)
+  - 根因：HTML class 大小写敏感，`vv-OrdersList` 与 sass 编译产物 `.vv-orders-list`
+    不匹配 → 整片样式失效
+  - 转换规则：PascalCase 每个大写字母前加 `-` 后全小写
+* **app:** 恢复 `App.vue` 防御性三态（`ErrorBoundary` + `AsyncState` +
+  `Transition` + `showRemoteMenuLoading` 计算属性）—— BEM 改造时被简化
+  过度删除，违反 §1.4 防御性 UI 约束
+* **home:** 修复 `OverviewSection` 2+3 卡片网格布局被破坏
+  - 根因：`bem.m('first')` 生成 block modifier `vv-overview-section--first`，
+    与 sass 嵌套 `&__row { &--first { ... } }` 展开的 element modifier
+    `.vv-overview-section__row--first` 不匹配 → grid-template-columns 未生效
+  - 修复：`bem.m()` → `bem.em('row', 'xxx')`（4 处）
+* **docs:** CLAUDE.md §3 新增反模式 #6（PascalCase createNamespace）
+  + §3.2 第 2 条强调"kebab-case 与 sass 根选择器严格对齐"
 
 ### 🐛 Bug Fixes | 缺陷修复（历史）
 

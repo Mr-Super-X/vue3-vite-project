@@ -5,7 +5,6 @@
  * - name / type / required → 走 extractApi 自动从源码提取
  * - description → 手写字典（TS 类型里没 doc，强行自动会"乱猜"）
  */
-import { ref, computed } from 'vue'
 import AsyncState from '@/components/common/AsyncState.vue'
 import asyncStateSource from '@/components/common/AsyncState.vue?raw'
 import DemoFrame from '../components/DemoFrame.vue'
@@ -14,6 +13,8 @@ import DocLayout from '../layouts/DocLayout.vue'
 import ApiTable from '../components/ApiTable.vue'
 import DocToc from '../components/DocToc.vue'
 import { extractApi, type ApiItem, type SlotItem } from '../utils/extractApi'
+
+const bem = createNamespace('demo-async-state')
 
 type Mode = 'data' | 'loading' | 'error' | 'empty'
 
@@ -98,7 +99,7 @@ const tocItems = [
     >
       <section id="demo-basic">
         <DemoField :code="asyncStateSource" label="被演示组件源码（AsyncState.vue）">
-          <div class="async-demo__controls">
+          <div :class="bem.e('controls')">
             <span>模拟状态：</span>
             <el-radio-group v-model="mode" size="small">
               <el-radio-button value="data">data</el-radio-button>
@@ -106,7 +107,7 @@ const tocItems = [
               <el-radio-button value="error">error</el-radio-button>
               <el-radio-button value="empty">empty</el-radio-button>
             </el-radio-group>
-            <span class="async-demo__retry">已重试 {{ retryCount }} 次</span>
+            <span :class="bem.e('retry')">已重试 {{ retryCount }} 次</span>
           </div>
 
           <AsyncState
@@ -115,7 +116,7 @@ const tocItems = [
             :is-empty="state.isEmpty"
             @retry="onRetry"
           >
-            <ul class="async-demo__data">
+            <ul :class="bem.e('data')">
               <li v-for="i in 3" :key="i">数据项 {{ i }}</li>
             </ul>
 
@@ -141,8 +142,8 @@ const tocItems = [
   </DocLayout>
 </template>
 
-<style lang="scss" scoped>
-.async-demo {
+<style lang="scss">
+.#{$BEM_PREFIX}-demo-async-state {
   &__controls {
     display: flex;
     align-items: center;

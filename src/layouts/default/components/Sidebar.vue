@@ -20,8 +20,6 @@
 //   - icon 按需引入 Element Plus icons（当前 * 通配，未来可改 unplugin-icons 按需加载）
 //   - 远程菜单注入的路由会通过 router.getRoutes() 自动出现，无需特殊处理
 
-import { computed, ref } from 'vue'
-import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import * as ElIcons from '@element-plus/icons-vue'
 import { useAppStore } from '@/store/modules/app'
@@ -39,6 +37,9 @@ const appStore = useAppStore()
 const { router } = useAppRouter()
 const route = useRoute()
 const { t } = useI18n()
+
+// 运行时 BEM 命名空间：vv-sidebar
+const bem = createNamespace('sidebar')
 
 /** 当前展开的子菜单路径集合（折叠态全部收起）。 */
 const openMenus = ref<Set<string>>(new Set())
@@ -142,60 +143,57 @@ function handleParentClick(item: MenuItem): void {
 </script>
 
 <template>
-  <aside class="vv-sidebar" :class="{ collapsed: appStore.sidebarCollapsed }">
-    <div class="vv-sidebar__brand">
+  <aside :class="[bem.b(), bem.is('collapsed', appStore.sidebarCollapsed)]">
+    <div :class="bem.e('brand')">
       <h1 v-if="!appStore.sidebarCollapsed">工贸统一登录</h1>
     </div>
 
-    <nav class="vv-sidebar__nav">
+    <nav :class="bem.e('nav')">
       <template v-for="item in menuItems" :key="item.path">
         <!-- 多级菜单 -->
-        <div v-if="item.children && item.children.length > 0" class="vv-sidebar__group">
+        <div v-if="item.children && item.children.length > 0" :class="bem.e('group')">
           <div
-            class="vv-sidebar__parent"
-            :class="{ active: isActive(item.path) }"
+            :class="[bem.e('parent'), bem.is('active', isActive(item.path))]"
             @click="handleParentClick(item)"
           >
-            <el-icon v-if="item.icon" class="vv-sidebar__icon">
+            <el-icon v-if="item.icon" :class="bem.e('icon')">
               <component :is="resolveIcon(item.icon)" />
             </el-icon>
-            <span v-if="!appStore.sidebarCollapsed" class="vv-sidebar__title">
+            <span v-if="!appStore.sidebarCollapsed" :class="bem.e('title')">
               {{ item.title }}
             </span>
-            <span v-if="!appStore.sidebarCollapsed" class="vv-sidebar__caret">
+            <span v-if="!appStore.sidebarCollapsed" :class="bem.e('caret')">
               {{ openMenus.has(item.path) ? '▾' : '▸' }}
             </span>
           </div>
           <ul
             v-show="openMenus.has(item.path) && !appStore.sidebarCollapsed"
-            class="vv-sidebar__sublist"
+            :class="bem.e('sublist')"
           >
             <li v-for="child in item.children" :key="child.path">
               <router-link
                 :to="child.path"
-                class="vv-sidebar__link"
-                :class="{ active: isActive(child.path) }"
+                :class="[bem.e('link'), bem.is('active', isActive(child.path))]"
               >
-                <el-icon v-if="child.icon" class="vv-sidebar__icon">
+                <el-icon v-if="child.icon" :class="bem.e('icon')">
                   <component :is="resolveIcon(child.icon)" />
                 </el-icon>
-                <span class="vv-sidebar__title">{{ child.title }}</span>
+                <span :class="bem.e('title')">{{ child.title }}</span>
               </router-link>
             </li>
           </ul>
         </div>
 
         <!-- 一级菜单 -->
-        <div v-else class="vv-sidebar__group">
+        <div v-else :class="bem.e('group')">
           <router-link
             :to="item.path"
-            class="vv-sidebar__parent"
-            :class="{ active: isActive(item.path) }"
+            :class="[bem.e('parent'), bem.is('active', isActive(item.path))]"
           >
-            <el-icon v-if="item.icon" class="vv-sidebar__icon">
+            <el-icon v-if="item.icon" :class="bem.e('icon')">
               <component :is="resolveIcon(item.icon)" />
             </el-icon>
-            <span v-if="!appStore.sidebarCollapsed" class="vv-sidebar__title">
+            <span v-if="!appStore.sidebarCollapsed" :class="bem.e('title')">
               {{ item.title }}
             </span>
           </router-link>
@@ -203,16 +201,16 @@ function handleParentClick(item: MenuItem): void {
       </template>
     </nav>
 
-    <div class="vv-sidebar__footer">
-      <button class="vv-sidebar__toggle" @click="appStore.toggleSidebar">
+    <div :class="bem.e('footer')">
+      <button :class="bem.e('toggle')" @click="appStore.toggleSidebar">
         {{ appStore.sidebarCollapsed ? '»' : '«' }}
       </button>
     </div>
   </aside>
 </template>
 
-<style scoped>
-.vv-sidebar {
+<style lang="scss">
+.#{$BEM_PREFIX}-sidebar {
   display: flex;
   flex-direction: column;
   width: var(--sidebar-width, 220px);
@@ -220,120 +218,130 @@ function handleParentClick(item: MenuItem): void {
   background: #001529;
   color: #bfcbd9;
   transition: width 200ms ease;
-}
-.vv-sidebar.collapsed {
-  width: var(--sidebar-collapsed-width, 64px);
-}
 
-.vv-sidebar__brand {
-  padding: 16px;
-  border-bottom: 1px solid #1f3a5a;
-  color: #fff;
-}
-.vv-sidebar__brand h1 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-}
+  &.is-collapsed {
+    width: var(--sidebar-collapsed-width, 64px);
+  }
 
-.vv-sidebar__nav {
-  flex: 1;
-  overflow-y: auto;
-  padding: 8px 0;
-}
-.vv-sidebar__nav::-webkit-scrollbar {
-  width: 4px;
-}
-.vv-sidebar__nav::-webkit-scrollbar-thumb {
-  background: #1f3a5a;
-}
+  &__brand {
+    padding: 16px;
+    border-bottom: 1px solid #1f3a5a;
+    color: #fff;
 
-.vv-sidebar__group {
-  margin-bottom: 2px;
-}
+    h1 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+  }
 
-.vv-sidebar__parent {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
-  cursor: pointer;
-  text-decoration: none;
-  color: inherit;
-  font-size: 14px;
-  transition: background 150ms;
-}
-.vv-sidebar__parent:hover {
-  background: #1f3a5a;
-  color: #fff;
-}
-.vv-sidebar__parent.active {
-  background: #1890ff;
-  color: #fff;
-}
+  &__nav {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
 
-.vv-sidebar__icon {
-  flex-shrink: 0;
-  width: 18px;
-  height: 18px;
-}
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: #1f3a5a;
+    }
+  }
 
-.vv-sidebar__title {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+  &__group {
+    margin-bottom: 2px;
+  }
 
-.vv-sidebar__caret {
-  font-size: 10px;
-  opacity: 0.7;
-}
+  &__parent {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    font-size: 14px;
+    transition: background 150ms;
 
-.vv-sidebar__sublist {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  background: #000c17;
-}
-.vv-sidebar__sublist li {
-  margin: 0;
-}
+    &:hover {
+      background: #1f3a5a;
+      color: #fff;
+    }
 
-.vv-sidebar__link {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 16px 8px 44px;
-  text-decoration: none;
-  color: inherit;
-  font-size: 13px;
-  transition: background 150ms;
-}
-.vv-sidebar__link:hover {
-  background: #1f3a5a;
-  color: #fff;
-}
-.vv-sidebar__link.active {
-  background: #1890ff;
-  color: #fff;
-}
+    &.is-active {
+      background: #1890ff;
+      color: #fff;
+    }
+  }
 
-.vv-sidebar__footer {
-  padding: 12px;
-  border-top: 1px solid #1f3a5a;
-}
-.vv-sidebar__toggle {
-  width: 100%;
-  padding: 6px;
-  background: transparent;
-  border: 1px solid #1f3a5a;
-  color: #bfcbd9;
-  cursor: pointer;
-  border-radius: 4px;
-}
-.vv-sidebar__toggle:hover {
-  background: #1f3a5a;
-  color: #fff;
+  &__icon {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+  }
+
+  &__title {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__caret {
+    font-size: 10px;
+    opacity: 0.7;
+  }
+
+  &__sublist {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    background: #000c17;
+
+    li {
+      margin: 0;
+    }
+  }
+
+  &__link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px 8px 44px;
+    text-decoration: none;
+    color: inherit;
+    font-size: 13px;
+    transition: background 150ms;
+
+    &:hover {
+      background: #1f3a5a;
+      color: #fff;
+    }
+
+    &.is-active {
+      background: #1890ff;
+      color: #fff;
+    }
+  }
+
+  &__footer {
+    padding: 12px;
+    border-top: 1px solid #1f3a5a;
+  }
+
+  &__toggle {
+    width: 100%;
+    padding: 6px;
+    background: transparent;
+    border: 1px solid #1f3a5a;
+    color: #bfcbd9;
+    cursor: pointer;
+    border-radius: 4px;
+
+    &:hover {
+      background: #1f3a5a;
+      color: #fff;
+    }
+  }
 }
 </style>

@@ -6,10 +6,13 @@ interface Props {
 }
 defineProps<Props>()
 const emit = defineEmits<{ retry: [] }>()
+
+// 运行时 BEM 命名空间：vv-async-state
+const bem = createNamespace('async-state')
 </script>
 
 <template>
-  <div class="async-state">
+  <div :class="bem.b()">
     <template v-if="loading">
       <slot name="loading"><el-skeleton :rows="3" animated /></slot>
     </template>
@@ -30,3 +33,8 @@ const emit = defineEmits<{ retry: [] }>()
     </template>
   </div>
 </template>
+
+<style lang="scss">
+.#{$BEM_PREFIX}-async-state {
+}
+</style>

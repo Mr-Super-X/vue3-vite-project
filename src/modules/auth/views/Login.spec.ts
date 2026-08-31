@@ -116,7 +116,7 @@ describe('Login.vue（深色科技感重构）', () => {
     // 等 validate 异步完成 + loading=true
     await flushPromises()
     // 用 BEM class 精准定位提交按钮（排除密码显隐按钮）
-    const submitBtn = w.find('button.vv-auth-login__submit')
+    const submitBtn = w.find('button.vv-login__submit')
     expect(submitBtn.exists()).toBe(true)
     expect(submitBtn.attributes('disabled')).toBeDefined()
     resolveLogin({ token: 'xxx' })

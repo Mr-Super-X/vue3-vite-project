@@ -1,7 +1,9 @@
 <script setup lang="ts">
 // 时间问候条：全宽 #F2F2F2 背景，左侧钟表图标 + 标语 + 日期
 // 规格：y=480..546 / 图标 18x18 / 标语 304x20 / 日期 130x17
-import { computed } from 'vue'
+
+// BEM 工具由 unplugin-auto-import 自动注入，无须显式 import
+const bem = createNamespace('date-greeting')
 
 const props = withDefaults(
   defineProps<{
@@ -25,27 +27,28 @@ const formattedDate = computed(() => {
 </script>
 
 <template>
-  <section class="date-greeting" aria-label="时间问候">
-    <div class="date-greeting__inner">
+  <section :class="bem.b()" aria-label="时间问候">
+    <div :class="bem.e('inner')">
       <img
-        class="date-greeting__icon"
+        :class="bem.e('icon')"
         src="@/modules/home/images/rest-time.png"
         alt=""
         width="18"
         height="18"
       />
-      <p class="date-greeting__text">{{ greeting }}</p>
-      <p class="date-greeting__date">{{ formattedDate }}</p>
+      <p :class="bem.e('text')">{{ greeting }}</p>
+      <p :class="bem.e('date')">{{ formattedDate }}</p>
     </div>
   </section>
 </template>
 
-<style lang="scss" scoped>
-.date-greeting {
+<style lang="scss">
+.#{$BEM_PREFIX}-date-greeting {
   width: 100%;
   background: #f2f2f2;
 
   &__inner {
+    position: relative;
     max-width: var(--portal-max-width);
     margin: 0 auto;
     padding: 15px 24px;

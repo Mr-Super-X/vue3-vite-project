@@ -5,7 +5,6 @@
  * 关键设计：BoomChild 用 props.shouldThrow 控制抛错（不闭包 ref），
  * ErrorBoundary 的 "恢复" 按钮 emit('reset')，demo 父组件同步清 shouldThrow。
  */
-import { ref, defineComponent, h } from 'vue'
 import ErrorBoundary from '@/components/common/ErrorBoundary.vue'
 import errorBoundarySource from '@/components/common/ErrorBoundary.vue?raw'
 import DemoFrame from '../components/DemoFrame.vue'
@@ -14,6 +13,8 @@ import DocLayout from '../layouts/DocLayout.vue'
 import ApiTable from '../components/ApiTable.vue'
 import DocToc from '../components/DocToc.vue'
 import { extractApi } from '../utils/extractApi'
+
+const bem = createNamespace('demo-error-boundary')
 
 // 父组件的 ref 故意不与 BoomChild 的 prop 同名（避免 ESLint
 // vue/no-mutating-props 把 ref 误判为 prop 赋值）。
@@ -28,7 +29,7 @@ const BoomChild = defineComponent({
       if (props.shouldThrow) {
         throw new Error('子组件渲染时故意抛错（演示用）')
       }
-      return h('p', { class: 'eb-demo__ok' }, '✅ 子组件正常渲染')
+      return h('p', { class: bem.e('ok') }, '✅ 子组件正常渲染')
     }
   },
 })
@@ -78,7 +79,7 @@ const tocItems = [
     >
       <section id="demo-basic">
         <DemoField :code="errorBoundarySource" label="被演示组件源码（ErrorBoundary.vue）">
-          <div class="eb-demo__controls">
+          <div :class="bem.e('controls')">
             <el-button type="danger" :disabled="errorTrigger" @click="errorTrigger = true">
               触发子组件错误
             </el-button>
@@ -100,8 +101,8 @@ const tocItems = [
   </DocLayout>
 </template>
 
-<style lang="scss" scoped>
-.eb-demo {
+<style lang="scss">
+.#{$BEM_PREFIX}-demo-error-boundary {
   &__controls {
     display: flex;
     gap: 8px;

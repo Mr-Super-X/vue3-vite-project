@@ -14,7 +14,7 @@
 
 - Node.js >= 20.19 或 >= 22.12
 - pnpm >= 9.x
-- 项目根目录：`D:\work\应急水利\应急\vue3-vite-project`
+- 项目根目录：`D:\personal\github\vue3工程模板\vue3-vite-project`
 
 ---
 
@@ -69,7 +69,7 @@ pnpm --version
 - [ ] **Step 1.3: 确认项目目录为空**
 
 ```bash
-ls D:\work\应急水利\应急\vue3-vite-project
+ls D:\personal\github\vue3工程模板\vue3-vite-project
 ```
 
 预期：仅含 `.omc/` 目录，无 `package.json`、`src/` 等。
@@ -77,11 +77,11 @@ ls D:\work\应急水利\应急\vue3-vite-project
 - [ ] **Step 1.4: 确认 cwd**
 
 ```bash
-cd D:\work\应急水利\应急\vue3-vite-project
+cd D:\personal\github\vue3工程模板\vue3-vite-project
 pwd
 ```
 
-预期：`/d/work/应急水利/应急/vue3-vite-project`
+预期：`/d/personal/github/vue3工程模板/vue3-vite-project`
 
 ---
 
@@ -95,7 +95,7 @@ pwd
 - [ ] **Step 2.1: 执行 create-vue（精简选项）**
 
 ```bash
-cd D:\work\应急水利\应急\vue3-vite-project
+cd D:\personal\github\vue3工程模板\vue3-vite-project
 pnpm create vue@latest . -- --typescript --router --pinia --no-jsx --no-vitest --no-e2e --no-eslint --no-prettier --no-playwright
 ```
 
@@ -104,7 +104,7 @@ pnpm create vue@latest . -- --typescript --router --pinia --no-jsx --no-vitest -
 - [ ] **Step 2.2: 删除默认 src/components/ 和 src/assets/**
 
 ```bash
-cd D:\work\应急水利\应急\vue3-vite-project
+cd D:\personal\github\vue3工程模板\vue3-vite-project
 rm -rf src/components src/assets
 ```
 

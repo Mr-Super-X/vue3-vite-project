@@ -22,7 +22,6 @@
 // </template>
 // ```
 
-import { storeToRefs } from 'pinia'
 import { useThemeStore } from '@store/modules/theme'
 
 export function useTheme() {
