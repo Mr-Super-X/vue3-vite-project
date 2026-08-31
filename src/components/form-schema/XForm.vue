@@ -1,19 +1,10 @@
 <script setup lang="ts">
-import {
-  computed,
-  ref,
-  watch,
-  nextTick,
-  type VNode,
-  onScopeDispose,
-  onMounted,
-  useAttrs,
-} from 'vue'
+import { computed, ref, watch, type VNode, onScopeDispose, onMounted, useAttrs } from 'vue'
 import { get, set } from 'lodash-es'
 import { useSchemaRenderer } from './composables/use-schema-renderer'
 import { useSchemaIndex } from './composables/use-schema-index'
 import { useCurrentBreakpoint } from './composables/use-current-breakpoint'
-import { validate, runCrossFieldValidation } from './composables/use-validate'
+import { validate } from './composables/use-validate'
 import { scanForForbidden } from './composables/use-scan-forbidden'
 import { withHidden } from './composables/with-hidden'
 import { applyDirectives } from './composables/apply-directives'
@@ -21,20 +12,20 @@ import { useFormInstance } from './composables/use-form-instance'
 import { useCrossFieldTrigger } from './composables/use-cross-field-trigger'
 import { useFormDirty } from './composables/use-form-dirty'
 import { useServerError } from './composables/use-server-error'
+import { useFormValidation } from './composables/use-form-validation'
+import { useTopLevelFields } from './composables/use-top-level-fields'
 import { useRenderSchemaNode } from './composables/render-schema-node'
 import { resolveFunctionExpression, setExpressionFunctions } from './composables/use-expression'
 import type { RenderSchemaNodeOptions } from './composables/render-schema-node'
-import { matchTrigger } from './composables/match-trigger'
 import { DEFAULT_COMPONENT_MAP, DEFAULT_COMPONENT_PROPS } from './element-plus-adapter'
 import { mergeRowResponsive } from './composables/render-schema-node'
 import XFormDebugBanner from './XFormDebugBanner.vue'
 import SchemaField from './SchemaField.vue'
-import type { ValidateResult } from './types'
 import 'element-plus/dist/index.css'
 import './styles/element-form-overwrite.scss'
 import { ElConfigProvider, ElForm, ElRow, ElCol } from 'element-plus'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
-import type { SchemaNode, XFormProps, XFormExpose, RuleItem } from './types'
+import type { SchemaNode, XFormProps, XFormExpose } from './types'
 
 const props = defineProps<XFormProps>()
 const attrs = useAttrs()
@@ -125,6 +116,11 @@ if (showDebugBanner.value) {
   )
 }
 
+// P2-1:响应式断点检测 —— viewport 变化时,响应式 ColConfig 自动拍平
+// useSchemaRenderer 内部 watch + 重渲染(整个 form 重新 mount)——简单可靠
+// 前置声明：useTopLevelFields 需要 currentBreakpoint 作为 dep
+const currentBreakpoint = useCurrentBreakpoint()
+
 const { reactiveSchema, triggerRender } = useSchemaRenderer({
   schema: computed(() => props.schema),
   components: computed(() => props.components) as never,
@@ -183,13 +179,29 @@ onMounted(() => {
 // 跨字段规则从 schemaIndex.crossRules 拍平传入，schema 变化时自动跟随重建
 // 阶段 X.Y：schema.debounceValidation 透传为 defaultDebounceMs，
 //   字段级 RuleItem.debounceMs 优先；0 = 实时（默认），>0 = 停止变化 delay ms 后跑一次
-const topLevelDebounceMs = computed<number>(() => {
-  const s = reactiveSchema.value
-  if (Array.isArray(s)) return 0 // 数组形式无顶层节点，关闭 debounce
-  return typeof s.debounceValidation === 'number' && s.debounceValidation >= 0
-    ? s.debounceValidation
-    : 0
+// 顶层字段集合（11 个 topLevelXxx computed）抽离到 use-top-level-fields.ts
+const {
+  debounceValidation: topLevelDebounceMs,
+  nodes: topLevelNodes,
+  row: topLevelRow,
+  column: topLevelColumn,
+  colSpan: topLevelColSpan,
+  disabled: topLevelDisabled,
+  readonly: topLevelReadonly,
+  labelWidth: topLevelLabelWidth,
+  labelPosition: topLevelLabelPosition,
+  scrollToError: topLevelScrollToError,
+  scrollIntoViewOptions: topLevelScrollIntoViewOptions,
+} = useTopLevelFields({
+  reactiveSchema: computed(() => reactiveSchema.value),
+  model: computed(() => props.model),
+  currentBreakpoint,
+  fieldErrors,
+  resolveFunctionExpression,
+  // mergeRowResponsive 真实签名第二参数是 specific union；useTopLevelFields deps 接受 string —— wrap 一层
+  mergeRowResponsive: (row, bp) => mergeRowResponsive(row, bp as 'xs' | 'sm' | 'md' | 'lg' | 'xl'),
 })
+
 const crossFieldTrigger = useCrossFieldTrigger({
   crossRules: () => {
     const out: Array<{ target: string; deps: string[]; rule: import('./types').RuleItem }> = []
@@ -227,232 +239,32 @@ const serverError = useServerError({
   knownFields: () => schemaIndex.allNames.value, // 包含 ignore 字段（hidden 字段也可能有后端错误）
 })
 
-/**
- * XForm 校验入口：先跑 el-form 字段内规则（失败直接 false），成功后跑跨字段校验
- * - 跨字段校验失败时把错误写入对应 form-item（用户在 UI 看到）
- * - 跨字段校验支持异步：crossValidator 返回 Promise<true | string> 时会自动 await
- * - 跨字段失败同时 console.error 列出所有错误 keyPath + message,便于调试
- * - el-form 未挂载时降级只跑跨字段校验（开发场景）
- * - scrollToError prop：字段规则失败由 ElForm 原生滚动（scrollToError 透传），
- *   跨字段失败由 scrollToFirstError 滚动到第一个 cross 错误字段
- */
-async function validateForm(): Promise<boolean> {
-  const m = props.model
-  if (!m) return true
-  const ef = elFormRef.value
-  if (!ef?.validate) {
-    const result = await runCrossFieldValidation(reactiveSchema.value, m, props.rules)
-    applyCrossErrors(result)
-    scrollToFirstError(firstCrossErrorField(result))
-    return result.isValid
-  }
-  // 等待 el-form 字段内规则校验完成（element-plus 2.x validate 接受 callback）
-  const efValidate = ef.validate
-  if (!efValidate) {
-    const result = await runCrossFieldValidation(reactiveSchema.value, m, props.rules)
-    applyCrossErrors(result)
-    scrollToFirstError(firstCrossErrorField(result))
-    return result.isValid
-  }
-  // 字段规则失败时 ElForm 原生 scrollToError 已处理滚动（第一个 .el-form-item.is-error）
-  const elValid = await new Promise<boolean>((resolve) => {
-    const maybePromise = efValidate((v: boolean) => resolve(v))
-    // 处理 el-form 2.x 即使传 callback 仍 reject errorsMap 的情况(避免 unhandled rejection)
-    Promise.resolve(maybePromise).catch(() => resolve(false))
-  })
-  if (!elValid) return false
-  // 跑跨字段校验（可能含异步 crossValidator）
-  const result = await runCrossFieldValidation(reactiveSchema.value, m, props.rules)
-  applyCrossErrors(result)
-  scrollToFirstError(firstCrossErrorField(result))
-  return result.isValid
-}
-
-/** 取跨字段校验结果中第一个错误的字段名（keyPath 末段） */
-function firstCrossErrorField(result: ValidateResult): string | null {
-  if (result.isValid) return null
-  const first = result.errors[0]
-  if (!first) return null
-  const field = first.keyPath[first.keyPath.length - 1]
-  return typeof field === 'string' ? field : null
-}
+// 校验编排（useFormValidation）在 topLevelScrollToError 声明之后调用，
+// 因为 deps 需要 topLevelScrollToError.value —— TDZ 顺序约束。
 
 /**
- * 跨字段校验失败滚动到第一个错误字段
- * - 字段规则失败的滚动由 ElForm 原生 scrollToError 处理，不走这里
- * - scrollToError 开关控制；nextTick 等红字渲染后再滚动
+ * 校验编排 —— 6 个函数（validateForm / validateDetail / triggerCrossFieldValidator /
+ * firstCrossErrorField / applyCrossErrors / scrollToFirstError）抽离到 composables/use-form-validation.ts
+ *
+ * 行为 100% 等价于原内联实现：
+ * - el-form.validate 失败直接 false，跨字段失败时滚动 + setFieldError 红字
+ * - 跨字段校验支持异步，序号令牌防竞态（H3）
+ * - 公开 API 签名不变
  */
-function scrollToFirstError(fieldName: string | null): void {
-  if (!fieldName || !topLevelScrollToError.value) return
-  void nextTick(() => {
-    scrollToField(fieldName)
-  })
-}
-
-/** 把跨字段校验失败的错误写入对应 el-form-item（用户在 UI 看到），并 console.error 列出全部 */
-function applyCrossErrors(result: ValidateResult): void {
-  if (result.isValid) return
-  for (const err of result.errors) {
-    const fieldPath = err.keyPath[err.keyPath.length - 1]
-    if (typeof fieldPath === 'string') setFieldError(fieldPath, err.message)
-  }
-  console.error('[XForm] cross field validation failed:', result.errors)
-}
-
-/** 详细校验：异步返回跨字段校验结果（含异步 crossValidator 等待） */
-async function validateDetail(): Promise<ValidateResult> {
-  const m = props.model
-  if (!m) return { isValid: true, errors: [] }
-  return runCrossFieldValidation(reactiveSchema.value, m, props.rules)
-}
-
-/**
- * 字段事件触发跨字段校验 —— 让 crossValidator 响应 trigger 配置
- * - 遍历当前字段 rules,提取 dependsOn + crossValidator + trigger 配置
- * - 检查 rule.trigger 与当前事件类型是否匹配:
- *   - rule.trigger === eventType(blur/change)→ 跑该 rule
- *   - rule.trigger 是数组包含 eventType → 跑该 rule
- *   - rule.trigger 未指定 → 默认响应 blur(向后兼容现有 schema)
- *   - rule.trigger 是 'manual' → 永远不响应 blur/change(只在 validateForm 时跑)
- * - 跑 crossValidator(支持同步/异步)
- * - 成功 → 清掉之前可能的红字
- * - 失败 → setFieldError 红字提示
- * - 跳过空值字段(空值交给普通 required 校验处理)
- */
-
-/** 每字段触发序号 —— 异步 crossValidator 竞态防护（H3）：连续 blur/change 时旧 Promise 不得覆盖新结果 */
-const crossTriggerSeq = new Map<string, number>()
-
-async function triggerCrossFieldValidator(
-  node: SchemaNode,
-  eventType: 'blur' | 'change'
-): Promise<void> {
-  if (!node.name || !node.rules) return
-  const m = props.model
-  if (!m) return
-  // 序号令牌：连续 blur/change 触发时，旧 Promise 后返回不得覆盖新结果（H3）
-  const triggerSeq = (crossTriggerSeq.get(node.name) ?? 0) + 1
-  crossTriggerSeq.set(node.name, triggerSeq)
-  const rules = Array.isArray(node.rules) ? node.rules : [node.rules]
-  const currentValue = get(m, node.name)
-  // 空值跳过 cross 校验(留给 required / type 规则)
-  if (currentValue === '' || currentValue === undefined || currentValue === null) return
-  for (const r of rules) {
-    if (typeof r !== 'object' || r === null) continue
-    const rule = r as RuleItem
-    if (!rule.crossValidator || !rule.dependsOn) continue
-    // trigger 字段过滤
-    if (!matchTrigger(rule.trigger, eventType)) continue
-    const depsList = (Array.isArray(rule.dependsOn) ? rule.dependsOn : [rule.dependsOn]).map(
-      (dep: string) => get(m, dep)
-    )
-    let result: true | string
-    try {
-      result = await Promise.resolve(rule.crossValidator(currentValue, ...depsList))
-    } catch (err) {
-      console.error('[XForm] crossValidator blur trigger threw:', err)
-      continue
-    }
-    if (triggerSeq !== crossTriggerSeq.get(node.name)) return // 已有更新的触发，丢弃过期结果
-    if (result === true) {
-      setFieldError(node.name, '', '')
-    } else {
-      setFieldError(node.name, result)
-    }
-  }
-}
-
-/**
- * 判断 rule.trigger 是否匹配当前事件类型 —— 已抽到 ./composables/match-trigger.ts 便于单测
- * (XForm.vue SFC 无法 export,直接 import 复用)
- */
-
-// 顶层节点列表（直接从 reactiveSchema 派生，含 reaction 修改后能触发重渲染）
-const topLevelNodes = computed<SchemaNode[]>(() => {
-  // 阶段 3.1:读 fieldErrors.value 建立响应式依赖
-  // —— 否则 setFieldError 写 fieldErrors 后,computed 命中缓存,模板不重渲染
-  void Object.keys(fieldErrors.value).length
-  const s = reactiveSchema.value
-  if (Array.isArray(s)) return s as SchemaNode[]
-  if (s.children !== undefined)
-    return (Array.isArray(s.children) ? s.children : [s.children]) as SchemaNode[]
-  return [s]
+const { validateForm, validateDetail, triggerCrossFieldValidator } = useFormValidation({
+  reactiveSchema: computed(() => reactiveSchema.value),
+  model: computed(() => props.model),
+  rules: computed(() => props.rules),
+  elFormRef,
+  setFieldError: (name, message) => setFieldError(name, message),
+  scrollToField,
+  topLevelScrollToError,
+  crossFieldTrigger,
 })
 
-const topLevelRow = computed(() => {
-  const s = reactiveSchema.value
-  if (Array.isArray(s) || s.children === undefined) return undefined
-  // 阶段 2.4：row.responsive 拍平 —— 当前断点的 gutter/type/align/justify 覆盖基础配置
-  return mergeRowResponsive(s.row, currentBreakpoint.value)
-})
-const topLevelColumn = computed(() => {
-  const s = reactiveSchema.value
-  if (Array.isArray(s) || s.children === undefined) return undefined
-  return s.column
-})
-const topLevelColSpan = computed(() =>
-  topLevelColumn.value ? Math.floor(24 / topLevelColumn.value) : 24
-)
-/** 自描述整体禁用（从 schema 顶层 disabled 字段读取，与 labelPosition 同模式，不在 XForm 标签上配置） */
-const topLevelDisabled = computed<boolean>(() => {
-  const s = reactiveSchema.value
-  if (Array.isArray(s)) return false // 数组形式无顶层节点字段
-  const d = s.disabled
-  if (d === undefined || d === null) return false
-  if (typeof d === 'boolean') return d
-  // 函数 / {{ }} 表达式 / reaction 写入的动态值：统一在此求值（computed 追踪 model 与 reactiveSchema）
-  if (typeof d === 'function')
-    return Boolean((d as (m: Record<string, unknown>) => unknown)(props.model ?? {}))
-  if (typeof d === 'string') {
-    const fn = resolveFunctionExpression<(m: unknown) => unknown>(d)
-    return fn ? Boolean(fn(props.model ?? {})) : false
-  }
-  return false
-})
-
-/** 自描述整体只读（从 schema 顶层 readonly 字段读取，与 disabled 同模式） */
-const topLevelReadonly = computed<boolean>(() => {
-  const s = reactiveSchema.value
-  if (Array.isArray(s)) return false // 数组形式无顶层节点字段
-  const d = s.readonly
-  if (d === undefined || d === null) return false
-  if (typeof d === 'boolean') return d
-  if (typeof d === 'function')
-    return Boolean((d as (m: Record<string, unknown>) => unknown)(props.model ?? {}))
-  if (typeof d === 'string') {
-    const fn = resolveFunctionExpression<(m: unknown) => unknown>(d)
-    return fn ? Boolean(fn(props.model ?? {})) : false
-  }
-  return false
-})
-
-/** 自描述 labelWidth（仅顶层 schema 生效，与 labelPosition 同模式；'' 为 el-form 默认自动宽度） */
-const topLevelLabelWidth = computed<string | number>(() => {
-  const s = reactiveSchema.value
-  if (Array.isArray(s)) return ''
-  return s.labelWidth ?? ''
-})
-
-/** 自描述 scrollToError（仅顶层 schema 生效，默认 false 与 element-plus 一致） */
-const topLevelScrollToError = computed(() => {
-  const s = reactiveSchema.value
-  if (Array.isArray(s)) return false
-  return s.scrollToError ?? false
-})
-
-/** 自描述 scrollIntoViewOptions（仅顶层 schema 生效，默认 true） */
-const topLevelScrollIntoViewOptions = computed(() => {
-  const s = reactiveSchema.value
-  if (Array.isArray(s)) return true
-  return s.scrollIntoViewOptions ?? true
-})
-
-// 阶段 2.4 增强:顶层 schema 自描述 labelPosition（从 schema 顶层字段读取,而非 XForm props）
-const topLevelLabelPosition = computed<'left' | 'right' | 'top'>(() => {
-  const s = reactiveSchema.value
-  if (Array.isArray(s) || s.children === undefined) return 'left'
-  return s.labelPosition ?? 'left'
-})
+// P2-1:响应式断点检测 —— viewport 变化时,响应式 ColConfig 自动拍平
+// useSchemaRenderer 内部 watch + 重渲染(整个 form 重新 mount)——简单可靠
+// 注：currentBreakpoint 已在 setup 顶部前置声明（useTopLevelFields deps 需要）
 
 /** 节点渲染（外层：hidden / directives 包装） */
 function renderToComponent(
@@ -474,8 +286,7 @@ function renderToComponent(
 }
 
 // P2-1:响应式断点检测 —— viewport 变化时,响应式 ColConfig 自动拍平
-// useSchemaRenderer 内部 watch + 重渲染(整个 form 重新 mount)——简单可靠
-const currentBreakpoint = useCurrentBreakpoint()
+// 注：currentBreakpoint 已在 setup 顶部前置声明（useTopLevelFields deps 需要）
 
 /** 合并内置默认 props 与用户传入配置：用户按组件名覆盖默认 */
 const mergedComponentProps = computed(() => ({
