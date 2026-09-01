@@ -54,18 +54,23 @@ const schema = {
 
 ---
 
-## 2. Props（8 个）
+## 2. Props（11 个）
 
-| Prop             | 类型                                                              | 必填 | 说明                                                                                                                               |
-| ---------------- | ----------------------------------------------------------------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `schema`         | `SchemaNode \| SchemaNode[]`                                      | ✅   | 表单 schema（§5 全字段）                                                                                                           |
-| `model`          | `Record<string, unknown>`                                         |      | 响应式数据对象，**必须 `reactive()` 包装**                                                                                         |
-| `components`     | `Record<string, unknown>`                                         |      | 自定义组件映射：`component: 'MyComp'` 时从这里查找                                                                                 |
-| `rules`          | `Record<string, RuleItem>`                                        |      | 命名规则引用：节点 `rules: 'myRule'` 字符串指向这里                                                                                |
-| `directives`     | `Record<string, Directive>`                                       |      | 自定义指令映射（节点 `directives` 中引用）                                                                                         |
-| `beforeChange`   | `(itemSchema, newValue, oldValue) => unknown \| Promise<unknown>` |      | 字段写入前拦截。**同步返回非 `undefined` → 用返回值替换写入；返回 Promise → resolve 后写入；reject 或返回 `undefined` → 放行原值** |
-| `zodSchema`      | `ZodType`                                                         |      | Zod 校验模式，配合 `validateWithZod()`（§6.3）                                                                                     |
-| `componentProps` | `Record<string, Record<string, unknown>>`                         |      | 按组件名注入默认 props（键支持短名 `'Input'` 和全名 `'ElInput'`）。与内置默认合并，用户配置覆盖内置；**节点级 `props` 优先级最高** |
+| Prop                    | 类型                                                              | 必填 | 说明                                                                                                                                                                                      |
+| ----------------------- | ----------------------------------------------------------------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schema`                | `SchemaNode \| SchemaNode[]`                                      | ✅   | 表单 schema（§4 全 30 字段）                                                                                                                                                              |
+| `model`                 | `Record<string, unknown>`                                         |      | 响应式数据对象，**必须 `reactive()` 包装**                                                                                                                                                |
+| `components`            | `Record<string, unknown>`                                         |      | 自定义组件映射：`component: 'MyComp'` 时从这里查找                                                                                                                                        |
+| `rules`                 | `Record<string, RuleItem>`                                        |      | 命名规则引用：节点 `rules: 'myRule'` 字符串指向这里                                                                                                                                       |
+| `directives`            | `Record<string, Directive>`                                       |      | 自定义指令映射（节点 `directives` 中引用）                                                                                                                                                |
+| `beforeChange`          | `(itemSchema, newValue, oldValue) => unknown \| Promise<unknown>` |      | 字段写入前拦截。**同步返回非 `undefined` → 用返回值替换写入；返回 Promise → resolve 后写入；reject 或返回 `undefined` → 放行原值**                                                        |
+| `zodSchema`             | `ZodType`                                                         |      | Zod 校验模式，配合 `validateWithZod()`（§5.3）                                                                                                                                            |
+| `componentProps`        | `Record<string, Record<string, unknown>>`                         |      | 按组件名注入默认 props（键支持短名 `'Input'` 和全名 `'ElInput'`）。与内置默认合并，用户配置覆盖内置；**节点级 `props` 优先级最高**                                                        |
+| `expressionFunctions`   | `Record<string, (...args: never[]) => unknown>`                   |      | 白名单函数表：注册后 `{{ }}` 表达式可直接引用注册名。**模块级共享，多实例间共享**；组件 scope 销毁会清空避免跨实例污染                                                                    |
+| `scrollToError`         | `boolean`                                                         |      | 校验失败自动滚动到第一个错误字段。字段规则失败走 ElForm 原生（第一个 `.el-form-item.is-error`）；跨字段失败由 XForm 内部滚动到第一个错误字段。**仅顶层 schema 生效**，prop 仅作为入口透传 |
+| `scrollIntoViewOptions` | `ScrollIntoViewOptions \| boolean`                                |      | 滚动行为选项（默认 true），如 `{ behavior: 'smooth', block: 'center' }`。**仅顶层 schema 生效**                                                                                           |
+
+> **11 个 prop 中只有 `schema` 必填**。`scrollToError` / `scrollIntoViewOptions` 在顶层 schema 同步存在——prop 与 schema 字段是"双入口"（prop 适合从外层配置透入，schema 字段适合内联），二者择一即可。
 
 **内置默认 props**：下表列出 XForm 的安全默认值；节点级 `props` 优先级最高，也可通过 XForm 的 `componentProps` 按组件名覆盖内置默认。
 
@@ -133,32 +138,37 @@ if (res.success) formRef.value?.resetDirty()
 
 ## 4. SchemaNode 字段参考
 
-| 分类     | 字段             | 类型                                              | 说明                                                                                                                  |
-| -------- | ---------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| 组件标识 | `component`      | `string \| object`                                | 短名 `'Input'` / 全名 `'ElInput'`（见 §4.1 解析规则）/ 直接传 Vue 组件对象（无需注册）                                |
-| 结构     | `name`           | `string`                                          | 字段名，**支持 lodash 路径**（如 `items[0].qty`），与 model 双向绑定                                                  |
-| 结构     | `children`       | `SchemaNode \| SchemaNode[] \| string`            | 子节点（递归渲染）；字符串直接输出文本                                                                                |
-| 结构     | `slots`          | `Record<string, SchemaSlot>`                      | 具名插槽：schema 节点 / 节点数组 / 字符串 / 渲染函数 `(scope?) => VNode`                                              |
-| 结构     | `formItem`       | `boolean \| FormItemConfig`                       | 是否包 el-form-item；`false` 跳过包装（无 label/校验）；对象可配 `component/props/directives/slots/rules`             |
-| 结构     | `kind` / `array` | `'array'` / `ArrayNodeConfig`                     | 数组容器节点（§8）                                                                                                    |
-| UI       | `label`          | `string`                                          | 标签文字                                                                                                              |
-| UI       | `col`            | `boolean \| ColConfig`                            | 栅格列：`{ span, offset, push, pull, responsive }`                                                                    |
-| UI       | `row`            | `RowConfig`                                       | 栅格行：`{ gutter, type, align, justify, responsive }`（见 §15）                                                      |
-| UI       | `column`         | `number`                                          | 每行栅格数（顶层 schema 生效，自动平均分配 span）                                                                     |
-| 校验     | `rules`          | `string \| RuleItem \| Array<string \| RuleItem>` | 校验规则（§6.1）；字符串为 `props.rules` 命名引用                                                                     |
-| 校验     | `disabled`       | `ReactionValue<boolean>`                          | 禁用（支持布尔/函数/表达式）。`props.disabled` 显式写优先；数组节点仅控制容器按钮；el-form 自动跳过 disabled 字段校验 |
-| 渲染     | `props`          | `Record<string, unknown>`                         | 组件 props（覆盖 `componentProps` 与内置默认）                                                                        |
-| 渲染     | `on`             | `Record<string, EventFn \| FunctionExpression>`   | 事件回调；字符串为 `{{ (m, ...args) => ... }}` 函数表达式                                                             |
-| 渲染     | `defaultValue`   | `unknown`                                         | 初值——仅当 model 该路径为 `undefined` 时通过 lodash `set` 填充                                                        |
-| 渲染     | `modelProp`      | `string`                                          | 自定义 v-model 属性名（默认 `modelValue`）                                                                            |
-| 渲染     | `directives`     | `DirectiveConfig[]`                               | 自定义指令：`{ directive: 'pin', arg, modifiers, value }`                                                             |
-| 渲染     | `asyncOptions`   | `AsyncOptionsConfig`                              | 异步选项数据源（§9）                                                                                                  |
-| 状态     | `hidden`         | `boolean`                                         | 隐藏但**仍渲染**（`display:none`，保留校验）                                                                          |
-| 状态     | `ignore`         | `boolean`                                         | 跳过渲染（DOM 不出现）                                                                                                |
-| 状态     | `key`            | `string \| number`                                | 唯一标识                                                                                                              |
-| 状态     | `permission`     | `ReactionValue<'view' \| 'edit' \| 'hidden'>`     | 字段权限（§10）。`'hidden'` 与 `hidden` 字段不同：**不渲染**                                                          |
-| 状态     | `reaction`       | `ReactionConfig`                                  | 响应式联动（§7）                                                                                                      |
-| 布局     | `labelPosition`  | `'left' \| 'right' \| 'top'`                      | **仅顶层容器 schema 生效**（el-form 实例级属性，element-plus 自身限制）。默认 `'left'`                                |
+| 分类     | 字段                    | 类型                                              | 说明                                                                                                                                                                  |
+| -------- | ----------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 组件标识 | `component`             | `string \| object`                                | 短名 `'Input'` / 全名 `'ElInput'`（见 §4.1 解析规则）/ 直接传 Vue 组件对象（无需注册）                                                                                |
+| 结构     | `name`                  | `string`                                          | 字段名，**支持 lodash 路径**（如 `items[0].qty`），与 model 双向绑定                                                                                                  |
+| 结构     | `children`              | `SchemaNode \| SchemaNode[] \| string`            | 子节点（递归渲染）；字符串直接输出文本                                                                                                                                |
+| 结构     | `slots`                 | `Record<string, SchemaSlot>`                      | 具名插槽：schema 节点 / 节点数组 / 字符串 / 渲染函数 `(scope?) => VNode`                                                                                              |
+| 结构     | `formItem`              | `boolean \| FormItemConfig`                       | 是否包 el-form-item；`false` 跳过包装（无 label/校验）；对象可配 `component/props/directives/slots/rules`                                                             |
+| 结构     | `kind` / `array`        | `'array'` / `ArrayNodeConfig`                     | 数组容器节点（§8）                                                                                                                                                    |
+| UI       | `label`                 | `string`                                          | 标签文字                                                                                                                                                              |
+| UI       | `col`                   | `boolean \| ColConfig`                            | 栅格列：`{ span, offset, push, pull, responsive }`                                                                                                                    |
+| UI       | `row`                   | `RowConfig`                                       | 栅格行：`{ gutter, type, align, justify, responsive }`（见 §15）                                                                                                      |
+| UI       | `column`                | `number`                                          | 每行栅格数（顶层 schema 生效，自动平均分配 span）                                                                                                                     |
+| 校验     | `rules`                 | `string \| RuleItem \| Array<string \| RuleItem>` | 校验规则（§5.1）；字符串为 `props.rules` 命名引用                                                                                                                     |
+| 校验     | `disabled`              | `ReactionValue<boolean>`                          | 禁用（支持布尔/函数/表达式）。`props.disabled` 显式写优先；数组节点仅控制容器按钮；el-form 自动跳过 disabled 字段校验                                                 |
+| 渲染     | `props`                 | `Record<string, unknown>`                         | 组件 props（覆盖 `componentProps` 与内置默认）                                                                                                                        |
+| 渲染     | `on`                    | `Record<string, EventFn \| FunctionExpression>`   | 事件回调；字符串为 `{{ (m, ...args) => ... }}` 函数表达式                                                                                                             |
+| 渲染     | `defaultValue`          | `unknown`                                         | 初值——仅当 model 该路径为 `undefined` 时通过 lodash `set` 填充                                                                                                        |
+| 渲染     | `modelProp`             | `string`                                          | 自定义 v-model 属性名（默认 `modelValue`）                                                                                                                            |
+| 渲染     | `directives`            | `DirectiveConfig[]`                               | 自定义指令：`{ directive: 'pin', arg, modifiers, value }`                                                                                                             |
+| 渲染     | `asyncOptions`          | `AsyncOptionsConfig`                              | 异步选项数据源（§9）                                                                                                                                                  |
+| 状态     | `hidden`                | `boolean`                                         | 隐藏但**仍渲染**（`display:none`，保留校验）                                                                                                                          |
+| 状态     | `ignore`                | `boolean`                                         | 跳过渲染（DOM 不出现）                                                                                                                                                |
+| 状态     | `key`                   | `string \| number`                                | 唯一标识                                                                                                                                                              |
+| 状态     | `permission`            | `ReactionValue<'view' \| 'edit' \| 'hidden'>`     | 字段权限（§10）。`'hidden'` 与 `hidden` 字段不同：**不渲染**                                                                                                          |
+| 状态     | `reaction`              | `ReactionConfig`                                  | 响应式联动（§6）                                                                                                                                                      |
+| 状态     | `readonly`              | `ReactionValue<boolean>`                          | **仅顶层 schema 生效**：`true` 时所有字段按 view 态纯文本展示（复用 `permission: 'view'` 渲染）；支持字面量/函数/表达式/reaction。字段级只读请用 `permission: 'view'` |
+| 布局     | `labelPosition`         | `'left' \| 'right' \| 'top'`                      | **仅顶层容器 schema 生效**（el-form 实例级属性，element-plus 自身限制）。默认 `'left'`                                                                                |
+| 布局     | `labelWidth`            | `string \| number`                                | **仅顶层 schema 生效**：如 `'120px'` 或 `120`。数组形式 schema 无顶层节点，配置不生效                                                                                 |
+| 校验     | `scrollToError`         | `boolean`                                         | **仅顶层 schema 生效**：校验失败自动滚动到第一个错误字段（默认 false）。字段规则走 ElForm 原生；跨字段走 XForm 内部                                                   |
+| 校验     | `scrollIntoViewOptions` | `ScrollIntoViewOptions \| boolean`                | **仅顶层 schema 生效**：滚动行为选项，默认 true                                                                                                                       |
+| 校验     | `debounceValidation`    | `number`                                          | **仅顶层 schema 生效**：跨字段校验全局 debounce 默认延迟（毫秒），0 = 实时。字段级 `rules[i].debounceMs` 可覆盖                                                       |
 
 ### 4.1 component 字符串解析规则
 
@@ -302,12 +312,12 @@ const { success, errors } = formRef.value!.validateWithZod()
 
 ### 5.4 触发时机汇总
 
-| 时机                  | 跑什么                                                                    |
-| --------------------- | ------------------------------------------------------------------------- |
-| 字段 blur / change    | 该字段 rules 中 `trigger` 匹配的规则（含 crossValidator）+ 反向跨字段规则 |
-| 字段值写入（v-model） | 反向跨字段规则（change 语义）                                             |
-| `validate()` 手动调用 | el-form 全部字段内规则 → 全部跨字段规则（含 `manual`）                    |
-| `validateWithZod()`   | 仅 Zod schema                                                             |
+| 时机                  | 跑什么                                                                                                                  |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| 字段 blur / change    | 该字段 rules 中 `trigger` 匹配的规则（含 crossValidator）+ 反向跨字段规则（trigger 默认 `blur`，`'manual'` 不响应事件） |
+| 字段值写入（v-model） | 反向跨字段规则（change 语义）+ 清空该字段错误                                                                           |
+| `validate()` 手动调用 | **短路逻辑**：先跑 el-form 字段内规则，失败 → 直接 `false` 不跑跨字段；成功 → 跑全部跨字段规则（含 `manual`）           |
+| `validateWithZod()`   | 仅 Zod schema（独立通道，与 validate() 不互通）                                                                         |
 
 ### 5.5 schema 静态校验（工具函数）
 
@@ -785,9 +795,9 @@ col: {
 
 ---
 
-## 19. 示例索引（23 个 demo）
+## 19. 示例索引（38 个 demo，含 1 个主入口）
 
-在线演示站点：`pnpm dev` → `/demo`（左侧「XForm 表单引擎」分组），路由 = `/demo/x-form-<kebab-case>`。
+在线演示站点：`pnpm dev` → `/demo`（左侧「XForm 表单引擎」分组），路由 = `/demo/x-form-<kebab-case>`。所有 demo 源码位于 `src/modules/demo/examples/XForm*.vue`（38 个文件）。
 
 | 路由                               | 内容                                                |
 | ---------------------------------- | --------------------------------------------------- |
@@ -796,24 +806,41 @@ col: {
 | `/demo/x-form-base`                | 基础用法（多字段 + 校验 + 重置）                    |
 | `/demo/x-form-nested`              | 复杂布局（Card 容器 + slots + 嵌套）                |
 | `/demo/x-form-builder`             | 链式构建器                                          |
+| `/demo/x-form-grid`                | row + column 栅格布局                               |
 | `/demo/x-form-reaction`            | 反应式联动（含防抖/节流）                           |
+| `/demo/x-form-reaction-deps`       | reaction `deps` 精确监听                            |
+| `/demo/x-form-reaction-advanced`   | reaction 进阶用法                                   |
+| `/demo/x-form-expression`          | `{{ }}` 函数表达式沙箱                              |
 | `/demo/x-form-cross-field`         | 跨字段校验                                          |
 | `/demo/x-form-cross-field-reverse` | 反向跨字段（精确触发）                              |
 | `/demo/x-form-async-options`       | 异步选项                                            |
 | `/demo/x-form-async-validator`     | 异步校验（loading 态）                              |
 | `/demo/x-form-array`               | 数组节点（增删/上下移/min-max 限制）                |
+| `/demo/x-form-array-draggable`     | 数组行拖拽排序                                      |
 | `/demo/x-form-persist`             | 草稿持久化（自动保存 + 刷新恢复）                   |
 | `/demo/x-form-responsive`          | 响应式布局（断点拍平）                              |
 | `/demo/x-form-dirty`               | 脏状态追踪                                          |
 | `/demo/x-form-disabled`            | 禁用状态（反应式）                                  |
+| `/demo/x-form-global-disabled`     | 整体禁用（顶层 schema `disabled`）                  |
+| `/demo/x-form-global-readonly`     | 整体只读（顶层 schema `readonly`）                  |
 | `/demo/x-form-field-permission`    | 字段权限（view/edit/hidden）                        |
+| `/demo/x-form-directives`          | 自定义指令                                          |
+| `/demo/x-form-events`              | `on` 事件绑定（函数 + 表达式）                      |
 | `/demo/x-form-server-error`        | 服务端错误映射                                      |
 | `/demo/x-form-slots`               | 插槽系统                                            |
 | `/demo/x-form-invalid-component`   | 无效组件校验（div 占位 + DebugBanner）              |
 | `/demo/x-form-large-schema`        | 大 schema 性能                                      |
 | `/demo/x-form-model-warn`          | model 缺失警告                                      |
 | `/demo/x-form-schema-index`        | 索引快照（getNames/getRef）                         |
+| `/demo/x-form-detail-fill`         | 详情页回填（加载 + resetDirty）                     |
+| `/demo/x-form-order-create`        | 业务综合示例（订单创建）                            |
+| `/demo/x-form-scroll-to-error`     | 校验失败自动滚动                                    |
+| `/demo/x-form-validate-field`      | `validateField` 单字段校验                          |
+| `/demo/x-form-validation-debounce` | 跨字段 debounce 调优                                |
+| `/demo/x-form-style-override`      | 样式覆盖（BEM 命名空间）                            |
 | `/demo/x-form-upload`              | 文件上传（单文件/多文件/拖拽/图片墙/校验/回显）     |
+
+> 主 demo `/demo/x-form`（对应 `XForm.vue`）是查阅全部 prop 与实例方法的入口；其余 37 个 demo 按主题分组覆盖各能力边界。
 
 ---
 

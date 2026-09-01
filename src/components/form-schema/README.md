@@ -24,19 +24,23 @@ const schema = {
 
 ---
 
-## props
+## props（10 个）
 
-| 属性                  | 类型                                           | 必填 | 说明                                                             |
-| --------------------- | ---------------------------------------------- | ---- | ---------------------------------------------------------------- |
-| `schema`              | `SchemaNode \| SchemaNode[]`                   | ✅   | 表单 schema                                                      |
-| `model`               | `Record<string, unknown>`                      |      | 响应式数据对象（需用 `reactive()` 包装）                         |
-| `components`          | `Record<string, Component>`                    |      | 自定义组件映射                                                   |
-| `rules`               | `Record<string, RuleItem>`                     |      | 校验规则命名引用                                                 |
-| `directives`          | `Record<string, Directive>`                    |      | 自定义指令映射                                                   |
-| `beforeChange`        | `(item, newVal, oldVal) => unknown \| Promise` |      | 字段值变化前拦截                                                 |
-| `zodSchema`           | `ZodType`                                      |      | zod 校验 schema（配合 `validateWithZod()`）                      |
-| `componentProps`      | `Record<string, Record<string, unknown>>`      |      | 按组件名注入默认 props（节点级 props 可覆盖）                    |
-| `expressionFunctions` | `Record<string, Function>`                     |      | 白名单函数表：{{ }} 表达式可直接引用注册名（模块级，多实例共享） |
+> 10 个 prop 中 `schema` 必填；`scrollToError` / `scrollIntoViewOptions` 同时作为 schema 顶层字段（仅顶层容器形态生效）。
+
+| 属性                    | 类型                                           | 必填 | 说明                                                                                                       |
+| ----------------------- | ---------------------------------------------- | ---- | ---------------------------------------------------------------------------------------------------------- |
+| `schema`                | `SchemaNode \| SchemaNode[]`                   | ✅   | 表单 schema                                                                                                |
+| `model`                 | `Record<string, unknown>`                      |      | 响应式数据对象（需用 `reactive()` 包装）                                                                   |
+| `components`            | `Record<string, Component>`                    |      | 自定义组件映射                                                                                             |
+| `rules`                 | `Record<string, RuleItem>`                     |      | 校验规则命名引用                                                                                           |
+| `directives`            | `Record<string, Directive>`                    |      | 自定义指令映射                                                                                             |
+| `beforeChange`          | `(item, newVal, oldVal) => unknown \| Promise` |      | 字段值变化前拦截                                                                                           |
+| `zodSchema`             | `ZodType`                                      |      | zod 校验 schema（配合 `validateWithZod()`）                                                                |
+| `componentProps`        | `Record<string, Record<string, unknown>>`      |      | 按组件名注入默认 props（节点级 props 可覆盖）                                                              |
+| `expressionFunctions`   | `Record<string, Function>`                     |      | 白名单函数表：{{ }} 表达式可直接引用注册名（**模块级，多实例共享**，组件卸载时清空避免跨实例污染）         |
+| `scrollToError`         | `boolean`                                      |      | 校验失败自动滚动到第一个错误字段（仅顶层 schema 生效，默认 false；字段规则走 ElForm 原生，跨字段走 XForm） |
+| `scrollIntoViewOptions` | `ScrollIntoViewOptions \| boolean`             |      | 滚动行为选项（仅顶层 schema 生效，默认 true）                                                              |
 
 ---
 
@@ -79,7 +83,7 @@ formRef.value?.resetDirty() // 当前状态设为新基线（提交后归零）
 
 ---
 
-## schema 字段（29 个）
+## schema 字段（30 个）
 
 | 字段                    | 类型                                                 | 说明                                                                                                   |
 | ----------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
@@ -406,12 +410,51 @@ dev 模式下 XFormDebugBanner 会自动在右下角浮窗显示 schema 校验�
 
 ---
 
-## 示例
+## 示例（38 个 demo，全部位于 `src/modules/demo/examples/XForm*.vue`）
 
-| 路由                       | 内容                                 |
-| -------------------------- | ------------------------------------ |
-| `/demo/xform-minimum-demo` | 最小可运行示例（5 分钟上手）         |
-| `/demo/xform-base`         | 基础用法（5 字段 + 校验 + 重置）     |
-| `/demo/xform-persist`      | 草稿持久化（自动保存 + 刷新恢复）    |
-| `/demo/xform-nested`       | 复杂布局（Card 容器 + slots + 嵌套） |
-| `/demo/xform-reaction`     | 反应式联动（防抖/节流/禁用/隐藏）    |
+> 38 个 demo 中 `/demo/x-form`（即 `XForm.vue`）是主入口，承载 Props/Events/Slots 完整 API 表；其余 37 个按主题分组覆盖各能力边界。
+
+完整在线演示站点：`pnpm dev` → `/demo`（左侧「XForm 表单引擎」分组），路由 = `/demo/x-form-<kebab-case>`。
+
+| 路由                               | 内容                                                |
+| ---------------------------------- | --------------------------------------------------- |
+| `/demo/x-form`                     | 用法总览（主 demo：Props/Events/Slots 完整 API 表） |
+| `/demo/x-form-minimum-demo`        | 最小示例（5 分钟上手）                              |
+| `/demo/x-form-base`                | 基础用法（多字段 + 校验 + 重置）                    |
+| `/demo/x-form-nested`              | 复杂布局（Card 容器 + slots + 嵌套）                |
+| `/demo/x-form-builder`             | 链式构建器                                          |
+| `/demo/x-form-reaction`            | 反应式联动（含防抖/节流）                           |
+| `/demo/x-form-reaction-deps`       | reaction `deps` 精确监听                            |
+| `/demo/x-form-reaction-advanced`   | reaction 进阶用法                                   |
+| `/demo/x-form-expression`          | `{{ }}` 函数表达式沙箱                              |
+| `/demo/x-form-cross-field`         | 跨字段校验                                          |
+| `/demo/x-form-cross-field-reverse` | 反向跨字段（精确触发）                              |
+| `/demo/x-form-async-options`       | 异步选项                                            |
+| `/demo/x-form-async-validator`     | 异步校验（loading 态）                              |
+| `/demo/x-form-array`               | 数组节点（增删/上下移/min-max 限制）                |
+| `/demo/x-form-array-draggable`     | 数组行拖拽排序                                      |
+| `/demo/x-form-persist`             | 草稿持久化（自动保存 + 刷新恢复）                   |
+| `/demo/x-form-responsive`          | 响应式布局（断点拍平）                              |
+| `/demo/x-form-grid`                | row + column 栅格布局                               |
+| `/demo/x-form-dirty`               | 脏状态追踪                                          |
+| `/demo/x-form-disabled`            | 禁用状态（反应式）                                  |
+| `/demo/x-form-global-disabled`     | 整体禁用（顶层 schema `disabled`）                  |
+| `/demo/x-form-global-readonly`     | 整体只读（顶层 schema `readonly`）                  |
+| `/demo/x-form-field-permission`    | 字段权限（view/edit/hidden）                        |
+| `/demo/x-form-directives`          | 自定义指令                                          |
+| `/demo/x-form-events`              | `on` 事件绑定（函数 + 表达式）                      |
+| `/demo/x-form-server-error`        | 服务端错误映射                                      |
+| `/demo/x-form-slots`               | 插槽系统                                            |
+| `/demo/x-form-invalid-component`   | 无效组件校验（div 占位 + DebugBanner）              |
+| `/demo/x-form-large-schema`        | 大 schema 性能                                      |
+| `/demo/x-form-model-warn`          | model 缺失警告                                      |
+| `/demo/x-form-schema-index`        | 索引快照（getNames/getRef）                         |
+| `/demo/x-form-detail-fill`         | 详情页回填（加载 + resetDirty）                     |
+| `/demo/x-form-order-create`        | 业务综合示例（订单创建）                            |
+| `/demo/x-form-scroll-to-error`     | 校验失败自动滚动                                    |
+| `/demo/x-form-validate-field`      | `validateField` 单字段校验                          |
+| `/demo/x-form-validation-debounce` | 跨字段 debounce 调优                                |
+| `/demo/x-form-style-override`      | 样式覆盖（BEM 命名空间）                            |
+| `/demo/x-form-upload`              | 文件上传（单文件/多文件/拖拽/图片墙/校验/回显）     |
+
+> 主 demo `/demo/x-form` 展示 Props/Events/Slots 完整 API 表，是查阅全部 prop 与实例方法的入口。

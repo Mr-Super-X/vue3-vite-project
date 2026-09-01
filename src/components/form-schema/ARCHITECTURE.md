@@ -36,7 +36,7 @@
 
 ```text
 src/components/form-schema/
-├── XForm.vue                      # 入口组件（95 行，setup 块零业务逻辑）
+├── XForm.vue                      # 入口组件（125 行：P2 后 setup 块零业务逻辑；模板 + props/attrs 透传 + ElConfigProvider + ElForm 骨架）
 ├── XFormDebugBanner.vue           # dev mode 调试面板（schema 校验错误 + 安全扫描）
 ├── XFormErrorToast.vue            # dev mode 错误 OSD toast（OPT-7 user-facing）
 ├── SchemaField.vue                # 节点级渲染容器（B-2：字段级重渲隔离）
@@ -134,21 +134,22 @@ RenderSchemaNode 主调度（render-schema-node.ts）
 
 ---
 
-## 2. Schema DSL 字段契约（29 字段最终版）
+## 2. Schema DSL 字段契约（30 字段最终版）
 
 ### 2.1 字段分类
 
-| 类别             | 字段                                                                                          |
-| ---------------- | --------------------------------------------------------------------------------------------- |
-| **节点标识**     | `component`, `name`, `key`, `label`                                                           |
-| **渲染属性**     | `props`, `on`, `children`, `slots`, `directives`                                              |
-| **布局**         | `row`, `column`, `col`, `formItem`                                                            |
-| **校验**         | `rules`, `defaultValue`                                                                       |
-| **响应式**       | `reaction`, `disabled`, `permission`, `readonly`, `hidden`, `ignore`                          |
-| **数组节点**     | `kind: 'array'`, `array: ArrayNodeConfig`                                                     |
-| **数据加载**     | `asyncOptions`                                                                                |
-| **顶层配置**     | `labelPosition`, `labelWidth`, `scrollToError`, `scrollIntoViewOptions`, `debounceValidation` |
-| **v-model 适配** | `modelProp`                                                                                   |
+| 类别             | 字段                                                                                          | 数     |
+| ---------------- | --------------------------------------------------------------------------------------------- | ------ |
+| **节点标识**     | `component`, `name`, `key`, `label`                                                           | 4      |
+| **渲染属性**     | `props`, `on`, `children`, `slots`, `directives`                                              | 5      |
+| **布局**         | `row`, `column`, `col`, `formItem`                                                            | 4      |
+| **校验**         | `rules`, `defaultValue`                                                                       | 2      |
+| **响应式**       | `reaction`, `disabled`, `permission`, `readonly`, `hidden`, `ignore`                          | 6      |
+| **数组节点**     | `kind: 'array'`, `array: ArrayNodeConfig`                                                     | 2      |
+| **数据加载**     | `asyncOptions`                                                                                | 1      |
+| **顶层配置**     | `labelPosition`, `labelWidth`, `scrollToError`, `scrollIntoViewOptions`, `debounceValidation` | 5      |
+| **v-model 适配** | `modelProp`                                                                                   | 1      |
+| **合计**         |                                                                                               | **30** |
 
 完整字段定义见 `types/schema-node.ts`。
 
@@ -274,7 +275,11 @@ const schema: SchemaNode = {
 }
 ```
 
-**reaction 调度策略**（`use-reaction.ts:ReactionConfig.strategy`）：-：`sync`（默认）：依赖变化立即同步执行 -：`debounce`：依赖停止变化 delay ms 后执行（远程搜索）-：`throttle`：delay ms 内最多执行一次（实时保存）
+**reaction 调度策略**（`ReactionConfig.strategy`，见 `types/reaction.ts`）：
+
+- `sync`（默认）：依赖变化立即同步执行
+- `debounce`：依赖停止变化 `delay` ms 后执行（远程搜索等高频输入场景）
+- `throttle`：`delay` ms 内最多执行一次（实时保存场景）
 
 **性能优化**：声明 `deps: ['a', 'b.c']` 后，仅精确 watch 这些路径；未声明时 deep watch 整棵 model（重开销）。
 
@@ -337,7 +342,7 @@ const schema: SchemaNode = {
     dependsOn: ['password'],
     crossValidator: (value, password) =>
       value === password || '两次密码不一致',
-    // trigger: 'blur' | 'change' | 'manual'  —— 可选，默认 manual
+    // trigger: 'blur' | 'change' | 'manual'  —— 可选，默认 blur（与 match-trigger.ts 第 14 行一致）
     // debounceMs: 300  —— 字段级 debounce 覆盖顶层 debounceValidation
   }],
 }
@@ -345,8 +350,9 @@ const schema: SchemaNode = {
 
 **触发机制**：
 
-- **realtime 反向触发**：`useCrossFieldTrigger` watch model 变化时精确触发 deps 包含变化字段的 crossValidator
-- **validateForm 批量**：`runCrossFieldValidation` 遍历 schema 跑全部 crossValidator，支持异步返回
+- **realtime 反向触发**：`useCrossFieldTrigger` watch model 变化时精确触发 deps 包含变化字段的 crossValidator（不区分 trigger）
+- **trigger 匹配（match-trigger.ts）**：字段 blur/change 事件触发时按 `rule.trigger` 过滤——`'manual'` 永不响应事件，array 形式 `['blur','change']` 任一命中即匹配，未指定默认 `blur`
+- **validateForm 批量 + 短路**：`runCrossFieldValidation` 遍历 schema 跑全部 crossValidator（含 `'manual'`），但 `validateForm` 字段规则失败时直接 `false` 不跑跨字段（短路逻辑）
 
 ### 4.3 服务端错误映射（OPT 2.1）
 
@@ -529,19 +535,21 @@ const schema = {
 
 ---
 
-## 9. 测试策略（当前 1042 测试）
+## 9. 测试策略（30 个 `.spec.ts` + 2 个 `.test-d.ts`）
 
 ### 9.1 测试分布
 
-| 类别                 | 文件数 | 测试数   | 覆盖率目标 |
-| -------------------- | ------ | -------- | ---------- |
-| composables          | ~30    | ~600     | ≥80%       |
-| XForm.spec           | 1      | 60+      | ≥80%       |
-| types (test-d)       | 2      | 编译期   | N/A        |
-| builders             | 1      | ~30      | ≥80%       |
-| element-plus-adapter | 1      | ~10      | 100%       |
-| index                | 1      | ~5       | 100%       |
-| **合计**             | ~30+   | **1042** | ≥80%       |
+| 类别                         | 文件数 | 测试数                  | 覆盖率目标 |
+| ---------------------------- | ------ | ----------------------- | ---------- |
+| composables（含 XForm 编排） | 25     | 主体回归                | ≥80%       |
+| XForm.spec                   | 1      | 主入口集成              | ≥80%       |
+| builders                     | 1      | builder 链路            | ≥80%       |
+| element-plus-adapter         | 1      | 组件名解析              | 100%       |
+| index                        | 1      | 公共导出                | 100%       |
+| types (test-d)               | 2      | 编译期                  | N/A        |
+| **合计（spec 文件）**        | **30** | 见 `pnpm test` 实际输出 | ≥80%       |
+
+> 测试用例总计数应通过 `pnpm test --reporter=verbose` 实测，文档不在此处硬编码（避免与实际运行结果失真）。
 
 ### 9.2 关键回归保护（源码级静态断言）
 
@@ -556,7 +564,7 @@ const schema = {
 
 ```bash
 pnpm type-check:full   # vue-tsc --build --force
-pnpm test              # 全量 1042 测试
+pnpm test              # 全量测试（30 个 .spec.ts + 2 个 .test-d.ts）
 pnpm lint              # ESLint
 pnpm build             # vite build
 ```
@@ -570,7 +578,8 @@ pnpm build             # vite build
 - **Element Plus 2.x 内部耦合**：setFieldError 双路径依赖 el-form.fields[i].validateState/validateMessage ref，element-plus 3.0 升级需重新验证
 - **element-plus 2.14 shallowRef 限制**：日期/Select/Cascader 等复杂控件失焦时不触发 crossValidator 红字（点击保存才触发）—— 这是 element-plus 自身实现
 - **validateStateDebounced (100ms)**：setFieldError 写入后 100ms 才显示红字（element-plus 内部节流）
-- **复杂 react 没有嵌套深度检查**：循环 reaction 可能触发"Maximum recursive updates"（已实现 50 次/flush 预算）
+- **reaction 嵌套无深度检查**：循环 reaction 可能触发"Maximum recursive updates"（已实现 50 次/flush 预算作为兜底并 `console.error` 告警）
+- **validate() 短路逻辑**：字段规则失败时直接 `false` 不跑跨字段；这是 element-plus `validate()` 风格一致行为，详见 `use-form-validation.ts:validateForm`
 
 ### 10.2 未来路线（P2+ 待评估）
 
@@ -584,11 +593,11 @@ pnpm build             # vite build
 
 ### 10.3 已完成的优化
 
-| 阶段   | 改进                                                                  |
-| ------ | --------------------------------------------------------------------- |
-| **P0** | 拆 XForm.vue (478→95) + builders 去重 + 类型断言归因 + CSS 回归修复   |
-| **P1** | 拆 types.ts (556→9 文件) + 模块级状态清理 + OSD 错误反馈 + 组件拆分   |
-| **P2** | 拆超大 composable + 拆 render-schema-node.ts + 合并设计文档（本文件） |
+| 阶段   | 改进                                                                                                                           |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| **P0** | 拆 XForm.vue (478→95) + builders 去重 + 类型断言归因 + CSS 回归修复                                                            |
+| **P1** | 拆 types.ts (556→9 文件) + 模块级状态清理 + OSD 错误反馈 + 组件拆分                                                            |
+| **P2** | 拆超大 composable + 拆 render-schema-node.ts + 合并设计文档（本文件，125 行 XForm.vue + 30 字段 SchemaNode + 39 个 demo 配套） |
 
 ---
 
@@ -642,10 +651,10 @@ pnpm build             # vite build
 | §1.6   | AutoImport                       | ✅ 全程不显式 import ref / watch / createNamespace                                                                                       |
 | §2     | src/ Architecture Lockdown       | ✅ 本目录稳定，所有改动经 §2.4 申请                                                                                                      |
 | §3     | BEM 命名规范                     | ✅ XForm.vue 使用 `createNamespace('x-form')` + `<style lang="scss">` 无 scoped                                                          |
-| §4 #6  | 文件行数限制                     | ✅ XForm 95 / composables <200 / types/ <220                                                                                             |
+| §4 #6  | 文件行数限制                     | ✅ XForm 125 / composables <300 / types/ <220                                                                                            |
 | §4 #7  | Hook/Composable 行数             | ⚠️ 3 个 composable >200 行（useTopLevelFields / useCrossFieldTrigger / useFormValidation），按 §3.4 备注"cohesive orchestrator 例外"接受 |
 | §4 #10 | npm 包验证                       | ✅ 仅 element-plus / lodash-es / zod（项目已装）                                                                                         |
-| §4 #11 | 新增 composable 需 .spec.ts      | ✅ 27 个 composable 全部有 spec                                                                                                          |
+| §4 #11 | 新增 composable 需 .spec.ts      | ✅ composables/ 下 27 个 composable + useXFormComposer 全部配 spec                                                                       |
 
 ---
 
