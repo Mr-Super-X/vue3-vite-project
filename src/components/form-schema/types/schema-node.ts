@@ -74,35 +74,60 @@ export interface SchemaNode {
    *  - Component 对象:直接传入 Vue 组件实例/选项对象(无需在 XForm 的 components prop 注册)
    * 推荐:EL 组件用 string 形式 + XForm 集中注册;slots 内的 trigger 元素也支持直接传 Component 对象
    */
+  /** @group 节点标识 */
   component?: string | object
+  /** @group 节点标识（rendered via Comp）） */
   props?: Record<string, unknown>
+  /** @group 渲染属性 */
   on?: Record<string, EventFn | FunctionExpression>
+  /** @group 渲染属性 */
   children?: SchemaNode | SchemaNode[] | string
+  /** @group 节点标识 */
   name?: string
+  /** @group 节点标识 */
   label?: string
+  /** @group 校验 */
   rules?: string | RuleItem | Array<string | RuleItem>
+  /** @group 渲染属性 */
   formItem?: boolean | FormItemConfig
+  /** @group v-model 适配 */
   modelProp?: string
+  /** @group 校验 */
   defaultValue?: unknown
+  /** @group 布局 */
   row?: RowConfig
+  /** @group 布局 */
   column?: number
+  /** @group 布局 */
   col?: boolean | ColConfig
+  /** @group 响应式 */
   reaction?: ReactionConfig
+  /** @group 渲染属性 */
   directives?: DirectiveConfig[]
   /** 异步选项数据源（Select/Cascader/TreeSelect/Autocomplete） */
+  /** @group 数据加载 */
   asyncOptions?: AsyncOptionsConfig
+  /** @group 渲染属性 */
   slots?: Record<string, SchemaSlot>
+  /** @group 响应式 */
   ignore?: boolean
+  /** @group 响应式 */
   hidden?: boolean
+  /** @group 节点标识 */
   key?: string | number
+  /** @group 数组节点 */
   kind?: 'array'
+  /** @group 数组节点 */
   array?: ArrayNodeConfig
-  /** 字段禁用状态（支持反应式：boolean / 函数 / 函数表达式）
+  /**
+   * 字段禁用状态（支持反应式：boolean / 函数 / 函数表达式）
    *  - 数组节点：仅控制容器按钮（行内控件需通过 reaction 自行级联）
    *  - props.disabled 优先级更高：用户显式写在 props 里的 disabled 会覆盖本字段
    *  - el-form 自动跳过 disabled 字段的校验（async-validator 行为）
    *  - 【顶层 schema 生效】写在顶层 schema 上 = 整体禁用整个表单（透传 el-form disabled，
-   *    与 labelPosition 同模式；函数/表达式/reaction 动态求值均支持） */
+   *    与 labelPosition 同模式；函数/表达式/reaction 动态求值均支持）
+   * @group 响应式（双层：字段级=字段禁用 / 顶层=整体禁用）
+   */
   disabled?: import('./reaction').ReactionValue<boolean>
   /**
    * 字段权限（阶段 2.3）：view / edit / hidden 三态
@@ -113,6 +138,7 @@ export interface SchemaNode {
    * 动态权限：函数形式 (model) => 'view' | 'edit' | 'hidden'，根据当前 model 动态决定
    * 权限码形式：字符串 'user.edit' 等，需配合 XForm 的 permissionResolver 配置
    * （默认 permissionResolver 接受普通字符串字面量，可由用户注入 useAuth().hasPerm 实现权限码 → 状态映射）
+   * @group 响应式（字段级）
    */
   permission?: import('./reaction').ReactionValue<'view' | 'edit' | 'hidden'>
   /**
@@ -123,6 +149,7 @@ export interface SchemaNode {
    *
    * 注：label-position 是 el-form 实例级属性,只能由顶层 schema 配置,
    * 不能针对单个 el-form-item 设置（这是 element-plus 自身限制）
+   * @group 顶层 schema（仅顶层生效）
    */
   labelPosition?: 'left' | 'right' | 'top'
   /**
@@ -131,11 +158,13 @@ export interface SchemaNode {
    * - hidden 优先级更高（hidden 字段仍不渲染）
    * - 支持字面量 / 函数 / 函数表达式 / reaction 动态求值
    * - 字段级只读请用 permission: 'view'（本字段仅顶层生效）
+   * @group 顶层 schema（仅顶层生效）
    */
   readonly?: import('./reaction').ReactionValue<boolean>
   /**
    * el-form label 宽度（仅顶层 schema 生效，与 labelPosition 同模式）：
    * 如 '120px' 或 120；数组形式 schema 无顶层节点，配置不生效
+   * @group 顶层 schema（仅顶层生效）
    */
   labelWidth?: string | number
   /**
@@ -143,11 +172,13 @@ export interface SchemaNode {
    * - 字段规则失败：ElForm 原生滚动到第一个 .el-form-item.is-error
    * - 跨字段 crossValidator 失败：XForm 内部滚动到第一个错误字段（keyPath 末段）
    * - 默认 false（与 element-plus 原生一致）
+   * @group 顶层 schema（仅顶层生效）
    */
   scrollToError?: boolean
   /**
    * 滚动行为选项（仅顶层 schema 生效，与 labelPosition 同模式，默认 true）：
    * 如 { behavior: 'smooth', block: 'center' }
+   * @group 顶层 schema（仅顶层生效）
    */
   scrollIntoViewOptions?: ScrollIntoViewOptions | boolean
   /**
@@ -155,6 +186,7 @@ export interface SchemaNode {
    * - 0（默认）：实时校验（每键触发 crossValidator）
    * - >0：依赖字段停止变化 delay ms 后跑一次 crossValidator（高频输入场景减负）
    * 字段级 rules[i].debounceMs 可覆盖本配置
+   * @group 顶层 schema（仅顶层生效）
    */
   debounceValidation?: number
 }

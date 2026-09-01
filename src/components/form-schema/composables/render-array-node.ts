@@ -14,6 +14,8 @@
  *   - 业务侧通过 `Component as never` 跳过元组校验，运行时由 Vue 内置组件解析
  *     完成 props/slots 校验
  * 不要在没有充分理由时移除这些 cast —— Element Plus 3.0 升级窗口期再评估
+ *
+ * 完整归因表（C1-C9 根因分类 + 文件分布）见 `../types/TYPE-CAST-AUDIT.md`。
  * ────────────────────────────────────────────────────────────────────────────
  */
 import { h, type VNode } from 'vue'

@@ -152,49 +152,44 @@ export interface RenderSchemaNodeOptions {
 // 主调度入口 —— 5 类分支委托给子模块
 // ────────────────────────────────────────────────────────────────────────────
 
-/** 主调度入口 —— 4 类分支委托给子模块 */
+/** 主调度入口 —— 5 类渲染分支委托给子函数（行为 100% 等价原内联实现，P1-3 重构） */
 export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
-  function renderToComponentInner(node: SchemaNode): VNode | string | VNode[] | undefined {
-    // 阶段 2.3：权限 gate（位于最前面，所有渲染分支前）
-    // - hidden:不渲染,直接返回 undefined（DOM 中不出现）
-    // - view:渲染为纯文本占位,跳过 formItem 包装与校验
-    // - edit:正常走原有分支
-    const permission = resolvePermission(node, {
-      model: () => opts.model ?? {},
-      ...(opts.permissionResolver ? { permissionResolver: opts.permissionResolver } : {}),
-    })
-    if (permission === 'hidden') return undefined
-    // 整体只读（顶层 schema readonly）：未 hidden 的字段一律按 view 态展示（P2-1）
-    const readonly = opts.globalReadonly?.() === true
-    if ((permission === 'view' || readonly) && node.name) {
-      // view 态:渲染 label + 纯文本占位（不包 formItem,不走校验）
-      return h(
-        'div',
-        {
-          key: `view-${node.name}`,
-          class: 'x-form-view-field',
-          'data-permission': 'view',
-        } as never,
-        {
-          default: () =>
-            [
-              node.label
-                ? h('label', { class: 'x-form-view-field__label' } as never, {
-                    default: () => `${node.label}：`,
-                  })
-                : null,
-              h('span', { class: 'x-form-view-field__value' } as never, {
-                default: () => renderViewPlaceholder(node, opts.model),
-              }),
-            ].filter(Boolean) as never,
-        }
-      ) as VNode
-    }
+  // ──────────────────────────────────────────────────────────────────────
+  // 5 类渲染分支函数（按顺序尝试，第一个返回非 undefined 的胜出）
+  // 每个函数职责单一 + 行为等价原内联 if-else 块；主函数只剩调度逻辑
+  // ──────────────────────────────────────────────────────────────────────
 
-    // 1) 数组节点独立分支
-    if (node.kind === 'array') {
-      return renderArrayNode(node, opts)
-    }
+  /** view 态占位（permission: 'view' 或顶层 readonly）—— 纯文本不包 formItem 不走校验 */
+  function renderViewField(node: SchemaNode): VNode {
+    return h(
+      'div',
+      {
+        key: `view-${node.name}`,
+        class: 'x-form-view-field',
+        'data-permission': 'view',
+      } as never,
+      {
+        default: () =>
+          [
+            node.label
+              ? h('label', { class: 'x-form-view-field__label' } as never, {
+                  default: () => `${node.label}：`,
+                })
+              : null,
+            h('span', { class: 'x-form-view-field__value' } as never, {
+              default: () => renderViewPlaceholder(node, opts.model),
+            }),
+          ].filter(Boolean) as never,
+      }
+    ) as VNode
+  }
+
+  /** 共享上下文准备（dev mode 白名单校验 + 组件解析 + 事件绑定 + async props） */
+  function resolveNodeContext(node: SchemaNode): {
+    Comp: ReturnType<typeof resolveComponentFor>
+    eventBindings: Record<string, unknown>
+    asyncProps: Record<string, unknown>
+  } {
     // OPT-B：dev mode props 白名单校验（用户传错字段名时 console.warn + OSD 提示）
     // validate 仅遍历 string component + EL_COMPONENT_MAP 命中的字段；用户自定义组件自动跳过
     validateSchemaProps(node)
@@ -207,22 +202,43 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
       ...buildOnBindings(node, opts.model),
     }
     const asyncProps = buildAsyncProps(node)
-    // 2) 视觉容器（Card 等带 row/column，无 name）
-    if (Comp && (node.slots || node.children !== undefined) && !node.name) {
-      return renderVisualContainer(node, Comp as object, opts, asyncProps)
-    }
-    // 3) FormItem 包装（含 name 或 formItem: true）
-    const wrapWithFormItem =
+    return { Comp, eventBindings, asyncProps }
+  }
+
+  /** 分支 2：视觉容器（Card 等带 row/column，无 name） */
+  function renderVisualBranch(
+    node: SchemaNode,
+    Comp: ReturnType<typeof resolveComponentFor>,
+    asyncProps: Record<string, unknown>
+  ): VNode | string | VNode[] | undefined {
+    if (!Comp || (!node.slots && node.children === undefined) || node.name) return undefined
+    return renderVisualContainer(node, Comp as object, opts, asyncProps)
+  }
+
+  /** 分支 3：FormItem 包装（含 name 或 formItem: true）—— 有 fall-through（result 为空时继续） */
+  function renderFormItemBranch(
+    node: SchemaNode,
+    Comp: ReturnType<typeof resolveComponentFor>
+  ): VNode | string | VNode[] | undefined {
+    const shouldWrap =
       (node.name !== undefined && node.formItem !== false) || node.formItem === true
-    if (wrapWithFormItem) {
-      const result = renderWithFormItem(node, Comp as object, opts)
-      if (result) return result
-    }
-    // 4) 纯 row+column 布局（无 formItem）
-    if (node.row || node.column !== undefined) {
-      return renderWithRowColumn(node, opts)
-    }
-    // 5) 默认分支：直接渲染 Comp
+    if (!shouldWrap) return undefined
+    return renderWithFormItem(node, Comp as object, opts) ?? undefined
+  }
+
+  /** 分支 4：纯 row+column 布局（无 formItem） */
+  function renderRowColumnBranch(node: SchemaNode): VNode | string | VNode[] | undefined {
+    if (node.row === undefined && node.column === undefined) return undefined
+    return renderWithRowColumn(node, opts)
+  }
+
+  /** 分支 5：默认——直接渲染 Comp + wrapWithElCol */
+  function renderDefaultBranch(
+    node: SchemaNode,
+    Comp: ReturnType<typeof resolveComponentFor>,
+    eventBindings: Record<string, unknown>,
+    asyncProps: Record<string, unknown>
+  ): VNode | string | VNode[] | undefined {
     if (!Comp) return undefined
     return wrapWithElCol(
       node,
@@ -240,6 +256,50 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
       ) as VNode,
       opts.currentBreakpoint?.value
     )
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // 主调度：权限 gate + view 态提前 return；下方 5 分支按顺序尝试
+  // ──────────────────────────────────────────────────────────────────────
+
+  function renderToComponentInner(node: SchemaNode): VNode | string | VNode[] | undefined {
+    // 阶段 2.3：权限 gate（位于最前面，所有渲染分支前）
+    // - hidden:不渲染,直接返回 undefined（DOM 中不出现）
+    // - view:渲染为纯文本占位,跳过 formItem 包装与校验
+    // - edit:正常走原有分支
+    const permission = resolvePermission(node, {
+      model: () => opts.model ?? {},
+      ...(opts.permissionResolver ? { permissionResolver: opts.permissionResolver } : {}),
+    })
+    if (permission === 'hidden') return undefined
+    // 整体只读（顶层 schema readonly）：未 hidden 的字段一律按 view 态展示（P2-1）
+    const readonly = opts.globalReadonly?.() === true
+    if ((permission === 'view' || readonly) && node.name) {
+      return renderViewField(node)
+    }
+
+    // 1) 数组节点独立分支（进入即截断，即使 renderArrayNode 返回 undefined）
+    //    原代码语义：`if (node.kind === 'array') return renderArrayNode(...)`，
+    //    即使 result 为 undefined 也截断后续分支（与视觉容器/row+column 一致）
+    if (node.kind === 'array') return renderArrayNode(node, opts)
+
+    // 共享上下文准备（dev mode 白名单校验 + Comp + eventBindings + asyncProps）
+    const { Comp, eventBindings, asyncProps } = resolveNodeContext(node)
+
+    // 2) 视觉容器（Card 等带 row/column，无 name）
+    const visualResult = renderVisualBranch(node, Comp, asyncProps)
+    if (visualResult !== undefined) return visualResult
+
+    // 3) FormItem 包装（含 name 或 formItem: true）—— 有 fall-through
+    const formItemResult = renderFormItemBranch(node, Comp)
+    if (formItemResult !== undefined) return formItemResult
+
+    // 4) 纯 row+column 布局（无 formItem）
+    const rowColumnResult = renderRowColumnBranch(node)
+    if (rowColumnResult !== undefined) return rowColumnResult
+
+    // 5) 默认分支：直接渲染 Comp
+    return renderDefaultBranch(node, Comp, eventBindings, asyncProps)
   }
   return renderToComponentInner
 }

@@ -360,7 +360,7 @@ describe('xTransfer 链式', () => {
     expect(node.props?.data).toBe(data)
     expect(node.props?.titles).toEqual(['未分配', '已分配'])
     expect(node.props?.filterable).toBe(true)
-    expect(node.props?.['button-texts']).toEqual(['向左', '向右'])
+    expect(node.props?.buttonTexts).toEqual(['向左', '向右'])
   })
 })
 

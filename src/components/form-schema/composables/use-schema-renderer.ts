@@ -1,4 +1,4 @@
-import { watch, ref, reactive, onScopeDispose, type Ref } from 'vue'
+import { watch, ref, reactive, markRaw, onScopeDispose, type Ref } from 'vue'
 import { cloneDeepWith } from 'lodash-es'
 
 /**
@@ -6,10 +6,15 @@ import { cloneDeepWith } from 'lodash-es'
  * 组件定义对象（options object）被深克隆后身份丢失，Vue 视为不同组件导致整字段 remount；
  * 保持引用后配合顶层稳定 key（B-1），schema 重建时同 key 节点走 patch 而非 remount。
  * 函数（reaction/validator/source）cloneDeep 本就按引用拷贝，无需特殊处理。
+ *
+ * markRaw 包裹：用户传 component 为 Component 对象（如 `component: ElIcon`）时，
+ * 后续 reactive(cloned) 会把组件对象也变 Proxy，触发 Vue 警告
+ * "Component that was made a reactive object"。
+ * markRaw 排除响应式追踪，保留 Vue 内部组件优化的同时消除警告。
  */
 function cloneSchema<T>(value: T): T {
   return cloneDeepWith(value, (val, key) => {
-    if (key === 'component' && val !== null && typeof val === 'object') return val
+    if (key === 'component' && val !== null && typeof val === 'object') return markRaw(val)
     return undefined // 其余字段走默认深克隆
   })
 }

@@ -11,6 +11,8 @@
  * Element Plus buildProp 类型元组推断 + props 类型展开不完整，需要 cast 到 never
  * 才能让 vue h() 接受动态拼装的 props 对象；运行时由 Element Plus 自身做校验。
  * 见 render-array-node.ts 头部同类说明。
+ *
+ * 完整归因表（C1-C9 根因分类）见 `../types/TYPE-CAST-AUDIT.md`。
  * ────────────────────────────────────────────────────────────────────────────
  */
 import { h, type VNode } from 'vue'

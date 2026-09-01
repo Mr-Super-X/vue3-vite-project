@@ -24,6 +24,32 @@ const schema = {
 
 ---
 
+## 文档导航图
+
+XForm 共有 5 份文档 + 38 个 demo，按角色 / 任务选读，避免到处翻：
+
+| 你的角色 / 任务                                 | 先看这个                                                | 再看这个                                                              | 跳过            |
+| ----------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------- | --------------- |
+| **新人首次集成**（5 分钟上手）                  | 本 README 上方「30 秒上手」                             | `/demo/x-form-minimum-demo`                                           | —               |
+| **业务开发者集成 XForm**                        | 本 README「DSL 字段速查表」+「链式构建器」+「决策指南」 | `/demo/x-form-base`                                                   | ARCHITECTURE.md |
+| **想理解底层机制**（reaction / 跨字段 / dirty） | ARCHITECTURE.md §3-5                                    | 对应 demo（`/x-form-reaction` `/x-form-cross-field` `/x-form-dirty`） | —               |
+| **排查 bug 或自定义场景**                       | 本 README「故障排查」+「自定义组件类型扩展」            | `types/TYPE-CAST-AUDIT.md`（85 处类型断言归因）                       | —               |
+| **架构师 / 重构决策**                           | `ARCHITECTURE.md` §1-13                                 | `types/TYPE-CAST-AUDIT.md` + 项目根 `CLAUDE.md` §1-2                  | 各 demo         |
+
+### 文档清单
+
+| 文件                                                                 | 内容                                    | 受众                     |
+| -------------------------------------------------------------------- | --------------------------------------- | ------------------------ |
+| `src/components/form-schema/README.md`（本文件）                     | API 速查 + 上手 demo 入口               | 业务开发者（**最先读**） |
+| `src/components/form-schema/ARCHITECTURE.md`                         | 设计原则 + 数据流 + 决策记录            | 进阶 / 架构师            |
+| `src/components/form-schema/types/TYPE-CAST-AUDIT.md`                | 85 处 `as never` 归因（C1-C9 根因分类） | 维护者                   |
+| `src/components/form-schema/composables/*.ts` 头部 JSDoc             | 各 composable 的设计意图                | 维护者                   |
+| 项目根 `docs/24-XForm使用指南.md` + `docs/25-XForm架构与决策记录.md` | 历史决策档案 + 业务实战                 | 进阶 / 历史追溯          |
+
+> **速记口诀**：先看 README 速查 → 跑对应 demo → 卡住了查 ARCHITECTURE → 改 cast 查 TYPE-CAST-AUDIT
+
+---
+
 ## props（10 个）
 
 > 10 个 prop 中 `schema` 必填；`scrollToError` / `scrollIntoViewOptions` 同时作为 schema 顶层字段（仅顶层容器形态生效）。
@@ -83,39 +109,100 @@ formRef.value?.resetDirty() // 当前状态设为新基线（提交后归零）
 
 ---
 
-## schema 字段（30 个）
+## schema 字段速查表（30 字段）
 
-| 字段                    | 类型                                                 | 说明                                                                                                   |
-| ----------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `component`             | `string`                                             | 组件名（短名 `'Input'` / 全名 `'ElInput'`）                                                            |
-| `props`                 | `Record<string, unknown>`                            | 组件 props                                                                                             |
-| `on`                    | `Record<string, Function \| string>`                 | 事件回调（string 是 `{{ (m) => ... }}` 表达式）                                                        |
-| `children`              | `SchemaNode \| SchemaNode[] \| string`               | 子节点                                                                                                 |
-| `label`                 | `string`                                             | 标签文字                                                                                               |
-| `name`                  | `string`                                             | 字段名（双向绑定的 key）                                                                               |
-| `key`                   | `string \| number`                                   | 唯一标识                                                                                               |
-| `rules`                 | `string \| RuleItem \| Array`                        | 校验规则                                                                                               |
-| `defaultValue`          | `unknown`                                            | 字段初值（model 缺时填入）                                                                             |
-| `modelProp`             | `string`                                             | 自定义 v-model 属性名（默认 `modelValue`）                                                             |
-| `row`                   | `RowConfig`                                          | 栅格行（gutter）                                                                                       |
-| `column`                | `number`                                             | 每行栅格数                                                                                             |
-| `col`                   | `boolean \| { span, offset }`                        | 子节点栅格列                                                                                           |
-| `hidden`                | `boolean`                                            | 节点隐藏（仍创建，display:none，不参与校验）                                                           |
-| `ignore`                | `boolean`                                            | 跳过渲染                                                                                               |
-| `reaction`              | `ReactionConfig`                                     | 反应式联动（支持 `deps` 精确监听依赖路径）                                                             |
-| `directives`            | `DirectiveConfig[]`                                  | 自定义指令                                                                                             |
-| `asyncOptions`          | `AsyncOptionsConfig`                                 | 异步选项数据源（Select/Cascader/TreeSelect/Autocomplete）                                              |
-| `slots`                 | `Record<string, SchemaNode>`                         | 具名插槽                                                                                               |
-| `formItem`              | `boolean \| { component, props, directives, slots }` | 自定义 form-item 包装                                                                                  |
-| `kind`                  | `'array'`                                            | 节点类型（`'array'` = 数组容器）                                                                       |
-| `array`                 | `ArrayNodeConfig`                                    | 数组容器配置（`kind: 'array'` 时必填；`draggable: true` 开启行拖拽排序）                               |
-| `disabled`              | `ReactionValue<boolean>`                             | 字段禁用（字面量 / 函数 / 表达式）；**顶层 schema 配置 = 整体禁用整个表单**（与 labelPosition 同模式） |
-| `readonly`              | `ReactionValue<boolean>`                             | 整体只读（**仅顶层 schema 生效**）：所有字段按 view 态纯文本展示；字段级只读用 `permission: 'view'`    |
-| `permission`            | `ReactionValue<'view' \| 'edit' \| 'hidden'>`        | 字段权限三态（view 只读 / edit 可编辑 / hidden 不渲染）                                                |
-| `labelPosition`         | `'left' \| 'right' \| 'top'`                         | label 位置（仅顶层 schema 生效）                                                                       |
-| `labelWidth`            | `string \| number`                                   | label 宽度（仅顶层 schema 生效，如 '120px' 或 120）                                                    |
-| `scrollToError`         | `boolean`                                            | 校验失败自动滚动到第一个错误字段（仅顶层 schema 生效，默认 false）                                     |
-| `scrollIntoViewOptions` | `ScrollIntoViewOptions \| boolean`                   | 滚动行为选项（仅顶层 schema 生效，默认 true）                                                          |
+> **层级速记**：字段按生效范围分三类——
+>
+> - **字段级**（22 个）：写在每个节点上，控制该节点的行为（如 `Input` 的 `placeholder`）
+> - **顶层 schema**（7 个）：仅在 `{ children: [...] }` 形态的最外层对象上生效，对应 element-plus `el-form` 实例级属性（控制整个表单行为）
+> - **双层**（1 个）：`disabled` 字段级=字段禁用，顶层=整体禁用整个表单
+>
+> 同名 prop 与 schema 字段的关系：`scrollToError` / `scrollIntoViewOptions` 同时是 XForm props 和顶层 schema 字段，schema 字段优先（XForm props 主要供不写 schema 的简单场景）。
+
+### 节点标识（4）
+
+| 字段        | 类型                  | 层级   | 说明                                                                |
+| ----------- | --------------------- | ------ | ------------------------------------------------------------------- |
+| `component` | `string \| Component` | 字段级 | 组件名（短名 `'Input'` / 全名 `'ElInput'` / 直接传 Component 对象） |
+| `name`      | `string`              | 字段级 | 字段名（双向绑定的 key，缺则不绑 model）                            |
+| `key`       | `string \| number`    | 字段级 | v-for 唯一标识（建议必填，避免 DOM 复用导致状态残留）               |
+| `label`     | `string`              | 字段级 | form-item 标签文字                                                  |
+
+### 渲染属性（5）
+
+| 字段         | 类型                                   | 层级   | 说明                                                            |
+| ------------ | -------------------------------------- | ------ | --------------------------------------------------------------- |
+| `props`      | `Record<string, unknown>`              | 字段级 | 透传给 component 的 props（受 `SchemaNodeFor<C>` 类型推导约束） |
+| `on`         | `Record<string, Function \| string>`   | 字段级 | 事件回调（string 是 `{{ (m) => ... }}` 表达式）                 |
+| `children`   | `SchemaNode \| SchemaNode[] \| string` | 字段级 | 子节点 / 文本                                                   |
+| `slots`      | `Record<string, SchemaNode>`           | 字段级 | 具名插槽                                                        |
+| `directives` | `DirectiveConfig[]`                    | 字段级 | 自定义指令                                                      |
+
+### 布局（4）
+
+| 字段       | 类型                                                 | 层级   | 说明                                                                  |
+| ---------- | ---------------------------------------------------- | ------ | --------------------------------------------------------------------- |
+| `row`      | `RowConfig`                                          | 字段级 | 栅格行（gutter）                                                      |
+| `column`   | `number`                                             | 字段级 | 每行栅格数                                                            |
+| `col`      | `boolean \| { span, offset }`                        | 字段级 | 子节点栅格列                                                          |
+| `formItem` | `boolean \| { component, props, directives, slots }` | 字段级 | 自定义 form-item 包装（false=裸渲染组件，true=默认包装，对象=自定义） |
+
+### 校验（2）
+
+| 字段           | 类型                          | 层级   | 说明                                                                    |
+| -------------- | ----------------------------- | ------ | ----------------------------------------------------------------------- |
+| `rules`        | `string \| RuleItem \| Array` | 字段级 | 校验规则（async-validator 兼容）；string 是 `XFormProps.rules` 命名引用 |
+| `defaultValue` | `unknown`                     | 字段级 | 字段初值（model 中缺该 key 时填入）                                     |
+
+### 响应式（6）
+
+| 字段         | 类型                                          | 层级              | 说明                                                                                  |
+| ------------ | --------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------- |
+| `reaction`   | `ReactionConfig`                              | 字段级            | 反应式联动（支持 `deps` 精确监听依赖路径）                                            |
+| `disabled`   | `ReactionValue<boolean>`                      | **字段级 + 顶层** | 字段级=字段禁用；顶层=整体禁用整个表单（透传 el-form disabled）                       |
+| `permission` | `ReactionValue<'view' \| 'edit' \| 'hidden'>` | 字段级            | 字段权限三态（view 只读 / edit 可编辑 / hidden 不渲染）                               |
+| `readonly`   | `ReactionValue<boolean>`                      | **仅顶层**        | 整体只读（未 hidden 字段一律按 view 态纯文本展示）；字段级只读用 `permission: 'view'` |
+| `hidden`     | `boolean \| ReactionValue<boolean>`           | 字段级            | 节点隐藏（仍创建，display:none，不参与校验）                                          |
+| `ignore`     | `boolean`                                     | 字段级            | 跳过渲染（不参与 `getNames`）                                                         |
+
+### 数组节点（2）
+
+| 字段    | 类型              | 层级   | 说明                                                                     |
+| ------- | ----------------- | ------ | ------------------------------------------------------------------------ |
+| `kind`  | `'array'`         | 字段级 | 节点类型（`'array'` = 数组容器）                                         |
+| `array` | `ArrayNodeConfig` | 字段级 | 数组容器配置（`kind: 'array'` 时必填；`draggable: true` 开启行拖拽排序） |
+
+### 数据加载（1）
+
+| 字段           | 类型                 | 层级   | 说明                                                            |
+| -------------- | -------------------- | ------ | --------------------------------------------------------------- |
+| `asyncOptions` | `AsyncOptionsConfig` | 字段级 | 异步选项数据源（Select / Cascader / TreeSelect / Autocomplete） |
+
+### 顶层 schema 配置（5）—— **仅顶层 schema 生效**
+
+> 这些字段对应 element-plus `el-form` 实例级属性，必须从顶层 schema 派生而非 XForm props 配置。
+
+| 字段                    | 类型                               | 层级       | 说明                                                                                    |
+| ----------------------- | ---------------------------------- | ---------- | --------------------------------------------------------------------------------------- |
+| `labelPosition`         | `'left' \| 'right' \| 'top'`       | **仅顶层** | label 位置（默认 `left`；`'top'` 推荐用于响应式布局）                                   |
+| `labelWidth`            | `string \| number`                 | **仅顶层** | label 宽度（如 `'120px'` 或 `120`）                                                     |
+| `scrollToError`         | `boolean`                          | **仅顶层** | 校验失败自动滚动到第一个错误字段（默认 `false`；与 XForm props 同名，schema 优先）      |
+| `scrollIntoViewOptions` | `ScrollIntoViewOptions \| boolean` | **仅顶层** | 滚动行为选项（默认 `true`）                                                             |
+| `debounceValidation`    | `number`                           | **仅顶层** | 跨字段校验默认 debounce ms（`0` = 实时，默认 `0`；字段级 `rules[i].debounceMs` 可覆盖） |
+
+### v-model 适配（1）
+
+| 字段        | 类型     | 层级   | 说明                                                               |
+| ----------- | -------- | ------ | ------------------------------------------------------------------ |
+| `modelProp` | `string` | 字段级 | 自定义 v-model 属性名（默认 `modelValue`，Upload 用 `'fileList'`） |
+
+---
+
+> **速记总结**：
+>
+> - **字段级（22）**：节点自身行为——标识（4）+ 渲染（5）+ 布局（4）+ 校验（2）+ 响应式（6 含 1 个双层）+ 数组（2）+ 数据加载（1）+ v-model（1）
+> - **顶层 schema（7 + 1 双层）**：表单整体行为——`labelPosition` / `labelWidth` / `scrollToError` / `scrollIntoViewOptions` / `debounceValidation` / `readonly` / `disabled`（双层）
+> - **关键约束**：`disabled` 在字段级只影响单个字段；在顶层禁用整个表单
 
 ---
 
@@ -458,3 +545,85 @@ dev 模式下 XFormDebugBanner 会自动在右下角浮窗显示 schema 校验�
 | `/demo/x-form-upload`              | 文件上传（单文件/多文件/拖拽/图片墙/校验/回显）     |
 
 > 主 demo `/demo/x-form` 展示 Props/Events/Slots 完整 API 表，是查阅全部 prop 与实例方法的入口。
+
+---
+
+## prod 错误反馈：哪些错误用户在生产环境能看到
+
+XForm 错误反馈分 4 层（form 红字 / OSD toast / console / Debug Banner），生产环境与开发环境可见性不同：
+
+| 层                                              | 触发场景                                                                | dev 可见 | prod 可见                                    | 用户感知          |
+| ----------------------------------------------- | ----------------------------------------------------------------------- | -------- | -------------------------------------------- | ----------------- |
+| **form 红字**（el-form-item 下方）              | el-form 字段规则失败 / `setFieldError` 写入 / `validateFromServer` 回填 | ✅       | ✅                                           | ✅ 用户可感知     |
+| **OSD 错误浮窗**（XFormErrorToast）             | 跨字段校验失败 / 服务端 422 回填 / schema 严重校验失败                  | ✅       | ❌ 默认关闭（需 `showDebugBanner` 强制开启） | ❌ 默认无感       |
+| **Debug Banner**（右下角浮窗）                  | schema 静态校验失败 / 表达式含 forbidden 标识符 / model 缺失            | ✅       | ❌ 仅 dev                                    | ❌ 仅 dev 可见    |
+| **console**（`console.error` / `console.warn`） | 所有错误 + 部分 warn（如 model 缺失）                                   | ✅       | ✅ 保留 `console.error`                      | ❌ 仅开发者控制台 |
+
+### 生产环境推荐配置
+
+```ts
+import XForm from '@/components/form-schema/XForm.vue'
+
+// 默认行为已适合 prod：form 红字全环境可见，OSD / Banner 仅 dev
+<XForm :schema="schema" :model="form" />
+
+// 如果希望 prod 也显示 OSD toast（不推荐，仅用于错误诊断场景）：
+const formRef = ref<XFormComponentInstance>()
+// 调用方自行实现错误浮窗（业务错误浮窗组件）
+formRef.value?.validateFromServer?.({ success: false, errors: {...} })
+// 然后业务浮窗组件接 fetch 错误展示用户提示
+```
+
+### 重要行为
+
+1. **默认 prod 用户能感知的错误** 仅 form 红字一种 —— 这与 element-plus 原生行为一致
+2. **OSD toast 默认 dev only** —— 避免生产环境弹出调试信息干扰用户
+3. **console.error 全环境保留** —— 出问题时浏览器 console / Sentry 仍能捕获
+4. **schema 静态校验失败不阻塞渲染** —— 字段仍会渲染，但 `console.error` + dev Banner 提示开发者
+
+---
+
+## `{{ }}` 表达式速查表（沙箱语法）
+
+`reaction` / `disabled` / `readonly` / `hidden` 字段支持三种写法（字面量 / 函数 / 表达式字符串），本表给出对照与适用场景：
+
+| 写法                        | 示例                                               | 何时用                                              | 类型推导                        |
+| --------------------------- | -------------------------------------------------- | --------------------------------------------------- | ------------------------------- |
+| **字面量 boolean**          | `disabled: true`                                   | 静态条件（编译时已知）                              | ✅ 完整                         |
+| **字面量 string**           | `rules: 'required'`                                | 命名规则引用（配合 `XFormProps.rules`）             | ✅ 完整                         |
+| **函数 `(m) => value`**     | `disabled: (m) => !m.enable`                       | 动态求值（推荐）；IDE 能识别 `m` 是 model 类型      | ✅ 完整（`m` 自动推导为 model） |
+| **表达式字符串 `{{ fn }}`** | `disabled: '{{ (m) => !m.enable ? "是" : "否" }}'` | **从后端 / JSON 配置下发 schema**（函数无法序列化） | ⚠️ 弱推导（`m` 是 `unknown`）   |
+
+### 沙箱安全机制
+
+- 表达式字符串走 `new Function('model', '__rest', ...)` 创建独立函数作用域（相对 `eval` 不污染闭包）
+- dev 模式 `scanForForbidden` 黑名单扫描：`window` / `document` / `globalThis` / `eval` / `Function` / `setTimeout` / `setInterval` / `fetch` / `XMLHttpRequest` 命中即 `console.error` 拒绝
+- **禁止把 schema 来自 URL 参数 / localStorage / 用户输入**（CSP 风险）—— 仅允许后端预校验 schema 或项目内硬编码
+
+### 完整示例：reaction 同时用字面量 + 函数 + 表达式
+
+```ts
+{
+  component: 'Input',
+  name: 'path',
+  label: '路径',
+  reaction: {
+    // 函数形式（IDE 类型推导完整）
+    hidden: (m) => !m.enablePath,
+    // 字面量（静态）
+    rules: 'required',
+    // 表达式字符串（从后端 schema JSON 下发也能跑）
+    label: '{{ (m) => m.enablePath ? "路径（必填）" : "路径" }}',
+    // 函数形式动态改 props
+    props: (m) => ({ placeholder: m.enablePath ? '请输入' : '' }),
+  },
+}
+```
+
+> **坑**：未声明 `deps` 时 deep watch 整棵 model（重开销）。声明 `deps: ['a', 'b']` 后仅精确监听 —— 函数体内写 model 也安全（不会自触发）。XForm 内置 50 次/flush 兜底 + `console.error` 告警防循环 reaction。
+
+### 表达式解析失败行为
+
+- 函数写法：编译期类型错误，IDE 红波浪线；运行时按规则默认处理
+- 表达式字符串：dev mode `console.error` + 跳过该字段更新（不阻塞其他字段）
+- 表达式含 forbidden 标识符：dev mode `console.error` + Debug Banner 红字警告

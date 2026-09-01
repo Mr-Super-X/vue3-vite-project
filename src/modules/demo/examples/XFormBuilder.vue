@@ -135,6 +135,8 @@ const schema: SchemaNode = {
     } as SchemaNode,
 
     // 3. Transfer 链式 .data().titles().filterable().buttonTexts()
+    // （演示同时给出「直接 schema 对象写法」与「builder 链式写法」两种风格以做对比；
+    // 实际项目推荐 builder 写法 —— 编译时类型校验 props 字段名）
     {
       label: '角色分配',
       name: 'roles',
@@ -143,7 +145,7 @@ const schema: SchemaNode = {
         data: TRANSFER_DATA,
         titles: ['可分配', '已分配'],
         filterable: true,
-        'button-texts': ['取消', '分配'],
+        buttonTexts: ['取消', '分配'],
       },
     } as SchemaNode,
 

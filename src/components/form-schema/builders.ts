@@ -9,7 +9,7 @@
  *    无需在子类中重复声明
  * 2. makeBuilder(componentName) —— 工厂返回一个继承 NodeBuilder 的 class，
  *    子类只需实现 component-specific 方法（clearable/options/format/...）
- * 3. 25 个 xXxx 入口函数 = makeBuilder(componentName).Ext 实例
+ * 3. 27 个 xXxx 入口函数（含 xArray）= makeBuilder(componentName).Ext 实例
  *
  * 类型推导：
  * - xInput() → Builder<'Input', ElInputProps> → build() 返回 SchemaNodeFor<'Input'>
@@ -20,10 +20,16 @@
  *
  * ────────────────────────────────────────────────────────────────────────────
  * OPT-2 重构要点：
- * - 删除原 makeBuilder 内 ~60 行方法复制粘贴（原 145-205）
- * - 删除原 Ext 类中 5 处 `_b` 反射访问（原 272-273 / 288-289 / 293-294）
- * - 行数：537 → ~280（去掉 makeBuilder 内 13 方法 × 25 builder 复制）
+ * - 删除原 makeBuilder 内 ~60 行方法复制粘贴
+ * - 删除原 Ext 类中 5 处 `_b` 反射访问
+ * - 行数：537 → 280（去掉 makeBuilder 内 13 方法 × 25 builder 复制）
  * - 公开 API 完全兼容，所有现有测试无需修改
+ * ────────────────────────────────────────────────────────────────────────────
+ * P0-1 重构要点（2026-09-01 易用性优化）：
+ * - 按 component 名字母 A-Z 分组，每个 component 包含「makeBuilder 工厂 + Ext 子类 + xXxx 入口」三件套
+ * - 旧结构：25 个工厂集中 + 12 个 Ext 子类分散 + 27 个入口函数集中
+ * - 新结构：每个 component 独立一节，查找 builder 能力从跨 2-3 处跳转 → 同 1 节内查找
+ * - 公开 API 完全兼容
  * ────────────────────────────────────────────────────────────────────────────
  */
 import type {
@@ -168,83 +174,46 @@ function makeBuilder<C extends ComponentName>(
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// 25 个 component 基础 builder
+// 27 个 component builder（按字母 A-Z 排序）
+// 每个 component 三件套：makeBuilder 工厂 + Ext 子类 + xXxx 入口函数
 // ────────────────────────────────────────────────────────────────────────────
 
-const InputBuilder = makeBuilder('Input')
-const SelectBuilder = makeBuilder('Select')
-const OptionBuilder = makeBuilder('Option')
-const SwitchBuilder = makeBuilder('Switch')
-const DatePickerBuilder = makeBuilder('DatePicker')
-const TimePickerBuilder = makeBuilder('TimePicker')
-const TimeSelectBuilder = makeBuilder('TimeSelect')
-const TreeSelectBuilder = makeBuilder('TreeSelect')
-const UploadBuilder = makeBuilder('Upload')
+// ── Autocomplete ──
 const AutocompleteBuilder = makeBuilder('Autocomplete')
-const TransferBuilder = makeBuilder('Transfer')
-const RadioGroupBuilder = makeBuilder('RadioGroup')
-const RadioBuilder = makeBuilder('Radio')
-const CheckboxGroupBuilder = makeBuilder('CheckboxGroup')
-const CheckboxBuilder = makeBuilder('Checkbox')
-const CascaderBuilder = makeBuilder('Cascader')
-const InputNumberBuilder = makeBuilder('InputNumber')
-const InputPasswordBuilder = makeBuilder('InputPassword')
-const InputTextAreaBuilder = makeBuilder('InputTextArea')
-const InputTagBuilder = makeBuilder('InputTag')
-const ColorPickerBuilder = makeBuilder('ColorPicker')
-const MentionBuilder = makeBuilder('Mention')
-const RateBuilder = makeBuilder('Rate')
-const SliderBuilder = makeBuilder('Slider')
-const CardBuilder = makeBuilder('Card')
-
-// ────────────────────────────────────────────────────────────────────────────
-// 组件特有方法扩展（Ext 类）
-// ────────────────────────────────────────────────────────────────────────────
-
-/** InputBuilder 扩展 clearable（el-input 特有） */
-class InputBuilderExt extends InputBuilder {
-  clearable(): this {
-    return this.prop('clearable', true)
+class AutocompleteBuilderExt extends AutocompleteBuilder {
+  fetchSuggestions(
+    fn: (queryString: string, cb: (suggestions: Array<{ value: string }>) => void) => void
+  ): this {
+    return this.prop('fetchSuggestions', fn as never)
+  }
+  triggerOnFocus(): this {
+    return this.prop('triggerOnFocus', true)
+  }
+  placement(p: 'top' | 'top-start' | 'top-end' | 'bottom' | 'bottom-start' | 'bottom-end'): this {
+    return this.prop('placement', p)
   }
 }
+export const xAutocomplete = (name: string) => new AutocompleteBuilderExt(name)
 
-/** SelectBuilder 扩展 options（el-select 特有） */
-class SelectBuilderExt extends SelectBuilder {
-  options(opts: Array<{ value: unknown; label: string }>): this {
+// ── Cascader ──
+const CascaderBuilder = makeBuilder('Cascader')
+class CascaderBuilderExt extends CascaderBuilder {
+  options(opts: Array<unknown>): this {
     return this.prop('options', opts)
   }
-}
-
-/** SwitchBuilder 扩展（无特有方法） */
-class SwitchBuilderExt extends SwitchBuilder {}
-
-/** DatePickerBuilder 扩展 format（el-date-picker 特有） */
-class DatePickerBuilderExt extends DatePickerBuilder {
-  format(v: string): this {
-    return this.prop('valueFormat', v)
+  showAllLevels(): this {
+    return this.prop('showAllLevels', true)
   }
-}
-
-/** TextareaBuilder 扩展 rows（用 Input type=textarea 模拟） */
-class TextareaBuilderExt extends InputBuilder {
-  rows(n: number): this {
-    return this.prop('type', 'textarea').prop('rows', n)
+  separator(s: string): this {
+    return this.prop('separator', s)
   }
+  // el-cascader 的 expandTrigger 在 props 嵌套字段中,需要 props.expandTrigger
+  // 简化:用 prop() 直接覆盖整个 props(覆盖式更新),文档说明限制
 }
+export const xCascader = (name: string) => new CascaderBuilderExt(name)
 
-/** RadioGroupBuilder 扩展 options（多个 Radio 子节点） */
-class RadioGroupBuilderExt extends RadioGroupBuilder {
-  options(opts: Array<{ value: string; label: string }>): this {
-    this.node.children = opts.map((o) => ({
-      component: 'Radio',
-      props: { value: o.value },
-      children: o.label,
-    }))
-    return this
-  }
-}
-
-/** CardBuilder 扩展 title / column / gutter */
+// ── Card ──
+const CardBuilder = makeBuilder('Card')
 class CardBuilderExt extends CardBuilder {
   title(t: string): this {
     return this.prop('title', t)
@@ -258,8 +227,112 @@ class CardBuilderExt extends CardBuilder {
     return this
   }
 }
+export const xCard = (name: string) => new CardBuilderExt(name)
 
-/** TimePickerBuilder 扩展 format / valueFormat / range(el-time-picker 特有） */
+// ── Checkbox ──
+const CheckboxBuilder = makeBuilder('Checkbox')
+export const xCheckbox = (name: string) => new CheckboxBuilder(name)
+
+// ── CheckboxGroup ──
+const CheckboxGroupBuilder = makeBuilder('CheckboxGroup')
+export const xCheckboxGroup = (name: string) => new CheckboxGroupBuilder(name)
+
+// ── ColorPicker ──
+const ColorPickerBuilder = makeBuilder('ColorPicker')
+export const xColorPicker = (name: string) => new ColorPickerBuilder(name)
+
+// ── DatePicker ──
+const DatePickerBuilder = makeBuilder('DatePicker')
+class DatePickerBuilderExt extends DatePickerBuilder {
+  format(v: string): this {
+    return this.prop('valueFormat', v)
+  }
+}
+export const xDatePicker = (name: string) => new DatePickerBuilderExt(name)
+
+// ── Input ──
+const InputBuilder = makeBuilder('Input')
+class InputBuilderExt extends InputBuilder {
+  clearable(): this {
+    return this.prop('clearable', true)
+  }
+}
+export const xInput = (name: string) => new InputBuilderExt(name)
+
+// ── InputNumber ──
+const InputNumberBuilder = makeBuilder('InputNumber')
+export const xInputNumber = (name: string) => new InputNumberBuilder(name)
+
+// ── InputPassword ──
+const InputPasswordBuilder = makeBuilder('InputPassword')
+export const xInputPassword = (name: string) => new InputPasswordBuilder(name)
+
+// ── InputTag ──
+const InputTagBuilder = makeBuilder('InputTag')
+export const xInputTag = (name: string) => new InputTagBuilder(name)
+
+// ── InputTextArea ──
+const InputTextAreaBuilder = makeBuilder('InputTextArea')
+export const xInputTextArea = (name: string) => new InputTextAreaBuilder(name)
+
+// ── Mention ──
+const MentionBuilder = makeBuilder('Mention')
+export const xMention = (name: string) => new MentionBuilder(name)
+
+// ── Option ──
+const OptionBuilder = makeBuilder('Option')
+export const xOption = (name: string) => new OptionBuilder(name)
+
+// ── Radio ──
+const RadioBuilder = makeBuilder('Radio')
+export const xRadio = (name: string) => new RadioBuilder(name)
+
+// ── RadioGroup ──
+const RadioGroupBuilder = makeBuilder('RadioGroup')
+class RadioGroupBuilderExt extends RadioGroupBuilder {
+  options(opts: Array<{ value: string; label: string }>): this {
+    this.node.children = opts.map((o) => ({
+      component: 'Radio',
+      props: { value: o.value },
+      children: o.label,
+    }))
+    return this
+  }
+}
+export const xRadioGroup = (name: string) => new RadioGroupBuilderExt(name)
+
+// ── Rate ──
+const RateBuilder = makeBuilder('Rate')
+export const xRate = (name: string) => new RateBuilder(name)
+
+// ── Select ──
+const SelectBuilder = makeBuilder('Select')
+class SelectBuilderExt extends SelectBuilder {
+  options(opts: Array<{ value: unknown; label: string }>): this {
+    return this.prop('options', opts)
+  }
+}
+export const xSelect = (name: string) => new SelectBuilderExt(name)
+
+// ── Slider ──
+const SliderBuilder = makeBuilder('Slider')
+export const xSlider = (name: string) => new SliderBuilder(name)
+
+// ── Switch ──
+const SwitchBuilder = makeBuilder('Switch')
+class SwitchBuilderExt extends SwitchBuilder {}
+export const xSwitch = (name: string) => new SwitchBuilderExt(name)
+
+// ── Textarea ──（复用 InputBuilder 的 props，type=textarea 模拟多行）
+class TextareaBuilderExt extends InputBuilder {
+  rows(n: number): this {
+    return this.prop('type', 'textarea').prop('rows', n)
+  }
+}
+export const xTextarea = (name: string) => new TextareaBuilderExt(name)
+
+// ── TimePicker ──
+const TimePickerBuilder = makeBuilder('TimePicker')
 class TimePickerBuilderExt extends TimePickerBuilder {
   format(v: string): this {
     return this.prop('format', v)
@@ -271,8 +344,10 @@ class TimePickerBuilderExt extends TimePickerBuilder {
     return this.prop('isRange', true)
   }
 }
+export const xTimePicker = (name: string) => new TimePickerBuilderExt(name)
 
-/** TimeSelectBuilder 扩展 format / start / end / step(el-time-select 特有） */
+// ── TimeSelect ──
+const TimeSelectBuilder = makeBuilder('TimeSelect')
 class TimeSelectBuilderExt extends TimeSelectBuilder {
   format(v: string): this {
     return this.prop('format', v)
@@ -287,27 +362,10 @@ class TimeSelectBuilderExt extends TimeSelectBuilder {
     return this.prop('step', v)
   }
 }
+export const xTimeSelect = (name: string) => new TimeSelectBuilderExt(name)
 
-/** UploadBuilder 扩展 action / accept / multiple / drag(el-upload 特有） */
-class UploadBuilderExt extends UploadBuilder {
-  action(url: string): this {
-    return this.prop('action', url)
-  }
-  accept(types: string): this {
-    return this.prop('accept', types)
-  }
-  multiple(): this {
-    return this.prop('multiple', true)
-  }
-  drag(): this {
-    return this.prop('drag', true)
-  }
-  listType(t: 'text' | 'picture' | 'picture-card' | 'picture-circle'): this {
-    return this.prop('listType', t)
-  }
-}
-
-/** TransferBuilder 扩展 data / titles / filterable / targetKeys(el-transfer 特有） */
+// ── Transfer ──
+const TransferBuilder = makeBuilder('Transfer')
 class TransferBuilderExt extends TransferBuilder {
   data(items: Array<{ key: unknown; label: string; disabled?: boolean }>): this {
     return this.prop('data', items)
@@ -319,11 +377,13 @@ class TransferBuilderExt extends TransferBuilder {
     return this.prop('filterable', true)
   }
   buttonTexts(btnLeft: string, btnRight: string): this {
-    return this.prop('button-texts', [btnLeft, btnRight] as never)
+    return this.prop('buttonTexts', [btnLeft, btnRight])
   }
 }
+export const xTransfer = (name: string) => new TransferBuilderExt(name)
 
-/** TreeSelectBuilder 扩展 data / multiple / checkStrictly / nodeKey(el-tree-select 特有） */
+// ── TreeSelect ──
+const TreeSelectBuilder = makeBuilder('TreeSelect')
 class TreeSelectBuilderExt extends TreeSelectBuilder {
   data(tree: Array<unknown>): this {
     return this.prop('data', tree)
@@ -341,41 +401,33 @@ class TreeSelectBuilderExt extends TreeSelectBuilder {
     return this.prop('props', p as never)
   }
 }
+export const xTreeSelect = (name: string) => new TreeSelectBuilderExt(name)
 
-/** CascaderBuilder 扩展 options / props / showAllLevels / separator(el-cascader 特有） */
-class CascaderBuilderExt extends CascaderBuilder {
-  options(opts: Array<unknown>): this {
-    return this.prop('options', opts)
+// ── Upload ──
+const UploadBuilder = makeBuilder('Upload')
+class UploadBuilderExt extends UploadBuilder {
+  action(url: string): this {
+    return this.prop('action', url)
   }
-  showAllLevels(): this {
-    return this.prop('showAllLevels', true)
+  accept(types: string): this {
+    return this.prop('accept', types)
   }
-  separator(s: string): this {
-    return this.prop('separator', s)
+  multiple(): this {
+    return this.prop('multiple', true)
   }
-  // el-cascader 的 expandTrigger 在 props 嵌套字段中,需要 props.expandTrigger
-  // 简化:用 prop() 直接覆盖整个 props(覆盖式更新),文档说明限制
-}
-
-/** AutocompleteBuilder 扩展 fetchSuggestions / triggerOnFocus / placement(el-autocomplete 特有） */
-class AutocompleteBuilderExt extends AutocompleteBuilder {
-  fetchSuggestions(
-    fn: (queryString: string, cb: (suggestions: Array<{ value: string }>) => void) => void
-  ): this {
-    return this.prop('fetchSuggestions', fn as never)
+  drag(): this {
+    return this.prop('drag', true)
   }
-  triggerOnFocus(): this {
-    return this.prop('triggerOnFocus', true)
-  }
-  placement(p: 'top' | 'top-start' | 'top-end' | 'bottom' | 'bottom-start' | 'bottom-end'): this {
-    return this.prop('placement', p)
+  listType(t: 'text' | 'picture' | 'picture-card' | 'picture-circle'): this {
+    return this.prop('listType', t)
   }
 }
+export const xUpload = (name: string) => new UploadBuilderExt(name)
 
 // ────────────────────────────────────────────────────────────────────────────
-// 数组节点构建器（独立于 makeBuilder,因为不绑 el 组件 props）
-// 链式 API：item / initialLength / minItems / maxItems / showActions / labels / title
-// build() 返回 SchemaNode —— props 类型不推导(数组节点本身不带 props)
+// 数组节点构建器（独立于 makeBuilder，因为不绑 el 组件 props）
+// 链式 API：item / initialLength / minItems / maxItems / showActions / labels / title / draggable
+// build() 返回 SchemaNode —— props 类型不推导（数组节点本身不带 props）
 // ────────────────────────────────────────────────────────────────────────────
 
 export class ArrayBuilder {
@@ -452,40 +504,10 @@ export class ArrayBuilder {
   }
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// 入口：链式构建 schema（返回类型带 props 推导）
-// ────────────────────────────────────────────────────────────────────────────
-
-export const xInput = (name: string) => new InputBuilderExt(name)
-export const xSelect = (name: string) => new SelectBuilderExt(name)
-export const xOption = (name: string) => new OptionBuilder(name)
-export const xSwitch = (name: string) => new SwitchBuilderExt(name)
-export const xDatePicker = (name: string) => new DatePickerBuilderExt(name)
-export const xTimePicker = (name: string) => new TimePickerBuilderExt(name)
-export const xTimeSelect = (name: string) => new TimeSelectBuilderExt(name)
-export const xTreeSelect = (name: string) => new TreeSelectBuilderExt(name)
-export const xUpload = (name: string) => new UploadBuilderExt(name)
-export const xAutocomplete = (name: string) => new AutocompleteBuilderExt(name)
-export const xTransfer = (name: string) => new TransferBuilderExt(name)
-export const xTextarea = (name: string) => new TextareaBuilderExt(name)
-export const xRadioGroup = (name: string) => new RadioGroupBuilderExt(name)
-export const xRadio = (name: string) => new RadioBuilder(name)
-export const xCheckboxGroup = (name: string) => new CheckboxGroupBuilder(name)
-export const xCheckbox = (name: string) => new CheckboxBuilder(name)
-export const xCascader = (name: string) => new CascaderBuilderExt(name)
-export const xInputNumber = (name: string) => new InputNumberBuilder(name)
-export const xInputPassword = (name: string) => new InputPasswordBuilder(name)
-export const xInputTextArea = (name: string) => new InputTextAreaBuilder(name)
-export const xInputTag = (name: string) => new InputTagBuilder(name)
-export const xColorPicker = (name: string) => new ColorPickerBuilder(name)
-export const xMention = (name: string) => new MentionBuilder(name)
-export const xRate = (name: string) => new RateBuilder(name)
-export const xSlider = (name: string) => new SliderBuilder(name)
-export const xCard = (name: string) => new CardBuilderExt(name)
 export const xArray = (name: string) => new ArrayBuilder(name)
 
 /**
- * NodeBuilder 已通过 `export class` 声明,自动成为命名导出
+ * NodeBuilder 已通过 `export class` 声明，自动成为命名导出
  * 高级用户可直接 `import { NodeBuilder } from '.../builders'` 继承自定义组件
  *
  * @example

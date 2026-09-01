@@ -75,6 +75,13 @@ const FORM_KEY_ALIASES = new Set([
   'labelWidth',
   'showPassword',
   'autocomplete',
+  // Vue 全局 attribute —— 所有组件都接受（运行时 fallthrough / 由 el-form-item 内部消费）
+  // 业务直接写到 props 里是合法的（虽然 XForm 推荐 class 用根 template，name 用节点 name 字段）
+  'class',
+  'style',
+  'attrs',
+  // el-form-item 特殊字段 —— name 用于 el-form 关联（XForm 内部也从 node.name 派生）
+  'name',
 ])
 
 /**

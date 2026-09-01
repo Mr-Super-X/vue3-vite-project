@@ -687,4 +687,21 @@ pnpm build             # vite build
 
 ---
 
+## 14. 类型断言归因（`TYPE-CAST-AUDIT.md`）
+
+`src/components/form-schema/` 下运行时类型断言（`as never` / `as any` / `as unknown`）共 **85 处**，按 9 个根因分类（C1-C9），归因表见 [`types/TYPE-CAST-AUDIT.md`](./types/TYPE-CAST-AUDIT.md)。
+
+> 摘要：
+>
+> - **39 处 C1**（element-plus buildProp 类型元组缺陷）—— 等待 element-plus 3.0 类型系统重写（P2）
+> - **15 处 C2**（SchemaNode.children 多态）—— schema 校验已拦，运行时安全，**接受**
+> - **8 处 C3**（element-plus 2.x 内部 ref-like 字段）—— 等待 3.0 重构 setFieldError 路径 B
+> - **6 处 C4**（ComputedRef 转 ref 类型偏离）—— 类型契约小幅偏离，**接受**
+> - **5 处 C8**（lodash-es 动态路径）—— **接受**
+> - 其余 12 处（C5/C6/C7/C9）零散分布在 use-xform-composer / wrap-with-elcol / render-with-grid 等
+
+新增 cast 必须登记到 `TYPE-CAST-AUDIT.md` 并在代码内加 `// cast C#` 短注释。
+
+---
+
 **文档版本**：v3.0.0 | **生成日期**：2026-09-01 | **状态**：当前实现权威指南
