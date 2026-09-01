@@ -3,8 +3,6 @@
 // 实际安全边界依赖 schema 来源约束（仅项目内部硬编码）
 // 危险标识符扫描已抽到 ./use-scan-forbidden.ts
 
-const EXPRESSION_REG = /^\s*\{\{([\s\S]+)\}\}\s*$/
-
 // ────────────────────────────────────────────────────────────────────────────
 // 模块级缓存 —— OPT-5 评估后保留并文档化
 //
@@ -24,6 +22,8 @@ const EXPRESSION_REG = /^\s*\{\{([\s\S]+)\}\}\s*$/
 // 把它们改为实例级会让同一字符串反复编译（N schema × M reaction），得不偿失。
 // 保留模块级 + 文档化设计权衡，是务实选择。 — OPT-5
 // ────────────────────────────────────────────────────────────────────────────
+
+const EXPRESSION_REG = /^\s*\{\{([\s\S]+)\}\}\s*$/
 
 const EXPRESSION_CACHE = new Map<string, ((model: unknown) => unknown) | null>()
 const CACHE_LIMIT = 500

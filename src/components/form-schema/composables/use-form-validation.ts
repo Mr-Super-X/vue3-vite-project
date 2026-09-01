@@ -12,11 +12,37 @@
  * - 滚动：字段失败由 el-form 原生 scrollToError；跨字段失败由 scrollToFirstError
  * - toast 文案不变：[XForm] cross field validation failed: [...]
  */
-import { nextTick } from 'vue'
+import { nextTick, toRaw, type Ref } from 'vue'
 import { get } from 'lodash-es'
 import { runCrossFieldValidation } from './use-validate'
 import { matchTrigger } from './match-trigger'
+import type { UseFormErrorBusReturn } from './use-form-error-bus'
 import type { ValidateResult, RuleItem, SchemaNode } from '../types'
+
+/** 解包 ref-like 字段值为字符串（element-plus 内部字段是 ref<string>，我们的 propString 是 string） */
+function readRefStr(v: string | Ref<string> | undefined): string | undefined {
+  if (v === undefined || v === null) return undefined
+  if (typeof v === 'string') return v
+  if (typeof v === 'object' && 'value' in v) {
+    const x = (v as { value: unknown }).value
+    return typeof x === 'string' ? x : undefined
+  }
+  return undefined
+}
+
+/** 解包 ref-like 字段值为 unknown（element-plus ElFormItemContext.fieldValue 是 ComputedRef<unknown>） */
+function readRefVal(v: unknown): unknown {
+  if (v === undefined || v === null) return undefined
+  if (typeof v === 'object' && 'value' in v) {
+    return (v as { value: unknown }).value
+  }
+  return v
+}
+
+/** toRaw 后再读（element-plus 内部字段可能被 reactive 包裹） */
+function toRawLike<T>(v: T): T {
+  return toRaw(v as object) as T
+}
 
 export interface UseFormValidationDeps {
   /** schema 的响应式视图（来自 useSchemaRenderer） */
@@ -35,7 +61,9 @@ export interface UseFormValidationDeps {
   setFieldError: (
     name: string,
     message: string,
-    state?: '' | 'validating' | 'success' | 'error'
+    state?: '' | 'validating' | 'success' | 'error',
+    /** OPT-7：静默标志 — true 时不触发 OSD 上报（applyCrossErrors 汇总场景） */
+    silent?: boolean
   ) => void
   /** 滚动到字段（来自 useFormInstance） */
   scrollToField: (name: string) => void
@@ -45,6 +73,8 @@ export interface UseFormValidationDeps {
   crossFieldTrigger: {
     trigger: (name: string) => void
   }
+  /** OPT-7：错误事件总线 —— 显式传递避免 provide/inject 在 composable 嵌套场景失效 */
+  errorBus?: UseFormErrorBusReturn
 }
 
 export interface UseFormValidationReturn {
@@ -76,6 +106,8 @@ export interface UseFormValidationReturn {
 export function useFormValidation(deps: UseFormValidationDeps): UseFormValidationReturn {
   // 每字段触发序号（异步 crossValidator 竞态防护）—— 实例级 Map，scope 销毁自动释放
   const crossTriggerSeq = new Map<string, number>()
+  // OPT-7：错误事件总线 —— 显式从 deps 传入（避免 composable 内 provide/inject 静默失效）
+  const errorBus = deps.errorBus
   const {
     reactiveSchema,
     model,
@@ -118,7 +150,39 @@ export function useFormValidation(deps: UseFormValidationDeps): UseFormValidatio
       // 处理 el-form 2.x 即使传 callback 仍 reject errorsMap 的情况(避免 unhandled rejection)
       Promise.resolve(maybePromise).catch(() => resolve(false))
     })
-    if (!elValid) return false
+    if (!elValid) {
+      // OPT-7：el-form 内置规则失败（含 async-validator / validator callback 失败）也需 OSD 提示
+      // 扫描 ef.fields 提取 is-error 字段名 + validateMessage + fieldValue
+      const elFields = (ef as unknown as { fields?: unknown[] }).fields ?? []
+      const details: Array<{ field: string; message: string; value?: unknown }> = []
+      for (const f of elFields) {
+        const raw = toRawLike(f) as {
+          propString?: string | Ref<string>
+          prop?: string | Ref<string>
+          validateState?: string | Ref<string>
+          validateMessage?: string | Ref<string>
+          fieldValue?: unknown
+        }
+        const state = readRefStr(raw.validateState)
+        if (state !== 'error') continue
+        const msg = readRefStr(raw.validateMessage)
+        if (!msg) continue
+        const name = readRefStr(raw.propString) || readRefStr(raw.prop)
+        if (!name) continue
+        details.push({ field: name, message: msg, value: readRefVal(raw.fieldValue) })
+      }
+      if (details.length > 0) {
+        errorBus?.report({
+          severity: 'error',
+          code: 'CROSS_VALIDATION_FAILED',
+          message: `校验失败 ${details.length} 项（详见表单红字）`,
+          fields: details.map((d) => d.field),
+          details,
+          source: 'useFormValidation/elForm',
+        })
+      }
+      return false
+    }
     const result = await runCrossFieldValidation(reactiveSchema.value, m, rules.value)
     applyCrossErrors(result)
     scrollToFirstError(firstCrossErrorField(result))
@@ -149,11 +213,26 @@ export function useFormValidation(deps: UseFormValidationDeps): UseFormValidatio
   /** 把跨字段校验失败的错误写入对应 el-form-item（用户在 UI 看到），并 console.error 列出全部 */
   function applyCrossErrors(result: ValidateResult): void {
     if (result.isValid) return
+    const details: Array<{ field: string; message: string; value?: unknown }> = []
+    const m = model.value ?? {}
     for (const err of result.errors) {
       const fieldPath = err.keyPath[err.keyPath.length - 1]
-      if (typeof fieldPath === 'string') setFieldError(fieldPath, err.message)
+      if (typeof fieldPath === 'string') {
+        // silent: true 避免与 per-field OSD 重复 —— applyCrossErrors 用汇总 toast
+        setFieldError(fieldPath, err.message, 'error', true)
+        details.push({ field: fieldPath, message: err.message, value: get(m, fieldPath) })
+      }
     }
     console.error('[XForm] cross field validation failed:', result.errors)
+    // OPT-7：升级为 user-facing 反馈（dev 弹 OSD，prod 静默）
+    errorBus?.report({
+      severity: 'error',
+      code: 'CROSS_VALIDATION_FAILED',
+      message: `跨字段校验失败 ${result.errors.length} 项`,
+      fields: details.map((d) => d.field),
+      details,
+      source: 'useFormValidation',
+    })
   }
 
   /** 详细校验：异步返回跨字段校验结果（含异步 crossValidator 等待） */

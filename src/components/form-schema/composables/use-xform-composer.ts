@@ -45,6 +45,7 @@ import { useFormDirty } from './use-form-dirty'
 import { useServerError } from './use-server-error'
 import { useFormValidation } from './use-form-validation'
 import { useTopLevelFields } from './use-top-level-fields'
+import { useFormErrorBus, type UseFormErrorBusReturn } from './use-form-error-bus'
 import {
   useRenderSchemaNode,
   mergeRowResponsive,
@@ -97,6 +98,8 @@ export interface UseXFormComposerReturn {
   exposed: XFormExpose
   /** DEV-only 调试钩子 —— XForm 在 setup 末尾调一次挂 window.__xform_debug */
   installDevDebugHook: () => void
+  /** OPT-7：错误事件总线 —— XForm 模板挂载 XFormErrorToast 消费 */
+  errorBus: UseFormErrorBusReturn
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -106,6 +109,10 @@ export interface UseXFormComposerReturn {
 export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComposerReturn {
   const { props } = options
   const bem = createNamespace('x-form')
+
+  // OPT-7：错误事件总线（user-facing 反馈，dev 弹 OSD，prod 静默）
+  // 显式 deps 传递 —— composable 内 provide/inject 在 setup 嵌套中静默失效
+  const errorBus = useFormErrorBus()
 
   // Dev-only 错误状态（暴露给 XFormDebugBanner）
   const validateErrors = ref<Array<{ keyPath: (string | number)[]; message: string }>>([])
@@ -122,6 +129,12 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
       '[XForm] model prop 未传入。校验、默认值填充、reaction、dirty 追踪均不会生效。' +
         '请传入 reactive() 包装的对象：const form = reactive({...})'
     )
+    errorBus.report({
+      severity: 'warn',
+      code: 'FORM_INSTANCE_NOT_READY',
+      message: 'model prop 未传入，校验/默认值填充/reaction/dirty 追踪均不会生效',
+      source: 'useXFormComposer',
+    })
   }
 
   /** 应用 schema 节点 defaultValue 到 model（仅在 model 字段未定义时填充） */
@@ -161,11 +174,26 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
           },
         })
         validateErrors.value = isValid ? [] : errors
-        if (!isValid) console.error('[XForm] schema validation failed:', errors)
+        if (!isValid) {
+          console.error('[XForm] schema validation failed:', errors)
+          // OPT-7：升级为 user-facing 反馈（dev 弹 OSD）
+          errorBus.report({
+            severity: 'error',
+            code: 'SCHEMA_VALIDATE_FAILED',
+            message: `Schema 校验失败 ${errors.length} 项（详见 Debug Banner）`,
+            source: 'useXFormComposer',
+          })
+        }
         const forbidden = scanForForbidden(normalized)
         forbiddenErrors.value = forbidden
         if (forbidden.length > 0) {
           console.error('[XForm][SECURITY] forbidden identifiers in expressions:', forbidden)
+          errorBus.report({
+            severity: 'error',
+            code: 'FORBIDDEN_IDENTIFIER',
+            message: `检测到危险标识符 ${forbidden.length} 个（详见 Debug Banner）`,
+            source: 'useXFormComposer',
+          })
         }
       },
       { immediate: true, deep: true }
@@ -203,7 +231,9 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
   } = useFormInstance(
     () => props.model,
     () => props.zodSchema,
-    fieldErrors // 阶段 3.1：传入外部错误状态 ref，setFieldError 走 props 路径
+    fieldErrors, // 阶段 3.1：传入外部错误状态 ref，setFieldError 走 props 路径
+    // OPT-7：显式传 errorBus（composable 内 provide/inject 静默失效）
+    errorBus
   )
 
   function normalizeSchema(val: SchemaNode | SchemaNode[]): SchemaNode {
@@ -289,6 +319,8 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     scrollToField,
     topLevelScrollToError,
     crossFieldTrigger,
+    // OPT-7：显式传 errorBus（composable 内 provide/inject 静默失效）
+    errorBus,
   })
 
   // 合并内置默认 props 与用户传入配置
@@ -443,5 +475,6 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     showDebugBanner,
     exposed,
     installDevDebugHook,
+    errorBus,
   }
 }

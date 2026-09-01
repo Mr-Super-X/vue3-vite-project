@@ -8,6 +8,7 @@ import {
   type Ref,
 } from 'vue'
 import { validateWithZod } from './use-validate'
+import type { UseFormErrorBusReturn } from './use-form-error-bus'
 import type { ZodType } from 'zod'
 
 /** 运行时方法对象（InstanceType<typeof ElForm> 会丢失 validate 等方法） */
@@ -49,7 +50,9 @@ export function useFormInstance(
   model: () => Record<string, unknown> | undefined,
   zodSchema: () => ZodType | undefined,
   /** 阶段 3.1：外部字段错误状态 ref（XForm.vue 创建并传入） */
-  externalErrors?: Ref<Record<string, FieldErrorState>>
+  externalErrors?: Ref<Record<string, FieldErrorState>>,
+  /** OPT-7：错误事件总线 —— 显式 deps 传入（避免 provide/inject 在嵌套 composable 中失效） */
+  errorBus?: UseFormErrorBusReturn
 ) {
   const elFormRef = ref<ElFormInstance | null>(null)
 
@@ -230,12 +233,26 @@ export function useFormInstance(
   function setFieldError(
     name: string,
     message: string,
-    state: '' | 'validating' | 'success' | 'error' = 'error'
+    state: '' | 'validating' | 'success' | 'error' = 'error',
+    /** 静默标志：true 时不触发 OSD 上报（用于 applyCrossErrors 批量汇总场景，避免 N 条独立 toast） */
+    silent?: boolean
   ): void {
     // 路径 A：element-plus 官方 props 路径
     if (externalErrors) {
       if (state === 'error' && message) {
         externalErrors.value[name] = { error: message, validateStatus: state }
+        // OPT-7：所有错误路径统一上报 OSD
+        // 仅 realtime 路径（crossValidator 反向触发 / 服务端 422）需要 OSD；
+        // validateForm 批量场景由 applyCrossErrors 发汇总 toast，setFieldError 静默
+        if (!silent) {
+          errorBus?.report({
+            severity: 'error',
+            code: 'CROSS_VALIDATION_FAILED',
+            message,
+            fields: [name],
+            source: 'useFormInstance',
+          })
+        }
       } else {
         delete externalErrors.value[name]
       }

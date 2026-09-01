@@ -148,7 +148,8 @@ describe('useFormValidation', () => {
       const api = useFormValidationReal(deps)
       expect(await api.validateForm()).toBe(false)
       expect(mockRunCrossFieldValidation).toHaveBeenCalledOnce()
-      expect(deps.setFieldError).toHaveBeenCalledWith('email', 'taken')
+      // OPT-7: validateForm → applyCrossErrors → setFieldError(name, msg, 'error', true)
+      expect(deps.setFieldError).toHaveBeenCalledWith('email', 'taken', 'error', true)
     })
 
     it('el-form.validate callback 成功 + cross 成功 → 返回 true', async () => {
@@ -437,7 +438,7 @@ describe('useFormValidation', () => {
       consoleSpy.mockRestore()
     })
 
-    it('errors 非空 → 写 setFieldError + console.error', () => {
+    it('errors 非空 → 写 setFieldError(silent=true) + console.error', () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
       const { deps, setFieldError } = makeDeps()
       const api = useFormValidationReal(deps)
@@ -449,8 +450,9 @@ describe('useFormValidation', () => {
         ],
       })
       expect(setFieldError).toHaveBeenCalledTimes(2)
-      expect(setFieldError).toHaveBeenNthCalledWith(1, 'a', 'err1')
-      expect(setFieldError).toHaveBeenNthCalledWith(2, 'b', 'err2')
+      // OPT-7: applyCrossErrors 用 silent=true 避免与 per-field OSD 重复
+      expect(setFieldError).toHaveBeenNthCalledWith(1, 'a', 'err1', 'error', true)
+      expect(setFieldError).toHaveBeenNthCalledWith(2, 'b', 'err2', 'error', true)
       expect(consoleSpy).toHaveBeenCalledWith(
         '[XForm] cross field validation failed:',
         expect.any(Array)
@@ -469,7 +471,7 @@ describe('useFormValidation', () => {
         ],
       })
       expect(setFieldError).toHaveBeenCalledTimes(1)
-      expect(setFieldError).toHaveBeenCalledWith('valid', 'keep')
+      expect(setFieldError).toHaveBeenCalledWith('valid', 'keep', 'error', true)
     })
   })
 

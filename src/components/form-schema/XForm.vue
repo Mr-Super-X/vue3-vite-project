@@ -11,6 +11,7 @@ import zhCn from 'element-plus/es/locale/lang/zh-cn'
 
 import { useXFormComposer } from './composables/use-xform-composer'
 import XFormDebugBanner from './XFormDebugBanner.vue'
+import XFormErrorToast from './XFormErrorToast.vue'
 import SchemaField from './SchemaField.vue'
 import type { XFormExpose, XFormProps } from './types'
 
@@ -49,6 +50,7 @@ const {
   showDebugBanner,
   exposed,
   installDevDebugHook,
+  errorBus,
 } = useXFormComposer({ props: propsModel })
 
 defineOptions({ inheritAttrs: false })
@@ -108,6 +110,12 @@ installDevDebugHook()
     v-if="showDebugBanner"
     :validate-errors="validateErrors"
     :forbidden-errors="forbiddenErrors"
+  />
+  <!-- OPT-7：user-facing 错误 OSD（dev 模式可见，prod 隐藏） -->
+  <XFormErrorToast
+    :events="errorBus.events.value"
+    :enabled="showDebugBanner"
+    @dismiss="errorBus.dismiss"
   />
 </template>
 
