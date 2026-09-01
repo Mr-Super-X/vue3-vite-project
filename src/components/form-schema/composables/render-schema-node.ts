@@ -8,6 +8,18 @@
  * - render-form-item.ts —— formItem 包装 + row+column 布局
  *
  * 主函数 renderToComponentInner 只做 4 类分支委托，不再包含具体渲染细节。
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 类型断言归因（OPT-3）
+ * 本文件 `as never` 集中在 h(ElCol, ...) 调用处与 SchemaNode.children 多态分支。
+ * - h() 类型 cast：vue + element-plus 类型元组缺陷，见 render-array-node.ts 头部
+ * - `buildSlotFn(...)() as never` / `renderChildren(...) as never`：SchemaNode.children
+ *   是 `SchemaNode | SchemaNode[] | string | undefined` 多态，调用方经 schema 配置
+ *   后类型 narrow 失败（业务上不可能误用，schema 校验在 XFormDevBanner 阶段拦）
+ * - `pickBreakpointConfig(responsive as never, current)`：ColConfig.responsive
+ *   已是 NonNullable<...> 但 vue 3.5 的 key narrowing 在 Conditional 上不完整
+ * 不要在没有充分理由时移除这些 cast
+ * ────────────────────────────────────────────────────────────────────────────
  */
 import {
   ElConfigProvider,

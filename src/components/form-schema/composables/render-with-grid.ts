@@ -4,6 +4,11 @@ import type { SchemaNode } from '../types'
 
 type RenderFn = (node: SchemaNode) => VNode | string | VNode[] | undefined
 
+/**
+ * 类型断言归因（OPT-3）：h(ElRow / ElCol, ...) 调用处的 `as never` 是
+ * Element Plus 类型元组推断缺陷，见 render-array-node.ts 头部同类说明。
+ */
+
 /** 视觉容器内栅格渲染（Card 等 + row/column 时使用） */
 export function renderToComponentWithGrid(node: SchemaNode, renderToComponent: RenderFn): VNode {
   const cs = node.column ? Math.floor(24 / node.column) : 24

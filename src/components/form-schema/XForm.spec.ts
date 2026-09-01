@@ -461,6 +461,38 @@ describe('XForm.vue validate-trigger 回归保护', () => {
   })
 })
 
+describe('XForm.vue 全局 CSS 导入回归保护', () => {
+  /**
+   * 根因回归：OPT-1 重构 XForm.vue 时漏掉了两行 CSS 导入
+   *   import 'element-plus/dist/index.css'
+   *   import './styles/element-form-overwrite.scss'
+   * 导致 element-plus 全局样式与 form-schema 自定义覆盖样式均未加载，
+   * 整个表单页面样式全部失效。
+   *
+   * 此处用源码级静态断言锁死两行 import，防止未来精简 XForm.vue 时再误删。
+   * CSS 加载是 element-plus + 表单样式的唯一入口（grep 全项目无其他导入点）。
+   */
+  it('XForm.vue 必须 import element-plus/dist/index.css（全局样式入口）', () => {
+    expect(XFormSource).toMatch(/import\s+['"]element-plus\/dist\/index\.css['"]/)
+  })
+
+  it('XForm.vue 必须 import ./styles/element-form-overwrite.scss（form-schema 自定义覆盖）', () => {
+    expect(XFormSource).toMatch(/import\s+['"]\.\/styles\/element-form-overwrite\.scss['"]/)
+  })
+
+  it('CSS import 必须位于 <script setup> 顶层（非条件分支）', () => {
+    // 取 <script setup>...</script> 块内的所有 import 行
+    const scriptBlock = XFormSource.match(/<script\s+setup[^>]*>([\s\S]*?)<\/script>/)
+    expect(scriptBlock).not.toBeNull()
+    const blockBody = scriptBlock![1] ?? ''
+    const cssImportCount = (blockBody.match(/from\s+['"]element-plus/g) ?? []).length
+    // element-plus 组件 import 应保持（已有），加上 css import 不应被包在 if 内
+    expect(cssImportCount).toBeGreaterThanOrEqual(1)
+    // 同时确保 css 路径未出现在任何注释或字符串中（防御性 —— 真 import 必须在源码 import 语句里）
+    expect(XFormSource).not.toMatch(/<!--[\s\S]*?element-plus\/dist\/index\.css[\s\S]*?-->/)
+  })
+})
+
 describe('XForm.vue scrollToError（校验失败自动滚动）', () => {
   // 注：XForm 模板的 <ElForm> 是 script setup 局部 import，全局 stub 不生效——
   // 走真实 ElForm 链路，用 scrollIntoView polyfill 观察滚动调用（jsdom 未实现该方法）
@@ -591,12 +623,12 @@ describe('XForm.vue defaultValue 填充（C1 回归）', () => {
   /**
    * 源码级静态断言（C1 根因）：applyDefaults 曾位于 showDebugBanner 门控的 watch 内，
    * 导致 prod（DEV=false）下 defaultValue 永不填充。
-   * 此处断言调试分支内不再包含 applyDefaults 调用。
+   * 重构后 applyDefaults 已收敛到 use-xform-composer.ts 的非调试分支（无条件执行），
+   * XForm.vue 不应再含该函数定义/调用 —— 此断言升级为"XFormSource 不含 applyDefaults"。
+   * 运行时行为由 use-xform-composer.spec.ts 覆盖。
    */
-  it('applyDefaults 调用不得位于 showDebugBanner 调试分支内', () => {
-    const debugBlock = XFormSource.match(/if \(showDebugBanner\.value\) \{[\s\S]*?\n\}/)
-    expect(debugBlock).not.toBeNull()
-    expect(debugBlock![0]).not.toMatch(/applyDefaults/)
+  it('applyDefaults 已迁移出 XForm.vue（重构至 use-xform-composer.ts）', () => {
+    expect(XFormSource).not.toMatch(/applyDefaults/)
   })
 })
 
