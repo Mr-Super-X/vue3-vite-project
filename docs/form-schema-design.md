@@ -1,0 +1,681 @@
+# Form Schema 权威设计指南
+
+> 本文档是 `src/components/form-schema/` 的综合设计指南，整合了 2026-08-19 至 2026-08-28 期间 6 份 spec/impl 文档，并反映了 2026-09 月 P0 / P1 / P2 三轮重构后的当前实现。
+>
+> **历史决策档案**：原分散文档保留在 `docs/superpowers/{specs,plans}/2026-08-*-form-schema-*.md`，可作为变更历史追溯。
+
+| 属性     | 值                            |
+| -------- | ----------------------------- |
+| 版本     | v3.0.0                        |
+| 日期     | 2026-09-01                    |
+| 状态     | 当前实现（生产可用）          |
+| 关联分支 | `feature/form-engine`         |
+| 关联代码 | `src/components/form-schema/` |
+
+---
+
+## 0. 演进时间线
+
+| 日期       | 阶段         | 主要内容                                                                                |
+| ---------- | ------------ | --------------------------------------------------------------------------------------- |
+| 2026-08-19 | 设计稿       | 整体设计：架构、DSL、API、安全、测试                                                    |
+| 2026-08-20 | v1 实现      | 基础 schema 渲染、reaction 联动、表达式沙箱                                             |
+| 2026-08-21 | 异步选项     | `asyncOptions` 字段 + 自动渲染 + deps 触发                                              |
+| 2026-08-21 | 类型推导     | `SchemaNodeFor<C>` 按 component 字段推导 props 类型                                     |
+| 2026-08-28 | 默认组件扩展 | 6 个新快捷名（InputPassword / InputTextArea / InputTag / ColorPicker / Mention / Rate） |
+| 2026-08-28 | 上传 demo    | `XFormUpload.vue` 演示 7 种上传场景                                                     |
+| 2026-09-01 | P0 重构      | 拆 XForm.vue 95 行 + builders.ts 去重 + 类型断言归因                                    |
+| 2026-09-01 | P1 重构      | types.ts 拆 9 文件 + 模块级状态清理 + OSD 错误反馈                                      |
+| 2026-09-01 | P2 重构      | 超大 composable 拆分 + render-schema-node 拆 4 文件                                     |
+
+---
+
+## 1. 架构与目录结构（当前 P2 拆分后）
+
+### 1.1 顶层目录
+
+```text
+src/components/form-schema/
+├── XForm.vue                      # 入口组件（95 行，setup 块零业务逻辑）
+├── XFormDebugBanner.vue           # dev mode 调试面板（schema 校验错误 + 安全扫描）
+├── XFormErrorToast.vue            # dev mode 错误 OSD toast（OPT-7 user-facing）
+├── SchemaField.vue                # 节点级渲染容器（B-2：字段级重渲隔离）
+├── element-plus-adapter.ts        # 内置 EL 组件映射表 + 默认 props
+├── types.ts                       # barrel re-export（→ types/ 子目录）
+├── types/                         # P1-OPT-4 拆分后
+│   ├── base.ts                    # EventFn / FunctionExpression / SchemaSlot
+│   ├── rule.ts                    # RuleItem（async-validator 兼容 + 跨字段）
+│   ├── reaction.ts                # ReactionValue / ReactionConfig
+│   ├── directive.ts               # DirectiveConfig / FormItemConfig
+│   ├── array.ts                   # ArrayNodeConfig
+│   ├── layout.ts                  # RowConfig / ColConfig（响应式断点）
+│   ├── async-options.ts           # AsyncOptionsConfig
+│   ├── schema-node.ts             # SchemaNode（29 字段）+ ComponentPropsRegistry + SchemaNodeFor
+│   └── xform.ts                   # XFormProps / XFormExpose / ValidateOptions / ValidateResult
+├── builders.ts                    # 27 个链式 builder（OPT-2：makeBuilder 工厂已简化）
+├── index.ts                        # 公共导出 + Vue 插件形式
+├── README.md                      # 简明使用说明
+├── styles/
+│   └── element-form-overwrite.scss   # form-schema 自定义样式覆盖
+├── composables/                   # 一文件一能力（P2 拆分后）
+│   ├── use-xform-composer.ts      # 顶层编排（composition root）
+│   ├── use-form-instance.ts       # el-form 实例方法编排（P2-A1：200 行）
+│   ├── use-set-field-error.ts     # setFieldError 双路径 + watch 守护（P2-A1：185 行）
+│   ├── use-form-validation.ts     # validateForm / validateDetail / applyCrossErrors
+│   ├── use-cross-field-trigger.ts # 反向跨字段实时触发 + debounce
+│   ├── use-form-dirty.ts          # dirty 状态追踪（阶段 2.2）
+│   ├── use-form-persist.ts        # 草稿持久化（草稿存储到 localStorage）
+│   ├── use-server-error.ts        # 服务端 422 → 表单字段错误映射（阶段 2.1）
+│   ├── use-top-level-fields.ts     # 顶层 schema 字段解析（11 个 computed）
+│   ├── use-schema-renderer.ts     # watch(schema) + reaction traverse
+│   ├── use-schema-index.ts        # 字段元数据中央索引（O(1) getNames）
+│   ├── use-schema-index.builder.ts # 索引构建器
+│   ├── use-validate.ts            # validate() 静态校验 + validateWithZod
+│   ├── use-scan-forbidden.ts      # 表达式沙箱关键字黑名单扫描
+│   ├── use-expression.ts          # resolveFunctionExpression + 模块级缓存
+│   ├── use-async-options.ts       # 异步选项数据源 + Autocomplete fetcher
+│   ├── use-field-permission.ts    # view/edit/hidden 权限 gate
+│   ├── use-current-breakpoint.ts  # 响应式断点检测
+│   ├── use-reaction.ts            # reaction applyReactionFields + watchEffect
+│   ├── use-form-error-bus.ts      # OPT-7：错误事件总线（provide/inject + OSD）
+│   ├── apply-reaction-fields.ts   # reaction 字段值求值
+│   ├── apply-directives.ts        # withDirectives 包装
+│   ├── build-vmodel-bindings.ts   # v-model 双向绑定（含 beforeChange 拦截）
+│   ├── build-on-bindings.ts       # on 事件绑定（函数 / 函数表达式字符串）
+│   ├── render-schema-node.ts      # 主调度入口（~190 行，P2-B 拆分后）
+│   ├── resolve-component.ts       # 组件名解析（P2-B：104 行）
+│   ├── compile-rules.ts           # 规则编译 + 默认 message（P2-B：41 行）
+│   ├── wrap-with-elcol.ts         # 栅格响应式包装（P2-B：82 行）
+│   ├── build-slots.ts             # 插槽构造 + Upload 默认内容（P2-B：125 行）
+│   ├── render-form-item.ts        # formItem 包装 + row+column 布局
+│   ├── render-visual-container.ts # 视觉容器（Card 等无 name 节点）
+│   ├── render-array-node.ts       # 数组节点（kind: 'array'）
+│   ├── render-with-grid.ts        # row+column 布局辅助
+│   ├── with-hidden.ts             # display:none wrapper
+│   └── draft-storage.ts           # 草稿存储后端
+└── bench/
+    └── large-schema.bench.ts       # 大 schema 性能基线
+```
+
+### 1.2 模块职责分层
+
+| 层级                   | 职责                                                                         | 边界                                |
+| ---------------------- | ---------------------------------------------------------------------------- | ----------------------------------- |
+| **XForm.vue**          | 模板 + props/attrs 透传 + setup 零业务逻辑                                   | 仅依赖 useXFormComposer             |
+| **use-xform-composer** | 顶层编排（composition root）：11 个 composable + 1 个 watch 守护 + opts 同步 | 编排其他 composable，不重复业务逻辑 |
+| **composables/**       | 一文件一能力（<200 行）                                                      | 仅依赖 types/ + 其他 composable     |
+| **types/**             | Schema DSL 类型契约                                                          | 无运行时逻辑                        |
+| **builders.ts**        | 链式 API（builder 模式）                                                     | 类型强推导                          |
+
+### 1.3 数据流
+
+```text
+XForm.vue 接收 props
+    ↓
+useXFormComposer 编排
+    ├── useSchemaRenderer  ──watch(schema)──→ reactiveSchema
+    ├── useSchemaIndex     ──O(1) getNames/fields
+    ├── useFormInstance    ──elFormRef + setFieldError + 数组操作
+    ├── useFormValidation  ──validateForm + applyCrossErrors
+    ├── useCrossFieldTrigger ──realtime reverse cross
+    ├── useFormDirty       ──dirty 状态基线
+    ├── useServerError     ──422 → 字段错误
+    ├── useTopLevelFields   ──顶层字段（labelPosition 等）
+    ├── useFormErrorBus    ──OPT-7：OSD 错误事件总线
+    └── useApplyReactions  ──reaction watchEffect 编排
+    ↓
+RenderSchemaNode 主调度（render-schema-node.ts）
+    ├── 权限 gate（hidden / view / edit）
+    ├── 数组节点 → renderArrayNode
+    ├── 视觉容器 → renderVisualContainer
+    ├── formItem 包装 → renderWithFormItem
+    └── 默认分支 → wrapWithElCol + h(Comp, props)
+```
+
+---
+
+## 2. Schema DSL 字段契约（29 字段最终版）
+
+### 2.1 字段分类
+
+| 类别             | 字段                                                                                          |
+| ---------------- | --------------------------------------------------------------------------------------------- |
+| **节点标识**     | `component`, `name`, `key`, `label`                                                           |
+| **渲染属性**     | `props`, `on`, `children`, `slots`, `directives`                                              |
+| **布局**         | `row`, `column`, `col`, `formItem`                                                            |
+| **校验**         | `rules`, `defaultValue`                                                                       |
+| **响应式**       | `reaction`, `disabled`, `permission`, `readonly`, `hidden`, `ignore`                          |
+| **数组节点**     | `kind: 'array'`, `array: ArrayNodeConfig`                                                     |
+| **数据加载**     | `asyncOptions`                                                                                |
+| **顶层配置**     | `labelPosition`, `labelWidth`, `scrollToError`, `scrollIntoViewOptions`, `debounceValidation` |
+| **v-model 适配** | `modelProp`                                                                                   |
+
+完整字段定义见 `types/schema-node.ts`。
+
+### 2.2 节点类型
+
+```typescript
+export interface SchemaNode {
+  // 节点标识
+  component?: string | object // 组件名（short/ElXxx/native）或 Component 对象
+  name?: string // 字段名（绑定 model[name]）
+  label?: string // form-item label
+  key?: string | number // v-for key
+
+  // 渲染属性
+  props?: Record<string, unknown> // 透传给 component
+  on?: Record<string, EventFn | FunctionExpression> // 事件绑定
+  children?: SchemaNode | SchemaNode[] | string // 子节点 / 字符串
+  slots?: Record<string, SchemaSlot> // 插槽
+  directives?: DirectiveConfig[] // 自定义指令
+
+  // 布局
+  row?: RowConfig // el-row 响应式
+  column?: number // 自动分列（24/column）
+  col?: boolean | ColConfig // el-col 响应式
+  formItem?: boolean | FormItemConfig // 是否包 el-form-item
+
+  // 校验
+  rules?: string | RuleItem | Array<string | RuleItem>
+  defaultValue?: unknown // mount 时填充到 model（若未定义）
+
+  // 反应式
+  reaction?: ReactionConfig // 节点级派生
+  disabled?: ReactionValue<boolean>
+  permission?: ReactionValue<'view' | 'edit' | 'hidden'>
+  readonly?: ReactionValue<boolean>
+  hidden?: boolean | ReactionValue<boolean>
+  ignore?: boolean // getNames 排除 / 不渲染
+
+  // 数组节点
+  kind?: 'array'
+  array?: ArrayNodeConfig
+
+  // 数据加载
+  asyncOptions?: AsyncOptionsConfig // Select/Cascader/TreeSelect/Autocomplete
+
+  // v-model 适配
+  modelProp?: string // 默认 'modelValue'，Upload 用 'fileList'
+
+  // 顶层 schema 生效
+  labelPosition?: 'left' | 'right' | 'top'
+  labelWidth?: string | number
+  scrollToError?: boolean
+  scrollIntoViewOptions?: ScrollIntoViewOptions | boolean
+  debounceValidation?: number
+}
+```
+
+### 2.3 类型推导
+
+`SchemaNodeFor<C>` 按 component 字段推导 props 类型：
+
+```typescript
+const node: SchemaNodeFor<'Input'> = {
+  component: 'Input',
+  name: 'email',
+  props: { placeholder: 'a@b.com', clearable: true }, // ← TS 校验 ElInputProps
+}
+```
+
+`ComponentPropsRegistry` 通过 TS module augmentation 可扩展自定义组件：
+
+```typescript
+declare module '@/components/form-schema/types' {
+  interface ComponentPropsRegistry {
+    MyInput: MyInputProps
+  }
+}
+```
+
+---
+
+## 3. 渲染流程与数据流
+
+### 3.1 整体流程
+
+```text
+1. XForm 挂载 / props 变化
+   ↓
+2. useXFormComposer 编排
+   ↓
+3. RenderSchemaNode 主调度（renderToComponentInner）
+   ├─ 权限 gate（hidden / view / edit）
+   ├─ 数组节点 → renderArrayNode
+   ├─ 视觉容器（Card 等带 row/column，无 name）
+   ├─ formItem 包装（含 name 或 formItem: true）
+   └─ 默认分支 → wrapWithElCol + h(Comp, props)
+   ↓
+4. el-form-item 注册到 el-form（自动按 name 关联 model[field]）
+   ↓
+5. 用户输入 → v-model 更新 → model[field] 响应式更新 → reaction 联动
+```
+
+### 3.2 反应式系统（reaction）
+
+```typescript
+const schema: SchemaNode = {
+  children: [
+    {
+      component: 'Switch',
+      name: 'strict',
+    },
+    {
+      component: 'Input',
+      name: 'reason',
+      reaction: {
+        hidden: (m) => !m.strict, // 函数
+        disabled: '{{ (m) => m.strict ? "是" : "否" }}', // 表达式字符串
+        rules: (m) => (m.strict ? [{ required: true }] : []), // 同步 rules
+        deps: ['strict'], // 精确 watch 路径
+      },
+    },
+  ],
+}
+```
+
+**reaction 调度策略**（`use-reaction.ts:ReactionConfig.strategy`）：-：`sync`（默认）：依赖变化立即同步执行 -：`debounce`：依赖停止变化 delay ms 后执行（远程搜索）-：`throttle`：delay ms 内最多执行一次（实时保存）
+
+**性能优化**：声明 `deps: ['a', 'b.c']` 后，仅精确 watch 这些路径；未声明时 deep watch 整棵 model（重开销）。
+
+### 3.3 数据双向绑定
+
+```typescript
+// buildVModelBindings(node, model, beforeChange, onValueChange)
+{
+  modelValue: model.name,                     // 读
+  'onUpdate:modelValue': (v) => {            // 写
+    const old = model.name
+    const final = beforeChange?.(node, v, old) ?? v
+    set(model, node.name, final)              // lodash set 支持嵌套路径
+    onValueChange?.(node, final)
+  },
+}
+```
+
+**关键点**：model 必须由父组件传入**响应式对象**（`reactive()` / `ref().value`），XForm 不创建副本。
+
+### 3.4 校验双轨
+
+| 触发                        | 路径                                                    |
+| --------------------------- | ------------------------------------------------------- |
+| `exposed.validate()`        | `el-form.validate()` + `runCrossFieldValidation()` 并行 |
+| 字段失焦                    | el-form-item.async-validator（rules）                   |
+| `exposed.validateWithZod()` | `zodSchema.safeParse(model)`                            |
+| 跨字段反向触发              | `useCrossFieldTrigger.trigger(field)`                   |
+
+---
+
+## 4. 校验系统
+
+### 4.1 标准字段规则（async-validator 兼容）
+
+```typescript
+{
+  rules: [
+    { required: true, message: '请输入', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '手机号格式错误' },
+    {
+      validator: (rule, value, cb) => {
+        if (value === 'forbidden') cb(new Error('禁用值'))
+        else cb()
+      },
+      trigger: 'change',
+    },
+    // 命名规则引用（XForm 扩展）
+    { required: true, message: '请输入' },  // 'required' 是 DSL 简写
+  ],
+  rules: 'emailRule',  // 命名规则需在 XFormProps.rules 中注册
+}
+```
+
+### 4.2 跨字段规则
+
+```typescript
+{
+  rules: [{
+    dependsOn: ['password'],
+    crossValidator: (value, password) =>
+      value === password || '两次密码不一致',
+    // trigger: 'blur' | 'change' | 'manual'  —— 可选，默认 manual
+    // debounceMs: 300  —— 字段级 debounce 覆盖顶层 debounceValidation
+  }],
+}
+```
+
+**触发机制**：
+
+- **realtime 反向触发**：`useCrossFieldTrigger` watch model 变化时精确触发 deps 包含变化字段的 crossValidator
+- **validateForm 批量**：`runCrossFieldValidation` 遍历 schema 跑全部 crossValidator，支持异步返回
+
+### 4.3 服务端错误映射（OPT 2.1）
+
+```typescript
+exposed.validateFromServer({
+  success: false,
+  errors: [
+    { field: 'email', message: '邮箱已被注册' },
+    { field: 'username', message: '用户名非法' },
+  ],
+})
+```
+
+自动写入字段错误，触发红字 + OSD toast。
+
+---
+
+## 5. 反应式（reaction）
+
+### 5.1 字段覆盖范围
+
+`reaction` 可覆盖节点的任意字段：rules / props / label / hidden / disabled + 任何 `SchemaNode[key]`。
+
+### 5.2 调度策略
+
+| strategy         | 行为                             | 适用场景 |
+| ---------------- | -------------------------------- | -------- |
+| `'sync'`（默认） | 依赖变化立即同步执行             | 一般联动 |
+| `'debounce'`     | 依赖停止变化 delay ms 后执行一次 | 远程搜索 |
+| `'throttle'`     | delay ms 内最多执行一次          | 实时保存 |
+
+### 5.3 性能：deps 精确监听
+
+```typescript
+reaction: {
+  hidden: (m) => !m.userType,
+  deps: ['userType'],  // 精确监听 —— 避免 deep watch 整棵 model
+}
+```
+
+未声明 `deps` 时 deep watch 整棵 model（重开销）。大 schema 下务必声明 deps。
+
+---
+
+## 6. 错误处理与 OSD
+
+### 6.1 三层错误展示
+
+| 层                                     | 触发                                            | 可见性         |
+| -------------------------------------- | ----------------------------------------------- | -------------- |
+| **form 红字**                          | el-form-item 校验失败                           | 用户           |
+| **XFormDebugBanner**（dev only）       | schema 静态校验失败 / 表达式含 forbidden 标识符 | 开发者右下角   |
+| **XFormErrorToast**（dev only，OPT-7） | 跨字段校验失败 / schema 非法 / 服务端错误       | 用户右上角浮窗 |
+
+### 6.2 OSD 输出格式
+
+```text
+✕ [CROSS_VALIDATION_FAILED] @useFormValidation/elForm
+校验失败 3 项（详见表单红字）
+  passwordConfirm  两次密码不一致     = 1
+  startDate        请选择开始日期     = (空)
+  endDate          请选择结束日期     = (空)
+```
+
+**Console 同步输出**（async-validator 风格 errorsMap）：
+
+```js
+[XForm][CROSS_VALIDATION_FAILED] 校验失败 3 项（详见表单红字） useFormValidation/elForm {
+  passwordConfirm: [{ message: '两次密码不一致', fieldValue: '1', field: 'passwordConfirm' }],
+  startDate: [{ message: '请选择开始日期', fieldValue: '', field: 'startDate' }],
+  endDate: [{ message: '请选择结束日期', fieldValue: '', field: 'endDate' }]
+}
+```
+
+### 6.3 错误传播分级
+
+| 错误类型            | 等级  | 处理                             | 用户感知            |
+| ------------------- | ----- | -------------------------------- | ------------------- |
+| schema 静态校验失败 | INFO  | console.error + 不阻塞           | 控制台 + dev banner |
+| 函数表达式解析失败  | WARN  | console.error + 跳过字段         | 该事件不触发        |
+| reaction 求值抛错   | WARN  | console.error + 保留上次值       | 反应式失效          |
+| 组件查找失败        | WARN  | console.warn + 渲染 `<div>`      | 占位                |
+| 跨字段校验失败      | ERROR | console.error + OSD toast + 红字 | 用户感知            |
+| 服务端 422          |       | OSD toast + 红字                 | 用户感知            |
+| zod 顶层校验失败    | INFO  | 返回 errors                      | 调用方展示          |
+
+**无静默吞错误**（CLAUDE.md §一.10）：所有 catch / 异常分支均带 console + OSD 上下文。
+
+---
+
+## 7. 安全策略
+
+### 7.1 函数表达式沙箱（D2）
+
+- 用 `new Function('model', '__rest', ` + `return (${expr})` + 仅暴露 model 参数
+- 相对 `eval` 的安全提升：new Function 创建独立函数作用域，不污染上层闭包
+
+**dev 模式静态扫描**（`use-scan-forbidden.ts`）：
+
+```typescript
+const FORBIDDEN_REG =
+  /\b(window|document|globalThis|eval|Function|setTimeout|setInterval|fetch|XMLHttpRequest)\b/
+```
+
+### 7.2 schema 来源约束
+
+| 来源                               | 是否允许                                |
+| ---------------------------------- | --------------------------------------- |
+| 内部代码硬编码 schema              | ✅ 推荐                                 |
+| `*.config.ts` / `*.json` 项目配置  | ✅                                      |
+| 后端 API 返回 schema               | ⚠️ 必须先经 `validate(schema)` 静态校验 |
+| URL 参数 / localStorage / 用户输入 | ❌ 禁止                                 |
+
+### 7.3 OWASP Top 10 对齐
+
+| 风险                | 缓解                                                       |
+| ------------------- | ---------------------------------------------------------- |
+| A03 Injection       | new Function 沙箱 + FORBIDDEN 关键字扫描 + schema 来源约束 |
+| A04 Insecure Design | 双轨校验 + `validate()` 强制校验                           |
+| A05 Misconfig       | 默认安全配置；不暴露敏感选项                               |
+| A08 Data Integrity  | dev 模式扫描 + 来源约束                                    |
+
+---
+
+## 8. Builder 链式 API
+
+### 8.1 27 个 builder 工厂
+
+| builder          | 组件名          | 特有方法                                                                                              |
+| ---------------- | --------------- | ----------------------------------------------------------------------------------------------------- |
+| `xInput`         | `Input`         | `clearable`                                                                                           |
+| `xInputPassword` | `Input`         | -                                                                                                     |
+| `xInputTextArea` | `Input`         | -                                                                                                     |
+| `xInputTag`      | `InputTag`      | -                                                                                                     |
+| `xTextarea`      | `Input`         | `rows`                                                                                                |
+| `xSelect`        | `Select`        | `options`                                                                                             |
+| `xOption`        | `Option`        | -                                                                                                     |
+| `xSwitch`        | `Switch`        | -                                                                                                     |
+| `xDatePicker`    | `DatePicker`    | `format`（valueFormat）                                                                               |
+| `xTimePicker`    | `TimePicker`    | `format` / `valueFormat` / `range`                                                                    |
+| `xTimeSelect`    | `TimeSelect`    | `format` / `start` / `end` / `step`                                                                   |
+| `xTreeSelect`    | `TreeSelect`    | `data` / `multiple` / `checkStrictly` / `nodeKey` / `props`                                           |
+| `xUpload`        | `Upload`        | `action` / `accept` / `multiple` / `drag` / `listType`                                                |
+| `xAutocomplete`  | `Autocomplete`  | `fetchSuggestions` / `triggerOnFocus` / `placement`                                                   |
+| `xTransfer`      | `Transfer`      | `data` / `titles` / `filterable` / `buttonTexts`                                                      |
+| `xRadioGroup`    | `RadioGroup`    | `options`                                                                                             |
+| `xRadio`         | `Radio`         | -                                                                                                     |
+| `xCheckboxGroup` | `CheckboxGroup` | -                                                                                                     |
+| `xCheckbox`      | `Checkbox`      | -                                                                                                     |
+| `xCascader`      | `Cascader`      | `options` / `showAllLevels` / `separator`                                                             |
+| `xInputNumber`   | `InputNumber`   | -                                                                                                     |
+| `xColorPicker`   | `ColorPicker`   | -                                                                                                     |
+| `xMention`       | `Mention`       | -                                                                                                     |
+| `xRate`          | `Rate`          | -                                                                                                     |
+| `xSlider`        | `Slider`        | -                                                                                                     |
+| `xCard`          | `Card`          | `title` / `column` / `gutter`                                                                         |
+| `xArray`         | (array node)    | `item` / `initialLength` / `minItems` / `maxItems` / `showActions` / `labels` / `title` / `draggable` |
+
+### 8.2 用法示例
+
+```typescript
+const schema = {
+  column: 2,
+  row: { gutter: 24 },
+  children: [
+    xInput('email').label('邮箱').required().placeholder('a@b.com').defaultValue('a@b.com').build(),
+    xDatePicker('birthday').label('生日').format('YYYY-MM-DD').build(),
+    xSelect('country')
+      .label('国家')
+      .options([
+        { value: 'CN', label: '中国' },
+        { value: 'US', label: '美国' },
+      ])
+      .build(),
+  ],
+}
+```
+
+**类型推导**：每个 builder 绑死 component 名 + props 类型，IDE 自动补全 props 字段名 + 校验值类型。
+
+---
+
+## 9. 测试策略（当前 1042 测试）
+
+### 9.1 测试分布
+
+| 类别                 | 文件数 | 测试数   | 覆盖率目标 |
+| -------------------- | ------ | -------- | ---------- |
+| composables          | ~30    | ~600     | ≥80%       |
+| XForm.spec           | 1      | 60+      | ≥80%       |
+| types (test-d)       | 2      | 编译期   | N/A        |
+| builders             | 1      | ~30      | ≥80%       |
+| element-plus-adapter | 1      | ~10      | 100%       |
+| index                | 1      | ~5       | 100%       |
+| **合计**             | ~30+   | **1042** | ≥80%       |
+
+### 9.2 关键回归保护（源码级静态断言）
+
+`XForm.spec.ts` 用 `?raw` 导入源码做正则匹配，防止未来精简时误删关键配置：
+
+- `:validate-trigger="['change', 'blur']"` 必须在 `<ElForm>` 标签上
+- `import 'element-plus/dist/index.css'` 必须存在（OPT-0 回归修复）
+- `import './styles/element-form-overwrite.scss'` 必须存在（OPT-0 回归修复）
+- 顶层 `v-for` 不能用 `:key="i"`，必须用 `node.key ?? node.name ?? i`
+
+### 9.3 验证命令
+
+```bash
+pnpm type-check:full   # vue-tsc --build --force
+pnpm test              # 全量 1042 测试
+pnpm lint              # ESLint
+pnpm build             # vite build
+```
+
+---
+
+## 10. 已知限制与未来路线
+
+### 10.1 已知限制
+
+- **Element Plus 2.x 内部耦合**：setFieldError 双路径依赖 el-form.fields[i].validateState/validateMessage ref，element-plus 3.0 升级需重新验证
+- **element-plus 2.14 shallowRef 限制**：日期/Select/Cascader 等复杂控件失焦时不触发 crossValidator 红字（点击保存才触发）—— 这是 element-plus 自身实现
+- **validateStateDebounced (100ms)**：setFieldError 写入后 100ms 才显示红字（element-plus 内部节流）
+- **复杂 react 没有嵌套深度检查**：循环 reaction 可能触发"Maximum recursive updates"（已实现 50 次/flush 预算）
+
+### 10.2 未来路线（P2+ 待评估）
+
+| 项                             | 描述                               | 风险                        |
+| ------------------------------ | ---------------------------------- | --------------------------- |
+| element-plus 3.0 升级          | setFieldError 重构 + 全套回归      | 高（需重写路径 B）          |
+| setFieldError 重构（P1-OPT-6） | 130 行 → 40 行，等待 EP 3.0 窗口期 | 高                          |
+| builder API 统一（27→15）      | 破坏性变更，4 种 Input 变体合并    | 中（需要 deprecation 过渡） |
+| unknown props 校验             | dev mode 严格 props 校验           | 中                          |
+| 服务端 schema 动态下发         | 安全风险高                         | 暂不做                      |
+
+### 10.3 已完成的优化
+
+| 阶段   | 改进                                                                  |
+| ------ | --------------------------------------------------------------------- |
+| **P0** | 拆 XForm.vue (478→95) + builders 去重 + 类型断言归因 + CSS 回归修复   |
+| **P1** | 拆 types.ts (556→9 文件) + 模块级状态清理 + OSD 错误反馈 + 组件拆分   |
+| **P2** | 拆超大 composable + 拆 render-schema-node.ts + 合并设计文档（本文件） |
+
+---
+
+## 11. 手动验证步骤
+
+### 11.1 基础渲染验证
+
+1. 启动 `pnpm dev`，打开 `http://localhost:5173/demo/xform-base`
+2. **预期**：基础 XForm 渲染，所有 Input/Select 组件正常工作
+
+### 11.2 校验路径验证
+
+1. 打开 `/demo/xform-cross-field`
+2. 密码填 `123`，确认密码填 `1`，点击「保存」
+3. **预期**：
+   - 表单红字「两次密码不一致」「请选择开始日期」「请选择结束日期」可见
+   - **右上角 OSD toast**：3 项错误详情，field + message + 当前值
+   - **console**：async-validator 风格 errorsMap 对象
+
+### 11.3 反应式验证
+
+1. 打开 `/demo/xform-reaction`
+2. 切换 Switch 状态，观察其他字段的 hidden / disabled / rules 联动
+3. **预期**：字段立即响应，OSD 无 toast（realtime 路径静默避免噪音）
+
+### 11.4 数组节点验证
+
+1. 打开 `/demo/xform-array`
+2. 添加 3 行数据，删除中间一行，验证焦点保持
+3. **预期**：剩余行不闪烁、焦点不丢失
+
+### 11.5 服务端错误验证
+
+1. 打开 `/demo/xform-server-error`
+2. 触发模拟 422 错误
+3. **预期**：OSD toast 列出错误字段，控制台输出服务端 errorsMap
+
+### 11.6 类型推导验证
+
+1. 在 IDE 中输入 `const node: SchemaNodeFor<'Input'> = { ... }`
+2. **预期**：IDE 自动补全 props 字段名，写错类型（如 `placeholder: 123`）触发 TS 编译错误
+
+---
+
+## 12. 与项目 CLAUDE.md 硬约束对齐
+
+| §      | 约束                             | 状态                                                                                                                                     |
+| ------ | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| §1.2   | 模块边界                         | ✅ types.ts barrel + composables 一文件一能力                                                                                            |
+| §1.4   | 防御性 UI（Loading/Error/Empty） | ⚠️ 不在 XForm 内部，由调用方用 `<AsyncState>` 包装                                                                                       |
+| §1.6   | AutoImport                       | ✅ 全程不显式 import ref / watch / createNamespace                                                                                       |
+| §2     | src/ Architecture Lockdown       | ✅ 本目录稳定，所有改动经 §2.4 申请                                                                                                      |
+| §3     | BEM 命名规范                     | ✅ XForm.vue 使用 `createNamespace('x-form')` + `<style lang="scss">` 无 scoped                                                          |
+| §4 #6  | 文件行数限制                     | ✅ XForm 95 / composables <200 / types/ <220                                                                                             |
+| §4 #7  | Hook/Composable 行数             | ⚠️ 3 个 composable >200 行（useTopLevelFields / useCrossFieldTrigger / useFormValidation），按 §3.4 备注"cohesive orchestrator 例外"接受 |
+| §4 #10 | npm 包验证                       | ✅ 仅 element-plus / lodash-es / zod（项目已装）                                                                                         |
+| §4 #11 | 新增 composable 需 .spec.ts      | ✅ 27 个 composable 全部有 spec                                                                                                          |
+
+---
+
+## 13. 引用
+
+### 13.1 核心代码
+
+- 入口组件：`src/components/form-schema/XForm.vue`
+- 顶层编排：`src/components/form-schema/composables/use-xform-composer.ts`
+- 主调度：`src/components/form-schema/composables/render-schema-node.ts`
+- 类型契约：`src/components/form-schema/types/schema-node.ts`
+- 链式 builder：`src/components/form-schema/builders.ts`
+
+### 13.2 历史决策档案
+
+- `docs/superpowers/specs/2026-08-19-form-schema-design.md` — 原始设计
+- `docs/superpowers/specs/2026-08-28-form-schema-default-components-design.md` — 默认组件扩展
+- `docs/superpowers/plans/2026-08-19-form-schema-impl.md` — v1 实施
+- `docs/superpowers/plans/2026-08-20-form-schema-v2-impl.md` — v2 实施
+- `docs/superpowers/plans/2026-08-21-form-schema-async-options.md` — 异步选项实施
+- `docs/superpowers/plans/2026-08-21-form-schema-custom-component-types.md` — 类型推导实施
+- `docs/superpowers/plans/2026-08-28-form-schema-default-components.md` — 默认组件实施
+- `docs/superpowers/plans/2026-08-28-form-schema-upload-demo.md` — 上传 demo
+
+### 13.3 外部参考
+
+- Element Plus 2.14.3：`node_modules/element-plus`（类型与实现）
+- async-validator：`element-plus` 内部依赖，规则兼容
+- Zod 4.4.3：可选顶层校验
+
+---
+
+**文档版本**：v3.0.0 | **生成日期**：2026-09-01 | **状态**：当前实现权威指南

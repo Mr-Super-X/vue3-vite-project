@@ -1,12 +1,17 @@
-import {
-  getCurrentScope,
-  onScopeDispose,
-  ref,
-  toRaw,
-  watch,
-  type ComponentPublicInstance,
-  type Ref,
-} from 'vue'
+/**
+ * useFormInstance —— el-form 实例方法编排（P2-A1 拆分后主文件）
+ *
+ * P2-A1 拆分前：394 行（含 setFieldError 双路径 + watch 守护）
+ * P2-A1 拆分后：本文件 ~250 行，setFieldError dual-path 已抽到 ./use-set-field-error.ts
+ *
+ * 职责：
+ *   - el-form 实例引用 + getRef / clearValidate / resetFields / validateField 等基础方法
+ *   - 数组操作 addItem / removeItem / moveItem（含 clearArraySubtree 行清理）
+ *   - validateFormWithZod（独立 zod 校验包装）
+ *   - 委托 useSetFieldError 处理 setFieldError / setFieldValidating + watch 守护
+ */
+import { ref, toRaw, type ComponentPublicInstance, type Ref } from 'vue'
+import { useSetFieldError, type FieldErrorState } from './use-set-field-error'
 import { validateWithZod } from './use-validate'
 import type { UseFormErrorBusReturn } from './use-form-error-bus'
 import type { ZodType } from 'zod'
@@ -33,19 +38,9 @@ export type ElFormInstance = {
   setInitialValues?: (initModel: Record<string, unknown>) => void
 }
 
-/** 阶段 3.1：字段错误状态（走 element-plus 官方 props 路径） */
-export type FieldErrorState = {
-  error: string
-  validateStatus: '' | 'validating' | 'success' | 'error'
-}
+/** 重新导出 FieldErrorState 保持向后兼容 */
+export type { FieldErrorState }
 
-/**
- * el-form 实例引用 + 校验 / 重置 / 滚动 等实例方法的封装
- * 暴露 validate / resetFields / clearValidate / getRef / getNames / scrollToField / validateWithZod
- *
- * 阶段 3.1 重构：setFieldError 改为更新 externalErrors ref（走 element-plus 官方
- * props.error + props.validateStatus 路径触发红字），不再直接写 elForm.fields[i]
- */
 export function useFormInstance(
   model: () => Record<string, unknown> | undefined,
   zodSchema: () => ZodType | undefined,
@@ -55,6 +50,19 @@ export function useFormInstance(
   errorBus?: UseFormErrorBusReturn
 ) {
   const elFormRef = ref<ElFormInstance | null>(null)
+
+  // setFieldError 双路径 + watch 守护 —— 委托独立 composable（P2-A1 拆分）
+  // 仅在 externalErrors 存在时初始化（无 externalErrors 表示 XForm.vue 未启用红字路径，
+  // 此场景不需要 watch 守护；setFieldError 也只是空操作）
+  const { setFieldError } = useSetFieldError({
+    externalErrors: externalErrors ?? ref<Record<string, FieldErrorState>>({}),
+    getFields: () =>
+      (elFormRef.value as unknown as { fields?: unknown[] } | null)?.fields as
+        | Array<{ prop?: string | { value?: string }; propString?: string | { value?: string } }>
+        | undefined,
+    // exactOptionalPropertyTypes: 条件展开避免传 undefined
+    ...(errorBus ? { errorBus } : {}),
+  })
 
   function getRef(key: string): ComponentPublicInstance | HTMLElement | null {
     const map = (elFormRef.value as unknown as { $?: Record<string, unknown> } | null)?.$ ?? {}
@@ -207,181 +215,6 @@ export function useFormInstance(
     arr.splice(to, 0, item)
     // [min(from,to), max(from,to)] 区间内的行索引均变化，区间外不受影响
     clearArraySubtree(name, Math.min(from, to))
-  }
-
-  /**
-   * 阶段 3.1：手动设置字段错误状态
-   * 双路径：
-   * 路径 A：element-plus 官方 props 路径（externalErrors → form-item props.error/validateStatus → watch → setValidationState）
-   * 路径 B：watch 守护（监听 externalErrors 变化，强制把对应字段内部 ref 同步成 error，
-   *        覆盖 el-form-item 内部任何后续 validate(success) 回调）
-   *
-   * 为什么需要双路径：
-   * 1. el-form.validateField / el-form.validate 成功后会调 setValidationState('success')，覆盖路径 A 写入的 error
-   * 2. 路径 A 依赖 props.error 的 watch；当 error 字符串未变化时 watch 不会重新触发，导致状态无法从 success 恢复为 error
-   * 3. 路径 B 用 deep + immediate watch 守护，任何 externalErrors 变更（无论 setFieldError 还是 crossValidator 重算）
-   *    都会同步强制 el-form-item 内部 validateState/validateMessage 到正确值
-   *
-   * element-plus 2.x el-form.fields 通过 defineExpose 暴露，数组元素是 formItemContext（reactive 对象）。
-   * 其中的 prop/propString/validateState/validateMessage 都是 ref，需用 toRaw 取原始 ref 后再改 .value。
-   *
-   * 注意：element-plus 内部有 validateStateDebounced（100ms debounce）驱动实际 DOM class 显示，
-   * 我们的 watch 是同步触发，validateState 值变更后 100ms 内 debounced 会同步过来 —— 我们在
-   * validateField('blur') 触发的 validate-success 回调执行后立即把状态恢复为 error，
-   * 保证 debounced 也最终显示 error。
-   */
-  function setFieldError(
-    name: string,
-    message: string,
-    state: '' | 'validating' | 'success' | 'error' = 'error',
-    /** 静默标志：true 时不触发 OSD 上报（用于 applyCrossErrors 批量汇总场景，避免 N 条独立 toast） */
-    silent?: boolean
-  ): void {
-    // 路径 A：element-plus 官方 props 路径
-    if (externalErrors) {
-      if (state === 'error' && message) {
-        externalErrors.value[name] = { error: message, validateStatus: state }
-        // OPT-7：所有错误路径统一上报 OSD
-        // 仅 realtime 路径（crossValidator 反向触发 / 服务端 422）需要 OSD；
-        // validateForm 批量场景由 applyCrossErrors 发汇总 toast，setFieldError 静默
-        if (!silent) {
-          errorBus?.report({
-            severity: 'error',
-            code: 'CROSS_VALIDATION_FAILED',
-            message,
-            fields: [name],
-            source: 'useFormInstance',
-          })
-        }
-      } else {
-        delete externalErrors.value[name]
-      }
-    }
-  }
-
-  // 路径 B：watch 守护
-  // 1) 订阅 externalErrors 变化（crossValidator 重算 / setFieldError 调用）
-  // 2) 订阅 fields 数组变化（新字段注册），给每个新字段的 validateState/validateMessage 装 watch：
-  //    当外部错误仍存在但 el-form-item 内部 validateField(success) 把状态改回 success 时，
-  //    立即纠正为 error —— 这是 element-plus validateStateDebounced(100ms) 之外的同步纠正。
-  //    debounced 最终会跟随 validateState 显示 error，所以红字保留。
-  if (externalErrors) {
-    const watchedFields = new WeakSet<object>()
-    // guardField 在 watch 回调内创建 watcher —— 脱离 setup effect scope，组件卸载后仍存活（泄漏）。
-    // 收集 stop 句柄，scope 销毁时统一清理；getCurrentScope 守卫单测中无 scope 的裸调用
-    const guardStops: (() => void)[] = []
-    if (getCurrentScope()) {
-      onScopeDispose(() => {
-        for (const s of guardStops) s()
-        guardStops.length = 0
-      })
-    }
-
-    const guardField = (field: object): void => {
-      if (watchedFields.has(field)) return
-      watchedFields.add(field)
-      const rawField = toRaw(field) as {
-        prop?: string | Ref<string>
-        propString?: string | Ref<string>
-        validateState?: { value?: string }
-        validateMessage?: { value?: string }
-      }
-      // 从 field 推字段名（优先 propString，没有用 prop）
-      const propString =
-        rawField.propString &&
-        typeof rawField.propString === 'object' &&
-        'value' in rawField.propString
-          ? rawField.propString.value
-          : rawField.propString
-      const prop =
-        rawField.prop && typeof rawField.prop === 'object' && 'value' in rawField.prop
-          ? rawField.prop.value
-          : rawField.prop
-      const fieldName = typeof propString === 'string' ? propString : prop
-      if (typeof fieldName !== 'string') return
-      const vs = rawField.validateState
-      const vm = rawField.validateMessage
-      if (vs && typeof vs === 'object' && 'value' in vs) {
-        guardStops.push(
-          watch(
-            () => (vs as Ref<string>).value,
-            (newState) => {
-              const err = externalErrors.value?.[fieldName]
-              if (err?.error && newState !== 'error') {
-                ;(vs as Ref<string>).value = 'error'
-                if (vm && typeof vm === 'object' && 'value' in vm) {
-                  ;(vm as Ref<string>).value = err.error
-                }
-              }
-            }
-          )
-        )
-      }
-    }
-
-    watch(
-      () => externalErrors.value,
-      (errors) => {
-        const ef = elFormRef.value as unknown as {
-          fields?: Array<{
-            prop?: string | Ref<string>
-            propString?: string | Ref<string>
-            validateState?: string | Ref<string>
-            validateMessage?: string | Ref<string>
-          }>
-        } | null
-        if (!ef?.fields) return
-        for (const field of ef.fields) {
-          const propString =
-            field.propString && typeof field.propString === 'object' && 'value' in field.propString
-              ? field.propString.value
-              : field.propString
-          const prop =
-            field.prop && typeof field.prop === 'object' && 'value' in field.prop
-              ? field.prop.value
-              : field.prop
-          const fieldName = typeof propString === 'string' ? propString : prop
-          if (typeof fieldName !== 'string') continue
-          const target = errors[fieldName]
-          const rawField = toRaw(field)
-          if (!rawField) continue
-          const vs = rawField.validateState
-          const vm = rawField.validateMessage
-          if (target?.error) {
-            if (vs && typeof vs === 'object' && 'value' in vs && vs.value !== 'error') {
-              ;(vs as Ref<string>).value = 'error'
-            }
-            if (vm && typeof vm === 'object' && 'value' in vm && vm.value !== target.error) {
-              ;(vm as Ref<string>).value = target.error
-            }
-          } else {
-            if (vs && typeof vs === 'object' && 'value' in vs && vs.value === 'error') {
-              ;(vs as Ref<string>).value = ''
-            }
-            if (vm && typeof vm === 'object' && 'value' in vm && vm.value) {
-              ;(vm as Ref<string>).value = ''
-            }
-          }
-          guardField(field)
-        }
-      },
-      { deep: true, immediate: true }
-    )
-
-    // fields 数组本身可能变化（el-form-item 注册新字段）
-    watch(
-      () => {
-        const ef = elFormRef.value as unknown as { fields?: unknown[] } | null
-        return ef?.fields
-      },
-      (fields) => {
-        if (!fields) return
-        for (const field of fields) {
-          if (field && typeof field === 'object') guardField(field)
-        }
-      },
-      { immediate: true }
-    )
   }
 
   /** 手动标记某个字段为校验中(el-form-item 显示 loading 图标) */

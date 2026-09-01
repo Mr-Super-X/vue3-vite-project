@@ -1,17 +1,21 @@
 /**
- * Schema 节点渲染调度器 —— 阶段 1.4 拆分后主文件
+ * Schema 节点渲染调度器 —— P2-B 拆分后主文件
  *
- * 职责：保留 col 响应式包装 + 工具函数 + 主调度入口
- * 拆出去的子模块：
- * - render-array-node.ts —— 数组节点（kind === 'array'）
- * - render-visual-container.ts —— 视觉容器（Card 等带 row/column，无 name）
- * - render-form-item.ts —— formItem 包装 + row+column 布局
+ * 原 528 行单文件包含：组件解析 + 规则编译 + 栅格包装 + 插槽构造 + 主调度 + 类型定义
+ * 拆分后（本文件 ~180 行）：
+ *   - 组件解析：./resolve-component.ts（EL_COMPONENT_MAP + resolveComponentFor + isElUpload）
+ *   - 规则编译：./compile-rules.ts（warnUnknownRule + compileRules）
+ *   - 栅格包装：./wrap-with-elcol.ts（wrapWithElCol + pickBreakpointConfig + mergeCol/RowResponsive）
+ *   - 插槽构造：./build-slots.ts（renderChildren + buildSlotFn + buildUploadDefaultSlot + buildUploadTipSlot + getComponentDefaultProps + buildAsyncProps）
+ *   - 主调度：本文件（useRenderSchemaNode + RenderSchemaNodeOptions）
  *
- * 主函数 renderToComponentInner 只做 4 类分支委托，不再包含具体渲染细节。
+ * 所有工具函数通过 re-export 保留对外 API，调用方零改动：
+ *   - render-form-item.ts / render-array-node.ts / render-visual-container.ts 等
+ *   - render-schema-node.spec.ts（测试用）
  *
  * ────────────────────────────────────────────────────────────────────────────
  * 类型断言归因（OPT-3）
- * 本文件 `as never` 集中在 h(ElCol, ...) 调用处与 SchemaNode.children 多态分支。
+ * 本文件 `as never` 集中在 h(ElCol, ...)调用处与 SchemaNode.children 多态分支。
  * - h() 类型 cast：vue + element-plus 类型元组缺陷，见 render-array-node.ts 头部
  * - `buildSlotFn(...)() as never` / `renderChildren(...) as never`：SchemaNode.children
  *   是 `SchemaNode | SchemaNode[] | string | undefined` 多态，调用方经 schema 配置
@@ -21,43 +25,33 @@
  * 不要在没有充分理由时移除这些 cast
  * ────────────────────────────────────────────────────────────────────────────
  */
-import {
-  ElConfigProvider,
-  ElForm,
-  ElFormItem,
-  ElCard,
-  ElButton,
-  ElInput,
-  ElSelect,
-  ElOption,
-  ElSwitch,
-  ElDatePicker,
-  ElTimePicker,
-  ElTimeSelect,
-  ElUpload,
-  ElTransfer,
-  ElTreeSelect,
-  ElAutocomplete,
-  ElRadioGroup,
-  ElRadio,
-  ElCheckboxGroup,
-  ElCheckbox,
-  ElCascader,
-  ElInputNumber,
-  ElInputTag,
-  ElMention,
-  ElColorPicker,
-  ElRate,
-  ElSlider,
-  ElIcon,
-} from 'element-plus'
-import { Plus, UploadFilled } from '@element-plus/icons-vue'
-import { resolveComponent, h, type VNode, type ComponentPublicInstance, type Ref } from 'vue'
-import { createNamespace } from '@/utils/bem'
-import type { SchemaNode, XFormProps, ColConfig, RowConfig, SchemaSlot } from '../types'
+import { h, type VNode, type ComponentPublicInstance, type Ref } from 'vue'
+
+import type { SchemaNode, XFormProps } from '../types'
+// ColConfig / RowConfig / SchemaSlot 类型仅在新拆分文件内使用；此处 re-export 仅保留
+// API 类型暴露位（外部消费方可能从本文件 import 类型）。
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type { ColConfig, RowConfig, SchemaSlot } from '../types'
+
+import { resolveComponentFor } from './resolve-component'
+// compileRules / mergeColResponsive / mergeRowResponsive / renderChildren /
+// buildSlotFn / buildUploadTipSlot 仅作为 re-export 暴露 API，本文件不直接使用。
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { compileRules } from './compile-rules'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { mergeColResponsive, mergeRowResponsive } from './wrap-with-elcol'
+import { wrapWithElCol } from './wrap-with-elcol'
+// renderChildren / buildSlotFn / buildUploadTipSlot 仅作为 re-export 暴露 API
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { renderChildren } from './build-slots'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { buildSlotFn } from './build-slots'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { buildUploadTipSlot } from './build-slots'
+import { buildUploadDefaultSlot, getComponentDefaultProps, buildAsyncProps } from './build-slots'
+
 import { buildVModelBindings } from './build-vmodel-bindings'
 import { buildOnBindings } from './build-on-bindings'
-import { buildAutocompleteFetcher } from './use-async-options'
 import { renderArrayNode } from './render-array-node'
 import { renderVisualContainer } from './render-visual-container'
 import { renderWithFormItem, renderWithRowColumn } from './render-form-item'
@@ -66,313 +60,40 @@ import { resolvePermission, renderViewPlaceholder } from './use-field-permission
 type RenderFn = (
   node: SchemaNode | SchemaNode[] | string | undefined | null
 ) => VNode | string | VNode[] | undefined
-type RuleArr = Array<Record<string, unknown>>
 
-const EL_COMPONENT_MAP: Record<string, unknown> = {
-  Input: ElInput,
-  Select: ElSelect,
-  Option: ElOption,
-  Switch: ElSwitch,
-  DatePicker: ElDatePicker,
-  TimePicker: ElTimePicker,
-  TimeSelect: ElTimeSelect,
-  Upload: ElUpload,
-  Transfer: ElTransfer,
-  TreeSelect: ElTreeSelect,
-  Autocomplete: ElAutocomplete,
-  Button: ElButton,
-  RadioGroup: ElRadioGroup,
-  Radio: ElRadio,
-  CheckboxGroup: ElCheckboxGroup,
-  Checkbox: ElCheckbox,
-  Cascader: ElCascader,
-  InputNumber: ElInputNumber,
-  InputPassword: ElInput,
-  ElInputPassword: ElInput,
-  InputTextArea: ElInput,
-  ElInputTextArea: ElInput,
-  InputTag: ElInputTag,
-  ColorPicker: ElColorPicker,
-  Mention: ElMention,
-  Rate: ElRate,
-  Slider: ElSlider,
-  Card: ElCard,
-  FormItem: ElFormItem,
-  Form: ElForm,
-}
+// ────────────────────────────────────────────────────────────────────────────
+// Re-exports —— 保留旧 API 兼容（render-form-item / render-array-node 等调用方零改动）
+// ────────────────────────────────────────────────────────────────────────────
 
-export function resolveComponentFor(
-  name: string | undefined,
-  userComponents?: Record<string, unknown>
-): unknown {
-  if (!name) return null
-  if (userComponents && name in userComponents) return userComponents[name]
-  if (name in EL_COMPONENT_MAP) return EL_COMPONENT_MAP[name] ?? null
-  if (name.startsWith('El') && name.length > 2) {
-    const short = name[2]!.toUpperCase() + name.slice(3)
-    if (short in EL_COMPONENT_MAP) return EL_COMPONENT_MAP[short] ?? null
-  }
-  if (name.startsWith('El')) {
-    try {
-      const r = resolveComponent(name)
-      if (typeof r !== 'string') return r
-    } catch {
-      /* fallthrough */
-    }
-  }
-  // 原生 HTML 标签（全小写，如 'a' / 'span' / 'div'）→ 返回字符串标签名，
-  // h() 对字符串直接渲染原生元素（与 EL 组件名的 PascalCase/ElXxx 约定不冲突）
-  if (name === name.toLowerCase()) return name
-  return null
-}
+export {
+  EL_COMPONENT_MAP,
+  resolveComponentFor,
+  isElUpload,
+  isPictureCardUpload,
+  isDragUpload,
+} from './resolve-component'
 
-/** 命名字符串规则未注册时静默降级为必填，排障极其困难 —— 必须显式告警暴露（通常是拼写错误） */
-function warnUnknownRule(name: string): Record<string, unknown> {
-  // 'required' 是 DSL 惯用简写（rules: 'required' ≡ [{ required: true }]，文档化行为），
-  // 不属于拼写错误，静默放行；其余未命中名才告警
-  if (name === 'required') return { required: true }
-  console.error(
-    `[XForm] 命名校验规则 "${name}" 未在 props.rules 中注册，已降级为 { required: true }（请检查拼写或注册该规则）`
-  )
-  return { required: true }
-}
+export { compileRules } from './compile-rules'
 
-/**
- * 校验规则编译：把 schema DSL 的规则数组归一化为 async-validator 可消费的对象数组。
- *
- * 行为：
- * - 字符串 `'required'` 在 propsRules 表里查表，未命中时降级为 `{ required: true }`（warnUnknownRule）
- * - 自动注入默认 message：与 builders.ts:90 的 `required(message = '必填')` 对齐；
- *   仅当 `required === true && !message` 时注入，**用户显式 message 不覆盖**
- * - label 可选：传入时 message = `${label}必填`（如「订单号必填」），未传时退化「必填」保持向后兼容
- * - async-validator 默认 message「orderNo is required」是英文，element-plus zhCn 不含此翻译，
- *   ElConfigProvider locale 改不了这一项；必须在编译层注入
- */
-export function compileRules(
-  rules: SchemaNode['rules'],
-  propsRules: XFormProps['rules'],
-  label?: string
-): RuleArr {
-  if (!rules) return []
-  return (Array.isArray(rules) ? rules : [rules])
-    .map((r) =>
-      typeof r === 'string'
-        ? (propsRules?.[r] ?? warnUnknownRule(r))
-        : (r as Record<string, unknown>)
-    )
-    .map((r) => {
-      // required: true 且无 message 时注入「<label>必填」，label 缺失时退化「必填」
-      if (r.required === true && r.message === undefined) {
-        return { ...r, message: label ? `${label}必填` : '必填' }
-      }
-      return r
-    })
-    .filter((r): r is Record<string, unknown> => typeof r === 'object' && r !== null)
-}
+export {
+  wrapWithElCol,
+  pickBreakpointConfig,
+  mergeColResponsive,
+  mergeRowResponsive,
+} from './wrap-with-elcol'
 
-export function wrapWithElCol(
-  node: SchemaNode,
-  inner: VNode,
-  currentBreakpoint?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
-): VNode {
-  if (node.col === false) return inner
-  if (node.col === undefined) return inner
-  const colObj = typeof node.col === 'object' ? node.col : null
-  const baseConfig = colObj?.responsive
-    ? pickBreakpointConfig(colObj.responsive, currentBreakpoint)
-    : null
-  const span = baseConfig?.span ?? colObj?.span ?? 24
-  const offset = baseConfig?.offset ?? colObj?.offset
-  // 关键修复:使用 ElCol 而非 ElFormItem —— ElFormItem 在 el-form 内响应栅格,
-  // 但 el-row 内的 gutter(padding-left/right)只对 ElCol 生效
-  return h(
-    ElCol as never,
-    {
-      span,
-      offset,
-      ...(colObj?.responsive ? { responsive: colObj.responsive } : {}),
-    } as never,
-    { default: () => inner }
-  ) as VNode
-}
+export {
+  renderChildren,
+  buildSlotFn,
+  buildUploadDefaultSlot,
+  buildUploadTipSlot,
+  getComponentDefaultProps,
+  buildAsyncProps,
+} from './build-slots'
 
-export function pickBreakpointConfig(
-  responsive: NonNullable<ColConfig['responsive']>,
-  current?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
-): { span?: number; offset?: number; push?: number; pull?: number } | undefined {
-  const order: Array<'xs' | 'sm' | 'md' | 'lg' | 'xl'> = ['xs', 'sm', 'md', 'lg', 'xl']
-  const currentIdx = current ? order.indexOf(current) : -1
-  for (let i = currentIdx; i >= 0; i--) {
-    if (responsive[order[i]!]) return responsive[order[i]!]
-  }
-  for (const k of order) {
-    if (responsive[k]) return responsive[k]
-  }
-  return undefined
-}
-
-export function mergeColResponsive(
-  col: SchemaNode['col'],
-  current?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
-): SchemaNode['col'] {
-  if (col === undefined || col === false) return col
-  if (typeof col !== 'object') return col
-  const responsive = col.responsive
-  if (!responsive) return col
-  const picked = pickBreakpointConfig(responsive, current)
-  if (!picked) return col
-  const merged: ColConfig = { ...col }
-  if (picked.span !== undefined) merged.span = picked.span
-  else if (merged.span === undefined) delete merged.span
-  if (picked.offset !== undefined) merged.offset = picked.offset
-  if (picked.push !== undefined) merged.push = picked.push
-  if (picked.pull !== undefined) merged.pull = picked.pull
-  delete (merged as { responsive?: unknown }).responsive
-  return merged
-}
-
-/**
- * 阶段 2.4：row.responsive 拍平
- * 与 mergeColResponsive 同逻辑 —— 但 row 没有 span/offset/push/pull,gutter/type/align/justify 是可选覆盖
- */
-export function mergeRowResponsive(
-  row: RowConfig | undefined,
-  current?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
-): RowConfig | undefined {
-  if (!row) return row
-  const responsive = row.responsive
-  if (!responsive) return row
-  const picked = pickBreakpointConfig(responsive as never, current)
-  if (!picked) return row
-  const merged: RowConfig = { ...row, ...picked }
-  delete (merged as { responsive?: unknown }).responsive
-  return merged
-}
-
-export function renderChildren(
-  children: SchemaNode['children'],
-  render: RenderFn
-): VNode | string | VNode[] | undefined {
-  if (children === undefined) return undefined
-  if (typeof children === 'string') return children
-  if (Array.isArray(children)) return children.map(render) as VNode[]
-  return render(children)
-}
-
-/** schema 名与解析结果双向确认，避免业务用 components 覆盖 Upload 后误注入默认图标 */
-function isElUpload(node: SchemaNode, Comp: unknown): boolean {
-  const name = typeof node.component === 'string' ? node.component : ''
-  if (name !== 'Upload' && name !== 'ElUpload') return false
-  return Comp === ElUpload
-}
-
-/** 判断当前节点是否为 listType='picture-card' 的 ElUpload */
-export function isPictureCardUpload(node: SchemaNode, Comp: unknown): boolean {
-  return isElUpload(node, Comp) && node.props?.listType === 'picture-card'
-}
-
-/** 判断当前节点是否为开启 drag 拖拽的 ElUpload */
-export function isDragUpload(node: SchemaNode, Comp: unknown): boolean {
-  return isElUpload(node, Comp) && Boolean(node.props?.drag)
-}
-
-/**
- * 两类默认图标的 class —— 带 modifier 区分类型，业务覆盖样式时可精确命中其中一类。
- * drag 额外保留 Element Plus 原生 `el-icon--upload` / `el-upload__text`，继承官方拖拽区图标与文案样式。
- */
-const bem = createNamespace('x-form') // 与 XForm.vue 同一 block，保证注入的类名落在 XForm 命名空间下
-const UPLOAD_ICON_CLASS = {
-  pictureCard: [bem.e('upload-icon'), bem.em('upload-icon', 'picture-card')].join(' '),
-  drag: ['el-icon--upload', bem.e('upload-icon'), bem.em('upload-icon', 'drag')].join(' '),
-}
-const UPLOAD_DRAG_TEXT_CLASS = ['el-upload__text', bem.e('upload-text')].join(' ')
-const UPLOAD_BUTTON_CLASS = bem.e('upload-button')
-
-/**
- * 构建 Upload 默认插槽内容。
- * 用户未提供 default slot / children 时按类型注入默认触发区内容：
- * - `listType: 'picture-card'` → `<el-icon><Plus /></el-icon>`
- * - `drag: true` → `<el-icon class="el-icon--upload"><UploadFilled /></el-icon>` + 拖拽提示文案
- * - 其余（text / picture）→ `<el-button>点击上传</el-button>`
- *
- * 为什么 text / picture 也必须兜底：ElUpload 的触发区**就是** default slot 本身
- * （element-plus/upload-content.vue 非 drag 分支直接 `renderSlot($slots, 'default')`，不含任何内置 UI），
- * 插槽为空时 `.el-upload--text` 是零高度空元素 —— 字段看起来没渲染、完全无法交互。
- *
- * 注意 DOM 结构：`el-form-item__content` 下会多出一层无类名的 `<div>`，它是 ElUpload 组件自身的
- * 模板根节点（element-plus/upload.vue 用它收拢 upload-list 与 upload-content 两个兄弟节点），
- * 不是 XForm 的包裹层，也无法从 XForm 侧移除；需要调整该层样式时用 `.el-form-item__content > div` 定位。
- */
-export function buildUploadDefaultSlot(
-  node: SchemaNode,
-  Comp: unknown,
-  render: RenderFn
-): () => VNode | string | VNode[] | undefined {
-  return () => {
-    // 用户已自定义默认插槽时优先使用，不覆盖
-    if (node.slots?.default !== undefined) {
-      // 统一用 buildSlotFn 处理函数 / 字符串 / SchemaNode / SchemaNode[]
-      return buildSlotFn(node.slots.default, render)() as never
-    }
-    const children = renderChildren(node.children, render) as never
-    if (children) return children
-    // 用了 slots.trigger 时 ElUpload 把 default 渲染在触发区之外（element-plus/upload.vue:85），
-    // 此时再注入默认内容会在触发区旁多出一个孤立按钮/图标
-    if (node.slots?.trigger !== undefined) return children
-    if (isPictureCardUpload(node, Comp)) {
-      return h(
-        ElIcon,
-        { class: UPLOAD_ICON_CLASS.pictureCard },
-        { default: () => h(Plus) }
-      ) as VNode
-    }
-    // drag 排在 picture-card 之后：两者同时开启时卡片触发区仅 148px，
-    // UploadFilled 的官方 67px 大图标会溢出，此时保留 Plus 更合适
-    if (isDragUpload(node, Comp)) {
-      return [
-        h(ElIcon, { class: UPLOAD_ICON_CLASS.drag }, { default: () => h(UploadFilled) }),
-        h('div', { class: UPLOAD_DRAG_TEXT_CLASS }, '拖拽文件到这里或点击上传'),
-      ] as VNode[]
-    }
-    // text / picture 兜底：触发区为空时字段不可见、不可点（详见函数 JSDoc）
-    if (isElUpload(node, Comp)) {
-      return h(
-        ElButton,
-        { class: UPLOAD_BUTTON_CLASS, type: 'primary' },
-        { default: () => '点击上传' }
-      ) as VNode
-    }
-    return children
-  }
-}
-
-export function buildSlotFn(value: SchemaSlot, render: RenderFn): (scope?: unknown) => unknown {
-  if (typeof value === 'function') {
-    return (scope?: unknown) => value(scope as Record<string, unknown>)
-  }
-  // 字符串 / SchemaNode / SchemaNode[] 统一走 renderChildren，
-  // 避免直接调用 renderToComponentInner 处理字符串时返回 undefined
-  return () => renderChildren(value as SchemaNode['children'], render)
-}
-
-/**
- * 构建 Upload 的 tip 插槽内容。
- * 当用户传入字符串时，自动包裹在 <div class="el-upload__tip"> 中，
- * 使字符串 tip 默认获得 Element Plus 的提示文案样式；
- * SchemaNode / 函数形式保持原样，由用户自行控制 wrapper。
- */
-export function buildUploadTipSlot(
-  value: SchemaSlot,
-  render: RenderFn
-): (scope?: unknown) => unknown {
-  if (typeof value === 'function') {
-    return (scope?: unknown) => value(scope as Record<string, unknown>)
-  }
-  if (typeof value === 'string') {
-    return () => h('div', { class: 'el-upload__tip' }, value)
-  }
-  return () => renderChildren(value as SchemaNode['children'], render)
-}
+// ────────────────────────────────────────────────────────────────────────────
+// RenderSchemaNodeOptions —— 主调度入参类型
+// ────────────────────────────────────────────────────────────────────────────
 
 export interface RenderSchemaNodeOptions {
   model: XFormProps['model']
@@ -426,24 +147,9 @@ export interface RenderSchemaNodeOptions {
   >
 }
 
-/** 取节点对应组件的默认 props；仅对 string component 生效 */
-export function getComponentDefaultProps(
-  node: SchemaNode,
-  componentProps?: Record<string, Record<string, unknown>>
-): Record<string, unknown> {
-  if (typeof node.component !== 'string') return {}
-  return componentProps?.[node.component] ?? {}
-}
-
-/** 构造 Autocomplete 异步选项所需的 props */
-export function buildAsyncProps(node: SchemaNode): Record<string, unknown> {
-  if (!node.asyncOptions) return {}
-  const name = typeof node.component === 'string' ? node.component : null
-  if (name !== 'Autocomplete' && name !== 'ElAutocomplete') return {}
-  return {
-    fetchSuggestions: buildAutocompleteFetcher(node.asyncOptions),
-  }
-}
+// ────────────────────────────────────────────────────────────────────────────
+// 主调度入口 —— 5 类分支委托给子模块
+// ────────────────────────────────────────────────────────────────────────────
 
 /** 主调度入口 —— 4 类分支委托给子模块 */
 export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
@@ -534,6 +240,4 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
   return renderToComponentInner
 }
 
-// 抑制未使用导入告警：ElConfigProvider/ElForm 是 XForm.vue 模板中用到的
-void [ElConfigProvider, ElForm]
 export type { ComponentPublicInstance }
