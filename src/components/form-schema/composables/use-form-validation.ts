@@ -172,9 +172,11 @@ export function useFormValidation(deps: UseFormValidationDeps): UseFormValidatio
         details.push({ field: name, message: msg, value: readRefVal(raw.fieldValue) })
       }
       if (details.length > 0) {
+        // OPT-C：el-form.validate() 失败 → 字段内规则（required/pattern/validator callback），
+        // 不是 cross-field，code 用 EL_FORM_VALIDATION_FAILED 与跨字段区分
         errorBus?.report({
           severity: 'error',
-          code: 'CROSS_VALIDATION_FAILED',
+          code: 'EL_FORM_VALIDATION_FAILED',
           message: `校验失败 ${details.length} 项（详见表单红字）`,
           fields: details.map((d) => d.field),
           details,

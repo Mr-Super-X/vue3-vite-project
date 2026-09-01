@@ -20,14 +20,28 @@ export type FormErrorSeverity = 'info' | 'warn' | 'error'
 
 /** 错误码 —— 业务可扩展 */
 export type FormErrorCode =
+  /** schema 静态校验失败（validate 函数返回 isValid=false） */
   | 'SCHEMA_VALIDATE_FAILED'
-  | 'UNKNOWN_COMPONENT'
+  /** 表达式含 FORBIDDEN 关键字（window/eval/document 等） */
   | 'FORBIDDEN_IDENTIFIER'
+  /** {{ fn }} 表达式解析失败（new Function 抛错） */
   | 'EXPRESSION_PARSE_FAILED'
+  /** 跨字段 crossValidator 失败（实时触发或 validateForm 批量） */
   | 'CROSS_VALIDATION_FAILED'
+  /** 跨字段 crossValidator 内部抛错（try/catch 捕获） */
   | 'CROSS_VALIDATOR_THREW'
+  /** el-form.validate() 返回 false（字段内规则失败：required/pattern/validator callback） */
+  | 'EL_FORM_VALIDATION_FAILED'
+  /** 单字段错误（setFieldError 通用入口，不区分来源：realtime cross / 服务端 422） */
+  | 'FIELD_ERROR'
+  /** reaction watchEffect 内求值抛错 */
   | 'REACTION_EVAL_FAILED'
+  /** XForm 挂载时 model prop 缺失 */
   | 'FORM_INSTANCE_NOT_READY'
+  /** 节点引用了未在 components / EL_COMPONENT_MAP 中注册的组件名 */
+  | 'UNKNOWN_COMPONENT'
+  /** 节点 props 包含组件未声明的键（dev mode 拼写错误检测） */
+  | 'UNKNOWN_COMPONENT_PROP'
   | (string & {}) // 业务自定义 code
 
 /** 单条错误事件 */

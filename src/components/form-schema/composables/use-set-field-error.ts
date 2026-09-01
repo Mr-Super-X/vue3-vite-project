@@ -105,10 +105,12 @@ export function useSetFieldError(opts: UseSetFieldErrorOptions): UseSetFieldErro
     if (state === 'error' && message) {
       externalErrors.value[name] = { error: message, validateStatus: state }
       // OPT-7：realtime 路径触发 OSD；validateForm 批量场景传 silent=true 跳过
+      // OPT-C：setFieldError 是单字段错误的通用入口（realtime cross / 服务端 422 都可能调用），
+      // 用通用 FIELD_ERROR code；区分来源由调用方的 source 字段标识
       if (!silent) {
         errorBus?.report({
           severity: 'error',
-          code: 'CROSS_VALIDATION_FAILED',
+          code: 'FIELD_ERROR',
           message,
           fields: [name],
           source: 'useFormInstance',

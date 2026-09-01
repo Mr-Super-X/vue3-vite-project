@@ -56,6 +56,7 @@ import { renderArrayNode } from './render-array-node'
 import { renderVisualContainer } from './render-visual-container'
 import { renderWithFormItem, renderWithRowColumn } from './render-form-item'
 import { resolvePermission, renderViewPlaceholder } from './use-field-permission'
+import { validateSchemaProps } from './validate-component-props'
 
 type RenderFn = (
   node: SchemaNode | SchemaNode[] | string | undefined | null
@@ -194,6 +195,9 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
     if (node.kind === 'array') {
       return renderArrayNode(node, opts)
     }
+    // OPT-B：dev mode props 白名单校验（用户传错字段名时 console.warn + OSD 提示）
+    // validate 仅遍历 string component + EL_COMPONENT_MAP 命中的字段；用户自定义组件自动跳过
+    validateSchemaProps(node)
     const Comp =
       typeof node.component === 'string'
         ? resolveComponentFor(node.component, opts.components)
