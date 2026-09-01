@@ -2,6 +2,7 @@
 
 > 本文由原 `26-XForm架构总览.md` 与 `27-XForm决策记录-ADR.md` 合并而来，数据按当前代码修正（2026-08-26）。
 > **使用指南见 `docs/24-XForm使用指南.md`**；本文面向维护者与接手引擎开发的人。
+> **完整设计规范见 `src/components/form-schema/ARCHITECTURE.md`**。
 
 > **TL;DR** — form-schema 引擎分四层：Schema 定义层 → Composable 编排层 → Render 渲染层 → Demo 应用层。当前规模：**24 个 spec 文件、371 个测试用例、22 个 demo** 覆盖全部关键能力。核心设计决策：schema 对象 DSL + 链式 Builder 双轨、自研跨字段 crossValidator、v-model 写入后主动触发（不依赖 watch）。
 
