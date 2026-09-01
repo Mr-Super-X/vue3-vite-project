@@ -204,13 +204,14 @@ describe('renderArrayNode / 行 key 稳定性（H8 回归）', () => {
     } as never
     // 行渲染在 slot 函数里是惰性的，先走一遍 key 收集强制求值
     rowKeys(renderArrayNode(makeNode(), opts))
+    // OPT-5：key 后缀从单调递增计数器改为 crypto.randomUUID() 短码（hex）
     expect(seen[0]).toEqual({
       name: 'items[0].qty',
-      key: expect.stringMatching(/^items#r\d+\.qty$/),
+      key: expect.stringMatching(/^items#r[0-9a-f]+\.qty$/),
     })
     expect(seen[1]).toEqual({
       name: 'items[1].qty',
-      key: expect.stringMatching(/^items#r\d+\.qty$/),
+      key: expect.stringMatching(/^items#r[0-9a-f]+\.qty$/),
     })
     expect(seen[0]!.key).not.toBe(seen[1]!.key)
   })

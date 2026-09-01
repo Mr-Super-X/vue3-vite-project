@@ -26,20 +26,35 @@ import type { RenderSchemaNodeOptions } from './render-schema-node'
 // index 作 key 时删/移一行会导致后续所有行重挂载（焦点丢失、内部组件状态与校验状态错位）；
 // 对象行在 splice/move 后身份不变 → key 稳定 → Vue 只移动 DOM 不重挂载。
 // 原始值行（string/number）无对象身份，退回 index（极少见场景）。
-// 模块级 WeakMap 跨渲染存活是必要的：renderRow 每次渲染重建，key 必须跨渲染稳定；
+//
+// WeakMap 跨渲染存活是必要的：renderRow 每次渲染重建，key 必须跨渲染稳定；
 // 行对象被 GC 时条目自动回收，不会泄漏。
+//
+// OPT-5：原 rowKeySeq 模块级计数器永增不回收（长时间运行下接近 2^53 上限），
+// 改为 crypto.randomUUID() 短码 —— 无全局计数器，UUID 重复概率可忽略。
 const rowKeyMap = new WeakMap<object, string>()
-let rowKeySeq = 0
 function rowKeyOf(row: unknown, index: number): string {
   if (row !== null && typeof row === 'object') {
     let k = rowKeyMap.get(row as object)
     if (!k) {
-      k = `r${++rowKeySeq}`
+      k = `r${newShortUid()}`
       rowKeyMap.set(row as object, k)
     }
     return k
   }
   return `i${index}`
+}
+
+/**
+ * 短 UUID 生成 —— 8 字符前缀，重复概率 1/2^32 = 可忽略
+ * 优先使用 crypto.randomUUID()（Node 19+/所有现代浏览器），
+ * 旧环境 fallback 到 time+random 组合
+ */
+function newShortUid(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID().slice(0, 8)
+  }
+  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
 }
 
 /**

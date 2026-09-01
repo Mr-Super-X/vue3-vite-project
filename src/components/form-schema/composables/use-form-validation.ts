@@ -63,14 +63,19 @@ export interface UseFormValidationReturn {
 }
 
 /**
- * 每字段触发序号 —— 异步 crossValidator 竞态防护（H3）：
- * 连续 blur/change 时旧 Promise 不得覆盖新结果。
- * 模块级 Map 而非 composable 内：保证同一字段跨多个 useFormValidation 实例仍按 name 去重
- * （实际不会发生但更安全）。
+ * 跨字段触发序号 —— 异步 crossValidator 竞态防护（H3）
+ *
+ * 原实现位于模块级 Map（composables/use-form-validation.ts 旧版 71 行）：
+ * - 优点：保证同一字段跨多个 useFormValidation 实例仍按 name 去重
+ * - 缺点：模块级 Map 跨实例共享，组件卸载后仍持有 entry；多 XForm 同页时序号
+ *   不会跨实例错位但浪费内存
+ *
+ * 改为实例级：每个 useFormValidation 调用独立一份 Map，
+ * 组件 unmount 时随 composable scope 一起 GC —— OPT-5
  */
-const crossTriggerSeq = new Map<string, number>()
-
 export function useFormValidation(deps: UseFormValidationDeps): UseFormValidationReturn {
+  // 每字段触发序号（异步 crossValidator 竞态防护）—— 实例级 Map，scope 销毁自动释放
+  const crossTriggerSeq = new Map<string, number>()
   const {
     reactiveSchema,
     model,
