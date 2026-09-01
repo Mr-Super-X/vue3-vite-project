@@ -72,14 +72,24 @@ export interface FormErrorEvent {
 export interface UseFormErrorBusReturn {
   /** 错误事件列表（响应式） */
   events: Ref<FormErrorEvent[]>
-  /** 上报一条错误 */
-  report(event: Omit<FormErrorEvent, 'id' | 'timestamp' | 'dismissed'>): void
+  /**
+   * 上报一条错误
+   * - 默认行为：5 秒内同 code + message 去重（用户连续输入反复弹窗是噪音）
+   * - `force: true`：跳过去重，用于用户主动 validate() / validateField() 调用场景
+   *   （主动操作期望每次都收到反馈，不应被去重）
+   */
+  report(event: Omit<FormErrorEvent, 'id' | 'timestamp' | 'dismissed'> & { force?: boolean }): void
   /** 关闭单条 toast */
   dismiss(id: string): void
   /** 关闭全部 */
   dismissAll(): void
   /** 未读数（驱动右上角红点徽标） */
   unreadCount: Ref<number>
+}
+
+/** report 入参类型（含可选 force 标志） */
+export type ReportErrorEventInput = Omit<FormErrorEvent, 'id' | 'timestamp' | 'dismissed'> & {
+  force?: boolean
 }
 
 const MAX_EVENTS = 5
@@ -93,18 +103,22 @@ export function useFormErrorBus(): UseFormErrorBusReturn {
   const events = ref<FormErrorEvent[]>([])
   const dedupeCache = new Map<string, number>()
 
-  function report(event: Omit<FormErrorEvent, 'id' | 'timestamp' | 'dismissed'>): void {
+  function report(event: ReportErrorEventInput): void {
+    const { force = false, ...eventData } = event
     // 同 code + message 在 5s 内去重 —— 用户连续输入反复弹窗是噪音
-    const dedupeKey = `${event.code}|${event.message}`
-    const lastTs = dedupeCache.get(dedupeKey)
-    if (lastTs && Date.now() - lastTs < DEDUPE_WINDOW_MS) {
+    // force: true 时跳过去重（用户主动 validate() / validateField() 调用场景）
+    if (!force) {
+      const dedupeKey = `${event.code}|${event.message}`
+      const lastTs = dedupeCache.get(dedupeKey)
+      if (lastTs && Date.now() - lastTs < DEDUPE_WINDOW_MS) {
+        dedupeCache.set(dedupeKey, Date.now())
+        return
+      }
       dedupeCache.set(dedupeKey, Date.now())
-      return
     }
-    dedupeCache.set(dedupeKey, Date.now())
 
     const newEvent: FormErrorEvent = {
-      ...event,
+      ...eventData,
       id: `${event.code}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       timestamp: Date.now(),
     }
@@ -118,12 +132,12 @@ export function useFormErrorBus(): UseFormErrorBusReturn {
           ? console.warn
           : console.info
     // 有 details 时按 async-validator 风格输出 errorsMap 对象 —— 便于复用 element-plus 排查工具
-    if (event.details && event.details.length > 0) {
+    if (eventData.details && eventData.details.length > 0) {
       const errorsMap: Record<
         string,
         Array<{ message: string; fieldValue: unknown; field: string }>
       > = {}
-      for (const d of event.details) {
+      for (const d of eventData.details) {
         if (!errorsMap[d.field]) errorsMap[d.field] = []
         errorsMap[d.field]!.push({
           message: d.message,

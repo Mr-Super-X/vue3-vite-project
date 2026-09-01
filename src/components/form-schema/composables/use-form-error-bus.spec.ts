@@ -166,4 +166,46 @@ describe('useFormErrorBus', () => {
     // 清理
     bus.dismissAll()
   })
+
+  it('force: true 跳过去重（用户主动 validate 调用场景）', () => {
+    vi.useFakeTimers()
+    try {
+      const { bus } = mountBus()
+      // 默认行为：同 code + message 在 5s 内去重
+      bus.report({ severity: 'error', code: 'FORCE', message: 'same' })
+      bus.report({ severity: 'error', code: 'FORCE', message: 'same' })
+      expect(bus.events.value).toHaveLength(1)
+      // force: true → 立即再加一条，跳过去重
+      bus.report({
+        severity: 'error',
+        code: 'FORCE',
+        message: 'same',
+        force: true,
+      })
+      expect(bus.events.value).toHaveLength(2)
+      // 再加 force → 仍然能加
+      bus.report({
+        severity: 'error',
+        code: 'FORCE',
+        message: 'same',
+        force: true,
+      })
+      expect(bus.events.value).toHaveLength(3)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('force 不污染事件数据（事件字段不含 force 键）', () => {
+    const { bus } = mountBus()
+    bus.report({
+      severity: 'error',
+      code: 'FORCE_PURE',
+      message: 'm',
+      force: true,
+    })
+    const event = bus.events.value[0]!
+    expect(event).not.toHaveProperty('force')
+    expect(event.code).toBe('FORCE_PURE')
+  })
 })

@@ -220,6 +220,7 @@ export function useFormInstance(
       const details = collectElFieldErrors(efAny, new Set(targetNames))
       if (details.length > 0) {
         console.error('[XForm] validateField failed:', details)
+        // force: true —— 用户主动 validateField() 调用场景，每次都应反馈（不被 5s 去重）
         errorBus?.report({
           severity: 'error',
           code: 'EL_FORM_VALIDATION_FAILED',
@@ -227,6 +228,7 @@ export function useFormInstance(
           fields: details.map((d) => d.field),
           details,
           source: 'useFormInstance/validateField',
+          force: true,
         })
       }
       return false

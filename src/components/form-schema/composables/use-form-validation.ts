@@ -172,8 +172,11 @@ export function useFormValidation(deps: UseFormValidationDeps): UseFormValidatio
         details.push({ field: name, message: msg, value: readRefVal(raw.fieldValue) })
       }
       if (details.length > 0) {
+        // console.error 始终留痕（force + 去重都不影响 console 输出）
+        console.error('[XForm] el-form validate failed:', details)
         // OPT-C：el-form.validate() 失败 → 字段内规则（required/pattern/validator callback），
         // 不是 cross-field，code 用 EL_FORM_VALIDATION_FAILED 与跨字段区分
+        // force: true —— 用户主动 validate() 调用场景，每次都应反馈（不被 5s 去重）
         errorBus?.report({
           severity: 'error',
           code: 'EL_FORM_VALIDATION_FAILED',
@@ -181,6 +184,7 @@ export function useFormValidation(deps: UseFormValidationDeps): UseFormValidatio
           fields: details.map((d) => d.field),
           details,
           source: 'useFormValidation/elForm',
+          force: true,
         })
       }
       return false
