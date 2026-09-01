@@ -4,6 +4,11 @@
 
 ### 🐛 Bug Fixes | 问题修复
 
+* **router:** 路由切换后页面滚动到顶部（修复 demo 切换导航时滚动位置未复位）
+  - 根因：`src/router/index.ts` 的 `createRouter` 未配置 `scrollBehavior`，切换路由时浏览器沿用旧滚动位置 —— demo 左侧菜单切换时右侧内容区不会回到顶部
+  - 修复：新增 `scrollBehavior` 选项 —— 浏览器前进/后退用 `savedPosition`、带 hash 锚点平滑滚到目标元素、其余情况 `{ top: 0, left: 0 }`
+  - 验证：`pnpm type-check` / `pnpm lint src/router/index.ts` 全绿
+
 * **form-schema:** `listType: 'text' | 'picture'` 的 Upload 字段完全不可交互
   - 现象：`/demo/xform-upload` 页的「附件列表」「手动上传」「上传前校验」「已上传文件回显」四个字段看不到任何上传入口，点不动
   - 根因：ElUpload 非 drag 分支的触发区**就是 default slot 本身**（`element-plus/upload-content.vue` 直接 `renderSlot($slots, 'default')`，无内置 UI），而 `buildUploadDefaultSlot` 只为 `picture-card` / `drag` 注入内容，默认 `listType: 'text'` 落到空插槽 → `.el-upload--text` 零高度空元素
