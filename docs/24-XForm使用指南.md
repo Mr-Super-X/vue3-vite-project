@@ -82,14 +82,15 @@ const schema = {
 
 ### 3.1 校验
 
-| 方法                  | 签名                                          | 说明                                                                                                                                        |
-| --------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `validate()`          | `() => Promise<boolean>`                      | 先跑 el-form 字段内规则（失败即 false），再跑跨字段 crossValidator（**异步 crossValidator 会 await**），失败错误自动写入对应 form-item 红字 |
-| `validateDetail()`    | `() => Promise<ValidateResult>`               | 只跑跨字段校验，返回 `{ isValid, errors: [{ keyPath, message }] }`，不写 UI                                                                 |
-| `validateWithZod()`   | `() => { success, errors: ZodError \| null }` | Zod 校验（需传 `zodSchema` prop；未传恒返回 success=true）                                                                                  |
-| `clearValidate()`     | `(names?: string[]) => void`                  | 清除校验状态（含外部字段错误）；传字段名数组只清指定字段                                                                                    |
-| `resetFields()`       | `() => void`                                  | 重置为初始值（同时清空外部字段错误）                                                                                                        |
-| `scrollToField(name)` | `(name: string) => void`                      | 滚动到指定字段                                                                                                                              |
+| 方法                  | 签名                                             | 说明                                                                                                                                                                                 |
+| --------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `validate()`          | `() => Promise<boolean>`                         | **短路逻辑**：先跑 el-form 字段内规则，失败 → 直接 `false` 不跑跨字段；成功 → 跑全部跨字段 crossValidator（**异步会 await**），失败自动写红字                                        |
+| `validateDetail()`    | `() => Promise<ValidateResult>`                  | 只跑跨字段校验，返回 `{ isValid, errors: [{ keyPath, message }] }`，不写 UI                                                                                                          |
+| `validateWithZod()`   | `() => { success, errors: ZodError \| null }`    | Zod 校验（需传 `zodSchema` prop；未传恒返回 success=true）                                                                                                                           |
+| `validateField(name)` | `(name: string \| string[]) => Promise<boolean>` | 校验指定字段（透传 el-form `validateField`）。**失败时与 `validate()` 对齐**：触发 `EL_FORM_VALIDATION_FAILED` OSD toast + `console.error('[XForm] validateField failed:', details)` |
+| `clearValidate()`     | `(names?: string[]) => void`                     | 清除校验状态（含外部字段错误）；传字段名数组只清指定字段                                                                                                                             |
+| `resetFields()`       | `() => void`                                     | 重置为初始值（同时清空外部字段错误）                                                                                                                                                 |
+| `scrollToField(name)` | `(name: string) => void`                         | 滚动到指定字段                                                                                                                                                                       |
 
 ### 3.2 字段错误（服务端错误场景）
 

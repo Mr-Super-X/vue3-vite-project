@@ -567,6 +567,94 @@ describe('useFormInstance / validateField（P1 回归）', () => {
     expect(errSpy).toHaveBeenCalledWith(expect.stringContaining('el-form 实例未绑定'))
     errSpy.mockRestore()
   })
+
+  it('校验失败且 ef.fields 含错误详情 → console.error + errorBus.report（与 validateForm 对齐）', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const reported: Array<{ code: string; severity: string; fields: string[] }> = []
+    // errorBus mock —— 用 as unknown 强制类型断言避免 5 字段全列
+    const errorBus = {
+      report: (e: { code: string; severity: string; fields: string[] }): void => {
+        reported.push(e)
+      },
+      events: { value: [] },
+      dismiss: () => undefined,
+      dismissAll: () => undefined,
+      unreadCount: { value: 0 },
+    }
+    const { elFormRef, validateField } = useFormInstance(
+      () => ({}),
+      () => undefined,
+      undefined,
+      errorBus as never
+    )
+    const mock = createMockElForm() as unknown as {
+      fields: Array<{
+        propString: string
+        validateState: { value: string }
+        validateMessage: { value: string }
+        fieldValue: unknown
+      }>
+      validateField: () => Promise<unknown>
+    }
+    mock.fields = [
+      {
+        propString: 'email',
+        validateState: { value: 'error' },
+        validateMessage: { value: '邮箱格式错误' },
+        fieldValue: 'abc',
+      },
+    ]
+    mock.validateField = vi.fn(() => Promise.reject(new Error('invalid')))
+    elFormRef.value = mock as never
+    await expect(validateField('email')).resolves.toBe(false)
+    expect(errSpy).toHaveBeenCalledWith('[XForm] validateField failed:', expect.any(Array))
+    expect(reported).toHaveLength(1)
+    expect(reported[0]?.code).toBe('EL_FORM_VALIDATION_FAILED')
+    expect(reported[0]?.fields).toEqual(['email'])
+    errSpy.mockRestore()
+  })
+
+  it('校验失败但 ef.fields 无匹配字段 → 不输出 console.error 不上报 errorBus（避免误报）', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const reported: unknown[] = []
+    const errorBus = {
+      report: (e: unknown): void => {
+        reported.push(e)
+      },
+      events: { value: [] },
+      dismiss: () => undefined,
+      dismissAll: () => undefined,
+      unreadCount: { value: 0 },
+    }
+    const { elFormRef, validateField } = useFormInstance(
+      () => ({}),
+      () => undefined,
+      undefined,
+      errorBus as never
+    )
+    const mock = createMockElForm() as unknown as {
+      fields: Array<{
+        propString: string
+        validateState: { value: string }
+        validateMessage: { value: string }
+      }>
+      validateField: () => Promise<unknown>
+    }
+    // 字段名不匹配 → collectElFieldErrors 返回空 → 不触发反馈
+    mock.fields = [
+      {
+        propString: 'otherField',
+        validateState: { value: 'error' },
+        validateMessage: { value: '其他字段错误' },
+      },
+    ]
+    mock.validateField = vi.fn(() => Promise.reject(new Error('invalid')))
+    elFormRef.value = mock as never
+    await expect(validateField('email')).resolves.toBe(false)
+    expect(errSpy).not.toHaveBeenCalledWith('[XForm] validateField failed:', expect.anything())
+    expect(reported).toHaveLength(0)
+    errSpy.mockRestore()
+  })
 })
 
 describe('useFormInstance / resetFields(names) 部分重置（P1 回归）', () => {

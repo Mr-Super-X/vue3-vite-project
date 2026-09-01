@@ -101,6 +101,46 @@ export function useFormInstance(
     return typeof name === 'string' ? name : null
   }
 
+  /** 从 ref-like 值解包字符串（element-plus 内部字段状态常用 ref<string> 形态） */
+  function readRefStr(v: string | Ref<string> | undefined): string | undefined {
+    if (v === undefined || v === null) return undefined
+    if (typeof v === 'string') return v
+    if (typeof v === 'object' && 'value' in v) {
+      const x = (v as { value: unknown }).value
+      return typeof x === 'string' ? x : undefined
+    }
+    return undefined
+  }
+
+  /**
+   * 从 el-form fields 提取 validateState=error 的字段详情，仅命中过滤集合的字段
+   * 用于 validateField 失败时构造 OSD toast 与 console.error 输出（与 validateForm 对齐）
+   */
+  function collectElFieldErrors(
+    ef: { fields?: unknown[] },
+    filterNames: Set<string>
+  ): Array<{ field: string; message: string; value?: unknown }> {
+    const fields = ef.fields ?? []
+    const details: Array<{ field: string; message: string; value?: unknown }> = []
+    for (const f of fields) {
+      const raw = toRaw(f) as {
+        propString?: string | Ref<string>
+        prop?: string | Ref<string>
+        validateState?: string | Ref<string>
+        validateMessage?: string | Ref<string>
+        fieldValue?: unknown
+      }
+      const validateState = readRefStr(raw.validateState)
+      if (validateState !== 'error') continue
+      const msg = readRefStr(raw.validateMessage)
+      if (!msg) continue
+      const fieldName = readRefStr(raw.propString) || readRefStr(raw.prop)
+      if (!fieldName || !filterNames.has(fieldName)) continue
+      details.push({ field: fieldName, message: msg, value: raw.fieldValue })
+    }
+    return details
+  }
+
   /**
    * 数组删/移后按行清理失效的校验态 —— 此前直接调无参 clearValidate() 会清空
    * 全表单错误（误伤其他字段的服务端/本地红字），且绕过 externalErrors 同步。
@@ -157,7 +197,10 @@ export function useFormInstance(
 
   /**
    * 校验指定字段（透传 el-form validateField）—— 与 validate() 风格一致返回 boolean：
-   * 成功 true；校验失败 / el-form 未绑定均 false（失败时错误已由 el-form-item 展示）
+   * 成功 true；校验失败 / el-form 未绑定均 false
+   * **失败时与 validateForm 对齐**：扫描 ef.fields 提取 validateState=error 的字段详情，
+   * 触发 OSD toast（EL_FORM_VALIDATION_FAILED）与 console.error 输出。
+   * 字段错误已由 el-form-item 红字展示，OSD/console 是给开发者的诊断反馈。
    */
   async function validateField(name: string | string[]): Promise<boolean> {
     const ef = elFormRef.value
@@ -171,7 +214,22 @@ export function useFormInstance(
       await ef.validateField(name)
       return true
     } catch {
-      return false // 校验失败：element-plus reject errorsMap，错误已写入 form-item
+      // 校验失败：与 validateForm 对齐 —— 扫描 ef.fields 提取命中字段的错误详情
+      const efAny = ef as unknown as { fields?: unknown[] }
+      const targetNames = Array.isArray(name) ? name : [name]
+      const details = collectElFieldErrors(efAny, new Set(targetNames))
+      if (details.length > 0) {
+        console.error('[XForm] validateField failed:', details)
+        errorBus?.report({
+          severity: 'error',
+          code: 'EL_FORM_VALIDATION_FAILED',
+          message: `字段校验失败 ${details.length} 项（详见表单红字）`,
+          fields: details.map((d) => d.field),
+          details,
+          source: 'useFormInstance/validateField',
+        })
+      }
+      return false
     }
   }
 
