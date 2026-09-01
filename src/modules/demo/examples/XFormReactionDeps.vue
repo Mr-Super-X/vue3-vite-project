@@ -11,7 +11,8 @@
  *   ③ deps 路径声明（可读性）：同一段计算逻辑，无 deps 靠函数体内引用追踪（隐式），
  *      有 deps 显式列出依赖路径（推荐——重构安全 + 阅读一目了然）
  */
-import { computed, reactive } from 'vue'
+import { computed, reactive, watch } from 'vue'
+import { cloneDeep } from 'lodash-es'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
@@ -33,7 +34,8 @@ const { formRef, copySchema, onReset } = useXFormDemo({
 const bem = createNamespace('demo-x-form-reaction-deps')
 
 // 共享 model：perf / cycle / readability 三个命名空间，A/B 模式共用同一份数据
-const model = reactive({
+/** model 初始值快照 —— 切换 A/B 模式时还原，避免上次测试残留（runCount/loopCount 累计） */
+const INITIAL_MODEL = {
   // ① 切断无关字段触发：与 perf.* 无关的「干扰字段」
   perf: { a: 1, b: 2, total: 0, runCount: 0 },
   distractor: { noise1: '', noise2: '', noise3: '' }, // 改动这些字段观察 reaction 是否被触发
@@ -41,10 +43,23 @@ const model = reactive({
   cycle: { a: 0, result: 0, loopCount: 0 },
   // ③ 可读性：同一计算逻辑
   readable: { qty: 2, price: 50, sum: 0 },
-})
+}
+
+const model = reactive(cloneDeep(INITIAL_MODEL))
+
+/** 把 model 还原到初始快照 —— 顶层 Object.assign 触发响应式通知，让 UI 与 reaction watcher 同步感知 */
+function resetModel(): void {
+  Object.assign(model, cloneDeep(INITIAL_MODEL))
+  // 顺手清 el-form 内部字段校验态（perf/cycle/readable 节点无 defaultValue，resetFields 不会动它们）
+  formRef.value?.clearValidate()
+}
 
 // 全局开关：A 模式（无 deps）vs B 模式（写 deps）
 const useDeps = ref(false)
+
+// 切换 A/B 模式时自动重置 model，避免上次测试残留（runCount/loopCount 累计）
+// flush: 'sync' —— 同步触发，让本次切换后的首次 setup sync runner 看到的是干净 model
+watch(useDeps, resetModel)
 
 // —— 反应式副作用函数（被 reaction._effect 调用；返回 undefined 让 isEqual 跳过写入） ——
 // ① 总价 = a + b（无副作用，只是演示 deps 是否触发）
@@ -212,7 +227,7 @@ const tocItems = [
             <el-radio-button :value="false">A 模式：无 deps（深 watch）</el-radio-button>
             <el-radio-button :value="true">B 模式：写 deps（精确监听）</el-radio-button>
           </el-radio-group>
-          <span :class="bem.e('hint')">切换时 schema 自动重算，旧 reaction stoppers 清理</span>
+          <span :class="bem.e('hint')">切换时自动重置数据（避免 runCount / loopCount 累计）</span>
         </div>
 
         <DemoField label="三个动机对比（共享 model，开关切换 A/B）" :code="xFormSource">
