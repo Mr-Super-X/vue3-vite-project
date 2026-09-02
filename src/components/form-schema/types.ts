@@ -31,4 +31,12 @@ export type {
   ComponentName,
   SchemaNodeFor,
 } from './types/schema-node'
-export type { XFormProps, XFormExpose, ValidateOptions, ValidateResult } from './types/xform'
+export type {
+  XFormProps,
+  XFormExpose,
+  ValidateOptions,
+  ValidateResult,
+  BeforeChangeCtx,
+  BeforeChangeFn,
+  BeforeChangeRule,
+} from './types/xform'

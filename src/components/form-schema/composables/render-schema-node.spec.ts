@@ -64,7 +64,7 @@ describe('resolveComponentFor 扩展内置表单组件', () => {
     expect((result as VNode).type).toBe(expected)
   })
 
-  it('为六类值形态写入 model', () => {
+  it('为六类值形态写入 model', async () => {
     const cases: Array<[string, unknown]> = [
       ['InputPassword', 'secret'],
       ['InputTextArea', 'line 1'],
@@ -83,6 +83,8 @@ describe('resolveComponentFor 扩展内置表单组件', () => {
       const updateModelValue = props['onUpdate:modelValue']
       expect(updateModelValue).toBeTypeOf('function')
       ;(updateModelValue as (nextValue: unknown) => void)(value)
+      // 等待 resolveBeforeChangeChain.then(applyValue) 微任务落地
+      await new Promise((r) => setTimeout(r, 0))
       expect(model.field).toEqual(value)
     }
   })

@@ -294,6 +294,7 @@ describe('buildVModelBindings (unit)', () => {
     expect(bindings).toHaveProperty('modelValue', 'foo')
     expect(bindings).toHaveProperty('onUpdate:modelValue')
     ;(bindings['onUpdate:modelValue'] as (v: unknown) => void)('bar')
+    await flushPromises()
     expect(model.name).toBe('bar')
   })
 
@@ -311,13 +312,16 @@ describe('buildVModelBindings (unit)', () => {
     const node = { name: 'name' } as SchemaNode
     const model = { name: 'foo' }
     const beforeChange = vi.fn((_n: unknown, v: unknown) => `formatted-${v}-was-${model.name}`)
-    const bindings = buildVModelBindings(node, model, beforeChange as never)
+    const bindings = buildVModelBindings(node, model, { layer1: beforeChange as never })
     ;(bindings['onUpdate:modelValue'] as (v: unknown) => void)('bar')
+    await flushPromises()
     expect(model.name).toBe('formatted-bar-was-foo')
     expect(beforeChange).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'name' }),
       'bar',
-      'foo'
+      'foo',
+      expect.anything(),
+      expect.anything()
     )
   })
 
@@ -325,8 +329,11 @@ describe('buildVModelBindings (unit)', () => {
     const { buildVModelBindings } = await import('./composables/build-vmodel-bindings')
     const node = { name: 'name' } as SchemaNode
     const model = { name: 'foo' }
-    const bindings = buildVModelBindings(node, model, vi.fn(() => undefined) as never)
+    const bindings = buildVModelBindings(node, model, {
+      layer1: vi.fn(() => undefined) as never,
+    })
     ;(bindings['onUpdate:modelValue'] as (v: unknown) => void)('bar')
+    await flushPromises()
     expect(model.name).toBe('bar')
   })
 
@@ -335,7 +342,7 @@ describe('buildVModelBindings (unit)', () => {
     const node = { name: 'name' } as SchemaNode
     const model = { name: 'foo' }
     const beforeChange = vi.fn((_n: unknown, v: unknown) => Promise.resolve(`async-${v}`))
-    const bindings = buildVModelBindings(node, model, beforeChange as never)
+    const bindings = buildVModelBindings(node, model, { layer1: beforeChange as never })
     ;(bindings['onUpdate:modelValue'] as (v: unknown) => void)('bar')
     await flushPromises()
     expect(model.name).toBe('async-bar')
@@ -346,7 +353,7 @@ describe('buildVModelBindings (unit)', () => {
     const node = { name: 'name' } as SchemaNode
     const model = { name: 'foo' }
     const beforeChange = vi.fn(() => Promise.reject(new Error('cancel')))
-    const bindings = buildVModelBindings(node, model, beforeChange as never)
+    const bindings = buildVModelBindings(node, model, { layer1: beforeChange as never })
     ;(bindings['onUpdate:modelValue'] as (v: unknown) => void)('bar')
     await flushPromises()
     expect(model.name).toBe('foo')

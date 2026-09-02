@@ -35,6 +35,7 @@ const model = reactive<Record<string, unknown>>({
   username: '',
   email: '',
   age: undefined,
+  remark: '',
 })
 
 /** schema computed：切换 position / width 自动重新渲染 */
@@ -42,7 +43,6 @@ const schema = ref<SchemaNode>(buildSchema())
 
 function buildSchema(): SchemaNode {
   return {
-    // ⭐ labelPosition / labelWidth 仅顶层 schema 生效
     labelPosition: position.value,
     labelWidth: width.value,
     column: 1,
@@ -64,6 +64,18 @@ function buildSchema(): SchemaNode {
         name: 'age',
         component: 'InputNumber',
         props: { min: 0, max: 150, controlsPosition: 'right' },
+      },
+      {
+        label: '备注（字段级 labelPosition=top）',
+        name: 'remark',
+        component: 'Input',
+        // ⭐ 字段级 labelPosition override 顶层 'left'
+        labelPosition: 'top',
+        props: {
+          type: 'textarea',
+          placeholder: '字段级 labelPosition=top 独立 override 顶层',
+          clearable: true,
+        },
       },
     ],
   }
@@ -97,14 +109,15 @@ const tocItems = [
 <template>
   <DocLayout>
     <DemoFrame
-      title="顶层 schema.labelPosition / labelWidth —— 表单整体布局"
+      title="labelPosition / labelWidth —— 顶层默认 + 字段级 override"
       source="src/components/form-schema/XForm.vue"
       :introductions="[
-        'labelPosition / labelWidth 仅顶层 schema 生效——对应 el-form 实例级属性',
+        'labelPosition / labelWidth 顶层配置为表单整体默认；字段级可声明 override 顶层',
         'top：移动端推荐（label 在字段上方，节省横向空间）',
         'left：桌面端标准（label 左对齐 + 120px 宽）',
         'right：右对齐（少见，用于对齐要求严格的表单）',
-        '节点级 labelPosition / labelWidth 不生效——这点新人最容易踩坑',
+        'element-plus el-form-item 原生支持 labelPosition / labelWidth，字段级与顶层可独立设置',
+        '字段级未声明时 el-form-item 自动继承 el-form 顶层（element-plus 原生行为）',
       ]"
     >
       <section id="demo-label-layout">

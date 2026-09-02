@@ -142,14 +142,24 @@ export interface SchemaNode {
    */
   permission?: import('./reaction').ReactionValue<'view' | 'edit' | 'hidden'>
   /**
-   * el-form label 位置（仅顶层 schema 生效，阶段 2.4 增强）：
+   * 字段级 beforeChange（第 3 层：业务内聚）
+   * - 与 Props.beforeChange 同签名（多 allValues + ctx 两可选参在尾部）
+   * - 数组元素字段（items[i].phone）直接写在 array.children[i].phone 上即可
+   * - 可通过 ctx.setFieldValue 联动修改其他兄弟字段（ctx 完全开放）
+   * @group 响应式（字段级）
+   */
+  beforeChange?: import('./xform').BeforeChangeFn
+  /**
+   * el-form label 位置 —— 顶层为默认值，字段级可 override
    * - 'left'（默认）：label 在 input 左侧
    * - 'right'：label 在 input 右侧
-   * - 'top'：label 在 input 上方（响应式布局推荐，避免 label 挤占 col 宽度）
+   * - 'top'：label 在 input 上方（响应式布局推荐）
    *
-   * 注：label-position 是 el-form 实例级属性,只能由顶层 schema 配置,
-   * 不能针对单个 el-form-item 设置（这是 element-plus 自身限制）
-   * @group 顶层 schema（仅顶层生效）
+   * element-plus ElFormItem 与 ElForm 共享 label-position prop，所以字段级可独立设置
+   * 字段级未设置时 el-form-item 自动继承 el-form 顶层配置（element-plus 原生行为）
+   *
+   * 顶层 schema 配置是表单整体默认值；字段级 override 用于个别字段差异化布局
+   * @group 布局（双层：顶层默认 / 字段级 override）
    */
   labelPosition?: 'left' | 'right' | 'top'
   /**
@@ -162,9 +172,11 @@ export interface SchemaNode {
    */
   readonly?: import('./reaction').ReactionValue<boolean>
   /**
-   * el-form label 宽度（仅顶层 schema 生效，与 labelPosition 同模式）：
-   * 如 '120px' 或 120；数组形式 schema 无顶层节点，配置不生效
-   * @group 顶层 schema（仅顶层生效）
+   * el-form label 宽度 —— 顶层为默认值，字段级可 override
+   * - 顶层配置：表单整体 label 宽度（透传 el-form label-width）
+   * - 字段级配置：该字段独立 label 宽度（透传 el-form-item label-width）
+   * - 如 '120px' 或 120；数组形式 schema 无顶层节点，配置不生效
+   * @group 布局（双层：顶层默认 / 字段级 override）
    */
   labelWidth?: string | number
   /**

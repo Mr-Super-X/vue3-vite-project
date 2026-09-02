@@ -7,6 +7,50 @@ import type { ZodType } from 'zod'
 import type { RuleItem } from './rule'
 import type { SchemaNode } from './schema-node'
 
+/**
+ * beforeChange 钩子上下文 —— 允许在字段级钩子里联动修改其他字段 / 取消写入
+ *
+ * 由 build-vmodel-bindings 在每字段 v-model 事件触发时构造（每字段独立 ctx 实例）
+ * - setFieldValue('district', null): 选城市时清空区字段（联动副作用）
+ * - setFieldError('phone', '格式错误'): 显示红字不阻断写入
+ * - abort(): 取消本次本字段写入，等价于返回 undefined
+ */
+export interface BeforeChangeCtx {
+  readonly name: string
+  setFieldValue(name: string, value: unknown): void
+  setFieldError(name: string, message: string): void
+  readonly abort: () => void
+}
+
+/** beforeChange 函数签名 —— 全局 Props / 字段级 / 命名空间 handler 三处共用 */
+export type BeforeChangeFn = (
+  item: SchemaNode,
+  newValue: unknown,
+  oldValue: unknown,
+  allValues?: Record<string, unknown>,
+  ctx?: BeforeChangeCtx
+) => unknown | Promise<unknown>
+
+/** beforeChange 函数签名 —— ctx 必填版本（业务常用，TS 类型推断更友好） */
+export type BeforeChangeFnWithCtx = (
+  item: SchemaNode,
+  newValue: unknown,
+  oldValue: unknown,
+  allValues: Record<string, unknown>,
+  ctx: BeforeChangeCtx
+) => unknown | Promise<unknown>
+
+/**
+ * 动态命名空间拦截规则 —— 字段是动态生成（如数组列表）时按 pattern 匹配
+ * - RegExp: 精确正则匹配（推荐 ^...$ 锚定）
+ * - string: 字面量精确匹配（'*' 单层通配 / '**' 多层通配）
+ * 多个规则匹配同一字段时按数组顺序全部串行执行
+ */
+export interface BeforeChangeRule {
+  pattern: RegExp | string
+  handler: BeforeChangeFn
+}
+
 /** XForm 组件 props */
 export interface XFormProps {
   schema: SchemaNode | SchemaNode[]
@@ -14,11 +58,22 @@ export interface XFormProps {
   components?: Record<string, unknown>
   rules?: Record<string, RuleItem>
   directives?: Record<string, Directive>
-  beforeChange?: (
-    itemSchema: SchemaNode,
-    newValue: unknown,
-    oldValue: unknown
-  ) => unknown | Promise<unknown>
+  /**
+   * 全局 Props beforeChange（第 1 层：横切关注点）
+   * - 返回新值 → 透传给下一层
+   * - 返回 undefined → 放行原值给下一层
+   * - Promise.resolve → 异步更新，等待结果后透传
+   * - Promise.reject / 抛异常 → catch + warn + 中断后续写入
+   *
+   * 字段级拦截请用 SchemaNode.beforeChange；动态数组场景请用 beforeChangeRules
+   */
+  beforeChange?: BeforeChangeFn
+  /**
+   * 动态命名空间拦截（第 2 层：按 pattern 匹配字段路径）
+   * 数组节点（items[i].phone）字段级配置繁琐，用规则数组简处理
+   * 多个规则匹配同一字段时按数组顺序全部串行执行
+   */
+  beforeChangeRules?: BeforeChangeRule[]
   zodSchema?: ZodType
   /**
    * 白名单函数表：注册后 {{ }} 表达式可直接引用注册名

@@ -44,6 +44,7 @@ import { useCrossFieldTrigger } from './use-cross-field-trigger'
 import { useFormDirty } from './use-form-dirty'
 import { useServerError } from './use-server-error'
 import { useFormValidation } from './use-form-validation'
+import { makeDefaultBeforeChangeCtx } from './build-vmodel-bindings'
 import { useTopLevelFields } from './use-top-level-fields'
 import { useFormErrorBus, type UseFormErrorBusReturn } from './use-form-error-bus'
 import {
@@ -354,6 +355,16 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     model: props.model,
     components: props.components,
     beforeChange: props.beforeChange,
+    beforeChangeRules: props.beforeChangeRules,
+    // ctx 工厂：makeBeforeChangeCtx 是函数，render 时才执行（闭包内访问的 exposed 在 useXFormComposer 末尾才构造）
+    // 用 getter 函数延迟解析 formRef 引用 —— render 时 exposed 已存在
+    makeBeforeChangeCtx: (node) =>
+      makeDefaultBeforeChangeCtx(
+        node,
+        (props.model ?? {}) as Record<string, unknown>,
+        // getter 闭包：render 时调用拿到 exposed
+        () => exposed
+      ),
     rules: props.rules,
     componentProps: mergedComponentProps.value,
     render: renderToComponent,

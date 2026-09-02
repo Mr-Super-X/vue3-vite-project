@@ -28,7 +28,7 @@ export const CN_NAMES: Record<string, string> = {
   XFormAsyncOptionsError: '异步选项·错误处理',
   XFormAsyncValidator: '异步校验',
   XFormBase: '基础用法',
-  XFormBeforeChange: '字段值拦截',
+  XFormBeforeChange: '字段值拦截·3 层',
   XFormBuilder: '链式构建器',
   XFormCrossField: '跨字段校验',
   XFormCrossFieldReverse: '反向跨字段',

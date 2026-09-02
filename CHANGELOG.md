@@ -2,6 +2,30 @@
 
 ## 未发布
 
+### ✨ Features | beforeChange 3 层升级 + label 字段级颗粒度
+
+* **feat(form-schema):** `beforeChange` 从单一全局拦截升级为 3 层拦截器
+  - 第 1 层：XFormProps.beforeChange（横切关注点：埋点 / 全局拦截）
+  - 第 2 层：XFormProps.beforeChangeRules（动态命名空间：数组节点统一处理）
+  - 第 3 层：SchemaNode.beforeChange（业务内聚性最高）
+  - 执行顺序：L1 → L2（多规则按数组顺序串行）→ L3；任一层返回新值透传给下一层；Promise.reject 中断整个 chain；同步 throw 被 warn + 放行原值给下一层
+  - 新增 `BeforeChangeCtx` 上下文：`setFieldValue`（联动修改其他字段）/ `setFieldError`（显示红字）/ `abort`（取消写入）/ `name`（当前字段路径）
+* **feat(form-schema):** labelPosition / labelWidth 支持字段级颗粒度
+  - 顶层 schema 配置作整体默认；SchemaNode.labelPosition / SchemaNode.labelWidth 字段级 override 顶层
+  - element-plus ElFormItem 与 ElForm 共享同一套 labelPosition / labelWidth props，字段级配置透传到 ElFormItem
+  - 字段级未声明时 ElFormItem 自动继承 ElForm 顶层（element-plus 原生行为）
+  - 推翻旧注释"labelPosition 字段级不生效——element-plus 限制"——element-plus 原生支持字段级
+
+### 📝 Docs | 文档同步更新
+
+* **docs(form-schema):** README / ARCHITECTURE 同步更新 —— 3 层 beforeChange 数据流图 + 字段级 label override 颗粒度说明
+* **demo(form-schema):** 重写 XFormBeforeChange.vue —— `el-tabs` 三段演示（A 全局 Props / B 字段级 / C 命名空间）
+* **demo(form-schema):** 扩展 XFormLabelLayout.vue —— 加备注字段 `labelPosition: 'top'` 字段级 override 演示
+* **demo(form-schema):** sidebar XFormBeforeChange 中文名更新为「字段值拦截·3 层」
+* **demo(form-schema):** xform-demos-api.ts beforeChangePropsItems / labelLayoutItems 条目扩展
+
+### 📝 Docs | 设计 + 计划文档
+
 ### 🐛 Bug Fixes | 问题修复
 
 * **demo(form-schema):** 修复新增 XForm demo 的 `:introductions` attribute 内嵌 ASCII 双引号导致 Vite 编译失败

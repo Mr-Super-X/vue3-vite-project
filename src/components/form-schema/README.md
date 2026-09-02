@@ -97,19 +97,20 @@ XForm 共有 5 份文档 + 38 个 demo，按角色 / 任务选读，避免到处
 
 > 10 个 prop 中 `schema` 必填；`scrollToError` / `scrollIntoViewOptions` 同时作为 schema 顶层字段（仅顶层容器形态生效）。
 
-| 属性                    | 类型                                           | 必填 | 说明                                                                                                       |
-| ----------------------- | ---------------------------------------------- | ---- | ---------------------------------------------------------------------------------------------------------- |
-| `schema`                | `SchemaNode \| SchemaNode[]`                   | ✅   | 表单 schema                                                                                                |
-| `model`                 | `Record<string, unknown>`                      |      | 响应式数据对象（需用 `reactive()` 包装）                                                                   |
-| `components`            | `Record<string, Component>`                    |      | 自定义组件映射                                                                                             |
-| `rules`                 | `Record<string, RuleItem>`                     |      | 校验规则命名引用                                                                                           |
-| `directives`            | `Record<string, Directive>`                    |      | 自定义指令映射                                                                                             |
-| `beforeChange`          | `(item, newVal, oldVal) => unknown \| Promise` |      | 字段值变化前拦截                                                                                           |
-| `zodSchema`             | `ZodType`                                      |      | zod 校验 schema（配合 `validateWithZod()`）                                                                |
-| `componentProps`        | `Record<string, Record<string, unknown>>`      |      | 按组件名注入默认 props（节点级 props 可覆盖）                                                              |
-| `expressionFunctions`   | `Record<string, Function>`                     |      | 白名单函数表：{{ }} 表达式可直接引用注册名（**模块级，多实例共享**，组件卸载时清空避免跨实例污染）         |
-| `scrollToError`         | `boolean`                                      |      | 校验失败自动滚动到第一个错误字段（仅顶层 schema 生效，默认 false；字段规则走 ElForm 原生，跨字段走 XForm） |
-| `scrollIntoViewOptions` | `ScrollIntoViewOptions \| boolean`             |      | 滚动行为选项（仅顶层 schema 生效，默认 true）                                                              |
+| 属性                    | 类型                                      | 必填 | 说明                                                                                                       |
+| ----------------------- | ----------------------------------------- | ---- | ---------------------------------------------------------------------------------------------------------- |
+| `schema`                | `SchemaNode \| SchemaNode[]`              | ✅   | 表单 schema                                                                                                |
+| `model`                 | `Record<string, unknown>`                 |      | 响应式数据对象（需用 `reactive()` 包装）                                                                   |
+| `components`            | `Record<string, Component>`               |      | 自定义组件映射                                                                                             |
+| `rules`                 | `Record<string, RuleItem>`                |      | 校验规则命名引用                                                                                           |
+| `directives`            | `Record<string, Directive>`               |      | 自定义指令映射                                                                                             |
+| `beforeChange`          | `BeforeChangeFn`                          |      | 全局 Props beforeChange（第 1 层：横切关注点：埋点 / 全局拦截）                                            |
+| `beforeChangeRules`     | `BeforeChangeRule[]`                      |      | 动态命名空间规则（第 2 层：按 pattern 匹配字段路径）                                                       |
+| `zodSchema`             | `ZodType`                                 |      | zod 校验 schema（配合 `validateWithZod()`）                                                                |
+| `componentProps`        | `Record<string, Record<string, unknown>>` |      | 按组件名注入默认 props（节点级 props 可覆盖）                                                              |
+| `expressionFunctions`   | `Record<string, Function>`                |      | 白名单函数表：{{ }} 表达式可直接引用注册名（**模块级，多实例共享**，组件卸载时清空避免跨实例污染）         |
+| `scrollToError`         | `boolean`                                 |      | 校验失败自动滚动到第一个错误字段（仅顶层 schema 生效，默认 false；字段规则走 ElForm 原生，跨字段走 XForm） |
+| `scrollIntoViewOptions` | `ScrollIntoViewOptions \| boolean`        |      | 滚动行为选项（仅顶层 schema 生效，默认 true）                                                              |
 
 ---
 
@@ -225,13 +226,13 @@ formRef.value?.resetDirty() // 当前状态设为新基线（提交后归零）
 
 > 这些字段对应 element-plus `el-form` 实例级属性，必须从顶层 schema 派生而非 XForm props 配置。
 
-| 字段                    | 类型                               | 层级       | 说明                                                                                    |
-| ----------------------- | ---------------------------------- | ---------- | --------------------------------------------------------------------------------------- |
-| `labelPosition`         | `'left' \| 'right' \| 'top'`       | **仅顶层** | label 位置（默认 `left`；`'top'` 推荐用于响应式布局）                                   |
-| `labelWidth`            | `string \| number`                 | **仅顶层** | label 宽度（如 `'120px'` 或 `120`）                                                     |
-| `scrollToError`         | `boolean`                          | **仅顶层** | 校验失败自动滚动到第一个错误字段（默认 `false`；与 XForm props 同名，schema 优先）      |
-| `scrollIntoViewOptions` | `ScrollIntoViewOptions \| boolean` | **仅顶层** | 滚动行为选项（默认 `true`）                                                             |
-| `debounceValidation`    | `number`                           | **仅顶层** | 跨字段校验默认 debounce ms（`0` = 实时，默认 `0`；字段级 `rules[i].debounceMs` 可覆盖） |
+| 字段                    | 类型                               | 层级          | 说明                                                                                    |
+| ----------------------- | ---------------------------------- | ------------- | --------------------------------------------------------------------------------------- |
+| `labelPosition`         | `'left' \| 'right' \| 'top'`       | 顶层 + 字段级 | label 位置（顶层默认 `left`；字段级 override 顶层）；`'top'` 推荐用于响应式布局         |
+| `labelWidth`            | `string \| number`                 | 顶层 + 字段级 | label 宽度（如 `'120px'` 或 `120`）；字段级 override 顶层                               |
+| `scrollToError`         | `boolean`                          | **仅顶层**    | 校验失败自动滚动到第一个错误字段（默认 `false`；与 XForm props 同名，schema 优先）      |
+| `scrollIntoViewOptions` | `ScrollIntoViewOptions \| boolean` | **仅顶层**    | 滚动行为选项（默认 `true`）                                                             |
+| `debounceValidation`    | `number`                           | **仅顶层**    | 跨字段校验默认 debounce ms（`0` = 实时，默认 `0`；字段级 `rules[i].debounceMs` 可覆盖） |
 
 ### v-model 适配（1）
 
@@ -244,7 +245,8 @@ formRef.value?.resetDirty() // 当前状态设为新基线（提交后归零）
 > **速记总结**：
 >
 > - **字段级（22）**：节点自身行为——标识（4）+ 渲染（5）+ 布局（4）+ 校验（2）+ 响应式（6 含 1 个双层）+ 数组（2）+ 数据加载（1）+ v-model（1）
-> - **顶层 schema（7 + 1 双层）**：表单整体行为——`labelPosition` / `labelWidth` / `scrollToError` / `scrollIntoViewOptions` / `debounceValidation` / `readonly` / `disabled`（双层）
+> - **顶层 schema（5 + 3 双层）**：表单整体行为——`scrollToError` / `scrollIntoViewOptions` / `debounceValidation` / `readonly` / `disabled`（双层）/ `labelPosition`（双层）/ `labelWidth`（双层）
+> - **双层颗粒度**：`disabled` / `labelPosition` / `labelWidth` —— 顶层配置为整体默认，字段级配置 override 顶层
 > - **关键约束**：`disabled` 在字段级只影响单个字段；在顶层禁用整个表单
 
 ---

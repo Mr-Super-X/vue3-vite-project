@@ -67,7 +67,13 @@ export function renderWithFormItem(
   }
 
   const eventBindings = {
-    ...buildVModelBindings(node, opts.model, opts.beforeChange, opts.onValueChange),
+    ...buildVModelBindings(node, opts.model, {
+      layer1: opts.beforeChange,
+      namespaceRules: opts.beforeChangeRules,
+      makeCtx: opts.makeBeforeChangeCtx,
+      formRef: opts.formRef,
+      onValueChange: opts.onValueChange,
+    }),
     ...buildOnBindings(node, opts.model),
   }
   const asyncProps = buildAsyncProps(node)
@@ -93,6 +99,10 @@ export function renderWithFormItem(
     {
       label: node.label,
       prop: node.name,
+      // ⭐ 字段级 label 配置 override 顶层（el-form-item 与 el-form 共享 labelPosition/labelWidth）
+      // 字段级未设置时 el-form-item 自动继承 el-form 顶层（element-plus 原生行为）
+      ...(node.labelPosition !== undefined ? { labelPosition: node.labelPosition } : {}),
+      ...(node.labelWidth !== undefined ? { labelWidth: node.labelWidth } : {}),
       // hidden 字段剥离 rules：隐藏必填项若参与校验会让 validate 恒 false，
       // 且 scrollToError 会滚动到 display:none 的元素（用户看不到任何错误）。
       // 保留 prop 注册（el-form-item 挂载时注册时机固定，动态增删 prop 不可靠），

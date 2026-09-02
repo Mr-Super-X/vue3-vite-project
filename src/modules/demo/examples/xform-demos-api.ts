@@ -1041,17 +1041,34 @@ export const detailFillItems: XFormApiItem[] = [
   },
 ]
 
-// XFormBeforeChange —— beforeChange 拦截器（XFormProps 级）
+// XFormBeforeChange —— 3 层 beforeChange 拦截器
 export const beforeChangePropsItems: XFormApiItem[] = [
   {
-    name: 'beforeChange (XFormProps 级)',
-    type: '(item, newVal, oldVal) => unknown | Promise',
-    description: '字段值写入 model 前拦截，按 item.name 分派到具体字段的拦截函数',
+    name: 'beforeChange (XFormProps 第 1 层)',
+    type: 'BeforeChangeFn: (item, newVal, oldVal, allValues?, ctx?) => unknown | Promise',
+    description: '全局 Props beforeChange 钩子——横切关注点（埋点 / 全局拦截）',
+  },
+  {
+    name: 'beforeChangeRules (XFormProps 第 2 层)',
+    type: 'BeforeChangeRule[]',
+    description: '动态命名空间规则数组；按 pattern 匹配字段路径后 handler 串行执行',
+  },
+  {
+    name: 'SchemaNode.beforeChange (第 3 层)',
+    type: 'BeforeChangeFn',
+    description:
+      '字段级 beforeChange——业务内聚性最高；数组元素字段直接写在 array.children[i].field 上',
+  },
+  {
+    name: 'BeforeChangeCtx',
+    type: '{ name, setFieldValue, setFieldError, abort }',
+    description:
+      '钩子上下文——允许字段级 beforeChange 联动修改其他字段（setFieldValue）、显示红字（setFieldError）、取消写入（abort）',
   },
   {
     name: 'item.name',
     type: 'string',
-    description: '当前字段名，函数内按此分派到具体字段的拦截逻辑（XFormProps 级共享一份函数）',
+    description: '当前字段名，第 1 层按此分派到具体字段逻辑',
   },
   {
     name: '同步返回非 undefined',
@@ -1071,7 +1088,7 @@ export const beforeChangePropsItems: XFormApiItem[] = [
   {
     name: 'Promise reject',
     type: '—',
-    description: '跳过更新，model 保持旧值',
+    description: '跳过更新，model 保持旧值；ctx.setFieldValue 已产生的副作用保留',
   },
   {
     name: '返回 undefined',
@@ -1190,25 +1207,28 @@ export const customFormItemItems: XFormApiItem[] = [
 // XFormLabelLayout —— 顶层 schema 布局字段
 export const labelLayoutItems: XFormApiItem[] = [
   {
-    name: 'labelPosition (顶层)',
+    name: 'labelPosition (顶层 + 字段级)',
     type: "'left' | 'right' | 'top'",
     default: "'left'",
-    description: '所有字段 label 位置：left / right / top；推荐 top 用于响应式布局',
+    description:
+      'label 位置：顶层配置为表单整体；字段级配置可 override 顶层（element-plus el-form-item 原生支持）',
   },
   {
-    name: 'labelWidth (顶层)',
+    name: 'labelWidth (顶层 + 字段级)',
     type: 'string | number',
-    description: 'label 宽度（如 "120px" 或 120），top 位置时无效',
+    description:
+      'label 宽度（如 "120px" 或 120）；顶层配置透传 el-form，字段级配置透传 el-form-item override 顶层',
   },
   {
-    name: '仅顶层生效',
+    name: '字段级 override 顶层',
     type: '—',
-    description: '这两个字段写在节点级不生效——必须从顶层 schema 派生，对应 el-form 实例级属性',
+    description:
+      '字段级声明 labelPosition / labelWidth 后该字段独立渲染；未声明时 el-form-item 自动继承 el-form 顶层配置（element-plus 原生行为）',
   },
   {
     name: '与 XFormProps.labelPosition 区别',
     type: '—',
-    description: 'XFormProps.labelPosition 不存在；只支持 schema 顶层字段',
+    description: 'XFormProps.labelPosition 不存在；只支持 schema 顶层 + 字段级字段',
   },
 ]
 

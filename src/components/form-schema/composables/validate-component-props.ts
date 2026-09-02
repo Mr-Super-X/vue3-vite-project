@@ -71,6 +71,8 @@ const FORM_KEY_ALIASES = new Set([
   'inlineMessage',
   'size',
   'disabled',
+  // labelPosition / labelWidth：顶层 schema 配置（透传 el-form）；
+  // 字段级 SchemaNode.labelPosition / labelWidth 也允许（透传 el-form-item，override 顶层）
   'labelPosition',
   'labelWidth',
   'showPassword',

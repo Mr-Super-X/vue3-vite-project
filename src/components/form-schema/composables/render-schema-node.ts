@@ -27,7 +27,13 @@
  */
 import { h, type VNode, type ComponentPublicInstance, type Ref } from 'vue'
 
-import type { SchemaNode, XFormProps } from '../types'
+import type {
+  BeforeChangeCtx,
+  BeforeChangeRule,
+  SchemaNode,
+  XFormExpose,
+  XFormProps,
+} from '../types'
 // ColConfig / RowConfig / SchemaSlot 类型仅在新拆分文件内使用；此处 re-export 仅保留
 // API 类型暴露位（外部消费方可能从本文件 import 类型）。
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -100,6 +106,11 @@ export interface RenderSchemaNodeOptions {
   model: XFormProps['model']
   components: XFormProps['components']
   beforeChange: XFormProps['beforeChange']
+  beforeChangeRules?: BeforeChangeRule[] | undefined
+  /** ctx 工厂（每字段独立 ctx 实例） */
+  makeBeforeChangeCtx?: ((node: SchemaNode) => BeforeChangeCtx) | undefined
+  /** XFormExpose：ctx.setFieldError 调用 */
+  formRef?: XFormExpose | undefined
   rules: XFormProps['rules']
   componentProps?: XFormProps['componentProps']
   render: RenderFn
@@ -198,7 +209,13 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
         ? resolveComponentFor(node.component, opts.components)
         : node.component
     const eventBindings = {
-      ...buildVModelBindings(node, opts.model, opts.beforeChange, opts.onValueChange),
+      ...buildVModelBindings(node, opts.model, {
+        layer1: opts.beforeChange,
+        namespaceRules: opts.beforeChangeRules,
+        makeCtx: opts.makeBeforeChangeCtx,
+        formRef: opts.formRef,
+        onValueChange: opts.onValueChange,
+      }),
       ...buildOnBindings(node, opts.model),
     }
     const asyncProps = buildAsyncProps(node)
