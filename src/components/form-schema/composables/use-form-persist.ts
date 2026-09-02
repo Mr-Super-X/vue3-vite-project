@@ -18,6 +18,13 @@ export interface FormPersistReturn {
   clear(): void
   /** 取消已调度的 debounce 写入（清空 model 时避免被空 model 覆盖草稿） */
   cancelPendingSave(): void
+  /**
+   * 标记进入「重置窗口」：屏蔽下一次 watch(model) 的 debouncedWrite，避免空 model 覆盖之前草稿。
+   * 用法：先 markResetting()，再调用 formRef.resetFields()——model 被清空但不会触发落盘，
+   *       localStorage 中仍是 reset前内容，可再次点恢复还原。
+   * nextTick 后自动解除屏蔽（只屏蔽 1 次 watch，防止永久失活）。
+   */
+  markResetting(): void
   hasDraft: Ref<boolean>
   lastSavedAt: Ref<number | null>
 }
@@ -84,6 +91,8 @@ export function useFormPersist(options: FormPersistOptions): FormPersistReturn {
   let pendingSave = false
   /** clear() 期间临时屏蔽 watch 写入：让业务代码可在 clear 后立即重置 model 而不触发空草稿回写 */
   let isClearing = false
+  /** markResetting() 期间临时屏蔽下一次 watch 写入：让 formRef.resetFields() 触发的空 model 不覆盖之前草稿 */
+  let isResetting = false
   const debouncedWrite = debounce(() => {
     pendingSave = false
     persistNow()
@@ -93,6 +102,11 @@ export function useFormPersist(options: FormPersistOptions): FormPersistReturn {
   }, debounceMs)
   watch(model, () => {
     if (isClearing) return
+    if (isResetting) {
+      // 屏蔽本次重置导致的空 model 回写；只屏蔽 1 次后自动解除
+      isResetting = false
+      return
+    }
     pendingSave = true
     debouncedWrite()
   })
@@ -106,6 +120,12 @@ export function useFormPersist(options: FormPersistOptions): FormPersistReturn {
   /** 暴露 cancelPendingSave：让 demo 在「清空 model 但保留草稿」场景调用 */
   function cancelPendingSave(): void {
     cancelPending()
+  }
+  /** 暴露 markResetting：让 demo 在调 formRef.resetFields() 前调用，
+   *  屏蔽下一次 watch 触发（formRef.resetFields 会写空 model），避免空 model 覆盖之前草稿。
+   *  仅屏蔽 1 次后自动解除，防止永久失活 */
+  function markResetting(): void {
+    isResetting = true
   }
   function clear(): void {
     cancelPending()
@@ -129,5 +149,5 @@ export function useFormPersist(options: FormPersistOptions): FormPersistReturn {
     flushPending()
     window.removeEventListener('beforeunload', flushPending)
   })
-  return { save, load, clear, cancelPendingSave, hasDraft, lastSavedAt }
+  return { save, load, clear, cancelPendingSave, markResetting, hasDraft, lastSavedAt }
 }

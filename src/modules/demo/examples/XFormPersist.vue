@@ -85,6 +85,15 @@ function onRestore() {
     ElMessage.warning('当前没有草稿（先填几个字段刷新页面再试）')
     return
   }
+  // 读取原始草稿用于错误诊断
+  const rawDraft = window.localStorage.getItem('vue3-vite-project:demo.x-form-persist.draft')
+  if (!rawDraft) {
+    // hasDraft=true 但 localStorage 为空 → 状态不一致（罕见）
+    // 直接重置 hasDraft 让 UI 与真实存储状态一致
+    persist.clear()
+    ElMessage.warning('草稿状态异常，已自动重置（先填几个字段刷新页面再试）')
+    return
+  }
   const ok = persist.load()
   if (!ok) {
     ElMessage.warning('草稿已失效（版本不匹配或数据损坏），已自动清除')
@@ -108,10 +117,14 @@ function onSimulateSubmit() {
   ElMessage.success('模拟提交成功：草稿已清除、dirty 已归零')
 }
 
-// 重置表单字段（与其他 demo 一致；本 demo 额外联动草稿清除）
+// 重置表单字段（与其他 demo 一致；本 demo 额外联动草稿保留）
 function onReset() {
+  // ⭐ 关键：重置会触发 model 变化 → useFormPersist watch 调度 debouncedWrite → 400ms 后
+  // 会用「空 model」覆盖 localStorage 中之前的草稿，导致后续点恢复读到的是空草稿
+  // 正确流程：先 markResetting() 屏蔽下一次 watch 写入，再 resetFields；之后 localStorage 中仍是旧草稿
+  persist.markResetting()
   formRef.value?.resetFields()
-  ElMessage.success('表单已重置')
+  ElMessage.success('表单已重置（草稿已保留，可再次点恢复还原）')
 }
 
 // 复制当前 schema 到剪贴板（与其他 demo 一致；本 demo 不依赖 useXFormDemo，手写实现）
@@ -163,7 +176,9 @@ const tocItems = [
             <XForm ref="formRef" :schema="schema" :model="model" />
 
             <div :class="bem.e('actions')">
-              <ElButton type="primary" @click="onRestore">恢复草稿（load + resetDirty）</ElButton>
+              <ElButton type="primary" :disabled="!persist.hasDraft.value" @click="onRestore">
+                恢复草稿（load + resetDirty）
+              </ElButton>
               <ElButton @click="onClear">清除草稿（clear）</ElButton>
               <ElButton type="success" @click="onSimulateSubmit">
                 模拟提交（clear + resetDirty）
