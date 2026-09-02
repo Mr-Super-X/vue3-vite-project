@@ -54,6 +54,12 @@
 
 ### 📝 Docs | 文档同步更新
 
+* **docs(demo):** 新增 `src/modules/demo/docs/如何写好一个 demo.md` —— demo 编写规范
+  - 明确 demo 定位、目录职责、新增三步、页面结构规范
+  - 提供指导思想（一事一 demo、对照组、验证方法、界面化日志）
+  - 给出 DemoFrame / DemoField / ApiTable / DocToc / ModelPreview 使用指南
+  - 列出常见反模式与提交前自检清单
+  - 附最小可运行示例模板
 * **docs(form-schema):** README / ARCHITECTURE 同步更新 —— 3 层 beforeChange 数据流图 + 字段级 label override 颗粒度说明
 * **demo(form-schema):** 重写 XFormBeforeChange.vue —— `el-tabs` 三段演示（A 全局 Props / B 字段级 / C 命名空间）
 * **demo(form-schema):** 扩展 XFormLabelLayout.vue —— 加备注字段 `labelPosition: 'top'` 字段级 override 演示
