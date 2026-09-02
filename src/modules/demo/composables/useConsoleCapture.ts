@@ -4,17 +4,22 @@
  * 应用场景：错误诊断 demo 让用户能"在页面上"看到 XForm 触发的警告，不必打开 DevTools
  *
  * 设计原则：
- * - 强约束：onMounted hook、onUnmounted 还原原始 console 方法（避免污染全局）
- * - 上限：内存保留最近 50 条（FIFO），单条 500 字截断（防内存爆 / 防页面卡顿）
- * - 过滤：可选 prefix 仅捕获包含此前缀的日志（XForm 内部统一以 "[XForm]" 起头）
- * - 单一职责：只捕获 + 暴露数据，渲染由调用方决定（用 ConsoleLogPanel）
+ * - **同步 hook**（关键）：hook 必须在 setup 函数体同步执行，**不依赖 onMounted**
+ *   - 原因：XForm 在 `useXFormComposer` 的 `watch(props.schema, ..., { immediate: true })`
+ *     同步触发 schema 校验，子组件 setup 阶段立即调 `console.warn('[XForm]...')`；
+ *     如果 hook 装在 onMounted，会晚于子组件 setup（父 mounted 是最后一步），错过早期日志。
+ *   - 同步 hook 确保父组件 setup 完成后到子组件 setup 之间 console 已被接管。
+ * - **onUnmounted 还原**：避免污染全局 console（多个 demo 同时挂载时链式还原仍然正确——每次 hook 保存"当前 console"作为自己的 original）
+ * - **上限**：内存保留最近 50 条（FIFO），单条 500 字截断（防内存爆 / 防页面卡顿）
+ * - **过滤**：可选 prefix 仅捕获包含此前缀的日志（XForm 内部统一以 "[XForm]" 起头）
+ * - **单一职责**：只捕获 + 暴露数据，渲染由调用方决定（用 ConsoleLogPanel）
  *
  * 使用：
  * ```ts
  * const { logs, clear } = useConsoleCapture('[XForm]')
  * ```
  */
-import { onMounted, onUnmounted, ref, type Ref } from 'vue'
+import { onUnmounted, ref, type Ref } from 'vue'
 
 export interface CapturedLog {
   level: 'error' | 'warn'
@@ -35,7 +40,8 @@ export interface UseConsoleCaptureReturn {
 export function useConsoleCapture(prefix?: string): UseConsoleCaptureReturn {
   const logs = ref<CapturedLog[]>([])
 
-  // 闭包内保存原始引用（避免多个实例互相覆盖）
+  // 同步 hook：必须在 setup 函数体内同步执行（在 Vue 生命周期之前完成 console 接管）
+  // 闭包内保存当前 console 引用作为自己的 original（链式 hook 时还原到调用前的版本）
   const originalError = console.error.bind(console)
   const originalWarn = console.warn.bind(console)
 
@@ -62,18 +68,18 @@ export function useConsoleCapture(prefix?: string): UseConsoleCaptureReturn {
     }
   }
 
-  onMounted(() => {
-    console.error = (...args: unknown[]) => {
-      capture('error', ...args)
-      originalError(...args)
-    }
-    console.warn = (...args: unknown[]) => {
-      capture('warn', ...args)
-      originalWarn(...args)
-    }
-  })
+  // 同步接管 console（不放在 onMounted——那会晚于子组件 setup）
+  console.error = (...args: unknown[]) => {
+    capture('error', ...args)
+    originalError(...args)
+  }
+  console.warn = (...args: unknown[]) => {
+    capture('warn', ...args)
+    originalWarn(...args)
+  }
 
   onUnmounted(() => {
+    // 还原到自己保存的 original（链式 hook 时会还原到上一个 hook 版本）
     console.error = originalError
     console.warn = originalWarn
   })
