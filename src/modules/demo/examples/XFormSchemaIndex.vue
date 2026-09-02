@@ -345,7 +345,8 @@ async function onReset(): Promise<void> {
 const securityWarnings = computed(() => scanForForbidden(bigSchema.value))
 
 const tocItems = [
-  { id: 'demo-schema-index', label: '索引快照演示' },
+  { id: 'demo-schema-index', label: '4 类业务问题' },
+  { id: 'demo-schema-snapshot', label: '索引快照演示' },
   { id: 'demo-schema-security', label: '安全扫描演示' },
   { id: 'api-schema-index', label: 'useSchemaIndex 返回' },
 ]
@@ -354,15 +355,66 @@ const tocItems = [
 <template>
   <DocLayout>
     <DemoFrame
-      title="useSchemaIndex —— schema 元数据中央索引"
+      title="useSchemaIndex —— 用 4 类业务问题理解中央索引"
       source="src/components/form-schema/composables/use-schema-index.ts"
       :introductions="[
-        '把 schema 树遍历 O(n) 换成 6 个 Map/Set 的 O(1) 查表。XForm 内部已自动集成，外部业务可复用同一索引实例。',
-        '大 schema 验证：80+ 字段 + 跨字段校验 + dirty 基线 + server error 全链路走索引查表，实时观察索引快照。',
-        '安全辅助：scanForForbidden 扫描所有可执行字段（on / reaction / directives / slots）的危险标识符。',
+        '【解决什么问题】XForm 内部需要反复回答 schema 元数据查询（脏检查、跨字段 watch、字段映射…）。每次遍历 O(n) 在大 schema 下慢。',
+        '【怎么解决】用 6 个 Map/Set 一次性构建索引，运行时 O(1) 查表。XForm 内部已自动集成，业务可复用同一实例。',
+        '【4 类业务问题】① 脏检查基线（fieldNames）② 跨字段 watch 启动（crossRules）③ 反向依赖图（reverseIndex）④ 服务错误映射（allNames + dependsOnMap）',
+        '下方先看「4 类问题」入口卡片，再展开「6 Map 实现细节」了解底层数据结构。',
       ]"
     >
       <section id="demo-schema-index">
+        <h4>4 类业务问题（点击切换查看索引加速方案）</h4>
+        <p>先理解要解决的问题，再看 6 Map 如何加速查询 —— 这样数据结构才不抽象。</p>
+
+        <!-- 4 类业务问题入口卡片 -->
+        <div :class="bem.e('problem-cards')">
+          <div :class="bem.e('problem-card')">
+            <strong>① 脏检查基线</strong>
+            <p>「用户改了哪些字段？」</p>
+            <p :class="bem.e('card-size')">
+              加速 Map:
+              <code>fieldNames</code>
+              （DFS 顺序，不含 ignore）
+            </p>
+            <p :class="bem.e('problem-example')">场景：保存按钮判断「有改动才允许提交」</p>
+          </div>
+          <div :class="bem.e('problem-card')">
+            <strong>② 跨字段 watch</strong>
+            <p>「target 字段需要监听哪些依赖字段？」</p>
+            <p :class="bem.e('card-size')">
+              加速 Map:
+              <code>crossRules</code>
+              （target → rules 列表）
+            </p>
+            <p :class="bem.e('problem-example')">场景：结束日期依赖开始日期的跨字段校验</p>
+          </div>
+          <div :class="bem.e('problem-card')">
+            <strong>③ 反向依赖图</strong>
+            <p>「字段 X 变了，哪些字段会受影响？」</p>
+            <p :class="bem.e('card-size')">
+              加速 Map:
+              <code>reverseIndex</code>
+              （dep → 受影响 targets）
+            </p>
+            <p :class="bem.e('problem-example')">场景：地址联动清空、改上级清下级</p>
+          </div>
+          <div :class="bem.e('problem-card')">
+            <strong>④ 服务错误映射</strong>
+            <p>「后端返 422 errors[]，怎么映射到字段？」</p>
+            <p :class="bem.e('card-size')">
+              加速 Map:
+              <code>allNames</code>
+              +
+              <code>dependsOnMap</code>
+            </p>
+            <p :class="bem.e('problem-example')">
+              场景：422 字段名映射到 model key（含 ignore 字段）
+            </p>
+          </div>
+        </div>
+
         <h4>运行时：动态生成 80+ 字段的表单 + 索引快照 + 操作面板</h4>
         <p>
           下方 4 块组成一个完整 demo：① 索引快照（6 个 Map 实时反映）② 大型表单（必填 +
@@ -597,6 +649,53 @@ const tocItems = [
   &__card-size {
     font-weight: 600;
     color: #303133 !important;
+  }
+
+  // 4 类业务问题入口卡片（顶部）
+  &__problem-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+    margin: 16px 0 24px;
+  }
+
+  &__problem-card {
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #f0f9ff, #ecfeff);
+    border: 1px solid var(--el-color-primary-light-7);
+    border-radius: 6px;
+
+    strong {
+      display: block;
+      color: var(--el-color-primary);
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    p {
+      margin: 4px 0 0;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--el-text-color-regular);
+    }
+
+    code {
+      padding: 1px 4px;
+      background: var(--el-fill-color-light);
+      border-radius: 2px;
+      font-family: 'SFMono-Regular', Consolas, monospace;
+      font-size: 12px;
+      color: var(--el-color-primary);
+    }
+  }
+
+  &__problem-example {
+    color: var(--el-text-color-secondary) !important;
+    font-style: italic;
+    font-size: 12px !important;
+    margin-top: 6px !important;
+    padding-top: 6px;
+    border-top: 1px dashed var(--el-color-primary-light-7);
   }
   &__details {
     margin-top: 8px;

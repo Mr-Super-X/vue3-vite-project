@@ -179,6 +179,27 @@ const tocItems = [
         '最后一节是「可覆盖钩子清单」表，覆盖 XForm 自有钩子、Element Plus 高频类、CSS 主题变量三类。',
       ]"
     >
+      <!-- 先看这个引导卡：6 个场景，新人易迷失 -->
+      <div :class="bem.e('start-here')">
+        <strong>👀 先看这个——样式覆盖场景按推荐顺序浏览</strong>
+        <p>
+          <strong>① 紧凑表单 + 品牌化</strong>
+          （必看） —— 掌握 :class 透传作用域 + 字段级 formItem.props.class 隔离
+        </p>
+        <p>
+          <strong>② 错误提示不抖动 + 只读态</strong>
+          （进阶） —— 占位高度预留 / permission: 'view' 纯文本展示
+        </p>
+        <p>
+          <strong>③ 数组节点 + 主题色</strong>
+          （高级） —— 行卡片化 / CSS 变量覆盖全局主色
+        </p>
+        <p>
+          <strong>末尾「可覆盖钩子清单」</strong>
+          —— 高/中/低三档稳定性分级，决定升级风险
+        </p>
+      </div>
+
       <!-- 场景 1：紧凑表单 -->
       <section id="demo-compact">
         <DemoField label="场景 1 紧凑表单（label 宽 / 控件高 / 行间距压缩）" :code="xFormSource">
@@ -543,6 +564,32 @@ const tocItems = [
   }
 
   // 钩子清单表
+  &__start-here {
+    display: block;
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    background: linear-gradient(90deg, #ecf5ff, #f0f9ff);
+    border-left: 4px solid var(--el-color-primary);
+    border-radius: 4px;
+    color: var(--el-text-color-regular);
+
+    > strong {
+      display: block;
+      color: var(--el-color-primary);
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    p {
+      margin: 4px 0;
+      line-height: 1.7;
+    }
+
+    strong {
+      color: var(--el-color-primary);
+    }
+  }
+
   &__cheatsheet-title {
     margin-top: 32px;
     margin-bottom: 8px;

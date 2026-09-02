@@ -2,6 +2,55 @@
 
 ## 未发布
 
+### ♻️ Refactor | XForm demo 可理解性深度修复（13 项 P0/P1/P2）
+
+基于批量可理解性审查（48 个 demo 评估 + 已读 13 个关键 demo 代码交叉验证）的修复批次：
+
+* **refactor(XFormBuilder):** 重写为真实 builder 链式代码
+  - 7 个字段全部用 `xCascader / xUpload / xTransfer / xTimePicker / xTimeSelect / xAutocomplete / xTreeSelect` 真实链式
+  - Upload 字段演示 builder + slots 混合写法（builder 不支持 slots 时的扩展模式）
+  - 修复前：标题写「builder 链式」但实际全用对象字面量；修复后：类型安全 + IDE 自动补全
+* **refactor(XFormAsyncOptionsError):** `immediate: false` 引擎限制独立成折叠面板
+  - 删除把限制当 demo 的 `cityLazy` 字段
+  - 主要演示 `onError` 回调 + `deps` 触发 source 重跑
+  - 新增「⚠️ API 限制说明」`el-collapse` 单独承载限制描述 + 变通方案
+* **refactor(XFormLargeSchema):** 加学习目标 + 30/120/300 三档对比 + 性能基准对照表
+  - `el-radio-group` 三档切换字段数（shallowRef 重建 schema）
+  - perf-panel 高亮展示 mount / build 耗时 + 档位 tag（流畅/可接受/需优化）
+  - placeholder 业务化（`sku-${i+1}` 模拟生产 SKU 命名）
+* **refactor(XFormSchemaIndex):** 用「4 类业务问题」开篇替换 6 Map 抽象展示
+  - 新增 4 类业务问题卡片：① 脏检查基线 ② 跨字段 watch ③ 反向依赖图 ④ 服务错误映射
+  - 每个 Map 配 1 个具体业务用例，让数据结构与业务问题一一对应
+* **refactor(XFormServerError):** intro 与 mock 对齐 + 移除响应式断点
+  - 删除响应式断点（已迁移到 XFormResponsive demo），单一职责专注服务端错误映射
+  - intro 文案与 4 类 mock 错误场景逐项对齐
+* **refactor(XFormBeforeChange):** source 标注改 XForm.vue + Tab C 加 ASCII 正则匹配示意图
+  - source 从 `build-vmodel-bindings.ts` 改 XForm.vue（在 intro 注释拦截逻辑所在文件）
+  - Tab C 命名空间新增 ASCII 图示解释 `/^contacts\[\d+\]\.phone$/` 命中规则
+* **refactor(XFormCustomFormItem):** inline 实现真实 `FormItemPlus` 组件
+  - 修复前：`component: 'FormItemPlus' as never` 未注册导致渲染异常
+  - 修复后：defineComponent 真实实现 + 通过 `XForm components` prop 注册
+  - schema 字段写法：`formItem.component: 'FormItemPlus'`（字符串名 + 注册，对 DSL 友好）
+* **refactor(XFormPersistSchemaVersion):** 加 7 步交互指引 + 弱化「引擎 bug」注释
+  - 新增 7 步交互指引 `el-collapse`（参考 XFormOrderCreate 引导模式）
+  - 「修正引擎 bug」注释改为中性「综合 hasDraft + lastSavedAt 作为按钮 disabled 依据」
+* **fix(XFormOrderCreate):** 能力清单表格第②项描述修正
+  - 表格写「onSave 内检查：客户名/电话至少一个」与 intro（`crossValidator`）矛盾
+  - 改为「`crossValidator`：客户名/电话至少一个（schema rules 自动触发，无需 onSave 内检查）」
+* **fix(XFormExpressionSandbox):** reaction 真正调用白名单函数
+  - 修复前：注册了 `toCurrency / upper / concat` 但 4 个 reaction 全用内联函数，白名单形同虚设
+  - 修复后：3 个 reaction 改字符串表达式 `{{ toCurrency(...) }}` / `{{ upper(...) }}` / `{{ concat(...) }}` 真正调用白名单
+  - 沙箱测试字段保留内联函数写法作为对比
+* **fix(XFormInvalidComponent):** 字段 D 命名统一
+  - 文件头注释「MyInput」「MyCustomInput」与 schema 实际 `MyUnregisteredComp` 不一致
+  - 注释统一为 `MyUnregisteredComp`（与对照组 `MyCustomInput` 区分清晰）
+* **feat(XForm / Upload / StyleOverride):** 加「先看这个」引导卡
+  - 3 个信息密度高的 demo 顶部加 `el-alert` 引导卡，标注核心场景 vs 进阶场景
+  - 减少 48 个 demo 侧边栏对新人造成的压迫感
+* **chore(demo):** 全局 placeholder 业务化整顿
+  - XFormBuilder：语言「主要编程语言」+ 部门「所属部门（树形多选）」
+  - XFormLargeSchema：字段 placeholder 部分用 `sku-${i+1}` 业务化
+
 ### ✨ Features | demo 可理解度提升（P0）
 
 * **feat(demo-clarity):** 新增 `useConsoleCapture` composable + 8 个单测

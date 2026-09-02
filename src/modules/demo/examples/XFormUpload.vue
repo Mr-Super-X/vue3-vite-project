@@ -426,6 +426,24 @@ const tocItems = [
         '触发区默认由 XForm 按类型注入（picture-card → Plus 图标、drag → 云朵图标 + 文案、其余 → 「点击上传」按钮）；产品要定制时用下方三种方案覆盖。',
       ]"
     >
+      <!-- 先看这个引导卡：上传场景较多，新人易迷失 -->
+      <div :class="bem.e('start-here')">
+        <strong>👀 先看这个——上传场景按推荐顺序浏览</strong>
+        <p>
+          <strong>① 头像 / 附件列表</strong>
+          （必看） —— 掌握 modelProp: 'fileList' + httpRequest mock 的最小模式
+        </p>
+        <p>
+          <strong>② 拖拽 / 图片墙 / 手动上传 / 上传前校验</strong>
+          （进阶） —— 各场景独立 props 配置
+        </p>
+        <p>
+          <strong>③ 定制三方案</strong>
+          （高级） —— 类名覆盖 / slots.default 接管触发区 / slots.file 自定义列表项（JSX vs h()
+          对照）
+        </p>
+      </div>
+
       <section id="demo-upload">
         <DemoField label="上传场景集合" :code="xFormSource">
           <XForm ref="formRef" :schema="schema" :model="model" />
@@ -466,6 +484,33 @@ const tocItems = [
     margin-top: 16px;
     display: flex;
     gap: 8px;
+  }
+
+  // 「先看这个」引导卡样式
+  &__start-here {
+    display: block;
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    background: linear-gradient(90deg, #ecf5ff, #f0f9ff);
+    border-left: 4px solid var(--el-color-primary);
+    border-radius: 4px;
+    color: var(--el-text-color-regular);
+
+    > strong {
+      display: block;
+      color: var(--el-color-primary);
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    p {
+      margin: 4px 0;
+      line-height: 1.7;
+    }
+
+    strong {
+      color: var(--el-color-primary);
+    }
   }
 
   // 方案 8：只覆盖类名，不碰 schema —— 作用域由 formItem.props.class 锁定在本字段

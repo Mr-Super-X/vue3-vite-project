@@ -49,6 +49,14 @@ const persist = useFormPersist({
   },
 })
 
+/**
+ * 草稿存在综合状态：
+ * - persist.hasDraft 反映初始 localStorage 中 key 是否存在
+ * - persist.lastSavedAt 反映本次会话内是否已 save 过
+ * 综合两者作为按钮 disabled 状态依据，避免"已 save 但 hasDraft 未更新"的中间态误禁用
+ */
+const hasDraftOrSaved = computed(() => persist.hasDraft.value || persist.lastSavedAt.value !== null)
+
 // —— 模拟 schema 升级 ——
 type Version = 'v1' | 'v2'
 const version = ref<Version>('v1')
@@ -156,16 +164,9 @@ onMounted(() => {
 
 const tocItems = [
   { id: 'demo-persist-schema-version', label: 'restoreFilter 演示' },
+  { id: 'demo-step-guide', label: '7 步交互指引' },
   { id: 'api-persist-schema-version', label: 'useFormPersist 配置速查' },
 ]
-
-/**
- * 草稿存在标志（修正 useFormPersist 引擎 bug）：
- * - persist.hasDraft 仅在初始化时根据 localStorage 存在性计算，save 后不自动更新
- * - persist.lastSavedAt 在每次 save 后更新（Date.now()）
- * 综合两者：hasDraft（初始 localStorage 有 key）或 lastSavedAt !== null（本次会话 save 过）
- */
-const hasDraftOrSaved = computed(() => persist.hasDraft.value || persist.lastSavedAt.value !== null)
 </script>
 
 <template>
@@ -174,15 +175,37 @@ const hasDraftOrSaved = computed(() => persist.hasDraft.value || persist.lastSav
       title="useFormPersist.restoreFilter —— schema 升级后裁剪旧草稿"
       source="src/components/form-schema/composables/use-form-persist.ts"
       :introductions="[
-        'schema 升级时字段会重命名 / 移除 / 新增；restoreFilter 在 load() 时裁剪旧字段 + 注入新字段默认值',
-        '应用场景：表单配置随业务迭代，存量用户草稿不能因为字段变更就丢',
-        '测试步骤：',
-        '  ① v1 模式下填字段 a=hello、b=world、oldField=legacy → 点「保存草稿」',
-        '  ② 切到 v2 → 点「加载草稿」 → a/b 保留，oldField 被裁剪，c=v2-default',
-        '  ③ 控制台看 [restoreFilter] 已裁剪废弃字段 oldField: legacy',
+        '【应用场景】schema 升级时字段会重命名 / 移除 / 新增；存量用户的草稿不能因为字段变更就丢',
+        '【restoreFilter】在 load() 时裁剪旧字段 + 注入新字段默认值',
+        '下方按 7 步交互指引走完整个升级流程：v1 填字段 → 切 v2 → 加载草稿 → 验证裁剪',
       ]"
     >
       <section id="demo-persist-schema-version">
+        <!-- 7 步交互指引（折叠面板，默认折叠让用户主动展开） -->
+        <el-collapse :class="bem.e('guide-collapse')">
+          <el-collapse-item title="📋 7 步交互指引（按顺序走完整个升级流程）" name="guide">
+            <ol :class="bem.e('guide-list')">
+              <li>
+                <strong>v1 模式</strong>
+                填字段：a=hello、b=world、oldField=legacy（v1 独有字段）
+              </li>
+              <li>点「保存草稿」→ 草稿写入 localStorage（key 含 v1 数据）</li>
+              <li>
+                切到
+                <strong>v2</strong>
+                （radio）→ schema 切换到 v2 版本
+              </li>
+              <li>点「加载草稿」→ restoreFilter 裁剪 oldField + 注入 c=v2-default</li>
+              <li>验证：表单显示 a=hello、b=world、c=v2-default，oldField 字段消失</li>
+              <li>
+                控制台查看
+                <code>[restoreFilter] 已裁剪废弃字段 oldField: legacy</code>
+              </li>
+              <li>点「清除草稿」→ 重置 + 清 localStorage，可重新开始</li>
+            </ol>
+          </el-collapse-item>
+        </el-collapse>
+
         <div :class="bem.e('controls')">
           <span>schema 版本：</span>
           <el-radio-group
@@ -238,6 +261,35 @@ const hasDraftOrSaved = computed(() => persist.hasDraft.value || persist.lastSav
 
     strong {
       color: var(--el-color-warning);
+    }
+  }
+
+  &__guide-collapse {
+    margin-bottom: 16px;
+  }
+
+  &__guide-list {
+    margin: 0;
+    padding-left: 20px;
+    line-height: 1.8;
+    font-size: 13px;
+    color: var(--el-text-color-regular);
+
+    li {
+      margin-bottom: 4px;
+    }
+
+    strong {
+      color: var(--el-color-primary);
+    }
+
+    code {
+      padding: 1px 6px;
+      background: var(--el-fill-color-light);
+      border-radius: 3px;
+      font-family: 'SFMono-Regular', Consolas, monospace;
+      font-size: 12px;
+      color: var(--el-color-primary);
     }
   }
 }

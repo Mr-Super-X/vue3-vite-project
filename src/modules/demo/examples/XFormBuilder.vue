@@ -15,6 +15,15 @@ import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
+import {
+  xCascader,
+  xUpload,
+  xTransfer,
+  xTimePicker,
+  xTimeSelect,
+  xAutocomplete,
+  xTreeSelect,
+} from '@/components/form-schema/builders'
 import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
@@ -91,36 +100,39 @@ const TREE_DATA = [
   },
 ]
 
+// —— Builder 链式 vs 对象字面量 ——
+/**
+ * 链式 builder 的核心价值：编译时类型校验 + IDE 自动补全
+ * - xXxx() 入口绑死 component 名 → 后续链式 prop 字段名由 TS 推导
+ * - 拼错 props 字段名（如 listTyp）→ 编译报错 vs 对象字面量运行时静默失效
+ *
+ * 局限：builder 不支持 slots/tips/asyncOptions/onChange 等 schema-only 字段
+ * → 含 slots 的 Upload 字段用对象字面量 + 展开 builder（SchemaNodeFor<'Upload'> 自动推导）
+ */
 const schema: SchemaNode = {
   column: 1,
   children: [
-    // 1. Cascader 链式 .options().showAllLevels().separator() —— 对象字面量等价
-    {
-      label: '省/市(选省后自动重置市)',
-      name: 'city',
-      component: 'Cascader',
-      props: {
-        options: CASCADER_DATA,
-        showAllLevels: true,
-        separator: ' / ',
-        placeholder: '选择省/市',
-      },
-      rules: [{ required: true, message: '请选择省/市', trigger: 'change' }],
-    } as SchemaNode,
+    // 1. Cascader —— xCascader().options().showAllLevels().separator()
+    xCascader('city')
+      .label('省/市(选省后自动重置市)')
+      .placeholder('选择省/市')
+      .options(CASCADER_DATA as unknown[])
+      .showAllLevels()
+      .separator(' / ')
+      .rules([{ required: true, message: '请选择省/市', trigger: 'change' }])
+      .build() as SchemaNode,
 
-    // 2. Upload 链式 .action().accept().listType().drag()
-    //    picture-card 模式需要 slots.default 提供 trigger 元素 + slots.tip 提示
+    // 2. Upload —— 链式 builder 仅覆盖 props，slots 需对象字面量扩展
+    //    picture-card 模式需 slots.default 提供 trigger 元素 + slots.tip 提示
     {
-      label: '头像上传',
-      name: 'avatar',
-      component: 'Upload',
-      props: {
-        action: '/api/upload',
-        accept: 'image/*',
-        listType: 'picture-card',
-        multiple: true,
-        drag: true,
-      },
+      ...xUpload('avatar')
+        .label('头像上传')
+        .action('/api/upload')
+        .accept('image/*')
+        .listType('picture-card')
+        .multiple()
+        .drag()
+        .build(),
       slots: {
         // trigger 元素(picture-card 必需)——直接传 Component 对象,无需 XForm.components 注册
         default: [
@@ -130,82 +142,63 @@ const schema: SchemaNode = {
             children: '+ 上传',
           } as SchemaNode,
         ],
-        tip: '支持 jpg/png 格式,单个文件不超过 500KB',
+        tip: '支持 jpg/png 格式，单文件不超过 500KB',
       },
-    } as SchemaNode,
+    } as unknown as SchemaNode,
 
-    // 3. Transfer 链式 .data().titles().filterable().buttonTexts()
-    // （演示同时给出「直接 schema 对象写法」与「builder 链式写法」两种风格以做对比；
-    // 实际项目推荐 builder 写法 —— 编译时类型校验 props 字段名）
-    {
-      label: '角色分配',
-      name: 'roles',
-      component: 'Transfer',
-      props: {
-        data: TRANSFER_DATA,
-        titles: ['可分配', '已分配'],
-        filterable: true,
-        buttonTexts: ['取消', '分配'],
-      },
-    } as SchemaNode,
+    // 3. Transfer —— xTransfer().data().titles().filterable().buttonTexts()
+    xTransfer('roles')
+      .label('角色分配')
+      .data(TRANSFER_DATA)
+      .titles('可分配', '已分配')
+      .filterable()
+      .buttonTexts('取消', '分配')
+      .build() as SchemaNode,
 
-    // 4. TimePicker 链式 .format().valueFormat().range()
-    {
-      label: '时间范围',
-      name: 'timeRange',
-      component: 'TimePicker',
-      props: {
-        format: 'HH:mm:ss',
-        valueFormat: 'HH:mm:ss',
-        isRange: true,
-        placeholder: '选择时间范围',
-      },
-    } as SchemaNode,
+    // 4. TimePicker —— xTimePicker().format().valueFormat().range()
+    xTimePicker('timeRange')
+      .label('时间范围')
+      .placeholder('选择时间范围')
+      .format('HH:mm:ss')
+      .valueFormat('HH:mm:ss')
+      .range()
+      .build() as SchemaNode,
 
-    // 5. TimeSelect 链式 .start().end().step().format()
-    {
-      label: '班次',
-      name: 'shift',
-      component: 'TimeSelect',
-      props: {
-        start: '08:00',
-        end: '20:00',
-        step: '00:30',
-        format: 'HH:mm',
-        placeholder: '选择班次',
-      },
-    } as SchemaNode,
+    // 5. TimeSelect —— xTimeSelect().start().end().step().format()
+    xTimeSelect('shift')
+      .label('班次')
+      .placeholder('选择班次')
+      .start('08:00')
+      .end('20:00')
+      .step('00:30')
+      .format('HH:mm')
+      .build() as SchemaNode,
 
-    // 6. Autocomplete 链式 .fetchSuggestions().triggerOnFocus().placement()
-    {
-      label: '编程语言',
-      name: 'language',
-      component: 'Autocomplete',
-      props: {
-        placeholder: '输入搜索 js / ts / py',
-        triggerOnFocus: true,
-        placement: 'bottom-start',
-        fetchSuggestions: (qs: string, cb: (s: Array<{ value: string }>) => void) =>
-          cb(
-            LANGS.filter((l) => l.toLowerCase().includes(qs.toLowerCase())).map((l) => ({
-              value: l,
-            }))
-          ),
-      },
-    } as SchemaNode,
+    // 6. Autocomplete —— xAutocomplete().fetchSuggestions().triggerOnFocus().placement()
+    //    fetchSuggestions 函数签名绑定（queryString, callback），cb 风格兼容 element-plus
+    xAutocomplete('language')
+      .label('主要编程语言')
+      .placeholder('搜索你想用的语言（js / ts / py / go / rust）')
+      .triggerOnFocus()
+      .placement('bottom-start')
+      .fetchSuggestions((qs: string, cb: (s: Array<{ value: string }>) => void): void => {
+        cb(
+          LANGS.filter((l) => l.toLowerCase().includes(qs.toLowerCase())).map((l) => ({
+            value: l,
+          }))
+        )
+      })
+      .build() as SchemaNode,
 
-    // 7. TreeSelect 链式 .data().multiple().checkStrictly().nodeKey()
-    {
-      label: '部门(树形多选)',
-      name: 'dept',
-      component: 'TreeSelect',
-      props: {
-        data: TREE_DATA,
-        multiple: true,
-        checkStrictly: true,
-        nodeKey: 'id',
-      },
-    } as SchemaNode,
+    // 7. TreeSelect —— xTreeSelect().data().multiple().checkStrictly().nodeKey()
+    xTreeSelect('dept')
+      .label('所属部门（树形多选）')
+      .placeholder('选择你所在的部门，支持多选')
+      .data(TREE_DATA as unknown[])
+      .multiple()
+      .checkStrictly()
+      .nodeKey('id')
+      .build() as SchemaNode,
   ],
 }
 
@@ -243,11 +236,14 @@ const tocItems = [
 <template>
   <DocLayout>
     <DemoFrame
-      title="builder 控件补齐"
-      source="src/components/form-schema/XForm.vue"
+      title="builder 链式 API（7 个复杂控件真实链式写法）"
+      source="src/components/form-schema/builders.ts"
       :introductions="[
-        '链式构建器覆盖更多组件：xCascader / xUpload / xAutocomplete / xTimePicker / xTimeSelect / xTreeSelect / xTransfer',
-        '演示场景：Cascader 省/市 + Upload 图片上传 + Transfer 角色分配 + TimePicker/TimeSelect + Autocomplete + TreeSelect',
+        'XForm 提供 27 个 xXxx() 链式 builder：每个绑死 component 名 + props 类型，链式调用时 IDE 自动补全 props 字段名',
+        '核心价值：编译时类型校验 —— 拼错字段（如 listTyp）编译报错；等价对象字面量写法则运行时静默失效',
+        '本 demo 覆盖 7 个复杂控件的真实链式写法：xCascader / xUpload / xTransfer / xTimePicker / xTimeSelect / xAutocomplete / xTreeSelect',
+        '使用边界：builder 不支持 slots / asyncOptions / on.change —— 含这些字段时用 builder.build() + 对象字面量展开（如 Upload 字段演示）',
+        '建议接入顺序：先用对象字面量理解 schema DSL → 复杂表单再用 builder 获得类型安全',
       ]"
     >
       <section id="demo-builder">

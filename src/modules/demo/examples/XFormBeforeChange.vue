@@ -233,11 +233,12 @@ async function onSave(): Promise<void> {
   <DocLayout>
     <DemoFrame
       title="XForm 3 层 beforeChange 拦截"
-      source="src/components/form-schema/composables/build-vmodel-bindings.ts"
+      source="src/components/form-schema/XForm.vue"
       :introductions="[
         'beforeChange 升级为 3 层拦截：全局 Props（第 1 层）→ 命名空间规则（第 2 层）→ 字段级（第 3 层）',
         '每层返回新值透传给下一层；任何层返回 Promise.reject / 抛异常 → 中断写入',
         'ctx 提供 setFieldValue / setFieldError / abort / name 4 个能力',
+        '拦截执行位于 composables/build-vmodel-bindings.ts 的 invokeBeforeChange 阶段',
         '切换 Tab 体验不同拦截层级',
       ]"
     >
@@ -276,6 +277,15 @@ async function onSave(): Promise<void> {
             :model="modelC"
             :before-change-rules="beforeChangeRulesC"
           />
+          <!-- 正则匹配路径示意 -->
+          <pre :class="bem.e('pattern-diagram')">
+正则: /&#94;contacts\[\d+\]\.phone$/
+       ↓ 命中以下动态路径:
+       ├─ contacts[0].phone → trimContactsPhone
+       ├─ contacts[1].phone → trimContactsPhone
+       ├─ contacts[2].phone → trimContactsPhone
+       └─ ... (新增行自动应用)
+          </pre>
         </DemoField>
 
         <div :class="bem.e('actions')">
@@ -302,6 +312,18 @@ async function onSave(): Promise<void> {
     margin-top: 16px;
     display: flex;
     gap: 8px;
+  }
+  &__pattern-diagram {
+    margin-top: 12px;
+    padding: 12px 16px;
+    background: var(--el-fill-color-light);
+    border-radius: 4px;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--el-text-color-regular);
+    white-space: pre;
+    overflow-x: auto;
   }
 }
 </style>

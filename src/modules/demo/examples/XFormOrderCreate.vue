@@ -395,7 +395,10 @@ const tocItems = [
             </tr>
             <tr>
               <td>② 跨字段校验</td>
-              <td>onSave 内检查：客户名/电话至少一个</td>
+              <td>
+                <code>crossValidator</code>
+                ：客户名/电话至少一个（schema rules 自动触发，无需 onSave 内检查）
+              </td>
               <td><code>/demo/x-form-cross-field</code></td>
             </tr>
             <tr>

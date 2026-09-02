@@ -56,7 +56,6 @@ const schema: SchemaNode = {
       label: '强制失败（模拟接口报错）',
       name: 'forceFail',
       component: 'Switch',
-      // 说明移至 template 顶部的 <p> 段落，Switch 无 description prop
     },
     {
       label: '城市（含 onError 错误处理）',
@@ -83,26 +82,6 @@ const schema: SchemaNode = {
         },
       },
     },
-    {
-      // ⚠️ 已知限制：immediate: false 字段在 XForm 引擎当前不实现 visibleChange 触发 source
-      // 实际行为：source 永远不调用，下拉列表始终为空
-      // 设计意图：immediate:false 用于大表单按需加载（节省初次 N 个并发请求）
-      // 当前演示：仅展示 schema 字段语法，不演示实际加载行为
-      // 修复方案：XForm 引擎需在 use-async-options.ts 增加 visible 状态监听 + 路由 visible-change 事件
-      label: '按需加载城市（immediate: false — 引擎限制）',
-      name: 'cityLazy',
-      component: 'Select',
-      props: { placeholder: '⚠️ XForm 引擎未实现 visibleChange 触发 source', clearable: true },
-      asyncOptions: {
-        source: mockFetchCities,
-        immediate: false, // 当前不触发
-        transform: (raw: unknown[]) =>
-          (raw as Array<{ id: number; name: string }>).map((it) => ({
-            label: it.name,
-            value: it.id,
-          })),
-      },
-    },
   ],
 }
 
@@ -125,16 +104,15 @@ const tocItems = [
 <template>
   <DocLayout>
     <DemoFrame
-      title="asyncOptions.onError + immediate: false"
+      title="asyncOptions.onError 错误处理（deps 触发重试）"
       source="src/components/form-schema/composables/use-async-options.ts"
       :introductions="[
-        'onError 回调：source 抛错时触发——业务侧 toast / 上报 / fallback 均可',
+        'asyncOptions.onError：source 抛错时触发——业务侧可接管 toast / 上报 / fallback',
+        'asyncOptions.deps：字段依赖——其他字段变化时自动触发 source 重跑（演示重试机制）',
         '默认行为：error 写入节点内部 state，AsyncOptions UI 显示「加载失败」提示',
-        'immediate: false：节点创建时不请求——按需触发（性能优化、大表单避免一次性发 N 个接口）',
-        '⚠️ XForm 引擎限制：immediate: false 字段的「按需触发」目前未实现 visibleChange 监听，source 永远不调用',
         '测试 1: 开启「强制失败」开关 → onError toast 立即弹出（deps 触发「城市」字段 source 重跑）',
         '测试 2: 关闭「强制失败」→ 「城市」下拉显示 3 个城市（deps 触发 source 重跑成功）',
-        '测试 3: 点击「按需加载城市」下拉 — 当前不工作（XForm 引擎 limitation 演示）',
+        '对比 demos：immediate 行为（默认/手动）见 XFormAsyncOptions；批量 deps 重试见本 demo',
       ]"
     >
       <section id="demo-async-options-error">
@@ -148,6 +126,32 @@ const tocItems = [
           <ModelPreview :model="model" />
         </DemoField>
       </section>
+
+      <!-- API 限制说明：与本 demo 演示内容分离，避免把 bug 展示当功能 demo -->
+      <el-collapse :class="bem.e('limit-collapse')">
+        <el-collapse-item title="⚠️ 关于 immediate: false 的引擎限制" name="immediate-limit">
+          <p>
+            <strong>设计意图</strong>
+            ：immediate: false 用于大表单按需加载（节省初次 N 个并发请求）。
+          </p>
+          <p>
+            <strong>当前限制</strong>
+            ：XForm 引擎未实现 visibleChange 监听，immediate: false 字段的 source 永远不调用。
+          </p>
+          <p>
+            <strong>变通方案</strong>
+            ：用
+            <code>on.change</code>
+            事件手动触发
+            <code>formRef.refreshOptions(fieldName)</code>
+            实例方法；或保持 immediate: true 由 deps 控制懒加载。
+          </p>
+          <p>
+            <strong>进度</strong>
+            ：见 use-async-options.ts 内部 issues 跟踪；本 demo 不演示该字段实际行为。
+          </p>
+        </el-collapse-item>
+      </el-collapse>
       <ApiTable
         title="AsyncOptionsConfig 速查"
         :items="asyncOptionsItems"

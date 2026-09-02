@@ -164,6 +164,23 @@ const tocItems = [
         '下方演示：基础渲染 / 反应式联动（Switch → path 联动）/ 自定义组件注入。',
       ]"
     >
+      <!-- 先看这个引导卡：减少 30 个 demo 的信息压迫感 -->
+      <div :class="bem.e('start-here')">
+        <strong>👀 先看这个——3 个场景按推荐顺序浏览</strong>
+        <p>
+          <strong>① 基础</strong>
+          （必看） —— schema + async-validator 校验 + el-form 标准 validate
+        </p>
+        <p>
+          <strong>② 反应式</strong>
+          （进阶） —— Switch 联动 path 字段的 disabled / rules 切换
+        </p>
+        <p>
+          <strong>③ 自定义组件</strong>
+          （进阶） —— 通过 components prop 注入 CustomTagInput 覆盖默认映射
+        </p>
+      </div>
+
       <section id="demo-basic">
         <DemoField label="基础用法（async-validator 校验）" :code="xFormSource">
           <div :class="bem.e('actions')">
@@ -247,6 +264,31 @@ const tocItems = [
     margin-top: 12px;
     font-size: 13px;
     color: #909399;
+  }
+  &__start-here {
+    display: block;
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    background: linear-gradient(90deg, #ecf5ff, #f0f9ff);
+    border-left: 4px solid var(--el-color-primary);
+    border-radius: 4px;
+    color: var(--el-text-color-regular);
+
+    > strong {
+      display: block;
+      color: var(--el-color-primary);
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    p {
+      margin: 4px 0;
+      line-height: 1.7;
+    }
+
+    strong {
+      color: var(--el-color-primary);
+    }
   }
 }
 

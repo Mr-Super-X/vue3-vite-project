@@ -8,8 +8,8 @@
  *   3. formItem: { slots: { label } } —— 自定义 label 内容（如加 icon）
  *   4. formItem: { component: 'FormItemPlus' } —— 用自定义组件替代 ElFormItem
  */
-import { reactive, h } from 'vue'
-import { ElMessage } from 'element-plus'
+import { reactive, h, defineComponent } from 'vue'
+import { ElMessage, ElFormItem } from 'element-plus'
 import { InfoFilled } from '@element-plus/icons-vue'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
@@ -34,6 +34,45 @@ const model = reactive<Record<string, unknown>>({
   password: '',
   bio: '',
   agreement: false,
+})
+
+/**
+ * 业务侧自定义 FormItemPlus（演示如何在 XForm 之外注册组件替代 ElFormItem）
+ * 真实项目建议放在 src/components/common/FormItemPlus/，导出 Vue 组件
+ * 本 demo 内 inline 实现：透传 props + slots 到 ElFormItem，外加 highlight 视觉扩展
+ */
+const FormItemPlus = defineComponent({
+  name: 'FormItemPlus',
+  props: {
+    label: { type: String, default: '' },
+    labelWidth: { type: String, default: undefined },
+    highlight: { type: Boolean, default: false },
+  },
+  setup(props, { slots, attrs }) {
+    // 合并 attrs 透传给 ElFormItem（保持 rules/prop/error 等链路工作）
+    const itemProps: Record<string, unknown> = { ...attrs, label: props.label }
+    if (props.labelWidth) itemProps.labelWidth = props.labelWidth
+
+    // highlight 视觉扩展：用 inline style 强制生效（避免 CSS 选择器特异性问题 + 不依赖 CSS 加载时机）
+    // wrapper 加类名让 CSS 选择器仍可命中（fallback），inline style 作主路径
+    const wrapperClass = props.highlight ? 'demo-form-item-plus-highlight' : undefined
+    const wrapperStyle = props.highlight
+      ? {
+          background: '#fef2f2',
+          borderRadius: '4px',
+          padding: '8px',
+          border: '1px solid #fca5a5',
+          width: '100%',
+        }
+      : { width: '100%' }
+    // 给 ElFormItem 传 highlight 类名让其内部 label/input 也带上标记，便于 CSS/JS 选择
+    // （element-plus 2.x 的 ElFormItem 根 class 透传通过根 div 拼接生效）
+    if (props.highlight) {
+      itemProps.class = 'demo-form-item-plus-highlight-el-form-item'
+    }
+    return () =>
+      h('div', { class: wrapperClass, style: wrapperStyle }, [h(ElFormItem, itemProps, slots)])
+  },
 })
 
 const schema: SchemaNode = {
@@ -81,10 +120,15 @@ const schema: SchemaNode = {
       component: 'InputTextArea',
       rules: [{ required: true, message: '请输入简介', trigger: 'blur' }],
       formItem: {
-        component: 'FormItemPlus' as never, // 演示场景：业务侧实现 FormItemPlus 后注册
-        props: { showWordLimit: true, maxWordCount: 200, highlight: true },
+        // formItem.component 用字符串名 + XForm.components 注册（schema DSL 兼容写法）
+        component: 'FormItemPlus',
+        props: { highlight: true },
       },
-      props: { rows: 3, maxlength: 200, placeholder: '使用 FormItemPlus 包装' },
+      props: {
+        rows: 3,
+        maxlength: 200,
+        placeholder: '使用 FormItemPlus 包装（含 highlight 视觉扩展）',
+      },
     },
     // ⑤ 字段 4：必填图标增强
     {
@@ -137,7 +181,7 @@ const tocItems = [
     >
       <section id="demo-custom-form-item">
         <DemoField label="用户录入（formItem 自定义）" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
+          <XForm ref="formRef" :schema="schema" :model="model" :components="{ FormItemPlus }" />
           <div :class="bem.e('actions')">
             <el-button @click="onReset">重置</el-button>
             <el-button type="primary" @click="onSave">保存</el-button>
@@ -177,6 +221,28 @@ const tocItems = [
     // 但 svg 元素本身不识别 CSS 变量，必须显式 width/height attribute
     width: 20px;
     height: 20px;
+  }
+
+  // FormItemPlus highlight 视觉扩展（demo 局部字符串类名，与组件内部透传对应）
+  // 注意：不能用 .#{$BEM_PREFIX}-demo-x-form-custom-form-item 限定根，因为 demo 顶层用了 DocLayout，
+  // bem.b() 类名未应用到 DOM 根 → 后代选择器永远不命中。直接用全局 demo 前缀类名。
+  .demo-form-item-plus-highlight {
+    .el-form-item__label {
+      color: #b91c1c;
+      font-weight: 600;
+    }
+
+    .el-input__wrapper,
+    .el-textarea__inner {
+      box-shadow: 0 0 0 1px #fca5a5 inset;
+      background: #fef2f2;
+
+      &:focus-within {
+        box-shadow:
+          0 0 0 1px #ef4444 inset,
+          0 0 0 3px rgb(239 68 68 / 12%);
+      }
+    }
   }
 }
 </style>

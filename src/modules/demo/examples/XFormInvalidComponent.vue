@@ -6,7 +6,7 @@
  * 1. 已知 EL 组件短名（Input）→ 不警告
  * 2. 已知 EL 组件全名（ElInput）→ 不警告（自动识别）
  * 3. 拼写错误的组件名（Inpurt）→ 控制台 warn + Debug Banner 红条
- * 4. 自定义组件未在 components prop 注册（MyInput）→ 警告
+ * 4. 自定义组件未在 components prop 注册（MyUnregisteredComp）→ 警告
  * 5. 自定义组件已在 components prop 注册 → 不警告
  *
  * 验证方法：
@@ -59,7 +59,7 @@ const model = reactive<Record<string, unknown>>({})
  * - 字段 A：已知 EL 短名（Input）→ 通过
  * - 字段 B：已知 EL 全名（ElInput）→ 通过
  * - 字段 C：拼写错误（Inpurt）→ 警告
- * - 字段 D：未注册的自定义组件（MyCustomInput 但未传）→ 警告
+ * - 字段 D：未注册的自定义组件（MyUnregisteredComp，未传）→ 警告
  */
 const schema: SchemaNode = {
   column: 1,

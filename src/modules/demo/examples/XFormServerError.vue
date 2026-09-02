@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 演示 setFieldError 服务端错误映射 + 响应式断点
+ * 演示 setFieldError 服务端错误映射（4 类错误场景）
  *
  * 场景:
  * 1. 表单提交 → 后端返回 422 with errors[] (field, message)
@@ -11,8 +11,9 @@
  *   formRef.value?.setFieldError('email', '该邮箱已注册')
  *
  * 注:本 demo 用 mock 模拟 fetch(不真实发请求),演示完整流程
+ * 单一职责：仅演示服务端错误映射，响应式断点见 XFormResponsive demo
  */
-import { reactive, onMounted, onUnmounted } from 'vue'
+import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
@@ -33,42 +34,22 @@ const { formRef, onReset, copySchema } = useXFormDemo({
   schema: () => schema,
 })
 
-// 响应式断点显示
-const currentBreakpoint = ref<'xs' | 'sm' | 'md' | 'lg' | 'xl'>('md')
-const width = ref(0)
-const updateBreakpoint = () => {
-  if (typeof window === 'undefined') return
-  width.value = window.innerWidth
-  if (width.value < 768) currentBreakpoint.value = 'xs'
-  else if (width.value < 992) currentBreakpoint.value = 'sm'
-  else if (width.value < 1200) currentBreakpoint.value = 'md'
-  else if (width.value < 1920) currentBreakpoint.value = 'lg'
-  else currentBreakpoint.value = 'xl'
-}
-onMounted(() => {
-  updateBreakpoint()
-  window.addEventListener('resize', updateBreakpoint)
-})
-onUnmounted(() => {
-  window.removeEventListener('resize', updateBreakpoint)
-})
-
 const schema: SchemaNode = {
-  // 响应式断点 —— 手机全宽,桌面 6/6/12
-  row: { gutter: 16, responsive: { xs: { gutter: 0 }, md: { gutter: 16 } } },
+  // 桌面 6/6/12 等宽布局 —— 响应式断点见 XFormResponsive demo
+  row: { gutter: 16 },
   children: [
     {
       label: '用户名',
       name: 'username',
       component: 'Input',
-      col: { responsive: { xs: { span: 24 }, md: { span: 6 } } },
+      col: { span: 6 },
       rules: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
     } as SchemaNode,
     {
       label: '邮箱',
       name: 'email',
       component: 'Input',
-      col: { responsive: { xs: { span: 24 }, md: { span: 6 } } },
+      col: { span: 6 },
       rules: [
         { required: true, message: '请输入邮箱', trigger: 'blur' },
         { type: 'email', message: '邮箱格式不正确', trigger: 'blur' },
@@ -79,7 +60,7 @@ const schema: SchemaNode = {
       name: 'password',
       component: 'Input',
       props: { type: 'password' },
-      col: { responsive: { xs: { span: 24 }, md: { span: 12 } } },
+      col: { span: 12 },
       rules: [
         { required: true, message: '请输入密码', trigger: 'blur' },
         // 本地规则：密码至少 6 位 —— 失焦即校验，避免用户等到提交才发现弱密码
@@ -175,16 +156,18 @@ const tocItems = [
 <template>
   <DocLayout>
     <DemoFrame
-      title="服务端错误映射 + 响应式断点"
+      title="服务端错误映射（4 类错误场景演示）"
       source="src/components/form-schema/XForm.vue"
       :introductions="[
-        '1. 响应式断点：RowConfig.responsive / ColConfig.responsive 透传，调整浏览器大小可看到布局变化',
-        '2. 服务端错误映射：模拟后端 422 响应，前端 setFieldError 映射红字',
-        '3. 测试场景:',
-        '   - 用户名=admin → 422:username/email 错误',
-        '   - 邮箱=test@spam.com → 422:email 黑名单',
-        '   - 密码=123 → 422:password 强度',
-        '4. 真实使用:fetch().then(r => r.json()).then(data => data.errors.forEach(e => setFieldError(e.field, e.message)))',
+        '后端返回 422 with errors[] → 前端循环调用 setFieldError(field, message) → UI 显示红字',
+        '本 demo 模拟 4 类独立错误场景，每个错误单独触发：用户名冲突 / 邮箱重复 / 邮箱黑名单 / 密码强度不足',
+        '测试场景（每个输入独立触发对应错误，互不耦合）:',
+        '   - 用户名=admin → 红字「用户名已存在」',
+        '   - 邮箱=admin@example.com → 红字「该邮箱已被注册」',
+        '   - 邮箱=test@spam.com → 红字「该邮箱域名在黑名单中」',
+        '   - 密码=123456 → 前端 min:6 通过，红字「必须包含字母」（后端额外规则）',
+        '   - 密码=123 → 前端失焦红字「密码长度不足」（本地 min:6 规则）',
+        '对比 demos：响应式断点见 XFormResponsive；批量校验见 XFormOrderCreate',
       ]"
     >
       <section id="demo-server-error">
@@ -197,21 +180,13 @@ const tocItems = [
           </div>
           <div :class="bem.e('state')">
             <div>
-              <strong>当前断点:</strong>
-              <el-tag>{{ currentBreakpoint }}</el-tag>
-              <span style="margin-left: 12px">
-                <strong>视口宽度:</strong>
-                {{ width }}px
-              </span>
-            </div>
-            <div>
-              <strong>测试 422 错误场景:</strong>
+              <strong>测试 422 错误场景（4 类独立错误）:</strong>
               <ul>
-                <li>用户名=admin → 红字 "用户名已存在"</li>
-                <li>邮箱=admin@example.com → 红字 "该邮箱已被注册"</li>
-                <li>邮箱=test@spam.com → 红字 "该邮箱域名在黑名单中"</li>
-                <li>密码=123 → 前端失焦红字 "密码长度不足"（本地 min:6 规则）</li>
-                <li>密码=123456 → 前端通过，保存后红字 "必须包含字母"（后端额外规则）</li>
+                <li>用户名=admin → 红字「用户名已存在」</li>
+                <li>邮箱=admin@example.com → 红字「该邮箱已被注册」</li>
+                <li>邮箱=test@spam.com → 红字「该邮箱域名在黑名单中」</li>
+                <li>密码=123456 → 前端通过，保存后红字「必须包含字母」</li>
+                <li>密码=123 → 前端失焦红字「密码长度不足」</li>
               </ul>
             </div>
             <ModelPreview :model="model" />
