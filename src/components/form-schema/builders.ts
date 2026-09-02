@@ -173,6 +173,16 @@ function makeBuilder<C extends ComponentName>(
   return BasicBuilder as new (name: string) => NodeBuilder<C, ComponentPropsRegistry[C]>
 }
 
+/**
+ * 极简 builder 工厂：返回 (fieldName: string) => NodeBuilder 实例
+ * 用于没有 component-specific 链式方法的纯组件（InputPassword/ColorPicker/Mention/Rate/...）
+ * 取代原来「const XxxBuilder = makeBuilder + export const xXxx = (n) => new XxxBuilder(n)」2 行模板
+ */
+const makeSimpleBuilder =
+  <C extends ComponentName>(componentName: C) =>
+  (fieldName: string): NodeBuilder<C> =>
+    new (makeBuilder(componentName))(fieldName)
+
 // ────────────────────────────────────────────────────────────────────────────
 // 27 个 component builder（按字母 A-Z 排序）
 // 每个 component 三件套：makeBuilder 工厂 + Ext 子类 + xXxx 入口函数
@@ -230,16 +240,13 @@ class CardBuilderExt extends CardBuilder {
 export const xCard = (name: string) => new CardBuilderExt(name)
 
 // ── Checkbox ──
-const CheckboxBuilder = makeBuilder('Checkbox')
-export const xCheckbox = (name: string) => new CheckboxBuilder(name)
+export const xCheckbox = makeSimpleBuilder('Checkbox')
 
 // ── CheckboxGroup ──
-const CheckboxGroupBuilder = makeBuilder('CheckboxGroup')
-export const xCheckboxGroup = (name: string) => new CheckboxGroupBuilder(name)
+export const xCheckboxGroup = makeSimpleBuilder('CheckboxGroup')
 
 // ── ColorPicker ──
-const ColorPickerBuilder = makeBuilder('ColorPicker')
-export const xColorPicker = (name: string) => new ColorPickerBuilder(name)
+export const xColorPicker = makeSimpleBuilder('ColorPicker')
 
 // ── DatePicker ──
 const DatePickerBuilder = makeBuilder('DatePicker')
@@ -260,32 +267,25 @@ class InputBuilderExt extends InputBuilder {
 export const xInput = (name: string) => new InputBuilderExt(name)
 
 // ── InputNumber ──
-const InputNumberBuilder = makeBuilder('InputNumber')
-export const xInputNumber = (name: string) => new InputNumberBuilder(name)
+export const xInputNumber = makeSimpleBuilder('InputNumber')
 
 // ── InputPassword ──
-const InputPasswordBuilder = makeBuilder('InputPassword')
-export const xInputPassword = (name: string) => new InputPasswordBuilder(name)
+export const xInputPassword = makeSimpleBuilder('InputPassword')
 
 // ── InputTag ──
-const InputTagBuilder = makeBuilder('InputTag')
-export const xInputTag = (name: string) => new InputTagBuilder(name)
+export const xInputTag = makeSimpleBuilder('InputTag')
 
 // ── InputTextArea ──
-const InputTextAreaBuilder = makeBuilder('InputTextArea')
-export const xInputTextArea = (name: string) => new InputTextAreaBuilder(name)
+export const xInputTextArea = makeSimpleBuilder('InputTextArea')
 
 // ── Mention ──
-const MentionBuilder = makeBuilder('Mention')
-export const xMention = (name: string) => new MentionBuilder(name)
+export const xMention = makeSimpleBuilder('Mention')
 
 // ── Option ──
-const OptionBuilder = makeBuilder('Option')
-export const xOption = (name: string) => new OptionBuilder(name)
+export const xOption = makeSimpleBuilder('Option')
 
 // ── Radio ──
-const RadioBuilder = makeBuilder('Radio')
-export const xRadio = (name: string) => new RadioBuilder(name)
+export const xRadio = makeSimpleBuilder('Radio')
 
 // ── RadioGroup ──
 const RadioGroupBuilder = makeBuilder('RadioGroup')
@@ -302,8 +302,7 @@ class RadioGroupBuilderExt extends RadioGroupBuilder {
 export const xRadioGroup = (name: string) => new RadioGroupBuilderExt(name)
 
 // ── Rate ──
-const RateBuilder = makeBuilder('Rate')
-export const xRate = (name: string) => new RateBuilder(name)
+export const xRate = makeSimpleBuilder('Rate')
 
 // ── Select ──
 const SelectBuilder = makeBuilder('Select')
@@ -315,13 +314,10 @@ class SelectBuilderExt extends SelectBuilder {
 export const xSelect = (name: string) => new SelectBuilderExt(name)
 
 // ── Slider ──
-const SliderBuilder = makeBuilder('Slider')
-export const xSlider = (name: string) => new SliderBuilder(name)
+export const xSlider = makeSimpleBuilder('Slider')
 
 // ── Switch ──
-const SwitchBuilder = makeBuilder('Switch')
-class SwitchBuilderExt extends SwitchBuilder {}
-export const xSwitch = (name: string) => new SwitchBuilderExt(name)
+export const xSwitch = makeSimpleBuilder('Switch')
 
 // ── Textarea ──（复用 InputBuilder 的 props，type=textarea 模拟多行）
 class TextareaBuilderExt extends InputBuilder {
