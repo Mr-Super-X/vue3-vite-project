@@ -13,11 +13,13 @@ import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../composables/useXFormDemo'
+import { useConsoleCapture } from '../composables/useConsoleCapture'
 import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
+import ConsoleLogPanel from '../components/ConsoleLogPanel.vue'
 import { expressionSandboxItems } from './xform-demos-api'
 import xFormSource from './XFormExpressionSandbox.vue?raw'
 import ModelPreview from '../components/ModelPreview.vue'
@@ -27,6 +29,9 @@ const { bem, formRef, onReset, copySchema } = useXFormDemo({
   schema: () => schema,
   model: () => model,
 })
+
+// 实时捕获沙箱拒绝原因（securityTest 字段触发时）
+const { logs, clear } = useConsoleCapture('[XForm]')
 
 // —— 白名单函数（expressionFunctions prop）——
 const expressionFunctions = {
@@ -161,7 +166,7 @@ const tocItems = [
         '沙箱安全：表达式含 document / fetch / eval / window 等 forbidden → console.error + Debug Banner 红字',
         '测试 1: 修改 price / qty → 合计标签实时更新（白名单函数正常）',
         '测试 2: 修改 code → 代码标签实时大写（白名单函数正常）',
-        '测试 3: 安全测试字段 → 打开 devtools 看 console.error，右下角 Debug Banner 红字警告',
+        '测试 3: 安全测试字段 → 下方「控制台输出」面板显示沙箱拒绝原因（无需打开 DevTools）',
         '⚠️ 安全规则：禁止把 schema 来自 URL 参数 / localStorage / 用户输入——仅允许后端预校验或项目硬编码',
       ]"
     >
@@ -185,6 +190,12 @@ const tocItems = [
         title="沙箱字段速查"
         :items="expressionSandboxItems"
         anchor="api-expression-sandbox"
+      />
+      <ConsoleLogPanel
+        :logs="logs"
+        title="沙箱拒绝原因（实时捕获）"
+        empty="暂无警告（应仅安全测试字段变更后出现 [XForm] scanForForbidden 日志）"
+        @clear="clear"
       />
     </DemoFrame>
     <template #toc><DocToc :items="tocItems" /></template>
