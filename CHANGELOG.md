@@ -2,6 +2,28 @@
 
 ## 未发布
 
+### ✨ Features | demo 可理解度提升（P0）
+
+* **feat(demo-clarity):** 新增 `useConsoleCapture` composable + 8 个单测
+  - 在组件生命周期内捕获 `console.error` / `console.warn` 到 reactive `logs` 数组
+  - `onUnmounted` 还原原始 console（强约束避免污染全局）
+  - 内存 FIFO 上限 50 条；单条 message 500 字截断（防页面卡顿）
+  - 可选 prefix 过滤（XForm demo 统一传 `'[XForm]'`）
+* **feat(demo-clarity):** 新增 `ConsoleLogPanel` 公共组件
+  - ElCollapse 默认折叠；error 红 / warn 黄
+  - 视图层 200 字二次截断；emit `clear` 事件（单一职责）
+* **refactor(XFormInvalidComponent):** 字段 label 加预期状态后缀 + 接入 console 面板
+  - A / B / E 加「（应通过）」；C / D 加「（应警告）」
+  - introduction 文案改为「下方控制台输出面板自动展示」（不再依赖 DevTools）
+* **refactor(XFormModelWarn):** 引入 console 面板
+  - 下方面板自动展示场景 1 的 [XForm] model 警告
+* **refactor(XFormExpressionSandbox):** 引入 console 面板
+  - 沙箱拒绝原因（document / fetch 屏蔽）实时展示
+* **feat(XFormOrderCreate):** 验证指引面板搬到 UI
+  - 顶部 `el-collapse` 默认折叠；展开后看到 7 条编号指引
+  - 新人首屏即可看到验证步骤，无须打开源码注释
+* **docs(demo-clarity):** 设计文档 `docs/superpowers/specs/2026-09-02-xform-demo-clarity-design.md` + 实现计划 `docs/superpowers/plans/2026-09-02-xform-demo-clarity.md`
+
 ### ✨ Features | demo sidebar 模糊搜索
 
 * **feat(demo-search):** `DocLayout.vue` sidebar 顶部新增常驻搜索框
