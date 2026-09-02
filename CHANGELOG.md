@@ -2,6 +2,20 @@
 
 ## 未发布
 
+### ✨ Features | demo sidebar 模糊搜索
+
+* **feat(demo-search):** `DocLayout.vue` sidebar 顶部新增常驻搜索框
+  - 匹配字段：`label`（中文名 + 组件名拼接的完整显示名）+ `name`（组件名），不区分大小写子串匹配
+  - 分组行为：未命中分组整组隐藏；命中分组强制展开（搜索激活态）
+  - 空状态：sidebar 列表区显示「未匹配到「xxx」」+ 「清空搜索」按钮
+  - 折叠快照：搜索期间 toggleGroup 不响应；模板 `v-show` 加 `isSearchActive` 前缀强制展开命中组；清空后 `collapsedGroups` 值不变 → 用户折叠偏好不被污染
+  - 路由切换保留输入框内容（避免跳转打断检索）
+  - 「返回首页」按钮 + 搜索框包成 `__sidebar-top` sticky 容器 —— sidebar 内容超长滚动时两者始终可见
+* **feat(demo-search):** 新增 `composables/useDemoSearch.ts` + 10 条单测
+  - 类型导出：`DemoSearchItem` / `DemoSearchGroup` / `UseDemoSearchOptions` / `UseDemoSearchReturn`
+  - composable 设计：「不修改 `collapsedGroups` + 模板 `v-show` 加 `isSearchActive` 前缀」即满足折叠快照需求，零额外状态
+* **docs(demo-search):** 设计文档 `docs/superpowers/specs/2026-09-02-demo-sidebar-search-design.md` + 实现计划 `docs/superpowers/plans/2026-09-02-demo-sidebar-search.md`
+
 ### ✨ Features | beforeChange 3 层升级 + label 字段级颗粒度
 
 * **feat(form-schema):** `beforeChange` 从单一全局拦截升级为 3 层拦截器

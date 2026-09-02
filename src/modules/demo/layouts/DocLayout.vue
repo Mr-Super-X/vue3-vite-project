@@ -16,16 +16,16 @@
 import { ArrowDown, ArrowRight, Back } from '@element-plus/icons-vue'
 import { useAppRouter } from '@composables/useAppRouter'
 import { getSidebarGroup, getSidebarLabel, SIDEBAR_GROUPS } from '../config/sidebar-groups'
+import { useDemoSearch, type DemoSearchItem } from '../composables/useDemoSearch'
 import { collapsedGroups, sidebarWidth } from './sidebar-state'
 import { useSidebarDrag } from './use-sidebar-drag'
 
 const route = useRoute()
 const { router } = useAppRouter()
 
-interface SidebarItem {
-  name: string
+interface SidebarItem extends DemoSearchItem {
+  /** 用于分组归类（PascalCase 组件名） */
   title: string
-  path: string
 }
 
 const sidebarItems = computed<SidebarItem[]>(() => {
@@ -34,11 +34,15 @@ const sidebarItems = computed<SidebarItem[]>(() => {
       .getRoutes()
       // 排除 redirect 路由（'Demo' 这种跳转型入口不应出现在侧边栏）
       .filter((r) => typeof r.name === 'string' && r.name.startsWith('Demo') && !r.redirect)
-      .map((r) => ({
-        name: String(r.name),
-        title: String(r.meta?.title ?? r.name),
-        path: r.path,
-      }))
+      .map((r) => {
+        const title = String(r.meta?.title ?? r.name)
+        return {
+          name: String(r.name),
+          title,
+          label: getSidebarLabel(title),
+          path: r.path,
+        }
+      })
   )
 })
 
@@ -64,8 +68,19 @@ const sidebarGroups = computed<SidebarGroup[]>(() => {
   )
 })
 
+// —— 搜索（输入即过滤；未命中分组隐藏，命中组强制展开） ——
+const keyword = ref('')
+const { filteredGroups, isSearchActive, clearKeyword } = useDemoSearch({
+  groups: sidebarGroups,
+  keyword,
+  collapsedGroups,
+})
+
 // —— 展开收起（默认全展开；状态模块级保留，见 sidebar-state.ts） ——
 function toggleGroup(groupTitle: string) {
+  // 搜索激活期间不响应 toggleGroup 写入 collapsedGroups，
+  // 否则会污染用户的折叠偏好（spec §3.4）
+  if (isSearchActive.value) return
   const next = new Set(collapsedGroups.value)
   if (next.has(groupTitle)) {
     next.delete(groupTitle)
@@ -87,37 +102,57 @@ const bem = createNamespace('doc-layout')
     :style="{ gridTemplateColumns: `${sidebarWidth}px 0 minmax(0, 1fr) 180px` }"
   >
     <aside :class="bem.e('sidebar')">
-      <button :class="bem.e('home')" type="button" @click="goHome">
-        <el-icon :class="bem.e('home-icon')"><Back /></el-icon>
-        <span>返回首页</span>
-      </button>
+      <div :class="bem.e('sidebar-top')">
+        <button :class="bem.e('home')" type="button" @click="goHome">
+          <el-icon :class="bem.e('home-icon')"><Back /></el-icon>
+          <span>返回首页</span>
+        </button>
+        <div :class="bem.e('search')">
+          <el-input
+            v-model="keyword"
+            placeholder="搜索 demo"
+            clearable
+            size="default"
+            :class="bem.e('search-input')"
+          />
+        </div>
+      </div>
       <ul :class="bem.e('nav')">
-        <li v-for="group in sidebarGroups" :key="group.title" :class="bem.e('group')">
+        <li v-for="group in filteredGroups" :key="group.title" :class="bem.e('group')">
           <button
             :class="bem.e('group-header')"
             type="button"
-            :aria-expanded="!collapsedGroups.has(group.title)"
+            :aria-expanded="isSearchActive || !collapsedGroups.has(group.title)"
             @click="toggleGroup(group.title)"
           >
             <el-icon :class="bem.e('group-arrow')">
-              <ArrowRight v-if="collapsedGroups.has(group.title)" />
+              <ArrowRight v-if="!isSearchActive && collapsedGroups.has(group.title)" />
               <ArrowDown v-else />
             </el-icon>
             <span :class="bem.e('group-name')">{{ group.title }}</span>
             <span :class="bem.e('group-count')">{{ group.items.length }}</span>
           </button>
-          <ul v-show="!collapsedGroups.has(group.title)" :class="bem.e('group-list')">
+          <ul
+            v-show="isSearchActive || !collapsedGroups.has(group.title)"
+            :class="bem.e('group-list')"
+          >
             <li v-for="item in group.items" :key="item.name">
               <RouterLink
                 :to="item.path"
                 :class="[bem.e('link'), bem.is('active', route.name === item.name)]"
               >
-                {{ getSidebarLabel(item.title) }}
+                {{ item.label }}
               </RouterLink>
             </li>
           </ul>
         </li>
       </ul>
+      <div v-if="isSearchActive && filteredGroups.length === 0" :class="bem.e('search-empty')">
+        <p :class="bem.e('search-empty-text')">未匹配到「{{ keyword }}」</p>
+        <button type="button" :class="bem.e('search-empty-btn')" @click="clearKeyword">
+          清空搜索
+        </button>
+      </div>
     </aside>
 
     <!-- 拖拽条放在 sidebar 与 main 之间的独立 grid 列，sticky 定位保证滚动时始终可见 -->
@@ -163,16 +198,21 @@ const bem = createNamespace('doc-layout')
     margin-left: 24px;
   }
 
-  &__home {
-    // sticky 定位：sidebar 内容超长滚动时始终可见
+  &__sidebar-top {
+    // 把 home + search 包成一个 sticky 容器：sidebar 内容超长滚动时
+    // 「返回首页」按钮与搜索框始终可见，避免检索流程被滚动打断
     position: sticky;
     top: 0;
     z-index: 2;
+    padding-bottom: 12px;
+  }
+
+  &__home {
     display: flex;
     align-items: center;
     gap: 6px;
     width: 100%;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
     padding: 6px 10px;
     background: var(--el-bg-color, #fff);
     border: 1px solid var(--el-border-color-lighter, #ebeef5);
@@ -194,6 +234,40 @@ const bem = createNamespace('doc-layout')
 
   &__home-icon {
     font-size: 14px;
+  }
+
+  &__search {
+    // 无 margin：与 home 间距由 sidebar-top padding-bottom 统一管理
+  }
+
+  &__search-input {
+    width: 100%;
+  }
+
+  &__search-empty {
+    padding: 24px 8px;
+    text-align: center;
+    color: var(--el-text-color-secondary, #909399);
+    font-size: 13px;
+  }
+
+  &__search-empty-text {
+    margin: 0 0 8px;
+  }
+
+  &__search-empty-btn {
+    padding: 4px 12px;
+    background: transparent;
+    border: 1px solid var(--el-border-color, #dcdfe6);
+    border-radius: 4px;
+    color: var(--el-color-primary, #409eff);
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+
+    &:hover {
+      background: var(--el-color-primary-light-9, #ecf5ff);
+    }
   }
 
   &__nav {
