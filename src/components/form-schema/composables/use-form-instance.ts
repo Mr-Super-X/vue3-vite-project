@@ -1,18 +1,19 @@
 /**
- * useFormInstance —— el-form 实例方法编排（P2-A1 拆分后主文件）
+ * useFormInstance —— el-form 实例方法编排（P2-A1 + P1-2 重做后主文件）
  *
  * P2-A1 拆分前：394 行（含 setFieldError 双路径 + watch 守护）
  * P2-A1 拆分后：本文件 ~250 行，setFieldError dual-path 已抽到 ./use-set-field-error.ts
+ * P1-2 重做后：zod 顶层校验内部委托 ./use-zod-validator.ts（公开签名 100% 不变）
  *
  * 职责：
  *   - el-form 实例引用 + getRef / clearValidate / resetFields / validateField 等基础方法
  *   - 数组操作 addItem / removeItem / moveItem（含 clearArraySubtree 行清理）
- *   - validateFormWithZod（独立 zod 校验包装，透传 validateWithZod）
  *   - 委托 useSetFieldError 处理 setFieldError / setFieldValidating + watch 守护
+ *   - zod 校验内部委托：见 ./use-zod-validator.ts
  */
 import { ref, toRaw, type ComponentPublicInstance, type Ref } from 'vue'
 import { useSetFieldError, type FieldErrorState } from './use-set-field-error'
-import { validateWithZod } from './use-validate'
+import { useZodValidator } from './use-zod-validator'
 import type { UseFormErrorBusReturn } from './use-form-error-bus'
 import type { ZodType } from 'zod'
 
@@ -239,11 +240,8 @@ export function useFormInstance(
     elFormRef.value?.scrollToField?.(name)
   }
 
-  function validateFormWithZod(): { success: boolean; errors: import('zod').ZodError | null } {
-    const zs = zodSchema()
-    if (!zs) return { success: true, errors: null }
-    return validateWithZod(zs, model() ?? {})
-  }
+  // P1-2 抽离：zod 顶层校验独立（内部委托，公开签名不变）
+  const { validateFormWithZod } = useZodValidator(model, zodSchema)
 
   /** 数组操作：在 model[name] 末尾追加一项（追加不产生索引位移，无需清理任何校验态） */
   function addItem(name: string, init?: Record<string, unknown>): void {

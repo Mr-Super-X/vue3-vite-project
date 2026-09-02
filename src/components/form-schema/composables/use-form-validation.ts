@@ -1,7 +1,10 @@
 /**
  * useFormValidation —— XForm 校验编排（el-form.validate + crossValidator + scrollToError）
  *
- * 把 XForm.vue 中分散的 6 个校验相关函数抽到独立 composable，行为 100% 等价于原内联实现。
+ * P2-2 重做后：
+ * - triggerCrossFieldValidator + 序号令牌 + matchTrigger 抽到 ./use-cross-field-rule-trigger.ts
+ * - 本文件内部委托该 composable，公开签名 100% 不变（spec 不改）
+ *
  * 公开行为契约（XFormExpose）：
  * - validate(): Promise<boolean> —— 字段规则失败直接 false；跑 crossValidator；失败 scrollToError
  * - validateDetail(): Promise<ValidateResult> —— 仅返回跨字段错误，不写 UI
@@ -15,7 +18,7 @@
 import { nextTick, toRaw, type Ref } from 'vue'
 import { get } from 'lodash-es'
 import { runCrossFieldValidation } from './use-validate'
-import { matchTrigger } from './match-trigger'
+import { useCrossFieldRuleTrigger } from './use-cross-field-rule-trigger'
 import type { UseFormErrorBusReturn } from './use-form-error-bus'
 import type { ValidateResult, RuleItem, SchemaNode } from '../types'
 
@@ -104,8 +107,6 @@ export interface UseFormValidationReturn {
  * 组件 unmount 时随 composable scope 一起 GC —— OPT-5
  */
 export function useFormValidation(deps: UseFormValidationDeps): UseFormValidationReturn {
-  // 每字段触发序号（异步 crossValidator 竞态防护）—— 实例级 Map，scope 销毁自动释放
-  const crossTriggerSeq = new Map<string, number>()
   // OPT-7：错误事件总线 —— 显式从 deps 传入（避免 composable 内 provide/inject 静默失效）
   const errorBus = deps.errorBus
   const {
@@ -118,6 +119,13 @@ export function useFormValidation(deps: UseFormValidationDeps): UseFormValidatio
     topLevelScrollToError,
     crossFieldTrigger,
   } = deps
+
+  // P2-2 抽离：每字段跨字段规则触发器独立（内部委托，公开签名不变）
+  // 注意：setFieldError 直接传引用，保留第 3 参数 state（spec 断言 3 参数调用）
+  const { triggerCrossFieldValidator } = useCrossFieldRuleTrigger({
+    model,
+    setFieldError,
+  })
 
   /**
    * XForm 校验入口：先跑 el-form 字段内规则（失败直接 false），成功后跑跨字段校验
@@ -246,54 +254,6 @@ export function useFormValidation(deps: UseFormValidationDeps): UseFormValidatio
     const m = model.value
     if (!m) return { isValid: true, errors: [] }
     return runCrossFieldValidation(reactiveSchema.value, m, rules.value)
-  }
-
-  /**
-   * 字段事件触发跨字段校验 —— 让 crossValidator 响应 trigger 配置
-   * - 遍历当前字段 rules,提取 dependsOn + crossValidator + trigger 配置
-   * - 检查 rule.trigger 与当前事件类型是否匹配
-   * - 跑 crossValidator(支持同步/异步)
-   * - 成功 → 清掉之前可能的红字
-   * - 失败 → setFieldError 红字提示
-   * - 跳过空值字段(空值交给普通 required 校验处理)
-   */
-  async function triggerCrossFieldValidator(
-    node: SchemaNode,
-    eventType: 'blur' | 'change'
-  ): Promise<void> {
-    if (!node.name || !node.rules) return
-    const m = model.value
-    if (!m) return
-    // 序号令牌：连续 blur/change 触发时，旧 Promise 后返回不得覆盖新结果（H3）
-    const triggerSeq = (crossTriggerSeq.get(node.name) ?? 0) + 1
-    crossTriggerSeq.set(node.name, triggerSeq)
-    const rules = Array.isArray(node.rules) ? node.rules : [node.rules]
-    const currentValue = get(m, node.name)
-    // 空值跳过 cross 校验(留给 required / type 规则)
-    if (currentValue === '' || currentValue === undefined || currentValue === null) return
-    for (const r of rules) {
-      if (typeof r !== 'object' || r === null) continue
-      const rule = r as RuleItem
-      if (!rule.crossValidator || !rule.dependsOn) continue
-      // trigger 字段过滤
-      if (!matchTrigger(rule.trigger, eventType)) continue
-      const depsList = (Array.isArray(rule.dependsOn) ? rule.dependsOn : [rule.dependsOn]).map(
-        (dep: string) => get(m, dep)
-      )
-      let result: true | string
-      try {
-        result = await Promise.resolve(rule.crossValidator(currentValue, ...depsList))
-      } catch (err) {
-        console.error('[XForm] crossValidator blur trigger threw:', err)
-        continue
-      }
-      if (triggerSeq !== crossTriggerSeq.get(node.name)) return // 已有更新的触发，丢弃过期结果
-      if (result === true) {
-        setFieldError(node.name, '', '')
-      } else {
-        setFieldError(node.name, result)
-      }
-    }
   }
 
   // 跨字段触发器冗余：原 XForm.vue 内 triggerCrossFieldValidator 内部使用 clearValidate + trigger
