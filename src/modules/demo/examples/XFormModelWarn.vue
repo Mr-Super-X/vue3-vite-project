@@ -14,17 +14,22 @@ import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../composables/useXFormDemo'
+import { useConsoleCapture } from '../composables/useConsoleCapture'
 import ApiTable from '../components/ApiTable.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
 import DocToc from '../components/DocToc.vue'
+import ConsoleLogPanel from '../components/ConsoleLogPanel.vue'
 import { modelWarnItems } from './xform-demos-api'
 
 const { bem } = useXFormDemo({
   name: 'model-warn',
   schema: () => schema,
 })
+
+// 实时捕获 XForm 的 model 警告（场景 1 不传 model 时触发）
+const { logs, clear } = useConsoleCapture('[XForm]')
 
 // 每个场景的代码片段（用于 DemoField 展示，方便复制对照）
 const scenario1Code = `<XForm :schema="schema" />\n// ⚠️ 控制台 warn：model prop 未传入`
@@ -58,11 +63,11 @@ const tocItems = [
       title="model 缺省 dev 警告"
       source="src/components/form-schema/XForm.vue"
       :introductions="[
-        'model prop 未传入时，dev mode 触发 console.warn。',
-        '打开 DevTools Console 查看三个场景：',
-        '1) 不传 model → [XForm] model prop 未传入 ...',
-        '2) 传 reactive({}) → 合法（不警告，但字段始终为空）',
-        `3) 传 reactive({ email: '' }) → 对照组`,
+        'model prop 未传入时，dev mode 触发 console.error。',
+        '下方「控制台输出」面板实时显示 XForm 的警告（不需打开 DevTools）。',
+        '场景 1：未传 model → 自动捕获 [XForm] model 警告',
+        '场景 2：reactive({}) → 合法（不警告，字段始终为空）',
+        `场景 3：reactive({ email: '' }) → 对照组，正常工作`,
         '校验 / 默认值 / reaction / dirty 追踪 在场景 1 下均不会生效。',
       ]"
     >
@@ -98,6 +103,12 @@ const tocItems = [
       </section>
 
       <ApiTable title="model prop 三种形态" :items="modelWarnItems" anchor="api-model-warn" />
+      <ConsoleLogPanel
+        :logs="logs"
+        title="XForm 控制台输出"
+        empty="暂无警告（场景 1 应捕获 1 条 [XForm] model 警告）"
+        @clear="clear"
+      />
     </DemoFrame>
 
     <template #toc>
