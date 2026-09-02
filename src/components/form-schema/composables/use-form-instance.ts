@@ -7,7 +7,7 @@
  * 职责：
  *   - el-form 实例引用 + getRef / clearValidate / resetFields / validateField 等基础方法
  *   - 数组操作 addItem / removeItem / moveItem（含 clearArraySubtree 行清理）
- *   - validateFormWithZod（独立 zod 校验包装）
+ *   - validateFormWithZod（独立 zod 校验包装，透传 validateWithZod）
  *   - 委托 useSetFieldError 处理 setFieldError / setFieldValidating + watch 守护
  */
 import { ref, toRaw, type ComponentPublicInstance, type Ref } from 'vue'

@@ -1,59 +1,49 @@
 /**
  * useXFormComposer —— XForm 顶层编排（composition root）
  *
- * 把 XForm.vue setup 中 11 个 composable 装配、optsEpoch 同步、fieldErrors
- * 绑定、dev-only 校验/scanner、debug hook 全部收敛到一处。XForm.vue 只负责
- * 模板 + 顶层 props/attrs + defineExpose 透传，setup 块零业务逻辑。
+ * P0 拆分后：
+ *   - dev 校验 + 表达式扫描 + debug hook + model 缺失 warn → ./use-dev-runtime.ts
+ *   - defaultValue 填充 + ElForm 初始值同步 → ./apply-default-values.ts
+ *   - XFormExpose 19 方法聚合 → ./use-xform-expose.ts
+ *   - 本文件保留 11 个 composable 装配 + optsEpoch 同步 + renderToComponent + renderOpts
  *
- * 行为 100% 等价于拆分前的 XForm.vue setup —— 所有 watch / onMounted / onScopeDispose
- * 时序均保持不变。
+ * 行为 100% 等价拆分前，所有 watch / onMounted / onScopeDispose 时序均保持不变。
  *
  * ────────────────────────────────────────────────────────────────────────────
  * 类型断言归因（OPT-3）
  * - `computed(() => props.components) as never` / `computed(() => props.model ?? {}) as never`：
- *   useSchemaRenderer 表单数据 formData 字段类型内部签名不接受 Record<string, unknown>，
- *   实际运行时是 model 对象。这是 composable 间类型契约的小幅偏离，不引入 cast 会
- *   传染到所有渲染链路。
- * - `setExpressionFunctions(fns as never)`：白名单函数注册入参类型故意宽松（fn: any）
- *   以允许业务注入任何函数，避免类型系统对未知函数形态的过度校验。
- * - `renderToComponent` 返回值 `as never`：内部多分支渲染 VNode | string | VNode[] |
- *   undefined 多态统一对外成单一类型，与上层 RenderFn 签名对齐。
+ *   useSchemaRenderer formData 字段类型内部签名不接受 Record<string, unknown>，
+ *   实际运行时是 model 对象。composable 间类型契约小幅偏离。
+ * - `setExpressionFunctions(fns as never)`：白名单函数注册入参故意宽松。
+ * - `renderToComponent` 返回值 `as never`：VNode | string | VNode[] | undefined 多态对外统一。
+ * - 不要在没有充分理由时移除这些 cast。
  * ────────────────────────────────────────────────────────────────────────────
  */
-import {
-  computed,
-  onMounted,
-  onScopeDispose,
-  ref,
-  watch,
-  type ComputedRef,
-  type Ref,
-  type VNode,
-} from 'vue'
-import { get, set } from 'lodash-es'
+import { computed, onScopeDispose, ref, watch, type ComputedRef, type Ref, type VNode } from 'vue'
 
 import { useSchemaRenderer } from './use-schema-renderer'
 import { useSchemaIndex } from './use-schema-index'
+import { useFormErrorBus } from './use-form-error-bus'
 import { useCurrentBreakpoint } from './use-current-breakpoint'
-import { validate } from './use-validate'
-import { scanForForbidden } from './use-scan-forbidden'
 import { withHidden } from './with-hidden'
 import { applyDirectives } from './apply-directives'
-import { useFormInstance, type ElFormInstance, type FieldErrorState } from './use-form-instance'
+import { useFormInstance, type FieldErrorState } from './use-form-instance'
 import { useCrossFieldTrigger } from './use-cross-field-trigger'
 import { useFormDirty } from './use-form-dirty'
 import { useServerError } from './use-server-error'
 import { useFormValidation } from './use-form-validation'
 import { makeDefaultBeforeChangeCtx } from './build-vmodel-bindings'
 import { useTopLevelFields } from './use-top-level-fields'
-import { useFormErrorBus, type UseFormErrorBusReturn } from './use-form-error-bus'
+import { resolveFunctionExpression, setExpressionFunctions } from './use-expression'
+import { useDevRuntime } from './use-dev-runtime'
+import { useApplyDefaults } from './apply-default-values'
+import { useXFormExpose } from './use-xform-expose'
 import {
   useRenderSchemaNode,
   mergeRowResponsive,
   type RenderSchemaNodeOptions,
 } from './render-schema-node'
-import { resolveFunctionExpression, setExpressionFunctions } from './use-expression'
-import { DEFAULT_COMPONENT_MAP, DEFAULT_COMPONENT_PROPS } from '../element-plus-adapter'
+import { DEFAULT_COMPONENT_PROPS } from '../element-plus-adapter'
 import type { RuleItem, RowConfig, SchemaNode, XFormExpose, XFormProps } from '../types'
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -72,7 +62,7 @@ export interface UseXFormComposerReturn {
   /** BEM namespace —— XForm 模板根 class */
   bem: ReturnType<typeof createNamespace>
   /** el-form template ref —— XForm 模板使用 */
-  elFormRef: Ref<ElFormInstance | null>
+  elFormRef: Ref<ReturnType<typeof useFormInstance>['elFormRef']['value']>
   /** 字段渲染函数 —— 传给 SchemaField */
   renderToComponent: RenderFn
   /** 字段错误状态 ref —— XForm 模板用 keys 建立响应式依赖 */
@@ -100,7 +90,7 @@ export interface UseXFormComposerReturn {
   /** DEV-only 调试钩子 —— XForm 在 setup 末尾调一次挂 window.__xform_debug */
   installDevDebugHook: () => void
   /** OPT-7：错误事件总线 —— XForm 模板挂载 XFormErrorToast 消费 */
-  errorBus: UseFormErrorBusReturn
+  errorBus: ReturnType<typeof import('./use-form-error-bus').useFormErrorBus>
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -115,97 +105,10 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
   // 显式 deps 传递 —— composable 内 provide/inject 在 setup 嵌套中静默失效
   const errorBus = useFormErrorBus()
 
-  // Dev-only 错误状态（暴露给 XFormDebugBanner）
-  const validateErrors = ref<Array<{ keyPath: (string | number)[]; message: string }>>([])
-  const forbiddenErrors = ref<string[]>([])
-  const showDebugBanner = ref(import.meta.env.DEV)
-
   // 阶段 3.1：外部字段错误状态（走 element-plus 官方 props.error + props.validateStatus 路径）
   const fieldErrors = ref<Record<string, FieldErrorState>>({})
 
-  // 阶段 1.2：model 缺时 dev mode 警告（提醒用户补传 reactive model）
-  // 仅 DEV 触发，prod tree-shake 后零运行时开销
-  if (import.meta.env.DEV && props.model === undefined) {
-    console.warn(
-      '[XForm] model prop 未传入。校验、默认值填充、reaction、dirty 追踪均不会生效。' +
-        '请传入 reactive() 包装的对象：const form = reactive({...})'
-    )
-    errorBus.report({
-      severity: 'warn',
-      code: 'FORM_INSTANCE_NOT_READY',
-      message: 'model prop 未传入，校验/默认值填充/reaction/dirty 追踪均不会生效',
-      source: 'useXFormComposer',
-    })
-  }
-
-  /** 应用 schema 节点 defaultValue 到 model（仅在 model 字段未定义时填充） */
-  function applyDefaults(
-    node: SchemaNode | SchemaNode[] | string | undefined,
-    model: Record<string, unknown> | undefined
-  ): void {
-    if (!model) return
-    if (typeof node === 'string' || node === undefined || node === null) return
-    if (Array.isArray(node)) {
-      node.forEach((n) => applyDefaults(n, model))
-      return
-    }
-    if (
-      node.name !== undefined &&
-      node.defaultValue !== undefined &&
-      get(model, node.name) === undefined
-    ) {
-      set(model, node.name, node.defaultValue)
-    }
-    if (node.children) applyDefaults(node.children, model)
-  }
-
-  // defaultValue 填充是运行时行为而非调试诊断，必须全环境生效 ——
-  // 此前它被 showDebugBanner 门控，导致 prod 下 defaultValue 静默失效
-
-  if (showDebugBanner.value) {
-    watch(
-      () => props.schema,
-      (val) => {
-        const normalized = Array.isArray(val) ? ({ children: val } as SchemaNode) : val
-        // 阶段 1.3：组件名校验 —— 短名 + ElXxx 全名 + userComponents 三类必须命中其一
-        const { isValid, errors } = validate(normalized, {
-          knownComponents: {
-            builtin: new Set(Object.keys(DEFAULT_COMPONENT_MAP)),
-            user: new Set(Object.keys(props.components ?? {})),
-          },
-        })
-        validateErrors.value = isValid ? [] : errors
-        if (!isValid) {
-          console.error('[XForm] schema validation failed:', errors)
-          // OPT-7：升级为 user-facing 反馈（dev 弹 OSD）
-          errorBus.report({
-            severity: 'error',
-            code: 'SCHEMA_VALIDATE_FAILED',
-            message: `Schema 校验失败 ${errors.length} 项（详见 Debug Banner）`,
-            source: 'useXFormComposer',
-          })
-        }
-        const forbidden = scanForForbidden(normalized)
-        forbiddenErrors.value = forbidden
-        if (forbidden.length > 0) {
-          // 降级为 warn：scanForForbidden 是 dev 诊断辅助，重复 0/低危标识符触发的 console.error 噪声大于收益
-          // 真实危险（window/document/fetch 等）仍由 Debug Banner + errorBus 上报，不静默
-          console.warn('[XForm][SECURITY] forbidden identifiers in expressions:', forbidden)
-          errorBus.report({
-            severity: 'error',
-            code: 'FORBIDDEN_IDENTIFIER',
-            message: `检测到危险标识符 ${forbidden.length} 个（详见 Debug Banner）`,
-            source: 'useXFormComposer',
-          })
-        }
-      },
-      { immediate: true, deep: true }
-    )
-  }
-
   // P2-1：响应式断点检测 —— viewport 变化时响应式 ColConfig 自动拍平
-  // useSchemaRenderer 内部 watch + 重渲染 —— 简单可靠
-  // 前置声明：useTopLevelFields 需要 currentBreakpoint 作为 dep
   const currentBreakpoint = useCurrentBreakpoint()
 
   const { reactiveSchema, triggerRender } = useSchemaRenderer({
@@ -235,27 +138,11 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     () => props.model,
     () => props.zodSchema,
     fieldErrors, // 阶段 3.1：传入外部错误状态 ref，setFieldError 走 props 路径
-    // OPT-7：显式传 errorBus（composable 内 provide/inject 静默失效）
     errorBus
   )
 
-  function normalizeSchema(val: SchemaNode | SchemaNode[]): SchemaNode {
-    return Array.isArray(val) ? ({ children: val } as SchemaNode) : val
-  }
-
-  /** 应用 defaultValue 并同步 ElForm 初始值快照 */
-  function applyDefaultsAndSync(val: SchemaNode | SchemaNode[]): void {
-    const normalized = normalizeSchema(val)
-    applyDefaults(normalized, props.model)
-    setInitialValues(props.model ?? {})
-  }
-
-  watch(() => props.schema, applyDefaultsAndSync, { immediate: true, deep: true })
-
-  onMounted(() => {
-    // setup 期 immediate watch 触发时 elFormRef 尚未绑定，mounted 后补同步一次初始值
-    applyDefaultsAndSync(props.schema)
-  })
+  // 阶段 2.2：defaultValue 全环境填充 + ElForm 初始值同步（P0 抽离到 apply-default-values）
+  useApplyDefaults(props, setInitialValues)
 
   const {
     debounceValidation: topLevelDebounceMs,
@@ -322,7 +209,6 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     scrollToField,
     topLevelScrollToError,
     crossFieldTrigger,
-    // OPT-7：显式传 errorBus（composable 内 provide/inject 静默失效）
     errorBus,
   })
 
@@ -331,6 +217,14 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     ...DEFAULT_COMPONENT_PROPS,
     ...props.componentProps,
   }))
+
+  // P0 抽离：dev 校验 + 表达式扫描 + debug hook
+  const { validateErrors, forbiddenErrors, showDebugBanner, installDevDebugHook } = useDevRuntime({
+    props,
+    errorBus,
+    setFieldError: (name, message) => setFieldError(name, message),
+    fieldErrors,
+  })
 
   /** 节点渲染（外层：hidden / directives 包装） */
   function renderToComponent(
@@ -437,36 +331,28 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     return [...schemaIndex.getFieldNames(includesIgnore)]
   }
 
-  const exposed: XFormExpose = {
+  // P0 抽离：exposed 19 方法聚合
+  const exposed: XFormExpose = useXFormExpose({
     getRef,
-    getNames,
-    validate: validateForm,
-    validateDetail,
     clearValidate,
     resetFields,
     validateField,
     scrollToField,
-    validateWithZod: validateFormWithZod,
+    validateFormWithZod,
     setFieldError,
     setFieldValidating,
     addItem,
     removeItem,
     moveItem,
+    validateForm,
+    validateDetail,
+    getNames,
     isDirty: formDirty.isDirty,
     getDirtyFields: formDirty.getDirtyFields,
     isTouched: formDirty.isTouched,
     resetDirty: formDirty.resetDirty,
     validateFromServer: serverError.validateFromServer,
-  }
-
-  function installDevDebugHook(): void {
-    if (!import.meta.env.DEV) return
-    ;(window as unknown as { __xform_debug?: unknown }).__xform_debug = {
-      setFieldError: (name: string, message: string) => setFieldError(name, message),
-      getFieldErrors: () => JSON.parse(JSON.stringify(fieldErrors.value)),
-      getModel: () => JSON.parse(JSON.stringify(props.model)),
-    }
-  }
+  })
 
   return {
     bem,

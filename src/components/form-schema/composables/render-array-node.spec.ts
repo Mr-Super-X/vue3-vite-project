@@ -9,7 +9,8 @@
 import { describe, it, expect, vi } from 'vitest'
 import { h, type VNode } from 'vue'
 import type { SchemaNode } from '../types'
-import { rewriteNamePath, renderArrayNode } from './render-array-node'
+import { rewriteNamePath } from './array-row-key'
+import { renderArrayNode } from './render-array-node'
 
 describe('rewriteNamePath / 基本', () => {
   it('单节点 name 前缀化', () => {
