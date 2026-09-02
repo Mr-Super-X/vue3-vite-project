@@ -48,6 +48,49 @@ XForm 共有 5 份文档 + 38 个 demo，按角色 / 任务选读，避免到处
 
 > **速记口诀**：先看 README 速查 → 跑对应 demo → 卡住了查 ARCHITECTURE → 改 cast 查 TYPE-CAST-AUDIT
 
+### 小白上手路径（新人入门 4 步走）
+
+> 共 48 个 demo，按「先建体感 → 再深入单能力 → 最后查缺补漏」三阶段阅读，避免在 30+ demo 间来回跳转。
+
+| 阶段                           | 路径                                                                  | 目标                                                                                 | 耗时   |
+| ------------------------------ | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ------ |
+| **① 5 分钟建体感**             | `/demo/x-form-minimum-demo` → `/demo/x-form-base`                     | 跑通「写 schema → 传 model → 渲染 → 校验」最小闭环                                   | 5 min  |
+| **② 30 分钟看完整业务形态**    | `/demo/x-form-order-create`（**新人首选**）                           | 一个 demo 串联 7 大能力：基础校验 / 跨字段 / 反应式 / 异步级联 / 数组 / 草稿 / dirty | 30 min |
+| **③ 按需深入单能力**           | reaction / dirty / persist / upload / array / cross-field（按症状选） | 单独吃透某个能力                                                                     | 半天   |
+| **④ 查缺补漏（2026-09 新增）** | 见下方「补全 demo」清单                                               | 补齐 README §props / §schema 字段中**零示例**的能力点                                | 按需   |
+
+#### 补全 demo 清单（2026-09 新增，10 个）
+
+> 此前 README 列出的 props / 实例方法 / schema 字段中存在「无独立 demo」的能力点，本批新增 demo 一一覆盖。
+
+| 路由                                  | 演示的能力点                                                            | 重要性 | 文件                            |
+| ------------------------------------- | ----------------------------------------------------------------------- | ------ | ------------------------------- |
+| `/demo/x-form-before-change`          | `XFormProps.beforeChange` 拦截器（值写入 model 前）                     | 🥇 P0  | `XFormBeforeChange.vue`         |
+| `/demo/x-form-zod`                    | `XFormProps.zodSchema` + `validateWithZod()` 异步校验                   | 🥇 P0  | `XFormZod.vue`                  |
+| `/demo/x-form-custom-component`       | `XFormProps.components` 自定义组件注册                                  | 🥇 P0  | `XFormCustomComponent.vue`      |
+| `/demo/x-form-ignore`                 | `schema.ignore` 字段（不渲染、不校验、不入 getNames）                   | 🥈 P1  | `XFormIgnore.vue`               |
+| `/demo/x-form-custom-form-item`       | `schema.formItem` 自定义 form-item 包装（含 slots / props / component） | 🥈 P1  | `XFormCustomFormItem.vue`       |
+| `/demo/x-form-label-layout`           | 顶层 `labelPosition` / `labelWidth`（响应式布局）                       | 🥈 P1  | `XFormLabelLayout.vue`          |
+| `/demo/x-form-array-api`              | `addItem` / `removeItem` / `moveItem` 实例方法（编程式操控）            | 🥉 P2  | `XFormArrayApi.vue`             |
+| `/demo/x-form-expression-sandbox`     | `expressionFunctions` 白名单 + 沙箱安全（scanForForbidden）             | P3     | `XFormExpressionSandbox.vue`    |
+| `/demo/x-form-persist-schema-version` | `useFormPersist.restoreFilter`（schema 升级裁剪旧草稿）                 | P3     | `XFormPersistSchemaVersion.vue` |
+| `/demo/x-form-async-options-error`    | `asyncOptions.onError` 错误处理 + `immediate: false` 延迟加载           | P3     | `XFormAsyncOptionsError.vue`    |
+
+#### 「按症状定位」对照表（出问题时快速跳转）
+
+| 现象                              | 跳到 demo                                |
+| --------------------------------- | ---------------------------------------- |
+| 反应式不响应 / 写 model 后无变化  | `/demo/x-form-reaction-deps`             |
+| 校验规则写了不触发                | `/demo/x-form-validate-field`            |
+| 跨字段校验不生效                  | `/demo/x-form-cross-field-reverse`       |
+| 表单填错很多要展示服务端错误      | `/demo/x-form-server-error`              |
+| 性能问题（100+ 字段卡顿）         | `/demo/x-form-large-schema`              |
+| 控制台报错但 UI 没提示            | `/demo/x-form-invalid-component`         |
+| 草稿数据回填字段对不上            | `/demo/x-form-persist-schema-version` ⭐ |
+| 自定义组件被识别为原生标签        | `/demo/x-form-custom-component`          |
+| 接入 schema 后字段全失效          | `/demo/x-form-model-warn`                |
+| 想拦截输入值（自动格式化 / 拒绝） | `/demo/x-form-before-change`             |
+
 ---
 
 ## props（10 个）

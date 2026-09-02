@@ -1,0 +1,163 @@
+<script setup lang="ts">
+/**
+ * 演示顶层 schema 字段 labelPosition / labelWidth —— 表单整体布局
+ *
+ * 场景：响应式中后台录入
+ *   1. labelPosition: 'top' —— 移动端友好（label 在字段上方）
+ *   2. labelPosition: 'left' + labelWidth: '120px' —— 桌面端标准
+ *   3. 切换演示三种 labelPosition 的视觉差异
+ *   4. 强调：这两个字段写在节点级不生效，必须从顶层 schema 派生
+ */
+import { reactive, ref } from 'vue'
+import { ElMessage } from 'element-plus'
+import XForm from '@/components/form-schema/XForm.vue'
+import type { SchemaNode } from '@/components/form-schema/types'
+import { useXFormDemo } from '../composables/useXFormDemo'
+import ApiTable from '../components/ApiTable.vue'
+import DemoFrame from '../components/DemoFrame.vue'
+import DemoField from '../components/DemoField.vue'
+import DocLayout from '../layouts/DocLayout.vue'
+import DocToc from '../components/DocToc.vue'
+import { labelLayoutItems } from './xform-demos-api'
+import xFormSource from './XFormLabelLayout.vue?raw'
+import ModelPreview from '../components/ModelPreview.vue'
+
+const { bem, formRef, onReset, copySchema } = useXFormDemo({
+  name: 'label-layout',
+  schema: () => schema.value,
+})
+
+type LabelPosition = 'left' | 'right' | 'top'
+const position = ref<LabelPosition>('left')
+const width = ref<string>('120px')
+
+const model = reactive<Record<string, unknown>>({
+  username: '',
+  email: '',
+  age: undefined,
+})
+
+/** schema computed：切换 position / width 自动重新渲染 */
+const schema = ref<SchemaNode>(buildSchema())
+
+function buildSchema(): SchemaNode {
+  return {
+    // ⭐ labelPosition / labelWidth 仅顶层 schema 生效
+    labelPosition: position.value,
+    labelWidth: width.value,
+    column: 1,
+    children: [
+      {
+        label: '用户名',
+        name: 'username',
+        component: 'Input',
+        rules: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+      },
+      {
+        label: '邮箱',
+        name: 'email',
+        component: 'Input',
+        rules: [{ required: true, type: 'email', message: '邮箱格式不正确', trigger: 'blur' }],
+      },
+      {
+        label: '年龄',
+        name: 'age',
+        component: 'InputNumber',
+        props: { min: 0, max: 150, controlsPosition: 'right' },
+      },
+    ],
+  }
+}
+
+/**
+ * 监听 position / width 自动 rebuild：用户改任一控件即重建 schema，无需点「应用」按钮
+ * rebuild 函数定义在 schema ref 初始化之后，watch 在 setup 末尾执行
+ */
+function rebuild(): void {
+  schema.value = buildSchema()
+}
+watch([position, width], rebuild)
+
+async function onSave() {
+  if (!formRef.value) return
+  const valid = await formRef.value.validate()
+  if (!valid) {
+    ElMessage.error('校验失败')
+    return
+  }
+  ElMessage.success('保存成功')
+}
+
+const tocItems = [
+  { id: 'demo-label-layout', label: 'label 布局演示' },
+  { id: 'api-label-layout', label: 'labelPosition / labelWidth 字段速查' },
+]
+</script>
+
+<template>
+  <DocLayout>
+    <DemoFrame
+      title="顶层 schema.labelPosition / labelWidth —— 表单整体布局"
+      source="src/components/form-schema/XForm.vue"
+      :introductions="[
+        'labelPosition / labelWidth 仅顶层 schema 生效——对应 el-form 实例级属性',
+        'top：移动端推荐（label 在字段上方，节省横向空间）',
+        'left：桌面端标准（label 左对齐 + 120px 宽）',
+        'right：右对齐（少见，用于对齐要求严格的表单）',
+        '节点级 labelPosition / labelWidth 不生效——这点新人最容易踩坑',
+      ]"
+    >
+      <section id="demo-label-layout">
+        <div :class="bem.e('controls')">
+          <span>labelPosition：</span>
+          <el-radio-group v-model="position">
+            <el-radio-button value="left">left</el-radio-button>
+            <el-radio-button value="right">right</el-radio-button>
+            <el-radio-button value="top">top（推荐移动端）</el-radio-button>
+          </el-radio-group>
+          <span>labelWidth：</span>
+          <el-input v-model="width" placeholder="如 120px / 160px" style="width: 140px" />
+          <!-- 「应用」按钮保留作为手动 rebuild 入口（watch 已自动触发，可省略） -->
+        </div>
+
+        <DemoField label="用户录入（label 布局切换）" :code="xFormSource">
+          <XForm ref="formRef" :schema="schema" :model="model" />
+          <div :class="bem.e('actions')">
+            <el-button @click="onReset">重置</el-button>
+            <el-button type="primary" @click="onSave">保存</el-button>
+            <el-button @click="copySchema">复制 schema</el-button>
+          </div>
+          <ModelPreview :model="model" />
+        </DemoField>
+      </section>
+      <ApiTable
+        title="labelPosition / labelWidth 字段速查"
+        :items="labelLayoutItems"
+        anchor="api-label-layout"
+      />
+    </DemoFrame>
+    <template #toc><DocToc :items="tocItems" /></template>
+  </DocLayout>
+</template>
+
+<style lang="scss">
+.#{$BEM_PREFIX}-demo-x-form-label-layout {
+  &__controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    background: var(--el-fill-color-light);
+    border-radius: 4px;
+    flex-wrap: wrap;
+    font-size: 13px;
+  }
+
+  &__actions {
+    margin-top: 16px;
+    display: flex;
+    gap: 8px;
+  }
+}
+</style>

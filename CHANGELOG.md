@@ -4,6 +4,31 @@
 
 ### 🐛 Bug Fixes | 问题修复
 
+* **demo(form-schema):** 修复新增 XForm demo 的 `:introductions` attribute 内嵌 ASCII 双引号导致 Vite 编译失败
+  - 现象：`Attribute name cannot contain U+0022 ("), U+0027 ('), and U+003C (<)` —— 路由 `/demo/x-form-persist-schema-version` 等首次访问即报
+  - 根因：HTML attribute 上下文（`:introductions="..."`）中嵌入裸 `"..."` 双引号被 HTML parser 解析为属性结束符，后续中文字符被识别为新 attribute name 触发非法字符错误
+  - 影响范围：4 个新 demo（XFormPersistSchemaVersion / XFormAsyncOptionsError / XFormZod / XFormIgnore）
+  - 修复：模板 attribute 字符串中的 `"..."` 改成中文「」括号（如「保存草稿」「加载失败」「传给后端的隐藏字段」）
+  - 注意：script 块 JS 单引号字符串内嵌 ASCII 双引号仍合法（HTML parser 不解析），保留原样
+
+### ✨ Demo | 补全 XForm 10 个核心能力演示（覆盖 README 中零示例 props/方法）
+
+* **demo(form-schema):** 新增 10 个 XForm demo —— 覆盖 README §props（10 个）与 §schema 字段速查表（30 个）中此前零独立 demo 的能力点
+  - P0 核心：XFormBeforeChange（`XFormProps.beforeChange` 拦截器，值写入 model 前自动格式化 / 超额拦截回弹）、XFormZod（`zodSchema` + `validateWithZod()` 集中式 zod 业务校验）、XFormCustomComponent（`components` prop 注册业务自定义 Component，含 MyTagSelector h() 写法演示）
+  - P1 重要：XFormIgnore（`schema.ignore` 字段不渲染 / 不校验 / 不入 `getNames`，可作传给后端的隐藏字段）、XFormCustomFormItem（`schema.formItem` 自定义包装含 `false` 裸渲染 / `slots.label` 自定义 / `component` 换 FormItemPlus / `props.labelWidth` 单字段独立宽度）、XFormLabelLayout（顶层 `labelPosition` / `labelWidth` 响应式布局，含 left/right/top 三档切换，强调节点级无效）
+  - P2 实例 API：XFormArrayApi（`addItem` / `removeItem` / `moveItem` 编程式操控数组节点，演示外部按钮与拖拽结果一致 + 批量导入 + 头插尾插）
+  - P3 隐含能力挑明：XFormExpressionSandbox（`expressionFunctions` 白名单函数注册 + 沙箱安全 scanForForbidden 演示，含 document/fetch forbidden 触发的 console.error + Debug Banner 红字）、XFormPersistSchemaVersion（`useFormPersist.restoreFilter` schema 升级裁剪旧草稿，含 v1→v2 字段重命名/移除/新增的完整迁移演示）、XFormAsyncOptionsError（`asyncOptions.onError` 错误处理 + `immediate: false` 延迟加载 + 强制失败开关）
+  - 路由 + sidebar 完全自动注册（`routes/index.ts` 的 `import.meta.glob` + `sidebar-groups.ts` 的 CN_NAMES 加 10 行），零侵入
+  - 每个 demo ≤200 行（展示组件规范），全套符合 BEM 命名空间（`vv-demo-x-form-{name}`）+ `<style lang="scss">` 无 scoped + `createNamespace` 自动注入
+
+### 📝 Docs | XForm README 与 API 数据同步更新
+
+* **docs(form-schema):** README 新增「小白上手路径」section —— 4 阶段阅读清单（5 分钟建体感 → 30 分钟看完整业务形态 → 按需深入单能力 → 查缺补漏）
+* **docs(form-schema):** README 新增「按症状定位」对照表 —— 10 种常见现象（反应式不响应 / 校验不触发 / 表单填错很多要展示服务端错误 / 性能问题 / 控制台报错但 UI 没提示 / 草稿数据回填字段对不上 / 自定义组件被识别为原生标签 / 接入 schema 后字段全失效 / 想拦截输入值）→ 直接跳转对应 demo
+* **docs(form-schema):** `xform-demos-api.ts` 新增 7 个 XFormApiItem[] export（`beforeChangePropsItems` / `zodItems` / `customComponentItems` / `ignoreItems` / `customFormItemItems` / `labelLayoutItems` / `arrayApiItems`），为对应 demo 提供 ApiTable 数据源
+
+### 🐛 Bug Fixes | 问题修复
+
 * **router:** 路由切换后页面滚动到顶部（修复 demo 切换导航时滚动位置未复位）
   - 根因：`src/router/index.ts` 的 `createRouter` 未配置 `scrollBehavior`，切换路由时浏览器沿用旧滚动位置 —— demo 左侧菜单切换时右侧内容区不会回到顶部
   - 修复：新增 `scrollBehavior` 选项 —— 浏览器前进/后退用 `savedPosition`、带 hash 锚点平滑滚到目标元素、其余情况 `{ top: 0, left: 0 }`

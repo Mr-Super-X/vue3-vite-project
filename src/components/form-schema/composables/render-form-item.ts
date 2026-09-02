@@ -80,6 +80,14 @@ export function renderWithFormItem(
 
   // 阶段 2.4 修复(嵌套顺序):
   // 正确嵌套: ElRow > ElCol > ElFormItem > Comp
+  // 转发 formItem.slots（特别是 label slot 用于自定义 label 内容）—— ElFormItem 的 label 是 slot 名称
+  const formItemSlots: Record<string, (scope?: unknown) => unknown> = {}
+  if (fi?.slots) {
+    for (const [k, v] of Object.entries(fi.slots)) {
+      // label slot 走 buildSlotFn 递归渲染 schema 节点；其他 slot 同样处理
+      formItemSlots[k] = buildSlotFn(v as never, opts.render)
+    }
+  }
   const formItem = h(
     FormItemComp as never,
     {
@@ -99,6 +107,8 @@ export function renderWithFormItem(
       // —— 若优先 name，数组删/移行后 fi-items[0].qty 漂移导致 form-item 重挂载
       ...(node.name || node.key ? { key: `fi-${node.key ?? node.name}` } : {}),
     } as never,
+    // ⭐ 第 3 参：ElFormItem 的 slots 对象——合并 formItemSlots（用户自定义 label/error 等）
+    // Comp 内部渲染（Input 组件）由 default slot 提供
     Comp
       ? {
           default: () => {
@@ -129,8 +139,13 @@ export function renderWithFormItem(
               { default: defaultSlot, ...extraSlots }
             )
           },
+          // ⭐ 合并 formItemSlots（用户自定义 formItem slots，如 label）到 ElFormItem 的 slots
+          // formItemSlots 的 key（如 label/error）会覆盖 ElFormItem 默认同名 slot
+          ...formItemSlots,
         }
-      : undefined
+      : Object.keys(formItemSlots).length > 0
+        ? formItemSlots
+        : undefined
   ) as VNode
   // wrapWithElCol(ElCol) 包 formItem —— 正确嵌套顺序
   return wrapWithElCol(node, formItem, opts.currentBreakpoint?.value)

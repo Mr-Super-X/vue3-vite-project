@@ -282,7 +282,7 @@ export const serverErrorMethods: XFormApiItem[] = [
   { name: 'clearValidate', type: '() => void', description: '清除全部字段校验状态' },
 ]
 
-// XFormEvents —— beforeChange 值拦截
+// XFormBeforeChange —— beforeChange 拦截器
 export const beforeChangeItems: XFormApiItem[] = [
   {
     name: 'beforeChange',
@@ -1038,5 +1038,207 @@ export const detailFillItems: XFormApiItem[] = [
     type: 'model.items = Row[]',
     description:
       'detail.items N 条直接写入 model，ArrayNode 渲染 N 行；array.initialLength 仅在字段未定义时生效',
+  },
+]
+
+// XFormBeforeChange —— beforeChange 拦截器（XFormProps 级）
+export const beforeChangePropsItems: XFormApiItem[] = [
+  {
+    name: 'beforeChange (XFormProps 级)',
+    type: '(item, newVal, oldVal) => unknown | Promise',
+    description: '字段值写入 model 前拦截，按 item.name 分派到具体字段的拦截函数',
+  },
+  {
+    name: 'item.name',
+    type: 'string',
+    description: '当前字段名，函数内按此分派到具体字段的拦截逻辑（XFormProps 级共享一份函数）',
+  },
+  {
+    name: '同步返回非 undefined',
+    type: 'unknown',
+    description: '返回值替换新值写入 model（自动格式化、单位换算）',
+  },
+  {
+    name: '同步返回 oldVal',
+    type: 'unknown',
+    description: '保持旧值，model 不变（输入框回弹——典型拒绝场景）',
+  },
+  {
+    name: 'Promise resolve',
+    type: 'unknown',
+    description: '异步校验后放行（如远程风控接口返回通过）',
+  },
+  {
+    name: 'Promise reject',
+    type: '—',
+    description: '跳过更新，model 保持旧值',
+  },
+  {
+    name: '返回 undefined',
+    type: '—',
+    description: '放行原值（默认行为）',
+  },
+]
+
+// XFormZod —— zodSchema + validateWithZod()
+export const zodItems: XFormApiItem[] = [
+  {
+    name: 'zodSchema (XFormProps)',
+    type: 'ZodType',
+    description: '集中声明业务校验规则（z.object / z.string / z.number ...）',
+  },
+  {
+    name: 'validateWithZod()',
+    type: '() => Promise<{ success, errors: [{ path, message }] }>',
+    description: '异步 zod 校验：success=true 通过；errors 含字段路径与错误信息',
+  },
+  {
+    name: '与 el-form 校验关系',
+    type: '—',
+    description:
+      '两者互补：el-form 字段规则（必填/正则）走 rules；zod 覆盖复杂业务（年龄区间 / 密码强度 / 跨字段）',
+  },
+  {
+    name: '失败展示',
+    type: '—',
+    description: 'validateWithZod 不自动写 form 红字——返回值供业务侧自行 toast / 红字 / 高亮',
+  },
+]
+
+// XFormCustomComponent —— components prop
+export const customComponentItems: XFormApiItem[] = [
+  {
+    name: 'components (XFormProps)',
+    type: 'Record<string, Component>',
+    description:
+      '注册业务自定义组件：key=schema.component 字符串，value=Vue 组件（h() 或 SFC 均可）',
+  },
+  {
+    name: '查找优先级',
+    type: '—',
+    description:
+      'components prop → element-plus 内置（ElInput / Input） → 原生 HTML 标签（div / span）',
+  },
+  {
+    name: 'v-model 兼容',
+    type: '—',
+    description:
+      '自定义组件按 props.modelValue + emit("update:modelValue") 实现可被 XForm 自动双向绑定',
+  },
+  {
+    name: '类型推导',
+    type: 'Module Augmentation',
+    description:
+      '扩展 ComponentPropsRegistry 后 SchemaNodeFor<"MyTagSelector"> 自动推导 props 类型',
+  },
+]
+
+// XFormIgnore —— ignore 字段
+export const ignoreItems: XFormApiItem[] = [
+  {
+    name: 'ignore',
+    type: 'boolean',
+    default: 'false',
+    description: '节点跳过渲染（不创建 DOM、不参与校验、不参与 getNames）',
+  },
+  {
+    name: 'model 中的值',
+    type: '—',
+    description: '已写入 model 的字段值静默保留——配合 defaultValue 可作"传给后端的隐藏字段"',
+  },
+  {
+    name: '与 hidden 区别',
+    type: '—',
+    description: 'hidden: 渲染但 display:none，参与校验；ignore: 完全不渲染，跳过校验',
+  },
+  {
+    name: '服务端错误映射',
+    type: '—',
+    description: 'validateFromServer 写入 ignore 字段 → 静默丢弃（不显示红字、不阻塞提交）',
+  },
+]
+
+// XFormCustomFormItem —— formItem 字段
+export const customFormItemItems: XFormApiItem[] = [
+  {
+    name: 'formItem: false',
+    type: 'boolean',
+    description: '不包 form-item 包装，直接渲染裸组件（适合作为展示型 UI 块）',
+  },
+  {
+    name: 'formItem: { component }',
+    type: 'string | Component',
+    description: '用自定义组件替代默认 ElFormItem 包装（如换 FormItemPlus / FormItemPro）',
+  },
+  {
+    name: 'formItem.props',
+    type: 'Record<string, unknown>',
+    description: '透传给自定义 formItem 组件的 props（如 labelWidth / required / rules ...）',
+  },
+  {
+    name: 'formItem.slots',
+    type: 'Record<string, SchemaNode>',
+    description: '自定义 formItem 的具名插槽（如 label 插槽渲染 icon）',
+  },
+  {
+    name: 'formItem.directives',
+    type: 'DirectiveConfig[]',
+    description: '挂在 formItem 包装节点上的指令',
+  },
+]
+
+// XFormLabelLayout —— 顶层 schema 布局字段
+export const labelLayoutItems: XFormApiItem[] = [
+  {
+    name: 'labelPosition (顶层)',
+    type: "'left' | 'right' | 'top'",
+    default: "'left'",
+    description: '所有字段 label 位置：left / right / top；推荐 top 用于响应式布局',
+  },
+  {
+    name: 'labelWidth (顶层)',
+    type: 'string | number',
+    description: 'label 宽度（如 "120px" 或 120），top 位置时无效',
+  },
+  {
+    name: '仅顶层生效',
+    type: '—',
+    description: '这两个字段写在节点级不生效——必须从顶层 schema 派生，对应 el-form 实例级属性',
+  },
+  {
+    name: '与 XFormProps.labelPosition 区别',
+    type: '—',
+    description: 'XFormProps.labelPosition 不存在；只支持 schema 顶层字段',
+  },
+]
+
+// XFormArrayApi —— addItem / removeItem / moveItem 实例方法
+export const arrayApiItems: XFormApiItem[] = [
+  {
+    name: 'addItem(name, initial?)',
+    type: '(name: string, initial?: object) => Promise<void>',
+    description: '在数组节点末尾追加一行（initial 缺省时用 schema 默认空值）',
+  },
+  {
+    name: 'removeItem(name, index)',
+    type: '(name: string, index: number) => Promise<void>',
+    description: '删除指定行；触发校验 + reaction 重算',
+  },
+  {
+    name: 'moveItem(name, from, to)',
+    type: '(name: string, from: number, to: number) => Promise<void>',
+    description: '行位置调整；与 array.draggable 拖拽结果一致（drop handler 内部调用）',
+  },
+  {
+    name: '与 UI 按钮关系',
+    type: '—',
+    description:
+      'UI 操作按钮（上移/下移/删除/新增）内部即调上述方法——外部按钮可直接调用实现相同行为',
+  },
+  {
+    name: 'min/max 边界',
+    type: '—',
+    description:
+      'addItem 不受 maxItems 限制（业务侧自行控制）；removeItem 受 minItems 限制（已达下限时拒绝）',
   },
 ]

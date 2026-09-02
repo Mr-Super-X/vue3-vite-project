@@ -52,6 +52,9 @@ export function useAsyncOptions(
       data.value = cfg.transform ? cfg.transform(raw) : raw
     } catch (err) {
       if (mySeq !== fetchSeq) return
+      // ⭐ 错误时清空 data：避免下拉列表展示陈旧数据误导用户
+      // 错误信息由 error.value + onError 回调同时承担
+      data.value = []
       error.value = err
       if (active) {
         cfg.onError?.(err)

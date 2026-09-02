@@ -1,4 +1,4 @@
-import { onScopeDispose, ref, watch } from 'vue'
+import { nextTick, onScopeDispose, ref, watch } from 'vue'
 import { debounce } from 'lodash-es'
 import { readDraft, removeDraft, writeDraft } from './draft-storage'
 
@@ -16,6 +16,8 @@ export interface FormPersistReturn {
   save(): void
   load(): boolean
   clear(): void
+  /** 取消已调度的 debounce 写入（清空 model 时避免被空 model 覆盖草稿） */
+  cancelPendingSave(): void
   hasDraft: Ref<boolean>
   lastSavedAt: Ref<number | null>
 }
@@ -80,23 +82,42 @@ export function useFormPersist(options: FormPersistOptions): FormPersistReturn {
   }
   // pendingSave：防抖窗口内存在未落盘变更的标记，beforeunload 据此同步 flush
   let pendingSave = false
+  /** clear() 期间临时屏蔽 watch 写入：让业务代码可在 clear 后立即重置 model 而不触发空草稿回写 */
+  let isClearing = false
   const debouncedWrite = debounce(() => {
     pendingSave = false
     persistNow()
+    // ⭐ auto-save 后同步更新 hasDraft —— 让「加载草稿」按钮在 fill 字段后立即可用
+    // 修复 demo 反馈的「自动保存了但加载按钮还 disabled」问题
+    if (!hasDraft.value) hasDraft.value = true
   }, debounceMs)
   watch(model, () => {
+    if (isClearing) return
     pendingSave = true
     debouncedWrite()
   })
   function save(): void {
     cancelPending()
     persistNow()
+    // ⭐ save 后同步更新 hasDraft —— 修复 demo 反馈的「save 后 hasDraft 仍 false」bug
+    // init 时 hasDraft 已读 localStorage，但 save 是后续操作需手动同步
+    if (!hasDraft.value) hasDraft.value = true
+  }
+  /** 暴露 cancelPendingSave：让 demo 在「清空 model 但保留草稿」场景调用 */
+  function cancelPendingSave(): void {
+    cancelPending()
   }
   function clear(): void {
     cancelPending()
+    // ⭐ 临时屏蔽下一次 watch(model) 写入：调用方常在 clear 后立刻重置 model（防止空草稿被自动写回）
+    isClearing = true
     removeDraft(key, storage)
     hasDraft.value = false
     lastSavedAt.value = null
+    // nextTick 后解除屏蔽，让 watch 恢复响应
+    void nextTick(() => {
+      isClearing = false
+    })
   }
   function flushPending(): void {
     if (!pendingSave) return
@@ -108,5 +129,5 @@ export function useFormPersist(options: FormPersistOptions): FormPersistReturn {
     flushPending()
     window.removeEventListener('beforeunload', flushPending)
   })
-  return { save, load, clear, hasDraft, lastSavedAt }
+  return { save, load, clear, cancelPendingSave, hasDraft, lastSavedAt }
 }

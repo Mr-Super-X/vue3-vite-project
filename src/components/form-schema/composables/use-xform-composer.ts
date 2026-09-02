@@ -187,7 +187,9 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
         const forbidden = scanForForbidden(normalized)
         forbiddenErrors.value = forbidden
         if (forbidden.length > 0) {
-          console.error('[XForm][SECURITY] forbidden identifiers in expressions:', forbidden)
+          // 降级为 warn：scanForForbidden 是 dev 诊断辅助，重复 0/低危标识符触发的 console.error 噪声大于收益
+          // 真实危险（window/document/fetch 等）仍由 Debug Banner + errorBus 上报，不静默
+          console.warn('[XForm][SECURITY] forbidden identifiers in expressions:', forbidden)
           errorBus.report({
             severity: 'error',
             code: 'FORBIDDEN_IDENTIFIER',
