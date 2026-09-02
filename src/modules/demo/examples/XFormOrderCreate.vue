@@ -302,6 +302,9 @@ onMounted(() => {
   refreshDirty()
 })
 
+/** 验证指引面板展开状态（默认折叠，用户主动展开） */
+const guideActive = ref<string[]>([])
+
 const tocItems = [
   { id: 'demo-order-create', label: '订单创建演示' },
   { id: 'demo-draft', label: '草稿与 dirty' },
@@ -318,8 +321,22 @@ const tocItems = [
         '本 demo 串联 XForm 7 大能力的「完整业务形态」：基础校验 + 跨字段 + 联动必填 + 异步级联 + 数组节点 + 草稿持久化 + dirty 追踪。',
         '对应真实中后台编辑页标准链路：拉数据 → 表单交互 → 校验 → 提交 → dirty 基线归零 / 草稿恢复。',
         '建议新接入 XForm 的同学先看本 demo，再按需点开 30 个独立 demo 深入单个能力。',
+        '下方「验证指引」面板按 7 步走完即可体验全部能力（默认折叠）。',
       ]"
     >
+      <el-collapse v-model="guideActive" :class="bem.e('guide-collapse')">
+        <el-collapse-item title="📋 验证指引（7 步覆盖 XForm 7 大能力）" name="guide">
+          <ol :class="bem.e('guide-list')">
+            <li>客户名/电话都留空 → 点保存 → 提示「客户名称、联系电话至少填一个」</li>
+            <li>填电话 13800 → blur → 红字「手机号格式不正确」</li>
+            <li>城市选「北京」→ 区域 options 自动加载</li>
+            <li>开「需要发票」→ 发票抬头显示 + 必填；关闭 → 隐藏</li>
+            <li>点「新增明细」→ 加一行；删到 1 行时删除按钮禁用</li>
+            <li>填几个字段 → F5 刷新 → 点「恢复草稿」→ 数据恢复 + isDirty 重置</li>
+            <li>改任意字段 → isDirty=true（isDirty 与 getDirtyFields 实时同步）</li>
+          </ol>
+        </el-collapse-item>
+      </el-collapse>
       <section id="demo-order-create">
         <DemoField label="端到端业务演示：订单创建（拉详情 → 校验 → 提交）" :code="xFormSource">
           <div :class="bem.b()">
@@ -424,6 +441,22 @@ const tocItems = [
     gap: 8px;
     margin-bottom: 16px;
     flex-wrap: wrap;
+  }
+
+  &__guide-collapse {
+    margin-bottom: 16px;
+  }
+
+  &__guide-list {
+    margin: 0;
+    padding-left: 20px;
+    line-height: 1.8;
+    font-size: 13px;
+    color: var(--el-text-color-regular, #606266);
+
+    li {
+      margin-bottom: 4px;
+    }
   }
 
   &__state {
