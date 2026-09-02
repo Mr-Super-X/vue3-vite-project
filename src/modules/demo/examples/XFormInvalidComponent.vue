@@ -18,11 +18,13 @@ import { ElMessage, ElInput } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode, XFormProps } from '@/components/form-schema/types'
 import { useXFormDemo } from '../composables/useXFormDemo'
+import { useConsoleCapture } from '../composables/useConsoleCapture'
 import ApiTable from '../components/ApiTable.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
 import DocToc from '../components/DocToc.vue'
+import ConsoleLogPanel from '../components/ConsoleLogPanel.vue'
 import { invalidComponentItems } from './xform-demos-api'
 import ModelPreview from '../components/ModelPreview.vue'
 
@@ -30,6 +32,9 @@ const { bem } = useXFormDemo({
   name: 'invalid-component',
   schema: () => schema,
 })
+
+// 实时捕获 XForm 触发的 console 输出，错误诊断 demo 让用户"在页面上"看到
+const { logs, clear } = useConsoleCapture('[XForm]')
 
 // 场景代码片段（用于 DemoField 展示）
 const invalidComponentCode = `{
@@ -60,25 +65,25 @@ const schema: SchemaNode = {
   column: 1,
   children: [
     {
-      label: 'A. 已知 EL 短名',
+      label: 'A. 已知 EL 短名（应通过）',
       name: 'fieldA',
       component: 'Input',
       props: { placeholder: '正常：Input 短名' },
     },
     {
-      label: 'B. 已知 EL 全名',
+      label: 'B. 已知 EL 全名（应通过）',
       name: 'fieldB',
       component: 'ElInput',
       props: { placeholder: '正常：ElInput 全名也识别' },
     },
     {
-      label: 'C. 拼写错误（Inpurt）',
+      label: 'C. 拼写错误 Inpurt（应警告）',
       name: 'fieldC',
       component: 'Inpurt', // 故意拼错
       props: { placeholder: '应触发警告' },
     },
     {
-      label: 'D. 未注册自定义组件',
+      label: 'D. 未注册自定义组件（应警告）',
       name: 'fieldD',
       component: 'MyUnregisteredComp', // 未在 components prop 注册
       props: { placeholder: '应触发警告' },
@@ -92,7 +97,7 @@ const registeredSchema: SchemaNode = {
   label: 'E. 已注册自定义组件（对照组）',
   children: [
     {
-      label: 'E. 已注册 MyCustomInput',
+      label: 'E. 已注册 MyCustomInput（应通过）',
       name: 'fieldE',
       component: 'MyCustomInput', // 已在 components prop 注册
       props: { placeholder: '正常：userComponents 命中' },
@@ -119,10 +124,10 @@ const tocItems = [
       title="组件名校验"
       source="src/components/form-schema/composables/use-validate.ts"
       :introductions="[
-        'schema component 字段拼写错误时，dev mode 触发 console.warn + Debug Banner 错误。',
-        '打开 DevTools Console 应看到 2 条 [XForm][validate] 警告（字段 C 和 D）。',
+        'schema component 字段拼写错误时，dev mode 触发 console.error + Debug Banner 错误。',
+        '下方「控制台输出」面板自动展示 XForm 触发的错误（不需打开 DevTools）。',
+        '字段 A（应通过）、B（应通过）、E（应通过）不触发警告；字段 C（应警告）、D（应警告）触发警告。',
         '右下角 Debug Banner（dev 模式）会显示红色错误条。',
-        '字段 A (Input)、B (ElInput)、E (MyCustomInput 已注册) 不应触发警告。',
       ]"
     >
       <section id="demo-invalid-component">
@@ -151,6 +156,12 @@ const tocItems = [
         title="组件名解析规则"
         :items="invalidComponentItems"
         anchor="api-invalid-component"
+      />
+      <ConsoleLogPanel
+        :logs="logs"
+        title="XForm 控制台输出（实时捕获）"
+        empty="暂无警告（应仅字段 C/D 触发 [XForm] validate 警告）"
+        @clear="clear"
       />
     </DemoFrame>
 
