@@ -95,6 +95,7 @@ export interface UseXFormComposerReturn {
 // 顶层编排
 // ────────────────────────────────────────────────────────────────────────────
 
+/** useXFormComposer —— XForm 顶层编排（composition root） */
 export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComposerReturn {
   const { props } = options
   const bem = createNamespace('x-form')

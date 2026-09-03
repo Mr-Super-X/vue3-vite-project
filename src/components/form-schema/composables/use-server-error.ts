@@ -55,6 +55,7 @@ export interface UseServerErrorReturn {
   validateFromServer: (response: ServerErrorResponse) => number
 }
 
+/** useServerError —— 服务端 422 响应 → 表单字段错误映射 */
 export function useServerError(opts: UseServerErrorOptions): UseServerErrorReturn {
   /**
    * 把 errors 数组/对象统一归一为 [path, message][] 列表

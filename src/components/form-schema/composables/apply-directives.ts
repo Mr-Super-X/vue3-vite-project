@@ -10,6 +10,7 @@
 import { withDirectives, type VNode, type Directive } from 'vue'
 import type { DirectiveConfig } from '../types'
 
+/** applyDirectives —— 把 node.directives 数组应用到 vnode（vue withDirectives 包装） */
 export function applyDirectives(vnode: VNode, directives: DirectiveConfig[] | undefined): VNode {
   if (!directives || directives.length === 0) return vnode
   try {

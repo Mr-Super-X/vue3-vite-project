@@ -34,6 +34,7 @@ export interface UseSchemaIndexReturn {
   reindex(): void
 }
 
+/** useSchemaIndex —— schema 元数据中央索引（O(1) 查表替代 O(n) 遍历） */
 export function useSchemaIndex(
   schemaGetter: () => SchemaNode | SchemaNode[] | string | undefined
 ): UseSchemaIndexReturn {

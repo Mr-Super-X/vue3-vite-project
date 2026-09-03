@@ -11,6 +11,7 @@ import { buildSlotFn, getComponentDefaultProps } from './render-schema-node'
 import { renderToComponentWithGrid } from './render-with-grid'
 import type { RenderSchemaNodeOptions } from './render-schema-node'
 
+/** renderVisualContainer —— 视觉容器渲染（Card 等无 name 节点） */
 export function renderVisualContainer(
   node: SchemaNode,
   Comp: object | string,

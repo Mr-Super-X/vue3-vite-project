@@ -45,6 +45,7 @@ export type ElFormInstance = {
 /** 重新导出 FieldErrorState 保持向后兼容（@see ./use-set-field-error.ts 定义） */
 export type { FieldErrorState }
 
+/** useFormInstance —— el-form 实例方法编排（getRef / validate / setFieldError / 数组操作） */
 export function useFormInstance(
   model: () => Record<string, unknown> | undefined,
   zodSchema: () => ZodType | undefined,

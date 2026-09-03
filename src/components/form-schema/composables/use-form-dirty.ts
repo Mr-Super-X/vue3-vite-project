@@ -41,6 +41,7 @@ export interface UseFormDirtyReturn {
   stop: () => void
 }
 
+/** useFormDirty —— dirty 状态追踪 + 基线管理 */
 export function useFormDirty(opts: UseFormDirtyOptions): UseFormDirtyReturn {
   /** 各字段的初始值快照（lodash path → 初始值） */
   const initialSnapshot = new Map<string, unknown>()

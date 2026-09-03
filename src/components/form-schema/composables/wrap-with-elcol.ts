@@ -10,6 +10,7 @@ import { h, type VNode } from 'vue'
 import { ElCol } from 'element-plus'
 import type { ColConfig, RowConfig, SchemaNode } from '../types'
 
+/** wrapWithElCol —— 节点 col 响应式包装（含 ElCol 渲染） */
 export function wrapWithElCol(
   node: SchemaNode,
   inner: VNode,
@@ -36,6 +37,7 @@ export function wrapWithElCol(
   ) as VNode
 }
 
+/** pickBreakpointConfig —— 当前断点配置挑选（移动优先 / 降降到基础） */
 export function pickBreakpointConfig(
   responsive: NonNullable<ColConfig['responsive']>,
   current?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
@@ -51,6 +53,7 @@ export function pickBreakpointConfig(
   return undefined
 }
 
+/** mergeColResponsive —— 响应式 col 拍平（移除 responsive 字段） */
 export function mergeColResponsive(
   col: SchemaNode['col'],
   current?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'

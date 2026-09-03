@@ -27,6 +27,7 @@ export interface ResolvePermissionOptions {
   permissionResolver?: (perm: string) => FieldPermission
 }
 
+/** resolvePermission —— 字段权限解析（view / edit / hidden 三态） */
 export function resolvePermission(
   node: SchemaNode,
   opts: ResolvePermissionOptions

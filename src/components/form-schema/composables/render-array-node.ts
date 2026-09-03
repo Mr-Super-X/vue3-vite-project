@@ -15,6 +15,7 @@ import { mergeColResponsive } from './render-schema-node'
 import type { RenderSchemaNodeOptions } from './render-schema-node'
 import { rowKeyOf, rewriteNamePath } from './array-row-key'
 
+/** renderArrayNode —— 数组节点渲染（kind='array'，ElCard + 行 + 行内控件） */
 export function renderArrayNode(
   node: SchemaNode,
   opts: RenderSchemaNodeOptions

@@ -21,6 +21,8 @@ import type { SchemaNode } from '../types'
  * 改为 crypto.randomUUID() 短码 —— 无全局计数器，UUID 重复概率可忽略。
  */
 const rowKeyMap = new WeakMap<object, string>()
+
+/** rowKeyOf —— 行级稳定 key（按行对象身份分配 WeakMap 索引，原始值行退回 index） */
 export function rowKeyOf(row: unknown, index: number): string {
   if (row !== null && typeof row === 'object') {
     let k = rowKeyMap.get(row as object)

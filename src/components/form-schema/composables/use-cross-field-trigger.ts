@@ -62,6 +62,7 @@ export interface UseCrossFieldTriggerOptions {
   defaultDebounceMs?: () => number
 }
 
+/** useCrossFieldTrigger —— 反向跨字段实时校验（精确 + 兑底 + debounce） */
 export function useCrossFieldTrigger(opts: UseCrossFieldTriggerOptions): {
   stop: () => void
   /**

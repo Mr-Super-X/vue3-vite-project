@@ -36,6 +36,7 @@ import {
 } from 'element-plus'
 import type { SchemaNode } from '../types'
 
+/** EL_COMPONENT_MAP —— 内置 EL 组件短名 → 实际组件对象的映射表 */
 export const EL_COMPONENT_MAP: Record<string, unknown> = {
   Input: ElInput,
   Select: ElSelect,
@@ -69,6 +70,7 @@ export const EL_COMPONENT_MAP: Record<string, unknown> = {
   Form: ElForm,
 }
 
+/** resolveComponentFor —— 组件名解析（用户注册 / 短名 / 全名 / ElXxx / 全局注册 / 原生 HTML） */
 export function resolveComponentFor(
   name: string | undefined,
   userComponents?: Record<string, unknown>

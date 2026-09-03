@@ -26,6 +26,7 @@ import {
 } from './render-schema-node'
 import type { RenderSchemaNodeOptions } from './render-schema-node'
 
+/** renderWithFormItem —— FormItem 包装渲染（含 name 或 formItem:true 的节点） */
 export function renderWithFormItem(
   node: SchemaNode,
   Comp: object | string | null,

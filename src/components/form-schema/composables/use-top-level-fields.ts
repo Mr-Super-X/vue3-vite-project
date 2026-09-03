@@ -81,6 +81,7 @@ function readTopLevelNode(reactiveSchema: {
   return s
 }
 
+/** useTopLevelFields —— XForm 顶层 schema 自描述字段集合（11 个 computed） */
 export function useTopLevelFields(deps: UseTopLevelFieldsDeps): UseTopLevelFieldsReturn {
   const {
     reactiveSchema,

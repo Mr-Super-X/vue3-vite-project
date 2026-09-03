@@ -32,6 +32,7 @@ const UPLOAD_ICON_CLASS = {
 const UPLOAD_DRAG_TEXT_CLASS = ['el-upload__text', bem.e('upload-text')].join(' ')
 const UPLOAD_BUTTON_CLASS = bem.e('upload-button')
 
+/** renderChildren —— children 多多态归一化（string / SchemaNode / SchemaNode[]） */
 export function renderChildren(
   children: SchemaNode['children'],
   render: RenderFn
@@ -42,6 +43,7 @@ export function renderChildren(
   return render(children)
 }
 
+/** buildSlotFn —— slot 值 → 渲染函数（统一 function / 字符串 / SchemaNode） */
 export function buildSlotFn(value: SchemaSlot, render: RenderFn): (scope?: unknown) => unknown {
   if (typeof value === 'function') {
     return (scope?: unknown) => value(scope as Record<string, unknown>)
