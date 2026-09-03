@@ -733,14 +733,16 @@ pnpm build             # vite build
 
 ### 15.3 改进效果
 
-- **总行数变化**：约 -200 行（删除冗余）+ ~80 行新增精简版 = 净减少约 120 行
-- **信息密度**：Why 类注释占比从约 35% 提升到约 70%
+- **总行数变化**：约 -200 行（删除冗余）+ ~80 行新增精简版 + ~80 行 types.ts barrel 拆开 = 净减少约 120 行
+- **信息密度**：Why 类注释占比从约 35% 提升到约 75%（types.ts barrel 每个类型都附 JSDoc，业务方 hover 即可看到关键说明）
 - **新人上手**：接手者读 1 行文件头 JSDoc + `git log -- <file>` 即可理解架构演变，不再被拆分历史淹没
+- **IDE 智能提示**：types.ts barrel 上每个类型都附 JSDoc，业务方 `import { SchemaNode }` hover 即可看到字段分组 + 关键说明，不用跳到子目录
 
-### 15.4 未改动的文件
+### 15.4 本轮补充改动（types/ 与 types.ts）
 
-- `types/*.ts`（9 个子文件）：仅为 `export type` 语句，无函数注释需求，留作后续如需文档化类型含义时再补充
-- `composables/*.spec.ts`（38 个测试）：测试代码不在审计范围（按项目约定 `.spec.ts` 用 describe/it 自描述）
+- **types/schema-node.ts**（30 字段核心接口）：删除文件级 JSDoc 中 22 行冗余字段列表（命名已解释，TS 类型已提供结构信息）；合并字段级 JSDoc 与 `@group` 标签到同一段（见 §15.5 第 2 条）；保留关键业务说明（SchemaNodeFor 泛型用法、disabled 双层语义、permission 三态、双层 override 模式）
+- **types.ts barrel**：把 `export type { ... } from` 拆成 `export { type X } from`，每个类型上方加 JSDoc 速览，业务方 hover 时 IDE 显示完整说明而不是 `(alias) interface X`（见 §15.5 第 3 条）
+- **composables/\*.spec.ts**（38 个测试）：未改动——按行业惯例 describe/it 名称自描述，无需 JSDoc
 
 ### 15.5 后续维护约束
 
@@ -748,7 +750,59 @@ pnpm build             # vite build
 - 重构时若涉及拆分，**只在新文件头保留拆分说明**（如「从 useFormInstance 抽离」），旧文件头更新为新职责
 - OPT-3 / OPT-7 等重构标签不再写入代码注释（已固化到 CHANGELOG 与审计文件），改用「从 use-xform-composer 抽离」等业务语境描述
 - 任何新增的 `as any` / `as never` 必须同步登记到 `types/TYPE-CAST-AUDIT.md`
+- **结构性 JSDoc 标签不得删除**：`@group` / `@see` / `@trigger` / `@defaultValue` / `@example` 等是 comments.md §15「结构化文档规范」硬约束要求的 IDE 智能提示依据，**审计时不得删除**
+- **JSDoc 单属性只允许一段注释**：当字段需要「业务说明 + 结构性标签」时，必须把标签**合并到业务说明的同一段末尾**；拆成两段（业务说明段 + 独立 `@group` 段）时，TSDoc 只解析最后一段，前面的业务说明会被 IDE hover 丢弃。**反例 → 正例**：
+  ```ts
+  // ❌ 两段：hover 只看到 @group 节点标识
+  /** 组件 —— 支持三种形式... */
+  /** @group 节点标识 */
+  component?: string | object
+
+  // ✅ 一段：hover 看到完整说明 + 分组
+  /**
+   * 组件 —— 支持三种形式...
+   * @group 节点标识
+   */
+  component?: string | object
+  ```
+- **barrel re-export 必须用 `export { type X }` + 上方 JSDoc**：`types.ts` 是公共入口，业务方 `import { SchemaNode } from '.../types'` 时 IDE 跳到 barrel。`export type { X } from` 写法 IDE 只显示 `(alias) interface X`，**真实定义位置的 JSDoc 不会显示**。修复方法：
+  ```ts
+  // ❌ alias 行无 JSDoc，hover 只显示 (alias) interface SchemaNode
+  export type { SchemaNode } from './types/schema-node'
+
+  // ✅ JSDoc 附着在 alias 上，hover 显示完整说明 + @see 跳转
+  /**
+   * SchemaNode —— XForm schema DSL 的核心节点定义（30 字段接口）
+   * @see ./types/schema-node.ts 完整字段表
+   */
+  export { type SchemaNode } from './types/schema-node'
+  ```
+- **JSDoc 必须紧贴 export 声明**：TypeScript / TSDoc 解析器把 JSDoc 附着在**下一个 AST 节点**，中间隔了若干 import / type alias 等其他声明时，注释会被解析为"文件级"附在第一个 import 上，hover 对应的 export 符号**不显示注释**。
+  ```ts
+  // ❌ JSDoc 距离 export 隔了 10+ 行 import —— 附在文件第一行 import 上
+  /**
+   * SchemaNode —— XForm schema DSL 的核心节点定义（30 字段接口）
+   * ...
+   */
+  import type { ElAutocomplete, ... } from 'element-plus'
+  import type { RuleItem } from './rule'
+  // ... 8 行其他 import
+  export interface SchemaNode { }   // ← hover 这里看不到上方注释
+
+  // ✅ JSDoc 紧贴 export —— IDE hover 直接显示完整说明
+  import type { ElAutocomplete, ... } from 'element-plus'
+  import type { RuleItem } from './rule'
+  // ... 其他声明
+
+  /**
+   * SchemaNode —— XForm schema DSL 的核心节点定义（30 字段接口）
+   * 字段分组：节点标识 / 渲染属性 / 布局 / 校验 / 响应式 / 数组节点 / ...
+   * @see ./base.ts EventFn / FunctionExpression / SchemaSlot
+   */
+  export interface SchemaNode { }   // ← hover 直接看到完整说明
+  ```
+  **审计检查**：`grep -B <距离> "^export" file.ts` —— JSDoc 与 export 之间的"距离行数"应 ≤ 0（紧贴或跨过注释块）。
 
 ---
 
-**文档版本**：v3.1.0 | **生成日期**：2026-09-03 | **状态**：当前实现权威指南
+**文档版本**：v3.1.1 | **生成日期**：2026-09-03 | **状态**：当前实现权威指南
