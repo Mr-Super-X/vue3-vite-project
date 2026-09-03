@@ -16,27 +16,10 @@ import type {
   XFormExpose,
   XFormProps,
 } from '../types'
-// 类型 re-export 保留外部消费方从本文件 import 的能力（实际定义在子模块内）
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type { ColConfig, RowConfig, SchemaSlot } from '../types'
 
 import { resolveComponentFor } from './resolve-component'
-// compileRules / mergeColResponsive / mergeRowResponsive / renderChildren /
-// buildSlotFn / buildUploadTipSlot 仅作为 re-export 暴露 API，本文件不直接使用。
-
-// 仅作为 re-export 暴露 API —— 本文件不直接使用
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { compileRules } from './compile-rules'
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { mergeColResponsive, mergeRowResponsive } from './wrap-with-elcol'
 import { wrapWithElCol } from './wrap-with-elcol'
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { renderChildren } from './build-slots'
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { buildSlotFn } from './build-slots'
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { buildUploadTipSlot } from './build-slots'
-import { buildUploadDefaultSlot, getComponentDefaultProps, buildAsyncProps } from './build-slots'
+import { buildAsyncProps, buildUploadDefaultSlot, getComponentDefaultProps } from './build-slots'
 
 import { buildVModelBindings } from './build-vmodel-bindings'
 import { buildOnBindings } from './build-on-bindings'
