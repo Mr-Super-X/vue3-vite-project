@@ -253,6 +253,51 @@ formRef.value?.resetDirty() // 当前状态设为新基线（提交后归零）
 
 ## 链式构建器（fbuilder）
 
+### 何时用 builder vs 裸对象 schema
+
+XForm 接受**两种等价的 schema 写法**，根据场景选择：
+
+| 场景                                 | 推荐写法                              | 原因                                   |
+| ------------------------------------ | ------------------------------------- | -------------------------------------- |
+| 业务模块内**手写**静态 schema        | **裸对象** + `SchemaNodeFor<'Input'>` | 直白、贴近底层 DSL，便于搜索/重构      |
+| 组件复用 + IDE 自动补全 props        | **builder**（`xInput()`）             | 链式调用 + 类型推导，props 字段名补全  |
+| 动态 schema（来自后端 / 配置）       | **裸对象**（JSON.parse 直接产出）     | builder 是 class，JSON 序列化不友好    |
+| 复杂字段配置（数组 / 嵌套 / 动态列） | **builder**                           | `.item()` / `.column()` 等链式方法直观 |
+| 字段数 < 5 的简单表单                | **裸对象**                            | 引入 builder 链增加理解成本            |
+| 字段数 > 20 + 多类型混合             | **builder**                           | 链式调用比大块对象嵌套更易读           |
+| 跨文件复用单字段定义                 | **builder factory** 提取为函数        | 比对象片段更易模块化                   |
+
+**语法对照**（同一个邮箱字段的两种写法）：
+
+```ts
+// 裸对象写法（贴近 DSL，JSON 友好）
+const emailNode: SchemaNodeFor<'Input'> = {
+  component: 'Input',
+  name: 'email',
+  label: '邮箱',
+  props: { placeholder: 'a@b.com', clearable: true },
+  rules: [{ required: true, message: '请输入邮箱' }],
+}
+
+// builder 写法（链式 + 类型推导）
+const emailNode = xInput('email')
+  .label('邮箱')
+  .placeholder('a@b.com')
+  .prop('clearable', true)
+  .validator((_rule, value, cb) => {
+    if (!value) cb(new Error('请输入邮箱'))
+    else cb()
+  })
+  .build()
+```
+
+> **关键约束**：
+>
+> - `build()` 之前**不会**校验 schema，只是构造 SchemaNodeFor —— 类型错误在 IDE hover 时即刻发现
+> - 两种写法生成的 `SchemaNodeFor<C>` 类型完全等价，可混合使用（同一 schema 内部分字段用 builder，其他字段用裸对象）
+> - builder 不增加运行时开销：`.build()` 仅返回 plain object，等价于裸对象
+> - builder 文件 `builders.ts` 是纯函数式（无副作用），可 tree-shake（未使用的 xXxx 不进 bundle）
+
 ```ts
 import {
   xInput,
