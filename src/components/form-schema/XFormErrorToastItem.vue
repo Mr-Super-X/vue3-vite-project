@@ -31,6 +31,20 @@ function severityIcon(s: FormErrorSeverity): string {
   }
 }
 
+/**
+ * 安全 JSON 序列化 —— 不可序列化值（循环引用等）返回 null 占位
+ * 与 formatValue 不同：保留完整字符串，不截断（用于 tooltip 显示原值）
+ * 修复：循环引用对象（如 backend 错误 detail.value 含 self-ref）会抛 TypeError，
+ *       此前的 :title 属性无 try/catch 导致整 toast 渲染崩溃。
+ */
+function tryJsonStringify(v: unknown): string | null {
+  try {
+    return JSON.stringify(v)
+  } catch {
+    return null
+  }
+}
+
 /** 格式化字段值显示 —— 数组/对象用 JSON.stringify，长字符串截断 */
 function formatValue(v: unknown): string {
   if (v === null) return 'null'
@@ -39,12 +53,9 @@ function formatValue(v: unknown): string {
     return v.length > 24 ? `${v.slice(0, 24)}…` : v
   }
   if (typeof v === 'object') {
-    try {
-      const s = JSON.stringify(v)
-      return s.length > 24 ? `${s.slice(0, 24)}…` : s
-    } catch {
-      return '[unserializable]'
-    }
+    const s = tryJsonStringify(v)
+    if (s === null) return '[unserializable]'
+    return s.length > 24 ? `${s.slice(0, 24)}…` : s
   }
   return String(v)
 }
@@ -66,7 +77,7 @@ function formatValue(v: unknown): string {
           <span
             v-if="d.value !== undefined"
             :class="$style.detailValue"
-            :title="`字段当前值：${JSON.stringify(d.value)}`"
+            :title="`字段当前值：${tryJsonStringify(d.value) ?? '[unserializable]'}`"
           >
             = {{ formatValue(d.value) }}
           </span>
