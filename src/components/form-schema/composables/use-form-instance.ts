@@ -16,6 +16,12 @@ import type { UseFormErrorBusReturn } from './use-form-error-bus'
 import type { ZodType } from 'zod'
 
 /** 运行时方法对象（InstanceType<typeof ElForm> 会丢失 validate 等方法） */
+/**
+ * ElFormInstance —— element-plus ElForm 实例运行时方法（宽松签名版）
+ *
+ * InstanceType<typeof ElForm> 会丢失 validate / validateField 等方法，这里补齐 element-plus 2.x 实际支持但 TS 类型声明不全的方法。
+ * @see ./use-set-field-error.ts Path B watch 守护依赖 fields 数组
+ */
 export type ElFormInstance = {
   validate?: (callback?: (valid: boolean) => void) => Promise<boolean>
   /**
@@ -36,7 +42,7 @@ export type ElFormInstance = {
   setInitialValues?: (initModel: Record<string, unknown>) => void
 }
 
-/** 重新导出 FieldErrorState 保持向后兼容 */
+/** 重新导出 FieldErrorState 保持向后兼容（@see ./use-set-field-error.ts 定义） */
 export type { FieldErrorState }
 
 export function useFormInstance(

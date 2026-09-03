@@ -7,6 +7,11 @@
 import type { ZodError, ZodType } from 'zod'
 import { validateWithZod } from './use-validate'
 
+/**
+ * useZodValidator 返回值 —— 顶层 zod 校验入口
+ *
+ * validateFormWithZod(): 与 el-form.validate 并行入口，未配置 zodSchema 时静默成功
+ */
 export interface UseZodValidatorReturn {
   /**
    * 顶层 zod 校验 —— 与 el-form.validate 并行入口

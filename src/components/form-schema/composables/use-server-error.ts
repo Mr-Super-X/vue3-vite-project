@@ -19,6 +19,12 @@ interface ServerErrorItem {
   message?: string
 }
 
+/**
+ * ServerErrorResponse —— 后端 422 响应格式
+ *
+ * - success?: 整体成功标记（true 时清空所有服务端错误，防御性处理 success+errors 同时存在）
+ * - errors?: 数组格式 [{ path|field, message }] 或对象格式 { field: msg | [msgs] }
+ */
 export interface ServerErrorResponse {
   /**
    * 后端整体成功标记 —— true 时清空所有服务端错误（红字）。
@@ -28,6 +34,10 @@ export interface ServerErrorResponse {
   errors?: ServerErrorItem[] | Record<string, string | string[]>
 }
 
+/**
+ * useServerError 入参 —— 错误写入 + 清错 + 已知字段过滤
+ * knownFields 可选：限制只处理 schema 中存在的字段（默认不过滤，未知字段静默跳过）
+ */
 export interface UseServerErrorOptions {
   setFieldError: (name: string, message: string) => void
   clearValidate: (names?: string[]) => void
@@ -35,6 +45,11 @@ export interface UseServerErrorOptions {
   knownFields?: () => readonly string[]
 }
 
+/**
+ * useServerError 返回值 —— 422 响应映射到表单字段
+ *
+ * validateFromServer(response): 自动 clearValidate 后逐个 setFieldError，返回处理数量
+ */
 export interface UseServerErrorReturn {
   /** 把 422 响应映射到表单字段（自动 clearValidate 后逐个 setFieldError） */
   validateFromServer: (response: ServerErrorResponse) => number

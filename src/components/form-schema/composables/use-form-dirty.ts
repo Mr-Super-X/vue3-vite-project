@@ -16,12 +16,22 @@
 import { watch } from 'vue'
 import { isEqual, get, cloneDeep } from 'lodash-es'
 
+/**
+ * useFormDirty 入参 —— 父组件注入 reactive model getter + 字段路径列表
+ */
 export interface UseFormDirtyOptions {
   model: () => Record<string, unknown> | undefined
   /** 字段路径列表（lodash path，如 'items[0].qty'） */
   fieldNames: () => readonly string[]
 }
 
+/**
+ * useFormDirty 返回值 —— dirty 状态查询 + 基线管理
+ *
+ * - isDirty / getDirtyFields / isTouched: 状态查询
+ * - resetDirty: 把当前状态标记为新基线（提交后归零 / 加载后初始化）
+ * - stop: 内部清理（组件 unmount 时由 useXFormComposer 调用）
+ */
 export interface UseFormDirtyReturn {
   isDirty: () => boolean
   getDirtyFields: () => string[]

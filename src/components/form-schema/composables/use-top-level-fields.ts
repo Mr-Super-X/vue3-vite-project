@@ -17,6 +17,10 @@ import type { SchemaNode, RowConfig } from '../types'
  */
 export type TopLevelFieldErrors = Record<string, unknown>
 
+/**
+ * useTopLevelFields 入参 —— schema 响应式视图 + 工具函数注入
+ * @see ./use-xform-composer.ts 11 个 composable 装配
+ */
 export interface UseTopLevelFieldsDeps {
   /** schema 响应式视图（来自 useSchemaRenderer） */
   reactiveSchema: { value: SchemaNode | SchemaNode[] | string | undefined }
@@ -32,6 +36,12 @@ export interface UseTopLevelFieldsDeps {
   mergeRowResponsive: (row: RowConfig | undefined, breakpoint: string) => RowConfig | undefined
 }
 
+/**
+ * useTopLevelFields 返回值 —— 11 个 computed + topLevelNodes
+ *
+ * 含顶层 schema 派生的 disabled / readonly / labelPosition / labelWidth / scrollToError /
+ * scrollIntoViewOptions / debounceValidation / nodes / row / column / colSpan
+ */
 export interface UseTopLevelFieldsReturn {
   /** 顶层 schema.debounceValidation → 跨字段默认 debounce ms（0 = 实时） */
   debounceValidation: ComputedRef<number>

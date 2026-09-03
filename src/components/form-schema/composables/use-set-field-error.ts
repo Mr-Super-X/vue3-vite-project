@@ -53,6 +53,13 @@ function readRefStr(v: ElFormFieldRaw['propString']): string | undefined {
 /** 取 el-form 内部 fields 数组（懒读取，避免 setup 期间 ref 为空时崩溃） */
 type FieldsGetter = () => ElFormFieldRaw[] | undefined
 
+/**
+ * useSetFieldError 入参 —— setFieldError 双路径机制依赖
+ *
+ * - externalErrors: 阶段 3.1 外部字段错误 ref（XForm.vue 创建并传入）
+ * - getFields: 懒读取 el-form fields 数组（elFormRef.value?.fields）
+ * - errorBus: 显式 deps 传入（避免 provide/inject 在嵌套 composable 中失效）
+ */
 export interface UseSetFieldErrorOptions {
   /** 阶段 3.1：外部字段错误状态 ref（XForm.vue 创建并传入） */
   externalErrors: Ref<Record<string, FieldErrorState>>
@@ -62,6 +69,9 @@ export interface UseSetFieldErrorOptions {
   errorBus?: UseFormErrorBusReturn
 }
 
+/**
+ * useSetFieldError 返回值 —— 双路径 setFieldError 函数
+ */
 export interface UseSetFieldErrorReturn {
   /**
    * 设置字段错误状态

@@ -42,10 +42,21 @@ type RenderFn = (
   node: SchemaNode | SchemaNode[] | string | undefined | null
 ) => VNode | string | VNode[] | undefined
 
+/**
+ * useXFormComposer 入参 —— 仅 props 一项（XForm setup 时调用）
+ */
 export interface UseXFormComposerOptions {
   props: XFormProps
 }
 
+/**
+ * useXFormComposer 返回值 —— XForm 模板全部依赖项（顶层编排对外契约）
+ *
+ * - bem / elFormRef / renderToComponent: 模板根 class / el-form ref / 节点渲染闭包
+ * - fieldErrors: 模板 :data-field-errors 显式绑定以建立响应式依赖（详见 XForm.vue 模板注释）
+ * - topLevelXxx: 顶层 schema 字段派生的 computed（labelPosition / disabled / scrollToError 等）
+ * - exposed / installDevDebugHook / errorBus: defineExpose 透传 / dev console hook / OSD 错误总线
+ */
 export interface UseXFormComposerReturn {
   /** XForm 模板根 class */
   bem: ReturnType<typeof createNamespace>

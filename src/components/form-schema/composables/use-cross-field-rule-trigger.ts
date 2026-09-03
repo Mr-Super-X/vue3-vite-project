@@ -7,6 +7,10 @@ import { get } from 'lodash-es'
 import { matchTrigger } from './match-trigger'
 import type { RuleItem, SchemaNode } from '../types'
 
+/**
+ * useCrossFieldRuleTrigger 入参 —— 模型 + 错误写入
+ * @see ./use-form-validation.ts 内部委托本 composable
+ */
 export interface UseCrossFieldRuleTriggerDeps {
   /** 表单数据 */
   model: { value: Record<string, unknown> | undefined }
@@ -14,6 +18,12 @@ export interface UseCrossFieldRuleTriggerDeps {
   setFieldError: (name: string, message: string, state?: '' | 'error') => void
 }
 
+/**
+ * useCrossFieldRuleTrigger 返回值 —— 字段事件跨字段规则触发器
+ *
+ * triggerCrossFieldValidator(node, eventType): 让 crossValidator 响应 trigger 配置
+ * 成功 → 清掉之前可能的红字；失败 → setFieldError 红字提示；空值字段跳过
+ */
 export interface UseCrossFieldRuleTriggerReturn {
   /**
    * 字段事件触发跨字段校验 —— 让 crossValidator 响应 trigger 配置

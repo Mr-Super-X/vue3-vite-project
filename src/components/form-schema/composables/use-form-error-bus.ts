@@ -68,6 +68,13 @@ export interface FormErrorEvent {
   dismissed?: boolean
 }
 
+/**
+ * useFormErrorBus 返回值 —— 错误事件总线对外契约
+ *
+ * - events: 响应式事件列表（XFormErrorToast 消费）
+ * - report: 上报入口（5s 内同 code+message 去重，force:true 跳过去重）
+ * - dismiss / dismissAll / unreadCount: toast 关闭与未读数
+ */
 export interface UseFormErrorBusReturn {
   /** 错误事件列表（响应式） */
   events: Ref<FormErrorEvent[]>
@@ -86,7 +93,10 @@ export interface UseFormErrorBusReturn {
   unreadCount: Ref<number>
 }
 
-/** report 入参类型（含可选 force 标志） */
+/**
+ * report 入参类型（含可选 force 标志）
+ * @see UseFormErrorBusReturn.report
+ */
 export type ReportErrorEventInput = Omit<FormErrorEvent, 'id' | 'timestamp' | 'dismissed'> & {
   force?: boolean
 }

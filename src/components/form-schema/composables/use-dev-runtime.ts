@@ -20,6 +20,12 @@ import type { UseFormErrorBusReturn } from './use-form-error-bus'
 import type { FieldErrorState } from './use-form-instance'
 import type { SchemaNode, XFormProps } from '../types'
 
+/**
+ * useDevRuntime 入参 —— dev 模式运行所需依赖
+ *
+ * - props / errorBus: XForm props + 错误事件总线
+ * - setFieldError / fieldErrors: 来自 useFormInstance，debug hook 暴露给 dev console
+ */
 export interface UseDevRuntimeDeps {
   props: XFormProps
   /** dev 模式错误总线（来自 useFormErrorBus） */
@@ -30,6 +36,12 @@ export interface UseDevRuntimeDeps {
   fieldErrors: Ref<Record<string, FieldErrorState>>
 }
 
+/**
+ * useDevRuntime 返回值 —— dev-only 状态与钩子
+ *
+ * - validateErrors / forbiddenErrors / showDebugBanner: XFormDebugBanner 消费
+ * - installDevDebugHook: dev 模式挂 window.__xform_debug（XForm setup 末尾调一次）
+ */
 export interface UseDevRuntimeReturn {
   /** schema 静态校验错误（仅 dev 显示在 XFormDebugBanner） */
   validateErrors: Ref<Array<{ keyPath: (string | number)[]; message: string }>>

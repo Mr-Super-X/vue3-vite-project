@@ -45,6 +45,13 @@ function toRawLike<T>(v: T): T {
   return toRaw(v as object) as T
 }
 
+/**
+ * useFormValidation 入参 —— 由 useXFormComposer 装配
+ *
+ * 显式 deps 注入而非 composable 内 provide/inject（避免嵌套场景静默失效）。
+ * @see ./use-xform-composer.ts createValidateValidation
+ * @see ./use-form-instance.ts elFormRef / setFieldError 来源
+ */
 export interface UseFormValidationDeps {
   reactiveSchema: { value: SchemaNode | SchemaNode[] | string | undefined }
   model: { value: Record<string, unknown> | undefined }
@@ -71,6 +78,14 @@ export interface UseFormValidationDeps {
   errorBus?: UseFormErrorBusReturn
 }
 
+/**
+ * useFormValidation 返回值 —— 校验编排公开 API
+ *
+ * - validateForm: 完整校验（字段规则 + 跨字段 + OSD 上报）
+ * - validateDetail: 仅跨字段结果，不写 UI
+ * - triggerCrossFieldValidator: 字段事件触发跨字段校验（v-model 写入 + onBlur + onChange）
+ * - firstCrossErrorField / applyCrossErrors / scrollToFirstError: 错误处理工具
+ */
 export interface UseFormValidationReturn {
   validateForm: () => Promise<boolean>
   validateDetail: () => Promise<ValidateResult>

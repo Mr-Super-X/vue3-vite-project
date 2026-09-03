@@ -6,6 +6,11 @@
  */
 import type { XFormExpose } from '../types'
 
+/**
+ * useXFormExpose 入参 —— XFormExpose 19 方法的来源
+ *
+ * 所有方法均来自 useXFormComposer 装配的各个子 composable（el-form 实例 / 校验 / dirty / 服务端错误等）
+ */
 export interface UseXFormExposeDeps {
   /** el-form 实例方法（来自 useFormInstance） */
   getRef: XFormExpose['getRef']

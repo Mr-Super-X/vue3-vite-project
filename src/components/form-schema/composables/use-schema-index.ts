@@ -12,6 +12,15 @@ import { ref, watch, type Ref } from 'vue'
 import type { SchemaNode } from '../types'
 import { buildIndex, type SchemaIndex } from './use-schema-index.builder'
 
+/**
+ * useSchemaIndex 返回值 —— schema 元数据中央索引（O(1) 查表）
+ *
+ * 含 byName / fieldNames / allNames / crossRules / reverseIndex / dependsOnMap 响应式 ref，
+ * 以及 getFieldNames (查表) / reindex (手动重建) 两个方法。
+ *
+ * 收益：use-cross-field-trigger / use-form-dirty / use-server-error / XForm.getNames
+ * 从每次 O(n) 全树遍历降为 O(1) Map 查询。
+ */
 export interface UseSchemaIndexReturn {
   byName: Readonly<Ref<SchemaIndex['byName']>>
   fieldNames: Readonly<Ref<readonly string[]>>

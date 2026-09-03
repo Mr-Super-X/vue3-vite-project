@@ -33,6 +33,13 @@ interface ReverseRule {
   rule: RuleItem
 }
 
+/**
+ * useCrossFieldTrigger 入参 —— 反向跨字段实时触发配置
+ *
+ * - crossRules: getter 返回扁平跨字段规则数组（XForm 通过 useSchemaIndex().crossRules 注入）
+ * - setFieldError / clearValidate: 来自 useFormInstance 的错误写入 + 官方清错流程
+ * - defaultDebounceMs: getter 形式（schema.debounceValidation 可能运行时改变）
+ */
 export interface UseCrossFieldTriggerOptions {
   /**
    * 跨字段规则的扁平数组 —— 由 XForm 通过 useSchemaIndex().crossRules 拍平后传入。

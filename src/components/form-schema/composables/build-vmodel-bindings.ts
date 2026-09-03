@@ -17,6 +17,16 @@ import type {
  * - onValueChange: 写入 model 后触发（跨字段校验 / dirty 追踪）
  * - formRef: XFormExpose，给 ctx.setFieldError 用
  */
+/**
+ * BeforeChangeConfig —— beforeChange 3 层钩子配置（buildVModelBindings 接收）
+ *
+ * - layer1: 全局 Props beforeChange（横切关注点）
+ * - namespaceRules: 动态命名空间规则数组（按 pattern 匹配字段路径）
+ * - fieldBeforeChange: 字段级 beforeChange（可不传，自动从 node.beforeChange 取）
+ * - makeCtx: 每字段独立 ctx 工厂
+ * - onValueChange: 写入 model 后触发（跨字段校验 / dirty 追踪）
+ * - formRef: XFormExpose，给 ctx.setFieldError 用
+ */
 export interface BeforeChangeConfig {
   layer1?: BeforeChangeFn | undefined
   namespaceRules?: BeforeChangeRule[] | undefined

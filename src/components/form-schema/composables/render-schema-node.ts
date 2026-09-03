@@ -84,6 +84,14 @@ export {
 // RenderSchemaNodeOptions —— 主调度入参类型
 // ────────────────────────────────────────────────────────────────────────────
 
+/**
+ * RenderSchemaNodeOptions —— render-schema-node 主调度入参
+ *
+ * 5 类分支（数组 / 视觉容器 / FormItem / row+column / 默认）共享的 ctx：
+ * model / components / beforeChange / rules / render / formRef / permissionResolver / globalReadonly 等
+ *
+ * @see ./render-form-item.ts / render-array-node.ts / render-visual-container.ts 等子模块接收此 options
+ */
 export interface RenderSchemaNodeOptions {
   model: XFormProps['model']
   components: XFormProps['components']

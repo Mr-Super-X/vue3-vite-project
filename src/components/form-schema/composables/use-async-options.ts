@@ -2,12 +2,22 @@ import { ref, watch, onScopeDispose, type Ref } from 'vue'
 import { get } from 'lodash-es'
 import type { SchemaNode, AsyncOptionsConfig } from '../types'
 
+/**
+ * AsyncOptionsState —— 异步选项节点的状态基础类型
+ *
+ * data / loading / error 响应式 ref；useAsyncOptions 在此基础上加 stop 控制。
+ */
 export interface AsyncOptionsState {
   data: Ref<unknown[]>
   loading: Ref<boolean>
   error: Ref<unknown>
 }
 
+/**
+ * useAsyncOptions 返回值 —— 继承 AsyncOptionsState + stop 控制
+ *
+ * stop: 停止 deps watcher（schema 变化 / 组件卸载时调用，使 in-flight 请求响应失效）
+ */
 export interface UseAsyncOptionsReturn extends AsyncOptionsState {
   /** 停止 deps watcher */
   stop: () => void
