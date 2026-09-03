@@ -21,10 +21,10 @@ import { useCrossFieldRuleTrigger } from './use-cross-field-rule-trigger'
 import type { RuleItem, SchemaNode } from '../types'
 
 describe('useCrossFieldRuleTrigger', () => {
-  let setFieldError: ReturnType<typeof vi.fn>
+  let setFieldError: (name: string, message: string, state?: '' | 'error') => void
 
   beforeEach(() => {
-    setFieldError = vi.fn()
+    setFieldError = vi.fn() as unknown as typeof setFieldError
   })
 
   afterEach(() => {

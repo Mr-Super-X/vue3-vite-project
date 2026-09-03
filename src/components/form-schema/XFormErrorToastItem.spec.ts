@@ -39,8 +39,10 @@ describe('XFormErrorToastItem', () => {
   })
 
   it('无 source 时不渲染 @ 标记', () => {
+    const event = makeEvent()
+    delete event.source
     const wrapper = mount(XFormErrorToastItem, {
-      props: { event: makeEvent({ source: undefined }) },
+      props: { event },
     })
     expect(wrapper.text()).not.toContain('@')
   })

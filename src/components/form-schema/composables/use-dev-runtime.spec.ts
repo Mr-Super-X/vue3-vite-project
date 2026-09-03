@@ -22,13 +22,19 @@ import type { XFormProps } from '../types'
 // 构造 errorBus mock：report 方法 + dismiss 槽位（return type 与 UseFormErrorBusReturn 对齐）
 function makeErrorBus(): UseFormErrorBusReturn {
   return {
-    events: ref([]),
-    report: vi.fn(),
-    dismiss: vi.fn(),
+    events: ref([]) as UseFormErrorBusReturn['events'],
+    report: vi.fn() as UseFormErrorBusReturn['report'],
+    dismiss: vi.fn() as UseFormErrorBusReturn['dismiss'],
+    dismissAll: vi.fn() as UseFormErrorBusReturn['dismissAll'],
+    unreadCount: ref(0) as UseFormErrorBusReturn['unreadCount'],
   }
 }
 
-function makeDeps(overrides?: Partial<XFormProps>) {
+function makeDeps(overrides?: {
+  schema?: unknown
+  model?: Record<string, unknown> | undefined
+  components?: unknown
+}) {
   const errorBus = makeErrorBus()
   const props = {
     schema: { children: [] },
