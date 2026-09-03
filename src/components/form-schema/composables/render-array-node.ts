@@ -1,22 +1,12 @@
 /**
  * 数组节点渲染（kind === 'array'）
+ *
  * - 外层 ElCard + 标题 + 添加按钮（顶部）
- * - 每行 ElFormItem（继承父数组节点的 label） + itemSchema 渲染 + 行尾按钮（上移/下移/删除）
+ * - 每行 ElFormItem（继承父数组节点的 label）+ itemSchema 渲染 + 行尾按钮（上移/下移/删除）
  * - min/max 边界禁用对应按钮
  * - name 路径自动前缀化为 items[i].subName（el-form 按嵌套路径校验）
  *
- * ────────────────────────────────────────────────────────────────────────────
- * 类型断言归因（OPT-3）
- * 本文件中 `as never` 集中在 h() 调用处（ElButton / ElCard / ElFormItem 类型元组）。
- * 这是 vue 3 + element-plus 2.x 类型系统的已知缺陷：
- *   - h(Component, props, slots) 中 props 的精确类型推导要求 Component 是
- *     ComponentPublicInstanceConstructor，但 Element Plus 仅导出泛型构造器
- *   - 业务侧通过 `Component as never` 跳过元组校验，运行时由 Vue 内置组件解析
- *     完成 props/slots 校验
- * 不要在没有充分理由时移除这些 cast —— Element Plus 3.0 升级窗口期再评估
- *
- * 完整归因表（C1-C9 根因分类 + 文件分布）见 `../types/TYPE-CAST-AUDIT.md`。
- * ────────────────────────────────────────────────────────────────────────────
+ * 类型断言（`as never`）归因见 types/TYPE-CAST-AUDIT.md。
  */
 import { h, type VNode } from 'vue'
 import { ElCard, ElButton } from 'element-plus'

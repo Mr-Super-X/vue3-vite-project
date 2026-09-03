@@ -1,15 +1,14 @@
 /**
- * validate-component-props —— dev mode props 白名单校验（OPT-B）
+ * validate-component-props —— dev mode props 白名单校验
  *
  * Element Plus 2.x 组件在运行时可通过 `Component.props` 反射所有声明的 prop 名
- * （vue 3 options API 风格）。本 composable 启动时一次性构建映射缓存：
- *   KNOWN_PROP_KEYS[componentName] = Set<string>
+ * （vue 3 options API 风格）。启动时一次性构建映射缓存 KNOWN_PROP_KEYS[componentName] = Set<string>。
  *
- * dev mode 下用户传入不在白名单的 props keys → console.warn + OSD 上报
- * prod mode 完全无开销（导入但不调用 validate）
+ * - dev mode：用户传入不在白名单的 props keys → console.warn + OSD 上报
+ * - prod mode：完全无开销（导入但不调用 validate）
  *
  * 不校验：
- * - 用户通过 components prop 注册的自定义组件（无 ComponentPropsRegistry 条目）
+ * - 用户通过 components prop 注册的自定义组件
  * - Component 对象（非 string 组件名）
  * - 类型错误（TS 编译期拦截）
  */

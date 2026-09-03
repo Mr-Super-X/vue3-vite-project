@@ -1,29 +1,11 @@
 /**
- * Schema 节点渲染调度器 —— P2-B 拆分后主文件
+ * Schema 节点渲染调度器 —— 5 类分支委托给子模块
  *
- * 原 528 行单文件包含：组件解析 + 规则编译 + 栅格包装 + 插槽构造 + 主调度 + 类型定义
- * 拆分后（本文件 ~180 行）：
- *   - 组件解析：./resolve-component.ts（EL_COMPONENT_MAP + resolveComponentFor + isElUpload）
- *   - 规则编译：./compile-rules.ts（warnUnknownRule + compileRules）
- *   - 栅格包装：./wrap-with-elcol.ts（wrapWithElCol + pickBreakpointConfig + mergeCol/RowResponsive）
- *   - 插槽构造：./build-slots.ts（renderChildren + buildSlotFn + buildUploadDefaultSlot + buildUploadTipSlot + getComponentDefaultProps + buildAsyncProps）
- *   - 主调度：本文件（useRenderSchemaNode + RenderSchemaNodeOptions）
+ * 拆分子模块：组件解析→./resolve-component、规则编译→./compile-rules、
+ * 栅格包装→./wrap-with-elcol、插槽构造→./build-slots、主调度→本文件。
+ * 所有工具函数通过 re-export 保留对外 API，调用方零改动。
  *
- * 所有工具函数通过 re-export 保留对外 API，调用方零改动：
- *   - render-form-item.ts / render-array-node.ts / render-visual-container.ts 等
- *   - render-schema-node.spec.ts（测试用）
- *
- * ────────────────────────────────────────────────────────────────────────────
- * 类型断言归因（OPT-3）
- * 本文件 `as never` 集中在 h(ElCol, ...)调用处与 SchemaNode.children 多态分支。
- * - h() 类型 cast：vue + element-plus 类型元组缺陷，见 render-array-node.ts 头部
- * - `buildSlotFn(...)() as never` / `renderChildren(...) as never`：SchemaNode.children
- *   是 `SchemaNode | SchemaNode[] | string | undefined` 多态，调用方经 schema 配置
- *   后类型 narrow 失败（业务上不可能误用，schema 校验在 XFormDevBanner 阶段拦）
- * - `pickBreakpointConfig(responsive as never, current)`：ColConfig.responsive
- *   已是 NonNullable<...> 但 vue 3.5 的 key narrowing 在 Conditional 上不完整
- * 不要在没有充分理由时移除这些 cast
- * ────────────────────────────────────────────────────────────────────────────
+ * 类型断言（`as never`）归因见 types/TYPE-CAST-AUDIT.md。
  */
 import { h, type VNode, type ComponentPublicInstance, type Ref } from 'vue'
 
@@ -34,20 +16,20 @@ import type {
   XFormExpose,
   XFormProps,
 } from '../types'
-// ColConfig / RowConfig / SchemaSlot 类型仅在新拆分文件内使用；此处 re-export 仅保留
-// API 类型暴露位（外部消费方可能从本文件 import 类型）。
+// 类型 re-export 保留外部消费方从本文件 import 的能力（实际定义在子模块内）
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type { ColConfig, RowConfig, SchemaSlot } from '../types'
 
 import { resolveComponentFor } from './resolve-component'
 // compileRules / mergeColResponsive / mergeRowResponsive / renderChildren /
 // buildSlotFn / buildUploadTipSlot 仅作为 re-export 暴露 API，本文件不直接使用。
+
+// 仅作为 re-export 暴露 API —— 本文件不直接使用
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { compileRules } from './compile-rules'
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { mergeColResponsive, mergeRowResponsive } from './wrap-with-elcol'
 import { wrapWithElCol } from './wrap-with-elcol'
-// renderChildren / buildSlotFn / buildUploadTipSlot 仅作为 re-export 暴露 API
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { renderChildren } from './build-slots'
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -201,8 +183,8 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
     eventBindings: Record<string, unknown>
     asyncProps: Record<string, unknown>
   } {
-    // OPT-B：dev mode props 白名单校验（用户传错字段名时 console.warn + OSD 提示）
-    // validate 仅遍历 string component + EL_COMPONENT_MAP 命中的字段；用户自定义组件自动跳过
+    // dev mode 白名单校验（用户传错字段名时 console.warn + OSD 提示）
+    // 仅遍历 string component + EL_COMPONENT_MAP 命中的字段；用户自定义组件自动跳过
     validateSchemaProps(node)
     const Comp =
       typeof node.component === 'string'
@@ -280,24 +262,22 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
   // ──────────────────────────────────────────────────────────────────────
 
   function renderToComponentInner(node: SchemaNode): VNode | string | VNode[] | undefined {
-    // 阶段 2.3：权限 gate（位于最前面，所有渲染分支前）
-    // - hidden:不渲染,直接返回 undefined（DOM 中不出现）
-    // - view:渲染为纯文本占位,跳过 formItem 包装与校验
-    // - edit:正常走原有分支
+    // 权限 gate（位于最前面，所有渲染分支前）
+    // - hidden: 不渲染，DOM 中不出现
+    // - view: 纯文本占位，跳过 formItem 包装与校验
+    // - edit: 正常走原有分支
     const permission = resolvePermission(node, {
       model: () => opts.model ?? {},
       ...(opts.permissionResolver ? { permissionResolver: opts.permissionResolver } : {}),
     })
     if (permission === 'hidden') return undefined
-    // 整体只读（顶层 schema readonly）：未 hidden 的字段一律按 view 态展示（P2-1）
+    // 顶层 schema readonly：未 hidden 的字段一律按 view 态展示
     const readonly = opts.globalReadonly?.() === true
     if ((permission === 'view' || readonly) && node.name) {
       return renderViewField(node)
     }
 
-    // 1) 数组节点独立分支（进入即截断，即使 renderArrayNode 返回 undefined）
-    //    原代码语义：`if (node.kind === 'array') return renderArrayNode(...)`，
-    //    即使 result 为 undefined 也截断后续分支（与视觉容器/row+column 一致）
+    // 数组节点独立分支：进入即截断，即使 renderArrayNode 返回 undefined
     if (node.kind === 'array') return renderArrayNode(node, opts)
 
     // 共享上下文准备（dev mode 白名单校验 + Comp + eventBindings + asyncProps）

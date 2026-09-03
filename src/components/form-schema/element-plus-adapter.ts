@@ -2,13 +2,9 @@
  * Schema 字符串快捷名 → Element Plus 全局注册名 的内置映射
  *
  * 为什么不在此处直接 import element-plus 组件对象：
- *   - 违反 CLAUDE.md §1.6 项目按需加载约定（unplugin-vue-components 自动注册）
- *   - 直接命名导入会增加 bundle size
- *   - 实际组件由 vue 内置 resolveComponent() 从全局注册表查找
- *
- * 使用方式：
- *   const name = resolveElComponentName(schema.component)  // → 'ElInput'
- *   const Comp = resolveComponent(name)                     // → ElInput 组件
+ * - 违反 CLAUDE.md §1.6 项目按需加载约定（unplugin-vue-components 自动注册）
+ * - 直接命名导入会增加 bundle size
+ * - 实际组件由 vue 内置 resolveComponent() 从全局注册表查找
  */
 export const DEFAULT_COMPONENT_MAP: Record<string, string> = {
   Input: 'ElInput',
@@ -79,8 +75,8 @@ const BASE_DEFAULT_COMPONENT_PROPS: Record<string, Record<string, unknown>> = {
 
 /**
  * 默认组件 props：按组件名注入，节点级 props 可覆盖。
- * 包含轻量输入 UX 默认值和 Input 语义 alias 默认值；不强制
- * ColorPicker、Mention、Rate 的业务偏好。
+ *
+ * 包含轻量输入 UX 默认值和 Input 语义 alias 默认值；不强制 ColorPicker、Mention、Rate 的业务偏好。
  *
  * 键同时支持快捷名（如 'Input'）和 Element Plus 全名（如 'ElInput'），
  * 因此 schema 中写 component: 'Input' 或 component: 'ElInput' 都能命中。
@@ -94,9 +90,9 @@ export const DEFAULT_COMPONENT_PROPS: Record<
  * 解析 schema.component 字符串到最终组件名（供 resolveComponent 查找）
  *
  * 解析顺序：
- *   1. userComponentKeys 命中 → 返回原 name（调用方走用户 components map）
- *   2. DEFAULT_COMPONENT_MAP 内置命中（如 Input → 'ElInput'）
- *   3. ElXxx 原生名直通
+ * 1. userComponentKeys 命中 → 返回原 name（调用方走用户 components map）
+ * 2. DEFAULT_COMPONENT_MAP 内置命中（如 Input → 'ElInput'）
+ * 3. ElXxx 原生名直通
  *
  * 返回 null 时调用方应降级为 <div> 占位
  */

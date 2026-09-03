@@ -1,13 +1,13 @@
+/**
+ * render-with-grid —— 视觉容器内栅格渲染
+ *
+ * 类型断言（`as never`）归因见 types/TYPE-CAST-AUDIT.md。
+ */
 import { h, type VNode } from 'vue'
 import { ElRow, ElCol } from 'element-plus'
 import type { SchemaNode } from '../types'
 
 type RenderFn = (node: SchemaNode) => VNode | string | VNode[] | undefined
-
-/**
- * 类型断言归因（OPT-3）：h(ElRow / ElCol, ...) 调用处的 `as never` 是
- * Element Plus 类型元组推断缺陷，见 render-array-node.ts 头部同类说明。
- */
 
 /** 视觉容器内栅格渲染（Card 等 + row/column 时使用） */
 export function renderToComponentWithGrid(node: SchemaNode, renderToComponent: RenderFn): VNode {

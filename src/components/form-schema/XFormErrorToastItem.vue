@@ -1,14 +1,8 @@
 <script setup lang="ts">
 /**
- * XFormErrorToastItem —— 单条错误 toast 卡片（P2-1 拆分抽出）
+ * XFormErrorToastItem —— 单条错误 toast 卡片
  *
- * 为什么独立成文件：
- * - XFormErrorToast.vue 267 行中 ~110 行是单条 toast 渲染（template li + 对应 style），
- *   列表壳 + 容错工具函数各占一半。拆分后主文件仅 ~100 行（容器 + 列表）
- * - 单条 toast 是纯展示组件（props.event + emits.dismiss），无状态，
- *   可独立单元测试（未来补 spec）
- *
- * 行为 100% 等价拆分前：template 结构 + style class 名 + event payload 透传均不变。
+ * 单条 toast 是纯展示组件（props.event + emits.dismiss），无状态。template 结构 + style class 名 + event payload 透传均与拆分前一致。
  */
 import type { FormErrorEvent, FormErrorSeverity } from './composables/use-form-error-bus'
 
@@ -33,9 +27,11 @@ function severityIcon(s: FormErrorSeverity): string {
 
 /**
  * 安全 JSON 序列化 —— 不可序列化值（循环引用等）返回 null 占位
- * 与 formatValue 不同：保留完整字符串，不截断（用于 tooltip 显示原值）
- * 修复：循环引用对象（如 backend 错误 detail.value 含 self-ref）会抛 TypeError，
- *       此前的 :title 属性无 try/catch 导致整 toast 渲染崩溃。
+ *
+ * 与 formatValue 不同：保留完整字符串，不截断（用于 tooltip 显示原值）。
+ *
+ * 修复背景：循环引用对象（如 backend 错误 detail.value 含 self-ref）会抛 TypeError，
+ * 此前的 :title 属性无 try/catch 导致整 toast 渲染崩溃。
  */
 function tryJsonStringify(v: unknown): string | null {
   try {

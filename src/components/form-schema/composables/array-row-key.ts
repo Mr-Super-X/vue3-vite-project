@@ -1,12 +1,9 @@
 /**
- * array-row-key —— 数组节点行身份与 name 路径前缀化工具（P1-1 拆分抽出）
+ * array-row-key —— 数组节点行身份与 name 路径前缀化工具
  *
- * 为什么独立成文件：
  * - rewriteNamePath（~50 行）是纯函数，被 render-array-node.ts + 其 spec 直接调用
  * - rowKeyOf + newShortUid（~30 行）是 renderRow 内部行级稳定 key 分配工具
  * - 三个工具均与渲染逻辑解耦，独立单元可单独测试
- *
- * 行为 100% 等价拆分前。
  */
 import type { SchemaNode } from '../types'
 
@@ -20,7 +17,7 @@ import type { SchemaNode } from '../types'
  * WeakMap 跨渲染存活是必要的：renderRow 每次渲染重建，key 必须跨渲染稳定；
  * 行对象被 GC 时条目自动回收，不会泄漏。
  *
- * OPT-5：原 rowKeySeq 模块级计数器永增不回收（长时间运行下接近 2^53 上限），
+ * 原 rowKeySeq 模块级计数器永增不回收（长时间运行下接近 2^53 上限），
  * 改为 crypto.randomUUID() 短码 —— 无全局计数器，UUID 重复概率可忽略。
  */
 const rowKeyMap = new WeakMap<object, string>()
@@ -49,7 +46,8 @@ export function newShortUid(): string {
 }
 
 /**
- * 把子 schema 的 name 路径前缀化,让 el-form 能按 list.0.qty 形式做嵌套校验
+ * 把子 schema 的 name 路径前缀化，让 el-form 能按 list.0.qty 形式做嵌套校验
+ *
  * - 递归处理 children / formItem.slots / slots
  * - 子节点为空 / 字符串时原样返回
  * - keyPrefix（可选）：按行对象身份生成 node.key —— name 是位置路径（校验用），

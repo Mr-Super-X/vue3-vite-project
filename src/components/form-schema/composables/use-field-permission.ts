@@ -1,7 +1,5 @@
 /**
- * 字段权限解析 —— 阶段 2.3
- *
- * 三态：view（只读纯文本）/ edit（可编辑）/ hidden（不渲染）
+ * 字段权限解析 —— 三态 view/edit/hidden
  *
  * 解析优先级：
  * 1. string 字面量 'view' | 'edit' | 'hidden' —— 直接使用
@@ -10,7 +8,7 @@
  * 4. undefined —— 视为 'edit'（向后兼容）
  *
  * 权限码字符串（如 'user.edit'）由调用方通过 permissionResolver 自行映射：
- *   XForm.permissionResolver: (perm) => 'view' | 'edit' | 'hidden'
+ * XForm.permissionResolver: (perm) => 'view' | 'edit' | 'hidden'
  * 默认 permissionResolver 是 identity（直接返回 string 值）
  */
 import type { SchemaNode } from '../types'

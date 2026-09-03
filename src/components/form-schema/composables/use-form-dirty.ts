@@ -1,7 +1,6 @@
 /**
- * 表单 dirty 状态追踪 —— 阶段 2.2
+ * 表单 dirty 状态追踪 —— 父组件在路由切换/关闭弹窗时判断用户是否修改过表单（用于未保存提示）
  *
- * 用途：父组件在路由切换/关闭弹窗时判断用户是否修改过表单（用于未保存提示）
  * API：
  * - isDirty(): boolean —— 任一字段与初始 snapshot 不同则 true
  * - getDirtyFields(): string[] —— 返回 dirty 字段路径列表（lodash 路径，如 'items[0].qty'）
@@ -13,7 +12,6 @@
  * - snapshot 由调用方负责初始化：XForm.vue 在 setup 末尾立即调一次 resetDirty() 拍基线
  *   避免 setup 时 model 为空导致"全字段 dirty"假象
  * - watch model deep 触发 dirty 重算（响应式）
- * - fieldNames 由 XForm.vue 通过 getNames() 提供（已存在）
  */
 import { watch } from 'vue'
 import { isEqual, get, cloneDeep } from 'lodash-es'

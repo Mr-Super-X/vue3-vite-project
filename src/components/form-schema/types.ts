@@ -1,9 +1,8 @@
 /**
  * XForm schema DSL —— 公共类型 barrel
  *
- * 历史：原 types.ts 单文件 556 行含 29 字段 SchemaNode + 全部子类型。
- * 重构（OPT-4）后按职责拆为 8 个子文件，本文件仅做 re-export，保持
- * 所有现有 `import type { ... } from '@/components/form-schema/types'` 不变。
+ * 原 types.ts 单文件 556 行含 29 字段 SchemaNode + 全部子类型。重构后按职责拆为 9 个子文件，
+ * 本文件仅做 re-export，保持所有现有 `import type { ... } from '@/components/form-schema/types'` 不变。
  *
  * 子文件索引：
  * - ./types/base.ts           基础类型：EventFn / FunctionExpression / SchemaSlot

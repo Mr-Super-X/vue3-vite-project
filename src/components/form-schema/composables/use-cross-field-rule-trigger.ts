@@ -1,16 +1,7 @@
 /**
- * use-cross-field-rule-trigger —— 每字段跨字段规则触发器（P2-2 重做，内部委托）
+ * use-cross-field-rule-trigger —— 每字段跨字段规则触发器
  *
- * 为什么独立成文件（保留 useFormValidation 公开签名前提下）：
- * - triggerCrossFieldValidator 含序号令牌 + matchTrigger + 空值跳过 + 异步竞态防护，
- *   ~40 行独立逻辑，与 useFormValidation 主编排（validateForm / applyCrossErrors）关注点不同
- * - 抽到独立单元后便于单独测试（未来补 spec），避免主文件过大
- *
- * 重做策略（区别于首次 P2-2）：
- * - useFormValidation 内部委托本 composable → 公开签名 100% 不变
- * - spec 不改、demo 不改、composer 集成不变
- *
- * 行为 100% 等价首次实现：trigger 顺序、序号令牌、空值跳过、过期结果丢弃逻辑完全保留。
+ * 从 useFormValidation 抽离（序号令牌 + matchTrigger + 空值跳过 + 异步竞态防护），内部委托，公开签名 100% 不变。
  */
 import { get } from 'lodash-es'
 import { matchTrigger } from './match-trigger'
@@ -38,8 +29,8 @@ export interface UseCrossFieldRuleTriggerReturn {
 
 /**
  * 字段事件跨字段规则触发器
- * - 序号令牌：连续 blur/change 触发时，旧 Promise 后返回不得覆盖新结果（H3）
- * - 实例级 Map：组件 unmount 时随 composable scope 一起 GC（OPT-5）
+ * - 序号令牌：连续 blur/change 触发时，旧 Promise 后返回不得覆盖新结果
+ * - 实例级 Map：组件 unmount 时随 composable scope 一起 GC
  */
 export function useCrossFieldRuleTrigger(
   deps: UseCrossFieldRuleTriggerDeps

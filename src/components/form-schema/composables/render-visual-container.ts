@@ -1,10 +1,9 @@
 /**
  * 视觉容器渲染（Card 等带 row/column 的节点，无 name 时走该分支）
- * - 用于「Card 容器包多个字段」「带 row+column 的容器节点」
- * - 默认 slot 来自 node.children 或 grid 渲染
  *
- * 类型断言归因（OPT-3）：h() 调用处的 `as never` 是 Element Plus 类型元组缺陷，
- * 见 render-array-node.ts 头部同类说明。
+ * 用于「Card 容器包多个字段」「带 row+column 的容器节点」，默认 slot 来自 node.children 或 grid 渲染。
+ *
+ * 类型断言（`as never`）归因见 types/TYPE-CAST-AUDIT.md。
  */
 import { h, type VNode } from 'vue'
 import type { SchemaNode } from '../types'

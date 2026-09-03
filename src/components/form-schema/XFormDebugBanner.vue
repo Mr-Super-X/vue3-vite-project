@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
- * Dev-only debug banner: 显示 schema 校验错误与安全扫描结果
- * 浮动在右下角，可折叠；点 X 关闭整个 banner
+ * XFormDebugBanner —— Dev-only debug banner
+ *
+ * 显示 schema 校验错误与安全扫描结果，浮动在右下角，可折叠；点 X 关闭整个 banner。
  */
 import { ref, computed } from 'vue'
 

@@ -74,12 +74,15 @@ export function containsReaction(schema: SchemaNode | SchemaNode[]): boolean {
   }
 }
 
-/** 应用 reaction：按需注册 watch（仅函数/函数表达式字符串）；求值错误 → console.error
- *  支持 strategy: 'sync' | 'debounce' | 'throttle' + delay
+/**
+ * 应用 reaction：按需注册 watch（仅函数/函数表达式字符串）；求值错误 → console.error
+ *
+ * - strategy: 'sync' | 'debounce' | 'throttle' + delay
  *  - 'sync'(默认):依赖变化立即同步执行
  *  - 'debounce':依赖停止变化 delay ms 后执行一次（适合远程搜索）
  *  - 'throttle':delay ms 内最多执行一次（适合实时保存）
- *  支持 deps: string[] —— 声明后仅精确 watch 这些路径；未声明保持 deep watch 整棵 model 的旧行为 */
+ * - deps: string[] —— 声明后仅精确 watch 这些路径；未声明保持 deep watch 整棵 model 的旧行为
+ */
 export function applyReactions(
   node: SchemaNode,
   model: Record<string, unknown>,

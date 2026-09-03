@@ -9,10 +9,8 @@ const FORBIDDEN_REG =
 const MAX_DEPTH = 32
 const MAX_NODES = 10_000
 
-/**
- * 扫描 schema 中所有可执行字段（on/reaction/disabled/permission/directives/slots/formItem.slots）的危险标识符
- * 防护：WeakSet 去重 + 最大深度 32 + 最大节点数 10000
- */
+/** 扫描 schema 中所有可执行字段（on/reaction/disabled/permission/directives/slots/formItem.slots）的危险标识符
+ *  防护：WeakSet 去重 + 最大深度 32 + 最大节点数 10000 */
 export function scanForForbidden(schema: SchemaNode | SchemaNode[]): string[] {
   const errors: string[] = []
   const seen = new WeakSet<object>()

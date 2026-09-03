@@ -1,9 +1,8 @@
 /**
- * compile-rules —— 校验规则编译（P2-B 拆分）
+ * compile-rules —— 校验规则编译
  *
- * 从 render-schema-node.ts 抽出。负责：
- *   - 字符串规则名查表 + 未注册警告
- *   - 必需字段的默认 message 自动注入（label-aware）
+ * - 字符串规则名查表 + 未注册警告
+ * - 必需字段的默认 message 自动注入（label-aware）
  */
 import type { SchemaNode, XFormProps } from '../types'
 

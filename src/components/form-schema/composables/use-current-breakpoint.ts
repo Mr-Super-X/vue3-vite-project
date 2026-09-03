@@ -16,18 +16,12 @@ const BREAKPOINTS: Array<[Breakpoint, number]> = [
 ]
 
 /**
- * 监听 window.innerWidth 变化,返回当前断点(xs/sm/md/lg/xl)
+ * 监听 window.innerWidth 变化，返回当前断点(xs/sm/md/lg/xl)
  *
- * 设计:
- * - SSR 安全:服务端没有 window,返回 'md'(中位断点)默认值
- * - onMounted 注册 resize 监听,onUnmounted 移除(无副作用)
- * - 断点计算:element-plus 默认阈值(与 docs 一致)
- *
- * 用法:
- * ```ts
- * const bp = useCurrentBreakpoint()
- * watch(bp, () => console.log('断点变化:', bp.value))
- * ```
+ * 设计：
+ * - SSR 安全：服务端没有 window，返回 'md'(中位断点)默认值
+ * - onMounted 注册 resize 监听，onUnmounted 移除（无副作用）
+ * - 断点计算：element-plus 默认阈值（与 docs 一致）
  */
 export function useCurrentBreakpoint(): Ref<Breakpoint> {
   const current = ref<Breakpoint>('md')

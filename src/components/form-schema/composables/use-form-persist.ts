@@ -30,6 +30,7 @@ export interface FormPersistReturn {
 }
 /**
  * 草稿持久化：防抖自动落盘 + beforeunload flush 兜底；不自动恢复，由使用方按 hasDraft 决定 load() 时机。
+ *
  * 边界：exclude 字段不落盘、序列化异常仅 warn；副作用：写 storage、注册 beforeunload 监听（scope 内自动清理）。
  */
 export function useFormPersist(options: FormPersistOptions): FormPersistReturn {

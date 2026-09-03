@@ -1,15 +1,13 @@
 /**
- * useFormInstance —— el-form 实例方法编排（P2-A1 + P1-2 重做后主文件）
- *
- * P2-A1 拆分前：394 行（含 setFieldError 双路径 + watch 守护）
- * P2-A1 拆分后：本文件 ~250 行，setFieldError dual-path 已抽到 ./use-set-field-error.ts
- * P1-2 重做后：zod 顶层校验内部委托 ./use-zod-validator.ts（公开签名 100% 不变）
+ * useFormInstance —— el-form 实例方法编排
  *
  * 职责：
- *   - el-form 实例引用 + getRef / clearValidate / resetFields / validateField 等基础方法
- *   - 数组操作 addItem / removeItem / moveItem（含 clearArraySubtree 行清理）
- *   - 委托 useSetFieldError 处理 setFieldError / setFieldValidating + watch 守护
- *   - zod 校验内部委托：见 ./use-zod-validator.ts
+ * - el-form 实例引用 + getRef / clearValidate / resetFields / validateField 等基础方法
+ * - 数组操作 addItem / removeItem / moveItem（含 clearArraySubtree 行清理）
+ * - 委托 useSetFieldError 处理 setFieldError / setFieldValidating + watch 守护
+ * - zod 校验内部委托 ./use-zod-validator.ts
+ *
+ * 已抽离：setFieldError 双路径+watch 守护→./use-set-field-error、zod→./use-zod-validator。
  */
 import { ref, toRaw, type ComponentPublicInstance, type Ref } from 'vue'
 import { useSetFieldError, type FieldErrorState } from './use-set-field-error'
@@ -21,19 +19,18 @@ import type { ZodType } from 'zod'
 export type ElFormInstance = {
   validate?: (callback?: (valid: boolean) => void) => Promise<boolean>
   /**
-   * clearValidate 运行时支持 props?: string[] 参数（仅清除指定字段），
-   * 但 element-plus 2.x TS 类型声明为 () => void —— 这里用宽松签名补齐
+   * element-plus 2.x TS 类型声明为 () => void，实际支持 props?: string[]（仅清除指定字段）
+   * 这里用宽松签名补齐
    */
   clearValidate?: (props?: string | string[]) => void
   resetFields?: (props?: string | string[]) => void
   scrollToField?: (name: string) => void
   /**
-   * 校验指定字段 —— element-plus 2.x 实际支持但 TS 类型声明不完整
-   * validateField(prop?: string | string[]): Promise<void>（校验失败 reject）
+   * element-plus 2.x 实际支持但 TS 类型声明不完整：validateField(prop?: string | string[]): Promise<void>（校验失败 reject）
    */
   validateField?: (prop?: string | string[]) => Promise<void>
   /**
-   * 同步 ElForm 初始值快照 —— element-plus 2.x 内部方法，
+   * element-plus 2.x 内部方法 —— 同步 ElForm 初始值快照，
    * 用于 defaultValue 填充后防止子组件 mount 副作用（如 ElRate emit 0）导致 resetFields 基准值错乱。
    */
   setInitialValues?: (initModel: Record<string, unknown>) => void
@@ -45,14 +42,13 @@ export type { FieldErrorState }
 export function useFormInstance(
   model: () => Record<string, unknown> | undefined,
   zodSchema: () => ZodType | undefined,
-  /** 阶段 3.1：外部字段错误状态 ref（XForm.vue 创建并传入） */
+  /** XForm.vue 创建并传入；走 element-plus 官方 props.error + props.validateStatus 路径 */
   externalErrors?: Ref<Record<string, FieldErrorState>>,
-  /** OPT-7：错误事件总线 —— 显式 deps 传入（避免 provide/inject 在嵌套 composable 中失效） */
+  /** 显式 deps 传入（避免 provide/inject 在嵌套 composable 中失效） */
   errorBus?: UseFormErrorBusReturn
 ) {
   const elFormRef = ref<ElFormInstance | null>(null)
 
-  // setFieldError 双路径 + watch 守护 —— 委托独立 composable（P2-A1 拆分）
   // 仅在 externalErrors 存在时初始化（无 externalErrors 表示 XForm.vue 未启用红字路径，
   // 此场景不需要 watch 守护；setFieldError 也只是空操作）
   const { setFieldError } = useSetFieldError({
@@ -73,8 +69,8 @@ export function useFormInstance(
   function validateForm(): Promise<boolean> {
     return new Promise((resolve) => {
       const ef = elFormRef.value
-      // 未绑定 el-form 时静默 resolve(true) 会把"配置/时序错误"伪装成"校验通过"，
-      // 提交链路会带着未校验的数据继续走 —— 按失败处理并给出可诊断的错误日志
+      // 未绑定 el-form 时按失败处理并给出可诊断错误日志：
+      // 静默 resolve(true) 会把"配置/时序错误"伪装成"校验通过"，提交链路带着未校验数据继续走
       if (!ef?.validate) {
         console.error(
           '[XForm] validate 调用时 el-form 实例未绑定（elFormRef 为空），已按校验失败处理'
@@ -165,7 +161,7 @@ export function useFormInstance(
   }
 
   function clearValidate(names?: string[]): void {
-    // 阶段 3.1：clearValidate 同时清理 externalErrors（保持与 setFieldError 同步）
+    // clearValidate 同时清理 externalErrors（保持与 setFieldError 同步）
     if (names && externalErrors) {
       for (const name of names) delete externalErrors.value[name]
     } else if (externalErrors) {
@@ -240,7 +236,7 @@ export function useFormInstance(
     elFormRef.value?.scrollToField?.(name)
   }
 
-  // P1-2 抽离：zod 顶层校验独立（内部委托，公开签名不变）
+  // zod 顶层校验独立（内部委托，公开签名不变）
   const { validateFormWithZod } = useZodValidator(model, zodSchema)
 
   /** 数组操作：在 model[name] 末尾追加一项（追加不产生索引位移，无需清理任何校验态） */
@@ -295,7 +291,7 @@ export function useFormInstance(
     moveItem,
     setFieldError,
     setFieldValidating,
-    // 阶段 3.1：暴露 externalErrors ref 让调用方（如 XForm.vue）能直接读状态
+    // 暴露 externalErrors ref 让调用方（如 XForm.vue）能直接读状态
     externalErrors,
   }
 }

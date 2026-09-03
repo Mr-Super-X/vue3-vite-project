@@ -1,19 +1,12 @@
 /**
  * FormItem 包装渲染（含 name 或 formItem: true 的节点）
+ *
  * - 外层包 el-form-item（label + prop + rules + onFocusout/onChange 跨字段触发）
  * - 内部渲染 Comp（v-model/on 事件 + 默认 props + node.props + async props + disabled + key）
  * - formItem 节点的 slots 转发给内部 Comp（如 el-upload 的 tip 槽位）
  * - 末尾 wrapWithElCol 应用 col 响应式断点
  *
- * ────────────────────────────────────────────────────────────────────────────
- * 类型断言归因（OPT-3）
- * 本文件中 `as never` 集中在 h(ElFormItem/ElRow/ElCol, ...) 调用处。
- * Element Plus buildProp 类型元组推断 + props 类型展开不完整，需要 cast 到 never
- * 才能让 vue h() 接受动态拼装的 props 对象；运行时由 Element Plus 自身做校验。
- * 见 render-array-node.ts 头部同类说明。
- *
- * 完整归因表（C1-C9 根因分类）见 `../types/TYPE-CAST-AUDIT.md`。
- * ────────────────────────────────────────────────────────────────────────────
+ * 类型断言（`as never`）归因见 types/TYPE-CAST-AUDIT.md。
  */
 import { h, type VNode } from 'vue'
 import { ElFormItem, ElRow, ElCol, ElUpload } from 'element-plus'

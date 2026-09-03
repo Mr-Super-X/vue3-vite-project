@@ -1,13 +1,12 @@
 /**
  * useSchemaIndex —— schema 元数据查询的中央索引
- * - 一次遍历构建 byName / fieldNames / allNames / crossRules / reverseIndex / dependsOnMap
+ *
+ * 一次遍历构建 byName / fieldNames / allNames / crossRules / reverseIndex / dependsOnMap。
+ * 收益：use-cross-field-trigger / use-form-dirty / use-server-error / XForm.getNames
+ * 从每次 O(n) 全树遍历降为 O(1) Map 查询，大 schema 性能显著提升。
+ *
  * - schema 整体替换时自动重建（监听 schemaGetter）
  * - 局部修改需手动调 reindex()（与现有 reactiveSchema 行为一致）
- *
- * 收益：use-cross-field-trigger / use-form-dirty / use-server-error / XForm.getNames
- *       从每次 O(n) 全树遍历降为 O(1) Map 查询，大 schema 性能显著提升。
- *
- * 向后兼容：保留旧 getNames() / collectCrossRuleFields() 公开 API，XForm 内部改为查索引。
  */
 import { ref, watch, type Ref } from 'vue'
 import type { SchemaNode } from '../types'

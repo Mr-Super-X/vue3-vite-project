@@ -1,10 +1,9 @@
 /**
- * resolve-component —— 组件名解析（P2-B 拆分）
+ * resolve-component —— 组件名解析
  *
- * 从 render-schema-node.ts 抽出。负责：
- *   - 内置 EL 组件短名 → 全名 → 实际组件的映射表（EL_COMPONENT_MAP）
- *   - 三段式组件名解析（用户注册 / 短名 / 全名 / ElXxx / 全局注册 / 原生 HTML）
- *   - ElUpload 类型判断工具（避免覆盖默认图标注入）
+ * - 内置 EL 组件短名 → 全名 → 实际组件的映射表（EL_COMPONENT_MAP）
+ * - 三段式组件名解析（用户注册 / 短名 / 全名 / ElXxx / 全局注册 / 原生 HTML）
+ * - ElUpload 类型判断工具（避免覆盖默认图标注入）
  */
 import { resolveComponent } from 'vue'
 import {

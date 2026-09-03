@@ -1,20 +1,14 @@
 /**
- * use-dev-runtime —— XForm dev 模式运行时（P0 拆分抽出）
+ * use-dev-runtime —— XForm dev 模式运行时
  *
- * 抽离原因：use-xform-composer.ts 原本 493 行，含三类不相关职责：
- *   1. 11 个 composable 装配（保留在 composer）
- *   2. dev 校验 + 表达式扫描 + debug hook + model 缺失 warn（→ 本文件）
- *   3. defaultValue 填充（→ apply-default-values.ts）
+ * 从 use-xform-composer 抽离，仅承载 dev-only 行为：
+ * - validateErrors / forbiddenErrors / showDebugBanner refs（供 XFormDebugBanner 消费）
+ * - schema 校验失败时 console.error + errorBus.report
+ * - 表达式含 forbidden 标识符时 console.warn + errorBus.report（降级为 warn）
+ * - model 缺失时 dev warn + errorBus.report
+ * - installDevDebugHook —— dev mode 挂 window.__xform_debug（setFieldError / getFieldErrors / getModel）
  *
- * 本文件仅承载 dev-only 行为：
- *   - validateErrors / forbiddenErrors / showDebugBanner refs（供 XFormDebugBanner 消费）
- *   - schema 校验失败时 console.error + errorBus.report
- *   - 表达式含 forbidden 标识符时 console.warn + errorBus.report（降级为 warn，
- *     真实危险由 DebugBanner 上报，避免重复 console.error 噪声）
- *   - model 缺失时 dev warn + errorBus.report
- *   - installDevDebugHook —— dev mode 挂 window.__xform_debug（setFieldError / getFieldErrors / getModel）
- *
- * 行为 100% 等价拆分前。
+ * prod 下所有 watch + ref 初始化均会执行但 console / errorBus 静默（依赖 showDebugBanner 门控）。
  */
 import { ref, watch, type Ref } from 'vue'
 import type { ComponentPublicInstance } from 'vue'

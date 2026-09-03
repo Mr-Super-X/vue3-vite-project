@@ -1,17 +1,16 @@
 /**
- * build-slots —— 插槽构造与组件 props 默认值（P2-B 拆分）
+ * build-slots —— 插槽构造与组件 props 默认值
  *
- * 从 render-schema-node.ts 抽出。负责：
- *   - renderChildren：children 多态归一化（string / SchemaNode / SchemaNode[]）
- *   - buildSlotFn：slot 值 → 渲染函数（统一 function / 字符串 / SchemaNode）
- *   - buildUploadDefaultSlot：Upload 触发区默认内容（picture-card / drag / text-picture）
- *   - buildUploadTipSlot：Upload tip 插槽（字符串自动包 el-upload__tip）
- *   - getComponentDefaultProps：按组件名注入默认 props
- *   - buildAsyncProps：构造 Autocomplete 异步选项所需 props
+ * - renderChildren：children 多态归一化（string / SchemaNode / SchemaNode[]）
+ * - buildSlotFn：slot 值 → 渲染函数（统一 function / 字符串 / SchemaNode）
+ * - buildUploadDefaultSlot：Upload 触发区默认内容（picture-card / drag / text-picture）
+ * - buildUploadTipSlot：Upload tip 插槽（字符串自动包 el-upload__tip）
+ * - getComponentDefaultProps：按组件名注入默认 props
+ * - buildAsyncProps：构造 Autocomplete 异步选项所需 props
  *
  * 默认图标 class 常量（BEM 命名空间 + el-icon--upload 兼容）：
- *   - pictureCard：触发区 148×148 卡片，含 Plus 图标
- *   - drag：保留 Element Plus 原生拖拽区结构（el-icon--upload + UploadFilled）
+ * - pictureCard：触发区 148×148 卡片，含 Plus 图标
+ * - drag：保留 Element Plus 原生拖拽区结构（el-icon--upload + UploadFilled）
  */
 import { h, type VNode } from 'vue'
 import { ElButton, ElIcon, ElUpload } from 'element-plus'

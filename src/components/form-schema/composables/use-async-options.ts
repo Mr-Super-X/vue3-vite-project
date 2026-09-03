@@ -15,11 +15,12 @@ export interface UseAsyncOptionsReturn extends AsyncOptionsState {
 
 /**
  * 管理单个 schema 节点的异步选项生命周期
+ *
  * - immediate 默认 true：创建时立即请求
  * - deps 变化时自动重新请求
  * - source 返回值经 transform 后存入 state.data
  * - 错误时调用 onError 并写入 state.error
- * - scope  disposed 后不再调用用户 onError（避免 Vue dev strict mode 双 mount 导致重复 toast）
+ * - scope disposed 后不再调用用户 onError（避免 Vue dev strict mode 双 mount 导致重复 toast）
  */
 export function useAsyncOptions(
   node: SchemaNode,

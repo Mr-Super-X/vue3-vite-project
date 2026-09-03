@@ -4,8 +4,7 @@ import { resolveFunctionExpression } from './use-expression'
 /** 构建节点事件绑定：node.on 的 function / function-expression-string 转为 vue 事件 prop
  * - 函数：直接传
  * - 字符串：经 resolveFunctionExpression 解析（失败则跳过该事件）
- * 事件 prop 名遵循 vue 约定：on<EventName> = on + 大写首字母
- */
+ * 事件 prop 名遵循 vue 约定：on<EventName> = on + 大写首字母 */
 export function buildOnBindings(
   node: SchemaNode,
   model: Record<string, unknown> | undefined

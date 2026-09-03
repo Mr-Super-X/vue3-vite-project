@@ -9,6 +9,7 @@ import type {
 
 /**
  * beforeChange 3 层钩子配置（buildVModelBindings 接收）
+ *
  * - layer1: 全局 Props beforeChange（横切关注点）
  * - namespaceRules: 动态命名空间规则数组
  * - fieldBeforeChange: 字段级 SchemaNode.beforeChange（可不传，自动从 node.beforeChange 取）
@@ -71,6 +72,7 @@ function patternMatches(pattern: RegExp | string, name: string): boolean {
 
 /**
  * 3 层串行 resolveBeforeChangeChain
+ *
  * 第 1 层 props.beforeChange -> 第 2 层 namespaceRules[pattern 匹配] -> 第 3 层 node.beforeChange
  * - 每层返回新值透传给下一层；任一层返回 Promise.resolve 异步等待
  * - 任一层抛同步异常 → catch + warn + 放行上一层结果给下一层（不阻断）
@@ -146,6 +148,7 @@ export function makeDefaultBeforeChangeCtx(
 
 /**
  * 构建节点 vModel 绑定：含 3 层 beforeChange 拦截
+ *
  * - 异步链结束后才写入 model
  * - onValueChange 钩子在写入完成后触发
  */

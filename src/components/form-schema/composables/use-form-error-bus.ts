@@ -1,16 +1,15 @@
 /**
- * useFormErrorBus —— XForm 错误事件总线
+ * useFormErrorBus —— XForm 错误事件总线（OPT-7）
  *
- * OPT-7 引入：原 27 处 console.error/warn 仅开发者打开 DevTools 可见，
- * 普通用户感知不到。新设计提供 provide/inject 共享的 error bus：
- *   - 调用方：report({ severity, code, message, fields?, source? }) —— 替换 console.error
- *   - 消费方：useInjectFormErrorBus() 读取 events + dismiss
- *   - 默认渲染：dev 模式通过 XFormErrorToast 浮窗展示，prod 静默（可扩展上报点）
+ * 原 27 处 console.error/warn 仅开发者 DevTools 可见。新设计 provide/inject 共享 error bus：
+ * - 调用方：report({ severity, code, message, fields?, source? }) 替换 console.error
+ * - 消费方：useInjectFormErrorBus() 读取 events + dismiss
+ * - 默认渲染：dev 通过 XFormErrorToast 浮窗展示，prod 静默（可扩展上报点）
  *
  * 设计权衡：
- *   - 不引入第三方 toast 库（element-plus ElMessageBus 与业务层耦合过深）
- *   - 仅 dev 弹 OSD；prod 静默 + 预留 hook 供业务埋点上报
- *   - 同 code 去重（5 秒内）：避免用户连续输入反复弹窗
+ * - 不引入第三方 toast 库（element-plus ElMessageBus 与业务层耦合过深）
+ * - 仅 dev 弹 OSD；prod 静默 + 预留 hook 供业务埋点上报
+ * - 同 code 去重（5 秒内）：避免用户连续输入反复弹窗
  */
 
 import { computed, inject, ref, type InjectionKey, type Ref } from 'vue'

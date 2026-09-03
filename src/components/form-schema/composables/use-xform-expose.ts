@@ -1,16 +1,8 @@
 /**
- * use-xform-expose —— XFormExpose 聚合（P0 拆分抽出）
+ * use-xform-expose —— XFormExpose 19 个方法聚合
  *
- * 把 useXFormComposer 内 19 个方法聚合抽到独立函数：
- *   - el-form 实例方法（getRef / clearValidate / resetFields / validateField / scrollToField）
- *   - 校验（validate / validateDetail / validateWithZod）
- *   - 字段错误（setFieldError / setFieldValidating）
- *   - 数组操作（addItem / removeItem / moveItem）
- *   - dirty（isDirty / getDirtyFields / isTouched / resetDirty）
- *   - schema 元数据（getNames）
- *   - 服务端错误（validateFromServer）
- *
- * 行为 100% 等价拆分前：exposed 对象键集与顺序保持一致（XFormExpose 定义）。
+ * 从 useXFormComposer 抽离：el-form 实例方法 / 校验 / 字段错误 / 数组操作 / dirty / schema 元数据 / 服务端错误。
+ * exposed 对象键集与顺序保持一致（XFormExpose 定义）。
  */
 import type { XFormExpose } from '../types'
 
@@ -44,7 +36,8 @@ export interface UseXFormExposeDeps {
 
 /**
  * 构造 XFormExpose —— 19 个方法聚合
- * 顺序与 use-xform-composer.ts 拆分前保持一致，便于对照验证
+ *
+ * 顺序与 use-xform-composer.ts 拆分前保持一致，便于对照验证。
  */
 export function useXFormExpose(deps: UseXFormExposeDeps): XFormExpose {
   return {

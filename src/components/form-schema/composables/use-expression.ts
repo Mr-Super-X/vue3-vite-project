@@ -4,23 +4,18 @@
 // 危险标识符扫描已抽到 ./use-scan-forbidden.ts
 
 // ────────────────────────────────────────────────────────────────────────────
-// 模块级缓存 —— OPT-5 评估后保留并文档化
+// 模块级缓存设计权衡
 //
 // 1. EXPRESSION_CACHE：编译结果缓存（字符串 → fn 或 null）
-//    - 表达式字符串是静态配置，但求值可能发生在每次渲染/联动中。
-//    - 不缓存意味着同一字符串反复 new Function（含语法解析），大表单下开销可观。
-//    - 失败结果同样缓存（null），避免同一非法表达式每轮重复 console.error。
-//    - 超 500 条时整体 clear（按时间窗口冷启动，命中影响可忽略）。
+//    - 不缓存意味着同一字符串反复 new Function，大表单下开销可观
+//    - 失败结果同样缓存（null），避免同一非法表达式每轮重复 console.error
+//    - 超 500 条时整体 clear
 //
 // 2. EXPRESSION_FNS / fnsVersion：白名单函数表 + 版本号
-//    - 由 XFormProps.expressionFunctions 通过 setExpressionFunctions 注入。
-//    - 模块级共享意味着多 XForm 实例同时挂载时后注册的会覆盖前者（last-write-wins）。
-//    - 当前项目实践中 XForm 不在同一页面多实例共存，保留性能特性。
-//    - 若未来需支持多实例共存，将 resolveFunctionExpression 改为接收 scope 参数即可。
-//
-// 设计权衡：以上两块本质是全局求值缓存，跨实例共享同一编译结果是性能优化。
-// 把它们改为实例级会让同一字符串反复编译（N schema × M reaction），得不偿失。
-// 保留模块级 + 文档化设计权衡，是务实选择。 — OPT-5
+//    - 由 XFormProps.expressionFunctions 通过 setExpressionFunctions 注入
+//    - 模块级共享意味着多 XForm 实例同时挂载时后注册的会覆盖前者（last-write-wins）
+//    - 当前项目实践中 XForm 不在同一页面多实例共存，保留性能特性
+//    - 若未来需支持多实例共存，将 resolveFunctionExpression 改为接收 scope 参数即可
 // ────────────────────────────────────────────────────────────────────────────
 
 const EXPRESSION_REG = /^\s*\{\{([\s\S]+)\}\}\s*$/

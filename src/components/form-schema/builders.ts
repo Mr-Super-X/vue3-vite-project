@@ -1,7 +1,5 @@
 /**
- * XForm schema 链式构建器
- *
- * 设计目标："XForm 使用门槛低" —— 对标 FormRender 的链式 API
+ * XForm schema 链式构建器（对标 FormRender 的链式 API）
  *
  * 架构（OPT-2 重构后）：
  * 1. NodeBuilder<C> —— 泛型基类，绑死 component 名 + props 类型
@@ -11,26 +9,11 @@
  *    子类只需实现 component-specific 方法（clearable/options/format/...）
  * 3. 27 个 xXxx 入口函数（含 xArray）= makeBuilder(componentName).Ext 实例
  *
- * 类型推导：
- * - xInput() → Builder<'Input', ElInputProps> → build() 返回 SchemaNodeFor<'Input'>
- * - xSelect() → Builder<'Select', ElSelectProps>
- * - ...
+ * 类型推导：xInput() → Builder<'Input', ElInputProps> → build() 返回 SchemaNodeFor<'Input'>，
+ * 这样 IDE 在链式调用时自动补全 props 字段名 + 校验 props 值类型。
  *
- * 这样 IDE 在链式调用时自动补全 props 字段名 + 校验 props 值类型
- *
- * ────────────────────────────────────────────────────────────────────────────
- * OPT-2 重构要点：
- * - 删除原 makeBuilder 内 ~60 行方法复制粘贴
- * - 删除原 Ext 类中 5 处 `_b` 反射访问
- * - 行数：537 → 280（去掉 makeBuilder 内 13 方法 × 25 builder 复制）
- * - 公开 API 完全兼容，所有现有测试无需修改
- * ────────────────────────────────────────────────────────────────────────────
- * P0-1 重构要点（2026-09-01 易用性优化）：
- * - 按 component 名字母 A-Z 分组，每个 component 包含「makeBuilder 工厂 + Ext 子类 + xXxx 入口」三件套
- * - 旧结构：25 个工厂集中 + 12 个 Ext 子类分散 + 27 个入口函数集中
- * - 新结构：每个 component 独立一节，查找 builder 能力从跨 2-3 处跳转 → 同 1 节内查找
- * - 公开 API 完全兼容
- * ────────────────────────────────────────────────────────────────────────────
+ * 按 component 名字母 A-Z 分组，每个 component 包含「makeBuilder 工厂 + Ext 子类 + xXxx 入口」三件套，
+ * 查找 builder 能力从跨 2-3 处跳转 → 同 1 节内查找。
  */
 import type {
   SchemaNode,
@@ -47,6 +30,7 @@ import type {
 
 /**
  * 链式构建器泛型基类
+ *
  * - C：绑死的 component 名（决定 SchemaNodeFor<C> 类型）
  * - P：组件 props 类型（默认从 ComponentPropsRegistry 推导）
  *

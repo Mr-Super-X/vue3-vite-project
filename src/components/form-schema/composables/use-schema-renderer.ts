@@ -2,9 +2,9 @@ import { watch, ref, reactive, markRaw, onScopeDispose, type Ref } from 'vue'
 import { cloneDeepWith } from 'lodash-es'
 
 /**
- * identity-preserving clone（渲染层重构 B-3）：行为同 cloneDeep，但不深入 component 字段 ——
+ * identity-preserving clone：行为同 cloneDeep，但不深入 component 字段 ——
  * 组件定义对象（options object）被深克隆后身份丢失，Vue 视为不同组件导致整字段 remount；
- * 保持引用后配合顶层稳定 key（B-1），schema 重建时同 key 节点走 patch 而非 remount。
+ * 保持引用后配合顶层稳定 key，schema 重建时同 key 节点走 patch 而非 remount。
  * 函数（reaction/validator/source）cloneDeep 本就按引用拷贝，无需特殊处理。
  *
  * markRaw 包裹：用户传 component 为 Component 对象（如 `component: ElIcon`）时，
@@ -31,6 +31,7 @@ interface UseSchemaRendererOptions {
 
 /**
  * 核心编排 composable
+ *
  * - watch(schema, deep)：schema 变化时按需克隆 + 注册 reaction watchEffect
  * - onScopeDispose：卸载时清理所有 watchEffect
  */
@@ -103,6 +104,7 @@ function traverse(
 
 /**
  * 注册 schema 中所有异步选项节点
+ *
  * - 为每个含 asyncOptions 的节点创建请求状态
  * - 状态变化时同步到 node.props（Select/Cascader → options；TreeSelect → data；loading → loading）
  * - 返回的 stop 函数由调用方在 schema 变化/组件卸载时统一调用

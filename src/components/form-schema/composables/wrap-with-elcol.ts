@@ -1,11 +1,10 @@
 /**
- * wrap-with-elcol —— 栅格响应式包装（P2-B 拆分）
+ * wrap-with-elcol —— 栅格响应式包装
  *
- * 从 render-schema-node.ts 抽出。负责：
- *   - wrapWithElCol：节点 col 响应式包装（含 ElCol 渲染）
- *   - pickBreakpointConfig：当前断点配置挑选（移动优先 / 降级到基础）
- *   - mergeColResponsive：响应式 col 拍平（移除 responsive 字段）
- *   - mergeRowResponsive：响应式 row 拍平
+ * - wrapWithElCol：节点 col 响应式包装（含 ElCol 渲染）
+ * - pickBreakpointConfig：当前断点配置挑选（移动优先 / 降级到基础）
+ * - mergeColResponsive：响应式 col 拍平（移除 responsive 字段）
+ * - mergeRowResponsive：响应式 row 拍平
  */
 import { h, type VNode } from 'vue'
 import { ElCol } from 'element-plus'
@@ -72,10 +71,7 @@ export function mergeColResponsive(
   return merged
 }
 
-/**
- * 阶段 2.4：row.responsive 拍平
- * 与 mergeColResponsive 同逻辑 —— 但 row 没有 span/offset/push/pull,gutter/type/align/justify 是可选覆盖
- */
+/** row.responsive 拍平：与 mergeColResponsive 同逻辑，但 row 没有 span/offset/push/pull，gutter/type/align/justify 是可选覆盖 */
 export function mergeRowResponsive(
   row: RowConfig | undefined,
   current?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
