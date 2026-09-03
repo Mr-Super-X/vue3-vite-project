@@ -151,16 +151,16 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
         key: `view-${node.name}`,
         class: 'x-form-view-field',
         'data-permission': 'view',
-      } as never,
+      } as Record<string, unknown>,
       {
         default: () =>
           [
             node.label
-              ? h('label', { class: 'x-form-view-field__label' } as never, {
+              ? h('label', { class: 'x-form-view-field__label' } as Record<string, unknown>, {
                   default: () => `${node.label}：`,
                 })
               : null,
-            h('span', { class: 'x-form-view-field__value' } as never, {
+            h('span', { class: 'x-form-view-field__value' } as Record<string, unknown>, {
               default: () => renderViewPlaceholder(node, opts.model),
             }),
           ].filter(Boolean) as never,
@@ -241,7 +241,7 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
           ...asyncProps,
           ...(node.disabled !== undefined ? { disabled: node.disabled } : {}),
           ...(node.key !== undefined && { key: node.key }),
-        } as never,
+        } as Record<string, unknown>,
         { default: buildUploadDefaultSlot(node, Comp, opts.render) as never }
       ) as VNode,
       opts.currentBreakpoint?.value

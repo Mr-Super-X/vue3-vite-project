@@ -85,13 +85,13 @@ export function renderArrayNode(
         key: `array-${listName}-${rowKey}`,
         class: `${typeof node.component === 'string' ? node.component.toLowerCase() : 'array-node'}__row`,
         ...dndProps,
-      } as never,
+      } as Record<string, unknown>,
       {
         default: () => [
-          h('div', { class: 'array-node__row-body' } as never, {
+          h('div', { class: 'array-node__row-body' } as Record<string, unknown>, {
             default: () => (inner && !Array.isArray(inner) ? [inner] : (inner as never)),
           }) as VNode,
-          h('div', { class: 'array-node__row-actions' } as never, {
+          h('div', { class: 'array-node__row-actions' } as Record<string, unknown>, {
             default: () =>
               [
                 showMove &&
@@ -101,7 +101,7 @@ export function renderArrayNode(
                       size: 'small',
                       disabled: index === 0,
                       onClick: () => opts.arrayActions?.moveItem(listName, index, index - 1),
-                    } as never,
+                    } as Record<string, unknown>,
                     { default: () => labelUp }
                   ),
                 showMove &&
@@ -111,7 +111,7 @@ export function renderArrayNode(
                       size: 'small',
                       disabled: index >= list.length - 1,
                       onClick: () => opts.arrayActions?.moveItem(listName, index, index + 1),
-                    } as never,
+                    } as Record<string, unknown>,
                     { default: () => labelDown }
                   ),
                 showRemove &&
@@ -122,7 +122,7 @@ export function renderArrayNode(
                       type: 'danger',
                       disabled: list.length <= min,
                       onClick: () => opts.arrayActions?.removeItem(listName, index),
-                    } as never,
+                    } as Record<string, unknown>,
                     { default: () => labelRemove }
                   ),
               ].filter(Boolean) as never,
@@ -138,13 +138,13 @@ export function renderArrayNode(
       shadow: 'never',
       class: 'array-node',
       ...(node.props ?? {}),
-    } as never,
+    } as Record<string, unknown>,
     {
       default: () => [
-        h('div', { class: 'array-node__header' } as never, {
+        h('div', { class: 'array-node__header' } as Record<string, unknown>, {
           default: () =>
             [
-              h('span', { class: 'array-node__title' } as never, {
+              h('span', { class: 'array-node__title' } as Record<string, unknown>, {
                 default: () => cfg.title ?? node.label ?? listName,
               }) as VNode,
               showAdd &&
@@ -155,16 +155,16 @@ export function renderArrayNode(
                     size: 'small',
                     disabled: list.length >= max,
                     onClick: () => opts.arrayActions?.addItem(listName),
-                  } as never,
+                  } as Record<string, unknown>,
                   { default: () => labelAdd }
                 ),
             ].filter(Boolean) as never,
         }) as VNode,
-        h('div', { class: 'array-node__body' } as never, {
+        h('div', { class: 'array-node__body' } as Record<string, unknown>, {
           default: () =>
             list.length === 0
               ? [
-                  h('div', { class: 'array-node__empty' } as never, {
+                  h('div', { class: 'array-node__empty' } as Record<string, unknown>, {
                     default: () => '暂无数据,点击右上角「添加」按钮新增',
                   }) as VNode,
                 ]

@@ -14,6 +14,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { effectScope, nextTick, reactive } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
 import type { MockInstance } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import { useXFormComposer, type UseXFormComposerReturn } from './use-xform-composer'
 import type { XFormExpose, XFormProps } from '../types'
@@ -298,5 +301,38 @@ describe('useXFormComposer', () => {
     } as unknown as XFormProps)
     expect(composer.topLevelLabelWidth.value).toBe(120)
     expect(composer.topLevelLabelPosition.value).toBe('right')
+  })
+})
+
+/**
+ * P0-1 silent catch 修复守护（静态源码检查）
+ *
+ * P0-1 修复点：use-xform-composer.ts 内 renderOpts.validateField 是内嵌闭包，
+ * 仅在字段 onBlur 时由 render-form-item 触发，无法在 unit test 层级直接 mount 触发。
+ * 采用静态源码检查守护——确保修复代码不被误删：
+ * 1. 包含错误码常量 EL_FORM_VALIDATE_FIELD_FAILED
+ * 2. 包含 errorBus.report 调用
+ * 3. 不包含 silent catch 注释
+ *
+ * 若需要更严格的行为测试，可改为 @vue/test-utils mount XForm.vue 触发字段 blur，
+ * 但需要 XForm.vue 暴露 errorBus（目前未 expose）。
+ */
+describe('P0-1 silent catch 修复守护', () => {
+  // Windows 下 `new URL('./xxx', import.meta.url).pathname` 解析为根盘符路径,
+  // 必须用 path.resolve(__dirname, ...) 才能拿到同目录相对路径
+  const composerPath = resolve(dirname(fileURLToPath(import.meta.url)), './use-xform-composer.ts')
+
+  it('use-xform-composer.ts 含 errorBus 上报与错误码常量', () => {
+    const content = readFileSync(composerPath, 'utf-8')
+    // 关键字符串必须存在
+    expect(content).toContain('EL_FORM_VALIDATE_FIELD_FAILED')
+    expect(content).toContain('errorBus.report')
+    // 不应是 silent catch
+    expect(content).not.toContain('catch {\n        /* silent')
+  })
+
+  it('use-xform-composer.ts 含 force: true 标志（主动调用场景跳过去重）', () => {
+    const content = readFileSync(composerPath, 'utf-8')
+    expect(content).toMatch(/force:\s*true/)
   })
 })

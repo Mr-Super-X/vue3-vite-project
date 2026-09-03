@@ -10,7 +10,7 @@
  */
 import { h, type VNode } from 'vue'
 import { ElFormItem, ElRow, ElCol, ElUpload } from 'element-plus'
-import type { SchemaNode } from '../types'
+import type { SchemaNode, SchemaSlot } from '../types'
 import { buildVModelBindings } from './build-vmodel-bindings'
 import { buildOnBindings } from './build-on-bindings'
 import {
@@ -85,7 +85,7 @@ export function renderWithFormItem(
   if (fi?.slots) {
     for (const [k, v] of Object.entries(fi.slots)) {
       // label slot 走 buildSlotFn 递归渲染 schema 节点；其他 slot 同样处理
-      formItemSlots[k] = buildSlotFn(v as never, opts.render)
+      formItemSlots[k] = buildSlotFn(v as SchemaSlot, opts.render)
     }
   }
   const formItem = h(
@@ -110,7 +110,7 @@ export function renderWithFormItem(
       // key 优先级：node.key（身份标识，数组行内为行对象身份前缀）> node.name（校验路径，含位置索引）
       // —— 若优先 name，数组删/移行后 fi-items[0].qty 漂移导致 form-item 重挂载
       ...(node.name || node.key ? { key: `fi-${node.key ?? node.name}` } : {}),
-    } as never,
+    } as Record<string, unknown>,
     // ⭐ 第 3 参：ElFormItem 的 slots 对象——合并 formItemSlots（用户自定义 label/error 等）
     // Comp 内部渲染（Input 组件）由 default slot 提供
     Comp
@@ -139,7 +139,7 @@ export function renderWithFormItem(
                 ...asyncProps,
                 ...(node.disabled !== undefined ? { disabled: node.disabled } : {}),
                 ...(node.key !== undefined && { key: node.key }),
-              } as never,
+              } as Record<string, unknown>,
               { default: defaultSlot, ...extraSlots }
             )
           },
@@ -167,7 +167,7 @@ export function renderWithRowColumn(node: SchemaNode, opts: RenderSchemaNodeOpti
   const mergedRow = mergeRowResponsive(node.row, opts.currentBreakpoint?.value)
   return h(
     ElRow as never,
-    { ...mergedRow, ...(node.key !== undefined && { key: node.key }) } as never,
+    { ...mergedRow, ...(node.key !== undefined && { key: node.key }) } as Record<string, unknown>,
     {
       default: () =>
         h(
@@ -178,7 +178,7 @@ export function renderWithRowColumn(node: SchemaNode, opts: RenderSchemaNodeOpti
               ? { responsive: node.col.responsive }
               : {}),
             ...(node.key !== undefined && { key: node.key }),
-          } as never,
+          } as Record<string, unknown>,
           {
             default: () => opts.render(node.children as never),
           }
