@@ -124,7 +124,7 @@ export function useDevRuntime(deps: UseDevRuntimeDeps): UseDevRuntimeReturn {
   function installDevDebugHook(): void {
     if (!import.meta.env.DEV) return
     ;(window as unknown as { __xform_debug?: unknown }).__xform_debug = {
-      setFieldError: (name: string, message: string) => setFieldError(name, message),
+      setFieldError,
       getFieldErrors: () => JSON.parse(JSON.stringify(fieldErrors.value)),
       getModel: () => JSON.parse(JSON.stringify(props.model)),
     }

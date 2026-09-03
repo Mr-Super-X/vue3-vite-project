@@ -175,8 +175,8 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
       return out
     },
     model: () => props.model,
-    setFieldError: (name, message) => setFieldError(name, message),
-    clearValidate: (names: string[]) => clearValidate(names),
+    setFieldError,
+    clearValidate,
     defaultDebounceMs: () => topLevelDebounceMs.value,
   })
 
@@ -191,7 +191,7 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
   watch(fieldErrors, () => triggerRender(), { deep: true })
 
   const serverError = useServerError({
-    setFieldError: (name, message) => setFieldError(name, message),
+    setFieldError,
     clearValidate,
     knownFields: () => schemaIndex.allNames.value,
   })
@@ -202,7 +202,7 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     model: computed(() => props.model),
     rules: computed(() => props.rules),
     elFormRef,
-    setFieldError: (name, message) => setFieldError(name, message),
+    setFieldError,
     scrollToField,
     topLevelScrollToError,
     crossFieldTrigger,
@@ -217,7 +217,7 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
   const { validateErrors, forbiddenErrors, showDebugBanner, installDevDebugHook } = useDevRuntime({
     props,
     errorBus,
-    setFieldError: (name, message) => setFieldError(name, message),
+    setFieldError,
     fieldErrors,
   })
 
@@ -259,9 +259,9 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     render: renderToComponent,
     externalErrors: () => fieldErrors.value,
     arrayActions: {
-      addItem: (name: string, init?: Record<string, unknown>) => addItem(name, init),
-      removeItem: (name: string, index: number) => removeItem(name, index),
-      moveItem: (name: string, from: number, to: number) => moveItem(name, from, to),
+      addItem,
+      removeItem,
+      moveItem,
     },
     triggerCrossFieldValidator: (node, eventType) => triggerCrossFieldValidator(node, eventType),
     validateField: async (name: string) => {

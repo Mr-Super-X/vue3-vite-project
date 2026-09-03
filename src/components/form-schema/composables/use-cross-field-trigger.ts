@@ -50,7 +50,7 @@ export interface UseCrossFieldTriggerOptions {
   /** 写错误到 form-item（由 XForm 通过 useFormInstance.setFieldError 注入） */
   setFieldError: (name: string, message: string) => void
   /** 清错误 —— 用 element-plus el-form.clearValidate([prop]) 走官方清错流程 */
-  clearValidate: (names: string[]) => void
+  clearValidate: (names?: string[]) => void
   /**
    * 全局默认 debounce 时延（毫秒，getter 形式）
    * - 返回 0：实时执行（每键触发）
