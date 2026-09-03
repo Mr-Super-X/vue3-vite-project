@@ -75,50 +75,133 @@ export interface SchemaNode {
    * @group 节点标识
    */
   component?: string | object
-  /** @group 节点标识 */
+  /**
+   * 透传给 component 的属性对象（element-plus 组件对应 ElXxxProps）
+   * 推荐：使用 `SchemaNodeFor<C>` 泛型版本按 component 字段推导 props 类型
+   * @group 节点标识
+   */
   props?: Record<string, unknown>
-  /** @group 渲染属性 */
+  /**
+   * 事件绑定 —— 键为事件名（如 'change' / 'blur'），值可为函数或 `{{ fn }}` 表达式
+   * @group 渲染属性
+   */
   on?: Record<string, EventFn | FunctionExpression>
-  /** @group 渲染属性 */
+  /**
+   * 子节点（递归 SchemaNode） / 子节点数组 / 字符串文本（用于 slot 内 text 内容）
+   * @group 渲染属性
+   */
   children?: SchemaNode | SchemaNode[] | string
-  /** @group 节点标识 */
+  /**
+   * 表单字段名 —— 绑定 model[name] 用于 el-form 数据收集与校验路径
+   * 数组节点必填（items[*] 等）；纯 UI 节点（如 Card）可不填
+   * @group 节点标识
+   */
   name?: string
-  /** @group 节点标识 */
+  /**
+   * el-form-item label 文本（左侧/上方/右侧 由 labelPosition 决定）
+   * @group 节点标识
+   */
   label?: string
-  /** @group 校验 */
+  /**
+   * 字段级校验规则（async-validator 兼容 + 跨字段扩展）
+   * - string：命名规则名（在 XFormProps.rules 中查找）
+   * - RuleItem：单个规则对象（required / pattern / validator / crossValidator 等）
+   * - Array<string | RuleItem>：多个规则按顺序串行校验
+   * @group 校验
+   */
   rules?: string | RuleItem | Array<string | RuleItem>
-  /** @group 渲染属性 */
+  /**
+   * 是否包 el-form-item（label + prop + rules 注册到 el-form）
+   * - true：自动包（默认 name 字段自动包）
+   * - false：明确不包（如 Card 视觉容器、纯展示节点）
+   * - FormItemConfig：详细配置（指定 component / props / slots / rules 等覆盖默认值）
+   * @group 渲染属性
+   */
   formItem?: boolean | FormItemConfig
-  /** @group v-model 适配 */
+  /**
+   * v-model 绑定的属性名（默认 'modelValue'，Upload 节点用 'file-list'）
+   * @group v-model 适配
+   */
   modelProp?: string
-  /** @group 校验 */
+  /**
+   * 字段初始默认值（mount 时填充 model[name]，仅当 model 中字段未定义时生效）
+   * 用户编辑后值会被替换；resetFields() 时回到此值
+   * @group 校验
+   */
   defaultValue?: unknown
-  /** @group 布局 */
+  /**
+   * el-row 栅格行配置（gutter / type / align / justify / responsive）
+   * 透传 element-plus ElRow；responsive 按当前 viewport 自动拍平（mobile-first）
+   * @group 布局
+   */
   row?: RowConfig
-  /** @group 布局 */
+  /**
+   * 每行栅格数（auto-spans: 24/column 计算各列 span）
+   * 数组节点不生效；与 col.span 二选一
+   * @group 布局
+   */
   column?: number
-  /** @group 布局 */
+  /**
+   * el-col 栅格列配置（span / offset / push / pull / responsive）
+   * - true：自动用 24/column 计算 span
+   * - false / undefined：不包 el-col（节点直出）
+   * - ColConfig：详细配置（span + offset + responsive）
+   * @group 布局
+   */
   col?: boolean | ColConfig
-  /** @group 响应式 */
+  /**
+   * 反应式配置 —— 覆盖节点任意字段（rules / props / label / hidden / disabled / ...）
+   * - strategy: sync（默认）/ debounce / throttle + delay
+   * - deps: 精确监听路径数组（避免 deep watch 整棵 model）
+   * @group 响应式
+   */
   reaction?: ReactionConfig
-  /** @group 渲染属性 */
+  /**
+   * 自定义指令数组（vue withDirectives 对应）
+   * - directive 字段支持 string 指令名（待注册表接线）或直接传 Directive 对象
+   * - 当前以 path-only 形式应用在渲染层 vnode 上
+   * @group 渲染属性
+   */
   directives?: DirectiveConfig[]
   /**
    * 异步选项数据源（Select/Cascader/TreeSelect/Autocomplete）
    * @group 数据加载
    */
   asyncOptions?: AsyncOptionsConfig
-  /** @group 渲染属性 */
+  /**
+   * 节点插槽内容 —— 键为 slot 名（如 'default' / 'tip'），值为 SchemaSlot（节点/字符串/渲染函数）
+   * @group 渲染属性
+   */
   slots?: Record<string, SchemaSlot>
-  /** @group 响应式 */
+  /**
+   * 是否从 getNames() 排除（不参与校验 / dirty 追踪 / 反应式索引），但仍会渲染
+   * 与 hidden 不同：hidden 不渲染；ignore 渲染但不参与表单数据收集
+   * @group 响应式
+   */
   ignore?: boolean
-  /** @group 响应式 */
+  /**
+   * 是否渲染（false 时不创建 DOM 节点，el-form-item 也不注册）；支持字面量 / 函数 / 函数表达式
+   * 与 ignore 不同：ignore 仍渲染但不参与数据收集
+   * @group 响应式
+   */
   hidden?: boolean
-  /** @group 节点标识 */
+  /**
+   * v-for key（数组行用行对象身份前缀派生稳定 key；详见 array-row-key.ts）
+   * key 优先级 > name（数组删/移行后 name 漂移会导致 form-item 重挂载）
+   * @group 节点标识
+   */
   key?: string | number
-  /** @group 数组节点 */
+  /**
+   * 节点类型标识 —— 固定 'array'，标记该节点为数组容器
+   * 数组节点走 renderArrayNode 分支，独立于普通字段渲染
+   * @group 数组节点
+   */
   kind?: 'array'
-  /** @group 数组节点 */
+  /**
+   * 数组容器配置（kind='array' 时必填）—— itemSchema / minItems / maxItems / showActions / labels / draggable
+   * @see ./array.ts ArrayNodeConfig 完整字段表
+   * @group 数组节点
+   */
   array?: ArrayNodeConfig
   /**
    * 字段禁用状态（支持反应式：boolean / 函数 / 函数表达式）
