@@ -1,8 +1,10 @@
 /**
- * use-zod-validator —— zod 顶层校验编排
+ * useZodValidator —— zod 顶层校验编排（与 el-form.validate 并行入口）
  *
- * 从 useFormInstance 抽离（zod 校验与 el-form 编排关注点不同），内部委托，公开签名 100% 不变。
  * 未配置 zodSchema 时返回 { success: true, errors: null }。
+ *
+ * @see ./use-validate.ts validateWithZod 底层实现
+ * @see ./use-form-instance.ts 装配方
  */
 import type { ZodError, ZodType } from 'zod'
 import { validateWithZod } from './use-validate'

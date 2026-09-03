@@ -1,11 +1,7 @@
 /**
- * applyDirectives —— 把 node.directives 数组应用到 vnode（vue withDirectives 包装）
- *
- * withDirectives 第二参数必须是元组数组 [dir, value, arg, modifiers]：
- * Vue 内部按 .length 遍历 + 数组解构，传对象会被静默跳过（指令不生效且无报错）。
- *
- * 字符串指令名暂不可解析：XFormProps.directives 注册表尚未接线，
- * 空 Directive 无钩子，跳过该条（当前仅支持直接传 Directive 对象）。
+ * 把 node.directives 数组应用到 vnode（vue withDirectives 包装）：
+ * 第二参数必须是元组数组 `[dir, value, arg, modifiers]`（Vue 按 .length 解构，对象会被静默跳过）。
+ * 字符串指令名暂不可解析（注册表尚未接线），跳过；当前仅支持直接传 Directive 对象。
  */
 import { withDirectives, type VNode, type Directive } from 'vue'
 import type { DirectiveConfig } from '../types'

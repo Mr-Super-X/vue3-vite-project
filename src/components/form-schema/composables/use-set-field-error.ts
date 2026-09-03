@@ -1,21 +1,17 @@
 /**
- * useSetFieldError —— setFieldError 双路径机制
+ * useSetFieldError —— setFieldError 双路径机制（外部错误 → el-form-item 红字）
  *
- * 从 use-form-instance 抽离，~140 行独立可复用单元。
+ * 为什么需要双路径：
+ * - 路径 A：externalErrors ref → el-form-item props 透传；
+ *   el-form.validateField 内部 setValidationState('success') 会覆盖 path A 写入的 error 状态
+ * - 路径 B：watch 守护强制把 el-form-item 的 validateState/validateMessage ref 同步成
+ *   当前错误值，覆盖 el-form 自身的 validate-success 回调，确保红字不被复位
  *
- * 双路径（OPT-7 衍生约束）：
- * - 路径 A：element-plus 官方 props 路径 —— externalErrors ref 写入 → renderWithFormItem
- *   通过 props.error/validateStatus 透传给 el-form-item → 触发红字
- *   失败场景：el-form.validateField / validate 内部 setValidationState('success')
- *   覆盖 path A 写入的 error 状态；或 error 字符串未变化时 props watch 不触发
- * - 路径 B：watch 守护 —— 监听 externalErrors 变化，强制把 el-form-item 内部
- *   validateState/validateMessage ref 同步成 externalErrors 的当前值
- *   覆盖 el-form 自身 validate-success 回调，确保红字状态不被复位
+ * OSD 上报：realtime 路径（crossValidator 反向 / 服务端 422）默认上报 toast；
+ * silent=true 跳过（applyCrossErrors 批量汇总场景，避免 N 条独立 toast）
  *
- * OSD 上报（OPT-7）：
- * - realtime 路径（crossValidator 反向触发 / 服务端 422）默认上报 toast
- * - validateForm 批量场景由 applyCrossErrors 发汇总 toast，setFieldError 用
- *   silent=true 避免 N 条独立 toast 弹出
+ * @see ./use-form-instance.ts 调用方
+ * @see ./use-form-error-bus.ts OSD 总线
  */
 
 import { getCurrentScope, onScopeDispose, toRaw, watch, type Ref } from 'vue'

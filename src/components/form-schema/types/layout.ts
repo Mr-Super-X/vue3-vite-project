@@ -1,8 +1,24 @@
 /**
  * 栅格布局类型 —— element-plus el-row / el-col 配置
+ *
+ * 设计职责：把"24 栅格响应式布局"抽象为可声明的 schema 片段，避免业务写 <el-row>/<el-col> 嵌套。
+ *
+ * 字段族：
+ * - RowConfig / ColConfig：栅格行 / 列配置（含 5 档响应式断点）
+ * - ResponsiveColConfig：单断点 Col 配置
+ * - SchemaNodeLayout：4 字段布局命名空间，被 SchemaNode extends 组合
+ *
+ * 响应式机制：element-plus el-col 内部支持传 responsive 对象自动按 viewport 选，
+ * el-row 则需业务触发重渲染（el-row 不监听 resize）——XForm 通过 use-current-breakpoint
+ * 桥接此能力。
+ *
+ * 命名空间索引：完整 9 命名空间字段对照表见 ../types.ts
+ * @see ../composables/wrap-with-elcol.ts 栅格包装实现
+ * @see ../composables/use-current-breakpoint.ts 响应式断点检测
+ * @see ./directive.ts FormItemConfig formItem 字段配套
  */
 
-/** Col 响应式断点(同 ColConfig 子字段) */
+/** Col 响应式断点(同 ColConfig 子字段) —— 单档配置（xs/sm/md/lg/xl 任一档） */
 export interface ResponsiveColConfig {
   span?: number
   offset?: number
@@ -10,7 +26,7 @@ export interface ResponsiveColConfig {
   pull?: number
 }
 
-/** 栅格（el-row） */
+/** 栅格行（el-row） —— 透传给 element-plus ElRow 组件 */
 export interface RowConfig {
   gutter?: number
   type?: 'flex'
@@ -35,7 +51,7 @@ export interface RowConfig {
     xl?: Pick<RowConfig, 'gutter' | 'type' | 'align' | 'justify'>
   }
 }
-/** 栅格（el-col） */
+/** 栅格列（el-col） —— 透传给 element-plus ElCol 组件 */
 export interface ColConfig {
   span?: number
   offset?: number
@@ -58,21 +74,17 @@ export interface ColConfig {
 /**
  * SchemaNode 命名空间 —— 布局（4 字段）
  *
- * P2-1 拆分：原 SchemaNode 31 字段拆为 9 个命名空间接口，本文件定义「布局」子集：
- * row / column / col / formItem —— el-row/el-col 栅格配置 + 是否包 el-form-item。
+ * 字段：row / column / col / formItem —— el-row/el-col 栅格配置 + 是否包 el-form-item。
+ * 职责：把响应式栅格布局从模板层（业务手写 <el-row>）下沉到 schema 层（声明式）。
  *
- * 业务用法：
- * - 直接 import 此接口用于"只需栅格 / formItem 配置 + 其他命名空间字段"的子类型场景
- * - 通过 SchemaNode（schema-node.ts）使用全部 9 个命名空间
- *
- * 不变量：
- * - SchemaNode extends 全部 9 个命名空间，TS 接口展平后类型形状与 P2-1 重构前完全等价
- * - 字段 JSDoc verbatim 拷贝自原 schema-node.ts，IDE hover 不变
+ * 不变量：SchemaNode extends 全部 9 个命名空间，TS 接口展平后类型形状与 P2-1 重构前完全等价。
  */
 import type { FormItemConfig } from './directive'
 
 /**
  * SchemaNodeLayout —— 布局（row / column / col / formItem）
+ *
+ * @group 布局
  */
 export interface SchemaNodeLayout {
   /**

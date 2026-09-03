@@ -1,5 +1,15 @@
 /**
  * 数组节点配置 —— kind === 'array' 时的容器配置
+ *
+ * 设计职责：把"可增删改的列表型表单字段"抽象为可声明的 schema 片段，
+ * 业务只需声明 itemSchema（每行形状）+ 行数边界 + 按钮配置，无需手写 add/remove 事件。
+ *
+ * 渲染链路：render-schema-node 命中 kind='array' → render-array-node 接管，
+ * 行内子节点复用 render-schema-node 递归（每行独立校验 / 反应式 / 权限）。
+ *
+ * 命名空间索引：完整 9 命名空间字段对照表见 ../types.ts
+ * @see ../composables/render-array-node.ts 数组节点渲染入口
+ * @see ../composables/use-form-instance.ts addItem / removeItem / moveItem 实例方法
  */
 import type { SchemaNode } from './schema-node'
 
@@ -37,20 +47,11 @@ export interface ArrayNodeConfig {
 /**
  * SchemaNode 命名空间 —— 数组节点（2 字段）
  *
- * P2-1 拆分：原 SchemaNode 31 字段拆为 9 个命名空间接口，本文件定义「数组节点」子集：
- * kind / array —— 标记节点为数组容器 + 容器配置。
+ * 字段：kind / array —— 标记节点为数组容器 + 容器配置。
+ * 职责：把列表型字段从"普通字段 + 业务手写循环"抽象为声明式 schema。
  *
- * 业务用法：
- * - 直接 import 此接口用于"只需数组容器 + 其他命名空间字段"的子类型场景
- * - 通过 SchemaNode（schema-node.ts）使用全部 9 个命名空间
- *
- * 不变量：
- * - SchemaNode extends 全部 9 个命名空间，TS 接口展平后类型形状与 P2-1 重构前完全等价
- * - 字段 JSDoc verbatim 拷贝自原 schema-node.ts，IDE hover 不变
- */
-
-/**
- * SchemaNodeArray —— 数组节点（kind / array）
+ * 不变量：SchemaNode extends 全部 9 个命名空间，TS 接口展平后类型形状与 P2-1 重构前完全等价。
+ * @group 数组节点
  */
 export interface SchemaNodeArray {
   /**

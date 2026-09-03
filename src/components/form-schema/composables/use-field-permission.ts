@@ -1,32 +1,9 @@
 /**
  * 字段权限解析 —— 三态 view/edit/hidden
  *
- * 解析优先级：
- * 1. string 字面量 'view' | 'edit' | 'hidden' —— 直接使用
- * 2. 函数 (model) => 状态 —— 调用求值（支持运行时动态权限）
- * 3. 字符串函数表达式 '{{ fn }}' —— 沙箱解析后调用（与 reaction 一致）
- * 4. undefined —— 视为 'edit'（向后兼容）
- *
- * 权限码字符串（如 'user.edit'）由调用方通过 XFormProps.permissionResolver 映射：
- * ```ts
- * <XForm
- *   :permission-resolver="(perm) => hasPerm(perm) ? 'edit' : 'hidden'"
- *   :schema="schema"
- * />
- * ```
- * 默认 identity（直接返回字符串字面量）。
- * resolver 返回值若不在三态之一，降级为 'edit'（最安全的可见可编辑态）—— 抛错场景同理。
- *
- * 用法示例（业务侧 useAuth 接入）：
- * ```ts
- * import { useAuth } from '@/composables/useAuth'
- *
- * const { hasPerm } = useAuth()
- * const xformProps = {
- *   permissionResolver: (perm: string) => hasPerm(perm) ? 'edit' : 'hidden',
- *   // ...
- * }
- * ```
+ * 解析优先级：string 字面量 → 函数 → '{{ fn }}' 表达式 → undefined（视为 'edit'）。
+ * 权限码（如 'user.edit'）通过 XFormProps.permissionResolver 映射；默认 identity，
+ * resolver 返回非三态值或抛错时降级为 'edit'（最安全的可见可编辑态）。
  *
  * @see ../types/xform.ts XFormProps.permissionResolver —— XForm 入参契约
  * @see render-schema-node.ts RenderSchemaNodeOptions.permissionResolver —— 渲染层注入点
@@ -39,15 +16,11 @@ export type FieldPermission = 'view' | 'edit' | 'hidden'
 
 export interface ResolvePermissionOptions {
   model: () => Record<string, unknown> | undefined
-  /**
-   * 权限码 → 状态 映射函数
-   * 默认 identity（string 字面量直接返回）
-   * 业务可注入 useAuth().hasPerm 实现：'user.edit' → hasPerm ? 'edit' : 'hidden'
-   */
+  /** 权限码 → 三态映射；默认 identity。业务可注入 useAuth().hasPerm */
   permissionResolver?: (perm: string) => FieldPermission
 }
 
-/** resolvePermission —— 字段权限解析（view / edit / hidden 三态） */
+/** 字段权限解析：字面量 / 函数 / '{{ fn }}' 三种来源，返回 view | edit | hidden */
 export function resolvePermission(
   node: SchemaNode,
   opts: ResolvePermissionOptions
@@ -84,10 +57,7 @@ export function resolvePermission(
   }
 }
 
-/**
- * view 态的渲染占位 —— 纯文本展示 model value
- * 通用 fallback：复杂组件（如 Upload）建议在节点层用 reaction 自行实现 view 模板
- */
+/** view 态渲染占位：纯文本展示 model value（复杂组件如 Upload 建议节点层 reaction 自实现） */
 export function renderViewPlaceholder(
   node: SchemaNode,
   model: Record<string, unknown> | undefined

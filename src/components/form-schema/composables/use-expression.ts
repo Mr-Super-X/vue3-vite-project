@@ -1,17 +1,4 @@
-// SECURITY：用 new Function 替代 eval，隔离上层作用域，仅暴露 model 只读副本与组件事件参数
-// model 经 toSafeDto 净化：排除函数 / 原型链 / 循环引用 / 危险字段
-// 实际安全边界依赖 schema 来源约束（仅项目内部硬编码）
-// 危险标识符扫描已抽到 ./use-scan-forbidden.ts
-
-// ────────────────────────────────────────────────────────────────────────────
-// 表达式作用域设计（保留向后兼容 + 新增 per-instance scope）
-//
-// 历史：原实现使用模块级 EXPRESSION_CACHE + EXPRESSION_FNS。
-// 局限：多 XForm 实例同时挂载时后注册的函数表会覆盖前者，且缓存共享。
-// 当前实践：XForm 不在同一页面多实例共存，模块级 API 保留作为向后兼容 fallback。
-// 新方案：createExpressionScope() 工厂为每个 XForm 实例返回独立作用域（缓存 + 函数表）。
-//         新调用方应优先使用 scope，旧模块级 API 保留到所有调用方迁移完成。
-// ────────────────────────────────────────────────────────────────────────────
+// SECURITY：用 new Function 替代 eval，仅暴露白名单 fns 与组件事件参数；危险标识符扫描见 ./use-scan-forbidden.ts
 
 const EXPRESSION_REG = /^\s*\{\{([\s\S]+)\}\}\s*$/
 const CACHE_LIMIT = 500
@@ -27,7 +14,7 @@ export function setExpressionFunctions(fns?: Record<string, (...args: never[]) =
   fnsVersion++ // fns 变化时旧编译缓存必须失效（同字符串表达式作用域已变）
 }
 
-/** 表达式作用域接口（每个 XForm 实例一个） */
+/** 每个 XForm 实例一个独立作用域，避免多实例共享 module 级缓存相互覆盖 */
 export interface ExpressionScope {
   setExpressionFunctions(fns?: Record<string, (...args: never[]) => unknown>): void
   resolveFunctionExpression: <T extends (...a: unknown[]) => unknown>(raw: unknown) => T | null
@@ -48,8 +35,7 @@ function toSafeDto(model: unknown, seen: WeakSet<object> = new WeakSet()): unkno
 }
 
 /**
- * 共享编译函数：给定缓存、版本引用与函数表引用，编译一次并写入缓存
- * 内部实现，确保旧模块级 API 与新 scope 工厂行为一致
+ * 编译一次并写入缓存。模块级 API 与 scope 工厂共享同一实现，保证行为一致
  */
 function compileExpression(
   raw: string,
@@ -78,7 +64,7 @@ function compileExpression(
   return compiled
 }
 
-/** 沙箱解析 schema 中的 {{ fn }} 表达式（向后兼容模块级 API） */
+/** 模块级 API：解析 {{ fn }} 表达式（新代码请用 createExpressionScope） */
 export function resolveFunctionExpression<T extends (...a: unknown[]) => unknown>(
   raw: unknown
 ): T | null {
@@ -94,7 +80,7 @@ export function resolveFunctionExpression<T extends (...a: unknown[]) => unknown
   return compiled as T | null
 }
 
-/** 创建一个独立的表达式作用域（每个 XForm 实例一个） */
+/** 为单个 XForm 实例创建独立 cache + fns 表，避免多实例共享状态 */
 export function createExpressionScope(): ExpressionScope {
   const cache = new Map<string, ((model: unknown) => unknown) | null>()
   const fnsRef = { current: {} as Record<string, (...args: never[]) => unknown> }

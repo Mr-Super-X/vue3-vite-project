@@ -2,7 +2,20 @@ import type { SchemaNode, RuleItem, ValidateOptions, ValidateResult } from '../t
 import type { ZodType } from 'zod'
 import { get } from 'lodash-es'
 
-/** 静态校验 schema 合法性 —— component/on/rules/children 类型与递归 */
+/**
+ * use-validate —— schema 静态校验 + 运行时跨字段校验 + zod 顶层校验
+ *
+ * 4 个导出函数（无 composable 状态，纯函数集）：
+ * - validate: 静态 schema 合法性（component/on/rules/children 类型 + 递归）
+ * - validateWithZod: 顶层 zod schema 校验（与 async-validator 并行入口）
+ * - runCrossFieldValidation: 运行时跨字段校验（含 array.itemSchema 展开 + 异步）
+ * - collectCrossRuleFields: 收集含 crossValidator 的字段节点（XForm 用于建 watcher）
+ *
+ * 不变量：crossValidator 抛错时 console.error 并跳过（避免一条错误规则阻断整张表单）
+ *
+ * @see ./use-form-validation.ts validateForm 主流程调用
+ * @see ./use-cross-field-trigger.ts collectCrossRuleFields 使用方
+ */
 export function validate(
   schema: SchemaNode | SchemaNode[] | unknown,
   options: ValidateOptions = {}

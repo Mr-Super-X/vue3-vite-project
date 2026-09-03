@@ -1,9 +1,7 @@
 /**
- * array-row-key —— 数组节点行身份与 name 路径前缀化工具
- *
- * - rewriteNamePath（~50 行）是纯函数，被 render-array-node.ts + 其 spec 直接调用
- * - rowKeyOf + newShortUid（~30 行）是 renderRow 内部行级稳定 key 分配工具
- * - 三个工具均与渲染逻辑解耦，独立单元可单独测试
+ * 数组节点行身份与 name 路径前缀化工具：rewriteNamePath 把子 schema 的 name 路径前缀化为
+ * `list[i].subName` 让 el-form 嵌套校验；rowKeyOf 按行对象身份（WeakMap）分配稳定 key，
+ * 避免 index 作 key 时删/移行导致重挂载焦点丢失。
  */
 import type { SchemaNode } from '../types'
 

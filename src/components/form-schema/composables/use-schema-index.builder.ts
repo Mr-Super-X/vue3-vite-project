@@ -1,9 +1,8 @@
 /**
- * useSchemaIndex 的纯函数 builder
- * - 一次性遍历 schema，构建 byName / fieldNames / allNames / crossRules / reverseIndex / dependsOnMap
- * - DFS 顺序与现有 getNames() 保持一致（先父后子、子按出现顺序）
- * - cross rules 提取覆盖 children / array.itemSchema / formItem.slots（与 collectCrossRuleFields 对齐）
- * - trigger=manual 的规则不进入 reverseIndex（仅 validateForm 跑）
+ * useSchemaIndex 的纯函数 builder：一次遍历构建 byName / fieldNames / allNames /
+ * crossRules / reverseIndex / dependsOnMap，DFS 顺序与 getNames() 保持一致。
+ * cross rules 覆盖 children / array.itemSchema / formItem.slots；
+ * trigger='manual' 的规则不进 reverseIndex（仅 validateForm 跑）。
  */
 import type { SchemaNode, RuleItem } from '../types'
 

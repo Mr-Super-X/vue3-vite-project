@@ -1,12 +1,8 @@
 /**
- * useTopLevelFields —— XForm 顶层 schema 自描述字段集合
- *
- * 把 XForm.vue 中 11 个高度相似的 topLevelXxx computed 抽离到独立 composable。
- * 这些 computed 都从 schema 顶层字段读取（如 s.disabled / s.readonly / s.column / s.labelPosition 等），
- * 函数/字符串值通过 resolveFunctionExpression 求值。
- *
- * 顶层 schema 字段为 el-form 实例级属性（labelPosition / disabled / labelWidth / scrollToError /
- * scrollIntoViewOptions），必须从 schema 派生而非 XForm props 配置。
+ * XForm 顶层 schema 自描述字段集合（11 个 computed）：
+ * 从 schema 顶层字段派生 el-form 实例级属性（labelPosition / disabled / labelWidth /
+ * scrollToError / scrollIntoViewOptions 等），必须从 schema 派生而非 XForm props 配置。
+ * 函数 / 字符串值通过 resolveFunctionExpression 求值。
  */
 import { computed, type ComputedRef } from 'vue'
 import type { SchemaNode, RowConfig } from '../types'

@@ -2,6 +2,18 @@ import { nextTick, onScopeDispose, ref, watch } from 'vue'
 import { debounce } from 'lodash-es'
 import { readDraft, removeDraft, writeDraft } from './draft-storage'
 
+/**
+ * useFormPersist —— 表单草稿持久化（防抖自动落盘 + beforeunload flush）
+ *
+ * 关键不变量：
+ * - exclude 字段不落盘（敏感字段如 cvv）；序列化异常仅 warn
+ * - schemaVersion 注入时草稿写版本信封；版本不匹配的旧草稿 load 时自动丢弃（防 schema 升级污染 model）
+ * - markResetting() / clear() 期间临时屏蔽 watch 回写（避免空 model 覆盖之前草稿）
+ *
+ * 副作用：写 storage、注册 beforeunload 监听（scope 内 onScopeDispose 自动清理）。
+ *
+ * @see ./draft-storage.ts 底层 storage 适配
+ */
 export interface FormPersistOptions {
   key: string // 草稿唯一 key：建议 '<模块>.<表单名>.draft'，经 storage.ts namespace 隔离
   model: Record<string, unknown> // 被监听的 reactive model

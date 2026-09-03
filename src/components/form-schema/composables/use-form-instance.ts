@@ -16,11 +16,13 @@ import type { UseFormErrorBusReturn } from './use-form-error-bus'
 import { readRefStr } from '../utils/read-ref-str'
 import type { ZodType } from 'zod'
 
-/** 运行时方法对象（InstanceType<typeof ElForm> 会丢失 validate 等方法） */
 /**
  * ElFormInstance —— element-plus ElForm 实例运行时方法（宽松签名版）
  *
- * InstanceType<typeof ElForm> 会丢失 validate / validateField 等方法，这里补齐 element-plus 2.x 实际支持但 TS 类型声明不全的方法。
+ * InstanceType<typeof ElForm> 会丢失 validate / validateField 等方法，这里补齐 element-plus 2.x
+ * 实际支持但 TS 类型声明不全的方法。setInitialValues 是 element-plus 内部方法 —— 同步 ElForm 初始值快照，
+ * 用于 defaultValue 填充后防止子组件 mount 副作用（如 ElRate emit 0）导致 resetFields 基准值错乱。
+ *
  * @see ./use-set-field-error.ts Path B watch 守护依赖 fields 数组
  */
 export type ElFormInstance = {
@@ -105,8 +107,7 @@ export function useFormInstance(
     return typeof name === 'string' ? name : null
   }
 
-  /** 从 ref-like 值解包字符串（element-plus 内部字段状态常用 ref<string> 形态） */
-  // 已迁移到 ../utils/read-ref-str —— 本地副本删除
+  /** 从 ref-like 值解包字符串 —— 已迁移到 ../utils/read-ref-str（element-plus 内部字段状态常用 ref<string> 形态） */
 
   /**
    * 从 el-form fields 提取 validateState=error 的字段详情，仅命中过滤集合的字段

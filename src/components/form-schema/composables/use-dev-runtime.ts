@@ -1,14 +1,10 @@
 /**
  * use-dev-runtime —— XForm dev 模式运行时
  *
- * 从 use-xform-composer 抽离，仅承载 dev-only 行为：
- * - validateErrors / forbiddenErrors / showDebugBanner refs（供 XFormDebugBanner 消费）
- * - schema 校验失败时 console.error + errorBus.report
- * - 表达式含 forbidden 标识符时 console.warn + errorBus.report（降级为 warn）
- * - model 缺失时 dev warn + errorBus.report
- * - installDevDebugHook —— dev mode 挂 window.__xform_debug（setFieldError / getFieldErrors / getModel）
+ * 仅承载 dev-only 行为：schema 校验（validate + errorBus.error）、表达式危险标识符扫描
+ * （scanForForbidden + errorBus.error）、model 缺失 warn、debug hook 安装（window.__xform_debug）。
  *
- * prod 下所有 watch + ref 初始化均会执行但 console / errorBus 静默（依赖 showDebugBanner 门控）。
+ * prod 下所有 watch + ref 初始化均执行但 console / errorBus 静默（依赖 showDebugBanner 门控）。
  */
 import { ref, watch, type Ref } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
@@ -20,28 +16,18 @@ import type { UseFormErrorBusReturn } from './use-form-error-bus'
 import type { FieldErrorState } from './use-form-instance'
 import type { SchemaNode, XFormProps } from '../types'
 
-/**
- * useDevRuntime 入参 —— dev 模式运行所需依赖
- *
- * - props / errorBus: XForm props + 错误事件总线
- * - setFieldError / fieldErrors: 来自 useFormInstance，debug hook 暴露给 dev console
- */
+/** useDevRuntime 入参 */
 export interface UseDevRuntimeDeps {
   props: XFormProps
   /** dev 模式错误总线（来自 useFormErrorBus） */
   errorBus: UseFormErrorBusReturn
-  /** setFieldError 来自 useFormInstance —— debug hook 暴露给 dev console */
+  /** debug hook 暴露给 dev console 的 setFieldError（来自 useFormInstance） */
   setFieldError: (name: string, message: string) => void
-  /** fieldErrors ref —— debug hook 暴露给 dev console */
+  /** debug hook 暴露给 dev console 的 fieldErrors ref（来自 useFormInstance） */
   fieldErrors: Ref<Record<string, FieldErrorState>>
 }
 
-/**
- * useDevRuntime 返回值 —— dev-only 状态与钩子
- *
- * - validateErrors / forbiddenErrors / showDebugBanner: XFormDebugBanner 消费
- * - installDevDebugHook: dev 模式挂 window.__xform_debug（XForm setup 末尾调一次）
- */
+/** useDevRuntime 返回值 */
 export interface UseDevRuntimeReturn {
   /** schema 静态校验错误（仅 dev 显示在 XFormDebugBanner） */
   validateErrors: Ref<Array<{ keyPath: (string | number)[]; message: string }>>
@@ -53,11 +39,7 @@ export interface UseDevRuntimeReturn {
   installDevDebugHook: () => void
 }
 
-/**
- * dev 模式运行时：扫描 + 校验 + debug hook + model 缺失 warn
- *
- * prod 下所有 watch + ref 初始化均会执行但 console / errorBus 静默（依赖 showDebugBanner 门控）
- */
+/** dev 模式运行时：扫描 + 校验 + debug hook + model 缺失 warn */
 export function useDevRuntime(deps: UseDevRuntimeDeps): UseDevRuntimeReturn {
   const { props, errorBus, setFieldError, fieldErrors } = deps
 

@@ -1,7 +1,11 @@
 /**
- * use-cross-field-rule-trigger —— 每字段跨字段规则触发器
+ * useCrossFieldRuleTrigger —— 字段事件（blur/change）跨字段规则触发器
  *
- * 从 useFormValidation 抽离（序号令牌 + matchTrigger + 空值跳过 + 异步竞态防护），内部委托，公开签名 100% 不变。
+ * 抽离自 useFormValidation（序号令牌 + matchTrigger + 空值跳过 + 异步竞态防护）；
+ * 内部委托，公开签名不变。
+ *
+ * @see ./use-form-validation.ts 调用方
+ * @see ./use-cross-field-trigger.ts 反向（model 变化触发）兄弟 composable
  */
 import { get } from 'lodash-es'
 import { matchTrigger } from './match-trigger'

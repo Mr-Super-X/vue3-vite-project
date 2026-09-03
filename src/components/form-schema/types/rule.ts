@@ -1,12 +1,21 @@
 /**
  * 校验规则类型 —— async-validator 兼容 + 跨字段扩展
  *
- * 包括：
- * - async-validator 标准字段：required / pattern / min / max / message / validator / trigger / type
- * - 跨字段扩展：dependsOn / crossValidator / debounceMs
+ * 设计决策：复用 element-plus 底层的 async-validator 协议，因此 `required / pattern / min /
+ * max / message / validator / trigger / type` 七个字段与官方规范一字不差。
+ * 跨字段扩展（`dependsOn / crossValidator / debounceMs`）是 form-schema 自有增强：
+ * async-validator 原生不支持多字段联动（如"密码 == 确认密码"），需自行调度 depends 链。
+ *
+ * 跨字段执行链路（详见 ../composables/use-cross-field-rule-trigger.ts）：
+ *   依赖字段变更 → crossValidator(value, ...depends) → true | string | Promise<...>
+ *   返回 string 作为错误 message，由 validateForm 统一写入对应 form-item
+ *
+ * @see ../composables/use-cross-field-rule-trigger.ts 跨字段触发器实现
+ * @see ../composables/use-form-validation.ts 校验编排入口
+ * @see ./xform.ts ValidateOptions.validateFirst 入参说明
  */
 
-/** 校验规则（async-validator 兼容） */
+/** 单条字段校验规则（async-validator 兼容 + 跨字段扩展） */
 export interface RuleItem {
   required?: boolean
   pattern?: RegExp | string

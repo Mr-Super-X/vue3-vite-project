@@ -1,10 +1,6 @@
 /**
- * 数组节点渲染（kind === 'array'）
- *
- * - 外层 ElCard + 标题 + 添加按钮（顶部）
- * - 每行 ElFormItem（继承父数组节点的 label）+ itemSchema 渲染 + 行尾按钮（上移/下移/删除）
- * - min/max 边界禁用对应按钮
- * - name 路径自动前缀化为 items[i].subName（el-form 按嵌套路径校验）
+ * 数组节点渲染（kind === 'array'）：ElCard + 标题 + 添加按钮 + 每行 ElFormItem + 行尾按钮，
+ * name 路径自动前缀化为 `items[i].subName`（el-form 按嵌套路径校验）。
  *
  * 类型断言（`as never`）归因见 types/TYPE-CAST-AUDIT.md。
  */

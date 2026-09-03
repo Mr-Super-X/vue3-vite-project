@@ -1,9 +1,6 @@
 /**
  * useFormValidation —— XForm 校验编排（el-form.validate + crossValidator + scrollToError）
  *
- * triggerCrossFieldValidator + 序号令牌 + matchTrigger 已抽到 ./use-cross-field-rule-trigger.ts，
- * 本文件内部委托该 composable，公开签名 100% 不变。
- *
  * 公开契约（XFormExpose）：
  * - validate(): Promise<boolean> —— 字段规则失败直接 false；跑 crossValidator；失败 scrollToError
  * - validateDetail(): Promise<ValidateResult> —— 仅返回跨字段错误，不写 UI
@@ -12,6 +9,8 @@
  * - 字段规则走 el-form.validate（官方路径）
  * - 跨字段：crossValidator 同步/异步都 await；失败写入对应 form-item 红字
  * - 滚动：字段失败由 el-form 原生 scrollToError；跨字段失败由 scrollToFirstError
+ *
+ * @see ./use-cross-field-rule-trigger.ts 委托实现 triggerCrossFieldValidator
  */
 import { nextTick, toRaw, type Ref } from 'vue'
 import { get } from 'lodash-es'

@@ -1,25 +1,15 @@
 /**
- * useSchemaIndex —— schema 元数据查询的中央索引
- *
+ * Schema 元数据查询的中央索引（O(1) 查表替代 O(n) 遍历）：
  * 一次遍历构建 byName / fieldNames / allNames / crossRules / reverseIndex / dependsOnMap。
- * 收益：use-cross-field-trigger / use-form-dirty / use-server-error / XForm.getNames
- * 从每次 O(n) 全树遍历降为 O(1) Map 查询，大 schema 性能显著提升。
- *
- * - schema 整体替换时自动重建（监听 schemaGetter）
- * - 局部修改需手动调 reindex()（与现有 reactiveSchema 行为一致）
+ * schema 整体替换时自动重建；局部修改需手动调 reindex()（与 reactiveSchema 行为一致）。
  */
 import { ref, watch, type Ref } from 'vue'
 import type { SchemaNode } from '../types'
 import { buildIndex, type SchemaIndex } from './use-schema-index.builder'
 
 /**
- * useSchemaIndex 返回值 —— schema 元数据中央索引（O(1) 查表）
- *
- * 含 byName / fieldNames / allNames / crossRules / reverseIndex / dependsOnMap 响应式 ref，
- * 以及 getFieldNames (查表) / reindex (手动重建) 两个方法。
- *
- * 收益：use-cross-field-trigger / use-form-dirty / use-server-error / XForm.getNames
- * 从每次 O(n) 全树遍历降为 O(1) Map 查询。
+ * useSchemaIndex 返回值：schema 元数据中央索引（O(1) 查表），含 6 个响应式 ref
+ * + getFieldNames (查表) + reindex (手动重建) 两个方法。
  */
 export interface UseSchemaIndexReturn {
   byName: Readonly<Ref<SchemaIndex['byName']>>

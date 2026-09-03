@@ -1,12 +1,27 @@
 /**
  * 反应式类型 —— 节点级派生字段的运行时求值
+ *
+ * 设计职责：把"某个字段值随其他字段变化而变化"这类联动需求抽象为可声明的 schema 片段，
+ * 避免业务在 onChange 回调里手写副作用（难以维护 + 难以跨字段）。
+ *
+ * 字段族：
+ * - ReactionValue<T>：单值反应式（字面量 / 函数 / 函数表达式字符串 三选一）
+ * - ReactionConfig：reaction 字段（覆盖节点的任意字段），含 strategy / delay / deps 性能优化
+ * - SchemaNodeReactive：7 字段响应式命名空间，被 SchemaNode extends 组合
+ *
+ * 执行链路：
+ *   model 变化 → useReaction watchEffect → applyReactionFields 求值 → target[key] = value
+ *
+ * 命名空间索引：完整 9 命名空间字段对照表见 ../types.ts
+ * @see ../composables/use-reaction.ts reaction 调度实现
+ * @see ../composables/apply-reaction-fields.ts 求值 → 节点字段赋值实现
  */
 import type { SchemaNode } from './schema-node'
 
-/** 反应式字段值：字面量 / 函数 / 函数表达式字符串 */
+/** 反应式字段值：字面量 / 函数 / 函数表达式字符串 —— 三种形态运行时由 use-reaction 统一求值 */
 export type ReactionValue<T> = T | ((model: Record<string, unknown>) => T) | string
 
-/** 反应式配置：覆盖节点的任意字段 */
+/** 反应式配置 —— reaction 字段类型，覆盖节点的任意字段 */
 export interface ReactionConfig {
   rules?: ReactionValue<SchemaNode['rules']>
   // reaction.props 整体作为 ReactionValue：applyReactionFields 对函数/字符串求值后整体覆盖 node.props
@@ -33,21 +48,12 @@ export interface ReactionConfig {
 /**
  * SchemaNode 命名空间 —— 响应式（7 字段）
  *
- * P2-1 拆分：原 SchemaNode 31 字段拆为 9 个命名空间接口，本文件定义「响应式」子集：
- * reaction / disabled / permission / readonly / hidden / ignore / beforeChange
- * —— 节点级派生 + 三态语义（view/edit/hidden）+ 业务内聚拦截层。
+ * 字段：reaction / disabled / permission / readonly / hidden / ignore / beforeChange
+ * 职责：节点级派生 + 三态语义（view/edit/hidden）+ 业务内聚拦截层。
  *
- * 业务用法：
- * - 直接 import 此接口用于"只需响应式字段 + 其他命名空间字段"的子类型场景
- * - 通过 SchemaNode（schema-node.ts）使用全部 9 个命名空间
- *
- * 不变量：
- * - SchemaNode extends 全部 9 个命名空间，TS 接口展平后类型形状与 P2-1 重构前完全等价
- * - 字段 JSDoc verbatim 拷贝自原 schema-node.ts，IDE hover 不变
- */
-
-/**
- * SchemaNodeReactive —— 响应式（7 字段）
+ * 不变量：SchemaNode extends 全部 9 个命名空间，TS 接口展平后类型形状与 P2-1 重构前完全等价。
+ * 字段 JSDoc verbatim 拷贝自原 schema-node.ts，IDE hover 不变。
+ * @group 响应式
  */
 export interface SchemaNodeReactive {
   /**

@@ -1,10 +1,6 @@
 /**
- * wrap-with-elcol —— 栅格响应式包装
- *
- * - wrapWithElCol：节点 col 响应式包装（含 ElCol 渲染）
- * - pickBreakpointConfig：当前断点配置挑选（移动优先 / 降级到基础）
- * - mergeColResponsive：响应式 col 拍平（移除 responsive 字段）
- * - mergeRowResponsive：响应式 row 拍平
+ * 栅格响应式包装：节点 col 响应式断点选取（移动优先，降级到基础配置），
+ * col / row.responsive 拍平后注入 ElCol（el-row gutter 只对 ElCol 生效）。
  */
 import { h, type VNode } from 'vue'
 import { ElCol } from 'element-plus'

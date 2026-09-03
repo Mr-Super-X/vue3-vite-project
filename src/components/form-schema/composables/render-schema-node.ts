@@ -1,11 +1,9 @@
 /**
- * Schema 节点渲染调度器 —— 5 类分支委托给子模块
- *
- * 拆分子模块：组件解析→./resolve-component、规则编译→./compile-rules、
- * 栅格包装→./wrap-with-elcol、插槽构造→./build-slots、主调度→本文件。
- * 所有工具函数通过 re-export 保留对外 API，调用方零改动。
+ * Schema 节点渲染调度器：5 类分支按权限 / view / array / 视觉容器 / formItem /
+ * row+column / 默认顺序委托给子模块，本文件只负责调度与共享 ctx 准备。
  *
  * 类型断言（`as never`）归因见 types/TYPE-CAST-AUDIT.md。
+ * @see ./render-form-item / render-array-node / render-visual-container 接收 RenderSchemaNodeOptions
  */
 import { h, type VNode, type ComponentPublicInstance, type Ref } from 'vue'
 import { createNamespace } from '@/utils/bem'
@@ -37,14 +35,7 @@ type RenderFn = (
   node: SchemaNode | SchemaNode[] | string | undefined | null
 ) => VNode | string | VNode[] | undefined
 
-// ────────────────────────────────────────────────────────────────────────────
-// Re-exports —— 保留旧 API 兼容（render-form-item / render-array-node 等调用方零改动）
-//
-// 历史：原 re-exports 让 render-schema-node 兼作 barrel，单文件职责模糊。
-// 演进：新增 ./composables/barrel.ts 作为正式 barrel（未来统一出口），
-//       本文件保留旧 re-export 以兼容 8+ 调用方（render-form-item / render-array-node 等），
-//       等所有调用方迁移到 barrel 后再彻底清除。
-// ────────────────────────────────────────────────────────────────────────────
+// ── Re-exports：保留旧 API（render-form-item / render-array-node 等 8+ 调用方暂未迁移到 barrel.ts）──
 
 export {
   EL_COMPONENT_MAP,
@@ -79,10 +70,8 @@ export {
 /**
  * RenderSchemaNodeOptions —— render-schema-node 主调度入参
  *
- * 5 类分支（数组 / 视觉容器 / FormItem / row+column / 默认）共享的 ctx：
- * model / components / beforeChange / rules / render / formRef / permissionResolver / globalReadonly 等
- *
- * @see ./render-form-item.ts / render-array-node.ts / render-visual-container.ts 等子模块接收此 options
+ * 5 类分支（数组 / 视觉容器 / FormItem / row+column / 默认）共享的 ctx，
+ * 由 XForm 注入，下游 ./render-form-item / render-array-node / render-visual-container 共用。
  */
 export interface RenderSchemaNodeOptions {
   model: XFormProps['model']
@@ -108,9 +97,8 @@ export interface RenderSchemaNodeOptions {
     eventType: 'blur' | 'change'
   ) => Promise<void> | void
   /**
-   * 触发 el-form 字段内 async-validator 校验（onBlur/onChange handler 需要手动调用）
-   * 为什么需要：覆盖 el-form-item 内部 emit 的 onBlur 后,el-form 不会自动跑字段内规则
-   * XForm 必须**显式**调用此函数才能保证字段内 min/max/required 等规则生效
+   * 覆盖 el-form-item 内部 emit 的 onBlur 后,el-form 不会自动跑字段内规则；
+   * XForm 必须在 onBlur/onChange handler 中显式调用此函数以保证 min/max/required 等规则生效
    */
   validateField?: (name: string) => Promise<void>
   /** v-model 值写入后主动触发 */
@@ -118,9 +106,7 @@ export interface RenderSchemaNodeOptions {
   /** 当前响应式断点 */
   currentBreakpoint?: Ref<'xs' | 'sm' | 'md' | 'lg' | 'xl'>
   /**
-   * 权限码 → 状态 映射（阶段 2.3）
-   * 业务可注入 useAuth().hasPerm 实现的 resolver：
-   *   'user.edit' → hasPerm('user.edit') ? 'edit' : 'hidden'
+   * 权限码 → 状态 映射：业务注入 `useAuth().hasPerm` 实现，
    * 默认 identity（字符串字面量直接返回）
    */
   permissionResolver?: (perm: string) => 'view' | 'edit' | 'hidden'
@@ -130,10 +116,8 @@ export interface RenderSchemaNodeOptions {
    */
   globalReadonly?: () => boolean
   /**
-   * 阶段 3.1：外部字段错误状态（由 XForm.vue 注入）
-   * 走 el-form-item 的 props.error + props.validateStatus 官方路径触发红字
-   * （避免直接修改 elForm.fields[i] 的隐患）
-   * key: 字段名;value: { error: string; validateStatus: '' | 'validating' | 'success' | 'error' }
+   * 外部字段错误状态（XForm.vue 注入），走 el-form-item 官方
+   * props.error + props.validateStatus 路径触发红字，避免直接改 elForm.fields[i]
    */
   externalErrors?: () => Record<
     string,
@@ -141,17 +125,8 @@ export interface RenderSchemaNodeOptions {
   >
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// 主调度入口 —— 5 类分支委托给子模块
-// ────────────────────────────────────────────────────────────────────────────
-
-/** 主调度入口 —— 5 类渲染分支委托给子函数（行为 100% 等价原内联实现，P1-3 重构） */
+/** 主调度入口 —— 5 类渲染分支按顺序委托给子函数 */
 export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
-  // ──────────────────────────────────────────────────────────────────────
-  // 5 类渲染分支函数（按顺序尝试，第一个返回非 undefined 的胜出）
-  // 每个函数职责单一 + 行为等价原内联 if-else 块；主函数只剩调度逻辑
-  // ──────────────────────────────────────────────────────────────────────
-
   /** view 态占位（permission: 'view' 或顶层 readonly）—— 纯文本不包 formItem 不走校验 */
   function renderViewField(node: SchemaNode): VNode {
     return h(

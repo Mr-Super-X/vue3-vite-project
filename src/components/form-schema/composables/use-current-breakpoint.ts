@@ -1,13 +1,19 @@
+/**
+ * use-current-breakpoint —— 监听 window.innerWidth 变化，返回 element-plus 风格断点
+ *
+ * 设计：SSR 安全（无 window 时返回 'md' 中位默认值）；onMounted 注册 + onUnmounted 清理；
+ * resize 走 100ms 节流（断点 6 档逐帧更新是浪费）。
+ */
 import { ref, onMounted, onUnmounted, type Ref } from 'vue'
 import { throttle } from 'lodash-es'
 
-/** resize 事件节流间隔：断点只有 6 档，高频 resize 逐帧更新是浪费 */
+/** resize 节流 100ms：断点只有 6 档，逐帧更新浪费 */
 const RESIZE_THROTTLE_MS = 100
 
 /** element-plus 标准 5 档断点 */
 export type Breakpoint = 'xs' | 'sm' | 'md' | 'lg' | 'xl'
 
-/** 断点阈值(单位 px)—— element-plus 默认值 */
+/** element-plus 默认断点阈值（与 docs 保持一致） */
 const BREAKPOINTS: Array<[Breakpoint, number]> = [
   ['xl', 1920],
   ['lg', 1200],
@@ -15,14 +21,7 @@ const BREAKPOINTS: Array<[Breakpoint, number]> = [
   ['sm', 768],
 ]
 
-/**
- * 监听 window.innerWidth 变化，返回当前断点(xs/sm/md/lg/xl)
- *
- * 设计：
- * - SSR 安全：服务端没有 window，返回 'md'(中位断点)默认值
- * - onMounted 注册 resize 监听，onUnmounted 移除（无副作用）
- * - 断点计算：element-plus 默认阈值（与 docs 一致）
- */
+/** 返回当前断点 ref；SSR 场景返回 'md' 中位默认 */
 export function useCurrentBreakpoint(): Ref<Breakpoint> {
   const current = ref<Breakpoint>('md')
 

@@ -1,10 +1,6 @@
 /**
- * FormItem 包装渲染（含 name 或 formItem: true 的节点）
- *
- * - 外层包 el-form-item（label + prop + rules + onFocusout/onChange 跨字段触发）
- * - 内部渲染 Comp（v-model/on 事件 + 默认 props + node.props + async props + disabled + key）
- * - formItem 节点的 slots 转发给内部 Comp（如 el-upload 的 tip 槽位）
- * - 末尾 wrapWithElCol 应用 col 响应式断点
+ * FormItem 包装渲染：外层 el-form-item 承担 label + prop + rules + onFocusout 跨字段触发，
+ * 内部渲染业务 Comp，末尾 wrapWithElCol 应用 col 响应式断点。
  *
  * 类型断言（`as never`）归因见 types/TYPE-CAST-AUDIT.md。
  */

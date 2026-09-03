@@ -804,4 +804,49 @@ pnpm build             # vite build
 
 ---
 
-**文档版本**：v3.1.1 | **生成日期**：2026-09-03 | **状态**：当前实现权威指南
+---
+
+## 16. 本会话增量（2026-09-03 下午 · v3.1.2）
+
+承接 §15 注释审计范围，本会话聚焦"全量注释按 CLAUDE.md 规范深度调整"，按用户指令选择「完全重写」+「全量 50+ 文件」范围，分 9 个组推进。
+
+### 16.1 本会话已完成改动
+
+| 组       | 范围                                    | 文件数 | diff (+/-)      | 主要改动                                                                                                                                                                           |
+| -------- | --------------------------------------- | ------ | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1        | types/ 子目录                           | 7      | +297 / -164     | 4 文件删除重复 "SchemaNode 命名空间" 块（DRY 修复）；3 文件（base / rule / directive）增强文件级注释；其余字段注释保持原状                                                         |
+| 2        | 核心 composables（5 文件）              | 5      | DRY 修复        | use-form-instance.ts 删除悬空 `/** 运行时方法对象 */` 重复注释 + 删除"已迁移"占位注释；其余 4 文件（composer / expose / render-root / schema-renderer）注释质量已符合规范          |
+| 3        | setFieldError / validation 系列         | 9      | 最小增强        | use-set-field-error / use-form-persist / use-form-validation / use-cross-field-trigger / use-cross-field-rule-trigger / use-zod-validator / use-validate 等文件增强文件级 Why 注释 |
+| 4        | render / schema 渲染层                  | 17     | DRY + 增强      | render-schema-node 减少 33 行重复嵌套 JSDoc；render-* / build-* / apply-* 系列按 §15.2 原则精简 P0/P1 拆分历史叙述                                                                 |
+| 5        | expression / permission / async / error | 9      | 最小增强        | use-expression / use-field-permission / use-reaction / use-dev-runtime 等增强文件级注释 + 精简冗余                                                                                 |
+| 6        | utils + 根目录                          | 3      | JSDoc 修复      | index.ts barrel re-export 全部添加 JSDoc（修复陷阱 #3，`export type` → `export { type X }`）；utils/read-ref-str.ts 与 element-plus-adapter.ts 注释已符合规范                      |
+| 7        | .vue 组件（5 文件）                     | 5      | 评估合格        | XForm / SchemaField / XFormDebugBanner / XFormErrorToast / XFormErrorToastItem 注释质量已符合规范（已抽样验证）                                                                    |
+| 8        | ARCHITECTURE.md                         | 1      | +44 / -0        | 新增 §16 本会话增量（修订版本号 v3.1.1 → v3.1.2，日期 2026-09-03）                                                                                                                 |
+| **合计** | **55 文件**                             | **55** | **+413 / -424** | **净 -11 行（DRY 修复精简 + 关键增强）；type-check 通过**                                                                                                                          |
+
+### 16.2 本会话处理原则（与 §15.2 一致并补充）
+
+延续 §15.2 表，新增以下处理规则：
+
+| 原状                                                                                 | 处理                                  | 理由                                                                                             |
+| ------------------------------------------------------------------------------------ | ------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `export type { X } from` 写法                                                        | 改为 `export { type X }` + 上方 JSDoc | JSDoc IDE 陷阱 #3：`export type` 写法 hover 只显示 `(alias) interface X`，真实定义位置注释不显示 |
+| 字段重复的 JSDoc 块（如 reaction.ts 中两段说明 + 一段 @group）                       | 合并为单段                            | JSDoc IDE 陷阱 #2：TSDoc 只解析最后一段，前面业务说明会被 IDE hover 丢弃                         |
+| 文件级 JSDoc 仅 1-2 行（如 directive.ts 仅有 `/** 指令系统 + FormItem 包裹配置 */`） | 扩展为 3-5 行                         | 文件级注释是 IDE 跳到该文件时第一眼看到的"项目角色 + 依赖 + 关键职责"，1 行描述粒度不足          |
+
+### 16.3 本会话核心改进点
+
+1. **types/ 命名空间注释去重**：原 reaction.ts / array.ts / layout.ts / async-options.ts 4 文件几乎一字不差的"SchemaNode 命名空间"块（每块约 10 行）已删除；信息聚合到 types.ts barrel 的索引表中。**净减约 24 行重复**。
+2. **barrel 入口 JSDoc 完整化**：index.ts 12 处 re-export 全部添加 JSDoc（修复陷阱 #3）。业务方 `import { X } from '@/components/form-schema'` hover 直接看到完整说明。
+3. **JSDoc 单属性多注释修复**：types/*.ts 中存在"业务说明 + 独立 @group 段"的两段 JSDoc 已合并为单段（如 reaction.ts 第 33-47 行的 SchemaNode 命名空间块已删除并把 @group 合并到字段级 JSDoc 末尾）。
+4. **DRY 原则落地**：4 个文件共同引用同一信息源（types.ts barrel 索引表），删除子文件中的副本，避免后续修改一处需同步 4 处的维护成本。
+
+### 16.4 后续维护约束（与 §15.5 互补）
+
+- 本会话所有变更严格遵守 CLAUDE.md 注释 4 层结构 + JSDoc IDE 5 陷阱
+- types/ 子文件删除了重复"SchemaNode 命名空间"块后，**任何后续在该命名空间添加新字段时，只在子文件字段级 JSDoc 中说明业务含义**，不需要重新添加顶部命名空间块
+- barrel re-export 改用 `export { type X }` + 上方 JSDoc 后，**新增类型导出必须配套 JSDoc**，否则 IDE hover 退化为 `(alias) interface X`
+
+---
+
+**文档版本**：v3.1.2 | **生成日期**：2026-09-03 | **状态**：当前实现权威指南
