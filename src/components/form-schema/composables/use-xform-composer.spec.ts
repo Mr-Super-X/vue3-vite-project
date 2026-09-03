@@ -307,7 +307,7 @@ describe('useXFormComposer', () => {
 /**
  * P0-1 silent catch 修复守护（静态源码检查）
  *
- * P0-1 修复点：use-xform-composer.ts 内 renderOpts.validateField 是内嵌闭包，
+ * P0-1 修复点：validateField 是内嵌闭包（位于 use-render-root.ts 的 renderOpts.validateField），
  * 仅在字段 onBlur 时由 render-form-item 触发，无法在 unit test 层级直接 mount 触发。
  * 采用静态源码检查守护——确保修复代码不被误删：
  * 1. 包含错误码常量 EL_FORM_VALIDATE_FIELD_FAILED
@@ -316,14 +316,17 @@ describe('useXFormComposer', () => {
  *
  * 若需要更严格的行为测试，可改为 @vue/test-utils mount XForm.vue 触发字段 blur，
  * 但需要 XForm.vue 暴露 errorBus（目前未 expose）。
+ *
+ * P0-3 重构后 validateField 闭包从 use-xform-composer.ts 搬到 use-render-root.ts，
+ * 静态检查路径同步更新。
  */
 describe('P0-1 silent catch 修复守护', () => {
   // Windows 下 `new URL('./xxx', import.meta.url).pathname` 解析为根盘符路径,
   // 必须用 path.resolve(__dirname, ...) 才能拿到同目录相对路径
-  const composerPath = resolve(dirname(fileURLToPath(import.meta.url)), './use-xform-composer.ts')
+  const renderRootPath = resolve(dirname(fileURLToPath(import.meta.url)), './use-render-root.ts')
 
-  it('use-xform-composer.ts 含 errorBus 上报与错误码常量', () => {
-    const content = readFileSync(composerPath, 'utf-8')
+  it('use-render-root.ts 含 errorBus 上报与错误码常量', () => {
+    const content = readFileSync(renderRootPath, 'utf-8')
     // 关键字符串必须存在
     expect(content).toContain('EL_FORM_VALIDATE_FIELD_FAILED')
     expect(content).toContain('errorBus.report')
@@ -331,8 +334,8 @@ describe('P0-1 silent catch 修复守护', () => {
     expect(content).not.toContain('catch {\n        /* silent')
   })
 
-  it('use-xform-composer.ts 含 force: true 标志（主动调用场景跳过去重）', () => {
-    const content = readFileSync(composerPath, 'utf-8')
+  it('use-render-root.ts 含 force: true 标志（主动调用场景跳过去重）', () => {
+    const content = readFileSync(renderRootPath, 'utf-8')
     expect(content).toMatch(/force:\s*true/)
   })
 })

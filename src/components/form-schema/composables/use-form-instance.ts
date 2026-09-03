@@ -50,17 +50,16 @@ export type { FieldErrorState }
 export function useFormInstance(
   model: () => Record<string, unknown> | undefined,
   zodSchema: () => ZodType | undefined,
-  /** XForm.vue 创建并传入；走 element-plus 官方 props.error + props.validateStatus 路径 */
-  externalErrors?: Ref<Record<string, FieldErrorState>>,
   /** 显式 deps 传入（避免 provide/inject 在嵌套 composable 中失效） */
   errorBus?: UseFormErrorBusReturn
 ) {
   const elFormRef = ref<ElFormInstance | null>(null)
+  // 阶段 3.1：externalErrors 由 useFormInstance 内部创建并拥有（避免 composer / instance / setFieldError
+  // 三方所有权争议）。走 element-plus 官方 props.error + props.validateStatus 路径触发红字。
+  const externalErrors = ref<Record<string, FieldErrorState>>({})
 
-  // 仅在 externalErrors 存在时初始化（无 externalErrors 表示 XForm.vue 未启用红字路径，
-  // 此场景不需要 watch 守护；setFieldError 也只是空操作）
   const { setFieldError } = useSetFieldError({
-    externalErrors: externalErrors ?? ref<Record<string, FieldErrorState>>({}),
+    externalErrors,
     getFields: () =>
       (elFormRef.value as unknown as { fields?: unknown[] } | null)?.fields as
         | Array<{ prop?: string | { value?: string }; propString?: string | { value?: string } }>
@@ -162,9 +161,10 @@ export function useFormInstance(
 
   function clearValidate(names?: string[]): void {
     // clearValidate 同时清理 externalErrors（保持与 setFieldError 同步）
-    if (names && externalErrors) {
+    // P0-2:externalErrors 必存在（P0-2 内部创建）,去掉冗余守卫
+    if (names) {
       for (const name of names) delete externalErrors.value[name]
-    } else if (externalErrors) {
+    } else {
       externalErrors.value = {}
     }
     elFormRef.value?.clearValidate?.(names)
@@ -172,13 +172,12 @@ export function useFormInstance(
 
   function resetFields(names?: string | string[]): void {
     // 部分重置：只清指定字段的 externalErrors；全量重置才清空整个 externalErrors
-    if (externalErrors) {
-      if (names !== undefined) {
-        const list = Array.isArray(names) ? names : [names]
-        for (const n of list) delete externalErrors.value[n]
-      } else {
-        externalErrors.value = {}
-      }
+    // P0-2:externalErrors 必存在（P0-2 内部创建）,去掉冗余守卫
+    if (names !== undefined) {
+      const list = Array.isArray(names) ? names : [names]
+      for (const n of list) delete externalErrors.value[n]
+    } else {
+      externalErrors.value = {}
     }
     elFormRef.value?.resetFields?.(names)
   }

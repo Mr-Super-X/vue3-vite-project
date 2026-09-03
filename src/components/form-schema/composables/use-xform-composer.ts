@@ -1,46 +1,36 @@
 /**
  * useXFormComposer —— XForm 顶层编排（composition root）
  *
- * 负责装配 11 个 composable + optsEpoch 同步 + renderToComponent + renderOpts。
- * 子编排已抽离：dev 校验→./use-dev-runtime、defaultValue→./apply-default-values、
- * XFormExpose→./use-xform-expose。
+ * 负责装配 11 个 composable + 渲染根闭包（renderToComponent）。
+ * 子编排已抽离：渲染根→./use-render-root、dev 校验→./use-dev-runtime、
+ * defaultValue→./apply-default-values、XFormExpose→./use-xform-expose。
  *
  * 类型断言（`as never`）归因见 types/TYPE-CAST-AUDIT.md。
  */
-import { computed, onScopeDispose, ref, watch, type ComputedRef, type Ref, type VNode } from 'vue'
+import { computed, onScopeDispose, watch, type ComputedRef, type Ref } from 'vue'
 
 import { useSchemaRenderer } from './use-schema-renderer'
 import { useSchemaIndex } from './use-schema-index'
 import { useFormErrorBus } from './use-form-error-bus'
 import { useCurrentBreakpoint } from './use-current-breakpoint'
-import { withHidden } from './with-hidden'
-import { applyDirectives } from './apply-directives'
 import { useFormInstance, type FieldErrorState } from './use-form-instance'
 import { useCrossFieldTrigger } from './use-cross-field-trigger'
 import { useFormDirty } from './use-form-dirty'
 import { useServerError } from './use-server-error'
 import { useFormValidation } from './use-form-validation'
-import { makeDefaultBeforeChangeCtx } from './build-vmodel-bindings'
 import { useTopLevelFields } from './use-top-level-fields'
 import { resolveFunctionExpression, setExpressionFunctions } from './use-expression'
 import { useDevRuntime } from './use-dev-runtime'
 import { useApplyDefaults } from './apply-default-values'
 import { useXFormExpose } from './use-xform-expose'
-import {
-  useRenderSchemaNode,
-  mergeRowResponsive,
-  type RenderSchemaNodeOptions,
-} from './render-schema-node'
+import { useRenderRoot, type RenderFn } from './use-render-root'
+import { mergeRowResponsive } from './render-schema-node'
 import { DEFAULT_COMPONENT_PROPS } from '../element-plus-adapter'
 import type { RuleItem, RowConfig, SchemaNode, XFormExpose, XFormProps } from '../types'
 
 // ────────────────────────────────────────────────────────────────────────────
 // 公共类型
 // ────────────────────────────────────────────────────────────────────────────
-
-type RenderFn = (
-  node: SchemaNode | SchemaNode[] | string | undefined | null
-) => VNode | string | VNode[] | undefined
 
 /**
  * useXFormComposer 入参 —— 仅 props 一项（XForm setup 时调用）
@@ -103,9 +93,6 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
   // 显式 deps 传递 —— composable 内 provide/inject 在 setup 嵌套中静默失效
   const errorBus = useFormErrorBus()
 
-  // 走 element-plus 官方 props.error + props.validateStatus 路径触发红字
-  const fieldErrors = ref<Record<string, FieldErrorState>>({})
-
   // viewport 变化时响应式 ColConfig 自动拍平
   const currentBreakpoint = useCurrentBreakpoint()
 
@@ -134,10 +121,10 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     moveItem,
     setFieldError,
     setFieldValidating,
+    externalErrors: fieldErrors,
   } = useFormInstance(
     () => props.model,
     () => props.zodSchema,
-    fieldErrors,
     errorBus
   )
 
@@ -221,79 +208,21 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     fieldErrors,
   })
 
-  /** 节点渲染（外层：hidden / directives 包装） */
-  function renderToComponent(
-    node: SchemaNode | SchemaNode[] | string | undefined | null
-  ): VNode | string | VNode[] | undefined {
-    // 订阅 optsEpoch：B4 watch 在 props 引用换代时 bump 它，字段 effect 随之失效重渲
-    void optsEpoch.value
-    if (node === null || node === undefined) return undefined
-    if (typeof node === 'string') return node
-    if (Array.isArray(node)) return node.map(renderToComponent) as VNode[]
-    if (node.ignore) return undefined
-    const result = renderInner(node)
-    if (!result || typeof result === 'string' || Array.isArray(result)) return result as never
-
-    if (node.hidden) {
-      const hiddenResult = withHidden(result)
-      return node.directives ? applyDirectives(hiddenResult, node.directives) : hiddenResult
-    }
-
-    return applyDirectives(result, node.directives)
-  }
-
-  const renderOpts: RenderSchemaNodeOptions = {
-    model: props.model,
-    components: props.components,
-    beforeChange: props.beforeChange,
-    beforeChangeRules: props.beforeChangeRules,
-    // getter 闭包延迟解析 exposed —— 闭包内访问的 exposed 在本函数末尾才构造
-    makeBeforeChangeCtx: (node) =>
-      makeDefaultBeforeChangeCtx(
-        node,
-        (props.model ?? {}) as Record<string, unknown>,
-        () => exposed
-      ),
-    rules: props.rules,
-    componentProps: mergedComponentProps.value,
-    render: renderToComponent,
-    externalErrors: () => fieldErrors.value,
-    arrayActions: {
-      addItem,
-      removeItem,
-      moveItem,
-    },
-    triggerCrossFieldValidator: (node, eventType) => triggerCrossFieldValidator(node, eventType),
-    validateField: async (name: string) => {
-      try {
-        await elFormRef.value?.validateField?.(name)
-      } catch (err: unknown) {
-        // 对齐 validateForm 错误流:走 errorBus, dev/qa 可通过 OSD 看到, prod 仅 console.error 留痕
-        // 错误已写入 form-item 但用户主动调用 validateField 仍需看到全量细节
-        errorBus.report({
-          severity: 'error',
-          code: 'EL_FORM_VALIDATE_FIELD_FAILED',
-          message: `字段 ${name} 校验失败`,
-          source: 'useXFormComposer.validateField',
-          force: true, // 主动调用场景,跳过去重
-          ...(err instanceof Error
-            ? { details: [{ field: name, value: undefined, message: err.message }] }
-            : {}),
-        })
-      }
-    },
-    // v-model 值变化时的跨字段调度唯一入口
-    onValueChange: (node, _newValue) => {
-      if (node.name) {
-        // 顺序关键：delay=0（实时模式）下 crossValidator 同步执行，
-        // 若先 trigger 后 clearValidate，刚写入的错误会被立即清除，导致 UI 不标红。
-        clearValidate([node.name])
-        crossFieldTrigger.trigger(node.name)
-      }
-    },
-    currentBreakpoint: currentBreakpoint,
-    globalReadonly: () => topLevelReadonly.value,
-  }
+  /** 节点渲染（外层：hidden / directives 包装） —— 由 useRenderRoot 维护 */
+  const { renderToComponent } = useRenderRoot({
+    props,
+    fieldErrors,
+    getExposed: () => exposed,
+    clearValidate,
+    elFormRef,
+    errorBus,
+    crossFieldTrigger,
+    triggerCrossFieldValidator,
+    arrayActions: { addItem, removeItem, moveItem },
+    currentBreakpoint,
+    topLevelReadonly,
+    mergedComponentProps,
+  })
 
   // 白名单函数表注册（模块级，scope 销毁时清空避免跨实例污染）
   watch(
@@ -302,30 +231,6 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     { immediate: true }
   )
   onScopeDispose(() => setExpressionFunctions(undefined))
-
-  const renderInner = useRenderSchemaNode(renderOpts)
-
-  // opts 换代计数器 —— 父级替换 props 引用时 bump，让所有 SchemaField 的 render effect 失效重渲
-  // B4 修复背景：renderOpts 在 setup 期捕获 props 快照，父级替换引用后渲染绑定静默断裂
-  const optsEpoch = ref(0)
-
-  watch(
-    () => [
-      props.model,
-      props.components,
-      props.rules,
-      props.beforeChange,
-      mergedComponentProps.value,
-    ],
-    () => {
-      renderOpts.model = props.model
-      renderOpts.components = props.components
-      renderOpts.rules = props.rules
-      renderOpts.beforeChange = props.beforeChange
-      renderOpts.componentProps = mergedComponentProps.value
-      optsEpoch.value++ // props 引用换代
-    }
-  )
 
   function getNames(includesIgnore = false): string[] {
     return [...schemaIndex.getFieldNames(includesIgnore)]

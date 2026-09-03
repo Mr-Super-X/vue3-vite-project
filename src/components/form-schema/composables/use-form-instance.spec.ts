@@ -1,5 +1,4 @@
 import { describe, it, expect, vi } from 'vitest'
-import { ref } from 'vue'
 import { z } from 'zod'
 import { useFormInstance } from './use-form-instance'
 
@@ -442,14 +441,14 @@ describe('useFormInstance(model, zodSchema)', () => {
   describe('setFieldError(name, message)', () => {
     // 阶段 3.1:setFieldError 改为走 externalErrors ref(官方 props 路径),
     // 不再直接修改 elForm.fields[i]。测试相应更新:检查 externalErrors ref 值
+    // P0-2:externalErrors 由 useFormInstance 内部创建并拥有,无需调用方传入
     it('writes message to externalErrors ref (走 element-plus 官方 props 路径)', () => {
       const { setFieldError, externalErrors } = useFormInstance(
         () => ({}),
-        () => undefined,
-        ref({}) as never
+        () => undefined
       )
       setFieldError('email', '邮箱格式错误')
-      expect(externalErrors!.value.email).toEqual({
+      expect(externalErrors.value.email).toEqual({
         error: '邮箱格式错误',
         validateStatus: 'error',
       })
@@ -458,25 +457,27 @@ describe('useFormInstance(model, zodSchema)', () => {
     it('writes default validateStatus when state omitted', () => {
       const { setFieldError, externalErrors } = useFormInstance(
         () => ({}),
-        () => undefined,
-        ref({}) as never
+        () => undefined
       )
       setFieldError('email', '错误信息')
-      expect(externalErrors!.value.email?.validateStatus).toBe('error')
+      expect(externalErrors.value.email?.validateStatus).toBe('error')
     })
 
     it('clears entry when message empty or state cleared', () => {
       const { setFieldError, externalErrors } = useFormInstance(
         () => ({}),
-        () => undefined,
-        ref({ email: { error: '旧', validateStatus: 'error' } }) as never
+        () => undefined
       )
+      // 先写入 —— internal externalErrors 现在由 useFormInstance 拥有,无法预先填充
+      setFieldError('email', '错误信息')
+      expect(externalErrors.value.email).toBeDefined()
+      // 清空
       setFieldError('email', '')
-      expect(externalErrors!.value.email).toBeUndefined()
+      expect(externalErrors.value.email).toBeUndefined()
     })
 
-    it('is silent when externalErrors ref not provided', () => {
-      // 不传 externalErrors 时 setFieldError 应为 no-op(兼容老调用)
+    it('does not throw when called without explicit el-form binding', () => {
+      // P0-2:externalErrors 始终由 useFormInstance 内部创建,setFieldError 不会因为无外部依赖而抛错
       const { setFieldError } = useFormInstance(
         () => ({}),
         () => undefined
@@ -487,11 +488,10 @@ describe('useFormInstance(model, zodSchema)', () => {
     it('supports nested path (items[0].qty) for array items', () => {
       const { setFieldError, externalErrors } = useFormInstance(
         () => ({}),
-        () => undefined,
-        ref({}) as never
+        () => undefined
       )
       setFieldError('items[0].qty', '数量必须大于 0')
-      expect(externalErrors!.value['items[0].qty']).toEqual({
+      expect(externalErrors.value['items[0].qty']).toEqual({
         error: '数量必须大于 0',
         validateStatus: 'error',
       })
@@ -502,16 +502,17 @@ describe('useFormInstance(model, zodSchema)', () => {
 describe('useFormInstance / guard watcher 泄漏修复（⑥ 回归）', () => {
   it('scope 销毁后 guard watcher 不再纠正字段状态', async () => {
     const { effectScope, nextTick, ref } = await import('vue')
-    const externalErrors = ref<Record<string, { error: string; validateStatus: string }>>({})
     const validateState = ref('success')
     const validateMessage = ref('')
     const scope = effectScope()
+    // P0-2:externalErrors 改为 useFormInstance 内部创建,这里用闭包变量接住引用
+    let externalErrorsRef: ReturnType<typeof useFormInstance>['externalErrors'] | undefined
     scope.run(() => {
       const inst = useFormInstance(
         () => ({}),
-        () => undefined,
-        externalErrors as never
+        () => undefined
       )
+      externalErrorsRef = inst.externalErrors
       const mock = {
         ...createMockElForm(),
         fields: [{ propString: 'a', validateState, validateMessage }],
@@ -519,7 +520,7 @@ describe('useFormInstance / guard watcher 泄漏修复（⑥ 回归）', () => {
       inst.elFormRef.value = mock as never
     })
     // 触发外层 watch → guardField 注册 inner watch
-    externalErrors.value = { a: { error: '服务端错误', validateStatus: 'error' } }
+    externalErrorsRef!.value = { a: { error: '服务端错误', validateStatus: 'error' } }
     await nextTick()
     // guard 生效验证：字段被改成 success 时应被纠正回 error
     validateState.value = 'success'
@@ -584,7 +585,6 @@ describe('useFormInstance / validateField（P1 回归）', () => {
     const { elFormRef, validateField } = useFormInstance(
       () => ({}),
       () => undefined,
-      undefined,
       errorBus as never
     )
     const mock = createMockElForm() as unknown as {
@@ -629,7 +629,6 @@ describe('useFormInstance / validateField（P1 回归）', () => {
     const { elFormRef, validateField } = useFormInstance(
       () => ({}),
       () => undefined,
-      undefined,
       errorBus as never
     )
     const mock = createMockElForm() as unknown as {
@@ -659,15 +658,13 @@ describe('useFormInstance / validateField（P1 回归）', () => {
 
 describe('useFormInstance / resetFields(names) 部分重置（P1 回归）', () => {
   it('透传 names 给 el-form，且只清指定字段的 externalErrors', () => {
-    const externalErrors = ref<Record<string, { error: string; validateStatus: string }>>({
-      a: { error: '错误A', validateStatus: 'error' },
-      b: { error: '错误B', validateStatus: 'error' },
-    })
-    const { elFormRef, resetFields } = useFormInstance(
+    // P0-2:externalErrors 由 useFormInstance 内部创建,通过 setFieldError 写入预置数据
+    const { elFormRef, resetFields, setFieldError, externalErrors } = useFormInstance(
       () => ({}),
-      () => undefined,
-      externalErrors as never
+      () => undefined
     )
+    setFieldError('a', '错误A')
+    setFieldError('b', '错误B')
     const mock = createMockElForm()
     elFormRef.value = mock as never
     resetFields(['a'])
@@ -677,14 +674,12 @@ describe('useFormInstance / resetFields(names) 部分重置（P1 回归）', () 
   })
 
   it('不传 names → 全量重置并清空 externalErrors（行为不变）', () => {
-    const externalErrors = ref<Record<string, { error: string; validateStatus: string }>>({
-      a: { error: '错误A', validateStatus: 'error' },
-    })
-    const { elFormRef, resetFields } = useFormInstance(
+    const { elFormRef, resetFields, setFieldError, externalErrors } = useFormInstance(
       () => ({}),
-      () => undefined,
-      externalErrors as never
+      () => undefined
     )
+    setFieldError('a', '错误A')
+    expect(externalErrors.value.a).toBeDefined()
     const mock = createMockElForm()
     elFormRef.value = mock as never
     resetFields()
