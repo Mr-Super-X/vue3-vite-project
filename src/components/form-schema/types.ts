@@ -86,6 +86,20 @@ export { type AsyncOptionsConfig } from './types/async-options'
  */
 export { type SchemaNode } from './types/schema-node'
 /**
+ * P2-1 命名空间分组 —— SchemaNode 由 9 个子接口 extends 组合而成
+ * 业务可按需 import 某个命名空间（仅关心某类字段的子类型场景）
+ * @see ./types/schema-node.ts 字段分组对照表
+ */
+export { type SchemaNodeIdentity } from './types/identity'
+export { type SchemaNodeRender } from './types/render'
+export { type SchemaNodeLayout } from './types/layout'
+export { type SchemaNodeValidate } from './types/validate'
+export { type SchemaNodeReactive } from './types/reaction'
+export { type SchemaNodeArray } from './types/array'
+export { type SchemaNodeData } from './types/async-options'
+export { type SchemaNodeVModel } from './types/v-model'
+export { type SchemaNodeTopLevel } from './types/top-level'
+/**
  * ComponentPropsRegistry —— 快捷名 → 组件 props 类型映射
  *
  * 消费方可 TS module augmentation 扩展自定义组件：

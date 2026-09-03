@@ -46,15 +46,42 @@ function countLines(relativePath: string): number {
   return readText(relativePath).split('\n').length
 }
 
-/** 解析 SchemaNode interface 体内的字段数（精确：仅 interface body 内的字段声明） */
-function countSchemaNodeFields(): number {
-  const content = readText('src/components/form-schema/types/schema-node.ts')
-  // 匹配 export interface SchemaNode { ... } —— 非贪婪，跨多行
-  const m = content.match(/export interface SchemaNode \{([\s\S]*?)\n\}/)
+/** SchemaNode 命名空间子接口清单（P2-1 重构后） */
+const SCHEMA_NODE_NAMESPACES = [
+  { file: 'src/components/form-schema/types/identity.ts', interfaceName: 'SchemaNodeIdentity' },
+  { file: 'src/components/form-schema/types/render.ts', interfaceName: 'SchemaNodeRender' },
+  { file: 'src/components/form-schema/types/layout.ts', interfaceName: 'SchemaNodeLayout' },
+  { file: 'src/components/form-schema/types/validate.ts', interfaceName: 'SchemaNodeValidate' },
+  { file: 'src/components/form-schema/types/reaction.ts', interfaceName: 'SchemaNodeReactive' },
+  { file: 'src/components/form-schema/types/array.ts', interfaceName: 'SchemaNodeArray' },
+  { file: 'src/components/form-schema/types/async-options.ts', interfaceName: 'SchemaNodeData' },
+  { file: 'src/components/form-schema/types/v-model.ts', interfaceName: 'SchemaNodeVModel' },
+  { file: 'src/components/form-schema/types/top-level.ts', interfaceName: 'SchemaNodeTopLevel' },
+] as const
+
+/** 解析 interface 体内的字段数（精确：仅 interface body 内的字段声明） */
+function countInterfaceFields(content: string, interfaceName: string): number {
+  // 匹配 export interface Name { ... } —— 非贪婪，跨多行
+  const re = new RegExp(`export interface ${interfaceName} \\{([\\s\\S]*?)\\n\\}`)
+  const m = content.match(re)
   if (!m) return 0
   // 仅计字段声明行：空白开头 + 标识符 + ? : 或直接 :
   const fieldLines = m[1].split('\n').filter((line) => /^\s+[a-z][a-zA-Z]*\??:\s/.test(line))
   return fieldLines.length
+}
+
+/**
+ * SchemaNode 字段总数 = 9 个命名空间子接口字段数之和（P2-1 重构后）
+ *
+ * SchemaNode 本身只 extends 不声明字段，所有字段分布在 9 个 namespace 子接口里。
+ * 脚本聚合各子接口的字段数后与 ARCHITECTURE.md §2.1 表「合计」行校验。
+ */
+function countSchemaNodeFields(): number {
+  let total = 0
+  for (const ns of SCHEMA_NODE_NAMESPACES) {
+    total += countInterfaceFields(readText(ns.file), ns.interfaceName)
+  }
+  return total
 }
 
 /** 数 builders.ts 中 xXxx 入口（`export const xXxx = ...`） */
