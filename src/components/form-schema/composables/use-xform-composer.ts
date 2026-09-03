@@ -113,6 +113,8 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     schema: computed(() => props.schema),
     components: computed(() => props.components) as never,
     formData: computed(() => props.model ?? {}) as never,
+    // 阶段 P2-3：reactionBudget 透传（默认 50 向后兼容）
+    ...(props.reactionBudget !== undefined ? { reactionBudget: props.reactionBudget } : {}),
   })
 
   // schema 元数据中央索引 —— 替代每次遍历 O(n) 的 getNames/collectCrossRuleFields

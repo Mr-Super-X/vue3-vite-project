@@ -19,7 +19,13 @@ function cloneSchema<T>(value: T): T {
   })
 }
 import type { SchemaNode, XFormProps } from '../types'
-import { containsReaction, applyReactions } from './use-reaction'
+import {
+  containsReaction,
+  applyReactions,
+  createBudget,
+  DEFAULT_REACTION_BUDGET,
+  type ReactionBudget,
+} from './use-reaction'
 import { useAsyncOptions, resolveAsyncOptionsProp } from './use-async-options'
 
 interface UseSchemaRendererOptions {
@@ -27,6 +33,14 @@ interface UseSchemaRendererOptions {
   components: Ref<Record<string, unknown> | undefined>
   formData: Ref<Record<string, unknown>>
   beforeChange?: XFormProps['beforeChange']
+  /**
+   * 单 flush 内 reaction 最大执行次数（阶段 P2-3 透传入口）
+   * - 默认 50（与 DEFAULT_REACTION_BUDGET 一致，向后兼容）
+   * - 大型 schema reaction 链较长时可调高
+   * - 严格排查循环联动时可调小
+   * @see ./use-reaction.ts
+   */
+  reactionBudget?: number
 }
 
 /**
@@ -59,7 +73,9 @@ export function useSchemaRenderer(opts: UseSchemaRendererOptions) {
       // 注册异步选项 watcher（在 reaction traverse 之前，避免 reaction 覆盖 props）
       registerAsyncOptions(cloned, opts.formData, asyncStoppers)
       if (hasRx) {
-        traverse(cloned as SchemaNode, opts.formData.value, stoppers)
+        // 阶段 P2-3：reactionBudget 透传到 reaction 执行预算（默认 50 向后兼容）
+        const budget: ReactionBudget = createBudget(opts.reactionBudget ?? DEFAULT_REACTION_BUDGET)
+        traverse(cloned as SchemaNode, opts.formData.value, stoppers, budget)
       }
       reactiveSchema.value = cloned
     },
@@ -93,13 +109,14 @@ export function useSchemaRenderer(opts: UseSchemaRendererOptions) {
 function traverse(
   node: SchemaNode | SchemaNode[],
   model: Record<string, unknown>,
-  stoppers: (() => void)[]
+  stoppers: (() => void)[],
+  budget: ReactionBudget
 ): void {
   if (Array.isArray(node)) {
-    node.forEach((n) => traverse(n, model, stoppers))
+    node.forEach((n) => traverse(n, model, stoppers, budget))
     return
   }
-  applyReactions(node, model, stoppers)
+  applyReactions(node, model, stoppers, budget)
 }
 
 /**

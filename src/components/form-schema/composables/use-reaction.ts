@@ -6,7 +6,7 @@ import { applyReactionFields } from './apply-reaction-fields'
 /** 单 flush 内 reaction 最大执行次数 —— 超出视为循环联动（reaction 写 model 又触发自身）。
  *  必须低于 Vue 调度器自身的递归上限（100）：先一步拦截可避免 Vue 抛出
  *  "Maximum recursive updates exceeded" 未处理异常，把卡死降级为可诊断的 console.error */
-const MAX_CHAIN_PER_FLUSH = 50
+export const DEFAULT_REACTION_BUDGET = 50
 
 /**
  * 联动执行预算：每个表单实例一份，nextTick 后自动重置。
@@ -14,16 +14,24 @@ const MAX_CHAIN_PER_FLUSH = 50
  * 一旦构成环（A 改 B、B 改 A）将无限刷入 Vue 调度队列，页面卡死且无报错。
  * 预算耗尽后本 flush 直接跳过并 console.error，把"卡死"降级为"可诊断的错误"。
  */
-interface ReactionBudget {
+export interface ReactionBudget {
+  /** 单 flush 内允许的最大执行次数（XFormProps.reactionBudget 透传） */
+  readonly max: number
+  /** 尝试进入预算,返回 true=允许, false=预算已耗尽 */
   enter: () => boolean
 }
 
-function createBudget(): ReactionBudget {
+/** 创建一份 reaction 执行预算（参数化 max，供 XFormProps.reactionBudget 透传）
+ *
+ * @param max 单 flush 内 reaction 最大执行次数，默认 DEFAULT_REACTION_BUDGET (50)
+ */
+export function createBudget(max: number = DEFAULT_REACTION_BUDGET): ReactionBudget {
   let count = 0
   let resetScheduled = false
   return {
+    max,
     enter() {
-      if (count >= MAX_CHAIN_PER_FLUSH) return false
+      if (count >= max) return false
       count++
       if (!resetScheduled) {
         resetScheduled = true
@@ -105,7 +113,7 @@ export function applyReactions(
       const runner = (): void => {
         if (!budget.enter()) {
           console.error(
-            `[XForm] reaction 单批次执行超过 ${MAX_CHAIN_PER_FLUSH} 次，疑似循环联动` +
+            `[XForm] reaction 单批次执行超过 ${budget.max} 次，疑似循环联动` +
               '（reaction 写入 model 又触发自身）。本批次已跳过，请检查联动链或声明 deps 缩小监听范围。'
           )
           return
