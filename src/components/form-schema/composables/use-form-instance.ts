@@ -13,6 +13,7 @@ import { ref, toRaw, type ComponentPublicInstance, type Ref } from 'vue'
 import { useSetFieldError, type FieldErrorState } from './use-set-field-error'
 import { useZodValidator } from './use-zod-validator'
 import type { UseFormErrorBusReturn } from './use-form-error-bus'
+import { readRefStr } from '../utils/read-ref-str'
 import type { ZodType } from 'zod'
 
 /** 运行时方法对象（InstanceType<typeof ElForm> 会丢失 validate 等方法） */
@@ -106,15 +107,7 @@ export function useFormInstance(
   }
 
   /** 从 ref-like 值解包字符串（element-plus 内部字段状态常用 ref<string> 形态） */
-  function readRefStr(v: string | Ref<string> | undefined): string | undefined {
-    if (v === undefined || v === null) return undefined
-    if (typeof v === 'string') return v
-    if (typeof v === 'object' && 'value' in v) {
-      const x = (v as { value: unknown }).value
-      return typeof x === 'string' ? x : undefined
-    }
-    return undefined
-  }
+  // 已迁移到 ../utils/read-ref-str —— 本地副本删除
 
   /**
    * 从 el-form fields 提取 validateState=error 的字段详情，仅命中过滤集合的字段

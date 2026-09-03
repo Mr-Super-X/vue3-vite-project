@@ -231,12 +231,14 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     if (typeof node === 'string') return node
     if (Array.isArray(node)) return node.map(renderToComponent) as VNode[]
     if (node.ignore) return undefined
-    if (node.hidden) {
-      const inner = renderInner(node)
-      if (inner && typeof inner !== 'string' && !Array.isArray(inner)) return withHidden(inner)
-    }
     const result = renderInner(node)
     if (!result || typeof result === 'string' || Array.isArray(result)) return result as never
+
+    if (node.hidden) {
+      const hiddenResult = withHidden(result)
+      return node.directives ? applyDirectives(hiddenResult, node.directives) : hiddenResult
+    }
+
     return applyDirectives(result, node.directives)
   }
 

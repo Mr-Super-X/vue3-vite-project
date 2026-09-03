@@ -1,18 +1,21 @@
 /**
  * useFormErrorBus —— XForm 错误事件总线（OPT-7）
  *
- * 原 27 处 console.error/warn 仅开发者 DevTools 可见。新设计 provide/inject 共享 error bus：
+ * 原 27 处 console.error/warn 仅开发者 DevTools 可见。改为单 XForm 实例共享 error bus：
  * - 调用方：report({ severity, code, message, fields?, source? }) 替换 console.error
- * - 消费方：useInjectFormErrorBus() 读取 events + dismiss
+ * - 消费方：通过 useFormErrorBus 返回的 events ref 订阅
  * - 默认渲染：dev 通过 XFormErrorToast 浮窗展示，prod 静默（可扩展上报点）
  *
  * 设计权衡：
  * - 不引入第三方 toast 库（element-plus ElMessageBus 与业务层耦合过深）
  * - 仅 dev 弹 OSD；prod 静默 + 预留 hook 供业务埋点上报
  * - 同 code 去重（5 秒内）：避免用户连续输入反复弹窗
+ *
+ * 历史：曾提供 FORM_ERROR_BUS_KEY + useInjectFormErrorBus 走 provide/inject 共享，
+ * 经审计全目录无 provide() 调用，已移除避免误导。
  */
 
-import { computed, inject, ref, type InjectionKey, type Ref } from 'vue'
+import { computed, ref, type Ref } from 'vue'
 
 /** 错误严重程度 */
 export type FormErrorSeverity = 'info' | 'warn' | 'error'
@@ -104,9 +107,6 @@ export type ReportErrorEventInput = Omit<FormErrorEvent, 'id' | 'timestamp' | 'd
 const MAX_EVENTS = 5
 const DEDUPE_WINDOW_MS = 5_000
 
-/** provide/inject key —— 业务方如需自定义渲染可自注入 */
-export const FORM_ERROR_BUS_KEY: InjectionKey<UseFormErrorBusReturn> = Symbol('XFormErrorBus')
-
 /** 创建一份 error bus（XForm 顶层调用一次） */
 export function useFormErrorBus(): UseFormErrorBusReturn {
   const events = ref<FormErrorEvent[]>([])
@@ -176,9 +176,4 @@ export function useFormErrorBus(): UseFormErrorBusReturn {
   const unreadCount = computed(() => events.value.filter((e) => !e.dismissed).length)
 
   return { events, report, dismiss, dismissAll, unreadCount }
-}
-
-/** 子组件/嵌套 composable 读取 error bus（无则返回 null） */
-export function useInjectFormErrorBus(): UseFormErrorBusReturn | null {
-  return inject(FORM_ERROR_BUS_KEY, null)
 }

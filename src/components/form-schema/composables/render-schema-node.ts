@@ -8,6 +8,10 @@
  * 类型断言（`as never`）归因见 types/TYPE-CAST-AUDIT.md。
  */
 import { h, type VNode, type ComponentPublicInstance, type Ref } from 'vue'
+import { createNamespace } from '@/utils/bem'
+
+// 与 XForm.vue / build-slots.ts 同一 block 命名空间
+const bem = createNamespace('x-form')
 
 import type {
   BeforeChangeCtx,
@@ -35,6 +39,11 @@ type RenderFn = (
 
 // ────────────────────────────────────────────────────────────────────────────
 // Re-exports —— 保留旧 API 兼容（render-form-item / render-array-node 等调用方零改动）
+//
+// 历史：原 re-exports 让 render-schema-node 兼作 barrel，单文件职责模糊。
+// 演进：新增 ./composables/barrel.ts 作为正式 barrel（未来统一出口），
+//       本文件保留旧 re-export 以兼容 8+ 调用方（render-form-item / render-array-node 等），
+//       等所有调用方迁移到 barrel 后再彻底清除。
 // ────────────────────────────────────────────────────────────────────────────
 
 export {
@@ -149,18 +158,18 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
       'div',
       {
         key: `view-${node.name}`,
-        class: 'x-form-view-field',
+        class: bem.e('view-field'),
         'data-permission': 'view',
       } as Record<string, unknown>,
       {
         default: () =>
           [
             node.label
-              ? h('label', { class: 'x-form-view-field__label' } as Record<string, unknown>, {
+              ? h('label', { class: bem.e('view-field__label') } as Record<string, unknown>, {
                   default: () => `${node.label}：`,
                 })
               : null,
-            h('span', { class: 'x-form-view-field__value' } as Record<string, unknown>, {
+            h('span', { class: bem.e('view-field__value') } as Record<string, unknown>, {
               default: () => renderViewPlaceholder(node, opts.model),
             }),
           ].filter(Boolean) as never,

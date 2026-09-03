@@ -21,6 +21,7 @@
 import { getCurrentScope, onScopeDispose, toRaw, watch, type Ref } from 'vue'
 
 import type { UseFormErrorBusReturn } from './use-form-error-bus'
+import { readRefStr } from '../utils/read-ref-str'
 
 /** 字段错误状态（与 use-form-instance 同步导出，保持向后兼容） */
 export type FieldErrorState = {
@@ -39,16 +40,7 @@ interface ElFormFieldRaw {
   validateMessage?: { value?: string }
 }
 
-/** 解包 ref-like 字符串字段 */
-function readRefStr(v: ElFormFieldRaw['propString']): string | undefined {
-  if (v === undefined || v === null) return undefined
-  if (typeof v === 'string') return v
-  if (typeof v === 'object' && 'value' in v) {
-    const x = v.value
-    return typeof x === 'string' ? x : undefined
-  }
-  return undefined
-}
+/** 解包 ref-like 字符串字段 —— 已迁移到 ../utils/read-ref-str */
 
 /** 取 el-form 内部 fields 数组（懒读取，避免 setup 期间 ref 为空时崩溃） */
 type FieldsGetter = () => ElFormFieldRaw[] | undefined

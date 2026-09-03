@@ -19,17 +19,7 @@ import { runCrossFieldValidation } from './use-validate'
 import { useCrossFieldRuleTrigger } from './use-cross-field-rule-trigger'
 import type { UseFormErrorBusReturn } from './use-form-error-bus'
 import type { ValidateResult, RuleItem, SchemaNode } from '../types'
-
-/** 解包 ref-like 字段值为字符串（element-plus 内部字段是 ref<string>，propString 是 string） */
-function readRefStr(v: string | Ref<string> | undefined): string | undefined {
-  if (v === undefined || v === null) return undefined
-  if (typeof v === 'string') return v
-  if (typeof v === 'object' && 'value' in v) {
-    const x = (v as { value: unknown }).value
-    return typeof x === 'string' ? x : undefined
-  }
-  return undefined
-}
+import { readRefStr } from '../utils/read-ref-str'
 
 /** 解包 ref-like 字段值为 unknown（element-plus ElFormItemContext.fieldValue 是 ComputedRef<unknown>） */
 function readRefVal(v: unknown): unknown {
