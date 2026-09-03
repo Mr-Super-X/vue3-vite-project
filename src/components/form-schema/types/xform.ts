@@ -103,6 +103,26 @@ export interface XFormProps {
    */
   componentProps?: Record<string, Record<string, unknown>>
   /**
+   * 权限码 → 字段状态 映射函数（阶段 2.3）
+   *
+   * 当节点 `permission` 字段是字符串字面量（如 `'user.edit'` / `'order.view'`）时，
+   * XForm 调用此函数把权限码映射为 'view' / 'edit' / 'hidden' 三态之一。
+   * 业务可注入 `useAuth().hasPerm` 的封装实现：
+   *
+   * ```ts
+   * <XForm
+   *   :permission-resolver="(perm) => hasPerm(perm) ? 'edit' : 'hidden'"
+   *   :schema="schema"
+   * />
+   * ```
+   *
+   * 默认 identity —— 字符串字面量直接当作状态返回（`'view'` / `'edit'` / `'hidden'` 三选一）。
+   * resolver 返回值若不在三态之一，降级为 `'edit'`（最安全的可见可编辑态）。
+   * @see ./composables/use-field-permission.ts resolvePermission
+   * @see SchemaNode.permission
+   */
+  permissionResolver?: (perm: string) => 'view' | 'edit' | 'hidden'
+  /**
    * 单批次 reaction 执行预算（阶段 P2-3 可配置化入口）
    *
    * 用途:reaction 函数允许写 model 副作用，deep watch 会再次触发 runner，

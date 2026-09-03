@@ -73,7 +73,7 @@ export { type ColConfig } from './types/layout'
 export { type AsyncOptionsConfig } from './types/async-options'
 
 /**
- * SchemaNode —— XForm schema DSL 的核心节点定义（30 字段接口）
+ * SchemaNode —— XForm schema DSL 的核心节点定义（31 字段接口）
  *
  * 字段分组：节点标识（component/name/label/key）、渲染属性（props/on/children/slots/directives）、
  * 布局（row/column/col/formItem）、校验（rules/defaultValue）、响应式（reaction/disabled/permission/...）、

@@ -7,7 +7,7 @@
  *
  * 类型断言（`as never`）归因见 types/TYPE-CAST-AUDIT.md。
  */
-import { computed, onScopeDispose, watch, type ComputedRef, type Ref } from 'vue'
+import { computed, watch, type ComputedRef, type Ref } from 'vue'
 
 import { useSchemaRenderer } from './use-schema-renderer'
 import { useSchemaIndex } from './use-schema-index'
@@ -19,7 +19,8 @@ import { useFormDirty } from './use-form-dirty'
 import { useServerError } from './use-server-error'
 import { useFormValidation } from './use-form-validation'
 import { useTopLevelFields } from './use-top-level-fields'
-import { resolveFunctionExpression, setExpressionFunctions } from './use-expression'
+import { resolveFunctionExpression } from './use-expression'
+import { useExpressionFunctions } from './use-expression-functions'
 import { useDevRuntime } from './use-dev-runtime'
 import { useApplyDefaults } from './apply-default-values'
 import { useXFormExpose } from './use-xform-expose'
@@ -222,15 +223,12 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     currentBreakpoint,
     topLevelReadonly,
     mergedComponentProps,
+    // exactOptionalPropertyTypes: 条件展开避免传 undefined
+    ...(props.permissionResolver ? { permissionResolver: props.permissionResolver } : {}),
   })
 
   // 白名单函数表注册（模块级，scope 销毁时清空避免跨实例污染）
-  watch(
-    () => props.expressionFunctions,
-    (fns) => setExpressionFunctions(fns as never),
-    { immediate: true }
-  )
-  onScopeDispose(() => setExpressionFunctions(undefined))
+  useExpressionFunctions({ expressionFunctions: () => props.expressionFunctions })
 
   function getNames(includesIgnore = false): string[] {
     return [...schemaIndex.getFieldNames(includesIgnore)]

@@ -50,7 +50,7 @@ src/components/form-schema/
 │   ├── array.ts                   # ArrayNodeConfig
 │   ├── layout.ts                  # RowConfig / ColConfig（响应式断点）
 │   ├── async-options.ts           # AsyncOptionsConfig
-│   ├── schema-node.ts             # SchemaNode（29 字段）+ ComponentPropsRegistry + SchemaNodeFor
+│   ├── schema-node.ts             # SchemaNode（31 字段）+ ComponentPropsRegistry + SchemaNodeFor
 │   └── xform.ts                   # XFormProps / XFormExpose / ValidateOptions / ValidateResult
 ├── builders.ts                    # 27 个链式 builder（OPT-2：makeBuilder 工厂已简化）
 ├── index.ts                        # 公共导出 + Vue 插件形式
@@ -134,7 +134,7 @@ RenderSchemaNode 主调度（render-schema-node.ts）
 
 ---
 
-## 2. Schema DSL 字段契约（30 字段最终版）
+## 2. Schema DSL 字段契约（31 字段最终版）
 
 ### 2.1 字段分类
 
@@ -144,12 +144,12 @@ RenderSchemaNode 主调度（render-schema-node.ts）
 | **渲染属性**     | `props`, `on`, `children`, `slots`, `directives`                                              | 5      |
 | **布局**         | `row`, `column`, `col`, `formItem`                                                            | 4      |
 | **校验**         | `rules`, `defaultValue`                                                                       | 2      |
-| **响应式**       | `reaction`, `disabled`, `permission`, `readonly`, `hidden`, `ignore`                          | 6      |
+| **响应式**       | `reaction`, `disabled`, `permission`, `readonly`, `hidden`, `ignore`, `beforeChange`          | 7      |
 | **数组节点**     | `kind: 'array'`, `array: ArrayNodeConfig`                                                     | 2      |
 | **数据加载**     | `asyncOptions`                                                                                | 1      |
 | **顶层配置**     | `labelPosition`, `labelWidth`, `scrollToError`, `scrollIntoViewOptions`, `debounceValidation` | 5      |
 | **v-model 适配** | `modelProp`                                                                                   | 1      |
-| **合计**         |                                                                                               | **30** |
+| **合计**         |                                                                                               | **31** |
 
 完整字段定义见 `types/schema-node.ts`。
 
@@ -535,21 +535,19 @@ const schema = {
 
 ---
 
-## 9. 测试策略（30 个 `.spec.ts` + 2 个 `.test-d.ts`）
+## 9. 测试策略（52 个 `.spec.ts` + 2 个 `.test-d.ts`）
 
 ### 9.1 测试分布
 
 | 类别                         | 文件数 | 测试数                  | 覆盖率目标 |
 | ---------------------------- | ------ | ----------------------- | ---------- |
-| composables（含 XForm 编排） | 25     | 主体回归                | ≥80%       |
-| XForm.spec                   | 1      | 主入口集成              | ≥80%       |
-| builders                     | 1      | builder 链路            | ≥80%       |
-| element-plus-adapter         | 1      | 组件名解析              | 100%       |
-| index                        | 1      | 公共导出                | 100%       |
+| composables（含 XForm 编排） | 43     | 主体回归                | ≥80%       |
+| 根 *.spec.ts                 | 9      | 主入口 + 辅助组件       | ≥80%       |
 | types (test-d)               | 2      | 编译期                  | N/A        |
-| **合计（spec 文件）**        | **30** | 见 `pnpm test` 实际输出 | ≥80%       |
+| **合计（spec 文件）**        | **52** | 见 `pnpm test` 实际输出 | ≥80%       |
 
 > 测试用例总计数应通过 `pnpm test --reporter=verbose` 实测，文档不在此处硬编码（避免与实际运行结果失真）。
+> 根 *.spec.ts 包括 XForm/SchemaField/builders/element-plus-adapter/index/xform-contract/XFormDebugBanner/XFormErrorToast/XFormErrorToastItem 共 9 个。
 
 ### 9.2 关键回归保护（源码级静态断言）
 
@@ -564,8 +562,9 @@ const schema = {
 
 ```bash
 pnpm type-check:full   # vue-tsc --build --force
-pnpm test              # 全量测试（30 个 .spec.ts + 2 个 .test-d.ts）
+pnpm test              # 全量测试（52 个 .spec.ts + 2 个 .test-d.ts）
 pnpm lint              # ESLint
+pnpm check:doc-currency  # 文档硬数据与代码一致性（5 项校验）
 pnpm build             # vite build
 ```
 
@@ -655,7 +654,7 @@ pnpm build             # vite build
 | §4 #6  | 文件行数限制                     | ✅ XForm 125 / composables <300 / types/ <220                                                                                                                                                                                                                                           |
 | §4 #7  | Hook/Composable 行数             | ⚠️ P0/P1 拆分后 5 个 composable >200 行：useXFormComposer (387)、useFormValidation (311)、useFormInstance (303)、useValidate (292)、useCrossFieldTrigger (230)。均按 §3.4 备注"cohesive orchestrator 例外"接受；后续如再需拆分会改变公开签名，触发 spec 大量改写（详见 §10 路线图 P0+） |
 | §4 #10 | npm 包验证                       | ✅ 仅 element-plus / lodash-es / zod（项目已装）                                                                                                                                                                                                                                        |
-| §4 #11 | 新增 composable 需 .spec.ts      | ✅ composables/ 下 27 个 composable + useXFormComposer 全部配 spec                                                                                                                                                                                                                      |
+| §4 #11 | 新增 composable 需 .spec.ts      | ✅ composables/ 下 43 个 composable + useXFormComposer 全部配 spec                                                                                                                                                                                                                      |
 
 ---
 

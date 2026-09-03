@@ -63,6 +63,12 @@ export interface UseRenderRootDeps {
   currentBreakpoint: Ref<'xs' | 'sm' | 'md' | 'lg' | 'xl'>
   topLevelReadonly: ComputedRef<boolean>
   mergedComponentProps: ComputedRef<Record<string, Record<string, unknown>>>
+  /**
+   * 权限码 → 字段状态 映射函数（来自 XFormProps.permissionResolver）
+   * 业务侧 useAuth().hasPerm 注入；默认 identity
+   * @see ../../../types/xform.ts XFormProps.permissionResolver
+   */
+  permissionResolver?: (perm: string) => 'view' | 'edit' | 'hidden'
 }
 
 /** useRenderRoot 返回值 —— 仅暴露 renderToComponent（optsEpoch 是内部订阅细节） */
@@ -86,6 +92,7 @@ export function useRenderRoot(deps: UseRenderRootDeps): UseRenderRootReturn {
     currentBreakpoint,
     topLevelReadonly,
     mergedComponentProps,
+    permissionResolver,
   } = deps
 
   // opts 换代计数器 —— 父级替换 props 引用时 bump，让所有 SchemaField 的 render effect 失效重渲
@@ -158,6 +165,8 @@ export function useRenderRoot(deps: UseRenderRootDeps): UseRenderRootReturn {
     },
     currentBreakpoint: currentBreakpoint,
     globalReadonly: () => topLevelReadonly.value,
+    // exactOptionalPropertyTypes: 条件展开避免传 undefined
+    ...(permissionResolver ? { permissionResolver } : {}),
   }
 
   const renderInner = useRenderSchemaNode(renderOpts)

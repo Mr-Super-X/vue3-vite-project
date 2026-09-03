@@ -7,9 +7,29 @@
  * 3. 字符串函数表达式 '{{ fn }}' —— 沙箱解析后调用（与 reaction 一致）
  * 4. undefined —— 视为 'edit'（向后兼容）
  *
- * 权限码字符串（如 'user.edit'）由调用方通过 permissionResolver 自行映射：
- * XForm.permissionResolver: (perm) => 'view' | 'edit' | 'hidden'
- * 默认 permissionResolver 是 identity（直接返回 string 值）
+ * 权限码字符串（如 'user.edit'）由调用方通过 XFormProps.permissionResolver 映射：
+ * ```ts
+ * <XForm
+ *   :permission-resolver="(perm) => hasPerm(perm) ? 'edit' : 'hidden'"
+ *   :schema="schema"
+ * />
+ * ```
+ * 默认 identity（直接返回字符串字面量）。
+ * resolver 返回值若不在三态之一，降级为 'edit'（最安全的可见可编辑态）—— 抛错场景同理。
+ *
+ * 用法示例（业务侧 useAuth 接入）：
+ * ```ts
+ * import { useAuth } from '@/composables/useAuth'
+ *
+ * const { hasPerm } = useAuth()
+ * const xformProps = {
+ *   permissionResolver: (perm: string) => hasPerm(perm) ? 'edit' : 'hidden',
+ *   // ...
+ * }
+ * ```
+ *
+ * @see ../types/xform.ts XFormProps.permissionResolver —— XForm 入参契约
+ * @see render-schema-node.ts RenderSchemaNodeOptions.permissionResolver —— 渲染层注入点
  */
 import type { SchemaNode } from '../types'
 import { get } from 'lodash-es'

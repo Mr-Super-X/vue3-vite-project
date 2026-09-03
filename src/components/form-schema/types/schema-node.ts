@@ -211,6 +211,12 @@ export interface SchemaNode {
    * - el-form 自动跳过 disabled 字段的校验（async-validator 行为）
    *
    * 【双层语义】字段级 = 字段禁用；顶层 schema = 整体禁用整个表单（透传 el-form disabled，与 labelPosition 同模式）
+   *
+   * 与 `permission: 'hidden'` 的区别：disabled 仍渲染 DOM 但视觉灰显 + 跳过校验；
+   * 'hidden' 直接不渲染。表单提交逻辑若要"附带字段但不让用户改"用 disabled，若要
+   * "完全屏蔽"用 permission: 'hidden'。
+   * @see permission 若需 view（纯文本展示）或 hidden（不渲染）
+   * @see readonly 顶层整体只读模式
    * @group 响应式
    */
   disabled?: import('./reaction').ReactionValue<boolean>
@@ -223,6 +229,12 @@ export interface SchemaNode {
    * 动态权限：函数形式 (model) => 'view' | 'edit' | 'hidden'，根据当前 model 动态决定。
    * 权限码形式：字符串 'user.edit' 等，需配合 XForm 的 permissionResolver 配置；
    * 用户可注入 useAuth().hasPerm 实现权限码 → 状态映射。
+   *
+   * 与 `disabled` 的区别：disabled 仍渲染灰显 + 跳过校验；permission 是三态语义（view/edit/hidden），
+   * 表达"展示形式"。表单状态切换场景（如 admin → read-only）用 permission。
+   * 与 `readonly` 的区别：permission 是字段级；readonly 是顶层整体只读（一次性给所有字段套 view）。
+   * @see disabled 字段级灰显
+   * @see readonly 顶层整体只读
    * @group 响应式
    */
   permission?: import('./reaction').ReactionValue<'view' | 'edit' | 'hidden'>
@@ -231,6 +243,12 @@ export interface SchemaNode {
    * - 与 Props.beforeChange 同签名（多 allValues + ctx 两可选参在尾部）
    * - 数组元素字段（items[i].phone）直接写在 array.children[i].phone 上即可
    * - 可通过 ctx.setFieldValue 联动修改其他兄弟字段（ctx 完全开放）
+   *
+   * 三层 beforeChange 拦截顺序：Props.beforeChange（全局横切）→ beforeChangeRules（命名空间 pattern 匹配）
+   * → SchemaNode.beforeChange（字段级业务内聚）。任意一层返回 undefined 放行给下一层；
+   * reject / 抛异常 → 中断后续写入。
+   * @see ../types/xform.ts XFormProps.beforeChange 全局横切层
+   * @see ../types/xform.ts XFormProps.beforeChangeRules 命名空间层
    * @group 响应式
    */
   beforeChange?: import('./xform').BeforeChangeFn
@@ -250,6 +268,11 @@ export interface SchemaNode {
    * - hidden 优先级更高（hidden 字段仍不渲染）
    * - 支持字面量 / 函数 / 函数表达式 / reaction 动态求值
    * - 字段级只读请用 permission: 'view'（本字段仅顶层生效）
+   *
+   * 与 `permission: 'view'` 的区别：readonly 一次性给所有字段套 view；permission 是单字段级控制。
+   * 查看模式（用户角色切换为 viewer）用 readonly 顶层；个别字段差异化权限用 permission。
+   * @see permission 字段级 view/edit/hidden
+   * @see disabled 字段级灰显
    * @group 响应式
    */
   readonly?: import('./reaction').ReactionValue<boolean>
