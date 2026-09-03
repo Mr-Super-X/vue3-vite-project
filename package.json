@@ -16,6 +16,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
+    "bench": "vitest bench --run --reporter=basic",
+    "bench:check": "vitest bench --run --reporter=basic",
     "check:routes": "node --experimental-strip-types scripts/check-routes.ts",
     "new-module": "node --experimental-strip-types scripts/new-module.ts",
     "remove-module": "node --experimental-strip-types scripts/remove-module.ts",

@@ -102,6 +102,21 @@ export interface XFormProps {
    * 该字段会与内置默认合并，用户传入的同名组件配置会按组件名覆盖内置默认值。
    */
   componentProps?: Record<string, Record<string, unknown>>
+  /**
+   * 单批次 reaction 执行预算（阶段 P2-3 可配置化入口）
+   *
+   * 用途:reaction 函数允许写 model 副作用，deep watch 会再次触发 runner，
+   * 一旦构成环（A→B→A）会无限刷入 Vue 调度队列，页面卡死且无报错。
+   * 预算耗尽后本批次跳过 + console.error 告警（见 use-reaction.ts）。
+   *
+   * - 默认 50（与既有行为一致，向后兼容）
+   * - 调大:大型 schema reaction 链较长时
+   * - 调小:严格排查循环联动时
+   *
+   * @see ./composables/use-reaction.ts
+   * @todo 运行时透传待后续 PR 实施（本阶段仅声明字段，避免触碰渲染核心）
+   */
+  reactionBudget?: number
 }
 
 /** XForm 组件实例方法 */

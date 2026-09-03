@@ -263,8 +263,19 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     validateField: async (name: string) => {
       try {
         await elFormRef.value?.validateField?.(name)
-      } catch {
-        /* silent — 校验失败时错误已写入 form-item */
+      } catch (err: unknown) {
+        // 对齐 validateForm 错误流:走 errorBus, dev/qa 可通过 OSD 看到, prod 仅 console.error 留痕
+        // 错误已写入 form-item 但用户主动调用 validateField 仍需看到全量细节
+        errorBus.report({
+          severity: 'error',
+          code: 'EL_FORM_VALIDATE_FIELD_FAILED',
+          message: `字段 ${name} 校验失败`,
+          source: 'useXFormComposer.validateField',
+          force: true, // 主动调用场景,跳过去重
+          ...(err instanceof Error
+            ? { details: [{ field: name, value: undefined, message: err.message }] }
+            : {}),
+        })
       }
     },
     // v-model 值变化时的跨字段调度唯一入口

@@ -108,3 +108,27 @@ export function resolveElComponentName(name: string, userComponentKeys?: string[
   }
   return null
 }
+
+/**
+ * ELComponentProps<T> —— 解开 element-plus buildProp 元组,提取运行时 props 类型
+ *
+ * element-plus 2.x 组件 props 类型形如 `[type, required, validator, __epPropKey]` 元组(用 readonly tuple 实现)，
+ * 在 vue 模板/h() 中直接使用会触发 TS 类型不兼容。传统做法是 `as never`(归因见 types/TYPE-CAST-AUDIT.md C1)。
+ *
+ * 本辅助类型用 Conditional Types 提取元组最后一个对象元素,得到运行时可消费的 props 形态。
+ * 这是未来消除 render-* 文件中 `as never` 的入口(P1-2 阶段一:仅声明,不替换)。
+ *
+ * @see types/TYPE-CAST-AUDIT.md C1
+ * @example
+ * ```ts
+ * import type { InputProps } from 'element-plus'
+ * type ElInputRuntimeProps = ELComponentProps<InputProps>
+ * ```
+ */
+export type ELComponentProps<T> = T extends readonly [...unknown[], infer Last]
+  ? Last extends object
+    ? Last
+    : never
+  : T extends object
+    ? T
+    : Record<string, unknown>
