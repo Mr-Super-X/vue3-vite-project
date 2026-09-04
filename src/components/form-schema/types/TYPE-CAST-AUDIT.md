@@ -4,6 +4,8 @@
 > 维护者查 cast 归因不必翻每个文件头部 JSDoc，到本文档查根因编号 → 跳到具体文件行。
 >
 > **2026-09-01 首次建立**：运行时 cast 总数 85 处，按 9 个根因编号（C1-C9）分类。
+>
+> **2026-09-04 更新**：XForm.vue:30 唯一生产代码 `as any` 改用 `Record<string, unknown>`（C1 根因修复），生产代码 cast 总数降至 84 处；测试代码（*.spec.ts）的 `as any` 不计入。
 
 ---
 
@@ -60,6 +62,15 @@
 **运行时安全**：ElRow/ElCol/ElFormItem 内部校验 props 类型，cast 不引入运行时风险。
 
 **替代方案**：等待 element-plus 3.0 重写类型系统（已规划 P2-1）。在此之前保留 cast。
+
+#### C1 已修：XForm.vue elConfig
+
+- 文件：`XForm.vue:30`
+- 原写法：`{ locale: zhCn, size: 'default' } as any`（全局 §1.5 违规）
+- 新写法：`{ locale: zhCn, size: 'default' }: Record<string, unknown>`
+- 触发场景：`<ElConfigProvider v-bind="elConfig">`
+- 运行时等价：ElConfigProvider 接受 locale (Language 对象) + size (string)，key 是 string 类型
+- 修复合规：消除全局 §1.5 唯一的生产代码 `as any`
 
 ---
 

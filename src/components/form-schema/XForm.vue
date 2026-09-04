@@ -23,10 +23,12 @@ const props = defineProps<XFormProps>()
 // 统一收口为 XFormProps 让下游 composable 不重复处理
 const propsModel = props as XFormProps
 const attrs = useAttrs()
-// 类型 cast 归因：element-plus buildProp 类型元组（type/required/validator/__epPropKey）
-// 与运行时值类型不等价，是 element-plus 2.x 类型系统已知问题（C1，归因见 types/TYPE-CAST-AUDIT.md）
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const elConfig = { locale: zhCn, size: 'default' } as any
+// 类型归因：element-plus 2.x ConfigProviderProps 是 ExtractPropTypes 元组
+// （type/required/validator/__epPropKey）形态，与运行时值类型不等价（C1 根因，
+// 详见 types/TYPE-CAST-AUDIT.md）。zhCn 是 Language 对象、size 是 string，
+// 运行时两者均生效；TS 层用 Record<string, unknown> 替代 `as any`（全局 §1.5 违规）。
+// 模板 <ElConfigProvider v-bind="elConfig"> 接受 string-keyed 对象。
+const elConfig: Record<string, unknown> = { locale: zhCn, size: 'default' }
 // BEM namespace 由 unplugin-auto-import 自动注入，无需显式 import
 const {
   bem,
