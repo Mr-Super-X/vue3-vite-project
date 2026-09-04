@@ -20,7 +20,8 @@ export const SIDEBAR_GROUPS: readonly SidebarGroupConfig[] = [
 
 /** 组件名 → 简短中文名（sidebar 显示为「组件名 中文名」） */
 export const CN_NAMES: Record<string, string> = {
-  XForm: '用法总览',
+  // XForm 表单引擎
+  XFormOverview: '用法总览',
   XFormArray: '数组节点',
   XFormArrayApi: '数组节点 API',
   XFormArrayDraggable: '数组行拖拽排序',

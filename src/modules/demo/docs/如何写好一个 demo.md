@@ -1,5 +1,12 @@
 # 如何写好一个 demo
 
+<!-- cspell:disable xform -->
+<!--
+  cspell disable xform —— demo 辅助 .ts 文件（xform-api / xform-demos-api /
+  xform-props-advanced-schema / xform-props-advanced-snippets / xform-detail-fill-mock）
+  按 kebab-case 命名是项目既定约定（CLAUDE.md §1.5 业务代码封装），不应作为拼写错误。
+-->
+
 > 本文档位于 `src/modules/demo/docs/`，约定 `src/modules/demo/` 目录下组件示例的编写规范。
 > 读完本文后，你应该能独立新增一个自动出现在侧边栏、结构完整、可验证的 demo 页面。
 >
@@ -65,6 +72,69 @@ src/modules/demo/
 - 如果示例复杂需要拆分子组件，可用文件夹形式：`examples/XFormAsyncOptions/index.vue`。
 
 > 不需要改 `routes/index.ts`，`import.meta.glob` 会自动扫描。
+
+#### 1.1 目录形式：按组件建子目录
+
+当一个组件的 demo 数量越来越多（>10 个），建议把该组件的 demo 集中到一个**与组件同名的子目录**下，便于长期维护：
+
+```text
+examples/
+├── AsyncState.vue              ← 通用组件 demo，留在 examples 根
+├── ErrorBoundary.vue           ← 通用组件 demo，留在 examples 根
+└── XForm/                      ← 组件 XForm 的子目录
+    ├── XFormOverview.vue       ← XForm 的「用法总览」（沿用原有 XForm.vue 角色）
+    ├── XFormBase.vue           ← 基础用法
+    ├── XFormArray.vue          ← 数组节点
+    ├── XForm*.vue              ← 其他若干 XForm demo
+    ├── configs/                ← 纯数据 .ts（API 表格条目、字典、schema、代码片段）
+    │   ├── xform-api.ts        ← XForm 总览的 Props/Events/Slots/方法 API 数据
+    │   ├── xform-demos-api.ts  ← 各 demo 私有 API 表格的集合（互引 ./xform-api）
+    │   ├── cascader-data.ts    ← 级联静态字典
+    │   ├── xform-props-advanced-schema.ts   ← PropsAdvanced demo 用的 schema 段
+    │   └── xform-props-advanced-snippets.ts ← PropsAdvanced demo 用的代码片段
+    └── utils/                  ← 工具函数 .ts（如 mock 异步接口）
+        └── xform-detail-fill-mock.ts        ← fetchOrderDetail / fetchCities 等
+```
+
+**派生规则**（`src/modules/demo/routes/index.ts` 内部实现）：
+
+<!-- markdownlint-disable MD060 -->
+
+| 物理文件                               | 派生 component                               | 派生 route name         | path                   |
+| -------------------------------------- | -------------------------------------------- | ----------------------- | ---------------------- |
+| `examples/AsyncState.vue`              | `AsyncState`（直接剥 `.vue`）                | `DemoAsyncState`        | `async-state`          |
+| `examples/XFormAsyncOptions/index.vue` | `XFormAsyncOptions`（取父目录名）            | `DemoXFormAsyncOptions` | `x-form-async-options` |
+| `examples/XForm/XFormBase.vue`         | `XFormBase`（直接剥 `.vue`）                 | `DemoXFormBase`         | `x-form-base`          |
+| `examples/XForm/index.vue`             | `XForm`（取父目录名，等价于 XForm Overview） | `DemoXForm`             | `x-form`               |
+| `examples/XForm/XFormOverview.vue`     | `XFormOverview`（直接剥 `.vue`）             | `DemoXFormOverview`     | `x-form-overview`      |
+
+<!-- markdownlint-enable MD060 -->
+
+要点：
+
+- 子目录文件名建议沿用「`XForm<能力名>`」完整 PascalCase，**不要省略前缀**——保留前缀能让目录扫描派生出的 route name 与历史一致（`DemoXFormBase` 而非 `DemoBase`），免去 sidebar / 白名单的批量修改。
+- 组件的「用法总览」页命名为 `XFormOverview.vue`（与「Overview」「index」二选一）。
+- 辅助文件分类管理，按导出性质分到两个子目录：
+  - `configs/` —— **纯数据**导出（API 表格条目、字典常量、schema 段、字符串代码片段），如 `xform-api.ts` / `xform-demos-api.ts` / `cascader-data.ts` 等。
+  - `utils/` —— **导出函数**的辅助工具（最常见是 mock 异步接口），如 `xform-detail-fill-mock.ts`。
+- 辅助文件与 `.vue` 在同一子目录层级，import 路径用**同级相对路径**：
+  - `'./configs/xform-xxx'`（data）
+  - `'./utils/xform-xxx'`（util）
+
+**新建子目录的步骤**：
+
+1. 在 `examples/` 下创建 `XForm/` 目录（用 `git mv` 一次性搬入已有的 demo，保留历史）。
+2. 调整 demo 内部对 `examples/../components/` 等上层目录的 import：
+
+   ```diff
+   - import DemoFrame from '../components/DemoFrame.vue'
+   + import DemoFrame from '../../components/DemoFrame.vue'
+   ```
+
+   （同级 import `'./configs/xform-demos-api'` / `'./utils/xform-xxx'` 不变。）
+
+3. **新建子目录时一并建立 `configs/` 与 `utils/`**（用 `git mv <file> configs/` 或 `utils/` 整理现有散落 .ts）。新加 .ts 时按"导出函数 vs 纯数据"二选一分类。
+4. 路由脚本已支持 `examples/*/*.vue` 扫描，**不需要改 `routes/index.ts`**。
 
 ### 步骤 2：在 `config/sidebar-groups.ts` 补中文名
 
