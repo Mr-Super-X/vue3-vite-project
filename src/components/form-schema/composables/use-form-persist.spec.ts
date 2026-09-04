@@ -138,6 +138,30 @@ describe('useFormPersist / 手动补丁', () => {
     expect(persist.lastSavedAt.value).toBeNull()
     vi.useRealTimers()
   })
+
+  it('markResetting 屏蔽下一次 watch 写入（resetFields 场景不覆盖草稿）', async () => {
+    vi.useFakeTimers()
+    const model = reactive<Record<string, unknown>>({ name: '' })
+    const persist = run({ key: KEY, model })
+    // 先写入一份草稿
+    model.name = '张三'
+    await nextTick()
+    vi.advanceTimersByTime(400)
+    expect(Local.get(KEY)).toEqual({ name: '张三' })
+    // 模拟 resetFields：先 markResetting 再清空 model
+    persist.markResetting()
+    model.name = ''
+    await nextTick()
+    vi.advanceTimersByTime(400)
+    // 关键断言：localStorage 中仍是「张三」草稿，未被空 model 覆盖
+    expect(Local.get(KEY)).toEqual({ name: '张三' })
+    // 下一次 model 变化应正常触发自动保存（markResetting 只屏蔽 1 次）
+    model.name = '李四'
+    await nextTick()
+    vi.advanceTimersByTime(400)
+    expect(Local.get(KEY)).toEqual({ name: '李四' })
+    vi.useRealTimers()
+  })
 })
 
 describe('useFormPersist / 错误处理', () => {

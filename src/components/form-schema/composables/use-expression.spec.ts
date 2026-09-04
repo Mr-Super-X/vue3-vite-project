@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { resolveFunctionExpression, setExpressionFunctions } from './use-expression'
+import {
+  resolveFunctionExpression,
+  setExpressionFunctions,
+  createExpressionScope,
+} from './use-expression'
 import { scanForForbidden } from './use-scan-forbidden'
 
 describe('resolveFunctionExpression(raw)', () => {
@@ -137,5 +141,55 @@ describe('use-expression / 白名单函数表（P2-2 回归）', () => {
     const fn2 = resolveFunctionExpression<(m: unknown) => string>('{{ () => f() }}')
     expect(fn2).not.toBe(fn1) // fnsVersion 变化 → 重新编译
     expect(fn2!({})).toBe('v2')
+  })
+})
+
+// ────────────────────────────────────────────────────────────────────────────
+// 新增：per-instance ExpressionScope 测试（多实例隔离）
+// ────────────────────────────────────────────────────────────────────────────
+
+describe('createExpressionScope() / 表达式作用域工厂', () => {
+  it('每个 scope 拥有独立的函数表', () => {
+    const scopeA = createExpressionScope()
+    const scopeB = createExpressionScope()
+    scopeA.setExpressionFunctions({ double: (x: number) => x * 2 })
+    scopeB.setExpressionFunctions({ triple: (x: number) => x * 3 })
+    const fnA = scopeA.resolveFunctionExpression<(m: number) => number>('{{ (m) => double(m) }}')
+    const fnB = scopeB.resolveFunctionExpression<(m: number) => number>('{{ (m) => triple(m) }}')
+    expect(fnA).not.toBeNull()
+    expect(fnB).not.toBeNull()
+    expect(fnA!(2)).toBe(4)
+    expect(fnB!(2)).toBe(6)
+  })
+
+  it('scope 之间缓存隔离：同名函数在两 scope 中互不干扰', () => {
+    const scopeA = createExpressionScope()
+    const scopeB = createExpressionScope()
+    scopeA.setExpressionFunctions({ id: (x: number) => x })
+    scopeB.setExpressionFunctions({ id: (x: number) => x + 100 })
+    const fnA = scopeA.resolveFunctionExpression<(m: number) => number>('{{ (m) => id(m) }}')
+    const fnB = scopeB.resolveFunctionExpression<(m: number) => number>('{{ (m) => id(m) }}')
+    expect(fnA!(5)).toBe(5)
+    expect(fnB!(5)).toBe(105)
+  })
+
+  it('scope 内部 fns 变化后缓存自动失效', () => {
+    const scope = createExpressionScope()
+    scope.setExpressionFunctions({ f: () => 'v1' })
+    const fn1 = scope.resolveFunctionExpression<() => string>('{{ () => f() }}')
+    expect(fn1!()).toBe('v1')
+    scope.setExpressionFunctions({ f: () => 'v2' })
+    const fn2 = scope.resolveFunctionExpression<() => string>('{{ () => f() }}')
+    expect(fn2!()).toBe('v2')
+  })
+
+  it('scope 不受模块级 setExpressionFunctions 影响', () => {
+    const scope = createExpressionScope()
+    // 模块级注册一个函数
+    setExpressionFunctions({ mod: () => 'module-level' })
+    // scope 内部未注册同名函数
+    const fn = scope.resolveFunctionExpression<() => string>('{{ () => mod() }}')
+    expect(fn).not.toBeNull()
+    expect(() => fn!()).toThrow(ReferenceError)
   })
 })

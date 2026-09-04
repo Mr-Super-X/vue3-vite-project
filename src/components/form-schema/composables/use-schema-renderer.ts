@@ -1,20 +1,31 @@
-import { watch, ref, reactive, onScopeDispose, type Ref } from 'vue'
+import { watch, ref, reactive, markRaw, onScopeDispose, type Ref } from 'vue'
 import { cloneDeepWith } from 'lodash-es'
 
 /**
- * identity-preserving clone（渲染层重构 B-3）：行为同 cloneDeep，但不深入 component 字段 ——
+ * identity-preserving clone：行为同 cloneDeep，但不深入 component 字段 ——
  * 组件定义对象（options object）被深克隆后身份丢失，Vue 视为不同组件导致整字段 remount；
- * 保持引用后配合顶层稳定 key（B-1），schema 重建时同 key 节点走 patch 而非 remount。
+ * 保持引用后配合顶层稳定 key，schema 重建时同 key 节点走 patch 而非 remount。
  * 函数（reaction/validator/source）cloneDeep 本就按引用拷贝，无需特殊处理。
+ *
+ * markRaw 包裹：用户传 component 为 Component 对象（如 `component: ElIcon`）时，
+ * 后续 reactive(cloned) 会把组件对象也变 Proxy，触发 Vue 警告
+ * "Component that was made a reactive object"。
+ * markRaw 排除响应式追踪，保留 Vue 内部组件优化的同时消除警告。
  */
 function cloneSchema<T>(value: T): T {
   return cloneDeepWith(value, (val, key) => {
-    if (key === 'component' && val !== null && typeof val === 'object') return val
+    if (key === 'component' && val !== null && typeof val === 'object') return markRaw(val)
     return undefined // 其余字段走默认深克隆
   })
 }
 import type { SchemaNode, XFormProps } from '../types'
-import { containsReaction, applyReactions } from './use-reaction'
+import {
+  containsReaction,
+  applyReactions,
+  createBudget,
+  DEFAULT_REACTION_BUDGET,
+  type ReactionBudget,
+} from './use-reaction'
 import { useAsyncOptions, resolveAsyncOptionsProp } from './use-async-options'
 
 interface UseSchemaRendererOptions {
@@ -22,10 +33,19 @@ interface UseSchemaRendererOptions {
   components: Ref<Record<string, unknown> | undefined>
   formData: Ref<Record<string, unknown>>
   beforeChange?: XFormProps['beforeChange']
+  /**
+   * 单 flush 内 reaction 最大执行次数（阶段 P2-3 透传入口）
+   * - 默认 50（与 DEFAULT_REACTION_BUDGET 一致，向后兼容）
+   * - 大型 schema reaction 链较长时可调高
+   * - 严格排查循环联动时可调小
+   * @see ./use-reaction.ts
+   */
+  reactionBudget?: number
 }
 
 /**
  * 核心编排 composable
+ *
  * - watch(schema, deep)：schema 变化时按需克隆 + 注册 reaction watchEffect
  * - onScopeDispose：卸载时清理所有 watchEffect
  */
@@ -53,7 +73,9 @@ export function useSchemaRenderer(opts: UseSchemaRendererOptions) {
       // 注册异步选项 watcher（在 reaction traverse 之前，避免 reaction 覆盖 props）
       registerAsyncOptions(cloned, opts.formData, asyncStoppers)
       if (hasRx) {
-        traverse(cloned as SchemaNode, opts.formData.value, stoppers)
+        // 阶段 P2-3：reactionBudget 透传到 reaction 执行预算（默认 50 向后兼容）
+        const budget: ReactionBudget = createBudget(opts.reactionBudget ?? DEFAULT_REACTION_BUDGET)
+        traverse(cloned as SchemaNode, opts.formData.value, stoppers, budget)
       }
       reactiveSchema.value = cloned
     },
@@ -76,9 +98,11 @@ export function useSchemaRenderer(opts: UseSchemaRendererOptions) {
      * （Vue 3 优化：computed 返回值引用未变时依赖方不重新执行 render）
      */
     triggerRender: () => {
-      // 阶段 3.1 调试：标记被调用
-      ;(window as unknown as { __triggerRenderCalled?: number }).__triggerRenderCalled =
-        ((window as unknown as { __triggerRenderCalled?: number }).__triggerRenderCalled ?? 0) + 1
+      // 阶段 3.1 调试：仅在 dev 环境标记，避免生产环境污染全局
+      if (import.meta.env.DEV) {
+        ;(window as unknown as { __triggerRenderCalled?: number }).__triggerRenderCalled =
+          ((window as unknown as { __triggerRenderCalled?: number }).__triggerRenderCalled ?? 0) + 1
+      }
       reactiveSchema.value = { ...reactiveSchema.value } as SchemaNode | SchemaNode[]
     },
   }
@@ -87,17 +111,19 @@ export function useSchemaRenderer(opts: UseSchemaRendererOptions) {
 function traverse(
   node: SchemaNode | SchemaNode[],
   model: Record<string, unknown>,
-  stoppers: (() => void)[]
+  stoppers: (() => void)[],
+  budget: ReactionBudget
 ): void {
   if (Array.isArray(node)) {
-    node.forEach((n) => traverse(n, model, stoppers))
+    node.forEach((n) => traverse(n, model, stoppers, budget))
     return
   }
-  applyReactions(node, model, stoppers)
+  applyReactions(node, model, stoppers, budget)
 }
 
 /**
  * 注册 schema 中所有异步选项节点
+ *
  * - 为每个含 asyncOptions 的节点创建请求状态
  * - 状态变化时同步到 node.props（Select/Cascader → options；TreeSelect → data；loading → loading）
  * - 返回的 stop 函数由调用方在 schema 变化/组件卸载时统一调用

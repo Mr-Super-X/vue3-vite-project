@@ -3,6 +3,8 @@
 基于 Vue 3 + Vite 8 + TypeScript 6 的中后台脚手架，Feature-Sliced 风格，支持模块独立开发、不依赖后端即可联调。
 
 > 🆕 **新同事请先看 [docs/10-新手指引.md](docs/10-新手指引.md)** —— 30 分钟 5 任务，带你从 clone 到加新模块。
+>
+> **最近更新**：2026-09-04 — 同步 2026-08-12 httpOnly 改造 + docs/22 mock v3 + coverage 阈值；详见各文件 §修订记录。
 
 ---
 
@@ -219,9 +221,8 @@ vue3-vite-project/
 │   ├── api/             # 网络层（http.ts + modules/）
 │   ├── assets/          # 静态资源（styles/、icons/）
 │   │   └── styles/      # 全局样式：reset / variables / theme / transition / element-overwrite / custom + mixins/
-│   ├── components/      # common/（通用无业务）+ layout/（布局）
+│   ├── components/      # common/（通用无业务，跨模块复用）
 │   │   ├── common/      # AsyncState / ErrorBoundary
-│   │   ├── layout/      # Header / Sidebar
 │   │   └── index.ts     # install 模式自动注册 common/ 下的 .vue
 │   ├── composables/     # useRequest、useTheme
 │   ├── directives/      # 自定义指令（install 模式 + .d.ts 分离）
@@ -346,7 +347,7 @@ pnpm dev:local
 | **default** | `@/layouts/default/index.vue` | 左侧 Sidebar + 顶 Header | 业务页（首页 / 列表 / 表单） |
 | **blank**   | `@/layouts/blank/index.vue`   | 居中、无侧栏无顶栏       | 登录页 / 注册页 / 第三方回调 |
 
-> ✅ Sidebar 菜单渲染已在 v3 实现：从 `router.getRoutes()` 自动派生 + 多级递归 + i18n + 折叠态联动（`src/components/layout/Sidebar.vue`，338 行）。新业务模块的菜单只需按 `modules/<m>/routes/index.ts` 声明路由即自动出现，无需手动维护菜单列表。
+> ✅ Sidebar 菜单渲染已在 v3 实现：从 `router.getRoutes()` 自动派生 + 多级递归 + i18n + 折叠态联动（`src/layouts/default/components/Sidebar.vue`）。新业务模块的菜单只需按 `modules/<m>/routes/index.ts` 声明路由即自动出现，无需手动维护菜单列表。
 
 #### 新增业务模块的 3 步流程（无需改 router 目录）
 
@@ -406,7 +407,7 @@ const routes: RouteRecordRaw[] = [
 
 - **BEM 命名规范**：Block = `vv-block`（或 `c-{name}`），Element = `__element`，Modifier = `--modifier`，State = `is-{state}`（运行时由 `is()` 生成）
 - **运行时工具**：`createNamespace('xxx')` 返回 `{ b, e, m, be, bm, em, bem, is }`，组件用 `const bem = createNamespace('header-bar')` + `:class="[bem.b(), bem.e('user')]"`
-- **编译期 mixin**：`@use '@/assets/styles/mixins/bem' as *` 在 SFC `<style lang="scss">` 中用 `@include b / e / m / is` 拼接
+- **编译期 mixin**：`vite.config.ts` 通过 sass `additionalData` 把 `@use '@/assets/styles/mixins/bem' as *` 自动注入到每个 `<style lang="scss">` 顶部，业务方**不要**重复 `@use`。直接 `@include b / e / m / is` 拼接即可。
 - **双主题**：浅色 + 深色 + 跟随系统，切换 API `useTheme().toggleMode()`（Pinia store + localStorage 持久化）
 
 ```vue

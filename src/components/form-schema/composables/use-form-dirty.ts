@@ -1,7 +1,6 @@
 /**
- * 表单 dirty 状态追踪 —— 阶段 2.2
+ * 表单 dirty 状态追踪 —— 父组件在路由切换/关闭弹窗时判断用户是否修改过表单（用于未保存提示）
  *
- * 用途：父组件在路由切换/关闭弹窗时判断用户是否修改过表单（用于未保存提示）
  * API：
  * - isDirty(): boolean —— 任一字段与初始 snapshot 不同则 true
  * - getDirtyFields(): string[] —— 返回 dirty 字段路径列表（lodash 路径，如 'items[0].qty'）
@@ -13,17 +12,26 @@
  * - snapshot 由调用方负责初始化：XForm.vue 在 setup 末尾立即调一次 resetDirty() 拍基线
  *   避免 setup 时 model 为空导致"全字段 dirty"假象
  * - watch model deep 触发 dirty 重算（响应式）
- * - fieldNames 由 XForm.vue 通过 getNames() 提供（已存在）
  */
 import { watch } from 'vue'
 import { isEqual, get, cloneDeep } from 'lodash-es'
 
+/**
+ * useFormDirty 入参 —— 父组件注入 reactive model getter + 字段路径列表
+ */
 export interface UseFormDirtyOptions {
   model: () => Record<string, unknown> | undefined
   /** 字段路径列表（lodash path，如 'items[0].qty'） */
   fieldNames: () => readonly string[]
 }
 
+/**
+ * useFormDirty 返回值 —— dirty 状态查询 + 基线管理
+ *
+ * - isDirty / getDirtyFields / isTouched: 状态查询
+ * - resetDirty: 把当前状态标记为新基线（提交后归零 / 加载后初始化）
+ * - stop: 内部清理（组件 unmount 时由 useXFormComposer 调用）
+ */
 export interface UseFormDirtyReturn {
   isDirty: () => boolean
   getDirtyFields: () => string[]
@@ -33,6 +41,7 @@ export interface UseFormDirtyReturn {
   stop: () => void
 }
 
+/** useFormDirty —— dirty 状态追踪 + 基线管理 */
 export function useFormDirty(opts: UseFormDirtyOptions): UseFormDirtyReturn {
   /** 各字段的初始值快照（lodash path → 初始值） */
   const initialSnapshot = new Map<string, unknown>()

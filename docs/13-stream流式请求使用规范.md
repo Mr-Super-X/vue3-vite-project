@@ -1,7 +1,9 @@
 # 流式请求使用规范
 
-> **文档版本**：v1.0.0 | **最后更新**：2026-07-24
-> **能力来源**：`src/api/stream.ts`（CHANGELOG 未记录，2026-07-24 审计补齐文档）
+> **文档版本**：v1.0.1 | **最后更新**：2026-09-04
+> **能力来源**：`src/api/stream.ts`（CHANGELOG 未记录，2026-07-24 审计补齐文档；2026-09-04 同步 httpOnly 改造）
+>
+> ⚠️ **已知不一致（2026-08-12 httpOnly 改造遗留）**：`requestStream` 当前仍走 `Authorization: Bearer <Session.get('token')>` 头，但 httpOnly 模式下 Session 不再持有 token（凭证由后端 `Set-Cookie: HttpOnly` 下发，前端 JS 不可读）。见 §2 与 §已知问题。
 
 ---
 
@@ -19,11 +21,11 @@
 
 ## 🎯 三种流格式
 
-| 格式           | 触发                 | 数据形态                        | 典型用途                 |
-| -------------- | -------------------- | ------------------------------- | ------------------------ |
-| `sse`（默认）  | 每行以 `data:` 开头  | 字符串 JSON + `[DONE]` 结束标记 | OpenAI / Claude 风格 SSE |
-| `ndjson`       | 每行一个 JSON        | 纯 JSON（无前缀）               | 日志流 / 事件流          |
-| `auto`（默认） | 自动检测首行 `data:` | 自适应                          | 不确定后端格式时         |
+| 格式               | 触发                 | 数据形态                        | 典型用途                 |
+| ------------------ | -------------------- | ------------------------------- | ------------------------ |
+| `auto`（**默认**） | 自动检测首行 `data:` | 自适应                          | 不确定后端格式时         |
+| `sse`（显式）      | 每行以 `data:` 开头  | 字符串 JSON + `[DONE]` 结束标记 | OpenAI / Claude 风格 SSE |
+| `ndjson`           | 每行一个 JSON        | 纯 JSON（无前缀）               | 日志流 / 事件流          |
 
 ---
 
@@ -104,9 +106,16 @@ await handle.done // done 永远 resolve（不 reject）；错误通过 onError 
 
 `done` 不抛异常——错误**只在 onError 回调中传递**。这是与 axios `request()` 的关键区别。
 
-### 2. Auth 自动注入
+### 2. Auth 自动注入（**当前与 httpOnly 模式不一致，待修复**）
 
-`requestStream` 内部自动读 `Session.get('token')` 并加 `Authorization: Bearer <token>` 头（与 `http.ts` 一致），业务侧无需手动传。
+`requestStream` 内部自动读 `Session.get('token')` 并加 `Authorization: Bearer <token>` 头。
+**该行为与 `http.ts` 已不一致**：
+
+- `http.ts` 在 2026-08-12 httpOnly 改造后改为 `withCredentials: true`，由浏览器自动携带 cookie，不再读 Session
+- `requestStream` **尚未切换**——仍读 Session（httpOnly 模式下永远是 null），且未配 `credentials: 'include'`
+- 因此 httpOnly 模式下流式请求**无法携带凭证**（cookie 不会随 fetch 发出，Session.get('token') 也拿不到值）
+
+> 计划修复方向：把 `stream.ts` 第 83-84 行的 `Session.get('token') + Authorization` 改为 fetch 的 `credentials: 'include'`（与 http.ts 一致）；目前临时方案是业务侧在 url 上拼 token query 参数（**仅限流式端点内部网络**，不推荐公网）。详见 §已知问题。
 
 ### 3. 解析容错
 
@@ -129,14 +138,14 @@ location /api/ai/ {
 
 ## 🆚 vs `request<T>()`
 
-| 维度     | `request<T>()`            | `requestStream<T>()`            |
-| -------- | ------------------------- | ------------------------------- |
-| 通信模式 | 一问一答                  | 服务器主动推                    |
-| 错误处理 | `try/catch` 捕获 ApiError | `onError` 回调 + `done` Promise |
-| 数据形态 | 单个 T                    | 多个 T（按消息）                |
-| 底层     | axios                     | fetch + ReadableStream          |
-| Auth 头  | 自动注入                  | 自动注入                        |
-| 取消     | AbortController           | `handle.cancel()`               |
+| 维度     | `request<T>()`              | `requestStream<T>()`                                      |
+| -------- | --------------------------- | --------------------------------------------------------- |
+| 通信模式 | 一问一答                    | 服务器主动推                                              |
+| 错误处理 | `try/catch` 捕获 ApiError   | `onError` 回调 + `done` Promise                           |
+| 数据形态 | 单个 T                      | 多个 T（按消息）                                          |
+| 底层     | axios + withCredentials     | fetch + ReadableStream（**未配 credentials: 'include'**） |
+| Auth 头  | cookie 自动携带（httpOnly） | Session Bearer（**httpOnly 模式下失效**）                 |
+| 取消     | AbortController             | `handle.cancel()`                                         |
 
 ---
 
@@ -153,7 +162,19 @@ const handle = requestStream<{ content: string }>({
 await handle.done
 ```
 
+## 🐛 已知问题
+
+### I1. httpOnly 模式下 Auth 失效（2026-08-12 改造遗留）
+
+- **现象**：httpOnly 模式下调用 `requestStream`，后端收到请求但拿不到用户身份（cookie 未随 fetch 发出 + Session.get('token') 永远返回 null）
+- **根因**：`src/api/stream.ts:83-84` 仍走 `Session.get('token') + Authorization Bearer`，与 `http.ts` 已切换到 `withCredentials: true` 不一致
+- **临时方案**（按需评估）：
+  - 业务侧在 url 上拼接 token query 参数（仅限可信内网，**不推荐公网**）
+  - 或后端单独开放 SSE 端点的免鉴权白名单（适用于 AI 演示场景）
+- **彻底修复**：把 `stream.ts` 第 89-95 行 `fetchImpl(...)` 调用改为带 `credentials: 'include'`，移除 Session.get('token') 那两行（参照 http.ts 的 `withCredentials: true`）
+
 ---
 
-_相关源码：`src/api/stream.ts`（160 行）+ `src/api/stream.spec.ts`_
+_相关源码：`src/api/stream.ts`（180 行）+ `src/api/stream.spec.ts`_
 _相关能力：`@/api/cancel`（AbortController 工具）_
+_相关待办：`stream.ts` Auth 改造（与 http.ts 对齐 httpOnly 模式）—— 见 §I1_

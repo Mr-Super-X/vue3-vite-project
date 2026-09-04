@@ -1,3 +1,8 @@
+/**
+ * render-with-grid —— 视觉容器内栅格渲染
+ *
+ * 类型断言（`as never`）归因见 types/TYPE-CAST-AUDIT.md。
+ */
 import { h, type VNode } from 'vue'
 import { ElRow, ElCol } from 'element-plus'
 import type { SchemaNode } from '../types'

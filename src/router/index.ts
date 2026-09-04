@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router'
-import type { RouteRecordRaw } from 'vue-router'
+import type { RouteRecordRaw, RouterScrollBehavior } from 'vue-router'
 import { autoRegisteredRoutes } from './auto-register'
 import { fallbackRoute } from './fallback'
 import { setupAuthGuard } from './guards/auth'
@@ -31,12 +31,24 @@ const rootRedirect: RouteRecordRaw = {
 //   - web：主流，URL 干净（需要后端 SPA fallback）
 //   - hash：URL 带 #，无需后端配合，适合子路径部署 / 静态托管
 //   通过 .env.development 或 .env.production 设 VITE_HISTORY_MODE=hash|web 覆盖
+
+// 路由切换后的滚动行为：
+//   - 浏览器前进/后退（popstate）：用浏览器记录的 savedPosition
+//   - 目标路由带 hash 锚点：平滑滚到对应元素（不同浏览器可能表现不一致）
+//   - 其他导航：滚到页面顶部
+const scrollBehavior: RouterScrollBehavior = (to, _from, savedPosition) => {
+  if (savedPosition) return savedPosition
+  if (to.hash) return { el: to.hash, behavior: 'smooth' }
+  return { top: 0, left: 0 }
+}
+
 export const router = createRouter({
   history:
     ROUTER_CONFIG.historyMode === 'hash'
       ? createWebHashHistory(ROUTER_CONFIG.base)
       : createWebHistory(ROUTER_CONFIG.base),
   routes: [rootRedirect, ...autoRegisteredRoutes, fallbackRoute],
+  scrollBehavior,
 })
 
 setupAuthGuard(router)

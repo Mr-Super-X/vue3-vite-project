@@ -1,12 +1,22 @@
 /**
- * useSchemaIndex 的纯函数 builder
- * - 一次性遍历 schema，构建 byName / fieldNames / allNames / crossRules / reverseIndex / dependsOnMap
- * - DFS 顺序与现有 getNames() 保持一致（先父后子、子按出现顺序）
- * - cross rules 提取覆盖 children / array.itemSchema / formItem.slots（与 collectCrossRuleFields 对齐）
- * - trigger=manual 的规则不进入 reverseIndex（仅 validateForm 跑）
+ * useSchemaIndex 的纯函数 builder：一次遍历构建 byName / fieldNames / allNames /
+ * crossRules / reverseIndex / dependsOnMap，DFS 顺序与 getNames() 保持一致。
+ * cross rules 覆盖 children / array.itemSchema / formItem.slots；
+ * trigger='manual' 的规则不进 reverseIndex（仅 validateForm 跑）。
  */
 import type { SchemaNode, RuleItem } from '../types'
 
+/**
+ * SchemaIndex —— schema 元数据中央索引（一次遍历构建的 6 张表）
+ *
+ * - byName: 字段名 → 节点（O(1) 查表）
+ * - fieldNames / allNames: 不含 / 含 ignore 字段路径列表（DFS 顺序）
+ * - crossRules: target → 跨字段规则（含 deps + trigger）
+ * - reverseIndex: depField → 受影响的 target 字段名列表（反向触发用）
+ * - dependsOnMap: target → deps 字段名列表
+ *
+ * @see ./use-schema-index.ts useSchemaIndex 包装响应式 ref + watch 重建
+ */
 export interface SchemaIndex {
   byName: Map<string, SchemaNode>
   /** 不含 ignore，DFS 顺序 */
@@ -21,6 +31,9 @@ export interface SchemaIndex {
   dependsOnMap: Map<string, string[]>
 }
 
+/**
+ * CrossRuleEntry —— 跨字段规则条目（target / deps / rule 三元组）
+ */
 export interface CrossRuleEntry {
   target: string
   deps: string[]

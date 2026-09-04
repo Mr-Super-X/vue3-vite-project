@@ -1,14 +1,8 @@
 /**
- * useTopLevelFields —— XForm 顶层 schema 自描述字段集合
- *
- * 把 XForm.vue 中 11 个高度相似的 topLevelXxx computed 抽离到独立 composable。
- * 这些 computed 都从 schema 顶层字段读取（如 s.disabled / s.readonly / s.column / s.labelPosition 等），
- * 函数/字符串值通过 resolveFunctionExpression 求值。
- *
- * 行为 100% 等价于原内联实现 —— 顶层 schema 字段为 el-form 实例级属性（labelPosition / disabled /
- * labelWidth / scrollToError / scrollIntoViewOptions），必须从 schema 派生而非 XForm props 配置。
- *
- * 调用方一次性拿到所有 11 个 computed + topLevelNodes（含 reaction 后能触发重渲染的依赖链）。
+ * XForm 顶层 schema 自描述字段集合（11 个 computed）：
+ * 从 schema 顶层字段派生 el-form 实例级属性（labelPosition / disabled / labelWidth /
+ * scrollToError / scrollIntoViewOptions 等），必须从 schema 派生而非 XForm props 配置。
+ * 函数 / 字符串值通过 resolveFunctionExpression 求值。
  */
 import { computed, type ComputedRef } from 'vue'
 import type { SchemaNode, RowConfig } from '../types'
@@ -19,6 +13,10 @@ import type { SchemaNode, RowConfig } from '../types'
  */
 export type TopLevelFieldErrors = Record<string, unknown>
 
+/**
+ * useTopLevelFields 入参 —— schema 响应式视图 + 工具函数注入
+ * @see ./use-xform-composer.ts 11 个 composable 装配
+ */
 export interface UseTopLevelFieldsDeps {
   /** schema 响应式视图（来自 useSchemaRenderer） */
   reactiveSchema: { value: SchemaNode | SchemaNode[] | string | undefined }
@@ -34,6 +32,12 @@ export interface UseTopLevelFieldsDeps {
   mergeRowResponsive: (row: RowConfig | undefined, breakpoint: string) => RowConfig | undefined
 }
 
+/**
+ * useTopLevelFields 返回值 —— 11 个 computed + topLevelNodes
+ *
+ * 含顶层 schema 派生的 disabled / readonly / labelPosition / labelWidth / scrollToError /
+ * scrollIntoViewOptions / debounceValidation / nodes / row / column / colSpan
+ */
 export interface UseTopLevelFieldsReturn {
   /** 顶层 schema.debounceValidation → 跨字段默认 debounce ms（0 = 实时） */
   debounceValidation: ComputedRef<number>
@@ -73,6 +77,7 @@ function readTopLevelNode(reactiveSchema: {
   return s
 }
 
+/** useTopLevelFields —— XForm 顶层 schema 自描述字段集合（11 个 computed） */
 export function useTopLevelFields(deps: UseTopLevelFieldsDeps): UseTopLevelFieldsReturn {
   const {
     reactiveSchema,
@@ -85,7 +90,7 @@ export function useTopLevelFields(deps: UseTopLevelFieldsDeps): UseTopLevelField
 
   /**
    * 顶层节点列表（直接从 reactiveSchema 派生，含 reaction 修改后能触发重渲染）
-   * 阶段 3.1：读 fieldErrors.value 建立响应式依赖 —— 否则 setFieldError 写 fieldErrors 后
+   * 读 fieldErrors.value 建立响应式依赖 —— 否则 setFieldError 写 fieldErrors 后
    * computed 命中缓存，模板不重渲染
    */
   const nodes = computed<SchemaNode[]>(() => {

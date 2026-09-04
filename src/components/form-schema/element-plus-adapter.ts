@@ -2,13 +2,9 @@
  * Schema 字符串快捷名 → Element Plus 全局注册名 的内置映射
  *
  * 为什么不在此处直接 import element-plus 组件对象：
- *   - 违反 CLAUDE.md §1.6 项目按需加载约定（unplugin-vue-components 自动注册）
- *   - 直接命名导入会增加 bundle size
- *   - 实际组件由 vue 内置 resolveComponent() 从全局注册表查找
- *
- * 使用方式：
- *   const name = resolveElComponentName(schema.component)  // → 'ElInput'
- *   const Comp = resolveComponent(name)                     // → ElInput 组件
+ * - 违反 CLAUDE.md §1.6 项目按需加载约定（unplugin-vue-components 自动注册）
+ * - 直接命名导入会增加 bundle size
+ * - 实际组件由 vue 内置 resolveComponent() 从全局注册表查找
  */
 export const DEFAULT_COMPONENT_MAP: Record<string, string> = {
   Input: 'ElInput',
@@ -79,8 +75,8 @@ const BASE_DEFAULT_COMPONENT_PROPS: Record<string, Record<string, unknown>> = {
 
 /**
  * 默认组件 props：按组件名注入，节点级 props 可覆盖。
- * 包含轻量输入 UX 默认值和 Input 语义 alias 默认值；不强制
- * ColorPicker、Mention、Rate 的业务偏好。
+ *
+ * 包含轻量输入 UX 默认值和 Input 语义 alias 默认值；不强制 ColorPicker、Mention、Rate 的业务偏好。
  *
  * 键同时支持快捷名（如 'Input'）和 Element Plus 全名（如 'ElInput'），
  * 因此 schema 中写 component: 'Input' 或 component: 'ElInput' 都能命中。
@@ -94,9 +90,9 @@ export const DEFAULT_COMPONENT_PROPS: Record<
  * 解析 schema.component 字符串到最终组件名（供 resolveComponent 查找）
  *
  * 解析顺序：
- *   1. userComponentKeys 命中 → 返回原 name（调用方走用户 components map）
- *   2. DEFAULT_COMPONENT_MAP 内置命中（如 Input → 'ElInput'）
- *   3. ElXxx 原生名直通
+ * 1. userComponentKeys 命中 → 返回原 name（调用方走用户 components map）
+ * 2. DEFAULT_COMPONENT_MAP 内置命中（如 Input → 'ElInput'）
+ * 3. ElXxx 原生名直通
  *
  * 返回 null 时调用方应降级为 <div> 占位
  */
@@ -112,3 +108,27 @@ export function resolveElComponentName(name: string, userComponentKeys?: string[
   }
   return null
 }
+
+/**
+ * ELComponentProps<T> —— 解开 element-plus buildProp 元组,提取运行时 props 类型
+ *
+ * element-plus 2.x 组件 props 类型形如 `[type, required, validator, __epPropKey]` 元组(用 readonly tuple 实现)，
+ * 在 vue 模板/h() 中直接使用会触发 TS 类型不兼容。传统做法是 `as never`(归因见 types/TYPE-CAST-AUDIT.md C1)。
+ *
+ * 本辅助类型用 Conditional Types 提取元组最后一个对象元素,得到运行时可消费的 props 形态。
+ * 这是未来消除 render-* 文件中 `as never` 的入口(P1-2 阶段一:仅声明,不替换)。
+ *
+ * @see types/TYPE-CAST-AUDIT.md C1
+ * @example
+ * ```ts
+ * import type { InputProps } from 'element-plus'
+ * type ElInputRuntimeProps = ELComponentProps<InputProps>
+ * ```
+ */
+export type ELComponentProps<T> = T extends readonly [...unknown[], infer Last]
+  ? Last extends object
+    ? Last
+    : never
+  : T extends object
+    ? T
+    : Record<string, unknown>

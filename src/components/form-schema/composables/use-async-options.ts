@@ -2,12 +2,14 @@ import { ref, watch, onScopeDispose, type Ref } from 'vue'
 import { get } from 'lodash-es'
 import type { SchemaNode, AsyncOptionsConfig } from '../types'
 
+/** 异步选项节点状态基础类型；useAsyncOptions 在此基础上加 stop 控制 */
 export interface AsyncOptionsState {
   data: Ref<unknown[]>
   loading: Ref<boolean>
   error: Ref<unknown>
 }
 
+/** useAsyncOptions 返回值 = 状态 + stop（schema 变化/组件卸载时使 in-flight 响应失效） */
 export interface UseAsyncOptionsReturn extends AsyncOptionsState {
   /** 停止 deps watcher */
   stop: () => void
@@ -15,11 +17,11 @@ export interface UseAsyncOptionsReturn extends AsyncOptionsState {
 
 /**
  * 管理单个 schema 节点的异步选项生命周期
- * - immediate 默认 true：创建时立即请求
- * - deps 变化时自动重新请求
- * - source 返回值经 transform 后存入 state.data
- * - 错误时调用 onError 并写入 state.error
- * - scope  disposed 后不再调用用户 onError（避免 Vue dev strict mode 双 mount 导致重复 toast）
+ *
+ * - immediate 默认 true：创建即请求
+ * - deps 变化自动重新请求（序号令牌防乱序覆盖）
+ * - 错误清空 data + 调 onError + 写 state.error
+ * - scope disposed 后不再触发 onError，避免 Vue dev strict mode 双 mount 重复 toast
  */
 export function useAsyncOptions(
   node: SchemaNode,
@@ -52,6 +54,9 @@ export function useAsyncOptions(
       data.value = cfg.transform ? cfg.transform(raw) : raw
     } catch (err) {
       if (mySeq !== fetchSeq) return
+      // ⭐ 错误时清空 data：避免下拉列表展示陈旧数据误导用户
+      // 错误信息由 error.value + onError 回调同时承担
+      data.value = []
       error.value = err
       if (active) {
         cfg.onError?.(err)
@@ -82,7 +87,7 @@ export function useAsyncOptions(
   }
 }
 
-/** 根据组件名决定 asyncOptions 数据注入哪个 prop */
+/** 根据组件名决定 asyncOptions 数据注入哪个 prop（Autocomplete 无 options prop，固定走 fetchSuggestions） */
 export function resolveAsyncOptionsProp(node: SchemaNode): string | null {
   const name = typeof node.component === 'string' ? node.component : null
   if (!name) return null
@@ -91,11 +96,7 @@ export function resolveAsyncOptionsProp(node: SchemaNode): string | null {
   return 'options'
 }
 
-/**
- * 为 Autocomplete 构造 fetchSuggestions 回调
- * - source 可接收可选 query 参数
- * - 结果经 transform 后通过 cb 回传
- */
+/** 为 Autocomplete 构造 fetchSuggestions 回调：source(query) → transform → cb；失败 cb([]) + onError */
 export function buildAutocompleteFetcher(
   cfg: AsyncOptionsConfig
 ): (queryString: string, cb: (suggestions: Array<{ value: unknown }>) => void) => void {

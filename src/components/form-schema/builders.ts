@@ -1,16 +1,19 @@
 /**
- * XForm schema 链式构建器：fbuilder
- * 让"XForm 使用门槛低"
+ * XForm schema 链式构建器（对标 FormRender 的链式 API）
  *
- * 对标 FormRender 的链式 API：xInput('email').label('邮箱').required().build()
+ * 架构（OPT-2 重构后）：
+ * 1. NodeBuilder<C> —— 泛型基类，绑死 component 名 + props 类型
+ *    通过 `class extends NodeBuilder` 直接继承所有链式方法（label/prop/required/...）
+ *    无需在子类中重复声明
+ * 2. makeBuilder(componentName) —— 工厂返回一个继承 NodeBuilder 的 class，
+ *    子类只需实现 component-specific 方法（clearable/options/format/...）
+ * 3. 27 个 xXxx 入口函数（含 xArray）= makeBuilder(componentName).Ext 实例
  *
- * 类型推导：每个 builder 绑死 component 名称 + props 类型
- * - xInput()    → Builder<'Input', ElInputProps> → build() 返回 SchemaNodeFor<'Input'>
- * - xSelect()   → Builder<'Select', ElSelectProps>
- * - xDatePicker() → Builder<'DatePicker', ElDatePickerProps>
- * - ... 12 个
+ * 类型推导：xInput() → Builder<'Input', ElInputProps> → build() 返回 SchemaNodeFor<'Input'>，
+ * 这样 IDE 在链式调用时自动补全 props 字段名 + 校验 props 值类型。
  *
- * 这样 IDE 在链式调用时自动补全 props 字段名 + 校验 props 值类型
+ * 按 component 名字母 A-Z 分组，每个 component 包含「makeBuilder 工厂 + Ext 子类 + xXxx 入口」三件套，
+ * 查找 builder 能力从跨 2-3 处跳转 → 同 1 节内查找。
  */
 import type {
   SchemaNode,
@@ -21,22 +24,34 @@ import type {
   ReactionValue,
 } from './types'
 
-/** 链式构建器基类（泛型：绑死 component 名 + props 类型） */
-class NodeBuilder<C extends ComponentName, P = ComponentPropsRegistry[C]> {
-  // public 供 Ext 子类（如 CardBuilderExt）跨类访问子节点字段
+// ────────────────────────────────────────────────────────────────────────────
+// 链式构建器基类
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 链式构建器泛型基类
+ *
+ * - C：绑死的 component 名（决定 SchemaNodeFor<C> 类型）
+ * - P：组件 props 类型（默认从 ComponentPropsRegistry 推导）
+ *
+ * 所有方法返回 `this` —— 链式调用通过原型链继承自动可用
+ */
+export class NodeBuilder<C extends ComponentName, P = ComponentPropsRegistry[C]> {
+  // public 供 Ext 子类（如 CardBuilderExt.column / RadioGroupBuilderExt.options）直接访问
   node: Partial<SchemaNodeFor<C>> = {}
 
-  constructor(name: string) {
-    ;(this.node as { name?: string }).name = name
+  constructor(componentName: C, name?: string) {
+    if (name !== undefined) this.node.name = name
+    this.node.component = componentName
   }
 
   label(label: string): this {
-    ;(this.node as { label?: string }).label = label
+    this.node.label = label
     return this
   }
 
   defaultValue(v: P extends { defaultValue?: infer D } ? D : unknown): this {
-    ;(this.node as { defaultValue?: unknown }).defaultValue = v
+    this.node.defaultValue = v
     return this
   }
 
@@ -54,7 +69,7 @@ class NodeBuilder<C extends ComponentName, P = ComponentPropsRegistry[C]> {
 
   /** 字段禁用状态 —— 支持反应式（boolean / 函数 / 函数表达式） */
   disabled(v: ReactionValue<boolean>): this {
-    ;(this.node as { disabled?: ReactionValue<boolean> }).disabled = v
+    this.node.disabled = v
     return this
   }
 
@@ -98,27 +113,27 @@ class NodeBuilder<C extends ComponentName, P = ComponentPropsRegistry[C]> {
   }
 
   rules(rules: RuleItem[] | string): this {
-    ;(this.node as { rules?: RuleItem[] | string }).rules = rules
+    this.node.rules = rules
     return this
   }
 
   hidden(flag = true): this {
-    ;(this.node as { hidden?: boolean }).hidden = flag
+    this.node.hidden = flag
     return this
   }
 
   ignore(flag = true): this {
-    ;(this.node as { ignore?: boolean }).ignore = flag
+    this.node.ignore = flag
     return this
   }
 
   col(span: number): this {
-    ;(this.node as { col?: boolean | { span: number } }).col = { span }
+    this.node.col = { span }
     return this
   }
 
   reaction(r: NonNullable<SchemaNode['reaction']>): this {
-    ;(this.node as { reaction?: SchemaNode['reaction'] }).reaction = r
+    this.node.reaction = r
     return this
   }
 
@@ -127,150 +142,183 @@ class NodeBuilder<C extends ComponentName, P = ComponentPropsRegistry[C]> {
   }
 }
 
-/** 通用 builder 工厂：绑死 component 名 */
+/**
+ * 通用 builder 工厂：返回绑死 component 名的类（extends NodeBuilder）
+ * 原实现需在工厂内重复声明 13 个方法转发到 _b；重构后通过原型继承直接获得全部方法
+ */
 function makeBuilder<C extends ComponentName>(
   componentName: C
-): new (name: string) => NodeBuilder<C, ComponentPropsRegistry[C]> & { [k: string]: unknown } {
-  // 返回一个类，构造时设置 component 字段
-  return class {
-    private _b: NodeBuilder<C, ComponentPropsRegistry[C]>
+): new (name: string) => NodeBuilder<C, ComponentPropsRegistry[C]> {
+  class BasicBuilder extends NodeBuilder<C, ComponentPropsRegistry[C]> {
     constructor(name: string) {
-      this._b = new NodeBuilder<C, ComponentPropsRegistry[C]>(name)
-      ;(this._b.node as { component?: C }).component = componentName
+      super(componentName, name)
     }
-    // 关键:所有基础方法返回 `this`(makeBuilder 匿名 class 实例)而非 `this._b.xxx()` 的结果
-    // 否则链式调用 `.label().format()` 时 .format 在 _b(NodeBuilder) 实例上找不到
-    // makeBuilder 匿名 class 是 Ext 子类(如 TimePickerBuilderExt)的父类,
-    // 通过原型链 Ext 实例有 format 等方法,链式调用 .format() 才能正常
-    label(l: string): this {
-      this._b.label(l)
-      return this
-    }
-    defaultValue(v: unknown): this {
-      this._b.defaultValue(v as never)
-      return this
-    }
-    placeholder(p: string): this {
-      this._b.placeholder(p)
-      return this
-    }
-    prop(k: string, v: unknown): this {
-      this._b.prop(k, v)
-      return this
-    }
-    disabled(v: ReactionValue<boolean>): this {
-      this._b.disabled(v)
-      return this
-    }
-    validator(
-      fn: (rule: unknown, value: unknown, cb: (err?: Error) => void) => void,
-      trigger: 'blur' | 'change' = 'blur'
-    ): this {
-      this._b.validator(fn, trigger)
-      return this
-    }
-    asyncValidator(
-      fn: (rule: unknown, value: unknown, cb: (err?: Error) => void) => Promise<unknown>,
-      trigger: 'blur' | 'change' = 'blur'
-    ): this {
-      this._b.asyncValidator(fn, trigger)
-      return this
-    }
-    required(m?: string): this {
-      this._b.required(m)
-      return this
-    }
-    rules(r: RuleItem[] | string): this {
-      this._b.rules(r)
-      return this
-    }
-    hidden(f?: boolean): this {
-      this._b.hidden(f)
-      return this
-    }
-    ignore(f?: boolean): this {
-      this._b.ignore(f)
-      return this
-    }
-    col(s: number): this {
-      this._b.col(s)
-      return this
-    }
-    reaction(r: NonNullable<SchemaNode['reaction']>): this {
-      this._b.reaction(r)
-      return this
-    }
-    build() {
-      return this._b.build()
-    }
-  } as unknown as new (
-    name: string
-  ) => NodeBuilder<C, ComponentPropsRegistry[C]> & { [k: string]: unknown }
+  }
+  return BasicBuilder as new (name: string) => NodeBuilder<C, ComponentPropsRegistry[C]>
 }
 
-/** 25 个 component 类型的基础 builder 类（每个绑死 component 名；另有 Ext 扩展类与 ArrayBuilder） */
-const InputBuilder = makeBuilder('Input')
-const SelectBuilder = makeBuilder('Select')
-const OptionBuilder = makeBuilder('Option')
-const SwitchBuilder = makeBuilder('Switch')
-const DatePickerBuilder = makeBuilder('DatePicker')
-const TimePickerBuilder = makeBuilder('TimePicker')
-const TimeSelectBuilder = makeBuilder('TimeSelect')
-const TreeSelectBuilder = makeBuilder('TreeSelect')
-const UploadBuilder = makeBuilder('Upload')
-const AutocompleteBuilder = makeBuilder('Autocomplete')
-const TransferBuilder = makeBuilder('Transfer')
-const RadioGroupBuilder = makeBuilder('RadioGroup')
-const RadioBuilder = makeBuilder('Radio')
-const CheckboxGroupBuilder = makeBuilder('CheckboxGroup')
-const CheckboxBuilder = makeBuilder('Checkbox')
-const CascaderBuilder = makeBuilder('Cascader')
-const InputNumberBuilder = makeBuilder('InputNumber')
-const InputPasswordBuilder = makeBuilder('InputPassword')
-const InputTextAreaBuilder = makeBuilder('InputTextArea')
-const InputTagBuilder = makeBuilder('InputTag')
-const ColorPickerBuilder = makeBuilder('ColorPicker')
-const MentionBuilder = makeBuilder('Mention')
-const RateBuilder = makeBuilder('Rate')
-const SliderBuilder = makeBuilder('Slider')
-const CardBuilder = makeBuilder('Card')
+/**
+ * 极简 builder 工厂：返回 (fieldName: string) => NodeBuilder 实例
+ * 用于没有 component-specific 链式方法的纯组件（InputPassword/ColorPicker/Mention/Rate/...）
+ * 取代原来「const XxxBuilder = makeBuilder + export const xXxx = (n) => new XxxBuilder(n)」2 行模板
+ */
+const makeSimpleBuilder =
+  <C extends ComponentName>(componentName: C) =>
+  (fieldName: string): NodeBuilder<C> =>
+    new (makeBuilder(componentName))(fieldName)
 
-/** InputBuilder 扩展 clearable（el-input 特有） */
-class InputBuilderExt extends InputBuilder {
-  clearable(): this {
-    return this.prop('clearable', true)
+// ────────────────────────────────────────────────────────────────────────────
+// 27 个 component builder（按字母 A-Z 排序）
+// 每个 component 三件套：makeBuilder 工厂 + Ext 子类 + xXxx 入口函数
+// ────────────────────────────────────────────────────────────────────────────
+
+// ── Autocomplete ──
+const AutocompleteBuilder = makeBuilder('Autocomplete')
+class AutocompleteBuilderExt extends AutocompleteBuilder {
+  fetchSuggestions(
+    fn: (queryString: string, cb: (suggestions: Array<{ value: string }>) => void) => void
+  ): this {
+    return this.prop('fetchSuggestions', fn as never)
+  }
+  triggerOnFocus(): this {
+    return this.prop('triggerOnFocus', true)
+  }
+  placement(p: 'top' | 'top-start' | 'top-end' | 'bottom' | 'bottom-start' | 'bottom-end'): this {
+    return this.prop('placement', p)
   }
 }
+/**
+ * xAutocomplete —— Autocomplete 组件链式构造器入口
+ *
+ * @see AutocompleteBuilderExt Ext 方法：fetchSuggestions / triggerOnFocus / placement
+ * @see NodeBuilder 基类通用方法：label / prop / placeholder / required / rules 等
+ */
+export const xAutocomplete = (name: string) => new AutocompleteBuilderExt(name)
 
-/** SelectBuilder 扩展 options（el-select 特有） */
-class SelectBuilderExt extends SelectBuilder {
-  options(opts: Array<{ value: unknown; label: string }>): this {
+// ── Cascader ──
+const CascaderBuilder = makeBuilder('Cascader')
+class CascaderBuilderExt extends CascaderBuilder {
+  options(opts: Array<unknown>): this {
     return this.prop('options', opts)
   }
+  showAllLevels(): this {
+    return this.prop('showAllLevels', true)
+  }
+  separator(s: string): this {
+    return this.prop('separator', s)
+  }
+  // el-cascader 的 expandTrigger 在 props 嵌套字段中,需要 props.expandTrigger
+  // 简化:用 prop() 直接覆盖整个 props(覆盖式更新),文档说明限制
 }
+/**
+ * xCascader —— Cascader 组件链式构造器入口
+ *
+ * @see CascaderBuilderExt Ext 方法：options / showAllLevels / separator
+ * @see NodeBuilder 基类通用方法
+ */
+export const xCascader = (name: string) => new CascaderBuilderExt(name)
 
-/** SwitchBuilder 扩展（无特有方法） */
-class SwitchBuilderExt extends SwitchBuilder {}
+// ── Card ──
+const CardBuilder = makeBuilder('Card')
+class CardBuilderExt extends CardBuilder {
+  /**
+   * 设置 Card 标题 —— element-plus ElCard 无 title prop，标题走 slots.header 渲染
+   * 写到 props.title 会触发 validate-component-props dev 模式 PROP_VALIDATION 警告
+   */
+  title(t: string): this {
+    if (!this.node.slots) this.node.slots = {}
+    this.node.slots.header = t
+    return this
+  }
+  column(c: number): this {
+    this.node.column = c
+    return this
+  }
+  gutter(g: number): this {
+    this.node.row = { gutter: g }
+    return this
+  }
+}
+/**
+ * xCard —— Card 视觉容器链式构造器入口（无 name 字段，走视觉容器渲染分支）
+ *
+ * @see CardBuilderExt Ext 方法：title / column / gutter
+ */
+export const xCard = (name: string) => new CardBuilderExt(name)
 
-/** DatePickerBuilder 扩展 format（el-date-picker 特有） */
+// ── Checkbox ──
+/** xCheckbox —— Checkbox 组件链式构造器入口（无 Ext，继承 NodeBuilder 通用方法） */
+export const xCheckbox = makeSimpleBuilder('Checkbox')
+
+// ── CheckboxGroup ──
+/** xCheckboxGroup —— CheckboxGroup 组件链式构造器入口 */
+export const xCheckboxGroup = makeSimpleBuilder('CheckboxGroup')
+
+// ── ColorPicker ──
+/** xColorPicker —— ColorPicker 组件链式构造器入口 */
+export const xColorPicker = makeSimpleBuilder('ColorPicker')
+
+// ── DatePicker ──
+const DatePickerBuilder = makeBuilder('DatePicker')
 class DatePickerBuilderExt extends DatePickerBuilder {
   format(v: string): this {
     return this.prop('valueFormat', v)
   }
 }
+/**
+ * xDatePicker —— DatePicker 组件链式构造器入口
+ *
+ * @see DatePickerBuilderExt Ext 方法：format (设置 valueFormat)
+ */
+export const xDatePicker = (name: string) => new DatePickerBuilderExt(name)
 
-/** TextareaBuilder 扩展 rows（用 Input type=textarea 模拟） */
-class TextareaBuilderExt extends InputBuilder {
-  rows(n: number): this {
-    return this.prop('type', 'textarea').prop('rows', n)
+// ── Input ──
+const InputBuilder = makeBuilder('Input')
+class InputBuilderExt extends InputBuilder {
+  clearable(): this {
+    return this.prop('clearable', true)
   }
 }
+/**
+ * xInput —— Input 组件链式构造器入口
+ *
+ * @see InputBuilderExt Ext 方法：clearable
+ */
+export const xInput = (name: string) => new InputBuilderExt(name)
 
-/** RadioGroupBuilder 扩展 options（多个 Radio 子节点） */
+// ── InputNumber ──
+/** xInputNumber —— InputNumber 组件链式构造器入口 */
+export const xInputNumber = makeSimpleBuilder('InputNumber')
+
+// ── InputPassword ──
+/** xInputPassword —— InputPassword 快捷名（element-plus 内部映射到 ElInput.type=password） */
+export const xInputPassword = makeSimpleBuilder('InputPassword')
+
+// ── InputTag ──
+/** xInputTag —— InputTag 组件链式构造器入口 */
+export const xInputTag = makeSimpleBuilder('InputTag')
+
+// ── InputTextArea ──
+/** xInputTextArea —— InputTextArea 快捷名（element-plus 内部映射到 ElInput.type=textarea） */
+export const xInputTextArea = makeSimpleBuilder('InputTextArea')
+
+// ── Mention ──
+/** xMention —— Mention 组件链式构造器入口 */
+export const xMention = makeSimpleBuilder('Mention')
+
+// ── Option ──
+/** xOption —— Select Option 组件链式构造器入口 */
+export const xOption = makeSimpleBuilder('Option')
+
+// ── Radio ──
+/** xRadio —— Radio 组件链式构造器入口 */
+export const xRadio = makeSimpleBuilder('Radio')
+
+// ── RadioGroup ──
+const RadioGroupBuilder = makeBuilder('RadioGroup')
 class RadioGroupBuilderExt extends RadioGroupBuilder {
   options(opts: Array<{ value: string; label: string }>): this {
-    const n = (this as unknown as { _b: InstanceType<typeof RadioGroupBuilder> })._b
-    ;(n.node as { children?: unknown }).children = opts.map((o) => ({
+    this.node.children = opts.map((o) => ({
       component: 'Radio',
       props: { value: o.value },
       children: o.label,
@@ -278,25 +326,54 @@ class RadioGroupBuilderExt extends RadioGroupBuilder {
     return this
   }
 }
+/**
+ * xRadioGroup —— RadioGroup 组件链式构造器入口
+ *
+ * @see RadioGroupBuilderExt Ext 方法：options (自动生成 Radio 子节点)
+ */
+export const xRadioGroup = (name: string) => new RadioGroupBuilderExt(name)
 
-/** CardBuilder 扩展 title / column / gutter */
-class CardBuilderExt extends CardBuilder {
-  title(t: string): this {
-    return this.prop('title', t)
-  }
-  column(c: number): this {
-    const b = (this as unknown as { _b: InstanceType<typeof CardBuilder> })._b
-    ;(b.node as { column?: number }).column = c
-    return this
-  }
-  gutter(g: number): this {
-    const b = (this as unknown as { _b: InstanceType<typeof CardBuilder> })._b
-    ;(b.node as { row?: { gutter?: number } }).row = { gutter: g }
-    return this
+// ── Rate ──
+/** xRate —— Rate 组件链式构造器入口 */
+export const xRate = makeSimpleBuilder('Rate')
+
+// ── Select ──
+const SelectBuilder = makeBuilder('Select')
+class SelectBuilderExt extends SelectBuilder {
+  options(opts: Array<{ value: unknown; label: string }>): this {
+    return this.prop('options', opts)
   }
 }
+/**
+ * xSelect —— Select 组件链式构造器入口
+ *
+ * @see SelectBuilderExt Ext 方法：options
+ */
+export const xSelect = (name: string) => new SelectBuilderExt(name)
 
-/** TimePickerBuilder 扩展 format / valueFormat / range(el-time-picker 特有) */
+// ── Slider ──
+/** xSlider —— Slider 组件链式构造器入口 */
+export const xSlider = makeSimpleBuilder('Slider')
+
+// ── Switch ──
+/** xSwitch —— Switch 组件链式构造器入口 */
+export const xSwitch = makeSimpleBuilder('Switch')
+
+// ── Textarea ──（复用 InputBuilder 的 props，type=textarea 模拟多行）
+class TextareaBuilderExt extends InputBuilder {
+  rows(n: number): this {
+    return this.prop('type', 'textarea').prop('rows', n)
+  }
+}
+/**
+ * xTextarea —— Textarea 快捷名（复用 InputBuilder，type=textarea + rows）
+ *
+ * @see TextareaBuilderExt Ext 方法：rows
+ */
+export const xTextarea = (name: string) => new TextareaBuilderExt(name)
+
+// ── TimePicker ──
+const TimePickerBuilder = makeBuilder('TimePicker')
 class TimePickerBuilderExt extends TimePickerBuilder {
   format(v: string): this {
     return this.prop('format', v)
@@ -308,8 +385,15 @@ class TimePickerBuilderExt extends TimePickerBuilder {
     return this.prop('isRange', true)
   }
 }
+/**
+ * xTimePicker —— TimePicker 组件链式构造器入口
+ *
+ * @see TimePickerBuilderExt Ext 方法：format / valueFormat / range
+ */
+export const xTimePicker = (name: string) => new TimePickerBuilderExt(name)
 
-/** TimeSelectBuilder 扩展 format / start / end / step(el-time-select 特有) */
+// ── TimeSelect ──
+const TimeSelectBuilder = makeBuilder('TimeSelect')
 class TimeSelectBuilderExt extends TimeSelectBuilder {
   format(v: string): this {
     return this.prop('format', v)
@@ -324,27 +408,15 @@ class TimeSelectBuilderExt extends TimeSelectBuilder {
     return this.prop('step', v)
   }
 }
+/**
+ * xTimeSelect —— TimeSelect 组件链式构造器入口
+ *
+ * @see TimeSelectBuilderExt Ext 方法：format / start / end / step
+ */
+export const xTimeSelect = (name: string) => new TimeSelectBuilderExt(name)
 
-/** UploadBuilder 扩展 action / accept / multiple / drag(el-upload 特有) */
-class UploadBuilderExt extends UploadBuilder {
-  action(url: string): this {
-    return this.prop('action', url)
-  }
-  accept(types: string): this {
-    return this.prop('accept', types)
-  }
-  multiple(): this {
-    return this.prop('multiple', true)
-  }
-  drag(): this {
-    return this.prop('drag', true)
-  }
-  listType(t: 'text' | 'picture' | 'picture-card' | 'picture-circle'): this {
-    return this.prop('listType', t)
-  }
-}
-
-/** TransferBuilder 扩展 data / titles / filterable / targetKeys(el-transfer 特有) */
+// ── Transfer ──
+const TransferBuilder = makeBuilder('Transfer')
 class TransferBuilderExt extends TransferBuilder {
   data(items: Array<{ key: unknown; label: string; disabled?: boolean }>): this {
     return this.prop('data', items)
@@ -356,11 +428,18 @@ class TransferBuilderExt extends TransferBuilder {
     return this.prop('filterable', true)
   }
   buttonTexts(btnLeft: string, btnRight: string): this {
-    return this.prop('button-texts', [btnLeft, btnRight] as never)
+    return this.prop('buttonTexts', [btnLeft, btnRight])
   }
 }
+/**
+ * xTransfer —— Transfer 穿梭框组件链式构造器入口
+ *
+ * @see TransferBuilderExt Ext 方法：data / titles / filterable / buttonTexts
+ */
+export const xTransfer = (name: string) => new TransferBuilderExt(name)
 
-/** TreeSelectBuilder 扩展 data / multiple / checkStrictly / nodeKey(el-tree-select 特有) */
+// ── TreeSelect ──
+const TreeSelectBuilder = makeBuilder('TreeSelect')
 class TreeSelectBuilderExt extends TreeSelectBuilder {
   data(tree: Array<unknown>): this {
     return this.prop('data', tree)
@@ -378,41 +457,53 @@ class TreeSelectBuilderExt extends TreeSelectBuilder {
     return this.prop('props', p as never)
   }
 }
+/**
+ * xTreeSelect —— TreeSelect 树形选组件链式构造器入口
+ *
+ * @see TreeSelectBuilderExt Ext 方法：data / multiple / checkStrictly / nodeKey / props
+ */
+export const xTreeSelect = (name: string) => new TreeSelectBuilderExt(name)
 
-/** CascaderBuilder 扩展 options / props / showAllLevels / separator(el-cascader 特有) */
-class CascaderBuilderExt extends CascaderBuilder {
-  options(opts: Array<unknown>): this {
-    return this.prop('options', opts)
+// ── Upload ──
+const UploadBuilder = makeBuilder('Upload')
+class UploadBuilderExt extends UploadBuilder {
+  action(url: string): this {
+    return this.prop('action', url)
   }
-  showAllLevels(): this {
-    return this.prop('showAllLevels', true)
+  accept(types: string): this {
+    return this.prop('accept', types)
   }
-  separator(s: string): this {
-    return this.prop('separator', s)
+  multiple(): this {
+    return this.prop('multiple', true)
   }
-  // el-cascader 的 expandTrigger 在 props 嵌套字段中,需要 props.expandTrigger
-  // 简化:用 prop() 直接覆盖整个 props(覆盖式更新),文档说明限制
-}
-
-/** AutocompleteBuilder 扩展 fetchSuggestions / triggerOnFocus / placement(el-autocomplete 特有) */
-class AutocompleteBuilderExt extends AutocompleteBuilder {
-  fetchSuggestions(
-    fn: (queryString: string, cb: (suggestions: Array<{ value: string }>) => void) => void
-  ): this {
-    return this.prop('fetchSuggestions', fn as never)
+  drag(): this {
+    return this.prop('drag', true)
   }
-  triggerOnFocus(): this {
-    return this.prop('triggerOnFocus', true)
-  }
-  placement(p: 'top' | 'top-start' | 'top-end' | 'bottom' | 'bottom-start' | 'bottom-end'): this {
-    return this.prop('placement', p)
+  listType(t: 'text' | 'picture' | 'picture-card' | 'picture-circle'): this {
+    return this.prop('listType', t)
   }
 }
+/**
+ * xUpload —— Upload 上传组件链式构造器入口
+ *
+ * @see UploadBuilderExt Ext 方法：action / accept / multiple / drag / listType
+ */
+export const xUpload = (name: string) => new UploadBuilderExt(name)
+
+// ────────────────────────────────────────────────────────────────────────────
+// 数组节点构建器（独立于 makeBuilder，因为不绑 el 组件 props）
+// 链式 API：item / initialLength / minItems / maxItems / showActions / labels / title / draggable
+// build() 返回 SchemaNode —— props 类型不推导（数组节点本身不带 props）
+// ────────────────────────────────────────────────────────────────────────────
 
 /**
- * 数组节点构建器（独立于 makeBuilder,因为不绑 el 组件 props）
- * 链式 API：item / initialLength / minItems / maxItems / showActions / labels / title
- * build() 返回 SchemaNode —— props 类型不推导(数组节点本身不带 props)
+ * ArrayBuilder —— 数组节点链式构造器（独立于 makeBuilder，因为不绑 el 组件 props）
+ *
+ * 链式 API：item / initialLength / minItems / maxItems / showActions / labels / title / draggable
+ * build() 返回 SchemaNode —— props 类型不推导（数组节点本身不带 props）
+ *
+ * @see ./render-array-node.ts 渲染逻辑
+ * @see ../types/array.ts ArrayNodeConfig 字段定义
  */
 export class ArrayBuilder {
   node: SchemaNode = { kind: 'array', array: { itemSchema: {} as SchemaNode } }
@@ -488,38 +579,25 @@ export class ArrayBuilder {
   }
 }
 
-/** 入口：链式构建 schema（返回类型带 props 推导） */
-export const xInput = (name: string) => new InputBuilderExt(name)
-export const xSelect = (name: string) => new SelectBuilderExt(name)
-export const xOption = (name: string) => new OptionBuilder(name)
-export const xSwitch = (name: string) => new SwitchBuilderExt(name)
-export const xDatePicker = (name: string) => new DatePickerBuilderExt(name)
-export const xTimePicker = (name: string) => new TimePickerBuilderExt(name)
-export const xTimeSelect = (name: string) => new TimeSelectBuilderExt(name)
-export const xTreeSelect = (name: string) => new TreeSelectBuilderExt(name)
-export const xUpload = (name: string) => new UploadBuilderExt(name)
-export const xAutocomplete = (name: string) => new AutocompleteBuilderExt(name)
-export const xTransfer = (name: string) => new TransferBuilderExt(name)
-export const xTextarea = (name: string) => new TextareaBuilderExt(name)
-export const xRadioGroup = (name: string) => new RadioGroupBuilderExt(name)
-export const xRadio = (name: string) => new RadioBuilder(name)
-export const xCheckboxGroup = (name: string) => new CheckboxGroupBuilder(name)
-export const xCheckbox = (name: string) => new CheckboxBuilder(name)
-export const xCascader = (name: string) => new CascaderBuilderExt(name)
-export const xInputNumber = (name: string) => new InputNumberBuilder(name)
-export const xInputPassword = (name: string) => new InputPasswordBuilder(name)
-export const xInputTextArea = (name: string) => new InputTextAreaBuilder(name)
-export const xInputTag = (name: string) => new InputTagBuilder(name)
-export const xColorPicker = (name: string) => new ColorPickerBuilder(name)
-export const xMention = (name: string) => new MentionBuilder(name)
-export const xRate = (name: string) => new RateBuilder(name)
-export const xSlider = (name: string) => new SliderBuilder(name)
-export const xCard = (name: string) => new CardBuilderExt(name)
+/** xArray —— 数组节点（kind='array'）链式构造器入口 */
 export const xArray = (name: string) => new ArrayBuilder(name)
 
 /**
- * 用法示例（编译时类型校验）：
+ * NodeBuilder 已通过 `export class` 声明，自动成为命名导出
+ * 高级用户可直接 `import { NodeBuilder } from '.../builders'` 继承自定义组件
  *
+ * @example
+ * class MyDatePickerBuilder extends NodeBuilder<'Input'> {
+ *   dateOnly(): this { return this.prop('type', 'date') }
+ * }
+ */
+
+// ────────────────────────────────────────────────────────────────────────────
+// 用法示例（编译时类型校验）
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * ```ts
  * const schema = {
  *   column: 2,
  *   row: { gutter: 24 },
@@ -533,4 +611,5 @@ export const xArray = (name: string) => new ArrayBuilder(name)
  *     //       ↑ 全部有类型推导
  *   ],
  * }
+ * ```
  */

@@ -2,7 +2,152 @@
 
 ## 未发布
 
+### ♻️ Refactor | XForm demo 可理解性深度修复（13 项 P0/P1/P2）
+
+基于批量可理解性审查（48 个 demo 评估 + 已读 13 个关键 demo 代码交叉验证）的修复批次：
+
+* **refactor(XFormBuilder):** 重写为真实 builder 链式代码
+  - 7 个字段全部用 `xCascader / xUpload / xTransfer / xTimePicker / xTimeSelect / xAutocomplete / xTreeSelect` 真实链式
+  - Upload 字段演示 builder + slots 混合写法（builder 不支持 slots 时的扩展模式）
+  - 修复前：标题写「builder 链式」但实际全用对象字面量；修复后：类型安全 + IDE 自动补全
+* **refactor(XFormAsyncOptionsError):** `immediate: false` 引擎限制独立成折叠面板
+  - 删除把限制当 demo 的 `cityLazy` 字段
+  - 主要演示 `onError` 回调 + `deps` 触发 source 重跑
+  - 新增「⚠️ API 限制说明」`el-collapse` 单独承载限制描述 + 变通方案
+* **refactor(XFormLargeSchema):** 加学习目标 + 30/120/300 三档对比 + 性能基准对照表
+  - `el-radio-group` 三档切换字段数（shallowRef 重建 schema）
+  - perf-panel 高亮展示 mount / build 耗时 + 档位 tag（流畅/可接受/需优化）
+  - placeholder 业务化（`sku-${i+1}` 模拟生产 SKU 命名）
+* **refactor(XFormSchemaIndex):** 用「4 类业务问题」开篇替换 6 Map 抽象展示
+  - 新增 4 类业务问题卡片：① 脏检查基线 ② 跨字段 watch ③ 反向依赖图 ④ 服务错误映射
+  - 每个 Map 配 1 个具体业务用例，让数据结构与业务问题一一对应
+* **refactor(XFormServerError):** intro 与 mock 对齐 + 移除响应式断点
+  - 删除响应式断点（已迁移到 XFormResponsive demo），单一职责专注服务端错误映射
+  - intro 文案与 4 类 mock 错误场景逐项对齐
+* **refactor(XFormBeforeChange):** source 标注改 XForm.vue + Tab C 加 ASCII 正则匹配示意图
+  - source 从 `build-vmodel-bindings.ts` 改 XForm.vue（在 intro 注释拦截逻辑所在文件）
+  - Tab C 命名空间新增 ASCII 图示解释 `/^contacts\[\d+\]\.phone$/` 命中规则
+* **refactor(XFormCustomFormItem):** inline 实现真实 `FormItemPlus` 组件
+  - 修复前：`component: 'FormItemPlus' as never` 未注册导致渲染异常
+  - 修复后：defineComponent 真实实现 + 通过 `XForm components` prop 注册
+  - schema 字段写法：`formItem.component: 'FormItemPlus'`（字符串名 + 注册，对 DSL 友好）
+* **refactor(XFormPersistSchemaVersion):** 加 7 步交互指引 + 弱化「引擎 bug」注释
+  - 新增 7 步交互指引 `el-collapse`（参考 XFormOrderCreate 引导模式）
+  - 「修正引擎 bug」注释改为中性「综合 hasDraft + lastSavedAt 作为按钮 disabled 依据」
+* **fix(XFormOrderCreate):** 能力清单表格第②项描述修正
+  - 表格写「onSave 内检查：客户名/电话至少一个」与 intro（`crossValidator`）矛盾
+  - 改为「`crossValidator`：客户名/电话至少一个（schema rules 自动触发，无需 onSave 内检查）」
+* **fix(XFormExpressionSandbox):** reaction 真正调用白名单函数
+  - 修复前：注册了 `toCurrency / upper / concat` 但 4 个 reaction 全用内联函数，白名单形同虚设
+  - 修复后：3 个 reaction 改字符串表达式 `{{ toCurrency(...) }}` / `{{ upper(...) }}` / `{{ concat(...) }}` 真正调用白名单
+  - 沙箱测试字段保留内联函数写法作为对比
+* **fix(XFormInvalidComponent):** 字段 D 命名统一
+  - 文件头注释「MyInput」「MyCustomInput」与 schema 实际 `MyUnregisteredComp` 不一致
+  - 注释统一为 `MyUnregisteredComp`（与对照组 `MyCustomInput` 区分清晰）
+* **feat(XForm / Upload / StyleOverride):** 加「先看这个」引导卡
+  - 3 个信息密度高的 demo 顶部加 `el-alert` 引导卡，标注核心场景 vs 进阶场景
+  - 减少 48 个 demo 侧边栏对新人造成的压迫感
+* **chore(demo):** 全局 placeholder 业务化整顿
+  - XFormBuilder：语言「主要编程语言」+ 部门「所属部门（树形多选）」
+  - XFormLargeSchema：字段 placeholder 部分用 `sku-${i+1}` 业务化
+
+### ✨ Features | demo 可理解度提升（P0）
+
+* **feat(demo-clarity):** 新增 `useConsoleCapture` composable + 8 个单测
+  - 在组件生命周期内捕获 `console.error` / `console.warn` 到 reactive `logs` 数组
+  - `onUnmounted` 还原原始 console（强约束避免污染全局）
+  - 内存 FIFO 上限 50 条；单条 message 500 字截断（防页面卡顿）
+  - 可选 prefix 过滤（XForm demo 统一传 `'[XForm]'`）
+* **feat(demo-clarity):** 新增 `ConsoleLogPanel` 公共组件
+  - ElCollapse 默认折叠；error 红 / warn 黄
+  - 视图层 200 字二次截断；emit `clear` 事件（单一职责）
+* **refactor(XFormInvalidComponent):** 字段 label 加预期状态后缀 + 接入 console 面板
+  - A / B / E 加「（应通过）」；C / D 加「（应警告）」
+  - introduction 文案改为「下方控制台输出面板自动展示」（不再依赖 DevTools）
+* **refactor(XFormModelWarn):** 引入 console 面板
+  - 下方面板自动展示场景 1 的 [XForm] model 警告
+* **refactor(XFormExpressionSandbox):** 引入 console 面板
+  - 沙箱拒绝原因（document / fetch 屏蔽）实时展示
+* **feat(XFormOrderCreate):** 验证指引面板搬到 UI
+  - 顶部 `el-collapse` 默认折叠；展开后看到 7 条编号指引
+  - 新人首屏即可看到验证步骤，无须打开源码注释
+* **docs(demo-clarity):** 设计文档 `docs/superpowers/specs/2026-09-02-xform-demo-clarity-design.md` + 实现计划 `docs/superpowers/plans/2026-09-02-xform-demo-clarity.md`
+
+### ✨ Features | demo sidebar 模糊搜索
+
+* **feat(demo-search):** `DocLayout.vue` sidebar 顶部新增常驻搜索框
+  - 匹配字段：`label`（中文名 + 组件名拼接的完整显示名）+ `name`（组件名），不区分大小写子串匹配
+  - 分组行为：未命中分组整组隐藏；命中分组强制展开（搜索激活态）
+  - 空状态：sidebar 列表区显示「未匹配到「xxx」」+ 「清空搜索」按钮
+  - 折叠快照：搜索期间 toggleGroup 不响应；模板 `v-show` 加 `isSearchActive` 前缀强制展开命中组；清空后 `collapsedGroups` 值不变 → 用户折叠偏好不被污染
+  - 路由切换保留输入框内容（避免跳转打断检索）
+  - 「返回首页」按钮 + 搜索框包成 `__sidebar-top` sticky 容器 —— sidebar 内容超长滚动时两者始终可见
+* **feat(demo-search):** 新增 `composables/useDemoSearch.ts` + 10 条单测
+  - 类型导出：`DemoSearchItem` / `DemoSearchGroup` / `UseDemoSearchOptions` / `UseDemoSearchReturn`
+  - composable 设计：「不修改 `collapsedGroups` + 模板 `v-show` 加 `isSearchActive` 前缀」即满足折叠快照需求，零额外状态
+* **docs(demo-search):** 设计文档 `docs/superpowers/specs/2026-09-02-demo-sidebar-search-design.md` + 实现计划 `docs/superpowers/plans/2026-09-02-demo-sidebar-search.md`
+
+### ✨ Features | beforeChange 3 层升级 + label 字段级颗粒度
+
+* **feat(form-schema):** `beforeChange` 从单一全局拦截升级为 3 层拦截器
+  - 第 1 层：XFormProps.beforeChange（横切关注点：埋点 / 全局拦截）
+  - 第 2 层：XFormProps.beforeChangeRules（动态命名空间：数组节点统一处理）
+  - 第 3 层：SchemaNode.beforeChange（业务内聚性最高）
+  - 执行顺序：L1 → L2（多规则按数组顺序串行）→ L3；任一层返回新值透传给下一层；Promise.reject 中断整个 chain；同步 throw 被 warn + 放行原值给下一层
+  - 新增 `BeforeChangeCtx` 上下文：`setFieldValue`（联动修改其他字段）/ `setFieldError`（显示红字）/ `abort`（取消写入）/ `name`（当前字段路径）
+* **feat(form-schema):** labelPosition / labelWidth 支持字段级颗粒度
+  - 顶层 schema 配置作整体默认；SchemaNode.labelPosition / SchemaNode.labelWidth 字段级 override 顶层
+  - element-plus ElFormItem 与 ElForm 共享同一套 labelPosition / labelWidth props，字段级配置透传到 ElFormItem
+  - 字段级未声明时 ElFormItem 自动继承 ElForm 顶层（element-plus 原生行为）
+  - 推翻旧注释"labelPosition 字段级不生效——element-plus 限制"——element-plus 原生支持字段级
+
+### 📝 Docs | 文档同步更新
+
+* **docs(demo):** 新增 `src/modules/demo/docs/如何写好一个 demo.md` —— demo 编写规范
+  - 明确 demo 定位、目录职责、新增三步、页面结构规范
+  - 提供指导思想（一事一 demo、对照组、验证方法、界面化日志）
+  - 给出 DemoFrame / DemoField / ApiTable / DocToc / ModelPreview 使用指南
+  - 列出常见反模式与提交前自检清单
+  - 附最小可运行示例模板
+* **docs(form-schema):** README / ARCHITECTURE 同步更新 —— 3 层 beforeChange 数据流图 + 字段级 label override 颗粒度说明
+* **demo(form-schema):** 重写 XFormBeforeChange.vue —— `el-tabs` 三段演示（A 全局 Props / B 字段级 / C 命名空间）
+* **demo(form-schema):** 扩展 XFormLabelLayout.vue —— 加备注字段 `labelPosition: 'top'` 字段级 override 演示
+* **demo(form-schema):** sidebar XFormBeforeChange 中文名更新为「字段值拦截·3 层」
+* **demo(form-schema):** xform-demos-api.ts beforeChangePropsItems / labelLayoutItems 条目扩展
+
+### 📝 Docs | 设计 + 计划文档
+
 ### 🐛 Bug Fixes | 问题修复
+
+* **demo(form-schema):** 修复新增 XForm demo 的 `:introductions` attribute 内嵌 ASCII 双引号导致 Vite 编译失败
+  - 现象：`Attribute name cannot contain U+0022 ("), U+0027 ('), and U+003C (<)` —— 路由 `/demo/x-form-persist-schema-version` 等首次访问即报
+  - 根因：HTML attribute 上下文（`:introductions="..."`）中嵌入裸 `"..."` 双引号被 HTML parser 解析为属性结束符，后续中文字符被识别为新 attribute name 触发非法字符错误
+  - 影响范围：4 个新 demo（XFormPersistSchemaVersion / XFormAsyncOptionsError / XFormZod / XFormIgnore）
+  - 修复：模板 attribute 字符串中的 `"..."` 改成中文「」括号（如「保存草稿」「加载失败」「传给后端的隐藏字段」）
+  - 注意：script 块 JS 单引号字符串内嵌 ASCII 双引号仍合法（HTML parser 不解析），保留原样
+
+### ✨ Demo | 补全 XForm 10 个核心能力演示（覆盖 README 中零示例 props/方法）
+
+* **demo(form-schema):** 新增 10 个 XForm demo —— 覆盖 README §props（10 个）与 §schema 字段速查表（30 个）中此前零独立 demo 的能力点
+  - P0 核心：XFormBeforeChange（`XFormProps.beforeChange` 拦截器，值写入 model 前自动格式化 / 超额拦截回弹）、XFormZod（`zodSchema` + `validateWithZod()` 集中式 zod 业务校验）、XFormCustomComponent（`components` prop 注册业务自定义 Component，含 MyTagSelector h() 写法演示）
+  - P1 重要：XFormIgnore（`schema.ignore` 字段不渲染 / 不校验 / 不入 `getNames`，可作传给后端的隐藏字段）、XFormCustomFormItem（`schema.formItem` 自定义包装含 `false` 裸渲染 / `slots.label` 自定义 / `component` 换 FormItemPlus / `props.labelWidth` 单字段独立宽度）、XFormLabelLayout（顶层 `labelPosition` / `labelWidth` 响应式布局，含 left/right/top 三档切换，强调节点级无效）
+  - P2 实例 API：XFormArrayApi（`addItem` / `removeItem` / `moveItem` 编程式操控数组节点，演示外部按钮与拖拽结果一致 + 批量导入 + 头插尾插）
+  - P3 隐含能力挑明：XFormExpressionSandbox（`expressionFunctions` 白名单函数注册 + 沙箱安全 scanForForbidden 演示，含 document/fetch forbidden 触发的 console.error + Debug Banner 红字）、XFormPersistSchemaVersion（`useFormPersist.restoreFilter` schema 升级裁剪旧草稿，含 v1→v2 字段重命名/移除/新增的完整迁移演示）、XFormAsyncOptionsError（`asyncOptions.onError` 错误处理 + `immediate: false` 延迟加载 + 强制失败开关）
+  - 路由 + sidebar 完全自动注册（`routes/index.ts` 的 `import.meta.glob` + `sidebar-groups.ts` 的 CN_NAMES 加 10 行），零侵入
+  - 每个 demo ≤200 行（展示组件规范），全套符合 BEM 命名空间（`vv-demo-x-form-{name}`）+ `<style lang="scss">` 无 scoped + `createNamespace` 自动注入
+
+### 📝 Docs | XForm README 与 API 数据同步更新
+
+* **docs(form-schema):** README 新增「小白上手路径」section —— 4 阶段阅读清单（5 分钟建体感 → 30 分钟看完整业务形态 → 按需深入单能力 → 查缺补漏）
+* **docs(form-schema):** README 新增「按症状定位」对照表 —— 10 种常见现象（反应式不响应 / 校验不触发 / 表单填错很多要展示服务端错误 / 性能问题 / 控制台报错但 UI 没提示 / 草稿数据回填字段对不上 / 自定义组件被识别为原生标签 / 接入 schema 后字段全失效 / 想拦截输入值）→ 直接跳转对应 demo
+* **docs(form-schema):** `xform-demos-api.ts` 新增 7 个 XFormApiItem[] export（`beforeChangePropsItems` / `zodItems` / `customComponentItems` / `ignoreItems` / `customFormItemItems` / `labelLayoutItems` / `arrayApiItems`），为对应 demo 提供 ApiTable 数据源
+
+### 🐛 Bug Fixes | 问题修复
+
+* **router:** 路由切换后页面滚动到顶部（修复 demo 切换导航时滚动位置未复位）
+  - 根因：`src/router/index.ts` 的 `createRouter` 未配置 `scrollBehavior`，切换路由时浏览器沿用旧滚动位置 —— demo 左侧菜单切换时右侧内容区不会回到顶部
+  - 修复：新增 `scrollBehavior` 选项 —— 浏览器前进/后退用 `savedPosition`、带 hash 锚点平滑滚到目标元素、其余情况 `{ top: 0, left: 0 }`
+  - 验证：`pnpm type-check` / `pnpm lint src/router/index.ts` 全绿
 
 * **form-schema:** `listType: 'text' | 'picture'` 的 Upload 字段完全不可交互
   - 现象：`/demo/xform-upload` 页的「附件列表」「手动上传」「上传前校验」「已上传文件回显」四个字段看不到任何上传入口，点不动

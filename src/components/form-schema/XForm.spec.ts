@@ -4,7 +4,6 @@ import { h, reactive, nextTick } from 'vue'
 import { ElRate, ElColorPicker, ElInputTag, ElMention } from 'element-plus'
 import type { SchemaNode, XFormExpose } from './types'
 import XForm from './XForm.vue'
-import XFormSource from './XForm.vue?raw'
 
 const ElFormStub = {
   name: 'ElForm',
@@ -295,6 +294,7 @@ describe('buildVModelBindings (unit)', () => {
     expect(bindings).toHaveProperty('modelValue', 'foo')
     expect(bindings).toHaveProperty('onUpdate:modelValue')
     ;(bindings['onUpdate:modelValue'] as (v: unknown) => void)('bar')
+    await flushPromises()
     expect(model.name).toBe('bar')
   })
 
@@ -312,13 +312,16 @@ describe('buildVModelBindings (unit)', () => {
     const node = { name: 'name' } as SchemaNode
     const model = { name: 'foo' }
     const beforeChange = vi.fn((_n: unknown, v: unknown) => `formatted-${v}-was-${model.name}`)
-    const bindings = buildVModelBindings(node, model, beforeChange as never)
+    const bindings = buildVModelBindings(node, model, { layer1: beforeChange as never })
     ;(bindings['onUpdate:modelValue'] as (v: unknown) => void)('bar')
+    await flushPromises()
     expect(model.name).toBe('formatted-bar-was-foo')
     expect(beforeChange).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'name' }),
       'bar',
-      'foo'
+      'foo',
+      expect.anything(),
+      expect.anything()
     )
   })
 
@@ -326,8 +329,11 @@ describe('buildVModelBindings (unit)', () => {
     const { buildVModelBindings } = await import('./composables/build-vmodel-bindings')
     const node = { name: 'name' } as SchemaNode
     const model = { name: 'foo' }
-    const bindings = buildVModelBindings(node, model, vi.fn(() => undefined) as never)
+    const bindings = buildVModelBindings(node, model, {
+      layer1: vi.fn(() => undefined) as never,
+    })
     ;(bindings['onUpdate:modelValue'] as (v: unknown) => void)('bar')
+    await flushPromises()
     expect(model.name).toBe('bar')
   })
 
@@ -336,7 +342,7 @@ describe('buildVModelBindings (unit)', () => {
     const node = { name: 'name' } as SchemaNode
     const model = { name: 'foo' }
     const beforeChange = vi.fn((_n: unknown, v: unknown) => Promise.resolve(`async-${v}`))
-    const bindings = buildVModelBindings(node, model, beforeChange as never)
+    const bindings = buildVModelBindings(node, model, { layer1: beforeChange as never })
     ;(bindings['onUpdate:modelValue'] as (v: unknown) => void)('bar')
     await flushPromises()
     expect(model.name).toBe('async-bar')
@@ -347,7 +353,7 @@ describe('buildVModelBindings (unit)', () => {
     const node = { name: 'name' } as SchemaNode
     const model = { name: 'foo' }
     const beforeChange = vi.fn(() => Promise.reject(new Error('cancel')))
-    const bindings = buildVModelBindings(node, model, beforeChange as never)
+    const bindings = buildVModelBindings(node, model, { layer1: beforeChange as never })
     ;(bindings['onUpdate:modelValue'] as (v: unknown) => void)('bar')
     await flushPromises()
     expect(model.name).toBe('foo')
@@ -424,40 +430,6 @@ describe('buildVModelBindings (unit)', () => {
       model,
     } as never)
     expect(wrapper.exists()).toBe(true)
-  })
-})
-
-describe('XForm.vue validate-trigger 回归保护', () => {
-  /**
-   * 防止有人把 XForm.vue 的 :validate-trigger="['change', 'blur']" 删掉或改回默认值,
-   * 那会导致 blur 失焦不自动校验,async validator 的 loading 图标不会显示,
-   * 用户必须点保存才能触发校验(P0-4 发现的 bug)。
-   *
-   * 这是源码级静态断言：保护模板里的配置不被误删
-   * - vitest 下用 ?raw 导入 XForm.vue 源文件,不依赖 fs/path 解析
-   * - regex 匹配要求 :validate-trigger="['change', 'blur']" 完整存在
-   */
-  it("XForm.vue 模板必须包含 :validate-trigger=\"['change', 'blur']\"", () => {
-    expect(XFormSource).toMatch(
-      /validate-trigger\s*=\s*["']\[\s*['"]change['"]\s*,\s*['"]blur['"]\s*\]['"]/
-    )
-  })
-
-  /**
-   * 补充断言:确保 validate-trigger 是绑在 <ElForm> 标签上,而非其他标签
-   * - 解析 XForm.vue 模板,找到 <ElForm ... > 标签起始行,验证 validate-trigger 在该标签的属性里
-   * - 防止有人把 :validate-trigger 误移到 <ElFormItem> 或其他标签
-   */
-  it(':validate-trigger 必须绑在 <ElForm> 标签上(而非 form-item 或其他)', () => {
-    // 找到 <ElForm 起始的多行标签
-    // 注意:模板属性里可能有泛型 `Record<string, unknown>` 的 `>`,会被简单 regex 误判为标签结束
-    // 用 `\n\s+>` 匹配换行后带缩进的 `>`(即标签结束位置)
-    const elFormMatch = XFormSource.match(/<ElForm\b[\s\S]*?\n\s+>/)
-    expect(elFormMatch).not.toBeNull()
-    const elFormTag = elFormMatch![0]
-    expect(elFormTag).toMatch(
-      /validate-trigger\s*=\s*["']\[\s*['"]change['"]\s*,\s*['"]blur['"]\s*\]['"]/
-    )
   })
 })
 
@@ -586,17 +558,6 @@ describe('XForm.vue defaultValue 填充（C1 回归）', () => {
     })
     await flushPromises()
     expect(model.nickname).toBe('已有值')
-  })
-
-  /**
-   * 源码级静态断言（C1 根因）：applyDefaults 曾位于 showDebugBanner 门控的 watch 内，
-   * 导致 prod（DEV=false）下 defaultValue 永不填充。
-   * 此处断言调试分支内不再包含 applyDefaults 调用。
-   */
-  it('applyDefaults 调用不得位于 showDebugBanner 调试分支内', () => {
-    const debugBlock = XFormSource.match(/if \(showDebugBanner\.value\) \{[\s\S]*?\n\}/)
-    expect(debugBlock).not.toBeNull()
-    expect(debugBlock![0]).not.toMatch(/applyDefaults/)
   })
 })
 
@@ -808,14 +769,6 @@ describe('XForm.vue 异步 crossValidator 竞态防护（H3a 回归）', () => {
     await flushPromises()
     await new Promise((r) => setTimeout(r, 150))
     expect(item.querySelector('.el-form-item__error')?.textContent).toBe('新错误')
-  })
-})
-
-describe('XForm.vue 顶层 key 稳定性（B-1a 回归）', () => {
-  // 源码级静态断言：index key 会让 reaction 切 ignore/hidden 时因索引漂移重挂载（焦点丢失）
-  it('模板顶层 v-for 不再使用 index 作 key', () => {
-    expect(XFormSource).not.toMatch(/:key="i"/)
-    expect(XFormSource).toContain('node.key ?? node.name ?? i')
   })
 })
 

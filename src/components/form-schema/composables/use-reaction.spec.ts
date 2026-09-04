@@ -305,3 +305,68 @@ describe('applyReactions(node, model, stoppers)', () => {
     errSpy.mockRestore()
   })
 })
+
+/**
+ * P2-3 reactionBudget 可配置化 守护测试
+ *
+ * 验证点：
+ * 1. createBudget(max) 接受 max 参数,budget 实例 .max 字段可读
+ * 2. 默认 max = DEFAULT_REACTION_BUDGET = 50
+ * 3. console.error 模板用 budget.max（不是硬编码常量）—— 修复 P2-3 typo
+ * 4. 透过 useSchemaRenderer 链路，XFormProps.reactionBudget 改变 console 文案
+ */
+describe('P2-3 reactionBudget 可配置化', () => {
+  it('createBudget 默认 max = DEFAULT_REACTION_BUDGET (50)', async () => {
+    const { createBudget, DEFAULT_REACTION_BUDGET } = await import('./use-reaction')
+    expect(DEFAULT_REACTION_BUDGET).toBe(50)
+    const budget = createBudget()
+    expect(budget.max).toBe(50)
+    // 默认预算允许 50 次进入
+    for (let i = 0; i < 50; i++) {
+      expect(budget.enter()).toBe(true)
+    }
+    // 第 51 次拒绝
+    expect(budget.enter()).toBe(false)
+  })
+
+  it('createBudget(自定义 max) 接受任意 max 值', async () => {
+    const { createBudget } = await import('./use-reaction')
+    const budget = createBudget(10)
+    expect(budget.max).toBe(10)
+    for (let i = 0; i < 10; i++) {
+      expect(budget.enter()).toBe(true)
+    }
+    expect(budget.enter()).toBe(false)
+  })
+
+  it('applyReactions 触发循环时 console.error 文案含 budget.max（非硬编码 50）', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { applyReactions, createBudget } = await import('./use-reaction')
+    const model = reactive({ a: 0 })
+    const node = {
+      reaction: {
+        deps: ['a'],
+        // 写自身依赖 → 触发循环
+        label: (m: { a: number }) => {
+          m.a++
+          return 'x'
+        },
+      },
+    } as unknown as SchemaNode
+    const stoppers: (() => void)[] = []
+    const budget = createBudget(100)
+    const scope = effectScope()
+    scope.run(() => {
+      applyReactions(node, model, stoppers, budget)
+    })
+    model.a = 5
+    await nextTick()
+    await nextTick()
+    // 关键断言：文案必须含 "100"（实际 max），不能是 "50"（硬编码常量）
+    expect(errSpy).toHaveBeenCalledWith(expect.stringContaining('100'))
+    expect(errSpy).not.toHaveBeenCalledWith(expect.stringContaining('超过 50 次'))
+    scope.stop()
+    stoppers.forEach((s) => s())
+    errSpy.mockRestore()
+  })
+})

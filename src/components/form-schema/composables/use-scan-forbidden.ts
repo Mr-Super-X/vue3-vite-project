@@ -1,18 +1,22 @@
+/**
+ * use-scan-forbidden —— schema 表达式危险标识符 dev 扫描器
+ *
+ * 仅在 dev mode 触发（useDevRuntime 门控）：console.warn + DebugBanner 提示，
+ * 不阻断渲染。真实安全边界是 schema 来自可信配置（README §安全）；本扫描仅做兜底提醒。
+ *
+ * 性能防护：WeakSet 去重 + MAX_DEPTH 32 + MAX_NODES 10000 防止恶意巨型 schema 拖死诊断路径。
+ */
 import type { SchemaNode } from '../types'
 
 // 危险标识符黑名单：覆盖 OWASP A03 Injection 主要攻击面
 // 取舍说明：open/location/navigator 未收录 —— 与常见表单字段同名（model.location 等），
-// 而本扫描是 dev 诊断（console.error + DebugBanner），误报噪声大于收益；
-// 真正的安全边界是 schema 必须来自可信配置（README 已声明，本扫描只是兜底提醒）
+// 误报噪声大于收益
 const FORBIDDEN_REG =
   /\b(window|document|globalThis|self|top|parent|frames|eval|Function|setTimeout|setInterval|fetch|XMLHttpRequest|process|Reflect|Proxy|constructor|__proto__|prototype|localStorage|sessionStorage|indexedDB|import|require|alert|prompt|confirm)\b/
 const MAX_DEPTH = 32
 const MAX_NODES = 10_000
 
-/**
- * 扫描 schema 中所有可执行字段（on/reaction/disabled/permission/directives/slots/formItem.slots）的危险标识符
- * 防护：WeakSet 去重 + 最大深度 32 + 最大节点数 10000
- */
+/** 扫描 on/reaction/disabled/permission/directives/slots/formItem.slots 中危险标识符，返回命中路径清单 */
 export function scanForForbidden(schema: SchemaNode | SchemaNode[]): string[] {
   const errors: string[] = []
   const seen = new WeakSet<object>()

@@ -1,29 +1,40 @@
+/**
+ * use-reaction —— reaction 应用 + 联动执行预算（防循环联动卡死）
+ *
+ * 为什么需要预算：reaction 允许写 model 副作用，deep watch 会再次触发 runner，
+ * 一旦构成环（A 改 B、B 改 A）将无限刷入 Vue 调度队列，页面卡死且无报错。
+ * 预算耗尽降级为 console.error，把"卡死"转为"可诊断错误"。
+ *
+ * 应用策略：sync / debounce / throttle + 可选 deps 精确监听。
+ */
 import { nextTick, watch } from 'vue'
 import { debounce, get, throttle } from 'lodash-es'
 import type { SchemaNode } from '../types'
 import { applyReactionFields } from './apply-reaction-fields'
 
-/** 单 flush 内 reaction 最大执行次数 —— 超出视为循环联动（reaction 写 model 又触发自身）。
- *  必须低于 Vue 调度器自身的递归上限（100）：先一步拦截可避免 Vue 抛出
- *  "Maximum recursive updates exceeded" 未处理异常，把卡死降级为可诊断的 console.error */
-const MAX_CHAIN_PER_FLUSH = 50
+/** 单 flush 内 reaction 最大执行次数 —— 必须低于 Vue 调度器自身递归上限（100），
+ *  先一步拦截避免 "Maximum recursive updates exceeded" 未处理异常把卡死降级为 console.error */
+export const DEFAULT_REACTION_BUDGET = 50
 
-/**
- * 联动执行预算：每个表单实例一份，nextTick 后自动重置。
- * 为什么需要：reaction 函数允许写 model 副作用，deep watch 会再次触发 runner，
- * 一旦构成环（A 改 B、B 改 A）将无限刷入 Vue 调度队列，页面卡死且无报错。
- * 预算耗尽后本 flush 直接跳过并 console.error，把"卡死"降级为"可诊断的错误"。
- */
-interface ReactionBudget {
+/** 联动执行预算：每个表单实例一份，nextTick 后自动重置。耗尽返回 false 跳过本次执行 */
+export interface ReactionBudget {
+  /** 单 flush 内允许的最大执行次数（XFormProps.reactionBudget 透传） */
+  readonly max: number
+  /** 尝试进入预算,返回 true=允许, false=预算已耗尽 */
   enter: () => boolean
 }
 
-function createBudget(): ReactionBudget {
+/** 创建一份 reaction 执行预算（参数化 max，供 XFormProps.reactionBudget 透传）
+ *
+ * @param max 单 flush 内 reaction 最大执行次数，默认 DEFAULT_REACTION_BUDGET (50)
+ */
+export function createBudget(max: number = DEFAULT_REACTION_BUDGET): ReactionBudget {
   let count = 0
   let resetScheduled = false
   return {
+    max,
     enter() {
-      if (count >= MAX_CHAIN_PER_FLUSH) return false
+      if (count >= max) return false
       count++
       if (!resetScheduled) {
         resetScheduled = true
@@ -37,7 +48,7 @@ function createBudget(): ReactionBudget {
   }
 }
 
-/** 检查 schema 中是否含 reaction 字段（含字段时才需启用 watchEffect） */
+/** 是否含 reaction 字段（含字段时才需启用 watchEffect） */
 export function containsReaction(schema: SchemaNode | SchemaNode[]): boolean {
   let found = false
   traverse(schema)
@@ -74,12 +85,14 @@ export function containsReaction(schema: SchemaNode | SchemaNode[]): boolean {
   }
 }
 
-/** 应用 reaction：按需注册 watch（仅函数/函数表达式字符串）；求值错误 → console.error
- *  支持 strategy: 'sync' | 'debounce' | 'throttle' + delay
- *  - 'sync'(默认):依赖变化立即同步执行
- *  - 'debounce':依赖停止变化 delay ms 后执行一次（适合远程搜索）
- *  - 'throttle':delay ms 内最多执行一次（适合实时保存）
- *  支持 deps: string[] —— 声明后仅精确 watch 这些路径；未声明保持 deep watch 整棵 model 的旧行为 */
+/**
+ * 应用 reaction：按需注册 watch（仅函数/函数表达式字符串）；求值错误 → console.error
+ *
+ * - strategy: 'sync'(默认) | 'debounce' | 'throttle' + delay
+ *   - 'debounce': 依赖停止变化 delay ms 后执行一次（适合远程搜索）
+ *   - 'throttle': delay ms 内最多执行一次（适合实时保存）
+ * - deps: string[] —— 声明后精确 watch 这些路径；未声明保持 deep watch 整棵 model 旧行为
+ */
 export function applyReactions(
   node: SchemaNode,
   model: Record<string, unknown>,
@@ -102,7 +115,7 @@ export function applyReactions(
       const runner = (): void => {
         if (!budget.enter()) {
           console.error(
-            `[XForm] reaction 单批次执行超过 ${MAX_CHAIN_PER_FLUSH} 次，疑似循环联动` +
+            `[XForm] reaction 单批次执行超过 ${budget.max} 次，疑似循环联动` +
               '（reaction 写入 model 又触发自身）。本批次已跳过，请检查联动链或声明 deps 缩小监听范围。'
           )
           return

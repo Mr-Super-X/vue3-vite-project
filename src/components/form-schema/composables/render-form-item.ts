@@ -1,28 +1,25 @@
 /**
- * FormItem 包装渲染（含 name 或 formItem: true 的节点）
- * - 外层包 el-form-item（label + prop + rules + onFocusout/onChange 跨字段触发）
- * - 内部渲染 Comp（v-model/on 事件 + 默认 props + node.props + async props + disabled + key）
- * - formItem 节点的 slots 转发给内部 Comp（如 el-upload 的 tip 槽位）
- * - 末尾 wrapWithElCol 应用 col 响应式断点
+ * FormItem 包装渲染：外层 el-form-item 承担 label + prop + rules + onFocusout 跨字段触发，
+ * 内部渲染业务 Comp，末尾 wrapWithElCol 应用 col 响应式断点。
+ *
+ * 类型断言（`as never`）归因见 types/TYPE-CAST-AUDIT.md。
  */
 import { h, type VNode } from 'vue'
 import { ElFormItem, ElRow, ElCol, ElUpload } from 'element-plus'
-import type { SchemaNode } from '../types'
+import type { SchemaNode, SchemaSlot } from '../types'
 import { buildVModelBindings } from './build-vmodel-bindings'
 import { buildOnBindings } from './build-on-bindings'
 import {
   buildSlotFn,
   buildUploadTipSlot,
-  compileRules,
-  getComponentDefaultProps,
   buildAsyncProps,
   buildUploadDefaultSlot,
-  resolveComponentFor,
-  wrapWithElCol,
-  mergeRowResponsive,
-} from './render-schema-node'
+  getComponentDefaultProps,
+} from './barrel'
+import { compileRules, resolveComponentFor, wrapWithElCol, mergeRowResponsive } from './barrel'
 import type { RenderSchemaNodeOptions } from './render-schema-node'
 
+/** renderWithFormItem —— FormItem 包装渲染（含 name 或 formItem:true 的节点） */
 export function renderWithFormItem(
   node: SchemaNode,
   Comp: object | string | null,
@@ -57,7 +54,13 @@ export function renderWithFormItem(
   }
 
   const eventBindings = {
-    ...buildVModelBindings(node, opts.model, opts.beforeChange, opts.onValueChange),
+    ...buildVModelBindings(node, opts.model, {
+      layer1: opts.beforeChange,
+      namespaceRules: opts.beforeChangeRules,
+      makeCtx: opts.makeBeforeChangeCtx,
+      formRef: opts.formRef,
+      onValueChange: opts.onValueChange,
+    }),
     ...buildOnBindings(node, opts.model),
   }
   const asyncProps = buildAsyncProps(node)
@@ -70,11 +73,23 @@ export function renderWithFormItem(
 
   // 阶段 2.4 修复(嵌套顺序):
   // 正确嵌套: ElRow > ElCol > ElFormItem > Comp
+  // 转发 formItem.slots（特别是 label slot 用于自定义 label 内容）—— ElFormItem 的 label 是 slot 名称
+  const formItemSlots: Record<string, (scope?: unknown) => unknown> = {}
+  if (fi?.slots) {
+    for (const [k, v] of Object.entries(fi.slots)) {
+      // label slot 走 buildSlotFn 递归渲染 schema 节点；其他 slot 同样处理
+      formItemSlots[k] = buildSlotFn(v as SchemaSlot, opts.render)
+    }
+  }
   const formItem = h(
     FormItemComp as never,
     {
       label: node.label,
       prop: node.name,
+      // ⭐ 字段级 label 配置 override 顶层（el-form-item 与 el-form 共享 labelPosition/labelWidth）
+      // 字段级未设置时 el-form-item 自动继承 el-form 顶层（element-plus 原生行为）
+      ...(node.labelPosition !== undefined ? { labelPosition: node.labelPosition } : {}),
+      ...(node.labelWidth !== undefined ? { labelWidth: node.labelWidth } : {}),
       // hidden 字段剥离 rules：隐藏必填项若参与校验会让 validate 恒 false，
       // 且 scrollToError 会滚动到 display:none 的元素（用户看不到任何错误）。
       // 保留 prop 注册（el-form-item 挂载时注册时机固定，动态增删 prop 不可靠），
@@ -88,7 +103,9 @@ export function renderWithFormItem(
       // key 优先级：node.key（身份标识，数组行内为行对象身份前缀）> node.name（校验路径，含位置索引）
       // —— 若优先 name，数组删/移行后 fi-items[0].qty 漂移导致 form-item 重挂载
       ...(node.name || node.key ? { key: `fi-${node.key ?? node.name}` } : {}),
-    } as never,
+    } as Record<string, unknown>,
+    // ⭐ 第 3 参：ElFormItem 的 slots 对象——合并 formItemSlots（用户自定义 label/error 等）
+    // Comp 内部渲染（Input 组件）由 default slot 提供
     Comp
       ? {
           default: () => {
@@ -115,12 +132,17 @@ export function renderWithFormItem(
                 ...asyncProps,
                 ...(node.disabled !== undefined ? { disabled: node.disabled } : {}),
                 ...(node.key !== undefined && { key: node.key }),
-              } as never,
+              } as Record<string, unknown>,
               { default: defaultSlot, ...extraSlots }
             )
           },
+          // ⭐ 合并 formItemSlots（用户自定义 formItem slots，如 label）到 ElFormItem 的 slots
+          // formItemSlots 的 key（如 label/error）会覆盖 ElFormItem 默认同名 slot
+          ...formItemSlots,
         }
-      : undefined
+      : Object.keys(formItemSlots).length > 0
+        ? formItemSlots
+        : undefined
   ) as VNode
   // wrapWithElCol(ElCol) 包 formItem —— 正确嵌套顺序
   return wrapWithElCol(node, formItem, opts.currentBreakpoint?.value)
@@ -138,7 +160,7 @@ export function renderWithRowColumn(node: SchemaNode, opts: RenderSchemaNodeOpti
   const mergedRow = mergeRowResponsive(node.row, opts.currentBreakpoint?.value)
   return h(
     ElRow as never,
-    { ...mergedRow, ...(node.key !== undefined && { key: node.key }) } as never,
+    { ...mergedRow, ...(node.key !== undefined && { key: node.key }) } as Record<string, unknown>,
     {
       default: () =>
         h(
@@ -149,7 +171,7 @@ export function renderWithRowColumn(node: SchemaNode, opts: RenderSchemaNodeOpti
               ? { responsive: node.col.responsive }
               : {}),
             ...(node.key !== undefined && { key: node.key }),
-          } as never,
+          } as Record<string, unknown>,
           {
             default: () => opts.render(node.children as never),
           }

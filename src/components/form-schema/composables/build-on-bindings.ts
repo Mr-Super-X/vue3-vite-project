@@ -1,10 +1,9 @@
 import type { SchemaNode } from '../types'
 import { resolveFunctionExpression } from './use-expression'
 
-/** 构建节点事件绑定：node.on 的 function / function-expression-string 转为 vue 事件 prop
- * - 函数：直接传
- * - 字符串：经 resolveFunctionExpression 解析（失败则跳过该事件）
- * 事件 prop 名遵循 vue 约定：on<EventName> = on + 大写首字母
+/**
+ * 节点事件绑定：node.on 转 vue 事件 prop（`on<EventName>` = on + 大写首字母）。
+ * 函数直接传；字符串经 resolveFunctionExpression 解析（失败则跳过该事件）。
  */
 export function buildOnBindings(
   node: SchemaNode,

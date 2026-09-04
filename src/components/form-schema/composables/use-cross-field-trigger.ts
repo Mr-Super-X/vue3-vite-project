@@ -1,25 +1,25 @@
 /**
- * 反向跨字段实时校验 —— 阶段 1.1 + 阶段 3.1 修复 + debounce 调度
+ * useCrossFieldTrigger —— 反向跨字段实时校验（精确触发 + 兜底 + debounce）
  *
- * 问题：当字段 A 变化时，依赖 A 的字段 B 的 crossValidator 应该重算并写错误到 B。
- * 当前 XForm.triggerCrossFieldValidator 仅在该字段失焦/change 时跑自己节点的 rules —— 不响应别人变化。
+ * 触发路径：
+ * - 精确：trigger(fieldName) —— XForm 在 onValueChange 时调用，只跑 deps 包含 fieldName 的 rule
+ * - 兜底：watch model deep diff 变化字段，逐个 run（处理 resetFields / setModel 等
+ *   不经过 onValueChange 的场景，避免漏触发）
  *
- * 解决：建立反向依赖索引 `{depField → [RuleDescriptor]}`，
- * model 任一字段变化时找出**受影响的** rules（deps 包含变化字段的）重新跑 crossValidator。
+ * debounce 调度：
+ * - 全局默认：opts.defaultDebounceMs（getter 形式，schema.debounceValidation 运行时可改）
+ * - 字段覆盖：RuleItem.debounceMs 优先于 defaultDebounceMs
+ * - 0 = 同步执行；>0 = lodash.debounce
+ * - runner 按 `target|delay` 缓存；模式切换延迟变化时清理同 target 旧 runner
  *
  * 设计要点：
- * - 精确触发：run(changedField) 只跑 deps 包含 changedField 的 rule（避免误触发其他字段）
- * - schema 变化时重建索引：schema 整体替换要重新收集
- * - 空值跳过：避免空字符串把已通过的字段错误重置（与正向逻辑对齐）
- * - 异步支持：crossValidator 可返回 Promise，统一用 Promise.resolve 包一层
- * - 双触发路径：
- *   1. 精确路径：暴露 trigger(fieldName) 方法，XForm.vue 在 onValueChange 时精确调用
- *   2. 兜底路径：保留 watch model，model 任一字段变化时对**所有**字段跑一次（处理非 onValueChange 路径如 resetFields）
- * - debounce 调度（阶段 X.Y）：
- *   - 全局默认：useCrossFieldTriggerOptions.defaultDebounceMs（由 XForm 从 schema.debounceValidation 透传）
- *   - 字段覆盖：RuleItem.debounceMs 优先于 defaultDebounceMs
- *   - 0 = 实时同步执行；>0 = lodash.debounce 延迟执行
- *   - runner 按 `target|delay` 缓存，同字段同 delay 共享一个 runner
+ * - 空值跳过：避免空字符串把已通过字段错误重置（与正向逻辑对齐）
+ * - schema 替换时重建索引 + 清空 runner 缓存 + 取消遗留 debounce timer（防内存泄漏 + counter 虚高）
+ * - 同 tick 去重：onValueChange + watch model 可能同 tick 触发同字段；trigger() 先登记字段，
+ *   watch 回调末尾清空 triggeredFields 窗口
+ * - 序号令牌：异步 crossValidator 连续触发时，旧 Promise 后返回不得覆盖新结果
+ *
+ * @see ./use-cross-field-rule-trigger.ts 正向字段事件触发（blur/change）
  */
 import { watch, type WatchStopHandle } from 'vue'
 import { debounce, get, isEqual } from 'lodash-es'
@@ -33,6 +33,13 @@ interface ReverseRule {
   rule: RuleItem
 }
 
+/**
+ * useCrossFieldTrigger 入参 —— 反向跨字段实时触发配置
+ *
+ * - crossRules: getter 返回扁平跨字段规则数组（XForm 通过 useSchemaIndex().crossRules 注入）
+ * - setFieldError / clearValidate: 来自 useFormInstance 的错误写入 + 官方清错流程
+ * - defaultDebounceMs: getter 形式（schema.debounceValidation 可能运行时改变）
+ */
 export interface UseCrossFieldTriggerOptions {
   /**
    * 跨字段规则的扁平数组 —— 由 XForm 通过 useSchemaIndex().crossRules 拍平后传入。
@@ -43,7 +50,7 @@ export interface UseCrossFieldTriggerOptions {
   /** 写错误到 form-item（由 XForm 通过 useFormInstance.setFieldError 注入） */
   setFieldError: (name: string, message: string) => void
   /** 清错误 —— 用 element-plus el-form.clearValidate([prop]) 走官方清错流程 */
-  clearValidate: (names: string[]) => void
+  clearValidate: (names?: string[]) => void
   /**
    * 全局默认 debounce 时延（毫秒，getter 形式）
    * - 返回 0：实时执行（每键触发）
@@ -55,6 +62,7 @@ export interface UseCrossFieldTriggerOptions {
   defaultDebounceMs?: () => number
 }
 
+/** useCrossFieldTrigger —— 反向跨字段实时校验（精确 + 兑底 + debounce） */
 export function useCrossFieldTrigger(opts: UseCrossFieldTriggerOptions): {
   stop: () => void
   /**
