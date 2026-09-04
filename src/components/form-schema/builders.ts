@@ -221,8 +221,14 @@ export const xCascader = (name: string) => new CascaderBuilderExt(name)
 // ── Card ──
 const CardBuilder = makeBuilder('Card')
 class CardBuilderExt extends CardBuilder {
+  /**
+   * 设置 Card 标题 —— element-plus ElCard 无 title prop，标题走 slots.header 渲染
+   * 写到 props.title 会触发 validate-component-props dev 模式 PROP_VALIDATION 警告
+   */
   title(t: string): this {
-    return this.prop('title', t)
+    if (!this.node.slots) this.node.slots = {}
+    this.node.slots.header = t
+    return this
   }
   column(c: number): this {
     this.node.column = c

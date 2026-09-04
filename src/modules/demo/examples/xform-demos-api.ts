@@ -185,6 +185,16 @@ export const permissionItems: XFormApiItem[] = [
     type: "string（如 'user.edit'）",
     description: '配合 XForm 的 permissionResolver（默认接受普通字符串字面量）',
   },
+  {
+    name: 'permissionResolver（XFormProps）',
+    type: '(perm: string) => "view" | "edit" | "hidden"',
+    description: '权限码 → 三态映射函数（业务侧注入；默认 identity 返回原值）',
+  },
+  {
+    name: '默认 identity',
+    type: '—',
+    description: 'permission 字符串字面量直接当作状态返回；resolver 返回非三态值降级为 edit',
+  },
 ]
 
 // XFormDisabled —— disabled 字段
@@ -232,6 +242,17 @@ export const builderItems: XFormApiItem[] = [
     name: '本 demo 补齐',
     type: 'xCascader / xUpload / xAutocomplete / xTimePicker / xTimeSelect / xTreeSelect / xTransfer',
     description: '7 个 builder 链式方法',
+  },
+  {
+    name: 'xArray',
+    type: '数组节点 builder',
+    description:
+      '链式构造数组节点：item / initialLength / minItems / maxItems / labels / title / draggable',
+  },
+  {
+    name: 'xCard',
+    type: 'Card 视觉容器 builder',
+    description: '链式构造 Card 分组：title / column / children（children 由对象字面量补充）',
   },
   {
     name: '链式方法',
@@ -1232,6 +1253,37 @@ export const labelLayoutItems: XFormApiItem[] = [
   },
 ]
 
+// XFormReactionStrategy —— reaction.strategy 三种调度策略速查
+export const reactionStrategyItems: XFormApiItem[] = [
+  {
+    name: 'sync（默认）',
+    type: "'sync'",
+    default: "'sync'",
+    description: '依赖变化立即同步执行 reaction 函数（一般联动）',
+  },
+  {
+    name: 'debounce',
+    type: "'debounce'",
+    description: '依赖停止变化 delay ms 后执行一次（远程搜索等高频输入）',
+  },
+  {
+    name: 'throttle',
+    type: "'throttle'",
+    description: 'delay ms 内最多执行一次（实时保存等）',
+  },
+  {
+    name: 'delay',
+    type: 'number',
+    description: 'debounce / throttle 延迟 ms（strategy ≠ sync 且 > 0 时生效）',
+  },
+  {
+    name: 'strategy 生效条件',
+    type: 'reactionConfig 含动态值',
+    description:
+      'use-reaction 第 106-108 行 hasDynamic 判定：reactionConfig 必须含函数 / {{ }} 表达式才会启用 watch 路径，strategy 才生效；全部字面量时 strategy 被忽略（仅一次性求值）',
+  },
+]
+
 // XFormArrayApi —— addItem / removeItem / moveItem 实例方法
 export const arrayApiItems: XFormApiItem[] = [
   {
@@ -1260,5 +1312,56 @@ export const arrayApiItems: XFormApiItem[] = [
     type: '—',
     description:
       'addItem 不受 maxItems 限制（业务侧自行控制）；removeItem 受 minItems 限制（已达下限时拒绝）',
+  },
+]
+
+// XFormValidateDetail —— validate() vs validateDetail() 对比 API
+export const validateDetailItems: XFormApiItem[] = [
+  {
+    name: 'validate()',
+    type: '() => Promise<boolean>',
+    description: '校验表单整体是否通过（true = 全部通过；false = 有错），适合快速布尔判断',
+  },
+  {
+    name: 'validateDetail()',
+    type: '() => Promise<ValidateResult>',
+    description: '校验并返回完整错误结构（含 keyPath + message），适合需要展示错误详情的场景',
+  },
+  {
+    name: 'ValidateResult.isValid',
+    type: 'boolean',
+    description:
+      '是否全部通过（等价于 validate() 返回值，便于在不破坏既有 validate() 调用点的前提下获取详细结构）',
+  },
+  {
+    name: 'ValidateResult.errors',
+    type: 'Array<{ keyPath: (string | number)[]; message: string }>',
+    description:
+      '错误详情数组：keyPath 是字段路径（字符串=字段名，数字=数组下标，支持嵌套），message 是错误信息',
+  },
+]
+
+// XFormPropsAdvanced —— 4 个未覆盖的 XFormProps 高级字段
+export const propsAdvancedItems: XFormApiItem[] = [
+  {
+    name: 'permissionResolver',
+    type: '(perm: string) => "view" | "edit" | "hidden"',
+    description: '权限码 → 三态映射（业务侧注入 useAuth().hasPerm 模拟）',
+  },
+  {
+    name: 'componentProps',
+    type: 'Record<string, Record<string, unknown>>',
+    description: '按组件名注入默认 props（节点级可覆盖）',
+  },
+  {
+    name: 'reactionBudget',
+    type: 'number',
+    default: '50',
+    description: '单 flush 内 reaction 最大执行次数（循环联动兜底）',
+  },
+  {
+    name: 'expressionFunctions',
+    type: 'Record<string, (...args) => unknown>',
+    description: '白名单函数表（沙箱表达式按名直接引用）',
   },
 ]

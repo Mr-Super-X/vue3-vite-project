@@ -11,10 +11,10 @@
  * 5. Autocomplete(自动补全):props.fetchSuggestions/triggerOnFocus
  * 6. TreeSelect(树形选择):props.data/multiple
  */
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/XForm.vue'
-import type { SchemaNode } from '@/components/form-schema/types'
+import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
 import {
   xCascader,
   xUpload,
@@ -23,6 +23,10 @@ import {
   xTimeSelect,
   xAutocomplete,
   xTreeSelect,
+  xArray,
+  xCard,
+  xInput,
+  xInputNumber,
 } from '@/components/form-schema/builders'
 import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
@@ -227,8 +231,121 @@ async function onSave() {
   })
 }
 
+// ============== xArray 数组节点演示 ==============
+/**
+ * 数组节点 builder 的核心价值：链式 .item() / .initialLength() / .minItems() / .maxItems()
+ * 替代 XFormArray demo 里展开 { kind: 'array', array: { ... } } 的 7-8 行字面量写法
+ *
+ * 边界提示：xInputNumber 用基类 NodeBuilder 通用 .prop() 写 controlsPosition；
+ * 当前 builder 暂未给 InputNumber 提供专有 Ext（任务范围限 2 个文件，未扩展 builders.ts）
+ */
+const arrayCode = `// 数组节点 builder：链式 .item() 接收「子 schema 对象」,一行替代展开字面量
+const itemsSchema = xArray('items')
+  .label('订单明细')
+  .title('订单明细')
+  .item({
+    column: 3,
+    children: [
+      xInput('product').label('商品').placeholder('商品名').build(),
+      xInputNumber('qty').label('数量').prop('controlsPosition', 'right').build(),
+      xInputNumber('price').label('单价').prop('controlsPosition', 'right').build(),
+    ],
+  })
+  .initialLength(2)
+  .minItems(1)
+  .maxItems(5)
+  .labels({ add: '新增明细', remove: '删除', moveUp: '上移', moveDown: '下移' })
+  .build()
+
+const schema = { children: [itemsSchema] }`
+
+/** 独立 formRef —— 与现有 6-builder section 不共用 ref（同一 ref 无法绑定多个 XForm 实例） */
+const arrayFormRef = ref<XFormExpose | null>(null)
+
+const schemaWithArray: SchemaNode = {
+  children: [
+    xArray('items')
+      .label('订单明细')
+      .title('订单明细')
+      .item({
+        column: 3,
+        children: [
+          xInput('product').label('商品').placeholder('商品名').build() as SchemaNode,
+          xInputNumber('qty').label('数量').prop('controlsPosition', 'right').build() as SchemaNode,
+          xInputNumber('price')
+            .label('单价')
+            .prop('controlsPosition', 'right')
+            .build() as SchemaNode,
+        ],
+      })
+      .initialLength(2)
+      .minItems(1)
+      .maxItems(5)
+      .labels({ add: '新增明细', remove: '删除', moveUp: '上移', moveDown: '下移' })
+      .build(),
+  ],
+}
+
+const modelArray = reactive<Record<string, unknown>>({
+  items: [
+    { product: 'sku-001', qty: 1, price: 89 },
+    { product: 'sku-002', qty: 2, price: 69 },
+  ],
+})
+
+// ============== xCard 视觉容器演示 ==============
+/**
+ * Card builder 链式暴露的字段仅 title / column / gutter（参见 builders.ts:223-235 CardBuilderExt）
+ * children 由对象字面量补充 —— XFormOrderCreate / XFormDetailFill 等 demo 都用此模式
+ * （{...xCard('xxx').build(), children: [...]}）避免给 builder 加无意义的 children() 方法
+ */
+const cardCode = `// Card 视觉容器 builder：链式构造容器属性 + 对象字面量补充 children
+const schema = {
+  children: [
+    {
+      ...xCard('userInfo').title('用户信息').column(2).build(),
+      children: [
+        xInput('username').label('用户名').required().build(),
+        xInput('email').label('邮箱').build(),
+      ],
+    },
+    {
+      ...xCard('contact').title('联系信息').column(1).build(),
+      children: [
+        xInput('phone').label('手机号').build(),
+      ],
+    },
+  ],
+}`
+
+const cardFormRef = ref<XFormExpose | null>(null)
+
+const schemaWithCard: SchemaNode = {
+  children: [
+    {
+      ...(xCard('userInfo').title('用户信息').column(2).build() as SchemaNode),
+      children: [
+        xInput('username').label('用户名').required().build() as SchemaNode,
+        xInput('email').label('邮箱').build() as SchemaNode,
+      ],
+    },
+    {
+      ...(xCard('contact').title('联系信息').column(1).build() as SchemaNode),
+      children: [xInput('phone').label('手机号').build() as SchemaNode],
+    },
+  ],
+}
+
+const modelCard = reactive<Record<string, unknown>>({
+  username: '',
+  email: '',
+  phone: '',
+})
+
 const tocItems = [
   { id: 'demo-builder', label: '构建器演示' },
+  { id: 'demo-builder-array', label: 'xArray 演示' },
+  { id: 'demo-builder-card', label: 'xCard 演示' },
   { id: 'api-builder', label: 'builder 链式方法' },
 ]
 </script>
@@ -258,6 +375,24 @@ const tocItems = [
         </DemoField>
       </section>
 
+      <section id="demo-builder-array">
+        <div :class="bem.e('new-section')">
+          <DemoField label="xArray 数组节点" :code="arrayCode">
+            <XForm ref="arrayFormRef" :schema="schemaWithArray" :model="modelArray" />
+            <ModelPreview :model="modelArray" />
+          </DemoField>
+        </div>
+      </section>
+
+      <section id="demo-builder-card">
+        <div :class="bem.e('new-section')">
+          <DemoField label="xCard 视觉容器" :code="cardCode">
+            <XForm ref="cardFormRef" :schema="schemaWithCard" :model="modelCard" />
+            <ModelPreview :model="modelCard" />
+          </DemoField>
+        </div>
+      </section>
+
       <ApiTable title="builder 链式方法" :items="builderItems" anchor="api-builder" />
     </DemoFrame>
 
@@ -273,6 +408,10 @@ const tocItems = [
     margin-top: 16px;
     display: flex;
     gap: 8px;
+  }
+  // xArray / xCard 新 section 与上方 demo-builder 拉开视觉间距
+  &__new-section {
+    margin-top: 32px;
   }
 }
 </style>

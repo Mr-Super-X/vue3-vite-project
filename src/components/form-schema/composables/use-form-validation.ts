@@ -163,11 +163,10 @@ export function useFormValidation(deps: UseFormValidationDeps): UseFormValidatio
         details.push({ field: name, message: msg, value: readRefVal(raw.fieldValue) })
       }
       if (details.length > 0) {
-        // console.error 始终留痕（force + 去重都不影响 console 输出）
-        console.error('[XForm] el-form validate failed:', details)
         // el-form.validate() 失败 → 字段内规则（required/pattern/validator callback），
         // 不是 cross-field，code 用 EL_FORM_VALIDATION_FAILED 与跨字段区分
         // force: true —— 用户主动 validate() 调用场景，每次都应反馈（不被 5s 去重）
+        // console 输出由 errorBus 内部统一处理（避免双重输出）
         errorBus?.report({
           severity: 'error',
           code: 'EL_FORM_VALIDATION_FAILED',
@@ -207,7 +206,7 @@ export function useFormValidation(deps: UseFormValidationDeps): UseFormValidatio
     })
   }
 
-  /** 把跨字段校验失败的错误写入对应 el-form-item（用户在 UI 看到），并 console.error 列出全部 */
+  /** 把跨字段校验失败的错误写入对应 el-form-item（用户在 UI 看到） */
   function applyCrossErrors(result: ValidateResult): void {
     if (result.isValid) return
     const details: Array<{ field: string; message: string; value?: unknown }> = []
@@ -220,7 +219,7 @@ export function useFormValidation(deps: UseFormValidationDeps): UseFormValidatio
         details.push({ field: fieldPath, message: err.message, value: get(m, fieldPath) })
       }
     }
-    console.error('[XForm] cross field validation failed:', result.errors)
+    // console 输出由 errorBus 内部统一处理（避免双重输出）
     // user-facing 反馈（dev 弹 OSD，prod 静默）
     errorBus?.report({
       severity: 'error',
@@ -232,11 +231,54 @@ export function useFormValidation(deps: UseFormValidationDeps): UseFormValidatio
     })
   }
 
-  /** 详细校验：异步返回跨字段校验结果（含异步 crossValidator 等待） */
+  /**
+   * 详细校验：同时收集 el-form 字段规则错误 + 跨字段错误
+   *
+   * 修复前只跑 runCrossFieldValidation → 必填字段错误收集不到 → errors=[] 与
+   * validate() 返回 false 不一致 → demo toast 显示"校验失败：0 项错误"
+   *
+   * 实现：先跑 el-form.validate() 收集字段规则错误（keyPath=[字段名]），
+   * 再跑 cross 收集跨字段错误（keyPath 来自 crossValidator），合并返回。
+   */
   async function validateDetail(): Promise<ValidateResult> {
     const m = model.value
     if (!m) return { isValid: true, errors: [] }
-    return runCrossFieldValidation(reactiveSchema.value, m, rules.value)
+
+    const errors: ValidateResult['errors'] = []
+
+    // 收集 el-form 字段规则错误（required / pattern / validator callback）
+    const ef = elFormRef.value
+    const efValidate = ef?.validate
+    if (efValidate) {
+      const elValid = await new Promise<boolean>((resolve) => {
+        const maybePromise = efValidate((v: boolean) => resolve(v))
+        Promise.resolve(maybePromise).catch(() => resolve(false))
+      })
+      if (!elValid) {
+        const elFields = (ef as unknown as { fields?: unknown[] }).fields ?? []
+        for (const f of elFields) {
+          const raw = toRawLike(f) as {
+            propString?: string | Ref<string>
+            prop?: string | Ref<string>
+            validateState?: string | Ref<string>
+            validateMessage?: string | Ref<string>
+          }
+          const state = readRefStr(raw.validateState)
+          if (state !== 'error') continue
+          const msg = readRefStr(raw.validateMessage)
+          if (!msg) continue
+          const name = readRefStr(raw.propString) || readRefStr(raw.prop)
+          if (!name) continue
+          errors.push({ keyPath: [name], message: msg })
+        }
+      }
+    }
+
+    // 收集跨字段错误（async crossValidator await 在 runCrossFieldValidation 内部）
+    const crossResult = await runCrossFieldValidation(reactiveSchema.value, m, rules.value)
+    errors.push(...crossResult.errors)
+
+    return { isValid: errors.length === 0, errors }
   }
 
   // 不直接调用 crossFieldTrigger —— 业务通过 onValueChange 显式触发 trigger

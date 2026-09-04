@@ -43,8 +43,8 @@ const bem = createNamespace('demo-console-log-panel')
       </template>
       <template v-else>
         <pre :class="bem.e('list')"><div
-          v-for="log in logs"
-          :key="log.timestamp"
+          v-for="(log, i) in logs"
+          :key="`${log.timestamp}-${i}`"
           :class="[bem.e('item'), bem.is('level-error', log.level === 'error'), bem.is('level-warn', log.level === 'warn')]"
         >
           <span :class="bem.e('level')">{{ log.level.toUpperCase() }}</span>

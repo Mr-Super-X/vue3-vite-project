@@ -97,6 +97,10 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
   // viewport 变化时响应式 ColConfig 自动拍平
   const currentBreakpoint = useCurrentBreakpoint()
 
+  // 白名单函数表注册必须在 useSchemaRenderer 之前：schema watcher immediate 触发 reaction 求值时
+  // 若 EXPRESSION_FNS 还未注册，沙箱 new Function 找不到白名单参数 → ReferenceError
+  useExpressionFunctions({ expressionFunctions: () => props.expressionFunctions })
+
   const { reactiveSchema, triggerRender } = useSchemaRenderer({
     schema: computed(() => props.schema),
     components: computed(() => props.components) as never,
@@ -227,8 +231,7 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     ...(props.permissionResolver ? { permissionResolver: props.permissionResolver } : {}),
   })
 
-  // 白名单函数表注册（模块级，scope 销毁时清空避免跨实例污染）
-  useExpressionFunctions({ expressionFunctions: () => props.expressionFunctions })
+  // 白名单函数表已提前到 useSchemaRenderer 之前注册（修复 setup 顺序 race condition）
 
   function getNames(includesIgnore = false): string[] {
     return [...schemaIndex.getFieldNames(includesIgnore)]
