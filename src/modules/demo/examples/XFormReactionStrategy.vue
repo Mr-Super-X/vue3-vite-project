@@ -167,6 +167,38 @@ const throttleCode = `{
   },
 }`
 
+/** strategy 三策略对比 —— 完整 schema（含 3 个 Card 段） */
+const strategyCode = `{
+  column: 1,
+  children: [
+    {
+      component: 'Card',
+      props: { header: 'sync（默认）—— 依赖变化立即执行' },
+      children: [{ component: 'Input', name: 'inputSync', reaction: { /* sync */ } }],
+    },
+    {
+      component: 'Card',
+      props: { header: 'debounce 300ms —— 停止变化后执行一次' },
+      children: [{ component: 'Input', name: 'inputDebounce', reaction: { /* debounce */ } }],
+    },
+    {
+      component: 'Card',
+      props: { header: 'throttle 300ms —— 300ms 内最多执行一次' },
+      children: [{ component: 'Input', name: 'inputThrottle', reaction: { /* throttle */ } }],
+    },
+  ],
+}`
+
+/** 三策略写法合并 —— 用 `---` 分隔，单个 DemoField 展示 */
+const strategyCodeCombined = `// ① sync 策略（默认）—— 依赖变化立即同步执行
+${syncCode}
+
+// ② debounce 300ms 策略 —— 依赖停止变化后执行一次
+${debounceCode}
+
+// ③ throttle 300ms 策略 —— 300ms 内最多执行一次
+${throttleCode}`
+
 const tocItems = [
   { id: 'demo-strategy', label: '三策略对比' },
   { id: 'api-reaction-strategy', label: 'reaction.strategy 速查' },
@@ -188,39 +220,40 @@ const tocItems = [
       ]"
     >
       <section id="demo-strategy">
-        <div :class="bem.e('hint')">
-          在三个输入框中连续输入字符（例如「abcdef」），观察下方的计数器差异： sync ≈
-          字符数，debounce = 1，throttle ≈ 字符数 / (delay ms)
-        </div>
-        <XForm ref="formRef" :schema="schema" :model="model" />
-        <div :class="bem.e('actions')">
-          <el-button @click="resetAll">重置计数 + 表单</el-button>
-          <el-button @click="onReset">仅重置表单</el-button>
-          <el-button @click="copySchema">复制 schema</el-button>
-        </div>
-        <div :class="bem.e('counters')">
-          <div :class="bem.e('counter')">
-            <strong>sync 触发次数：</strong>
-            <span :class="bem.e('num')">{{ syncCount }}</span>
-            <div :class="bem.e('tip')">每输入一字符立即 +1</div>
+        <DemoField label="strategy 三策略对比（sync / debounce / throttle）" :code="strategyCode">
+          <div :class="bem.e('hint')">
+            在三个输入框中连续输入字符（例如「abcdef」），观察下方的计数器差异： sync ≈
+            字符数，debounce = 1，throttle ≈ 字符数 / (delay ms)
           </div>
-          <div :class="bem.e('counter')">
-            <strong>debounce 触发次数：</strong>
-            <span :class="bem.e('num')">{{ debounceCount }}</span>
-            <div :class="bem.e('tip')">连续输入 → 停止 300ms 后 +1</div>
+          <XForm ref="formRef" :schema="schema" :model="model" />
+          <div :class="bem.e('actions')">
+            <el-button @click="resetAll">重置计数 + 表单</el-button>
+            <el-button @click="onReset">仅重置表单</el-button>
+            <el-button @click="copySchema">复制 schema</el-button>
           </div>
-          <div :class="bem.e('counter')">
-            <strong>throttle 触发次数：</strong>
-            <span :class="bem.e('num')">{{ throttleCount }}</span>
-            <div :class="bem.e('tip')">300ms 内最多 +1</div>
+          <div :class="bem.e('counters')">
+            <div :class="bem.e('counter')">
+              <strong>sync 触发次数：</strong>
+              <span :class="bem.e('num')">{{ syncCount }}</span>
+              <div :class="bem.e('tip')">每输入一字符立即 +1</div>
+            </div>
+            <div :class="bem.e('counter')">
+              <strong>debounce 触发次数：</strong>
+              <span :class="bem.e('num')">{{ debounceCount }}</span>
+              <div :class="bem.e('tip')">连续输入 → 停止 300ms 后 +1</div>
+            </div>
+            <div :class="bem.e('counter')">
+              <strong>throttle 触发次数：</strong>
+              <span :class="bem.e('num')">{{ throttleCount }}</span>
+              <div :class="bem.e('tip')">300ms 内最多 +1</div>
+            </div>
           </div>
-        </div>
-        <ModelPreview :model="model" />
+          <ModelPreview :model="model" />
+        </DemoField>
       </section>
 
-      <DemoField label="sync 策略（默认）" :code="syncCode" />
-      <DemoField label="debounce 策略" :code="debounceCode" />
-      <DemoField label="throttle 策略" :code="throttleCode" />
+      <h3>三种 strategy 写法对比</h3>
+      <DemoField label="sync / debounce / throttle 三种写法对比" :code="strategyCodeCombined" />
     </DemoFrame>
 
     <ApiTable
