@@ -41,6 +41,20 @@ declare module 'vue-router' {
     permissions?: string[]
     /** 路由可见性，false 时菜单隐藏且禁止直接访问（hidden 后端菜单转换目标） */
     visible?: boolean
+    /**
+     * 菜单可见性（**仅作用于侧边栏渲染过滤，不影响路由守卫**）。
+     *
+     * 与 `visible` 的语义差异：
+     *   - `visible: false` → 菜单隐藏 **+ 守卫拦截直访**（双屏蔽，用于"真隐藏"页面，如隐藏订单详情）
+     *   - `menuVisible: false` → **仅菜单隐藏**，路由仍可被 URL 直访（场景：客服邮件链接直达运营报表）
+     *
+     * 设计动机：reports 模块注释承诺"运营报表不希望出现在侧边栏，但客服可通过邮件链接直达"，
+     * 但 `visible` 是双语义字段无法单独表达"只藏菜单不禁访问"，故新增本字段解耦。
+     *
+     * @see {@link file://./guards/visibility.ts} 守卫消费 `visible`（不消费 `menuVisible`）
+     * @see {@link file://../layouts/default/components/Sidebar.vue} 侧边栏消费 `menuVisible`
+     */
+    menuVisible?: boolean
     /** keepAlive 缓存开关（业务页面切换时是否保留组件实例） */
     keepAlive?: boolean
     /** 面包屑是否展示（侧边栏无关，紧凑型页面用 false） */

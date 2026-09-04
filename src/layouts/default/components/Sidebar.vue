@@ -4,7 +4,7 @@
 // 设计要点：
 //   - 从 router.getRoutes() 自动派生菜单（无需手动维护菜单列表）
 //   - 多级菜单递归渲染
-//   - 过滤：meta.visible === false 隐藏；path === '/' 跳过；children 为空跳过
+//   - 过滤：meta.menuVisible === false 隐藏；path === '/' 跳过；children 为空跳过
 //   - 当前激活：path 匹配高亮（支持 prefix 匹配，子页 /orders/list 也高亮 /orders 父菜单）
 //   - 折叠态：appStore.sidebarCollapsed 联动（仅显示图标）
 //   - i18n 标题：resolveRouteTitle(route, t) → titleKey → title → name fallback
@@ -49,13 +49,14 @@ const openMenus = ref<Set<string>>(new Set())
  *
  * 过滤规则：
  *   1. 没有 path 的路由（layout 包裹层）→ 跳过
- *   2. meta.visible === false → 跳过
+ *   2. meta.menuVisible === false → 跳过
  *   3. children 全空 → 跳过
  *   4. 没有 name 也没可渲染 children 的孤儿路由 → 跳过
  */
 function toMenuItem(r: ReturnType<typeof router.getRoutes>[number]): MenuItem | null {
-  const visible = (r.meta as { visible?: boolean } | undefined)?.visible
-  if (visible === false) return null
+  // 仅按 menuVisible 过滤；visible 字段是后端 hidden 菜单的协议转换目标（守卫拦截直访），不影响侧边栏
+  const menuVisible = (r.meta as { menuVisible?: boolean } | undefined)?.menuVisible
+  if (menuVisible === false) return null
 
   const rawChildren = (r.children ?? []) as unknown as Array<
     ReturnType<typeof router.getRoutes>[number]

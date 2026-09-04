@@ -20,7 +20,9 @@ const routes: RouteRecordRaw[] = [
           title: '运营报表',
           icon: 'data-analysis',
           permissions: ['reports:view'],
-          visible: false, // 本地模式默认隐藏菜单
+          // 菜单隐藏但允许 URL 直访（场景：客服通过邮件链接直达报表页）。
+          // 注意：用 menuVisible 而非 visible，因为 visible: false 会被守卫拦截直访。
+          menuVisible: false,
         },
       },
     ],
