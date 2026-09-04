@@ -20,13 +20,13 @@ const schema = {
 }
 ```
 
-完整 demo 在 `/demo/xform-minimum-demo`。
+完整 demo 在 `/demo/x-form-minimum-demo`（详见 `src/modules/demo/examples/XForm/`，路由由 `src/modules/demo/routes/index.ts` 自动派生）。
 
 ---
 
 ## 文档导航图
 
-XForm 共有 5 份文档 + 38 个 demo，按角色 / 任务选读，避免到处翻：
+XForm 共有 5 份文档 + 54 个 demo（XForm 52 个 + AsyncState/ErrorBoundary 2 个），按角色 / 任务选读，避免到处翻：
 
 | 你的角色 / 任务                                 | 先看这个                                                | 再看这个                                                              | 跳过            |
 | ----------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------- | --------------- |
@@ -50,7 +50,7 @@ XForm 共有 5 份文档 + 38 个 demo，按角色 / 任务选读，避免到处
 
 ### 小白上手路径（新人入门 4 步走）
 
-> 共 48 个 demo，按「先建体感 → 再深入单能力 → 最后查缺补漏」三阶段阅读，避免在 30+ demo 间来回跳转。
+> 共 54 个 demo（XForm 52 + AsyncState/ErrorBoundary 2），按「先建体感 → 再深入单能力 → 最后查缺补漏」三阶段阅读，避免在 30+ demo 间来回跳转。
 
 | 阶段                           | 路径                                                                  | 目标                                                                                 | 耗时   |
 | ------------------------------ | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ------ |
@@ -153,13 +153,13 @@ formRef.value?.resetDirty() // 当前状态设为新基线（提交后归零）
 
 ---
 
-## schema 字段速查表（30 字段）
+## schema 字段速查表（31 字段）
 
 > **层级速记**：字段按生效范围分三类——
 >
-> - **字段级**（22 个）：写在每个节点上，控制该节点的行为（如 `Input` 的 `placeholder`）
-> - **顶层 schema**（7 个）：仅在 `{ children: [...] }` 形态的最外层对象上生效，对应 element-plus `el-form` 实例级属性（控制整个表单行为）
-> - **双层**（1 个）：`disabled` 字段级=字段禁用，顶层=整体禁用整个表单
+> - **字段级**（23 个）：写在每个节点上，控制该节点的行为（如 `Input` 的 `placeholder`）
+> - **顶层 schema**（5 个）：仅在 `{ children: [...] }` 形态的最外层对象上生效，对应 element-plus `el-form` 实例级属性（控制整个表单行为）
+> - **双层**（3 个）：`disabled` / `labelPosition` / `labelWidth` —— 字段级控制单字段，顶层配置整体默认（字段级 override 顶层）
 >
 > 同名 prop 与 schema 字段的关系：`scrollToError` / `scrollIntoViewOptions` 同时是 XForm props 和顶层 schema 字段，schema 字段优先（XForm props 主要供不写 schema 的简单场景）。
 
@@ -198,16 +198,17 @@ formRef.value?.resetDirty() // 当前状态设为新基线（提交后归零）
 | `rules`        | `string \| RuleItem \| Array` | 字段级 | 校验规则（async-validator 兼容）；string 是 `XFormProps.rules` 命名引用 |
 | `defaultValue` | `unknown`                     | 字段级 | 字段初值（model 中缺该 key 时填入）                                     |
 
-### 响应式（6）
+### 响应式（7）
 
-| 字段         | 类型                                          | 层级              | 说明                                                                                  |
-| ------------ | --------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------- |
-| `reaction`   | `ReactionConfig`                              | 字段级            | 反应式联动（支持 `deps` 精确监听依赖路径）                                            |
-| `disabled`   | `ReactionValue<boolean>`                      | **字段级 + 顶层** | 字段级=字段禁用；顶层=整体禁用整个表单（透传 el-form disabled）                       |
-| `permission` | `ReactionValue<'view' \| 'edit' \| 'hidden'>` | 字段级            | 字段权限三态（view 只读 / edit 可编辑 / hidden 不渲染）                               |
-| `readonly`   | `ReactionValue<boolean>`                      | **仅顶层**        | 整体只读（未 hidden 字段一律按 view 态纯文本展示）；字段级只读用 `permission: 'view'` |
-| `hidden`     | `boolean \| ReactionValue<boolean>`           | 字段级            | 节点隐藏（仍创建，display:none，不参与校验）                                          |
-| `ignore`     | `boolean`                                     | 字段级            | 跳过渲染（不参与 `getNames`）                                                         |
+| 字段           | 类型                                          | 层级              | 说明                                                                                  |
+| -------------- | --------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------- |
+| `reaction`     | `ReactionConfig`                              | 字段级            | 反应式联动（支持 `deps` 精确监听依赖路径）                                            |
+| `disabled`     | `ReactionValue<boolean>`                      | **字段级 + 顶层** | 字段级=字段禁用；顶层=整体禁用整个表单（透传 el-form disabled）                       |
+| `permission`   | `ReactionValue<'view' \| 'edit' \| 'hidden'>` | 字段级            | 字段权限三态（view 只读 / edit 可编辑 / hidden 不渲染）                               |
+| `readonly`     | `ReactionValue<boolean>`                      | **仅顶层**        | 整体只读（未 hidden 字段一律按 view 态纯文本展示）；字段级只读用 `permission: 'view'` |
+| `hidden`       | `boolean \| ReactionValue<boolean>`           | 字段级            | 节点隐藏（仍创建，display:none，不参与校验）                                          |
+| `ignore`       | `boolean`                                     | 字段级            | 跳过渲染（不参与 `getNames`）                                                         |
+| `beforeChange` | `BeforeChangeFn \| BeforeChangeRule[]`        | 字段级            | 字段值拦截（详见 `XFormBeforeChange.vue` demo）                                       |
 
 ### 数组节点（2）
 
@@ -244,7 +245,7 @@ formRef.value?.resetDirty() // 当前状态设为新基线（提交后归零）
 
 > **速记总结**：
 >
-> - **字段级（22）**：节点自身行为——标识（4）+ 渲染（5）+ 布局（4）+ 校验（2）+ 响应式（6 含 1 个双层）+ 数组（2）+ 数据加载（1）+ v-model（1）
+> - **字段级（23）**：节点自身行为——标识（4）+ 渲染（5）+ 布局（4）+ 校验（2）+ 响应式（7 含 1 个双层）+ 数组（2）+ 数据加载（1）+ v-model（1）
 > - **顶层 schema（5 + 3 双层）**：表单整体行为——`scrollToError` / `scrollIntoViewOptions` / `debounceValidation` / `readonly` / `disabled`（双层）/ `labelPosition`（双层）/ `labelWidth`（双层）
 > - **双层颗粒度**：`disabled` / `labelPosition` / `labelWidth` —— 顶层配置为整体默认，字段级配置 override 顶层
 > - **关键约束**：`disabled` 在字段级只影响单个字段；在顶层禁用整个表单

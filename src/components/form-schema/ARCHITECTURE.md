@@ -36,7 +36,7 @@
 
 ```text
 src/components/form-schema/
-├── XForm.vue                      # 入口组件（125 行：P2 后 setup 块零业务逻辑；模板 + props/attrs 透传 + ElConfigProvider + ElForm 骨架）
+├── XForm.vue                      # 入口组件（121 行：P2 后 setup 块零业务逻辑；模板 + props/attrs 透传 + ElConfigProvider + ElForm 骨架）
 ├── XFormDebugBanner.vue           # dev mode 调试面板（schema 校验错误 + 安全扫描）
 ├── XFormErrorToast.vue            # dev mode 错误 OSD toast（OPT-7 user-facing）
 ├── SchemaField.vue                # 节点级渲染容器（B-2：字段级重渲隔离）
@@ -51,7 +51,12 @@ src/components/form-schema/
 │   ├── layout.ts                  # RowConfig / ColConfig（响应式断点）
 │   ├── async-options.ts           # AsyncOptionsConfig
 │   ├── schema-node.ts             # SchemaNode（31 字段）+ ComponentPropsRegistry + SchemaNodeFor
-│   └── xform.ts                   # XFormProps / XFormExpose / ValidateOptions / ValidateResult
+│   ├── xform.ts                   # XFormProps / XFormExpose / ValidateOptions / ValidateResult
+│   ├── identity.ts                # SchemaNodeIdentity（4 字段：component/name/label/key）
+│   ├── render.ts                  # SchemaNodeRender（5 字段：props/on/children/slots/directives）
+│   ├── validate.ts                # SchemaNodeValidate（2 字段：rules/defaultValue）
+│   ├── top-level.ts               # SchemaNodeTopLevel（5 字段：labelPosition/labelWidth/scrollToError/scrollIntoViewOptions/debounceValidation）
+│   └── v-model.ts                 # SchemaNodeVModel（1 字段：modelProp）
 ├── builders.ts                    # 27 个链式 builder（OPT-2：makeBuilder 工厂已简化）
 ├── index.ts                        # 公共导出 + Vue 插件形式
 ├── README.md                      # 简明使用说明

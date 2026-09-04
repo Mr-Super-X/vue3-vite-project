@@ -13,7 +13,7 @@
 ## 一、开发流程总览
 
 ```text
-1. 阅读本指南 + docs/ARCHITECTURE.md(对应模块)
+1. 阅读本指南 + 对应模块的 `ARCHITECTURE.md`(form-schema 为 `src/components/form-schema/ARCHITECTURE.md`)
 2. 在 .claude/backups/<方案名>/ 备份待修改文件(方案隔离)
 3. Grep / Glob 定位相关代码 + Read 上下文
 4. Edit 精准修改(老文件用 Edit, 新文件用 Write)
@@ -268,7 +268,7 @@ cp -r .claude/backups/<方案名>/<日期>/* src/
 
 ## 十二、获得帮助
 
-- **架构理解**:读 `docs/ARCHITECTURE.md` 或 `src/components/form-schema/ARCHITECTURE.md`
+- **架构理解**:读对应模块的 `ARCHITECTURE.md`(form-schema 为 `src/components/form-schema/ARCHITECTURE.md`)
 - **类型 cast 归因**:读 `src/components/form-schema/types/TYPE-CAST-AUDIT.md`
 - **API 用法**:读 `src/components/form-schema/README.md`
 - **Bug 调试**:派发 `superpowers:systematic-debugging` skill
