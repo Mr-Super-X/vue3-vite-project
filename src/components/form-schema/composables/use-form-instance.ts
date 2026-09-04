@@ -10,6 +10,7 @@
  * 已抽离：setFieldError 双路径+watch 守护→./use-set-field-error、zod→./use-zod-validator。
  */
 import { ref, toRaw, type ComponentPublicInstance, type Ref } from 'vue'
+import { get, set } from 'lodash-es'
 import { useSetFieldError, type FieldErrorState } from './use-set-field-error'
 import { useZodValidator } from './use-zod-validator'
 import type { UseFormErrorBusReturn } from './use-form-error-bus'
@@ -239,19 +240,29 @@ export function useFormInstance(
   // zod 顶层校验独立（内部委托，公开签名不变）
   const { validateFormWithZod } = useZodValidator(model, zodSchema)
 
-  /** 数组操作：在 model[name] 末尾追加一项（追加不产生索引位移，无需清理任何校验态） */
+  /** 数组操作：在 name 路径末尾追加一项（追加不产生索引位移，无需清理任何校验态）
+   *
+   * name 支持嵌套路径（如 'orders[0].items'），用 lodash get/set 解析。
+   * P0-3 修复：嵌套 array 场景下内层 array 节点 name 已被前缀化（如 orders[0].items），
+   * 直接 m[name] 失效。
+   */
   function addItem(name: string, init?: Record<string, unknown>): void {
     const m = model()
     if (!m) return
-    if (!Array.isArray(m[name])) m[name] = []
-    ;(m[name] as unknown[]).push(init ?? {})
+    let arr = get(m, name) as unknown[] | undefined
+    if (!Array.isArray(arr)) {
+      arr = []
+      set(m, name, arr)
+    }
+    arr.push(init ?? {})
   }
 
-  /** 数组操作：删除 model[name][index] */
+  /** 数组操作：删除 name[index]（支持嵌套路径） */
   function removeItem(name: string, index: number): void {
     const m = model()
-    if (!m || !Array.isArray(m[name])) return
-    const arr = m[name] as unknown[]
+    if (!m) return
+    const arr = get(m, name) as unknown[] | undefined
+    if (!Array.isArray(arr)) return
     if (index < 0 || index >= arr.length) return
     arr.splice(index, 1)
     // 被删行及之后的行索引位移（items[2].qty → items[1].qty），旧位置错误失效；
@@ -259,11 +270,12 @@ export function useFormInstance(
     clearArraySubtree(name, index)
   }
 
-  /** 数组操作：把 model[name][from] 移到 [to] */
+  /** 数组操作：把 name[from] 移到 [to]（支持嵌套路径） */
   function moveItem(name: string, from: number, to: number): void {
     const m = model()
-    if (!m || !Array.isArray(m[name])) return
-    const arr = m[name] as unknown[]
+    if (!m) return
+    const arr = get(m, name) as unknown[] | undefined
+    if (!Array.isArray(arr)) return
     if (from < 0 || from >= arr.length || to < 0 || to >= arr.length || from === to) return
     const [item] = arr.splice(from, 1)
     arr.splice(to, 0, item)

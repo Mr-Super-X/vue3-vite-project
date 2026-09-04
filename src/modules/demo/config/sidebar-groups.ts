@@ -49,6 +49,7 @@ export const CN_NAMES: Record<string, string> = {
   XFormMinimumDemo: '最小示例',
   XFormModelWarn: 'model 缺失警告',
   XFormNested: '复杂布局',
+  XFormNestedArray: '嵌套数组节点',
   XFormOrderCreate: '端到端业务示例（订单创建页）',
   XFormPersist: '草稿持久化',
   XFormPersistSchemaVersion: '草稿持久化·schema 版本',

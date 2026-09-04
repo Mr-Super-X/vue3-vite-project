@@ -67,7 +67,19 @@ export function rewriteNamePath(
   const cloned: SchemaNode = { ...sub }
   const originalName = cloned.name
   if (originalName) {
-    cloned.name = `${prefix}${sep}${originalName}`
+    // P0-3 防重复前缀：嵌套 array 场景下，外层 array 已把内层 array 节点 name 加前缀
+    // （如 'items[0].subItems'），内层 array 渲染时再调 rewriteNamePath 会重复加前缀。
+    // 检测规则（覆盖嵌套 array + 普通重复前缀）：
+    // - originalName === prefix（精确相等）
+    // - prefix 以 originalName + '[' 开头（嵌套 array 行级 prefix，如 items[0].subItems[0]）
+    // - prefix 以 originalName + sep 开头（普通嵌套前缀，如 items[0].subItems.field）
+    const alreadyPrefixed =
+      originalName === prefix ||
+      prefix.startsWith(originalName + '[') ||
+      prefix.startsWith(originalName + sep)
+    if (!alreadyPrefixed) {
+      cloned.name = `${prefix}${sep}${originalName}`
+    }
     // 用户显式配置的 key 优先；否则用行身份前缀派生稳定 key
     if (keyPrefix && cloned.key === undefined) cloned.key = `${keyPrefix}${sep}${originalName}`
   }

@@ -687,3 +687,93 @@ describe('useFormInstance / resetFields(names) 部分重置（P1 回归）', () 
     expect(externalErrors.value).toEqual({})
   })
 })
+
+describe('嵌套 array 操作（P0-3 修复）', () => {
+  it('addItem 在嵌套路径 orders[0].items 末尾追加项', () => {
+    const model: Record<string, unknown> = {
+      orders: [{ items: [{ qty: 1 }] }],
+    }
+    const { addItem } = useFormInstance(
+      () => model,
+      () => undefined
+    )
+    addItem('orders[0].items', { qty: 2 })
+    expect((model.orders as Array<{ items: unknown[] }>)[0]!.items).toHaveLength(2)
+    expect((model.orders as Array<{ items: Array<{ qty: number }> }>)[0]!.items[1]).toEqual({
+      qty: 2,
+    })
+  })
+
+  it('addItem 自动初始化不存在的嵌套数组', () => {
+    const model: Record<string, unknown> = {
+      orders: [{}],
+    }
+    const { addItem } = useFormInstance(
+      () => model,
+      () => undefined
+    )
+    addItem('orders[0].items', { qty: 1 })
+    expect((model.orders as Array<{ items?: unknown[] }>)[0]!.items).toEqual([{ qty: 1 }])
+  })
+
+  it('removeItem 删除嵌套路径的指定行', () => {
+    const model: Record<string, unknown> = {
+      orders: [{ items: [{ qty: 1 }, { qty: 2 }, { qty: 3 }] }],
+    }
+    const { removeItem } = useFormInstance(
+      () => model,
+      () => undefined
+    )
+    removeItem('orders[0].items', 1)
+    expect((model.orders as Array<{ items: Array<{ qty: number }> }>)[0]!.items).toEqual([
+      { qty: 1 },
+      { qty: 3 },
+    ])
+  })
+
+  it('moveItem 嵌套路径：行换位生效', () => {
+    const model: Record<string, unknown> = {
+      orders: [{ items: [{ qty: 1 }, { qty: 2 }, { qty: 3 }] }],
+    }
+    const { moveItem } = useFormInstance(
+      () => model,
+      () => undefined
+    )
+    moveItem('orders[0].items', 0, 2)
+    expect((model.orders as Array<{ items: Array<{ qty: number }> }>)[0]!.items).toEqual([
+      { qty: 2 },
+      { qty: 3 },
+      { qty: 1 },
+    ])
+  })
+
+  it('moveItem 嵌套路径：非法索引不抛错（静默返回）', () => {
+    const model: Record<string, unknown> = {
+      orders: [{ items: [{ qty: 1 }] }],
+    }
+    const { moveItem } = useFormInstance(
+      () => model,
+      () => undefined
+    )
+    moveItem('orders[0].items', 0, 5) // to 越界
+    expect((model.orders as Array<{ items: Array<{ qty: number }> }>)[0]!.items).toEqual([
+      { qty: 1 },
+    ])
+  })
+
+  it('addItem/removeItem/moveItem 不影响顶层 array（向后兼容）', () => {
+    const model: Record<string, unknown> = {
+      tasks: [{ id: 1 }, { id: 2 }],
+    }
+    const { addItem, removeItem, moveItem } = useFormInstance(
+      () => model,
+      () => undefined
+    )
+    addItem('tasks', { id: 3 })
+    expect(model.tasks).toHaveLength(3)
+    moveItem('tasks', 0, 2)
+    expect(model.tasks).toEqual([{ id: 2 }, { id: 3 }, { id: 1 }])
+    removeItem('tasks', 0)
+    expect(model.tasks).toEqual([{ id: 3 }, { id: 1 }])
+  })
+})

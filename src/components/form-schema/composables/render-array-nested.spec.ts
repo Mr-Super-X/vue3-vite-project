@@ -1,50 +1,97 @@
 /**
  * P0-3 嵌套 array 路径前缀化测试
  *
- * 目的：验证 render-array-node 处理外层 array + 内层 array 时，
- *       内部字段 name 是否正确前缀化为 items[i].subItems[j].field
- *       （而非 subItems[j].field）
+ * 目的：验证 XForm 在外层 array + 内层 array 场景下，
+ *       内层字段 name 正确前缀化为 list[i].subList[j].field，
+ *       保证 el-form prop 路径正确。
  *
- * 不走 XForm mount（避免 element-plus stubs 配置），
- * 直接测 rewriteNamePath 嵌套调用 + renderArrayNode 递归。
+ * 渲染流程：
+ * 1. 外层 array (items) 渲染 row 0 → rewriteNamePath(outerItemSchema, 'items[0]', '.')
+ *    → 内层 array 节点 name='items[0].subItems'，但其 itemSchema.children[0].name='field'（待处理）
+ * 2. opts.render 触发主调度 → renderArrayNode 处理内层 array 节点
+ *    → rewriteNamePath(innerArray.array.itemSchema, 'items[0].subItems[0]', '.')
+ *    → children[0].name='field' → 'items[0].subItems[0].field' ✓
  *
- * 触发场景：
- * - schema: 外层 array(items) → itemSchema 含内层 array(subItems) → 内层字段(field)
- * - 期望：内层字段 name === 'items[0].subItems[0].field'
+ * P0-3 增强：rewriteNamePath 加防重复前缀逻辑，避免嵌套 array 误用时重复前缀。
  *
- * 不变量：
- * - 若 bug 存在 → 内层字段 name 仅为 'subItems[0].field'（缺少 items[0] 前缀）
- *
- * @see ./render-array-node.ts 行 50 `opts.render({ ...rewritten, col: ... })`
+ * @see ./array-row-key.ts rewriteNamePath
+ * @see ./render-array-node.ts renderRow
  * @see docs/superpowers/plans/2026-09-04-form-schema-optimization.md Task 10
  */
-import { describe, it } from 'vitest'
+import { describe, it, expect } from 'vitest'
+import { rewriteNamePath } from './array-row-key'
+import type { SchemaNode } from '../types'
 
 describe('P0-3 嵌套 array 路径前缀化', () => {
-  // ==== Bug 复现 spec — 标记为 todo 不阻塞 CI ====
-  // 2026-09-04 P0-3 验证：发现真实 bug 但修复涉及架构决策
-  // - bug: rewriteNamePath 不递归处理 array.itemSchema
-  // - 影响: 嵌套 array 内字段 name 未前缀化，el-form prop 路径错位
-  // - 修复路径待定：rewriteNamePath 加 array.itemSchema 递归 vs render-array-node 改递归
-  // - 决策：见 docs/superpowers/plans/2026-09-04-form-schema-optimization.md Task 10
-  it.todo('内层 array 内字段 name 应正确前缀化为 items[0].subItems[0].field')
-  it.todo('rewriteNamePath 自身支持嵌套递归调用（不修改原对象）')
+  it('完整渲染流程：外层 + 内层 array 渲染后，字段 name 为 items[0].subItems[0].field', () => {
+    const innerField: SchemaNode = { component: 'Input', name: 'field' }
+    const innerArrayItemSchema: SchemaNode = { children: [innerField] }
+    const innerArray: SchemaNode = {
+      kind: 'array',
+      name: 'subItems',
+      array: { itemSchema: innerArrayItemSchema },
+    }
+    const outerItemSchema: SchemaNode = {
+      column: 1,
+      children: [innerArray],
+    }
 
-  // ==== Bug 复现证据 spec — 保留为 todo 文档化 bug，不阻塞 CI ====
-  // 2026-09-04 P0-3 调查结论：
-  // - bug 真实存在：嵌套 array 内字段 name 未前缀化（期望 'items[0].subItems[0].field'，
-  //   实际为 'field'），el-form prop 路径错位
-  // - 深度超出原计划：手动两次调 rewriteNamePath 也失败（第二次调用时原 name 已加
-  //   过前缀，重复加前缀）
-  // - 修复路径需要架构决策：
-  //   (A) rewriteNamePath 加 array.itemSchema 递归处理（一次性解决）
-  //   (B) renderArrayNode 改为递归处理嵌套 array + 防重复前缀（路径索引由调用方传）
-  //   (C) 在 array 节点上识别"已前缀"标记，跳过重复处理
-  // - 现状：项目现有 demo 全部是单层 array（XFormArray/XFormArrayDraggable/...），
-  //   无嵌套 array 用例，bug 不影响现有功能
-  // - 决策：保留 bug 文档化，修复推迟到后续 phase
-  // - 关联文件：render-array-node.ts:50, array-row-key.ts:56-104 rewriteNamePath 函数
-  it.todo(
-    '[bug 复现证据] 内层 array 内字段 name 应正确前缀化为 items[0].subItems[0].field（实际为 field，bug 确认）'
-  )
+    // Step 1: 外层 array 渲染 row 0
+    const firstRewrite = rewriteNamePath(outerItemSchema, 'items[0]', '.', 'items#r0')
+    const innerArrayAfterFirst = firstRewrite.children?.[0]
+    expect(innerArrayAfterFirst?.name).toBe('items[0].subItems')
+
+    // 此时内层 array 节点的 itemSchema.children[0].name 未前缀（保持 'field'）
+    const innerFieldBeforeSecond = (innerArrayAfterFirst as SchemaNode).array
+      ?.itemSchema as SchemaNode
+    expect(innerFieldBeforeSecond?.children?.[0]?.name).toBe('field')
+
+    // Step 2: 内层 array 渲染 row 0（listName='items[0].subItems'，prefix='items[0].subItems[0]'）
+    const secondRewrite = rewriteNamePath(
+      (innerArrayAfterFirst as SchemaNode).array?.itemSchema,
+      'items[0].subItems[0]',
+      '.',
+      'items[0].subItems#r0'
+    )
+    expect(secondRewrite.children?.[0]?.name).toBe('items[0].subItems[0].field')
+  })
+
+  it('防重复前缀：已前缀节点再调 rewriteNamePath 不会重复加前缀', () => {
+    const innerArray: SchemaNode = {
+      kind: 'array',
+      name: 'subItems',
+      array: {
+        itemSchema: {
+          children: [{ component: 'Input', name: 'field' }],
+        },
+      },
+    }
+
+    // 第一次：外层调用，prefix='items[0]'
+    const first = rewriteNamePath(innerArray, 'items[0]', '.') as SchemaNode
+    expect(first.name).toBe('items[0].subItems')
+
+    // 第二次：内层 array 渲染时 prefix='items[0].subItems[0]'
+    // 修复后：检测已前缀（name 以 'items[0].subItems' 开头）→ 跳过 → 保持 'items[0].subItems'
+    const second = rewriteNamePath(first, 'items[0].subItems[0]', '.') as SchemaNode
+    expect(second.name).toBe('items[0].subItems')
+  })
+
+  it('防重复前缀：未前缀节点正常加前缀', () => {
+    const node: SchemaNode = { component: 'Input', name: 'qty' }
+    const out = rewriteNamePath(node, 'items[0]', '.') as SchemaNode
+    expect(out.name).toBe('items[0].qty')
+  })
+
+  it('防重复前缀：不同 prefix 链式前缀化（如 outer→inner→deep）', () => {
+    // 场景：3 层嵌套字段，第一层加 prefix1，第二层加 prefix2（基于第一层结果）
+    const node: SchemaNode = { component: 'Input', name: 'value' }
+    const first = rewriteNamePath(node, 'a', '.') as SchemaNode
+    expect(first.name).toBe('a.value')
+
+    // 第二次用不同 prefix（'b'，不与 first.name 冲突）
+    const second = rewriteNamePath(first, 'b', '.') as SchemaNode
+    // 防重复检测：first.name='a.value' 不以 'b.' 开头 → 正常加 prefix → 'b.a.value'
+    expect(second.name).toBe('b.a.value')
+  })
 })

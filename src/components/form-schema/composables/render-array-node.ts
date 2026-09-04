@@ -6,6 +6,7 @@
  */
 import { h, type VNode } from 'vue'
 import { ElCard, ElButton } from 'element-plus'
+import { get } from 'lodash-es'
 import type { SchemaNode } from '../types'
 import { mergeColResponsive } from './barrel'
 import type { RenderSchemaNodeOptions } from './render-schema-node'
@@ -31,7 +32,9 @@ export function renderArrayNode(
   const labelUp = cfg.labels?.moveUp ?? '上移'
   const labelDown = cfg.labels?.moveDown ?? '下移'
 
-  const listRaw = opts.model?.[listName]
+  // P0-3 修复：嵌套 array 场景下 listName 是嵌套路径（如 orders[0].items），
+  // 直接 model[listName] 只能读顶层 key。改用 lodash get 解析嵌套路径。
+  const listRaw = get(opts.model ?? {}, listName)
   const list: unknown[] = Array.isArray(listRaw) ? listRaw : []
   const min = cfg.minItems ?? 0
   const max = cfg.maxItems ?? Infinity
