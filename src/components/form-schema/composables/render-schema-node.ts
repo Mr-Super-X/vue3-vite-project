@@ -2,6 +2,9 @@
  * Schema 节点渲染调度器：5 类分支按权限 / view / array / 视觉容器 / formItem /
  * row+column / 默认顺序委托给子模块，本文件只负责调度与共享 ctx 准备。
  *
+ * 公共工具函数（如 resolveComponentFor / compileRules / wrapWithElCol / buildSlotFn 等）
+ * 统一从 `./barrel` 消费，本文件不再 re-export —— 渲染调度器与 barrel 职责分离。
+ *
  * 类型断言（`as never`）归因见 types/TYPE-CAST-AUDIT.md。
  * @see ./render-form-item / render-array-node / render-visual-container 接收 RenderSchemaNodeOptions
  */
@@ -34,34 +37,6 @@ import { validateSchemaProps } from './validate-component-props'
 type RenderFn = (
   node: SchemaNode | SchemaNode[] | string | undefined | null
 ) => VNode | string | VNode[] | undefined
-
-// ── Re-exports：保留旧 API（render-form-item / render-array-node 等 8+ 调用方暂未迁移到 barrel.ts）──
-
-export {
-  EL_COMPONENT_MAP,
-  resolveComponentFor,
-  isElUpload,
-  isPictureCardUpload,
-  isDragUpload,
-} from './resolve-component'
-
-export { compileRules } from './compile-rules'
-
-export {
-  wrapWithElCol,
-  pickBreakpointConfig,
-  mergeColResponsive,
-  mergeRowResponsive,
-} from './wrap-with-elcol'
-
-export {
-  renderChildren,
-  buildSlotFn,
-  buildUploadDefaultSlot,
-  buildUploadTipSlot,
-  getComponentDefaultProps,
-  buildAsyncProps,
-} from './build-slots'
 
 // ────────────────────────────────────────────────────────────────────────────
 // RenderSchemaNodeOptions —— 主调度入参类型

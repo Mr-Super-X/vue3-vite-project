@@ -12,14 +12,11 @@ import { buildOnBindings } from './build-on-bindings'
 import {
   buildSlotFn,
   buildUploadTipSlot,
-  compileRules,
-  getComponentDefaultProps,
   buildAsyncProps,
   buildUploadDefaultSlot,
-  resolveComponentFor,
-  wrapWithElCol,
-  mergeRowResponsive,
-} from './render-schema-node'
+  getComponentDefaultProps,
+} from './barrel'
+import { compileRules, resolveComponentFor, wrapWithElCol, mergeRowResponsive } from './barrel'
 import type { RenderSchemaNodeOptions } from './render-schema-node'
 
 /** renderWithFormItem —— FormItem 包装渲染（含 name 或 formItem:true 的节点） */

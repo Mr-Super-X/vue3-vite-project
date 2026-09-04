@@ -6,7 +6,7 @@
  */
 import { h, type VNode } from 'vue'
 import type { SchemaNode } from '../types'
-import { buildSlotFn, getComponentDefaultProps } from './render-schema-node'
+import { buildSlotFn, getComponentDefaultProps } from './barrel'
 import { renderToComponentWithGrid } from './render-with-grid'
 import type { RenderSchemaNodeOptions } from './render-schema-node'
 

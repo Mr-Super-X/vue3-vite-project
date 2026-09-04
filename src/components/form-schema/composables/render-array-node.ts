@@ -7,7 +7,7 @@
 import { h, type VNode } from 'vue'
 import { ElCard, ElButton } from 'element-plus'
 import type { SchemaNode } from '../types'
-import { mergeColResponsive } from './render-schema-node'
+import { mergeColResponsive } from './barrel'
 import type { RenderSchemaNodeOptions } from './render-schema-node'
 import { rowKeyOf, rewriteNamePath } from './array-row-key'
 

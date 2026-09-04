@@ -25,7 +25,7 @@ import { useDevRuntime } from './use-dev-runtime'
 import { useApplyDefaults } from './apply-default-values'
 import { useXFormExpose } from './use-xform-expose'
 import { useRenderRoot, type RenderFn } from './use-render-root'
-import { mergeRowResponsive } from './render-schema-node'
+import { mergeRowResponsive } from './barrel'
 import { DEFAULT_COMPONENT_PROPS } from '../element-plus-adapter'
 import type { RuleItem, RowConfig, SchemaNode, XFormExpose, XFormProps } from '../types'
 
