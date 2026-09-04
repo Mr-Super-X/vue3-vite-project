@@ -438,7 +438,7 @@ describe('useFormValidation', () => {
       consoleSpy.mockRestore()
     })
 
-    it('errors 非空 → 写 setFieldError(silent=true) + console.error', () => {
+    it('errors 非空 → 写 setFieldError(silent=true)（console 由 errorBus 统一输出）', () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
       const { deps, setFieldError } = makeDeps()
       const api = useFormValidationReal(deps)
@@ -453,10 +453,9 @@ describe('useFormValidation', () => {
       // OPT-7: applyCrossErrors 用 silent=true 避免与 per-field OSD 重复
       expect(setFieldError).toHaveBeenNthCalledWith(1, 'a', 'err1', 'error', true)
       expect(setFieldError).toHaveBeenNthCalledWith(2, 'b', 'err2', 'error', true)
-      expect(consoleSpy).toHaveBeenCalledWith(
-        '[XForm] cross field validation failed:',
-        expect.any(Array)
-      )
+      // console 输出由 errorBus 内部统一处理（避免双重输出）：
+      // applyCrossErrors 不再直接 console.error，所有 console 走 errorBus → console 单一来源
+      expect(consoleSpy).not.toHaveBeenCalled()
       consoleSpy.mockRestore()
     })
 
