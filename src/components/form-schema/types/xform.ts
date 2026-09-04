@@ -134,7 +134,12 @@ export interface XFormProps {
    * - 调小:严格排查循环联动时
    *
    * @see ./composables/use-reaction.ts
-   * @todo 运行时透传待后续 PR 实施（本阶段仅声明字段，避免触碰渲染核心）
+   * @see ./composables/use-schema-renderer.ts（opts.reactionBudget 透传入口，createBudget 创建 budget 实例）
+   * @see ./composables/use-xform-composer.ts（composer.ts:109 接收 props.reactionBudget 并条件展开传给 useSchemaRenderer）
+   *
+   * 不变量：
+   * - 默认 50（与既有行为一致，向后兼容）
+   * - 透传链路完整（spec 覆盖：use-reaction.spec.ts line 342 验证 budget.max 反映在 console.error 文案）
    */
   reactionBudget?: number
 }
