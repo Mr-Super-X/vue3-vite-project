@@ -1,12 +1,16 @@
 <script setup lang="ts">
 /**
- * XFormProps 高级配置 demo —— 集中演示 4 个 XFormProps 字段
+ * XFormProps 高级配置 demo —— 4 个独立 XForm 实例 + DemoField 包裹
  *
  * 覆盖字段：
  *   1. permissionResolver：权限码 → view/edit/hidden 三态映射函数
  *   2. componentProps：按组件名注入默认 props（节点级可覆盖）
  *   3. reactionBudget：reaction 循环联动预算（超限 console.error 后跳过）
  *   4. expressionFunctions：业务白名单 + 字符串表达式直接引用
+ *
+ * 结构演进：原版 4 个 section 嵌套在单个 XForm（用 Card 分组），但 Card 标题与 DemoField
+ * 折叠代码区分离 → 页面割裂。重构为每个 section 独立 XForm 实例 + DemoField 包裹，
+ * 与 element-plus 官网演示风格一致（每个示例独立 + 独立代码区）。
  *
  * 与已有 demo 互补：
  *   - XFormFieldPermission：字面量 / 函数 / 表达式 三种 permission 来源
@@ -16,15 +20,13 @@
  */
 import { reactive } from 'vue'
 import XForm from '@/components/form-schema/XForm.vue'
-import { useXFormDemo } from '../composables/useXFormDemo'
-import { useConsoleCapture } from '../composables/useConsoleCapture'
 import ApiTable from '../components/ApiTable.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
 import DocLayout from '../layouts/DocLayout.vue'
 import DocToc from '../components/DocToc.vue'
-import ModelPreview from '../components/ModelPreview.vue'
 import ConsoleLogPanel from '../components/ConsoleLogPanel.vue'
+import { useConsoleCapture } from '../composables/useConsoleCapture'
 import { propsAdvancedItems } from './xform-demos-api'
 import {
   permissionCode,
@@ -32,13 +34,14 @@ import {
   reactionBudgetCode,
   expressionFunctionsCode,
 } from './xform-props-advanced-snippets'
-import { schema } from './xform-props-advanced-schema'
+import {
+  permissionResolverSchema,
+  componentPropsSchema,
+  reactionBudgetSchema,
+  expressionFunctionsSchema,
+} from './xform-props-advanced-schema'
 
-const { bem, formRef, onReset, copySchema } = useXFormDemo({
-  name: 'props-advanced',
-  schema: () => schema,
-  model: () => model,
-})
+const bem = createNamespace('demo-x-form-props-advanced')
 
 // —— 1. permissionResolver ——
 //  业务侧通常这样写：
@@ -59,41 +62,53 @@ function permissionResolver(perm: string): 'view' | 'edit' | 'hidden' {
 }
 
 // —— 2. componentProps ——
-//  按组件名注入全局默认 props；节点级 props 可覆盖（典型用法：批量开启 clearable）
 const componentPropsGlobal = {
   Input: { clearable: true, size: 'small' as const },
   Select: { filterable: true, clearable: true },
 }
 
 // —— 4. expressionFunctions ——
-//  业务白名单函数；字符串表达式 {{ fn }} 按名直接引用（适合后端 JSON 配置场景）
 const expressionFunctions = {
   toCurrency: (v: unknown): string => `¥${Number(v ?? 0).toFixed(2)}`,
   upper: (v: unknown): string => String(v ?? '').toUpperCase(),
   concat: (...args: unknown[]): string => args.map((a) => String(a ?? '')).join('-'),
 }
 
-const model = reactive<Record<string, unknown>>({
-  // —— permissionResolver 段 ——
+// 共享 props（4 个 XForm 实例各自接收）
+const sharedProps = {
+  'permission-resolver': permissionResolver,
+  'component-props': componentPropsGlobal,
+  'reaction-budget': 5,
+  'expression-functions': expressionFunctions,
+} as const
+
+// 4 个独立 model（每个 section 独立，不跨 section 联动）
+const permissionModel = reactive<Record<string, unknown>>({
   username: 'guest',
   email: 'guest@example.com',
   phone: '13800000000',
   submitter: '管理员',
-  // —— componentProps 段 ——
+})
+
+const componentPropsModel = reactive<Record<string, unknown>>({
   title: '演示全局 small + clearable',
-  city: '',
+  city: 'BJ',
   qty: 1,
-  // —— reactionBudget 段 ——
+})
+
+const reactionBudgetModel = reactive<Record<string, unknown>>({
   loopA: 0,
   loopB: 0,
   loopCount: 0,
-  // —— expressionFunctions 段 ——
+})
+
+const expressionFunctionsModel = reactive<Record<string, unknown>>({
   price: 88,
   qty2: 3,
   code: 'abc',
 })
 
-// 控制台日志捕获（仅 [XForm] 前缀）—— reaction 预算耗尽 console.error 走 [XForm] 标签
+// 控制台日志捕获（仅 [XForm] 前缀）
 const { logs, clear } = useConsoleCapture('[XForm]')
 
 const tocItems = [
@@ -112,27 +127,14 @@ const tocItems = [
       source="src/components/form-schema/XForm.vue"
       :introductions="[
         '集中演示 4 个 XFormProps 字段：permissionResolver / componentProps / reactionBudget / expressionFunctions。',
+        '每个 section 独立 XForm 实例 + DemoField 包裹 —— 与 element-plus 官网演示风格一致。',
         '1. permissionResolver：把字符串字面量权限码映射为 view / edit / hidden 三态，业务侧注入 useAuth().hasPerm 即可。',
         '2. componentProps：按组件名注入默认 props，节点级 props 可覆盖（适合批量调整全局 UI 风格）。',
         '3. reactionBudget：reaction 循环联动兜底，本 demo 用 5 次预算演示超限 console.error。',
         '4. expressionFunctions：业务函数白名单，字符串表达式 {{ fn }} 直接按名引用（适合后端 JSON 配置场景）。',
       ]"
     >
-      <XForm
-        ref="formRef"
-        :schema="schema"
-        :model="model"
-        :permission-resolver="permissionResolver"
-        :component-props="componentPropsGlobal"
-        :reaction-budget="5"
-        :expression-functions="expressionFunctions"
-      />
-      <div :class="bem.e('actions')">
-        <el-button @click="onReset">重置</el-button>
-        <el-button @click="copySchema">复制 schema</el-button>
-      </div>
-      <ModelPreview :model="model" />
-
+      <!-- Section 1: permissionResolver —— 独立 XForm 实例 + DemoField 包裹 -->
       <section id="demo-permission-resolver" :class="bem.e('section')">
         <h3>1. permissionResolver —— 权限码 → 三态映射</h3>
         <p>
@@ -148,9 +150,12 @@ const tocItems = [
           <code>'view'</code>
           渲染为只读纯文本。
         </p>
-        <DemoField label="permissionResolver 用法" :code="permissionCode" />
+        <DemoField label="permissionResolver 用法" :code="permissionCode">
+          <XForm :schema="permissionResolverSchema" :model="permissionModel" v-bind="sharedProps" />
+        </DemoField>
       </section>
 
+      <!-- Section 2: componentProps -->
       <section id="demo-component-props" :class="bem.e('section')">
         <h3>2. componentProps —— 全局默认 props（节点级可覆盖）</h3>
         <p>
@@ -168,9 +173,12 @@ const tocItems = [
           <code>size: 'default'</code>
           覆盖全局默认。
         </p>
-        <DemoField label="componentProps 用法" :code="componentPropsCode" />
+        <DemoField label="componentProps 用法" :code="componentPropsCode">
+          <XForm :schema="componentPropsSchema" :model="componentPropsModel" v-bind="sharedProps" />
+        </DemoField>
       </section>
 
+      <!-- Section 3: reactionBudget -->
       <section id="demo-reaction-budget" :class="bem.e('section')">
         <h3>3. reactionBudget —— 循环联动预算</h3>
         <p>
@@ -194,9 +202,12 @@ const tocItems = [
           <span :class="bem.e('trigger-count')">5</span>
           。
         </p>
-        <DemoField label="reactionBudget 用法" :code="reactionBudgetCode" />
+        <DemoField label="reactionBudget 用法" :code="reactionBudgetCode">
+          <XForm :schema="reactionBudgetSchema" :model="reactionBudgetModel" v-bind="sharedProps" />
+        </DemoField>
       </section>
 
+      <!-- Section 4: expressionFunctions -->
       <section id="demo-expression-functions" :class="bem.e('section')">
         <h3>4. expressionFunctions —— 业务白名单 + 字符串表达式引用</h3>
         <p>
@@ -206,14 +217,20 @@ const tocItems = [
           <code>数量</code>
           /
           <code>代码</code>
-          ，观察
+          ， 观察
           <code>合计</code>
           与
           <code>拼接大写</code>
           label 实时变化 —— 字符串表达式按名引用白名单函数（与 XFormExpressionSandbox
           共用同一套机制）。
         </p>
-        <DemoField label="expressionFunctions 用法" :code="expressionFunctionsCode" />
+        <DemoField label="expressionFunctions 用法" :code="expressionFunctionsCode">
+          <XForm
+            :schema="expressionFunctionsSchema"
+            :model="expressionFunctionsModel"
+            v-bind="sharedProps"
+          />
+        </DemoField>
       </section>
 
       <ApiTable
@@ -235,11 +252,6 @@ const tocItems = [
 
 <style lang="scss">
 .#{$BEM_PREFIX}-demo-x-form-props-advanced {
-  &__actions {
-    margin-top: 16px;
-    display: flex;
-    gap: 8px;
-  }
   &__section {
     margin-top: 24px;
     h3 {
