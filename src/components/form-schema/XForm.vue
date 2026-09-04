@@ -60,7 +60,7 @@ installDevDebugHook()
 
 <template>
   <ElConfigProvider v-bind="elConfig">
-    <div :class="[bem.b(), attrs.class]">
+    <div :class="[bem.b(), attrs.class]" :data-field-errors="Object.keys(fieldErrors).join(',')">
       <ElForm
         ref="elFormRef"
         :model="(props.model ?? {}) as Record<string, unknown>"
@@ -71,10 +71,6 @@ installDevDebugHook()
         :scroll-to-error="topLevelScrollToError"
         :scroll-into-view-options="topLevelScrollIntoViewOptions"
       >
-        <!-- fieldErrors 变化时强制重渲染：triggerRef 通知依赖但不修改引用，
-             computed topLevelNodes 引用未变 → Vue 不会重渲染。显式绑定到 DOM 属性
-             让模板建立响应式依赖，触发重渲染 -->
-        <div :data-field-errors="Object.keys(fieldErrors).join(',')" style="display: none" />
         <!-- 模板内联 `as never` 归因：Element Plus buildProp 类型元组在 vue 模板表达式
              中推导失败，运行时由 ElRow 自身校验 gutter 为 number | string（C1，归因见
              types/TYPE-CAST-AUDIT.md） -->
