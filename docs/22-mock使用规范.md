@@ -1,7 +1,7 @@
 # Mock 数据使用规范
 
-> **文档版本**：v1.0.0 | **最后更新**：2026-07-24
-> **覆盖范围**：mock 文件组织、defineMock 用法、同步/异步/timeout 控制、与 Zod schema 集成、prod 防御层（mock-guard）、CI 验证
+> **文档版本**：v1.0.1 | **最后更新**：2026-09-04
+> **覆盖范围**：mock 文件组织、`MockMethod[]` + `response`/`rawResponse` 用法、与 Zod schema 集成、prod 防御层（mock-guard）、CI 验证
 > **适用读者**：第一次给页面加 mock 数据的新人 + 联调真实后端前期的开发者
 > **配套文档**：`docs/15-请求层缓存-合并-分页适配使用规范.md`（cache + merge + pageAdapter 三件套）、`docs/14-zod请求参数校验使用规范.md`（Zod schema）
 
@@ -42,19 +42,19 @@ mock/
 
 ---
 
-## 3. defineMock 基础用法
+## 3. MockMethod[] 基础用法（vite-plugin-mock v3）
 
 ```ts
 // mock/user.ts
-import { defineMock } from 'vite-plugin-mock/utils'
+import type { MockMethod } from 'vite-plugin-mock'
 
-export default defineMock([
+export default [
   {
     url: '/api/user/list',
     method: 'get',
     timeout: 200, // 模拟网络延迟 200ms
-    body: ({ query }) => ({
-      // ← body 是函数，接收 query/params
+    response: ({ query }) => ({
+      // ← response 是函数，接收 query/params
       code: 200,
       message: 'ok',
       data: {
@@ -72,53 +72,65 @@ export default defineMock([
   {
     url: '/api/user/:id',
     method: 'get',
-    body: ({ params }) => ({
+    response: ({ params }) => ({
       code: 200,
       data: { id: Number(params.id), name: '用户 ' + params.id },
     }),
   },
-])
+] as MockMethod[]
 ```
 
-### 3.1 body 函数签名
+### 3.1 response 函数签名
+
+`response` 字段接收一个**同步**函数，签名如下（参考 `mock/user.ts`）：
 
 ```ts
-body: ({ query, params, headers, body }) => {
-  /* ... */
+response: ({ query, params }) => {
+  // query: URL 查询参数
+  // params: URL 动态参数
+  return { code: 200, data: ... }
 }
 ```
 
-| 参数      | 来源            | 示例                                                    |
-| --------- | --------------- | ------------------------------------------------------- |
-| `query`   | URL 查询字符串  | `?page=1&pageSize=20` → `{ page: '1', pageSize: '20' }` |
-| `params`  | URL 动态参数    | `/user/:id` → `{ id: '123' }`                           |
-| `headers` | HTTP 请求头     | `{ 'x-token': 'xxx' }`                                  |
-| `body`    | POST/PUT 请求体 | `{ name: 'xxx' }`                                       |
+| 参数     | 来源           | 示例                                                    |
+| -------- | -------------- | ------------------------------------------------------- |
+| `query`  | URL 查询字符串 | `?page=1&pageSize=20` → `{ page: '1', pageSize: '20' }` |
+| `params` | URL 动态参数   | `/user/:id` → `{ id: '123' }`                           |
 
 > 注意：query/params 值都是**字符串**，需要手动转 number：`Number(params.id)`。
+> 简化的 `response` 不暴露 `headers` / 请求 `body`；如需读请求头或 body，用 `rawResponse: (req, res) => {...}`（参考 `mock/auth.ts` 的登录契约）。
 
 ### 3.2 同步 / 异步
 
+**简化的 `response` 必须同步**（vite-plugin-mock v3 设计）；如需异步（延迟、读 body、写 Set-Cookie 等），切到 `rawResponse: (req, res) => {...}`。
+
 ```ts
-// ✅ 同步（vite-plugin-mock 推荐，性能更好）
+// ✅ 同步（推荐，性能好；timeout 字段生效）
 {
   url: '/api/user/list',
   method: 'get',
-  body: () => ({ code: 200, data: [] }),
+  timeout: 200,
+  response: ({ query }) => ({ code: 200, data: [] }),
 }
 
-// ⚠️ 异步（兼容，但 vite-plugin-mock 文档明确不推荐）
+// ✅ 异步（仅 rawResponse 支持；timeout 字段不生效，需手写 setTimeout）
 {
-  url: '/api/user/list',
-  method: 'get',
-  async body() {
-    await delay(200) // 模拟网络延迟
-    return { code: 200, data: [] }
+  url: '/api/auth/login',
+  method: 'post',
+  rawResponse: async (req, res) => {
+    const body = await readBody(req) // 手动解析 body
+    setTimeout(() => {
+      res.setHeader('Set-Cookie', 'token=xxx; HttpOnly')
+      res.end(JSON.stringify({ code: 200 }))
+    }, 200)
   },
 }
 ```
 
-> **延迟用 `timeout` 字段**而非 async body（vite-plugin-mock 文档明确说 mock 函数不能 async）。
+> **关键区分**：
+>
+> - `response`：**必须同步**；延迟用 `timeout: ms` 字段
+> - `rawResponse`：**支持 async**；不受 `timeout` 控制（用 setTimeout 模拟延迟）；手动管 Set-Cookie / statusCode / body 解析
 
 ### 3.3 timeout 字段
 
@@ -127,7 +139,7 @@ body: ({ query, params, headers, body }) => {
   url: '/api/user/list',
   method: 'get',
   timeout: 200,         // 单位 ms；模拟网络延迟
-  body: () => ({ ... }),
+  response: () => ({ ... }),
 }
 ```
 
@@ -153,15 +165,15 @@ export type User = z.infer<typeof UserSchema>
 
 ```ts
 // mock/user.ts
-import { defineMock } from 'vite-plugin-mock/utils'
+import type { MockMethod } from 'vite-plugin-mock'
 import { UserSchema, type User } from '@/modules/user/types'
 
-export default defineMock([
+export default [
   {
     url: '/api/user/list',
     method: 'get',
     timeout: 200,
-    body: () => {
+    response: () => {
       const list: User[] = Array.from({ length: 10 }, (_, i) => ({
         id: i + 1,
         name: `用户 ${i + 1}`,
@@ -173,7 +185,7 @@ export default defineMock([
       return { code: 200, data: { list, total: 100 } }
     },
   },
-])
+] as MockMethod[]
 ```
 
 **优势**：
@@ -187,19 +199,21 @@ export default defineMock([
 ## 5. 错误码模拟
 
 ```ts
-export default defineMock([
+import type { MockMethod } from 'vite-plugin-mock'
+
+export default [
   // 正常返回
   {
     url: '/api/user/list',
     method: 'get',
-    body: () => ({ code: 200, data: [] }),
+    response: () => ({ code: 200, data: [] }),
   },
 
   // 模拟 401（未登录）
   {
     url: '/api/auth/profile',
     method: 'get',
-    body: () => ({
+    response: () => ({
       code: 401,
       message: '未登录',
     }),
@@ -210,9 +224,9 @@ export default defineMock([
     url: '/api/user/list',
     method: 'get',
     status: 500, // ← HTTP 状态码
-    body: () => ({ code: 500, message: '服务器异常' }),
+    response: () => ({ code: 500, message: '服务器异常' }),
   },
-])
+] as MockMethod[]
 ```
 
 > `code` 是业务字段（前端拦截器识别），`status` 是 HTTP 状态码（浏览器识别）。
@@ -225,7 +239,7 @@ export default defineMock([
 {
   url: '/api/user/detail/:id',
   method: 'get',
-  body: ({ params }) => {
+  response: ({ params }) => {
     const id = Number(params.id)
     if (id === 999) {
       return { code: 404, message: '用户不存在' }
@@ -268,27 +282,25 @@ plugins: [
 
 **问题**：vite-plugin-mock 仅在 dev 启用；如果代码里有 mock 数据残留，prod 会带入。
 
-**项目方案**：`src/api/mock-guard.ts` 提供扩展点。
+**项目方案**：`src/api/mock-guard.ts` 提供 prod 断言钩子（实际兜底由 vite 构建配置保证；mock 模块在 prod 构建自然被 tree-shake 剔除）。
 
 ```ts
-// src/main.ts
-import { setupProdMockServer } from '@/api/mock-guard'
-
-if (import.meta.env.PROD) {
-  setupProdMockServer({
-    // prod 模式下需要拦截的 URL（罕见，例如 MSW 切真实 mock）
-    interceptUrls: [],
-  })
+// src/api/mock-guard.ts（实际实现，2026-08 现状）
+export function assertNoMockInProd(): void {
+  // vite-plugin-mock 仅在 dev 服务生效；prod 构建自然剔除 mock 模块
+  // 此函数保留为防御层扩展点——如未来需要运行时校验（如扫描 import.meta.glob），
+  // 可在此实现具体逻辑
+  void 0
 }
 ```
 
 **使用场景**：
 
-- 需要在 prod 环境演示（不能连真后端）
-- 用 MSW 等浏览器端 mock 替换 vite-plugin-mock
-- 需要 prod 环境完整跑业务流程（演示部署）
+- 当前实现为**空操作 + 扩展点**——prod 包不包含 mock 是由 vite build 配置 + tree-shake 自然保证
+- 未来如需运行时校验（如扫描 import.meta.glob 确认无 mock 导入），在 `assertNoMockInProd` 内部加实现即可
+- 用 MSW 等浏览器端 mock 替换 vite-plugin-mock 不在此处处理（属于独立基础设施）
 
-**默认行为**：prod 环境不启用任何 mock，所有请求走真实接口（或返回网络错误）。
+**默认行为**：prod 环境无任何 mock；所有请求走真实接口（或返回网络错误）。
 
 ---
 
@@ -296,11 +308,13 @@ if (import.meta.env.PROD) {
 
 ```ts
 // mock/menu.ts（节选，详见 docs/07-路由模块设计.md）
-export default defineMock([
+import type { MockMethod } from 'vite-plugin-mock'
+
+export default [
   {
     url: '/api/menu',
     method: 'get',
-    body: () => ({
+    response: () => ({
       code: 200,
       data: [
         {
@@ -317,7 +331,7 @@ export default defineMock([
       ],
     }),
   },
-])
+] as MockMethod[]
 ```
 
 **注意**：路由 `name` 必须在 `src/router/types.ts` 与 `src/router/auto-register.ts` 同时注册。
@@ -328,11 +342,13 @@ export default defineMock([
 
 ```ts
 // mock/dict.ts（节选）
-export default defineMock([
+import type { MockMethod } from 'vite-plugin-mock'
+
+export default [
   {
     url: '/api/dict/user_status',
     method: 'get',
-    body: () => ({
+    response: () => ({
       code: 200,
       data: [
         { value: 'active', label: '启用' },
@@ -341,7 +357,7 @@ export default defineMock([
     }),
   },
   // 业务侧用法详见 docs/11-字典使用规范.md
-])
+] as MockMethod[]
 ```
 
 ---
@@ -377,12 +393,12 @@ vi.mock('@/api/modules/user', () => ({
 
 ```
 □ 1. mock 文件放在 mock/<feature>.ts，与 src/api/modules/<feature>.ts 对应？
-□ 2. 使用 defineMock([...]) 数组形式（而非单个对象）？
-□ 3. body 用同步函数 + timeout 字段（而非 async body）？
+□ 2. 使用 `[...] as MockMethod[]` 数组形式（而非单个对象）？
+□ 3. 同步数据用 `response: ({ query, params }) => ...` + `timeout` 字段；需要异步/Set-Cookie/读 body 时切 `rawResponse: (req, res) => ...`？
 □ 4. mock 数据类型与 Zod schema 一致（避免字段漂移）？
 □ 5. 错误码用业务字段 code 而非 HTTP status（除非要测 500）？
 □ 6. 远程菜单 mock 的 name 在 RouteName 联合类型中？
-□ 7. prod 模式不需要 mock 时已配置 setupProdMockServer？
+□ 7. prod 模式不需要 mock 时已确认 vite build 自动 tree-shake（mock-guard 提供 `assertNoMockInProd` 扩展点，按需启用）？
 □ 8. 单测用 vi.mock 而非 mock-server？
 ```
 
@@ -390,14 +406,14 @@ vi.mock('@/api/modules/user', () => ({
 
 ## 14. 常见坑
 
-| 症状                                | 原因                                                                                                    | 解法                                   |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| mock 修改后没生效                   | dev server 未重启 + watchFiles 未开                                                                     | `vite.config.ts` 加 `watchFiles: true` |
-| prod 包包含 mock 残留               | vite build 不读 `.env.development`，未设/非 `'false'` 自动关闭；如遇 prod mock 残留，多半是代码静态引用 | 检查 `vite.config.ts` 的 `enable` 契约 |
-| async body 不生效                   | vite-plugin-mock 不支持 async                                                                           | 改用同步 + `timeout: ms`               |
-| params 是字符串                     | URL 动态参数永远是 string                                                                               | `Number(params.id)` 手动转             |
-| 后端字段名改了但前端没改            | mock 与生产 schema 漂移                                                                                 | 用 Zod schema 共享类型                 |
-| 远程菜单 mock 报"未注册的路由 name" | name 不在 COMPONENT_REGISTRY                                                                            | 先在 modules/<m>/routes/index.ts 声明  |
+| 症状                                | 原因                                                                                                    | 解法                                                                                               |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| mock 修改后没生效                   | dev server 未重启 + watchFiles 未开                                                                     | `vite.config.ts` 加 `watchFiles: true`                                                             |
+| prod 包包含 mock 残留               | vite build 不读 `.env.development`，未设/非 `'false'` 自动关闭；如遇 prod mock 残留，多半是代码静态引用 | 检查 `vite.config.ts` 的 `enable` 契约                                                             |
+| `response` 写 async 不生效          | `response` 字段必须同步（vite-plugin-mock v3 设计）                                                     | 改用同步 + `timeout: ms`；如需真异步用 `rawResponse: async (req, res) => ...`（参考 mock/auth.ts） |
+| params 是字符串                     | URL 动态参数永远是 string                                                                               | `Number(params.id)` 手动转                                                                         |
+| 后端字段名改了但前端没改            | mock 与生产 schema 漂移                                                                                 | 用 Zod schema 共享类型                                                                             |
+| 远程菜单 mock 报"未注册的路由 name" | name 不在 COMPONENT_REGISTRY                                                                            | 先在 modules/<m>/routes/index.ts 声明                                                              |
 
 ## 🔗 相关文档
 
@@ -413,4 +429,4 @@ vi.mock('@/api/modules/user', () => ({
 
 ---
 
-_文档版本：v1.0.0 | 编写日期：2026-07-24 | 配套项目版本：vue3-vite-project 0.x_
+_文档版本：v1.0.1 | 编写日期：2026-09-04 | 配套项目版本：vue3-vite-project 0.x | 修订记录：v1.0.1 (2026-09-04) §3-7 同步 vite-plugin-mock v3（`body`→`response` + `defineMock`→`MockMethod[]` + `rawResponse` 异步契约）；§8 mock-guard 实际实现为 `assertNoMockInProd`（旧 `setupProdMockServer` 不存在）_

@@ -1,7 +1,7 @@
 # Zod 请求校验使用规范
 
-> **文档版本**：v1.0.0 | **最后更新**：2026-07-24
-> **能力来源**：`src/api/validator.ts`（CHANGELOG 未记录，2026-07-24 审计补齐文档）
+> **文档版本**：v1.0.1 | **最后更新**：2026-09-04
+> **能力来源**：`src/api/validator.ts`（CHANGELOG 未记录，2026-07-24 审计补齐文档；2026-09-04 同步测试用例）
 
 ---
 
@@ -89,6 +89,8 @@ const data: Equipment = await requestValidated(EquipmentSchema, { url: '/equipme
 [validator] schema 验证失败: id: expected number, received string; status: invalid enum value
 ```
 
+> 实现细节（`src/api/validator.ts`）：错误信息取前 3 条 issue（避免堆栈过长），格式为 `<path>: <message>`；多条用 `; ` 拼接。
+
 业务侧 try/catch 即可拿到 ApiError：
 
 ```ts
@@ -160,7 +162,14 @@ const user = await requestValidated(UserSchema, { url: '/user/1' })
 | 失败行为 | 编译错误          | 抛 ApiError + console.error    | 抛 ApiError      |
 | 业务场景 | 日常调用          | 关键接口 / 新接口 / 不稳定契约 | 已有数据二次校验 |
 
+## 🧪 单测覆盖
+
+`src/api/validator.spec.ts` 5 例：
+
+- validate（基础 4 例）：合法数据通过 / 非法数据抛 ApiError（code=500）/ 多层 path 错误格式化 / 多个错误只取前 3 个
+- requestValidated（包装 1 例）：mock http 模块后验证响应
+
 ---
 
-_相关源码：`src/api/validator.ts`（64 行）+ `src/api/validator.spec.ts`_
-_相关依赖：[Zod](https://zod.dev) v4_
+_相关源码：`src/api/validator.ts`（63 行）+ `src/api/validator.spec.ts`（5 例）_
+_相关依赖：[Zod](https://zod.dev) v4（`^4.4.3`，package.json）_

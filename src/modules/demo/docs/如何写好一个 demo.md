@@ -47,15 +47,26 @@ src/modules/demo/
 │   └── useDemoSearch.ts # sidebar 搜索
 ├── config/
 │   └── sidebar-groups.ts  # 分组 + 中文名映射（新增 demo 必改）
-├── examples/            # demo 页面入口（自动注册路由）
-│   ├── XFormBase.vue
-│   ├── XFormOrderCreate.vue
-│   └── ...
+├── examples/            # demo 页面入口（自动注册路由）；当前 40 个：38 个 XForm demo + AsyncState + ErrorBoundary
+│   ├── AsyncState.vue
+│   ├── ErrorBoundary.vue
+│   ├── XForm/             # XForm 38 个 demo 的集中目录（含 configs/ + utils/）
+│   │   ├── XFormOverview.vue
+│   │   ├── XFormBase.vue
+│   │   ├── XFormArray.vue
+│   │   └── ...（共 38 个 XForm*.vue）
+│   │   ├── configs/       # 纯数据 .ts（API 表格条目、字典、schema、代码片段）— 见 §三、1.1
+│   │   └── utils/         # 工具函数 .ts（如 mock 异步接口）— 见 §三、1.1
 ├── layouts/
-│   └── DocLayout.vue    # 三栏文档布局
+│   ├── DocLayout.vue      # 三栏文档布局
+│   ├── sidebar-state.ts    # 侧边栏状态模块（自动注册）
+│   └── use-sidebar-drag.ts # 侧边栏拖拽 composable（自动注册）
 ├── routes/
-│   └── index.ts         # 自动扫描 examples/，通常无需手动改
-└── docs/                # 规范与说明类文档
+│   └── index.ts           # 自动扫描 examples/，通常无需手动改
+├── styles/                # demo 模块全局样式（如 `.mdx-style` 等）
+├── utils/                 # demo 模块私有工具（非 XForm 子目录，是模块根级）
+│   └── extractApi.ts      # 从 .vue 文件提取 API 表格数据（供 ApiTable 自动填充）
+└── docs/                  # 规范与说明类文档
     └── 如何写好一个 demo.md  # 本文档
 ```
 
@@ -113,7 +124,7 @@ examples/
 要点：
 
 - 子目录文件名建议沿用「`XForm<能力名>`」完整 PascalCase，**不要省略前缀**——保留前缀能让目录扫描派生出的 route name 与历史一致（`DemoXFormBase` 而非 `DemoBase`），免去 sidebar / 白名单的批量修改。
-- 组件的「用法总览」页命名为 `XFormOverview.vue`（与「Overview」「index」二选一）。
+- 组件的「用法总览」页命名为 `XFormOverview.vue`（与「Overview」「index」二选一）。**当前项目使用 `XFormOverview.vue` 而非 `index.vue`**——避免自动派生的 component 名 `XForm` 与已有概览 demo 重名冲突；下表 `examples/XForm/index.vue` 行仅为说明派生规则，不要求实际创建。
 - 辅助文件分类管理，按导出性质分到两个子目录：
   - `configs/` —— **纯数据**导出（API 表格条目、字典常量、schema 段、字符串代码片段），如 `xform-api.ts` / `xform-demos-api.ts` / `cascader-data.ts` 等。
   - `utils/` —— **导出函数**的辅助工具（最常见是 mock 异步接口），如 `xform-detail-fill-mock.ts`。
@@ -589,6 +600,15 @@ const tocItems = [
 - `src/modules/demo/routes/index.ts` —— 路由自动注册逻辑
 - `src/modules/demo/config/sidebar-groups.ts` —— 分组与中文名配置
 - `src/modules/demo/components/DemoFrame.vue` —— 页面容器实现
-- `src/modules/demo/examples/XFormOrderCreate.vue` —— 端到端业务示例参考
-- `src/modules/demo/examples/XFormModelWarn.vue` —— 对照组 + 控制台捕获参考
+- `src/modules/demo/examples/XForm/XFormOrderCreate.vue` —— 端到端业务示例参考
+- `src/modules/demo/examples/XForm/XFormModelWarn.vue` —— 对照组 + 控制台捕获参考
+- `src/modules/demo/examples/XForm/XFormOverview.vue` —— XForm 用法总览（入口 demo）
 - `CLAUDE.md` §3 —— 项目 BEM 编写规范
+
+---
+
+## 修订记录
+
+| 版本   | 日期       | 变更                                                                                                                                                                                                                                                         |
+| ------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| v1.0.0 | 2026-09-04 | §二 目录树增加 `styles/`、`utils/extractApi.ts`、`layouts/sidebar-state.ts`、`layouts/use-sidebar-drag.ts`；§三 1.1 派生规则表注明当前实际用 `XFormOverview.vue` 而非 `index.vue`；§三、1.1 configs/ 列表补齐 `xform-api.ts`；§十三 延伸阅读同步 demo 新路径 |
