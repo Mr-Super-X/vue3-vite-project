@@ -1,11 +1,16 @@
+<script setup lang="ts">
+// 运行时 BEM 命名空间：vv-blank-layout
+const bem = createNamespace('blank-layout')
+</script>
+
 <template>
-  <div class="blank-layout">
+  <div :class="bem.b()">
     <RouterView />
   </div>
 </template>
 
-<style scoped>
-.blank-layout {
+<style lang="scss">
+.#{$BEM_PREFIX}-blank-layout {
   min-height: 100vh;
   background: #f5f7fa;
   /* 注意：不要用 display: flex + align-items: center + justify-content: center

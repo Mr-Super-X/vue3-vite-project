@@ -1,4 +1,3 @@
-import { ref } from 'vue'
 // ElMessageBox 由 unplugin-auto-import 注入（importStyle 自动带样式，勿显式 import）
 import { useUserStore } from '@/store/modules/user'
 import { useAppRouter } from './useAppRouter'

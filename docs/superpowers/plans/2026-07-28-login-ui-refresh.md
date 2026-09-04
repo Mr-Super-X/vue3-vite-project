@@ -762,7 +762,7 @@ pnpm test --run
 - [ ] **Step 1: 启动 dev server（后台）**
 
 ```bash
-cd "D:/work/应急水利/应急/vue3-vite-project" && pnpm dev:local
+cd "D:/personal/github/vue3工程模板/vue3-vite-project" && pnpm dev:local
 ```
 
 预期：Vite 启动，`http://localhost:5173` 可访问。
@@ -823,7 +823,7 @@ mcp__chrome-devtools__take_screenshot()
 - [ ] **Step 1: git status 确认变更范围**
 
 ```bash
-cd "D:/work/应急水利/应急/vue3-vite-project" && git status --short
+cd "D:/personal/github/vue3工程模板/vue3-vite-project" && git status --short
 ```
 
 预期：仅 2 个文件变动（Login.vue 修改 + Login.spec.ts 新增），无意外文件被改。
@@ -831,7 +831,7 @@ cd "D:/work/应急水利/应急/vue3-vite-project" && git status --short
 - [ ] **Step 2: git add + commit（按项目规范，单独行加 metadata）**
 
 ```bash
-cd "D:/work/应急水利/应急/vue3-vite-project" && \
+cd "D:/personal/github/vue3工程模板/vue3-vite-project" && \
   git add "src/modules/auth/views/Login.vue" "src/modules/auth/views/Login.spec.ts" && \
   git commit -m "feat(auth): 登录页深色科技感重构 + 增强交互
 

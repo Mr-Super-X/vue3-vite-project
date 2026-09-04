@@ -10,8 +10,6 @@
 //
 // 不发起任何网络请求，权限刷新仍由 userStore.fetchProfile 负责。
 
-import { computed } from 'vue'
-import { storeToRefs } from 'pinia'
 import { useUserStore } from '@store/modules/user'
 
 /**

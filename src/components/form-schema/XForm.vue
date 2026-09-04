@@ -1,0 +1,121 @@
+<script setup lang="ts">
+/**
+ * XForm —— schema 驱动的 element-plus 表单渲染器
+ *
+ * 模板 + props/attrs 透传 + ElConfigProvider + ElForm 骨架，所有业务编排收敛到 ./use-xform-composer.ts。
+ */
+import { useAttrs } from 'vue'
+import { ElConfigProvider, ElForm, ElRow, ElCol } from 'element-plus'
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
+
+import { useXFormComposer } from './composables/use-xform-composer'
+import XFormDebugBanner from './XFormDebugBanner.vue'
+import XFormErrorToast from './XFormErrorToast.vue'
+import SchemaField from './SchemaField.vue'
+import type { XFormExpose, XFormProps } from './types'
+
+// 全局样式（label 颜色、必填星号等覆盖）—— 仅 XForm.vue 加载，未使用 XForm 的页面无需引入
+import 'element-plus/dist/index.css'
+import './styles/element-form-overwrite.scss'
+
+const props = defineProps<XFormProps>()
+// exactOptionalPropertyTypes 下 vue 推导的 props 类型与 XFormProps 在 optional 字段上有差异，
+// 统一收口为 XFormProps 让下游 composable 不重复处理
+const propsModel = props as XFormProps
+const attrs = useAttrs()
+// 类型归因：element-plus 2.x ConfigProviderProps 是 ExtractPropTypes 元组
+// （type/required/validator/__epPropKey）形态，与运行时值类型不等价（C1 根因，
+// 详见 types/TYPE-CAST-AUDIT.md）。zhCn 是 Language 对象、size 是 string，
+// 运行时两者均生效；TS 层用 Record<string, unknown> 替代 `as any`（全局 §1.5 违规）。
+// 模板 <ElConfigProvider v-bind="elConfig"> 接受 string-keyed 对象。
+const elConfig: Record<string, unknown> = { locale: zhCn, size: 'default' }
+// BEM namespace 由 unplugin-auto-import 自动注入，无需显式 import
+const {
+  bem,
+  elFormRef,
+  renderToComponent,
+  fieldErrors,
+  topLevelNodes,
+  topLevelRow,
+  topLevelColumn,
+  topLevelColSpan,
+  topLevelDisabled,
+  topLevelLabelWidth,
+  topLevelLabelPosition,
+  topLevelScrollToError,
+  topLevelScrollIntoViewOptions,
+  validateErrors,
+  forbiddenErrors,
+  showDebugBanner,
+  exposed,
+  installDevDebugHook,
+  errorBus,
+} = useXFormComposer({ props: propsModel })
+
+defineOptions({ inheritAttrs: false })
+defineExpose(exposed satisfies XFormExpose)
+
+installDevDebugHook()
+</script>
+
+<template>
+  <ElConfigProvider v-bind="elConfig">
+    <div :class="[bem.b(), attrs.class]" :data-field-errors="Object.keys(fieldErrors).join(',')">
+      <ElForm
+        ref="elFormRef"
+        :model="(props.model ?? {}) as Record<string, unknown>"
+        :validate-trigger="['change', 'blur']"
+        :disabled="topLevelDisabled"
+        :label-position="topLevelLabelPosition"
+        :label-width="topLevelLabelWidth"
+        :scroll-to-error="topLevelScrollToError"
+        :scroll-into-view-options="topLevelScrollIntoViewOptions"
+      >
+        <!-- 模板内联 `as never` 归因：Element Plus buildProp 类型元组在 vue 模板表达式
+             中推导失败，运行时由 ElRow 自身校验 gutter 为 number | string（C1，归因见
+             types/TYPE-CAST-AUDIT.md） -->
+        <ElRow v-if="topLevelColumn" :gutter="(topLevelRow?.gutter ?? 0) as never">
+          <ElCol
+            v-for="(node, i) in topLevelNodes"
+            :key="node.key ?? node.name ?? i"
+            :span="topLevelColSpan"
+          >
+            <SchemaField :node="node" :render-fn="renderToComponent" />
+          </ElCol>
+        </ElRow>
+        <ElRow v-else-if="topLevelRow" :gutter="(topLevelRow?.gutter ?? 0) as never">
+          <SchemaField
+            v-for="(node, i) in topLevelNodes"
+            :key="node.key ?? node.name ?? i"
+            :node="node"
+            :render-fn="renderToComponent"
+          />
+        </ElRow>
+        <SchemaField
+          v-else
+          v-for="(node, i) in topLevelNodes"
+          :key="node.key ?? node.name ?? i"
+          :node="node"
+          :render-fn="renderToComponent"
+        />
+      </ElForm>
+    </div>
+  </ElConfigProvider>
+  <XFormDebugBanner
+    v-if="showDebugBanner"
+    :validate-errors="validateErrors"
+    :forbidden-errors="forbiddenErrors"
+  />
+  <!-- OPT-7：user-facing 错误 OSD（dev 可见 / prod 隐藏） -->
+  <XFormErrorToast
+    :events="errorBus.events.value"
+    :enabled="showDebugBanner"
+    @dismiss="errorBus.dismiss"
+  />
+</template>
+
+<style lang="scss">
+/* 命名空间占位 —— 子组件覆盖样式各自下钻到 .#{$BEM_PREFIX}-x-form__xxx */
+.#{$BEM_PREFIX}-x-form {
+}
+</style>

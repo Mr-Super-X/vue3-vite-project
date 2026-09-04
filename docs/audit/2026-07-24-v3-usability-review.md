@@ -309,3 +309,7 @@ grep -rn "尚未实现.*Sidebar\|Sidebar.*尚未实现" README.md docs/
 ---
 
 _报告版本：v3.0 | 评估日期：2026-07-24（同日增量） | 上版：v2.0 | 评估方式：独立 grep/Read + 6 个并行 code-explorer agent | 下次评估建议：2026-08 月度_
+
+---
+
+> **2026-08-19 架构变更**：本文档中提到的 `src/components/layout/Header.vue` / `src/components/layout/Sidebar.vue` 已迁移至 `src/layouts/default/components/`（layout 自包含重构）。详见 `CHANGELOG.md`「♻ Refactor | 重构」分组。

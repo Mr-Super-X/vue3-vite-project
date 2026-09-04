@@ -1,34 +1,41 @@
 <script setup lang="ts">
 // 单条指标行：label | value | trend
 // 规格：行高 42px / 标签 14px / 数值 20px bold / 趋势 12px + 8x8 方向箭头
-import { computed } from 'vue'
 import type { OverviewMetricDto } from '@/modules/home/types/portal-overview'
 
-const props = defineProps<{
+// BEM 工具由 unplugin-auto-import 自动注入，无须显式 import
+const bem = createNamespace('overview-metric-row')
+
+defineProps<{
   metric: OverviewMetricDto
 }>()
-
-const trendClass = computed(() => `is-${props.metric.trend}`)
 </script>
 
 <template>
-  <div class="ov-row">
-    <div class="ov-row__label">
-      <span class="ov-row__label-text">{{ metric.label }}</span>
-      <span v-if="metric.unit" class="ov-row__unit">{{ metric.unit }}</span>
+  <div :class="bem.b()">
+    <div :class="bem.e('label')">
+      <span :class="bem.e('label-text')">{{ metric.label }}</span>
+      <span v-if="metric.unit" :class="bem.e('unit')">{{ metric.unit }}</span>
     </div>
-    <div class="ov-row__value-wrap">
-      <span class="ov-row__value">{{ metric.value }}</span>
-      <span :class="['ov-row__trend', trendClass]">
-        <span class="ov-row__arrow" aria-hidden="true" />
-        <span class="ov-row__trend-text">同比 {{ metric.trendText }}</span>
+    <div :class="bem.e('value-wrap')">
+      <span :class="bem.e('value')">{{ metric.value }}</span>
+      <span
+        :class="[
+          bem.e('trend'),
+          bem.is('up', metric.trend === 'up'),
+          bem.is('down', metric.trend === 'down'),
+          bem.is('flat', metric.trend === 'flat'),
+        ]"
+      >
+        <span :class="bem.e('arrow')" aria-hidden="true" />
+        <span :class="bem.e('trend-text')">同比 {{ metric.trendText }}</span>
       </span>
     </div>
   </div>
 </template>
 
-<style lang="scss" scoped>
-.ov-row {
+<style lang="scss">
+.#{$BEM_PREFIX}-overview-metric-row {
   display: flex;
   align-items: center;
   justify-content: space-between;

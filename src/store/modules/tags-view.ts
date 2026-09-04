@@ -10,8 +10,6 @@
 //   - 同一 name 在 visitedViews 中只保留一条，path 更新到最新
 //   - cachedViews 不变（keep-alive 缓存复用，组件实例仍在）
 
-import { defineStore } from 'pinia'
-import { ref } from 'vue'
 import type { RouteLocationNormalized } from 'vue-router'
 
 export interface TagView {

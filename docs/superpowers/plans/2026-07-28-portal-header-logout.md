@@ -380,7 +380,7 @@ pnpm test --run
 - [ ] **Step 1: 启动 dev server**
 
 ```bash
-cd "D:/work/应急水利/应急/vue3-vite-project" && pnpm dev:local
+cd "D:/personal/github/vue3工程模板/vue3-vite-project" && pnpm dev:local
 ```
 
 预期：Vite 启动，端口 5173 或 5174 可访问。

@@ -1,6 +1,6 @@
 # Web Vitals 使用规范
 
-> **当前状态（v1.0.0）**：4 项核心指标**已采集**，但**未接上报端点**。dev 模式可在浏览器控制台直接观察；prod 默认 noop（不上报任何端点）。后续与运维约定 URL 与协议后，在 `main.ts` 一行接入。
+> **当前状态（v1.0.1）**：4 项核心指标**已采集**，但**未接上报端点**。dev 模式默认通过控制台徽章（`showBadge`）直接观察；prod 默认 noop（不上报任何端点）。后续与运维约定 URL 与协议后，在 `main.ts` 一行接入。
 
 ## 1. 4 项核心指标
 
@@ -23,7 +23,7 @@
 web-vitals 库采集（PerformanceObserver API）
   ↓
 src/plugins/webVitals.ts 中转
-  ├── dev: console.info（默认）
+  ├── dev: showBadge 控制台徽章（GitHub 风格，按 rating 切换颜色，默认）
   └── prod: 默认 noop，由 options.report 自定义
        ├── Sentry: setMeasurement
        ├── Ga: gtag('event', metric.name)
@@ -31,6 +31,10 @@ src/plugins/webVitals.ts 中转
 ```
 
 采集与上报**解耦**——本插件只采集并提供回调，业务方在 `main.ts` 一行决定怎么上报。
+
+> dev 模式默认 reporter 用 `@/utils/consoleBadge` 的 `showBadge`，输出形如
+> `性能监控 · Web Vitals · LCP` + 数值 + 评级（good / needs-improvement / poor）的徽章，
+> 比 `console.info` 更便于视觉区分（颜色按 rating 切换：good 绿 / 需改进黄 / 差红）。
 
 ## 3. 接入示例
 
@@ -83,14 +87,17 @@ app.use(Plugins, {
 
 ### 3.4 仅本地观察（默认行为）
 
-不动 `main.ts` 即可。dev 模式启动后浏览器控制台会打印：
+不动 `main.ts` 即可。dev 模式启动后浏览器控制台会输出 GitHub 风格徽章：
 
 ```
-[WebVitals] LCP=1820 (good)
-[WebVitals] INP=145 (good)
-[WebVitals] CLS=0.04 (good)
-[WebVitals] TTFB=380 (good)
+性能监控 · Web Vitals · LCP   1820ms · good              (绿底徽章)
+性能监控 · Web Vitals · INP   145ms  · good              (绿底徽章)
+性能监控 · Web Vitals · CLS   0.04  · good               (绿底徽章)
+性能监控 · Web Vitals · TTFB  380ms · good               (绿底徽章)
 ```
+
+> 实现细节见 `src/plugins/webVitals.ts` 的 `defaultReporter`：用 `@utils/consoleBadge`
+> 的 `showBadge(label, value, labelColor, valueColor)` 渲染（label 深紫 #6b21a8，性能监控语义）。
 
 prod 模式默认 noop，不会有任何外发请求。
 
@@ -147,10 +154,10 @@ app.use(Plugins, {
 1. `pnpm dev`
 2. 打开 Chrome DevTools → Console
 3. 触发页面加载、点击按钮让 INP 触发
-4. 应看到 `[WebVitals] LCP=...` 等输出
+4. 应看到「性能监控 · Web Vitals · LCP」等彩色徽章输出
 
 E2E 自测（接入端点后）：用 Playwright 模拟导航 + 点击，断言 post 请求有 `name` 字段。
 
 ---
 
-_文档版本：v1.0.0 | 编写日期：2026-07-23 | 配套包：`web-vitals@6.0.0`_
+_文档版本：v1.0.1 | 编写日期：2026-07-23 | 最后更新：2026-09-04（dev 默认 reporter 已改为 showBadge 徽章）| 配套包：`web-vitals@6.0.0`_

@@ -4,7 +4,7 @@ import { autoImport } from '@/utils/autoImport'
 /**
  * 自动扫描当前目录下所有指令文件并全局注册。
  *
- * 设计要点（参考 D:\work\应急水利\am-portal-mobile-yzy-fe\src\plugins\autoImportGlobalDirectivePlugin.js）：
+ * 设计要点（参考原内部项目 autoImportGlobalDirectivePlugin.js 实现）：
  * - Vite 适配：import.meta.glob 替代 webpack require.context
  * - 自动跳过 index.ts 自身和下划线开头的内部工具文件（如 _utils.ts）
  * - 自动跳过 .d.ts 类型声明文件

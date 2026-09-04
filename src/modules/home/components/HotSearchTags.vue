@@ -1,4 +1,7 @@
 <script setup lang="ts">
+// BEM 工具由 unplugin-auto-import 自动注入，无须显式 import
+const bem = createNamespace('hot-search-tags')
+
 defineProps<{
   tags: string[]
   active?: string
@@ -10,13 +13,13 @@ defineEmits<{
 </script>
 
 <template>
-  <div class="hot-search">
-    <span class="hot-search__label">热门搜索：</span>
+  <div :class="bem.b()">
+    <span :class="bem.e('label')">热门搜索：</span>
     <button
       v-for="tag in tags"
       :key="tag"
       type="button"
-      :class="['hot-search__tag', { active: tag === active }]"
+      :class="[bem.e('tag'), bem.is('active', tag === active)]"
       @click="$emit('select', tag)"
     >
       {{ tag }}
@@ -24,8 +27,8 @@ defineEmits<{
   </div>
 </template>
 
-<style lang="scss" scoped>
-.hot-search {
+<style lang="scss">
+.#{$BEM_PREFIX}-hot-search-tags {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -38,7 +41,6 @@ defineEmits<{
   }
 
   &__tag {
-    padding: 2px 0;
     background: rgba(0, 0, 0, 0.15);
     border: none;
     border-radius: 2px;
@@ -50,7 +52,7 @@ defineEmits<{
     padding: 0 8px;
     height: 24px;
 
-    &.active {
+    &.is-active {
       background: #016be6;
       color: #fff;
     }

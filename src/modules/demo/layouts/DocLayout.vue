@@ -4,25 +4,28 @@
  *
  * 布局：grid 三列 [sidebar | main | toc]
  *   - 左侧 sidebar：自动从 router 收集所有 Demo* 路由，**零手动维护**——
- *     新增 demo 子路由后 sidebar 自动出现。当前所有 demo 平铺在一个"通用"组。
+ *     新增 demo 子路由后 sidebar 自动出现。按组件类型分组（分组规则与中文名
+ *     映射见 config/sidebar-groups.ts），组可点击展开收起，右缘可拖拽调整宽度
+ *     （150~400px，逻辑见 use-sidebar-drag.ts）。
  *     顶部有"返回首页"按钮，点击回到项目根路由（dashboard /）。
  *   - 中间 main：演示页内容（default slot）
  *   - 右侧 toc：本页锚点导航（toc slot，由各 demo 页面提供）
  *
  * 边界：sidebar 在内容超长时保持 sticky；toc 同理。
  */
-import { computed } from 'vue'
-import { useRoute, RouterLink } from 'vue-router'
-import { Back } from '@element-plus/icons-vue'
+import { ArrowDown, ArrowRight, Back } from '@element-plus/icons-vue'
 import { useAppRouter } from '@composables/useAppRouter'
+import { getSidebarGroup, getSidebarLabel, SIDEBAR_GROUPS } from '../config/sidebar-groups'
+import { useDemoSearch, type DemoSearchItem } from '../composables/useDemoSearch'
+import { collapsedGroups, sidebarWidth } from './sidebar-state'
+import { useSidebarDrag } from './use-sidebar-drag'
 
 const route = useRoute()
 const { router } = useAppRouter()
 
-interface SidebarItem {
-  name: string
+interface SidebarItem extends DemoSearchItem {
+  /** 用于分组归类（PascalCase 组件名） */
   title: string
-  path: string
 }
 
 const sidebarItems = computed<SidebarItem[]>(() => {
@@ -31,11 +34,15 @@ const sidebarItems = computed<SidebarItem[]>(() => {
       .getRoutes()
       // 排除 redirect 路由（'Demo' 这种跳转型入口不应出现在侧边栏）
       .filter((r) => typeof r.name === 'string' && r.name.startsWith('Demo') && !r.redirect)
-      .map((r) => ({
-        name: String(r.name),
-        title: String(r.meta?.title ?? r.name),
-        path: r.path,
-      }))
+      .map((r) => {
+        const title = String(r.meta?.title ?? r.name)
+        return {
+          name: String(r.name),
+          title,
+          label: getSidebarLabel(title),
+          path: r.path,
+        }
+      })
   )
 })
 
@@ -43,44 +50,130 @@ const sidebarItems = computed<SidebarItem[]>(() => {
 function goHome() {
   router.push('/')
 }
+
+// —— 分组归类（空组过滤掉，不渲染） ——
+interface SidebarGroup {
+  title: string
+  items: SidebarItem[]
+}
+
+const sidebarGroups = computed<SidebarGroup[]>(() => {
+  const map = new Map<string, SidebarItem[]>()
+  for (const group of SIDEBAR_GROUPS) map.set(group.title, [])
+  for (const item of sidebarItems.value) {
+    map.get(getSidebarGroup(item.title))?.push(item)
+  }
+  return SIDEBAR_GROUPS.map((g) => ({ title: g.title, items: map.get(g.title) ?? [] })).filter(
+    (g) => g.items.length > 0
+  )
+})
+
+// —— 搜索（输入即过滤；未命中分组隐藏，命中组强制展开） ——
+const keyword = ref('')
+const { filteredGroups, isSearchActive, clearKeyword } = useDemoSearch({
+  groups: sidebarGroups,
+  keyword,
+  collapsedGroups,
+})
+
+// —— 展开收起（默认全展开；状态模块级保留，见 sidebar-state.ts） ——
+function toggleGroup(groupTitle: string) {
+  // 搜索激活期间不响应 toggleGroup 写入 collapsedGroups，
+  // 否则会污染用户的折叠偏好（spec §3.4）
+  if (isSearchActive.value) return
+  const next = new Set(collapsedGroups.value)
+  if (next.has(groupTitle)) {
+    next.delete(groupTitle)
+  } else {
+    next.add(groupTitle)
+  }
+  collapsedGroups.value = next
+}
+
+// —— 拖拽调整 sidebar 宽度（150~400px 钳制；状态模块级保留，逻辑见 use-sidebar-drag） ——
+const { onResizerMousedown } = useSidebarDrag(sidebarWidth, 150, 400)
+
+const bem = createNamespace('doc-layout')
 </script>
 
 <template>
-  <div class="doc-layout">
-    <aside class="doc-layout__sidebar">
-      <button class="doc-layout__home" type="button" @click="goHome">
-        <el-icon class="doc-layout__home-icon"><Back /></el-icon>
-        <span>返回首页</span>
-      </button>
-      <h3 class="doc-layout__group-title">组件</h3>
-      <ul class="doc-layout__nav">
-        <li v-for="item in sidebarItems" :key="item.name">
-          <RouterLink
-            :to="item.path"
-            class="doc-layout__link"
-            :class="{ 'is-active': route.name === item.name }"
+  <div
+    :class="bem.b()"
+    :style="{ gridTemplateColumns: `${sidebarWidth}px 0 minmax(0, 1fr) 180px` }"
+  >
+    <aside :class="bem.e('sidebar')">
+      <div :class="bem.e('sidebar-top')">
+        <button :class="bem.e('home')" type="button" @click="goHome">
+          <el-icon :class="bem.e('home-icon')"><Back /></el-icon>
+          <span>返回首页</span>
+        </button>
+        <div :class="bem.e('search')">
+          <el-input
+            v-model="keyword"
+            placeholder="搜索 demo"
+            clearable
+            size="default"
+            :class="bem.e('search-input')"
+          />
+        </div>
+      </div>
+      <ul :class="bem.e('nav')">
+        <li v-for="group in filteredGroups" :key="group.title" :class="bem.e('group')">
+          <button
+            :class="bem.e('group-header')"
+            type="button"
+            :aria-expanded="isSearchActive || !collapsedGroups.has(group.title)"
+            @click="toggleGroup(group.title)"
           >
-            {{ item.title }}
-          </RouterLink>
+            <el-icon :class="bem.e('group-arrow')">
+              <ArrowRight v-if="!isSearchActive && collapsedGroups.has(group.title)" />
+              <ArrowDown v-else />
+            </el-icon>
+            <span :class="bem.e('group-name')">{{ group.title }}</span>
+            <span :class="bem.e('group-count')">{{ group.items.length }}</span>
+          </button>
+          <ul
+            v-show="isSearchActive || !collapsedGroups.has(group.title)"
+            :class="bem.e('group-list')"
+          >
+            <li v-for="item in group.items" :key="item.name">
+              <RouterLink
+                :to="item.path"
+                :class="[bem.e('link'), bem.is('active', route.name === item.name)]"
+              >
+                {{ item.label }}
+              </RouterLink>
+            </li>
+          </ul>
         </li>
       </ul>
+      <div v-if="isSearchActive && filteredGroups.length === 0" :class="bem.e('search-empty')">
+        <p :class="bem.e('search-empty-text')">未匹配到「{{ keyword }}」</p>
+        <button type="button" :class="bem.e('search-empty-btn')" @click="clearKeyword">
+          清空搜索
+        </button>
+      </div>
     </aside>
 
-    <main class="doc-layout__main">
+    <!-- 拖拽条放在 sidebar 与 main 之间的独立 grid 列，sticky 定位保证滚动时始终可见 -->
+    <div :class="bem.e('resizer')" @mousedown="onResizerMousedown" />
+
+    <main :class="bem.e('main')">
       <slot />
     </main>
 
-    <aside class="doc-layout__toc">
+    <aside :class="bem.e('toc')">
       <slot name="toc" />
     </aside>
   </div>
 </template>
 
-<style lang="scss" scoped>
-.doc-layout {
+<style lang="scss">
+.#{$BEM_PREFIX}-doc-layout {
+  // grid-template-columns 由内联 style 动态控制（sidebar 宽度可拖拽）
+  // 四列：[sidebar | resizer(0宽) | main | toc]
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr) 180px;
-  gap: 24px;
+  gap: 0;
   align-items: start;
   // 强制占满视口高度（减去 default-layout 的 64px header + 上下 padding），
   // 避免 demo 内容少时容器塌陷导致 sidebar / toc 看起来"居中"——
@@ -93,6 +186,25 @@ function goHome() {
     top: 16px;
     max-height: calc(100vh - 32px);
     overflow-y: auto;
+    padding: 16px;
+  }
+
+  &__toc {
+    margin-left: 24px;
+  }
+
+  &__main {
+    padding: 16px;
+    margin-left: 24px;
+  }
+
+  &__sidebar-top {
+    // 把 home + search 包成一个 sticky 容器：sidebar 内容超长滚动时
+    // 「返回首页」按钮与搜索框始终可见，避免检索流程被滚动打断
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding-bottom: 12px;
   }
 
   &__home {
@@ -100,9 +212,9 @@ function goHome() {
     align-items: center;
     gap: 6px;
     width: 100%;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
     padding: 6px 10px;
-    background: transparent;
+    background: var(--el-bg-color, #fff);
     border: 1px solid var(--el-border-color-lighter, #ebeef5);
     border-radius: 4px;
     color: #606266;
@@ -124,13 +236,38 @@ function goHome() {
     font-size: 14px;
   }
 
-  &__group-title {
-    margin: 0 0 8px;
+  &__search {
+    // 无 margin：与 home 间距由 sidebar-top padding-bottom 统一管理
+  }
+
+  &__search-input {
+    width: 100%;
+  }
+
+  &__search-empty {
+    padding: 24px 8px;
+    text-align: center;
+    color: var(--el-text-color-secondary, #909399);
     font-size: 13px;
-    font-weight: 600;
-    color: #909399;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+  }
+
+  &__search-empty-text {
+    margin: 0 0 8px;
+  }
+
+  &__search-empty-btn {
+    padding: 4px 12px;
+    background: transparent;
+    border: 1px solid var(--el-border-color, #dcdfe6);
+    border-radius: 4px;
+    color: var(--el-color-primary, #409eff);
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+
+    &:hover {
+      background: var(--el-color-primary-light-9, #ecf5ff);
+    }
   }
 
   &__nav {
@@ -139,8 +276,72 @@ function goHome() {
     list-style: none;
   }
 
+  &__group {
+    margin-bottom: 4px;
+  }
+
+  &__group-header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    padding: 6px 8px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #909399;
+    cursor: pointer;
+
+    &:hover {
+      background: #f5f7fa;
+      color: #606266;
+    }
+  }
+
+  &__group-arrow {
+    flex-shrink: 0;
+    font-size: 12px;
+  }
+
+  &__group-name {
+    flex: 1;
+    text-align: left;
+  }
+
+  &__group-count {
+    flex-shrink: 0;
+    font-size: 11px;
+    color: #c0c4cc;
+  }
+
+  &__group-list {
+    margin: 0;
+    padding: 0 0 0 8px;
+    list-style: none;
+  }
+
+  &__resizer {
+    // 独立 grid 列，sticky 定位保证 sidebar 内部滚动或页面滚动时始终可见
+    position: sticky;
+    top: 16px;
+    align-self: start;
+    justify-self: end;
+    z-index: 1;
+    width: 6px;
+    height: calc(100vh - 32px);
+    cursor: col-resize;
+
+    &:hover {
+      background: rgba(64, 158, 255, 0.3);
+    }
+  }
+
   &__link {
     display: block;
+    // 长组件名（如 XFormCrossFieldReverse）在窄 sidebar 下允许断词，避免撑出横向滚动
+    overflow-wrap: break-word;
     padding: 6px 12px;
     margin: 2px 0;
     font-size: 13px;
