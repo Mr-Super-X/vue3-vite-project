@@ -3,6 +3,8 @@
  * XForm —— schema 驱动的 element-plus 表单渲染器
  *
  * 模板 + props/attrs 透传 + ElConfigProvider + ElForm 骨架，所有业务编排收敛到 ./use-xform-composer.ts。
+ *
+ * @group XForm 组件
  */
 import { useAttrs } from 'vue'
 import { ElConfigProvider, ElForm, ElRow, ElCol } from 'element-plus'

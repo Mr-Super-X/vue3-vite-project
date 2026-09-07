@@ -6,6 +6,8 @@
  *
  * @see ./use-form-validation.ts 调用方
  * @see ./use-cross-field-trigger.ts 反向（model 变化触发）兄弟 composable
+ *
+ * @group 表单编排：校验
  */
 import { get } from 'lodash-es'
 import { matchTrigger } from './match-trigger'

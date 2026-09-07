@@ -5,6 +5,10 @@
  * - 违反 CLAUDE.md §1.6 项目按需加载约定（unplugin-vue-components 自动注册）
  * - 直接命名导入会增加 bundle size
  * - 实际组件由 vue 内置 resolveComponent() 从全局注册表查找
+ *
+ * 类型断言（`as never`）归因见 types/TYPE-CAST-AUDIT.md。
+ *
+ * @group XForm 适配层
  */
 export const DEFAULT_COMPONENT_MAP: Record<string, string> = {
   Input: 'ElInput',

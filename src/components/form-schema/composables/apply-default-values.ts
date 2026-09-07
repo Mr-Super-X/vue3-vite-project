@@ -3,6 +3,8 @@
  *
  * 从 use-xform-composer 抽离。defaultValue 填充是运行时行为（非 dev 诊断），必须全环境生效；
  * dev 校验 + 表达式扫描已迁到 use-dev-runtime.ts，本文件只保留 model 填充逻辑。
+ *
+ * @group 表单编排：默认值
  */
 import { onMounted, watch } from 'vue'
 import { get, set } from 'lodash-es'

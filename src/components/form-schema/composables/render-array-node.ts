@@ -3,6 +3,8 @@
  * name 路径自动前缀化为 `items[i].subName`（el-form 按嵌套路径校验）。
  *
  * 类型断言（`as never`）归因见 types/TYPE-CAST-AUDIT.md。
+ *
+ * @group 表单编排：渲染
  */
 import { h, type VNode } from 'vue'
 import { ElCard, ElButton } from 'element-plus'
@@ -91,6 +93,8 @@ export function renderArrayNode(
             default: () => (inner && !Array.isArray(inner) ? [inner] : (inner as never)),
           }) as VNode,
           h('div', { class: 'array-node__row-actions' } as Record<string, unknown>, {
+            // 类型归因：ElButton 与 h() 第一参 union 不等价（C1 根因，详见 types/TYPE-CAST-AUDIT.md）；
+            // 运行时已验证 render 正常，TS 层用 as never 兜底。
             default: () =>
               [
                 showMove &&

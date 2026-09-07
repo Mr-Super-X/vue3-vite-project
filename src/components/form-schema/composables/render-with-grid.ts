@@ -2,6 +2,8 @@
  * render-with-grid —— 视觉容器内栅格渲染
  *
  * 类型断言（`as never`）归因见 types/TYPE-CAST-AUDIT.md。
+ *
+ * @group 表单编排：渲染
  */
 import { h, type VNode } from 'vue'
 import { ElRow, ElCol } from 'element-plus'
@@ -17,6 +19,8 @@ export function renderToComponentWithGrid(node: SchemaNode, renderToComponent: R
     : node.children && typeof node.children === 'object'
       ? [node.children as SchemaNode]
       : []
+  // 类型归因：ElRow/ElCol 与 SchemaNode 字面类型不等价（C1 根因，详见 types/TYPE-CAST-AUDIT.md）；
+  // 嵌套 h() 的 component / props / children 三参都需兜底，运行时已验证，TS 层用 as never 替代 as any（全局 §1.5 违规）。
   return h(ElRow as never, { ...node.row } as never, {
     default: () =>
       arr.map((c, i) => {

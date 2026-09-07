@@ -12,6 +12,8 @@
  * - snapshot 由调用方负责初始化：XForm.vue 在 setup 末尾立即调一次 resetDirty() 拍基线
  *   避免 setup 时 model 为空导致"全字段 dirty"假象
  * - watch model deep 触发 dirty 重算（响应式）
+ *
+ * @group 表单编排：dirty
  */
 import { watch } from 'vue'
 import { isEqual, get, cloneDeep } from 'lodash-es'

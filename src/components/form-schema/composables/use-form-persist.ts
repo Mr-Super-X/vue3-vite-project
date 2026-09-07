@@ -13,6 +13,8 @@ import { readDraft, removeDraft, writeDraft } from './draft-storage'
  * 副作用：写 storage、注册 beforeunload 监听（scope 内 onScopeDispose 自动清理）。
  *
  * @see ./draft-storage.ts 底层 storage 适配
+ *
+ * @group 表单编排：草稿
  */
 export interface FormPersistOptions {
   key: string // 草稿唯一 key：建议 '<模块>.<表单名>.draft'，经 storage.ts namespace 隔离

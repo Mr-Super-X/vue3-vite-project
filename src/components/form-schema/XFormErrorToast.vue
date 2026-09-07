@@ -11,6 +11,8 @@
  * - ErrorToast 聚焦运行时错误（crossValidator 失败 / 表达式解析失败 / 组件名无效等）
  *
  * 单条 toast 卡片渲染抽到 ./XFormErrorToastItem.vue，本文件仅承载容器（Teleport + ul 列表 + stack 定位样式）。
+ *
+ * @group XForm 组件
  */
 import type { FormErrorEvent } from './composables/use-form-error-bus'
 import XFormErrorToastItem from './XFormErrorToastItem.vue'

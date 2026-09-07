@@ -12,6 +12,8 @@
  * 重复维护成本高，统一到此处消除重复。
  *
  * @see types/TYPE-CAST-AUDIT.md（已登记的 6 处使用）
+ *
+ * @group XForm 工具
  */
 
 /** 允许的输入类型：string 或任意带 .value 字段的对象（含 Ref / ComputedRef / plain object） */

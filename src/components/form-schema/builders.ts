@@ -14,6 +14,12 @@
  *
  * 按 component 名字母 A-Z 分组，每个 component 包含「makeBuilder 工厂 + Ext 子类 + xXxx 入口」三件套，
  * 查找 builder 能力从跨 2-3 处跳转 → 同 1 节内查找。
+ *
+ * 类型断言（`as never`）归因：链式 builder 返回 SchemaNodeFor<C> 时，规则 / prop value 等字段
+ * 类型与 element-plus 内部 props union 不等价（C1 根因，详见 types/TYPE-CAST-AUDIT.md）；
+ * 运行时已验证 setRules / setProps 生效，TS 层用 as never 兜底。
+ *
+ * @group XForm 构建器
  */
 import type {
   SchemaNode,

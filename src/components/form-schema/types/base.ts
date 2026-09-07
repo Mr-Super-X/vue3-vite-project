@@ -11,6 +11,8 @@
  *
  * @see ./schema-node.ts 顶层使用方
  * @see ../composables/use-expression.ts FunctionExpression 沙箱解析入口
+ *
+ * @group 类型系统
  */
 import type { VNode } from 'vue'
 import type { SchemaNode } from './schema-node'

@@ -5,6 +5,8 @@
  * （scanForForbidden + errorBus.error）、model 缺失 warn、debug hook 安装（window.__xform_debug）。
  *
  * prod 下所有 watch + ref 初始化均执行但 console / errorBus 静默（依赖 showDebugBanner 门控）。
+ *
+ * @group 表单编排：开发态
  */
 import { ref, watch, type Ref } from 'vue'
 import type { ComponentPublicInstance } from 'vue'

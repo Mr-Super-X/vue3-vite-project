@@ -11,6 +11,8 @@
  * 如果 re-export 行无 JSDoc，IDE 只显示 `(alias) ...`，真实定义位置的注释不显示。
  * @see ./types.ts types barrel 完整类型索引
  * @see ./composables barrel 模块级 composable 重导出
+ *
+ * @group XForm 入口
  */
 import type { App, Component } from 'vue'
 import XForm from './XForm.vue'

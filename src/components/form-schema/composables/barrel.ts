@@ -18,7 +18,11 @@
  *
  * 类型与内部 hook（不在 barrel）：
  * - useRenderSchemaNode / RenderSchemaNodeOptions —— 仅渲染调度器本职，调用方直接 `./render-schema-node`
+ *
+ * @group 表单编排：渲染
  */
+
+/** EL_COMPONENT_MAP + 组件解析 + Upload 子类型判定 —— 见 ./resolve-component */
 export {
   EL_COMPONENT_MAP,
   resolveComponentFor,
@@ -27,8 +31,10 @@ export {
   isDragUpload,
 } from './resolve-component'
 
+/** compileRules —— async-validator 规则预编译（去掉 typeof==='undefined' 等占位条目） */
 export { compileRules } from './compile-rules'
 
+/** wrapWithElCol + 响应式栅格合并工具 —— 见 ./wrap-with-elcol */
 export {
   wrapWithElCol,
   pickBreakpointConfig,
@@ -36,6 +42,7 @@ export {
   mergeRowResponsive,
 } from './wrap-with-elcol'
 
+/** children 渲染 + slot 工厂 + Upload 默认/tip slot + 异步 props 装配 —— 见 ./build-slots */
 export {
   renderChildren,
   buildSlotFn,

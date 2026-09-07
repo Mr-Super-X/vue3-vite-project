@@ -13,6 +13,8 @@
  *
  * @see ../composables/apply-directives.ts 指令挂载实现
  * @see ../composables/render-form-item.ts formItem 渲染入口
+ *
+ * @group 类型系统
  */
 import type { Directive } from 'vue'
 import type { SchemaNode } from './schema-node'

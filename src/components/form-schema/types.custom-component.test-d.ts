@@ -6,6 +6,8 @@
  * 2. builder 返回类型能读取注册表类型
  *
  * 文件以 .test-d.ts 结尾：vitest 不会运行（纯类型），但 tsc --build 会编译
+ *
+ * @group XForm 类型测试
  */
 import type { SchemaNodeFor } from './types'
 import { xInput } from './builders'

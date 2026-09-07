@@ -8,6 +8,8 @@
  * 输入单字段只重渲该字段，其余字段的 vnode 完全不动。
  *
  * el-form 的 provide/inject 沿组件祖先链传递，中间多一层组件不影响 ElFormItem 注册。
+ *
+ * @group XForm 组件
  */
 import type { VNode } from 'vue'
 import type { SchemaNode } from './types'

@@ -12,6 +12,8 @@
  *
  * @see ./use-form-instance.ts 调用方
  * @see ./use-form-error-bus.ts OSD 总线
+ *
+ * @group 表单编排：错误总线
  */
 
 import { getCurrentScope, onScopeDispose, toRaw, watch, type Ref } from 'vue'

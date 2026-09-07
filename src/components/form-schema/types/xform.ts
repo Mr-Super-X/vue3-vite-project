@@ -1,5 +1,7 @@
 /**
  * XForm 组件对外契约 —— Props / Expose / Validate 入出参
+ *
+ * @group 类型系统
  */
 import type { ComponentPublicInstance, Directive } from 'vue'
 import type { ZodType } from 'zod'

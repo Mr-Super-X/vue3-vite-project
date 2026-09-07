@@ -1,3 +1,17 @@
+/**
+ * use-expression —— `{{ fn }}` 表达式沙箱解析与缓存
+ *
+ * 编译期：用 `new Function` 替代 eval（比 eval 安全），仅暴露白名单 fns + 组件事件参数；
+ * 危险标识符扫描兜底在 ./use-scan-forbidden.ts。
+ *
+ * 运行时：模块级状态（EXPRESSION_CACHE / EXPRESSION_FNS / fnsVersion），业务方应通过
+ * ExpressionScope 而非直接读写这些全局；模块级形态保留是为向后兼容旧调用方。
+ *
+ * @see ./use-expression-functions.ts 表达式函数表生命周期管理
+ * @see ./use-scan-forbidden.ts dev 危险标识符扫描
+ *
+ * @group 表单编排：表达式
+ */
 // SECURITY：用 new Function 替代 eval，仅暴露白名单 fns 与组件事件参数；危险标识符扫描见 ./use-scan-forbidden.ts
 
 const EXPRESSION_REG = /^\s*\{\{([\s\S]+)\}\}\s*$/

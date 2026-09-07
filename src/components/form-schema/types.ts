@@ -21,6 +21,8 @@
  * @see ./types/schema-node.ts —— SchemaNode 完整字段表（30 字段）请看这个文件
  * @see ./types/xform.ts —— XFormProps / XFormExpose / beforeChange 完整说明
  * @see ./types/rule.ts —— RuleItem 跨字段规则 + crossValidator / debounceMs
+ *
+ * @group 类型系统
  */
 
 /**

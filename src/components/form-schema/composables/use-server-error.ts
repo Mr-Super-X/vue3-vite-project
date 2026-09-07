@@ -10,6 +10,8 @@
  * - 数组路径支持（`items[0].qty`）—— 与 lodash get 兼容
  * - 先清空已有错误再写入，避免旧错误残留（与 element-plus 内部行为一致）
  * - 不存在的字段静默跳过（field 可能在 schema 中已被 hidden/ignore）
+ *
+ * @group 表单编排：服务端错误
  */
 
 /** 服务端响应中单个错误项的常见字段名 */

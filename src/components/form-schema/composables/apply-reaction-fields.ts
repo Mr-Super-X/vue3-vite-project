@@ -1,3 +1,15 @@
+/**
+ * apply-reaction-fields —— reaction 字段求值后写入 node（use-reaction 的纯函数形态）
+ *
+ * 与 use-reaction 的区别：
+ * - use-reaction：watch model + 调度策略 + 副作用预算（带 reactive state）
+ * - apply-reaction-fields：纯函数版"把 reaction 字段求值后写回 node"，给 static schema 初始化用
+ *
+ * 元字段（strategy / delay / deps）仅用于 use-reaction 调度策略，不写入 node
+ * 避免序列化时带元数据。
+ *
+ * @group 表单编排：联动
+ */
 import type { SchemaNode } from '../types'
 import { isEqual } from 'lodash-es'
 import { resolveFunctionExpression } from './use-expression'

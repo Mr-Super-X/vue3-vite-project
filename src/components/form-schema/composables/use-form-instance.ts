@@ -8,6 +8,8 @@
  * - zod 校验内部委托 ./use-zod-validator.ts
  *
  * 已抽离：setFieldError 双路径+watch 守护→./use-set-field-error、zod→./use-zod-validator。
+ *
+ * @group 表单编排：实例
  */
 import { ref, toRaw, type ComponentPublicInstance, type Ref } from 'vue'
 import { get, set } from 'lodash-es'

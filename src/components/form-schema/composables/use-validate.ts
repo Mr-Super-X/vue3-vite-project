@@ -15,6 +15,8 @@ import { get } from 'lodash-es'
  *
  * @see ./use-form-validation.ts validateForm 主流程调用
  * @see ./use-cross-field-trigger.ts collectCrossRuleFields 使用方
+ *
+ * @group 表单编排：校验
  */
 export function validate(
   schema: SchemaNode | SchemaNode[] | unknown,

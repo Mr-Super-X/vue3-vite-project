@@ -2,6 +2,8 @@
  * 插槽构造与组件 props 默认值：children 多态归一化、slot → 渲染函数、
  * Upload 触发区默认内容（picture-card / drag / text-picture）、Upload tip 字符串自动包
  * el-upload__tip、按组件名注入默认 props、构造 Autocomplete 异步选项 props。
+ *
+ * @group 表单编排：渲染
  */
 import { h, type VNode } from 'vue'
 import { ElButton, ElIcon, ElUpload } from 'element-plus'
@@ -68,6 +70,8 @@ export function buildUploadDefaultSlot(
     // 用户已自定义默认插槽时优先使用，不覆盖
     if (node.slots?.default !== undefined) {
       // 统一用 buildSlotFn 处理函数 / 字符串 / SchemaNode / SchemaNode[]
+      // 类型归因：渲染函数返回 VNode | string | VNode[] | undefined 联合与 Upload slot 期望类型不等价
+      // （C1 根因，详见 types/TYPE-CAST-AUDIT.md）；运行时已验证，TS 层用 as never 兜底。
       return buildSlotFn(node.slots.default, render)() as never
     }
     const children = renderChildren(node.children, render) as never

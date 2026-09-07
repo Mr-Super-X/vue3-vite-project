@@ -3,6 +3,8 @@
  * crossRules / reverseIndex / dependsOnMap，DFS 顺序与 getNames() 保持一致。
  * cross rules 覆盖 children / array.itemSchema / formItem.slots；
  * trigger='manual' 的规则不进 reverseIndex（仅 validateForm 跑）。
+ *
+ * @group 表单编排：索引
  */
 import type { SchemaNode, RuleItem } from '../types'
 

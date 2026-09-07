@@ -11,6 +11,8 @@
  * - 用户通过 components prop 注册的自定义组件
  * - Component 对象（非 string 组件名）
  * - 类型错误（TS 编译期拦截）
+ *
+ * @group 表单编排：开发态
  */
 import type { UseFormErrorBusReturn } from './use-form-error-bus'
 import type { SchemaNode } from '../types'

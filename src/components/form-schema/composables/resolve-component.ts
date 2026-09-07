@@ -1,6 +1,8 @@
 /**
  * 组件名解析：用户注册 / 短名 / 全名 / ElXxx / 全局注册 / 原生 HTML 标签，
  * 内置 EL 短名 → 实际组件映射见 EL_COMPONENT_MAP，ElUpload 类型判断工具避免覆盖默认图标注入。
+ *
+ * @group 表单编排：渲染
  */
 import { resolveComponent } from 'vue'
 import {

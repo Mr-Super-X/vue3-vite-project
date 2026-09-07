@@ -13,6 +13,8 @@
  * @see ../composables/use-cross-field-rule-trigger.ts 跨字段触发器实现
  * @see ../composables/use-form-validation.ts 校验编排入口
  * @see ./xform.ts ValidateOptions.validateFirst 入参说明
+ *
+ * @group 类型系统
  */
 
 /** 单条字段校验规则（async-validator 兼容 + 跨字段扩展） */

@@ -7,6 +7,8 @@
  * - rule.trigger === 'manual' → 永远不匹配（只在 validateForm() 时跑）
  *
  * 提取到独立文件便于单元测试，避免 XForm.vue SFC 无法 export 的限制。
+ *
+ * @group 表单编排：校验
  */
 export function matchTrigger(
   ruleTrigger: 'blur' | 'change' | 'manual' | string | string[] | undefined,

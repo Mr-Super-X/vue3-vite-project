@@ -3,6 +3,8 @@
  * 从 schema 顶层字段派生 el-form 实例级属性（labelPosition / disabled / labelWidth /
  * scrollToError / scrollIntoViewOptions 等），必须从 schema 派生而非 XForm props 配置。
  * 函数 / 字符串值通过 resolveFunctionExpression 求值。
+ *
+ * @group 表单编排：顶层字段
  */
 import { computed, type ComputedRef } from 'vue'
 import type { SchemaNode, RowConfig } from '../types'

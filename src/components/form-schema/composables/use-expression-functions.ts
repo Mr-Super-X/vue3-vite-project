@@ -6,6 +6,8 @@
  *
  * @see ./use-expression.ts setExpressionFunctions —— 模块级注册 API
  * @see ../types/xform.ts XFormProps.expressionFunctions —— 业务入参契约
+ *
+ * @group 表单编排：表达式
  */
 import { onScopeDispose, watch } from 'vue'
 
@@ -23,6 +25,9 @@ export interface UseExpressionFunctionsDeps {
  * 用法：useExpressionFunctions({ expressionFunctions: () => props.expressionFunctions })
  */
 export function useExpressionFunctions(deps: UseExpressionFunctionsDeps): void {
+  // 类型归因：XFormProps.expressionFunctions 的 Record<string, Function> 与模块级 fns 表签名
+  // （Record<string, (...args: never[]) => unknown>）变参约束不等价（C1 根因，详见 types/TYPE-CAST-AUDIT.md）；
+  // 运行时已验证沙箱执行无越界，TS 层用 as never 兜底。
   watch(
     () => deps.expressionFunctions(),
     (fns) => setExpressionFunctions(fns as never),

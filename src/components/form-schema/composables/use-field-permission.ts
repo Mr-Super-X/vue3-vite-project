@@ -7,6 +7,8 @@
  *
  * @see ../types/xform.ts XFormProps.permissionResolver —— XForm 入参契约
  * @see render-schema-node.ts RenderSchemaNodeOptions.permissionResolver —— 渲染层注入点
+ *
+ * @group 表单编排：权限
  */
 import type { SchemaNode } from '../types'
 import { get } from 'lodash-es'

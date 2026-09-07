@@ -3,6 +3,8 @@
  *
  * 业务入口推荐 `SchemaNodeFor<C>` 泛型版本（按 component 字段推导 props 类型）：
  *   const node: SchemaNodeFor<'Input'> = { component: 'Input', props: { placeholder: 'x' } }
+ *
+ * @group 类型系统
  */
 import type {
   ElAutocomplete,

@@ -5,6 +5,8 @@
  * 如果类型不匹配，tsc 会报 TS2322/TS2345 错误（CI 自动捕获）
  *
  * 文件以 .test-d.ts 结尾：vitest 不会运行（纯类型），但 tsc --build 会编译
+ *
+ * @group XForm 类型测试
  */
 import type { SchemaNodeFor, PropsByComponent } from './types'
 

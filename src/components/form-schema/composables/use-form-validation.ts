@@ -11,6 +11,8 @@
  * - 滚动：字段失败由 el-form 原生 scrollToError；跨字段失败由 scrollToFirstError
  *
  * @see ./use-cross-field-rule-trigger.ts 委托实现 triggerCrossFieldValidator
+ *
+ * @group 表单编排：校验
  */
 import { nextTick, toRaw, type Ref } from 'vue'
 import { get } from 'lodash-es'

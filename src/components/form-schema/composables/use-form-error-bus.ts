@@ -6,6 +6,8 @@
  *
  * 不引入第三方 toast 库（ElMessageBus 与业务层耦合过深）；prod 预留 hook 供业务埋点上报。
  * 同 code 去重（5 秒内）避免连续输入反复弹窗；force:true 跳过去重用于主动 validate 场景。
+ *
+ * @group 表单编排：错误总线
  */
 
 import { computed, ref, type Ref } from 'vue'

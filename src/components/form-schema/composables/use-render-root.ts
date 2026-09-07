@@ -13,6 +13,8 @@
  * - renderOpts.model/components/rules/beforeChange/componentProps 在 setup 期捕获 props 快照，
  *   父级替换引用时通过同步 watch 写入新值（修复 B4 静默断裂问题）
  * - onValueChange 必须先 clearValidate 再 trigger —— delay=0 实时模式下顺序倒置会导致红字被立即清除
+ *
+ * @group 表单编排：渲染
  */
 import { ref, watch, type ComputedRef, type Ref, type VNode } from 'vue'
 
@@ -110,6 +112,8 @@ export function useRenderRoot(deps: UseRenderRootDeps): UseRenderRootReturn {
     if (Array.isArray(node)) return node.map(renderToComponent) as VNode[]
     if (node.ignore) return undefined
     const result = renderInner(node)
+    // 类型归因：renderInner 返回 VNode | string | VNode[] | undefined 联合，TS 推导为 VNode 后
+    // 此处 narrow 仅 string | VNode[] 分支需要 as never 兜底（C1 根因，详见 types/TYPE-CAST-AUDIT.md）。
     if (!result || typeof result === 'string' || Array.isArray(result)) return result as never
 
     if (node.hidden) {

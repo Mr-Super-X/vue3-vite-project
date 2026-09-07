@@ -20,6 +20,8 @@
  * - 序号令牌：异步 crossValidator 连续触发时，旧 Promise 后返回不得覆盖新结果
  *
  * @see ./use-cross-field-rule-trigger.ts 正向字段事件触发（blur/change）
+ *
+ * @group 表单编排：校验
  */
 import { watch, type WatchStopHandle } from 'vue'
 import { debounce, get, isEqual } from 'lodash-es'

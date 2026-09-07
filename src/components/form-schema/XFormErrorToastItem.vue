@@ -3,6 +3,8 @@
  * XFormErrorToastItem —— 单条错误 toast 卡片
  *
  * 单条 toast 是纯展示组件（props.event + emits.dismiss），无状态。template 结构 + style class 名 + event payload 透传均与拆分前一致。
+ *
+ * @group XForm 组件
  */
 import type { FormErrorEvent, FormErrorSeverity } from './composables/use-form-error-bus'
 

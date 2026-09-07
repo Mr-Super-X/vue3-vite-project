@@ -1,3 +1,13 @@
+/**
+ * use-schema-renderer —— schema 整体替换 + identity-preserving clone + markRaw 包装
+ *
+ * 关键责任：
+ * - 监听 schema 引用换代；旧 schema 走 cloneDeepWith 复刻，新 schema 走 identity-preserving 浅克隆
+ * - identity-preserving clone：component 字段保持引用（避免 Vue 整字段 remount）
+ * - markRaw(component)：用户传 Component 对象时排除响应式追踪（消除 "reactive object" 警告）
+ *
+ * @group 表单编排：渲染
+ */
 import { watch, ref, reactive, markRaw, onScopeDispose, type Ref } from 'vue'
 import { cloneDeepWith } from 'lodash-es'
 

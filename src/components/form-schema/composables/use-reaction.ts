@@ -6,6 +6,8 @@
  * 预算耗尽降级为 console.error，把"卡死"转为"可诊断错误"。
  *
  * 应用策略：sync / debounce / throttle + 可选 deps 精确监听。
+ *
+ * @group 表单编排：联动
  */
 import { nextTick, watch } from 'vue'
 import { debounce, get, throttle } from 'lodash-es'

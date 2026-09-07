@@ -7,6 +7,8 @@
  *
  * 类型断言（`as never`）归因见 types/TYPE-CAST-AUDIT.md。
  * @see ./render-form-item / render-array-node / render-visual-container 接收 RenderSchemaNodeOptions
+ *
+ * @group 表单编排：渲染
  */
 import { h, type VNode, type ComponentPublicInstance, type Ref } from 'vue'
 import { createNamespace } from '@/utils/bem'
@@ -189,6 +191,8 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
     asyncProps: Record<string, unknown>
   ): VNode | string | VNode[] | undefined {
     if (!Comp) return undefined
+    // 类型归因：动态 Comp（resolveComponentFor 返回 object | string）与 h() 第一参 union 不等价
+    // （C1 根因，详见 types/TYPE-CAST-AUDIT.md）；运行时已验证 render 正常，TS 层用 as never 兜底。
     return wrapWithElCol(
       node,
       h(

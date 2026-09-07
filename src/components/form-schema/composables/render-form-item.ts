@@ -3,6 +3,8 @@
  * 内部渲染业务 Comp，末尾 wrapWithElCol 应用 col 响应式断点。
  *
  * 类型断言（`as never`）归因见 types/TYPE-CAST-AUDIT.md。
+ *
+ * @group 表单编排：渲染
  */
 import { h, type VNode } from 'vue'
 import { ElFormItem, ElRow, ElCol, ElUpload } from 'element-plus'
@@ -81,6 +83,8 @@ export function renderWithFormItem(
       formItemSlots[k] = buildSlotFn(v as SchemaSlot, opts.render)
     }
   }
+  // 类型归因：FormItemComp（el-form-item 或自定义组件）与 h() 第一参 union 不等价
+  // （C1 根因，详见 types/TYPE-CAST-AUDIT.md）；rules 经 compileRules 返回的 union 也走 as never 兜底。
   const formItem = h(
     FormItemComp as never,
     {

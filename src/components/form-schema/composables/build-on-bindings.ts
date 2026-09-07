@@ -1,3 +1,10 @@
+/**
+ * build-on-bindings —— node.on 转 vue 事件 prop 的纯函数工厂
+ *
+ * 函数直接传；字符串经 resolveFunctionExpression 解析（失败则跳过该事件，避免 Vue prop 警告）。
+ *
+ * @group 表单编排：渲染
+ */
 import type { SchemaNode } from '../types'
 import { resolveFunctionExpression } from './use-expression'
 

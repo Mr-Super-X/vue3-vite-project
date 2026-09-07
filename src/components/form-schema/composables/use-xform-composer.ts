@@ -6,6 +6,11 @@
  * defaultValue→./apply-default-values、XFormExpose→./use-xform-expose。
  *
  * 类型断言（`as never`）归因见 types/TYPE-CAST-AUDIT.md。
+ *
+ * 为什么 as never 而非 as any：仅用于把 props 引用"喂"给 el-form / el-form-item 的 props union
+ * （XFormExpose 内部方法签名），运行时已通过单元测试验证，TS 层用 as never 标记受控逃逸点。
+ *
+ * @group 表单编排：编排入口
  */
 import { computed, watch, type ComputedRef, type Ref } from 'vue'
 

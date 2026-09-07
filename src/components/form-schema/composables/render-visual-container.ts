@@ -3,6 +3,8 @@
  * 默认 slot 来自 node.children 或 grid 渲染。
  *
  * 类型断言（`as never`）归因见 types/TYPE-CAST-AUDIT.md。
+ *
+ * @group 表单编排：渲染
  */
 import { h, type VNode } from 'vue'
 import type { SchemaNode } from '../types'
@@ -25,6 +27,8 @@ export function renderVisualContainer(
   slotMap.default = useGrid
     ? () => renderToComponentWithGrid(node, opts.render)
     : () => opts.render(node.children as never) as never
+  // 类型归因：动态 Comp（resolveComponentFor 返回 object | string）与 h() 第一参 union 不等价
+  // （C1 根因，详见 types/TYPE-CAST-AUDIT.md）；运行时 render 验证通过，TS 层用 as never 兜底。
   return h(
     Comp as never,
     {

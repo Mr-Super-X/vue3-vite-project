@@ -3,6 +3,8 @@
  *
  * 从 useXFormComposer 抽离：el-form 实例方法 / 校验 / 字段错误 / 数组操作 / dirty / schema 元数据 / 服务端错误。
  * exposed 对象键集与顺序保持一致（XFormExpose 定义）。
+ *
+ * @group 表单编排：对外接口
  */
 import type { XFormExpose } from '../types'
 
