@@ -43,6 +43,10 @@
     align-items: center;
     gap: 8px;
     white-space: normal;
+
+    .el-pagination__sizes {
+      width: 120px;
+    }
   }
   .el-pagination ul.el-pager {
     display: inline-flex;
