@@ -1,25 +1,45 @@
 <script setup lang="ts">
 /**
- * TableHeader —— P0 占位 stub，P3 替换为完整实现。
+ * TableHeader —— 工具栏（spec §五组件树 / §七插槽系统）
+ *
+ * 职责：刷新按钮 + 密度切换（三档：紧凑/默认/宽松）+ 列设置按钮 +
+ * 插槽（tableHeader / toolButton）。
  *
  * @group ProTable 子组件
  */
+import { ElButton, ElButtonGroup, ElTooltip } from 'element-plus'
+import { Refresh, Setting } from '@element-plus/icons-vue' // 显式 import（§1.6.1 来源注释）
 import type { ProColumn, TableDensity } from '../types'
 
-// P0 stub：放宽 props 类型让 ProTable.vue 透传；P3 实现时收紧
-defineProps<{
+interface Props {
   columns: ProColumn[]
   visibleColumns: ProColumn[]
   density: TableDensity
   colSettingVisible: boolean
-}>()
-defineEmits<{
+}
+const props = defineProps<Props>()
+const emit = defineEmits<{
   refresh: []
   'update:density': [TableDensity]
   'update:colSettingVisible': [boolean]
 }>()
 
 const bem = createNamespace('pro-table-header')
+
+const densityList: TableDensity[] = ['compact', 'default', 'loose']
+const densityLabels: Record<TableDensity, string> = {
+  compact: '紧凑',
+  default: '默认',
+  loose: '宽松',
+}
+
+function handleRefresh(): void {
+  emit('refresh')
+}
+
+function handleColSetting(): void {
+  emit('update:colSettingVisible', !props.colSettingVisible)
+}
 </script>
 
 <template>
@@ -29,6 +49,23 @@ const bem = createNamespace('pro-table-header')
     </div>
     <div :class="bem.e('right')">
       <slot name="toolButton" />
+      <ElTooltip content="刷新">
+        <ElButton :icon="Refresh" circle data-test="refresh-btn" @click="handleRefresh" />
+      </ElTooltip>
+      <ElButtonGroup>
+        <ElButton
+          v-for="d in densityList"
+          :key="d"
+          :type="props.density === d ? 'primary' : 'default'"
+          size="small"
+          @click="emit('update:density', d)"
+        >
+          {{ densityLabels[d] }}
+        </ElButton>
+      </ElButtonGroup>
+      <ElTooltip content="列设置">
+        <ElButton :icon="Setting" circle data-test="col-setting-btn" @click="handleColSetting" />
+      </ElTooltip>
     </div>
   </div>
 </template>
