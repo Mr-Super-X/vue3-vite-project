@@ -17,8 +17,12 @@
  *   无法被 JS 删除），前端只清登录标记
  *
  * 安全要点：
- * - clear()/Session.clear() 只清除本项目 namespace 的 key（不破坏其他项目 / 其他路径的数据）
- * - get() 在 JSON.parse 失败时自动清除脏数据 + 返回 null（避免 SyntaxError 冒泡到 ErrorBoundary）
+ * - `clear()` / `Session.clear()` 只清除本项目 namespace 的 key（不破坏其他项目 / 其他路径的数据）
+ * - `get()` 在 JSON.parse 失败时自动清除脏数据 + 返回 null（避免 SyntaxError 冒泡到 ErrorBoundary）
+ *
+ * @see [`src/api/http.ts`](../api/http.ts) `withCredentials` 配置（cookie 自动携带）
+ * @see [`src/router/guards/auth.ts`](../router/guards/auth.ts) 登录态守卫（读取 Session 'auth'）
+ * @group 浏览器存储
  */
 
 /**

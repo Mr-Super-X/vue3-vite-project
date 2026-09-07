@@ -1,14 +1,20 @@
-// 权限组合式函数
-//
-// 业务侧需要的权限相关 API 全部封装在这里，组件 / 指令 / store 共用同一份事实来源。
-//
-// 设计要点：
-//  - 不在 store 增加 permission getter（过度耦合）
-//  - 返回值基于 useUserStore() 实时计算（响应式）
-//  - AND 语义：hasPerm(['a','b']) → 都满足才 true
-//  - ANY 语义：hasAnyPerm(['a','b']) → 任一满足即 true
-//
-// 不发起任何网络请求，权限刷新仍由 userStore.fetchProfile 负责。
+/**
+ * 权限组合式函数。
+ *
+ * 业务侧需要的权限相关 API 全部封装在这里，组件 / 指令 / store 共用同一份事实来源。
+ *
+ * 设计要点：
+ * - 不在 store 增加 permission getter（过度耦合）
+ * - 返回值基于 `useUserStore()` 实时计算（响应式）
+ * - AND 语义：`hasPerm(['a','b'])` → 都满足才 true
+ * - ANY 语义：`hasAnyPerm(['a','b'])` → 任一满足即 true
+ *
+ * 不发起任何网络请求，权限刷新仍由 `userStore.fetchProfile` 负责。
+ *
+ * @see [`src/directives/permission.ts`](../directives/permission.ts) `v-permission` 指令
+ * @see [`src/store/modules/user`](../store/modules/user) permissions 状态来源
+ * @group 权限组合式 API
+ */
 
 import { useUserStore } from '@store/modules/user'
 
@@ -16,7 +22,7 @@ import { useUserStore } from '@store/modules/user'
  * 权限组合式 API。
  *
  * 返回当前用户的权限信息 + 判定函数。组件中任何需要判断"能不能做某事"的地方
- * 都应该用 useAuth() 而非直接读 store（如 v-auth 指令内部）。
+ * 都应该用 `useAuth()` 而非直接读 store（如 v-auth 指令内部）。
  *
  * @example
  * ```vue
@@ -30,6 +36,8 @@ import { useUserStore } from '@store/modules/user'
  *   <el-button v-if="canEdit">编辑</el-button>
  * </template>
  * ```
+ *
+ * @group 权限组合式 API
  */
 export function useAuth() {
   const userStore = useUserStore()

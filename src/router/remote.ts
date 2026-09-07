@@ -1,16 +1,24 @@
-// 接口加载菜单（remote 模式）
-//
-// 工作流：
-//   1. fetchRemoteRoutes() 调用 /api/menu 拉取菜单 JSON（带超时 + 重试）
-//   2. convertMenu() 把 JSON 转换为 Vue Router 路由配置
-//   3. 在守卫中 router.addRoute() 注入
-//
-// 失败策略：
-//   - fetchRemoteRoutes() 内部捕获异常，返回空数组 + console.warn
-//   - 由守卫负责 fallback：返回空数组时 console.warn + 保持 local 菜单
-//
-// 后端菜单 JSON 约定（详见 src/router/types.ts）：
-//   { name: RouteName; path: string; meta?: RouteMeta; children?: RemoteMenuItem[] }
+/**
+ * 接口加载菜单（remote 模式）。
+ *
+ * 工作流：
+ * 1. `fetchRemoteRoutes()` 调用 `/api/menu` 拉取菜单 JSON（带超时 + 重试）
+ * 2. `convertMenu()` 把 JSON 转换为 Vue Router 路由配置
+ * 3. 在守卫中 `router.addRoute()` 注入
+ *
+ * 失败策略：
+ * - `fetchRemoteRoutes()` 内部捕获异常，返回空数组 + console.warn
+ * - 由守卫负责 fallback：返回空数组时 console.warn + 保持 local 菜单
+ *
+ * 后端菜单 JSON 约定（详见 `src/router/types.ts`）：
+ * ```ts
+ * { name: RouteName; path: string; meta?: RouteMeta; children?: RemoteMenuItem[] }
+ * ```
+ *
+ * @see [`./types.ts`](./types.ts) `RemoteMenuItem` 类型与 `RouteMeta` 扩展
+ * @see [`./guards/remote-menu.ts`](./guards/remote-menu.ts) 守卫懒加载入口
+ * @group 路由：远程菜单
+ */
 
 import type { RouteRecordRaw } from 'vue-router'
 import { z } from 'zod'

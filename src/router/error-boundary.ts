@@ -1,14 +1,19 @@
-// 路由错误边界（独立模块，便于测试）
-//
-// 抽离 src/router/index.ts 中的 `router.onError` 处理逻辑为独立函数，
-// 让 5 段守卫、单文件入口、错误边界各司其职，便于单测覆盖。
-//
-// 触发场景：
-//   1. 动态 import 失败（语法错误、循环依赖、chunks 加载失败）
-//   2. 路由解析异常（component 字段无效、formatInvalid）
-//   3. chunk artifact 损坏（生产构建后 CDN 缓存导致 hash 不匹配）
-//
-// 行为：自动跳 /500 错误页，避免用户看到空白屏。
+/**
+ * 路由错误边界（独立模块，便于测试）。
+ *
+ * 抽离 `src/router/index.ts` 中的 `router.onError` 处理逻辑为独立函数，
+ * 让 5 段守卫、单文件入口、错误边界各司其职，便于单测覆盖。
+ *
+ * 触发场景：
+ * 1. 动态 import 失败（语法错误、循环依赖、chunks 加载失败）
+ * 2. 路由解析异常（`component` 字段无效、`formatInvalid`）
+ * 3. chunk artifact 损坏（生产构建后 CDN 缓存导致 hash 不匹配）
+ *
+ * 行为：自动跳 `/500` 错误页，避免用户看到空白屏。
+ *
+ * @see [`./index.ts`](./index.ts) `setupRouterErrorBoundary` 调用点
+ * @group 路由：错误边界
+ */
 
 import type { Router } from 'vue-router'
 

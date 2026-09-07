@@ -1,15 +1,21 @@
-// 守卫 - 远程菜单懒加载（独立可测的纯函数）
-//
-// 业务背景：
-//  - remote 模式下，登录后从 /api/menu 拉菜单并 router.addRoute() 注入
-//  - 每个 token 周期只拉一次（dynamicLoaded 标记）
-//  - 加载失败 / 返回空 → 保持 local 菜单（不影响用户当前页）
-//
-// 模块级状态：
-//  - dynamicLoaded：本次登录周期内是否已加载
-//  - currentAuthState：上次加载时的登录标记（检测登录切换，重置 dynamicLoaded）
-//
-// 这些状态必须在此文件内（而非上层 auth.ts），便于 resetAuthGuardState 重置。
+/**
+ * 守卫 —— 远程菜单懒加载（独立可测的纯函数）。
+ *
+ * 业务背景：
+ * - remote 模式下，登录后从 `/api/menu` 拉菜单并 `router.addRoute()` 注入
+ * - 每个 token 周期只拉一次（`dynamicLoaded` 标记）
+ * - 加载失败 / 返回空 → 保持 local 菜单（不影响用户当前页）
+ *
+ * 模块级状态：
+ * - `dynamicLoaded`：本次登录周期内是否已加载
+ * - `currentAuthState`：上次加载时的登录标记（检测登录切换，重置 `dynamicLoaded`）
+ *
+ * 这些状态必须在此文件内（而非上层 auth.ts），便于 `resetAuthGuardState` 重置。
+ *
+ * @see [`./auth.ts`](./auth.ts) `ensureRemoteMenuLoaded` 调用点
+ * @see [`../remote.ts`](../remote.ts) `fetchRemoteRoutes` 拉取与转换
+ * @group 路由：远程菜单守卫
+ */
 
 import type { RouteLocationNormalized, RouteLocationRaw, Router } from 'vue-router'
 import type { useUserStore } from '@/store/modules/user'

@@ -1,17 +1,23 @@
-// 路由组合式函数（业务侧高层 API）
-//
-// 在 vue-router 的 useRouter() 之上封装业务级常用操作：
-//  - pushWithTitle: 跳转路由并写入 document.title（i18n 友好）
-//  - pushByName: 按 RouteName 类型安全跳转（无需记字符串）
-//  - replaceByName: 同上但用 replace（不留历史）
-//  - back: 安全返回（带 fallback）
-//  - addDynamicRoute: 远程菜单加载时按 name 注册（wrapper）
-//  - withErrorToast: 把 router.push 失败包装为 toast（避免裸 Promise rejection）
-//
-// 设计要点：
-//  - 文件名 useAppRouter.ts 与导出名 useAppRouter 一致，区别于 vue-router 的 useRouter
-//  - 不在 store 添加 router mutation（保持 router 单例由 vue-router 管）
-//  - 所有 async 操作都 catch 错误并 toast，避免上层每处重复 try/catch
+/**
+ * 路由组合式函数（业务侧高层 API）。
+ *
+ * 在 vue-router 的 `useRouter()` 之上封装业务级常用操作：
+ * - `pushWithTitle`：跳转路由并写入 document.title（i18n 友好）
+ * - `pushByName`：按 RouteName 类型安全跳转（无需记字符串）
+ * - `replaceByName`：同上但用 replace（不留历史）
+ * - `back`：安全返回（带 fallback）
+ * - `addDynamicRoute`：远程菜单加载时按 name 注册（wrapper）
+ * - `withErrorToast`：把 router.push 失败包装为 toast（避免裸 Promise rejection）
+ *
+ * 设计要点：
+ * - 文件名 `useAppRouter.ts` 与导出名 `useAppRouter` 一致，**区别于 vue-router 的 `useRouter`**
+ *   （参见 [[composable-useapprouter-naming]] 记忆）
+ * - 不在 store 添加 router mutation（保持 router 单例由 vue-router 管）
+ * - 所有 async 操作都 catch 错误并 toast，避免上层每处重复 try/catch
+ *
+ * @see [`src/router/`](../../router/) vue-router 实例与守卫
+ * @group 路由组合式 API
+ */
 
 import { router } from '@router'
 import { resolveRouteTitle } from '@router/helpers'
@@ -23,9 +29,11 @@ import type { RouteLocationRaw, RouteLocationNamedRaw, RouteRecordRaw, Router } 
  * 应用层路由 composable。
  *
  * 业务侧推荐使用本 composable 而非直接 import router 实例，以便：
- *  - 集中错误处理（toast）
- *  - i18n title 自动写入 document.title
- *  - 类型安全的 pushByName + RouteName 联合类型检查
+ * - 集中错误处理（toast）
+ * - i18n title 自动写入 document.title
+ * - 类型安全的 pushByName + RouteName 联合类型检查
+ *
+ * @group 路由组合式 API
  */
 export function useAppRouter(): {
   /** vue-router 实例（兼容旧 API） */

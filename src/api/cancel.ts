@@ -9,6 +9,11 @@ import type { AxiosRequestConfig } from 'axios'
  *   // 后续：
  *   ctrl.abort('用户取消')
  */
+/**
+ * 取消控制器句柄：把 AbortController 抽象为业务可读的对象。
+ *
+ * @group 网络基建：取消控制
+ */
 export interface AbortHandle {
   signal: AbortSignal
   /** 主动取消；reason 会写入 signal.reason */

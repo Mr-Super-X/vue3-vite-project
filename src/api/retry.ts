@@ -11,6 +11,9 @@
  *     () => request<LoginResult>({ url, method: 'post', idempotent: true }),
  *     { retries: 2, baseDelay: 300 }
  *   )
+ *
+ * @see [`src/api/http.ts`](./http.ts) `idempotent` config 字段透传
+ * @group 网络基建：重试
  */
 import { isApiError } from './types/error'
 

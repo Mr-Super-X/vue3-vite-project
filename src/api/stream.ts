@@ -30,6 +30,9 @@ import { Session } from '@/utils/storage'
  *   onMessage: (event) => handleEvent(event),
  * })
  * ```
+ *
+ * @see [`src/api/http.ts`](./http.ts) `withCredentials` 等通用配置参考
+ * @group 网络基建：流式响应
  */
 
 const getAPIBaseURL = () => import.meta.env.VITE_API_BASE_URL ?? ''

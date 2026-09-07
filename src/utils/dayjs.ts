@@ -12,6 +12,10 @@
  * - duration plugin（时长累加）
  * - isSame / isAfter / isBefore 工具
  * - 与项目 store 的 locale 同步（自动跟随 appStore.locale 切换 dayjs.locale）
+ *
+ * @see [`src/locales/index.ts`](../locales/index.ts) 项目 locale 类型定义
+ * @see [`src/store/modules/app`](../../store/modules/app) locale 切换
+ * @group 日期工具
  */
 
 import dayjs, { type Dayjs, type ConfigType } from 'dayjs'

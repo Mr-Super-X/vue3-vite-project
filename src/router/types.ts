@@ -1,14 +1,20 @@
-// 路由类型定义
-//
-// 设计变更（2026-07-24 方案 A）：
-//   - 移除 RouteName 联合类型（单一事实源是 routes/index.ts）
-//   - auto-register.ts 通过 import.meta.glob 派生所有 name
-//   - 拼写校验靠 zod runtime（remote.ts）+ pushByNameStrict dev 校验
-//   - 不再有"加新模块要同步 types.ts"的负担
-//
-// 校验脚本：scripts/check-routes.ts（pnpm check:routes）
-//   - 不再读 RouteName 联合
-//   - 改为校验"whitelist ⊆ 实际 routes name + 系统路由必存在"
+/**
+ * 路由类型定义。
+ *
+ * 设计变更（2026-07-24 方案 A）：
+ * - 移除 RouteName 联合类型（单一事实源是 `routes/index.ts`）
+ * - `auto-register.ts` 通过 `import.meta.glob` 派生所有 name
+ * - 拼写校验靠 zod runtime（`remote.ts`）+ `pushByNameStrict` dev 校验
+ * - 不再有"加新模块要同步 types.ts"的负担
+ *
+ * 校验脚本：`scripts/check-routes.ts`（`pnpm check:routes`）
+ * - 不再读 RouteName 联合
+ * - 改为校验"whitelist ⊆ 实际 routes name + 系统路由必存在"
+ *
+ * @see [`./auto-register.ts`](./auto-register.ts) 派生所有 name
+ * @see [`./remote.ts`](./remote.ts) zod runtime 校验
+ * @group 路由类型
+ */
 
 import type { RouteMeta } from 'vue-router'
 

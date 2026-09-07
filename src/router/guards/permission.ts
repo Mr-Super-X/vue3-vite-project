@@ -1,12 +1,18 @@
-// 守卫 - 权限码检查（独立可测的纯函数）
-//
-// 业务背景：路由 meta.permissions 是 AND 语义数组（所有权限都满足才放行），
-// 无权限时跳 /403 错误页（区别于白名单路由的「可匿名访问」语义）。
-//
-// 设计要点：
-//  - 纯函数：仅依赖入参，便于单测
-//  - 不修改任何全局状态（无副作用）
-//  - meta.permissions 缺失或为空数组均视为"无权限要求"，返回放行
+/**
+ * 守卫 —— 权限码检查（独立可测的纯函数）。
+ *
+ * 业务背景：路由 `meta.permissions` 是 AND 语义数组（所有权限都满足才放行），
+ * 无权限时跳 `/403` 错误页（区别于白名单路由的「可匿名访问」语义）。
+ *
+ * 设计要点：
+ * - 纯函数：仅依赖入参，便于单测
+ * - 不修改任何全局状态（无副作用）
+ * - `meta.permissions` 缺失或为空数组均视为"无权限要求"，返回放行
+ *
+ * @see [`./auth.ts`](./auth.ts) `checkPermission` 调用点
+ * @see [`src/composables/useAuth.ts`](../../composables/useAuth.ts) `hasPerm` 语义对齐
+ * @group 路由：权限守卫
+ */
 
 import type { RouteLocationNormalized, RouteLocationRaw } from 'vue-router'
 import type { useUserStore } from '@/store/modules/user'
