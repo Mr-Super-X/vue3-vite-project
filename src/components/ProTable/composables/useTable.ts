@@ -1,0 +1,160 @@
+/**
+ * useTable —— 数据/分页/loading/多选（spec §六数据流 / §九错误处理 #1-#5）
+ *
+ * 职责：
+ * - 包装 useRequest（CLAUDE.md §1.5 强制封装；AbortController + 三态）
+ * - 管理分页（page / pageSize / total）
+ * - 多选 selectedRows（按 row-key 去重；reserve-selection 由 el-table 自带）
+ * - expose：refresh / clearSelection / getSelectedRows / tableRef
+ *
+ * **fetchHook 注入设计**（plan critical review #3 修正）：
+ * 不通过 Object.assign(props, ...) 反 Vue 单向数据流，
+ * 而是由 ProTable.vue setup 时把 fetchHook 闭包传给 useTable 与 useSearch，
+ * useTable 用 watch 监听 page/pageSize 变化触发 fetchHook。
+ *
+ * @see [`@/composables/useRequest`](../../composables/useRequest.ts) 请求封装
+ * @see [`./useSearch`](./useSearch.ts) 共享 fetchHook 闭包
+ * @group ProTable composables
+ */
+import { ref, watch, onMounted, type ComponentPublicInstance, type Ref } from 'vue'
+import { useRequest } from '@composables/useRequest' // 项目 composable auto-import
+import type { ProTableProps, TableDensity, TableEngine } from '../types'
+import type { UseSearchReturn } from './useSearch'
+
+export interface UseTableOptions {
+  props: ProTableProps
+  search: UseSearchReturn
+  /** 列上下文（当前 P1 stub；P3 useColumns 后接入） */
+  columns: { allColumns?: Ref<unknown[]>; sortedColumns?: Ref<unknown[]> }
+  engine: Ref<TableEngine>
+}
+
+export interface UseTableReturn {
+  data: Ref<Record<string, unknown>[] | null>
+  loading: Ref<boolean>
+  error: Ref<Error | null>
+  total: Ref<number>
+  page: Ref<number>
+  pageSize: Ref<number>
+  selectedRows: Ref<Record<string, unknown>[]>
+  density: Ref<TableDensity>
+  tableRef: Ref<ComponentPublicInstance | null>
+  refresh: () => Promise<void>
+  clearSelection: () => void
+  getSelectedRows: () => Record<string, unknown>[]
+  setSelectedRows: (rows: Record<string, unknown>[]) => void
+  setPage: (page: number) => void
+  setPageSize: (size: number) => void
+  setDensity: (d: TableDensity) => void
+}
+
+export function useTable(options: UseTableOptions): UseTableReturn {
+  const { props, search } = options
+
+  const data = ref<Record<string, unknown>[] | null>(null)
+  const total = ref(0)
+  const page = ref(1)
+  const pageSize = ref(props.pageSize ?? 10)
+  const selectedRows = ref<Record<string, unknown>[]>([])
+  const tableRef = ref<ComponentPublicInstance | null>(null)
+  const density = ref<TableDensity>(props.density ?? 'default')
+
+  // useRequest 包装（AbortController 内置；spec §九 #5 快速连续取消）
+  // immediate: false：useTable 显式控制首次请求（onMounted），便于测试与时序对齐
+  const request = useRequest(
+    async () => {
+      const params = search.serializeParams({
+        ...search.getParams(),
+        pageNum: page.value,
+        pageSize: pageSize.value,
+        ...(props.initParam ?? {}),
+      })
+      return await props.requestApi(params)
+    },
+    {
+      immediate: false,
+      onSuccess: (result) => {
+        const rawData = result.data ?? []
+        data.value = props.dataCallback ? props.dataCallback(rawData) : rawData
+        total.value = result.total ?? 0
+      },
+      onError: (err: unknown) => {
+        data.value = []
+        total.value = 0
+        props.requestError?.(err)
+      },
+    }
+  )
+
+  async function refresh(): Promise<void> {
+    await request.execute()
+  }
+
+  function setPage(p: number): void {
+    page.value = p
+  }
+
+  function setPageSize(size: number): void {
+    pageSize.value = size
+    page.value = 1
+  }
+
+  function setSelectedRows(rows: Record<string, unknown>[]): void {
+    // 按 row-key 去重（spec §九 #13 守卫：row-key 缺失时不报错）
+    const key = props.rowKey
+    if (!key) {
+      selectedRows.value = [...rows]
+      return
+    }
+    const seen = new Set<string>()
+    const unique: Record<string, unknown>[] = []
+    for (const row of rows) {
+      const k = String(row[key])
+      if (seen.has(k)) continue
+      seen.add(k)
+      unique.push(row)
+    }
+    selectedRows.value = unique
+  }
+
+  function clearSelection(): void {
+    selectedRows.value = []
+  }
+
+  function getSelectedRows(): Record<string, unknown>[] {
+    return [...selectedRows.value]
+  }
+
+  function setDensity(d: TableDensity): void {
+    density.value = d
+  }
+
+  // 首次 mount 触发请求（spec 决策 1：spec §九 #5 AbortController 由 useRequest 接管）
+  onMounted(() => {
+    void refresh()
+  })
+
+  // page / pageSize 变化时自动触发刷新
+  watch([page, pageSize], () => {
+    void refresh()
+  })
+
+  return {
+    data,
+    loading: request.loading as Ref<boolean>,
+    error: request.error as Ref<Error | null>,
+    total,
+    page,
+    pageSize,
+    selectedRows,
+    density,
+    tableRef,
+    refresh,
+    clearSelection,
+    getSelectedRows,
+    setSelectedRows,
+    setPage,
+    setPageSize,
+    setDensity,
+  }
+}
