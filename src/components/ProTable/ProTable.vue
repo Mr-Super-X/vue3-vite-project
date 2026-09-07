@@ -233,6 +233,11 @@ defineExpose({
               })
             "
           >
+            <!-- 自定义表头渲染（col.headerRender，spec §一 ProColumn.headerRender 字段） -->
+            <template v-if="col.headerRender" #header="scope">
+              <component :is="col.headerRender({ column: col, $index: scope.$index })" />
+            </template>
+
             <template #default="scope">
               <slot :name="col.prop" :row="scope.row" :column="col" :index="scope.$index">
                 <!-- 直接渲染 resolveCell 的值（VNode / string / number 均可） -->

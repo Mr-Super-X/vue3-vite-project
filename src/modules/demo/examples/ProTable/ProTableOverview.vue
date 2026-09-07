@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup lang="tsx">
 /**
  * ProTable 用法演示 + API 文档（半自动版，遵循 demo 模块规范）
  *
@@ -146,6 +146,7 @@ const tocItems = [
   { id: 'demo-basic', label: '基础用法', level: 2 },
   { id: 'demo-enum', label: 'enum → ElTag', level: 2 },
   { id: 'demo-slots', label: '自定义插槽', level: 2 },
+  { id: 'demo-render', label: '自定义渲染（col.render）', level: 2 },
   { id: 'demo-expose', label: 'defineExpose 调用', level: 2 },
   { id: 'api-props', label: 'Props', level: 2 },
   { id: 'api-slots', label: 'Slots', level: 2 },
@@ -285,7 +286,7 @@ const basicCode = `<template>
   />
 </template>
 
-<script setup lang="ts">
+<script setup lang="tsx">
 import { ProTable, type ProColumn } from '@/components/ProTable'
 
 const columns: ProColumn[] = [
@@ -325,6 +326,139 @@ async function refresh() {
 }
 
 template: <ProTable ref="proTableRef" :columns="..." />`
+
+/* ───────────── 自定义渲染（JSX / h()）演示 ───────────── */
+
+/** 列定义：演示 col.render 三种用法
+ *  1. JSX 渲染按钮组（操作列）
+ *  2. JSX 条件渲染（年龄颜色 + 🎉）
+ *  3. JSX 渲染复杂结构（角色 ElTag + 文字）
+ * 注：本文件用 lang="tsx"（vue 3 JSX 编译，@vitejs/plugin-vue-jsx 已配） */
+const renderColumns: ProColumn[] = [
+  { prop: 'id', label: 'ID', width: 80 },
+  {
+    prop: 'name',
+    label: '姓名（JSX + headerRender 演示）',
+    minWidth: 180,
+    /** headerRender：返回带 tooltip 的表头（spec §一 ProColumn.headerRender 字段） */
+    headerRender: () => (
+      <el-tooltip content="用户的真实姓名" placement="top">
+        <span>
+          姓名 <i style={{ color: '#409eff', cursor: 'help' }}>ⓘ</i>
+        </span>
+      </el-tooltip>
+    ),
+  },
+  {
+    prop: 'age',
+    label: '年龄（JSX 自定义格式）',
+    width: 140,
+    /** JSX render：返回带条件颜色的 span */
+    render: ({ row }) => (
+      <span style={{ color: Number(row.age) >= 30 ? '#67c23a' : '#909399' }}>
+        {row.age} 岁 {Number(row.age) >= 30 ? '🎉' : ''}
+      </span>
+    ),
+  },
+  {
+    prop: 'role',
+    label: '角色（JSX 多元素）',
+    width: 200,
+    /** JSX render：返回 ElTag + span 多元素 */
+    render: ({ row }) => {
+      const roleMap: Record<
+        string,
+        { label: string; type: 'primary' | 'success' | 'warning' | 'info' | 'danger' }
+      > = {
+        admin: { label: '管理员', type: 'danger' },
+        editor: { label: '编辑', type: 'warning' },
+        guest: { label: '访客', type: 'info' },
+      }
+      const r = roleMap[String(row.role)]
+      return r ? (
+        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+          <el-tag type={r.type} size="small">
+            {r.label}
+          </el-tag>
+          <span style={{ color: '#909399', fontSize: '12px' }}>(动态)</span>
+        </div>
+      ) : (
+        <span>{String(row.role)}</span>
+      )
+    },
+  },
+  {
+    prop: 'createdAt',
+    label: '创建时间（JSX 格式化）',
+    width: 180,
+    /** JSX render：返回格式化日期 + 条件颜色（3 天内绿色） */
+    render: ({ row }) => {
+      const date = new Date(String(row.createdAt))
+      const y = date.getFullYear()
+      const m = String(date.getMonth() + 1).padStart(2, '0')
+      const d = String(date.getDate()).padStart(2, '0')
+      const isRecent = Date.now() - date.getTime() < 1000 * 60 * 60 * 24 * 3
+      return (
+        <span style={{ color: isRecent ? '#67c23a' : undefined }}>
+          {y}-{m}-{d}
+        </span>
+      )
+    },
+  },
+  {
+    prop: 'operation',
+    label: '操作（JSX 多按钮）',
+    type: 'operation',
+    width: 200,
+    /** JSX render：返回多个 ElButton（按钮组） */
+    render: ({ row }) => (
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <el-button type="primary" link size="small" onClick={() => handleViewDetail(row)}>
+          查看
+        </el-button>
+        <el-button
+          type="warning"
+          link
+          size="small"
+          onClick={() => ElMessage.info(`编辑 ${(row as UserRow).name}`)}
+        >
+          编辑
+        </el-button>
+        <el-button
+          type="danger"
+          link
+          size="small"
+          onClick={() => ElMessage.warning(`删除 ${(row as UserRow).name}`)}
+        >
+          删除
+        </el-button>
+      </div>
+    ),
+  },
+]
+
+const renderCode = `// 列定义：3 种 render 用法
+const columns: ProColumn[] = [
+  {
+    prop: 'age',
+    label: '年龄',
+    render: ({ row }) => h('span', { style: { color: '#67c23a' } }, \`\${row.age} 岁\`),
+  },
+  {
+    prop: 'role',
+    label: '角色',
+    render: ({ row }) => h(ElTag, { type: 'warning' }, () => '编辑'),
+  },
+  {
+    prop: 'operation',
+    label: '操作',
+    render: ({ row }) =>
+      h('div', null, [
+        h(ElButton, { onClick: () => onView(row) }, () => '查看'),
+        h(ElButton, { onClick: () => onEdit(row) }, () => '编辑'),
+      ]),
+  },
+]`
 </script>
 
 <template>
@@ -395,6 +529,19 @@ template: <ProTable ref="proTableRef" :columns="..." />`
       </section>
 
       <!-- 自定义插槽 -->
+      <!-- 自定义渲染（col.render） -->
+      <section id="demo-render">
+        <DemoField label="自定义渲染（render 函数返回 VNode）" :code="renderCode">
+          <ProTable
+            :columns="renderColumns"
+            :request-api="mockRequestApi"
+            table-key="demo-pro-table-render"
+            row-key="id"
+            :page-size="5"
+          />
+        </DemoField>
+      </section>
+
       <section id="demo-slots">
         <DemoField label="自定义插槽" :code="slotsCode">
           <ProTable
