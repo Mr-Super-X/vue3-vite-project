@@ -5,11 +5,14 @@ import type { MockMethod } from 'vite-plugin-mock'
 /**
  * 远程菜单 mock：与 src/router/types.ts 的 RemoteMenuItem[] 契约一致。
  *
- * 覆盖 4 种典型场景：
+ * 覆盖 3 种典型场景：
  *   1. 单级菜单（Home）—— 顶层页面，无需权限
  *   2. 单级菜单（UserList）—— 顶层业务页 + 权限码
- *   3. 多级菜单（Orders → OrdersList / OrdersDetail）—— 一级菜单 + 嵌套子页面
- *   4. 隐藏菜单（Reports）—— 后端 hidden:true 转换后，前端 meta.visible:false
+ *   3. 隐藏菜单（Reports）—— 后端 hidden:true 转换后，前端 meta.visible:false
+ *
+ * 多级菜单（嵌套 children）场景已注释保留（参考块），实际未启用——
+ * 启用前需在 src/modules/ 下新增对应业务模块（如 orders/）并注册路由，
+ * 否则 COMPONENT_REGISTRY 查不到 name → src/router/remote.ts:172 触发 warn。
  *
  * 路由守卫在 remote 模式下会调此接口拉菜单并 router.addRoute() 注入。
  * 拉到的 JSON 由 src/router/remote.ts:34 的 RemoteMenuItemSchema（zod）运行时校验；
@@ -42,38 +45,7 @@ export default [
             permissions: ['user:view'],
           },
         },
-        // 3. 多级菜单（父级 Orders 一级菜单 + 嵌套 OrdersList / OrdersDetail）
-        {
-          name: 'Orders',
-          path: '/orders',
-          meta: {
-            title: '订单管理',
-            icon: 'list',
-            permissions: ['orders:view'],
-          },
-          children: [
-            // 二级菜单：订单列表
-            {
-              name: 'OrdersList',
-              path: '/orders/list',
-              meta: {
-                title: '订单列表',
-                permissions: ['orders:view'],
-              },
-            },
-            // 二级菜单：订单详情（菜单隐藏，需直接 URL 访问）
-            {
-              name: 'OrdersDetail',
-              path: '/orders/detail/:id',
-              meta: {
-                title: '订单详情',
-                permissions: ['orders:view'],
-                hidden: true,
-              },
-            },
-          ],
-        },
-        // 4. 隐藏菜单（hidden: true → meta.visible: false）
+        // 3. 隐藏菜单（hidden: true → meta.visible: false）
         {
           name: 'Reports',
           path: '/reports',
