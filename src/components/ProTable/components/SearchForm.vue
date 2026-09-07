@@ -12,6 +12,7 @@
  * @group ProTable 子组件
  */
 import { ref, computed } from 'vue' // vue（生命周期/底层 API）
+import './../styles/element-protable-overwrite.scss' // Element Plus 样式覆盖（BEM 嵌套，对齐 XForm 模式）
 import {
   ElForm,
   ElFormItem,
@@ -166,14 +167,3 @@ function selectPlaceholder(col: ProColumn): string {
     </ElForm>
   </div>
 </template>
-
-<style lang="scss">
-.#{$BEM_PREFIX}-pro-table-search {
-  &__actions {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 8px;
-  }
-}
-</style>

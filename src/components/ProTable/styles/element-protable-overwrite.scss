@@ -1,0 +1,88 @@
+/**
+ * Element Plus 组件样式覆盖（对齐 form-schema/styles/element-form-overwrite.scss 模式）。
+ *
+ * **模式**：
+ * - 不在 ProTable.vue 内联样式
+ * - 不使用 :deep（CLAUDE.md §3 BEM 规范禁止 scoped + :deep）
+ * - 用 `.vv-pro-table { ... }` 嵌套选择器，scoped 隔离
+ * - ProTable.vue 顶部 `import './styles/element-protable-overwrite.scss'`
+ *
+ * @group ProTable 全局样式覆盖
+ */
+
+.#{$BEM_PREFIX}-pro-table {
+  /* ─────────── ElTable 宽度修复 ─────────── */
+
+  /* 默认 width: auto + 表格按内容收缩。强制 100% 让表格填满父容器 */
+  & > .el-table {
+    width: 100%;
+  }
+
+  /* ─────────── ElForm (SearchForm) 宽度修复 ─────────── */
+
+  /* el-form-item 默认 inline-flex + auto 宽度，导致 select 等控件塌缩。
+     强制 el-form-item / el-form-item__content / 控件 width: 100% 占满 el-col */
+  .el-form-item,
+  .el-form-item__content,
+  .el-select,
+  .el-date-editor,
+  .el-cascader,
+  .el-tree-select,
+  .el-input-number {
+    width: 100%;
+  }
+
+  /* ─────────── ElPagination 横排修复 ─────────── */
+
+  /* element-plus 2.x 的 el-pagination 在 vite-plugin-mock + 按需注入环境下 flex 样式丢失，
+     导致分页器数字按钮垂直排列。手动恢复 flex 横向布局 */
+  .el-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    white-space: normal;
+  }
+  .el-pagination ul.el-pager {
+    display: inline-flex;
+    flex-wrap: wrap;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    gap: 4px;
+  }
+  .el-pagination ul.el-pager li {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    height: 28px;
+    padding: 0 4px;
+    background: #f4f4f5;
+    color: #606266;
+    border-radius: 2px;
+    cursor: pointer;
+  }
+  .el-pagination ul.el-pager li.is-active {
+    background: #409eff;
+    color: #fff;
+  }
+
+  /* ─────────── ElTable 密度（紧凑/默认/宽松）切换 ─────────── */
+  /* element-plus 2.x 没有内置 density prop 控制行高，
+     用 ProTable 根 div 的 data-density 属性 + CSS 变量手动控制行高 */
+
+  &[data-density='compact'] .el-table__row td {
+    height: 32px;
+    padding: 4px 0;
+  }
+  &[data-density='default'] .el-table__row td {
+    height: 48px;
+    padding: 8px 0;
+  }
+  &[data-density='loose'] .el-table__row td {
+    height: 64px;
+    padding: 12px 0;
+  }
+}

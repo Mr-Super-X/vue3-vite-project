@@ -2,12 +2,9 @@
 /**
  * ProTable —— 配置驱动的表格组件（spec §4 文件清单 / §五组件树 / §六数据流）
  *
- * 编排层角色：持有 4 个 composables 的解构输出（P1 后接入），把状态透传给子组件
+ * 编排层角色：持有 3 个 composables 的解构输出，把状态透传给子组件
  * SearchForm / TableHeader / ElTable / ElPagination / ColSetting。
  * 业务编排收敛到 composables/*.ts（CLAUDE.md §一 #11 Hook 拆分）。
- *
- * **P0 骨架版本**：本版本硬编码 el-table 渲染，**不调用 composables**（P1 阶段接入 useSearch/useTable/useColumns/useVxeTable）。
- * 这样 P0 独立可运行（types 类型可被引用），P1 是行为增强。
  *
  * @see [`./composables/useSearch`](./composables/useSearch.ts) 搜索参数管理
  * @see [`./composables/useColumns`](./composables/useColumns.ts) 列解析与持久化
@@ -15,7 +12,9 @@
  * @see [`./adapters/engine`](./adapters/engine.ts) 引擎工厂
  * @group ProTable 组件
  */
-import { ref, useAttrs, watch, type Ref } from 'vue' // vue 生命周期/底层 API（CLAUDE.md §1.6.1）
+import { ref, useAttrs, watch, h, isVNode, type Ref } from 'vue' // vue 生命周期/底层 API（CLAUDE.md §1.6.1）
+import 'element-plus/dist/index.css' // 与 form-schema/XForm.vue 对齐：直接引入全量 CSS（覆盖 ProTable 用的所有组件：ElTable / ElPagination / ElForm / ElInput 等）
+import './styles/element-protable-overwrite.scss' // ProTable 特定的样式覆盖（BEM 嵌套，对齐 form-schema 模式）
 import {
   ElTable,
   ElTableColumn,
@@ -28,7 +27,11 @@ import AsyncState from '@/components/common/AsyncState.vue' // 项目内 default
 import SearchForm from './components/SearchForm.vue'
 import TableHeader from './components/TableHeader.vue'
 import ColSetting from './components/ColSetting.vue'
-import type { ProColumn, ProTableExpose, ProTableProps } from './types'
+import { useSearch } from './composables/useSearch'
+import { useColumns } from './composables/useColumns'
+import { useTable } from './composables/useTable'
+import { resolveEngine } from './adapters/engine'
+import type { ProColumn, ProTableExpose, ProTableProps, TableDensity } from './types'
 
 const props = withDefaults(defineProps<ProTableProps>(), {
   tableEngine: 'element-plus',
@@ -39,18 +42,13 @@ const props = withDefaults(defineProps<ProTableProps>(), {
   initParam: () => ({}),
 })
 
-const emit = defineEmits<{
-  search: [Record<string, unknown>]
-  reset: []
-}>()
-
 const attrs = useAttrs()
 defineOptions({ inheritAttrs: false })
 
-/* ───────────── P0 骨架版：硬编码状态，P1 替换为 composables ───────────── */
+/* ───────────── 编排层：用 3 个 composables 接管所有状态 ───────────── */
 
 /** 引擎 ref —— spec 决策 4：setup 阶段一次性捕获 */
-const engineRef: Ref<'element-plus' | 'vxe-table'> = ref(props.tableEngine)
+const engineRef: Ref<'element-plus' | 'vxe-table'> = resolveEngine(props.tableEngine)
 watch(
   () => props.tableEngine,
   (v) => {
@@ -61,46 +59,52 @@ watch(
   }
 )
 
-/** 列设置抽屉状态 */
+/** 列设置抽屉状态（spec 附录 A #8：默认关闭） */
 const colSettingVisible = ref(false)
 
-/** 数据 / 分页（占位，P1 由 useTable 接管） */
-const data = ref<Record<string, unknown>[] | null>(null)
-const total = ref(0)
-const page = ref(1)
-const pageSize = ref(props.pageSize ?? 10)
-const loading = ref(false)
-const error = ref<Error | null>(null)
-const density = ref<'compact' | 'default' | 'loose'>(props.density ?? 'default')
-const tableRef = ref<ComponentPublicInstance | null>(null) // element-plus 表格实例
-const selectedRows = ref<Record<string, unknown>[]>([])
+// exactOptionalPropertyTypes 兼容：withDefaults 返回的 props 含 undefined optional，
+// ProTableProps 严格不允 undefined。cast 一次解决（CLAUDE.md §四严禁 any；用 unknown 收口）
+const propsForComposables = props as unknown as ProTableProps
 
-/** 搜索参数（占位，P1 由 useSearch 接管） */
-const searchParams: Ref<Record<string, unknown>> = ref({ ...(props.initParam ?? {}) })
-for (const col of props.columns) {
-  if (col.search) {
-    searchParams.value[col.prop] = col.search.defaultValue ?? null
-  }
-}
+// 注意顺序：useSearch 需要 useTable.refresh 作 fetchHook；
+// useTable 需要 useSearch.searchParams 序列化参数；形成循环。
+// 解决方案：useTable 创建时不传 search（仅用 props.columns.search 初始化 searchParams）；
+//           useSearch 创建时拿已存在的 table.refresh 作 fetchHook。
+const columns = useColumns({ props: propsForComposables, engine: engineRef })
+const table = useTable({ props: propsForComposables, columns, engine: engineRef })
 
-/** 搜索列（按 columns.search 过滤） */
-const searchColumns = props.columns.filter((c) => Boolean(c.search))
-
-/** 可见列（按 hidden 过滤 + 响应式） */
-const sortedColumns = ref<ProColumn[]>(
-  props.columns.filter((c) => {
-    if (typeof c.hidden === 'boolean') return !c.hidden
-    if (c.hidden && typeof c.hidden === 'object' && 'value' in c.hidden) {
-      return !Boolean((c.hidden as Ref<boolean>).value)
+// useSearch 仅承担"用户搜索 UI ↔ 参数"职责，refresh 由 useTable.fetchHook 闭包触发
+const search = useSearch({
+  props: propsForComposables,
+  engine: engineRef,
+  fetchHook: async (opts) => {
+    if (opts?.reset) {
+      table.resetSearchParams()
+      table.setPage(1)
     }
-    return true
-  })
-)
-const allColumns = ref<ProColumn[]>([...props.columns])
+    await table.refresh()
+  },
+})
 
-function isEmpty(): boolean {
-  return !loading.value && !error.value && (data.value?.length ?? 0) === 0
+// useSearch.searchParams → useTable.searchParams 同步（避免重复维护）
+watch(
+  () => search.searchParams.value,
+  (v) => table.setSearchParams(v),
+  { deep: true }
+)
+
+// 列设置抽屉状态同步（useColumns.colSettingVisible → ProTable.colSettingVisible）
+watch(
+  () => columns.colSettingVisible.value,
+  (v) => (colSettingVisible.value = v)
+)
+
+// 列设置抽屉 emit（ProTable → useColumns）
+function handleColSettingUpdate(visible: boolean): void {
+  colSettingVisible.value = visible
 }
+
+/* ───────────── 辅助函数 ───────────── */
 
 /**
  * 解析列渲染（enum → ElTag；render → 调用返回 VNode；默认 → 字段值）
@@ -120,6 +124,7 @@ function resolveCell(col: ProColumn, row: Record<string, unknown>, index: number
 
 /**
  * 过滤对象中的 undefined 字段（exactOptionalPropertyTypes 兼容）
+ *
  * @group ProTable 组件
  */
 function filterUndefined(obj: Record<string, unknown>): Record<string, unknown> {
@@ -130,100 +135,67 @@ function filterUndefined(obj: Record<string, unknown>): Record<string, unknown> 
   return out
 }
 
-function handleRefresh(): void {
-  // P1 由 useTable 接入 requestApi.refresh
-  loading.value = true
-  setTimeout(() => {
-    loading.value = false
-  }, 500)
-}
-
-function handleSearch(): void {
-  page.value = 1
-  handleRefresh()
-  emit('search', { ...searchParams.value })
-}
-
-function handleReset(): void {
-  for (const col of props.columns) {
-    if (col.search) {
-      searchParams.value[col.prop] = col.search.defaultValue ?? null
-    }
-  }
-  page.value = 1
-  handleRefresh()
-  emit('reset')
-}
-
+/** ElPagination 当前页 / size 变化桥接到 useTable */
 function handlePageChange(p: number): void {
-  page.value = p
-  handleRefresh()
+  table.setPage(p)
 }
-
 function handleSizeChange(s: number): void {
-  pageSize.value = s
-  page.value = 1
-  handleRefresh()
+  table.setPageSize(s)
 }
 
-function handleSelectionChange(rows: Record<string, unknown>[]): void {
-  const key = props.rowKey
-  if (!key) {
-    selectedRows.value = [...rows]
-    return
-  }
-  const seen = new Set<string>()
-  const unique: Record<string, unknown>[] = []
-  for (const row of rows) {
-    const k = String(row[key])
-    if (seen.has(k)) continue
-    seen.add(k)
-    unique.push(row)
-  }
-  selectedRows.value = unique
+/** 表格密度切换桥接 */
+function handleDensityChange(d: TableDensity): void {
+  table.setDensity(d)
 }
+
+/** 多选变化桥接 */
+function handleSelectionChange(rows: Record<string, unknown>[]): void {
+  table.setSelectedRows(rows)
+}
+
+/** 是否空数据（给 AsyncState 三态用） */
+function isEmpty(): boolean {
+  return !table.loading.value && !table.error.value && (table.data.value?.length ?? 0) === 0
+}
+
+/* ───────────── BEM 命名空间 ───────────── */
 
 const bem = createNamespace('pro-table')
 
-// ───────────── expose（spec §八 defineExpose 清单） ─────────────
+/* ───────────── defineExpose（spec §八） ───────────── */
+
 defineExpose({
-  refresh: async () => handleRefresh(),
-  reset: async () => handleReset(),
-  getSelectedRows: () => [...selectedRows.value],
-  clearSelection: () => {
-    selectedRows.value = []
-  },
-  getSearchParams: () => ({ ...searchParams.value }),
-  setSearchParams: async (params: Record<string, unknown>) => {
-    Object.assign(searchParams.value, params)
-    page.value = 1
-    await handleRefresh()
-  },
-  element: tableRef,
+  refresh: () => table.refresh(),
+  reset: () => search.reset(),
+  getSelectedRows: () => table.getSelectedRows(),
+  clearSelection: () => table.clearSelection(),
+  getSearchParams: () => search.getParams(),
+  setSearchParams: (params: Record<string, unknown>) => search.setSearchParams(params),
+  element: table.tableRef,
   engine: engineRef.value,
 } satisfies ProTableExpose)
 </script>
 
 <template>
   <ElConfigProvider>
-    <div :class="[bem.b(), attrs.class]" :style="attrs.style">
+    <div :class="[bem.b(), attrs.class]" :style="attrs.style" :data-density="table.density.value">
       <SearchForm
-        v-if="searchColumns.length > 0"
-        :columns="searchColumns"
-        :search-params="searchParams"
+        v-if="columns.searchColumns.length > 0"
+        :columns="columns.searchColumns"
+        :search-params="search.searchParams.value"
         :search-rows="props.searchRows"
-        @search="handleSearch"
-        @reset="handleReset"
-        @update:search-params="(v) => Object.assign(searchParams, v)"
+        @search="search.search"
+        @reset="search.reset"
+        @update:search-params="(v) => search.setSearchParams(v)"
       />
       <TableHeader
-        :columns="allColumns"
-        :visible-columns="sortedColumns"
-        :density="density"
+        :columns="columns.allColumns.value"
+        :visible-columns="columns.sortedColumns.value"
+        :density="table.density.value"
         :col-setting-visible="colSettingVisible"
-        @refresh="handleRefresh"
-        @update:density="(v) => (density = v)"
-        @update:col-setting-visible="(v) => (colSettingVisible = v)"
+        @refresh="table.refresh"
+        @update:density="handleDensityChange"
+        @update:col-setting-visible="handleColSettingUpdate"
       >
         <template #tableHeader>
           <slot name="tableHeader" />
@@ -232,16 +204,21 @@ defineExpose({
           <slot name="toolButton" />
         </template>
       </TableHeader>
-      <AsyncState :loading="loading" :error="error" :is-empty="isEmpty()" @retry="handleRefresh">
+      <AsyncState
+        :loading="table.loading.value"
+        :error="table.error.value"
+        :is-empty="isEmpty()"
+        @retry="table.refresh"
+      >
         <ElTable
           v-if="engineRef === 'element-plus'"
-          ref="tableRef"
-          :data="data ?? []"
+          ref="table.tableRef"
+          :data="table.data.value ?? []"
           v-bind="props.rowKey ? { rowKey: props.rowKey } : {}"
           @selection-change="handleSelectionChange"
         >
           <ElTableColumn
-            v-for="col in sortedColumns"
+            v-for="col in columns.sortedColumns.value"
             :key="col.prop"
             :prop="col.prop"
             :label="col.label"
@@ -258,7 +235,16 @@ defineExpose({
           >
             <template #default="scope">
               <slot :name="col.prop" :row="scope.row" :column="col" :index="scope.$index">
-                <component :is="resolveCell(col, scope.row, scope.$index)" />
+                <!-- 直接渲染 resolveCell 的值（VNode / string / number 均可） -->
+                <component :is="'div'" v-if="false" />
+                <template v-for="(item, i) in [resolveCell(col, scope.row, scope.$index)]" :key="i">
+                  <template v-if="isVNode(item)">
+                    <component :is="item" />
+                  </template>
+                  <template v-else>
+                    {{ item }}
+                  </template>
+                </template>
               </slot>
             </template>
           </ElTableColumn>
@@ -271,9 +257,9 @@ defineExpose({
       </AsyncState>
       <ElPagination
         v-if="props.pagination !== false"
-        :total="total"
-        :current-page="page"
-        :page-size="pageSize"
+        :total="table.total.value"
+        :current-page="table.page.value"
+        :page-size="table.pageSize.value"
         layout="total, sizes, prev, pager, next, jumper"
         v-bind="(props.pagination as Record<string, unknown>) ?? {}"
         @current-change="handlePageChange"
@@ -289,16 +275,24 @@ defineExpose({
       <ColSetting
         v-if="engineRef === 'element-plus'"
         v-model:visible="colSettingVisible"
-        :columns="allColumns"
-        :visible-keys="sortedColumns.map((c) => c.prop)"
-        :fixed-keys="allColumns.filter((c) => c.fixed).map((c) => c.prop)"
+        :columns="columns.allColumns.value"
+        :visible-keys="columns.visibleKeys.value"
+        :fixed-keys="columns.fixedKeys.value"
+        @update:visible-keys="(keys) => columns.setVisibleKeys(keys)"
+        @reset-to-default="columns.resetToDefault"
       />
     </div>
   </ElConfigProvider>
 </template>
 
 <style lang="scss">
-/* 命名空间占位 —— 子组件覆盖样式各自下钻到 .#{$BEM_PREFIX}-pro-table__xxx */
+/* ProTable 根容器：宽度占满即可，内部子组件自带布局 */
 .#{$BEM_PREFIX}-pro-table {
+  width: 100%;
+
+  /* 内部各区域之间的间距 */
+  & > * + * {
+    margin-top: 12px;
+  }
 }
 </style>

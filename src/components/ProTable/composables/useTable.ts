@@ -3,14 +3,15 @@
  *
  * 职责：
  * - 包装 useRequest（CLAUDE.md §1.5 强制封装；AbortController + 三态）
+ * - 内部维护 searchParams（从 props.columns.search.defaultValue 初始化）
+ * - 序列化搜索参数（剔除 undefined/null/''，保留 0/false，附录 A #10）
  * - 管理分页（page / pageSize / total）
  * - 多选 selectedRows（按 row-key 去重；reserve-selection 由 el-table 自带）
  * - expose：refresh / clearSelection / getSelectedRows / tableRef
  *
- * **fetchHook 注入设计**（plan critical review #3 修正）：
- * 不通过 Object.assign(props, ...) 反 Vue 单向数据流，
- * 而是由 ProTable.vue setup 时把 fetchHook 闭包传给 useTable 与 useSearch，
- * useTable 用 watch 监听 page/pageSize 变化触发 fetchHook。
+ * **独立 searchParams 设计**：
+ * 不再依赖 useSearch 的 searchParams，避免 useSearch ↔ useTable 循环依赖。
+ * ProTable.vue 通过 fetchHook 闭包让 useSearch.search/reset 触发 useTable.refresh。
  *
  * @see [`@/composables/useRequest`](../../composables/useRequest.ts) 请求封装
  * @see [`./useSearch`](./useSearch.ts) 共享 fetchHook 闭包
@@ -19,12 +20,10 @@
 import { ref, watch, onMounted, type ComponentPublicInstance, type Ref } from 'vue'
 import { useRequest } from '@composables/useRequest' // 项目 composable auto-import
 import type { ProTableProps, TableDensity, TableEngine } from '../types'
-import type { UseSearchReturn } from './useSearch'
 
 export interface UseTableOptions {
   props: ProTableProps
-  search: UseSearchReturn
-  /** 列上下文（当前 P1 stub；P3 useColumns 后接入） */
+  /** 列上下文（useColumns 返回值） */
   columns: { allColumns?: Ref<unknown[]>; sortedColumns?: Ref<unknown[]> }
   engine: Ref<TableEngine>
 }
@@ -39,6 +38,7 @@ export interface UseTableReturn {
   selectedRows: Ref<Record<string, unknown>[]>
   density: Ref<TableDensity>
   tableRef: Ref<ComponentPublicInstance | null>
+  searchParams: Ref<Record<string, unknown>>
   refresh: () => Promise<void>
   clearSelection: () => void
   getSelectedRows: () => Record<string, unknown>[]
@@ -46,10 +46,31 @@ export interface UseTableReturn {
   setPage: (page: number) => void
   setPageSize: (size: number) => void
   setDensity: (d: TableDensity) => void
+  setSearchParams: (params: Record<string, unknown>) => void
+  resetSearchParams: () => void
 }
 
 export function useTable(options: UseTableOptions): UseTableReturn {
-  const { props, search } = options
+  const { props } = options
+
+  // 内部 searchParams：从 props.columns.search.defaultValue 初始化（不依赖 useSearch）
+  const initialSearchParams: Record<string, unknown> = { ...(props.initParam ?? {}) }
+  for (const col of props.columns) {
+    if (col.search) {
+      initialSearchParams[col.prop] = col.search.defaultValue ?? null
+    }
+  }
+  const searchParams = ref<Record<string, unknown>>(initialSearchParams)
+
+  /** 序列化参数（剔除 undefined/null/''，保留 0/false） */
+  function serializeParams(params: Record<string, unknown>): Record<string, unknown> {
+    const out: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(params)) {
+      if (value === undefined || value === null || value === '') continue
+      out[key] = value
+    }
+    return out
+  }
 
   const data = ref<Record<string, unknown>[] | null>(null)
   const total = ref(0)
@@ -60,14 +81,12 @@ export function useTable(options: UseTableOptions): UseTableReturn {
   const density = ref<TableDensity>(props.density ?? 'default')
 
   // useRequest 包装（AbortController 内置；spec §九 #5 快速连续取消）
-  // immediate: false：useTable 显式控制首次请求（onMounted），便于测试与时序对齐
   const request = useRequest(
     async () => {
-      const params = search.serializeParams({
-        ...search.getParams(),
+      const params = serializeParams({
+        ...searchParams.value,
         pageNum: page.value,
         pageSize: pageSize.value,
-        ...(props.initParam ?? {}),
       })
       return await props.requestApi(params)
     },
@@ -129,7 +148,23 @@ export function useTable(options: UseTableOptions): UseTableReturn {
     density.value = d
   }
 
-  // 首次 mount 触发请求（spec 决策 1：spec §九 #5 AbortController 由 useRequest 接管）
+  /** 程序化设置搜索参数（ProTable.vue 通过 fetchHook 触发刷新） */
+  function setSearchParams(params: Record<string, unknown>): void {
+    Object.assign(searchParams.value, params)
+  }
+
+  /** 重置搜索参数到 defaultValue */
+  function resetSearchParams(): void {
+    const reset: Record<string, unknown> = { ...(props.initParam ?? {}) }
+    for (const col of props.columns) {
+      if (col.search) {
+        reset[col.prop] = col.search.defaultValue ?? null
+      }
+    }
+    searchParams.value = reset
+  }
+
+  // 首次 mount 触发请求
   onMounted(() => {
     void refresh()
   })
@@ -149,6 +184,7 @@ export function useTable(options: UseTableOptions): UseTableReturn {
     selectedRows,
     density,
     tableRef,
+    searchParams,
     refresh,
     clearSelection,
     getSelectedRows,
@@ -156,5 +192,7 @@ export function useTable(options: UseTableOptions): UseTableReturn {
     setPage,
     setPageSize,
     setDensity,
+    setSearchParams,
+    resetSearchParams,
   }
 }

@@ -2,6 +2,9 @@ allowBuilds:
   '@parcel/watcher': true
   esbuild: true
 
+minimumReleaseAgeExclude:
+  - vxe-table@4.21.7
+
 overrides:
   'vue': 'beta'
   '@vue/compiler-core': 'beta'

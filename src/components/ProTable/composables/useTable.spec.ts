@@ -84,6 +84,17 @@ describe('useTable', () => {
     expect(table.total.value).toBe(99)
   })
 
+  it('resetSearchParams 恢复 defaultValue（仅重置带 search 配置的列）', () => {
+    const deps = makeDeps()
+    deps.props.columns = [
+      { prop: 'name', label: '名称', search: { el: 'input', defaultValue: '' } },
+    ] as never
+    const table = useTable(deps)
+    table.setSearchParams({ name: '张三' })
+    table.resetSearchParams()
+    expect(table.searchParams.value).toEqual({ name: '' })
+  })
+
   it('getSelectedRows 返回按 row-key 去重的选中', () => {
     const table = useTable(makeDeps())
     table.setSelectedRows([{ id: 1 }, { id: 2 }, { id: 1 }])

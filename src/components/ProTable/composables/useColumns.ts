@@ -78,7 +78,8 @@ export function useColumns(options: UseColumnsOptions): UseColumnsReturn {
         return ia - ib
       })
     }
-    return arr.filter((c) => !isHidden(c))
+    // 过滤逻辑：col.hidden = true 隐藏 + 不在 visibleKeys 中也隐藏
+    return arr.filter((c) => !isHidden(c) && visibleKeys.value.includes(c.prop))
   })
 
   const searchColumns = allColumns.value.filter((c) => Boolean(c.search))
@@ -145,11 +146,20 @@ export function useColumns(options: UseColumnsOptions): UseColumnsReturn {
     persist()
   }
 
-  /** 恢复默认：清 Local 存储 + 重置 allColumns（附录 A #6） */
+  /** 恢复默认：清 Local 存储 + 重置 allColumns + visibleKeys（附录 A #6） */
   function resetToDefault(): void {
     if (!storageKey) return
     Local.remove(storageKey)
     allColumns.value = [...props.columns]
+    visibleKeys.value = props.columns.map((c) => c.prop) // 重置可见列（含 hidden=false + Ref<boolean>）
+    // 重置所有列的 hidden 状态
+    for (const col of allColumns.value) {
+      if (typeof col.hidden === 'boolean') {
+        col.hidden = false
+      } else if (col.hidden && typeof col.hidden === 'object' && 'value' in col.hidden) {
+        ;(col.hidden as Ref<boolean>).value = false
+      }
+    }
   }
 
   // 响应式 hidden 变化时持久化
