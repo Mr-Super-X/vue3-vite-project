@@ -2,6 +2,22 @@
 
 ## 未发布
 
+### ✨ Features | 新增 ProTable 组件（配置驱动 + 双引擎架构）
+
+* **`src/components/ProTable/`**：新增配置驱动的企业级表格组件（Element Plus + vxe-table 双引擎）
+  * `columns` 数组同时定义表格列与搜索项（`ProColumn` 类型，~100 行类型契约）
+  * 自动生成搜索区（响应式布局 + 展开/收起，搜索按钮在前，附录 A #4）
+  * 工具栏：刷新 + 密度切换 + 列设置（复选框切换可见性，附录 A #6 "恢复默认"）
+  * 分页区（基于 el-pagination，page / pageSize 自动同步）
+  * 插槽系统：tableHeader / toolButton / [prop] / operation / search-[prop] / empty / paginationLeft / paginationRight
+  * 多选跨页记忆（el-table reserve-selection + row-key，附录 A #1 保留多选）
+  * 双引擎切换：`table-engine="element-plus" | "vxe-table"`，**vxe-table 动态按需加载**（spec 决策 1）
+  * `defineExpose`：`refresh` / `reset` / `getSelectedRows` / `clearSelection` / `getSearchParams` / `setSearchParams` / `element` / `engine`
+  * 类型安全：`ProTableProps` / `ProColumn` / `ProTableExpose` / `EnumProps` / `SearchElType` / `TableEngine` / `TableDensity`
+  * 4 个 composables：`useSearch` / `useTable` / `useColumns` / `useVxeTable`（每个 ≤150 行）
+  * 3 个子组件：`SearchForm` / `TableHeader` / `ColSetting`
+  * 测试覆盖：7 个 .spec.ts，共 **30 个测试全过**
+
 ### ♻️ Refactor | XForm demo 可理解性深度修复（13 项 P0/P1/P2）
 
 基于批量可理解性审查（48 个 demo 评估 + 已读 13 个关键 demo 代码交叉验证）的修复批次：
