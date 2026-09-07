@@ -214,6 +214,7 @@ defineExpose({
         :search-rows="props.searchRows"
         @search="handleSearch"
         @reset="handleReset"
+        @update:search-params="(v) => Object.assign(searchParams, v)"
       />
       <TableHeader
         :columns="allColumns"
