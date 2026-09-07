@@ -1,4 +1,13 @@
 <script setup lang="ts">
+/**
+ * 数据总览卡片骨架屏（loading 态使用）。
+ *
+ * 1.4s 线性渐变 shimmer 动画，禁用 box-sizing 之外的所有 hover / click 交互
+ * （aria-hidden="true" 让读屏器跳过）。
+ *
+ * @see [`./OverviewSection.vue`](./OverviewSection.vue) 父容器
+ * @group 业务模块：Home
+ */
 // BEM 工具由 unplugin-auto-import 自动注入，无须显式 import
 const bem = createNamespace('overview-card-skeleton')
 </script>

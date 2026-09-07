@@ -1,27 +1,33 @@
-// Web Vitals 客户端采集
-//
-// 安装：pnpm add web-vitals
-//
-// 设计要点：
-//   - 4 项核心指标（LCP / INP / CLS / TTFB）；FCP 可选启用
-//   - dev 模式：默认 console.info 输出便于开发者立即观察
-//   - prod 模式：默认 noop（不上报到任何端点）；业务通过 options.report 自定义
-//   - 上报 endpoint **未实现**——后端协议未定，业务后续接入见 docs/12-web-vitals使用规范.md
-//
-// 为何不上报到自家端点：
-//   - 上报协议（fetch / sendBeacon / image ping）和端点 URL 需与运维约定
-//   - 采集与上报解耦：web-vitals 库负责采，业务层只在 options.report 里加一行
-//
-// 接入示例（见 docs/12 完整版本）：
-//   ```ts
-//   app.use(WebVitals, {
-//     report: (metric) => {
-//       // Sentry: Sentry.setMeasurement(metric.name, metric.value)
-//       // Ga: gtag('event', metric.name, { value: metric.value })
-//       // 自有 APM: navigator.sendBeacon('/apm/web-vitals', JSON.stringify(metric))
-//     },
-//   })
-//   ```
+/**
+ * Web Vitals 客户端采集
+ *
+ * 安装：pnpm add web-vitals
+ *
+ * 设计要点：
+ *   - 4 项核心指标（LCP / INP / CLS / TTFB）；FCP 可选启用
+ *   - dev 模式：默认 console.info 输出便于开发者立即观察
+ *   - prod 模式：默认 noop（不上报到任何端点）；业务通过 options.report 自定义
+ *   - 上报 endpoint **未实现**——后端协议未定，业务后续接入见 docs/12-web-vitals使用规范.md
+ *
+ * 为何不上报到自家端点：
+ *   - 上报协议（fetch / sendBeacon / image ping）和端点 URL 需与运维约定
+ *   - 采集与上报解耦：web-vitals 库负责采，业务层只在 options.report 里加一行
+ *
+ * 接入示例（见 docs/12 完整版本）：
+ *   ```ts
+ *   app.use(WebVitals, {
+ *     report: (metric) => {
+ *       // Sentry: Sentry.setMeasurement(metric.name, metric.value)
+ *       // Ga: gtag('event', metric.name, { value: metric.value })
+ *       // 自有 APM: navigator.sendBeacon('/apm/web-vitals', JSON.stringify(metric))
+ *     },
+ *   })
+ *   ```
+ *
+ * @see [`@/utils/consoleBadge`](../utils/consoleBadge.ts) dev 模式徽章输出
+ * @see [`./index.ts`](./index.ts) 插件统一注册入口
+ * @group 插件：性能监控
+ */
 
 import type { App } from 'vue'
 import { onCLS, onINP, onLCP, onTTFB, type Metric } from 'web-vitals'

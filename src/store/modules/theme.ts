@@ -1,15 +1,20 @@
-// 主题 store
-//
-// 持久化：mode 字段通过 pinia-plugin-persistedstate 自动写入 localStorage
-// 跟随系统：mode === 'auto' 时监听 prefers-color-scheme 媒体查询
-//
-// 切换 API：
-//   useThemeStore().setMode('dark')   // 强制深色
-//   useThemeStore().setMode('light')  // 强制浅色
-//   useThemeStore().setMode('auto')   // 跟随系统
-//   useThemeStore().toggleMode()      // 智能切换（auto → 显式；light ↔ dark）
-//
-// 推荐在组件中使用 useTheme() composable（@composables/useTheme），更简洁。
+/**
+ * 主题 store（持久化）。
+ *
+ * 持久化：mode 字段通过 pinia-plugin-persistedstate 自动写入 localStorage
+ * 跟随系统：mode === 'auto' 时监听 prefers-color-scheme 媒体查询
+ *
+ * 切换 API：
+ *   useThemeStore().setMode('dark')   // 强制深色
+ *   useThemeStore().setMode('light')  // 强制浅色
+ *   useThemeStore().setMode('auto')   // 跟随系统
+ *   useThemeStore().toggleMode()      // 智能切换（auto → 显式；light ↔ dark）
+ *
+ * 推荐在组件中使用 useTheme() composable（@composables/useTheme），更简洁。
+ *
+ * @see [`@composables/useTheme`](../composables/useTheme.ts) 推荐消费入口
+ * @group 状态管理：主题
+ */
 
 /** 主题模式：light（强制浅色）/ dark（强制深色）/ auto（跟随系统） */
 export type ThemeMode = 'light' | 'dark' | 'auto'

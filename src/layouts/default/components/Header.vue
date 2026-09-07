@@ -1,4 +1,16 @@
 <script setup lang="ts">
+/**
+ * Default 布局顶部条（用户信息 + 退出按钮）。
+ *
+ * 设计取舍：
+ * - 极简单组件：仅展示当前用户 + 退出入口。面包屑/折叠/通知中心留待后续业务方按需扩展
+ * - i18n：未引入 useI18n，硬编码"游客"和"退出"——通用词条后续按 i18n 整体迁移时一起处理
+ * - 退出流程：调用 `useLogout().confirmLogout()`，统一在 useLogout 处理二次确认 + loading
+ *
+ * @see [`@composables/useLogout`](../../../composables/useLogout.ts) 退出登录流程
+ * @see [`@/store/modules/user.ts`](../../../store/modules/user.ts) 用户登录态
+ * @group 布局：Default
+ */
 import { useUserStore } from '@/store/modules/user'
 
 const userStore = useUserStore()

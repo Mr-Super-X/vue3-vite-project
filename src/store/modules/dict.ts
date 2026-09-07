@@ -1,15 +1,21 @@
-// 字典状态管理
-//
-// 设计要点：
-//   - 业务调用 useDict('user_status') 触发 fetchDict（lazy）
-//   - 30s 网络层缓存：http.ts 拦截器（防 429 / 雪崩）
-//   - 5min 业务层缓存：本 store（跨页面共享，避免重复 await）
-//   - 登录后守卫钩子调用 preloadDict 预加载 PRELOAD_DICT_KEYS
-//   - 用户登出 / 切换账号调 clear 清空
-//
-// 业务侧不要直接调 dictApi.getByType，统一通过 useDict。
-//
-// PRELOAD_DICT_KEYS：登录后立即拉的字典（修改此处即可）
+/**
+ * 字典状态管理（业务层缓存）。
+ *
+ * 设计要点：
+ *   - 业务调用 useDict('user_status') 触发 fetchDict（lazy）
+ *   - 30s 网络层缓存：http.ts 拦截器（防 429 / 雪崩）
+ *   - 5min 业务层缓存：本 store（跨页面共享，避免重复 await）
+ *   - 登录后守卫钩子调用 preloadDict 预加载 PRELOAD_DICT_KEYS
+ *   - 用户登出 / 切换账号调 clear 清空
+ *
+ * 业务侧不要直接调 dictApi.getByType，统一通过 useDict。
+ *
+ * PRELOAD_DICT_KEYS：登录后立即拉的字典（修改此处即可）
+ *
+ * @see [`@composables/useDict`](../composables/useDict.ts) 业务侧消费封装
+ * @see [`./user.ts`](./user.ts) 登录后触发 preloadDict
+ * @group 状态管理：字典
+ */
 
 import { dictApi, type DictEntry } from '@/api/modules/dict'
 

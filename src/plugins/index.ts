@@ -23,6 +23,10 @@ import type { PluginsOptions } from './errorHandler.d'
  *   }
  * })
  * ```
+ *
+ * @see [`./errorHandler.ts`](./errorHandler.ts) 全局错误处理
+ * @see [`./webVitals.ts`](./webVitals.ts) 性能指标采集
+ * @group 插件：注册入口
  */
 const install = (app: App, options: PluginsOptions = {}): void => {
   // 1. 全局错误处理（默认启用；传 false 可关闭）

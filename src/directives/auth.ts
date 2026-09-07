@@ -1,16 +1,22 @@
-// 权限指令 v-auth
-//
-// 用法：
-//   v-auth="'user:edit'"               单权限
-//   v-auth="['user:view','user:edit']" 多权限（AND 语义，全部满足）
-//   v-auth:any="['a','b']"             多权限（ANY 语义，任一满足）
-//   v-auth:disabled 修饰符             无权限时仅禁用，保留元素
-//
-// 实现：
-//  - install 模式（与 inputDebounce / buttonDebounce / permission 一致）
-//  - 调用 useAuth() 取最新权限，自动响应权限变化（store 更新时元素也更新）
-//  - 移除元素不是 el.remove()（彻底删除），而是 el.style.display = 'none'
-//    这样 Vue 响应式系统保留组件实例，切回权限时不需要重新挂载
+/**
+ * 权限指令 v-auth
+ *
+ * 用法：
+ *   v-auth="'user:edit'"               单权限
+ *   v-auth="['user:view','user:edit']" 多权限（AND 语义，全部满足）
+ *   v-auth:any="['a','b']"             多权限（ANY 语义，任一满足）
+ *   v-auth:disabled 修饰符             无权限时仅禁用，保留元素
+ *
+ * 实现：
+ *  - install 模式（与 inputDebounce / buttonDebounce / permission 一致）
+ *  - 调用 useAuth() 取最新权限，自动响应权限变化（store 更新时元素也更新）
+ *  - 移除元素不是 el.remove()（彻底删除），而是 el.style.display = 'none'
+ *    这样 Vue 响应式系统保留组件实例，切回权限时不需要重新挂载
+ *
+ * @see [`./permission.ts`](./permission.ts) 旧版权限指令
+ * @see [`../../composables/useAuth`](../../composables/useAuth.ts) 权限判断底层
+ * @group 指令：权限
+ */
 
 import type { App } from 'vue'
 import { useAuth } from '@composables/useAuth'

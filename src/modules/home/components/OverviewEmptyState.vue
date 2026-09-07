@@ -1,4 +1,13 @@
 <script setup lang="ts">
+/**
+ * 数据总览空态：当前时间段未查询到统计指标。
+ *
+ * 与 `<AsyncState>` 的 empty 区别：本组件是总览区专用，带"当前时间段"语义；
+ * AsyncState 是通用三态。
+ *
+ * @see [`./OverviewSection.vue`](./OverviewSection.vue) 父容器
+ * @group 业务模块：Home
+ */
 import { DocumentRemove } from '@element-plus/icons-vue'
 
 // BEM 工具由 unplugin-auto-import 自动注入，无须显式 import

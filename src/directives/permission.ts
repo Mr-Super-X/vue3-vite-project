@@ -1,19 +1,25 @@
-// 权限控制指令 v-permission
-//
-// 用法：
-//   v-permission="'user:edit'"               单权限
-//   v-permission="['user:view','user:edit']" 多权限（AND 语义，全部满足）
-//   v-permission:any="['a','b']"             多权限（ANY 语义，任一满足）
-//
-// 与 v-auth 区别：
-//  - v-permission 是早期指令，专为按钮设计；行为更简单：仅做"移除"或"禁用"切换
-//  - v-auth 是 P0-4 阶段推出的统一权限指令，支持更多修饰符组合
-//  - 推荐新代码用 v-auth；v-permission 保留以兼容已有调用
-//
-// 实现：
-//  - install 模式（与 v-auth / inputDebounce / buttonDebounce 一致）
-//  - 调用 useAuth() 实时读取权限；权限变化时通过 updated 钩子重新判断
-//  - 默认行为：无权限时 display: none（与 v-auth remove 模式一致）
+/**
+ * 权限控制指令 v-permission
+ *
+ * 用法：
+ *   v-permission="'user:edit'"               单权限
+ *   v-permission="['user:view','user:edit']" 多权限（AND 语义，全部满足）
+ *   v-permission:any="['a','b']"             多权限（ANY 语义，任一满足）
+ *
+ * 与 v-auth 区别：
+ *  - v-permission 是早期指令，专为按钮设计；行为更简单：仅做"移除"或"禁用"切换
+ *  - v-auth 是 P0-4 阶段推出的统一权限指令，支持更多修饰符组合
+ *  - 推荐新代码用 v-auth；v-permission 保留以兼容已有调用
+ *
+ * 实现：
+ *  - install 模式（与 v-auth / inputDebounce / buttonDebounce 一致）
+ *  - 调用 useAuth() 实时读取权限；权限变化时通过 updated 钩子重新判断
+ *  - 默认行为：无权限时 display: none（与 v-auth remove 模式一致）
+ *
+ * @see [`./auth.ts`](./auth.ts) 统一权限指令
+ * @see [`../../composables/useAuth`](../../composables/useAuth.ts) 权限判断底层
+ * @group 指令：权限
+ */
 
 import type { App } from 'vue'
 import { useAuth } from '@composables/useAuth'

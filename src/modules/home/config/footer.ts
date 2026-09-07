@@ -1,3 +1,12 @@
+/**
+ * 首页底部链接 + 版权 + 备案信息（演示配置）。
+ *
+ * 数据来源当前是硬编码，待接入运营后台 CMS 后由接口返回。
+ *
+ * @see [`./types`](./types.ts) FooterLink
+ * @see [`../components/HomeFooter.vue`](../components/HomeFooter.vue) 消费方
+ * @group 业务模块：Home
+ */
 import type { FooterLink } from './types'
 
 export const FOOTER_LINKS: FooterLink[] = [

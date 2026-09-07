@@ -1,8 +1,12 @@
 /**
- * 首页 Hero 配置
+ * 首页 Hero 配置（slogan + 热搜词 + 搜索类型 + 占位文案）。
  *
- * - searchTypes 与 src/modules/home/config/types.ts 的 SearchTypeOption 配套
+ * - searchTypes 与 `./types` 的 SearchTypeOption 配套
  * - 此类型只被本文件消费，未外暴露
+ *
+ * @see [`./types`](./types.ts) SearchTypeOption
+ * @see [`../components/HeroSection.vue`](../components/HeroSection.vue) 消费方
+ * @group 业务模块：Home
  */
 export interface HeroConfig {
   slogan: string

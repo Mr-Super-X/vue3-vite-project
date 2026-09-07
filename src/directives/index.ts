@@ -20,6 +20,9 @@ import { autoImport } from '@/utils/autoImport'
  *
  * 未来新增指令：直接在 src/directives/ 下添加 v-xxx.ts 即可，
  * 无需在本文件 import，也无需修改 main.ts。
+ *
+ * @see [`../../utils/autoImport.ts`](../../utils/autoImport.ts) 通用 autoImport 工具
+ * @group 指令：自动注册
  */
 interface DirectiveModule {
   default: { install: (app: App) => void }

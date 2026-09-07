@@ -1,9 +1,17 @@
 <script setup lang="ts">
-// PortalNav：基于 el-menu 的门户顶部导航
-// - 父项无 children → 直接菜单项（点击 router.push 或外链）
-// - 父项有 children → 子菜单父项（hover 弹出子菜单，父项本身不响应点击）
-// - 子菜单项点击 → router.push 或外链
-// - activeIndex 计算：当前路由 path 命中某顶层或某子项 → 把对应顶层 key 标为高亮
+/**
+ * PortalNav：基于 el-menu 的门户顶部导航。
+ *
+ * 行为矩阵：
+ * - 父项无 children → 直接菜单项（点击 router.push 或外链）
+ * - 父项有 children → 子菜单父项（hover 弹出子菜单，父项本身不响应点击）
+ * - 子菜单项点击 → router.push 或外链
+ * - activeIndex 计算：当前路由 path 命中某顶层或某子项 → 把对应顶层 key 标为高亮
+ *
+ * @see [`../config/nav.ts`](../config/nav.ts) 默认导航配置
+ * @see [`../config/types.ts`](../config/types.ts) PortalNavItem 类型
+ * @group 布局：Portal
+ */
 import type { PortalNavItem, PortalNavSubItem } from '@/layouts/portal/config/types'
 
 const bem = createNamespace('portal-nav')

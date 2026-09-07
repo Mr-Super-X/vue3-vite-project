@@ -1,6 +1,22 @@
 <script setup lang="ts">
-// 数据总览：标题 + 周期切换 + 2+3 卡片网格
-// 规格：标题 24px 高 + 周期 28px 高 / 第一行 2 卡 688x170 / 第二行 3 卡 450x170
+/**
+ * 数据总览：标题 + 周期切换 + 2+3 卡片网格。
+ *
+ * 规格：标题 24px 高 + 周期 28px 高 / 第一行 2 卡 688x170 / 第二行 3 卡 450x170。
+ *
+ * **卡片图标静态 import 的必要性**：
+ * 动态 `src` 字符串（如 `'../../images/x.png'`）浏览器按页面 URL 解析，
+ * 子路径部署下必 404。走 vite 资源管线静态 import 才能生成带 hash 的稳定 URL。
+ *
+ * 状态优先级：loading（骨架屏）> error（错误态 + 重试）> empty（空态）> 正常数据。
+ *
+ * @see [`./OverviewCard.vue`](./OverviewCard.vue) 单卡片
+ * @see [`./OverviewCardSkeleton.vue`](./OverviewCardSkeleton.vue) 骨架屏
+ * @see [`./OverviewErrorState.vue`](./OverviewErrorState.vue) 错误态
+ * @see [`./OverviewEmptyState.vue`](./OverviewEmptyState.vue) 空态
+ * @see [`@/modules/home/store/portal-overview`](../store/portal-overview.ts) 数据源
+ * @group 业务模块：Home
+ */
 import { usePortalOverviewStore } from '@/modules/home/store/portal-overview'
 import OverviewCard from './OverviewCard.vue'
 import OverviewCardSkeleton from './OverviewCardSkeleton.vue'

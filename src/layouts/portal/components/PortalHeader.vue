@@ -1,6 +1,19 @@
 <script setup lang="ts">
-// 门户头部：背景图 + 品牌区（logo + 标语）+ 导航区（菜单 + 当前用户）
-// 整图规格：1920x180（src/layouts/portal/images/layout-head-bg.png），内容宽度 1400，在 1920 视口下左右各 260 留白
+/**
+ * 门户头部：背景图 + 品牌区（logo + 标语）+ 导航区（菜单 + 当前用户）。
+ *
+ * 整图规格：1920x180（`src/layouts/portal/images/layout-head-bg.png`），内容宽度 1400，
+ * 在 1920 视口下左右各 260 留白。
+ *
+ * A11y：
+ * - 顶部 `<header role="banner">` 标识页头语义
+ * - logo `<a aria-label="...">` 朗读完整名称
+ * - 用户区 `role="button" aria-haspopup="menu"` 标识下拉行为
+ *
+ * @see [`./PortalNav.vue`](./PortalNav.vue) 顶部导航菜单
+ * @see [`@composables/useLogout`](../../../composables/useLogout.ts) 退出流程
+ * @group 布局：Portal
+ */
 import { useUserStore } from '@/store/modules/user'
 import { useLogout } from '@composables/useLogout'
 import { ArrowDown, SwitchButton } from '@element-plus/icons-vue'

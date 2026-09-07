@@ -1,4 +1,21 @@
 <script setup lang="ts">
+/**
+ * 应用根组件。
+ *
+ * 三层职责：
+ * 1. ElConfigProvider：注入 Element Plus 全局配置（locale / size / button 配置）
+ * 2. ErrorBoundary：捕获子树渲染错误，提供"恢复"按钮
+ * 3. AsyncState + RouterView：路由出口，remote 模式下首次进入时显示骨架屏
+ *
+ * i18n 同步：监听 vue-i18n 的 locale 变化，自动更新 Element Plus 语言包；
+ * 若 `elementLocales` 缺失目标 locale 则 fallback 到 zhCn（避免新增 locale 后忘记注册）。
+ *
+ * @see [`@/router`](./router/index.ts) 路由配置
+ * @see [`@/locales`](./locales/index.ts) i18n 入口
+ * @see [`./components/common/ErrorBoundary.vue`](./components/common/ErrorBoundary.vue) 错误边界
+ * @see [`./components/common/AsyncState.vue`](./components/common/AsyncState.vue) 三态容器
+ * @group 应用根
+ */
 import { useI18n } from 'vue-i18n'
 import { useRouterStore } from '@store/modules/router'
 import ErrorBoundary from '@/components/common/ErrorBoundary.vue'

@@ -1,4 +1,22 @@
 <script setup lang="ts">
+/**
+ * Default 布局（侧边栏 + 顶部 + 多页签 + 主内容）。
+ *
+ * 用途：所有需要完整后台框架的页面（用户管理、订单管理等业务模块）。
+ * 路由 meta.layout === 'default'（或不指定）的路由会使用本布局。
+ *
+ * 关键设计：
+ * - 侧边栏宽度：跟随 `appStore.sidebarCollapsed` 切换
+ * - 多页签：`<keep-alive :include="cachedViews">` 缓存已访问页面，避免重复渲染
+ * - Grid 布局：sidebar / header / nav / main 四区严格定位
+ *
+ * @see [`../blank/index.vue`](../blank/index.vue) 空白布局
+ * @see [`./components/Header.vue`](./components/Header.vue) 顶部
+ * @see [`./components/Sidebar.vue`](./components/Sidebar.vue) 侧边栏
+ * @see [`@/components/common/TagsView/index.vue`](../../components/common/TagsView/index.vue) 多页签
+ * @see [`@/store/modules/tags-view.ts`](../../store/modules/tags-view.ts) 缓存视图来源
+ * @group 布局
+ */
 import { useAppStore } from '@/store/modules/app'
 import { useTagsViewStore } from '@/store/modules/tags-view'
 import Sidebar from './components/Sidebar.vue'

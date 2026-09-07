@@ -1,4 +1,12 @@
 <script setup lang="ts">
+/**
+ * 热搜词标签条（Hero 区内部使用）。
+ *
+ * 行为：点击 tag → emit('select', tag) 给父组件（HeroSection），
+ * 父组件同步 keyword 状态。
+ *
+ * @group 业务模块：Home
+ */
 // BEM 工具由 unplugin-auto-import 自动注入，无须显式 import
 const bem = createNamespace('hot-search-tags')
 

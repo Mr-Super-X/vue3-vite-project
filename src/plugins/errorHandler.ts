@@ -25,6 +25,10 @@ import { _bindErrorHandler } from '@/utils/safeAsync'
  *   report: (err, ctx) => Sentry.captureException(err, { tags: ctx })
  * })
  * ```
+ *
+ * @see [`@/utils/safeAsync`](../utils/safeAsync.ts) 异步错误捕获工具
+ * @see [`./index.ts`](./index.ts) 插件统一注册入口
+ * @group 插件：错误处理
  */
 export default {
   install(app: App, options: ErrorHandlerOptions = {}): void {

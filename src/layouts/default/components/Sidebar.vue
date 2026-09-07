@@ -1,24 +1,30 @@
 <script setup lang="ts">
-// 侧边栏菜单组件
-//
-// 设计要点：
-//   - 从 router.getRoutes() 自动派生菜单（无需手动维护菜单列表）
-//   - 多级菜单递归渲染
-//   - 过滤：meta.menuVisible === false 隐藏；path === '/' 跳过；children 为空跳过
-//   - 当前激活：path 匹配高亮（支持 prefix 匹配，子页 /orders/list 也高亮 /orders 父菜单）
-//   - 折叠态：appStore.sidebarCollapsed 联动（仅显示图标）
-//   - i18n 标题：resolveRouteTitle(route, t) → titleKey → title → name fallback
-//   - 图标：meta.icon（Element Plus icon 名）→ <component :is="...">
-//
-// 设计取舍（2026-07-24 实施）：
-//   原计划用 el-menu / el-sub-menu / el-menu-item 实现，但 Element Plus 2.14 在
-//   Vue 3.5 + TS 6 下存在已知类型 bug（prop 类型被推断为 PropType 元对象）。
-//   重写为纯 Vue + router-link 实现：完全类型安全，零 @ts-ignore，
-//   折叠过渡用 CSS transition 实现。
-//
-// 已知缺口：
-//   - icon 按需引入 Element Plus icons（当前 * 通配，未来可改 unplugin-icons 按需加载）
-//   - 远程菜单注入的路由会通过 router.getRoutes() 自动出现，无需特殊处理
+/**
+ * 侧边栏菜单组件。
+ *
+ * 设计要点：
+ *   - 从 router.getRoutes() 自动派生菜单（无需手动维护菜单列表）
+ *   - 多级菜单递归渲染
+ *   - 过滤：meta.menuVisible === false 隐藏；path === '/' 跳过；children 为空跳过
+ *   - 当前激活：path 匹配高亮（支持 prefix 匹配，子页 /orders/list 也高亮 /orders 父菜单）
+ *   - 折叠态：appStore.sidebarCollapsed 联动（仅显示图标）
+ *   - i18n 标题：resolveRouteTitle(route, t) → titleKey → title → name fallback
+ *   - 图标：meta.icon（Element Plus icon 名）→ <component :is="...">
+ *
+ * 设计取舍（2026-07-24 实施）：
+ *   原计划用 el-menu / el-sub-menu / el-menu-item 实现，但 Element Plus 2.14 在
+ *   Vue 3.5 + TS 6 下存在已知类型 bug（prop 类型被推断为 PropType 元对象）。
+ *   重写为纯 Vue + router-link 实现：完全类型安全，零 @ts-ignore，
+ *   折叠过渡用 CSS transition 实现。
+ *
+ * 已知缺口：
+ *   - icon 按需引入 Element Plus icons（当前 * 通配，未来可改 unplugin-icons 按需加载）
+ *   - 远程菜单注入的路由会通过 router.getRoutes() 自动出现，无需特殊处理
+ *
+ * @see [`@/router/helpers.ts`](../../../router/helpers.ts) resolveRouteTitle / extractRouteIcon
+ * @see [`@/store/modules/app.ts`](../../../store/modules/app.ts) sidebarCollapsed 折叠态
+ * @group 布局：Default
+ */
 
 import { useI18n } from 'vue-i18n'
 import * as ElIcons from '@element-plus/icons-vue'

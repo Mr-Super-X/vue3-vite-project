@@ -1,14 +1,20 @@
-// 多页签状态管理
-//
-// 设计要点：
-//   - visitedViews: 已访问路由的 UI 渲染列表（按访问顺序）
-//   - cachedViews: 实际进入 keep-alive 的 name 列表（与 visitedViews 同步，但排除已关闭的非 affix）
-//   - affix: meta.affix === true 的路由（如 Home）始终保留，用户无法关闭
-//   - 不持久化：避免换账号看到上个账号的 tab（设计取舍）
-//
-// 路由参数变化策略（如 /user/1 → /user/2）：
-//   - 同一 name 在 visitedViews 中只保留一条，path 更新到最新
-//   - cachedViews 不变（keep-alive 缓存复用，组件实例仍在）
+/**
+ * 多页签状态管理。
+ *
+ * 设计要点：
+ *   - visitedViews: 已访问路由的 UI 渲染列表（按访问顺序）
+ *   - cachedViews: 实际进入 keep-alive 的 name 列表（与 visitedViews 同步，但排除已关闭的非 affix）
+ *   - affix: meta.affix === true 的路由（如 Home）始终保留，用户无法关闭
+ *   - 不持久化：避免换账号看到上个账号的 tab（设计取舍）
+ *
+ * 路由参数变化策略（如 /user/1 → /user/2）：
+ *   - 同一 name 在 visitedViews 中只保留一条，path 更新到最新
+ *   - cachedViews 不变（keep-alive 缓存复用，组件实例仍在）
+ *
+ * @see [`../../components/common/TagsView/index.vue`](../../components/common/TagsView/index.vue) UI 渲染
+ * @see [`../../router/guards/remote-menu.ts`](../../router/guards/remote-menu.ts) 触发 addRouteView
+ * @group 状态管理：多页签
+ */
 
 import type { RouteLocationNormalized } from 'vue-router'
 

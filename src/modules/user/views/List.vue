@@ -1,4 +1,17 @@
 <script setup lang="ts">
+/**
+ * 用户列表页（演示 useRequest + AsyncState 三态集成）。
+ *
+ * useRequest 提供 `{ data, loading, error, isEmpty, execute }` 五元组：
+ * - `data`：成功响应（UserListResponse，含 list + meta）
+ * - `loading` / `error` / `isEmpty`：驱动 AsyncState 三态切换
+ * - `execute`：AsyncState 重试按钮触发 refetch
+ *
+ * @see [`@composables/useRequest`](../../../composables/useRequest.ts) 请求封装
+ * @see [`@/components/common/AsyncState`](../../../components/common/AsyncState.vue) 三态容器
+ * @see [`@/api/modules/user`](../../../api/modules/user.ts) getList 接口
+ * @group 业务模块：User
+ */
 import { userApi } from '@/api/modules/user'
 import AsyncState from '@/components/common/AsyncState.vue'
 

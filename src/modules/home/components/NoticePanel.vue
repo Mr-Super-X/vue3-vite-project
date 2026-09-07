@@ -1,7 +1,15 @@
 <script setup lang="ts">
-// 通知公告侧栏：用户名 + 消息/待办计数 + 公告/消息双 tab + 公告列表
-// 规格：364x252 / AVATAR 32x32 / 标签页 18px 高亮蓝
-
+/**
+ * 通知公告侧栏：用户名 + 消息/待办计数 + 公告/消息双 tab + 公告列表。
+ *
+ * 规格：364x252 / AVATAR 32x32 / 标签页 18px 高亮蓝。
+ *
+ * 当前 TABS / NOTICES 数据为硬编码占位，待接入通知中心接口后由 props 传入。
+ *
+ * A11y：`aria-label="通知分类"` + `aria-hidden="true"` 标识装饰性元素。
+ *
+ * @group 业务模块：Home
+ */
 // BEM 工具由 unplugin-auto-import 自动注入，无须显式 import
 const bem = createNamespace('notice-panel')
 

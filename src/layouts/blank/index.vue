@@ -1,4 +1,14 @@
 <script setup lang="ts">
+/**
+ * Blank 布局（无侧边栏 / 顶部 / 多页签）。
+ *
+ * 用途：登录页、错误页（404 / 403 / 500）等需要全屏纯净背景的页面。
+ * 路由 meta.layout === 'blank' 的路由会使用本布局。
+ *
+ * @see [`../../router/config.ts`](../../router/config.ts) 路由配置
+ * @see [`../default/index.vue`](../default/index.vue) 完整布局
+ * @group 布局
+ */
 // 运行时 BEM 命名空间：vv-blank-layout
 const bem = createNamespace('blank-layout')
 </script>

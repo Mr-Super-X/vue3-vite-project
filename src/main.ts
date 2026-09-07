@@ -1,3 +1,26 @@
+/**
+ * 应用入口：装配所有全局设施。
+ *
+ * 装配顺序（顺序敏感）：
+ * 1. brandColor 注入：必须在 createApp 之前完成，避免首屏闪烁
+ * 2. document.title：与守卫并行设置，避免标题短暂停留在 index.html 默认值
+ * 3. assertNoMockInProd：prod 环境防 mock 残留
+ * 4. pinia → router → i18n → GlobalComponents → Directives → Plugins
+ *
+ * 浏览器基线：
+ * - normalize.css：跨浏览器默认值统一
+ * - virtual:uno.css：UnoCSS 按需原子类
+ * - `@/assets/styles/index.scss`：项目 SCSS 入口
+ *
+ * @see [`./App.vue`](./App.vue) 根组件
+ * @see [`./router`](./router/index.ts) 路由
+ * @see [`./store`](./store/index.ts) Pinia
+ * @see [`./locales`](./locales/index.ts) i18n
+ * @see [`@directives`](./directives/index.ts) 指令注册
+ * @see [`@components`](./components/index.ts) 组件注册
+ * @see [`@plugins`](./plugins/index.ts) 插件注册
+ * @group 应用入口
+ */
 import App from './App.vue'
 import router from './router'
 import pinia from './store'

@@ -1,5 +1,13 @@
 <script setup lang="ts">
-// 首页 AI 助手挂件：右下角悬浮气泡，提示文案 + 触发提示
+/**
+ * 首页 AI 助手挂件：右下角悬浮气泡，提示文案 + 触发提示。
+ *
+ * 占位实现：点击触发 `ElMessage.info('AI 助手即将上线')`，等真实 AI 对话接入后替换。
+ *
+ * A11y：`aria-label="打开 AI 助手"` + 内部 `aria-hidden="true"` 标识装饰性 emoji。
+ *
+ * @group 业务模块：Home
+ */
 // ElMessage 由 unplugin-auto-import 注入（importStyle 自动带样式，勿显式 import）
 // BEM 工具由 unplugin-auto-import 自动注入，无须显式 import
 const bem = createNamespace('home-ai-widget')

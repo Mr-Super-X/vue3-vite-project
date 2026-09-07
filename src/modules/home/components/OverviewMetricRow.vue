@@ -1,6 +1,20 @@
 <script setup lang="ts">
-// 单条指标行：label | value | trend
-// 规格：行高 42px / 标签 14px / 数值 20px bold / 趋势 12px + 8x8 方向箭头
+/**
+ * 单条指标行：label | value | trend。
+ *
+ * 规格：行高 42px / 标签 14px / 数值 20px bold / 趋势 12px + 8x8 方向箭头。
+ *
+ * 趋势色（业务约定）：
+ * - `is-up`：红色（风险升高，警示色）
+ * - `is-down`：绿色（风险下降，安慰色）
+ * - `is-flat`：灰色（持平）
+ *
+ * 字体：PingFang SC + DIN Alternate（数字用 DIN 保证 tabular-nums 对齐）。
+ *
+ * @see [`./OverviewCard.vue`](./OverviewCard.vue) 父容器
+ * @see [`@/modules/home/types/portal-overview`](../types/portal-overview.ts) OverviewMetricDto
+ * @group 业务模块：Home
+ */
 import type { OverviewMetricDto } from '@/modules/home/types/portal-overview'
 
 // BEM 工具由 unplugin-auto-import 自动注入，无须显式 import

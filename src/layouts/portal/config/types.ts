@@ -1,6 +1,14 @@
 import type { RouteRecordName } from 'vue-router'
 
 /**
+ * 顶部导航配置类型（PortalNav 使用）。
+ *
+ * @see [`../components/PortalNav.vue`](../components/PortalNav.vue) 渲染消费方
+ * @see [`./nav.ts`](./nav.ts) PORTAL_NAV 配置
+ * @group 布局：Portal
+ */
+
+/**
  * 顶部导航子项（PortalNav 使用）
  */
 export interface PortalNavSubItem {

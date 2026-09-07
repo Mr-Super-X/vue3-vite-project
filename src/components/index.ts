@@ -1,4 +1,20 @@
-// src/components/index.ts
+/**
+ * 全局组件自动注册插件（`@components`）。
+ *
+ * 自动扫描 `src/components/common/**` 下所有 .vue 文件（eager），按 BEM 命名注册到 app。
+ *
+ * 三层过滤：
+ * 1. glob 排除（仅 import 阶段）：排除 `*.spec.ts` / `*.d.ts`
+ * 2. `_internal` 目录（`./common/_internal/naming` 提供 `isExcluded`）
+ * 3. 组件 default 缺失 / 组件名重复
+ *
+ * dev 模式：console 输出注册数 / 跳过数（GitHub 风格徽章）
+ * prod 模式：静默，仅 console.warn 真正异常
+ *
+ * @see [`./common/_internal/naming`](./common/_internal/naming.ts) 命名工具
+ * @see [`@/utils/autoImport.ts`](../utils/autoImport.ts) 通用 autoImport 工具
+ * @group 全局组件注册
+ */
 import type { App, Component } from 'vue'
 import { isExcluded, resolveComponentName } from './common/_internal/naming'
 import { autoImport } from '@/utils/autoImport'

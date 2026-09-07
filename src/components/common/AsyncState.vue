@@ -1,4 +1,18 @@
 <script setup lang="ts">
+/**
+ * 通用三态容器（Loading / Error / Empty）+ 默认插槽内容。
+ *
+ * 设计要点：
+ * - 与 useRequest 配合：props 来自 `{ loading, error, isEmpty, retry }`
+ * - 三种状态均提供默认 UI + 可覆盖的具名插槽：
+ *   - `loading`：默认 `<el-skeleton :rows="3" animated />`
+ *   - `error`：默认 `<el-result icon="error">` + 重试按钮；可传入 `:error` 错误对象 + `:retry` 函数
+ *   - `empty`：默认 `<el-empty description="暂无数据" />`
+ * - 状态优先级：loading > error > empty > 默认插槽
+ *
+ * @see [`@composables/useRequest`](../../composables/useRequest.ts) 配套的请求封装
+ * @group 通用组件
+ */
 interface Props {
   loading: boolean
   error: Error | null

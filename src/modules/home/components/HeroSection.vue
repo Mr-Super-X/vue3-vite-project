@@ -1,6 +1,17 @@
 <script setup lang="ts">
-// 首页 Hero 区：背景图 + 左 banner + 右通知公告
-// 规格：1920x300 背景图，1400 内容区，左侧 banner 922x252，右侧通知卡片 364x252
+/**
+ * 首页 Hero 区：背景图 + 左 banner + 右通知公告。
+ *
+ * 规格：1920x300 背景图，1400 内容区，左侧 banner 922x252，右侧通知卡片 364x252。
+ *
+ * 状态：searchType + keyword + activeTag，提交时 console.info 占位（未对接搜索接口）。
+ *
+ * @see [`./HotSearchTags.vue`](./HotSearchTags.vue) 热搜词
+ * @see [`./SearchBar.vue`](./SearchBar.vue) 搜索框
+ * @see [`./NoticePanel.vue`](./NoticePanel.vue) 通知公告
+ * @see [`@/modules/home/config/hero.ts`](../config/hero.ts) 配置
+ * @group 业务模块：Home
+ */
 import HotSearchTags from './HotSearchTags.vue'
 import SearchBar from './SearchBar.vue'
 import NoticePanel from './NoticePanel.vue'
