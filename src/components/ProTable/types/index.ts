@@ -1,0 +1,180 @@
+/**
+ * ProTable 类型集中定义（spec §4 文件清单 / §7 props 透传 / §八 defineExpose 的类型源头）。
+ *
+ * 所有类型通过 `src/components/ProTable/index.ts` barrel re-export 暴露给业务方。
+ * JSDoc 单属性只允许一段（§5.1 陷阱 #2），barrel 用 `export { type X }`（陷阱 #3），
+ * JSDoc 必须紧贴 export（陷阱 #4），@group 不能代替业务描述（陷阱 #5）。
+ *
+ * @group ProTable 类型
+ */
+import type { ComponentPublicInstance, Ref, VNode } from 'vue'
+
+/** 搜索项 el 控件类型 —— 决定 SearchForm 渲染哪种 element-plus 控件 @group ProTable 类型 */
+export type SearchElType =
+  'input' | 'select' | 'date-picker' | 'tree-select' | 'cascader' | 'input-number'
+
+/** 表格引擎枚举 —— spec 决策 4：首次 mount 锁定，运行时 prop 修改无效 @group ProTable 类型 */
+export type TableEngine = 'element-plus' | 'vxe-table'
+
+/** 表格密度三档 —— 附录 A #7 默认 'default' @group ProTable 类型 */
+export type TableDensity = 'compact' | 'default' | 'loose'
+
+/**
+ * 枚举项（与 element-plus el-option / ProTable enum 渲染对齐）。
+ *
+ * @group ProTable 类型
+ */
+export interface EnumProps {
+  /** 显示文本 */
+  label: string
+  /** 值（用于回填 searchParams 与表格 cell 显示） */
+  value: string | number | boolean
+  /** ElTag 类型（enum 渲染时使用） */
+  tagType?: 'primary' | 'success' | 'warning' | 'danger' | 'info'
+  /** 是否禁用（搜索下拉场景） */
+  disabled?: boolean
+}
+
+/**
+ * 搜索项配置 —— 描述一个 search 控件的渲染与默认值。
+ *
+ * @group ProTable 类型
+ */
+export interface SearchConfig {
+  /** 渲染哪种 element-plus 控件 */
+  el: SearchElType
+  /** 透传给 element-plus 控件的 props（type / placeholder / clearable 等） */
+  props?: Record<string, unknown>
+  /** 初始默认值（reset 时恢复，附录 A #1） */
+  defaultValue?: unknown
+  /** 排序权重（升序；缺省按 columns 数组顺序） */
+  order?: number
+  /** el-col 占位（默认 6，4 列布局） */
+  span?: number
+  /** 自定义搜索插槽名（spec §7 `search-[prop]`） */
+  slot?: string
+}
+
+/**
+ * ProTable 列定义 —— 同时驱动表格列与搜索项（spec §1 配置驱动）。
+ *
+ * @group ProTable 类型
+ */
+export interface ProColumn {
+  /** 字段名（v-for key + table column prop + search 表单 key） */
+  prop: string
+  /** 显示文本（表头 + 表单 label） */
+  label: string
+  /** 特殊列类型（index 序号 / selection 多选 / expand 展开 / operation 操作） */
+  type?: 'index' | 'selection' | 'expand' | 'operation'
+  width?: number | string
+  minWidth?: number | string
+  /** 固定列（left/right；false 由列设置抽屉控制） */
+  fixed?: 'left' | 'right'
+  /** 是否可排序 */
+  sortable?: boolean
+  /** 是否隐藏（支持 Ref 响应式，列设置抽屉切换） */
+  hidden?: boolean | Ref<boolean>
+  /** 搜索配置（缺省则该列不参与搜索区） */
+  search?: SearchConfig
+  /** 字典映射（自动渲染 ElTag） */
+  enum?: EnumProps[]
+  /** 是否从 useDict 异步字典过滤（spec §九 #9） */
+  isFilterEnum?: boolean
+  /** el-option fieldNames（label/value 映射，与 element-plus 对齐） */
+  fieldNames?: { label: string; value: string }
+  /** 自定义表头渲染（返回 VNode；支持 h() 与 JSX） */
+  headerRender?: (scope: { column: ProColumn; $index: number }) => VNode
+  /** 自定义单元格渲染（返回 VNode；不传则按 enum/字段值渲染） */
+  render?: (scope: { row: Record<string, unknown>; column: ProColumn; $index: number }) => VNode
+  /** 透传给 ElTableColumn / VxeColumn 的 props */
+  tableProps?: Record<string, unknown>
+  /** 透传给 VxeColumn 的 props（仅 vxe-table 引擎生效） */
+  vxeProps?: Record<string, unknown>
+}
+
+/**
+ * ProTable requestApi 响应结构 —— 后端约定（data + total + pageNum + pageSize）。
+ *
+ * @group ProTable 类型
+ */
+export interface ProTableResponse {
+  data: Record<string, unknown>[]
+  total: number
+  pageNum: number
+  pageSize: number
+}
+
+/**
+ * ProTable requestApi 方法签名。
+ *
+ * @group ProTable 类型
+ */
+export type ProTableRequestApi = (params: Record<string, unknown>) => Promise<ProTableResponse>
+
+/**
+ * ProTable 组件 props —— 公开 API 的类型契约（spec §4 / §7）。
+ *
+ * @group ProTable 类型
+ */
+export interface ProTableProps {
+  /** 列定义（同时驱动表格列与搜索项） */
+  columns: ProColumn[]
+  /** 数据请求方法（必填） */
+  requestApi: ProTableRequestApi
+  /** 固定查询参数（搜索时与表单值合并；附录 A #10 序列化规则） */
+  initParam?: Record<string, unknown>
+  /** 数据预处理（在 useTable 拿到 result 之后） */
+  dataCallback?: (data: Record<string, unknown>[]) => Record<string, unknown>[]
+  /** 请求错误回调（useRequest.onError 已自动捕获错误） */
+  requestError?: (error: unknown) => void
+  /** 是否显示分页（true / false / 透传 props） */
+  pagination?: boolean | Record<string, unknown>
+  /** 表格引擎（spec 决策 4：首次 mount 前设置，运行时修改需 reload） */
+  tableEngine?: TableEngine
+  /** 用于 localStorage 缓存列设置的 key（未传则不持久化，附录 A #5） */
+  tableKey?: string
+  /** 行 key 字段名（多选必填） */
+  rowKey?: string
+  /** 初始每页大小（默认 10） */
+  pageSize?: number
+  /** 搜索项默认显示行数（默认 3 行；超出可展开） */
+  searchRows?: number
+  /** 默认密度（附录 A #7 默认 'default'） */
+  density?: TableDensity
+}
+
+/**
+ * ProTable 实例对外暴露的 API（spec §八）—— 父组件通过 ref 调用。
+ *
+ * @group ProTable 类型
+ */
+export interface ProTableExpose {
+  /** 重新执行当前搜索条件（搜索参数不变） */
+  refresh: () => Promise<void>
+  /**
+   * 重置搜索参数到 defaultValue + 清空分页 + 刷新
+   * 默认行为：保留多选选中行（附录 A #1；调用方需清可调 clearSelection）
+   */
+  reset: () => Promise<void>
+  /** 当前多选选中的行（按 row-key 去重） */
+  getSelectedRows: () => Record<string, unknown>[]
+  /** 清空所有选中 */
+  clearSelection: () => void
+  /** 当前搜索参数（响应式 read-only snapshot） */
+  getSearchParams: () => Record<string, unknown>
+  /**
+   * 程序化修改搜索参数（修改后自动触发搜索 + 回到第 1 页，附录 A #9）
+   * 默认行为：保留多选选中行（附录 A #3）
+   */
+  setSearchParams: (params: Record<string, unknown>) => Promise<void>
+  /**
+   * element-plus 表格实例（仅 element-plus 引擎有值；vxe-table 引擎为 null）。
+   * 使用 ComponentPublicInstance 而非 InstanceType<typeof ElTable>，
+   * 原因：el-table 是 functional 组件定义，InstanceType 不适用。
+   * 父组件如需直接调用 el-table 方法，可通过类型断言访问具体方法。
+   */
+  element: Ref<ComponentPublicInstance | null>
+  /** 当前激活的引擎（首次挂载锁定） */
+  engine: TableEngine
+}
