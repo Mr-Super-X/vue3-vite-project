@@ -122,11 +122,18 @@ export interface SearchConfig {
 /**
  * ProTable 列定义 —— 同时驱动表格列与搜索项（spec §1 配置驱动）。
  *
+ * 泛型 T = 行数据类型（M1 泛型化，默认 Record<string, unknown> 向后兼容）。
+ * render/headerRender 用「方法语法」声明：TS 对方法参数做双变（bivariance）检查，
+ * 使 ProColumn<T> 可赋值给 ProColumn（默认 Record）——下游子组件与能力层消费方
+ * 无需泛型化（§5.1 JSDoc 陷阱 #2：单属性一段注释）。
+ * ⚠️ 行类型建议用 type 别名而非 interface：interface 无隐式索引签名，
+ * 赋值到默认 T 位置（Record<string, unknown>）可能报 TS #15300 相关错误。
+ *
  * @group ProTable 类型
  */
-export interface ProColumn {
-  /** 字段名（v-for key + table column prop + search 表单 key） */
-  prop: string
+export interface ProColumn<T extends object = Record<string, unknown>> {
+  /** 字段名（v-for key + table column prop + search 表单 key）—— IDE 优先补全 T 的键；联合 string 放行 'operation' 等特殊列（决策 D1） */
+  prop: Extract<keyof T, string> | string
   /** 显示文本（表头 + 表单 label） */
   label: string
   /** 特殊列类型（index 序号 / selection 多选 / expand 展开 / operation 操作） */
@@ -147,10 +154,10 @@ export interface ProColumn {
   isFilterEnum?: boolean
   /** el-option fieldNames（label/value 映射，与 element-plus 对齐） */
   fieldNames?: { label: string; value: string }
-  /** 自定义表头渲染（返回 VNode；支持 h() 与 JSX） */
-  headerRender?: (scope: { column: ProColumn; $index: number }) => VNode
-  /** 自定义单元格渲染（返回 VNode；不传则按 enum/字段值渲染） */
-  render?: (scope: { row: Record<string, unknown>; column: ProColumn; $index: number }) => VNode
+  /** 自定义表头渲染（返回 VNode；支持 h() 与 JSX）—— 方法语法（bivariance），见接口级注释 */
+  headerRender?(scope: { column: ProColumn<T>; $index: number }): VNode
+  /** 自定义单元格渲染（返回 VNode；不传则按 enum/字段值渲染）—— 方法语法（bivariance），见接口级注释 */
+  render?(scope: { row: T; column: ProColumn<T>; $index: number }): VNode
   /** 透传给 ElTableColumn 的 props */
   tableProps?: Record<string, unknown>
   /** 行内编辑配置（不声明 = 该列只读） */
@@ -166,10 +173,12 @@ export interface ProColumn {
 /**
  * ProTable requestApi 响应结构 —— 后端约定（data + total + pageNum + pageSize）。
  *
+ * 泛型 T = 行数据类型（M1 泛型化，默认 Record<string, unknown> 向后兼容）。
+ *
  * @group ProTable 类型
  */
-export interface ProTableResponse {
-  data: Record<string, unknown>[]
+export interface ProTableResponse<T extends object = Record<string, unknown>> {
+  data: T[]
   total: number
   pageNum: number
   pageSize: number
@@ -178,24 +187,33 @@ export interface ProTableResponse {
 /**
  * ProTable requestApi 方法签名。
  *
+ * 泛型 T = 行数据类型（M1 泛型化，默认 Record<string, unknown> 向后兼容）。
+ *
  * @group ProTable 类型
  */
-export type ProTableRequestApi = (params: Record<string, unknown>) => Promise<ProTableResponse>
+export type ProTableRequestApi<T extends object = Record<string, unknown>> = (
+  params: Record<string, unknown>
+) => Promise<ProTableResponse<T>>
 
 /**
  * ProTable 组件 props —— 公开 API 的类型契约（spec §4 / §7）。
  *
+ * 泛型 T = 行数据类型（M1 泛型化，默认 Record<string, unknown> 向后兼容）。
+ *
  * @group ProTable 类型
  */
-export interface ProTableProps {
+export interface ProTableProps<T extends object = Record<string, unknown>> {
   /** 列定义（同时驱动表格列与搜索项） */
-  columns: ProColumn[]
+  columns: ProColumn<T>[]
   /** 数据请求方法（必填） */
-  requestApi: ProTableRequestApi
+  requestApi: ProTableRequestApi<T>
   /** 固定查询参数（搜索时与表单值合并；附录 A #10 序列化规则） */
   initParam?: Record<string, unknown>
-  /** 数据预处理（在 useTable 拿到 result 之后） */
-  dataCallback?: (data: Record<string, unknown>[]) => Record<string, unknown>[]
+  /**
+   * 数据预处理（在 useTable 拿到 result 之后）—— 方法语法（bivariance），
+   * 与 render 同理由：保证 ProTableProps<T> 在下游非泛型消费时可赋值
+   */
+  dataCallback?(data: T[]): T[]
   /** 请求错误回调（useRequest.onError 已自动捕获错误） */
   requestError?: (error: unknown) => void
   /** 是否显示分页（true / false / 透传 props） */
@@ -225,9 +243,11 @@ export interface ProTableProps {
 /**
  * ProTable 实例对外暴露的 API（spec §八）—— 父组件通过 ref 调用。
  *
+ * 泛型 T = 行数据类型（M1 泛型化，默认 Record<string, unknown> 向后兼容）。
+ *
  * @group ProTable 类型
  */
-export interface ProTableExpose {
+export interface ProTableExpose<T extends object = Record<string, unknown>> {
   /** 重新执行当前搜索条件（搜索参数不变） */
   refresh: () => Promise<void>
   /**
@@ -236,7 +256,7 @@ export interface ProTableExpose {
    */
   reset: () => Promise<void>
   /** 当前多选选中的行（按 row-key 去重） */
-  getSelectedRows: () => Record<string, unknown>[]
+  getSelectedRows: () => T[]
   /** 清空所有选中 */
   clearSelection: () => void
   /** 当前搜索参数（响应式 read-only snapshot） */
@@ -266,5 +286,5 @@ export interface ProTableExpose {
   refreshChildren?: (rowKey: string | number) => Promise<void>
 
   // 行拖拽（v2.0 —— Task 7 实施后改为 required）
-  setRowOrder?: (newOrder: Record<string, unknown>[]) => void
+  setRowOrder?: (newOrder: T[]) => void
 }
