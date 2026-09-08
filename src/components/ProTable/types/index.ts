@@ -304,13 +304,14 @@ export interface ProTableExpose<T extends object = Record<string, unknown>> {
    */
   setSearchParams: (params: Record<string, unknown>) => Promise<void>
   /**
-   * element-plus 表格实例（v2.0 vxe-table 引擎未实现，传入时回退 element-plus，故恒有值）。
+   * element-plus 表格实例（v2.1 决策 6）。vxe-table 引擎下为 null（vxe 实例暂不对外暴露）；
+   * vxe 引擎加载失败会运行时回退 element-plus，回退完成后恒有值。
    * 使用 ComponentPublicInstance 而非 InstanceType<typeof ElTable>，
    * 原因：el-table 是 functional 组件定义，InstanceType 不适用。
    * 父组件如需直接调用 el-table 方法，可通过类型断言访问具体方法。
    */
   element: Ref<ComponentPublicInstance | null>
-  /** 当前激活的引擎（首次挂载锁定） */
+  /** 当前激活的引擎（首次挂载锁定；vxe 引擎加载失败时运行时回退 element-plus 除外） */
   engine: TableEngine
   /** 当前排序状态（null = 未排序；M2 服务端排序） */
   getSortState: () => SortState<T> | null

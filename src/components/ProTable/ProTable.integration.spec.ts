@@ -7,7 +7,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import ProTable from './ProTable.vue'
+import VxeTableBody from './components/VxeTableBody.vue'
 import type { ProTableProps } from './types'
+
+// v2.1 P3：VxeTableBody 的 vxe 动态加载在集成测试中 mock 为「永不 resolve」——
+// 保持骨架屏态即可断言分支接管，避免真实 import vxe-table（大文件 + jsdom 渲染不确定性）。
+// 真实加载 / fallback 路径的用例由 P5 引擎切换测试覆盖
+vi.mock('./composables/useVxeTable', () => ({
+  useVxeTable: () => ({
+    loadVxeTable: () => new Promise<unknown>(() => {}),
+    isLoaded: () => false,
+    reset: () => {},
+  }),
+}))
 
 const mockApi: ProTableProps['requestApi'] = async () => ({
   data: [],
@@ -51,19 +63,21 @@ describe('ProTable v2.0 集成（冲突矩阵 + 启动校验）', () => {
     expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('span.direction=column'))
   })
 
-  it('vxe-table 引擎：warn 回退 element-plus（v2.0 未实现）', async () => {
+  it('vxe-table 引擎：setup 不再回退，VxeTableBody 分支接管（v2.1 P3）', async () => {
     const wrapper = mount(ProTable, {
       props: {
         columns: [{ prop: 'name', label: '名称' }],
-        // 返回非空数据：空数据时 AsyncState 渲染 empty 态不挂载 ElTable，无法断言引擎回退
+        // 返回非空数据：空数据时 AsyncState 渲染 empty 态不挂载表格体，无法断言引擎分支
         requestApi: async () => ({ data: [{ name: '甲' }], total: 1, pageNum: 1, pageSize: 10 }),
         tableEngine: 'vxe-table',
       } as ProTableProps,
     })
     await new Promise((r) => setTimeout(r, 10))
-    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('vxe-table 引擎暂未实现'))
-    // 回退后仍渲染 element-plus 表格
-    expect(wrapper.findComponent({ name: 'ElTable' }).exists()).toBe(true)
+    // v2.1 P3：resolveEngine 的静态回退已删除（运行时回退由 VxeTableBody engine-fallback 承担）
+    expect(console.warn).not.toHaveBeenCalledWith(expect.stringContaining('vxe-table 引擎暂未实现'))
+    // vxe 加载被 mock 为永不完成：分支由 VxeTableBody（骨架屏态）接管，不挂载 ElTable
+    expect(wrapper.findComponent(VxeTableBody).exists()).toBe(true)
+    expect(wrapper.findComponent({ name: 'ElTable' }).exists()).toBe(false)
   })
 
   it('启动校验：能力冲突时只 warn 不 throw（组件仍 mount 成功）', () => {

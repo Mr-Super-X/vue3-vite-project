@@ -24,6 +24,7 @@ import SearchForm from './components/SearchForm.vue'
 import TableHeader from './components/TableHeader.vue'
 import ColSetting from './components/ColSetting.vue'
 import ElementTableBody from './components/ElementTableBody.vue'
+import VxeTableBody from './components/VxeTableBody.vue' // v2.1 P3：vxe-table 引擎分支（动态加载，失败回退 element-plus）
 import { useSearch } from './composables/useSearch'
 import { useColumns } from './composables/useColumns'
 import { useTable } from './composables/useTable'
@@ -161,6 +162,14 @@ function handleSelectionChange(rows: Record<string, unknown>[]): void {
   table.setSelectedRows(rows as unknown as T[])
 }
 
+/**
+ * vxe 引擎加载失败回退（spec §九 #7）：engineRef 虽为 setup 一次性锁定，
+ * 但引擎模块加载失败是运行时事件，此处是唯一的可变点 —— 切回 element-plus 保页面可用
+ */
+function handleEngineFallback(): void {
+  engineRef.value = 'element-plus'
+}
+
 /** 是否空数据（给 AsyncState 三态用） */
 function isEmpty(): boolean {
   return !table.loading.value && !table.error.value && (table.data.value?.length ?? 0) === 0
@@ -252,6 +261,24 @@ defineExpose({
             <slot :name="name" v-bind="scope" />
           </template>
         </ElementTableBody>
+        <!-- v2.1 P3：vxe-table 引擎分支（无树形/拖拽；加载失败由 engine-fallback 回退） -->
+        <VxeTableBody
+          v-else
+          :rows="(table.data.value ?? []) as Record<string, unknown>[]"
+          :columns="sortedColumnsLoose"
+          :row-key="props.rowKey"
+          :row-edit="rowEdit"
+          :cell-span="cellSpan"
+          @selection-change="handleSelectionChange"
+          @cell-dblclick="(rowKey) => rowEdit?._start(rowKey)"
+          @sort-change="handleSortChange"
+          @engine-fallback="handleEngineFallback"
+        >
+          <!-- 透传业务插槽（col.prop 命名插槽等），与 el 分支契约一致 -->
+          <template v-for="(_, name) in $slots" :key="name" #[name]="scope">
+            <slot :name="name" v-bind="scope" />
+          </template>
+        </VxeTableBody>
         <template #empty>
           <slot name="empty">
             <ElEmpty description="暂无数据" />
