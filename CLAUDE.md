@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > 本文档是 `~/.claude/CLAUDE.md` 的项目级补充。所有全局规则（§一～§十一）自动适用，遇到冲突以**本文档为准**。
 >
-> **文档版本**：v1.0.0 | **生成日期**：2026-07-27 | **生效分支**：`master`
+> **文档版本**：v1.1.0 | **生成日期**：2026-09-08 | **生效分支**：`master`
 
 ---
 
@@ -335,20 +335,21 @@ const bem = createNamespace('form-engine') // kebab-case，必须与 sass 根选
 
 ## §4 Project Constraints
 
-| #   | 约束                                                              | 落地方式                                              |
-| --- | ----------------------------------------------------------------- | ----------------------------------------------------- |
-| 1   | 包管理强制 pnpm                                                   | `package.json:scripts.preinstall` → `only-allow pnpm` |
-| 2   | 新增业务模块**必须**用 `pnpm new-module <kebab-name>`             | `scripts/new-module.ts`（自动追加 RouteName）         |
-| 3   | 业务代码**必须**用 `useAppRouter` / `useRequest` / `useAuth` 封装 | ESLint `no-restricted-imports`                        |
-| 4   | 模块间通信走 `modules/<m>/index.ts`                               | 见 §1.2 模块边界铁律                                  |
-| 5   | `common` 组件不得 `import` 自 `modules/`                          | 保护 tree-shake                                       |
-| 6   | `utils/` 不得依赖 Vue/Pinia                                       | 与框架解耦                                            |
-| 7   | `store/` 不存网络请求中间态                                       | loading 放组件 / composable                           |
-| 8   | 路由一致性校验：`pnpm check:routes`                               | CI 阶段强制                                           |
-| 9   | 类型校验：`pnpm type-check:full`（build 前必过）                  | `package.json:scripts`                                |
-| 10  | 第三方 npm 包引用前必先 `npm view <pkg>` 验证                     | 全局规则                                              |
-| 11  | 新增 composable / store / 类型必须带 `.spec.ts`（覆盖率 ≥ 80%）   | Vitest                                                |
-| 12  | 功能性变更同步 `CHANGELOG.md`（仅 typo 免记）                     | 项目约定                                              |
+| #   | 约束                                                              | 落地方式                                                                           |
+| --- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| 1   | 包管理强制 pnpm                                                   | `package.json:scripts.preinstall` → `only-allow pnpm`                              |
+| 2   | 新增业务模块**必须**用 `pnpm new-module <kebab-name>`             | `scripts/new-module.ts`（自动追加 RouteName）                                      |
+| 3   | 业务代码**必须**用 `useAppRouter` / `useRequest` / `useAuth` 封装 | ESLint `no-restricted-imports`                                                     |
+| 4   | 模块间通信走 `modules/<m>/index.ts`                               | 见 §1.2 模块边界铁律                                                               |
+| 5   | `common` 组件不得 `import` 自 `modules/`                          | 保护 tree-shake                                                                    |
+| 6   | `utils/` 不得依赖 Vue/Pinia                                       | 与框架解耦                                                                         |
+| 7   | `store/` 不存网络请求中间态                                       | loading 放组件 / composable                                                        |
+| 8   | 路由一致性校验：`pnpm check:routes`                               | CI 阶段强制                                                                        |
+| 9   | 类型校验：`pnpm type-check:full`（build 前必过）                  | `package.json:scripts`                                                             |
+| 10  | 第三方 npm 包引用前必先 `npm view <pkg>` 验证                     | 全局规则                                                                           |
+| 11  | 新增 composable / store / 类型必须带 `.spec.ts`（覆盖率 ≥ 80%）   | Vitest                                                                             |
+| 12  | 功能性变更同步 `CHANGELOG.md`（仅 typo 免记）                     | 项目约定                                                                           |
+| 13  | 编写 CSS 禁止使用 `!important` 解决问题                           | 仅当用户主动要求时才可使用；优先级应通过选择器特异性 / BEM 命名空间 / 源码顺序解决 |
 
 ---
 

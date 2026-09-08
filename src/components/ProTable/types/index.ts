@@ -9,6 +9,70 @@
  */
 import type { ComponentPublicInstance, Ref, VNode } from 'vue'
 
+/** 行内编辑配置 —— 列粒度控制哪些字段可编辑 @group ProTable 类型 */
+export interface ColumnEditConfig {
+  el: 'input' | 'select' | 'input-number' | string
+  props?: Record<string, unknown>
+  rules?: Record<string, unknown> | Record<string, unknown>[]
+  editable?: boolean | Ref<boolean>
+}
+
+/** 树形数据配置 —— 列粒度标识「该列展示树形缩进 + 展开/折叠」 @group ProTable 类型 */
+export interface ColumnTreeConfig {
+  indentSize?: number
+  expandSlot?: string
+}
+
+/** 单元格合并配置 —— 列粒度声明「该列参与合并」 @group ProTable 类型 */
+export interface ColumnSpanConfig {
+  direction: 'row' | 'column' | 'both'
+  judge?: (rowA: Record<string, unknown>, rowB: Record<string, unknown>) => boolean
+}
+
+/** 行编辑顶层配置 @group ProTable 类型 */
+export interface RowEditConfig {
+  trigger?: 'dblclick' | 'manual'
+  exclusive?: boolean
+  onSave?: (
+    row: Record<string, unknown>,
+    changes: Record<string, unknown>
+  ) => boolean | Promise<boolean>
+  onSaved?: (row: Record<string, unknown>) => void
+  onSaveError?: (row: Record<string, unknown>, error: unknown) => void
+}
+
+/** 树形数据顶层配置 @group ProTable 类型 */
+export interface TreeConfig {
+  loadChildren?: (row: Record<string, unknown>) => Promise<Record<string, unknown>[]>
+  childrenKey?: string
+  defaultExpandDepth?: number
+  rowKey?: string
+  showLine?: boolean
+  loadDebounce?: number
+  /** v2.0 与编辑共存时，编辑仅作用于叶子节点；true 时禁用编辑按钮 */
+  exclusive?: boolean
+}
+
+/** 单元格合并顶层配置 @group ProTable 类型 */
+export interface CellSpanConfig {
+  judge?: (params: {
+    row: Record<string, unknown>
+    column: ProColumn
+    rowIndex: number
+    columnIndex: number
+  }) => { rowspan: number; colspan: number }
+  spanHeader?: boolean
+  maxMergeSpan?: number
+  /** v2.0 列级合并方向（与 ColumnSpanConfig.direction 同义，作用于全局） */
+  direction?: 'row' | 'column' | 'both'
+}
+
+/** 行拖拽排序顶层配置 @group ProTable 类型 */
+export interface RowDragConfig {
+  handle?: string | '__all__'
+  onSortChange?: (newOrder: Record<string, unknown>[]) => boolean | Promise<boolean>
+}
+
 /** 搜索项 el 控件类型 —— 决定 SearchForm 渲染哪种 element-plus 控件 @group ProTable 类型 */
 export type SearchElType =
   'input' | 'select' | 'date-picker' | 'tree-select' | 'cascader' | 'input-number'
@@ -91,6 +155,14 @@ export interface ProColumn {
   tableProps?: Record<string, unknown>
   /** 透传给 VxeColumn 的 props（仅 vxe-table 引擎生效） */
   vxeProps?: Record<string, unknown>
+  /** 行内编辑配置（不声明 = 该列只读） */
+  edit?: ColumnEditConfig
+  /** 树形列声明（仅一列生效，默认第一列） */
+  tree?: ColumnTreeConfig
+  /** 单元格合并配置（不声明 = 该列不参与合并） */
+  span?: ColumnSpanConfig
+  /** 该列是否参与行拖拽（默认 false 不参与） */
+  draggable?: boolean
 }
 
 /**
@@ -142,6 +214,14 @@ export interface ProTableProps {
   searchRows?: number
   /** 默认密度（附录 A #7 默认 'default'） */
   density?: TableDensity
+  /** 行内编辑（v2.0） */
+  enableRowEdit?: boolean | RowEditConfig
+  /** 树形数据（v2.0） */
+  enableTree?: boolean | TreeConfig
+  /** 单元格合并（v2.0） */
+  enableCellSpan?: boolean | CellSpanConfig
+  /** 行拖拽排序（v2.0） */
+  enableRowDrag?: boolean | RowDragConfig
 }
 
 /**
@@ -177,4 +257,16 @@ export interface ProTableExpose {
   element: Ref<ComponentPublicInstance | null>
   /** 当前激活的引擎（首次挂载锁定） */
   engine: TableEngine
+  // 行内编辑（v2.0 —— Task 7 实施后改为 required）
+  startEdit?: (rowKey: string | number) => void
+  cancelEdit?: (rowKey?: string | number) => void
+  saveEdit?: (rowKey?: string | number) => Promise<boolean>
+
+  // 树形（v2.0 —— Task 7 实施后改为 required）
+  expandNode?: (rowKey: string | number, expanded?: boolean) => void
+  collapseNode?: (rowKey: string | number) => void
+  refreshChildren?: (rowKey: string | number) => Promise<void>
+
+  // 行拖拽（v2.0 —— Task 7 实施后改为 required）
+  setRowOrder?: (newOrder: Record<string, unknown>[]) => void
 }

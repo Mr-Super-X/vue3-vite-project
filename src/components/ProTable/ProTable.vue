@@ -30,6 +30,7 @@ import ColSetting from './components/ColSetting.vue'
 import { useSearch } from './composables/useSearch'
 import { useColumns } from './composables/useColumns'
 import { useTable } from './composables/useTable'
+import { useTableCapabilities } from './composables/useTableCapabilities'
 import { resolveEngine } from './adapters/engine'
 import type { ProColumn, ProTableExpose, ProTableProps, TableDensity } from './types'
 
@@ -104,6 +105,95 @@ function handleColSettingUpdate(visible: boolean): void {
   colSettingVisible.value = visible
 }
 
+/* ───────────── v2.0 四类能力编排（已抽到 useTableCapabilities.ts） ───────────── */
+
+const { rowEdit, treeData, cellSpan, rowDrag, v2Expose } = useTableCapabilities({
+  props: propsForComposables,
+  columns,
+  table,
+})
+
+/** v2.0 树形：data 变化时 normalize + 扁平化生成 el-table 可用数据 */
+watch(
+  () => table.data.value,
+  (data) => {
+    if (treeData && data && data.length > 0) {
+      treeData.normalize(data as never)
+    }
+  },
+  { immediate: true }
+)
+const flatTreeData = computed(() =>
+  treeData ? (treeData.flattenData() as Record<string, unknown>[]) : (table.data.value ?? [])
+)
+
+/** v2.0 行拖拽：通过本地 ref="proTableEl" 拿 el-table 实例的 $el DOM，挂载 sortablejs */
+const proTableEl = ref<{ $el?: HTMLElement } | null>(null)
+
+const tryAttachSortable = (): void => {
+  if (!rowDrag || !proTableEl.value?.$el) return
+  const root = proTableEl.value.$el
+  if (!root || typeof root.querySelector !== 'function') return
+  const tbody = root.querySelector('.el-table__body tbody') as HTMLElement | null
+  if (!tbody) return
+  rowDrag.detachSortable()
+  rowDrag.attachSortable(tbody)
+}
+
+onMounted(() => {
+  nextTick(() => tryAttachSortable())
+  setTimeout(() => tryAttachSortable(), 100)
+  setTimeout(() => tryAttachSortable(), 500)
+})
+
+watch(
+  [() => table.data.value, () => props.columns],
+  () => {
+    if (!rowDrag) return
+    nextTick(() => tryAttachSortable())
+  },
+  { flush: 'post' }
+)
+
+/** v2.0 单元格合并：data/columns 变化时重新构建 spanMethod 缓存 */
+watch(
+  [() => table.data.value, () => props.columns],
+  () => {
+    if (cellSpan && table.data.value) {
+      nextTick(() => cellSpan.resetCache())
+    }
+  },
+  { flush: 'post' }
+)
+
+/** v2.0 双击单元格触发编辑（element-plus el-table cell-dblclick） */
+function handleCellDblClick(row: Record<string, unknown>, _column: unknown): void {
+  if (!rowEdit) return
+  const key = row[props.rowKey ?? 'id'] as string | number
+  rowEdit._start(key)
+}
+
+/** v2.0 树形模式：el-table expand-icon 点击桥接到 treeData.toggle */
+function handleExpandChange(row: Record<string, unknown>, _expandedRows: unknown): void {
+  if (!treeData) return
+  const key = row[props.rowKey ?? 'id'] as string | number
+  void treeData.toggle(key)
+}
+
+/** v2.0 解析编辑控件（el: 'input' | 'select' | 'input-number' | 自定义组件名） */
+function resolveEditComp(el: string): string {
+  switch (el) {
+    case 'input':
+      return 'el-input'
+    case 'select':
+      return 'el-select'
+    case 'input-number':
+      return 'el-input-number'
+    default:
+      return el
+  }
+}
+
 /* ───────────── 辅助函数 ───────────── */
 
 /**
@@ -173,6 +263,7 @@ defineExpose({
   setSearchParams: (params: Record<string, unknown>) => search.setSearchParams(params),
   element: table.tableRef,
   engine: engineRef.value,
+  ...v2Expose,
 } satisfies ProTableExpose)
 </script>
 
@@ -212,10 +303,17 @@ defineExpose({
       >
         <ElTable
           v-if="engineRef === 'element-plus'"
-          ref="table.tableRef"
-          :data="table.data.value ?? []"
-          v-bind="props.rowKey ? { rowKey: props.rowKey } : {}"
+          ref="proTableEl"
+          :data="treeData ? flatTreeData : (table.data.value ?? [])"
+          v-bind="{
+            ...(props.rowKey ? { rowKey: props.rowKey } : {}),
+            ...(cellSpan
+              ? { spanMethod: cellSpan.spanMethod, cellClassName: cellSpan.cellClassName }
+              : {}),
+          }"
           @selection-change="handleSelectionChange"
+          @cell-dblclick="handleCellDblClick"
+          @expand-change="handleExpandChange"
         >
           <ElTableColumn
             v-for="col in columns.sortedColumns.value"
@@ -240,14 +338,107 @@ defineExpose({
 
             <template #default="scope">
               <slot :name="col.prop" :row="scope.row" :column="col" :index="scope.$index">
-                <!-- 直接渲染 resolveCell 的值（VNode / string / number 均可） -->
-                <component :is="'div'" v-if="false" />
-                <template v-for="(item, i) in [resolveCell(col, scope.row, scope.$index)]" :key="i">
-                  <template v-if="isVNode(item)">
-                    <component :is="item" />
-                  </template>
-                  <template v-else>
-                    {{ item }}
+                <!-- v2.0 行拖拽手柄（sortablejs 通过此 handle 选择器绑定） -->
+                <span
+                  v-if="col.draggable"
+                  class="pro-table-drag-handle"
+                  :data-col="col.prop"
+                  :class="bem.e('drag-handle')"
+                  style="cursor: grab; user-select: none"
+                >
+                  ⋮⋮
+                </span>
+                <!-- v2.0 树形缩进 + 展开按钮（最高优先级） -->
+                <template v-if="col.tree && treeData">
+                  <span
+                    :style="{
+                      paddingLeft: (scope.row._level ?? 0) * (col.tree.indentSize ?? 24) + 'px',
+                    }"
+                  >
+                    <button
+                      v-if="scope.row._hasChildren"
+                      type="button"
+                      :class="'pro-table-tree-toggle'"
+                      @click="treeData.toggle(scope.row[props.rowKey ?? 'id'])"
+                    >
+                      {{ treeData.isExpanded(scope.row[props.rowKey ?? 'id']) ? '▾' : '▸' }}
+                    </button>
+                    <template
+                      v-for="(item, i) in [resolveCell(col, scope.row, scope.$index)]"
+                      :key="i"
+                    >
+                      <template v-if="isVNode(item)">
+                        <component :is="item" />
+                      </template>
+                      <template v-else>
+                        {{ item }}
+                      </template>
+                    </template>
+                  </span>
+                </template>
+                <!-- v2.0 编辑控件（编辑态 + 含 edit 配置） -->
+                <template
+                  v-else-if="rowEdit?.isEditing(scope.row[props.rowKey ?? 'id']) && col.edit"
+                >
+                  <el-input
+                    v-if="col.edit.el === 'input'"
+                    :model-value="
+                      rowEdit.getValue(scope.row[props.rowKey ?? 'id'], col.prop) as string
+                    "
+                    @update:model-value="
+                      (v: string | number) =>
+                        rowEdit?.setValue(scope.row[props.rowKey ?? 'id'], col.prop, v)
+                    "
+                    v-bind="col.edit.props ?? {}"
+                    size="small"
+                  />
+                  <el-input-number
+                    v-else-if="col.edit.el === 'input-number'"
+                    :model-value="
+                      rowEdit.getValue(scope.row[props.rowKey ?? 'id'], col.prop) as number
+                    "
+                    @update:model-value="
+                      (v: number | undefined) =>
+                        rowEdit?.setValue(scope.row[props.rowKey ?? 'id'], col.prop, v)
+                    "
+                    v-bind="col.edit.props ?? {}"
+                    size="small"
+                  />
+                  <!-- TODO v2.1: el-select 类型适配后改回 el-option 列表 -->
+                  <el-select
+                    v-else-if="col.edit.el === 'select'"
+                    :model-value="
+                      rowEdit.getValue(scope.row[props.rowKey ?? 'id'], col.prop) as never
+                    "
+                    @update:model-value="
+                      (v: unknown) =>
+                        rowEdit?.setValue(scope.row[props.rowKey ?? 'id'], col.prop, v)
+                    "
+                    v-bind="col.edit.props ?? {}"
+                  />
+                  <component
+                    v-else
+                    :is="resolveEditComp(col.edit.el)"
+                    :model-value="rowEdit.getValue(scope.row[props.rowKey ?? 'id'], col.prop)"
+                    @update:model-value="
+                      (v: unknown) =>
+                        rowEdit?.setValue(scope.row[props.rowKey ?? 'id'], col.prop, v)
+                    "
+                  />
+                </template>
+                <!-- 默认渲染（v1 resolveCell） -->
+                <template v-else>
+                  <component :is="'div'" v-if="false" />
+                  <template
+                    v-for="(item, i) in [resolveCell(col, scope.row, scope.$index)]"
+                    :key="i"
+                  >
+                    <template v-if="isVNode(item)">
+                      <component :is="item" />
+                    </template>
+                    <template v-else>
+                      {{ item }}
+                    </template>
                   </template>
                 </template>
               </slot>
@@ -298,6 +489,14 @@ defineExpose({
   /* 内部各区域之间的间距 */
   & > * + * {
     margin-top: 12px;
+  }
+
+  /* v2.0 树形模式：复用 el-table__expand-icon，隐藏自定义 toggle + 隐藏展开行内容 */
+  .pro-table-tree-toggle {
+    display: none;
+  }
+  .el-table__expanded-cell {
+    display: none;
   }
 }
 </style>

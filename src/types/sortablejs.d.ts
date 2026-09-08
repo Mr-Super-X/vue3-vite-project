@@ -1,0 +1,26 @@
+/**
+ * sortablejs ambient module declaration（项目实际依赖 sortablejs ^1.15.7，
+ * 但该包未自带 .d.ts，也不在 @types/sortablejs 包中）。
+ * 仅暴露 useRowDrag.ts 实际用到的最小 API 表面。
+ */
+declare module 'sortablejs' {
+  export interface SortableEvent {
+    oldIndex?: number
+    newIndex?: number
+    dragged?: HTMLElement
+    related?: HTMLElement
+  }
+
+  export interface SortableOptions {
+    handle?: string
+    animation?: number
+    onMove?: (evt: SortableEvent, originalEvent: Event) => boolean
+    onEnd?: (evt: SortableEvent) => void
+  }
+
+  export default class Sortable {
+    static create(el: HTMLElement, options?: SortableOptions): Sortable
+    option(name: string, value: unknown): void
+    destroy(): void
+  }
+}

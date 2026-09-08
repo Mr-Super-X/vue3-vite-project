@@ -2,6 +2,33 @@
 
 ## 未发布
 
+### ✨ Features | ProTable v2.0 —— 4 类核心能力扩展
+
+* **feat(ProTable):** 行内编辑（双击进入 + 多行并行 + 异步校验 + 草稿保留）
+  * 新增 `useRowEdit` composable（71 行，9 个单测）
+  * `ProColumn.edit?: ColumnEditConfig` 字段（el / props / rules / editable）
+  * ProTableExpose 新增 `startEdit` / `cancelEdit` / `saveEdit`
+* **feat(ProTable):** 树形数据（懒加载 + 默认展开 + 搜索命中自动展开）
+  * 新增 `useTreeData` composable（76 行，8 个单测）
+  * 客户端遍历匹配 + 祖先路径自动展开 + 未加载节点 lazy load 触发
+* **feat(ProTable):** 单元格合并（element-plus spanMethod 包装 + 自定义 judge + 合并上限）
+  * 新增 `useCellSpan` composable（67 行，7 个单测）
+  * 同列相邻值自动纵向合并 / 自定义判定 / 跨列合并（_spanTarget 标记）
+* **feat(ProTable):** 行拖拽排序（sortablejs 绑定 + 业务拦截 + 跨层拖拽阻止）
+  * 新增 `useRowDrag` composable（80 行，8 个单测）
+  * 手柄列 / 整行拖拽 / `onSortChange` 异步确认 / `onMove` 跨层拦截
+* **feat(ProTable):** 能力冲突矩阵（6 条规则 + 启动校验 + warn 不 throw）
+* **refactor(ProTable):** `ProTable.vue` 编排层集成 4 个 composable + 启动校验 + 8 个 v2 expose 方法（303 → 421 行）
+* **refactor(useTable):** 新增 `editingKeys` / `treeExpandedKeys` / `isTreeMode` 状态字段（198 → 212 行）
+* **chore(types):** 新增 7 个 config interface（`ColumnEditConfig` / `ColumnTreeConfig` / `ColumnSpanConfig` / `RowEditConfig` / `TreeConfig` / `CellSpanConfig` / `RowDragConfig`），`ProColumn` 增 4 字段，`ProTableProps` 增 4 prop
+* **chore(types):** `sortablejs.d.ts` ambient module declaration（项目使用 sortablejs ^1.15.7 但无 .d.ts）
+* **feat(demo):** 5 个 demo 覆盖 4 类能力（编辑 / 树形 / 合并 / 拖拽 / 总览升级）
+* **test(ProTable):** 集成 spec 6 用例（冲突矩阵 + 启动校验 + 能力 prop 形式兼容）
+
+**已知限制**：vxe-table 引擎 v2.0 不适配 4 类能力（v2.1 议题）
+
+测试：v1 共 30 → v2.0 共 **75**（composable 32 + 集成 6 + demo 0 + v1 30 + 类型间接测试）
+
 ### ✨ Features | 新增 ProTable 组件（配置驱动 + 双引擎架构）
 
 * **`src/components/ProTable/`**：新增配置驱动的企业级表格组件（Element Plus + vxe-table 双引擎）

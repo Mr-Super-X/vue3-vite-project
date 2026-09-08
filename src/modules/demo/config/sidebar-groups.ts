@@ -14,12 +14,19 @@ export interface SidebarGroupConfig {
 }
 
 export const SIDEBAR_GROUPS: readonly SidebarGroupConfig[] = [
+  { title: 'ProTable 表格组件', prefix: 'ProTable' },
   { title: 'XForm 表单引擎', prefix: 'XForm' },
   { title: '通用组件', prefix: '' },
 ]
 
 /** 组件名 → 简短中文名（sidebar 显示为「组件名 中文名」） */
 export const CN_NAMES: Record<string, string> = {
+  // ProTable 表格组件（v2.0）
+  ProTableOverview: '用法总览（4 类能力切换）',
+  ProTableRowEdit: '行内编辑',
+  ProTableTree: '树形数据',
+  ProTableCellSpan: '单元格合并',
+  ProTableRowDrag: '行拖拽排序',
   // XForm 表单引擎
   XFormOverview: '用法总览',
   XFormArray: '数组节点',

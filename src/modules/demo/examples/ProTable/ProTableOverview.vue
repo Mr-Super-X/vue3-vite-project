@@ -148,6 +148,7 @@ const tocItems = [
   { id: 'demo-slots', label: '自定义插槽', level: 2 },
   { id: 'demo-render', label: '自定义渲染（col.render）', level: 2 },
   { id: 'demo-expose', label: 'defineExpose 调用', level: 2 },
+  { id: 'demo-v2-capabilities', label: 'v2.0 4 类能力切换', level: 2 },
   { id: 'api-props', label: 'Props', level: 2 },
   { id: 'api-slots', label: 'Slots', level: 2 },
   { id: 'api-expose', label: 'Expose', level: 2 },
@@ -459,6 +460,30 @@ const columns: ProColumn[] = [
       ]),
   },
 ]`
+
+/* ───────────── v2.0 能力切换面板（spec §八.3 / Task 12） ───────────── */
+
+const capabilityConfig = ref({
+  rowEdit: false,
+  tree: false,
+  cellSpan: false,
+  rowDrag: false,
+})
+
+function setAllCapabilities(val: boolean): void {
+  capabilityConfig.value = { rowEdit: val, tree: val, cellSpan: val, rowDrag: val }
+}
+
+const capabilityOverviewCode = `<template>
+  <ProTable
+    :columns="columns"
+    :request-api="requestApi"
+    :enable-row-edit="config.rowEdit"
+    :enable-tree="config.tree"
+    :enable-cell-span="config.cellSpan"
+    :enable-row-drag="config.rowDrag"
+  />
+</template>`
 </script>
 
 <template>
@@ -598,6 +623,31 @@ const columns: ProColumn[] = [
       <ApiTable title="ProTable Slots" :items="slotsItems" />
       <ApiTable title="ProTable Expose（ref）" :items="exposeItems" />
       <ApiTable title="ProColumn 关键字段" :items="columnsItems" />
+
+      <!-- v2.0 能力切换面板（Task 12） -->
+      <section id="demo-v2-capabilities">
+        <DemoField label="v2.0 4 类能力一键切换" :code="capabilityOverviewCode">
+          <div :class="bem.e('capability-panel')">
+            <ElSwitch v-model="capabilityConfig.rowEdit" active-text="行内编辑" />
+            <ElSwitch v-model="capabilityConfig.tree" active-text="树形数据" />
+            <ElSwitch v-model="capabilityConfig.cellSpan" active-text="单元格合并" />
+            <ElSwitch v-model="capabilityConfig.rowDrag" active-text="行拖拽" />
+            <ElButton size="small" @click="setAllCapabilities(true)">一键全开</ElButton>
+            <ElButton size="small" @click="setAllCapabilities(false)">恢复默认</ElButton>
+          </div>
+          <p :class="bem.e('hint')">
+            切换上方 4 个开关，下方表格实时启用对应能力。 详细场景见：
+            <code>/demo/pro-table-row-edit</code>
+            /
+            <code>tree</code>
+            /
+            <code>cell-span</code>
+            /
+            <code>row-drag</code>
+            。
+          </p>
+        </DemoField>
+      </section>
     </DemoFrame>
 
     <template #toc>
@@ -647,6 +697,17 @@ const columns: ProColumn[] = [
   &__msg {
     font-size: 13px;
     color: var(--el-text-color-regular);
+  }
+
+  &__capability-panel {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+    padding: 12px;
+    background: var(--el-fill-color-light);
+    border-radius: 4px;
   }
 }
 </style>

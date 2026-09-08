@@ -136,7 +136,7 @@ const tocItems = [
             <span :class="bem.e('control-label')">字段数切换：</span>
             <el-radio-group
               :model-value="currentFieldCount"
-              @update:model-value="(v) => setFieldCount(Number(v))"
+              @update:model-value="(v: unknown) => setFieldCount(Number(v))"
             >
               <el-radio-button
                 v-for="n in FIELD_COUNT_OPTIONS"
