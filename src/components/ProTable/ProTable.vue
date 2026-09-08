@@ -15,23 +15,15 @@
  * @see [`./adapters/engine`](./adapters/engine.ts) 引擎工厂
  * @group ProTable 组件
  */
-import { ref, useAttrs, watch, h, type Ref } from 'vue' // vue 生命周期/底层 API（CLAUDE.md §1.6.1）
+import { ref, useAttrs, watch, type Ref } from 'vue' // vue 生命周期/底层 API（CLAUDE.md §1.6.1）
 import 'element-plus/dist/index.css' // 与 form-schema/XForm.vue 对齐：直接引入全量 CSS（覆盖 ProTable 用的所有组件：ElTable / ElPagination / ElForm / ElInput 等）
 import './styles/element-protable-overwrite.scss' // ProTable 特定的样式覆盖（BEM 嵌套，对齐 form-schema 模式）
-import {
-  ElTable,
-  ElTableColumn,
-  ElPagination,
-  ElEmpty,
-  ElConfigProvider,
-  ElTag,
-} from 'element-plus' // element-plus 按需注入（unplugin-vue-components）
+import { ElPagination, ElEmpty, ElConfigProvider } from 'element-plus' // element-plus 按需注入（unplugin-vue-components）
 import AsyncState from '@/components/common/AsyncState.vue' // 项目内 default import（unplugin-vue-components 自动注册全局组件）
 import SearchForm from './components/SearchForm.vue'
 import TableHeader from './components/TableHeader.vue'
 import ColSetting from './components/ColSetting.vue'
-import EditCell from './components/EditCell.vue'
-import CellContent from './components/CellContent.vue'
+import ElementTableBody from './components/ElementTableBody.vue'
 import { useSearch } from './composables/useSearch'
 import { useColumns } from './composables/useColumns'
 import { useTable } from './composables/useTable'
@@ -124,7 +116,7 @@ watch(
   { immediate: true }
 )
 
-/** v2.0 el-table 实例 ref —— 供 getTbody 查询 tbody DOM（行拖拽挂载点） */
+/** v2.0 el-table 实例 ref —— 供 getTbody 查询 tbody DOM（行拖拽挂载点；P1 起指向 ElementTableBody 实例，$el 透传到底层 ElTable） */
 const proTableEl = ref<{ $el?: HTMLElement } | null>(null)
 
 /** v2.0 单元格合并：data/columns 变化时重新构建 spanMethod 缓存 */
@@ -138,58 +130,7 @@ watch(
   { flush: 'post' }
 )
 
-/** 统一取行 rowKey（props.rowKey 字段，默认 'id'）—— 模板与事件桥接共用 */
-function rowKeyOf(row: unknown): string | number {
-  // unknown 入参解耦 T：树形扁平行含 _level/_hasChildren 附加字段，事件行来自 el-table（any）
-  return (row as Record<string, unknown>)[props.rowKey ?? 'id'] as string | number
-}
-
-/** v2.0 双击单元格触发编辑（element-plus el-table cell-dblclick） */
-function handleCellDblClick(row: Record<string, unknown>, _column: unknown): void {
-  if (!rowEdit) return
-  rowEdit._start(rowKeyOf(row))
-}
-
-/** v2.0 树形模式：el-table expand-icon 点击桥接到 treeData.toggle */
-function handleExpandChange(row: Record<string, unknown>, _expandedRows: unknown): void {
-  if (!treeData) return
-  void treeData.toggle(rowKeyOf(row))
-}
-
 /* ───────────── 辅助函数 ───────────── */
-
-/**
- * 解析列渲染（enum → ElTag；render → 调用返回 VNode；默认 → 字段值）
- *
- * 行字段读取经 record 局部转换：T extends object 无索引签名，
- * render 回调则直接拿到 T（泛型化的核心收益）。
- *
- * @group ProTable 组件
- */
-function resolveCell(col: ProColumn<T>, row: T, index: number): unknown {
-  if (col.render) return col.render({ row, column: col, $index: index })
-  const record = row as Record<string, unknown>
-  if (col.enum) {
-    const entry = col.enum.find((e) => e.value === record[col.prop])
-    if (entry) {
-      return h(ElTag, { type: entry.tagType ?? 'info' }, () => entry.label)
-    }
-  }
-  return record[col.prop]
-}
-
-/**
- * 过滤对象中的 undefined 字段（exactOptionalPropertyTypes 兼容）
- *
- * @group ProTable 组件
- */
-function filterUndefined(obj: Record<string, unknown>): Record<string, unknown> {
-  const out: Record<string, unknown> = {}
-  for (const [k, v] of Object.entries(obj)) {
-    if (v !== undefined) out[k] = v
-  }
-  return out
-}
 
 /** ElPagination 当前页 / size 变化桥接到 useTable */
 function handlePageChange(p: number): void {
@@ -287,91 +228,30 @@ defineExpose({
         :is-empty="isEmpty()"
         @retry="table.refresh"
       >
-        <ElTable
+        <ElementTableBody
           v-if="engineRef === 'element-plus'"
           ref="proTableEl"
-          :data="
+          :rows="
             (treeData ? treeData.flatData.value : (table.data.value ?? [])) as Record<
               string,
               unknown
             >[]
           "
-          v-bind="{
-            ...(props.rowKey ? { rowKey: props.rowKey } : {}),
-            ...(cellSpan
-              ? { spanMethod: cellSpan.spanMethod, cellClassName: cellSpan.cellClassName }
-              : {}),
-          }"
+          :columns="sortedColumnsLoose"
+          :row-key="props.rowKey"
+          :row-edit="rowEdit"
+          :tree-data="treeData"
+          :cell-span="cellSpan"
           @selection-change="handleSelectionChange"
-          @cell-dblclick="handleCellDblClick"
-          @expand-change="handleExpandChange"
+          @cell-dblclick="(rowKey) => rowEdit?._start(rowKey)"
+          @expand-toggle="(rowKey) => treeData && void treeData.toggle(rowKey)"
           @sort-change="handleSortChange"
         >
-          <ElTableColumn
-            v-for="col in columns.sortedColumns.value"
-            :key="col.prop"
-            :prop="col.prop"
-            :label="col.label"
-            v-bind="
-              filterUndefined({
-                type: col.type,
-                width: col.width,
-                minWidth: col.minWidth,
-                fixed: col.fixed,
-                sortable: col.sortable,
-                ...(col.tableProps ?? {}),
-              })
-            "
-          >
-            <!-- 自定义表头渲染（col.headerRender，spec §一 ProColumn.headerRender 字段） -->
-            <template v-if="col.headerRender" #header="scope">
-              <component :is="col.headerRender({ column: col, $index: scope.$index })" />
-            </template>
-
-            <template #default="scope">
-              <slot :name="col.prop" :row="scope.row" :column="col" :index="scope.$index">
-                <!-- v2.0 行拖拽手柄（sortablejs 通过此 handle 选择器绑定） -->
-                <span
-                  v-if="col.draggable"
-                  class="pro-table-drag-handle"
-                  :data-col="col.prop"
-                  :class="bem.e('drag-handle')"
-                  style="cursor: grab; user-select: none"
-                >
-                  ⋮⋮
-                </span>
-                <!-- v2.0 树形缩进 + 展开按钮（最高优先级） -->
-                <template v-if="col.tree && treeData">
-                  <span
-                    :style="{
-                      paddingLeft: (scope.row._level ?? 0) * (col.tree.indentSize ?? 24) + 'px',
-                    }"
-                  >
-                    <button
-                      v-if="scope.row._hasChildren"
-                      type="button"
-                      :class="'pro-table-tree-toggle'"
-                      @click="treeData.toggle(rowKeyOf(scope.row))"
-                    >
-                      {{ treeData.isExpanded(rowKeyOf(scope.row)) ? '▾' : '▸' }}
-                    </button>
-                    <CellContent :content="resolveCell(col, scope.row, scope.$index)" />
-                  </span>
-                </template>
-                <!-- v2.0 编辑控件（编辑态 + 含 edit 配置） -->
-                <EditCell
-                  v-else-if="rowEdit?.isEditing(rowKeyOf(scope.row)) && col.edit"
-                  :row-key="rowKeyOf(scope.row)"
-                  :col="col as ProColumn"
-                  :value="rowEdit.getValue(rowKeyOf(scope.row), col.prop)"
-                  @update="(prop, v) => rowEdit?.setValue(rowKeyOf(scope.row), prop, v)"
-                />
-                <!-- 默认渲染（v1 resolveCell） -->
-                <CellContent v-else :content="resolveCell(col, scope.row, scope.$index)" />
-              </slot>
-            </template>
-          </ElTableColumn>
-        </ElTable>
+          <!-- 透传业务插槽（col.prop 命名插槽等），保持 v1 插槽契约不变 -->
+          <template v-for="(_, name) in $slots" :key="name" #[name]="scope">
+            <slot :name="name" v-bind="scope" />
+          </template>
+        </ElementTableBody>
         <template #empty>
           <slot name="empty">
             <ElEmpty description="暂无数据" />
