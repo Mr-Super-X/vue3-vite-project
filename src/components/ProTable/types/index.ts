@@ -184,6 +184,8 @@ export interface ProColumn<T extends object = Record<string, unknown>> {
   render?(scope: { row: T; column: ProColumn<T>; $index: number }): VNode
   /** 透传给 ElTableColumn 的 props */
   tableProps?: Record<string, unknown>
+  /** 透传给 VxeColumn 的 props（仅 vxe-table 引擎生效；补充不覆盖映射派生值 field/title/sortable 等） */
+  vxeProps?: Record<string, unknown>
   /** 行内编辑配置（不声明 = 该列只读） */
   edit?: ColumnEditConfig
   /** 树形列声明（仅一列生效，默认第一列） */
