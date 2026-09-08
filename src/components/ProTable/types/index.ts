@@ -84,6 +84,30 @@ export type TableEngine = 'element-plus' | 'vxe-table'
 export type TableDensity = 'compact' | 'default' | 'loose'
 
 /**
+ * 排序状态 —— 组件向外暴露 / emit 的形态；null 表示未排序（表头第三击清除）。
+ *
+ * 泛型 T = 行数据类型（M2 服务端排序），prop 联合 string 与 ProColumn.prop 同理由。
+ *
+ * @group ProTable 类型
+ */
+export interface SortState<T extends object = Record<string, unknown>> {
+  /** 排序列字段名（IDE 优先补全 T 的键；联合 string 放行特殊列） */
+  prop: Extract<keyof T, string> | string
+  /** 升序 / 降序 */
+  order: 'ascending' | 'descending'
+}
+
+/**
+ * el-table sort-change 事件负载（order 为 null = 第三击清除排序；prop 对齐 element-plus 声明可为 null）。
+ *
+ * @group ProTable 类型
+ */
+export interface SortChangeEvent {
+  prop: string | null
+  order: 'ascending' | 'descending' | null
+}
+
+/**
  * 枚举项（与 element-plus el-option / ProTable enum 渲染对齐）。
  *
  * @group ProTable 类型
@@ -142,8 +166,8 @@ export interface ProColumn<T extends object = Record<string, unknown>> {
   minWidth?: number | string
   /** 固定列（left/right；false 由列设置抽屉控制） */
   fixed?: 'left' | 'right'
-  /** 是否可排序 */
-  sortable?: boolean
+  /** 是否可排序 —— true 客户端排序（el-table 原生行为）；'custom' 服务端排序（M2：sort-change → 请求参数） */
+  sortable?: boolean | 'custom'
   /** 是否隐藏（支持 Ref 响应式，列设置抽屉切换） */
   hidden?: boolean | Ref<boolean>
   /** 搜索配置（缺省则该列不参与搜索区） */
@@ -218,6 +242,17 @@ export interface ProTableProps<T extends object = Record<string, unknown>> {
   requestError?: (error: unknown) => void
   /** 是否显示分页（true / false / 透传 props） */
   pagination?: boolean | Record<string, unknown>
+  /**
+   * 排序参数序列化适配（决策 D2）—— 缺省用内置约定 { orderByColumn, isAsc }；
+   * 后端约定不同时用它改键名/形态（如 (state) => ({ sortBy: state.prop, sortOrder: state.order })）
+   */
+  sortParamsAdapter?: (state: SortState<T>) => Record<string, unknown>
+  /**
+   * 响应结构适配器（决策 D5 fail-fast）—— 兼容非 { data, total, pageNum, pageSize } 约定的后端。
+   * requestApi 可原样返回后端结构（类型侧 cast 一次），由本回调映射为 ProTableResponse<T>；
+   * 映射结果结构非法（data 非数组 / total 非数字）时 console.error + 抛错（经 useRequest 错误通道进入 error 态）。
+   */
+  responseAdapter?: (raw: unknown) => ProTableResponse<T>
   /** 表格引擎（spec 决策 4：首次 mount 前设置，运行时修改需 reload） */
   tableEngine?: TableEngine
   /** 用于 localStorage 缓存列设置的 key（未传则不持久化，附录 A #5） */
@@ -275,6 +310,8 @@ export interface ProTableExpose<T extends object = Record<string, unknown>> {
   element: Ref<ComponentPublicInstance | null>
   /** 当前激活的引擎（首次挂载锁定） */
   engine: TableEngine
+  /** 当前排序状态（null = 未排序；M2 服务端排序） */
+  getSortState: () => SortState<T> | null
   // 行内编辑（v2.0 —— Task 7 实施后改为 required）
   startEdit?: (rowKey: string | number) => void
   cancelEdit?: (rowKey?: string | number) => void

@@ -47,6 +47,55 @@ async function requestApi(params: Record<string, unknown>) {
 
 详见 [`./types/index.ts`](./types/index.ts) 类型定义。
 
+## 泛型（M1）
+
+```ts
+interface User {
+  id: number
+  name: string
+  status: 0 | 1
+}
+
+const columns: ProColumn<User>[] = [
+  {
+    prop: 'name', // IDE 自动补全 'id' | 'name' | 'status'
+    label: '名称',
+    render: ({ row }) => h('span', row.name), // row: User，类型精确
+  },
+]
+```
+
+不传泛型时默认 `Record<string, unknown>`，存量代码零改动。
+
+## 服务端排序（M2）
+
+```ts
+const columns: ProColumn<Order>[] = [
+  { prop: 'amount', label: '金额', sortable: 'custom' }, // 点击表头 → 请求带 orderByColumn/isAsc
+]
+// 后端约定不同可改序列化：
+<ProTable :sort-params-adapter="(s) => ({ sortBy: s.prop, sortOrder: s.order })" ... />
+```
+
+`sortable: true` 仍是 el-table 客户端排序；`sort-change` 事件与 `getSortState()` 暴露可用。
+
+## 响应结构适配（M3）
+
+后端返回非 `{ data, total, pageNum, pageSize }` 时：
+
+```ts
+<ProTable
+  :request-api="rawApi as ProTableRequestApi<Order>"
+  :response-adapter="(raw) => {
+    const r = raw as { records: Order[]; totalCount: number }
+    return { data: r.records, total: r.totalCount, pageNum: 1, pageSize: 10 }
+  }"
+  ...
+/>
+```
+
+适配结果结构非法（data 非数组 / total 非数字）会 console.error 并进入错误态（AsyncState 展示 + 重试）。
+
 ## 引擎（v2.1 计划支持 vxe-table）
 
 v2.0 仅实现 element-plus 引擎。传入 `table-engine="vxe-table"` 时会 `console.warn` 并回退 element-plus：

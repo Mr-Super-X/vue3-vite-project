@@ -17,6 +17,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { ref } from 'vue'
 import { useTable } from './useTable'
+import type { SortState } from '../types'
 
 describe('useTable', () => {
   const makeDeps = () => {
@@ -103,5 +104,94 @@ describe('useTable', () => {
     table.setSelectedRows([{ id: 1 }])
     table.clearSelection()
     expect(table.getSelectedRows()).toEqual([])
+  })
+
+  it('M2：onSortChange 更新 sortState 并把排序参数并入请求（默认序列化）', async () => {
+    const deps = makeDeps()
+    const table = useTable(deps)
+    await table.refresh()
+    table.onSortChange({ prop: 'name', order: 'ascending' })
+    await vi.waitFor(() => expect(deps.props.requestApi).toHaveBeenCalledTimes(2))
+    // 注：getSearchParams 返回的 name:'' 被 serializeParams 剔除（附录 A #10），故不在期望内
+    expect(deps.props.requestApi).toHaveBeenLastCalledWith({
+      orderByColumn: 'name',
+      isAsc: 'asc',
+      pageNum: 1,
+      pageSize: 10,
+    })
+    expect(table.getSortState()).toEqual({ prop: 'name', order: 'ascending' })
+  })
+
+  it('M2：第三击（order=null）清除排序状态且请求不带排序参数', async () => {
+    const deps = makeDeps()
+    const table = useTable(deps)
+    await table.refresh()
+    table.onSortChange({ prop: 'name', order: 'ascending' })
+    await vi.waitFor(() => expect(deps.props.requestApi).toHaveBeenCalledTimes(2))
+    table.onSortChange({ prop: 'name', order: null })
+    await vi.waitFor(() => expect(deps.props.requestApi).toHaveBeenCalledTimes(3))
+    expect(table.getSortState()).toBeNull()
+    const last = deps.props.requestApi.mock.calls.at(-1)![0] as Record<string, unknown>
+    expect(last).not.toHaveProperty('orderByColumn')
+    expect(last).not.toHaveProperty('isAsc')
+  })
+
+  it('M2：自定义 sortParamsAdapter 覆盖默认序列化', async () => {
+    const deps = makeDeps()
+    deps.props.sortParamsAdapter = (state: SortState) => ({
+      sortBy: state.prop,
+      sortOrder: state.order,
+    })
+    const table = useTable(deps)
+    await table.refresh()
+    table.onSortChange({ prop: 'name', order: 'descending' })
+    await vi.waitFor(() => expect(deps.props.requestApi).toHaveBeenCalledTimes(2))
+    expect(deps.props.requestApi).toHaveBeenLastCalledWith(
+      expect.objectContaining({ sortBy: 'name', sortOrder: 'descending' })
+    )
+  })
+
+  it('M2：排序变化回第 1 页（page>1 时只触发一次新请求）', async () => {
+    const deps = makeDeps()
+    const table = useTable(deps)
+    await table.refresh()
+    table.setPage(3)
+    await vi.waitFor(() => expect(deps.props.requestApi).toHaveBeenCalledTimes(2))
+    expect(table.page.value).toBe(3)
+    table.onSortChange({ prop: 'name', order: 'ascending' })
+    await vi.waitFor(() => expect(table.page.value).toBe(1))
+    const last = deps.props.requestApi.mock.calls.at(-1)![0] as Record<string, unknown>
+    expect(last).toMatchObject({ pageNum: 1, orderByColumn: 'name' })
+    // page watch 已触发刷新：确认没有二次重复请求
+    await new Promise((r) => setTimeout(r, 20))
+    expect(deps.props.requestApi).toHaveBeenCalledTimes(3)
+  })
+
+  it('M3：responseAdapter 映射自定义结构（records/totalCount → data/total）', async () => {
+    const deps = makeDeps()
+    deps.props.requestApi = vi
+      .fn()
+      .mockResolvedValue({ records: [{ id: 7, name: 'x' }], totalCount: 1 })
+    deps.props.responseAdapter = (raw: unknown) => {
+      const r = raw as { records: unknown[]; totalCount: number }
+      return { data: r.records, total: r.totalCount, pageNum: 1, pageSize: 10 }
+    }
+    const table = useTable(deps)
+    await table.refresh()
+    expect(table.data.value).toEqual([{ id: 7, name: 'x' }])
+    expect(table.total.value).toBe(1)
+  })
+
+  it('M3：responseAdapter 返回非法结构 → 错误态 + requestError 回调（fail-fast）', async () => {
+    const deps = makeDeps()
+    const onRequestError = vi.fn()
+    deps.props.requestApi = vi.fn().mockResolvedValue({ wrong: true })
+    deps.props.responseAdapter = () => ({ bad: 1 }) as never
+    deps.props.requestError = onRequestError
+    const table = useTable(deps)
+    await table.refresh()
+    expect(table.error.value).toBeTruthy()
+    expect(String(table.error.value?.message)).toContain('结构非法')
+    expect(onRequestError).toHaveBeenCalled()
   })
 })

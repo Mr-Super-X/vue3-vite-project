@@ -22,23 +22,24 @@ flowchart TD
 
 ## Composables 依赖
 
-| Composable        | 依赖                           | 输出                                       |
-| ----------------- | ------------------------------ | ------------------------------------------ |
-| `useSearch`       | props.columns（search 配置）   | searchParams / search() / reset()          |
-| `useColumns`      | props.columns + Local          | sortedColumns / allColumns / toggleVisible |
-| `useTable`        | props + useSearch + useColumns | data / loading / pagination / selectedRows |
-| `adapters/engine` | props.tableEngine              | Ref<TableEngine>（首次挂载锁定）           |
+| Composable        | 依赖                           | 输出                                                   |
+| ----------------- | ------------------------------ | ------------------------------------------------------ |
+| `useSearch`       | props.columns（search 配置）   | searchParams / search() / reset()                      |
+| `useColumns`      | props.columns + Local          | sortedColumns / allColumns / toggleVisible             |
+| `useTable`        | props + useSearch + useColumns | data / loading / pagination / selectedRows / sortState |
+| `adapters/engine` | props.tableEngine              | Ref<TableEngine>（首次挂载锁定）                       |
 
 ## 状态归属
 
-| 状态     | 位置            | 类型        | 持久化                            |
-| -------- | --------------- | ----------- | --------------------------------- |
-| 搜索参数 | useSearch       | reactive    | 否                                |
-| 表格数据 | useTable        | ref         | 否（按需 fetch）                  |
-| 多选选中 | useTable        | ref         | 否（el-table reserve-selection）  |
-| 列设置   | useColumns      | ref + Local | ✅（Local `${tableKey}:columns`） |
-| 密度     | useTable        | ref         | 否                                |
-| 引擎     | adapters/engine | Ref         | 否（首次挂载锁定）                |
+| 状态     | 位置            | 类型        | 持久化                                                       |
+| -------- | --------------- | ----------- | ------------------------------------------------------------ |
+| 搜索参数 | useSearch       | reactive    | 否                                                           |
+| 表格数据 | useTable        | ref         | 否（按需 fetch）                                             |
+| 多选选中 | useTable        | ref         | 否（el-table reserve-selection）                             |
+| 列设置   | useColumns      | ref + Local | ✅（Local `${tableKey}:columns`）                            |
+| 密度     | useTable        | ref         | 否                                                           |
+| 排序状态 | useTable        | ref         | 否（M2 服务端排序：sortState，不混入 searchParams，决策 D4） |
+| 引擎     | adapters/engine | Ref         | 否（首次挂载锁定）                                           |
 
 ## 引擎切换
 
@@ -65,6 +66,7 @@ sequenceDiagram
 - `useRequest` 内置 AbortController + 三态（loading/error/data）
 - `Local.get` 内置 `safeParse` 清脏数据
 - vxe-table 引擎 v2.0 未实现：传入时 resolveEngine warn 并回退 element-plus（v2.1 交付）
+- `responseAdapter` 返回值结构非法 → console.error + 抛错（useRequest catch 进入 error 态 + requestError 回调，决策 D5）
 
 ## 文件清单
 
@@ -84,7 +86,7 @@ src/components/ProTable/
 | 模块        | 测试数 |
 | ----------- | ------ |
 | useSearch   | 5      |
-| useTable    | 6      |
+| useTable    | 13     |
 | useColumns  | 5      |
 | SearchForm  | 4      |
 | TableHeader | 4      |

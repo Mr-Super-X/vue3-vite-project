@@ -162,4 +162,68 @@ describe('ProTable v2.0 集成（冲突矩阵 + 启动校验）', () => {
     const calls = requestApi.mock.calls
     expect(calls[calls.length - 1]![0]).toMatchObject({ name: '张三' })
   })
+
+  it('M2：sortable=custom 列 sort-change → 请求带 orderByColumn/isAsc（服务端排序接线）', async () => {
+    const requestApi = vi.fn().mockResolvedValue({
+      data: [{ name: '甲', amount: 3 }],
+      total: 1,
+      pageNum: 1,
+      pageSize: 10,
+    })
+    const wrapper = mount(ProTable, {
+      props: {
+        columns: [{ prop: 'amount', label: '金额', sortable: 'custom' }],
+        requestApi,
+      } as unknown as ProTableProps,
+    })
+    await new Promise((r) => setTimeout(r, 10)) // 首次请求
+    // 直接驱动 el-table 的 sort-change（jsdom 点击 el-table 表头不可靠；
+    // 事件接线由本测试覆盖，真实点击路径列为浏览器手动验证）
+    wrapper
+      .findComponent({ name: 'ElTable' })
+      .vm.$emit('sort-change', { column: null, prop: 'amount', order: 'ascending' })
+    await new Promise((r) => setTimeout(r, 10))
+    const calls = requestApi.mock.calls
+    expect(calls[calls.length - 1]![0]).toMatchObject({ orderByColumn: 'amount', isAsc: 'asc' })
+  })
+
+  it('M2：sortable=true（客户端排序）列 sort-change 不触发服务端请求', async () => {
+    const requestApi = vi.fn().mockResolvedValue({
+      data: [{ name: '甲', amount: 3 }],
+      total: 1,
+      pageNum: 1,
+      pageSize: 10,
+    })
+    const wrapper = mount(ProTable, {
+      props: {
+        columns: [{ prop: 'amount', label: '金额', sortable: true }],
+        requestApi,
+      } as unknown as ProTableProps,
+    })
+    await new Promise((r) => setTimeout(r, 10))
+    const callsBefore = requestApi.mock.calls.length
+    wrapper
+      .findComponent({ name: 'ElTable' })
+      .vm.$emit('sort-change', { column: null, prop: 'amount', order: 'ascending' })
+    await new Promise((r) => setTimeout(r, 10))
+    expect(requestApi.mock.calls.length).toBe(callsBefore)
+  })
+
+  it('M2：组件向外 emit sort-change（父级可监听排序变化）', async () => {
+    const onSortChange = vi.fn()
+    const wrapper = mount(ProTable, {
+      props: {
+        columns: [{ prop: 'amount', label: '金额', sortable: 'custom' }],
+        // 返回非空数据：空数据时 AsyncState 渲染 empty 态不挂载 ElTable，无法驱动 sort-change
+        requestApi: async () => ({ data: [{ amount: 3 }], total: 1, pageNum: 1, pageSize: 10 }),
+        onSortChange,
+      } as unknown as ProTableProps,
+    })
+    await new Promise((r) => setTimeout(r, 10))
+    wrapper
+      .findComponent({ name: 'ElTable' })
+      .vm.$emit('sort-change', { column: null, prop: 'amount', order: 'descending' })
+    await new Promise((r) => setTimeout(r, 10))
+    expect(onSortChange).toHaveBeenCalledWith({ prop: 'amount', order: 'descending' })
+  })
 })

@@ -20,7 +20,14 @@
 import { ref, watch, onMounted, type ComponentPublicInstance, type Ref } from 'vue'
 import { useRequest } from '@composables/useRequest' // 项目 composable auto-import
 import { serializeParams } from './useSearch' // 第 1 步单源化：序列化唯一实现
-import type { ProTableProps, TableDensity, TableEngine } from '../types'
+import type {
+  ProTableProps,
+  ProTableResponse,
+  SortChangeEvent,
+  SortState,
+  TableDensity,
+  TableEngine,
+} from '../types'
 
 export interface UseTableOptions<T extends object = Record<string, unknown>> {
   props: ProTableProps<T>
@@ -51,6 +58,35 @@ export interface UseTableReturn<T extends object = Record<string, unknown>> {
   setPage: (page: number) => void
   setPageSize: (size: number) => void
   setDensity: (d: TableDensity) => void
+  /** 当前排序状态（null = 未排序） */
+  sortState: Ref<SortState<T> | null>
+  /** el-table sort-change 事件入口 —— 更新状态 + 回第 1 页 + 触发请求 */
+  onSortChange: (evt: SortChangeEvent) => void
+  /** 排序状态快照（ProTable.vue 经此向外 emit / expose） */
+  getSortState: () => SortState<T> | null
+}
+
+/**
+ * 内置排序参数序列化 —— 国产后台最常用约定 { orderByColumn, isAsc }（设计决策 D2）。
+ * 后端约定不同时由 props.sortParamsAdapter 接管（见类型 JSDoc）。
+ */
+function defaultSortParams(state: SortState | null): Record<string, unknown> {
+  if (!state) return {}
+  return { orderByColumn: state.prop, isAsc: state.order === 'ascending' ? 'asc' : 'desc' }
+}
+
+/**
+ * 校验适配后的响应结构（M3 fail-fast，决策 D5）。
+ * 抛错发生在 useRequest 的 try 内 → 被 catch 捕获进入 error 态 + requestError 回调——
+ * 不静默吞、不影响组件树（AsyncState 展示错误 + 重试）。
+ */
+function assertValidResponse<T extends object>(result: ProTableResponse<T>): void {
+  if (!result || !Array.isArray(result.data) || typeof result.total !== 'number') {
+    const message =
+      '[ProTable] responseAdapter 返回值结构非法：期望 { data: T[], total: number }（pageNum/pageSize 可省略）'
+    console.error(message, result)
+    throw new Error(message)
+  }
 }
 
 export function useTable<T extends object = Record<string, unknown>>(
@@ -68,11 +104,22 @@ export function useTable<T extends object = Record<string, unknown>>(
   const tableRef = ref<ComponentPublicInstance | null>(null)
   const density = ref<TableDensity>(props.density ?? 'default')
 
+  /** 排序状态 —— 不混入 searchParams（D4：排序是表格交互状态，非表单输入，useSearch 语义保持纯净） */
+  const sortState = ref<SortState<T> | null>(null)
+
+  /** 排序参数序列化：优先业务方 adapter，缺省内置约定；未排序返回空对象（不传空键给后端） */
+  function serializeSort(state: SortState<T> | null): Record<string, unknown> {
+    if (!state) return {}
+    if (props.sortParamsAdapter) return props.sortParamsAdapter(state)
+    return defaultSortParams(state)
+  }
+
   // useRequest 包装（AbortController 内置；spec §九 #5 快速连续取消）
   const request = useRequest(
     async () => {
       const params = serializeParams({
         ...options.getSearchParams(),
+        ...serializeSort(sortState.value),
         pageNum: page.value,
         pageSize: pageSize.value,
       })
@@ -81,9 +128,10 @@ export function useTable<T extends object = Record<string, unknown>>(
     {
       immediate: false,
       onSuccess: (result) => {
-        const rawData = result.data ?? []
-        data.value = props.dataCallback ? props.dataCallback(rawData) : rawData
-        total.value = result.total ?? 0
+        const adapted = props.responseAdapter ? props.responseAdapter(result) : result
+        assertValidResponse(adapted)
+        data.value = props.dataCallback ? props.dataCallback(adapted.data) : adapted.data
+        total.value = adapted.total
       },
       onError: (err: unknown) => {
         data.value = []
@@ -137,6 +185,24 @@ export function useTable<T extends object = Record<string, unknown>>(
     density.value = d
   }
 
+  /**
+   * el-table sort-change 事件入口（M2 服务端排序）。
+   * 三连点语义由 el-table 提供（asc → desc → null）；order=null 清除排序。
+   * 排序变化回第 1 页（与搜索同语义）：page 未变时须手动刷新（watch 不触发）。
+   */
+  function onSortChange(evt: SortChangeEvent): void {
+    sortState.value = evt.order && evt.prop ? { prop: evt.prop, order: evt.order } : null
+    if (page.value !== 1) {
+      page.value = 1
+    } else {
+      void refresh()
+    }
+  }
+
+  function getSortState(): SortState<T> | null {
+    return sortState.value
+  }
+
   // 首次 mount 触发请求
   onMounted(() => {
     void refresh()
@@ -164,5 +230,8 @@ export function useTable<T extends object = Record<string, unknown>>(
     setPage,
     setPageSize,
     setDensity,
+    sortState,
+    onSortChange,
+    getSortState,
   }
 }

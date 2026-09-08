@@ -2,6 +2,16 @@
 
 ## 未发布
 
+### ✨ Features | ProTable 下一迭代（M1 泛型化 → M2 服务端排序 → M3 响应适配器）
+
+> 计划文档：`docs/superpowers/plans/2026-09-08-protable-next-iteration.md`
+
+* **feat(pro-table):** ProColumn/ProTableProps 泛型化（render row 精确到 T，默认 `Record<string, unknown>` 向后兼容；方法语法 bivariance 保证下游子组件零改动）
+* **feat(pro-table):** 服务端排序（`sortable: 'custom'` 接线 + `sortParamsAdapter` 序列化适配 + `sort-change` 事件 + `getSortState` 暴露；排序状态归 useTable，不混入 searchParams）
+* **feat(pro-table):** `responseAdapter` 响应结构适配 + fail-fast 校验（data 非数组 / total 非数字 → console.error + 错误态）
+* **test(ProTable):** 测试 96 → 111（新增排序 4 用例 + 集成接线 3 用例 + responseAdapter 2 用例 + 类型层断言 spec）
+* **docs(ProTable):** README 新增泛型/服务端排序/响应适配三节；ARCHITECTURE 状态归属/依赖/错误处理同步；新增服务端排序 demo（ProTableServerSort）
+
 ### 🐛 Bug Fixes | ProTable 行拖拽取消二次确认后顺序已变（DOM 未还原）
 
 * **fix(ProTable):** `useRowDrag` `onEnd` 先还原 sortablejs 物理移动过的 DOM 行再走确认/取消/跳过分支——取消、onSortChange 抛错、树形映射失败时 DOM 不再残留错位（与 ColSetting 列设置拖拽修复同理：Vue 保持唯一数据源）

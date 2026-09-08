@@ -218,3 +218,33 @@ export const rowDragExposeItems: ApiItem[] = [
     description: '程序化设置行顺序（拖拽后的新顺序）。',
   },
 ]
+
+/* ───────────── 服务端排序 demo（ProTableServerSort） ───────────── */
+
+export const sortColumnItems: ApiItem[] = [
+  {
+    name: 'sortable',
+    type: "boolean | 'custom'",
+    required: false,
+    default: 'false',
+    description:
+      "true 客户端排序（el-table 原生）；'custom' 服务端排序（点击表头把排序参数发给后端）。",
+  },
+]
+
+export const sortPropsItems: ApiItem[] = [
+  {
+    name: 'sortParamsAdapter',
+    type: '(state: SortState) => Record<string, unknown>',
+    required: false,
+    description: '排序参数序列化适配；缺省 { orderByColumn, isAsc }。',
+  },
+]
+
+export const sortExposeItems: ApiItem[] = [
+  {
+    name: 'getSortState()',
+    type: 'SortState | null',
+    description: '当前排序状态；组件同时向外 emit sort-change 事件。',
+  },
+]

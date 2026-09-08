@@ -34,6 +34,10 @@ export {
   type SearchElType,
   type TableEngine,
   type TableDensity,
+  /** 排序状态 —— sort-change 事件与 getSortState 暴露的类型 @see ./types */
+  type SortState,
+  /** el-table sort-change 事件负载 @see ./types */
+  type SortChangeEvent,
 } from './types'
 
 /**

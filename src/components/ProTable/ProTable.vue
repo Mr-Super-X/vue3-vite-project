@@ -6,9 +6,8 @@
  * SearchForm / TableHeader / ElTable / ElPagination / ColSetting。
  * 业务编排收敛到 composables/*.ts（CLAUDE.md §一 #11 Hook 拆分）。
  *
- * 泛型 T = 行数据类型（M1）：render 回调的 row 精确到 T；默认 Record<string, unknown>
- * 向后兼容，存量调用零改动。bivariance（方法语法）保证 ProColumn<T> 可赋值
- * 给下游非泛型子组件（EditCell/SearchForm/TableHeader/ColSetting）。
+ * 泛型 T = 行数据类型（M1）：render 回调的 row 精确到 T；默认 Record<string, unknown> 向后兼容，
+ * 存量调用零改动。
  *
  * @see [`./composables/useSearch`](./composables/useSearch.ts) 搜索参数管理
  * @see [`./composables/useColumns`](./composables/useColumns.ts) 列解析与持久化
@@ -38,9 +37,16 @@ import { useColumns } from './composables/useColumns'
 import { useTable } from './composables/useTable'
 import { useTableCapabilities } from './composables/useTableCapabilities'
 import { resolveEngine } from './adapters/engine'
-import type { ProColumn, ProTableExpose, ProTableProps, TableDensity } from './types'
+import type {
+  ProColumn,
+  ProTableExpose,
+  ProTableProps,
+  SortChangeEvent,
+  SortState,
+  TableDensity,
+} from './types'
 
-const props = withDefaults(defineProps<ProTableProps>(), {
+const props = withDefaults(defineProps<ProTableProps<T>>(), {
   tableEngine: 'element-plus',
   pagination: true,
   pageSize: 10,
@@ -51,6 +57,11 @@ const props = withDefaults(defineProps<ProTableProps>(), {
 
 const attrs = useAttrs()
 defineOptions({ inheritAttrs: false })
+
+const emit = defineEmits<{
+  /** 服务端排序变化（仅 sortable='custom' 列触发；payload 为 null 表示清除排序） */
+  (e: 'sort-change', payload: SortState<T> | null): void
+}>()
 
 /* ───────────── 编排层：用 3 个 composables 接管所有状态 ───────────── */
 
@@ -194,9 +205,17 @@ function handleDensityChange(d: TableDensity): void {
 }
 
 /**
- * 多选变化桥接 —— el-table 事件行为 Record 视角（非泛型），cast 收口到 T[]。
- * cast 安全性：行对象运行时同一引用，仅类型视角转换。
+ * M2 服务端排序桥接：仅 sortable='custom' 列生效（客户端排序列维持 el-table 原生行为）。
+ * 经 useTable.onSortChange 更新状态 + 回第 1 页 + 触发请求，随后向外 emit 当前排序状态。
  */
+function handleSortChange(evt: SortChangeEvent): void {
+  const col = columns.sortedColumns.value.find((c) => c.prop === evt.prop)
+  if (!col || col.sortable !== 'custom') return
+  table.onSortChange(evt)
+  emit('sort-change', table.sortState.value)
+}
+
+/** 多选变化桥接 —— el-table 事件行为 Record 视角（非泛型），cast 收口到 T[]（运行时同一引用）。 */
 function handleSelectionChange(rows: Record<string, unknown>[]): void {
   table.setSelectedRows(rows as unknown as T[])
 }
@@ -211,10 +230,8 @@ function isEmpty(): boolean {
 const bem = createNamespace('pro-table')
 
 /**
- * 下游子组件（SearchForm/TableHeader/ColSetting/EditCell）消费非泛型 ProColumn（默认 T）。
- * T 在组件内未解析，ProColumn<T> 与 ProColumn 双向均不可赋值
- * （bivariance 仅对具体类型生效， unresolved T 两头都不满足），
- * 故模板绑定处提供 Record 视角 computed 收口 cast —— 运行时同一引用。
+ * 下游子组件消费非泛型 ProColumn：T 未解析时 ProColumn<T> 双向均不可赋值
+ * （bivariance 仅对具体类型生效），模板绑定处用 Record 视角 computed 收口 cast —— 运行时同一引用。
  */
 const searchColumnsLoose = computed(() => columns.searchColumns as ProColumn[])
 const allColumnsLoose = computed(() => columns.allColumns.value as ProColumn[])
@@ -231,6 +248,7 @@ defineExpose({
   setSearchParams: (params: Record<string, unknown>) => search.setSearchParams(params),
   element: table.tableRef,
   engine: engineRef.value,
+  getSortState: () => table.getSortState(),
   ...v2Expose,
 } satisfies ProTableExpose<T>)
 </script>
@@ -287,6 +305,7 @@ defineExpose({
           @selection-change="handleSelectionChange"
           @cell-dblclick="handleCellDblClick"
           @expand-change="handleExpandChange"
+          @sort-change="handleSortChange"
         >
           <ElTableColumn
             v-for="col in columns.sortedColumns.value"
