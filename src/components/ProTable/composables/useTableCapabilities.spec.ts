@@ -119,4 +119,76 @@ describe('useTableCapabilities', () => {
     })
     expect(() => result.v2Expose.setRowOrder([])).not.toThrow()
   })
+
+  /* ── v2.1 决策 5：vxe 引擎能力矩阵 ── */
+
+  it('vxe 引擎 + enableTree：treeData 不实例化（warn 由集成测试断言 onMounted 触发）', () => {
+    const result = useTableCapabilities({
+      props: {
+        columns: [],
+        requestApi: async () => ({ data: [], total: 0, pageNum: 1, pageSize: 10 }),
+        enableTree: { defaultExpandDepth: 1 },
+      } as never,
+      columns: { allColumns: ref([]) },
+      table: { data: ref([]) },
+      engine: ref('vxe-table'),
+    })
+    expect(result.treeData).toBeNull()
+  })
+
+  it('vxe 引擎 + enableRowDrag：rowDrag 不实例化', () => {
+    const result = useTableCapabilities({
+      props: {
+        columns: [],
+        requestApi: async () => ({ data: [], total: 0, pageNum: 1, pageSize: 10 }),
+        enableRowDrag: true,
+      } as never,
+      columns: { allColumns: ref([]) },
+      table: { data: ref([]) },
+      engine: ref('vxe-table'),
+    })
+    expect(result.rowDrag).toBeNull()
+  })
+
+  it('vxe 引擎 + enableRowEdit：rowEdit 正常实例化', () => {
+    const result = useTableCapabilities({
+      props: {
+        columns: [],
+        requestApi: async () => ({ data: [], total: 0, pageNum: 1, pageSize: 10 }),
+        enableRowEdit: true,
+      } as never,
+      columns: { allColumns: ref([]) },
+      table: { data: ref([]) },
+      engine: ref('vxe-table'),
+    })
+    expect(result.rowEdit).not.toBeNull()
+  })
+
+  it('vxe 引擎 + enableCellSpan：cellSpan 正常实例化', () => {
+    const result = useTableCapabilities({
+      props: {
+        columns: [],
+        requestApi: async () => ({ data: [], total: 0, pageNum: 1, pageSize: 10 }),
+        enableCellSpan: true,
+      } as never,
+      columns: { allColumns: ref([]) },
+      table: { data: ref([]) },
+      engine: ref('vxe-table'),
+    })
+    expect(result.cellSpan).not.toBeNull()
+  })
+
+  it('element 引擎 + enableTree：不受 vxe 忽略逻辑影响，treeData 正常实例化', () => {
+    const result = useTableCapabilities({
+      props: {
+        columns: [],
+        requestApi: async () => ({ data: [], total: 0, pageNum: 1, pageSize: 10 }),
+        enableTree: { defaultExpandDepth: 1 },
+      } as never,
+      columns: { allColumns: ref([]) },
+      table: { data: ref([]) },
+      engine: ref('element-plus'),
+    })
+    expect(result.treeData).not.toBeNull()
+  })
 })

@@ -22,12 +22,19 @@ import type {
   RowDragConfig,
   RowEditConfig,
   TreeConfig,
+  TableEngine,
 } from '../types'
 
 export interface UseTableCapabilitiesOptions<T extends object = Record<string, unknown>> {
   props: ProTableProps<T>
   columns: { allColumns?: RefType<ProColumn<T>[]> }
   table: { data: RefType<T[] | null> }
+  /**
+   * 当前表格引擎（v2.1 决策 5）：vxe-table 引擎不支持树形 / 行拖拽，
+   * 检出即 warn + 不实例化对应能力（rowEdit / cellSpan 正常接线）。
+   * 缺省按 element-plus 处理（向后兼容未传 engine 的调用方/测试）。
+   */
+  engine?: RefType<TableEngine>
   /**
    * el-table tbody DOM 获取器 —— 由编排层提供（持有模板 ref），
    * 传入后 useRowDrag 自持挂载生命周期（onMounted + watch data 自动重挂）。
@@ -80,6 +87,10 @@ export function useTableCapabilities<T extends object = Record<string, unknown>>
   const cellSpanConfig = computed<CellSpanConfig>(() => asConfig(props.enableCellSpan, {}))
   const rowDragConfig = computed<RowDragConfig>(() => asConfig(props.enableRowDrag, {}))
 
+  // v2.1 决策 5：setup 一次性读取引擎。vxe 加载失败回退 element-plus 后不会重实例化能力
+  // （罕见故障路径：树形/拖拽在该页面不可用，但表格主内容可用，warn 已提示）
+  const isVxe = options.engine?.value === 'vxe-table'
+
   const rowEdit = props.enableRowEdit
     ? useRowEdit({
         // H5：行 key 字段随 props.rowKey 注入，避免 useRowEdit 硬编码 'id' 导致自定义行 key 的表格保存失败
@@ -88,19 +99,21 @@ export function useTableCapabilities<T extends object = Record<string, unknown>>
       })
     : null
 
-  const treeData = props.enableTree
-    ? useTreeData({
-        ...(pickDefined(treeDataConfig.value, [
-          'loadChildren',
-          'childrenKey',
-          'defaultExpandDepth',
-          'rowKey',
-          'showLine',
-          'loadDebounce',
-          'exclusive',
-        ]) as object),
-      })
-    : null
+  // v2.1 决策 5：vxe 引擎不支持树形（扁平化模型与 vxe tree-config 不同）→ 不实例化 + 启动 warn
+  const treeData =
+    props.enableTree && !isVxe
+      ? useTreeData({
+          ...(pickDefined(treeDataConfig.value, [
+            'loadChildren',
+            'childrenKey',
+            'defaultExpandDepth',
+            'rowKey',
+            'showLine',
+            'loadDebounce',
+            'exclusive',
+          ]) as object),
+        })
+      : null
 
   const cellSpan = props.enableCellSpan
     ? useCellSpan({
@@ -133,32 +146,46 @@ export function useTableCapabilities<T extends object = Record<string, unknown>>
     return m
   })
 
-  const rowDrag = props.enableRowDrag
-    ? useRowDrag({
-        handle: rowDragConfig.value.handle ?? 'first-col',
-        data: table.data as unknown as Ref<Record<string, unknown>[]>,
-        crossLevelDrag: !props.enableTree,
-        ...(options.getTbody && { getTbody: options.getTbody }),
-        // 树形模式必传映射；平铺模式不传，onEnd 直接用 DOM index（行为与 v1 一致）
-        ...(treeData && {
-          getViewRowKeys: () => viewRowKeys.value,
-          resolveTopIndex: (viewIndex: number) => {
-            const key = viewRowKeys.value[viewIndex]
-            return key === undefined ? -1 : (topIndexByKey.value.get(key) ?? -1)
-          },
-        }),
-        ...(rowDragConfig.value.onSortChange && { onSortChange: rowDragConfig.value.onSortChange }),
-      })
-    : null
+  // v2.1 决策 5：vxe 引擎不支持行拖拽（getTbody 选择器硬编码 .el-table__body tbody，vxe DOM 结构不同）→ 不实例化 + 启动 warn
+  const rowDrag =
+    props.enableRowDrag && !isVxe
+      ? useRowDrag({
+          handle: rowDragConfig.value.handle ?? 'first-col',
+          data: table.data as unknown as Ref<Record<string, unknown>[]>,
+          crossLevelDrag: !props.enableTree,
+          ...(options.getTbody && { getTbody: options.getTbody }),
+          // 树形模式必传映射；平铺模式不传，onEnd 直接用 DOM index（行为与 v1 一致）
+          ...(treeData && {
+            getViewRowKeys: () => viewRowKeys.value,
+            resolveTopIndex: (viewIndex: number) => {
+              const key = viewRowKeys.value[viewIndex]
+              return key === undefined ? -1 : (topIndexByKey.value.get(key) ?? -1)
+            },
+          }),
+          ...(rowDragConfig.value.onSortChange && {
+            onSortChange: rowDragConfig.value.onSortChange,
+          }),
+        })
+      : null
 
-  /** 启动校验（spec §七.3） */
+  /** 启动校验（spec §七.3 + v2.1 决策 5 引擎能力矩阵） */
   function validateCapabilities(): void {
-    if (props.enableRowEdit && props.enableTree && !treeDataConfig.value.exclusive) {
+    // v2.1 决策 5：vxe 引擎不支持的能力在 setup 已忽略实例化，此处提示用户配置被忽略的原因
+    if (isVxe && props.enableTree) {
+      console.warn('[ProTable] vxe-table 引擎暂不支持树形（enableTree），该配置已忽略')
+    }
+    if (isVxe && props.enableRowDrag) {
+      console.warn('[ProTable] vxe-table 引擎暂不支持行拖拽（enableRowDrag），该配置已忽略')
+    }
+    // vxe 下 enableTree 已被忽略，「编辑仅作用于叶子节点」的前提不存在，跳过避免误导
+    if (!isVxe && props.enableRowEdit && props.enableTree && !treeDataConfig.value.exclusive) {
       console.warn('[ProTable] enableRowEdit + enableTree: 编辑仅作用于叶子节点')
     }
     // M5：全局 span.direction 目前不参与合并计算（生效路径是列级 span.direction，
     // 见 useCellSpan.buildCache），此处不再原地改写调用方配置对象（props 保护），仅提示
+    // 同 vxe 守卫：树形被忽略时「树形 + span.direction=column」冲突前提不存在
     if (
+      !isVxe &&
       typeof props.enableCellSpan === 'object' &&
       cellSpanConfig.value.direction === 'column' &&
       props.enableTree

@@ -80,6 +80,48 @@ describe('ProTable v2.0 集成（冲突矩阵 + 启动校验）', () => {
     expect(wrapper.findComponent({ name: 'ElTable' }).exists()).toBe(false)
   })
 
+  it('vxe 引擎 + enableTree：warn「暂不支持树形」且忽略（v2.1 决策 5）', async () => {
+    mount(ProTable, {
+      props: {
+        columns: [{ prop: 'name', label: '名称' }],
+        requestApi: async () => ({ data: [{ name: '甲' }], total: 1, pageNum: 1, pageSize: 10 }),
+        tableEngine: 'vxe-table',
+        enableTree: { defaultExpandDepth: 1 },
+      } as ProTableProps,
+    })
+    await new Promise((r) => setTimeout(r, 10))
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('vxe-table 引擎暂不支持树形'))
+  })
+
+  it('vxe 引擎 + enableRowDrag：warn「暂不支持行拖拽」且忽略（v2.1 决策 5）', async () => {
+    mount(ProTable, {
+      props: {
+        columns: [{ prop: 'name', label: '名称' }],
+        requestApi: async () => ({ data: [{ name: '甲' }], total: 1, pageNum: 1, pageSize: 10 }),
+        tableEngine: 'vxe-table',
+        enableRowDrag: true,
+      } as ProTableProps,
+    })
+    await new Promise((r) => setTimeout(r, 10))
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining('vxe-table 引擎暂不支持行拖拽')
+    )
+  })
+
+  it('vxe 引擎 + 编辑 + 树形：不 warn「编辑仅作用于叶子节点」（树形前提已被忽略，避免误导）', async () => {
+    mount(ProTable, {
+      props: {
+        columns: [{ prop: 'name', label: '名称', edit: { el: 'input' } }],
+        requestApi: async () => ({ data: [{ name: '甲' }], total: 1, pageNum: 1, pageSize: 10 }),
+        tableEngine: 'vxe-table',
+        enableRowEdit: true,
+        enableTree: { defaultExpandDepth: 1 },
+      } as ProTableProps,
+    })
+    await new Promise((r) => setTimeout(r, 10))
+    expect(console.warn).not.toHaveBeenCalledWith(expect.stringContaining('编辑仅作用于叶子节点'))
+  })
+
   it('启动校验：能力冲突时只 warn 不 throw（组件仍 mount 成功）', () => {
     const wrapper = mount(ProTable, {
       props: {

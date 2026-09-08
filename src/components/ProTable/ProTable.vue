@@ -97,6 +97,7 @@ const { rowEdit, treeData, cellSpan, v2Expose } = useTableCapabilities({
   props: propsForComposables,
   columns,
   table,
+  engine: engineRef, // v2.1 决策 5：vxe 引擎不支持树形/行拖拽，由能力层检出 warn + 忽略
   // v2.0 行拖拽：tbody DOM 由 capabilities 内部透传给 useRowDrag，挂载生命周期自持
   // （onMounted + watch data 自动重挂），此处仅需提供模板 ref 的 DOM 访问口
   getTbody: () => {
