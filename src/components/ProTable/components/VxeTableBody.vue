@@ -57,6 +57,25 @@ const engineLoading = ref(true)
 const vxeTableComp = shallowRef<unknown>(null)
 const vxeColumnComp = shallowRef<unknown>(null)
 
+/**
+ * vxe 表格组件实例（vxe v4 setup 返回 $xeTable 全量方法，模板 ref 可直接调 recalculate）。
+ * 类型只声明用到的 recalculate —— 动态组件实例无静态类型可引（vxe 类型链依赖未安装的 vxe-pc-ui）
+ */
+const vxeTableInst = ref<{ recalculate?: (reFull?: boolean) => Promise<unknown> } | null>(null)
+
+/**
+ * 密度切换后重算行高 —— vxe 行高变量（--vxe-ui-table-row-height-*）经隐藏尺寸元素测量后
+ * 缓存（rowHeightStore），data-density 变化不会自动触发重测，由编排层 ProTable.handleDensityChange
+ * 在切密度后调用（el 引擎行高是纯 CSS，无需此步）
+ *
+ * @see [`../../styles/element-protable-overwrite.scss`](../../styles/element-protable-overwrite.scss) 密度变量覆盖机制
+ */
+defineExpose({
+  recalculate: () => {
+    void vxeTableInst.value?.recalculate?.()
+  },
+})
+
 const { loadVxeTable } = useVxeTable()
 
 onMounted(async () => {
@@ -130,6 +149,7 @@ function handleCellDblclick(payload: { row: Record<string, unknown> }): void {
   <component
     :is="vxeTableComp"
     v-else-if="vxeTableComp"
+    ref="vxeTableInst"
     :data="rows"
     :row-config="{ keyField: rowKey ?? 'id' }"
     :sort-config="hasCustomSort(columns) ? { remote: true } : undefined"

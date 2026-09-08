@@ -32,11 +32,19 @@ vi.mock('./composables/useVxeTable', () => ({
   }),
 }))
 
+/** VxeTable stub 的 recalculate spy 列表 —— setup 返回 render 函数时实例不暴露方法，改用模块级收集 */
+const vxeRecalculateSpies: Array<ReturnType<typeof vi.fn>> = []
+
 /** VxeTable stub：接收 VxeTableBody 模板绑定的事件（emits 声明后 $emit 才受控） */
 const VxeTableStub = defineComponent({
   name: 'VxeTableStub',
   emits: ['sort-change', 'checkbox-change', 'checkbox-all', 'cell-dblclick'],
-  setup(_, { slots }) {
+  setup(_, { slots, expose }) {
+    // recalculate spy：锁定「密度切换后编排层触发 vxe 行高重算」（行高变量测量有缓存）。
+    // 经 expose 透出以模拟真实 vxe v4（setup 返回 $xeTable，recalculate 在实例代理上可用）
+    const recalculate = vi.fn()
+    vxeRecalculateSpies.push(recalculate)
+    expose({ recalculate })
     return () => h('div', { class: 'vxe-table-stub' }, slots.default?.())
   },
 })
@@ -207,13 +215,15 @@ describe('ProTable v2.1 引擎切换', () => {
     await nextTick()
     expect(wrapper.findComponent({ name: 'ElDrawer' }).props('modelValue')).toBe(true)
 
-    // 密度：切换按钮更新根 div data-density（vxe 引擎下 CSS 选择器已对齐 .vxe-body--row）
+    // 密度：切换按钮更新根 div data-density（vxe 行高走 CSS 变量 --vxe-ui-table-row-height-* 覆盖，
+    // 测量结果有缓存，需触发 vxe recalculate 重算行高）
     const compactBtn = wrapper
       .findAllComponents({ name: 'ElButton' })
       .find((b) => b.text() === '紧凑')
     await compactBtn?.trigger('click')
     await nextTick()
     expect(wrapper.find('.vv-pro-table').attributes('data-density')).toBe('compact')
+    expect(vxeRecalculateSpies.at(-1)).toHaveBeenCalled()
   })
 
   it('列设置拖拽排序后列组件全量 remount（key 带序位，对齐 vxe 按挂载序注册列的机制）', async () => {

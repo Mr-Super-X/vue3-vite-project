@@ -121,6 +121,9 @@ watch(
 /** v2.0 el-table 实例 ref —— 供 getTbody 查询 tbody DOM（行拖拽挂载点；P1 起指向 ElementTableBody 实例，$el 透传到底层 ElTable） */
 const proTableEl = ref<{ $el?: HTMLElement } | null>(null)
 
+/** v2.1 vxe 引擎分支实例 ref —— 目前用于密度切换后触发 vxe 行高重算（见 handleDensityChange） */
+const proTableVxe = ref<InstanceType<typeof VxeTableBody> | null>(null)
+
 /** v2.0 单元格合并：data/columns 变化时重新构建 spanMethod 缓存 */
 watch(
   [() => table.data.value, () => props.columns],
@@ -142,9 +145,16 @@ function handleSizeChange(s: number): void {
   table.setPageSize(s)
 }
 
-/** 表格密度切换桥接 */
+/**
+ * 表格密度切换桥接。
+ * vxe 引擎需额外触发行高重算：vxe 行高变量（--vxe-ui-table-row-height-*）测量结果有缓存，
+ * data-density 变更不会自动重测（el 引擎行高是纯 CSS 即时生效，无需此步）
+ */
 function handleDensityChange(d: TableDensity): void {
   table.setDensity(d)
+  if (engineRef.value === 'vxe-table') {
+    nextTick(() => proTableVxe.value?.recalculate())
+  }
 }
 
 /**
@@ -265,6 +275,7 @@ defineExpose({
         <!-- v2.1 P3：vxe-table 引擎分支（无树形/拖拽；加载失败由 engine-fallback 回退） -->
         <VxeTableBody
           v-else
+          ref="proTableVxe"
           :rows="(table.data.value ?? []) as Record<string, unknown>[]"
           :columns="sortedColumnsLoose"
           :row-key="props.rowKey"

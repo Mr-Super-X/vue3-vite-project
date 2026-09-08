@@ -98,33 +98,50 @@
   }
 
   /* ─────────── 表格密度（紧凑/默认/宽松）切换 ─────────── */
-  /* element-plus 2.x 没有内置 density prop 控制行高，
-     用 ProTable 根 div 的 data-density 属性 + CSS 变量手动控制行高；
-     vxe-table 引擎无 density 概念，选择器对齐 vxe body 行 class（.vxe-body--row）同步三档 */
 
+  /* element-plus 2.x 没有内置 density prop 控制行高，
+     用 ProTable 根 div 的 data-density 属性 + CSS 手动控制行高 */
   &[data-density='compact'] .el-table__row td {
     height: 32px;
     padding: 4px 0;
-  }
-  &[data-density='compact'] .vxe-body--row td {
-    height: 32px;
-    /* vxe 单元格保留水平 padding（vxe 默认 ~8px），清零会导致内容贴边 */
-    padding: 4px 8px;
   }
   &[data-density='default'] .el-table__row td {
     height: 48px;
     padding: 8px 0;
   }
-  &[data-density='default'] .vxe-body--row td {
-    height: 48px;
-    padding: 8px 8px;
-  }
   &[data-density='loose'] .el-table__row td {
     height: 64px;
     padding: 12px 0;
   }
-  &[data-density='loose'] .vxe-body--row td {
-    height: 64px;
-    padding: 12px 8px;
+
+  /* vxe-table 引擎的密度对齐不能沿用「td 设 height/padding」：vxe 由 JS 测量 CSS 变量
+     --vxe-ui-table-row-height-*（隐藏尺寸元素 .vxe-table-var-*），把结果以「内联 min-height」
+     写进 .vxe-cell（vxe-table es/table/src/body.js），对 td 设高会被内联 min-height 顶开
+     （实测 default 档行高 48+16=64px，双引擎并排差 ~180px）。故密度档位改为覆盖该组变量；
+     四个尺寸键同值，规避 vxe size 解析路径差异。注意测量结果有缓存，动态切密度后
+     需调 VxeTableBody.recalculate()（ProTable.handleDensityChange 触发） */
+  &[data-density='compact'] {
+    --vxe-ui-table-row-height-default: 32px;
+    --vxe-ui-table-row-height-medium: 32px;
+    --vxe-ui-table-row-height-small: 32px;
+    --vxe-ui-table-row-height-mini: 32px;
+
+    /* 单元格垂直 padding 不缩会顶住 32px 行高（22px 行高内容 + 16px padding = 38px） */
+    .vxe-body--row .vxe-cell {
+      padding-top: 4px;
+      padding-bottom: 4px;
+    }
+  }
+  &[data-density='default'] {
+    --vxe-ui-table-row-height-default: 48px;
+    --vxe-ui-table-row-height-medium: 48px;
+    --vxe-ui-table-row-height-small: 48px;
+    --vxe-ui-table-row-height-mini: 48px;
+  }
+  &[data-density='loose'] {
+    --vxe-ui-table-row-height-default: 64px;
+    --vxe-ui-table-row-height-medium: 64px;
+    --vxe-ui-table-row-height-small: 64px;
+    --vxe-ui-table-row-height-mini: 64px;
   }
 }
