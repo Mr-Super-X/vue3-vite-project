@@ -28,7 +28,6 @@
 ## 已知限制（第一版）
 
 - vxe-table 引擎 UI 渲染细节未交付（仅动态 import 骨架）
-- sortablejs 拖拽实例化未接入 ColSetting
 - 集成测试 `ProTable.spec.ts` 未交付（仅单元测试 30 个）
 
 后续迭代按需求补充。

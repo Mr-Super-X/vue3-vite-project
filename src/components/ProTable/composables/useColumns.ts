@@ -29,7 +29,7 @@ export interface UseColumnsReturn {
   colSettingVisible: Ref<boolean>
   toggleVisible: (prop: string) => void
   toggleFixed: (prop: string, fixed: 'left' | 'right' | undefined) => void
-  reorderColumns: (payload: { from: string; to: string }) => void
+  setColumnOrder: (order: string[]) => void
   setVisibleKeys: (keys: string[]) => void
   setFixedKeys: (keys: string[]) => void
   resetToDefault: () => void
@@ -56,6 +56,13 @@ export function useColumns(options: UseColumnsOptions): UseColumnsReturn {
     ? (Local.get(storageKey) as PersistedSetting | null)
     : null
 
+  /**
+   * 列顺序（含隐藏列）—— 拖拽排序的响应式数据源。
+   * 不能用 setup 时的一次性 persisted.order 快照：快照非响应式，
+   * 拖拽更新 allColumns 后 sortedColumns 仍按旧快照排序，表格列序不更新（历史 bug）。
+   */
+  const columnOrder = ref<string[]>(persisted?.order ?? props.columns.map((c) => c.prop))
+
   /** 是否隐藏（支持 boolean 与 Ref<boolean>） */
   function isHidden(col: ProColumn): boolean {
     if (typeof col.hidden === 'boolean') return col.hidden
@@ -66,18 +73,16 @@ export function useColumns(options: UseColumnsOptions): UseColumnsReturn {
   }
 
   const sortedColumns = computed(() => {
-    const order = persisted?.order
+    const order = columnOrder.value
     const arr: ProColumn[] = [...allColumns.value]
-    if (order) {
-      arr.sort((a, b) => {
-        const ia = order.indexOf(a.prop)
-        const ib = order.indexOf(b.prop)
-        if (ia === -1 && ib === -1) return 0
-        if (ia === -1) return 1
-        if (ib === -1) return -1
-        return ia - ib
-      })
-    }
+    arr.sort((a, b) => {
+      const ia = order.indexOf(a.prop)
+      const ib = order.indexOf(b.prop)
+      if (ia === -1 && ib === -1) return 0
+      if (ia === -1) return 1
+      if (ib === -1) return -1
+      return ia - ib
+    })
     // 过滤逻辑：col.hidden = true 隐藏 + 不在 visibleKeys 中也隐藏
     return arr.filter((c) => !isHidden(c) && visibleKeys.value.includes(c.prop))
   })
@@ -88,7 +93,9 @@ export function useColumns(options: UseColumnsOptions): UseColumnsReturn {
   function persist(): void {
     if (!storageKey) return
     const setting: PersistedSetting = {
-      order: sortedColumns.value.map((c) => c.prop),
+      // 保存完整列顺序（含隐藏列）：抽屉渲染 allColumns（含隐藏列），
+      // 若只存可见列顺序，隐藏列重新显示后会漂移到最后
+      order: columnOrder.value,
       visible: Object.fromEntries(allColumns.value.map((c) => [c.prop, !isHidden(c)])),
       fixed: Object.fromEntries(
         allColumns.value.filter((c) => c.fixed).map((c) => [c.prop, c.fixed ?? 'left'])
@@ -122,17 +129,19 @@ export function useColumns(options: UseColumnsOptions): UseColumnsReturn {
     persist()
   }
 
-  function reorderColumns(payload: { from: string; to: string }): void {
-    const arr = [...allColumns.value]
-    const fromIdx = arr.findIndex((c) => c.prop === payload.from)
-    const toIdx = arr.findIndex((c) => c.prop === payload.to)
-    if (fromIdx === -1 || toIdx === -1) return
-    const moved = arr.splice(fromIdx, 1)[0]
-    if (!moved) return
-    // splice 后 toIdx 可能偏移：fromIdx < toIdx 时 to 需要往前移 1
-    const insertIdx = fromIdx < toIdx ? toIdx - 1 : toIdx
-    arr.splice(insertIdx, 0, moved)
-    allColumns.value = arr
+  /**
+   * 应用列拖拽后的完整顺序（ColSetting sortablejs onEnd 产出，col.prop 数组）
+   * - 同步 columnOrder（sortedColumns 的排序依据）与 allColumns（抽屉渲染依据）
+   * - order 中未包含的列（如后追加的新列）按原相对顺序排到最后
+   */
+  function setColumnOrder(order: string[]): void {
+    columnOrder.value = [...order]
+    const rank = new Map(order.map((prop, index) => [prop, index]))
+    allColumns.value = [...allColumns.value].sort((a, b) => {
+      const ia = rank.get(a.prop) ?? Number.MAX_SAFE_INTEGER
+      const ib = rank.get(b.prop) ?? Number.MAX_SAFE_INTEGER
+      return ia - ib
+    })
     persist()
   }
 
@@ -146,12 +155,13 @@ export function useColumns(options: UseColumnsOptions): UseColumnsReturn {
     persist()
   }
 
-  /** 恢复默认：清 Local 存储 + 重置 allColumns + visibleKeys（附录 A #6） */
+  /** 恢复默认：清 Local 存储 + 重置 allColumns + visibleKeys + 列顺序（附录 A #6） */
   function resetToDefault(): void {
     if (!storageKey) return
     Local.remove(storageKey)
     allColumns.value = [...props.columns]
     visibleKeys.value = props.columns.map((c) => c.prop) // 重置可见列（含 hidden=false + Ref<boolean>）
+    columnOrder.value = props.columns.map((c) => c.prop) // 同步重置列顺序，否则恢复默认后顺序仍是拖拽后的
     // 重置所有列的 hidden 状态
     for (const col of allColumns.value) {
       if (typeof col.hidden === 'boolean') {
@@ -178,7 +188,7 @@ export function useColumns(options: UseColumnsOptions): UseColumnsReturn {
     colSettingVisible,
     toggleVisible,
     toggleFixed,
-    reorderColumns,
+    setColumnOrder,
     setVisibleKeys,
     setFixedKeys,
     resetToDefault,

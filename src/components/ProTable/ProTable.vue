@@ -475,6 +475,7 @@ defineExpose({
         :visible-keys="columns.visibleKeys.value"
         :fixed-keys="columns.fixedKeys.value"
         @update:visible-keys="(keys) => columns.setVisibleKeys(keys)"
+        @reorder="(order) => columns.setColumnOrder(order)"
         @reset-to-default="columns.resetToDefault"
       />
     </div>

@@ -2,6 +2,15 @@
 
 ## 未发布
 
+### 🐛 Bug Fixes | ProTable 列设置拖拽排序不生效（双根因修复）
+
+* **fix(ProTable):** 列设置抽屉拖拽后表格列顺序不更新
+  * 根因 1（`ColSetting.vue`）：sortablejs 拖拽过程中即移动真实 DOM 节点，旧实现取 `children[newIndex]` 作目标列，但该位置恰为被拖元素本身 → `to === from` 被守卫拦截，`reorder` 事件从未发出。改为 `onStart` 捕获旧顺序、`onEnd` 从 DOM 读取完整新顺序 emit（`reorder: [string[]]`）+ 还原 DOM 让 Vue v-for 保持唯一数据源
+  * 根因 2（`useColumns.ts`）：`sortedColumns` 按 setup 时的一次性 `persisted.order` 快照排序（非响应式），即使事件到达、allColumns 已重排，表格仍按旧顺序渲染。改为响应式 `columnOrder` ref；`reorderColumns(from, to)` 重构为 `setColumnOrder(order)`
+  * `resetToDefault` 同步重置列顺序；持久化 order 由"仅可见列"改为"完整列顺序"（隐藏列重新显示后位置不再漂移）
+  * `src/types/sortablejs.d.ts` 补 `onStart` 回调声明
+* **test(ProTable):** useColumns 增 4 用例（setColumnOrder 排序 / 持久化 order 存在时回归 / order 缺列容错 / resetToDefault 恢复顺序）；ColSetting 增 onEnd 回归用例（emit 完整顺序 + DOM 还原）
+
 ### ✨ Features | ProTable v2.0 —— 4 类核心能力扩展
 
 * **feat(ProTable):** 行内编辑（双击进入 + 多行并行 + 异步校验 + 草稿保留）
