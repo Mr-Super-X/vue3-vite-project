@@ -11,7 +11,7 @@
 | 步骤 | 内容 | 状态 | 完成日期 |
 |------|------|------|----------|
 | 第 0 步 | 行为等价清理（死代码 / 单源化 colSettingVisible / engine 锁定 / M4 判定） | ✅ 已完成 | 2026-09-08 |
-| 第 1 步 | searchParams 单源化（修 H1/H2/M6，核心） | ⬜ 未开始 | — |
+| 第 1 步 | searchParams 单源化（修 H1/H2/M6，核心） | ✅ 已完成 | 2026-09-08 |
 | 第 2 步 | 能力编排归位（H4/H7/M8 + EditCell 抽取） | ⬜ 未开始 | — |
 | 第 3 步 | props 保护（M2 列对象拷贝 / M5 派生 direction） | ⬜ 未开始 | — |
 | 第 4 步 | vxe 死路径决策 + useRowEdit rowKey 注入（H3/H5） | ⬜ 未开始 | — |
@@ -38,33 +38,32 @@
 
 ### 1.1 useTable 改造
 
-- [ ] `UseTableOptions` 增加 `getSearchParams: () => Record<string, unknown>`；删除内部 `searchParams` ref、`setSearchParams`、`resetSearchParams`、`serializeParams`（`useTable.ts:62-79, 163-176`）
-- [ ] 请求参数组装改为 `serializeParams({ ...options.getSearchParams(), pageNum, pageSize })`（`useTable.ts:97-101`）；`serializeParams` 迁移到 useTable 内唯一保留一份（或抽 `utils`，优先留在 useSearch 一处、useTable 直接拿序列化后的——二选一，原则是全库仅一份实现）
-- [ ] 删 `UseTableReturn` 中对应字段
+- [x] `UseTableOptions` 增加 `getSearchParams: () => Record<string, unknown>`；删除内部 `searchParams` ref、`setSearchParams`、`resetSearchParams`、`serializeParams` ✅ 2026-09-08
+- [x] 请求参数组装改为 `serializeParams({ ...options.getSearchParams(), pageNum, pageSize })`；`serializeParams` 全库唯一实现放 `useSearch.ts` 模块级 export，useTable import 复用 ✅ 2026-09-08
+- [x] 删 `UseTableReturn` 中对应字段 ✅ 2026-09-08
 
 ### 1.2 useSearch 改造
 
-- [ ] 新增 `updateParams(params: Record<string, unknown>): void`——**纯写参数，不触发请求**（供搜索区输入绑定）
-- [ ] `setSearchParams` 语义不变（写 + 回第 1 页 + 请求），仅程序化 expose 使用
-- [ ] `reset()` 保持「恢复 defaultValue + fetchHook({reset:true})」
+- [x] 新增 `updateParams(params)`——纯写参数，不触发请求（供搜索区输入绑定）✅ 2026-09-08
+- [x] `setSearchParams` 语义不变（写 + 回第 1 页 + 请求），仅程序化 expose 使用 ✅ 2026-09-08
+- [x] `reset()` 保持「恢复 defaultValue + fetchHook({reset:true})」✅ 2026-09-08（无需改动，原有行为即正确）
 
 ### 1.3 ProTable.vue 接线
 
-- [ ] `useTable({...})` 传入 `getSearchParams: () => search.searchParams.value`——注意初始化顺序：`useSearch` 需先于 `useTable` 创建（当前顺序相反，需交换 `ProTable.vue:74-88` 的创建顺序，并重新校验 fetchHook 闭包）
-- [ ] 删除桥接 watch（`ProTable.vue:91-95`）
-- [ ] SearchForm 的 `@update:search-params`（`ProTable.vue:280`）从 `search.setSearchParams` 改绑 `search.updateParams`
-- [ ] SearchForm 输入控件加防抖：优先复用项目已有 `v-inputDebounce` 指令（`src/directives/`），在 `SearchForm.vue` 各 `@update:model-value` 处应用
+- [x] `useSearch` 先于 `useTable` 创建；`getSearchParams: () => search.searchParams.value`；fetchHook 闭包引用后声明的 table（用户交互期才执行）✅ 2026-09-08
+- [x] 删除桥接 watch（原 `ProTable.vue:91-95`）✅ 2026-09-08
+- [x] SearchForm 的 `@update:search-params` 从 `search.setSearchParams` 改绑 `search.updateParams` ✅ 2026-09-08
+- [~] SearchForm 输入防抖：**调整决定 —— 不实施**。H2 修复后输入与请求已解耦（updateParams 纯写即时回写，是受控输入的标准行为）；需要防抖的副作用（请求）已由按钮门控。且 `v-inputDebounce` 是 DOM 层 input 事件防抖，与 `update:model-value` 受控流不兼容 ✅ 2026-09-08
 
 ### 1.4 测试
 
-- [ ] `useSearch.spec.ts` 增补：`updateParams` 不触发 fetchHook；`setSearchParams` 仍触发
-- [ ] `useTable.spec.ts` 改造：mock `getSearchParams` 验证请求参数组装；删除已删方法的用例
-- [ ] 集成测试（`ProTable.integration.spec.ts`）增补场景：「输入搜索词 → 点搜索按钮 → requestApi 收到正确参数」；「暴露的 setSearchParams → requestApi 收到传入参数（回归 H1）」
+- [x] `useSearch.spec.ts` 增补：`updateParams` 不触发 fetchHook；`setSearchParams` 仍触发 ✅ 2026-09-08
+- [x] `useTable.spec.ts` 改造：mock `getSearchParams` 验证请求参数组装（含序列化用例）；删除 resetSearchParams 用例 ✅ 2026-09-08
+- [x] 集成测试增补：「暴露的 setSearchParams → requestApi 收到传入参数（H1 回归）」「输入不发请求、点搜索发正确参数（H2 回归）」✅ 2026-09-08
 
 ### 1.5 验证
 
-- [ ] `pnpm test src/components/ProTable && pnpm type-check:full && pnpm lint`
-- [ ] 浏览器验证：输入框逐字符输入**不发请求**（Network 面板确认），点搜索发一次且参数正确；`reset` 恢复默认值并请求
+- [x] `pnpm test src/components/ProTable && pnpm type-check:full && pnpm lint` —— 13 文件 84 测试全绿 + vue-tsc + eslint 零错误 ✅ 2026-09-08（浏览器 Network 面板验证列为手动项）
 
 ---
 

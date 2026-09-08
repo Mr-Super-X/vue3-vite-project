@@ -67,4 +67,13 @@ describe('useSearch', () => {
     expect(search.searchParams.value).toEqual({ name: '李四', status: 1, tenantId: 't1' })
     expect(fetchHook).toHaveBeenCalled()
   })
+
+  it('updateParams 纯写参数且不触发 fetchHook（H2 修复：输入与请求解耦）', () => {
+    const engine = ref('element-plus' as const)
+    const fetchHook = vi.fn()
+    const search = useSearch({ props: makeProps(), engine, fetchHook })
+    search.updateParams({ name: '王五' })
+    expect(search.searchParams.value).toEqual({ name: '王五', status: null, tenantId: 't1' })
+    expect(fetchHook).not.toHaveBeenCalled()
+  })
 })

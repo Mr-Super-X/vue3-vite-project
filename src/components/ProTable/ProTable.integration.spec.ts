@@ -105,4 +105,46 @@ describe('ProTable v2.0 集成（冲突矩阵 + 启动校验）', () => {
     expect(wrapper1.exists()).toBe(true)
     expect(wrapper2.exists()).toBe(true)
   })
+
+  it('H1 回归：程序化 setSearchParams 的请求带传入参数（而非默认参数）', async () => {
+    const requestApi = vi.fn().mockResolvedValue({ data: [], total: 0, pageNum: 1, pageSize: 10 })
+    const wrapper = mount(ProTable, {
+      props: {
+        columns: [{ prop: 'name', label: '名称', search: { el: 'input', defaultValue: '' } }],
+        requestApi,
+      } as unknown as ProTableProps,
+    })
+    await new Promise((r) => setTimeout(r, 10)) // 等待 onMounted 首次请求
+    const vm = wrapper.vm as unknown as {
+      setSearchParams: (p: Record<string, unknown>) => Promise<void>
+    }
+    await vm.setSearchParams({ name: '李四' })
+    await new Promise((r) => setTimeout(r, 10))
+    const calls = requestApi.mock.calls
+    expect(calls[calls.length - 1]![0]).toMatchObject({ name: '李四' })
+  })
+
+  it('H2 回归：搜索框输入不发请求，点搜索按钮才发且参数正确', async () => {
+    const requestApi = vi.fn().mockResolvedValue({ data: [], total: 0, pageNum: 1, pageSize: 10 })
+    const wrapper = mount(ProTable, {
+      props: {
+        columns: [{ prop: 'name', label: '名称', search: { el: 'input', defaultValue: '' } }],
+        requestApi,
+      } as unknown as ProTableProps,
+    })
+    await new Promise((r) => setTimeout(r, 10)) // 首次请求
+    const initialCalls = requestApi.mock.calls.length
+
+    // 输入关键词（不点搜索）：不应触发新请求
+    await wrapper.find('input').setValue('张三')
+    await new Promise((r) => setTimeout(r, 10))
+    expect(requestApi.mock.calls.length).toBe(initialCalls)
+
+    // 点搜索按钮：触发一次请求且带输入参数
+    await wrapper.find('[data-test="search-btn"]').trigger('click')
+    await new Promise((r) => setTimeout(r, 10))
+    expect(requestApi.mock.calls.length).toBe(initialCalls + 1)
+    const calls = requestApi.mock.calls
+    expect(calls[calls.length - 1]![0]).toMatchObject({ name: '张三' })
+  })
 })

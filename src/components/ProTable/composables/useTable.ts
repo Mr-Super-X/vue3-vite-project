@@ -19,6 +19,7 @@
  */
 import { ref, watch, onMounted, type ComponentPublicInstance, type Ref } from 'vue'
 import { useRequest } from '@composables/useRequest' // 项目 composable auto-import
+import { serializeParams } from './useSearch' // 第 1 步单源化：序列化唯一实现
 import type { ProTableProps, TableDensity, TableEngine } from '../types'
 
 export interface UseTableOptions {
@@ -26,6 +27,11 @@ export interface UseTableOptions {
   /** 列上下文（useColumns 返回值） */
   columns: { allColumns?: Ref<unknown[]>; sortedColumns?: Ref<unknown[]> }
   engine: Ref<TableEngine>
+  /**
+   * 读取当前搜索参数 —— 由 ProTable.vue 注入 useSearch.searchParams（单一数据源）。
+   * 第 1 步单源化：useTable 不再自持 searchParams 副本（原双份 + watch 桥接导致 H1 参数错配）。
+   */
+  getSearchParams: () => Record<string, unknown>
 }
 
 export interface UseTableReturn {
@@ -38,7 +44,6 @@ export interface UseTableReturn {
   selectedRows: Ref<Record<string, unknown>[]>
   density: Ref<TableDensity>
   tableRef: Ref<ComponentPublicInstance | null>
-  searchParams: Ref<Record<string, unknown>>
   refresh: () => Promise<void>
   clearSelection: () => void
   getSelectedRows: () => Record<string, unknown>[]
@@ -46,31 +51,10 @@ export interface UseTableReturn {
   setPage: (page: number) => void
   setPageSize: (size: number) => void
   setDensity: (d: TableDensity) => void
-  setSearchParams: (params: Record<string, unknown>) => void
-  resetSearchParams: () => void
 }
 
 export function useTable(options: UseTableOptions): UseTableReturn {
   const { props } = options
-
-  // 内部 searchParams：从 props.columns.search.defaultValue 初始化（不依赖 useSearch）
-  const initialSearchParams: Record<string, unknown> = { ...(props.initParam ?? {}) }
-  for (const col of props.columns) {
-    if (col.search) {
-      initialSearchParams[col.prop] = col.search.defaultValue ?? null
-    }
-  }
-  const searchParams = ref<Record<string, unknown>>(initialSearchParams)
-
-  /** 序列化参数（剔除 undefined/null/''，保留 0/false） */
-  function serializeParams(params: Record<string, unknown>): Record<string, unknown> {
-    const out: Record<string, unknown> = {}
-    for (const [key, value] of Object.entries(params)) {
-      if (value === undefined || value === null || value === '') continue
-      out[key] = value
-    }
-    return out
-  }
 
   const data = ref<Record<string, unknown>[] | null>(null)
   const total = ref(0)
@@ -84,7 +68,7 @@ export function useTable(options: UseTableOptions): UseTableReturn {
   const request = useRequest(
     async () => {
       const params = serializeParams({
-        ...searchParams.value,
+        ...options.getSearchParams(),
         pageNum: page.value,
         pageSize: pageSize.value,
       })
@@ -148,22 +132,6 @@ export function useTable(options: UseTableOptions): UseTableReturn {
     density.value = d
   }
 
-  /** 程序化设置搜索参数（ProTable.vue 通过 fetchHook 触发刷新） */
-  function setSearchParams(params: Record<string, unknown>): void {
-    Object.assign(searchParams.value, params)
-  }
-
-  /** 重置搜索参数到 defaultValue */
-  function resetSearchParams(): void {
-    const reset: Record<string, unknown> = { ...(props.initParam ?? {}) }
-    for (const col of props.columns) {
-      if (col.search) {
-        reset[col.prop] = col.search.defaultValue ?? null
-      }
-    }
-    searchParams.value = reset
-  }
-
   // 首次 mount 触发请求
   onMounted(() => {
     void refresh()
@@ -184,7 +152,6 @@ export function useTable(options: UseTableOptions): UseTableReturn {
     selectedRows,
     density,
     tableRef,
-    searchParams,
     refresh,
     clearSelection,
     getSelectedRows,
@@ -192,7 +159,5 @@ export function useTable(options: UseTableOptions): UseTableReturn {
     setPage,
     setPageSize,
     setDensity,
-    setSearchParams,
-    resetSearchParams,
   }
 }

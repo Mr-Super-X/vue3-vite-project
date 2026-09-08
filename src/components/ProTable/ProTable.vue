@@ -55,32 +55,26 @@ const engineRef: Ref<'element-plus' | 'vxe-table'> = resolveEngine(props.tableEn
 // ProTableProps 严格不允 undefined。cast 一次解决（CLAUDE.md §四严禁 any；用 unknown 收口）
 const propsForComposables = props as unknown as ProTableProps
 
-// 注意顺序：useSearch 需要 useTable.refresh 作 fetchHook；
-// useTable 需要 useSearch.searchParams 序列化参数；形成循环。
-// 解决方案：useTable 创建时不传 search（仅用 props.columns.search 初始化 searchParams）；
-//           useSearch 创建时拿已存在的 table.refresh 作 fetchHook。
+// 注意顺序（第 1 步单源化）：useSearch 先创建并持有唯一 searchParams；
+// useTable 通过 getSearchParams 闭包读取。fetchHook 闭包内引用后声明的 table ——
+// 仅在用户交互/程序化调用时执行，此时 table 已初始化（避免 useSearch ↔ useTable 循环依赖）。
 const columns = useColumns({ props: propsForComposables, engine: engineRef })
-const table = useTable({ props: propsForComposables, columns, engine: engineRef })
 
 // useSearch 仅承担"用户搜索 UI ↔ 参数"职责，refresh 由 useTable.fetchHook 闭包触发
 const search = useSearch({
   props: propsForComposables,
   engine: engineRef,
   fetchHook: async (opts) => {
-    if (opts?.reset) {
-      table.resetSearchParams()
-      table.setPage(1)
-    }
+    if (opts?.reset) table.setPage(1)
     await table.refresh()
   },
 })
-
-// useSearch.searchParams → useTable.searchParams 同步（避免重复维护）
-watch(
-  () => search.searchParams.value,
-  (v) => table.setSearchParams(v),
-  { deep: true }
-)
+const table = useTable({
+  props: propsForComposables,
+  columns,
+  engine: engineRef,
+  getSearchParams: () => search.searchParams.value,
+})
 
 // 列设置抽屉状态（单一真相源在 useColumns.colSettingVisible，见 ./composables/useColumns）
 function handleColSettingUpdate(visible: boolean): void {
@@ -259,7 +253,7 @@ defineExpose({
         :search-rows="props.searchRows"
         @search="search.search"
         @reset="search.reset"
-        @update:search-params="(v) => search.setSearchParams(v)"
+        @update:search-params="(v) => search.updateParams(v)"
       />
       <TableHeader
         :columns="columns.allColumns.value"

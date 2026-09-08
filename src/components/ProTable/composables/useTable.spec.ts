@@ -33,13 +33,9 @@ describe('useTable', () => {
         pageSize: 10,
         rowKey: 'id',
       } as never,
-      search: {
-        searchParams: ref({ name: '' }),
-        serializeParams: (p: Record<string, unknown>) => p,
-        getParams: () => ({ name: '' }),
-      } as never,
       columns: {} as never,
       engine: ref('element-plus' as const),
+      getSearchParams: () => ({ name: '' }),
     }
   }
 
@@ -84,15 +80,16 @@ describe('useTable', () => {
     expect(table.total.value).toBe(99)
   })
 
-  it('resetSearchParams 恢复 defaultValue（仅重置带 search 配置的列）', () => {
+  it('refresh() 使用 getSearchParams 返回值组装请求参数（含分页 + 序列化）', async () => {
     const deps = makeDeps()
-    deps.props.columns = [
-      { prop: 'name', label: '名称', search: { el: 'input', defaultValue: '' } },
-    ] as never
+    deps.getSearchParams = () => ({ name: '张三', empty: '', nil: null })
     const table = useTable(deps)
-    table.setSearchParams({ name: '张三' })
-    table.resetSearchParams()
-    expect(table.searchParams.value).toEqual({ name: '' })
+    await table.refresh()
+    expect(deps.props.requestApi).toHaveBeenCalledWith({
+      name: '张三',
+      pageNum: 1,
+      pageSize: 10,
+    })
   })
 
   it('getSelectedRows 返回按 row-key 去重的选中', () => {

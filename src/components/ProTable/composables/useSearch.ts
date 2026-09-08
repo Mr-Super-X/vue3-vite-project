@@ -19,6 +19,19 @@ import type { ProTableProps, TableEngine } from '../types'
 /** fetchHook 回调签名 —— 由 ProTable.vue setup 注入 */
 export type FetchHook = (opts?: { reset?: boolean }) => Promise<void>
 
+/**
+ * 序列化参数：剔除 undefined / null / 空字符串（保留 0/false，附录 A #10）。
+ * 全库唯一实现 —— useTable 请求组装时复用（第 1 步单源化，消除双份拷贝）。
+ */
+export function serializeParams(params: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === '') continue
+    out[key] = value
+  }
+  return out
+}
+
 export interface UseSearchOptions {
   props: ProTableProps
   engine: Ref<TableEngine>
@@ -35,7 +48,12 @@ export interface UseSearchReturn {
   getParams: () => Record<string, unknown>
   /** 程序化设置搜索参数 + 回到第 1 页 + 刷新（保留多选，附录 A #3） */
   setSearchParams: (params: Record<string, unknown>) => Promise<void>
-  /** 序列化参数：剔除 undefined / null / 空字符串（保留 0/false，附录 A #10） */
+  /**
+   * 纯写搜索参数（不触发请求）—— 供搜索区输入控件双向绑定。
+   * H2 修复：输入与请求解耦，只有「搜索按钮 / reset / 程序化 setSearchParams」才发请求。
+   */
+  updateParams: (params: Record<string, unknown>) => void
+  /** 序列化参数（re-export 模块级 serializeParams，向后兼容） */
   serializeParams: (params: Record<string, unknown>) => Record<string, unknown>
 }
 
@@ -50,17 +68,8 @@ export function useSearch(options: UseSearchOptions): UseSearchReturn {
     }
   }
 
+  /** searchParams —— 全库唯一真相源（useTable 通过 getSearchParams 读取） */
   const searchParams = ref<Record<string, unknown>>(initialForm)
-
-  /** 序列化参数：剔除 undefined / null / 空字符串（保留 0/false，附录 A #10） */
-  function serializeParams(params: Record<string, unknown>): Record<string, unknown> {
-    const out: Record<string, unknown> = {}
-    for (const [key, value] of Object.entries(params)) {
-      if (value === undefined || value === null || value === '') continue
-      out[key] = value
-    }
-    return out
-  }
 
   /** 获取当前 searchParams 快照 */
   function getParams(): Record<string, unknown> {
@@ -83,9 +92,14 @@ export function useSearch(options: UseSearchOptions): UseSearchReturn {
     if (fetchHook) await fetchHook({ reset: true })
   }
 
+  /** 纯写搜索参数（不触发请求）—— 供搜索区输入控件绑定 */
+  function updateParams(params: Record<string, unknown>): void {
+    Object.assign(searchParams.value, params)
+  }
+
   /** 程序化设置：合并 + 回到第 1 页 + 刷新（附录 A #3 不清多选） */
   async function setSearchParams(params: Record<string, unknown>): Promise<void> {
-    Object.assign(searchParams.value, params)
+    updateParams(params)
     if (fetchHook) await fetchHook({ reset: true })
   }
 
@@ -95,6 +109,7 @@ export function useSearch(options: UseSearchOptions): UseSearchReturn {
     reset,
     getParams,
     setSearchParams,
+    updateParams,
     serializeParams,
   }
 }
