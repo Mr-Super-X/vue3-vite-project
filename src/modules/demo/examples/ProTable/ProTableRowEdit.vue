@@ -16,7 +16,7 @@
  * 4. 双击姓名 + 双击部门 → 两个字段同时进入编辑
  */
 import { ref } from 'vue'
-import type { ProColumn } from '@/components/ProTable/types'
+import type { ProColumn, ProTableExpose } from '@/components/ProTable/types'
 import ProTable from '@/components/ProTable/ProTable.vue'
 import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
@@ -68,14 +68,15 @@ const config = ref({
   },
 })
 
-const tableRef = ref<InstanceType<typeof ProTable>>()
+// 泛型 SFC 的 typeof ProTable 不是构造器，InstanceType 不适用 —— 直接用 defineExpose 暴露的契约类型
+const tableRef = ref<ProTableExpose>()
 
 async function handleSaveAll(): Promise<void> {
-  await tableRef.value?.saveEdit()
+  await tableRef.value?.saveEdit?.()
 }
 
 function handleCancelAll(): void {
-  tableRef.value?.cancelEdit()
+  tableRef.value?.cancelEdit?.()
 }
 
 /* ───────────── 目录导航 ───────────── */

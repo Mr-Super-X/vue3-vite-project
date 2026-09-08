@@ -1,10 +1,14 @@
-<script setup lang="ts">
+<script setup lang="ts" generic="T extends object = Record<string, unknown>">
 /**
  * ProTable —— 配置驱动的表格组件（spec §4 文件清单 / §五组件树 / §六数据流）
  *
  * 编排层角色：持有 3 个 composables 的解构输出，把状态透传给子组件
  * SearchForm / TableHeader / ElTable / ElPagination / ColSetting。
  * 业务编排收敛到 composables/*.ts（CLAUDE.md §一 #11 Hook 拆分）。
+ *
+ * 泛型 T = 行数据类型（M1）：render 回调的 row 精确到 T；默认 Record<string, unknown>
+ * 向后兼容，存量调用零改动。bivariance（方法语法）保证 ProColumn<T> 可赋值
+ * 给下游非泛型子组件（EditCell/SearchForm/TableHeader/ColSetting）。
  *
  * @see [`./composables/useSearch`](./composables/useSearch.ts) 搜索参数管理
  * @see [`./composables/useColumns`](./composables/useColumns.ts) 列解析与持久化
@@ -54,8 +58,8 @@ defineOptions({ inheritAttrs: false })
 const engineRef: Ref<'element-plus' | 'vxe-table'> = resolveEngine(props.tableEngine)
 
 // exactOptionalPropertyTypes 兼容：withDefaults 返回的 props 含 undefined optional，
-// ProTableProps 严格不允 undefined。cast 一次解决（CLAUDE.md §四严禁 any；用 unknown 收口）
-const propsForComposables = props as unknown as ProTableProps
+// ProTableProps<T> 严格不允 undefined。cast 一次解决（CLAUDE.md §四严禁 any；用 unknown 收口）
+const propsForComposables = props as unknown as ProTableProps<T>
 
 // 注意顺序（第 1 步单源化）：useSearch 先创建并持有唯一 searchParams；
 // useTable 通过 getSearchParams 闭包读取。fetchHook 闭包内引用后声明的 table ——
@@ -124,8 +128,9 @@ watch(
 )
 
 /** 统一取行 rowKey（props.rowKey 字段，默认 'id'）—— 模板与事件桥接共用 */
-function rowKeyOf(row: Record<string, unknown>): string | number {
-  return row[props.rowKey ?? 'id'] as string | number
+function rowKeyOf(row: unknown): string | number {
+  // unknown 入参解耦 T：树形扁平行含 _level/_hasChildren 附加字段，事件行来自 el-table（any）
+  return (row as Record<string, unknown>)[props.rowKey ?? 'id'] as string | number
 }
 
 /** v2.0 双击单元格触发编辑（element-plus el-table cell-dblclick） */
@@ -145,17 +150,21 @@ function handleExpandChange(row: Record<string, unknown>, _expandedRows: unknown
 /**
  * 解析列渲染（enum → ElTag；render → 调用返回 VNode；默认 → 字段值）
  *
+ * 行字段读取经 record 局部转换：T extends object 无索引签名，
+ * render 回调则直接拿到 T（泛型化的核心收益）。
+ *
  * @group ProTable 组件
  */
-function resolveCell(col: ProColumn, row: Record<string, unknown>, index: number): unknown {
+function resolveCell(col: ProColumn<T>, row: T, index: number): unknown {
   if (col.render) return col.render({ row, column: col, $index: index })
+  const record = row as Record<string, unknown>
   if (col.enum) {
-    const entry = col.enum.find((e) => e.value === row[col.prop])
+    const entry = col.enum.find((e) => e.value === record[col.prop])
     if (entry) {
       return h(ElTag, { type: entry.tagType ?? 'info' }, () => entry.label)
     }
   }
-  return row[col.prop]
+  return record[col.prop]
 }
 
 /**
@@ -184,9 +193,12 @@ function handleDensityChange(d: TableDensity): void {
   table.setDensity(d)
 }
 
-/** 多选变化桥接 */
+/**
+ * 多选变化桥接 —— el-table 事件行为 Record 视角（非泛型），cast 收口到 T[]。
+ * cast 安全性：行对象运行时同一引用，仅类型视角转换。
+ */
 function handleSelectionChange(rows: Record<string, unknown>[]): void {
-  table.setSelectedRows(rows)
+  table.setSelectedRows(rows as unknown as T[])
 }
 
 /** 是否空数据（给 AsyncState 三态用） */
@@ -197,6 +209,16 @@ function isEmpty(): boolean {
 /* ───────────── BEM 命名空间 ───────────── */
 
 const bem = createNamespace('pro-table')
+
+/**
+ * 下游子组件（SearchForm/TableHeader/ColSetting/EditCell）消费非泛型 ProColumn（默认 T）。
+ * T 在组件内未解析，ProColumn<T> 与 ProColumn 双向均不可赋值
+ * （bivariance 仅对具体类型生效， unresolved T 两头都不满足），
+ * 故模板绑定处提供 Record 视角 computed 收口 cast —— 运行时同一引用。
+ */
+const searchColumnsLoose = computed(() => columns.searchColumns as ProColumn[])
+const allColumnsLoose = computed(() => columns.allColumns.value as ProColumn[])
+const sortedColumnsLoose = computed(() => columns.sortedColumns.value as ProColumn[])
 
 /* ───────────── defineExpose（spec §八） ───────────── */
 
@@ -210,7 +232,7 @@ defineExpose({
   element: table.tableRef,
   engine: engineRef.value,
   ...v2Expose,
-} satisfies ProTableExpose)
+} satisfies ProTableExpose<T>)
 </script>
 
 <template>
@@ -218,7 +240,7 @@ defineExpose({
     <div :class="[bem.b(), attrs.class]" :style="attrs.style" :data-density="table.density.value">
       <SearchForm
         v-if="columns.searchColumns.length > 0"
-        :columns="columns.searchColumns"
+        :columns="searchColumnsLoose"
         :search-params="search.searchParams.value"
         :search-rows="props.searchRows"
         @search="search.search"
@@ -226,8 +248,8 @@ defineExpose({
         @update:search-params="(v) => search.updateParams(v)"
       />
       <TableHeader
-        :columns="columns.allColumns.value"
-        :visible-columns="columns.sortedColumns.value"
+        :columns="allColumnsLoose"
+        :visible-columns="sortedColumnsLoose"
         :density="table.density.value"
         :col-setting-visible="columns.colSettingVisible.value"
         @refresh="table.refresh"
@@ -251,9 +273,10 @@ defineExpose({
           v-if="engineRef === 'element-plus'"
           ref="proTableEl"
           :data="
-            treeData
-              ? (treeData.flatData.value as Record<string, unknown>[])
-              : (table.data.value ?? [])
+            (treeData ? treeData.flatData.value : (table.data.value ?? [])) as Record<
+              string,
+              unknown
+            >[]
           "
           v-bind="{
             ...(props.rowKey ? { rowKey: props.rowKey } : {}),
@@ -320,7 +343,7 @@ defineExpose({
                 <EditCell
                   v-else-if="rowEdit?.isEditing(rowKeyOf(scope.row)) && col.edit"
                   :row-key="rowKeyOf(scope.row)"
-                  :col="col"
+                  :col="col as ProColumn"
                   :value="rowEdit.getValue(rowKeyOf(scope.row), col.prop)"
                   @update="(prop, v) => rowEdit?.setValue(rowKeyOf(scope.row), prop, v)"
                 />
@@ -356,7 +379,7 @@ defineExpose({
       <ColSetting
         v-if="engineRef === 'element-plus'"
         v-model:visible="columns.colSettingVisible.value"
-        :columns="columns.allColumns.value"
+        :columns="allColumnsLoose"
         :visible-keys="columns.visibleKeys.value"
         :fixed-keys="columns.fixedKeys.value"
         @update:visible-keys="(keys) => columns.setVisibleKeys(keys)"
