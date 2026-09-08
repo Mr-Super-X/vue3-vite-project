@@ -84,18 +84,29 @@ function rowKeyOf(row: unknown): string | number {
 /** vxe 多选无合并的 selection-change，需自行维护选区 */
 const selectedRows = ref<Record<string, unknown>[]>([])
 
-/** 单选 toggle */
+/**
+ * 选区比较必须按 rowKey 而非引用相等：
+ * vxe-table 内部会对 data 做响应式代理 / 数据加工，checkbox 事件回传的行对象
+ * 与 :data 传入的原引用可能不是同一对象（集成测试已复现引用不一致），
+ * 用 === 去重会导致全选合并时重复行
+ */
+function sameRow(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
+  return rowKeyOf(a) === rowKeyOf(b)
+}
+
+/** 单选 toggle（同 key 先移除再追加，防代理引用不同导致重复入区） */
 function handleCheckboxChange(payload: { row: Record<string, unknown>; checked: boolean }): void {
-  selectedRows.value = payload.checked
-    ? [...selectedRows.value, payload.row]
-    : selectedRows.value.filter((r) => r !== payload.row)
+  const rest = selectedRows.value.filter((r) => !sameRow(r, payload.row))
+  selectedRows.value = payload.checked ? [...rest, payload.row] : rest
   emit('selection-change', selectedRows.value)
 }
 
-/** 全选 toggle：checked 时并入受影响行，取消时移除（payload.rows 缺省退化全部可见行） */
+/** 全选 toggle：checked 时并入受影响行（同 key 去重），取消时移除（payload.rows 缺省退化全部可见行） */
 function handleCheckboxAll(payload: { checked: boolean; rows?: Record<string, unknown>[] }): void {
   const affected = payload.rows ?? props.rows
-  const rest = selectedRows.value.filter((r) => !affected.includes(r))
+  const rest = selectedRows.value.filter(
+    (r) => !affected.some((affectedRow) => sameRow(affectedRow, r))
+  )
   selectedRows.value = payload.checked ? [...rest, ...affected] : rest
   emit('selection-change', selectedRows.value)
 }

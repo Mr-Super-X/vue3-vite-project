@@ -23,3 +23,19 @@ overrides:
 peerDependencyRules:
   allowAny:
     - 'vue'
+
+packageExtensions:
+  # vxe-table@4.21.x 的 es 产物运行时 import '@vxe-ui/core'（es/ui/index.js），
+  # 但包的 package.json 未声明 dependencies/peerDependencies → pnpm 严格 node_modules
+  # 下 @vxe-ui/core 根本不进依赖图，vite dev 预构建产物保留裸导入导致 import-analysis 报错。
+  # 补声明依赖后 pnpm 会安装 @vxe-ui/core（连带其 dependencies：xe-utils / dom-zindex）
+  'vxe-table@*':
+    dependencies:
+      '@vxe-ui/core': '^4.4.0'
+
+# pnpm 11 项目级 hoisting 配置须写此处（.npmrc 项目级配置不再被读取）。
+# 提升 vxe-table 的运行时依赖到根 node_modules，供 vite dev 预构建产物中的裸导入解析
+publicHoistPattern:
+  - '*@vxe-ui/*'
+  - 'xe-utils'
+  - 'dom-zindex'

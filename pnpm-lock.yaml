@@ -19,6 +19,8 @@ overrides:
   '@vue/shared': beta
   '@vue/compat': beta
 
+packageExtensionsChecksum: sha256-KCPgB93aSWbkV5xuk0tg1GKfCnwaAncn69ULpWGBhHE=
+
 importers:
 
   .:
@@ -61,7 +63,7 @@ importers:
         version: 5.2.0(esbuild@0.28.1)(pinia@3.0.4(typescript@6.0.3)(vue@3.6.0-beta.17(typescript@6.0.3)))(rolldown@1.1.5)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))(vue@3.6.0-beta.17(typescript@6.0.3))
       vxe-table:
         specifier: ^4.21.7
-        version: 4.21.7
+        version: 4.21.7(vue@3.6.0-beta.17(typescript@6.0.3))
       web-vitals:
         specifier: ^6.2.1
         version: 6.2.1
@@ -1783,6 +1785,11 @@ packages:
     peerDependencies:
       vue: ^3.5.0
 
+  '@vxe-ui/core@4.4.21':
+    resolution: {integrity: sha512-xaKGhQxrSU3G7+cQbxMBSzNXiWliRDgtR5GmD/FD9f5tl8e9SuZLe2SfODjItp6oBvBkKI2TXBZiCx502WftyA==}
+    peerDependencies:
+      vue: ^3.2.0
+
   abbrev@1.0.3:
     resolution: {integrity: sha512-s07HMJf6O5iTLVDx9cH7c9VbOdrmzxE+AzWz9CPi94zVNBQQA3jIwIZKTrHQj4dGR1T/MdwMnVJzSpjaVEXtXw==}
 
@@ -2326,6 +2333,9 @@ packages:
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
+
+  dom-zindex@1.0.7:
+    resolution: {integrity: sha512-cKU/h8v8IPBgdZOTPbPmq3Ib+Ac5C+kKoh9I4LbGR9BM3GwbmB16KYWKJcj5M2BavnA66EbgYzxYDLd1IytnlQ==}
 
   dotenv@17.4.2:
     resolution: {integrity: sha512-nI4U3TottKAcAD9LLud4Cb7b2QztQMUEfHbvhTH09bqXTxnSie8WnjPALV/WMCrJZ6UV/qHJ6L03OqO3LcdYZw==}
@@ -4500,6 +4510,9 @@ packages:
     resolution: {integrity: sha512-g/eziiSUNBSsdDJtCLB8bdYEUMj4jR7AGeUo96p/3dTafgjHhpF4RiCFPiRILwjQoDXx5MqkBr4fwWtR3Ky4Wg==}
     engines: {node: '>=20'}
 
+  xe-utils@4.0.13:
+    resolution: {integrity: sha512-hIxQ3LQv/WF0DyeNsZ7VclX5+n5CKoUJ3DG76GFtuAnVQ/NaSv3MKmyZ6MD73wfSdzZBcziV8wcas8GRNSYMwg==}
+
   xml-name-validator@4.0.0:
     resolution: {integrity: sha512-ICP2e+jsHvAj2E2lIHxa5tjXRlKDJo4IdvPvCXbXQGdzSfmSpNVyIKMvoZHjDY9DP0zV17iI85o90vRFXNccRw==}
     engines: {node: '>=12'}
@@ -6190,6 +6203,12 @@ snapshots:
     dependencies:
       vue: 3.6.0-beta.17(typescript@6.0.3)
 
+  '@vxe-ui/core@4.4.21(vue@3.6.0-beta.17(typescript@6.0.3))':
+    dependencies:
+      dom-zindex: 1.0.7
+      vue: 3.6.0-beta.17(typescript@6.0.3)
+      xe-utils: 4.0.13
+
   abbrev@1.0.3: {}
 
   acorn-jsx@5.3.2(acorn@8.17.0):
@@ -6728,6 +6747,8 @@ snapshots:
   detect-indent@6.1.0: {}
 
   detect-libc@2.1.2: {}
+
+  dom-zindex@1.0.7: {}
 
   dotenv@17.4.2: {}
 
@@ -8830,7 +8851,11 @@ snapshots:
     optionalDependencies:
       typescript: 6.0.3
 
-  vxe-table@4.21.7: {}
+  vxe-table@4.21.7(vue@3.6.0-beta.17(typescript@6.0.3)):
+    dependencies:
+      '@vxe-ui/core': 4.4.21(vue@3.6.0-beta.17(typescript@6.0.3))
+    transitivePeerDependencies:
+      - vue
 
   w3c-xmlserializer@5.0.0:
     dependencies:
@@ -8921,6 +8946,8 @@ snapshots:
     dependencies:
       is-wsl: 3.1.1
       powershell-utils: 0.1.0
+
+  xe-utils@4.0.13: {}
 
   xml-name-validator@4.0.0: {}
 

@@ -2,6 +2,23 @@
 
 ## 未发布
 
+### 🐛 Bug Fixes | vxe-table 引擎 dev 模式 `@vxe-ui/core` 解析失败
+
+* **fix(deps):** vxe-table@4.21.x 的 es 产物运行时 import `@vxe-ui/core`，但包未声明依赖 → pnpm 严格 node_modules 下依赖缺失，vite dev 预构建产物保留裸导入导致 `Failed to resolve import "@vxe-ui/core"`。经 `pnpm-workspace.yaml` 的 `packageExtensions` 补声明 `@vxe-ui/core ^4.4.0`（连带 xe-utils / dom-zindex 进依赖图）+ `publicHoistPattern` 提升三个包到根 node_modules
+* **chore(pnpm):** 修复 `.npmrc` 第 2 行两行粘连的配置损坏（`onlyBuiltDependencies[]=@parcel/watchershamefully-hoist=true`，`shamefully-hoist` 从未生效）；pnpm 11 项目级配置统一迁移至 `pnpm-workspace.yaml`（`pnpm config list` 不再读取项目 .npmrc）
+
+### ✨ Features | ProTable v2.1 —— vxe-table 引擎
+
+> 设计稿：`docs/superpowers/specs/2026-09-08-protable-v2.1-vxe-engine-design.md` | 计划：`docs/superpowers/plans/2026-09-08-protable-v2.1-vxe-engine.md`
+
+* **feat(pro-table):** `table-engine="vxe-table"` 渲染引擎实装——`useVxeTable` 动态加载（JS + CSS 按需注入 + app 安装，chunk 不进首屏），加载失败自动回退 element-plus 并 console.warn
+* **feat(pro-table):** ElTable 渲染分支抽离为 `ElementTableBody.vue`（纯移动，行为零变化）；新增 `VxeTableBody.vue` 第二引擎分支
+* **feat(pro-table):** vxe 列映射层 `adapters/vxe-column.ts`（prop→field / label→title / selection→checkbox 等）+ `ProColumn.vxeProps` 恢复（补充不覆盖派生值）
+* **feat(pro-table):** vxe 事件适配——checkbox-change/checkbox-all 合并为 selection-change（选区按 rowKey 比较，兼容 vxe 内部数据代理）、sort-change 负载 { field, order } → { prop, order }
+* **feat(pro-table):** vxe 引擎能力矩阵对齐——行编辑/单元格合并/服务端排序/多选支持；树形/行拖拽启动校验 warn 并忽略
+* **test(ProTable):** 新增 `ProTable.engine.spec.ts` 引擎切换 4 用例（vxe 渲染 / fallback 回退 / checkbox 合并选区 / sort 负载适配）
+* **docs(ProTable):** README 引擎章节（用法 + 能力矩阵 + vxeProps）；ARCHITECTURE 文件清单同步；CONTRIBUTING 删除 v2.1 接入清单、更新已知限制；新增引擎对比 demo（ProTableEngineCompare）
+
 ### ✨ Features | ProTable 下一迭代（M1 泛型化 → M2 服务端排序 → M3 响应适配器）
 
 > 计划文档：`docs/superpowers/plans/2026-09-08-protable-next-iteration.md`

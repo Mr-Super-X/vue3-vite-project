@@ -72,13 +72,21 @@ sequenceDiagram
 
 ```
 src/components/ProTable/
-├── ProTable.vue                  # 编排层
+├── ProTable.vue                  # 编排层（引擎分发 + 状态 owner）
 ├── index.ts                      # 统一导出
 ├── types/index.ts                # 类型定义
-├── adapters/engine.ts            # 引擎工厂
-├── composables/                  # 4 个 composables
-├── components/                   # 3 个子组件
-└── __tests__/                    # 8 个 .spec.ts
+├── adapters/
+│   ├── engine.ts                 # 引擎工厂（resolveEngine）
+│   ├── cell-render.ts            # 单元格内容解析（双引擎共用）
+│   └── vxe-column.ts             # ProColumn → VxeColumn 映射（v2.1）
+├── composables/                  # 10 个 composables（useTable/useSearch/useColumns/
+│                                 # useRowEdit/useRowDrag/useCellSpan/useTreeData/
+│                                 # useTableCapabilities/useVxeTable）
+├── components/                   # 6 个子组件 + 双引擎渲染分支：
+│                                 # ElementTableBody（el 引擎）/ VxeTableBody（vxe 引擎，v2.1）
+├── ProTable.integration.spec.ts  # 集成测试
+├── ProTable.engine.spec.ts       # 引擎切换测试（v2.1）
+└── __tests__/                    # 其余 .spec.ts
 ```
 
 ## 覆盖率

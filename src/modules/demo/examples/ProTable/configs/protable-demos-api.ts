@@ -248,3 +248,59 @@ export const sortExposeItems: ApiItem[] = [
     description: '当前排序状态；组件同时向外 emit sort-change 事件。',
   },
 ]
+
+/* ───────────── 引擎对比 demo（ProTableEngineCompare，v2.1） ───────────── */
+
+export const enginePropsItems: ApiItem[] = [
+  {
+    name: 'tableEngine',
+    type: "'element-plus' | 'vxe-table'",
+    required: false,
+    default: "'element-plus'",
+    description:
+      '渲染引擎：vxe-table 首次 mount 时动态加载（JS + CSS 按需注入，chunk 不进首屏）；加载失败自动回退 element-plus。',
+  },
+]
+
+export const engineColumnItems: ApiItem[] = [
+  {
+    name: 'vxeProps',
+    type: 'Record<string, unknown>',
+    required: false,
+    description:
+      '透传 VxeColumn props（仅 vxe 引擎生效）；定位为补充不覆盖——与 ProTable 派生字段（field/title/sortable 等）冲突时以派生值为准。',
+  },
+]
+
+export const engineMatrixItems: ApiItem[] = [
+  {
+    name: '多选 selection',
+    type: '✅ 支持',
+    description: 'checkbox-change / checkbox-all 合并为 selection-change。',
+  },
+  {
+    name: '服务端排序',
+    type: '✅ 支持',
+    description: "sortable: 'custom' 走同一 sortParamsAdapter 协议。",
+  },
+  {
+    name: '行内编辑',
+    type: '✅ 支持',
+    description: 'cell-dblclick 协议与 el-table 单参数对象签名兼容。',
+  },
+  {
+    name: '单元格合并',
+    type: '✅ 支持',
+    description: 'span-method / cellClassName 直绑 vxe-table。',
+  },
+  {
+    name: '树形数据',
+    type: '❌ 暂不支持',
+    description: '启动时 console.warn 并忽略 enableTree 配置。',
+  },
+  {
+    name: '行拖拽排序',
+    type: '❌ 暂不支持',
+    description: '启动时 console.warn 并忽略 enableRowDrag 配置。',
+  },
+]

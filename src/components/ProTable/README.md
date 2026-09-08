@@ -1,6 +1,6 @@
 # ProTable 组件
 
-> 配置驱动的企业级表格组件（Element Plus 引擎，vxe-table 引擎 v2.1 计划支持）。参考 vue-element-plus-admin 的 ProTable 设计哲学。
+> 配置驱动的企业级表格组件（Element Plus / vxe-table 双引擎）。参考 vue-element-plus-admin 的 ProTable 设计哲学。
 
 ## 安装
 
@@ -8,7 +8,7 @@
 
 - `element-plus`（项目基础 UI 库）
 - `sortablejs ^1.15.7`（列设置拖拽）
-- `vxe-table ^4.21.7`（vxe-table 引擎预留依赖，v2.1 交付，动态按需加载）
+- `vxe-table ^4.21.7`（vxe-table 引擎，v2.1 交付；动态按需加载，chunk 不进首屏）
 
 ## 基础用法
 
@@ -96,16 +96,43 @@ const columns: ProColumn<Order>[] = [
 
 适配结果结构非法（data 非数组 / total 非数字）会 console.error 并进入错误态（AsyncState 展示 + 重试）。
 
-## 引擎（v2.1 计划支持 vxe-table）
+## 引擎（v2.1 交付 vxe-table）
 
-v2.0 仅实现 element-plus 引擎。传入 `table-engine="vxe-table"` 时会 `console.warn` 并回退 element-plus：
+`table-engine` 支持双引擎，默认 `element-plus`：
 
 ```vue
-<!-- 实际渲染 element-plus 表格，控制台提示 vxe-table 暂未实现 -->
+<!-- element-plus 引擎（默认） -->
+<ProTable :columns="columns" :request-api="requestApi" />
+
+<!-- vxe-table 引擎：首次 mount 动态加载（JS + CSS 按需注入，chunk 不进首屏）；
+     加载失败自动回退 element-plus 并 console.warn -->
 <ProTable :columns="columns" :request-api="requestApi" table-engine="vxe-table" />
 ```
 
 > 注意：引擎 prop 仅在首次 mount 前生效，运行时修改需 reload（spec 决策 4）。
+
+### vxe 引擎能力矩阵（v2.1）
+
+| 能力           | element-plus | vxe-table                         |
+| -------------- | ------------ | --------------------------------- |
+| 多选 selection | ✅           | ✅（checkbox-change/all 合并）    |
+| 服务端排序     | ✅           | ✅（同一 sortParamsAdapter 协议） |
+| 行内编辑       | ✅           | ✅                                |
+| 单元格合并     | ✅           | ✅                                |
+| 树形数据       | ✅           | ❌ 暂不支持（warn 并忽略）        |
+| 行拖拽排序     | ✅           | ❌ 暂不支持（warn 并忽略）        |
+
+### ProColumn.vxeProps
+
+仅 vxe 引擎生效，透传 VxeColumn props。定位为**补充不覆盖**——与 ProTable 派生字段（field/title/sortable 等）冲突时以派生值为准：
+
+```ts
+const columns: ProColumn<Order>[] = [
+  { prop: 'amount', label: '金额', sortable: 'custom', vxeProps: { align: 'right' } },
+]
+```
+
+引擎并排对比见 demo：`modules/demo/examples/ProTable/ProTableEngineCompare.vue`。
 
 ## 插槽系统
 

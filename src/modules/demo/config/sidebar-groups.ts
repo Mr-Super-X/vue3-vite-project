@@ -28,6 +28,7 @@ export const CN_NAMES: Record<string, string> = {
   ProTableCellSpan: '单元格合并',
   ProTableRowDrag: '行拖拽排序',
   ProTableServerSort: '服务端排序',
+  ProTableEngineCompare: '引擎对比（vxe-table）',
   // XForm 表单引擎
   XFormOverview: '用法总览',
   XFormArray: '数组节点',
