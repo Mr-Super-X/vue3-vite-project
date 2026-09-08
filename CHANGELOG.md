@@ -2,6 +2,15 @@
 
 ## 未发布
 
+### 🐛 Bug Fixes | ProTable vxe 引擎密度 / 列设置不生效
+
+* **fix(ProTable):** 密度切换 CSS 选择器只命中 el-table（`.el-table__row`），vxe 引擎下完全无效——补 `.vxe-body--row td` 三档行高选择器（水平 padding 保留 8px 防贴边）；列设置抽屉被 `v-if="engineRef === 'element-plus'"` 排除，vxe 引擎点击无反应——ColSetting 操作引擎无关数据层（useColumns），移除引擎限制；列设置拖拽排序后 vxe 表格列序不更新——vxe-table 在 VxeColumn 挂载时按 DOM 序注册 staticColumns，Vue 按 key 移动组件实例不触发重注册，VxeColumn 的 key 由 `col.prop` 改为带序位 `` `${col.prop}:${index}` ``，重排时全量 remount 按新 DOM 序重新注册；窄容器下 vxe 表格 enum 列（ElTag 固有宽度内容）被自动列宽压到 tag 宽度以下，tag 溢出单元格被表格容器裁剪——toVxeColumnProps 对未显式声明 width/minWidth 且无自定义 render 的 enum 列补 minWidth 80px 兜底（el-table 自动布局按内容撑开列，无此问题）
+* **test(ProTable):** engine spec 补 2 用例（vxe 引擎下 ColSetting 渲染 + 列设置按钮开抽屉 + 密度按钮桥接 data-density；列重排后列组件全量 remount + DOM 新序）
+
+### 🐛 Bug Fixes | ProTable 搜索区窄容器宽度塌陷
+
+* **fix(ProTable):** SearchForm 固定 4 列布局在窄容器（如引擎对比 demo 双栏 pane ~630px）下列宽压到 ~150px、输入框 ~80px 不可用。element-protable-overwrite.scss 新增 CSS 容器查询（container-type: inline-size）：搜索区 ≤900px 自动降 2 列、≤560px 降 1 列；element-plus 栅格断点基于视口宽度，对"视口宽但容器窄"场景无效，容器查询按组件自身宽度降级
+
 ### 🐛 Bug Fixes | vxe-table 引擎 dev 模式 `@vxe-ui/core` 解析失败
 
 * **fix(deps):** vxe-table@4.21.x 的 es 产物运行时 import `@vxe-ui/core`，但包未声明依赖 → pnpm 严格 node_modules 下依赖缺失，vite dev 预构建产物保留裸导入导致 `Failed to resolve import "@vxe-ui/core"`。经 `pnpm-workspace.yaml` 的 `packageExtensions` 补声明 `@vxe-ui/core ^4.4.0`（连带 xe-utils / dom-zindex 进依赖图）+ `publicHoistPattern` 提升三个包到根 node_modules

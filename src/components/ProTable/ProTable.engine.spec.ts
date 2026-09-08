@@ -6,15 +6,17 @@
  * - fallback 路径：loadVxeTable reject → engine-fallback → 回退渲染 ElTable
  * - checkbox 合并选区：checkbox-change / checkbox-all 合并为 selection-change（决策 4）
  * - sort-change 负载适配：{ field, order } → { prop, order: 'ascending'|'descending' }（决策 4）
+ * - 列设置重排：列序变化全量 remount 列组件（vxe 按挂载序注册列，Vue 移动实例不触发重注册）
  *
  * mock 策略：vi.hoisted + vi.mock 按用例控制 loadVxeTable 行为（resolve stub 模块 / reject），
  * 避免真实 import vxe-table（大文件 + jsdom 渲染不确定性）。
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { defineComponent, h, nextTick } from 'vue' // vue（render 函数建 stub）
+import { defineComponent, h, nextTick, onMounted } from 'vue' // vue（render 函数建 stub）
 import { mount, flushPromises } from '@vue/test-utils'
 import ProTable from './ProTable.vue'
 import VxeTableBody from './components/VxeTableBody.vue'
+import ColSetting from './components/ColSetting.vue'
 import type { ProTableProps, ProColumn } from './types'
 
 // vi.hoisted：vi.mock 工厂提升到文件顶部，可变 mock 函数须经 hoisted 透出才能按用例配置
@@ -39,7 +41,13 @@ const VxeTableStub = defineComponent({
   },
 })
 
-/** VxeColumn stub：透出 field/title 绑定值供断言；default 插槽提供 vxe 风格 scope */
+/**
+ * VxeColumn stub：透出 field/title 绑定值供断言；default 插槽提供 vxe 风格 scope。
+ * mountLog 模拟真实 vxe-table 的列注册机制（assembleColumn 在挂载时按 DOM 序注册），
+ * 用于锁定「列序变化必须 remount 列组件」的修复（key 带序位）
+ */
+const vxeColumnMountLog: string[] = []
+
 const VxeColumnStub = defineComponent({
   name: 'VxeColumnStub',
   props: {
@@ -47,6 +55,9 @@ const VxeColumnStub = defineComponent({
     title: { type: String, default: '' },
   },
   setup(props, { slots }) {
+    onMounted(() => {
+      vxeColumnMountLog.push(props.field)
+    })
     return () =>
       h('div', { class: 'vxe-column-stub', 'data-field': props.field }, [
         h('span', { class: 'vxe-column-stub__title' }, props.title),
@@ -180,5 +191,65 @@ describe('ProTable v2.1 引擎切换', () => {
     stub.vm.$emit('sort-change', { field: 'amount', order: null })
     await nextTick()
     expect(wrapper.emitted('sort-change')?.at(-1)?.[0]).toEqual({ prop: 'amount', order: null })
+  })
+
+  it('vxe 引擎下列设置 / 密度可用：ColSetting 渲染 + 按钮桥接正常', async () => {
+    vxeMocks.loadVxeTable.mockResolvedValue(stubVxeModule)
+    const wrapper = mount(ProTable, {
+      props: makeProps({ tableEngine: 'vxe-table' }),
+    })
+    await flushPromises()
+    await nextTick()
+
+    // 列设置：vxe 引擎下 ColSetting 同样渲染（v-if 引擎限制已移除，数据层引擎无关）
+    expect(wrapper.findComponent(ColSetting).exists()).toBe(true)
+    await wrapper.find('[data-test="col-setting-btn"]').trigger('click')
+    await nextTick()
+    expect(wrapper.findComponent({ name: 'ElDrawer' }).props('modelValue')).toBe(true)
+
+    // 密度：切换按钮更新根 div data-density（vxe 引擎下 CSS 选择器已对齐 .vxe-body--row）
+    const compactBtn = wrapper
+      .findAllComponents({ name: 'ElButton' })
+      .find((b) => b.text() === '紧凑')
+    await compactBtn?.trigger('click')
+    await nextTick()
+    expect(wrapper.find('.vv-pro-table').attributes('data-density')).toBe('compact')
+  })
+
+  it('列设置拖拽排序后列组件全量 remount（key 带序位，对齐 vxe 按挂载序注册列的机制）', async () => {
+    vxeColumnMountLog.length = 0
+    vxeMocks.loadVxeTable.mockResolvedValue(stubVxeModule)
+    const columns: ProColumn[] = [
+      { prop: 'a', label: '甲' },
+      { prop: 'b', label: '乙' },
+      { prop: 'c', label: '丙' },
+    ]
+    const wrapper = mount(VxeTableBody, {
+      props: { rows: [], columns, rowEdit: null, cellSpan: null },
+    })
+    await flushPromises()
+    await nextTick()
+    // 初始按挂载序注册（模拟 vxe assembleColumn）
+    expect(vxeColumnMountLog).toEqual(['a', 'b', 'c'])
+
+    // 模拟列设置拖拽排序：列数组重排（ProTable 编排层经 sortedColumnsLoose 透传）
+    await wrapper.setProps({
+      columns: [columns[1], columns[2], columns[0]],
+    })
+    await nextTick()
+
+    // 重排后必须全量 remount：vxe-table 只在列挂载时按 DOM 序注册 staticColumns，
+    // 若 Vue 仅移动组件实例（key 不含序位），注册序不变 → 表头列序不更新（历史 bug）。
+    // 只断言 remount 集合而非顺序：真实 vxe 的 assembleColumn 在挂载钩子里读 DOM 位置
+    // 取插入下标，与钩子触发顺序无关；Vue 调度器不保证 remount 触发序等于 vnode 序
+    expect(vxeColumnMountLog.slice(0, 3)).toEqual(['a', 'b', 'c'])
+    expect([...vxeColumnMountLog.slice(3)].sort()).toEqual(['a', 'b', 'c'])
+    expect(vxeColumnMountLog).toHaveLength(6)
+    // DOM 顺序同步为新列序
+    expect(wrapper.findAll('.vxe-column-stub').map((el) => el.attributes('data-field'))).toEqual([
+      'b',
+      'c',
+      'a',
+    ])
   })
 })

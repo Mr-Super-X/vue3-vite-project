@@ -143,10 +143,13 @@ function handleCellDblclick(payload: { row: Record<string, unknown> }): void {
     @checkbox-all="handleCheckboxAll"
     @cell-dblclick="handleCellDblclick"
   >
+    <!-- key 必须带序位：vxe-table 在 VxeColumn 挂载时按 DOM 位置注册 staticColumns，
+         此后按注册序（renderSortNumber）渲染表头，Vue 按 key 移动组件实例不会触发重注册。
+         列设置拖拽排序后若 key 仅 col.prop，实例只移动不重挂载，vxe 列序不更新（v2.1 修复的 bug） -->
     <component
       :is="vxeColumnComp"
-      v-for="col in columns"
-      :key="col.prop"
+      v-for="(col, index) in columns"
+      :key="`${col.prop}:${index}`"
       v-bind="toVxeColumnProps(col)"
     >
       <!-- 自定义表头渲染（col.headerRender） -->

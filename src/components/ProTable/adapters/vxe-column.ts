@@ -12,6 +12,15 @@
 import type { ProColumn } from '../types'
 
 /**
+ * enum 列（渲染 ElTag，white-space:nowrap 固有宽度内容）的兜底列宽。
+ * 取值依据：3 字中文 tag 实测 ~55px（14px 字号 + el-tag 水平内边距）+
+ * 单元格水平 padding 16px + 余量。vxe 自动列宽只按剩余空间分配、不测量内容宽度，
+ * 窄容器下无宽度声明的 enum 列会被压到 tag 宽度以下，tag 溢出单元格被表格容器裁剪
+ * （el-table 自动布局按内容撑开列，无此问题）——故映射时补 minWidth 兜底。
+ */
+const ENUM_TAG_MIN_WIDTH = 80
+
+/**
  * 翻译 ProColumn 为 VxeColumn props
  *
  * 合并策略：vxeProps 为「补充」不覆盖派生值 —— ProColumn 显式声明的语义
@@ -37,9 +46,21 @@ export function toVxeColumnProps<T extends object = Record<string, unknown>>(
   if (col.sortable !== undefined) derived.sortable = true
   if (col.width !== undefined) derived.width = col.width
   if (col.minWidth !== undefined) derived.minWidth = col.minWidth
+  // enum 列 ElTag 兜底列宽：用户显式 width/minWidth（含 vxeProps 里的声明）优先；
+  // 自定义 render 列内容宽度不可知，不兜底
+  const vxeProps = col.vxeProps ?? {}
+  if (
+    col.enum &&
+    !col.render &&
+    col.width === undefined &&
+    col.minWidth === undefined &&
+    vxeProps.minWidth === undefined
+  ) {
+    derived.minWidth = ENUM_TAG_MIN_WIDTH
+  }
   if (col.fixed !== undefined) derived.fixed = col.fixed
   // 先铺 vxeProps 再覆盖派生值：实现「补充不覆盖」策略（undefined 派生键已被上面的守卫跳过）
-  return { ...(col.vxeProps ?? {}), ...definedEntries(derived) }
+  return { ...vxeProps, ...definedEntries(derived) }
 }
 
 /**

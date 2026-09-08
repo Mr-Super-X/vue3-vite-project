@@ -32,6 +32,30 @@
     width: 100%;
   }
 
+  /* ─────────── SearchForm 窄容器列数降级（容器查询） ─────────── */
+
+  /* SearchForm 固定 4 列布局（el-col span=6）。ProTable 处于窄容器时（如引擎对比
+     demo 双栏并排的 pane，仅 ~630px），每列被压到 ~150px，输入框仅剩 ~80px 不可用。
+     element-plus 栅格断点基于视口宽度，对"视口宽但容器窄"的场景无效，
+     故用 CSS 容器查询按 .vv-pro-table-search 自身宽度降级：≤900px 降 2 列、≤560px 降 1 列。
+     覆盖 el-col 的 max-width/flex-basis 即可（选择器特异性 0-3-0 > el-col-6 的 0-1-0） */
+  .vv-pro-table-search {
+    container-type: inline-size;
+
+    @container (max-width: 900px) {
+      .el-row > .el-col {
+        flex: 0 0 50%;
+        max-width: 50%;
+      }
+    }
+    @container (max-width: 560px) {
+      .el-row > .el-col {
+        flex: 0 0 100%;
+        max-width: 100%;
+      }
+    }
+  }
+
   /* ─────────── ElPagination 横排修复 ─────────── */
 
   /* element-plus 2.x 的 el-pagination 在 vite-plugin-mock + 按需注入环境下 flex 样式丢失，
@@ -73,20 +97,34 @@
     color: #fff;
   }
 
-  /* ─────────── ElTable 密度（紧凑/默认/宽松）切换 ─────────── */
+  /* ─────────── 表格密度（紧凑/默认/宽松）切换 ─────────── */
   /* element-plus 2.x 没有内置 density prop 控制行高，
-     用 ProTable 根 div 的 data-density 属性 + CSS 变量手动控制行高 */
+     用 ProTable 根 div 的 data-density 属性 + CSS 变量手动控制行高；
+     vxe-table 引擎无 density 概念，选择器对齐 vxe body 行 class（.vxe-body--row）同步三档 */
 
   &[data-density='compact'] .el-table__row td {
     height: 32px;
     padding: 4px 0;
   }
+  &[data-density='compact'] .vxe-body--row td {
+    height: 32px;
+    /* vxe 单元格保留水平 padding（vxe 默认 ~8px），清零会导致内容贴边 */
+    padding: 4px 8px;
+  }
   &[data-density='default'] .el-table__row td {
     height: 48px;
     padding: 8px 0;
   }
+  &[data-density='default'] .vxe-body--row td {
+    height: 48px;
+    padding: 8px 8px;
+  }
   &[data-density='loose'] .el-table__row td {
     height: 64px;
     padding: 12px 0;
+  }
+  &[data-density='loose'] .vxe-body--row td {
+    height: 64px;
+    padding: 12px 8px;
   }
 }

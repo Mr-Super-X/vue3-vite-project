@@ -6,7 +6,8 @@
  * 展开/收起（默认前 searchRows×2 行）、搜索/重置按钮（搜索在前，附录 A #4）、
  * 自定义插槽 search-[prop]（spec §七插槽系统）。
  *
- * 6 列布局：每个 el-col 默认 span=6（即 4 列布局）。
+ * 6 列布局：每个 el-col 默认 span=6（即 4 列布局）；窄容器（≤900px）由
+ * element-protable-overwrite.scss 的容器查询自动降为 2 列（≤560px 降 1 列）。
  *
  * @see [`../composables/useSearch`](../composables/useSearch.ts) 数据源
  * @group ProTable 子组件

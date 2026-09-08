@@ -303,8 +303,9 @@ defineExpose({
           <slot name="paginationRight" />
         </template>
       </ElPagination>
+      <!-- 列设置：引擎无关 —— 操作 useColumns 数据层（visibleKeys/columnOrder），
+           el / vxe 两引擎都消费 sortedColumns，抽屉 UI 用 element-plus 组件无引擎耦合 -->
       <ColSetting
-        v-if="engineRef === 'element-plus'"
         v-model:visible="columns.colSettingVisible.value"
         :columns="allColumnsLoose"
         :visible-keys="columns.visibleKeys.value"
