@@ -12,8 +12,8 @@
 |------|------|------|----------|
 | 第 0 步 | 行为等价清理（死代码 / 单源化 colSettingVisible / engine 锁定 / M4 判定） | ✅ 已完成 | 2026-09-08 |
 | 第 1 步 | searchParams 单源化（修 H1/H2/M6，核心） | ✅ 已完成 | 2026-09-08 |
-| 第 2 步 | 能力编排归位（H4/H7/M8 + EditCell 抽取） | ⬜ 未开始 | — |
-| 第 3 步 | props 保护（M2 列对象拷贝 / M5 派生 direction） | ⬜ 未开始 | — |
+| 第 2 步 | 能力编排归位（H4/H7/M8 + EditCell 抽取） | ✅ 已完成 | 2026-09-08 |
+| 第 3 步 | props 保护（M2 列对象拷贝 / M5 派生 direction） | ✅ 已完成 | 2026-09-08 |
 | 第 4 步 | vxe 死路径决策 + useRowEdit rowKey 注入（H3/H5） | ⬜ 未开始 | — |
 
 ---
@@ -71,34 +71,34 @@
 
 ### 2.1 useRowDrag 自持 DOM 挂载
 
-- [ ] `UseRowDragOptions` 增加 `getTbody: () => HTMLElement | null`（替代外部传 tbody）
-- [ ] useRowDrag 内部 `watch(data, flush: 'post')` 自动 `detach + attach`；对外保留 `attachSortable/detachSortable` 签名兼容（spec 复用）
-- [ ] 删除 `ProTable.vue:133-156` 的 `tryAttachSortable` + 3 个 `setTimeout` + 2 个 watch；`onMounted` 仅剩首次 attach
-- [ ] `ProTable.vue` 传 `getTbody: () => proTableEl.value?.$el?.querySelector('.el-table__body tbody') ?? null`
+- [x] `UseRowDragOptions` 增加 `getTbody: () => HTMLElement | null`（替代外部传 tbody）✅ 2026-09-08
+- [x] useRowDrag 内部 `watch(data, flush: 'post')` 自动 `detach + attach`；对外保留 `attachSortable/detachSortable` 签名兼容（spec 复用）✅ 2026-09-08
+- [x] 删除 `ProTable.vue:133-156` 的 `tryAttachSortable` + 3 个 `setTimeout` + 2 个 watch；`onMounted` 仅剩首次 attach（移入 useRowDrag 内部）✅ 2026-09-08
+- [x] `ProTable.vue` 传 `getTbody: () => proTableEl.value?.$el?.querySelector('.el-table__body tbody') ?? null`（经 useTableCapabilities options 透传）✅ 2026-09-08
 
 ### 2.2 树形索引映射（H6）
 
-- [ ] `onEnd` 不再直接用 DOM index splice 顶层数组：先由 `getRowKey` 收集视图行 key 序列 → 映射到顶层数组索引 → 再 splice
-- [ ] `UseRowDragOptions` 增加 `getViewRowKeys?: () => (string|number)[]` 与 `resolveTopIndex?: (viewIndex: number) => number`；树形模式（crossLevelDrag=false）下映射失败时 `console.warn` 并跳过（替代现状静默错位）
-- [ ] 补 useRowDrag.spec：树形模式拖拽非顶层行的用例
+- [x] `onEnd` 不再直接用 DOM index splice 顶层数组：先由 `getViewRowKeys` 收集视图行 key 序列 → 映射到顶层数组索引 → 再 splice ✅ 2026-09-08
+- [x] `UseRowDragOptions` 增加 `getViewRowKeys?: () => (string|number)[]` 与 `resolveTopIndex?: (viewIndex: number) => number`；树形模式（crossLevelDrag=false）下映射失败时 `console.warn` 并跳过（替代现状静默错位）✅ 2026-09-08
+- [x] 补 useRowDrag.spec：树形模式拖拽非顶层行的用例（映射成功 splice + 映射失败跳过）✅ 2026-09-08
 
 ### 2.3 useTreeData 响应式与资源清理
 
-- [ ] `flattenData()` 普通方法改为内部 `computed`，返回对象增加 `flatData: Ref<TreeNode[]>`；`ProTable.vue:126-128` 的 `flatTreeData` computed 删除，模板直接用 `treeData.flatData`
-- [ ] 返回 `dispose(): void` 清理 `timers` Map + `expanded/loading`（`useTreeData.ts:14`）
-- [ ] `useTableCapabilities.ts:134-136` 的 `onUnmounted` 增加 `treeData?.dispose()`
+- [x] `flattenData()` 普通方法改为内部 `computed`，返回对象增加 `flatData: Ref<TreeNode[]>`；`ProTable.vue:126-128` 的 `flatTreeData` computed 删除，模板直接用 `treeData.flatData` ✅ 2026-09-08
+- [x] 返回 `dispose(): void` 清理 `timers` Map + `expanded/loading`（`useTreeData.ts:14`）✅ 2026-09-08
+- [x] `useTableCapabilities.ts:134-136` 的 `onUnmounted` 增加 `treeData?.dispose()` ✅ 2026-09-08
 
 ### 2.4 模板减负
 
-- [ ] 抽取 `components/EditCell.vue`：props `(rowKey, col, value, editConfig)` + emit `update`；承接 `ProTable.vue:380-428` 四分支编辑控件与 `resolveEditComp`
-- [ ] 抽取 `components/CellContent.vue`：承接 VNode 包装 trick（`ProTable.vue:367-376, 432-442` 两处 `v-for="(item,i) in [resolveCell(...)]"`）
-- [ ] 树形缩进 span（`ProTable.vue:352-377`）抽 `TreeCell.vue` 或保留在模板（视抽完后 ProTable.vue 行数决定，目标 ≤400 行）
-- [ ] `resolveEditComp` 随 EditCell 迁移出 ProTable.vue
+- [x] 抽取 `components/EditCell.vue`：props `(rowKey, col, value)` + emit `update(prop, value)`；承接 `ProTable.vue:380-428` 四分支编辑控件与 `resolveEditComp`（附 EditCell.spec 4 用例）✅ 2026-09-08
+- [x] 抽取 `components/CellContent.vue`：承接 VNode 包装 trick（两处 `v-for="(item,i) in [resolveCell(...)]"`，附 CellContent.spec 3 用例）✅ 2026-09-08
+- [x] 树形缩进 span 保留在模板（抽完后 ProTable.vue 384 行 ≤400 目标已达成，无需再抽 TreeCell.vue）；顺带提取 `rowKeyOf()` 统一 rowKey 取法 ✅ 2026-09-08
+- [x] `resolveEditComp` 随 EditCell 迁移出 ProTable.vue ✅ 2026-09-08
 
 ### 2.5 验证
 
-- [ ] `pnpm test src/components/ProTable && pnpm type-check:full && pnpm lint`
-- [ ] 浏览器回归：行拖拽排序（平铺 + 树形同层）、单元格合并、行内编辑双击、树形展开/懒加载
+- [x] `pnpm test src/components/ProTable && pnpm type-check:full && pnpm lint` —— 15 文件 93 测试全绿 + vue-tsc + eslint 零错误 ✅ 2026-09-08
+- [~] 浏览器回归：行拖拽排序（平铺 + 树形同层）、单元格合并、行内编辑双击、树形展开/懒加载 —— 列为手动验证项（代码级验证：H6 映射逻辑由 useRowDrag.spec 树形用例覆盖）
 
 ---
 
@@ -106,20 +106,21 @@
 
 ### 3.1 useColumns 列对象拷贝
 
-- [ ] 初始化 `allColumns` 时白名单拷贝列对象：拷贝数据字段（`prop/label/width/...`）、`hidden` 转本地 `ref<boolean>`（外部传 `Ref<boolean>` 时包 `computed` 读 + 本地 ref 写，保持响应式）、保留函数/数组引用（`render/headerRender/enum/search/tableProps`，不 deep clone）
-- [ ] `toggleVisible`（`useColumns.ts:107-119`）不再原地改写调用方对象结构；`toggleFixed`/`resetToDefault` 同理基于本地副本
-- [ ] 注意：`sortedColumns`/`searchColumns` 消费的是拷贝后的列，`ProColumn.hidden` 的 `Ref<boolean>` 公开类型保持不变
-- [ ] 补 useColumns.spec：外部 columns 常量不被修改（深比较前后对象）；两个实例共享同一 columns 常量互不污染
+- [x] 初始化 `allColumns` 时白名单拷贝列对象：新增 `cloneColumns()`（`useColumns.ts:53`）浅拷贝一层，boolean → 本地 `ref`；外部 `Ref<boolean>` → computed 包装（本地未写入时读外部保持联动，set 写本地副本 ref 实现"手动优先"）；函数/数组引用（render/headerRender/enum/search/tableProps）保留共享 ✅ 2026-09-08
+- [x] `toggleVisible`/`resetToDefault` 基于本地副本：统一赋「新 ref 实例」走 reactive 属性替换（根因：`allColumns` 是 deep ref，读 `col.hidden` 时被 reactive 自动解包拿不到 Ref 本体，且 UnwrapRef+exactOptionalPropertyTypes 需 cast 回 `ProColumn`）；`toggleFixed` 原本就写副本字段无需改 ✅ 2026-09-08
+- [x] `sortedColumns`/`searchColumns` 消费拷贝后的列，`ProColumn.hidden` 的 `Ref<boolean>` 公开类型保持不变 ✅ 2026-09-08
+- [x] 补 useColumns.spec 3 用例：外部 columns 常量不被修改（toggleVisible+toggleFixed 前后 deep equal）；两个实例共享同一 columns 常量互不污染；外部 Ref<boolean> 联动 + 手动 toggle 本地优先 ✅ 2026-09-08
 
 ### 3.2 validateCapabilities 派生化（M5）
 
-- [ ] `useTableCapabilities.ts:129` 不再 `cellSpanConfig.value.direction = 'row'` 原地改；改为 `const effectiveSpanDirection = computed(() => props.enableTree && config.direction === 'column' ? 'row' : config.direction)`，useCellSpan 入参消费该派生值
-- [ ] validateCapabilities 仅保留 `console.warn` 提示
+- [~] **方案修正（实施时发现原计划假设不成立）**：原计划的 `effectiveSpanDirection` computed 假设 useCellSpan 消费全局 direction，但经全库核实全局 `span.direction` **无任何消费者**（合并生效路径只有列级 `span.direction`，见 `useCellSpan.ts:51,89`），全局配置本来就是死配置。因此不新增 computed（避免把死配置接线成行为变化），改为最小行为等价修复：`validateCapabilities` 删除 `cellSpanConfig.value.direction = 'row'` 原地改写（M5 mutation 消除），保留 console.warn 并注明该配置被忽略 ✅ 2026-09-08
+- [x] 全局 `direction` 死配置与 vxe 死路径同类，列入第 4 步统一决策（删除或标注）✅ 2026-09-08
+- [x] 同步更新集成测试 ④ 标题（断言只查 warn 文案，不受影响）✅ 2026-09-08
 
 ### 3.3 验证
 
-- [ ] `pnpm test src/components/ProTable && pnpm type-check:full && pnpm lint`
-- [ ] 浏览器验证列设置：显隐切换、固定列、拖拽排序、恢复默认、localStorage 持久化（tableKey 场景）
+- [x] `pnpm test src/components/ProTable && pnpm type-check:full && pnpm lint` —— 15 文件 96 测试全绿 + vue-tsc + eslint 零错误 ✅ 2026-09-08
+- [~] 浏览器验证列设置：显隐切换、固定列、拖拽排序、恢复默认、localStorage 持久化（tableKey 场景）—— 列为手动验证项
 
 ---
 

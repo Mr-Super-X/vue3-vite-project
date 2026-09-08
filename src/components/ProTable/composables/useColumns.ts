@@ -41,12 +41,43 @@ interface PersistedSetting {
   fixed?: Record<string, 'left' | 'right'>
 }
 
+/**
+ * 列对象白名单拷贝（M2：props 保护）—— 浅拷贝一层数据字段，杜绝 toggleVisible/toggleFixed
+ * 原地改写调用方列对象；函数/数组引用（render/headerRender/enum/search/tableProps）保留共享，不 deep clone。
+ *
+ * hidden 统一转本地 Ref<boolean>：
+ * - 外部 boolean → `ref(初始值)`，toggle 读写副本字段，外部对象不受影响
+ * - 外部 Ref<boolean> → computed 包装：get 在本地未写入时读外部（保持外部程序化联调），
+ *   set 写本地副本 ref —— 用户经列设置面板的手动操作优先于外部值
+ */
+function cloneColumns(cols: ProColumn[]): ProColumn[] {
+  return cols.map((col) => {
+    const copy: ProColumn = { ...col }
+    const h = col.hidden
+    if (h !== undefined) {
+      if (typeof h === 'boolean') {
+        copy.hidden = ref(h)
+      } else {
+        const external = h as Ref<boolean>
+        const local = ref<boolean | null>(null)
+        copy.hidden = computed({
+          get: () => local.value ?? Boolean(external.value),
+          set: (v: boolean) => {
+            local.value = v
+          },
+        })
+      }
+    }
+    return copy
+  })
+}
+
 export function useColumns(options: UseColumnsOptions): UseColumnsReturn {
   const { props } = options
   const tableKey = props.tableKey
   const storageKey = tableKey ? `${tableKey}:columns` : ''
 
-  const allColumns = ref<ProColumn[]>([...props.columns])
+  const allColumns = ref<ProColumn[]>(cloneColumns(props.columns))
   const visibleKeys = ref<string[]>(props.columns.map((c) => c.prop))
   const fixedKeys = ref<string[]>(props.columns.filter((c) => c.fixed).map((c) => c.prop))
   const colSettingVisible = ref(false) // 附录 A #8：默认关闭
@@ -107,14 +138,13 @@ export function useColumns(options: UseColumnsOptions): UseColumnsReturn {
   function toggleVisible(prop: string): void {
     const col = allColumns.value.find((c) => c.prop === prop)
     if (!col) return
-    const current = isHidden(col)
-    if (typeof col.hidden === 'boolean') {
-      col.hidden = !current
-    } else {
-      // 转为响应式 ref（Vue ref 包装）
-      const r = ref(!current)
-      ;(col as { hidden: boolean | Ref<boolean> }).hidden = r
-    }
+    // allColumns 是 deep ref（元素经 reactive 代理）：读 col.hidden 时 ref 会被自动解包成
+    // primitive，拿不到 Ref 本体；因此统一赋「新 ref 实例」走属性替换（reactive 对
+    // 「旧值 ref + 新值 ref」走替换，不写真值），避免误写外部传入的 readonly computed 副本。
+    // cast 原因：Ref<ProColumn[]> 的 .value 经 UnwrapRef 把 hidden 的 Ref<boolean> 解成 boolean
+    // 且 exactOptionalPropertyTypes 排除 undefined，与运行时「reactive 存 ref 本体」不符；
+    // 还原为 ProColumn 类型后按公开声明赋值
+    ;(col as ProColumn).hidden = ref(!isHidden(col))
     persist()
   }
 
@@ -159,15 +189,13 @@ export function useColumns(options: UseColumnsOptions): UseColumnsReturn {
   function resetToDefault(): void {
     if (!storageKey) return
     Local.remove(storageKey)
-    allColumns.value = [...props.columns]
+    allColumns.value = cloneColumns(props.columns)
     visibleKeys.value = props.columns.map((c) => c.prop) // 重置可见列（含 hidden=false + Ref<boolean>）
     columnOrder.value = props.columns.map((c) => c.prop) // 同步重置列顺序，否则恢复默认后顺序仍是拖拽后的
-    // 重置所有列的 hidden 状态
+    // 重置所有列的 hidden 状态：统一赋新 ref(false) 走属性替换（cast 原因同 toggleVisible）
     for (const col of allColumns.value) {
-      if (typeof col.hidden === 'boolean') {
-        col.hidden = false
-      } else if (col.hidden && typeof col.hidden === 'object' && 'value' in col.hidden) {
-        ;(col.hidden as Ref<boolean>).value = false
+      if (col.hidden !== undefined) {
+        ;(col as ProColumn).hidden = ref(false)
       }
     }
   }

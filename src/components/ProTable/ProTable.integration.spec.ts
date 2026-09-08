@@ -38,7 +38,7 @@ describe('ProTable v2.0 集成（冲突矩阵 + 启动校验）', () => {
     expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('编辑仅作用于叶子节点'))
   })
 
-  it('④ 树形 + 合并：span.direction=column 自动改为 row + console.warn', async () => {
+  it('④ 树形 + 合并：span.direction=column 被忽略 + console.warn（M5：不改写调用方配置）', async () => {
     mount(ProTable, {
       props: {
         columns: [{ prop: 'name', label: '名称' }],

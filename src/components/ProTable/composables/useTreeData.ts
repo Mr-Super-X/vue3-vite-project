@@ -54,6 +54,13 @@ export function useTreeData(config: TreeConfig) {
       }
     }
   }
+  // flatData 为 computed：expanded Set 变化（touchExpanded 替换实例）即自动重算，
+  // 消费方（ProTable 模板 / 行拖拽视图行映射）无须手动调 flattenData()（H4 归位）
+  const flatData = computed<TreeNode[]>(() => {
+    const out: TreeNode[] = []
+    flatten(roots, out)
+    return out
+  })
   return {
     normalize(data: TreeNode[]) {
       roots.length = 0
@@ -73,7 +80,7 @@ export function useTreeData(config: TreeConfig) {
               r.node[cKey] = children as TreeNode[]
               for (const c of children) c._level = (r.node._level ?? 0) + 1
               r.node._loaded = true
-              touchExpanded() // 触发响应式（flattenData 重新计算）
+              touchExpanded() // 触发响应式（flatData 重新计算）
             })
             .catch((err: unknown) => {
               console.error('[useTreeData] normalize auto load failed:', err)
@@ -82,12 +89,8 @@ export function useTreeData(config: TreeConfig) {
       }
       return data
     },
-    /** v2.0 新增：按展开状态扁平化树形数据，el-table :data 直接使用 */
-    flattenData(): TreeNode[] {
-      const out: TreeNode[] = []
-      flatten(roots, out)
-      return out
-    },
+    /** v2.0 已展开节点的扁平视图（computed，随 expanded 自动重算），el-table :data 直接使用 */
+    flatData,
     isExpanded: (k: string | number) => expanded.value.has(k),
     expandAll: () => {
       const keys: (string | number)[] = []
@@ -144,5 +147,12 @@ export function useTreeData(config: TreeConfig) {
       }
     },
     expandedKeys: computed(() => expanded.value),
+    /** 资源清理：组件卸载时清掉懒加载挂起的 timer 与响应式状态（防内存泄漏） */
+    dispose() {
+      for (const t of timers.values()) clearTimeout(t)
+      timers.clear()
+      expanded.value.clear()
+      loading.value.clear()
+    },
   }
 }

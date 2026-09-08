@@ -131,4 +131,56 @@ describe('useRowDrag', () => {
     expect(consoleWarn).toHaveBeenCalled()
     consoleWarn.mockRestore()
   })
+
+  it('树形模式：视图行 key 映射到顶层索引后 splice（H6）', async () => {
+    // 视图扁平序列：a 展开两个子节点 → [a, a1, a2, b, c]，顶层 data 只有 [a, b, c]
+    const data = ref([{ id: 'a' }, { id: 'b' }, { id: 'c' }])
+    const onSortChange = vi.fn(() => true)
+    const viewKeys = ['a', 'a1', 'a2', 'b', 'c']
+    const drag = useRowDrag({
+      handle: 'first-col',
+      data,
+      onSortChange,
+      crossLevelDrag: false,
+      getViewRowKeys: () => viewKeys,
+      resolveTopIndex: (viewIndex) => ['a', 'b', 'c'].indexOf(viewKeys[viewIndex] as string),
+    })
+
+    const tbody = document.createElement('tbody')
+    drag.attachSortable(tbody)
+
+    const onEndHandler = mockSortable.create.mock.calls[0][1].onEnd
+    // 视图 index 3（顶层 b）拖到视图 index 0（顶层 a）之前
+    await onEndHandler({ oldIndex: 3, newIndex: 0 })
+
+    expect(onSortChange).toHaveBeenCalledWith([{ id: 'b' }, { id: 'a' }, { id: 'c' }])
+    expect(data.value).toEqual([{ id: 'b' }, { id: 'a' }, { id: 'c' }])
+  })
+
+  it('树形模式：非顶层行映射失败时跳过 + console.warn（H6）', async () => {
+    const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const data = ref([{ id: 'a' }, { id: 'b' }])
+    const onSortChange = vi.fn(() => true)
+    const viewKeys = ['a', 'a1', 'b']
+    const drag = useRowDrag({
+      handle: 'first-col',
+      data,
+      onSortChange,
+      crossLevelDrag: false,
+      getViewRowKeys: () => viewKeys,
+      resolveTopIndex: (viewIndex) => ['a', 'b'].indexOf(viewKeys[viewIndex] as string),
+    })
+
+    const tbody = document.createElement('tbody')
+    drag.attachSortable(tbody)
+
+    const onEndHandler = mockSortable.create.mock.calls[0][1].onEnd
+    // oldIndex=1 是子节点 a1，映射返回 -1 → 跳过
+    await onEndHandler({ oldIndex: 1, newIndex: 2 })
+
+    expect(data.value).toEqual([{ id: 'a' }, { id: 'b' }])
+    expect(onSortChange).not.toHaveBeenCalled()
+    expect(consoleWarn).toHaveBeenCalled()
+    consoleWarn.mockRestore()
+  })
 })

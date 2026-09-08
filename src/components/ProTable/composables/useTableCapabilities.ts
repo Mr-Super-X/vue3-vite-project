@@ -28,6 +28,11 @@ export interface UseTableCapabilitiesOptions {
   props: ProTableProps
   columns: { allColumns?: RefType<ProColumn[]> }
   table: { data: RefType<Record<string, unknown>[] | null> }
+  /**
+   * el-table tbody DOM 获取器 —— 由编排层提供（持有模板 ref），
+   * 传入后 useRowDrag 自持挂载生命周期（onMounted + watch data 自动重挂）。
+   */
+  getTbody?: () => HTMLElement | null
 }
 
 export interface UseTableCapabilitiesReturn {
@@ -106,11 +111,35 @@ export function useTableCapabilities(
       })
     : null
 
+  // H6 树形拖拽索引映射：视图行（扁平后 DOM 顺序）→ data 顶层数组索引。
+  // 仅在树形 + 拖拽同时启用时创建，key 取自 props.rowKey（默认 'id'）。
+  const rowKeyField = props.rowKey ?? 'id'
+  const viewRowKeys = computed<(string | number)[]>(() => {
+    const src = treeData
+      ? (treeData.flatData.value as Record<string, unknown>[])
+      : (table.data.value ?? [])
+    return src.map((r) => r[rowKeyField] as string | number)
+  })
+  const topIndexByKey = computed(() => {
+    const m = new Map<string | number, number>()
+    ;(table.data.value ?? []).forEach((r, i) => m.set(r[rowKeyField] as string | number, i))
+    return m
+  })
+
   const rowDrag = props.enableRowDrag
     ? useRowDrag({
         handle: rowDragConfig.value.handle ?? 'first-col',
         data: table.data as unknown as Ref<Record<string, unknown>[]>,
         crossLevelDrag: !props.enableTree,
+        ...(options.getTbody && { getTbody: options.getTbody }),
+        // 树形模式必传映射；平铺模式不传，onEnd 直接用 DOM index（行为与 v1 一致）
+        ...(treeData && {
+          getViewRowKeys: () => viewRowKeys.value,
+          resolveTopIndex: (viewIndex: number) => {
+            const key = viewRowKeys.value[viewIndex]
+            return key === undefined ? -1 : (topIndexByKey.value.get(key) ?? -1)
+          },
+        }),
         ...(rowDragConfig.value.onSortChange && { onSortChange: rowDragConfig.value.onSortChange }),
       })
     : null
@@ -120,19 +149,23 @@ export function useTableCapabilities(
     if (props.enableRowEdit && props.enableTree && !treeDataConfig.value.exclusive) {
       console.warn('[ProTable] enableRowEdit + enableTree: 编辑仅作用于叶子节点')
     }
+    // M5：全局 span.direction 目前不参与合并计算（生效路径是列级 span.direction，
+    // 见 useCellSpan.buildCache），此处不再原地改写调用方配置对象（props 保护），仅提示
     if (
       typeof props.enableCellSpan === 'object' &&
       cellSpanConfig.value.direction === 'column' &&
       props.enableTree
     ) {
-      console.warn('[ProTable] 树形模式下禁用 span.direction=column，已自动改为 row')
-      cellSpanConfig.value.direction = 'row'
+      console.warn(
+        '[ProTable] 树形模式下禁用 span.direction=column，该配置已忽略（合并行为由列级 span.direction 决定）'
+      )
     }
   }
 
   onMounted(validateCapabilities)
   onUnmounted(() => {
     rowDrag?.detachSortable()
+    treeData?.dispose()
   })
 
   const v2Expose = {
