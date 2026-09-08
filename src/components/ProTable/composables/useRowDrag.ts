@@ -46,6 +46,23 @@ export function useRowDrag(options: UseRowDragOptions) {
         ? `.${handleClass.value}`
         : `.${handleClass.value}[data-col="${options.handle}"]`
 
+    /**
+     * 把 sortablejs 物理移动过的 DOM 行还原到 oldIndex 位置。
+     * 为什么需要：sortablejs 拖拽直接操作真实 DOM，而 Vue 以 data 为唯一数据源；
+     * 取消/抛错/映射失败等分支只 return 不更新 data，DOM 不会被 Vue 纠正，
+     * 用户会看到"取消无效、顺序已变"（与 ColSetting.vue 列设置拖拽修复同理）。
+     */
+    const restoreDomRow = (
+      from: HTMLElement | undefined,
+      item: HTMLElement | undefined,
+      oldIndex?: number
+    ): void => {
+      if (!from || !item || oldIndex === undefined || oldIndex < 0) return
+      if (item.parentNode !== from) return
+      from.removeChild(item)
+      from.insertBefore(item, from.children[oldIndex] ?? null)
+    }
+
     const sortable = Sortable.create(tbody, {
       handle: handleSelector,
       animation: 150,
@@ -55,9 +72,16 @@ export function useRowDrag(options: UseRowDragOptions) {
         }
         return true
       },
-      onEnd: async (evt: { oldIndex?: number; newIndex?: number }) => {
+      onEnd: async (evt: {
+        oldIndex?: number
+        newIndex?: number
+        from?: HTMLElement
+        item?: HTMLElement
+      }) => {
         const oldIndex = evt.oldIndex ?? -1
         const newIndex = evt.newIndex ?? -1
+        // 先还原 DOM，再走后续分支：无论确认/取消/跳过，DOM 都交还给 Vue 重渲染
+        restoreDomRow(evt.from, evt.item, evt.oldIndex)
         if (oldIndex === newIndex || oldIndex < 0 || newIndex < 0) return
 
         // H6 树形模式：DOM 视图行顺序 ≠ data 顶层数组顺序，先经 key 映射到顶层索引再 splice

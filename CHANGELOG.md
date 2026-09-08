@@ -2,6 +2,11 @@
 
 ## 未发布
 
+### 🐛 Bug Fixes | ProTable 行拖拽取消二次确认后顺序已变（DOM 未还原）
+
+* **fix(ProTable):** `useRowDrag` `onEnd` 先还原 sortablejs 物理移动过的 DOM 行再走确认/取消/跳过分支——取消、onSortChange 抛错、树形映射失败时 DOM 不再残留错位（与 ColSetting 列设置拖拽修复同理：Vue 保持唯一数据源）
+* **test(ProTable):** useRowDrag 增 2 用例（取消还原 DOM / 映射失败还原 DOM）
+
 ### 🔧 Refactors | ProTable 架构优化（5 步计划，2026-09-08 评估驱动）
 
 > 计划文档：`docs/superpowers/plans/2026-09-08-protable-arch-refactor.md`
