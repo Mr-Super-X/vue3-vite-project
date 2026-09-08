@@ -32,8 +32,8 @@ export function serializeParams(params: Record<string, unknown>): Record<string,
   return out
 }
 
-export interface UseSearchOptions {
-  props: ProTableProps
+export interface UseSearchOptions<T extends object = Record<string, unknown>> {
+  props: ProTableProps<T>
   engine: Ref<TableEngine>
   fetchHook?: FetchHook
 }
@@ -57,7 +57,9 @@ export interface UseSearchReturn {
   serializeParams: (params: Record<string, unknown>) => Record<string, unknown>
 }
 
-export function useSearch(options: UseSearchOptions): UseSearchReturn {
+export function useSearch<T extends object = Record<string, unknown>>(
+  options: UseSearchOptions<T>
+): UseSearchReturn {
   const { props, fetchHook } = options
 
   // 1) 收集所有 search 配置列的 prop + defaultValue（+ initParam）

@@ -22,8 +22,8 @@ import { useRequest } from '@composables/useRequest' // 项目 composable auto-i
 import { serializeParams } from './useSearch' // 第 1 步单源化：序列化唯一实现
 import type { ProTableProps, TableDensity, TableEngine } from '../types'
 
-export interface UseTableOptions {
-  props: ProTableProps
+export interface UseTableOptions<T extends object = Record<string, unknown>> {
+  props: ProTableProps<T>
   /** 列上下文（useColumns 返回值） */
   columns: { allColumns?: Ref<unknown[]>; sortedColumns?: Ref<unknown[]> }
   engine: Ref<TableEngine>
@@ -34,33 +34,37 @@ export interface UseTableOptions {
   getSearchParams: () => Record<string, unknown>
 }
 
-export interface UseTableReturn {
-  data: Ref<Record<string, unknown>[] | null>
+export interface UseTableReturn<T extends object = Record<string, unknown>> {
+  data: Ref<T[] | null>
   loading: Ref<boolean>
   error: Ref<Error | null>
   total: Ref<number>
   page: Ref<number>
   pageSize: Ref<number>
-  selectedRows: Ref<Record<string, unknown>[]>
+  selectedRows: Ref<T[]>
   density: Ref<TableDensity>
   tableRef: Ref<ComponentPublicInstance | null>
   refresh: () => Promise<void>
   clearSelection: () => void
-  getSelectedRows: () => Record<string, unknown>[]
-  setSelectedRows: (rows: Record<string, unknown>[]) => void
+  getSelectedRows: () => T[]
+  setSelectedRows: (rows: T[]) => void
   setPage: (page: number) => void
   setPageSize: (size: number) => void
   setDensity: (d: TableDensity) => void
 }
 
-export function useTable(options: UseTableOptions): UseTableReturn {
+export function useTable<T extends object = Record<string, unknown>>(
+  options: UseTableOptions<T>
+): UseTableReturn<T> {
   const { props } = options
 
-  const data = ref<Record<string, unknown>[] | null>(null)
+  // Vue 对含裸泛型 T 的 ref 会套 UnwrapRefSimple<T>（静态判定不了 T 是否含 Ref 联合），
+  // 需显式断言回 Ref<T[]>：仅类型层 cast，运行时仍是普通 deep ref，与泛型化前行为一致
+  const data = ref<T[] | null>(null) as unknown as Ref<T[] | null>
   const total = ref(0)
   const page = ref(1)
   const pageSize = ref(props.pageSize ?? 10)
-  const selectedRows = ref<Record<string, unknown>[]>([])
+  const selectedRows = ref<T[]>([]) as unknown as Ref<T[]>
   const tableRef = ref<ComponentPublicInstance | null>(null)
   const density = ref<TableDensity>(props.density ?? 'default')
 
@@ -102,7 +106,7 @@ export function useTable(options: UseTableOptions): UseTableReturn {
     page.value = 1
   }
 
-  function setSelectedRows(rows: Record<string, unknown>[]): void {
+  function setSelectedRows(rows: T[]): void {
     // 按 row-key 去重（spec §九 #13 守卫：row-key 缺失时不报错）
     const key = props.rowKey
     if (!key) {
@@ -110,9 +114,10 @@ export function useTable(options: UseTableOptions): UseTableReturn {
       return
     }
     const seen = new Set<string>()
-    const unique: Record<string, unknown>[] = []
+    const unique: T[] = []
     for (const row of rows) {
-      const k = String(row[key])
+      // T extends object 无索引签名：行字段读取统一经 Record 转换（本文件唯一 cast 点）
+      const k = String((row as Record<string, unknown>)[key])
       if (seen.has(k)) continue
       seen.add(k)
       unique.push(row)
@@ -124,7 +129,7 @@ export function useTable(options: UseTableOptions): UseTableReturn {
     selectedRows.value = []
   }
 
-  function getSelectedRows(): Record<string, unknown>[] {
+  function getSelectedRows(): T[] {
     return [...selectedRows.value]
   }
 

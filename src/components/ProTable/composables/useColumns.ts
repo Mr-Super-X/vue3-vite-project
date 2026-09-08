@@ -15,15 +15,15 @@ import { ref, computed, watch, type Ref } from 'vue'
 import { Local } from '@/utils/storage' // plan critical review #5：Local 不在 auto-import 列表
 import type { ProColumn, ProTableProps, TableEngine } from '../types'
 
-export interface UseColumnsOptions {
-  props: ProTableProps
+export interface UseColumnsOptions<T extends object = Record<string, unknown>> {
+  props: ProTableProps<T>
   engine: Ref<TableEngine>
 }
 
-export interface UseColumnsReturn {
-  allColumns: Ref<ProColumn[]>
-  sortedColumns: Ref<ProColumn[]>
-  searchColumns: ProColumn[]
+export interface UseColumnsReturn<T extends object = Record<string, unknown>> {
+  allColumns: Ref<ProColumn<T>[]>
+  sortedColumns: Ref<ProColumn<T>[]>
+  searchColumns: ProColumn<T>[]
   visibleKeys: Ref<string[]>
   fixedKeys: Ref<string[]>
   colSettingVisible: Ref<boolean>
@@ -50,9 +50,9 @@ interface PersistedSetting {
  * - 外部 Ref<boolean> → computed 包装：get 在本地未写入时读外部（保持外部程序化联调），
  *   set 写本地副本 ref —— 用户经列设置面板的手动操作优先于外部值
  */
-function cloneColumns(cols: ProColumn[]): ProColumn[] {
+function cloneColumns<T extends object>(cols: ProColumn<T>[]): ProColumn<T>[] {
   return cols.map((col) => {
-    const copy: ProColumn = { ...col }
+    const copy: ProColumn<T> = { ...col }
     const h = col.hidden
     if (h !== undefined) {
       if (typeof h === 'boolean') {
@@ -72,12 +72,14 @@ function cloneColumns(cols: ProColumn[]): ProColumn[] {
   })
 }
 
-export function useColumns(options: UseColumnsOptions): UseColumnsReturn {
+export function useColumns<T extends object = Record<string, unknown>>(
+  options: UseColumnsOptions<T>
+): UseColumnsReturn<T> {
   const { props } = options
   const tableKey = props.tableKey
   const storageKey = tableKey ? `${tableKey}:columns` : ''
 
-  const allColumns = ref<ProColumn[]>(cloneColumns(props.columns))
+  const allColumns = ref<ProColumn<T>[]>(cloneColumns(props.columns))
   const visibleKeys = ref<string[]>(props.columns.map((c) => c.prop))
   const fixedKeys = ref<string[]>(props.columns.filter((c) => c.fixed).map((c) => c.prop))
   const colSettingVisible = ref(false) // 附录 A #8：默认关闭
@@ -95,7 +97,7 @@ export function useColumns(options: UseColumnsOptions): UseColumnsReturn {
   const columnOrder = ref<string[]>(persisted?.order ?? props.columns.map((c) => c.prop))
 
   /** 是否隐藏（支持 boolean 与 Ref<boolean>） */
-  function isHidden(col: ProColumn): boolean {
+  function isHidden(col: ProColumn<T>): boolean {
     if (typeof col.hidden === 'boolean') return col.hidden
     if (col.hidden && typeof col.hidden === 'object' && 'value' in col.hidden) {
       return Boolean((col.hidden as Ref<boolean>).value)
@@ -105,7 +107,7 @@ export function useColumns(options: UseColumnsOptions): UseColumnsReturn {
 
   const sortedColumns = computed(() => {
     const order = columnOrder.value
-    const arr: ProColumn[] = [...allColumns.value]
+    const arr: ProColumn<T>[] = [...allColumns.value]
     arr.sort((a, b) => {
       const ia = order.indexOf(a.prop)
       const ib = order.indexOf(b.prop)
@@ -144,7 +146,7 @@ export function useColumns(options: UseColumnsOptions): UseColumnsReturn {
     // cast 原因：Ref<ProColumn[]> 的 .value 经 UnwrapRef 把 hidden 的 Ref<boolean> 解成 boolean
     // 且 exactOptionalPropertyTypes 排除 undefined，与运行时「reactive 存 ref 本体」不符；
     // 还原为 ProColumn 类型后按公开声明赋值
-    ;(col as ProColumn).hidden = ref(!isHidden(col))
+    ;(col as ProColumn<T>).hidden = ref(!isHidden(col))
     persist()
   }
 
@@ -195,7 +197,7 @@ export function useColumns(options: UseColumnsOptions): UseColumnsReturn {
     // 重置所有列的 hidden 状态：统一赋新 ref(false) 走属性替换（cast 原因同 toggleVisible）
     for (const col of allColumns.value) {
       if (col.hidden !== undefined) {
-        ;(col as ProColumn).hidden = ref(false)
+        ;(col as ProColumn<T>).hidden = ref(false)
       }
     }
   }

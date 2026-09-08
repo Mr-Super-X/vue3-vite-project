@@ -24,10 +24,10 @@ import type {
   TreeConfig,
 } from '../types'
 
-export interface UseTableCapabilitiesOptions {
-  props: ProTableProps
-  columns: { allColumns?: RefType<ProColumn[]> }
-  table: { data: RefType<Record<string, unknown>[] | null> }
+export interface UseTableCapabilitiesOptions<T extends object = Record<string, unknown>> {
+  props: ProTableProps<T>
+  columns: { allColumns?: RefType<ProColumn<T>[]> }
+  table: { data: RefType<T[] | null> }
   /**
    * el-table tbody DOM 获取器 —— 由编排层提供（持有模板 ref），
    * 传入后 useRowDrag 自持挂载生命周期（onMounted + watch data 自动重挂）。
@@ -35,7 +35,7 @@ export interface UseTableCapabilitiesOptions {
   getTbody?: () => HTMLElement | null
 }
 
-export interface UseTableCapabilitiesReturn {
+export interface UseTableCapabilitiesReturn<T extends object = Record<string, unknown>> {
   rowEdit: ReturnType<typeof useRowEdit> | null
   treeData: ReturnType<typeof useTreeData> | null
   cellSpan: ReturnType<typeof useCellSpan> | null
@@ -47,7 +47,7 @@ export interface UseTableCapabilitiesReturn {
     expandNode: (rowKey: string | number, expanded?: boolean) => void
     collapseNode: (rowKey: string | number) => void
     refreshChildren: (rowKey: string | number) => Promise<void>
-    setRowOrder: (newOrder: Record<string, unknown>[]) => void
+    setRowOrder: (newOrder: T[]) => void
   }
 }
 
@@ -70,9 +70,9 @@ function pickDefined<T extends object>(src: T, keys: readonly (keyof T)[]): Part
   return out
 }
 
-export function useTableCapabilities(
-  options: UseTableCapabilitiesOptions
-): UseTableCapabilitiesReturn {
+export function useTableCapabilities<T extends object = Record<string, unknown>>(
+  options: UseTableCapabilitiesOptions<T>
+): UseTableCapabilitiesReturn<T> {
   const { props, columns, table } = options
 
   const rowEditConfig = computed<RowEditConfig>(() => asConfig(props.enableRowEdit, {}))
@@ -117,14 +117,19 @@ export function useTableCapabilities(
   // 仅在树形 + 拖拽同时启用时创建，key 取自 props.rowKey（默认 'id'）。
   const rowKeyField = props.rowKey ?? 'id'
   const viewRowKeys = computed<(string | number)[]>(() => {
-    const src = treeData
-      ? (treeData.flatData.value as Record<string, unknown>[])
-      : (table.data.value ?? [])
+    // cast 原因：T 无索引签名，行 key 读取统一经 Record 转换（与 setRowOrder 同一边界）
+    const src = (treeData ? treeData.flatData.value : (table.data.value ?? [])) as Record<
+      string,
+      unknown
+    >[]
     return src.map((r) => r[rowKeyField] as string | number)
   })
   const topIndexByKey = computed(() => {
     const m = new Map<string | number, number>()
-    ;(table.data.value ?? []).forEach((r, i) => m.set(r[rowKeyField] as string | number, i))
+    // cast 原因同上
+    ;((table.data.value ?? []) as Record<string, unknown>[]).forEach((r, i) =>
+      m.set(r[rowKeyField] as string | number, i)
+    )
     return m
   })
 
@@ -181,7 +186,8 @@ export function useTableCapabilities(
     },
     saveEdit: async (rowKey?: string | number): Promise<boolean> => {
       if (!rowEdit) return false
-      const data = table.data.value ?? []
+      // T extends object 无索引签名：传给非泛型 _save 前经 Record 转换（能力层 cast 边界之一）
+      const data = (table.data.value ?? []) as Record<string, unknown>[]
       if (rowKey === undefined) {
         const keys = [...rowEdit.editingKeys.value]
         const results = await Promise.all(keys.map((k) => rowEdit._save(k, data)))
@@ -206,8 +212,12 @@ export function useTableCapabilities(
       treeData.expandedKeys.value.delete(rowKey)
       await treeData.toggle(rowKey)
     },
-    setRowOrder: (newOrder: Record<string, unknown>[]) => {
-      if (table.data) (table.data as Ref<Record<string, unknown>[] | null>).value = newOrder
+    setRowOrder: (newOrder: T[]) => {
+      if (table.data)
+        (table.data as Ref<Record<string, unknown>[] | null>).value = newOrder as unknown as Record<
+          string,
+          unknown
+        >[]
     },
   }
 
