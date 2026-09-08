@@ -48,20 +48,8 @@ defineOptions({ inheritAttrs: false })
 
 /* ───────────── 编排层：用 3 个 composables 接管所有状态 ───────────── */
 
-/** 引擎 ref —— spec 决策 4：setup 阶段一次性捕获 */
+/** 引擎 ref —— spec 决策 4：setup 阶段一次性捕获，运行时修改 prop 无效（锁定语义） */
 const engineRef: Ref<'element-plus' | 'vxe-table'> = resolveEngine(props.tableEngine)
-watch(
-  () => props.tableEngine,
-  (v) => {
-    // 仅在首次渲染前有效；运行时修改无效（JSDoc 约束）
-    if (engineRef.value === 'element-plus' || engineRef.value === 'vxe-table') {
-      engineRef.value = v
-    }
-  }
-)
-
-/** 列设置抽屉状态（spec 附录 A #8：默认关闭） */
-const colSettingVisible = ref(false)
 
 // exactOptionalPropertyTypes 兼容：withDefaults 返回的 props 含 undefined optional，
 // ProTableProps 严格不允 undefined。cast 一次解决（CLAUDE.md §四严禁 any；用 unknown 收口）
@@ -94,15 +82,9 @@ watch(
   { deep: true }
 )
 
-// 列设置抽屉状态同步（useColumns.colSettingVisible → ProTable.colSettingVisible）
-watch(
-  () => columns.colSettingVisible.value,
-  (v) => (colSettingVisible.value = v)
-)
-
-// 列设置抽屉 emit（ProTable → useColumns）
+// 列设置抽屉状态（单一真相源在 useColumns.colSettingVisible，见 ./composables/useColumns）
 function handleColSettingUpdate(visible: boolean): void {
-  colSettingVisible.value = visible
+  columns.colSettingVisible.value = visible
 }
 
 /* ───────────── v2.0 四类能力编排（已抽到 useTableCapabilities.ts） ───────────── */
@@ -283,7 +265,7 @@ defineExpose({
         :columns="columns.allColumns.value"
         :visible-columns="columns.sortedColumns.value"
         :density="table.density.value"
-        :col-setting-visible="colSettingVisible"
+        :col-setting-visible="columns.colSettingVisible.value"
         @refresh="table.refresh"
         @update:density="handleDensityChange"
         @update:col-setting-visible="handleColSettingUpdate"
@@ -428,7 +410,6 @@ defineExpose({
                 </template>
                 <!-- 默认渲染（v1 resolveCell） -->
                 <template v-else>
-                  <component :is="'div'" v-if="false" />
                   <template
                     v-for="(item, i) in [resolveCell(col, scope.row, scope.$index)]"
                     :key="i"
@@ -470,7 +451,7 @@ defineExpose({
       </ElPagination>
       <ColSetting
         v-if="engineRef === 'element-plus'"
-        v-model:visible="colSettingVisible"
+        v-model:visible="columns.colSettingVisible.value"
         :columns="columns.allColumns.value"
         :visible-keys="columns.visibleKeys.value"
         :fixed-keys="columns.fixedKeys.value"

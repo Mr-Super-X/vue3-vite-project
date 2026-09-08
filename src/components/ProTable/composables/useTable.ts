@@ -17,7 +17,7 @@
  * @see [`./useSearch`](./useSearch.ts) 共享 fetchHook 闭包
  * @group ProTable composables
  */
-import { ref, computed, watch, onMounted, type ComponentPublicInstance, type Ref } from 'vue'
+import { ref, watch, onMounted, type ComponentPublicInstance, type Ref } from 'vue'
 import { useRequest } from '@composables/useRequest' // 项目 composable auto-import
 import type { ProTableProps, TableDensity, TableEngine } from '../types'
 
@@ -39,12 +39,6 @@ export interface UseTableReturn {
   density: Ref<TableDensity>
   tableRef: Ref<ComponentPublicInstance | null>
   searchParams: Ref<Record<string, unknown>>
-  /** v2.0 编辑态行 key 集合（由 useRowEdit 接管） */
-  editingKeys: Ref<Set<string | number>>
-  /** v2.0 树形展开 key 集合（由 useTreeData 接管） */
-  treeExpandedKeys: Ref<Set<string | number>>
-  /** v2.0 是否处于树形模式 */
-  isTreeMode: Ref<boolean>
   refresh: () => Promise<void>
   clearSelection: () => void
   getSelectedRows: () => Record<string, unknown>[]
@@ -85,11 +79,6 @@ export function useTable(options: UseTableOptions): UseTableReturn {
   const selectedRows = ref<Record<string, unknown>[]>([])
   const tableRef = ref<ComponentPublicInstance | null>(null)
   const density = ref<TableDensity>(props.density ?? 'default')
-
-  // v2.0 状态字段（由 ProTable.vue 接入 useRowEdit / useTreeData 后接管写入）
-  const editingKeys = ref<Set<string | number>>(new Set())
-  const treeExpandedKeys = ref<Set<string | number>>(new Set())
-  const isTreeMode = computed(() => !!props.enableTree)
 
   // useRequest 包装（AbortController 内置；spec §九 #5 快速连续取消）
   const request = useRequest(
@@ -196,9 +185,6 @@ export function useTable(options: UseTableOptions): UseTableReturn {
     density,
     tableRef,
     searchParams,
-    editingKeys,
-    treeExpandedKeys,
-    isTreeMode,
     refresh,
     clearSelection,
     getSelectedRows,

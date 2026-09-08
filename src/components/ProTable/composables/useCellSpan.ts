@@ -110,8 +110,9 @@ export function useCellSpan(options: UseCellSpanOptions) {
   }): string => {
     const r = spanMethod(params)
     if (r.rowspan > 1) {
-      // amount 列的自定义 judge 合并 → 橙色
-      if (params.column?.property === 'amount') return 'is-merge-rowspan is-merge-judge'
+      // 自定义 judge 合并 → 橙色（判定依据：该列声明了 span.judge，而非硬编码列名）
+      const col = columnsRef.value.find((c) => c.prop === params.column?.property)
+      if (col?.span?.judge) return 'is-merge-rowspan is-merge-judge'
       return 'is-merge-rowspan'
     }
     if (r.colspan > 1) return 'is-merge-colspan'
