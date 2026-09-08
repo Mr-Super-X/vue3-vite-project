@@ -1,6 +1,6 @@
 # ProTable 组件
 
-> 配置驱动的企业级表格组件（Element Plus + vxe-table 双引擎）。参考 vue-element-plus-admin 的 ProTable 设计哲学。
+> 配置驱动的企业级表格组件（Element Plus 引擎，vxe-table 引擎 v2.1 计划支持）。参考 vue-element-plus-admin 的 ProTable 设计哲学。
 
 ## 安装
 
@@ -8,7 +8,7 @@
 
 - `element-plus`（项目基础 UI 库）
 - `sortablejs ^1.15.7`（列设置拖拽）
-- `vxe-table ^4.21.7`（vxe-table 引擎，**动态按需加载**）
+- `vxe-table ^4.21.7`（vxe-table 引擎预留依赖，v2.1 交付，动态按需加载）
 
 ## 基础用法
 
@@ -47,16 +47,16 @@ async function requestApi(params: Record<string, unknown>) {
 
 详见 [`./types/index.ts`](./types/index.ts) 类型定义。
 
-## 双引擎
+## 引擎（v2.1 计划支持 vxe-table）
 
-通过 `table-engine="vxe-table"` 切换：
+v2.0 仅实现 element-plus 引擎。传入 `table-engine="vxe-table"` 时会 `console.warn` 并回退 element-plus：
 
 ```vue
+<!-- 实际渲染 element-plus 表格，控制台提示 vxe-table 暂未实现 -->
 <ProTable :columns="columns" :request-api="requestApi" table-engine="vxe-table" />
 ```
 
 > 注意：引擎 prop 仅在首次 mount 前生效，运行时修改需 reload（spec 决策 4）。
-> vxe-table 通过动态 import 按需加载，不污染首屏 bundle。
 
 ## 插槽系统
 

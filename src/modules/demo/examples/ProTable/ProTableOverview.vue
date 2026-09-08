@@ -192,7 +192,7 @@ const propsItems = [
     required: false,
     default: 'element-plus',
     description:
-      "表格引擎（值: 'element-plus' | 'vxe-table'；首次 mount 前设置，运行时修改需 reload）",
+      "表格引擎（值: 'element-plus' | 'vxe-table'；首次 mount 前设置，运行时修改需 reload；v2.0 传入 'vxe-table' 会 console.warn 并回退 element-plus，v2.1 计划支持）",
   },
   {
     name: 'tableKey',

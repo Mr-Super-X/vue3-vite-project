@@ -82,6 +82,8 @@ export function useTableCapabilities(
 
   const rowEdit = props.enableRowEdit
     ? useRowEdit({
+        // H5：行 key 字段随 props.rowKey 注入，避免 useRowEdit 硬编码 'id' 导致自定义行 key 的表格保存失败
+        rowKey: props.rowKey ?? 'id',
         ...(pickDefined(rowEditConfig.value, ['onSave', 'onSaved', 'onSaveError']) as object),
       })
     : null

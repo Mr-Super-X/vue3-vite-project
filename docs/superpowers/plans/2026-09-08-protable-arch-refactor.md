@@ -14,7 +14,7 @@
 | 第 1 步 | searchParams 单源化（修 H1/H2/M6，核心） | ✅ 已完成 | 2026-09-08 |
 | 第 2 步 | 能力编排归位（H4/H7/M8 + EditCell 抽取） | ✅ 已完成 | 2026-09-08 |
 | 第 3 步 | props 保护（M2 列对象拷贝 / M5 派生 direction） | ✅ 已完成 | 2026-09-08 |
-| 第 4 步 | vxe 死路径决策 + useRowEdit rowKey 注入（H3/H5） | ⬜ 未开始 | — |
+| 第 4 步 | vxe 死路径决策 + useRowEdit rowKey 注入（H3/H5） | ✅ 已完成 | 2026-09-08 |
 
 ---
 
@@ -126,22 +126,22 @@
 
 ## 第 4 步：vxe 死路径决策 + rowKey 注入（H3 / H5）
 
-### 4.1 vxe 决策（**实现前需用户拍板**，默认推荐方案 A）
+### 4.1 vxe 决策（方案 A，用户已拍板）
 
-- [ ] 方案 A（推荐）：`'vxe-table'` 时 `console.warn('[ProTable] vxe-table 引擎暂未实现，已回退 element-plus')` 并回退；删除 `useVxeTable.ts` 及其 spec；`types/index.ts` 删除 `vxeProps` 字段；README/ARCHITECTURE 标注 v2.1 计划
-- [ ] 方案 B：保留代码，README/ARCHITECTURE 显式标注"实验性未接线"
-- [ ] 补测试：传 `table-engine="vxe-table"` 渲染 el-table 且 warn（方案 A）
+- [x] 方案 A：`'vxe-table'` 时 `console.warn('[ProTable] vxe-table 引擎暂未实现，已回退 element-plus（v2.1 计划支持）')` 并回退（`adapters/engine.ts` resolveEngine）；删除 `useVxeTable.ts` 及其 spec；`types/index.ts` 删除 `vxeProps` 字段；README/ARCHITECTURE/CONTRIBUTING 标注 v2.1 计划 ✅ 2026-09-08
+- [x] 顺带清理：`engine.ts` 删除无消费者的 `isVxeEngine`；CONTRIBUTING 删除已过时的「集成测试未交付」条目 ✅ 2026-09-08
+- [x] 补测试：传 `table-engine="vxe-table"` 渲染 el-table 且 warn（方案 A）✅ 2026-09-08
 
 ### 4.2 useRowEdit rowKey 注入（H5）
 
-- [ ] `UseRowEditOptions` 增加 `rowKey?: string`（默认 `'id'`）；`_save` 内 `data.find((r) => r[options.rowKey ?? 'id'] === rowKey)`（`useRowEdit.ts:58, 69`）
-- [ ] `useTableCapabilities.ts:78-82` 透传 `props.rowKey ?? 'id'`
-- [ ] 补 useRowEdit.spec：自定义 rowKey（如 `uuid`）保存成功用例
+- [x] `UseRowEditOptions` 增加 `rowKey?: string`（默认 `'id'`）；`_save` 内按 `options.rowKey ?? 'id'` 查找行（成功 + catch 两处）✅ 2026-09-08
+- [x] `useTableCapabilities.ts:83-87` 透传 `props.rowKey ?? 'id'` ✅ 2026-09-08
+- [x] 补 useRowEdit.spec：自定义 rowKey（`uuid`）保存成功用例 ✅ 2026-09-08
 
 ### 4.3 验证
 
-- [ ] `pnpm test src/components/ProTable && pnpm type-check:full && pnpm lint`
-- [ ] 全量 demo 回归：`/demo/pro-table-overview|row-edit|tree|cell-span|row-drag`
+- [x] `pnpm test src/components/ProTable && pnpm type-check:full && pnpm lint` —— 14 文件 95 测试全绿 + vue-tsc + eslint 零错误 ✅ 2026-09-08
+- [~] 全量 demo 回归：`/demo/pro-table-overview|row-edit|tree|cell-span|row-drag` —— 列为手动验证项（4.2 行为由 spec 用例覆盖；4.1 回退路径由集成测试覆盖）
 
 ---
 

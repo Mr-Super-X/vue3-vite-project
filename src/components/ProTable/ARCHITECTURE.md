@@ -17,7 +17,7 @@ flowchart TD
     K --> H
     L[Local storage] <--> H
     M[tableEngine prop] --> N[adapters/engine.ts]
-    N --> O[vxe-table 引擎分支]
+    N --> O[vxe-table 回退 warn（v2.0 未实现）]
 ```
 
 ## Composables 依赖
@@ -27,7 +27,6 @@ flowchart TD
 | `useSearch`       | props.columns（search 配置）   | searchParams / search() / reset()          |
 | `useColumns`      | props.columns + Local          | sortedColumns / allColumns / toggleVisible |
 | `useTable`        | props + useSearch + useColumns | data / loading / pagination / selectedRows |
-| `useVxeTable`     | （独立）                       | loadVxeTable() 动态加载模块                |
 | `adapters/engine` | props.tableEngine              | Ref<TableEngine>（首次挂载锁定）           |
 
 ## 状态归属
@@ -48,9 +47,12 @@ sequenceDiagram
     participant Setup as ProTable.vue setup
     participant Engine as engineRef
     participant EP as element-plus
-    participant Vxe as vxe-table
     Setup->>Engine: resolveEngine(props.tableEngine)
-    Engine-->>Setup: ref<'element-plus'>
+    alt tableEngine = 'vxe-table'（v2.0 未实现）
+        Engine-->>Setup: console.warn + ref<'element-plus'>
+    else
+        Engine-->>Setup: ref<'element-plus'>
+    end
     Note over Engine: 首次挂载锁定
     Setup->>EP: v-if='element-plus'
     Note over Setup: 运行时切换 prop 不生效
@@ -62,7 +64,7 @@ sequenceDiagram
 
 - `useRequest` 内置 AbortController + 三态（loading/error/data）
 - `Local.get` 内置 `safeParse` 清脏数据
-- vxe-table 动态 import 失败时上层 catch 切回 element-plus
+- vxe-table 引擎 v2.0 未实现：传入时 resolveEngine warn 并回退 element-plus（v2.1 交付）
 
 ## 文件清单
 
@@ -84,8 +86,6 @@ src/components/ProTable/
 | useSearch   | 5      |
 | useTable    | 6      |
 | useColumns  | 5      |
-| useVxeTable | 3      |
 | SearchForm  | 4      |
 | TableHeader | 4      |
 | ColSetting  | 3      |
-| **合计**    | **30** |

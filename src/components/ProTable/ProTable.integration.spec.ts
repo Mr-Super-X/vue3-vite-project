@@ -51,6 +51,21 @@ describe('ProTable v2.0 集成（冲突矩阵 + 启动校验）', () => {
     expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('span.direction=column'))
   })
 
+  it('vxe-table 引擎：warn 回退 element-plus（v2.0 未实现）', async () => {
+    const wrapper = mount(ProTable, {
+      props: {
+        columns: [{ prop: 'name', label: '名称' }],
+        // 返回非空数据：空数据时 AsyncState 渲染 empty 态不挂载 ElTable，无法断言引擎回退
+        requestApi: async () => ({ data: [{ name: '甲' }], total: 1, pageNum: 1, pageSize: 10 }),
+        tableEngine: 'vxe-table',
+      } as ProTableProps,
+    })
+    await new Promise((r) => setTimeout(r, 10))
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('vxe-table 引擎暂未实现'))
+    // 回退后仍渲染 element-plus 表格
+    expect(wrapper.findComponent({ name: 'ElTable' }).exists()).toBe(true)
+  })
+
   it('启动校验：能力冲突时只 warn 不 throw（组件仍 mount 成功）', () => {
     const wrapper = mount(ProTable, {
       props: {

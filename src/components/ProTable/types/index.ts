@@ -77,7 +77,7 @@ export interface RowDragConfig {
 export type SearchElType =
   'input' | 'select' | 'date-picker' | 'tree-select' | 'cascader' | 'input-number'
 
-/** 表格引擎枚举 —— spec 决策 4：首次 mount 锁定，运行时 prop 修改无效 @group ProTable 类型 */
+/** 表格引擎枚举 —— spec 决策 4：首次 mount 锁定，运行时 prop 修改无效；'vxe-table' v2.0 未实现（回退 element-plus，v2.1 支持） @group ProTable 类型 */
 export type TableEngine = 'element-plus' | 'vxe-table'
 
 /** 表格密度三档 —— 附录 A #7 默认 'default' @group ProTable 类型 */
@@ -151,10 +151,8 @@ export interface ProColumn {
   headerRender?: (scope: { column: ProColumn; $index: number }) => VNode
   /** 自定义单元格渲染（返回 VNode；不传则按 enum/字段值渲染） */
   render?: (scope: { row: Record<string, unknown>; column: ProColumn; $index: number }) => VNode
-  /** 透传给 ElTableColumn / VxeColumn 的 props */
+  /** 透传给 ElTableColumn 的 props */
   tableProps?: Record<string, unknown>
-  /** 透传给 VxeColumn 的 props（仅 vxe-table 引擎生效） */
-  vxeProps?: Record<string, unknown>
   /** 行内编辑配置（不声明 = 该列只读） */
   edit?: ColumnEditConfig
   /** 树形列声明（仅一列生效，默认第一列） */
@@ -249,7 +247,7 @@ export interface ProTableExpose {
    */
   setSearchParams: (params: Record<string, unknown>) => Promise<void>
   /**
-   * element-plus 表格实例（仅 element-plus 引擎有值；vxe-table 引擎为 null）。
+   * element-plus 表格实例（v2.0 vxe-table 引擎未实现，传入时回退 element-plus，故恒有值）。
    * 使用 ComponentPublicInstance 而非 InstanceType<typeof ElTable>，
    * 原因：el-table 是 functional 组件定义，InstanceType 不适用。
    * 父组件如需直接调用 el-table 方法，可通过类型断言访问具体方法。

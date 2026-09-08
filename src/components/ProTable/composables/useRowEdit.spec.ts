@@ -100,6 +100,41 @@ describe('useRowEdit', () => {
     expect(editWithAsync.getError('row-1', 'salary')).toBe('工资超限')
   })
 
+  it('自定义 rowKey（如 uuid）保存成功（H5：不再硬编码 id）', async () => {
+    const editWithUuid = useRowEdit({
+      rowKey: 'uuid',
+      onSave: undefined,
+      onSaved: undefined,
+      onSaveError: undefined,
+    })
+    const data: Record<string, unknown>[] = [{ uuid: 'u-1', name: '李四' }]
+    editWithUuid._start('u-1')
+    editWithUuid.setValue('u-1', 'name', '张三')
+
+    const result = await editWithUuid._save('u-1', data)
+    expect(result).toBe(true)
+    expect(data[0].name).toBe('张三')
+  })
+
+  it('自定义 rowKey 的 catch 分支：onSave 抛错时按 uuid 定位行并触发 onSaveError', async () => {
+    const receivedRows: Record<string, unknown>[] = []
+    const editWithUuid = useRowEdit({
+      rowKey: 'uuid',
+      onSave: async () => {
+        throw new Error('提交失败')
+      },
+      onSaved: undefined,
+      onSaveError: (row) => receivedRows.push(row),
+    })
+    const data: Record<string, unknown>[] = [{ uuid: 'u-1', name: '李四' }]
+    editWithUuid._start('u-1')
+    editWithUuid.setValue('u-1', 'name', '张三')
+
+    const result = await editWithUuid._save('u-1', data)
+    expect(result).toBe(false)
+    expect(receivedRows).toEqual([{ uuid: 'u-1', name: '李四' }])
+  })
+
   it('多行同时编辑独立', () => {
     edit._start('row-1')
     edit._start('row-2')

@@ -159,8 +159,8 @@ export interface ProColumn {
   render?: (scope: { row: Record<string<unknown>>; column: ProColumn; $index: number }) => VNode
   /** 透传给 ElTableColumn / VxeColumn 的 props */
   tableProps?: Record<string<unknown>>
-  /** 透传给 VxeColumn 的 props（仅 vxe-table 引擎） */
-  vxeProps?: Record<string<unknown>>
+  /** [已移除] v2.0 删除 vxeProps（vxe-table 引擎回退 element-plus），统一使用 tableProps；v2.1 接入时恢复，见 src/components/ProTable/CONTRIBUTING.md「v2.1 接入 vxe-table 清单」 */
+  // vxeProps?: Record<string, unknown>
 }
 
 /** ProTable 组件 props @group ProTable 类型 */

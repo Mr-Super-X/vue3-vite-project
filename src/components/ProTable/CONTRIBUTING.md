@@ -25,9 +25,19 @@
 - `feat:` / `fix:` / `refactor:` / `docs:` / `test:` / `chore:`
 - subject 小写开头（commitlint 规则）
 
-## 已知限制（第一版）
+## 已知限制
 
-- vxe-table 引擎 UI 渲染细节未交付（仅动态 import 骨架）
-- 集成测试 `ProTable.spec.ts` 未交付（仅单元测试 30 个）
+- vxe-table 引擎 v2.0 未实现：传入 `table-engine="vxe-table"` 时 warn 并回退 element-plus（v2.1 计划交付，届时在 `adapters/engine.ts` 解除回退）
 
-后续迭代按需求补充。
+## v2.1 接入 vxe-table 清单
+
+被删除的骨架代码可从 git 历史恢复：`git checkout aaedabf -- src/components/ProTable/composables/useVxeTable.ts src/components/ProTable/composables/useVxeTable.spec.ts`（aaedabf 为骨架首次提交，含 dynamic import + 模块缓存 + spec）。接入步骤：
+
+1. **恢复加载层**：`useVxeTable.ts` 骨架放回 `composables/`，`package.json` 的 `vxe-table ^4.21.7` 依赖已预留
+2. **解除回退**：`adapters/engine.ts` 删除 `resolveEngine` 的 vxe 回退分支，`ProTableExpose.element` 注释同步
+3. **类型恢复**：`types/index.ts` 恢复 `ProColumn.vxeProps`（透传 VxeColumn props）
+4. **渲染分支**：`ProTable.vue` 模板按 `engineRef` 加 vxe-table 分支（vxe 组件按需注册，勿全局引入污染首屏）
+5. **列映射层**：新增 `ProColumn → VxeColumn` 映射（prop/width/fixed/sortable/enum/render/headerRender 对齐）
+6. **事件桥接**：`cell-dblclick` / `expand-change` / `selection-change` 等事件映射到既有 handler（行编辑/树形/多选依赖）
+7. **能力矩阵对齐**：4 类 v2 能力（编辑/树形/合并/拖拽）逐项验证 vxe 支持度，不支持的在 `validateCapabilities` 加 warn（树形 vxe 已知不支持）
+8. **测试补齐**：useVxeTable spec 恢复 + 集成测试补引擎切换用例 + demo 加引擎对比页

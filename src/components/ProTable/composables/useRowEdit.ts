@@ -6,6 +6,8 @@
 
 /** 行内编辑 composable 选项（spec §5.1）。@group ProTable Composables */
 export interface UseRowEditOptions {
+  /** 行 key 字段名（默认 'id'）—— _save 按该字段在 data 中定位行 @group 编辑配置 */
+  rowKey?: string
   /** 保存前业务校验/提交；返回 false 中止（保留编辑态），抛错走 onSaveError。@group 编辑钩子 */
   onSave?: (
     row: Record<string, unknown>,
@@ -53,9 +55,10 @@ export function useRowEdit(options: UseRowEditOptions) {
   ): Promise<boolean> => {
     if (validating.value.has(rowKey)) return false
     validating.value.add(rowKey)
+    const keyField = options.rowKey ?? 'id'
     try {
       const draft = drafts.value.get(rowKey) ?? {}
-      const row = data.find((r) => r.id === rowKey)
+      const row = data.find((r) => r[keyField] === rowKey)
       if (!row) return false
       const result = await options.onSave?.(row, draft)
       if (result === false) return false
@@ -66,7 +69,7 @@ export function useRowEdit(options: UseRowEditOptions) {
       options.onSaved?.(row)
       return true
     } catch (err) {
-      const row = data.find((r) => r.id === rowKey)
+      const row = data.find((r) => r[keyField] === rowKey)
       if (row) options.onSaveError?.(row, err)
       return false
     } finally {

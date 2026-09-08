@@ -2,6 +2,19 @@
 
 ## 未发布
 
+### 🔧 Refactors | ProTable 架构优化（5 步计划，2026-09-08 评估驱动）
+
+> 计划文档：`docs/superpowers/plans/2026-09-08-protable-arch-refactor.md`
+
+* **fix(ProTable):** searchParams 单源化（H1/H2）——唯一真相源收归 `useSearch`，`useTable` 改为 `getSearchParams` 读取回调；修复「程序化 setSearchParams 后请求参数错配」与「输入即搜无防抖」两个缺陷；输入路径（`updateParams` 纯写）与请求路径（按钮门控）分离
+* **fix(ProTable):** useRowEdit 硬编码 `r.id`（H5）——注入 `props.rowKey`，自定义行 key 表格保存/错误回调不再失效
+* **fix(ProTable):** 树形拖拽索引错位（H6）——DOM 视图行 key 映射回顶层数组索引后 splice，映射失败 console.warn 并跳过（替代静默错位）
+* **refactor(ProTable):** 能力编排归位（H4）——`useRowDrag` 自持 DOM 挂载生命周期（onMounted + watch data flush:'post'），删除 ProTable.vue 3 个 setTimeout + 2 个 watch；`useTreeData.flatData` 响应式化 + `dispose()` 资源清理；抽取 `EditCell.vue` / `CellContent.vue` 子组件（ProTable.vue 384 行 ≤400 达标）
+* **refactor(ProTable):** props 保护（M2/M5）——`useColumns` 白名单拷贝列对象，外部 columns 常量不再被反向 mutation，多实例共享互不污染；`validateCapabilities` 消除原地改写调用方配置
+* **refactor(ProTable):** 行为等价清理——删除 `useVxeTable` 死路径（方案 A：vxe-table 引擎 warn 并回退 element-plus，骨架可从 aaedabf 恢复，v2.1 接入清单见 CONTRIBUTING.md）、删除模板死代码与 useTable 死字段、`colSettingVisible` 单源化、engine 锁定语义统一
+* **test(ProTable):** 测试 75 → 96（新增 searchParams 单源化 / 树形拖拽映射 / 列拷贝保护 / vxe 回退 / 自定义 rowKey 等 21 个用例）
+* **docs(ProTable):** README / ARCHITECTURE / CONTRIBUTING 同步，旧实现计划文档标注 vxeProps 已移除
+
 ### 🐛 Bug Fixes | ProTable 列设置拖拽排序不生效（双根因修复）
 
 * **fix(ProTable):** 列设置抽屉拖拽后表格列顺序不更新
