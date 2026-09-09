@@ -78,22 +78,6 @@ export function useFormInstance(
     return (map[key] as ComponentPublicInstance | HTMLElement) ?? null
   }
 
-  function validateForm(): Promise<boolean> {
-    return new Promise((resolve) => {
-      const ef = elFormRef.value
-      // 未绑定 el-form 时按失败处理并给出可诊断错误日志：
-      // 静默 resolve(true) 会把"配置/时序错误"伪装成"校验通过"，提交链路带着未校验数据继续走
-      if (!ef?.validate) {
-        console.error(
-          '[XForm] validate 调用时 el-form 实例未绑定（elFormRef 为空），已按校验失败处理'
-        )
-        return resolve(false)
-      }
-      // element-plus 2.x 即使传 callback 仍 reject errorsMap（微任务），需 Promise.catch 接住
-      Promise.resolve(ef.validate((valid: boolean) => resolve(valid))).catch(() => resolve(false))
-    })
-  }
-
   /** 从 el-form field 上下文提取字段路径名（优先 propString，兼容 ref/字符串两种形态） */
   function extractFieldName(field: unknown): string | null {
     const raw = toRaw(field) as {
@@ -267,7 +251,6 @@ export function useFormInstance(
   return {
     elFormRef,
     getRef,
-    validateForm,
     clearValidate,
     resetFields,
     setInitialValues,
