@@ -8,7 +8,9 @@
 
 * **fix(ProTable):** element-plus 引擎 `type: 'selection'` 列行内勾选框不渲染——`ElementTableBody` 对 ElTableColumn **统一提供 default slot**，覆盖 el-table 对 selection 列的内置 checkbox 渲染（`cellForced.renderCell` 仅在无 default slot 时生效），行内单元格空白只剩表头全选框；selection 列排除出 default slot（`v-if="col.type !== 'selection'"`），交还 el-table 自渲染
 * **fix(ProTable):** 多选跨页记忆（`reserve-selection`）失效——`AsyncState` 的 loading 分支以 skeleton 替换插槽，每次翻页/搜索刷新都**卸载重建 ElTable 实例**，其 store 内多选选区 / 展开行等交互态全部丢失；`initialLoading` 收窄判定（仅「从未渲染过数据」时 skeleton，之后刷新保留表格实例、loading 期间展示旧数据），配合 `tableProps: { reserveSelection: true }` 跨页累计选区可用
-* **fix(ProTable):** 切分页/排序/搜索刷新期间表格无 loading 指示——`initialLoading` 收窄的补偿缺口：后续刷新表格保持挂载但缺少遮罩；`ElementTableBody` / `VxeTableBody` 新增 `loading` prop（分别接 el-table `v-loading` 指令 / vxe `loading` prop），编排层传 `table.loading && hasTableMounted`——首次 skeleton 与表格遮罩不叠加
+* **fix(ProTable):** 切分页/排序/搜索刷新期间表格无 loading 指示——`initialLoading` 收窄的补偿缺口：后续刷新表格保持挂载但缺少遮罩；`ElementTableBody` / `VxeTableBody` 新增 `loading` prop，编排层传 `table.loading && hasTableMounted`（首次 skeleton 与表格遮罩不叠加）。el 引擎走 `v-loading` 指令；vxe 引擎走外层容器 `v-loading` —— vxe 自带 `loading` prop 的遮罩组件 `VxeLoading` 由未安装的 vxe-pc-ui 提供（vxe-table esm 版不含，UMD 才内置），`VxeUI.getComponent('VxeLoading')` 返回 undefined 致原生 prop 无效；待评估引入 vxe-pc-ui 后可换回原生 prop（tooltip 等组件同此依赖）
+* **fix(ProTable):** el 引擎切密度（紧凑/默认/宽松）时表头高度不变、且与表体行高不对齐——密度覆盖只作用于表体 `.el-table__row td`（`height` 显式设定），表头 `th.el-table__cell` 仅补 padding 时高度 = 内容行高(约 23.6px) + padding，默认档实测 39.57px vs 表体 48px，两引擎并排 demo 出现高度差；表头同步设 `height`（table 布局中按最小高度生效）与表体对齐。vxe 引擎表头与表体共用 `--vxe-ui-table-row-height-*` 变量，无此问题
+* **refactor(ProTable):** 密度档位值（行高 32/48/64、垂直 padding 4/8/12）提取为 Sass map 设计令牌（`$pro-table-density-tokens`）+ `@each` 生成 el 表体/表头、vxe 四尺寸键共 21 处分散硬编码——调档/新增档位单点维护（压缩编译产物 diff 验证零行为变化）
 * **test(ProTable):** 集成 spec 补回归用例——selection 列行内渲染 el-table 内置 checkbox（真实 mount 断言 `.el-table__body .el-checkbox`）；切分页请求挂起期间断言 `.el-loading-mask` 出现、数据到达后消失；测试 154 → 156
 * **docs(demo):** overview 新增「多选（勾选 / 清除勾选，含跨页记忆）」演示区块（`#demo-selection`）——`getSelectedRows` / `clearSelection` 外部按钮 + reserve-selection 跨页验证入口
 

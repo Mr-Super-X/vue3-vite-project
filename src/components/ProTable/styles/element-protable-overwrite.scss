@@ -9,6 +9,7 @@
  *
  * @group ProTable 全局样式覆盖
  */
+@use 'sass:map';
 
 .#{$BEM_PREFIX}-pro-table {
   /* ─────────── ElTable 宽度修复 ─────────── */
@@ -99,49 +100,64 @@
 
   /* ─────────── 表格密度（紧凑/默认/宽松）切换 ─────────── */
 
-  /* element-plus 2.x 没有内置 density prop 控制行高，
-     用 ProTable 根 div 的 data-density 属性 + CSS 手动控制行高 */
-  &[data-density='compact'] .el-table__row td {
-    height: 32px;
-    padding: 4px 0;
-  }
-  &[data-density='default'] .el-table__row td {
-    height: 48px;
-    padding: 8px 0;
-  }
-  &[data-density='loose'] .el-table__row td {
-    height: 64px;
-    padding: 12px 0;
-  }
+  /* 密度档位设计令牌：el 引擎表体 td 行高/padding、表头 padding、vxe 引擎行高变量
+     全部同源这一张表 —— 调档/新增档位只改这里，不再有多处分散的 32/48/64 硬编码。
+     （element-plus 2.x 无内置 density prop，靠 ProTable 根 div 的 data-density
+       属性 + 下列生成的规则控制行高） */
+  $pro-table-density-tokens: (
+    'compact': (
+      row-height: 32px,
+      cell-padding-y: 4px,
+    ),
+    'default': (
+      row-height: 48px,
+      cell-padding-y: 8px,
+    ),
+    'loose': (
+      row-height: 64px,
+      cell-padding-y: 12px,
+    ),
+  );
 
-  /* vxe-table 引擎的密度对齐不能沿用「td 设 height/padding」：vxe 由 JS 测量 CSS 变量
-     --vxe-ui-table-row-height-*（隐藏尺寸元素 .vxe-table-var-*），把结果以「内联 min-height」
-     写进 .vxe-cell（vxe-table es/table/src/body.js），对 td 设高会被内联 min-height 顶开
-     （实测 default 档行高 48+16=64px，双引擎并排差 ~180px）。故密度档位改为覆盖该组变量；
-     四个尺寸键同值，规避 vxe size 解析路径差异。注意测量结果有缓存，动态切密度后
-     需调 VxeTableBody.recalculate()（ProTable.handleDensityChange 触发） */
-  &[data-density='compact'] {
-    --vxe-ui-table-row-height-default: 32px;
-    --vxe-ui-table-row-height-medium: 32px;
-    --vxe-ui-table-row-height-small: 32px;
-    --vxe-ui-table-row-height-mini: 32px;
+  @each $density, $tokens in $pro-table-density-tokens {
+    $row-height: map.get($tokens, row-height);
+    $cell-padding-y: map.get($tokens, cell-padding-y);
 
-    /* 单元格垂直 padding 不缩会顶住 32px 行高（22px 行高内容 + 16px padding = 38px） */
-    .vxe-body--row .vxe-cell {
-      padding-top: 4px;
-      padding-bottom: 4px;
+    &[data-density='#{$density}'] {
+      /* el 引擎表体：td 设 height + padding 控制行高 */
+      .el-table__row td {
+        height: $row-height;
+        padding: $cell-padding-y 0;
+      }
+
+      /* el 引擎表头：不设 height 时表头高度 = 内容行高(约 23.6px) + padding，
+         比表体矮一档（默认档 39.6 vs 48），两引擎并排 demo 出现高度差；
+         th 的 height 在 table 布局中按最小高度生效，与表体对齐（vxe 表头与表体
+         共用行高变量，无此问题） */
+      .el-table__header .el-table__cell {
+        height: $row-height;
+        padding: $cell-padding-y 0;
+      }
+
+      /* vxe 引擎：不能沿用「td 设高」——vxe 由 JS 测量下列变量（隐藏尺寸元素
+         .vxe-table-var-*），以「内联 min-height」写进 .vxe-cell
+         （vxe-table es/table/src/body.js），对 td 设高会被顶开（实测 default 档
+         行高 48+16=64px，双引擎并排差 ~180px）。四尺寸键同值，规避 vxe size
+         解析路径差异。注意测量结果有缓存，动态切密度后需调
+         VxeTableBody.recalculate()（ProTable.handleDensityChange 触发） */
+      --vxe-ui-table-row-height-default: #{$row-height};
+      --vxe-ui-table-row-height-medium: #{$row-height};
+      --vxe-ui-table-row-height-small: #{$row-height};
+      --vxe-ui-table-row-height-mini: #{$row-height};
+
+      /* compact 专属：vxe 单元格垂直 padding 不缩会顶住 32px 行高
+         （22px 行高内容 + 16px 默认 padding = 38px > 32px） */
+      @if $density == 'compact' {
+        .vxe-body--row .vxe-cell {
+          padding-top: #{$cell-padding-y};
+          padding-bottom: #{$cell-padding-y};
+        }
+      }
     }
-  }
-  &[data-density='default'] {
-    --vxe-ui-table-row-height-default: 48px;
-    --vxe-ui-table-row-height-medium: 48px;
-    --vxe-ui-table-row-height-small: 48px;
-    --vxe-ui-table-row-height-mini: 48px;
-  }
-  &[data-density='loose'] {
-    --vxe-ui-table-row-height-default: 64px;
-    --vxe-ui-table-row-height-medium: 64px;
-    --vxe-ui-table-row-height-small: 64px;
-    --vxe-ui-table-row-height-mini: 64px;
   }
 }
