@@ -10,6 +10,7 @@
  */
 import { watch, ref, reactive, markRaw, onScopeDispose, type Ref } from 'vue'
 import { cloneDeepWith } from 'lodash-es'
+import { trackTriggerRender } from './use-dev-runtime'
 
 /**
  * identity-preserving clone：行为同 cloneDeep，但不深入 component 字段 ——
@@ -108,11 +109,7 @@ export function useSchemaRenderer(opts: UseSchemaRendererOptions) {
      * （Vue 3 优化：computed 返回值引用未变时依赖方不重新执行 render）
      */
     triggerRender: () => {
-      // 阶段 3.1 调试：仅在 dev 环境标记，避免生产环境污染全局
-      if (import.meta.env.DEV) {
-        ;(window as unknown as { __triggerRenderCalled?: number }).__triggerRenderCalled =
-          ((window as unknown as { __triggerRenderCalled?: number }).__triggerRenderCalled ?? 0) + 1
-      }
+      trackTriggerRender()
       reactiveSchema.value = { ...reactiveSchema.value } as SchemaNode | SchemaNode[]
     },
   }

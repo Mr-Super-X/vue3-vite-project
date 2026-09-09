@@ -123,6 +123,17 @@ export function useDevRuntime(deps: UseDevRuntimeDeps): UseDevRuntimeReturn {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+// dev 计数器 —— 收敛散落的 window 调试副作用（use-schema-renderer 的 triggerRender 计数）
+// ────────────────────────────────────────────────────────────────────────────
+
+/** 记录一次 triggerRender 调用（window.__triggerRenderCalled，dev only，prod 零开销） */
+export function trackTriggerRender(): void {
+  if (!import.meta.env.DEV) return
+  const w = window as unknown as { __triggerRenderCalled?: number }
+  w.__triggerRenderCalled = (w.__triggerRenderCalled ?? 0) + 1
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 // 类型重导出 —— 防止调用方 import 多路径
 // ────────────────────────────────────────────────────────────────────────────
 export type { ComponentPublicInstance }

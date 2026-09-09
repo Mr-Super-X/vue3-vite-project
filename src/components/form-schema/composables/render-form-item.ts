@@ -67,9 +67,11 @@ export function renderWithFormItem(
   }
   const asyncProps = buildAsyncProps(node)
 
-  // 阶段 3.1：走 element-plus 官方 API 路径
-  // 通过 props.error + props.validateStatus 触发 el-form-item 红字
-  // （不直接修改 elForm.fields[i] —— 避免与 element-plus 内部状态机冲突）
+  // 阶段 3.1：走 element-plus 官方 props 路径（error + validateStatus）触发 el-form-item 红字。
+  // 注意：双路径设计 —— 本文件是路径 A（props 驱动）；
+  // 路径 B（直接写 elForm.fields[i] 内部 validateState/validateMessage ref）存在于
+  // @see ./use-set-field-error.ts 的 watch 守护（guardField），用于纠正 EP 内部状态机漂移。
+  // 两条路径互补，删除任一条前必读 use-set-field-error.ts 文件头说明。
   const externalErrors = opts.externalErrors?.()
   const ext = node.name && externalErrors ? externalErrors[node.name] : null
 
