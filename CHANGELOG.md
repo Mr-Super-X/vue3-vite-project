@@ -2,6 +2,13 @@
 
 ## 未发布
 
+### 🐛 Bug Fixes | form-schema 表达式沙箱实例级化（批次 2-3：H2）
+
+> 审计与设计：`docs/superpowers/specs/2026-09-09-form-schema-arch-audit.md` | 计划：`docs/superpowers/plans/2026-09-09-form-schema-batch2-3-expression-scope.md`
+
+* **fix(form-schema):** 表达式沙箱从模块级共享状态改为 per-instance `createExpressionScope()`（H2）——此前函数表 + 编译缓存为模块级共享，同页多 XForm 实例互相污染（浏览器实测三种形态：B mount 覆盖 A 的函数表、A unmount 清表致 B 表达式 ReferenceError、A 重挂载覆盖 B）。composer 统一注入实例 scope 到 4 个消费点：`useTopLevelFields` / `useSchemaRenderer`（reaction 管线 traverse → applyReactions → applyReactionFields）/ `useRenderRoot`（on 事件绑定 / permission 表达式）；`useExpressionFunctions` 改为写注入 scope，删除 onScopeDispose 清表（scope 随实例 GC）
+* **deprecate(form-schema):** 模块级 `setExpressionFunctions` / `resolveFunctionExpression` 标 `@deprecated`（对外公共 API，直接删除是 breaking change；form-schema 内部已全部改用实例 scope）
+
 ### 🐛 Bug Fixes | form-schema 行为修复（批次 2：H3 + H1）
 
 > 审计与设计：`docs/superpowers/specs/2026-09-09-form-schema-arch-audit.md` | 计划：`docs/superpowers/plans/2026-09-09-form-schema-batch2-behavior-fixes.md`

@@ -249,3 +249,15 @@ describe('renderViewPlaceholder', () => {
     expect(renderViewPlaceholder(node, { user: { profile: { name: '李四' } } })).toBe('李四')
   })
 })
+
+describe('resolvePermission / H2：注入 resolveFunctionExpression（实例级沙箱）', () => {
+  it('opts.resolveFunctionExpression 注入优先于模块级', () => {
+    const node = { component: 'Input', name: 'a', permission: '{{ () => tag() }}' } as SchemaNode
+    const result = resolvePermission(node, {
+      model: () => ({}),
+      // as never 兼容泛型签名：注入解析器任何表达式都返回 () => 'hidden'
+      resolveFunctionExpression: () => (() => 'hidden') as never,
+    })
+    expect(result).toBe('hidden')
+  })
+})

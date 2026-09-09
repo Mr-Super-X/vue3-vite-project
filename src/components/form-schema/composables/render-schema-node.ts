@@ -35,6 +35,7 @@ import { renderVisualContainer } from './render-visual-container'
 import { renderWithFormItem, renderWithRowColumn } from './render-form-item'
 import { resolvePermission, renderViewPlaceholder } from './use-field-permission'
 import { validateSchemaProps } from './validate-component-props'
+import type { ExpressionScope } from './use-expression'
 
 type RenderFn = (
   node: SchemaNode | SchemaNode[] | string | undefined | null
@@ -87,6 +88,12 @@ export interface RenderSchemaNodeOptions {
    * 默认 identity（字符串字面量直接返回）
    */
   permissionResolver?: (perm: string) => 'view' | 'edit' | 'hidden'
+  /**
+   * H2：实例级表达式解析器（composer 注入 createExpressionScope() 产物）。
+   * on 事件绑定与 permission 表达式经它解析，缺省回退模块级（向后兼容）。
+   * @see ./use-expression.ts createExpressionScope
+   */
+  resolveFunctionExpression?: ExpressionScope['resolveFunctionExpression']
   /**
    * 整体只读（顶层 schema readonly 字段解析结果，由 XForm 注入）：
    * 返回 true 时未 hidden 的字段一律按 view 态纯文本展示（hidden 优先级仍最高）
@@ -150,7 +157,7 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
         formRef: opts.formRef,
         onValueChange: opts.onValueChange,
       }),
-      ...buildOnBindings(node, opts.model),
+      ...buildOnBindings(node, opts.model, opts.resolveFunctionExpression),
     }
     const asyncProps = buildAsyncProps(node)
     return { Comp, eventBindings, asyncProps }
@@ -223,6 +230,9 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
     const permission = resolvePermission(node, {
       model: () => opts.model ?? {},
       ...(opts.permissionResolver ? { permissionResolver: opts.permissionResolver } : {}),
+      ...(opts.resolveFunctionExpression
+        ? { resolveFunctionExpression: opts.resolveFunctionExpression }
+        : {}),
     })
     if (permission === 'hidden') return undefined
     // 顶层 schema readonly：未 hidden 的字段一律按 view 态展示

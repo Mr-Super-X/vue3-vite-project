@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { effectScope, nextTick, reactive } from 'vue'
 import type { SchemaNode } from '../types'
-import { containsReaction, applyReactions } from './use-reaction'
+import { containsReaction, applyReactions, createBudget } from './use-reaction'
 
 describe('containsReaction(schema)', () => {
   it('returns true if any node has reaction field', () => {
@@ -458,5 +458,37 @@ describe('H1 修复：standalone disabled/hidden 函数形态克隆阶段归一�
     const stoppers: (() => void)[] = []
     applyReactions(node, model, stoppers)
     expect(stoppers).toHaveLength(0)
+  })
+})
+
+describe('H2：applyReactions 注入 resolveFunctionExpression（实例级沙箱）', () => {
+  it('注入的 resolve 优先于模块级：node.label 用注入解析器的结果', () => {
+    const model: Record<string, unknown> = {}
+    const node = reactive({
+      component: 'Input',
+      name: 'a',
+      reaction: { label: '{{ () => tag() }}' },
+    }) as SchemaNode
+    // 注入解析器：任何表达式都返回 () => 'INJECTED'（as never 兼容泛型签名）
+    const injectedResolve = () => (() => 'INJECTED') as never
+    const stoppers: (() => void)[] = []
+    applyReactions(node, model, stoppers, createBudget(), injectedResolve)
+
+    expect(node.label).toBe('INJECTED')
+    stoppers.forEach((s) => s())
+  })
+
+  it('未注入 resolve → 回退模块级（向后兼容）', () => {
+    const model: Record<string, unknown> = {}
+    const node = reactive({
+      component: 'Input',
+      name: 'a',
+      reaction: { label: '{{ (m) => "plain" }}' },
+    }) as SchemaNode
+    const stoppers: (() => void)[] = []
+    applyReactions(node, model, stoppers) // 无第 5 参
+
+    expect(node.label).toBe('plain')
+    stoppers.forEach((s) => s())
   })
 })

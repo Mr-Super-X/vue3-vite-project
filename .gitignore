@@ -39,9 +39,9 @@ __screenshots__/
 # Vite
 *.timestamp-*-*.mjs
 
-# vite-plugin-mock 打包缓存（运行时自动清理，提交兜底屏蔽）
-mock/_*.bundled_*.mjs
-mock/_*.bundled_*.cjs
+# vite-plugin-mock 打包缓存（运行时自动清理，提交兜底屏蔽；** 覆盖 mock 子目录下的生成物）
+mock/**/_*.bundled_*.mjs
+mock/**/_*.bundled_*.cjs
 
 # Local backup and OMC runtime state
 .claude/backups/

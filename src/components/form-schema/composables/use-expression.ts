@@ -22,7 +22,12 @@ const EXPRESSION_CACHE = new Map<string, ((model: unknown) => unknown) | null>()
 let EXPRESSION_FNS: Record<string, (...args: never[]) => unknown> = {}
 let fnsVersion = 0
 
-/** 注册表达式可用函数表（XForm setup 调用；传 undefined 清空） */
+/**
+ * 注册表达式可用函数表（XForm setup 调用；传 undefined 清空）
+ *
+ * @deprecated 2026-09-09（H2）：模块级共享表导致多 XForm 实例互相污染。
+ * 新代码请用 createExpressionScope()（每实例一份）。保留是为向后兼容已接入的旧调用方。
+ */
 export function setExpressionFunctions(fns?: Record<string, (...args: never[]) => unknown>): void {
   EXPRESSION_FNS = fns ?? {}
   fnsVersion++ // fns 变化时旧编译缓存必须失效（同字符串表达式作用域已变）
@@ -78,7 +83,12 @@ function compileExpression(
   return compiled
 }
 
-/** 模块级 API：解析 {{ fn }} 表达式（新代码请用 createExpressionScope） */
+/**
+ * 模块级 API：解析 {{ fn }} 表达式
+ *
+ * @deprecated 2026-09-09（H2）：模块级共享缓存 + 函数表导致多 XForm 实例互相污染。
+ * 新代码请用 createExpressionScope()（每实例一份）。保留是为向后兼容已接入的旧调用方。
+ */
 export function resolveFunctionExpression<T extends (...a: unknown[]) => unknown>(
   raw: unknown
 ): T | null {

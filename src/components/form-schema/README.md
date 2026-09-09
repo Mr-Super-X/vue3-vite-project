@@ -108,7 +108,7 @@ XForm 共有 5 份文档 + 54 个 demo（XForm 52 个 + AsyncState/ErrorBoundary
 | `beforeChangeRules`     | `BeforeChangeRule[]`                      |      | 动态命名空间规则（第 2 层：按 pattern 匹配字段路径）                                                       |
 | `zodSchema`             | `ZodType`                                 |      | zod 校验 schema（配合 `validateWithZod()`）                                                                |
 | `componentProps`        | `Record<string, Record<string, unknown>>` |      | 按组件名注入默认 props（节点级 props 可覆盖）                                                              |
-| `expressionFunctions`   | `Record<string, Function>`                |      | 白名单函数表：{{ }} 表达式可直接引用注册名（**模块级，多实例共享**，组件卸载时清空避免跨实例污染）         |
+| `expressionFunctions`   | `Record<string, Function>`                |      | 白名单函数表：{{ }} 表达式可直接引用注册名（**实例级沙箱**，同页多 XForm 实例互不污染，2-3 起）            |
 | `scrollToError`         | `boolean`                                 |      | 校验失败自动滚动到第一个错误字段（仅顶层 schema 生效，默认 false；字段规则走 ElForm 原生，跨字段走 XForm） |
 | `scrollIntoViewOptions` | `ScrollIntoViewOptions \| boolean`        |      | 滚动行为选项（仅顶层 schema 生效，默认 true）                                                              |
 

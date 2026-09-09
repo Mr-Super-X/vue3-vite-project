@@ -13,6 +13,9 @@ import { nextTick, watch } from 'vue'
 import { debounce, get, throttle } from 'lodash-es'
 import type { SchemaNode } from '../types'
 import { applyReactionFields } from './apply-reaction-fields'
+// 注意：第 5 参缺省值故意引用 @deprecated 模块级 API —— 旧调用方不传 resolve 时
+// 必须回退模块级表保持行为不变，这是向后兼容设计
+import { resolveFunctionExpression, type ExpressionScope } from './use-expression'
 
 /** 单 flush 内 reaction 最大执行次数 —— 必须低于 Vue 调度器自身递归上限（100），
  *  先一步拦截避免 "Maximum recursive updates exceeded" 未处理异常把卡死降级为 console.error */
@@ -105,12 +108,15 @@ export function containsReaction(schema: SchemaNode | SchemaNode[]): boolean {
  *   - 'debounce': 依赖停止变化 delay ms 后执行一次（适合远程搜索）
  *   - 'throttle': delay ms 内最多执行一次（适合实时保存）
  * - deps: string[] —— 声明后精确 watch 这些路径；未声明保持 deep watch 整棵 model 旧行为
+ * @param resolve H2：实例级表达式解析器（缺省回退模块级，向后兼容旧调用方）；
+ *   透传给全部递归子树，保证嵌套节点与顶层节点用同一份沙箱
  */
 export function applyReactions(
   node: SchemaNode,
   model: Record<string, unknown>,
   stoppers: (() => void)[],
-  budget: ReactionBudget = createBudget()
+  budget: ReactionBudget = createBudget(),
+  resolve: ExpressionScope['resolveFunctionExpression'] = resolveFunctionExpression
 ): void {
   // H1 修复：standalone 函数/'{{ }}'形态 disabled/hidden 归一化为 reaction 条目。
   // 背景：字段级 disabled/hidden 此前只有字面量 boolean 被实现层消费 —— 函数形态被
@@ -151,7 +157,7 @@ export function applyReactions(
           return
         }
         try {
-          applyReactionFields(node, reactionConfig, model)
+          applyReactionFields(node, reactionConfig, model, resolve)
         } catch (err) {
           console.error('[XForm] reaction evaluation error:', err)
         }
@@ -174,37 +180,38 @@ export function applyReactions(
       }
       stoppers.push(stop)
     } else {
-      applyReactionFields(node, reactionConfig, model)
+      applyReactionFields(node, reactionConfig, model, resolve)
     }
   }
   if (node.children) {
     if (Array.isArray(node.children))
-      node.children.forEach((c) => applyReactions(c, model, stoppers, budget))
+      node.children.forEach((c) => applyReactions(c, model, stoppers, budget, resolve))
     else if (typeof node.children === 'object')
-      applyReactions(node.children, model, stoppers, budget)
+      applyReactions(node.children, model, stoppers, budget, resolve)
   }
   if (node.slots) {
     for (const slot of Object.values(node.slots)) {
       if (typeof slot === 'function') continue
       if (slot && typeof slot === 'object' && !Array.isArray(slot))
-        applyReactions(slot, model, stoppers, budget)
-      else if (Array.isArray(slot)) slot.forEach((c) => applyReactions(c, model, stoppers, budget))
+        applyReactions(slot, model, stoppers, budget, resolve)
+      else if (Array.isArray(slot))
+        slot.forEach((c) => applyReactions(c, model, stoppers, budget, resolve))
     }
   }
   if (node.formItem && typeof node.formItem === 'object' && node.formItem.slots) {
     for (const slot of Object.values(node.formItem.slots)) {
       if (typeof slot === 'function') continue
       if (slot && typeof slot === 'object' && !Array.isArray(slot))
-        applyReactions(slot, model, stoppers, budget)
+        applyReactions(slot, model, stoppers, budget, resolve)
     }
   }
   // 数组节点（kind: 'array'）：递归遍历 itemSchema 子树，注册内嵌 reaction
   if (node.kind === 'array' && node.array) {
     const itemSchema = node.array.itemSchema
     if (Array.isArray(itemSchema)) {
-      itemSchema.forEach((c) => applyReactions(c, model, stoppers, budget))
+      itemSchema.forEach((c) => applyReactions(c, model, stoppers, budget, resolve))
     } else if (itemSchema && typeof itemSchema === 'object') {
-      applyReactions(itemSchema, model, stoppers, budget)
+      applyReactions(itemSchema, model, stoppers, budget, resolve)
     }
   }
 }

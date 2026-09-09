@@ -12,7 +12,9 @@
  */
 import type { SchemaNode } from '../types'
 import { isEqual } from 'lodash-es'
-import { resolveFunctionExpression } from './use-expression'
+import { resolveFunctionExpression, type ExpressionScope } from './use-expression'
+// 注意：下方缺省参数故意引用 @deprecated 模块级 API —— 旧调用方（外部直接调用 applyReactions
+// / applyReactionFields 不传 resolve）必须回退模块级表才能保持行为不变，这是向后兼容设计
 
 /** reaction 元字段 —— 仅用于 use-reaction 调度策略,不写入 node(避免序列化时带元数据) */
 const REACTION_META_KEYS = new Set(['strategy', 'delay', 'deps'])
@@ -23,17 +25,20 @@ const REACTION_META_KEYS = new Set(['strategy', 'delay', 'deps'])
  * - 字面量 / 字符串函数表达式：写入 node[key]（如 label: 'xxx' / label: '{{ fn }}'）
  * - 函数 reaction：执行 + 返回值赋给 node[key]（label 用法兼容；函数内部可同时写 model 副作用）
  * - 元字段（strategy / delay）：跳过，不写入 node
+ *
+ * @param resolve H2：实例级表达式解析器（缺省回退模块级，向后兼容旧调用方）
  */
 export function applyReactionFields(
   node: SchemaNode,
   reaction: NonNullable<SchemaNode['reaction']>,
-  model: Record<string, unknown>
+  model: Record<string, unknown>,
+  resolve: ExpressionScope['resolveFunctionExpression'] = resolveFunctionExpression
 ): void {
   for (const [key, raw] of Object.entries(reaction)) {
     if (REACTION_META_KEYS.has(key)) continue
     let value: unknown = raw
     if (typeof raw === 'string') {
-      const fn = resolveFunctionExpression(raw)
+      const fn = resolve(raw)
       if (fn) value = (fn as (m: Record<string, unknown>) => unknown)(model)
     } else if (typeof raw === 'function') {
       value = (raw as (m: Record<string, unknown>) => unknown)(model)

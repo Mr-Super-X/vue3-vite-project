@@ -37,7 +37,12 @@ export {
   type SchemaIndex,
   type CrossRuleEntry,
 } from './composables/use-schema-index'
-/** resolveFunctionExpression —— 编译并执行 `{{ fn }}` 函数表达式字符串（沙箱） */
+/**
+ * resolveFunctionExpression —— 编译并执行 `{{ fn }}` 函数表达式字符串（沙箱）
+ *
+ * @deprecated 2026-09-09（H2）：模块级共享缓存 + 函数表导致多 XForm 实例互相污染。
+ * 新代码请用 createExpressionScope()（每实例一份）。保留是为向后兼容已接入的旧调用方。
+ */
 export { resolveFunctionExpression } from './composables/use-expression'
 /** resolveElComponentName —— schema.component 字符串解析到最终组件名 */
 export { resolveElComponentName } from './adapters/element-plus-adapter'

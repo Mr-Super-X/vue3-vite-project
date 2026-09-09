@@ -71,7 +71,8 @@ flowchart TD
 | 佐证 | composer 注释自己记录了 setup 顺序 race 的 workaround（`use-xform-composer.ts:105-107`："白名单函数表注册必须在 useSchemaRenderer 之前…否则 ReferenceError"）——这是共享状态被迫串行化的典型症状 |
 | 现状 | per-instance 的 `createExpressionScope()` 已实现（`use-expression.ts:98-124`）但 **composer 未采用**；`useTopLevelFields` 的 `resolveFunctionExpression` 已是注入参数（`use-top-level-fields.ts:32`），接缝现成 |
 | 后果 | 同页两个 XForm：实例 B setup 时 immediate watch 以 `undefined` 清表，毁掉实例 A 的注册；A 卸载时 onScopeDispose 又清表毁掉 B |
-| 建议 | 见 §3 批次 2-3 |
+| 验证 | ✅ **已确认**（2026-09-09 浏览器实测，chrome-devtools 驱动，`/demo/xform-reaction` 临时双实例装置）：① B mount 后 A 的 `{{ tag() }}` 重算显示 **from-B**（B 覆盖模块表）；② A unmount 后 B 重算 **ReferenceError**（清表毁 B，控制台实证）；③ A 重挂载后 B 重算显示 **from-A**。批次 2-3 修复后三形态复验**全部通过**（A 恒 from-A、B 恒 from-B、console 零报错） |
+| 建议 | 见 §3 批次 2-3。验证已完成，批次 2-3 已实施并复验通过 |
 
 #### H3 — useCrossFieldTrigger 的 model diff 快照是顶层浅拷贝，嵌套字段变化检测失效
 
@@ -257,4 +258,4 @@ new Promise<boolean>((resolve) => {
 
 - 本报告全部发现来自主线程逐文件精读（79 个文件）+ grep 证据交叉验证；审计过程中派发的 4 个并行 Explore 子代理均返回空确认（"完成"/"任务已结束"），未产出可用内容，故未采纳其任何结论，亦未让渡核查责任。
 - 未精读文件（builders.ts 后半、render-array-node.ts、build-slots.ts、use-field-permission.ts、use-server-error.ts、use-form-persist.ts、draft-storage.ts、use-async-options.ts、use-schema-index.builder.ts、render-visual-container.ts 等 30+ 文件）仅通过 import 关系与 spec 存在性间接确认职责，H1/H2/H3 均不依赖这些文件。
-- H1/H3 已于 2026-09-09 按 §5 完成浏览器手动验证，**均确认成立**（证据见 §2.1 各条「验证」行）；H2 仍基于静态分析，立项批次 2-3 前建议补充"同页多 XForm 实例"场景验证。
+- H1/H3 已于 2026-09-09 按 §5 完成浏览器手动验证，**均确认成立**（证据见 §2.1 各条「验证」行）；H2 三种污染形态亦于 2026-09-09 浏览器实测确认（证据见 §2.1 H2「验证」行），批次 2-3 修复后复验全部通过。

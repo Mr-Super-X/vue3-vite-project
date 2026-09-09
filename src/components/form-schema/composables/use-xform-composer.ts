@@ -24,7 +24,7 @@ import { useFormDirty } from './use-form-dirty'
 import { useServerError } from './use-server-error'
 import { useFormValidation } from './use-form-validation'
 import { useTopLevelFields } from './use-top-level-fields'
-import { resolveFunctionExpression } from './use-expression'
+import { createExpressionScope } from './use-expression'
 import { useExpressionFunctions } from './use-expression-functions'
 import { useDevRuntime } from './use-dev-runtime'
 import { useApplyDefaults } from './apply-default-values'
@@ -102,9 +102,14 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
   // viewport 变化时响应式 ColConfig 自动拍平
   const currentBreakpoint = useCurrentBreakpoint()
 
+  // H2 修复：表达式沙箱实例级化 —— 每实例独立函数表 + 编译缓存，
+  // 消除「同页多 XForm 共享模块级表互相覆盖/清表」污染（审计 2026-09-09 浏览器实测确认）
+  const exprScope = createExpressionScope()
+
   // 白名单函数表注册必须在 useSchemaRenderer 之前：schema watcher immediate 触发 reaction 求值时
-  // 若 EXPRESSION_FNS 还未注册，沙箱 new Function 找不到白名单参数 → ReferenceError
-  useExpressionFunctions({ expressionFunctions: () => props.expressionFunctions })
+  // 若 exprScope 函数表还未注册，沙箱 new Function 找不到白名单参数 → ReferenceError。
+  // 跨实例竞争已消除（exprScope 实例私有，不再有「B 的 immediate 注册覆盖/清表毁掉 A」）
+  useExpressionFunctions({ scope: exprScope, expressionFunctions: () => props.expressionFunctions })
 
   const { reactiveSchema, triggerRender } = useSchemaRenderer({
     schema: computed(() => props.schema),
@@ -112,6 +117,8 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     formData: computed(() => props.model ?? {}) as never,
     // 阶段 P2-3：reactionBudget 透传（默认 50 向后兼容）
     ...(props.reactionBudget !== undefined ? { reactionBudget: props.reactionBudget } : {}),
+    // H2：reaction 管线（traverse → applyReactions → applyReactionFields）统一用实例沙箱
+    resolveFunctionExpression: exprScope.resolveFunctionExpression,
   })
 
   // schema 元数据中央索引 —— 替代每次遍历 O(n) 的 getNames/collectCrossRuleFields
@@ -157,7 +164,7 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     model: computed(() => props.model),
     currentBreakpoint,
     fieldErrors,
-    resolveFunctionExpression,
+    resolveFunctionExpression: exprScope.resolveFunctionExpression,
     // useTopLevelFields deps 接受 string；mergeRowResponsive 真实签名是 specific union —— wrap 一层
     mergeRowResponsive: (row, bp) =>
       mergeRowResponsive(row, bp as 'xs' | 'sm' | 'md' | 'lg' | 'xl'),
@@ -234,9 +241,11 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     mergedComponentProps,
     // exactOptionalPropertyTypes: 条件展开避免传 undefined
     ...(props.permissionResolver ? { permissionResolver: props.permissionResolver } : {}),
+    // H2：render 层（on 事件绑定 / permission 表达式）用实例沙箱
+    resolveFunctionExpression: exprScope.resolveFunctionExpression,
   })
 
-  // 白名单函数表已提前到 useSchemaRenderer 之前注册（修复 setup 顺序 race condition）
+  // 表达式沙箱（exprScope）已先于 useSchemaRenderer 创建并注册，见 setup 顶部说明
 
   function getNames(includesIgnore = false): string[] {
     return [...schemaIndex.getFieldNames(includesIgnore)]

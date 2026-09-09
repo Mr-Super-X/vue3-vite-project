@@ -63,7 +63,7 @@ export function renderWithFormItem(
       formRef: opts.formRef,
       onValueChange: opts.onValueChange,
     }),
-    ...buildOnBindings(node, opts.model),
+    ...buildOnBindings(node, opts.model, opts.resolveFunctionExpression),
   }
   const asyncProps = buildAsyncProps(node)
 

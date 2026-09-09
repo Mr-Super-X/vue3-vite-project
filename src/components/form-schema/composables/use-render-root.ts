@@ -25,6 +25,7 @@ import { applyDirectives } from './apply-directives'
 import type { SchemaNode, XFormExpose, XFormProps } from '../types'
 import type { FieldErrorState } from './use-form-instance'
 import type { UseFormErrorBusReturn } from './use-form-error-bus'
+import type { ExpressionScope } from './use-expression'
 
 /** 渲染闭包签名 —— 与 useRenderSchemaNode.render 一致 */
 export type RenderFn = (
@@ -71,6 +72,12 @@ export interface UseRenderRootDeps {
    * @see ../../../types/xform.ts XFormProps.permissionResolver
    */
   permissionResolver?: (perm: string) => 'view' | 'edit' | 'hidden'
+  /**
+   * H2：实例级表达式解析器（composer 用 createExpressionScope() 创建，每实例一份）。
+   * 透传到 renderOpts 供 on 事件绑定 / permission 表达式使用实例私有沙箱。
+   * @see ./use-expression.ts createExpressionScope
+   */
+  resolveFunctionExpression?: ExpressionScope['resolveFunctionExpression']
 }
 
 /** useRenderRoot 返回值 —— 仅暴露 renderToComponent（optsEpoch 是内部订阅细节） */
@@ -95,6 +102,7 @@ export function useRenderRoot(deps: UseRenderRootDeps): UseRenderRootReturn {
     topLevelReadonly,
     mergedComponentProps,
     permissionResolver,
+    resolveFunctionExpression,
   } = deps
 
   // opts 换代计数器 —— 父级替换 props 引用时 bump，让所有 SchemaField 的 render effect 失效重渲
@@ -171,6 +179,7 @@ export function useRenderRoot(deps: UseRenderRootDeps): UseRenderRootReturn {
     globalReadonly: () => topLevelReadonly.value,
     // exactOptionalPropertyTypes: 条件展开避免传 undefined
     ...(permissionResolver ? { permissionResolver } : {}),
+    ...(resolveFunctionExpression ? { resolveFunctionExpression } : {}),
   }
 
   const renderInner = useRenderSchemaNode(renderOpts)

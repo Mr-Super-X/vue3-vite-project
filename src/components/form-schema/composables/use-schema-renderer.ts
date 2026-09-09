@@ -38,6 +38,7 @@ import {
   type ReactionBudget,
 } from './use-reaction'
 import { useAsyncOptions, resolveAsyncOptionsProp } from './use-async-options'
+import type { ExpressionScope } from './use-expression'
 
 interface UseSchemaRendererOptions {
   schema: Ref<SchemaNode | SchemaNode[]>
@@ -52,6 +53,12 @@ interface UseSchemaRendererOptions {
    * @see ./use-reaction.ts
    */
   reactionBudget?: number
+  /**
+   * H2：实例级表达式解析器（composer 用 createExpressionScope() 创建，每实例一份）。
+   * 注入后 reaction 管线全部节点用实例私有沙箱求值，缺省回退模块级（向后兼容）。
+   * @see ./use-expression.ts createExpressionScope
+   */
+  resolveFunctionExpression?: ExpressionScope['resolveFunctionExpression']
 }
 
 /**
@@ -86,7 +93,13 @@ export function useSchemaRenderer(opts: UseSchemaRendererOptions) {
       if (hasRx) {
         // 阶段 P2-3：reactionBudget 透传到 reaction 执行预算（默认 50 向后兼容）
         const budget: ReactionBudget = createBudget(opts.reactionBudget ?? DEFAULT_REACTION_BUDGET)
-        traverse(cloned as SchemaNode, opts.formData.value, stoppers, budget)
+        traverse(
+          cloned as SchemaNode,
+          opts.formData.value,
+          stoppers,
+          budget,
+          opts.resolveFunctionExpression
+        )
       }
       reactiveSchema.value = cloned
     },
@@ -119,13 +132,14 @@ function traverse(
   node: SchemaNode | SchemaNode[],
   model: Record<string, unknown>,
   stoppers: (() => void)[],
-  budget: ReactionBudget
+  budget: ReactionBudget,
+  resolve?: ExpressionScope['resolveFunctionExpression']
 ): void {
   if (Array.isArray(node)) {
-    node.forEach((n) => traverse(n, model, stoppers, budget))
+    node.forEach((n) => traverse(n, model, stoppers, budget, resolve))
     return
   }
-  applyReactions(node, model, stoppers, budget)
+  applyReactions(node, model, stoppers, budget, resolve)
 }
 
 /**

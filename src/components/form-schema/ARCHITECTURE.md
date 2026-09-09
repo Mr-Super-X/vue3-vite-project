@@ -81,7 +81,7 @@ src/components/form-schema/
 │   ├── use-schema-index.builder.ts # 索引构建器
 │   ├── use-validate.ts            # validate() 静态校验 + validateWithZod
 │   ├── use-scan-forbidden.ts      # 表达式沙箱关键字黑名单扫描
-│   ├── use-expression.ts          # resolveFunctionExpression + 模块级缓存
+│   ├── use-expression.ts          # ExpressionScope 实例沙箱 + 模块级兼容 API（@deprecated）
 │   ├── use-async-options.ts       # 异步选项数据源 + Autocomplete fetcher
 │   ├── use-field-permission.ts    # view/edit/hidden 权限 gate
 │   ├── use-current-breakpoint.ts  # 响应式断点检测
@@ -474,6 +474,22 @@ reaction: {
 const FORBIDDEN_REG =
   /\b(window|document|globalThis|eval|Function|setTimeout|setInterval|fetch|XMLHttpRequest)\b/
 ```
+
+**H2 修复（2026-09-09）：沙箱状态实例级化**
+
+此前函数表（`EXPRESSION_FNS`）与编译缓存（`EXPRESSION_CACHE`）是模块级共享状态，同页多 XForm
+实例互相污染（浏览器实测三种形态：B mount 覆盖 A 的函数表 / A unmount 清表致 B 表达式
+ReferenceError / A 重挂载覆盖 B）。修复后：
+
+- composer setup 顶部用 `createExpressionScope()` 创建**每实例一份**的函数表 + 编译缓存
+- 4 个消费点统一注入 `exprScope.resolveFunctionExpression`：
+  `useTopLevelFields`（顶层自描述字段）→ `useSchemaRenderer`（reaction 管线
+  traverse → applyReactions → applyReactionFields）→ `useRenderRoot`（render 层
+  on 事件绑定 / permission 表达式）
+- `useExpressionFunctions` 改为把 props.expressionFunctions 写入注入 scope，
+  不再操作模块级状态，也无 onScopeDispose 清表（scope 随实例 GC）
+- 模块级 `setExpressionFunctions` / `resolveFunctionExpression` 保留并标 `@deprecated`
+  （对外公共 API，直接删除是 breaking change）
 
 ### 7.2 schema 来源约束
 
