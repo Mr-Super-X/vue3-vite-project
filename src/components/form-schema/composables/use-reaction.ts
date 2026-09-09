@@ -50,6 +50,17 @@ export function createBudget(max: number = DEFAULT_REACTION_BUDGET): ReactionBud
   }
 }
 
+/** H1 修复：standalone 函数 / '{{ }}' 形态的 disabled/hidden 视为 reaction 源
+ * （克隆阶段由 applyReactions 归一化为 reaction 条目求值，与 README「✅ 完整（推荐）」承诺对齐） */
+function hasReactiveStandaloneField(o: Record<string, unknown>): boolean {
+  return (
+    typeof o.disabled === 'function' ||
+    (typeof o.disabled === 'string' && o.disabled.startsWith('{{')) ||
+    typeof o.hidden === 'function' ||
+    (typeof o.hidden === 'string' && o.hidden.startsWith('{{'))
+  )
+}
+
 /** 是否含 reaction 字段（含字段时才需启用 watchEffect） */
 export function containsReaction(schema: SchemaNode | SchemaNode[]): boolean {
   let found = false
@@ -58,7 +69,7 @@ export function containsReaction(schema: SchemaNode | SchemaNode[]): boolean {
   function traverse(node: unknown): void {
     if (found || node === null || typeof node !== 'object') return
     const o = node as Record<string, unknown>
-    if (o.reaction) {
+    if (o.reaction || hasReactiveStandaloneField(o)) {
       found = true
       return
     }
@@ -101,9 +112,26 @@ export function applyReactions(
   stoppers: (() => void)[],
   budget: ReactionBudget = createBudget()
 ): void {
-  if (node.reaction) {
+  // H1 修复：standalone 函数/'{{ }}'形态 disabled/hidden 归一化为 reaction 条目。
+  // 背景：字段级 disabled/hidden 此前只有字面量 boolean 被实现层消费 —— 函数形态被
+  // render-form-item/render-schema-node/render-visual-container 原样 spread 进组件 props
+  // （dev 报 prop type 警告 + 字段永久禁用），hidden 函数形态被 use-render-root 当 truthy
+  // 恒隐藏。归一化后走既有 watch 求值管线，boolean 写回 node，全部消费点自动正确。
+  // 合并优先级：node.reaction 已有同名 key 时以 reaction 为准（显式配置优先于简写）。
+  const standaloneReactive: Record<string, unknown> = {}
+  for (const key of ['disabled', 'hidden'] as const) {
+    const raw = (node as Record<string, unknown>)[key]
+    if (typeof raw === 'function' || (typeof raw === 'string' && raw.startsWith('{{'))) {
+      if (node.reaction?.[key] === undefined) standaloneReactive[key] = raw
+      delete (node as Record<string, unknown>)[key]
+    }
+  }
+  if (node.reaction || Object.keys(standaloneReactive).length > 0) {
     // 保存本地引用：watchEffect 立即同步执行时 node.reaction 已被 delete
-    const reactionConfig = node.reaction
+    const reactionConfig = {
+      ...node.reaction,
+      ...standaloneReactive,
+    } as NonNullable<SchemaNode['reaction']>
     delete node.reaction
     const hasDynamic = Object.values(reactionConfig).some(
       (v) => typeof v === 'function' || (typeof v === 'string' && v.startsWith('{{'))
