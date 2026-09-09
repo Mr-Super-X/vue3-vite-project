@@ -169,7 +169,9 @@ new Promise<boolean>((resolve) => {
 
 ## 3. 优化方案（三批次，全部非破坏公开 API）
 
-### 批次 1 — 纯内部重构（零行为变更，可直接做）
+### 批次 1 — 纯内部重构（零行为变更）—— ✅ 已完成
+
+> 2026-09-09 核查确认：6 项均在此前会话完成（1-1 见 commit `6afb19b`；1-2/1-3/1-4/1-5/1-6 逐项核对当前代码确认），零剩余。
 
 | # | 改动 | 文件 | 消除项 |
 | --- | --- | --- | --- |
@@ -195,7 +197,7 @@ new Promise<boolean>((resolve) => {
 | # | 改动 | 说明 | 消除项 |
 | --- | --- | --- | --- |
 | 3-1 | `triggerRender` 细粒度失效 | 按 `fieldErrors` 变更的字段名定位对应 SchemaField（如 `:data-error-key` 订阅），错误写入只重渲受影响字段；保留顶层浅拷贝作为 fallback | M3b |
-| 3-2 | 抽 `walkSchema` 公共遍历器 | visitor 模式统一 5 处递归；各调用方只留命中逻辑 | M5 |
+| 3-2 | ~~抽 `walkSchema` 公共遍历器~~ **✅ 已完成（2026-09-09）** | visitor 模式统一 6 处静态递归（containsReaction / applyReactions / registerAsyncOptions / containsAsyncOptions / collectCrossRuleFields / buildIndex；#5 traverseCross 为模型驱动异步遍历保持独立并加 @see 注释）；计划 `docs/superpowers/plans/2026-09-09-form-schema-batch3-2-walk-schema.md` | M5 |
 | 3-3 | `useSetFieldError` 守护 watcher 合并 | 评估"单次遍历 + 手动比对"替代 per-field watch | L2 |
 | 3-4 | errorBus 去重窗口语义 | 固定窗口 or 注释明确 | L1 |
 
@@ -248,7 +250,7 @@ new Promise<boolean>((resolve) => {
 | P0 | 批次 1（1-1 ~ 1-6，一次 commit 或按项拆分） | 无 |
 | P0 | ~~H1/H3 手动验证（§5.1/5.2）→ 确认后立项批次 2~~ **已完成（2026-09-09，均确认成立）** | 无 |
 | P1 | 批次 2（行为修复，逐项 spec） | H1/H3 验证结论 |
-| P1 | 批次 3-2 walkSchema（建议在 EP 3.0 升级前完成，降低升级 diff 面） | 无 |
+| P1 | ~~批次 3-2 walkSchema~~ **✅ 已完成（2026-09-09，EP 3.0 升级 diff 面已收敛）** | 无 |
 | P2 | 批次 3-1/3-3/3-4（性能项，大表单场景实测后定） | 有真实大表单性能数据 |
 | P2 | EP 3.0 升级评估（ARCHITECTURE §10.2 既定项，批次 1 完成后 diff 面最小） | 批次 1 + 3-2 |
 

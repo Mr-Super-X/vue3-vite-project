@@ -16,6 +16,7 @@ import { applyReactionFields } from './apply-reaction-fields'
 // 注意：第 5 参缺省值故意引用 @deprecated 模块级 API —— 旧调用方不传 resolve 时
 // 必须回退模块级表保持行为不变，这是向后兼容设计
 import { resolveFunctionExpression, type ExpressionScope } from './use-expression'
+import { walkSchema } from '../utils/walk-schema'
 
 /** 单 flush 内 reaction 最大执行次数 —— 必须低于 Vue 调度器自身递归上限（100），
  *  先一步拦截避免 "Maximum recursive updates exceeded" 未处理异常把卡死降级为 console.error */
@@ -55,7 +56,7 @@ export function createBudget(max: number = DEFAULT_REACTION_BUDGET): ReactionBud
 
 /** H1 修复：standalone 函数 / '{{ }}' 形态的 disabled/hidden 视为 reaction 源
  * （克隆阶段由 applyReactions 归一化为 reaction 条目求值，与 README「✅ 完整（推荐）」承诺对齐） */
-function hasReactiveStandaloneField(o: Record<string, unknown>): boolean {
+function hasReactiveStandaloneField(o: SchemaNode): boolean {
   return (
     typeof o.disabled === 'function' ||
     (typeof o.disabled === 'string' && o.disabled.startsWith('{{')) ||
@@ -64,41 +65,16 @@ function hasReactiveStandaloneField(o: Record<string, unknown>): boolean {
   )
 }
 
-/** 是否含 reaction 字段（含字段时才需启用 watchEffect） */
+/** 是否含 reaction 字段（含字段时才需启用 watchEffect）—— 经 walkSchema 四向遍历（M5 统一） */
 export function containsReaction(schema: SchemaNode | SchemaNode[]): boolean {
   let found = false
-  traverse(schema)
-  return found
-  function traverse(node: unknown): void {
-    if (found || node === null || typeof node !== 'object') return
-    const o = node as Record<string, unknown>
-    if (o.reaction || hasReactiveStandaloneField(o)) {
+  walkSchema(schema, (node) => {
+    if (node.reaction || hasReactiveStandaloneField(node)) {
       found = true
-      return
+      return false
     }
-    if (Array.isArray(o.children)) o.children.forEach(traverse)
-    else if (o.children && typeof o.children === 'object') traverse(o.children)
-    if (o.slots && typeof o.slots === 'object') {
-      for (const slot of Object.values(o.slots as Record<string, unknown>)) {
-        if (typeof slot === 'function') continue
-        traverse(slot)
-      }
-    }
-    if (o.formItem && typeof o.formItem === 'object') {
-      const fi = o.formItem as Record<string, unknown>
-      if (fi.slots && typeof fi.slots === 'object') {
-        for (const slot of Object.values(fi.slots as Record<string, unknown>)) {
-          if (typeof slot === 'function') continue
-          traverse(slot)
-        }
-      }
-    }
-    // 数组节点（kind: 'array'）：递归遍历 itemSchema 子树，避免 itemSchema 内部 reaction 被漏判
-    if (o.kind === 'array' && o.array && typeof o.array === 'object') {
-      const itemSchema = (o.array as Record<string, unknown>).itemSchema
-      traverse(itemSchema)
-    }
-  }
+  })
+  return found
 }
 
 /**
@@ -117,6 +93,19 @@ export function applyReactions(
   stoppers: (() => void)[],
   budget: ReactionBudget = createBudget(),
   resolve: ExpressionScope['resolveFunctionExpression'] = resolveFunctionExpression
+): void {
+  walkSchema(node, (n) => {
+    registerNodeReaction(n, model, stoppers, budget, resolve)
+  })
+}
+
+/** 单节点：H1 归一化 standalone 函数/'{{ }}'形态 disabled/hidden → reaction 条目，按需注册 watch */
+function registerNodeReaction(
+  node: SchemaNode,
+  model: Record<string, unknown>,
+  stoppers: (() => void)[],
+  budget: ReactionBudget,
+  resolve: ExpressionScope['resolveFunctionExpression']
 ): void {
   // H1 修复：standalone 函数/'{{ }}'形态 disabled/hidden 归一化为 reaction 条目。
   // 背景：字段级 disabled/hidden 此前只有字面量 boolean 被实现层消费 —— 函数形态被
@@ -181,37 +170,6 @@ export function applyReactions(
       stoppers.push(stop)
     } else {
       applyReactionFields(node, reactionConfig, model, resolve)
-    }
-  }
-  if (node.children) {
-    if (Array.isArray(node.children))
-      node.children.forEach((c) => applyReactions(c, model, stoppers, budget, resolve))
-    else if (typeof node.children === 'object')
-      applyReactions(node.children, model, stoppers, budget, resolve)
-  }
-  if (node.slots) {
-    for (const slot of Object.values(node.slots)) {
-      if (typeof slot === 'function') continue
-      if (slot && typeof slot === 'object' && !Array.isArray(slot))
-        applyReactions(slot, model, stoppers, budget, resolve)
-      else if (Array.isArray(slot))
-        slot.forEach((c) => applyReactions(c, model, stoppers, budget, resolve))
-    }
-  }
-  if (node.formItem && typeof node.formItem === 'object' && node.formItem.slots) {
-    for (const slot of Object.values(node.formItem.slots)) {
-      if (typeof slot === 'function') continue
-      if (slot && typeof slot === 'object' && !Array.isArray(slot))
-        applyReactions(slot, model, stoppers, budget, resolve)
-    }
-  }
-  // 数组节点（kind: 'array'）：递归遍历 itemSchema 子树，注册内嵌 reaction
-  if (node.kind === 'array' && node.array) {
-    const itemSchema = node.array.itemSchema
-    if (Array.isArray(itemSchema)) {
-      itemSchema.forEach((c) => applyReactions(c, model, stoppers, budget, resolve))
-    } else if (itemSchema && typeof itemSchema === 'object') {
-      applyReactions(itemSchema, model, stoppers, budget, resolve)
     }
   }
 }

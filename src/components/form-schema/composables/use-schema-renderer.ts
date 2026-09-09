@@ -39,6 +39,7 @@ import {
 } from './use-reaction'
 import { useAsyncOptions, resolveAsyncOptionsProp } from './use-async-options'
 import type { ExpressionScope } from './use-expression'
+import { walkSchema } from '../utils/walk-schema'
 
 interface UseSchemaRendererOptions {
   schema: Ref<SchemaNode | SchemaNode[]>
@@ -154,79 +155,40 @@ function registerAsyncOptions(
   model: Ref<Record<string, unknown>>,
   stoppers: (() => void)[]
 ): void {
-  if (Array.isArray(node)) {
-    node.forEach((n) => registerAsyncOptions(n, model, stoppers))
-    return
-  }
-  if (node.asyncOptions) {
-    const state = useAsyncOptions(node, model)
-    stoppers.push(state.stop)
-    const stopState = watch(
-      () => [state.data.value, state.loading.value],
-      () => {
-        const targetProp = resolveAsyncOptionsProp(node)
-        node.props = { ...(node.props ?? {}), loading: state.loading.value }
-        if (targetProp) {
-          node.props = { ...node.props, [targetProp]: state.data.value }
-        }
-      },
-      { immediate: true, deep: true }
-    )
-    stoppers.push(stopState)
-  }
-  if (node.children) {
-    if (Array.isArray(node.children)) {
-      registerAsyncOptions(node.children, model, stoppers)
-    } else if (typeof node.children === 'object') {
-      registerAsyncOptions(node.children, model, stoppers)
-    }
-  }
-  if (node.slots) {
-    for (const slot of Object.values(node.slots)) {
-      if (typeof slot === 'function') continue
-      if (slot && typeof slot === 'object' && !Array.isArray(slot)) {
-        registerAsyncOptions(slot, model, stoppers)
-      } else if (Array.isArray(slot)) {
-        slot.forEach((s) => registerAsyncOptions(s, model, stoppers))
-      }
-    }
-  }
+  // 遍历范围保持既有行为：只走 children + node.slots 两向，故意不遍历
+  // formItem.slots 与 array.itemSchema —— 既有实现漏遍历这两处的 asyncOptions，
+  // 行为修复（补遍历后可能改变请求触发时机）不属本批次，M5 只统一遍历器
+  walkSchema(
+    node,
+    (n) => {
+      if (!n.asyncOptions) return
+      const state = useAsyncOptions(n, model)
+      stoppers.push(state.stop)
+      const stopState = watch(
+        () => [state.data.value, state.loading.value],
+        () => {
+          const targetProp = resolveAsyncOptionsProp(n)
+          n.props = { ...(n.props ?? {}), loading: state.loading.value }
+          if (targetProp) {
+            n.props = { ...n.props, [targetProp]: state.data.value }
+          }
+        },
+        { immediate: true, deep: true }
+      )
+      stoppers.push(stopState)
+    },
+    { includeFormItemSlots: false, includeArrayItemSchema: false }
+  )
 }
 
-/** 检查 schema 中是否含 asyncOptions 字段（含字段时才需启用 reactive） */
+/** 检查 schema 中是否含 asyncOptions 字段（含字段时才需启用 reactive）—— 经 walkSchema 四向遍历（M5 统一） */
 function containsAsyncOptions(node: SchemaNode | SchemaNode[]): boolean {
   let found = false
-  traverse(node)
-  return found
-
-  function traverse(n: unknown): void {
-    if (found || n === null || typeof n !== 'object') return
-    const o = n as Record<string, unknown>
-    if (o.asyncOptions) {
+  walkSchema(node, (n) => {
+    if (n.asyncOptions) {
       found = true
-      return
+      return false
     }
-    if (Array.isArray(o.children)) o.children.forEach(traverse)
-    else if (o.children && typeof o.children === 'object') traverse(o.children)
-    if (o.slots && typeof o.slots === 'object') {
-      for (const slot of Object.values(o.slots as Record<string, unknown>)) {
-        if (typeof slot === 'function') continue
-        traverse(slot)
-      }
-    }
-    if (o.formItem && typeof o.formItem === 'object') {
-      const fi = o.formItem as Record<string, unknown>
-      if (fi.slots && typeof fi.slots === 'object') {
-        for (const slot of Object.values(fi.slots as Record<string, unknown>)) {
-          if (typeof slot === 'function') continue
-          traverse(slot)
-        }
-      }
-    }
-    // 数组节点（kind: 'array'）：递归遍历 itemSchema 子树
-    if (o.kind === 'array' && o.array && typeof o.array === 'object') {
-      const itemSchema = (o.array as Record<string, unknown>).itemSchema
-      traverse(itemSchema)
-    }
-  }
+  })
+  return found
 }

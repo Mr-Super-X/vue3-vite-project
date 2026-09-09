@@ -102,6 +102,11 @@ src/components/form-schema/
 │   ├── render-with-grid.ts        # row+column 布局辅助
 │   ├── with-hidden.ts             # display:none wrapper
 │   └── draft-storage.ts           # 草稿存储后端
+├── utils/                         # 纯函数工具（跨 composable 复用、无响应式状态）
+│   ├── read-ref-str.ts            # ref/string 归一化读取
+│   ├── collect-el-field-errors.ts # el-form 错误对象扁平化收集（批次 1-1）
+│   ├── run-el-form-validate.ts    # el-form validate Promise 化（批次 1-1）
+│   └── walk-schema.ts             # M5：schema 树四向递归公共遍历器（批次 3-2，统一 5 处手写递归）
 └── bench/
     └── large-schema.bench.ts       # 大 schema 性能基线
 ```

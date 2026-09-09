@@ -2,6 +2,14 @@
 
 ## 未发布
 
+### ♻️ Code Refactoring | form-schema 抽取 walkSchema 公共遍历器（批次 3-2：M5）
+
+> 审计与设计：`docs/superpowers/specs/2026-09-09-form-schema-arch-audit.md` | 计划：`docs/superpowers/plans/2026-09-09-form-schema-batch3-2-walk-schema.md`。零公开 API 变更、零行为变更（各调用方遍历方向集合经 opts 精确保持）
+
+* **refactor(form-schema):** 新增 `utils/walk-schema.ts` —— schema 树「children / slots / formItem.slots / array.itemSchema」四向递归公共遍历器（visitor 模式 + early-exit + 三方向 opts 开关），统一 6 处手写递归：use-reaction.ts `containsReaction` / `applyReactions`、use-schema-renderer.ts `containsAsyncOptions` / `registerAsyncOptions`、use-validate.ts `collectCrossRuleFields`（顺带删除从不消费的 keyPath 死参数）、use-schema-index.builder.ts `buildIndex`（顺带删除本地 traverse / isSchemaNodeLike）。新增一种容器字段类型从改 5+ 处收敛到改 1 处（开闭原则）；净 -131 行
+* **refactor(form-schema):** `traverseCross`（use-validate.ts）保持独立不复用 —— array 节点按 model[name] 运行时行数展开 itemSchema，遍历形状由 model 驱动而非 schema 静态结构，语义与静态遍历器本质不同；文件头加 `@see` 注释说明
+* **docs(form-schema):** ARCHITECTURE.md 目录树补 utils/ 区块（含批次 1-1 两个 util，此前未列入）；审计文档批次 3 表格 3-2 标完成
+
 ### 🐛 Bug Fixes | form-schema 表达式沙箱实例级化（批次 2-3：H2）
 
 > 审计与设计：`docs/superpowers/specs/2026-09-09-form-schema-arch-audit.md` | 计划：`docs/superpowers/plans/2026-09-09-form-schema-batch2-3-expression-scope.md`
