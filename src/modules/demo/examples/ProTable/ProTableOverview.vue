@@ -13,6 +13,7 @@
  *   5. 工具栏：刷新 / 密度切换 / 列设置抽屉
  *   6. 自定义插槽（tableHeader / toolButton / operation / id）
  *   7. defineExpose 调用（refresh / reset / getSelectedRows）
+ *   8. 多选勾选 / 清除勾选（getSelectedRows / clearSelection，v2.2-M1 验证入口）
  *
  * 路由：自动注册为 `/demo/pro-table-overview`
  */
@@ -140,6 +141,42 @@ function handleDelete(row: Record<string, unknown>): void {
   ElMessage.warning(`删除：${(row as UserRow).name}`)
 }
 
+/* ───────────── 多选（勾选 / 清除勾选，v2.2-M1 验证入口） ───────────── */
+
+const selectionRef = ref<ProTableExpose | null>(null)
+
+const selectionColumns: ProColumn[] = [
+  {
+    prop: '__selection',
+    label: '',
+    type: 'selection',
+    width: 50,
+    /** 跨页记忆：el-table reserve-selection（依赖 row-key；清选区用 expose 的 clearSelection） */
+    tableProps: { reserveSelection: true },
+  },
+  { prop: 'id', label: 'ID', width: 80 },
+  { prop: 'name', label: '姓名', minWidth: 140 },
+  { prop: 'role', label: '角色', width: 100, enum: ROLE_OPTIONS },
+  { prop: 'createdAt', label: '创建时间', width: 180 },
+]
+
+/** 读取当前选区 —— 跨页勾选时返回所有页累计选中的行（reserve-selection 汇总） */
+function handleGetSelected(): void {
+  const rows = selectionRef.value?.getSelectedRows() ?? []
+  if (rows.length === 0) {
+    ElMessage.info('当前未选中任何行')
+    return
+  }
+  const names = rows.map((r) => (r as UserRow).name).join('、')
+  ElMessage.success(`已选中 ${rows.length} 行：${names}`)
+}
+
+/** v2.2-M1 验证点：clearSelection 除清空 selectedRows 外，同步清除 el-table UI 勾选态 */
+function handleClearSelection(): void {
+  selectionRef.value?.clearSelection()
+  ElMessage.success('已清除勾选（selectedRows 与 UI 勾选同步清空）')
+}
+
 /* ───────────── toc 锚点 ───────────── */
 
 const tocItems = [
@@ -148,6 +185,7 @@ const tocItems = [
   { id: 'demo-slots', label: '自定义插槽', level: 2 },
   { id: 'demo-render', label: '自定义渲染（col.render）', level: 2 },
   { id: 'demo-expose', label: 'defineExpose 调用', level: 2 },
+  { id: 'demo-selection', label: '多选（勾选 / 清除勾选）', level: 2 },
   { id: 'demo-v2-capabilities', label: 'v2.0 4 类能力切换', level: 2 },
   { id: 'api-props', label: 'Props', level: 2 },
   { id: 'api-slots', label: 'Slots', level: 2 },
@@ -327,6 +365,18 @@ async function refresh() {
 }
 
 template: <ProTable ref="proTableRef" :columns="..." />`
+
+const selectionCode = `// 列定义加一列 type: 'selection'（reserveSelection = 跨页记忆，需 row-key）
+const columns: ProColumn[] = [
+  { prop: '__selection', label: '', type: 'selection', width: 50,
+    tableProps: { reserveSelection: true } },
+  { prop: 'name', label: '姓名', minWidth: 140 },
+]
+
+// 外部按钮：读取选区 / 清除勾选
+// v2.2-M1 起 clearSelection 同步清空 el-table UI 勾选态（修复只清数据不清 UI）
+const rows = proTableRef.value?.getSelectedRows()
+proTableRef.value?.clearSelection()`
 
 /* ───────────── 自定义渲染（JSX / h()）演示 ───────────── */
 
@@ -615,6 +665,25 @@ const capabilityOverviewCode = `<template>
               <ElTag size="small">#{{ row.id }}</ElTag>
             </template>
           </ProTable>
+        </DemoField>
+      </section>
+
+      <!-- 多选（勾选 / 清除勾选） -->
+      <section id="demo-selection">
+        <DemoField label="多选（勾选 / 清除勾选，含跨页记忆）" :code="selectionCode">
+          <div :class="bem.e('actions')">
+            <ElButton type="primary" @click="handleGetSelected">获取选中行</ElButton>
+            <ElButton @click="handleClearSelection">清除勾选</ElButton>
+            <span :class="bem.e('msg')">勾选多行后点按钮验证；翻到第 2 页再勾选，可验跨页记忆</span>
+          </div>
+          <ProTable
+            ref="selectionRef"
+            :columns="selectionColumns"
+            :request-api="mockRequestApi"
+            table-key="demo-pro-table-selection"
+            row-key="id"
+            :page-size="5"
+          />
         </DemoField>
       </section>
 

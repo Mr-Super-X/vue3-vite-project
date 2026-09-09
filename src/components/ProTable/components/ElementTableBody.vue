@@ -26,6 +26,11 @@ import CellContent from './CellContent.vue'
 const props = defineProps<{
   /** 渲染行（树形模式为扁平化后的 flatData） */
   rows: Record<string, unknown>[]
+  /**
+   * 后续刷新 loading（分页/排序/搜索请求期间的遮罩）。
+   * 首次加载由编排层 AsyncState skeleton 承担，本组件收到时恒为 false —— 避免双重 loading。
+   */
+  loading: boolean
   /** 可见列（列设置抽屉排序后的结果） */
   columns: ProColumn[]
   /** 行 key 字段名（缺省 'id'）；显式联合 undefined —— exactOptionalPropertyTypes 下模板绑定可能传 undefined */
@@ -87,6 +92,7 @@ defineExpose({
 <template>
   <ElTable
     ref="elTableRef"
+    v-loading="loading"
     :data="rows"
     v-bind="{
       ...(rowKey ? { rowKey } : {}),
@@ -120,7 +126,11 @@ defineExpose({
         <component :is="col.headerRender({ column: col, $index: scope.$index })" />
       </template>
 
-      <template #default="scope">
+      <!-- 单元格默认插槽。
+           ⚠️ selection 列必须排除：el-table 对 type=selection 的内置 checkbox 渲染（cellForced.renderCell）
+           仅在列未提供 default slot 时生效；这里统一提供 slot 会覆盖掉 checkbox，导致行内勾选框不渲染
+           （v2.2-M1 demo 验证发现的缺陷） -->
+      <template v-if="col.type !== 'selection'" #default="scope">
         <slot :name="col.prop" :row="scope.row" :column="col" :index="scope.$index">
           <!-- v2.0 行拖拽手柄（sortablejs 通过此 handle 选择器绑定） -->
           <span

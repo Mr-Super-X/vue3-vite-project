@@ -207,6 +207,24 @@ function isEmpty(): boolean {
   return !table.loading.value && !table.error.value && (table.data.value?.length ?? 0) === 0
 }
 
+/**
+ * 首次加载判定：AsyncState 的 loading 分支会用 skeleton 替换插槽、卸载整个表格——
+ * 若每次翻页/搜索刷新都走 loading 分支，ElTable 实例反复重建，其 store 内的
+ * 多选选区（reserve-selection 跨页记忆）、展开行等交互态全部丢失。
+ * 因此仅「从未渲染过数据」时显示 skeleton；之后刷新保留表格实例（loading 期间展示旧数据，
+ * useTable.onError 才清 data，故刷新中途不会误入 empty 分支）。
+ */
+const hasTableMounted = ref(false)
+watch(
+  () => table.data.value,
+  (d) => {
+    if (d && d.length > 0) hasTableMounted.value = true
+  },
+  { immediate: true }
+)
+/** 首次加载中（skeleton 态）；后续刷新为 false，保持表格挂载 */
+const initialLoading = computed(() => table.loading.value && !hasTableMounted.value)
+
 /* ───────────── BEM 命名空间 ───────────── */
 
 const bem = createNamespace('pro-table')
@@ -264,7 +282,7 @@ defineExpose({
         </template>
       </TableHeader>
       <AsyncState
-        :loading="table.loading.value"
+        :loading="initialLoading"
         :error="table.error.value"
         :is-empty="isEmpty()"
         @retry="table.refresh"
@@ -278,6 +296,7 @@ defineExpose({
               unknown
             >[]
           "
+          :loading="table.loading.value && hasTableMounted"
           :columns="sortedColumnsLoose"
           :row-key="props.rowKey"
           :row-edit="rowEdit"
@@ -298,6 +317,7 @@ defineExpose({
           v-else
           ref="proTableVxe"
           :rows="(table.data.value ?? []) as Record<string, unknown>[]"
+          :loading="table.loading.value && hasTableMounted"
           :columns="sortedColumnsLoose"
           :row-key="props.rowKey"
           :row-edit="rowEdit"

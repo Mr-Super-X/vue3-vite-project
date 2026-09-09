@@ -2,6 +2,16 @@
 
 ## 未发布
 
+### 🐛 Bug Fixes | ProTable 多选列渲染 + 刷新保持表格实例 + 刷新 loading 遮罩
+
+> 由 overview demo 新增「勾选 / 清除勾选」验证入口暴露（此前多选无任何 demo 可验）
+
+* **fix(ProTable):** element-plus 引擎 `type: 'selection'` 列行内勾选框不渲染——`ElementTableBody` 对 ElTableColumn **统一提供 default slot**，覆盖 el-table 对 selection 列的内置 checkbox 渲染（`cellForced.renderCell` 仅在无 default slot 时生效），行内单元格空白只剩表头全选框；selection 列排除出 default slot（`v-if="col.type !== 'selection'"`），交还 el-table 自渲染
+* **fix(ProTable):** 多选跨页记忆（`reserve-selection`）失效——`AsyncState` 的 loading 分支以 skeleton 替换插槽，每次翻页/搜索刷新都**卸载重建 ElTable 实例**，其 store 内多选选区 / 展开行等交互态全部丢失；`initialLoading` 收窄判定（仅「从未渲染过数据」时 skeleton，之后刷新保留表格实例、loading 期间展示旧数据），配合 `tableProps: { reserveSelection: true }` 跨页累计选区可用
+* **fix(ProTable):** 切分页/排序/搜索刷新期间表格无 loading 指示——`initialLoading` 收窄的补偿缺口：后续刷新表格保持挂载但缺少遮罩；`ElementTableBody` / `VxeTableBody` 新增 `loading` prop（分别接 el-table `v-loading` 指令 / vxe `loading` prop），编排层传 `table.loading && hasTableMounted`——首次 skeleton 与表格遮罩不叠加
+* **test(ProTable):** 集成 spec 补回归用例——selection 列行内渲染 el-table 内置 checkbox（真实 mount 断言 `.el-table__body .el-checkbox`）；切分页请求挂起期间断言 `.el-loading-mask` 出现、数据到达后消失；测试 154 → 156
+* **docs(demo):** overview 新增「多选（勾选 / 清除勾选，含跨页记忆）」演示区块（`#demo-selection`）——`getSelectedRows` / `clearSelection` 外部按钮 + reserve-selection 跨页验证入口
+
 ### 🐛 Bug Fixes | ProTable v2.2-M1 正确性修复（深度审计驱动）
 
 > 审计与设计：`docs/superpowers/specs/2026-09-08-protable-v2.2-arch-audit-design.md`

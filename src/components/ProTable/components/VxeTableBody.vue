@@ -30,6 +30,12 @@ import CellContent from './CellContent.vue'
 const props = defineProps<{
   /** 渲染行 */
   rows: Record<string, unknown>[]
+  /**
+   * 后续刷新 loading（分页/排序/搜索请求期间的遮罩）。
+   * 首次加载由编排层 AsyncState skeleton 承担，本组件收到时恒为 false —— 避免双重 loading。
+   * 遮罩由模板外层容器 v-loading 渲染（非 vxe 自带 loading prop，原因见模板注释）。
+   */
+  loading: boolean
   /** 可见列（列设置抽屉排序后的结果） */
   columns: ProColumn[]
   /** 行 key 字段名（缺省 'id'，映射 vxe row-config.keyField）；显式联合 undefined —— exactOptionalPropertyTypes 兼容 */
@@ -146,50 +152,60 @@ function handleCellDblclick(payload: { row: Record<string, unknown> }): void {
 
 <template>
   <ElSkeleton v-if="engineLoading" :rows="5" animated />
-  <component
-    :is="vxeTableComp"
-    v-else-if="vxeTableComp"
-    ref="vxeTableInst"
-    :data="rows"
-    :row-config="{ keyField: rowKey ?? 'id' }"
-    :sort-config="hasCustomSort(columns) ? { remote: true } : undefined"
-    v-bind="{
-      ...(cellSpan
-        ? { spanMethod: cellSpan.spanMethod, cellClassName: cellSpan.cellClassName }
-        : {}),
-    }"
-    @sort-change="handleSortChange"
-    @checkbox-change="handleCheckboxChange"
-    @checkbox-all="handleCheckboxAll"
-    @cell-dblclick="handleCellDblclick"
-  >
-    <!-- key 必须带序位：vxe-table 在 VxeColumn 挂载时按 DOM 位置注册 staticColumns，
+  <!--
+    后续刷新遮罩由外层容器 v-loading 承担（与 element-plus 引擎同款视觉）。
+    不用 vxe 自带 loading prop：vxe-table esm 版不含遮罩组件 VxeLoading（由 vxe-pc-ui 包提供，
+    项目未安装，VxeUI.getComponent('VxeLoading') 返回 undefined → prop 传了也不渲染）。
+    若未来引入 vxe-pc-ui，可换回 vxe 原生 loading prop
+  -->
+  <div v-else-if="vxeTableComp" v-loading="loading">
+    <component
+      :is="vxeTableComp"
+      ref="vxeTableInst"
+      :data="rows"
+      :row-config="{ keyField: rowKey ?? 'id' }"
+      :sort-config="hasCustomSort(columns) ? { remote: true } : undefined"
+      v-bind="{
+        ...(cellSpan
+          ? { spanMethod: cellSpan.spanMethod, cellClassName: cellSpan.cellClassName }
+          : {}),
+      }"
+      @sort-change="handleSortChange"
+      @checkbox-change="handleCheckboxChange"
+      @checkbox-all="handleCheckboxAll"
+      @cell-dblclick="handleCellDblclick"
+    >
+      <!-- key 必须带序位：vxe-table 在 VxeColumn 挂载时按 DOM 位置注册 staticColumns，
          此后按注册序（renderSortNumber）渲染表头，Vue 按 key 移动组件实例不会触发重注册。
          列设置拖拽排序后若 key 仅 col.prop，实例只移动不重挂载，vxe 列序不更新（v2.1 修复的 bug） -->
-    <component
-      :is="vxeColumnComp"
-      v-for="(col, index) in columns"
-      :key="`${col.prop}:${index}`"
-      v-bind="toVxeColumnProps(col)"
-    >
-      <!-- 自定义表头渲染（col.headerRender） -->
-      <template v-if="col.headerRender" #header="scope">
-        <component :is="col.headerRender({ column: col, $index: scope.$columnIndex ?? 0 })" />
-      </template>
-      <template #default="scope">
-        <slot :name="col.prop" :row="scope.row" :column="col" :index="scope.rowIndex ?? 0">
-          <!-- 行编辑控件（编辑态 + 含 edit 配置）；树形分支 vxe 引擎不支持，无对应模板 -->
-          <EditCell
-            v-if="rowEdit?.isEditing(rowKeyOf(scope.row)) && col.edit"
-            :row-key="rowKeyOf(scope.row)"
-            :col="col"
-            :value="rowEdit.getValue(rowKeyOf(scope.row), col.prop)"
-            @update="(prop, v) => rowEdit?.setValue(rowKeyOf(scope.row), prop, v)"
-          />
-          <!-- 默认渲染（与 ElementTableBody 共用 cell-render 适配层） -->
-          <CellContent v-else :content="resolveCellContent(col, scope.row, scope.rowIndex ?? 0)" />
-        </slot>
-      </template>
+      <component
+        :is="vxeColumnComp"
+        v-for="(col, index) in columns"
+        :key="`${col.prop}:${index}`"
+        v-bind="toVxeColumnProps(col)"
+      >
+        <!-- 自定义表头渲染（col.headerRender） -->
+        <template v-if="col.headerRender" #header="scope">
+          <component :is="col.headerRender({ column: col, $index: scope.$columnIndex ?? 0 })" />
+        </template>
+        <template #default="scope">
+          <slot :name="col.prop" :row="scope.row" :column="col" :index="scope.rowIndex ?? 0">
+            <!-- 行编辑控件（编辑态 + 含 edit 配置）；树形分支 vxe 引擎不支持，无对应模板 -->
+            <EditCell
+              v-if="rowEdit?.isEditing(rowKeyOf(scope.row)) && col.edit"
+              :row-key="rowKeyOf(scope.row)"
+              :col="col"
+              :value="rowEdit.getValue(rowKeyOf(scope.row), col.prop)"
+              @update="(prop, v) => rowEdit?.setValue(rowKeyOf(scope.row), prop, v)"
+            />
+            <!-- 默认渲染（与 ElementTableBody 共用 cell-render 适配层） -->
+            <CellContent
+              v-else
+              :content="resolveCellContent(col, scope.row, scope.rowIndex ?? 0)"
+            />
+          </slot>
+        </template>
+      </component>
     </component>
-  </component>
+  </div>
 </template>

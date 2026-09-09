@@ -281,6 +281,29 @@ describe('ProTable v2.0 集成（冲突矩阵 + 启动校验）', () => {
     expect(typeof vm.element?.clearSelection).toBe('function')
   })
 
+  it('v2.2-M1 修复回归：selection 列行内渲染 el-table 内置 checkbox（default slot 不覆盖 cellForced）', async () => {
+    const wrapper = mount(ProTable, {
+      props: {
+        columns: [
+          { prop: '__selection', label: '', type: 'selection', width: 50 },
+          { prop: 'name', label: '名称' },
+        ],
+        // 返回非空数据：空数据时 AsyncState 渲染 empty 态不挂载表格体
+        requestApi: async () => ({
+          data: [{ id: 1, name: '甲' }],
+          total: 1,
+          pageNum: 1,
+          pageSize: 10,
+        }),
+        rowKey: 'id',
+      } as ProTableProps,
+    })
+    await new Promise((r) => setTimeout(r, 10))
+    // 缺陷现象：ElTableColumn 统一提供 default slot 会覆盖 el-table 对 selection 列的
+    // 强制 checkbox 渲染（cellForced.renderCell），导致行内勾选框缺失、只有表头全选框
+    expect(wrapper.findAll('.el-table__body .el-checkbox').length).toBe(1)
+  })
+
   it('v2.2-M1：跨页 reset 只触发一次请求（page≠1 时无双发）', async () => {
     const requestApi = vi.fn().mockResolvedValue({ data: [], total: 100, pageNum: 1, pageSize: 10 })
     const wrapper = mount(ProTable, {
@@ -301,6 +324,49 @@ describe('ProTable v2.0 集成（冲突矩阵 + 启动校验）', () => {
     await vm.reset()
     await new Promise((r) => setTimeout(r, 20))
     expect(requestApi).toHaveBeenCalledTimes(3)
+  })
+
+  it('v2.2-M1 补偿：切分页期间表格展示 loading 遮罩（initialLoading skeleton 仅首次）', async () => {
+    type MockResponse = {
+      data: { name: string }[]
+      total: number
+      pageNum: number
+      pageSize: number
+    }
+    let resolveSecond: ((v: MockResponse) => void) | null = null
+    let callCount = 0
+    const requestApi = vi.fn().mockImplementation(() => {
+      callCount += 1
+      // 首次请求直接成功；第二次请求（切分页）人为挂起，用于断言 loading 遮罩
+      return callCount === 1
+        ? Promise.resolve<MockResponse>({
+            data: [{ name: '甲' }],
+            total: 100,
+            pageNum: 1,
+            pageSize: 10,
+          })
+        : new Promise<MockResponse>((resolve) => {
+            resolveSecond = resolve
+          })
+    })
+    const wrapper = mount(ProTable, {
+      props: {
+        columns: [{ prop: 'name', label: '名称' }],
+        requestApi,
+      } as unknown as ProTableProps,
+    })
+    // 首次请求完成 → 表格挂载（非空数据），此时不应有表格遮罩（skeleton 也已结束）
+    await vi.waitFor(() => expect(requestApi).toHaveBeenCalledTimes(1))
+    await new Promise((r) => setTimeout(r, 10))
+    expect(wrapper.find('.el-loading-mask').exists()).toBe(false)
+
+    // 切到第 2 页：第二次请求挂起期间，v-loading 遮罩应出现在表格上
+    wrapper.findComponent({ name: 'ElPagination' }).vm.$emit('current-change', 2)
+    await vi.waitFor(() => expect(wrapper.find('.el-loading-mask').exists()).toBe(true))
+
+    // 释放第二次请求 → 数据到达后遮罩消失
+    resolveSecond?.({ data: [{ name: '乙' }], total: 100, pageNum: 2, pageSize: 10 })
+    await vi.waitFor(() => expect(wrapper.find('.el-loading-mask').exists()).toBe(false))
   })
 
   it('M2：组件向外 emit sort-change（父级可监听排序变化）', async () => {
