@@ -2,6 +2,14 @@
 
 ## 未发布
 
+### 🐛 Bug Fixes | form-schema 错误清除语义修复（跨字段 demo 实测）
+
+> 用户在 `/demo/xform-cross-field` 实测反馈两个错误清除语义 bug，经 chrome-devtools MCP 浏览器实证定位根因后修复
+
+* **fix(form-schema):** 路径 B watch 清理逻辑从「无外部错误条目即清错」改为「上一轮有外部错误条目、本轮没有才清错」的 diff 精准清理（`use-set-field-error.ts`）——修复 el-form 内部错误（如 required 红字）被误清的问题：空保存后填确认密码触发跨字段错误时，日期字段未触碰但其 required 红字被 watch else 分支无差别清空
+* **fix(form-schema):** `useCrossFieldTrigger` 新增 `onFormReset()`（取消排队 debounce runner + 重拍 deps 快照），composer 包装 `exposed.resetFields` 在实例重置后同 tick 调用（`use-cross-field-trigger.ts` / `use-xform-composer.ts`）——对齐 el-form 官方「resetFields 后不重新校验」惯例，修复重置后兜底 watch 把「重置造成的值变化」当普通变化重跑 crossValidator 的问题（如 user.age 重置回 10 时「未成年」红字复现）
+* **test(form-schema):** 新增 4 个回归用例锁定两个语义（外部错误新增不误清 el-form 内部错误 / 条目删除仅清对应字段；onFormReset 后兜底 watch 空跑不重校验 / 取消排队 debounce runner）
+
 ### ♻️ Code Refactoring | form-schema 抽取 walkSchema 公共遍历器（批次 3-2：M5）
 
 > 审计与设计：`docs/superpowers/specs/2026-09-09-form-schema-arch-audit.md` | 计划：`docs/superpowers/plans/2026-09-09-form-schema-batch3-2-walk-schema.md`。零公开 API 变更、零行为变更（各调用方遍历方向集合经 opts 精确保持）

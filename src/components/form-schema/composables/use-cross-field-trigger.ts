@@ -3,8 +3,8 @@
  *
  * 触发路径：
  * - 精确：trigger(fieldName) —— XForm 在 onValueChange 时调用，只跑 deps 包含 fieldName 的 rule
- * - 兜底：watch model deep diff 变化字段，逐个 run（处理 resetFields / setModel 等
- *   不经过 onValueChange 的场景，避免漏触发）
+ * - 兜底：watch model deep diff 变化字段，逐个 run（处理 setModel 等不经过
+ *   onValueChange 的场景，避免漏触发；resetFields 走 onFormReset 重拍快照，不在此列）
  *
  * debounce 调度：
  * - 全局默认：opts.defaultDebounceMs（getter 形式，schema.debounceValidation 运行时可改）
@@ -73,6 +73,15 @@ export function useCrossFieldTrigger(opts: UseCrossFieldTriggerOptions): {
    * - 调用方：XForm.vue 的 onValueChange 回调精确传入 node.name
    */
   trigger: (changedField: string) => void
+  /**
+   * resetFields 同步调用（须在 model 已被重置之后、同 tick 内调用）：
+   * - 取消排队中的 debounce runner（reset 已清错，残留 timer 到期不得把错误写回）
+   * - 重拍 deps 快照 —— 兜底 watch 随后到达时新旧快照一致空跑，不把「重置造成的
+   *   值变化」当普通变化重新校验（对齐 el-form 官方 resetFields 不重新校验的惯例；
+   *   无此防护时未成年 crossValidator 会在重置后把红字重新写上）
+   * @see ./use-xform-composer.ts resetFields 包装调用点
+   */
+  onFormReset: () => void
 } {
   let rules: ReverseRule[] = opts.crossRules()
   // runner 类型：debounced 函数（lodash 返回）带 .cancel()；sync 函数无 cancel。
@@ -267,6 +276,15 @@ export function useCrossFieldTrigger(opts: UseCrossFieldTriggerOptions): {
     trigger: (changedField: string) => {
       triggeredFields.add(changedField)
       run(changedField)
+    },
+    onFormReset: () => {
+      // ① 取消排队中的 debounce timer（sync runner 的 cancel 为空操作，安全统一调用）
+      for (const r of runnerCache.values()) {
+        if (typeof r.cancel === 'function') r.cancel()
+      }
+      // ② 重拍快照：调用方保证 model 已完成重置且与本调用同 tick（watch 异步 flush），
+      // 随后到达的兜底 watch pass 因新旧快照一致而空跑
+      oldSnapshot = takeSnapshot()
     },
   }
 }

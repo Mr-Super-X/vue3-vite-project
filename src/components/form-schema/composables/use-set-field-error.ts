@@ -118,6 +118,11 @@ export function useSetFieldError(opts: UseSetFieldErrorOptions): UseSetFieldErro
   //    当外部错误仍存在但 el-form-item 内部 validateField(success) 把状态改回 success 时，
   //    立即纠正为 error —— 这是 element-plus validateStateDebounced(100ms) 之外的同步纠正。
   //    debounced 最终会跟随 validateState 显示 error，所以红字保留。
+  //
+  // 清理语义（diff 精准清理）：只清「上一轮有外部错误条目、这一轮没有」的字段。
+  // 无外部错误条目的字段一律不动 —— el-form 内部错误（如 required 红字）归
+  // el-form validateField 自己管，绝不能被误清（Bug：填确认密码触发外部错误时，
+  // 日期字段的 required 红字被 watch else 分支无差别清空）
   const watchedFields = new WeakSet<object>()
   // guardField 在 watch 回调内创建 watcher —— 脱离 setup effect scope，组件卸载后仍存活（泄漏）。
   // 收集 stop 句柄，scope 销毁时统一清理；getCurrentScope 守卫单测中无 scope 的裸调用
@@ -156,11 +161,15 @@ export function useSetFieldError(opts: UseSetFieldErrorOptions): UseSetFieldErro
     }
   }
 
+  // 上一轮 watch 时「持有外部错误条目」的字段名集合 —— diff 清理的基准
+  let prevErrorFields = new Set<string>()
+
   watch(
     () => externalErrors.value,
     (errors) => {
       const fields = getFields()
       if (!fields) return
+      const currentErrorFields = new Set<string>()
       for (const field of fields) {
         if (!field || typeof field !== 'object') continue
         const rawField = toRaw(field) as ElFormFieldRaw
@@ -170,13 +179,16 @@ export function useSetFieldError(opts: UseSetFieldErrorOptions): UseSetFieldErro
         const vs = rawField.validateState
         const vm = rawField.validateMessage
         if (target?.error) {
+          currentErrorFields.add(fieldName)
           if (vs && typeof vs === 'object' && 'value' in vs && vs.value !== 'error') {
             ;(vs as { value: string }).value = 'error'
           }
           if (vm && typeof vm === 'object' && 'value' in vm && vm.value !== target.error) {
             ;(vm as { value: string }).value = target.error
           }
-        } else {
+        } else if (prevErrorFields.has(fieldName)) {
+          // 仅当「上一轮有外部错误条目、这一轮没有」才清除显示状态；
+          // 新旧皆无条目的字段保持不动（其 error 状态属于 el-form 内部错误）
           if (vs && typeof vs === 'object' && 'value' in vs && vs.value === 'error') {
             ;(vs as { value: string }).value = ''
           }
@@ -186,6 +198,7 @@ export function useSetFieldError(opts: UseSetFieldErrorOptions): UseSetFieldErro
         }
         guardField(field)
       }
+      prevErrorFields = currentErrorFields
     },
     { deep: true, immediate: true }
   )

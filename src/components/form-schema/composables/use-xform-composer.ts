@@ -128,7 +128,7 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     elFormRef,
     getRef,
     clearValidate,
-    resetFields,
+    resetFields: instanceResetFields,
     setInitialValues,
     validateField,
     scrollToField,
@@ -183,6 +183,17 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     clearValidate,
     defaultDebounceMs: () => topLevelDebounceMs.value,
   })
+
+  /**
+   * resetFields 包装 —— 在实例重置（清 externalErrors + el-form 官方重置 model）之后
+   * 同 tick 调 crossFieldTrigger.onFormReset()：重拍 deps 快照使随后到达的兜底 watch
+   * pass 空跑，并取消排队中的 debounce runner —— 对齐 el-form 官方「重置后不重新
+   * 校验」的惯例（否则 crossValidator 会把重置回初始值的字段重新标红，如未成年场景）
+   */
+  function resetFields(names?: string | string[]): void {
+    instanceResetFields(names)
+    crossFieldTrigger.onFormReset()
+  }
 
   const formDirty = useFormDirty({
     model: () => props.model,

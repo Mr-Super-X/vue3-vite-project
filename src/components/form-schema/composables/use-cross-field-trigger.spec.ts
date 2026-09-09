@@ -547,6 +547,66 @@ describe('useCrossFieldTrigger / model watch 兜底路径', () => {
   })
 })
 
+describe('useCrossFieldTrigger / onFormReset（reset 后不重校验）', () => {
+  it('reset 值变化后同 tick 调 onFormReset → 兜底 watch 空跑，不触发 crossValidator', async () => {
+    let call = 0
+    const rules: ReverseRule[] = [
+      {
+        target: 'user.age',
+        deps: ['user.age'],
+        rule: {
+          crossValidator: (_v: unknown, age: unknown) => {
+            call++
+            return Number(age) >= 18 ? true : '未成年'
+          },
+          dependsOn: 'user.age',
+          trigger: 'change',
+        },
+      },
+    ]
+    const model = reactive<Record<string, unknown>>({ user: { age: 30 } })
+    const opts = makeOpts(rules, () => model)
+    const { onFormReset } = useCrossFieldTrigger(opts)
+    await nextTick()
+    call = 0
+
+    // 模拟 resetFields：model 被重置回初始值（age 10），同 tick 内调 onFormReset 重拍快照
+    ;(model.user as { age: number }).age = 10
+    onFormReset()
+    await nextTick()
+    await new Promise((r) => setTimeout(r, 20))
+
+    // ★ 旧逻辑：watch diff 命中 user.age → crossValidator(10) 重跑 → 未成年错误复现
+    expect(call).toBe(0)
+    expect(opts.setFieldError).not.toHaveBeenCalled()
+  })
+
+  it('onFormReset 取消排队中的 debounce runner（timer 到期不执行）', async () => {
+    vi.useFakeTimers()
+    const rules: ReverseRule[] = [
+      {
+        target: 'confirmPassword',
+        deps: ['password'],
+        rule: {
+          debounceMs: 500,
+          crossValidator: () => 'err',
+          dependsOn: 'password',
+          trigger: 'change',
+        },
+      },
+    ]
+    const model: Record<string, unknown> = { password: '1', confirmPassword: '1' }
+    const opts = makeOpts(rules, () => model)
+    const { trigger, onFormReset } = useCrossFieldTrigger(opts)
+
+    trigger('password') // debounce 排队中
+    onFormReset() // 取消排队 runner
+    vi.advanceTimersByTime(500)
+    expect(opts.setFieldError).not.toHaveBeenCalled()
+    vi.useRealTimers()
+  })
+})
+
 describe('useCrossFieldTrigger / 卸载清理', () => {
   it('stop() 卸载后 trigger 不再生效', async () => {
     const rules: ReverseRule[] = [

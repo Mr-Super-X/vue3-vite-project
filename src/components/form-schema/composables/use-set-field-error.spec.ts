@@ -196,6 +196,69 @@ describe('useSetFieldError — 路径 B（el-form fields 同步）', () => {
     scope.stop()
   })
 
+  it('Bug 回归：其他字段新增外部错误时，不清除本字段的 el-form 内部错误（无外部错误条目不误清）', async () => {
+    const externalErrors = ref<Record<string, FieldErrorState>>({})
+    const confirmField = makeField('passwordConfirm', '', '')
+    const dateField = makeField('startDate', '', '')
+    const getFields = vi.fn(() => [confirmField, dateField])
+    const errorBus = makeErrorBus()
+
+    const scope = effectScope()
+    scope.run(() => {
+      useSetFieldError({ externalErrors, getFields, errorBus })
+    })
+    await nextTick()
+
+    // 模拟 el-form validate：空保存把日期标成内部错误（不经 externalErrors，无外部错误条目）
+    dateField.validateState.value = 'error'
+    dateField.validateMessage.value = '请选择开始日期'
+
+    // 用户输入确认密码 12 → 跨字段错误经 externalErrors 新增条目
+    externalErrors.value = { passwordConfirm: { error: '两次密码不一致', validateStatus: 'error' } }
+    await nextTick()
+
+    // 确认密码错误正常写入
+    expect(confirmField.validateState.value).toBe('error')
+    expect(confirmField.validateMessage.value).toBe('两次密码不一致')
+    // ★ 日期的 el-form 内部错误绝不能被误清（旧逻辑：watch else 分支无差别清空）
+    expect(dateField.validateState.value).toBe('error')
+    expect(dateField.validateMessage.value).toBe('请选择开始日期')
+
+    scope.stop()
+  })
+
+  it('Bug 回归：外部错误条目删除 → 仅该字段清除显示（diff 精准清理）', async () => {
+    const externalErrors = ref<Record<string, FieldErrorState>>({
+      passwordConfirm: { error: '两次密码不一致', validateStatus: 'error' },
+    })
+    const confirmField = makeField('passwordConfirm', '', '')
+    const dateField = makeField('startDate', 'error', '请选择开始日期')
+    const getFields = vi.fn(() => [confirmField, dateField])
+    const errorBus = makeErrorBus()
+
+    const scope = effectScope()
+    scope.run(() => {
+      useSetFieldError({ externalErrors, getFields, errorBus })
+    })
+    await nextTick()
+    // immediate 同步：confirmField 有条目 → 写入 error；dateField 无条目但初始即 error
+    // （模拟 el-form 内部错误先于 useSetFieldError 挂载存在）→ 不应被误清
+    expect(dateField.validateState.value).toBe('error')
+
+    // 外部错误条目删除（crossValidator 重算通过）
+    externalErrors.value = {}
+    await nextTick()
+
+    // 只有「旧有条目、新无条目」的 confirmField 被清除
+    expect(confirmField.validateState.value).toBe('')
+    expect(confirmField.validateMessage.value).toBe('')
+    // dateField 新旧皆无外部错误条目 → 保持 el-form 内部错误不动
+    expect(dateField.validateState.value).toBe('error')
+    expect(dateField.validateMessage.value).toBe('请选择开始日期')
+
+    scope.stop()
+  })
+
   it('fields 数组变化时给新字段装 watch 守护（已知限制：新字段不自动同步已存在的错误）', async () => {
     const externalErrors = ref<Record<string, FieldErrorState>>({
       email: { error: 'e', validateStatus: 'error' },

@@ -69,7 +69,7 @@ src/components/form-schema/
 ├── composables/                   # 一文件一能力（P2 拆分后）
 │   ├── use-xform-composer.ts      # 顶层编排（composition root）
 │   ├── use-form-instance.ts       # el-form 实例方法编排（P2-A1：200 行）
-│   ├── use-set-field-error.ts     # setFieldError 双路径 + watch 守护（P2-A1：185 行）
+│   ├── use-set-field-error.ts     # setFieldError 双路径 + watch 守护（P2-A1：219 行）
 │   ├── use-form-validation.ts     # validateForm / validateDetail / applyCrossErrors
 │   ├── use-cross-field-trigger.ts # 反向跨字段实时触发 + debounce
 │   ├── use-form-dirty.ts          # dirty 状态追踪（阶段 2.2）
@@ -371,6 +371,12 @@ const schema: SchemaNode = {
 > **H3 修复（2026-09-09）**：model watch 兜底从顶层浅拷贝 diff 改为按 rule 的 deps 值快照 diff
 > （`use-cross-field-trigger.ts`，对齐 use-reaction deps 快照模式），嵌套路径直改
 > （`model.user.age = 30` 绕过 v-model）不再漏触发。
+>
+> **reset 语义（2026-09-09）**：`resetFields` 走 composer 包装 —— 实例重置后同 tick 调
+> `crossFieldTrigger.onFormReset()`（取消排队 debounce runner + 重拍 deps 快照），
+> 兜底 watch 随后到达时快照一致空跑，**重置后不重新校验**（对齐 el-form 官方惯例）。
+> 无此防护时，重置回初始值的字段会被兜底 watch 当普通变化重跑 crossValidator
+> （如 user.age 重置回 10 时「未成年」红字复现）。setModel 不经此包装，仍走兜底校验。
 
 ### 4.3 服务端错误映射（OPT 2.1）
 
