@@ -362,35 +362,65 @@ describe('useCrossFieldTrigger / model watch 兜底路径', () => {
     expect(opts.setFieldError).toHaveBeenCalledWith('passwordConfirm', '两次密码不一致')
   })
 
-  it('model 嵌套字段深度变化 → 仍触发（deep watch）', async () => {
+  it('H3 回归：直改嵌套路径（绕过 v-model）→ deps 快照 diff 命中 → 触发 crossValidator', async () => {
+    let call = 0
     const rules: ReverseRule[] = [
       {
-        target: 'target',
-        deps: ['obj.field'],
+        target: 'label',
+        deps: ['user.age'],
         rule: {
-          crossValidator: (v: unknown, dep: unknown) => (v === dep ? true : 'mismatch'),
-          dependsOn: 'obj.field',
+          crossValidator: (_v: unknown, age: unknown) => {
+            call++
+            return Number(age) >= 18 ? true : '未成年'
+          },
+          dependsOn: 'user.age',
           trigger: 'change',
         },
       },
     ]
-    // 用 reactive() 让嵌套字段也变成 reactive proxy（deep watch 才能触发）
-    const reactiveModel = reactive<Record<string, unknown>>({ obj: { field: 'a' }, target: 'a' })
-    const modelRef = ref(reactiveModel)
-    const opts = makeOpts(rules, () => modelRef.value)
+    // 用 reactive() 让嵌套属性可 deep watch
+    const model = reactive<Record<string, unknown>>({ user: { age: 10 }, label: 'x' })
+    const opts = makeOpts(rules, () => model)
     useCrossFieldTrigger(opts)
+    await nextTick()
+    call = 0 // 排除 setup 期可能的初始触发计数
 
-    // 直接改 nested 属性 —— 整体 modelRef.value 引用不变，但 deep watch 应触发
-    ;(reactiveModel.obj as { field: string }).field = 'b'
+    // H3 场景：demo 程序直改嵌套路径（不走 v-model / onValueChange）
+    ;(model.user as { age: number }).age = 30
     await nextTick()
     await new Promise((r) => setTimeout(r, 20))
 
-    // 注：vue watch 在 vitest jsdom 环境下 deep 触发可能不稳，但只要 internal model 变了就是对的
-    // 这里重点验证 useCrossFieldTrigger 内部 modelGetter 返回最新值
-    const triggerInstance = useCrossFieldTrigger(opts)
-    triggerInstance.trigger('obj.field')
+    expect(call).toBe(1)
+    expect(opts.clearValidate).toHaveBeenCalledWith(['label'])
+  })
+
+  it('H3 回归：与任何 rule 无关的字段变化 → 不触发（新旧逻辑行为等价，新逻辑不再空跑 run）', async () => {
+    let call = 0
+    const rules: ReverseRule[] = [
+      {
+        target: 'label',
+        deps: ['user.age'],
+        rule: {
+          crossValidator: () => {
+            call++
+            return 'err'
+          },
+          dependsOn: 'user.age',
+          trigger: 'change',
+        },
+      },
+    ]
+    const model = reactive<Record<string, unknown>>({ user: { age: 10 }, label: 'x', noise: 1 })
+    const opts = makeOpts(rules, () => model)
+    useCrossFieldTrigger(opts)
     await nextTick()
-    expect(opts.setFieldError).toHaveBeenCalledWith('target', 'mismatch')
+    call = 0
+
+    model.noise = 999
+    await nextTick()
+    await new Promise((r) => setTimeout(r, 20))
+
+    expect(call).toBe(0)
   })
 
   it('model 从 undefined → {} 不抛错', async () => {
@@ -408,6 +438,112 @@ describe('useCrossFieldTrigger / model watch 兜底路径', () => {
     const modelRef = ref<Record<string, unknown> | undefined>(undefined)
     const opts = makeOpts(rules, () => modelRef.value)
     expect(() => useCrossFieldTrigger(opts)).not.toThrow()
+  })
+
+  it('H3 修复附带语义：直改 target 值（绕过 v-model）→ target 快照变化 → 正向重算', async () => {
+    let call = 0
+    const rules: ReverseRule[] = [
+      {
+        target: 'label',
+        deps: ['user.age'],
+        rule: {
+          crossValidator: (v: unknown, age: unknown) => {
+            call++
+            return Number(age) >= 18 || v === '' ? true : '未成年'
+          },
+          dependsOn: 'user.age',
+          trigger: 'change',
+        },
+      },
+    ]
+    const model = reactive<Record<string, unknown>>({ user: { age: 30 }, label: 'x' })
+    const opts = makeOpts(rules, () => model)
+    useCrossFieldTrigger(opts)
+    await nextTick()
+    call = 0
+
+    model.label = 'y'
+    await nextTick()
+    await new Promise((r) => setTimeout(r, 20))
+
+    expect(call).toBe(1)
+  })
+
+  it('H3 修复：同 tick trigger(dep) + 直改同路径 → 去重窗口保留，只执行 1 次', async () => {
+    let call = 0
+    const rules: ReverseRule[] = [
+      {
+        target: 'label',
+        deps: ['user.age'],
+        rule: {
+          crossValidator: () => {
+            call++
+            return 'err'
+          },
+          dependsOn: 'user.age',
+          trigger: 'change',
+        },
+      },
+    ]
+    const model = reactive<Record<string, unknown>>({ user: { age: 10 }, label: 'x' })
+    const opts = makeOpts(rules, () => model)
+    const { trigger } = useCrossFieldTrigger(opts)
+
+    trigger('user.age') // 路径 1：onValueChange 精确触发（同步）
+    ;(model.user as { age: number }).age = 11 // 路径 2：同 tick deep watch diff
+    await nextTick()
+    await new Promise((r) => setTimeout(r, 20))
+
+    expect(call).toBe(1)
+  })
+
+  it('H3 修复：rules 整体替换后快照重置，不因旧快照误触发', async () => {
+    let call = 0
+    const rulesA: ReverseRule[] = [
+      {
+        target: 'label',
+        deps: ['a'],
+        rule: {
+          crossValidator: () => {
+            call++
+            return 'err'
+          },
+          dependsOn: 'a',
+          trigger: 'change',
+        },
+      },
+    ]
+    const rulesRef = ref(rulesA)
+    const model = reactive<Record<string, unknown>>({ a: 1, label: 'x' })
+    const setFieldError = vi.fn()
+    const clearValidate = vi.fn()
+    useCrossFieldTrigger({
+      crossRules: () => rulesRef.value,
+      model: () => model,
+      setFieldError,
+      clearValidate,
+    })
+    await nextTick()
+    call = 0
+
+    // 替换为无关 rule（deps 完全不同），随后改旧 dep → 不应触发旧 rule
+    rulesRef.value = [
+      {
+        target: 'other',
+        deps: ['b'],
+        rule: {
+          crossValidator: () => 'other err',
+          dependsOn: 'b',
+          trigger: 'change',
+        },
+      },
+    ]
+    await nextTick()
+    model.a = 2
+    await nextTick()
+    await new Promise((r) => setTimeout(r, 20))
+
+    expect(call).toBe(0)
   })
 })
 

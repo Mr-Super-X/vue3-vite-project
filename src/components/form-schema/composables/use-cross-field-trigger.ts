@@ -170,6 +170,32 @@ export function useCrossFieldTrigger(opts: UseCrossFieldTriggerOptions): {
     }
   }
 
+  // ──────────────────────────────────────────────────────────────────────
+  // H3 修复（审计 2026-09-09）：deps 值快照 diff —— 对齐 use-reaction deps 快照模式
+  // ──────────────────────────────────────────────────────────────────────
+  // 背景：旧实现对 model 做顶层浅拷贝 `{ ...model }` diff —— 嵌套 mutate
+  // （如 model.user.age = 30）时新旧快照是同一对象引用，isEqual 恒 true 恒判未变；
+  // 且就算 diff 出顶层 key 'user'，deps 精确匹配（'user.age' ≠ 'user'）也让 run 空跑。
+  // 改为：每条 rule 记录 deps 各路径取值快照 + target 当前值，watch 触发时逐项 isEqual。
+  interface RuleSnapshot {
+    depsValues: unknown[]
+    targetValue: unknown
+  }
+  function takeSnapshot(): Map<ReverseRule, RuleSnapshot> {
+    const m = new Map<ReverseRule, RuleSnapshot>()
+    const model = opts.model()
+    if (!model) return m
+    for (const r of rules) {
+      m.set(r, {
+        depsValues: r.deps.map((d) => get(model, d)),
+        targetValue: get(model, r.target),
+      })
+    }
+    return m
+  }
+  // 初始快照基于 setup 时的 rules（crossRules watch immediate 同步重建后也会重置）
+  let oldSnapshot = takeSnapshot()
+
   // 跨字段规则重建（依赖 XForm 通过 opts.crossRules 传入；索引变化时该 getter 返回新数组）
   // 重建时清空 runner 缓存 + 取消所有遗留 debounce timer：
   // 仅 runnerCache.clear() 会留下 in-flight 的 lodash.debounce 内部 setTimeout，
@@ -185,40 +211,46 @@ export function useCrossFieldTrigger(opts: UseCrossFieldTriggerOptions): {
         }
         runnerCache.clear()
         targetSeqMap.clear()
+        // 规则集变化后旧快照中的 rule 引用全部失效，立即重建防止旧快照误触发
+        oldSnapshot = takeSnapshot()
       },
       { immediate: true, flush: 'sync' }
     )
   )
 
-  // 阶段 3.1 修复：watch model 兜底 + 精确 diff 触发
-  // 解决"demo 程序直接修改 model 不触发校验"的问题（如一键制造日期冲突）
-  // —— 监听 model 变化,对比 oldModel/newModel 找出变化的字段名,逐个精确 run
-  // —— 避免改 password 时误触发日期校验(原 bug 根因)
-  let oldSnapshot: Record<string, unknown> = opts.model() ? { ...opts.model()! } : {}
+  // watch model 兜底：deep 监听 + deps 快照精确 diff（H3 修复，见文件头快照工具注释）
+  // - dep 值变化 → run(depPath)（deps 精确匹配命中该 rule）
+  // - target 值变化 → run(target)（正向重算 + 空值跳过语义，覆盖绕过 v-model 直改 target）
+  // - 与任何 rule 无关的 key 变化不再 run（旧逻辑顶层 diff 对无关 key 也是空跑，行为等价且更省）
   stops.push(
     watch(
       () => opts.model(),
       (newModel) => {
         if (!newModel) {
-          oldSnapshot = {}
+          oldSnapshot = new Map()
           return
         }
+        const fresh = takeSnapshot()
         const changed: string[] = []
-        for (const key of Object.keys(newModel)) {
-          if (!isEqual(newModel[key], oldSnapshot[key])) {
-            changed.push(key)
-          }
+        for (const [r, snap] of fresh) {
+          const prev = oldSnapshot.get(r)
+          // rules 重建时已同步重置快照，prev 恒存在；防御性跳过缺失项
+          if (!prev) continue
+          r.deps.forEach((d, i) => {
+            if (!isEqual(snap.depsValues[i], prev.depsValues[i])) changed.push(d)
+          })
+          if (!isEqual(snap.targetValue, prev.targetValue)) changed.push(r.target)
         }
-        oldSnapshot = { ...newModel }
+        oldSnapshot = fresh
         for (const key of changed) {
-          // trigger() 同 tick 已精确处理过的字段跳过（嵌套路径如 items[0].qty
-          // 只会以顶层 items 出现在 diff 里，不在 Set 中，run 空跑无副作用）
+          // trigger() 同 tick 已精确处理过的字段跳过（嵌套路径如 user.age
+          // 在 onValueChange 路径以完整 name 登记，同 tick 去重窗口保留）
           if (triggeredFields.has(key)) continue
           run(key)
         }
         triggeredFields.clear()
       },
-      { deep: true } // 关键:deep 监听 model 内部属性变化
+      { deep: true } // 关键:deep 监听 model 内部属性变化（嵌套路径依赖此触发）
     )
   )
 
