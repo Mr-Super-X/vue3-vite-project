@@ -21,6 +21,7 @@ import { useCrossFieldRuleTrigger } from './use-cross-field-rule-trigger'
 import type { UseFormErrorBusReturn } from './use-form-error-bus'
 import type { ValidateResult, RuleItem, SchemaNode } from '../types'
 import { collectElFieldErrors } from '../utils/collect-el-field-errors'
+import { runElFormValidate } from '../utils/run-el-form-validate'
 
 /**
  * useFormValidation 入参 —— 由 useXFormComposer 装配
@@ -124,11 +125,7 @@ export function useFormValidation(deps: UseFormValidationDeps): UseFormValidatio
       return result.isValid
     }
     // 字段规则失败时 ElForm 原生 scrollToError 已处理滚动（第一个 .el-form-item.is-error）
-    const elValid = await new Promise<boolean>((resolve) => {
-      const maybePromise = efValidate((v: boolean) => resolve(v))
-      // 关键：el-form 2.x 即使传 callback 仍 reject errorsMap（避免 unhandled rejection）
-      Promise.resolve(maybePromise).catch(() => resolve(false))
-    })
+    const elValid = await runElFormValidate(efValidate)
     if (!elValid) {
       // el-form 内置规则失败（含 async-validator / validator callback 失败）也需 OSD 提示
       // 扫描 ef.fields 提取 is-error 字段名 + validateMessage + fieldValue
@@ -223,10 +220,7 @@ export function useFormValidation(deps: UseFormValidationDeps): UseFormValidatio
     const ef = elFormRef.value
     const efValidate = ef?.validate
     if (efValidate) {
-      const elValid = await new Promise<boolean>((resolve) => {
-        const maybePromise = efValidate((v: boolean) => resolve(v))
-        Promise.resolve(maybePromise).catch(() => resolve(false))
-      })
+      const elValid = await runElFormValidate(efValidate)
       if (!elValid) {
         for (const d of collectElFieldErrors(ef as unknown as { fields?: unknown[] })) {
           errors.push({ keyPath: [d.field], message: d.message })
