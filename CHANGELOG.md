@@ -2,6 +2,17 @@
 
 ## 未发布
 
+### ♻️ Code Refactoring | form-schema 校验/错误子系统内部重构（批次 1）
+
+> 审计与设计：`docs/superpowers/specs/2026-09-09-form-schema-arch-audit.md` | 计划：`docs/superpowers/plans/2026-09-09-form-schema-batch1-refactor.md`。零公开 API 变更、零行为变更
+
+* **refactor(form-schema):** 抽取 `utils/collect-el-field-errors.ts` —— 三处对 `ef.fields` 的 `toRaw → validateState==='error' → validateMessage → propString||prop` 扫描结构重复（use-form-instance validateField / use-form-validation validateForm / validateDetail）统一为单一工具，element-plus 3.0 升级 diff 面从 3 处收敛到 1 处
+* **refactor(form-schema):** 抽取 `utils/run-el-form-validate.ts` —— el-form.validate「callback + reject 双轨」Promise 包装两处重复统一；EP 2.x 即使传 callback 仍 reject errorsMap 的兜底行为单点维护
+* **refactor(form-schema):** 删除 useFormValidation 死依赖 `crossFieldTrigger`（deps 接口 / 解构 / `void` 占位 / composer 传参 / spec mock 五处同步），合并 validateForm 两个逐字重复的守卫分支
+* **refactor(form-schema):** 删除 useFormInstance.validateForm 死代码（生产零调用方，与 useFormValidation.validateForm 同名不同语义，属维护陷阱）+ spec 4 个用例；XFormExpose 上的 validateForm 来自 useFormValidation，对外契约不变
+* **perf(form-schema):** composer 的 fieldErrors watch 去 `deep: true` —— setFieldError 对外部错误的写入均为顶层键赋值/删除，浅 watch 即可捕获（use-set-field-error 路径 B 守护内的 deep watch 保留不动）
+* **docs(form-schema):** 修正 render-form-item 阶段 3.1 过时注释（原称「不直接修改 elForm.fields[i]」，实际双路径设计——路径 B 的 watch 守护恰恰直接写字段内部 ref）；triggerRender 的 window 调试计数器收敛至 use-dev-runtime 的 `trackTriggerRender()`
+
 ### ♻️ Code Refactoring | form-schema 目录归位（components/ + adapters/）
 
 * **refactor(form-schema):** 5 个 Vue 组件（XForm / SchemaField / XFormDebugBanner / XFormErrorToast / XFormErrorToastItem，含各自 spec）从根目录移入 `components/`；`element-plus-adapter.ts`（含 spec）移入 `adapters/`。纯目录归位，零逻辑变更（git mv 保留历史）
