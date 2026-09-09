@@ -108,7 +108,6 @@ export function useTableCapabilities<T extends object = Record<string, unknown>>
             'childrenKey',
             'defaultExpandDepth',
             'rowKey',
-            'showLine',
             'loadDebounce',
             'exclusive',
           ]) as object),

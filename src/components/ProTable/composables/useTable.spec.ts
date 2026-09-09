@@ -106,6 +106,16 @@ describe('useTable', () => {
     expect(table.getSelectedRows()).toEqual([])
   })
 
+  it('v2.2-M1：clearSelection 同步调用 el-table 实例的 clearSelection（清 UI 勾选态）', () => {
+    const table = useTable(makeDeps())
+    const elClearSelection = vi.fn()
+    table.tableRef.value = { clearSelection: elClearSelection } as never
+    table.setSelectedRows([{ id: 1 }])
+    table.clearSelection()
+    expect(elClearSelection).toHaveBeenCalledTimes(1)
+    expect(table.getSelectedRows()).toEqual([])
+  })
+
   it('M2：onSortChange 更新 sortState 并把排序参数并入请求（默认序列化）', async () => {
     const deps = makeDeps()
     const table = useTable(deps)

@@ -2,6 +2,16 @@
 
 ## 未发布
 
+### 🐛 Bug Fixes | ProTable v2.2-M1 正确性修复（深度审计驱动）
+
+> 审计与设计：`docs/superpowers/specs/2026-09-08-protable-v2.2-arch-audit-design.md`
+
+* **fix(ProTable):** `element` expose 恒为 null——`useTable.tableRef` 创建后从未接线；`ElementTableBody` 经 defineExpose 转发 ElTable 实例（getter 透传 `$el`，保持 getTbody 行拖拽挂载点可用），编排层 watch 同步进 `table.tableRef`；`clearSelection()` 同步调用 el-table 实例的 `clearSelection()` 清 UI 勾选态（vxe 引擎 tableRef 为 null，可选链兜底）
+* **fix(ProTable):** 列设置持久化只恢复列顺序——`persist()` 写入的 `visible`/`fixed` 在加载路径从不读取（隐藏的列、固定的列刷新后复原）；setup 回填 `persisted.visible` → `visibleKeys`、`persisted.fixed` → 列副本 + `fixedKeys`（未收录的列显式取消固定，防 props 初始 fixed 回移）；`resetToDefault` 同步重置 `fixedKeys`；`persist()` 的 visible 口径改为有效可见性（`hidden` 字段与抽屉 `visibleKeys` 取交集），与回填口径一致，round-trip 不漂移
+* **fix(ProTable):** 跨页 reset / setSearchParams 双发请求——fetchHook 对齐 `onSortChange` 同场景模式：page≠1 时仅 `setPage(1)` 由 page watch 触发请求，不再紧接手动 `refresh()` 第二次
+* **refactor(ProTable):** 移除僵尸配置字段（类型层承诺但运行时零读取点）——`RowEditConfig.trigger/exclusive`、`TreeConfig.showLine`、`CellSpanConfig.judge/spanHeader`、`ProColumn.isFilterEnum/fieldNames`
+* **test(ProTable):** 测试 147 → 154（element expose 接线并断言穿透至 ElTable 实例方法 / clearSelection UI 联动 / 持久化回填与 round-trip / fixed 取消固定不回移 / resetToDefault 重置 fixedKeys / 跨页 reset 单请求）
+
 ### 🐛 Bug Fixes | ProTable vxe 引擎密度 / 列设置不生效
 
 * **fix(ProTable):** vxe 引擎密度行高对齐机制修正——vxe-table 由 JS 测量 CSS 变量 `--vxe-ui-table-row-height-*`（隐藏尺寸元素 `.vxe-table-var-*`）并以「内联 min-height」写进 `.vxe-cell`，此前对 `.vxe-body--row td` 设 height/padding 会被内联 min-height 顶开（default 档实测行高 64px，与 el 引擎 48px 并排差 ~180px）；密度改为覆盖该组变量（四尺寸键同值，compact 档同步缩 `.vxe-cell` 垂直 padding 防 38px 底），双引擎表格高度差收敛到 ~26px（残余为 vxe 单元格边框 ~1.5px/行 + 表头 ~10px）；测量结果有缓存，动态切密度由 `handleDensityChange` 触发 VxeTableBody 暴露的 `recalculate()` 重算（el 引擎纯 CSS 即时生效无需此步）；列设置抽屉被 `v-if="engineRef === 'element-plus'"` 排除，vxe 引擎点击无反应——ColSetting 操作引擎无关数据层（useColumns），移除引擎限制；列设置拖拽排序后 vxe 表格列序不更新——vxe-table 在 VxeColumn 挂载时按 DOM 序注册 staticColumns，Vue 按 key 移动组件实例不触发重注册，VxeColumn 的 key 由 `col.prop` 改为带序位 `` `${col.prop}:${index}` ``，重排时全量 remount 按新 DOM 序重新注册；窄容器下 vxe 表格 enum 列（ElTag 固有宽度内容）被自动列宽压到 tag 宽度以下，tag 溢出单元格被表格容器裁剪——toVxeColumnProps 对未显式声明 width/minWidth 且无自定义 render 的 enum 列补 minWidth 80px 兜底（el-table 自动布局按内容撑开列，无此问题）

@@ -156,6 +156,59 @@ describe('useColumns', () => {
     expect(sharedColumns.every((c) => c.hidden === undefined)).toBe(true)
   })
 
+  it('v2.2-M1：加载持久化时回填 visible/fixed（列设置完整恢复）', () => {
+    vi.mocked(Local.get).mockReturnValue({
+      order: ['b', 'a', 'c'],
+      visible: { a: true, b: false, c: true },
+      fixed: { c: 'left' },
+    })
+    const engine = ref('element-plus' as const)
+    const cols = useColumns({ props: makeProps(), engine })
+    // visible 回填：b 不可见（order b,a,c 中 b 被过滤）
+    expect(cols.visibleKeys.value).toEqual(['a', 'c'])
+    expect(cols.sortedColumns.value.map((c) => c.prop)).toEqual(['a', 'c'])
+    // fixed 回填：c 列固定到 left
+    expect(cols.fixedKeys.value).toEqual(['c'])
+    expect(cols.allColumns.value.find((c) => c.prop === 'c')?.fixed).toBe('left')
+  })
+
+  it('v2.2-M1：抽屉取消勾选后 persist 的 visible 与回填语义一致（round-trip）', () => {
+    const engine = ref('element-plus' as const)
+    const cols = useColumns({ props: makeProps(), engine })
+    cols.setVisibleKeys(['a', 'c']) // 抽屉取消勾选 b
+    const saved = vi.mocked(Local.set).mock.calls.at(-1)?.[1] as {
+      visible: Record<string, boolean>
+    }
+    expect(saved.visible).toEqual({ a: true, b: false, c: true })
+  })
+
+  it('v2.2-M1：persisted.fixed 未收录的列恢复为不固定（覆盖 props 初始 fixed）', () => {
+    // 场景：列 a 初始 fixed:'left'，用户在抽屉取消固定后 persist 的 fixed 为空对象，
+    // 刷新后 a 不得回移为固定
+    vi.mocked(Local.get).mockReturnValue({ fixed: {} })
+    const props = {
+      columns: [
+        { prop: 'a', label: 'A', fixed: 'left' as const },
+        { prop: 'b', label: 'B' },
+      ],
+      tableKey: 't',
+    } as never
+    const engine = ref('element-plus' as const)
+    const cols = useColumns({ props, engine })
+    expect(cols.allColumns.value.find((c) => c.prop === 'a')?.fixed).toBeUndefined()
+    expect(cols.fixedKeys.value).toEqual([])
+  })
+
+  it('v2.2-M1：resetToDefault 同步重置 fixedKeys（与列副本口径一致）', () => {
+    vi.mocked(Local.get).mockReturnValue({ fixed: { b: 'left' } })
+    const engine = ref('element-plus' as const)
+    const cols = useColumns({ props: makeProps(), engine })
+    expect(cols.fixedKeys.value).toEqual(['b'])
+    cols.resetToDefault()
+    // makeProps 无初始 fixed：恢复默认后 fixedKeys 应为空
+    expect(cols.fixedKeys.value).toEqual([])
+  })
+
   it('M2：外部 Ref<boolean> hidden 保持联动，手动 toggle 后本地优先', () => {
     const externalHidden = ref(false)
     const props = {

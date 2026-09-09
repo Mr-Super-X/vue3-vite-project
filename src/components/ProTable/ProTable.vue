@@ -15,7 +15,7 @@
  * @see [`./adapters/engine`](./adapters/engine.ts) 引擎工厂
  * @group ProTable 组件
  */
-import { ref, useAttrs, watch, type Ref } from 'vue' // vue 生命周期/底层 API（CLAUDE.md §1.6.1）
+import { ref, useAttrs, watch, type ComponentPublicInstance, type Ref } from 'vue' // vue 生命周期/底层 API（CLAUDE.md §1.6.1）
 import 'element-plus/dist/index.css' // 与 form-schema/XForm.vue 对齐：直接引入全量 CSS（覆盖 ProTable 用的所有组件：ElTable / ElPagination / ElForm / ElInput 等）
 import './styles/element-protable-overwrite.scss' // ProTable 特定的样式覆盖（BEM 嵌套，对齐 form-schema 模式）
 import { ElPagination, ElEmpty, ElConfigProvider } from 'element-plus' // element-plus 按需注入（unplugin-vue-components）
@@ -75,7 +75,12 @@ const search = useSearch({
   props: propsForComposables,
   engine: engineRef,
   fetchHook: async (opts) => {
-    if (opts?.reset) table.setPage(1)
+    // v2.2-M1：reset 且 page≠1 时仅 setPage(1) —— page watch 会触发请求，
+    // 再手动 refresh 会双发（对齐 useTable.onSortChange 同场景的处理模式）
+    if (opts?.reset && table.page.value !== 1) {
+      table.setPage(1)
+      return
+    }
     await table.refresh()
   },
 })
@@ -119,7 +124,23 @@ watch(
 )
 
 /** v2.0 el-table 实例 ref —— 供 getTbody 查询 tbody DOM（行拖拽挂载点；P1 起指向 ElementTableBody 实例，$el 透传到底层 ElTable） */
-const proTableEl = ref<{ $el?: HTMLElement } | null>(null)
+const proTableEl = ref<{
+  $el?: HTMLElement
+  elTable?: ComponentPublicInstance | null
+} | null>(null)
+
+/**
+ * v2.2-M1：ElementTableBody 暴露的 ElTable 实例同步进 useTable.tableRef
+ * （对外 element expose + clearSelection 清 UI 勾选态的载体）。
+ * 引擎回退（vxe → element-plus）后 ElementTableBody 挂载，watch 同样覆盖该路径。
+ */
+watch(
+  proTableEl,
+  (inst) => {
+    table.tableRef.value = inst?.elTable ?? null
+  },
+  { flush: 'post' }
+)
 
 /** v2.1 vxe 引擎分支实例 ref —— 目前用于密度切换后触发 vxe 行高重算（见 handleDensityChange） */
 const proTableVxe = ref<InstanceType<typeof VxeTableBody> | null>(null)

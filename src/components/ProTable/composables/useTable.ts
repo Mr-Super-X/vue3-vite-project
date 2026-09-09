@@ -175,6 +175,9 @@ export function useTable<T extends object = Record<string, unknown>>(
 
   function clearSelection(): void {
     selectedRows.value = []
+    // v2.2-M1：同步清 el-table UI 勾选态（tableRef 由 ElementTableBody 经编排层接线；
+    // vxe 引擎 / 未挂载时为 null，可选链兜底）
+    ;(tableRef.value as { clearSelection?: () => void } | null)?.clearSelection?.()
   }
 
   function getSelectedRows(): T[] {

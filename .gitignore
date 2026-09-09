@@ -46,6 +46,7 @@ mock/_*.bundled_*.cjs
 # Local backup and OMC runtime state
 .claude/backups/
 .claude/tmp/
+.claude/.agent-reports/
 .claude/scheduled_tasks.lock
 .omc/state/
 .omc/sessions/

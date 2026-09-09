@@ -170,7 +170,7 @@ describe('ProTable v2.0 集成（冲突矩阵 + 启动校验）', () => {
       props: {
         columns: [],
         requestApi: mockApi,
-        enableRowEdit: { trigger: 'manual' },
+        enableRowEdit: { onSaved: () => {} },
       } as ProTableProps,
     })
     expect(wrapper1.exists()).toBe(true)
@@ -263,6 +263,44 @@ describe('ProTable v2.0 集成（冲突矩阵 + 启动校验）', () => {
       .vm.$emit('sort-change', { column: null, prop: 'amount', order: 'ascending' })
     await new Promise((r) => setTimeout(r, 10))
     expect(requestApi.mock.calls.length).toBe(callsBefore)
+  })
+
+  it('v2.2-M1：element expose 指向 ElTable 实例（element-plus 引擎下非 null）', async () => {
+    const wrapper = mount(ProTable, {
+      props: {
+        columns: [{ prop: 'name', label: '名称' }],
+        // 返回非空数据：空数据时 AsyncState 渲染 empty 态不挂载表格体
+        requestApi: async () => ({ data: [{ name: '甲' }], total: 1, pageNum: 1, pageSize: 10 }),
+      } as ProTableProps,
+    })
+    await new Promise((r) => setTimeout(r, 10))
+    const vm = wrapper.vm as unknown as { element: { clearSelection?: unknown } | null }
+    expect(vm.element).not.toBeNull()
+    // 断言穿透到 ElTable 实例方法：若 expose 链任何一环把 ref 对象原样透出，
+    // element 会是 { value: ... } 包装而非实例，本断言即失败（审查发现 #1 的实证裁决）
+    expect(typeof vm.element?.clearSelection).toBe('function')
+  })
+
+  it('v2.2-M1：跨页 reset 只触发一次请求（page≠1 时无双发）', async () => {
+    const requestApi = vi.fn().mockResolvedValue({ data: [], total: 100, pageNum: 1, pageSize: 10 })
+    const wrapper = mount(ProTable, {
+      props: {
+        columns: [{ prop: 'name', label: '名称', search: { el: 'input' } }],
+        requestApi,
+      } as unknown as ProTableProps,
+    })
+    await new Promise((r) => setTimeout(r, 10)) // onMounted 首次请求
+    expect(requestApi).toHaveBeenCalledTimes(1)
+
+    // 翻到第 3 页（watch 触发第 2 次请求）
+    wrapper.findComponent({ name: 'ElPagination' }).vm.$emit('current-change', 3)
+    await vi.waitFor(() => expect(requestApi).toHaveBeenCalledTimes(2))
+
+    // 重置：page 3→1 由 watch 触发一次请求即够，不得再手动 refresh 第二次
+    const vm = wrapper.vm as unknown as { reset: () => Promise<void> }
+    await vm.reset()
+    await new Promise((r) => setTimeout(r, 20))
+    expect(requestApi).toHaveBeenCalledTimes(3)
   })
 
   it('M2：组件向外 emit sort-change（父级可监听排序变化）', async () => {

@@ -79,15 +79,37 @@ export function useColumns<T extends object = Record<string, unknown>>(
   const tableKey = props.tableKey
   const storageKey = tableKey ? `${tableKey}:columns` : ''
 
-  const allColumns = ref<ProColumn<T>[]>(cloneColumns(props.columns))
-  const visibleKeys = ref<string[]>(props.columns.map((c) => c.prop))
-  const fixedKeys = ref<string[]>(props.columns.filter((c) => c.fixed).map((c) => c.prop))
-  const colSettingVisible = ref(false) // 附录 A #8：默认关闭
-
   // 加载持久化（safeParse 由 Local 提供；spec §九 #8）
   const persisted: PersistedSetting | null = storageKey
     ? (Local.get(storageKey) as PersistedSetting | null)
     : null
+
+  const allColumns = ref<ProColumn<T>[]>(cloneColumns(props.columns))
+  // v2.2-M1 回填：persisted.fixed 写入列副本（原实现只恢复 order，固定列刷新后丢失）。
+  // 未收录的列必须显式取消固定：persisted.fixed 不含某列 = 用户曾取消固定，
+  // 缺 else 分支会让 props 初始 fixed 在刷新后回移（审查发现 #2）
+  if (persisted?.fixed) {
+    for (const col of allColumns.value) {
+      const f = persisted.fixed[col.prop]
+      if (f) {
+        col.fixed = f
+      } else {
+        delete (col as { fixed?: 'left' | 'right' }).fixed
+      }
+    }
+  }
+  // v2.2-M1 回填：persisted.visible 恢复抽屉勾选态（键缺失默认可见，兼容新增列）
+  const visibleKeys = ref<string[]>(
+    persisted?.visible
+      ? props.columns.map((c) => c.prop).filter((p) => persisted.visible?.[p] !== false)
+      : props.columns.map((c) => c.prop)
+  )
+  const fixedKeys = ref<string[]>(
+    persisted?.fixed
+      ? Object.keys(persisted.fixed)
+      : props.columns.filter((c) => c.fixed).map((c) => c.prop)
+  )
+  const colSettingVisible = ref(false) // 附录 A #8：默认关闭
 
   /**
    * 列顺序（含隐藏列）—— 拖拽排序的响应式数据源。
@@ -129,7 +151,11 @@ export function useColumns<T extends object = Record<string, unknown>>(
       // 保存完整列顺序（含隐藏列）：抽屉渲染 allColumns（含隐藏列），
       // 若只存可见列顺序，隐藏列重新显示后会漂移到最后
       order: columnOrder.value,
-      visible: Object.fromEntries(allColumns.value.map((c) => [c.prop, !isHidden(c)])),
+      // 有效可见性 = hidden 字段（程序化 / 外部 Ref）与抽屉 visibleKeys 取交集 ——
+      // 与 setup 回填口径一致（回填进 visibleKeys），round-trip 不漂移（v2.2-M1）
+      visible: Object.fromEntries(
+        allColumns.value.map((c) => [c.prop, !isHidden(c) && visibleKeys.value.includes(c.prop)])
+      ),
       fixed: Object.fromEntries(
         allColumns.value.filter((c) => c.fixed).map((c) => [c.prop, c.fixed ?? 'left'])
       ),
@@ -194,6 +220,7 @@ export function useColumns<T extends object = Record<string, unknown>>(
     allColumns.value = cloneColumns(props.columns)
     visibleKeys.value = props.columns.map((c) => c.prop) // 重置可见列（含 hidden=false + Ref<boolean>）
     columnOrder.value = props.columns.map((c) => c.prop) // 同步重置列顺序，否则恢复默认后顺序仍是拖拽后的
+    fixedKeys.value = props.columns.filter((c) => c.fixed).map((c) => c.prop) // 同步重置固定列（v2.2-M1 审查发现 #3）
     // 重置所有列的 hidden 状态：统一赋新 ref(false) 走属性替换（cast 原因同 toggleVisible）
     for (const col of allColumns.value) {
       if (col.hidden !== undefined) {

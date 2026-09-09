@@ -31,8 +31,6 @@ export interface ColumnSpanConfig {
 
 /** 行编辑顶层配置 @group ProTable 类型 */
 export interface RowEditConfig {
-  trigger?: 'dblclick' | 'manual'
-  exclusive?: boolean
   onSave?: (
     row: Record<string, unknown>,
     changes: Record<string, unknown>
@@ -47,7 +45,6 @@ export interface TreeConfig {
   childrenKey?: string
   defaultExpandDepth?: number
   rowKey?: string
-  showLine?: boolean
   loadDebounce?: number
   /** v2.0 与编辑共存时，编辑仅作用于叶子节点；true 时禁用编辑按钮 */
   exclusive?: boolean
@@ -55,13 +52,6 @@ export interface TreeConfig {
 
 /** 单元格合并顶层配置 @group ProTable 类型 */
 export interface CellSpanConfig {
-  judge?: (params: {
-    row: Record<string, unknown>
-    column: ProColumn
-    rowIndex: number
-    columnIndex: number
-  }) => { rowspan: number; colspan: number }
-  spanHeader?: boolean
   maxMergeSpan?: number
   /** v2.0 列级合并方向（与 ColumnSpanConfig.direction 同义，作用于全局） */
   direction?: 'row' | 'column' | 'both'
@@ -174,10 +164,6 @@ export interface ProColumn<T extends object = Record<string, unknown>> {
   search?: SearchConfig
   /** 字典映射（自动渲染 ElTag） */
   enum?: EnumProps[]
-  /** 是否从 useDict 异步字典过滤（spec §九 #9） */
-  isFilterEnum?: boolean
-  /** el-option fieldNames（label/value 映射，与 element-plus 对齐） */
-  fieldNames?: { label: string; value: string }
   /** 自定义表头渲染（返回 VNode；支持 h() 与 JSX）—— 方法语法（bivariance），见接口级注释 */
   headerRender?(scope: { column: ProColumn<T>; $index: number }): VNode
   /** 自定义单元格渲染（返回 VNode；不传则按 enum/字段值渲染）—— 方法语法（bivariance），见接口级注释 */

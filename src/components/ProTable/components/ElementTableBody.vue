@@ -14,6 +14,7 @@
  * @group ProTable 组件
  */
 import { ElTable, ElTableColumn } from 'element-plus' // element-plus 按需注入（unplugin-vue-components 只管模板，script 中显式 import）
+import type { ComponentPublicInstance } from 'vue' // 类型导入（TS 编译器需要，不参与运行时）
 import type { ProColumn, SortChangeEvent } from '../types'
 import type { useRowEdit } from '../composables/useRowEdit'
 import type { useTreeData } from '../composables/useTreeData'
@@ -64,10 +65,28 @@ function filterUndefined(obj: Record<string, unknown>): Record<string, unknown> 
   }
   return out
 }
+
+/**
+ * ElTable 实例 ref —— v2.2-M1 起经 defineExpose 转发给编排层，
+ * 同步进 useTable.tableRef（对外 element expose + clearSelection 清 UI 勾选态）。
+ */
+const elTableRef = ref<ComponentPublicInstance | null>(null)
+
+// defineExpose 后父级模板 ref 只能拿到本对象（默认实例属性不再透出），
+// 故 $el 用 getter 显式转发 —— ProTable.vue 的 getTbody（行拖拽挂载点查询）依赖它
+defineExpose({
+  /** el-table 组件实例（编排层同步进 useTable.tableRef） */
+  elTable: elTableRef,
+  /** 根 DOM（透传 ElTable 根元素） */
+  get $el() {
+    return elTableRef.value?.$el as HTMLElement | undefined
+  },
+})
 </script>
 
 <template>
   <ElTable
+    ref="elTableRef"
     :data="rows"
     v-bind="{
       ...(rowKey ? { rowKey } : {}),
