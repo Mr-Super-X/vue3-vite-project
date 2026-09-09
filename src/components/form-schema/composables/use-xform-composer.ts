@@ -184,8 +184,9 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
   // 立即拍基线
   formDirty.resetDirty()
 
-  // fieldErrors 变化时强制 reactiveSchema 引用变化
-  watch(fieldErrors, () => triggerRender(), { deep: true })
+  // 浅 watch 即可：setFieldError 对 externalErrors 的写入均为顶层键赋值/删除，
+  // 无需 deep 遍历（deep watch 保留在 use-set-field-error 的路径 B 守护内）
+  watch(fieldErrors, () => triggerRender())
 
   const serverError = useServerError({
     setFieldError,
