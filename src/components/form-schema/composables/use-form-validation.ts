@@ -14,27 +14,13 @@
  *
  * @group 表单编排：校验
  */
-import { nextTick, toRaw, type Ref } from 'vue'
+import { nextTick } from 'vue'
 import { get } from 'lodash-es'
 import { runCrossFieldValidation } from './use-validate'
 import { useCrossFieldRuleTrigger } from './use-cross-field-rule-trigger'
 import type { UseFormErrorBusReturn } from './use-form-error-bus'
 import type { ValidateResult, RuleItem, SchemaNode } from '../types'
-import { readRefStr } from '../utils/read-ref-str'
-
-/** 解包 ref-like 字段值为 unknown（element-plus ElFormItemContext.fieldValue 是 ComputedRef<unknown>） */
-function readRefVal(v: unknown): unknown {
-  if (v === undefined || v === null) return undefined
-  if (typeof v === 'object' && 'value' in v) {
-    return (v as { value: unknown }).value
-  }
-  return v
-}
-
-/** toRaw 后再读（element-plus 内部字段可能被 reactive 包裹） */
-function toRawLike<T>(v: T): T {
-  return toRaw(v as object) as T
-}
+import { collectElFieldErrors } from '../utils/collect-el-field-errors'
 
 /**
  * useFormValidation 入参 —— 由 useXFormComposer 装配
@@ -146,24 +132,9 @@ export function useFormValidation(deps: UseFormValidationDeps): UseFormValidatio
     if (!elValid) {
       // el-form 内置规则失败（含 async-validator / validator callback 失败）也需 OSD 提示
       // 扫描 ef.fields 提取 is-error 字段名 + validateMessage + fieldValue
-      const elFields = (ef as unknown as { fields?: unknown[] }).fields ?? []
-      const details: Array<{ field: string; message: string; value?: unknown }> = []
-      for (const f of elFields) {
-        const raw = toRawLike(f) as {
-          propString?: string | Ref<string>
-          prop?: string | Ref<string>
-          validateState?: string | Ref<string>
-          validateMessage?: string | Ref<string>
-          fieldValue?: unknown
-        }
-        const state = readRefStr(raw.validateState)
-        if (state !== 'error') continue
-        const msg = readRefStr(raw.validateMessage)
-        if (!msg) continue
-        const name = readRefStr(raw.propString) || readRefStr(raw.prop)
-        if (!name) continue
-        details.push({ field: name, message: msg, value: readRefVal(raw.fieldValue) })
-      }
+      const details = collectElFieldErrors(ef as unknown as { fields?: unknown[] }, {
+        includeValue: true,
+      })
       if (details.length > 0) {
         // el-form.validate() 失败 → 字段内规则（required/pattern/validator callback），
         // 不是 cross-field，code 用 EL_FORM_VALIDATION_FAILED 与跨字段区分
@@ -257,21 +228,8 @@ export function useFormValidation(deps: UseFormValidationDeps): UseFormValidatio
         Promise.resolve(maybePromise).catch(() => resolve(false))
       })
       if (!elValid) {
-        const elFields = (ef as unknown as { fields?: unknown[] }).fields ?? []
-        for (const f of elFields) {
-          const raw = toRawLike(f) as {
-            propString?: string | Ref<string>
-            prop?: string | Ref<string>
-            validateState?: string | Ref<string>
-            validateMessage?: string | Ref<string>
-          }
-          const state = readRefStr(raw.validateState)
-          if (state !== 'error') continue
-          const msg = readRefStr(raw.validateMessage)
-          if (!msg) continue
-          const name = readRefStr(raw.propString) || readRefStr(raw.prop)
-          if (!name) continue
-          errors.push({ keyPath: [name], message: msg })
+        for (const d of collectElFieldErrors(ef as unknown as { fields?: unknown[] })) {
+          errors.push({ keyPath: [d.field], message: d.message })
         }
       }
     }

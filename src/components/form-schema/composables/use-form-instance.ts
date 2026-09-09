@@ -16,7 +16,7 @@ import { get, set } from 'lodash-es'
 import { useSetFieldError, type FieldErrorState } from './use-set-field-error'
 import { useZodValidator } from './use-zod-validator'
 import type { UseFormErrorBusReturn } from './use-form-error-bus'
-import { readRefStr } from '../utils/read-ref-str'
+import { collectElFieldErrors } from '../utils/collect-el-field-errors'
 import type { ZodType } from 'zod'
 
 /**
@@ -113,35 +113,6 @@ export function useFormInstance(
   /** 从 ref-like 值解包字符串 —— 已迁移到 ../utils/read-ref-str（element-plus 内部字段状态常用 ref<string> 形态） */
 
   /**
-   * 从 el-form fields 提取 validateState=error 的字段详情，仅命中过滤集合的字段
-   * 用于 validateField 失败时构造 OSD toast 与 console.error 输出（与 validateForm 对齐）
-   */
-  function collectElFieldErrors(
-    ef: { fields?: unknown[] },
-    filterNames: Set<string>
-  ): Array<{ field: string; message: string; value?: unknown }> {
-    const fields = ef.fields ?? []
-    const details: Array<{ field: string; message: string; value?: unknown }> = []
-    for (const f of fields) {
-      const raw = toRaw(f) as {
-        propString?: string | Ref<string>
-        prop?: string | Ref<string>
-        validateState?: string | Ref<string>
-        validateMessage?: string | Ref<string>
-        fieldValue?: unknown
-      }
-      const validateState = readRefStr(raw.validateState)
-      if (validateState !== 'error') continue
-      const msg = readRefStr(raw.validateMessage)
-      if (!msg) continue
-      const fieldName = readRefStr(raw.propString) || readRefStr(raw.prop)
-      if (!fieldName || !filterNames.has(fieldName)) continue
-      details.push({ field: fieldName, message: msg, value: raw.fieldValue })
-    }
-    return details
-  }
-
-  /**
    * 数组删/移后按行清理失效的校验态 —— 此前直接调无参 clearValidate() 会清空
    * 全表单错误（误伤其他字段的服务端/本地红字），且绕过 externalErrors 同步。
    * 只清 fromIndex 及之后的行：错误是位置性的，索引位移后旧错误指向错位的行；
@@ -217,7 +188,10 @@ export function useFormInstance(
       // 校验失败：与 validateForm 对齐 —— 扫描 ef.fields 提取命中字段的错误详情
       const efAny = ef as unknown as { fields?: unknown[] }
       const targetNames = Array.isArray(name) ? name : [name]
-      const details = collectElFieldErrors(efAny, new Set(targetNames))
+      const details = collectElFieldErrors(efAny, {
+        filterNames: new Set(targetNames),
+        includeValue: true,
+      })
       if (details.length > 0) {
         console.error('[XForm] validateField failed:', details)
         // force: true —— 用户主动 validateField() 调用场景，每次都应反馈（不被 5s 去重）
