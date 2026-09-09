@@ -48,10 +48,6 @@ export interface UseFormValidationDeps {
   ) => void
   scrollToField: (name: string) => void
   topLevelScrollToError: { value: boolean }
-  /** 当前未直接使用 —— 保留以备扩展 */
-  crossFieldTrigger: {
-    trigger: (name: string) => void
-  }
   /** 显式传递避免 provide/inject 在 composable 嵌套场景失效 */
   errorBus?: UseFormErrorBusReturn
 }
@@ -90,7 +86,6 @@ export function useFormValidation(deps: UseFormValidationDeps): UseFormValidatio
     setFieldError,
     scrollToField,
     topLevelScrollToError,
-    crossFieldTrigger,
   } = deps
 
   // setFieldError 直接传引用，保留第 3 参数 state（spec 断言 3 参数调用）
@@ -112,18 +107,13 @@ export function useFormValidation(deps: UseFormValidationDeps): UseFormValidatio
     if (!m) return true
     const ef = elFormRef.value
     if (!ef?.validate) {
+      // el-form 未挂载时降级只跑跨字段校验（开发场景）
       const result = await runCrossFieldValidation(reactiveSchema.value, m, rules.value)
       applyCrossErrors(result)
       scrollToFirstError(firstCrossErrorField(result))
       return result.isValid
     }
     const efValidate = ef.validate
-    if (!efValidate) {
-      const result = await runCrossFieldValidation(reactiveSchema.value, m, rules.value)
-      applyCrossErrors(result)
-      scrollToFirstError(firstCrossErrorField(result))
-      return result.isValid
-    }
     // 字段规则失败时 ElForm 原生 scrollToError 已处理滚动（第一个 .el-form-item.is-error）
     const elValid = await runElFormValidate(efValidate)
     if (!elValid) {
@@ -234,9 +224,6 @@ export function useFormValidation(deps: UseFormValidationDeps): UseFormValidatio
 
     return { isValid: errors.length === 0, errors }
   }
-
-  // 不直接调用 crossFieldTrigger —— 业务通过 onValueChange 显式触发 trigger
-  void crossFieldTrigger
 
   return {
     validateForm,

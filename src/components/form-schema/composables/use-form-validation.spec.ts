@@ -44,7 +44,6 @@ function makeDeps(overrides: Partial<UseFormValidationDeps> = {}): {
   setFieldError: ReturnType<typeof vi.fn>
   clearValidate: ReturnType<typeof vi.fn>
   scrollToField: ReturnType<typeof vi.fn>
-  crossFieldTrigger: { trigger: ReturnType<typeof vi.fn> }
   topLevelScrollToError: Ref<boolean>
   elFormRef: Ref<{ validate?: (cb?: (v: boolean) => void) => Promise<boolean> } | null>
   reactiveSchema: Ref<SchemaNode | SchemaNode[] | string | undefined>
@@ -58,7 +57,6 @@ function makeDeps(overrides: Partial<UseFormValidationDeps> = {}): {
   const setFieldError = vi.fn()
   const clearValidate = vi.fn()
   const scrollToField = vi.fn()
-  const crossFieldTrigger = { trigger: vi.fn() }
   const topLevelScrollToError = ref(false)
 
   const deps: UseFormValidationDeps = {
@@ -71,7 +69,6 @@ function makeDeps(overrides: Partial<UseFormValidationDeps> = {}): {
     setFieldError,
     scrollToField,
     topLevelScrollToError,
-    crossFieldTrigger,
     ...overrides,
   }
 
@@ -80,7 +77,6 @@ function makeDeps(overrides: Partial<UseFormValidationDeps> = {}): {
     setFieldError,
     clearValidate,
     scrollToField,
-    crossFieldTrigger,
     topLevelScrollToError,
     elFormRef,
     reactiveSchema,

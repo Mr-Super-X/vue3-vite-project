@@ -202,7 +202,6 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     setFieldError,
     scrollToField,
     topLevelScrollToError,
-    crossFieldTrigger,
     errorBus,
   })
 
