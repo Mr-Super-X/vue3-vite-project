@@ -2,6 +2,14 @@
 
 ## 未发布
 
+### ♻️ Code Refactoring | form-schema 错误守护 watcher 按需挂载（批次 3-3：L2）
+
+> 审计与设计：`docs/superpowers/specs/2026-09-09-form-schema-arch-audit.md`。行为等价重构，零公开 API 变更
+
+* **refactor(form-schema):** `useSetFieldError` 路径 B 守护从「全字段挂载」改为「按需挂载」（`use-set-field-error.ts`）——仅「当前有外部错误条目」的字段挂 validateState watcher，条目清除即 stop。大表单常态（无外部错误）watcher 数从 O(字段数) 降为 0；无条目的字段守护回调本就恒空跑，白挂 watcher 纯属浪费
+* **docs(form-schema):** 评估结论写入实现注释——审计原建议「合并为单次遍历比对」不可行：守护的职责是实时纠正（el-form blur 校验通过把 validateState 改回 success 时 externalErrors 未变，须在 ref 变化瞬间纠正），合并后纠正只在 externalErrors 变化时发生，两次变化之间的 drift（红字消失）将可见，属行为回归
+* **test(form-schema):** 行为等价由现有 19 个用例锁定（纠正语义 / diff 精准清理 / 幂等 / scope 清理全绿）
+
 ### ✨ Features | form-schema 错误浮窗 OSD 可配置化（showErrorToast prop）
 
 * **feat(form-schema):** 新增 `showErrorToast?: boolean` prop（`XFormProps`）——XFormErrorToast 从「耦合 showDebugBanner（dev 环境恒开 / prod 恒关、用户不可控）」改为独立开关，**全环境默认 false（关闭）**，传 `:show-error-toast="true"` 开启；错误主反馈始终是字段红字 + console 留痕，toast 仅为补充提醒，默认开启会对连续输入校验失败场景造成弹窗噪音
