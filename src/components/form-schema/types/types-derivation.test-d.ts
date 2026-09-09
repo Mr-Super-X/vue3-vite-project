@@ -8,7 +8,7 @@
  *
  * @group XForm 类型测试
  */
-import type { SchemaNodeFor, PropsByComponent } from './types'
+import type { SchemaNodeFor, PropsByComponent } from '../types'
 
 // === Input 节点类型推导 ===
 const _inputValid: SchemaNodeFor<'Input'> = {

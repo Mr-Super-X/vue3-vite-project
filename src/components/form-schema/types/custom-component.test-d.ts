@@ -9,8 +9,8 @@
  *
  * @group XForm 类型测试
  */
-import type { SchemaNodeFor } from './types'
-import { xInput } from './builders'
+import type { SchemaNodeFor } from '../types'
+import { xInput } from '../builders'
 
 // 自定义组件 props
 interface MyInputProps {
@@ -19,7 +19,7 @@ interface MyInputProps {
   modelValue?: string
 }
 
-declare module './types' {
+declare module '../types' {
   interface ComponentPropsRegistry {
     MyInput: MyInputProps
   }
