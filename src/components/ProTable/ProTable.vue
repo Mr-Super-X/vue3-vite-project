@@ -255,7 +255,11 @@ defineExpose({
 
 <template>
   <ElConfigProvider>
-    <div :class="[bem.b(), attrs.class]" :style="attrs.style" :data-density="table.density.value">
+    <div
+      :class="[bem.b(), bem.is('tree', !!treeData), attrs.class]"
+      :style="attrs.style"
+      :data-density="table.density.value"
+    >
       <SearchForm
         v-if="columns.searchColumns.length > 0"
         :columns="searchColumnsLoose"
@@ -380,12 +384,34 @@ defineExpose({
     margin-top: 12px;
   }
 
-  /* v2.0 树形模式：复用 el-table__expand-icon，隐藏自定义 toggle + 隐藏展开行内容 */
-  .pro-table-tree-toggle {
-    display: none;
+  /* v2.2 树形模式：展开开关走树列内联自定义箭头（ElementTableBody 渲染，随 _level 缩进体现层级） */
+  &.is-tree {
+    /* 使用方若仍声明 type:'expand' 列：隐藏其自带 icon 与展开行内容，避免与内联箭头形成双开关 */
+    .el-table__expand-icon,
+    .el-table__expanded-cell {
+      display: none;
+    }
   }
-  .el-table__expanded-cell {
-    display: none;
+
+  /* 树列内联展开箭头按钮：reset 浏览器默认 button 外观（边框/底色），对齐单元格文本基线 */
+  .pro-table-tree-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--el-text-color-regular);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--el-color-primary);
+    }
   }
 }
 </style>

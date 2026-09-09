@@ -27,7 +27,7 @@ import { treeConfigItems, treeExposeItems } from './configs/protable-demos-api'
 const bem = createNamespace('demo-pro-table-tree')
 
 const columns: ProColumn[] = [
-  { prop: '__expand__', label: '', type: 'expand', width: 48 },
+  // v2.2：展开开关内联在树列（随层级缩进），无需再借 type:'expand' 列的 el-table 自带 icon
   { prop: 'name', label: '组织名称', tree: { indentSize: 20 } },
   { prop: 'hasChildren', label: '有子节点' },
 ]

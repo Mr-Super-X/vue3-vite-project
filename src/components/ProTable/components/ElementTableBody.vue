@@ -96,6 +96,14 @@ defineExpose({
     :data="rows"
     v-bind="{
       ...(rowKey ? { rowKey } : {}),
+      ...(treeData
+        ? {
+            // v2.2 修复：树形行对象带 children 字段（useTreeData 懒加载赋值），el-table 默认
+            // tree-props 会识别该字段把行递归渲染为树节点 —— flatData 平铺行 + 树形嵌套行
+            // = 同一行渲染两次（Duplicate keys）。指向不存在的字段，el-table 即按纯平铺渲染
+            treeProps: { children: '__pro_table_flat__', hasChildren: '__pro_table_flat__' },
+          }
+        : {}),
       ...(cellSpan
         ? { spanMethod: cellSpan.spanMethod, cellClassName: cellSpan.cellClassName }
         : {}),
@@ -149,10 +157,14 @@ defineExpose({
                 paddingLeft: (scope.row._level ?? 0) * (col.tree.indentSize ?? 24) + 'px',
               }"
             >
+              <!-- v2.2 树形展开箭头：内联在树列内（随 _level 缩进体现层级），替代 v2.0 借用 el-table expand 列 icon 的方案 -->
               <button
                 v-if="scope.row._hasChildren"
                 type="button"
-                :class="'pro-table-tree-toggle'"
+                class="pro-table-tree-toggle"
+                :class="bem.e('tree-toggle')"
+                :aria-expanded="treeData.isExpanded(rowKeyOf(scope.row))"
+                aria-label="展开/折叠"
                 @click="treeData.toggle(rowKeyOf(scope.row))"
               >
                 {{ treeData.isExpanded(rowKeyOf(scope.row)) ? '▾' : '▸' }}

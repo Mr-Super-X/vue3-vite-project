@@ -50,6 +50,34 @@ describe('ProTable v2.0 集成（冲突矩阵 + 启动校验）', () => {
     expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('编辑仅作用于叶子节点'))
   })
 
+  it('树形懒加载：el-table 平铺渲染不重复（无 Duplicate keys 警告，行数=flatData 行数）', async () => {
+    // v2.2 回归：行对象带 children 字段（懒加载赋值），el-table 默认 tree-props 会识别该字段
+    // 递归渲染树节点 —— flatData 平铺行 + el-table 树形嵌套行 = 同一行渲染两次（Duplicate keys）
+    const wrapper = mount(ProTable, {
+      props: {
+        columns: [{ prop: 'name', label: '名称', tree: { indentSize: 20 } }],
+        requestApi: async () => ({
+          data: [{ id: 'root', name: '公司', _hasChildren: true }],
+          total: 1,
+          pageNum: 1,
+          pageSize: 10,
+        }),
+        enableTree: {
+          rowKey: 'id',
+          loadDebounce: 1,
+          loadChildren: async () => [{ id: 'child-1', name: '子1', _hasChildren: false }],
+        },
+        rowKey: 'id',
+      } as unknown as ProTableProps,
+    })
+    await new Promise((r) => setTimeout(r, 30))
+    await wrapper.find('.pro-table-tree-toggle').trigger('click')
+    await new Promise((r) => setTimeout(r, 30))
+    // 修复后：root + child-1 共 2 行；未修复时 el-table 树形递归会多渲染 1 行 child-1（共 3 行）
+    expect(wrapper.findAll('.el-table__body tbody tr')).toHaveLength(2)
+    expect(console.warn).not.toHaveBeenCalledWith(expect.stringContaining('Duplicate keys'))
+  })
+
   it('④ 树形 + 合并：span.direction=column 被忽略 + console.warn（M5：不改写调用方配置）', async () => {
     mount(ProTable, {
       props: {

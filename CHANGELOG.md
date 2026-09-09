@@ -2,6 +2,14 @@
 
 ## 未发布
 
+### 💄 Style | ProTable 树形展开箭头改内联自定义图标
+
+* **fix(ProTable):** 树形模式展开开关此前借用 `type:'expand'` 列的 el-table 自带 icon——箭头固定在独立 48px 列、不随 `_level` 缩进，层级感缺失；改为树列内联自定义箭头（`▾`/`▸`，随缩进内联于节点名前），按钮 reset 浏览器默认外观 + hover 主题色
+* **fix(ProTable):** 隐藏规则收进 `is-tree` 作用域——根节点新增 `bem.is('tree')` 状态类，el-table 自带 expand icon / 展开行内容仅在树形模式隐藏（此前 `.el-table__expanded-cell` 无条件隐藏，非树形场景 expand 列的「展开行内容」能力被误伤，README 列类型表承诺的 expand 能力随之恢复）
+* **fix(ProTable):** 树形懒加载展开后控制台 `Duplicate keys found during update` 警告 + 子行重复渲染——树形行对象带 `children` 字段（useTreeData 懒加载赋值），el-table 默认 `tree-props` 识别该字段把行递归渲染为树节点，与 ProTable 自行扁平化的 flatData 平铺行双渲染同一节点；树形模式下 `treeProps` 指向哨兵字段（`__pro_table_flat__`），el-table 按纯平铺渲染，展开/懒加载由 useTreeData 单一职责接管。mock 中历史「深拷贝防 Duplicate keys」注释的误修根源即此
+* **test(ProTable):** 集成 spec 补树形回归用例——懒加载 mount 后断言表体行数 = flatData 行数（修复前多渲染 1 行）且 console.warn 无 Duplicate keys（真实 mount ElTable 复现）。测试 156 → 157
+* **docs(demo):** `ProTableTree` 移除 `__expand__` 列（48px icon 列不再需要），展开交互统一走树列内联箭头
+
 ### 🐛 Bug Fixes | ProTable 多选列渲染 + 刷新保持表格实例 + 刷新 loading 遮罩
 
 > 由 overview demo 新增「勾选 / 清除勾选」验证入口暴露（此前多选无任何 demo 可验）
