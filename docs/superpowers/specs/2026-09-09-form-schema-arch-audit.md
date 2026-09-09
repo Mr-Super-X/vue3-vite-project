@@ -199,7 +199,7 @@ new Promise<boolean>((resolve) => {
 | 3-1 | `triggerRender` 细粒度失效 | 按 `fieldErrors` 变更的字段名定位对应 SchemaField（如 `:data-error-key` 订阅），错误写入只重渲受影响字段；保留顶层浅拷贝作为 fallback | M3b |
 | 3-2 | ~~抽 `walkSchema` 公共遍历器~~ **✅ 已完成（2026-09-09）** | visitor 模式统一 6 处静态递归（containsReaction / applyReactions / registerAsyncOptions / containsAsyncOptions / collectCrossRuleFields / buildIndex；#5 traverseCross 为模型驱动异步遍历保持独立并加 @see 注释）；计划 `docs/superpowers/plans/2026-09-09-form-schema-batch3-2-walk-schema.md` | M5 |
 | 3-3 | `useSetFieldError` 守护 watcher 合并 | 评估"单次遍历 + 手动比对"替代 per-field watch | L2 |
-| 3-4 | errorBus 去重窗口语义 | 固定窗口 or 注释明确 | L1 |
+| 3-4 | ~~errorBus 去重窗口语义~~ **✅ 已完成（2026-09-09）** | 固定窗口（命中不刷新窗口起点）+ dedupeCache 容量上限 100 + JSDoc 明确去重粒度契约（9 调用点逐一核对均满足） | L1 |
 
 ---
 

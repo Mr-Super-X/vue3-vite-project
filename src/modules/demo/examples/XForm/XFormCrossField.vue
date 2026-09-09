@@ -17,7 +17,7 @@
  * 实际校验仍生效:点击「保存」时 validateForm() 跑 el-form.validate + runCrossFieldValidation,
  * 失败时 setFieldError 写入错误 + toast 提示
  */
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import XForm from '@/components/form-schema/components/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
@@ -241,6 +241,12 @@ const model = reactive<Record<string, unknown>>({
   h1HiddenField: '',
 })
 
+/**
+ * 错误浮窗 OSD 开关 —— 演示 XFormProps.showErrorToast（默认关闭）
+ * 开启后跨字段校验失败的 errorBus 事件以右上角 toast 弹出（5s 固定窗口去重）
+ */
+const showErrorToast = ref(false)
+
 async function onSave() {
   if (!formRef.value) return
   const valid = await formRef.value.validate()
@@ -300,11 +306,12 @@ const tocItems = [
         'validateDetail() 同步返回完整跨字段错误列表(用于调试或自定义展示)',
         'H3 验证：「年龄」挂在嵌套路径 user.age、「监护人」dependsOn 该嵌套路径 —— 年龄 10 时点「保存」制造两处红字(未成年 / 须填监护人),再点「直改 model.user.age = 30」按钮(绕过 v-model),两处红字都应自动消失',
         'H1 验证：「standalone disabled/hidden 字段」使用字段级函数形态(非 reaction 简写)—— 切换「同意协议」开关,两字段应联动禁用/启用、隐藏/显示,dev 控制台无 prop type 警告',
+        'showErrorToast：打开右侧「浮窗」开关后点「保存」,跨字段校验失败的 errorBus 事件会以右上角 toast 弹出(默认关闭;同码错误 5s 固定窗口去重)',
       ]"
     >
       <section id="demo-cross-field">
         <DemoField label="跨字段校验" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
+          <XForm ref="formRef" :schema="schema" :model="model" :show-error-toast="showErrorToast" />
           <div :class="bem.e('actions')">
             <el-button @click="onReset">重置</el-button>
             <el-button type="primary" @click="onSave">保存</el-button>
@@ -313,6 +320,13 @@ const tocItems = [
               直改 model.user.age = 30（H3）
             </el-button>
             <el-button @click="copySchema">复制 schema</el-button>
+            <el-switch
+              v-model="showErrorToast"
+              inline-prompt
+              active-text="浮窗开"
+              inactive-text="浮窗关"
+              style="margin-left: auto"
+            />
           </div>
           <ModelPreview :model="model" />
         </DemoField>

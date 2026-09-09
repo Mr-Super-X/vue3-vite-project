@@ -2,6 +2,22 @@
 
 ## 未发布
 
+### ✨ Features | form-schema 错误浮窗 OSD 可配置化（showErrorToast prop）
+
+* **feat(form-schema):** 新增 `showErrorToast?: boolean` prop（`XFormProps`）——XFormErrorToast 从「耦合 showDebugBanner（dev 环境恒开 / prod 恒关、用户不可控）」改为独立开关，**全环境默认 false（关闭）**，传 `:show-error-toast="true"` 开启；错误主反馈始终是字段红字 + console 留痕，toast 仅为补充提醒，默认开启会对连续输入校验失败场景造成弹窗噪音
+* **docs(form-schema):** README §props（10→11 个）+ §prod 错误反馈表 + 生产推荐配置段、ARCHITECTURE.md 目录树与三层错误展示表、XFormErrorToast/XForm 模板注释同步「dev only」旧描述
+* **demo(form-schema):** `XFormCrossField.vue` 新增「错误浮窗 OSD」开关，演示 showErrorToast 开启效果（跨字段失败 toast 即时可见）
+* **test(form-schema):** XForm 集成 spec 新增 2 用例——未传 prop 时错误事件不渲染浮窗（默认关闭）、传 `show-error-toast` 时渲染
+
+### 🐛 Bug Fixes | form-schema errorBus 去重窗口改固定窗口（批次 3-4：L1）
+
+> 审计与设计：`docs/superpowers/specs/2026-09-09-form-schema-arch-audit.md`
+
+* **fix(form-schema):** 去重命中不再刷新窗口起点 —— 原滑动窗口语义下，高频同码错误（如每键触发的 crossValidator 失败）每次命中都顺延窗口起点，持续触发时首次弹窗后**永不重复展示**；改为固定窗口（节流语义：距上次入列满 5s 后下一条立即入列），错误重新出现后最迟 5s 内再次提醒
+* **fix(form-schema):** dedupeCache 增加容量上限 100 —— 历史「code|message」组合原本无限累积导致 Map 无界增长；触顶时先清理窗口起点已过期的条目，仍超限则整体清空（最坏后果 = 去重短暂失效，无正确性影响）
+* **docs(form-schema):** `report` JSDoc 明确去重粒度契约：去重键 = code + message，message 变化的错误视为新错误立即入列，调用方须保证 message 承载区分信息（如含字段名/失败数量）或传 `force: true`（9 个现有调用点逐一核对均满足）
+* **test(form-schema):** 新增 2 个用例锁定固定窗口语义（命中不刷新窗口起点）与容量上限行为
+
 ### 🐛 Bug Fixes | form-schema 错误清除语义修复（跨字段 demo 实测）
 
 > 用户在 `/demo/xform-cross-field` 实测反馈两个错误清除语义 bug，经 chrome-devtools MCP 浏览器实证定位根因后修复

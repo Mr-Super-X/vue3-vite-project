@@ -104,6 +104,39 @@ describe('useFormErrorBus', () => {
     }
   })
 
+  it('去重窗口为固定窗口：命中不刷新窗口起点（L1 修复，滑动窗口会无限顺延）', () => {
+    vi.useFakeTimers()
+    try {
+      const { bus } = mountBus()
+      bus.report({ severity: 'error', code: 'FIXED', message: 'x' }) // t=0 入列，窗口起点
+      vi.advanceTimersByTime(2_000)
+      bus.report({ severity: 'error', code: 'FIXED', message: 'x' }) // t=2 命中去重
+      vi.advanceTimersByTime(4_000)
+      // t=6：距窗口起点 t=0 已 6s ≥ 5s → 必须重新入列
+      // 若为滑动窗口，t=2 的命中会刷新起点到 2，t=6 距起点仅 4s 会被误吞
+      bus.report({ severity: 'error', code: 'FIXED', message: 'x' })
+      expect(bus.events.value).toHaveLength(2)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('dedupe 缓存有容量上限：超过上限后最早的去重键可被重新上报（防 Map 无界增长）', () => {
+    vi.useFakeTimers()
+    try {
+      const { bus } = mountBus()
+      // 报告 101 个不同 message（超出容量上限 100）
+      for (let i = 1; i <= 101; i++) {
+        bus.report({ severity: 'info', code: 'FLOOD', message: `m${i}` })
+      }
+      // 容量超限 → 缓存被清理 → 重报最早的 m1 不被去重，重新入列到列表头部
+      bus.report({ severity: 'info', code: 'FLOOD', message: 'm1' })
+      expect(bus.events.value[0]?.message).toBe('m1')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('dismiss(id) 标记单条为 dismissed；unreadCount 不变之前', () => {
     const { bus } = mountBus()
     bus.report({ severity: 'warn', code: 'A', message: 'a' })

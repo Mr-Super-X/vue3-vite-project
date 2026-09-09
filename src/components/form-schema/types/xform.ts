@@ -125,6 +125,16 @@ export interface XFormProps {
    */
   permissionResolver?: (perm: string) => 'view' | 'edit' | 'hidden'
   /**
+   * 开启错误浮窗 OSD（XFormErrorToast，右上角 toast 展示 errorBus 事件）
+   *
+   * - 默认 false（全环境含 dev 均不渲染浮窗）——错误主反馈始终是字段红字 + console 留痕，
+   *   toast 是补充提醒，默认开启会对连续输入校验失败的场景造成弹窗噪音
+   * - 传 true 开启：跨字段校验失败 / 表达式解析失败 / 服务端 422 回填等
+   *   errorBus 事件以浮窗形式可见
+   * - 与 DebugBanner 相互独立（showDebugBanner 只控制 schema 校验 + 安全扫描横幅）
+   */
+  showErrorToast?: boolean
+  /**
    * 单批次 reaction 执行预算（阶段 P2-3 可配置化入口）
    *
    * 用途:reaction 函数允许写 model 副作用，deep watch 会再次触发 runner，

@@ -3,8 +3,9 @@
  * XFormErrorToast —— user-facing 错误提示容器
  *
  * 渲染 XFormErrorEvent 列表为右上角浮窗 toast：
- * - dev 模式：弹出 OSD（on-screen display），无需打开 DevTools 即可感知错误
- * - prod 模式：组件 v-if 隐藏（dev-only 渲染），保留 console + 上报点扩展位
+ * - 由 XForm 的 showErrorToast prop 控制（enabled=true 且存在未 dismiss 事件时渲染）——
+ *   默认关闭、显式传参开启，与运行环境（dev/prod）无关
+ * - 关闭时 errorBus 仍保留 console 留痕 + prod 上报点扩展位，仅可视化层不渲染
  *
  * 与 XFormDebugBanner 的区别：
  * - DebugBanner 聚焦 schema 校验错误 + 安全扫描（静态分析产物）
@@ -19,7 +20,7 @@ import XFormErrorToastItem from './XFormErrorToastItem.vue'
 
 const { events, enabled } = defineProps<{
   events: FormErrorEvent[]
-  /** 是否启用可视化（prod = false，仅 dev 弹窗） */
+  /** 是否启用可视化 —— 由 XForm 的 showErrorToast prop 控制（默认关闭），与本组件无关环境判断 */
   enabled: boolean
 }>()
 

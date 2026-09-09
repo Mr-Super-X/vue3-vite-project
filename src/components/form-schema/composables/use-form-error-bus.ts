@@ -5,7 +5,8 @@
  * 消费方通过 events ref 订阅（dev 通过 XFormErrorToast 浮窗展示，prod 静默）。
  *
  * 不引入第三方 toast 库（ElMessageBus 与业务层耦合过深）；prod 预留 hook 供业务埋点上报。
- * 同 code 去重（5 秒内）避免连续输入反复弹窗；force:true 跳过去重用于主动 validate 场景。
+ * 同 code + message 固定窗口去重（5 秒内不重复弹窗，命中不刷新窗口起点）；
+ * force:true 跳过去重用于主动 validate 场景。
  *
  * @group 表单编排：错误总线
  */
@@ -78,7 +79,10 @@ export interface UseFormErrorBusReturn {
   events: Ref<FormErrorEvent[]>
   /**
    * 上报一条错误
-   * - 默认行为：5 秒内同 code + message 去重（用户连续输入反复弹窗是噪音）
+   * - 默认行为：**固定窗口**去重 —— 同 code + message 距「上一次入列」不足 5s 时丢弃，
+   *   去重命中不刷新窗口起点（节流语义：每 5s 最多展示一次同码错误）
+   * - 去重粒度 = code + message：message 变化的错误视为新错误立即入列，因此调用方
+   *   须保证 message 承载区分信息（如含字段名/失败数量），否则不同错误的重复会被合并
    * - `force: true`：跳过去重，用于用户主动 validate() / validateField() 调用场景
    *   （主动操作期望每次都收到反馈，不应被去重）
    */
@@ -101,21 +105,42 @@ export type ReportErrorEventInput = Omit<FormErrorEvent, 'id' | 'timestamp' | 'd
 
 const MAX_EVENTS = 5
 const DEDUPE_WINDOW_MS = 5_000
+/**
+ * dedupeCache 容量上限 —— 每条「code|message」组合占一个条目，
+ * 历史不同 message 组合无限累积会导致 Map 无界增长；
+ * 超限后先清理过期条目，仍超限则整体清空（最坏后果 = 去重短暂失效多弹几条 toast，无正确性影响）
+ */
+const MAX_DEDUPE_CACHE = 100
 
 /** 创建一份 error bus（XForm 顶层调用一次） */
 export function useFormErrorBus(): UseFormErrorBusReturn {
   const events = ref<FormErrorEvent[]>([])
   const dedupeCache = new Map<string, number>()
 
+  /**
+   * dedupeCache 容量防护：清理窗口起点已过期的条目；仍超限则整体清空
+   * 惰性调用 —— 仅在上报路径且 size 触顶时执行，避免每次 report 都 O(n) 扫描
+   */
+  function evictDedupeCacheIfNeeded(now: number): void {
+    if (dedupeCache.size < MAX_DEDUPE_CACHE) return
+    for (const [key, ts] of dedupeCache) {
+      if (now - ts >= DEDUPE_WINDOW_MS) dedupeCache.delete(key)
+    }
+    if (dedupeCache.size >= MAX_DEDUPE_CACHE) dedupeCache.clear()
+  }
+
   function report(event: ReportErrorEventInput): void {
     const { force = false, ...eventData } = event
     // 同 code + message 在 5s 内去重 —— 用户连续输入反复弹窗是噪音
-    // force: true 时跳过去重（用户主动 validate() / validateField() 调用场景）
+    // 固定窗口语义（L1 修复）：窗口起点 = 上一次入列时刻，去重命中不刷新 ——
+    // 若为滑动窗口，高频同码错误每键刷新起点，窗口被无限顺延导致首次之后永不重弹
+    // 去重粒度 = code + message：message 变化的错误是新 key 立即入列（可见最新），
+    // 调用方须保证 message 承载区分信息；主动 validate 场景传 force: true
     if (!force) {
+      evictDedupeCacheIfNeeded(Date.now())
       const dedupeKey = `${event.code}|${event.message}`
       const lastTs = dedupeCache.get(dedupeKey)
       if (lastTs && Date.now() - lastTs < DEDUPE_WINDOW_MS) {
-        dedupeCache.set(dedupeKey, Date.now())
         return
       }
       dedupeCache.set(dedupeKey, Date.now())

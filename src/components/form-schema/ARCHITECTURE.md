@@ -40,7 +40,7 @@ src/components/form-schema/
 ├── components/                    # Vue 组件集中（2026-09-09 从根目录归位）
 │   ├── XForm.vue                  # 入口组件（121 行：P2 后 setup 块零业务逻辑；模板 + props/attrs 透传 + ElConfigProvider + ElForm 骨架）
 │   ├── XFormDebugBanner.vue       # dev mode 调试面板（schema 校验错误 + 安全扫描）
-│   ├── XFormErrorToast.vue        # dev mode 错误 OSD toast（OPT-7 user-facing）
+│   ├── XFormErrorToast.vue        # 错误 OSD toast（OPT-7 user-facing，showErrorToast prop 控制默认关闭）
 │   ├── XFormErrorToastItem.vue    # OSD toast 单条错误项
 │   └── SchemaField.vue            # 节点级渲染容器（B-2：字段级重渲隔离）
 ├── adapters/                      # 组件库适配层（2026-09-09 从根目录归位）
@@ -430,11 +430,11 @@ reaction: {
 
 ### 6.1 三层错误展示
 
-| 层                                     | 触发                                            | 可见性         |
-| -------------------------------------- | ----------------------------------------------- | -------------- |
-| **form 红字**                          | el-form-item 校验失败                           | 用户           |
-| **XFormDebugBanner**（dev only）       | schema 静态校验失败 / 表达式含 forbidden 标识符 | 开发者右下角   |
-| **XFormErrorToast**（dev only，OPT-7） | 跨字段校验失败 / schema 非法 / 服务端错误       | 用户右上角浮窗 |
+| 层                                                            | 触发                                            | 可见性         |
+| ------------------------------------------------------------- | ----------------------------------------------- | -------------- |
+| **form 红字**                                                 | el-form-item 校验失败                           | 用户           |
+| **XFormDebugBanner**（dev only）                              | schema 静态校验失败 / 表达式含 forbidden 标识符 | 开发者右下角   |
+| **XFormErrorToast**（`showErrorToast` prop，默认关闭，OPT-7） | 跨字段校验失败 / schema 非法 / 服务端错误       | 用户右上角浮窗 |
 
 ### 6.2 OSD 输出格式
 

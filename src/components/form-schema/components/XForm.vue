@@ -108,10 +108,11 @@ installDevDebugHook()
     :validate-errors="validateErrors"
     :forbidden-errors="forbiddenErrors"
   />
-  <!-- OPT-7：user-facing 错误 OSD（dev 可见 / prod 隐藏） -->
+  <!-- OPT-7：user-facing 错误 OSD —— 由 showErrorToast prop 独立控制（默认关闭），
+       与 showDebugBanner（schema 校验/安全扫描横幅，dev 自动开）互不耦合 -->
   <XFormErrorToast
     :events="errorBus.events.value"
-    :enabled="showDebugBanner"
+    :enabled="propsModel.showErrorToast ?? false"
     @dismiss="errorBus.dismiss"
   />
 </template>

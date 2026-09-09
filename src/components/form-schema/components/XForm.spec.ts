@@ -1005,4 +1005,33 @@ describe('XForm.vue 整体 readonly 只读模式（顶层 schema 配置，P2-1 �
     await flushPromises()
     expect(wrapper.findAll('input').length).toBe(1)
   })
+
+  it('未传 showErrorToast → 错误事件不渲染浮窗（默认关闭）', async () => {
+    const wrapper = mountXForm({
+      schema: { component: 'ElInput', name: 'name' } as unknown as SchemaNode,
+      model: reactive({}),
+    })
+    await nextTick()
+    const exposed = wrapper.vm as unknown as XFormExpose
+    exposed.setFieldError('name', '服务端返回的错误')
+    await nextTick()
+    // 断言 toast 容器（ul[role="alert"]）——DebugBanner 的诊断面板也是 role="alert"（div），
+    // 用元素名区分，避免 dev 下 banner 常驻导致误判
+    expect(document.body.querySelector('ul[role="alert"]')).toBeNull()
+    wrapper.unmount()
+  })
+
+  it('传 show-error-toast → 错误事件渲染为右上角浮窗', async () => {
+    const wrapper = mountXForm({
+      schema: { component: 'ElInput', name: 'name' } as unknown as SchemaNode,
+      model: reactive({}),
+      showErrorToast: true,
+    })
+    await nextTick()
+    const exposed = wrapper.vm as unknown as XFormExpose
+    exposed.setFieldError('name', '服务端返回的错误')
+    await nextTick()
+    expect(document.body.querySelector('ul[role="alert"]')).not.toBeNull()
+    wrapper.unmount()
+  })
 })
