@@ -11,7 +11,7 @@
  */
 import { ref, reactive, computed, h } from 'vue'
 import { z } from 'zod'
-import XForm from '@/components/form-schema/XForm.vue'
+import XForm from '@/components/form-schema/components/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'

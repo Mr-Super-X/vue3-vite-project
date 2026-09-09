@@ -2,6 +2,12 @@
 
 ## 未发布
 
+### ♻️ Code Refactoring | form-schema 目录归位（components/ + adapters/）
+
+* **refactor(form-schema):** 5 个 Vue 组件（XForm / SchemaField / XFormDebugBanner / XFormErrorToast / XFormErrorToastItem，含各自 spec）从根目录移入 `components/`；`element-plus-adapter.ts`（含 spec）移入 `adapters/`。纯目录归位，零逻辑变更（git mv 保留历史）
+* **refactor(form-schema):** 同步修复 70+ 处 import 路径 —— barrel `index.ts`、编排层（use-xform-composer / use-dev-runtime）、被移文件内部对 `types` / `composables` / `styles` 的引用、`xform-contract.spec.ts` 的 CSS 路径正则（`./styles` → `../styles`）、demo 模块 48 个示例 + demo 文档 2 处直接 import 旧路径（`@/components/form-schema/XForm.vue` → `…/components/XForm.vue`）
+* **docs(form-schema):** ARCHITECTURE.md 目录树 + 演进时间线（v3.1.0）+ spec 分布说明同步；README 生产配置示例 import 路径、CONTRIBUTING 自定义组件指引路径同步
+
 ### 💄 Style | ProTable 树形展开箭头改内联自定义图标
 
 * **fix(ProTable):** 树形模式展开开关此前借用 `type:'expand'` 列的 el-table 自带 icon——箭头固定在独立 48px 列、不随 `_level` 缩进，层级感缺失；改为树列内联自定义箭头（`▾`/`▸`，随缩进内联于节点名前），按钮 reset 浏览器默认外观 + hover 主题色

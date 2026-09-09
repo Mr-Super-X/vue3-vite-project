@@ -11,7 +11,7 @@
  * 4. 多列布局（column: 2 / 3）
  */
 import { reactive } from 'vue'
-import XForm from '@/components/form-schema/XForm.vue'
+import XForm from '@/components/form-schema/components/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'

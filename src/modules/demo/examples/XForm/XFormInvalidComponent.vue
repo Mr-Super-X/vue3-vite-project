@@ -15,7 +15,7 @@
  */
 import { reactive } from 'vue'
 import { ElMessage, ElInput } from 'element-plus'
-import XForm from '@/components/form-schema/XForm.vue'
+import XForm from '@/components/form-schema/components/XForm.vue'
 import type { SchemaNode, XFormProps } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import { useConsoleCapture } from '../../composables/useConsoleCapture'

@@ -653,7 +653,7 @@ XForm 错误反馈分 4 层（form 红字 / OSD toast / console / Debug Banner�
 ### 生产环境推荐配置
 
 ```ts
-import XForm from '@/components/form-schema/XForm.vue'
+import XForm from '@/components/form-schema/components/XForm.vue'
 
 // 默认行为已适合 prod：form 红字全环境可见，OSD / Banner 仅 dev
 <XForm :schema="schema" :model="form" />

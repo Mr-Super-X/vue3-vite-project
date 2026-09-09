@@ -13,7 +13,7 @@
 import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 import XFormErrorToastItem from './XFormErrorToastItem.vue'
-import type { FormErrorEvent } from './composables/use-form-error-bus'
+import type { FormErrorEvent } from '../composables/use-form-error-bus'
 
 function makeEvent(overrides?: Partial<FormErrorEvent>): FormErrorEvent {
   return {

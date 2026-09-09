@@ -14,7 +14,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { h } from 'vue'
 import SchemaField from './SchemaField.vue'
-import type { SchemaNode } from './types'
+import type { SchemaNode } from '../types'
 
 describe('SchemaField', () => {
   it('renderFn 被调用并接收 node', () => {

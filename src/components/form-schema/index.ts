@@ -4,7 +4,7 @@
  * 项目角色：XForm 组件库对外唯一出口，业务方通过 `import { XForm, ... } from '@/components/form-schema'`
  * 即可获得组件 + 链式 builder + 辅助 composable + 全部类型。
  *
- * 依赖：./XForm.vue 组件 / ./composables/* 子能力 / ./builders 链式 API / ./types 类型契约。
+ * 依赖：./components/XForm.vue 组件 / ./composables/* 子能力 / ./adapters 组件适配层 / ./builders 链式 API / ./types 类型契约。
  *
  * JSDoc IDE 提示规范：所有 re-export 上方必须有 JSDoc（types.ts barrel 已对齐）。
  * 原因：业务方 hover `import { Xxx } from '@/components/form-schema'` 时，IDE 直接跳到本 barrel，
@@ -15,7 +15,7 @@
  * @group XForm 入口
  */
 import type { App, Component } from 'vue'
-import XForm from './XForm.vue'
+import XForm from './components/XForm.vue'
 
 /** XForm 组件（具名导出；默认导出是插件形式） */
 export { XForm }
@@ -40,7 +40,7 @@ export {
 /** resolveFunctionExpression —— 编译并执行 `{{ fn }}` 函数表达式字符串（沙箱） */
 export { resolveFunctionExpression } from './composables/use-expression'
 /** resolveElComponentName —— schema.component 字符串解析到最终组件名 */
-export { resolveElComponentName } from './element-plus-adapter'
+export { resolveElComponentName } from './adapters/element-plus-adapter'
 
 // 链式构建器全集（27 个工厂函数：xInput / xSelect / ... / xRate / xArray）
 /** 链式 builder API —— xInput / xSelect / xDatePicker / xArray / ... 全集 */

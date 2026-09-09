@@ -11,7 +11,7 @@
 import { reactive, h, defineComponent } from 'vue'
 import { ElMessage, ElFormItem } from 'element-plus'
 import { InfoFilled } from '@element-plus/icons-vue'
-import XForm from '@/components/form-schema/XForm.vue'
+import XForm from '@/components/form-schema/components/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'

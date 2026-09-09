@@ -19,7 +19,7 @@
  *   - XFormExpression / XFormExpressionSandbox：{{ fn }} 字符串表达式 + 白名单
  */
 import { reactive } from 'vue'
-import XForm from '@/components/form-schema/XForm.vue'
+import XForm from '@/components/form-schema/components/XForm.vue'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'

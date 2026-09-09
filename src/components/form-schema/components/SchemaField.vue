@@ -12,7 +12,7 @@
  * @group XForm 组件
  */
 import type { VNode } from 'vue'
-import type { SchemaNode } from './types'
+import type { SchemaNode } from '../types'
 
 const props = defineProps<{
   node: SchemaNode

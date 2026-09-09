@@ -13,7 +13,7 @@ import type { ComponentPublicInstance } from 'vue'
 
 import { validate } from './use-validate'
 import { scanForForbidden } from './use-scan-forbidden'
-import { DEFAULT_COMPONENT_MAP } from '../element-plus-adapter'
+import { DEFAULT_COMPONENT_MAP } from '../adapters/element-plus-adapter'
 import type { UseFormErrorBusReturn } from './use-form-error-bus'
 import type { FieldErrorState } from './use-form-instance'
 import type { SchemaNode, XFormProps } from '../types'

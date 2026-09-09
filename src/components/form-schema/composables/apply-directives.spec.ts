@@ -10,7 +10,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { h, reactive, type VNode, type Directive } from 'vue'
 import { mount } from '@vue/test-utils'
-import XForm from '../XForm.vue'
+import XForm from '../components/XForm.vue'
 import type { SchemaNode } from '../types'
 import { applyDirectives } from './apply-directives'
 

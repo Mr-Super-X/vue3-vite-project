@@ -9,7 +9,7 @@ import FormSchemaPlugin, {
   xArray,
 } from './index'
 import { validate } from './composables/use-validate'
-import { resolveElComponentName } from './element-plus-adapter'
+import { resolveElComponentName } from './adapters/element-plus-adapter'
 
 describe('FormSchemaPlugin', () => {
   it('install(app) registers XForm globally', () => {

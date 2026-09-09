@@ -13,7 +13,7 @@
  */
 import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
-import XForm from '@/components/form-schema/XForm.vue'
+import XForm from '@/components/form-schema/components/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'

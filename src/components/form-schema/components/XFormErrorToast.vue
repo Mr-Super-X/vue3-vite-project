@@ -14,7 +14,7 @@
  *
  * @group XForm 组件
  */
-import type { FormErrorEvent } from './composables/use-form-error-bus'
+import type { FormErrorEvent } from '../composables/use-form-error-bus'
 import XFormErrorToastItem from './XFormErrorToastItem.vue'
 
 const { events, enabled } = defineProps<{

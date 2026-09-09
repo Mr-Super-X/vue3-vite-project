@@ -6,8 +6,8 @@
 
 | 属性     | 值                            |
 | -------- | ----------------------------- |
-| 版本     | v3.0.0                        |
-| 日期     | 2026-09-01                    |
+| 版本     | v3.1.0                        |
+| 日期     | 2026-09-09                    |
 | 状态     | 当前实现（生产可用）          |
 | 关联分支 | `feature/form-engine`         |
 | 关联代码 | `src/components/form-schema/` |
@@ -16,17 +16,18 @@
 
 ## 0. 演进时间线
 
-| 日期       | 阶段         | 主要内容                                                                                |
-| ---------- | ------------ | --------------------------------------------------------------------------------------- |
-| 2026-08-19 | 设计稿       | 整体设计：架构、DSL、API、安全、测试                                                    |
-| 2026-08-20 | v1 实现      | 基础 schema 渲染、reaction 联动、表达式沙箱                                             |
-| 2026-08-21 | 异步选项     | `asyncOptions` 字段 + 自动渲染 + deps 触发                                              |
-| 2026-08-21 | 类型推导     | `SchemaNodeFor<C>` 按 component 字段推导 props 类型                                     |
-| 2026-08-28 | 默认组件扩展 | 6 个新快捷名（InputPassword / InputTextArea / InputTag / ColorPicker / Mention / Rate） |
-| 2026-08-28 | 上传 demo    | `XFormUpload.vue` 演示 7 种上传场景                                                     |
-| 2026-09-01 | P0 重构      | 拆 XForm.vue 95 行 + builders.ts 去重 + 类型断言归因                                    |
-| 2026-09-01 | P1 重构      | types.ts 拆 9 文件 + 模块级状态清理 + OSD 错误反馈                                      |
-| 2026-09-01 | P2 重构      | 超大 composable 拆分 + render-schema-node 拆 4 文件                                     |
+| 日期       | 阶段         | 主要内容                                                                                      |
+| ---------- | ------------ | --------------------------------------------------------------------------------------------- |
+| 2026-08-19 | 设计稿       | 整体设计：架构、DSL、API、安全、测试                                                          |
+| 2026-08-20 | v1 实现      | 基础 schema 渲染、reaction 联动、表达式沙箱                                                   |
+| 2026-08-21 | 异步选项     | `asyncOptions` 字段 + 自动渲染 + deps 触发                                                    |
+| 2026-08-21 | 类型推导     | `SchemaNodeFor<C>` 按 component 字段推导 props 类型                                           |
+| 2026-08-28 | 默认组件扩展 | 6 个新快捷名（InputPassword / InputTextArea / InputTag / ColorPicker / Mention / Rate）       |
+| 2026-08-28 | 上传 demo    | `XFormUpload.vue` 演示 7 种上传场景                                                           |
+| 2026-09-01 | P0 重构      | 拆 XForm.vue 95 行 + builders.ts 去重 + 类型断言归因                                          |
+| 2026-09-01 | P1 重构      | types.ts 拆 9 文件 + 模块级状态清理 + OSD 错误反馈                                            |
+| 2026-09-01 | P2 重构      | 超大 composable 拆分 + render-schema-node 拆 4 文件                                           |
+| 2026-09-09 | 目录归位     | 5 个 Vue 组件移入 `components/` + element-plus-adapter 移入 `adapters/`（纯移动，零逻辑变更） |
 
 ---
 
@@ -36,11 +37,14 @@
 
 ```text
 src/components/form-schema/
-├── XForm.vue                      # 入口组件（121 行：P2 后 setup 块零业务逻辑；模板 + props/attrs 透传 + ElConfigProvider + ElForm 骨架）
-├── XFormDebugBanner.vue           # dev mode 调试面板（schema 校验错误 + 安全扫描）
-├── XFormErrorToast.vue            # dev mode 错误 OSD toast（OPT-7 user-facing）
-├── SchemaField.vue                # 节点级渲染容器（B-2：字段级重渲隔离）
-├── element-plus-adapter.ts        # 内置 EL 组件映射表 + 默认 props
+├── components/                    # Vue 组件集中（2026-09-09 从根目录归位）
+│   ├── XForm.vue                  # 入口组件（121 行：P2 后 setup 块零业务逻辑；模板 + props/attrs 透传 + ElConfigProvider + ElForm 骨架）
+│   ├── XFormDebugBanner.vue       # dev mode 调试面板（schema 校验错误 + 安全扫描）
+│   ├── XFormErrorToast.vue        # dev mode 错误 OSD toast（OPT-7 user-facing）
+│   ├── XFormErrorToastItem.vue    # OSD toast 单条错误项
+│   └── SchemaField.vue            # 节点级渲染容器（B-2：字段级重渲隔离）
+├── adapters/                      # 组件库适配层（2026-09-09 从根目录归位）
+│   └── element-plus-adapter.ts    # 内置 EL 组件映射表 + 默认 props
 ├── types.ts                       # barrel re-export（→ types/ 子目录）
 ├── types/                         # P1-OPT-4 拆分后
 │   ├── base.ts                    # EventFn / FunctionExpression / SchemaSlot
@@ -552,7 +556,7 @@ const schema = {
 | **合计（spec 文件）**        | **52** | 见 `pnpm test` 实际输出 | ≥80%       |
 
 > 测试用例总计数应通过 `pnpm test --reporter=verbose` 实测，文档不在此处硬编码（避免与实际运行结果失真）。
-> 根 *.spec.ts 包括 XForm/SchemaField/builders/element-plus-adapter/index/xform-contract/XFormDebugBanner/XFormErrorToast/XFormErrorToastItem 共 9 个。
+> 根目录 spec 为 builders / index / xform-contract 共 3 个；components/ 下 5 个（XForm/SchemaField/XFormDebugBanner/XFormErrorToast/XFormErrorToastItem）；adapters/ 下 1 个（element-plus-adapter）。
 
 ### 9.2 关键回归保护（源码级静态断言）
 
@@ -667,7 +671,8 @@ pnpm build             # vite build
 
 ### 13.1 核心代码
 
-- 入口组件：`src/components/form-schema/XForm.vue`
+- 入口组件：`src/components/form-schema/components/XForm.vue`
+- 组件适配层：`src/components/form-schema/adapters/element-plus-adapter.ts`
 - 顶层编排：`src/components/form-schema/composables/use-xform-composer.ts`
 - 主调度：`src/components/form-schema/composables/render-schema-node.ts`
 - 类型契约：`src/components/form-schema/types/schema-node.ts`
@@ -715,14 +720,14 @@ pnpm build             # vite build
 
 ### 15.1 审计范围
 
-| 类别                                                               | 文件数      | 改动条数（约） |
-| ------------------------------------------------------------------ | ----------- | -------------- |
-| 核心入口（XForm + composer + 主调度 + 校验编排 + el-form 编排）    | 5           | ~80 行精简     |
-| 渲染子模块（render-* / wrap-* / build-* / resolve-* / compile-*）  | 9           | ~40 行精简     |
-| composables/ 编排层（27 个）                                       | 27          | ~120 行精简    |
-| 入口与适配（builders + index + element-plus-adapter + 4 Vue 组件） | 7           | ~30 行精简     |
-| types barrel                                                       | 1           | ~10 行精简     |
-| **合计**                                                           | **49 文件** | **~280 行**    |
+| 类别                                                                   | 文件数      | 改动条数（约） |
+| ---------------------------------------------------------------------- | ----------- | -------------- |
+| 核心入口（XForm + composer + 主调度 + 校验编排 + el-form 编排）        | 5           | ~80 行精简     |
+| 渲染子模块（render-* / wrap-* / build-* / resolve-* / compile-*）      | 9           | ~40 行精简     |
+| composables/ 编排层（27 个）                                           | 27          | ~120 行精简    |
+| 入口与适配（builders + index + components/ 5 组件 + adapters/ 适配器） | 7           | ~30 行精简     |
+| types barrel                                                           | 1           | ~10 行精简     |
+| **合计**                                                               | **49 文件** | **~280 行**    |
 
 ### 15.2 处理原则
 

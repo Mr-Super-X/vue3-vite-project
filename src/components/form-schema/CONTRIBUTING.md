@@ -123,7 +123,7 @@ return {
 
 ### 5.1 注册组件名 + Props 类型
 
-1. **在 `element-plus-adapter.ts` 添加短名映射**(如果包装 EL 组件)
+1. **在 `adapters/element-plus-adapter.ts` 添加短名映射**(如果包装 EL 组件)
 2. **通过 TS module augmentation 扩展**:
 
 ```ts
@@ -135,7 +135,7 @@ declare module '@/components/form-schema/types' {
 }
 ```
 
-3. **测试**:在 `element-plus-adapter.spec.ts` 加用例
+3. **测试**:在 `adapters/element-plus-adapter.spec.ts` 加用例
 
 ### 5.2 使用时通过 components prop 注册
 

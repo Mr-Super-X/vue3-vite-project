@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { h, reactive, nextTick } from 'vue'
 import { ElRate, ElColorPicker, ElInputTag, ElMention } from 'element-plus'
-import type { SchemaNode, XFormExpose } from './types'
+import type { SchemaNode, XFormExpose } from '../types'
 import XForm from './XForm.vue'
 
 const ElFormStub = {
@@ -287,7 +287,7 @@ describe('XForm.vue resetFields 与 defaultValue', () => {
 describe('buildVModelBindings (unit)', () => {
   // 单元测试 buildVModelBindings 纯函数（不依赖 el-input 在 jsdom 行为）
   it('uses default modelValue / onUpdate:modelValue keys (vue camelCase prop convention)', async () => {
-    const { buildVModelBindings } = await import('./composables/build-vmodel-bindings')
+    const { buildVModelBindings } = await import('../composables/build-vmodel-bindings')
     const node = { name: 'name' } as SchemaNode
     const model = { name: 'foo' }
     const bindings = buildVModelBindings(node, model, undefined)
@@ -299,7 +299,7 @@ describe('buildVModelBindings (unit)', () => {
   })
 
   it('uses node.modelProp custom key when provided', async () => {
-    const { buildVModelBindings } = await import('./composables/build-vmodel-bindings')
+    const { buildVModelBindings } = await import('../composables/build-vmodel-bindings')
     const node = { name: 'name', modelProp: 'value' } as unknown as SchemaNode
     const model = { name: 'foo' }
     const bindings = buildVModelBindings(node, model, undefined)
@@ -308,7 +308,7 @@ describe('buildVModelBindings (unit)', () => {
   })
 
   it('uses beforeChange return value as actual model update', async () => {
-    const { buildVModelBindings } = await import('./composables/build-vmodel-bindings')
+    const { buildVModelBindings } = await import('../composables/build-vmodel-bindings')
     const node = { name: 'name' } as SchemaNode
     const model = { name: 'foo' }
     const beforeChange = vi.fn((_n: unknown, v: unknown) => `formatted-${v}-was-${model.name}`)
@@ -326,7 +326,7 @@ describe('buildVModelBindings (unit)', () => {
   })
 
   it('uses original value when beforeChange returns undefined', async () => {
-    const { buildVModelBindings } = await import('./composables/build-vmodel-bindings')
+    const { buildVModelBindings } = await import('../composables/build-vmodel-bindings')
     const node = { name: 'name' } as SchemaNode
     const model = { name: 'foo' }
     const bindings = buildVModelBindings(node, model, {
@@ -338,7 +338,7 @@ describe('buildVModelBindings (unit)', () => {
   })
 
   it('handles async beforeChange by awaiting and updating', async () => {
-    const { buildVModelBindings } = await import('./composables/build-vmodel-bindings')
+    const { buildVModelBindings } = await import('../composables/build-vmodel-bindings')
     const node = { name: 'name' } as SchemaNode
     const model = { name: 'foo' }
     const beforeChange = vi.fn((_n: unknown, v: unknown) => Promise.resolve(`async-${v}`))
@@ -349,7 +349,7 @@ describe('buildVModelBindings (unit)', () => {
   })
 
   it('skips update when beforeChange Promise rejects', async () => {
-    const { buildVModelBindings } = await import('./composables/build-vmodel-bindings')
+    const { buildVModelBindings } = await import('../composables/build-vmodel-bindings')
     const node = { name: 'name' } as SchemaNode
     const model = { name: 'foo' }
     const beforeChange = vi.fn(() => Promise.reject(new Error('cancel')))

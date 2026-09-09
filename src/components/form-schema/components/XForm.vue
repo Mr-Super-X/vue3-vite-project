@@ -2,7 +2,7 @@
 /**
  * XForm —— schema 驱动的 element-plus 表单渲染器
  *
- * 模板 + props/attrs 透传 + ElConfigProvider + ElForm 骨架，所有业务编排收敛到 ./use-xform-composer.ts。
+ * 模板 + props/attrs 透传 + ElConfigProvider + ElForm 骨架，所有业务编排收敛到 ../composables/use-xform-composer.ts。
  *
  * @group XForm 组件
  */
@@ -10,15 +10,15 @@ import { useAttrs } from 'vue'
 import { ElConfigProvider, ElForm, ElRow, ElCol } from 'element-plus'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 
-import { useXFormComposer } from './composables/use-xform-composer'
+import { useXFormComposer } from '../composables/use-xform-composer'
 import XFormDebugBanner from './XFormDebugBanner.vue'
 import XFormErrorToast from './XFormErrorToast.vue'
 import SchemaField from './SchemaField.vue'
-import type { XFormExpose, XFormProps } from './types'
+import type { XFormExpose, XFormProps } from '../types'
 
 // 全局样式（label 颜色、必填星号等覆盖）—— 仅 XForm.vue 加载，未使用 XForm 的页面无需引入
 import 'element-plus/dist/index.css'
-import './styles/element-form-overwrite.scss'
+import '../styles/element-form-overwrite.scss'
 
 const props = defineProps<XFormProps>()
 // exactOptionalPropertyTypes 下 vue 推导的 props 类型与 XFormProps 在 optional 字段上有差异，
