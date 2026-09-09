@@ -498,6 +498,9 @@ const node: SchemaNodeFor<'MyInput'> = {
 }
 ```
 
+> standalone 简写（与 `reaction.disabled` 完全等价，克隆阶段自动归一化）：
+> `disabled: (m) => !m.enablePath`
+
 **调度策略**：`strategy: 'sync' | 'debounce' | 'throttle'` + `delay`（ms）。
 
 **性能优化 —— `deps` 精确监听**：默认情况下含动态值的 reaction 会 deep watch 整棵 model（任意字段变化都触发求值）。声明 `deps` 后仅监听指定路径：

@@ -363,6 +363,10 @@ const schema: SchemaNode = {
 - **trigger 匹配（match-trigger.ts）**：字段 blur/change 事件触发时按 `rule.trigger` 过滤——`'manual'` 永不响应事件，array 形式 `['blur','change']` 任一命中即匹配，未指定默认 `blur`
 - **validateForm 批量 + 短路**：`runCrossFieldValidation` 遍历 schema 跑全部 crossValidator（含 `'manual'`），但 `validateForm` 字段规则失败时直接 `false` 不跑跨字段（短路逻辑）
 
+> **H3 修复（2026-09-09）**：model watch 兜底从顶层浅拷贝 diff 改为按 rule 的 deps 值快照 diff
+> （`use-cross-field-trigger.ts`，对齐 use-reaction deps 快照模式），嵌套路径直改
+> （`model.user.age = 30` 绕过 v-model）不再漏触发。
+
 ### 4.3 服务端错误映射（OPT 2.1）
 
 ```typescript
@@ -380,6 +384,11 @@ exposed.validateFromServer({
 ---
 
 ## 5. 反应式（reaction）
+
+> **H1 修复（2026-09-09）**：字段级 `disabled`/`hidden` 的函数 / `'{{ fn }}'` 形态在克隆阶段
+> 由 `applyReactions` 归一化为 reaction 条目求值（`use-reaction.ts` 入口），boolean 结果写回 node。
+> `permission`（渲染时 `resolvePermission` 求值）与顶层 `disabled`/`readonly`
+> （`useTopLevelFields` computed 求值）本就工作，不在归一化范围。
 
 ### 5.1 字段覆盖范围
 

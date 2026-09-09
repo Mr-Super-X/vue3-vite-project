@@ -2,6 +2,13 @@
 
 ## 未发布
 
+### 🐛 Bug Fixes | form-schema 行为修复（批次 2：H3 + H1）
+
+> 审计与设计：`docs/superpowers/specs/2026-09-09-form-schema-arch-audit.md` | 计划：`docs/superpowers/plans/2026-09-09-form-schema-batch2-behavior-fixes.md`
+
+* **fix(form-schema):** 跨字段兜底 watch 从顶层浅拷贝 diff 改为按 rule 的 deps 值快照 diff（`use-cross-field-trigger.ts`，对齐 use-reaction deps 快照模式）——修复嵌套路径直改（`model.user.age = 30` 绕过 v-model）时新旧快照同引用恒判未变、crossValidator 漏触发的问题（H3）
+* **fix(form-schema):** 字段级 `disabled`/`hidden` 的 standalone 函数 / `'{{ fn }}'` 形态在克隆阶段由 `applyReactions` 归一化为 reaction 条目走既有 watch 求值管线（`use-reaction.ts`）——修复函数形态被原样 spread 进组件 props（dev prop type 警告 + 字段永久禁用/恒隐藏）的问题（H1）
+
 ### ♻️ Code Refactoring | form-schema 校验/错误子系统内部重构（批次 1）
 
 > 审计与设计：`docs/superpowers/specs/2026-09-09-form-schema-arch-audit.md` | 计划：`docs/superpowers/plans/2026-09-09-form-schema-batch1-refactor.md`。零公开 API 变更、零行为变更

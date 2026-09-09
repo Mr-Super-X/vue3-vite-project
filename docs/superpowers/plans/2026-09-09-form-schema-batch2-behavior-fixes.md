@@ -20,7 +20,7 @@
 **Files:**
 - Modify: `src/components/form-schema/composables/use-cross-field-trigger.spec.ts`（`describe('useCrossFieldTrigger / model watch 兜底路径')` 块 341-412 行区域追加；其中 365-394 行的弱测试一并替换）
 
-- [ ] **Step 1: 替换弱测试 + 新增 H3 回归测试**
+- [x] **Step 1: 替换弱测试 + 新增 H3 回归测试**
 
 `use-cross-field-trigger.spec.ts` 中，将 365-394 行的 `it('model 嵌套字段深度变化 → 仍触发（deep watch）', ...)` 整个替换为以下两个测试，并在 `describe('useCrossFieldTrigger / model watch 兜底路径')` 块末尾（`it('model 从 undefined → {} 不抛错')` 之后）追加三个测试：
 
@@ -193,7 +193,7 @@
   })
 ```
 
-- [ ] **Step 2: 跑测试确认按预期失败**
+- [x] **Step 2: 跑测试确认按预期失败**
 
 Run: `pnpm test src/components/form-schema/composables/use-cross-field-trigger.spec.ts`
 Expected: **FAIL** —— H3 回归测试"直改嵌套路径"断言 `call` 为 1 但实际为 0（旧浅拷贝 diff 检测不到嵌套变化）；"无关字段不触发"通过（旧逻辑 run 空跑，call 不变）可不作失败依据；其余新测试按新旧逻辑差异失败。
@@ -205,7 +205,7 @@ Expected: **FAIL** —— H3 回归测试"直改嵌套路径"断言 `call` 为 1
 **Files:**
 - Modify: `src/components/form-schema/composables/use-cross-field-trigger.ts:193-223`（model watch 块整体替换）+ `:178-191`（crossRules watch 末尾加快照重置）+ 声明顺序调整
 
-- [ ] **Step 1: 在 crossRules watch 之前插入快照工具（文件级）**
+- [x] **Step 1: 在 crossRules watch 之前插入快照工具（文件级）**
 
 在 `use-cross-field-trigger.ts` 第 173 行注释块（`// 跨字段规则重建...`）**之前**插入：
 
@@ -237,7 +237,7 @@ Expected: **FAIL** —— H3 回归测试"直改嵌套路径"断言 `call` 为 1
   let oldSnapshot = takeSnapshot()
 ```
 
-- [ ] **Step 2: crossRules watch handler 末尾重置快照**
+- [x] **Step 2: crossRules watch handler 末尾重置快照**
 
 `use-cross-field-trigger.ts` crossRules watch 回调（原 181-189 行）在 `targetSeqMap.clear()` 之后追加一行：
 
@@ -245,7 +245,7 @@ Expected: **FAIL** —— H3 回归测试"直改嵌套路径"断言 `call` 为 1
         oldSnapshot = takeSnapshot()
 ```
 
-- [ ] **Step 3: 替换 model watch 块**
+- [x] **Step 3: 替换 model watch 块**
 
 将原 193-223 行（`// 阶段 3.1 修复：watch model 兜底 + 精确 diff 触发` 至 `{ deep: true }` 的整块）替换为：
 
@@ -287,12 +287,12 @@ Expected: **FAIL** —— H3 回归测试"直改嵌套路径"断言 `call` 为 1
   )
 ```
 
-- [ ] **Step 4: 跑测试确认通过**
+- [x] **Step 4: 跑测试确认通过**
 
 Run: `pnpm test src/components/form-schema/composables/use-cross-field-trigger.spec.ts`
 Expected: PASS（新增 5 个 + 既有全部）
 
-- [ ] **Step 5: 全量回归 + 提交**
+- [x] **Step 5: 全量回归 + 提交**
 
 ```bash
 pnpm test src/components/form-schema
@@ -311,12 +311,12 @@ git commit -m "fix(form-schema): useCrossFieldTrigger deps 快照对齐 reaction
 **Files:**
 - Modify: `src/components/form-schema/composables/use-reaction.spec.ts`（追加新 describe 块；若文件不存在则先看 `use-reaction.ts` 现有测试挂在哪个 spec —— `ls src/components/form-schema/composables/use-reaction*` 确认）
 
-- [ ] **Step 1: 确认测试挂载点**
+- [x] **Step 1: 确认测试挂载点**
 
 Run: `ls src/components/form-schema/composables/use-reaction*`
 Expected: 存在 `use-reaction.spec.ts`。以下代码追加到该文件末尾。
 
-- [ ] **Step 2: 追加失败测试**
+- [x] **Step 2: 追加失败测试**
 
 ```ts
 describe('H1 修复：standalone disabled/hidden 函数形态克隆阶段归一化', () => {
@@ -410,7 +410,7 @@ import { containsReaction, applyReactions } from './use-reaction'
 
 （以现有 import 实际形态为准做最小合并，禁止整段覆写。）
 
-- [ ] **Step 3: 跑测试确认失败**
+- [x] **Step 3: 跑测试确认失败**
 
 Run: `pnpm test src/components/form-schema/composables/use-reaction.spec.ts`
 Expected: **FAIL** —— "函数 disabled 求值写回 node" 中 `expect(node.disabled).toBe(true)` 实际为函数（未求值）；"containsReaction standalone" 中函数形态预期 `true` 实际 `false`。
@@ -422,7 +422,7 @@ Expected: **FAIL** —— "函数 disabled 求值写回 node" 中 `expect(node.d
 **Files:**
 - Modify: `src/components/form-schema/composables/use-reaction.ts:54-88`（containsReaction）、`:98-151`（applyReactions 入口）
 
-- [ ] **Step 1: containsReaction 检测 standalone 动态形态**
+- [x] **Step 1: containsReaction 检测 standalone 动态形态**
 
 `use-reaction.ts` 在 `containsReaction` 函数前（第 53 行 `/** 是否含 reaction 字段...` 注释之前）插入文件级 helper：
 
@@ -451,7 +451,7 @@ function hasReactiveStandaloneField(o: Record<string, unknown>): boolean {
     if (o.reaction || hasReactiveStandaloneField(o)) {
 ```
 
-- [ ] **Step 2: applyReactions 归一化入口**
+- [x] **Step 2: applyReactions 归一化入口**
 
 `use-reaction.ts` `applyReactions` 函数体开头（原第 104 行 `if (node.reaction) {` 处）替换为：
 
@@ -481,12 +481,12 @@ function hasReactiveStandaloneField(o: Record<string, unknown>): boolean {
 
 原 `hasDynamic` 起的逻辑保持不变（`reactionConfig` 变量名沿用，后续 `Object.values(reactionConfig)` 求值对合并后 config 自然生效）。
 
-- [ ] **Step 3: 跑测试确认通过**
+- [x] **Step 3: 跑测试确认通过**
 
 Run: `pnpm test src/components/form-schema/composables/use-reaction.spec.ts`
 Expected: PASS（新增 5 个 + 既有全部）
 
-- [ ] **Step 4: 全量回归 + 提交**
+- [x] **Step 4: 全量回归 + 提交**
 
 ```bash
 pnpm test src/components/form-schema
@@ -533,7 +533,7 @@ git commit -m "fix(form-schema): standalone disabled/hidden 函数形态克隆�
 - Modify: `src/components/form-schema/README.md`（`reaction` 用法示例区 489-495 行附近补 standalone 等价说明）
 - Modify: `CHANGELOG.md`（fix 段落）
 
-- [ ] **Step 1: ARCHITECTURE.md 补充**
+- [x] **Step 1: ARCHITECTURE.md 补充**
 
 在 reaction 机制描述章节追加（锚点：搜索 `applyReactions` 或「reaction」章节标题）：
 
@@ -552,7 +552,7 @@ git commit -m "fix(form-schema): standalone disabled/hidden 函数形态克隆�
 > （`model.user.age = 30` 绕过 v-model）不再漏触发。
 ```
 
-- [ ] **Step 2: README.md 补充**
+- [x] **Step 2: README.md 补充**
 
 form-schema README 的 reaction 示例（489-495 行）下方追加一行说明：
 
@@ -561,11 +561,11 @@ form-schema README 的 reaction 示例（489-495 行）下方追加一行说明�
 //   disabled: (m) => !m.enablePath
 ```
 
-- [ ] **Step 3: CHANGELOG.md**
+- [x] **Step 3: CHANGELOG.md**
 
 按项目约束 #12 追加两条 `fix` 记录（H3 / H1，各一句 + 文件引用）。
 
-- [ ] **Step 4: 全量验收**
+- [x] **Step 4: 全量验收**
 
 ```bash
 pnpm test                # 全绿（较批次 1 新增 10 个用例）
@@ -574,7 +574,7 @@ pnpm check:doc-currency  # 5/5
 pnpm lint                # 无新增 warning
 ```
 
-- [ ] **Step 5: 合规简报**
+- [x] **Step 5: 合规简报**
 
 附「本次对 src/ 的所有写操作清单」（§2.5）：use-cross-field-trigger.ts、use-cross-field-trigger.spec.ts、use-reaction.ts、use-reaction.spec.ts、ARCHITECTURE.md、README.md、CHANGELOG.md。
 
