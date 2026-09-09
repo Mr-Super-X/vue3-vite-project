@@ -151,10 +151,12 @@ const schema: SchemaNode = {
         },
       ],
     },
-    // ── H3 验证：嵌套路径跨字段 ─────────────────────────────────────
+    // ── H3 验证：嵌套路径直改触发跨字段重算 ─────────────────────────
     // 字段挂在 model.user.age（嵌套路径），通过下方「直改 model」按钮绕过
-    // v-model 直接改值 —— 修复前 watch 兜底 diff 不到嵌套变化，红字不动；
-    // 修复后 deps 值快照 diff 命中 → crossValidator 自动重算，红字消失
+    // v-model 直接改值 —— 修复前 watch 兜底浅拷贝 diff 不到嵌套变化，红字不动；
+    // 修复后 deps 值快照 diff 命中 → crossValidator 自动重算，红字消失。
+    // 本字段自引用 deps 覆盖 target 快照分支；下方「监护人」dependsOn 本路径，
+    // 覆盖真正的跨字段 dep 分支 —— 两条分支由同一个直改按钮一并验证
     {
       label: '年龄（嵌套 user.age）',
       name: 'user.age',
@@ -170,6 +172,29 @@ const schema: SchemaNode = {
           dependsOn: ['user.age'],
           crossValidator: (_value: unknown, age: unknown) =>
             age === '' || age === undefined || age === null || Number(age) >= 18 || '未成年',
+          trigger: 'change',
+        },
+      ],
+    },
+    {
+      label: '监护人',
+      name: 'guardian',
+      component: 'Input',
+      props: { placeholder: '未成年时必填', clearable: true },
+      rules: [
+        {
+          // 真正的跨字段：依赖嵌套路径 user.age。年龄 ≥18 时本字段无要求；
+          // 点「直改 model」后 deps 快照 diff 命中 → 本字段红字自动消失（H3 dep 分支）。
+          // 注：实时触发有空值跳过语义（target 为空直接 clearValidate），
+          // 所以「须填监护人」红字先由「保存」写入，再由直改按钮验证自动清除
+          dependsOn: ['user.age'],
+          crossValidator: (guardian: unknown, age: unknown) =>
+            age === '' ||
+            age === undefined ||
+            age === null ||
+            Number(age) >= 18 ||
+            Boolean(guardian) ||
+            '未成年须填写监护人',
           trigger: 'change',
         },
       ],
@@ -207,8 +232,9 @@ const model = reactive<Record<string, unknown>>({
   endDate: '',
   primaryContact: '',
   backupContact: '',
-  // H3 验证：嵌套路径字段
+  // H3 验证：嵌套路径字段 + 跨字段监护人
   user: { age: 10 },
+  guardian: '',
   // H1 验证：联动开关（默认关 → 下方 standalone 字段禁用/隐藏）
   agree: false,
   h1DisabledField: '',
@@ -231,8 +257,9 @@ async function onSave() {
 }
 
 /** H3 验证：直改嵌套路径（绕过 v-model / onValueChange）
- * 先用年龄字段失焦或点「保存」制造「未成年」红字，再点本按钮直改 model.user.age = 30
- * 预期：红字自动消失（deps 值快照 diff 命中 → crossValidator 重算 → clearValidate） */
+ * 先点「保存」制造两处红字（年龄「未成年」+ 监护人「须填写监护人」），
+ * 再点本按钮直改 model.user.age = 30
+ * 预期：两处红字都自动消失（deps 值快照 diff 命中 → crossValidator 重算 → clearValidate） */
 function onDirectSetAge() {
   ;(model.user as { age: number }).age = 30
 }
@@ -271,7 +298,7 @@ const tocItems = [
         '3. 主/备用联系人至少填一个 — 双向 dependsOn 互相校验',
         'crossValidator 返回 true 表示通过,返回 string 作为错误信息(form-schema 自动写入对应 form-item)',
         'validateDetail() 同步返回完整跨字段错误列表(用于调试或自定义展示)',
-        'H3 验证：「年龄」字段挂在嵌套路径 user.age(InputNumber,v-model 输出 number)—— 输入或加减按钮改到 18 以下并失焦制造「未成年」红字,再点「直改 model.user.age = 30」按钮(绕过 v-model),红字应自动消失',
+        'H3 验证：「年龄」挂在嵌套路径 user.age、「监护人」dependsOn 该嵌套路径 —— 年龄 10 时点「保存」制造两处红字(未成年 / 须填监护人),再点「直改 model.user.age = 30」按钮(绕过 v-model),两处红字都应自动消失',
         'H1 验证：「standalone disabled/hidden 字段」使用字段级函数形态(非 reaction 简写)—— 切换「同意协议」开关,两字段应联动禁用/启用、隐藏/显示,dev 控制台无 prop type 警告',
       ]"
     >
