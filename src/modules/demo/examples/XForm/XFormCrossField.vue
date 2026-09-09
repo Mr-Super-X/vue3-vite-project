@@ -151,6 +151,52 @@ const schema: SchemaNode = {
         },
       ],
     },
+    // ── H3 验证：嵌套路径跨字段 ─────────────────────────────────────
+    // 字段挂在 model.user.age（嵌套路径），通过下方「直改 model」按钮绕过
+    // v-model 直接改值 —— 修复前 watch 兜底 diff 不到嵌套变化，红字不动；
+    // 修复后 deps 值快照 diff 命中 → crossValidator 自动重算，红字消失
+    {
+      label: '年龄（嵌套 user.age）',
+      name: 'user.age',
+      // InputNumber 的 v-model 输出 number，与初始值/直改按钮的类型一致，
+      // 手输、加减按钮、直改三条路径都不会触发 async-validator 类型校验
+      component: 'InputNumber',
+      props: { placeholder: '请输入年龄', min: 0 },
+      rules: [
+        {
+          // 显式声明 type: 'number' —— async-validator 对未声明 type 的规则默认按
+          // string 校验（dist-node getType: rule.type || 'string'），与本字段 number 值不匹配
+          type: 'number',
+          dependsOn: ['user.age'],
+          crossValidator: (_value: unknown, age: unknown) =>
+            age === '' || age === undefined || age === null || Number(age) >= 18 || '未成年',
+          trigger: 'change',
+        },
+      ],
+    },
+    // ── H1 验证：standalone 函数形态 disabled / hidden ──────────────
+    // 不用 reaction 简写，直接写字段级函数形态 —— 修复前函数被原样 spread 进
+    // 组件 props（dev 报 prop type 警告 + 字段永久禁用/恒隐藏）；
+    // 修复后克隆阶段归一化为 reaction 条目求值，随 agree 开关联动
+    {
+      label: '同意协议（联动开关）',
+      name: 'agree',
+      component: 'Switch',
+    },
+    {
+      label: 'standalone disabled 字段',
+      name: 'h1DisabledField',
+      component: 'Input',
+      props: { placeholder: '打开上方开关后启用' },
+      disabled: (m: Record<string, unknown>) => !m.agree,
+    },
+    {
+      label: 'standalone hidden 字段',
+      name: 'h1HiddenField',
+      component: 'Input',
+      props: { placeholder: '打开上方开关后显示' },
+      hidden: '{{ (m) => !m.agree }}',
+    },
   ],
 }
 
@@ -161,6 +207,12 @@ const model = reactive<Record<string, unknown>>({
   endDate: '',
   primaryContact: '',
   backupContact: '',
+  // H3 验证：嵌套路径字段
+  user: { age: 10 },
+  // H1 验证：联动开关（默认关 → 下方 standalone 字段禁用/隐藏）
+  agree: false,
+  h1DisabledField: '',
+  h1HiddenField: '',
 })
 
 async function onSave() {
@@ -176,6 +228,13 @@ async function onSave() {
     duration: 0,
     showClose: true,
   })
+}
+
+/** H3 验证：直改嵌套路径（绕过 v-model / onValueChange）
+ * 先用年龄字段失焦或点「保存」制造「未成年」红字，再点本按钮直改 model.user.age = 30
+ * 预期：红字自动消失（deps 值快照 diff 命中 → crossValidator 重算 → clearValidate） */
+function onDirectSetAge() {
+  ;(model.user as { age: number }).age = 30
 }
 
 /** 演示 validateDetail：异步返回所有跨字段错误（用于调试或自定义展示） */
@@ -212,6 +271,8 @@ const tocItems = [
         '3. 主/备用联系人至少填一个 — 双向 dependsOn 互相校验',
         'crossValidator 返回 true 表示通过,返回 string 作为错误信息(form-schema 自动写入对应 form-item)',
         'validateDetail() 同步返回完整跨字段错误列表(用于调试或自定义展示)',
+        'H3 验证：「年龄」字段挂在嵌套路径 user.age(InputNumber,v-model 输出 number)—— 输入或加减按钮改到 18 以下并失焦制造「未成年」红字,再点「直改 model.user.age = 30」按钮(绕过 v-model),红字应自动消失',
+        'H1 验证：「standalone disabled/hidden 字段」使用字段级函数形态(非 reaction 简写)—— 切换「同意协议」开关,两字段应联动禁用/启用、隐藏/显示,dev 控制台无 prop type 警告',
       ]"
     >
       <section id="demo-cross-field">
@@ -221,6 +282,9 @@ const tocItems = [
             <el-button @click="onReset">重置</el-button>
             <el-button type="primary" @click="onSave">保存</el-button>
             <el-button @click="onInspectDetail">查看跨字段详情</el-button>
+            <el-button type="warning" plain @mousedown.prevent @click="onDirectSetAge">
+              直改 model.user.age = 30（H3）
+            </el-button>
             <el-button @click="copySchema">复制 schema</el-button>
           </div>
           <ModelPreview :model="model" />
