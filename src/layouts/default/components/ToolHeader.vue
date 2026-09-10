@@ -12,6 +12,7 @@
  * @group 布局：Default
  */
 import { Moon, Sunny } from '@element-plus/icons-vue'
+import { useI18n } from 'vue-i18n'
 import { useTheme } from '@composables/useTheme'
 import { defaultLayoutConfig } from '../config/app'
 import Collapse from './Collapse.vue'
@@ -33,6 +34,7 @@ withDefaults(
 )
 
 const { isDark, setMode } = useTheme()
+const { t } = useI18n()
 </script>
 
 <template>
@@ -50,7 +52,7 @@ const { isDark, setMode } = useTheme()
         inline-prompt
         :active-icon="Moon"
         :inactive-icon="Sunny"
-        aria-label="切换深色主题"
+        :aria-label="t('header.darkMode')"
         @update:model-value="(v: boolean | string | number) => setMode(v ? 'dark' : 'light')"
       />
       <LocaleDropdown v-if="defaultLayoutConfig.ui.locale" />

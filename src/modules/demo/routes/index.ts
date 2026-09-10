@@ -85,7 +85,7 @@ const routes: RouteRecordRaw[] = import.meta.env.DEV
         name: 'Demo',
         component: () => import('@/layouts/blank/index.vue'),
         redirect: defaultChildName ? { name: defaultChildName } : '/demo',
-        meta: { title: '组件示例', icon: 'magic-stick' },
+        meta: { title: '组件示例', titleKey: 'menu.demo', icon: 'magic-stick' },
         children: exampleRoutes,
       },
     ]

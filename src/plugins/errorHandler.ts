@@ -30,6 +30,19 @@ import { _bindErrorHandler } from '@/utils/safeAsync'
  * @see [`./index.ts`](./index.ts) 插件统一注册入口
  * @group 插件：错误处理
  */
+/**
+ * Chromium 布局观测的已知良性噪声：ResizeObserver 在一帧内收到过多通知时
+ * 会抛出该错误，EP 的 el-scrollbar / 弹层动画场景高频触发，无堆栈、无实际损害。
+ * 过滤以免污染错误上报（Sentry 等），详见 https://stackoverflow.com/q/49384120
+ */
+const BENIGN_ERROR_PATTERNS = [/ResizeObserver loop completed with undelivered notifications/]
+
+/** 判断错误是否属于已知良性噪声（不进入上报通道） */
+function isBenignError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err)
+  return BENIGN_ERROR_PATTERNS.some((pattern) => pattern.test(message))
+}
+
 export default {
   install(app: App, options: ErrorHandlerOptions = {}): void {
     const { report, logToConsole = import.meta.env.DEV } = options
@@ -54,7 +67,10 @@ export default {
 
     // 2. window 全局 JS 错误
     window.addEventListener('error', (event) => {
-      handle(event.error ?? event.message, 'window.error', {
+      const err = event.error ?? event.message
+      // 良性噪声直接丢弃：不 console.error 也不上报（避免污染监控）
+      if (isBenignError(err)) return
+      handle(err, 'window.error', {
         filename: event.filename,
         lineno: event.lineno,
         colno: event.colno,

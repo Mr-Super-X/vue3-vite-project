@@ -38,6 +38,15 @@ function setKey(key: string): string {
   return `${APP_NAMESPACE}:${key}`
 }
 
+/**
+ * 导出加前缀后的完整 key——供绕过 Local/Session 封装、直接操作 localStorage 的
+ * 场景使用（如 Pinia persistedstate 的 persist.key、主题初始读取），
+ * 保证与 Local/Session 写入的 key 命名规则一致。
+ */
+export function namespacedStorageKey(key: string): string {
+  return setKey(key)
+}
+
 /** 通用的"只清本项目 namespace"遍历删除函数（Local/Session 复用） */
 function clearByNamespace(storage: Storage): void {
   const prefix = `${APP_NAMESPACE}:`

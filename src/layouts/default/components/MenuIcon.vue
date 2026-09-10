@@ -11,6 +11,7 @@
  * @group 布局：Default
  */
 import * as ElIcons from '@element-plus/icons-vue'
+import { pascalCase } from '@/utils'
 
 const props = defineProps<{
   /** Element Plus 图标名（如 'odometer'）；空/未命中不渲染 */
@@ -18,9 +19,13 @@ const props = defineProps<{
   name?: string | undefined
 }>()
 
+// 路由 meta.icon 存的是 kebab-case（'magic-stick'），而 @element-plus/icons-vue
+// 的导出键是 PascalCase（'MagicStick'）——必须转换后取键，否则解析恒为
+// undefined 导致折叠态菜单"看不见图标"（2026-09-10 实测回归）
 const iconComponent = computed(() => {
   if (!props.name) return undefined
-  return (ElIcons as Record<string, unknown>)[props.name]
+  const key = pascalCase(props.name)
+  return (ElIcons as Record<string, unknown>)[key]
 })
 </script>
 

@@ -11,7 +11,7 @@
  *   - 同一 name 在 visitedViews 中只保留一条，path 更新到最新
  *   - cachedViews 不变（keep-alive 缓存复用，组件实例仍在）
  *
- * @see [`../../components/common/TagsView/index.vue`](../../components/common/TagsView/index.vue) UI 渲染
+ * @see [`../../layouts/default/components/TagsView.vue`](../../layouts/default/components/TagsView.vue) UI 渲染
  * @see [`../../router/guards/remote-menu.ts`](../../router/guards/remote-menu.ts) 触发 addRouteView
  * @group 状态管理：多页签
  */
@@ -23,8 +23,10 @@ export interface TagView {
   name: string
   /** 完整路径（含 query），用于路由切换 */
   path: string
-  /** 渲染名（meta.title || name） */
+  /** 渲染名（meta.title || name）。有 titleKey 时 UI 层应优先 t(titleKey) 实现语言热切换 */
   title: string
+  /** i18n 键（meta.titleKey），存在时页签/面包屑等 UI 随语言切换实时翻译 */
+  titleKey?: string
   /** 菜单图标（Element Plus 图标名，页签前缀图标用） */
   icon?: string
   /** meta.affix === true 时为固定 tag（如 Home），不可关闭 */
@@ -41,11 +43,13 @@ export interface TagView {
 function toTag(route: RouteLocationNormalized): TagView | null {
   if (!route.name) return null
   const icon = route.meta?.icon as string | undefined
+  const titleKey = (route.meta as { titleKey?: string }).titleKey
   return {
     name: String(route.name),
     path: route.fullPath,
     title: (route.meta?.title as string | undefined) ?? String(route.name),
     // exactOptionalPropertyTypes：undefined 不入对象，用条件展开
+    ...(titleKey ? { titleKey } : {}),
     ...(icon ? { icon } : {}),
     affix: route.meta?.affix === true,
   }

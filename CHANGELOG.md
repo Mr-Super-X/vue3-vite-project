@@ -2,6 +2,44 @@
 
 ## 未发布
 
+### 🐛 Bug Fixes | default 布局面包屑：无标题包装层记录渲染成孤立 "/"（对标参考仓）
+
+* **fix(layouts/default):** Breadcrumb 过滤条件补「必须有标题来源」（`meta.title ?? meta.titleKey`）——`/user` 这类纯布局包装层父记录 meta 为空，原过滤（仅排除 visible/breadcrumb === false）把它放行，`resolveRouteTitle` 兜底返回 `''`，渲染出开头一个空标题可点击项 + 孤立 "/" 分隔符。对标参考仓「只渲染有 title 的记录」：实测 `/user/list` 面包屑从「/ 用户管理」修正为单层「用户管理」（当前页纯文本不可点）；`/workbench/analysis` 多层「工作台/分析页」不受影响
+
+### 🐛 Bug Fixes | workbench 视图与 AppView 双层 padding
+
+* **fix(modules/workbench):** 移除三个视图（Index/Analysis/Monitor）根节点的 `padding: var(--app-content-padding)`——页面级内容区内边距由布局层 `AppView __content` 统一提供（24px，demo 等 60+ 页面均依赖该基线），视图再自加一层叠加成 48px 大间距。全仓 grep 确认仅这 3 个视图有重复，已全清并留 Why 注释防再犯。实测：视图根 padding 0、卡片距内容区边缘 24px
+
+### 🐛 Bug Fixes | default 布局面包屑 duplicate key 警告
+
+* **fix(layouts/default):** Breadcrumb 的 `el-breadcrumb-item` key 由 `crumb.path` 改 `` `${crumb.path}-${index}` ``——空 path 的 index 子路由（`path: ''`）经 vue-router 规范化后与父记录同 path（`/workbench` 的父记录与子记录都是 '/workbench'），父/子标题不同（工作台 / 工作台首页）时相邻去重保留两条、path key 重复触发 `[Vue warn]: Duplicate keys found during update: "/workbench"`。key 加 index 后缀消除重复，面包屑渲染与跳转行为不变（实测 /workbench 控制台零警告、工作台→监控页 crumbs 正常）
+
+### ✨ Features | default 布局折叠侧栏菜单项 hover tooltip
+
+> 折叠态下菜单只剩图标，hover 仅背景高亮、用户无从知晓目标页——补 tooltip 提示
+
+* **feat(layouts/default):** 折叠侧栏（vertical 根实例）的叶子菜单项 hover 弹 `el-tooltip`（placement right、show-after 300ms、dark 主题）——内容为 `promotedNode(node).title`，与展开态可见文字同源，随 locale 切换自动更新；tooltip 默认 teleport 到 body，不被 el-scrollbar 裁剪。实现要点：① 仅根实例生效（`showCollapsedTooltip = isCollapsed && !isNested`）——递归实例渲染在 hover 弹层内（展开态、文字完整可见），且弹层菜单项文字完整，无需 tooltip；② 仅叶子菜单项——折叠态 hover 分组本就会弹子项浮层（有上下文），tooltip 会与浮层重叠冲突；③ tooltip 分支不渲染标题 span——EP collapse 样式本就把直接子 span 隐藏（0×0 + visibility:hidden），等效且保证 tooltip 单根触发；④ 展开态 / horizontal 模式 / 弹层内渲染走原 v-else 分支，零影响。浏览器实测：折叠 hover 仪表盘图标 → dark tooltip「仪表盘」右侧弹出；hover 分组仅弹子项浮层、无 tooltip
+
+### 🐛 Bug Fixes | default 布局折叠菜单不可见修复（图标 kebab→PascalCase 解析 + 折叠弹层限高）
+
+> 用户反馈「经典布局收起左侧菜单栏后，菜单不可见，鼠标 hover 时有一块背景」逐项修复
+
+* **fix(layouts/default):** MenuIcon 图标解析加 `pascalCase` 转换——路由 `meta.icon` 存 kebab-case（`'magic-stick'`），而 `@element-plus/icons-vue` 导出键是 PascalCase（`'MagicStick'`），原实现直接以 kebab-case 取键恒为 `undefined`，导致菜单图标（含折叠态唯一的可见内容）从不渲染；折叠后菜单"只剩一块背景"。经 `pascalCase()` 转换后取键，折叠态 4 个图标 22×22 居中恢复（浏览器实测）
+* **fix(layouts/default):** 折叠 hover 弹层（`.vv-app-menu-popper--vertical`）限高——demo 模块 60+ 子项时弹层撑至 1159px 超出视口；加 `max-height: calc(100vh - 20px); overflow-y: auto`，弹层内部可滚动
+* **test(layouts/default):** 新增 `MenuIcon.spec.ts` 4 用例——kebab-case 解析（magic-stick→MagicStick）/ 单词名解析 / 未命中不渲染 / 空 name 不渲染，防回归
+
+> Phase 5 功能审查（中英文切换 / 折叠 / 页签刷新 / 左右滚动 / 更多菜单全链路实测）后的用户反馈逐项修复
+
+* **fix(plugins):** errorHandler 增加已知良性错误白名单——`ResizeObserver loop completed with undelivered notifications`（Chromium 布局观测噪声，EP el-scrollbar / 弹层动画高频触发、无堆栈无损害）在 window error 监听处直接丢弃，不再 console.error 也不进上报通道，避免污染 Sentry；真实错误仍正常上报（实测 dispatch 两类错误验证）
+* **chore(components):** 删除死代码 `src/components/common/TagsView/`（无任何模板引用，default 布局复刻后仅剩历史包袱；其全局非 scoped 样式曾占用 `vv-tags-view` 命名空间与布局版冲突）——同步清理 `types/components.d.ts` 两处全局组件声明、`tags-view.ts` @see 指向、`TagsView.vue` 命名空间注释改历史说明（`default-tags-view` 命名空间保留不回迁）
+* **fix(store):** Pinia persist key 命名空间化——`utils/storage.ts` 新增导出 `namespacedStorageKey()`（与 Local/Session 写入规则一致），`theme.ts` persist key 改 `vue3-vite-project:theme-mode`（保留老裸 key 一次性读取兜底并清除），`app.ts` 改 `vue3-vite-project:app-ui`；实测两个 key 均按新规则落盘、刷新回灌正常。docs/06/10/18/19/21 同步更新（§4.4「裸 key」旧决策重写为「必须经 namespacedStorageKey 拼接」）
+* **test(utils):** storage.spec 新增 1 用例——`namespacedStorageKey()` 与 `Local.set` 写入的 key 规则一致
+* **verified(layouts/default):** 页签左右滚动按钮实测通过——溢出场景（scrollWidth 1600 > clientWidth 488）下点击右滚 scrollLeft 0→200、左滚 200→0；自动化浏览器 smooth 动画被冻结属测试环境限制，降级瞬时验证按钮真实逻辑（handler → scrollBy(±200) → wrapRef 链路完整）。页签刷新实测正常（输入清空重建 + keep-alive 保留），用户侧如遇失效为 HMR 旧状态，硬刷新即可
+
+### 📖 Documentation | CLAUDE.md BEM 规范新增「非 scoped 样式禁止 :deep()」约束
+
+* **docs(claude-md):** §3.2 强制约定新增第 10 条 + §3.3 反模式新增第 8 条——非 scoped 样式下 `:deep()` / `::v-deep` / `:v-deep` 不会被编译，会以伪类原样输出到浏览器并被整条规则丢弃；BEM 模式下覆盖第三方库组件样式必须直接写后代选择器；§3.2 第 5 条补充交叉引用，文档版本升至 v1.2.0
+
 ### ✨ Features | default 布局复刻 vue-element-plus-admin（四模式 + 多页签 + 工作流组件全家桶）
 
 > 计划：`docs/superpowers/plans/2026-09-09-default-layout-replica.md`。复刻 [vue-element-plus-admin](https://github.com/kailong321200875/vue-element-plus-admin) 布局结构与组件功能，对齐 `layouts/portal` 自包含组织约定（components / config / styles，不引用 `@/components/`）
@@ -15,8 +53,13 @@
 * **style(layouts/default):** `styles/default-tokens.scss` 对齐参考仓 `var.css` 精确值（亮：白侧栏 + 紫主色 #5b5bd6 + slate 文字色；暗：#111827/#0b1120/#818cf8）——EP 变量覆盖以 mixin 导出、施加在 `.vv-default-layout` 容器作用域（不污染项目全局主题与 portal 布局），布局专用变量（`--left-menu-*` 等）全局定义供 teleport 菜单弹层取用；顶栏 / 工具条 / 页签条毛玻璃（`color-mix` 94%/96% + `backdrop-filter: blur(16px)` + 双层 slate 阴影），侧栏 224/72、顶栏 60px、页签 38px、内容 padding 24px
 * **style(layouts/default):** Logo mark 38px + 按布局模式分色标题；菜单补箭头 1em / 内嵌子菜单列间隙 / 折叠图标 22px；内容区 `min-height` 扣除顶栏页签；TagsView 背景移交布局壳统一毛玻璃；Breadcrumb 修复 EP 2.14 + TS6 下 `:to="undefined"` 的 TS2379（改显式分支渲染）
 * **style(layouts/default):** 新增 `styles/element-overwrite.scss`——EP 弹层变量映射：default 布局挂载时 `index.vue` 往 `<html>` 写 `data-layout="default"`（卸载清除），teleport 到 body 的弹层（下拉 / Select / Dialog / Message 等）经 `[data-layout='default']` 选择器命中与容器相同的 EP mixin，获得紫色主题（亮：hover #eeeeff/#5b5bd6；暗：#252c49/#818cf8）；属性随路由切换，portal 布局页面无泄漏；不逐组件写覆盖规则（弹层类名与 portal 全局共享，无法限定作用域）
+* **fix(layouts/default):** 滚动职责归位——布局根 `height: 100%` 因 App.vue 的 ErrorBoundary / AsyncState 包装层（block + auto 高）截断 #app→布局的百分比高度链，退化为内容高度、页脚 50px 溢出致 body 滚动；布局根改 `100vh/100dvh` 锚定视口（自包含，不碰全局组件），`__scroll`（main 区）恢复为唯一滚动容器；AppView 内容 `min-height` 补扣 `--app-footer-height`，短内容页页脚恰好沉底
+* **fix(layouts/default):** TagsView 页签高度 22px → 31.4286px（与官网逐位一致）——非 scoped 样式下 `:deep()` 规则整体被浏览器丢弃致 `.el-scrollbar__view` 高度链断裂，AppMenu 8 处同款问题一并改为普通后代选择器（菜单 44px / radius 10px / gap 10px 定制恢复生效）；布局 TagsView 命名空间 `tags-view` → `default-tags-view`，规避 `src/components/common/TagsView`（无模板引用的死代码）全局非 scoped 样式的同名命名空间冲突（align-items / padding 被篡改）；`item-body` / `link` 逐级 `font-weight: inherit` 恢复激活页签 600 字重（reset.css 对 div/a 设 normal 阻断继承链）
 * **test(layouts/default):** 新增 `config/menu.spec.ts` 15 用例（createRouter 真实实例验证平铺语义：index 子路由无重复 / 单子项提升 / 分组过滤 / 排除项 / affix 收集 / i18n titleKey 优先）
 * **i18n:** `menu.workbench*` 4 键入 zh-CN / en-US
+* **fix(layouts/default):** 语言切换全链路修复（功能审查实测发现的 Phase 1 遗留）——全仓无写 `i18n.global.locale` 的代码导致切换语言 UI 永不翻译；App.vue watch `appStore.locale` 同步 vue-i18n 实例 + `<html lang>`（immediate 兼刷新回灌），`app` store persist pick 增 `locale`（`app-ui` 实测写入 localStorage）
+* **i18n:** 菜单/页签/面包屑随语言热更新——home/user/demo 路由补 `meta.titleKey`（`menu.home` 文案对齐「仪表盘」、新增 `menu.demo`）；`TagView` 增可选 `titleKey`（`toTag` / `filterAffixRoutes` 携带），TagsView 渲染改 `tagTitle() = titleKey ? t(titleKey) : title`；Breadcrumb 改 `resolveRouteTitle(record, t)`；zh/en 同步新增 `header.*` 15 键（布局面板/折叠/dark/退出登录等）与 `tagsView.*` 11 键（工具 aria + 右键菜单 6 项），Collapse/LayoutSwitcher/ToolHeader/UserInfo/LocaleDropdown/遮罩全部接 t()；顺带修正 en-US `app.title` 残留错误产品名
+* **fix(layouts/default):** 页签刷新静默失效——TagsView 与 AppView 是 `<main>` 平级兄弟，AppView provide 的 `default-layout-refresh` 对 TagsView 不可见（控制台 injection not found 告警、refresh 空转）；refresh 句柄与 refreshKey 上提 `default/index.vue` 统一 provide，AppView 改 inject key。实测：keep-alive 切走切回输入保留、刷新后组件重建输入清空
 
 ### ♻️ Code Refactoring | form-schema 错误守护 watcher 按需挂载（批次 3-3：L2）
 

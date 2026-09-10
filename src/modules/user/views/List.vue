@@ -38,6 +38,5 @@ const bem = createNamespace('user-list')
 
 <style lang="scss">
 .#{$BEM_PREFIX}-user-list {
-  padding: 24px;
 }
 </style>

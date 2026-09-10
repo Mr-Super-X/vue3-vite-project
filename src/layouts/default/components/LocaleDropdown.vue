@@ -2,18 +2,20 @@
 /**
  * 头部语言切换下拉（复刻参考仓 LocaleDropdown，接项目 appStore.locale）。
  *
- * 项目 i18n 实例通过 watch appStore.locale 同步（见 store/modules/app），
- * 本组件只负责写入 setLocale。
+ * 项目 i18n 实例由 App.vue watch appStore.locale 统一同步（含 <html lang> 与
+ * 刷新后回灌），本组件只负责写入 setLocale。
  *
  * @see [`@/store/modules/app`](../../../store/modules/app.ts) locale / setLocale
  * @group 布局：Default
  */
 import { ArrowDown } from '@element-plus/icons-vue'
+import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/store/modules/app'
 
 const bem = createNamespace('locale-dropdown')
 
 const appStore = useAppStore()
+const { t } = useI18n()
 
 const OPTIONS = [
   { value: 'zh-CN', label: '简体中文' },
@@ -29,7 +31,7 @@ function onCommand(value: string) {
 
 <template>
   <el-dropdown :class="bem.b()" trigger="click" @command="onCommand">
-    <button :class="bem.e('trigger')" type="button" aria-label="切换语言">
+    <button :class="bem.e('trigger')" type="button" :aria-label="t('header.switchLanguage')">
       <span :class="bem.e('current')">{{ appStore.locale === 'zh-CN' ? '中文' : 'En' }}</span>
       <el-icon :size="12"><ArrowDown /></el-icon>
     </button>

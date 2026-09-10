@@ -172,6 +172,10 @@ export function filterAffixRoutes(router: Router, t?: (key: string) => string): 
       name: record.name,
       path: record.path,
       title: resolveRouteTitle(record, t),
+      // titleKey 一并携带：title 是挂载时的快照，UI 层 t(titleKey) 才能随语言热切换
+      ...((record.meta as { titleKey?: string }).titleKey
+        ? { titleKey: (record.meta as { titleKey?: string }).titleKey }
+        : {}),
       affix: true,
     })
   }

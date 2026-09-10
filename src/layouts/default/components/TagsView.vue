@@ -8,12 +8,13 @@
  * - 左/右滚动按钮、当前页签自动滚动到可视区
  * - 刷新按钮 / "更多"按钮（点击触发当前页签菜单）
  * - 右键菜单：刷新 / 关闭 / 关闭左侧 / 关闭右侧 / 关闭其他 / 全部关闭
- * - 刷新实现：store.removeCachedView 剔除 keep-alive 缓存 + AppView 注入的
+ * - 刷新实现：store.removeCachedView 剔除 keep-alive 缓存 + 布局壳注入的
  *   refresh 句柄重建当前路由组件（替代参考仓的 /redirect 路由方案，不新增路由）
  *
  * @see [`../../store/modules/tags-view`](../../../store/modules/tags-view.ts) 页签状态
  * @see [`../config/menu.ts`](../config/menu.ts) filterAffixRoutes affix 收集
- * @see [`./AppView.vue`](./AppView.vue) refresh 句柄提供方
+ * @see [`../index.vue`](../index.vue) refresh 句柄 provide 方
+ * @see [`./AppView.vue`](./AppView.vue) refreshKey 消费方
  * @group 布局：Default
  */
 import {
@@ -34,9 +35,12 @@ import { defaultLayoutConfig } from '../config/app'
 import ContextMenu, { type ContextMenuItem } from './ContextMenu.vue'
 import MenuIcon from './MenuIcon.vue'
 
-const bem = createNamespace('tags-view')
+// 命名空间用 default-tags-view 而非 tags-view：
+// 历史上 src/components/common/TagsView 曾以全局非 scoped 样式占用 vv-tags-view
+// 命名空间（该死代码已删除，命名空间保留不回迁，避免 git 历史中的样式互相覆盖问题重演）
+const bem = createNamespace('default-tags-view')
 
-/** AppView 注入的页签刷新句柄（重建当前路由组件） */
+/** 布局壳（default/index.vue）注入的页签刷新句柄（重建当前路由组件） */
 const refreshView = inject<() => void>('default-layout-refresh')
 
 const route = useRoute()
@@ -52,6 +56,11 @@ const activeTag = computed(() => visitedViews.value.find((view) => view.path ===
 
 /** 所有页签被关光后的兜底跳转路径 */
 const defaultPath = computed(() => '/')
+
+/** 页签显示名：有 titleKey 时走 i18n 实时翻译（title 是加入页签时的语言快照） */
+function tagTitle(view: TagView): string {
+  return view.titleKey ? t(view.titleKey) : view.title
+}
 
 function isActive(view: TagView): boolean {
   return view.path === route.fullPath
@@ -127,31 +136,36 @@ function createContextMenu(view: TagView): ContextMenuItem[] {
   const otherViews = visitedViews.value.filter((v) => v.name !== view.name)
 
   const items: ContextMenuItem[] = [
-    { icon: Refresh, label: '刷新', command: () => refreshTag(view) },
-    { icon: Close, label: '关闭', disabled: view.affix, command: () => closeTag(view) },
+    { icon: Refresh, label: t('tagsView.menuRefresh'), command: () => refreshTag(view) },
+    {
+      icon: Close,
+      label: t('tagsView.menuClose'),
+      disabled: view.affix,
+      command: () => closeTag(view),
+    },
     {
       divided: true,
       icon: Back,
-      label: '关闭左侧',
+      label: t('tagsView.menuCloseLeft'),
       disabled: index <= 0 || !hasClosableView(visitedViews.value.slice(0, index)),
       command: () => closeLeftTags(view),
     },
     {
       icon: Right,
-      label: '关闭右侧',
+      label: t('tagsView.menuCloseRight'),
       disabled: index < 0 || !hasClosableView(visitedViews.value.slice(index + 1)),
       command: () => closeRightTags(view),
     },
     {
       divided: true,
       icon: CircleClose,
-      label: '关闭其他',
+      label: t('tagsView.menuCloseOthers'),
       disabled: !hasClosableView(otherViews),
       command: () => closeOtherTags(view),
     },
     {
       icon: Minus,
-      label: '全部关闭',
+      label: t('tagsView.menuCloseAll'),
       disabled: !hasClosableView(visitedViews.value),
       command: closeAllTags,
     },
@@ -177,7 +191,7 @@ watch(
     <button
       :class="[bem.e('tool'), bem.em('tool', 'first')]"
       type="button"
-      aria-label="向左滚动页签"
+      :aria-label="t('tagsView.scrollLeft')"
       @click="scrollTags(-200)"
     >
       <el-icon><ArrowLeft /></el-icon>
@@ -190,7 +204,7 @@ watch(
             v-for="item in visitedViews"
             :key="item.name"
             :schema="createContextMenu(item)"
-            :class="[bem.e('item'), bem.is('active', isActive(item))]"
+            :class="[bem.e('item'), bem.is('active', isActive(item)), bem.is('affix', item.affix)]"
           >
             <div :class="bem.e('item-body')" :data-tag-active="isActive(item)">
               <RouterLink :to="item.path" :class="bem.e('link')">
@@ -198,13 +212,13 @@ watch(
                   v-if="defaultLayoutConfig.ui.tagsViewIcon && item.icon"
                   :name="item.icon"
                 />
-                <span>{{ item.title }}</span>
+                <span>{{ tagTitle(item) }}</span>
               </RouterLink>
               <button
                 v-if="!item.affix"
                 :class="bem.e('close')"
                 type="button"
-                :aria-label="`关闭页签: ${item.title}`"
+                :aria-label="`${t('tagsView.closeTag')}: ${tagTitle(item)}`"
                 @click.stop="closeTag(item)"
               >
                 <el-icon :size="13"><Close /></el-icon>
@@ -215,20 +229,30 @@ watch(
       </el-scrollbar>
     </div>
 
-    <button :class="bem.e('tool')" type="button" aria-label="向右滚动页签" @click="scrollTags(200)">
+    <button
+      :class="bem.e('tool')"
+      type="button"
+      :aria-label="t('tagsView.scrollRight')"
+      @click="scrollTags(200)"
+    >
       <el-icon><ArrowRight /></el-icon>
     </button>
     <button
       :class="bem.e('tool')"
       type="button"
-      aria-label="刷新当前页签"
+      :aria-label="t('tagsView.refresh')"
       :disabled="!activeTag"
       @click="refreshTag(activeTag)"
     >
       <el-icon><Refresh /></el-icon>
     </button>
     <ContextMenu trigger="click" :schema="activeTag ? createContextMenu(activeTag) : []">
-      <button :class="bem.e('tool')" type="button" aria-label="更多页签操作" :disabled="!activeTag">
+      <button
+        :class="bem.e('tool')"
+        type="button"
+        :aria-label="t('tagsView.more')"
+        :disabled="!activeTag"
+      >
         <el-icon><MoreFilled /></el-icon>
       </button>
     </ContextMenu>
@@ -236,14 +260,15 @@ watch(
 </template>
 
 <style lang="scss">
-.#{$BEM_PREFIX}-tags-view {
+.#{$BEM_PREFIX}-default-tags-view {
   position: relative;
   display: flex;
   width: 100%;
   height: var(--tags-view-height);
   // 背景由布局壳统一提供（topbar / __tags 毛玻璃），组件自身保持透明
 
-  :deep(.el-scrollbar__view) {
+  // 非 scoped 样式下 :deep() 不会被编译、整条规则被浏览器丢弃——直接写后代选择器
+  .el-scrollbar__view {
     height: 100%;
   }
 
@@ -331,6 +356,9 @@ watch(
     display: flex;
     align-items: center;
     height: 100%;
+    // 项目 reset.css 对 div/a 均设 font-weight: normal，会阻断激活页签 600 字重的继承链，
+    // 逐级 inherit 恢复（item → item-body → link）
+    font-weight: inherit;
   }
 
   &__link {

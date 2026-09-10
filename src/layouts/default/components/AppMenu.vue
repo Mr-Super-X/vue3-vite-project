@@ -46,6 +46,13 @@ const { router } = useAppRouter()
 /** 折叠仅作用于 vertical 模式 */
 const isCollapsed = computed(() => props.mode === 'vertical' && appStore.sidebarCollapsed)
 
+/**
+ * 折叠 tooltip 开关：仅根实例生效——折叠态下图标是唯一可见内容，hover 弹
+ * tooltip 提示目标页名称；递归实例渲染在 hover 弹层内（展开态、文字完整
+ * 可见），不需要 tooltip
+ */
+const showCollapsedTooltip = computed(() => isCollapsed.value && !props.isNested)
+
 /** 激活菜单项：meta.activeMenu 优先（隐藏详情页高亮其列表页场景） */
 const activeMenu = computed(() => {
   const meta = route.meta as { activeMenu?: string }
@@ -95,8 +102,21 @@ function handleSelect(index: string): void {
         <template v-for="node in menuNodes" :key="node.path">
           <!-- 单子项提升 / 叶子节点：直接菜单项 -->
           <el-menu-item v-if="isPromotedItem(node)" :index="promotedNode(node).path">
-            <MenuIcon v-if="promotedNode(node).icon" :name="promotedNode(node).icon" />
-            <span :class="bem.e('title')">{{ promotedNode(node).title }}</span>
+            <!-- 折叠态 tooltip：图标为唯一可见内容，hover 提示目标页名称（标题与
+                 展开态文字同源，随 locale 切换自动更新）；此分支不渲染标题 span——
+                 EP collapse 样式本就把直接子 span 隐藏（0×0 + visibility:hidden） -->
+            <el-tooltip
+              v-if="showCollapsedTooltip && promotedNode(node).icon"
+              :content="promotedNode(node).title"
+              placement="right"
+              :show-after="300"
+            >
+              <MenuIcon :name="promotedNode(node).icon" />
+            </el-tooltip>
+            <template v-else>
+              <MenuIcon v-if="promotedNode(node).icon" :name="promotedNode(node).icon" />
+              <span :class="bem.e('title')">{{ promotedNode(node).title }}</span>
+            </template>
           </el-menu-item>
 
           <!-- 父菜单分组 -->
@@ -183,7 +203,8 @@ function handleSelect(index: string): void {
     background: transparent;
   }
 
-  :deep(.el-menu) {
+  // 非 scoped 样式下 :deep() 不会被编译、整条规则被浏览器丢弃——直接写后代选择器
+  .el-menu {
     width: 100%;
     padding: 8px 0;
     border: none;
@@ -246,7 +267,7 @@ function handleSelect(index: string): void {
   }
 
   // 折叠态：图标居中
-  :deep(.el-menu--collapse) {
+  .el-menu--collapse {
     width: var(--left-menu-min-width);
 
     > .el-menu-item,
@@ -268,21 +289,21 @@ function handleSelect(index: string): void {
 
   // vertical 模式：图标与标题间距 10px（horizontal 模式由 EP 默认处理）
   &--vertical {
-    :deep(.el-menu > .el-sub-menu > .el-sub-menu__title) {
+    .el-menu > .el-sub-menu > .el-sub-menu__title {
       margin-top: 0;
       margin-bottom: 0;
     }
 
-    :deep(.el-menu--vertical > .el-sub-menu) {
+    .el-menu--vertical > .el-sub-menu {
       margin: 3px 0;
     }
 
-    :deep(.el-sub-menu__title),
-    :deep(.el-menu-item) {
+    .el-sub-menu__title,
+    .el-menu-item {
       gap: 10px;
     }
 
-    :deep(.el-menu--collapse) {
+    .el-menu--collapse {
       > .el-menu-item,
       > .el-sub-menu > .el-sub-menu__title {
         gap: 0;
@@ -292,7 +313,7 @@ function handleSelect(index: string): void {
 
   // 水平模式（top 布局顶栏）
   &--horizontal {
-    :deep(.el-menu--horizontal) {
+    .el-menu--horizontal {
       display: flex;
       gap: 4px;
       align-items: center;
@@ -336,7 +357,9 @@ function handleSelect(index: string): void {
 // ─── 折叠弹层（element-plus teleports 到 body，全局样式）────────────
 // 类名由 `${bem.b()}-popper--${mode}` 动态拼接（见组件 popperClass 计算属性）
 .#{$BEM_PREFIX}-app-menu-popper--vertical {
-  overflow: hidden;
+  // 子项极多时（demo 模块 60+ 页）弹层会超出视口——限高 + 内部滚动
+  max-height: calc(100vh - 20px);
+  overflow-y: auto;
   border: 1px solid var(--layout-border-color) !important;
   border-radius: 12px !important;
   box-shadow: var(--layout-shadow) !important;

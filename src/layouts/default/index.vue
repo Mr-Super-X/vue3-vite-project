@@ -75,6 +75,21 @@ function closeMobileMenu() {
 }
 
 /**
+ * 页签刷新机制（provide 必须上提到本布局壳）：
+ * TagsView（命令发起方）与 AppView（key 消费方）是 <main> 下的平级兄弟，
+ * 由 AppView provide 时 TagsView inject 不到（控制台告警 + 刷新静默失效），
+ * 故 refresh 句柄与 key 都从布局壳注入，AppView / TagsView 各自 inject。
+ * @see [`./components/AppView.vue`](./components/AppView.vue) key 消费方
+ * @see [`./components/TagsView.vue`](./components/TagsView.vue) 命令发起方
+ */
+const refreshKey = ref(0)
+function refreshCurrentView() {
+  refreshKey.value++
+}
+provide('default-layout-refresh', refreshCurrentView)
+provide('default-layout-refresh-key', refreshKey)
+
+/**
  * 布局激活期间在 <html> 标记 data-layout="default"——teleport 到 body 的 EP 弹层
  * （下拉/对话框/消息等）不在容器内，靠该属性命中 element-overwrite.scss 的变量映射，
  * 与布局本体共用同一套紫色主题（@see ./styles/element-overwrite.scss）。
@@ -167,7 +182,7 @@ onUnmounted(clearLayoutScope)
       v-if="appStore.mobile && !appStore.sidebarCollapsed"
       :class="bem.e('mask')"
       type="button"
-      aria-label="关闭导航菜单"
+      :aria-label="t('header.closeMenu')"
       @click="closeMobileMenu"
     ></button>
   </section>

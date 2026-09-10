@@ -26,6 +26,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('../views/List.vue'),
         meta: {
           title: '用户管理',
+          titleKey: 'menu.user',
           icon: 'user',
           requiresAuth: true,
           permissions: ['user:view'],

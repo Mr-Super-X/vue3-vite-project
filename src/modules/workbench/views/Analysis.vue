@@ -39,8 +39,8 @@ const metrics = [
 
 <style lang="scss">
 .#{$BEM_PREFIX}-workbench-analysis {
-  padding: var(--app-content-padding);
-
+  // 页面级 padding 由布局层 AppView __content 统一提供（--app-content-padding），
+  // 视图不再自加——曾双层叠加导致 48px 大间距（2026-09-10 反馈修复）
   &__heading {
     font-size: 15px;
     font-weight: 600;

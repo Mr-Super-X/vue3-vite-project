@@ -5,10 +5,14 @@
  * 刷新机制说明：参考仓用 /redirect 路由重定向实现页签刷新（需新增全局路由），
  * 本项目用"剔除 keep-alive 缓存 + 重建组件 key"实现，自包含不污染路由表：
  * 1. TagsView 刷新 → store.removeCachedView(name) 把当前页移出 include 列表
- * 2. 本组件 inject 的 refresh 句柄递增 refreshKey → 组件 key 变化重新挂载
+ * 2. 布局壳（default/index.vue）注入的 refreshKey 递增 → 组件 key 变化重新挂载
  * 3. 旧缓存实例因 include 不再匹配被 keep-alive 自动清理
  *
+ * provide 在布局壳而非本组件：TagsView 与 AppView 是平级兄弟，AppView provide
+ * 时 TagsView inject 不到（@see ../index.vue 的刷新机制注释）
+ *
  * @see [`./TagsView.vue`](./TagsView.vue) 刷新命令发起方
+ * @see [`../index.vue`](../index.vue) refreshKey / refresh 句柄 provide 方
  * @see [`@/store/modules/tags-view`](../../../store/modules/tags-view.ts) cachedViews
  * @group 布局：Default
  */
@@ -23,15 +27,8 @@ const tagsViewStore = useTagsViewStore()
 
 const cachedViews = computed(() => tagsViewStore.cachedViews)
 
-/** 刷新计数：页签"刷新"命令时递增，强制当前路由组件重新挂载 */
-const refreshKey = ref(0)
-
-/** 提供给 TagsView 的刷新句柄（页签右键菜单 / 刷新按钮调用） */
-function refresh(): void {
-  refreshKey.value++
-}
-
-provide('default-layout-refresh', refresh)
+/** 刷新计数（布局壳注入）：页签"刷新"命令时递增，强制当前路由组件重新挂载 */
+const refreshKey = inject<Ref<number>>('default-layout-refresh-key', ref(0))
 </script>
 
 <template>

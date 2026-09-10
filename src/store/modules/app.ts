@@ -16,6 +16,8 @@
  * @group 状态管理：App UI
  */
 
+import { namespacedStorageKey } from '@/utils/storage'
+
 /** 布局模式：sidebar 经典侧边栏 / top 顶部导航 / mixed 顶栏+二级侧栏 / dual 双栏 rail */
 export type LayoutMode = 'sidebar' | 'top' | 'mixed' | 'dual'
 
@@ -76,9 +78,12 @@ export const useAppStore = defineStore(
   },
   {
     persist: {
-      key: 'app-ui',
+      // 与 utils/storage 共用命名空间规则（vue3-vite-project:app-ui），
+      // 老用户残留的裸 'app-ui' key 不影响（pick 字段回灌失败只是回退默认值）
+      key: namespacedStorageKey('app-ui'),
       storage: localStorage,
-      pick: ['layout'],
+      // locale 一并持久化：刷新后 App.vue 的 watch（immediate）回灌到 i18n 实例
+      pick: ['layout', 'locale'],
     },
   }
 )

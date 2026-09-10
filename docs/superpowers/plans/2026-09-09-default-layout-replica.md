@@ -118,3 +118,48 @@
   2. `index.vue` 生命周期：onMounted 写 `document.documentElement data-layout="default"`，onUnmounted 仅当值仍为 default 时清除（不误伤其他布局标记）。
   3. 属性随路由切换——portal 布局页面无此属性，弹层回落项目全局主题，无泄漏。
   验证：type-check ✓ / eslint ✓ / vite transform 200 ✓；浏览器实测（chrome-devtools，5174）：html 级变量亮 #5b5bd6/#eeeeff/#f5f6fa/#526077 全紫；用户下拉弹层项色 #526077、hover fill #eeeeff、hover 文字 #5b5bd6；auto 暗色模拟 html 级 #818cf8/#252c49/#151e30/#cbd5e1，弹层底色 #1b2538、hover #252c49/#818cf8 全部命中。CHANGELOG 已补 element-overwrite 条目。
+- 2026-09-09（Phase 4 滚动容器 + TagsView 样式修复）：用户反馈两问题，实测定位双根因：
+  1. 「body 滚动而非 main 滚动」：App.vue 的 ErrorBoundary / AsyncState 包装层（block + auto 高）截断 #app→布局的百分比高度链，`height: 100%` 退化为内容高度，页脚 50px 溢出到 body。修复：index.vue 布局根改 `height: 100vh/100dvh`（自包含，不碰全局组件）；AppView 内容 min-height 补扣 `--app-footer-height`，页脚短内容页恰好沉底。
+  2. 「TagsView 样式与官网不同」：三个叠加根因——a) 非 scoped 样式下 `:deep()` 不被编译、整条规则被浏览器丢弃（TagsView 的 scrollbar-view 高度链断裂致页签仅 22px；AppMenu 8 处 :deep 规则同样全丢），全部改为普通后代选择器；b) `src/components/common/TagsView`（死代码，无模板引用）以全局非 scoped 样式占用同名 `vv-tags-view` 命名空间，align-items:center/padding 等规则篡改布局页签——布局侧命名空间改 `default-tags-view` 规避；c) 项目 reset.css 对 div/a 设 font-weight:normal 阻断激活页签 600 字重继承，item-body/link 逐级 `font-weight: inherit` 恢复。
+  验证：chrome-devtools 实测页签高 31.4286px（与官网逐位一致）、激活字重 600、菜单项 44px/radius 10px/gap 10px 恢复、bodyScrolls=false 且 __scroll 为唯一滚动容器、页脚沉底；type-check ✓ / eslint 4 文件 0 问题 ✓。
+- 2026-09-09（Phase 5 功能审查）：用户要求「再次审查页面功能，确保原官网功能都实现（中英文切换 / 侧边栏折叠 / 页签刷新 / 左右滚动 / 更多菜单等）」。chrome-devtools 系统性实测，发现 4 个真问题并修复：
+  1. **i18n 同步缺失（Phase 1 遗留）**：点击 English 仅 store.locale 变，全仓无任何代码写 i18n.global.locale，UI 永不翻译、不持久化。修复：App.vue watch appStore.locale → useI18n 可写 locale + `<html lang>`（immediate 兼刷新回灌）；app.ts persist pick 加 'locale'（实测 theme-mode/app-ui 均写入 localStorage）。
+  2. **部分 UI 不随语言热更新**：仅 workbench 路由配了 meta.titleKey（菜单经 buildMenuTree(router, t) computed 响应式重建），home/user/demo 路由无 titleKey 恒显中文；页签（tags-view store toTag 快照 meta.title）与面包屑（meta.title 快照）同样不翻译。修复：三个模块路由补 titleKey（menu.home 文案对齐「仪表盘」、新增 menu.demo）；TagView 增加可选 titleKey（toTag / filterAffixRoutes 携带），TagsView 渲染改 tagTitle() = titleKey ? t(titleKey) : title；Breadcrumb 改 resolveRouteTitle(record, t)。zh/en locale 同步新增 header.*（布局切换面板/折叠/dark/退出等 15 键）与 tagsView.*（工具 aria + 右键菜单 6 项 11 键），Collapse/LayoutSwitcher/ToolHeader/UserInfo/LocaleDropdown/index.vue 遮罩全部改 t()。顺带修复 en-US app.title 残留错误产品名（Emergency Water Portal → Enterprise Admin）。
+  3. **页签刷新静默失效**：控制台告警 injection "default-layout-refresh" not found——TagsView 与 AppView 是 `<main>` 下平级兄弟，AppView provide 对 TagsView 不可见，refreshView?.() 静默空转。修复：refreshKey + refresh 句柄上提 default/index.vue 统一 provide（refresh / refresh-key 两个 key），AppView 改 inject key，TagsView 改 inject 句柄。
+  4. 验证矩阵（英文态 + 中文态双向）：菜单/页签/面包屑/布局面板/右键菜单全翻译 ✓、html lang 同步 ✓、app-ui 持久化刷新回灌 ✓、折叠 224↔72 ✓、keep-alive 切走切回输入保留 + 刷新后输入清空重建 ✓、左右滚动无报错 ✓、更多菜单 6 项禁用态正确 ✓、四模式 DOM 结构（topbar/horizontal/primaryNav/secondary/rail/sidebar）✓、深色主题 data-theme + theme-mode 持久化 ✓、用户下拉退出登录 ✓。type-check ✓ / eslint 16 文件 0 问题 ✓ / tags-view + menu spec 24 用例全绿 ✓。
+- 2026-09-10（Phase 5 反馈五项修复）：用户反馈 5 项，逐项处理：
+  1. **ResizeObserver 报错污染 errorHandler**：`ResizeObserver loop completed with undelivered notifications` 是 Chromium 布局观测良性噪声（EP el-scrollbar/弹层动画高频触发、无堆栈无损害）。修复：errorHandler.ts 新增 BENIGN_ERROR_PATTERNS 白名单 + isBenignError()，window error 监听处命中即 return（不 console 也不上报）。实测：dispatch 良性错误被吞、真实错误仍打 [window.error] ✓。
+  2. **刷新功能不生效**：实测当前构建正常（输入 refresh-verify-456 → 点刷新 → 输入清空重建、keep-alive 保留）。判断为 HMR 旧状态（provide/inject 跨组件 HMR 需整刷），已在回复中建议硬刷新 Ctrl+F5。
+  3. **左右滚动按钮无法验证**：demo 路由挂 blank 布局造不出页签溢出；改在 workbench 页面 emulate 640px 视口 + JS 撑宽页签列表造出 scrollWidth 1600 > clientWidth 488。实测发现自动化浏览器 smooth 滚动动画被冻结（连页面内新建的隔离 div smooth scrollBy 都不动，属测试环境限制），降级把 scrollBy 改 instant 后验证按钮真实逻辑：右点 scrollLeft 0→200、左点 200→0 ✓（handler → scrollBy(±200) → el-scrollbar wrapRef 链路完整）。
+  4. **死代码清理（用户批准删除）**：删 `src/components/common/TagsView/index.vue` + 空目录；同步清 types/components.d.ts 两处 TagsView 全局声明（dev server 监听会自动重生成，删文件后手动对齐）、tags-view.ts @see 改指 layouts/default/components/TagsView.vue、TagsView.vue 命名空间注释改历史说明（default-tags-view 不回迁）。docs/CHANGELOG/audit 历史记录不动。
+  5. **storage key 命名空间化**：utils/storage.ts 导出 namespacedStorageKey()（与 Local/Session 同规则）；theme.ts persist key 改 namespacedStorageKey('theme-mode') + 老裸 key 一次性读取兜底并清除；app.ts persist key 改 namespacedStorageKey('app-ui')。实测：vue3-vite-project:theme-mode / vue3-vite-project:app-ui 均按新规则落盘、布局切换与主题切换正常。docs/06/10/18/19/21 同步更新——docs/19 §4.4「裸 key 靠 storeId 隔离」旧决策按用户新决策重写为「必须经 namespacedStorageKey() 拼接」；docs/18 app.ts「无持久化」陈旧描述一并修正。
+  验证：type-check ✓ / eslint 8 文件 0 问题 ✓ / storage+tags-view+menu 40 用例全绿 ✓。CHANGELOG 已补「功能审查反馈五项修复」条目。
+
+---
+
+## 2026-09-10 Phase 5 反馈第二项修复：折叠菜单不可见
+
+用户反馈「经典布局收起左侧菜单栏后，菜单不可见，鼠标 hover 时有一块背景」，根因两项均已修复并浏览器实测：
+
+1. **菜单图标从不渲染**——`MenuIcon.vue` 以路由 `meta.icon`（kebab-case `'magic-stick'`）直接取 `@element-plus/icons-vue` 的 PascalCase 导出键，恒为 `undefined`。EP collapse 机制下折叠态菜单项的 span 标题 `visibility:hidden`、子菜单箭头 `display:none`，图标是唯一可见内容——图标缺失即"菜单不可见、只剩一块背景"。修复：取键前经 `pascalCase()` 转换。实测折叠态 4 个图标 22×22 居中恢复。
+2. **折叠 hover 弹层超高**——demo 模块 60+ 子项撑出 1159px 弹层超出视口。修复：`.vv-app-menu-popper--vertical` 加 `max-height: calc(100vh - 20px); overflow-y: auto`。
+
+验证：`pnpm type-check` / eslint 双文件 0 问题；新增 `MenuIcon.spec.ts` 4 用例全绿；浏览器实测折叠图标 + 弹层限高滚动正常。
+
+关于「hover 时整页变暗」：自动化浏览器 DOM 全量扫描无任何半透明遮罩元素（opacity 全为 1），强制移除弹层即恢复，且该浏览器环境实测冻结 CSS 动画（smooth scroll 不动）——判断为自动化测试环境动画冻结导致的截图伪影，非应用 bug；真实浏览器如出现请再反馈。
+
+---
+
+## 2026-09-10 Phase 6 增强：折叠侧栏菜单项 hover tooltip
+
+用户提议：折叠态菜单只剩图标、hover 只有背景高亮，用户无从知晓目标页——补 tooltip 更好。
+
+设计决策与实现（AppMenu.vue 单文件）：
+
+1. **仅叶子菜单项**：折叠态 hover 分组（sub-menu）本就会弹子项浮层（有上下文），tooltip 会与浮层重叠冲突。
+2. **仅根实例**（`showCollapsedTooltip = isCollapsed && !isNested`）：递归实例渲染在 hover 弹层内——弹层是展开态、文字完整可见，无需 tooltip。
+3. **tooltip 分支不渲染标题 span**：EP collapse 样式本就把 `.el-menu-item > span` 隐藏（0×0 + visibility:hidden），不渲染等效；同时保证 el-tooltip 单根触发（其 slot 要求单一根元素）。
+4. 内容 = `promotedNode(node).title`，与展开态文字同源，随 locale 切换自动更新（index.vue 的 `menuTree` computed 依赖 `t`）。
+5. `el-tooltip`：placement right、show-after 300ms、dark 主题、teleport body（不被 el-scrollbar 裁剪）。EP 组件由 unplugin-vue-components 按需注入。
+
+验证：`pnpm type-check` / eslint 0 问题；layouts/default 19 用例全绿；浏览器实测折叠 hover 仪表盘 → dark tooltip「仪表盘」右侧弹出，hover 分组仅弹子项浮层无 tooltip。

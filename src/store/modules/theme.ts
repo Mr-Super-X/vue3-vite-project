@@ -16,15 +16,27 @@
  * @group 状态管理：主题
  */
 
+import { namespacedStorageKey } from '@/utils/storage'
+
 /** 主题模式：light（强制浅色）/ dark（强制深色）/ auto（跟随系统） */
 export type ThemeMode = 'light' | 'dark' | 'auto'
 
-const STORAGE_KEY = 'theme-mode'
+// persist key 与 utils/storage 的 Local/Session 共用同一命名空间规则
+// （vue3-vite-project:theme-mode），避免多项目同域部署时互相覆盖
+const STORAGE_KEY = namespacedStorageKey('theme-mode')
+// 2026-09-09 之前 persist key 是裸 'theme-mode'，老用户 localStorage 可能残留该 key，
+// 一次性读取兜底并在命中后清除（persist 订阅随后只写新 key）
+const LEGACY_STORAGE_KEY = 'theme-mode'
 
 /**
  * 从 localStorage 读取初始 mode，非法值兜底为 'auto'。
  */
 function readInitialMode(): ThemeMode {
+  const legacy = localStorage.getItem(LEGACY_STORAGE_KEY)
+  if (legacy === 'light' || legacy === 'dark' || legacy === 'auto') {
+    localStorage.removeItem(LEGACY_STORAGE_KEY)
+    return legacy
+  }
   const stored = localStorage.getItem(STORAGE_KEY)
   if (stored === 'light' || stored === 'dark' || stored === 'auto') {
     return stored

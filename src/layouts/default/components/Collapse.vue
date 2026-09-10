@@ -8,18 +8,20 @@
  * @group 布局：Default
  */
 import { Expand, Fold } from '@element-plus/icons-vue'
+import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/store/modules/app'
 
 const bem = createNamespace('app-collapse')
 
 const appStore = useAppStore()
+const { t } = useI18n()
 </script>
 
 <template>
   <button
     :class="bem.b()"
     type="button"
-    :aria-label="appStore.sidebarCollapsed ? '展开导航' : '收起导航'"
+    :aria-label="appStore.sidebarCollapsed ? t('header.expand') : t('header.collapse')"
     @click="appStore.toggleSidebar()"
   >
     <el-icon :size="18">

@@ -11,12 +11,14 @@
  * @group 布局：Default
  */
 import { ArrowDown, SwitchButton } from '@element-plus/icons-vue'
+import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@/store/modules/user'
 
 const bem = createNamespace('user-info')
 
 const userStore = useUserStore()
 const { loggingOut, confirmLogout } = useLogout()
+const { t } = useI18n()
 
 const userName = computed(() => userStore.profile?.name ?? '游客')
 const avatarText = computed(() => userStore.profile?.name?.charAt(0) ?? '?')
@@ -33,7 +35,7 @@ const avatarText = computed(() => userStore.profile?.name?.charAt(0) ?? '?')
       <el-dropdown-menu>
         <el-dropdown-item command="logout" :disabled="loggingOut">
           <el-icon><SwitchButton /></el-icon>
-          <span>{{ loggingOut ? '退出中...' : '退出登录' }}</span>
+          <span>{{ loggingOut ? t('header.loggingOut') : t('header.logout') }}</span>
         </el-dropdown-item>
       </el-dropdown-menu>
     </template>

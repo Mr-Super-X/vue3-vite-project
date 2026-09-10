@@ -10,22 +10,25 @@
  * @group 布局：Default
  */
 import { ArrowDown, Check, Menu as MenuIconEp } from '@element-plus/icons-vue'
+import { useI18n } from 'vue-i18n'
 import { useAppStore, type LayoutMode } from '@/store/modules/app'
 
 const bem = createNamespace('layout-switcher')
 
 const appStore = useAppStore()
+const { t } = useI18n()
 const open = ref(false)
 
-const LAYOUTS: { value: LayoutMode; label: string }[] = [
-  { value: 'sidebar', label: '经典侧栏' },
-  { value: 'top', label: '顶部导航' },
-  { value: 'mixed', label: '混合布局' },
-  { value: 'dual', label: '双栏布局' },
+/** 布局项的 i18n 键（label 走 t()，切换语言热更新） */
+const LAYOUTS: { value: LayoutMode; labelKey: string }[] = [
+  { value: 'sidebar', labelKey: 'header.layoutSidebar' },
+  { value: 'top', labelKey: 'header.layoutTop' },
+  { value: 'mixed', labelKey: 'header.layoutMixed' },
+  { value: 'dual', labelKey: 'header.layoutDual' },
 ]
 
-const currentLabel = computed(
-  () => LAYOUTS.find((item) => item.value === appStore.layout)?.label ?? ''
+const currentLabel = computed(() =>
+  t(LAYOUTS.find((item) => item.value === appStore.layout)?.labelKey ?? '')
 )
 
 function selectLayout(mode: LayoutMode) {
@@ -47,7 +50,7 @@ function closeOnBlur(event: FocusEvent) {
     <button
       :class="bem.e('trigger')"
       type="button"
-      aria-label="切换布局"
+      :aria-label="t('header.switchLayout')"
       :aria-expanded="open"
       @click="open = !open"
     >
@@ -58,8 +61,8 @@ function closeOnBlur(event: FocusEvent) {
 
     <div :class="bem.e('panel')">
       <div :class="bem.e('heading')">
-        <strong>布局设置</strong>
-        <span>选择导航布局</span>
+        <strong>{{ t('header.layoutSettings') }}</strong>
+        <span>{{ t('header.layoutSettingsHint') }}</span>
       </div>
 
       <button
@@ -75,7 +78,7 @@ function closeOnBlur(event: FocusEvent) {
           <i :class="bem.e('preview-secondary')"></i>
           <i :class="bem.e('preview-content')"></i>
         </span>
-        <span :class="bem.e('option-label')">{{ item.label }}</span>
+        <span :class="bem.e('option-label')">{{ t(item.labelKey) }}</span>
         <el-icon v-if="appStore.layout === item.value" :size="16"><Check /></el-icon>
       </button>
     </div>

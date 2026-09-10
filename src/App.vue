@@ -18,6 +18,7 @@
  */
 import { useI18n } from 'vue-i18n'
 import { useRouterStore } from '@store/modules/router'
+import { useAppStore } from '@store/modules/app'
 import ErrorBoundary from '@/components/common/ErrorBoundary.vue'
 import AsyncState from '@/components/common/AsyncState.vue'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
@@ -28,6 +29,7 @@ import type { Language } from 'element-plus/es/locale'
 const bem = createNamespace('app')
 
 const routerStore = useRouterStore()
+const appStore = useAppStore()
 const { isLoadingRemoteMenu } = storeToRefs(routerStore)
 const route = useRoute()
 const { locale: i18nLocale } = useI18n()
@@ -46,6 +48,19 @@ const elementLocales: Record<string, Language> = {
   'zh-CN': zhCn,
   'en-US': en,
 }
+
+// 语言同步总线：appStore.locale 是唯一事实源（持久化），此处 watch 同步到
+// vue-i18n 全局实例（i18nLocale 可写）与 <html lang>（SEO / 无障碍）。
+// { immediate: true } 兼做刷新后的初始化回灌（persist 恢复 store 后生效）。
+// 任何调用 appStore.setLocale() 的入口（default 布局 LocaleDropdown 等）都自动生效。
+watch(
+  () => appStore.locale,
+  (l) => {
+    i18nLocale.value = l
+    document.documentElement.lang = l
+  },
+  { immediate: true }
+)
 
 // 类型归因：element-plus 2.x ConfigProviderProps 是 ExtractPropTypes 元组
 // （type/required/validator/__epPropKey）形态，与运行时值类型不等价（C1 根因，
