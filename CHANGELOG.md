@@ -2,6 +2,10 @@
 
 ## 未发布
 
+### 🐛 Bug Fixes | 经典侧栏折叠弹层过高（限高对齐水平弹层策略）
+
+* **fix(layouts/default):** 折叠态 hover 图标弹出的 vertical 二级菜单限高 `calc(100vh - 20px)` 实测 933px 近全屏（demo 模块 60+ 项），用户反馈过高——改为与用户方定值的水平弹层同一偏移 `calc(100vh - 300px)`（实测 653px，约 14 项可见 + 内部滚动），两处弹层限高策略一致。实测定位 top 71→bottom 724 视口内、单层滚动条、docOverflow false，暗色样式无回归
+
 ### ♻️ Code Refactoring | 全项目 !important 清零（规范 §4#13 收尾，用户方执行）
 
 > 继 default 布局 AppMenu 24 处之后，用户将其余文件中的 !important 全部清除——`src/` 下声明级 `!important` 已清零（grep 仅剩注释提及）。共 5 文件 29 处

@@ -383,8 +383,10 @@ function handleSelect(index: string): void {
   --el-menu-text-color: var(--left-menu-text-color);
   --el-menu-active-color: var(--left-menu-text-active-color);
 
-  // 子项极多时（demo 模块 60+ 页）弹层会超出视口——限高 + 内部滚动
-  max-height: calc(100vh - 20px);
+  // 子项极多时（demo 模块 60+ 页）弹层会超出视口——限高 + 内部滚动。
+  // 限高与水平弹层同一偏移（100vh - 300px，用户方 2026-09-10 定值）：
+  // 原 100vh - 20px 实测弹层 933px 近全屏，折叠态悬停菜单过高（用户反馈）
+  max-height: calc(100vh - 300px);
   overflow-y: auto;
   border: 1px solid var(--layout-border-color);
   border-radius: 12px;

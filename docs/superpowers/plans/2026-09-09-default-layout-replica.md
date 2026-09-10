@@ -204,3 +204,9 @@
 - 修复：① 移除三个 props，改走 EP 官方变量 --el-menu-bg-color/--el-menu-text-color/--el-menu-active-color（容器 + vertical/horizontal 弹层分别定义，弹层 teleport 继承不到容器作用域）；② 剩余冲突改用特异性——.el-menu 内部 0-3-0/0-4-0 压 EP 默认规则，弹层边框三件套 .el-popper 前缀 0-2-0 压 .el-popper.is-light（源码顺序决胜）；③ horizontal 弹层局部主色变量 + 文件底部暗色覆盖不动；用户改的限高 calc(100vh - 300px) 保留
 - 验证：grep 声明清零（仅剩注释提及）；CDP 四模式亮暗双主题基色/悬停/激活 computed 实测正确、折叠 48px 居中、弹层单层滚动条、菜单项内联 style 消失；type-check + eslint + layouts 23 用例全绿
 - 收尾（同日）：用户将项目其余文件 !important 全部清除（reset.css 3 / PortalHeader 2 / PortalNav 7 / login.scss 13 / XFormSchemaIndex 4，共 29 处），src/ 声明级 !important 清零；两份 2026-07-28 计划文档内嵌片段已同步，CHANGELOG 已记录
+
+### 6.11 折叠弹层过高：vertical 弹层限高对齐水平弹层（用户反馈）
+
+- 根因：`.el-popper.vv-app-menu-popper--vertical` 限高 `calc(100vh - 20px)`，demo 60+ 项实测 933px 近全屏
+- 修复：改 `calc(100vh - 300px)`——与 6.9 用户方定值的水平弹层同一偏移，两处弹层限高策略一致
+- 验证：CDP 实测 653px（约 14 项可见 + 单层滚动条）、定位视口内、docOverflow false；ESLint 通过
