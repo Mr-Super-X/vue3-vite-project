@@ -2,6 +2,10 @@
 
 ## 未发布
 
+### 🐛 Bug Fixes | 切换暗色主题后刷新回到亮色（主题持久化读取格式失配）
+
+* **fix(store/theme):** `readInitialMode` 只比对裸字符串（`'light'/'dark'/'auto'`），而 persist 插件实际写入的是 JSON 序列化对象 `{"mode":"dark"}`——比对永不命中，每次刷新都兜底回 `'auto'`（亮色系统下表现为暗色丢失；legacy key 迁移逻辑同款失配一并修复）。新增 `parseStoredMode` 兼容三种历史格式：JSON 对象 `{"mode":"dark"}`（当前 persist 格式）、JSON 字符串 `"dark"`、裸字符串 `dark`，非法值仍兜底 `'auto'`。浏览器实证修复前后 localStorage 实况（key `vue3-vite-project:theme-mode` 值为 `{"mode":"dark"}` 但刷新后 data-theme 丢失）；修复后往返验证：UI 切浅色/暗色 → 存储格式正确 → 刷新恢复暗色 + 暗色布局变量生效（内容区 bg #0b1120）。新增 `theme.spec.ts` 7 用例覆盖格式兼容 / legacy 迁移 / 非法值兜底 / setMode 应用
+
 ### ✨ Features | default 布局页签刷新可见反馈（内容区 180ms 淡入）
 
 > 验收反馈「工作台首页、分析页点刷新没看到任何反馈，用户管理和监控页有反馈」——实证确认刷新机制对全部页面生效（填字→刷新→字被清空 = 组件重挂载），差异在页面内容性质：user/list 有 useRequest 骨架闪烁、监控页有输入状态变化可感知，纯静态页重挂载后像素不变、无可捕捉反馈

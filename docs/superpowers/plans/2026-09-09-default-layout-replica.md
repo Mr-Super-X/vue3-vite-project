@@ -172,3 +172,9 @@
 - 实证：两页填字→刷新→字清空 = remount 真实发生，机制对全部页面生效；差异在页面内容性质（静态页重挂载像素不变）
 - 修复：`AppView.vue` watch `refreshKey` → 一次性 `is-refresh-fade` class（220ms 摘除）+ CSS animation 180ms 淡入；路由切换不触发（负面对照验证）；弃用 `<Transition>` 改 animation 规避 keep-alive out-in 交互风险
 - 验证：CDP 实测刷新 60ms class+动画在 / 300ms 摘除 / 切页签零触发；type-check ✓ eslint ✓ layouts 23 用例全绿 ✓
+
+### 6.7 切暗色刷新回亮色（theme 持久化读取格式失配）
+
+- 根因：persist 插件写入 JSON `{"mode":"dark"}`，`readInitialMode` 只比对裸字符串 → 永不命中 → 兜底 'auto' → 亮色系下暗色丢失；legacy key 迁移同款失配
+- 修复：`parseStoredMode` 兼容 JSON 对象 / JSON 字符串 / 裸字符串三种历史格式 + 类型守卫
+- 验证：浏览器实证（修复前 localStorage 实况 vs 刷新后 data-theme 丢失）；修复后 UI 往返切换 + 刷新恢复暗色（内容区 bg #0b1120）；新增 theme.spec.ts 7 用例，store 全量 33 用例绿
