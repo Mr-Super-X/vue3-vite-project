@@ -103,8 +103,13 @@
   --el-bg-color-overlay: #1b2538;
   --el-fill-color-blank: #151e30;
   --el-fill-color-light: #1c2638;
+  // fill 阶梯暗化必须完整到 lighter/extra-light：EP el-table stripe 条纹行用
+  // --el-fill-color-lighter 作行底色，缺失时回落 EP 出厂亮色系 #fafafa——暗色下
+  // 条纹行整块泛白、与深色表体强烈割裂（2026-09-10 /user/list 暗色实测）
   --el-fill-color: #1a2436;
   --el-fill-color-dark: #0f1726;
+  --el-fill-color-lighter: #232f45;
+  --el-fill-color-extra-light: #2c3a54;
   --el-border-color: #344055;
   --el-border-color-light: #2d394c;
   --el-border-color-lighter: #273244;

@@ -2,6 +2,10 @@
 
 ## 未发布
 
+### 🐛 Bug Fixes | default 布局暗色主题 el-table stripe 条纹行泛白割裂
+
+* **fix(layouts/default):** `default-tokens.scss` 的 `default-layout-ep-dark` mixin 补齐 fill 阶梯缺失的两档——`--el-fill-color-lighter: #232f45`、`--el-fill-color-extra-light: #2c3a54`。EP el-table 的 stripe 条纹行底色取 `--el-fill-color-lighter`，mixin 原只覆盖到 light/dark 档，缺失档回落 EP 出厂亮色值 #fafafa——暗色下条纹行整块泛白、深色表体+白条纹强烈割裂（/user/list 实测）。暗色阶梯现完整：dark #0f1726 → base #1a2436 → light #1c2638 → lighter #232f45 → extra-light #2c3a54；亮色未动（EP 默认 #fafafa，实测无回归）
+
 ### 🐛 Bug Fixes | default 布局面包屑：无标题包装层记录渲染成孤立 "/"（对标参考仓）
 
 * **fix(layouts/default):** Breadcrumb 过滤条件补「必须有标题来源」（`meta.title ?? meta.titleKey`）——`/user` 这类纯布局包装层父记录 meta 为空，原过滤（仅排除 visible/breadcrumb === false）把它放行，`resolveRouteTitle` 兜底返回 `''`，渲染出开头一个空标题可点击项 + 孤立 "/" 分隔符。对标参考仓「只渲染有 title 的记录」：实测 `/user/list` 面包屑从「/ 用户管理」修正为单层「用户管理」（当前页纯文本不可点）；`/workbench/analysis` 多层「工作台/分析页」不受影响
