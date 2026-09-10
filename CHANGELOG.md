@@ -2,6 +2,36 @@
 
 ## 未发布
 
+### 🔧 Refactor | vite.config.ts 工程化抽离：消除 alias 双维护痛点
+
+> 把 `vite.config.ts` 内的构建期配置抽离到 `build/` 工程配置目录，建立 src 子目录别名的**单一来源**，并通过生成器自动同步 `tsconfig.app.json` 的 `paths` 块，消除双维护痛点；同时为未来大概率需要的 proxy / devServer 等配置预留位置
+
+* **feat(build/):** 新增 6 个语义化模块
+  * `aliases.ts` — SRC_DIR_ALIASES 单一来源（15 个别名 `@` + 14 个 `@xxx`），导出 `resolveSrcDirAliases()` (vite resolve) + `generateTsconfigPaths()` (tsconfig paths)
+  * `vendor-chunks.ts` — VENDOR_CHUNKS 配置（顺序敏感：vendor-vue / vendor-ui）
+  * `proxy.ts` — `createProxyConfig(env)` 预留空壳（联调真实后端时启用）
+  * `server.ts` — SERVER_DEFAULTS（port 5174 / strictPort）
+  * `scss.ts` — SCSS additionalData 注入 + silenceDeprecations（bem mixin 兼容）
+  * `index.ts` — barrel re-export
+* **feat(build/scripts/generate-tsconfig-paths.ts):** tsconfig.app.json paths 块自动生成器——读 build/aliases.ts → 写入 tsconfig.app.json；hash 比对无变更秒跳过；`--check` 模式供 CI 校验
+* **chore(tsconfig.app.base.json):** 新建手写 base（无 paths），`tsconfig.app.json` 改为 extends base + paths 由生成器注入（单一来源）
+* **feat(scripts/check-aliases.ts):** 新增 `pnpm check:aliases` 校验脚本——比对 build/aliases.ts 与 tsconfig.app.json paths，不一致 CI 失败阻断
+* **feat(package.json scripts):** 新增 `pnpm generate:tsconfig-paths` 与 `pnpm check:aliases`
+* **chore(.husky/pre-commit):** 接入 `pnpm generate:tsconfig-paths`（头）+ `pnpm check:aliases`（lint-staged 之后）—— pre-commit 阶段保证 paths 永远同步
+* **refactor(vite.config.ts):** 5 处内联配置替换为 `build/*` import——SRC_DIR_ALIASES / resolveSrcDirAliases / vendorChunks / server / scss；行为完全等价（alias / vendors / scss 注入不变）
+* **chore(tsconfig.node.json):** include 加 `build/**/*.ts`（build 模块纳入 type-check）；启用 `allowImportingTsExtensions`（生成器跨文件 .ts import）
+* **test(build/):** 新增 7 个 spec / 23 个用例——aliases (9) / vendor-chunks (4) / proxy (2) / server (2) / scss (3) / generate-tsconfig-paths (3)；覆盖单一来源、顺序敏感、hash 比对
+* **建议验证：** `pnpm type-check:full` 0 error；`pnpm test` 1779/1779 通过；`pnpm lint` 0；`pnpm build` vendor-vue (6.14 kB) / vendor-ui (708.97 kB) / vendor-utils (1316.55 kB) 三组 chunk 正常生成；`pnpm check:aliases` ✅；漂移测试（手动在 build/aliases.ts 加 `@fake` → 跑生成器 → tsconfig.app.json 自动写入 2 条新 paths → 还原后自动删除）；spec 路径 `docs/superpowers/specs/2026-09-10-vite-config-split-design.md` / plan 路径 `docs/superpowers/plans/2026-09-10-vite-config-split.md`
+
+#### 增量补丁：echarts 单独 chunk + barrel 整合 + 注释
+
+> 4 项反馈落地：echarts 单独打包 / 生成器重复维护确认已修复（用 import 不用内联）/ vite.config.ts 与原版 diff 对比 plugins 数组无意外变更 + 添加必要注释 / vite.config.ts 5 个独立 import 整合为 build/index.ts barrel
+
+* **feat(build/vendor-chunks.ts):** 新增 `vendor-charts` 组（patterns: `['/echarts/']`），单独打包 echarts（~1.1MB）避免污染 vendor-ui 缓存命中；vendor-utils 从 1316 kB 缩至 195 kB
+* **refactor(vite.config.ts):** 5 个分散 import（aliases / vendor-chunks / proxy / server / scss）整合为 1 个 build/index.ts barrel re-export
+* **docs(vite.config.ts):** 添加 4 处必要注释——文件级 JSDoc（说明本文件定位 + 历史）/ server 字段（说明 SERVER_DEFAULTS + createProxyConfig 来源）/ scss 字段（指向 build/scss.ts）/ manualChunks（强调 VENDOR_CHUNKS 顺序敏感）
+* **验证：** git diff vs HEAD 显示 plugins 数组（line 26-84）零变更；`pnpm type-check:full --force` 0 error；`pnpm lint` 0；`pnpm test` 1779/1779；`pnpm build` vendor-vue (6.14 kB) / vendor-ui (708.97 kB) / vendor-charts (1117.85 kB) / vendor-utils (195.64 kB) 四组 chunk 正常；`pnpm check:aliases` ✅
+
 ### ✨ Features | demo 模块 sidebar 宽度升级为 localStorage 持久化
 
 > 当前 demo 文档布局（DocLayout）拖拽调宽后只在模块级 ref 保留，刷新 / 跨浏览器会话即丢失。升级为 `Local.set/get` 持久化，跨会话保留用户偏好

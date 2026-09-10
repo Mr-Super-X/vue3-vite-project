@@ -1,39 +1,17 @@
-import { fileURLToPath, URL } from 'node:url'
-
+/**
+ * Vite 工程配置
+ *
+ * 本文件定位：
+ *   - **装配清单**：负责组合 plugins 数组 + 各 defineConfig 字段
+ *   - **工程配置**：路径别名 / vendorChunks / server / scs 注入等已迁移到 `build/` 子模块
+ *     （单一来源详见 build/index.ts barrel re-export，避免与 tsconfig.app.json 双维护）
+ *
+ * 历史：
+ *   - 2026-09-10: 抽出 SRC_DIR_ALIASES / vendorChunks / server / scss 到 build/* 单一来源
+ *   - 详见 docs/superpowers/specs/2026-09-10-vite-config-split-design.md
+ */
 import { defineConfig } from 'vite'
 
-/**
- * src 下子目录别名映射（与 tsconfig.app.json paths 配置保持同步）
- *
- * key: alias 名（裸别名 + /* 两种用法）；value: src 下的子目录名
- * 维护规则：新增子目录时同时改本表 + tsconfig.app.json
- */
-const SRC_DIR_ALIASES = {
-  '@': '',
-  '@api': 'api',
-  '@assets': 'assets',
-  '@components': 'components',
-  '@composables': 'composables',
-  '@directives': 'directives',
-  '@enums': 'enums',
-  '@layouts': 'layouts',
-  '@locales': 'locales',
-  '@modules': 'modules',
-  '@plugins': 'plugins',
-  '@router': 'router',
-  '@store': 'store',
-  '@types': 'types',
-  '@utils': 'utils',
-} as const
-
-/** 把 SRC_DIR_ALIASES 解析为 vite resolve.alias 格式 */
-function resolveSrcDirAliases(): Record<string, string> {
-  const map: Record<string, string> = {}
-  for (const [alias, sub] of Object.entries(SRC_DIR_ALIASES)) {
-    map[alias] = fileURLToPath(new URL(`./src/${sub}`, import.meta.url))
-  }
-  return map
-}
 import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
 import vueDevTools from 'vite-plugin-vue-devtools'
@@ -45,20 +23,15 @@ import { viteMockServe } from 'vite-plugin-mock'
 import { visualizer } from 'rollup-plugin-visualizer'
 import { cleanMockBundled } from './scripts/vite-plugin-clean-mock'
 
-// 第三方库 vendor chunk 分组配置（顺序敏感——先匹配先返回）
-// 新增分组只需在此处追加一项，无需修改 manualChunks 内部逻辑
-const vendorChunks: ReadonlyArray<{ name: string; patterns: ReadonlyArray<string> }> = [
-  {
-    // Vue 核心：vue / vue-router / pinia / @vue/*
-    name: 'vendor-vue',
-    patterns: ['/vue/', '/pinia/', '/@vue/'],
-  },
-  {
-    // UI 库：element-plus / @element-plus/icons-vue / unplugin-vue-components
-    name: 'vendor-ui',
-    patterns: ['/element-plus/', '/unplugin-vue-components/'],
-  },
-]
+// 工程配置（单一来源：build/index.ts barrel re-export）
+// 详见 docs/superpowers/specs/2026-09-10-vite-config-split-design.md
+import {
+  resolveSrcDirAliases,
+  VENDOR_CHUNKS,
+  createProxyConfig,
+  SERVER_DEFAULTS,
+  SCSS_PREPROCESSOR_OPTIONS,
+} from './build'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -122,9 +95,11 @@ export default defineConfig({
       : []),
   ],
   server: {
-    // 项目固定使用 5174 端口（与默认 5173 错开，避免与并行项目端口冲突）
-    port: 5174,
-    strictPort: true, // 5174 被占用时直接报错而非自动找下一个端口，避免端口混淆
+    // port 5174 / strictPort: true 来自 build/server.ts 的 SERVER_DEFAULTS
+    // proxy 来自 build/proxy.ts 的 createProxyConfig(env) —— 当前返回 {} 占位
+    // 联调真实后端时在 build/proxy.ts 内按需补充 _env 字段解析
+    ...SERVER_DEFAULTS,
+    proxy: createProxyConfig(process.env),
   },
   resolve: {
     alias: resolveSrcDirAliases(),
@@ -153,10 +128,9 @@ export default defineConfig({
       //     标记 if-function 为 deprecation 但函数仍可用。改用 @if 块会让表达式级赋值退化为
       //     block 级冗余代码，CSS 模式 if(...: ...; else:) 在 SCSS 文件中 sass 1.101 解析拒绝，
       //     暂时静默该 deprecation。
-      scss: {
-        silenceDeprecations: ['new-global', 'if-function'],
-        additionalData: `@use '@/assets/styles/mixins/bem' as * with ($BEM_PREFIX: '${process.env.VITE_BEM_PREFIX ?? 'vv'}');\n`,
-      },
+      //
+      // 实际 additionalData 值 + silenceDeprecations 数组见 build/scss.ts 的 SCSS_PREPROCESSOR_OPTIONS
+      scss: SCSS_PREPROCESSOR_OPTIONS,
       less: { javascriptEnabled: true },
     },
   },
@@ -201,7 +175,9 @@ export default defineConfig({
         manualChunks(id) {
           // 业务代码不归 vendor
           if (!id.includes('node_modules')) return undefined
-          for (const { name, patterns } of vendorChunks) {
+          // VENDOR_CHUNKS 来自 build/vendor-chunks.ts —— 顺序敏感（vue → ui → charts）
+          // 顺序敏感：先匹配先返回，新加组必须 append 到末尾
+          for (const { name, patterns } of VENDOR_CHUNKS) {
             if (patterns.some((pattern) => id.includes(pattern))) return name
           }
           // 其他第三方库：axios / vue-i18n / 等

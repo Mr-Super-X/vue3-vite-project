@@ -19,6 +19,8 @@
     "bench": "vitest bench --run --reporter=basic",
     "bench:check": "vitest bench --run --reporter=basic",
     "check:routes": "node --experimental-strip-types scripts/check-routes.ts",
+    "check:aliases": "node --experimental-strip-types scripts/check-aliases.ts",
+    "generate:tsconfig-paths": "node --experimental-strip-types build/scripts/generate-tsconfig-paths.ts",
     "check:doc-currency": "node --experimental-strip-types scripts/check-doc-currency.ts",
     "new-module": "node --experimental-strip-types scripts/new-module.ts",
     "remove-module": "node --experimental-strip-types scripts/remove-module.ts",
