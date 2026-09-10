@@ -15,6 +15,10 @@
  * el-sub-menu 通过 element-plus 的 provide/inject 把 select 事件上报给根
  * el-menu，因此只有根实例绑定 @select。
  *
+ * 颜色策略：不传 EP 的 background-color/text-color/active-text-color props——EP 会
+ * 把它们以内联样式落到每个菜单项，CSS 覆盖只能上 !important（违反规范 §4#13）。
+ * 改由容器/弹层分别定义 --el-menu-bg-color 等官方变量驱动（见样式块头注释）
+ *
  * @see [`../config/menu.ts`](../config/menu.ts) buildMenuTree / resolveSingleChild
  * @see [`../config/app.ts`](../config/app.ts) uniqueOpened 开关
  * @group 布局：Default
@@ -93,9 +97,6 @@ function handleSelect(index: string): void {
         :mode="mode"
         :collapse="isCollapsed"
         :unique-opened="defaultLayoutConfig.ui.uniqueOpened"
-        background-color="var(--left-menu-bg-color)"
-        text-color="var(--left-menu-text-color)"
-        active-text-color="var(--left-menu-text-active-color)"
         :popper-class="popperClass"
         @select="handleSelect"
       >
@@ -136,9 +137,6 @@ function handleSelect(index: string): void {
       v-else
       :default-active="activeMenu"
       mode="horizontal"
-      background-color="var(--top-header-bg-color)"
-      text-color="var(--top-header-text-color)"
-      active-text-color="var(--el-color-primary)"
       :popper-class="popperClass"
       @select="handleSelect"
     >
@@ -180,6 +178,14 @@ function handleSelect(index: string): void {
 
 <style lang="scss">
 .#{$BEM_PREFIX}-app-menu {
+  // 菜单颜色走 EP 官方 CSS 变量通道——不传 background-color/text-color/active-text-color
+  // props：EP 会把这些 props 以内联样式落到每个菜单项上，CSS 侧覆盖只能上 !important
+  // （违反项目规范 §4#13）。变量在容器与弹层分别定义（弹层 teleport 到 body，继承不到
+  // 容器作用域），菜单项基色/激活色交给 EP 默认规则按变量渲染
+  --el-menu-bg-color: var(--left-menu-bg-color);
+  --el-menu-text-color: var(--left-menu-text-color);
+  --el-menu-active-color: var(--left-menu-text-active-color);
+
   height: 100%;
   overflow: hidden;
   background: var(--left-menu-bg-color);
@@ -221,16 +227,16 @@ function handleSelect(index: string): void {
         background-color 160ms ease;
     }
 
-    // 激活态：文字高亮 + 主题色背景
+    // 激活态：文字色由 --el-menu-active-color 变量驱动（EP 默认规则），这里补主题色背景；
+    // 特异性（0-4-0）高于 EP .el-menu-item.is-active（0-2-0），无须 !important
     .el-menu-item.is-active {
       font-weight: 600;
-      color: var(--left-menu-text-active-color) !important;
-      background-color: var(--left-menu-bg-active-color) !important;
+      background-color: var(--left-menu-bg-active-color);
     }
 
     // 子菜单父标题激活时同步高亮文字
     .is-active > .el-sub-menu__title {
-      color: var(--left-menu-text-active-color) !important;
+      color: var(--left-menu-text-active-color);
     }
 
     // 箭头图标固定 1em 宽，避免不同图标字体下错位（对齐参考仓）
@@ -241,18 +247,19 @@ function handleSelect(index: string): void {
     .el-sub-menu__title,
     .el-menu-item {
       &:hover {
-        color: var(--left-menu-text-active-color) !important;
-        background-color: var(--left-menu-bg-active-color) !important;
+        color: var(--left-menu-text-active-color);
+        background-color: var(--left-menu-bg-active-color);
       }
     }
 
     // 内嵌子菜单（未 teleported 的二级及以下）：纵向间隙布局 + 浅底区分层级
+    // （底色曾需 !important 压 EP 内联背景——颜色改走变量通道后内联样式消失，平权即可）
     .el-menu--inline {
       display: flex;
       flex-direction: column;
       gap: 6px;
       padding: 6px 0 0;
-      background-color: var(--left-menu-bg-light-color) !important;
+      background-color: var(--left-menu-bg-light-color);
 
       > .el-sub-menu {
         display: flex;
@@ -274,7 +281,7 @@ function handleSelect(index: string): void {
     > .el-sub-menu > .el-sub-menu__title {
       justify-content: center;
       width: 48px;
-      padding: 0 !important;
+      padding: 0;
       margin-right: 12px;
       margin-left: 12px;
     }
@@ -311,8 +318,12 @@ function handleSelect(index: string): void {
     }
   }
 
-  // 水平模式（top 布局顶栏）
+  // 水平模式（top 布局顶栏）：颜色同走 EP 变量通道（顶栏配色与侧栏不同，覆盖变量值）
   &--horizontal {
+    --el-menu-bg-color: transparent;
+    --el-menu-text-color: var(--top-header-text-color);
+    --el-menu-active-color: var(--el-color-primary);
+
     .el-menu--horizontal {
       display: flex;
       gap: 4px;
@@ -328,21 +339,22 @@ function handleSelect(index: string): void {
         padding: 0 15px;
         margin: 0;
         line-height: 38px;
-        color: var(--top-header-text-color) !important;
+        // border: 0 同时压制 EP 水平激活态的 2px 底部指示条——本规则特异性
+        // （0-4-0）高于 EP .el-menu--horizontal > .el-menu-item.is-active（0-3-0）
         border: 0;
         border-radius: 10px;
 
         &:hover {
-          color: var(--el-color-primary) !important;
-          background: var(--top-header-hover-color) !important;
+          color: var(--el-color-primary);
+          background: var(--top-header-hover-color);
         }
       }
 
       > .el-menu-item.is-active,
       > .el-sub-menu.is-active .el-sub-menu__title {
         font-weight: 600;
-        color: var(--el-color-primary) !important;
-        background: var(--el-color-primary-light-9) !important;
+        color: var(--el-color-primary);
+        background: var(--el-color-primary-light-9);
       }
 
       // EP 水平箭头绝对定位于标题右侧（实测 right:20px、宽 12px，占用右侧 20-32px
@@ -362,18 +374,24 @@ function handleSelect(index: string): void {
 }
 
 // ─── 折叠弹层（element-plus teleports 到 body，全局样式）────────────
-// 类名由 `${bem.b()}-popper--${mode}` 动态拼接（见组件 popperClass 计算属性）
-.#{$BEM_PREFIX}-app-menu-popper--vertical {
+// 类名由 `${bem.b()}-popper--${mode}` 动态拼接（见组件 popperClass 计算属性）。
+// 颜色走 EP 变量通道（弹层继承不到容器作用域的变量，在此重定义一次）。
+// 选择器带 .el-popper 前缀：把特异性提到 0-2-0 压过 EP .el-popper.is-light 的默认
+// 边框/阴影（等特异性靠源码顺序决胜——组件样式注入晚于 EP），项目规范 §4#13 禁用 !important
+.el-popper.#{$BEM_PREFIX}-app-menu-popper--vertical {
+  --el-menu-bg-color: var(--left-menu-bg-color);
+  --el-menu-text-color: var(--left-menu-text-color);
+  --el-menu-active-color: var(--left-menu-text-active-color);
+
   // 子项极多时（demo 模块 60+ 页）弹层会超出视口——限高 + 内部滚动
   max-height: calc(100vh - 20px);
   overflow-y: auto;
-  border: 1px solid var(--layout-border-color) !important;
-  border-radius: 12px !important;
-  box-shadow: var(--layout-shadow) !important;
+  border: 1px solid var(--layout-border-color);
+  border-radius: 12px;
+  box-shadow: var(--layout-shadow);
 
   .el-menu {
     padding: 6px;
-    background-color: var(--left-menu-bg-color) !important;
   }
 
   .el-sub-menu__title,
@@ -381,44 +399,43 @@ function handleSelect(index: string): void {
     height: 40px;
     margin: 2px 0;
     line-height: 40px;
-    color: var(--left-menu-text-color) !important;
     border-radius: 8px;
 
     &:hover {
-      color: var(--left-menu-text-active-color) !important;
-      background-color: var(--left-menu-bg-active-color) !important;
+      color: var(--left-menu-text-active-color);
+      background-color: var(--left-menu-bg-active-color);
     }
   }
 
   .el-menu-item.is-active {
-    color: var(--left-menu-text-active-color) !important;
-    background-color: var(--left-menu-bg-active-color) !important;
+    background-color: var(--left-menu-bg-active-color);
   }
 }
 
+// horizontal 弹层：EP 把 popper-class 同时复制到外层 el-popper 与内层
+// .el-menu--popup-container，变量挂类名两处都生效；滚动只挂内层容器（外层同限高会出
+// 双层滚动条）。颜色变量与 vertical 弹层同一套 EP 变量通道，不落地内联样式
 .#{$BEM_PREFIX}-app-menu-popper--horizontal {
+  --el-menu-bg-color: var(--top-header-bg-color);
+  --el-menu-text-color: var(--top-header-text-color);
+  --el-menu-active-color: var(--el-color-primary);
+
   // teleport 到 body 取不到容器作用域的紫色主色（见 default-tokens.scss 作用域分层说明），
-  // 因该类名为 default 布局专属，在此局部定义 EP 主色变量
+  // 因该类名为 default 布局专属，在此局部定义 EP 主色变量（暗色覆盖见文件底部）
   --el-color-primary: #5b5bd6;
   --el-color-primary-light-9: #eeeeff;
 
-  // 子项极多时（demo 模块 60+ 页，实测弹层 2334px）会超出视口撑出 body 滚动条——
-  // 限高 + 内部滚动，与 vertical 弹层同一策略（2026-09-10 top 布局实测修复）。
-  // 滚动只挂在内层 .el-menu--popup-container：EP 会把 popper-class 同时复制到外层
-  // el-popper 与内层容器，两处都限高会出现双层滚动条（2026-09-10 二次反馈修复）
   &.el-menu--popup-container {
+    // 子项极多时（demo 模块 60+ 页，实测弹层 2334px）会超出视口撑出 body 滚动条——
+    // 限高 + 内部滚动，与 vertical 弹层同一策略（2026-09-10 top 布局实测修复）
     max-height: calc(100vh - 300px);
     overflow-x: hidden;
     overflow-y: auto;
   }
-  border: 1px solid var(--layout-border-color) !important;
-  border-radius: 12px !important;
-  box-shadow: var(--layout-shadow) !important;
 
   .el-menu {
     min-width: 180px;
     padding: 6px;
-    background-color: var(--top-header-bg-color) !important;
   }
 
   .el-sub-menu__title,
@@ -426,20 +443,26 @@ function handleSelect(index: string): void {
     height: 40px;
     margin: 2px 0;
     line-height: 40px;
-    color: var(--top-header-text-color) !important;
     border-radius: 8px;
 
     &:hover {
-      color: var(--el-color-primary) !important;
-      background-color: var(--top-header-hover-color) !important;
+      color: var(--el-color-primary);
+      background-color: var(--top-header-hover-color);
     }
   }
 
   .el-menu-item.is-active {
     font-weight: 600;
-    color: var(--el-color-primary) !important;
-    background-color: var(--el-color-primary-light-9) !important;
+    background-color: var(--el-color-primary-light-9);
   }
+}
+
+// 边框三件套带 .el-popper 前缀挂外层（0-2-0 压过 EP .el-popper.is-light 默认边框/阴影，
+// 等特异性靠源码顺序决胜——组件样式注入晚于 EP）
+.el-popper.#{$BEM_PREFIX}-app-menu-popper--horizontal {
+  border: 1px solid var(--layout-border-color);
+  border-radius: 12px;
+  box-shadow: var(--layout-shadow);
 }
 
 // 暗色：水平弹层局部 EP 变量（与 theme store 的 data-theme 机制对齐）

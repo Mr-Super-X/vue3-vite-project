@@ -178,8 +178,8 @@ async function onCommand(cmd: string) {
 
   .el-dropdown-menu__item:not(.is-disabled) {
     &:hover {
-      background: rgba(56, 189, 248, 0.15) !important;
-      color: #fff !important;
+      background: rgba(56, 189, 248, 0.15);
+      color: #fff;
     }
   }
 }

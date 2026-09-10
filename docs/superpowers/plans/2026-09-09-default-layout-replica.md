@@ -196,3 +196,11 @@
 - 根因：EP 2.14 把 popper-class 同时复制到外层 el-popper 与内层 .el-menu--popup-container，6.9 的 max-height+overflow 挂在两处 → 双层滚动条
 - 修复：限高/滚动收敛内层（&.el-menu--popup-container 限定）
 - 验证：扣除边框后精确判定——外层无滚动条、内层单条、docOverflow false；注意 offsetWidth-clientWidth 判定会被 1px 边框误导（误判教训）
+
+### 6.10 样式治理：AppMenu 全面清除 !important（对齐项目规范 §4#13）
+
+- 背景：用户要求检查 default 布局样式不出现 !important——24 处全部集中在 AppMenu.vue
+- 根因：EP el-menu 的 background-color/text-color/active-text-color props 内联到每个菜单项，CSS 覆盖只能上 !important
+- 修复：① 移除三个 props，改走 EP 官方变量 --el-menu-bg-color/--el-menu-text-color/--el-menu-active-color（容器 + vertical/horizontal 弹层分别定义，弹层 teleport 继承不到容器作用域）；② 剩余冲突改用特异性——.el-menu 内部 0-3-0/0-4-0 压 EP 默认规则，弹层边框三件套 .el-popper 前缀 0-2-0 压 .el-popper.is-light（源码顺序决胜）；③ horizontal 弹层局部主色变量 + 文件底部暗色覆盖不动；用户改的限高 calc(100vh - 300px) 保留
+- 验证：grep 声明清零（仅剩注释提及）；CDP 四模式亮暗双主题基色/悬停/激活 computed 实测正确、折叠 48px 居中、弹层单层滚动条、菜单项内联 style 消失；type-check + eslint + layouts 23 用例全绿
+- 收尾（同日）：用户将项目其余文件 !important 全部清除（reset.css 3 / PortalHeader 2 / PortalNav 7 / login.scss 13 / XFormSchemaIndex 4，共 29 处），src/ 声明级 !important 清零；两份 2026-07-28 计划文档内嵌片段已同步，CHANGELOG 已记录

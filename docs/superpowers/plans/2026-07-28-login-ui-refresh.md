@@ -12,11 +12,11 @@
 
 ## 文件清单
 
-| 操作 | 路径 | 行数 | 说明 |
-|------|------|------|------|
-| 备份 | `.claude/backups/login-ui-refresh/Login.vue.bak` | 50 | 实施前备份原文件（CLAUDE.md §七 方案隔离） |
-| 修改 | `src/modules/auth/views/Login.vue` | 50 → ~230 | 完全重写为深色科技感 + 增强交互 |
-| 新建 | `src/modules/auth/views/Login.spec.ts` | ~150 | 7 个单测用例，覆盖率 ≥ 80% |
+| 操作 | 路径                                             | 行数      | 说明                                       |
+| ---- | ------------------------------------------------ | --------- | ------------------------------------------ |
+| 备份 | `.claude/backups/login-ui-refresh/Login.vue.bak` | 50        | 实施前备份原文件（CLAUDE.md §七 方案隔离） |
+| 修改 | `src/modules/auth/views/Login.vue`               | 50 → ~230 | 完全重写为深色科技感 + 增强交互            |
+| 新建 | `src/modules/auth/views/Login.spec.ts`           | ~150      | 7 个单测用例，覆盖率 ≥ 80%                 |
 
 **src/ 写操作清单**（CLAUDE.md §2.5 必须列出）：
 - `src/modules/auth/views/Login.vue`（修改 — §2.3 例外已生效，用户已明确指定）
@@ -445,17 +445,17 @@ async function handleSubmit() {
     width: 100%;
     max-width: 440px;
     padding: 0;
-    background: var(--login-card-bg) !important;
-    border: 1px solid var(--login-card-border) !important;
-    border-radius: 16px !important;
+    background: var(--login-card-bg);
+    border: 1px solid var(--login-card-border);
+    border-radius: 16px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5),
-      inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     animation: login-fade-in-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 
     @supports not (backdrop-filter: blur(1px)) {
-      background: rgba(15, 23, 42, 0.95) !important;
+      background: rgba(15, 23, 42, 0.95);
     }
 
     :deep(.el-card__body) {
@@ -527,25 +527,25 @@ async function handleSubmit() {
     }
 
     :deep(.el-input__wrapper) {
-      background: var(--login-input-bg) !important;
-      border-radius: 8px !important;
-      box-shadow: 0 0 0 1px var(--login-input-border) inset !important;
+      background: var(--login-input-bg);
+      border-radius: 8px;
+      box-shadow: 0 0 0 1px var(--login-input-border) inset;
       transition: box-shadow 0.2s ease;
       padding: 4px 12px;
       min-height: 44px;
     }
 
     :deep(.el-input__wrapper:hover) {
-      box-shadow: 0 0 0 1px var(--login-accent-glow) inset !important;
+      box-shadow: 0 0 0 1px var(--login-accent-glow) inset;
     }
 
     :deep(.el-input__wrapper.is-focus) {
       box-shadow: 0 0 0 1px var(--login-accent) inset,
-        0 0 0 3px var(--login-input-focus) !important;
+        0 0 0 3px var(--login-input-focus);
     }
 
     :deep(.el-input__inner) {
-      color: var(--login-text-primary) !important;
+      color: var(--login-text-primary);
       height: 36px;
       font-size: 14px;
     }
@@ -601,8 +601,8 @@ async function handleSubmit() {
     }
 
     :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
-      background: var(--login-accent) !important;
-      border-color: var(--login-accent) !important;
+      background: var(--login-accent);
+      border-color: var(--login-accent);
     }
   }
 

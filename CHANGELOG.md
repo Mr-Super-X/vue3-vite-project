@@ -2,6 +2,24 @@
 
 ## 未发布
 
+### ♻️ Code Refactoring | 全项目 !important 清零（规范 §4#13 收尾，用户方执行）
+
+> 继 default 布局 AppMenu 24 处之后，用户将其余文件中的 !important 全部清除——`src/` 下声明级 `!important` 已清零（grep 仅剩注释提及）。共 5 文件 29 处
+
+* **refactor(styles):** `reset.css` autofill 3 处 / `PortalHeader.vue` 下拉悬停 2 处 / `PortalNav.vue` 子菜单标题 7 处 / `login.scss` 登录卡片·输入框·复选框 13 处 / `XFormSchemaIndex.vue` 4 处。替代策略与 AppMenu 同一思路——BEM 命名空间/深层嵌套选择器特异性压过 EP 单/双类默认规则，等特异性靠源码顺序决胜，不再依赖 !important
+* **保留关注（reset.css autofill）：** Chrome UA 样式表对 autofill 背景色/文字色是 UA 级 !important，作者普通声明本就无法覆盖——原 `!important` 在这三行实际是无效声明；真正压住 UA 自动填充底色的是同行的 `box-shadow: 0 0 0 1000px #f9fafc inset`（盒阴影不在 UA 覆盖范围），该行未动、机制不受影响
+* **文档同步：** `2026-07-28-login-ui-refresh.md` / `2026-07-28-portal-header-logout.md` 内嵌代码片段已由用户方同步去 !important
+* **建议验证：** 登录页用已保存账号触发浏览器自动填充，确认输入框底色仍被盒阴影盖住（无 UA 黄色泄漏）；portal 布局导航悬停、头部下拉悬停、登录页卡片/输入框聚焦态目测无回归
+
+### ♻️ Code Refactoring | layouts/default 全面清除 !important（对齐项目规范 §4#13）
+
+> 用户要求「检查 default 中的样式，不要出现 !important」——`src/layouts/default` 下 24 处 `!important` 全部清除（全部集中在 AppMenu.vue），视觉零回归
+
+* **refactor(layouts/default):** 根因釜底抽薪——EP el-menu 的 `background-color`/`text-color`/`active-text-color` props 会被以内联样式落到每个 `.el-menu-item`/`.el-sub-menu__title` 及弹层上，CSS 侧覆盖只能上 `!important`（这 24 处的历史来源）。移除三个 props，改走 EP 官方 CSS 变量通道 `--el-menu-bg-color`/`--el-menu-text-color`/`--el-menu-active-color`：容器块与 vertical/horizontal 弹层分别定义（弹层 teleport 到 body，继承不到容器作用域变量），菜单项基色/激活色交给 EP 默认规则按变量渲染。实测菜单项内联 style 属性彻底消失（`(none)`）
+* **refactor(layouts/default):** 剩余优先级冲突全部改用特异性解决——`.el-menu` 内部规则（0-3-0/0-4-0）压 EP 单/双类默认规则；弹层边框三件套带 `.el-popper` 前缀（0-2-0）压 EP `.el-popper.is-light`（0-2-0 等特异性靠源码顺序决胜，组件样式注入晚于 EP）；折叠态 `padding: 0`（原 `padding: 0 !important`）平权即胜
+* **保留不动：** horizontal 弹层局部 EP 主色变量（teleport 取不到容器作用域紫色主色）+ 文件底部暗色覆盖块（`[data-theme='dark']` 下 #818cf8/#252c49）；用户方改过的水平弹层限高 `calc(100vh - 300px)` 原值保留
+* **验证：** `grep !important src/layouts/default` 仅剩注释提及、声明清零；CDP 四模式实测——经典侧栏/折叠态（48px 居中）/top 水平菜单基色·悬停·激活 computed 值亮暗双主题全部正确（暗色 #818cf8/#252c49 覆盖生效）、vertical/horizontal 弹层背景/边框/圆角/阴影/条目色正确、水平弹层内层单层滚动条（外层无）；`pnpm type-check:full` + ESLint + layouts 23 用例全绿
+
 ### 🐛 Bug Fixes | top 布局水平菜单弹层超高撑出 body 滚动条
 
 * **fix(layouts/default):** `.vv-app-menu-popper--horizontal` 补限高——vertical 折叠弹层已有 `max-height: calc(100vh - 20px)` 策略，水平弹层遗漏且 `overflow: hidden`，demo 模块 60+ 页时弹层实测 2334px 超出视口、撑出 documentElement 滚动条

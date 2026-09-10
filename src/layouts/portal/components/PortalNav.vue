@@ -117,16 +117,16 @@ function handleSelect(index: string): void {
   .el-sub-menu__title {
     height: 52px;
     line-height: 52px;
-    padding: 0 !important;
+    padding: 0;
     margin-right: 80px;
     color: rgba(255, 255, 255, 0.8);
     font-size: 20px;
     font-family: 'PingFang SC', 'Alibaba PuHuiTi', sans-serif;
-    background: transparent !important;
+    background: transparent;
 
     &:hover {
       color: #fff;
-      background: transparent !important;
+      background: transparent;
     }
   }
 
@@ -154,14 +154,14 @@ function handleSelect(index: string): void {
     height: 40px;
     line-height: 40px;
     margin-right: 0;
-    padding: 0 16px !important;
+    padding: 0 16px;
     font-size: 14px;
     color: #303133;
-    background: #fff !important;
+    background: #fff;
 
     &:hover {
-      background: #ecf5ff !important;
-      color: var(--el-color-primary) !important;
+      background: #ecf5ff;
+      color: var(--el-color-primary);
     }
   }
 
