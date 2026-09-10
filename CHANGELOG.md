@@ -2,6 +2,14 @@
 
 ## 未发布
 
+### ✨ Features | demo 模块 sidebar 宽度升级为 localStorage 持久化
+
+> 当前 demo 文档布局（DocLayout）拖拽调宽后只在模块级 ref 保留，刷新 / 跨浏览器会话即丢失。升级为 `Local.set/get` 持久化，跨会话保留用户偏好
+
+* **feat(demo/layouts/sidebar-state):** sidebarWidth 持久化升级——模块加载时 `Local.get('demo-sidebar-width')` 读取初始值（合法 number 直接采用；非 number / null / 字符串等非法值兜底 200）；`watch(sidebarWidth, ...)` 注册 300ms debounce 自动写回，避免 `useSidebarDrag` 拖拽过程中 mousemove 高频触发 setItem。钳制到 [150, 400] 边界由 `useSidebarDrag` 承担（DocLayout 注入），sidebar-state 不重复硬编码边界；存储 key `demo-sidebar-width` 走 storage.ts 自动加 `<APP_NAMESPACE>:` 前缀，与 `app-ui` / `theme-mode` 等 key 命名规则一致
+* **test(demo/layouts/sidebar-state):** 新增 8 用例——合法值采用 / 缺值兜底 200 / 字符串兜底 / null 兜底 / 浮点四舍五入 / watch 触发写回 / 拖拽高频写 debounce 合并（连续 250/260/280 改值只写最后一次）/ 跨模块加载一致性（A 模块改值 → reload B 模块读 Local 一致）；`vi.resetModules` 处理模块级单例 + watch 重置，`vi.useFakeTimers` 处理 debounce 时序
+* **建议验证：** 浏览器实测 `/demo/pro-table-overview` 拖拽 sidebar 边缘到 320px → 关闭并重新打开浏览器/标签页 → 仍是 320px；浏览器 DevTools 看 `localStorage[vue3-vite-project:demo-sidebar-width]` 数值正确；多次拖拽仅在停止拖拽 300ms 后才落盘（Network/storage 面板观察）；`pnpm type-check` / `pnpm lint` / `pnpm test src/modules/demo --run`（6 文件 49 用例全绿）
+
 ### 📖 Documentation | demo 模块文案对齐：清理过期描述与失效 API 引用
 
 > 全量扫描 `src/modules/demo/examples/`（63 个 demo 文件）后批量修正过期文案，确保 sidebar 中文名 / 演示页 introductions / DemoField label 与当前代码实现一致
