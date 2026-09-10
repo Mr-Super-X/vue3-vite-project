@@ -10,7 +10,15 @@
 * **feat(directives):** 新增 `v-draggable` 指令（`src/directives/draggable.ts`，按现有 install 约定自动全局注册）——绑定元素即拖拽手柄，只有按住手柄才能拖；首次拖拽把 EP「margin 居中」定位切换为 left/top（相对全屏 fixed 的 el-overlay，坐标即视口坐标）；`clampPosition` 把弹窗钳制在视口边界内，下缘保留手柄高度可抓回（而非贴 0）。弃用 EP 原生 draggable 的原因：原生无边界限制，拖出视口后无法找回
 * **feat(composables):** 新增 `useDialog` Hook（`src/composables/useDialog.ts`）——接收 Vue 组件 + 配置返回 `{ open, close, setProps, isOpen }`；open 时创建容器 div 挂 body 用 `render()` 动态挂载，EP `closed` 事件（关闭动画结束）后 `render(null)` + `remove()` 销毁，无 DOM 残留；**appContext 双保险继承**：setup 内调用捕获 `getCurrentInstance().appContext`，纯 JS 调用回退到 main.ts `setDialogAppContext(app)` 注册的全局上下文（`main.ts` 追加一行，必须在所有 `app.use` 之后调用），动态挂载的弹窗及其子组件因此可正常访问全局注册的组件 / Pinia / Router / i18n；open() 返回 Promise——点「确定」resolve，取消/关闭/X/ESC/遮罩 reject `DialogCancelledError`（instanceof 可识别，语义对齐 ElMessageBox.confirm）；`setProps` 经响应式状态 + 包装组件 render 实时生效
 * **test:** 新增 `draggable.spec.ts`（4 组 clampPosition 边界数学 + 4 用例指令行为：拖拽位移/边界钳制/禁用/动态恢复）与 `useDialog.spec.ts`（6 用例：确认 resolve + 容器销毁、取消 reject、X 关闭 reject、setProps 实时更新、contentProps 透传、close() 语义）；useDialog 测试通过注册 ElDialog/ElButton/v-draggable 的最小上下文模拟纯 JS 调用，`.el-dialog` 能被渲染即证明 appContext 继承生效
+* **demo:** 新增 `examples/ProDialog/ProDialogOverview.vue`（声明式：v-model + 原生 props 透传 / 拖拽边界实时坐标 / 全屏×拖拽交叉 / header-footer 插槽）与 `ProDialogUseDialog.vue`（命令式：open Promise 结果反馈 / contentProps + setProps / 句柄复用回归 / appContext 继承验证），sidebar 新增「ProDialog 弹窗组件」分组
 * **建议验证：** 页面模板里 `<ProDialog v-model="visible" title="测试" draggable>` 验证拖拽不越界 + 全屏按钮切换；某按钮回调里 `useDialog(组件).open()` 验证命令式唤起、确定/取消的 Promise 语义、弹窗内 el 组件与 Pinia 正常可用
+
+### 🐛 Bug Fixes | ProDialog demo 实测反馈（头部对齐 + 二次拖拽偏移）
+
+> 来源：demo 页 `/demo/pro-dialog-overview` 真实浏览器验证反馈
+
+* **fix(directives/draggable):** 二次拖拽位置偏移——`originLeft/Top` 只在首次拖拽缓存、之后不更新，第二次拖拽以初始位置为原点计算位移，弹窗按下瞬间跳回偏移前位置。改为每次 mousedown 重读 `getBoundingClientRect` 作为原点（上次落点即本次起点）；同时「margin→left/top 定位切换」由一次性 flag 改为按内联 style 实际状态判断，修复全屏切换清除内联定位后拖拽失灵的隐患；垂直钳制由「视口高 - 手柄高」改为「视口高 - 弹窗高」，整个弹窗留在视口内，不再触发 EP `.el-overlay { overflow: auto }` 的滚动条。补 2 个回归用例（连续拖拽坐标累计 / 内联定位被外部清除后自动重切换）
+* **fix(components/common/ProDialog):** 头部样式——EP 原生 X 按钮绝对定位、与 flex 流内的全屏按钮对不齐（`padding-right: 44px` 预留间距不可控）。收编为完全自定义头部：全屏 + 关闭按钮组成 actions 组靠右对齐（24×24 等宽），`show-close` 从 $attrs 剥离避免 EP 重复渲染原生 X；自绘关闭按钮语义对齐原生 X——`before-close` 存在时交由它决定是否关闭（kebab/camel 两种写法均识别）。补 2 个用例（beforeClose 拦截 / show-close=false 隐藏）
 
 ### 🐛 Bug Fixes | 经典侧栏折叠弹层过高（限高对齐水平弹层策略）
 

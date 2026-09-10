@@ -14,7 +14,7 @@
  * jsdom 布局尺寸为 0，拖拽前按 800×600 视口 / 400×300 弹窗 mock（同 draggable.spec 策略）。
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createApp } from 'vue'
+import { createApp, nextTick } from 'vue'
 import type { App } from 'vue'
 import { ElButton, ElDialog } from 'element-plus'
 import Draggable from '@directives/draggable'
@@ -61,13 +61,47 @@ describe('ProDialog', () => {
     return btn as HTMLElement
   }
 
-  it('默认渲染：内置取消/确定按钮 + 全屏切换按钮 + title 落位', async () => {
+  it('默认渲染：内置取消/确定按钮 + 全屏/关闭按钮靠右一组 + title 落位', async () => {
     mountOpen()
     await vi.waitFor(() => {
       expect(document.querySelectorAll('.el-dialog__footer button').length).toBe(2)
     })
     expect(fullscreenBtn()).toBeTruthy()
+    // 自绘关闭按钮（EP 原生 X 已收编进 actions 组，.el-dialog__headerbtn 不再渲染）
+    expect(document.querySelector('.vv-pro-dialog__close-btn')).toBeTruthy()
+    expect(document.querySelector('.el-dialog__headerbtn')).toBeNull()
     expect(document.querySelector('.vv-pro-dialog__title')?.textContent).toContain('交叉测试')
+  })
+
+  it('自绘关闭按钮尊重 beforeClose 拦截', async () => {
+    const onUpdate = vi.fn()
+    let allowClose = false
+    mountOpen({
+      beforeClose: (done: () => void) => {
+        if (allowClose) done()
+      },
+      'onUpdate:modelValue': onUpdate,
+    })
+    await queryDialog()
+
+    const closeBtn = document.querySelector<HTMLElement>('.vv-pro-dialog__close-btn') as HTMLElement
+    // beforeClose 不放行：不触发 update:modelValue
+    closeBtn.click()
+    await nextTick()
+    expect(onUpdate).not.toHaveBeenCalled()
+
+    // 放行后：关闭
+    allowClose = true
+    closeBtn.click()
+    await nextTick()
+    expect(onUpdate).toHaveBeenCalledWith(false)
+  })
+
+  it('show-close=false：actions 组里只有全屏按钮，无自绘关闭按钮', async () => {
+    mountOpen({ 'show-close': false })
+    await queryDialog()
+    expect(document.querySelector('.vv-pro-dialog__close-btn')).toBeNull()
+    expect(document.querySelector('.vv-pro-dialog__fullscreen-btn')).toBeTruthy()
   })
 
   it('拖拽后切全屏：清除 v-draggable 的内联定位残留；退出全屏同样复位', async () => {

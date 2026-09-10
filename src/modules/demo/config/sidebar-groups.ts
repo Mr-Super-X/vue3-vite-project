@@ -16,6 +16,7 @@ export interface SidebarGroupConfig {
 export const SIDEBAR_GROUPS: readonly SidebarGroupConfig[] = [
   { title: 'ProTable 表格组件', prefix: 'ProTable' },
   { title: 'XForm 表单引擎', prefix: 'XForm' },
+  { title: 'ProDialog 弹窗组件', prefix: 'ProDialog' },
   { title: '通用组件', prefix: '' },
 ]
 
@@ -82,6 +83,10 @@ export const CN_NAMES: Record<string, string> = {
   XFormValidateDetail: 'validateDetail 详细返回',
   XFormValidateField: '逐字段校验',
   XFormZod: 'zod 校验',
+  // ProDialog 弹窗组件
+  ProDialogOverview: '用法总览（声明式）',
+  ProDialogUseDialog: '命令式调用（useDialog）',
+  // 通用组件
   AsyncState: '异步状态容器',
   ErrorBoundary: '错误边界',
 }

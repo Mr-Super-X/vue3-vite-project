@@ -55,21 +55,28 @@ describe('v-draggable 指令', () => {
     `,
   })
 
-  /** jsdom 中布局尺寸全为 0，这里按 800×600 视口、400×300 弹窗、50px 手柄 mock */
-  function mockLayout(dialog: HTMLElement, handle: HTMLElement) {
-    vi.spyOn(dialog, 'getBoundingClientRect').mockReturnValue({
-      left: 100,
-      top: 80,
-      width: 400,
-      height: 300,
-      right: 500,
-      bottom: 380,
-      x: 100,
-      y: 80,
-      toJSON: () => ({}),
-    } as DOMRect)
+  /** jsdom 中布局尺寸全为 0，这里按 800×600 视口、400×300 弹窗 mock；
+   *  rect 跟随内联 style 返回——指令每次 mousedown 会重读当前位置作为拖拽原点 */
+  function mockLayout(dialog: HTMLElement) {
+    const current = () => ({
+      left: parseFloat(dialog.style.left) || 100,
+      top: parseFloat(dialog.style.top) || 80,
+    })
+    vi.spyOn(dialog, 'getBoundingClientRect').mockImplementation(
+      () =>
+        ({
+          ...current(),
+          width: 400,
+          height: 300,
+          right: current().left + 400,
+          bottom: current().top + 300,
+          x: current().left,
+          y: current().top,
+          toJSON: () => ({}),
+        }) as DOMRect
+    )
     Object.defineProperty(dialog, 'offsetWidth', { value: 400, configurable: true })
-    Object.defineProperty(handle, 'offsetHeight', { value: 50, configurable: true })
+    Object.defineProperty(dialog, 'offsetHeight', { value: 300, configurable: true })
     Object.defineProperty(window, 'innerWidth', { value: 800, configurable: true })
     Object.defineProperty(window, 'innerHeight', { value: 600, configurable: true })
   }
@@ -102,7 +109,7 @@ describe('v-draggable 指令', () => {
     const wrapper = mount(Host, { global: { plugins: [Draggable] } })
     const dialog = wrapper.find('.el-dialog').element as HTMLElement
     const handle = wrapper.find('.handle').element as HTMLElement
-    mockLayout(dialog, handle)
+    mockLayout(dialog)
 
     drag(handle, { clientX: 120, clientY: 100 }, { clientX: 220, clientY: 200 })
 
@@ -114,18 +121,58 @@ describe('v-draggable 指令', () => {
     expect(dialog.style.top).toBe('180px')
   })
 
-  it('拖拽不超出视口边界：右缘钳制 maxLeft、下缘保留手柄可抓回', () => {
+  it('拖拽不超出视口边界：右/下缘钳制，整个弹窗留在视口内（不产生 overlay 滚动条）', () => {
     const wrapper = mount(Host, { global: { plugins: [Draggable] } })
     const dialog = wrapper.find('.el-dialog').element as HTMLElement
     const handle = wrapper.find('.handle').element as HTMLElement
-    mockLayout(dialog, handle)
+    mockLayout(dialog)
 
     // 起点 (120,100)，拖到极远 (7020,5100)：原始 left=7000/top=5080
     drag(handle, { clientX: 120, clientY: 100 }, { clientX: 7020, clientY: 5100 })
 
-    // maxLeft = 800-400 = 400；maxTop = 600-50 = 550（不是 0，保证可抓回）
+    // maxLeft = 800-400 = 400；maxTop = 600-300 = 300（整个弹窗在视口内）
     expect(dialog.style.left).toBe('400px')
-    expect(dialog.style.top).toBe('550px')
+    expect(dialog.style.top).toBe('300px')
+  })
+
+  it('连续两次拖拽坐标累计：第二次以上次落点为原点，不跳回初始位置（回归）', () => {
+    const wrapper = mount(Host, { global: { plugins: [Draggable] } })
+    const dialog = wrapper.find('.el-dialog').element as HTMLElement
+    const handle = wrapper.find('.handle').element as HTMLElement
+    mockLayout(dialog)
+
+    // 第一次拖拽：+100/+100 → 200/180
+    drag(handle, { clientX: 120, clientY: 100 }, { clientX: 220, clientY: 200 })
+    expect(dialog.style.left).toBe('200px')
+    expect(dialog.style.top).toBe('180px')
+
+    // 第二次拖拽：+50/+50 → 250/230。
+    // 若原点沿用首次缓存值（100/80），会算出 150/130——弹窗跳回偏移前位置（用户反馈 bug）
+    drag(handle, { clientX: 300, clientY: 250 }, { clientX: 350, clientY: 300 })
+    expect(dialog.style.left).toBe('250px')
+    expect(dialog.style.top).toBe('230px')
+  })
+
+  it('内联定位被外部清除（如全屏切换）后拖拽仍正常：自动重新切换定位', () => {
+    const wrapper = mount(Host, { global: { plugins: [Draggable] } })
+    const dialog = wrapper.find('.el-dialog').element as HTMLElement
+    const handle = wrapper.find('.handle').element as HTMLElement
+    mockLayout(dialog)
+
+    drag(handle, { clientX: 120, clientY: 100 }, { clientX: 220, clientY: 200 })
+    expect(dialog.style.left).toBe('200px')
+
+    // 模拟 ProDialog.toggleFullScreen 清除内联定位（弹窗回到 margin 居中）
+    dialog.style.left = ''
+    dialog.style.top = ''
+    dialog.style.margin = ''
+    dialog.style.position = ''
+
+    // 再次拖拽：应检测出定位被重置并重新切换，再按位移移动（rect mock 回 100/80，+100 → 200）
+    drag(handle, { clientX: 150, clientY: 150 }, { clientX: 250, clientY: 250 })
+    expect(dialog.style.position).toBe('relative')
+    expect(dialog.style.left).toBe('200px')
+    expect(dialog.style.top).toBe('180px')
   })
 
   it('绑定值为 false 时禁用拖拽，弹窗位置不动', () => {
@@ -135,7 +182,7 @@ describe('v-draggable 指令', () => {
     })
     const dialog = wrapper.find('.el-dialog').element as HTMLElement
     const handle = wrapper.find('.handle').element as HTMLElement
-    mockLayout(dialog, handle)
+    mockLayout(dialog)
 
     drag(handle, { clientX: 120, clientY: 100 }, { clientX: 220, clientY: 200 })
 
@@ -150,7 +197,7 @@ describe('v-draggable 指令', () => {
     })
     const dialog = wrapper.find('.el-dialog').element as HTMLElement
     const handle = wrapper.find('.handle').element as HTMLElement
-    mockLayout(dialog, handle)
+    mockLayout(dialog)
 
     drag(handle, { clientX: 120, clientY: 100 }, { clientX: 220, clientY: 200 })
     expect(dialog.style.left).toBe('')

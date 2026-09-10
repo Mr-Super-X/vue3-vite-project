@@ -15,7 +15,13 @@
  *   因此手柄放在 EP header 内任意层级均可）
  * - 首次拖拽时把 EP 默认的「margin 居中 + margin-top 偏移」定位切换为 left/top
  *   定位——margin 定位无法表达水平位移；el-overlay 是全屏 fixed，相对它的坐标即视口坐标
- * - 上边界钳制到「视口高 - 手柄高」而非 0：保证弹窗拖到底部时头部仍可抓回
+ * - 每次 mousedown 都重新读取当前位置作为拖拽原点：上次落点即本次起点
+ *   （不能用首次值缓存——第二次拖拽会以初始位置为基准，弹窗瞬间跳回偏移前位置）
+ * - 定位切换不用一次性 flag 而用内联 style 实际状态判断：ProDialog 全屏切换会清除
+ *   内联定位，flag 模式下再次 mousedown 时弹窗已回 margin 居中，left 写在 static
+ *   定位上不生效，拖拽会失灵
+ * - 边界钳制到「视口 - 弹窗尺寸」：整个弹窗留在视口内——若只保留手柄高度，
+ *   弹窗底部必然超出视口，触发 EP .el-overlay { overflow: auto } 的滚动条
  * - 仅支持鼠标事件（中后台桌面端场景）；如需平板触摸支持需改 Pointer Events
  *
  * 状态存 WeakMap（而非挂到 el 自定义属性）：避免污染 DOM 类型声明，元素回收自动释放。
@@ -54,8 +60,6 @@ interface DragState {
   handle: HTMLElement
   /** 绑定值：false 时禁用（binding.value 为 undefined 视为开启） */
   enabled: boolean
-  /** 是否已把 EP 的 margin 定位切换为 left/top 定位（只在首次拖拽时切换一次） */
-  positioned: boolean
   startX: number
   startY: number
   originLeft: number
@@ -76,7 +80,6 @@ function createState(el: HTMLElement, binding: DirectiveBinding<boolean | undefi
   const state: DragState = {
     handle: el,
     enabled: binding.value !== false,
-    positioned: false,
     startX: 0,
     startY: 0,
     originLeft: 0,
@@ -90,18 +93,25 @@ function createState(el: HTMLElement, binding: DirectiveBinding<boolean | undefi
       // 阻止默认行为防止拖拽时选中文本；不阻断 click，关闭按钮等其他交互不受影响
       e.preventDefault()
 
-      // 首次拖拽：EP 默认 margin 定位无法表达水平位移，切换为 left/top 定位
-      if (!state.positioned) {
+      // EP 默认 margin 定位无法表达水平位移，需切换为 left/top 定位。
+      // 用内联 style 实际状态判断（而非一次性 flag）：ProDialog 全屏切换会清除
+      // 内联定位使弹窗回到 margin 居中，若 flag 仍记着「已切换」，left 会写在
+      // static 定位上不生效，拖拽失灵
+      const switched = dialog.style.position === 'relative' && dialog.style.left !== ''
+      if (!switched) {
         const rect = dialog.getBoundingClientRect()
         dialog.style.margin = '0'
         dialog.style.position = 'relative'
         dialog.style.left = `${rect.left}px`
         dialog.style.top = `${rect.top}px`
-        state.originLeft = rect.left
-        state.originTop = rect.top
-        state.positioned = true
       }
 
+      // 关键：每次 mousedown 都重读当前实际位置作为原点（上次落点即本次起点）。
+      // 若复用首次拖拽缓存的原点，第二次拖拽会以初始位置为基准计算位移，
+      // 弹窗在按下瞬间跳回偏移前位置（demo 验证抓到的「二次拖拽偏移」bug）
+      const rect = dialog.getBoundingClientRect()
+      state.originLeft = rect.left
+      state.originTop = rect.top
       state.startX = e.clientX
       state.startY = e.clientY
       document.addEventListener('mousemove', state.onMouseMove)
@@ -117,10 +127,9 @@ function createState(el: HTMLElement, binding: DirectiveBinding<boolean | undefi
           top: state.originTop + e.clientY - state.startY,
         },
         {
-          // 不越过右边界；弹窗比视口宽时 maxLeft 为负，由 clampPosition 兜底为 0
+          // 整个弹窗钳制在视口内：右/下缘不超过视口，不触发 EP overlay 的滚动条
           maxLeft: window.innerWidth - dialog.offsetWidth,
-          // 钳制到「视口高 - 手柄高」而非 0：保证拖到底部时头部仍可抓回
-          maxTop: window.innerHeight - state.handle.offsetHeight,
+          maxTop: window.innerHeight - dialog.offsetHeight,
         }
       )
       dialog.style.left = `${next.left}px`

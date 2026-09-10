@@ -84,12 +84,13 @@ describe('useDialog', () => {
     await waitContainerGone()
   })
 
-  it('点头部 X 关闭同样以 DialogCancelledError reject（所有关闭途径语义一致）', async () => {
+  it('点头部自绘关闭按钮同样以 DialogCancelledError reject（所有关闭途径语义一致）', async () => {
     const dialog = useDialog(Content)
     const promise = dialog.open()
     await waitContent()
 
-    document.querySelector<HTMLElement>('.el-dialog__headerbtn')?.click()
+    // EP 原生 X 已收编为 ProDialog 自绘关闭按钮（.el-dialog__headerbtn 不再渲染）
+    document.querySelector<HTMLElement>('.vv-pro-dialog__close-btn')?.click()
 
     await expect(promise).rejects.toBeInstanceOf(DialogCancelledError)
     await waitContainerGone()
