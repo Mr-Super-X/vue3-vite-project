@@ -2,6 +2,22 @@
 
 ## 未发布
 
+### ✨ Features | default 布局复刻 vue-element-plus-admin（四模式 + 多页签 + 工作流组件全家桶）
+
+> 计划：`docs/superpowers/plans/2026-09-09-default-layout-replica.md`。复刻 [vue-element-plus-admin](https://github.com/kailong321200875/vue-element-plus-admin) 布局结构与组件功能，对齐 `layouts/portal` 自包含组织约定（components / config / styles，不引用 `@/components/`）
+
+* **feat(layouts/default):** 四模式布局外壳——sidebar（经典侧栏）/ top（顶部导航）/ mixed（顶栏主导航 + 二级侧栏）/ dual（图标 rail + 二级侧栏），移动端（≤767px）自动降级抽屉侧栏 + 遮罩；旧 `Header.vue` / `Sidebar.vue` 删除，14 个自包含组件重写（`index.vue` + `components/{Logo,Collapse,Breadcrumb,AppMenu,PrimaryNav,LayoutSwitcher,LocaleDropdown,UserInfo,ToolHeader,ContextMenu,TagsView,AppView,MenuIcon}.vue`）
+* **feat(layouts/default):** 路由 → 菜单树派生（`config/menu.ts`）——基于 vue-router 5 `getRoutes()` 平铺语义构建，覆盖 index 子路由（`path: ''`）/ 单子项提升（`resolveSingleChild`，复刻 `hasOneShowingChild`）/ `menuVisible` 过滤 / affix 页签收集（`filterAffixRoutes`）；外链新窗口打开
+* **feat(store):** `app` store 新增 `layout: LayoutMode`（localStorage 持久化）+ `mobile`（matchMedia 监听，移动端强制折叠）；`tags-view` store 新增 `closeLeft` / `closeRight` / `removeCachedView`（页签刷新剔除 keep-alive 缓存）
+* **feat(layouts/default):** 多页签 TagsView——滚动页签条 + 右键菜单（刷新 / 关闭 / 关闭左 / 右侧 / 其他 / 全部）+ 左右滚动 / 刷新 / 更多工具按钮；刷新用 AppView 内部 key 重建实现（provide/inject），不新增 `/redirect` 路由
+* **feat(modules/workbench):** default 布局验收模块——`pnpm new-module workbench` 生成，父分组菜单（首页 index 子路由 + 分析页 + 监控页），视图 `defineOptions({ name })` 对齐路由 name 保证 keep-alive 缓存命中，页签内输入内容切换后保留可验证
+* **fix(layouts/default):** 菜单树构建两处边界——空 path 子路由（home/workbench 首页形态）解析为父路径本身（消除 '/home/' 幽灵路径导致的重复菜单项），index 子路由的标题 / 图标继承到父节点（mixed/dual 模式 PrimaryNav 消费顶层节点 title 不再为空）
+* **style(layouts/default):** `styles/default-tokens.scss` 对齐参考仓 `var.css` 精确值（亮：白侧栏 + 紫主色 #5b5bd6 + slate 文字色；暗：#111827/#0b1120/#818cf8）——EP 变量覆盖以 mixin 导出、施加在 `.vv-default-layout` 容器作用域（不污染项目全局主题与 portal 布局），布局专用变量（`--left-menu-*` 等）全局定义供 teleport 菜单弹层取用；顶栏 / 工具条 / 页签条毛玻璃（`color-mix` 94%/96% + `backdrop-filter: blur(16px)` + 双层 slate 阴影），侧栏 224/72、顶栏 60px、页签 38px、内容 padding 24px
+* **style(layouts/default):** Logo mark 38px + 按布局模式分色标题；菜单补箭头 1em / 内嵌子菜单列间隙 / 折叠图标 22px；内容区 `min-height` 扣除顶栏页签；TagsView 背景移交布局壳统一毛玻璃；Breadcrumb 修复 EP 2.14 + TS6 下 `:to="undefined"` 的 TS2379（改显式分支渲染）
+* **style(layouts/default):** 新增 `styles/element-overwrite.scss`——EP 弹层变量映射：default 布局挂载时 `index.vue` 往 `<html>` 写 `data-layout="default"`（卸载清除），teleport 到 body 的弹层（下拉 / Select / Dialog / Message 等）经 `[data-layout='default']` 选择器命中与容器相同的 EP mixin，获得紫色主题（亮：hover #eeeeff/#5b5bd6；暗：#252c49/#818cf8）；属性随路由切换，portal 布局页面无泄漏；不逐组件写覆盖规则（弹层类名与 portal 全局共享，无法限定作用域）
+* **test(layouts/default):** 新增 `config/menu.spec.ts` 15 用例（createRouter 真实实例验证平铺语义：index 子路由无重复 / 单子项提升 / 分组过滤 / 排除项 / affix 收集 / i18n titleKey 优先）
+* **i18n:** `menu.workbench*` 4 键入 zh-CN / en-US
+
 ### ♻️ Code Refactoring | form-schema 错误守护 watcher 按需挂载（批次 3-3：L2）
 
 > 审计与设计：`docs/superpowers/specs/2026-09-09-form-schema-arch-audit.md`。行为等价重构，零公开 API 变更

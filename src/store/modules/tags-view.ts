@@ -25,6 +25,8 @@ export interface TagView {
   path: string
   /** 渲染名（meta.title || name） */
   title: string
+  /** 菜单图标（Element Plus 图标名，页签前缀图标用） */
+  icon?: string
   /** meta.affix === true 时为固定 tag（如 Home），不可关闭 */
   affix?: boolean
 }
@@ -38,10 +40,13 @@ export interface TagView {
  */
 function toTag(route: RouteLocationNormalized): TagView | null {
   if (!route.name) return null
+  const icon = route.meta?.icon as string | undefined
   return {
     name: String(route.name),
     path: route.fullPath,
     title: (route.meta?.title as string | undefined) ?? String(route.name),
+    // exactOptionalPropertyTypes：undefined 不入对象，用条件展开
+    ...(icon ? { icon } : {}),
     affix: route.meta?.affix === true,
   }
 }
@@ -90,6 +95,27 @@ export const useTagsViewStore = defineStore('tags-view', () => {
     )
   }
 
+  /** 关闭左侧：保留当前 tag 及其右侧 + 所有 affix tag。 */
+  function closeLeft(view: TagView): void {
+    const index = visitedViews.value.findIndex((v) => v.name === view.name)
+    if (index < 0) return
+    visitedViews.value = visitedViews.value.filter((v, i) => v.affix || i >= index)
+    cachedViews.value = visitedViews.value.map((v) => v.name)
+  }
+
+  /** 关闭右侧：保留当前 tag 及其左侧 + 所有 affix tag。 */
+  function closeRight(view: TagView): void {
+    const index = visitedViews.value.findIndex((v) => v.name === view.name)
+    if (index < 0) return
+    visitedViews.value = visitedViews.value.filter((v, i) => v.affix || i <= index)
+    cachedViews.value = visitedViews.value.map((v) => v.name)
+  }
+
+  /** 从 keep-alive 缓存中剔除指定 name（页签"刷新"用：剔除后重挂载组件） */
+  function removeCachedView(name: string): void {
+    cachedViews.value = cachedViews.value.filter((n) => n !== name)
+  }
+
   /** router.afterEach 钩子入口（仅展示用），已处理路由无 name 的情况。 */
   function addRouteView(route: RouteLocationNormalized): void {
     const tag = toTag(route)
@@ -103,6 +129,9 @@ export const useTagsViewStore = defineStore('tags-view', () => {
     removeView,
     closeOthers,
     closeAll,
+    closeLeft,
+    closeRight,
+    removeCachedView,
     addRouteView,
   }
 })

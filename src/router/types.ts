@@ -58,7 +58,7 @@ declare module 'vue-router' {
      * 但 `visible` 是双语义字段无法单独表达"只藏菜单不禁访问"，故新增本字段解耦。
      *
      * @see {@link file://./guards/visibility.ts} 守卫消费 `visible`（不消费 `menuVisible`）
-     * @see {@link file://../layouts/default/components/Sidebar.vue} 侧边栏消费 `menuVisible`
+     * @see {@link file://../layouts/default/config/menu.ts} isMenuHidden 消费 `menuVisible`
      */
     menuVisible?: boolean
     /** keepAlive 缓存开关（业务页面切换时是否保留组件实例） */

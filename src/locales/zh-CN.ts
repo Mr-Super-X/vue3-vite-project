@@ -28,6 +28,13 @@ export default {
     username: '用户名',
     password: '密码',
   },
-  menu: { home: '首页', user: '用户管理' },
+  menu: {
+    home: '首页',
+    user: '用户管理',
+    workbench: '工作台',
+    workbenchHome: '工作台首页',
+    workbenchAnalysis: '分析页',
+    workbenchMonitor: '监控页',
+  },
   error: { '403': '无权访问', '404': '页面不存在', '500': '服务器错误' },
 }

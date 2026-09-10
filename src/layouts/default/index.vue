@@ -1,88 +1,389 @@
 <script setup lang="ts">
 /**
- * Default 布局（侧边栏 + 顶部 + 多页签 + 主内容）。
+ * Default 布局外壳（复刻 vue-element-plus-admin 的 Layout.vue，四模式）。
  *
- * 用途：所有需要完整后台框架的页面（用户管理、订单管理等业务模块）。
- * 路由 meta.layout === 'default'（或不指定）的路由会使用本布局。
+ * 模式矩阵（跟随 appStore.layout，移动端一律强制 sidebar + 抽屉）：
+ * - sidebar：左栏（Logo + 全量菜单）+ 顶栏工具条 + 页签 + 内容
+ * - top：顶栏（Logo + 横向菜单 + 工具条）+ 页签 + 内容
+ * - mixed：顶栏（Logo + 主导航 + 工具条）+ 二级侧栏（当前模块子菜单）+ 内容
+ * - dual：左 rail（compact Logo + 主导航竖排）+ 二级侧栏 + 顶栏工具条 + 页签 + 内容
  *
- * 关键设计：
- * - 侧边栏宽度：跟随 `appStore.sidebarCollapsed` 切换
- * - 多页签：`<keep-alive :include="cachedViews">` 缓存已访问页面，避免重复渲染
- * - Grid 布局：sidebar / header / nav / main 四区严格定位
+ * 菜单数据源：buildMenuTree(router) 从 router.getRoutes() 派生（见 config/menu.ts），
+ * mixed/dual 的二级菜单 = 当前激活顶层模块的 children。
  *
- * @see [`../blank/index.vue`](../blank/index.vue) 空白布局
- * @see [`./components/Header.vue`](./components/Header.vue) 顶部
- * @see [`./components/Sidebar.vue`](./components/Sidebar.vue) 侧边栏
- * @see [`@/components/common/TagsView/index.vue`](../../components/common/TagsView/index.vue) 多页签
- * @see [`@/store/modules/tags-view.ts`](../../store/modules/tags-view.ts) 缓存视图来源
+ * 移动端（≤767px，appStore.mobile）：侧栏变 fixed 抽屉 + 遮罩，点遮罩收起。
+ *
+ * @see [`./components/ToolHeader.vue`](./components/ToolHeader.vue) 顶栏工具条
+ * @see [`./components/AppMenu.vue`](./components/AppMenu.vue) 递归菜单
+ * @see [`./components/PrimaryNav.vue`](./components/PrimaryNav.vue) 主导航
+ * @see [`./components/TagsView.vue`](./components/TagsView.vue) 多页签
+ * @see [`./config/menu.ts`](./config/menu.ts) 菜单树派生
+ * @see [`@/store/modules/app`](../../store/modules/app.ts) layout / sidebarCollapsed / mobile
  * @group 布局
  */
 import { useAppStore } from '@/store/modules/app'
-import { useTagsViewStore } from '@/store/modules/tags-view'
-import Sidebar from './components/Sidebar.vue'
-import Header from './components/Header.vue'
-import TagsView from '@/components/common/TagsView/index.vue'
-const appStore = useAppStore()
-const tagsViewStore = useTagsViewStore()
-const cachedViews = computed(() => tagsViewStore.cachedViews)
+import { useI18n } from 'vue-i18n'
+import type { MenuNode } from './config/types'
+import { buildMenuTree, firstRoutePath, isUrl } from './config/menu'
+import Logo from './components/Logo.vue'
+import AppMenu from './components/AppMenu.vue'
+import PrimaryNav from './components/PrimaryNav.vue'
+import ToolHeader from './components/ToolHeader.vue'
+import TagsView from './components/TagsView.vue'
+import AppView from './components/AppView.vue'
 
-// 运行时 BEM 命名空间：vv-default-layout
 const bem = createNamespace('default-layout')
+
+const appStore = useAppStore()
+const route = useRoute()
+const { router } = useAppRouter()
+const { t } = useI18n()
+
+/** 全量菜单树（各业务模块顶层路由） */
+const menuTree = computed(() => buildMenuTree(router, t))
+
+/** 移动端强制 sidebar 抽屉模式 */
+const layout = computed(() => (appStore.mobile ? 'sidebar' : appStore.layout))
+
+/** 当前路由所属的顶层模块节点（mixed/dual 的二级菜单与主导航激活态） */
+const activePrimary = computed<MenuNode | undefined>(() => {
+  const path = route.path
+  return menuTree.value.find(
+    (node) => !isUrl(node.path) && (path === node.path || path.startsWith(`${node.path}/`))
+  )
+})
+
+/** mixed/dual 模式的二级侧栏菜单 = 当前顶层模块的子菜单 */
+const secondaryNodes = computed<MenuNode[]>(() => activePrimary.value?.children ?? [])
+
+/** Backtop 目标滚动容器类名（动态拼接 BEM，避免硬编码前缀） */
+const backtopTarget = computed(() => `.${bem.e('scroll')}`)
+
+/** 主导航点击：跳转该模块第一个可见叶子页（外链新窗口打开） */
+function selectPrimary(node: MenuNode) {
+  const path = firstRoutePath(node)
+  if (isUrl(path)) {
+    window.open(path, '_blank', 'noopener,noreferrer')
+  } else {
+    router.push(path)
+  }
+}
+
+/** 移动端点遮罩收起抽屉 */
+function closeMobileMenu() {
+  appStore.sidebarCollapsed = true
+}
+
+/**
+ * 布局激活期间在 <html> 标记 data-layout="default"——teleport 到 body 的 EP 弹层
+ * （下拉/对话框/消息等）不在容器内，靠该属性命中 element-overwrite.scss 的变量映射，
+ * 与布局本体共用同一套紫色主题（@see ./styles/element-overwrite.scss）。
+ * 卸载时仅清除自己写入的值，避免误伤其他布局的标记。
+ */
+function applyLayoutScope() {
+  document.documentElement.setAttribute('data-layout', 'default')
+}
+
+function clearLayoutScope() {
+  if (document.documentElement.getAttribute('data-layout') === 'default') {
+    document.documentElement.removeAttribute('data-layout')
+  }
+}
+
+onMounted(applyLayoutScope)
+onUnmounted(clearLayoutScope)
 </script>
 
 <template>
-  <div :class="bem.b()">
-    <aside :class="[bem.e('sidebar'), bem.is('collapsed', appStore.sidebarCollapsed)]">
-      <Sidebar />
-    </aside>
-    <header :class="bem.e('header')">
-      <Header />
+  <section :class="[bem.b(), bem.m(layout)]">
+    <!-- top / mixed 模式顶栏 -->
+    <header v-if="layout === 'top' || layout === 'mixed'" :class="bem.e('topbar')">
+      <Logo />
+      <AppMenu v-if="layout === 'top'" :menu-nodes="menuTree" mode="horizontal" />
+      <PrimaryNav
+        v-else
+        :nodes="menuTree"
+        :active-path="activePrimary?.path"
+        mode="top"
+        @select="selectPrimary"
+      />
+      <ToolHeader
+        :show-collapse="layout === 'mixed'"
+        :show-breadcrumb="false"
+        :class="bem.e('top-tools')"
+      />
     </header>
-    <nav :class="bem.e('nav')">
-      <TagsView />
-    </nav>
-    <main :class="bem.e('main')">
-      <RouterView v-slot="{ Component }">
-        <keep-alive :include="cachedViews">
-          <component :is="Component" :key="$route.fullPath" />
-        </keep-alive>
-      </RouterView>
-    </main>
-  </div>
+
+    <div :class="bem.e('body')">
+      <!-- sidebar 模式左栏 -->
+      <aside
+        v-if="layout === 'sidebar'"
+        :class="[
+          bem.e('sidebar'),
+          bem.is('collapsed', appStore.sidebarCollapsed),
+          bem.is('mobile', appStore.mobile),
+        ]"
+      >
+        <Logo />
+        <AppMenu :menu-nodes="menuTree" />
+      </aside>
+
+      <!-- dual 模式一级 rail -->
+      <aside v-if="layout === 'dual'" :class="bem.e('rail')">
+        <Logo compact />
+        <el-scrollbar>
+          <PrimaryNav
+            :nodes="menuTree"
+            :active-path="activePrimary?.path"
+            mode="rail"
+            @select="selectPrimary"
+          />
+        </el-scrollbar>
+      </aside>
+
+      <!-- mixed / dual 模式二级侧栏 -->
+      <aside
+        v-if="layout === 'mixed' || layout === 'dual'"
+        :class="[bem.e('secondary'), bem.is('collapsed', appStore.sidebarCollapsed)]"
+      >
+        <div v-if="!appStore.sidebarCollapsed" :class="bem.e('secondary-title')">
+          {{ activePrimary?.title ?? '' }}
+        </div>
+        <AppMenu :menu-nodes="secondaryNodes" />
+      </aside>
+
+      <main :class="bem.e('workspace')">
+        <ToolHeader v-if="layout === 'sidebar' || layout === 'dual'" :class="bem.e('toolbar')" />
+        <TagsView :class="bem.e('tags')" />
+        <div v-loading="appStore.globalLoading" :class="bem.e('scroll')">
+          <AppView />
+          <el-backtop :target="backtopTarget" :right="20" :bottom="20" />
+        </div>
+      </main>
+    </div>
+
+    <!-- 移动端抽屉遮罩 -->
+    <button
+      v-if="appStore.mobile && !appStore.sidebarCollapsed"
+      :class="bem.e('mask')"
+      type="button"
+      aria-label="关闭导航菜单"
+      @click="closeMobileMenu"
+    ></button>
+  </section>
 </template>
 
 <style lang="scss">
+// 非 scoped：default-tokens 的 CSS 变量 + 折叠弹层需对子组件/teleport 节点可见
+@use './styles/default-tokens.scss' as *;
+// EP 弹层变量映射（html[data-layout='default'] 选择器，需在 tokens 之后加载以复用其 mixin）
+@use './styles/element-overwrite.scss';
+
 .#{$BEM_PREFIX}-default-layout {
-  display: grid;
-  grid-template-areas: 'sidebar header' 'sidebar nav' 'sidebar main';
-  grid-template-columns: auto 1fr;
-  grid-template-rows: var(--header-height) var(--tags-view-height, 36px) 1fr;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  // 不用 height: 100%：App.vue 的 ErrorBoundary / AsyncState 包装层（block + auto 高）
+  // 截断了 #app → 布局的百分比高度链，100% 会退化为内容高度，整页随 body 滚动。
+  // 布局是路由级全屏基座，直接锚定视口高度；100dvh 规避移动端地址栏收缩。
   height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--app-content-bg-color);
 
-  &__sidebar {
-    grid-area: sidebar;
-    width: var(--sidebar-width);
-    background: #001529;
-    color: #fff;
+  // EP 变量覆盖限定在 default 布局容器（紫色主色 + slate 文字色），不污染全局主题。
+  // 选择器需与 theme store 的 data-theme 机制对齐：显式 dark + auto 跟随系统。
+  @include default-layout-ep-light;
 
-    &.is-collapsed {
-      width: var(--sidebar-collapsed-width);
+  // ─── 顶栏（top / mixed 模式）────────────────────────
+  &__topbar {
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    height: var(--top-tool-height);
+    // 毛玻璃：底色 94% 不透明 + 16px 背景模糊，滚动内容从顶栏下透出（参考仓标志性质感）
+    background: color-mix(in srgb, var(--top-header-bg-color) 94%, transparent);
+    border-bottom: 1px solid var(--layout-border-color);
+    box-shadow: var(--layout-shadow);
+    backdrop-filter: blur(16px);
+    flex: none;
+
+    // top 模式横向菜单占满顶栏中段
+    .#{$BEM_PREFIX}-app-logo {
+      min-width: var(--left-menu-max-width);
     }
   }
 
-  &__header {
-    grid-area: header;
-    border-bottom: 1px solid #eee;
+  &__top-tools {
+    height: 100%;
+    padding-left: 6px;
+    margin-left: auto;
+    border-left: 1px solid var(--layout-border-color);
+    flex: none;
   }
 
-  &__nav {
-    grid-area: nav;
+  // ─── 主体（侧栏 + 工作区）───────────────────────────
+  &__body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
   }
 
-  &__main {
-    grid-area: main;
-    padding: var(--spacing-md);
-    overflow: auto;
+  &__sidebar,
+  &__secondary,
+  &__rail {
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--left-menu-bg-color);
+    border-right: 1px solid var(--layout-border-color);
+    transition:
+      width var(--transition-time-02),
+      transform var(--transition-time-02);
+    flex: none;
+  }
+
+  // sidebar 模式左栏
+  &__sidebar {
+    width: var(--left-menu-max-width);
+
+    &.is-collapsed {
+      width: var(--left-menu-min-width);
+    }
+  }
+
+  // mixed / dual 二级侧栏（底色稍浅区分层级）
+  &__secondary {
+    width: var(--left-menu-max-width);
+    background: var(--left-menu-bg-light-color);
+
+    // 二级侧栏菜单透明显示二级侧栏底色（AppMenu 根节点自带侧栏底色，需覆盖）
+    .#{$BEM_PREFIX}-app-menu {
+      background: transparent;
+    }
+
+    &.is-collapsed {
+      width: var(--left-menu-min-width);
+    }
+  }
+
+  &__secondary-title {
+    height: 46px;
+    padding: 0 18px;
+    overflow: hidden;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 46px;
+    color: var(--logo-title-text-color);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--layout-border-color);
+    flex: none;
+
+    &::before {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      margin-right: 9px;
+      vertical-align: 1px;
+      background: var(--el-color-primary);
+      border-radius: 50%;
+      content: '';
+      box-shadow: 0 0 0 4px var(--el-color-primary-light-9);
+    }
+  }
+
+  // dual 模式一级 rail
+  &__rail {
+    width: var(--layout-rail-width);
+
+    .#{$BEM_PREFIX}-app-logo {
+      justify-content: center;
+      width: var(--layout-rail-width);
+      padding: 0;
+    }
+  }
+
+  // ─── 工作区（工具条 + 页签 + 内容滚动区）─────────────
+  &__workspace {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  &__scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  // ─── 工作区顶部悬浮条（工具条 + 页签）：毛玻璃 96% ───────
+  // 背景只在此定义（TagsView 组件内不再自带底色），统一毛玻璃质感
+  &__toolbar,
+  &__tags {
+    z-index: 10;
+    flex: none;
+    background: color-mix(in srgb, var(--top-header-bg-color) 96%, transparent);
+    border-bottom: 1px solid var(--layout-border-color);
+    backdrop-filter: blur(16px);
+  }
+
+  &__toolbar {
+    z-index: 20;
+    box-shadow: var(--layout-shadow);
+  }
+
+  // ─── 移动端遮罩 ──────────────────────────────────────
+  &__mask {
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+    cursor: pointer;
+    background: rgb(15 23 42 / 45%);
+    border: 0;
+    backdrop-filter: blur(2px);
+  }
+}
+
+// ─── 暗色：EP 变量覆盖（与 theme store 的 data-theme 机制对齐）──
+[data-theme='dark'] .#{$BEM_PREFIX}-default-layout {
+  @include default-layout-ep-dark;
+}
+
+// 跟随系统：仅当用户未显式设置 data-theme
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .#{$BEM_PREFIX}-default-layout {
+    @include default-layout-ep-dark;
+  }
+}
+
+// ─── 移动端：侧栏变抽屉 ────────────────────────────────
+@media (max-width: 767px) {
+  .#{$BEM_PREFIX}-default-layout__sidebar.is-mobile {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 30;
+    width: min(82vw, var(--left-menu-max-width));
+    box-shadow: 20px 0 50px rgb(15 23 42 / 25%);
+
+    &.is-collapsed {
+      transform: translateX(-100%);
+    }
+  }
+}
+
+// ─── 无障碍：减少动画偏好 ──────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .#{$BEM_PREFIX}-default-layout {
+    &__sidebar,
+    &__secondary,
+    &__rail {
+      transition: none;
+    }
   }
 }
 </style>

@@ -22,6 +22,13 @@ export default {
     username: 'Username',
     password: 'Password',
   },
-  menu: { home: 'Home', user: 'User Management' },
+  menu: {
+    home: 'Home',
+    user: 'User Management',
+    workbench: 'Workbench',
+    workbenchHome: 'Workbench Home',
+    workbenchAnalysis: 'Analysis',
+    workbenchMonitor: 'Monitor',
+  },
   error: { '403': 'Forbidden', '404': 'Not Found', '500': 'Server Error' },
 }
