@@ -178,3 +178,21 @@
 - 根因：persist 插件写入 JSON `{"mode":"dark"}`，`readInitialMode` 只比对裸字符串 → 永不命中 → 兜底 'auto' → 亮色系下暗色丢失；legacy key 迁移同款失配
 - 修复：`parseStoredMode` 兼容 JSON 对象 / JSON 字符串 / 裸字符串三种历史格式 + 类型守卫
 - 验证：浏览器实证（修复前 localStorage 实况 vs 刷新后 data-theme 丢失）；修复后 UI 往返切换 + 刷新恢复暗色（内容区 bg #0b1120）；新增 theme.spec.ts 7 用例，store 全量 33 用例绿
+
+### 6.8 四模式菜单渲染修复（dual 空项 / mixed 缺项 / top 箭头叠字）
+
+- 根因 1（同因两项）：PrimaryNav 直接消费原始顶层节点，`/user` 包装路由无 meta → 空图标空文案项；修复为 resolveSingleChild 提升语义（displayItems），激活态/select 载荷保留 raw 节点防激活态丢失
+- 根因 2：top 水平子菜单标题 padding 0 15px 未预留 EP 绝对定位箭头空间（right:20px 宽 12px）→ 右内边距 34px
+- 验证：CDP 三模式实测（rail 四项齐全+跳转+激活态 / mixed 顶横排四项+二级侧栏 / top 箭头文案间距 2px）；新增 PrimaryNav.spec.ts 4 用例，layouts 27 用例全绿；经典侧栏无回归
+
+### 6.9 top 布局水平弹层超高撑出 body 滚动条
+
+- 根因：`.vv-app-menu-popper--horizontal` 无 max-height（vertical 弹层已有限高，水平遗漏），demo 60+ 项实测弹层 2334px
+- 修复：补 `max-height: calc(100vh - 20px)` + `overflow-y: auto`（overflow: hidden 改 x hidden / y auto）
+- 验证：CDP 实测弹层 933px 限高内滚动、docOverflow false
+
+### 6.9-补 top 布局水平弹层双层滚动条（6.9 二次反馈）
+
+- 根因：EP 2.14 把 popper-class 同时复制到外层 el-popper 与内层 .el-menu--popup-container，6.9 的 max-height+overflow 挂在两处 → 双层滚动条
+- 修复：限高/滚动收敛内层（&.el-menu--popup-container 限定）
+- 验证：扣除边框后精确判定——外层无滚动条、内层单条、docOverflow false；注意 offsetWidth-clientWidth 判定会被 1px 边框误导（误判教训）

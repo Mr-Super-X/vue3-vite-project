@@ -2,6 +2,18 @@
 
 ## 未发布
 
+### 🐛 Bug Fixes | top 布局水平菜单弹层超高撑出 body 滚动条
+
+* **fix(layouts/default):** `.vv-app-menu-popper--horizontal` 补限高——vertical 折叠弹层已有 `max-height: calc(100vh - 20px)` 策略，水平弹层遗漏且 `overflow: hidden`，demo 模块 60+ 页时弹层实测 2334px 超出视口、撑出 documentElement 滚动条
+* **fix(layouts/default):** 限高引发二次问题——EP 2.14 会把 popper-class **同时复制到外层 el-popper 与内层 .el-menu--popup-container**，两处都挂 max-height + overflow-y 出现双层滚动条。滚动收敛到内层容器（`&.el-menu--popup-container` 限定），实测外层 overflow visible 无滚动条、内层单条滚动条（扣除边框后精确判定），docOverflow false；vertical 弹层行为不变
+
+### 🐛 Bug Fixes | 双栏/混合主导航空项 + 顶部导航子菜单箭头叠字
+
+> 三个布局模式菜单渲染问题一次修复，同根因两项 + CSS 一项
+
+* **fix(layouts/default):** PrimaryNav（mixed 顶横排 / dual 侧栏 rail）直接消费菜单树**原始顶层节点**——`/user` 这类纯布局包装路由自身无 meta（title/icon 为空），渲染出空图标空文案项（dual rail 实测第 3 项空白），混合模式顶横排同因少一项。修复：与 AppMenu 同一套 `resolveSingleChild` 提升语义，显示用 `displayItems` 单子项时替换为子项标题/图标；激活态匹配与 select 事件载荷仍用 raw 顶层节点（提升后子项 path `/user/list ≠ /user`，直接替换会丢激活态）。实测 dual rail 四项齐全、点用户管理跳转 /user/list 且激活态正确；mixed 顶横排四项齐全 + 二级侧栏正常
+* **fix(layouts/default):** top 布局水平菜单子菜单标题 `padding: 0 15px` 未给箭头预留空间——EP 水平箭头绝对定位于标题右侧（实测 right:20px、宽 12px），长标题文案伸进箭头下方叠压（工作台/组件示例多级菜单实测）。子菜单标题右内边距改为 34px，实测文案右缘与箭头间距 2px 不再叠压；菜单项（无箭头）padding 不变。新增 `PrimaryNav.spec.ts` 4 用例（提升渲染 / raw path 激活态 / raw 载荷 / rail 模式），layouts 27 用例全绿
+
 ### 🐛 Bug Fixes | 切换暗色主题后刷新回到亮色（主题持久化读取格式失配）
 
 * **fix(store/theme):** `readInitialMode` 只比对裸字符串（`'light'/'dark'/'auto'`），而 persist 插件实际写入的是 JSON 序列化对象 `{"mode":"dark"}`——比对永不命中，每次刷新都兜底回 `'auto'`（亮色系统下表现为暗色丢失；legacy key 迁移逻辑同款失配一并修复）。新增 `parseStoredMode` 兼容三种历史格式：JSON 对象 `{"mode":"dark"}`（当前 persist 格式）、JSON 字符串 `"dark"`、裸字符串 `dark`，非法值仍兜底 `'auto'`。浏览器实证修复前后 localStorage 实况（key `vue3-vite-project:theme-mode` 值为 `{"mode":"dark"}` 但刷新后 data-theme 丢失）；修复后往返验证：UI 切浅色/暗色 → 存储格式正确 → 刷新恢复暗色 + 暗色布局变量生效（内容区 bg #0b1120）。新增 `theme.spec.ts` 7 用例覆盖格式兼容 / legacy 迁移 / 非法值兜底 / setMode 应用

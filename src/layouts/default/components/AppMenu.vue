@@ -287,7 +287,7 @@ function handleSelect(index: string): void {
     }
   }
 
-  // vertical 模式：图标与标题间距 10px（horizontal 模式由 EP 默认处理）
+  // vertical 模式：图标与标题间距 0px（horizontal 模式由 EP 默认处理）
   &--vertical {
     .el-menu > .el-sub-menu > .el-sub-menu__title {
       margin-top: 0;
@@ -300,7 +300,7 @@ function handleSelect(index: string): void {
 
     .el-sub-menu__title,
     .el-menu-item {
-      gap: 10px;
+      gap: 0px;
     }
 
     .el-menu--collapse {
@@ -343,6 +343,13 @@ function handleSelect(index: string): void {
         font-weight: 600;
         color: var(--el-color-primary) !important;
         background: var(--el-color-primary-light-9) !important;
+      }
+
+      // EP 水平箭头绝对定位于标题右侧（实测 right:20px、宽 12px，占用右侧 20-32px
+      // 区域），右内边距必须盖住箭头——沿用 15px 会让标题文案伸进箭头下方叠压
+      // （2026-09-10 top 布局工作台多级菜单实测）
+      > .el-sub-menu .el-sub-menu__title {
+        padding-right: 34px;
       }
     }
   }
@@ -395,7 +402,15 @@ function handleSelect(index: string): void {
   --el-color-primary: #5b5bd6;
   --el-color-primary-light-9: #eeeeff;
 
-  overflow: hidden;
+  // 子项极多时（demo 模块 60+ 页，实测弹层 2334px）会超出视口撑出 body 滚动条——
+  // 限高 + 内部滚动，与 vertical 弹层同一策略（2026-09-10 top 布局实测修复）。
+  // 滚动只挂在内层 .el-menu--popup-container：EP 会把 popper-class 同时复制到外层
+  // el-popper 与内层容器，两处都限高会出现双层滚动条（2026-09-10 二次反馈修复）
+  &.el-menu--popup-container {
+    max-height: calc(100vh - 300px);
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
   border: 1px solid var(--layout-border-color) !important;
   border-radius: 12px !important;
   box-shadow: var(--layout-shadow) !important;

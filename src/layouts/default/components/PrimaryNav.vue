@@ -5,15 +5,21 @@
  * 展示菜单树的顶层节点（模块级），点击后由父组件跳转该模块的第一个可见叶子页。
  * 激活态跟随 activePath（当前路由所属顶层模块）。
  *
+ * 单子项提升：顶层包装路由（如 /user）自身无 meta（title/icon 为空），与 AppMenu
+ * 同一套 resolveSingleChild 提升语义——显示子项的标题/图标，否则 rail/顶横排
+ * 会出现空图标空文案项（2026-09-10 双栏/混合布局实测）
+ *
  * @see [`../index.vue`](../index.vue) activePrimary / selectPrimary 计算与跳转
+ * @see [`../config/menu.ts`](../config/menu.ts) resolveSingleChild 提升判定
  * @group 布局：Default
  */
 import type { MenuNode } from '../config/types'
+import { resolveSingleChild } from '../config/menu'
 import MenuIcon from './MenuIcon.vue'
 
 const bem = createNamespace('primary-nav')
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     /** 顶层菜单节点（模块级） */
     nodes: MenuNode[]
@@ -28,20 +34,32 @@ withDefaults(
 const emit = defineEmits<{
   select: [node: MenuNode]
 }>()
+
+/**
+ * 显示用列表：单子项提升时 display 替换为子项（标题/图标），多子项分组 display 为自身。
+ * raw 保留原节点——激活态匹配（activePath 是顶层 path）与 select 事件载荷都以 raw 为准，
+ * 不能用提升后的子项 path（/user/list ≠ /user，激活态会丢失）
+ */
+const displayItems = computed(() =>
+  props.nodes.map((node) => {
+    const { oneShowingChild, onlyChild } = resolveSingleChild(node)
+    return { raw: node, display: oneShowingChild ? (onlyChild ?? node) : node }
+  })
+)
 </script>
 
 <template>
   <nav :class="[bem.b(), bem.m(mode)]" aria-label="主导航">
     <button
-      v-for="node in nodes"
-      :key="node.path"
+      v-for="item in displayItems"
+      :key="item.raw.path"
       type="button"
-      :class="[bem.e('item'), bem.is('active', activePath === node.path)]"
-      :title="node.title"
-      @click="emit('select', node)"
+      :class="[bem.e('item'), bem.is('active', activePath === item.raw.path)]"
+      :title="item.display.title"
+      @click="emit('select', item.raw)"
     >
-      <MenuIcon v-if="node.icon" :name="node.icon" />
-      <span :class="bem.e('label')">{{ node.title }}</span>
+      <MenuIcon v-if="item.display.icon" :name="item.display.icon" />
+      <span :class="bem.e('label')">{{ item.display.title }}</span>
     </button>
   </nav>
 </template>
