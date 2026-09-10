@@ -19,6 +19,7 @@
 
 * **fix(directives/draggable):** 二次拖拽位置偏移——`originLeft/Top` 只在首次拖拽缓存、之后不更新，第二次拖拽以初始位置为原点计算位移，弹窗按下瞬间跳回偏移前位置。改为每次 mousedown 重读 `getBoundingClientRect` 作为原点（上次落点即本次起点）；同时「margin→left/top 定位切换」由一次性 flag 改为按内联 style 实际状态判断，修复全屏切换清除内联定位后拖拽失灵的隐患；垂直钳制由「视口高 - 手柄高」改为「视口高 - 弹窗高」，整个弹窗留在视口内，不再触发 EP `.el-overlay { overflow: auto }` 的滚动条。补 2 个回归用例（连续拖拽坐标累计 / 内联定位被外部清除后自动重切换）
 * **fix(components/common/ProDialog):** 头部样式——EP 原生 X 按钮绝对定位、与 flex 流内的全屏按钮对不齐（`padding-right: 44px` 预留间距不可控）。收编为完全自定义头部：全屏 + 关闭按钮组成 actions 组靠右对齐（24×24 等宽），`show-close` 从 $attrs 剥离避免 EP 重复渲染原生 X；自绘关闭按钮语义对齐原生 X——`before-close` 存在时交由它决定是否关闭（kebab/camel 两种写法均识别）。补 2 个用例（beforeClose 拦截 / show-close=false 隐藏）
+* **chore(vite.config):** `useDialog` 加入 unplugin-auto-import 注入列表（与 `useAppRouter`/`useRequest`/`useAuth`/`useLogout` 同级），业务 `<script setup>` 内可直接 `useDialog(...)` 无须 import；同模块的 `DialogCancelledError`（class 名 AutoImport 不注入）与 `setDialogAppContext`（仅 main.ts 一次性调用，不应污染 setup 全局）保持具名 import
 
 ### 🐛 Bug Fixes | 经典侧栏折叠弹层过高（限高对齐水平弹层策略）
 

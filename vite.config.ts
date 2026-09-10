@@ -79,6 +79,10 @@ export default defineConfig({
         { from: '@/composables/useLogout', imports: [{ name: 'useLogout' }] },
         { from: '@/composables/useRequest', imports: [{ name: 'useRequest' }] },
         { from: '@/composables/useAppRouter', imports: [{ name: 'useAppRouter' }] },
+        // useDialog：命令式弹窗（详见 src/composables/useDialog）
+        // 同模块的 DialogCancelledError / setDialogAppContext 不注入：前者是类型（不参与运行时），
+        // 后者只在 main.ts 一次性调用（不应污染 setup 全局作用域）
+        { from: '@/composables/useDialog', imports: [{ name: 'useDialog' }] },
         // 业务侧高频 utils（详见 src/utils/*）
         { from: '@/utils/bem', imports: [{ name: 'createNamespace' }] },
       ],

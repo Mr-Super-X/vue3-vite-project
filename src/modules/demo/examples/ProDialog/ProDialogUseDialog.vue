@@ -15,7 +15,9 @@
  * 内联组件也恰好演示 useDialog「接收任意组件对象」的能力。
  */
 import { ElInput, ElTag } from 'element-plus'
-import { DialogCancelledError, useDialog } from '@/composables/useDialog'
+// useDialog 与 DialogCancelledError 由 unplugin-auto-import 全局注入（详见 CLAUDE.md §1.6）
+// DialogCancelledError 是 class 名，AutoImport 仅注入函数；此处保留具名 import 仅用于 instanceof
+import { DialogCancelledError } from '@/composables/useDialog'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import DocLayout from '../../layouts/DocLayout.vue'
