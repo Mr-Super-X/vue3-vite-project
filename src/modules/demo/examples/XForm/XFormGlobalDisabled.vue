@@ -63,7 +63,7 @@ const schema = computed<SchemaNode>(() => {
     children: [
       {
         component: 'Card',
-        props: { header: '① 顶层 schema.disabled 3 种写法对比（切换上方 RadioGroup）' },
+        props: { header: '① 顶层 schema.disabled 4 种写法对比（切换上方 RadioGroup）' },
         column: 2,
         row: { gutter: 16 },
         children: [
@@ -148,7 +148,7 @@ const tocItems = [
       source="src/components/form-schema/XForm.vue"
       :introductions="[
         'XFormDisabled 演示字段级 node.disabled；本页演示顶层 schema.disabled（透传 el-form disabled，与 labelPosition 同模式）。',
-        'XForm 顶层 disabled 写法 3 种：字面量 / 函数 / {{ fn }} 表达式（顶层 disabled 是 ReactionValue<boolean>，不支持 reaction 对象）。',
+        'XForm 顶层 disabled 写法 4 种：字面量 true / 字面量 false / 函数 / {{ fn }} 表达式（顶层 disabled 是 ReactionValue<boolean>，不支持 reaction 对象）。',
         '优先级：permission: hidden（最高，不渲染） > 字段级 props.disabled > 顶层 schema.disabled',
         'el-form 自动跳过 disabled 字段的校验（async-validator 行为）。',
       ]"

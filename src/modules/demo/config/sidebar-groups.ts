@@ -23,7 +23,7 @@ export const SIDEBAR_GROUPS: readonly SidebarGroupConfig[] = [
 /** 组件名 → 简短中文名（sidebar 显示为「组件名 中文名」） */
 export const CN_NAMES: Record<string, string> = {
   // ProTable 表格组件（v2.0）
-  ProTableOverview: '用法总览（4 类能力切换）',
+  ProTableOverview: '用法总览',
   ProTableRowEdit: '行内编辑',
   ProTableTree: '树形数据',
   ProTableCellSpan: '单元格合并',
@@ -61,9 +61,9 @@ export const CN_NAMES: Record<string, string> = {
   XFormModelWarn: 'model 缺失警告',
   XFormNested: '复杂布局',
   XFormNestedArray: '嵌套数组节点',
-  XFormOrderCreate: '端到端业务示例（订单创建页）',
+  XFormOrderCreate: '端到端订单创建业务示例',
   XFormPersist: '草稿持久化',
-  XFormPersistSchemaVersion: '草稿持久化·schema 版本',
+  XFormPersistSchemaVersion: '草稿持久化',
   XFormPropsAdvanced: 'XFormProps 高级配置',
   XFormReaction: '反应式联动',
   XFormReactionAdvanced: '反应式联动·进阶',
@@ -72,7 +72,7 @@ export const CN_NAMES: Record<string, string> = {
   XFormGlobalDisabled: '全局禁用',
   XFormGlobalReadonly: '全局只读',
   XFormIgnore: '节点忽略',
-  XFormValidationDebounce: '实时校验和debounce',
+  XFormValidationDebounce: '跨字段校验 debounce',
   XFormResponsive: '响应式布局',
   XFormSchemaIndex: '索引快照',
   XFormScrollToError: '错误自动滚动',

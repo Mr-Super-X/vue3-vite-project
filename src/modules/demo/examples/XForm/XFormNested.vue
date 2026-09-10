@@ -1,6 +1,8 @@
 <script setup lang="ts">
 /**
- * 参考开源 form-schema 实现的 demo（form/nested.vue）—— 复杂布局
+ * XForm 复杂布局 demo —— Card 分组 + 嵌套 children + slots 插槽系统
+ *
+ * 对照参考仓场景命名（form/nested）—— 业务模块可参照本 demo 搭建多分组用户资料页。
  *
  * 场景：用户资料 —— 三个 Card 分组（基本信息 / 联系方式 / 偏好设置）
  *

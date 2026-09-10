@@ -298,7 +298,7 @@ const tocItems = [
       title="跨字段校验（crossValidator）"
       source="src/components/form-schema/XForm.vue"
       :introductions="[
-        'RuleItem 新增 dependsOn + crossValidator 两个字段,声明式跨字段校验:',
+        'RuleItem dependsOn + crossValidator 两个字段,声明式跨字段校验:',
         '1. 密码 = 确认密码 — dependsOn: [\'password\']',
         '2. 开始日期 ≤ 结束日期 — 结束日期 dependsOn: [\'startDate\']',
         '3. 主/备用联系人至少填一个 — 双向 dependsOn 互相校验',

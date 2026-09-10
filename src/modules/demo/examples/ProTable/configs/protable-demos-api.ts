@@ -23,7 +23,7 @@ export const rowEditPropsItems: ApiItem[] = [
     type: 'boolean | RowEditConfig',
     required: false,
     default: 'false',
-    description: '启用行内编辑能力（v2.0）。传 boolean 启用默认配置；传对象启用细粒度配置。',
+    description: '启用行内编辑能力。传 boolean 启用默认配置；传对象启用细粒度配置。',
   },
   {
     name: 'trigger',

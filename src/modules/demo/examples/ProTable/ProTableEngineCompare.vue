@@ -75,7 +75,7 @@ const columns: ProColumn<Order>[] = [
       title="ProTableEngineCompare 引擎对比"
       source="src/components/ProTable/components/VxeTableBody.vue"
       :introductions="[
-        'tableEngine 切换渲染引擎：element-plus（默认）/ vxe-table（v2.1）。',
+        'tableEngine 切换渲染引擎：element-plus（默认）/ vxe-table（动态按需加载）。',
         'vxe-table 引擎按需动态加载，chunk 不进首屏；加载失败自动回退 element-plus。',
         '同一份 columns / requestApi 双引擎并排，验证列映射与事件适配（sort / selection）。',
         'vxe 引擎暂不支持树形 / 行拖拽（启动时 console.warn 并忽略该能力）。',
@@ -94,7 +94,7 @@ const columns: ProColumn<Order>[] = [
               />
             </div>
             <div :class="bem.e('pane')">
-              <h4 :class="bem.e('engine-title')">vxe-table（v2.1 引擎）</h4>
+              <h4 :class="bem.e('engine-title')">vxe-table 引擎</h4>
               <ProTable
                 table-engine="vxe-table"
                 :columns="columns"
@@ -113,11 +113,7 @@ const columns: ProColumn<Order>[] = [
         :items="engineColumnItems"
         anchor="api-engine-column"
       />
-      <ApiTable
-        title="vxe 引擎能力矩阵（v2.1）"
-        :items="engineMatrixItems"
-        anchor="api-engine-matrix"
-      />
+      <ApiTable title="vxe 引擎能力矩阵" :items="engineMatrixItems" anchor="api-engine-matrix" />
     </DemoFrame>
 
     <template #toc>

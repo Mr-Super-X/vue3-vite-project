@@ -84,7 +84,7 @@ const sortOrdersResponseAdapter = (raw) => ({
         'sortable: \'custom\' 的列表头点击后，排序参数随请求发给后端（默认 orderByColumn/isAsc）。',
         '排序变化自动回第 1 页；第三击清除排序（el-table 原生三连点语义）。',
         '后端约定不同可用 sortParamsAdapter 改序列化形态。',
-        '本 demo 后端返回 { records, totalCount }，经 responseAdapter 映射（M3）。',
+        '本 demo 后端返回 { records, totalCount }，经 responseAdapter 映射为约定结构。',
       ]"
     >
       <section id="demo-server-sort" :class="bem.b()">

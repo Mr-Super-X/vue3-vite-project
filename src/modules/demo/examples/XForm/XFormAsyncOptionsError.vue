@@ -1,11 +1,12 @@
 <script setup lang="ts">
 /**
- * 演示 asyncOptions.onError + immediate: false
+ * 演示 asyncOptions.onError + deps 重试机制
  *
- * 场景：城市选择器（含网络异常处理 + 延迟加载）
+ * 场景：城市选择器（含网络异常处理 + 字段依赖触发重试）
  *   1. onError 回调：请求失败 → toast 提示 + 不阻塞 UI（默认行为）
- *   2. immediate: false —— 节点创建时不请求，由外部 trigger 触发
- *   3. 手动重试：trigger() / refreshOptions() 实例方法
+ *   2. asyncOptions.deps：字段依赖——其他字段变化时自动触发 source 重跑
+ *   3. 当前限制：immediate: false 节点创建时不请求（依赖 visibleChange 监听，
+ *      引擎未实装）；可用 deps 字段依赖或 on.change 事件触发 source 重跑
  */
 import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
@@ -141,10 +142,10 @@ const tocItems = [
           <p>
             <strong>变通方案</strong>
             ：用
-            <code>on.change</code>
-            事件手动触发
-            <code>formRef.refreshOptions(fieldName)</code>
-            实例方法；或保持 immediate: true 由 deps 控制懒加载。
+            <code>asyncOptions.deps</code>
+            声明字段依赖（其他字段变化触发 source 重跑，参考本 demo）；或保持
+            <code>immediate: true</code>
+            由 deps 控制懒加载。
           </p>
           <p>
             <strong>进度</strong>

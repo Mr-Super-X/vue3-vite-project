@@ -1,6 +1,8 @@
 <script setup lang="ts">
 /**
- * 参考开源 form-schema 实现的 demo（form/base.vue）—— 基础用法
+ * XForm 基础用法 demo —— 2 列栅格 + 字符串 / 函数校验规则
+ *
+ * 对照参考仓场景命名（form/base）—— 业务模块可参照本 demo 搭建订单 / 用户等查询表单。
  *
  * 🠶 三种"隐藏"语义对比（hidden / ignore / permission: 'hidden'）：见 docs/24-XForm使用指南.md §4.2
  *
@@ -207,7 +209,7 @@ const tocItems = [
       title="基础用法（订单查询表单）"
       source="src/components/form-schema/XForm.vue"
       :introductions="[
-        '订单查询表单：订单号 / 状态 / 日期区间 / 备注 5 字段。',
+        '订单查询表单：订单号 / 状态 / 日期区间 / 备注 4 字段。',
         '顶层 row.gutter: 24 + 节点级 col.span 分配列宽：前 4 字段各 12 列，备注 24 列整行占满。',
         '注意：顶层 column 会把每个节点包进固定 span 的 ElCol，节点级 col.span 无法突破半宽——混用列宽时用 row + col.span 组合。',
         'rules 支持 「required」字符串 + validator 函数。订单号带格式校验，结束日期不能晚于今天。',

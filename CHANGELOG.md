@@ -2,6 +2,30 @@
 
 ## 未发布
 
+### 📖 Documentation | demo 模块文案对齐：清理过期描述与失效 API 引用
+
+> 全量扫描 `src/modules/demo/examples/`（63 个 demo 文件）后批量修正过期文案，确保 sidebar 中文名 / 演示页 introductions / DemoField label 与当前代码实现一致
+
+* **fix(demo/ProTable/ProTableOverview):** propsItems 描述里 `v2.0 传入 'vxe-table' 会 console.warn 并回退 element-plus，v2.1 计划支持` 改为 `v2.1 起支持 vxe-table 引擎，动态按需加载，chunk 不进首屏`（v2.1 实装后 src/components/ProTable/adapters/engine.ts 已删除 vxe 回退分支，原描述过期）
+* **fix(demo/ProTable/ProTableOverview):** DemoFrame introductions 与 start-here 引导卡同步 demo 实际包含的 7 个演示区（基础 / enum / render / 插槽 / defineExpose / 多选 / 四类能力）——原 4 场景卡片未涵盖 render / selection / 能力切换三个新增 section
+* **fix(demo/ProTable/ProTableOverview):** DemoField label `v2.0 4 类能力一键切换` 与 toc 项改为普适描述（`四类能力一键切换（行内编辑 / 树形 / 单元格合并 / 行拖拽）`）——版本号从用户面文案去除，避免后续版本演进再过期
+* **fix(demo/XForm/XFormOverview):** introductions `支持全量 14 字段` 改为 `支持全量 19 字段`（按 configs/xform-api.ts schemaNodeItems 实测条目数：component / props / on / children / name / label / rules / reaction / formItem / modelProp / defaultValue / row / directives / asyncOptions / slots / disabled / permission / ignore / kind+array）
+* **fix(demo/XForm/XFormAsyncOptionsError):** 删除 `formRef.refreshOptions(fieldName)` 引用——该方法在 form-schema 实例中不存在（grep src/components/form-schema 无匹配）；"变通方案"改为推荐 asyncOptions.deps 字段依赖（其他字段变化触发 source 重跑）作为实际可用的重试机制，与本 demo「强制失败开关 deps: 'forceFail'」演示一致
+* **fix(demo/XForm/XFormBase + XFormNested):** 文件头注释 `参考开源 form-schema 实现的 demo（form/base.vue）` 改为 `XForm 基础用法 demo —— 对照参考仓场景命名（form/base）`——form-schema 是项目自有组件（src/components/form-schema/），非开源 fork；保留括号内命名作为对照溯源
+* **fix(demo/config/sidebar-groups):** `XFormValidationDebounce: '实时校验和debounce'` typo 改为 `跨字段校验 debounce`——与 XFormValidationDebounce.vue 实际标题「跨字段校验 debounce 调度（高频输入减负）」对齐
+* **建议验证：** `pnpm type-check` / `pnpm lint` / `pnpm test src/modules/demo/config/sidebar-groups.spec.ts`（5 用例全绿）；浏览器实测 `/demo/pro-table-overview` start-here 卡片显示 7 场景、propsItems 描述新文案；`/demo/x-form-async-options-error` 变通方案段落显示 asyncOptions.deps 推荐用法
+
+> 第二轮扫描补充修复（P0 关键描述错误 / 版本号泄漏 user-facing 文案）
+
+* **fix(demo/ProTable/ProTableEngineCompare):** user-facing 文案去除 `v2.1` 标记——introductions L78 改为「vxe-table（动态按需加载）」、h4 标题去 `（v2.1 引擎）`、ApiTable 标题去 `（v2.1）`；开发注释保留版本溯源
+* **fix(demo/ProTable/ProTableServerSort):** introductions `经 responseAdapter 映射（M3）` 改为 `经 responseAdapter 映射为约定结构`——M3 是开发里程碑，用户文案不应出现
+* **fix(demo/ProTable/ProTableTree):** introductions `vxe-table 引擎 v2.0 不支持树形能力` 改为 `vxe-table 引擎不支持树形能力（启动时 console.warn 并忽略），仅 element-plus 引擎生效`——v2.0 标记混淆当前能力边界
+* **fix(demo/ProTable/configs/protable-demos-api):** `启用行内编辑能力（v2.0）` 改为 `启用行内编辑能力`——API 描述去除版本号
+* **fix(demo/XForm/XFormDisabled):** introductions `SchemaNode 新增 disabled: ReactionValue<boolean>` 改为 `SchemaNode disabled: ReactionValue<boolean>`——「新增」暗示曾经不存在，与现状不符
+* **fix(demo/XForm/XFormCrossField):** introductions `RuleItem 新增 dependsOn + crossValidator` 改为 `RuleItem dependsOn + crossValidator`——同上
+* **fix(demo/XForm/XFormBase):** introductions `订单查询表单 ... 5 字段` 改为 `4 字段`——实际只有 4 个字段（订单号 / 状态 / 日期区间 / 备注）
+* **fix(demo/XForm/XFormGlobalDisabled):** 顶层 disabled 写法 `3 种` 改为 `4 种`——demo 实际演示 `literal_true / literal_false / fn / expr` 四种 mode，与源代码 schema computed 一致
+
 ### ✨ Features | ProDialog 高级弹窗组件（声明式 + 命令式双入口）
 
 > 需求：弹窗支持模板 `v-model` 调用与 `useDialog` 纯 JS 命令式调用双模式，头部可拖拽（限制在视口边界内）、可全屏切换，全程 TS 强类型

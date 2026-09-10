@@ -122,7 +122,7 @@ const tocItems = [
       title="disabled 字段状态（支持反应式）"
       source="src/components/form-schema/XForm.vue"
       :introductions="[
-        'SchemaNode 新增 disabled: ReactionValue<boolean> 字段,支持 3 种粒度:',
+        'SchemaNode disabled: ReactionValue<boolean> 字段,支持 3 种粒度:',
         '1. 静态 disabled：xInput(\'username\').disabled(true) — 字段始终禁用(如业务标识字段)',
         '2. 反应式 disabled：开关状态联动——「同意条款」=true 时,「不同意原因」字段禁用',
         '3. 反应式 disabled：业务模式联动——「海运」时,「空运保价金额」字段禁用',

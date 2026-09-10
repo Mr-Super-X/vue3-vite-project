@@ -186,7 +186,7 @@ const tocItems = [
   { id: 'demo-render', label: '自定义渲染（col.render）', level: 2 },
   { id: 'demo-expose', label: 'defineExpose 调用', level: 2 },
   { id: 'demo-selection', label: '多选（勾选 / 清除勾选）', level: 2 },
-  { id: 'demo-v2-capabilities', label: 'v2.0 4 类能力切换', level: 2 },
+  { id: 'demo-v2-capabilities', label: '四类能力切换', level: 2 },
   { id: 'api-props', label: 'Props', level: 2 },
   { id: 'api-slots', label: 'Slots', level: 2 },
   { id: 'api-expose', label: 'Expose', level: 2 },
@@ -230,7 +230,7 @@ const propsItems = [
     required: false,
     default: 'element-plus',
     description:
-      "表格引擎（值: 'element-plus' | 'vxe-table'；首次 mount 前设置，运行时修改需 reload；v2.0 传入 'vxe-table' 会 console.warn 并回退 element-plus，v2.1 计划支持）",
+      "表格引擎（值: 'element-plus' | 'vxe-table'；v2.1 起支持 vxe-table 引擎，动态按需加载，chunk 不进首屏；首次 mount 前设置，运行时修改需 reload）",
   },
   {
     name: 'tableKey',
@@ -543,11 +543,11 @@ const capabilityOverviewCode = `<template>
       source="src/components/ProTable/ProTable.vue"
       :introductions="[
         '基于 columns schema 的配置驱动表格组件，同一 columns 数组同时驱动搜索项与表格列。',
-        '下方演示：基础用法 / enum 自动渲染 ElTag / 自定义插槽 / defineExpose 调用。',
+        '下方演示：基础用法 / enum 自动渲染 ElTag / 自定义渲染（render） / 自定义插槽 / defineExpose 调用 / 多选勾选清除 / 四类能力一键切换。',
       ]"
     >
       <div :class="bem.e('start-here')">
-        <strong>👀 先看这个 —— 4 个场景按推荐顺序浏览</strong>
+        <strong>👀 先看这个 —— 7 个场景按推荐顺序浏览</strong>
         <p>
           <strong>① 基础</strong>
           （必看）—— columns 同时驱动搜索与表格
@@ -557,12 +557,24 @@ const capabilityOverviewCode = `<template>
           （必看）—— 字典自动渲染 ElTag
         </p>
         <p>
-          <strong>③ 插槽</strong>
+          <strong>③ render</strong>
+          （进阶）—— JSX 自定义单元格渲染
+        </p>
+        <p>
+          <strong>④ 插槽</strong>
           （进阶）—— tableHeader / toolButton / operation / id
         </p>
         <p>
-          <strong>④ defineExpose</strong>
+          <strong>⑤ defineExpose</strong>
           （进阶）—— refresh / reset 外部调用
+        </p>
+        <p>
+          <strong>⑥ 多选</strong>
+          （进阶）—— 勾选 / 清除勾选 + 跨页记忆
+        </p>
+        <p>
+          <strong>⑦ 4 类能力</strong>
+          （参考）—— 行内编辑 / 树形 / 单元格合并 / 行拖拽一键开关
         </p>
       </div>
 
@@ -695,7 +707,10 @@ const capabilityOverviewCode = `<template>
 
       <!-- v2.0 能力切换面板（Task 12） -->
       <section id="demo-v2-capabilities">
-        <DemoField label="v2.0 4 类能力一键切换" :code="capabilityOverviewCode">
+        <DemoField
+          label="四类能力一键切换（行内编辑 / 树形 / 单元格合并 / 行拖拽）"
+          :code="capabilityOverviewCode"
+        >
           <div :class="bem.e('capability-panel')">
             <ElSwitch v-model="capabilityConfig.rowEdit" active-text="行内编辑" />
             <ElSwitch v-model="capabilityConfig.tree" active-text="树形数据" />
