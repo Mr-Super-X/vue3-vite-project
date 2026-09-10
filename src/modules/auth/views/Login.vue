@@ -32,6 +32,9 @@ const loading = ref(false)
 const showPassword = ref(false)
 const rememberMe = ref(false)
 
+// 品牌文案统一走 VITE_APP_TITLE（与 main.ts 初始化 document.title 同源），避免硬编码业务名
+const appTitle = import.meta.env.VITE_APP_TITLE || '企业中后台管理'
+
 const rules = {
   username: [
     { required: true, message: '请输入账号', trigger: 'blur' },
@@ -85,7 +88,7 @@ async function handleSubmit() {
           <span :class="bem.e('logo-piece')" />
         </div>
         <h1 :class="bem.e('title')">企业中后台管理</h1>
-        <p :class="bem.e('subtitle')">应急指挥 · 数据中台</p>
+        <p :class="bem.e('subtitle')">{{ appTitle }} · 数据中台</p>
       </div>
 
       <!-- 表单 -->
@@ -139,7 +142,7 @@ async function handleSubmit() {
         </button>
       </el-form>
 
-      <p :class="bem.e('footer')">© 2026 应急指挥中心</p>
+      <p :class="bem.e('footer')">© 2026 {{ appTitle }}中心</p>
     </el-card>
   </div>
 </template>

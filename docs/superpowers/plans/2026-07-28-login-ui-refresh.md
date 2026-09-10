@@ -260,7 +260,7 @@ async function handleSubmit() {
           <span :class="bem.e('logo-piece')" />
         </div>
         <h1 :class="bem.e('title')">企业中后台管理</h1>
-        <p :class="bem.e('subtitle')">应急指挥 · 数据中台</p>
+        <p :class="bem.e('subtitle')">{{ appTitle }} · 数据中台</p>
       </div>
 
       <!-- 表单 -->
@@ -319,7 +319,7 @@ async function handleSubmit() {
         </button>
       </el-form>
 
-      <p :class="bem.e('footer')">© 2026 应急指挥中心</p>
+      <p :class="bem.e('footer')">© 2026 {{ appTitle }}中心</p>
     </el-card>
   </div>
 </template>
