@@ -2,6 +2,12 @@
 
 ## 未发布
 
+### ✨ Features | default 布局页签刷新可见反馈（内容区 180ms 淡入）
+
+> 验收反馈「工作台首页、分析页点刷新没看到任何反馈，用户管理和监控页有反馈」——实证确认刷新机制对全部页面生效（填字→刷新→字被清空 = 组件重挂载），差异在页面内容性质：user/list 有 useRequest 骨架闪烁、监控页有输入状态变化可感知，纯静态页重挂载后像素不变、无可捕捉反馈
+
+* **feat(layouts/default):** AppView 监听布局壳注入的 `refreshKey`，页签刷新命令触发时给 `__content` 挂一次性 `is-refresh-fade`（220ms 后摘除），CSS 动画 `vv-app-view-refresh-fade` 180ms 淡入——静态页刷新"已发生"可感知。关键设计：① watch 只盯 refreshKey，路由切换不触发（负面对照实测无 class、无动画）；② 用 CSS animation 而非 `<Transition>`：避免与 keep-alive out-in 的已知交互风险，且 class 与应用同帧提交、新视图挂载即带动画类；③ 220ms 定时器摘除 class 防无关重渲染误触发，onUnmounted 清理定时器。实测：刷新 60ms 时 class 在 + 动画运行，300ms 后摘除；切页签零触发；23 用例全绿、控制台零警告
+
 ### 🐛 Bug Fixes | default 布局暗色主题 el-table stripe 条纹行泛白割裂
 
 * **fix(layouts/default):** `default-tokens.scss` 的 `default-layout-ep-dark` mixin 补齐 fill 阶梯缺失的两档——`--el-fill-color-lighter: #232f45`、`--el-fill-color-extra-light: #2c3a54`。EP el-table 的 stripe 条纹行底色取 `--el-fill-color-lighter`，mixin 原只覆盖到 light/dark 档，缺失档回落 EP 出厂亮色值 #fafafa——暗色下条纹行整块泛白、深色表体+白条纹强烈割裂（/user/list 实测）。暗色阶梯现完整：dark #0f1726 → base #1a2436 → light #1c2638 → lighter #232f45 → extra-light #2c3a54；亮色未动（EP 默认 #fafafa，实测无回归）

@@ -163,3 +163,12 @@
 5. `el-tooltip`：placement right、show-after 300ms、dark 主题、teleport body（不被 el-scrollbar 裁剪）。EP 组件由 unplugin-vue-components 按需注入。
 
 验证：`pnpm type-check` / eslint 0 问题；layouts/default 19 用例全绿；浏览器实测折叠 hover 仪表盘 → dark tooltip「仪表盘」右侧弹出，hover 分组仅弹子项浮层无 tooltip。
+
+## Phase 6 验收反馈修复日志（2026-09-10 续）
+
+### 6.6 页签刷新可见反馈（AppView 180ms 淡入）
+
+- 现象：工作台首页/分析页点刷新"无反馈"，用户管理/监控页"有反馈"
+- 实证：两页填字→刷新→字清空 = remount 真实发生，机制对全部页面生效；差异在页面内容性质（静态页重挂载像素不变）
+- 修复：`AppView.vue` watch `refreshKey` → 一次性 `is-refresh-fade` class（220ms 摘除）+ CSS animation 180ms 淡入；路由切换不触发（负面对照验证）；弃用 `<Transition>` 改 animation 规避 keep-alive out-in 交互风险
+- 验证：CDP 实测刷新 60ms class+动画在 / 300ms 摘除 / 切页签零触发；type-check ✓ eslint ✓ layouts 23 用例全绿 ✓
