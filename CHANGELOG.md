@@ -2,6 +2,16 @@
 
 ## 未发布
 
+### ✨ Features | ProDialog 高级弹窗组件（声明式 + 命令式双入口）
+
+> 需求：弹窗支持模板 `v-model` 调用与 `useDialog` 纯 JS 命令式调用双模式，头部可拖拽（限制在视口边界内）、可全屏切换，全程 TS 强类型
+
+* **feat(components/common):** 新增 `ProDialog` 组件（`src/components/common/ProDialog/`）——ElDialog 原生 Props 全量继承（`InstanceType<typeof ElDialog>['$props']` 推导，避开 EP 内部导出路径），扩展 `draggable`（默认 true，全屏态自动禁用）/ `fullScreen`（默认 false，头部带切换按钮，走 EP 原生 `fullscreen` 机制）/ `showFullScreenButton`；透传 default/header/footer 插槽；内置「取消/确定」footer 并抛出语义化事件（`confirm` 仅确定按钮触发，`close` 为所有关闭途径的兜底）。组件经 `@/components/index.ts` 扫描自动全局注册，也可具名导入
+* **feat(directives):** 新增 `v-draggable` 指令（`src/directives/draggable.ts`，按现有 install 约定自动全局注册）——绑定元素即拖拽手柄，只有按住手柄才能拖；首次拖拽把 EP「margin 居中」定位切换为 left/top（相对全屏 fixed 的 el-overlay，坐标即视口坐标）；`clampPosition` 把弹窗钳制在视口边界内，下缘保留手柄高度可抓回（而非贴 0）。弃用 EP 原生 draggable 的原因：原生无边界限制，拖出视口后无法找回
+* **feat(composables):** 新增 `useDialog` Hook（`src/composables/useDialog.ts`）——接收 Vue 组件 + 配置返回 `{ open, close, setProps, isOpen }`；open 时创建容器 div 挂 body 用 `render()` 动态挂载，EP `closed` 事件（关闭动画结束）后 `render(null)` + `remove()` 销毁，无 DOM 残留；**appContext 双保险继承**：setup 内调用捕获 `getCurrentInstance().appContext`，纯 JS 调用回退到 main.ts `setDialogAppContext(app)` 注册的全局上下文（`main.ts` 追加一行，必须在所有 `app.use` 之后调用），动态挂载的弹窗及其子组件因此可正常访问全局注册的组件 / Pinia / Router / i18n；open() 返回 Promise——点「确定」resolve，取消/关闭/X/ESC/遮罩 reject `DialogCancelledError`（instanceof 可识别，语义对齐 ElMessageBox.confirm）；`setProps` 经响应式状态 + 包装组件 render 实时生效
+* **test:** 新增 `draggable.spec.ts`（4 组 clampPosition 边界数学 + 4 用例指令行为：拖拽位移/边界钳制/禁用/动态恢复）与 `useDialog.spec.ts`（6 用例：确认 resolve + 容器销毁、取消 reject、X 关闭 reject、setProps 实时更新、contentProps 透传、close() 语义）；useDialog 测试通过注册 ElDialog/ElButton/v-draggable 的最小上下文模拟纯 JS 调用，`.el-dialog` 能被渲染即证明 appContext 继承生效
+* **建议验证：** 页面模板里 `<ProDialog v-model="visible" title="测试" draggable>` 验证拖拽不越界 + 全屏按钮切换；某按钮回调里 `useDialog(组件).open()` 验证命令式唤起、确定/取消的 Promise 语义、弹窗内 el 组件与 Pinia 正常可用
+
 ### 🐛 Bug Fixes | 经典侧栏折叠弹层过高（限高对齐水平弹层策略）
 
 * **fix(layouts/default):** 折叠态 hover 图标弹出的 vertical 二级菜单限高 `calc(100vh - 20px)` 实测 933px 近全屏（demo 模块 60+ 项），用户反馈过高——改为与用户方定值的水平弹层同一偏移 `calc(100vh - 300px)`（实测 653px，约 14 项可见 + 内部滚动），两处弹层限高策略一致。实测定位 top 71→bottom 724 视口内、单层滚动条、docOverflow false，暗色样式无回归

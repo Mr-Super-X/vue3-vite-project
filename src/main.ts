@@ -28,6 +28,7 @@ import i18n from './locales'
 import Directives from '@directives'
 import GlobalComponents from '@components'
 import Plugins from '@plugins'
+import { setDialogAppContext } from '@composables/useDialog'
 import { assertNoMockInProd } from '@/api/mock-guard'
 
 // 浏览器基线统一（必须在所有自定义样式之前）。
@@ -77,5 +78,10 @@ app.use(i18n)
 app.use(GlobalComponents)
 app.use(Directives)
 app.use(Plugins)
+
+// 命令式弹窗（useDialog）的上下文来源：纯 JS 调用（无 setup 实例可捕获）时，
+// 动态挂载的弹窗依赖这里注册的全局 appContext 才能访问 Pinia/Router/全局组件。
+// 必须在所有 app.use 之后调用——_context 的 provides 由插件 install 写入
+setDialogAppContext(app)
 
 app.mount('#app')
