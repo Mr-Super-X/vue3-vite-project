@@ -50,6 +50,16 @@ export interface ProDialogProps extends ElDialogNativeProps {
    * @defaultValue true
    */
   showFullScreenButton?: boolean
+
+  /**
+   * 是否允许按住右下角拖拉调整弹窗宽高（默认 false）——
+   * 启用后右下角出现 12×12 px 三角手柄；硬编码钳制最小 320×200、
+   * 最大 viewport - 16px；全屏态自动禁用（与 draggable 同步策略）。
+   * 仅在 resize 结束（mouseup）时抛 resizeChange 事件，
+   * 不在 mousemove 高频抛以避免父组件重渲染抖动。
+   * @defaultValue false
+   */
+  resizable?: boolean
 }
 
 /**
@@ -73,6 +83,8 @@ export type ProDialogEmits = {
   confirm: []
   /** 全屏状态切换 */
   fullScreenChange: [value: boolean]
+  /** 拖拉调整宽高结束时（mouseup）触发；参数为最终宽高（px） */
+  resizeChange: [width: number, height: number]
 }
 
 /**

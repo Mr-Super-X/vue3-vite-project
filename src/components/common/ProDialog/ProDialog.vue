@@ -65,6 +65,14 @@ interface Props {
   fullScreen?: boolean
   /** 是否显示头部全屏切换按钮（默认 true） */
   showFullScreenButton?: boolean
+  /**
+   * 是否允许按住右下角拖拉调整弹窗宽高（默认 false）——
+   * 启用后右下角出现 12×12 px 三角手柄；
+   * 钳制：最小 320×200、最大 viewport - 16px；全屏态自动禁用。
+   * 仅在 resize 结束（mouseup）时抛 resizeChange，
+   * 不在 mousemove 高频抛以避免父组件重渲染抖动。
+   */
+  resizable?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -73,6 +81,7 @@ const props = withDefaults(defineProps<Props>(), {
   draggable: true,
   fullScreen: false,
   showFullScreenButton: true,
+  resizable: false,
 })
 
 const emit = defineEmits<{
@@ -85,6 +94,8 @@ const emit = defineEmits<{
   confirm: []
   /** 全屏状态切换 */
   fullScreenChange: [value: boolean]
+  /** 拖拉调整宽高结束时（mouseup）触发；参数为最终宽高（px） */
+  resizeChange: [width: number, height: number]
 }>()
 
 const isFullScreen = ref(props.fullScreen)
@@ -112,18 +123,87 @@ const dragEnabled = computed(() => props.draggable && !isFullScreen.value && vis
 
 function toggleFullScreen(): void {
   isFullScreen.value = !isFullScreen.value
-  // 清除拖拽留下的内联定位：EP 的 .is-fullscreen 只重置 margin/width/height，
-  // 不重置 v-draggable 写入的内联 left/top——不清理会把全屏弹窗顶出视口。
-  // 进出全屏都清除：退出全屏后弹窗回到默认居中位置（拖拽偏移一并复位）
+  // 清除拖拽 + resize 留下的内联定位/尺寸：
+  // - 拖拽：EP .is-fullscreen 只重置 margin，不重置 left/top
+  // - resize：width/height 不清除 → 退出全屏后弹窗仍是上次拖拽的尺寸（EP 默认 width 不生效）
+  // 进出全屏都清除：退出全屏后弹窗回到默认居中 + EP 默认尺寸
   const dialog = headerRef.value?.closest<HTMLElement>('.el-dialog')
   if (dialog) {
     dialog.style.left = ''
     dialog.style.top = ''
     dialog.style.margin = ''
     dialog.style.position = ''
+    dialog.style.width = ''
+    dialog.style.height = ''
   }
   emit('fullScreenChange', isFullScreen.value)
 }
+
+// —— 可拖拉调整宽高 ——
+/** resize 启用条件：props.resizable && 非全屏 && 弹窗可见（与 draggable 同步策略） */
+const resizableEnabled = computed(() => props.resizable && !isFullScreen.value && visible.value)
+
+/** resize 中间状态：mousedown 时锁定，mouseup 时清空 */
+interface ResizeState {
+  startX: number
+  startY: number
+  startWidth: number
+  startHeight: number
+  dialog: HTMLElement
+}
+
+let resizeState: ResizeState | null = null
+
+function startResize(e: MouseEvent): void {
+  if (!resizableEnabled.value) return
+  const dialog = headerRef.value?.closest<HTMLElement>('.el-dialog')
+  if (!dialog) return
+  resizeState = {
+    startX: e.clientX,
+    startY: e.clientY,
+    startWidth: dialog.offsetWidth,
+    startHeight: dialog.offsetHeight,
+    dialog,
+  }
+  document.addEventListener('mousemove', handleResizeMove)
+  document.addEventListener('mouseup', handleResizeUp)
+  // preventDefault 防止文本选中 + 改鼠标手势
+  e.preventDefault()
+  document.body.style.userSelect = 'none'
+  document.body.style.cursor = 'se-resize'
+}
+
+function handleResizeMove(e: MouseEvent): void {
+  if (!resizeState) return
+  const dx = e.clientX - resizeState.startX
+  const dy = e.clientY - resizeState.startY
+  // 钳制：最小 320×200 / 最大 viewport - 16px（左右上下各留 8px 余量）
+  const maxW = window.innerWidth - 16
+  const maxH = window.innerHeight - 16
+  const newWidth = Math.max(320, Math.min(maxW, resizeState.startWidth + dx))
+  const newHeight = Math.max(200, Math.min(maxH, resizeState.startHeight + dy))
+  resizeState.dialog.style.width = `${newWidth}px`
+  resizeState.dialog.style.height = `${newHeight}px`
+}
+
+function handleResizeUp(): void {
+  if (!resizeState) return
+  document.removeEventListener('mousemove', handleResizeMove)
+  document.removeEventListener('mouseup', handleResizeUp)
+  document.body.style.userSelect = ''
+  document.body.style.cursor = ''
+  emit('resizeChange', resizeState.dialog.offsetWidth, resizeState.dialog.offsetHeight)
+  resizeState = null
+}
+
+// onUnmounted 清监听：组件卸载时如果正在 resize，document 监听器必须清理（防泄漏）
+onUnmounted(() => {
+  document.removeEventListener('mousemove', handleResizeMove)
+  document.removeEventListener('mouseup', handleResizeUp)
+  document.body.style.userSelect = ''
+  document.body.style.cursor = ''
+  resizeState = null
+})
 
 /** el-dialog 的 open 事件（进入动画开始） */
 function handleOpen(): void {
@@ -209,6 +289,11 @@ function handleCloseClick(): void {
       </div>
     </template>
 
+    <!-- resize 手柄：作为 default slot 第一个元素，绝对定位贴 dialog 右下角。
+         EP .el-dialog__body 默认 position: relative，所以 handle 的 absolute 相对 body。
+         触发条件：resizable 启用 + 非全屏 + 弹窗可见（resizableEnabled computed 已聚合）。 -->
+    <div v-if="resizableEnabled" :class="bem.e('resize-handle')" @mousedown="startResize" />
+
     <slot />
 
     <template #footer>
@@ -260,6 +345,36 @@ function handleCloseClick(): void {
   // 禁用拖拽时手柄恢复默认光标（全屏态 / draggable=false）
   &.is-drag-disabled &__header {
     cursor: default;
+  }
+
+  // 右下角 resize 手柄：12×12 px 三角，绝对定位贴 dialog 右下角
+  // hover 时三角变蓝（提示可调整）
+  &__resize-handle {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 12px;
+    height: 12px;
+    cursor: se-resize;
+    user-select: none;
+    z-index: 1;
+
+    &::after {
+      content: '';
+      position: absolute;
+      right: 3px;
+      bottom: 3px;
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-width: 0 0 6px 6px;
+      border-color: transparent transparent var(--el-color-info) transparent;
+      transition: border-bottom-color 0.2s ease;
+    }
+
+    &:hover::after {
+      border-bottom-color: var(--el-color-primary);
+    }
   }
 }
 </style>

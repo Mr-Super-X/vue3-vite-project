@@ -10,6 +10,19 @@
 * **test(demo/layouts/sidebar-state):** 新增 8 用例——合法值采用 / 缺值兜底 200 / 字符串兜底 / null 兜底 / 浮点四舍五入 / watch 触发写回 / 拖拽高频写 debounce 合并（连续 250/260/280 改值只写最后一次）/ 跨模块加载一致性（A 模块改值 → reload B 模块读 Local 一致）；`vi.resetModules` 处理模块级单例 + watch 重置，`vi.useFakeTimers` 处理 debounce 时序
 * **建议验证：** 浏览器实测 `/demo/pro-table-overview` 拖拽 sidebar 边缘到 320px → 关闭并重新打开浏览器/标签页 → 仍是 320px；浏览器 DevTools 看 `localStorage[vue3-vite-project:demo-sidebar-width]` 数值正确；多次拖拽仅在停止拖拽 300ms 后才落盘（Network/storage 面板观察）；`pnpm type-check` / `pnpm lint` / `pnpm test src/modules/demo --run`（6 文件 49 用例全绿）
 
+### ✨ Features | ProDialog 新增 resizable 可拖拉调整宽高能力
+
+> 需求：弹窗支持右下角三角手柄拖拽调整宽高（企业常见：详情 / 审批 / 报告预览动态调整内容区域），硬编码钳制 min 320×200 / max viewport - 16；为兼容 `useDialog` 命令式入口，新增 `resizeChange` 事件而非暴露 API（弹窗组件不增加方法表面积）
+
+* **feat(components/common/ProDialog):** 新增 `resizable?: boolean` 与 `resizeChange: [w, h]` 事件——mousedown / move / up 事件链；右下角 12×12 px 三角手柄（CSS `::after` 三角 + hover 变蓝）；`resizableEnabled` computed 聚合 `props.resizable && !isFullScreen && visible` 与 draggable 互斥同步策略；钳制常量 `MIN_WIDTH=320 / MIN_HEIGHT=200 / VIEWPORT_MARGIN=8` 硬编码（与 draggable 同风格，YAGNI）；`toggleFullScreen` 加 width / height 内联清理（避免 resize 后切全屏再退出，残留尺寸导致 EP 默认 width 不生效——与 v-draggable 清理 left / top 同思路）；onUnmounted 清 document mousemove / mouseup 监听（防内存泄漏）
+* **feat(components/common/ProDialog/types):** `ProDialogProps` 加 `resizable` 字段、`ProDialogEmits` 加 `resizeChange` 事件，JSDoc 完整（默认 `false`、仅 mouseup 抛、与 `draggable` 同步禁用）
+* **test(components/common/ProDialog):** ProDialog.spec.ts 4 → 13 用例，新增 8 个 resizable 测试（resizable=true 渲染 handle / resizable=false 无 handle / mousedown-mousemove-mouseup 完整链路抛 resizeChange / 钳制最小 320×200 / 钳制最大 viewport-16 / 全屏态禁用 handle / resize 后切全屏内联 width-height 被清除 / mousemove 不抛事件仅 mouseup 抛 / onUnmounted 清监听）；`mockLayout` 改 getter 模式让 offsetWidth 跟随 style 动态计算（贴近真实浏览器重排行为，避免 emit 拿到 mock 固定值的陷阱）；`mountOpen` 扩展支持 `listeners` 参数（Vue3 `createApp` 第二参数 `onXxx` 自动识别为 emit listener）
+* **demo(demo/examples/ProDialog):** 新增 `ProDialogResizable.vue`（305 行，4 个 DemoField：① 基础可调整 ② 视口边界钳制 ③ resizeChange 事件日志 ④ 全屏×resize 交叉），沿用 DocLayout + DemoFrame + DemoField + DocToc 模板
+* **fix(demo/ProDialogResizable):** ④ 全屏×resize 交叉 demo 状态字段「最后一次 resize 尺寸」原依赖手动点「记录当前尺寸」按钮（反直觉），改为 `@resize-change="onFullResize"` 直接驱动，删除冗余按钮——状态与用户操作（拖拽）实时同步
+* **chore(demo/config):** CN_NAMES 加 `ProDialogResizable: '可拖拉调整宽高'`，自动归入「ProDialog 弹窗组件」分组（分组前缀 `ProDialog` 已存在，无需改 SIDEBAR_GROUPS）
+* **chore(.gitignore):** 新增 `.verify/`（浏览器验证截图存档目录不入库）
+* **建议验证：** dev `/demo/pro-dialog-resizable` 拖右下角三角，鼠标变 ↘ 光标、body 文字不被选中；事件 demo 日志 mousemove 不刷屏、mouseup 仅一次记录；全屏×resize 交叉 demo 先拖大再切全屏退出，应回到 EP 默认 480 而非拖拽尺寸；浏览器实测基础 demo `480×259 → 680×409`（+200/+150）、最小钳制 `320×200`、最大钳制 `1425×885`（viewport `1441×901 - 16`）；`pnpm type-check:full` / `pnpm lint` / `vitest ProDialog.spec.ts`（13/13）/ `pnpm check:routes` 全绿
+
 ### 📖 Documentation | demo 模块文案对齐：清理过期描述与失效 API 引用
 
 > 全量扫描 `src/modules/demo/examples/`（63 个 demo 文件）后批量修正过期文案，确保 sidebar 中文名 / 演示页 introductions / DemoField label 与当前代码实现一致

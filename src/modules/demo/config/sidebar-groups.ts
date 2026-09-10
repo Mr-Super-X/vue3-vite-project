@@ -86,6 +86,7 @@ export const CN_NAMES: Record<string, string> = {
   XFormZod: 'zod 校验',
   // ProDialog 弹窗组件
   ProDialogOverview: '用法总览（声明式）',
+  ProDialogResizable: '可拖拉调整宽高',
   ProDialogUseDialog: '命令式调用（useDialog）',
   // BaseChart 图表组件
   BaseChartOverview: '用法总览',

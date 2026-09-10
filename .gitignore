@@ -54,3 +54,4 @@ mock/**/_*.bundled_*.cjs
 src/types/components.d.ts
 src/types/auto-imports.d.ts
 .gstack/
+.verify/

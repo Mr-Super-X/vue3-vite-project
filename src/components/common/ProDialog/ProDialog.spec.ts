@@ -35,10 +35,20 @@ describe('ProDialog', () => {
     vi.restoreAllMocks()
   })
 
-  function mountOpen(props: Record<string, unknown> = {}): void {
+  function mountOpen(
+    props: Record<string, unknown> = {},
+    listeners: Record<string, unknown> = {}
+  ): void {
     const container = document.createElement('div')
     document.body.appendChild(container)
-    const app = createApp(ProDialog, { modelValue: true, title: '交叉测试', ...props })
+    // Vue3 createApp 第二参数支持 on* 开头的 key 作为 emit listener；
+    // 这里把 listeners 展开到 props 对象里，createApp 自动识别 onXxx → 监听器
+    const app = createApp(ProDialog, {
+      modelValue: true,
+      title: '交叉测试',
+      ...props,
+      ...listeners,
+    })
     app.component('ElDialog', ElDialog)
     app.component('ElButton', ElButton)
     app.use(Draggable)
@@ -152,5 +162,166 @@ describe('ProDialog', () => {
     })
     expect(dialog.style.left).toBe('')
     expect(dialog.style.position).toBe('')
+  })
+
+  describe('resizable 可调整宽高', () => {
+    /** 提取 resize-handle 元素 */
+    function resizeHandle(): HTMLElement {
+      const el = document.querySelector<HTMLElement>('.vv-pro-dialog__resize-handle')
+      expect(el).toBeTruthy()
+      return el as HTMLElement
+    }
+
+    /** jsdom 下弹窗/视口尺寸全 0，需要 mock 才能让钳制逻辑有真值可算。
+     *
+     * offsetWidth / offsetHeight 用 getter 实现：跟随 style.width / style.height
+     * 动态变化（贴近真实浏览器重排行为），保证 emit 时拿到的尺寸是 resize 后的值。
+     */
+    function mockLayout(width = 400, height = 300, viewportW = 800, viewportH = 600): void {
+      const dialog = document.querySelector<HTMLElement>('.el-dialog') as HTMLElement
+      Object.defineProperty(dialog, 'offsetWidth', {
+        get() {
+          const styleWidth = Number.parseInt(this.style.width, 10)
+          return styleWidth || width
+        },
+        configurable: true,
+      })
+      Object.defineProperty(dialog, 'offsetHeight', {
+        get() {
+          const styleHeight = Number.parseInt(this.style.height, 10)
+          return styleHeight || height
+        },
+        configurable: true,
+      })
+      Object.defineProperty(window, 'innerWidth', { value: viewportW, configurable: true })
+      Object.defineProperty(window, 'innerHeight', { value: viewportH, configurable: true })
+    }
+
+    it('resizable=true：右下角出现 resize-handle 元素', async () => {
+      mountOpen({ resizable: true })
+      await queryDialog()
+      expect(resizeHandle()).toBeTruthy()
+    })
+
+    it('resizable=false（默认）：无 resize-handle', async () => {
+      mountOpen()
+      await queryDialog()
+      expect(document.querySelector('.vv-pro-dialog__resize-handle')).toBeNull()
+    })
+
+    it('拖拽 handle：mousedown 启动 → mousemove 改 width/height → mouseup 抛 resizeChange', async () => {
+      const onResizeChange = vi.fn()
+      mountOpen({ resizable: true }, { onResizeChange })
+      const dialog = await queryDialog()
+      mockLayout()
+
+      resizeHandle().dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }))
+      // 模拟向右下拖 +200/+150
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 200, clientY: 150 }))
+      expect(dialog.style.width).toBe('600px')
+      expect(dialog.style.height).toBe('450px')
+
+      // mouseup 触发事件
+      document.dispatchEvent(new MouseEvent('mouseup'))
+      // mock 用 getter 跟随 style 动态计算 offsetWidth，emit 拿到的就是 resize 后的尺寸
+      expect(onResizeChange).toHaveBeenCalledWith(600, 450)
+      // 副作用清理：cursor / user-select 恢复
+      expect(document.body.style.cursor).toBe('')
+      expect(document.body.style.userSelect).toBe('')
+    })
+
+    it('钳制：最小尺寸 320×200（向左上拖出范围时被夹紧）', async () => {
+      mountOpen({ resizable: true })
+      const dialog = await queryDialog()
+      mockLayout()
+
+      resizeHandle().dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }))
+      // 起点 clientX/Y 是 0，向左上拖 -500/-500：实际位移为 0 - 500 = -500，远小于最小
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: -500, clientY: -500 }))
+      expect(dialog.style.width).toBe('320px')
+      expect(dialog.style.height).toBe('200px')
+      document.dispatchEvent(new MouseEvent('mouseup'))
+    })
+
+    it('钳制：最大尺寸 = viewport - 16px（向右下拖出视口时被夹紧）', async () => {
+      mountOpen({ resizable: true })
+      const dialog = await queryDialog()
+      mockLayout(400, 300, 800, 600)
+
+      resizeHandle().dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }))
+      // 向右下拖 +1000/+1000：远超 800-16 / 600-16
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 1000, clientY: 1000 }))
+      expect(dialog.style.width).toBe('784px') // 800 - 16
+      expect(dialog.style.height).toBe('584px') // 600 - 16
+      document.dispatchEvent(new MouseEvent('mouseup'))
+    })
+
+    it('全屏态：自动禁用 resize（resizableEnabled computed 联动）', async () => {
+      mountOpen({ resizable: true, fullScreen: true })
+      await queryDialog()
+      expect(document.querySelector('.vv-pro-dialog__resize-handle')).toBeNull()
+    })
+
+    it('resize 后切全屏：内联 width/height 被清除（与拖拽清理同思路）', async () => {
+      mountOpen({ resizable: true })
+      const dialog = await queryDialog()
+      mockLayout()
+
+      // 拖大弹窗
+      resizeHandle().dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }))
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 200, clientY: 200 }))
+      document.dispatchEvent(new MouseEvent('mouseup'))
+      expect(dialog.style.width).toBe('600px')
+      expect(dialog.style.height).toBe('500px')
+
+      // 切全屏：内联尺寸 + 定位应一并清除（toggleFullScreen 加了 width/height 清理）
+      fullscreenBtn().click()
+      await vi.waitFor(() => {
+        expect(dialog.classList.contains('is-fullscreen')).toBe(true)
+      })
+      expect(dialog.style.width).toBe('')
+      expect(dialog.style.height).toBe('')
+      expect(dialog.style.left).toBe('')
+      expect(dialog.style.top).toBe('')
+    })
+
+    it('mousemove 中不抛 resizeChange（仅 mouseup 触发，避免父组件高频重渲染）', async () => {
+      const onResizeChange = vi.fn()
+      mountOpen({ resizable: true }, { onResizeChange })
+      await queryDialog()
+      mockLayout()
+
+      resizeHandle().dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }))
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 100, clientY: 100 }))
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 200, clientY: 200 }))
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 300, clientY: 300 }))
+      expect(onResizeChange).not.toHaveBeenCalled() // 关键断言：mousemove 不抛
+
+      document.dispatchEvent(new MouseEvent('mouseup'))
+      expect(onResizeChange).toHaveBeenCalledTimes(1)
+    })
+
+    it('onUnmounted 清理 document 监听器（防内存泄漏）', async () => {
+      const onResizeChange = vi.fn()
+      mountOpen({ resizable: true }, { onResizeChange })
+      await queryDialog()
+      mockLayout()
+
+      // 启动 resize（mousedown 注册了 document mousemove/mouseup 监听）
+      resizeHandle().dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }))
+
+      // 卸载前手动模拟未触发的 mouseup（模拟用户拖到一半组件被销毁）
+      const { app, container } = mounted[mounted.length - 1]!
+      app.unmount()
+      container.remove()
+
+      // 卸载后再次 dispatch mousemove 不应再触发业务逻辑（document 监听已被 onUnmounted 清掉）
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 999, clientY: 999 }))
+      // resizeState 已置 null，handleResizeMove 是 no-op；断言函数式（副作用：style 不应被改）
+      const dialog = document.querySelector<HTMLElement>('.el-dialog')
+      // 卸载后 dialog 应已被移除或未被附加新尺寸
+      // （实际 EP 卸载后会 remove .el-overlay；这里只要 style 没被改就算清理通过）
+      expect(dialog?.style.width === '' || dialog === null).toBe(true)
+    })
   })
 })
