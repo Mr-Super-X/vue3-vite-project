@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > 本文档是 `~/.claude/CLAUDE.md` 的项目级补充。所有全局规则（§一～§十一）自动适用，遇到冲突以**本文档为准**。
 >
-> **文档版本**：v1.1.0 | **生成日期**：2026-09-08 | **生效分支**：`master`
+> **文档版本**：v1.2.0 | **生成日期**：2026-09-10 | **生效分支**：`master`
 
 ---
 
@@ -309,11 +309,12 @@ const bem = createNamespace('form-engine') // kebab-case，必须与 sass 根选
 | 2   | `bem` 实例声明                 | `const bem = createNamespace('<kebab-case>')`，组件名必须是 **kebab-case**（如 `form-engine`、`async-state`），与 sass 根选择器 `.#{$BEM_PREFIX}-<kebab-case>` **严格对齐**——HTML class 与 CSS 选择器大小写敏感，不一致将导致整片样式失效                               |
 | 3   | 模板 class 拼装                | 必须通过 `bem.b()` / `bem.e()` / `bem.m()` / `bem.is()` / `bem.has()` 拼装，**禁止**硬编码前缀字符串                                                                                                                                                                    |
 | 4   | `<style>` 块 `lang` 属性       | 必填 `lang="scss"`，用于解析 `$BEM_PREFIX` Sass 变量                                                                                                                                                                                                                    |
-| 5   | `<style>` 块 `scoped` 属性     | **禁止添加**——命名空间隔离由 BEM 接管，scoped 是冗余                                                                                                                                                                                                                    |
+| 5   | `<style>` 块 `scoped` 属性     | **禁止添加**——命名空间隔离由 BEM 接管，scoped 是冗余；连锁约束：非 scoped 样式下 `:deep()` 不会被编译（见第 10 条）                                                                                                                                                     |
 | 6   | 根选择器写法                   | 必须 `.#{$BEM_PREFIX}-组件名-kebab-case`（如 `.#{$BEM_PREFIX}-form-engine`），与 `bem` 实例一一对应                                                                                                                                                                     |
 | 7   | 嵌套占位符                     | element 用 `&__xxx`、modifier 用 `&--yyy`、状态用 `&.is-xxx` / `&.has-xxx`，禁止重复拼接前缀                                                                                                                                                                            |
 | 8   | BEM 默认前缀                   | `vv`（即 `$BEM_PREFIX` 默认值），由 `unplugin-auto-import` 注入                                                                                                                                                                                                         |
 | 9   | `bem.m()` vs `bem.em()` 选择   | **block modifier** 用 `bem.m('xxx')` → `vv-<block>--xxx`（作用于整个组件，如卡片整体 `'shimmer'`）；**element modifier** 用 `bem.em('elem', 'xxx')` → `vv-<block>__elem--xxx`（作用于某个元素，如 `__row--first`）。误用会导致 class 与 sass 嵌套选择器不匹配，样式失效 |
+| 10  | 穿透写法                       | 非 scoped 样式下 `:deep()` / `::v-deep` / `:v-deep` **均不会被编译**，会以伪类原样输出到浏览器并被整条规则丢弃——**必须直接写后代选择器**（如 `.#{$BEM_PREFIX}-form-engine .el-input__inner { ... }`）                                                                   |
 
 ### 3.3 反模式（禁止出现）
 
@@ -326,6 +327,7 @@ const bem = createNamespace('form-engine') // kebab-case，必须与 sass 根选
 | 5   | 同一组件出现两份 `bem` 实例声明                                                  | 命名空间分裂，会造成样式不生效                                                                                                                                                                                   |
 | 6   | `createNamespace('PascalCase')`（如 `'OrdersList'`、`'HomeFooter'`）             | HTML class 大小写敏感，`vv-OrdersList` 与 sass 编译产物 `.vv-orders-list` 不匹配 → 整片样式失效。**必须用 kebab-case**（`'orders-list'`、`'home-footer'`），转换规则：`PascalCase` 每个大写字母前加 `-` 后全小写 |
 | 7   | `bem.m('xxx')` 误用于 element 修饰（如 `bem.m('first')` 当 m 用于 `__row` 元素） | `bem.m()` 生成 `vv-<block>--xxx`（block modifier），与 sass 嵌套 `&__row { &--first { ... } }` 展开的 `vv-<block>__row--first`（element modifier）不匹配 → grid 等布局失效。**应当用 `bem.em('row', 'first')`**  |
+| 8   | 非 scoped `<style>` 中使用 `:deep()` / `::v-deep` / `:v-deep`                    | 非 scoped 样式无编译器接管，`:deep()` 会作为伪类**原样输出到浏览器**，整条规则被浏览器直接丢弃（而非仅该选择器失效）——覆盖第三方库组件样式时**必须直接写后代选择器**                                             |
 
 ### 3.4 验证机制
 
