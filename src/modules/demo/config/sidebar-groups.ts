@@ -17,6 +17,7 @@ export const SIDEBAR_GROUPS: readonly SidebarGroupConfig[] = [
   { title: 'ProTable 表格组件', prefix: 'ProTable' },
   { title: 'XForm 表单引擎', prefix: 'XForm' },
   { title: 'ProDialog 弹窗组件', prefix: 'ProDialog' },
+  { title: 'BaseChart 图表组件', prefix: 'BaseChart' },
   { title: '通用组件', prefix: '' },
 ]
 
@@ -86,6 +87,12 @@ export const CN_NAMES: Record<string, string> = {
   // ProDialog 弹窗组件
   ProDialogOverview: '用法总览（声明式）',
   ProDialogUseDialog: '命令式调用（useDialog）',
+  // BaseChart 图表组件
+  BaseChartOverview: '用法总览',
+  BaseChartSaleFunnel: '销售转化漏斗',
+  BaseChartRealTime: '实时监控',
+  BaseChartInDialog: '嵌入 ProDialog',
+  BaseChartDashboard: '多图表仪表盘',
   // 通用组件
   AsyncState: '异步状态容器',
   ErrorBoundary: '错误边界',
