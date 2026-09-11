@@ -1,7 +1,8 @@
 # useRequest 三态请求使用规范
 
-> **文档版本**：v1.0.0 | **最后更新**：2026-07-24
-> **能力来源**：`src/composables/useRequest.ts`（CHANGELOG 未记录，2026-07-24 审计补齐文档）
+> **文档版本**：v1.2.0 | **最后更新**：2026-09-11
+> **能力来源**：`src/composables/useRequest.ts`（212 行）+ `src/composables/useRequest.spec.ts`
+> **状态**：v1.2 在 v1.1 基础上新增「快速重复点击竞态保护」机制说明 + 修正 `useRequestReturn.aborted` 字段（实际为 `Ref<boolean>`，旧版误写 `Ref<...>`） + 补全「与 useRequest 配合 AsyncState」最佳实践段。接口、返回值、行为细节以 `src/composables/useRequest.ts` 为准；如有差异以源码为准。
 
 ---
 

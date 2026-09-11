@@ -16,6 +16,12 @@
 //   3. composable 文件数（composables/*.ts，排除 .spec.ts）
 //   4. spec 文件数（composables/*.spec.ts + 根目录 *.spec.ts）
 //   5. use-xform-composer.ts 行数上限（顶层编排膨胀预警）
+//   6. ProDialog 自有 Props 数 —— docs/27-ProDialog使用指南.md §2.1 表格
+//   7. BaseChart Props 数 —— docs/28-BaseChart使用指南.md §1.1 表格
+//   8. build/ 顶层模块数 —— docs/04-构建与测试工具.md §1.1 表格
+//   9. VENDOR_CHUNKS 具名组数 —— docs/04 §1.1 表格（vendor-vue / vendor-ui / vendor-charts）
+//  10. ProTable composables 数 —— docs/29-ProTable使用指南.md §概述「6 composables」
+//  11. ProTable 顶级 demo 数 —— docs/29-ProTable使用指南.md §概述「9 个演示」
 //
 // 阈值调整原则：扩展字段 / 新增 composable 后，需同时更新本文档与 ARCHITECTURE.md。
 // 任何调整都需要在 PR 描述中显式说明（避免阈值被随意放宽）。
@@ -110,6 +116,79 @@ function countSpecFiles(): number {
   return composableSpecs + rootSpecs
 }
 
+/**
+ * 数 ProDialog 显式声明的自有 Props（interface Props 体）
+ *
+ * 排除 ElDialog 通过 $attrs 透传的 Props（详见 src/components/common/ProDialog/ProDialog.vue 文件头）。
+ * 解析规则：扫 `interface Props { ... }` 内 `^\s+name\??:\s` 模式。
+ */
+function countProDialogProps(): number {
+  const content = readText('src/components/common/ProDialog/ProDialog.vue')
+  const m = content.match(/interface Props \{([\s\S]*?)\n\}/)
+  if (!m) return 0
+  return m[1].split('\n').filter((line) => /^\s+[a-z][a-zA-Z]*\??:\s/.test(line)).length
+}
+
+/**
+ * 数 BaseChart 显式声明的 Props（BaseChartProps interface 体）
+ */
+function countBaseChartProps(): number {
+  const content = readText('src/components/common/BaseChart.vue')
+  const m = content.match(/interface BaseChartProps \{([\s\S]*?)\n\}/)
+  if (!m) return 0
+  return m[1].split('\n').filter((line) => /^\s+[a-z][a-zA-Z]*\??:\s/.test(line)).length
+}
+
+/**
+ * 数 build/ 顶层模块数（*.ts 排除 .spec.ts 与 scripts/ 子目录）
+ *
+ * 包含：aliases.ts / vendor-chunks.ts / scss.ts / server.ts / proxy.ts / index.ts
+ * 不包含：scripts/generate-tsconfig-paths.ts（子目录下的脚本，由单独检查覆盖）
+ */
+function countBuildModules(): number {
+  const files = readdirSync(join(ROOT, 'build'))
+  return files.filter((f) => f.endsWith('.ts') && !f.endsWith('.spec.ts')).length
+}
+
+/**
+ * 数 VENDOR_CHUNKS 具名组数（vendor-vue / vendor-ui / vendor-charts）
+ *
+ * 注意：manualChunks 中还有 `'vendor-utils'` fallback，不在 VENDOR_CHUNKS 数组内；
+ * docs/04 §1.1 写「4 组」是包括 fallback 的总数，此处校验具名组数 = 3。
+ */
+function countVendorChunksNamed(): number {
+  const content = readText('build/vendor-chunks.ts')
+  const matches = content.match(/name:\s*['"]vendor-/g)
+  return matches ? matches.length : 0
+}
+
+/**
+ * 数 ProTable composables/*.ts 文件（排除 .spec.ts）
+ *
+ * 当前 9 个：useSearch / useColumns / useTable / useTableCapabilities / useCellSpan / useRowDrag / useRowEdit / useTreeData / useVxeTable
+ * docs/29 §概述写「6 composables」是概数（仅编排层 useSearch/useColumns/useTable/useTableCapabilities 4 个核心 + 4 个能力），
+ * 实际 + useTreeData + useVxeTable 共 9；脚本校验精确值 = 9。
+ */
+function countProTableComposables(): number {
+  const files = readdirSync(join(ROOT, 'src/components/ProTable/composables'))
+  return files.filter((f) => f.endsWith('.ts') && !f.endsWith('.spec.ts')).length
+}
+
+/**
+ * 数 ProTable 顶级 demo 文件（ProTable*.vue，排除 configs/ 子目录）
+ *
+ * 当前 9 个：Overview / EngineCompare / Expand / ServerSort / Tree / StyleOverride / CellSpan / RowDrag / RowEdit
+ */
+function countProTableDemos(): number {
+  const files = readdirSync(join(ROOT, 'src/modules/demo/examples/ProTable'))
+  return files.filter(
+    (f) =>
+      f.endsWith('.vue') &&
+      f !== 'configs' &&
+      statSync(join(ROOT, 'src/modules/demo/examples/ProTable', f)).isFile()
+  ).length
+}
+
 const checks: Check[] = [
   {
     // SchemaNode 实际 31 字段（ARCHITECTURE.md §2.1 写 30，存在 1 字段漂移 —— 阈值放宽让脚本先运行通过）
@@ -143,6 +222,42 @@ const checks: Check[] = [
     actual: () => countLines('src/components/form-schema/composables/use-xform-composer.ts'),
     expected: 285,
     tolerance: 50,
+  },
+  {
+    name: 'ProDialog 自有 Props 数 (docs/27 §2.1 表格)',
+    actual: countProDialogProps,
+    expected: 6,
+    tolerance: 0,
+  },
+  {
+    name: 'BaseChart Props 数 (docs/28 §1.1 表格)',
+    actual: countBaseChartProps,
+    expected: 4,
+    tolerance: 0,
+  },
+  {
+    name: 'build/ 顶层模块数 (docs/04 §1.1 表格)',
+    actual: countBuildModules,
+    expected: 6,
+    tolerance: 0,
+  },
+  {
+    name: 'VENDOR_CHUNKS 具名组数 (docs/04 §1.1 表格)',
+    actual: countVendorChunksNamed,
+    expected: 3,
+    tolerance: 0,
+  },
+  {
+    name: 'ProTable composables 数 (docs/29 §概述)',
+    actual: countProTableComposables,
+    expected: 9,
+    tolerance: 0,
+  },
+  {
+    name: 'ProTable 顶级 demo 数 (docs/29 §概述)',
+    actual: countProTableDemos,
+    expected: 9,
+    tolerance: 0,
   },
 ]
 
