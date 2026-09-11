@@ -31,6 +31,8 @@ export const CN_NAMES: Record<string, string> = {
   ProTableRowDrag: '行拖拽排序',
   ProTableServerSort: '服务端排序',
   ProTableEngineCompare: '引擎对比（vxe-table）',
+  ProTableStyleOverride: '样式定制',
+  ProTableExpand: '表格内嵌',
   // XForm 表单引擎
   XFormOverview: '用法总览',
   XFormArray: '数组节点',
