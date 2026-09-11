@@ -53,30 +53,81 @@ function applyRestore(el: ElHTMLElement): void {
   el.removeAttribute('aria-hidden')
 }
 
+/**
+ * 每次 binding 或权限变化时重新求值并应用。
+ *
+ * 为什么独立函数：mounted / updated / watchEffect 三处都要执行同一份逻辑；
+ * 提取后任何修改仅一处生效，避免漏改造成行为漂移。
+ */
+function evaluate(el: ElHTMLElement, permissionBinding: PermissionBinding): void {
+  const { hasPerm, hasAnyPerm } = useAuth()
+  if (checkPermission(permissionBinding, hasPerm, hasAnyPerm)) {
+    applyRestore(el)
+  } else {
+    applyNoPermissionDisplay(el)
+  }
+}
+
+/**
+ * 指令内部状态（每个绑定元素一份）。
+ *
+ * - stopWatcher：watchEffect 返回的停止函数；unmounted 时必须调用，否则
+ *   即使元素被移除，effect 仍会持续订阅 store.permissions，造成内存泄漏。
+ * - getBinding：闭包返回「当前最新」的 PermissionBinding；updated 时整体替换，
+ *   保证 binding.value / arg 变化也能被响应（不需要 binding 自身引用）。
+ */
+interface PermissionContext {
+  stopWatcher: () => void
+  getBinding: () => PermissionBinding
+}
+const ctxMap = new WeakMap<ElHTMLElement, PermissionContext>()
+
 export default {
   install(app: App) {
     app.directive<ElHTMLElement, PermissionBinding['value']>('permission', {
       mounted(el, binding) {
-        const { hasPerm, hasAnyPerm } = useAuth()
-        const b: PermissionBinding = {
+        const currentBinding: PermissionBinding = {
           value: binding.value as string | string[],
           arg: binding.arg,
         }
-        if (!checkPermission(b, hasPerm, hasAnyPerm)) {
-          applyNoPermissionDisplay(el)
+        const ctx: PermissionContext = {
+          getBinding: () => currentBinding,
+          stopWatcher: () => {
+            /* 占位，mount 末尾覆盖 */
+          },
         }
+        ctxMap.set(el, ctx)
+
+        // watchEffect 同时订阅 binding.value 与 store.permissions：
+        //  - binding 自身变化（updated 钩子会重写 currentBinding）
+        //  - store 权限变化（用户切换角色 / token 刷新）
+        // 任一变化触发 effect → evaluate(el, currentBinding) 重新求值
+        const stop = watchEffect(() => {
+          // 读取 binding.value 建立依赖；store.permissions 通过 useAuth().hasPerm 隐式收集
+          void currentBinding.value
+          evaluate(el, currentBinding)
+        })
+        ctx.stopWatcher = stop
       },
       updated(el, binding) {
-        // 权限可能异步变化（角色切换 / token 刷新），重新判断
-        const { hasPerm, hasAnyPerm } = useAuth()
-        const b: PermissionBinding = {
+        const ctx = ctxMap.get(el)
+        if (!ctx) return
+        // 整体替换 currentBinding；下次 watchEffect 触发即读到新 binding
+        ctx.getBinding = () => ({
           value: binding.value as string | string[],
           arg: binding.arg,
-        }
-        if (checkPermission(b, hasPerm, hasAnyPerm)) {
-          applyRestore(el)
-        } else {
-          applyNoPermissionDisplay(el)
+        })
+        // 立刻同步一次：watchEffect 依赖收集可能异步触发，不能等下次变化
+        evaluate(el, {
+          value: binding.value as string | string[],
+          arg: binding.arg,
+        })
+      },
+      unmounted(el) {
+        const ctx = ctxMap.get(el)
+        if (ctx) {
+          ctx.stopWatcher()
+          ctxMap.delete(el)
         }
       },
     })

@@ -18,6 +18,7 @@ export const SIDEBAR_GROUPS: readonly SidebarGroupConfig[] = [
   { title: 'XForm 表单引擎', prefix: 'XForm' },
   { title: 'ProDialog 弹窗组件', prefix: 'ProDialog' },
   { title: 'BaseChart 图表组件', prefix: 'BaseChart' },
+  { title: '自定义指令', prefix: 'Directive' },
   { title: '通用组件', prefix: '' },
 ]
 
@@ -96,6 +97,14 @@ export const CN_NAMES: Record<string, string> = {
   BaseChartRealTime: '实时监控',
   BaseChartInDialog: '嵌入 ProDialog',
   BaseChartDashboard: '多图表仪表盘',
+  // 自定义指令
+  DirectiveOverview: '指令总览',
+  DirectiveCopy: 'v-copy 文本复制',
+  DirectiveDraggable: 'v-draggable 弹窗拖拽',
+  DirectiveAuth: 'v-auth 权限（推荐）',
+  DirectivePermission: 'v-permission 权限（兼容）',
+  DirectiveInputDebounce: 'v-inputDebounce 输入防抖',
+  DirectiveButtonDebounce: 'v-buttonDebounce 按钮防抖',
   // 通用组件
   AsyncState: '异步状态容器',
   ErrorBoundary: '错误边界',
