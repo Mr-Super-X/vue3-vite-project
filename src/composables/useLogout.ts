@@ -13,7 +13,7 @@
  * @group 登出组合式 API
  */
 
-// ElMessageBox 由 unplugin-auto-import 注入（importStyle 自动带样式，勿显式 import）
+// useConfirm 由 unplugin-auto-import 注入（详见 vite.config.ts 的 AutoImport 配置）
 import { useUserStore } from '@/store/modules/user'
 import { useAppRouter } from './useAppRouter'
 
@@ -23,16 +23,14 @@ export function useLogout() {
   const loggingOut = ref(false)
 
   async function confirmLogout(): Promise<void> {
-    try {
-      await ElMessageBox.confirm('确定退出登录吗？', '提示', {
-        confirmButtonText: '退出',
-        cancelButtonText: '取消',
-        type: 'warning',
-      })
-    } catch {
-      // 用户在 confirm 弹窗点取消
-      return
-    }
+    // useConfirm 取消时 resolve(false) 而非 reject，故此处无须 try/catch
+    const confirmed = await useConfirm({
+      content: '确定退出登录吗？',
+      title: '提示',
+      confirmButtonText: '退出',
+      type: 'warning',
+    })
+    if (!confirmed) return
 
     loggingOut.value = true
     try {

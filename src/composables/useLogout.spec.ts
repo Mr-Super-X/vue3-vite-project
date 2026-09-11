@@ -1,12 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
-vi.mock('element-plus', () => ({
-  ElMessageBox: { confirm: vi.fn() },
-}))
-
-const { mockStoreLogout, mockGoLogin } = vi.hoisted(() => ({
+const { mockStoreLogout, mockGoLogin, mockUseConfirm } = vi.hoisted(() => ({
   mockStoreLogout: vi.fn(),
   mockGoLogin: vi.fn().mockResolvedValue(undefined),
+  mockUseConfirm: vi.fn(),
+}))
+
+// useLogout 经 AutoImport 注入 useConfirm，转换后即 '@/composables/useConfirm'
+vi.mock('@/composables/useConfirm', () => ({
+  useConfirm: mockUseConfirm,
 }))
 
 vi.mock('@/store/modules/user', () => ({
@@ -17,13 +19,12 @@ vi.mock('@/composables/useAppRouter', () => ({
   useAppRouter: () => ({ goLogin: mockGoLogin }),
 }))
 
-import { ElMessageBox } from 'element-plus'
 import { useLogout } from './useLogout'
 
 beforeEach(() => {
   mockStoreLogout.mockReset()
   mockGoLogin.mockReset().mockResolvedValue(undefined)
-  ;(ElMessageBox.confirm as ReturnType<typeof vi.fn>).mockReset()
+  mockUseConfirm.mockReset()
 })
 
 describe('useLogout', () => {
@@ -33,7 +34,7 @@ describe('useLogout', () => {
   })
 
   it('confirm 取消时 logout 与跳转均不触发', async () => {
-    ;(ElMessageBox.confirm as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('cancel'))
+    mockUseConfirm.mockResolvedValueOnce(false)
     const { loggingOut, confirmLogout } = useLogout()
     await confirmLogout()
     expect(mockStoreLogout).not.toHaveBeenCalled()
@@ -42,7 +43,7 @@ describe('useLogout', () => {
   })
 
   it('confirm 确认后：logout + 跳登录页，loggingOut 复位', async () => {
-    ;(ElMessageBox.confirm as ReturnType<typeof vi.fn>).mockResolvedValueOnce('ok')
+    mockUseConfirm.mockResolvedValueOnce(true)
     mockStoreLogout.mockResolvedValueOnce(undefined)
     const { loggingOut, confirmLogout } = useLogout()
     await confirmLogout()
@@ -52,7 +53,7 @@ describe('useLogout', () => {
   })
 
   it('跳转抛错时 loggingOut 在 finally 中复位', async () => {
-    ;(ElMessageBox.confirm as ReturnType<typeof vi.fn>).mockResolvedValueOnce('ok')
+    mockUseConfirm.mockResolvedValueOnce(true)
     mockStoreLogout.mockResolvedValueOnce(undefined)
     mockGoLogin.mockRejectedValueOnce(new Error('boom'))
     const { loggingOut, confirmLogout } = useLogout()

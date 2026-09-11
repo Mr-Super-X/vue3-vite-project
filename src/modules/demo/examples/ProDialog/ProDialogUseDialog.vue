@@ -125,10 +125,59 @@ const SNIPPET_REUSE = `// 同一个句柄反复 open（settled 标志必须随 o
 await dialog.open()  // 确认关闭
 await dialog.open()  // 第二次必须正常 resolve/reject，不能永久挂起`
 
+// —— 4. useConfirm：取消即 resolve(false)，无须 try/catch ——
+const confirmResult = ref('尚未操作')
+const dangerResult = ref('尚未操作')
+
+async function handleSimpleConfirm() {
+  // 一行表达：if 不成立 → 用户取消，直接 return（再不会有 Uncaught in promise）
+  if (
+    !(await useConfirm({
+      content: '这是一条普通确认，点击确定后下方状态会更新。',
+      title: '系统提示',
+    }))
+  ) {
+    confirmResult.value = '↩ 用户取消（resolve false，无需 try/catch）'
+    return
+  }
+  confirmResult.value = '✅ 用户确认（resolve true）'
+}
+
+async function handleDangerConfirm() {
+  // danger: true = 确认按钮转红 + 警告图标，等价于手写 { type:'warning', confirmButtonType:'danger' }
+  if (
+    !(await useConfirm({
+      content: '此操作将永久删除该记录，且不可恢复。',
+      title: '危险操作',
+      danger: true,
+      confirmButtonText: '删除',
+      cancelButtonText: '再想想',
+    }))
+  ) {
+    dangerResult.value = '↩ 用户取消'
+    return
+  }
+  dangerResult.value = '✅ 已确认删除（控制台应无 Uncaught in promise 警告）'
+}
+
+const SNIPPET_CONFIRM_BASIC = `// 取消 resolve(false) 而非 reject，故无须 try/catch
+const confirmed = await useConfirm('确定删除吗？')
+if (!confirmed) return
+await api.remove(id)`
+
+const SNIPPET_CONFIRM_DANGER = `// danger 预设：确认按钮转红 + 警告图标
+await useConfirm({
+  content: '此操作不可恢复',
+  title: '危险操作',
+  danger: true,
+  confirmButtonText: '删除',
+})`
+
 const tocItems = [
   { id: 'demo-command-basic', label: 'open() 的 Promise 语义' },
   { id: 'demo-command-props', label: 'contentProps + setProps' },
   { id: 'demo-command-reuse', label: '句柄复用（回归点）' },
+  { id: 'demo-command-confirm', label: 'useConfirm：取消即 resolve(false)' },
 ]
 </script>
 
@@ -190,6 +239,44 @@ const tocItems = [
           <p :class="bem.e('tip')">
             每次打开后任意确认或取消关闭，再点按钮唤起下一次——若第二次弹窗卡死或结果不更新， 说明
             settled 复位逻辑回归。
+          </p>
+        </DemoField>
+      </section>
+
+      <section id="demo-command-confirm">
+        <DemoField
+          :code="SNIPPET_CONFIRM_BASIC"
+          label="④ useConfirm：取消 resolve(false)，无须 try/catch"
+        >
+          <p :class="bem.e('tip')">
+            对比上方 useDialog 的 try/catch + DialogCancelledError 模式—— useConfirm
+            把取消统一重塑为 resolve(false)，业务代码无需异常捕获路径， 且彻底消除控制台 `Uncaught
+            (in promise) cancel` 噪音。
+          </p>
+          <div :class="bem.e('controls')">
+            <el-button type="primary" @click="handleSimpleConfirm">普通确认</el-button>
+          </div>
+          <el-alert
+            :title="confirmResult"
+            :type="confirmResult.startsWith('✅') ? 'success' : 'info'"
+            :closable="false"
+          />
+          <p :class="bem.e('tip')">
+            点击「取消」或按 ESC / 点遮罩 → 状态显示「resolve false」，控制台应 0 警告。
+          </p>
+        </DemoField>
+
+        <DemoField :code="SNIPPET_CONFIRM_DANGER" label="⑤ useConfirm danger 预设：危险操作高亮">
+          <div :class="bem.e('controls')">
+            <el-button type="danger" @click="handleDangerConfirm">危险操作</el-button>
+          </div>
+          <el-alert
+            :title="dangerResult"
+            :type="dangerResult.startsWith('✅') ? 'success' : 'warning'"
+            :closable="false"
+          />
+          <p :class="bem.e('tip')">
+            弹窗应显示红色「删除」按钮 + 黄色警告图标，按钮文案已被显式字段覆盖。
           </p>
         </DemoField>
       </section>

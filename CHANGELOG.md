@@ -2,6 +2,28 @@
 
 ## 未发布
 
+### 🐛 Fix | useConfirm.content 类型谎言：VNode 运行时会渲染成 [object Object]
+
+> `UseConfirmOptions.content` 之前声明为 `string | VNode`，但 EP 2.14.3 message-box 模板 (`message-box/src/index.vue:85-94`) 里 message 只被 `textContent` / `innerHTML` 字符串消费，传 VNode 进去 `toDisplayString(vnode)` 只会拿到 `[object Object]`。类型上写允许但运行时不靠谱，等于给调用方挖坑。类型收紧为 `string` 后：
+> - 编译期拦截所有「以为支持 VNode」的误用（`type-check:full` 0 错即证明现有 4 个调用方无 VNode 误用）
+> - 注释明确指出「业务组件请用 useDialog」—— useConfirm / useDialog 分工固化到代码层
+> - 仍然支持 HTML 富文本：传 HTML 字符串 + `dangerouslyUseHTMLString: true`，EP 走 `innerHTML` 分支可渲染 `<el-tag>` 等全局注册组件
+
+* **fix(composables/useConfirm.ts):** `content` 类型由 `string | VNode` 收紧为 `string`；删除冗余的 `import type { VNode }`；JSDoc 注释补三段说明——EP 模板分支机制（`textContent` / `innerHTML`）/ 类型谎言为何根治 / useConfirm vs useDialog 分工
+* **验证：** `pnpm type-check:full` 0 error（编译期拦截所有 VNode 误用）；`pnpm test useConfirm + useLogout` 20/20 通过（无回归）；`pnpm lint` 0
+
+### ✨ Features | useConfirm 二次确认 Hook：取消即 resolve(false)
+
+> 封装 `ElMessageBox.confirm`，把取消/关闭从 reject 重塑为 resolve(false)，业务侧可以 `if (await useConfirm('...'))` 一行表达确认流程，无须 try/catch，根除控制台 `Uncaught (in promise) cancel` 噪音；与 `useDialog` 互补分工（前者 bool 询问 / 后者组件级弹窗 reject `DialogCancelledError`）
+
+* **feat(composables/useConfirm.ts):** 新增二次确认 Hook —— 重载双形态 API（位置参数 `useConfirm(content, title?)` / 对象参数 `useConfirm({...})`），danger 危险操作预设（确认按钮转红 + 警告图标，预设可被显式同名字段覆盖），appContext 三层回退（显式 > setup 同步期 > main.ts 通过 useDialog 注册的全局上下文），VNode 形态 content 上下文透传（项目按需引入 EP 不调 `app.use(ElementPlus)`，不补上下文全局组件 / Pinia / i18n 会失效）
+* **test(composables/useConfirm.spec.ts):** 16 用例覆盖 —— Promise 重塑（resolve true / 'cancel'→false / 'close'→false / 业务异常原样上抛 / 非哨兵字符串上抛）、参数归一（位置/对象/title 覆盖/HTML 透传）、danger 预设（默认值/字段覆盖/不泄漏）、appContext 透传（缺省回退/显式 null 不回退/不泄漏）
+* **feat(composables/useDialog.ts):** 新增 `getDialogAppContext()` 导出 —— 供 useConfirm 复用 main.ts 已注册的 app 上下文，避免每个动态挂载场景各建一套 setXxxAppContext
+* **feat(vite.config.ts):** AutoImport 注册 useConfirm —— 与 useDialog 同级待遇，setup 内免 import
+* **refactor(composables/useLogout.ts):** 用 useConfirm 替换 9 行 try/catch 样板，confirmLogout 主体从 9 行降至 6 行；useLogout.spec.ts 同步把 mock 从 `element-plus` 切到 `@/composables/useConfirm`
+* **docs(CLAUDE.md):** §1.5 命令式弹窗表新增 useConfirm 行（与 useDialog 分工互补）；§1.6 AutoImport 标识符表与 §1.6.1 注释提示表补 useConfirm
+* **验证：** `pnpm test src/composables/useConfirm.spec.ts src/composables/useLogout.spec.ts` 20/20 通过；`pnpm type-check:full` 0 error；`pnpm lint` 0；`auto-imports.d.ts:76` 已自动生成 `useConfirm` 声明
+
 ### 🔧 Refactor | vite.config.ts 工程化抽离：消除 alias 双维护痛点
 
 > 把 `vite.config.ts` 内的构建期配置抽离到 `build/` 工程配置目录，建立 src 子目录别名的**单一来源**，并通过生成器自动同步 `tsconfig.app.json` 的 `paths` 块，消除双维护痛点；同时为未来大概率需要的 proxy / devServer 等配置预留位置

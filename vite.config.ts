@@ -53,9 +53,12 @@ export default defineConfig({
         { from: '@/composables/useRequest', imports: [{ name: 'useRequest' }] },
         { from: '@/composables/useAppRouter', imports: [{ name: 'useAppRouter' }] },
         // useDialog：命令式弹窗（详见 src/composables/useDialog）
-        // 同模块的 DialogCancelledError / setDialogAppContext 不注入：前者是类型（不参与运行时），
-        // 后者只在 main.ts 一次性调用（不应污染 setup 全局作用域）
+        // 同模块的 DialogCancelledError / setDialogAppContext / getDialogAppContext 不注入：
+        // 第一个是类型（不参与运行时），后两个只在 main.ts / useConfirm 内部调用（不应污染 setup 全局作用域）
         { from: '@/composables/useDialog', imports: [{ name: 'useDialog' }] },
+        // useConfirm：二次确认（详见 src/composables/useConfirm）
+        // 取消时 resolve(false) 而非 reject，故调用方无须 try/catch
+        { from: '@/composables/useConfirm', imports: [{ name: 'useConfirm' }] },
         // 业务侧高频 utils（详见 src/utils/*）
         { from: '@/utils/bem', imports: [{ name: 'createNamespace' }] },
       ],

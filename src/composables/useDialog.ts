@@ -50,6 +50,18 @@ export function setDialogAppContext(app: App): void {
 }
 
 /**
+ * 读取已注册的主应用上下文（未注册时为 null）。
+ *
+ * 供同样需要「脱离组件树渲染」的兄弟 composable 复用 —— 上下文注册点只保留
+ * main.ts 那一处，避免每个动态挂载场景各建一套 setXxxAppContext。
+ *
+ * @see [`./useConfirm`](./useConfirm) 当前唯一的外部消费方（VNode 形态 content 需要）
+ */
+export function getDialogAppContext(): AppContext | null {
+  return globalAppContext
+}
+
+/**
  * 用户取消/关闭弹窗时 open() Promise 的 reject 原因。
  * 通过 instanceof 或 code === 'DIALOG_CANCELLED' 识别。
  */

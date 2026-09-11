@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > 本文档是 `~/.claude/CLAUDE.md` 的项目级补充。所有全局规则（§一～§十一）自动适用，遇到冲突以**本文档为准**。
 >
-> **文档版本**：v1.3.0 | **生成日期**：2026-09-11 | **生效分支**：`master`
+> **文档版本**：v1.4.0 | **生成日期**：2026-09-11 | **生效分支**：`master`
+>
+> **v1.4 变更**：新增 `useConfirm` composable —— 二次确认 Hook（取消 resolve false）；§1.5 必用 composable 列表补 `useConfirm`；AutoImport 标识符表（§1.6 + §1.6.1）补 `useConfirm`；§2.1 composables 描述补 `useConfirm`。
 >
 > **v1.3 变更**：Commands 表补全 6 个脚本（`bench` / `bench:check` / `remove-module` / `check:aliases` / `check:doc-currency` / `generate:tsconfig-paths`）；AutoImport 标识符表补 `useDict` / `useTheme`；§2.1 业务模块清单补 `workbench`；Directives 描述补 `v-auth` / `v-draggable`；composables 描述补 `useDialog` / `useDict` / `useTheme`；§1.5 必用 composable 列表补 `useDialog`。
 
@@ -103,25 +105,26 @@ Feature-Sliced 风格的中后台门户前端（`vue3-vite-project`，企业中�
 
 业务代码**禁止**直接 `import { useRouter } from 'vue-router'` 或 `import axios from 'axios'`，**必须**用项目封装：
 
-| 场景                            | 必须用                                                         |
-| ------------------------------- | -------------------------------------------------------------- |
-| 路由（跳转/参数/back）          | `@composables/useAppRouter`                                    |
-| 网络请求（三态 + 错误处理）     | `@composables/useRequest`                                      |
-| 权限（AND / ANY 语义）          | `@composables/useAuth`（`hasPerm` / `hasAnyPerm`）             |
-| 命令式弹窗（确认/取消 Promise） | `@composables/useDialog`（取消 reject `DialogCancelledError`） |
+| 场景                            | 必须用                                                                  |
+| ------------------------------- | ----------------------------------------------------------------------- |
+| 路由（跳转/参数/back）          | `@composables/useAppRouter`                                             |
+| 网络请求（三态 + 错误处理）     | `@composables/useRequest`                                               |
+| 权限（AND / ANY 语义）          | `@composables/useAuth`（`hasPerm` / `hasAnyPerm`）                      |
+| 命令式弹窗（确认/取消 Promise） | `@composables/useDialog`（取消 reject `DialogCancelledError`）          |
+| 二次确认（取消 resolve false）  | `@composables/useConfirm`（取消 resolve `false`，调用方无须 try/catch） |
 
 ### 1.6 AutoImport 自动导入（无须显式 `import`）
 
 > `vite.config.ts` 第 70-91 行通过 `unplugin-auto-import` 配置了**5 类**自动注入到 `<script setup>` 全局作用域（详见 `src/types/auto-imports.d.ts`）。
 > **写代码时这些内容无须再写 `import` 语句**——会自动可用。
 
-| 类别                 | 来源              | 自动注入的标识符（示例）                                                                                                                      |
-| -------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Vue 核心**         | `'vue'`           | `ref`、`reactive`、`computed`、`watch`、`watchEffect`、`onMounted`、`onUnmounted`、`nextTick`、`defineProps`、`defineEmits`、`defineModel` 等 |
-| **Vue Router**       | `'vue-router'`    | `useRoute`、`useRouter`、`useLink`、`RouterLink`、`RouterView` 等                                                                             |
-| **Pinia**            | `'pinia'`         | `defineStore`、`storeToRefs`、`acceptHMRUpdate` 等                                                                                            |
-| **业务 composables** | `@/composables/*` | `useAppRouter`、`useRequest`、`useAuth`、`useLogout`、`useDialog`、`useDict`、`useTheme` 等（详见 `vite.config.ts` 的 AutoImport 配置）       |
-| **业务 utils**       | `@/utils/bem`     | `createNamespace`（详见 `vite.config.ts` 第 83 行）                                                                                           |
+| 类别                 | 来源              | 自动注入的标识符（示例）                                                                                                                              |
+| -------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Vue 核心**         | `'vue'`           | `ref`、`reactive`、`computed`、`watch`、`watchEffect`、`onMounted`、`onUnmounted`、`nextTick`、`defineProps`、`defineEmits`、`defineModel` 等         |
+| **Vue Router**       | `'vue-router'`    | `useRoute`、`useRouter`、`useLink`、`RouterLink`、`RouterView` 等                                                                                     |
+| **Pinia**            | `'pinia'`         | `defineStore`、`storeToRefs`、`acceptHMRUpdate` 等                                                                                                    |
+| **业务 composables** | `@/composables/*` | `useAppRouter`、`useRequest`、`useAuth`、`useLogout`、`useDialog`、`useConfirm`、`useDict`、`useTheme` 等（详见 `vite.config.ts` 的 AutoImport 配置） |
+| **业务 utils**       | `@/utils/bem`     | `createNamespace`（详见 `vite.config.ts` 第 83 行）                                                                                                   |
 
 #### 正确示例
 
@@ -174,13 +177,13 @@ AutoImport **未覆盖**以下内容，仍必须写 import：
 
 #### 不常见 API（必须加注释）
 
-| 标识符（举例）                                                                           | 来源包提示（注释怎么写）                       |
-| ---------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| `RouterLink`、`RouterView`、`useLink`                                                    | `// vue-router 组件`                           |
-| `storeToRefs`、`acceptHMRUpdate`                                                         | `// pinia 工具`                                |
-| `useAppRouter`、`useRequest`、`useAuth`、`useLogout`、`useDialog`、`useDict`、`useTheme` | `// 项目 composable @composables/*`            |
-| `createNamespace`                                                                        | `// 项目 BEM 工具 @utils/bem（vite 自动注入）` |
-| `watchEffect`、`nextTick`、`onErrorCaptured`、`shallowRef`                               | `// vue（生命周期/底层 API）`                  |
+| 标识符（举例）                                                                                         | 来源包提示（注释怎么写）                       |
+| ------------------------------------------------------------------------------------------------------ | ---------------------------------------------- |
+| `RouterLink`、`RouterView`、`useLink`                                                                  | `// vue-router 组件`                           |
+| `storeToRefs`、`acceptHMRUpdate`                                                                       | `// pinia 工具`                                |
+| `useAppRouter`、`useRequest`、`useAuth`、`useLogout`、`useDialog`、`useConfirm`、`useDict`、`useTheme` | `// 项目 composable @composables/*`            |
+| `createNamespace`                                                                                      | `// 项目 BEM 工具 @utils/bem（vite 自动注入）` |
+| `watchEffect`、`nextTick`、`onErrorCaptured`、`shallowRef`                                             | `// vue（生命周期/底层 API）`                  |
 
 #### 注释格式与位置
 
@@ -223,7 +226,7 @@ const { data } = storeToRefs(useUserStore())
 | --- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | `api/`         | 跨模块网络请求基建（`http`/`cache`/`retry`/`token-refresh` 等）+ `api/modules/` 跨模块共享接口                                                                                                     |
 | 2   | `components/`  | 全局通用组件（`common/`）。**禁止**放置任何布局专用子组件（`Header` / `Sidebar` 等）—— 布局相关组件必须落在 `layouts/<m>/components/` 下随 layout 自包含                                           |
-| 3   | `composables/` | 业务侧组合式函数封装（`useAppRouter`/`useRequest`/`useAuth`/`useDialog`/`useDict`/`useLogout`/`useTheme` 等）                                                                                      |
+| 3   | `composables/` | 业务侧组合式函数封装（`useAppRouter`/`useRequest`/`useAuth`/`useDialog`/`useConfirm`/`useDict`/`useLogout`/`useTheme` 等）                                                                         |
 | 4   | `directives/`  | 自定义指令（`v-inputDebounce`/`v-buttonDebounce`/`v-permission`/`v-auth`/`v-draggable`）                                                                                                           |
 | 5   | `enums/`       | 枚举常量（`httpEnum`/`roleEnum` 等）                                                                                                                                                               |
 | 6   | `layouts/`     | 路由级布局基座（`default`/`blank`/`portal`）—— 每个 layout **自包含**，子组件放 `./components/`、配置放 `./config/`、资源放 `./images/`、样式放 `./styles/`；禁止跨目录到 `@/components/` 引用组件 |
