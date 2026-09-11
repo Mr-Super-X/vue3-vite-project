@@ -12,7 +12,6 @@
  */
 import { computed, reactive, ref, watch } from 'vue'
 import { ElButton, ElMessage, ElTag } from 'element-plus'
-import XForm from '@/components/form-schema/components/XForm.vue'
 import { useFormPersist } from '@/components/form-schema'
 import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
 import DemoField from '../../components/DemoField.vue'

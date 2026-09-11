@@ -14,7 +14,6 @@
  * 4. vxe 引擎不支持树形 / 行拖拽（启动 console.warn 并忽略），本 demo 不演示
  */
 import type { ProColumn } from '@/components/ProTable/types'
-import ProTable from '@/components/ProTable/ProTable.vue'
 import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'

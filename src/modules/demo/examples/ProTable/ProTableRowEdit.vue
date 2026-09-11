@@ -17,7 +17,6 @@
  */
 import { ref } from 'vue'
 import type { ProColumn, ProTableExpose } from '@/components/ProTable/types'
-import ProTable from '@/components/ProTable/ProTable.vue'
 import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
@@ -103,7 +102,6 @@ const basicCode = `<template>
 <script setup lang="ts">
 import { ref } from 'vue'
 import type { ProColumn } from '@/components/ProTable/types'
-import ProTable from '@/components/ProTable/ProTable.vue'
 
 const columns: ProColumn[] = [
   { prop: 'name', label: '姓名', edit: { el: 'input', rules: { required: true } } },

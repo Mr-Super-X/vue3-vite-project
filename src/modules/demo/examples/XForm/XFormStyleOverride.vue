@@ -10,7 +10,6 @@
  * CN_NAMES 自动派生，**不需要改 routes/index.ts**。
  */
 import { reactive } from 'vue'
-import XForm from '@/components/form-schema/components/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import DemoFrame from '../../components/DemoFrame.vue'

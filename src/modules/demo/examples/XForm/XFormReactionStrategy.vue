@@ -18,7 +18,6 @@
  *   - strategy 默认 'sync'；debounce/throttle 仅在 delay > 0 时生效
  */
 import { reactive } from 'vue'
-import XForm from '@/components/form-schema/components/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'

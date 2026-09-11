@@ -14,7 +14,6 @@
 import { computed, reactive, watch } from 'vue'
 import { cloneDeep } from 'lodash-es'
 import { ElMessage } from 'element-plus'
-import XForm from '@/components/form-schema/components/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'

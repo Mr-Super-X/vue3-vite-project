@@ -14,7 +14,6 @@
  * - Demo 3：金额范围（>=10000 标记为"高金额"）自定义 judge 合并
  */
 import type { ProColumn } from '@/components/ProTable/types'
-import ProTable from '@/components/ProTable/ProTable.vue'
 import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'

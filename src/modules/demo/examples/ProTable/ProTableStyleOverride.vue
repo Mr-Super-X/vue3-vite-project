@@ -19,7 +19,7 @@
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { InfoFilled } from '@element-plus/icons-vue'
-import { ProTable, type ProColumn, type ProTableExpose } from '@/components/ProTable'
+import type { ProColumn, ProTableExpose } from '@/components/ProTable'
 import {
   styleOverrideRequestApi,
   type StyleOverrideProduct,
@@ -240,7 +240,7 @@ const tocItems = [
 const basicCode = `<script setup lang="ts">
 import { h } from 'vue'
 import { ElTag } from 'element-plus'
-import { ProTable, type ProColumn } from '@/components/ProTable'
+import type { ProColumn } from '@/components/ProTable'
 
 const columns: ProColumn[] = [
   { prop: 'name', label: '商品名称', fixed: 'left' },

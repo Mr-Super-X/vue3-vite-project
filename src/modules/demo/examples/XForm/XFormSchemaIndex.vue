@@ -22,7 +22,6 @@
  */
 import { computed, reactive, ref, watch } from 'vue'
 import { ElButton, ElMessage, ElTag } from 'element-plus'
-import XForm from '@/components/form-schema/components/XForm.vue'
 import { useSchemaIndex } from '@/components/form-schema/composables/use-schema-index'
 import { scanForForbidden } from '@/components/form-schema/composables/use-scan-forbidden'
 import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'

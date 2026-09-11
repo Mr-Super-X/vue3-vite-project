@@ -25,7 +25,6 @@
  */
 import { reactive, ref, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import XForm from '@/components/form-schema/components/XForm.vue'
 import { useFormPersist } from '@/components/form-schema'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { xArray } from '@/components/form-schema/builders'

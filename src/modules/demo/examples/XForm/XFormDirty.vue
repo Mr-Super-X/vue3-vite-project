@@ -27,7 +27,6 @@
  */
 import { reactive, ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import XForm from '@/components/form-schema/components/XForm.vue'
 import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'

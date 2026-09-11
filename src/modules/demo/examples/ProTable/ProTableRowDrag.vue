@@ -14,7 +14,6 @@
  */
 import { ElMessageBox } from 'element-plus'
 import type { ProColumn } from '@/components/ProTable/types'
-import ProTable from '@/components/ProTable/ProTable.vue'
 import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'

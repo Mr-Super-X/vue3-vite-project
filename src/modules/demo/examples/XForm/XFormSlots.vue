@@ -11,7 +11,6 @@
 import { reactive, h } from 'vue'
 import { ElButton, ElIcon } from 'element-plus'
 import { Upload } from '@element-plus/icons-vue'
-import XForm from '@/components/form-schema/components/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
