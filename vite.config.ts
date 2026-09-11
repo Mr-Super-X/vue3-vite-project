@@ -71,6 +71,11 @@ export default defineConfig({
     }),
     Components({
       resolvers: [ElementPlusResolver({ importStyle: 'css' })],
+      /**
+       * 声明要自动导入的全局组件
+       */
+      dirs: ['src/components/common', 'src/components/ProTable', 'src/components/form-schema'],
+      deep: true,
       dts: 'src/types/components.d.ts',
     }),
     // mock 启用开关由 VITE_USE_MOCK 控制（2026-07-27 切换）。
