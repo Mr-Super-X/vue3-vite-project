@@ -95,7 +95,7 @@
     "vite-plugin-mock": "^3.0.2",
     "vite-plugin-vue-devtools": "^8.1.2",
     "vitest": "^4.1.9",
-    "vue-tsc": "^3.3.5"
+    "vue-tsc": "^3.3.11"
   },
   "engines": {
     "node": "^22.18.0 || >=24.12.0",
