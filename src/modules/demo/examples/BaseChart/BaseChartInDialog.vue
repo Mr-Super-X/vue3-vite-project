@@ -12,7 +12,6 @@
  */
 import { ref } from 'vue'
 import { ProDialog } from '@/components/common/ProDialog'
-import BaseChart from '@/components/common/BaseChart.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import DocLayout from '../../layouts/DocLayout.vue'

@@ -11,7 +11,6 @@
  */
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import AsyncState from '@/components/common/AsyncState.vue'
 import XForm from '@/components/form-schema/components/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { xArray } from '@/components/form-schema/builders'
