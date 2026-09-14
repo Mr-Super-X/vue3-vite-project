@@ -1,43 +1,36 @@
 /**
- * 字典 API。
+ * 字典 API —— `/api/dict/:code` 的唯一请求出口。
  *
- * 返回业务常用的"枚举字典"（用户状态、订单状态、角色类型等）。
- * 后端按 `type` 分组，前端用 `useDict('xxx')` 自动管理缓存与 loading。
- * 内置 30s TTL 内存缓存（`http.ts` 拦截器层），防重复请求与雪崩。
+ * 为什么走项目 request<T>（http.ts 封装）而非裸 axios / fetch：
+ * - CLAUDE.md §1.5 / §4 #3：业务代码禁止直接 import axios，统一走 request 封装
+ * - 免费获得 http 拦截器能力：30s GET 内存缓存（防抖池之前的第一层请求合并）、
+ *   401 自动刷新重试、统一错误处理
  *
- * @see [`src/composables/useDict.ts`](../../composables/useDict.ts) 推荐调用入口
+ * @see [`src/types/dict.ts`](../../types/dict.ts) DictItem 契约定义（前端主导）
+ * @see [`src/composables/useDict.ts`](../../composables/useDict.ts) 业务侧推荐入口
  * @group 业务 API：字典
  */
 
 import { request } from '../http'
-
-export interface DictEntry {
-  /** 业务值（`el-select` 的 :value） */
-  value: string | number
-  /** 显示文本 */
-  label: string
-  /** 业务扩展字段（颜色、是否禁用等，按需扩展） */
-  [key: string]: unknown
-}
+import type { DictItem } from '@/types/dict'
 
 export const dictApi = {
   /**
-   * 按字典类型获取所有条目（如 `'user_status'` / `'order_status'`）。
+   * 按字典 code 拉取全部字典项（如 `'gender'` / `'user_status'`）。
    *
-   * 业务侧不要直接调本方法，请用 `useDict(key)` composable：
-   * - 自动 lazy fetch（首次访问才发请求）
-   * - 30s TTL 内复用缓存
-   * - 返回 reactive `{ options, loading, getLabel, refresh }`
+   * 业务侧不要直接调本方法 —— 用 `useDict(code)` composable：
+   * - store 层 5min 内存缓存 + Promise 防抖池（多组件并发自动合并为一次请求）
+   * - lazy fetch（setup 阶段自动触发），失败降级为空数组
    *
-   * @param type 字典类型（如 `'user_status'`）
+   * @param code 字典 code（URL 路径参数，对应后端 `/api/dict/:code`）
    *
    * @group 业务 API：字典
    */
-  getByType: (type: string) =>
-    request<DictEntry[]>({
-      url: `/dict/${type}`,
+  getDict: (code: string) =>
+    request<DictItem[]>({
+      url: `/dict/${code}`,
       method: 'get',
-      // 30s TTL 内存缓存（拦截器层自动应用，相同 url + params 不重复发）
+      // http 层 30s TTL 内存缓存：防抖池之外的第一层请求合并（相同 url 不重复发）
       cache: { ttl: 30 },
     }),
 }

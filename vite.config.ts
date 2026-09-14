@@ -52,6 +52,8 @@ export default defineConfig({
         { from: '@/composables/useLogout', imports: [{ name: 'useLogout' }] },
         { from: '@/composables/useRequest', imports: [{ name: 'useRequest' }] },
         { from: '@/composables/useAppRouter', imports: [{ name: 'useAppRouter' }] },
+        // useDict：字典组合式 API（详见 src/composables/useDict，契约形态按 code 解构）
+        { from: '@/composables/useDict', imports: [{ name: 'useDict' }] },
         // useDialog：命令式弹窗（详见 src/composables/useDialog）
         // 同模块的 DialogCancelledError / setDialogAppContext / getDialogAppContext 不注入：
         // 第一个是类型（不参与运行时），后两个只在 main.ts / useConfirm 内部调用（不应污染 setup 全局作用域）

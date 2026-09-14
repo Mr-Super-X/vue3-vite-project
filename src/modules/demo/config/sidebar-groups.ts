@@ -108,6 +108,7 @@ export const CN_NAMES: Record<string, string> = {
   // 通用组件
   AsyncState: '异步状态容器',
   ErrorBoundary: '错误边界',
+  Dict: '字典组件（DictSelect / DictTag）',
 }
 
 /** 返回组件名所属分组标题（未命中任何前缀时归入兜底组） */

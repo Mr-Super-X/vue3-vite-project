@@ -2,6 +2,21 @@
 
 ## 未发布
 
+### ✨ Features | 字典功能契约化重构：DictItem 类型契约 + Promise 防抖池 + DictSelect / DictTag 组件
+
+> 「前端主导数据结构」落地：字典契约（DictItem）定义在 src/types/dict.ts，后端 / Mock 按 `/api/dict/:code` 返回数组配合实现。useDict 升级为多 code 契约形态（按 code 解构 `Ref<DictItem[]>` + `refreshDict`），store 层 16ms 轮询并发合并替换为 Promise 防抖池（Map<code, Promise>，并发共享同一次请求）。新增 DictSelect（el-select 封装，$attrs 透传 + disabled 契约字段）/ DictTag（el-tag 封装，未命中显示 value 原文）全局组件与 /demo/dict 演示页
+
+* **feat(src/types/dict.ts):** 新增字典类型契约单一来源 —— DictItem（value / label / type / disabled / cssClass + unknown 索引签名严格化契约的 any）+ DictTagType；放 types/ 而非 api 层，API / store / composable / 组件四层平级引用，依赖方向干净
+* **feat(mock/dict.ts):** 重写为单条动态路由 `/api/dict/:code` + DICT_DATA 数据表（新增字典只加键值，路由零改动）；gender / user_status / order_type 为契约演示字典（locked 项 `disabled: true`），role（登录预加载依赖）/ order_status 保留兼容
+* **refactor(src/api/modules/dict.ts):** `dictApi.getByType(type)` → `getDict(code)`，对齐契约用语；类型从 `@/types/dict` 导入；继续走项目 request 封装（http 层 30s GET 缓存作为防抖池之前的第一层合并）
+* **refactor(src/store/modules/dict.ts):** Promise 防抖池（`Map<code, Promise>`，finally 自动出池）替换 16ms setInterval 轮询 —— 零延迟、无定时器；刻意用普通函数而非 async function（async 会把池中 Promise 展开再包新实例，丢失共享语义）；保留 5min TTL / preloadDict / getLabel / clear
+* **refactor(src/composables/useDict.ts):** 契约形态 `useDict<T extends string>(...codes): Record<T, Ref<DictItem[]>> & { refreshDict }` —— 泛型保留 code 字面量，解构类型精确；Ref 用 computed 实现（数据所有权在 store，composable 只建视图）；lazy fetch 失败 console.error 降级（Ref 保持 []），消除旧版 unhandled rejection 隐患；移除 onMounted 双触发（防抖池已保证并发安全）
+* **feat(src/components/common/DictSelect.vue / DictTag.vue):** 全局组件（构建期自动注册，消费方免 import）——DictSelect 内部自动调用 useDict + `v-bind="$attrs"` 透传 clearable / filterable 等 + 契约 disabled 映射 el-option；DictTag 按 value 匹配 label / type / cssClass，未命中显示 value 原文、空值 '-' 占位
+* **feat(src/modules/demo/examples/Dict.vue):** 演示页（表单下拉 + 表格状态列 + useDict 契约形态 / refreshDict 演示），路由 / demo 侧边栏「通用组件」组自动注册
+* **feat(vite.config.ts):** AutoImport 注册 `useDict` —— CLAUDE.md §1.6 声称已在列但实际缺失，补上后组件内免 import 调用才成立
+* **test(dict.spec.ts / useDict.spec.ts):** 19 用例同步 —— 防抖池「并发共享一次请求」、失败出池后重试、契约形态解构 / 响应式 / refreshDict / 失败降级
+* **验证：** `pnpm type-check:full` 0 error；`pnpm lint` 0；`pnpm test` 19/19 通过
+
 ### 🐛 Fix | useConfirm.content 类型谎言：VNode 运行时会渲染成 [object Object]
 
 > `UseConfirmOptions.content` 之前声明为 `string | VNode`，但 EP 2.14.3 message-box 模板 (`message-box/src/index.vue:85-94`) 里 message 只被 `textContent` / `innerHTML` 字符串消费，传 VNode 进去 `toDisplayString(vnode)` 只会拿到 `[object Object]`。类型上写允许但运行时不靠谱，等于给调用方挖坑。类型收紧为 `string` 后：
