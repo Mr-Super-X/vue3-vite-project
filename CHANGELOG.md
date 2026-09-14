@@ -2,6 +2,26 @@
 
 ## 未发布
 
+### ♻️ Refactor | RichTextEditor 目录化整改：单文件散落 common/ 一级 → ProDialogForm 同款四件套
+
+> 对齐项目复合组件编写规范（ProDialog / ProDialogForm 模式），此前 `RichTextEditor.vue` 单文件散落在 `components/common/` 一级、Props/Emits 内联未导出、缺 spec
+
+* **refactor(src/components/common/RichTextEditor.vue → src/components/common/RichTextEditor/):** 组件移入独立目录，四件套齐备
+  * `RichTextEditor.vue` 组件本体（逻辑零变更）+ script 级 JSDoc + `defineOptions({ name: 'RichTextEditor' })`
+  * `types.ts` 抽出 `RichTextEditorProps / RichTextEditorEmits / UploadResult` 命名导出（此前内联 `interface Props/Emits` 不可复用）
+  * `index.ts` barrel 导出组件 + 全部类型（与 ProDialogForm 同模式；全局自动注册不受影响——unplugin dirs deep 扫描，注册名按文件名不变）
+  * `RichTextEditor.spec.ts` 新增 8 个用例：挂载渲染 / onChange 清洗 emit（script 剔除）/ watch 回写 sanitize / 防循环不重复 setHtml / customUpload 成功·未传·失败 3 分支 / 卸载 destroy。stub 掉 Editor/Toolbar（jsdom 不完整支持 Selection/Range），`vi.hoisted` 提升 fake editor 规避 mock 工厂 TDZ
+* **refactor(src/modules/demo/examples/RichTextEditor.vue):** `?raw` 源码提取路径 + `source=` 字符串同步到新路径（2 处）
+* **已验证：** 新 spec 8/8 通过、`vue-tsc --build` 无报错、demo 页全局注册渲染正常
+
+### 🐛 Fix | RichTextEditor 加粗/斜体"HTML 对但视觉无效"：reset.css `*` 重置压平 Slate 文本 span
+
+> 工具栏加粗/斜体命令生效、HTML 结构正确，但视觉无变化；连在 strong 上手写 `element.style font-style: italic` 也无效
+
+* **fix(src/components/common/RichTextEditor/RichTextEditor.vue):** 样式覆盖选择器补 `[data-slate-string]` 后代——WangEditor V5 基于 Slate，文本渲染在 `<strong><span data-slate-string>文本</span></strong>` 的内层 span；项目 `reset.css` 的 `*{font-weight:normal;font-style:normal}` 以「指定值优先于继承」直接压平该 span（仅恢复 strong/b 包裹层无效，strong 计算 700 是假正常）。b/strong/i/em 均扩展命中文本层；text-decoration 按规范贯穿内联后代，u/s 无需扩展
+* **已验证：** 浏览器实测内层 span 字重 400→700，截图视觉加粗生效
+* **排查方向沉淀：** 见项目 memory `reset-css-rich-text-fontweight.md`（查最内层文本元素计算样式 / element.style 无效⇒后代指定值打断继承 / Slate 文本永远在 `[data-slate-string]` span 上）
+
 ### ✨ Features | RichTextEditor 富文本编辑器组件：WangEditor V5 + DOMPurify XSS 防御 + 自定义图片上传
 
 > 基于 `@wangeditor/editor@5.1.23` + `@wangeditor/editor-for-vue@5.1.12`（Vue3 next 分支）封装的 `v-model` 富文本编辑器，把 WangEditor V5 工具栏/编辑区分离的复杂度、emit HTML 的 XSS 风险、自定义上传接入样板收敛到一个组件，业务方只关心 `modelValue` + `uploadApi` 两件事

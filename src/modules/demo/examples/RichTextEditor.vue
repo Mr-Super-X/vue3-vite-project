@@ -18,7 +18,7 @@
 -->
 <script setup lang="ts">
 import { ref } from 'vue'
-import RichTextEditorSource from '@/components/common/RichTextEditor.vue?raw'
+import RichTextEditorSource from '@/components/common/RichTextEditor/RichTextEditor.vue?raw'
 import DemoField from '../components/DemoField.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DocLayout from '../layouts/DocLayout.vue'
@@ -216,7 +216,7 @@ const tocItems = [
   <DocLayout>
     <DemoFrame
       title="RichTextEditor 富文本编辑器"
-      source="src/components/common/RichTextEditor.vue"
+      source="src/components/common/RichTextEditor/RichTextEditor.vue"
       :introductions="[
         '基于 WangEditor V5（@wangeditor/editor-for-vue@5.x）封装的 v-model 富文本编辑器。',
         '内置 DOMPurify XSS 防御（emit 前过滤 <script>/onerror 等危险内容）+ 自定义图片上传 + 防循环更新。',
