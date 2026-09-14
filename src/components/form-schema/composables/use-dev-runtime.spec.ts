@@ -15,6 +15,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { effectScope, reactive, ref } from 'vue'
 import { useDevRuntime } from './use-dev-runtime'
+// 文件顶层 mock resolve-component 模块，让 collectResolvableComponents 内部的
+// resolveComponentFor 调用可被 spy 控制；其余导出（EL_COMPONENT_MAP / isElUpload 等）保留实际实现
+vi.mock('./resolve-component', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./resolve-component')>()
+  return {
+    ...actual,
+    resolveComponentFor: vi.fn(actual.resolveComponentFor),
+  }
+})
+import { resolveComponentFor } from './resolve-component'
 import type { UseFormErrorBusReturn } from './use-form-error-bus'
 import type { FieldErrorState } from './use-form-instance'
 import type { XFormProps } from '../types'
@@ -140,6 +150,63 @@ describe('useDevRuntime', () => {
     await new Promise((r) => setTimeout(r, 0))
     expect(ret.validateErrors.value).toEqual([])
     scope.stop()
+  })
+
+  it('schema 含 unplugin-vue-components 自动注册的全局组件 → validateErrors 为空', async () => {
+    // mock resolveComponentFor 模拟 RichTextEditor 全局可解析（unplugin-vue-components 自动注册到 GlobalComponents）
+    vi.mocked(resolveComponentFor).mockImplementation((name) => {
+      if (name === 'RichTextEditor') return { name: 'RichTextEditor' }
+      return null
+    })
+    const { props, errorBus, fieldErrors, setFieldError } = makeDeps({
+      schema: [{ component: 'RichTextEditor', name: 'desc' }],
+    })
+    const scope = effectScope()
+    let ret!: ReturnType<typeof useDevRuntime>
+    scope.run(() => {
+      ret = useDevRuntime({ props, errorBus, setFieldError, fieldErrors })
+    })
+    await new Promise((r) => setTimeout(r, 0))
+    expect(ret.validateErrors.value).toEqual([])
+    vi.mocked(resolveComponentFor).mockReset()
+  })
+
+  it('schema 含拼写错误组件名 → validateErrors 仍报错（运行时 fallback 不误识别）', async () => {
+    // mock resolveComponentFor 始终返回 null —— 模拟「unplugin 未注册 + 拼写错误」场景
+    vi.mocked(resolveComponentFor).mockReturnValue(null)
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { props, errorBus, fieldErrors, setFieldError } = makeDeps({
+      schema: [{ component: 'Inpurt', name: 'a' }], // Input 拼错
+    })
+    const scope = effectScope()
+    let ret!: ReturnType<typeof useDevRuntime>
+    scope.run(() => {
+      ret = useDevRuntime({ props, errorBus, setFieldError, fieldErrors })
+    })
+    await new Promise((r) => setTimeout(r, 0))
+    expect(ret.validateErrors.value.length).toBeGreaterThan(0)
+    expect(ret.validateErrors.value[0]?.message).toContain('未知组件名')
+    expect(errorSpy).toHaveBeenCalled()
+    vi.mocked(resolveComponentFor).mockReset()
+    errorSpy.mockRestore()
+  })
+
+  it('props.components 显式注册 → 不依赖运行时探测', async () => {
+    // mock resolveComponentFor 始终返回 null —— 即使如此，props.components 显式提供的 MyInput
+    // 也应被识别为合法组件，证明 user 集合优先于运行时探测
+    vi.mocked(resolveComponentFor).mockReturnValue(null)
+    const { props, errorBus, fieldErrors, setFieldError } = makeDeps({
+      schema: [{ component: 'MyInput', name: 'a' }],
+      components: { MyInput: { name: 'MyInput' } },
+    })
+    const scope = effectScope()
+    let ret!: ReturnType<typeof useDevRuntime>
+    scope.run(() => {
+      ret = useDevRuntime({ props, errorBus, setFieldError, fieldErrors })
+    })
+    await new Promise((r) => setTimeout(r, 0))
+    expect(ret.validateErrors.value).toEqual([])
+    vi.mocked(resolveComponentFor).mockReset()
   })
 
   it('schema 含 forbidden 标识符（window）→ forbiddenErrors + console.warn', async () => {

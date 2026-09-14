@@ -14,9 +14,59 @@ import type { ComponentPublicInstance } from 'vue'
 import { validate } from './use-validate'
 import { scanForForbidden } from './use-scan-forbidden'
 import { DEFAULT_COMPONENT_MAP } from '../adapters/element-plus-adapter'
+import { resolveComponentFor } from './resolve-component'
 import type { UseFormErrorBusReturn } from './use-form-error-bus'
 import type { FieldErrorState } from './use-form-instance'
 import type { SchemaNode, XFormProps } from '../types'
+
+/**
+ * 递归收集 schema 中出现的 string component 名（去重），过滤 builtin / ElXxx / 原生 HTML，
+ * 对剩余名字逐个调用 resolveComponentFor —— 命中（unplugin-vue-components 自动注册的项目级组件
+ * 如 RichTextEditor / BaseChart）返回真实组件对象，加入 dev validate 的 user 集合。
+ *
+ * 目的：dev validate 只查 builtin/user 两个集合，不感知运行时 resolveComponentFor 的全局组件
+ * fallback，会把 RichTextEditor 误报为「未知组件名」。此处动态探测让 dev 校验与运行时解析对齐，
+ * 但 Inpurt 这类拼写错误 resolveComponentFor 仍返回 null → 仍被 validate 识别为拼写错误。
+ */
+function collectResolvableComponents(
+  schema: SchemaNode | SchemaNode[] | undefined,
+  userComponents: Record<string, unknown> | undefined
+): Set<string> {
+  const names = new Set<string>()
+  const visit = (node: unknown): void => {
+    if (!node) return
+    if (typeof node === 'string') return
+    if (Array.isArray(node)) {
+      node.forEach(visit)
+      return
+    }
+    if (typeof node !== 'object') return
+    const obj = node as Record<string, unknown>
+    if (typeof obj.component === 'string') names.add(obj.component)
+    if (obj.children) visit(obj.children)
+    if (obj.slots) {
+      for (const v of Object.values(obj.slots as Record<string, unknown>)) visit(v)
+    }
+    if (obj.array && typeof obj.array === 'object') {
+      const item = (obj.array as { itemSchema?: unknown }).itemSchema
+      if (item) visit(item)
+    }
+    if (obj.formItem && typeof obj.formItem === 'object') {
+      const slots = (obj.formItem as { slots?: unknown }).slots
+      if (slots) visit(slots)
+    }
+  }
+  visit(schema)
+
+  const resolvable = new Set<string>()
+  for (const name of names) {
+    if (name in DEFAULT_COMPONENT_MAP) continue
+    if (name.startsWith('El')) continue
+    if (name === name.toLowerCase()) continue
+    if (resolveComponentFor(name, userComponents) != null) resolvable.add(name)
+  }
+  return resolvable
+}
 
 /** useDevRuntime 入参 */
 export interface UseDevRuntimeDeps {
@@ -70,10 +120,13 @@ export function useDevRuntime(deps: UseDevRuntimeDeps): UseDevRuntimeReturn {
       (val) => {
         const normalized: SchemaNode = Array.isArray(val) ? ({ children: val } as SchemaNode) : val
         // 阶段 1.3：组件名校验 —— 短名 + ElXxx 全名 + userComponents 三类必须命中其一
+        // 运行时解析额外收集：schema.component 字符串走 resolveComponentFor 测试，能解析的（如
+        // unplugin-vue-components 自动注册的 RichTextEditor）一并加入 user 集合，与运行时 fallback 对齐
+        const runtimeResolved = collectResolvableComponents(normalized, props.components)
         const { isValid, errors } = validate(normalized, {
           knownComponents: {
             builtin: new Set(Object.keys(DEFAULT_COMPONENT_MAP)),
-            user: new Set(Object.keys(props.components ?? {})),
+            user: new Set([...Object.keys(props.components ?? {}), ...runtimeResolved]),
           },
         })
         validateErrors.value = isValid ? [] : errors

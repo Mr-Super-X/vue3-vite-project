@@ -2,6 +2,17 @@
 
 ## 未发布
 
+### ♻️ Refactor | resolveComponentFor 全局组件 fallback：schema.component 直接写项目级组件名
+
+> 此前 schema.component 字符串仅支持 4 类解析——userComponents 注册 / EL 短名 / ElXxx 全名 / 原生 HTML 标签。项目级组件（如 RichTextEditor）必须通过 XFormProps.components 重复注册一遍才能用，冗余且增加 boilerplate。借助 unplugin-vue-components 已把 src/components/common/** 自动注入到 GlobalComponents 的事实，把 vue.resolveComponent 加入解析链 fallback
+
+* **feat(src/components/form-schema/composables/resolve-component.ts:resolveComponentFor):** 在原生 HTML 标签判定的 fallthrough 前追加 `try { resolveComponent(name) } catch {}` —— vue 命中返回组件对象，fallthrough 返回 null（与 ElXxx 路径同语义）。JSDoc 同步更新。userComponents / EL_COMPONENT_MAP / ElXxx 优先级不变
+* **feat(src/components/form-schema/composables/use-dev-runtime.ts):** 新增 `collectResolvableComponents(schema, userComponents)` 工具 —— 递归收集 schema.component 字符串名（去重），过滤 builtin / ElXxx / 原生 HTML 后逐个调用 resolveComponentFor 探测，命中者（unplugin-vue-components 自动注册的项目级组件如 RichTextEditor / BaseChart）加入 dev validate 的 user 集合。watch callback 在 validate 调用前同步注入 runtimeResolved 集合。**目的：** dev mode validate 不感知运行时 resolveComponentFor 的 fallback 能力，会把 RichTextEditor 误报为「未知组件名」（实测堆栈：`use-validate.ts:77 → use-dev-runtime.ts:81 → use-form-error-bus.ts:179`）；此处动态探测让 dev 校验与运行时解析对齐。**拼写错误检测能力保留** —— Inpurt 这类 resolveComponentFor 返回 null 的错误仍被识别
+* **test(src/components/form-schema/composables/resolve-component.spec.ts):** 文件顶层 `vi.mock('vue')` 拦截 resolveComponent（默认实现 mock 出 vue 未命中行为 `name => name`，让 fallback → null 路径可断言）；新增 3 个用例：① RichTextEditor 命中返回组件对象；② 未注册返回字符串 → fallthrough → null（拼写错误如 Inpurt 仍被正确识别为错误）；③ userComponents 优先于全局 fallback。原 24 用例 + 新增 3 用例 27/27 通过
+* **test(src/components/form-schema/composables/use-dev-runtime.spec.ts):** 文件顶层 `vi.mock('./resolve-component')` 拦截 resolveComponentFor（保留其他导出实际实现）；新增 3 个用例：① schema 含 RichTextEditor（mock 解析成功）→ validateErrors 为空；② schema 含 Inpurt（mock 解析失败）→ validateErrors 仍含 1 项「未知组件名」；③ props.components 显式注册 → 不依赖运行时探测。原 11 用例 + 新增 3 用例 14/14 通过
+* **feat(src/modules/demo/examples/XForm/XFormBase.vue):** schema 末尾追加「商品描述」字段（col span 24 + rules 'required' + props height/placeholder），component: 'RichTextEditor'，无 :components 注册；introductions 段落同步说明 fallback 机制
+* **不变量：** 未在 builtin/user/全局命中的字符串仍返回 null（拼写错误检查能力不变）；原生 HTML 标签（小写）走 `name === name.toLowerCase()` 兜底，不进 vue.resolveComponent
+
 ### ♻️ Refactor | RichTextEditor 目录化整改：单文件散落 common/ 一级 → ProDialogForm 同款四件套
 
 > 对齐项目复合组件编写规范（ProDialog / ProDialogForm 模式），此前 `RichTextEditor.vue` 单文件散落在 `components/common/` 一级、Props/Emits 内联未导出、缺 spec

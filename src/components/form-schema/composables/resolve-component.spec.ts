@@ -2,13 +2,26 @@
  * resolve-component 单元测试
  *
  * 覆盖：
- * - resolveComponentFor: 用户组件 / 内置短名 / ElXxx 全名 / 原生 HTML 标签
+ * - resolveComponentFor: 用户组件 / 内置短名 / ElXxx 全名 / 原生 HTML 标签 / 全局组件 fallback
  * - EL_COMPONENT_MAP: 26 个内置映射完整性
  * - isElUpload: component name + Comp 引用双重判断
  * - isPictureCardUpload / isDragUpload: 基于 isElUpload + props 判断
  */
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { ElUpload } from 'element-plus'
+
+// 文件顶层 mock vue 模块：resolveComponentFor 的全局组件 fallback 走 vue.resolveComponent，
+// jsdom 无 Vue 实例时该调用会抛错——用 mock 提供可控返回值，让 fallback 路径可断言。
+// 默认实现 mock 出 vue 未命中行为：返回组件名字符串 → resolveComponentFor fallthrough → null
+vi.mock('vue', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('vue')>()
+  return {
+    ...actual,
+    resolveComponent: vi.fn((name: string) => name),
+  }
+})
+
+import { resolveComponent } from 'vue'
 import {
   EL_COMPONENT_MAP,
   isDragUpload,
@@ -17,6 +30,8 @@ import {
   resolveComponentFor,
 } from './resolve-component'
 import type { SchemaNode } from '../types'
+
+const mockedResolveComponent = vi.mocked(resolveComponent)
 
 describe('resolveComponentFor', () => {
   it('undefined → null', () => {
@@ -51,6 +66,30 @@ describe('resolveComponentFor', () => {
   it('空 userComponents → 仍走内置查找', () => {
     const result = resolveComponentFor('Input', {})
     expect(result).toBe(EL_COMPONENT_MAP.Input)
+  })
+
+  it('全局组件 fallback：vue.resolveComponent 命中 → 返回组件对象', () => {
+    // unplugin-vue-components 把 src/components/common/** 自动注册到 GlobalComponents，
+    // 这里 mock vue.resolveComponent 模拟 RichTextEditor 全局可解析
+    const RichTextEditorStub = { name: 'RichTextEditor' }
+    mockedResolveComponent.mockReturnValueOnce(RichTextEditorStub as never)
+    const result = resolveComponentFor('RichTextEditor')
+    expect(result).toBe(RichTextEditorStub)
+  })
+
+  it('全局组件 fallback：vue.resolveComponent 返回字符串（未注册）→ null', () => {
+    // vue 未命中时 resolveComponent 返回组件名字符串原样；显式视为 fallthrough，
+    // 与 ElXxx 路径同语义。防止拼写错误（如 Inpurt）被误识别为合法组件
+    mockedResolveComponent.mockReturnValueOnce('NotRegistered' as never)
+    expect(resolveComponentFor('NotRegistered')).toBeNull()
+  })
+
+  it('userComponents 优先于全局 fallback', () => {
+    const UserVersion = { name: 'UserRichTextEditor' }
+    const GlobalVersion = { name: 'GlobalRichTextEditor' }
+    mockedResolveComponent.mockReturnValueOnce(GlobalVersion as never)
+    const result = resolveComponentFor('RichTextEditor', { RichTextEditor: UserVersion })
+    expect(result).toBe(UserVersion)
   })
 })
 

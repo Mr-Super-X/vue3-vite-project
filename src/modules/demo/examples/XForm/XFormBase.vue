@@ -177,6 +177,17 @@ const schema: SchemaNode = {
       defaultValue: 1,
       props: { min: 0 },
     },
+    {
+      label: '商品描述',
+      name: 'description',
+      col: { span: 24 },
+      // 不在 EL 组件集、未通过 :components 注册 —— 演示 resolveComponentFor 全局组件 fallback
+      // （unplugin-vue-components 把 src/components/common/** 自动注册到 GlobalComponents）
+      component: 'RichTextEditor',
+      rules: 'required',
+      defaultValue: '<p>富文本编辑器默认内容</p>',
+      props: { height: '320px', placeholder: '请输入商品描述（支持富文本）' },
+    },
   ],
 }
 
@@ -213,6 +224,7 @@ const tocItems = [
         '注意：顶层 column 会把每个节点包进固定 span 的 ElCol，节点级 col.span 无法突破半宽——混用列宽时用 row + col.span 组合。',
         'rules 支持 「required」字符串 + validator 函数。订单号带格式校验，结束日期不能晚于今天。',
         '新增组件字段：密码 / 描述 / 技能标签 / 主题色 / 负责人 / 评分 / 最低价（验证 InputPassword/InputTextArea/InputTag/ColorPicker/Mention/Rate 别名、默认 props、节点覆盖与 v-model）。',
+        '商品描述字段演示「全局组件 fallback」：schema.component 直接写 RichTextEditor，依赖 unplugin-vue-components 自动注册到 GlobalComponents，无需在 XForm 上 :components 重复注册。',
       ]"
     >
       <section id="demo-base">

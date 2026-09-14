@@ -92,6 +92,15 @@ export function resolveComponentFor(
   // 原生 HTML 标签（全小写，如 'a' / 'span' / 'div'）→ 返回字符串标签名，
   // h() 对字符串直接渲染原生元素（与 EL 组件名的 PascalCase/ElXxx 约定不冲突）
   if (name === name.toLowerCase()) return name
+  // 项目级全局组件 fallback：unplugin-vue-components 把 src/components/common/** 自动注入到
+  // GlobalComponents，schema.component 直接写 'RichTextEditor' 等项目组件名可被 resolveComponent
+  // 解析，业务方无需在 XFormProps.components 重复注册。vue 未命中返回字符串 → fallthrough 到 null。
+  try {
+    const r = resolveComponent(name)
+    if (typeof r !== 'string') return r
+  } catch {
+    /* not registered globally — fallthrough to null */
+  }
   return null
 }
 
