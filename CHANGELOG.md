@@ -2,6 +2,31 @@
 
 ## 未发布
 
+### ✨ Features | ProDialogForm 弹窗表单组合组件：ProDialog + XForm 内置「校验 → 提交 → 自动关闭 → 自动重置」
+
+> 把「ProDialog 弹窗 + XForm 表单 + 异步提交 + 校验重置」4 个常见样板编排收敛到一个组件，业务方只关心 schema / model / onSubmit 三件事。沿用 ProDialog 子目录 + barrel 模式（与 ProDialog / XForm 调用方式一致）
+
+* **feat(src/components/common/ProDialogForm/ProDialogForm.vue):** 4 大核心能力
+  * `v-model` 显隐 + ProDialog 原生 props（width / close-on-click-modal / beforeClose / ...）透传
+  * 内置「确定 / 取消」footer：点确定自动 validate → 调 onSubmit → 成功后自动关闭 + emit('success')
+  * 关闭弹窗后（动画结束 ~300ms）自动 resetFields 清空数据与校验状态（`setTimeout(resetFields, 300)` 模拟 EP 默认动画时长，避免闪烁感）
+  * 防重复提交：submitLoading 标志 + try/finally（即使按钮被绕过也阻断二次提交）
+* **feat(src/components/common/ProDialogForm/types.ts):** Props / Emits / Expose 完整契约
+  * Props：`modelValue / title / width? / schema / model / rules? / onSubmit / submitButtonText? / cancelButtonText? / resetOnClose?`
+  * Emits：`update:modelValue / success / submit-failed`（submit-failed 在 onSubmit reject 时触发，**不** throw 避免 500 重定向）
+  * Expose：透传 XFormExpose 全部 19 个方法（validate / resetFields / setFieldError / addItem / isDirty / ...）
+* **feat(src/components/common/ProDialogForm/index.ts):** barrel 导出 `ProDialogForm` + 全部类型 + `XFormExpose` re-export
+* **feat(src/modules/demo/examples/ProDialogForm/ProDialogFormOverview.vue):** 演示页 5 段——基础用法 / 提交失败（emit submit-failed）/ 关闭自动重置 / footer 作用域插槽 / expose 方法（setFieldError 模拟服务端 422 回填）；路由 + sidebar 通过 glob 自动注册
+* **refactor(src/modules/demo/config/sidebar-groups.ts):** CN_NAMES 追加 1 行 `ProDialogFormOverview: '用法总览（弹窗表单）'`，自动归到「ProDialog 弹窗组件」分组
+
+### 🐛 Fix | ProDialogForm onSubmit 失败处理改用 emit 而非 throw：避免全局 errorHandler 500 重定向
+
+> 初始实现用 `throw err` 把 onSubmit 抛出的错误冒泡到全局，导致调用方未监听时 Vue app.config.errorHandler 触发项目全局 500 跳转。改用 emit('submit-failed', err) 让调用方完全控制错误处理（toast / 字段红字 / 静默）
+
+* **fix(src/components/common/ProDialogForm/ProDialogForm.vue):** catch 块改为 `emit('submitFailed', err)`，移除 `throw err`；JSDoc 注释说明设计动机（Vue 模板事件处理器调 async 函数时 Promise reject 会冒泡到 errorHandler）
+* **refactor(src/components/common/ProDialogForm/ProDialogForm.vue):** defineExpose 从 Proxy 改为显式对象字面量代理 —— 之前 Proxy.get 在 formRef.value 未就绪时返回 undefined，调用方访问 expose 方法报 `setFieldError is not a function`；现在每个方法都是真实函数（`formRef.value?.xxx`），永远不会"消失"
+* **fix(src/modules/demo/examples/ProDialogForm/ProDialogFormOverview.vue):** demo 新增 `onSubmitFailed` 处理函数（toast 提示错误）+ 模板 `@submit-failed` 监听；演示文案更新
+
 ### ✨ Features | 字典功能契约化重构：DictItem 类型契约 + Promise 防抖池 + DictSelect / DictTag 组件
 
 > 「前端主导数据结构」落地：字典契约（DictItem）定义在 src/types/dict.ts，后端 / Mock 按 `/api/dict/:code` 返回数组配合实现。useDict 升级为多 code 契约形态（按 code 解构 `Ref<DictItem[]>` + `refreshDict`），store 层 16ms 轮询并发合并替换为 Promise 防抖池（Map<code, Promise>，并发共享同一次请求）。新增 DictSelect（el-select 封装，$attrs 透传 + disabled 契约字段）/ DictTag（el-tag 封装，未命中显示 value 原文）全局组件与 /demo/dict 演示页

@@ -91,6 +91,7 @@ export const CN_NAMES: Record<string, string> = {
   ProDialogOverview: '用法总览（声明式）',
   ProDialogResizable: '可拖拉调整宽高',
   ProDialogUseDialog: '命令式调用（useDialog）',
+  ProDialogFormOverview: '用法总览（弹窗表单）',
   // BaseChart 图表组件
   BaseChartOverview: '用法总览',
   BaseChartSaleFunnel: '销售转化漏斗',
