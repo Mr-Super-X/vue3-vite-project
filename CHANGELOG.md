@@ -2,6 +2,17 @@
 
 ## 未发布
 
+### ♻️ Refactor | RichTextEditor 源头处理「视觉为空」映射：v-model emit('') 而非占位段落，消费方无须做字符串剥离
+
+> 之前 demo 把字符串 `'required'` 改成 RuleItem 数组（含自定义 validator + trigger: 'change'）来兜底 wangEditor V5 永远输出 `<p><br></p>` 占位段落的问题——但这是让消费方为组件内部数据形态买单。本应在组件源头完成语义映射：编辑器内容「视觉为空」时 v-model emit 空字符串 `''`，让业务方继续用 `rules: 'required'` 这种标准写法
+
+* **feat(src/components/common/RichTextEditor/RichTextEditor.vue):** 新增 `isVisualEmpty(html)` 工具 —— 剥 HTML 标签 + `&nbsp;` + trim 判空。handleChange 检测「视觉为空」时 emit('') 而非 sanitizeHtml 后内容；watch 处理外部 prop 置空场景——编辑器已视觉为空时跳过 setHtml 防循环（setHtml('') 后 wangEditor 仍可能保留占位段落，与 emit('') 会形成 setHtml 循环）
+* **test(src/components/common/RichTextEditor/RichTextEditor.spec.ts):** 新增 4 个用例覆盖源头修复：① `<p><br></p>` 占位段落 → emit('')；② 内容仅 `&nbsp;` 占位 → emit('')；③ 外部 prop 置空 + 编辑器非空 → setHtml('') 清空；④ 外部 prop 置空 + 编辑器已空 → 跳过 setHtml（防循环）。原 8 用例 + 新增 4 用例 12/12 通过
+* **refactor(src/modules/demo/examples/XForm/XFormBase.vue):** RichTextEditor 字段 rules 由 RuleItem 数组（自定义 validator + trigger: 'change'）改回字符串 `'required'`。源头修好，业务侧无须做字符串处理与 trigger 调整，与项目中其他 Input / Select 等原生组件写法一致
+* **不变量：** v-model 协议语义不变——`update:modelValue` 仍 emit 字符串，仅当内容「视觉为空」时把占位段落的非空字符串映射为 `''`，业务侧按字符串标准理解即可
+
+### ♻️ Refactor | resolveComponentFor 全局组件 fallback：schema.component 直接写项目级组件名
+
 ### ♻️ Refactor | resolveComponentFor 全局组件 fallback：schema.component 直接写项目级组件名
 
 > 此前 schema.component 字符串仅支持 4 类解析——userComponents 注册 / EL 短名 / ElXxx 全名 / 原生 HTML 标签。项目级组件（如 RichTextEditor）必须通过 XFormProps.components 重复注册一遍才能用，冗余且增加 boilerplate。借助 unplugin-vue-components 已把 src/components/common/** 自动注入到 GlobalComponents 的事实，把 vue.resolveComponent 加入解析链 fallback
@@ -10,7 +21,8 @@
 * **feat(src/components/form-schema/composables/use-dev-runtime.ts):** 新增 `collectResolvableComponents(schema, userComponents)` 工具 —— 递归收集 schema.component 字符串名（去重），过滤 builtin / ElXxx / 原生 HTML 后逐个调用 resolveComponentFor 探测，命中者（unplugin-vue-components 自动注册的项目级组件如 RichTextEditor / BaseChart）加入 dev validate 的 user 集合。watch callback 在 validate 调用前同步注入 runtimeResolved 集合。**目的：** dev mode validate 不感知运行时 resolveComponentFor 的 fallback 能力，会把 RichTextEditor 误报为「未知组件名」（实测堆栈：`use-validate.ts:77 → use-dev-runtime.ts:81 → use-form-error-bus.ts:179`）；此处动态探测让 dev 校验与运行时解析对齐。**拼写错误检测能力保留** —— Inpurt 这类 resolveComponentFor 返回 null 的错误仍被识别
 * **test(src/components/form-schema/composables/resolve-component.spec.ts):** 文件顶层 `vi.mock('vue')` 拦截 resolveComponent（默认实现 mock 出 vue 未命中行为 `name => name`，让 fallback → null 路径可断言）；新增 3 个用例：① RichTextEditor 命中返回组件对象；② 未注册返回字符串 → fallthrough → null（拼写错误如 Inpurt 仍被正确识别为错误）；③ userComponents 优先于全局 fallback。原 24 用例 + 新增 3 用例 27/27 通过
 * **test(src/components/form-schema/composables/use-dev-runtime.spec.ts):** 文件顶层 `vi.mock('./resolve-component')` 拦截 resolveComponentFor（保留其他导出实际实现）；新增 3 个用例：① schema 含 RichTextEditor（mock 解析成功）→ validateErrors 为空；② schema 含 Inpurt（mock 解析失败）→ validateErrors 仍含 1 项「未知组件名」；③ props.components 显式注册 → 不依赖运行时探测。原 11 用例 + 新增 3 用例 14/14 通过
-* **feat(src/modules/demo/examples/XForm/XFormBase.vue):** schema 末尾追加「商品描述」字段（col span 24 + rules 'required' + props height/placeholder），component: 'RichTextEditor'，无 :components 注册；introductions 段落同步说明 fallback 机制
+* **feat(src/modules/demo/examples/XForm/XFormBase.vue):** schema 末尾追加「商品描述」字段（col span 24 + props height: '320px' + placeholder），component: 'RichTextEditor'，无 :components 注册；introductions 段落同步说明 fallback 机制
+* **fix(src/modules/demo/examples/XForm/XFormBase.vue):** RichTextEditor 字段 rules 由字符串 `'required'` 改为 RuleItem 数组（含自定义 validator + trigger: 'change'）。双 bug 修复：① wangEditor V5 空内容时 emit 永远输出 `<p><br></p>` 占位段落而非空字符串，async-validator 的 required 规则对非空字符串视为已填 → 自定义 validator 去掉 HTML 标签 + `&nbsp;` 后再判空；② XForm 默认 rules trigger='blur'，RichTextEditor 内容变化走 update:modelValue 不触发 blur → 显式声明 trigger='change' 才能在保存前自动校验（实测：不修复则清空富文本后点保存不触发红字）
 * **不变量：** 未在 builtin/user/全局命中的字符串仍返回 null（拼写错误检查能力不变）；原生 HTML 标签（小写）走 `name === name.toLowerCase()` 兜底，不进 vue.resolveComponent
 
 ### ♻️ Refactor | RichTextEditor 目录化整改：单文件散落 common/ 一级 → ProDialogForm 同款四件套

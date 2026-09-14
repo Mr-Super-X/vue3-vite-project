@@ -134,6 +134,25 @@ function sanitizeHtml(html: string): string {
   return DOMPurify.sanitize(html, SANITIZE_CONFIG) as string
 }
 
+/**
+ * HTML 「视觉为空」判定：去掉所有 HTML 标签 + &nbsp; + trim 后无可见字符。
+ *
+ * wangEditor V5 编辑器永远保留一个空段落（<p><br></p>）作为光标容器——
+ * 用户清空内容 / 连续 Backspace 把段落内容删空 / 加载默认值后立即删空，
+ * editor.getHtml() 都会返回这个占位段落，消费方用 `rules: 'required'` 校验
+ * 会把它当作「已填」。
+ *
+ * 业务语义：「视觉为空」等价于「用户看到的是空白」，v-model 应映射为 ''
+ * 让 async-validator 的 required 规则能正确工作。组件内部完成此映射，
+ * 消费方只需写 `rules: 'required'` 无须关心 wangEditor 内部数据形态。
+ */
+function isVisualEmpty(html: string): boolean {
+  return !String(html ?? '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, '')
+    .trim()
+}
+
 /** Editor 实例创建完成：缓存到 ref 供 setHtml / destroy / getHtml 使用 */
 const handleCreated = (editor: IDomEditor): void => {
   editorRef.value = editor
@@ -147,9 +166,18 @@ const handleCreated = (editor: IDomEditor): void => {
  * 如果父组件直接 v-model，modelValue 会被脏数据污染，XSS 防御失效。
  *
  * 所以我们不监听 @update:model-value，只监听 @on-change，自己清洗后再 emit。
+ *
+ * 空内容映射：wangEditor V5 永远输出 <p><br></p> 占位段落，消费方用 `rules: 'required'`
+ * 校验会误识别为「已填」。此处检测「视觉为空」后主动 emit ''，让 v-model 反映业务语义。
+ * @see isVisualEmpty 详细机制
  */
 const handleChange = (editor: IDomEditor): void => {
-  const cleanHtml = sanitizeHtml(editor.getHtml())
+  const rawHtml = editor.getHtml()
+  if (isVisualEmpty(rawHtml)) {
+    emit('update:modelValue', '')
+    return
+  }
+  const cleanHtml = sanitizeHtml(rawHtml)
   emit('update:modelValue', cleanHtml)
 }
 
@@ -166,6 +194,10 @@ const handleChange = (editor: IDomEditor): void => {
  *
  * 不加这个判断会导致：setHtml → onChange → emit → watch → setHtml ... 的死循环。
  *
+ * 外部置空（newHtml 为 ''）：wangEditor setHtml('') 后内部仍保留 <p><br></p> 光标容器，
+ * editor.getHtml() 不会被同步成 ''——若按既有比较逻辑会出现死循环（safeHtml '' !== getHtml() '<p><br></p>）。
+ * 此处用 isVisualEmpty 二次判断：编辑器已经是「视觉为空」状态就跳过 setHtml，避免循环。
+ *
  * ⚠ 必传 safeHtml 而非 newHtml：外部 prop 传入的 HTML 可能是脏数据（API 返回 / 用户粘贴 / 第三方拼接），
  * 直接 setHtml 会让 onerror/javascript: 等进入 DOM 并被浏览器执行。sanitize 是必经闸门。
  *
@@ -180,6 +212,17 @@ watch(
     const editor = editorRef.value
     if (editor == null) return
     const safeHtml = sanitizeHtml(newHtml ?? '')
+    // 外部置空场景：编辑器若已视觉为空则跳过 setHtml（避免与 isVisualEmpty emit('') 形成 setHtml 循环）；
+    // 若编辑器仍有内容则执行 setHtml('') 清空（reset / 加载空默认值场景）。
+    if (isVisualEmpty(newHtml ?? '')) {
+      if (isVisualEmpty(editor.getHtml())) return
+      try {
+        editor.setHtml(safeHtml)
+      } catch (err) {
+        console.error('[RichTextEditor] setHtml failed:', err)
+      }
+      return
+    }
     if (safeHtml === editor.getHtml()) return
     try {
       editor.setHtml(safeHtml)

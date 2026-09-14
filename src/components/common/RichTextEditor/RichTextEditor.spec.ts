@@ -122,6 +122,53 @@ describe('RichTextEditor', () => {
     expect(fakeEditor.setHtml).not.toHaveBeenCalled()
   })
 
+  it('onChange 视觉为空（wangEditor 占位段落 <p><br></p>）→ emit 空字符串', async () => {
+    // wangEditor V5 编辑器清空后 getHtml() 永远返回 <p><br></p> 占位段落作为光标容器。
+    // 业务方用 rules:'required' 校验时，<p><br></p> 会被误识别为「已填」——此处映射为 ''
+    const wrapper = mountEditor()
+    fakeEditor.getHtml.mockReturnValue('<p><br></p>')
+
+    wrapper.findComponent({ name: 'EditorStub' }).vm.$emit('onChange', fakeEditor)
+    await wrapper.vm.$nextTick()
+
+    const emitted = wrapper.emitted('update:modelValue')
+    expect(emitted).toHaveLength(1)
+    expect(emitted?.[0]?.[0]).toBe('')
+  })
+
+  it('onChange 内容仅含 &nbsp; / <br> 占位符 → emit 空字符串', async () => {
+    // 边界：用户连续输入空格或 Backspace 删到只剩 &nbsp; 占位——同样视为「视觉为空」
+    const wrapper = mountEditor()
+    fakeEditor.getHtml.mockReturnValue('<p>&nbsp;&nbsp;&nbsp;</p>')
+
+    wrapper.findComponent({ name: 'EditorStub' }).vm.$emit('onChange', fakeEditor)
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.emitted('update:modelValue')?.[0]?.[0]).toBe('')
+  })
+
+  it("外部 prop 置空 + 编辑器当前非空 → setHtml('') 清空", async () => {
+    // reset / 加载空默认值场景：父组件 modelValue 变 ''，编辑器内仍有旧内容需要清空
+    const wrapper = mountEditor({ modelValue: '<p>已有内容</p>' })
+    fakeEditor.getHtml.mockReturnValue('<p>编辑器旧内容</p>')
+
+    await wrapper.setProps({ modelValue: '' })
+
+    expect(fakeEditor.setHtml).toHaveBeenCalledTimes(1)
+    expect(fakeEditor.setHtml).toHaveBeenCalledWith('')
+  })
+
+  it('外部 prop 置空 + 编辑器已视觉为空 → 跳过 setHtml（防循环）', async () => {
+    // 编辑器内部已是 <p><br></p> 占位段落 → isVisualEmpty(editor.getHtml()) 为 true，
+    // 无需再次 setHtml('')（setHtml 后 getHtml() 仍可能是占位段落，会与 isVisualEmpty emit('') 形成循环）
+    const wrapper = mountEditor({ modelValue: '<p>初始</p>' })
+    fakeEditor.getHtml.mockReturnValue('<p><br></p>')
+
+    await wrapper.setProps({ modelValue: '' })
+
+    expect(fakeEditor.setHtml).not.toHaveBeenCalled()
+  })
+
   it('上传成功：customUpload 调 uploadApi 后 insertFn 插入返回的 url/alt/href', async () => {
     const uploadApi = vi.fn<(file: File) => Promise<UploadResult>>().mockResolvedValue({
       url: 'https://oss.example.com/a.png',
