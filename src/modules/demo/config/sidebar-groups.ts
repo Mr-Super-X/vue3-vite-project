@@ -110,6 +110,7 @@ export const CN_NAMES: Record<string, string> = {
   AsyncState: '异步状态容器',
   ErrorBoundary: '错误边界',
   Dict: '字典组件（DictSelect / DictTag）',
+  RichTextEditor: '富文本编辑器（WangEditor V5）',
 }
 
 /** 返回组件名所属分组标题（未命中任何前缀时归入兜底组） */

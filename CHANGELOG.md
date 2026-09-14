@@ -2,6 +2,23 @@
 
 ## 未发布
 
+### ✨ Features | RichTextEditor 富文本编辑器组件：WangEditor V5 + DOMPurify XSS 防御 + 自定义图片上传
+
+> 基于 `@wangeditor/editor@5.1.23` + `@wangeditor/editor-for-vue@5.1.12`（Vue3 next 分支）封装的 `v-model` 富文本编辑器，把 WangEditor V5 工具栏/编辑区分离的复杂度、emit HTML 的 XSS 风险、自定义上传接入样板收敛到一个组件，业务方只关心 `modelValue` + `uploadApi` 两件事
+
+* **feat(src/components/common/RichTextEditor.vue):** 4 大核心能力
+  * `v-model` 双向绑定 HTML 内容 + `height / placeholder / readOnly / uploadApi` props
+  * **🛡 双向 XSS 防御**：`SANITIZE_CONFIG` 单一入口（USE_PROFILES.html + 显式 FORBID_TAGS 黑名单 `style/script/iframe/object/embed/form` + FORBID_ATTR 黑名单 `onerror/onclick/onload/onmouseover/onfocus/style/formaction`），watch 和 handleChange **共用**同一份配置；emit 链路清洗掉用户输入里的脏数据，prop 链路清洗掉父组件传入的脏数据——之前只清洗 emit 链路导致 `<img onerror=...>` / `<a href="javascript:...">` 通过 `props.modelValue` 直接 `setHtml` 进入编辑器 DOM 并被浏览器执行，是真实 XSS 漏洞，本次修复堵上
+  * **防循环更新**：watch `props.modelValue` 时只有与 `editor.getHtml()` 不一致才 `setHtml`；不传 `:model-value` 给 Editor 组件，绕过其内部 `update:modelValue` emit 未清洗 HTML 的通路，由组件自己 watch + onChange + DOMPurify 全链路接管
+  * **自定义图片上传**：`editorConfig.MENU_CONF['uploadImage'].customUpload` 拦截默认 base64 调用 `props.uploadApi(file)`，成功 `insertFn(url, alt, href)` 插入，失败 `ElMessage.error` + `console.error`（不静默吞错）；不传 `uploadApi` 时点上传会 `ElMessage.warning` 友好提示
+  * **生命周期**：`onBeforeUnmount` 必调 `editor.destroy()` 并把 `editorRef.value` 置 null，避免 toolbar/编辑区 DOM 监听器泄漏；shallowRef 而非 ref（WangEditor 内部 Slate 数据结构深响应化会拖慢渲染）
+* **feat(src/components/common/RichTextEditor.vue):** BEM 命名空间 `rich-text-editor`（自动注册到 `components.d.ts`，IDE hover 走 `GlobalComponents` 路径展示完整 `DefineComponent` 类型，无需显式 import）
+* **feat(src/modules/demo/examples/RichTextEditor.vue):** 演示页 5 段——基础 v-model + DOMPurify XSS 防御 / 自定义图片上传（axios 模拟 OSS，1.2s 延迟 + 50% 失败率）/ 只读模式切换 / 防循环更新验证（onChange 计数器 + 控制台日志）/ XSS payload 可视化（`<script>` / `onerror` / `javascript:` 等 4 种典型攻击）+ Props/Events/Slots API 表（extractApi 自动提取 + description 字典 merge）；路由 `DemoRichTextEditor` 由 `import.meta.glob` 自动派生
+* **refactor(src/modules/demo/config/sidebar-groups.ts):** CN_NAMES 追加 1 行 `RichTextEditor: '富文本编辑器（WangEditor V5）'`，自动归到「通用组件」分组
+* **chore(package.json):** 新增依赖 `@wangeditor/editor@^5.1.23` + `@wangeditor/editor-for-vue@^5.1.12` + `dompurify@^3.4.15`（DOMPurify 3.x 内置类型，无需 `@types/dompurify`）
+* **⚠ 已知限制：** `@wangeditor/editor-for-vue@5.1.12` 的 package.json `exports` 字段缺 `types` 条件，vue-tsc 找不到 d.ts。组件 import 处加 `@ts-expect-error` + 注释兜底（运行时 vite 用 `module` 字段解析 esm.js 不受影响）。待上游修复或本项目提 PR 加 paths 配置后移除
+* **⚠ height 约束：** `height` 不建议 < 300px——WangEditor V5 modal/hoverbar 定位依赖编辑区高度，否则 console 报警告且部分快捷交互偏离。默认 '300px' 是这个临界值，JSDoc 已说明
+
 ### ✨ Features | ProDialogForm 弹窗表单组合组件：ProDialog + XForm 内置「校验 → 提交 → 自动关闭 → 自动重置」
 
 > 把「ProDialog 弹窗 + XForm 表单 + 异步提交 + 校验重置」4 个常见样板编排收敛到一个组件，业务方只关心 schema / model / onSubmit 三件事。沿用 ProDialog 子目录 + barrel 模式（与 ProDialog / XForm 调用方式一致）
