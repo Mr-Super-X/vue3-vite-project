@@ -113,11 +113,14 @@ const { rowEdit, treeData, cellSpan, v2Expose } = useTableCapabilities({
 })
 
 /** v2.0 树形：data 变化时 normalize + 扁平化（flatData computed 随 expanded 自动重算） */
+const hasTableMounted = ref(false)
+/** v2.2-M2 修复：合并 treeData.normalize 与 hasTableMounted 为单一监听点，避免同一数据源双 watcher。data 非空时同时触发 normalize 与首次加载标记 */
 watch(
   () => table.data.value,
   (data) => {
-    if (treeData && data && data.length > 0) {
-      treeData.normalize(data as never)
+    if (data && data.length > 0) {
+      treeData?.normalize(data as never)
+      hasTableMounted.value = true
     }
   },
   { immediate: true }
@@ -144,17 +147,6 @@ watch(
 
 /** v2.1 vxe 引擎分支实例 ref —— 目前用于密度切换后触发 vxe 行高重算（见 handleDensityChange） */
 const proTableVxe = ref<InstanceType<typeof VxeTableBody> | null>(null)
-
-/** v2.0 单元格合并：data/columns 变化时重新构建 spanMethod 缓存 */
-watch(
-  [() => table.data.value, () => props.columns],
-  () => {
-    if (cellSpan && table.data.value) {
-      nextTick(() => cellSpan.resetCache())
-    }
-  },
-  { flush: 'post' }
-)
 
 /* ───────────── 辅助函数 ───────────── */
 
@@ -213,15 +205,10 @@ function isEmpty(): boolean {
  * 多选选区（reserve-selection 跨页记忆）、展开行等交互态全部丢失。
  * 因此仅「从未渲染过数据」时显示 skeleton；之后刷新保留表格实例（loading 期间展示旧数据，
  * useTable.onError 才清 data，故刷新中途不会误入 empty 分支）。
+ *
+ * hasTableMounted ref 定义 + watch 已在 v2.0 树形能力编排处合并（避免同源 data 双 watcher），
+ * 此处仅引用。
  */
-const hasTableMounted = ref(false)
-watch(
-  () => table.data.value,
-  (d) => {
-    if (d && d.length > 0) hasTableMounted.value = true
-  },
-  { immediate: true }
-)
 /** 首次加载中（skeleton 态）；后续刷新为 false，保持表格挂载 */
 const initialLoading = computed(() => table.loading.value && !hasTableMounted.value)
 

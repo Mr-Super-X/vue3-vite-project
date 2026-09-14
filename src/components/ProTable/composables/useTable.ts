@@ -191,7 +191,10 @@ export function useTable<T extends object = Record<string, unknown>>(
   /**
    * el-table sort-change 事件入口（M2 服务端排序）。
    * 三连点语义由 el-table 提供（asc → desc → null）；order=null 清除排序。
-   * 排序变化回第 1 页（与搜索同语义）：page 未变时须手动刷新（watch 不触发）。
+   * 排序变化回第 1 页（与搜索同语义）：
+   * - page != 1：赋 page = 1，触发下方 [page, pageSize] watch → refresh
+   * - page == 1：赋值相同值不触发 watch，需显式 refresh 兜底
+   * 两条路径互斥，各一次 refresh；AbortController 在 useRequest 内置防连发。
    */
   function onSortChange(evt: SortChangeEvent): void {
     sortState.value = evt.order && evt.prop ? { prop: evt.prop, order: evt.order } : null
@@ -212,6 +215,7 @@ export function useTable<T extends object = Record<string, unknown>>(
   })
 
   // page / pageSize 变化时自动触发刷新
+  // 无 immediate：onMounted 已显式首次 refresh，避免双发
   watch([page, pageSize], () => {
     void refresh()
   })

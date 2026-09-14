@@ -11,7 +11,7 @@
  * @see [`@/utils/storage`](../../utils/storage.ts) Local 工具
  * @group ProTable composables
  */
-import { ref, computed, watch, type Ref } from 'vue'
+import { ref, computed, type Ref } from 'vue'
 import { Local } from '@/utils/storage' // plan critical review #5：Local 不在 auto-import 列表
 import type { ProColumn, ProTableProps, TableEngine } from '../types'
 
@@ -228,13 +228,6 @@ export function useColumns<T extends object = Record<string, unknown>>(
       }
     }
   }
-
-  // 响应式 hidden 变化时持久化
-  watch(
-    () => allColumns.value,
-    () => persist(),
-    { deep: true }
-  )
 
   return {
     allColumns,
