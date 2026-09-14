@@ -288,14 +288,24 @@ onBeforeUnmount(() => {
       color: #c0c4cc;
     }
 
-    // 覆盖项目 reset.css 对 b/strong 等的 font-weight: normal 重置——
-    // 否则 wangEditor 加粗等命令 HTML 变化但视觉无变化（用户视觉上看不到加粗）
+    // 覆盖项目 reset.css 对字重/字形的全局重置（`*{font-weight:normal;font-style:normal}`）——
+    // 否则 wangEditor 加粗/斜体命令 HTML 变化但视觉无变化。
+    //
+    // ⚠ 为什么必须连 [data-slate-string] 一起命中：WangEditor V5 基于 Slate，
+    // 叶子文本渲染结构是 <strong><span data-slate-string>文本</span></strong>，
+    // 可见文本在内层 span 上；而 `*` 重置对 span 是指定值，优先于从 strong
+    // 继承来的样式——只恢复 strong/b 包裹层压不住内层 span（实测 span 字重 400）。
+    // text-decoration 无需同理处理：该属性按规范会贯穿内联后代，u/s 视觉天然生效。
     b,
-    strong {
+    strong,
+    b [data-slate-string],
+    strong [data-slate-string] {
       font-weight: bold;
     }
     i,
-    em {
+    em,
+    i [data-slate-string],
+    em [data-slate-string] {
       font-style: italic;
     }
     u {
