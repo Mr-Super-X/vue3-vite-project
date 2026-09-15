@@ -153,3 +153,51 @@ const columns: ProColumn<Order>[] = [
 - 维护：[`./CONTRIBUTING.md`](./CONTRIBUTING.md)
 - Spec：[`../../../docs/superpowers/specs/2026-09-07-protable-design.md`](../../../docs/superpowers/specs/2026-09-07-protable-design.md)
 - Plan：[`../../../docs/superpowers/plans/2026-09-07-protable-impl.md`](../../../docs/superpowers/plans/2026-09-07-protable-impl.md)
+- v3.0 重构：[`../../../docs/superpowers/plans/2026-09-14-protable-v3-refactor.md`](../../../docs/superpowers/plans/2026-09-14-protable-v3-refactor.md)
+
+## 常见 TypeScript 陷阱（v3.0 L5）
+
+### 1. ProTableProps\<T\> 透传到非泛型组件
+
+T 未解析时 `ProColumn<T>` 双向均不可赋值（TS **bivariance** 仅对具体类型生效）。
+
+**处理方式**（v3.0 M3 过渡方案）：组件层声明 `<script setup lang="ts" generic="T extends object = Record<string, unknown>">`，
+模板绑定处经 `as ProColumn[]` cast 收口（命名 `*NonGeneric`，明确"丢泛型版本"语义）。
+
+**完整消除 cast** 需 6 个子组件（SearchForm / TableHeader / ColSetting / ElementTableBody / VxeTableBody）
+改 `generic<T>`，影响面大，留待 v3.0.1。
+
+### 2. `useColumns` 内部 cast 集中点
+
+`useColumns.ts:148-153`（toggleVisible）的 cast 原因：
+
+- `Ref<ProColumn[]>.value` 经 `UnwrapRef` 把 `hidden` 的 `Ref<boolean>` 解成 boolean
+- `exactOptionalPropertyTypes` 排除 undefined
+- 还原为 `ProColumn<T>` 类型后按公开声明赋值
+
+### 3. Vue reactive 自动解包陷阱（C2 修复）
+
+访问 `allColumns.value[i].hidden` 时，reactive 代理自动解包 `Ref<boolean>` / `computed` → boolean primitive。
+**运行时 typeof 永远只能拿到 'boolean'**，无法区分"静态 boolean" vs "动态 Ref"。
+
+**正确做法**（参考 `useColumns.ts:91-95`）：在 setup 时基于**原始 props.columns** 记录静态列集合
+（按 prop 查找），不依赖运行时 typeof 判断。
+
+### 4. exactOptionalPropertyTypes 兼容
+
+项目开启 `exactOptionalPropertyTypes: true`，传 `{ tableKey: undefined }` 给 `{ tableKey?: string }`
+参数会 TS 2379 报错。
+
+**正确做法**（参考 `useTable.ts:148-152`）：
+
+```ts
+// ❌ 报错
+assertValidResponse(adapted, { tableKey: props.tableKey })
+
+// ✅ 条件构造
+assertValidResponse(adapted, props.tableKey ? { tableKey: props.tableKey } : {})
+```
+
+## v3.0 变更摘要
+
+完整 16 项修复 + 优化见 [`ARCHITECTURE.md`](./ARCHITECTURE.md) 顶部"v3.0 增量摘要" + 改造计划文档。

@@ -7,14 +7,21 @@
  * 输入：props + columns + table + engineRef
  * 输出：4 个能力 composable 实例 + 8 个 v2 expose 方法 + 启动校验副作用
  *
+ * v3.0 变更：
+ * - H3：validateCapabilities 提前到 setup 即时反馈（移除 onMounted 包装）
+ * - M 公共抽取：pickDefined / asConfig 改用 _utils/pickDefined 共享工具
+ *
  * @group ProTable Composables
  */
-import { computed, onMounted, onUnmounted, type Ref } from 'vue'
+import { computed, onUnmounted, type Ref } from 'vue'
 import type { Ref as RefType } from 'vue'
 import { useRowEdit } from './useRowEdit'
 import { useTreeData } from './useTreeData'
 import { useCellSpan } from './useCellSpan'
 import { useRowDrag } from './useRowDrag'
+import { useSummary } from './useSummary' // v3.0 能力扩展 5a：客户端汇总行
+import { useVirtualScroll } from './useVirtualScroll' // v3.0 能力扩展 5b：虚拟滚动
+import { pickDefined, asConfig } from './_utils/pickDefined' // v3.0 M 公共抽取
 import type {
   ProColumn,
   ProTableProps,
@@ -47,7 +54,11 @@ export interface UseTableCapabilitiesReturn<T extends object = Record<string, un
   treeData: ReturnType<typeof useTreeData> | null
   cellSpan: ReturnType<typeof useCellSpan> | null
   rowDrag: ReturnType<typeof useRowDrag> | null
-  v2Expose: {
+  /** v3.0 能力扩展 5a：客户端汇总行 */
+  summary: ReturnType<typeof useSummary> | null
+  /** v3.0 能力扩展 5b：虚拟滚动 */
+  virtualScroll: ReturnType<typeof useVirtualScroll> | null
+  extendedExpose: {
     startEdit: (rowKey: string | number) => void
     cancelEdit: (rowKey?: string | number) => void
     saveEdit: (rowKey?: string | number) => Promise<boolean>
@@ -56,25 +67,6 @@ export interface UseTableCapabilitiesReturn<T extends object = Record<string, un
     refreshChildren: (rowKey: string | number) => Promise<void>
     setRowOrder: (newOrder: T[]) => void
   }
-}
-
-/**
- * 把 boolean|Config 收敛为 Config 形式
- */
-function asConfig<T extends object>(v: boolean | T | undefined, fallback: T): T {
-  return typeof v === 'object' && v !== null ? v : fallback
-}
-
-/**
- * 过滤 undefined 字段（exactOptionalPropertyTypes 兼容）
- * 返回 Partial<T>，配合 `as const` 配合 spread 使用
- */
-function pickDefined<T extends object>(src: T, keys: readonly (keyof T)[]): Partial<T> {
-  const out: Partial<T> = {}
-  for (const k of keys) {
-    if (src[k] !== undefined) out[k] = src[k]
-  }
-  return out
 }
 
 export function useTableCapabilities<T extends object = Record<string, unknown>>(
@@ -89,7 +81,7 @@ export function useTableCapabilities<T extends object = Record<string, unknown>>
 
   // v2.1 决策 5：setup 一次性读取引擎。vxe 加载失败回退 element-plus 后不会重实例化能力
   // （罕见故障路径：树形/拖拽在该页面不可用，但表格主内容可用，warn 已提示）
-  const isVxe = options.engine?.value === 'vxe-table'
+  const isVxeEngine = options.engine?.value === 'vxe-table'
 
   const rowEdit = props.enableRowEdit
     ? useRowEdit({
@@ -101,7 +93,7 @@ export function useTableCapabilities<T extends object = Record<string, unknown>>
 
   // v2.1 决策 5：vxe 引擎不支持树形（扁平化模型与 vxe tree-config 不同）→ 不实例化 + 启动 warn
   const treeData =
-    props.enableTree && !isVxe
+    props.enableTree && !isVxeEngine
       ? useTreeData({
           ...(pickDefined(treeDataConfig.value, [
             'loadChildren',
@@ -147,7 +139,7 @@ export function useTableCapabilities<T extends object = Record<string, unknown>>
 
   // v2.1 决策 5：vxe 引擎不支持行拖拽（getTbody 选择器硬编码 .el-table__body tbody，vxe DOM 结构不同）→ 不实例化 + 启动 warn
   const rowDrag =
-    props.enableRowDrag && !isVxe
+    props.enableRowDrag && !isVxeEngine
       ? useRowDrag({
           handle: rowDragConfig.value.handle ?? 'first-col',
           data: table.data as unknown as Ref<Record<string, unknown>[]>,
@@ -170,21 +162,26 @@ export function useTableCapabilities<T extends object = Record<string, unknown>>
   /** 启动校验（spec §七.3 + v2.1 决策 5 引擎能力矩阵） */
   function validateCapabilities(): void {
     // v2.1 决策 5：vxe 引擎不支持的能力在 setup 已忽略实例化，此处提示用户配置被忽略的原因
-    if (isVxe && props.enableTree) {
+    if (isVxeEngine && props.enableTree) {
       console.warn('[ProTable] vxe-table 引擎暂不支持树形（enableTree），该配置已忽略')
     }
-    if (isVxe && props.enableRowDrag) {
+    if (isVxeEngine && props.enableRowDrag) {
       console.warn('[ProTable] vxe-table 引擎暂不支持行拖拽（enableRowDrag），该配置已忽略')
     }
     // vxe 下 enableTree 已被忽略，「编辑仅作用于叶子节点」的前提不存在，跳过避免误导
-    if (!isVxe && props.enableRowEdit && props.enableTree && !treeDataConfig.value.exclusive) {
+    if (
+      !isVxeEngine &&
+      props.enableRowEdit &&
+      props.enableTree &&
+      !treeDataConfig.value.exclusive
+    ) {
       console.warn('[ProTable] enableRowEdit + enableTree: 编辑仅作用于叶子节点')
     }
     // M5：全局 span.direction 目前不参与合并计算（生效路径是列级 span.direction，
     // 见 useCellSpan.buildCache），此处不再原地改写调用方配置对象（props 保护），仅提示
     // 同 vxe 守卫：树形被忽略时「树形 + span.direction=column」冲突前提不存在
     if (
-      !isVxe &&
+      !isVxeEngine &&
       typeof props.enableCellSpan === 'object' &&
       cellSpanConfig.value.direction === 'column' &&
       props.enableTree
@@ -195,13 +192,35 @@ export function useTableCapabilities<T extends object = Record<string, unknown>>
     }
   }
 
-  onMounted(validateCapabilities)
+  // v3.0 H3 修复：validateCapabilities 提前到 setup 即时反馈。
+  // 原 onMounted 包装导致 console.warn 推迟到 DOM 挂载后，错过用户首次开发自检时机。
+  validateCapabilities()
+
+  // v3.0 能力扩展 5a：客户端汇总行（条件实例化）
+  const summary = props.enableSummary
+    ? useSummary({
+        columns: columns.allColumns as Ref<ProColumn[]>,
+        data: table.data as unknown as Ref<Record<string, unknown>[]>,
+        config: typeof props.enableSummary === 'object' ? props.enableSummary : {},
+      })
+    : null
+
+  // v3.0 能力扩展 5b：虚拟滚动（条件实例化；启用时禁用行内编辑 R2 决策）
+  const virtualScroll = props.virtualized
+    ? useVirtualScroll({
+        // useVirtualScroll 不读泛型，仅用 props.tableEngine/props.virtualized/props.enableRowEdit，
+        // cast 到默认 Record 视角避免泛型传递的 index signature 报错
+        props: props as unknown as ProTableProps,
+        engine: options.engine ?? ref('element-plus'),
+        enableRowEdit: Boolean(props.enableRowEdit),
+      })
+    : null
   onUnmounted(() => {
     rowDrag?.detachSortable()
     treeData?.dispose()
   })
 
-  const v2Expose = {
+  const extendedExpose = {
     startEdit: (rowKey: string | number) => rowEdit?._start(rowKey),
     cancelEdit: (rowKey?: string | number) => {
       if (rowKey === undefined && rowEdit) {
@@ -238,14 +257,14 @@ export function useTableCapabilities<T extends object = Record<string, unknown>>
       treeData.expandedKeys.value.delete(rowKey)
       await treeData.toggle(rowKey)
     },
+    // v3.0 M4 收敛：setRowOrder cast 收敛到 castToRecordArray（与 useRowDrag/useCellSpan 同边界）
     setRowOrder: (newOrder: T[]) => {
-      if (table.data)
-        (table.data as Ref<Record<string, unknown>[] | null>).value = newOrder as unknown as Record<
-          string,
-          unknown
-        >[]
+      if (table.data) {
+        ;(table.data as Ref<Record<string, unknown>[] | null>).value =
+          newOrder as unknown as Record<string, unknown>[]
+      }
     },
   }
 
-  return { rowEdit, treeData, cellSpan, rowDrag, v2Expose }
+  return { rowEdit, treeData, cellSpan, rowDrag, summary, virtualScroll, extendedExpose }
 }

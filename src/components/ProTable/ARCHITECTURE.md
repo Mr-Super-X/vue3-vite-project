@@ -1,5 +1,17 @@
 # ProTable 架构文档
 
+> **当前版本**：v3.0（Phase 1-4 完成；Phase 5 能力扩展 + Phase 6 demo 待办）
+>
+> **v3.0 增量摘要**：
+>
+> - **C1/C2 修复**：resetToDefault 不破坏外部 Ref 响应性 + persist 排除动态 Ref 列
+> - **H1/H2/H3 修复**：watch 清理（page/pageSize + proTableEl）+ validateCapabilities 提前到 setup
+> - **M 公共抽取**：`_utils/pickDefined.ts`（pickDefined / asConfig / castToRecordArray）
+> - **M1-M5**：cloneColumns 拆子函数 + defaultSortParams 泛型 + loose → nonGeneric 重命名 + setRowOrder cast 收敛 + useTableEngineDom composable
+> - **L1/L3/L4 优化**：assertValidResponse 上下文 + 命名工程化（isVxeEngine / extendedExpose）+ 模板内联箭头函数提取
+>
+> **完整改造计划**：[`docs/superpowers/plans/2026-09-14-protable-v3-refactor.md`](../../superpowers/plans/2026-09-14-protable-v3-refactor.md)
+
 ## 数据流（state owner = ProTable.vue）
 
 ```mermaid
@@ -22,12 +34,15 @@ flowchart TD
 
 ## Composables 依赖
 
-| Composable        | 依赖                           | 输出                                                   |
-| ----------------- | ------------------------------ | ------------------------------------------------------ |
-| `useSearch`       | props.columns（search 配置）   | searchParams / search() / reset()                      |
-| `useColumns`      | props.columns + Local          | sortedColumns / allColumns / toggleVisible             |
-| `useTable`        | props + useSearch + useColumns | data / loading / pagination / selectedRows / sortState |
-| `adapters/engine` | props.tableEngine              | Ref<TableEngine>（首次挂载锁定）                       |
+| Composable           | 依赖                           | 输出                                                   |
+| -------------------- | ------------------------------ | ------------------------------------------------------ |
+| `useSearch`          | props.columns（search 配置）   | searchParams / search() / reset()                      |
+| `useColumns`         | props.columns + Local          | sortedColumns / allColumns / toggleVisible             |
+| `useTable`           | props + useSearch + useColumns | data / loading / pagination / selectedRows / sortState |
+| `adapters/engine`    | props.tableEngine              | Ref<TableEngine>（首次挂载锁定）                       |
+| **v3.0 新增**        |                                |                                                        |
+| `_utils/pickDefined` | —                              | pickDefined / asConfig / castToRecordArray（公共工具） |
+| `useTableEngineDom`  | proTableEl 模板 ref            | getTbody()（DOM 访问层，v3.0 M5 抽取基础设施）         |
 
 ## 状态归属
 

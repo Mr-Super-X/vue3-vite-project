@@ -17,7 +17,7 @@
  * @see [`./useSearch`](./useSearch.ts) 共享 fetchHook 闭包
  * @group ProTable composables
  */
-import { ref, watch, onMounted, type ComponentPublicInstance, type Ref } from 'vue'
+import { ref, watch, onMounted, onUnmounted, type ComponentPublicInstance, type Ref } from 'vue'
 import { useRequest } from '@composables/useRequest' // 项目 composable auto-import
 import { serializeParams } from './useSearch' // 第 1 步单源化：序列化唯一实现
 import type {
@@ -69,8 +69,11 @@ export interface UseTableReturn<T extends object = Record<string, unknown>> {
 /**
  * 内置排序参数序列化 —— 国产后台最常用约定 { orderByColumn, isAsc }（设计决策 D2）。
  * 后端约定不同时由 props.sortParamsAdapter 接管（见类型 JSDoc）。
+ *
+ * v3.0 M2：接受 SortState<T>（带泛型）而非 SortState（无泛型），
+ * 让 state.prop 类型自动对齐 T 的键名，调用方无需 cast。
  */
-function defaultSortParams(state: SortState | null): Record<string, unknown> {
+function defaultSortParams<T extends object>(state: SortState<T> | null): Record<string, unknown> {
   if (!state) return {}
   return { orderByColumn: state.prop, isAsc: state.order === 'ascending' ? 'asc' : 'desc' }
 }
@@ -79,11 +82,19 @@ function defaultSortParams(state: SortState | null): Record<string, unknown> {
  * 校验适配后的响应结构（M3 fail-fast，决策 D5）。
  * 抛错发生在 useRequest 的 try 内 → 被 catch 捕获进入 error 态 + requestError 回调——
  * 不静默吞、不影响组件树（AsyncState 展示错误 + 重试）。
+ *
+ * v3.0 L1 优化：日志加 tableKey + timestamp 上下文，便于生产环境问题定位。
  */
-function assertValidResponse<T extends object>(result: ProTableResponse<T>): void {
+function assertValidResponse<T extends object>(
+  result: ProTableResponse<T>,
+  context: { tableKey?: string } = {}
+): void {
   if (!result || !Array.isArray(result.data) || typeof result.total !== 'number') {
+    const ts = Date.now()
+    const ctx = context.tableKey ? `[tableKey=${context.tableKey}]` : '[no-tableKey]'
     const message =
-      '[ProTable] responseAdapter 返回值结构非法：期望 { data: T[], total: number }（pageNum/pageSize 可省略）'
+      `[ProTable]${ctx}@${ts} responseAdapter 返回值结构非法：` +
+      '期望 { data: T[], total: number }（pageNum/pageSize 可省略）'
     console.error(message, result)
     throw new Error(message)
   }
@@ -129,7 +140,7 @@ export function useTable<T extends object = Record<string, unknown>>(
       immediate: false,
       onSuccess: (result) => {
         const adapted = props.responseAdapter ? props.responseAdapter(result) : result
-        assertValidResponse(adapted)
+        assertValidResponse(adapted, props.tableKey ? { tableKey: props.tableKey } : {})
         data.value = props.dataCallback ? props.dataCallback(adapted.data) : adapted.data
         total.value = adapted.total
       },
@@ -216,8 +227,13 @@ export function useTable<T extends object = Record<string, unknown>>(
 
   // page / pageSize 变化时自动触发刷新
   // 无 immediate：onMounted 已显式首次 refresh，避免双发
-  watch([page, pageSize], () => {
+  // v3.0 H1 修复：捕获 watch 返回的 stop，onUnmounted 调用避免组件卸载后
+  // 请求飞行中 + ref 更新写入已销毁状态（内存泄漏 + 警告）
+  const stopPageWatcher = watch([page, pageSize], () => {
     void refresh()
+  })
+  onUnmounted(() => {
+    stopPageWatcher()
   })
 
   return {

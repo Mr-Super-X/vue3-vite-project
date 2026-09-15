@@ -15,7 +15,7 @@
  * @see [`./adapters/engine`](./adapters/engine.ts) 引擎工厂
  * @group ProTable 组件
  */
-import { ref, useAttrs, watch, type ComponentPublicInstance, type Ref } from 'vue' // vue 生命周期/底层 API（CLAUDE.md §1.6.1）
+import { ref, useAttrs, watch, onUnmounted, type ComponentPublicInstance, type Ref } from 'vue' // vue 生命周期/底层 API（CLAUDE.md §1.6.1）
 import 'element-plus/dist/index.css' // 与 form-schema/XForm.vue 对齐：直接引入全量 CSS（覆盖 ProTable 用的所有组件：ElTable / ElPagination / ElForm / ElInput 等）
 import './styles/element-protable-overwrite.scss' // ProTable 特定的样式覆盖（BEM 嵌套，对齐 form-schema 模式）
 import { ElPagination, ElEmpty, ElConfigProvider } from 'element-plus' // element-plus 按需注入（unplugin-vue-components）
@@ -98,19 +98,22 @@ function handleColSettingUpdate(visible: boolean): void {
 
 /* ───────────── v2.0 四类能力编排（已抽到 useTableCapabilities.ts） ───────────── */
 
-const { rowEdit, treeData, cellSpan, v2Expose } = useTableCapabilities({
-  props: propsForComposables,
-  columns,
-  table,
-  engine: engineRef, // v2.1 决策 5：vxe 引擎不支持树形/行拖拽，由能力层检出 warn + 忽略
-  // v2.0 行拖拽：tbody DOM 由 capabilities 内部透传给 useRowDrag，挂载生命周期自持
-  // （onMounted + watch data 自动重挂），此处仅需提供模板 ref 的 DOM 访问口
-  getTbody: () => {
-    const root = proTableEl.value?.$el
-    if (!root || typeof root.querySelector !== 'function') return null
-    return root.querySelector('.el-table__body tbody') as HTMLElement | null
-  },
-})
+const { rowEdit, treeData, cellSpan, summary, virtualScroll, extendedExpose } =
+  useTableCapabilities({
+    props: propsForComposables,
+    columns,
+    table,
+    engine: engineRef, // v2.1 决策 5：vxe 引擎不支持树形/行拖拽，由能力层检出 warn + 忽略
+    // v2.0 行拖拽：tbody DOM 由 capabilities 内部透传给 useRowDrag，挂载生命周期自持
+    // （onMounted + watch data 自动重挂），此处仅需提供模板 ref 的 DOM 访问口
+    getTbody: () => {
+      // v3.0 M5 内联实现保留：useTableEngineDom composable 在 proTableEl 声明后
+      // 注入更合适（顺序约束），此处保留最小实现保持变更局部化
+      const root = proTableEl.value?.$el
+      if (!root || typeof root.querySelector !== 'function') return null
+      return root.querySelector('.el-table__body tbody') as HTMLElement | null
+    },
+  })
 
 /** v2.0 树形：data 变化时 normalize + 扁平化（flatData computed 随 expanded 自动重算） */
 const hasTableMounted = ref(false)
@@ -136,14 +139,19 @@ const proTableEl = ref<{
  * v2.2-M1：ElementTableBody 暴露的 ElTable 实例同步进 useTable.tableRef
  * （对外 element expose + clearSelection 清 UI 勾选态的载体）。
  * 引擎回退（vxe → element-plus）后 ElementTableBody 挂载，watch 同样覆盖该路径。
+ * v3.0 H2 修复：捕获 watch 返回的 stop，onUnmounted 调用避免组件卸载后
+ * 引用已销毁 ElementTableBody 实例导致无意义赋值。
  */
-watch(
+const stopProTableElWatcher = watch(
   proTableEl,
   (inst) => {
     table.tableRef.value = inst?.elTable ?? null
   },
   { flush: 'post' }
 )
+onUnmounted(() => {
+  stopProTableElWatcher()
+})
 
 /** v2.1 vxe 引擎分支实例 ref —— 目前用于密度切换后触发 vxe 行高重算（见 handleDensityChange） */
 const proTableVxe = ref<InstanceType<typeof VxeTableBody> | null>(null)
@@ -186,6 +194,18 @@ function handleSelectionChange(rows: Record<string, unknown>[]): void {
   table.setSelectedRows(rows as unknown as T[])
 }
 
+/** v3.0 L4：模板内联箭头函数提取，便于 IDE 跳转 + 单测覆盖
+ *  v3.0 修复：_start 接收 rowData 由 ElementTableBody 的 @cell-dblclick 直接传入并回填原值；
+ *  此处保留方法作为编排层扩展点（v3.0.1：可触发 analytics / row 焦点状态等） */
+function handleCellDblClick(rowKey: string | number): void {
+  void rowKey
+}
+
+/** v3.0 L4：模板内联箭头函数提取 */
+function handleExpandToggle(rowKey: string | number): void {
+  if (treeData) void treeData.toggle(rowKey)
+}
+
 /**
  * vxe 引擎加载失败回退（spec §九 #7）：engineRef 虽为 setup 一次性锁定，
  * 但引擎模块加载失败是运行时事件，此处是唯一的可变点 —— 切回 element-plus 保页面可用
@@ -217,12 +237,36 @@ const initialLoading = computed(() => table.loading.value && !hasTableMounted.va
 const bem = createNamespace('pro-table')
 
 /**
- * 下游子组件消费非泛型 ProColumn：T 未解析时 ProColumn<T> 双向均不可赋值
- * （bivariance 仅对具体类型生效），模板绑定处用 Record 视角 computed 收口 cast —— 运行时同一引用。
+ * v3.0 M3 升级路径：
+ *
+ * 当前 cast 收敛：T 未解析时 ProColumn<T> 双向均不可赋值（bivariance 仅对具体类型生效），
+ * 模板绑定处用 Record 视角 computed 收口 cast —— 运行时同一引用。
+ *
+ * 命名"nonGeneric"（替代旧"loose"）明确语义：这些 computed 是"丢泛型版本"，提供给
+ * 非泛型子组件使用。完整消除 cast 需要 6 个子组件（SearchForm / TableHeader /
+ * ColSetting / ElementTableBody / VxeTableBody）改为 generic<T>，影响面大，留待 v3.0.1。
+ *
+ * @see [`./components/SearchForm.vue`](./components/SearchForm.vue) 等子组件
  */
-const searchColumnsLoose = computed(() => columns.searchColumns as ProColumn[])
-const allColumnsLoose = computed(() => columns.allColumns.value as ProColumn[])
-const sortedColumnsLoose = computed(() => columns.sortedColumns.value as ProColumn[])
+const searchColumnsNonGeneric = computed(() => columns.searchColumns as ProColumn[])
+const allColumnsNonGeneric = computed(() => columns.allColumns.value as ProColumn[])
+const sortedColumnsNonGeneric = computed(() => columns.sortedColumns.value as ProColumn[])
+
+/**
+ * v3.0 5a：汇总行参数 —— el-table 内置 show-summary + summary-method 机制。
+ * 当 enableSummary 启用时，summary?.summaryRows 提供按列汇总值。
+ */
+const showSummary = computed(() => Boolean(summary))
+const summaryMethod = computed(() => {
+  if (!summary) return undefined
+  // 闭包捕获 summaryRows（响应式追踪 data 变化自动重算）
+  return (): string[] => summary.summaryRows.value
+})
+
+/**
+ * v3.0 5b：虚拟滚动 tableProps（高度限制 + rowHeight）
+ */
+const virtualScrollTableProps = computed(() => virtualScroll?.tableProps.value ?? {})
 
 /* ───────────── defineExpose（spec §八） ───────────── */
 
@@ -236,7 +280,7 @@ defineExpose({
   element: table.tableRef,
   engine: engineRef.value,
   getSortState: () => table.getSortState(),
-  ...v2Expose,
+  ...extendedExpose,
 } satisfies ProTableExpose<T>)
 </script>
 
@@ -249,7 +293,7 @@ defineExpose({
     >
       <SearchForm
         v-if="columns.searchColumns.length > 0"
-        :columns="searchColumnsLoose"
+        :columns="searchColumnsNonGeneric"
         :search-params="search.searchParams.value"
         :search-rows="props.searchRows"
         @search="search.search"
@@ -257,8 +301,8 @@ defineExpose({
         @update:search-params="(v) => search.updateParams(v)"
       />
       <TableHeader
-        :columns="allColumnsLoose"
-        :visible-columns="sortedColumnsLoose"
+        :columns="allColumnsNonGeneric"
+        :visible-columns="sortedColumnsNonGeneric"
         :density="table.density.value"
         :col-setting-visible="columns.colSettingVisible.value"
         @refresh="table.refresh"
@@ -288,14 +332,17 @@ defineExpose({
             >[]
           "
           :loading="table.loading.value && hasTableMounted"
-          :columns="sortedColumnsLoose"
+          :columns="sortedColumnsNonGeneric"
           :row-key="props.rowKey"
           :row-edit="rowEdit"
           :tree-data="treeData"
           :cell-span="cellSpan"
+          :show-summary="showSummary"
+          :summary-method="summaryMethod"
+          :virtual-scroll-props="virtualScrollTableProps"
           @selection-change="handleSelectionChange"
-          @cell-dblclick="(rowKey) => rowEdit?._start(rowKey)"
-          @expand-toggle="(rowKey) => treeData && void treeData.toggle(rowKey)"
+          @cell-dblclick="handleCellDblClick"
+          @expand-toggle="handleExpandToggle"
           @sort-change="handleSortChange"
         >
           <!-- 透传业务插槽（col.prop 命名插槽等），保持 v1 插槽契约不变 -->
@@ -309,12 +356,12 @@ defineExpose({
           ref="proTableVxe"
           :rows="(table.data.value ?? []) as Record<string, unknown>[]"
           :loading="table.loading.value && hasTableMounted"
-          :columns="sortedColumnsLoose"
+          :columns="sortedColumnsNonGeneric"
           :row-key="props.rowKey"
           :row-edit="rowEdit"
           :cell-span="cellSpan"
           @selection-change="handleSelectionChange"
-          @cell-dblclick="(rowKey) => rowEdit?._start(rowKey)"
+          @cell-dblclick="handleCellDblClick"
           @sort-change="handleSortChange"
           @engine-fallback="handleEngineFallback"
         >
@@ -350,7 +397,7 @@ defineExpose({
            el / vxe 两引擎都消费 sortedColumns，抽屉 UI 用 element-plus 组件无引擎耦合 -->
       <ColSetting
         v-model:visible="columns.colSettingVisible.value"
-        :columns="allColumnsLoose"
+        :columns="allColumnsNonGeneric"
         :visible-keys="columns.visibleKeys.value"
         :fixed-keys="columns.fixedKeys.value"
         @update:visible-keys="(keys) => columns.setVisibleKeys(keys)"

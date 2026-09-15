@@ -70,7 +70,7 @@ describe('useTableCapabilities', () => {
     expect(result.cellSpan).not.toBeNull()
   })
 
-  it('v2Expose.startEdit 在 rowEdit 未启用时为 noop', () => {
+  it('extendedExpose.startEdit 在 rowEdit 未启用时为 noop', () => {
     const result = useTableCapabilities({
       props: {
         columns: [],
@@ -79,10 +79,10 @@ describe('useTableCapabilities', () => {
       columns: { allColumns: ref([]) },
       table: { data: ref([]) },
     })
-    expect(() => result.v2Expose.startEdit('row-1')).not.toThrow()
+    expect(() => result.extendedExpose.startEdit('row-1')).not.toThrow()
   })
 
-  it('v2Expose.saveEdit 在 rowEdit 未启用时返回 false', async () => {
+  it('extendedExpose.saveEdit 在 rowEdit 未启用时返回 false', async () => {
     const result = useTableCapabilities({
       props: {
         columns: [],
@@ -91,11 +91,11 @@ describe('useTableCapabilities', () => {
       columns: { allColumns: ref([]) },
       table: { data: ref([]) },
     })
-    const r = await result.v2Expose.saveEdit('row-1')
+    const r = await result.extendedExpose.saveEdit('row-1')
     expect(r).toBe(false)
   })
 
-  it('v2Expose.expandNode 在 treeData 未启用时为 noop', () => {
+  it('extendedExpose.expandNode 在 treeData 未启用时为 noop', () => {
     const result = useTableCapabilities({
       props: {
         columns: [],
@@ -104,11 +104,11 @@ describe('useTableCapabilities', () => {
       columns: { allColumns: ref([]) },
       table: { data: ref([]) },
     })
-    expect(() => result.v2Expose.expandNode('row-1')).not.toThrow()
-    expect(() => result.v2Expose.collapseNode('row-1')).not.toThrow()
+    expect(() => result.extendedExpose.expandNode('row-1')).not.toThrow()
+    expect(() => result.extendedExpose.collapseNode('row-1')).not.toThrow()
   })
 
-  it('v2Expose.setRowOrder 在未挂载 table 时为 noop', () => {
+  it('extendedExpose.setRowOrder 在未挂载 table 时为 noop', () => {
     const result = useTableCapabilities({
       props: {
         columns: [],
@@ -117,7 +117,7 @@ describe('useTableCapabilities', () => {
       columns: { allColumns: ref([]) },
       table: { data: ref(null) },
     })
-    expect(() => result.v2Expose.setRowOrder([])).not.toThrow()
+    expect(() => result.extendedExpose.setRowOrder([])).not.toThrow()
   })
 
   /* ── v2.1 决策 5：vxe 引擎能力矩阵 ── */
@@ -190,5 +190,22 @@ describe('useTableCapabilities', () => {
       engine: ref('element-plus'),
     })
     expect(result.treeData).not.toBeNull()
+  })
+
+  // v3.0 H3 修复：validateCapabilities 在 setup 阶段立即触发，不等 onMounted
+  it('H3：vxe 引擎 + enableTree 时 setup 立即 warn（不等 onMounted）', () => {
+    useTableCapabilities({
+      props: {
+        columns: [],
+        requestApi: async () => ({ data: [], total: 0, pageNum: 1, pageSize: 10 }),
+        tableEngine: 'vxe-table',
+        enableTree: true,
+      } as never,
+      columns: { allColumns: ref([]) },
+      table: { data: ref([]) },
+      engine: ref('vxe-table'),
+    })
+    // setup 同步调用 → warn 立即记录，无需等待 mount
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('vxe-table 引擎暂不支持树形'))
   })
 })

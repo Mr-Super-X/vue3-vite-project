@@ -15,6 +15,13 @@ export interface ColumnEditConfig {
   props?: Record<string, unknown>
   rules?: Record<string, unknown> | Record<string, unknown>[]
   editable?: boolean | Ref<boolean>
+  /**
+   * v3.0 5d：编辑值触发时机（默认 'input' 实时同步；'blur' 与 ProTable trigger='blur' 对齐）
+   *
+   * - 'input'（默认）：input 事件即时同步（高频但响应快）
+   * - 'blur'（推荐）：blur 事件同步，符合表单语义、避免高频同步风暴
+   */
+  updateEvent?: 'input' | 'blur'
 }
 
 /** 树形数据配置 —— 列粒度标识「该列展示树形缩进 + 展开/折叠」 @group ProTable 类型 */
@@ -61,6 +68,37 @@ export interface CellSpanConfig {
 export interface RowDragConfig {
   handle?: string | '__all__'
   onSortChange?: (newOrder: Record<string, unknown>[]) => boolean | Promise<boolean>
+}
+
+/** 单列聚合类型 —— v3.0 新增（useSummary 客户端聚合） @group ProTable 类型 */
+export type SummaryAggregate = 'sum' | 'avg' | 'count' | 'max' | 'min'
+
+/** 单列聚合配置 —— 声明该列如何聚合 @group ProTable 类型 */
+export interface ColumnSummaryConfig {
+  /** 聚合函数类型 */
+  aggregate: SummaryAggregate
+  /** 自定义格式化（默认：保留 2 位小数 + 千分位） */
+  formatter?: (value: number, rows: Record<string, unknown>[]) => string
+  /** 标签前缀（默认："合计"） */
+  label?: string
+}
+
+/** 表格汇总行顶层配置 —— v3.0 新增 @group ProTable 类型 */
+export interface SummaryConfig {
+  /** 显示位置（默认 'bottom'） */
+  position?: 'bottom' | 'top'
+  /** 哪些列参与汇总（按 prop 声明，未声明列不显示汇总值） */
+  columns?: Record<string, ColumnSummaryConfig>
+  /** 整行 label（如"合计"、"本页汇总"，默认"合计"） */
+  label?: string
+}
+
+/** 虚拟滚动配置 —— v3.0 新增（useVirtualScroll 能力） @group ProTable 类型 */
+export interface VirtualScrollConfig {
+  /** 行高（像素，默认 48） */
+  rowHeight?: number
+  /** 预渲染行数（默认 10） */
+  overscan?: number
 }
 
 /** 搜索项 el 控件类型 —— 决定 SearchForm 渲染哪种 element-plus 控件 @group ProTable 类型 */
@@ -180,6 +218,12 @@ export interface ProColumn<T extends object = Record<string, unknown>> {
   span?: ColumnSpanConfig
   /** 该列是否参与行拖拽（默认 false 不参与） */
   draggable?: boolean
+  /**
+   * 子列（用于多级表头分组；v3.0 5c 新增）
+   * - 含 children 的父列渲染为多级表头
+   * - 持久化按扁平化 prop 维度处理（R1 决策）
+   */
+  children?: ProColumn<T>[]
 }
 
 /**
@@ -261,6 +305,10 @@ export interface ProTableProps<T extends object = Record<string, unknown>> {
   enableCellSpan?: boolean | CellSpanConfig
   /** 行拖拽排序（v2.0） */
   enableRowDrag?: boolean | RowDragConfig
+  /** 客户端汇总行（v3.0 新增） */
+  enableSummary?: boolean | SummaryConfig
+  /** 虚拟滚动（v3.0 新增） */
+  virtualized?: boolean | VirtualScrollConfig
 }
 
 /**
