@@ -43,6 +43,12 @@
   .vv-pro-table-search {
     container-type: inline-size;
 
+    /* 搜索/重置/展开按钮组右对齐（el-col 内默认左对齐，对齐多数中后台工具栏惯例） */
+    &__actions {
+      display: flex;
+      justify-content: flex-end;
+    }
+
     @container (max-width: 900px) {
       .el-row > .el-col {
         flex: 0 0 50%;

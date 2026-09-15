@@ -8,9 +8,13 @@
  * - v3.0 已知限制：完整多级表头（el-table-column 嵌套）待 v3.0.1 修复
  *
  * 验证步骤：
- * 1. 表格显示 9 列，前 4 列（ID/基础信息/姓名/邮箱/电话）蓝色 border，后 4 列绿色 border
+ * 1. 表格显示 9 列：【基础信息】组（父标题列+姓名/邮箱/电话）蓝色左边框，
+ *    【业务信息】组（父标题列+部门/入职日期/薪资）绿色左边框，ID 列无边框
  * 2. 列设置抽屉可拖拽、隐藏、刷新持久化（tableKey="demo-pro-table-grouped-header"）
  * 3. 父子列共享 storage key 维度（隐藏父列不影响子列隐藏状态）
+ *
+ * 样式注意：本文件 <style> 非 scoped（项目 BEM 规范），:deep() 会被浏览器整条
+ * 丢弃，分组样式必须直接写后代选择器（修复记录：v3.0.1 验证不通过根因）
  */
 import { type ProColumn } from '@/components/ProTable'
 import DocLayout from '../../layouts/DocLayout.vue'
@@ -176,22 +180,24 @@ const tocItems = [
 
 <style lang="scss">
 .#{$BEM_PREFIX}-demo-pro-table-grouped-header {
-  // 视觉分组样式：cellClassName 标记的列左侧加 border
-  :deep(.grouped-col-basic) {
+  // 视觉分组样式：cellClassName 标记的列左侧加 border。
+  // 本项目 <style> 非 scoped（BEM 命名空间隔离），:deep() 无编译器接管、会被浏览器
+  // 当未知伪类整条丢弃 —— 必须直接写后代选择器（CLAUDE.md §3.3 反模式 #8）
+  .grouped-col-basic {
     border-left: 2px solid var(--el-color-primary-light-5);
   }
-  :deep(.grouped-col-business) {
+  .grouped-col-business {
     border-left: 2px solid var(--el-color-success-light-5);
   }
-  :deep(.grouped-header-basic),
-  :deep(.grouped-header-business) {
+  .grouped-header-basic,
+  .grouped-header-business {
     background-color: var(--el-fill-color-light) !important;
     font-weight: 600;
   }
-  :deep(.grouped-header-basic) {
+  .grouped-header-basic {
     color: var(--el-color-primary);
   }
-  :deep(.grouped-header-business) {
+  .grouped-header-business {
     color: var(--el-color-success);
   }
 }

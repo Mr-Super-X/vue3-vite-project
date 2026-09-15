@@ -2,6 +2,15 @@
 
 ## 未发布
 
+### 🐛 Fix | ProTable 列分组 demo 分组样式失效：非 scoped 样式下 `:deep()` 被浏览器整条丢弃
+
+> 用户验证 `/demo/pro-table-grouped-header` 不通过：表格渲染正常但蓝/绿分组边框、父标题列着色全部缺失。根因：`ProTableGroupedHeader.vue` 的 `<style lang="scss">` 按项目 BEM 规范**非 scoped**，其中 5 处 `:deep()` 无编译器接管、被浏览器当未知伪类**整条规则丢弃**（CLAUDE.md §3.3 反模式 #8）
+
+* **fix(src/modules/demo/examples/ProTable/ProTableGroupedHeader.vue):** 5 处 `:deep(.xxx)` 全部改为直接后代选择器（`.vv-demo-pro-table-grouped-header .xxx`）；文件头验证步骤描述与渲染实际对齐（蓝/绿组各 4 列、ID 列无边框），并补样式注意事项注释防再犯
+* **chore(src/modules/demo/examples/ProTable/ProTableSummary.vue):** 移除 demo 内多加的密度切换 radio-group（`density` ref / `handleDensityChange` / `:density` 绑定 / el-radio-group）——ProTable 工具栏（TableHeader）已自带密度切换，demo 内重复添加属多余；刷新按钮与汇总演示不受影响
+* **feat(src/components/ProTable/styles/element-protable-overwrite.scss):** `.vv-pro-table-search` 块新增 `&__actions { display: flex; justify-content: flex-end; }`——搜索/重置/展开按钮组在 el-col 内默认左对齐，改为右对齐（对齐多数中后台工具栏惯例）
+* **已验证：** `vue-tsc --build` 无报错、ESLint 无告警、ProTable 23 测试文件 204 用例全通过；浏览器实测（5174 dev server）：分组 demo 9 列 + 蓝绿边框 + 父标题着色生效（注：姓名列此前被列设置抽屉持久化隐藏，清理 `demo-pro-table-grouped-header:columns` 后完整 9 列——持久化功能本身正常）、汇总 demo 密度 radio 已移除且汇总行正常、overview 搜索按钮右对齐
+
 ### 🐛 Fix | ProTable el-table-v2 虚拟化分支功能修复：排序 / 密度切换 / loading / 搜索接入
 
 > 上一轮 v3.0.1 虚拟化引擎落地后实测：列设置可用，但排序点击无响应、密度切换不生效、刷新/重置无 loading、demo 无搜索项无法验证。根因全部定位到 element-plus TableV2 的 API 差异（源码层实证）
