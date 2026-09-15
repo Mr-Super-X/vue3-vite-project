@@ -41,6 +41,12 @@ const props = defineProps<{
   treeData: ReturnType<typeof useTreeData> | null
   /** 单元格合并能力实例（未启用为 null，spanMethod 不绑定） */
   cellSpan: ReturnType<typeof useCellSpan> | null
+  /** v3.0 5a：是否显示汇总行（undefined = 透传 undefined 给 ElTable，即不显示） */
+  showSummary?: boolean | undefined
+  /** v3.0 5a：汇总方法（返回按列汇总值数组） */
+  summaryMethod?: (() => string[]) | undefined
+  /** v3.0 5b：虚拟滚动 tableProps（高度限制 + rowHeight 等） */
+  virtualScrollProps?: Record<string, unknown>
 }>()
 
 const bem = createNamespace('pro-table') // kebab-case，与 ProTable.vue 同源：拖拽手柄类名必须与 useRowDrag 选择器一致
@@ -107,9 +113,20 @@ defineExpose({
       ...(cellSpan
         ? { spanMethod: cellSpan.spanMethod, cellClassName: cellSpan.cellClassName }
         : {}),
+      // v3.0 5a：汇总行（el-table 内置 show-summary + summary-method 机制）
+      ...(showSummary && summaryMethod ? { showSummary: true, summaryMethod } : {}),
+      // v3.0 5b：虚拟滚动（高度限制 + rowHeight）
+      ...(virtualScrollProps ?? {}),
     }"
     @selection-change="(rows) => emit('selection-change', rows)"
-    @cell-dblclick="(row) => emit('cell-dblclick', rowKeyOf(row))"
+    @cell-dblclick="
+      (row) => {
+        const rowKey = rowKeyOf(row)
+        // v3.0 修复：双击进入编辑时回填原行值（_start 接收 rowData 初始化 drafts）
+        rowEdit?._start(rowKey, row as Record<string, unknown>)
+        emit('cell-dblclick', rowKey)
+      }
+    "
     @expand-change="(row) => emit('expand-toggle', rowKeyOf(row))"
     @sort-change="(evt) => emit('sort-change', evt)"
   >

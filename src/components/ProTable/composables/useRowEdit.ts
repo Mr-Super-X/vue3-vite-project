@@ -40,9 +40,19 @@ export function useRowEdit(options: UseRowEditOptions) {
     if (!errors.value.has(rowKey)) errors.value.set(rowKey, {})
     errors.value.get(rowKey)![field] = message
   }
-  const _start = (rowKey: string | number) => {
+  /**
+   * v3.0 修复：_start 初始化 drafts 时从原始行数据复制当前字段值。
+   * 之前 drafts 是空 {} → getValue 返回 undefined → EditCell 渲染空 input。
+   * 现在 drafts 预填当前行各字段 → 双击进编辑时 input 显示原值。
+   *
+   * @param rowKey 行唯一键
+   * @param rowData 原始行数据（v2.0 通过 onStart 钩子传入；v3.0 兼容直接传 row）
+   */
+  const _start = (rowKey: string | number, rowData?: Record<string, unknown>) => {
     editingKeys.value.add(rowKey)
-    if (!drafts.value.has(rowKey)) drafts.value.set(rowKey, {})
+    if (!drafts.value.has(rowKey)) {
+      drafts.value.set(rowKey, rowData ? { ...rowData } : {})
+    }
   }
   const _cancel = (rowKey: string | number) => {
     editingKeys.value.delete(rowKey)
