@@ -13,7 +13,12 @@
  * 3. 翻到第 2 页（10 行后 11-20 行）→ 数量合计、平均单价变化（与第 1 页不同）
  */
 import { ref } from 'vue'
-import { ProTable, type ProColumn, type ProTableExpose } from '@/components/ProTable'
+import {
+  ProTable,
+  type ProColumn,
+  type ProTableExpose,
+  type TableDensity,
+} from '@/components/ProTable'
 import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
@@ -54,6 +59,16 @@ const tableRef = ref<ProTableExpose | null>(null)
 
 async function handleRefresh(): Promise<void> {
   await tableRef.value?.refresh()
+}
+
+/** v3.0.1：密度切换状态（验证汇总行 footer td 也同步切换行高） */
+const density = ref<TableDensity>('compact')
+
+function handleDensityChange(d: string | number | boolean | undefined): void {
+  // el-radio-group @change 类型为 string|number|boolean|undefined，收窄到 TableDensity
+  if (d === 'compact' || d === 'default' || d === 'loose') {
+    density.value = d
+  }
 }
 
 /* ───────────── 代码片段（DemoField 高亮展示） ───────────── */
@@ -101,6 +116,8 @@ const tocItems = [
             :request-api="summaryOrdersRequestApi"
             table-key="demo-pro-table-summary"
             row-key="id"
+            :density="density"
+            @update:density="handleDensityChange"
             :enable-summary="{
               label: '本页合计',
               columns: {
@@ -116,6 +133,12 @@ const tocItems = [
           />
           <div :class="bem.e('actions')">
             <el-button type="primary" @click="handleRefresh">刷新（验证 data 变化重算）</el-button>
+            <!-- v3.0.1：密度切换验证汇总行同步生效（之前 footer td 不在 density 选择器内） -->
+            <el-radio-group :model-value="density" @change="handleDensityChange" size="small">
+              <el-radio-button label="compact">紧凑</el-radio-button>
+              <el-radio-button label="default">默认</el-radio-button>
+              <el-radio-button label="loose">宽松</el-radio-button>
+            </el-radio-group>
           </div>
         </DemoField>
       </section>

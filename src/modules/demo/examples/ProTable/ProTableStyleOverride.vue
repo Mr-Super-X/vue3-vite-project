@@ -233,6 +233,7 @@ const tocItems = [
   { id: 'demo-fixed-columns', label: '④ 固定列组合' },
   { id: 'demo-density-compare', label: '⑤ 密度切换对比' },
   { id: 'demo-theme-override', label: '⑥ 主题色覆盖' },
+  { id: 'hook-cheatsheet', label: '可覆盖钩子清单' },
 ]
 
 /* ───────────── 代码片段 ───────────── */
@@ -358,6 +359,190 @@ const densityCode = `<ProTable density="compact" :columns="columns" :request-api
             />
           </div>
         </DemoField>
+      </section>
+
+      <!-- 可覆盖钩子清单（对齐 XFormStyleOverride 结构：选择器 / 作用域 / 稳定 / 适用场景） -->
+      <section id="hook-cheatsheet" :class="bem.b()">
+        <h2 :class="bem.e('cheatsheet-title')">可覆盖钩子清单</h2>
+        <p :class="bem.e('cheatsheet-hint')">
+          选择器按稳定性分三档：
+          <strong>高</strong>
+          = 项目自有（ProTable BEM 类名），不随第三方变动；
+          <strong>中</strong>
+          = Element Plus 类（el-table / el-pagination），升级 element-plus 大版本可能变动；
+          <strong>低</strong>
+          = Element Plus CSS 变量（--el-color-* / --el-text-*），理论上稳定但版本间可能微调。
+        </p>
+        <div :class="bem.e('cheatsheet-wrap')">
+          <table :class="bem.e('cheatsheet-table')">
+            <thead>
+              <tr>
+                <th>选择器 / 变量</th>
+                <th>作用域</th>
+                <th>稳定</th>
+                <th>适用场景</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>.vv-pro-table</code></td>
+                <td>ProTable 根节点</td>
+                <td>高</td>
+                <td>表格整体品牌化（通过 ProTable 父级 :class 锁作用域）</td>
+              </tr>
+              <tr>
+                <td><code>.vv-pro-table__header / __body / __footer</code></td>
+                <td>表头 / 表体 / 表脚容器</td>
+                <td>高</td>
+                <td>局部区域背景色 / 边框 / 圆角</td>
+              </tr>
+              <tr>
+                <td><code>.vv-pro-table__toolbar / __title / __toolbar-buttons</code></td>
+                <td>工具栏（标题 + 操作按钮）</td>
+                <td>高</td>
+                <td>工具栏对齐 / 按钮组样式</td>
+              </tr>
+              <tr>
+                <td>
+                  <code>.vv-pro-table__vip-badge / __high-price / __out-of-stock / __recent</code>
+                </td>
+                <td>单元格条件样式标记</td>
+                <td>高</td>
+                <td>业务方自渲染 VNode 时注入 cell-* 标记，CSS :has() 反向命中整行</td>
+              </tr>
+              <tr>
+                <td><code>.el-table / .el-table__inner-wrapper</code></td>
+                <td>el-table 根 + 内部容器</td>
+                <td>中</td>
+                <td>表格整体边框 / 圆角（element-plus 升级风险）</td>
+              </tr>
+              <tr>
+                <td><code>.el-table__header-wrapper / __header</code></td>
+                <td>表头容器 + th 单元格</td>
+                <td>中</td>
+                <td>表头背景 / 高度 / 边框 / 字体加粗</td>
+              </tr>
+              <tr>
+                <td><code>.el-table__body-wrapper / tr / td</code></td>
+                <td>表体容器 / 行 / 单元格</td>
+                <td>中</td>
+                <td>行高 / 单元格 padding / 边框 / 斑马纹</td>
+              </tr>
+              <tr>
+                <td><code>.el-table__row--striped</code></td>
+                <td>斑马纹行</td>
+                <td>中</td>
+                <td>奇偶行差异化背景</td>
+              </tr>
+              <tr>
+                <td><code>.el-table__row:hover / .el-table__row--current</code></td>
+                <td>hover / 高亮行</td>
+                <td>中</td>
+                <td>交互态背景色</td>
+              </tr>
+              <tr>
+                <td><code>.el-table__fixed / __fixed-left / __fixed-right</code></td>
+                <td>固定列容器</td>
+                <td>中</td>
+                <td>固定列阴影 / 背景（避免与滚动内容重叠）</td>
+              </tr>
+              <tr>
+                <td><code>.el-table__column-filter-trigger</code></td>
+                <td>列筛选触发器</td>
+                <td>中</td>
+                <td>列筛选图标染色 / 尺寸</td>
+              </tr>
+              <tr>
+                <td><code>.el-table__sort-icon / .sort-caret</code></td>
+                <td>排序箭头</td>
+                <td>中</td>
+                <td>排序状态颜色 / 箭头大小</td>
+              </tr>
+              <tr>
+                <td>
+                  <code>
+                    .el-pagination / .el-pagination__total / __sizes / __prev / __next / __pager /
+                    __jump
+                  </code>
+                </td>
+                <td>分页器 7 区块</td>
+                <td>中</td>
+                <td>分页器对齐 / 按钮颜色 / 输入框尺寸</td>
+              </tr>
+              <tr>
+                <td><code>.el-empty / .el-empty__description</code></td>
+                <td>空状态容器</td>
+                <td>中</td>
+                <td>空状态图标 / 文案 / 居中布局</td>
+              </tr>
+              <tr>
+                <td><code>.el-loading-mask / .el-loading-spinner</code></td>
+                <td>loading 遮罩</td>
+                <td>中</td>
+                <td>loading 背景透明度 / spinner 颜色</td>
+              </tr>
+              <tr>
+                <td><code>--el-color-primary / light-3/5/7/8/9 / dark-2</code></td>
+                <td>主色 + 浅色阶</td>
+                <td>低</td>
+                <td>品牌色全局覆盖（6 个色阶），影响所有 el-table / 分页器 / 按钮</td>
+              </tr>
+              <tr>
+                <td><code>--el-color-success / warning / danger / info</code></td>
+                <td>语义色</td>
+                <td>低</td>
+                <td>行 / 单元格条件样式的语义色（成功 / 警告 / 错误 / 中性）</td>
+              </tr>
+              <tr>
+                <td>
+                  <code>
+                    --el-text-color-primary / regular / secondary / placeholder / disabled
+                  </code>
+                </td>
+                <td>文字层级色</td>
+                <td>低</td>
+                <td>文字层级、对比度、placeholder 提示色</td>
+              </tr>
+              <tr>
+                <td>
+                  <code>
+                    --el-border-color / --el-border-color-light / --el-border-color-lighter
+                  </code>
+                </td>
+                <td>边框色</td>
+                <td>低</td>
+                <td>表格 / 单元格边框深浅</td>
+              </tr>
+              <tr>
+                <td>
+                  <code>
+                    --el-fill-color / --el-fill-color-light / --el-fill-color-lighter /
+                    --el-fill-color-blank
+                  </code>
+                </td>
+                <td>背景填充色</td>
+                <td>低</td>
+                <td>行 hover / 表头 / 斑马纹背景</td>
+              </tr>
+              <tr>
+                <td><code>--el-border-radius-base / small / round</code></td>
+                <td>圆角基调</td>
+                <td>低</td>
+                <td>表格 / 单元格 / 控件圆角</td>
+              </tr>
+              <tr>
+                <td>
+                  <code>
+                    --el-font-size-extra-large / large / medium / base / small / extra-small
+                  </code>
+                </td>
+                <td>字号档位</td>
+                <td>低</td>
+                <td>表头 / 单元格 / 注释文字大小</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
     </DemoFrame>
 
@@ -516,6 +701,70 @@ const densityCode = `<ProTable density="compact" :columns="columns" :request-api
 
   &__density-pane {
     min-width: 0;
+  }
+
+  /* ───────────── 钩子清单表（对齐 XFormStyleOverride） ───────────── */
+
+  &__cheatsheet-title {
+    margin-top: 32px;
+    margin-bottom: 8px;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+  }
+
+  &__cheatsheet-hint {
+    margin-bottom: 16px;
+    padding: 10px 14px;
+    background: var(--el-fill-color-light);
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--el-text-color-regular);
+    line-height: 1.7;
+
+    strong {
+      color: var(--el-color-primary);
+      margin: 0 4px;
+    }
+  }
+
+  &__cheatsheet-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: 6px;
+  }
+
+  &__cheatsheet-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+
+    th,
+    td {
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--el-border-color-lighter);
+      vertical-align: top;
+    }
+
+    thead th {
+      background: var(--el-fill-color-light);
+      font-weight: 600;
+      color: var(--el-text-color-regular);
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    code {
+      padding: 1px 6px;
+      background: var(--el-fill-color-light);
+      border-radius: 3px;
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+      font-size: 12px;
+      color: #c7254e;
+    }
   }
 
   &__density-title {
