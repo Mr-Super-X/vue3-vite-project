@@ -382,6 +382,31 @@ export const virtualScrollConfigItems: ApiItem[] = [
     default: '10',
     description: '预渲染行数（视区外多渲染的缓冲行数）。',
   },
+  {
+    name: 'height',
+    type: 'number',
+    required: false,
+    default: '500',
+    description:
+      'v3.0.2 新增：容器高度 px 数字（H2 修复）。该值 > 0 时优先于父容器实测值，避免容器异常覆盖用户预期。',
+  },
+  {
+    name: 'width',
+    type: "number | 'auto'",
+    required: false,
+    default: "'auto'",
+    description: 'v3.0.1 新增：容器宽度 px 数字或 auto。',
+  },
+]
+
+export const virtualScrollColumnItems: ApiItem[] = [
+  {
+    name: 'formatter',
+    type: '(row, column, cellValue, $index) => string | VNode',
+    required: false,
+    description:
+      'v3.0.2 新增（M4）：轻量格式化函数。优先级 render > 插槽 > formatter > enum > 默认文本。',
+  },
 ]
 
 export const virtualScrollLimitsItems: ApiItem[] = [

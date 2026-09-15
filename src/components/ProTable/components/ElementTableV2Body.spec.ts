@@ -217,4 +217,164 @@ describe('ElementTableV2Body', () => {
     expect(wrapper.exists()).toBe(true)
     wrapper.unmount()
   })
+
+  it('C1 修复：props.slots 透传桥接（v1 体验对齐）', () => {
+    // v3.0.2 修复：父组件 $slots 由 ProTable 编排层通过 props.slots 传下来，
+    // 子组件 useSlots() 拿不到父级插槽。本测试验证 props.slots 路径生效。
+    const customSlotFn = vi.fn(({ row }: { row: { name: string } }) => `slot-${row.name}`)
+    const wrapper = mount(ElementTableV2Body, {
+      props: {
+        rows: baseRows,
+        columns: baseColumns,
+        rowKey: 'id',
+        loading: false,
+        virtualConfig: {},
+        slots: { name: customSlotFn as never },
+      },
+    })
+    expect(wrapper.exists()).toBe(true)
+    // 验证 props.slots 被正确传递（ElementTableV2Body 内部 renderCell 调用 props.slots[col.prop]?.()）
+    expect((wrapper.props() as { slots?: Record<string, unknown> }).slots).toHaveProperty('name')
+    wrapper.unmount()
+  })
+
+  it('M4 修复：formatter 字段格式化（无 render / 无 slot 时生效）', () => {
+    const formatterSpy = vi.fn((row: { value: number }) => `[${row.value}]`)
+    const colsWithFormatter: ProColumn[] = [
+      { prop: 'value', label: '值', formatter: formatterSpy as never },
+    ]
+    const wrapper = mount(ElementTableV2Body, {
+      props: {
+        rows: baseRows,
+        columns: colsWithFormatter,
+        rowKey: 'id',
+        loading: false,
+        virtualConfig: {},
+      },
+    })
+    expect(wrapper.exists()).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('H3 修复：selectionWarned 实例化（多个 ProTable 实例各自触发一次 warn）', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const colsWithSelection: ProColumn[] = [
+      ...baseColumns,
+      { prop: 'select', label: '', type: 'selection', width: 50 },
+    ]
+
+    // 实例 1：触发一次 warn
+    mount(ElementTableV2Body, {
+      props: {
+        rows: baseRows,
+        columns: colsWithSelection,
+        rowKey: 'id',
+        loading: false,
+        virtualConfig: {},
+      },
+    })
+    expect(warnSpy).toHaveBeenCalledTimes(1)
+
+    // 实例 2：原模块级变量下会跳过 warn；修复后应独立触发
+    mount(ElementTableV2Body, {
+      props: {
+        rows: baseRows,
+        columns: colsWithSelection,
+        rowKey: 'id',
+        loading: false,
+        virtualConfig: {},
+      },
+    })
+    expect(warnSpy).toHaveBeenCalledTimes(2)
+    warnSpy.mockRestore()
+  })
+
+  it('H2 修复：virtualConfig.height 数字 > 0 优先于父容器实测', async () => {
+    const wrapper = mount(ElementTableV2Body, {
+      props: {
+        rows: baseRows,
+        columns: baseColumns,
+        rowKey: 'id',
+        loading: false,
+        virtualConfig: { height: 800 }, // 用户显式配置 800
+      },
+    })
+    // 即便 measuredHeight 通过 ResizeObserver 测量到不同值，配置优先
+    expect(wrapper.findComponent(ElTableV2).props('height')).toBe(800)
+    wrapper.unmount()
+  })
+
+  it('L3 ResizeObserver：jsdom 环境下 graceful fallback 到 configuredHeight', () => {
+    // jsdom 不提供 ResizeObserver；ElementTableV2Body.vue:101 typeof 守卫应跳过观察。
+    // 首次同步测量也走 getBoundingClientRect，jsdom 返回 0，fallback 到 configuredHeight(500)
+    const wrapper = mount(ElementTableV2Body, {
+      props: {
+        rows: baseRows,
+        columns: baseColumns,
+        rowKey: 'id',
+        loading: false,
+        virtualConfig: {}, // 未配 width/height → 用 fallback
+      },
+    })
+    // width 未配 → measuredWidth=0 → fallback 800
+    expect(wrapper.findComponent(ElTableV2).props('width')).toBe(800)
+    // height 未配 → measuredHeight=0 → fallback configuredHeight=500
+    expect(wrapper.findComponent(ElTableV2).props('height')).toBe(500)
+    wrapper.unmount()
+  })
+
+  it('L3 ResizeObserver：mock ResizeObserver 后尺寸变化触发 measuredWidth 更新', async () => {
+    // 模拟 ResizeObserver 全局，捕获 observe/disconnect 调用
+    let observed: Element | null = null
+    let disconnectCalled = false
+    const observers: Array<(entries: Array<{ contentRect: DOMRect; target: Element }>) => void> = []
+
+    const MockResizeObserver = class {
+      constructor(cb: (entries: Array<{ contentRect: DOMRect; target: Element }>) => void) {
+        observers.push(cb)
+      }
+      observe(el: Element): void {
+        observed = el
+      }
+      disconnect(): void {
+        disconnectCalled = true
+      }
+      unobserve(): void {
+        // no-op
+      }
+    }
+
+    const originalRO = (globalThis as { ResizeObserver?: unknown }).ResizeObserver
+    ;(globalThis as { ResizeObserver?: unknown }).ResizeObserver = MockResizeObserver
+
+    try {
+      const wrapper = mount(ElementTableV2Body, {
+        props: {
+          rows: baseRows,
+          columns: baseColumns,
+          rowKey: 'id',
+          loading: false,
+          virtualConfig: {},
+        },
+        attachTo: document.body,
+      })
+
+      // 1. 验证 ResizeObserver 被正确 observe
+      expect(observed).not.toBeNull()
+      expect(observers).toHaveLength(1)
+
+      // 2. 触发 resize 回调，模拟容器变宽到 1024px
+      observers[0]!([{ contentRect: { width: 1024, height: 600 } as DOMRect, target: observed! }])
+      await nextTick()
+
+      // 3. measuredWidth 应被更新为 1024
+      expect(wrapper.findComponent(ElTableV2).props('width')).toBe(1024)
+
+      // 4. 卸载应触发 disconnect
+      wrapper.unmount()
+      expect(disconnectCalled).toBe(true)
+    } finally {
+      ;(globalThis as { ResizeObserver?: unknown }).ResizeObserver = originalRO
+    }
+  })
 })

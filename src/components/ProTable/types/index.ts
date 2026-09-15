@@ -210,6 +210,11 @@ export interface ProColumn<T extends object = Record<string, unknown>> {
   headerRender?(scope: { column: ProColumn<T>; $index: number }): VNode
   /** 自定义单元格渲染（返回 VNode；不传则按 enum/字段值渲染）—— 方法语法（bivariance），见接口级注释 */
   render?(scope: { row: T; column: ProColumn<T>; $index: number }): VNode
+  /**
+   * 单元格字符串格式化（v3.0.1 新增）—— 与 v1 el-table formatter 字段对齐，
+   * 供不需完整 VNode 的轻量场景（如金额千分位）。返回 string | VNode；优先级低于 render 与具名插槽。
+   */
+  formatter?: (row: T, column: ProColumn<T>, cellValue: unknown, index: number) => string | VNode
   /** 透传给 ElTableColumn 的 props */
   tableProps?: Record<string, unknown>
   /** 透传给 VxeColumn 的 props（仅 vxe-table 引擎生效；补充不覆盖映射派生值 field/title/sortable 等） */

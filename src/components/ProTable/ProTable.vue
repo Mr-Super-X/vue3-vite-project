@@ -332,6 +332,7 @@ defineExpose({
           :row-key="props.rowKey"
           :virtual-config="virtualScroll?.config.value ?? {}"
           :density="table.density.value"
+          :slots="$slots as never"
           @sort-change="handleSortChange"
         />
         <ElementTableBody

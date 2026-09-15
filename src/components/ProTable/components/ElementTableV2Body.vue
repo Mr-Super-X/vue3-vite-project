@@ -11,15 +11,19 @@
  * 到 width/height，让虚拟滚动表格跟着父容器自适应。
  *
  * 已知限制（强隔离策略）：
- * - 不支持 el-table v1 的 slot 模板约定；ProColumn.render 字段用 h() 函数替代
  * - 不支持树形 / 展开行 / 汇总行 / 单元格合并 / 行拖拽 / 多选列（v2 引擎无对应能力，
  *   type='selection' 列命中时 warn + 忽略，见下方 selection 守卫）
+ * - v3.0.2 修复（C1）：具名插槽透传已通过 useSlots() 桥接到 cellRenderer，
+ *   v1 `<template #prop="scope">` 写法在 v2 引擎下也生效（优先级：
+ *   render > slot > formatter > enum > 默认 row[prop]）
  *
  * 关键实现决策（与 element-plus 2.14 源码对齐，勿回退）：
  * - 传 table 级 `fixed` prop（v1 语义模式）：useColumns 走 rigid 布局——列宽精确 =
- *   配置宽度、总宽超出容器时产生横向滚动条（bodyWidth = max(columnsTotalWidth, 容器宽)）；
- *   代价是 flexGrow 与 minWidth CSS 被源码禁用，剩余空间填充由下方适配层用
- *   v1 算法（按 minWidth 比例分配）自己算
+ *   配置宽度、总宽超出容器时产生横向滚动条（bodyWidth = max(columnsTotalWidth, 容器宽)）。
+ *   v3.0.2 C2 文档化：`fixed=true` 模式下源码禁用 `flexGrow` / `minWidth` CSS，
+ *   剩余空间填充由下方 fillColumnsToContainer 用 v1 算法（按 minWidth 比例分配）自己算；
+ *   列宽拖拽通过 TableV2 内置列分隔符（column separator）拖拽实现，与 CSS flexGrow
+ *   无关，仍可用。详见下方 fillColumnsToContainer。
  * - 用 `row-height`（fixed-size 模式）而非 `estimated-row-height`：后者走 DynamicSizeGrid，
  *   按 rowKey 缓存实测行高，density 切换不会重新测量（密度切换失效），且逐行测量拖慢滚动
  * - 排序用 `onColumnSort` callback prop（TableV2 不 emit sort-change）+ `sortBy` 驱动表头图标
@@ -28,10 +32,19 @@
  * @group ProTable 组件
  */
 import { computed, h, onBeforeUnmount, onMounted, ref, watch, type VNode } from 'vue'
-import { ElTableV2 } from 'element-plus' // element-plus 按需注入（unplugin-vue-components 只管模板，script 中显式 import）
+import { ElTableV2, ElTag } from 'element-plus' // element-plus 按需注入（unplugin-vue-components 只管模板，script 中显式 import）
 import type { ProColumn, SortChangeEvent, TableDensity, VirtualScrollConfig } from '../types'
 
-/** density → 行高映射（el-table-v2 不响应 CSS 变量，必须显式传 estimatedRowHeight） */
+/** density → 行高映射（el-table-v2 不响应 CSS 变量，必须显式传 rowHeight）
+ *
+ * ⚠️ H1 单源化约束：此字典是 v2 引擎的行高真理源。
+ * v1 引擎（el-table）走 SCSS 变量定义在 `styles/element-protable-overwrite.scss`
+ * 的 `$pro-table-density-tokens`。两处数值必须保持同步：
+ *   compact: 32px
+ *   default: 48px
+ *   loose:   64px
+ * 调整密度档位时两处都要改（v3.0.1 已知约束，引入 CSS 变量桥接会让 v2 引擎多一层
+ * 运行时 getComputedStyle 开销，权衡后维持双源）。 */
 const DENSITY_ROW_HEIGHT: Record<TableDensity, number> = {
   compact: 32,
   default: 48,
@@ -51,6 +64,18 @@ const props = defineProps<{
   virtualConfig: VirtualScrollConfig
   /** v3.0.1：表格密度（el-table-v2 不响应 CSS 变量，需显式传 estimatedRowHeight） */
   density?: TableDensity | undefined
+  /**
+   * v3.0.2 P0 C1 修复：父作用域具名插槽映射（v1 `<template #prop="scope">` 透传）。
+   *
+   * key = 列 prop，value = 插槽渲染函数（接收 { row, column, $index } 返回 VNode）。
+   * 子组件 useSlots() 拿不到父级插槽，必须由 ProTable 编排层把 $slots 透传下来。
+   */
+  slots?:
+    | Record<
+        string,
+        (scope: { row: Record<string, unknown>; column: ProColumn; $index: number }) => VNode
+      >
+    | undefined
 }>()
 
 const emit = defineEmits<{
@@ -72,6 +97,13 @@ const configuredHeight = computed(() => props.virtualConfig.height ?? 500)
  * ElTableV2 必须传 px 数字，不能是 'auto' / 百分比 / undefined。
  * 策略：mounted 时通过 ResizeObserver 测量父容器实际宽高，缺省时
  * 容器宽度 = 父容器 clientWidth，高度 = 配置的 virtualConfig.height。
+ *
+ * 优先级（H2 修复）：
+ * - width：virtualConfig.width 数字 → 实测 → fallback 800（首次测量前）
+ * - height：virtualConfig.height 数字（>0） → 实测 → configuredHeight 兜底
+ *
+ * 用户显式配置 px 数字时优先于父容器实测——避免父容器高度异常（如 0 / 视口过小）
+ * 时覆盖用户预期。这是与 width 对称的语义。
  */
 const effectiveWidth = computed(() => {
   // 配置指定了具体 px 数字 → 用配置；否则用实测
@@ -81,7 +113,10 @@ const effectiveWidth = computed(() => {
 })
 
 const effectiveHeight = computed(() => {
-  // 配置指定了 px 数字 → 用配置；否则用实测（实测来自父容器高度或 fallback）
+  // 配置指定了 px 数字 → 优先用配置（H2 修复：避免实测异常值覆盖用户预期）
+  const configured = props.virtualConfig.height
+  if (typeof configured === 'number' && configured > 0) return configured
+  // 未配置 → 实测优先，缺测 fallback 到 DEFAULT_V2_HEIGHT
   return measuredHeight.value || configuredHeight.value
 })
 
@@ -200,6 +235,8 @@ const v2Columns = computed(() => {
     width: widths[index],
     ...(col.fixed !== undefined && { fixed: col.fixed }),
     ...(col.sortable && { sortable: true }),
+    // M2 修复：cellRenderer 闭包捕获 col（不变）+ rowData/rowIndex（运行时传入），
+    // 避免每次 measuredWidth 变化都创建新函数引用触发 TableV2 内部 diff 重渲。
     cellRenderer: (rendererProps: {
       rowData: Record<string, unknown>
       column: { dataKey: string; key: string }
@@ -225,7 +262,11 @@ const effectiveRowHeight = computed(() => {
  * TableV2 排序状态（驱动表头 SortIcon 展示）。
  * TableV2 只认 sortBy {key, order:'asc'|'desc'}；点击时取 oppositeOrder，
  * 故初始 'desc' 让首击升序，与 el-table v1 sort-change 默认行为一致。
- */
+ *
+ * ⚠️ M3 已知语义差异：el-table v1 排序初始态为 'asc'（首击升序），TableV2 内部
+ * 取 oppositeOrder 故初始为 'desc'。两者最终行为一致（首击升序），但若业务方
+ * 通过 `sortBy` prop 强制预设排序状态，需注意此差异。详见 demo ProTableVirtualScroll
+ * 验证步骤 4。 */
 const sortBy = ref<{ key: string; order: 'asc' | 'desc' }>({ key: '', order: 'desc' })
 
 /**
@@ -240,13 +281,16 @@ function handleColumnSort(param: { key: string; order: 'asc' | 'desc' }): void {
   })
 }
 
-/** selection 列守卫：v2 无内置多选能力，命中即 warn + 忽略（防静默丢列） */
-let selectionWarned = false
+/** selection 列守卫：v2 无内置多选能力，命中即 warn + 忽略（防静默丢列）。
+ *
+ * H3 修复：原模块级 `let selectionWarned = false` 在多个 ProTable 实例下只触发一次 warn，
+ * 导致后续实例命中 selection 列静默丢失。改为实例级 ref，每个实例独立计数。 */
+const selectionWarned = ref(false)
 watch(
   () => props.columns.some((c) => c.type === 'selection'),
   (hasSelection) => {
-    if (hasSelection && !selectionWarned) {
-      selectionWarned = true
+    if (hasSelection && !selectionWarned.value) {
+      selectionWarned.value = true
       console.warn(
         '[ProTable] virtualized（el-table-v2）不支持 type="selection" 多选列，该列已被忽略'
       )
@@ -255,22 +299,57 @@ watch(
   { immediate: true }
 )
 
-/** 单元格渲染：优先 ProColumn.render，否则默认 row[prop] 文本。
+/** 单元格渲染：P0 C1 修复后优先级链
+ *
+ * 1. ProColumn.render —— 业务自定义 h() 函数（最高优先，向后兼容）
+ * 2. 具名插槽（v1 体验对齐） —— `slots[col.prop]?.({ row, column, $index })`
+ * 3. ProColumn.formatter —— 简单字符串格式化（新增字段，M4 修复）
+ * 4. ProColumn.enum —— 字典 ElTag 渲染（与 v1 cell-render 一致）
+ * 5. 默认 row[prop] 文本（fallback）
  *
  * fixed-size 模式下行高由 rowHeight 控制，padding 只负责水平缩进与垂直留白
  * （需在 DENSITY_ROW_HEIGHT 内，超高内容会被裁剪）。
  */
 function renderCell(col: ProColumn, row: Record<string, unknown>, rowIndex: number): VNode {
   const cellStyle = props.density ? { padding: DENSITY_CELL_PADDING[props.density] } : undefined
+  const cellValue = row[col.prop as string]
+
+  // 1. ProColumn.render —— 业务自定义渲染
   if (typeof col.render === 'function') {
-    // 业务自定义渲染：包装一层 div 应用 padding
     return h(
       'div',
       { style: cellStyle },
       col.render({ row: row as never, column: col, $index: rowIndex })
     )
   }
-  return h('span', { style: cellStyle }, String(row[col.prop as string] ?? ''))
+
+  // 2. 具名插槽（v1 透传桥接）—— C1 修复：父级 $slots 由 ProTable 编排层透传至 props.slots
+  const propSlot = props.slots?.[col.prop as string]
+  if (typeof propSlot === 'function') {
+    const vnode = propSlot({ row, column: col, $index: rowIndex })
+    return h('div', { style: cellStyle }, vnode)
+  }
+
+  // 3. ProColumn.formatter（M4 新增）
+  if (typeof col.formatter === 'function') {
+    const formatted = col.formatter(row, col, cellValue, rowIndex)
+    return h('div', { style: cellStyle }, String(formatted ?? ''))
+  }
+
+  // 4. ProColumn.enum —— ElTag 字典
+  if (col.enum && Array.isArray(col.enum)) {
+    const entry = col.enum.find((e) => e.value === cellValue)
+    if (entry) {
+      return h(
+        'div',
+        { style: cellStyle },
+        h(ElTag, { type: entry.tagType ?? 'info' }, () => entry.label)
+      )
+    }
+  }
+
+  // 5. fallback
+  return h('div', { style: cellStyle }, String(cellValue ?? ''))
 }
 
 const bem = createNamespace('pro-table-v2')
