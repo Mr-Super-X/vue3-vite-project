@@ -99,6 +99,10 @@ export interface VirtualScrollConfig {
   rowHeight?: number
   /** 预渲染行数（默认 10） */
   overscan?: number
+  /** v3.0.1 新增：容器高度 px（默认 500） */
+  height?: number
+  /** v3.0.1 新增：容器宽度 — 'auto' | px 数字（el-table-v2 不支持百分比，默认 'auto'） */
+  width?: number | 'auto'
 }
 
 /** 搜索项 el 控件类型 —— 决定 SearchForm 渲染哪种 element-plus 控件 @group ProTable 类型 */
