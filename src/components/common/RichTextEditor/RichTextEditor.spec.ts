@@ -223,4 +223,74 @@ describe('RichTextEditor', () => {
 
     expect(fakeEditor.destroy).toHaveBeenCalledTimes(1)
   })
+
+  // ===== defineExpose 命令式 API =====
+
+  it('getEditor() 返回底层 IDomEditor 实例', () => {
+    const wrapper = mountEditor()
+
+    const vm = wrapper.vm as unknown as {
+      getEditor: () => unknown
+    }
+
+    expect(vm.getEditor()).toBe(fakeEditor)
+  })
+
+  it('focus() / blur() 调用底层 editor API', () => {
+    // fake editor 注入 focus/blur 桩以便断言
+    const focusSpy = vi.fn()
+    const blurSpy = vi.fn()
+    const wrapper = mountEditor()
+    fakeEditor.focus = focusSpy
+    fakeEditor.blur = blurSpy
+
+    const vm = wrapper.vm as unknown as {
+      focus: () => void
+      blur: () => void
+    }
+
+    vm.focus()
+    vm.blur()
+
+    expect(focusSpy).toHaveBeenCalledTimes(1)
+    expect(blurSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('getHtml() 返回编辑器当前 HTML（editor 未就绪时降级为空串）', () => {
+    const wrapper = mountEditor()
+    fakeEditor.getHtml.mockReturnValue('<p>当前内容</p>')
+
+    const vm = wrapper.vm as unknown as { getHtml: () => string }
+
+    expect(vm.getHtml()).toBe('<p>当前内容</p>')
+  })
+
+  it('setHtml() 走 DOMPurify 清洗后调用底层 setHtml', () => {
+    // 暴露的 setHtml 走 sanitize 闸门，防止脏 HTML 直接进入编辑器 DOM
+    const wrapper = mountEditor()
+
+    const vm = wrapper.vm as unknown as { setHtml: (html: string) => void }
+    vm.setHtml('<script>x</script><p>新内容</p>')
+
+    expect(fakeEditor.setHtml).toHaveBeenCalledWith('<p>新内容</p>')
+  })
+
+  it('unmount 后命令式 API 安全降级（不抛错）', () => {
+    // editorRef.value 在 onBeforeUnmount 中已被置 null，
+    // 调用暴露的命令式 API 不应崩，应通过可选链短路
+    const wrapper = mountEditor()
+    wrapper.unmount()
+
+    const vm = wrapper.vm as unknown as {
+      focus: () => void
+      blur: () => void
+      getHtml: () => string
+      setHtml: (html: string) => void
+    }
+
+    expect(() => vm.focus()).not.toThrow()
+    expect(() => vm.blur()).not.toThrow()
+    expect(vm.getHtml()).toBe('')
+    expect(() => vm.setHtml('<p>x</p>')).not.toThrow()
+  })
 })

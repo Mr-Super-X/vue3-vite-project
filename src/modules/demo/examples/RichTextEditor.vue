@@ -174,6 +174,10 @@ const propDescriptions: Record<string, string> = {
   readOnly: '是否只读。true 时工具栏禁用。默认 false。运行时变更不响应，需 v-if 重建。',
   uploadApi:
     '自定义图片上传函数。签名 (file: File) => Promise<{ url, alt? }>。不传则禁用图片上传菜单。',
+  toolbarExcludeKeys:
+    '工具栏要排除的菜单 key 列表。默认 ["uploadVideo"]。完整 key 见 WangEditor 官方文档。运行时变更不响应（wangEditor V5 无热更新 API）。',
+  toolbarKeys:
+    '工具栏要包含的菜单 key 列表（白名单模式）。不传时显示 WangEditor 默认全部菜单。与 toolbarExcludeKeys 互斥，toolbarKeys 优先。运行时变更不响应。',
 }
 
 const eventDescriptions: Record<string, string> = {
@@ -181,7 +185,7 @@ const eventDescriptions: Record<string, string> = {
 }
 
 const slotDescriptions: Record<string, string> = {
-  // 当前组件无插槽
+  footer: '编辑器底部插入自定义内容（如字数统计、AI 续写按钮等扩展 UI）。',
 }
 
 function merge<T extends { name: string }>(

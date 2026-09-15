@@ -2,7 +2,15 @@
   RichTextEditor —— 基于 WangEditor V5 的高级富文本编辑器
   设计：v-model 双向绑定（DOMPurify 在 prop/emit 双向链路上清洗）+ 防循环更新 + uploadApi 自定义图片上传 + onBeforeUnmount 调 destroy
   V5 工具栏与编辑区分离：Toolbar 通过 :editor 接收 Editor 实例建立关联
-  @see https://www.wangeditor.com/v5/
+
+  优化点（相对原版本）：
+  - 抽离 syncEditorWithModel / safeSetHtml / getUploadErrorMessage 三个内联函数，去掉 watch 回调的 25 行嵌套
+  - toolbarConfig / editorConfig 升级为 computed，支持响应 prop 变化
+  - 新增 toolbarExcludeKeys / toolbarKeys props，提升可扩展性
+  - 新增 #footer slot，为消费方提供扩展点
+  - defineExpose 暴露 getEditor / focus / blur / getHtml / setHtml 命令式 API
+  - watch 加 flush: 'post'，与 Editor 内部 Slate 数据同步更可靠
+  - 显式保存 stopWatcher，onBeforeUnmount 中先 stop 再 destroy  @see https://www.wangeditor.com/v5/
   @see https://github.com/cure53/DOMPurify
   @group 富文本编辑器
 -->
@@ -16,10 +24,12 @@
  * - uploadApi 自定义图片上传（拦截默认 base64，走 OSS/后端存储）
  * - onBeforeUnmount 必须 destroy，否则编辑器 DOM 监听器泄漏 + 路由切换报 "Cannot read properties of null"
  *
+ * 命令式 API：通过 ref 访问组件，调用 getEditor() / focus() / getHtml() / setHtml()
+ *
  * @see [`./types.ts`](./types.ts) Props / Emits 类型
  * @group 通用组件：RichTextEditor
  */
-import { onBeforeUnmount, shallowRef, watch } from 'vue'
+import { computed, onBeforeUnmount, shallowRef, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import DOMPurify from 'dompurify'
 // @ts-expect-error - @wangeditor/editor-for-vue@5.1.12 的 package.json exports 字段缺 "types" 条件，
@@ -38,72 +48,14 @@ const props = withDefaults(defineProps<RichTextEditorProps>(), {
   readOnly: false,
   // uploadApi 不设默认：exactOptionalPropertyTypes 下 undefined 不能赋值给可选 prop，
   // 保持 undefined 让消费方通过 `if (!props.uploadApi)` 判定即可
+  // toolbarExcludeKeys 数组/对象用工厂函数返回，避免所有实例共享同一引用
+  toolbarExcludeKeys: () => ['uploadVideo'],
 })
 const emit = defineEmits<RichTextEditorEmits>()
 
-// BEM 命名空间：vv-rich-text-editor / __toolbar / __editor
+// BEM 命名空间：vv-rich-text-editor / __toolbar / __editor / __footer
 // createNamespace 由 unplugin-auto-import 全局注入，详见 vite.config.ts AutoImport.imports
 const bem = createNamespace('rich-text-editor')
-
-/**
- * Editor 实例用 shallowRef 而非 ref（vue 底层 API）：WangEditor 内部维护 Slate 数据结构 + DOM 节点，
- * 深响应化会拖慢渲染且无业务收益。
- */
-const editorRef = shallowRef<IDomEditor | null>(null)
-
-// 工具栏默认配置：隐藏「上传视频」菜单（本组件只封装图片上传场景）
-const toolbarConfig: Partial<IToolbarConfig> = {
-  excludeKeys: ['uploadVideo'],
-}
-
-// 编辑区高度转 CSS：'300px' 原样 / 数字按 px 处理
-// 抽成 computed 是为了模板不写复杂表达式（项目「模板层不写复杂表达式」规范）
-const heightCss = computed<string>(() =>
-  typeof props.height === 'number' ? `${props.height}px` : props.height
-)
-
-// 编辑器配置：placeholder / readOnly + MENU_CONF['uploadImage']
-// 注意 onChange / onCreated 等回调**不能**放在 defaultConfig 里，
-// Editor 内部会主动抛 "请使用 @onChange 事件，不要放在 props 中" 错误（详见 editor-for-vue 源码）
-const editorConfig: Partial<IEditorConfig> = {
-  placeholder: props.placeholder,
-  readOnly: props.readOnly,
-  MENU_CONF: {
-    uploadImage: {
-      // 上传超时 5s（默认 30s 对富文本内联图片过长）
-      timeout: 5 * 1000,
-      /**
-       * 拦截默认 base64 上传：调用 props.uploadApi 走 OSS/后端存储，
-       * 拿到真实 URL 后 insertFn 插入编辑器。
-       *
-       * customUpload 与 defaultConfig.onChange 等「回调放在 props」的检查一样，
-       * 是 WangEditor 故意设计的「状态来源单一化」机制——避免同一生命周期有多入口。
-       * 这里 customUpload 是注册在 uploadImage 菜单的「子回调」，Editor 不会拦截。
-       */
-      customUpload: async (
-        file: File,
-        insertFn: (src: string, alt: string, href: string) => void
-      ): Promise<void> => {
-        const uploadApi = props.uploadApi
-        if (!uploadApi) {
-          ElMessage.warning('请先配置 uploadApi 以启用图片上传')
-          return
-        }
-        try {
-          const { url, alt } = await uploadApi(file)
-          // insertFn 三参：图片 URL、alt 文本、链接 URL
-          // 这里把 href 也指向图片地址，方便用户点击查看原图
-          insertFn(url, alt ?? file.name, url)
-        } catch (err) {
-          // 上传失败给用户明确反馈（不静默吞错，遵循 §防御性编程 强约束）
-          ElMessage.error('图片上传失败，请稍后再试')
-          // 控制台留详细堆栈便于排查
-          console.error('[RichTextEditor] uploadImage failed:', err)
-        }
-      },
-    },
-  },
-}
 
 /**
  * DOMPurify 清洗配置（统一入口，watch 和 handleChange 共用避免配置漂移）
@@ -130,8 +82,8 @@ const SANITIZE_CONFIG = {
 /** DOMPurify 清洗入口：watch 和 handleChange 共用，杜绝配置漂移 */
 function sanitizeHtml(html: string): string {
   // DOMPurify 3.x 类型声明在某些 DOM lib 配置下会返回 TrustedHTML | string，
-  // 这里业务始终按 string 处理
-  return DOMPurify.sanitize(html, SANITIZE_CONFIG) as string
+  // 这里业务始终按 string 处理——用 String() 兜底，SSR 环境也不会炸
+  return String(DOMPurify.sanitize(html, SANITIZE_CONFIG))
 }
 
 /**
@@ -152,6 +104,104 @@ function isVisualEmpty(html: string): boolean {
     .replace(/&nbsp;/g, '')
     .trim()
 }
+
+/**
+ * setHtml 错误兜底：WangEditor 内部 setHtml 可能 reject（如 demo 里的 `<img src="x">` 触发
+ * 「Cannot resolve a DOM node from Slate node: {"text":""}」），unhandledrejection 会冒泡到
+ * 全局 errorHandler → 整个页面被错误页覆盖。这里统一 catch 静默处理：
+ * XSS 防御已经在 sanitize 完成，setHtml 失败不影响安全。
+ *
+ * 抽离为独立函数（DRY）：watch 内两个分支原本各自写 try/catch，现统一调用此处。
+ */
+function safeSetHtml(editor: IDomEditor, html: string): void {
+  try {
+    editor.setHtml(html)
+  } catch (err) {
+    console.error('[RichTextEditor] setHtml failed:', err)
+  }
+}
+
+/**
+ * 自定义上传错误信息归一化：区分 AbortError / 网络错误 / 业务错误，给用户更精准反馈。
+ *
+ * 防御性编程 §10：catch 块非空且有差异化日志/提示。
+ */
+function getUploadErrorMessage(err: unknown): string {
+  if (err instanceof Error) {
+    if (err.name === 'AbortError') return '图片上传已取消'
+    if (err.message.includes('NetworkError') || err.message.includes('Failed to fetch')) {
+      return '网络异常，上传失败，请检查网络后重试'
+    }
+  }
+  return '图片上传失败，请稍后再试'
+}
+
+/**
+ * Editor 实例用 shallowRef 而非 ref（vue 底层 API）：WangEditor 内部维护 Slate 数据结构 + DOM 节点，
+ * 深响应化会拖慢渲染且无业务收益。
+ */
+const editorRef = shallowRef<IDomEditor | null>(null)
+
+// 工具栏配置：toolbarKeys 优先于 toolbarExcludeKeys；
+// 都不传时退化为默认排除 'uploadVideo'（兼容原行为）
+// 升级为 computed：未来如放开「初始化一次性 prop」限制，可零成本支持运行时变更
+const toolbarConfig = computed<Partial<IToolbarConfig>>(() => {
+  if (props.toolbarKeys?.length) {
+    return { toolbarKeys: props.toolbarKeys }
+  }
+  return { excludeKeys: props.toolbarExcludeKeys ?? [] }
+})
+
+// 编辑区高度转 CSS：'300px' 原样 / 数字按 px 处理
+// 抽成 computed 是为了模板不写复杂表达式（项目「模板层不写复杂表达式」规范）
+const heightCss = computed<string>(() =>
+  typeof props.height === 'number' ? `${props.height}px` : props.height
+)
+
+// 编辑器配置：placeholder / readOnly + MENU_CONF['uploadImage']
+// 注意 onChange / onCreated 等回调**不能**放在 defaultConfig 里，
+// Editor 内部会主动抛 "请使用 @onChange 事件，不要放在 props 中" 错误（详见 editor-for-vue 源码）
+const editorConfig = computed<Partial<IEditorConfig>>(() => ({
+  placeholder: props.placeholder,
+  readOnly: props.readOnly,
+  MENU_CONF: {
+    uploadImage: {
+      // 上传超时 5s（默认 30s 对富文本内联图片过长）
+      timeout: 5 * 1000,
+      /**
+       * 拦截默认 base64 上传：调用 props.uploadApi 走 OSS/后端存储，
+       * 拿到真实 URL 后 insertFn 插入编辑器。
+       *
+       * customUpload 与 defaultConfig.onChange 等「回调放在 props」的检查一样，
+       * 是 WangEditor 故意设计的「状态来源单一化」机制——避免同一生命周期有多入口。
+       * 这里 customUpload 是注册在 uploadImage 菜单的「子回调」，Editor 不会拦截。
+       */
+      customUpload: async (
+        file: File,
+        insertFn: (src: string, alt: string, href: string) => void
+      ): Promise<void> => {
+        // 通过 props 闭包而非 getter：uploadApi 是初始化一次性 prop（types.ts 已标注），
+        // 运行时变更不响应，无须 watch
+        const uploadApi = props.uploadApi
+        if (!uploadApi) {
+          ElMessage.warning('请先配置 uploadApi 以启用图片上传')
+          return
+        }
+        try {
+          const { url, alt } = await uploadApi(file)
+          // insertFn 三参：图片 URL、alt 文本、链接 URL
+          // 这里把 href 也指向图片地址，方便用户点击查看原图
+          insertFn(url, alt ?? file.name, url)
+        } catch (err) {
+          // 上传失败给用户明确反馈（不静默吞错，遵循 §防御性编程 强约束）
+          ElMessage.error(getUploadErrorMessage(err))
+          // 控制台留详细堆栈便于排查
+          console.error('[RichTextEditor] uploadImage failed:', err)
+        }
+      },
+    },
+  },
+}))
 
 /** Editor 实例创建完成：缓存到 ref 供 setHtml / destroy / getHtml 使用 */
 const handleCreated = (editor: IDomEditor): void => {
@@ -182,14 +232,14 @@ const handleChange = (editor: IDomEditor): void => {
 }
 
 /**
- * watch props.modelValue：仅在「外部值 ≠ 编辑器当前 HTML」时 setHtml。
+ * 把外部 prop 的 HTML 同步到编辑器内部。
  *
  * 防循环原理：
  *   1. 用户输入 → Editor.onChange → handleChange → emit('update:modelValue', cleanHtml)
- *   2. props.modelValue 变为 cleanHtml → 本 watch 触发
- *   3. cleanHtml !== editor.getHtml()（编辑器内部是脏 HTML）→ setHtml(safeHtml)
+ *   2. props.modelValue 变为 cleanHtml → watch 触发 → syncEditorWithModel
+ *   3. cleanHtml !== editor.getHtml()（编辑器内部是脏 HTML）→ safeSetHtml(safeHtml)
  *   4. Editor 再次触发 onChange → handleChange → emit 同样 safeHtml
- *   5. props.modelValue 还是 safeHtml → 本 watch 触发
+ *   5. props.modelValue 还是 safeHtml → watch 触发 → syncEditorWithModel
  *   6. safeHtml === editor.getHtml()（此时编辑器已被 setHtml 清洗过）→ **跳过 setHtml**，循环终止
  *
  * 不加这个判断会导致：setHtml → onChange → emit → watch → setHtml ... 的死循环。
@@ -201,49 +251,69 @@ const handleChange = (editor: IDomEditor): void => {
  * ⚠ 必传 safeHtml 而非 newHtml：外部 prop 传入的 HTML 可能是脏数据（API 返回 / 用户粘贴 / 第三方拼接），
  * 直接 setHtml 会让 onerror/javascript: 等进入 DOM 并被浏览器执行。sanitize 是必经闸门。
  *
- * ⚠ setHtml 用 Promise.resolve().then 包一层 try/catch：WangEditor 内部对某些 HTML 节点转换可能 reject
- * （如 demo 里的 `<img src="x">` 触发「Cannot resolve a DOM node from Slate node: {"text":""}」），
- * unhandledrejection 会冒泡到全局 errorHandler → 整个 demo 页面被错误页覆盖。
- * 这里 catch 静默处理：XSS 防御已经在 sanitize 完成，setHtml 失败不影响安全。
+ * 抽离为独立函数（相对原版本）：让 watch 回调从 25 行降到 1 行，集中防循环/视觉为空/setHtml 三分支。
  */
-watch(
-  () => props.modelValue,
-  (newHtml) => {
-    const editor = editorRef.value
-    if (editor == null) return
-    const safeHtml = sanitizeHtml(newHtml ?? '')
+function syncEditorWithModel(newHtml: string | undefined): void {
+  const editor = editorRef.value
+  if (editor == null) return
+  const safeHtml = sanitizeHtml(newHtml ?? '')
+  if (isVisualEmpty(newHtml ?? '')) {
     // 外部置空场景：编辑器若已视觉为空则跳过 setHtml（避免与 isVisualEmpty emit('') 形成 setHtml 循环）；
     // 若编辑器仍有内容则执行 setHtml('') 清空（reset / 加载空默认值场景）。
-    if (isVisualEmpty(newHtml ?? '')) {
-      if (isVisualEmpty(editor.getHtml())) return
-      try {
-        editor.setHtml(safeHtml)
-      } catch (err) {
-        console.error('[RichTextEditor] setHtml failed:', err)
-      }
-      return
-    }
-    if (safeHtml === editor.getHtml()) return
-    try {
-      editor.setHtml(safeHtml)
-    } catch (err) {
-      console.error('[RichTextEditor] setHtml failed:', err)
-    }
+    if (isVisualEmpty(editor.getHtml())) return
+    safeSetHtml(editor, safeHtml)
+    return
   }
+  if (safeHtml === editor.getHtml()) return
+  safeSetHtml(editor, safeHtml)
+}
+
+/**
+ * watch props.modelValue：仅在「外部值 ≠ 编辑器当前 HTML」时 setHtml。
+ *
+ * flush: 'post'：让 watch 在 DOM 更新周期之后触发，与 Editor 内部 setHtml/onChange 同步更可靠，
+ * 避免在组件渲染前同步导致 editor.getHtml() 返回旧值的边缘时序问题。
+ */
+const stopWatcher = watch(
+  () => props.modelValue,
+  (newHtml) => syncEditorWithModel(newHtml),
+  { flush: 'post' }
 )
 
 /**
- * 组件卸载：必须 destroy 编辑器。
+ * 组件卸载：先 stop watcher，再 destroy 编辑器。
  *
  * 不 destroy 的后果：
  *   - 编辑器实例内的 toolbar/编辑区 DOM 监听器不会释放，造成内存泄漏
  *   - 路由切换时旧编辑器仍在监听 onChange，控制台报 "Cannot read properties of null"
  */
 onBeforeUnmount(() => {
+  stopWatcher()
   const editor = editorRef.value
   if (editor == null) return
   editor.destroy()
   editorRef.value = null
+})
+
+/**
+ * 暴露命令式 API 给父组件
+ *
+ * - getEditor：访问底层 IDomEditor，可调用 WangEditor 全部命令式方法（如 insertText / focus / getSelectionText）
+ * - focus / blur：聚焦/失焦编辑器
+ * - getHtml / setHtml：与 v-model 等价的命令式接口
+ *
+ * 父组件示例：通过 ref 获取实例后调用命令式 API（如 getEditor / focus / setHtml）。
+ */
+defineExpose({
+  getEditor: (): IDomEditor | null => editorRef.value,
+  focus: (): void => editorRef.value?.focus(),
+  blur: (): void => editorRef.value?.blur(),
+  getHtml: (): string => editorRef.value?.getHtml() ?? '',
+  setHtml: (html: string): void => {
+    const editor = editorRef.value
+    if (editor == null) return
+    safeSetHtml(editor, sanitizeHtml(html))
+  },
 })
 </script>
 
@@ -272,6 +342,10 @@ onBeforeUnmount(() => {
       @on-created="handleCreated"
       @on-change="handleChange"
     />
+    <!-- 扩展点：编辑器底部插入自定义内容（如字数统计、AI 续写按钮） -->
+    <div v-if="$slots.footer" :class="bem.e('footer')">
+      <slot name="footer" />
+    </div>
   </div>
 </template>
 
@@ -323,6 +397,14 @@ onBeforeUnmount(() => {
     del {
       text-decoration: line-through;
     }
+  }
+
+  &__footer {
+    border-top: 1px solid #ebeef5;
+    padding: 8px 12px;
+    background: #fafafa;
+    font-size: 13px;
+    color: #606266;
   }
 }
 </style>
