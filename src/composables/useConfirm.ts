@@ -1,9 +1,7 @@
 import type { AppContext } from 'vue'
 import { getCurrentInstance } from 'vue'
-import type { ElMessageBoxOptions } from 'element-plus'
+import { ElMessageBox, type ElMessageBoxOptions } from 'element-plus'
 import { getDialogAppContext } from './useDialog'
-
-// ElMessageBox 由 unplugin-auto-import 注入（importStyle 自动带样式，勿显式 import）
 
 /**
  * EP 在用户取消 / 关闭时 reject 的哨兵值。

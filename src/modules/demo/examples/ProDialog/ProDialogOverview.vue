@@ -42,27 +42,21 @@ const dragEnabled = ref(true)
 const dragPosText = ref('尚未拖拽（margin 居中定位）')
 
 // 拖拽结束时（document mouseup）读取 .el-dialog 的内联定位，直观验证边界钳制结果
-let posListener: (() => void) | null = null
-
-function stopPosListener() {
-  if (posListener) {
-    document.removeEventListener('mouseup', posListener)
-    posListener = null
+// 修复:用组件作用域的 mouseup 监听（绑定到演示段落容器）替代全局 document 监听。
+// 原实现的副作用:每次 dragVisible=true 都挂 document mouseup 全局监听器，叠加在
+// 4 个 ProDialog 实例的 EP overlay 容器 patch 之上，造成打开后续示例时主线程繁忙。
+// 新实现:用模板 @mouseup 绑定到 demo 段落，事件冒泡自动清理，无 watch 开销。
+function onDragMouseUp(_e: MouseEvent): void {
+  // 仅在弹窗打开时响应（dragVisible 控制的 ProDialog 已 visible=true，page 上有可见 .el-dialog）
+  const dialog = document.querySelector<HTMLElement>(
+    '.el-overlay-dialog:not([style*="display: none"]) .el-dialog'
+  )
+  if (!dialog) return
+  // 仅当用户确实在拖拽后松开（即有 left 内联定位）才更新提示文案
+  if (dialog.style.left) {
+    dragPosText.value = `left: ${dialog.style.left}，top: ${dialog.style.top}（内联定位已接管）`
   }
 }
-
-watch(dragVisible, (v) => {
-  stopPosListener()
-  if (!v) return
-  posListener = () => {
-    const dialog = document.querySelector<HTMLElement>('.el-dialog')
-    dragPosText.value = dialog?.style.left
-      ? `left: ${dialog.style.left}，top: ${dialog.style.top}（内联定位已接管）`
-      : '尚未拖拽（margin 居中定位）'
-  }
-  document.addEventListener('mouseup', posListener)
-})
-onUnmounted(stopPosListener)
 
 const SNIPPET_DRAG = `<ProDialog v-model="visible" title="按住标题栏拖拽" :draggable="true">
   只能按住头部拖拽；越出视口的位移会被钳制，
@@ -151,7 +145,9 @@ const tocItems = [
 
       <section id="demo-drag">
         <DemoField :code="SNIPPET_DRAG" label="② 拖拽与视口边界钳制">
-          <div :class="bem.e('controls')">
+          <!-- mouseup 监听绑定到本段容器（局部作用域），不再挂全局 document 监听器。
+               这样既避免叠加 EP overlay 容器 patch 的主线程开销，也无需 onUnmounted 清理 -->
+          <div :class="bem.e('controls')" @mouseup="onDragMouseUp">
             <el-button type="primary" @click="dragVisible = true">打开可拖拽弹窗</el-button>
             <el-switch v-model="dragEnabled" active-text="允许拖拽" inactive-text="禁用拖拽" />
           </div>
