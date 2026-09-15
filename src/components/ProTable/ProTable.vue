@@ -24,6 +24,7 @@ import SearchForm from './components/SearchForm.vue'
 import TableHeader from './components/TableHeader.vue'
 import ColSetting from './components/ColSetting.vue'
 import ElementTableBody from './components/ElementTableBody.vue'
+import ElementTableV2Body from './components/ElementTableV2Body.vue' // v3.0.1：el-table-v2 真虚拟化引擎分支
 import VxeTableBody from './components/VxeTableBody.vue' // v2.1 P3：vxe-table 引擎分支（动态加载，失败回退 element-plus）
 import { useSearch } from './composables/useSearch'
 import { useColumns } from './composables/useColumns'
@@ -322,8 +323,18 @@ defineExpose({
         :is-empty="isEmpty()"
         @retry="table.refresh"
       >
+        <!-- v3.0.1：virtualized 优先于 engine，命中时挂载 v2 引擎分支 -->
+        <ElementTableV2Body
+          v-if="engineRef === 'element-plus' && virtualScroll?.enabled"
+          :rows="(table.data.value ?? []) as Record<string, unknown>[]"
+          :loading="table.loading.value && hasTableMounted"
+          :columns="sortedColumnsNonGeneric"
+          :row-key="props.rowKey"
+          :virtual-config="virtualScroll?.config.value ?? {}"
+          @selection-change="handleSelectionChange"
+        />
         <ElementTableBody
-          v-if="engineRef === 'element-plus'"
+          v-else-if="engineRef === 'element-plus'"
           ref="proTableEl"
           :rows="
             (treeData ? treeData.flatData.value : (table.data.value ?? [])) as Record<
