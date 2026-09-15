@@ -1,6 +1,21 @@
 # ProTable 架构文档
 
-> **当前版本**：v3.0（Phase 1-4 完成；Phase 5 能力扩展 + Phase 6 demo 待办）
+> **当前版本**：v3.0.1（v3.0 + 真虚拟化引擎升级）
+>
+> **v3.0.1 增量摘要**：
+>
+> - **真虚拟化引擎**：虚拟滚动从 v3.0 的"高度容器 + CSS overflow 假虚拟化"切换到 el-table-v2 真虚拟化
+> - **新增 ElementTableV2Body**：包装 `<el-table-v2>` + 列 cellRenderer 适配，独立于 v1 引擎分支
+> - **强隔离策略**：virtualized 启用时其他能力（行内编辑 / 树形 / 汇总 / 合并 / 拖拽）一律 warn + 忽略
+> - **vxe-table 引擎回落**：virtualized + tableEngine="vxe-table" 自动回落到 element-plus
+> - **useVirtualScroll 升级**：新增 `v2TableConfig` 输出；`VirtualScrollConfig` 扩展 `height` / `width`
+> - **渲染分支优先级**：ProTable.vue 模板分支 `virtualized > engine`（虚拟化命中优先于引擎选择）
+>
+> **完整设计**：[`docs/superpowers/specs/2026-09-15-protable-el-table-v2-design.md`](../../superpowers/specs/2026-09-15-protable-el-table-v2-design.md)
+>
+> **完整实施计划**：[`docs/superpowers/plans/2026-09-15-protable-el-table-v2-impl.md`](../../superpowers/plans/2026-09-15-protable-el-table-v2-impl.md)
+>
+> ---
 >
 > **v3.0 增量摘要**：
 >

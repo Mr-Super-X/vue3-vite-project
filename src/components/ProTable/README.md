@@ -198,6 +198,20 @@ assertValidResponse(adapted, { tableKey: props.tableKey })
 assertValidResponse(adapted, props.tableKey ? { tableKey: props.tableKey } : {})
 ```
 
+## v3.0.1 变更摘要（虚拟滚动真虚拟化）
+
+- **真虚拟化引擎升级**：`useVirtualScroll` 从假虚拟化（CSS overflow + 高度容器）切换到 `el-table-v2` 真虚拟化引擎，支持 10 万行 × 10 列流畅渲染。
+- **强隔离策略**：开启 `virtualized` 时其他能力（行内编辑 / 树形 / 汇总 / 合并 / 拖拽）一律 `console.warn` + 忽略；`tableEngine="vxe-table"` 自动回落到 `element-plus`。
+- **新增组件**：`ElementTableV2Body.vue`（独立文件，与 v1 引擎分支 `ElementTableBody` 并列存在）。
+- **useVirtualScroll 升级**：新增 `v2TableConfig` 输出（width / height / estimatedRowHeight）；`VirtualScrollConfig` 扩展 `height` / `width` 字段。
+- **demo 升级**：`/demo/pro-table-virtual-scroll` 演示 10 万行 × 10 列（含 ID + Department 左固定列），首屏 < 1s，滚动 avgFPS ≥ 100。
+- **保留能力**：列设置 / 排序 / 搜索 / 密度切换 / 多选 在虚拟化分支仍可用。
+
+完整 v3.0.1 设计 + 实施计划：
+
+- [`docs/superpowers/specs/2026-09-15-protable-el-table-v2-design.md`](../../../docs/superpowers/specs/2026-09-15-protable-el-table-v2-design.md)
+- [`docs/superpowers/plans/2026-09-15-protable-el-table-v2-impl.md`](../../../docs/superpowers/plans/2026-09-15-protable-el-table-v2-impl.md)
+
 ## v3.0 变更摘要
 
 完整 16 项修复 + 优化见 [`ARCHITECTURE.md`](./ARCHITECTURE.md) 顶部"v3.0 增量摘要" + 改造计划文档。
