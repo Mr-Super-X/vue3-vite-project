@@ -35,20 +35,19 @@ import { computed, h, onBeforeUnmount, onMounted, ref, watch, type VNode } from 
 import { ElTableV2, ElTag } from 'element-plus' // element-plus 按需注入（unplugin-vue-components 只管模板，script 中显式 import）
 import type { ProColumn, SortChangeEvent, TableDensity, VirtualScrollConfig } from '../types'
 
-/** density → 行高映射（el-table-v2 不响应 CSS 变量，必须显式传 rowHeight）
+/**
+ * 密度行高 + 单元格 padding 合并到单一字典。
+ * 【优化】Record<TableDensity, ...> 在 types 联合扩展时(新增档位)TS 会强制要求
+ * 补齐 rowHeight + cellPadding 两字段,把 H1 单源化从"注释纪律"提升为"类型约束"。
  *
- * ⚠️ H1 单源化约束：此字典是 v2 引擎的行高真理源。
- * v1 引擎（el-table）走 SCSS 变量定义在 `styles/element-protable-overwrite.scss`
- * 的 `$pro-table-density-tokens`。两处数值必须保持同步：
- *   compact: 32px
- *   default: 48px
- *   loose:   64px
- * 调整密度档位时两处都要改（v3.0.1 已知约束，引入 CSS 变量桥接会让 v2 引擎多一层
- * 运行时 getComputedStyle 开销，权衡后维持双源）。 */
-const DENSITY_ROW_HEIGHT: Record<TableDensity, number> = {
-  compact: 32,
-  default: 48,
-  loose: 64,
+ * ⚠️ H1 单源化约束:此字典是 v2 引擎的行高/单元格内边距真理源。
+ * v1 引擎(el-table)走 SCSS 变量定义在 `styles/element-protable-overwrite.scss`
+ * 的 `$pro-table-density-tokens`。调整密度档位时,v1 SCSS 与本字典必须同步。
+ */
+const DENSITY_TOKENS: Record<TableDensity, { rowHeight: number; cellPadding: string }> = {
+  compact: { rowHeight: 32, cellPadding: '4px 8px' },
+  default: { rowHeight: 48, cellPadding: '12px 8px' },
+  loose: { rowHeight: 64, cellPadding: '20px 8px' },
 }
 
 const props = defineProps<{
@@ -207,22 +206,121 @@ function fillColumnsToContainer(columns: ProColumn[], containerWidth: number): n
   const total = base.reduce((acc, w) => acc + w, 0)
   if (containerWidth <= total || stretchable.length === 0) return base
   const extra = containerWidth - total
-  const stretchableMinWidthSum = stretchable.reduce(
-    (acc, index) => acc + toPxWidth(columns[index]!.minWidth),
-    0
-  )
+  // 预先缓存每列的 minWidth 数值,避免 forEach 中重复 toPxWidth
+  const stretchableMinWidths = stretchable.map((i) => toPxWidth(columns[i]!.minWidth))
+  const stretchableMinWidthSum = stretchableMinWidths.reduce((acc, w) => acc + w, 0)
   const widths = [...base]
   let assigned = 0
   stretchable.forEach((colIndex, order) => {
-    // 末列吸收取整余数：前 N-1 列向下取整，余数全给末列，总和精确 = containerWidth
+    // 末列吸收取整余数:前 N-1 列向下取整,余数全给末列,总和精确 = containerWidth
+    const minW = stretchableMinWidths[order]!
     const share =
       order === stretchable.length - 1
         ? extra - assigned
-        : Math.floor((extra * toPxWidth(columns[colIndex]!.minWidth)) / stretchableMinWidthSum)
+        : Math.floor((extra * minW) / stretchableMinWidthSum)
     widths[colIndex] = base[colIndex]! + share
     assigned += share
   })
   return widths
+}
+
+/**
+ * 列 prop → 列对象 索引。renderCellForV2 内部按 dataKey O(1) 查表，
+ * 避免每行渲染都线性扫描 columns（10 列 × 1000 行 = 1 万次扫描）。
+ */
+const colByDataKey = computed(() => {
+  const m = new Map<string, ProColumn>()
+  for (const col of props.columns) {
+    if (col.prop) m.set(col.prop as string, col)
+  }
+  return m
+})
+
+/**
+ * 单元格渲染参数 —— 抽到类型便于 5 个小函数共享
+ */
+type CellRenderScope = {
+  rowData: Record<string, unknown>
+  column: { dataKey: string; key: string }
+  rowIndex: number
+}
+
+/** 1. ProColumn.render —— 业务自定义渲染 */
+function renderByRender(col: ProColumn, scope: CellRenderScope): VNode | null {
+  if (typeof col.render !== 'function') return null
+  return col.render({
+    row: scope.rowData as never,
+    column: col,
+    $index: scope.rowIndex,
+  })
+}
+
+/** 2. 具名插槽(v1 透传桥接) */
+function renderBySlot(col: ProColumn, scope: CellRenderScope): VNode | null {
+  const propSlot = props.slots?.[col.prop as string]
+  if (typeof propSlot !== 'function') return null
+  return propSlot({ row: scope.rowData, column: col, $index: scope.rowIndex })
+}
+
+/** 3. ProColumn.formatter —— 返回 string 给主函数包 div */
+function renderByFormatter(
+  col: ProColumn,
+  rowData: Record<string, unknown>,
+  cellValue: unknown,
+  rowIndex: number
+): string | null {
+  if (typeof col.formatter !== 'function') return null
+  return String(col.formatter(rowData as never, col, cellValue, rowIndex) ?? '')
+}
+
+/** 4. ProColumn.enum —— ElTag 字典 */
+function renderByEnum(col: ProColumn, cellValue: unknown): VNode | null {
+  if (!col.enum || !Array.isArray(col.enum)) return null
+  const entry = col.enum.find((e) => e.value === cellValue)
+  if (!entry) return null
+  return h(ElTag, { type: entry.tagType ?? 'info' }, () => entry.label)
+}
+
+/** 5. fallback —— row[prop] 文本 */
+function renderFallback(cellValue: unknown): string {
+  return String(cellValue ?? '')
+}
+
+/**
+ * 单元格渲染总入口:在 setup 顶层定义(非 v2Columns computed 内闭包),
+ * 函数引用在组件生命周期内稳定。v2Columns 重算时 cellRenderer 始终是同一引用,
+ * TableV2 内部 columns diff 走"列结构未变"快路径,避免每帧重建 cellRenderer。
+ *
+ * 卫语句早返回:按优先级链逐级尝试,命中即返回,嵌套深度从 5 降到 1。
+ */
+function renderCellForV2(rendererProps: CellRenderScope): VNode {
+  const col = colByDataKey.value.get(rendererProps.column.dataKey)
+  const cellStyle = props.density
+    ? { padding: DENSITY_TOKENS[props.density].cellPadding }
+    : undefined
+  const cellValue = rendererProps.rowData[rendererProps.column.dataKey]
+
+  // 极端边界:props.columns 在 watch 间隙被替换且新数据缺该列 → fallback 渲染原值
+  if (!col) return h('div', { style: cellStyle }, renderFallback(cellValue))
+
+  // 1. ProColumn.render
+  const customRender = renderByRender(col, rendererProps)
+  if (customRender) return h('div', { style: cellStyle }, customRender)
+
+  // 2. 具名插槽
+  const slotVNode = renderBySlot(col, rendererProps)
+  if (slotVNode) return h('div', { style: cellStyle }, slotVNode)
+
+  // 3. ProColumn.formatter
+  const formatted = renderByFormatter(col, rendererProps.rowData, cellValue, rendererProps.rowIndex)
+  if (formatted !== null) return h('div', { style: cellStyle }, formatted)
+
+  // 4. ProColumn.enum
+  const enumVNode = renderByEnum(col, cellValue)
+  if (enumVNode) return h('div', { style: cellStyle }, enumVNode)
+
+  // 5. fallback
+  return h('div', { style: cellStyle }, renderFallback(cellValue))
 }
 
 const v2Columns = computed(() => {
@@ -235,26 +333,13 @@ const v2Columns = computed(() => {
     width: widths[index],
     ...(col.fixed !== undefined && { fixed: col.fixed }),
     ...(col.sortable && { sortable: true }),
-    // M2 修复：cellRenderer 闭包捕获 col（不变）+ rowData/rowIndex（运行时传入），
-    // 避免每次 measuredWidth 变化都创建新函数引用触发 TableV2 内部 diff 重渲。
-    cellRenderer: (rendererProps: {
-      rowData: Record<string, unknown>
-      column: { dataKey: string; key: string }
-      rowIndex: number
-    }): VNode => renderCell(col, rendererProps.rowData, rendererProps.rowIndex),
+    cellRenderer: renderCellForV2, // setup 顶层函数引用稳定
   }))
 })
 
-/** density → cell padding（行高由 rowHeight 固定，padding 提供水平缩进 + 垂直留白） */
-const DENSITY_CELL_PADDING: Record<TableDensity, string> = {
-  compact: '4px 8px',
-  default: '12px 8px',
-  loose: '20px 8px',
-}
-
 /** 实际 rowHeight：density 优先，否则用 virtualConfig.rowHeight，否则 fallback 48 */
 const effectiveRowHeight = computed(() => {
-  if (props.density) return DENSITY_ROW_HEIGHT[props.density]
+  if (props.density) return DENSITY_TOKENS[props.density].rowHeight
   return props.virtualConfig.rowHeight ?? 48
 })
 
@@ -298,59 +383,6 @@ watch(
   },
   { immediate: true }
 )
-
-/** 单元格渲染：P0 C1 修复后优先级链
- *
- * 1. ProColumn.render —— 业务自定义 h() 函数（最高优先，向后兼容）
- * 2. 具名插槽（v1 体验对齐） —— `slots[col.prop]?.({ row, column, $index })`
- * 3. ProColumn.formatter —— 简单字符串格式化（新增字段，M4 修复）
- * 4. ProColumn.enum —— 字典 ElTag 渲染（与 v1 cell-render 一致）
- * 5. 默认 row[prop] 文本（fallback）
- *
- * fixed-size 模式下行高由 rowHeight 控制，padding 只负责水平缩进与垂直留白
- * （需在 DENSITY_ROW_HEIGHT 内，超高内容会被裁剪）。
- */
-function renderCell(col: ProColumn, row: Record<string, unknown>, rowIndex: number): VNode {
-  const cellStyle = props.density ? { padding: DENSITY_CELL_PADDING[props.density] } : undefined
-  const cellValue = row[col.prop as string]
-
-  // 1. ProColumn.render —— 业务自定义渲染
-  if (typeof col.render === 'function') {
-    return h(
-      'div',
-      { style: cellStyle },
-      col.render({ row: row as never, column: col, $index: rowIndex })
-    )
-  }
-
-  // 2. 具名插槽（v1 透传桥接）—— C1 修复：父级 $slots 由 ProTable 编排层透传至 props.slots
-  const propSlot = props.slots?.[col.prop as string]
-  if (typeof propSlot === 'function') {
-    const vnode = propSlot({ row, column: col, $index: rowIndex })
-    return h('div', { style: cellStyle }, vnode)
-  }
-
-  // 3. ProColumn.formatter（M4 新增）
-  if (typeof col.formatter === 'function') {
-    const formatted = col.formatter(row, col, cellValue, rowIndex)
-    return h('div', { style: cellStyle }, String(formatted ?? ''))
-  }
-
-  // 4. ProColumn.enum —— ElTag 字典
-  if (col.enum && Array.isArray(col.enum)) {
-    const entry = col.enum.find((e) => e.value === cellValue)
-    if (entry) {
-      return h(
-        'div',
-        { style: cellStyle },
-        h(ElTag, { type: entry.tagType ?? 'info' }, () => entry.label)
-      )
-    }
-  }
-
-  // 5. fallback
-  return h('div', { style: cellStyle }, String(cellValue ?? ''))
-}
 
 const bem = createNamespace('pro-table-v2')
 
