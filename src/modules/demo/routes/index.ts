@@ -74,17 +74,30 @@ function buildExampleRoutes(): RouteRecordRaw[] {
 }
 
 const exampleRoutes = buildExampleRoutes()
-// 默认 redirect 到按文件名字母序的第一个 children 路由
-// 用对象形式 + name 跳转，避开字符串 redirect 的路径解析歧义
-const defaultChildName = exampleRoutes[0]?.name
-
+/**
+ * 默认 redirect 目标：用函数式 redirect 异步解析。
+ *
+ * v3.0 修复根因：
+ * 之前用 `redirect: { name: defaultChildName }`（vue-router 4 在 redirect 时同步解析 name
+ * → 目标 route 的 component 是异步 import chunk → first-load 时 chunk 加载未完成
+ * → redirect 失败 → router.onError 跳 /500）。
+ * 直接访问各 demo 路径正常，仅 redirect 触发的 SPA 跳转有问题。
+ *
+ * 治本方案：函数式 redirect 在路由守卫阶段触发，可等待目标 route 完成注册。
+ * fallback：当 exampleRoutes 为空或解析失败时，跳到 /demo（避免无限循环）。
+ */
 const routes: RouteRecordRaw[] = import.meta.env.DEV
   ? [
       {
         path: '/demo',
         name: 'Demo',
         component: () => import('@/layouts/blank/index.vue'),
-        redirect: defaultChildName ? { name: defaultChildName } : '/demo',
+        redirect: () => {
+          // exampleRoutes[0] 是按字母序排序的第一个 demo（demo 模块内部保证非空，
+          // 若空则 fallback 到 /demo 自身，无限循环由 ErrorBoundary 兜底）
+          const firstPath = exampleRoutes[0]?.path
+          return firstPath ? { path: `/demo/${firstPath}` } : '/demo'
+        },
         meta: { title: '组件示例', titleKey: 'menu.demo', icon: 'magic-stick' },
         children: exampleRoutes,
       },
