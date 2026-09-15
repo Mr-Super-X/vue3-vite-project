@@ -304,3 +304,141 @@ export const engineMatrixItems: ApiItem[] = [
     description: '启动时 console.warn 并忽略 enableRowDrag 配置。',
   },
 ]
+
+/* ───────────── v3.0 客户端汇总行 demo（ProTableSummary） ───────────── */
+
+export const summaryConfigItems: ApiItem[] = [
+  {
+    name: 'enableSummary',
+    type: 'boolean | SummaryConfig',
+    required: false,
+    default: 'false',
+    description: '启用客户端汇总行；传 boolean 启用默认配置，传对象启用细粒度配置。',
+  },
+  {
+    name: 'position',
+    type: "'bottom' | 'top'",
+    required: false,
+    default: "'bottom'",
+    description: '汇总行位置（v3.0 当前仅实现 bottom，top 预留）。',
+  },
+  {
+    name: 'columns',
+    type: 'Record<prop, ColumnSummaryConfig>',
+    required: true,
+    description: '按列 prop 声明聚合配置；未声明的列在汇总行不显示值。',
+  },
+  {
+    name: 'label',
+    type: 'string',
+    required: false,
+    default: "'合计'",
+    description: '汇总行第一列显示的标签文本。',
+  },
+]
+
+export const summaryColumnItems: ApiItem[] = [
+  {
+    name: 'aggregate',
+    type: "'sum' | 'avg' | 'count' | 'max' | 'min'",
+    required: true,
+    description: '聚合函数类型。',
+  },
+  {
+    name: 'formatter',
+    type: '(value, rows) => string',
+    required: false,
+    description: '自定义格式化（如金额前缀 ¥）；默认保留 2 位小数 + 千分位。',
+  },
+  {
+    name: 'label',
+    type: 'string',
+    required: false,
+    description: '该列汇总值的标签前缀（默认继承 config.label）。',
+  },
+]
+
+/* ───────────── v3.0 虚拟滚动 demo（ProTableVirtualScroll） ───────────── */
+
+export const virtualScrollConfigItems: ApiItem[] = [
+  {
+    name: 'virtualized',
+    type: 'boolean | VirtualScrollConfig',
+    required: false,
+    default: 'false',
+    description: '启用虚拟滚动；传 boolean 启用默认 48px 行高，传对象启用细粒度配置。',
+  },
+  {
+    name: 'rowHeight',
+    type: 'number',
+    required: false,
+    default: '48',
+    description: '行高（像素），用于 el-table-v2 / vxe scroll-y 配置。',
+  },
+  {
+    name: 'overscan',
+    type: 'number',
+    required: false,
+    default: '10',
+    description: '预渲染行数（视区外多渲染的缓冲行数）。',
+  },
+]
+
+export const virtualScrollLimitsItems: ApiItem[] = [
+  {
+    name: 'enableRowEdit + virtualized',
+    type: '互斥',
+    description:
+      '虚拟行索引 ≠ 真实数据索引会破坏行内编辑 key 映射；启用虚拟滚动时 enableRowEdit 自动失效（启动 warn）。',
+  },
+  {
+    name: 'enableTree + virtualized',
+    type: '暂未集成',
+    description: 'v3.0 虚拟滚动主要服务平铺场景；树形模式集成留待 v3.0.1。',
+  },
+]
+
+/* ───────────── v3.0 列分组 demo（ProTableGroupedHeader） ───────────── */
+
+export const groupedHeaderColumnItems: ApiItem[] = [
+  {
+    name: 'children',
+    type: 'ProColumn[]',
+    required: false,
+    description: '子列数组；声明后该列渲染为多级表头父列。',
+  },
+  {
+    name: 'groupKey',
+    type: 'string',
+    required: false,
+    description: '分组 ID（v3.0 预留字段，持久化按 prop 维度处理）。',
+  },
+]
+
+export const groupedHeaderKnownLimitsItems: ApiItem[] = [
+  {
+    name: '完整多级表头',
+    type: '⚠️ v3.0.1 待修复',
+    description:
+      'Element Plus 2.14 el-table-column 嵌套递归在 Vue 3.5 + unplugin-vue-components 组合下未生效（实测只产生 1 行 thead）。v3.0 采用务实方案：父列作单级 + 子列 cellClassName 视觉分组；v3.0.1 评估 h() 函数式渲染。',
+  },
+]
+
+/* ───────────── v3.0 单元格 v-model demo（ProTableEditCellVModel） ───────────── */
+
+export const editCellVModelColumnItems: ApiItem[] = [
+  {
+    name: 'edit.el',
+    type: "'input' | 'select' | 'input-number' | string",
+    required: false,
+    description: '编辑控件类型；自定义组件名可通过 XForm-style 注册。',
+  },
+  {
+    name: 'edit.updateEvent',
+    type: "'input' | 'blur'",
+    required: false,
+    default: "'input'",
+    description:
+      'v3.0 新增：编辑值同步时机。input 即时同步（高频），blur 失焦同步（与 ProTable 默认 trigger 对齐）。',
+  },
+]

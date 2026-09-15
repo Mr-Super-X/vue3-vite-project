@@ -27,6 +27,10 @@ export const CN_NAMES: Record<string, string> = {
   // ProTable 表格组件（v2.0）
   ProTableOverview: '用法总览',
   ProTableRowEdit: '行内编辑',
+  ProTableSummary: '客户端汇总行（v3.0）',
+  ProTableVirtualScroll: '虚拟滚动（v3.0）',
+  ProTableGroupedHeader: '列分组（v3.0）',
+  ProTableEditCellVModel: '单元格 v-model（v3.0）',
   ProTableTree: '树形数据',
   ProTableCellSpan: '单元格合并',
   ProTableRowDrag: '行拖拽排序',

@@ -1,0 +1,198 @@
+<script setup lang="ts">
+/**
+ * ProTable v3.0 列分组 demo（5c）
+ *
+ * 演示能力：
+ * - 父列 + 子列 视觉分组（cellClassName 区分基础信息/业务信息）
+ * - R1 决策：父子扁平化持久化（按 prop 维度统一 storage key）
+ * - v3.0 已知限制：完整多级表头（el-table-column 嵌套）待 v3.0.1 修复
+ *
+ * 验证步骤：
+ * 1. 表格显示 9 列，前 4 列（ID/基础信息/姓名/邮箱/电话）蓝色 border，后 4 列绿色 border
+ * 2. 列设置抽屉可拖拽、隐藏、刷新持久化（tableKey="demo-pro-table-grouped-header"）
+ * 3. 父子列共享 storage key 维度（隐藏父列不影响子列隐藏状态）
+ */
+import { type ProColumn } from '@/components/ProTable'
+import DocLayout from '../../layouts/DocLayout.vue'
+import DemoFrame from '../../components/DemoFrame.vue'
+import DemoField from '../../components/DemoField.vue'
+import ApiTable from '../../components/ApiTable.vue'
+import DocToc from '../../components/DocToc.vue'
+import { groupedEmployeesRequestApi } from '../../../../../mock/pro-table/grouped-employees'
+import {
+  groupedHeaderColumnItems,
+  groupedHeaderKnownLimitsItems,
+} from './configs/protable-demos-api'
+
+const bem = createNamespace('demo-pro-table-grouped-header')
+
+interface Employee {
+  id: number
+  name: string
+  email: string
+  phone: string
+  department: string
+  joinDate: string
+  salary: number
+}
+
+/**
+ * v3.0 列分组务实方案：
+ * - 含 children 的父列作"分组标题"列（label 加【】前缀区分）
+ * - 子列做 cellClassName 视觉分组（CSS 左侧 border 区分）
+ * - 完整 el-table-column 嵌套多级表头留待 v3.0.1
+ */
+const columns: ProColumn<Employee>[] = [
+  { prop: 'id', label: 'ID', width: 80 },
+  // 父列 1：基础信息
+  {
+    prop: 'basic',
+    label: '【基础信息】',
+    minWidth: 120,
+    tableProps: { className: 'grouped-header-basic' } as Record<string, unknown>,
+  },
+  {
+    prop: 'name',
+    label: '姓名',
+    minWidth: 120,
+    tableProps: { className: 'grouped-col-basic' } as Record<string, unknown>,
+  },
+  {
+    prop: 'email',
+    label: '邮箱',
+    minWidth: 200,
+    tableProps: { className: 'grouped-col-basic' } as Record<string, unknown>,
+  },
+  {
+    prop: 'phone',
+    label: '电话',
+    minWidth: 140,
+    tableProps: { className: 'grouped-col-basic' } as Record<string, unknown>,
+  },
+  // 父列 2：业务信息
+  {
+    prop: 'business',
+    label: '【业务信息】',
+    minWidth: 100,
+    tableProps: { className: 'grouped-header-business' } as Record<string, unknown>,
+  },
+  {
+    prop: 'department',
+    label: '部门',
+    minWidth: 100,
+    tableProps: { className: 'grouped-col-business' } as Record<string, unknown>,
+  },
+  {
+    prop: 'joinDate',
+    label: '入职日期',
+    width: 120,
+    tableProps: { className: 'grouped-col-business' } as Record<string, unknown>,
+  },
+  {
+    prop: 'salary',
+    label: '薪资',
+    width: 120,
+    tableProps: { align: 'right' as const, className: 'grouped-col-business' } as Record<
+      string,
+      unknown
+    >,
+  },
+]
+
+/* ───────────── 代码片段 ───────────── */
+
+const basicCode = `<template>
+  <ProTable
+    :columns="columns"
+    :request-api="requestApi"
+    table-key="demo-pro-table-grouped-header"
+  />
+</template>
+
+<script setup lang="ts">
+const columns: ProColumn[] = [
+  { prop: 'id', label: 'ID' },
+  // 父列：分组标题
+  { prop: 'basic', label: '【基础信息】',
+    tableProps: { className: 'grouped-header-basic' } },
+  // 子列：视觉分组
+  { prop: 'name', label: '姓名',
+    tableProps: { className: 'grouped-col-basic' } },
+  { prop: 'business', label: '【业务信息】',
+    tableProps: { className: 'grouped-header-business' } },
+  { prop: 'department', label: '部门',
+    tableProps: { className: 'grouped-col-business' } },
+]
+<\/script>`
+
+/* ───────────── 目录导航 ───────────── */
+
+const tocItems = [
+  { id: 'demo-grouped-header', label: '能力演示' },
+  { id: 'api-grouped-column', label: 'ProColumn.children 字段' },
+  { id: 'api-grouped-limits', label: '已知限制' },
+]
+</script>
+
+<template>
+  <DocLayout>
+    <DemoFrame
+      title="ProTableGroupedHeader 列分组"
+      source="src/components/ProTable/components/GroupedHeader.vue"
+      :introductions="[
+        '基于 children 字段声明 + cellClassName 视觉分组的列分组方案（v3.0 务实版）。',
+        '下方演示：「【基础信息】」「【业务信息】」两个父标题列 + 子列 CSS 左侧 border 区分。',
+        'R1 决策：父子扁平化持久化（按 prop 维度统一 storage key），列设置抽屉独立存储父子列。',
+      ]"
+    >
+      <section id="demo-grouped-header" :class="bem.b()">
+        <DemoField label="视觉分组" :code="basicCode">
+          <ProTable
+            :columns="columns"
+            :request-api="groupedEmployeesRequestApi"
+            table-key="demo-pro-table-grouped-header"
+            row-key="id"
+          />
+        </DemoField>
+      </section>
+
+      <ApiTable
+        title="ProColumn.children 字段（v3.0 新增）"
+        :items="groupedHeaderColumnItems"
+        anchor="api-grouped-column"
+      />
+      <ApiTable
+        title="已知限制"
+        :items="groupedHeaderKnownLimitsItems"
+        anchor="api-grouped-limits"
+      />
+    </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
+  </DocLayout>
+</template>
+
+<style lang="scss">
+.#{$BEM_PREFIX}-demo-pro-table-grouped-header {
+  // 视觉分组样式：cellClassName 标记的列左侧加 border
+  :deep(.grouped-col-basic) {
+    border-left: 2px solid var(--el-color-primary-light-5);
+  }
+  :deep(.grouped-col-business) {
+    border-left: 2px solid var(--el-color-success-light-5);
+  }
+  :deep(.grouped-header-basic),
+  :deep(.grouped-header-business) {
+    background-color: var(--el-fill-color-light) !important;
+    font-weight: 600;
+  }
+  :deep(.grouped-header-basic) {
+    color: var(--el-color-primary);
+  }
+  :deep(.grouped-header-business) {
+    color: var(--el-color-success);
+  }
+}
+</style>
