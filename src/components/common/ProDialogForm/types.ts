@@ -97,4 +97,17 @@ export type ProDialogFormEmits = {
  * 调用约定：当内部 XForm 未挂载时调用返回 undefined（或类型默认空值），
  * 父组件须自行处理竞态（建议 watch(formRef) 等 ref 就绪后再调用）。
  */
+/**
+ * validateFromServer 入参形状 —— 服务端 422/400 错误回填到表单字段。
+ * 与 XFormExpose.validateFromServer 入参对齐,抽到此处便于 buildXFormExposeProxy 复用。
+ *
+ * @see [`@/components/form-schema/types/xform`](../../../form-schema/types/xform.ts) 原始定义
+ * @group 通用组件:ProDialogForm
+ */
+export interface ValidateServerResponse {
+  success?: boolean
+  errors?:
+    Array<{ path?: string; field?: string; message?: string }> | Record<string, string | string[]>
+}
+
 export type ProDialogFormExpose = XFormExpose

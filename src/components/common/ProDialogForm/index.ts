@@ -23,4 +23,4 @@ export type { ProDialogFormEmits } from './types'
 // Re-export 依赖类型供调用方使用（避免调用方单独 import form-schema/types）
 export type { XFormExpose } from '@/components/form-schema/types'
 /** ProDialogForm Expose —— 透传 XFormExpose 全部 19 个方法 @see ./types.ts */
-export type { ProDialogFormExpose } from './types'
+export type { ProDialogFormExpose, ValidateServerResponse } from './types'
