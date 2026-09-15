@@ -58,6 +58,8 @@ export interface UseTableCapabilitiesReturn<T extends object = Record<string, un
   summary: ReturnType<typeof useSummary> | null
   /** v3.0 能力扩展 5b：虚拟滚动 */
   virtualScroll: ReturnType<typeof useVirtualScroll> | null
+  /** v3.0.1 新增：el-table-v2 引擎的 v2 配置（virtualized 启用时为非空 Ref） */
+  v2TableConfig: ReturnType<typeof useVirtualScroll>['v2TableConfig'] | null
   extendedExpose: {
     startEdit: (rowKey: string | number) => void
     cancelEdit: (rowKey?: string | number) => void
@@ -266,5 +268,14 @@ export function useTableCapabilities<T extends object = Record<string, unknown>>
     },
   }
 
-  return { rowEdit, treeData, cellSpan, rowDrag, summary, virtualScroll, extendedExpose }
+  return {
+    rowEdit,
+    treeData,
+    cellSpan,
+    rowDrag,
+    summary,
+    virtualScroll,
+    extendedExpose,
+    v2TableConfig: virtualScroll?.v2TableConfig ?? null,
+  }
 }
