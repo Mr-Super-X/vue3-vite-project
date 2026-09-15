@@ -158,6 +158,13 @@
           padding-bottom: #{$cell-padding-y};
         }
       }
+
+      /* 汇总行（el-table footer / show-summary）：与表体行高对齐，
+         之前 footer td 不在 density 选择器内导致 compact 档汇总行仍按默认行高渲染 */
+      .el-table__footer-wrapper td {
+        height: $row-height;
+        padding: $cell-padding-y 0;
+      }
     }
   }
 }

@@ -115,6 +115,21 @@ export function useTable<T extends object = Record<string, unknown>>(
   const tableRef = ref<ComponentPublicInstance | null>(null)
   const density = ref<TableDensity>(props.density ?? 'default')
 
+  // v3.0.1：响应 props.density 变化（之前只读一次初始化，外部 v-model:density 更新不生效）
+  // 配套处理：组件卸载时停止 watcher（H1/H2 修复同样的生命周期清理纪律）
+  const stopDensityWatch = watch(
+    () => props.density,
+    (newDensity) => {
+      if (newDensity && newDensity !== density.value) {
+        density.value = newDensity
+      }
+    },
+    { immediate: false }
+  )
+  onUnmounted(() => {
+    stopDensityWatch()
+  })
+
   /** 排序状态 —— 不混入 searchParams（D4：排序是表格交互状态，非表单输入，useSearch 语义保持纯净） */
   const sortState = ref<SortState<T> | null>(null)
 
