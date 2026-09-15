@@ -42,34 +42,66 @@ interface PersistedSetting {
 }
 
 /**
- * 列对象白名单拷贝（M2：props 保护）—— 浅拷贝一层数据字段，杜绝 toggleVisible/toggleFixed
- * 原地改写调用方列对象；函数/数组引用（render/headerRender/enum/search/tableProps）保留共享，不 deep clone。
+ * 克隆单个列的 hidden 字段，统一处理 boolean / Ref<boolean> / undefined 三态
  *
- * hidden 统一转本地 Ref<boolean>：
  * - 外部 boolean → `ref(初始值)`，toggle 读写副本字段，外部对象不受影响
  * - 外部 Ref<boolean> → computed 包装：get 在本地未写入时读外部（保持外部程序化联调），
  *   set 写本地副本 ref —— 用户经列设置面板的手动操作优先于外部值
+ *
+ * v3.0 M1 抽取：cloneColumns 内联 20 行 → 拆为子函数便于单测和复用
+ *
+ * @see cloneColumns 调用方
+ */
+function cloneColumnHidden<T extends object>(col: ProColumn<T>): ProColumn<T> {
+  const copy: ProColumn<T> = { ...col }
+  const h = col.hidden
+  if (h === undefined) return copy
+  if (typeof h === 'boolean') {
+    copy.hidden = ref(h)
+    return copy
+  }
+  const external = h as Ref<boolean>
+  const local = ref<boolean | null>(null)
+  copy.hidden = computed({
+    get: () => local.value ?? Boolean(external.value),
+    set: (v: boolean) => {
+      local.value = v
+    },
+  })
+  return copy
+}
+
+/**
+ * 列对象白名单拷贝（M2：props 保护）—— 浅拷贝一层数据字段，杜绝 toggleVisible/toggleFixed
+ * 原地改写调用方列对象；函数/数组引用（render/headerRender/enum/search/tableProps）保留共享，不 deep clone。
+ *
+ * v3.0 M1 抽取：hidden 处理逻辑下沉到 cloneColumnHidden 子函数
+ * v3.0 5c：children 嵌套列递归 clone（独立处理每一层 hidden）
  */
 function cloneColumns<T extends object>(cols: ProColumn<T>[]): ProColumn<T>[] {
   return cols.map((col) => {
-    const copy: ProColumn<T> = { ...col }
-    const h = col.hidden
-    if (h !== undefined) {
-      if (typeof h === 'boolean') {
-        copy.hidden = ref(h)
-      } else {
-        const external = h as Ref<boolean>
-        const local = ref<boolean | null>(null)
-        copy.hidden = computed({
-          get: () => local.value ?? Boolean(external.value),
-          set: (v: boolean) => {
-            local.value = v
-          },
-        })
-      }
+    const copy = cloneColumnHidden(col)
+    if (col.children?.length) {
+      copy.children = cloneColumns(col.children)
     }
     return copy
   })
+}
+
+/**
+ * v3.0 5c：扁平化嵌套列 —— 把 ProColumn<T>[].children 拍平为 ProColumn<T>[]，
+ * 用于持久化（子列与父列共享同一 storage key；R1 决策）。
+ */
+function _flattenColumns<T extends object>(cols: ProColumn<T>[]): ProColumn<T>[] {
+  const out: ProColumn<T>[] = []
+  for (const col of cols) {
+    if (col.children?.length) {
+      out.push(..._flattenColumns(col.children))
+    } else {
+      out.push(col)
+    }
+  }
+  return out
 }
 
 export function useColumns<T extends object = Record<string, unknown>>(
@@ -85,6 +117,15 @@ export function useColumns<T extends object = Record<string, unknown>>(
     : null
 
   const allColumns = ref<ProColumn<T>[]>(cloneColumns(props.columns))
+  // v3.0 C2 修复辅助：记录"静态 hidden 列 prop 集合"，用于 persist / 回填时识别
+  // 动态 Ref<boolean> 列。Vue reactive 代理会自动解包 ref/computed 属性
+  // （allColumns.value[i].hidden 访问时已是 boolean primitive，无法用 typeof 区分
+  // 原始类型），故必须在 setup 时基于原始 props.columns 记录。
+  const staticHiddenProps = new Set<string>(
+    props.columns
+      .filter((c) => c.hidden === undefined || typeof c.hidden === 'boolean')
+      .map((c) => c.prop)
+  )
   // v2.2-M1 回填：persisted.fixed 写入列副本（原实现只恢复 order，固定列刷新后丢失）。
   // 未收录的列必须显式取消固定：persisted.fixed 不含某列 = 用户曾取消固定，
   // 缺 else 分支会让 props 初始 fixed 在刷新后回移（审查发现 #2）
@@ -99,9 +140,18 @@ export function useColumns<T extends object = Record<string, unknown>>(
     }
   }
   // v2.2-M1 回填：persisted.visible 恢复抽屉勾选态（键缺失默认可见，兼容新增列）
+  // v3.0 C2 修复：动态列（hidden 为 Ref<boolean>）始终包含在 visibleKeys，
+  // 其可见性由外部 Ref/isHidden 决定；仅静态 boolean hidden 列按 persisted 过滤
   const visibleKeys = ref<string[]>(
     persisted?.visible
-      ? props.columns.map((c) => c.prop).filter((p) => persisted.visible?.[p] !== false)
+      ? props.columns
+          .filter((c) => {
+            // 动态列（hidden 为 Ref<boolean>）：始终包含，不受持久化影响
+            if (!staticHiddenProps.has(c.prop)) return true
+            // 静态列：按 persisted.visible 决定（键缺失或 true = 可见）
+            return persisted.visible?.[c.prop] !== false
+          })
+          .map((c) => c.prop)
       : props.columns.map((c) => c.prop)
   )
   const fixedKeys = ref<string[]>(
@@ -151,10 +201,14 @@ export function useColumns<T extends object = Record<string, unknown>>(
       // 保存完整列顺序（含隐藏列）：抽屉渲染 allColumns（含隐藏列），
       // 若只存可见列顺序，隐藏列重新显示后会漂移到最后
       order: columnOrder.value,
-      // 有效可见性 = hidden 字段（程序化 / 外部 Ref）与抽屉 visibleKeys 取交集 ——
-      // 与 setup 回填口径一致（回填进 visibleKeys），round-trip 不漂移（v2.2-M1）
+      // v3.0 C2 修复：仅静态 hidden 列（undefined/boolean）参与持久化，
+      // 动态 Ref<boolean> 列不写 — 避免外部 Ref 动态隐藏后被写回 visible=true
+      // 与 hidden=true 矛盾（回填循环）。过滤基于 staticHiddenProps（按 prop 查找），
+      // 不依赖运行时 typeof 判断（reactive 已自动解包 ref/computed）
       visible: Object.fromEntries(
-        allColumns.value.map((c) => [c.prop, !isHidden(c) && visibleKeys.value.includes(c.prop)])
+        allColumns.value
+          .filter((c) => staticHiddenProps.has(c.prop))
+          .map((c) => [c.prop, !isHidden(c) && visibleKeys.value.includes(c.prop)])
       ),
       fixed: Object.fromEntries(
         allColumns.value.filter((c) => c.fixed).map((c) => [c.prop, c.fixed ?? 'left'])
@@ -217,16 +271,13 @@ export function useColumns<T extends object = Record<string, unknown>>(
   function resetToDefault(): void {
     if (!storageKey) return
     Local.remove(storageKey)
+    // v3.0 C1 修复：cloneColumns 已正确处理 boolean / Ref<boolean> / undefined 三态，
+    // 无需再 manual ref(false) 覆盖（后者会破坏外部 Ref 响应性）。
+    // 直接调用 cloneColumns 重建 allColumns，让所有列重新走 computed 包装逻辑
     allColumns.value = cloneColumns(props.columns)
     visibleKeys.value = props.columns.map((c) => c.prop) // 重置可见列（含 hidden=false + Ref<boolean>）
     columnOrder.value = props.columns.map((c) => c.prop) // 同步重置列顺序，否则恢复默认后顺序仍是拖拽后的
     fixedKeys.value = props.columns.filter((c) => c.fixed).map((c) => c.prop) // 同步重置固定列（v2.2-M1 审查发现 #3）
-    // 重置所有列的 hidden 状态：统一赋新 ref(false) 走属性替换（cast 原因同 toggleVisible）
-    for (const col of allColumns.value) {
-      if (col.hidden !== undefined) {
-        ;(col as ProColumn<T>).hidden = ref(false)
-      }
-    }
   }
 
   return {

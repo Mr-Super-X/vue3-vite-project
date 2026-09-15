@@ -227,4 +227,54 @@ describe('useColumns', () => {
     // 外部 ref 本身不被改写
     expect(externalHidden.value).toBe(true)
   })
+
+  // v3.0 C1 修复：resetToDefault 不破坏外部 Ref 响应性
+  it('C1：resetToDefault 后外部 Ref<boolean> hidden 仍保持联动', () => {
+    const externalHidden = ref(false)
+    const props = {
+      columns: [{ prop: 'name', label: 'Name', hidden: externalHidden }],
+      tableKey: 't',
+    } as never
+    const engine = ref('element-plus' as const)
+    const cols = useColumns({ props, engine })
+
+    // reset 前：外部隐藏 → 联动排除
+    externalHidden.value = true
+    expect(cols.sortedColumns.value.map((c) => c.prop)).toEqual([])
+
+    // 关键操作：resetToDefault 必须保留外部 Ref 响应性
+    cols.resetToDefault()
+
+    // reset 后：外部 ref 改回 false → 副本应再次显示
+    externalHidden.value = false
+    expect(cols.sortedColumns.value.map((c) => c.prop)).toEqual(['name'])
+
+    // 外部 ref 再次变 true → 副本应再次隐藏
+    externalHidden.value = true
+    expect(cols.sortedColumns.value.map((c) => c.prop)).toEqual([])
+  })
+
+  // v3.0 C2 修复：动态 Ref 列不污染 persist 持久化
+  it('C2：外部 Ref<boolean> hidden 变化不写入 persist（仅静态列参与持久化）', () => {
+    const externalHidden = ref(false)
+    const props = {
+      columns: [
+        { prop: 'static1', label: 'Static1' },
+        { prop: 'dynamic', label: 'Dynamic', hidden: externalHidden },
+      ],
+      tableKey: 't',
+    } as never
+    const engine = ref('element-plus' as const)
+    const cols = useColumns({ props, engine })
+
+    // 触发 persist：调用 setVisibleKeys 或其他写入路径
+    cols.setVisibleKeys(['static1', 'dynamic'])
+    const saved = vi.mocked(Local.set).mock.calls.at(-1)?.[1] as {
+      visible: Record<string, boolean>
+    }
+
+    // 关键断言：persist 的 visible 仅含静态列，动态 Ref 列被排除
+    expect(saved.visible).toEqual({ static1: true })
+    expect('dynamic' in saved.visible).toBe(false)
+  })
 })
