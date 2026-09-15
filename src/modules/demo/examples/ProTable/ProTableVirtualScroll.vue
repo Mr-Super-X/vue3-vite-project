@@ -12,7 +12,10 @@
  * 1. 页面加载 → 表格容器固定 500px 高度，滚动流畅
  * 2. 列设置 → 隐藏 remark 列 → 表格立即刷新
  * 3. 列设置 → 重排 columns → 表格列序变化
- * 4. console 演示：当 virtualized + enableSummary 命中时输出 warn
+ * 4. 排序 → 点击「评分」/「等级」表头 → 数据按该列升降序（服务端排序）
+ * 5. 密度 → 切换 紧凑/默认/宽松 → 行高即时变化（32/48/64）
+ * 6. 搜索 → 姓名搜索框输入关键字 → 表格只显示匹配行；重置 → 恢复全量
+ * 7. console 演示：当 virtualized + enableSummary 命中时输出 warn
  */
 import { ref } from 'vue'
 import { ProTable, type ProColumn, type ProTableExpose } from '@/components/ProTable'
@@ -26,10 +29,16 @@ import { virtualScrollConfigItems, virtualScrollLimitsItems } from './configs/pr
 
 const bem = createNamespace('demo-pro-table-virtual-scroll')
 
-/** 10 列定义：ID + Department 左固定，其余自适应 */
+/** 10 列定义：ID + Department 左固定，其余自适应；name 列挂搜索（对应 mock 的 name 参数） */
 const columns: ProColumn<BigRow>[] = [
   { prop: 'id', label: 'ID', width: 80, fixed: 'left', sortable: 'custom' },
-  { prop: 'name', label: '姓名', minWidth: 160, sortable: 'custom' },
+  {
+    prop: 'name',
+    label: '姓名',
+    minWidth: 160,
+    sortable: 'custom',
+    search: { el: 'input', defaultValue: '', span: 6 },
+  },
   { prop: 'email', label: '邮箱', minWidth: 220 },
   { prop: 'department', label: '部门', width: 120, fixed: 'left' },
   { prop: 'status', label: '状态', width: 100 },

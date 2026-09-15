@@ -6,7 +6,8 @@
 >
 > - **真虚拟化引擎**：虚拟滚动从 v3.0 的"高度容器 + CSS overflow 假虚拟化"切换到 el-table-v2 真虚拟化
 > - **新增 ElementTableV2Body**：包装 `<el-table-v2>` + 列 cellRenderer 适配，独立于 v1 引擎分支
-> - **强隔离策略**：virtualized 启用时其他能力（行内编辑 / 树形 / 汇总 / 合并 / 拖拽）一律 warn + 忽略
+> - **强隔离策略**：virtualized 启用时其他能力（行内编辑 / 树形 / 汇总 / 合并 / 拖拽 / **多选列**）一律 warn + 忽略
+> - **v2 关键实现决策**：传 table 级 `fixed` prop=true（rigid 布局：列宽精确 = 配置值，总宽超出容器撑出横向滚动条，v1 语义；代价是 flexGrow/minWidth 被源码禁用，剩余空间由适配层 v1 填充算法按 minWidth 比例分配、末列吸收取整余数）；行高走 fixed-size `row-height`（`estimated-row-height` 的 DynamicSizeGrid 按 rowKey 缓存实测高度，会导致密度切换失效）；排序接 `onColumnSort` callback prop + `sortBy` 驱动 SortIcon，翻译为编排层 `sort-change`
 > - **vxe-table 引擎回落**：virtualized + tableEngine="vxe-table" 自动回落到 element-plus
 > - **useVirtualScroll 升级**：新增 `v2TableConfig` 输出；`VirtualScrollConfig` 扩展 `height` / `width`
 > - **渲染分支优先级**：ProTable.vue 模板分支 `virtualized > engine`（虚拟化命中优先于引擎选择）

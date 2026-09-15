@@ -331,7 +331,8 @@ defineExpose({
           :columns="sortedColumnsNonGeneric"
           :row-key="props.rowKey"
           :virtual-config="virtualScroll?.config.value ?? {}"
-          @selection-change="handleSelectionChange"
+          :density="table.density.value"
+          @sort-change="handleSortChange"
         />
         <ElementTableBody
           v-else-if="engineRef === 'element-plus'"

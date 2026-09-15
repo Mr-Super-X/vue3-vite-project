@@ -4,6 +4,8 @@
  */
 import { describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { nextTick } from 'vue'
+import { ElTableV2 } from 'element-plus'
 import ElementTableV2Body from './ElementTableV2Body.vue'
 import type { ProColumn } from '../types'
 
@@ -33,7 +35,7 @@ describe('ElementTableV2Body', () => {
     wrapper.unmount()
   })
 
-  it('接收 virtualConfig 派生 width/height/estimatedRowHeight', () => {
+  it('virtualConfig 派生 width/height/rowHeight（fixed-size 模式）', () => {
     const wrapper = mount(ElementTableV2Body, {
       props: {
         rows: baseRows,
@@ -43,14 +45,83 @@ describe('ElementTableV2Body', () => {
         virtualConfig: { rowHeight: 60, height: 800, width: 1200 },
       },
     })
-    // el-table-v2 内部读取 props，不强制断言 DOM 内部结构（element-plus 内部难测）
-    expect(wrapper.props('virtualConfig').height).toBe(800)
-    expect(wrapper.props('virtualConfig').rowHeight).toBe(60)
-    expect(wrapper.props('virtualConfig').width).toBe(1200)
+    const table = wrapper.findComponent(ElTableV2)
+    expect(table.props('height')).toBe(800)
+    expect(table.props('width')).toBe(1200)
+    // density 未传时用 virtualConfig.rowHeight；不传 estimatedRowHeight（dynamic 模式会让密度切换失效）
+    expect(table.props('rowHeight')).toBe(60)
+    expect(table.props('estimatedRowHeight')).toBeUndefined()
     wrapper.unmount()
   })
 
-  it('emit selection-change 事件', async () => {
+  it('density 优先于 virtualConfig.rowHeight', () => {
+    const wrapper = mount(ElementTableV2Body, {
+      props: {
+        rows: baseRows,
+        columns: baseColumns,
+        rowKey: 'id',
+        loading: false,
+        density: 'compact',
+        virtualConfig: { rowHeight: 60 },
+      },
+    })
+    expect(wrapper.findComponent(ElTableV2).props('rowHeight')).toBe(32)
+    wrapper.unmount()
+  })
+
+  it('列适配：v1 填充算法分配剩余宽度（按 minWidth 比例），sortable 归一为 boolean', () => {
+    const wrapper = mount(ElementTableV2Body, {
+      props: {
+        rows: baseRows,
+        columns: [
+          ...baseColumns,
+          { prop: 'score', label: '评分', minWidth: 150, sortable: 'custom' },
+        ] as ProColumn[],
+        rowKey: 'id',
+        loading: false,
+        virtualConfig: {},
+      },
+    })
+    const cols = wrapper.findComponent(ElTableV2).props('columns') as Array<Record<string, unknown>>
+    // jsdom 未测量容器 → fallback 800；base=[100,200,120,150] 共 570，extra=230
+    // 可拉伸列 name(200)/score(150)：name += floor(230*200/350)=131，score 吸收余数 99
+    const byKey = (k: string) => cols.find((c) => c.key === k)
+    expect(byKey('id')).toMatchObject({ width: 100 })
+    expect(byKey('id')).not.toHaveProperty('sortable')
+    expect(byKey('name')).toMatchObject({ width: 331 })
+    expect(byKey('value')).toMatchObject({ width: 120 })
+    expect(byKey('score')).toMatchObject({ width: 249, sortable: true })
+    // 列宽总和精确等于容器宽（rigid 布局，flexGrow 被源码禁用故不输出）
+    expect(cols.reduce((acc, c) => acc + (c.width as number), 0)).toBe(800)
+    expect(byKey('name')).not.toHaveProperty('flexGrow')
+    wrapper.unmount()
+  })
+
+  it('列适配：总宽超出容器时保持精确宽度（rigid 布局溢出 → 横向滚动条，v1 语义）', () => {
+    const wrapper = mount(ElementTableV2Body, {
+      props: {
+        rows: baseRows,
+        columns: [
+          ...baseColumns,
+          { prop: 'score', label: '评分', minWidth: 150, sortable: 'custom' },
+        ] as ProColumn[],
+        rowKey: 'id',
+        loading: false,
+        virtualConfig: { width: 500 }, // 容器 500 < base 总宽 570
+      },
+    })
+    const cols = wrapper.findComponent(ElTableV2).props('columns') as Array<Record<string, unknown>>
+    const byKey = (k: string) => cols.find((c) => c.key === k)
+    expect(byKey('id')).toMatchObject({ width: 100 })
+    expect(byKey('name')).toMatchObject({ width: 200 })
+    expect(byKey('score')).toMatchObject({ width: 150 })
+    // 列宽不被压缩 → TableV2 bodyWidth 撑出横向滚动条
+    expect(cols.reduce((acc, c) => acc + (c.width as number), 0)).toBe(570)
+    wrapper.unmount()
+  })
+
+  it('selection 列被过滤并 warn（v2 无内置多选，强隔离）', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const wrapper = mount(ElementTableV2Body, {
       props: {
         rows: baseRows,
@@ -60,9 +131,50 @@ describe('ElementTableV2Body', () => {
         virtualConfig: {},
       },
     })
-    wrapper.vm.$emit('selection-change', baseRows)
-    // 注：mount 后用 vm.$emit 测试组件实例事件（非真实交互）
-    expect(wrapper.emitted('selection-change')).toBeTruthy()
+    const cols = wrapper.findComponent(ElTableV2).props('columns') as Array<Record<string, unknown>>
+    expect(cols.some((c) => c.key === 'select')).toBe(false)
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('selection'))
+    warnSpy.mockRestore()
+    wrapper.unmount()
+  })
+
+  it('onColumnSort 回调翻译为 sort-change 事件（asc/desc → ascending/descending）', async () => {
+    const wrapper = mount(ElementTableV2Body, {
+      props: {
+        rows: baseRows,
+        columns: baseColumns,
+        rowKey: 'id',
+        loading: false,
+        virtualConfig: {},
+      },
+    })
+    const onColumnSort = wrapper.findComponent(ElTableV2).props('onColumnSort') as (p: {
+      key: string
+      order: 'asc' | 'desc'
+    }) => void
+    onColumnSort({ key: 'name', order: 'asc' })
+    onColumnSort({ key: 'name', order: 'desc' })
+    const events = wrapper.emitted('sort-change')
+    expect(events).toHaveLength(2)
+    expect(events?.[0]).toEqual([{ prop: 'name', order: 'ascending' }])
+    expect(events?.[1]).toEqual([{ prop: 'name', order: 'descending' }])
+    // sortBy 状态同步给 TableV2 驱动 SortIcon（prop 传递需等 Vue 异步刷新）
+    await nextTick()
+    expect(wrapper.findComponent(ElTableV2).props('sortBy')).toEqual({ key: 'name', order: 'desc' })
+    wrapper.unmount()
+  })
+
+  it('loading=true 时容器出现 v-loading 遮罩（TableV2 无内置 loading prop）', () => {
+    const wrapper = mount(ElementTableV2Body, {
+      props: {
+        rows: baseRows,
+        columns: baseColumns,
+        rowKey: 'id',
+        loading: true,
+        virtualConfig: {},
+      },
+    })
+    expect(wrapper.find('.el-loading-mask').exists()).toBe(true)
     wrapper.unmount()
   })
 

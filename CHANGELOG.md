@@ -2,6 +2,23 @@
 
 ## 未发布
 
+### 🐛 Fix | ProTable el-table-v2 虚拟化分支功能修复：排序 / 密度切换 / loading / 搜索接入
+
+> 上一轮 v3.0.1 虚拟化引擎落地后实测：列设置可用，但排序点击无响应、密度切换不生效、刷新/重置无 loading、demo 无搜索项无法验证。根因全部定位到 element-plus TableV2 的 API 差异（源码层实证）
+
+* **fix(src/components/ProTable/components/ElementTableV2Body.vue):** 四项引擎适配修复
+  * 排序接线：TableV2 不 emit `sort-change`，需传 `onColumnSort` callback prop（接收 `{key, order:'asc'|'desc'}`），翻译为编排层 `SortChangeEvent`（`'ascending'|'descending'`）后 emit；本地 `sortBy` ref 回传驱动表头 SortIcon（初始 `'desc'` 使首击升序，与 el-table v1 默认行为一致）
+  * 密度切换：`estimated-row-height`（DynamicSizeGrid）按 rowKey 缓存实测行高，density 变更不重新测量 → 改用 fixed-size `row-height`，prop 变更即重排且滚动性能更好
+  * loading：TableV2 无 `loading` prop（此前传了无效 prop）→ 容器 `v-loading` 指令（与 v1 引擎 ElementTableBody 一致）
+  * 列宽：传 table 级 `fixed` prop=true 开启 rigid 布局（useColumns 强制 flexGrow/flexShrink=0 且忽略 column.minWidth，源码 calcColumnStyle 实证 → 列宽精确 = 配置值、总宽超出容器撑出横向滚动条；flex 模式实证永远无横向滚动条）。剩余空间填充由适配层自实现 v1 算法：列宽数值化（el-table v1 允许数字字符串，`toPxWidth` 归一），可拉伸列（仅 minWidth 无 width）按 minWidth 比例分配、末列吸收取整余数，总和精确 = 容器宽；`sortable` 归一 boolean
+* **fix(src/components/ProTable/ProTable.vue):** v2 分支 `@selection-change`（TableV2 无此事件，死代码）→ `@sort-change="handleSortChange"`（服务端排序链路复用）
+* **feat(src/components/ProTable/components/ElementTableV2Body.vue):** 强隔离补漏 —— `type="selection"` 列在 v2 分支 warn + 忽略（原先把 v1 的 selection 列类型透传给 TableV2 是无效字段，静默丢列）
+* **fix(mock/pro-table/big-data.ts):** ① `sortByField` 的 `isAsc` 判定从 `'ascending'` 改为项目约定 `'asc'|'desc'`（useTable serializeSort D2 决策），此前排序恒为降序；② `BigDataRequest` 新增 `name` 参数（与 `keyword` 等义），支持搜索表单挂列直传
+* **feat(src/modules/demo/examples/ProTable/ProTableVirtualScroll.vue):** name 列挂 `search: { el: 'input' }`，搜索/重置可验证；验证步骤补排序/密度/搜索
+* **test(src/components/ProTable/components/ElementTableV2Body.spec.ts):** 10 用例（原 5 改造 + 新增 5）：rowHeight fixed-size 传递 / density 优先 / 列适配 v1 填充算法（按 minWidth 比例、总和精确 = 容器宽、无 flexGrow）/ rigid 溢出（容器窄于列总宽时列宽不被压缩）/ selection 过滤 + warn / onColumnSort→sort-change 翻译 / v-loading 遮罩
+* **docs(src/components/ProTable/README.md + ARCHITECTURE.md):** 保留能力清单去除「多选」（v2 不支持），补 v2 关键实现决策（fixed rigid 布局 + v1 填充算法 / row-height 模式 / onColumnSort 回调）
+* **已验证：** 9/9 单测通过、`vue-tsc --build` 无报错、浏览器实测（5174 dev server）：排序升/降 + 图标、密度 32/48/64、刷新 loading 遮罩、搜索过滤 + 重置、10 万行滚至第 5 万行固定列同步、列弹性填充无横向滚动条
+
 ### ♻️ Refactor | RichTextEditor 源头处理「视觉为空」映射：v-model emit('') 而非占位段落，消费方无须做字符串剥离
 
 > 之前 demo 把字符串 `'required'` 改成 RuleItem 数组（含自定义 validator + trigger: 'change'）来兜底 wangEditor V5 永远输出 `<p><br></p>` 占位段落的问题——但这是让消费方为组件内部数据形态买单。本应在组件源头完成语义映射：编辑器内容「视觉为空」时 v-model emit 空字符串 `''`，让业务方继续用 `rules: 'required'` 这种标准写法

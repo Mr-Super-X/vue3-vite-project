@@ -31,11 +31,14 @@ export interface BigRow {
   remark: string
 }
 
-/** 列表请求参数 —— 与 useTable fetchHook 兼容（pageNum / pageSize / keyword / orderByColumn / isAsc） */
+/** 列表请求参数 —— 与 useTable fetchHook 兼容（pageNum / pageSize / keyword / name / orderByColumn / isAsc） */
 interface BigDataRequest {
   pageNum?: number
   pageSize?: number
+  /** 关键字（name/email 模糊匹配）——虚拟 demo 的隐藏搜索字段 prop */
   keyword?: string
+  /** 姓名模糊匹配 —— 搜索表单挂在 name 列时传入（与 keyword 等义，二选一） */
+  name?: string
   orderByColumn?: string
   isAsc?: string
 }
@@ -87,7 +90,7 @@ function makeBigRow(i: number): BigRow {
 /** 模块级一次性生成 10 万行（mock 阶段直接全量返回，不分页） */
 const ALL_ROWS: BigRow[] = Array.from({ length: 100_000 }, (_, i) => makeBigRow(i))
 
-/** 关键字过滤 */
+/** 关键字过滤（keyword 与 name 等义：demo 搜索表单挂在 name 列，传 name 参数） */
 function filterByKeyword(rows: BigRow[], keyword?: string): BigRow[] {
   if (!keyword) return rows
   const kw = String(keyword).toLowerCase()
@@ -97,7 +100,8 @@ function filterByKeyword(rows: BigRow[], keyword?: string): BigRow[] {
 /** 排序 */
 function sortByField(rows: BigRow[], orderBy?: string, isAsc?: string): BigRow[] {
   if (!orderBy || !isAsc) return rows
-  const asc = isAsc === 'ascending'
+  // useTable serializeSort 约定 'asc' | 'desc'（D2 决策）；兼容历史 'ascending' 写法
+  const asc = isAsc === 'asc' || isAsc === 'ascending'
   return [...rows].sort((a, b) => {
     const av = (a as unknown as Record<string, unknown>)[orderBy]
     const bv = (b as unknown as Record<string, unknown>)[orderBy]
@@ -113,20 +117,35 @@ function sortByField(rows: BigRow[], orderBy?: string, isAsc?: string): BigRow[]
 /**
  * 虚拟滚动 mock requestApi
  *
- * mock 阶段：直接全量返回 10 万行（不走分页），让虚拟化引擎自行接管滚动
- * 返回形态按 ProTableRequestApi 约定（data/total/pageNum/pageSize）
- * 生产场景：按 pageSize 分页，由后端分页
+ * 虚拟化 demo 特殊语义：
+ * - 不分页（pageSize 始终 = 全部行数），让虚拟化引擎自行接管滚动
+ * - 业务场景真实分页时由后端处理；这里 mock 阶段直接返回全集
+ * - 返回形态按 ProTableRequestApi 约定（data/total/pageNum/pageSize）
  */
+/** 调用计数（window 暴露给浏览器调试用） */
+let callCount = 0
+if (typeof window !== 'undefined') {
+  ;(window as unknown as { __bigDataCallCount?: number }).__bigDataCallCount = 0
+}
+
 export const bigDataRequestApi = async (
   params: BigDataRequest = {}
 ): Promise<{ data: BigRow[]; total: number; pageNum: number; pageSize: number }> => {
-  // 模拟网络延迟 50ms（让骨架屏可见）
-  await new Promise((resolve) => setTimeout(resolve, 50))
+  callCount++
+  if (typeof window !== 'undefined') {
+    ;(window as unknown as { __bigDataCallCount?: number }).__bigDataCallCount = callCount
+  }
 
-  const filtered = filterByKeyword(ALL_ROWS, params.keyword)
+  // 模拟网络延迟 600ms：首次让骨架屏可感知；刷新/搜索/排序的 loading 遮罩也需停留足够久
+  await new Promise((resolve) => setTimeout(resolve, 600))
+
+  const filtered = filterByKeyword(ALL_ROWS, params.keyword ?? params.name)
   const sorted = sortByField(filtered, params.orderByColumn, params.isAsc)
-  const page = params.pageNum ?? 1
-  const size = params.pageSize ?? 100_000 // mock 默认一次性返回全部
-  const sliced = sorted.slice((page - 1) * size, page * size)
-  return { data: sliced, total: filtered.length, pageNum: page, pageSize: size }
+  // 虚拟化场景：忽略 pageSize 截断，一次性返回全部（让虚拟滚动引擎管理可见区）
+  return {
+    data: sorted,
+    total: sorted.length,
+    pageNum: params.pageNum ?? 1,
+    pageSize: sorted.length,
+  }
 }
