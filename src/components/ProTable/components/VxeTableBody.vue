@@ -54,6 +54,8 @@ const props = defineProps<{
    * （vxe 行高由 --vxe-ui-table-row-height-* 变量覆盖，编辑控件需要显式 size 映射）
    */
   density?: TableDensity | undefined
+  /** 列宽拖拽：true 时映射列级 resizable（vxe 列 resizable 默认 false，语义天然契合） */
+  columnResize?: boolean | undefined
 }>()
 
 const emit = defineEmits<{
@@ -210,7 +212,10 @@ function handleCellDblclick(payload: { row: Record<string, unknown> }): void {
         :is="vxeColumnComp"
         v-for="(col, index) in columns"
         :key="`${col.prop}:${index}`"
-        v-bind="toVxeColumnProps(col)"
+        v-bind="{
+          ...toVxeColumnProps(col),
+          ...(props.columnResize ? { resizable: true } : {}),
+        }"
       >
         <!-- 自定义表头渲染（col.headerRender） -->
         <template v-if="col.headerRender" #header="scope">

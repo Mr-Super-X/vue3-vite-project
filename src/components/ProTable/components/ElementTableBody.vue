@@ -62,6 +62,8 @@ const props = defineProps<{
    * （el 引擎行高由 data-density CSS 变量覆盖，编辑控件需要显式 size 映射）
    */
   density?: TableDensity | undefined
+  /** 列宽拖拽：true 时表头列边框可拖动（ep resizable 默认 true，必须显式绑 false 才能默认关闭） */
+  columnResize?: boolean | undefined
 }>()
 
 const bem = createNamespace('pro-table') // kebab-case，与 ProTable.vue 同源：拖拽手柄类名必须与 useRowDrag 选择器一致
@@ -137,6 +139,9 @@ defineExpose({
       ...(showSummary && summaryMethod ? { showSummary: true, summaryMethod } : {}),
       // v3.0 5b：虚拟滚动（高度限制 + rowHeight）
       ...(virtualScrollProps ?? {}),
+      // column-resize 前置 border：ep 列宽拖拽硬依赖表级 border（table-header/event-helper.mjs
+      // handleMouseMove 首行守卫 if (!props.border) return）——边框线是 th 右缘拖拽手柄命中区
+      ...(props.columnResize ? { border: true } : {}),
     }"
     @selection-change="(rows) => emit('selection-change', rows)"
     @cell-dblclick="
@@ -155,6 +160,7 @@ defineExpose({
       :key="col.prop"
       :prop="col.prop"
       :label="col.label"
+      :resizable="props.columnResize"
       v-bind="
         filterUndefined({
           // radio 非 el-table 内置列类型（el-table 仅识别 selection/index/expand）——

@@ -93,6 +93,15 @@ describe('ElementTableBody', () => {
     wrapper.unmount()
   })
 
+  it('columnResize 联动 ElTable border（ep 列宽拖拽前置 border，event-helper 首行守卫）', () => {
+    const wrapperOn = mountBody({ columnResize: true })
+    expect(wrapperOn.find('.el-table').classes()).toContain('el-table--border')
+    wrapperOn.unmount()
+    const wrapperOff = mountBody()
+    expect(wrapperOff.find('.el-table').classes()).not.toContain('el-table--border')
+    wrapperOff.unmount()
+  })
+
   it('radio 列：选中收敛在 update:modelValue（change 不再驱动选中，规避 el emits 校验警告）', async () => {
     const columns: ProColumn[] = [
       { prop: '__radio', label: '', type: 'radio', width: 45 },

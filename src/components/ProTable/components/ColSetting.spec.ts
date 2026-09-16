@@ -182,6 +182,30 @@ describe('ColSetting', () => {
     expect(item.classes()).toContain('vv-pro-table-col-setting__item')
   })
 
+  it('点击置顶按钮 emit reorder（目标列 + 其余保持原序），首列置顶按钮禁用', async () => {
+    const wrapper = mount(ColSetting, {
+      props: {
+        visible: true,
+        columns: columns as never,
+        visibleKeys: ['a', 'b', 'c'],
+        fixedKeys: [],
+      },
+      global: {
+        stubs: {
+          ElDrawer: {
+            template: '<div class="el-drawer-stub"><slot /></div>',
+          },
+        },
+      },
+    })
+    // 置顶 c → [c, a, b]（复用 reorder 通道，useColumns.setColumnOrder 处理顺序+持久化）
+    await wrapper.find('[data-test="col-top-c"]').trigger('click')
+    expect(wrapper.emitted('reorder')?.[0]).toEqual([['c', 'a', 'b']])
+    // 已在首位的列置顶按钮禁用
+    expect(wrapper.find('[data-test="col-top-a"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('[data-test="col-top-b"]').attributes('disabled')).toBeUndefined()
+  })
+
   it('拖拽结束 emit reorder（完整新顺序）且还原 DOM 到拖拽前', async () => {
     const wrapper = mount(ColSetting, {
       props: {

@@ -375,6 +375,13 @@ export interface ProTableProps<T extends object = Record<string, unknown>> {
    * 恢复时机判定见 composables/useStatePersist.ts
    */
   statePersist?: boolean
+  /**
+   * 列宽拖拽：true 时表头列边框可拖动调宽（默认 false）。
+   * el 引擎显式绑 el-table-column resizable（ep 默认 true，须显式 false 才能默认关闭）；
+   * vxe 引擎映射列级 resizable（vxe 默认 false，语义天然契合）。
+   * virtualized（TableV2）分支不支持 —— TableV2 列宽受控（onColumnResize 需回写列宽配置），留待后续
+   */
+  columnResize?: boolean
 }
 
 /**

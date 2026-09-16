@@ -68,6 +68,7 @@ const props = withDefaults(defineProps<ProTableProps<T>>(), {
   searchRows: 3,
   density: 'default',
   initParam: () => ({}),
+  columnResize: false,
 })
 
 const attrs = useAttrs()
@@ -512,6 +513,7 @@ defineExpose({
           :selected-row-key="selectedRowKey"
           :max-height="autoHeightMax"
           :density="table.density.value"
+          :column-resize="props.columnResize"
           @selection-change="handleSelectionChange"
           @radio-select="handleRadioSelect"
           @expand-toggle="handleExpandToggle"
@@ -534,6 +536,7 @@ defineExpose({
           :cell-span="cellSpan"
           :max-height="autoHeightMax"
           :density="table.density.value"
+          :column-resize="props.columnResize"
           @selection-change="handleSelectionChange"
           @radio-select="handleRadioSelect"
           @sort-change="handleSortChange"

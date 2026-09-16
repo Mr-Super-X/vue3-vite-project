@@ -8,6 +8,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import ProTable from './ProTable.vue'
 import VxeTableBody from './components/VxeTableBody.vue'
+import ElementTableBody from './components/ElementTableBody.vue'
 import type { ProTableProps } from './types'
 
 // v2.1 P3：VxeTableBody 的 vxe 动态加载在集成测试中 mock 为「永不 resolve」——
@@ -89,6 +90,36 @@ describe('ProTable v2.0 集成（冲突矩阵 + 启动校验）', () => {
     })
     await new Promise((r) => setTimeout(r, 10))
     expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('span.direction=column'))
+  })
+
+  it('columnResize 透传：默认 false，开启后表格体组件收到 true', async () => {
+    const nonEmptyApi: ProTableProps['requestApi'] = async () => ({
+      data: [{ name: '甲' }],
+      total: 1,
+      pageNum: 1,
+      pageSize: 10,
+    })
+    // 默认关闭（el 引擎 resizable 默认 true，ProTable 层必须显式 false 才能关）
+    const wrapperDefault = mount(ProTable, {
+      props: {
+        columns: [{ prop: 'name', label: '名称' }],
+        requestApi: nonEmptyApi,
+      } as ProTableProps,
+    })
+    await new Promise((r) => setTimeout(r, 10))
+    expect(wrapperDefault.findComponent(ElementTableBody).props('columnResize')).toBe(false)
+    wrapperDefault.unmount()
+
+    const wrapperOn = mount(ProTable, {
+      props: {
+        columns: [{ prop: 'name', label: '名称' }],
+        requestApi: nonEmptyApi,
+        columnResize: true,
+      } as ProTableProps,
+    })
+    await new Promise((r) => setTimeout(r, 10))
+    expect(wrapperOn.findComponent(ElementTableBody).props('columnResize')).toBe(true)
+    wrapperOn.unmount()
   })
 
   it('vxe-table 引擎：setup 不再回退，VxeTableBody 分支接管（v2.1 P3）', async () => {

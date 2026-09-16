@@ -2,6 +2,16 @@
 
 ## 未发布
 
+### ✨ Feat | ProTable 列设置置顶 + 列宽拖拽 column-resize（默认关闭）
+
+> ① 列设置抽屉每列新增置顶按钮（复用 reorder 通道——useColumns.setColumnOrder 同步顺序并持久化，与拖拽排序同一链路，零 composable 改动）② ProTable 新增 column-resize 属性：开启后表头列边框可拖动调宽，默认关闭
+
+* **feat(src/components/ProTable/components/ColSetting.vue):** 每列 item 尾部新增置顶按钮（Top 图标 + tooltip，首位列禁用）——点击 emit reorder `[目标列, ...其余保持原序]`
+* **feat(src/components/ProTable/types/index.ts + ProTable.vue):** `ProTableProps.columnResize?: boolean`（默认 false）——el 引擎显式绑 el-table-column `resizable`（ep 默认 true，必须显式 false 才能默认关闭；`:resizable` 置于列级 `tableProps` 展开之前，列级显式配置可覆盖组件级）；vxe 引擎映射列级 `resizable: true`（vxe 默认 false，语义天然契合）；virtualized（TableV2）分支不支持（列宽受控，留待后续）
+* **fix(src/components/ProTable/components/ElementTableBody.vue):** column-resize 联动表级 `border` —— ep 列宽拖拽硬依赖 border（`table-header/event-helper.mjs` handleMouseMove 首行守卫 `if (!props.border) return`，边框线即 th 右缘拖拽手柄命中区）；首版仅绑 resizable 未联动 border，用户实测光标无变化不可拖，本次修复（DOM 级 spec 断言 `.el-table--border` class 锁定联动）
+* **feat(src/modules/demo/examples/ProTable/ProTableColumnResize.vue):** 新 demo——开启/默认关闭双表对照（悬停表头边框光标 col-resize vs 不可拖）
+* **已验证：** ColSetting + integration 新用例（置顶 emit reorder 断言 / columnResize 默认 false 与开启 true 透传断言）全通过、`vue-tsc --build` 无报错、ESLint 无告警
+
 ### 🐛 Fix | ProTable 列设置抽屉：未命名列空显示 + 拖拽热区误导
 
 > 用户验证列设置抽屉两处体验缺陷：① 列未设置 label（空串）时复选框后空白无法辨别是哪列 ② 整条 item 显示 grab 手型暗示可拖，但 sortablejs handle 仅限 ⋮⋮ 图标、可拖区域过小交互不流畅

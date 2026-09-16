@@ -10,7 +10,8 @@
  * @group ProTable 子组件
  */
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { ElDrawer, ElCheckbox, ElCheckboxGroup, ElButton } from 'element-plus'
+import { ElDrawer, ElCheckbox, ElCheckboxGroup, ElButton, ElTooltip } from 'element-plus'
+import { Top } from '@element-plus/icons-vue' // 显式 import（§1.6.1 来源注释）
 import Sortable from 'sortablejs'
 import type { ProColumn } from '../types'
 
@@ -47,6 +48,15 @@ function handleClose(): void {
 function handleReset(): void {
   emit('resetToDefault')
   handleClose()
+}
+
+/**
+ * 置顶列：emit 重排数组（目标列 + 其余保持原序）——复用 reorder 通道，
+ * useColumns.setColumnOrder 同步 columnOrder / allColumns 并持久化（与拖拽排序同一链路）
+ */
+function handleTop(prop: string): void {
+  const rest = props.columns.filter((c) => c.prop !== prop).map((c) => c.prop)
+  emit('reorder', [prop, ...rest])
 }
 
 /**
@@ -154,7 +164,7 @@ watch(
       @update:model-value="(v) => handleVisibleChange(v as string[])"
     >
       <div
-        v-for="col in props.columns"
+        v-for="(col, index) in props.columns"
         :key="col.prop"
         :class="bem.e('item')"
         :data-prop="col.prop"
@@ -166,6 +176,17 @@ watch(
           <!-- 未命名列（label 空串/缺失）以 prop 兜底展示，弱化样式标识「这是字段名不是显示名」 -->
           <span v-else :class="bem.e('label-fallback')">{{ col.prop }}</span>
         </ElCheckbox>
+        <ElTooltip content="置顶">
+          <ElButton
+            :class="bem.e('top-btn')"
+            :icon="Top"
+            circle
+            size="small"
+            :disabled="index === 0"
+            :data-test="`col-top-${col.prop}`"
+            @click="handleTop(col.prop)"
+          />
+        </ElTooltip>
       </div>
     </ElCheckboxGroup>
     <template #footer>
@@ -224,6 +245,12 @@ watch(
   &__label-fallback {
     color: var(--el-text-color-secondary);
     font-style: italic;
+  }
+
+  &__top-btn {
+    /* 置顶按钮常显（操作可发现性），右对齐推到 item 尾部 */
+    margin-left: auto;
+    flex-shrink: 0;
   }
 }
 </style>
