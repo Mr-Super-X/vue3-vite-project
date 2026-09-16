@@ -21,9 +21,9 @@
  *
  * @group XForm 组件
  */
-import { computed } from 'vue'
 import type { FormErrorEvent } from '../composables/use-form-error-bus'
 import XFormErrorToastItem from './XFormErrorToastItem.vue'
+// computed 由 unplugin-auto-import 注入（CLAUDE.md §1.6）—— 2026-09-16 review 收敛
 
 const { events, enabled } = defineProps<{
   events: FormErrorEvent[]

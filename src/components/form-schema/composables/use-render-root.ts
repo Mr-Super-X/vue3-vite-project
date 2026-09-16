@@ -13,6 +13,8 @@
  * - renderOpts.model/components/rules/beforeChange/componentProps 在 setup 期捕获 props 快照，
  *   父级替换引用时通过同步 watch 写入新值（修复 B4 静默断裂问题）
  * - onValueChange 必须先 clearValidate 再 trigger —— delay=0 实时模式下顺序倒置会导致红字被立即清除
+ * - watch 为默认 pre-flush：父组件渲染周期内 props 换代时，回调在本组件重渲**前**执行，
+ *   renderOpts 更新 + optsEpoch bump 先于渲染生效，本轮字段渲染即使用新值（2026-09-16 注释对齐）
  *
  * @group 表单编排：渲染
  */
@@ -184,7 +186,8 @@ export function useRenderRoot(deps: UseRenderRootDeps): UseRenderRootReturn {
 
   const renderInner = useRenderSchemaNode(renderOpts)
 
-  // props 引用换代时同步 renderOpts + bump optsEpoch
+  // props 引用换代时更新 renderOpts + bump optsEpoch
+  // 默认 pre-flush：回调在本组件重渲前执行，保证本轮渲染读取的已是新值
   watch(
     () => [
       props.model,

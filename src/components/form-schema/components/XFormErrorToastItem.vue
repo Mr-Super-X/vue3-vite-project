@@ -3,15 +3,19 @@
  * XFormErrorToastItem —— 单条错误 toast 卡片
  *
  * 纯展示组件（props.event + emits.dismiss），无状态。
- * 值格式化抽离到 utils/format-error-value.ts 以便单测与复用：
- * 同一对象只 stringify 一次,display 与 tooltip 共享 getValueMeta 结果。
+ * 值格式化抽离到 utils/format-error-value.ts 以便单测与复用。
+ *
+ * 优化（2026-09-16 review）：details 的值元数据（display/tooltip）经 computed 预计算，
+ * 原模板在 :title 与插值处各调一次 getValueMeta —— 同一值重复 JSON.stringify。
+ * 现 display/tooltip 共享同一 ValueMeta，兑现「同一对象只 stringify 一次」的约定。
  *
  * @group XForm 组件
  */
 import type { FormErrorEvent, FormErrorSeverity } from '../composables/use-form-error-bus'
-import { getValueMeta } from '../utils/format-error-value'
+import { getValueMeta, type ValueMeta } from '../utils/format-error-value'
+// computed 由 unplugin-auto-import 注入（CLAUDE.md §1.6）
 
-defineProps<{
+const props = defineProps<{
   event: FormErrorEvent
 }>()
 
@@ -25,6 +29,25 @@ const SEVERITY_ICONS: Readonly<Record<FormErrorSeverity, string>> = {
   warn: '⚠',
   info: 'ℹ',
 }
+
+/**
+ * details + 值元数据预计算 —— 每次 events 变化仅序列化一次
+ *
+ * meta 为 undefined 表示该 detail 无 value 字段（与原模板 v-if="d.value !== undefined" 判定一致）
+ */
+interface DetailWithMeta {
+  field: string
+  message: string
+  meta: ValueMeta | undefined
+}
+
+const detailsWithMeta = computed<DetailWithMeta[]>(() =>
+  (props.event.details ?? []).map((d) => ({
+    field: d.field,
+    message: d.message,
+    meta: d.value !== undefined ? getValueMeta(d.value) : undefined,
+  }))
+)
 </script>
 
 <template>
@@ -36,17 +59,13 @@ const SEVERITY_ICONS: Readonly<Record<FormErrorSeverity, string>> = {
         <span v-if="event.source" :class="$style.source">@{{ event.source }}</span>
       </header>
       <p :class="$style.message">{{ event.message }}</p>
-      <ul v-if="event.details?.length" :class="$style.detailList">
+      <ul v-if="detailsWithMeta.length" :class="$style.detailList">
         <!-- d.field 在 schema 校验中唯一，作为 :key 比 index 更稳定 -->
-        <li v-for="(d, i) in event.details" :key="d.field ?? i" :class="$style.detailItem">
+        <li v-for="(d, i) in detailsWithMeta" :key="d.field ?? i" :class="$style.detailItem">
           <code :class="$style.detailField">{{ d.field }}</code>
           <span :class="$style.detailMsg">{{ d.message }}</span>
-          <span
-            v-if="d.value !== undefined"
-            :class="$style.detailValue"
-            :title="`字段当前值：${getValueMeta(d.value).tooltip}`"
-          >
-            = {{ getValueMeta(d.value).display }}
+          <span v-if="d.meta" :class="$style.detailValue" :title="`字段当前值：${d.meta.tooltip}`">
+            = {{ d.meta.display }}
           </span>
         </li>
       </ul>

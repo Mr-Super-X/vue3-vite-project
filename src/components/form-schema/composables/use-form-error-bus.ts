@@ -156,25 +156,28 @@ export function useFormErrorBus(): UseFormErrorBusReturn {
 
   function report(event: ReportErrorEventInput): void {
     const { force = false, ...eventData } = event
+    // 单次取时间戳（2026-09-16 review 优化）：去重窗口判定与入列 timestamp 必须用同一读数，
+    // 避免时钟跳变/低精度计时器下「判定未命中去重、入列时间戳却落在窗口内」的自相矛盾
+    const now = Date.now()
     // 同 code + message 在 5s 内去重 —— 用户连续输入反复弹窗是噪音
     // 固定窗口语义（L1 修复）：窗口起点 = 上一次入列时刻，去重命中不刷新 ——
     // 若为滑动窗口，高频同码错误每键刷新起点，窗口被无限顺延导致首次之后永不重弹
     // 去重粒度 = code + message：message 变化的错误是新 key 立即入列（可见最新），
     // 调用方须保证 message 承载区分信息；主动 validate 场景传 force: true
     if (!force) {
-      evictDedupeCacheIfNeeded(Date.now())
+      evictDedupeCacheIfNeeded(now)
       const dedupeKey = `${event.code}|${event.message}`
       const lastTs = dedupeCache.get(dedupeKey)
-      if (lastTs && Date.now() - lastTs < DEDUPE_WINDOW_MS) {
+      if (lastTs && now - lastTs < DEDUPE_WINDOW_MS) {
         return
       }
-      dedupeCache.set(dedupeKey, Date.now())
+      dedupeCache.set(dedupeKey, now)
     }
 
     const newEvent: FormErrorEvent = {
       ...eventData,
       id: generateId(event.code),
-      timestamp: Date.now(),
+      timestamp: now,
     }
     // 保留最近 MAX_EVENTS 条
     events.value = [newEvent, ...events.value].slice(0, MAX_EVENTS)

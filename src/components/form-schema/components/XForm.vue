@@ -6,7 +6,6 @@
  *
  * @group XForm 组件
  */
-import { computed, onMounted } from 'vue'
 import { ElConfigProvider, ElForm, ElRow, ElCol } from 'element-plus'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 

@@ -20,8 +20,9 @@
  *
  * @group XForm 组件
  */
-import { onErrorCaptured, ref, computed, type VNode } from 'vue'
+import type { VNode } from 'vue'
 import type { SchemaNode } from '../types'
+// ref / computed / onErrorCaptured 由 unplugin-auto-import 注入（CLAUDE.md §1.6）—— 2026-09-16 review 收敛
 
 /** Props 类型 —— 集中声明便于 IDE hover 展开 + 子组件 props 校验 */
 type SchemaFieldProps = {
@@ -39,16 +40,16 @@ defineOptions({ name: 'XFormSchemaField' })
 const renderError = ref<Error | null>(null)
 
 /**
- * tick counter —— 让 computed 主动追踪 renderError 变化，重新求值
+ * tick counter —— 冗余触发器，保证 onErrorCaptured 后 computed 必定重算
  *
- * 不能让 computed 直接读 renderError.value（会破坏 model 响应式追踪链稳定性），
- * 改用一个 ref counter：renderError 设置时 tick++ → computed 重算 → 返回 undefined → 占位
+ * computed 已直接订阅 renderError.value（见下方 rendered），但保留 tick 双保险：
+ * 早期 vue 3.x 版本对「computed 内读取的 ref 由外部钩子写入」的调度存在时序差异，
+ * tick++ 显式制造一次依赖变化，确保各 vue 版本下 patch 失败后占位 UI 都能稳定出现。
  *
  * 关键：tick 必须**先于**renderError 被设置，否则下一次 render 仍会调 renderFn
  *
- * ⚠️ 不要删除此 ref —— vue 3 的响应式依赖追踪必须显式访问 ref.value 才能建立依赖,
- * 改用「computed 直接读 renderError」会让 renderFn 闭包内的 model 依赖在某些 vue
- * 版本下未被正确建立,RichTextEditor 等全局组件首次渲染会出现空白 VNode。
+ * ⚠️ 不要删除此 ref —— 移除后 RichTextEditor 等全局组件首次渲染在部分 vue
+ * 版本下会出现空白 VNode（历史回归，见 2026-09-16 修复记录）。
  */
 const tick = ref(0)
 

@@ -25,21 +25,16 @@ const KNOWN_PROP_KEYS: Record<string, Set<string>> = {}
  * 一次性从 EL_COMPONENT_MAP 反射所有组件的 props keys
  * 懒构建（2026-09-16 review 优化）：首次 validateSchemaProps 调用时才构建，
  * 启动期无副作用；prod 模式下 validate 入口直接 return，永不构建。
+ *
+ * 结构说明（2026-09-16 review 收敛）：此前存在第二段「仅为 El 开头键补建」的循环，
+ * 其与第一段的条件差异在数学上不可达（第一段已无条件尝试填充同键，props 存在与否
+ * 两段判定完全一致）——属死代码，删除。保留第三段短名 → ElXxx 全名别名补全。
  */
 function buildKnownPropKeys(): void {
   for (const [name, comp] of Object.entries(EL_COMPONENT_MAP)) {
     const props = (comp as { props?: Record<string, unknown> }).props
     if (props && typeof props === 'object') {
       KNOWN_PROP_KEYS[name] = new Set(Object.keys(props))
-    }
-  }
-  // 同时为 ElXxx 全名建立别名（如果与短名不同）
-  for (const [name, comp] of Object.entries(EL_COMPONENT_MAP)) {
-    if (name.startsWith('El') && !KNOWN_PROP_KEYS[name]) {
-      const props = (comp as { props?: Record<string, unknown> }).props
-      if (props && typeof props === 'object') {
-        KNOWN_PROP_KEYS[name] = new Set(Object.keys(props))
-      }
     }
   }
   // 显式补全：所有 EL 组件短名（Input / Select / ...）的 ElXxx 全名（即使不在 EL_COMPONENT_MAP 中）
@@ -71,7 +66,7 @@ export function _resetForTesting(): void {
 
 /** dev mode 校验结果 */
 interface ValidationResult {
-  /** 未未未未在白名单的 props（拼写错误 / 错误组件） */
+  /** 未在白名单的 props（拼写错误 / 错误组件） */
   unknown: string[]
   /** props 中缺失 el-form 推荐的关键字段（仅 info 提示） */
   suspicious: string[]
