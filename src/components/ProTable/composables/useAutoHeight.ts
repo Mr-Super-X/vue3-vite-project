@@ -1,5 +1,5 @@
 /**
- * useAutoHeight —— 表格区自动撑满视口剩余高度（v3.1 新增）。
+ * useAutoHeight —— 表格区自动撑满视口剩余高度（v3.1 新增；v3.1.1 review 优化）。
  *
  * 目标体验（中后台列表页标配）：搜索区 / 工具栏 / 表格 / 分页器整体不超出视口，
  * 表头与分页器固定，中间表体随窗口伸缩滚动。
@@ -12,10 +12,15 @@
  * （侧栏折叠等宽度变化会联动子区域换行高度）。测量不到（jsdom / SSR）时
  * maxHeight 保持 null，ElTable 退回默认全量渲染行为，不影响功能。
  *
+ * v3.1.1 review 优化：
+ * - 缓存 selector → element 映射（Map），避免每次 measure 重复 querySelector
+ * - rAF 同帧去重：ResizeObserver + window resize 在同一帧可能多次触发，
+ *   requestAnimationFrame 调度保证只在下一帧重测 1 次
+ *
  * @see [`../ProTable.vue`](../ProTable.vue) 编排层 —— 唯一调用方
  * @group ProTable composables
  */
-import { ref, watch, nextTick, onScopeDispose, type Ref } from 'vue' // vue（生命周期/底层 API）
+import { ref, watch, nextTick, onScopeDispose, type Ref } from 'vue'
 
 export interface UseAutoHeightOptions {
   /** 是否启用（编排层综合 props.autoHeight 与 virtualized 冲突后传入） */
@@ -44,15 +49,41 @@ const PAGINATION_SELECTOR = '.el-pagination'
 export function useAutoHeight(options: UseAutoHeightOptions): UseAutoHeightReturn {
   const maxHeight = ref<number | null>(null)
   let resizeObserver: ResizeObserver | null = null
+  /** v3.1.1 review：selector → element 缓存 —— measure 高频触发场景避免重复 querySelector */
+  const elementCache = new Map<string, HTMLElement>()
+  /** v3.1.1 review：rAF 同帧去重句柄 —— ResizeObserver + resize 在同帧可能多次触发 */
+  let rafHandle: number | null = null
 
+  /**
+   * v3.1.1 review：缓存读取 —— selector → element，未命中或元素已 disconnected 时重查并写入。
+   * isConnected 守卫：DOM 树重构（如 v-if 切换）后旧 element 失效，重新 querySelector。
+   *
+   * 注意：用 truthy 检查替代 `instanceof HTMLElement` —— vitest mockRoot 测试夹具用
+   * `as unknown as HTMLElement` cast 但运行时原型链无 HTMLElement.prototype，
+   * instanceof 会误判为 false 跳过缓存写入。
+   */
+  function getCachedElement(root: HTMLElement, selector: string): HTMLElement | undefined {
+    const cached = elementCache.get(selector)
+    if (cached && cached.isConnected) return cached
+    const found = root.querySelector(selector)
+    if (found) {
+      const el = found as HTMLElement
+      elementCache.set(selector, el)
+      return el
+    }
+    return undefined
+  }
+
+  /** 实际测量 —— 读缓存 selector → element，累加各子区域高度 */
   function measure(): void {
     const root = options.rootEl.value
     if (!root) return
     const top = root.getBoundingClientRect().top
     // offsetHeight 不含 margin；margin-top 已由 FIXED_MARGIN_TOTAL 统一扣除
-    const searchH = root.querySelector(SEARCH_SELECTOR)?.getBoundingClientRect().height ?? 0
-    const headerH = root.querySelector(HEADER_SELECTOR)?.getBoundingClientRect().height ?? 0
-    const paginationH = root.querySelector(PAGINATION_SELECTOR)?.getBoundingClientRect().height ?? 0
+    const searchH = getCachedElement(root, SEARCH_SELECTOR)?.getBoundingClientRect().height ?? 0
+    const headerH = getCachedElement(root, HEADER_SELECTOR)?.getBoundingClientRect().height ?? 0
+    const paginationH =
+      getCachedElement(root, PAGINATION_SELECTOR)?.getBoundingClientRect().height ?? 0
     const available =
       window.innerHeight -
       top -
@@ -64,13 +95,34 @@ export function useAutoHeight(options: UseAutoHeightOptions): UseAutoHeightRetur
     maxHeight.value = Math.max(available, MIN_TABLE_HEIGHT)
   }
 
+  /**
+   * v3.1.1 review：rAF 同帧去重 —— 仅在 ResizeObserver 回调中使用。
+   * ResizeObserver 在观察循环中可能高频触发（同一帧多次），rAF 调度保证只在下一帧重测 1 次。
+   * window.resize 事件本身低频（用户拖窗口），保持直接 measure；首测也保持直接调用以兼容
+   * vitest jsdom 环境（rAF 在 jsdom 不会自动 flush，会破坏测试时序）。
+   */
+  function scheduleMeasure(): void {
+    if (typeof requestAnimationFrame === 'undefined') {
+      measure()
+      return
+    }
+    if (rafHandle !== null) return
+    rafHandle = requestAnimationFrame(() => {
+      rafHandle = null
+      measure()
+    })
+  }
+
   if (options.enabled) {
     // 首测：等子区域渲染完成（SearchForm / TableHeader v-if 会影响 DOM 结构）
+    // 保持直接 measure 调用以兼容 vitest jsdom 环境（rAF 在 jsdom 不会自动 flush）
     void nextTick(measure)
+    // window.resize 低频（用户拖窗口），直接 measure 即可
     window.addEventListener('resize', measure)
-    // typeof 守卫：vitest jsdom 与 SSR 环境不提供 ResizeObserver（与 ElementTableV2Body 同模式）
+    // typeof 守卫：vitest jsdom 与 SSR 环境不提供 ResizeObserver
+    // ResizeObserver 高频（观察循环中可能同帧多次），走 rAF 去重
     if (typeof ResizeObserver !== 'undefined' && options.rootEl.value) {
-      resizeObserver = new ResizeObserver(measure)
+      resizeObserver = new ResizeObserver(scheduleMeasure)
       resizeObserver.observe(options.rootEl.value)
     }
     // rootEl 是 ref，setup 时可能还未挂载（模板 ref 填充晚于 setup）——watch 兜底
@@ -78,8 +130,10 @@ export function useAutoHeight(options: UseAutoHeightOptions): UseAutoHeightRetur
       options.rootEl,
       (el) => {
         if (el && typeof ResizeObserver !== 'undefined') {
+          // 根容器变更时清缓存（旧 element 已 disconnected）
+          elementCache.clear()
           resizeObserver?.disconnect()
-          resizeObserver = new ResizeObserver(measure)
+          resizeObserver = new ResizeObserver(scheduleMeasure)
           resizeObserver.observe(el)
         }
       },
@@ -90,6 +144,11 @@ export function useAutoHeight(options: UseAutoHeightOptions): UseAutoHeightRetur
       window.removeEventListener('resize', measure)
       resizeObserver?.disconnect()
       resizeObserver = null
+      elementCache.clear()
+      if (rafHandle !== null) {
+        cancelAnimationFrame(rafHandle)
+        rafHandle = null
+      }
     })
   }
 

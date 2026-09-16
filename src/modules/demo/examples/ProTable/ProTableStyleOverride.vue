@@ -27,7 +27,9 @@ import {
 import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
+import ApiTable from '../../components/ApiTable.vue'
 import DocToc from '../../components/DocToc.vue'
+import { styleOverrideItems } from './configs/protable-demos-api'
 
 const bem = createNamespace('demo-pro-table-style-override')
 
@@ -544,6 +546,12 @@ const densityCode = `<ProTable density="compact" :columns="columns" :request-api
           </table>
         </div>
       </section>
+
+      <ApiTable
+        title="样式定制技巧（v3.1）"
+        :items="styleOverrideItems"
+        anchor="api-style-override"
+      />
     </DemoFrame>
 
     <template #toc>

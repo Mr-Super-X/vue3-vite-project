@@ -15,6 +15,11 @@
  * 注入 ref 初值，避开 useTable 内 page watcher 双发问题）；attach() 在 mounted
  * 后调用（此时首次请求已发出，开始监听写回）。
  *
+ * v3.1.1 review 优化：
+ * - 原实现 4 个独立 watch（searchParams/page/pageSize/sortState），各自触发 persist，
+ *   高频搜索场景会出现"searchParams 变 + page 变"连续两次 JSON.stringify + Local.set
+ * - 合并为单一 watch 监听 ref 数组 + `flush: 'post'`，同帧（microtask）多次变更合并为 1 次
+ *
  * @see [`./useColumns`](./useColumns.ts) 同一 tableKey 存储约定（`:columns` 后缀）
  * @group ProTable composables
  */
@@ -129,19 +134,22 @@ export function useStatePersist(options: UseStatePersistOptions): UseStatePersis
       Local.set(stateKey, snapshot)
     }
 
-    // 4 个源任一变化即写回；分页/搜索/排序均低频交互，无需防抖
-    const stops = [
-      watch(sources.searchParams, persist, { deep: true }),
-      watch(sources.page, persist),
-      watch(sources.pageSize, persist),
-      watch(sources.sortState, persist),
-    ]
+    /**
+     * 4 个 ref 合并为单一 watch，flush: 'post' 让同帧（microtask）多次变更合并为 1 次回调。
+     * 例：用户修改 searchParams 后点击搜索按钮（触发 page 变化）→ microtask 内仅 1 次 persist。
+     * deep: true 保留 searchParams 内部字段变化的响应性。
+     */
+    const stop = watch(
+      [sources.searchParams, sources.page, sources.pageSize, sources.sortState],
+      persist,
+      { deep: true, flush: 'post' }
+    )
 
     // 刷新 / 关闭标签页：清 alive → 下次进入视为新会话不恢复。
     // 路由跳走（组件卸载）不触发 beforeunload，alive 保留，返回时恢复
     window.addEventListener('beforeunload', clearAlive)
     onScopeDispose(() => {
-      stops.forEach((stop) => stop())
+      stop()
       window.removeEventListener('beforeunload', clearAlive)
     })
   }

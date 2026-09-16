@@ -20,6 +20,9 @@ import { ProTable, type ProColumn, type ProTableExpose } from '@/components/ProT
 import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
+import ApiTable from '../../components/ApiTable.vue'
+import DocToc from '../../components/DocToc.vue'
+import { radioColumnItems, reserveSelectionColumnItems } from './configs/protable-demos-api'
 import { projectRequestApi, type ProjectRow } from './configs/projects'
 
 const bem = createNamespace('demo-pro-table-row-select')
@@ -74,6 +77,13 @@ const reserveCode = `// 多选跨页保持：v3.1 一等字段（替代 tablePro
 
 // 需配合 row-key：跨页累计勾选由选中区天然支持
 <ProTable row-key="id" :columns="columns" :request-api="requestApi" />`
+
+const tocItems = [
+  { id: 'demo-radio', label: 'radio 单选列' },
+  { id: 'demo-reserve', label: 'reserveSelection 跨页多选' },
+  { id: 'api-radio-column', label: 'radio 列字段' },
+  { id: 'api-reserve-selection', label: 'reserveSelection 字段' },
+]
 </script>
 
 <template>
@@ -86,42 +96,63 @@ const reserveCode = `// 多选跨页保持：v3.1 一等字段（替代 tablePro
         '上方演示单选（含跨页保持），下方演示跨页多选累计勾选。',
       ]"
     >
-      <DemoField label="radio 单选列（跨页保持）" :code="radioCode">
-        <p :class="bem.e('hint')">
-          验证：① 点 radio 选中一行 → 点「读取 radio 选中」提示单行 ② 翻到第 2 页再翻回 →
-          选中态保持（选中收敛统一选中区，不被分页重置）
-        </p>
-        <div :class="bem.e('actions')">
-          <ElButton type="primary" size="small" @click="handleGetRadio">读取 radio 选中</ElButton>
-        </div>
-        <ProTable
-          ref="radioRef"
-          :columns="radioColumns"
-          :request-api="projectRequestApi"
-          table-key="demo-v31-radio"
-          row-key="id"
-          :page-size="5"
-        />
-      </DemoField>
+      <section :class="bem.b()">
+        <DemoField id="demo-radio" label="radio 单选列（跨页保持）" :code="radioCode">
+          <p :class="bem.e('hint')">
+            验证：① 点 radio 选中一行 → 点「读取 radio 选中」提示单行 ② 翻到第 2 页再翻回 →
+            选中态保持（选中收敛统一选中区，不被分页重置）
+          </p>
+          <div :class="bem.e('actions')">
+            <ElButton type="primary" size="small" @click="handleGetRadio">读取 radio 选中</ElButton>
+          </div>
+          <ProTable
+            ref="radioRef"
+            :columns="radioColumns"
+            :request-api="projectRequestApi"
+            table-key="demo-v31-radio"
+            row-key="id"
+            :page-size="5"
+          />
+        </DemoField>
 
-      <DemoField label="reserveSelection 多选跨页（一等字段）" :code="reserveCode">
-        <p :class="bem.e('hint')">
-          验证：第 1 页勾 2 行 → 翻第 2 页勾 1 行 → 点「读取跨页勾选」提示累计 3 行（v3.1
-          起列上直接写 reserveSelection，替代 tableProps 透传）
-        </p>
-        <div :class="bem.e('actions')">
-          <ElButton type="primary" size="small" @click="handleGetReserve">读取跨页勾选</ElButton>
-        </div>
-        <ProTable
-          ref="reserveRef"
-          :columns="reserveColumns"
-          :request-api="projectRequestApi"
-          table-key="demo-v31-reserve"
-          row-key="id"
-          :page-size="5"
-        />
-      </DemoField>
+        <DemoField
+          id="demo-reserve"
+          label="reserveSelection 多选跨页（一等字段）"
+          :code="reserveCode"
+        >
+          <p :class="bem.e('hint')">
+            验证：第 1 页勾 2 行 → 翻第 2 页勾 1 行 → 点「读取跨页勾选」提示累计 3 行（v3.1
+            起列上直接写 reserveSelection，替代 tableProps 透传）
+          </p>
+          <div :class="bem.e('actions')">
+            <ElButton type="primary" size="small" @click="handleGetReserve">读取跨页勾选</ElButton>
+          </div>
+          <ProTable
+            ref="reserveRef"
+            :columns="reserveColumns"
+            :request-api="projectRequestApi"
+            table-key="demo-v31-reserve"
+            row-key="id"
+            :page-size="5"
+          />
+        </DemoField>
+      </section>
+
+      <ApiTable
+        title="radio 单选列字段（v3.1）"
+        :items="radioColumnItems"
+        anchor="api-radio-column"
+      />
+      <ApiTable
+        title="reserveSelection 字段（v3.1）"
+        :items="reserveSelectionColumnItems"
+        anchor="api-reserve-selection"
+      />
     </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
   </DocLayout>
 </template>
 

@@ -467,3 +467,230 @@ export const editCellVModelColumnItems: ApiItem[] = [
       'v3.0 新增：编辑值同步时机。input 即时同步（高频），blur 失焦同步（与 ProTable 默认 trigger 对齐）。',
   },
 ]
+
+/* ───────────── v3.1 内置格式化器 demo（ProTableFormatter） ───────────── */
+
+export const formatterColumnItems: ApiItem[] = [
+  {
+    name: 'formatter',
+    type: 'ColumnFormatter | ColumnFormatterPreset',
+    required: false,
+    description:
+      'v3.1 放宽：单元格格式化函数或内置预设 key。优先级 render > 具名插槽 > formatter > enum > 原始值。',
+  },
+]
+
+export const formatterPresetItems: ApiItem[] = [
+  {
+    name: 'dateTime',
+    type: '预设 key',
+    description: 'dayjs 格式化为 YYYY-MM-DD HH:mm:ss；非法值原样字符串化（不出现 Invalid Date）。',
+  },
+  {
+    name: 'date',
+    type: '预设 key',
+    description: 'dayjs 格式化为 YYYY-MM-DD。',
+  },
+  {
+    name: 'time',
+    type: '预设 key',
+    description: 'dayjs 格式化为 HH:mm:ss。',
+  },
+  {
+    name: 'amount',
+    type: '预设 key',
+    description: '千分位 + 2 位小数（zh-CN locale）；非数字原样返回。',
+  },
+  {
+    name: 'percent',
+    type: '预设 key',
+    description: '数值 ×100% + 2 位小数（0.1567 → 15.67%）。',
+  },
+  {
+    name: 'boolTag',
+    type: '预设 key',
+    description: 'true → ElTag success「是」/ false → ElTag info「否」/ 其他值 → 原样。',
+  },
+]
+
+/* ───────────── v3.1 自动高度 demo（ProTableAutoHeight） ───────────── */
+
+export const autoHeightItems: ApiItem[] = [
+  {
+    name: 'autoHeight',
+    type: 'boolean | AutoHeightConfig',
+    required: false,
+    default: 'false',
+    description:
+      'v3.1 新增：表格区自动撑满视口剩余高度（表头固定 + 表体滚动 + 分页器常驻）。传 boolean 用默认配置；传对象启用细粒度配置。virtualized 启用时本配置被忽略并 console.warn（v2 引擎自带高度管理）。',
+  },
+]
+
+export const autoHeightConfigItems: ApiItem[] = [
+  {
+    name: 'offset',
+    type: 'number',
+    required: false,
+    default: '24',
+    description:
+      '附加减去的余量（像素）。测量无法感知的占位（页面底部留白 / 父容器 padding）；正值让表格更矮，负值让表格更高。',
+  },
+]
+
+/* ───────────── v3.1 状态保持 demo（ProTableStatePersist） ───────────── */
+
+export const statePersistItems: ApiItem[] = [
+  {
+    name: 'statePersist',
+    type: 'boolean',
+    required: false,
+    default: 'false',
+    description:
+      'v3.1 新增：路由级持久化开关。需配合 tableKey（未传则 no-op）。恢复时机判定：localStorage 存快照 + sessionStorage alive 标记——beforeunload 清除 alive，F5 刷新视为新会话不恢复；路由跳走 alive 保留，返回时恢复搜索/分页/排序。',
+  },
+]
+
+export const statePersistStorageItems: ApiItem[] = [
+  {
+    name: '${tableKey}:state',
+    type: 'localStorage',
+    description:
+      '状态快照。结构：{ version:1, searchParams, page, pageSize, sortState }。version 字段预留未来迁移分派。',
+  },
+  {
+    name: '${tableKey}:state-alive',
+    type: 'sessionStorage',
+    description:
+      '组件存活标记。mount 后写 1；beforeunload 清空（区分路由跳走 vs F5 刷新）。按标签页隔离——新标签页打开同页不恢复。',
+  },
+]
+
+/* ───────────── v3.1 列宽拖拽 demo（ProTableColumnResize） ───────────── */
+
+export const columnResizeItems: ApiItem[] = [
+  {
+    name: 'columnResize',
+    type: 'boolean',
+    required: false,
+    default: 'false',
+    description:
+      'v3.1 新增：列宽拖拽开关。开启后表头列边框可拖动调宽。el 引擎显式绑 el-table-column resizable（ep 默认 true，须显式 false 才能默认关闭）+ 联动表级 border（ep 列宽拖拽硬依赖 border 作为拖拽手柄命中区）；vxe 引擎映射列级 resizable（vxe 默认 false，语义天然契合）。virtualized（TableV2）分支不支持——列宽受控（onColumnResize 需回写列宽配置），留待后续。',
+  },
+]
+
+export const columnResizeColumnItems: ApiItem[] = [
+  {
+    name: 'tableProps.resizable',
+    type: 'boolean',
+    required: false,
+    description:
+      '列级覆盖组件级 columnResize：单列 resizable 显式优先（el 引擎）。列设 false → 该列不可拖，其他列按组件级配置。',
+  },
+]
+
+/* ───────────── v3.1 行选择 demo（ProTableRowSelect） ───────────── */
+
+export const radioColumnItems: ApiItem[] = [
+  {
+    name: 'type',
+    type: "'radio'",
+    required: false,
+    description:
+      'v3.1 新增：单选列类型（el 引擎自绘 ElRadio / vxe 引擎内置 radio 列）。选中收敛统一选中区（selectedRows 单元素），getSelectedRows() 返回单行数组。',
+  },
+]
+
+export const reserveSelectionColumnItems: ApiItem[] = [
+  {
+    name: 'reserveSelection',
+    type: 'boolean',
+    required: false,
+    default: 'false',
+    description:
+      'v3.1 新增：多选跨页保持（一等字段，替代 tableProps: { reserveSelection: true } 手写透传）。el 引擎透传 el-table-column reserve-selection，vxe 引擎映射 checkbox-config.reserve。需配合 row-key。',
+  },
+]
+
+/* ───────────── v3.1 操作列 demo（ProTableOperation） ───────────── */
+
+export const operationColumnItems: ApiItem[] = [
+  {
+    name: 'type',
+    type: "'operation'",
+    required: false,
+    description:
+      "操作列类型。内容完全由 #operation 插槽接管（el/vxe 引擎均透传），表头渲染 + 列宽规则照常生效。常固定右侧（fixed:'right'）以适应横向滚动场景。",
+  },
+]
+
+export const headerRenderItems: ApiItem[] = [
+  {
+    name: 'headerRender',
+    type: '(scope: { column, $index }) => VNode',
+    required: false,
+    description:
+      '自定义表头渲染函数。返回 VNode（支持 h() 与 JSX）。v3.1 接线后 el/vxe 引擎均生效。常见用法：表头 + 问号图标 + ElTooltip 气泡说明业务口径。',
+  },
+]
+
+/* ───────────── v3.1 样式覆盖 demo（ProTableStyleOverride） ───────────── */
+
+export const styleOverrideItems: ApiItem[] = [
+  {
+    name: 'BEM 命名空间',
+    type: 'vv- 前缀',
+    description:
+      '所有 .vue 单文件组件遵循 CLAUDE.md §3 BEM 规范：createNamespace(\'kebab-case\') + 模板用 bem.b()/bem.e() 拼装 + <style lang="scss"> 用 .#{$BEM_PREFIX}-kebab-case 根选择器。命名空间隔离由 BEM 接管，不写 scoped。',
+  },
+  {
+    name: '穿透第三方组件',
+    type: '后代选择器',
+    description:
+      '非 scoped 样式下 :deep() / ::v-deep / :v-deep 不会被编译，会作为伪类原样输出到浏览器被丢弃。覆盖 element-plus 组件样式必须直接写后代选择器（如 .vv-pro-table .el-input__inner { ... }）。',
+  },
+  {
+    name: '设计令牌',
+    type: 'CSS 变量',
+    description:
+      '优先使用 element-plus 暴露的 CSS 变量（--el-color-primary、--el-text-color-regular、--el-bg-color 等）而非硬编码颜色，保证 dark mode 联动 + 主题一致性。',
+  },
+  {
+    name: 'row-class-name',
+    type: 'tableProps',
+    description:
+      '行级自定义 class：tableProps: { rowClassName: (args) => string }。可叠加状态色（成功/警告/禁用）或 zebra 斑马纹。',
+  },
+  {
+    name: 'cell-class-name',
+    type: 'tableProps',
+    description:
+      '单元格级自定义 class：tableProps: { cellClassName: (args) => string }。可叠加对齐方式、字体样式、徽章标记。',
+  },
+]
+
+/* ───────────── v3.1 表格内嵌 demo（ProTableExpand） ───────────── */
+
+export const expandColumnItems: ApiItem[] = [
+  {
+    name: 'type',
+    type: "'expand'",
+    required: false,
+    description:
+      '展开行类型。内容完全由 #expand 插槽接管（el 引擎透传 el-table #expand 行内容；vxe 引擎透传 expanded-content）。点击行首展开图标展开/折叠。常用于主表 + 详情内嵌展示。',
+  },
+]
+
+export const expandSlotItems: ApiItem[] = [
+  {
+    name: '#expand',
+    type: 'slot',
+    description:
+      '作用域插槽。scope 包含 { row, $index }，el 引擎额外暴露 column / store（参考 el-table 文档）。',
+  },
+  {
+    name: 'ProTable 内嵌',
+    type: 'expand 内容',
+    description:
+      '展开行内可放置任意内容（卡片 / 表单 / 嵌套 ProTable）。展开行高度自适应内容，无固定上限。',
+  },
+]

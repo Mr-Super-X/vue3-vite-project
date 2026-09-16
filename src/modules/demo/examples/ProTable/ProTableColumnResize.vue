@@ -21,6 +21,9 @@ import { ProTable, type ProColumn } from '@/components/ProTable'
 import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
+import ApiTable from '../../components/ApiTable.vue'
+import DocToc from '../../components/DocToc.vue'
+import { columnResizeItems, columnResizeColumnItems } from './configs/protable-demos-api'
 import { projectRequestApi, type ProjectRow } from './configs/projects'
 
 const bem = createNamespace('demo-pro-table-column-resize')
@@ -41,6 +44,13 @@ const resizeCode = `<!-- 组件级开启：所有列表头边框可拖动调宽 
 
 const defaultCode = `<!-- 默认关闭：不传 column-resize，表头边框不可拖 -->
 <ProTable :columns="columns" :request-api="requestApi" />`
+
+const tocItems = [
+  { id: 'demo-resize-on', label: 'column-resize 开启' },
+  { id: 'demo-resize-off', label: '默认关闭对照' },
+  { id: 'api-column-resize', label: 'columnResize Prop' },
+  { id: 'api-column-resize-column', label: '列级覆盖' },
+]
 </script>
 
 <template>
@@ -53,35 +63,52 @@ const defaultCode = `<!-- 默认关闭：不传 column-resize，表头边框不�
         '列级 tableProps.resizable 可覆盖组件级配置；virtualized（TableV2）分支暂不支持。',
       ]"
     >
-      <DemoField label="column-resize 开启（拖表头边框调宽）" :code="resizeCode">
-        <p :class="bem.e('hint')">
-          验证：开启后表格带边框线（ep 列宽拖拽前置 border）→ 悬停任意表头列边框 → 光标变 col-resize
-          → 按住拖动调列宽
-        </p>
-        <ProTable
-          :columns="resizeColumns"
-          :request-api="projectRequestApi"
-          table-key="demo-column-resize-on"
-          row-key="id"
-          column-resize
-          :page-size="5"
-        />
-      </DemoField>
+      <section :class="bem.b()">
+        <DemoField
+          id="demo-resize-on"
+          label="column-resize 开启（拖表头边框调宽）"
+          :code="resizeCode"
+        >
+          <p :class="bem.e('hint')">
+            验证：开启后表格带边框线（ep 列宽拖拽前置 border）→ 悬停任意表头列边框 → 光标变
+            col-resize → 按住拖动调列宽
+          </p>
+          <ProTable
+            :columns="resizeColumns"
+            :request-api="projectRequestApi"
+            table-key="demo-column-resize-on"
+            row-key="id"
+            column-resize
+            :page-size="5"
+          />
+        </DemoField>
 
-      <DemoField label="默认关闭（对照）" :code="defaultCode">
-        <p :class="bem.e('hint')">
-          验证：同样位置悬停表头列边框 → 无光标、不可拖（column-resize 默认 false， el 引擎 ep
-          resizable 默认 true，由 ProTable 显式关闭）
-        </p>
-        <ProTable
-          :columns="resizeColumns"
-          :request-api="projectRequestApi"
-          table-key="demo-column-resize-off"
-          row-key="id"
-          :page-size="5"
-        />
-      </DemoField>
+        <DemoField id="demo-resize-off" label="默认关闭（对照）" :code="defaultCode">
+          <p :class="bem.e('hint')">
+            验证：同样位置悬停表头列边框 → 无光标、不可拖（column-resize 默认 false， el 引擎 ep
+            resizable 默认 true，由 ProTable 显式关闭）
+          </p>
+          <ProTable
+            :columns="resizeColumns"
+            :request-api="projectRequestApi"
+            table-key="demo-column-resize-off"
+            row-key="id"
+            :page-size="5"
+          />
+        </DemoField>
+      </section>
+
+      <ApiTable title="columnResize Prop" :items="columnResizeItems" anchor="api-column-resize" />
+      <ApiTable
+        title="列级覆盖（tableProps.resizable）"
+        :items="columnResizeColumnItems"
+        anchor="api-column-resize-column"
+      />
     </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
   </DocLayout>
 </template>
 

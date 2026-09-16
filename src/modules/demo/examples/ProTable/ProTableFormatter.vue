@@ -19,6 +19,9 @@ import { ProTable, type ProColumn } from '@/components/ProTable'
 import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
+import ApiTable from '../../components/ApiTable.vue'
+import DocToc from '../../components/DocToc.vue'
+import { formatterColumnItems, formatterPresetItems } from './configs/protable-demos-api'
 import { projectRequestApi, type ProjectRow } from './configs/projects'
 
 const bem = createNamespace('demo-pro-table-formatter')
@@ -53,6 +56,13 @@ const formatterCode = `const columns: ProColumn[] = [
 const vxeCode = `<!-- 同一份 columns：formatter 走统一渲染适配层，双引擎行为一致 -->
 <!-- vxe 引擎首次 mount 时动态加载 JS/CSS（chunk 不进首屏） -->
 <ProTable table-engine="vxe-table" :columns="columns" :request-api="requestApi" />`
+
+const tocItems = [
+  { id: 'demo-formatter', label: '能力演示' },
+  { id: 'demo-formatter-vxe', label: 'vxe 引擎一致性' },
+  { id: 'api-formatter-column', label: 'ProColumn.formatter 字段' },
+  { id: 'api-formatter-preset', label: '内置格式化器预设' },
+]
 </script>
 
 <template>
@@ -65,37 +75,54 @@ const vxeCode = `<!-- 同一份 columns：formatter 走统一渲染适配层，�
         '下方同时验证 vxe-table 引擎下同一列定义的渲染一致性。',
       ]"
     >
-      <DemoField label="内置 formatter 预设（6 预设 + 非法值容错）" :code="formatterCode">
-        <p :class="bem.e('hint')">
-          验证：① 前 8 列按各自预设格式化（金额千分位、进度 ×100%、布尔绿/灰标签）②
-          「非法日期容错」列显示原样字符串
-          <code>not-a-date</code>
-          （dayjs isValid 守卫，不出现 Invalid Date）
-        </p>
-        <ProTable
-          :columns="formatterColumns"
-          :request-api="projectRequestApi"
-          table-key="demo-v31-formatter"
-          row-key="id"
-          :page-size="5"
-        />
-      </DemoField>
+      <section id="demo-formatter" :class="bem.b()">
+        <DemoField label="内置 formatter 预设（6 预设 + 非法值容错）" :code="formatterCode">
+          <p :class="bem.e('hint')">
+            验证：① 前 8 列按各自预设格式化（金额千分位、进度 ×100%、布尔绿/灰标签）②
+            「非法日期容错」列显示原样字符串
+            <code>not-a-date</code>
+            （dayjs isValid 守卫，不出现 Invalid Date）
+          </p>
+          <ProTable
+            :columns="formatterColumns"
+            :request-api="projectRequestApi"
+            table-key="demo-v31-formatter"
+            row-key="id"
+            :page-size="5"
+          />
+        </DemoField>
 
-      <DemoField label="vxe-table 引擎一致性" :code="vxeCode">
-        <p :class="bem.e('hint')">
-          验证：金额 / 创建时间列渲染与上方 el 引擎一致（formatter 经统一 cell-render
-          适配层解析）；首次切换动态加载 vxe JS/CSS
-        </p>
-        <ProTable
-          :columns="vxeColumns"
-          :request-api="projectRequestApi"
-          table-key="demo-v31-vxe"
-          row-key="id"
-          table-engine="vxe-table"
-          :page-size="5"
-        />
-      </DemoField>
+        <DemoField id="demo-formatter-vxe" label="vxe-table 引擎一致性" :code="vxeCode">
+          <p :class="bem.e('hint')">
+            验证：金额 / 创建时间列渲染与上方 el 引擎一致（formatter 经统一 cell-render
+            适配层解析）；首次切换动态加载 vxe JS/CSS
+          </p>
+          <ProTable
+            :columns="vxeColumns"
+            :request-api="projectRequestApi"
+            table-key="demo-v31-vxe"
+            row-key="id"
+            table-engine="vxe-table"
+            :page-size="5"
+          />
+        </DemoField>
+      </section>
+
+      <ApiTable
+        title="ProColumn.formatter 字段"
+        :items="formatterColumnItems"
+        anchor="api-formatter-column"
+      />
+      <ApiTable
+        title="内置格式化器预设（v3.1）"
+        :items="formatterPresetItems"
+        anchor="api-formatter-preset"
+      />
     </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
   </DocLayout>
 </template>
 

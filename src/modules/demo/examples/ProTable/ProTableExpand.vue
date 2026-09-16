@@ -37,7 +37,9 @@ import { expandRequestApi } from '../../../../../mock/pro-table/expand'
 import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
+import ApiTable from '../../components/ApiTable.vue'
 import DocToc from '../../components/DocToc.vue'
+import { expandColumnItems, expandSlotItems } from './configs/protable-demos-api'
 
 const bem = createNamespace('demo-pro-table-expand')
 
@@ -443,6 +445,13 @@ const complexCellCode = `// 复杂单元格：金额带进度条
           </p>
         </DemoField>
       </section>
+
+      <ApiTable
+        title="expand 列字段（v3.1）"
+        :items="expandColumnItems"
+        anchor="api-expand-column"
+      />
+      <ApiTable title="expand 插槽与内嵌用法" :items="expandSlotItems" anchor="api-expand-slot" />
     </DemoFrame>
 
     <template #toc>

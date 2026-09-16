@@ -19,6 +19,9 @@ import { ProTable, type ProColumn } from '@/components/ProTable'
 import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
+import ApiTable from '../../components/ApiTable.vue'
+import DocToc from '../../components/DocToc.vue'
+import { statePersistItems, statePersistStorageItems } from './configs/protable-demos-api'
 import { projectRequestApi, type ProjectRow } from './configs/projects'
 
 const bem = createNamespace('demo-pro-table-state-persist')
@@ -48,6 +51,12 @@ function goOverview(): void {
   // pushByName 内部已统一错误处理（handleRouterError）；void 标记有意不 await
   void router.pushByName('DemoProTableOverview')
 }
+
+const tocItems = [
+  { id: 'demo-state-persist', label: '能力演示' },
+  { id: 'api-state-persist', label: 'statePersist Prop' },
+  { id: 'api-state-persist-storage', label: '存储约定' },
+]
 </script>
 
 <template>
@@ -60,25 +69,38 @@ function goOverview(): void {
         '恢复时机靠 localStorage 快照 + sessionStorage alive 标记双重判定。',
       ]"
     >
-      <DemoField label="statePersist（路由返回恢复 / F5 不恢复）" :code="persistCode">
-        <p :class="bem.e('hint')">
-          验证：① 搜索框输入「项目-1」、翻到第 2 页、点 ID 表头排序 ② 点下方按钮跳走 →
-          浏览器「后退」回来 → 搜索词 / 页码 / 排序全部恢复 ③ 按 F5 刷新 → 不恢复（全新会话）
-        </p>
-        <div :class="bem.e('actions')">
-          <ElButton size="small" @click="goOverview">跳去 Overview 页面（验证返回恢复）</ElButton>
-          <span :class="bem.e('msg')">跳走后点浏览器「后退」回到本页</span>
-        </div>
-        <ProTable
-          :columns="columns"
-          :request-api="projectRequestApi"
-          table-key="demo-v31-persist"
-          row-key="id"
-          state-persist
-          :page-size="5"
-        />
-      </DemoField>
+      <section id="demo-state-persist" :class="bem.b()">
+        <DemoField label="statePersist（路由返回恢复 / F5 不恢复）" :code="persistCode">
+          <p :class="bem.e('hint')">
+            验证：① 搜索框输入「项目-1」、翻到第 2 页、点 ID 表头排序 ② 点下方按钮跳走 →
+            浏览器「后退」回来 → 搜索词 / 页码 / 排序全部恢复 ③ 按 F5 刷新 → 不恢复（全新会话）
+          </p>
+          <div :class="bem.e('actions')">
+            <ElButton size="small" @click="goOverview">跳去 Overview 页面（验证返回恢复）</ElButton>
+            <span :class="bem.e('msg')">跳走后点浏览器「后退」回到本页</span>
+          </div>
+          <ProTable
+            :columns="columns"
+            :request-api="projectRequestApi"
+            table-key="demo-v31-persist"
+            row-key="id"
+            state-persist
+            :page-size="5"
+          />
+        </DemoField>
+      </section>
+
+      <ApiTable title="statePersist Prop" :items="statePersistItems" anchor="api-state-persist" />
+      <ApiTable
+        title="存储约定（localStorage + sessionStorage）"
+        :items="statePersistStorageItems"
+        anchor="api-state-persist-storage"
+      />
     </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
   </DocLayout>
 </template>
 

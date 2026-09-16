@@ -20,6 +20,9 @@ import { ProTable, type ProColumn } from '@/components/ProTable'
 import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
+import ApiTable from '../../components/ApiTable.vue'
+import DocToc from '../../components/DocToc.vue'
+import { autoHeightItems, autoHeightConfigItems } from './configs/protable-demos-api'
 import { projectRequestApi, type ProjectRow } from './configs/projects'
 
 const bem = createNamespace('demo-pro-table-auto-height')
@@ -39,6 +42,13 @@ const autoHeightCode = `<!-- 表格区撑满视口剩余高度：视口高 - 根
 
 const fullscreenCode = `<!-- 工具栏全屏按钮（v3.1 内置）：与刷新按钮紧贴成组（组内边框合并、组间 8px） -->
 <!-- 点击切换 CSS fixed 全屏（z-index 1500，低于 el-dialog 2000）；Esc 或再次点击退出 -->`
+
+const tocItems = [
+  { id: 'demo-autoheight', label: 'autoHeight 演示' },
+  { id: 'demo-fullscreen', label: '工具栏全屏' },
+  { id: 'api-autoheight', label: 'autoHeight Prop' },
+  { id: 'api-autoheight-config', label: 'AutoHeightConfig' },
+]
 </script>
 
 <template>
@@ -51,35 +61,52 @@ const fullscreenCode = `<!-- 工具栏全屏按钮（v3.1 内置）：与刷新�
         '工具栏全屏按钮与刷新按钮紧贴成组，复合在本页一起验证布局能力。',
       ]"
     >
-      <DemoField label="autoHeight（缩小窗口验证）" :code="autoHeightCode">
-        <p :class="bem.e('hint')">
-          验证：① 缩小浏览器窗口高度 → 表体出现纵向滚动条、分页器始终可见 ② 拖回窗口 →
-          表体高度跟随伸缩 ③ 与 virtualized 同开会 console.warn（互斥，本页未同开）
-        </p>
-        <ProTable
-          :columns="columns"
-          :request-api="projectRequestApi"
-          table-key="demo-v31-autoheight"
-          row-key="id"
-          auto-height
-        />
-      </DemoField>
+      <section id="demo-autoheight" :class="bem.b()">
+        <DemoField label="autoHeight（缩小窗口验证）" :code="autoHeightCode">
+          <p :class="bem.e('hint')">
+            验证：① 缩小浏览器窗口高度 → 表体出现纵向滚动条、分页器始终可见 ② 拖回窗口 →
+            表体高度跟随伸缩 ③ 与 virtualized 同开会 console.warn（互斥，本页未同开）
+          </p>
+          <ProTable
+            :columns="columns"
+            :request-api="projectRequestApi"
+            table-key="demo-v31-autoheight"
+            row-key="id"
+            auto-height
+          />
+        </DemoField>
 
-      <DemoField label="工具栏全屏（与刷新按钮紧贴成组）" :code="fullscreenCode">
-        <p :class="bem.e('hint')">
-          验证：① 工具栏右侧「⟳ 刷新 ⛶ 全屏」两圆按钮紧贴、与密度组间 8px ② 点击全屏 → 表格 fixed
-          铺满视口、按钮高亮 ③ Esc 或再次点击退出 ④ 全屏内打开 el-dialog 不被遮挡（z-index 1500 &lt;
-          2000）
-        </p>
-        <ProTable
-          :columns="columns"
-          :request-api="projectRequestApi"
-          table-key="demo-v31-fullscreen"
-          row-key="id"
-          :page-size="5"
-        />
-      </DemoField>
+        <DemoField
+          id="demo-fullscreen"
+          label="工具栏全屏（与刷新按钮紧贴成组）"
+          :code="fullscreenCode"
+        >
+          <p :class="bem.e('hint')">
+            验证：① 工具栏右侧「⟳ 刷新 ⛶ 全屏」两圆按钮紧贴、与密度组间 8px ② 点击全屏 → 表格 fixed
+            铺满视口、按钮高亮 ③ Esc 或再次点击退出 ④ 全屏内打开 el-dialog 不被遮挡（z-index 1500
+            &lt; 2000）
+          </p>
+          <ProTable
+            :columns="columns"
+            :request-api="projectRequestApi"
+            table-key="demo-v31-fullscreen"
+            row-key="id"
+            :page-size="5"
+          />
+        </DemoField>
+      </section>
+
+      <ApiTable title="autoHeight Prop" :items="autoHeightItems" anchor="api-autoheight" />
+      <ApiTable
+        title="AutoHeightConfig 字段"
+        :items="autoHeightConfigItems"
+        anchor="api-autoheight-config"
+      />
     </DemoFrame>
+
+    <template #toc>
+      <DocToc :items="tocItems" />
+    </template>
   </DocLayout>
 </template>
 
