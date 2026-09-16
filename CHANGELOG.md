@@ -2,6 +2,21 @@
 
 ## 未发布
 
+### 🐛 Fix | ProTable 列设置抽屉：未命名列空显示 + 拖拽热区误导
+
+> 用户验证列设置抽屉两处体验缺陷：① 列未设置 label（空串）时复选框后空白无法辨别是哪列 ② 整条 item 显示 grab 手型暗示可拖，但 sortablejs handle 仅限 ⋮⋮ 图标、可拖区域过小交互不流畅
+
+* **fix(src/components/ProTable/components/ColSetting.vue):** 未命名列（label 空串/缺失）以 prop 兜底展示，灰色斜体弱化样式标识「这是字段名不是显示名」；`data-drag-handle` 从图标 span 上移到 item 根 div（拖拽热区 = 整行），sortablejs 新增 `filter: '.el-checkbox'` 排除勾选区（命中 filter 不启动拖拽、checkbox 正常勾选——handle 原注释「避免 checkbox 抢 pointer event」的诉求改由 filter 承接）；拖拽图标负边距外扩点击热区 + hover 高亮
+* **feat(src/types/sortablejs.d.ts):** 最小声明补 `filter?: string` 字段
+* **已验证：** ColSetting spec + 2 新用例（label 兜底渲染断言 / sortable filter 配置 + handle 位置断言）全通过、`vue-tsc --build` 无报错、ESLint 无告警
+
+### ✨ Feat | ProTable 新 demo：操作列下拉收纳 + 表头 Tooltip
+
+> 真实业务操作按钮众多时的收纳模式演示。两项能力本身已存在（`type:'operation'` 插槽 / `headerRender` 双引擎接线），本次补齐演示与文档化写法
+
+* **feat(src/modules/demo/examples/ProTable/ProTableOperation.vue):** 新增聚焦 demo —— 操作列「编辑/详情」高频直出 + 「更多」ElDropdown 折叠低频操作（trigger:'click' 防悬停误触，fixed:'right' 惯例）；表头 Tooltip 经 `headerRender` + ElTooltip 函数式默认插槽挂问号图标（label + 图标 BEM 类名经非 scoped 全局样式命中 el-table 表头内部 DOM）
+* **已验证：** sidebar-groups spec（CN_NAMES 注册一致性）通过、`vue-tsc --build` 无报错、ESLint 无告警
+
 ### ✨ Feat | ProTable v3.1 能力补全：自动高度 / 状态保持 / 全屏 / 单选列 / 内置格式化器
 
 > 对照社区最佳实践（vue-pure-admin / vben-admin）能力清单审查：12 项中 7 项已具备，4 项部分缺失、2 项完全缺失，本次全部补齐。第三方 API 全部经 node_modules 运行时代码实证（vxe `radio-change` 事件 / `checkboxOpts.reserve` / 表级 `max-height`；ep `reserveSelection` / ElRadio `value` prop / `FullScreen` 图标），无凭记忆编造

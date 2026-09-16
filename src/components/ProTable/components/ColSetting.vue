@@ -95,6 +95,9 @@ function initSortable(): void {
   let prevOrder: string[] = []
   sortableInstance = Sortable.create(el, {
     handle: `[data-drag-handle]`,
+    // 拖拽热区为整行（handle 在 item 根上），但 checkbox 交互区排除：
+    // 命中 filter 时 sortablejs 不启动拖拽（preventOnFilter 默认 true），checkbox 正常勾选
+    filter: '.el-checkbox',
     animation: 150,
     onStart: () => {
       prevOrder = readOrder(el)
@@ -155,10 +158,13 @@ watch(
         :key="col.prop"
         :class="bem.e('item')"
         :data-prop="col.prop"
+        :data-drag-handle="col.prop"
       >
-        <span :class="bem.e('drag-handle')" :data-drag-handle="col.prop">⋮⋮</span>
+        <span :class="bem.e('drag-handle')">⋮⋮</span>
         <ElCheckbox :value="col.prop" :data-test="`col-check-${col.prop}`" @click.stop>
-          {{ col.label }}
+          <span v-if="col.label">{{ col.label }}</span>
+          <!-- 未命名列（label 空串/缺失）以 prop 兜底展示，弱化样式标识「这是字段名不是显示名」 -->
+          <span v-else :class="bem.e('label-fallback')">{{ col.prop }}</span>
         </ElCheckbox>
       </div>
     </ElCheckboxGroup>
@@ -198,14 +204,26 @@ watch(
   }
 
   &__drag-handle {
+    /* 图标视觉锚点小，用负边距外扩点击热区（透明区域不影响布局） */
+    margin: -6px -4px;
+    padding: 6px 4px;
     color: var(--el-text-color-secondary);
     font-size: 14px;
     user-select: none;
     cursor: grab;
 
+    &:hover {
+      color: var(--el-color-primary);
+    }
+
     &:active {
       cursor: grabbing;
     }
+  }
+
+  &__label-fallback {
+    color: var(--el-text-color-secondary);
+    font-style: italic;
   }
 }
 </style>

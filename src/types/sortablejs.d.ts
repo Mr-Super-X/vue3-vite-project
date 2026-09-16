@@ -13,6 +13,8 @@ declare module 'sortablejs' {
 
   export interface SortableOptions {
     handle?: string
+    /** 命中选择器的元素不启动拖拽（如列设置里排除 .el-checkbox 勾选区） */
+    filter?: string
     animation?: number
     onStart?: (evt: SortableEvent) => void
     onMove?: (evt: SortableEvent, originalEvent: Event) => boolean

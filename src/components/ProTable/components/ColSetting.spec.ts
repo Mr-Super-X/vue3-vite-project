@@ -20,7 +20,12 @@ import ColSetting from './ColSetting.vue'
 const hoisted = vi.hoisted(() => ({
   config: null as null | {
     el: HTMLElement
-    options: { onStart?: () => void; onEnd?: () => void }
+    options: {
+      onStart?: () => void
+      onEnd?: () => void
+      handle?: string
+      filter?: string
+    }
   },
 }))
 vi.mock('sortablejs', () => ({
@@ -111,6 +116,70 @@ describe('ColSetting', () => {
     })
     const checkboxes = wrapper.findAll('input[type="checkbox"]')
     expect(checkboxes.length).toBe(3)
+  })
+
+  it('label 为空的列以 prop 兜底展示（弱化样式标识未命名列）', () => {
+    const columns = [
+      { prop: 'a', label: 'A' },
+      { prop: 'b', label: '' },
+    ]
+    const wrapper = mount(ColSetting, {
+      props: {
+        visible: true,
+        columns: columns as never,
+        visibleKeys: ['a', 'b'],
+        fixedKeys: [],
+      },
+      global: {
+        stubs: {
+          ElDrawer: {
+            template: '<div class="el-drawer-stub"><slot /></div>',
+          },
+          ElCheckboxGroup: {
+            template: '<div class="cb-group-stub"><slot /></div>',
+            props: ['modelValue'],
+          },
+          // ElCheckbox 用真实组件（label 文本在 .el-checkbox__label 插槽内渲染）
+        },
+      },
+    })
+    const namedLabel = wrapper.find('[data-test="col-check-a"]')
+    expect(namedLabel.text()).toContain('A')
+    const fallback = wrapper.find(
+      '[data-test="col-check-b"] .vv-pro-table-col-setting__label-fallback'
+    )
+    expect(fallback.exists()).toBe(true)
+    expect(fallback.text()).toBe('b')
+  })
+
+  it('sortable 配置：拖拽热区整行（handle 在 item 根），checkbox 区域被 filter 排除', async () => {
+    const wrapper = mount(ColSetting, {
+      props: {
+        visible: true,
+        columns: columns as never,
+        visibleKeys: ['a', 'b', 'c'],
+        fixedKeys: [],
+      },
+      global: {
+        stubs: {
+          ElDrawer: {
+            template: '<div class="el-drawer-stub"><slot /></div>',
+          },
+          ElCheckboxGroup: {
+            template: '<div class="cb-group-stub"><slot /></div>',
+            props: ['modelValue'],
+          },
+        },
+      },
+    })
+    await flushPromises()
+    const config = hoisted.config
+    expect(config).toBeTruthy()
+    expect(config!.options.filter).toBe('.el-checkbox')
+    // handle 在 item 根 div（data-drag-handle 随 v-for 绑定在 item 上，而非内部图标 span）
+    const item = wrapper.find('[data-drag-handle="a"]')
+    expect(item.exists()).toBe(true)
+    expect(item.classes()).toContain('vv-pro-table-col-setting__item')
   })
 
   it('拖拽结束 emit reorder（完整新顺序）且还原 DOM 到拖拽前', async () => {
