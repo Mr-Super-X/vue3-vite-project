@@ -16,13 +16,13 @@
  * @see [`../adapters/vxe-column`](../adapters/vxe-column.ts) ProColumn → VxeColumn 映射
  * @group ProTable 组件
  */
-import { onMounted, shallowRef, ref } from 'vue' // vue 生命周期/底层 API（CLAUDE.md §1.6.1）
+import { onMounted, shallowRef, ref, computed } from 'vue' // vue 生命周期/底层 API（CLAUDE.md §1.6.1）
 import { ElSkeleton } from 'element-plus' // element-plus 按需注入（unplugin-vue-components 只管模板，script 中显式 import）
-import type { ProColumn, SortChangeEvent } from '../types'
+import type { ProColumn, SortChangeEvent, TableDensity } from '../types'
 import type { useRowEdit } from '../composables/useRowEdit'
 import type { useCellSpan } from '../composables/useCellSpan'
 import { useVxeTable } from '../composables/useVxeTable'
-import { toVxeColumnProps, hasCustomSort } from '../adapters/vxe-column'
+import { toVxeColumnProps, hasCustomSort, hasReserveSelection } from '../adapters/vxe-column'
 import { resolveCellContent } from '../adapters/cell-render'
 import EditCell from './EditCell.vue'
 import CellContent from './CellContent.vue'
@@ -44,11 +44,23 @@ const props = defineProps<{
   rowEdit: ReturnType<typeof useRowEdit> | null
   /** 单元格合并能力实例（未启用为 null，span-method 不绑定） */
   cellSpan: ReturnType<typeof useCellSpan> | null
+  /**
+   * v3.1：自动高度（useAutoHeight 计算结果）—— 非 null 时绑定 vxe 表级 max-height
+   * （vxe max-height 运行时代码实证，表体滚动 + 表头固定）；null 不绑定
+   */
+  maxHeight?: number | null
+  /**
+   * v3.1：当前密度档位 —— 透传给 EditCell，编辑态控件尺寸随密度联动
+   * （vxe 行高由 --vxe-ui-table-row-height-* 变量覆盖，编辑控件需要显式 size 映射）
+   */
+  density?: TableDensity | undefined
 }>()
 
 const emit = defineEmits<{
   /** 多选变化（合并 checkbox-change / checkbox-all 后的事件行集合） */
   (e: 'selection-change', rows: Record<string, unknown>[]): void
+  /** v3.1：单选选中（vxe 内置 radio 列 radio-change 事件上行；编排层收敛到统一选中区） */
+  (e: 'radio-select', row: Record<string, unknown>): void
   /** 双击单元格（已解析 rowKey；编排层转发给 rowEdit._start） */
   (e: 'cell-dblclick', rowKey: string | number): void
   /** 排序变化（已适配为内部 SortChangeEvent；编排层判定 sortable==='custom' 后走 M2 服务端排序） */
@@ -144,6 +156,19 @@ function handleSortChange(payload: { field?: string; order?: 'asc' | 'desc' | nu
   })
 }
 
+/** v3.1：vxe 内置 radio 列选中（radio-change 负载含 row，运行时代码实证）→ 上行编排层统一选中区 */
+function handleRadioChange(payload: { row: Record<string, unknown> }): void {
+  emit('radio-select', payload.row)
+}
+
+/**
+ * v3.1：多选跨页保持 —— 任一 selection 列声明 reserveSelection 时开启 vxe
+ * checkbox-config.reserve（vxe 运行时代码 checkboxOpts.reserve 分支实证）
+ */
+const checkboxConfig = computed(() =>
+  hasReserveSelection(props.columns) ? { reserve: true } : undefined
+)
+
 /** 双击单元格 → 行编辑进入 */
 function handleCellDblclick(payload: { row: Record<string, unknown> }): void {
   emit('cell-dblclick', rowKeyOf(payload.row))
@@ -163,8 +188,10 @@ function handleCellDblclick(payload: { row: Record<string, unknown> }): void {
       :is="vxeTableComp"
       ref="vxeTableInst"
       :data="rows"
+      :max-height="maxHeight ?? undefined"
       :row-config="{ keyField: rowKey ?? 'id' }"
       :sort-config="hasCustomSort(columns) ? { remote: true } : undefined"
+      :checkbox-config="checkboxConfig"
       v-bind="{
         ...(cellSpan
           ? { spanMethod: cellSpan.spanMethod, cellClassName: cellSpan.cellClassName }
@@ -173,6 +200,7 @@ function handleCellDblclick(payload: { row: Record<string, unknown> }): void {
       @sort-change="handleSortChange"
       @checkbox-change="handleCheckboxChange"
       @checkbox-all="handleCheckboxAll"
+      @radio-change="handleRadioChange"
       @cell-dblclick="handleCellDblclick"
     >
       <!-- key 必须带序位：vxe-table 在 VxeColumn 挂载时按 DOM 位置注册 staticColumns，
@@ -196,6 +224,7 @@ function handleCellDblclick(payload: { row: Record<string, unknown> }): void {
               :row-key="rowKeyOf(scope.row)"
               :col="col"
               :value="rowEdit.getValue(rowKeyOf(scope.row), col.prop)"
+              :density="density"
               @update="(prop, v) => rowEdit?.setValue(rowKeyOf(scope.row), prop, v)"
             />
             <!-- 默认渲染（与 ElementTableBody 共用 cell-render 适配层） -->

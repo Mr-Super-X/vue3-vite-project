@@ -198,6 +198,65 @@ assertValidResponse(adapted, { tableKey: props.tableKey })
 assertValidResponse(adapted, props.tableKey ? { tableKey: props.tableKey } : {})
 ```
 
+## v3.1 变更摘要（能力补全）
+
+对照社区最佳实践（vue-pure-admin / vben-admin）能力清单补齐 5 项缺口：
+
+### 自动高度
+
+```vue
+<!-- 表格区撑满视口剩余高度：表头/分页器固定，表体随窗口伸缩滚动 -->
+<ProTable :columns="columns" :request-api="requestApi" auto-height />
+
+<!-- 对象形态可微调测量余量（页面底部留白等） -->
+<ProTable :columns="columns" :request-api="requestApi" :auto-height="{ offset: 40 }" />
+```
+
+- 与 `virtualized` 同时启用时忽略并 warn（v2 引擎自带高度管理）
+- 测量失败（jsdom/SSR）自动降级为默认全量渲染，不影响功能
+
+### 状态保持（路由返回恢复）
+
+```vue
+<!-- 需配合 tableKey；路由切换返回时恢复搜索/分页/排序，F5 刷新不恢复 -->
+<ProTable :columns="columns" :request-api="requestApi" table-key="orders" state-persist />
+```
+
+- 全量恢复：搜索参数 + 页码 + 每页大小 + 排序状态
+- 实现：localStorage 快照 + sessionStorage alive 标记（beforeunload 清除判定刷新）
+
+### 全屏
+
+工具栏新增全屏按钮（v3.1 起内置），CSS fixed 方案，Esc 可退出，全屏内打开 el-dialog 不受遮挡。
+
+### radio 单选列 与 跨页保持多选
+
+```ts
+const columns: ProColumn<User>[] = [
+  { prop: 'id', label: '选择', type: 'radio' }, // 单选列（el 引擎自绘 / vxe 引擎内置）
+  { prop: 'name', label: '名称', type: 'selection', reserveSelection: true }, // 多选跨页保持（需 row-key）
+]
+```
+
+- radio 选中收敛到统一选中区：`getSelectedRows()` 返回单行数组，`clearSelection()` 同时清多单选
+- `reserveSelection` 替代 `tableProps: { reserveSelection: true }` 手写透传（el 引擎列属性 / vxe 引擎 checkbox-config.reserve）
+
+### 内置格式化器预设
+
+```ts
+const columns: ProColumn<Order>[] = [
+  { prop: 'createdAt', label: '创建时间', formatter: 'dateTime' }, // 2026-09-16 14:30:00
+  { prop: 'amount', label: '金额', formatter: 'amount' }, // 1,234,567.89
+  { prop: 'rate', label: '费率', formatter: 'percent' }, // 15.67%
+  { prop: 'enabled', label: '启用', formatter: 'boolTag' }, // 是/否 ElTag
+  // 自定义函数形态仍可用（与 v1 el-table formatter 签名一致）
+  { prop: 'code', label: '编码', formatter: (row) => row.code.toUpperCase() },
+]
+```
+
+- 预设：`dateTime` / `date` / `time` / `amount` / `percent` / `boolTag`；非法输入原样返回
+- **修复**：v3.0.1 引入 `formatter` 时仅虚拟滚动分支生效，v3.1 起三引擎（el / vxe / v2）行为一致（优先级 render > formatter > enum > 原始值）
+
 ## v3.0.1 变更摘要（虚拟滚动真虚拟化）
 
 - **真虚拟化引擎升级**：`useVirtualScroll` 从假虚拟化（CSS overflow + 高度容器）切换到 `el-table-v2` 真虚拟化引擎，支持 10 万行 × 10 列流畅渲染。

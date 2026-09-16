@@ -1,6 +1,17 @@
 # ProTable 架构文档
 
-> **当前版本**：v3.0.1（v3.0 + 真虚拟化引擎升级）
+> **当前版本**：v3.1（能力补全：自动高度 / 状态保持 / 全屏 / 单选列 / 内置格式化器）
+>
+> **v3.1 增量摘要**：
+>
+> - **useAutoHeight**：表格区自动撑满视口剩余高度（实测 DOM 算法 + window resize + ResizeObserver 重算；jsdom 守卫；钳制下限 100px）。`autoHeight: true | { offset }`，virtualized 同开忽略 + warn
+> - **useStatePersist**：搜索/分页/排序路由级持久化。localStorage 快照（`${tableKey}:state`）+ sessionStorage alive 标记（beforeunload 清除）—— 路由返回恢复、F5 刷新不恢复。快照经 `initialState` 注入 useTable ref 初值（setup 早期同步，避开 page watcher 双发）
+> - **useFullscreen**：全屏状态（CSS fixed 方案，z-index 1500 低于 el-dialog；Esc 退出 flush:'sync'；scope dispose 清监听）
+> - **radio 单选列**：el 引擎自绘 ElRadio（ep 无内置）、vxe 引擎映射内置 type='radio'；选中收敛 useTable 统一选中区，多单选 getSelectedRows/clearSelection 同构
+> - **reserveSelection**：多选跨页保持一等字段（el 列属性 / vxe checkbox-config.reserve，均 node_modules 运行时代码实证）
+> - **cell-format 预设**：`formatter: 'dateTime'|'date'|'time'|'amount'|'percent'|'boolTag'`；`ColumnFormatter<T>` = 函数 | 预设 key；同时修复 formatter 在 el/vxe 引擎分支未接线的遗漏（v3.0.1 仅 v2 分支生效），三引擎统一走 resolveFormatter 解析层
+>
+> ---
 >
 > **v3.0.1 增量摘要**：
 >
@@ -50,27 +61,33 @@ flowchart TD
 
 ## Composables 依赖
 
-| Composable           | 依赖                           | 输出                                                   |
-| -------------------- | ------------------------------ | ------------------------------------------------------ |
-| `useSearch`          | props.columns（search 配置）   | searchParams / search() / reset()                      |
-| `useColumns`         | props.columns + Local          | sortedColumns / allColumns / toggleVisible             |
-| `useTable`           | props + useSearch + useColumns | data / loading / pagination / selectedRows / sortState |
-| `adapters/engine`    | props.tableEngine              | Ref<TableEngine>（首次挂载锁定）                       |
-| **v3.0 新增**        |                                |                                                        |
-| `_utils/pickDefined` | —                              | pickDefined / asConfig / castToRecordArray（公共工具） |
-| `useTableEngineDom`  | proTableEl 模板 ref            | getTbody()（DOM 访问层，v3.0 M5 抽取基础设施）         |
+| Composable             | 依赖                                | 输出                                                     |
+| ---------------------- | ----------------------------------- | -------------------------------------------------------- |
+| `useSearch`            | props.columns（search 配置）        | searchParams / search() / reset()                        |
+| `useColumns`           | props.columns + Local               | sortedColumns / allColumns / toggleVisible               |
+| `useTable`             | props + useSearch + useColumns      | data / loading / pagination / selectedRows / sortState   |
+| `adapters/engine`      | props.tableEngine                   | Ref<TableEngine>（首次挂载锁定）                         |
+| **v3.0 新增**          |                                     |                                                          |
+| `_utils/pickDefined`   | —                                   | pickDefined / asConfig / castToRecordArray（公共工具）   |
+| `useTableEngineDom`    | proTableEl 模板 ref                 | getTbody()（DOM 访问层，v3.0 M5 抽取基础设施）           |
+| **v3.1 新增**          |                                     |                                                          |
+| `useAutoHeight`        | rootEl + props.autoHeight           | maxHeight（Ref<number \| null>，null 不绑定）            |
+| `useStatePersist`      | props.tableKey + props.statePersist | read() 快照 / attach() 写回监听（Local + session alive） |
+| `useFullscreen`        | —                                   | isFullscreen / toggleFullscreen / exitFullscreen         |
+| `adapters/cell-format` | —                                   | resolveFormatter（函数/预设 key → 可执行格式化函数）     |
 
 ## 状态归属
 
-| 状态     | 位置            | 类型        | 持久化                                                       |
-| -------- | --------------- | ----------- | ------------------------------------------------------------ |
-| 搜索参数 | useSearch       | reactive    | 否                                                           |
-| 表格数据 | useTable        | ref         | 否（按需 fetch）                                             |
-| 多选选中 | useTable        | ref         | 否（el-table reserve-selection）                             |
-| 列设置   | useColumns      | ref + Local | ✅（Local `${tableKey}:columns`）                            |
-| 密度     | useTable        | ref         | 否                                                           |
-| 排序状态 | useTable        | ref         | 否（M2 服务端排序：sortState，不混入 searchParams，决策 D4） |
-| 引擎     | adapters/engine | Ref         | 否（首次挂载锁定）                                           |
+| 状态          | 位置            | 类型        | 持久化                                                                              |
+| ------------- | --------------- | ----------- | ----------------------------------------------------------------------------------- |
+| 搜索参数      | useSearch       | reactive    | v3.1 可选（statePersist 时经 useStatePersist → Local `${tableKey}:state`）          |
+| 表格数据      | useTable        | ref         | 否（按需 fetch）                                                                    |
+| 多选/单选选中 | useTable        | ref         | 否（多选跨页保持走 el-table reserve-selection / vxe checkbox-config.reserve）       |
+| 列设置        | useColumns      | ref + Local | ✅（Local `${tableKey}:columns`）                                                   |
+| 密度          | useTable        | ref         | 否                                                                                  |
+| 分页/排序状态 | useTable        | ref         | v3.1 可选（statePersist 时随快照持久化；M2 服务端排序不混入 searchParams，决策 D4） |
+| 全屏态        | useFullscreen   | ref         | 否（组件内状态，class 由编排层绑定）                                                |
+| 引擎          | adapters/engine | Ref         | 否（首次挂载锁定）                                                                  |
 
 ## 引擎切换
 

@@ -20,6 +20,7 @@
 import { ref, watch, onMounted, onUnmounted, type ComponentPublicInstance, type Ref } from 'vue'
 import { useRequest } from '@composables/useRequest' // 项目 composable auto-import
 import { serializeParams } from './useSearch' // 第 1 步单源化：序列化唯一实现
+import type { PersistedTableState } from './useStatePersist' // v3.1：状态保持快照（纯类型依赖，无运行时环）
 import type {
   ProTableProps,
   ProTableResponse,
@@ -39,6 +40,12 @@ export interface UseTableOptions<T extends object = Record<string, unknown>> {
    * 第 1 步单源化：useTable 不再自持 searchParams 副本（原双份 + watch 桥接导致 H1 参数错配）。
    */
   getSearchParams: () => Record<string, unknown>
+  /**
+   * v3.1：持久化快照（useStatePersist.read() 返回值）—— page/pageSize/sortState
+   * 以快照为 ref 初值。必须在 useTable 创建前同步传入：之后赋值会触发 page watcher
+   * 与 onMounted 首次请求双发；初值注入则 onMounted 单次请求即为恢复状态
+   */
+  initialState?: PersistedTableState
 }
 
 export interface UseTableReturn<T extends object = Record<string, unknown>> {
@@ -105,12 +112,15 @@ export function useTable<T extends object = Record<string, unknown>>(
 ): UseTableReturn<T> {
   const { props } = options
 
+  // v3.1：持久化快照注入初值（statePersist 启用且路由返回场景；新会话为 undefined 走原默认值）
+  const snapshot = options.initialState
+
   // Vue 对含裸泛型 T 的 ref 会套 UnwrapRefSimple<T>（静态判定不了 T 是否含 Ref 联合），
   // 需显式断言回 Ref<T[]>：仅类型层 cast，运行时仍是普通 deep ref，与泛型化前行为一致
   const data = ref<T[] | null>(null) as unknown as Ref<T[] | null>
   const total = ref(0)
-  const page = ref(1)
-  const pageSize = ref(props.pageSize ?? 10)
+  const page = ref(snapshot?.page ?? 1)
+  const pageSize = ref(snapshot?.pageSize ?? props.pageSize ?? 10)
   const selectedRows = ref<T[]>([]) as unknown as Ref<T[]>
   const tableRef = ref<ComponentPublicInstance | null>(null)
   const density = ref<TableDensity>(props.density ?? 'default')
@@ -131,7 +141,10 @@ export function useTable<T extends object = Record<string, unknown>>(
   })
 
   /** 排序状态 —— 不混入 searchParams（D4：排序是表格交互状态，非表单输入，useSearch 语义保持纯净） */
-  const sortState = ref<SortState<T> | null>(null)
+  // v3.1：快照恢复时以持久化排序为初值；SortState（无泛型）→ SortState<T> 仅类型层 cast（运行时纯数据 { prop, order }）
+  const sortState = ref<SortState<T> | null>(
+    (snapshot?.sortState as SortState<T> | null | undefined) ?? null
+  )
 
   /** 排序参数序列化：优先业务方 adapter，缺省内置约定；未排序返回空对象（不传空键给后端） */
   function serializeSort(state: SortState<T> | null): Record<string, unknown> {

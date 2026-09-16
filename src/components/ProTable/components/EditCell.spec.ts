@@ -14,19 +14,21 @@ import { mount } from '@vue/test-utils'
 import EditCell from './EditCell.vue'
 import type { ProColumn } from '../types'
 
-/** ElInput stub：把 update:modelValue 桥接到原生 input 事件，便于模拟用户输入 */
+/** ElInput stub：把 update:modelValue 桥接到原生 input 事件，便于模拟用户输入
+ *  size 显式声明为 prop：原生 input 的 size 是 DOM prop（Vue 走 el.size 赋值），
+ *  不声明时 attributes('size') 拿不到值，无法断言尺寸对齐 */
 const ElInputStub = {
-  props: ['modelValue'],
+  props: ['modelValue', 'size'],
   emits: ['update:modelValue'],
   template:
     '<input class="el-input-stub" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
 }
 const ElInputNumberStub = {
-  props: ['modelValue'],
+  props: ['modelValue', 'size'],
   template: '<div class="el-input-number-stub" />',
 }
 const ElSelectStub = {
-  props: ['modelValue'],
+  props: ['modelValue', 'size'],
   template: '<div class="el-select-stub" />',
 }
 
@@ -36,9 +38,14 @@ const colWithEdit = (edit: NonNullable<ProColumn['edit']>): ProColumn => ({
   edit,
 })
 
-function mountEditCell(edit: NonNullable<ProColumn['edit']>, value: unknown) {
+function mountEditCell(
+  edit: NonNullable<ProColumn['edit']>,
+  value: unknown,
+  density?: 'compact' | 'default' | 'loose'
+) {
   return mount(EditCell, {
-    props: { rowKey: 1, col: colWithEdit(edit), value },
+    // exactOptionalPropertyTypes：density 未传时不写入 props（条件展开，避免显式 undefined）
+    props: { rowKey: 1, col: colWithEdit(edit), value, ...(density ? { density } : {}) },
     global: {
       stubs: { ElInput: ElInputStub, ElInputNumber: ElInputNumberStub, ElSelect: ElSelectStub },
     },
@@ -64,6 +71,46 @@ describe('EditCell', () => {
       true
     )
     expect(mountEditCell({ el: 'select' }, 'a').find('.el-select-stub').exists()).toBe(true)
+  })
+
+  it('内置三控件统一 size=small（修复点：select 曾缺省 default 32px，与 input/input-number 的 24px 不齐）', () => {
+    expect(mountEditCell({ el: 'input' }, 'x').findComponent(ElInputStub).props('size')).toBe(
+      'small'
+    )
+    expect(mountEditCell({ el: 'select' }, 'x').findComponent(ElSelectStub).props('size')).toBe(
+      'small'
+    )
+    expect(
+      mountEditCell({ el: 'input-number' }, 1).findComponent(ElInputNumberStub).props('size')
+    ).toBe('small')
+    // 根 div 是统一样式挂载点（input-number 宽度 100% 后代选择器的前提）
+    expect(mountEditCell({ el: 'input' }, 'x').classes('vv-edit-cell')).toBe(true)
+  })
+
+  it('密度联动：density 三档映射控件 size（compact→small / default→default / loose→large）', () => {
+    expect(
+      mountEditCell({ el: 'input' }, 'x', 'compact').findComponent(ElInputStub).props('size')
+    ).toBe('small')
+    expect(
+      mountEditCell({ el: 'input' }, 'x', 'default').findComponent(ElInputStub).props('size')
+    ).toBe('default')
+    expect(
+      mountEditCell({ el: 'input' }, 'x', 'loose').findComponent(ElInputStub).props('size')
+    ).toBe('large')
+    // select / input-number 同映射（密度切换对全部内置控件生效）
+    expect(
+      mountEditCell({ el: 'select' }, 'x', 'loose').findComponent(ElSelectStub).props('size')
+    ).toBe('large')
+    expect(
+      mountEditCell({ el: 'input-number' }, 1, 'default')
+        .findComponent(ElInputNumberStub)
+        .props('size')
+    ).toBe('default')
+  })
+
+  it('列级 edit.props.size 显式优先于 density 映射', () => {
+    const wrapper = mountEditCell({ el: 'input', props: { size: 'large' } }, 'x', 'compact')
+    expect(wrapper.findComponent(ElInputStub).props('size')).toBe('large')
   })
 
   it('自定义组件名经 resolveEditComp 原样交给 component :is', () => {

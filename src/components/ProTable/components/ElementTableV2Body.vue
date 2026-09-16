@@ -34,6 +34,7 @@
 import { computed, h, onBeforeUnmount, onMounted, ref, watch, type VNode } from 'vue'
 import { ElTableV2, ElTag } from 'element-plus' // element-plus 按需注入（unplugin-vue-components 只管模板，script 中显式 import）
 import type { ProColumn, SortChangeEvent, TableDensity, VirtualScrollConfig } from '../types'
+import { resolveFormatter } from '../adapters/cell-format' // v3.1：formatter 预设与 el/vxe 引擎共用同一解析层
 
 /**
  * 密度行高 + 单元格 padding 合并到单一字典。
@@ -262,15 +263,16 @@ function renderBySlot(col: ProColumn, scope: CellRenderScope): VNode | null {
   return propSlot({ row: scope.rowData, column: col, $index: scope.rowIndex })
 }
 
-/** 3. ProColumn.formatter —— 返回 string 给主函数包 div */
+/** 3. ProColumn.formatter —— 函数或内置预设 key（v3.1），返回 string 给主函数包 div */
 function renderByFormatter(
   col: ProColumn,
   rowData: Record<string, unknown>,
   cellValue: unknown,
   rowIndex: number
 ): string | null {
-  if (typeof col.formatter !== 'function') return null
-  return String(col.formatter(rowData as never, col, cellValue, rowIndex) ?? '')
+  const formatterFn = resolveFormatter(col.formatter)
+  if (!formatterFn) return null
+  return String(formatterFn(rowData, col, cellValue, rowIndex) ?? '')
 }
 
 /** 4. ProColumn.enum —— ElTag 字典 */

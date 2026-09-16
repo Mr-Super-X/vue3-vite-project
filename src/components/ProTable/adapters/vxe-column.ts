@@ -38,7 +38,9 @@ export function toVxeColumnProps<T extends object = Record<string, unknown>>(
     title: col.label,
   }
   // 特殊列类型翻译（operation 是普通业务列，无 vxe 特殊类型对应）
+  // v3.1：radio 单选列 vxe-table 有内置类型（type==='radio'，运行时代码 isRadioType 分支实证），直接映射
   if (col.type === 'selection') derived.type = 'checkbox'
+  else if (col.type === 'radio') derived.type = 'radio'
   else if (col.type === 'index') derived.type = 'seq'
   else if (col.type === 'expand') derived.type = 'expand'
   // sortable：true（客户端）与 'custom'（服务端）在 vxe 列级同为 true，
@@ -71,6 +73,17 @@ export function toVxeColumnProps<T extends object = Record<string, unknown>>(
  */
 export function hasCustomSort(columns: ProColumn[]): boolean {
   return columns.some((c) => c.sortable === 'custom')
+}
+
+/**
+ * v3.1：是否存在跨页保持多选列 —— VxeTableBody 据此决定是否给 VxeTable 开
+ * `checkbox-config.reserve`（vxe checkboxOpts.reserve 运行时代码实证）
+ *
+ * @param columns 全部可见列
+ * @returns 任一 selection 列 reserveSelection 为 true 时 true
+ */
+export function hasReserveSelection(columns: ProColumn[]): boolean {
+  return columns.some((c) => c.type === 'selection' && Boolean(c.reserveSelection))
 }
 
 /** 剔除 undefined 值后返回新对象（exactOptionalPropertyTypes 兼容，与 ProTable.vue filterUndefined 同语义） */

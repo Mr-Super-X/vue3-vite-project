@@ -2,6 +2,23 @@
 
 ## 未发布
 
+### ✨ Feat | ProTable v3.1 能力补全：自动高度 / 状态保持 / 全屏 / 单选列 / 内置格式化器
+
+> 对照社区最佳实践（vue-pure-admin / vben-admin）能力清单审查：12 项中 7 项已具备，4 项部分缺失、2 项完全缺失，本次全部补齐。第三方 API 全部经 node_modules 运行时代码实证（vxe `radio-change` 事件 / `checkboxOpts.reserve` / 表级 `max-height`；ep `reserveSelection` / ElRadio `value` prop / `FullScreen` 图标），无凭记忆编造
+
+* **feat(src/components/ProTable/composables/useAutoHeight.ts):** 表格区自动撑满视口剩余高度 —— 表头/分页器固定、表体随窗口伸缩滚动。算法实测 DOM（视口高 - 根容器 top - 搜索区/工具栏/分页器高度 - 固定间距 - 用户 offset），重算时机 mounted + window resize + ResizeObserver(根容器)；jsdom/SSR 无 ResizeObserver 走 typeof 守卫（与 ElementTableV2Body 同模式）；窄视口钳制下限 100px。`autoHeight: true | { offset }`，virtualized 同开时忽略并 warn
+* **feat(src/components/ProTable/composables/useStatePersist.ts):** 搜索参数/页码/每页大小/排序状态路由级持久化。localStorage 存快照（`${tableKey}:state`）+ sessionStorage 存 alive 标记：组件 mounted 写 alive、window beforeunload 清 alive —— 路由跳走返回恢复、F5 刷新/新标签页不恢复（用户决策的全量恢复粒度）。快照经 initialState 注入 useTable ref 初值（setup 早期同步，避开 page watcher 与 onMounted 双发）；快照结构 fail-safe 校验（version/字段类型不符丢弃并清除）
+* **feat(src/components/ProTable/composables/useFullscreen.ts):** 表格全屏切换（CSS fixed 方案：z-index 1500 低于 el-dialog 遮罩，全屏内开弹窗不遮挡；Esc 退出 + 组件卸载兜底清监听；watch flush:'sync' 消除"切换后瞬间 Esc 未监听"竞态）
+* **feat(src/components/ProTable/components/TableHeader.vue):** 工具栏新增全屏按钮（全屏态 primary 高亮 + tooltip 切换文案）
+* **feat(src/components/ProTable/adapters/cell-format.ts):** 内置格式化器预设 —— `formatter: 'dateTime' | 'date' | 'time' | 'amount' | 'percent' | 'boolTag'`，非法输入（非数字金额/非法日期/null）一律原样返回不吞错。`ProColumn.formatter` 类型放宽为 `ColumnFormatter<T>`（函数 | 预设 key），向后兼容
+* **fix(src/components/ProTable/adapters/cell-render.ts):** formatter 分支接线补齐 —— v3.0.1 引入 formatter 时仅虚拟滚动分支（ElementTableV2Body）生效，el/vxe 引擎分支缺失本次修复；优先级链对齐 v2 分支（render > formatter > enum > raw）。ElementTableV2Body.renderByFormatter 同步走 resolveFormatter 统一解析层，三引擎格式化行为一致
+* **feat(src/components/ProTable):** radio 单选列（el 引擎自绘 ElRadio 控件——ep 无内置 radio 列；vxe 引擎映射内置 type='radio'，运行时代码 isRadioType 分支实证）。选中收敛到 useTable 统一选中区（selectedRows 单元素），`getSelectedRows` / `clearSelection` 多选单选同构，跨页保持天然支持
+* **feat(src/components/ProTable):** 多选跨页保持一等字段 `ProColumn.reserveSelection`（el 引擎透传 el-table-column reserve-selection、vxe 引擎映射 checkbox-config.reserve——checkboxOpts.reserve 运行时代码实证），替代 `tableProps: { reserveSelection: true }` 手写透传
+* **feat(src/components/ProTable/components/ElementTableBody.vue + VxeTableBody.vue):** autoHeight 的 maxHeight 透传（el 引擎绑 ElTable max-height、vxe 引擎绑表级 max-height）
+* **test:** 新增 4 个 spec 文件 46 用例 —— cell-format（分发四态/日期/金额/百分比/布尔标签 22 用例）/ useFullscreen（切换/Esc/竞态/清理 8 用例）/ useStatePersist（恢复时机/写回/beforeunload/清理 9 用例）/ useAutoHeight（算法/resize/钳制/守卫 7 用例）
+* **docs:** README v3.1 摘要 + 新能力用法示例；ARCHITECTURE 版本 v3.1 + composables 依赖表 + 状态归属表同步
+* **已验证：** 新增 46 用例全通过、ProTable 全量测试套件（23 文件 204+ 用例）无回归、`vue-tsc --build` 无报错
+
 ### 🐛 Fix | ProTable 列分组 demo 分组样式失效：非 scoped 样式下 `:deep()` 被浏览器整条丢弃
 
 > 用户验证 `/demo/pro-table-grouped-header` 不通过：表格渲染正常但蓝/绿分组边框、父标题列着色全部缺失。根因：`ProTableGroupedHeader.vue` 的 `<style lang="scss">` 按项目 BEM 规范**非 scoped**，其中 5 处 `:deep()` 无编译器接管、被浏览器当未知伪类**整条规则丢弃**（CLAUDE.md §3.3 反模式 #8）

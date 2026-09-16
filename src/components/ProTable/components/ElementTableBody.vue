@@ -13,9 +13,9 @@
  * @see [`../adapters/cell-render`](../adapters/cell-render.ts) resolveCellContent 共用渲染逻辑
  * @group ProTable 组件
  */
-import { ElTable, ElTableColumn } from 'element-plus' // element-plus 按需注入（unplugin-vue-components 只管模板，script 中显式 import）
+import { ElTable, ElTableColumn, ElRadio } from 'element-plus' // element-plus 按需注入（unplugin-vue-components 只管模板，script 中显式 import）
 import type { ComponentPublicInstance } from 'vue' // 类型导入（TS 编译器需要，不参与运行时）
-import type { ProColumn, SortChangeEvent } from '../types'
+import type { ProColumn, SortChangeEvent, TableDensity } from '../types'
 import type { useRowEdit } from '../composables/useRowEdit'
 import type { useTreeData } from '../composables/useTreeData'
 import type { useCellSpan } from '../composables/useCellSpan'
@@ -47,6 +47,21 @@ const props = defineProps<{
   summaryMethod?: (() => string[]) | undefined
   /** v3.0 5b：虚拟滚动 tableProps（高度限制 + rowHeight 等） */
   virtualScrollProps?: Record<string, unknown>
+  /**
+   * v3.1：radio 单选列当前选中行的 rowKey（useTable.selectedRows[0] 经编排层解析；
+   * undefined = 未选中）—— 驱动 el-radio 勾选态，跨页保持由 useTable 选中区天然支持
+   */
+  selectedRowKey?: string | number | undefined
+  /**
+   * v3.1：自动高度（useAutoHeight 计算结果）—— 非 null 时绑定 ElTable max-height
+   * （表头固定 + 表体滚动）；null 不绑定，维持默认全量渲染
+   */
+  maxHeight?: number | null
+  /**
+   * v3.1：当前密度档位 —— 透传给 EditCell，编辑态控件尺寸随密度联动
+   * （el 引擎行高由 data-density CSS 变量覆盖，编辑控件需要显式 size 映射）
+   */
+  density?: TableDensity | undefined
 }>()
 
 const bem = createNamespace('pro-table') // kebab-case，与 ProTable.vue 同源：拖拽手柄类名必须与 useRowDrag 选择器一致
@@ -54,6 +69,8 @@ const bem = createNamespace('pro-table') // kebab-case，与 ProTable.vue 同源
 const emit = defineEmits<{
   /** 多选变化（行 Record 视角；编排层 cast 收口到 T[]，运行时同一引用） */
   (e: 'selection-change', rows: Record<string, unknown>[]): void
+  /** v3.1：单选选中（整行数据透传；编排层 setSelectedRows([row]) 收敛到统一选中区） */
+  (e: 'radio-select', row: Record<string, unknown>): void
   /** 双击单元格（已解析 rowKey；编排层转发给 rowEdit._start） */
   (e: 'cell-dblclick', rowKey: string | number): void
   /** 树形展开/折叠（已解析 rowKey；编排层转发给 treeData.toggle） */
@@ -102,6 +119,9 @@ defineExpose({
     :data="rows"
     v-bind="{
       ...(rowKey ? { rowKey } : {}),
+      // v3.1 自动高度：非 null 时绑定 max-height（exactOptionalPropertyTypes 下条件展开，
+      // 避免显式传 undefined 触发 TS2379）
+      ...(maxHeight != null ? { maxHeight } : {}),
       ...(treeData
         ? {
             // v2.2 修复：树形行对象带 children 字段（useTreeData 懒加载赋值），el-table 默认
@@ -137,11 +157,15 @@ defineExpose({
       :label="col.label"
       v-bind="
         filterUndefined({
-          type: col.type,
+          // radio 非 el-table 内置列类型（el-table 仅识别 selection/index/expand）——
+          // 透传未知 type 虽走默认列渲染容错，但会让 columnConfig.type 携带脏值，显式过滤
+          type: col.type === 'radio' ? undefined : col.type,
           width: col.width,
           minWidth: col.minWidth,
           fixed: col.fixed,
           sortable: col.sortable,
+          // v3.1：多选跨页保持一等字段（需 row-key；el-table-column reserve-selection）
+          ...(col.reserveSelection ? { reserveSelection: true } : {}),
           ...(col.tableProps ?? {}),
         })
       "
@@ -189,12 +213,28 @@ defineExpose({
               <CellContent :content="resolveCellContent(col, scope.row, scope.$index)" />
             </span>
           </template>
+          <!--
+            v3.1 radio 单选列 —— el-table 无内置 radio 类型，自绘单选控件。
+            选中态由编排层 selectedRowKey 驱动（useTable.selectedRows[0] 解析），
+            点击 emit 整行 → 编排层 setSelectedRows([row]) 收敛到统一选中区
+            （getSelectedRows / clearSelection 对 radio 天然复用）。
+            modelValue 条件展开：exactOptionalPropertyTypes 下 undefined 显式传入报 TS2379
+          -->
+          <ElRadio
+            v-else-if="col.type === 'radio'"
+            v-bind="{
+              ...(props.selectedRowKey !== undefined ? { modelValue: props.selectedRowKey } : {}),
+              value: rowKeyOf(scope.row),
+            }"
+            @change="emit('radio-select', scope.row)"
+          />
           <!-- v2.0 编辑控件（编辑态 + 含 edit 配置） -->
           <EditCell
             v-else-if="rowEdit?.isEditing(rowKeyOf(scope.row)) && col.edit"
             :row-key="rowKeyOf(scope.row)"
             :col="col"
             :value="rowEdit.getValue(rowKeyOf(scope.row), col.prop)"
+            :density="density"
             @update="(prop, v) => rowEdit?.setValue(rowKeyOf(scope.row), prop, v)"
           />
           <!-- 默认渲染（v1 resolveCell，P1 起走共用 cell-render 适配层） -->

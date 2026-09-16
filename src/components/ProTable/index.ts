@@ -38,6 +38,12 @@ export {
   type SortState,
   /** el-table sort-change 事件负载 @see ./types */
   type SortChangeEvent,
+  /** 内置格式化器预设 key —— formatter: 'dateTime' 等 @see ./types */
+  type ColumnFormatterPreset,
+  /** 单元格格式化器 —— 函数或预设 key @see ./types */
+  type ColumnFormatter,
+  /** 自动高度配置 —— autoHeight 对象形态 @see ./types */
+  type AutoHeightConfig,
 } from './types'
 
 /**

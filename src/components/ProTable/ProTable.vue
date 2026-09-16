@@ -32,6 +32,9 @@ import { useTable } from './composables/useTable'
 import { useTableCapabilities } from './composables/useTableCapabilities'
 import { useTableEngineDom } from './composables/useTableEngineDom'
 import { useEngineFallback } from './composables/useEngineFallback' // v3.0.3：引擎回退状态抽离
+import { useFullscreen } from './composables/useFullscreen' // v3.1：全屏切换
+import { useAutoHeight } from './composables/useAutoHeight' // v3.1：表格区自适应视口高度
+import { useStatePersist } from './composables/useStatePersist' // v3.1：搜索/分页/排序路由级持久化
 import { resolveEngine } from './adapters/engine'
 import type {
   ProColumn,
@@ -77,6 +80,22 @@ const emit = defineEmits<{
   (e: 'engine-fallback', reason: string): void
 }>()
 
+/* ───────────── v3.1 状态保持（read 必须在 useSearch/useTable 之前，见 composable 注释） ───────────── */
+
+const statePersist = useStatePersist({
+  tableKey: props.tableKey,
+  enabled: props.statePersist ?? false,
+})
+/** 路由返回场景的快照；新会话（F5 刷新/未启用）为 null */
+const persistedSnapshot = statePersist.read()
+
+// virtualized 分支（el-table-v2）自带高度管理，autoHeight 与之同开属配置冲突 —— 忽略并提示
+if (props.autoHeight && props.virtualized) {
+  console.warn(
+    '[ProTable] autoHeight 与 virtualized 同时启用：virtualized 自带高度管理，autoHeight 已忽略'
+  )
+}
+
 /* ───────────── 编排层：用 3 个 composables 接管所有状态 ───────────── */
 
 /**
@@ -120,11 +139,23 @@ const search = useSearch({
     await table.refresh()
   },
 })
+// v3.1：恢复快照搜索参数（updateParams 纯写不触发请求；useTable 的 onMounted 首次请求即带恢复参数）
+if (persistedSnapshot) search.updateParams(persistedSnapshot.searchParams)
 const table = useTable({
   props: propsForComposables,
   columns,
   engine: engineRef,
   getSearchParams: () => search.searchParams.value,
+  // v3.1：快照注入 page/pageSize/sortState 初值（exactOptionalPropertyTypes 下条件展开，不显式传 undefined）
+  ...(persistedSnapshot && { initialState: persistedSnapshot }),
+})
+// v3.1：挂载写回监听（搜索/分页/排序变化 → localStorage 快照 + session alive 标记，
+// alive 判定逻辑见 useStatePersist.ts 文件级注释）
+statePersist.attach({
+  searchParams: search.searchParams,
+  page: table.page,
+  pageSize: table.pageSize,
+  sortState: table.sortState,
 })
 
 // 列设置抽屉状态（单一真相源在 useColumns.colSettingVisible，见 ./composables/useColumns）
@@ -138,6 +169,24 @@ function handleColSettingUpdate(visible: boolean): void {
  * 用 InstanceType 精确化,IDE hover 可看到 elTable / $el 等完整暴露属性。
  */
 const proTableEl = ref<InstanceType<typeof ElementTableBody> | null>(null)
+
+/* ───────────── v3.1：根容器 ref + 全屏 + 自动高度 ───────────── */
+
+/** 根容器 DOM ref —— fullscreen class 绑定与 autoHeight 测量的共同挂载点 */
+const rootEl = ref<HTMLElement | null>(null)
+
+/** 全屏切换状态 —— CSS fixed 方案（is-fullscreen class 由模板绑定），Esc 退出在 composable 内 */
+const { isFullscreen, toggleFullscreen } = useFullscreen()
+
+/**
+ * 自动高度 —— virtualized 启用时忽略（v2 引擎自带高度管理，上方已 warn）；
+ * offset 余量取 props.autoHeight 对象形态（配置型 prop，setup 一次读取即可）
+ */
+const { maxHeight: autoHeightMax } = useAutoHeight({
+  enabled: Boolean(props.autoHeight) && !props.virtualized,
+  rootEl,
+  offset: typeof props.autoHeight === 'object' ? (props.autoHeight.offset ?? 0) : 0,
+})
 
 /** tbody DOM 访问点 —— 经 useTableEngineDom composable 收敛，原内联查询已删除（重复实现） */
 const { getTbody } = useTableEngineDom({ proTableEl })
@@ -224,6 +273,21 @@ function handleSortChange(evt: SortChangeEvent): void {
 function handleSelectionChange(rows: Record<string, unknown>[]): void {
   table.setSelectedRows(rows as unknown as T[])
 }
+
+/**
+ * v3.1：单选列选中桥接 —— 复用 useTable 统一选中区（selectedRows 单元素），
+ * getSelectedRows / clearSelection 对多选/单选天然同构；跨页保持由选中区不随翻页清空保证
+ */
+function handleRadioSelect(row: Record<string, unknown>): void {
+  table.setSelectedRows([row as unknown as T])
+}
+
+/** v3.1：radio 列当前选中行 rowKey（selectedRows[0] 解析）—— 驱动 el-radio 勾选态；undefined = 未选中 */
+const selectedRowKey = computed<string | number | undefined>(() => {
+  const first = table.selectedRows.value[0] as Record<string, unknown> | undefined
+  if (!first) return undefined
+  return (first[props.rowKey ?? 'id'] as string | number | undefined) ?? undefined
+})
 
 /**
  * 模板内联箭头函数提取为具名 handler —— 便于后续埋点 / row 焦点状态扩展。
@@ -377,7 +441,13 @@ defineExpose({
 <template>
   <ElConfigProvider>
     <div
-      :class="[bem.b(), bem.is('tree', !!treeData), attrs.class]"
+      ref="rootEl"
+      :class="[
+        bem.b(),
+        bem.is('tree', !!treeData),
+        bem.is('fullscreen', isFullscreen),
+        attrs.class,
+      ]"
       :style="attrs.style"
       :data-density="table.density.value"
     >
@@ -395,9 +465,11 @@ defineExpose({
         :visible-columns="sortedColumnsNonGeneric"
         :density="table.density.value"
         :col-setting-visible="columns.colSettingVisible.value"
+        :fullscreen="isFullscreen"
         @refresh="table.refresh"
         @update:density="handleDensityChange"
         @update:col-setting-visible="handleColSettingUpdate"
+        @toggle-fullscreen="toggleFullscreen"
       >
         <template #tableHeader>
           <slot name="tableHeader" />
@@ -437,7 +509,11 @@ defineExpose({
           :show-summary="showSummary"
           :summary-method="summaryMethod"
           :virtual-scroll-props="virtualScrollTableProps"
+          :selected-row-key="selectedRowKey"
+          :max-height="autoHeightMax"
+          :density="table.density.value"
           @selection-change="handleSelectionChange"
+          @radio-select="handleRadioSelect"
           @expand-toggle="handleExpandToggle"
           @sort-change="handleSortChange"
         >
@@ -456,7 +532,10 @@ defineExpose({
           :row-key="props.rowKey"
           :row-edit="rowEdit"
           :cell-span="cellSpan"
+          :max-height="autoHeightMax"
+          :density="table.density.value"
           @selection-change="handleSelectionChange"
+          @radio-select="handleRadioSelect"
           @sort-change="handleSortChange"
           @engine-fallback="handleEngineFallback"
         >
@@ -511,6 +590,19 @@ defineExpose({
   /* 内部各区域之间的间距 */
   & > * + * {
     margin-top: 12px;
+  }
+
+  /*
+   * v3.1 全屏态 —— CSS fixed 遮罩方案（useFullscreen 状态驱动）。
+   * z-index 1500：低于 el-dialog 遮罩（2000 起），全屏表格内打开弹窗不被遮挡
+   */
+  &.is-fullscreen {
+    position: fixed;
+    inset: 0;
+    z-index: 1500;
+    padding: 16px;
+    background: var(--el-bg-color);
+    overflow: auto;
   }
 
   /* v2.2 树形模式：展开开关走树列内联自定义箭头（ElementTableBody 渲染，随 _level 缩进体现层级） */

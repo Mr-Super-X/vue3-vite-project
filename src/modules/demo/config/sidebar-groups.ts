@@ -38,6 +38,11 @@ export const CN_NAMES: Record<string, string> = {
   ProTableEngineCompare: '引擎对比（vxe-table）',
   ProTableStyleOverride: '样式定制',
   ProTableExpand: '表格内嵌',
+  // ProTable v3.1 能力验证（拆分为聚焦 demo，原复合页 ProTableV31Features 已移除）
+  ProTableFormatter: '内置格式化器（跨引擎一致）',
+  ProTableRowSelect: '单选 / 跨页多选',
+  ProTableAutoHeight: '自动高度 + 全屏',
+  ProTableStatePersist: '状态保持恢复',
   // XForm 表单引擎
   XFormOverview: '用法总览',
   XFormArray: '数组节点',

@@ -176,6 +176,45 @@ export interface SearchConfig {
 }
 
 /**
+ * 内置单元格格式化器预设 key —— v3.1 新增。
+ *
+ * 解决高频格式化场景（时间 / 金额千分位 / 百分比等）业务方重复实现的问题：
+ * `formatter: 'dateTime'` 一键生效，等价于手写 dayjs 格式化函数。
+ * 非法输入（非数字金额、非法日期）一律原样返回，不做吞错处理。
+ *
+ * @group ProTable 类型
+ */
+export type ColumnFormatterPreset = 'dateTime' | 'date' | 'time' | 'amount' | 'percent' | 'boolTag'
+
+/**
+ * 单元格格式化器 —— 自定义函数或内置预设 key（v3.1：formatter 从纯函数放宽为 函数 | 预设）。
+ *
+ * 函数形态与 v1 el-table formatter 对齐（row / column / cellValue / index 四参）；
+ * 预设形态见 {@link ColumnFormatterPreset}。优先级：render > 具名插槽 > formatter > enum > 原始值。
+ *
+ * @group ProTable 类型
+ */
+export type ColumnFormatter<T extends object = Record<string, unknown>> =
+  | ((row: T, column: ProColumn<T>, cellValue: unknown, index: number) => string | VNode)
+  | ColumnFormatterPreset
+
+/**
+ * 自动高度配置 —— v3.1 新增（useAutoHeight 能力）。
+ *
+ * 表格区自动撑满视口剩余高度：表头固定 + 底部分页器固定，中间表体随窗口伸缩滚动。
+ * 传 `true` 用默认值；对象形态可微调测量余量。
+ *
+ * @group ProTable 类型
+ */
+export interface AutoHeightConfig {
+  /**
+   * 附加减去的余量（像素，默认 24）—— 用于页面底部留白 / 父容器 padding 等
+   * 测量无法感知的占位；正值让表格更矮，负值让表格更高
+   */
+  offset?: number
+}
+
+/**
  * ProTable 列定义 —— 同时驱动表格列与搜索项（spec §1 配置驱动）。
  *
  * 泛型 T = 行数据类型（M1 泛型化，默认 Record<string, unknown> 向后兼容）。
@@ -192,8 +231,8 @@ export interface ProColumn<T extends object = Record<string, unknown>> {
   prop: Extract<keyof T, string> | string
   /** 显示文本（表头 + 表单 label） */
   label: string
-  /** 特殊列类型（index 序号 / selection 多选 / expand 展开 / operation 操作） */
-  type?: 'index' | 'selection' | 'expand' | 'operation'
+  /** 特殊列类型（index 序号 / selection 多选 / radio 单选 / expand 展开 / operation 操作） */
+  type?: 'index' | 'selection' | 'radio' | 'expand' | 'operation'
   width?: number | string
   minWidth?: number | string
   /** 固定列（left/right；false 由列设置抽屉控制） */
@@ -208,13 +247,20 @@ export interface ProColumn<T extends object = Record<string, unknown>> {
   enum?: EnumProps[]
   /** 自定义表头渲染（返回 VNode；支持 h() 与 JSX）—— 方法语法（bivariance），见接口级注释 */
   headerRender?(scope: { column: ProColumn<T>; $index: number }): VNode
-  /** 自定义单元格渲染（返回 VNode；不传则按 enum/字段值渲染）—— 方法语法（bivariance），见接口级注释 */
+  /** 自定义单元格渲染（返回 VNode；不传则按 formatter/enum/字段值渲染）—— 方法语法（bivariance），见接口级注释 */
   render?(scope: { row: T; column: ProColumn<T>; $index: number }): VNode
   /**
-   * 单元格字符串格式化（v3.0.1 新增）—— 与 v1 el-table formatter 字段对齐，
-   * 供不需完整 VNode 的轻量场景（如金额千分位）。返回 string | VNode；优先级低于 render 与具名插槽。
+   * 单元格格式化（v3.1 放宽）—— 支持自定义函数与内置预设 key（'dateTime' / 'amount' 等，
+   * 见 ColumnFormatterPreset）。返回 string | VNode；优先级低于 render 与具名插槽。
+   * 注：v3.0.1 引入本字段时 el/vxe 引擎分支未接线（仅虚拟滚动分支生效），v3.1 补齐三引擎。
    */
-  formatter?: (row: T, column: ProColumn<T>, cellValue: unknown, index: number) => string | VNode
+  formatter?: ColumnFormatter<T>
+  /**
+   * 多选跨页保持选中 —— v3.1 新增（仅 type='selection' 列生效，需配合 row-key）。
+   * 一等字段替代 tableProps: { reserveSelection: true } 手写透传；
+   * el 引擎透传 el-table-column reserve-selection，vxe 引擎映射 checkbox-config.reserve
+   */
+  reserveSelection?: boolean
   /** 透传给 ElTableColumn 的 props */
   tableProps?: Record<string, unknown>
   /** 透传给 VxeColumn 的 props（仅 vxe-table 引擎生效；补充不覆盖映射派生值 field/title/sortable 等） */
@@ -318,6 +364,17 @@ export interface ProTableProps<T extends object = Record<string, unknown>> {
   enableSummary?: boolean | SummaryConfig
   /** 虚拟滚动（v3.0 新增） */
   virtualized?: boolean | VirtualScrollConfig
+  /**
+   * 自动高度（v3.1 新增）—— 表格区自动撑满视口剩余高度，表头/分页器固定，表体滚动。
+   * 传 true 用默认配置；virtualized 启用时本配置被忽略（v2 引擎自带高度管理）
+   */
+  autoHeight?: boolean | AutoHeightConfig
+  /**
+   * 状态保持（v3.1 新增）—— 路由切换返回时恢复搜索参数 / 页码 / 每页大小 / 排序状态。
+   * 依赖 tableKey 作为 localStorage key（未传 tableKey 时忽略）；浏览器刷新（F5）不恢复，
+   * 恢复时机判定见 composables/useStatePersist.ts
+   */
+  statePersist?: boolean
 }
 
 /**
