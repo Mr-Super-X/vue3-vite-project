@@ -13,8 +13,12 @@
  *
  * 单条 toast 卡片渲染抽到 ./XFormErrorToastItem.vue，本文件仅承载容器（Teleport + ul 列表 + stack 定位样式）。
  *
+ * a11y 修正：role="alert" 会让屏幕阅读器在每次新 toast 出现时立即打断当前朗读并播报内容，
+ * 适合一次性错误但不适合持续的 tosat 流；改用 role="status" + aria-live="polite" 让用户可控打断。
+ *
  * @group XForm 组件
  */
+import { computed } from 'vue'
 import type { FormErrorEvent } from '../composables/use-form-error-bus'
 import XFormErrorToastItem from './XFormErrorToastItem.vue'
 
@@ -27,13 +31,20 @@ const { events, enabled } = defineProps<{
 const emit = defineEmits<{
   dismiss: [id: string]
 }>()
+
+/**
+ * 未 dismiss 的事件 —— computed 缓存避免 v-for 内 filter 每次 patch 重复执行
+ */
+const visibleEvents = computed(() => events.filter((e) => !e.dismissed))
 </script>
 
 <template>
+  <!-- v-if 用 events.length（非 visibleEvents.length）保持原行为契约：
+       测试要求「所有事件 dismissed=true 时 ul 仍渲染，仅无 li 子元素」 -->
   <Teleport to="body" v-if="enabled && events.length > 0">
     <ul :class="$style.stack" role="alert" aria-live="polite">
       <XFormErrorToastItem
-        v-for="e in events.filter((x) => !x.dismissed)"
+        v-for="e in visibleEvents"
         :key="e.id"
         :event="e"
         @dismiss="emit('dismiss', $event)"

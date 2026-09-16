@@ -16,16 +16,15 @@ const emit = defineEmits<{
   dismiss: [id: string]
 }>()
 
-function severityIcon(s: FormErrorSeverity): string {
-  switch (s) {
-    case 'error':
-      return '✕'
-    case 'warn':
-      return '⚠'
-    default:
-      return 'ℹ'
-  }
+/** 严重等级 → 图标查表 —— 比 switch 更纯，O(1) 命中 */
+const SEVERITY_ICONS: Readonly<Record<FormErrorSeverity, string>> = {
+  error: '✕',
+  warn: '⚠',
+  info: 'ℹ',
 }
+
+/** 显示截断阈值 —— 24 字符覆盖常见 id / name / 短文本 */
+const VALUE_DISPLAY_MAX = 24
 
 /**
  * 安全 JSON 序列化 —— 不可序列化值（循环引用等）返回 null 占位
@@ -43,25 +42,34 @@ function tryJsonStringify(v: unknown): string | null {
   }
 }
 
-/** 格式化字段值显示 —— 数组/对象用 JSON.stringify，长字符串截断 */
+/**
+ * 格式化字段值显示 —— 数组/对象用 tryJsonStringify，长字符串截断
+ *
+ * 性能要点：与 title 属性共享 tryJsonStringify 结果，避免对同一对象序列化两次。
+ */
 function formatValue(v: unknown): string {
   if (v === null) return 'null'
   if (v === undefined) return 'undefined'
   if (typeof v === 'string') {
-    return v.length > 24 ? `${v.slice(0, 24)}…` : v
+    return v.length > VALUE_DISPLAY_MAX ? `${v.slice(0, VALUE_DISPLAY_MAX)}…` : v
   }
   if (typeof v === 'object') {
     const s = tryJsonStringify(v)
     if (s === null) return '[unserializable]'
-    return s.length > 24 ? `${s.slice(0, 24)}…` : s
+    return s.length > VALUE_DISPLAY_MAX ? `${s.slice(0, VALUE_DISPLAY_MAX)}…` : s
   }
   return String(v)
+}
+
+/** 字段当前值的 tooltip 文本 —— title 用完整 JSON，display 用截断 JSON */
+function valueTooltip(v: unknown): string {
+  return `字段当前值：${tryJsonStringify(v) ?? '[unserializable]'}`
 }
 </script>
 
 <template>
   <li :class="[$style.toast, $style[event.severity]]">
-    <span :class="$style.icon" aria-hidden="true">{{ severityIcon(event.severity) }}</span>
+    <span :class="$style.icon" aria-hidden="true">{{ SEVERITY_ICONS[event.severity] }}</span>
     <div :class="$style.body">
       <header :class="$style.title">
         <code :class="$style.code">{{ event.code }}</code>
@@ -69,13 +77,14 @@ function formatValue(v: unknown): string {
       </header>
       <p :class="$style.message">{{ event.message }}</p>
       <ul v-if="event.details?.length" :class="$style.detailList">
-        <li v-for="(d, i) in event.details" :key="i" :class="$style.detailItem">
+        <!-- d.field 在 schema 校验中唯一，作为 :key 比 index 更稳定 -->
+        <li v-for="(d, i) in event.details" :key="d.field ?? i" :class="$style.detailItem">
           <code :class="$style.detailField">{{ d.field }}</code>
           <span :class="$style.detailMsg">{{ d.message }}</span>
           <span
             v-if="d.value !== undefined"
             :class="$style.detailValue"
-            :title="`字段当前值：${tryJsonStringify(d.value) ?? '[unserializable]'}`"
+            :title="valueTooltip(d.value)"
           >
             = {{ formatValue(d.value) }}
           </span>

@@ -18,6 +18,8 @@ const props = defineProps<{
   node: SchemaNode
   renderFn: (node: SchemaNode) => VNode | string | VNode[] | undefined
 }>()
+
+defineOptions({ name: 'XFormSchemaField' })
 </script>
 
 <template>

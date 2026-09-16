@@ -6,7 +6,7 @@
  *
  * @group XForm 组件
  */
-import { useAttrs } from 'vue'
+import { computed, onMounted } from 'vue'
 import { ElConfigProvider, ElForm, ElRow, ElCol } from 'element-plus'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 
@@ -21,15 +21,14 @@ import 'element-plus/dist/index.css'
 import '../styles/element-form-overwrite.scss'
 
 const props = defineProps<XFormProps>()
-// exactOptionalPropertyTypes 下 vue 推导的 props 类型与 XFormProps 在 optional 字段上有差异，
-// 统一收口为 XFormProps 让下游 composable 不重复处理
+// exactOptionalPropertyTypes 下 vue 推导的 props 类型（LooseRequired 包裹）与
+// XFormProps 在 optional 字段（如 model?: T vs model: T）上有严格类型差异，
+// 收口为 XFormProps 让下游 useXFormComposer 不重复处理。
+// （归因见 types/TYPE-CAST-AUDIT.md；外部消费方仍通过 defineExpose(exposed) 拿不到此别名）
 const propsModel = props as XFormProps
-const attrs = useAttrs()
-// 类型归因：element-plus 2.x ConfigProviderProps 是 ExtractPropTypes 元组
-// （type/required/validator/__epPropKey）形态，与运行时值类型不等价（C1 根因，
-// 详见 types/TYPE-CAST-AUDIT.md）。zhCn 是 Language 对象、size 是 string，
-// 运行时两者均生效；TS 层用 Record<string, unknown> 替代 `as any`（全局 §1.5 违规）。
-// 模板 <ElConfigProvider v-bind="elConfig"> 接受 string-keyed 对象。
+// element-plus 2.x ConfigProviderProps 是 ExtractPropTypes 元组（type/required/validator/__epPropKey）形态，
+// 运行时 locale 是 Language 对象、size 是 string；TS 层用 Record<string, unknown> 替代 `as any`（全局 §1.5 违规），
+// <ElConfigProvider v-bind="elConfig"> 接受 string-keyed 对象（归因见 types/TYPE-CAST-AUDIT.md C1）。
 const elConfig: Record<string, unknown> = { locale: zhCn, size: 'default' }
 // BEM namespace 由 unplugin-auto-import 自动注入，无需显式 import
 const {
@@ -54,18 +53,36 @@ const {
   errorBus,
 } = useXFormComposer({ props: propsModel })
 
-defineOptions({ inheritAttrs: false })
 defineExpose(exposed satisfies XFormExpose)
 
-installDevDebugHook()
+/**
+ * 缓存模板里反复出现的派生值 —— 避免每次响应式依赖变化都重算
+ *
+ * - fieldErrorKeys：纯字符串，浅比较友好，作为 data-attr 稳定触发 attribute update
+ * - topLevelGutter：消除模板两个分支里重复的 `topLevelRow?.gutter ?? 0 as never`
+ * - resolvedModel：兜底空对象，避免下游 `props.model` 为 undefined 时 ElForm 抛错
+ */
+const fieldErrorKeys = computed(() => Object.keys(fieldErrors.value).join(','))
+const topLevelGutter = computed(() => topLevelRow.value?.gutter ?? 0)
+const resolvedModel = computed(() => (props.model ?? {}) as Record<string, unknown>)
+
+/**
+ * dev console 钩子移到 onMounted —— 避免 SSR 环境下 window 访问抛错；
+ * 仅 dev 开启，prod 模式下 installDevDebugHook 是 no-op
+ */
+onMounted(() => installDevDebugHook())
 </script>
 
 <template>
   <ElConfigProvider v-bind="elConfig">
-    <div :class="[bem.b(), attrs.class]" :data-field-errors="Object.keys(fieldErrors).join(',')">
+    <!--
+      注意：未设置 inheritAttrs:false —— $attrs 自动透传到此根 div，
+      消费方可自由传入 @click / style / data-* 等（修复潜在 attrs 静默吞掉的 Bug）
+    -->
+    <div :class="bem.b()" :data-field-errors="fieldErrorKeys">
       <ElForm
         ref="elFormRef"
-        :model="(props.model ?? {}) as Record<string, unknown>"
+        :model="resolvedModel"
         :validate-trigger="['change', 'blur']"
         :disabled="topLevelDisabled"
         :label-position="topLevelLabelPosition"
@@ -73,10 +90,7 @@ installDevDebugHook()
         :scroll-to-error="topLevelScrollToError"
         :scroll-into-view-options="topLevelScrollIntoViewOptions"
       >
-        <!-- 模板内联 `as never` 归因：Element Plus buildProp 类型元组在 vue 模板表达式
-             中推导失败，运行时由 ElRow 自身校验 gutter 为 number | string（C1，归因见
-             types/TYPE-CAST-AUDIT.md） -->
-        <ElRow v-if="topLevelColumn" :gutter="(topLevelRow?.gutter ?? 0) as never">
+        <ElRow v-if="topLevelColumn" :gutter="topLevelGutter">
           <ElCol
             v-for="(node, i) in topLevelNodes"
             :key="node.key ?? node.name ?? i"
@@ -85,7 +99,7 @@ installDevDebugHook()
             <SchemaField :node="node" :render-fn="renderToComponent" />
           </ElCol>
         </ElRow>
-        <ElRow v-else-if="topLevelRow" :gutter="(topLevelRow?.gutter ?? 0) as never">
+        <ElRow v-else-if="topLevelRow" :gutter="topLevelGutter">
           <SchemaField
             v-for="(node, i) in topLevelNodes"
             :key="node.key ?? node.name ?? i"
@@ -100,6 +114,8 @@ installDevDebugHook()
           :node="node"
           :render-fn="renderToComponent"
         />
+        <!-- 扩展插槽：嵌入表单内部底部（提交按钮 / 说明文案） -->
+        <slot name="footer" />
       </ElForm>
     </div>
   </ElConfigProvider>
@@ -112,7 +128,7 @@ installDevDebugHook()
        与 showDebugBanner（schema 校验/安全扫描横幅，dev 自动开）互不耦合 -->
   <XFormErrorToast
     :events="errorBus.events.value"
-    :enabled="propsModel.showErrorToast ?? false"
+    :enabled="props.showErrorToast ?? false"
     @dismiss="errorBus.dismiss"
   />
 </template>
