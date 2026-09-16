@@ -120,6 +120,10 @@ export function useRenderRoot(deps: UseRenderRootDeps): UseRenderRootReturn {
     if (node === null || node === undefined) return undefined
     if (typeof node === 'string') return node
     if (Array.isArray(node)) return node.map(renderToComponent) as VNode[]
+    //                                                    ^^^^^^^^^^^^^^^^
+    // 类型断言安全说明：renderToComponent 返回联合含 string | undefined，但 schema
+    // 约束下数组子节点只会递归出 VNode —— string 形态在上方 `typeof node === 'string'`
+    // 已早退返回，不可能混入数组。断言仅为满足 TS 联合 narrow，运行时无 string 元素。
     if (node.ignore) return undefined
     const result = renderInner(node)
     // 类型归因：renderInner 返回 VNode | string | VNode[] | undefined 联合，TS 推导为 VNode 后

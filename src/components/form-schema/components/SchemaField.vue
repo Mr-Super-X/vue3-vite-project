@@ -7,14 +7,17 @@
  * 下沉到本组件后，每个字段的 render effect 独立追踪自己的 get(model)，
  * 输入单字段只重渲该字段，其余字段的 vnode 完全不动。
  *
- * 优化内容（2026-09-15 review）：
+ * 容错设计（2026-09-15 review）：
  * 1. 双重容错：
  *    a. safeRender computed try/catch 捕获 renderFn 同步 throw
  *    b. onErrorCaptured 捕获子组件 patch 阶段 throw
  *    关键：onErrorCaptured 通过 tick counter 让 computed 重新求值，返回 undefined
  *    让 template 重渲染走占位 UI 而非继续渲染已 throw 的 component
- * 2. #default scoped slot —— 消费方按节点名替换渲染
- * 3. 显式 Props interface —— IDE hover 展开完整类型
+ * 2. 恢复机制（2026-09-16 review 新增）：watch props.node / props.renderFn 换代时
+ *    重置 renderError —— 否则异步组件注册完成 / schema 热更新后字段永久锁定在
+ *    「字段渲染失败」占位，底层问题已修复也无法恢复
+ * 3. #default scoped slot —— 消费方按节点名替换渲染
+ * 4. 显式 Props interface —— IDE hover 展开完整类型
  *
  * el-form 的 provide/inject 沿组件祖先链传递，中间多一层组件不影响 ElFormItem 注册。
  *
@@ -35,7 +38,7 @@ const props = defineProps<SchemaFieldProps>()
 defineOptions({ name: 'XFormSchemaField' })
 
 /**
- * patch 阶段错误状态 —— 由 onErrorCaptured 填充
+ * patch 阶段错误状态 —— 由 onErrorCaptured 填充，watch 恢复（见下方 watch）
  */
 const renderError = ref<Error | null>(null)
 
@@ -46,12 +49,32 @@ const renderError = ref<Error | null>(null)
  * 早期 vue 3.x 版本对「computed 内读取的 ref 由外部钩子写入」的调度存在时序差异，
  * tick++ 显式制造一次依赖变化，确保各 vue 版本下 patch 失败后占位 UI 都能稳定出现。
  *
- * 关键：tick 必须**先于**renderError 被设置，否则下一次 render 仍会调 renderFn
+ * 与 renderError 的写入顺序无先后要求：Vue 3 调度器合并同一同步块内的多次 ref
+ * 写入到同一次 flush，computed 在下一次求值时同时读取两者的最终值。
  *
  * ⚠️ 不要删除此 ref —— 移除后 RichTextEditor 等全局组件首次渲染在部分 vue
  * 版本下会出现空白 VNode（历史回归，见 2026-09-16 修复记录）。
  */
 const tick = ref(0)
+
+/**
+ * 错误恢复 —— props.node / props.renderFn 换代时重置 renderError
+ *
+ * 业务场景：异步组件首次渲染时尚未注册 → onErrorCaptured 锁定占位；
+ * 组件注册完成后 schema 引用替换，若不解锁，字段将永久显示「渲染失败」，
+ * 即使底层问题已修复。此处复位 renderError + tick，让 rendered computed
+ * 重新执行 renderFn，字段随下一次 patch 恢复正常。
+ *
+ * 防抖：仅当 renderError 有值时才 tick++，避免正常场景下的无效重算。
+ */
+watch(
+  () => [props.node, props.renderFn] as const,
+  () => {
+    if (!renderError.value) return
+    renderError.value = null
+    tick.value++
+  }
+)
 
 /**
  * 同步阶段安全渲染 —— computed 包裹 renderFn 调用，捕获同步 throw
@@ -92,13 +115,13 @@ const rendered = computed<VNode | string | undefined>(() => {
  * 捕获子组件 patch 阶段的 throw —— 阻止冒泡到外层 ErrorBoundary
  *
  * 时机：Vue patch 子组件时执行其 render function / setup，若 throw 触发此钩子。
- * 关键：递增 tick 让 computed 重新求值（renderError 有值时返回 undefined），
- * template 下次 patch 走占位 div 而非继续渲染已 throw 的 component。
+ * renderError 与 tick 在同一同步块内写入 —— Vue 3 调度器合并同一块内的
+ * 多次 ref 写入到同一次 flush，computed 在下一次求值时同时看到两个更新，
+ * 二者无先后顺序依赖。
  *
  * 返回 false 阻止 Vue 继续向上传播（否则外层 ErrorBoundary 会接管并渲染错误页）。
  */
 onErrorCaptured((err) => {
-  // 必须**先**递增 tick，确保下次 render 时 computed 已看到 renderError
   renderError.value = err instanceof Error ? err : new Error(String(err))
   tick.value++
   if (import.meta.env.DEV) {
@@ -120,7 +143,7 @@ onErrorCaptured((err) => {
       </template>
     </SchemaField>
   -->
-  <slot name="default" :node="props.node">
+  <slot :node="props.node">
     <!--
       三选一渲染：
       1. patch 阶段 throw（renderError 有值）→ 占位 div
