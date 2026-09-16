@@ -1365,3 +1365,65 @@ export const propsAdvancedItems: XFormApiItem[] = [
     description: '白名单函数表（沙箱表达式按名直接引用）',
   },
 ]
+
+// XFormRenderRecovery —— SchemaField 容错降级速查
+export const renderRecoveryItems: XFormApiItem[] = [
+  {
+    name: 'safeRender try/catch',
+    type: '—',
+    description:
+      'SchemaField.vue 渲染 renderFn 时用 try/catch 包裹，throw 时降级到 <div class="x-form-render-error">',
+  },
+  {
+    name: '降级占位 UI',
+    type: '<div data-xform-error="<name>">',
+    description: '红色虚线框 + 字段名 + 错误提示文案（不依赖 el-message 减少耦合）',
+  },
+  {
+    name: 'dev 留痕',
+    type: 'console.error',
+    description:
+      '仅 import.meta.env.DEV 时输出 [XForm][SchemaField] render failed for node "<name>" + 原始 Error 对象',
+  },
+  {
+    name: 'prod 静默',
+    type: '—',
+    description: '生产环境不输出 console，仅显示占位 UI（节省性能开销 + 避免敏感信息泄露）',
+  },
+  {
+    name: '影响范围',
+    type: '单字段',
+    description: '失败仅影响当前字段，同 schema 其他字段正常渲染，整张 XForm 不会崩溃',
+  },
+]
+
+// XFormErrorToastSlot —— toastContainer slot 替换速查
+export const errorToastSlotItems: XFormApiItem[] = [
+  {
+    name: '<slot name="toastContainer">',
+    type: 'Vue named slot',
+    description: 'XForm 模板新增插槽，业务可完整接管错误 toast 容器',
+  },
+  {
+    name: 'slot props',
+    type: '{ events: FormErrorEvent[] }',
+    description: '注入 errorBus 当前事件列表（响应式，已过滤 dismissed）',
+  },
+  {
+    name: '默认 fallback',
+    type: '<XFormErrorToast>',
+    description: '未传 slot 时仍走默认 XFormErrorToast 容器（向后兼容）',
+  },
+  {
+    name: '常见替换实现',
+    type: '—',
+    description:
+      'element-plus ElNotification / ElMessage / Sonner / 自建 ToastList / 业务埋点上报点',
+  },
+  {
+    name: 'dismiss 处理',
+    type: 'errorBus.dismiss(id)',
+    description:
+      '业务侧 toast 关闭时调 errorBus.dismiss(id) —— errorBus 内部 timer 自动清理（onScopeDispose 兜底）',
+  },
+]

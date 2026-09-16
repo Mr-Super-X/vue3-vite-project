@@ -11,7 +11,7 @@
  * @group 表单编排：错误总线
  */
 
-import { computed, ref, type Ref } from 'vue'
+import { computed, onScopeDispose, shallowRef, type ComputedRef, type ShallowRef } from 'vue'
 
 /** 错误严重程度 */
 export type FormErrorSeverity = 'info' | 'warn' | 'error'
@@ -76,7 +76,7 @@ export interface FormErrorEvent {
  */
 export interface UseFormErrorBusReturn {
   /** 错误事件列表（响应式） */
-  events: Ref<FormErrorEvent[]>
+  events: ShallowRef<FormErrorEvent[]>
   /**
    * 上报一条错误
    * - 默认行为：**固定窗口**去重 —— 同 code + message 距「上一次入列」不足 5s 时丢弃，
@@ -92,7 +92,7 @@ export interface UseFormErrorBusReturn {
   /** 关闭全部 */
   dismissAll(): void
   /** 未读数（驱动右上角红点徽标） */
-  unreadCount: Ref<number>
+  unreadCount: ComputedRef<number>
 }
 
 /**
@@ -111,11 +111,25 @@ const DEDUPE_WINDOW_MS = 5_000
  * 超限后先清理过期条目，仍超限则整体清空（最坏后果 = 去重短暂失效多弹几条 toast，无正确性影响）
  */
 const MAX_DEDUPE_CACHE = 100
+/** dismiss 清理延时 —— 用户点 × 后 30s 物理移除（防列表无限增长） */
+const DISMISS_CLEANUP_MS = 30_000
 
 /** 创建一份 error bus（XForm 顶层调用一次） */
 export function useFormErrorBus(): UseFormErrorBusReturn {
-  const events = ref<FormErrorEvent[]>([])
+  // shallowRef：toast 列表 ≤5 条且事件对象扁平，深响应式无意义
+  // 整体替换（.value = [...]）保持响应式但避免逐字段 Proxy 化
+  const events = shallowRef<FormErrorEvent[]>([])
   const dedupeCache = new Map<string, number>()
+  // 跟踪所有未触发的 dismiss cleanup timer —— XForm 卸载时一次性清理，
+  // 避免回调在组件销毁后写入已 unmount 的 ref
+  const dismissTimers = new Map<string, ReturnType<typeof setTimeout>>()
+
+  // 组件卸载 / composable 所在 effectScope 终止时统一清理
+  onScopeDispose(() => {
+    for (const t of dismissTimers.values()) clearTimeout(t)
+    dismissTimers.clear()
+    dedupeCache.clear()
+  })
 
   /**
    * dedupeCache 容量防护：清理窗口起点已过期的条目；仍超限则整体清空
@@ -181,14 +195,23 @@ export function useFormErrorBus(): UseFormErrorBusReturn {
   }
 
   function dismiss(id: string): void {
+    // 取消已存在的清理 timer（用户连续点 × 不应叠加计时）
+    const existing = dismissTimers.get(id)
+    if (existing) clearTimeout(existing)
+
     events.value = events.value.map((e) => (e.id === id ? { ...e, dismissed: true } : e))
-    // 30s 后清理 dismissed 项（防止列表无限增长）
-    setTimeout(() => {
+    // 句柄存入 Map，组件卸载时由 onScopeDispose 统一清理
+    const handle = setTimeout(() => {
       events.value = events.value.filter((e) => e.id !== id)
-    }, 30_000)
+      dismissTimers.delete(id)
+    }, DISMISS_CLEANUP_MS)
+    dismissTimers.set(id, handle)
   }
 
   function dismissAll(): void {
+    // 同步清理所有 pending timer —— 立即释放事件 + 句柄
+    for (const t of dismissTimers.values()) clearTimeout(t)
+    dismissTimers.clear()
     events.value = []
     dedupeCache.clear()
   }

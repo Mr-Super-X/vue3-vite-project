@@ -125,12 +125,20 @@ onMounted(() => installDevDebugHook())
     :forbidden-errors="forbiddenErrors"
   />
   <!-- OPT-7：user-facing 错误 OSD —— 由 showErrorToast prop 独立控制（默认关闭），
-       与 showDebugBanner（schema 校验/安全扫描横幅，dev 自动开）互不耦合 -->
-  <XFormErrorToast
-    :events="errorBus.events.value"
-    :enabled="props.showErrorToast ?? false"
-    @dismiss="errorBus.dismiss"
-  />
+       与 showDebugBanner（schema 校验/安全扫描横幅，dev 自动开）互不耦合。
+       优化点（2026-09-15 review）：toast 容器可通过 slot 替换，业务可用 ElNotification / 自定义组件替代
+         <XForm>
+           <template #toastContainer="{ events }">
+             <MyToastList :events="events" @dismiss="errorBus.dismiss" />
+           </template>
+         </XForm> -->
+  <slot name="toastContainer" :events="errorBus.events.value">
+    <XFormErrorToast
+      :events="errorBus.events.value"
+      :enabled="props.showErrorToast ?? false"
+      @dismiss="errorBus.dismiss"
+    />
+  </slot>
 </template>
 
 <style lang="scss">
