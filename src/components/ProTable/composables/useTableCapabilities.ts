@@ -15,12 +15,16 @@
  */
 import { computed, onUnmounted, type Ref } from 'vue'
 import type { Ref as RefType } from 'vue'
+
+// v3.1.3 review：空 Map 单例 —— topIndexByKey 在 props.enableRowDrag=false 时复用，
+// 避免每次 computed 重算都 new Map()（GC 压力）。仅 topIndexByKey 在该场景下被消费方访问时返回。
+const EMPTY_MAP: ReadonlyMap<string | number, number> = new Map()
 import { useRowEdit } from './useRowEdit'
 import { useTreeData } from './useTreeData'
 import { useCellSpan } from './useCellSpan'
 import { useRowDrag } from './useRowDrag'
 import { useSummary } from './useSummary' // v3.0 能力扩展 5a：客户端汇总行
-import { useVirtualScroll } from './useVirtualScroll' // v3.0 能力扩展 5b：虚拟滚动
+import { useVirtualScroll, type UseVirtualScrollReturn } from './useVirtualScroll' // v3.0 能力扩展 5b：虚拟滚动
 import { pickDefined, asConfig } from './_utils/pickDefined' // v3.0 M 公共抽取
 import type {
   ProColumn,
@@ -47,6 +51,11 @@ export interface UseTableCapabilitiesOptions<T extends object = Record<string, u
    * 传入后 useRowDrag 自持挂载生命周期（onMounted + watch data 自动重挂）。
    */
   getTbody?: () => HTMLElement | null
+  /**
+   * v3.1.3 review：可选外部 virtualScroll 实例 —— 编排层（ProTable.vue）创建并传入，
+   * 避免 useTableCapabilities 内部重复创建；未传则按 props.virtualized 条件内部创建（向后兼容）。
+   */
+  virtualScroll?: UseVirtualScrollReturn | null
 }
 
 export interface UseTableCapabilitiesReturn<T extends object = Record<string, unknown>> {
@@ -121,8 +130,13 @@ export function useTableCapabilities<T extends object = Record<string, unknown>>
 
   // H6 树形拖拽索引映射：视图行（扁平后 DOM 顺序）→ data 顶层数组索引。
   // 仅在树形 + 拖拽同时启用时创建，key 取自 props.rowKey（默认 'id'）。
+  //
+  // v3.1.3 review：条件 computed 减负 —— 此前两个 computed 在所有场景都被创建 + 每次
+  // data 变更都执行 new Map()，对无拖拽场景造成不必要响应式开销与 GC 压力。
+  // 改为按 props.enableRowDrag 短路：未启用时返回稳定的单例空数组/空 Map，避免每帧分配。
   const rowKeyField = props.rowKey ?? 'id'
   const viewRowKeys = computed<(string | number)[]>(() => {
+    if (!props.enableRowDrag) return []
     // cast 原因：T 无索引签名，行 key 读取统一经 Record 转换（与 setRowOrder 同一边界）
     const src = (treeData ? treeData.flatData.value : (table.data.value ?? [])) as Record<
       string,
@@ -131,6 +145,7 @@ export function useTableCapabilities<T extends object = Record<string, unknown>>
     return src.map((r) => r[rowKeyField] as string | number)
   })
   const topIndexByKey = computed(() => {
+    if (!props.enableRowDrag) return EMPTY_MAP
     const m = new Map<string | number, number>()
     // cast 原因同上
     ;((table.data.value ?? []) as Record<string, unknown>[]).forEach((r, i) =>
@@ -208,15 +223,18 @@ export function useTableCapabilities<T extends object = Record<string, unknown>>
     : null
 
   // v3.0 能力扩展 5b：虚拟滚动（条件实例化；启用时禁用行内编辑 R2 决策）
-  const virtualScroll = props.virtualized
-    ? useVirtualScroll({
-        // useVirtualScroll 不读泛型，仅用 props.tableEngine/props.virtualized/props.enableRowEdit，
-        // cast 到默认 Record 视角避免泛型传递的 index signature 报错
-        props: props as unknown as ProTableProps,
-        engine: options.engine ?? ref('element-plus'),
-        enableRowEdit: Boolean(props.enableRowEdit),
-      })
-    : null
+  // v3.1.3 review：编排层可选注入；未传则按 props.virtualized 内部创建（向后兼容单测）
+  const virtualScroll: UseVirtualScrollReturn | null =
+    options.virtualScroll ??
+    (props.virtualized
+      ? useVirtualScroll({
+          // useVirtualScroll 不读泛型，仅用 props.tableEngine/props.virtualized/props.enableRowEdit，
+          // cast 到默认 Record 视角避免泛型传递的 index signature 报错
+          props: props as unknown as ProTableProps,
+          engine: options.engine ?? ref('element-plus'),
+          enableRowEdit: Boolean(props.enableRowEdit),
+        })
+      : null)
   onUnmounted(() => {
     rowDrag?.detachSortable()
     treeData?.dispose()

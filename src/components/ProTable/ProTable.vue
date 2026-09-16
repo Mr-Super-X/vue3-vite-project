@@ -38,6 +38,7 @@ import { useFullscreen } from './composables/useFullscreen' // v3.1：全屏切�
 import { useAutoHeight } from './composables/useAutoHeight' // v3.1：表格区自适应视口高度
 import { useStatePersist } from './composables/useStatePersist' // v3.1：搜索/分页/排序路由级持久化
 import { useProTableEvents } from './composables/useProTableEvents' // v3.1.1 review：事件桥接编排层抽离
+import { useVirtualScroll } from './composables/useVirtualScroll' // v3.1.3 review：编排层接管 virtualized + vxe-table 引擎回退
 import { resolveEngine } from './adapters/engine'
 import type { ProColumn, ProTableExpose, ProTableProps, SortState, TableEngine } from './types'
 
@@ -188,16 +189,42 @@ const proTableEl = ref<InstanceType<typeof ElementTableBody> | null>(null)
 /** tbody DOM 访问点 —— 经 useTableEngineDom composable 收敛 */
 const { getTbody } = useTableEngineDom({ proTableEl })
 
+/* ───────────── v3.1.3 review：virtualized + vxe-table 引擎回退接管 ───────────── */
+
+/**
+ * 编排层按 props.virtualized 条件创建 useVirtualScroll —— 原 useTableCapabilities
+ * 内部创建但与 useEngineFallback 解耦，导致 useVirtualScroll 必须自己 mutate engine.value
+ * 反向数据流。改为编排层条件创建 + 通过 options 注入 useTableCapabilities + 处理 engineConflict。
+ *
+ * 未启用时为 null：useVirtualEngine / useVxeEngine computed 按 null 短路，
+ * 避免 Boolean(virtualScroll?.enabled) 误判（Ref 对象 Boolean() 永远为 true）。
+ */
+const virtualScroll = props.virtualized
+  ? useVirtualScroll({
+      // useVirtualScroll 不读泛型，仅用 props.tableEngine/props.virtualized/props.enableRowEdit，
+      // cast 到默认 Record 视角避免泛型传递的 index signature 报错（与 useTableCapabilities.ts 同边界）
+      props: propsForComposables as unknown as ProTableProps,
+      engine: engineRef,
+      enableRowEdit: Boolean(props.enableRowEdit),
+    })
+  : null
+// virtualized + vxe-table 冲突：useVirtualScroll 不再 mutate engine.value，
+// 改为标记 engineConflict 由编排层 useEngineFallback 统一接管（行为等价 + 数据流单向）
+if (virtualScroll?.engineConflict.value === 'vxe-table-incompatible') {
+  handleEngineFallback('virtualized 启用时强制回退 element-plus 引擎（vxe-table 不兼容）')
+}
+
 /* ───────────── v2.0 四类能力编排（已抽到 useTableCapabilities.ts） ───────────── */
 
-const { rowEdit, treeData, cellSpan, summary, virtualScroll, extendedExpose } =
-  useTableCapabilities({
-    props: propsForComposables,
-    columns,
-    table,
-    engine: engineRef,
-    getTbody,
-  })
+const { rowEdit, treeData, cellSpan, summary, extendedExpose } = useTableCapabilities({
+  props: propsForComposables,
+  columns,
+  table,
+  engine: engineRef,
+  getTbody,
+  // v3.1.3 review：编排层注入 virtualScroll（由 useTableCapabilities 透传，避免重复实例化）
+  virtualScroll,
+})
 
 /** v2.0 树形：data 变化时 normalize + 扁平化（flatData computed 随 expanded 自动重算） */
 const hasTableMounted = ref(false)
@@ -366,9 +393,13 @@ const summaryMethod = computed<(() => string[]) | undefined>(() => {
   return (): string[] => summary.summaryRows.value
 })
 
-/** v3.0.3：引擎模式枚举 —— 单一 computed 替代 `useVirtualEngine` + `useVxeEngine` 两个布尔。 */
+/** v3.0.3：引擎模式枚举 —— 单一 computed 替代 `useVirtualEngine` + `useVxeEngine` 两个布尔。
+ *
+ * 注意：必须读 `enabled.value` 而非 `enabled`（后者是 Ref 对象，Boolean() 永远为 true）。
+ * virtualScroll 为 null 时短路返回 false。
+ */
 const useVirtualEngine = computed(
-  () => effectiveEngine.value === 'element-plus' && Boolean(virtualScroll?.enabled)
+  () => effectiveEngine.value === 'element-plus' && Boolean(virtualScroll?.enabled.value)
 )
 const useVxeEngine = computed(() => effectiveEngine.value === 'vxe-table')
 

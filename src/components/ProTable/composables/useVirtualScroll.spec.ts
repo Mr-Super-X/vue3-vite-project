@@ -117,15 +117,28 @@ describe('v3.0.1 强隔离校验', () => {
     expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('enableRowDrag'))
   })
 
-  it('virtualized + tableEngine="vxe-table" → 回落 element-plus + warn', () => {
+  it('virtualized + tableEngine="vxe-table" → engineConflict 标记 + warn（不再 mutate engine.value）', () => {
     const engine = ref<TableEngine>('vxe-table')
-    useVirtualScroll({
+    const result = useVirtualScroll({
       props: makeProps({ virtualized: true }),
       engine,
       enableRowEdit: false,
     })
-    expect(engine.value).toBe('element-plus')
+    // v3.1.3 review：useVirtualScroll 不再 mutate options.engine.value；
+    // 引擎回落由编排层 useEngineFallback.handleEngineFallback 接管
+    expect(engine.value).toBe('vxe-table')
+    expect(result.engineConflict.value).toBe('vxe-table-incompatible')
     expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('vxe-table'))
+  })
+
+  it('virtualized + element-plus 引擎 → engineConflict 为 null', () => {
+    const engine = ref<TableEngine>('element-plus')
+    const result = useVirtualScroll({
+      props: makeProps({ virtualized: true }),
+      engine,
+      enableRowEdit: false,
+    })
+    expect(result.engineConflict.value).toBeNull()
   })
 
   it('virtualized 且全部能力关闭 → 无 warn', () => {

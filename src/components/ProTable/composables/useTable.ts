@@ -115,12 +115,17 @@ export function useTable<T extends object = Record<string, unknown>>(
   // v3.1：持久化快照注入初值（statePersist 启用且路由返回场景；新会话为 undefined 走原默认值）
   const snapshot = options.initialState
 
-  // Vue 对含裸泛型 T 的 ref 会套 UnwrapRefSimple<T>（静态判定不了 T 是否含 Ref 联合），
-  // 需显式断言回 Ref<T[]>：仅类型层 cast，运行时仍是普通 deep ref，与泛型化前行为一致
+  // v3.1.3 review：泛型 ref 的 UnwrapRefSimple 边界注释
+  //
+  // Vue 3.5+ 对 `ref<T>` 推断含 `UnwrapRefSimple<T>` 自动展开嵌套 ref。
+  // 但 `T[] | null` 经 UnwrapRef 后类型仍正确；此处 cast 是为了规避
+  // "Type 'Ref<UnwrapRefSimple<T[] | null>>' is not assignable to Ref<T[] | null>"
+  // 这类 TS 编译器过度展开 —— 运行时 ref 行为不变。
   const data = ref<T[] | null>(null) as unknown as Ref<T[] | null>
   const total = ref(0)
   const page = ref(snapshot?.page ?? 1)
   const pageSize = ref(snapshot?.pageSize ?? props.pageSize ?? 10)
+  // v3.1.3 review：同上 UnwrapRefSimple cast —— selectedRows Ref<T[]>
   const selectedRows = ref<T[]>([]) as unknown as Ref<T[]>
   const tableRef = ref<ComponentPublicInstance | null>(null)
   const density = ref<TableDensity>(props.density ?? 'default')

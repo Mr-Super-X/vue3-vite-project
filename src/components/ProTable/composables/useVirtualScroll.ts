@@ -6,9 +6,16 @@
  * - 提供 el-table-v2 引擎分支的完整 props
  * - 强隔离校验：与其他能力（行内编辑/树形/汇总/合并/拖拽）+ vxe-table 引擎冲突时 warn + 忽略
  *
+ * v3.1.3 review 重构：
+ * - 移除 setup 阶段直接 mutate `options.engine.value = 'element-plus'` 的反模式（违反 Vue 单向数据流）。
+ * - 改为暴露 `engineConflict: Ref<'vxe-table-incompatible' | null>` 标记冲突，由编排层
+ *   `ProTable.vue` 在拿到该标记后通过 `useEngineFallback.handleEngineFallback()` 触发回退。
+ * - 行为等价：virtualized + vxe-table 仍自动回落到 element-plus，但 mutate 主体由编排层负责，
+ *   引擎数据流可追踪（单一来源 = useEngineFallback.effectiveEngine）。
+ *
  * @group ProTable composables
  */
-import { computed, type Ref } from 'vue'
+import { computed, ref, type Ref } from 'vue'
 import type { ProTableProps, TableEngine, VirtualScrollConfig } from '../types'
 
 export interface UseVirtualScrollOptions {
@@ -28,6 +35,11 @@ export interface UseVirtualScrollReturn {
     height: number
     estimatedRowHeight: number
   }>
+  /**
+   * v3.1.3 review：virtualized 与 vxe-table 冲突标记 —— 由编排层 useEngineFallback 接管回退。
+   * 编排层在 setup 早期读取此标记并触发 handleEngineFallback，useVirtualScroll 不再 mutate options.engine.value。
+   */
+  engineConflict: Ref<'vxe-table-incompatible' | null>
 }
 
 const DEFAULT_ROW_HEIGHT = 48
@@ -39,7 +51,7 @@ const DEFAULT_V2_HEIGHT = 500
  *
  * 已知限制（强隔离策略）：
  * - 行内编辑 / 树形 / 汇总 / 合并 / 拖拽 与 v2 不兼容，启用时 warn + 忽略
- * - vxe-table 引擎不支持 v2，启用时 warn + 强制回落 element-plus
+ * - vxe-table 引擎不支持 v2，启用时 warn + 由编排层回落到 element-plus（v3.1.3 review）
  */
 export function useVirtualScroll(options: UseVirtualScrollOptions): UseVirtualScrollReturn {
   const enabled = computed(() => Boolean(options.props.virtualized))
@@ -49,14 +61,17 @@ export function useVirtualScroll(options: UseVirtualScrollOptions): UseVirtualSc
     return typeof v === 'object' && v !== null ? v : {}
   })
 
-  /** v3.0.1 强隔离校验（启动期一次性） */
+  // v3.1.3 review：不再 mutate options.engine.value，仅标记冲突供编排层接管
+  const engineConflict = ref<'vxe-table-incompatible' | null>(null)
+  if (enabled.value && options.engine.value === 'vxe-table') {
+    engineConflict.value = 'vxe-table-incompatible'
+    console.warn(
+      '[ProTable] virtualized + tableEngine="vxe-table" 不兼容，编排层将自动回落到 element-plus 引擎'
+    )
+  }
+
+  // v3.1.3 review：启动期一次性冲突 warn（其他能力）
   if (enabled.value) {
-    if (options.engine.value === 'vxe-table') {
-      console.warn(
-        '[ProTable] virtualized + tableEngine="vxe-table" 不兼容，自动回落到 element-plus 引擎'
-      )
-      options.engine.value = 'element-plus'
-    }
     const conflicts: string[] = []
     if (options.enableRowEdit) conflicts.push('enableRowEdit')
     if (options.props.enableTree) conflicts.push('enableTree')
@@ -92,5 +107,5 @@ export function useVirtualScroll(options: UseVirtualScrollOptions): UseVirtualSc
     estimatedRowHeight: config.value.rowHeight ?? DEFAULT_ROW_HEIGHT,
   }))
 
-  return { enabled, config, tableProps, v2TableConfig }
+  return { enabled, config, tableProps, v2TableConfig, engineConflict }
 }
