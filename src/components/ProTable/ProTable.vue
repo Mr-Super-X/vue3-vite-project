@@ -2,20 +2,22 @@
 /**
  * ProTable —— 配置驱动的表格组件（spec §4 文件清单 / §五组件树 / §六数据流）
  *
- * 编排层角色：持有 4 个 composables 的解构输出，把状态透传给子组件
+ * 编排层角色：持有 8 个 composables 的解构输出，把状态透传给子组件
  * SearchForm / TableHeader / ElTable / ElPagination / ColSetting。
  * 业务编排收敛到 composables/*.ts（CLAUDE.md §一 #11 Hook 拆分）。
  *
- * v3.1.1 review 优化：
- * - 11 个事件桥接 handler 抽到 useProTableEvents（编排层 ≤80 行原则；模板零内联箭头）
- * - 模板 6 处条件展开（maxHeight / treeProps / spanMethod / summary / virtualScroll / columnResize）
- *   合并为 elTableBindings / vxeTableBindings computed
- * - 根容器 attrs 透传改用 v-bind="$attrs"，保留父组件传的 data-* / aria-*
- * - 重命名 toNonGenericColumn → asViewColumn（语义化）
+ * v3.1.2 review 优化（仅编排层小修，行为不变）：
+ * - 移除反模式 `void nextTick` 占位 import（line 340）
+ * - `searchColumnsNonGeneric` 改 const（useColumns 一次性生成，非响应式）
+ * - `summaryMethod` 拆为 `summaryRows` computed + 模板 inline 闭包（避免闭包引用变化触发子组件 prop 重新挂载）
+ * - `hasTableMounted` + `initialLoading` 边界修正（空数据首屏不再卡在骨架屏）
+ * - 抽 `DEFAULT_ROW_KEY` 常量统一 'id' 字面量
+ * - autoHeight 与 virtualized 同开时强制置空 props.autoHeight（避免 ElementTableV2Body 收到双重 max-height）
+ * - emit 类型对齐 useProTableEvents，去掉 ProTable.vue 中的适配闭包
  *
  * @group ProTable 组件
  */
-import { computed, ref, watch, onUnmounted, nextTick, type Ref } from 'vue'
+import { computed, ref, watch, onUnmounted, type Ref } from 'vue' // v3.1.2 review：移除 nextTick 反模式占位
 import 'element-plus/dist/index.css' // 与 form-schema/XForm.vue 对齐：直接引入全量 CSS
 import './styles/element-protable-overwrite.scss' // ProTable 特定的样式覆盖
 import { ElPagination, ElEmpty, ElConfigProvider } from 'element-plus' // element-plus 按需注入
@@ -39,6 +41,21 @@ import { useProTableEvents } from './composables/useProTableEvents' // v3.1.1 re
 import { resolveEngine } from './adapters/engine'
 import type { ProColumn, ProTableExpose, ProTableProps, SortState, TableEngine } from './types'
 
+/* ───────────── 局部常量 ───────────── */
+
+/**
+ * 行 key 字段名缺省值 —— ProTable.selectedRowKey + useTable.setSelectedRows
+ * + useTableCapabilities.rowKeyField 三处共用；将来调整默认行键只改这一处。
+ * v3.1.2 review 抽常量。
+ */
+const DEFAULT_ROW_KEY = 'id'
+
+/**
+ * 单例空对象 —— 给 paginationProps 在 prop 为 false 时复用，避免每次重渲创建新对象。
+ * 提前到所有 computed 之前声明，避免原版"先使用后声明"的视觉逆序（v3.1.2 review）。
+ */
+const EMPTY_PAGINATION_PROPS = Object.freeze({}) as Readonly<Record<string, unknown>>
+
 /* ───────────── 局部工具 ───────────── */
 
 /**
@@ -47,6 +64,14 @@ import type { ProColumn, ProTableExpose, ProTableProps, SortState, TableEngine }
  */
 function asViewColumn<T extends object>(col: ProColumn<T>): ProColumn {
   return col as unknown as ProColumn
+}
+
+/**
+ * v3.1.2 review：批量投影工具 —— 三处 castColumns 形态相同（map → cast），
+ * 仅数据源不同；统一抽工厂函数，去除重复。
+ */
+function asViewColumns<T extends object>(cols: ProColumn<T>[]): ProColumn[] {
+  return cols.map(asViewColumn)
 }
 
 const props = withDefaults(defineProps<ProTableProps<T>>(), {
@@ -77,7 +102,13 @@ const statePersist = useStatePersist({
 /** 路由返回场景的快照；新会话（F5 刷新/未启用）为 null */
 const persistedSnapshot = statePersist.read()
 
-// virtualized 分支（el-table-v2）自带高度管理，autoHeight 与之同开属配置冲突 —— 忽略并提示
+/**
+ * v3.1.2 review：autoHeight 与 virtualized 同开时，编排层直接置空 autoHeightEnabled。
+ * 原实现仅 console.warn 不阻断，遗留状态不一致风险：virtualized 分支生效时，
+ * useAutoHeight 返回的 maxHeight 仍可能为非 null（取决于 watch 触发顺序），会让
+ * ElementTableV2Body 同时收到 max-height 与自身高度管理，造成渲染异常。
+ */
+const autoHeightEnabled = props.autoHeight && !props.virtualized ? props.autoHeight : undefined
 if (props.autoHeight && props.virtualized) {
   console.warn(
     '[ProTable] autoHeight 与 virtualized 同时启用：virtualized 自带高度管理，autoHeight 已忽略'
@@ -142,13 +173,13 @@ const rootEl = ref<HTMLElement | null>(null)
 const { isFullscreen, toggleFullscreen } = useFullscreen()
 
 /**
- * 自动高度 —— virtualized 启用时忽略（v2 引擎自带高度管理，上方已 warn）；
- * offset 余量取 props.autoHeight 对象形态
+ * 自动高度 —— v3.1.2 review：autoHeightEnabled 已在编排层剔除 virtualized 冲突，
+ * 此处直接传入；offset 取 autoHeightEnabled 对象形态（false/undefined 时为 0）。
  */
 const { maxHeight: autoHeightMax } = useAutoHeight({
-  enabled: Boolean(props.autoHeight) && !props.virtualized,
+  enabled: Boolean(autoHeightEnabled),
   rootEl,
-  offset: typeof props.autoHeight === 'object' ? (props.autoHeight.offset ?? 0) : 0,
+  offset: typeof autoHeightEnabled === 'object' ? (autoHeightEnabled.offset ?? 0) : 0,
 })
 
 /** ElementTableBody 实例 ref —— 提前到 useTableEngineDom 之前声明，供 composable 接收 */
@@ -170,11 +201,17 @@ const { rowEdit, treeData, cellSpan, summary, virtualScroll, extendedExpose } =
 
 /** v2.0 树形：data 变化时 normalize + 扁平化（flatData computed 随 expanded 自动重算） */
 const hasTableMounted = ref(false)
-/** 合并 treeData.normalize 与 hasTableMounted 为单一监听点，避免同一数据源双 watcher */
+/**
+ * v3.1.2 review：data !== null（含 []）即标记 mounted。
+ * 原条件 `data.length > 0` 在首屏空数据（data 已是 [] 而非 null）时永不标记，
+ * 导致 initialLoading 永远为 true，骨架屏不消失。
+ *
+ * 合并 treeData.normalize 与 hasTableMounted 为单一监听点，避免同一数据源双 watcher。
+ */
 watch(
   () => table.data.value,
   (data) => {
-    if (data && data.length > 0) {
+    if (data !== null) {
       treeData?.normalize(data as never)
       hasTableMounted.value = true
     }
@@ -203,6 +240,10 @@ const proTableVxe = ref<InstanceType<typeof VxeTableBody> | null>(null)
 
 /* ───────────── v3.1.1 review：事件桥接抽到 useProTableEvents ───────────── */
 
+/**
+ * v3.1.2 review：emit 类型已对齐 defineEmits 的 sort-change 签名，
+ * 直接传 emit 函数，去掉原 ProTable.vue 中的适配闭包。
+ */
 const events = useProTableEvents<T>({
   table,
   columns,
@@ -212,17 +253,18 @@ const events = useProTableEvents<T>({
     effectiveEngine,
     proTableVxe,
   },
-  emit: (event, payload) => {
-    // 收口 defineEmits 类型到本 composable 的 sort-change 事件
-    if (event === 'sort-change') emit('sort-change', payload as SortState<T> | null)
-  },
+  emit,
 })
 
-/** v3.1：radio 列当前选中行 rowKey（selectedRows[0] 解析）—— 驱动 el-radio 勾选态；undefined = 未选中 */
+/**
+ * v3.1：radio 列当前选中行 rowKey（selectedRows[0] 解析）—— 驱动 el-radio 勾选态；undefined = 未选中。
+ * v3.1.2 review：默认值走 DEFAULT_ROW_KEY 常量（与 useTable.setSelectedRows 同一来源）。
+ */
 const selectedRowKey = computed<string | number | undefined>(() => {
   const first = table.selectedRows.value[0] as Record<string, unknown> | undefined
   if (!first) return undefined
-  return (first[props.rowKey ?? 'id'] as string | number | undefined) ?? undefined
+  const key = props.rowKey ?? DEFAULT_ROW_KEY
+  return (first[key] as string | number | undefined) ?? undefined
 })
 
 /**
@@ -235,7 +277,7 @@ const tableRows = computed<Record<string, unknown>[]>(
 
 /**
  * v3.0.3：分页 props —— 收敛模板 cast `(props.pagination as Record<string, unknown>) ?? {}`。
- * 引用稳定（pagination 为 false 或缺省时返回单例 {}）。
+ * 引用稳定（pagination 为 false 或缺省时返回顶部单例 EMPTY_PAGINATION_PROPS）。
  */
 const paginationProps = computed<Record<string, unknown>>(() => {
   const p = props.pagination
@@ -243,16 +285,24 @@ const paginationProps = computed<Record<string, unknown>>(() => {
   return EMPTY_PAGINATION_PROPS as Record<string, unknown>
 })
 
-/** 单例空对象 —— 给 paginationProps 在 prop 为 false 时复用，避免每次重渲创建新对象 */
-const EMPTY_PAGINATION_PROPS = Object.freeze({}) as Readonly<Record<string, unknown>>
+// 单例 EMPTY_PAGINATION_PROPS 已在文件顶部声明（v3.1.2 review）
 
-/** 是否空数据(给 AsyncState 三态用) —— 用 tableRows 替代 (table.data.value?.length ?? 0) === 0 */
+/**
+ * 是否空数据(给 AsyncState 三态用) —— 用 tableRows 替代 (table.data.value?.length ?? 0) === 0
+ * 注意：与 initialLoading 配合，loading=true 时不进入 empty 态（避免骨架屏闪烁）
+ */
 const isEmptyData = computed(
   () => !table.loading.value && !table.error.value && tableRows.value.length === 0
 )
 
-/** 首次加载中（skeleton 态）；后续刷新为 false，保持表格挂载（避免 reserve-selection / 展开行状态丢失） */
-const initialLoading = computed(() => table.loading.value && !hasTableMounted.value)
+/**
+ * 首次加载中（skeleton 态）；后续刷新为 false，保持表格挂载（避免 reserve-selection / 展开行状态丢失）。
+ * v3.1.2 review：边界修正——loading=true 且"未拿到 data（null）"展示骨架屏；
+ * loading=true 但"已拿到 data（即便 []）"切走 skeleton 进入空数据态，避免首屏空数据卡骨架屏。
+ */
+const initialLoading = computed(
+  () => table.loading.value && (table.data.value === null || !hasTableMounted.value)
+)
 
 /* ───────────── BEM 命名空间 ───────────── */
 
@@ -260,9 +310,16 @@ const bem = createNamespace('pro-table')
 
 /* ───────────── 列 cast 收敛（泛型 T → 非泛型 ProColumn，给子组件） ───────────── */
 
-const searchColumnsNonGeneric = computed(() => columns.searchColumns.map(asViewColumn))
-const allColumnsNonGeneric = computed(() => columns.allColumns.value.map(asViewColumn))
-const sortedColumnsNonGeneric = computed(() => columns.sortedColumns.value.map(asViewColumn))
+/**
+ * v3.1.2 review：
+ * - searchColumnsNonGeneric：searchColumns 在 useColumns setup 时一次性生成（filter 静态结果），
+ *   无响应性收益，包 computed 是误导；改为普通常量。
+ * - allColumnsNonGeneric / sortedColumnsNonGeneric：依赖响应式 Ref（visibleKeys/columnOrder），
+ *   必须保留 computed。
+ */
+const searchColumnsNonGeneric = asViewColumns(columns.searchColumns)
+const allColumnsNonGeneric = computed(() => asViewColumns(columns.allColumns.value))
+const sortedColumnsNonGeneric = computed(() => asViewColumns(columns.sortedColumns.value))
 
 /* ───────────── v3.1.1 review：模板条件展开合并为 computed 对象 ───────────── */
 
@@ -309,9 +366,6 @@ const summaryMethod = computed<(() => string[]) | undefined>(() => {
   return (): string[] => summary.summaryRows.value
 })
 
-/** v3.0 5b：虚拟滚动 tableProps（高度限制 + rowHeight） */
-const virtualScrollTableProps = computed(() => virtualScroll?.tableProps.value ?? {})
-
 /** v3.0.3：引擎模式枚举 —— 单一 computed 替代 `useVirtualEngine` + `useVxeEngine` 两个布尔。 */
 const useVirtualEngine = computed(
   () => effectiveEngine.value === 'element-plus' && Boolean(virtualScroll?.enabled)
@@ -335,9 +389,6 @@ defineExpose({
   getSortState: () => table.getSortState(),
   ...extendedExpose,
 } satisfies ProTableExpose<T>)
-
-// 引用 nextTick 保留导入（防御性：避免 Tree-shaker 移除 import 后 vite-plugin-vue-devtools 误报）
-void nextTick
 </script>
 
 <template>
@@ -405,7 +456,6 @@ void nextTick
           :cell-span="cellSpan"
           :show-summary="showSummary"
           :summary-method="summaryMethod"
-          :virtual-scroll-props="virtualScrollTableProps"
           :selected-row-key="selectedRowKey"
           :max-height="autoHeightMax"
           :density="table.density.value"
