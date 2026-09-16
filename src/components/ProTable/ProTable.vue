@@ -51,6 +51,18 @@ import type { ProColumn, ProTableExpose, ProTableProps, SortState, TableEngine }
  */
 const DEFAULT_ROW_KEY = 'id'
 
+/* ───────────── BEM 命名空间（v3.1.4 review：提前到 useAutoHeight 之前） ───────────── */
+
+/**
+ * v3.1.4 review：编排层在 useAutoHeight 之前就创建好 SearchForm/TableHeader 的
+ * BEM 命名空间 —— 给 useAutoHeight.selectors 注入 BEM 字符串用。
+ * 单一来源：编排层用 `bem.b()` 生成 BEM 字符串，与子组件内 `createNamespace('pro-table-search')`
+ * 同名同前缀，$BEM_PREFIX / 子组件块名改了 → 全链路同步，不会静默失效。
+ */
+const bem = createNamespace('pro-table')
+const searchFormBem = createNamespace('pro-table-search')
+const tableHeaderBem = createNamespace('pro-table-header')
+
 /**
  * 单例空对象 —— 给 paginationProps 在 prop 为 false 时复用，避免每次重渲创建新对象。
  * 提前到所有 computed 之前声明，避免原版"先使用后声明"的视觉逆序（v3.1.2 review）。
@@ -176,11 +188,21 @@ const { isFullscreen, toggleFullscreen } = useFullscreen()
 /**
  * 自动高度 —— v3.1.2 review：autoHeightEnabled 已在编排层剔除 virtualized 冲突，
  * 此处直接传入；offset 取 autoHeightEnabled 对象形态（false/undefined 时为 0）。
+ *
+ * v3.1.4 review：BEM 选择器由编排层注入（替代 useAutoHeight 原硬编码 .vv-pro-table-search/-header）。
+ * 编排层用 SearchForm/TableHeader 各自的 `bem.b()` 产出对应 BEM 根类名传入，
+ * 避免 composable 隐式依赖 $BEM_PREFIX 默认值 'vv'（CLAUDE.md §3.2 规则 3）。
  */
 const { maxHeight: autoHeightMax } = useAutoHeight({
   enabled: Boolean(autoHeightEnabled),
   rootEl,
   offset: typeof autoHeightEnabled === 'object' ? (autoHeightEnabled.offset ?? 0) : 0,
+  // BEM 字符串由编排层统一生成，与子组件块名/BEM 前缀单一来源同步
+  selectors: {
+    search: searchFormBem.b(),
+    header: tableHeaderBem.b(),
+    // pagination 选填：保留 element-plus 默认 '.el-pagination'
+  },
 })
 
 /** ElementTableBody 实例 ref —— 提前到 useTableEngineDom 之前声明，供 composable 接收 */
@@ -295,12 +317,11 @@ const selectedRowKey = computed<string | number | undefined>(() => {
 })
 
 /**
- * v3.0.3：表格数据标准化 —— 收敛模板中 3 处 `(table.data.value ?? []) as Record<string, unknown>[]`。
- * 引用稳定：data 不变时所有引擎分支共享同一数组。
+ * v3.0.3 → v3.1.4 review：表格数据 Record 视角投影 —— 直接读 useTable 暴露的
+ * `rows` computed，消除原「(table.data.value ?? []) as Record<string, unknown>[]」
+ * 在编排层重复 cast。引用稳定：data 不变时所有引擎分支共享同一数组。
  */
-const tableRows = computed<Record<string, unknown>[]>(
-  () => (table.data.value ?? []) as unknown as Record<string, unknown>[]
-)
+const tableRows = computed<Record<string, unknown>[]>(() => table.rows.value)
 
 /**
  * v3.0.3：分页 props —— 收敛模板 cast `(props.pagination as Record<string, unknown>) ?? {}`。
@@ -330,10 +351,6 @@ const isEmptyData = computed(
 const initialLoading = computed(
   () => table.loading.value && (table.data.value === null || !hasTableMounted.value)
 )
-
-/* ───────────── BEM 命名空间 ───────────── */
-
-const bem = createNamespace('pro-table')
 
 /* ───────────── 列 cast 收敛（泛型 T → 非泛型 ProColumn，给子组件） ───────────── */
 

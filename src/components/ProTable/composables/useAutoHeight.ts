@@ -29,6 +29,20 @@ export interface UseAutoHeightOptions {
   rootEl: Ref<HTMLElement | null>
   /** 附加余量（像素，默认 0）—— AutoHeightConfig.offset，正值让表格更矮 */
   offset?: number
+  /**
+   * 子区域 BEM 选择器（v3.1.4 review：由编排层注入，替代原硬编码）
+   * - search / header 必填：编排层用对应子组件的 `bem.b()` 产出（如 `'.vv-pro-table-search'`）
+   * - pagination 选填：element-plus 稳定 class，非 BEM，保留默认 `.el-pagination`
+   * 必填而非默认：避免 $BEM_PREFIX 改了 / 子组件块名改了 → 静默失效
+   */
+  selectors?: {
+    /** SearchForm 根 BEM 类（编排层 searchFormBem.b()） */
+    search?: string
+    /** TableHeader 根 BEM 类（编排层 tableHeaderBem.b()） */
+    header?: string
+    /** ElPagination 选择器（element-plus 稳定 class） */
+    pagination?: string
+  }
 }
 
 export interface UseAutoHeightReturn {
@@ -41,10 +55,17 @@ const FIXED_MARGIN_TOTAL = 36
 /** 极端窄视口下的高度下限 —— 避免 maxHeight 算出负数/个位数导致表体不可见 */
 const MIN_TABLE_HEIGHT = 100
 
-/** 子区域选择器 —— 项目内稳定 BEM class + element-plus 稳定 class（测量目标） */
-const SEARCH_SELECTOR = '.vv-pro-table-search'
-const HEADER_SELECTOR = '.vv-pro-table-header'
-const PAGINATION_SELECTOR = '.el-pagination'
+/** 子区域选择器 —— 全部由编排层注入，避免 composable 隐式依赖 $BEM_PREFIX 默认值。
+ *
+ * v3.1.4 review 重构：
+ * - 原 `SEARCH_SELECTOR` / `HEADER_SELECTOR` 硬编码 `.vv-pro-table-search` / `.vv-pro-table-header`，
+ *   与 CLAUDE.md §3.2 规则 3「禁止硬编码前缀字符串」冲突。若 $BEM_PREFIX 改了
+ *   （如多 theme 打包），选择器会静默失效，maxHeight 测量全错。
+ * - 改为编排层通过 `bem.b()` 生成 BEM 字符串后经 options 注入。
+ * - element-plus 稳定 class（`.el-pagination`）非 BEM，保留默认值。
+ */
+/** element-plus 分页器选择器（非 BEM，外部库稳定 class，保留默认值） */
+const DEFAULT_PAGINATION_SELECTOR = '.el-pagination'
 
 export function useAutoHeight(options: UseAutoHeightOptions): UseAutoHeightReturn {
   const maxHeight = ref<number | null>(null)
@@ -80,10 +101,17 @@ export function useAutoHeight(options: UseAutoHeightOptions): UseAutoHeightRetur
     if (!root) return
     const top = root.getBoundingClientRect().top
     // offsetHeight 不含 margin；margin-top 已由 FIXED_MARGIN_TOTAL 统一扣除
-    const searchH = getCachedElement(root, SEARCH_SELECTOR)?.getBoundingClientRect().height ?? 0
-    const headerH = getCachedElement(root, HEADER_SELECTOR)?.getBoundingClientRect().height ?? 0
-    const paginationH =
-      getCachedElement(root, PAGINATION_SELECTOR)?.getBoundingClientRect().height ?? 0
+    // v3.1.4 review：选择器从 options.selectors 读取，无默认值（避免 BEM 静默失效）
+    const searchSel = options.selectors?.search
+    const headerSel = options.selectors?.header
+    const paginationSel = options.selectors?.pagination ?? DEFAULT_PAGINATION_SELECTOR
+    const searchH = searchSel
+      ? (getCachedElement(root, searchSel)?.getBoundingClientRect().height ?? 0)
+      : 0
+    const headerH = headerSel
+      ? (getCachedElement(root, headerSel)?.getBoundingClientRect().height ?? 0)
+      : 0
+    const paginationH = getCachedElement(root, paginationSel)?.getBoundingClientRect().height ?? 0
     const available =
       window.innerHeight -
       top -

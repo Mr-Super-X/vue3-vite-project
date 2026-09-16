@@ -53,17 +53,43 @@ describe('useAutoHeight', () => {
 
   it('启用：首测计算 maxHeight（算法：视口 - top - 子区域 - 固定间距 - offset）', async () => {
     stubInnerHeight(900)
+    // v3.1.4 review：选择器由编排层注入，测试同步改用 selectors 选项
+    // （与生产路径一致，避免测试与生产双份 BEM 字符串漂移）
     const root = mockRoot(100, {
       '.vv-pro-table-search': 60,
       '.vv-pro-table-header': 40,
       '.el-pagination': 32,
     })
     const { result, dispose } = withScope(() =>
-      useAutoHeight({ enabled: true, rootEl: ref(root), offset: 10 })
+      useAutoHeight({
+        enabled: true,
+        rootEl: ref(root),
+        offset: 10,
+        selectors: {
+          search: '.vv-pro-table-search',
+          header: '.vv-pro-table-header',
+        },
+      })
     )
     await nextTick()
     // 900 - 100 - 60 - 40 - 32 - 36(固定间距) - 10(offset) = 622
     expect(result.maxHeight.value).toBe(622)
+    dispose()
+  })
+
+  it('v3.1.4：未传 selectors.search 时搜索区高度按 0 算（无静默默认字符串）', async () => {
+    stubInnerHeight(900)
+    const root = mockRoot(100, { '.el-pagination': 32 })
+    const { result, dispose } = withScope(() =>
+      useAutoHeight({
+        enabled: true,
+        rootEl: ref(root),
+        selectors: { header: '.vv-pro-table-header' },
+      })
+    )
+    await nextTick()
+    // 900 - 100 - 0(未传 search) - 0(mockRoot 没 header) - 32 - 36 = 732
+    expect(result.maxHeight.value).toBe(732)
     dispose()
   })
 

@@ -13,6 +13,7 @@
  */
 import { ref, computed, type Ref } from 'vue'
 import { Local } from '@/utils/storage' // plan critical review #5：Local 不在 auto-import 列表
+import { isValidPersistedSetting } from './_utils/validatePersisted' // v3.1.4 review：持久化形状 fail-safe 守卫
 import type { ProColumn, ProTableProps, TableEngine } from '../types'
 
 export interface UseColumnsOptions<T extends object = Record<string, unknown>> {
@@ -35,7 +36,11 @@ export interface UseColumnsReturn<T extends object = Record<string, unknown>> {
   resetToDefault: () => void
 }
 
-interface PersistedSetting {
+/**
+ * 持久化结构 —— v3.1.4 review 抽为 export，被 _utils/validatePersisted 消费。
+ * 字段全部 optional（向前兼容旧版本快照）。
+ */
+export interface PersistedSetting {
   order?: string[]
   visible?: Record<string, boolean>
   fixed?: Record<string, 'left' | 'right'>
@@ -111,10 +116,12 @@ export function useColumns<T extends object = Record<string, unknown>>(
   const tableKey = props.tableKey
   const storageKey = tableKey ? `${tableKey}:columns` : ''
 
-  // 加载持久化（safeParse 由 Local 提供；spec §九 #8）
-  const persisted: PersistedSetting | null = storageKey
-    ? (Local.get(storageKey) as PersistedSetting | null)
-    : null
+  // 加载持久化（v3.1.4 review：fail-safe 形状校验，避免篡改 localStorage 注入
+  // 非数组 order / 非 boolean visible 让下游 Object.fromEntries 抛错）
+  // safeParse 由 Local 提供；spec §九 #8
+  const raw: unknown = storageKey ? Local.get(storageKey) : null
+  const persisted: PersistedSetting | null =
+    raw && isValidPersistedSetting(raw) ? (raw as PersistedSetting) : null
 
   const allColumns = ref<ProColumn<T>[]>(cloneColumns(props.columns))
   // v3.0 C2 修复辅助：记录"静态 hidden 列 prop 集合"，用于 persist / 回填时识别

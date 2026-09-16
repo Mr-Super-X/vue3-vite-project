@@ -50,8 +50,15 @@
      demo 双栏并排的 pane，仅 ~630px），每列被压到 ~150px，输入框仅剩 ~80px 不可用。
      element-plus 栅格断点基于视口宽度，对"视口宽但容器窄"的场景无效，
      故用 CSS 容器查询按 .vv-pro-table-search 自身宽度降级：≤900px 降 2 列、≤560px 降 1 列。
-     覆盖 el-col 的 max-width/flex-basis 即可（选择器特异性 0-3-0 > el-col-6 的 0-1-0） */
-  .vv-pro-table-search {
+     覆盖 el-col 的 max-width/flex-basis 即可（选择器特异性 0-3-0 > el-col-6 的 0-1-0）
+
+     v3.1.4 review：选择器从硬编码 .vv-pro-table-search 改为 .#{$BEM_PREFIX}-pro-table-search，
+     与 BEM 工具产出对齐。SearchForm 块名 / BEM 前缀改了 → 全链路同步，不会静默失效。
+     嵌套规则：容器类型 / 按钮组右对齐 / 容器查询 @container 均针对 SearchForm 根元素；
+     @container 内部 .el-row > .el-col 是后代选择器，编译产物
+     `.vv-pro-table .vv-pro-table-search { container-type: ... }` 与原版完全一致
+     （SearchForm 永远是 ProTable 后代，descendant 语义正确）。 */
+  .#{$BEM_PREFIX}-pro-table-search {
     container-type: inline-size;
 
     /* 搜索/重置/展开按钮组右对齐（el-col 内默认左对齐，对齐多数中后台工具栏惯例） */

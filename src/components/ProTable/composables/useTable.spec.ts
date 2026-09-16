@@ -204,4 +204,31 @@ describe('useTable', () => {
     expect(String(table.error.value?.message)).toContain('结构非法')
     expect(onRequestError).toHaveBeenCalled()
   })
+
+  // v3.1.4 review 新增：rows computed（data 的 Record 视角投影）
+  it('v3.1.4：rows 是 data 的 Record 视角投影，data=null 时返回空数组', async () => {
+    const deps = makeDeps()
+    const table = useTable(deps)
+    // 初始 data === null
+    expect(table.data.value).toBeNull()
+    expect(table.rows.value).toEqual([])
+    // refresh 后 data 填充，rows 同步
+    await table.refresh()
+    expect(table.rows.value).toEqual([{ id: 1, name: 'a' }])
+  })
+
+  // v3.1.4 review 新增：rowKey 缺失时 WeakSet 引用去重
+  it('v3.1.4：rowKey 缺失时 setSelectedRows 按对象引用去重（WeakSet 兜底）+ warn', () => {
+    const deps = makeDeps()
+    delete (deps.props as { rowKey?: string }).rowKey // 显式删除 rowKey
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const table = useTable(deps)
+    const row1 = { id: 1, name: 'a' }
+    const row2 = { id: 2, name: 'b' }
+    // 同一对象引用重复传入：去重保留 1 个
+    table.setSelectedRows([row1, row1, row2, row2])
+    expect(table.getSelectedRows()).toEqual([row1, row2])
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('rowKey 缺失'))
+    warnSpy.mockRestore()
+  })
 })

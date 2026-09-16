@@ -17,7 +17,15 @@
  * @see [`./useSearch`](./useSearch.ts) 共享 fetchHook 闭包
  * @group ProTable composables
  */
-import { ref, watch, onMounted, onUnmounted, type ComponentPublicInstance, type Ref } from 'vue'
+import {
+  ref,
+  computed,
+  watch,
+  onMounted,
+  onUnmounted,
+  type ComponentPublicInstance,
+  type Ref,
+} from 'vue'
 import { useRequest } from '@composables/useRequest' // 项目 composable auto-import
 import { serializeParams } from './useSearch' // 第 1 步单源化：序列化唯一实现
 import type { PersistedTableState } from './useStatePersist' // v3.1：状态保持快照（纯类型依赖，无运行时环）
@@ -50,6 +58,12 @@ export interface UseTableOptions<T extends object = Record<string, unknown>> {
 
 export interface UseTableReturn<T extends object = Record<string, unknown>> {
   data: Ref<T[] | null>
+  /**
+   * v3.1.4 review：data 的 Record 视角投影 —— 消除下游消费方「(data.value ?? []) as Record<string, unknown>[]」
+   * 重复 cast。useTable 自身做 1 次类型层投影，下游（ProTable.vue 模板 / useTableCapabilities 等）
+   * 直接 `table.rows.value` 使用。
+   */
+  rows: Ref<Record<string, unknown>[]>
   loading: Ref<boolean>
   error: Ref<Error | null>
   total: Ref<number>
@@ -122,6 +136,15 @@ export function useTable<T extends object = Record<string, unknown>>(
   // "Type 'Ref<UnwrapRefSimple<T[] | null>>' is not assignable to Ref<T[] | null>"
   // 这类 TS 编译器过度展开 —— 运行时 ref 行为不变。
   const data = ref<T[] | null>(null) as unknown as Ref<T[] | null>
+  /**
+   * v3.1.4 review：data 的 Record 视角投影（消除下游 cast 重复）
+   * - computed 缓存 cast 结果，避免每次访问重新 cast
+   * - 下游可直接 `table.rows.value` 替代 `(table.data.value ?? []) as Record<string, unknown>[]`
+   * - 运行时 data / rows 是同一引用，零性能开销
+   */
+  const rows = computed<Record<string, unknown>[]>(
+    () => (data.value ?? []) as unknown as Record<string, unknown>[]
+  )
   const total = ref(0)
   const page = ref(snapshot?.page ?? 1)
   const pageSize = ref(snapshot?.pageSize ?? props.pageSize ?? 10)
@@ -199,10 +222,22 @@ export function useTable<T extends object = Record<string, unknown>>(
   }
 
   function setSelectedRows(rows: T[]): void {
-    // 按 row-key 去重（spec §九 #13 守卫：row-key 缺失时不报错）
+    // 按 row-key 去重（spec §九 #13 守卫：row-key 缺失时按对象引用去重兜底）
+    // v3.1.4 review：原实现 rowKey 缺失时直接 `[...rows]` 不去重，
+    // el-table 多次触发 selection-change 可能产生重复行污染 selectedRows
     const key = props.rowKey
     if (!key) {
-      selectedRows.value = [...rows]
+      // 业务方传 props.rowKey 后可按字段去重；未传时按对象引用去重（WeakSet 防内存泄漏）
+      console.warn(
+        '[ProTable] rowKey 缺失：setSelectedRows 按对象引用去重兜底，建议显式传 rowKey 启用按字段去重'
+      )
+      const seen = new WeakSet<object>()
+      selectedRows.value = rows.filter((r) => {
+        const obj = r as object
+        if (seen.has(obj)) return false
+        seen.add(obj)
+        return true
+      })
       return
     }
     const seen = new Set<string>()
@@ -271,6 +306,7 @@ export function useTable<T extends object = Record<string, unknown>>(
 
   return {
     data,
+    rows,
     loading: request.loading as Ref<boolean>,
     error: request.error as Ref<Error | null>,
     total,
