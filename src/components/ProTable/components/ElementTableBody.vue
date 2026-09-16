@@ -215,9 +215,11 @@ defineExpose({
           </template>
           <!--
             v3.1 radio 单选列 —— el-table 无内置 radio 类型，自绘单选控件。
-            选中态由编排层 selectedRowKey 驱动（useTable.selectedRows[0] 解析），
-            点击 emit 整行 → 编排层 setSelectedRows([row]) 收敛到统一选中区
-            （getSelectedRows / clearSelection 对 radio 天然复用）。
+            选中收敛在 update:modelValue 而非 change：el-radio 的 change 于 nextTick
+            派发且携带 props.modelValue 当前值，纯受控（modelValue 单向注入、点击不本地
+            更新）下首次点击 change 读到 undefined → 触发 element-plus radioEmits.change
+            校验失败的 dev 警告；选中挪到 update:modelValue（setter 同步路径）后，同步
+            更新 selectedRowKey → 重渲染 flush 先于 el nextTick，change 携带值已合法。
             modelValue 条件展开：exactOptionalPropertyTypes 下 undefined 显式传入报 TS2379
           -->
           <ElRadio
@@ -226,7 +228,7 @@ defineExpose({
               ...(props.selectedRowKey !== undefined ? { modelValue: props.selectedRowKey } : {}),
               value: rowKeyOf(scope.row),
             }"
-            @change="emit('radio-select', scope.row)"
+            @update:model-value="emit('radio-select', scope.row)"
           />
           <!-- v2.0 编辑控件（编辑态 + 含 edit 配置） -->
           <EditCell

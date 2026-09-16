@@ -20,6 +20,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { h, nextTick } from 'vue'
+import { ElRadio } from 'element-plus'
 import ElementTableBody from './ElementTableBody.vue'
 import type { ProColumn } from '../types'
 
@@ -89,6 +90,31 @@ describe('ElementTableBody', () => {
     wrapper.vm.$emit('cell-dblclick', 1)
     expect(wrapper.emitted('cell-dblclick')).toBeTruthy()
     expect(wrapper.emitted('cell-dblclick')![0]).toEqual([1])
+    wrapper.unmount()
+  })
+
+  it('radio 列：选中收敛在 update:modelValue（change 不再驱动选中，规避 el emits 校验警告）', async () => {
+    const columns: ProColumn[] = [
+      { prop: '__radio', label: '', type: 'radio', width: 45 },
+      { prop: 'id', label: 'ID', width: 80 },
+    ]
+    const wrapper = mountBody({ columns })
+    const radio = wrapper.findComponent(ElRadio)
+    expect(radio.exists()).toBe(true)
+    // change 不再承载选中：el-radio change 于 nextTick 携带 props.modelValue，
+    // 纯受控下首次点击为 undefined，若由 change 驱动选中会踩中其 emits 校验 dev 警告（组件注释详述）
+    radio.vm.$emit('change', undefined)
+    await nextTick()
+    expect(wrapper.emitted('radio-select')).toBeFalsy()
+    // 选中走 update:modelValue 同步路径：emit 整行 → 编排层收敛统一选中区
+    // （jsdom 下 ElTable 行 scope.row 为空对象占位 —— functional 组件环境限制，
+    //   与 cell-dblclick 用例同理，见文件头注释；此处锁定「update 触发 + 载荷为单行对象」契约）
+    radio.vm.$emit('update:modelValue', 1)
+    await nextTick()
+    const events = wrapper.emitted('radio-select')
+    expect(events).toHaveLength(1)
+    expect(events![0]).toHaveLength(1)
+    expect(typeof events![0]![0]).toBe('object')
     wrapper.unmount()
   })
 
