@@ -2,11 +2,14 @@
 /**
  * XFormErrorToastItem —— 单条错误 toast 卡片
  *
- * 单条 toast 是纯展示组件（props.event + emits.dismiss），无状态。template 结构 + style class 名 + event payload 透传均与拆分前一致。
+ * 纯展示组件（props.event + emits.dismiss），无状态。
+ * 值格式化抽离到 utils/format-error-value.ts 以便单测与复用：
+ * 同一对象只 stringify 一次,display 与 tooltip 共享 getValueMeta 结果。
  *
  * @group XForm 组件
  */
 import type { FormErrorEvent, FormErrorSeverity } from '../composables/use-form-error-bus'
+import { getValueMeta } from '../utils/format-error-value'
 
 defineProps<{
   event: FormErrorEvent
@@ -16,54 +19,11 @@ const emit = defineEmits<{
   dismiss: [id: string]
 }>()
 
-/** 严重等级 → 图标查表 —— 比 switch 更纯，O(1) 命中 */
+/** 严重等级 → 图标查表 —— 比 switch 更纯，值命中 */
 const SEVERITY_ICONS: Readonly<Record<FormErrorSeverity, string>> = {
   error: '✕',
   warn: '⚠',
   info: 'ℹ',
-}
-
-/** 显示截断阈值 —— 24 字符覆盖常见 id / name / 短文本 */
-const VALUE_DISPLAY_MAX = 24
-
-/**
- * 安全 JSON 序列化 —— 不可序列化值（循环引用等）返回 null 占位
- *
- * 与 formatValue 不同：保留完整字符串，不截断（用于 tooltip 显示原值）。
- *
- * 修复背景：循环引用对象（如 backend 错误 detail.value 含 self-ref）会抛 TypeError，
- * 此前的 :title 属性无 try/catch 导致整 toast 渲染崩溃。
- */
-function tryJsonStringify(v: unknown): string | null {
-  try {
-    return JSON.stringify(v)
-  } catch {
-    return null
-  }
-}
-
-/**
- * 格式化字段值显示 —— 数组/对象用 tryJsonStringify，长字符串截断
- *
- * 性能要点：与 title 属性共享 tryJsonStringify 结果，避免对同一对象序列化两次。
- */
-function formatValue(v: unknown): string {
-  if (v === null) return 'null'
-  if (v === undefined) return 'undefined'
-  if (typeof v === 'string') {
-    return v.length > VALUE_DISPLAY_MAX ? `${v.slice(0, VALUE_DISPLAY_MAX)}…` : v
-  }
-  if (typeof v === 'object') {
-    const s = tryJsonStringify(v)
-    if (s === null) return '[unserializable]'
-    return s.length > VALUE_DISPLAY_MAX ? `${s.slice(0, VALUE_DISPLAY_MAX)}…` : s
-  }
-  return String(v)
-}
-
-/** 字段当前值的 tooltip 文本 —— title 用完整 JSON，display 用截断 JSON */
-function valueTooltip(v: unknown): string {
-  return `字段当前值：${tryJsonStringify(v) ?? '[unserializable]'}`
 }
 </script>
 
@@ -84,9 +44,9 @@ function valueTooltip(v: unknown): string {
           <span
             v-if="d.value !== undefined"
             :class="$style.detailValue"
-            :title="valueTooltip(d.value)"
+            :title="`字段当前值：${getValueMeta(d.value).tooltip}`"
           >
-            = {{ formatValue(d.value) }}
+            = {{ getValueMeta(d.value).display }}
           </span>
         </li>
       </ul>

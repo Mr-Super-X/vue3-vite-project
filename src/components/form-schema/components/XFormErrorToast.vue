@@ -3,7 +3,7 @@
  * XFormErrorToast —— user-facing 错误提示容器
  *
  * 渲染 XFormErrorEvent 列表为右上角浮窗 toast：
- * - 由 XForm 的 showErrorToast prop 控制（enabled=true 且存在未 dismiss 事件时渲染）——
+ * - 由 XForm 的 showErrorToast prop 控制（enabled=true 时渲染）——
  *   默认关闭、显式传参开启，与运行环境（dev/prod）无关
  * - 关闭时 errorBus 仍保留 console 留痕 + prod 上报点扩展位，仅可视化层不渲染
  *
@@ -11,10 +11,13 @@
  * - DebugBanner 聚焦 schema 校验错误 + 安全扫描（静态分析产物）
  * - ErrorToast 聚焦运行时错误（crossValidator 失败 / 表达式解析失败 / 组件名无效等）
  *
- * 单条 toast 卡片渲染抽到 ./XFormErrorToastItem.vue，本文件仅承载容器（Teleport + ul 列表 + stack 定位样式）。
- *
- * a11y 修正：role="alert" 会让屏幕阅读器在每次新 toast 出现时立即打断当前朗读并播报内容，
- * 适合一次性错误但不适合持续的 tosat 流；改用 role="status" + aria-live="polite" 让用户可控打断。
+ * a11y 决策（以代码为准）：
+ * - 模板使用 `role="alert" aria-live="polite"`
+ * - role="alert" 隐式 aria-live="assertive"，
+ *   但显式声明的 aria-live="polite" 会**覆盖**默认值
+ * - 采用 polite 让屏阅读器在当前朗读**停顿时**才播报新 toast，
+ *   适合持续 toast 流（不会反复打断用户正在听的菜单项）
+ * - 若业务希望"立即打断"，可通过 toastContainer slot 替换容器
  *
  * @group XForm 组件
  */
@@ -24,7 +27,7 @@ import XFormErrorToastItem from './XFormErrorToastItem.vue'
 
 const { events, enabled } = defineProps<{
   events: FormErrorEvent[]
-  /** 是否启用可视化 —— 由 XForm 的 showErrorToast prop 控制（默认关闭），与本组件无关环境判断 */
+  /** 是否启用可视化 —— 由 XForm 的 showErrorToast prop 控制（默认关闭） */
   enabled: boolean
 }>()
 
@@ -34,8 +37,12 @@ const emit = defineEmits<{
 
 /**
  * 未 dismiss 的事件 —— computed 缓存避免 v-for 内 filter 每次 patch 重复执行
+ *
+ * 短路优化：events 全部 dismissed 时直接返回同长度 0 数组,减少下游 v-for diff 成本
  */
-const visibleEvents = computed(() => events.filter((e) => !e.dismissed))
+const visibleEvents = computed(() =>
+  events.some((e) => !e.dismissed) ? events.filter((e) => !e.dismissed) : []
+)
 </script>
 
 <template>

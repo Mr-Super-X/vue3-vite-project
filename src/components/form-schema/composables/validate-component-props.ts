@@ -23,8 +23,8 @@ const KNOWN_PROP_KEYS: Record<string, Set<string>> = {}
 
 /**
  * 一次性从 EL_COMPONENT_MAP 反射所有组件的 props keys
- * 在 import 时立即执行（同步操作，启动成本 < 1ms）
- * 用户自定义组件（如 MyInput）未注册到 EL_COMPONENT_MAP → 自动跳过
+ * 懒构建（2026-09-16 review 优化）：首次 validateSchemaProps 调用时才构建，
+ * 启动期无副作用；prod 模式下 validate 入口直接 return，永不构建。
  */
 function buildKnownPropKeys(): void {
   for (const [name, comp] of Object.entries(EL_COMPONENT_MAP)) {
@@ -52,7 +52,22 @@ function buildKnownPropKeys(): void {
     }
   }
 }
-buildKnownPropKeys()
+
+/** 懒构建守卫 —— 多次调用只构建一次 */
+let built = false
+
+/** 测试用：触发懒构建（spec 可直接调用） */
+export function _ensureBuilt(): void {
+  if (built) return
+  buildKnownPropKeys()
+  built = true
+}
+
+/** 测试用：重置缓存以便重新构建（仅测试 import 后调用） */
+export function _resetForTesting(): void {
+  for (const k of Object.keys(KNOWN_PROP_KEYS)) delete KNOWN_PROP_KEYS[k]
+  built = false
+}
 
 /** dev mode 校验结果 */
 interface ValidationResult {
@@ -120,6 +135,7 @@ export function validateSchemaProps(
 ): void {
   if (!import.meta.env.DEV) return
   if (!root) return
+  _ensureBuilt()
   traverse(root)
 
   function traverse(node: SchemaNode | SchemaNode[] | string | undefined): void {
@@ -161,5 +177,7 @@ export function validateSchemaProps(
 
 /** 测试用：获取某组件白名单（用于 spec 验证） */
 export function getKnownPropKeys(componentName: string): Set<string> | undefined {
+  // 测试场景下可能直接访问缓存而不走 validateSchemaProps；显式触发懒构建
+  _ensureBuilt()
   return KNOWN_PROP_KEYS[componentName]
 }

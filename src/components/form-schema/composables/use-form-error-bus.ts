@@ -56,7 +56,7 @@ export interface FormErrorEvent {
   fields?: string[]
   /**
    * 字段错误详情（async-validator 风格）—— toast 渲染 + console 按字段分组输出
-   * 每条含 field 路径、message 错误信息、可选 fieldValue 当前值
+   * 每条含 field 路径、message 错误信息、可选 field value 当前值
    */
   details?: Array<{ field: string; message: string; value?: unknown }>
   /** 错误来源模块名（debug 友好） */
@@ -111,8 +111,19 @@ const DEDUPE_WINDOW_MS = 5_000
  * 超限后先清理过期条目，仍超限则整体清空（最坏后果 = 去重短暂失效多弹几条 toast，无正确性影响）
  */
 const MAX_DEDUPE_CACHE = 100
-/** dismiss 清理延时 —— 用户点 × 后 30s 物理移除（防列表无限增长） */
+/** dismiss 清理时长 —— 用户点 × 后 30s 物理移除（防列表无限增长） */
 const DISMISS_CLEANUP_MS = 30_000
+
+/**
+ * 生成唯一 ID —— crypto.randomUUID 在所有现代浏览器（Chrome 92+/Firefox 95+/Safari 15.4+）可用
+ * 旧浏览器回退到 Math.random —— 实际碰撞概率已 < 2^-16
+ */
+function generateId(code: string): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `${code}-${crypto.randomUUID()}`
+  }
+  return `${code}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
 
 /** 创建一份 error bus（XForm 顶层调用一次） */
 export function useFormErrorBus(): UseFormErrorBusReturn {
@@ -162,7 +173,7 @@ export function useFormErrorBus(): UseFormErrorBusReturn {
 
     const newEvent: FormErrorEvent = {
       ...eventData,
-      id: `${event.code}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: generateId(event.code),
       timestamp: Date.now(),
     }
     // 保留最近 MAX_EVENTS 条
@@ -181,8 +192,7 @@ export function useFormErrorBus(): UseFormErrorBusReturn {
         Array<{ message: string; fieldValue: unknown; field: string }>
       > = {}
       for (const d of eventData.details) {
-        if (!errorsMap[d.field]) errorsMap[d.field] = []
-        errorsMap[d.field]!.push({
+        ;(errorsMap[d.field] ??= []).push({
           message: d.message,
           fieldValue: d.value,
           field: d.field,

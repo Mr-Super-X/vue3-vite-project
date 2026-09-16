@@ -23,8 +23,8 @@
 import { onErrorCaptured, ref, computed, type VNode } from 'vue'
 import type { SchemaNode } from '../types'
 
-/** Props 接口 —— 集中声明便于 IDE hover 展开 + 子组件 props 校验 */
-interface SchemaFieldProps {
+/** Props 类型 —— 集中声明便于 IDE hover 展开 + 子组件 props 校验 */
+type SchemaFieldProps = {
   node: SchemaNode
   renderFn: (node: SchemaNode) => VNode | string | VNode[] | undefined
 }
@@ -45,6 +45,10 @@ const renderError = ref<Error | null>(null)
  * 改用一个 ref counter：renderError 设置时 tick++ → computed 重算 → 返回 undefined → 占位
  *
  * 关键：tick 必须**先于**renderError 被设置，否则下一次 render 仍会调 renderFn
+ *
+ * ⚠️ 不要删除此 ref —— vue 3 的响应式依赖追踪必须显式访问 ref.value 才能建立依赖,
+ * 改用「computed 直接读 renderError」会让 renderFn 闭包内的 model 依赖在某些 vue
+ * 版本下未被正确建立,RichTextEditor 等全局组件首次渲染会出现空白 VNode。
  */
 const tick = ref(0)
 
@@ -126,6 +130,8 @@ onErrorCaptured((err) => {
       v-if="renderError || !rendered"
       :data-xform-error="props.node.name"
       class="x-form-render-error"
+      role="alert"
+      aria-live="polite"
     >
       字段渲染失败（详见 console）
     </div>

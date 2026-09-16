@@ -4,35 +4,45 @@
  *
  * 显示 schema 校验错误与安全扫描结果，浮动在右下角，可折叠；点 X 关闭整个 banner。
  *
+ * 三态 viewState（2026-09-16 review 优化）：
+ * 原来用两个 boolean ref（collapsed + dismissed），实际三态互斥。
+ * 合并为单一 viewState: 'open' | 'collapsed' | 'dismissed'，响应式开销减半。
+ *
  * @group XForm 组件
  */
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 
 interface ValidationError {
   keyPath: (string | number)[]
   message: string
 }
 
+type ViewState = 'open' | 'collapsed' | 'dismissed'
+
 const props = defineProps<{
   validateErrors: ValidationError[]
   forbiddenErrors: string[]
 }>()
 
-const collapsed = ref(false)
-const dismissed = ref(false)
+const viewState = ref<ViewState>('open')
 
 const total = computed(() => props.validateErrors.length + props.forbiddenErrors.length)
-const visible = computed(() => !dismissed.value && total.value > 0)
+const visible = computed(() => viewState.value !== 'dismissed' && total.value > 0)
 </script>
 
 <template>
   <Teleport to="body" v-if="visible">
-    <div v-if="!collapsed" :class="$style.panel" role="alert">
+    <div v-if="viewState === 'open'" :class="$style.panel" role="alert">
       <header :class="$style.header">
         <strong>XForm 调试面板（{{ total }} 项问题）</strong>
         <span :class="$style.actions">
-          <button type="button" :class="$style.btn" @click="collapsed = true">收起</button>
-          <button type="button" :class="$style.btn" aria-label="关闭" @click="dismissed = true">
+          <button type="button" :class="$style.btn" @click="viewState = 'collapsed'">收起</button>
+          <button
+            type="button"
+            :class="$style.btn"
+            aria-label="关闭"
+            @click="viewState = 'dismissed'"
+          >
             ×
           </button>
         </span>
@@ -52,7 +62,7 @@ const visible = computed(() => !dismissed.value && total.value > 0)
       type="button"
       :class="$style.fab"
       :aria-label="`XForm 调试面板 ${total} 项问题`"
-      @click="collapsed = false"
+      @click="viewState = 'open'"
     >
       ⚠ XForm 调试 ({{ total }})
     </button>

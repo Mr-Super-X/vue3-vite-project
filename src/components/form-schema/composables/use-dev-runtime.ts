@@ -8,7 +8,7 @@
  *
  * @group 表单编排：开发态
  */
-import { ref, watch, type Ref } from 'vue'
+import { nextTick, ref, watch, type Ref } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
 
 import { validate } from './use-validate'
@@ -115,47 +115,62 @@ export function useDevRuntime(deps: UseDevRuntimeDeps): UseDevRuntimeReturn {
   }
 
   if (showDebugBanner.value) {
+    /**
+     * dev validate 函数 —— 抽出来便于 nextTick 调度
+     *
+     * 关键修复（2026-09-16）：原实现 watch immediate 在 setup 同步执行,内部
+     * collectResolvableComponents → resolveComponentFor → vue.resolveComponent 触发
+     * `[Vue warn]: resolveComponent can only be used in render() or setup()`。
+     *
+     * 修复方案：watch 自身不 immediate,首次执行延后到 nextTick（setup 同步代码结束后），
+     * 此时 Vue 已经在 render effect 上下文,resolveComponent 合法。后续 schema 变化
+     * 触发的 watch 也在非 setup 同步期,无警告。
+     */
+    function runDevValidate(val: typeof props.schema): void {
+      const normalized: SchemaNode = Array.isArray(val) ? ({ children: val } as SchemaNode) : val
+      // 阶段 1.3：组件名校验 —— 短名 + ElXxx 全名 + userComponents 三类必须命中其一
+      // 运行时解析额外收集：schema.component 字符串走 resolveComponentFor 测试，能解析的（如
+      // unplugin-vue-components 自动注册的 RichTextEditor）一并加入 user 集合，与运行时 fallback 对齐
+      const runtimeResolved = collectResolvableComponents(normalized, props.components)
+      const { isValid, errors } = validate(normalized, {
+        knownComponents: {
+          builtin: new Set(Object.keys(DEFAULT_COMPONENT_MAP)),
+          user: new Set([...Object.keys(props.components ?? {}), ...runtimeResolved]),
+        },
+      })
+      validateErrors.value = isValid ? [] : errors
+      if (!isValid) {
+        console.error('[XForm] schema validation failed:', errors)
+        // OPT-7：升级为 user-facing 反馈（dev 弹 OSD）
+        errorBus.report({
+          severity: 'error',
+          code: 'SCHEMA_VALIDATE_FAILED',
+          message: `Schema 校验失败 ${errors.length} 项（详见 Debug Banner）`,
+          source: 'useDevRuntime',
+        })
+      }
+      const forbidden = scanForForbidden(normalized)
+      forbiddenErrors.value = forbidden
+      if (forbidden.length > 0) {
+        // 降级为 warn：scanForForbidden 是 dev 诊断辅助，重复 0/低危标识符触发的 console.error 噪声大于收益
+        // 真实危险（window/document/fetch 等）仍由 Debug Banner + errorBus 上报，不静默
+        console.warn('[XForm][SECURITY] forbidden identifiers in expressions:', forbidden)
+        errorBus.report({
+          severity: 'error',
+          code: 'FORBIDDEN_IDENTIFIER',
+          message: `检测到危险标识符 ${forbidden.length} 个（详见 Debug Banner）`,
+          source: 'useDevRuntime',
+        })
+      }
+    }
+
     watch(
       () => props.schema,
-      (val) => {
-        const normalized: SchemaNode = Array.isArray(val) ? ({ children: val } as SchemaNode) : val
-        // 阶段 1.3：组件名校验 —— 短名 + ElXxx 全名 + userComponents 三类必须命中其一
-        // 运行时解析额外收集：schema.component 字符串走 resolveComponentFor 测试，能解析的（如
-        // unplugin-vue-components 自动注册的 RichTextEditor）一并加入 user 集合，与运行时 fallback 对齐
-        const runtimeResolved = collectResolvableComponents(normalized, props.components)
-        const { isValid, errors } = validate(normalized, {
-          knownComponents: {
-            builtin: new Set(Object.keys(DEFAULT_COMPONENT_MAP)),
-            user: new Set([...Object.keys(props.components ?? {}), ...runtimeResolved]),
-          },
-        })
-        validateErrors.value = isValid ? [] : errors
-        if (!isValid) {
-          console.error('[XForm] schema validation failed:', errors)
-          // OPT-7：升级为 user-facing 反馈（dev 弹 OSD）
-          errorBus.report({
-            severity: 'error',
-            code: 'SCHEMA_VALIDATE_FAILED',
-            message: `Schema 校验失败 ${errors.length} 项（详见 Debug Banner）`,
-            source: 'useDevRuntime',
-          })
-        }
-        const forbidden = scanForForbidden(normalized)
-        forbiddenErrors.value = forbidden
-        if (forbidden.length > 0) {
-          // 降级为 warn：scanForForbidden 是 dev 诊断辅助，重复 0/低危标识符触发的 console.error 噪声大于收益
-          // 真实危险（window/document/fetch 等）仍由 Debug Banner + errorBus 上报，不静默
-          console.warn('[XForm][SECURITY] forbidden identifiers in expressions:', forbidden)
-          errorBus.report({
-            severity: 'error',
-            code: 'FORBIDDEN_IDENTIFIER',
-            message: `检测到危险标识符 ${forbidden.length} 个（详见 Debug Banner）`,
-            source: 'useDevRuntime',
-          })
-        }
-      },
-      { immediate: true, deep: true }
+      (val) => runDevValidate(val),
+      { deep: true }
     )
+    // 首次触发延后到 nextTick —— 避开 setup 同步期 vue.resolveComponent 警告
+    nextTick(() => runDevValidate(props.schema))
   }
 
   function installDevDebugHook(): void {
