@@ -143,67 +143,103 @@ function toggleFullScreen(): void {
 /** resize 启用条件：props.resizable && 非全屏 && 弹窗可见（与 draggable 同步策略） */
 const resizableEnabled = computed(() => props.resizable && !isFullScreen.value && visible.value)
 
-/** resize 中间状态：mousedown 时锁定，mouseup 时清空 */
-interface ResizeState {
-  startX: number
-  startY: number
-  startWidth: number
-  startHeight: number
-  dialog: HTMLElement
-}
-
-let resizeState: ResizeState | null = null
-
-function startResize(e: MouseEvent): void {
-  if (!resizableEnabled.value) return
-  const dialog = headerRef.value?.closest<HTMLElement>('.el-dialog')
-  if (!dialog) return
-  resizeState = {
-    startX: e.clientX,
-    startY: e.clientY,
-    startWidth: dialog.offsetWidth,
-    startHeight: dialog.offsetHeight,
-    dialog,
+/**
+ * 右下角 resize 交互子系统（composable 抽离）。
+ *
+ * 抽离理由：组件本体负责「弹窗是什么」（透传 / 布局 / 语义化事件），resize 是一套
+ * 自包含的交互闭环——document 级监听注册清理、钳制数学、全局副作用恢复——与模板
+ * 零耦合；收拢后组件只剩一行声明，钳制逻辑可脱离 DOM 做纯函数单测。
+ * 参数用结构类型（{ value: T }）而非 Ref<T>：本文件零 vue import（AutoImport 约定），
+ * 结构类型与 Ref<T> 赋值兼容。
+ * @param enabled resize 生效条件（响应式数据源由组件注入，保持单向数据流）
+ * @param headerRef 头部手柄 ref：经它 closest('.el-dialog') 找到被改尺寸的容器
+ * @param onResizeEnd mouseup 结算回调（组件转发为 resizeChange 事件）
+ * @see [`./ProDialog.spec.ts`](./ProDialog.spec.ts) 钳制 / 清理 / 全屏联动用例
+ */
+function useProDialogResize(
+  enabled: { readonly value: boolean },
+  headerRef: { readonly value: HTMLElement | null },
+  onResizeEnd: (width: number, height: number) => void
+): { startResize: (e: MouseEvent) => void } {
+  /** resize 中间状态：mousedown 锁定，mouseup 清空（普通变量而非 ref——避免高频 mousemove 触发响应式依赖追踪） */
+  interface ResizeState {
+    startX: number
+    startY: number
+    startWidth: number
+    startHeight: number
+    dialog: HTMLElement
   }
-  document.addEventListener('mousemove', handleResizeMove)
-  document.addEventListener('mouseup', handleResizeUp)
-  // preventDefault 防止文本选中 + 改鼠标手势
-  e.preventDefault()
-  document.body.style.userSelect = 'none'
-  document.body.style.cursor = 'se-resize'
+
+  let resizeState: ResizeState | null = null
+
+  // body 全局样式的旧值备份：mouseup / 卸载时「恢复」而非「清空」——
+  // 宿主页面若本身设了 userSelect（如全局拖拽排序场景），清空会把宿主样式一并抹掉
+  let prevUserSelect = ''
+  let prevCursor = ''
+
+  function startResize(e: MouseEvent): void {
+    if (!enabled.value) return
+    const dialog = headerRef.value?.closest<HTMLElement>('.el-dialog')
+    if (!dialog) return
+    resizeState = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startWidth: dialog.offsetWidth,
+      startHeight: dialog.offsetHeight,
+      dialog,
+    }
+    prevUserSelect = document.body.style.userSelect
+    prevCursor = document.body.style.cursor
+    document.addEventListener('mousemove', handleResizeMove)
+    document.addEventListener('mouseup', handleResizeUp)
+    // preventDefault 防止文本选中 + 改鼠标手势
+    e.preventDefault()
+    document.body.style.userSelect = 'none'
+    document.body.style.cursor = 'se-resize'
+  }
+
+  function handleResizeMove(e: MouseEvent): void {
+    if (!resizeState) return
+    const dx = e.clientX - resizeState.startX
+    const dy = e.clientY - resizeState.startY
+    // 钳制：最小 320×200 / 最大 viewport - 16px（左右上下各留 8px 余量）
+    const maxW = window.innerWidth - 16
+    const maxH = window.innerHeight - 16
+    const newWidth = Math.max(320, Math.min(maxW, resizeState.startWidth + dx))
+    const newHeight = Math.max(200, Math.min(maxH, resizeState.startHeight + dy))
+    resizeState.dialog.style.width = `${newWidth}px`
+    resizeState.dialog.style.height = `${newHeight}px`
+  }
+
+  /** 摘除 document 监听 + 按备份恢复 body 样式（mouseup 与组件卸载清理共用） */
+  function stopResize(): void {
+    document.removeEventListener('mousemove', handleResizeMove)
+    document.removeEventListener('mouseup', handleResizeUp)
+    document.body.style.userSelect = prevUserSelect
+    document.body.style.cursor = prevCursor
+  }
+
+  function handleResizeUp(): void {
+    if (!resizeState) return
+    stopResize()
+    onResizeEnd(resizeState.dialog.offsetWidth, resizeState.dialog.offsetHeight)
+    resizeState = null
+  }
+
+  // onUnmounted 清监听：组件卸载时如果正在 resize，document 监听器必须清理（防泄漏）；
+  // body 样式同样按备份值恢复
+  onUnmounted(() => {
+    stopResize()
+    resizeState = null
+  })
+
+  return { startResize }
 }
 
-function handleResizeMove(e: MouseEvent): void {
-  if (!resizeState) return
-  const dx = e.clientX - resizeState.startX
-  const dy = e.clientY - resizeState.startY
-  // 钳制：最小 320×200 / 最大 viewport - 16px（左右上下各留 8px 余量）
-  const maxW = window.innerWidth - 16
-  const maxH = window.innerHeight - 16
-  const newWidth = Math.max(320, Math.min(maxW, resizeState.startWidth + dx))
-  const newHeight = Math.max(200, Math.min(maxH, resizeState.startHeight + dy))
-  resizeState.dialog.style.width = `${newWidth}px`
-  resizeState.dialog.style.height = `${newHeight}px`
-}
-
-function handleResizeUp(): void {
-  if (!resizeState) return
-  document.removeEventListener('mousemove', handleResizeMove)
-  document.removeEventListener('mouseup', handleResizeUp)
-  document.body.style.userSelect = ''
-  document.body.style.cursor = ''
-  emit('resizeChange', resizeState.dialog.offsetWidth, resizeState.dialog.offsetHeight)
-  resizeState = null
-}
-
-// onUnmounted 清监听：组件卸载时如果正在 resize，document 监听器必须清理（防泄漏）
-onUnmounted(() => {
-  document.removeEventListener('mousemove', handleResizeMove)
-  document.removeEventListener('mouseup', handleResizeUp)
-  document.body.style.userSelect = ''
-  document.body.style.cursor = ''
-  resizeState = null
-})
+// resize 交互收拢为一行声明：监听生命周期 / 钳制 / 副作用恢复全部在 composable 内
+const { startResize } = useProDialogResize(resizableEnabled, headerRef, (width, height) =>
+  emit('resizeChange', width, height)
+)
 
 /** el-dialog 的 open 事件（进入动画开始） */
 function handleOpen(): void {

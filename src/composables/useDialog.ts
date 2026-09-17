@@ -29,7 +29,16 @@
  * @group Composables
  */
 import type { App, AppContext, Component } from 'vue'
-import { defineComponent, getCurrentInstance, h, reactive, ref, render } from 'vue'
+import {
+  defineComponent,
+  getCurrentInstance,
+  h,
+  onScopeDispose,
+  reactive,
+  ref,
+  render,
+  shallowRef,
+} from 'vue'
 import { ProDialog } from '@components/common/ProDialog'
 import type { UseDialogOptions } from '@components/common/ProDialog'
 
@@ -103,9 +112,19 @@ export function useDialog(content: Component, options: UseDialogOptions = {}): U
   // 纯 JS 调用时 getCurrentInstance() 为 null，走模块级全局回退
   const callerContext = getCurrentInstance()?.appContext ?? null
 
+  // 组件卸载自动清理：callerContext 非空 ⟺ 组件 setup 同步阶段调用（此刻必有 active
+  // effect scope；纯 JS 调用为 null，跳过）——调用方组件销毁时按「取消」语义关闭
+  // 弹窗，否则容器挂在 body 上不受调用方生命周期管理：DOM 残留 + Promise 挂起泄漏
+  if (callerContext) {
+    onScopeDispose(() => close())
+  }
+
   // 响应式配置：包装组件的 render 函数展开 state —— 这是 setProps 实时生效的关键
   const state = reactive<UseDialogOptions>({ ...options })
-  const contentPropsRef = ref<Record<string, unknown>>({})
+  // shallowRef 而非 ref：contentProps 是「打开瞬间的快照」——只有 open() 整体替换
+  // 这一个写入口，无属性级响应需求；深响应会让调用方原地修改嵌套对象时内容组件
+  // 被动更新（破坏快照语义），且对嵌套对象徒增递归代理开销
+  const contentPropsRef = shallowRef<Record<string, unknown>>({})
   const visible = ref(false)
 
   let container: HTMLElement | null = null
