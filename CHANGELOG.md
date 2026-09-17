@@ -2,6 +2,15 @@
 
 ## 未发布
 
+### ✨ Feat | ProDialog resizeMinToInitial：resize 最小尺寸锁定初始打开宽高（只能放大）
+
+> 此前 resizable 开启后最小尺寸硬编码 320×200，业务方无法阻止用户把弹窗拖到比内容设计尺寸还小导致排版错乱。本次新增 `resize-min-to-initial` 开关：开启后本次打开弹窗的初始宽高即最小可缩尺寸（只能放大、不能缩小到初始以下），每次重新打开重新记录；关闭时保持原有 320×200 行为完全兼容
+
+* **feat(src/components/common/ProDialog/ProDialog.vue):** 新增 `resizeMinToInitial` prop（默认 false）；open 事件经 `nextTick` 记录本次打开初始宽高（`initialDialogSize`），`useProDialogResize` 钳制最小值改为经 `ResizeMinSource` 注入（get 取最小值 / ensure 在 open 记录未就绪时首次拖拽补记，兼容弹窗内容异步挂载时序）；上限仍 viewport - 16px 不变（可放大）；全屏态禁用 resize 行为不变
+* **feat(src/components/common/ProDialog/types.ts):** `ProDialogProps.resizeMinToInitial?: boolean`（JSDoc 含默认值与语义），命令式 `useDialog` 经 `UseDialogOptions` 自动获得该配置
+* **feat(src/modules/demo/examples/ProDialog/ProDialogResizable.vue):** 新增「⑤ 最小尺寸锁定初始打开宽高」演示（480px 初始宽弹窗：左下拖钳回初始 / 右上拖正常放大），DemoFrame 钳制规则说明与目录同步
+* **已验证：** ProDialog spec 15 用例全通过（新增 2 个：钳制到初始 400×300 + 可放大断言 / 开关关闭仍为 320×200 断言，prototype 级 offset mock 覆盖打开即记录时序）、`vue-tsc --build` 无报错、ESLint 无告警
+
 ### 🔍 Review | ProTable 深度 Code Review 批次修复（review R1-R13）
 
 > 对 ProTable 全目录（编排层 + 8 composables + 子组件 + 类型层）的深度审查批次修复。R1 为真实功能缺陷（initParam 与搜索列同名时被 `defaultValue ?? null` 静默覆盖丢失），其余为性能/可维护性/类型诚实性修复；交互行为默认不变（R3 抽屉即改即搜语义涉及业务确认，本次未动）。完整审查报告见 `.claude/.agent-reports/2026-09-17-protable-deep-review.md`

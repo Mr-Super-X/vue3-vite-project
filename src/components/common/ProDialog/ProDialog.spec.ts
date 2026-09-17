@@ -323,5 +323,88 @@ describe('ProDialog', () => {
       // （实际 EP 卸载后会 remove .el-overlay；这里只要 style 没被改就算清理通过）
       expect(dialog?.style.width === '' || dialog === null).toBe(true)
     })
+
+    /**
+     * prototype 级尺寸 mock：挂在 HTMLElement.prototype 上，dialog 元素尚未渲染时即生效。
+     *
+     * 与 mockLayout（元素级）的差异：resizeMinToInitial 的初始尺寸在 open 事件时记录，
+     * 早于测试拿到 dialog 元素的时机——元素级 mock 挂载时测量已完成，只能用 prototype 级。
+     * 仅对 .el-dialog 元素返回 mock 值，其余元素保持 jsdom 默认 0。
+     * 返回 restore 回调（prototype 描述符需显式还原，vi.restoreAllMocks 不覆盖 defineProperty）。
+     */
+    function mockDialogLayoutProto(
+      width = 400,
+      height = 300,
+      viewportW = 800,
+      viewportH = 600
+    ): () => void {
+      const origWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth')
+      const origHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetHeight')
+      Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
+        configurable: true,
+        get(this: HTMLElement) {
+          if (!this.classList.contains('el-dialog')) return 0
+          return Number.parseInt(this.style.width, 10) || width
+        },
+      })
+      Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
+        configurable: true,
+        get(this: HTMLElement) {
+          if (!this.classList.contains('el-dialog')) return 0
+          return Number.parseInt(this.style.height, 10) || height
+        },
+      })
+      Object.defineProperty(window, 'innerWidth', { value: viewportW, configurable: true })
+      Object.defineProperty(window, 'innerHeight', { value: viewportH, configurable: true })
+      return () => {
+        if (origWidth) Object.defineProperty(HTMLElement.prototype, 'offsetWidth', origWidth)
+        if (origHeight) Object.defineProperty(HTMLElement.prototype, 'offsetHeight', origHeight)
+      }
+    }
+
+    it('resizeMinToInitial：钳制最小 = 本次打开的初始宽高（向左上拖停在初始尺寸，可正常放大）', async () => {
+      const restore = mockDialogLayoutProto(400, 300, 800, 600)
+      try {
+        // 打开时（open 事件 → nextTick）即记录初始尺寸，此刻 prototype mock 已生效 → 400×300
+        mountOpen({ resizable: true, resizeMinToInitial: true })
+        const dialog = await queryDialog()
+        await nextTick()
+        await nextTick() // handleOpen 内 nextTick 的测量回调
+
+        // 向左上拖 -500：停在初始 400×300（而非默认 320×200）
+        resizeHandle().dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }))
+        document.dispatchEvent(new MouseEvent('mousemove', { clientX: -500, clientY: -500 }))
+        expect(dialog.style.width).toBe('400px')
+        expect(dialog.style.height).toBe('300px')
+        document.dispatchEvent(new MouseEvent('mouseup'))
+
+        // 向右下拖 +100/+100：可正常放大（开关只抬升下限，不限制上限）
+        resizeHandle().dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }))
+        document.dispatchEvent(new MouseEvent('mousemove', { clientX: 100, clientY: 100 }))
+        expect(dialog.style.width).toBe('500px')
+        expect(dialog.style.height).toBe('400px')
+        document.dispatchEvent(new MouseEvent('mouseup'))
+      } finally {
+        restore()
+      }
+    })
+
+    it('resizeMinToInitial=false（默认）：即使已记录初始尺寸，最小仍钳制 320×200', async () => {
+      const restore = mockDialogLayoutProto(400, 300, 800, 600)
+      try {
+        mountOpen({ resizable: true })
+        const dialog = await queryDialog()
+        await nextTick()
+        await nextTick()
+
+        resizeHandle().dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }))
+        document.dispatchEvent(new MouseEvent('mousemove', { clientX: -500, clientY: -500 }))
+        expect(dialog.style.width).toBe('320px')
+        expect(dialog.style.height).toBe('200px')
+        document.dispatchEvent(new MouseEvent('mouseup'))
+      } finally {
+        restore()
+      }
+    })
   })
 })

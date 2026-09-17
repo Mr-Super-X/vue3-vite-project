@@ -73,6 +73,12 @@ interface Props {
    * 不在 mousemove 高频抛以避免父组件重渲染抖动。
    */
   resizable?: boolean
+  /**
+   * resize 最小尺寸是否锁定为「本次打开时」的初始宽高（默认 false）——
+   * 开启后只能放大、不能缩小到比初始打开时更小（防止内容排版被拖乱）；
+   * 关闭时最小仍为硬编码 320×200。每次重新打开弹窗都会重新记录初始宽高。
+   */
+  resizeMinToInitial?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -82,6 +88,7 @@ const props = withDefaults(defineProps<Props>(), {
   fullScreen: false,
   showFullScreenButton: true,
   resizable: false,
+  resizeMinToInitial: false,
 })
 
 const emit = defineEmits<{
@@ -144,6 +151,49 @@ function toggleFullScreen(): void {
 const resizableEnabled = computed(() => props.resizable && !isFullScreen.value && visible.value)
 
 /**
+ * 本次打开弹窗的初始宽高（resizeMinToInitial 开启时作为最小可缩尺寸）。
+ * 每次打开重新记录（open 事件 → nextTick 测量），保证「当前初始打开」语义——
+ * 上一次 resize 留下的内联尺寸不影响本次记录（EP 重渲染后 offsetWidth 即初始布局值）。
+ */
+const initialDialogSize = ref<{ width: number; height: number } | null>(null)
+
+/** 打开时记录初始尺寸：测量需等 dialog DOM 就位，故走 nextTick */
+function recordInitialSize(): void {
+  nextTick(() => {
+    const dialog = headerRef.value?.closest<HTMLElement>('.el-dialog')
+    if (dialog) {
+      initialDialogSize.value = { width: dialog.offsetWidth, height: dialog.offsetHeight }
+    }
+  })
+}
+
+/**
+ * resize 钳制最小值数据源（组件注入，composable 保持纯交互）。
+ *
+ * get：当前最小宽高——resizeMinToInitial 开启且有记录时用「本次打开的初始宽高」，
+ * 否则回退硬编码 320×200（保持 resizable 原有行为）；
+ * ensure：open 事件的记录若因渲染时序未就绪（如弹窗内容异步挂载），
+ * 首次拖拽时用当前尺寸补记——打开后未经 resize 的当前尺寸即初始尺寸。
+ */
+interface ResizeMinSource {
+  get: () => { width: number; height: number }
+  ensure: (width: number, height: number) => void
+}
+
+const resizeMinSource: ResizeMinSource = {
+  get() {
+    return props.resizeMinToInitial && initialDialogSize.value
+      ? initialDialogSize.value
+      : { width: 320, height: 200 }
+  },
+  ensure(width, height) {
+    if (props.resizeMinToInitial && !initialDialogSize.value) {
+      initialDialogSize.value = { width, height }
+    }
+  },
+}
+
+/**
  * 右下角 resize 交互子系统（composable 抽离）。
  *
  * 抽离理由：组件本体负责「弹窗是什么」（透传 / 布局 / 语义化事件），resize 是一套
@@ -153,12 +203,16 @@ const resizableEnabled = computed(() => props.resizable && !isFullScreen.value &
  * 结构类型与 Ref<T> 赋值兼容。
  * @param enabled resize 生效条件（响应式数据源由组件注入，保持单向数据流）
  * @param headerRef 头部手柄 ref：经它 closest('.el-dialog') 找到被改尺寸的容器
+ * @param minSource 钳制最小宽高（px）数据源——resizeMinToInitial 开启时为
+ * 本次打开弹窗的初始宽高，否则 320×200；由组件注入聚合（prop / 记录状态），
+ * ensure 供 open 记录未就绪时首次拖拽补记
  * @param onResizeEnd mouseup 结算回调（组件转发为 resizeChange 事件）
  * @see [`./ProDialog.spec.ts`](./ProDialog.spec.ts) 钳制 / 清理 / 全屏联动用例
  */
 function useProDialogResize(
   enabled: { readonly value: boolean },
   headerRef: { readonly value: HTMLElement | null },
+  minSource: ResizeMinSource,
   onResizeEnd: (width: number, height: number) => void
 ): { startResize: (e: MouseEvent) => void } {
   /** resize 中间状态：mousedown 锁定，mouseup 清空（普通变量而非 ref——避免高频 mousemove 触发响应式依赖追踪） */
@@ -188,6 +242,8 @@ function useProDialogResize(
       startHeight: dialog.offsetHeight,
       dialog,
     }
+    // open 事件的初始尺寸记录未就绪时（渲染时序差异），用当前尺寸补记
+    minSource.ensure(dialog.offsetWidth, dialog.offsetHeight)
     prevUserSelect = document.body.style.userSelect
     prevCursor = document.body.style.cursor
     document.addEventListener('mousemove', handleResizeMove)
@@ -202,11 +258,13 @@ function useProDialogResize(
     if (!resizeState) return
     const dx = e.clientX - resizeState.startX
     const dy = e.clientY - resizeState.startY
-    // 钳制：最小 320×200 / 最大 viewport - 16px（左右上下各留 8px 余量）
+    // 钳制：最小值取 minSource（resizeMinToInitial 开启时为初始打开宽高）；
+    // 最大 viewport - 16px（左右上下各留 8px 余量）
+    const { width: minW, height: minH } = minSource.get()
     const maxW = window.innerWidth - 16
     const maxH = window.innerHeight - 16
-    const newWidth = Math.max(320, Math.min(maxW, resizeState.startWidth + dx))
-    const newHeight = Math.max(200, Math.min(maxH, resizeState.startHeight + dy))
+    const newWidth = Math.max(minW, Math.min(maxW, resizeState.startWidth + dx))
+    const newHeight = Math.max(minH, Math.min(maxH, resizeState.startHeight + dy))
     resizeState.dialog.style.width = `${newWidth}px`
     resizeState.dialog.style.height = `${newHeight}px`
   }
@@ -237,12 +295,16 @@ function useProDialogResize(
 }
 
 // resize 交互收拢为一行声明：监听生命周期 / 钳制 / 副作用恢复全部在 composable 内
-const { startResize } = useProDialogResize(resizableEnabled, headerRef, (width, height) =>
-  emit('resizeChange', width, height)
+const { startResize } = useProDialogResize(
+  resizableEnabled,
+  headerRef,
+  resizeMinSource,
+  (width, height) => emit('resizeChange', width, height)
 )
 
-/** el-dialog 的 open 事件（进入动画开始） */
+/** el-dialog 的 open 事件（进入动画开始）：记录本次打开的初始宽高，供 resizeMinToInitial 钳制 */
 function handleOpen(): void {
+  recordInitialSize()
   emit('open')
 }
 

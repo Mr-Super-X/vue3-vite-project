@@ -8,6 +8,8 @@
  * 3. resizeChange 事件：mouseup 抛 { width, height }，可用于持久化用户偏好
  * 4. 全屏 × resize 交叉：先 resize → 切全屏 → 退出全屏：内联 width/height 必须被清除，
  *    弹窗回到 EP 默认尺寸 + 默认居中（与现有拖拽清理逻辑同一思路）
+ * 5. resizeMinToInitial：最小尺寸锁定「本次打开」的初始宽高——只能放大、
+ *    不能缩小到比初始打开时更小（防止内容排版被拖乱）
  *
  * 覆盖事件：
  * - 全屏态自动禁用 resize（resizableEnabled computed 已聚合）
@@ -94,11 +96,30 @@ const SNIPPET_FULL = `<ProDialog
 <!-- 路径：拖大弹窗 → 切全屏 → 退出全屏 → 应回到 EP 默认 width -->
 <!-- resize 与 fullScreen 的内联 width/height 在 toggleFullScreen 中已清理 -->`
 
+// —— ⑤ 最小尺寸锁定初始打开宽高 ——
+const minInitVisible = ref(false)
+const minInitSize = ref('尚未调整')
+function onMinInitResize(w: number, h: number) {
+  minInitSize.value = `${w} × ${h}`
+}
+
+const SNIPPET_MIN_INIT = `<ProDialog
+  v-model="visible"
+  title="只能放大"
+  width="480px"
+  resizable
+  resize-min-to-initial
+  @resize-change="onResize"
+>
+  最小尺寸 = 本次打开的初始宽高：可放大，拖小会被钳回初始尺寸。
+</ProDialog>`
+
 const tocItems = [
   { id: 'demo-basic', label: '基础可调整' },
   { id: 'demo-bounds', label: '视口边界钳制' },
   { id: 'demo-event', label: 'resizeChange 事件' },
   { id: 'demo-fullscreen', label: '全屏 × resize 交叉' },
+  { id: 'demo-min-initial', label: '最小尺寸锁定初始' },
 ]
 </script>
 
@@ -109,7 +130,7 @@ const tocItems = [
       source="src/components/common/ProDialog/ProDialog.vue"
       :introductions="[
         '在 ElDialog 基础上扩展：右下角三角手柄，mousedown → mousemove 改尺寸 → mouseup 抛 resizeChange。',
-        '钳制规则（硬编码于组件内）：最小 320×200 / 最大 viewport - 16px；全屏态自动禁用。',
+        '钳制规则：最小 320×200（resize-min-to-initial 开启时为本次打开的初始宽高）/ 最大 viewport - 16px；全屏态自动禁用。',
         '仅在 mouseup 时抛一次事件，mousemove 高频不抛——避免父组件重渲染抖动（可持久化用户偏好）。',
       ]"
     >
@@ -238,6 +259,43 @@ const tocItems = [
               拖拽后下方「最后一次 resize 尺寸」应立刻更新；
               退出全屏后弹窗异常（仍是拖拽尺寸）说明内联 width/height
               清除逻辑回归——应保持与拖拽清理同一思路。
+            </p>
+          </ProDialog>
+        </DemoField>
+      </section>
+
+      <section id="demo-min-initial">
+        <DemoField :code="SNIPPET_MIN_INIT" label="⑤ 最小尺寸锁定初始打开宽高（只能放大）">
+          <div :class="bem.e('controls')">
+            <el-button type="primary" @click="minInitVisible = true">打开弹窗</el-button>
+            <span :class="bem.e('status')">当前尺寸：{{ minInitSize }}</span>
+          </div>
+          <p :class="bem.e('para')">
+            <code>resize-min-to-initial</code>
+            开启后，本次打开弹窗的初始宽高即为最小可缩尺寸——往左下拖会被钳制回初始尺寸，往右上拖可正常放大。
+          </p>
+          <p :class="bem.e('para')">
+            适用场景：弹窗内容按设计稿固定了舒适尺寸（如 480px
+            宽表单），不允许用户拖小到内容排版错乱。
+            关闭后重新打开，钳制基准会重新按本次打开的初始尺寸计算。
+          </p>
+          <ProDialog
+            v-model="minInitVisible"
+            title="只能放大（初始 480px）"
+            width="480px"
+            resizable
+            resize-min-to-initial
+            @resize-change="onMinInitResize"
+          >
+            <p :class="bem.e('para')">
+              初始宽 480px：尝试往
+              <b>左下</b>
+              拖小——尺寸会停在初始宽高；往
+              <b>右上</b>
+              拖大不受限。
+            </p>
+            <p :class="bem.e('para')">
+              对比：上方「② 边界钳制」不传本开关时，往左下最小只能到硬编码的 320×200。
             </p>
           </ProDialog>
         </DemoField>

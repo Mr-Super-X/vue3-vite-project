@@ -192,4 +192,29 @@ describe('useDialog', () => {
     await expect(second).resolves.toBe(true)
     await waitContainerGone()
   })
+
+  /**
+   * 防回归：options → ProDialog 是 `{ ...state }` 全量展开（useDialog.ts），
+   * 非白名单逐属性拷贝——若未来退化为白名单，ProDialog 新增扩展 prop
+   * （如 resizeMinToInitial）会「类型合法、运行时不生效」地静默丢失。
+   * 以 resizable 的 resize-handle 渲染为透传生效的 DOM 表征；
+   * resizeMinToInitial 与其同属 UseDialogOptions，走同一链路。
+   */
+  it('options 与 setProps 全量透传 ProDialog 扩展 prop（resize-handle 出现/消失为表征）', async () => {
+    const dialog = useDialog(Content, { resizable: true, resizeMinToInitial: true })
+    const promise = dialog.open()
+    await vi.waitFor(() => {
+      expect(document.querySelector('.vv-pro-dialog__resize-handle')).toBeTruthy()
+    })
+
+    // setProps 入口同源（Object.assign → state → 展开），关闭 resizable 手柄应立即消失
+    dialog.setProps({ resizable: false })
+    await vi.waitFor(() => {
+      expect(document.querySelector('.vv-pro-dialog__resize-handle')).toBeNull()
+    })
+
+    dialog.close()
+    promise.catch(() => {}) // 预期中的取消 rejection，避免 unhandled rejection 噪音
+    await waitContainerGone()
+  })
 })

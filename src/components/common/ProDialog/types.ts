@@ -60,6 +60,14 @@ export interface ProDialogProps extends ElDialogNativeProps {
    * @defaultValue false
    */
   resizable?: boolean
+
+  /**
+   * resize 最小尺寸是否锁定为「本次打开时」的初始宽高（默认 false）——
+   * 开启后只能放大、不能缩小到比初始打开时更小（防止内容排版被拖乱）；
+   * 关闭时最小仍为硬编码 320×200。每次重新打开弹窗都会重新记录初始宽高。
+   * @defaultValue false
+   */
+  resizeMinToInitial?: boolean
 }
 
 /**
