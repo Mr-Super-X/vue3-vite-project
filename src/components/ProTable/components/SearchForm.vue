@@ -165,47 +165,6 @@ function toggleCollapsed(): void {
   writeExpandedToStorage(collapsed.value)
 }
 
-/* ─────────── v3.2 升级：Transition JS 钩子（max-height 平滑过渡） ─────────── */
-
-/**
- * 展开/收起时让字段区高度从 0 过渡到自然高度（auto）
- * 用 v-show + JS 钩子是兼容「字段数量变化时仍能 animate」的最简方案
- */
-function onFieldsBeforeEnter(el: Element): void {
-  ;(el as HTMLElement).style.height = '0px'
-  ;(el as HTMLElement).style.overflow = 'hidden'
-}
-function onFieldsEnter(el: Element, done: () => void): void {
-  // scrollHeight = 内容自然高度；过渡 200ms
-  const h = (el as HTMLElement).scrollHeight
-  ;(el as HTMLElement).style.transition = 'height 200ms ease-in-out'
-  ;(el as HTMLElement).style.height = `${h}px`
-  setTimeout(done, 200)
-}
-function onFieldsAfterEnter(el: Element): void {
-  ;(el as HTMLElement).style.transition = ''
-  ;(el as HTMLElement).style.height = ''
-  ;(el as HTMLElement).style.overflow = ''
-}
-function onFieldsBeforeLeave(el: Element): void {
-  const h = (el as HTMLElement).scrollHeight
-  ;(el as HTMLElement).style.height = `${h}px`
-  ;(el as HTMLElement).style.overflow = 'hidden'
-}
-function onFieldsLeave(el: Element, done: () => void): void {
-  // requestAnimationFrame 确保浏览器读取到起始高度后再过渡到 0
-  requestAnimationFrame(() => {
-    ;(el as HTMLElement).style.transition = 'height 200ms ease-in-out'
-    ;(el as HTMLElement).style.height = '0px'
-    setTimeout(done, 200)
-  })
-}
-function onFieldsAfterLeave(el: Element): void {
-  ;(el as HTMLElement).style.transition = ''
-  ;(el as HTMLElement).style.height = ''
-  ;(el as HTMLElement).style.overflow = ''
-}
-
 /* ─────────── v3.2 升级：lazyEnum 懒加载（select 首次展开时触发） ─────────── */
 
 const lazyEnumLoaded = new Set<string>() // 已加载过 lazy enum 的 prop
@@ -490,62 +449,51 @@ function buildPlaceholder(col: ProColumn, prefix: '请输入' | '请选择' | un
       -->
       <div :class="bem.e('inline')">
         <div :class="bem.e('fields')">
-          <Transition
-            name="search-fields"
-            @before-enter="onFieldsBeforeEnter"
-            @enter="onFieldsEnter"
-            @after-enter="onFieldsAfterEnter"
-            @before-leave="onFieldsBeforeLeave"
-            @leave="onFieldsLeave"
-            @after-leave="onFieldsAfterLeave"
-          >
-            <!--
-              v3.3 升级：v-show 永远为 true。
-              主表单是否折叠由 mainFormColumns 控制（collapse 档折叠时 slice 前 4），
-              这里只是 Transition 的挂载点 —— Transition JS 钩子依赖 v-show/v-if 切换才能触发，
-              但本组件内部 children 列表变化（v-for 项数从 4 → 全部）足以让 layout 自然过渡。
-            -->
-            <div v-show="true" :class="bem.e('field-list')">
-              <ElFormItem
-                v-for="col in mainFormColumns"
-                :key="col.prop"
-                :label="col.label"
-                :class="bem.e('field')"
-              >
-                <slot :name="`search-${col.prop}`" :column="col">
-                  <component
-                    :is="SEARCH_CONTROL_MAP[col.search!.el].component"
-                    v-bind="{
-                      modelValue: localParams[col.prop] as unknown as never,
-                      ...(SEARCH_CONTROL_MAP[col.search!.el].clearable ? { clearable: true } : {}),
-                      ...(SEARCH_CONTROL_MAP[col.search!.el].placeholderPrefix
-                        ? {
-                            placeholder: buildPlaceholder(
-                              col,
-                              SEARCH_CONTROL_MAP[col.search!.el].placeholderPrefix
-                            ) as unknown as never,
-                          }
-                        : {}),
-                      ...col.search!.props,
-                    }"
-                    @update:model-value="(v: unknown) => handleColUpdate(col, v)"
-                    @visible-change="(v: boolean) => handleColVisibleChange(col, v)"
-                    @clear="handleSearch"
-                  >
-                    <template v-if="SEARCH_CONTROL_MAP[col.search!.el].hasOptions" #default>
-                      <ElOption
-                        v-for="opt in col.enum ?? []"
-                        :key="String(opt.value)"
-                        :label="opt.label as unknown as never"
-                        :value="opt.value as unknown as never"
-                        :disabled="opt.disabled as unknown as never"
-                      />
-                    </template>
-                  </component>
-                </slot>
-              </ElFormItem>
-            </div>
-          </Transition>
+          <!--
+            review R4：原 <Transition> + 6 个 JS 钩子已删除 —— 挂载点原为 v-show 恒 true，
+            钩子永不触发（死代码）；折叠展开由 mainFormColumns（slice 前 N 个）直接驱动，
+            行为与删除前完全一致（均无动画）。
+          -->
+          <div :class="bem.e('field-list')">
+            <ElFormItem
+              v-for="col in mainFormColumns"
+              :key="col.prop"
+              :label="col.label"
+              :class="bem.e('field')"
+            >
+              <slot :name="`search-${col.prop}`" :column="col">
+                <component
+                  :is="SEARCH_CONTROL_MAP[col.search!.el].component"
+                  v-bind="{
+                    modelValue: localParams[col.prop] as unknown as never,
+                    ...(SEARCH_CONTROL_MAP[col.search!.el].clearable ? { clearable: true } : {}),
+                    ...(SEARCH_CONTROL_MAP[col.search!.el].placeholderPrefix
+                      ? {
+                          placeholder: buildPlaceholder(
+                            col,
+                            SEARCH_CONTROL_MAP[col.search!.el].placeholderPrefix
+                          ) as unknown as never,
+                        }
+                      : {}),
+                    ...col.search!.props,
+                  }"
+                  @update:model-value="(v: unknown) => handleColUpdate(col, v)"
+                  @visible-change="(v: boolean) => handleColVisibleChange(col, v)"
+                  @clear="handleSearch"
+                >
+                  <template v-if="SEARCH_CONTROL_MAP[col.search!.el].hasOptions" #default>
+                    <ElOption
+                      v-for="opt in col.enum ?? []"
+                      :key="String(opt.value)"
+                      :label="opt.label as unknown as never"
+                      :value="opt.value as unknown as never"
+                      :disabled="opt.disabled as unknown as never"
+                    />
+                  </template>
+                </component>
+              </slot>
+            </ElFormItem>
+          </div>
         </div>
         <div :class="bem.e('actions')">
           <!--

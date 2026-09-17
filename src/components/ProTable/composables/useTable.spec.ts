@@ -15,7 +15,7 @@
  * @group ProTable composables 测试
  */
 import { describe, it, expect, vi } from 'vitest'
-import { ref } from 'vue'
+import { ref, nextTick } from 'vue'
 import { useTable } from './useTable'
 import type { SortState } from '../types'
 
@@ -64,6 +64,19 @@ describe('useTable', () => {
     table.setPage(2)
     await vi.waitFor(() => expect(deps.props.requestApi).toHaveBeenCalledTimes(2))
     expect(table.page.value).toBe(2)
+  })
+
+  it('review R5：waitForRefresh 可等待 page watcher 触发的刷新完成（reset 路径）', async () => {
+    const deps = makeDeps()
+    const table = useTable(deps)
+    await table.refresh()
+    expect(deps.props.requestApi).toHaveBeenCalledTimes(1)
+    // 模拟编排层 reset 路径：setPage 后 watcher 异步发起刷新，waitForRefresh 须等其完成
+    table.setPage(3)
+    await nextTick() // watcher（默认 flush）已执行，其间 void refresh() 登记 pendingRefresh
+    await table.waitForRefresh()
+    expect(deps.props.requestApi).toHaveBeenCalledTimes(2)
+    expect(table.page.value).toBe(3)
   })
 
   it('快速连续 refresh：第二次覆盖第一次结果（useRequest AbortController）', async () => {

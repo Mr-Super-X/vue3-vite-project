@@ -76,4 +76,43 @@ describe('useSearch', () => {
     expect(search.searchParams.value).toEqual({ name: '王五', status: null, tenantId: 't1' })
     expect(fetchHook).not.toHaveBeenCalled()
   })
+
+  // review R1 回归：initParam 与搜索列同名时不再被 defaultValue ?? null 静默覆盖
+  it('initParam 与搜索列同名时覆盖 defaultValue（修复静默丢失缺陷）', () => {
+    const engine = ref('element-plus' as const)
+    const search = useSearch({
+      props: {
+        columns: [
+          { prop: 'name', label: '名称', search: { el: 'input', defaultValue: '' } },
+          { prop: 'status', label: '状态', search: { el: 'select' } }, // 无 defaultValue
+        ],
+        initParam: { status: 'paid', tenantId: 't1' },
+      } as never,
+      engine,
+    })
+    // 修复前：status 被改写为 null，经 serializeParams 剔除后永久丢失
+    expect(search.searchParams.value).toEqual({ name: '', status: 'paid', tenantId: 't1' })
+    expect(search.serializeParams(search.searchParams.value)).toEqual({
+      status: 'paid',
+      tenantId: 't1',
+    })
+  })
+
+  it('reset() 时无 defaultValue 的字段回退恢复 initParam 同名键', async () => {
+    const engine = ref('element-plus' as const)
+    const search = useSearch({
+      props: {
+        columns: [
+          { prop: 'name', label: '名称', search: { el: 'input', defaultValue: '' } },
+          { prop: 'status', label: '状态', search: { el: 'select' } }, // 无 defaultValue
+        ],
+        initParam: { status: 'paid' },
+      } as never,
+      engine,
+    })
+    search.updateParams({ status: 'shipped' })
+    await search.reset()
+    // 修复前 reset 恢复 null（initParam 丢失）；修复后回退到 initParam 值
+    expect(search.searchParams.value).toEqual({ name: '', status: 'paid' })
+  })
 })

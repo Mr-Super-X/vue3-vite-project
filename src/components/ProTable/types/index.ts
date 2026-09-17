@@ -85,8 +85,6 @@ export interface ColumnSummaryConfig {
 
 /** 表格汇总行顶层配置 —— v3.0 新增 @group ProTable 类型 */
 export interface SummaryConfig {
-  /** 显示位置（默认 'bottom'） */
-  position?: 'bottom' | 'top'
   /** 哪些列参与汇总（按 prop 声明，未声明列不显示汇总值） */
   columns?: Record<string, ColumnSummaryConfig>
   /** 整行 label（如"合计"、"本页汇总"，默认"合计"） */
@@ -123,6 +121,14 @@ export const SearchLevel = {
   Advanced: 'advanced',
 } as const
 export type SearchLevel = (typeof SearchLevel)[keyof typeof SearchLevel]
+
+/**
+ * 行 key 字段名缺省值 —— 编排层 / 能力层（useTableCapabilities）/ 渲染层（ElementTableBody）/
+ * 树形层（useTreeData）的 'id' 默认值单一来源。调整默认行键只改这一处。
+ *
+ * @group ProTable 类型
+ */
+export const DEFAULT_ROW_KEY = 'id'
 
 /**
  * SearchForm 布局档位（v3.4 新增）—— 业务方可强制指定搜索区布局，替代纯字段数自动判定。
@@ -418,7 +424,10 @@ export interface ProTableProps<T extends object = Record<string, unknown>> {
   columns: ProColumn<T>[]
   /** 数据请求方法（必填） */
   requestApi: ProTableRequestApi<T>
-  /** 固定查询参数（搜索时与表单值合并；附录 A #10 序列化规则） */
+  /**
+   * 固定查询参数（随表单值一同序列化发送，附录 A #10 序列化规则）。
+   * 与搜索字段同名时作为该字段的初始值（覆盖 defaultValue），reset 后恢复该值。
+   */
   initParam?: Record<string, unknown>
   /**
    * 数据预处理（在 useTable 拿到 result 之后）—— 方法语法（bivariance），

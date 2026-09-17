@@ -2,6 +2,22 @@
 
 ## 未发布
 
+### 🔍 Review | ProTable 深度 Code Review 批次修复（review R1-R13）
+
+> 对 ProTable 全目录（编排层 + 8 composables + 子组件 + 类型层）的深度审查批次修复。R1 为真实功能缺陷（initParam 与搜索列同名时被 `defaultValue ?? null` 静默覆盖丢失），其余为性能/可维护性/类型诚实性修复；交互行为默认不变（R3 抽屉即改即搜语义涉及业务确认，本次未动）。完整审查报告见 `.claude/.agent-reports/2026-09-17-protable-deep-review.md`
+
+* **fix(src/components/ProTable/composables/useSearch.ts):** review R1 —— 初始化合并顺序调整为「字段 defaultValue 先、initParam 后覆盖」，reset 时无 defaultValue 的字段回退恢复 initParam 同名键；修复固定查询参数被静默丢失的缺陷（useSearch spec + 2 回归用例锁定）
+* **refactor(src/components/ProTable/components/SelectedTags.vue):** review R2 + R12 —— 删除为「原地 mutation 生产者」设计的 deep watch + version 计数器（useSearch v3.2 起契约即 re-assign 新引用，浅依赖 props.searchParams 即可），消除每次变更 O(n) deep traverse；对象值显示不再 `JSON.stringify` 截断（防内部字段泄露 + 多字节截断乱码），daterange 二元组显示 `start ~ end`、其余对象显示 `[对象]`
+* **refactor(src/components/ProTable/composables/useTable.ts + ProTable.vue):** review R5 —— 新增 `waitForRefresh()`（pendingRefresh 统一登记所有刷新路径的 in-flight 句柄），reset 且 page≠1 时 fetchHook 经 `nextTick` 等 page watcher flush 后再等请求完成，`reset()`/`setSearchParams()` 的 Promise 语义修正为「数据刷新完成后 resolve」
+* **chore(src/components/ProTable/components/SearchForm.vue):** review R4 —— 删除死代码：Transition 挂载点 `v-show` 恒为 true 导致 6 个 JS 过渡钩子永不执行（约 40 行），折叠展开行为删除前后完全一致（均无动画）
+* **refactor(src/components/ProTable/types/index.ts + 4 处消费方):** review R7 —— `DEFAULT_ROW_KEY` 常量上移至 types 并全链路消费（原 ProTable.vue 局部常量声称「三处共用」实际 4 处硬编码 `'id'`：useTableCapabilities ×2 / ElementTableBody / useTreeData）
+* **refactor(src/components/ProTable/components/ElementTableBody.vue):** review R8 —— 模板 5 处内联箭头事件 handler 改为具名函数（稳定引用，与编排层 useProTableEvents「零内联箭头」同一标准）
+* **fix(src/components/ProTable/composables/useTreeData.ts):** review R6 —— 懒加载 timer 触发后即从 timers Map 移除，防长会话无界累积
+* **fix(src/components/ProTable/composables/useColumns.ts):** review R11 —— `searchColumns` 改 `let` + return getter 暴露，resetToDefault 重建 allColumns 后同步重建，消除旧克隆快照「同一数据两个真相」陷阱（spec + 1 回归用例锁定与 allColumns 同源）
+* **refactor(src/components/ProTable/types/index.ts):** review R13 —— 移除 `SummaryConfig.position`（运行时从未实现，类型承诺超出能力）；`initParam` JSDoc 补注同名键合并语义
+* **docs(src/components/ProTable/composables/useTable.ts):** review R9 —— hasWarnedMissingRowKey 注释修正（模块级 = 应用生命周期一次，非「composable 实例级」）
+* **已验证：** ProTable 全部 35 个 spec 364 用例通过（新增 4 个回归用例）、`vue-tsc --build --force` 无报错；浏览器实测（chrome-devtools）见下方验证记录
+
 ### ⚙️ Chore | 构建产物分目录输出：js / css / img 各归其位
 
 > 此前 dist 产物全部平铺在 assets/ 单目录，运维排查与 CDN 差异化缓存策略不便。本次按资源类型分目录：js → dist/js/、css → dist/css/、常见图片（png/jpg/jpeg/gif/svg/webp/ico/bmp/avif/tiff/apng）→ dist/img/，字体等其它资源兜底 dist/assets/（本项目当前无字体产物，目录在有对应资源时生成）

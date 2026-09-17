@@ -15,6 +15,7 @@
  */
 import { ElTable, ElTableColumn, ElRadio } from 'element-plus' // element-plus 按需注入（unplugin-vue-components 只管模板，script 中显式 import）
 import type { ComponentPublicInstance } from 'vue' // 类型导入（TS 编译器需要，不参与运行时）
+import { DEFAULT_ROW_KEY } from '../types' // 行 key 缺省值单一来源（review R7）
 import type { ProColumn, SortChangeEvent, TableDensity } from '../types'
 import type { useRowEdit } from '../composables/useRowEdit'
 import type { useTreeData } from '../composables/useTreeData'
@@ -81,10 +82,10 @@ const emit = defineEmits<{
   (e: 'sort-change', evt: SortChangeEvent): void
 }>()
 
-/** 统一取行 rowKey（props.rowKey 字段，默认 'id'）—— 事件桥接与树形模板共用 */
+/** 统一取行 rowKey（props.rowKey 字段，默认 DEFAULT_ROW_KEY）—— 事件桥接与树形模板共用 */
 function rowKeyOf(row: unknown): string | number {
   // unknown 入参解耦 T：树形扁平行含 _level/_hasChildren 附加字段，事件行来自 el-table（any）
-  return (row as Record<string, unknown>)[props.rowKey ?? 'id'] as string | number
+  return (row as Record<string, unknown>)[props.rowKey ?? DEFAULT_ROW_KEY] as string | number
 }
 
 /** 过滤对象中的 undefined 字段（exactOptionalPropertyTypes 兼容） */
@@ -94,6 +95,27 @@ function filterUndefined(obj: Record<string, unknown>): Record<string, unknown> 
     if (v !== undefined) out[k] = v
   }
   return out
+}
+
+/* ─────────── ElTable 事件具名 handler（review R8）───────────
+ * 模板零内联箭头：与编排层 useProTableEvents 同一标准 ——
+ * 稳定 handler 引用让 Vue props diff 判定无变化，跳过 ElTable 不必要更新路径。
+ * 事件负载类型显式标注（el-table emit 是 any，这里收敛到本组件 emit 契约）。
+ */
+function onSelectionChange(rows: Record<string, unknown>[]): void {
+  emit('selection-change', rows)
+}
+function onCellDblclick(row: unknown): void {
+  const rowKey = rowKeyOf(row)
+  // v3.0 修复：双击进入编辑时回填原行值（_start 接收 rowData 初始化 drafts）
+  props.rowEdit?._start(rowKey, row as Record<string, unknown>)
+  emit('cell-dblclick', rowKey)
+}
+function onExpandChange(row: unknown): void {
+  emit('expand-toggle', rowKeyOf(row))
+}
+function onSortChange(evt: SortChangeEvent): void {
+  emit('sort-change', evt)
 }
 
 /**
@@ -143,17 +165,10 @@ defineExpose({
       // handleMouseMove 首行守卫 if (!props.border) return）——边框线是 th 右缘拖拽手柄命中区
       ...(props.columnResize ? { border: true } : {}),
     }"
-    @selection-change="(rows) => emit('selection-change', rows)"
-    @cell-dblclick="
-      (row) => {
-        const rowKey = rowKeyOf(row)
-        // v3.0 修复：双击进入编辑时回填原行值（_start 接收 rowData 初始化 drafts）
-        rowEdit?._start(rowKey, row as Record<string, unknown>)
-        emit('cell-dblclick', rowKey)
-      }
-    "
-    @expand-change="(row) => emit('expand-toggle', rowKeyOf(row))"
-    @sort-change="(evt) => emit('sort-change', evt)"
+    @selection-change="onSelectionChange"
+    @cell-dblclick="onCellDblclick"
+    @expand-change="onExpandChange"
+    @sort-change="onSortChange"
   >
     <ElTableColumn
       v-for="col in columns"

@@ -117,6 +117,24 @@ describe('useColumns', () => {
     expect(cols.sortedColumns.value.map((c) => c.prop)).toEqual(['a', 'b', 'c'])
   })
 
+  it('review R11 回归：resetToDefault 后 searchColumns 与 allColumns 同源（非旧克隆快照）', () => {
+    const props = {
+      columns: [
+        { prop: 'a', label: 'A', search: { el: 'input' } },
+        { prop: 'b', label: 'B' },
+      ],
+      tableKey: 't',
+    } as never
+    const engine = ref('element-plus' as const)
+    const cols = useColumns({ props, engine })
+    const before = cols.searchColumns[0]
+    cols.resetToDefault()
+    // 修复前：searchColumns 持有 reset 前的旧克隆对象；修复后：与 allColumns 同源于新克隆
+    expect(cols.searchColumns[0]).not.toBe(before)
+    expect(cols.searchColumns[0]).toBe(cols.allColumns.value[0])
+    expect(cols.searchColumns.map((c) => c.prop)).toEqual(['a'])
+  })
+
   it('H1 回归：未传 tableKey（无持久化）时 resetToDefault 仍重置内存状态', () => {
     // ColSetting 抽屉「恢复默认」按钮无条件渲染；早期实现 storageKey 为空时整体
     // return，导致无持久化场景下点击按钮毫无效果（内存列序/可见性不重置）。

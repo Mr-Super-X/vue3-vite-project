@@ -73,6 +73,12 @@ export interface UseTableReturn<T extends object = Record<string, unknown>> {
   density: Ref<TableDensity>
   tableRef: Ref<ComponentPublicInstance | null>
   refresh: () => Promise<void>
+  /**
+   * 等待当前进行中的刷新完成（无进行中请求时立即 resolve）——
+   * 编排层 reset 路径（setPage 触发 watcher 刷新）使用，保证 reset() 的
+   * Promise 在数据刷新完成后才 resolve（review R5）。
+   */
+  waitForRefresh: () => Promise<void>
   clearSelection: () => void
   getSelectedRows: () => T[]
   setSelectedRows: (rows: T[]) => void
@@ -124,7 +130,8 @@ function assertValidResponse<T extends object>(
 /**
  * rowKey 缺失警告的一次性哨兵 —— setSelectedRows 会被 el-table 高频触发
  * （selection-change 每次勾选都调），每次调用都 warn 会刷屏控制台；
- * 改为模块级（composable 实例级）只提示一次，行为提示能力不损失。
+ * 改为模块级只提示一次（应用生命周期内首个缺失 rowKey 的实例告警，多表格场景也只报一次），
+ * 行为提示能力不损失。
  */
 let hasWarnedMissingRowKey = false
 
@@ -216,8 +223,25 @@ export function useTable<T extends object = Record<string, unknown>>(
     }
   )
 
-  async function refresh(): Promise<void> {
-    await request.execute()
+  /**
+   * 最新 in-flight 请求的 await 句柄 —— 所有刷新路径（onMounted 首次请求 /
+   * page watcher / 显式 refresh）都经 execute() 统一登记到这里。
+   *
+   * 用途（review R5）：reset 且 page≠1 时 setPage(1) 触发的刷新由 watcher 异步发起，
+   * 调用方（search.reset / setSearchParams）的 Promise 需要等待该请求完成后才 resolve。
+   * useRequest.execute 的 Promise 永不 reject（错误走 onError 回调 + error ref），
+   * 因此 await 本句柄不会抛出，语义安全。
+   */
+  let pendingRefresh: Promise<void> | null = null
+
+  function refresh(): Promise<void> {
+    pendingRefresh = request.execute()
+    return pendingRefresh
+  }
+
+  /** 等待当前进行中的刷新完成（无进行中请求时立即 resolve）—— 供编排层 reset 路径使用 */
+  async function waitForRefresh(): Promise<void> {
+    await pendingRefresh
   }
 
   function setPage(p: number): void {
@@ -327,6 +351,7 @@ export function useTable<T extends object = Record<string, unknown>>(
     density,
     tableRef,
     refresh,
+    waitForRefresh,
     clearSelection,
     getSelectedRows,
     setSelectedRows,

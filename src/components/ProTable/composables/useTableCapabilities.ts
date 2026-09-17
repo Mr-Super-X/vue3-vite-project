@@ -26,6 +26,7 @@ import { useRowDrag } from './useRowDrag'
 import { useSummary } from './useSummary' // v3.0 能力扩展 5a：客户端汇总行
 import { useVirtualScroll, type UseVirtualScrollReturn } from './useVirtualScroll' // v3.0 能力扩展 5b：虚拟滚动
 import { pickDefined, asConfig } from './_utils/pickDefined' // v3.0 M 公共抽取
+import { DEFAULT_ROW_KEY } from '../types' // 行 key 缺省值单一来源（review R7）
 import type {
   ProColumn,
   ProTableProps,
@@ -97,7 +98,7 @@ export function useTableCapabilities<T extends object = Record<string, unknown>>
   const rowEdit = props.enableRowEdit
     ? useRowEdit({
         // H5：行 key 字段随 props.rowKey 注入，避免 useRowEdit 硬编码 'id' 导致自定义行 key 的表格保存失败
-        rowKey: props.rowKey ?? 'id',
+        rowKey: props.rowKey ?? DEFAULT_ROW_KEY,
         ...(pickDefined(rowEditConfig.value, ['onSave', 'onSaved', 'onSaveError']) as object),
       })
     : null
@@ -134,7 +135,7 @@ export function useTableCapabilities<T extends object = Record<string, unknown>>
   // v3.1.3 review：条件 computed 减负 —— 此前两个 computed 在所有场景都被创建 + 每次
   // data 变更都执行 new Map()，对无拖拽场景造成不必要响应式开销与 GC 压力。
   // 改为按 props.enableRowDrag 短路：未启用时返回稳定的单例空数组/空 Map，避免每帧分配。
-  const rowKeyField = props.rowKey ?? 'id'
+  const rowKeyField = props.rowKey ?? DEFAULT_ROW_KEY
   const viewRowKeys = computed<(string | number)[]>(() => {
     if (!props.enableRowDrag) return []
     // cast 原因：T 无索引签名，行 key 读取统一经 Record 转换（与 setRowOrder 同一边界）

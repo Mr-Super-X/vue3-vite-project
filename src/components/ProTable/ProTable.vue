@@ -17,7 +17,7 @@
  *
  * @group ProTable 组件
  */
-import { computed, ref, watch, onUnmounted, type Ref } from 'vue' // v3.1.2 review：移除 nextTick 反模式占位
+import { computed, ref, watch, nextTick, onUnmounted, type Ref } from 'vue' // v3.1.2 review 移除 nextTick 反模式占位；nextTick 为 review R5 reset 路径等待 page watcher flush 真实需要
 import 'element-plus/dist/index.css' // 与 form-schema/XForm.vue 对齐：直接引入全量 CSS
 import './styles/element-protable-overwrite.scss' // ProTable 特定的样式覆盖
 import { ElPagination, ElEmpty, ElConfigProvider } from 'element-plus' // element-plus 按需注入
@@ -41,16 +41,8 @@ import { useStatePersist } from './composables/useStatePersist' // v3.1：搜索
 import { useProTableEvents } from './composables/useProTableEvents' // v3.1.1 review：事件桥接编排层抽离
 import { useVirtualScroll } from './composables/useVirtualScroll' // v3.1.3 review：编排层接管 virtualized + vxe-table 引擎回退
 import { resolveEngine } from './adapters/engine'
+import { DEFAULT_ROW_KEY } from './types' // 行 key 缺省值单一来源（review R7，原局部常量上移 types）
 import type { ProColumn, ProTableExpose, ProTableProps, SortState, TableEngine } from './types'
-
-/* ───────────── 局部常量 ───────────── */
-
-/**
- * 行 key 字段名缺省值 —— ProTable.selectedRowKey + useTable.setSelectedRows
- * + useTableCapabilities.rowKeyField 三处共用；将来调整默认行键只改这一处。
- * v3.1.2 review 抽常量。
- */
-const DEFAULT_ROW_KEY = 'id'
 
 /* ───────────── BEM 命名空间（v3.1.4 review：提前到 useAutoHeight 之前） ───────────── */
 
@@ -155,6 +147,12 @@ const search = useSearch({
     // reset 且 page≠1 时仅 setPage(1) —— page watch 会触发请求，再手动 refresh 会双发
     if (opts?.reset && table.page.value !== 1) {
       table.setPage(1)
+      // review R5：setPage 触发的刷新由 page watcher 异步发起，原实现直接 return 导致
+      // reset()/setSearchParams() 的 Promise 在数据尚未刷新完成时就 resolve。
+      // nextTick 等 watcher flush（pre 优先于 render，nextTick resolution 前必已执行），
+      // 其间 watcher 内 void refresh() 已登记 pendingRefresh；再 await 它保证数据到位。
+      await nextTick()
+      await table.waitForRefresh()
       return
     }
     await table.refresh()

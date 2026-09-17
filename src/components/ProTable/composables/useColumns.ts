@@ -199,7 +199,13 @@ export function useColumns<T extends object = Record<string, unknown>>(
     return arr.filter((c) => !isHidden(c) && visibleKeys.value.includes(c.prop))
   })
 
-  const searchColumns = allColumns.value.filter((c) => Boolean(c.search))
+  /**
+   * searchColumns —— 带 search 配置的列（搜索区用）。
+   * 用 `let` + return 对象 getter 暴露（而非 const 快照）：
+   * resetToDefault 会重建 allColumns（cloneColumns 新克隆），getter 保证消费方
+   * 始终读到与 allColumns 同源的列对象，避免「同一数据两个真相」（review R11）。
+   */
+  let searchColumns: ProColumn<T>[] = allColumns.value.filter((c) => Boolean(c.search))
 
   /** 持久化当前列设置 */
   function persist(): void {
@@ -287,6 +293,7 @@ export function useColumns<T extends object = Record<string, unknown>>(
     // 无需再 manual ref(false) 覆盖（后者会破坏外部 Ref 响应性）。
     // 直接调用 cloneColumns 重建 allColumns，让所有列重新走 computed 包装逻辑
     allColumns.value = cloneColumns(props.columns)
+    searchColumns = allColumns.value.filter((c) => Boolean(c.search)) // 与 allColumns 同步重建（review R11）
     visibleKeys.value = props.columns.map((c) => c.prop) // 重置可见列（含 hidden=false + Ref<boolean>）
     columnOrder.value = props.columns.map((c) => c.prop) // 同步重置列顺序，否则恢复默认后顺序仍是拖拽后的
     fixedKeys.value = props.columns.filter((c) => c.fixed).map((c) => c.prop) // 同步重置固定列（v2.2-M1 审查发现 #3）
@@ -295,7 +302,9 @@ export function useColumns<T extends object = Record<string, unknown>>(
   return {
     allColumns,
     sortedColumns,
-    searchColumns,
+    get searchColumns(): ProColumn<T>[] {
+      return searchColumns
+    },
     visibleKeys,
     fixedKeys,
     colSettingVisible,

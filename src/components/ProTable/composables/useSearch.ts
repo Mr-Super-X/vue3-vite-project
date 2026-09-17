@@ -62,13 +62,17 @@ export function useSearch<T extends object = Record<string, unknown>>(
 ): UseSearchReturn {
   const { props, fetchHook } = options
 
-  // 1) 收集所有 search 配置列的 prop + defaultValue（+ initParam）
-  const initialForm: Record<string, unknown> = { ...(props.initParam ?? {}) }
+  // 1) 先收集所有 search 配置列的 prop + defaultValue，
+  // 再以 initParam 覆盖合并 —— 同名键时「固定查询参数」作为字段初始值生效（不被 ?? null 抹掉）。
+  // 修复（review R1）：原实现先 spread initParam 再被 `defaultValue ?? null` 无条件覆盖，
+  // 导致与搜索列同名的 initParam 键被改写为 null、经 serializeParams 剔除后永久丢失。
+  const initialForm: Record<string, unknown> = {}
   for (const col of props.columns) {
     if (col.search) {
       initialForm[col.prop] = col.search.defaultValue ?? null
     }
   }
+  Object.assign(initialForm, props.initParam ?? {})
 
   /** searchParams —— 全库唯一真相源（useTable 通过 getSearchParams 读取） */
   const searchParams = ref<Record<string, unknown>>(initialForm)
@@ -91,7 +95,8 @@ export function useSearch<T extends object = Record<string, unknown>>(
     const resetParams: Record<string, unknown> = { ...searchParams.value }
     for (const col of props.columns) {
       if (col.search) {
-        resetParams[col.prop] = col.search.defaultValue ?? null
+        // 回退顺序：字段 defaultValue → initParam 同名键（固定参数 reset 后恢复）→ null
+        resetParams[col.prop] = col.search.defaultValue ?? props.initParam?.[col.prop] ?? null
       }
     }
     searchParams.value = resetParams

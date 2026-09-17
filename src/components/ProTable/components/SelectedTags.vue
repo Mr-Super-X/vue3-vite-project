@@ -16,7 +16,7 @@
  * - 单个 tag × 点击：emit('clear-one', prop) 让父组件清字段
  * - 「清除全部」点击：emit('clear-all') 让父组件清所有
  */
-import { computed, ref, watch } from 'vue' // vue（生命周期/底层 API）
+import { computed } from 'vue' // vue（生命周期/底层 API）
 import { ElTag, ElButton } from 'element-plus' // element-plus 按需注入
 import type { ProColumn } from '../types'
 
@@ -44,32 +44,33 @@ const emit = defineEmits<Emits>()
 const bem = createNamespace('pro-table-selected-tags')
 
 /**
- * v3.2 升级：deep watch 强制重算
- *
- * 背景：useSearch.searchParams 是 `ref<Record<string, unknown>>`，ref 的 .value
- * 是普通对象，Vue 3 不会对普通对象做深度响应式追踪。当 SearchForm 的 Proxy
- * 或 useSearch.updateParams() 原地 mutate 对象属性时，下游 computed（selectedTags）
- * 不会重算，导致 tag 不显示。
- *
- * 修复：用 deep watch 监听 searchParams 任何属性变化 + 用一个本地 ref 作为
- * 「版本计数器」，让 selectedTags computed 显式依赖它，从而触发重算。
- *
- * 这是局部修复，避免改动 useSearch 的 ref → reactive 大重构。
+ * 非 select 字段的显示值格式化（review R12）
+ * - 二元组（如 el-date-picker daterange 的 [start, end]）：`start ~ end`
+ * - 其余数组：`[N 项]`
+ * - 对象：`[对象]` —— 不再 JSON.stringify 截断展示（避免内部字段泄露到 UI +
+ *   UTF-16 按单元截断多字节字符产生乱码）
  */
-const version = ref(0)
-watch(
-  () => props.searchParams,
-  () => {
-    version.value++
-  },
-  { deep: true }
-)
+function formatDisplayValue(v: unknown): string {
+  if (Array.isArray(v)) {
+    const isPair = v.length === 2 && v.every((item) => ['string', 'number'].includes(typeof item))
+    if (isPair) return `${String(v[0])} ~ ${String(v[1])}`
+    return `[${v.length} 项]`
+  }
+  if (typeof v === 'object' && v !== null) return '[对象]'
+  return String(v)
+}
 
 /**
  * 已选 tag 列表：[{ prop, label, value, displayValue }]
  * - prop: 字段名（用于清除时定位）
  * - label: 字段显示名（如「订单状态」）
  * - displayValue: 用户可读的值（select 翻译后的 label）
+ *
+ * review R2：直接依赖 props.searchParams —— useSearch v3.2 起契约即 re-assign 新对象
+ * （见 useSearch.ts updateParams/reset），浅依赖引用即可捕获全部更新；原 deep watch +
+ * version 计数器是为「原地 mutation 生产者」设计的兜底，useSearch 修复后已是过时设计
+ * （每次变更 deep traverse 整个参数树是 O(n) 浪费，且 void version.value 打断
+ * Vue 依赖追踪的声明式语义）。与 SearchForm.vue 的浅 watch 注释同一前提。
  */
 interface SelectedTag {
   prop: string
@@ -78,7 +79,6 @@ interface SelectedTag {
   rawValue: unknown
 }
 const selectedTags = computed<SelectedTag[]>(() => {
-  void version.value // 显式依赖版本号，触发 deep watch 后的重算
   const tags: SelectedTag[] = []
   for (const col of props.columns) {
     if (!col.search) continue // 无 search 配置的列不参与 tag
@@ -92,13 +92,8 @@ const selectedTags = computed<SelectedTag[]>(() => {
       const enumMap = props.enumMaps[col.prop]
       // 收紧 null 检查避免 TS18048 + 运行时崩溃
       displayValue = enumMap ? String(enumMap[v as string | number] ?? v) : String(v)
-    } else if (Array.isArray(v)) {
-      displayValue = `[${v.length} 项]`
-    } else if (typeof v === 'object' && v !== null) {
-      // date range / 复杂对象 → JSON 简略
-      displayValue = JSON.stringify(v).slice(0, 30)
     } else {
-      displayValue = String(v)
+      displayValue = formatDisplayValue(v)
     }
     tags.push({
       prop: col.prop,

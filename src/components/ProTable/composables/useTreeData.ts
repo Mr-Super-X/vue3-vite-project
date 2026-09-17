@@ -1,3 +1,4 @@
+import { DEFAULT_ROW_KEY } from '../types' // 行 key 缺省值单一来源（review R7）
 import type { TreeConfig } from '../types'
 /** 树形数据节点结构 —— ProTable 内部状态字段以 _ 开头（业务不应读写）@group ProTable Composables */
 export interface TreeNode extends Record<string, unknown> {
@@ -13,7 +14,7 @@ export function useTreeData(config: TreeConfig) {
   const loading = ref<Set<string | number>>(new Set())
   const timers = new Map<string | number, ReturnType<typeof setTimeout>>()
   const cKey = config.childrenKey ?? 'children',
-    rKey = config.rowKey ?? 'id',
+    rKey = config.rowKey ?? DEFAULT_ROW_KEY,
     dExp = config.defaultExpandDepth ?? 0
   const roots: TreeNode[] = []
   const seek = (
@@ -114,6 +115,7 @@ export function useTreeData(config: TreeConfig) {
         if (p) clearTimeout(p)
         await new Promise<void>((resolve, reject) => {
           const t = setTimeout(async () => {
+            timers.delete(k) // 触发即移除，防 Map 长会话累积（review R6）
             try {
               if (config.loadChildren) {
                 const r = seek(k, roots)
