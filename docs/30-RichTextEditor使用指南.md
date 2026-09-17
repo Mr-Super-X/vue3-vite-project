@@ -190,7 +190,7 @@ const uploadApi = async (file: File) => {
 | ------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------- |
 | `src/components/common/RichTextEditor/RichTextEditor.spec.ts` | 12     | v-model 双向 + DOMPurify 清洗 + 视觉为空映射 + 防循环 + 命令式 API + onBeforeUnmount destroy |
 
-完整 demo 站：RichTextEditor 演示（XSS 防御演示 + 上传演示 + 详情只读模式）。
+完整 demo 站：`src/modules/demo/examples/RichTextEditor.vue` 单文件（按 tab 内嵌展示 XSS 防御演示 + 上传演示 + 详情只读模式三类场景），路由 `/demo/rich-text-editor`。
 
 ---
 

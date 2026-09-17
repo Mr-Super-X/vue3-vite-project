@@ -360,6 +360,18 @@ export default [
 ] as MockMethod[]
 ```
 
+> **DS-3 关键约定（mock URL vs API URL）**：
+>
+> | 维度        | API 代码 url 字段（`src/api/modules/*.ts`） | mock 文件 url 字段（`mock/*.ts`）                 |
+> | ----------- | ------------------------------------------- | ------------------------------------------------- |
+> | `/api` 前缀 | **不写**（由 `http.ts` 的 `baseURL` 拼装）  | **必写**（vite-plugin-mock 直连独立 mock 服务器） |
+> | 环境变量    | `VITE_API_BASE_URL` 控制 baseURL            | 与 baseURL 无关，由 mock 服务器自行处理           |
+>
+> **典型错误**：业务代码写 `request({ url: '/api/user/list' })` → 实际请求变成 `VITE_API_BASE_URL + /api/api/user/list`（`/api` 双拼，请求 404）。
+> 正确写法：`request({ url: '/user/list' })`。`baseURL` 已在 `src/api/http.ts:baseURL` 统一配置。
+>
+> 关闭 mock 时设 `VITE_USE_MOCK=false` + `VITE_API_BASE_URL=<真实后端地址>`（详见 §"环境变量"段）。
+
 ---
 
 ## 11. 测试与 mock 的关系

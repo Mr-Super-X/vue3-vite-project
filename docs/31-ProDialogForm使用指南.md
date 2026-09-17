@@ -243,7 +243,7 @@ catch (err) {
 | `useDialogSubmit.spec.ts` | 8      | 防重复 + 失败 loading 复位 + 不抛 err      |
 | `useResetOnClose.spec.ts` | 6      | 延时重置 + 重入保护 + onUnmounted 清 timer |
 
-完整 demo 站：ProDialogForm 演示（基础用法 / 自定义 footer / 命令式 useDialog 集成）。
+完整 demo 站：`src/modules/demo/examples/ProDialogForm/ProDialogFormOverview.vue` 单 demo（基础用法 + 自定义 footer + 命令式 useDialog 集成三类场景在同一文件内分章节演示），路由 `/demo/pro-dialog-form-overview`。
 
 ---
 

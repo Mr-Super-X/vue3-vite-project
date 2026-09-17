@@ -17,7 +17,7 @@
 | 业务方既要模板 `v-model` 又要 `JS` 回调 | **双入口**：声明式 `<ProDialog>` + 命令式 `useDialog()`       |
 | 文本/HTML 二次确认（危险操作）          | 命令式 `useConfirm()`（取消 resolve `false`，无须 try/catch） |
 
-完整 demo 站：`/demo/pro-dialog-overview`（声明式）+ `/demo/pro-dialog-use-dialog`（命令式）+ `/demo/pro-dialog-resizable`（调整宽高）。
+完整 demo 站：`src/modules/demo/examples/ProDialog/`（3 个 demo：`ProDialogOverview.vue` 声明式 + `ProDialogUseDialog.vue` 命令式 + `ProDialogResizable.vue` resizable + `resizeMinToInitial`），路由 `/demo/pro-dialog-<kebab>`。表单弹窗另见 `src/modules/demo/examples/ProDialogForm/ProDialogFormOverview.vue`。
 
 ---
 

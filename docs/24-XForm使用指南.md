@@ -796,52 +796,70 @@ col: {
 
 ---
 
-## 19. 示例索引（38 个 demo，含 1 个主入口）
+## 19. 示例索引（54 个 demo + 1 个主入口）
 
-在线演示站点：`pnpm dev` → `/demo`（左侧「XForm 表单引擎」分组），路由 = `/demo/x-form-<kebab-case>`。所有 demo 源码位于 `src/modules/demo/examples/XForm*.vue`（38 个文件）。
+在线演示站点：`pnpm dev` → `/demo`（左侧「XForm 表单引擎」分组），路由 = `/demo/x-form-<kebab-case>`。所有 demo 源码位于 `src/modules/demo/examples/XForm/`（54 个 `.vue` 文件 + 1 个 configs/ 工具 + 1 个 utils/ 工具）。
 
-| 路由                               | 内容                                                |
-| ---------------------------------- | --------------------------------------------------- |
-| `/demo/x-form`                     | 用法总览（主 demo：Props/Events/Slots 完整 API 表） |
-| `/demo/x-form-minimum-demo`        | 最小示例（5 分钟上手）                              |
-| `/demo/x-form-base`                | 基础用法（多字段 + 校验 + 重置）                    |
-| `/demo/x-form-nested`              | 复杂布局（Card 容器 + slots + 嵌套）                |
-| `/demo/x-form-builder`             | 链式构建器                                          |
-| `/demo/x-form-grid`                | row + column 栅格布局                               |
-| `/demo/x-form-reaction`            | 反应式联动（含防抖/节流）                           |
-| `/demo/x-form-reaction-deps`       | reaction `deps` 精确监听                            |
-| `/demo/x-form-reaction-advanced`   | reaction 进阶用法                                   |
-| `/demo/x-form-expression`          | `{{ }}` 函数表达式沙箱                              |
-| `/demo/x-form-cross-field`         | 跨字段校验                                          |
-| `/demo/x-form-cross-field-reverse` | 反向跨字段（精确触发）                              |
-| `/demo/x-form-async-options`       | 异步选项                                            |
-| `/demo/x-form-async-validator`     | 异步校验（loading 态）                              |
-| `/demo/x-form-array`               | 数组节点（增删/上下移/min-max 限制）                |
-| `/demo/x-form-array-draggable`     | 数组行拖拽排序                                      |
-| `/demo/x-form-persist`             | 草稿持久化（自动保存 + 刷新恢复）                   |
-| `/demo/x-form-responsive`          | 响应式布局（断点拍平）                              |
-| `/demo/x-form-dirty`               | 脏状态追踪                                          |
-| `/demo/x-form-disabled`            | 禁用状态（反应式）                                  |
-| `/demo/x-form-global-disabled`     | 整体禁用（顶层 schema `disabled`）                  |
-| `/demo/x-form-global-readonly`     | 整体只读（顶层 schema `readonly`）                  |
-| `/demo/x-form-field-permission`    | 字段权限（view/edit/hidden）                        |
-| `/demo/x-form-directives`          | 自定义指令                                          |
-| `/demo/x-form-events`              | `on` 事件绑定（函数 + 表达式）                      |
-| `/demo/x-form-server-error`        | 服务端错误映射                                      |
-| `/demo/x-form-slots`               | 插槽系统                                            |
-| `/demo/x-form-invalid-component`   | 无效组件校验（div 占位 + DebugBanner）              |
-| `/demo/x-form-large-schema`        | 大 schema 性能                                      |
-| `/demo/x-form-model-warn`          | model 缺失警告                                      |
-| `/demo/x-form-schema-index`        | 索引快照（getNames/getRef）                         |
-| `/demo/x-form-detail-fill`         | 详情页回填（加载 + resetDirty）                     |
-| `/demo/x-form-order-create`        | 业务综合示例（订单创建）                            |
-| `/demo/x-form-scroll-to-error`     | 校验失败自动滚动                                    |
-| `/demo/x-form-validate-field`      | `validateField` 单字段校验                          |
-| `/demo/x-form-validation-debounce` | 跨字段 debounce 调优                                |
-| `/demo/x-form-style-override`      | 样式覆盖（BEM 命名空间）                            |
-| `/demo/x-form-upload`              | 文件上传（单文件/多文件/拖拽/图片墙/校验/回显）     |
+| 路由                                  | 内容                                                                                   |
+| ------------------------------------- | -------------------------------------------------------------------------------------- |
+| `/demo/x-form`                        | **主 demo**：Props/Events/Slots 完整 API 表 + 实例方法演示（对应 `XFormOverview.vue`） |
+| `/demo/x-form-minimum-demo`           | 最小示例（5 分钟上手）                                                                 |
+| `/demo/x-form-base`                   | 基础用法（多字段 + 校验 + 重置）                                                       |
+| `/demo/x-form-nested`                 | 复杂布局（Card 容器 + slots + 嵌套）                                                   |
+| `/demo/x-form-nested-array`           | 嵌套数组（树形数据 + 多层联动）                                                        |
+| `/demo/x-form-builder`                | 链式构建器                                                                             |
+| `/demo/x-form-grid`                   | row + column 栅格布局                                                                  |
+| `/demo/x-form-props-advanced`         | Props 进阶（model/schemas/events/expose 完整契约）                                     |
+| `/demo/x-form-schema-index`           | 索引快照（getNames/getRef）                                                            |
+| `/demo/x-form-large-schema`           | 大 schema 性能（千级字段）                                                             |
+| `/demo/x-form-label-layout`           | label 布局（top/left/right）+ labelWidth                                               |
+| `/demo/x-form-style-override`         | 样式覆盖（BEM 命名空间）                                                               |
+| `/demo/x-form-responsive`             | 响应式布局（断点拍平）                                                                 |
+| `/demo/x-form-ignore`                 | ignore 字段（UI 展示但不参与 submit）                                                  |
+| `/demo/x-form-render-recovery`        | 渲染失败恢复机制（ErrorBoundary + fallback）                                           |
+| `/demo/x-form-model-warn`             | model 缺失警告                                                                         |
+| `/demo/x-form-detail-fill`            | 详情页回填（加载 + resetDirty）                                                        |
+| `/demo/x-form-order-create`           | 业务综合示例（订单创建）                                                               |
+| `/demo/x-form-reaction`               | 反应式联动（含防抖/节流）                                                              |
+| `/demo/x-form-reaction-deps`          | reaction `deps` 精确监听                                                               |
+| `/demo/x-form-reaction-advanced`      | reaction 进阶用法                                                                      |
+| `/demo/x-form-reaction-strategy`      | reaction 策略选择                                                                      |
+| `/demo/x-form-expression`             | `{{ }}` 函数表达式沙箱                                                                 |
+| `/demo/x-form-expression-sandbox`     | 表达式沙箱隔离与安全演示                                                               |
+| `/demo/x-form-cross-field`            | 跨字段校验                                                                             |
+| `/demo/x-form-cross-field-reverse`    | 反向跨字段（精确触发）                                                                 |
+| `/demo/x-form-async-options`          | 异步选项                                                                               |
+| `/demo/x-form-async-options-error`    | 异步选项加载失败降级                                                                   |
+| `/demo/x-form-async-validator`        | 异步校验（loading 态）                                                                 |
+| `/demo/x-form-array`                  | 数组节点（增删/上下移/min-max 限制）                                                   |
+| `/demo/x-form-array-api`              | 数组节点 + 远程 API 同步                                                               |
+| `/demo/x-form-array-draggable`        | 数组行拖拽排序                                                                         |
+| `/demo/x-form-before-change`          | beforeChange 三层校验                                                                  |
+| `/demo/x-form-persist`                | 草稿持久化（自动保存 + 刷新恢复）                                                      |
+| `/demo/x-form-persist-schema-version` | 草稿持久化 + schema 版本不兼容检测                                                     |
+| `/demo/x-form-dirty`                  | 脏状态追踪                                                                             |
+| `/demo/x-form-disabled`               | 禁用状态（反应式）                                                                     |
+| `/demo/x-form-global-disabled`        | 整体禁用（顶层 schema `disabled`）                                                     |
+| `/demo/x-form-global-readonly`        | 整体只读（顶层 schema `readonly`）                                                     |
+| `/demo/x-form-field-permission`       | 字段权限（view/edit/hidden）                                                           |
+| `/demo/x-form-directives`             | 自定义指令                                                                             |
+| `/demo/x-form-events`                 | `on` 事件绑定（函数 + 表达式）                                                         |
+| `/demo/x-form-server-error`           | 服务端错误映射                                                                         |
+| `/demo/x-form-error-toast-slot`       | 错误提示自定义插槽                                                                     |
+| `/demo/x-form-slots`                  | 插槽系统                                                                               |
+| `/demo/x-form-invalid-component`      | 无效组件校验（div 占位 + DebugBanner）                                                 |
+| `/demo/x-form-custom-component`       | 自定义组件（用户组件注册）                                                             |
+| `/demo/x-form-custom-form-item`       | 自定义 FormItem 包装                                                                   |
+| `/demo/x-form-scroll-to-error`        | 校验失败自动滚动                                                                       |
+| `/demo/x-form-validate-field`         | `validateField` 单字段校验                                                             |
+| `/demo/x-form-validate-detail`        | `validateDetail` 全字段校验 + 详细错误                                                 |
+| `/demo/x-form-validation-debounce`    | 跨字段 debounce 调优                                                                   |
+| `/demo/x-form-zod`                    | Zod schema 校验                                                                        |
+| `/demo/x-form-upload`                 | 文件上传（单文件/多文件/拖拽/图片墙/校验/回显）                                        |
 
-> 主 demo `/demo/x-form`（对应 `XForm.vue`）是查阅全部 prop 与实例方法的入口；其余 37 个 demo 按主题分组覆盖各能力边界。
+> **主 demo 入口**：`/demo/x-form`（对应 `XFormOverview.vue`）—— 查阅全部 prop、事件、实例方法的入口。其余 53 个 demo 按「基础 → 进阶 → 反应式联动 → 校验 → 异步 → 数组 → 样式与扩展」分组覆盖各能力边界。
+>
+> **配套工具**：`src/modules/demo/examples/XForm/configs/`（共享 schema 配置）+ `src/modules/demo/examples/XForm/utils/`（演示用工具函数）。
 
 ---
 

@@ -1,8 +1,9 @@
 # BaseChart 图表组件使用指南
 
-> **文档版本**：v1.0.0 | **最后更新**：2026-09-11
+> **文档版本**：v1.0.0 | **最后更新**：2026-09-17
 > **依赖版本**：ECharts 6.x（独立打包进 `vendor-charts` chunk，见 `docs/04` §v2.0）
 > **源码位置**：`src/components/common/BaseChart.vue`
+> **演示站**：`src/modules/demo/examples/BaseChart/`（5 个 demo，详见 §11）
 
 ---
 
@@ -302,3 +303,19 @@ chartRef.value?.getInstance()?.on('click', handler)
 - 类型导出：`echarts` 包 `EChartsCoreOption`
 - 主题注册：`echarts.registerTheme`
 - 包体积分析：`docs/04-构建与测试工具.md` §Vendor Chunk（含 `vendor-charts`）
+
+---
+
+## 11. 示例索引（5 个 demo + 1 个主入口）
+
+在线演示站点：`pnpm dev` → `/demo`（左侧「BaseChart 图表」分组），路由 = `/demo/base-chart-<kebab-case>`。所有 demo 源码位于 `src/modules/demo/examples/BaseChart/`（5 个 `.vue` 文件）。
+
+| 路由                           | 内容                                                     |
+| ------------------------------ | -------------------------------------------------------- |
+| `/demo/base-chart-overview`    | **主 demo**：BaseChart 用法总览（props / events / 三态） |
+| `/demo/base-chart-dashboard`   | Dashboard 综合示例（多图表组合 + 主题切换）              |
+| `/demo/base-chart-real-time`   | 实时数据（定时刷新 + 性能验证）                          |
+| `/demo/base-chart-sale-funnel` | 销售漏斗图（特定图表类型 demo）                          |
+| `/demo/base-chart-in-dialog`   | BaseChart 嵌入 ProDialog（弹窗内图表）                   |
+
+> **主 demo 入口**：`/demo/base-chart-overview`（对应 `BaseChartOverview.vue`）—— 查阅 props/events/三态的入口。其余 4 个 demo 按「综合 → 实时 → 特定图型 → 嵌入场景」分组。

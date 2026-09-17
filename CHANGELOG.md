@@ -17,6 +17,32 @@
 * **未改动（已对齐无需更新）:** `docs/29-ProTable使用指南.md` Props 表 + §4.4 searchLayout + v3.4 变更摘要、`docs/27-ProDialog使用指南.md` §2.8 resizeMinToInitial、`docs/32-常用交互指令.md` §1 v-copy + §2 防抖指令、`src/components/ProTable/{README,ARCHITECTURE,CONTRIBUTING}.md`、`docs/08-模块化架构总览.md` 主表
 * **已验证（无代码变更无须跑测试）:** 仅 markdownlint 风格警告（表格对齐 / 代码内空格），与内容正确性无关
 
+### 📝 Docs | demo 索引修复 + 9 月 spec 交付对照（深度扫描第二轮）
+
+> 实测 `src/modules/demo/examples/` 下 94 个 `.vue` 文件后，按 demo 数量与主入口错位产出 7 项差异（DP-1~DP-7），并核对 9 月份 12 个 design spec 全部已交付代码。无代码变更，纯文档。
+
+* **fix(docs/24-XForm使用指南.md):** DP-1 §19 示例索引从 38 → 54 个 demo（+16）；主入口错位 `XForm.vue` → `XFormOverview.vue`；按"基础 → 反应式联动 → 校验 → 异步 → 数组 → 样式与扩展"重排分组
+* **fix(docs/29-ProTable使用指南.md):** DP-2 §15 新增示例索引（19 个 demo 完整表格）；§12 测试覆盖表"9 个 demo" → "19 个 demo + 详见 §15"
+* **fix(docs/28-BaseChart使用指南.md):** DP-4 §11 新增示例索引（5 个 demo：Overview / Dashboard / RealTime / SaleFunnel / InDialog）
+* **fix(docs/27-ProDialog使用指南.md):** DP-6 §概述 demo 站描述补全（3 个 ProDialog demo + 1 个 ProDialogForm demo）
+* **fix(docs/30-RichTextEditor使用指南.md):** DP-3 末尾 demo 描述改为"单文件 RichTextEditor.vue 按 tab 内嵌三类场景"
+* **fix(docs/31-ProDialogForm使用指南.md):** DP-7 末尾 demo 描述改为"ProDialogFormOverview.vue 单 demo 分章节演示"
+* **fix(docs/32-常用交互指令.md):** DP-5 演示站描述补 DirectiveOverview 总览（实际 7 个 demo 不是 6 个）
+* **verify(specs/2026-09-*):** DP-8 9 月份 12 个 design spec 全部已在 14 天窗口内交付：beforeChange 三层（form-schema composables 落地）/ demo sidebar 搜索（commit b423c62）/ ProTable v1-v3.0.1 全周期（types+composables+demos）/ form-schema 架构审计 3 批次 / vite.config 工程化抽离（build/ + generate-tsconfig-paths.ts）
+* **未改动（已对齐无需更新）:** 12 个 spec 文档自身、CHANGELOG 时间线与 git log 9 月以来 commit 完全对齐
+* **已验证（无代码变更无须跑测试）:** markdownlint + cSpell 累计 ~30 条警告（表格对齐 MD060 + 拼写 mousemove/vueuse），与内容正确性无关
+
+### 📝 Docs | 第五轮扫描：mock URL 约定 + ESLint 规则范围对齐
+
+> 第四轮扫描发现 5 项 DS-* 文档差异（mock URL vs API URL 的 `/api` 前缀约定 + ESLint `no-restricted-imports` 覆盖范围与 CLAUDE.md §1.5 措辞不一致）。修复 4 项（DS-3/4/6/7/8），DS-1（ESLint 新增 useUserStore 拦截规则）由项目配置保护 hook 拦截，未执行。
+
+* **docs(docs/22-mock使用规范.md):** DS-3/DS-6 §10 字典 mock 段补"API URL vs mock URL 关键约定"——API 代码 url 字段**不含** `/api` 前缀（由 http.ts baseURL 统一拼装），mock URL **必含** `/api` 前缀（vite-plugin-mock 直连独立 mock 服务器）；典型错误示例 `request({ url: '/api/user/list' })` → 实际变成 `/api/api/user/list`（双拼 404）+ 正确写法 `request({ url: '/user/list' })`
+* **docs(docs/02-代码质量工具链.md):** DS-4/DS-7 新增 §"项目自定义 ESLint 规则"章节，列当前已配置 2 条规则（vue-router/useRouter + axios）与 CLAUDE.md §1.5 强制 5 条的对照表 + 解释"为什么不全量加规则"（误报风险/重构成本/CALUDE.md 措辞）+ "后续扩展"草稿方案（启用前需全局排查 5+ 处 useUserStore 越级）
+* **docs(CLAUDE.md):** DS-8 §1.5 标题与表格修订 —— 标题改为"ESLint 规则 + 规范双轨制"，表格新增"ESLint 规则约束"列（✅ 已约束 / ⚠️ 规范 + code review 兜底），明确"5 条封装实际只有 2 条走 ESLint 自动 warning，其他 3 条靠规范 + code review 兜底"
+* **verify(eslint.config.mjs):** DS-1/DS-2 评估完成。ESLint 配置保护 hook 拦截了 useUserStore 规则新增（"禁止修改 eslint.config.mjs"）→ 尊重项目工程纪律，DS-1 不执行；DS-2（环境变量硬编码凭证）项目当前无对应违规实例，规则加不加影响为零，亦不执行。两项均通过 docs/02 §"项目自定义 ESLint 规则" / §"未来扩展"作为待办记录
+* **未改动（已对齐无需更新）:** 4 个模块 index.ts 全部符合 §1.2 铁律；API 类型 `UserItem` / `Pagination<T>` 与 mock 返回结构一致；6 个 types/*.d.ts 文档引用一致；9 个核心组件 JSDoc 完善
+* **已验证（无代码变更无须跑测试）:** markdownlint 累计 ~50 条风格警告（新增 docs/02 §自定义规则表格），与内容正确性无关；eslint.config.mjs 未改动（git diff 验证）
+
 ### ✨ Feat | ProDialog resizeMinToInitial：resize 最小尺寸锁定初始打开宽高（只能放大）
 
 > 此前 resizable 开启后最小尺寸硬编码 320×200，业务方无法阻止用户把弹窗拖到比内容设计尺寸还小导致排版错乱。本次新增 `resize-min-to-initial` 开关：开启后本次打开弹窗的初始宽高即最小可缩尺寸（只能放大、不能缩小到初始以下），每次重新打开重新记录；关闭时保持原有 320×200 行为完全兼容

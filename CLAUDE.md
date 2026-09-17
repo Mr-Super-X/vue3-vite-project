@@ -113,17 +113,19 @@ Feature-Sliced 风格的中后台门户前端（`vue3-vite-project`，企业中�
 </AsyncState>
 ```
 
-### 1.5 业务代码强制封装（ESLint `no-restricted-imports` 自动 warning）
+### 1.5 业务代码强制封装（ESLint 规则 + 规范双轨制）
 
 业务代码**禁止**直接 `import { useRouter } from 'vue-router'` 或 `import axios from 'axios'`，**必须**用项目封装：
 
-| 场景                            | 必须用                                                                  |
-| ------------------------------- | ----------------------------------------------------------------------- |
-| 路由（跳转/参数/back）          | `@composables/useAppRouter`                                             |
-| 网络请求（三态 + 错误处理）     | `@composables/useRequest`                                               |
-| 权限（AND / ANY 语义）          | `@composables/useAuth`（`hasPerm` / `hasAnyPerm`）                      |
-| 命令式弹窗（确认/取消 Promise） | `@composables/useDialog`（取消 reject `DialogCancelledError`）          |
-| 二次确认（取消 resolve false）  | `@composables/useConfirm`（取消 resolve `false`，调用方无须 try/catch） |
+| 场景                            | 必须用                                                                  | ESLint 规则约束                                         |
+| ------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------- |
+| 路由（跳转/参数/back）          | `@composables/useAppRouter`                                             | ✅ `no-restricted-imports` warn（vue-router/useRouter） |
+| 网络请求（三态 + 错误处理）     | `@composables/useRequest`                                               | ✅ `no-restricted-imports` warn（axios / axios/*）      |
+| 权限（AND / ANY 语义）          | `@composables/useAuth`（`hasPerm` / `hasAnyPerm`）                      | ⚠️ 规范 + code review 兜底（暂无 ESLint 规则）          |
+| 命令式弹窗（确认/取消 Promise） | `@composables/useDialog`（取消 reject `DialogCancelledError`）          | ⚠️ 规范 + code review 兜底（暂无 ESLint 规则）          |
+| 二次确认（取消 resolve false）  | `@composables/useConfirm`（取消 resolve `false`，调用方无须 try/catch） | ⚠️ 规范 + code review 兜底（暂无 ESLint 规则）          |
+
+> **DS-8 修订说明**：原措辞"ESLint `no-restricted-imports` 自动 warning"对全部 5 条均成立，但实测 ESLint **仅约束前 2 条**（`useAppRouter` / `useRequest`）；后 3 条（`useAuth` / `useDialog` / `useConfirm`）暂无 ESLint 规则，靠项目规范 + code review 兜底。详见 [`docs/02-代码质量工具链.md`](docs/02-代码质量工具链.md) §"项目自定义 ESLint 规则"。
 
 ### 1.6 AutoImport 自动导入（无须显式 `import`）
 
