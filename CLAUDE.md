@@ -4,7 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > 本文档是 `~/.claude/CLAUDE.md` 的项目级补充。所有全局规则（§一～§十一）自动适用，遇到冲突以**本文档为准**。
 >
-> **文档版本**：v1.5.0 | **生成日期**：2026-09-11 | **生效分支**：`master`
+> **文档版本**：v1.6.0 | **生成日期**：2026-09-17 | **生效分支**：`master`
+>
+> **最近更新**（2026-09-17）：同步文档与最新代码对齐
+>
+> - `docs/11-字典使用规范.md` v2 重写：useDict 由单 key 形态（`{options, getLabel, refresh, loading}`）升级为多 code 契约形态（`{ gender, user_status, refreshDict }`）
+> - `docs/27-ProDialog使用指南.md` 新增 §8.5 `useConfirm` 命令式二次确认章节；测试覆盖表加 `useConfirm.spec.ts` 4 例
+> - `docs/10-新手指引.md` 新增 §3.7 `useConfirm` / `useDialog` 命令式弹窗示例
+> - `docs/26-项目推荐说明.md` 新增"组件级杀手锏"小节（ProTable v3.4 / ProDialog v1.1 / ProDialogForm / XForm / RichTextEditor 等）+ 完整文档索引
+> - `docs/32-常用交互指令.md` §3 修正 `docs/34-权限设计.md` 错位路径 → `docs/23-权限设计.md`；§7 相关文档补 v-copy 自身引用
+> - `docs/04-构建与测试工具.md` 测试覆盖表补 `useDialog` / `useConfirm` / `useTheme` 三个 composable spec
+> - `README.md` 顶部"最近更新"对齐本次同步范围
 >
 > **v1.5 变更**：新增 §1.7「组件全局注册与 IDE 智能提示（强约束）」—— 明确 `components/common/**` 下的全局组件**不要显式 import**，依赖 `unplugin-vue-components` 自动注册；显式 import 会让 Volar 在 ESM 路径下丢失 `DefineComponent` 完整类型展开，hover 只显示 `import Xxx`。同步修正 §1.6 表格中"项目内业务模块"行（原措辞会让消费方误写 import），§4 Project Constraints 新增 #15。
 >

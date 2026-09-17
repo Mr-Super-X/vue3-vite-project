@@ -2,6 +2,21 @@
 
 ## 未发布
 
+### 📝 Docs | 文档深度同步：useDict v2 契约形态 / useConfirm 章节 / 项目推荐说明
+
+> 扫描全量 docs/ 与最新 src/ 代码，按 P0/P1/P2 分级产出 9 项差异清单并完成修复。无代码变更，纯文档与 README/CLAUDE.md 顶部同步。
+
+* **docs(docs/11-字典使用规范.md):** v2 重写 —— `useDict` 由旧版「单 key 返回 `{ options, getLabel, refresh, loading }`」改为「多 code 契约形态 `useDict('gender', 'user_status') → { gender, user_status, refreshDict }`」。补 §2.1 核心 API + §2.4 强制刷新 + §9 v1→v2 迁移速查；§7 单测覆盖同步（useDict.spec.ts 5 例新描述）
+* **docs(docs/27-ProDialog使用指南.md):** 新增 §8.5 `useConfirm` 命令式二次确认章节（基础用法 / HTML 富文本 / 与 ElMessageBox.confirm 差异表 / 已知限制）；顶部"覆盖范围"扩到 `useDialog + useConfirm`；§3 三种入口对比表 + §1 痛点表补 useConfirm 行；§8 测试覆盖表补 `useConfirm.spec.ts` 4 例
+* **docs(docs/10-新手指引.md):** 新增 §3.7 命令式弹窗（useConfirm 一行 API + useDialog + DialogCancelledError 错误识别）
+* **docs(docs/26-项目推荐说明.md):** 新增"组件级杀手锏"小节（ProTable v3.4 / ProDialog v1.1 / ProDialogForm / XForm / RichTextEditor / BaseChart / AsyncState / ErrorBoundary / DictSelect / DictTag）+ Composable 一行 API 总览；版本号升 v1.0.0 → v1.1.0；补 5 篇相关文档外链（27/29/30/31/32）
+* **docs(docs/32-常用交互指令.md):** 修正 §3 `docs/34-权限设计.md` 错位路径 → `docs/23-权限设计.md`；顶部"源码位置"补 `import.meta.glob` 自动扫描说明；§7 相关文档补 v-copy 自身引用 + 指令数从 5 改为 6
+* **docs(docs/04-构建与测试工具.md):** 测试覆盖表 composables 行补 `useDialog` / `useConfirm` / `useTheme` 三个 spec
+* **docs(README.md):** 顶部"最近更新"对齐本轮同步范围（6 项 docs/ 改动）
+* **docs(CLAUDE.md):** 文档版本 v1.5.0 → v1.6.0；新增"最近更新（2026-09-17）"段列出本轮同步明细
+* **未改动（已对齐无需更新）:** `docs/29-ProTable使用指南.md` Props 表 + §4.4 searchLayout + v3.4 变更摘要、`docs/27-ProDialog使用指南.md` §2.8 resizeMinToInitial、`docs/32-常用交互指令.md` §1 v-copy + §2 防抖指令、`src/components/ProTable/{README,ARCHITECTURE,CONTRIBUTING}.md`、`docs/08-模块化架构总览.md` 主表
+* **已验证（无代码变更无须跑测试）:** 仅 markdownlint 风格警告（表格对齐 / 代码内空格），与内容正确性无关
+
 ### ✨ Feat | ProDialog resizeMinToInitial：resize 最小尺寸锁定初始打开宽高（只能放大）
 
 > 此前 resizable 开启后最小尺寸硬编码 320×200，业务方无法阻止用户把弹窗拖到比内容设计尺寸还小导致排版错乱。本次新增 `resize-min-to-initial` 开关：开启后本次打开弹窗的初始宽高即最小可缩尺寸（只能放大、不能缩小到初始以下），每次重新打开重新记录；关闭时保持原有 320×200 行为完全兼容

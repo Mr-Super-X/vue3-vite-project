@@ -1,8 +1,8 @@
 # ProDialog 高级弹窗使用指南
 
 > **文档版本**：v1.1.0 | **最后更新**：2026-09-17
-> **覆盖范围**：声明式组件 `<ProDialog>` + 命令式 Hook `useDialog()` + 拖拽指令 `v-draggable`
-> **源码位置**：`src/components/common/ProDialog/`、`src/composables/useDialog.ts`、`src/directives/draggable.ts`
+> **覆盖范围**：声明式组件 `<ProDialog>` + 命令式 Hook `useDialog()` / `useConfirm()` + 拖拽指令 `v-draggable`
+> **源码位置**：`src/components/common/ProDialog/`、`src/composables/useDialog.ts`、`src/composables/useConfirm.ts`、`src/directives/draggable.ts`
 
 ---
 
@@ -10,11 +10,12 @@
 
 `ProDialog` 是 Element Plus `ElDialog` 的工程化封装，**围绕三个核心痛点** 高频弹窗场景做了扩展：
 
-| 痛点                                    | 解决方案                                                |
-| --------------------------------------- | ------------------------------------------------------- |
-| 拖拽弹窗出视口外无法找回                | `v-draggable` 指令 + 视口边界钳制                       |
-| 业务方频繁写「全屏切换按钮」            | 内置 `fullScreen` 切换 + `showFullScreenButton`         |
-| 业务方既要模板 `v-model` 又要 `JS` 回调 | **双入口**：声明式 `<ProDialog>` + 命令式 `useDialog()` |
+| 痛点                                    | 解决方案                                                      |
+| --------------------------------------- | ------------------------------------------------------------- |
+| 拖拽弹窗出视口外无法找回                | `v-draggable` 指令 + 视口边界钳制                             |
+| 业务方频繁写「全屏切换按钮」            | 内置 `fullScreen` 切换 + `showFullScreenButton`               |
+| 业务方既要模板 `v-model` 又要 `JS` 回调 | **双入口**：声明式 `<ProDialog>` + 命令式 `useDialog()`       |
+| 文本/HTML 二次确认（危险操作）          | 命令式 `useConfirm()`（取消 resolve `false`，无须 try/catch） |
 
 完整 demo 站：`/demo/pro-dialog-overview`（声明式）+ `/demo/pro-dialog-use-dialog`（命令式）+ `/demo/pro-dialog-resizable`（调整宽高）。
 
@@ -22,11 +23,12 @@
 
 ## 1. 三种入口对比
 
-| 入口                     | 适用场景                                     | 返回值                                                 |
-| ------------------------ | -------------------------------------------- | ------------------------------------------------------ |
-| `<ProDialog v-model>`    | 模板里已声明、可控显隐                       | `update:modelValue` 事件                               |
-| `useDialog(Comp).open()` | 按钮回调 / 请求回调中动态唤起                | `Promise<true>`（确定）/ reject `DialogCancelledError` |
-| `v-draggable`            | 需要拖拽边界钳制的弹窗（ProDialog 默认启用） | —                                                      |
+| 入口                     | 适用场景                                       | 返回值                                                     |
+| ------------------------ | ---------------------------------------------- | ---------------------------------------------------------- |
+| `<ProDialog v-model>`    | 模板里已声明、可控显隐                         | `update:modelValue` 事件                                   |
+| `useDialog(Comp).open()` | 按钮回调 / 请求回调中动态唤起                  | `Promise<true>`（确定）/ reject `DialogCancelledError`     |
+| `useConfirm(text)`       | 纯文本/HTML 二次确认（删除 / 重置 / 批量操作） | `Promise<boolean>`（true = 确认，false = 取消；不 reject） |
+| `v-draggable`            | 需要拖拽边界钳制的弹窗（ProDialog 默认启用）   | —                                                          |
 
 ---
 
@@ -451,8 +453,65 @@ async function handleDelete() {
 | --------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------- |
 | `src/components/common/ProDialog/ProDialog.spec.ts` | 15     | resizable / **resizeMinToInitial 钳制初始 + 关闭回退** / beforeClose / show-close / 全屏×resize 交叉 / 内联清理 |
 | `src/composables/useDialog.spec.ts`                 | 6      | 确认 resolve + 容器销毁 / 取消 reject / X 关闭 reject / setProps 实时更新 / contentProps 透传 / close() 语义    |
+| `src/composables/useConfirm.spec.ts`                | 4      | 文本 / HTML 富文本 / 取消 resolve false / danger 预设 + 真实异常原样上抛                                        |
 | `src/directives/draggable.spec.ts`                  | 4      | 拖拽位移 / 边界钳制 / 禁用 / 动态恢复（clampPosition 边界数学覆盖）                                             |
 | demo（手动验证）                                    | 4 个   | ProDialogOverview / ProDialogUseDialog / ProDialogResizable / DemoField 4 区                                    |
+
+---
+
+## 8.5 命令式 `useConfirm()` —— 二次确认（取消 resolve false）
+
+> 用途：纯文本 / HTML 字符串的「是否继续」询问（删除、重置、批量清空等危险操作）。与 `useDialog` 互补：
+>
+> - `useConfirm` —— 文本/HTML 确认框，返回 `boolean`，**取消 resolve `false`**，无须 try/catch
+> - `useDialog` —— 自定义内容组件（表单等），取消 reject `DialogCancelledError`，必须 try/catch
+
+### 8.5.1 基础用法
+
+```ts
+// 形态 1：位置参数（最简）
+const ok = await useConfirm('确定删除吗？')
+if (!ok) return
+
+// 形态 2：对象参数（含标题 / 按钮文案 / 危险操作预设）
+if (
+  !(await useConfirm({
+    content: `确定删除订单 ${orderId} 吗？此操作不可恢复。`,
+    title: '删除确认',
+    danger: true, // 确认按钮转红 + 警告图标
+    confirmButtonText: '删除',
+  }))
+)
+  return
+await api.removeOrder(orderId)
+```
+
+### 8.5.2 HTML 富文本
+
+```ts
+await useConfirm({
+  content: `<p>订单 <b>${orderId}</b> 将被永久删除 <el-tag type="danger">不可恢复</el-tag></p>`,
+  dangerouslyUseHTMLString: true, // 走 EP innerHTML 分支，可渲染全局注册的 <el-tag> 等
+  confirmButtonText: '我已知晓风险',
+})
+```
+
+> **类型刻意只允许 `string`**：EP 模板里 message 只被字符串消费，VNode/Component 形态运行时渲染成 `[object Object]`。需要业务组件作为内容（表单 / 多选）请用 `useDialog`。
+
+### 8.5.3 与 ElMessageBox.confirm 的差异
+
+| 维度          | `ElMessageBox.confirm` 原生          | `useConfirm` 本项目封装                     |
+| ------------- | ------------------------------------ | ------------------------------------------- |
+| 取消行为      | `reject('cancel')` / `'close'`       | `resolve(false)`                            |
+| 业务异常      | 与取消 reject 混在一起               | 仅取消 resolve `false`，真实异常原样上抛    |
+| 业务调用方    | 须 try/catch 否则 unhandled          | 一行 `if (!(await useConfirm(...))) return` |
+| `danger` 预设 | 须手写 `type` + `confirmButtonClass` | `danger: true` 一行开关                     |
+
+### 8.5.4 已知限制
+
+- **仅文本/HTML**：业务组件表单内容请改用 `useDialog`
+- **`dangerouslyUseHTMLString: true` 须手动清洗**：传用户输入的 HTML 前务必 DOMPurify 处理，避免 XSS
+- **`beforeClose` 回调内抛出的业务异常原样上抛**：与取消 reject 的分流靠 EP 哨兵值 `'cancel' | 'close'`，详见 `src/composables/useConfirm.ts:16-18` 的 `CANCEL_ACTIONS` 注释
 
 ---
 
@@ -483,7 +542,7 @@ try {
 ## 10. 相关文档
 
 - 组件源码：`src/components/common/ProDialog/ProDialog.vue`
-- 命令式 Hook：`src/composables/useDialog.ts`
+- 命令式 Hook：`src/composables/useDialog.ts`、`src/composables/useConfirm.ts`
 - 拖拽指令：`src/directives/draggable.ts`
 - 类型导出：`src/components/common/ProDialog/types.ts`
 - Demo 站：`src/modules/demo/examples/ProDialog/`

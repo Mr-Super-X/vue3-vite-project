@@ -4,7 +4,16 @@
 
 > 🆕 **新同事请先看 [docs/10-新手指引.md](docs/10-新手指引.md)** —— 30 分钟 5 任务，带你从 clone 到加新模块。
 >
-> **最近更新**：2026-09-17 — 同步 docs/27 ProDialog `resizeMinToInitial`、docs/29 ProTable v3.4 `searchLayout` + v3.2/v3.0.1 多 prop、docs/04 构建产物分目录（`dist/js/` `dist/css/` `dist/img/`）、ProTable CONTRIBUTING.md v3.x 已知限制；详见 [CHANGELOG.md](CHANGELOG.md)。
+> **最近更新**：2026-09-17 — **本轮文档深度同步**：
+>
+> - `docs/11-字典使用规范.md` v2 重写（useDict 多 code 契约形态 `{ gender, user_status, refreshDict }`）+ §9 v1→v2 迁移速查
+> - `docs/27-ProDialog使用指南.md` 新增 §8.5 `useConfirm` 命令式章节（取消 resolve false）+ 测试覆盖表补 `useConfirm.spec.ts`
+> - `docs/10-新手指引.md` 新增 §3.7 命令式弹窗（useConfirm / useDialog）示例
+> - `docs/26-项目推荐说明.md` 新增"组件级杀手锏"小节 + 完整组件/Composable 文档索引
+> - `docs/32-常用交互指令.md` 修正 §3 `docs/34-权限设计.md` 错位路径 → `docs/23-权限设计.md`
+> - `docs/04-构建与测试工具.md` 测试覆盖表补 `useDialog` / `useConfirm` / `useTheme` 三个 spec
+>
+> 上轮同步：docs/27 ProDialog `resizeMinToInitial`、docs/29 ProTable v3.4 `searchLayout` + v3.2/v3.0.1 多 prop、docs/04 构建产物分目录（`dist/js/` `dist/css/` `dist/img/`）、ProTable CONTRIBUTING.md v3.x 已知限制；详见 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
 
