@@ -64,8 +64,8 @@ export default {
     if (import.meta.env.DEV && !import.meta.env.VITE_QUIET_DEV) {
       // dev 模式用 GitHub 风格徽章汇总；标签深灰与 Web Vitals（深紫）拉开
       // 关闭方式：.env.local 加 VITE_QUIET_DEV=1（适合专注调试时减少噪音）
-      showBadge('GlobalComponents · 已注册', `${registered} 个`, '#1f2937', '#0e9f6e')
-      showBadge('GlobalComponents · 已跳过', `${skipped} 个`, '#1f2937', '#6b7280')
+      showBadge('GlobalComponents（common） · 已注册', `${registered} 个`, '#1f2937', '#0e9f6e')
+      showBadge('GlobalComponents（common） · 已跳过', `${skipped} 个`, '#1f2937', '#6b7280')
 
       if (skippedReasons.length > 0) {
         console.warn('[GlobalComponents] 跳过详情：\n  - ' + skippedReasons.join('\n  - '))
