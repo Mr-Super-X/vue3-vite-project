@@ -19,13 +19,9 @@ const bem = createNamespace('pro-table-summary')
 </template>
 
 <style lang="scss">
-.#{$BEM_PREFIX}-pro-table-summary {
-  // 汇总行视觉对齐（覆盖 el-table 默认 footer 样式）
-  background-color: var(--el-fill-color-light);
-  font-weight: 600;
-
-  td {
-    background-color: var(--el-fill-color-light) !important;
-  }
-}
+/*
+ * SummaryRow 当前是 v3.0 5a 占位组件（hidden）—— 实际汇总由 useSummary + el-table 内置
+ * :summary-method 实现，不渲染任何 td 子节点。原 td { background-color !important }
+ * 永远走不到，纯死代码，连同整个块一并移除。
+ */
 </style>

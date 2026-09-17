@@ -85,18 +85,23 @@ export function useSearch<T extends object = Record<string, unknown>>(
 
   /** 重置：恢复 defaultValue + 回到第 1 页 + 刷新（附录 A #1 不清多选） */
   async function reset(): Promise<void> {
-    // 恢复 defaultValue（initParam 是固定参数，不重置）
+    // v3.2 升级：re-assign ref value 触发响应式（SelectedTags 等下游消费方能感知变化）
+    // 原版 `searchParams.value[col.prop] = ...` 是原地 mutation，ref 的 .value
+    // 引用不变，下游 computed（依赖 props.searchParams）不会重算。
+    const resetParams: Record<string, unknown> = { ...searchParams.value }
     for (const col of props.columns) {
       if (col.search) {
-        searchParams.value[col.prop] = col.search.defaultValue ?? null
+        resetParams[col.prop] = col.search.defaultValue ?? null
       }
     }
+    searchParams.value = resetParams
     if (fetchHook) await fetchHook({ reset: true })
   }
 
   /** 纯写搜索参数（不触发请求）—— 供搜索区输入控件绑定 */
   function updateParams(params: Record<string, unknown>): void {
-    Object.assign(searchParams.value, params)
+    // v3.2 升级：同上 re-assign 而非原地 mutation
+    searchParams.value = { ...searchParams.value, ...params }
   }
 
   /** 程序化设置：合并 + 回到第 1 页 + 刷新（附录 A #3 不清多选） */

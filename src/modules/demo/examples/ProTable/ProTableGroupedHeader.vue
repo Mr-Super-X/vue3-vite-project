@@ -189,11 +189,20 @@ const tocItems = [
   .grouped-col-business {
     border-left: 2px solid var(--el-color-success-light-5);
   }
-  .grouped-header-basic,
-  .grouped-header-business {
-    background-color: var(--el-fill-color-light) !important;
+  /*
+   * 表头分组底色覆写（无 !important）：
+   * 选择器特异性 (0,3,1) > el-table 内置 th 规则 (0,2,1)，
+   * 无须 !important（项目规范 §4 #13）。
+   */
+  .el-table th.grouped-header-basic,
+  .el-table th.grouped-header-business {
+    background-color: var(--el-fill-color-light);
     font-weight: 600;
   }
+  /*
+   * 颜色直接用普通 class 即可（element-plus 不覆写 th 默认 color），
+   * 选择器 (0,2,0)，靠源码顺序决胜（晚于 EP CSS 注入）。
+   */
   .grouped-header-basic {
     color: var(--el-color-primary);
   }

@@ -109,6 +109,21 @@ export interface VirtualScrollConfig {
 export type SearchElType =
   'input' | 'select' | 'date-picker' | 'tree-select' | 'cascader' | 'input-number'
 
+/**
+ * 搜索项层级（v3.2 新增）—— 用 const 对象 + 类型替代纯字符串字面量联合，
+ * 避免模板中拼错（'advence' 等）+ IDE 自动补全
+ * - SearchLevel.Basic（默认）：主表单展示，受折叠态约束
+ * - SearchLevel.Advanced：收纳进「高级筛选」弹窗 + 角标显示已选数量
+ *
+ * 设计动机：电商订单筛选 / 多维度财务报表等场景常含 5-30 个查询条件，
+ * 平铺会导致表格高度被大幅挤压。层级分离让用户能按需展开。
+ */
+export const SearchLevel = {
+  Basic: 'basic',
+  Advanced: 'advanced',
+} as const
+export type SearchLevel = (typeof SearchLevel)[keyof typeof SearchLevel]
+
 /** 表格引擎枚举 —— spec 决策 4：首次 mount 锁定，运行时 prop 修改无效；'vxe-table' v2.0 未实现（回退 element-plus，v2.1 支持） @group ProTable 类型 */
 export type TableEngine = 'element-plus' | 'vxe-table'
 
@@ -158,6 +173,11 @@ export interface EnumProps {
 /**
  * 搜索项配置 —— 描述一个 search 控件的渲染与默认值。
  *
+ * v3.2 review 扩展（应对中后台多查询条件场景）：
+ * - `level` 字段将搜索项分为「基础」/「高级」两层
+ * - `debounce` 字段支持字段级防抖自动搜索
+ * - 配合 SearchForm 的 searchDisplay prop + 高级筛选弹窗，5-30 个查询条件都能优雅展示
+ *
  * @group ProTable 类型
  */
 export interface SearchConfig {
@@ -173,6 +193,74 @@ export interface SearchConfig {
   span?: number
   /** 自定义搜索插槽名（spec §7 `search-[prop]`） */
   slot?: string
+  /**
+   * v3.2 新增：字段层级
+   * - 'basic'（默认）：主表单展示，受默认折叠逻辑约束（折叠态显示前 n×2 行）
+   * - 'advanced'：收纳进「高级筛选」弹窗，主表单不展示，避免 5+ 查询条件挤压表格可视区
+   *
+   * 设计动机：电商订单筛选 / 多维度财务报表等场景常含 5-30 个查询条件，
+   * 平铺会导致表格高度被大幅挤压。层级分离让用户能按需展开。
+   * 推荐使用 `SearchLevel.Basic` / `SearchLevel.Advanced` 常量（见 types 顶部）
+   */
+  level?: SearchLevel
+  /**
+   * v3.2 新增：input 类控件防抖延迟（毫秒）
+   * - 0 / undefined：保持 H2 修复行为（输入与请求解耦，仅回车 / 按钮触发）
+   * - > 0：输入时自动触发防抖搜索（如 300ms 间隔），适用于实时筛选场景（订单状态切换等）
+   *
+   * 注意：仅在 `el === 'input'` 等可输入控件上有意义；select / date-picker 的 change
+   * 事件天然低频，不需防抖。组件内部按 el 类型自动判断是否启用。
+   */
+  debounce?: number
+  /**
+   * v3.2 升级：触发时机
+   * - 'change'（默认）：值变化即自动触发搜索（适合 select / date-picker 等低频控件）
+   * - 'enter'：仅回车触发（适合 input 大文本输入场景，避免高频请求）
+   *
+   * 与 `debounce` 字段互斥：
+   * - 配了 `searchTrigger` 就用此设置（推荐用法）
+   * - 配了 `debounce`（旧 API）则按防抖逻辑处理（向后兼容）
+   * - 都不配：input 走 H2 默认（回车/按钮），其他走 change
+   */
+  searchTrigger?: 'change' | 'enter'
+  /**
+   * v3.2 升级：值变化钩子
+   *
+   * 用途：字段 A 变化时清空字段 B（如「订单状态」从「已支付」改为「未支付」时
+   * 自动清空「支付时间」字段，避免脏数据发给后端）。
+   *
+   * @example
+   * ```ts
+   * {
+   *   prop: 'orderStatus',
+   *   search: {
+   *     el: 'select',
+   *     onChange: (newVal, oldVal, params) => {
+   *       // status 变化时清空 paymentTime（脏数据清理）
+   *       if (newVal === 'unpaid') params.paymentTime = undefined
+   *     }
+   *   }
+   * }
+   * ```
+   */
+  onChange?: (newVal: unknown, oldVal: unknown, params: Record<string, unknown>) => void
+  /**
+   * v3.2 升级：select 字典懒加载
+   * - false（默认）：表格初始化时全量加载（适合 ≤ 50 条的小字典）
+   * - true：聚焦 / 打开下拉时才加载（适合 > 50 条的大字典，如地区、商品分类）
+   *
+   * 注：业务方需在 lazy load 钩子里调用 `Local.set()` 更新选项（EP Select 不支持内置 lazy）
+   */
+  lazyEnum?: boolean
+  /**
+   * v3.2 升级：per-field 折叠控制
+   * - undefined（默认）：跟随全局 collapsed 状态
+   * - true：无论全局如何，永远在主表单展示
+   * - false：永远收纳到高级筛选（即使 level=basic）
+   *
+   * 用途：核心查询字段（如订单号）始终展示，辅助字段（如备注）跟随全局折叠
+   */
+  collapsed?: boolean
 }
 
 /**
@@ -382,6 +470,38 @@ export interface ProTableProps<T extends object = Record<string, unknown>> {
    * virtualized（TableV2）分支不支持 —— TableV2 列宽受控（onColumnResize 需回写列宽配置），留待后续
    */
   columnResize?: boolean
+  /**
+   * v3.2 新增：搜索字段联动显隐
+   *
+   * 接收当前 searchParams，返回 { [prop]: boolean } 控制每个字段是否显示。
+   * - 未返回 / 返回 true → 显示（参与搜索）
+   * - 返回 false → 隐藏（不进入主表单，也不进入高级筛选弹窗）
+   *
+   * 典型场景：
+   * - 订单状态下拉选「已退款」时显示「退款原因」
+   * - 选择「高级筛选」时显示「金额范围」字段
+   * - 状态为「禁用」时禁用「启用时间」字段（需配合 disabled prop，目前仅控制显隐）
+   *
+   * 注意：函数应保持纯函数性（无副作用），内部会按 reactive 自动追踪依赖
+   */
+  searchDisplay?: (params: Record<string, unknown>) => Record<string, boolean>
+  /**
+   * v3.2 升级：是否显示「已选条件」回显区（tag 形式）
+   * - true（默认）：搜索区与表格之间显示当前生效的查询条件 tag，支持单个/全部清除
+   * - false：关闭回显区（适用于简洁页面）
+   *
+   * 设计动机：用户筛选后往往忘记自己设置了什么条件，tag 回显 + 一键清除能
+   * 显著降低误操作（看到 tag 才意识到「哦原来我按了已支付」）。
+   */
+  showSelectedTags?: boolean
+  /**
+   * v3.2 升级：是否持久化「展开/收起」状态到 localStorage
+   * - false（默认）：状态仅内存保留，刷新后回到默认折叠
+   * - true：通过 localStorage[`${tableKey}:search-expanded`] 记忆展开状态
+   *
+   * 需要 tableKey 已设置（未设置则忽略）
+   */
+  expandedStatePersist?: boolean
 }
 
 /**

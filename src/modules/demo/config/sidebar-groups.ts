@@ -45,6 +45,8 @@ export const CN_NAMES: Record<string, string> = {
   ProTableStatePersist: '状态保持恢复',
   ProTableOperation: '操作列收纳 + 表头 Tooltip',
   ProTableColumnResize: '列宽拖拽',
+  // ProTable SearchForm 架构升级（默认折叠 / 高级弹窗 / 联动 / 防抖 / 响应式）
+  ProTableSearchAdvanced: '多条件搜索（高级特性）',
   // XForm 表单引擎
   XFormOverview: '用法总览',
   XFormArray: '数组节点',

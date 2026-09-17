@@ -23,6 +23,7 @@ import './styles/element-protable-overwrite.scss' // ProTable 特定的样式覆
 import { ElPagination, ElEmpty, ElConfigProvider } from 'element-plus' // element-plus 按需注入
 import AsyncState from '@/components/common/AsyncState.vue' // 项目内 default import（unplugin-vue-components 自动注册全局组件）
 import SearchForm from './components/SearchForm.vue'
+import SelectedTags from './components/SelectedTags.vue' // v3.2 升级：已选条件回显
 import TableHeader from './components/TableHeader.vue'
 import ColSetting from './components/ColSetting.vue'
 import ElementTableBody from './components/ElementTableBody.vue'
@@ -392,6 +393,58 @@ const elTableBindings = computed<Record<string, unknown>>(() => ({
   ...(props.columnResize ? { border: true } : {}),
 }))
 
+/* ─────────── v3.2 升级：SelectedTags 数据 + 清除条件 handler ─────────── */
+
+/**
+ * v3.2 升级：select 枚举值翻译 Map
+ * - key = col.prop
+ * - value = { [rawValue]: label }
+ *
+ * 用途：SelectedTags 显示「订单状态: 已支付」而不是「订单状态: paid」
+ */
+const searchEnumMaps = computed<Record<string, Record<string, string>>>(() => {
+  const maps: Record<string, Record<string, string>> = {}
+  for (const col of columns.searchColumns) {
+    if (col.search?.el === 'select' && col.enum) {
+      const m: Record<string, string> = {}
+      for (const opt of col.enum) {
+        m[String(opt.value)] = opt.label
+      }
+      maps[col.prop] = m
+    }
+  }
+  return maps
+})
+
+/**
+ * v3.2 升级：清除单个搜索条件（SelectedTags × 按钮触发）
+ * 还原字段为 defaultValue + 重新搜索
+ */
+function handleClearOneCondition(prop: string): void {
+  // 1. 找到对应 column 拿到 defaultValue
+  const col = columns.searchColumns.find((c) => c.prop === prop)
+  const defaultValue = col?.search?.defaultValue ?? null
+  // 2. 通过 useSearch.updateParams 写入（不触发请求）
+  search.updateParams({ [prop]: defaultValue })
+  // 3. 触发搜索
+  void search.search()
+}
+
+/**
+ * v3.2 升级：清除全部搜索条件（清除全部按钮触发）
+ * 遍历所有 search columns 还原 defaultValue
+ */
+function handleClearAllConditions(): void {
+  const updates: Record<string, unknown> = {}
+  for (const col of columns.searchColumns) {
+    if (col.search) {
+      updates[col.prop] = col.search.defaultValue ?? null
+    }
+  }
+  search.updateParams(updates)
+  void search.search()
+}
+
 /** vxe-table 引擎分支的 v-bind 对象 */
 const vxeTableBindings = computed<Record<string, unknown>>(() => ({
   ...(props.rowKey ? { rowKey: props.rowKey } : {}),
@@ -452,9 +505,31 @@ defineExpose({
         :columns="searchColumnsNonGeneric"
         :search-params="search.searchParams.value"
         :search-rows="props.searchRows"
+        v-bind="{
+          ...(props.tableKey ? { tableKey: props.tableKey } : {}),
+          ...(props.searchDisplay ? { searchDisplay: props.searchDisplay } : {}),
+          ...(props.expandedStatePersist ? { expandedStatePersist: true } : {}),
+        }"
         @search="search.search"
         @reset="search.reset"
         @update:search-params="events.updateSearchParams"
+        @clear-condition="handleClearOneCondition"
+        @clear-all-conditions="handleClearAllConditions"
+      />
+      <!--
+        v3.2 升级：已选条件回显区（tag 形式）
+        - 默认开启（showSelectedTags 未指定时为 true）
+        - 单个 ×：清该字段 + 重新搜索
+        - 清除全部：清所有字段 + 重新搜索
+        - enumMaps：把 select 枚举值翻译为 label（避免显示数字 ID）
+      -->
+      <SelectedTags
+        v-if="props.showSelectedTags !== false && columns.searchColumns.length > 0"
+        :columns="searchColumnsNonGeneric"
+        :search-params="search.searchParams.value"
+        :enum-maps="searchEnumMaps"
+        @clear-one="handleClearOneCondition"
+        @clear-all="handleClearAllConditions"
       />
       <TableHeader
         :columns="allColumnsNonGeneric"

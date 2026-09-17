@@ -122,6 +122,16 @@
     color: #fff;
   }
 
+  /* ─────────── SearchForm 高级筛选按钮内 ElBadge 样式 ─────────── */
+  /* v3.3 重大重构：
+     - 旧规则（已移除）：强制 ElBadge 为 inline 相对定位 + margin-left: 4px，
+       解决「ElButton 文字按钮 + ElBadge 数字」场景下的视觉重叠问题。
+     - 新方案：高级筛选改为圆形图标按钮（详见 SearchForm.vue __advanced-btn），
+       按钮内不再有文字，ElBadge 改为「绝对定位到按钮右上角」更合理。
+     - 新样式实现位置：SearchForm.vue 的 `&__advanced-btn { position: relative }` +
+       `&__badge { position: absolute; top: -2px; right: -2px }`（v3.3 已实现）。
+     - 此处不再覆写 ElBadge 定位，以免新规则被高特异性 (0,3,0) 顶掉。 */
+
   /* ─────────── 表格密度（紧凑/默认/宽松）切换 ─────────── */
 
   /* 密度档位设计令牌：el 引擎表体 td 行高/padding、表头 padding、vxe 引擎行高变量

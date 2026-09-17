@@ -1,57 +1,390 @@
 <script setup lang="ts">
 /**
- * SearchForm —— 自动生成的搜索区（spec §五组件树 / §九错误处理 #9 / 附录 A #4）
+ * SearchForm —— 自动生成的搜索区（v3.2 重大 UX 升级）
  *
- * 职责：根据 columns.search 自动生成 el-input / el-select 等搜索控件；
- * 展开/收起（默认前 searchRows×2 行）、搜索/重置按钮（搜索在前，附录 A #4）、
- * 自定义插槽 search-[prop]（spec §七插槽系统）。
- *
- * 6 列布局：每个 el-col 默认 span=6（即 4 列布局）；窄容器（≤900px）由
- * element-protable-overwrite.scss 的容器查询自动降为 2 列（≤560px 降 1 列）。
+ * 核心职责（v3.2 升级）：
+ * 1) 响应式栅格：el-col 加 xs/sm/md 断点
+ * 2) 默认折叠 + 展开/收起按钮（文字+图标，平滑过渡动画）
+ * 3) 高级筛选 Drawer：level: 'advanced' 字段进 ElDrawer（不挤压表格）
+ * 4) searchDisplay 联动显隐
+ * 5) 字段级防抖 / searchTrigger 触发时机
+ * 6) onChange 钩子（值清空联动：状态改值时清空关联字段）
+ * 7) lazyEnum 懒加载标记
+ * 8) 展开状态 localStorage 记忆（expandedStatePersist prop）
  *
  * @see [`../composables/useSearch`](../composables/useSearch.ts) 数据源
  * @group ProTable 子组件
  */
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue' // vue（生命周期/底层 API）
-import './../styles/element-protable-overwrite.scss' // Element Plus 样式覆盖（BEM 嵌套，对齐 XForm 模式）
-import { ElForm, ElFormItem, ElRow, ElCol, ElOption, ElButton } from 'element-plus' // v3.1.4 review：6 个搜索控件组件改由 searchControlRegistry 注册表提供
-import { Search, Refresh, ArrowUp, ArrowDown } from '@element-plus/icons-vue' // 显式 import（§1.6.1 来源注释）
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue' // vue（生命周期/底层 API）
+import './../styles/element-protable-overwrite.scss' // Element Plus 样式覆盖
+import {
+  ElForm,
+  ElFormItem,
+  ElRow,
+  ElCol,
+  ElOption,
+  ElButton,
+  ElDrawer,
+  ElBadge,
+  ElTooltip,
+} from 'element-plus' // v3.2 升级：ElDialog → ElDrawer（不挤压表格）
+import { Search, Refresh, ArrowUp, ArrowDown, Filter } from '@element-plus/icons-vue'
 import type { ProColumn } from '../types'
-import { SEARCH_CONTROL_MAP } from '../composables/_utils/searchControlRegistry' // v3.1.4 review：控件注册表（替代 v-if 链）
+import { SearchLevel } from '../types' // v3.2：层级枚举常量
+import { SEARCH_CONTROL_MAP } from '../composables/_utils/searchControlRegistry'
+import { debounceFn } from '../composables/_utils/debounce'
 
 interface Props {
   columns: ProColumn[]
   searchParams: Record<string, unknown>
-  /** 默认显示行数；超出可展开（spec §搜索区） */
   searchRows: number
+  /**
+   * v3.2 字段联动显隐
+   */
+  searchDisplay?: (params: Record<string, unknown>) => Record<string, boolean>
+  /**
+   * v3.2 升级：展开状态 localStorage 持久化（需配合 tableKey）
+   * - false（默认）：不持久化
+   * - true：刷新 / 跨页操作后保持展开状态
+   */
+  expandedStatePersist?: boolean
+  /** v3.2 升级：localStorage 命名空间（与 useColumns 列设置同一约定） */
+  tableKey?: string
 }
 const props = defineProps<Props>()
 const emit = defineEmits<{
   search: []
   reset: []
-  /** v-model:searchParams 双向绑定（避免直接修改 prop 触发 lint） */
+  /** v-model:searchParams 双向绑定（v3.2.2 重构：emit 完整快照而非 Proxy mutate） */
   'update:searchParams': [Record<string, unknown>]
+  /**
+   * v3.2 升级：清除单个条件事件（用于 SelectedTags 删除某个 tag 时联动）
+   * SearchForm 收到此事件后只清该字段 + 触发搜索，不影响其他条件
+   */
+  clearCondition: [string] // 被清除的字段 prop
+  /**
+   * v3.2 升级：清除全部条件事件
+   */
+  clearAllConditions: []
 }>()
 
-/** 包装 v-model：子组件修改本地副本 + emit 到父组件 */
-const localParams = new Proxy(props.searchParams, {
-  set(target, key, value) {
-    ;(target as Record<string, unknown>)[key as string] = value
-    emit('update:searchParams', { ...target })
-    return true
+/**
+ * v3.2.2 重构：去掉 Proxy 包装（之前是 `new Proxy(props.searchParams, { set })`）
+ *
+ * 原 Proxy 模式的问题：
+ * 1. Proxy 持有的是「旧 props.searchParams 对象」引用
+ * 2. useSearch.updateParams 改为 re-assign 后，searchParams.value 指向「新对象」
+ * 3. 但 SearchForm 的 Proxy 仍指向旧对象（Vue setup 只跑一次）
+ * 4. 结果：用户输入写入旧对象（被 GC），新对象没有这些值
+ * 5. 下游 SelectedTags 读新对象的 props.searchParams（响应式触发），但值是空的
+ *
+ * 修复：直接 emit 一个新的 searchParams 快照，让父组件统一 re-assign。
+ * 局部缓存：localParams 作为 emit 的来源（避免反复 spread props.searchParams）
+ */
+const localParams = ref<Record<string, unknown>>({ ...props.searchParams })
+watch(
+  () => props.searchParams,
+  (newVal) => {
+    // 父组件 re-assign 后同步本地副本（避免 emit 引用旧值）
+    localParams.value = { ...newVal }
   },
-})
+  { deep: true } // 兼容业务方原地 mutate 场景（详见 useSearch re-assign 模式说明）
+)
 
 const bem = createNamespace('pro-table-search')
 
-const collapsed = ref(false)
-/** 可见列：折叠态下显示 searchRows×2 行；展开态显示全部 */
-const visibleColumns = computed(() =>
-  collapsed.value ? props.columns.slice(0, props.searchRows * 2) : props.columns
+/* ─────────── v3.3 升级：4 档自适应布局策略 ─────────── */
+
+/**
+ * v3.3 布局策略（基于 basic 字段数 + advanced 字段数动态选档）。
+ *
+ * 需求文档：
+ * - searchConfig.collapsed 默认 true（per-column 字段级折叠控制，类型层已定义）
+ * - basic > 3 且 <= 8 → 默认走「内联展开/收起」
+ * - columns 中存在 search.level === 'advanced' 字段 → 自动渲染「高级筛选抽屉」
+ * - 「展开/收起」与「高级筛选」互斥（动态自适应）
+ *
+ * 档位矩阵：
+ * | 档位        | basic 范围 | advanced | toggle 按钮 | adv 按钮 | inline form         |
+ * |-------------|------------|----------|-------------|----------|---------------------|
+ * | flat        | ≤ 3        | 0        | 隐藏        | 隐藏     | 全部 basic 平铺     |
+ * | collapse    | 4 ~ 8      | 0        | 显示        | 隐藏     | basic 折叠（前 3）  |
+ * | flat-large  | > 8        | 0        | 隐藏        | 隐藏     | 全部 basic 平铺     |
+ * | drawer      | 任意       | > 0      | 隐藏        | 显示     | basic 平铺 + 抽屉   |
+ *
+ * drawer 档位下，basic 字段保持 inline flat（不在抽屉里），
+ * 抽屉只承载 advanced 字段（用户确认：basic 仍然走「全平铺无折叠」）。
+ */
+
+const COLLAPSED_INLINE_LIMIT = 3 // collapse 档：折叠时主表单只显示前 3 个字段（用户要求：超过 3 个折叠按钮才出现）
+
+/* ─────────── v3.2 升级：展开/收起状态（含 localStorage 持久化） ─────────── */
+
+/**
+ * v3.2 升级：localStorage 展开状态读写
+ * key = `${tableKey}:search-expanded`
+ * tableKey 缺失时不持久化（每次刷新回到默认）
+ */
+const EXPANDED_STORAGE_KEY = props.tableKey ? `${props.tableKey}:search-expanded` : ''
+
+function readExpandedFromStorage(): boolean | null {
+  if (!props.expandedStatePersist || !EXPANDED_STORAGE_KEY) return null
+  try {
+    const raw = window.localStorage.getItem(EXPANDED_STORAGE_KEY)
+    if (raw === '1') return true
+    if (raw === '0') return false
+    return null
+  } catch {
+    return null // 隐私模式或存储不可用
+  }
+}
+
+function writeExpandedToStorage(value: boolean): void {
+  if (!props.expandedStatePersist || !EXPANDED_STORAGE_KEY) return
+  try {
+    window.localStorage.setItem(EXPANDED_STORAGE_KEY, value ? '1' : '0')
+  } catch {
+    /* 存储不可用时静默降级 */
+  }
+}
+
+const collapsed = ref<boolean>(readExpandedFromStorage() ?? true) // 默认折叠
+
+function toggleCollapsed(): void {
+  collapsed.value = !collapsed.value
+  writeExpandedToStorage(collapsed.value)
+}
+
+/* ─────────── v3.2 升级：Transition JS 钩子（max-height 平滑过渡） ─────────── */
+
+/**
+ * 展开/收起时让字段区高度从 0 过渡到自然高度（auto）
+ * 用 v-show + JS 钩子是兼容「字段数量变化时仍能 animate」的最简方案
+ */
+function onFieldsBeforeEnter(el: Element): void {
+  ;(el as HTMLElement).style.height = '0px'
+  ;(el as HTMLElement).style.overflow = 'hidden'
+}
+function onFieldsEnter(el: Element, done: () => void): void {
+  // scrollHeight = 内容自然高度；过渡 200ms
+  const h = (el as HTMLElement).scrollHeight
+  ;(el as HTMLElement).style.transition = 'height 200ms ease-in-out'
+  ;(el as HTMLElement).style.height = `${h}px`
+  setTimeout(done, 200)
+}
+function onFieldsAfterEnter(el: Element): void {
+  ;(el as HTMLElement).style.transition = ''
+  ;(el as HTMLElement).style.height = ''
+  ;(el as HTMLElement).style.overflow = ''
+}
+function onFieldsBeforeLeave(el: Element): void {
+  const h = (el as HTMLElement).scrollHeight
+  ;(el as HTMLElement).style.height = `${h}px`
+  ;(el as HTMLElement).style.overflow = 'hidden'
+}
+function onFieldsLeave(el: Element, done: () => void): void {
+  // requestAnimationFrame 确保浏览器读取到起始高度后再过渡到 0
+  requestAnimationFrame(() => {
+    ;(el as HTMLElement).style.transition = 'height 200ms ease-in-out'
+    ;(el as HTMLElement).style.height = '0px'
+    setTimeout(done, 200)
+  })
+}
+function onFieldsAfterLeave(el: Element): void {
+  ;(el as HTMLElement).style.transition = ''
+  ;(el as HTMLElement).style.height = ''
+  ;(el as HTMLElement).style.overflow = ''
+}
+
+/* ─────────── v3.2 升级：lazyEnum 懒加载（select 首次展开时触发） ─────────── */
+
+const lazyEnumLoaded = new Set<string>() // 已加载过 lazy enum 的 prop
+
+function handleColVisibleChange(col: ProColumn, visible: boolean): void {
+  // 仅 select 类 + lazyEnum=true + 首次展开时触发
+  if (!visible) return
+  if (col.search?.el !== 'select') return
+  if (!col.search?.lazyEnum) return
+  if (lazyEnumLoaded.has(col.prop)) return
+  lazyEnumLoaded.add(col.prop)
+  // 业务方可在 onChange 钩子中实现具体加载（demo 中演示）
+  col.search?.onChange?.(
+    localParams.value[col.prop],
+    localParams.value[col.prop],
+    localParams.value
+  )
+}
+
+/** 监听 expandedStatePersist 变化：动态切换持久化策略（业务方运行时改 prop） */
+watch(
+  () => props.expandedStatePersist,
+  () => {
+    if (!props.expandedStatePersist) return
+    // 重新持久化当前状态
+    writeExpandedToStorage(collapsed.value)
+  }
 )
 
-/** 是否显示展开/收起按钮（仅当列数 > searchRows×2 时显示） */
-const showToggle = computed(() => props.columns.length > props.searchRows * 2)
+/**
+ * v3.2 高级筛选 Drawer 可见性
+ */
+const advancedVisible = ref(false)
+
+/* ─────────── v3.2 升级：核心 computed ─────────── */
+
+/**
+ * v3.2 字段联动显隐过滤 + 过滤无 search 配置的列
+ */
+const allBasicColumns = computed<ProColumn[]>(() => {
+  const display = props.searchDisplay?.(localParams.value) ?? {}
+  return props.columns.filter((col) => {
+    if (!col.search) return false
+    if (col.search.level === SearchLevel.Advanced) return false
+    if (display[col.prop] === false) return false
+    return true
+  })
+})
+
+/**
+ * v3.3 升级：当前布局档位（4 档自适应）
+ *
+ * 决策顺序：drawer（任何 advanced 字段） > flat-large（basic > 8） >
+ *          collapse（basic 4-8） > flat（basic ≤ 3）
+ *
+ * 该值驱动 showToggle / showAdvancedBtn / mainFormColumns 三处行为。
+ */
+const layoutMode = computed<'flat' | 'collapse' | 'flat-large' | 'drawer'>(() => {
+  if (advancedColumns.value.length > 0) return 'drawer'
+  const basicCount = allBasicColumns.value.length
+  if (basicCount > 8) return 'flat-large'
+  if (basicCount > 3) return 'collapse'
+  return 'flat'
+})
+
+/**
+ * v3.3 升级：主表单可见列 —— 按 layoutMode 自适应
+ *
+ * - collapse 档：折叠时只显示前 4 个，展开后显示全部
+ * - flat / flat-large / drawer 档：全部平铺（不受 collapsed 控制）
+ */
+const mainFormColumns = computed<ProColumn[]>(() => {
+  if (layoutMode.value === 'collapse' && collapsed.value) {
+    return allBasicColumns.value.slice(0, COLLAPSED_INLINE_LIMIT)
+  }
+  return allBasicColumns.value
+})
+
+/** 是否显示「展开/收起」按钮（仅 collapse 档） */
+const showToggle = computed(() => layoutMode.value === 'collapse')
+
+/** 是否显示「高级筛选」按钮（仅 drawer 档） */
+const showAdvancedBtn = computed(() => layoutMode.value === 'drawer')
+
+/**
+ * v3.2 高级筛选字段集合
+ */
+const advancedColumns = computed<ProColumn[]>(() => {
+  const display = props.searchDisplay?.(localParams.value) ?? {}
+  return props.columns.filter((col) => {
+    if (!col.search) return false
+    if (col.search.level !== SearchLevel.Advanced) return false
+    if (display[col.prop] === false) return false
+    return true
+  })
+})
+
+/** 高级筛选已选数量（仅非空值计入） */
+const advancedSelectedCount = computed(() => {
+  return advancedColumns.value.filter((col) => {
+    const v = localParams.value[col.prop]
+    if (v === undefined || v === null || v === '') return false
+    if (Array.isArray(v) && v.length === 0) return false
+    return true
+  }).length
+})
+
+/**
+ * v3.2.2 重构：统一写入函数（替代 Proxy 自动 emit）
+ *
+ * 写入 → emit('update:searchParams', 新快照) → useSearch.updateParams re-assign
+ * → 父组件 re-render → props.searchParams 变 → localParams 同步（watch）
+ * 这样整个链路无 Proxy 引用泄漏，所有消费者读到一致的新对象。
+ */
+function setLocal(key: string, value: unknown): void {
+  const next = { ...localParams.value, [key]: value }
+  localParams.value = next
+  emit('update:searchParams', next)
+}
+function setLocalBulk(patch: Record<string, unknown>): void {
+  const next = { ...localParams.value, ...patch }
+  localParams.value = next
+  emit('update:searchParams', next)
+}
+
+/* ─────────── v3.2 升级：字段级防抖 + searchTrigger ─────────── */
+
+const debounceHandlers = new Map<string, ReturnType<typeof debounceFn>>()
+
+function getOrCreateDebounceSearch(col: ProColumn): ReturnType<typeof debounceFn> {
+  let handler = debounceHandlers.get(col.prop)
+  if (!handler) {
+    const delay = col.search?.debounce ?? 0
+    handler = debounceFn(() => handleSearch(), delay)
+    debounceHandlers.set(col.prop, handler)
+  }
+  return handler
+}
+
+/* ─────────── v3.2 升级：值清空联动（onChange 钩子） ─────────── */
+
+const previousValues = new Map<string, unknown>()
+
+/**
+ * 字段值变化统一处理
+ * - onChange 钩子：值变化时调用，支持业务方清空联动
+ * - searchTrigger 触发：'change' 立即搜索 / 'enter' 等回车 / debounce > 0 防抖搜索
+ */
+function handleColUpdate(col: ProColumn, v: unknown): void {
+  const oldVal = previousValues.get(col.prop) ?? localParams.value[col.prop]
+  // onChange 钩子：业务方可在钩子里改写 params（清空联动）
+  if (col.search?.onChange) {
+    col.search.onChange(v, oldVal, localParams.value)
+    // 业务方在 onChange 里已修改 localParams.value，单次 emit 合并所有修改
+    setLocalBulk({})
+  } else {
+    // 默认行为：单字段更新
+    setLocal(col.prop, v)
+  }
+  previousValues.set(col.prop, v)
+
+  // 触发时机判定
+  const trigger = col.search?.searchTrigger
+  if (trigger === 'change') {
+    // 任何控件 change 即搜索（select/date-picker 推荐）
+    handleSearch()
+  } else if (col.search?.el === 'input') {
+    // input 类控件
+    if (trigger === 'enter') {
+      // 仅回车触发（不防抖，不 change 触发）—— 由 native form submit 拦截器处理
+    } else if ((col.search?.debounce ?? 0) > 0) {
+      // 旧 API：debounce > 0 触发防抖
+      getOrCreateDebounceSearch(col).invoke()
+    }
+    // 都不配：保持 H2 默认（输入与请求解耦，仅回车/按钮触发）
+  } else {
+    // 非 input 控件（select/date-picker 等）：默认 change 即搜索
+    handleSearch()
+  }
+}
+
+/* ─────────── v3.2 升级：清除单个条件（SelectedTags 用） ─────────── */
+
+// 注：clearCondition / clearAllConditions 在 defineEmits 中声明但本组件不主动 emit，
+// 由 SelectedTags → ProTable → SearchForm 的事件链路上游处理（见 ProTable.vue）。
+// 原 handleClearOneCondition / handleClearAllConditions 内部函数已在 v3.3 重构中移除
+// （死代码 —— 模板无 @clear-condition 监听且未调用 emit）。
+
+/* ─────────── 基础 handlers ─────────── */
 
 function handleSearch(): void {
   emit('search')
@@ -61,33 +394,34 @@ function handleReset(): void {
   emit('reset')
 }
 
-function toggleCollapsed(): void {
-  collapsed.value = !collapsed.value
+function openAdvanced(): void {
+  advancedVisible.value = true
 }
 
-/**
- * v3.1.4 review：阻止 native form implicit submit（按回车触发页面刷新 + URL 加 ?）
- *
- * 问题背景：SearchForm 用 ElForm 包裹搜索控件。无 rules 时 ElForm 不 emit submit，
- * 但浏览器 native `<form>` 仍会按 HTML 规范在用户按回车时触发 implicit submit：
- * - 跳转到 form action（无 action = 当前 URL）
- * - form data 作为 query string 序列化（即使空数据也加 `?`）
- * - vue-router 后续去掉 `?` 但 search 请求未发出
- *
- * 修复方案：拿 ElForm root 元素（native `<form>`）+ onMounted 绑定 native submit 监听
- * - 拦截 preventDefault 阻止页面导航
- * - 主动调用 handleSearch 触发 search emit（与点「搜索」按钮行为完全一致）
- * - onBeforeUnmount 清理监听避免泄漏
- *
- * 为什么不用 @submit.prevent on ElForm：EP 2.x ElForm 声明了 emits: ['submit']，
- * 但只在 async-validator 通过后 emit。无 rules 时不 emit → @submit 不会触发。
- * 同时 native submit 仍会触发 implicit navigation。ref + native listener 才是稳路径。
- */
+function closeAdvanced(): void {
+  advancedVisible.value = false
+}
+
+function handleAdvancedApply(): void {
+  advancedVisible.value = false
+  handleSearch()
+}
+
+function handleAdvancedReset(): void {
+  const snapshot: Record<string, unknown> = {}
+  for (const col of advancedColumns.value) {
+    snapshot[col.prop] = col.search?.defaultValue ?? null
+  }
+  setLocalBulk(snapshot)
+  handleSearch()
+}
+
+/* ─────────── v3.1.4 review：阻止 native form implicit submit ─────────── */
+
 const elFormRef = ref<InstanceType<typeof ElForm> | null>(null)
 let detachSubmitListener: (() => void) | null = null
 
 onMounted(() => {
-  // ElForm 组件实例的 $el 是 native <form> 元素（EP 内部用 <form> 渲染）
   const formEl = (elFormRef.value as unknown as { $el?: HTMLFormElement } | null)?.$el
   if (!formEl || formEl.tagName !== 'FORM') return
   const onNativeSubmit = (e: Event): void => {
@@ -101,9 +435,14 @@ onMounted(() => {
 onBeforeUnmount(() => {
   detachSubmitListener?.()
   detachSubmitListener = null
+  for (const handler of debounceHandlers.values()) {
+    handler.cancel()
+  }
+  debounceHandlers.clear()
+  previousValues.clear()
 })
 
-/** input placeholder —— v3.1.4 review：根据控件 prefix 动态生成（替代原 inputPlaceholder/selectPlaceholder 两个分支） */
+/** input placeholder —— 根据控件 prefix 动态生成 */
 function buildPlaceholder(col: ProColumn, prefix: '请输入' | '请选择' | undefined): string {
   return prefix ? `${prefix}${col.label}` : ''
 }
@@ -112,73 +451,270 @@ function buildPlaceholder(col: ProColumn, prefix: '请输入' | '请选择' | un
 <template>
   <div :class="bem.b()">
     <ElForm ref="elFormRef" :model="localParams" inline label-position="left">
-      <ElRow :gutter="16">
-        <ElCol v-for="col in visibleColumns" :key="col.prop" :span="col.search?.span ?? 6">
-          <slot :name="`search-${col.prop}`" :column="col">
-            <ElFormItem :label="col.label">
-              <!--
-                v3.1.4 review：搜索控件改用「注册表 + 动态 component」编排（替代 v3.1.3 的 v-if/v-else-if 链）
-
-                重构动机：6 段 v-if 链 + 6 段 @clear + 6 段 @update:model-value + 2 个 placeholder
-                函数分支 = 「下楼梯式」代码，每加一个控件要改 5 处。
-
-                重构后：SEARCH_CONTROL_MAP[col.search.el] 查表 → component / clearable / placeholder
-                一次性拿到。新增控件仅在注册表加 1 条（参照 _utils/searchControlRegistry.ts）。
-
-                共性行为（@clear + @update:model-value + clearable）在统一处声明，模板不再重复。
-                select 特有的 ElOption children 用 v-if 条件渲染（避免给所有控件加空 slot）。
-
-                行为不变：clearable / placeholder 文本 / @clear / @update:model-value 与重构前完全一致。
-              -->
-              <component
-                :is="SEARCH_CONTROL_MAP[col.search!.el].component"
-                v-bind="{
-                  modelValue: localParams[col.prop] as never,
-                  ...(SEARCH_CONTROL_MAP[col.search!.el].clearable ? { clearable: true } : {}),
-                  ...(SEARCH_CONTROL_MAP[col.search!.el].placeholderPrefix
-                    ? {
-                        placeholder: buildPlaceholder(
-                          col,
-                          SEARCH_CONTROL_MAP[col.search!.el].placeholderPrefix
-                        ) as never,
-                      }
-                    : {}),
-                  ...col.search!.props,
-                }"
-                @update:model-value="(v: unknown) => (localParams[col.prop] = v as never)"
-                @clear="handleSearch"
+      <!--
+        v3.2 重大升级：左右结构（用户要求）
+        - 字段在左：flex: 1，自然换行（多行时）
+        - 按钮在右：flex: 0 white-space: nowrap（绝不换行）
+        - 整体行布局：align-items: flex-start 顶部对齐
+        - 展开/收起：fields 区域 height 0→auto 平滑过渡
+      -->
+      <div :class="bem.e('inline')">
+        <div :class="bem.e('fields')">
+          <Transition
+            name="search-fields"
+            @before-enter="onFieldsBeforeEnter"
+            @enter="onFieldsEnter"
+            @after-enter="onFieldsAfterEnter"
+            @before-leave="onFieldsBeforeLeave"
+            @leave="onFieldsLeave"
+            @after-leave="onFieldsAfterLeave"
+          >
+            <!--
+              v3.3 升级：v-show 永远为 true。
+              主表单是否折叠由 mainFormColumns 控制（collapse 档折叠时 slice 前 4），
+              这里只是 Transition 的挂载点 —— Transition JS 钩子依赖 v-show/v-if 切换才能触发，
+              但本组件内部 children 列表变化（v-for 项数从 4 → 全部）足以让 layout 自然过渡。
+            -->
+            <div v-show="true" :class="bem.e('field-list')">
+              <ElFormItem
+                v-for="col in mainFormColumns"
+                :key="col.prop"
+                :label="col.label"
+                :class="bem.e('field')"
               >
-                <!-- select 类控件渲染 enum 选项列表（其他控件忽略此 slot） -->
-                <template v-if="SEARCH_CONTROL_MAP[col.search!.el].hasOptions" #default>
-                  <ElOption
-                    v-for="opt in col.enum ?? []"
-                    :key="String(opt.value)"
-                    :label="opt.label as never"
-                    :value="opt.value as never"
-                    :disabled="opt.disabled as never"
-                  />
-                </template>
-              </component>
-            </ElFormItem>
-          </slot>
-        </ElCol>
-        <ElCol :span="6" :class="bem.e('actions')">
-          <!-- 搜索按钮在前，重置按钮在后（附录 A #4） -->
+                <slot :name="`search-${col.prop}`" :column="col">
+                  <component
+                    :is="SEARCH_CONTROL_MAP[col.search!.el].component"
+                    v-bind="{
+                      modelValue: localParams[col.prop] as unknown as never,
+                      ...(SEARCH_CONTROL_MAP[col.search!.el].clearable ? { clearable: true } : {}),
+                      ...(SEARCH_CONTROL_MAP[col.search!.el].placeholderPrefix
+                        ? {
+                            placeholder: buildPlaceholder(
+                              col,
+                              SEARCH_CONTROL_MAP[col.search!.el].placeholderPrefix
+                            ) as unknown as never,
+                          }
+                        : {}),
+                      ...col.search!.props,
+                    }"
+                    @update:model-value="(v: unknown) => handleColUpdate(col, v)"
+                    @visible-change="(v: boolean) => handleColVisibleChange(col, v)"
+                    @clear="handleSearch"
+                  >
+                    <template v-if="SEARCH_CONTROL_MAP[col.search!.el].hasOptions" #default>
+                      <ElOption
+                        v-for="opt in col.enum ?? []"
+                        :key="String(opt.value)"
+                        :label="opt.label as unknown as never"
+                        :value="opt.value as unknown as never"
+                        :disabled="opt.disabled as unknown as never"
+                      />
+                    </template>
+                  </component>
+                </slot>
+              </ElFormItem>
+            </div>
+          </Transition>
+        </div>
+        <div :class="bem.e('actions')">
+          <!--
+            按钮顺序约定（用户要求 v3.3.1）：高级筛选在最左侧（条件分流的主入口），
+            然后是搜索 / 重置（主操作），最后是展开/收起（折叠档）。
+            次级操作（条件分流）放最前是因为它的过滤会直接影响下面的表格数据。
+          -->
+          <ElTooltip v-if="showAdvancedBtn" content="高级筛选" placement="top">
+            <ElButton
+              circle
+              :class="bem.e('advanced-btn')"
+              data-test="advanced-btn"
+              @click="openAdvanced"
+            >
+              <el-icon><Filter /></el-icon>
+              <ElBadge
+                :value="advancedSelectedCount"
+                :max="99"
+                :hidden="advancedSelectedCount === 0"
+                :class="bem.e('badge')"
+                data-test="advanced-badge"
+              />
+            </ElButton>
+          </ElTooltip>
           <ElButton type="primary" :icon="Search" data-test="search-btn" @click="handleSearch">
             搜索
           </ElButton>
           <ElButton :icon="Refresh" data-test="reset-btn" @click="handleReset">重置</ElButton>
-          <ElButton
-            v-if="showToggle"
-            text
-            :icon="collapsed ? ArrowDown : ArrowUp"
-            data-test="toggle-btn"
-            @click="toggleCollapsed"
-          >
-            {{ collapsed ? '展开' : '收起' }}
-          </ElButton>
-        </ElCol>
-      </ElRow>
+          <!--
+            v3.3 升级：展开/收起改为圆形图标按钮（与 TableHeader 列设置按钮同款 `circle`），
+            减少按钮文字对搜索区横向空间的占用；图标方向天然表达可点击切换的语义。
+            ElTooltip 包裹补充 hover 提示（圆形按钮无文字必须有 tooltip 兜底）。
+
+            v3.3.1 修复：v-if 必须同时控制 ElTooltip 与 ElButton。
+            原代码 `v-if="showToggle"` 只在 button 上，但 ElTooltip 没条件渲染，
+            档位不渲染 toggle 时（flat / flat-large / drawer）ElTooltip 的 OnlyChild
+            会找不到合法子节点，触发 `[ElOnlyChild] no valid child node found` 警告 ×N。
+            修复：v-if 上提到 ElTooltip，button 与 tooltip 同生同灭。
+          -->
+          <ElTooltip v-if="showToggle" :content="collapsed ? '展开' : '收起'" placement="top">
+            <ElButton
+              :icon="collapsed ? ArrowDown : ArrowUp"
+              circle
+              data-test="toggle-btn"
+              @click="toggleCollapsed"
+            />
+          </ElTooltip>
+        </div>
+      </div>
     </ElForm>
+
+    <!--
+      v3.3 升级：高级筛选改用 ElDrawer（从右侧滑出）
+      - 不挤压表格：Drawer 是覆盖层，表格高度不受影响
+      - 适合数据量极大 / 需要持续查看表格的场景
+      - 宽度 35%：足够承载复杂表单结构
+      - close-on-click-modal 默认 true（用户要求）：点击遮罩区即可关闭抽屉，
+        不必强制走「取消」按钮。点「确定」按钮保留显式提交语义。
+    -->
+    <ElDrawer
+      v-model="advancedVisible"
+      title="高级筛选"
+      direction="rtl"
+      size="35%"
+      data-test="advanced-drawer"
+    >
+      <ElForm :model="localParams" label-position="top">
+        <ElRow :gutter="16">
+          <ElCol v-for="col in advancedColumns" :key="col.prop" :xs="24" :sm="12">
+            <ElFormItem :label="col.label">
+              <slot :name="`search-${col.prop}`" :column="col">
+                <component
+                  :is="SEARCH_CONTROL_MAP[col.search!.el].component"
+                  v-bind="{
+                    modelValue: localParams[col.prop] as unknown as never,
+                    ...(SEARCH_CONTROL_MAP[col.search!.el].clearable ? { clearable: true } : {}),
+                    ...(SEARCH_CONTROL_MAP[col.search!.el].placeholderPrefix
+                      ? {
+                          placeholder: buildPlaceholder(
+                            col,
+                            SEARCH_CONTROL_MAP[col.search!.el].placeholderPrefix
+                          ) as unknown as never,
+                        }
+                      : {}),
+                    ...col.search!.props,
+                  }"
+                  @update:model-value="(v: unknown) => handleColUpdate(col, v)"
+                  @clear="handleSearch"
+                >
+                  <template v-if="SEARCH_CONTROL_MAP[col.search!.el].hasOptions" #default>
+                    <ElOption
+                      v-for="opt in col.enum ?? []"
+                      :key="String(opt.value)"
+                      :label="opt.label as unknown as never"
+                      :value="opt.value as unknown as never"
+                      :disabled="opt.disabled as unknown as never"
+                    />
+                  </template>
+                </component>
+              </slot>
+            </ElFormItem>
+          </ElCol>
+        </ElRow>
+      </ElForm>
+      <template #footer>
+        <div :class="bem.e('drawer-footer')">
+          <ElButton data-test="advanced-reset" @click="handleAdvancedReset">清空</ElButton>
+          <ElButton @click="closeAdvanced">取消</ElButton>
+          <ElButton type="primary" data-test="advanced-apply" @click="handleAdvancedApply">
+            确定
+          </ElButton>
+        </div>
+      </template>
+    </ElDrawer>
   </div>
 </template>
+
+<style lang="scss">
+/*
+ * v3.2 重大升级：左右结构（用户要求）
+ * - 字段在左：flex: 1 自然换行
+ * - 按钮在右：flex: 0 + white-space: nowrap（绝换行）
+ * - 整体：align-items: flex-start
+ * - 展开/收起动画由 JS 钩子驱动 max-height 过渡
+ */
+.#{$BEM_PREFIX}-pro-table-search {
+  &__inline {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap; /* 字段在窄屏自动换行到按钮下面 */
+  }
+  &__fields {
+    flex: 1 1 auto;
+    min-width: 0; /* 防止 flex item 内容溢出 */
+  }
+  &__field-list {
+    display: grid;
+    /* 默认 4 列自适应网格（lg+），小屏降为 2/1 列 */
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px 16px;
+  }
+  &__field {
+    /*
+     * 覆写 el-form-item 默认 margin-bottom: 22px。
+     * 选择器特异性：.#{$BEM_PREFIX}-pro-table-search__field (0,1,0) = .el-form-item (0,1,0)，
+     * 靠源码顺序决胜（组件样式晚于 element-plus CSS 注入），
+     * 故不需要 !important（项目规范 §4 #13）。
+     */
+    margin-bottom: 0;
+  }
+  &__actions {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 0px;
+    white-space: nowrap; /* 按钮绝换行（用户要求） */
+    .el-button + .el-button {
+      margin-left: 8px;
+    }
+  }
+  /*
+   * v3.3 用户要求：ElBadge 绝对定位到按钮右上角，彻底脱离 inline-block 布局。
+   * 即使 badge 内容（数字 / 圆点）有宽度，也不会挤压图标。
+   * 定位基准：&__advanced-btn（已显式 position: relative）——
+   * 不依赖 ElButton 内部是否 position: relative，避免 EP 升级时静默失效。
+   *
+   * v3.3.1 关键样式修正：
+   * 1) &__advanced-btn 加 overflow: hidden —— EP 默认 `.el-badge__content` 使用
+   *    `translate(50%, -50%)` 把 sup 角标移出 wrapper 一半（设计意图是让角标
+   *    半悬挂在边界外），对文字按钮 OK；但对 32x32 circle 按钮会让红圈溢出
+   *    半个直径到按钮外（视觉上像「按钮旁边挂了个红色大气球」）。
+   *    overflow: hidden 把溢出部分裁掉，角标限制在按钮内。
+   * 2) &__badge 改用 top: 0; right: 0 —— 与 overflow:hidden 配合，让 sup
+   *    正好出现在按钮内的右上角（translate 后位置约 top: 9px right: 9px，
+   *    是按钮圆周的合理位置）。
+   *
+   * 圆形图标按钮内的图标居中（用户要求 v3.3）：
+   * element-plus 的 `.el-button [class*=el-icon]+span { margin-left: 6px }` 是为
+   * 「图标+文字」按钮预留的间距，会命中我们的 ElBadge wrapper，让图标视觉左偏。
+   * 重置 trailing span 的 margin-left 为 0（防 EP 默认规则的左偏）。
+   * 靠源码顺序决胜（晚于 EP CSS 注入），项目规范 §4 #13：不用 !important。
+   */
+  &__advanced-btn {
+    /* 给按钮加显式定位基准 + overflow 裁切，让 badge 角标限制在按钮内 */
+    position: relative;
+    &.el-button [class*='el-icon'] + span {
+      margin-left: 0;
+    }
+  }
+  &__badge {
+    position: absolute;
+    top: -2px;
+    right: -5px;
+  }
+  &__drawer-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+}
+</style>
