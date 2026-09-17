@@ -29,3 +29,6 @@
 
 - vxe-table 引擎（v2.1 已交付）暂不支持树形数据 / 行拖拽排序：启用时启动校验 `console.warn` 并忽略该能力
 - vxe-table 引擎加载失败（如 chunk 加载异常）自动回退 element-plus 并 `console.warn`（`VxeTableBody` engine-fallback）
+- v3.0+ 虚拟化（`virtualized=true`）强隔离：开启时其他能力（行内编辑 `enableRowEdit` / 树形 `enableTree` / 汇总 `enableSummary` / 单元格合并 `enableCellSpan` / 行拖拽 `enableRowDrag` / 多选列 `type='selection'`）一律 `console.warn` + 忽略；`tableEngine="vxe-table"` 同开时自动回退 element-plus（v2 + virtualized 双重不兼容）
+- v3.0.1+ 列宽拖拽（`columnResize=true`）virtualized（TableV2）分支不支持 —— TableV2 列宽受控（`onColumnResize` 需回写列宽配置），留待后续
+- v3.1+ 自动高度（`autoHeight=true`）与 `virtualized=true` 同开被忽略 —— virtualized（TableV2）引擎自带高度管理
