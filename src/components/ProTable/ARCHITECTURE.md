@@ -1,6 +1,22 @@
 # ProTable 架构文档
 
-> **当前版本**：v3.1（能力补全：自动高度 / 状态保持 / 全屏 / 单选列 / 内置格式化器）
+> **当前版本**：v3.4（搜索区布局档位下放 + v3.2 已选回显/字段联动）
+>
+> **v3.4 增量摘要**：
+>
+> - **searchLayout prop**：新增 `SearchLayoutMode = 'auto' \| 'flat' \| 'collapse' \| 'flat-large' \| 'drawer'` 类型 + ProTableProps.searchLayout prop。SearchForm.vue layoutMode 判定顺序调整为：advanced 字段存在（永远 drawer，保证 advanced 字段可达，优先级最高）> searchLayout 非 auto 强制档位 > 字段数自动判定。真实业务两类场景不适配：① 宽屏页面想平铺更多字段却被强制折叠（字段数 ≠ 页面空间需求）；② searchDisplay 联动使字段数动态变化时档位在 flat/collapse 间跳变（展开/收起按钮时有时无、布局抖动）
+>
+> ---
+>
+> **v3.2 增量摘要**：
+>
+> - **SearchLevel 常量**（types/index.ts）：用 const 对象 + 类型替代纯字符串字面量联合（`'basic'`/`'advanced'`），避免模板拼错 + IDE 自动补全
+> - **search 配置 v3.2 扩展**（SearchConfig）：`level`（basic/advanced 层级）/ `debounce`（输入防抖毫秒）/ `searchTrigger`（change/enter）/ `onChange`（字段联动清空）/ `lazyEnum`（字典懒加载）/ `collapsed`（per-field 折叠控制）—— 覆盖中后台多查询条件场景（5-30 个查询条件优雅展示）
+> - **showSelectedTags prop**（默认 true）：搜索区与表格之间显示当前生效查询条件 tag，支持单个/全部清除（v3.2 SelectedTags.vue 新增）
+> - **expandedStatePersist prop**：展开/收起状态通过 localStorage[`${tableKey}:search-expanded`] 记忆（需 tableKey，未设置忽略）
+> - **searchDisplay prop**：字段联动显隐（`(params) => Record<prop, boolean>`），返回 `false` 的字段**彻底隐藏**（不进入主表单也不进入高级筛选抽屉）；纯函数 + reactive 自动追踪依赖
+>
+> ---
 >
 > **v3.1 增量摘要**：
 >

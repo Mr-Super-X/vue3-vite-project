@@ -1,6 +1,6 @@
 # ProDialog 高级弹窗使用指南
 
-> **文档版本**：v1.0.0 | **最后更新**：2026-09-11
+> **文档版本**：v1.1.0 | **最后更新**：2026-09-17
 > **覆盖范围**：声明式组件 `<ProDialog>` + 命令式 Hook `useDialog()` + 拖拽指令 `v-draggable`
 > **源码位置**：`src/components/common/ProDialog/`、`src/composables/useDialog.ts`、`src/directives/draggable.ts`
 
@@ -36,14 +36,15 @@
 
 > 原生 ElDialog Props 通过 `$attrs` 透传（详见 §2.4）。下表仅列 ProDialog 自有 Props。
 
-| Prop                   | 类型      | 默认值  | 说明                                                             |
-| ---------------------- | --------- | ------- | ---------------------------------------------------------------- |
-| `modelValue`           | `boolean` | `false` | 显隐（`v-model:modelValue`）                                     |
-| `title`                | `string`  | `''`    | 弹窗标题（透传 EP `title`；传入 `header` 插槽时插槽优先）        |
-| `draggable`            | `boolean` | `true`  | 是否允许按住头部拖拽（**全屏态自动禁用**）                       |
-| `fullScreen`           | `boolean` | `false` | 初始是否全屏（头部自带切换按钮）                                 |
-| `showFullScreenButton` | `boolean` | `true`  | 是否显示头部全屏切换按钮                                         |
-| `resizable`            | `boolean` | `false` | 是否允许右下角拖拉调整宽高（启用后右下角出现 12×12 px 三角手柄） |
+| Prop                   | 类型      | 默认值  | 说明                                                                                                            |
+| ---------------------- | --------- | ------- | --------------------------------------------------------------------------------------------------------------- |
+| `modelValue`           | `boolean` | `false` | 显隐（`v-model:modelValue`）                                                                                    |
+| `title`                | `string`  | `''`    | 弹窗标题（透传 EP `title`；传入 `header` 插槽时插槽优先）                                                       |
+| `draggable`            | `boolean` | `true`  | 是否允许按住头部拖拽（**全屏态自动禁用**）                                                                      |
+| `fullScreen`           | `boolean` | `false` | 初始是否全屏（头部自带切换按钮）                                                                                |
+| `showFullScreenButton` | `boolean` | `true`  | 是否显示头部全屏切换按钮                                                                                        |
+| `resizable`            | `boolean` | `false` | 是否允许右下角拖拉调整宽高（启用后右下角出现 12×12 px 三角手柄）                                                |
+| `resizeMinToInitial`   | `boolean` | `false` | resize 最小尺寸锁定为「本次打开」的初始宽高（开启后只能放大、不能缩小到初始以下；关闭时最小仍为硬编码 320×200） |
 
 ### 2.2 Events
 
@@ -138,7 +139,38 @@ function onResize(width: number, height: number) {
 
 **与 `draggable` / `fullScreen` 互斥**：全屏态 resizable 自动禁用（缩放到 0）；resize 后切全屏退出，会清除内联 `width/height`，回到 EP 默认 480，避免残留尺寸。
 
-### 2.8 自定义 header / footer
+### 2.8 resizeMinToInitial 锁定最小尺寸
+
+当 `resizable=true` 且 `resizeMinToInitial=true` 时，最小尺寸从硬编码 `320×200` 改为**本次打开弹窗的初始宽高**——只能放大、不能缩小到初始以下：
+
+```vue
+<ProDialog
+  v-model="visible"
+  title="代码预览"
+  resizable
+  :resize-min-to-initial="true"
+  @resize-change="onResize"
+>
+  <pre><code>{{ code }}</code></pre>
+</ProDialog>
+```
+
+**钳制规则**：
+
+| 维度   | 最小                | 最大          |
+| ------ | ------------------- | ------------- |
+| width  | 本次打开初始 width  | viewport - 16 |
+| height | 本次打开初始 height | viewport - 16 |
+
+**行为细节**：
+
+- 每次重新打开弹窗都会重新记录初始宽高（`open` 事件 + `nextTick` 测量 `.el-dialog` 的 `offsetWidth/offsetHeight`）
+- open 事件因内容异步挂载未就绪时，首次 `mousedown` 会用当前尺寸补记（避免首次拖拽就「不锁」）
+- 关闭 `resizeMinToInitial`（默认）即回退到 §2.7 的 `320×200` 硬编码，行为完全兼容
+
+**典型场景**：内容有最小设计宽度（如宽报表卡片 / 代码对比块），硬编码 320 会让用户把弹窗拖到比内容设计尺寸还小导致排版错乱，开启本开关即可锁定。
+
+### 2.9 自定义 header / footer
 
 ```vue
 <ProDialog v-model="visible" title="默认">
@@ -415,12 +447,12 @@ async function handleDelete() {
 
 ## 8. 测试覆盖
 
-| 文件                                                | 用例数 | 覆盖范围                                                                                                     |
-| --------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------ |
-| `src/components/common/ProDialog/ProDialog.spec.ts` | 13     | resizable / beforeClose / show-close / 全屏×resize 交叉 / 内联清理                                           |
-| `src/composables/useDialog.spec.ts`                 | 6      | 确认 resolve + 容器销毁 / 取消 reject / X 关闭 reject / setProps 实时更新 / contentProps 透传 / close() 语义 |
-| `src/directives/draggable.spec.ts`                  | 4      | 拖拽位移 / 边界钳制 / 禁用 / 动态恢复（clampPosition 边界数学覆盖）                                          |
-| demo（手动验证）                                    | 4 个   | ProDialogOverview / ProDialogUseDialog / ProDialogResizable / DemoField 4 区                                 |
+| 文件                                                | 用例数 | 覆盖范围                                                                                                        |
+| --------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------- |
+| `src/components/common/ProDialog/ProDialog.spec.ts` | 15     | resizable / **resizeMinToInitial 钳制初始 + 关闭回退** / beforeClose / show-close / 全屏×resize 交叉 / 内联清理 |
+| `src/composables/useDialog.spec.ts`                 | 6      | 确认 resolve + 容器销毁 / 取消 reject / X 关闭 reject / setProps 实时更新 / contentProps 透传 / close() 语义    |
+| `src/directives/draggable.spec.ts`                  | 4      | 拖拽位移 / 边界钳制 / 禁用 / 动态恢复（clampPosition 边界数学覆盖）                                             |
+| demo（手动验证）                                    | 4 个   | ProDialogOverview / ProDialogUseDialog / ProDialogResizable / DemoField 4 区                                    |
 
 ---
 

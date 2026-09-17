@@ -1,6 +1,6 @@
 # ProTable 配置驱动表格使用指南
 
-> **文档版本**：v1.0.0 | **最后更新**：2026-09-11
+> **文档版本**：v3.4.0 | **最后更新**：2026-09-17
 > **覆盖版本**：v2.0（含 v2.1 vxe-table 引擎 + 服务端排序）
 > **源码位置**：`src/components/ProTable/`
 > **demo 站**：`/demo/pro-table-overview`（9 个演示：Overview / EngineCompare / Expand / ServerSort / Tree / StyleOverride / CellSpan / RowDrag / RowEdit）
@@ -84,26 +84,35 @@ async function requestApi(params: Record<string, unknown>) {
 
 ### 1.2 Props 表（v2.0）
 
-| Prop                | 类型                                    | 默认值           | 说明                                              |
-| ------------------- | --------------------------------------- | ---------------- | ------------------------------------------------- |
-| `columns`           | `ProColumn<T>[]`                        | 必填             | 列定义（驱动表头 + 表格 + 搜索 + 列设置）         |
-| `requestApi`        | `ProTableRequestApi<T>`                 | 必填             | 数据请求方法（必填）                              |
-| `initParam`         | `Record<string, unknown>`               | `{}`             | 固定查询参数（与搜索值合并）                      |
-| `dataCallback`      | `(data: T[]) => T[]`                    | `undefined`      | 数据后处理（拿到 result 之后）                    |
-| `requestError`      | `(error: unknown) => void`              | `undefined`      | 请求错误回调                                      |
-| `pagination`        | `boolean \| Record<string, unknown>`    | `true`           | 是否显示分页 / 透传分页 props                     |
-| `sortParamsAdapter` | `(state: SortState<T>) => Record`       | 缺省约定         | 排序参数序列化（默认 `{ orderByColumn, isAsc }`） |
-| `responseAdapter`   | `(raw: unknown) => ProTableResponse<T>` | 缺省直通         | 响应结构适配（非约定后端用）                      |
-| `tableEngine`       | `'element-plus' \| 'vxe-table'`         | `'element-plus'` | 表格引擎（首次 mount 锁定）                       |
-| `tableKey`          | `string`                                | `undefined`      | localStorage 持久化列设置的 key                   |
-| `rowKey`            | `string`                                | 必填（多选）     | 行 key 字段名                                     |
-| `pageSize`          | `number`                                | `10`             | 初始每页大小                                      |
-| `searchRows`        | `number`                                | `3`              | 搜索项默认显示行数（超出可展开）                  |
-| `density`           | `'compact' \| 'default' \| 'loose'`     | `'default'`      | 表格密度                                          |
-| `enableRowEdit`     | `boolean \| RowEditConfig`              | `false`          | 行内编辑（v2.0）                                  |
-| `enableTree`        | `boolean \| TreeConfig`                 | `false`          | 树形数据（v2.0）                                  |
-| `enableCellSpan`    | `boolean \| CellSpanConfig`             | `false`          | 单元格合并（v2.0）                                |
-| `enableRowDrag`     | `boolean \| RowDragConfig`              | `false`          | 行拖拽排序（v2.0）                                |
+| Prop                   | 类型                                                         | 默认值           | 说明                                                                     |
+| ---------------------- | ------------------------------------------------------------ | ---------------- | ------------------------------------------------------------------------ |
+| `columns`              | `ProColumn<T>[]`                                             | 必填             | 列定义（驱动表头 + 表格 + 搜索 + 列设置）                                |
+| `requestApi`           | `ProTableRequestApi<T>`                                      | 必填             | 数据请求方法（必填）                                                     |
+| `initParam`            | `Record<string, unknown>`                                    | `{}`             | 固定查询参数（与搜索值合并）                                             |
+| `dataCallback`         | `(data: T[]) => T[]`                                         | `undefined`      | 数据后处理（拿到 result 之后）                                           |
+| `requestError`         | `(error: unknown) => void`                                   | `undefined`      | 请求错误回调                                                             |
+| `pagination`           | `boolean \| Record<string, unknown>`                         | `true`           | 是否显示分页 / 透传分页 props                                            |
+| `sortParamsAdapter`    | `(state: SortState<T>) => Record`                            | 缺省约定         | 排序参数序列化（默认 `{ orderByColumn, isAsc }`）                        |
+| `responseAdapter`      | `(raw: unknown) => ProTableResponse<T>`                      | 缺省直通         | 响应结构适配（非约定后端用）                                             |
+| `tableEngine`          | `'element-plus' \| 'vxe-table'`                              | `'element-plus'` | 表格引擎（首次 mount 锁定）                                              |
+| `tableKey`             | `string`                                                     | `undefined`      | localStorage 持久化列设置的 key                                          |
+| `rowKey`               | `string`                                                     | 必填（多选）     | 行 key 字段名                                                            |
+| `pageSize`             | `number`                                                     | `10`             | 初始每页大小                                                             |
+| `searchRows`           | `number`                                                     | `3`              | 搜索项默认显示行数（超出可展开）                                         |
+| `density`              | `'compact' \| 'default' \| 'loose'`                          | `'default'`      | 表格密度                                                                 |
+| `enableRowEdit`        | `boolean \| RowEditConfig`                                   | `false`          | 行内编辑（v2.0）                                                         |
+| `enableTree`           | `boolean \| TreeConfig`                                      | `false`          | 树形数据（v2.0）                                                         |
+| `enableCellSpan`       | `boolean \| CellSpanConfig`                                  | `false`          | 单元格合并（v2.0）                                                       |
+| `enableRowDrag`        | `boolean \| RowDragConfig`                                   | `false`          | 行拖拽排序（v2.0）                                                       |
+| `enableSummary`        | `boolean \| SummaryConfig`                                   | `false`          | 客户端汇总行（v3.0：按列聚合 `sum` / `avg` / `count` / `max` / `min`）   |
+| `virtualized`          | `boolean \| VirtualScrollConfig`                             | `false`          | 虚拟滚动（v3.0：10 万行 × 10 列流畅渲染；强隔离与其他能力 warn + 忽略）  |
+| `autoHeight`           | `boolean \| AutoHeightConfig`                                | `false`          | 表格区自动撑满视口剩余高度（v3.1；与 `virtualized` 同开被忽略）          |
+| `statePersist`         | `boolean`                                                    | `false`          | 路由级持久化搜索/分页/排序状态（v3.1；需配合 `tableKey`，F5 刷新不恢复） |
+| `columnResize`         | `boolean`                                                    | `false`          | 表头列边框可拖动调宽（v3.0.1；`virtualized` 分支不支持）                 |
+| `searchDisplay`        | `(params) => Record<string, boolean>`                        | `undefined`      | 搜索字段联动显隐（v3.2：返回 `false` 的字段彻底隐藏）                    |
+| `searchLayout`         | `'auto' \| 'flat' \| 'collapse' \| 'flat-large' \| 'drawer'` | `'auto'`         | 搜索区布局档位强制指定（v3.4：替代纯字段数自动判定）                     |
+| `showSelectedTags`     | `boolean`                                                    | `true`           | 搜索区与表格之间显示「已选条件」tag 回显（v3.2）                         |
+| `expandedStatePersist` | `boolean`                                                    | `false`          | 展开/收起状态持久化到 localStorage（v3.2；需配合 `tableKey`）            |
 
 ### 1.3 defineExpose（v2.0）
 
@@ -162,26 +171,31 @@ async function handleProgrammaticSearch() {
 
 ### 2.1 字段表
 
-| 字段           | 类型                                                | 说明                                                        |
-| -------------- | --------------------------------------------------- | ----------------------------------------------------------- |
-| `prop`         | `keyof T \| string`                                 | 字段名（v-for key + column prop + search 表单 key）         |
-| `label`        | `string`                                            | 显示文本（表头 + form label）                               |
-| `type`         | `'index' \| 'selection' \| 'expand' \| 'operation'` | 特殊列（序号 / 多选 / 展开 / 操作）                         |
-| `width`        | `number \| string`                                  | 列宽                                                        |
-| `minWidth`     | `number \| string`                                  | 最小列宽                                                    |
-| `fixed`        | `'left' \| 'right'`                                 | 固定列                                                      |
-| `sortable`     | `boolean \| 'custom'`                               | 是否可排序（`true` 客户端；`'custom'` 服务端，M2 触发请求） |
-| `hidden`       | `boolean \| Ref<boolean>`                           | 是否隐藏（支持响应式，列设置抽屉切换）                      |
-| `search`       | `SearchConfig`                                      | 搜索项配置（缺省则该列不参与搜索区）                        |
-| `enum`         | `EnumProps[]`                                       | 字典映射（自动渲染 ElTag + 搜索下拉）                       |
-| `headerRender` | `(scope) => VNode`                                  | 自定义表头渲染（`h()` 或 JSX）                              |
-| `render`       | `(scope) => VNode`                                  | 自定义单元格渲染                                            |
-| `tableProps`   | `Record<string, unknown>`                           | 透传给 ElTableColumn 的 props                               |
-| `vxeProps`     | `Record<string, unknown>`                           | 透传给 VxeColumn 的 props（仅 vxe 引擎生效）                |
-| `edit`         | `ColumnEditConfig`                                  | 行内编辑配置（不声明 = 只读）                               |
-| `tree`         | `ColumnTreeConfig`                                  | 树形列声明（仅一列生效，默认第一列）                        |
-| `span`         | `ColumnSpanConfig`                                  | 单元格合并配置（不声明 = 不参与）                           |
-| `draggable`    | `boolean`                                           | 该列是否参与行拖拽（默认 false）                            |
+| 字段               | 类型                                                | 说明                                                                                  |
+| ------------------ | --------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `prop`             | `keyof T \| string`                                 | 字段名（v-for key + column prop + search 表单 key）                                   |
+| `label`            | `string`                                            | 显示文本（表头 + form label）                                                         |
+| `type`             | `'index' \| 'selection' \| 'expand' \| 'operation'` | 特殊列（序号 / 多选 / 展开 / 操作）                                                   |
+| `width`            | `number \| string`                                  | 列宽                                                                                  |
+| `minWidth`         | `number \| string`                                  | 最小列宽                                                                              |
+| `fixed`            | `'left' \| 'right'`                                 | 固定列                                                                                |
+| `sortable`         | `boolean \| 'custom'`                               | 是否可排序（`true` 客户端；`'custom'` 服务端，M2 触发请求）                           |
+| `hidden`           | `boolean \| Ref<boolean>`                           | 是否隐藏（支持响应式，列设置抽屉切换）                                                |
+| `search`           | `SearchConfig`                                      | 搜索项配置（缺省则该列不参与搜索区）                                                  |
+| `enum`             | `EnumProps[]`                                       | 字典映射（自动渲染 ElTag + 搜索下拉）                                                 |
+| `headerRender`     | `(scope) => VNode`                                  | 自定义表头渲染（`h()` 或 JSX）                                                        |
+| `render`           | `(scope) => VNode`                                  | 自定义单元格渲染                                                                      |
+| `tableProps`       | `Record<string, unknown>`                           | 透传给 ElTableColumn 的 props                                                         |
+| `vxeProps`         | `Record<string, unknown>`                           | 透传给 VxeColumn 的 props（仅 vxe 引擎生效）                                          |
+| `edit`             | `ColumnEditConfig`                                  | 行内编辑配置（不声明 = 只读）                                                         |
+| `tree`             | `ColumnTreeConfig`                                  | 树形列声明（仅一列生效，默认第一列）                                                  |
+| `span`             | `ColumnSpanConfig`                                  | 单元格合并配置（不声明 = 不参与）                                                     |
+| `draggable`        | `boolean`                                           | 该列是否参与行拖拽（默认 false）                                                      |
+| `children`         | `ProColumn<T>[]`                                    | 子列（v3.0：多级表头分组；持久化按扁平 `prop` 维度处理）                              |
+| `formatter`        | `ColumnFormatter<T>`                                | 单元格格式化（v3.1：函数 \| 预设 `'dateTime'`/`'amount'`/`'percent'`/`'boolTag'` 等） |
+| `reserveSelection` | `boolean`                                           | 多选跨页保持选中（v3.1：仅 `type='selection'` 列生效，需配 `rowKey`）                 |
+
+> **search 配置 v3.2 扩展**：`level`（`Basic`/`Advanced` 层级）/ `debounce`（输入防抖毫秒）/ `searchTrigger`（`change`/`enter`）/ `onChange`（字段联动清空）/ `lazyEnum`（字典懒加载）/ `collapsed`（per-field 折叠控制）—— 详见 §4.4/§4.5/§4.6。
 
 ### 2.2 枚举自动渲染（`enum` 字段）
 
@@ -388,6 +402,60 @@ await tableRef.value?.setSearchParams({ status: 'active' })
 // 重置搜索参数 + 分页 + 刷新（保留多选）
 await tableRef.value?.reset()
 ```
+
+### 4.4 searchLayout：搜索区布局档位（v3.4）
+
+替代「按字段数自动判定」档位（≤3 flat / 4-8 collapse / >8 flat-large）。真实业务两类场景不适配：① 宽屏页面想平铺更多字段却被强制折叠；② `searchDisplay` 联动使字段数动态变化时档位抖动。
+
+```vue
+<!-- 宽屏 6 字段强制全平铺 -->
+<ProTable :columns="columns" :request-api="requestApi" search-layout="flat" />
+
+<!-- searchDisplay 联动时锁定档位，避免布局抖动 -->
+<ProTable :columns="columns" :request-api="requestApi" search-layout="collapse" />
+```
+
+| 值                        | 行为                                                     |
+| ------------------------- | -------------------------------------------------------- |
+| `'auto'`（默认）          | 维持原自动行为（≤3 flat / 4-8 collapse / >8 flat-large） |
+| `'flat'` / `'flat-large'` | 全部平铺，无展开/收起按钮                                |
+| `'collapse'`              | 强制折叠，始终显示展开/收起按钮                          |
+| `'drawer'`                | 强制高级筛选抽屉形态                                     |
+
+> **优先级**：存在 `search.level='advanced'` 字段时无论本配置为何都走 `drawer` 档（advanced 字段必须可达）。
+
+### 4.5 searchDisplay：字段联动显隐（v3.2）
+
+```vue
+<ProTable
+  :columns="columns"
+  :request-api="requestApi"
+  :search-display="
+    (params) => ({
+      refundReason: params.status === 'refunded',
+      paymentTime: params.status === 'paid',
+    })
+  "
+/>
+```
+
+- 返回 `false` 的字段**彻底隐藏**（不进入主表单，也不进入高级筛选抽屉）
+- 函数应保持纯函数性（无副作用），内部按 reactive 自动追踪依赖
+
+### 4.6 已选条件回显 + 展开状态持久化（v3.2）
+
+```vue
+<!-- 显示已选条件 tag（默认开启：搜索后忘了自己筛了什么，回显 + 一键清除） -->
+<ProTable :columns="columns" :request-api="requestApi" />
+
+<!-- 关闭回显 -->
+<ProTable :columns="columns" :request-api="requestApi" :show-selected-tags="false" />
+
+<!-- 展开/收起状态持久化到 localStorage（需配合 tableKey） -->
+<ProTable :columns="columns" :request-api="requestApi" table-key="orders" expanded-state-persist />
+```
+
+`search.level='advanced'` + `showSelectedTags` 联动时，已选高级条件也会以 tag 形式回显在搜索区与表格之间。
 
 ---
 

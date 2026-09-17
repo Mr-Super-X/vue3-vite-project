@@ -198,6 +198,77 @@ assertValidResponse(adapted, { tableKey: props.tableKey })
 assertValidResponse(adapted, props.tableKey ? { tableKey: props.tableKey } : {})
 ```
 
+## v3.4 变更摘要（搜索区布局档位下放）
+
+> 真实业务两类场景不适配自动判定档位：① 宽屏页面 6 个字段想全平铺却被强制折叠；② `searchDisplay` 联动使字段数动态变化时档位在 flat/collapse 间跳变。本次把判定权下放，新增 `searchLayout` prop，`'auto'`（默认）保持自动行为完全向后兼容，显式档位跳过字段数判定。
+
+```vue
+<!-- 宽屏 6 字段强制平铺 -->
+<ProTable :columns="columns" :request-api="requestApi" search-layout="flat" />
+
+<!-- searchDisplay 联动时锁定档位避免布局抖动 -->
+<ProTable :columns="columns" :request-api="requestApi" search-layout="collapse" />
+```
+
+| 值                        | 行为                                               |
+| ------------------------- | -------------------------------------------------- |
+| `'auto'`（默认）          | ≤3 flat / 4-8 collapse / >8 flat-large（自动判定） |
+| `'flat'` / `'flat-large'` | 全部平铺，无展开/收起按钮                          |
+| `'collapse'`              | 强制折叠，始终显示展开/收起按钮                    |
+| `'drawer'`                | 强制高级筛选抽屉形态                               |
+
+> **优先级**：存在 `search.level='advanced'` 字段时无论本配置为何都走 `drawer` 档（advanced 字段必须可达）。
+
+**实现**：`types/index.ts` 新增 `SearchLayoutMode = 'auto' \| 'flat' \| 'collapse' \| 'flat-large' \| 'drawer'` 联合类型 + `ProTableProps.searchLayout?` prop；`SearchForm.vue` `layoutMode` 判定顺序「advanced 字段存在（永远 drawer，优先级最高）> searchLayout 非 auto 强制档位 > 字段数自动判定」；`ProTable.vue` 经 `v-bind` 透传 searchLayout（缺省不传保持子组件默认）。
+
+**演示**：`ProTableSearchAdvanced.vue` ⑩ 号 demo「6 basic 强制 flat 档」（与 ② 号 demo 同字段对照：自动 collapse vs 强制 flat）。
+
+## v3.2 变更摘要（多查询条件支持）
+
+> 中后台典型「重搜索」页面（电商订单筛选、财务报表等）常含 5-30 个查询条件，平铺会挤压表格可视区。本次把搜索项拆分到两层（basic 主表单 / advanced 高级抽屉）+ 字段级防抖 + 字段联动 + 已选回显，让任意规模的查询条件都能优雅展示。
+
+**新增 `SearchLevel` 常量**（`types/index.ts`）：
+
+```ts
+export const SearchLevel = { Basic: 'basic', Advanced: 'advanced' } as const
+```
+
+**search 配置扩展**（`SearchConfig`）：
+
+| 字段            | 类型                               | 说明                                                                          |
+| --------------- | ---------------------------------- | ----------------------------------------------------------------------------- |
+| `level`         | `'basic' \| 'advanced'`            | 搜索项层级（Advanced 收纳进「高级筛选」弹窗 + 角标显示已选数量）              |
+| `debounce`      | `number`                           | input 类控件防抖毫秒（`>0` 输入时自动触发；`0`/undefined 保持输入与请求解耦） |
+| `searchTrigger` | `'change' \| 'enter'`              | 触发时机（与 `debounce` 互斥）                                                |
+| `onChange`      | `(newVal, oldVal, params) => void` | 字段联动清空钩子（典型：订单状态改「未支付」时清空支付时间字段）              |
+| `lazyEnum`      | `boolean`                          | select 字典懒加载（聚焦/打开下拉才加载）                                      |
+| `collapsed`     | `boolean`                          | per-field 折叠控制（核心字段强制在主表单展示）                                |
+
+**新增 ProTable Props**：
+
+| Prop                   | 类型                                  | 默认    | 说明                                                                              |
+| ---------------------- | ------------------------------------- | ------- | --------------------------------------------------------------------------------- |
+| `showSelectedTags`     | `boolean`                             | `true`  | 搜索区与表格之间显示已选条件 tag，支持单个/全部清除                               |
+| `expandedStatePersist` | `boolean`                             | `false` | 展开/收起状态通过 `localStorage[${tableKey}:search-expanded]` 记忆（需 tableKey） |
+| `searchDisplay`        | `(params) => Record<string, boolean>` | —       | 字段联动显隐（返回 `false` 字段彻底隐藏）                                         |
+
+**典型用法**：
+
+```vue
+<ProTable
+  :columns="columns"
+  :request-api="requestApi"
+  :search-display="
+    (params) => ({
+      refundReason: params.status === 'refunded',
+      paymentTime: params.status === 'paid',
+    })
+  "
+  table-key="orders"
+  expanded-state-persist
+/>
+```
+
 ## v3.1 变更摘要（能力补全）
 
 对照社区最佳实践（vue-pure-admin / vben-admin）能力清单补齐 5 项缺口：
