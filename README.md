@@ -62,6 +62,7 @@
 │   ├── buttonDebounce.*    └── modules/home/
 │   ├── permission.*
 │   ├── auth.*              ← v-auth（AND/ANY 语义 + disabled/remove 修饰符）
+│   ├── copy.*              ← v-copy（文本复制；modern API + legacy 双降级）
 │   └── draggable.*         ← v-draggable（视口边界钳制，被 ProDialog 默认消费）
 ├── plugins/
 │   ├── errorHandler.*      ← Vue 插件（install 模式）

@@ -254,7 +254,7 @@ const { data } = storeToRefs(useUserStore())
 | 1   | `api/`         | 跨模块网络请求基建（`http`/`cache`/`retry`/`token-refresh` 等）+ `api/modules/` 跨模块共享接口                                                                                                     |
 | 2   | `components/`  | 全局通用组件（`common/`）。**禁止**放置任何布局专用子组件（`Header` / `Sidebar` 等）—— 布局相关组件必须落在 `layouts/<m>/components/` 下随 layout 自包含                                           |
 | 3   | `composables/` | 业务侧组合式函数封装（`useAppRouter`/`useRequest`/`useAuth`/`useDialog`/`useConfirm`/`useDict`/`useLogout`/`useTheme` 等）                                                                         |
-| 4   | `directives/`  | 自定义指令（`v-inputDebounce`/`v-buttonDebounce`/`v-permission`/`v-auth`/`v-draggable`）                                                                                                           |
+| 4   | `directives/`  | 自定义指令（`v-inputDebounce`/`v-buttonDebounce`/`v-permission`/`v-auth`/`v-draggable`/`v-copy`）                                                                                                  |
 | 5   | `enums/`       | 枚举常量（`httpEnum`/`roleEnum` 等）                                                                                                                                                               |
 | 6   | `layouts/`     | 路由级布局基座（`default`/`blank`/`portal`）—— 每个 layout **自包含**，子组件放 `./components/`、配置放 `./config/`、资源放 `./images/`、样式放 `./styles/`；禁止跨目录到 `@/components/` 引用组件 |
 | 7   | `locales/`     | 国际化文案（`zh-CN`/`en-US`）                                                                                                                                                                      |
