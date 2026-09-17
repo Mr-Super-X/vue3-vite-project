@@ -90,7 +90,8 @@ export function useVirtualScroll(options: UseVirtualScrollOptions): UseVirtualSc
     const overscan = config.value.overscan ?? DEFAULT_OVERSCAN
     if (options.engine.value === 'element-plus') {
       return {
-        height: 500,
+        // 复用 DEFAULT_V2_HEIGHT 单点常量：两处 500 同源，改默认值不会漏改
+        height: DEFAULT_V2_HEIGHT,
         rowHeight,
         _overscan: overscan,
       }

@@ -124,6 +124,18 @@ export const SearchLevel = {
 } as const
 export type SearchLevel = (typeof SearchLevel)[keyof typeof SearchLevel]
 
+/**
+ * SearchForm 布局档位（v3.4 新增）—— 业务方可强制指定搜索区布局，替代纯字段数自动判定。
+ *
+ * 真实业务中字段数与页面空间不一定匹配（宽屏想平铺 6 字段 / searchDisplay 联动使字段数
+ * 动态变化引起档位抖动），故把判定权下放：'auto'（默认）保持字段数自动判定，
+ * 显式档位锁定布局行为。存在 search.level='advanced' 字段时无论配置为何都走 'drawer'
+ * （advanced 字段必须可达，优先级高于强制档位）。
+ *
+ * @group ProTable 类型
+ */
+export type SearchLayoutMode = 'auto' | 'flat' | 'collapse' | 'flat-large' | 'drawer'
+
 /** 表格引擎枚举 —— spec 决策 4：首次 mount 锁定，运行时 prop 修改无效；'vxe-table' v2.0 未实现（回退 element-plus，v2.1 支持） @group ProTable 类型 */
 export type TableEngine = 'element-plus' | 'vxe-table'
 
@@ -485,6 +497,18 @@ export interface ProTableProps<T extends object = Record<string, unknown>> {
    * 注意：函数应保持纯函数性（无副作用），内部会按 reactive 自动追踪依赖
    */
   searchDisplay?: (params: Record<string, unknown>) => Record<string, boolean>
+  /**
+   * v3.4 新增：搜索区布局档位 —— 强制指定 basic 字段呈现方式，替代纯字段数自动判定。
+   * - 'auto'（默认）：按 basic 字段数自动判定（≤3 flat / 4-8 collapse / >8 flat-large）
+   * - 'flat' / 'flat-large'：全部平铺（无展开/收起按钮）
+   * - 'collapse'：强制折叠（始终显示展开/收起按钮，折叠时仅前 3 个）
+   * - 'drawer'：强制高级筛选抽屉形态
+   *
+   * 典型场景：searchDisplay 联动使字段数动态变化时锁定档位避免布局抖动；
+   * 宽屏页面强制平铺更多字段。注意：存在 search.level='advanced' 字段时
+   * 无论本配置为何都走 drawer 档（advanced 字段必须可达）。
+   */
+  searchLayout?: SearchLayoutMode
   /**
    * v3.2 升级：是否显示「已选条件」回显区（tag 形式）
    * - true（默认）：搜索区与表格之间显示当前生效的查询条件 tag，支持单个/全部清除

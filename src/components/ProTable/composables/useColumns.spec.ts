@@ -117,6 +117,32 @@ describe('useColumns', () => {
     expect(cols.sortedColumns.value.map((c) => c.prop)).toEqual(['a', 'b', 'c'])
   })
 
+  it('H1 回归：未传 tableKey（无持久化）时 resetToDefault 仍重置内存状态', () => {
+    // ColSetting 抽屉「恢复默认」按钮无条件渲染；早期实现 storageKey 为空时整体
+    // return，导致无持久化场景下点击按钮毫无效果（内存列序/可见性不重置）。
+    const props = {
+      columns: [
+        { prop: 'a', label: 'A' },
+        { prop: 'b', label: 'B' },
+        { prop: 'c', label: 'C' },
+      ],
+      // 故意不传 tableKey
+    } as never
+    const engine = ref('element-plus' as const)
+    const cols = useColumns({ props, engine })
+
+    cols.setColumnOrder(['b', 'c', 'a'])
+    cols.toggleVisible('a')
+    expect(cols.sortedColumns.value.map((c) => c.prop)).toEqual(['b', 'c'])
+
+    cols.resetToDefault()
+
+    // 内存状态全部回到初始（且不应抛错 / 不应写 localStorage）
+    expect(cols.sortedColumns.value.map((c) => c.prop)).toEqual(['a', 'b', 'c'])
+    expect(cols.visibleKeys.value).toEqual(['a', 'b', 'c'])
+    expect(Local.remove).not.toHaveBeenCalled()
+  })
+
   it('M2：toggleVisible/toggleFixed 不修改外部 columns 常量（props 保护）', () => {
     const externalColumns = [
       { prop: 'a', label: 'A' },

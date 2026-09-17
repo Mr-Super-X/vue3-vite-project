@@ -396,15 +396,15 @@ const elTableBindings = computed<Record<string, unknown>>(() => ({
 /* ─────────── v3.2 升级：SelectedTags 数据 + 清除条件 handler ─────────── */
 
 /**
- * v3.2 升级：select 枚举值翻译 Map
+ * 构建 select 枚举值翻译 Map（纯函数，便于单测）
  * - key = col.prop
  * - value = { [rawValue]: label }
  *
  * 用途：SelectedTags 显示「订单状态: 已支付」而不是「订单状态: paid」
  */
-const searchEnumMaps = computed<Record<string, Record<string, string>>>(() => {
+function buildSearchEnumMaps(searchCols: ProColumn[]): Record<string, Record<string, string>> {
   const maps: Record<string, Record<string, string>> = {}
-  for (const col of columns.searchColumns) {
+  for (const col of searchCols) {
     if (col.search?.el === 'select' && col.enum) {
       const m: Record<string, string> = {}
       for (const opt of col.enum) {
@@ -414,7 +414,17 @@ const searchEnumMaps = computed<Record<string, Record<string, string>>>(() => {
     }
   }
   return maps
-})
+}
+
+/**
+ * v3.2 review：select 枚举值翻译 Map。
+ * 与 searchColumnsNonGeneric 同一规则：数据源 columns.searchColumns 是 useColumns
+ * setup 时一次性生成的静态数组（无响应性），包 computed 是误导（v3.1.2 review
+ * 已在 searchColumnsNonGeneric 上执行过同规则），改为普通常量 + 纯函数构建。
+ * 入参用已投影的 searchColumnsNonGeneric（asViewColumns 抹除泛型 T 的 Record 视角），
+ * 避免 ProColumn<T> → ProColumn 的方法语法 bivariance 边界报错。
+ */
+const searchEnumMaps = buildSearchEnumMaps(searchColumnsNonGeneric)
 
 /**
  * v3.2 升级：清除单个搜索条件（SelectedTags × 按钮触发）
@@ -509,6 +519,8 @@ defineExpose({
           ...(props.tableKey ? { tableKey: props.tableKey } : {}),
           ...(props.searchDisplay ? { searchDisplay: props.searchDisplay } : {}),
           ...(props.expandedStatePersist ? { expandedStatePersist: true } : {}),
+          // v3.4：布局档位下放业务方（auto 缺省不传，保持 SearchForm 默认行为）
+          ...(props.searchLayout ? { searchLayout: props.searchLayout } : {}),
         }"
         @search="search.search"
         @reset="search.reset"

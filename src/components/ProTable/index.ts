@@ -44,6 +44,8 @@ export {
   type ColumnFormatter,
   /** 自动高度配置 —— autoHeight 对象形态 @see ./types */
   type AutoHeightConfig,
+  /** 搜索区布局档位 —— searchLayout prop 类型（auto/flat/collapse/flat-large/drawer）@see ./types */
+  type SearchLayoutMode,
 } from './types'
 
 /**

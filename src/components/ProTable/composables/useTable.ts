@@ -121,6 +121,13 @@ function assertValidResponse<T extends object>(
   }
 }
 
+/**
+ * rowKey 缺失警告的一次性哨兵 —— setSelectedRows 会被 el-table 高频触发
+ * （selection-change 每次勾选都调），每次调用都 warn 会刷屏控制台；
+ * 改为模块级（composable 实例级）只提示一次，行为提示能力不损失。
+ */
+let hasWarnedMissingRowKey = false
+
 export function useTable<T extends object = Record<string, unknown>>(
   options: UseTableOptions<T>
 ): UseTableReturn<T> {
@@ -201,8 +208,9 @@ export function useTable<T extends object = Record<string, unknown>>(
         total.value = adapted.total
       },
       onError: (err: unknown) => {
-        data.value = []
-        total.value = 0
+        // 失败时保留 data / total 不清空 —— 错误展示由 useRequest 的 error ref
+        // 经 AsyncState 错误态接管（与数据区互斥渲染），旧数据维持供用户查看上下文；
+        // 早期实现清空 data 导致失败瞬间数据闪空 + total 归零，破坏重试连续性。
         props.requestError?.(err)
       },
     }
@@ -228,9 +236,12 @@ export function useTable<T extends object = Record<string, unknown>>(
     const key = props.rowKey
     if (!key) {
       // 业务方传 props.rowKey 后可按字段去重；未传时按对象引用去重（WeakSet 防内存泄漏）
-      console.warn(
-        '[ProTable] rowKey 缺失：setSelectedRows 按对象引用去重兜底，建议显式传 rowKey 启用按字段去重'
-      )
+      if (!hasWarnedMissingRowKey) {
+        hasWarnedMissingRowKey = true
+        console.warn(
+          '[ProTable] rowKey 缺失：setSelectedRows 按对象引用去重兜底，建议显式传 rowKey 启用按字段去重'
+        )
+      }
       const seen = new WeakSet<object>()
       selectedRows.value = rows.filter((r) => {
         const obj = r as object

@@ -165,6 +165,65 @@ describe('SearchForm', () => {
     expect(visibleInputs.length).toBe(8)
   })
 
+  // ─────────── v3.4：searchLayout 布局档位下放业务方 ───────────
+
+  it('v3.4：searchLayout=flat 强制平铺（6 字段不走 collapse 自动判定）', () => {
+    const sixColumns = Array.from({ length: 6 }, (_, i) => ({
+      prop: `f${i}`,
+      label: `字段${i}`,
+      search: { el: 'input' as const },
+    }))
+    const wrapper = mount(SearchForm, {
+      props: {
+        columns: sixColumns as never,
+        searchParams: reactive({}),
+        searchRows: 3,
+        searchLayout: 'flat',
+      },
+    })
+    // 无展开/收起按钮 + 全部 6 字段平铺可见（自动判定本会折叠为前 3）
+    expect(wrapper.find('[data-test="toggle-btn"]').exists()).toBe(false)
+    expect(wrapper.findAll('input[placeholder*="字段"]').length).toBe(6)
+  })
+
+  it('v3.4：searchLayout=collapse 强制折叠（2 字段也显示展开按钮）', () => {
+    const twoColumns = [
+      { prop: 'a', label: '甲字段', search: { el: 'input' as const } },
+      { prop: 'b', label: '乙字段', search: { el: 'input' as const } },
+    ]
+    const wrapper = mount(SearchForm, {
+      props: {
+        columns: twoColumns as never,
+        searchParams: reactive({}),
+        searchRows: 3,
+        searchLayout: 'collapse',
+      },
+    })
+    // 自动判定（≤3）本应无 toggle 按钮；强制 collapse 后按钮出现
+    expect(wrapper.find('[data-test="toggle-btn"]').exists()).toBe(true)
+  })
+
+  it('v3.4：存在 advanced 字段时 searchLayout 强制 flat 仍让位 drawer（advanced 字段必须可达）', () => {
+    const columnsWithAdvanced = [
+      { prop: 'name', label: '名称', search: { el: 'input' as const } },
+      {
+        prop: 'amount',
+        label: '金额',
+        search: { el: 'input' as const, level: 'advanced' as const },
+      },
+    ]
+    const wrapper = mount(SearchForm, {
+      props: {
+        columns: columnsWithAdvanced as never,
+        searchParams: reactive({}),
+        searchRows: 3,
+        searchLayout: 'flat',
+      },
+    })
+    // drawer 档：高级筛选按钮存在（若强制 flat 生效，advanced 字段将无入口渲染）
+    expect(wrapper.find('[data-test="advanced-btn"]').exists()).toBe(true)
+  })
+
   it('v3.2：level=advanced 字段收纳进弹窗 + 触发按钮显示', () => {
     const columnsWithAdvanced = [
       { prop: 'name', label: '名称', search: { el: 'input' as const, level: 'basic' as const } },
@@ -235,22 +294,22 @@ describe('SearchForm', () => {
       { prop: 'orderStatus', label: '订单状态', search: { el: 'select' as const } },
       { prop: 'refundReason', label: '退款原因', search: { el: 'input' as const } },
     ]
-    const params = reactive({ orderStatus: 'paid' as string })
     const searchDisplay = (p: Record<string, unknown>) => ({
       refundReason: p.orderStatus === 'refunded',
     })
     const wrapper = mount(SearchForm, {
       props: {
         columns: columnsWithDisplay as never,
-        searchParams: params,
+        searchParams: { orderStatus: 'paid' },
         searchRows: 3,
         searchDisplay,
       },
     })
     expect(wrapper.findAll('input[placeholder]').length).toBe(0)
-    // 改变 orderStatus → refundReason 应重新显示
-    params.orderStatus = 'refunded'
-    await wrapper.vm.$nextTick()
+    // 模拟真实生产数据流：useSearch.updateParams re-assign 新对象引用（spread 产生新引用），
+    // 浅 watch 捕获引用变化 → localParams 同步 → searchDisplay 重算。
+    // 不走「原地 mutate props.searchParams」——所有权归 useSearch，原地修改不是受支持的 API。
+    await wrapper.setProps({ searchParams: { orderStatus: 'refunded' } })
     expect(wrapper.findAll('input[placeholder]').length).toBe(1)
   })
 

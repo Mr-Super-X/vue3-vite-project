@@ -2,6 +2,16 @@
 
 ## 未发布
 
+### ✨ Feat | ProTable searchLayout：搜索区布局档位下放业务方（v3.4）
+
+> 此前 SearchForm 布局档位（flat/collapse/flat-large/drawer）纯按 basic 字段数自动判定，真实业务两类场景不适配：① 宽屏页面 6 个字段想全平铺却被强制折叠（字段数 ≠ 页面空间需求）② searchDisplay 联动使字段数动态变化时档位在 flat/collapse 间跳变（展开/收起按钮时有时无、布局抖动）。本次把判定权下放：新增 `searchLayout` prop，'auto'（默认）保持自动行为完全向后兼容，显式档位跳过字段数判定
+
+* **feat(src/components/ProTable/types/index.ts):** `SearchLayoutMode = 'auto' | 'flat' | 'collapse' | 'flat-large' | 'drawer'` + `ProTableProps.searchLayout?: SearchLayoutMode`；`index.ts` barrel 同步导出
+* **feat(src/components/ProTable/components/SearchForm.vue):** `layoutMode` 判定顺序调整为「advanced 字段存在（永远 drawer，保证 advanced 字段可达，优先级高于强制档位——防止强制 flat 时 advanced 字段静默丢失）> searchLayout 非 auto 强制档位 > 字段数自动判定」；文件头档位矩阵注释同步
+* **feat(src/components/ProTable/ProTable.vue):** SearchForm v-bind 透传 `searchLayout`（缺省不传，保持子组件默认）
+* **feat(src/modules/demo/examples/ProTable/ProTableSearchAdvanced.vue):** 新增 ⑩ 号演示「searchLayout：6 basic 强制 flat 档」——与 ② 号 demo 同字段对照（自动 collapse vs 强制 flat 平铺）
+* **已验证：** SearchForm spec + 3 新用例（强制 flat 6 字段无 toggle 全平铺 / 强制 collapse 2 字段有 toggle / advanced 存在时强制 flat 让位 drawer）全通过、`vue-tsc --build` 无报错、ESLint 无告警
+
 ### ✨ Feat | ProTable 列设置置顶 + 列宽拖拽 column-resize（默认关闭）
 
 > ① 列设置抽屉每列新增置顶按钮（复用 reorder 通道——useColumns.setColumnOrder 同步顺序并持久化，与拖拽排序同一链路，零 composable 改动）② ProTable 新增 column-resize 属性：开启后表头列边框可拖动调宽，默认关闭

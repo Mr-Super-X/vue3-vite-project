@@ -2,7 +2,8 @@
  * ProTable v2.0 能力编排 composable（spec §六 ProTable 编排设计）
  *
  * 把 ProTable.vue 中 4 类能力 composable 的条件实例化 + 启动校验 + v2 expose
- * 统一收敛到此处，让 ProTable.vue 保持 ≤400 行。
+ * 统一收敛到此处，让 ProTable.vue 编排层只持有组装胶水（composables 拆分后
+ * 主文件仍含模板/样式，行数控制依赖后续编排层继续下沉，见 review M3）。
  *
  * 输入：props + columns + table + engineRef
  * 输出：4 个能力 composable 实例 + 8 个 v2 expose 方法 + 启动校验副作用
@@ -13,8 +14,7 @@
  *
  * @group ProTable Composables
  */
-import { computed, onUnmounted, type Ref } from 'vue'
-import type { Ref as RefType } from 'vue'
+import { computed, onUnmounted, ref, type Ref } from 'vue'
 
 // v3.1.3 review：空 Map 单例 —— topIndexByKey 在 props.enableRowDrag=false 时复用，
 // 避免每次 computed 重算都 new Map()（GC 压力）。仅 topIndexByKey 在该场景下被消费方访问时返回。
@@ -38,14 +38,14 @@ import type {
 
 export interface UseTableCapabilitiesOptions<T extends object = Record<string, unknown>> {
   props: ProTableProps<T>
-  columns: { allColumns?: RefType<ProColumn<T>[]> }
-  table: { data: RefType<T[] | null> }
+  columns: { allColumns?: Ref<ProColumn<T>[]> }
+  table: { data: Ref<T[] | null> }
   /**
    * 当前表格引擎（v2.1 决策 5）：vxe-table 引擎不支持树形 / 行拖拽，
    * 检出即 warn + 不实例化对应能力（rowEdit / cellSpan 正常接线）。
    * 缺省按 element-plus 处理（向后兼容未传 engine 的调用方/测试）。
    */
-  engine?: RefType<TableEngine>
+  engine?: Ref<TableEngine>
   /**
    * el-table tbody DOM 获取器 —— 由编排层提供（持有模板 ref），
    * 传入后 useRowDrag 自持挂载生命周期（onMounted + watch data 自动重挂）。

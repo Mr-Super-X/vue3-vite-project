@@ -274,10 +274,15 @@ export function useColumns<T extends object = Record<string, unknown>>(
     persist()
   }
 
-  /** 恢复默认：清 Local 存储 + 重置 allColumns + visibleKeys + 列顺序（附录 A #6） */
+  /**
+   * 恢复默认：清 Local 存储 + 重置 allColumns + visibleKeys + 列顺序（附录 A #6）
+   *
+   * 存储清除与内存重置解耦：ColSetting 抽屉的「恢复默认」按钮无条件渲染（未传
+   * tableKey 时 storageKey 为空串），早期实现整体 return 导致无持久化场景下
+   * 按钮形同虚设 —— 内存状态重置与是否有存储 key 无关。
+   */
   function resetToDefault(): void {
-    if (!storageKey) return
-    Local.remove(storageKey)
+    if (storageKey) Local.remove(storageKey)
     // v3.0 C1 修复：cloneColumns 已正确处理 boolean / Ref<boolean> / undefined 三态，
     // 无需再 manual ref(false) 覆盖（后者会破坏外部 Ref 响应性）。
     // 直接调用 cloneColumns 重建 allColumns，让所有列重新走 computed 包装逻辑

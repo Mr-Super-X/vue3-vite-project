@@ -29,7 +29,7 @@ import {
   ElTooltip,
 } from 'element-plus' // v3.2 升级：ElDialog → ElDrawer（不挤压表格）
 import { Search, Refresh, ArrowUp, ArrowDown, Filter } from '@element-plus/icons-vue'
-import type { ProColumn } from '../types'
+import type { ProColumn, SearchLayoutMode } from '../types'
 import { SearchLevel } from '../types' // v3.2：层级枚举常量
 import { SEARCH_CONTROL_MAP } from '../composables/_utils/searchControlRegistry'
 import { debounceFn } from '../composables/_utils/debounce'
@@ -50,6 +50,13 @@ interface Props {
   expandedStatePersist?: boolean
   /** v3.2 升级：localStorage 命名空间（与 useColumns 列设置同一约定） */
   tableKey?: string
+  /**
+   * v3.4 新增：布局档位 —— 缺省 'auto' 按字段数自动判定；
+   * 显式档位跳过自动判定（应对字段数与页面空间不匹配 / searchDisplay 联动
+   * 导致字段数动态变化引起档位抖动的真实业务场景）。
+   * 存在 advanced 字段时仍强制 drawer（advanced 字段必须可达）。
+   */
+  searchLayout?: SearchLayoutMode
 }
 const props = defineProps<Props>()
 const emit = defineEmits<{
@@ -87,8 +94,10 @@ watch(
   (newVal) => {
     // 父组件 re-assign 后同步本地副本（避免 emit 引用旧值）
     localParams.value = { ...newVal }
-  },
-  { deep: true } // 兼容业务方原地 mutate 场景（详见 useSearch re-assign 模式说明）
+  }
+  // 不加 { deep: true }：useSearch 是唯一生产者，其 API 契约就是 re-assign 新对象引用
+  // （见 useSearch.ts updateParams/reset 注释），浅 watch 引用变化已足够捕获全部更新；
+  // deep watch 会对整个参数树做递归 traverse，对嵌套值（日期范围数组等）是 O(n) 浪费。
 )
 
 const bem = createNamespace('pro-table-search')
@@ -104,7 +113,8 @@ const bem = createNamespace('pro-table-search')
  * - columns 中存在 search.level === 'advanced' 字段 → 自动渲染「高级筛选抽屉」
  * - 「展开/收起」与「高级筛选」互斥（动态自适应）
  *
- * 档位矩阵：
+ * 档位矩阵（v3.4 起 searchLayout 可强制指定，缺省 auto 按本矩阵自动判定；
+ * advanced 字段存在时永远 drawer，优先级高于强制档位）：
  * | 档位        | basic 范围 | advanced | toggle 按钮 | adv 按钮 | inline form         |
  * |-------------|------------|----------|-------------|----------|---------------------|
  * | flat        | ≤ 3        | 0        | 隐藏        | 隐藏     | 全部 basic 平铺     |
@@ -246,15 +256,23 @@ const allBasicColumns = computed<ProColumn[]>(() => {
 })
 
 /**
- * v3.3 升级：当前布局档位（4 档自适应）
+ * v3.3 升级：当前布局档位（4 档自适应 + v3.4 业务方强制档位）
  *
- * 决策顺序：drawer（任何 advanced 字段） > flat-large（basic > 8） >
- *          collapse（basic 4-8） > flat（basic ≤ 3）
+ * 决策顺序：drawer（任何 advanced 字段，保证 advanced 字段可达） >
+ *          业务方强制档位（searchLayout 非 auto） > 字段数自动判定
+ *          （basic > 8 flat-large / 4-8 collapse / ≤3 flat）
  *
  * 该值驱动 showToggle / showAdvancedBtn / mainFormColumns 三处行为。
  */
 const layoutMode = computed<'flat' | 'collapse' | 'flat-large' | 'drawer'>(() => {
+  // advanced 字段存在性永远优先 —— advanced 字段必须经抽屉可达，
+  // 防止业务方强制 flat/collapse 时 advanced 字段静默丢失（无入口渲染）
   if (advancedColumns.value.length > 0) return 'drawer'
+  // v3.4：业务方强制档位跳过字段数自动判定。下放动机：字段数与页面空间
+  // 不一定匹配（宽屏想平铺 6 字段），且 searchDisplay 联动使字段数动态变化时
+  // 自动判定会让档位在 flat/collapse 间跳变（按钮时有时无、布局抖动），
+  // 锁定档位可消除抖动
+  if (props.searchLayout && props.searchLayout !== 'auto') return props.searchLayout
   const basicCount = allBasicColumns.value.length
   if (basicCount > 8) return 'flat-large'
   if (basicCount > 3) return 'collapse'
@@ -321,6 +339,16 @@ function setLocalBulk(patch: Record<string, unknown>): void {
   emit('update:searchParams', next)
 }
 
+/**
+ * emit 当前 localParams 完整快照（空 patch 的语义化封装）——
+ * 用于 onChange 钩子已原地修改 localParams 后，把「业务方改过的现状」一次性同步给父组件。
+ */
+function emitCurrentSnapshot(): void {
+  const next = { ...localParams.value }
+  localParams.value = next
+  emit('update:searchParams', next)
+}
+
 /* ─────────── v3.2 升级：字段级防抖 + searchTrigger ─────────── */
 
 const debounceHandlers = new Map<string, ReturnType<typeof debounceFn>>()
@@ -349,8 +377,10 @@ function handleColUpdate(col: ProColumn, v: unknown): void {
   // onChange 钩子：业务方可在钩子里改写 params（清空联动）
   if (col.search?.onChange) {
     col.search.onChange(v, oldVal, localParams.value)
-    // 业务方在 onChange 里已修改 localParams.value，单次 emit 合并所有修改
-    setLocalBulk({})
+    // 业务方在 onChange 里已原地修改 localParams.value（如 params.paymentTime = undefined），
+    // 需要把当前快照 emit 出去让 useSearch re-assign —— emitCurrentSnapshot() 即
+    // 「emit 当前完整快照」的语义（等价 setLocalBulk({})，但意图自解释，不靠空对象旁注）
+    emitCurrentSnapshot()
   } else {
     // 默认行为：单字段更新
     setLocal(col.prop, v)
@@ -603,6 +633,7 @@ function buildPlaceholder(col: ProColumn, prefix: '请输入' | '请选择' | un
                     ...col.search!.props,
                   }"
                   @update:model-value="(v: unknown) => handleColUpdate(col, v)"
+                  @visible-change="(v: boolean) => handleColVisibleChange(col, v)"
                   @clear="handleSearch"
                 >
                   <template v-if="SEARCH_CONTROL_MAP[col.search!.el].hasOptions" #default>

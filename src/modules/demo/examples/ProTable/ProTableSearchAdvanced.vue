@@ -147,6 +147,14 @@ const responsiveCode = `// 模板层响应式栅格（SearchForm 内部已实现
   ...
 </ElCol>`
 
+const searchLayoutCode = `// v3.4 searchLayout —— 布局档位下放业务方（缺省 'auto' 按字段数自动判定）
+<ProTable :columns="columns" :request-api="api" search-layout="flat" />
+// 6 个 basic 字段自动判定本应是 collapse（折叠），强制 flat 后全部平铺、无展开按钮。
+// 典型场景：
+// - 宽屏页面想平铺更多字段（字段数 ≠ 页面空间需求）
+// - searchDisplay 联动使字段数动态变化 → 锁定档位避免按钮时有时无的布局抖动
+// 注意：存在 search.level='advanced' 字段时永远走 drawer（advanced 字段必须可达）`
+
 const tocItems = [
   // v3.3 新增：4 档布局矩阵
   { id: 'demo-mode-flat', label: 'flat 档（≤ 3 basic）' },
@@ -159,6 +167,8 @@ const tocItems = [
   { id: 'demo-debounce', label: 'drawer 档 · 字段级防抖（输入即搜索）' },
   { id: 'demo-display', label: 'drawer 档 · searchDisplay 联动显隐' },
   { id: 'demo-responsive', label: 'drawer 档 · 响应式栅格' },
+  // v3.4 新增：布局档位下放
+  { id: 'demo-search-layout', label: 'v3.4 · searchLayout 强制档位' },
   { id: 'api-search-config', label: 'SearchConfig 字段' },
   { id: 'api-protable-props', label: 'ProTable.Props 新字段' },
 ]
@@ -418,6 +428,26 @@ const proTablePropsItems = [
             :search-display="advancedSearchDisplay"
             table-key="demo-advanced-responsive"
             row-key="id"
+            :page-size="5"
+          />
+        </DemoField>
+
+        <DemoField
+          id="demo-search-layout"
+          label="⑩ v3.4 searchLayout：6 basic 强制 flat 档（自动判定本应是 collapse）"
+          :code="searchLayoutCode"
+        >
+          <p :class="bem.e('hint')">
+            验证：① 与 ② 号 demo 同样的 6 个 basic 字段，加 search-layout="flat" 后强制平铺 ②
+            右侧**没有「展开/收起」按钮**，6 个字段全部直接可见（对照 ② 号 demo 默认折叠为前 3） ③
+            自动判定规则被显式配置覆盖 —— 字段数与页面空间需求不匹配时的下放手段
+          </p>
+          <ProTable
+            :columns="collapseModeColumns"
+            :request-api="orderRequestApi"
+            table-key="demo-search-layout"
+            row-key="id"
+            search-layout="flat"
             :page-size="5"
           />
         </DemoField>
