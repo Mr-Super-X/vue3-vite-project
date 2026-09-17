@@ -2,6 +2,13 @@
 
 ## 未发布
 
+### ⚙️ Chore | 构建产物分目录输出：js / css / img 各归其位
+
+> 此前 dist 产物全部平铺在 assets/ 单目录，运维排查与 CDN 差异化缓存策略不便。本次按资源类型分目录：js → dist/js/、css → dist/css/、常见图片（png/jpg/jpeg/gif/svg/webp/ico/bmp/avif/tiff/apng）→ dist/img/，字体等其它资源兜底 dist/assets/（本项目当前无字体产物，目录在有对应资源时生成）
+
+* **chore(vite.config.ts):** `build.rollupOptions.output` 新增 `entryFileNames` / `chunkFileNames`（统一 js/ 前缀）+ `assetFileNames` 函数按扩展名分流 css/ → img/ → assets/ 兜底；`assetInfo.name` 在 rolldown 类型中已 @deprecated，改用 `names` 数组（取首个原始文件名判定）
+* **已验证：** `pnpm type-check:full` 通过、`pnpm build` 产物实测（js 26 / css 16 / img 10 全部归位，根目录无散落资源）、index.html 引用路径正确（`/js/*` `/css/*`）、css 内 `url(/img/*)` 绝对路径无相对路径 404 风险、`vite preview` 实测 index/js/css/img 全部 HTTP 200
+
 ### ✨ Feat | ProTable searchLayout：搜索区布局档位下放业务方（v3.4）
 
 > 此前 SearchForm 布局档位（flat/collapse/flat-large/drawer）纯按 basic 字段数自动判定，真实业务两类场景不适配：① 宽屏页面 6 个字段想全平铺却被强制折叠（字段数 ≠ 页面空间需求）② searchDisplay 联动使字段数动态变化时档位在 flat/collapse 间跳变（展开/收起按钮时有时无、布局抖动）。本次把判定权下放：新增 `searchLayout` prop，'auto'（默认）保持自动行为完全向后兼容，显式档位跳过字段数判定

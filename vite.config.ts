@@ -179,6 +179,34 @@ export default defineConfig({
       //
       // 完整字段见 @rolldown/types 或 node_modules/.pnpm/rolldown@1.1.5/.../define-config-BhJ90aEv.d.mts
       output: {
+        // ===== 产物文件分类输出：js / css / img 分目录，其它资源归 assets/ =====
+        // 目的：dist 目录结构清晰，运维可按目录维度排查问题 + CDN 按目录配置差异化缓存策略
+        // 注：rolldown 兼容 rollup 的 entryFileNames / chunkFileNames / assetFileNames 语义
+        entryFileNames: 'js/[name]-[hash].js',
+        chunkFileNames: 'js/[name]-[hash].js',
+        assetFileNames(assetInfo) {
+          // 按资源扩展名分目录：css → css/；常见图片 → img/；字体等其它资源 → assets/
+          // 注：rolldown 的 PreRenderedAsset.name 已 @deprecated，改用 names 数组（取首个原始文件名判定）
+          const assetName = assetInfo.names[0] ?? ''
+          if (assetName.endsWith('.css')) return 'css/[name]-[hash][extname]'
+          const IMG_EXTENSIONS = [
+            '.png',
+            '.jpg',
+            '.jpeg',
+            '.gif',
+            '.svg',
+            '.webp',
+            '.ico',
+            '.bmp',
+            '.avif',
+            '.tiff',
+            '.apng',
+          ]
+          if (IMG_EXTENSIONS.some((ext) => assetName.endsWith(ext)))
+            return 'img/[name]-[hash][extname]'
+          return 'assets/[name]-[hash][extname]'
+        },
+
         // 手动拆分第三方库（vendor chunk）→ 利用浏览器强缓存
         // 业务代码 (src/) 变化时只更新业务 chunk，第三方库 chunk 命中缓存
         // 注：Vite 8 用 rolldown 替代 rollup，manualChunks 必须是函数（不能是对象）
