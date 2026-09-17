@@ -432,6 +432,9 @@ function handleCloseClick(): void {
     flex-shrink: 0;
     align-items: center;
     gap: 4px;
+    .el-button + .el-button {
+      margin-left: 0px;
+    }
   }
 
   &__action-btn {
