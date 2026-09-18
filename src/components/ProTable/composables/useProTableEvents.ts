@@ -53,6 +53,14 @@ export interface UseProTableEventsSearch {
 }
 
 /**
+ * 行编辑桥接所需最小接口 —— 仅依赖 _start（双击启动 + 行数据回填 drafts），
+ * 与 UseProTableEventsTable 同一「最小接口」设计，不 import useRowEdit 全量类型
+ */
+export interface UseProTableEventsRowEdit {
+  _start: (rowKey: string | number, rowData?: Record<string, unknown>) => void
+}
+
+/**
  * vxe 引擎行高重算上下文 —— ProTable.vue 持有 proTableVxe ref，
  * 本 composable 不感知 VxeTableBody 内部结构，仅通过 recalculate 方法触发行高重算
  */
@@ -77,6 +85,8 @@ export interface UseProTableEventsOptions<T extends object = Record<string, unkn
   columns: UseProTableEventsColumns<T>
   search: UseProTableEventsSearch
   treeData: ReturnType<typeof useTreeData> | null
+  /** 行编辑能力（未启用 enableRowEdit 时为 null）—— 双击编辑启动通道 */
+  rowEdit: UseProTableEventsRowEdit | null
   engine: UseProTableEventsEngineContext
   emit: UseProTableEventsEmit<T>
 }
@@ -96,6 +106,13 @@ export interface UseProTableEventsReturn {
   handleRadioSelect: (row: Record<string, unknown>) => void
   /** 树形展开/折叠 —— 转发给 useTreeData.toggle */
   handleExpandToggle: (rowKey: string | number) => void
+  /**
+   * 双击单元格启动行编辑 —— 两引擎 body 组件统一只转发 cell-dblclick 事件到此，
+   * 由桥接层调 rowEdit._start（带回填行数据初始化 drafts）。
+   * 2026-09-18 review 收编理由：原 el 分支在展示组件内直调 _start（越权 + 与文件头
+   * 「仅事件转发」声明矛盾），vxe 分支只 emit 无人消费导致双击编辑静默失效
+   */
+  handleCellDblclick: (rowKey: string | number, rowData: Record<string, unknown>) => void
   /** 搜索参数纯写 —— SearchForm @update:search-params */
   updateSearchParams: (v: Record<string, unknown>) => void
   /** 列设置抽屉：可见性切换 */
@@ -109,7 +126,7 @@ export interface UseProTableEventsReturn {
 export function useProTableEvents<T extends object = Record<string, unknown>>(
   options: UseProTableEventsOptions<T>
 ): UseProTableEventsReturn {
-  const { table, columns, search, treeData, engine, emit } = options
+  const { table, columns, search, treeData, rowEdit, engine, emit } = options
 
   function handlePageChange(p: number): void {
     table.setPage(p)
@@ -153,6 +170,11 @@ export function useProTableEvents<T extends object = Record<string, unknown>>(
     if (treeData) void treeData.toggle(rowKey)
   }
 
+  /** 双击启动行编辑桥接 —— rowData 回填 drafts（v3.0 修复语义保留） */
+  function handleCellDblclick(rowKey: string | number, rowData: Record<string, unknown>): void {
+    rowEdit?._start(rowKey, rowData)
+  }
+
   /** 搜索参数更新桥接 —— SearchForm @update:search-params */
   function updateSearchParams(v: Record<string, unknown>): void {
     search.updateParams(v)
@@ -181,6 +203,7 @@ export function useProTableEvents<T extends object = Record<string, unknown>>(
     handleSelectionChange,
     handleRadioSelect,
     handleExpandToggle,
+    handleCellDblclick,
     updateSearchParams,
     updateVisibleKeys,
     updateColumnOrder,

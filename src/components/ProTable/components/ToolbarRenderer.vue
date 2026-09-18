@@ -82,29 +82,31 @@ watch(
 const directList = computed(() => visibleActions.value.slice(0, props.maxVisible))
 const overflowList = computed(() => visibleActions.value.slice(props.maxVisible))
 
-/** 点击防重入：Promise 形态的 onClick 未结算前禁止再次点击（按钮 loading 反馈） */
+/** 点击防重入：Promise 形态的 onClick 未结算前禁止再次点击（按钮 loading 反馈）。
+ *  2026-09-18 review：confirm 等待期间同样持锁——否则用户在弹窗未决时点其他按钮，
+ *  命令式 useConfirm 二次触发会替换首个弹窗，首个 Promise 悬挂造成泄漏窗口。 */
 const pendingAction = ref<ToolbarAction<T> | null>(null)
 
 async function handleClick(action: ToolbarAction<T>): Promise<void> {
   if (resolveBoolOrFn(action.disabled)) return
+  // 全局单锁：置锁后覆盖 confirm + onClick 全程，结算（含取消）才释放
   if (pendingAction.value) return
-  // 二次确认：useConfirm 取消时 resolve false 直接返回（无须 try/catch，CLAUDE.md §1.5）
-  if (action.confirm) {
-    const ok =
-      typeof action.confirm === 'string'
-        ? await useConfirm(action.confirm)
-        : await useConfirm(action.confirm)
-    if (!ok) return
-  }
-  const result = action.onClick(props.ctx)
-  // Promise 形态：结算前锁定（异常向上抛交给业务，不静默吞——项目错误处理规范）
-  if (result instanceof Promise) {
-    pendingAction.value = action
-    try {
-      await result
-    } finally {
-      pendingAction.value = null
+  pendingAction.value = action
+  try {
+    // 二次确认：useConfirm 取消时 resolve false 直接返回（无须 try/catch，CLAUDE.md §1.5）。
+    // 注意：typeof 分流不是冗余——useConfirm 有两个重载（string / UseConfirmOptions），
+    // 联合类型参数无法匹配单个重载，必须先 narrow（2026-09-18 review 曾误合并导致 TS2769，已回退）
+    if (action.confirm) {
+      const ok =
+        typeof action.confirm === 'string'
+          ? await useConfirm(action.confirm)
+          : await useConfirm(action.confirm)
+      if (!ok) return
     }
+    // 异常向上抛交给业务，不静默吞（项目错误处理规范）；finally 保证锁一定释放
+    await action.onClick(props.ctx)
+  } finally {
+    pendingAction.value = null
   }
 }
 
@@ -117,8 +119,8 @@ function handleCommand(action: ToolbarAction<T>): void {
 <template>
   <div :class="bem.b()">
     <ElButton
-      v-for="(action, index) in directList"
-      :key="`${action.label}-${index}`"
+      v-for="action in directList"
+      :key="action.label"
       :type="action.type ?? 'default'"
       :icon="action.icon!"
       :disabled="resolveBoolOrFn(action.disabled)"
@@ -134,11 +136,7 @@ function handleCommand(action: ToolbarAction<T>): void {
       </ElButton>
       <template #dropdown>
         <ElDropdownMenu>
-          <ElDropdownItem
-            v-for="(action, index) in overflowList"
-            :key="`${action.label}-${index}`"
-            :command="action"
-          >
+          <ElDropdownItem v-for="action in overflowList" :key="action.label" :command="action">
             {{ action.label }}
           </ElDropdownItem>
         </ElDropdownMenu>

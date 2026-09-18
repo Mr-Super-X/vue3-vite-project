@@ -279,7 +279,15 @@ export function useTable<T extends object = Record<string, unknown>>(
     const unique: T[] = []
     for (const row of rows) {
       // T extends object 无索引签名：行字段读取统一经 Record 转换（本文件唯一 cast 点）
-      const k = String((row as Record<string, unknown>)[key])
+      const v = (row as Record<string, unknown>)[key]
+      // 2026-09-18 review：原 String(undefined) === 'undefined' 使多行同缺 key 字段
+      // 被错误去重成一行（selectedRows 静默丢数据）；缺 key 的行不参与去重、全部保留，
+      // 与 el-table 对无 key 行的行为对齐。有效值仍 String 化统一（1 与 '1' 同 key 语义不变）
+      if (v === null || v === undefined) {
+        unique.push(row)
+        continue
+      }
+      const k = String(v)
       if (seen.has(k)) continue
       seen.add(k)
       unique.push(row)

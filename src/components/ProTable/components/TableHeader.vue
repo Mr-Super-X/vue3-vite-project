@@ -1,10 +1,14 @@
-<script setup lang="ts">
+<script setup lang="ts" generic="T extends object = Record<string, unknown>">
 /**
  * TableHeader —— 工具栏（spec §五组件树 / §七插槽系统）
  *
  * 职责：刷新按钮 + 密度切换（三档：紧凑/默认/宽松）+ 列设置按钮 +
  * 全屏切换（v3.1）+ 插槽（tableHeader / toolButton）+
  * toolbar 配置式按钮组渲染（2026-09-18：slot 内容在前，ToolbarRenderer 渲染配置在后）。
+ *
+ * 2026-09-18 review：补 generic<T> 透传——原声明落为默认 Record 泛型，
+ * 行类型在 ProTable → TableHeader → ToolbarRenderer 链上断层（hover 丢 T 提示），
+ * 编排层被迫写 `as unknown as` 双断言。
  *
  * @group ProTable 子组件
  */
@@ -21,9 +25,9 @@ interface Props {
   /** v3.1：当前全屏状态（按钮高亮用） */
   fullscreen?: boolean
   /** 2026-09-18：toolbar 配置式按钮组（编排层 props.toolbar 投影；缺省不渲染） */
-  toolbar?: ToolbarAction[]
+  toolbar?: ToolbarAction<T>[]
   /** 2026-09-18：slot 作用域 + ToolbarRenderer 共用的上下文（选中行/loading/refresh） */
-  toolbarCtx: ToolbarCtx
+  toolbarCtx: ToolbarCtx<T>
   /** 2026-09-18：toolbar 直出上限（透传 ToolbarRenderer，默认 3）；`| undefined` 兼容 exactOptionalPropertyTypes 显式传 undefined */
   maxVisibleActions?: number | undefined
 }

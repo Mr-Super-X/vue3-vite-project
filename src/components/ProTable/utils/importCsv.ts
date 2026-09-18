@@ -17,6 +17,13 @@ export interface ImportCsvOptions {
    * 声明的列在表头中缺失时输出 undefined（业务层校验补全）。
    */
   columns: CsvColumn[]
+  /**
+   * 文件大小上限（字节）—— 缺省不设限（保持既有行为）。
+   * 2026-09-18 review：file.text() 一次性读入内存，字符串 + rows 二维数组 + 输出对象
+   * 约为文件体积的数倍，低内存设备大文件会 OOM。业务侧若面向大文件导入场景，
+   * 应显式设限（如 50 * 1024 * 1024）并由调用方捕获提示用户。
+   */
+  maxFileSize?: number
 }
 
 /**
@@ -100,6 +107,12 @@ export async function importCsv(
   file: File,
   options: ImportCsvOptions
 ): Promise<Record<string, unknown>[]> {
+  // 大小守卫（可选）：超限抛 RangeError 由业务层捕获提示（职责边界：utils 只负责解析）
+  if (options.maxFileSize !== undefined && file.size > options.maxFileSize) {
+    throw new RangeError(
+      `[importCsv] 文件大小 ${(file.size / 1024 / 1024).toFixed(1)}MB 超过上限 ${(options.maxFileSize / 1024 / 1024).toFixed(1)}MB`
+    )
+  }
   const raw = await file.text()
   // 去 BOM（Excel 保存的 CSV 常带 UTF-8 BOM）
   const text = raw.charCodeAt(0) === 0xfeff ? raw.slice(1) : raw

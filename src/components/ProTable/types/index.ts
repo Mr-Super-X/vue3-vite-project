@@ -444,7 +444,10 @@ export type ToolbarConfirm =
  * @group ProTable 类型
  */
 export interface ToolbarAction<T extends object = Record<string, unknown>> {
-  /** 按钮文本 */
+  /**
+   * 按钮文本 —— 同时是 v-for 渲染 key（同 toolbar / 同 selectionBarActions 组内须唯一，
+   * 否则增删 actions 时 key 错位导致按钮复用错乱；children 拍平后与父级同序列，亦须唯一）
+   */
   label: string
   /** EP 按钮语义色（默认 'default'）；'danger' 用于批量删除等危险操作，建议必配 confirm */
   type?: 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'default'

@@ -16,7 +16,7 @@
  * @see [`../adapters/vxe-column`](../adapters/vxe-column.ts) ProColumn → VxeColumn 映射
  * @group ProTable 组件
  */
-import { onMounted, shallowRef, ref, computed } from 'vue' // vue 生命周期/底层 API（CLAUDE.md §1.6.1）
+import { onMounted, shallowRef, ref, computed, watch } from 'vue' // vue 生命周期/底层 API（CLAUDE.md §1.6.1）
 import { ElSkeleton } from 'element-plus' // element-plus 按需注入（unplugin-vue-components 只管模板，script 中显式 import）
 import type { ProColumn, SortChangeEvent, TableDensity } from '../types'
 import type { useRowEdit } from '../composables/useRowEdit'
@@ -64,7 +64,7 @@ const emit = defineEmits<{
   /** v3.1：单选选中（vxe 内置 radio 列 radio-change 事件上行；编排层收敛到统一选中区） */
   (e: 'radio-select', row: Record<string, unknown>): void
   /** 双击单元格（已解析 rowKey；编排层转发给 rowEdit._start） */
-  (e: 'cell-dblclick', rowKey: string | number): void
+  (e: 'cell-dblclick', rowKey: string | number, rowData: Record<string, unknown>): void
   /** 排序变化（已适配为内部 SortChangeEvent；编排层判定 sortable==='custom' 后走 M2 服务端排序） */
   (e: 'sort-change', evt: SortChangeEvent): void
   /** 引擎加载失败 —— 编排层切回 element-plus */
@@ -171,10 +171,26 @@ const checkboxConfig = computed(() =>
   hasReserveSelection(props.columns) ? { reserve: true } : undefined
 )
 
-/** 双击单元格 → 行编辑进入 */
+/** 双击单元格 → 行编辑进入（纯事件转发：编排层 useProTableEvents 调 rowEdit._start） */
 function handleCellDblclick(payload: { row: Record<string, unknown> }): void {
-  emit('cell-dblclick', rowKeyOf(payload.row))
+  emit('cell-dblclick', rowKeyOf(payload.row), payload.row)
 }
+
+/**
+ * 2026-09-18 review：非 reserve 语义下翻页/数据刷新须清空镜像选区——
+ * 原实现仅 checkbox 事件维护 selectedRows，rows 替换后旧行残留并持续 emit，
+ * 与 el 引擎「非 reserve 翻页自动清选区」行为不一致，编排层拿到脏选区。
+ * reserve 分支由 vxe 内部按 keyField 自行管理跨页选区，不动。
+ */
+watch(
+  () => props.rows,
+  () => {
+    if (hasReserveSelection(props.columns)) return
+    if (selectedRows.value.length === 0) return
+    selectedRows.value = []
+    emit('selection-change', [])
+  }
+)
 </script>
 
 <template>

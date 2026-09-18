@@ -74,8 +74,8 @@ const emit = defineEmits<{
   (e: 'selection-change', rows: Record<string, unknown>[]): void
   /** v3.1：单选选中（整行数据透传；编排层 setSelectedRows([row]) 收敛到统一选中区） */
   (e: 'radio-select', row: Record<string, unknown>): void
-  /** 双击单元格（已解析 rowKey；编排层转发给 rowEdit._start） */
-  (e: 'cell-dblclick', rowKey: string | number): void
+  /** 双击单元格（rowKey + 行数据；编排层 useProTableEvents 转发给 rowEdit._start） */
+  (e: 'cell-dblclick', rowKey: string | number, rowData: Record<string, unknown>): void
   /** 树形展开/折叠（已解析 rowKey；编排层转发给 treeData.toggle） */
   (e: 'expand-toggle', rowKey: string | number): void
   /** 排序变化（原始 el-table 负载；编排层判定 sortable==='custom' 后走 M2 服务端排序） */
@@ -106,10 +106,11 @@ function onSelectionChange(rows: Record<string, unknown>[]): void {
   emit('selection-change', rows)
 }
 function onCellDblclick(row: unknown): void {
-  const rowKey = rowKeyOf(row)
-  // v3.0 修复：双击进入编辑时回填原行值（_start 接收 rowData 初始化 drafts）
-  props.rowEdit?._start(rowKey, row as Record<string, unknown>)
-  emit('cell-dblclick', rowKey)
+  // 2026-09-18 review：原在此直调 rowEdit._start（展示组件越权触发行编辑生命周期，
+  // 与文件头「仅做读取与事件转发」声明矛盾；且 vxe 分支无此直调路径，双击编辑在
+  // vxe 引擎静默失效）。统一收编为纯事件转发：编排层 useProTableEvents.handleCellDblclick
+  // 接收后调 _start（rowData 随行事件带上，v3.0 回填 drafts 语义不变）
+  emit('cell-dblclick', rowKeyOf(row), row as Record<string, unknown>)
 }
 function onExpandChange(row: unknown): void {
   emit('expand-toggle', rowKeyOf(row))

@@ -36,8 +36,16 @@ const emit = defineEmits<{
 
 const bem = createNamespace('pro-table-selection-bar')
 
+/**
+ * 2026-09-18 review：useSlots() 必须在 setup 顶层调用。
+ * 原写在 computed getter 内，依赖「重算时刻恰有 active instance」——边缘触发路径
+ * （响应式上下文外重算）currentInstance 为 null 会取不到 slots，
+ * hasDefaultSlot 误降为 false 导致 slot 与 actions 并存渲染。
+ */
+const slots = useSlots()
+
 /** 右侧是否被 slot 完全接管（slot 优先于 actions 配置） */
-const hasDefaultSlot = computed(() => Boolean(useSlots().default))
+const hasDefaultSlot = computed(() => Boolean(slots.default))
 
 /** slot 作用域：ctx 全量 + 清除句柄（命名 clearSelection 与 ProTableExpose 对齐） */
 const slotScope = computed(() => ({
@@ -117,6 +125,13 @@ const slotScope = computed(() => ({
     display: inline-flex;
     align-items: center;
     gap: 8px;
+  }
+}
+
+/* 尊重减弱动效偏好（web/performance 规范）：用户系统开启 reduced-motion 时跳过进场动画 */
+@media (prefers-reduced-motion: reduce) {
+  .#{$BEM_PREFIX}-pro-table-selection-bar {
+    animation: none;
   }
 }
 </style>

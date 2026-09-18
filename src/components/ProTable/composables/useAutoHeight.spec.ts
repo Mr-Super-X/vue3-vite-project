@@ -15,8 +15,12 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { ref, nextTick, effectScope } from 'vue'
 import { useAutoHeight } from './useAutoHeight'
 
-/** 构造 mock 根容器：getBoundingClientRect + 按选择器返回子区域高度 */
-function mockRoot(top: number, heights: Record<string, number>): HTMLElement {
+/**
+ * 构造 mock 根容器：getBoundingClientRect + 按选择器返回子区域高度。
+ * childCount：2026-09-18 review 后间距按 root 实际渲染子元素数动态算，
+ * 夹具须显式声明（默认 4 = search/header/AsyncState/pagination 四区域三间距 → 36px）
+ */
+function mockRoot(top: number, heights: Record<string, number>, childCount = 4): HTMLElement {
   const els = new Map<string, HTMLElement>()
   for (const [selector, height] of Object.entries(heights)) {
     els.set(selector, { getBoundingClientRect: () => ({ height }) } as unknown as HTMLElement)
@@ -24,6 +28,7 @@ function mockRoot(top: number, heights: Record<string, number>): HTMLElement {
   return {
     getBoundingClientRect: () => ({ top, height: 0 }),
     querySelector: (sel: string) => els.get(sel) ?? null,
+    childElementCount: childCount,
   } as unknown as HTMLElement
 }
 

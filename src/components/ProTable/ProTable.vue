@@ -64,6 +64,7 @@ import type {
 const bem = createNamespace('pro-table')
 const searchFormBem = createNamespace('pro-table-search')
 const tableHeaderBem = createNamespace('pro-table-header')
+const selectedTagsBem = createNamespace('pro-table-selected-tags') // v3.2：autoHeight 高度扣除注入用
 const selectionBarBem = createNamespace('pro-table-selection-bar') // 2026-09-18：autoHeight selectors 注入用
 
 /**
@@ -210,6 +211,8 @@ const { maxHeight: autoHeightMax } = useAutoHeight({
   selectors: {
     search: searchFormBem.b(),
     header: tableHeaderBem.b(),
+    // v3.2 已选条件回显区：2026-09-18 review 修复高度漏算（同开时表格溢出视口）
+    selectedTags: selectedTagsBem.b(),
     // pagination 选填：保留 element-plus 默认 '.el-pagination'
     // 2026-09-18（设计 D8）：SelectionBar v-if 挂载/卸载时经 ResizeObserver 联动重测
     selectionBar: selectionBarBem.b(),
@@ -309,6 +312,8 @@ const events = useProTableEvents<T>({
   columns,
   search,
   treeData,
+  // 2026-09-18 review：双击编辑收编——两引擎 body 只转发 cell-dblclick，由桥接层调 _start
+  rowEdit: rowEdit ?? null,
   engine: {
     effectiveEngine,
     proTableVxe,
@@ -570,8 +575,8 @@ defineExpose({
         :density="table.density.value"
         :col-setting-visible="columns.colSettingVisible.value"
         :fullscreen="isFullscreen"
-        :toolbar="(props.toolbar ?? []) as unknown as ToolbarAction[]"
-        :toolbar-ctx="toolbarCtx as unknown as ToolbarCtx"
+        :toolbar="(props.toolbar ?? []) as ToolbarAction<T>[]"
+        :toolbar-ctx="toolbarCtx"
         :max-visible-actions="props.maxVisibleActions"
         @refresh="table.refresh"
         @update:density="events.handleDensityChange"
@@ -593,8 +598,8 @@ defineExpose({
       -->
       <SelectionBar
         v-if="table.selectedRows.value.length > 0"
-        :ctx="toolbarCtx as unknown as ToolbarCtx"
-        :actions="(props.selectionBarActions ?? []) as unknown as ToolbarAction[]"
+        :ctx="toolbarCtx"
+        :actions="(props.selectionBarActions ?? []) as ToolbarAction<T>[]"
         :max-visible="props.maxVisibleActions"
         @clear="table.clearSelection"
       >
@@ -640,6 +645,7 @@ defineExpose({
           @selection-change="events.handleSelectionChange"
           @radio-select="events.handleRadioSelect"
           @expand-toggle="events.handleExpandToggle"
+          @cell-dblclick="events.handleCellDblclick"
           @sort-change="events.handleSortChange"
         >
           <!-- 透传业务插槽（col.prop 命名插槽等），保持 v1 插槽契约不变 -->
@@ -663,6 +669,7 @@ defineExpose({
           v-bind="vxeTableBindings"
           @selection-change="events.handleSelectionChange"
           @radio-select="events.handleRadioSelect"
+          @cell-dblclick="events.handleCellDblclick"
           @sort-change="events.handleSortChange"
           @engine-fallback="handleEngineFallback"
         >

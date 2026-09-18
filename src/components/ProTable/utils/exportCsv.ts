@@ -29,7 +29,12 @@ export interface ExportCsvOptions {
   bom?: boolean
 }
 
-/** UTF-8 BOM —— Excel 依赖此前缀识别 UTF-8 编码（显式转义，避免不可见字符在编辑中丢失） */
+/**
+ * UTF-8 BOM —— Excel 依赖此前缀识别 UTF-8 编码。
+ * 用转义序列而非字面量 U+FEFF：字面量 BOM 在编辑器往返 / git / 格式化工具链中
+ * 会被静默剥离（2026-09-18 review HIGH：注释声称显式转义但实现是字面量，已修正），
+ * 导致 bom 默认开启却静默失效、Excel 中文乱码极难排查。
+ */
 const BOM = '﻿'
 
 /** RFC4180 单元格转义：含 , " 换行 的字段整体加引号，内部引号 doubling */

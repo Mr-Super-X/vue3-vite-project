@@ -40,6 +40,9 @@ export interface UseAutoHeightOptions {
     search?: string
     /** TableHeader 根 BEM 类（编排层 tableHeaderBem.b()） */
     header?: string
+    /** SelectedTags 根 BEM 类（编排层 selectedTagsBem.b()，v3.2 已选条件回显区）——
+     * 可选：showSelectedTags 开启时才渲染；2026-09-18 review 修复高度漏算 */
+    selectedTags?: string
     /** ElPagination 选择器（element-plus 稳定 class） */
     pagination?: string
     /**
@@ -55,8 +58,12 @@ export interface UseAutoHeightReturn {
   maxHeight: Ref<number | null>
 }
 
-/** 根容器子区域间距 —— ProTable.vue `& > * + * { margin-top: 12px }`，4 个区域 3 个间距 */
-const FIXED_MARGIN_TOTAL = 36
+/** 兄弟区域间距单位 —— ProTable.scss `& > * + * { margin-top: 12px }`。
+ * 2026-09-18 review：原 FIXED_MARGIN_TOTAL=36 硬编码「4 区域 3 间距」，v3.2 后兄弟区域
+ * 最多 6 个（SearchForm/SelectedTags/TableHeader/SelectionBar/AsyncState/ElPagination），
+ * 静态常量导致与 SelectedTags/SelectionBar 同开时 maxHeight 系统性高估、表格溢出视口。
+ * 间距总数改为 measure 时按 root 实际渲染子元素数动态计算。 */
+const SIBLING_MARGIN = 12
 /** 极端窄视口下的高度下限 —— 避免 maxHeight 算出负数/个位数导致表体不可见 */
 const MIN_TABLE_HEIGHT = 100
 
@@ -109,6 +116,7 @@ export function useAutoHeight(options: UseAutoHeightOptions): UseAutoHeightRetur
     // v3.1.4 review：选择器从 options.selectors 读取，无默认值（避免 BEM 静默失效）
     const searchSel = options.selectors?.search
     const headerSel = options.selectors?.header
+    const selectedTagsSel = options.selectors?.selectedTags
     const paginationSel = options.selectors?.pagination ?? DEFAULT_PAGINATION_SELECTOR
     const selectionBarSel = options.selectors?.selectionBar
     const searchH = searchSel
@@ -117,19 +125,28 @@ export function useAutoHeight(options: UseAutoHeightOptions): UseAutoHeightRetur
     const headerH = headerSel
       ? (getCachedElement(root, headerSel)?.getBoundingClientRect().height ?? 0)
       : 0
+    // 2026-09-18 review：原实现漏算 SelectedTags（v3.2 起默认开启，约 32px+），
+    // autoHeight 与已选条件回显同开时表格底部溢出视口
+    const selectedTagsH = selectedTagsSel
+      ? (getCachedElement(root, selectedTagsSel)?.getBoundingClientRect().height ?? 0)
+      : 0
     const paginationH = getCachedElement(root, paginationSel)?.getBoundingClientRect().height ?? 0
     // SelectionBar 高度：批量条 v-if 挂载/卸载时经 ResizeObserver 联动重测（设计 D8）
     const selectionBarH = selectionBarSel
       ? (getCachedElement(root, selectionBarSel)?.getBoundingClientRect().height ?? 0)
       : 0
+    // 间距按 root 实际渲染的子元素数动态算（ColSetting 为 teleport dialog，root 内无元素残留）。
+    // `?? 0` 防御与 getCachedElement 同因：vitest mockRoot 夹具运行时无 childElementCount
+    const marginTotal = Math.max((root.childElementCount ?? 0) - 1, 0) * SIBLING_MARGIN
     const available =
       window.innerHeight -
       top -
       searchH -
       headerH -
+      selectedTagsH -
       paginationH -
       selectionBarH -
-      FIXED_MARGIN_TOTAL -
+      marginTotal -
       (options.offset ?? 0)
     maxHeight.value = Math.max(available, MIN_TABLE_HEIGHT)
   }

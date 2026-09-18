@@ -71,7 +71,8 @@ export interface UseTableCapabilitiesReturn<T extends object = Record<string, un
   /** v3.0.1 新增：el-table-v2 引擎的 v2 配置（virtualized 启用时为非空 Ref） */
   v2TableConfig: ReturnType<typeof useVirtualScroll>['v2TableConfig'] | null
   extendedExpose: {
-    startEdit: (rowKey: string | number) => void
+    /** 程序化启动行编辑（rowData 缺省时 drafts 不回填，编辑框显空值） */
+    startEdit: (rowKey: string | number, rowData?: Record<string, unknown>) => void
     cancelEdit: (rowKey?: string | number) => void
     saveEdit: (rowKey?: string | number) => Promise<boolean>
     expandNode: (rowKey: string | number, expanded?: boolean) => void
@@ -242,7 +243,9 @@ export function useTableCapabilities<T extends object = Record<string, unknown>>
   })
 
   const extendedExpose = {
-    startEdit: (rowKey: string | number) => rowEdit?._start(rowKey),
+    // 2026-09-18 review：透传 rowData（与双击编辑 _start(rowKey, rowData) 回填语义对齐）
+    startEdit: (rowKey: string | number, rowData?: Record<string, unknown>) =>
+      rowEdit?._start(rowKey, rowData),
     cancelEdit: (rowKey?: string | number) => {
       if (rowKey === undefined && rowEdit) {
         rowEdit.editingKeys.value.forEach((k) => rowEdit._cancel(k))
