@@ -120,4 +120,15 @@ describe('EditCell', () => {
     expect(wrapper.find('.el-input-stub').exists()).toBe(false)
     expect(wrapper.html()).toContain('my-custom-comp')
   })
+
+  // ─────────── v3.5 PR1-A：A11y 编辑态播报 ───────────
+
+  it('v3.5：进入编辑时插入 sr-only span + aria-live 播报', () => {
+    const wrapper = mountEditCell({ el: 'input' }, 'x')
+    const srOnly = wrapper.find('.sr-only')
+    expect(srOnly.exists()).toBe(true)
+    expect(srOnly.attributes('aria-live')).toBe('polite')
+    // 播报消息含字段名（label 优先，缺省回落 prop）
+    expect(srOnly.text()).toContain('已进入编辑')
+  })
 })

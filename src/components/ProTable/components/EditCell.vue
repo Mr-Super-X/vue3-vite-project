@@ -98,10 +98,23 @@ function handleBlur(evt: FocusEvent): void {
   // el-input 的 blur 事件 target.value 即当前输入值
   emit('update', props.col.prop, target?.value ?? props.value)
 }
+
+/**
+ * v3.5 PR1-A：A11y 播报 —— 进入编辑态时屏幕阅读器朗读「已进入编辑 字段名」，
+ * 让盲用户明确感知「我现在处于编辑态可以输入」。sr-only 视觉隐藏但 aria-live
+ * 区域可被 NVDA / JAWS / VoiceOver 识别。
+ */
+const ariaLiveMessage = computed(() => `已进入编辑 ${props.col.label ?? props.col.prop}`)
 </script>
 
 <template>
   <div :class="bem.b()">
+    <!--
+      v3.5 PR1-A：编辑态播报（aria-live）
+      - 进入编辑：屏幕阅读器朗读「已进入编辑 字段名」
+      - 视觉隐藏：position absolute + clip-path（_a11y.scss sr-only 工具类复用）
+    -->
+    <span class="sr-only" aria-live="polite">{{ ariaLiveMessage }}</span>
     <!-- 统一根 div：编辑控件尺寸/宽度样式的 BEM 挂载点（input-number 宽度 100% 需要稳定后代选择器）。
          注意根元素前不能放 HTML 注释 —— Vue 3 会把注释计为 fragment 额外根节点，$el 指向注释锚点 -->
     <!-- :size 在 v-bind 之前：edit.props.size 显式优先；缺省随 density 映射（compact→small / default→default / loose→large） -->
