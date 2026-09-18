@@ -88,4 +88,11 @@ describe('SelectionBar', () => {
     expect(root.exists()).toBe(true)
     expect(root.attributes('aria-live')).toBe('polite')
   })
+
+  // ─────────── v3.5 PR1-A：A11y aria-label 补齐 ───────────
+
+  it('v3.5：清除按钮 aria-label="清除选择"', () => {
+    const wrapper = mount(SelectionBar, { props: { ctx: makeCtx() } })
+    expect(wrapper.find('[data-test="selection-clear"]').attributes('aria-label')).toBe('清除选择')
+  })
 })

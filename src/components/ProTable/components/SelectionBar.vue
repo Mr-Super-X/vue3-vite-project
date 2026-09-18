@@ -67,6 +67,7 @@ const slotScope = computed(() => ({
         type="primary"
         size="small"
         :class="bem.e('clear')"
+        aria-label="清除选择"
         data-test="selection-clear"
         @click="emit('clear')"
       >
