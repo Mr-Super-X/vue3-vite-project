@@ -3,7 +3,7 @@
 > **文档版本**：v3.4.0 | **最后更新**：2026-09-17
 > **覆盖版本**：v2.0（含 v2.1 vxe-table 引擎 + 服务端排序）
 > **源码位置**：`src/components/ProTable/`
-> **demo 站**：`/demo/pro-table-overview`（9 个演示：Overview / EngineCompare / Expand / ServerSort / Tree / StyleOverride / CellSpan / RowDrag / RowEdit）
+> **demo 站**：`/demo/pro-table-overview`（22 个演示：21 个能力 demo + 主入口，完整清单见 §16 示例索引）
 
 ---
 
@@ -13,13 +13,13 @@
 
 **3 大特色**：
 
-| 特色                   | 体现                                                                                    |
-| ---------------------- | --------------------------------------------------------------------------------------- |
-| **配置驱动**           | 一份 `columns` 同时驱动表头 + 表格列 + 搜索表单 + 列设置                                |
-| **双引擎**             | `element-plus`（默认）+ `vxe-table`（v2.1 动态加载），自动回退                          |
-| **6 composables 编排** | `useSearch` / `useColumns` / `useTable` / `useTableCapabilities` / 4 个能力 composables |
-| **4 大能力**           | v2.0 新增：行内编辑 / 树形 / 单元格合并 / 行拖拽（按需启用）                            |
-| **三态闭环**           | 与 `AsyncState` / `useRequest` 配合，loading/error/empty 完整处理                       |
+| 特色                    | 体现                                                                                                    |
+| ----------------------- | ------------------------------------------------------------------------------------------------------- |
+| **配置驱动**            | 一份 `columns` 同时驱动表头 + 表格列 + 搜索表单 + 列设置                                                |
+| **双引擎**              | `element-plus`（默认）+ `vxe-table`（v2.1 动态加载），自动回退                                          |
+| **17 composables 编排** | 核心 `useSearch` / `useColumns` / `useTable` / `useTableCapabilities` + 13 个能力/引擎/事件 composables |
+| **4 大能力**            | v2.0 新增：行内编辑 / 树形 / 单元格合并 / 行拖拽（按需启用）                                            |
+| **三态闭环**            | 与 `AsyncState` / `useRequest` 配合，loading/error/empty 完整处理                                       |
 
 **适用场景**：
 
@@ -113,6 +113,9 @@ async function requestApi(params: Record<string, unknown>) {
 | `searchLayout`         | `'auto' \| 'flat' \| 'collapse' \| 'flat-large' \| 'drawer'` | `'auto'`         | 搜索区布局档位强制指定（v3.4：替代纯字段数自动判定）                     |
 | `showSelectedTags`     | `boolean`                                                    | `true`           | 搜索区与表格之间显示「已选条件」tag 回显（v3.2）                         |
 | `expandedStatePersist` | `boolean`                                                    | `false`          | 展开/收起状态持久化到 localStorage（v3.2；需配合 `tableKey`）            |
+| `toolbar`              | `ToolbarAction<T>[]`                                         | `undefined`      | 工具栏配置式按钮（2026-09-18：权限/确认/折叠由组件代管，见 §9）          |
+| `selectionBarActions`  | `ToolbarAction<T>[]`                                         | `undefined`      | 批量操作条按钮（选中行 > 0 时浮出，见 §9.3）                             |
+| `maxVisibleActions`    | `number`                                                     | `3`              | 工具栏直出按钮上限，超出折叠进「更多」下拉（见 §9.1）                    |
 
 ### 1.3 defineExpose（v2.0）
 
@@ -690,7 +693,121 @@ tableRef.value?.refreshChildren('org-1') // 重新加载 org-1 子节点
 
 ---
 
-## 9. 异步三态
+## 9. 工具栏与批量操作（2026-09-18）
+
+真实业务页面的「新增 / 批量 / 导入 / 导出」按钮由两层能力承载：**配置式工具栏**（`toolbar` prop）+ **批量操作条**（`selectionBarActions` prop / `#selectionBar` slot）。设计 spec：`docs/superpowers/specs/2026-09-18-pro-table-toolbar-design.md`。
+
+### 9.1 配置式工具栏 toolbar
+
+```ts
+const toolbar: ToolbarAction<ProjectRow>[] = [
+  { label: '新增项目', type: 'primary', onClick: () => openCreateDialog() },
+  {
+    label: '导出选中',
+    icon: Download,
+    disabled: ({ selectedCount }) => selectedCount === 0,  // ctx 联动禁用
+    onClick: ({ selectedRows }) => exportCsv(...),
+  },
+  { label: '刷新', onClick: async ({ refresh }) => { await refresh() } },
+  { label: '归档', onClick: () => archive() },  // 第 4 个 → 折叠进「更多」
+]
+
+<ProTable :columns="cols" :request-api="api" row-key="id"
+  :toolbar="toolbar" :max-visible-actions="3" />
+```
+
+渲染管线（`<ToolbarRenderer>`）：perm 权限过滤（`useAuth`）→ `hidden` 计算 → `maxVisibleActions` 截断折叠「更多」下拉 → `confirm` 二次确认包装（`useConfirm`）→ `onClick(ctx)`。`children` 子项拍平参与折叠计数；`onClick` 返回 Promise 未结算期间按钮锁定防重入。
+
+### 9.2 ToolbarAction 字段
+
+| 字段       | 类型                                                                     | 说明                                                                     |
+| ---------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| `label`    | `string`                                                                 | 按钮文案（必填）                                                         |
+| `type`     | `'primary' \| 'success' \| 'warning' \| 'danger' \| 'info' \| 'default'` | EP 按钮类型                                                              |
+| `icon`     | `Component`                                                              | EP 图标组件                                                              |
+| `perm`     | `string \| string[]`                                                     | 权限编码（AND 语义，无权限不渲染）                                       |
+| `confirm`  | `ToolbarConfirm`                                                         | 二次确认：`string` 或 `{ content, title?, danger?, confirmButtonText? }` |
+| `disabled` | `boolean \| ((ctx: ToolbarCtx<T>) => boolean)`                           | 禁用（支持 ctx 函数联动，如未选中禁用导出）                              |
+| `hidden`   | `boolean \| ((ctx: ToolbarCtx<T>) => boolean)`                           | 隐藏（同 disabled，但整按钮不渲染）                                      |
+| `loading`  | `boolean`                                                                | 外部控制 loading 态                                                      |
+| `onClick`  | `(ctx: ToolbarCtx<T>) => void \| Promise<void>`                          | 点击行为（必填；返回 Promise 期间自动锁定）                              |
+| `children` | `ToolbarAction<T>[]`                                                     | 子动作（拍平参与折叠计数，不渲染多级菜单）                               |
+
+`ToolbarCtx<T>` 作用域（同时下发到 `#tableHeader` / `#toolButton` slot）：
+
+```ts
+interface ToolbarCtx<T> {
+  selectedRows: T[] // 当前选中行
+  selectedCount: number // 选中数（快捷字段）
+  loading: boolean // 表格请求中
+  refresh: () => Promise<void> // 刷新表格
+}
+```
+
+### 9.3 批量操作条 selectionBar
+
+选中行 > 0 时浮出（`role="status"` + `aria-live="polite"`，进场动画），与工具栏解耦。双通道：
+
+```vue
+<!-- 通道 1：配置式（与 toolbar 同构 API） -->
+<ProTable
+  :selection-bar-actions="[
+    {
+      label: '批量删除',
+      type: 'danger',
+      confirm: { content: '确定删除选中的项目吗？', danger: true, confirmButtonText: '删除' },
+      onClick: async ({ selectedRows, refresh }) => {
+        await batchDeleteApi(selectedRows.map((r) => r.id))
+        await refresh() // 删除后刷新表格
+      },
+    },
+  ]"
+/>
+
+<!-- 通道 2：#selectionBar slot 完全接管（优先于配置） -->
+<template #selectionBar="{ selectedRows, clearSelection }">
+  <span>自定义批量区：{{ selectedRows.length }} 行</span>
+  <ElButton size="small" type="danger" @click="clearSelection">清除选中</ElButton>
+</template>
+```
+
+slot 作用域比 `ToolbarCtx` 多一个 `clearSelection: () => void`。启用前提：列定义含 selection 列 + `rowKey`（如 `{ prop: '__selection', label: '', type: 'selection', width: 45 }`）。`autoHeight` 模式会扣除批量条高度（`selectors.selectionBar`）。
+
+### 9.4 slot 作用域增强（向后兼容）
+
+`#tableHeader` / `#toolButton` slot 下发完整 `ToolbarCtx`——原无参 slot 用法不受影响，新用法可读取选中数/触发刷新：
+
+```vue
+<template #tableHeader="{ selectedCount }">
+  <ElTag type="primary">已选 {{ selectedCount }} 项</ElTag>
+</template>
+```
+
+### 9.5 CSV 导入导出（零依赖 utils）
+
+```ts
+import { exportCsv, importCsv, parseCsvText, type CsvColumn } from '@/components/ProTable/utils'
+
+// 导出：BOM 防 Excel 中文乱码 + RFC4180 引号转义（含逗号/换行字段安全往返）
+const res = await projectRequestApi({ pageNum: 1, pageSize: 1000 }) // 全量拉取归业务
+exportCsv(res.data, {
+  filename: '项目台账.csv', // 缺省 export-<timestamp>.csv
+  columns: [
+    { prop: 'title', label: '项目' },
+    // value：自定义取值（枚举翻译 / 金额格式化 / 字段拼接）
+    { prop: 'done', label: '状态', value: (r) => (r.done ? '已完成' : '进行中') },
+  ],
+})
+
+// 导入：File → 引号感知状态机解析 → 表头列名映射 prop
+const rows = await importCsv(file, { columns }) // Record<string, unknown>[]，值均为 string
+```
+
+职责边界（设计 D7）：utils 只负责「行数据 ↔ 文件」；**分页全量拉取、类型转换、逐行校验、提交后端、错误明细回显全部归业务层**。`.xlsx` 明确不做（spec 非目标），需要时另立项。
+
+---
+
+## 10. 异步三态
 
 ProTable 内部已与 `<AsyncState>` 集成：
 
@@ -717,7 +834,7 @@ ProTable 内部已与 `<AsyncState>` 集成：
 
 ---
 
-## 10. 决策表
+## 11. 决策表
 
 | 场景                            | 推荐                                        |
 | ------------------------------- | ------------------------------------------- |
@@ -733,7 +850,7 @@ ProTable 内部已与 `<AsyncState>` 集成：
 
 ---
 
-## 11. 已知限制
+## 12. 已知限制
 
 | #   | 限制                                                                                       | 应对方式                      |
 | --- | ------------------------------------------------------------------------------------------ | ----------------------------- |
@@ -747,24 +864,28 @@ ProTable 内部已与 `<AsyncState>` 集成：
 
 ---
 
-## 12. 测试覆盖
+## 13. 测试覆盖
 
-| 文件                                                      | 覆盖范围                                                    |
-| --------------------------------------------------------- | ----------------------------------------------------------- |
-| `src/components/ProTable/composables/useSearch.spec.ts`   | 搜索参数管理 + 重置 + 程序化 setParams                      |
-| `src/components/ProTable/composables/useColumns.spec.ts`  | 列解析 / 隐藏 / 持久化 / 列设置                             |
-| `src/components/ProTable/composables/useTable.spec.ts`    | 数据请求 / 分页 / 排序 / 响应适配                           |
-| `src/components/ProTable/composables/useCellSpan.spec.ts` | 单元格合并边界数学                                          |
-| `src/components/ProTable/composables/useRowDrag.spec.ts`  | 行拖拽位移 / 边界                                           |
-| `src/components/ProTable/composables/useRowEdit.spec.ts`  | 行内编辑生命周期                                            |
-| `src/components/ProTable/adapters/vxe-column.spec.ts`     | vxe 列映射                                                  |
-| `src/modules/demo/examples/ProTable/ProTable*.vue`        | 19 个 demo 覆盖所有主路径 + 各能力边界（详见 §15 示例索引） |
+| 文件                                                         | 覆盖范围                                                       |
+| ------------------------------------------------------------ | -------------------------------------------------------------- |
+| `src/components/ProTable/composables/useSearch.spec.ts`      | 搜索参数管理 + 重置 + 程序化 setParams                         |
+| `src/components/ProTable/composables/useColumns.spec.ts`     | 列解析 / 隐藏 / 持久化 / 列设置                                |
+| `src/components/ProTable/composables/useTable.spec.ts`       | 数据请求 / 分页 / 排序 / 响应适配                              |
+| `src/components/ProTable/composables/useCellSpan.spec.ts`    | 单元格合并边界数学                                             |
+| `src/components/ProTable/composables/useRowDrag.spec.ts`     | 行拖拽位移 / 边界                                              |
+| `src/components/ProTable/composables/useRowEdit.spec.ts`     | 行内编辑生命周期                                               |
+| `src/components/ProTable/adapters/vxe-column.spec.ts`        | vxe 列映射                                                     |
+| `src/components/ProTable/components/ToolbarRenderer.spec.ts` | 工具栏渲染管线：perm 过滤 / hidden / 折叠 / confirm / 重入锁定 |
+| `src/components/ProTable/components/SelectionBar.spec.ts`    | 批量条双通道：配置渲染 / slot 接管 / clearSelection            |
+| `src/components/ProTable/utils/exportCsv.spec.ts`            | BOM 字节断言 / RFC4180 转义 / filename 缺省                    |
+| `src/components/ProTable/utils/importCsv.spec.ts`            | 引号感知解析 / 表头映射 / 空行剔除 / BOM 去除                  |
+| `src/modules/demo/examples/ProTable/ProTable*.vue`           | 21 个 demo 覆盖所有主路径 + 各能力边界（详见 §16 示例索引）    |
 
 完整 demo 站：`/demo/pro-table-overview` 等 9 个路径（auto-import 自动注册）。
 
 ---
 
-## 13. 速查
+## 14. 速查
 
 ```vue
 <!-- 最小 -->
@@ -798,22 +919,22 @@ const rows = tableRef.value?.getSelectedRows()
 
 ---
 
-## 14. 相关文档
+## 15. 相关文档
 
 - 组件源码：`src/components/ProTable/ProTable.vue`
 - 类型导出：`src/components/ProTable/types/index.ts`
 - composables：`src/components/ProTable/composables/`
 - 引擎适配：`src/components/ProTable/adapters/`
-- Demo 站：`src/modules/demo/examples/ProTable/`（19 个 demo，详见 §15）
+- Demo 站：`src/modules/demo/examples/ProTable/`（21 个 demo，详见 §16）
 - Element Plus Table 文档：https://element-plus.org/zh-CN/component/table.html
 - vxe-table 文档：https://vxetable.cn/
 - 设计 spec：`docs/superpowers/specs/2026-09-07-protable-design.md` + `2026-09-08-protable-v2.1-vxe-engine-design.md`
 
 ---
 
-## 15. 示例索引（19 个 demo + 1 个主入口）
+## 16. 示例索引（21 个 demo + 1 个主入口）
 
-在线演示站点：`pnpm dev` → `/demo`（左侧「ProTable 企业级表格」分组），路由 = `/demo/pro-table-<kebab-case>`。所有 demo 源码位于 `src/modules/demo/examples/ProTable/`（19 个 `.vue` 文件）。
+在线演示站点：`pnpm dev` → `/demo`（左侧「ProTable 企业级表格」分组），路由 = `/demo/pro-table-<kebab-case>`。所有 demo 源码位于 `src/modules/demo/examples/ProTable/`（21 个 `.vue` 文件）。
 
 | 路由                               | 内容                                                                      |
 | ---------------------------------- | ------------------------------------------------------------------------- |
@@ -837,7 +958,9 @@ const rows = tableRef.value?.getSelectedRows()
 | `/demo/pro-table-operation`        | 操作列下拉收纳（`ElDropdown`）+ 表头 Tooltip（`headerRender`）            |
 | `/demo/pro-table-edit-cell-vmodel` | 行内编辑 v-model:density / density 双向绑定                               |
 | `/demo/pro-table-style-override`   | 样式覆盖（BEM 命名空间 + 主题切换）                                       |
+| `/demo/pro-table-header-actions`   | 工具栏与批量操作（toolbar 配置式 API + SelectionBar 双通道，2026-09-18）  |
+| `/demo/pro-table-import-export`    | CSV 导入导出（零依赖 utils：BOM + RFC4180 + 表头映射，2026-09-18）        |
 
-> **主 demo 入口**：`/demo/pro-table-overview`（对应 `ProTableOverview.vue`）—— 查阅全部 prop、事件、实例方法的入口。其余 19 个 demo 按「基础 → 引擎 → 搜索 → 虚拟化 → 编辑 → 选择/拖拽/展开 → 树形/合并/汇总 → 样式」分组覆盖各能力边界。
+> **主 demo 入口**：`/demo/pro-table-overview`（对应 `ProTableOverview.vue`）—— 查阅全部 prop、事件、实例方法的入口。其余 21 个 demo 按「基础 → 引擎 → 搜索 → 虚拟化 → 编辑 → 选择/拖拽/展开 → 树形/合并/汇总 → 工具栏/批量 → 导入导出 → 样式」分组覆盖各能力边界。
 >
 > **配套 mock**：`src/mock/pro-table/big-data.ts`（10 万行 × 10 列含固定列）+ `src/mock/pro-table/scenarios.ts`（各 demo 业务数据）。

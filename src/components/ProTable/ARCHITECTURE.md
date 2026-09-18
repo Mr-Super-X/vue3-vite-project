@@ -143,11 +143,14 @@ src/components/ProTable/
 │   ├── engine.ts                 # 引擎工厂（resolveEngine）
 │   ├── cell-render.ts            # 单元格内容解析（双引擎共用）
 │   └── vxe-column.ts             # ProColumn → VxeColumn 映射（v2.1）
-├── composables/                  # 10 个 composables（useTable/useSearch/useColumns/
-│                                 # useRowEdit/useRowDrag/useCellSpan/useTreeData/
-│                                 # useTableCapabilities/useVxeTable）
-├── components/                   # 6 个子组件 + 双引擎渲染分支：
-│                                 # ElementTableBody（el 引擎）/ VxeTableBody（vxe 引擎，v2.1）
+├── composables/                  # 17 个 composables（4 核心 useTable/useSearch/useColumns/
+│                                 # useTableCapabilities + 13 能力/引擎/事件：useRowEdit/useRowDrag/
+│                                 # useCellSpan/useTreeData/useSummary/useVirtualScroll/useAutoHeight/
+│                                 # useStatePersist/useFullscreen/useProTableEvents/useVxeTable/
+│                                 # useEngineFallback/useTableEngineDom）
+├── components/                   # 13 个子组件 + 双引擎渲染分支：
+│                                 # ElementTableBody / VxeTableBody（v2.1）+ ToolbarRenderer /
+│                                 # SelectionBar（2026-09-18 工具栏与批量操作条）
 ├── ProTable.integration.spec.ts  # 集成测试
 ├── ProTable.engine.spec.ts       # 引擎切换测试（v2.1）
 └── __tests__/                    # 其余 .spec.ts

@@ -7,7 +7,12 @@
  *
  * @group ProTable 类型
  */
-import type { ComponentPublicInstance, Ref, VNode } from 'vue'
+import type { Component, ComponentPublicInstance, Ref, VNode } from 'vue'
+
+// ⚠️ 本文件刻意不 import '@/composables/useConfirm'：实验证明（2026-09-18）该 import type
+// 会触发 vue-tsc --build 下 ProDialog.vue 全局 auto-import 声明丢失（TS2304 ×15），
+// 链路 types → useConfirm → useDialog → ProDialog.vue。ToolbarConfirm 字段内联声明，
+// 结构类型与 UseConfirmOptions 子集等价（useConfirm(action.confirm) 编译通过）。
 
 /** 行内编辑配置 —— 列粒度控制哪些字段可编辑 @group ProTable 类型 */
 export interface ColumnEditConfig {
@@ -388,6 +393,80 @@ export interface ProColumn<T extends object = Record<string, unknown>> {
 }
 
 /**
+ * Toolbar 点击上下文 —— toolbar/selectionBarActions 配置回调与 #tableHeader/#toolButton/#selectionBar
+ * slot 作用域共用同一份数据。ProTable 编排层从 useTable 聚合（selectedRows/loading/refresh 单一来源），
+ * 业务方在配置或 slot 里直接消费，无须 ref 回读。
+ *
+ * 泛型 T = 行数据类型（与 ProColumn/ProTableProps 同理由，默认 Record 向后兼容）。
+ *
+ * @group ProTable 类型
+ */
+export interface ToolbarCtx<T extends object = Record<string, unknown>> {
+  /** 当前选中行快照（row-key 去重后；跨页 reserve-selection 时含其他页选中行） */
+  selectedRows: T[]
+  /** 选中数量 —— 等价 selectedRows.length，模板里少一层属性访问 */
+  selectedCount: number
+  /** 表格请求进行中 —— 批量操作防重入（如禁止重复提交） */
+  loading: boolean
+  /** 触发表格刷新（保持当前搜索/分页条件）—— 批量操作成功后调用 */
+  refresh: () => Promise<void>
+}
+
+/**
+ * ToolbarAction 二次确认配置 —— 字符串为确认正文简写（自动套 useConfirm）；
+ * 对象形态可追加标题/危险样式/确认按钮文案。
+ *
+ * 字段与 UseConfirmOptions 对应子集保持同名同型（结构类型等价），
+ * ToolbarRenderer 直接整体传入 useConfirm。
+ *
+ * @group ProTable 类型
+ */
+export type ToolbarConfirm =
+  | string
+  | {
+      /** 确认正文（仅纯文本；HTML 形态请用 slot 自行调 useConfirm） */
+      content: string
+      /** 弹窗标题（缺省「系统提示」） */
+      title?: string
+      /** 危险操作（确认按钮转红 + 警告图标），等价 useConfirm 的 danger 预设 */
+      danger?: boolean
+      /** 确认按钮文案（如「删除」） */
+      confirmButtonText?: string
+    }
+
+/**
+ * 工具栏/批量条 action 配置 —— 组件代管权限/危险确认/折叠收纳（2026-09-18 toolbar 设计 D1-D4）。
+ *
+ * 渲染管线（ToolbarRenderer）：perm 过滤 → hidden 计算 → primary 重复 warn →
+ * 按 maxVisibleActions 截断（超出收进「更多」dropdown）→ 点击时 confirm 包装 → onClick(ctx)。
+ * 泛型 T = 行数据类型（回调 ctx 里 selectedRows 精确到 T）。
+ *
+ * @group ProTable 类型
+ */
+export interface ToolbarAction<T extends object = Record<string, unknown>> {
+  /** 按钮文本 */
+  label: string
+  /** EP 按钮语义色（默认 'default'）；'danger' 用于批量删除等危险操作，建议必配 confirm */
+  type?: 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'default'
+  /** 左侧图标（element-plus 图标组件，需业务方显式 import） */
+  icon?: Component
+  /** 权限码（string 或 AND 数组，语义同 v-auth 指令）—— 无权限整块不渲染 */
+  perm?: string | string[]
+  /** 二次确认：字符串 = 确认正文；建议危险操作（删除/审核）必配，取消 resolve false 不执行 onClick */
+  confirm?: ToolbarConfirm
+  /** 禁用：布尔或按上下文计算（如 `({ selectedCount }) => selectedCount === 0` 禁用批量删除） */
+  disabled?: boolean | ((ctx: ToolbarCtx<T>) => boolean)
+  /** 隐藏：布尔或按上下文计算；优先级高于 disabled（hidden 时整块不渲染，disabled 仍占位） */
+  hidden?: boolean | ((ctx: ToolbarCtx<T>) => boolean)
+  /** 外部 loading（异步操作防重入），不传则点击态由业务自行管理 */
+  loading?: boolean
+  /** 点击回调；配 confirm 时先弹确认（仅确定后执行），返回 Promise 期间按钮 loading */
+  onClick: (ctx: ToolbarCtx<T>) => void | Promise<void>
+  /** 子操作：与父同级参与折叠计数，超出 maxVisibleActions 时随父收进「更多」 */
+  children?: ToolbarAction<T>[]
+}
+
+/**
  * ProTable requestApi 响应结构 —— 后端约定（data + total + pageNum + pageSize）。
  *
  * 泛型 T = 行数据类型（M1 泛型化，默认 Record<string, unknown> 向后兼容）。
@@ -535,6 +614,19 @@ export interface ProTableProps<T extends object = Record<string, unknown>> {
    * 需要 tableKey 已设置（未设置则忽略）
    */
   expandedStatePersist?: boolean
+  /**
+   * TableHeader 左区配置式按钮组（2026-09-18 toolbar 设计）—— 新增/导入/导出等主操作的标准通道。
+   * 组件代管：权限过滤（perm）、二次确认（confirm）、超出折叠（maxVisibleActions）、主按钮唯一 warn。
+   * 与 #tableHeader slot 并存：slot 内容渲染在配置按钮之前，向后兼容。
+   */
+  toolbar?: ToolbarAction<T>[]
+  /**
+   * SelectionBar 批量操作配置（2026-09-18 toolbar 设计）—— 选中行 > 0 时表格上方浮出批量条。
+   * 与 #selectionBar slot 二选一：slot 提供时完全接管（slot 优先），本配置忽略。
+   */
+  selectionBarActions?: ToolbarAction<T>[]
+  /** toolbar/selectionBarActions 直出按钮上限（默认 3），超出部分折叠进「更多」下拉 */
+  maxVisibleActions?: number
 }
 
 /**

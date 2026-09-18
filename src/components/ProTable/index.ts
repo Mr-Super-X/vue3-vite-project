@@ -46,6 +46,12 @@ export {
   type AutoHeightConfig,
   /** 搜索区布局档位 —— searchLayout prop 类型（auto/flat/collapse/flat-large/drawer）@see ./types */
   type SearchLayoutMode,
+  /** 工具栏配置 —— toolbar/selectionBarActions 的 action 配置（权限/危险确认/折叠收纳）@see ./types */
+  type ToolbarAction,
+  /** 工具栏上下文 —— 配置回调与 slot 作用域共用（selectedRows/loading/refresh）@see ./types */
+  type ToolbarCtx,
+  /** 二次确认配置 —— ToolbarAction.confirm 类型（字符串或 UseConfirmOptions 子集）@see ./types */
+  type ToolbarConfirm,
 } from './types'
 
 /**

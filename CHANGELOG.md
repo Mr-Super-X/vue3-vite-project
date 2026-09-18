@@ -2,6 +2,18 @@
 
 ## 未发布
 
+### ✨ Features | ProTable 工具栏 / 批量操作条 / CSV 导入导出
+
+> 真实业务页面的「新增 / 批量 / 导入 / 导出」按钮扩展能力落地。设计 spec：`docs/superpowers/specs/2026-09-18-pro-table-toolbar-design.md`（L1 slot 作用域增强 → L2 配置式 toolbar → L3 内置 SelectionBar → L4 CSV utils 四层渐进）。
+
+* **feat(src/components/ProTable/types/index.ts):** 新增 `ToolbarCtx`（selectedRows/selectedCount/loading/refresh）+ `ToolbarAction`（label/type/icon/perm/confirm/disabled/hidden/loading/onClick/children）+ `ToolbarConfirm` 类型；`ProTableProps` 末尾新增 `toolbar` / `selectionBarActions` / `maxVisibleActions`（默认 3）三 prop。⚠️ 类型文件刻意不 import `@/composables/useConfirm`（vue-tsc --build 下会触发 ProDialog.vue 全局 auto-import 声明丢失 TS2304×15，ToolbarConfirm 字段内联声明规避）
+* **feat(src/components/ProTable/components/ToolbarRenderer.vue + SelectionBar.vue):** 工具栏渲染管线（perm 过滤 → hidden 计算 → maxVisibleActions 截断折叠「更多」下拉 → useConfirm 包装 → onClick(ctx)，Promise 未结算锁定防重入）+ 批量操作条（选中 > 0 浮出，配置式 actions 与 `#selectionBar` slot 完全接管双通道，slot 优先；`role="status"` + `aria-live="polite"` 无障碍）
+* **feat(src/components/ProTable/utils/):** 零依赖 CSV 导入导出——`exportCsv`（BOM 防 Excel 中文乱码 + RFC4180 引号转义 + Blob 下载）+ `importCsv`/`parseCsvText`（引号感知状态机 + 表头 label→prop 映射 + 全空行剔除 + BOM 去除）。职责边界：utils 只管「行数据 ↔ 文件」，全量拉取/类型转换/校验/提交归业务层
+* **feat(src/components/ProTable/ProTable.vue + TableHeader.vue + composables/useAutoHeight.ts):** `toolbarCtx` computed 下发 + SelectionBar 挂载（TableHeader 后、AsyncState 前）+ `#tableHeader`/`#toolButton` slot 作用域透传 ToolbarCtx（向后兼容）+ `selectors.selectionBar` 高度扣除
+* **test(src/components/ProTable/):** 新增 4 个 spec 共 41 例（ToolbarRenderer 9 / SelectionBar 6 / exportCsv 7 / importCsv 7 + TableHeader 适配重写 12），全部通过；`pnpm type-check:full` 0 错误
+* **demo(src/modules/demo/examples/ProTable/):** 新增 `ProTableHeaderActions.vue`（toolbar 配置 + 双通道 SelectionBar + slot 作用域）与 `ProTableImportExport.vue`（CSV 导出/导入业务接线），sidebar 中文名 + demo API 表同步注册（路由 `/demo/pro-table-header-actions` / `/demo/pro-table-import-export`）
+* **docs(docs/29-ProTable使用指南.md):** 新增 §9 工具栏与批量操作（toolbar 渲染管线 / ToolbarAction 字段表 / SelectionBar 双通道 / slot 作用域增强 / CSV utils 用法与职责边界）；§1.2 Props 表补 3 行；§13 测试覆盖表 +4 spec；§16 示例索引 19 → 21 个 demo；原 §9~§15 顺延为 §10~§16
+
 ### 📝 Docs | 文档深度同步：useDict v2 契约形态 / useConfirm 章节 / 项目推荐说明
 
 > 扫描全量 docs/ 与最新 src/ 代码，按 P0/P1/P2 分级产出 9 项差异清单并完成修复。无代码变更，纯文档与 README/CLAUDE.md 顶部同步。

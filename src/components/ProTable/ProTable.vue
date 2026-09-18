@@ -25,6 +25,7 @@ import AsyncState from '@/components/common/AsyncState.vue' // 项目内 default
 import SearchForm from './components/SearchForm.vue'
 import SelectedTags from './components/SelectedTags.vue' // v3.2 升级：已选条件回显
 import TableHeader from './components/TableHeader.vue'
+import SelectionBar from './components/SelectionBar.vue' // 2026-09-18：批量操作浮出条
 import ColSetting from './components/ColSetting.vue'
 import ElementTableBody from './components/ElementTableBody.vue'
 import ElementTableV2Body from './components/ElementTableV2Body.vue' // v3.0.1：el-table-v2 真虚拟化引擎分支
@@ -42,7 +43,15 @@ import { useProTableEvents } from './composables/useProTableEvents' // v3.1.1 re
 import { useVirtualScroll } from './composables/useVirtualScroll' // v3.1.3 review：编排层接管 virtualized + vxe-table 引擎回退
 import { resolveEngine } from './adapters/engine'
 import { DEFAULT_ROW_KEY } from './types' // 行 key 缺省值单一来源（review R7，原局部常量上移 types）
-import type { ProColumn, ProTableExpose, ProTableProps, SortState, TableEngine } from './types'
+import type {
+  ProColumn,
+  ProTableExpose,
+  ProTableProps,
+  SortState,
+  TableEngine,
+  ToolbarAction,
+  ToolbarCtx,
+} from './types'
 
 /* ───────────── BEM 命名空间（v3.1.4 review：提前到 useAutoHeight 之前） ───────────── */
 
@@ -55,6 +64,7 @@ import type { ProColumn, ProTableExpose, ProTableProps, SortState, TableEngine }
 const bem = createNamespace('pro-table')
 const searchFormBem = createNamespace('pro-table-search')
 const tableHeaderBem = createNamespace('pro-table-header')
+const selectionBarBem = createNamespace('pro-table-selection-bar') // 2026-09-18：autoHeight selectors 注入用
 
 /**
  * 单例空对象 —— 给 paginationProps 在 prop 为 false 时复用，避免每次重渲创建新对象。
@@ -201,6 +211,8 @@ const { maxHeight: autoHeightMax } = useAutoHeight({
     search: searchFormBem.b(),
     header: tableHeaderBem.b(),
     // pagination 选填：保留 element-plus 默认 '.el-pagination'
+    // 2026-09-18（设计 D8）：SelectionBar v-if 挂载/卸载时经 ResizeObserver 联动重测
+    selectionBar: selectionBarBem.b(),
   },
 })
 
@@ -314,6 +326,17 @@ const selectedRowKey = computed<string | number | undefined>(() => {
   const key = props.rowKey ?? DEFAULT_ROW_KEY
   return (first[key] as string | number | undefined) ?? undefined
 })
+
+/**
+ * 2026-09-18 toolbar 设计：聚合 ToolbarCtx —— selectedRows/loading/refresh 单一来源（useTable），
+ * toolbar 配置 / selectionBarActions 配置 / tableHeader·toolButton·selectionBar slot 作用域共用。
+ */
+const toolbarCtx = computed<ToolbarCtx<T>>(() => ({
+  selectedRows: table.selectedRows.value,
+  selectedCount: table.selectedRows.value.length,
+  loading: table.loading.value,
+  refresh: table.refresh,
+}))
 
 /**
  * v3.0.3 → v3.1.4 review：表格数据 Record 视角投影 —— 直接读 useTable 暴露的
@@ -547,18 +570,38 @@ defineExpose({
         :density="table.density.value"
         :col-setting-visible="columns.colSettingVisible.value"
         :fullscreen="isFullscreen"
+        :toolbar="(props.toolbar ?? []) as unknown as ToolbarAction[]"
+        :toolbar-ctx="toolbarCtx as unknown as ToolbarCtx"
+        :max-visible-actions="props.maxVisibleActions"
         @refresh="table.refresh"
         @update:density="events.handleDensityChange"
         @update:col-setting-visible="events.handleColSettingUpdate"
         @toggle-fullscreen="toggleFullscreen"
       >
-        <template #tableHeader>
-          <slot name="tableHeader" />
+        <!-- 2026-09-18：slot 作用域透传 ToolbarCtx（旧用法不带 scope 不受影响，向后兼容） -->
+        <template #tableHeader="scope">
+          <slot name="tableHeader" v-bind="scope" />
         </template>
-        <template #toolButton>
-          <slot name="toolButton" />
+        <template #toolButton="scope">
+          <slot name="toolButton" v-bind="scope" />
         </template>
       </TableHeader>
+      <!--
+        2026-09-18 批量操作浮出条（设计 D5/D6）：选中行 > 0 时挂载于表格上方。
+        #selectionBar slot 优先于 selectionBarActions 配置（SelectionBar 内部判定接管）；
+        清除经 useTable.clearSelection（同步清 el-table UI 勾选态）。
+      -->
+      <SelectionBar
+        v-if="table.selectedRows.value.length > 0"
+        :ctx="toolbarCtx as unknown as ToolbarCtx"
+        :actions="(props.selectionBarActions ?? []) as unknown as ToolbarAction[]"
+        :max-visible="props.maxVisibleActions"
+        @clear="table.clearSelection"
+      >
+        <template v-if="$slots.selectionBar" #default="scope">
+          <slot name="selectionBar" v-bind="scope" />
+        </template>
+      </SelectionBar>
       <AsyncState
         :loading="initialLoading"
         :error="table.error.value"

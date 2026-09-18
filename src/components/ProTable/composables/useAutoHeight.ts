@@ -42,6 +42,11 @@ export interface UseAutoHeightOptions {
     header?: string
     /** ElPagination 选择器（element-plus 稳定 class） */
     pagination?: string
+    /**
+     * SelectionBar 根 BEM 类（编排层 selectionBarBem.b()，2026-09-18 toolbar 设计 D8）——
+     * 可选：批量条 v-if 条件挂载，出现时由 ResizeObserver 监听根容器联动重测
+     */
+    selectionBar?: string
   }
 }
 
@@ -105,6 +110,7 @@ export function useAutoHeight(options: UseAutoHeightOptions): UseAutoHeightRetur
     const searchSel = options.selectors?.search
     const headerSel = options.selectors?.header
     const paginationSel = options.selectors?.pagination ?? DEFAULT_PAGINATION_SELECTOR
+    const selectionBarSel = options.selectors?.selectionBar
     const searchH = searchSel
       ? (getCachedElement(root, searchSel)?.getBoundingClientRect().height ?? 0)
       : 0
@@ -112,12 +118,17 @@ export function useAutoHeight(options: UseAutoHeightOptions): UseAutoHeightRetur
       ? (getCachedElement(root, headerSel)?.getBoundingClientRect().height ?? 0)
       : 0
     const paginationH = getCachedElement(root, paginationSel)?.getBoundingClientRect().height ?? 0
+    // SelectionBar 高度：批量条 v-if 挂载/卸载时经 ResizeObserver 联动重测（设计 D8）
+    const selectionBarH = selectionBarSel
+      ? (getCachedElement(root, selectionBarSel)?.getBoundingClientRect().height ?? 0)
+      : 0
     const available =
       window.innerHeight -
       top -
       searchH -
       headerH -
       paginationH -
+      selectionBarH -
       FIXED_MARGIN_TOTAL -
       (options.offset ?? 0)
     maxHeight.value = Math.max(available, MIN_TABLE_HEIGHT)

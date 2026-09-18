@@ -694,3 +694,125 @@ export const expandSlotItems: ApiItem[] = [
       '展开行内可放置任意内容（卡片 / 表单 / 嵌套 ProTable）。展开行高度自适应内容，无固定上限。',
   },
 ]
+
+/* ───────────── 工具栏 / 批量操作条 demo（ProTableHeaderActions，2026-09-18） ───────────── */
+
+export const toolbarActionItems: ApiItem[] = [
+  {
+    name: 'label',
+    type: 'string',
+    required: true,
+    description: '按钮文本。',
+  },
+  {
+    name: 'type',
+    type: "'primary' | 'success' | 'warning' | 'danger' | 'info' | 'default'",
+    required: false,
+    default: "'default'",
+    description:
+      'EP 按钮语义色；danger 用于批量删除等危险操作。多个 primary 时控制台 warn（主操作应唯一）。',
+  },
+  {
+    name: 'icon',
+    type: 'Component',
+    required: false,
+    description: '左侧图标（element-plus 图标组件，业务显式 import）。',
+  },
+  {
+    name: 'perm',
+    type: 'string | string[]',
+    required: false,
+    description: '权限码（AND 语义，同 v-auth）；无权限整块不渲染。',
+  },
+  {
+    name: 'confirm',
+    type: 'string | { content; title?; danger?; confirmButtonText? }',
+    required: false,
+    description: '二次确认（自动套 useConfirm，取消不执行 onClick）；建议危险操作必配。',
+  },
+  {
+    name: 'disabled / hidden',
+    type: 'boolean | ((ctx: ToolbarCtx) => boolean)',
+    required: false,
+    description:
+      '禁用（占位灰置）/ 隐藏（整块不渲染）；函数形态实时消费 ctx（如 selectedCount 联动）。',
+  },
+  {
+    name: 'onClick',
+    type: '(ctx: ToolbarCtx) => void | Promise<void>',
+    required: true,
+    description:
+      '点击回调；Promise 未结算期间按钮自动 loading 防重入。ctx = { selectedRows, selectedCount, loading, refresh }。',
+  },
+  {
+    name: 'children',
+    type: 'ToolbarAction[]',
+    required: false,
+    description: '子操作：拍平参与折叠计数，超出 maxVisibleActions 随父收进「更多」下拉。',
+  },
+]
+
+export const toolbarPropsItems: ApiItem[] = [
+  {
+    name: 'toolbar',
+    type: 'ToolbarAction[]',
+    required: false,
+    description: 'TableHeader 左区配置式按钮组；与 #tableHeader slot 并存（slot 在前，向后兼容）。',
+  },
+  {
+    name: 'selectionBarActions',
+    type: 'ToolbarAction[]',
+    required: false,
+    description: '批量条配置（选中行 > 0 浮出）；与 #selectionBar slot 二选一，slot 优先。',
+  },
+  {
+    name: 'maxVisibleActions',
+    type: 'number',
+    required: false,
+    default: '3',
+    description: 'toolbar / selectionBarActions 直出上限，超出折叠「更多」下拉。',
+  },
+  {
+    name: '#tableHeader / #toolButton',
+    type: 'slot（作用域增强）',
+    required: false,
+    description:
+      '2026-09-18 起作用域下发 ToolbarCtx { selectedRows, selectedCount, loading, refresh }；不带 scope 的旧用法不受影响。',
+  },
+  {
+    name: '#selectionBar',
+    type: 'slot',
+    required: false,
+    description: '完全接管批量条右侧；作用域 = ToolbarCtx + clearSelection。',
+  },
+]
+
+/* ───────────── CSV 导入导出 demo（ProTableImportExport，2026-09-18） ───────────── */
+
+export const csvColumnItems: ApiItem[] = [
+  {
+    name: 'prop',
+    type: 'string',
+    required: true,
+    description: '行数据字段名（导入时为输出 key）。',
+  },
+  {
+    name: 'label',
+    type: 'string',
+    required: true,
+    description: 'CSV 表头列名（导入时按此匹配表头；未声明的表头列自动忽略）。',
+  },
+  {
+    name: 'value',
+    type: '(row) => string | number',
+    required: false,
+    description: '自定义取值（缺省 row[prop]）：金额格式化 / 枚举翻译 / 字段拼接。导出时生效。',
+  },
+  {
+    name: 'filename / bom',
+    type: 'string / boolean',
+    required: false,
+    default: 'export-YYYYMMDD-HHmmss.csv / true',
+    description: '导出文件名 / 是否写 UTF-8 BOM（Excel 打开中文不乱码的前提）。',
+  },
+]

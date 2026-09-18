@@ -3,13 +3,15 @@
  * TableHeader —— 工具栏（spec §五组件树 / §七插槽系统）
  *
  * 职责：刷新按钮 + 密度切换（三档：紧凑/默认/宽松）+ 列设置按钮 +
- * 全屏切换（v3.1）+ 插槽（tableHeader / toolButton）。
+ * 全屏切换（v3.1）+ 插槽（tableHeader / toolButton）+
+ * toolbar 配置式按钮组渲染（2026-09-18：slot 内容在前，ToolbarRenderer 渲染配置在后）。
  *
  * @group ProTable 子组件
  */
 import { ElButton, ElButtonGroup, ElTooltip } from 'element-plus'
 import { Refresh, Setting, FullScreen } from '@element-plus/icons-vue' // 显式 import（§1.6.1 来源注释）
-import type { ProColumn, TableDensity } from '../types'
+import ToolbarRenderer from './ToolbarRenderer.vue' // 2026-09-18：toolbar 配置统一渲染器
+import type { ProColumn, TableDensity, ToolbarAction, ToolbarCtx } from '../types'
 
 interface Props {
   columns: ProColumn[]
@@ -18,9 +20,16 @@ interface Props {
   colSettingVisible: boolean
   /** v3.1：当前全屏状态（按钮高亮用） */
   fullscreen?: boolean
+  /** 2026-09-18：toolbar 配置式按钮组（编排层 props.toolbar 投影；缺省不渲染） */
+  toolbar?: ToolbarAction[]
+  /** 2026-09-18：slot 作用域 + ToolbarRenderer 共用的上下文（选中行/loading/refresh） */
+  toolbarCtx: ToolbarCtx
+  /** 2026-09-18：toolbar 直出上限（透传 ToolbarRenderer，默认 3）；`| undefined` 兼容 exactOptionalPropertyTypes 显式传 undefined */
+  maxVisibleActions?: number | undefined
 }
 const props = withDefaults(defineProps<Props>(), {
   fullscreen: false,
+  toolbar: () => [],
 })
 const emit = defineEmits<{
   refresh: []
@@ -51,10 +60,17 @@ function handleColSetting(): void {
 <template>
   <div :class="bem.b()">
     <div :class="bem.e('left')">
-      <slot name="tableHeader" />
+      <!-- 2026-09-18：slot 作用域下发 ToolbarCtx（向后兼容：不带 scope 的旧用法不受影响） -->
+      <slot name="tableHeader" v-bind="props.toolbarCtx" />
+      <ToolbarRenderer
+        v-if="props.toolbar.length > 0"
+        :actions="props.toolbar"
+        :ctx="props.toolbarCtx"
+        :max-visible="props.maxVisibleActions"
+      />
     </div>
     <div :class="bem.e('right')">
-      <slot name="toolButton" />
+      <slot name="toolButton" v-bind="props.toolbarCtx" />
       <!-- 刷新 + 全屏：同类 icon 操作紧贴成组（vben / vue-pure-admin 工具栏惯例），组间由 __right 的 gap 分隔 -->
       <div :class="bem.e('actions')">
         <ElTooltip content="刷新">

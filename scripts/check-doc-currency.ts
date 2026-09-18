@@ -20,8 +20,8 @@
 //   7. BaseChart Props 数 —— docs/28-BaseChart使用指南.md §1.1 表格
 //   8. build/ 顶层模块数 —— docs/04-构建与测试工具.md §1.1 表格
 //   9. VENDOR_CHUNKS 具名组数 —— docs/04 §1.1 表格（vendor-vue / vendor-ui / vendor-charts）
-//  10. ProTable composables 数 —— docs/29-ProTable使用指南.md §概述「6 composables」
-//  11. ProTable 顶级 demo 数 —— docs/29-ProTable使用指南.md §概述「9 个演示」
+//  10. ProTable composables 数 —— docs/29-ProTable使用指南.md §概述「17 composables」
+//  11. ProTable 顶级 demo 数 —— docs/29-ProTable使用指南.md §概述「22 个演示」（21 能力 demo + ProTableOverview 主入口）
 //
 // 阈值调整原则：扩展字段 / 新增 composable 后，需同时更新本文档与 ARCHITECTURE.md。
 // 任何调整都需要在 PR 描述中显式说明（避免阈值被随意放宽）。
@@ -165,9 +165,11 @@ function countVendorChunksNamed(): number {
 /**
  * 数 ProTable composables/*.ts 文件（排除 .spec.ts）
  *
- * 当前 9 个：useSearch / useColumns / useTable / useTableCapabilities / useCellSpan / useRowDrag / useRowEdit / useTreeData / useVxeTable
- * docs/29 §概述写「6 composables」是概数（仅编排层 useSearch/useColumns/useTable/useTableCapabilities 4 个核心 + 4 个能力），
- * 实际 + useTreeData + useVxeTable 共 9；脚本校验精确值 = 9。
+ * 当前 17 个：4 核心（useSearch / useColumns / useTable / useTableCapabilities）
+ * + 13 能力/引擎/事件（useRowEdit / useRowDrag / useCellSpan / useTreeData / useSummary /
+ * useVirtualScroll / useAutoHeight / useStatePersist / useFullscreen / useProTableEvents /
+ * useVxeTable / useEngineFallback / useTableEngineDom）
+ * docs/29 §概述写「17 composables」是概数；脚本校验精确值 = 17。
  */
 function countProTableComposables(): number {
   const files = readdirSync(join(ROOT, 'src/components/ProTable/composables'))
@@ -177,7 +179,7 @@ function countProTableComposables(): number {
 /**
  * 数 ProTable 顶级 demo 文件（ProTable*.vue，排除 configs/ 子目录）
  *
- * 当前 9 个：Overview / EngineCompare / Expand / ServerSort / Tree / StyleOverride / CellSpan / RowDrag / RowEdit
+ * 当前 22 个：21 个能力 demo + ProTableOverview 主入口（2026-09-18 新增 HeaderActions / ImportExport）
  */
 function countProTableDemos(): number {
   const files = readdirSync(join(ROOT, 'src/modules/demo/examples/ProTable'))
@@ -226,7 +228,7 @@ const checks: Check[] = [
   {
     name: 'ProDialog 自有 Props 数 (docs/27 §2.1 表格)',
     actual: countProDialogProps,
-    expected: 6,
+    expected: 7,
     tolerance: 0,
   },
   {
@@ -250,13 +252,13 @@ const checks: Check[] = [
   {
     name: 'ProTable composables 数 (docs/29 §概述)',
     actual: countProTableComposables,
-    expected: 9,
+    expected: 17,
     tolerance: 0,
   },
   {
     name: 'ProTable 顶级 demo 数 (docs/29 §概述)',
     actual: countProTableDemos,
-    expected: 9,
+    expected: 22,
     tolerance: 0,
   },
 ]

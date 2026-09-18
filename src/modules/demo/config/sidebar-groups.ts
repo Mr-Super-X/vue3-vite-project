@@ -47,6 +47,9 @@ export const CN_NAMES: Record<string, string> = {
   ProTableColumnResize: '列宽拖拽',
   // ProTable SearchForm 架构升级（默认折叠 / 高级弹窗 / 联动 / 防抖 / 响应式）
   ProTableSearchAdvanced: '多条件搜索（高级特性）',
+  // ProTable 工具栏 / 批量操作条 / CSV 导入导出（2026-09-18）
+  ProTableHeaderActions: '工具栏与批量操作（配置式 API）',
+  ProTableImportExport: 'CSV 导入导出（零依赖）',
   // XForm 表单引擎
   XFormOverview: '用法总览',
   XFormArray: '数组节点',
