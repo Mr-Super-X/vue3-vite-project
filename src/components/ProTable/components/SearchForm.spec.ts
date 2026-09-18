@@ -459,4 +459,69 @@ describe('SearchForm', () => {
     expect(wrapper.emitted('search')).toBeTruthy()
     vi.useRealTimers()
   })
+
+  // ─────────── v3.5 PR1-A：A11y region + aria-label 断言 ───────────
+
+  it('v3.5：根 div 加 role="search" + aria-label="表格筛选"', () => {
+    const wrapper = mount(SearchForm, {
+      props: {
+        columns: columns as never,
+        searchParams: reactive({ name: '', status: null }),
+        searchRows: 3,
+      },
+    })
+    const root = wrapper.find('.vv-pro-table-search')
+    expect(root.exists()).toBe(true)
+    expect(root.attributes('role')).toBe('search')
+    expect(root.attributes('aria-label')).toBe('表格筛选')
+  })
+
+  it('v3.5：搜索按钮 + 重置按钮带 aria-label', () => {
+    const wrapper = mount(SearchForm, {
+      props: {
+        columns: columns as never,
+        searchParams: reactive({ name: '', status: null }),
+        searchRows: 3,
+      },
+    })
+    expect(wrapper.find('[data-test="search-btn"]').attributes('aria-label')).toBe('搜索')
+    expect(wrapper.find('[data-test="reset-btn"]').attributes('aria-label')).toBe('重置筛选')
+  })
+
+  it('v3.5：高级筛选按钮 + 展开/收起按钮带 aria-label + aria-expanded', () => {
+    const cols = [
+      ...Array.from({ length: 5 }, (_, i) => ({
+        prop: `b${i}`,
+        label: `基础${i}`,
+        search: { el: 'input' as const, level: 'basic' as const },
+      })),
+      {
+        prop: 'a0',
+        label: '高级0',
+        search: { el: 'input' as const, level: 'advanced' as const },
+      },
+    ]
+    const wrapper = mount(SearchForm, {
+      props: { columns: cols as never, searchParams: reactive({}), searchRows: 3 },
+    })
+    // drawer 档：高级筛选按钮带 aria-label
+    expect(wrapper.find('[data-test="advanced-btn"]').attributes('aria-label')).toBe('打开高级筛选')
+  })
+
+  it('v3.5：collapse 档 toggle 按钮带 aria-label', async () => {
+    const cols = Array.from({ length: 4 }, (_, i) => ({
+      prop: `f${i}`,
+      label: `字段${i}`,
+      search: { el: 'input' as const },
+    }))
+    const wrapper = mount(SearchForm, {
+      props: { columns: cols as never, searchParams: reactive({}), searchRows: 3 },
+    })
+    const toggleBtn = wrapper.find('[data-test="toggle-btn"]')
+    expect(toggleBtn.exists()).toBe(true)
+    expect(toggleBtn.attributes('aria-label')).toBe('展开搜索条件')
+    // 点击展开后属性切换
+    await toggleBtn.trigger('click')
+    expect(wrapper.find('[data-test="toggle-btn"]').attributes('aria-label')).toBe('收起搜索条件')
+  })
 })

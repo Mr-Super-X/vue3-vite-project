@@ -438,7 +438,7 @@ function buildPlaceholder(col: ProColumn, prefix: '请输入' | '请选择' | un
 </script>
 
 <template>
-  <div :class="bem.b()">
+  <div :class="bem.b()" role="search" aria-label="表格筛选">
     <ElForm ref="elFormRef" :model="localParams" inline label-position="left">
       <!--
         v3.2 重大升级：左右结构（用户要求）
@@ -506,6 +506,7 @@ function buildPlaceholder(col: ProColumn, prefix: '请输入' | '请选择' | un
               circle
               :class="bem.e('advanced-btn')"
               data-test="advanced-btn"
+              aria-label="打开高级筛选"
               @click="openAdvanced"
             >
               <el-icon><Filter /></el-icon>
@@ -518,10 +519,23 @@ function buildPlaceholder(col: ProColumn, prefix: '请输入' | '请选择' | un
               />
             </ElButton>
           </ElTooltip>
-          <ElButton type="primary" :icon="Search" data-test="search-btn" @click="handleSearch">
+          <ElButton
+            type="primary"
+            :icon="Search"
+            data-test="search-btn"
+            aria-label="搜索"
+            @click="handleSearch"
+          >
             搜索
           </ElButton>
-          <ElButton :icon="Refresh" data-test="reset-btn" @click="handleReset">重置</ElButton>
+          <ElButton
+            :icon="Refresh"
+            data-test="reset-btn"
+            aria-label="重置筛选"
+            @click="handleReset"
+          >
+            重置
+          </ElButton>
           <!--
             v3.3 升级：展开/收起改为圆形图标按钮（与 TableHeader 列设置按钮同款 `circle`），
             减少按钮文字对搜索区横向空间的占用；图标方向天然表达可点击切换的语义。
@@ -538,6 +552,8 @@ function buildPlaceholder(col: ProColumn, prefix: '请输入' | '请选择' | un
               :icon="collapsed ? ArrowDown : ArrowUp"
               circle
               data-test="toggle-btn"
+              :aria-label="collapsed ? '展开搜索条件' : '收起搜索条件'"
+              :aria-expanded="!collapsed"
               @click="toggleCollapsed"
             />
           </ElTooltip>
