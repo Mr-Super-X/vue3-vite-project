@@ -98,6 +98,7 @@
     "vite-plugin-mock": "^3.0.2",
     "vite-plugin-vue-devtools": "^8.1.2",
     "vitest": "^4.1.9",
+    "vitest-axe": "^0.1.0",
     "vue-tsc": "^3.3.11"
   },
   "engines": {
