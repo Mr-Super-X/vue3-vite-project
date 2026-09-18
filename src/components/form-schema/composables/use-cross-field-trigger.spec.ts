@@ -22,7 +22,8 @@ interface ReverseRule {
 
 function makeOpts(
   rules: ReverseRule[],
-  modelGetter: () => Record<string, unknown> | undefined
+  modelGetter: () => Record<string, unknown> | undefined,
+  extra?: Pick<UseCrossFieldTriggerOptions, 'defaultDebounceMs' | 'watchFallback'>
 ): UseCrossFieldTriggerOptions & {
   setFieldError: ReturnType<typeof vi.fn>
   clearValidate: ReturnType<typeof vi.fn>
@@ -34,6 +35,7 @@ function makeOpts(
     model: modelGetter,
     setFieldError,
     clearValidate,
+    ...(extra ?? {}),
   }
 }
 
@@ -544,6 +546,95 @@ describe('useCrossFieldTrigger / model watch 兜底路径', () => {
     await new Promise((r) => setTimeout(r, 20))
 
     expect(call).toBe(0)
+  })
+
+  it('watchFallback=false → 直改 model 字段不触发 crossValidator（兜底关闭，纯 v-model 表单可省 deep watch）', async () => {
+    let call = 0
+    const rules: ReverseRule[] = [
+      {
+        target: 'label',
+        deps: ['user.age'],
+        rule: {
+          crossValidator: () => {
+            call++
+            return 'err'
+          },
+          dependsOn: 'user.age',
+          trigger: 'change',
+        },
+      },
+    ]
+    const model = reactive<Record<string, unknown>>({ user: { age: 10 }, label: 'x' })
+    const opts = makeOpts(rules, () => model, { watchFallback: false })
+    useCrossFieldTrigger(opts)
+    await nextTick()
+    call = 0
+
+    // 直改嵌套路径（绕过 v-model）——watchFallback=false 时兜底 deep watch 未注册，不应触发
+    ;(model.user as { age: number }).age = 30
+    await nextTick()
+    await new Promise((r) => setTimeout(r, 20))
+
+    expect(call).toBe(0)
+  })
+
+  it('watchFallback=false → trigger(dep) 精确路径仍可用（只关兜底，不关正触发）', async () => {
+    let call = 0
+    const rules: ReverseRule[] = [
+      {
+        target: 'label',
+        deps: ['user.age'],
+        rule: {
+          crossValidator: (_v: unknown, age: unknown) => {
+            call++
+            return Number(age) >= 18 ? true : '未成年'
+          },
+          dependsOn: 'user.age',
+          trigger: 'change',
+        },
+      },
+    ]
+    const model = reactive<Record<string, unknown>>({ user: { age: 10 }, label: 'x' })
+    const opts = makeOpts(rules, () => model, { watchFallback: false })
+    const { trigger } = useCrossFieldTrigger(opts)
+    await nextTick()
+    call = 0
+
+    trigger('user.age') // 精确路径：不受 watchFallback 影响
+    await nextTick()
+
+    expect(call).toBe(1)
+    expect(opts.setFieldError).toHaveBeenCalledWith('label', '未成年')
+  })
+
+  it('watchFallback 缺省（undefined）→ 向后兼容：直改 model 字段仍触发（同显式 true）', async () => {
+    let call = 0
+    const rules: ReverseRule[] = [
+      {
+        target: 'label',
+        deps: ['user.age'],
+        rule: {
+          crossValidator: (_v: unknown, age: unknown) => {
+            call++
+            return Number(age) >= 18 ? true : '未成年'
+          },
+          dependsOn: 'user.age',
+          trigger: 'change',
+        },
+      },
+    ]
+    const model = reactive<Record<string, unknown>>({ user: { age: 10 }, label: 'x' })
+    const opts = makeOpts(rules, () => model) // 不传 watchFallback → undefined → 默认 true
+    useCrossFieldTrigger(opts)
+    await nextTick()
+    call = 0
+
+    ;(model.user as { age: number }).age = 30
+    await nextTick()
+    await new Promise((r) => setTimeout(r, 20))
+
+    expect(call).toBe(1)
+    expect(opts.clearValidate).toHaveBeenCalledWith(['label'])
   })
 })
 

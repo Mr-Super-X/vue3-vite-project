@@ -15,9 +15,17 @@
  * @group 通用组件:ProDialogForm
  */
 import type { ProDialogFormExpose, ProDialogFormProps } from './types'
+import type { RuleItem } from '@/components/form-schema/types'
 import { useDialogSubmit } from './composables/useDialogSubmit'
 import { useResetOnClose } from './composables/useResetOnClose'
 import { buildXFormExposeProxy } from './composables/buildXFormExposeProxy'
+
+/**
+ * 空 rules 稳定引用 —— 不能用模板内联 `props.rules ?? {}`：
+ * 内联对象每次父渲染生成新引用，XForm 的 renderOpts 引用比较会判定 rules 换代，
+ * 触发 optsEpoch++ → 全部字段 SchemaField 失效重建（性能回归）
+ */
+const EMPTY_RULES: Record<string, RuleItem> = {}
 
 defineOptions({
   name: 'ProDialogForm',
@@ -82,8 +90,18 @@ defineExpose<ProDialogFormExpose>(buildXFormExposeProxy(() => formRef.value))
     @update:model-value="emit('update:modelValue', $event)"
     @close="handleClose"
   >
-    <!-- XForm 表单主体 —— 通过 ref 绑定,submit 时调用 validate() -->
-    <XForm ref="formRef" :schema="schema" :model="model" :rules="props.rules ?? {}" />
+    <!--
+      XForm 表单主体 —— 通过 ref 绑定,submit 时调用 validate()
+      v-bind="xformProps" 在前：显式 props（schema/model/rules）后绑定，
+      同名键以显式 props 为准（扩展能力不覆盖主数据契约）
+    -->
+    <XForm
+      ref="formRef"
+      v-bind="xformProps"
+      :schema="schema"
+      :model="model"
+      :rules="props.rules ?? EMPTY_RULES"
+    />
 
     <!-- 默认插槽:在表单之后插入额外内容(分隔线 / 说明文字) -->
     <slot />

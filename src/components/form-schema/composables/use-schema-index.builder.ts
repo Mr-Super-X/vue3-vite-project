@@ -71,10 +71,13 @@ export function buildIndex(schema: SchemaNode | SchemaNode[] | string | undefine
       if (!n.rules) return
       const arr = Array.isArray(n.rules) ? n.rules : [n.rules]
       for (const r of arr) {
-        if (typeof r !== 'object' || !r || !('crossValidator' in r) || !('dependsOn' in r)) continue
+        if (typeof r !== 'object' || !r || !('crossValidator' in r)) continue
+        const ri = r as RuleItem
+        // deps 是 dependsOn 的别名（命名统一，PM 审查发现 4）：优先 dependsOn，回退 deps
+        const raw = ri.dependsOn ?? ri.deps
+        if (!raw) continue
         const target = resolveFieldId(n)
         if (!target) continue
-        const raw = (r as RuleItem).dependsOn
         const deps = (Array.isArray(raw) ? raw : [raw]).filter(
           (d): d is string => typeof d === 'string'
         )

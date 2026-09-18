@@ -43,36 +43,49 @@ export function applyDefaults(
 }
 
 /**
- * 应用 defaultValue + 同步 ElForm 初始值快照
+ * 应用 defaultValue（schema 变化时）+ 同步 ElForm 初始值快照（仅首次）
  *
- * setup 期 immediate watch 触发时 elFormRef 尚未绑定，mounted 后再补一次
+ * setup 期 immediate watch 触发时 elFormRef 尚未绑定，mounted 后再补一次快照同步。
+ *
+ * ⚠️ 快照只同步一次（首次挂载）——schema 后续 watch 触发（如业务把 schema 包成 computed
+ * 依赖 model 字段，输入即重求值产生新 schema 引用）时**不得**再调 setInitialValues，否则
+ * 会把当前脏 model 同步为 initialValue，导致 resetFields 回到脏值而非 mount 时初始值
+ * （2026-09-18 用户反馈「点重置没反应」根因）。
  */
 export function applyDefaultsAndSync(
   props: XFormProps,
   val: SchemaNode | SchemaNode[],
-  setInitialValues: (initModel: Record<string, unknown>) => void
+  setInitialValues: (initModel: Record<string, unknown>) => void,
+  syncSnapshot = true
 ): void {
   const normalized = normalizeSchema(val)
   applyDefaults(normalized, props.model)
-  setInitialValues(props.model ?? {})
+  if (syncSnapshot) setInitialValues(props.model ?? {})
 }
 
 /**
- * 注册 schema 变化 → applyDefaultsAndSync + mounted 后补同步
+ * 注册 schema 变化 → applyDefaults（+ 首次快照同步）+ mounted 后补同步
  *
- * 立即执行 + deep watch schema 引用变化
+ * 立即执行 + deep watch schema 引用变化；schema 后续变化只应用 defaultValue，
+ * 不重复 setInitialValues（避免污染 el-form 的初始值快照，见 applyDefaultsAndSync 注释）
  */
 export function useApplyDefaults(
   props: XFormProps,
   setInitialValues: (initModel: Record<string, unknown>) => void
 ): void {
+  let isFirstSync = true
   watch(
     () => props.schema,
-    (val) => applyDefaultsAndSync(props, val, setInitialValues),
+    (val) => {
+      applyDefaultsAndSync(props, val, setInitialValues, isFirstSync)
+      isFirstSync = false
+    },
     { immediate: true, deep: true }
   )
   onMounted(() => {
-    // setup 期 immediate watch 触发时 elFormRef 尚未绑定，mounted 后补同步一次初始值
-    applyDefaultsAndSync(props, props.schema, setInitialValues)
+    // setup 期 immediate watch 触发时 elFormRef 尚未绑定，mounted 后补一次快照同步
+    // （仅首次：若 watch 已同步过则跳过，避免重复覆盖；若 watch 因 schema 异常未触发也兜底）
+    applyDefaultsAndSync(props, props.schema, setInitialValues, isFirstSync)
+    isFirstSync = false
   })
 }

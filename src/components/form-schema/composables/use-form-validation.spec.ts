@@ -294,10 +294,7 @@ describe('useFormValidation', () => {
       }
       await api.triggerCrossFieldValidator(node, 'blur')
       expect(deps.setFieldError).not.toHaveBeenCalled()
-      expect(consoleSpy).toHaveBeenCalledWith(
-        '[XForm] crossValidator blur trigger threw:',
-        expect.any(Error)
-      )
+      expect(consoleSpy).toHaveBeenCalledWith('[XForm] crossValidator threw:', expect.any(Error))
       consoleSpy.mockRestore()
     })
 

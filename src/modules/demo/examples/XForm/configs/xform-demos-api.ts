@@ -495,6 +495,26 @@ export const minimumItems: XFormApiItem[] = [
   },
 ]
 
+// XFormI18n —— i18n 接入要点
+export const i18nItems: XFormApiItem[] = [
+  {
+    name: 'label（函数式）',
+    type: "(t) => t('form.email')",
+    required: true,
+    description: 'label 支持 XFormLabelFn：渲染期以注入的 t 求值（identity.ts）',
+  },
+  {
+    name: 't（XFormProps）',
+    type: 'XFormTranslateFn',
+    description: '翻译函数注入：vue-i18n 的 t / 字典闭包均可；未注入时函数式 label 收 identity',
+  },
+  {
+    name: '语言切换',
+    type: '换 t 引用 / vue-i18n locale',
+    description: 't 在 render effect 内求值：vue-i18n 场景 locale 变化自动重渲，无需重建 schema',
+  },
+]
+
 // XFormNested —— Card 分组布局
 export const nestedItems: XFormApiItem[] = [
   {

@@ -24,7 +24,11 @@ import type {
   ElRate,
   ElSelect,
   ElSlider,
+  ElStep,
+  ElSteps,
   ElSwitch,
+  ElTabPane,
+  ElTabs,
   ElTimePicker,
   ElTimeSelect,
   ElTransfer,
@@ -52,12 +56,12 @@ type ComponentProps<T> = T extends new (...args: never[]) => infer R
   : NonNullable<T extends { props: infer P } ? P : never>
 
 /**
- * SchemaNode —— XForm schema DSL 的核心节点定义（31 字段接口）
+ * SchemaNode —— XForm schema DSL 的核心节点定义（35 字段接口）
  *
  * 字段分组（按 P2-1 拆分后命名空间）：
  * | 命名空间 | 字段数 | 子接口 |
  * | --- | --- | --- |
- * | 节点标识 | 4 | SchemaNodeIdentity（component/name/label/key） |
+ * | 节点标识 | 6 | SchemaNodeIdentity（component/name/label/key + id/meta 设计器预留） |
  * | 渲染属性 | 5 | SchemaNodeRender（props/on/children/slots/directives） |
  * | 布局 | 4 | SchemaNodeLayout（row/column/col/formItem） |
  * | 校验 | 2 | SchemaNodeValidate（rules/defaultValue） |
@@ -65,7 +69,7 @@ type ComponentProps<T> = T extends new (...args: never[]) => infer R
  * | 数组节点 | 2 | SchemaNodeArray（kind/array） |
  * | 数据加载 | 1 | SchemaNodeData（asyncOptions） |
  * | v-model 适配 | 1 | SchemaNodeVModel（modelProp） |
- * | 顶层配置 | 5 | SchemaNodeTopLevel（labelPosition/labelWidth/scrollToError/scrollIntoViewOptions/debounceValidation） |
+ * | 顶层配置 | 7 | SchemaNodeTopLevel（labelPosition/labelWidth/scrollToError/scrollIntoViewOptions/debounceValidation/watchFallback + schemaVersion 设计器预留） |
  *
  * TS interface extends 组合：9 命名空间无字段重叠，SchemaNode 类型形状与 P2-1 重构前完全等价。
  * IDE hover 仍显示扁平字段列表；命名空间接口可单独 import 用于"只关心某类字段"的子类型场景。
@@ -73,7 +77,7 @@ type ComponentProps<T> = T extends new (...args: never[]) => infer R
  * 业务入口推荐 `SchemaNodeFor<C>` 泛型版本（按 component 字段推导 props 类型）：
  *   const node: SchemaNodeFor<'Input'> = { component: 'Input', props: { placeholder: 'x' } }
  *
- * @see ./identity.ts SchemaNodeIdentity（4 字段）
+ * @see ./identity.ts SchemaNodeIdentity（6 字段）
  * @see ./render.ts SchemaNodeRender（5 字段）
  * @see ./layout.ts SchemaNodeLayout（4 字段）
  * @see ./validate.ts SchemaNodeValidate（2 字段）
@@ -122,6 +126,10 @@ type ElCascaderProps = ComponentProps<typeof ElCascader>
 type ElInputNumberProps = ComponentProps<typeof ElInputNumber>
 type ElSliderProps = ComponentProps<typeof ElSlider>
 type ElCardProps = ComponentProps<typeof ElCard>
+type ElTabsProps = ComponentProps<typeof ElTabs>
+type ElTabPaneProps = ComponentProps<typeof ElTabPane>
+type ElStepsProps = ComponentProps<typeof ElSteps>
+type ElStepProps = ComponentProps<typeof ElStep>
 type ElFormItemProps = ComponentProps<typeof ElFormItem>
 
 /**
@@ -162,6 +170,10 @@ export interface ComponentPropsRegistry {
   InputNumber: ElInputNumberProps
   Slider: ElSliderProps
   Card: ElCardProps
+  Tabs: ElTabsProps
+  TabPane: ElTabPaneProps
+  Steps: ElStepsProps
+  Step: ElStepProps
   FormItem: ElFormItemProps
   // 数组节点不绑 el 组件,内部独立渲染 —— props 类型留空占位
   ArrayNode: Record<string, unknown>

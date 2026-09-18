@@ -1,7 +1,7 @@
 import type { SchemaNode, RuleItem, ValidateOptions, ValidateResult } from '../types'
 import type { ZodType } from 'zod'
-import { get } from 'lodash-es'
 import { walkSchema } from '../utils/walk-schema'
+import { runCrossRule } from './cross-rule-runner'
 
 /**
  * use-validate —— schema 静态校验 + 运行时跨字段校验 + zod 顶层校验
@@ -243,23 +243,14 @@ async function runNodeCrossRules(
     const resolvedRule = typeof r === 'string' ? namedRules?.[r] : r
     if (typeof resolvedRule !== 'object' || resolvedRule === null) continue
     const rule = resolvedRule as RuleItem
-    if (!rule.crossValidator || !rule.dependsOn) continue
+    if (!rule.crossValidator || !(rule.dependsOn ?? rule.deps)) continue
     if (!node.name) continue
-    const value = get(model, node.name)
-    const depsList = (Array.isArray(rule.dependsOn) ? rule.dependsOn : [rule.dependsOn]).map(
-      (dep) => get(model, dep)
-    )
-    let result: true | string
-    try {
-      // 兼容同步和异步返回值
-      result = await Promise.resolve(rule.crossValidator(value, ...depsList))
-    } catch (err) {
-      console.error('[XForm] crossValidator threw:', err)
-      continue
+    // 批量路径无空值跳过（空值照跑 crossValidator）——与其他两条路径的差异见 cross-rule-runner 文件头
+    const outcome = await runCrossRule(rule, model, node.name)
+    if (outcome.kind === 'fail') {
+      errors.push({ keyPath: [...keyPath, node.name], message: outcome.message })
     }
-    if (result !== true) {
-      errors.push({ keyPath: [...keyPath, node.name], message: result })
-    }
+    // pass / threw：不写 errors（threw 已在 runCrossRule 内 console.error）
   }
 }
 

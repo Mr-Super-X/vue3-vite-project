@@ -4,6 +4,7 @@ import {
   DEFAULT_COMPONENT_MAP,
   DEFAULT_COMPONENT_PROPS,
 } from './element-plus-adapter'
+import { EL_COMPONENT_MAP } from '../composables/resolve-component'
 
 describe('resolveElComponentName(name, userComponentKeys?)', () => {
   it('resolves "Input" to "ElInput" from default map', () => {
@@ -82,5 +83,16 @@ describe('resolveElComponentName(name, userComponentKeys?)', () => {
     expect(DEFAULT_COMPONENT_MAP.Radio).toBe('ElRadio')
     expect(DEFAULT_COMPONENT_MAP.Checkbox).toBe('ElCheckbox')
     expect(DEFAULT_COMPONENT_MAP.Slider).toBe('ElSlider')
+  })
+
+  it('DEFAULT_COMPONENT_MAP 键集合与 EL_COMPONENT_MAP 单一真源一致（防双表漂移，架构审查 #2）', () => {
+    expect(Object.keys(DEFAULT_COMPONENT_MAP).sort()).toEqual(Object.keys(EL_COMPONENT_MAP).sort())
+  })
+
+  it('DEFAULT_COMPONENT_MAP 从组件对象 .name 派生 ElXxx 目标名（含 Icon 与别名键）', () => {
+    expect(DEFAULT_COMPONENT_MAP.Icon).toBe('ElIcon')
+    expect(DEFAULT_COMPONENT_MAP.InputPassword).toBe('ElInput')
+    expect(DEFAULT_COMPONENT_MAP.ElInputTextArea).toBe('ElInput')
+    expect(DEFAULT_COMPONENT_MAP.Form).toBe('ElForm')
   })
 })

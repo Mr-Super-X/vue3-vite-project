@@ -39,7 +39,26 @@ export interface ExpressionScope {
   resolveFunctionExpression: <T extends (...a: unknown[]) => unknown>(raw: unknown) => T | null
 }
 
-/** 深冻结 model 为安全 DTO：排除函数 / 原型链 / 循环引用 / 危险字段 */
+/**
+ * 深冻结 model 为安全 DTO：排除函数 / 原型链 / 循环引用 / 危险字段
+ *
+ * 性能优化（架构审查 #7）：每次调用 compiled() 都全量深拷贝 model 是大表单热点
+ * （N 个 reaction × 每次 deps 变化 × O(model)）。改为按【本轮 tick】缓存——
+ * 同一微任务内多次调用（同字段连续多表达式、多字段同批 reaction）只深拷贝一次，
+ * 缓存随微任务结束自动失效；model 值在 tick 间变化时下一次求值重新拷贝，行为保持。
+ */
+let safeDtoCache: { raw: unknown; dto: unknown } | null = null
+function toSafeDtoCached(model: unknown): unknown {
+  if (safeDtoCache && safeDtoCache.raw === model) return safeDtoCache.dto
+  const dto = toSafeDto(model)
+  safeDtoCache = { raw: model, dto }
+  // 微任务结束即失效：避免跨 tick 读到旧快照
+  queueMicrotask(() => {
+    safeDtoCache = null
+  })
+  return dto
+}
+
 function toSafeDto(model: unknown, seen: WeakSet<object> = new WeakSet()): unknown {
   if (model === null || typeof model !== 'object' || seen.has(model)) return model
   if (typeof model === 'function') return undefined
@@ -74,7 +93,7 @@ function compileExpression(
       `return (${raw.trim()})(model, ...__rest)`
     ) as (model: unknown, rest: unknown[], ...whitelist: unknown[]) => unknown
     compiled = (model: unknown, ...rest: unknown[]) =>
-      fn(toSafeDto(model), rest, ...names.map((n) => fnsRef.current[n]))
+      fn(toSafeDtoCached(model), rest, ...names.map((n) => fnsRef.current[n]))
   } catch (err) {
     console.error('[XForm] Invalid function expression:', raw, err)
   }

@@ -9,6 +9,11 @@
  * 原模板在 :title 与插值处各调一次 getValueMeta —— 同一值重复 JSON.stringify。
  * 现 display/tooltip 共享同一 ValueMeta，兑现「同一对象只 stringify 一次」的约定。
  *
+ * 用户语义分层（2026-09-18 三视角审查 F3）：SCHEMA_VALIDATE_FAILED 这类 code 与
+ * @source 对终端用户零信息价值 —— 标题主体改为 userMessage ?? message；
+ * code/source 仅 dev（import.meta.env.DEV）以弱化 meta 行呈现，prod 完全不渲染。
+ * 色板同步 EP CSS 变量（F6），暗色模式随主题自动切换。
+ *
  * @group XForm 组件
  */
 import type { FormErrorEvent, FormErrorSeverity } from '../composables/use-form-error-bus'
@@ -29,6 +34,15 @@ const SEVERITY_ICONS: Readonly<Record<FormErrorSeverity, string>> = {
   warn: '⚠',
   info: 'ℹ',
 }
+
+/** toast 标题主体 —— 用户语义优先（F3），dev 语义 message 兜底 */
+const headline = computed(() => props.event.userMessage ?? props.event.message)
+
+/**
+ * dev 标记 —— 模板表达式不支持 import.meta（SFC parser sourceType 限制），
+ * script 取值后供模板 v-if 使用：code/source meta 行仅 dev 渲染（F3）
+ */
+const isDev = import.meta.env.DEV
 
 /**
  * details + 值元数据预计算 —— 每次 events 变化仅序列化一次
@@ -55,10 +69,8 @@ const detailsWithMeta = computed<DetailWithMeta[]>(() =>
     <span :class="$style.icon" aria-hidden="true">{{ SEVERITY_ICONS[event.severity] }}</span>
     <div :class="$style.body">
       <header :class="$style.title">
-        <code :class="$style.code">{{ event.code }}</code>
-        <span v-if="event.source" :class="$style.source">@{{ event.source }}</span>
+        <span :class="$style.message">{{ headline }}</span>
       </header>
-      <p :class="$style.message">{{ event.message }}</p>
       <ul v-if="detailsWithMeta.length" :class="$style.detailList">
         <!-- d.field 在 schema 校验中唯一，作为 :key 比 index 更稳定 -->
         <li v-for="(d, i) in detailsWithMeta" :key="d.field ?? i" :class="$style.detailItem">
@@ -73,6 +85,11 @@ const detailsWithMeta = computed<DetailWithMeta[]>(() =>
         字段：
         <code v-for="f in event.fields" :key="f">{{ f }}</code>
       </p>
+      <!-- dev-only meta：code/source 服务排错而非终端用户（F3），prod 零渲染 -->
+      <p v-if="isDev" :class="$style.meta">
+        <code :class="$style.code">{{ event.code }}</code>
+        <span v-if="event.source" :class="$style.source">@{{ event.source }}</span>
+      </p>
     </div>
     <button
       type="button"
@@ -86,26 +103,27 @@ const detailsWithMeta = computed<DetailWithMeta[]>(() =>
 </template>
 
 <style module>
+/* 色板全部走 EP CSS 变量（F6）——暗色/自定义主题随 element-plus 自动切换 */
 .toast {
   display: flex;
   align-items: flex-start;
   gap: 10px;
   padding: 10px 12px;
-  background: #fff;
+  background: var(--el-bg-color);
   border-radius: 6px;
-  box-shadow: 0 4px 16px rgb(0 0 0 / 12%);
+  box-shadow: var(--el-box-shadow);
   font-size: 13px;
   line-height: 1.5;
   animation: slideIn 180ms ease-out;
 }
 .error {
-  border-left: 3px solid #ff4d4f;
+  border-left: 3px solid var(--el-color-danger);
 }
 .warn {
-  border-left: 3px solid #faad14;
+  border-left: 3px solid var(--el-color-warning);
 }
 .info {
-  border-left: 3px solid #1677ff;
+  border-left: 3px solid var(--el-color-primary);
 }
 .icon {
   flex-shrink: 0;
@@ -120,48 +138,51 @@ const detailsWithMeta = computed<DetailWithMeta[]>(() =>
   color: #fff;
 }
 .error .icon {
-  background: #ff4d4f;
+  background: var(--el-color-danger);
 }
 .warn .icon {
-  background: #faad14;
+  background: var(--el-color-warning);
 }
 .info .icon {
-  background: #1677ff;
+  background: var(--el-color-primary);
 }
 .body {
   flex: 1;
   min-width: 0;
 }
 .title {
+  margin: 0 0 4px;
+}
+.message {
+  margin: 0;
+  color: var(--el-text-color-primary);
+  word-break: break-word;
+}
+.meta {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin: 0 0 4px;
+  margin: 6px 0 0;
 }
 .code {
   font-family: ui-monospace, SFMono-Regular, monospace;
   font-size: 11px;
   padding: 1px 5px;
-  background: #f5f5f5;
+  background: var(--el-fill-color-light);
   border-radius: 3px;
-  color: #595959;
+  color: var(--el-text-color-secondary);
 }
 .source {
   font-size: 11px;
-  color: #8c8c8c;
-}
-.message {
-  margin: 0;
-  color: #262626;
-  word-break: break-word;
+  color: var(--el-text-color-placeholder);
 }
 .fields {
   margin: 4px 0 0;
   font-size: 11px;
-  color: #8c8c8c;
+  color: var(--el-text-color-placeholder);
 }
 .fields code {
-  background: #fafafa;
+  background: var(--el-fill-color-lighter);
   padding: 1px 4px;
   border-radius: 3px;
   margin-right: 4px;
@@ -184,25 +205,25 @@ const detailsWithMeta = computed<DetailWithMeta[]>(() =>
   flex-wrap: wrap;
 }
 .detailField {
-  background: #fafafa;
+  background: var(--el-fill-color-lighter);
   padding: 1px 5px;
   border-radius: 3px;
   font-family: ui-monospace, SFMono-Regular, monospace;
   font-size: 11px;
-  color: #595959;
+  color: var(--el-text-color-secondary);
   flex-shrink: 0;
 }
 .detailMsg {
-  color: #262626;
+  color: var(--el-text-color-primary);
   word-break: break-word;
   flex: 1;
   min-width: 0;
 }
 .detailValue {
-  color: #8c8c8c;
+  color: var(--el-text-color-placeholder);
   font-family: ui-monospace, SFMono-Regular, monospace;
   font-size: 11px;
-  background: #f5f5f5;
+  background: var(--el-fill-color-light);
   padding: 1px 4px;
   border-radius: 3px;
   cursor: help;
@@ -217,15 +238,15 @@ const detailsWithMeta = computed<DetailWithMeta[]>(() =>
   background: transparent;
   border: none;
   cursor: pointer;
-  color: #8c8c8c;
+  color: var(--el-text-color-placeholder);
   font-size: 18px;
   line-height: 1;
   padding: 0 4px;
   border-radius: 3px;
 }
 .close:hover {
-  background: #f5f5f5;
-  color: #262626;
+  background: var(--el-fill-color-light);
+  color: var(--el-text-color-primary);
 }
 @keyframes slideIn {
   from {

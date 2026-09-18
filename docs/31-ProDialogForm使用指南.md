@@ -50,6 +50,23 @@
 | `submitButtonText` | `string`                     | `'确 定'` | 提交按钮文案                                    |
 | `cancelButtonText` | `string`                     | `'取 消'` | 取消按钮文案                                    |
 | `resetOnClose`     | `boolean`                    | `true`    | 关闭后是否重置表单（动画结束 300ms 后）         |
+| `xformProps`       | `Partial<XFormProps>`        | —         | XForm 扩展 props 透传入口（见下方说明）         |
+
+> **XForm 能力透传**：ProDialogForm 显式 props 只覆盖 XForm 的主数据契约（`schema` / `model` / `rules`），
+> 其余 XForm 能力 —— `components`（自定义组件）/ `zodSchema` / `beforeChange` / `directives` /
+> `componentProps` / `expressionFunctions` / `permissionResolver` / `showErrorToast` / `scrollToError`
+> 等 —— 统一经 `xformProps` 透传。同名键优先级：显式 props > `xformProps`。
+>
+> ```ts
+> <ProDialogForm
+>   v-model="visible"
+>   title="编辑用户"
+>   :schema="schema"
+>   :model="form"
+>   :on-submit="handleSubmit"
+>   :xform-props="{ showErrorToast: true, scrollToError: true, components: { MyInput } }"
+> />
+> ```
 
 ### 2.2 Emits
 

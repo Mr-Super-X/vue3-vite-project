@@ -70,6 +70,46 @@ function findVNodeByType(vnode: unknown, typeName: string): unknown {
   return undefined
 }
 
+/**
+ * 在 vnode 树中收集所有指定 type 的 vnode（深度优先，含 slot 调用展开）
+ * findVNodeByType 的首个命中版；本函数返回全部命中，用于断言「分配成 N 个 ElCol」类场景
+ */
+function findAllVNodesByType(vnode: unknown, typeName: string): unknown[] {
+  const out: unknown[] = []
+  const walk = (v: unknown): void => {
+    if (Array.isArray(v)) {
+      v.forEach(walk)
+      return
+    }
+    if (!v || typeof v !== 'object') return
+    const node = v as { type?: unknown; children?: unknown }
+    const isMatch =
+      (typeof node.type === 'string' && node.type === typeName) ||
+      (node.type &&
+        typeof node.type === 'object' &&
+        (node.type as { name?: string }).name === typeName)
+    if (isMatch) out.push(v)
+    if (Array.isArray(node.children)) {
+      node.children.forEach(walk)
+    } else if (node.children && typeof node.children === 'object') {
+      const slots = node.children as Record<string, unknown>
+      for (const slotValue of Object.values(slots)) {
+        if (typeof slotValue === 'function') {
+          try {
+            walk(slotValue())
+          } catch {
+            // slot 调用失败，跳过
+          }
+        } else {
+          walk(slotValue)
+        }
+      }
+    }
+  }
+  walk(vnode)
+  return out
+}
+
 describe('renderWithFormItem', () => {
   it('基本 Input 包装：label + prop + rules', () => {
     const node: SchemaNode = {
@@ -350,5 +390,49 @@ describe('renderWithRowColumn', () => {
     const vnode = renderWithRowColumn(node, opts)
     const rowNode = findVNodeByType(vnode, 'ElRow')
     expect(rowNode).toBeDefined()
+  })
+
+  /**
+   * 回归（2026-09-18 xform-grid 模式3）：无组件容器节点（column + row + children 字段）
+   * 之前把 children 全塞进单个 ElCol，column 只决定该 ElCol 的宽度，字段纵向堆叠。
+   * 设计意图是「分区组织字段」——column=N 时 children 应分配到 N 个独立 ElCol（span=24/N）。
+   * @see XFormGrid.vue 模式3「布局容器节点」
+   */
+  it('column + 非空 children → children 分配到 column 个独立 ElCol（grid 分区）', () => {
+    const node: SchemaNode = {
+      column: 2,
+      row: { gutter: 24 },
+      children: [
+        { component: 'Input', name: 'orderNo', label: '订单号' },
+        { component: 'Input', name: 'status', label: '订单状态' },
+      ],
+    }
+    const opts = makeOpts({
+      render: vi.fn((n: SchemaNode) => `rendered:${n.name}`) as never,
+    })
+    const vnode = renderWithRowColumn(node, opts)
+    const cols = findAllVNodesByType(vnode, 'ElCol') as Array<{ props: { span?: number } }>
+    // column=2 → 2 个独立 ElCol，各 span=12
+    expect(cols.length).toBe(2)
+    expect(cols.map((c) => c.props.span)).toEqual([12, 12])
+  })
+
+  it('column=3 + 3 children → 3 个 ElCol 各 span=8', () => {
+    const node: SchemaNode = {
+      column: 3,
+      row: { gutter: 24 },
+      children: [
+        { component: 'Input', name: 'a', label: 'A' },
+        { component: 'Input', name: 'b', label: 'B' },
+        { component: 'Input', name: 'c', label: 'C' },
+      ],
+    }
+    const opts = makeOpts({
+      render: vi.fn((n: SchemaNode) => `rendered:${n.name}`) as never,
+    })
+    const vnode = renderWithRowColumn(node, opts)
+    const cols = findAllVNodesByType(vnode, 'ElCol') as Array<{ props: { span?: number } }>
+    expect(cols.length).toBe(3)
+    expect(cols.every((c) => c.props.span === 8)).toBe(true)
   })
 })

@@ -40,6 +40,8 @@ export type FormErrorCode =
   | 'UNKNOWN_COMPONENT'
   /** 节点 props 包含组件未声明的键（dev mode 拼写错误检测） */
   | 'UNKNOWN_COMPONENT_PROP'
+  /** asyncOptions 位于 registerAsyncOptions 不可达位置（formItem.slots / array.itemSchema 内），请求不会发起 */
+  | 'ASYNC_OPTIONS_UNSUPPORTED_POSITION'
   | (string & {}) // 业务自定义 code
 
 /** 单条错误事件 */
@@ -52,6 +54,12 @@ export interface FormErrorEvent {
   code: FormErrorCode
   /** 用户可读消息 */
   message: string
+  /**
+   * 面向终端用户的改写消息 —— toast 展示优先级高于 message
+   * 调用方在 dev 语义 message（含 code/字段路径/调试细节）之外提供一句人话，
+   * 未提供时 toast 退回 message
+   */
+  userMessage?: string
   /** 涉及的字段路径（用于聚焦定位） */
   fields?: string[]
   /**

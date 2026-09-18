@@ -125,6 +125,39 @@ describe('XFormDebugBanner', () => {
     expect(findInBody('[role="alert"]')).not.toBeNull()
   })
 
+  it('keyPath 数字段序列化为 EP 风格 [n] 下标（F5，与 async-validator 报错格式对齐）', () => {
+    const { bodyText } = makeWrapper({
+      validateErrors: [{ keyPath: ['items', 0, 'name'], message: '必填' }],
+      forbiddenErrors: [],
+    })
+    expect(bodyText()).toContain('items[0].name')
+    expect(bodyText()).toContain('必填')
+  })
+
+  it('点击错误项 → emit locate（EP 风格路径，供 scrollToField 定位）', async () => {
+    const { wrapper } = makeWrapper({
+      validateErrors: [{ keyPath: ['items', 2, 'phone'], message: '格式错误' }],
+      forbiddenErrors: [],
+    })
+    const item = document.body.querySelector('[role="button"]') as HTMLElement
+    expect(item).not.toBeNull()
+    item.click()
+    await wrapper.vm.$nextTick?.()
+    expect(wrapper.emitted('locate')).toBeTruthy()
+    expect(wrapper.emitted('locate')?.[0]).toEqual(['items[2].phone'])
+  })
+
+  it('头部含「复制全部」按钮（jsdom 无 clipboard API，仅断言入口存在）', () => {
+    makeWrapper({
+      validateErrors: [{ keyPath: ['email'], message: '未知组件名' }],
+      forbiddenErrors: [],
+    })
+    const copyBtn = Array.from(document.body.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('复制全部')
+    )
+    expect(copyBtn).toBeDefined()
+  })
+
   it('点击关闭（×）→ dismissed=true → 整个 banner 消失', async () => {
     const { wrapper, findInBody } = makeWrapper({
       validateErrors: [{ keyPath: ['x'], message: 'm' }],

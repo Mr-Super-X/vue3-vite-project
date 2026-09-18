@@ -8,6 +8,7 @@
  * - model 缺失时（DEV）→ warn 文案含「model prop 未传入」
  * - schema 含未知组件 → validateErrors 被填充 + console.error + errorBus.report(SCHEMA_VALIDATE_FAILED)
  * - schema 含 forbidden 标识符 → forbiddenErrors 被填充 + console.warn + errorBus.report(FORBIDDEN_IDENTIFIER)
+ * - schema 的 array.itemSchema 内含 asyncOptions → asyncOptionsWarnings + console.warn + errorBus.report(ASYNC_OPTIONS_UNSUPPORTED_POSITION)
  * - installDevDebugHook：挂载 window.__xform_debug
  * - installDevDebugHook：多次调用幂等
  * - installDevDebugHook：prod 环境不挂载
@@ -234,6 +235,41 @@ describe('useDevRuntime', () => {
     expect(errorBus.report).toHaveBeenCalledWith(
       expect.objectContaining({
         code: 'FORBIDDEN_IDENTIFIER',
+      })
+    )
+    scope.stop()
+  })
+
+  it('schema 的 array.itemSchema 内含 asyncOptions → asyncOptionsWarnings + console.warn + errorBus.report', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const { props, errorBus, fieldErrors, setFieldError } = makeDeps({
+      schema: [
+        {
+          kind: 'array',
+          name: 'items',
+          array: {
+            itemSchema: {
+              children: [{ component: 'Select', name: 'productId', asyncOptions: {} }],
+            },
+          },
+        },
+      ],
+    })
+    const scope = effectScope()
+    let ret!: ReturnType<typeof useDevRuntime>
+    scope.run(() => {
+      ret = useDevRuntime({ props, errorBus, setFieldError, fieldErrors })
+    })
+    await new Promise((r) => setTimeout(r, 0))
+    expect(ret.asyncOptionsWarnings.value).toEqual(['字段 "productId"'])
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('asyncOptions 位于不支持的位置'),
+      expect.anything()
+    )
+    expect(errorBus.report).toHaveBeenCalledWith(
+      expect.objectContaining({
+        severity: 'warn',
+        code: 'ASYNC_OPTIONS_UNSUPPORTED_POSITION',
       })
     )
     scope.stop()

@@ -8,6 +8,7 @@ import type { ZodType } from 'zod'
 
 import type { RuleItem } from './rule'
 import type { SchemaNode } from './schema-node'
+import type { XFormTranslateFn } from './identity'
 
 /**
  * beforeChange 钩子上下文 —— 允许在字段级钩子里联动修改其他字段 / 取消写入
@@ -60,6 +61,19 @@ export interface XFormProps {
   components?: Record<string, unknown>
   rules?: Record<string, RuleItem>
   directives?: Record<string, Directive>
+  /**
+   * i18n 翻译函数注入（架构审查 PM 发现 3，2026-09-18 落地）
+   *
+   * - 用于求值 SchemaNode.label 的函数式（XFormLabelFn）：label: (t) => t('form.email')
+   * - XForm 不绑定具体 i18n 库（分层铁律：components/ 不得 import locales/）——
+   *   调用方在 modules 层注入 vue-i18n 的 t 或自研字典查表函数
+   * - 求值发生在 render effect 内：vue-i18n 的 t 借此建立 locale 依赖，
+   *   语言切换自动重渲（无需重建 schema）
+   * - 缺省 identity ((key) => key)：函数式 label 收到 key 原样返回（业务可完全闭包自译）
+   *
+   * @see ./identity.ts XFormLabelFn / XFormTranslateFn
+   */
+  t?: XFormTranslateFn
   /**
    * 全局 Props beforeChange（第 1 层：横切关注点）
    * - 返回新值 → 透传给下一层
@@ -154,6 +168,34 @@ export interface XFormProps {
    * - 透传链路完整（spec 覆盖：use-reaction.spec.ts line 342 验证 budget.max 反映在 console.error 文案）
    */
   reactionBudget?: number
+  /**
+   * 表单密度尺寸（透传 ElConfigProvider.size），覆盖内部写死的 'default'
+   *
+   * 场景（设计师审查 F9）：中后台常见"紧凑表格页内嵌紧凑筛选表单"，此前 XForm 内部
+   * 硬编码 size='default' 会覆盖外层 ElConfigProvider——业务被迫在 XForm 外再包一层。
+   * 现在直接通过本 prop 一处传入即可。
+   *
+   * - 'large' / 'default' / 'small' 与 element-plus 语义一致
+   * - 未传入时保持 'default'（向后兼容）
+   * - schema 顶层节点不预留 size 字段（密度是表单级视觉决策，字段级不开放）
+   *
+   * @see ./components/XForm.vue（elConfig 透传处）
+   */
+  size?: 'large' | 'default' | 'small'
+  /**
+   * 字段级 dirty 视觉指示（设计师审查 F13）
+   *
+   * 开启后，被修改过的字段（getDirtyFields 返回的非空集合）对应的 form-item label
+   * 会追加 `is-dirty` class，配合样式（`__label::after` 圆点）给用户"我改了哪里"的视觉线索。
+   *
+   * - 默认 false（不开启，避免侵入消费方现有视觉）
+   * - 数据侧 getDirtyFields / isDirty / resetDirty 已就绪，本 prop 只接渲染层
+   * - dirty 集合随 resetDirty() 调用自动清空（响应式）
+   *
+   * @see ./composables/use-form-dirty.ts（能力层）
+   * @see ./components/XForm.vue（class 绑定处）
+   */
+  showDirtyMark?: boolean
 }
 
 /** XForm 组件实例方法 */

@@ -27,11 +27,13 @@ import type {
 import { resolveComponentFor } from './resolve-component'
 import { wrapWithElCol } from './wrap-with-elcol'
 import { buildAsyncProps, buildUploadDefaultSlot, getComponentDefaultProps } from './build-slots'
+import { resolveLabel } from '../utils/resolve-label'
 
 import { buildVModelBindings } from './build-vmodel-bindings'
 import { buildOnBindings } from './build-on-bindings'
 import { renderArrayNode } from './render-array-node'
 import { renderVisualContainer } from './render-visual-container'
+import { renderTabsStepsNode } from './render-tabs-steps-node'
 import { renderWithFormItem, renderWithRowColumn } from './render-form-item'
 import { resolvePermission, renderViewPlaceholder } from './use-field-permission'
 import { validateSchemaProps } from './validate-component-props'
@@ -55,6 +57,8 @@ export interface RenderSchemaNodeOptions {
   model: XFormProps['model']
   components: XFormProps['components']
   beforeChange: XFormProps['beforeChange']
+  /** i18n 翻译函数（XFormProps.t 透传）——label 函数式在 render effect 内以它求值 */
+  t?: XFormProps['t']
   beforeChangeRules?: BeforeChangeRule[] | undefined
   /** ctx 工厂（每字段独立 ctx 实例） */
   makeBeforeChangeCtx?: ((node: SchemaNode) => BeforeChangeCtx) | undefined
@@ -107,6 +111,15 @@ export interface RenderSchemaNodeOptions {
     string,
     { error: string; validateStatus: '' | 'validating' | 'success' | 'error' }
   >
+  /**
+   * 字段级 dirty 视觉指示（XFormProps.showDirtyMark 透传，设计师审查 F13）
+   * - showDirtyMark: 是否开启 dirty 标记（默认 false）
+   * - dirtyFields: 响应式 dirty 字段集合（composer 注入 useFormDirty.dirtyFieldsRef）
+   * 二者同时存在时，render-form-item 给对应 el-form-item 追加 `is-dirty` class
+   * exactOptionalPropertyTypes: 可选 + undefined 联合以兼容条件展开
+   */
+  showDirtyMark?: boolean | undefined
+  dirtyFields?: Readonly<Ref<ReadonlySet<string>>> | undefined
 }
 
 /** 主调度入口 —— 5 类渲染分支按顺序委托给子函数 */
@@ -125,7 +138,7 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
           [
             node.label
               ? h('label', { class: bem.e('view-field__label') } as Record<string, unknown>, {
-                  default: () => `${node.label}：`,
+                  default: () => `${resolveLabel(node.label, opts.t)}：`,
                 })
               : null,
             h('span', { class: bem.e('view-field__value') } as Record<string, unknown>, {
@@ -171,6 +184,16 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
   ): VNode | string | VNode[] | undefined {
     if (!Comp || (!node.slots && node.children === undefined) || node.name) return undefined
     return renderVisualContainer(node, Comp as object, opts, asyncProps)
+  }
+
+  /** 分支 2b：Tabs / Steps 视觉容器（children 每项 → ElTabPane / ElStep 面板） */
+  function renderTabsStepsBranch(
+    node: SchemaNode,
+    Comp: ReturnType<typeof resolveComponentFor>,
+    asyncProps: Record<string, unknown>
+  ): VNode | string | VNode[] | undefined {
+    if (!Comp) return undefined
+    return renderTabsStepsNode(node, Comp as object, opts, asyncProps) ?? undefined
   }
 
   /** 分支 3：FormItem 包装（含 name 或 formItem: true）—— 有 fall-through（result 为空时继续） */
@@ -247,7 +270,11 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
     // 共享上下文准备（dev mode 白名单校验 + Comp + eventBindings + asyncProps）
     const { Comp, eventBindings, asyncProps } = resolveNodeContext(node)
 
-    // 2) 视觉容器（Card 等带 row/column，无 name）
+    // 2) Tabs / Steps 视觉容器（children 即面板）——先于 Card 视觉容器判定
+    const tabsStepsResult = renderTabsStepsBranch(node, Comp, asyncProps)
+    if (tabsStepsResult !== undefined) return tabsStepsResult
+
+    // 2b) 视觉容器（Card 等带 row/column，无 name）
     const visualResult = renderVisualBranch(node, Comp, asyncProps)
     if (visualResult !== undefined) return visualResult
 

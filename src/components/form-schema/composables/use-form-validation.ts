@@ -70,10 +70,10 @@ export interface UseFormValidationReturn {
 }
 
 /**
- * 跨字段触发序号 —— 异步 crossValidator 竞态防护（H3）
+ * useFormValidation —— XForm 校验编排（el-form.validate + crossValidator + scrollToError）
  *
- * 实例级：每个 useFormValidation 调用独立一份 Map，组件 unmount 时随 composable scope 一起 GC
- * 改前是模块级 Map（多实例共享，组件卸载后仍持有 entry 浪费内存）—— OPT-5
+ * 跨字段执行语义（seq 竞态令牌 / 异常兜底 / 取值归一）统一收敛到
+ * ./cross-rule-runner.ts；字段事件触发委托 ./use-cross-field-rule-trigger
  */
 export function useFormValidation(deps: UseFormValidationDeps): UseFormValidationReturn {
   // 显式从 deps 传入（避免 composable 内 provide/inject 静默失效）

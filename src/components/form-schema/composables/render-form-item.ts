@@ -9,6 +9,7 @@
 import { h, type VNode } from 'vue'
 import { ElFormItem, ElRow, ElCol, ElUpload } from 'element-plus'
 import type { SchemaNode, SchemaSlot } from '../types'
+import { resolveLabel } from '../utils/resolve-label'
 import { buildVModelBindings } from './build-vmodel-bindings'
 import { buildOnBindings } from './build-on-bindings'
 import {
@@ -87,10 +88,13 @@ export function renderWithFormItem(
   }
   // 类型归因：FormItemComp（el-form-item 或自定义组件）与 h() 第一参 union 不等价
   // （C1 根因，详见 types/TYPE-CAST-AUDIT.md）；rules 经 compileRules 返回的 union 也走 as never 兜底。
+  // label 在 render effect 内 resolveLabel 求值（i18n 函数式收 props.t；compileRules 的
+  // 默认「<label>必填」消息同样用求值后文案，函数式 label 不会漏成 undefined）
+  const resolvedLabel = resolveLabel(node.label, opts.t)
   const formItem = h(
     FormItemComp as never,
     {
-      label: node.label,
+      label: resolvedLabel,
       prop: node.name,
       // ⭐ 字段级 label 配置 override 顶层（el-form-item 与 el-form 共享 labelPosition/labelWidth）
       // 字段级未设置时 el-form-item 自动继承 el-form 顶层（element-plus 原生行为）
@@ -101,11 +105,16 @@ export function renderWithFormItem(
       // 保留 prop 注册（el-form-item 挂载时注册时机固定，动态增删 prop 不可靠），
       // rules 为空即恒通过。hidden ≠ ignore：值仍保留在 model 中会提交
       rules:
-        node.hidden === true ? [] : (compileRules(node.rules, opts.rules, node.label) as never),
+        node.hidden === true ? [] : (compileRules(node.rules, opts.rules, resolvedLabel) as never),
       ...(ext?.error ? { error: ext.error } : {}),
       ...(ext?.validateStatus ? { validateStatus: ext.validateStatus } : {}),
       ...(onFocusout ? { onFocusout } : {}),
       ...fiProps,
+      // dirty 标记（设计师审查 F13）：showDirtyMark 开启且字段在 dirtyFields 集合中 → 追加 is-dirty class
+      // dirtyFields 是 Ref<Set>，render effect 内 .has() 建立响应式依赖，集合替换时自动重渲
+      ...(opts.showDirtyMark && node.name && opts.dirtyFields?.value.has(node.name)
+        ? { class: 'is-dirty' }
+        : {}),
       // key 优先级：node.key（身份标识，数组行内为行对象身份前缀）> node.name（校验路径，含位置索引）
       // —— 若优先 name，数组删/移行后 fi-items[0].qty 漂移导致 form-item 重挂载
       ...(node.name || node.key ? { key: `fi-${node.key ?? node.name}` } : {}),
@@ -164,6 +173,36 @@ export function renderWithRowColumn(node: SchemaNode, opts: RenderSchemaNodeOpti
         : 24
   // 阶段 2.4:row.responsive 拍平 —— 当前断点的 gutter/type/align/justify 覆盖基础配置
   const mergedRow = mergeRowResponsive(node.row, opts.currentBreakpoint?.value)
+
+  const childrenArr = Array.isArray(node.children)
+    ? (node.children as SchemaNode[])
+    : node.children && typeof node.children === 'object'
+      ? [node.children as SchemaNode]
+      : []
+
+  // ⭐ column + 非空 children → grid 分区（xform-grid 模式3「布局容器节点」修复）：
+  // 设计意图是 column=N 把 children 分配到 N 个独立 ElCol（span=24/N），而非把 children
+  // 全塞进单个占 24/N 宽的 ElCol 里纵向堆叠。与视觉容器 Card 的 renderToComponentWithGrid
+  // 同语义（column 分配优先，child 自有 col 配置在 column 容器内不另包，避免双嵌套 ElCol）。
+  // col 对象（span/offset）而无 column 时保留「单 ElCol 整段占宽」语义（column 缺失即不分配）。
+  if (node.column !== undefined && childrenArr.length > 0) {
+    const cs = Math.floor(24 / node.column)
+    return h(
+      ElRow as never,
+      { ...mergedRow, ...(node.key !== undefined && { key: node.key }) } as Record<string, unknown>,
+      {
+        default: () =>
+          childrenArr.map((c, i) =>
+            h(
+              ElCol as never,
+              { span: cs, key: (c as Record<string, unknown>).key ?? i } as Record<string, unknown>,
+              { default: () => opts.render(c) }
+            )
+          ),
+      }
+    ) as never
+  }
+
   return h(
     ElRow as never,
     { ...mergedRow, ...(node.key !== undefined && { key: node.key }) } as Record<string, unknown>,

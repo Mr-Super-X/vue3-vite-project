@@ -11,7 +11,9 @@ const ElFormStub = {
 }
 const ElFormItemStub = {
   name: 'ElFormItem',
-  template: '<div class="el-form-item"><slot /></div>',
+  props: ['label', 'prop', 'rules', 'labelWidth', 'labelPosition'],
+  template:
+    '<div class="el-form-item"><span v-if="label" class="fi-label">{{ label }}</span><slot /></div>',
 }
 const ElRowStub = { name: 'ElRow', template: '<div class="el-row"><slot /></div>' }
 const ElColStub = { name: 'ElCol', template: '<div class="el-col"><slot /></div>' }
@@ -36,6 +38,9 @@ function mountXForm(props: Record<string, unknown>, extraComponents: Record<stri
   return mount(XForm as never, {
     props: props as never,
     global: {
+      // 解除 VTU 默认的 transition-group stub —— toast 容器（F4 TransitionGroup）
+      // 需真实渲染为 ul[role="alert"] 才能被断言
+      stubs: { 'transition-group': false },
       components: {
         ElConfigProvider: ElConfigProviderStub,
         ElForm: ElFormStub,
@@ -90,6 +95,55 @@ describe('XForm.vue', () => {
     expect(wrapper.html()).toContain('el-input-stub')
     const inputs = wrapper.findAllComponents(InputStub)
     expect(inputs.length).toBe(2)
+  })
+
+  it('i18n 函数式 label：t 注入 → 渲染翻译后文案', () => {
+    const wrapper = mountXForm({
+      schema: {
+        children: [
+          {
+            component: 'ElInput',
+            name: 'email',
+            label: (t: (key: string) => string) => t('form.email'),
+          },
+        ],
+      } as unknown as SchemaNode,
+      t: (key: string) => `zh:${key}`,
+    } as never)
+    expect(wrapper.find('.el-form-item__label').text()).toBe('zh:form.email')
+  })
+
+  it('i18n 函数式 label：未注入 t → identity 原样返回 key', () => {
+    const wrapper = mountXForm({
+      schema: {
+        children: [
+          {
+            component: 'ElInput',
+            name: 'email',
+            label: (t: (key: string) => string) => t('form.email'),
+          },
+        ],
+      } as unknown as SchemaNode,
+    } as never)
+    expect(wrapper.find('.el-form-item__label').text()).toBe('form.email')
+  })
+
+  it('i18n 函数式 label：setProps 换 t 引用 → 重渲出新文案', async () => {
+    const wrapper = mountXForm({
+      schema: {
+        children: [
+          {
+            component: 'ElInput',
+            name: 'email',
+            label: (t: (key: string) => string) => t('form.email'),
+          },
+        ],
+      } as unknown as SchemaNode,
+      t: (key: string) => `zh:${key}`,
+    } as never)
+    expect(wrapper.find('.el-form-item__label').text()).toBe('zh:form.email')
+    await wrapper.setProps({ t: (key: string) => `en:${key}` })
+    expect(wrapper.find('.el-form-item__label').text()).toBe('en:form.email')
   })
 
   it('accepts schema as array (auto-wrap with children)', () => {

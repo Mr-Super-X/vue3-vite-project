@@ -11,6 +11,7 @@
  */
 import { get } from 'lodash-es'
 import { matchTrigger } from './match-trigger'
+import { runCrossRule, createCrossSeqGuard } from './cross-rule-runner'
 import type { RuleItem, SchemaNode } from '../types'
 
 /**
@@ -46,12 +47,15 @@ export interface UseCrossFieldRuleTriggerReturn {
 /**
  * 字段事件跨字段规则触发器
  * - 序号令牌：连续 blur/change 触发时，旧 Promise 后返回不得覆盖新结果
- * - 实例级 Map：组件 unmount 时随 composable scope 一起 GC
+ * - 实例级：组件 unmount 时随 composable scope 一起 GC
+ *
+ * seq 原语统一收敛到 cross-rule-runner；本路径 bump 时机 = 触发开始（先于空值检查，
+ * 空值也消耗一个 seq —— 行为保持，见 runner 文件头「刻意不统一」）
  */
 export function useCrossFieldRuleTrigger(
   deps: UseCrossFieldRuleTriggerDeps
 ): UseCrossFieldRuleTriggerReturn {
-  const crossTriggerSeq = new Map<string, number>()
+  const seqGuard = createCrossSeqGuard()
 
   async function triggerCrossFieldValidator(
     node: SchemaNode,
@@ -61,8 +65,7 @@ export function useCrossFieldRuleTrigger(
     const m = deps.model.value
     if (!m) return
     // 序号令牌：连续 blur/change 触发时，旧 Promise 后返回不得覆盖新结果（H3）
-    const triggerSeq = (crossTriggerSeq.get(node.name) ?? 0) + 1
-    crossTriggerSeq.set(node.name, triggerSeq)
+    const seq = seqGuard.begin(node.name)
     const rules = Array.isArray(node.rules) ? node.rules : [node.rules]
     const currentValue = get(m, node.name)
     // 空值跳过 cross 校验(留给 required / type 规则)
@@ -70,25 +73,17 @@ export function useCrossFieldRuleTrigger(
     for (const r of rules) {
       if (typeof r !== 'object' || r === null) continue
       const rule = r as RuleItem
-      if (!rule.crossValidator || !rule.dependsOn) continue
+      if (!rule.crossValidator || !(rule.dependsOn ?? rule.deps)) continue
       // trigger 字段过滤
       if (!matchTrigger(rule.trigger, eventType)) continue
-      const depsList = (Array.isArray(rule.dependsOn) ? rule.dependsOn : [rule.dependsOn]).map(
-        (dep: string) => get(m, dep)
-      )
-      let result: true | string
-      try {
-        result = await Promise.resolve(rule.crossValidator(currentValue, ...depsList))
-      } catch (err) {
-        console.error('[XForm] crossValidator blur trigger threw:', err)
-        continue
-      }
-      if (triggerSeq !== crossTriggerSeq.get(node.name)) return // 已有更新的触发，丢弃过期结果
-      if (result === true) {
+      const outcome = await runCrossRule(rule, m, node.name)
+      if (!seqGuard.isCurrent(node.name, seq)) return // 已有更新的触发，丢弃过期结果
+      if (outcome.kind === 'pass') {
         deps.setFieldError(node.name, '', '')
-      } else {
-        deps.setFieldError(node.name, result)
+      } else if (outcome.kind === 'fail') {
+        deps.setFieldError(node.name, outcome.message)
       }
+      // threw：runCrossRule 内已 console.error，继续下一条 rule（对齐原 catch → continue 语义）
     }
   }
 

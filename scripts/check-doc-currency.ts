@@ -22,6 +22,8 @@
 //   9. VENDOR_CHUNKS 具名组数 —— docs/04 §1.1 表格（vendor-vue / vendor-ui / vendor-charts）
 //  10. ProTable composables 数 —— docs/29-ProTable使用指南.md §概述「17 composables」
 //  11. ProTable 顶级 demo 数 —— docs/29-ProTable使用指南.md §概述「22 个演示」（21 能力 demo + ProTableOverview 主入口）
+//  12. XFormProps 字段数 —— docs/24 §2 + form-schema README「18 个」（三视角审查 Wave1-5 同步后的硬数据；Wave3-4 i18n +1 t；Wave3-6 交互增强 +2 size/showDirtyMark）
+//  13. XForm demo 数 —— docs/24 §19 示例索引「56 个」+ README（src/modules/demo/examples/XForm/ 下 .vue 数）
 //
 // 阈值调整原则：扩展字段 / 新增 composable 后，需同时更新本文档与 ARCHITECTURE.md。
 // 任何调整都需要在 PR 描述中显式说明（避免阈值被随意放宽）。
@@ -90,9 +92,16 @@ function countSchemaNodeFields(): number {
   return total
 }
 
-/** 数 builders.ts 中 xXxx 入口（`export const xXxx = ...`） */
+/**
+ * 数 builder xXxx 入口数（builders/ 子目录全部 .ts，排除 index barrel）
+ *
+ * 架构审查 #3 拆分后 builders.ts 仅做 re-export（`export * from './builders/index'`），
+ * 真正入口在 builders/core.ts + fields-*.ts + containers.ts。
+ */
 function countBuilders(): number {
-  const content = readText('src/components/form-schema/builders.ts')
+  const dir = join(FORM_SCHEMA, 'builders')
+  const files = readdirSync(dir).filter((f) => f.endsWith('.ts') && f !== 'index.ts')
+  const content = files.map((f) => readText(`src/components/form-schema/builders/${f}`)).join('\n')
   const matches = content.match(/^export const x[A-Z]\w+\s*[:=]/gm)
   return matches ? matches.length : 0
 }
@@ -104,16 +113,45 @@ function countComposables(): number {
     .length
 }
 
-/** 数 composables/*.spec.ts + 根目录 *.spec.ts */
+/**
+ * 数 form-schema 全目录 spec 文件（composables + components + adapters + utils + 根级）
+ *
+ * 当前 62 个：composables 49（47 实现各 1 + barrel.spec + cross-rule-runner.spec）
+ * + components 5 + adapters 1 + utils 4 + 根级 3。docs/25 TL;DR 与 ARCHITECTURE.md §9.1 表「合计」行写 62。
+ */
 function countSpecFiles(): number {
-  const composableSpecs = readdirSync(FORM_SCHEMA + '/composables').filter((f) =>
-    f.endsWith('.spec.ts')
-  ).length
-  const rootFiles = readdirSync(FORM_SCHEMA)
-  const rootSpecs = rootFiles.filter(
+  const dirs = ['composables', 'components', 'adapters', 'utils']
+  const nested = dirs.reduce(
+    (sum, d) =>
+      sum + readdirSync(join(FORM_SCHEMA, d)).filter((f) => f.endsWith('.spec.ts')).length,
+    0
+  )
+  const rootSpecs = readdirSync(FORM_SCHEMA).filter(
     (f) => f.endsWith('.spec.ts') && statSync(join(FORM_SCHEMA, f)).isFile()
   ).length
-  return composableSpecs + rootSpecs
+  return nested + rootSpecs
+}
+
+/**
+ * 数 XFormProps 字段数（types/xform.ts interface 体）
+ *
+ * docs/24 §2 与 form-schema README props 段均写「16 个」；与 index.spec.ts
+ * 'XFormProps 契约快照' 用例互锁 —— 增删 prop 时两处同时失败。
+ */
+function countXFormProps(): number {
+  return countInterfaceFields(readText('src/components/form-schema/types/xform.ts'), 'XFormProps')
+}
+
+/**
+ * 数 XForm demo 文件（src/modules/demo/examples/XForm/ 下 .vue，含 XFormOverview 主入口）
+ *
+ * docs/24 §19 示例索引表「56 个 demo」与 README demo 计数段写 56；§19 表行数与此互锁。
+ * 2026-09-18 Wave4-2 新增 XFormTabsSteps：55 → 56。
+ */
+function countXFormDemos(): number {
+  return readdirSync(join(ROOT, 'src/modules/demo/examples/XForm')).filter((f) =>
+    f.endsWith('.vue')
+  ).length
 }
 
 /**
@@ -193,31 +231,31 @@ function countProTableDemos(): number {
 
 const checks: Check[] = [
   {
-    // SchemaNode 实际 31 字段（ARCHITECTURE.md §2.1 写 30，存在 1 字段漂移 —— 阈值放宽让脚本先运行通过）
-    name: 'SchemaNode 字段数 (ARCHITECTURE.md §2.1 表格，文档当前标 30)',
+    // SchemaNode 实际 35 字段（ARCHITECTURE.md §2.1 已同步为 35）
+    name: 'SchemaNode 字段数 (ARCHITECTURE.md §2.1 表格)',
     actual: countSchemaNodeFields,
-    expected: 31,
+    expected: 35,
     tolerance: 0,
   },
   {
     name: 'builder 入口数 (ARCHITECTURE.md §8.1 表格)',
     actual: countBuilders,
-    expected: 27,
+    expected: 29,
     tolerance: 0,
   },
   {
-    // 实际 44 个 composable —— ARCHITECTURE.md §1.1 目录树未给精确数,这里给宽阈值
+    // ARCHITECTURE.md 头部写「一文件一能力（47 个）」含 barrel.ts；本函数排除 barrel 数实现文件 = 46
     name: 'composable 文件数 (ARCHITECTURE.md §1.1 目录树)',
     actual: countComposables,
-    expected: 44,
-    tolerance: 4,
+    expected: 46,
+    tolerance: 2,
   },
   {
-    // 实际 52 个 spec —— ARCHITECTURE.md §9.1 表格写 30,真实数更高（每个 composable 配一个 + 根目录若干）
+    // 62 = ARCHITECTURE.md §9.1 表合计行 + docs/25 TL;DR（2026-09-18 Wave3-3 +1 cross-rule-runner.spec）
     name: 'spec 文件数 (ARCHITECTURE.md §9.1 表格)',
     actual: countSpecFiles,
-    expected: 52,
-    tolerance: 5,
+    expected: 62,
+    tolerance: 2,
   },
   {
     name: 'use-xform-composer.ts 行数 (顶层编排膨胀预警)',
@@ -259,6 +297,18 @@ const checks: Check[] = [
     name: 'ProTable 顶级 demo 数 (docs/29 §概述)',
     actual: countProTableDemos,
     expected: 22,
+    tolerance: 0,
+  },
+  {
+    name: 'XFormProps 字段数 (docs/24 §2 + README「18 个」)',
+    actual: countXFormProps,
+    expected: 18,
+    tolerance: 0,
+  },
+  {
+    name: 'XForm demo 数 (docs/24 §19「56 个」+ README)',
+    actual: countXFormDemos,
+    expected: 56,
     tolerance: 0,
   },
 ]

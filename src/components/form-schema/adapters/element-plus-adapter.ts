@@ -1,48 +1,33 @@
 /**
  * Schema 字符串快捷名 → Element Plus 全局注册名 的内置映射
  *
- * 为什么不在此处直接 import element-plus 组件对象：
- * - 违反 CLAUDE.md §1.6 项目按需加载约定（unplugin-vue-components 自动注册）
- * - 直接命名导入会增加 bundle size
- * - 实际组件由 vue 内置 resolveComponent() 从全局注册表查找
+ * ⚠️ 单一真源派生（架构审查 #2，2026-09-18 收敛）：本表不再手写，
+ * 从 composables/resolve-component.ts 的 EL_COMPONENT_MAP（组件对象表）
+ * 派生 —— 新增组件只须在 EL_COMPONENT_MAP 登记一次，两处自动对齐。
  *
- * 类型断言（`as never`）归因见 types/TYPE-CAST-AUDIT.md。
+ * 依赖 element-plus 组件对象的稳定 `.name` 属性（如 ElInput.name === 'ElInput'）；
+ * 别名键（InputPassword / ElInputPassword 等共享 ElInput 对象）自动派生正确目标名。
+ * 若未来 EP 某组件缺 `.name`，fall back 到短名键本身。
+ *
+ * 为什么不在此处直接 import element-plus 组件对象作值：
+ * - 本表消费方只要字符串名（resolveComponent 从全局注册表查找）
+ * - 直接持有组件对象引用会增加 adapter 层与 EP 的耦合面
+ * （组件对象仅在 resolve-component.ts 一处持有，adapter 单向依赖之）
  *
  * @group XForm 适配层
  */
-export const DEFAULT_COMPONENT_MAP: Record<string, string> = {
-  Input: 'ElInput',
-  InputPassword: 'ElInput',
-  ElInputPassword: 'ElInput',
-  InputTextArea: 'ElInput',
-  ElInputTextArea: 'ElInput',
-  InputTag: 'ElInputTag',
-  Select: 'ElSelect',
-  Option: 'ElOption',
-  Switch: 'ElSwitch',
-  DatePicker: 'ElDatePicker',
-  TimePicker: 'ElTimePicker',
-  TimeSelect: 'ElTimeSelect',
-  Upload: 'ElUpload',
-  Transfer: 'ElTransfer',
-  TreeSelect: 'ElTreeSelect',
-  Autocomplete: 'ElAutocomplete',
-  ColorPicker: 'ElColorPicker',
-  Mention: 'ElMention',
-  Rate: 'ElRate',
-  Button: 'ElButton',
-  Icon: 'ElIcon',
-  RadioGroup: 'ElRadioGroup',
-  Radio: 'ElRadio',
-  CheckboxGroup: 'ElCheckboxGroup',
-  Checkbox: 'ElCheckbox',
-  Cascader: 'ElCascader',
-  InputNumber: 'ElInputNumber',
-  Slider: 'ElSlider',
-  Card: 'ElCard',
-  FormItem: 'ElFormItem',
-  Form: 'ElForm',
+import { EL_COMPONENT_MAP } from '../composables/resolve-component'
+
+function deriveComponentNameMap(): Record<string, string> {
+  const map: Record<string, string> = {}
+  for (const [shortName, component] of Object.entries(EL_COMPONENT_MAP)) {
+    const withName = component as { name?: string }
+    map[shortName] = withName.name ?? shortName
+  }
+  return map
 }
+
+export const DEFAULT_COMPONENT_MAP: Record<string, string> = deriveComponentNameMap()
 
 /** 把快捷名形式的默认 props 同时展开为 ElXxx 形式，兼容 schema 中两种写法 */
 function expandComponentProps(

@@ -16,6 +16,7 @@ import {
   ElDatePicker,
   ElForm,
   ElFormItem,
+  ElIcon,
   ElInput,
   ElInputNumber,
   ElInputTag,
@@ -26,7 +27,11 @@ import {
   ElRate,
   ElSelect,
   ElSlider,
+  ElStep,
+  ElSteps,
   ElSwitch,
+  ElTabPane,
+  ElTabs,
   ElTimePicker,
   ElTimeSelect,
   ElTransfer,
@@ -35,7 +40,13 @@ import {
 } from 'element-plus'
 import type { SchemaNode } from '../types'
 
-/** EL_COMPONENT_MAP —— 内置 EL 组件短名 → 实际组件对象的映射表 */
+/**
+ * EL_COMPONENT_MAP —— 内置 EL 组件短名 → 实际组件对象的映射表
+ *
+ * ⚠️ 唯一 runtime 真源（架构审查 #2，2026-09-18 收敛）：组件名 → 字符串的
+ * DEFAULT_COMPONENT_MAP（adapters/element-plus-adapter.ts）从此表派生，
+ * 禁止再手写第二份映射表 —— 新增组件只在此处登记一次。
+ */
 export const EL_COMPONENT_MAP: Record<string, unknown> = {
   Input: ElInput,
   Select: ElSelect,
@@ -49,6 +60,7 @@ export const EL_COMPONENT_MAP: Record<string, unknown> = {
   TreeSelect: ElTreeSelect,
   Autocomplete: ElAutocomplete,
   Button: ElButton,
+  Icon: ElIcon,
   RadioGroup: ElRadioGroup,
   Radio: ElRadio,
   CheckboxGroup: ElCheckboxGroup,
@@ -65,6 +77,10 @@ export const EL_COMPONENT_MAP: Record<string, unknown> = {
   Rate: ElRate,
   Slider: ElSlider,
   Card: ElCard,
+  Tabs: ElTabs,
+  TabPane: ElTabPane,
+  Steps: ElSteps,
+  Step: ElStep,
   FormItem: ElFormItem,
   Form: ElForm,
 }

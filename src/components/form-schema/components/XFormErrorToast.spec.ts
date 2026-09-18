@@ -9,7 +9,7 @@
  * - dismiss 事件转发：XFormErrorToastItem emit → XFormErrorToast emit
  * - role/aria-live 无障碍属性
  */
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import XFormErrorToast from './XFormErrorToast.vue'
 import type { FormErrorEvent } from '../composables/use-form-error-bus'
@@ -27,7 +27,13 @@ function makeEvent(overrides?: Partial<FormErrorEvent>): FormErrorEvent {
 }
 
 function makeWrapper(props: { events: FormErrorEvent[]; enabled: boolean }) {
-  const wrapper = mount(XFormErrorToast, { props, attachTo: document.body })
+  const wrapper = mount(XFormErrorToast, {
+    props,
+    attachTo: document.body,
+    // VTU 默认 stub transition-group —— 解除 stub 才能真实渲染 ul[role="alert"]
+    // 并驱动 enter/leave 过渡类名（F4 TransitionGroup 改造的前提）
+    global: { stubs: { 'transition-group': false } },
+  })
   const findInBody = (selector: string) => document.body.querySelector(selector)
   const bodyText = () => document.body.textContent ?? ''
   return { wrapper, findInBody, bodyText }
@@ -114,5 +120,84 @@ describe('XFormErrorToast', () => {
     const ul = findInBody('ul[role="alert"]')
     expect(ul).not.toBeNull()
     expect(ul?.querySelectorAll('li').length).toBe(0)
+  })
+
+  describe('超量聚合卡片（F4）', () => {
+    it('可见 toast 超过 3 条 → 第 4 条起聚合为「还有 N 条错误」卡片', () => {
+      const { findInBody, bodyText } = makeWrapper({
+        events: [
+          makeEvent({ code: 'A', message: 'm1' }),
+          makeEvent({ code: 'B', message: 'm2' }),
+          makeEvent({ code: 'C', message: 'm3' }),
+          makeEvent({ code: 'D', message: 'm4' }),
+          makeEvent({ code: 'E', message: 'm5' }),
+        ],
+        enabled: true,
+      })
+      // 前 3 条直接渲染
+      const ul = findInBody('ul[role="alert"]')
+      expect(ul?.querySelectorAll('li')).toHaveLength(4) // 3 toast + 1 聚合卡
+      expect(bodyText()).toContain('还有 2 条错误')
+      expect(bodyText()).toContain('共 5 条')
+    })
+
+    it('可见 toast ≤ 3 条 → 无聚合卡', () => {
+      const { findInBody } = makeWrapper({
+        events: [
+          makeEvent({ code: 'A', message: 'm1' }),
+          makeEvent({ code: 'B', message: 'm2' }),
+          makeEvent({ code: 'C', message: 'm3' }),
+        ],
+        enabled: true,
+      })
+      expect(findInBody('ul[role="alert"]')?.querySelectorAll('li')).toHaveLength(3)
+    })
+
+    it('点击「全部关闭」→ emit dismissAll', async () => {
+      const { wrapper } = makeWrapper({
+        events: [
+          makeEvent({ code: 'A' }),
+          makeEvent({ code: 'B' }),
+          makeEvent({ code: 'C' }),
+          makeEvent({ code: 'D' }),
+        ],
+        enabled: true,
+      })
+      const btn = Array.from(document.body.querySelectorAll('button')).find((b) =>
+        b.textContent?.includes('全部关闭')
+      ) as HTMLElement
+      expect(btn).toBeDefined()
+      btn.click()
+      await wrapper.vm.$nextTick?.()
+      expect(wrapper.emitted('dismissAll')).toBeTruthy()
+    })
+  })
+
+  describe('自动消失（F4）', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('新 toast 7s 后自动 emit dismiss（无需用户点 ×）', () => {
+      const { wrapper } = makeWrapper({
+        events: [makeEvent({ id: 'evt-auto', code: 'AUTO' })],
+        enabled: true,
+      })
+      expect(wrapper.emitted('dismiss')).toBeUndefined()
+      vi.advanceTimersByTime(7_000)
+      expect(wrapper.emitted('dismiss')?.[0]).toEqual(['evt-auto'])
+    })
+
+    it('6.9s 内不自动 dismiss（时序边界）', () => {
+      const { wrapper } = makeWrapper({
+        events: [makeEvent({ id: 'evt-wait', code: 'WAIT' })],
+        enabled: true,
+      })
+      vi.advanceTimersByTime(6_900)
+      expect(wrapper.emitted('dismiss')).toBeUndefined()
+    })
   })
 })

@@ -73,6 +73,20 @@ describe('useFormErrorBus', () => {
     expect(e.timestamp).toBeGreaterThan(0)
   })
 
+  it('report() 携带 userMessage 时透传到事件（F3 用户语义分层数据通道）', () => {
+    const { bus } = mountBus()
+    bus.report({
+      severity: 'error',
+      code: 'EL_FORM_VALIDATION_FAILED',
+      message: 'el-form.validate() rejected（dev 语义）',
+      userMessage: '表单校验未通过，请检查标红字段',
+    })
+    const e = bus.events.value[0]!
+    expect(e.userMessage).toBe('表单校验未通过，请检查标红字段')
+    // dev 语义 message 保留（console 留痕与调试面板仍消费它）
+    expect(e.message).toBe('el-form.validate() rejected（dev 语义）')
+  })
+
   it('report() 上报 error 走 console.error；warn 走 console.warn；info 走 console.info', () => {
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})

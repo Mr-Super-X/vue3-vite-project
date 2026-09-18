@@ -125,6 +125,46 @@ describe('ProDialogForm', () => {
     })
   })
 
+  describe('xformProps 透传', () => {
+    it('xformProps 属性透传到 XForm（showErrorToast / scrollToError / components）', async () => {
+      const wrapper = mountForm({
+        xformProps: {
+          showErrorToast: true,
+          scrollToError: true,
+          components: { MyComp: {} },
+        },
+      })
+      await nextTick()
+      const xformAttrs = wrapper.findComponent({ name: 'XForm' }).vm.$attrs
+      expect(xformAttrs.showErrorToast).toBe(true)
+      expect(xformAttrs.scrollToError).toBe(true)
+      expect(xformAttrs.components).toEqual({ MyComp: {} })
+    })
+
+    it('同名键优先级：显式 rules 覆盖 xformProps.rules', async () => {
+      const explicitRules = { username: { required: true } }
+      const wrapper = mountForm({
+        rules: explicitRules,
+        xformProps: { rules: { other: { required: true } } },
+      })
+      await nextTick()
+      const xformAttrs = wrapper.findComponent({ name: 'XForm' }).vm.$attrs
+      // 注：经 VTU mount 传递后对象引用可能被克隆，优先级断言用深比较（引用稳定性由下个用例覆盖）
+      expect(xformAttrs.rules).toStrictEqual(explicitRules)
+    })
+
+    it('rules 缺省时使用稳定空对象引用（父重渲染后引用不变，避免 XForm renderOpts 全量失效）', async () => {
+      const wrapper = mountForm()
+      await nextTick()
+      const first = wrapper.findComponent({ name: 'XForm' }).vm.$attrs.rules
+      await wrapper.setProps({ title: '触发父组件重渲染' })
+      await nextTick()
+      const second = wrapper.findComponent({ name: 'XForm' }).vm.$attrs.rules
+      expect(first).toBe(second)
+      expect(second).toEqual({})
+    })
+  })
+
   describe('提交逻辑', () => {
     it('提交成功 → 关闭弹窗（emit update:modelValue false）+ emit("success")', async () => {
       const onSubmit = vi.fn(() => Promise.resolve())

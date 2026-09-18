@@ -28,7 +28,8 @@ const propsModel = props as XFormProps
 // element-plus 2.x ConfigProviderProps 是 ExtractPropTypes 元组（type/required/validator/__epPropKey）形态，
 // 运行时 locale 是 Language 对象、size 是 string；TS 层用 Record<string, unknown> 替代 `as any`（全局 §1.5 违规），
 // <ElConfigProvider v-bind="elConfig"> 接受 string-keyed 对象（归因见 types/TYPE-CAST-AUDIT.md C1）。
-const elConfig: Record<string, unknown> = { locale: zhCn, size: 'default' }
+// size 透传 XFormProps.size（设计师审查 F9）：未传入时保持 'default'（向后兼容）
+const elConfig: Record<string, unknown> = { locale: zhCn, size: props.size ?? 'default' }
 // BEM namespace 由 unplugin-auto-import 自动注入，无需显式 import
 const {
   bem,
@@ -46,10 +47,12 @@ const {
   topLevelScrollIntoViewOptions,
   validateErrors,
   forbiddenErrors,
+  asyncOptionsWarnings,
   showDebugBanner,
   exposed,
   installDevDebugHook,
   errorBus,
+  scrollToField,
 } = useXFormComposer({ props: propsModel })
 
 defineExpose(exposed satisfies XFormExpose)
@@ -122,6 +125,8 @@ onMounted(() => installDevDebugHook())
     v-if="showDebugBanner"
     :validate-errors="validateErrors"
     :forbidden-errors="forbiddenErrors"
+    :async-options-warnings="asyncOptionsWarnings"
+    @locate="scrollToField"
   />
   <!-- OPT-7：user-facing 错误 OSD —— 由 showErrorToast prop 独立控制（默认关闭），
        与 showDebugBanner（schema 校验/安全扫描横幅，dev 自动开）互不耦合。
@@ -136,6 +141,7 @@ onMounted(() => installDevDebugHook())
       :events="errorBus.events.value"
       :enabled="props.showErrorToast ?? false"
       @dismiss="errorBus.dismiss"
+      @dismiss-all="errorBus.dismissAll"
     />
   </slot>
 </template>

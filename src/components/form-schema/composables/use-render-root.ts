@@ -80,6 +80,24 @@ export interface UseRenderRootDeps {
    * @see ./use-expression.ts createExpressionScope
    */
   resolveFunctionExpression?: ExpressionScope['resolveFunctionExpression']
+  /**
+   * 字段级 dirty 视觉指示（XFormProps.showDirtyMark 透传，设计师审查 F13）
+   * dirtyFields 由 composer 注入（useFormDirty.dirtyFieldsRef，响应式 Set）
+   * render-form-item 在 render effect 内订阅它，dirty 集合变化时自动重渲对应字段
+   * exactOptionalPropertyTypes: 可选 + undefined 联合以兼容条件展开
+   */
+  showDirtyMark?: boolean | undefined
+  dirtyFields?: Readonly<Ref<ReadonlySet<string>>> | undefined
+  /**
+   * model 表达式重渲 epoch（composer 注入）——
+   * useModelExpressionRerender 检测到 model 变化且 schema 含 model 依赖表达式
+   * （顶层 readonly/disabled / 字段 permission 的函数或 '{{ }}' 形态）时 bump 它，
+   * 使所有 SchemaField 的 renderFn 重跑。为什么需要：这些表达式的求值在 Card 等
+   * 视觉容器的 slot 闭包里（render-schema-node resolvePermission），脱离 SchemaField
+   * 自身 render effect 同步追踪，且收沙箱深拷贝副本不追踪 model —— 必须靠 epoch
+   * 强制整树重建才能让 permission 重算（2026-09-18 xform-expression 角色切换失效根因）
+   */
+  modelExpressionEpoch?: Readonly<Ref<number>> | undefined
 }
 
 /** useRenderRoot 返回值 —— 仅暴露 renderToComponent（optsEpoch 是内部订阅细节） */
@@ -105,6 +123,9 @@ export function useRenderRoot(deps: UseRenderRootDeps): UseRenderRootReturn {
     mergedComponentProps,
     permissionResolver,
     resolveFunctionExpression,
+    showDirtyMark,
+    dirtyFields,
+    modelExpressionEpoch,
   } = deps
 
   // opts 换代计数器 —— 父级替换 props 引用时 bump，让所有 SchemaField 的 render effect 失效重渲
@@ -117,6 +138,9 @@ export function useRenderRoot(deps: UseRenderRootDeps): UseRenderRootReturn {
   ): VNode | string | VNode[] | undefined {
     // 订阅 optsEpoch：B4 watch 在 props 引用换代时 bump 它，字段 effect 随之失效重渲
     void optsEpoch.value
+    // 订阅 modelExpressionEpoch：model 依赖表达式（顶层 readonly/disabled / 字段 permission）
+    // 的求值在 slot 闭包里脱离本组件 effect 追踪，靠 composer bump 此 epoch 强制整树重建
+    void modelExpressionEpoch?.value
     if (node === null || node === undefined) return undefined
     if (typeof node === 'string') return node
     if (Array.isArray(node)) return node.map(renderToComponent) as VNode[]
@@ -143,6 +167,9 @@ export function useRenderRoot(deps: UseRenderRootDeps): UseRenderRootReturn {
     components: props.components,
     beforeChange: props.beforeChange,
     beforeChangeRules: props.beforeChangeRules,
+    // i18n t 用 getter 闭包而非 setup 快照：父级替换 t 引用（语言切换）无需等 optsEpoch 覆盖，
+    // resolveLabel 每次渲染实时读 props.t；vue-i18n 的 t 在 render effect 内被调用以建立 locale 依赖
+    t: (key) => props.t?.(key) ?? key,
     // getter 闭包延迟解析 exposed —— 闭包内访问的 exposed 在本函数末尾才构造
     makeBeforeChangeCtx: (node) =>
       makeDefaultBeforeChangeCtx(node, (props.model ?? {}) as Record<string, unknown>, getExposed),
@@ -150,6 +177,9 @@ export function useRenderRoot(deps: UseRenderRootDeps): UseRenderRootReturn {
     componentProps: mergedComponentProps.value,
     render: renderToComponent,
     externalErrors: () => fieldErrors.value,
+    // dirty 标记（设计师审查 F13）：showDirtyMark 透传 + dirtyFields 响应式订阅
+    showDirtyMark: showDirtyMark ?? false,
+    dirtyFields,
     arrayActions,
     triggerCrossFieldValidator: (node, eventType) => triggerCrossFieldValidator(node, eventType),
     validateField: async (name: string) => {

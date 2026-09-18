@@ -77,30 +77,72 @@ watch(
 )
 
 /**
- * 同步阶段安全渲染 —— computed 包裹 renderFn 调用，捕获同步 throw
+ * node 属性写回重渲兜底 —— deep watch props.node，任一属性变化时 tick++ 触发本字段重渲
+ *
+ * 为什么需要：renderNode 是普通函数（非 computed），其内 renderFn 递归创建的子树 VNode
+ * 含多层 slot 闭包（Card → renderToComponentWithGrid → 字段 label/hidden 在 ElCard patch 期
+ * 的 slot 调用栈里才被读取）。这导致 SchemaField 自身 render effect 同步执行期**读不到**
+ * 深层子字段的 node.label / node.hidden —— 这些属性的响应式订阅记在第三方组件（ElCard）
+ * 的 effect 上，reaction 写回时无法可靠驱动整棵子树重建（2026-09-18 用户反馈
+ * xform-expression demo「功能都失效」根因：reaction 写回正确但 DOM 不刷新）。
+ * 之前用 computed 包裹时，computed 的 deps 容器会收纳这些深层读取并挂到本组件 effect，
+ * 改动后该机制丢失 —— 此处用 deep watch 重建等价订阅。
+ *
+ * 成本：每个 SchemaField 一个 deep watcher；node 属性实际变化时才 tick++（渲染兜底）。
+ *
+ * ⚠️ watch 为浅源（() => props.node）+ deep:true —— 递归监听整棵子树 reactive node。
+ */
+watch(
+  () => props.node,
+  () => {
+    tick.value++
+  },
+  { deep: true }
+)
+
+/**
+ * 渲染输出 —— 用函数而非 computed 包裹 renderFn 调用
+ *
+ * ⚠️ 不能用 computed：renderFn 内可能含 applyDirectives → withDirectives，后者要求
+ * 活跃渲染上下文（currentRenderingInstance !== null）。computed 求值可能在 watch
+ * flush / 副作用阶段，此时 rendering instance 已清空 → withDirectives 守卫命中
+ * 警告 + 跳过指令挂载（2026-09-18 用户反馈 xform-directives demo 控制台警告根因）。
+ * 真正的组件 render() 函数执行期渲染上下文必定活跃，故用普通函数 + 模板内调
+ * {{ renderNode() }} 触发组件重渲染时重新执行（依赖通过 props.renderFn 闭包自动追踪）。
  *
  * 依赖：props.node / props.renderFn（renderFn 内访问 model → 字段级响应式追踪）
  * + tick（patch 阶段 throw 重置触发器）
  *
  * 关键：catch 块内**不写 ref**（vue/no-side-effects-in-computed-properties 禁用），
- * 仅 console 留痕 + 返回 undefined —— template 通过 `!rendered` 走占位 div
+ * 仅 console 留痕 + 返回 undefined —— template 通过 `renderNode() === undefined` 走占位 div
  *
- * 返回类型 narrow 为 VNode | string | undefined：模板 <component :is="...">
- * 只接受单值；renderFn 返回数组形态属于上游约定违规，取首项或忽略
+ * ⭐ 返回值三态语义（2026-09-18 修 xform-field-permission「permission:hidden 误报渲染失败」）：
+ * - VNode | string → 正常渲染
+ * - null → **合法空渲染**（permission 'hidden' / node.ignore / 无组件映射等 renderFn 正常返回
+ *   undefined 的场景）——template 走 `<component :is="null">` 渲染为空，**不显示错误占位**
+ * - undefined → **渲染失败**（renderFn 同步 throw / patch 阶段 renderError）——template 显示占位
+ *
+ * 为什么必须区分：renderFn 对 permission 'hidden' 合法返回 undefined（字段不渲染），
+ * 与 renderFn throw 的 undefined 在旧 `!renderNode()` 判定下无法区分，导致 hidden 字段
+ * 被误报「字段渲染失败」。permission hidden 是「按设计消失」，不是「渲染出错」。
+ *
+ * 返回类型 narrow 为 VNode | string | null | undefined：模板 <component :is="...">
+ * 接受 null 渲染空节点；renderFn 返回数组形态属于上游约定违规，取首项或忽略
  */
-const rendered = computed<VNode | string | undefined>(() => {
+function renderNode(): VNode | string | null | undefined {
   void tick.value // 建立 tick 依赖，让 onErrorCaptured 能触发重算
   if (renderError.value) return undefined // patch 阶段已出错：返回 undefined 走占位
   try {
     const result = props.renderFn(props.node)
     if (Array.isArray(result)) {
-      // 数组形态不直接渲染：透传首项
-      return result[0]
+      // 数组形态不直接渲染：透传首项（首项 undefined → 合法空）
+      return result[0] ?? null
     }
-    return result ?? undefined
+    // renderFn 正常返回 undefined/null（permission hidden / ignore / 无组件）→ 合法空渲染
+    return result ?? null
   } catch (err) {
     // dev 留痕；prod 静默 —— 不写 renderError (避免 vue/no-side-effects-in-computed-properties)
-    // sync throw 后 rendered 为 undefined，template 通过 !rendered 走占位 div
+    // sync throw 后返回 undefined（区别于合法空 null），template 走占位 div
     if (import.meta.env.DEV) {
       console.error(
         `[XForm][SchemaField] renderFn failed for node "${props.node.name ?? '<unnamed>'}"`,
@@ -109,7 +151,7 @@ const rendered = computed<VNode | string | undefined>(() => {
     }
     return undefined
   }
-})
+}
 
 /**
  * 捕获子组件 patch 阶段的 throw —— 阻止冒泡到外层 ErrorBoundary
@@ -145,13 +187,15 @@ onErrorCaptured((err) => {
   -->
   <slot :node="props.node">
     <!--
-      三选一渲染：
+      三选一渲染（2026-09-18 修 permission:hidden 误报）：
       1. patch 阶段 throw（renderError 有值）→ 占位 div
-      2. renderFn 同步 throw（rendered === undefined）→ 占位 div
-      3. 正常 → <component :is="rendered" />
+      2. renderFn 同步 throw（renderNode() === undefined）→ 占位 div
+      3. renderNode() 返回 null → **合法空渲染**（permission 'hidden' / ignore / 无组件映射）
+         <component :is="null"> 渲染为空，不显示占位
+      4. 正常 VNode | string → <component :is="renderNode()" />
     -->
     <div
-      v-if="renderError || !rendered"
+      v-if="renderError || renderNode() === undefined"
       :data-xform-error="props.node.name"
       class="x-form-render-error"
       role="alert"
@@ -159,7 +203,7 @@ onErrorCaptured((err) => {
     >
       字段渲染失败（详见 console）
     </div>
-    <component v-else :is="rendered" />
+    <component v-else :is="renderNode()" />
   </slot>
 </template>
 

@@ -13,6 +13,7 @@ import type { ComponentPublicInstance } from 'vue'
 
 import { validate } from './use-validate'
 import { scanForForbidden } from './use-scan-forbidden'
+import { scanAsyncOptionsUnsupported } from './use-scan-async-options'
 import { DEFAULT_COMPONENT_MAP } from '../adapters/element-plus-adapter'
 import { resolveComponentFor } from './resolve-component'
 import type { UseFormErrorBusReturn } from './use-form-error-bus'
@@ -85,6 +86,8 @@ export interface UseDevRuntimeReturn {
   validateErrors: Ref<Array<{ keyPath: (string | number)[]; message: string }>>
   /** 表达式沙箱黑名单命中（仅 dev） */
   forbiddenErrors: Ref<string[]>
+  /** asyncOptions 位于不支持位置（formItem.slots / array.itemSchema 内，请求不会发起，仅 dev） */
+  asyncOptionsWarnings: Ref<string[]>
   /** 是否显示 debug banner（dev = true，prod = false） */
   showDebugBanner: Ref<boolean>
   /** XForm setup 末尾调一次挂 window.__xform_debug（dev only） */
@@ -97,6 +100,7 @@ export function useDevRuntime(deps: UseDevRuntimeDeps): UseDevRuntimeReturn {
 
   const validateErrors = ref<Array<{ keyPath: (string | number)[]; message: string }>>([])
   const forbiddenErrors = ref<string[]>([])
+  const asyncOptionsWarnings = ref<string[]>([])
   const showDebugBanner = ref(import.meta.env.DEV)
 
   // 阶段 1.2：model 缺时 dev mode 警告（提醒用户补传 reactive model）
@@ -162,6 +166,22 @@ export function useDevRuntime(deps: UseDevRuntimeDeps): UseDevRuntimeReturn {
           source: 'useDevRuntime',
         })
       }
+      // F2 短期：array.itemSchema / formItem.slots 内的 asyncOptions 永远不会发起请求，
+      // dev 阶段扫描并让沉默失败可见（console + errorBus + DebugBanner 三处同现）
+      const unsupportedAsync = scanAsyncOptionsUnsupported(normalized)
+      asyncOptionsWarnings.value = unsupportedAsync
+      if (unsupportedAsync.length > 0) {
+        console.warn(
+          '[XForm] asyncOptions 位于不支持的位置（formItem.slots / array.itemSchema 内），请求不会发起:',
+          unsupportedAsync
+        )
+        errorBus.report({
+          severity: 'warn',
+          code: 'ASYNC_OPTIONS_UNSUPPORTED_POSITION',
+          message: `${unsupportedAsync.length} 个 asyncOptions 位于不支持的位置，请求不会发起（详见 Debug Banner）`,
+          source: 'useDevRuntime',
+        })
+      }
     }
 
     watch(
@@ -185,6 +205,7 @@ export function useDevRuntime(deps: UseDevRuntimeDeps): UseDevRuntimeReturn {
   return {
     validateErrors,
     forbiddenErrors,
+    asyncOptionsWarnings,
     showDebugBanner,
     installDevDebugHook,
   }

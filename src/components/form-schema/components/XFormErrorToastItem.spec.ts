@@ -252,6 +252,29 @@ describe('XFormErrorToastItem', () => {
     })
   })
 
+  describe('用户语义分层（F3）', () => {
+    it('有 userMessage 时标题主体显示 userMessage 而非 message', () => {
+      const wrapper = mount(XFormErrorToastItem, {
+        props: {
+          event: makeEvent({
+            message: 'EL_FORM_VALIDATION_FAILED: el-form.validate() rejected',
+            userMessage: '表单校验未通过，请检查标红字段',
+          }),
+        },
+      })
+      expect(wrapper.text()).toContain('表单校验未通过，请检查标红字段')
+      // dev 语义 message 被 userMessage 遮蔽（不重复出现在正文）
+      expect(wrapper.text()).not.toContain('el-form.validate() rejected')
+    })
+
+    it('无 userMessage 时标题主体退回 message', () => {
+      const wrapper = mount(XFormErrorToastItem, {
+        props: { event: makeEvent({ message: '只有 dev 语义消息' }) },
+      })
+      expect(wrapper.text()).toContain('只有 dev 语义消息')
+    })
+  })
+
   describe('关闭按钮', () => {
     it('点击关闭按钮 → emit dismiss 事件 + 传 id', async () => {
       const wrapper = mount(XFormErrorToastItem, {

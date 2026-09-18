@@ -3,7 +3,7 @@
  *
  * @group 通用组件：ProDialogForm
  */
-import type { RuleItem, SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import type { RuleItem, SchemaNode, XFormExpose, XFormProps } from '@/components/form-schema/types'
 
 /**
  * ProDialogForm Props —— 弹窗表单组合组件
@@ -34,6 +34,15 @@ export interface ProDialogFormProps {
   model: Record<string, unknown>
   /** 表单校验规则 —— 透传给 XForm 的 `rules`；通常内联在 schema 节点中，可省略 */
   rules?: Record<string, RuleItem>
+  /**
+   * XForm 扩展 props 透传 —— 弹窗场景使用 XForm 其余能力（components / zodSchema /
+   * beforeChange / directives / componentProps / expressionFunctions / permissionResolver /
+   * showErrorToast / scrollToError 等）的统一入口
+   *
+   * 同名键优先级：ProDialogForm 显式 props（schema / model / rules）> xformProps，
+   * 避免扩展属性意外覆盖表单主数据契约
+   */
+  xformProps?: Partial<XFormProps>
   /**
    * 异步提交函数 —— 校验通过后由组件调用。
    *

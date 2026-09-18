@@ -194,6 +194,37 @@ describe('useXFormComposer', () => {
     expect(composer.fieldErrors.value).toEqual({})
   })
 
+  describe('错误传播链路验证（架构审查 #4）', () => {
+    const triggerRenderCount = () =>
+      (globalThis as { __triggerRenderCalled?: number }).__triggerRenderCalled ?? 0
+
+    it('setFieldError 键级写入不触发 composer watch（ref 源监听不到 reactive 键 mutation）', async () => {
+      const { composer } = mount(SIMPLE_SCHEMA)
+      const baseline = triggerRenderCount()
+      // 真实路径：externalErrors.value[name] = {...}（reactive 对象键写入，非 ref 重赋值）
+      composer.exposed.setFieldError('email', '服务端返回的错误')
+      await nextTick()
+      // watch(fieldErrors) 的源是 ref —— 键级 mutation 不触发 ref 的 dep，计数不变
+      // 这是「疑似失效 watch」的实证：该 watch 对 setFieldError 路径从未生效过
+      expect(triggerRenderCount()).toBe(baseline)
+    })
+
+    it('渲染兜底路径有效：Object.keys 派生（模拟 XForm.vue :data-field-errors 绑定）随键级写入更新', async () => {
+      const { composer, dispose } = mount(SIMPLE_SCHEMA)
+      // 模拟 XForm.vue fieldErrorKeys computed —— 渲染期读取 reactive 键建立追踪
+      const scope = effectScope()
+      const keysSig = scope.run(() =>
+        computed(() => Object.keys(composer.fieldErrors.value).join(','))
+      )
+      expect(keysSig?.value).toBe('')
+      composer.exposed.setFieldError('email', '服务端返回的错误')
+      await nextTick()
+      expect(keysSig?.value).toBe('email')
+      scope.stop()
+      dispose()
+    })
+  })
+
   it('顶层 readonly 反应式装配不崩溃（值通过 internal renderOpts.globalReadonly 消费）', () => {
     // readonly 是顶层字段，composer 内部消费于 renderOpts.globalReadonly，
     // 不直接对外暴露 —— 此处验证 composer 装配过程未崩溃

@@ -109,6 +109,9 @@ function validateNodeProps(node: SchemaNode): ValidationResult {
 
   const unknown: string[] = []
   for (const key of Object.keys(node.props)) {
+    // Vue 事件监听在 props 对象里以 on + 驼峰事件名形式透传（等价模板 @tab-change），
+    // 不在 Component.props 反射的 prop 声明白名单内 —— 合法透传，跳过校验
+    if (/^on[A-Z]/.test(key)) continue
     if (!known.has(key) && !FORM_KEY_ALIASES.has(key)) {
       unknown.push(key)
     }

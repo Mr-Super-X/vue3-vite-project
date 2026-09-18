@@ -74,7 +74,9 @@ export default defineConfig({
     Components({
       resolvers: [ElementPlusResolver({ importStyle: 'css' })],
       /**
-       * 声明要自动导入的全局组件
+       * 声明要自动导入的全局组件 —— 三目录下所有 .vue（deep: true 含任意深度子目录）
+       * 均注册到 vue.GlobalComponents，消费方模板直接用 <BaseChart /> / <ProTable /> /
+       * <XForm /> 等，不要显式 import（CLAUDE.md §1.7 强约束）
        */
       dirs: ['src/components/common', 'src/components/ProTable', 'src/components/form-schema'],
       deep: true,

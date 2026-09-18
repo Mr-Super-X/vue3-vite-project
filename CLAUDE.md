@@ -4,9 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > 本文档是 `~/.claude/CLAUDE.md` 的项目级补充。所有全局规则（§一～§十一）自动适用，遇到冲突以**本文档为准**。
 >
-> **文档版本**：v1.6.0 | **生成日期**：2026-09-17 | **生效分支**：`master`
+> **文档版本**：v1.7.0 | **生成日期**：2026-09-18 | **生效分支**：`master`
 >
-> **最近更新**（2026-09-17）：同步文档与最新代码对齐
+> **最近更新**（2026-09-18）：修正 §1.7 组件自动注册范围描述（Wave4-4 决策）
+>
+> - **v1.7 变更**：§1.7 / §1.6 / §4 #15 三处修订——`unplugin-vue-components` 实际 dirs 为 `['src/components/common', 'src/components/ProTable', 'src/components/form-schema']` + `deep: true`（vite.config.ts:74-82），三目录下所有 .vue（含深层子目录，如 `ProDialog/` / `XForm` / `ProTable`）均自动注册，**都不要显式 import**。旧版「只扫 components/common 一级 / 子目录组件（form-schema/ProDialog/ 等）需显式 import」描述与 vite.config 实际配置矛盾（Wave4-4 AskUserQuestion 决策选 B 修订 CLAUDE.md，保留 vite.config 现状）
+> - 同步删除「unplugin 默认 dirs 只扫一级」错误机制说明（实际 deep: true 深扫）
+> - 检测方法从「删除 `import Xxx from '@/components/common/...'`」泛化为「删除 `import Xxx from '...'`」
+>
+> **v1.6 更新**（2026-09-17）：同步文档与最新代码对齐
 >
 > - `docs/11-字典使用规范.md` v2 重写：useDict 由单 key 形态（`{options, getLabel, refresh, loading}`）升级为多 code 契约形态（`{ gender, user_status, refreshDict }`）
 > - `docs/27-ProDialog使用指南.md` 新增 §8.5 `useConfirm` 命令式二次确认章节；测试覆盖表加 `useConfirm.spec.ts` 4 例
@@ -165,14 +171,14 @@ AutoImport **未覆盖**以下内容，仍必须写 import：
 
 > **路径约定**：src/ 内跨目录引用优先用 alias（`@/`、`@components/`、`@utils/` 等，共 15 个，见 `vite.config.ts` 的 `SRC_DIR_ALIASES`）；同目录兄弟文件用 `./` 相对路径即可。别名表与 `tsconfig.app.json` paths 双处维护，新增子目录需两处同步。
 
-| 类型                                    | 示例                                                       | 原因                                                                                                                             |
-| --------------------------------------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| 第三方 UI 库组件                        | `import { User, Lock } from '@element-plus/icons-vue'`     | element-plus 用 `unplugin-vue-components` 按需注入，与 AutoImport 是两套机制                                                     |
-| 第三方工具库                            | `import dayjs from 'dayjs'`                                | 不在 AutoImport 配置列表中                                                                                                       |
-| 全局组件（`components/common/**` 一级） | **不要 import**，模板直接 `<BaseChart />`                  | `unplugin-vue-components` 自动注入到 `vue.GlobalComponents`；显式 import 会让 IDE hover 丢失 `DefineComponent` 展开（详见 §1.7） |
-| 子目录组件（非自动注册）                | `import Xxx from '@/components/sub/Xxx.vue'`               | 仅当组件不在 `components/common/` 一级下时才需 import（如 `form-schema/`、`ProDialog/` 等）                                      |
-| 类型导入                                | `import type { UserProfile } from '@/api/modules/auth'`    | 类型 import 不参与运行时，但 TS 编译器需要                                                                                       |
-| SCSS / 资源文件                         | `import './styles/login.scss'`（在 `<style>` 中用 `@use`） | CSS 走 vite 资源管线，与 JS AutoImport 解耦                                                                                      |
+| 类型                                                            | 示例                                                                     | 原因                                                                                                                                                        |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 第三方 UI 库组件                                                | `import { User, Lock } from '@element-plus/icons-vue'`                   | element-plus 用 `unplugin-vue-components` 按需注入，与 AutoImport 是两套机制                                                                                |
+| 第三方工具库                                                    | `import dayjs from 'dayjs'`                                              | 不在 AutoImport 配置列表中                                                                                                                                  |
+| 全局组件（`components/common/` + `ProTable/` + `form-schema/`） | **不要 import**，模板直接 `<BaseChart />` / `<ProTable />` / `<XForm />` | `unplugin-vue-components` 自动注入到 `vue.GlobalComponents`（dirs 三目录，deep: true）；显式 import 会让 IDE hover 丢失 `DefineComponent` 展开（详见 §1.7） |
+| 其他子目录组件（非自动注册）                                    | `import Xxx from '@/components/sub/Xxx.vue'`                             | 仅当组件不在 dirs 三目录下时才需显式 import（如 `components/` 下其他自建子目录）                                                                            |
+| 类型导入                                                        | `import type { UserProfile } from '@/api/modules/auth'`                  | 类型 import 不参与运行时，但 TS 编译器需要                                                                                                                  |
+| SCSS / 资源文件                                                 | `import './styles/login.scss'`（在 `<style>` 中用 `@use`）               | CSS 走 vite 资源管线，与 JS AutoImport 解耦                                                                                                                 |
 
 > **新增可自动注入的标识符**：编辑 `vite.config.ts` 的 `AutoImport.imports` 数组 + 重启 dev server，**无须**为每个组件手动加 import。
 
@@ -233,11 +239,11 @@ const { data } = storeToRefs(useUserStore())
 
 ### 1.7 组件全局注册与 IDE 智能提示（强约束）
 
-`unplugin-vue-components`（`vite.config.ts:72-75`）自动扫描 `src/components/common/**` 下所有 .vue 文件，按文件名（PascalCase）注册到 `vue.GlobalComponents` 接口，输出 `src/types/components.d.ts`。该文件由 `.gitignore:56` 屏蔽，**仅在 `pnpm dev` / `pnpm build` 时由 unplugin 重新生成**。
+`unplugin-vue-components`（`vite.config.ts:74-82`）按 `dirs: ['src/components/common', 'src/components/ProTable', 'src/components/form-schema']` + `deep: true` 自动扫描**三个目录下所有 .vue 文件**（含任意深度子目录），按文件名（PascalCase）注册到 `vue.GlobalComponents` 接口，输出 `src/types/components.d.ts`。该文件由 `.gitignore:56` 屏蔽，**仅在 `pnpm dev` / `pnpm build` 时由 unplugin 重新生成**。
 
 **消费方规则（强约束）：**
 
-- ✅ 模板中**直接**使用 `<BaseChart />` 等，无须显式 import；IDE 通过 `GlobalComponents` 路径解析，hover 时展示完整 `DefineComponent<BaseChartProps, ...>` 类型签名（含 props / defineExpose / slots）
+- ✅ 模板中**直接**使用 `<BaseChart />` / `<ProTable />` / `<XForm />` / `<ProDialog />` 等，无须显式 import；IDE 通过 `GlobalComponents` 路径解析，hover 时展示完整 `DefineComponent<BaseChartProps, ...>` 类型签名（含 props / defineExpose / slots）
 - ❌ **不要**写 `import BaseChart from '@/components/common/BaseChart.vue'`——Volar 在 setup scope 的 ESM 路径下不会把 `typeof import('...vue')['default']` 展开为完整 `DefineComponent`，hover 时只显示 `import BaseChart` 字样（丢失 props / expose / slots 智能提示）
 
 **根因（机制说明）：** Volar 对组件引用有两条推导路径：
@@ -247,11 +253,11 @@ const { data } = storeToRefs(useUserStore())
 | `GlobalComponents.BaseChart`（来自 components.d.ts）  | `vue.GlobalComponents` 接口合并 + 完整模板类型检查 | 完整 `DefineComponent<Props, Expose, ...>` 展开 |
 | `import BaseChart from '...vue'`（消费方 ESM import） | 模块加载类型推导 + `<script setup>` 宏简化         | 仅显示 import 来源，丢失展开                    |
 
-**范围**：`components/common/**` 一级下的所有 .vue 文件（`BaseChart` / `AsyncState` / `ErrorBoundary` 等）走本规则。`components/common/ProDialog/`、`components/form-schema/` 等子目录组件**不**自动注册（unplugin 默认 dirs 只扫一级），按需显式 import。
+**范围**：dirs 三目录（`components/common/` + `components/ProTable/` + `components/form-schema/`）下所有 .vue 文件均自动注册，含深层子目录（`deep: true`）——`BaseChart` / `AsyncState` / `ProTable` / `SearchForm` / `XForm` / `ProDialog` / `ProDialogForm` 等。`components/` 下其他自建子目录**不**在 dirs 内，需显式 import。
 
 **对照 Vant 第三方库：** vant 不需要显式 import，hover 时显示 `WithInstall<DefineComponent<ExtractPropTypes<{...}>, ...>>`——本项目走 GlobalComponents 路径时行为完全一致。
 
-**检测 / 自检方法：** 若 IDE hover 模板中的 `<XxxComponent>` 只显示 `import XxxComponent`，按本节规则删除对应 `import XxxComponent from '@/components/common/...'` 即可。
+**检测 / 自检方法：** 若 IDE hover 模板中的 `<XxxComponent>` 只显示 `import XxxComponent`，按本节规则删除对应 `import XxxComponent from '...'` 即可。
 
 ---
 
@@ -389,23 +395,23 @@ const bem = createNamespace('form-engine') // kebab-case，必须与 sass 根选
 
 ## §4 Project Constraints
 
-| #   | 约束                                                                                                                                    | 落地方式                                                                           |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| 1   | 包管理强制 pnpm                                                                                                                         | `package.json:scripts.preinstall` → `only-allow pnpm`                              |
-| 2   | 新增业务模块**必须**用 `pnpm new-module <kebab-name>`                                                                                   | `scripts/new-module.ts`（自动追加 RouteName）                                      |
-| 3   | 业务代码**必须**用 `useAppRouter` / `useRequest` / `useAuth` / `useDialog` 封装                                                         | ESLint `no-restricted-imports`                                                     |
-| 4   | 模块间通信走 `modules/<m>/index.ts`                                                                                                     | 见 §1.2 模块边界铁律                                                               |
-| 5   | `common` 组件不得 `import` 自 `modules/`                                                                                                | 保护 tree-shake                                                                    |
-| 6   | `utils/` 不得依赖 Vue/Pinia                                                                                                             | 与框架解耦                                                                         |
-| 7   | `store/` 不存网络请求中间态                                                                                                             | loading 放组件 / composable                                                        |
-| 8   | 路由一致性校验：`pnpm check:routes`                                                                                                     | CI 阶段强制                                                                        |
-| 9   | 类型校验：`pnpm type-check:full`（build 前必过）                                                                                        | `package.json:scripts`                                                             |
-| 10  | 第三方 npm 包引用前必先 `npm view <pkg>` 验证                                                                                           | 全局规则                                                                           |
-| 11  | 新增 composable / store / 类型必须带 `.spec.ts`（覆盖率 ≥ 80%）                                                                         | Vitest                                                                             |
-| 12  | 功能性变更同步 `CHANGELOG.md`（仅 typo 免记）                                                                                           | 项目约定                                                                           |
-| 13  | 编写 CSS 禁止使用 `!important` 解决问题                                                                                                 | 仅当用户主动要求时才可使用；优先级应通过选择器特异性 / BEM 命名空间 / 源码顺序解决 |
-| 14  | src/ 内跨目录引用**优先 alias 路径**（`@/` 等 15 个别名，见 `vite.config.ts` `SRC_DIR_ALIASES`），禁止 `../../` 深层相对路径            | 项目约定                                                                           |
-| 15  | `components/common/**` 一级下的全局组件**不要显式 import**，依赖 `unplugin-vue-components` 自动注册获得 IDE hover 智能提示（详见 §1.7） | IDE 体验                                                                           |
+| #   | 约束                                                                                                                                                                           | 落地方式                                                                           |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| 1   | 包管理强制 pnpm                                                                                                                                                                | `package.json:scripts.preinstall` → `only-allow pnpm`                              |
+| 2   | 新增业务模块**必须**用 `pnpm new-module <kebab-name>`                                                                                                                          | `scripts/new-module.ts`（自动追加 RouteName）                                      |
+| 3   | 业务代码**必须**用 `useAppRouter` / `useRequest` / `useAuth` / `useDialog` 封装                                                                                                | ESLint `no-restricted-imports`                                                     |
+| 4   | 模块间通信走 `modules/<m>/index.ts`                                                                                                                                            | 见 §1.2 模块边界铁律                                                               |
+| 5   | `common` 组件不得 `import` 自 `modules/`                                                                                                                                       | 保护 tree-shake                                                                    |
+| 6   | `utils/` 不得依赖 Vue/Pinia                                                                                                                                                    | 与框架解耦                                                                         |
+| 7   | `store/` 不存网络请求中间态                                                                                                                                                    | loading 放组件 / composable                                                        |
+| 8   | 路由一致性校验：`pnpm check:routes`                                                                                                                                            | CI 阶段强制                                                                        |
+| 9   | 类型校验：`pnpm type-check:full`（build 前必过）                                                                                                                               | `package.json:scripts`                                                             |
+| 10  | 第三方 npm 包引用前必先 `npm view <pkg>` 验证                                                                                                                                  | 全局规则                                                                           |
+| 11  | 新增 composable / store / 类型必须带 `.spec.ts`（覆盖率 ≥ 80%）                                                                                                                | Vitest                                                                             |
+| 12  | 功能性变更同步 `CHANGELOG.md`（仅 typo 免记）                                                                                                                                  | 项目约定                                                                           |
+| 13  | 编写 CSS 禁止使用 `!important` 解决问题                                                                                                                                        | 仅当用户主动要求时才可使用；优先级应通过选择器特异性 / BEM 命名空间 / 源码顺序解决 |
+| 14  | src/ 内跨目录引用**优先 alias 路径**（`@/` 等 15 个别名，见 `vite.config.ts` `SRC_DIR_ALIASES`），禁止 `../../` 深层相对路径                                                   | 项目约定                                                                           |
+| 15  | `components/common/` + `ProTable/` + `form-schema/` 三目录下所有 .vue 全局组件**不要显式 import**，依赖 `unplugin-vue-components` 自动注册获得 IDE hover 智能提示（详见 §1.7） | IDE 体验                                                                           |
 
 ---
 

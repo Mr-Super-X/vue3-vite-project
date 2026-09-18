@@ -2,6 +2,246 @@
 
 ## 未发布
 
+### 🐛 Bug Fixes | XForm 布局容器节点：column 分区失效，children 全堆单 ElCol 纵向排列（xform-grid 模式3）
+
+> 用户实测 `/demo/xform-grid` 模式3「布局容器节点」：demo 设计意图是「无 name 节点带 row/column → 渲染为纯栅格容器，分区组织字段」（分区1 `column:2` 放订单号+状态 2 列并排，分区2 `column:3` 放金额+日期+备注 3 列并排），实际渲染成 5 个字段全纵向单列堆叠。根因：`renderWithRowColumn`（无组件无 name 的 row/column 容器节点渲染路径，dispatch 顺序 permission → array → tabs/steps → visual → formItem → **rowColumn** → default）把 `node.column` 错当「整个分区占 `24/column` 宽」，children 全塞进**单个** ElCol——column 的语义应是「该容器内 children 分配到 N 个独立 ElCol」。**既有实现缺陷**（087f000 引入 grid demo 时即如此），非本轮 SchemaField 重构回归——但 SchemaField 系列修复后此路径暴露为可见 bug。与视觉容器 Card 的 `renderToComponentWithGrid` 对齐（column 分配优先，child 自有 col 在 column 容器内不另包，避免双嵌套 ElCol）。模式1（column 统一分配）/ 模式2（row+col.span）经浏览器实测**不受影响**（顶层 column 与 col 对象语义保留原路径）。
+
+* **fix(src/components/form-schema/composables/render-form-item.ts):** `renderWithRowColumn` 新增分支——`node.column !== undefined && children 非空数组` 时走 grid 分区：每个 child 经 `opts.render(c)` 递归渲染后包独立 ElCol（`span=Math.floor(24/column)`，key 取 `c.key ?? i`），ElRow 沿用 `mergeRowResponsive` 拍平；`col` 对象（span/offset/responsive）而无 column、或 children 为空时保留「单 ElCol 整段占宽」原语义（向后兼容现有测试与 Card 兜底路径）
+* **test(src/components/form-schema/composables/render-form-item.spec.ts):** 新增 2 例——`column:2 + 2 children → 2 个 ElCol 各 span=12` / `column:3 + 3 children → 3 个 ElCol 各 span=8`；新增 `findAllVNodesByType` 辅助函数（slot 展开 + 数组递归，支持「分配成 N 个 vnode」类断言）
+* **已验证:** `pnpm vitest run src/components/form-schema` 65 文件 1175 例全绿（+2 例）+ `pnpm type-check` 0 错误 + `pnpm exec eslint` 改动文件 0 警告；浏览器实测（chrome-devtools，真实 DOM 结构）——模式3：分区1 `directCols:2 spans:[12,12]`（订单号/订单状态各占一列）、分区2 `directCols:3 spans:[8,8,8]`（金额/日期/备注各占一列）；回归确认模式1 `spans:[8,8,8,8,8]`、模式2 `spans:[6,6,12,12,12]` 均不变
+
+### 🐛 Bug Fixes | XForm SchemaField：reaction 写回 node 属性不触发重渲（xform-expression demo「功能都失效」根因）
+
+> 用户打开 `/demo/xform-expression` 反馈「功能都失效」。浏览器实证分两类：(A) **reaction 写回类**（币种联动 label / 选「其他」显隐补充说明）——根因是 2026-09-18 把 `rendered` computed 改为 `renderNode()` 普通函数后，Card 等视觉容器经多层 slot 闭包（`renderVisualContainer → renderToComponentWithGrid`）递归渲染子字段，子字段 `node.label` / `node.hidden` 的读取被推迟到 ElCard patch 期的 slot 调用栈，**脱离 SchemaField 自身 render effect 的同步执行期**——之前 computed 的 deps 容器会收纳这些深层读取并挂到本组件 effect，改动后该机制丢失，reaction 写回正确但 DOM 不刷新；(B) **表达式求值类**（顶层 readonly 锁定 / permission 三态 / on.change 日志）——根因是表达式沙箱 `toSafeDtoCached` 深拷贝 model 为安全 DTO，切断响应式追踪（顶层 readonly computed 只依赖 `props.model` 引用 + `reactiveSchema.value`，model 字段 mutation 不触发重算），此为引擎自 ba8879d 诞生起的固有架构行为，**非本轮回归**。
+
+* **fix(src/components/form-schema/components/SchemaField.vue):** 新增 deep watch `props.node` → `tick++` 重渲兜底——node 任一属性（含深层 children 字段的 label/hidden）变化时触发本字段重渲，重建等价于旧 computed deps 的响应式订阅；成本为每 SchemaField 一个 deep watcher，仅属性实际变化时 tick++
+* **fix(src/components/form-schema/composables/use-model-expression-rerender.ts):** 新增 composable——检测 schema 是否含「model 依赖表达式」（顶层 readonly/disabled 或字段 permission 的函数/'{{ }}' 形态），含则挂 `watch(model, {deep})` → `triggerRender()` + `onModelChange()` 重渲兜底；**按需启用**（无这类表达式的纯 v-model 表单零 deep watch 开销，保留字段级重渲隔离性能卖点）。解决表达式沙箱 `toSafeDtoCached` 深拷贝切断响应式追踪的固有缺口——这类表达式的宿主 computed 只依赖 `props.model` 引用，model 字段 mutation 不重算
+* **fix(src/components/form-schema/components/SchemaField.vue):** `renderNode()` 返回值改**三态语义**区分「合法空」与「渲染失败」——`null`=合法空渲染（permission 'hidden' / node.ignore / 无组件映射等 renderFn 正常返回 undefined 的场景）、`undefined`=渲染失败（renderFn 同步 throw / patch 阶段 renderError）。模板判定从 `!renderNode()` 改为 `renderNode() === undefined`。修复 `permission: 'hidden'` 字段（internalNote / 权限码 admin.delete 等）被误报「字段渲染失败（详见 console）」红色占位——hidden 是「按设计消失」而非「渲染出错」（2026-09-18 用户反馈 xform-field-permission 两个字段渲染失败根因）；`<component :is="null">` 渲染为空节点，hidden 字段正常从 DOM 消失
+* **fix(src/components/form-schema/composables/use-render-root.ts):** `renderToComponent` 新增订阅 `modelExpressionEpoch`——model 依赖表达式的求值在 Card 等视觉容器的 slot 闭包里（`resolvePermission`），脱离 SchemaField 自身 render effect 同步追踪；composer bump 此 epoch 强制整树 SchemaField 重跑，permission 才得以重算（顶层 readonly 走 `topLevelReadonly` computed 追踪无需 epoch，permission 在 slot 闭包必须靠 epoch）
+* **fix(src/components/form-schema/composables/use-xform-composer.ts):** 接线 `useModelExpressionRerender` + 创建 `modelExpressionEpoch` 传 useRenderRoot
+* **已验证(A+B 类修复):** `pnpm vitest run src/components/form-schema` 65 文件 1173 例全绿 + `pnpm type-check` 0 错误；浏览器实测（chrome-devtools，真实 UI 交互）——① 锁定开关切 on → 6 字段 view 化、切 off 恢复可编辑；② 币种切 USD → 金额 label 联动 `报销金额（美元 $）`；③ 费用类型选「其他」→ 补充说明显示；④ on.change 日志面板追加「费用类型 → xxx」；⑤ 角色切 viewer → 审批意见 view 纯文本、切回 admin → 恢复可编辑；⑥ **xform-field-permission**：permission 'hidden' 字段（内部备注 / 权限码-管理员）不再误报「字段渲染失败」红色占位（`errCount:0`），正常从 DOM 消失；动态权限函数形态（adminNote 随 role 切 admin/guest 显隐）正常
+
+### 🐛 Bug Fixes | XForm Tabs/Steps demo：三条用户反馈修复（onTabChange 误报 / budget 类型 / 首 tab 未选中）
+
+> 用户打开 `/demo/x-form-tabs-steps` 反馈 2 条控制台警告 + 1 条交互异常：(1) dev props 校验误报「Tabs props 包含未声明键：onTabChange」——事件回调形态（`onTabChange` / `onUpdate:modelValue`）合法透传但不在 Component.props 反射白名单内；(2) ElInputNumber `modelValue` 要求 `Number | Null`，demo 初始值 `''` 触发类型检查警告；(3) Tabs 首 tab「基础信息」初始未选中，需手动点击才渲染表单——根因是 schema 给 Tabs 加了 `beforeLeave: async`（EP beforeLeave 须同步返 false 才阻止，async 恒真不阻止；且初始 mount 走 Promise 分支 + schema computed 重求值新闭包，打乱首个 tab 初始渲染）。KISS 修复：校验器加 `^on[A-Z]` 豁免 / demo 初始值改 `null` / Tabs 回归纯视觉容器（门控只保留在 Steps「下一步」按钮）。
+
+* **fix(src/components/form-schema/components/SchemaField.vue):** `rendered` computed 改为 `renderNode()` 普通函数——`renderFn` 内可能含 `applyDirectives → withDirectives`，后者要求活跃渲染上下文（currentRenderingInstance !== null）；computed 求值可能在 watch flush / 副作用阶段，此时 rendering instance 已清空 → withDirectives 守卫命中警告 + **跳过指令挂载**（2026-09-18 用户反馈 xform-directives demo 控制台警告根因，此前 focus / audit 指令均不生效）。真正的组件 render() 函数执行期渲染上下文必定活跃，故改为模板内 `{{ renderNode() }}` 调用（每次组件重渲染重新执行）
+* **fix(src/components/form-schema/components/SchemaField.spec.ts):** 改写「字段级重渲隔离」用例——renderNode 是普通函数（非 computed 缓存），调用次数从精确 2 次放宽为 >= 2；关键断言保持 node1/node2 各自被独立调用（隔离语义不变）
+* **fix(src/modules/demo/examples/XForm/XFormDirectives.vue):** 临时调试标记已移除（验证 mounted 真实执行后清理）
+* **fix(src/components/form-schema/composables/render-tabs-steps-node.spec.ts):** 改写「children 每项 → ElStep」用例——断言 title prop 映射 + label prop 不存在；新增「Steps child.label 缺省 → title 回退 `面板 N`」用例
+* **fix(src/components/form-schema/composables/validate-component-props.spec.ts):** 新增 1 例——Tabs + `modelValue` / `onTabChange` / `onUpdate:modelValue` 不警告（合法透传）
+* **fix(src/components/form-schema/composables/render-tabs-steps-node.ts):** `renderPanes` 把 `child.name` 透传为 ElTabPane 的 `name` prop——EP 用 `currentName`（来自 modelValue）匹配 `paneName` 决定 active pane；此前不传 name 时 paneName fallback 到 index（'0'/'1'），与 modelValue（如 'basic'）永远不匹配，导致所有 pane `v-show=none`（首次打开看不到表单，2026-09-18 用户反馈二次根因；首次误判为 beforeLeave 副作用已回滚）
+* **fix(src/components/form-schema/composables/render-tabs-steps-node.spec.ts):** 新增 2 例——child.name 透传为 pane name（回归）/ child.name 缺省不传 name prop（EP fallback 到 index）
+* **fix(src/components/form-schema/composables/apply-default-values.ts):** `setInitialValues` 快照同步限定为**仅首次**——此前 `watch(() => props.schema, {deep: true})` 在 schema 任何重求值（含业务把 schema 包成 computed 依赖 model 字段的场景）都会触发 `applyDefaultsAndSync → setInitialValues(props.model)`，把当前脏 model 同步为 el-form 的 initialValue 快照；用户随后点重置时 `resetField` 回到被污染的快照（=当前值），表现为「重置没反应」。修复后首次挂载同步一次快照，后续 schema watch 只应用 `defaultValue` 不再覆盖快照；**这是通用 XForm 引擎 bug**（所有 schema 是 computed 的 41 个 demo 均受影响），2026-09-18 用户反馈第四次根因
+* **fix(src/components/form-schema/composables/apply-default-values.spec.ts):** 改写「schema 引用变化时重跑」用例——断言 setInitialValues 在后续 watch 触发时**不再被调**（仍 1 次）+ 新增 1 例 `applyDefaultsAndSync(syncSnapshot=false)` 只应用 defaultValue 不同步快照
+* **feat(src/modules/demo/examples/XForm/XFormTabsSteps.vue):** 重置按钮升级为 `onResetAll`——除 `resetFields()` 外同步归零 `activeStep=0` + `activeTab='basic'`（此前只清表单字段，step 进度和 tab 停留原位，用户看到「空白表单 + step 停在 2」困惑）；CSS 覆盖区分 `is-process`（当前激活）vs `is-success`（已完成）vs `is-wait`（未到达）三态视觉——EP 把 state class 加在 `.el-step__head` 而非 `.el-step` 本身（demo 初次覆盖选择器写错已修正），给 `is-process` 图标加 3px 主色粗边框 + 4px 光晕 + 连接线主色，让用户一眼看到「当前在哪一步」
+* **已验证:** `pnpm type-check` 0 错误；`pnpm vitest run src/components/form-schema` 64 文件 1156 例全绿；浏览器实测（chrome-devtools MCP）pane id=`pane-basic` + `is-active` + 3 个 `el-form-item` 渲染成功
+
+### 📚 Docs | 修正 CLAUDE.md §1.7 组件自动注册范围描述：三目录 deep 注册（Wave4-4 决策）
+
+> Wave4-4 触发 AskUserQuestion 决策（选 B 修订 CLAUDE.md）：vite.config `dirs: ['src/components/common', 'src/components/ProTable', 'src/components/form-schema']` + `deep: true` 实际**深扫三目录所有 .vue**（含 ProDialog/ / XForm / ProTable 子组件），与 CLAUDE.md §1.7 旧描述「只扫 components/common 一级 / 子目录组件需显式 import」矛盾。保留 vite.config 现状，同步修订 CLAUDE.md §1.7 / §1.6 / §4 #15 三处 + vite.config 注释。
+
+* **docs(CLAUDE.md §1.7):** 修订「自动扫描 components/common/**」→「dirs 三目录（common + ProTable + form-schema）+ deep: true 深扫所有 .vue」；范围段同步明确 ProDialog / ProDialogForm / XForm / ProTable / SearchForm 等均自动注册不要 import；删除「unplugin 默认 dirs 只扫一级」错误机制说明；检测方法从「删除 import from '@/components/common/...'」泛化为「删除 import from '...'」
+* **docs(CLAUDE.md §1.6):** 「全局组件」行扩为三目录示例（BaseChart / ProTable / XForm）；「子目录组件（非自动注册）」反例从「form-schema/ProDialog/ 等」改为「components/ 下其他自建子目录」（因 form-schema/ProDialog 实际在 dirs 内自动注册）
+* **docs(CLAUDE.md §4 #15 + 头部 v1.7.0 变更记录):** 约束表同步三目录描述 + 本次修订归因
+* **docs(vite.config.ts):** Components dirs 注释明确三目录 + deep: true 语义 + 指向 CLAUDE.md §1.7
+* **已验证:** 全项目 Grep 无其他「只扫一级 / 子目录不自动注册」残留描述；`pnpm type-check` 0 错误；`pnpm check:doc-currency` 13/13 通过
+
+### ✨ Features | XForm 设计器演进类型字段预留：id / meta / schemaVersion 三字段（PM 审查发现 12）
+
+> 产品经理审查发现 12：低代码设计器接口预留评估——基础良好（schema 纯 JSON 可序列化、{{ }} 表达式支持后端下发、类型契约完整导出），但缺顶层 `schemaVersion` 字段（schema 升级靠 useFormPersist.restoreFilter 手工裁剪）+ 节点级 `id`/`meta` 约定（设计器选中/锚定/回写需要）。本轮仅做**接口预留**（不实现设计器）：SchemaNode 加可选 `id?: string` / `meta?: Record<string, unknown>`（节点级，identity 命名空间），顶层容器加可选 `schemaVersion?: string`（SchemaNodeTopLevel）；可视化工具有了锚点后再评估 PoC。
+
+* **feat(src/components/form-schema/types/identity.ts):** `SchemaNodeIdentity` 加 `id?: string`（节点稳定 id，同层唯一，设计器选中/锚定/回写；XForm 渲染与校验不消费，仍按 name/key 做标识）+ `meta?: Record<string, unknown>`（透传不透明键值对，不消费/不校验/不序列化到 model；建议仅放可 JSON 序列化的纯数据）——4 → 6 字段
+* **feat(src/components/form-schema/types/top-level.ts):** `SchemaNodeTopLevel` 加 `schemaVersion?: string`（'major.minor.patch' 或业务自定义；XForm 渲染不消费，供 useFormPersist.restoreFilter 升级裁剪 + 设计器 schema 升级策略锚定）——6 → 7 字段
+* **feat(src/components/form-schema/types/schema-node.ts):** SchemaNode 文件头字段分组表 + @see 同步（31 → 35 字段；identity 4 → 6 / top-level 5 → 7）
+* **test(src/components/form-schema/index.spec.ts):** 新增「设计器演进字段类型契约」2 例——SchemaNode 接受 id/meta/schemaVersion 可选字段（值正确透传）/ 三字段均可缺省（业务手写 schema 无设计器需求不填）
+* **docs(src/components/form-schema/README.md):** 新增「设计器演进接口预留」小节——三字段语义/消费侧/缺省约定对照表
+* **docs(src/components/form-schema/ARCHITECTURE.md):** §2.1 字段分类表节点标识 4 → 6（加 id/meta）+ 顶层配置 5 → 7（加 watchFallback/schemaVersion）+ 合计 31 → 35；目录树 identity/top-level/schema-node 字段数注释同步
+* **ci(scripts/check-doc-currency.ts):** SchemaNode 字段数 expected 32 → 35（注释同步「Wave4-3 +3 id/meta/schemaVersion」）
+* **已验证:** index.spec 9/9 通过；`pnpm type-check` 0 错误；`pnpm check:doc-currency` SchemaNode 字段数 35/35 通过
+
+### ✨ Features | XForm Tabs/Steps 视觉容器内置：children 即面板 + 激活态绑定 model + 校验门控（PM 审查发现 9）
+
+> 产品经理审查发现：Tabs/折叠分组容器 / Steps 分步表单在能力矩阵标「❌ 缺失（仅 Card）」，CONTRIBUTING §3.2 已铺好扩展路径。本轮复用 render-visual-container 分支模式新增 Tabs/Steps 视觉容器——`component: 'Tabs'/'Steps'`（或 El 全名），children 每项 → ElTabPane/ElStep 面板（label 取 child.label，缺省回退 `面板 N`）。定位纯视觉容器（与 Card 同级），激活态绑定 / 校验门控通过**透传 EP 原生 props/events** 实现（Tabs：`modelValue` + `onTabChange` + `beforeLeave`；Steps：`active` + 外层按钮驱动），不在 XForm 侧做二次抽象。
+
+* **feat(src/components/form-schema/composables/render-tabs-steps-node.ts):** 新增 Tabs/Steps 视觉容器渲染分支——`isTabsNode` / `isStepsNode` 判定（短名 / El 全名 / 组件对象三形态）；`renderPanes` 把 children 每项映射为 ElTabPane / ElStep（label 取 child.label 缺省回退 `面板 N`）；面板内容 child.row/column 走 renderToComponentWithGrid 栅格；props 合并优先级与 renderVisualContainer 对齐（componentProps → node.props → asyncProps → disabled/key）
+* **feat(src/components/form-schema/composables/render-schema-node.ts):** 主调度加分支 2b（Tabs/Steps 视觉容器）——先于 Card 视觉容器判定，无 name + children 数组才命中，否则返回 undefined 落入后续分支
+* **feat(src/components/form-schema/composables/resolve-component.ts):** EL_COMPONENT_MAP 加 `Tabs: ElTabs` / `TabPane: ElTabPane` / `Steps: ElSteps` / `Step: ElStep` 四项
+* **feat(src/components/form-schema/types/schema-node.ts):** ComponentPropsRegistry 加 `Tabs: ElTabsProps` / `TabPane: ElTabPaneProps` / `Steps: ElStepsProps` / `Step: ElStepProps` 四项
+* **feat(src/components/form-schema/builders/containers.ts + index.ts):** 新增 `xTabs` / `xSteps` 链式 builder（Ext 方法：Tabs.modelValue/beforeLeave；Steps.active/processStatus）；builder 入口 27 → 29
+* **test(src/components/form-schema/composables/render-tabs-steps-node.spec.ts):** 新增 14 例——isTabsNode/isStepsNode 三形态判定 / Tabs children → ElTabPane（label 取 child.label）/ label 缺省回退 / modelValue 透传 / child.row/column 走 grid（产出 ElRow）/ Steps children → ElStep / 非 Tabs-Steps（Card）返回 undefined / 有 name / children 非数组 / children 空数组边界
+* **demo(src/modules/demo/examples/XForm/XFormTabsSteps.vue):** 活动创建场景——Tabs 分组（基础信息 / 高级设置）+ Steps 分步（填写 / 确认 / 完成）；schema 用 computed 包让 modelValue/active 随 model 响应；Tabs beforeLeave 校验门控（切走 basic 前 validateField BASIC_FIELDS，失败 return false 阻止切换 + ElMessage 提示）；Steps 外层「上一步 / 下一步」按钮驱动 activeStep；sidebar 注册「Tabs/Steps 容器」
+* **docs(src/components/form-schema/README.md):** 新增「视觉容器（Card / Tabs / Steps，children 即面板）」小节——容器/面板组件/label 来源/激活态+校验门控对照表；demo 计数 55 → 56 三处
+* **docs(docs/24-XForm使用指南.md):** §19 示例索引 55 → 56 + 加 `/demo/x-form-tabs-steps` 行
+* **docs(src/components/form-schema/ARCHITECTURE.md):** §8.1 builder 工厂 27 → 29 + builders.ts 目录树注释 + 表加 xTabs / xSteps 两行
+* **ci(scripts/check-doc-currency.ts):** XForm demo 数 expected 55 → 56；builder 入口数 expected 27 → 29（注释同步「Wave4-2 +2 xTabs/xSteps」）
+* **已验证:** 全量 form-schema 64 文件 1151 例通过；`pnpm type-check` 0 错误；`pnpm check:doc-currency` 13/13 通过
+
+### ⚡ Performance | XForm 性能三热点优化：表达式 toSafeDto 微任务缓存 84x + cross-field watchFallback 逃逸口 + schema 管线文档化（架构师审查 #7/#8/#6）
+
+> 架构师审查性能三热点一次性落地：① 表达式沙箱每次 compiled 调用都对 model 全量深拷贝（`toSafeDto`），同 tick 多字段 reaction 同批触发时重复拷贝 N 次——加微任务级缓存同 tick 只拷一次（跨 tick 失效保行为一致，bench 实证 84x 加速）；② cross-field 反向校验常驻 deep watch + 每键 lodash isEqual 快照 diff，纯 v-model 表单（所有写入经 onValueChange）是白白付的成本——加 `watchFallback: false` 逃逸口（schema 顶层字段）显式关闭；③ schema 变更管线对根引用 deep watch + cloneDeep 重建（含索引 / reaction 预算 / crossRule 拍平等 N 次 walk），原地 mutate 深层字段不会热更——文档化「须整体替换」约束。
+
+* **perf(架构审查 #7, src/components/form-schema/composables/use-expression.ts):** 新增模块级 `safeDtoCache: { raw, dto }` + `queueMicrotask` 失效——`compiled()` 同 tick 多次调用只深拷贝一次（N reaction 同批触发场景），跨 tick 缓存失效保证行为一致（WeakMap 方案被否：嵌套对象变化会读旧快照）
+* **perf(架构审查 #7, src/components/form-schema/bench/expression-safe-dto.bench.ts):** 新增 vitest bench 两例（同 tick 缓存命中 vs 跨 tick 每次新建）；实测 17,509 hz vs 207 hz = **84.23x faster**
+* **perf(架构审查 #8, src/components/form-schema/composables/use-cross-field-trigger.ts):** `UseCrossFieldTriggerOptions` 新增 `watchFallback?: boolean`（默认 true 向后兼容）；deep watch 兜底块包在 `if (opts.watchFallback !== false)`——纯 v-model 表单可关 deep watch 省每键 isEqual 成本；JSDoc 量化 trade-off
+* **perf(架构审查 #8, src/components/form-schema/types/top-level.ts):** `SchemaNodeTopLevel` 新增 `watchFallback?: boolean`（仅顶层 schema 生效，SchemaNodeTopLevel 5→6 字段 / SchemaNode 31→32 字段）
+* **perf(架构审查 #8, src/components/form-schema/composables/use-xform-composer.ts):** useCrossFieldTrigger 调用接线 `watchFallback: reactiveSchema.value.watchFallback ?? true`
+* **docs(架构审查 #6, docs/24-XForm使用指南.md):** §17 故障排查 + §18 已知限制各加一行——schema 变更管线对根引用 deep watch + cloneDeep 重建（含 N 次 walk），不支持原地 mutate 热更，须整体赋新引用触发单次重建
+* **test(src/components/form-schema/composables/use-cross-field-trigger.spec.ts):** 新增 watchFallback 3 例（false → 直改 model 不触发 / false → 精确 trigger 路径仍可用 / 缺省向后兼容同显式 true）；makeOpts 扩 extra 透传；33/33 通过
+* **ci(scripts/check-doc-currency.ts):** SchemaNode 字段数 expected 31 → 32（注释同步「Wave4-1 +1 watchFallback」）
+* **已验证:** 全量 form-schema 63 文件 1137 例通过；`pnpm type-check` 0 错误；`pnpm check:doc-currency` 13/13 通过；`pnpm vitest bench src/components/form-schema/bench/expression-safe-dto.bench.ts` 84.23x 加速
+
+### ✨ Features | XForm 交互增强：F7 拖拽落点指示线 + F9 size 密度 + F13 dirty 标记（设计师审查）
+
+> 设计师审查的三个交互/体验增强一次性落地：数组行拖拽排序新增落点指示线 + 源行拖拽态（此前只有 dragover preventDefault，无任何视觉反馈）；XFormProps 新增 `size` 透传 ElConfigProvider（此前内部硬编码 'default'，中后台紧凑表单场景需外层再包一层 ConfigProvider）；XFormProps 新增 `showDirtyMark` 字段级 dirty 视觉指示（此前 dirty 追踪能力完整但表单上无任何视觉线索，"我改了哪里"只能靠外挂面板）。
+
+* **feat(F9 密度控制, src/components/form-schema/types/xform.ts):** XFormProps 新增 `size?: 'large' | 'default' | 'small'`，JSDoc 说明场景 / 向后兼容（未传入保持 'default'）/ schema 顶层不预留 size（密度是表单级视觉决策）
+* **feat(F9, src/components/form-schema/components/XForm.vue):** `elConfig.size` 由硬编码 `'default'` 改 `props.size ?? 'default'`
+* **feat(F13 dirty 标记, src/components/form-schema/types/xform.ts):** XFormProps 新增 `showDirtyMark?: boolean`（默认 false）；JSDoc 说明数据侧能力已就绪 + resetDirty 自动清空
+* **feat(F13, src/components/form-schema/composables/use-form-dirty.ts):** 新增 `dirtyFieldsRef: Readonly<Ref<ReadonlySet<string>>>` 响应式导出——recompute 时整体替换新 Set 触发响应式依赖（render-form-item 的 is-dirty class 绑定订阅它）；`recompute` 由原地 clear/add 改构造新 Set 赋 value
+* **feat(F13, src/components/form-schema/composables/use-render-root.ts + render-schema-node.ts + use-xform-composer.ts):** `showDirtyMark` / `dirtyFields` 沿 renderOpts 链路透传到 render-form-item；exactOptionalPropertyTypes 用 `| undefined` 联合 + 条件展开兼容
+* **feat(F13, src/components/form-schema/composables/render-form-item.ts):** form-item h() props 加 `class: 'is-dirty'` 条件（showDirtyMark 开启 + node.name 在 dirtyFields 集合中）；render effect 内 `.has()` 建立响应式依赖
+* **feat(F13, src/components/form-schema/styles/element-form-overwrite.scss):** `.el-form-item.is-dirty .el-form-item__label::after` 6px 圆点（`--el-color-warning`）
+* **feat(F7 拖拽指示, src/components/form-schema/composables/render-array-node.ts):** 模块级 `dragSourceIndex` / `dropTargetIndex` / `dropPosition` ref（同一时刻只在一个数组上拖拽）；`onDragstart` 记源 index；`onDragover` 计算鼠标在行内垂直位置（上半 before / 下半 after）；`onDragleave` 清落点；`onDrop` 换算落点（before → index-1 / after → index）调 moveItem；`onDragend` 清状态；row class 数组拼 `is-dragging` / `is-drop-before` / `is-drop-after`
+* **feat(F7, src/components/form-schema/styles/element-form-overwrite.scss):** `.array-node__row.is-dragging { opacity: 0.5 }` + `.is-drop-before::before` / `.is-drop-after::after` 2px `--el-color-primary` 插入线（绝对定位跨整行宽度）
+* **test(src/components/form-schema/composables/use-form-dirty.spec.ts):** 新增 dirtyFieldsRef 响应式 1 例（recompute 触发 Set 替换 / has 查询 / resetDirty 清空），16/16 通过
+* **test(src/components/form-schema/index.spec.ts):** XFormProps 契约快照补 `size: true` / `showDirtyMark: true`，toHaveLength(16) → (18)
+* **docs(docs/24-XForm使用指南.md):** §2 Props 表标题 16→18 + 补 size / showDirtyMark 两行 + 表尾「18 个 prop」
+* **docs(src/components/form-schema/README.md):** §props 标题 16→18 + 表补 size / showDirtyMark 两行
+* **ci(scripts/check-doc-currency.ts):** XFormProps 字段数 expected 16 → 18（注释同步「Wave3-6 交互增强 +2 size/showDirtyMark」）
+* **已验证:** 全量 form-schema 63 文件 1134 例通过；`pnpm type-check` 0 错误；`pnpm check:doc-currency` 13/13 通过
+
+### ✨ Features | 概念地图页 + deps/dependsOn 命名统一（PM 审查发现 4）
+
+> 产品经理审查发现：XForm 有 ~20 个核心概念，其中「三套依赖 / 三种隐藏 / 三层拦截」三组近义词是新人主要认知税；reaction/asyncOptions 用 `deps`、跨字段校验用 `dependsOn`，命名不统一加剧学习成本。本轮在 README 新增「概念地图」章节（三组近义概念对照），并把 `deps` 统一为跨字段校验的推荐别名（`dependsOn` 保留向后兼容）。
+
+* **docs(src/components/form-schema/README.md):** 新增「概念地图」章节——三种「依赖」（reaction deps / asyncOptions deps / crossValidator dependsOn|deps）对照表 + 三种「隐藏」（hidden / ignore / permission:'hidden'）语义光谱表 + 三层「写入前拦截」（Props 全局 → beforeChangeRules 命名空间 → 字段级）对照表；下沉引用 docs/24 §4.2 / §10 详细决策树
+* **feat(src/components/form-schema/types/rule.ts):** `RuleItem` 新增 `deps?: string | string[]` 作为 `dependsOn` 的别名（与 reaction / asyncOptions 命名统一）；JSDoc 说明优先级（dependsOn 优先）+ 推荐新代码写 deps
+* **feat(src/components/form-schema/composables/cross-rule-runner.ts):** `runCrossRuleMaybeSync` / `runCrossRule` 签名扩 `deps`；取值归一改为 `rule.dependsOn ?? rule.deps`
+* **feat(src/components/form-schema/composables/use-cross-field-rule-trigger.ts):** 事件触发路径过滤条件 `!rule.dependsOn` → `!(rule.dependsOn ?? rule.deps)`（不漏 deps 别名）
+* **feat(src/components/form-schema/composables/use-validate.ts):** 批量 validate 路径同上
+* **feat(src/components/form-schema/composables/use-schema-index.builder.ts):** 反向触发索引构建的 dependsOn 提取改为 `ri.dependsOn ?? ri.deps`（同时声明时 dependsOn 优先）；存在性过滤放宽（不再要求 'dependsOn' in r，由 raw 存在性兜底）
+* **test(src/components/form-schema/composables/cross-rule-runner.spec.ts):** 新增 3 例——deps 别名等效 / dependsOn 优先于 deps / 缺 dependsOn 与 deps 时 threw（不调 crossValidator）
+* **docs(docs/24-XForm使用指南.md):** §5.2 标题改「dependsOn / deps + crossValidator」+ blockquote 说明命名统一 + 示例 dependsOn → deps
+* **已验证:** 全量 form-schema 63 文件 1133 例通过；`pnpm type-check` 0 错误；`pnpm check:doc-currency` 13/13 通过
+
+### ✨ Features | XForm label 函数式 i18n + XFormProps.t 注入（PM 审查发现 3）
+
+> 产品经理审查发现：XForm 无任何 i18n 机制，多语言场景 label 只能预烘焙字符串，切换语言需重建 schema。本轮落地「label 函数式」方案——label 类型放宽为 `string | (t) => string`，函数由 XForm 渲染期以注入的 t 求值；XForm 不绑定 i18n 库（vue-i18n 的 t / 字典闭包均可注入），缺省 identity。t 在 render effect 内求值，vue-i18n 场景语言切换自动重渲，无需重建 schema。
+
+* **feat(src/components/form-schema/types/identity.ts):** 新增 `XFormTranslateFn = (key: string) => string` + `XFormLabelFn = (t) => string`；`label?: string | XFormLabelFn`（含与 reaction 函数式风格区分的 JSDoc——reaction.label 在管线求值成 string 后才写入 node.label，渲染层拿到的函数必是 i18n 函数）
+* **feat(src/components/form-schema/types/xform.ts):** XFormProps 新增 `t?: XFormTranslateFn`（JSDoc 说明分层铁律：components/ 不 import locales/；调用方注入 vue-i18n 的 t 或字典闭包；缺省 identity）；字段数 15 → 16
+* **feat(src/components/form-schema/utils/resolve-label.ts):** 新建 `resolveLabel(label, t?)`——函数式 label 以注入 t（缺省 FALLBACK_T identity）求值；string label 原样返回
+* **feat(src/components/form-schema/composables/render-form-item.ts):** `resolveLabel(node.label, opts.t)` 求值后传入 ElFormItem.label + compileRules 默认「<label>必填」消息（函数式 label 不会漏成 undefined）
+* **feat(src/components/form-schema/composables/render-schema-node.ts):** view 态 label 前缀同步 resolveLabel；RenderSchemaNodeOptions 加 `t?: XFormProps['t']`
+* **feat(src/components/form-schema/composables/render-array-node.ts):** 数组行 title `cfg.title ?? resolveLabel(node.label, opts.t) ?? listName`
+* **feat(src/components/form-schema/composables/use-render-root.ts):** renderOpts 加 `t: (key) => props.t?.(key) ?? key`——getter 闭包非 setup 快照，父级换 t 引用无需 optsEpoch 覆盖
+* **feat(src/components/form-schema/builders/core.ts + containers.ts):** `label(label: string | XFormLabelFn): this`（import XFormLabelFn）
+* **feat(src/components/form-schema/types.ts):** barrel 补 `export { type XFormTranslateFn }` / `export { type XFormLabelFn }`（带 JSDoc）
+* **test(src/components/form-schema/components/XForm.spec.ts):** ElFormItemStub 加 `props: ['label']` + template 渲染 `.fi-label`；新增 i18n describe 3 例（t 注入渲染翻译文案 / 未注入 identity / setProps 换 t 重渲）；断言目标 `.el-form-item__label`（render-form-item.ts 直接 import ElFormItem 不走 global.components stub）
+* **test(src/components/form-schema/index.spec.ts):** 契约快照补 `t: true`，toHaveLength(16)
+* **demo(src/modules/demo/examples/XForm/XFormI18n.vue):** 新增 label 函数式 i18n demo——字典 DICTS zh/en + locale ref + t computed 闭包（模拟 vue-i18n）；三字段函数式 label + crossValidator 密码确认；语言切换按钮（zh/en）
+* **demo(src/modules/demo/examples/XForm/configs/xform-demos-api.ts):** `i18nItems` 3 项 API 说明
+* **demo(src/modules/demo/config/sidebar-groups.ts):** `XFormI18n: 'label 函数式 i18n'`（插在 XFormIgnore 前）
+* **docs(docs/24-XForm使用指南.md):** §2 Props 表加 `t` 行（类型 XFormTranslateFn）+ 标题「15 个」→「16 个」+ line 77「15 个 prop」→16；§19 示例索引加 XFormI18n 行
+* **docs(src/components/form-schema/README.md):** §props 标题 15→16 + 说明行 + 表补 `t` 行
+* **ci(scripts/check-doc-currency.ts):** XFormProps 字段数注释补「Wave3-4 i18n +1 t」；XForm demo 数 54→55（含注释）
+* **已验证:** 全量 form-schema 63 文件 1130 例通过；`pnpm type-check` 0 错误；`pnpm check:doc-currency` 13/13 通过
+
+### ♻️ Refactor | cross 校验三路径执行语义统一于 cross-rule-runner（架构审查 #11）
+
+> 三条 crossValidator 执行路径（反向 model 触发 / 正向 blur-change 事件触发 / validate 批量全量）各自手写「dependsOn 取值 + 同步异步分流 + 抛错兜底 + seq 竞态令牌」，共 3 份重复实现。收敛为单一原语模块，行为保持（含同步 crossValidator 同步写入、seq bump 时机、空值三策略差异）。
+
+* **refactor(src/components/form-schema/composables/cross-rule-runner.ts):** 新建——`runCrossRuleMaybeSync`（同步 crossValidator 直返 outcome 保持同步写入语义；异步返回 Promise）+ `runCrossRule`（async 包装，事件/批量路径 await 串行消费）+ `createCrossSeqGuard`（seq 令牌原语 begin/isCurrent/clear）；文件头显式声明「刻意不统一」清单（seq bump 时机、空值策略、结果写入三路径语义不同，保留调用方）
+* **refactor(use-cross-field-trigger.ts):** executeRule 改经 runner——空值清错 + seq bump 在空值检查后（原语义）+ 同步结果同步写入 / 异步 then 内 seq 过期丢弃
+* **refactor(use-cross-field-rule-trigger.ts):** seq Map 收敛为 createCrossSeqGuard（bump 时机 = 触发开始先于空值检查，原语义）；循环内 await runCrossRule，pass → setFieldError(name,'','')，fail → setFieldError(name,msg)，threw → 继续下一条（原 catch-continue 语义）
+* **refactor(use-validate.ts):** runNodeCrossRules 内层 try/catch + Promise.resolve 收敛为 await runCrossRule（批量路径无空值跳过、无 seq，原语义）；移除 lodash get import
+* **refactor(use-form-validation.ts):** 删除 line 72-77 过时注释（seq Map 本体早已迁走），改为指向 runner 的函数级 JSDoc
+* **style:** console.error 文案三处统一为 `[XForm] crossValidator threw:`（原 reverse/blur trigger 变体）；2 处 spec 断言同步更新
+* **test(cross-rule-runner.spec.ts):** 新增 15 例（同步直返 / 异步分流 / dependsOn 归一 / 抛错兜底 / 嵌套路径 / seq 递增-过期-clear）
+* **docs(ARCHITECTURE.md):** §9.1 表 61 → 62（composables 48→49）；§4 #11 行 48→49 spec 文件；docs/25 TL;DR 61 → 62
+* **ci(scripts/check-doc-currency.ts):** spec 文件数 expected 61 → 62（tolerance 收紧同步）
+* **已验证:** cross 相关 5 文件 128 例通过；全量 form-schema 套件通过；`pnpm type-check` 0 错误；`pnpm check:doc-currency` 13/13 通过
+
+### ♻️ Refactor | 组件映射表单源化：EL_COMPONENT_MAP 唯一 runtime 真源（架构审查 #2）
+
+> 架构审查发现组件映射存在两份手写表：adapters/element-plus-adapter.ts 的 DEFAULT_COMPONENT_MAP（31 条 name→string）与 composables/resolve-component.ts 的 EL_COMPONENT_MAP（30 条 name→Component），新增组件需双处登记必然漂移（Icon 已在 adapter 侧独存）。本轮收敛为单一真源 + 派生表，并修复 builders 拆分的 import 路径与 composer 返回类型两处遗留类型错误。
+
+* **refactor(src/components/form-schema/composables/resolve-component.ts):** EL_COMPONENT_MAP 补 `Icon: ElIcon`，升级为唯一 runtime 真源（31 条），header 注释声明「DEFAULT_COMPONENT_MAP 从此表派生，禁止再手写第二份映射表」
+* **refactor(src/components/form-schema/adapters/element-plus-adapter.ts):** DEFAULT_COMPONENT_MAP 31 条手写表 → `deriveComponentNameMap()` 从 EL_COMPONENT_MAP 派生（依赖 EP 组件对象稳定 `.name` 属性；InputPassword/ElInputTextArea 等别名键共享 ElInput 对象自动派生正确；缺 `.name` 时回退短名键）；JSDoc 说明派生关系与假设
+* **test(src/components/form-schema/adapters/element-plus-adapter.spec.ts):** 新增 2 例——键集合与 EL_COMPONENT_MAP 一致（防双表漂移契约）+ Icon/别名键 `.name` 派生正确；45/45 通过
+* **fix(src/components/form-schema/builders/core.ts + containers.ts):** Wave3-1 拆分的 import 路径修正 `'../../types'` → `'../types'`（types.ts 与 types/ 目录并存时文件优先解析，vue-tsc 编译失败但 vitest 解析通过致当时漏检）
+* **fix(src/components/form-schema/composables/use-xform-composer.ts):** `UseXFormComposerReturn` 接口 + return 补 `scrollToField`（Wave2-2 banner @locate 接线时 XForm.vue 已解构使用，返回类型遗漏声明）
+* **已验证:** adapter/resolve-component/use-dev-runtime/use-validate 92 例通过；builders/composer/XForm 72 例通过；`pnpm type-check` 0 错误；`pnpm check:doc-currency` 13/13 通过
+
+### 🐛 Fixes | XForm scrollToError/scrollIntoViewOptions 死 prop 修复（schema 优先、props 兜底）
+
+> 三视角审查（架构师/设计师/产品经理）发现：`scrollToError` / `scrollIntoViewOptions` 两个 props 仅声明从未接线——`use-top-level-fields.ts` 只从 schema 顶层节点读取，props 传入时被静默忽略。修复后形成「schema 显式配置 > props 兜底 > false」三级优先级。
+
+* **fix(src/components/form-schema/composables/use-top-level-fields.ts):** 两个 computed 增加 props 兜底分支（`s?.scrollToError ?? props?.scrollToError ?? false`）；header 注释更新说明例外
+* **fix(src/components/form-schema/composables/use-xform-composer.ts):** deps 传入 `props`
+* **test(src/components/form-schema/composables/use-top-level-fields.spec.ts):** 新增 5 例（props 兜底 true / schema 显式 false 优先于 props true / 双缺省 false / scrollIntoViewOptions 透传 / schema 优先级），58/58 通过
+
+### ✨ Features | ProDialogForm xformProps 透传 + 稳定 rules 引用 + asyncOptions 不可达位置 dev 警告 + 数组行默认布局
+
+> 同一轮审查的四个集成/体验缺口一次性补齐。ProDialogForm 此前仅透传 3/15 个 XForm props（schema/model/rules），其余能力（components/zodSchema/beforeChange/permissionResolver/showErrorToast 等）完全无法使用；数组节点行内布局样式缺失导致控件错位挤压。
+
+* **feat(src/components/common/ProDialogForm/):** 新增 `xformProps?: Partial<XFormProps>` 透传入口（`v-bind="xformProps"`，同名键优先级：显式 props > xformProps）；`:rules` 缺省改绑模块级 `EMPTY_RULES` 稳定空对象——修复 `props.rules ?? {}` 每次渲染新建引用导致 XForm renderOpts 全量失效的性能隐患
+* **test(src/components/common/ProDialogForm/ProDialogForm.spec.ts):** 新增 `xformProps 透传` describe 3 例（透传 / 优先级深比较 / 引用稳定性 toBe），21/21 通过
+* **feat(src/components/form-schema/):** 新增 `use-scan-async-options.ts`（walkSchema 集差扫描：全量遍历 minus registerAsyncOptions 实际遍历，自动跟随 walker 选项，单一事实源）——dev 环境下 asyncOptions 位于不支持位置（formItem.slots / array.itemSchema 内）时 console.warn + errorBus.report（新错误码 `ASYNC_OPTIONS_UNSUPPORTED_POSITION`），debug banner 同步渲染警告行
+* **test(src/components/form-schema/):** 新增 `use-scan-async-options.spec.ts` 6 例 + dev-runtime 集成 1 例，21/21 通过
+* **style(src/components/form-schema/styles/element-form-overwrite.scss):** 数组行补齐默认布局——`.array-node__row`（flex + gap 12）/ `__row-body`（flex:1）/ `__row-actions`（flex-shrink:0 + `--xform-array-actions-offset` 对齐变量）/ `__empty`（虚线占位空态）
+* **fix(src/components/form-schema/composables/render-array-node.ts):** 空态文案改为「暂无数据，点击上方「添加X」按钮添加一行」（原「右上角」与实际按钮位置不符）
+* **test(src/components/form-schema/):** render-array-node 19/19 通过
+* **docs(docs/31-ProDialogForm使用指南.md):** Props 表补 `xformProps` 行 + 「XForm 能力透传」blockquote（用法示例 + 优先级说明）
+* **docs(docs/24-XForm使用指南.md):** §8 asyncOptions 字段表后补「位置限制」警告块（formItem.slots / array.itemSchema 内不发起请求）
+
+### ♻️ Refactor | builders.ts 621 行拆分 builders/ 子目录 + 兼容 barrel（架构审查 #3）
+
+> builders.ts 621 行超项目 400 行硬上限 1.45 倍；27 个 builder 的「makeBuilder + Ext 子类 + xXxx 入口」三件套是纯结构重复。按域拆 6 文件，导出面 27 入口 + NodeBuilder + ArrayBuilder 完全不变。
+
+* **refactor(src/components/form-schema/builders/):** 新建 core.ts（NodeBuilder 基类 + makeBuilder/makeSimpleBuilder 工厂）+ fields-input.ts（Input/Textarea/InputNumber/Mention 等 7 个）+ fields-select.ts（Select/Autocomplete/Cascader/RadioGroup/Checkbox 等 11 个）+ fields-date.ts（DatePicker/TimePicker/TimeSelect）+ fields-data.ts（Transfer/TreeSelect/Upload/ColorPicker）+ containers.ts（Card + ArrayBuilder）+ index.ts barrel
+* **refactor(builders.ts):** 621 行 → 兼容 barrel（`export * from './builders/index'`）；⚠️ 必须保留本文件 —— 全部消费方（14 处 demo/docs/spec）以无扩展名路径导入，Vite/TS 在 builders.ts 与 builders/ 并存时优先解析文件
+* **ci(scripts/check-doc-currency.ts):** countBuilders 扫描范围 builders.ts → builders/ 子目录（排除 index barrel）；实测 27/27 不变
+* **docs(ARCHITECTURE.md):** 目录树补 builders/ 条目；模块表 builders.ts → builders/；相关文件链接更新；composer 行「1 个 watch 守护」描述同步 Wave2-3 的删除
+* **已验证:** form-schema 全量 61 文件 1107 例通过；`pnpm type-check` 0 错误（含 custom-component.test-d.ts 对 '../builders' 路径的类型推导）；builders.spec 45/45 不变
+
+### ♻️ Refactor | composer 失效 watch 实证删除 + 错误传播依赖路径收敛（架构审查 #4）
+
+> 架构审查发现 composer 的 `watch(fieldErrors, () => triggerRender())` 疑似失效：setFieldError 走 reactive 键级写入，watch 的 ref 源监听不到键 mutation。本轮先写 spec 实证，再删除死代码并收敛隐式耦合。
+
+* **test(use-xform-composer.spec.ts):** 新增「错误传播链路验证」describe 2 例 —— ①setFieldError 键级写入后 `window.__triggerRenderCalled` 计数不变（实证 watch 从未生效）②Object.keys 派生（模拟 XForm.vue `:data-field-errors` 绑定）随键级写入更新（实证渲染兜底路径有效）
+* **refactor(use-xform-composer.ts):** 删除失效的 `watch(fieldErrors, () => triggerRender())` 与 `triggerRender` 解构/unused `watch` import；注释说明真实依赖路径（XForm.vue `:data-field-errors` 显式绑定 + render-form-item 渲染期读键），并警示勿复活该 watch
+* **refactor(use-top-level-fields.ts):** 删除 `nodes` computed 内的 `void Object.keys(fieldErrors.value).length` fake read（同为失效代码）+ `UseTopLevelFieldsDeps` 移除无人消费的 `fieldErrors` 字段与 `TopLevelFieldErrors` 类型
+* **test(use-top-level-fields.spec.ts):** 删除断言恒真的假用例「fieldErrors 写入时 nodes computed 重新求值」；makeDeps 同步收敛
+* **已验证:** form-schema + ProDialogForm 全量 64 文件 1138 例通过；`pnpm type-check` 0 错误
+
+### ✨ Features | XForm 错误反馈层集群改造（三视角审查 F3/F4/F5/F6）
+
+> 设计师审查发现错误反馈层「面向用户的界面是开发者语义」：SCHEMA_VALIDATE_FAILED 这类 code 排在 toast 视觉前排、toast 永不自动消失、超量无聚合、debug banner 只能看不能点。四个发现一次性改造。
+
+* **feat(use-form-error-bus.ts):** `FormErrorEvent` 新增 `userMessage?: string` —— toast 展示优先级高于 message；dev 语义 message 保留供 console 留痕
+* **feat(components/XFormErrorToastItem.vue):** 标题主体改为 `userMessage ?? message`（F3）；code/source 降为 dev-only 弱化 meta 行（prod 零渲染）；色板全面替换为 EP CSS 变量（F6），暗色模式随主题自动切换
+* **feat(components/XFormErrorToast.vue):** 三项体验改造（F4）——①新 toast 7s 自动 dismiss（定时器以 id 为 key 手动管理，卸载/手动 dismiss 双向清理防泄漏）②TransitionGroup 进出过渡对称（slideIn/slideOut）③可见 toast 超 3 条聚合为「还有 N 条错误」卡片 + 「全部关闭」按钮（emit dismissAll，XForm 接线 errorBus.dismissAll）
+* **feat(components/XFormDebugBanner.vue):** 三项交互改造（F5）——①keyPath 序列化为 EP 风格 `items[0].name`（与 async-validator 报错格式对齐）②点击错误项 emit `locate(path)` → XForm `scrollToField` 滚到对应字段（role="button" + Enter 键支持）③「复制全部」按钮复制纯文本错误清单（clipboard API + execCommand 双降级，✓ 已复制 1.5s 反馈）；色板同步 EP 变量（F6）
+* **test:** use-form-error-bus +1（userMessage 透传）/ ToastItem +2（userMessage 优先 / message 兜底）/ Toast +5（聚合卡 3 + 自动 dismiss 时序 2；解除 VTU transition-group stub 以真实渲染 ul）/ DebugBanner +3（EP keyPath / locate emit / 复制入口）——form-schema 全量 61 文件 1106 例通过
+* **docs(docs/24-XForm使用指南.md):** showErrorToast props 行补行为描述（userMessage 分层 / 7s 自动消失 / 超量聚合）
+
+### 🛡️ CI | check-doc-currency 扩展 + XFormProps 契约快照（Wave2-1）
+
+> 三视角审查 Wave1-5 一次性同步的 9 处硬数据（props 15 个 / demo 54 个 / spec 61 个等）此前无任何机制守护，重构后必然再次漂移。本轮把最关键的三项纳入 CI 阻断校验，并加编译期契约测试互锁。
+
+* **ci(scripts/check-doc-currency.ts):** 新增 2 项校验——`XFormProps 字段数`（types/xform.ts interface 体 = 15，对应 docs/24 §2 + README）与 `XForm demo 数`（examples/XForm/ 下 .vue = 54，对应 docs/24 §19）；`spec 文件数`统计范围扩展为全目录（composables + components + adapters + utils + 根级），expected 52±5 → 61±2；`composable 文件数`收紧 44±4 → 46±2（Wave1-5 后的精确地面真值）；头部覆盖清单同步更新至 13 项。实测 13/13 PASS
+* **test(src/components/form-schema/index.spec.ts):** 新增 `XFormProps 契约` describe——`satisfies Record<keyof XFormProps, true>` 编译期锁定字段集合（漏字段/多字段直接 TS 报错）+ `toHaveLength(15)` 运行期锁数量；与 check-doc-currency 第 12 项互锁。7/7 通过
+
+### 📝 Docs | XForm 文档硬数据一次性同步（三视角审查收尾）
+> Wave1-1~1-4 功能变更引发的 9 处文档硬数据漂移一次性对齐：props 计数、demo 计数、spec 计数、行数、composables 清单。此后由 Wave2-1 的 check-doc-currency 扩展持续守护。
+
+* **docs(src/components/form-schema/README.md):** props 段改为「15 个」并补 permissionResolver/reactionBudget 行、scrollToError 描述改为「schema 优先、props 兜底」；demo 计数统一为「54 个 XForm demo + 4 个通用组件 demo」；§29 示例表头改为「38 个高频入门 demo（全量 54 个见 docs/24 §19）」+ 单一事实源维护注释
+* **docs(docs/24-XForm使用指南.md):** §2 Props 改为「15 个」并补 4 行；§13.2 builder 计数 28 → 27；§19 表头改为「54 个 demo，含 1 个主入口」
+* **docs(src/components/form-schema/ARCHITECTURE.md):** 组件树 XForm.vue 121 → 149 行；composables 清单补 11 个遗漏条目（use-xform-expose / use-cross-field-rule-trigger / use-render-root / use-zod-validator / validate-component-props / use-scan-async-options / use-dev-runtime / use-expression-functions / apply-default-values / array-row-key / barrel）；§9 测试统计 61 个 spec（composables 48 + components 5 + adapters 1 + utils 4 + 根级 3）；§4 #6/#7/#11 行数与 spec 覆盖描述同步
+* **docs(docs/25-XForm架构与决策记录.md):** TL;DR spec 计数「约 30 个」→「61 个 `.spec.ts` + 2 个 `.test-d.ts`」（实测磁盘计数）
+
 ### 🐛 Fixes | ProTable SelectedTags 回显区永不渲染（showSelectedTags 默认值失效）
 
 > 高级筛选抽屉选值后「当前筛选」tag 区不出现的根因：`showSelectedTags` 仅声明类型（`showSelectedTags?: boolean`）未进 `withDefaults`，Vue 对 absent Boolean prop 做 **boolean casting（absent → false）**，原守卫 `v-if="props.showSelectedTags !== false"` 恒为 false，组件从未挂载。文档契约「默认开启」在运行时失效。

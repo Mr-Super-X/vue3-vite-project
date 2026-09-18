@@ -25,6 +25,11 @@
  */
 import { watch, type WatchStopHandle } from 'vue'
 import { debounce, get, isEqual } from 'lodash-es'
+import {
+  runCrossRuleMaybeSync,
+  createCrossSeqGuard,
+  type CrossRuleOutcome,
+} from './cross-rule-runner'
 import type { RuleItem } from '../types'
 
 interface ReverseRule {
@@ -62,6 +67,15 @@ export interface UseCrossFieldTriggerOptions {
    * 可能在运行中改变（demo 模式切换 / 远程拉取 schema 覆盖等）；getter 保证读取最新值
    */
   defaultDebounceMs?: () => number
+  /**
+   * deep watch model 兜底开关（架构审查 #8，默认 true 保持向后兼容）
+   *
+   * true：常驻 deep watch 整个 model + 每键 isEqual 快照 diff —— 覆盖「绕过 v-model 直改
+   * model」（如 setModel 赋值 / 外部 patch）的兜底场景；代价是大表单每键 isEqual 成本。
+   * false：关闭兜底 —— 纯 v-model 表单（所有写入都经 onValueChange）可省掉 deep watch，
+   * 但绕过 v-model 的写入不再自动触发跨字段校验（需调用方手动 trigger）。
+   */
+  watchFallback?: boolean
 }
 
 /** useCrossFieldTrigger —— 反向跨字段实时校验（精确 + 兑底 + debounce） */
@@ -88,8 +102,9 @@ export function useCrossFieldTrigger(opts: UseCrossFieldTriggerOptions): {
   // 统一类型让清理逻辑可以安全调用 cancel（lodash.debounce 返回值 cast 后 cancel 存在）
   type Runner = (() => void) & { cancel?: () => void }
   const stops: WatchStopHandle[] = []
-  // 每字段序号令牌：异步 crossValidator 连续触发时，旧 Promise 后返回不得覆盖新结果（H3）
-  const targetSeqMap = new Map<string, number>()
+  // 序号令牌：异步 crossValidator 连续触发时，旧 Promise 后返回不得覆盖新结果（H3）
+  // seq 原语统一收敛到 cross-rule-runner；本路径 bump 时机 = 空值检查之后（行为保持，见 runner 文件头）
+  const seqGuard = createCrossSeqGuard()
   // runner 缓存：key = `${target}|${delayMs}`，同字段同 delay 共享一个 lodash.debounce 实例
   // rules 整体替换时清空缓存（旧 runner 引用的 rule 引用已失效）
   const runnerCache = new Map<string, (() => void) & { cancel?: () => void }>()
@@ -100,7 +115,7 @@ export function useCrossFieldTrigger(opts: UseCrossFieldTriggerOptions): {
   // 保证下一 tick 的真实变化不被误吞
   const triggeredFields = new Set<string>()
 
-  /** 单条 rule 的同步执行（debounce 包装内部调用），同步/异步结果都走 targetSeqMap 防竞态 */
+  /** 单条 rule 的同步执行（debounce 包装内部调用），同步/异步结果都走 seqGuard 防竞态 */
   function executeRule(r: ReverseRule): void {
     const model = opts.model()
     if (!model) return
@@ -109,26 +124,24 @@ export function useCrossFieldTrigger(opts: UseCrossFieldTriggerOptions): {
       opts.clearValidate([r.target])
       return
     }
-    const depsValues = r.deps.map((d) => get(model, d))
-    const cv = r.rule.crossValidator
-    if (!cv) return
-    const seq = (targetSeqMap.get(r.target) ?? 0) + 1
-    targetSeqMap.set(r.target, seq)
-    const result = cv(value, ...depsValues)
-    if (result instanceof Promise) {
-      result
-        .then((res) => {
-          if (seq !== targetSeqMap.get(r.target)) return // 已有更新的触发，丢弃过期结果
-          if (res === true) opts.clearValidate([r.target])
-          else opts.setFieldError(r.target, res)
-        })
-        .catch((err) => {
-          console.error('[XForm] reverse cross validator threw:', err)
-        })
-    } else if (result === true) {
-      opts.clearValidate([r.target])
+    if (!r.rule.crossValidator) return
+    // bump 时机保持原语义：空值检查之后（空值不清 seq，旧飞行结果落盘时仍 current）
+    const seq = seqGuard.begin(r.target)
+    const settle = (outcome: CrossRuleOutcome): void => {
+      if (outcome.kind === 'pass') opts.clearValidate([r.target])
+      else if (outcome.kind === 'fail') opts.setFieldError(r.target, outcome.message)
+      // threw：runCrossRuleMaybeSync 内已 console.error，静默跳过
+    }
+    const outcome = runCrossRuleMaybeSync(r.rule, model, r.target)
+    if (outcome instanceof Promise) {
+      // 异步结果：seq 过期丢弃（连续触发竞态防护，H3）
+      outcome.then((o) => {
+        if (!seqGuard.isCurrent(r.target, seq)) return
+        settle(o)
+      })
     } else {
-      opts.setFieldError(r.target, result)
+      // 同步结果同步写入（保持原语义：同步 crossValidator 不经过微任务，无 seq 检查）
+      settle(outcome)
     }
   }
 
@@ -219,7 +232,7 @@ export function useCrossFieldTrigger(opts: UseCrossFieldTriggerOptions): {
           if (typeof r.cancel === 'function') r.cancel()
         }
         runnerCache.clear()
-        targetSeqMap.clear()
+        seqGuard.clear()
         // 规则集变化后旧快照中的 rule 引用全部失效，立即重建防止旧快照误触发
         oldSnapshot = takeSnapshot()
       },
@@ -231,37 +244,40 @@ export function useCrossFieldTrigger(opts: UseCrossFieldTriggerOptions): {
   // - dep 值变化 → run(depPath)（deps 精确匹配命中该 rule）
   // - target 值变化 → run(target)（正向重算 + 空值跳过语义，覆盖绕过 v-model 直改 target）
   // - 与任何 rule 无关的 key 变化不再 run（旧逻辑顶层 diff 对无关 key 也是空跑，行为等价且更省）
-  stops.push(
-    watch(
-      () => opts.model(),
-      (newModel) => {
-        if (!newModel) {
-          oldSnapshot = new Map()
-          return
-        }
-        const fresh = takeSnapshot()
-        const changed: string[] = []
-        for (const [r, snap] of fresh) {
-          const prev = oldSnapshot.get(r)
-          // rules 重建时已同步重置快照，prev 恒存在；防御性跳过缺失项
-          if (!prev) continue
-          r.deps.forEach((d, i) => {
-            if (!isEqual(snap.depsValues[i], prev.depsValues[i])) changed.push(d)
-          })
-          if (!isEqual(snap.targetValue, prev.targetValue)) changed.push(r.target)
-        }
-        oldSnapshot = fresh
-        for (const key of changed) {
-          // trigger() 同 tick 已精确处理过的字段跳过（嵌套路径如 user.age
-          // 在 onValueChange 路径以完整 name 登记，同 tick 去重窗口保留）
-          if (triggeredFields.has(key)) continue
-          run(key)
-        }
-        triggeredFields.clear()
-      },
-      { deep: true } // 关键:deep 监听 model 内部属性变化（嵌套路径依赖此触发）
+  // - watchFallback=false 逃逸口（架构审查 #8）：纯 v-model 表单可关 deep watch 省每键 isEqual
+  if (opts.watchFallback !== false) {
+    stops.push(
+      watch(
+        () => opts.model(),
+        (newModel) => {
+          if (!newModel) {
+            oldSnapshot = new Map()
+            return
+          }
+          const fresh = takeSnapshot()
+          const changed: string[] = []
+          for (const [r, snap] of fresh) {
+            const prev = oldSnapshot.get(r)
+            // rules 重建时已同步重置快照，prev 恒存在；防御性跳过缺失项
+            if (!prev) continue
+            r.deps.forEach((d, i) => {
+              if (!isEqual(snap.depsValues[i], prev.depsValues[i])) changed.push(d)
+            })
+            if (!isEqual(snap.targetValue, prev.targetValue)) changed.push(r.target)
+          }
+          oldSnapshot = fresh
+          for (const key of changed) {
+            // trigger() 同 tick 已精确处理过的字段跳过（嵌套路径如 user.age
+            // 在 onValueChange 路径以完整 name 登记，同 tick 去重窗口保留）
+            if (triggeredFields.has(key)) continue
+            run(key)
+          }
+          triggeredFields.clear()
+        },
+        { deep: true } // 关键:deep 监听 model 内部属性变化（嵌套路径依赖此触发）
+      )
     )
-  )
+  }
 
   return {
     stop: () => {
