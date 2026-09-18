@@ -62,7 +62,7 @@ function handleColSetting(): void {
 </script>
 
 <template>
-  <div :class="bem.b()">
+  <div :class="bem.b()" role="toolbar" aria-label="表格工具栏">
     <div :class="bem.e('left')">
       <!-- 2026-09-18：slot 作用域下发 ToolbarCtx（向后兼容：不带 scope 的旧用法不受影响） -->
       <slot name="tableHeader" v-bind="props.toolbarCtx" />
@@ -78,7 +78,13 @@ function handleColSetting(): void {
       <!-- 刷新 + 全屏：同类 icon 操作紧贴成组（vben / vue-pure-admin 工具栏惯例），组间由 __right 的 gap 分隔 -->
       <div :class="bem.e('actions')">
         <ElTooltip content="刷新">
-          <ElButton :icon="Refresh" circle data-test="refresh-btn" @click="handleRefresh" />
+          <ElButton
+            :icon="Refresh"
+            circle
+            aria-label="刷新表格"
+            data-test="refresh-btn"
+            @click="handleRefresh"
+          />
         </ElTooltip>
         <!-- v3.1 全屏切换：紧邻刷新按钮；实际切换逻辑在编排层 useFullscreen（Esc 也可退出） -->
         <ElTooltip :content="props.fullscreen ? '退出全屏' : '全屏'">
@@ -86,24 +92,35 @@ function handleColSetting(): void {
             :icon="FullScreen"
             circle
             :type="props.fullscreen ? 'primary' : 'default'"
+            :aria-label="props.fullscreen ? '退出全屏' : '进入全屏'"
+            :aria-pressed="props.fullscreen ? 'true' : 'false'"
             data-test="fullscreen-btn"
             @click="emit('toggleFullscreen')"
           />
         </ElTooltip>
       </div>
-      <ElButtonGroup>
+      <ElButtonGroup role="group" aria-label="表格密度切换">
         <ElButton
           v-for="d in densityList"
           :key="d"
           :type="props.density === d ? 'primary' : 'default'"
           size="small"
+          :aria-label="`切换表格密度为${densityLabels[d]}`"
+          :aria-pressed="props.density === d ? 'true' : 'false'"
           @click="emit('update:density', d)"
         >
           {{ densityLabels[d] }}
         </ElButton>
       </ElButtonGroup>
       <ElTooltip content="列设置">
-        <ElButton :icon="Setting" circle data-test="col-setting-btn" @click="handleColSetting" />
+        <ElButton
+          :icon="Setting"
+          circle
+          aria-label="打开列设置"
+          :aria-expanded="props.colSettingVisible ? 'true' : 'false'"
+          data-test="col-setting-btn"
+          @click="handleColSetting"
+        />
       </ElTooltip>
     </div>
   </div>

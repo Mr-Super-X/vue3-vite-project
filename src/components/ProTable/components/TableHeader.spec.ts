@@ -104,4 +104,47 @@ describe('TableHeader', () => {
     expect(wrapper.text()).toContain('新增')
     expect(wrapper.find('.scope-count').text()).toBe('0')
   })
+
+  // ─────────── v3.5 PR1-A：A11y toolbar + 4 个 icon 按钮 aria-label ───────────
+
+  it('v3.5：根 div 加 role="toolbar" + aria-label="表格工具栏"', () => {
+    const wrapper = mountHeader({})
+    const root = wrapper.find('.vv-pro-table-header')
+    expect(root.exists()).toBe(true)
+    expect(root.attributes('role')).toBe('toolbar')
+    expect(root.attributes('aria-label')).toBe('表格工具栏')
+  })
+
+  it('v3.5：刷新按钮 aria-label="刷新表格"', () => {
+    const wrapper = mountHeader({})
+    expect(wrapper.find('[data-test="refresh-btn"]').attributes('aria-label')).toBe('刷新表格')
+  })
+
+  it('v3.5：全屏按钮 aria-label 切换（进入/退出全屏） + aria-pressed', async () => {
+    const wrapper = mountHeader({ fullscreen: false })
+    expect(wrapper.find('[data-test="fullscreen-btn"]').attributes('aria-label')).toBe('进入全屏')
+    // aria-pressed=false
+    expect(wrapper.find('[data-test="fullscreen-btn"]').attributes('aria-pressed')).toBe('false')
+    // 点击触发 toggleFullscreen（实际切换由编排层 useFullscreen 执行）
+    await wrapper.find('[data-test="fullscreen-btn"]').trigger('click')
+    expect(wrapper.emitted('toggleFullscreen')).toBeTruthy()
+  })
+
+  it('v3.5：列设置按钮 aria-label="打开列设置"', () => {
+    const wrapper = mountHeader({ colSettingVisible: false })
+    const btn = wrapper.find('[data-test="col-setting-btn"]')
+    expect(btn.attributes('aria-label')).toBe('打开列设置')
+  })
+
+  it('v3.5：密度切换 3 按钮带 aria-label + aria-pressed', () => {
+    const wrapper = mountHeader({ density: 'default' })
+    const compactBtn = wrapper.findAll('button').find((b) => b.text().includes('紧凑'))
+    const defaultBtn = wrapper.findAll('button').find((b) => b.text().includes('默认'))
+    const looseBtn = wrapper.findAll('button').find((b) => b.text().includes('宽松'))
+    expect(compactBtn?.attributes('aria-label')).toBe('切换表格密度为紧凑')
+    expect(defaultBtn?.attributes('aria-label')).toBe('切换表格密度为默认')
+    expect(looseBtn?.attributes('aria-label')).toBe('切换表格密度为宽松')
+    // 当前密度 default：aria-pressed=true
+    expect(defaultBtn?.attributes('aria-pressed')).toBe('true')
+  })
 })
