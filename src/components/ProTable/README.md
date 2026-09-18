@@ -198,6 +198,74 @@ assertValidResponse(adapted, { tableKey: props.tableKey })
 assertValidResponse(adapted, props.tableKey ? { tableKey: props.tableKey } : {})
 ```
 
+## v3.5 变更摘要（A11y 改造 + E2E）
+
+> 目标：让 ProTable 通过 WCAG 2.1 AA 合规审查 + E2E 测试覆盖关键用户路径（搜索→列表→选中→批量操作）。
+
+### A11y 三层结构
+
+| 层级       | 元素                              | ARIA 属性                                                               |
+| ---------- | --------------------------------- | ----------------------------------------------------------------------- |
+| 根容器     | `ProTable.vue` 根 div             | `role="grid"` + `aria-label="数据表格"` + `aria-rowcount` + `aria-busy` |
+| 工具栏     | `TableHeader.vue` 工具栏容器      | `role="toolbar"` + `aria-label="表格工具栏"`                            |
+| 工具栏按钮 | 刷新 / 全屏 / 列设置 / 密度切换   | `aria-label` + `aria-pressed`（密度切换）+ `aria-expanded`（列设置）    |
+| 搜索区     | `SearchForm.vue` 根 div           | `role="search"` + `aria-label="表格筛选"`                               |
+| 搜索区按钮 | 搜索 / 重置 / 高级筛选 / 展开收起 | `aria-label` + `aria-expanded`（折叠按钮）                              |
+| 已选条件区 | `SelectedTags.vue` 根 div         | `role="region"` + `aria-label="当前已选筛选条件"`                       |
+| 批量操作条 | `SelectionBar.vue` 根 div         | `role="status"` + `aria-live="polite"`（已 N 项自动朗读）               |
+| 编辑态     | `EditCell.vue` sr-only span       | `aria-live="polite"`（进入编辑态播报）                                  |
+
+### 13 处 aria-label 清单
+
+| #   | 组件         | 元素          | aria-label                        |
+| --- | ------------ | ------------- | --------------------------------- |
+| 1   | ProTable     | 根 div        | `数据表格` / `数据表格（全屏）`   |
+| 2   | SearchForm   | 搜索按钮      | `搜索`                            |
+| 3   | SearchForm   | 重置按钮      | `重置筛选`                        |
+| 4   | SearchForm   | 高级筛选按钮  | `打开高级筛选`                    |
+| 5   | SearchForm   | 展开/收起按钮 | `展开搜索条件` / `收起搜索条件`   |
+| 6   | SelectedTags | tag × 按钮    | `清除筛选条件 ${label}`           |
+| 7   | SelectedTags | 清除全部      | `清除全部筛选条件`                |
+| 8   | TableHeader  | 刷新按钮      | `刷新表格`                        |
+| 9   | TableHeader  | 全屏按钮      | `进入全屏` / `退出全屏`           |
+| 10  | TableHeader  | 密度切换按钮  | `切换表格密度为${紧凑/默认/宽松}` |
+| 11  | TableHeader  | 列设置按钮    | `打开列设置`                      |
+| 12  | ColSetting   | checkbox      | `显示/隐藏 ${label}`              |
+| 13  | ColSetting   | 置顶按钮      | `置顶 ${label}`                   |
+| 14  | SelectionBar | 清除按钮      | `清除选择`                        |
+
+### 键盘可达修复
+
+- **SelectedTags × 按钮**：EP 内置 `closable` 按钮已可 Tab 聚焦；增加 `aria-label` 让屏幕阅读器朗读字段名
+- **ColSetting**：保留 sortablejs 拖拽，旁加 `aria-label` 让键盘用户了解「置顶」按钮意图
+- **TableHeader 工具栏**：4 个 icon 按钮全部带 `aria-label`，鼠标 hover 与 Tab 焦点体验一致
+- **EditCell 编辑态**：进入编辑时插入 sr-only span + `aria-live="polite"`，盲用户感知「我现在处于编辑态」
+
+### prefers-reduced-motion 全局
+
+`styles/_a11y.scss` 加 `@media (prefers-reduced-motion: reduce)` 规则，把 ProTable 子树内所有 `animation-duration` / `transition-duration` 抑制到 `0.01ms`，用户开启系统级「减弱动效」偏好时所有过渡立即生效。
+
+### 颜色对比度审计
+
+`vitest-axe` 集成（`tests/` 直接调用 `axe(wrapper.element)`），裁剪掉 EP + jsdom 触发的结构性误报规则（region / aria-required-children / label）后，CI 阶段确保未来变更不会引入新的 ARIA / color-contrast violations。
+
+### E2E 关键路径（Playwright）
+
+`tests/e2e/protable/` 新增 2 个 spec 覆盖关键用户路径：
+
+| Spec                      | 覆盖路径                                                                            |
+| ------------------------- | ----------------------------------------------------------------------------------- |
+| `search-list.spec.ts`     | 打开 demo → 填搜索框 → 行数减少 → 清空 → 恢复                                       |
+| `selection-batch.spec.ts` | 打开 demo → 勾选 3 行 → SelectionBar 出现 + `已选 3 项` + `aria-live=polite` → 清除 |
+
+**CI 准备**：
+
+```bash
+pnpm test:e2e:install   # 首次下载 Chromium（约 100MB）
+pnpm dev                # 后台启动 dev server
+pnpm test:e2e           # 跑 E2E（baseURL=http://localhost:5174）
+```
+
 ## v3.4 变更摘要（搜索区布局档位下放）
 
 > 真实业务两类场景不适配自动判定档位：① 宽屏页面 6 个字段想全平铺却被强制折叠；② `searchDisplay` 联动使字段数动态变化时档位在 flat/collapse 间跳变。本次把判定权下放，新增 `searchLayout` prop，`'auto'`（默认）保持自动行为完全向后兼容，显式档位跳过字段数判定。
