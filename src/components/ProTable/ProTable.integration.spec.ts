@@ -446,3 +446,59 @@ describe('ProTable v2.0 集成（冲突矩阵 + 启动校验）', () => {
     expect(onSortChange).toHaveBeenCalledWith({ prop: 'amount', order: 'descending' })
   })
 })
+
+describe('SelectedTags 已选条件回显区（v3.2 回归）', () => {
+  // 回归背景：showSelectedTags 走 withDefaults 未声明默认值时，Vue 对 Boolean 类型 prop
+  // 做「absent → false」强转，原 v-if `!== false` 恒为 false，回显区从未挂载。
+  // 以下 3 例锁死「默认开启 / 显式关闭 / 显式开启」三态。
+  it('默认（未传 showSelectedTags）：设置搜索参数后回显区渲染 tag', async () => {
+    const wrapper = mount(ProTable, {
+      props: {
+        columns: [{ prop: 'name', label: '名称', search: { el: 'input', defaultValue: '' } }],
+        requestApi: mockApi,
+      } as unknown as ProTableProps,
+    })
+    await new Promise((r) => setTimeout(r, 10))
+    const vm = wrapper.vm as unknown as {
+      setSearchParams: (p: Record<string, unknown>) => Promise<void>
+    }
+    await vm.setSearchParams({ name: '李四' })
+    await new Promise((r) => setTimeout(r, 10))
+    expect(wrapper.find('.vv-pro-table-selected-tags').exists()).toBe(true)
+    expect(wrapper.find('[data-test="selected-tag-name"]').text()).toContain('李四')
+  })
+
+  it('showSelectedTags=false：回显区不渲染', async () => {
+    const wrapper = mount(ProTable, {
+      props: {
+        columns: [{ prop: 'name', label: '名称', search: { el: 'input', defaultValue: '' } }],
+        requestApi: mockApi,
+        showSelectedTags: false,
+      } as unknown as ProTableProps,
+    })
+    await new Promise((r) => setTimeout(r, 10))
+    const vm = wrapper.vm as unknown as {
+      setSearchParams: (p: Record<string, unknown>) => Promise<void>
+    }
+    await vm.setSearchParams({ name: '李四' })
+    await new Promise((r) => setTimeout(r, 10))
+    expect(wrapper.find('.vv-pro-table-selected-tags').exists()).toBe(false)
+  })
+
+  it('showSelectedTags=true（显式）：回显区渲染', async () => {
+    const wrapper = mount(ProTable, {
+      props: {
+        columns: [{ prop: 'name', label: '名称', search: { el: 'input', defaultValue: '' } }],
+        requestApi: mockApi,
+        showSelectedTags: true,
+      } as unknown as ProTableProps,
+    })
+    await new Promise((r) => setTimeout(r, 10))
+    const vm = wrapper.vm as unknown as {
+      setSearchParams: (p: Record<string, unknown>) => Promise<void>
+    }
+    await vm.setSearchParams({ name: '李四' })
+    await new Promise((r) => setTimeout(r, 10))
+    expect(wrapper.find('.vv-pro-table-selected-tags').exists()).toBe(true)
+  })
+})

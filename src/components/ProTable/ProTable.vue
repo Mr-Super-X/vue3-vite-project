@@ -99,6 +99,10 @@ const props = withDefaults(defineProps<ProTableProps<T>>(), {
   density: 'default',
   initParam: () => ({}),
   columnResize: false,
+  // v3.2 回归修复：Boolean prop 未声明默认值时被 Vue 强转为 false（boolean casting），
+  // 原 `v-if="props.showSelectedTags !== false"` 恒 false 导致 SelectedTags 永不挂载。
+  // 显式声明默认 true 让「未传 = 开启」的文档契约在运行时成立。
+  showSelectedTags: true,
 })
 
 defineOptions({ inheritAttrs: false })
@@ -562,7 +566,7 @@ defineExpose({
         - enumMaps：把 select 枚举值翻译为 label（避免显示数字 ID）
       -->
       <SelectedTags
-        v-if="props.showSelectedTags !== false && columns.searchColumns.length > 0"
+        v-if="props.showSelectedTags && columns.searchColumns.length > 0"
         :columns="searchColumnsNonGeneric"
         :search-params="search.searchParams.value"
         :enum-maps="searchEnumMaps"

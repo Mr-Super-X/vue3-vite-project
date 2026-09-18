@@ -2,6 +2,14 @@
 
 ## 未发布
 
+### 🐛 Fixes | ProTable SelectedTags 回显区永不渲染（showSelectedTags 默认值失效）
+
+> 高级筛选抽屉选值后「当前筛选」tag 区不出现的根因：`showSelectedTags` 仅声明类型（`showSelectedTags?: boolean`）未进 `withDefaults`，Vue 对 absent Boolean prop 做 **boolean casting（absent → false）**，原守卫 `v-if="props.showSelectedTags !== false"` 恒为 false，组件从未挂载。文档契约「默认开启」在运行时失效。
+
+* **fix(src/components/ProTable/ProTable.vue):** `withDefaults` 显式声明 `showSelectedTags: true`；v-if 由 `!== false` 改为真值判断（`props.showSelectedTags && columns.searchColumns.length > 0`），与 README/ARCHITECTURE「默认 true」契约对齐
+* **test(src/components/ProTable/ProTable.integration.spec.ts):** 新增「SelectedTags 已选条件回显区」3 例回归（默认开启渲染 tag / 显式 false 不渲染 / 显式 true 渲染），锁死三态
+* **已验证:** ProTable 全量 39 spec 402 例通过；浏览器实测 drawer 选值 → 回显区出现 → 单个 × / 清除全部均正常
+
 ### ✨ Features | ProTable 工具栏 / 批量操作条 / CSV 导入导出
 
 > 真实业务页面的「新增 / 批量 / 导入 / 导出」按钮扩展能力落地。设计 spec：`docs/superpowers/specs/2026-09-18-pro-table-toolbar-design.md`（L1 slot 作用域增强 → L2 配置式 toolbar → L3 内置 SelectionBar → L4 CSV utils 四层渐进）。
