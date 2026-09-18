@@ -20,6 +20,7 @@
 import { computed, ref, watch, nextTick, onUnmounted, type Ref } from 'vue' // v3.1.2 review 移除 nextTick 反模式占位；nextTick 为 review R5 reset 路径等待 page watcher flush 真实需要
 import 'element-plus/dist/index.css' // 与 form-schema/XForm.vue 对齐：直接引入全量 CSS
 import './styles/element-protable-overwrite.scss' // ProTable 特定的样式覆盖
+import './styles/_a11y.scss' // v3.5 PR1-A：A11y 全局样式（focus-visible / prefers-reduced-motion / sr-only）
 import { ElPagination, ElEmpty, ElConfigProvider } from 'element-plus' // element-plus 按需注入
 import AsyncState from '@/components/common/AsyncState.vue' // 项目内 default import（unplugin-vue-components 自动注册全局组件）
 import SearchForm from './components/SearchForm.vue'
@@ -539,6 +540,10 @@ defineExpose({
       v-bind="$attrs"
       :class="[bem.b(), bem.is('tree', !!treeData), bem.is('fullscreen', isFullscreen)]"
       :data-density="table.density.value"
+      role="grid"
+      :aria-label="isFullscreen ? '数据表格（全屏）' : '数据表格'"
+      :aria-rowcount="table.total.value + 1"
+      :aria-busy="table.loading.value"
     >
       <SearchForm
         v-if="columns.searchColumns.length > 0"
