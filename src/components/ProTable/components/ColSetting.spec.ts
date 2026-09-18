@@ -14,6 +14,8 @@
  */
 import { describe, it, expect, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import ColSetting from './ColSetting.vue'
 
 // mock sortablejs（捕获 Sortable.create 配置，测试直接驱动 onStart/onEnd 模拟拖拽）
@@ -247,5 +249,63 @@ describe('ColSetting', () => {
     expect(wrapper.emitted('reorder')?.[0]).toEqual([['b', 'c', 'a']])
     // 回归断言 2：DOM 还原为拖拽前顺序，Vue v-for 保持唯一数据源
     expect(propOrder()).toEqual(['a', 'b', 'c'])
+  })
+
+  // ─────────── v3.5 PR1-A：A11y aria-label 补齐 ───────────
+
+  it('v3.5：每个 item 带 aria-label 含列名', async () => {
+    const wrapper = mount(ColSetting, {
+      props: { visible: true, columns, visibleKeys: ['a', 'b'], fixedKeys: [] },
+      global: {
+        stubs: {
+          ElDrawer: { template: '<div><slot /></div>' },
+        },
+      },
+    })
+    await flushPromises()
+    const items = wrapper.findAll('[data-prop]')
+    expect(items.length).toBe(3)
+    expect(items[0]!.attributes('aria-label')).toBe('列设置项 A')
+    expect(items[1]!.attributes('aria-label')).toBe('列设置项 B')
+  })
+
+  it('v3.5：每个 checkbox aria-label 含「显示/隐藏 列名」', async () => {
+    const wrapper = mount(ColSetting, {
+      props: { visible: true, columns, visibleKeys: ['a', 'b'], fixedKeys: [] },
+      global: {
+        stubs: {
+          ElDrawer: { template: '<div><slot /></div>' },
+        },
+      },
+    })
+    await flushPromises()
+    const checkA = wrapper.find('[data-test="col-check-a"]')
+    expect(checkA.attributes('aria-label')).toBe('显示/隐藏 A')
+    const checkB = wrapper.find('[data-test="col-check-b"]')
+    expect(checkB.attributes('aria-label')).toBe('显示/隐藏 B')
+  })
+
+  it('v3.5：每个 top 按钮 aria-label 含「置顶 列名」', async () => {
+    const wrapper = mount(ColSetting, {
+      props: { visible: true, columns, visibleKeys: ['a', 'b'], fixedKeys: [] },
+      global: {
+        stubs: {
+          ElDrawer: { template: '<div><slot /></div>' },
+        },
+      },
+    })
+    await flushPromises()
+    const topB = wrapper.find('[data-test="col-top-b"]')
+    expect(topB.attributes('aria-label')).toBe('置顶 B')
+    const topC = wrapper.find('[data-test="col-top-c"]')
+    expect(topC.attributes('aria-label')).toBe('置顶 C')
+  })
+
+  it('v3.5：恢复默认 + 关闭按钮存在并带 aria-label（源文件断言）', () => {
+    // ElDrawer 的 footer slot 在 jsdom + VTU stub 下渲染不稳定，
+    // 直接断言源文件包含 aria-label 字符串（覆盖 ci 阶段防回归）
+    const src = readFileSync(join(__dirname, 'ColSetting.vue'), 'utf8')
+    expect(src).toContain('aria-label="恢复默认列设置"')
+    expect(src).toContain('aria-label="关闭列设置"')
   })
 })

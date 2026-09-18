@@ -169,9 +169,17 @@ watch(
         :class="bem.e('item')"
         :data-prop="col.prop"
         :data-drag-handle="col.prop"
+        :aria-label="`列设置项 ${col.label ?? col.prop}`"
       >
-        <span :class="bem.e('drag-handle')">⋮⋮</span>
-        <ElCheckbox :value="col.prop" :data-test="`col-check-${col.prop}`" @click.stop>
+        <span :class="bem.e('drag-handle')" :aria-label="`拖拽手柄 ${col.label ?? col.prop}`">
+          ⋮⋮
+        </span>
+        <ElCheckbox
+          :value="col.prop"
+          :data-test="`col-check-${col.prop}`"
+          :aria-label="`显示/隐藏 ${col.label ?? col.prop}`"
+          @click.stop
+        >
           <span v-if="col.label">{{ col.label }}</span>
           <!-- 未命名列（label 空串/缺失）以 prop 兜底展示，弱化样式标识「这是字段名不是显示名」 -->
           <span v-else :class="bem.e('label-fallback')">{{ col.prop }}</span>
@@ -183,6 +191,7 @@ watch(
             circle
             size="small"
             :disabled="index === 0"
+            :aria-label="`置顶 ${col.label ?? col.prop}`"
             :data-test="`col-top-${col.prop}`"
             @click="handleTop(col.prop)"
           />
@@ -190,8 +199,10 @@ watch(
       </div>
     </ElCheckboxGroup>
     <template #footer>
-      <ElButton data-test="reset-btn" @click="handleReset">恢复默认</ElButton>
-      <ElButton data-test="close-btn" @click="handleClose">关闭</ElButton>
+      <ElButton data-test="reset-btn" aria-label="恢复默认列设置" @click="handleReset">
+        恢复默认
+      </ElButton>
+      <ElButton data-test="close-btn" aria-label="关闭列设置" @click="handleClose">关闭</ElButton>
     </template>
   </ElDrawer>
 </template>
