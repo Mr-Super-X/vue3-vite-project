@@ -63,14 +63,14 @@
 
 **替代方案**：等待 element-plus 3.0 重写类型系统（已规划 P2-1）。在此之前保留 cast。
 
-#### C1 已修：XForm.vue elConfig
+#### C1 已删除：XForm.vue elConfig
 
-- 文件：`XForm.vue:30`
-- 原写法：`{ locale: zhCn, size: 'default' } as any`（全局 §1.5 违规）
-- 新写法：`{ locale: zhCn, size: 'default' }: Record<string, unknown>`
-- 触发场景：`<ElConfigProvider v-bind="elConfig">`
-- 运行时等价：ElConfigProvider 接受 locale (Language 对象) + size (string)，key 是 string 类型
-- 修复合规：消除全局 §1.5 唯一的生产代码 `as any`
+- 文件：`XForm.vue`（2026-09-18 移除内层 ElConfigProvider 包裹时一并删除）
+- 原写法（历史）：`{ locale: zhCn, size: 'default' } as any`（全局 §1.5 违规）
+- 中间形态：`{ locale: zhCn, size: 'default' }: Record<string, unknown>`
+- 触发场景（历史）：`<ElConfigProvider v-bind="elConfig">`
+- 现状：XForm 模板根改为单个原生 div（locale 继承 App.vue 全局 ElConfigProvider、
+  size 直接绑 ElForm.size），elConfig 与对应 cast 场景均已不存在
 
 ---
 

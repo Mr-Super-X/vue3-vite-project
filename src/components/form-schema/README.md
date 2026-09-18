@@ -115,7 +115,7 @@ XForm 共有 5 份文档 + 56 个 XForm demo + 4 个通用组件 demo（AsyncSta
 | `permissionResolver`    | `(perm: string) => 'view' \| 'edit' \| 'hidden'` |      | 权限码 → 字段状态映射（节点 `permission` 为权限码字面量时调用；默认 identity）                                  |
 | `showErrorToast`        | `boolean`                                        |      | 开启错误浮窗 OSD（XFormErrorToast，右上角 toast 展示 errorBus 事件；**全环境默认 false**，与 DebugBanner 独立） |
 | `reactionBudget`        | `number`                                         |      | 单批次 reaction 执行预算（默认 50；防循环联动卡死，耗尽跳过大并报错）                                           |
-| `size`                  | `'large' \| 'default' \| 'small'`                |      | 表单密度尺寸（F9）：透传 ElConfigProvider.size，覆盖内部 'default'。紧凑表格页内嵌紧凑筛选表单场景一处传入      |
+| `size`                  | `'large' \| 'default' \| 'small'`                |      | 表单密度尺寸（F9）：透传 ElForm.size，未传入跟随全局 size。紧凑表格页内嵌紧凑筛选表单场景一处传入               |
 | `showDirtyMark`         | `boolean`                                        |      | 字段级 dirty 视觉指示（F13，默认 false）：被修改字段 label 追加 `is-dirty` class + 橙色圆点                     |
 
 ---

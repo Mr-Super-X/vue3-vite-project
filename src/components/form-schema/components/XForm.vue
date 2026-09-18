@@ -6,8 +6,7 @@
  *
  * @group XForm 组件
  */
-import { ElConfigProvider, ElForm, ElRow, ElCol } from 'element-plus'
-import zhCn from 'element-plus/es/locale/lang/zh-cn'
+import { ElForm, ElRow, ElCol } from 'element-plus'
 
 import { useXFormComposer } from '../composables/use-xform-composer'
 import XFormDebugBanner from './XFormDebugBanner.vue'
@@ -25,11 +24,6 @@ const props = defineProps<XFormProps>()
 // 收口为 XFormProps 让下游 useXFormComposer 不重复处理。
 // （归因见 types/TYPE-CAST-AUDIT.md；外部消费方仍通过 defineExpose(exposed) 拿不到此别名）
 const propsModel = props as XFormProps
-// element-plus 2.x ConfigProviderProps 是 ExtractPropTypes 元组（type/required/validator/__epPropKey）形态，
-// 运行时 locale 是 Language 对象、size 是 string；TS 层用 Record<string, unknown> 替代 `as any`（全局 §1.5 违规），
-// <ElConfigProvider v-bind="elConfig"> 接受 string-keyed 对象（归因见 types/TYPE-CAST-AUDIT.md C1）。
-// size 透传 XFormProps.size（设计师审查 F9）：未传入时保持 'default'（向后兼容）
-const elConfig: Record<string, unknown> = { locale: zhCn, size: props.size ?? 'default' }
 // BEM namespace 由 unplugin-auto-import 自动注入，无需显式 import
 const {
   bem,
@@ -76,74 +70,83 @@ onMounted(() => installDevDebugHook())
 </script>
 
 <template>
-  <ElConfigProvider v-bind="elConfig">
-    <!--
-      注意：未设置 inheritAttrs:false —— $attrs 自动透传到此根 div，
-      消费方可自由传入 @click / style / data-* 等（修复潜在 attrs 静默吞掉的 Bug）
-    -->
-    <div :class="bem.b()" :data-field-errors="fieldErrorKeys">
-      <ElForm
-        ref="elFormRef"
-        :model="resolvedModel"
-        :validate-trigger="['change', 'blur']"
-        :disabled="topLevelDisabled"
-        :label-position="topLevelLabelPosition"
-        :label-width="topLevelLabelWidth"
-        :scroll-to-error="topLevelScrollToError"
-        :scroll-into-view-options="topLevelScrollIntoViewOptions"
-      >
-        <ElRow v-if="topLevelColumn" :gutter="topLevelGutter">
-          <ElCol
-            v-for="(node, i) in topLevelNodes"
-            :key="node.key ?? node.name ?? i"
-            :span="topLevelColSpan"
-          >
-            <SchemaField :node="node" :render-fn="renderToComponent" />
-          </ElCol>
-        </ElRow>
-        <ElRow v-else-if="topLevelRow" :gutter="topLevelGutter">
-          <SchemaField
-            v-for="(node, i) in topLevelNodes"
-            :key="node.key ?? node.name ?? i"
-            :node="node"
-            :render-fn="renderToComponent"
-          />
-        </ElRow>
+  <!--
+    模板根是单个原生 div —— Vue 自动继承外部传入的非 props 属性（class/style/@click/data-*），
+    这是样式覆盖场景的关键路径（见 demo/xform-style-override）。
+    刻意不包裹 ElConfigProvider：
+    - locale 继承 App.vue 全局配置（跟随 i18n 切 zh-CN/en-US；原先内层固定 zhCn
+      反而覆盖全局语言，切英语后表单内仍是中文）
+    - size 由 ElForm 的 size prop 注入（EP 组件 useSize 优先取 form 注入，等效）
+  -->
+  <div :class="bem.b()" :data-field-errors="fieldErrorKeys">
+    <ElForm
+      ref="elFormRef"
+      :model="resolvedModel"
+      :size="props.size ?? ''"
+      :validate-trigger="['change', 'blur']"
+      :disabled="topLevelDisabled"
+      :label-position="topLevelLabelPosition"
+      :label-width="topLevelLabelWidth"
+      :scroll-to-error="topLevelScrollToError"
+      :scroll-into-view-options="topLevelScrollIntoViewOptions"
+    >
+      <ElRow v-if="topLevelColumn" :gutter="topLevelGutter">
+        <ElCol
+          v-for="(node, i) in topLevelNodes"
+          :key="node.key ?? node.name ?? i"
+          :span="topLevelColSpan"
+        >
+          <SchemaField :node="node" :render-fn="renderToComponent" />
+        </ElCol>
+      </ElRow>
+      <ElRow v-else-if="topLevelRow" :gutter="topLevelGutter">
         <SchemaField
-          v-else
           v-for="(node, i) in topLevelNodes"
           :key="node.key ?? node.name ?? i"
           :node="node"
           :render-fn="renderToComponent"
         />
-        <!-- 扩展插槽：嵌入表单内部底部（提交按钮 / 说明文案） -->
-        <slot name="footer" />
-      </ElForm>
-    </div>
-  </ElConfigProvider>
-  <XFormDebugBanner
-    v-if="showDebugBanner"
-    :validate-errors="validateErrors"
-    :forbidden-errors="forbiddenErrors"
-    :async-options-warnings="asyncOptionsWarnings"
-    @locate="scrollToField"
-  />
-  <!-- OPT-7：user-facing 错误 OSD —— 由 showErrorToast prop 独立控制（默认关闭），
-       与 showDebugBanner（schema 校验/安全扫描横幅，dev 自动开）互不耦合。
-       优化点（2026-09-15 review）：toast 容器可通过 slot 替换，业务可用 ElNotification / 自定义组件替代
-         <XForm>
-           <template #toastContainer="{ events }">
-             <MyToastList :events="events" @dismiss="errorBus.dismiss" />
-           </template>
-         </XForm> -->
-  <slot name="toastContainer" :events="errorBus.events.value">
-    <XFormErrorToast
-      :events="errorBus.events.value"
-      :enabled="props.showErrorToast ?? false"
-      @dismiss="errorBus.dismiss"
-      @dismiss-all="errorBus.dismissAll"
+      </ElRow>
+      <SchemaField
+        v-else
+        v-for="(node, i) in topLevelNodes"
+        :key="node.key ?? node.name ?? i"
+        :node="node"
+        :render-fn="renderToComponent"
+      />
+      <!-- 扩展插槽：嵌入表单内部底部（提交按钮 / 说明文案） -->
+      <slot name="footer" />
+    </ElForm>
+    <!--
+      XFormDebugBanner / toastContainer slot 都是 Teleport-to-body 的旁挂浮层（不占主 DOM），
+      收敛在主 div 内部维持模板单根节点 —— 若作为模板的并列根节点，组件根会变成 fragment，
+      Vue 3 对 fragment 根不做 $attrs 自动继承，消费方传入的 class/style 会触发
+      "Extraneous non-props attributes" 警告且样式透传失效
+    -->
+    <XFormDebugBanner
+      v-if="showDebugBanner"
+      :validate-errors="validateErrors"
+      :forbidden-errors="forbiddenErrors"
+      :async-options-warnings="asyncOptionsWarnings"
+      @locate="scrollToField"
     />
-  </slot>
+    <!-- OPT-7：user-facing 错误 OSD —— 由 showErrorToast prop 独立控制（默认关闭），
+         与 showDebugBanner（schema 校验/安全扫描横幅，dev 自动开）互不耦合。
+         优化点（2026-09-15 review）：toast 容器可通过 slot 替换，业务可用 ElNotification / 自定义组件替代
+           <XForm>
+             <template #toastContainer="{ events }">
+               <MyToastList :events="events" @dismiss="errorBus.dismiss" />
+             </template>
+           </XForm> -->
+    <slot name="toastContainer" :events="errorBus.events.value">
+      <XFormErrorToast
+        :events="errorBus.events.value"
+        :enabled="props.showErrorToast ?? false"
+        @dismiss="errorBus.dismiss"
+        @dismiss-all="errorBus.dismissAll"
+      />
+    </slot>
+  </div>
 </template>
 
 <style lang="scss">

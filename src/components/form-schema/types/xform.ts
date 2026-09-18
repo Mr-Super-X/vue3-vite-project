@@ -169,17 +169,16 @@ export interface XFormProps {
    */
   reactionBudget?: number
   /**
-   * 表单密度尺寸（透传 ElConfigProvider.size），覆盖内部写死的 'default'
+   * 表单密度尺寸（透传 ElForm.size），未传入时跟随全局 size（App 层默认 'default'）
    *
-   * 场景（设计师审查 F9）：中后台常见"紧凑表格页内嵌紧凑筛选表单"，此前 XForm 内部
-   * 硬编码 size='default' 会覆盖外层 ElConfigProvider——业务被迫在 XForm 外再包一层。
-   * 现在直接通过本 prop 一处传入即可。
+   * 场景（设计师审查 F9）：中后台常见"紧凑表格页内嵌紧凑筛选表单"，业务一处传入即可。
+   * ElForm 通过 provide/formItemSize 注入所有后代 EP 组件（EP 的 useSize 优先取 form 注入），
+   * 无需再包一层 ElConfigProvider。
    *
    * - 'large' / 'default' / 'small' 与 element-plus 语义一致
-   * - 未传入时保持 'default'（向后兼容）
    * - schema 顶层节点不预留 size 字段（密度是表单级视觉决策，字段级不开放）
    *
-   * @see ./components/XForm.vue（elConfig 透传处）
+   * @see ./components/XForm.vue（ElForm size 绑定处）
    */
   size?: 'large' | 'default' | 'small'
   /**
