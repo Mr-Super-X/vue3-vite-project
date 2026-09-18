@@ -115,7 +115,7 @@ function handleClearAll(): void {
 </script>
 
 <template>
-  <div v-if="selectedTags.length > 0" :class="bem.b()">
+  <div v-if="selectedTags.length > 0" :class="bem.b()" role="region" aria-label="当前已选筛选条件">
     <span :class="bem.e('label')">当前筛选：</span>
     <ElTag
       v-for="tag in selectedTags"
@@ -123,6 +123,7 @@ function handleClearAll(): void {
       closable
       :class="bem.e('tag')"
       :data-test="`selected-tag-${tag.prop}`"
+      :aria-label="`清除筛选条件 ${tag.label}`"
       @close="handleClearOne(tag.prop)"
     >
       {{ tag.label }}: {{ tag.displayValue }}
@@ -132,6 +133,7 @@ function handleClearAll(): void {
       type="primary"
       :class="bem.e('clear-all')"
       data-test="clear-all-tags"
+      aria-label="清除全部筛选条件"
       @click="handleClearAll"
     >
       清除全部
