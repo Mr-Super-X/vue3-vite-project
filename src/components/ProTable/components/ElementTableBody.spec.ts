@@ -236,4 +236,19 @@ describe('ElementTableBody', () => {
     expect(wrapper.exists()).toBe(true)
     wrapper.unmount()
   })
+
+  // ─────────── v3.5 PR1-A：A11y selection-change 播报 ───────────
+
+  it('v3.5：selection-change 后 sr-only 播报「已选 N 项」', async () => {
+    const wrapper = mountBody({ columns: [{ prop: 'name', label: '名称' }] })
+    const srOnly = wrapper.find('.sr-only')
+    expect(srOnly.exists()).toBe(true)
+    expect(srOnly.attributes('aria-live')).toBe('polite')
+    // 初始空文本（无选中时不播报）
+    expect(srOnly.text()).toBe('')
+    // 模拟 selection-change 事件
+    wrapper.findComponent({ name: 'ElTable' }).vm.$emit('selection-change', [{ id: 1 }, { id: 2 }])
+    await nextTick()
+    expect(wrapper.find('.sr-only').text()).toBe('已选 2 项')
+  })
 })
