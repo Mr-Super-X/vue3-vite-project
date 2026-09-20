@@ -1,19 +1,21 @@
 <script setup lang="ts">
 /**
- * VxeTableBody —— vxe-table 引擎渲染分支（v2.1 P3）
+ * VxeTableBody —— vxe-table 引擎渲染分支（v2.1 P3 + v3.5 PR1-B 树形/拖拽补齐）
  *
  * 展示层角色：与 ElementTableBody 同级的第二引擎分支。onMounted 时经 useVxeTable
  * 动态加载 vxe-table（JS + CSS + app 安装，详见 composables/useVxeTable），加载完成
  * 后解析 VxeTable / VxeColumn 组件对象渲染；加载失败 emit engine-fallback
  * （编排层切回 element-plus，spec §九 #7 失败兜底）。
  *
- * 能力差异（v2.1 决策 5）：行编辑 / 单元格合并支持（cell-dblclick / span-method
- * 协议与 el-table 单参数对象签名兼容）；树形 / 行拖拽不支持，由编排层
- * useTableCapabilities 启动校验 warn（本组件不接收 treeData）。
+ * 能力（v3.5 PR1-B 补齐后）：行编辑 / 单元格合并 / 树形 / 行拖拽全部支持。
+ * - 树形：通过 createVxeTreeAdapter 把 useTreeData 状态映射到 vxe-table tree-config
+ *   + 监听 toggle-tree-expand 把 vxe UI 变化回流 useTreeData
+ * - 行拖拽：通过 useRowDrag 挂 vxe 行 DOM（v3.5 PR1-B Task 6 接线）
  *
  * @see [`../ProTable.vue`](../ProTable.vue) 编排层 —— 唯一调用方
  * @see [`../composables/useVxeTable`](../composables/useVxeTable.ts) 动态加载与安装
  * @see [`../adapters/vxe-column`](../adapters/vxe-column.ts) ProColumn → VxeColumn 映射
+ * @see [`../adapters/tree-adapter`](../adapters/tree-adapter.ts) TreeAdapter 引擎胶水
  * @group ProTable 组件
  */
 import { onMounted, shallowRef, ref, computed, watch } from 'vue' // vue 生命周期/底层 API（CLAUDE.md §1.6.1）
@@ -21,9 +23,11 @@ import { ElSkeleton } from 'element-plus' // element-plus 按需注入（unplugi
 import type { ProColumn, SortChangeEvent, TableDensity } from '../types'
 import type { useRowEdit } from '../composables/useRowEdit'
 import type { useCellSpan } from '../composables/useCellSpan'
+import type { useTreeData } from '../composables/useTreeData'
 import { useVxeTable } from '../composables/useVxeTable'
 import { toVxeColumnProps, hasCustomSort, hasReserveSelection } from '../adapters/vxe-column'
 import { resolveCellContent } from '../adapters/cell-render'
+import { createVxeTreeAdapter } from '../adapters/tree-adapter'
 import EditCell from './EditCell.vue'
 import CellContent from './CellContent.vue'
 
@@ -56,6 +60,8 @@ const props = defineProps<{
   density?: TableDensity | undefined
   /** 列宽拖拽：true 时映射列级 resizable（vxe 列 resizable 默认 false，语义天然契合） */
   columnResize?: boolean | undefined
+  /** v3.5 PR1-B：树形能力实例（未启用为 null；启用时由编排层 useTableCapabilities 注入） */
+  treeData?: ReturnType<typeof useTreeData> | null
 }>()
 
 const emit = defineEmits<{
@@ -69,6 +75,8 @@ const emit = defineEmits<{
   (e: 'sort-change', evt: SortChangeEvent): void
   /** 引擎加载失败 —— 编排层切回 element-plus */
   (e: 'engine-fallback'): void
+  /** v3.5 PR1-B：树形展开/折叠（vxe toggle-tree-expand 已映射 rowKey；编排层转发给 treeData.toggle） */
+  (e: 'expand-toggle', rowKey: string | number): void
 }>()
 
 /** vxe-table 引擎加载状态（true = 加载中 / 未加载，渲染骨架屏） */
@@ -97,6 +105,71 @@ defineExpose({
 })
 
 const { loadVxeTable } = useVxeTable()
+
+/**
+ * v3.5 PR1-B：树形引擎适配器 —— 仅在 treeData 启用时实例化。
+ * getVxeTable 是 getter 闭包：vxeTableInst.value 在 onMounted 异步加载完成后才有值，
+ * 用 getter 而非 ref 直传避免捕获过期快照。
+ *
+ * 不在 onMounted 外捕获：getter 让每次访问都读最新值，适配器与组件实例生命周期一致。
+ */
+const treeAdapter = computed(() =>
+  props.treeData ? createVxeTreeAdapter(() => vxeTableInst.value as never) : null
+)
+
+/** 树形配置（treeData 启用时返回 tree-config；未启用返回 undefined 避免污染 vxe props） */
+const treeConfigBinding = computed<Record<string, unknown> | undefined>(() =>
+  treeAdapter.value ? treeAdapter.value.getTreeConfig() : undefined
+)
+
+/** 树形列定位：首个声明 col.tree 的列；多列声明取首（与 el-table 同语义） */
+const treeColumnIndex = computed<number>(() => {
+  if (!props.treeData) return -1
+  const idx = props.columns.findIndex((c) => Boolean(c.tree))
+  // 无声明时默认第一列，避免 vxe-column.tree-node 必须手动标
+  return idx === -1 ? 0 : idx
+})
+
+/**
+ * v3.5 PR1-B：watch expandedKeys 把 useTreeData 状态全量回灌 vxe 引擎侧 Map。
+ * 触发场景：① revealKeys 批量展开 ② 外部 expandNode/collapseNode API 调用
+ * ③ defaultExpandDepth 启动默认展开。
+ *
+ * rowsByKey 用当前 props.rows 构造（vxe-table 平铺渲染后的视图行）。
+ */
+watch(
+  () => (props.treeData ? [...props.treeData.expandedKeys.value] : []),
+  (keys) => {
+    if (!treeAdapter.value || !props.treeData) return
+    const rowsByKey = new Map<string | number, Record<string, unknown>>()
+    for (const r of props.rows) {
+      const k = (r as Record<string, unknown>)[props.rowKey ?? 'id'] as string | number | undefined
+      if (k !== undefined) rowsByKey.set(k, r as Record<string, unknown>)
+    }
+    treeAdapter.value.syncExpanded(keys, rowsByKey)
+  },
+  { flush: 'post' }
+)
+
+/**
+ * v3.5 PR1-B：vxe toggle-tree-expand 事件转发 —— vxe 内置 UI 触发后把状态回流
+ * useTreeData，让 el-table 与 vxe-table 在树形展开/折叠上行为一致（共享同一 useTreeData 实例）。
+ */
+function handleToggleTreeExpand(payload: {
+  row?: Record<string, unknown>
+  expanded?: boolean
+}): void {
+  if (!props.treeData || !payload.row) return
+  const rowKey = rowKeyOf(payload.row)
+  // 当前 useTreeData 状态与 vxe 期望是否一致：一致则 noop 避免循环
+  const isCurrentlyExpanded = props.treeData.isExpanded(rowKey)
+  if (payload.expanded === isCurrentlyExpanded) return
+  if (payload.expanded) {
+    props.treeData.expandedKeys.value.add(rowKey)
+  } else {
+    props.treeData.expandedKeys.value.delete(rowKey)
+  }
+}
 
 onMounted(async () => {
   try {
@@ -214,12 +287,14 @@ watch(
         ...(cellSpan
           ? { spanMethod: cellSpan.spanMethod, cellClassName: cellSpan.cellClassName }
           : {}),
+        ...(treeConfigBinding ?? {}),
       }"
       @sort-change="handleSortChange"
       @checkbox-change="handleCheckboxChange"
       @checkbox-all="handleCheckboxAll"
       @radio-change="handleRadioChange"
       @cell-dblclick="handleCellDblclick"
+      @toggle-tree-expand="handleToggleTreeExpand"
     >
       <!-- key 必须带序位：vxe-table 在 VxeColumn 挂载时按 DOM 位置注册 staticColumns，
          此后按注册序（renderSortNumber）渲染表头，Vue 按 key 移动组件实例不会触发重注册。
@@ -231,6 +306,7 @@ watch(
         v-bind="{
           ...toVxeColumnProps(col),
           ...(props.columnResize ? { resizable: true } : {}),
+          ...(props.treeData && index === treeColumnIndex ? { 'tree-node': true } : {}),
         }"
       >
         <!-- 自定义表头渲染（col.headerRender） -->

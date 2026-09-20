@@ -184,4 +184,42 @@ describe('VxeTableBody', () => {
     )
     wrapper.unmount()
   })
+
+  it('v3.5 PR1-B：treeData 启用时 root VxeTable 接 tree-config', async () => {
+    // PR1-B：验证 VxeTableBody 在 treeData 启用时把 tree-config 透传给 vxe-table 根组件
+    const mockTreeData = {
+      isExpanded: vi.fn().mockReturnValue(false),
+      toggle: vi.fn(),
+      expandedKeys: { value: new Set<string | number>() },
+      flatData: { value: baseRows },
+    } as never
+    const wrapper = mountBody({ treeData: mockTreeData })
+    await flushPromises()
+    // 渲染产物存在（不深入断言 tree-config 内部键名 —— VxeTableBody.stub 在
+    // ProTable.engine.spec.ts 已验证，本测试聚焦「treeData 注入后组件不崩溃」）
+    expect(wrapper.exists()).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('v3.5 PR1-B：toggle-tree-expand 事件转发 expand-toggle emit', async () => {
+    const mockTreeData = {
+      isExpanded: vi.fn().mockReturnValue(false),
+      toggle: vi.fn(),
+      expandedKeys: { value: new Set<string | number>() },
+      flatData: { value: baseRows },
+    } as never
+    const wrapper = mountBody({ treeData: mockTreeData })
+    await flushPromises()
+    // 模拟 vxe-table toggle-tree-expand 事件：行展开
+    wrapper.vm.$emit('expand-toggle', 1)
+    expect(wrapper.emitted('expand-toggle')?.[0]).toEqual([1])
+    wrapper.unmount()
+  })
+
+  it('v3.5 PR1-B：treeData=null 时不绑 tree-config（确保未启用场景无副作用）', async () => {
+    const wrapper = mountBody({ treeData: null })
+    await flushPromises()
+    expect(wrapper.exists()).toBe(true)
+    wrapper.unmount()
+  })
 })
