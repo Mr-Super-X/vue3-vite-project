@@ -120,9 +120,9 @@ describe('useTableCapabilities', () => {
     expect(() => result.extendedExpose.setRowOrder([])).not.toThrow()
   })
 
-  /* ── v2.1 决策 5：vxe 引擎能力矩阵 ── */
+  /* ── v3.5 PR1-B：vxe 引擎能力矩阵（树形 + 拖拽均补齐） ── */
 
-  it('vxe 引擎 + enableTree：treeData 不实例化（warn 由集成测试断言 onMounted 触发）', () => {
+  it('vxe 引擎 + enableTree：treeData 正常实例化（v3.5 PR1-B 补齐树形）', () => {
     const result = useTableCapabilities({
       props: {
         columns: [],
@@ -133,10 +133,10 @@ describe('useTableCapabilities', () => {
       table: { data: ref([]) },
       engine: ref('vxe-table'),
     })
-    expect(result.treeData).toBeNull()
+    expect(result.treeData).not.toBeNull()
   })
 
-  it('vxe 引擎 + enableRowDrag：rowDrag 不实例化', () => {
+  it('vxe 引擎 + enableRowDrag：rowDrag 正常实例化（v3.5 PR1-B 补齐拖拽）', () => {
     const result = useTableCapabilities({
       props: {
         columns: [],
@@ -147,6 +147,23 @@ describe('useTableCapabilities', () => {
       table: { data: ref([]) },
       engine: ref('vxe-table'),
     })
+    expect(result.rowDrag).not.toBeNull()
+  })
+
+  it('vxe 引擎 + enableTree + enableRowDrag 三者冲突：rowDrag 不挂（sortablejs 与 vxe tree-node 冲突）', () => {
+    const result = useTableCapabilities({
+      props: {
+        columns: [],
+        requestApi: async () => ({ data: [], total: 0, pageNum: 1, pageSize: 10 }),
+        enableTree: true,
+        enableRowDrag: true,
+      } as never,
+      columns: { allColumns: ref([]) },
+      table: { data: ref([]) },
+      engine: ref('vxe-table'),
+    })
+    // 冲突时 treeData 仍生效（业务优先保证树形）；rowDrag 退化 null 避免拖拽错位
+    expect(result.treeData).not.toBeNull()
     expect(result.rowDrag).toBeNull()
   })
 
@@ -192,8 +209,27 @@ describe('useTableCapabilities', () => {
     expect(result.treeData).not.toBeNull()
   })
 
-  // v3.0 H3 修复：validateCapabilities 在 setup 阶段立即触发，不等 onMounted
-  it('H3：vxe 引擎 + enableTree 时 setup 立即 warn（不等 onMounted）', () => {
+  // v3.5 PR1-B：vxe + 树形 + 拖拽 三者冲突 → setup 立即 warn；纯树形/纯拖拽不再 warn
+  it('vxe 引擎 + enableTree + enableRowDrag 时 setup 立即 warn（三者冲突）', () => {
+    useTableCapabilities({
+      props: {
+        columns: [],
+        requestApi: async () => ({ data: [], total: 0, pageNum: 1, pageSize: 10 }),
+        tableEngine: 'vxe-table',
+        enableTree: true,
+        enableRowDrag: true,
+      } as never,
+      columns: { allColumns: ref([]) },
+      table: { data: ref([]) },
+      engine: ref('vxe-table'),
+    })
+    // setup 同步调用 → warn 立即记录
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining('vxe-table 引擎 + 树形 + 行拖拽 同时启用')
+    )
+  })
+
+  it('vxe 引擎 + 纯 enableTree 时不 warn（v3.5 PR1-B 起 vxe 支持树形）', () => {
     useTableCapabilities({
       props: {
         columns: [],
@@ -205,7 +241,25 @@ describe('useTableCapabilities', () => {
       table: { data: ref([]) },
       engine: ref('vxe-table'),
     })
-    // setup 同步调用 → warn 立即记录，无需等待 mount
-    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('vxe-table 引擎暂不支持树形'))
+    expect(console.warn).not.toHaveBeenCalledWith(
+      expect.stringContaining('vxe-table 引擎暂不支持树形')
+    )
+  })
+
+  it('vxe 引擎 + 纯 enableRowDrag 时不 warn（v3.5 PR1-B 起 vxe 支持拖拽）', () => {
+    useTableCapabilities({
+      props: {
+        columns: [],
+        requestApi: async () => ({ data: [], total: 0, pageNum: 1, pageSize: 10 }),
+        tableEngine: 'vxe-table',
+        enableRowDrag: true,
+      } as never,
+      columns: { allColumns: ref([]) },
+      table: { data: ref([]) },
+      engine: ref('vxe-table'),
+    })
+    expect(console.warn).not.toHaveBeenCalledWith(
+      expect.stringContaining('vxe-table 引擎暂不支持行拖拽')
+    )
   })
 })

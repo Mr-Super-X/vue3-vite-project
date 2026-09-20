@@ -104,20 +104,20 @@ export function useTableCapabilities<T extends object = Record<string, unknown>>
       })
     : null
 
-  // v2.1 决策 5：vxe 引擎不支持树形（扁平化模型与 vxe tree-config 不同）→ 不实例化 + 启动 warn
-  const treeData =
-    props.enableTree && !isVxeEngine
-      ? useTreeData({
-          ...(pickDefined(treeDataConfig.value, [
-            'loadChildren',
-            'childrenKey',
-            'defaultExpandDepth',
-            'rowKey',
-            'loadDebounce',
-            'exclusive',
-          ]) as object),
-        })
-      : null
+  // v3.5 PR1-B：vxe 引擎也支持树形（vxeTableBody 接 vxeTreeAdapter + tree-config + tree-node 列），
+  // 不再守卫 !isVxeEngine；enableTree=true 时双引擎统一实例化 useTreeData
+  const treeData = props.enableTree
+    ? useTreeData({
+        ...(pickDefined(treeDataConfig.value, [
+          'loadChildren',
+          'childrenKey',
+          'defaultExpandDepth',
+          'rowKey',
+          'loadDebounce',
+          'exclusive',
+        ]) as object),
+      })
+    : null
 
   const cellSpan = props.enableCellSpan
     ? useCellSpan({
@@ -156,9 +156,14 @@ export function useTableCapabilities<T extends object = Record<string, unknown>>
     return m
   })
 
-  // v2.1 决策 5：vxe 引擎不支持行拖拽（getTbody 选择器硬编码 .el-table__body tbody，vxe DOM 结构不同）→ 不实例化 + 启动 warn
+  // v3.5 PR1-B：vxe 引擎也支持行拖拽（VxeTableBody defineExpose.getTbody 暴露 vxe tbody，
+  // useTableEngineDom 按 effectiveEngine 路由到正确 tbody；不再守卫 !isVxeEngine）
+  //
+  // vxe-tree + sortablejs 同时启用冲突：vxe 行 .vxe-body--row + tree-node 行结构与
+  // sortablejs 直接 DOM 操作冲突，会引发拖拽错位。冲突检测 → 不挂 sortablejs + warn
+  const isVxeTreeConflict = isVxeEngine && props.enableTree
   const rowDrag =
-    props.enableRowDrag && !isVxeEngine
+    props.enableRowDrag && !isVxeTreeConflict
       ? useRowDrag({
           handle: rowDragConfig.value.handle ?? 'first-col',
           data: table.data as unknown as Ref<Record<string, unknown>[]>,
@@ -178,14 +183,14 @@ export function useTableCapabilities<T extends object = Record<string, unknown>>
         })
       : null
 
-  /** 启动校验（spec §七.3 + v2.1 决策 5 引擎能力矩阵） */
+  /** 启动校验（spec §七.3 + v3.5 PR1-B 引擎能力矩阵） */
   function validateCapabilities(): void {
-    // v2.1 决策 5：vxe 引擎不支持的能力在 setup 已忽略实例化，此处提示用户配置被忽略的原因
-    if (isVxeEngine && props.enableTree) {
-      console.warn('[ProTable] vxe-table 引擎暂不支持树形（enableTree），该配置已忽略')
-    }
-    if (isVxeEngine && props.enableRowDrag) {
-      console.warn('[ProTable] vxe-table 引擎暂不支持行拖拽（enableRowDrag），该配置已忽略')
+    // v3.5 PR1-B：vxe 引擎 + 树形 + 行拖拽 三者冲突（sortablejs 与 vxe tree-node 行
+    // 结构不兼容，会引发拖拽错位）→ 不挂 sortablejs + warn 告知用户
+    if (isVxeEngine && props.enableTree && props.enableRowDrag) {
+      console.warn(
+        '[ProTable] vxe-table 引擎 + 树形 + 行拖拽 同时启用：sortablejs 与 vxe tree-node 行结构冲突，已自动忽略行拖拽'
+      )
     }
     // vxe 下 enableTree 已被忽略，「编辑仅作用于叶子节点」的前提不存在，跳过避免误导
     if (

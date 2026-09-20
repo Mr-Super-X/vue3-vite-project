@@ -141,7 +141,7 @@ describe('ProTable v2.0 集成（冲突矩阵 + 启动校验）', () => {
     expect(wrapper.findComponent({ name: 'ElTable' }).exists()).toBe(false)
   })
 
-  it('vxe 引擎 + enableTree：warn「暂不支持树形」且忽略（v2.1 决策 5）', async () => {
+  it('vxe 引擎 + 纯 enableTree：不 warn「暂不支持树形」（v3.5 PR1-B 补齐树形）', async () => {
     mount(ProTable, {
       props: {
         columns: [{ prop: 'name', label: '名称' }],
@@ -151,10 +151,13 @@ describe('ProTable v2.0 集成（冲突矩阵 + 启动校验）', () => {
       } as ProTableProps,
     })
     await new Promise((r) => setTimeout(r, 10))
-    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('vxe-table 引擎暂不支持树形'))
+    // v3.5 PR1-B 起 vxe 支持树形 → 不再有「暂不支持树形」warn
+    expect(console.warn).not.toHaveBeenCalledWith(
+      expect.stringContaining('vxe-table 引擎暂不支持树形')
+    )
   })
 
-  it('vxe 引擎 + enableRowDrag：warn「暂不支持行拖拽」且忽略（v2.1 决策 5）', async () => {
+  it('vxe 引擎 + 纯 enableRowDrag：不 warn「暂不支持行拖拽」（v3.5 PR1-B 补齐拖拽）', async () => {
     mount(ProTable, {
       props: {
         columns: [{ prop: 'name', label: '名称' }],
@@ -164,8 +167,24 @@ describe('ProTable v2.0 集成（冲突矩阵 + 启动校验）', () => {
       } as ProTableProps,
     })
     await new Promise((r) => setTimeout(r, 10))
-    expect(console.warn).toHaveBeenCalledWith(
+    expect(console.warn).not.toHaveBeenCalledWith(
       expect.stringContaining('vxe-table 引擎暂不支持行拖拽')
+    )
+  })
+
+  it('vxe 引擎 + 树形 + 行拖拽 三者冲突：warn 提示 sortablejs 与 vxe tree-node 行结构冲突', async () => {
+    mount(ProTable, {
+      props: {
+        columns: [{ prop: 'name', label: '名称' }],
+        requestApi: async () => ({ data: [{ name: '甲' }], total: 1, pageNum: 1, pageSize: 10 }),
+        tableEngine: 'vxe-table',
+        enableTree: { defaultExpandDepth: 1 },
+        enableRowDrag: true,
+      } as ProTableProps,
+    })
+    await new Promise((r) => setTimeout(r, 10))
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining('vxe-table 引擎 + 树形 + 行拖拽 同时启用')
     )
   })
 

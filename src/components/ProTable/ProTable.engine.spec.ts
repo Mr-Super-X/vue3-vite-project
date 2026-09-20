@@ -262,4 +262,67 @@ describe('ProTable v2.1 引擎切换', () => {
       'a',
     ])
   })
+
+  // ─────────────────────────────────────────────────────────
+  // v3.5 PR1-B：双引擎 capability matrix —— 树形 + 行拖拽能力对等
+  // ─────────────────────────────────────────────────────────
+  it('v3.5 PR1-B capability matrix：vxe + enableTree mount 不崩溃（vxe 引擎补齐树形）', async () => {
+    vxeMocks.loadVxeTable.mockResolvedValue(stubVxeModule)
+    const wrapper = mount(ProTable, {
+      props: makeProps({
+        tableEngine: 'vxe-table',
+        enableTree: { defaultExpandDepth: 1 },
+      }),
+    })
+    await flushPromises()
+    await nextTick()
+    expect(wrapper.findComponent(VxeTableBody).exists()).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('v3.5 PR1-B capability matrix：vxe + enableRowDrag mount 不崩溃（vxe 引擎补齐拖拽）', async () => {
+    vxeMocks.loadVxeTable.mockResolvedValue(stubVxeModule)
+    const wrapper = mount(ProTable, {
+      props: makeProps({
+        tableEngine: 'vxe-table',
+        enableRowDrag: { handle: '__all__' },
+      }),
+    })
+    await flushPromises()
+    await nextTick()
+    expect(wrapper.findComponent(VxeTableBody).exists()).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('v3.5 PR1-B capability matrix：el + enableTree mount 仍正常（回归保护）', async () => {
+    const wrapper = mount(ProTable, {
+      props: makeProps({
+        enableTree: { defaultExpandDepth: 1 },
+      }),
+    })
+    await flushPromises()
+    await nextTick()
+    // el 分支 mount 成功 + VxeTableBody 不挂载（engine=element-plus 不命中 v-else-if）
+    expect(wrapper.findComponent(VxeTableBody).exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('v3.5 PR1-B capability matrix：vxe + 树形 + 拖拽 三者冲突 warn（行拖拽退化）', async () => {
+    vxeMocks.loadVxeTable.mockResolvedValue(stubVxeModule)
+    const wrapper = mount(ProTable, {
+      props: makeProps({
+        tableEngine: 'vxe-table',
+        enableTree: { defaultExpandDepth: 1 },
+        enableRowDrag: true,
+      }),
+    })
+    await flushPromises()
+    await nextTick()
+    // 三者冲突 → 启动 warn sortablejs 与 vxe tree-node 行结构冲突
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining('vxe-table 引擎 + 树形 + 行拖拽 同时启用')
+    )
+    expect(wrapper.findComponent(VxeTableBody).exists()).toBe(true)
+    wrapper.unmount()
+  })
 })

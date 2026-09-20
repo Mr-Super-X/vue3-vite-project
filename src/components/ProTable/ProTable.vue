@@ -227,8 +227,15 @@ const { maxHeight: autoHeightMax } = useAutoHeight({
 /** ElementTableBody 实例 ref —— 提前到 useTableEngineDom 之前声明，供 composable 接收 */
 const proTableEl = ref<InstanceType<typeof ElementTableBody> | null>(null)
 
-/** tbody DOM 访问点 —— 经 useTableEngineDom composable 收敛 */
-const { getTbody } = useTableEngineDom({ proTableEl })
+/** v2.1 vxe 引擎分支实例 ref —— 密度切换触发 vxe 行高重算 + useTableEngineDom vxe tbody 查询 */
+const proTableVxe = ref<InstanceType<typeof VxeTableBody> | null>(null)
+
+/** tbody DOM 访问点 —— 经 useTableEngineDom composable 收敛；v3.5 PR1-B 起支持 el + vxe 双引擎路由 */
+const { getTbody } = useTableEngineDom({
+  proTableEl,
+  proTableVxe,
+  effectiveEngine,
+})
 
 /* ───────────── v3.1.3 review：virtualized + vxe-table 引擎回退接管 ───────────── */
 
@@ -257,7 +264,7 @@ if (virtualScroll?.engineConflict.value === 'vxe-table-incompatible') {
 
 /* ───────────── v2.0 四类能力编排（已抽到 useTableCapabilities.ts） ───────────── */
 
-const { rowEdit, treeData, cellSpan, summary, extendedExpose } = useTableCapabilities({
+const { rowEdit, treeData, cellSpan, rowDrag, summary, extendedExpose } = useTableCapabilities({
   props: propsForComposables,
   columns,
   table,
@@ -302,9 +309,6 @@ const stopProTableElWatcher = watch(
 onUnmounted(() => {
   stopProTableElWatcher()
 })
-
-/** v2.1 vxe 引擎分支实例 ref —— 目前用于密度切换后触发 vxe 行高重算 */
-const proTableVxe = ref<InstanceType<typeof VxeTableBody> | null>(null)
 
 /* ───────────── v3.1.1 review：事件桥接抽到 useProTableEvents ───────────── */
 
@@ -662,7 +666,7 @@ defineExpose({
             <slot :name="name" v-bind="scope" />
           </template>
         </ElementTableBody>
-        <!-- v2.1 P3：vxe-table 引擎分支（无树形/拖拽；加载失败由 engine-fallback 回退） -->
+        <!-- v3.5 PR1-B：vxe-table 引擎分支（树形/拖拽接线与 el 对等；加载失败由 engine-fallback 回退） -->
         <VxeTableBody
           v-else-if="useVxeEngine"
           ref="proTableVxe"
@@ -672,12 +676,15 @@ defineExpose({
           :row-key="props.rowKey"
           :row-edit="rowEdit"
           :cell-span="cellSpan"
+          :tree-data="treeData"
+          :row-drag="rowDrag"
           :max-height="autoHeightMax"
           :density="table.density.value"
           :column-resize="props.columnResize"
           v-bind="vxeTableBindings"
           @selection-change="events.handleSelectionChange"
           @radio-select="events.handleRadioSelect"
+          @expand-toggle="events.handleExpandToggle"
           @cell-dblclick="events.handleCellDblclick"
           @sort-change="events.handleSortChange"
           @engine-fallback="handleEngineFallback"
