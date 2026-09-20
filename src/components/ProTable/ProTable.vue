@@ -682,7 +682,7 @@ defineExpose({
         <VxeTableBody
           v-else-if="useVxeEngine"
           ref="proTableVxe"
-          :rows="tableRows"
+          :rows="(treeData ? treeData.flatData.value : tableRows) as T[]"
           :loading="table.loading.value && hasTableMounted"
           :columns="sortedColumnsTyped as ProColumn<Record<string, unknown>>[]"
           :row-key="props.rowKey"
