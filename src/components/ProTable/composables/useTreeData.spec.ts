@@ -30,6 +30,22 @@ describe('useTreeData', () => {
     expect(normalized[0].children![0].children![0]._level).toBe(2)
   })
 
+  // v3.5 hotfix-8：注入 _parent 引用，让 useRowDrag 嵌套 splice 能定位 parent.children 数组
+  it('normalize 给所有非顶层节点注入 _parent（指向父 children 数组）', () => {
+    const normalized = tree.normalize(treeData)
+    const root = normalized[0]
+    const deptRd = root.children![0]
+    const teamFe = deptRd.children![0]
+    // 根节点 _parent 不注入（顶层 row 走旧的 resolveTopIndex 路径）
+    expect(root._parent).toBeUndefined()
+    // 第二层节点 _parent 指向根的 children 数组
+    expect(deptRd._parent).toBe(root.children)
+    expect(deptRd._parent).toContain(deptRd)
+    // 第三层节点 _parent 指向第二层节点的 children 数组
+    expect(teamFe._parent).toBe(deptRd.children)
+    expect(teamFe._parent).toContain(teamFe)
+  })
+
   it('defaultExpandDepth = 1 时根节点 + 第一层展开', () => {
     tree.normalize(treeData)
     expect(tree.isExpanded('1')).toBe(true)
@@ -64,7 +80,9 @@ describe('useTreeData', () => {
     await lazyTree.toggle('root')
     const root = data[0]
     expect(root._loaded).toBe(true)
-    expect(root.children).toEqual([{ id: 'lazy-1', name: '懒加载子节点', _level: 1 }])
+    expect(root.children).toEqual([
+      { id: 'lazy-1', name: '懒加载子节点', _level: 1, _parent: root.children },
+    ])
   })
 
   it('toggle 异步 lazy load 失败保持 collapsed + console.error', async () => {

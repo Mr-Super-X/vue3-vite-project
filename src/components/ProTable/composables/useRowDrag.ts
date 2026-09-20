@@ -27,6 +27,12 @@ export interface UseRowDragOptions {
    * 映射不到（如视图行不是顶层节点）时返回 -1，onEnd 将 console.warn 并跳过本次排序。
    */
   resolveTopIndex?: (viewIndex: number) => number
+  /**
+   * v3.5 hotfix-8：嵌套 splice 映射 —— 给定视图行索引返回 parent.children 数组与 parent 内索引。
+   * 树形模式必传（与 resolveTopIndex 配对）。用于嵌套数据拖拽：splice parent.children 而非 data 顶层。
+   * 返回 null 表示顶层 row 或边界（调用方降级到 resolveTopIndex）。
+   */
+  treeSpliceFromViewIndex?: (viewIndex: number) => { parent: unknown[]; index: number } | null
 }
 
 /**
@@ -87,7 +93,33 @@ export function useRowDrag(options: UseRowDragOptions) {
         // H6 树形模式：DOM 视图行顺序 ≠ data 顶层数组顺序，先经 key 映射到顶层索引再 splice
         let from = oldIndex
         let to = newIndex
-        if (options.getViewRowKeys && options.resolveTopIndex) {
+        // v3.5 hotfix-8：嵌套 splice 优先 —— 拖拽嵌套数据的子节点时 splice parent.children
+        if (options.treeSpliceFromViewIndex) {
+          const mappedFrom = options.treeSpliceFromViewIndex(oldIndex)
+          const mappedTo = options.treeSpliceFromViewIndex(newIndex)
+          if (mappedFrom && mappedTo) {
+            // 同 parent.index 数组内 splice（保持其他 row 顺序）
+            const moved = mappedFrom.parent.splice(mappedFrom.index, 1)[0]
+            if (moved !== undefined) {
+              mappedTo.parent.splice(mappedTo.index, 0, moved)
+              // 顶层 data 引用未变，但仍要触发响应式：用新数组引用替换
+              options.data.value = [...options.data.value]
+            }
+            return
+          }
+          // 任一映射失败（顶层 row 或边界）：退化走原 resolveTopIndex 路径
+          const oldMapped = options.resolveTopIndex?.(oldIndex) ?? -1
+          const newMapped = options.resolveTopIndex?.(newIndex) ?? -1
+          if (oldMapped < 0 || newMapped < 0) {
+            console.debug('[useRowDrag] 树形模式视图行映射失败（非顶层节点），跳过本次排序:', {
+              oldIndex,
+              newIndex,
+            })
+            return
+          }
+          from = oldMapped
+          to = newMapped
+        } else if (options.getViewRowKeys && options.resolveTopIndex) {
           const mappedFrom = options.resolveTopIndex(oldIndex)
           const mappedTo = options.resolveTopIndex(newIndex)
           if (mappedFrom < 0 || mappedTo < 0) {
@@ -153,7 +185,15 @@ export function useRowDrag(options: UseRowDragOptions) {
       () => nextTick(reattach),
       { flush: 'post' }
     )
-    onMounted(() => nextTick(reattach))
+    // v3.5 hotfix-7：vxe-table 异步加载后 tbody 才出现，onMounted 跑得太早
+    // → sortablejs 没挂上 → 行拖拽失效。加 retry 兜底（200ms / 500ms / 1s 三次尝试）
+    // 满足 vxe-table engine async load + first-row-render 时序
+    onMounted(() => {
+      nextTick(reattach)
+      setTimeout(() => nextTick(reattach), 200)
+      setTimeout(() => nextTick(reattach), 500)
+      setTimeout(() => nextTick(reattach), 1000)
+    })
   }
 
   return {

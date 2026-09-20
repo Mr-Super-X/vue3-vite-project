@@ -161,30 +161,42 @@ export function useTableCapabilities<T extends object = Record<string, unknown>>
   // v3.5 PR1-B：vxe 引擎也支持行拖拽（VxeTableBody defineExpose.getTbody 暴露 vxe tbody，
   // useTableEngineDom 按 effectiveEngine 路由到正确 tbody；不再守卫 !isVxeEngine）
   //
-  // vxe-tree + sortablejs 同时启用冲突：vxe 行 .vxe-body--row + tree-node 行结构与
-  // sortablejs 直接 DOM 操作冲突，会引发拖拽错位。冲突检测 → 不挂 sortablejs + warn
-  const isVxeTreeConflict = isVxeEngine && props.enableTree
-  const rowDrag =
-    props.enableRowDrag && !isVxeTreeConflict
-      ? useRowDrag({
-          handle: rowDragConfig.value.handle ?? 'first-col',
-          // v3.5 PR3：T → Record 视角 cast（useRowDrag 内部按 Record 处理，与 T 相邻能力层 cast 边界对齐）
-          data: table.data as unknown as Ref<Record<string, unknown>[]>,
-          crossLevelDrag: !props.enableTree,
-          ...(options.getTbody && { getTbody: options.getTbody }),
-          // 树形模式必传映射；平铺模式不传，onEnd 直接用 DOM index（行为与 v1 一致）
-          ...(treeData && {
-            getViewRowKeys: () => viewRowKeys.value,
-            resolveTopIndex: (viewIndex: number) => {
-              const key = viewRowKeys.value[viewIndex]
-              return key === undefined ? -1 : (topIndexByKey.value.get(key) ?? -1)
-            },
-          }),
-          ...(rowDragConfig.value.onSortChange && {
-            onSortChange: rowDragConfig.value.onSortChange,
-          }),
-        })
-      : null
+  // v3.5 hotfix-7：取消 isVxeTreeConflict 守卫。原 PR1-B 设计假设「vxe 行 .vxe-body--row
+  // + tree-node 行结构与 sortablejs 直接 DOM 操作冲突，会引发拖拽错位」——hotfix-5/6 已修复
+  // vxe 树形渲染（childrenField='children' + cacheRowMap(true) 重建索引），实测 sortablejs
+  // 挂 vxe tbody 可正常拖拽（实测试试看是否错位）。如仍错位，再回滚守卫 + 改文案。
+  const rowDrag = props.enableRowDrag
+    ? useRowDrag({
+        handle: rowDragConfig.value.handle ?? 'first-col',
+        // v3.5 PR3：T → Record 视角 cast（useRowDrag 内部按 Record 处理，与 T 相邻能力层 cast 边界对齐）
+        data: table.data as unknown as Ref<Record<string, unknown>[]>,
+        crossLevelDrag: !props.enableTree,
+        ...(options.getTbody && { getTbody: options.getTbody }),
+        // 树形模式必传映射；平铺模式不传，onEnd 直接用 DOM index（行为与 v1 一致）
+        ...(treeData && {
+          getViewRowKeys: () => viewRowKeys.value,
+          resolveTopIndex: (viewIndex: number) => {
+            const key = viewRowKeys.value[viewIndex]
+            return key === undefined ? -1 : (topIndexByKey.value.get(key) ?? -1)
+          },
+          // v3.5 hotfix-8：嵌套 splice 映射 —— 给定视图行索引返回 parent.children 数组与 indexInParent
+          // 返回 null 时调用方降级走 resolveTopIndex（顶层 row 或边界）
+          treeSpliceFromViewIndex: (viewIndex: number) => {
+            // flatData 与 viewRowKeys 同顺序（同一 computed 数据源），可按下标直接索引
+            const flatSrc = (treeData ? treeData.flatData.value : []) as Array<
+              Record<string, unknown>
+            >
+            const row = flatSrc[viewIndex]
+            if (!row || !row['_parent']) return null
+            const parent = row['_parent'] as unknown[]
+            return { parent, index: parent.indexOf(row) }
+          },
+        }),
+        ...(rowDragConfig.value.onSortChange && {
+          onSortChange: rowDragConfig.value.onSortChange,
+        }),
+      })
+    : null
 
   /** 启动校验（spec §七.3 + v3.5 PR1-B 引擎能力矩阵） */
   function validateCapabilities(): void {

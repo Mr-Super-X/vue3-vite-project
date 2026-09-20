@@ -7,6 +7,8 @@ export interface TreeNode extends Record<string, unknown> {
   _hasChildren?: boolean
   _loaded?: boolean
   _level?: number
+  /** v3.5 hotfix-8：父数组引用（dfs / lazy load 时注入）—— 用于嵌套数据拖拽 splice 定位 parent.children @group ProTable Composables */
+  _parent?: TreeNode[]
 }
 /** 树形数据 composable（spec §5.2）@group ProTable Composables */
 export function useTreeData(config: TreeConfig) {
@@ -34,7 +36,14 @@ export function useTreeData(config: TreeConfig) {
   const dfs = (ns: TreeNode[], lv: number, onVisit: (n: TreeNode, lv: number) => void): void => {
     for (const n of ns) {
       onVisit(n, lv)
-      if (n[cKey] && Array.isArray(n[cKey])) dfs(n[cKey] as TreeNode[], lv + 1, onVisit)
+      if (n[cKey] && Array.isArray(n[cKey])) {
+        // v3.5 hotfix-8：给每个子节点注入 _parent 引用，便于 useRowDrag 嵌套 splice
+        // （拖拽嵌套数据时 splice parent.children 数组而非 data 顶层）
+        ;(n[cKey] as TreeNode[]).forEach((c) => {
+          c._parent = n[cKey] as TreeNode[]
+        })
+        dfs(n[cKey] as TreeNode[], lv + 1, onVisit)
+      }
     }
   }
   /** 触发 expanded 响应式（Set 的 add/delete 不会自动通知 ref，必须替换整个 Set） */
@@ -79,7 +88,11 @@ export function useTreeData(config: TreeConfig) {
             .loadChildren(r.node)
             .then((children) => {
               r.node[cKey] = children as TreeNode[]
-              for (const c of children) c._level = (r.node._level ?? 0) + 1
+              for (const c of children) {
+                c._level = (r.node._level ?? 0) + 1
+                // v3.5 hotfix-8：lazy load 子节点也注入 _parent 引用（与 dfs 同步）
+                c._parent = children as TreeNode[]
+              }
               r.node._loaded = true
               touchExpanded() // 触发响应式（flatData 重新计算）
             })
@@ -122,7 +135,11 @@ export function useTreeData(config: TreeConfig) {
                 if (r?.node._hasChildren && !r.node._loaded) {
                   const cs = await config.loadChildren(r.node)
                   r.node[cKey] = cs as TreeNode[]
-                  for (const c of cs) c._level = (r.node._level ?? 0) + 1
+                  for (const c of cs) {
+                    c._level = (r.node._level ?? 0) + 1
+                    // v3.5 hotfix-8：toggle lazy load 子节点也注入 _parent
+                    c._parent = cs as TreeNode[]
+                  }
                   r.node._loaded = true
                 }
               }

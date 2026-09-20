@@ -49,14 +49,28 @@ export interface UseTableEngineDomReturn {
  * vxe 路径优先调 proTableVxe.getTbody（VxeTableBody 内部 querySelector
  * .vxe-table--body-wrapper tbody）；未传 proTableVxe 时退化走 el 路径
  * （保持向后兼容单测）。
+ *
+ * v3.5 hotfix-7：vxe 路径加 fallback —— 实测 VxeTableBody 是 generic 组件，
+ * template ref `ref="proTableVxe"` 在某些 Vue 版本对 generic 组件不绑（实测
+ * proTableVxe.value === null），useRowDrag.attachSortable 取 tbody 永远 null
+ * → sortablejs 不挂载 → 行拖拽不可用。
+ *
+ * 兜底：proTableVxe.value 缺失或 getTbody 返回 null 时，全局 querySelector 找
+ * `.vxe-table .vxe-table--body-wrapper .vxe-table--body tbody`（vxe-table v4
+ * 真实 DOM 路径），退化路径保证行拖拽始终能挂载。
  */
 export function useTableEngineDom(options: UseTableEngineDomOptions): UseTableEngineDomReturn {
   function getTbody(): HTMLElement | null {
     const isVxe = options.effectiveEngine?.value === 'vxe-table'
-    if (isVxe && options.proTableVxe?.value) {
+    if (isVxe) {
       // vxe-table 引擎：经 VxeTableBody defineExpose 暴露的 getTbody 拿 tbody
       // 该 getter 内部已处理 onMounted 前 fallback（模板根 div ref query）
-      return options.proTableVxe.value.getTbody?.() ?? null
+      const vxeTbody = options.proTableVxe?.value?.getTbody?.() ?? null
+      if (vxeTbody) return vxeTbody
+      // 兜底：proTableVxe ref 未绑 / getTbody 返回 null 时，全局 querySelector
+      return document.querySelector(
+        '.vxe-table .vxe-table--body-wrapper .vxe-table--body tbody'
+      ) as HTMLElement | null
     }
     const root = options.proTableEl.value?.$el
     if (!root || typeof root.querySelector !== 'function') return null

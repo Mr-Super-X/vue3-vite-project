@@ -121,16 +121,23 @@ defineExpose({
   recalculate: () => {
     void vxeTableInst.value?.recalculate?.()
   },
-  /** v3.5 PR1-B：vxe-table 根 DOM（含 .vxe-table--body-wrapper tbody），useRowDrag 挂载点 */
+  /** v3.5 PR1-B：vxe-table 根 DOM，useRowDrag 挂载点 */
   getTbody(): HTMLElement | null {
     // 优先从 vxe 实例 ref 拿根 DOM；退化走组件根 DOM（onMounted 前 ref 还未绑定）
     const root = (vxeTableInst.value as unknown as { $el?: HTMLElement } | null)?.$el
     if (root instanceof HTMLElement) {
-      return root.querySelector('.vxe-table--body-wrapper tbody') as HTMLElement | null
+      // v3.5 hotfix-7：vxe-table v4 实际 tbody 在
+      // .vxe-table--body-wrapper > .vxe-table--body-inner-wrapper > table.vxe-table--body > tbody
+      // （多嵌套一层 .vxe-table--body-inner-wrapper div），原 .vxe-table--body-wrapper tbody 直接选
+      // 不到此路径——取 tbody 一直 null，sortablejs 未挂载。
+      // 修复 querySelector 路径找最深 tbody，兼容多嵌套。
+      return root.querySelector(
+        '.vxe-table--body-wrapper .vxe-table--body tbody'
+      ) as HTMLElement | null
     }
     // onMounted 前：fallback 用 ref="proTableVxeRoot" 抓模板根 div 再 query
     return proTableVxeRoot.value?.querySelector(
-      '.vxe-table--body-wrapper tbody'
+      '.vxe-table--body-wrapper .vxe-table--body tbody'
     ) as HTMLElement | null
   },
 })
@@ -398,6 +405,18 @@ watch(
         </template>
         <template #default="scope">
           <slot :name="col.prop" :row="scope.row" :column="col" :index="scope.rowIndex ?? 0">
+            <!-- v3.5 hotfix-7：行拖拽手柄（与 ElementTableBody 保持一致）。
+                 sortablejs 通过 .pro-table-drag-handle 类选择器定位拖拽触发元素，
+                 原 VxeTableBody 缺手柄 → sortablejs 找不到 handle → 拖拽不生效。
+                 仅在 col.draggable=true 时渲染（与其他能力开关一致）。 -->
+            <span
+              v-if="col.draggable"
+              class="pro-table-drag-handle"
+              :data-col="col.prop"
+              style="cursor: grab; user-select: none"
+            >
+              ⋮⋮
+            </span>
             <!-- 行编辑控件（编辑态 + 含 edit 配置）；树形分支 vxe 引擎不支持，无对应模板 -->
             <EditCell
               v-if="rowEdit?.isEditing(rowKeyOf(scope.row)) && col.edit"

@@ -151,7 +151,7 @@ describe('useTableCapabilities', () => {
     expect(result.rowDrag).not.toBeNull()
   })
 
-  it('vxe 引擎 + enableTree + enableRowDrag 三者冲突：rowDrag 不挂（sortablejs 与 vxe tree-node 冲突）', () => {
+  it('vxe 引擎 + enableTree + enableRowDrag 三者共存：hotfix-7 取消守卫后双能力均挂载', () => {
     const result = useTableCapabilities({
       props: {
         columns: [],
@@ -163,9 +163,10 @@ describe('useTableCapabilities', () => {
       table: { data: ref([]) },
       engine: ref('vxe-table'),
     })
-    // 冲突时 treeData 仍生效（业务优先保证树形）；rowDrag 退化 null 避免拖拽错位
+    // v3.5 hotfix-7 取消 isVxeTreeConflict 守卫（vxe 行结构修复后实测 sortablejs 可挂载），
+    // treeData 仍生效；rowDrag 也正常挂载，不再降级 null
     expect(result.treeData).not.toBeNull()
-    expect(result.rowDrag).toBeNull()
+    expect(result.rowDrag).not.toBeNull()
   })
 
   it('vxe 引擎 + enableRowEdit：rowEdit 正常实例化', () => {

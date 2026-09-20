@@ -250,4 +250,99 @@ describe('useRowDrag', () => {
     expect(consoleDebug).toHaveBeenCalled()
     consoleDebug.mockRestore()
   })
+
+  // v3.5 hotfix-8：嵌套 splice —— 拖拽嵌套数据的子节点时 splice parent.children 数组
+  it('嵌套数据：treeSpliceFromViewIndex 把子节点 splice 到 parent.children（hotfix-8）', async () => {
+    // 视图扁平序列：[company, dept-rd, dept-mkt]，data 顶层只有 [company]
+    const companyChildren = [
+      { id: 'dept-rd', name: '研发部' },
+      { id: 'dept-mkt', name: '市场部' },
+    ]
+    // 模拟 useTreeData 注入 _parent
+    companyChildren.forEach((c) => {
+      ;(c as Record<string, unknown>)._parent = companyChildren
+    })
+    const data = ref([{ id: 'company', children: companyChildren } as Record<string, unknown>])
+    const onSortChange = vi.fn(() => true)
+    // 视图行 key 序列（flatData 顺序）
+    const viewKeys = ['company', 'dept-rd', 'dept-mkt']
+    // treeSpliceFromViewIndex：从 flatData 取 row，根据 _parent 找 parent 数组与 index
+    const treeSpliceFromViewIndex = (viewIndex: number) => {
+      const flatSrc = data.value
+      const flatData = [flatSrc[0], companyChildren[0], companyChildren[1]]
+      const row = flatData[viewIndex] as Record<string, unknown>
+      if (!row || !row['_parent']) return null
+      const parent = row['_parent'] as unknown[]
+      return { parent, index: parent.indexOf(row) }
+    }
+    const drag = useRowDrag({
+      handle: 'first-col',
+      data,
+      onSortChange,
+      crossLevelDrag: false,
+      getViewRowKeys: () => viewKeys,
+      resolveTopIndex: (viewIndex) => {
+        const key = viewKeys[viewIndex]
+        return data.value.findIndex((r) => r.id === key)
+      },
+      treeSpliceFromViewIndex,
+    })
+
+    const tbody = document.createElement('tbody')
+    drag.attachSortable(tbody)
+
+    const onEndHandler = mockSortable.create.mock.calls[0][1].onEnd
+    // 拖拽前记录旧引用（hotfix-8 onEnd 内会替换 data.value 为新数组以触发响应式）
+    const beforeRef = data.value
+    // 拖拽 dept-rd (viewIndex=1) 到 dept-mkt (viewIndex=2) 之后
+    await onEndHandler({ oldIndex: 1, newIndex: 2 })
+
+    // 顶层 data 引用变为新数组（hotfix-8 触发响应式机制）
+    expect(data.value).not.toBe(beforeRef)
+    // children 重排为 [dept-mkt, dept-rd]
+    expect(companyChildren.map((c) => c.id)).toEqual(['dept-mkt', 'dept-rd'])
+  })
+
+  it('嵌套数据：parent 内不同 row 拖拽时不破坏其他节点的 _parent 引用（hotfix-8）', async () => {
+    const children = [
+      { id: 'a1', name: 'a1' },
+      { id: 'a2', name: 'a2' },
+      { id: 'a3', name: 'a3' },
+    ]
+    children.forEach((c) => {
+      ;(c as Record<string, unknown>)._parent = children
+    })
+    const data = ref([{ id: 'root', children } as Record<string, unknown>])
+    const onSortChange = vi.fn(() => true)
+    const viewKeys = ['root', 'a1', 'a2', 'a3']
+    const treeSpliceFromViewIndex = (viewIndex: number) => {
+      const flatData = [data.value[0], children[0], children[1], children[2]]
+      const row = flatData[viewIndex] as Record<string, unknown>
+      if (!row || !row['_parent']) return null
+      const parent = row['_parent'] as unknown[]
+      return { parent, index: parent.indexOf(row) }
+    }
+    const drag = useRowDrag({
+      handle: 'first-col',
+      data,
+      onSortChange,
+      crossLevelDrag: false,
+      getViewRowKeys: () => viewKeys,
+      resolveTopIndex: (_vi: number) => 0, // 顶层恒 0（不会被嵌套路径走）
+      treeSpliceFromViewIndex,
+    })
+
+    const tbody = document.createElement('tbody')
+    drag.attachSortable(tbody)
+
+    const onEndHandler = mockSortable.create.mock.calls[0][1].onEnd
+    // 拖 a3 (viewIndex=3) 到 a1 (viewIndex=1) 之前：a3 a1 a2 → a1 a2 a3
+    await onEndHandler({ oldIndex: 3, newIndex: 1 })
+
+    expect(children.map((c) => c.id)).toEqual(['a3', 'a1', 'a2'])
+    // 所有节点 _parent 仍指向 children 数组
+    children.forEach((c) => {
+      expect((c as Record<string, unknown>)._parent).toBe(children)
+    })
+  })
 })
