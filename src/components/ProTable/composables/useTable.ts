@@ -365,16 +365,32 @@ export function useTable<T extends object = Record<string, unknown>>(
   }
 
   /**
-   * v3.5 PR2：el-table filter-change 事件入口（服务端筛选）。
-   * newFilters 是 el-table 给的「当前全表筛选快照」（{ propA: [v1], propB: [v2, v3] }），
-   * 覆盖式赋值确保「用户在 UI 上清除某列筛选」时 filterState 同步清空对应列，
-   * 不残留 stale value。
+   * v3.5 PR2 + hotfix-2：el-table filter-change 事件入口（服务端筛选）。
+   * newFilters 是 el-table 给的「当前筛选状态」（{ propA: [v1], propB: [v2, v3] }）。
+   *
+   * v3.5 PR2 文档原约定为「全表快照」并用覆盖式赋值，但 element-plus 2.14.x 实测
+   * filter-change 在多列筛选连续触发时可能仅携带变化列的子集——纯覆盖会导致未变化的
+   * 列筛选值丢失（用户复现：status=待支付 → dept=技术部 后，status 列值被擦除）。
+   * 改 merge 语义：保留旧 state 未出现在 newFilters 的列；空数组视为「用户清空该列」，
+   * 显式 delete 走原清空语义。
+   *
+   * 兼容性：element-plus 文档版「全表快照」行为下，newFilters 包含所有 active 列，
+   * merge 输出 === newFilters，等价覆盖式——既兼容原行为又兜底残缺快照。
    *
    * 无 adapter 时仅 UI 记忆，不触发请求（el-table 客户端筛选继续生效）；
    * 有 adapter 时回第 1 页 + 触发请求（与 onSortChange 对称）。
    */
   function setFilter(newFilters: FilterValuesMap): void {
-    filterState.value = { ...newFilters }
+    const merged: FilterValuesMap = { ...filterState.value }
+    for (const [key, value] of Object.entries(newFilters)) {
+      if (Array.isArray(value) && value.length === 0) {
+        // 空数组 = 用户清空该列筛选；显式 delete 而非赋值 []，便于后续 reset / emit 判空
+        delete merged[key]
+      } else {
+        merged[key] = value
+      }
+    }
+    filterState.value = merged
     if (!props.filterParamsAdapter) return
     if (page.value !== 1) {
       page.value = 1

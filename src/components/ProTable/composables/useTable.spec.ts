@@ -319,14 +319,27 @@ describe('useTable', () => {
       })
     })
 
-    it('setFilter 覆盖式赋值（不残留已被 UI 清除的列）', async () => {
+    it('setFilter merge 语义（hotfix-2）：element-plus 2.14.x filter-change 可能仅携带变化列，merge 兜底保留未变化列', async () => {
       const deps = makeDeps()
       deps.props.filterParamsAdapter = () => ({})
       const table = useTable(deps)
       await table.refresh()
       table.setFilter({ status: ['paid'], dept: ['tech'] })
-      // 用户清掉 status 列筛选（el-table 会发 { dept: ['tech'] } 的新快照）
+      // 模拟 el-table 第二列变化时仅携带变化列（status 未出现在 newFilters 中）：
+      // 旧覆盖式实现会丢失 status 列值；merge 语义下保留。
       table.setFilter({ dept: ['tech'] })
+      expect(table.getFilterState()).toEqual({ status: ['paid'], dept: ['tech'] })
+    })
+
+    it('setFilter 空数组 = 显式清空该列（区分「该列未变」与「该列清空」）', async () => {
+      const deps = makeDeps()
+      deps.props.filterParamsAdapter = () => ({})
+      const table = useTable(deps)
+      await table.refresh()
+      table.setFilter({ status: ['paid'], dept: ['tech'] })
+      // 用户在 UI 上清掉 status 列筛选，el-table 发 { status: [], dept: ['tech'] }：
+      // 空数组走 delete 路径，status 列从 filterState 移除。
+      table.setFilter({ status: [], dept: ['tech'] })
       expect(table.getFilterState()).toEqual({ dept: ['tech'] })
     })
   })
