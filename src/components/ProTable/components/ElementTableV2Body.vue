@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup lang="ts" generic="T extends object = Record<string, unknown>">
 /**
  * ElementTableV2Body —— element-plus v2 引擎渲染分支（v3.0.1 新增）
  *
@@ -9,6 +9,8 @@
  * 关键差异：ElTableV2 是 fixed-size 容器（必须 px 数字），与 el-table v1 的
  * 自适应容器不同。本组件用 ResizeObserver 监听父容器尺寸变化，回填实际 px
  * 到 width/height，让虚拟滚动表格跟着父容器自适应。
+ *
+ * v3.5 PR3：补 generic<T> 透传——rows / columns 绑 T，与 ElementTableBody 对齐。
  *
  * 已知限制（强隔离策略）：
  * - 不支持树形 / 展开行 / 汇总行 / 单元格合并 / 行拖拽 / 多选列（v2 引擎无对应能力，
@@ -53,11 +55,11 @@ const DENSITY_TOKENS: Record<TableDensity, { rowHeight: number; cellPadding: str
 
 const props = defineProps<{
   /** 渲染行（v2 不支持树形，按平铺数据传入） */
-  rows: Record<string, unknown>[]
+  rows: T[]
   /** 后续刷新 loading（首次加载由编排层 AsyncState skeleton 承担） */
   loading: boolean
   /** 可见列（列设置抽屉排序后的结果） */
-  columns: ProColumn[]
+  columns: ProColumn<T>[]
   /** 行 key 字段名（缺省 'id'） */
   rowKey?: string | undefined
   /** 虚拟滚动配置（来自 useVirtualScroll.v2TableConfig） */
@@ -176,7 +178,7 @@ onBeforeUnmount(() => {
  */
 
 /** 可拉伸列判定：仅 minWidth、无显式 width（v1 中只有这类列参与剩余空间分配） */
-function isStretchable(col: ProColumn): boolean {
+function isStretchable(col: ProColumn<T>): boolean {
   return col.width === undefined && col.minWidth !== undefined
 }
 
@@ -191,7 +193,7 @@ function toPxWidth(w: number | string | undefined): number {
 }
 
 /** 基础列宽：显式 width 优先，其次 minWidth，最后 fallback 120（v1 ?? minWidth ?? 120 语义） */
-function resolveBaseWidth(col: ProColumn): number {
+function resolveBaseWidth(col: ProColumn<T>): number {
   return toPxWidth(col.width) || toPxWidth(col.minWidth) || 120
 }
 
@@ -199,7 +201,7 @@ function resolveBaseWidth(col: ProColumn): number {
  * v1 列宽填充算法：剩余宽度按可拉伸列的 minWidth 比例分配（末列吸收取整余数，
  * 保证列宽总和精确等于容器宽，避免亚像素漂移）。容器未测量到时用 fallback 宽度。
  */
-function fillColumnsToContainer(columns: ProColumn[], containerWidth: number): number[] {
+function fillColumnsToContainer(columns: ProColumn<T>[], containerWidth: number): number[] {
   const base = columns.map(resolveBaseWidth)
   const stretchable = columns
     .map((col, index) => (isStretchable(col) ? index : -1))
@@ -230,7 +232,7 @@ function fillColumnsToContainer(columns: ProColumn[], containerWidth: number): n
  * 避免每行渲染都线性扫描 columns（10 列 × 1000 行 = 1 万次扫描）。
  */
 const colByDataKey = computed(() => {
-  const m = new Map<string, ProColumn>()
+  const m = new Map<string, ProColumn<T>>()
   for (const col of props.columns) {
     if (col.prop) m.set(col.prop as string, col)
   }
@@ -241,42 +243,49 @@ const colByDataKey = computed(() => {
  * 单元格渲染参数 —— 抽到类型便于 5 个小函数共享
  */
 type CellRenderScope = {
-  rowData: Record<string, unknown>
+  rowData: T
   column: { dataKey: string; key: string }
   rowIndex: number
 }
 
 /** 1. ProColumn.render —— 业务自定义渲染 */
-function renderByRender(col: ProColumn, scope: CellRenderScope): VNode | null {
+function renderByRender(col: ProColumn<T>, scope: CellRenderScope): VNode | null {
   if (typeof col.render !== 'function') return null
   return col.render({
-    row: scope.rowData as never,
+    row: scope.rowData,
     column: col,
     $index: scope.rowIndex,
   })
 }
 
 /** 2. 具名插槽(v1 透传桥接) */
-function renderBySlot(col: ProColumn, scope: CellRenderScope): VNode | null {
+function renderBySlot(col: ProColumn<T>, scope: CellRenderScope): VNode | null {
   const propSlot = props.slots?.[col.prop as string]
   if (typeof propSlot !== 'function') return null
-  return propSlot({ row: scope.rowData, column: col, $index: scope.rowIndex })
+  return propSlot({
+    row: scope.rowData as Record<string, unknown>,
+    column: col as ProColumn,
+    $index: scope.rowIndex,
+  })
 }
 
 /** 3. ProColumn.formatter —— 函数或内置预设 key（v3.1），返回 string 给主函数包 div */
 function renderByFormatter(
-  col: ProColumn,
-  rowData: Record<string, unknown>,
+  col: ProColumn<T>,
+  rowData: T,
   cellValue: unknown,
   rowIndex: number
 ): string | null {
   const formatterFn = resolveFormatter(col.formatter)
   if (!formatterFn) return null
-  return String(formatterFn(rowData, col, cellValue, rowIndex) ?? '')
+  // v3.5 PR3：rowData T → Record<string, unknown> cast（resolveFormatter 内部按 Record 视角处理）
+  return String(
+    formatterFn(rowData as Record<string, unknown>, col as ProColumn, cellValue, rowIndex) ?? ''
+  )
 }
 
 /** 4. ProColumn.enum —— ElTag 字典 */
-function renderByEnum(col: ProColumn, cellValue: unknown): VNode | null {
+function renderByEnum(col: ProColumn<T>, cellValue: unknown): VNode | null {
   if (!col.enum || !Array.isArray(col.enum)) return null
   const entry = col.enum.find((e) => e.value === cellValue)
   if (!entry) return null
@@ -300,7 +309,8 @@ function renderCellForV2(rendererProps: CellRenderScope): VNode {
   const cellStyle = props.density
     ? { padding: DENSITY_TOKENS[props.density].cellPadding }
     : undefined
-  const cellValue = rendererProps.rowData[rendererProps.column.dataKey]
+  // v3.5 PR3：T 无索引签名 → cast Record 视角取列值
+  const cellValue = (rendererProps.rowData as Record<string, unknown>)[rendererProps.column.dataKey]
 
   // 极端边界:props.columns 在 watch 间隙被替换且新数据缺该列 → fallback 渲染原值
   if (!col) return h('div', { style: cellStyle }, renderFallback(cellValue))

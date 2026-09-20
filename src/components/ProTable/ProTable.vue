@@ -636,9 +636,9 @@ defineExpose({
         <!-- v3.0.1：virtualized 优先于 engine，命中时挂载 v2 引擎分支 -->
         <ElementTableV2Body
           v-if="useVirtualEngine"
-          :rows="tableRows"
+          :rows="tableRows as T[]"
           :loading="table.loading.value && hasTableMounted"
-          :columns="sortedColumnsTyped as ProColumn<Record<string, unknown>>[]"
+          :columns="sortedColumnsTyped"
           :row-key="props.rowKey"
           :virtual-config="virtualScroll?.config.value ?? {}"
           :density="table.density.value"
