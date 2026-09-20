@@ -1,12 +1,15 @@
 /**
- * TreeAdapter 单元测试（v3.5 PR1-B Task 1）—— 验证 TreeAdapter 接口契约与 elementPlusTreeAdapter 实现。
- *
- * vxeTreeAdapter 适配器在 Task 2 追加。
+ * TreeAdapter 单元测试（v3.5 PR1-B Task 1 + Task 2）—— 验证 TreeAdapter 接口契约
+ * 与 elementPlusTreeAdapter / vxeTreeAdapter 双引擎实现。
  *
  * @group ProTable adapters 测试
  */
-import { describe, it, expect } from 'vitest'
-import { createElementPlusTreeAdapter, type TreeAdapter } from './tree-adapter'
+import { describe, it, expect, vi } from 'vitest'
+import {
+  createElementPlusTreeAdapter,
+  createVxeTreeAdapter,
+  type TreeAdapter,
+} from './tree-adapter'
 
 describe('TreeAdapter (elementPlusTreeAdapter)', () => {
   const adapter = createElementPlusTreeAdapter()
@@ -47,5 +50,80 @@ describe('TreeAdapter (elementPlusTreeAdapter)', () => {
     expect(typeof a.getExpandedKeys).toBe('function')
     expect(typeof a.syncExpanded).toBe('function')
     expect(typeof a.hasChildren).toBe('function')
+  })
+})
+
+describe('TreeAdapter (vxeTreeAdapter)', () => {
+  it('getTreeConfig 返回 vxe-table tree-config 协议', () => {
+    const adapter = createVxeTreeAdapter(() => null)
+    const cfg = adapter.getTreeConfig()
+    expect(cfg).toHaveProperty('treeConfig')
+    const tc = cfg['treeConfig'] as {
+      children: string
+      hasChildren: string
+      expandAll: boolean
+      accordion: boolean
+      trigger: string
+    }
+    expect(tc.children).toBe('__pro_table_flat__')
+    expect(tc.hasChildren).toBe('__pro_table_flat__')
+    expect(tc.expandAll).toBe(false)
+    expect(tc.accordion).toBe(false)
+    // trigger: 'cell' 与 el-table 单元格点击展开语义一致（vxe 默认 'default' 图标点击）
+    expect(tc.trigger).toBe('cell')
+  })
+
+  it('onExpand 调 vxe-table setTreeExpand(row, true)', () => {
+    const setTreeExpand = vi.fn()
+    const adapter = createVxeTreeAdapter(() => ({ setTreeExpand }))
+    const row = { id: 'r1' }
+    adapter.onExpand('r1', row)
+    expect(setTreeExpand).toHaveBeenCalledWith(row, true)
+  })
+
+  it('onCollapse 调 vxe-table setTreeExpand(row, false)', () => {
+    const setTreeExpand = vi.fn()
+    const adapter = createVxeTreeAdapter(() => ({ setTreeExpand }))
+    const row = { id: 'r1' }
+    adapter.onCollapse('r1', row)
+    expect(setTreeExpand).toHaveBeenCalledWith(row, false)
+  })
+
+  it('row 缺失时不调用 setTreeExpand（退化等待 syncExpanded 全量回灌）', () => {
+    const setTreeExpand = vi.fn()
+    const adapter = createVxeTreeAdapter(() => ({ setTreeExpand }))
+    adapter.onExpand('r1', undefined)
+    expect(setTreeExpand).not.toHaveBeenCalled()
+  })
+
+  it('vxe-table 实例为 null 时所有操作安全 noop', () => {
+    const adapter = createVxeTreeAdapter(() => null)
+    expect(() => adapter.onExpand('k1', { id: 'k1' })).not.toThrow()
+    expect(() => adapter.onCollapse('k1', { id: 'k1' })).not.toThrow()
+    expect(() => adapter.syncExpanded(['k1'], new Map())).not.toThrow()
+  })
+
+  it('syncExpanded 按 rowsByKey 逐行调用 setTreeExpand(true)', () => {
+    const setTreeExpand = vi.fn()
+    const adapter = createVxeTreeAdapter(() => ({ setTreeExpand }))
+    const rowsByKey = new Map<string | number, Record<string, unknown>>([
+      ['a', { id: 'a' }],
+      ['b', { id: 'b' }],
+    ])
+    adapter.syncExpanded(['a', 'b', 'missing'], rowsByKey)
+    expect(setTreeExpand).toHaveBeenCalledTimes(2)
+    expect(setTreeExpand).toHaveBeenNthCalledWith(1, { id: 'a' }, true)
+    expect(setTreeExpand).toHaveBeenNthCalledWith(2, { id: 'b' }, true)
+  })
+
+  it('getExpandedKeys 返回空数组（vxe 引擎侧展开状态由 useTreeData 主导）', () => {
+    const adapter = createVxeTreeAdapter(() => null)
+    expect(adapter.getExpandedKeys()).toEqual([])
+  })
+
+  it('hasChildren 基于 _hasChildren 字段判定（与 el 同源）', () => {
+    const adapter = createVxeTreeAdapter(() => null)
+    expect(adapter.hasChildren({ _hasChildren: true })).toBe(true)
+    expect(adapter.hasChildren({})).toBe(false)
   })
 })
