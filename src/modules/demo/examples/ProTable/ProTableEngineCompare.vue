@@ -24,6 +24,7 @@ import {
   sortOrdersResponseAdapter,
   type Order,
 } from '../../../../../mock/pro-table/sort-orders'
+import { orgChartRequestApi, loadOrgChildren } from '../../../../../mock/pro-table/org-chart'
 import {
   engineColumnItems,
   engineMatrixItems,
@@ -48,8 +49,24 @@ const columns: ProColumn<Order>[] = [
   },
 ]
 
+/**
+ * v3.5 PR1-B：树形 + 行拖拽双引擎对照列定义（组织架构 mock）
+ * 复用 ProTableTree.vue 的 org-chart mock，验证双引擎树形 + 拖拽能力对等
+ */
+const treeDragColumns: ProColumn[] = [
+  { prop: 'name', label: '组织名称', tree: { indentSize: 20 }, draggable: true },
+  { prop: 'hasChildren', label: '有子节点', width: 100 },
+]
+
+const treeConfig = {
+  loadChildren: (row: Record<string, unknown>) => loadOrgChildren(row as never),
+  defaultExpandDepth: 1,
+  rowKey: 'id',
+}
+
 const tocItems = [
   { id: 'demo-engine-compare', label: '能力演示' },
+  { id: 'demo-tree-drag-compare', label: '树形 + 拖拽双引擎对照' },
   { id: 'api-engine-props', label: '引擎 Props' },
   { id: 'api-engine-column', label: 'ProColumn.vxeProps' },
   { id: 'api-engine-matrix', label: 'vxe 能力矩阵' },
@@ -66,6 +83,29 @@ const columns: ProColumn<Order>[] = [
   { prop: 'amount', label: '金额', sortable: 'custom', vxeProps: { align: 'right' } },
 ]
 <\/script>`
+
+const treeDragCode = `<template>
+  <!-- v3.5 PR1-B：树形 + 行拖拽能力双引擎对等 -->
+  <ProTable
+    :columns="treeDragColumns"
+    :request-api="orgChartRequestApi"
+    :enable-tree="treeConfig"
+    :enable-row-drag="{ handle: '__all__' }"
+    row-key="id"
+  />
+</template>
+
+<script setup lang="ts">
+const treeDragColumns = [
+  { prop: 'name', label: '组织名称', tree: { indentSize: 20 }, draggable: true },
+  { prop: 'hasChildren', label: '有子节点', width: 100 },
+]
+const treeConfig = {
+  loadChildren: async (row) => await loadOrgChildren(row),
+  defaultExpandDepth: 1,
+  rowKey: 'id',
+}
+<\/script>`
 </script>
 
 <template>
@@ -77,7 +117,7 @@ const columns: ProColumn<Order>[] = [
         'tableEngine 切换渲染引擎：element-plus（默认）/ vxe-table（动态按需加载）。',
         'vxe-table 引擎按需动态加载，chunk 不进首屏；加载失败自动回退 element-plus。',
         '同一份 columns / requestApi 双引擎并排，验证列映射与事件适配（sort / selection）。',
-        'vxe 引擎暂不支持树形 / 行拖拽（启动时 console.warn 并忽略该能力）。',
+        'v3.5 PR1-B 起 vxe 引擎也支持树形 + 行拖拽，与 element-plus 引擎能力对等。',
       ]"
     >
       <section id="demo-engine-compare" :class="bem.b()">
@@ -99,6 +139,35 @@ const columns: ProColumn<Order>[] = [
                 :columns="columns"
                 :request-api="sortOrdersRequestApi"
                 :response-adapter="sortOrdersResponseAdapter"
+                row-key="id"
+              />
+            </div>
+          </div>
+        </DemoField>
+      </section>
+
+      <!-- v3.5 PR1-B：树形 + 行拖拽双引擎对照演示 -->
+      <section id="demo-tree-drag-compare" :class="bem.b()">
+        <DemoField label="树形 + 行拖拽 双引擎对照（v3.5 PR1-B 补齐）" :code="treeDragCode">
+          <div :class="bem.e('grid')">
+            <div :class="bem.e('pane')">
+              <h4 :class="bem.e('engine-title')">element-plus（默认引擎）</h4>
+              <ProTable
+                :columns="treeDragColumns"
+                :request-api="orgChartRequestApi"
+                :enable-tree="treeConfig"
+                :enable-row-drag="{ handle: '__all__' }"
+                row-key="id"
+              />
+            </div>
+            <div :class="bem.e('pane')">
+              <h4 :class="bem.e('engine-title')">vxe-table 引擎</h4>
+              <ProTable
+                table-engine="vxe-table"
+                :columns="treeDragColumns"
+                :request-api="orgChartRequestApi"
+                :enable-tree="treeConfig"
+                :enable-row-drag="{ handle: '__all__' }"
                 row-key="id"
               />
             </div>

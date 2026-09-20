@@ -295,13 +295,15 @@ export const engineMatrixItems: ApiItem[] = [
   },
   {
     name: '树形数据',
-    type: '❌ 暂不支持',
-    description: '启动时 console.warn 并忽略 enableTree 配置。',
+    type: '✅ 支持',
+    description:
+      'v3.5 PR1-B 起与 el 引擎对等：通过 createVxeTreeAdapter 把 useTreeData 状态映射到 vxe-table tree-config + 监听 toggle-tree-expand 回流。',
   },
   {
     name: '行拖拽排序',
-    type: '❌ 暂不支持',
-    description: '启动时 console.warn 并忽略 enableRowDrag 配置。',
+    type: '✅ 支持',
+    description:
+      'v3.5 PR1-B 起与 el 引擎对等：sortablejs 挂 .vxe-table--body-wrapper tbody；vxeTreeAdapter + vxeRowDragAdapter 提供引擎胶水；与树形同时启用会触发 console.warn 提示 sortablejs 与 vxe tree-node 行结构冲突。',
   },
 ]
 
