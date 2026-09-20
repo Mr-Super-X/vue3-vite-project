@@ -6,13 +6,14 @@
  * - 双击姓名进入编辑（useRowEdit.el = 'input' + rules）
  * - 部门下拉编辑（el: 'select' + props.options）
  * - 工资数字编辑（el: 'input-number' + precision + min）
+ * - edit.updateEvent 双模式对比：姓名列 'input' 实时同步 vs 工资/备注列 'blur' 失焦同步
  * - 异步校验：工资 > 5w 拒绝 + 字段级红字错误
  * - 多行同时编辑：工具栏「保存全部」「取消全部」
  *
  * 验证步骤：
  * 1. 双击「张三」姓名 → 出现输入框
- * 2. 改为「张三丰」→ 点「保存全部」→ 数据更新
- * 3. 改钱七工资 99999 → 保存 → 字段下方红字「工资超限」
+ * 2. 改为「张三丰」→ 数据实时变化（input 模式）
+ * 3. 双击工资改 88888 → 编辑中数据不生效，失焦后才同步（blur 模式）→ 保存 → 红字「工资超限」
  * 4. 双击姓名 + 双击部门 → 两个字段同时进入编辑
  */
 import { ref } from 'vue'
@@ -36,8 +37,14 @@ const bem = createNamespace('demo-pro-table-row-edit')
 const columns: ProColumn[] = [
   {
     prop: 'name',
-    label: '姓名',
-    edit: { el: 'input', rules: { required: true, message: '姓名必填' } },
+    label: '姓名（input 实时同步）',
+    edit: {
+      el: 'input',
+      rules: { required: true, message: '姓名必填' },
+      // updateEvent 双模式对比（原 ProTableEditCellVModel demo 能力并入）：
+      // 'input'（默认）输入即时同步；'blur' 失焦才同步（见下方工资列）
+      updateEvent: 'input',
+    },
   },
   {
     prop: 'dept',
@@ -53,7 +60,16 @@ const columns: ProColumn[] = [
       },
     },
   },
-  { prop: 'salary', label: '工资', edit: { el: 'input-number', props: { precision: 2, min: 0 } } },
+  {
+    prop: 'salary',
+    label: '工资（blur 失焦同步）',
+    edit: {
+      el: 'input-number',
+      props: { precision: 2, min: 0 },
+      // 数字输入高频 change，blur 同步避免增量刷新风暴
+      updateEvent: 'blur',
+    },
+  },
   { prop: 'hiredAt', label: '入职日期' },
 ]
 
@@ -104,8 +120,9 @@ import { ref } from 'vue'
 import type { ProColumn } from '@/components/ProTable/types'
 
 const columns: ProColumn[] = [
-  { prop: 'name', label: '姓名', edit: { el: 'input', rules: { required: true } } },
-  { prop: 'salary', label: '工资', edit: { el: 'input-number', props: { min: 0 } } },
+  // updateEvent: 'input'（默认）实时同步；'blur' 失焦同步（数字输入建议 blur 防高频刷新）
+  { prop: 'name', label: '姓名', edit: { el: 'input', updateEvent: 'input', rules: { required: true } } },
+  { prop: 'salary', label: '工资', edit: { el: 'input-number', updateEvent: 'blur', props: { min: 0 } } },
 ]
 
 const config = {
@@ -130,8 +147,8 @@ async function saveAll() {
       source="src/components/ProTable/composables/useRowEdit.ts"
       :introductions="[
         '基于 useRowEdit composable 实现的行级编辑状态机：双击进入 / 多行并行 / 异步校验 / 草稿独立。',
-        '下方演示：双击姓名 + 下拉部门 + 数字工资 + 异步校验（工资超限）。',
-        '配套 ProColumn.edit 字段声明哪些列可编辑，ProTableExpose 提供 saveEdit/cancelEdit/startEdit API。',
+        '下方演示：双击姓名（input 实时同步）+ 下拉部门 + 数字工资（blur 失焦同步，双模式对比）+ 异步校验（工资超限）。',
+        '配套 ProColumn.edit 字段声明哪些列可编辑（含 updateEvent 同步时机），ProTableExpose 提供 saveEdit/cancelEdit/startEdit API。',
       ]"
     >
       <!-- 演示区 -->

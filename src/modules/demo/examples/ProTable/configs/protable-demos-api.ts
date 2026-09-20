@@ -77,6 +77,14 @@ export const rowEditColumnItems: ApiItem[] = [
     required: false,
     description: '该字段是否可编辑（响应式 Ref 支持按行状态切换）。',
   },
+  {
+    name: 'edit.updateEvent',
+    type: "'input' | 'blur'",
+    required: false,
+    default: "'input'",
+    description:
+      '编辑值同步时机（原 ProTableEditCellVModel demo 并入本表）：input 即时同步（高频），blur 失焦同步（数字输入建议 blur 防刷新风暴）。',
+  },
 ]
 
 export const rowEditExposeItems: ApiItem[] = [
@@ -448,25 +456,6 @@ export const groupedHeaderKnownLimitsItems: ApiItem[] = [
     type: '⚠️ v3.0.1 待修复',
     description:
       'Element Plus 2.14 el-table-column 嵌套递归在 Vue 3.5 + unplugin-vue-components 组合下未生效（实测只产生 1 行 thead）。v3.0 采用务实方案：父列作单级 + 子列 cellClassName 视觉分组；v3.0.1 评估 h() 函数式渲染。',
-  },
-]
-
-/* ───────────── v3.0 单元格 v-model demo（ProTableEditCellVModel） ───────────── */
-
-export const editCellVModelColumnItems: ApiItem[] = [
-  {
-    name: 'edit.el',
-    type: "'input' | 'select' | 'input-number' | string",
-    required: false,
-    description: '编辑控件类型；自定义组件名可通过 XForm-style 注册。',
-  },
-  {
-    name: 'edit.updateEvent',
-    type: "'input' | 'blur'",
-    required: false,
-    default: "'input'",
-    description:
-      'v3.0 新增：编辑值同步时机。input 即时同步（高频），blur 失焦同步（与 ProTable 默认 trigger 对齐）。',
   },
 ]
 

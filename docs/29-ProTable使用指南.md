@@ -936,31 +936,30 @@ const rows = tableRef.value?.getSelectedRows()
 
 在线演示站点：`pnpm dev` → `/demo`（左侧「ProTable 企业级表格」分组），路由 = `/demo/pro-table-<kebab-case>`。所有 demo 源码位于 `src/modules/demo/examples/ProTable/`（21 个 `.vue` 文件）。
 
-| 路由                               | 内容                                                                      |
-| ---------------------------------- | ------------------------------------------------------------------------- |
-| `/demo/pro-table-overview`         | **主 demo**：Props 完整用法 + 实例方法演示（对应 `ProTableOverview.vue`） |
-| `/demo/pro-table-engine-compare`   | element-plus vs vxe-table 双引擎并排对比（表格 + 格式化 + 排序）          |
-| `/demo/pro-table-search-advanced`  | v3.2 多查询条件：basic/advanced 抽屉 + searchLayout + 已选回显            |
-| `/demo/pro-table-virtual-scroll`   | v3.0.1 虚拟滚动（10 万行 × 10 列 + 固定列）                               |
-| `/demo/pro-table-auto-height`      | v3.1 自动高度（撑满视口剩余空间）                                         |
-| `/demo/pro-table-state-persist`    | v3.1 状态保持（路由切换恢复搜索/分页/排序）                               |
-| `/demo/pro-table-column-resize`    | 列宽拖拽（`columnResize`）                                                |
-| `/demo/pro-table-formatter`        | v3.1 内置格式化器（dateTime/amount/percent/boolTag）+ 自定义函数          |
-| `/demo/pro-table-server-sort`      | 服务端排序（`sortable: 'custom'` + `sortParamsAdapter`）                  |
-| `/demo/pro-table-row-edit`         | 行内编辑（`enableRowEdit` 完整生命周期）                                  |
-| `/demo/pro-table-row-select`       | 单选列 / 多选列 / 跨页保持选中 / `getSelectedRows`/`clearSelection`       |
-| `/demo/pro-table-row-drag`         | 行拖拽排序（`enableRowDrag` + `setRowOrder`）                             |
-| `/demo/pro-table-expand`           | 展开行（`type: 'expand'` + `expand` 插槽）                                |
-| `/demo/pro-table-tree`             | 树形数据（`enableTree` + 懒加载 + 展开折叠）                              |
-| `/demo/pro-table-cell-span`        | 单元格合并（`enableCellSpan` + `judge` 函数）                             |
-| `/demo/pro-table-summary`          | 客户端汇总行（`enableSummary` + sum/avg/count/max/min）                   |
-| `/demo/pro-table-grouped-header`   | 多级表头（`children` 子列）                                               |
-| `/demo/pro-table-operation`        | 操作列下拉收纳（`ElDropdown`）+ 表头 Tooltip（`headerRender`）            |
-| `/demo/pro-table-edit-cell-vmodel` | 行内编辑 v-model:density / density 双向绑定                               |
-| `/demo/pro-table-style-override`   | 样式覆盖（BEM 命名空间 + 主题切换）                                       |
-| `/demo/pro-table-header-actions`   | 工具栏与批量操作（toolbar 配置式 API + SelectionBar 双通道，2026-09-18）  |
-| `/demo/pro-table-import-export`    | CSV 导入导出（零依赖 utils：BOM + RFC4180 + 表头映射，2026-09-18）        |
+| 路由                              | 内容                                                                      |
+| --------------------------------- | ------------------------------------------------------------------------- |
+| `/demo/pro-table-overview`        | **主 demo**：Props 完整用法 + 实例方法演示（对应 `ProTableOverview.vue`） |
+| `/demo/pro-table-engine-compare`  | element-plus vs vxe-table 双引擎并排对比（表格 + 格式化 + 排序）          |
+| `/demo/pro-table-search-advanced` | v3.2 多查询条件：basic/advanced 抽屉 + searchLayout + 已选回显            |
+| `/demo/pro-table-virtual-scroll`  | v3.0.1 虚拟滚动（10 万行 × 10 列 + 固定列）                               |
+| `/demo/pro-table-auto-height`     | v3.1 自动高度（撑满视口剩余空间）                                         |
+| `/demo/pro-table-state-persist`   | v3.1 状态保持（路由切换恢复搜索/分页/排序）                               |
+| `/demo/pro-table-column-resize`   | 列宽拖拽（`columnResize`）                                                |
+| `/demo/pro-table-formatter`       | v3.1 内置格式化器（dateTime/amount/percent/boolTag）+ 自定义函数          |
+| `/demo/pro-table-server-sort`     | 服务端排序（`sortable: 'custom'` + `sortParamsAdapter`）                  |
+| `/demo/pro-table-row-edit`        | 行内编辑（`enableRowEdit` 完整生命周期）                                  |
+| `/demo/pro-table-row-select`      | 单选列 / 多选列 / 跨页保持选中 / `getSelectedRows`/`clearSelection`       |
+| `/demo/pro-table-row-drag`        | 行拖拽排序（`enableRowDrag` + `setRowOrder`）                             |
+| `/demo/pro-table-expand`          | 展开行（`type: 'expand'` + `expand` 插槽）                                |
+| `/demo/pro-table-tree`            | 树形数据（`enableTree` + 懒加载 + 展开折叠）                              |
+| `/demo/pro-table-cell-span`       | 单元格合并（`enableCellSpan` + `judge` 函数）                             |
+| `/demo/pro-table-summary`         | 客户端汇总行（`enableSummary` + sum/avg/count/max/min）                   |
+| `/demo/pro-table-grouped-header`  | 多级表头（`children` 子列）                                               |
+| `/demo/pro-table-operation`       | 操作列下拉收纳（`ElDropdown`）+ 表头 Tooltip（`headerRender`）            |
+| `/demo/pro-table-style-override`  | 样式覆盖（BEM 命名空间 + 主题切换）                                       |
+| `/demo/pro-table-header-actions`  | 工具栏与批量操作（toolbar 配置式 API + SelectionBar 双通道，2026-09-18）  |
+| `/demo/pro-table-import-export`   | CSV 导入导出（零依赖 utils：BOM + RFC4180 + 表头映射，2026-09-18）        |
 
-> **主 demo 入口**：`/demo/pro-table-overview`（对应 `ProTableOverview.vue`）—— 查阅全部 prop、事件、实例方法的入口。其余 21 个 demo 按「基础 → 引擎 → 搜索 → 虚拟化 → 编辑 → 选择/拖拽/展开 → 树形/合并/汇总 → 工具栏/批量 → 导入导出 → 样式」分组覆盖各能力边界。
+> **主 demo 入口**：`/demo/pro-table-overview`（对应 `ProTableOverview.vue`）—— 查阅全部 prop、事件、实例方法的入口。其余 20 个 demo 按「基础 → 引擎 → 搜索 → 虚拟化 → 编辑 → 选择/拖拽/展开 → 树形/合并/汇总 → 工具栏/批量 → 导入导出 → 样式」分组覆盖各能力边界。
 >
 > **配套 mock**：`src/mock/pro-table/big-data.ts`（10 万行 × 10 列含固定列）+ `src/mock/pro-table/scenarios.ts`（各 demo 业务数据）。
