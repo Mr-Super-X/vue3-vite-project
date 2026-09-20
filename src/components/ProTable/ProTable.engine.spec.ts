@@ -14,6 +14,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { defineComponent, h, nextTick, onMounted } from 'vue' // vue（render 函数建 stub）
 import { mount, flushPromises } from '@vue/test-utils'
+import { ElDropdown } from 'element-plus' // v3.5：密度改下拉后 command 事件直发（文字按钮已移除）
 import ProTable from './ProTable.vue'
 import VxeTableBody from './components/VxeTableBody.vue'
 import ColSetting from './components/ColSetting.vue'
@@ -218,10 +219,8 @@ describe('ProTable v2.1 引擎切换', () => {
 
     // 密度：切换按钮更新根 div data-density（vxe 行高走 CSS 变量 --vxe-ui-table-row-height-* 覆盖，
     // 测量结果有缓存，需触发 vxe recalculate 重算行高）
-    const compactBtn = wrapper
-      .findAllComponents({ name: 'ElButton' })
-      .find((b) => b.text() === '紧凑')
-    await compactBtn?.trigger('click')
+    // v3.5：密度改为 ElDropdown，向 TableHeader 内的 ElDropdown 直发 command 事件（与点击菜单项等价）
+    wrapper.findComponent(ElDropdown).vm.$emit('command', 'compact')
     await nextTick()
     expect(wrapper.find('.vv-pro-table').attributes('data-density')).toBe('compact')
     expect(vxeRecalculateSpies.at(-1)).toHaveBeenCalled()
