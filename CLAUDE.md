@@ -4,11 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > 本文档是 `~/.claude/CLAUDE.md` 的项目级补充。所有全局规则（§一～§十一）自动适用，遇到冲突以**本文档为准**。
 >
-> **文档版本**：v1.8.0 | **生成日期**：2026-09-20 | **生效分支**：`feature/engine-optimization`
+> **文档版本**：v1.9.0 | **生成日期**：2026-09-20 | **生效分支**：`feature/engine-optimization`
 >
-> **最近更新**（2026-09-20）：全代码库 vs 文档审计同步（9 项实际修复）
+> **最近更新**（2026-09-20）：3 专项审计同步（18 项全部修复）
 >
-> - **v1.8 变更**：§1.3 状态管理分层修订——明确 barrel `src/store/index.ts` 实际导出 5 个全局 store（app/user/theme/tags-view/dict），`tags-view` 多页签刻意不持久化、`dict` 5min TTL；`useRouterStore`（`src/store/modules/router.ts`）**不在 barrel**，由 `router/guards/remote-menu.ts` 内部消费，不属于跨模块共享
+> - **v1.9 变更**：3 专项审计（8 composable + 5 组件 + 单测/CHANGELOG）共发现 18 项差异，**全部已修复**：
+>   - **组件契约**（docs/29 + docs/24）：ProTable 新增 §1.4 Events 表（sort-change/filter-change/engine-fallback）+ §1.5 Slots 表 + §7.5 SummaryAggregate 枚举；新增 `filterParamsAdapter` prop + `getFilterState()` expose；XForm 新增 Slots 段（footer/toastContainer）
+>   - **Composable 契约**（docs/07 + docs/23 + docs/27）：useAppRouter 新增 `pushByNameStrict` + `name: string` 类型放宽说明；useLogout 切 `useConfirm` 路径同步 + `loggingOut` 字段补全；useAuth 空数组语义；useConfirm 默认值表
+>   - **单测/CHANGELOG**（docs/04 + CHANGELOG）：line 596 deduper/request-coalescer 笔误修复；line 595 useTheme 幽灵 spec 修正；§常用命令补 `test:e2e` + `test:e2e:install`；§测试清单补 4 行（ProDialogForm/form-schema 子目录/layouts/default/demo）；CHANGELOG 顶部新增 v3.5 PR2（filterParamsAdapter / 事件完整披露）+ PR3（ProColumn\<T\> 泛型 9 commit）+ A11y 改造（10 commit）三条独立章节
+> - **v1.8 变更**（同日，前一轮全代码库审计）：§1.3 状态管理分层修订——明确 barrel `src/store/index.ts` 实际导出 5 个全局 store（app/user/theme/tags-view/dict），`tags-view` 多页签刻意不持久化、`dict` 5min TTL；`useRouterStore`（`src/store/modules/router.ts`）**不在 barrel**，由 `router/guards/remote-menu.ts` 内部消费，不属于跨模块共享
 > - 同步修订 `README.md`：§1.2 架构图、`§3 状态管理分层`、`§4 Layout 速选`（新增 portal）、`§6 BEM`（新增 bem.em() 语义）、`§目录结构`（composables 列表补全）、`§Mock 数据` 表格式、`§环境变量`（VITE_API_BASE_URL 默认值修正）
 > - 同步修订 `docs/04-构建与测试工具.md` §测试文件清单：补 caseConvert/theme/plugins/ProTable/form-schema/demo/portal/auth/build 等遗漏条目
 > - 同步修订 `docs/07-路由模块设计.md` §Layout 选择速查：新增 portal layout（顶部水平导航）

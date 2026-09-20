@@ -4,14 +4,34 @@
 
 > 🆕 **新同事请先看 [docs/10-新手指引.md](docs/10-新手指引.md)** —— 30 分钟 5 任务，带你从 clone 到加新模块。
 >
-> **最近更新**：2026-09-20 — **全代码库 vs 文档审计同步（9 项实际修复，3 项误判）**：
+> **最近更新**：2026-09-20 — **3 专项审计同步（18 项全部修复）**：
 >
-> - `README.md` 修订 9 处：§1.2 架构图补 `tags-view`/`dict` 全局 store；§3 状态管理分层列出 5 个 barrel store 及各自持久化策略；§4 Layout 速选新增 **portal**（顶部水平导航）；§6 BEM 补 `bem.em()` element modifier 语义；§目录结构 composables 列表补全 8 个；§Mock 数据表格格式统一；§环境变量 `VITE_API_BASE_URL` 默认值修正为"未设=当前 origin"；新增 `vxe-table` 技术栈行 + `build/*` 工程化行
-> - `docs/04-构建与测试工具.md` §测试文件清单补 8 项：caseConvert / theme / plugins / router guards / ProTable / form-schema / demo / portal / auth / build 等遗漏条目
-> - `docs/07-路由模块设计.md` §Layout 选择速查：新增 portal layout 行 + 典型搭配示例
-> - `CLAUDE.md` §1.3 状态管理分层：明确 5 个 barrel store + useRouterStore 不在 barrel
-> - **3 项误判**（H2 v-auth / H3 prod mock / M3 resizeMinToInitial）：经核查 `docs/23-权限设计.md §5.7.2` / `docs/22-mock使用规范.md §prod 防御层` / `docs/27-ProDialog使用指南.md §2.8` 已有详尽覆盖，**无需补充**
+> **Batch A — 组件契约 CRITICAL+HIGH**（docs/29 + docs/24）：
 >
+> - `docs/29-ProTable使用指南.md`：§1.2 新增 `filterParamsAdapter` prop（v3.5 PR2）+ §1.3 新增 `getFilterState()` expose + §1.4 新增 Events 表（`sort-change` / `filter-change` / `engine-fallback` 3 个事件完整披露）+ §1.5 新增 Slots 表
+> - `docs/24-XForm使用指南.md`：新增 Slots 段（`footer` + `toastContainer` + ToastEvent 类型契约）
+>
+> **Batch B — Composable P1**（docs/07 + docs/23）：
+>
+> - `docs/07-路由模块设计.md`：§"路由高层 API" 新增 `pushByNameStrict`（dev 模式 throw 兜底）+ 8 方法速查表 + 类型放宽说明（`name: string` 替代 RouteName 联合类型，2026-07-24 方案 A 后）
+> - `docs/23-权限设计.md`：§5.10 useLogout 改 `useConfirm` composable 调用（v1.14.2 改造）+ 新增 `loggingOut: Ref<boolean>` 字段说明
+>
+> **Batch C — 组件 MEDIUM**（docs/29）：§7.5 新增 `SummaryAggregate` 枚举表（`sum`/`avg`/`count`/`max`/`min`）
+>
+> **Batch D — 配置 MEDIUM**（docs/04 + CHANGELOG）：
+>
+> - `docs/04-构建与测试工具.md`：line 596 修复 `deduper`/`request-coalescer` 笔误（实际是 `request-merger`）
+> - `CHANGELOG.md`：顶部新增 v3.5 PR2（filterParamsAdapter / 事件完整披露）+ PR3（ProColumn\<T\> 泛型 9 commit）+ A11y 改造（10 commit）三条独立章节
+>
+> **Batch E — LOW 6 项小修补**（docs/04 + docs/23 + docs/27）：
+>
+> - `docs/23 §5.7.1` 新增 useAuth 空数组语义行
+> - `docs/27 §8.5.1` 新增 useConfirm 默认值表
+> - `docs/04 line 595` 移除 useTheme 幽灵 spec（由 theme.spec.ts 间接覆盖）
+> - `docs/04 §常用命令` 补 `pnpm test:e2e` + `pnpm test:e2e:install`
+> - `docs/04 §测试清单` 补 4 行（ProDialogForm / form-schema 子目录 / layouts/default / modules/demo）
+>
+> 上轮同步（2026-09-20）：全代码库审计 9 项修复 + 3 项误判，详见本节原历史段。
 > 上轮同步（2026-09-17）：docs/11 useDict v2 多 code 契约、docs/27 §8.5 useConfirm、docs/10 §3.7 命令式弹窗、docs/26 组件级杀手锏、docs/32 §3 错位路径、docs/04 测试覆盖；详见 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
