@@ -4,11 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > 本文档是 `~/.claude/CLAUDE.md` 的项目级补充。所有全局规则（§一～§十一）自动适用，遇到冲突以**本文档为准**。
 >
-> **文档版本**：v1.7.0 | **生成日期**：2026-09-18 | **生效分支**：`master`
+> **文档版本**：v1.8.0 | **生成日期**：2026-09-20 | **生效分支**：`feature/engine-optimization`
 >
-> **最近更新**（2026-09-18）：修正 §1.7 组件自动注册范围描述（Wave4-4 决策）
+> **最近更新**（2026-09-20）：全代码库 vs 文档审计同步（9 项实际修复）
 >
-> - **v1.7 变更**：§1.7 / §1.6 / §4 #15 三处修订——`unplugin-vue-components` 实际 dirs 为 `['src/components/common', 'src/components/ProTable', 'src/components/form-schema']` + `deep: true`（vite.config.ts:74-82），三目录下所有 .vue（含深层子目录，如 `ProDialog/` / `XForm` / `ProTable`）均自动注册，**都不要显式 import**。旧版「只扫 components/common 一级 / 子目录组件（form-schema/ProDialog/ 等）需显式 import」描述与 vite.config 实际配置矛盾（Wave4-4 AskUserQuestion 决策选 B 修订 CLAUDE.md，保留 vite.config 现状）
+> - **v1.8 变更**：§1.3 状态管理分层修订——明确 barrel `src/store/index.ts` 实际导出 5 个全局 store（app/user/theme/tags-view/dict），`tags-view` 多页签刻意不持久化、`dict` 5min TTL；`useRouterStore`（`src/store/modules/router.ts`）**不在 barrel**，由 `router/guards/remote-menu.ts` 内部消费，不属于跨模块共享
+> - 同步修订 `README.md`：§1.2 架构图、`§3 状态管理分层`、`§4 Layout 速选`（新增 portal）、`§6 BEM`（新增 bem.em() 语义）、`§目录结构`（composables 列表补全）、`§Mock 数据` 表格式、`§环境变量`（VITE_API_BASE_URL 默认值修正）
+> - 同步修订 `docs/04-构建与测试工具.md` §测试文件清单：补 caseConvert/theme/plugins/ProTable/form-schema/demo/portal/auth/build 等遗漏条目
+> - 同步修订 `docs/07-路由模块设计.md` §Layout 选择速查：新增 portal layout（顶部水平导航）
+>
+> **v1.7 变更**（2026-09-18）：§1.7 / §1.6 / §4 #15 三处修订——`unplugin-vue-components` 实际 dirs 为 `['src/components/common', 'src/components/ProTable', 'src/components/form-schema']` + `deep: true`（vite.config.ts:74-82），三目录下所有 .vue（含深层子目录，如 `ProDialog/` / `XForm` / `ProTable`）均自动注册，**都不要显式 import**。旧版「只扫 components/common 一级 / 子目录组件（form-schema/ProDialog/ 等）需显式 import」描述与 vite.config 实际配置矛盾（Wave4-4 AskUserQuestion 决策选 B 修订 CLAUDE.md，保留 vite.config 现状）
+>
 > - 同步删除「unplugin 默认 dirs 只扫一级」错误机制说明（实际 deep: true 深扫）
 > - 检测方法从「删除 `import Xxx from '@/components/common/...'`」泛化为「删除 `import Xxx from '...'`」
 >
@@ -104,7 +110,13 @@ Feature-Sliced 风格的中后台门户前端（`vue3-vite-project`，企业中�
 
 ### 1.3 状态管理分层
 
-- **全局 `store/modules/`**：仅跨模块共享（`app` 侧边栏/语言、`user` token/profile/权限、`theme` 主题持久化、`router` UI 状态）
+- **全局 `store/modules/`**（经 `src/store/index.ts` barrel 导出）：仅跨模块共享
+  - `app`（侧边栏/语言/布局模式/移动端断点/globalLoading，`pick: ['layout', 'locale']` 持久化）
+  - `user`（token/profile/权限，`pick: ['token', 'profile']` 持久化）
+  - `theme`（主题模式 + 品牌色，`pick: ['mode', 'primaryColor']` 持久化）
+  - `tags-view`（已访问路由 + keep-alive 缓存名单，**刻意不持久化**避免换账号看到老 tab）
+  - `dict`（字典项业务层缓存，5min TTL + Promise 防抖池）
+  - 注：`src/store/modules/router.ts` 内的 `useRouterStore`（远程菜单加载态/路由错误）**不在 barrel**，由 `router/guards/remote-menu.ts` 直接消费，不属于跨模块共享
 - **模块私有 store**：归 `modules/<m>/store/`，业务状态不污染全局
 - **风格**：Pinia Setup Store（接近 composables 心智，便于复用）
 - **持久化**：`pinia-plugin-persistedstate` 仅对 store 字段 `pick` 持久化（避免整体写 localStorage）

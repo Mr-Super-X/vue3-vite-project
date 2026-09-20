@@ -4,16 +4,15 @@
 
 > 🆕 **新同事请先看 [docs/10-新手指引.md](docs/10-新手指引.md)** —— 30 分钟 5 任务，带你从 clone 到加新模块。
 >
-> **最近更新**：2026-09-17 — **本轮文档深度同步**：
+> **最近更新**：2026-09-20 — **全代码库 vs 文档审计同步（9 项实际修复，3 项误判）**：
 >
-> - `docs/11-字典使用规范.md` v2 重写（useDict 多 code 契约形态 `{ gender, user_status, refreshDict }`）+ §9 v1→v2 迁移速查
-> - `docs/27-ProDialog使用指南.md` 新增 §8.5 `useConfirm` 命令式章节（取消 resolve false）+ 测试覆盖表补 `useConfirm.spec.ts`
-> - `docs/10-新手指引.md` 新增 §3.7 命令式弹窗（useConfirm / useDialog）示例
-> - `docs/26-项目推荐说明.md` 新增"组件级杀手锏"小节 + 完整组件/Composable 文档索引
-> - `docs/32-常用交互指令.md` 修正 §3 `docs/34-权限设计.md` 错位路径 → `docs/23-权限设计.md`
-> - `docs/04-构建与测试工具.md` 测试覆盖表补 `useDialog` / `useConfirm` / `useTheme` 三个 spec
+> - `README.md` 修订 9 处：§1.2 架构图补 `tags-view`/`dict` 全局 store；§3 状态管理分层列出 5 个 barrel store 及各自持久化策略；§4 Layout 速选新增 **portal**（顶部水平导航）；§6 BEM 补 `bem.em()` element modifier 语义；§目录结构 composables 列表补全 8 个；§Mock 数据表格格式统一；§环境变量 `VITE_API_BASE_URL` 默认值修正为"未设=当前 origin"；新增 `vxe-table` 技术栈行 + `build/*` 工程化行
+> - `docs/04-构建与测试工具.md` §测试文件清单补 8 项：caseConvert / theme / plugins / router guards / ProTable / form-schema / demo / portal / auth / build 等遗漏条目
+> - `docs/07-路由模块设计.md` §Layout 选择速查：新增 portal layout 行 + 典型搭配示例
+> - `CLAUDE.md` §1.3 状态管理分层：明确 5 个 barrel store + useRouterStore 不在 barrel
+> - **3 项误判**（H2 v-auth / H3 prod mock / M3 resizeMinToInitial）：经核查 `docs/23-权限设计.md §5.7.2` / `docs/22-mock使用规范.md §prod 防御层` / `docs/27-ProDialog使用指南.md §2.8` 已有详尽覆盖，**无需补充**
 >
-> 上轮同步：docs/27 ProDialog `resizeMinToInitial`、docs/29 ProTable v3.4 `searchLayout` + v3.2/v3.0.1 多 prop、docs/04 构建产物分目录（`dist/js/` `dist/css/` `dist/img/`）、ProTable CONTRIBUTING.md v3.x 已知限制；详见 [CHANGELOG.md](CHANGELOG.md)。
+> 上轮同步（2026-09-17）：docs/11 useDict v2 多 code 契约、docs/27 §8.5 useConfirm、docs/10 §3.7 命令式弹窗、docs/26 组件级杀手锏、docs/32 §3 错位路径、docs/04 测试覆盖；详见 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
 
@@ -33,25 +32,26 @@
 
 ## 🛠️ 技术栈
 
-| 维度         | 选型                        | 版本                                                                                  |
-| ------------ | --------------------------- | ------------------------------------------------------------------------------------- |
-| 核心框架     | Vue                         | ^3.5.38                                                                               |
-| 构建工具     | Vite                        | ^8.0.16                                                                               |
-| 语言         | TypeScript                  | ~6.0.0（strict 模式）                                                                 |
-| 包管理器     | pnpm                        | >=11.x                                                                                |
-| Node 要求    | -                           | >=22.18 或 >=24.12                                                                    |
-| UI 组件库    | Element Plus                | ^2.14.3                                                                               |
-| 原子化 CSS   | UnoCSS                      | ^66.7.5（兼容 SCSS/LESS/原生 CSS）                                                    |
-| 状态管理     | Pinia                       | ^3.0.4                                                                                |
-| 路由         | Vue Router                  | ^5.1.0                                                                                |
-| 国际化       | Vue I18n                    | ^11.4.6                                                                               |
-| 网络层       | Axios                       | ^1.18.1                                                                               |
-| 浏览器基线   | normalize.css               | ^8.0.1                                                                                |
-| 日期工具     | dayjs                       | ^1.11.21                                                                              |
-| API Mock     | vite-plugin-mock            | ^3.0.2                                                                                |
-| Cookie 工具  | js-cookie                   | ^3.0.8（仅非敏感偏好场景预留；凭证走 httpOnly cookie，JS 不可读写，严禁用其存 token） |
-| 测试框架     | Vitest                      | ^4.1.9 + @vue/test-utils + jsdom                                                      |
-| Pinia 持久化 | pinia-plugin-persistedstate | ^4.7.1（仅 store 字段 pick 持久化）                                                   |
+| 维度         | 选型                        | 版本                                                                                     |
+| ------------ | --------------------------- | ---------------------------------------------------------------------------------------- |
+| 核心框架     | Vue                         | ^3.5.38                                                                                  |
+| 构建工具     | Vite                        | ^8.0.16                                                                                  |
+| 语言         | TypeScript                  | ~6.0.0（strict 模式）                                                                    |
+| 包管理器     | pnpm                        | >=11.x                                                                                   |
+| Node 要求    | -                           | >=22.18 或 >=24.12                                                                       |
+| UI 组件库    | Element Plus                | ^2.14.3                                                                                  |
+| 原子化 CSS   | UnoCSS                      | ^66.7.5（兼容 SCSS/LESS/原生 CSS）                                                       |
+| 状态管理     | Pinia                       | ^3.0.4                                                                                   |
+| 表格组件     | vxe-table                   | ^4.21.7（ProTable 双引擎：Element Plus / vxe-table 二选一，v3.5 起 Element Plus 为默认） |
+| 路由         | Vue Router                  | ^5.1.0                                                                                   |
+| 国际化       | Vue I18n                    | ^11.4.6                                                                                  |
+| 网络层       | Axios                       | ^1.18.1                                                                                  |
+| 浏览器基线   | normalize.css               | ^8.0.1                                                                                   |
+| 日期工具     | dayjs                       | ^1.11.21                                                                                 |
+| API Mock     | vite-plugin-mock            | ^3.0.2                                                                                   |
+| Cookie 工具  | js-cookie                   | ^3.0.8（仅非敏感偏好场景预留；凭证走 httpOnly cookie，JS 不可读写，严禁用其存 token）    |
+| 测试框架     | Vitest                      | ^4.1.9 + @vue/test-utils + jsdom                                                         |
+| Pinia 持久化 | pinia-plugin-persistedstate | ^4.7.1（仅 store 字段 pick 持久化）                                                      |
 
 ---
 
@@ -79,14 +79,13 @@
 ├── utils/
 │   ├── storage.ts / dayjs.ts / bem.ts / _utils.ts
 │   └── ...
-├── store/modules/          ← 跨模块共享 Pinia
-│   ├── app.ts              ← 侧边栏/语言/全局 loading
-│   ├── user.ts             ← token/profile/权限
-│   ├── theme.ts            ← 主题模式（持久化）
-│   ├── dict.ts             ← 字典缓存
-│   ├── tags-view.ts        ← 标签页（已访问路由缓存）
-│   └── router.ts           ← 路由 UI 状态
-└── layouts/                ← 路由级布局（blank/default）
+├── store/modules/          ← 跨模块共享 Pinia（src/store/index.ts barrel）
+│   ├── app.ts              ← 侧边栏/语言/布局/移动端/全局 loading（pick 持久化 layout+locale）
+│   ├── user.ts             ← token/profile/权限（pick 持久化 token+profile）
+│   ├── theme.ts            ← 主题模式（pick 持久化 mode+primaryColor）
+│   ├── tags-view.ts        ← 多页签（已访问路由缓存；刻意不持久化，避免换账号看到老 tab）
+│   └── dict.ts             ← 字典缓存（5min TTL + Promise 防抖池）
+└── layouts/                ← 路由级布局（default/blank/portal）
 ```
 
 > **模块化范式（v1.0.0+）**：`directives/` 与 `plugins/` 均采用 `export default { install(app) {...} }` 模式，每个模块独立 `.d.ts` 类型文件，`index.ts` 统一注册入口。main.ts 集中 `app.use()` 接入。详见 [`docs/08-模块化架构总览.md`](docs/08-模块化架构总览.md)。
@@ -106,10 +105,16 @@
 
 ### 3. 状态管理分层
 
-- **全局 store/modules/**：仅跨模块共享（app 侧边栏/语言、user token/profile/权限、theme 主题、router 路由状态）
+- **全局 store/modules/**（经 `src/store/index.ts` barrel 导出）：仅跨模块共享
+  - `app`（侧边栏/语言/布局模式/移动端断点/globalLoading，`pick: ['layout', 'locale']` 持久化）
+  - `user`（token/profile/权限，`pick: ['token', 'profile']` 持久化）
+  - `theme`（主题模式 + 品牌色，`pick: ['mode', 'primaryColor']` 持久化）
+  - `tags-view`（已访问路由 + keep-alive 缓存名单，**刻意不持久化**，避免换账号看到老 tab）
+  - `dict`（字典项业务层缓存，5min TTL + Promise 防抖池；不持久化）
+  - 注：`src/store/modules/router.ts` 内有 `useRouterStore`（远程菜单加载态/路由错误），但**不在 barrel 内**，由 `router/guards/remote-menu.ts` 直接消费，不属于跨模块共享
 - **模块私有 store**：归 `modules/<m>/store/`，业务状态不污染全局
 - **Pinia Setup Store 风格**：更接近 composables 心智，便于复用
-- **持久化**：`pinia-plugin-persistedstate` 仅对 store 字段 `pick` 持久化（避免整体写 localStorage）
+- **持久化**：`pinia-plugin-persistedstate` 仅对 store 字段 `pick` 持久化（避免整体写 localStorage），各 store 具体 pick 字段见上方
 
 ### 4. 防御性 UI 三态
 
@@ -195,22 +200,23 @@ utils/      ← validate.ts      └── routes/index.ts（自动注册）
 
 #### 3. 全局/模块双层状态管理
 
-| 层       | 路径                 | 放什么                                                                                                        | 不放什么       |
-| -------- | -------------------- | ------------------------------------------------------------------------------------------------------------- | -------------- |
-| 全局     | `store/modules/`     | 跨模块共享：`app`（侧边栏/语言）、`user`（token/profile/权限）、`theme`（主题模式）、`router`（路由 UI 状态） | 任何业务状态   |
-| 模块私有 | `modules/<m>/store/` | 业务状态：列表筛选、表单临时态、详情缓存                                                                      | 跨模块共享数据 |
+| 层       | 路径                 | 放什么                                                                                                                                            | 不放什么       |
+| -------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| 全局     | `store/modules/`     | 跨模块共享（barrel 经 `src/store/index.ts` 导出）：`app`（UI 偏好）、`user`（登录态）、`theme`（主题）、`tags-view`（多页签）、`dict`（字典缓存） | 任何业务状态   |
+| 模块私有 | `modules/<m>/store/` | 业务状态：列表筛选、表单临时态、详情缓存                                                                                                          | 跨模块共享数据 |
 
 #### 4. 技术栈替换零侵入
 
 目录边界限定了每个技术决策的影响范围：
 
-| 想做的事                      | 改的位置                         | 业务模块影响                                |
-| ----------------------------- | -------------------------------- | ------------------------------------------- |
-| Pinia → Redux                 | `store/`                         | 零（业务模块不直接 import 全局 store 内部） |
-| Element Plus → Ant Design Vue | `components/common/` + `main.ts` | 零（业务模块只用 `common/` 封装）           |
-| Axios → Fetch                 | `api/http.ts`                    | 零（业务模块只调 `api/modules/*.ts`）       |
-| UnoCSS → Tailwind             | `uno.config.ts` + 全局样式       | 零                                          |
-| v-inputDebounce 自定义实现    | `directives/_utils.ts`           | 零（业务模块只通过 v-inputDebounce 用）     |
+| 想做的事                      | 改的位置                                             | 业务模块影响                                |
+| ----------------------------- | ---------------------------------------------------- | ------------------------------------------- |
+| Pinia → Redux                 | `store/`                                             | 零（业务模块不直接 import 全局 store 内部） |
+| Element Plus → Ant Design Vue | `components/common/` + `main.ts`                     | 零（业务模块只用 `common/` 封装）           |
+| Axios → Fetch                 | `api/http.ts`                                        | 零（业务模块只调 `api/modules/*.ts`）       |
+| UnoCSS → Tailwind             | `uno.config.ts` + 全局样式                           | 零                                          |
+| Vite 8 配置拆分               | `build/*`（aliases/vendor-chunks/scss/server/proxy） | vite.config.ts 保持轻量入口（≈230 行）      |
+| v-inputDebounce 自定义实现    | `directives/_utils.ts`                               | 零（业务模块只通过 v-inputDebounce 用）     |
 
 #### 5. 并行开发友好
 
@@ -238,7 +244,8 @@ vue3-vite-project/
 │   ├── components/      # common/（通用无业务，跨模块复用）
 │   │   ├── common/      # AsyncState / ErrorBoundary
 │   │   └── index.ts     # install 模式自动注册 common/ 下的 .vue
-│   ├── composables/     # useRequest / useAppRouter / useDialog / useConfirm / useDict / useTheme / useAuth / useLogout
+│   ├── composables/     # useAppRouter / useRequest / useAuth / useLogout / useDialog / useConfirm / useDict / useTheme
+│                    # （全部由 unplugin-auto-import 全局注入，<script setup> 无须显式 import）
 │   ├── directives/      # 自定义指令（install 模式 + .d.ts 分离）
 │   │   ├── _utils.ts      # 通用 debounce + isFunction
 │   │   ├── inputDebounce.{ts,d.ts}    # v-inputDebounce 输入防抖
@@ -353,7 +360,7 @@ pnpm dev:local
 | --------------- | ---------------------------------------------------------- | -------------- |
 | auth            | `/api/auth/login`、`/api/auth/profile`、`/api/auth/logout` | admin / 123456 |
 | user            | `/api/user/list`、`/api/user/:id`                          | -              |
-| menu            | `/api/menu`（远程菜单）                                    | -              |
+| menu（远程）    | `/api/menu`（远程菜单，remote 模式守卫调用）               | -              |
 | portal-overview | `/api/portal/overview`（首页数据总览）                     | -              |
 
 > `/api/menu`（远程菜单）在 remote 模式下由守卫调用。已内置 mock（Home + UserList），无需额外配置即可跑通端到端流程。
@@ -366,10 +373,11 @@ pnpm dev:local
 
 #### Layout 速选（先决定用哪个）
 
-| Layout      | 组件                          | 视觉特征                 | 适用场景                     |
-| ----------- | ----------------------------- | ------------------------ | ---------------------------- |
-| **default** | `@/layouts/default/index.vue` | 左侧 Sidebar + 顶 Header | 业务页（首页 / 列表 / 表单） |
-| **blank**   | `@/layouts/blank/index.vue`   | 居中、无侧栏无顶栏       | 登录页 / 注册页 / 第三方回调 |
+| Layout      | 组件                          | 视觉特征                            | 适用场景                       |
+| ----------- | ----------------------------- | ----------------------------------- | ------------------------------ |
+| **default** | `@/layouts/default/index.vue` | 左侧 Sidebar + 顶 Header + TagsView | 业务页（首页 / 列表 / 表单）   |
+| **blank**   | `@/layouts/blank/index.vue`   | 居中、无侧栏无顶栏                  | 登录页 / 注册页 / 第三方回调   |
+| **portal**  | `@/layouts/portal/index.vue`  | 顶部导航 + 内容区（无侧栏）         | 门户 / 对外展示 / 公开站点首页 |
 
 > ✅ Sidebar 菜单渲染已在 v3 实现：从 `router.getRoutes()` 自动派生 + 多级递归 + i18n + 折叠态联动（`src/layouts/default/components/Sidebar.vue`）。新业务模块的菜单只需按 `modules/<m>/routes/index.ts` 声明路由即自动出现，无需手动维护菜单列表。
 
@@ -431,6 +439,10 @@ const routes: RouteRecordRaw[] = [
 
 - **BEM 命名规范**：Block = `vv-block`（或 `c-{name}`），Element = `__element`，Modifier = `--modifier`，State = `is-{state}`（运行时由 `is()` 生成）
 - **运行时工具**：`createNamespace('xxx')` 返回 `{ b, e, m, be, bm, em, bem, is }`，组件用 `const bem = createNamespace('header-bar')` + `:class="[bem.b(), bem.e('user')]"`
+- **BEM 方法语义区分**（CLAUDE.md §3.2 #9 强约束）：
+  - `bem.m('xxx')` → `vv-<block>--xxx`（block modifier，作用于整个组件，如卡片整体 `'shimmer'`）
+  - `bem.em('elem', 'xxx')` → `vv-<block>__elem--xxx`（element modifier，作用于某个元素，如 `__row--first`）
+  - 误用会导致 class 与 sass 嵌套选择器不匹配，整片样式失效
 - **编译期 mixin**：`vite.config.ts` 通过 sass `additionalData` 把 `@use '@/assets/styles/mixins/bem' as *` 自动注入到每个 `<style lang="scss">` 顶部，业务方**不要**重复 `@use`。直接 `@include b / e / m / is` 拼接即可。
 - **双主题**：浅色 + 深色 + 跟随系统，切换 API `useTheme().toggleMode()`（Pinia store + localStorage 持久化）
 
@@ -570,7 +582,7 @@ pnpm build
 | 变量                     | 说明                                                                                                                                                          | 默认值              |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
 | `VITE_APP_TITLE`         | 应用标题首屏占位（`src/main.ts` 初始化；登录后由路由 `meta.title` 覆盖）                                                                                      | 企业中后台管理      |
-| `VITE_API_BASE_URL`      | API 基础 URL（baseURL，前缀统一管理）                                                                                                                         | `/api`              |
+| `VITE_API_BASE_URL`      | API 基础 URL（`src/api/http.ts:106` `getAPIBaseURL()` 直接读取；axios 未设 baseURL 时回退到当前 origin，dev 默认同源，prod 需显式配）                         | 未设=当前 origin    |
 | `VITE_USE_MOCK`          | mock 数据开关（`vite.config.ts` viteMockServe 读取；`true`/未设=启用，`false`=关闭用于联调真后端）                                                            | dev 默认开启        |
 | `VITE_MENU_SOURCE`       | 菜单加载模式（`local` / `remote`，未设置时默认 `remote`）                                                                                                     | `remote`            |
 | `VITE_HISTORY_MODE`      | 路由历史模式（`web` / `hash`，用于子路径或静态托管部署）                                                                                                      | `web`               |
