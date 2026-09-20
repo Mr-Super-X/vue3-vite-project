@@ -18,8 +18,8 @@ import ToolbarRenderer from './ToolbarRenderer.vue' // 2026-09-18：toolbar 配�
 import type { ProColumn, TableDensity, ToolbarAction, ToolbarCtx } from '../types'
 
 interface Props {
-  columns: ProColumn<T>[]
-  visibleColumns: ProColumn<T>[]
+  columns: ProColumn[]
+  visibleColumns: ProColumn[]
   density: TableDensity
   colSettingVisible: boolean
   /** v3.1：当前全屏状态（按钮高亮用） */
