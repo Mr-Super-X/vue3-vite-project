@@ -126,6 +126,24 @@ describe('TreeAdapter (vxeTreeAdapter)', () => {
     expect(setTreeExpand).toHaveBeenNthCalledWith(2, { id: 'b' }, true)
   })
 
+  // v3.5 hotfix-10 回归：用户点内联收起按钮 → useTreeData 从 expandedKeys 删除 key →
+  // syncExpanded 必须对「不在 keys 里的行」发 setTreeExpand(row, false)。
+  // 原实现只遍历 keys 发 true（单边同步）→ vxe-table 内部展开 Map 残留 true → 收起无效。
+  // el 引擎无此缺陷（flatData 重算后子行直接从数据消失），故仅 vxe 适配器需要 false 路径
+  it('syncExpanded 对不在 keys 中的行调 setTreeExpand(row, false)（hotfix-10：收起链路）', () => {
+    const setTreeExpand = vi.fn()
+    const adapter = createVxeTreeAdapter(() => ({ setTreeExpand }))
+    const rowsByKey = new Map<string | number, Record<string, unknown>>([
+      ['a', { id: 'a' }],
+      ['b', { id: 'b' }],
+    ])
+    // 场景：a 展开中，b 刚被用户收起（已从 keys 移除，但 vxe 内部展开 Map 仍残留 true）
+    adapter.syncExpanded(['a'], rowsByKey)
+    expect(setTreeExpand).toHaveBeenCalledTimes(2)
+    expect(setTreeExpand).toHaveBeenCalledWith({ id: 'a' }, true)
+    expect(setTreeExpand).toHaveBeenCalledWith({ id: 'b' }, false)
+  })
+
   // v3.5 hotfix-6：syncExpanded 末尾须调 cacheRowMap(true) 重建 vxe-table 行索引。
   // 根因：vxe lazy=true 才走 loadTreeChildren（重建 fullAllDataRowIdData）；
   // 我们用 useTreeData 自管懒加载 → setTreeExpand 不会重建 → 子节点

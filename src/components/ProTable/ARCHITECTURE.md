@@ -10,6 +10,7 @@
 > - **useTableCapabilities vxe 引擎能力补齐**：移除 treeData/rowDrag 的 `!isVxeEngine` 守卫；新增三者冲突检测（vxe + 树形 + 拖拽 同时启用时 rowDrag 退化 null + warn）
 > - **VxeTableBody 接线**：新增 treeData + rowDrag prop + defineExpose.getTbody（onMounted 前 fallback 用模板根 div ref query）
 > - **ProTable.vue 双引擎条件透传**：vxeTableBindings 接收 treeData + rowDrag 与 enable-row-drag
+> - **v3.5 hotfix-10 树形收起修复**：`createVxeTreeAdapter.syncExpanded` 从单边同步（只遍历 keys 发 `setTreeExpand(row, true)`）改为双边同步（遍历 rowsByKey 全量行，按 keys 集合判定 true/false）。原实现下用户收起时 useTreeData 已从 expandedKeys 删除 key，但 vxe-table 内部展开 Map 收不到 false 指令 → 视图保持展开；el 引擎靠 flatData 重算无此缺陷
 >
 > **唯一约束**：vxe + 树形 + 行拖拽 三者同时启用会触发 console.warn（sortablejs 与 vxe tree-node 行结构冲突），行拖拽自动退化 null。
 >

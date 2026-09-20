@@ -158,9 +158,16 @@ export function createVxeTreeAdapter(
     syncExpanded(keys, rowsByKey): void {
       const vxe = getVxeTable()
       if (!vxe?.setTreeExpand) return
-      for (const k of keys) {
-        const row = rowsByKey.get(k)
-        if (row) vxe.setTreeExpand(row, true)
+      // v3.5 hotfix-10：双边同步 —— 遍历 rowsByKey 全量行（而非仅 keys），
+      // 不在 keys 里的行显式 setTreeExpand(row, false)。
+      // 原实现只遍历 keys 发 true（单边同步）：用户收起时 useTreeData 已从 expandedKeys
+      // 删除该 key，vxe-table 内部展开 Map 收不到 false 指令 → 视图保持展开（收起无效）。
+      // el 引擎无此缺陷（flatData 重算后子行直接从数据消失），故仅 vxe 适配器需要 false 路径。
+      // vxe 侧若因程序化 setTreeExpand 回吐 toggle-tree-expand 事件，
+      // VxeTableBody.handleToggleTreeExpand 的「状态一致则 noop」守卫阻断循环。
+      const expandedSet = new Set(keys)
+      for (const [key, row] of rowsByKey) {
+        vxe.setTreeExpand(row, expandedSet.has(key))
       }
       // v3.5 hotfix-6：setTreeExpand 不会自动重建 vxe-table 内部 fullAllDataRowIdData——
       // vxe lazy=true 才走 loadTreeChildren（重建索引），我们用 useTreeData 自管懒加载

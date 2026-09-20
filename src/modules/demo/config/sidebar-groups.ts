@@ -36,13 +36,13 @@ export const CN_NAMES: Record<string, string> = {
   ProTableRowDrag: '行拖拽排序',
   ProTableServerSort: '服务端排序',
   ProTableServerFilter: '服务端筛选',
-  ProTableEngineCompare: '引擎对比（vxe-table）',
+  ProTableEngineCompare: 'vxe-table引擎对比',
   ProTableStyleOverride: '样式定制',
   ProTableExpand: '表格内嵌',
   // ProTable v3.1 能力验证（拆分为聚焦 demo，原复合页 ProTableV31Features 已移除）
   ProTableFormatter: '内置格式化器',
-  ProTableRowSelect: '单选 / 跨页多选',
-  ProTableAutoHeight: '自动高度 + 全屏',
+  ProTableRowSelect: '单选/跨页多选',
+  ProTableAutoHeight: '自动高度/全屏',
   ProTableStatePersist: '状态保持恢复',
   ProTableOperation: '操作收纳/表头 Tooltip',
   ProTableColumnResize: '列宽拖拽',
@@ -83,7 +83,7 @@ export const CN_NAMES: Record<string, string> = {
   XFormModelWarn: 'model 缺失警告',
   XFormNested: '复杂布局',
   XFormNestedArray: '嵌套数组节点',
-  XFormOrderCreate: '端到端订单创建业务示例',
+  XFormOrderCreate: '订单创建业务示例',
   XFormPersist: '草稿持久化',
   XFormPersistSchemaVersion: '草稿持久化',
   XFormPropsAdvanced: 'XFormProps 高级配置',
@@ -96,7 +96,7 @@ export const CN_NAMES: Record<string, string> = {
   XFormGlobalReadonly: '全局只读',
   XFormI18n: 'label 函数式 i18n',
   XFormIgnore: '节点忽略',
-  XFormValidationDebounce: '跨字段校验 debounce',
+  XFormValidationDebounce: '跨字段校验防抖',
   XFormResponsive: '响应式布局',
   XFormSchemaIndex: '索引快照',
   XFormScrollToError: '错误自动滚动',
@@ -109,10 +109,10 @@ export const CN_NAMES: Record<string, string> = {
   XFormValidateField: '逐字段校验',
   XFormZod: 'zod 校验',
   // ProDialog 弹窗组件
-  ProDialogOverview: '用法总览（声明式）',
+  ProDialogOverview: '声明式弹窗',
   ProDialogResizable: '可拖拉调整宽高',
-  ProDialogUseDialog: '命令式调用（useDialog）',
-  ProDialogFormOverview: '用法总览（弹窗表单）',
+  ProDialogUseDialog: '命令式弹窗',
+  ProDialogFormOverview: '弹窗表单用法',
   // BaseChart 图表组件
   BaseChartOverview: '用法总览',
   BaseChartSaleFunnel: '销售转化漏斗',
@@ -131,7 +131,7 @@ export const CN_NAMES: Record<string, string> = {
   AsyncState: '异步状态容器',
   ErrorBoundary: '错误边界',
   Dict: '字典组件（DictSelect / DictTag）',
-  RichTextEditor: '富文本编辑器（WangEditor V5）',
+  RichTextEditor: '富文本编辑器',
 }
 
 /** 返回组件名所属分组标题（未命中任何前缀时归入兜底组） */
