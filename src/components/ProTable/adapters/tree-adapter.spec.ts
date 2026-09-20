@@ -64,13 +64,19 @@ describe('TreeAdapter (vxeTreeAdapter)', () => {
       expandAll: boolean
       accordion: boolean
       trigger: string
+      indent: number
     }
     expect(tc.childrenField).toBe('__pro_table_flat__')
-    expect(tc.hasChildren).toBe('__pro_table_flat__')
+    // v3.5 hotfix-4：hasChildren 指向 _hasChildren（useTreeData.normalize 注入的字段），
+    // 让 vxe-table 识别父节点并渲染箭头图标（之前 TREE_PLACEHOLDER 导致全部判为叶子节点）
+    expect(tc.hasChildren).toBe('_hasChildren')
     expect(tc.expandAll).toBe(false)
     expect(tc.accordion).toBe(false)
-    // trigger: 'cell' 与 el-table 单元格点击展开语义一致（vxe 默认 'default' 图标点击）
-    expect(tc.trigger).toBe('cell')
+    // trigger: 'default'（箭头点击），与 vxe-table v4 默认一致；
+    // 原 'cell' 会让 vxe 不渲染展开箭头（v3.5 hotfix-4 修复）
+    expect(tc.trigger).toBe('default')
+    // indent: 20 与 ProColumn.tree.indentSize 默认值对齐，避免子级与父级挤在一起
+    expect(tc.indent).toBe(20)
   })
 
   it('onExpand 调 vxe-table setTreeExpand(row, true)', () => {

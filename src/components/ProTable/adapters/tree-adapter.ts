@@ -111,11 +111,19 @@ export function createVxeTreeAdapter(
       // （useTreeData 已经把 children 字段重定向到 __pro_table_flat__ 让两引擎都不重复渲染）
       return {
         treeConfig: {
+          // childrenField 占位符：避免 vxe-table 识别真实 children 字段重复渲染（与 el 引擎共用策略）
           childrenField: TREE_PLACEHOLDER,
-          hasChildren: TREE_PLACEHOLDER,
+          // hasChildren 指向 useTreeData.normalize 注入的 _hasChildren 字段（业务数据自带）；
+          // v3.5 hotfix-4 修复：原值 TREE_PLACEHOLDER 让 vxe-table 找不到行内 _hasChildren 标记，
+          // 判定全部为叶子节点 → 不渲染箭头图标，无法展开
+          hasChildren: '_hasChildren',
           expandAll: false,
           accordion: false,
-          trigger: 'cell', // vxe-table v4 默认 'default'（图标点击），改 'cell' 与 el-table 单元格点击一致
+          // trigger 改回 'default'（箭头点击），与 vxe-table v4 默认一致；
+          // 原 'cell' 让 vxe 不渲染展开箭头（v3.5 hotfix-4 修复）
+          trigger: 'default',
+          // 缩进 20px：与 ProColumn.tree.indentSize 默认值对齐；vxe 缺省可能为 0 导致子级与父级挤在一起
+          indent: 20,
         },
       }
     },

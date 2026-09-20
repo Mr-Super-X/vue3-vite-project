@@ -156,14 +156,6 @@ const treeConfigBinding = computed<Record<string, unknown> | undefined>(() =>
   treeAdapter.value ? treeAdapter.value.getTreeConfig() : undefined
 )
 
-/** 树形列定位：首个声明 col.tree 的列；多列声明取首（与 el-table 同语义） */
-const treeColumnIndex = computed<number>(() => {
-  if (!props.treeData) return -1
-  const idx = props.columns.findIndex((c) => Boolean(c.tree))
-  // 无声明时默认第一列，避免 vxe-column.tree-node 必须手动标
-  return idx === -1 ? 0 : idx
-})
-
 /**
  * v3.5 PR1-B：watch expandedKeys 把 useTreeData 状态全量回灌 vxe 引擎侧 Map。
  * 触发场景：① revealKeys 批量展开 ② 外部 expandNode/collapseNode API 调用
@@ -396,7 +388,8 @@ watch(
         v-bind="{
           ...toVxeColumnProps(col),
           ...(props.columnResize ? { resizable: true } : {}),
-          ...(props.treeData && index === treeColumnIndex ? { 'tree-node': true } : {}),
+          // v3.5 hotfix-4：移除硬编码 'tree-node': true；
+          // 由 toVxeColumnProps 基于 col.tree 派生 treeNode 字段（语义更清晰、避开了 v-bind 对连字符键的边界问题）
         }"
       >
         <!-- 自定义表头渲染（col.headerRender） -->

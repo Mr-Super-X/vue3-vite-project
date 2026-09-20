@@ -61,6 +61,10 @@ export function toVxeColumnProps<T extends object = Record<string, unknown>>(
     derived.minWidth = ENUM_TAG_MIN_WIDTH
   }
   if (col.fixed !== undefined) derived.fixed = col.fixed
+  // v3.5 hotfix-4：treeNode 派生 —— 当 ProColumn.tree 声明时把该列标记为 vxe 树形节点列
+  // （vxe-column tree-node 字段名是连字符格式，Vue 模板 v-bind 不接受连字符键
+  //  → 由 toVxeColumnProps 集中翻译比在 VxeTableBody 模板里硬编码 'tree-node' 更稳健）
+  if (col.tree !== undefined) derived.treeNode = true
   // 先铺 vxeProps 再覆盖派生值：实现「补充不覆盖」策略（undefined 派生键已被上面的守卫跳过）
   return { ...vxeProps, ...definedEntries(derived) }
 }
