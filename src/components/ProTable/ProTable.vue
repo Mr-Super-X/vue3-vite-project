@@ -104,6 +104,8 @@ const props = withDefaults(defineProps<ProTableProps<T>>(), {
   // 原 `v-if="props.showSelectedTags !== false"` 恒 false 导致 SelectedTags 永不挂载。
   // 显式声明默认 true 让「未传 = 开启」的文档契约在运行时成立。
   showSelectedTags: true,
+  // v3.5 PR2：filterParamsAdapter 不显式默认（function 类型 withDefaults 不支持）；
+  // undefined 即走 el-table 客户端筛选默认值，与 sortParamsAdapter 对称。
 })
 
 defineOptions({ inheritAttrs: false })
@@ -163,15 +165,19 @@ const search = useSearch({
   engine: engineRef,
   fetchHook: async (opts) => {
     // reset 且 page≠1 时仅 setPage(1) —— page watch 会触发请求，再手动 refresh 会双发
-    if (opts?.reset && table.page.value !== 1) {
-      table.setPage(1)
-      // review R5：setPage 触发的刷新由 page watcher 异步发起，原实现直接 return 导致
-      // reset()/setSearchParams() 的 Promise 在数据尚未刷新完成时就 resolve。
-      // nextTick 等 watcher flush（pre 优先于 render，nextTick resolution 前必已执行），
-      // 其间 watcher 内 void refresh() 已登记 pendingRefresh；再 await 它保证数据到位。
-      await nextTick()
-      await table.waitForRefresh()
-      return
+    if (opts?.reset) {
+      // v3.5 PR2：reset 路径同步清空筛选状态（仅清 state 不触发请求，由下方 setPage/refresh 接管一次）
+      table.resetFilter()
+      if (table.page.value !== 1) {
+        table.setPage(1)
+        // review R5：setPage 触发的刷新由 page watcher 异步发起，原实现直接 return 导致
+        // reset()/setSearchParams() 的 Promise 在数据尚未刷新完成时就 resolve。
+        // nextTick 等 watcher flush（pre 优先于 render，nextTick resolution 前必已执行），
+        // 其间 watcher 内 void refresh() 已登记 pendingRefresh；再 await 它保证数据到位。
+        await nextTick()
+        await table.waitForRefresh()
+        return
+      }
     }
     await table.refresh()
   },
@@ -535,6 +541,8 @@ defineExpose({
     return effectiveEngine.value
   },
   getSortState: () => table.getSortState(),
+  /** v3.5 PR2：当前全表筛选快照 —— 父级可读取做 URL 同步 / 埋点 / 上报 */
+  getFilterState: () => table.getFilterState(),
   ...extendedExpose,
 } satisfies ProTableExpose<T>)
 </script>
@@ -662,6 +670,7 @@ defineExpose({
           @expand-toggle="events.handleExpandToggle"
           @cell-dblclick="events.handleCellDblclick"
           @sort-change="events.handleSortChange"
+          @filter-change="events.handleFilterChange"
         >
           <!-- 透传业务插槽（col.prop 命名插槽等），保持 v1 插槽契约不变 -->
           <template v-for="(_, name) in $slots" :key="name" #[name]="scope">
@@ -689,6 +698,7 @@ defineExpose({
           @expand-toggle="events.handleExpandToggle"
           @cell-dblclick="events.handleCellDblclick"
           @sort-change="events.handleSortChange"
+          @filter-change="events.handleFilterChange"
           @engine-fallback="handleEngineFallback"
         >
           <!-- 透传业务插槽（col.prop 命名插槽等），与 el 分支契约一致 -->

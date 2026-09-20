@@ -284,7 +284,7 @@ describe('useTable', () => {
       expect(table.getFilterState()).toEqual({ status: ['paid'] })
     })
 
-    it('resetFilter 清空 filterState + 触发请求（filterParamsAdapter 存在时）', async () => {
+    it('resetFilter 仅清空 filterState（不触发请求；编排层 reset 路径统一切页+刷新）', async () => {
       const deps = makeDeps()
       const adapter = vi.fn((filters: Record<string, (string | number | boolean)[]>) => ({
         statusList: filters.status,
@@ -297,15 +297,11 @@ describe('useTable', () => {
 
       const callsBefore = deps.props.requestApi.mock.calls.length
       table.resetFilter()
-      await vi.waitFor(() =>
-        expect(deps.props.requestApi.mock.calls.length).toBeGreaterThan(callsBefore)
-      )
+      // resetFilter 仅清空 state，不触发新请求（编排层 reset 流程 setPage+refresh 已含一次）
+      await new Promise((r) => setTimeout(r, 10))
+      expect(deps.props.requestApi.mock.calls.length).toBe(callsBefore)
       // filterState 已清空
       expect(table.getFilterState()).toEqual({})
-      // 第二次请求（resetFilter 触发）的 params 不含筛选字段（adapter 未被调用；
-      // serializeFilters 对空 state 直接 return {}，避免空键污染请求）
-      const lastCall = deps.props.requestApi.mock.calls.at(-1)![0] as Record<string, unknown>
-      expect(lastCall).not.toHaveProperty('statusList')
     })
 
     it('filterState 全空时 serializeFilters 返回空对象（不污染请求 params）', async () => {

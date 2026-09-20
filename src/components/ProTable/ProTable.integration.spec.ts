@@ -468,6 +468,166 @@ describe('ProTable v2.0 集成（冲突矩阵 + 启动校验）', () => {
   })
 })
 
+/**
+ * v3.5 PR2：服务端筛选 filterParamsAdapter 端到端测试。
+ *
+ * 覆盖：el-table @filter-change → handleFilterChange → setFilter + adapter 调用 +
+ * 请求带序列化结果 + emit filter-change 事件。覆盖默认无 adapter 行为 + reset 清空 + expose。
+ */
+describe('ProTable v3.5 PR2 服务端筛选', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('filterParamsAdapter 存在：el-table filter-change → adapter 调用 + 请求带序列化字段', async () => {
+    const requestApi = vi.fn().mockResolvedValue({
+      data: [{ id: 1, status: 'paid' }],
+      total: 1,
+      pageNum: 1,
+      pageSize: 10,
+    })
+    const filterParamsAdapter = vi.fn((filters: Record<string, (string | number | boolean)[]>) => ({
+      statusList: filters.status,
+      deptList: filters.dept,
+    }))
+    const wrapper = mount(ProTable, {
+      props: {
+        columns: [{ prop: 'status', label: '状态' }],
+        requestApi,
+        filterParamsAdapter,
+        rowKey: 'id',
+      } as unknown as ProTableProps,
+    })
+    await new Promise((r) => setTimeout(r, 10))
+    // 模拟 el-table filter-change：传全表筛选快照
+    wrapper
+      .findComponent({ name: 'ElTable' })
+      .vm.$emit('filter-change', { status: ['paid'], dept: ['tech'] })
+    await vi.waitFor(() => expect(requestApi).toHaveBeenCalledTimes(2))
+    expect(filterParamsAdapter).toHaveBeenCalledWith({ status: ['paid'], dept: ['tech'] })
+    const lastCall = requestApi.mock.calls.at(-1)![0] as Record<string, unknown>
+    expect(lastCall).toMatchObject({ statusList: ['paid'], deptList: ['tech'] })
+    wrapper.unmount()
+  })
+
+  it('filterParamsAdapter 存在：组件向外 emit filter-change 事件', async () => {
+    const onFilterChange = vi.fn()
+    const wrapper = mount(ProTable, {
+      props: {
+        columns: [{ prop: 'status', label: '状态' }],
+        requestApi: async () => ({
+          data: [{ status: 'paid' }],
+          total: 1,
+          pageNum: 1,
+          pageSize: 10,
+        }),
+        filterParamsAdapter: () => ({}),
+        onFilterChange,
+        rowKey: 'id',
+      } as unknown as ProTableProps,
+    })
+    await new Promise((r) => setTimeout(r, 10))
+    wrapper.findComponent({ name: 'ElTable' }).vm.$emit('filter-change', { status: ['paid'] })
+    await new Promise((r) => setTimeout(r, 10))
+    expect(onFilterChange).toHaveBeenCalledWith({ status: ['paid'] })
+    wrapper.unmount()
+  })
+
+  it('默认（无 filterParamsAdapter）：filter-change 仅 UI 记忆，不触发新请求', async () => {
+    const requestApi = vi.fn().mockResolvedValue({
+      data: [{ id: 1 }],
+      total: 1,
+      pageNum: 1,
+      pageSize: 10,
+    })
+    const wrapper = mount(ProTable, {
+      props: {
+        columns: [{ prop: 'status', label: '状态' }],
+        requestApi,
+        rowKey: 'id',
+      } as ProTableProps,
+    })
+    await new Promise((r) => setTimeout(r, 10))
+    const callsBefore = requestApi.mock.calls.length
+    wrapper.findComponent({ name: 'ElTable' }).vm.$emit('filter-change', { status: ['paid'] })
+    await new Promise((r) => setTimeout(r, 10))
+    // 无 adapter → 无新请求（el-table 客户端筛选继续生效）
+    expect(requestApi.mock.calls.length).toBe(callsBefore)
+    // 但 getFilterState 仍记录（UI 记忆 + expose）
+    const vm = wrapper.vm as unknown as { getFilterState: () => Record<string, unknown[]> }
+    expect(vm.getFilterState()).toEqual({ status: ['paid'] })
+    wrapper.unmount()
+  })
+
+  it('expose getFilterState 暴露当前全表筛选快照', async () => {
+    const requestApi = vi.fn().mockResolvedValue({
+      data: [{ id: 1 }],
+      total: 1,
+      pageNum: 1,
+      pageSize: 10,
+    })
+    const wrapper = mount(ProTable, {
+      props: {
+        columns: [{ prop: 'status', label: '状态' }],
+        requestApi,
+        filterParamsAdapter: () => ({}),
+        rowKey: 'id',
+      } as unknown as ProTableProps,
+    })
+    await new Promise((r) => setTimeout(r, 10))
+    const vm = wrapper.vm as unknown as { getFilterState: () => Record<string, unknown[]> }
+    // 初始为空对象
+    expect(vm.getFilterState()).toEqual({})
+    // 触发 filter-change 后快照更新
+    wrapper
+      .findComponent({ name: 'ElTable' })
+      .vm.$emit('filter-change', { status: ['paid'], dept: ['tech'] })
+    await new Promise((r) => setTimeout(r, 10))
+    expect(vm.getFilterState()).toEqual({ status: ['paid'], dept: ['tech'] })
+    wrapper.unmount()
+  })
+
+  it('reset() 同步清空 filterState（adapter 存在时 + page=1 路径）', async () => {
+    const requestApi = vi.fn().mockResolvedValue({
+      data: [{ id: 1 }],
+      total: 10,
+      pageNum: 1,
+      pageSize: 10,
+    })
+    const filterParamsAdapter = vi.fn((filters: Record<string, (string | number | boolean)[]>) => ({
+      statusList: filters.status,
+    }))
+    const wrapper = mount(ProTable, {
+      props: {
+        columns: [{ prop: 'status', label: '状态' }],
+        requestApi,
+        filterParamsAdapter,
+        rowKey: 'id',
+      } as unknown as ProTableProps,
+    })
+    await new Promise((r) => setTimeout(r, 10))
+    wrapper.findComponent({ name: 'ElTable' }).vm.$emit('filter-change', { status: ['paid'] })
+    await vi.waitFor(() => expect(requestApi).toHaveBeenCalledTimes(2))
+
+    const vm = wrapper.vm as unknown as {
+      reset: () => Promise<void>
+      getFilterState: () => Record<string, unknown[]>
+    }
+    await vm.reset()
+    await new Promise((r) => setTimeout(r, 20))
+    // reset 后 filterState 已清空
+    expect(vm.getFilterState()).toEqual({})
+    // reset 触发的新请求 params 不含筛选字段（filterState 空 → adapter 不被调）
+    const lastCall = requestApi.mock.calls.at(-1)![0] as Record<string, unknown>
+    expect(lastCall).not.toHaveProperty('statusList')
+    wrapper.unmount()
+  })
+})
+
 describe('SelectedTags 已选条件回显区（v3.2 回归）', () => {
   // 回归背景：showSelectedTags 走 withDefaults 未声明默认值时，Vue 对 Boolean 类型 prop
   // 做「absent → false」强转，原 v-if `!== false` 恒为 false，回显区从未挂载。

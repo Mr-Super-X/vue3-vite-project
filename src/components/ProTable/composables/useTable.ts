@@ -383,9 +383,13 @@ export function useTable<T extends object = Record<string, unknown>>(
     }
   }
 
-  /** v3.5 PR2：清空筛选状态 —— search.reset 路径调用（与 setFilter({}) 复用同一刷新逻辑） */
+  /**
+   * v3.5 PR2：清空筛选状态 —— search.reset 路径调用。
+   * 仅清空 state 不触发请求；编排层 reset 流程已含 setPage(1) + refresh，
+   * 复用同一次请求避免 resetFilter 与 page watcher 双发。
+   */
   function resetFilter(): void {
-    setFilter({})
+    filterState.value = {}
   }
 
   /** v3.5 PR2：筛选状态快照 —— ProTable.vue 经此向外 emit / expose */
