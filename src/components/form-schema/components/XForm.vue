@@ -137,7 +137,9 @@ onMounted(() => installDevDebugHook())
              <template #toastContainer="{ events }">
                <MyToastList :events="events" @dismiss="errorBus.dismiss" />
              </template>
-           </XForm> -->
+           </XForm>
+         @see docs/24 §Slots 段（toastContainer 完整契约 + ToastEvent 类型）
+         @see src/components/form-schema/composables/use-form-error-bus.ts (errorBus 来源) -->
     <slot name="toastContainer" :events="errorBus.events.value">
       <XFormErrorToast
         :events="errorBus.events.value"

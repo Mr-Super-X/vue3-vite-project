@@ -114,6 +114,18 @@ const emit = defineEmits<{
   /** 引擎回退事件。vxe-table 加载失败时触发,父组件可联动监控/提示用户 */
   (e: 'engine-fallback', reason: string): void
 }>()
+/**
+ * ProTable 对外事件契约（v3.5 PR2 起完整披露）。
+ *
+ * `filter-change` 与 `engine-fallback` 在 v3.5 PR2 之前仅在 element-plus 引擎下触发；
+ * PR2 起 vxe-table 引擎同样 emit，保证消费方写法不依赖引擎选择。
+ *
+ * @see [`docs/29-ProTable使用指南.md §1.4 Events`](../../docs/29-ProTable使用指南.md) 完整事件表 + payload 类型
+ * @see [`docs/29-ProTable使用指南.md §3.5`](../../docs/29-ProTable使用指南.md) filterParamsAdapter 服务端筛选示例
+ * @trigger sort-change → `useTable` 内 sortParamsAdapter 拼装请求参数
+ * @trigger filter-change → 消费方可用 filterParamsAdapter 自定义请求参数
+ * @trigger engine-fallback → 监控上报 / 用户提示
+ */
 
 /* ───────────── v3.1 状态保持（read 必须在 useSearch/useTable 之前，见 composable 注释） ───────────── */
 
