@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup lang="ts" generic="T extends object = Record<string, unknown>">
 /**
  * ColSetting —— 列设置抽屉（spec §五组件树 / 附录 A #6 "恢复默认"按钮）
  *
@@ -6,6 +6,9 @@
  * - 复选框切换列可见性
  * - sortablejs 拖拽重排列顺序（emit reorder 事件由 useColumns 处理）
  * - "恢复默认"按钮（附录 A #6）
+ *
+ * v3.5 PR3：补 generic<T> 透传——原声明落为默认 Record 泛型，
+ * 编排层被迫写 `as unknown as` 双断言。
  *
  * @group ProTable 子组件
  */
@@ -17,7 +20,7 @@ import type { ProColumn } from '../types'
 
 interface Props {
   visible: boolean
-  columns: ProColumn[]
+  columns: ProColumn<T>[]
   visibleKeys: string[]
   fixedKeys: string[]
 }

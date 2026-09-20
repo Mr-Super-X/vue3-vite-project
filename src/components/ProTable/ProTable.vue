@@ -727,7 +727,7 @@ defineExpose({
       <!-- 列设置：引擎无关 —— 操作 useColumns 数据层（visibleKeys/columnOrder） -->
       <ColSetting
         v-model:visible="columns.colSettingVisible.value"
-        :columns="allColumnsTyped as ProColumn<Record<string, unknown>>[]"
+        :columns="allColumnsTyped"
         :visible-keys="columns.visibleKeys.value"
         :fixed-keys="columns.fixedKeys.value"
         @update:visible-keys="events.updateVisibleKeys"
