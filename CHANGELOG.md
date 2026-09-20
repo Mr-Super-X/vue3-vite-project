@@ -2,6 +2,60 @@
 
 ## 未发布
 
+### ✨ Feature | ProTable v3.5 PR1-B：vxe-table 引擎树形 + 行拖拽能力补齐
+
+> v3.5 PR1-A 通过 A11y + E2E 后，PR1-B 解决 v2.1 决策 5 遗留：vxe-table 引擎能力与 element-plus 对等。树形 + 行拖拽两个 v2.0 起只支持 el 引擎的能力，PR1-B 起在 vxe 引擎下也完整可用。
+
+**新增 Adapter 引擎胶水层**（`src/components/ProTable/adapters/`）：
+
+- `tree-adapter.ts` + `tree-adapter.spec.ts`：`TreeAdapter` 接口 + `createElementPlusTreeAdapter`（el: treeProps 占位符 + flatData 重算）+ `createVxeTreeAdapter(getVxeTable)`（vxe: tree-config 协议 + `setTreeExpand(row, expanded)` 双向同步 + `syncExpanded(keys, rowsByKey)` 全量回灌）
+- `row-drag-adapter.ts` + `row-drag-adapter.spec.ts`：`RowDragAdapter` 接口 + `createElementPlusRowDragAdapter(rowKey='id')`（el: `.el-table__body-wrapper tbody` + `:data-row-key` 反查）+ `createVxeRowDragAdapter({ getRowsByIndex, getLevelByViewIndex, rowKey })`（vxe: `.vxe-table--body-wrapper tbody` + 视图索引 → `props.rows` 反查 + 可选 tree 模式 `_level`）
+
+**VxeTableBody.vue 接线**：
+
+- 新增 `treeData` + `rowDrag` props（`ReturnType<typeof useTreeData | useRowDrag> | null`）
+- 新增 `expand-toggle` emit（vxe `toggle-tree-expand` 事件已映射 rowKey）
+- 实例化 `createVxeTreeAdapter`（getter 闭包访问 `vxeTableInst.value`，适配器与组件实例生命周期一致）
+- `treeConfigBinding` computed + `treeColumnIndex` computed 定位首个 `col.tree` 列
+- watch `expandedKeys` 全量回灌 vxe 引擎侧 Map（覆盖 revealKeys 批量展开、外部 expandNode/collapseNode API、defaultExpandDepth 启动默认展开三个场景）
+- `handleToggleTreeExpand` 把 vxe UI 触发展开/折叠回流 `useTreeData`，双引擎共享同一 useTreeData 实例
+- defineExpose 新增 `getTbody`：优先从 vxe 实例 ref 拿根 DOM 再 query `.vxe-table--body-wrapper tbody`；onMounted 前 fallback 用模板根 div ref query
+
+**ProTable.vue + useTableCapabilities.ts 双引擎条件透传**：
+
+- `useTableCapabilities` 移除 `treeData !isVxeEngine` 守卫：vxe 引擎也支持树形
+- 移除 `rowDrag !isVxeEngine` 守卫：vxe 引擎也支持拖拽
+- 新增 `isVxeTreeConflict` 检测：vxe + 树形 + 拖拽 三者同时启用时 rowDrag 退化 null（sortablejs 与 vxe tree-node 行结构冲突）
+- `useTableEngineDom` 双引擎 tbody 路由：新增 `proTableVxe` + `effectiveEngine` 参数，按 `effectiveEngine.value === 'vxe-table'` 走 vxe tbody 查询路径
+- `validateCapabilities` 改写：单一 warn「三者冲突」替代原 vxe 不支持树形/拖拽两条
+- ProTable.vue `vxeTableBindings` 接收 treeData + rowDrag（与 elTableBindings 对称）
+- 顶层解构 useTableCapabilities 加 rowDrag（之前漏掉）
+
+**测试覆盖**：
+
+- `tree-adapter.spec.ts` 13 例：elementPlusTreeAdapter 5 例 + vxeTreeAdapter 8 例
+- `row-drag-adapter.spec.ts` 23 例：elementPlusRowDragAdapter 10 例 + vxeRowDragAdapter 11 例 + 3 个常量导出断言
+- `VxeTableBody.spec.ts` 新增 6 例：treeData 启用 / toggle 事件 / treeData=null 不绑 tree-config / rowDrag=null / rowDrag 启用 / getTbody 暴露
+- `useTableCapabilities.spec.ts` 改写：vxe + enableTree → treeData 正常实例化；vxe + enableRowDrag → rowDrag 正常实例化；vxe + 树形 + 拖拽 三者冲突 → rowDrag 退化 null + warn
+- `ProTable.engine.spec.ts` 新增 4 例 capability matrix：vxe + enableTree mount / vxe + enableRowDrag mount / el + enableTree 回归保护 / vxe + 树形 + 拖拽 三者冲突 warn
+- `ProTable.integration.spec.ts` 改写旧断言：vxe + 纯 enableTree / 纯 enableRowDrag 不再 warn「暂不支持」；vxe + 树形 + 拖拽 三者冲突 warn
+
+**Demo 更新**：
+
+- `ProTableEngineCompare.vue` 新增「树形 + 行拖拽双引擎对照」section：左右两栏分别渲染 el-table 和 vxe-table 引擎同一份 columns + enable-tree + enable-row-drag，验证 v3.5 PR1-B 起双引擎行为一致
+- `engineMatrixItems` 树形/行拖拽两行从「❌ 暂不支持」改为「✅ 支持」+ 描述
+
+**文档**：
+
+- `README.md` §引擎能力矩阵（v2.1 → v3.5 PR1-B）：树形/行拖拽两行升级 + 三者冲突 warn 说明
+- `README.md` 新增 v3.5 PR1-B 变更摘要段：TreeAdapter/RowDragAdapter 4 个工厂对照表 + 双引擎能力对照（v2.1 → v3.5 PR1-B）+ 实现要点 + 唯一约束
+- `ARCHITECTURE.md` 顶部「当前版本」从 v3.4 升到 v3.5（PR1-A + PR1-B），新增 PR1-B 增量摘要
+
+**已知约束**：
+
+- vxe + 树形 + 行拖拽 **三者同时启用**会触发 console.warn（sortablejs 与 vxe tree-node 行结构不兼容），行拖拽自动退化 null，业务方按需取舍
+- 视觉对照：本环境下无浏览器截图能力，由用户在 dev server 打开 `/demo/pro-table-engine-compare` 手动验证双引擎树形 + 行拖拽对等
+
 ### 🐛 Bug Fixes | XForm 布局容器节点：column 分区失效，children 全堆单 ElCol 纵向排列（xform-grid 模式3）
 
 > 用户实测 `/demo/xform-grid` 模式3「布局容器节点」：demo 设计意图是「无 name 节点带 row/column → 渲染为纯栅格容器，分区组织字段」（分区1 `column:2` 放订单号+状态 2 列并排，分区2 `column:3` 放金额+日期+备注 3 列并排），实际渲染成 5 个字段全纵向单列堆叠。根因：`renderWithRowColumn`（无组件无 name 的 row/column 容器节点渲染路径，dispatch 顺序 permission → array → tabs/steps → visual → formItem → **rowColumn** → default）把 `node.column` 错当「整个分区占 `24/column` 宽」，children 全塞进**单个** ElCol——column 的语义应是「该容器内 children 分配到 N 个独立 ElCol」。**既有实现缺陷**（087f000 引入 grid demo 时即如此），非本轮 SchemaField 重构回归——但 SchemaField 系列修复后此路径暴露为可见 bug。与视觉容器 Card 的 `renderToComponentWithGrid` 对齐（column 分配优先，child 自有 col 在 column 容器内不另包，避免双嵌套 ElCol）。模式1（column 统一分配）/ 模式2（row+col.span）经浏览器实测**不受影响**（顶层 column 与 col 对象语义保留原路径）。
