@@ -59,13 +59,13 @@ describe('TreeAdapter (vxeTreeAdapter)', () => {
     const cfg = adapter.getTreeConfig()
     expect(cfg).toHaveProperty('treeConfig')
     const tc = cfg['treeConfig'] as {
-      children: string
+      childrenField: string
       hasChildren: string
       expandAll: boolean
       accordion: boolean
       trigger: string
     }
-    expect(tc.children).toBe('__pro_table_flat__')
+    expect(tc.childrenField).toBe('__pro_table_flat__')
     expect(tc.hasChildren).toBe('__pro_table_flat__')
     expect(tc.expandAll).toBe(false)
     expect(tc.accordion).toBe(false)

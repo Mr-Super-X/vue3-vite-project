@@ -91,7 +91,10 @@ export function useRowDrag(options: UseRowDragOptions) {
           const mappedFrom = options.resolveTopIndex(oldIndex)
           const mappedTo = options.resolveTopIndex(newIndex)
           if (mappedFrom < 0 || mappedTo < 0) {
-            console.warn('[useRowDrag] 树形模式视图行映射失败（非顶层节点），跳过本次排序:', {
+            // 降级到 console.debug：拖拽非顶层节点是 crossLevelDrag=false 的预期行为，
+            // 非错误，但 dev 环境仍需可见——用 console.debug 默认在生产构建中剥离（v8 ignore）。
+            // 文档：https://developer.mozilla.org/en-US/docs/Web/API/Console/debug
+            console.debug('[useRowDrag] 树形模式视图行映射失败（非顶层节点），跳过本次排序:', {
               oldIndex,
               newIndex,
             })

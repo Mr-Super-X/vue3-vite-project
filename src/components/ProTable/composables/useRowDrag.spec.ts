@@ -224,8 +224,8 @@ describe('useRowDrag', () => {
     expect(data.value).toEqual([{ id: 'b' }, { id: 'a' }, { id: 'c' }])
   })
 
-  it('树形模式：非顶层行映射失败时跳过 + console.warn（H6）', async () => {
-    const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  it('树形模式：非顶层行映射失败时跳过 + console.debug（H6）', async () => {
+    const consoleDebug = vi.spyOn(console, 'debug').mockImplementation(() => {})
     const data = ref([{ id: 'a' }, { id: 'b' }])
     const onSortChange = vi.fn(() => true)
     const viewKeys = ['a', 'a1', 'b']
@@ -247,7 +247,7 @@ describe('useRowDrag', () => {
 
     expect(data.value).toEqual([{ id: 'a' }, { id: 'b' }])
     expect(onSortChange).not.toHaveBeenCalled()
-    expect(consoleWarn).toHaveBeenCalled()
-    consoleWarn.mockRestore()
+    expect(consoleDebug).toHaveBeenCalled()
+    consoleDebug.mockRestore()
   })
 })

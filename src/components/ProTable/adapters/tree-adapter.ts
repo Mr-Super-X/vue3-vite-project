@@ -105,11 +105,13 @@ export function createVxeTreeAdapter(
 ): TreeAdapter {
   return {
     getTreeConfig(): Record<string, unknown> {
-      // vxe-table v4 tree-config 协议：children/hasChildren 字段约定与 el 同款占位符
+      // vxe-table v4.21.7 tree-config 协议：children 字段已废弃，统一改用 childrenField
+      // （vxe-table 4.21.7 文档：https://vxetable.cn/v4/#/table/api ；旧 children 仍兼容但控制台告警）
+      // 与 el-table 的 treeProps.children 字段名不同——el-table 不动，只改 vxe 分支
       // （useTreeData 已经把 children 字段重定向到 __pro_table_flat__ 让两引擎都不重复渲染）
       return {
         treeConfig: {
-          children: TREE_PLACEHOLDER,
+          childrenField: TREE_PLACEHOLDER,
           hasChildren: TREE_PLACEHOLDER,
           expandAll: false,
           accordion: false,
