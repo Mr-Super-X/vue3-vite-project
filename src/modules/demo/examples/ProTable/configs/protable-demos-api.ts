@@ -818,3 +818,42 @@ export const csvColumnItems: ApiItem[] = [
     description: '导出文件名 / 是否写 UTF-8 BOM（Excel 打开中文不乱码的前提）。',
   },
 ]
+
+/* ───────────── 服务端筛选 demo（ProTableServerFilter，v3.5 PR2） ───────────── */
+
+export const filterPropsItems: ApiItem[] = [
+  {
+    name: 'filterParamsAdapter',
+    type: '(filters: FilterValuesMap) => Record<string, unknown>',
+    required: false,
+    description:
+      'v3.5 PR2 新增：把全表筛选快照序列化为后端期望的请求参数形态。缺省走 el-table 客户端筛选默认值（filterState 仅 UI 记忆，不入请求）。',
+  },
+]
+
+export const filterColumnItems: ApiItem[] = [
+  {
+    name: 'column.filters',
+    type: 'Array<{ text: string; value: string | number }>',
+    required: false,
+    description:
+      'v3.5 PR2：列头筛选下拉选项配置（element-plus 原生协议）。业务方在 ProColumn.tableProps.filters 声明筛选项；el-table 自动渲染下拉面板。',
+  },
+]
+
+export const filterExposeItems: ApiItem[] = [
+  {
+    name: 'getFilterState',
+    type: '() => FilterValuesMap',
+    required: true,
+    description:
+      '当前全表筛选快照（与 el-table filter-change 事件负载同形态），供 URL 同步 / 埋点上报使用。',
+  },
+  {
+    name: 'filter-change 事件',
+    type: '(payload: FilterValuesMap) => void',
+    required: false,
+    description:
+      '筛选变化时 emit，payload 为当前全表筛选快照。父组件可监听做 UI 联动 / 埋点 / 上报。',
+  },
+]

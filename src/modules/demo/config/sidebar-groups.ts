@@ -35,6 +35,7 @@ export const CN_NAMES: Record<string, string> = {
   ProTableCellSpan: '单元格合并',
   ProTableRowDrag: '行拖拽排序',
   ProTableServerSort: '服务端排序',
+  ProTableServerFilter: '服务端筛选（v3.5 PR2）',
   ProTableEngineCompare: '引擎对比（vxe-table）',
   ProTableStyleOverride: '样式定制',
   ProTableExpand: '表格内嵌',
