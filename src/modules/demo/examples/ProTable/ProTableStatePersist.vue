@@ -86,6 +86,7 @@ const tocItems = [
             row-key="id"
             state-persist
             :page-size="5"
+            :show-selected-tags="false"
           />
         </DemoField>
       </section>
