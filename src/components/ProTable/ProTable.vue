@@ -678,11 +678,15 @@ defineExpose({
             <slot :name="name" v-bind="scope" />
           </template>
         </ElementTableBody>
-        <!-- v3.5 PR1-B：vxe-table 引擎分支（树形/拖拽接线与 el 对等；加载失败由 engine-fallback 回退） -->
+        <!-- v3.5 PR1-B：vxe-table 引擎分支（树形/拖拽接线与 el 对等；加载失败由 engine-fallback 回退）
+             v3.5 hotfix-5：vxe 引擎 :rows 改回 tableRows（原始嵌套数据），原因——
+             vxe-table 用 tree-config.childrenField='children'（hotfix-5 同步改）递归渲染嵌套数据；
+             el 引擎走 treeData.flatData 平铺 + treeProps 占位符。两引擎数据源不同
+             （el 平铺+vxe 占位 / vxe 嵌套+真实字段名），syncExpanded 双向同步使用。 -->
         <VxeTableBody
           v-else-if="useVxeEngine"
           ref="proTableVxe"
-          :rows="(treeData ? treeData.flatData.value : tableRows) as T[]"
+          :rows="tableRows as T[]"
           :loading="table.loading.value && hasTableMounted"
           :columns="sortedColumnsTyped as ProColumn<Record<string, unknown>>[]"
           :row-key="props.rowKey"

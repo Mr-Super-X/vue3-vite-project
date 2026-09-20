@@ -101,6 +101,13 @@ export function createElementPlusTreeAdapter(): TreeAdapter {
 export function createVxeTreeAdapter(
   getVxeTable: () => {
     setTreeExpand?: (row: Record<string, unknown>, expanded: boolean) => void
+    /**
+     * v3.5 hotfix-6：按 :data 树重新索引 fullAllDataRowIdData（清空后重建）。
+     * 仅 vxe-table lazy=true 走 loadTreeChildren 会触发该重建；我们用 useTreeData
+     * 自管懒加载时需手动调一次，否则子节点 rowRest.level=undefined → body.ts:527
+     * 退化为 {} → className 'row--level-undefined' + treeNodeStyle:none
+     */
+    cacheRowMap?: (isReset: boolean) => void
   } | null
 ): TreeAdapter {
   return {
@@ -111,8 +118,11 @@ export function createVxeTreeAdapter(
       // （useTreeData 已经把 children 字段重定向到 __pro_table_flat__ 让两引擎都不重复渲染）
       return {
         treeConfig: {
-          // childrenField 占位符：避免 vxe-table 识别真实 children 字段重复渲染（与 el 引擎共用策略）
-          childrenField: TREE_PLACEHOLDER,
+          // v3.5 hotfix-5：childrenField 从 TREE_PLACEHOLDER 改为真实字段名 'children'
+          // 因为 ProTable.vue:685 vxe 引擎 :rows 改回 tableRows（原始嵌套数据），
+          // vxe-table 需要 childrenField 指向真实 children 字段递归渲染子节点
+          // （原占位符让 vxe-table 找不到 children 字段 → 树形不渲染）
+          childrenField: 'children',
           // hasChildren 指向 useTreeData.normalize 注入的 _hasChildren 字段（业务数据自带）；
           // v3.5 hotfix-4 修复：原值 TREE_PLACEHOLDER 让 vxe-table 找不到行内 _hasChildren 标记，
           // 判定全部为叶子节点 → 不渲染箭头图标，无法展开
@@ -149,6 +159,14 @@ export function createVxeTreeAdapter(
         const row = rowsByKey.get(k)
         if (row) vxe.setTreeExpand(row, true)
       }
+      // v3.5 hotfix-6：setTreeExpand 不会自动重建 vxe-table 内部 fullAllDataRowIdData——
+      // vxe lazy=true 才走 loadTreeChildren（重建索引），我们用 useTreeData 自管懒加载
+      // 时子节点 row.children 已就位但 vxe 索引里没它们 → body.ts:527 rowRest.level=undefined
+      // → className 'row--level-undefined' + cellStyle.paddingLeft 无缩进。
+      // 手动 cacheRowMap(true) 按当前 :data 树（含嵌套 children）重跑 XEUtils.eachTree
+      // 重建 fullAllDataRowIdData，子节点拿到正确 level → 渲染 row--level-N + 缩进 paddingLeft。
+      // 复杂度 O(n) 树全扫，可接受；watch expandedKeys 触发频次仅展开/折叠/搜索/初始化
+      vxe.cacheRowMap?.(true)
     },
     hasChildren(row: Record<string, unknown>): boolean {
       // vxe-table 平铺渲染（与 el 同源 useTreeData.normalize 输出）：有 _hasChildren 即为有子节点

@@ -66,7 +66,10 @@ describe('TreeAdapter (vxeTreeAdapter)', () => {
       trigger: string
       indent: number
     }
-    expect(tc.childrenField).toBe('__pro_table_flat__')
+    // v3.5 hotfix-5：childrenField 从 TREE_PLACEHOLDER 改回真实字段名 'children'——
+    // ProTable.vue:685 vxe 引擎 :rows 改回 tableRows（原始嵌套数据），vxe-table
+    // 需指向真实 children 字段递归渲染（占位符让它找不到 children → 不渲染）
+    expect(tc.childrenField).toBe('children')
     // v3.5 hotfix-4：hasChildren 指向 _hasChildren（useTreeData.normalize 注入的字段），
     // 让 vxe-table 识别父节点并渲染箭头图标（之前 TREE_PLACEHOLDER 导致全部判为叶子节点）
     expect(tc.hasChildren).toBe('_hasChildren')
@@ -120,6 +123,24 @@ describe('TreeAdapter (vxeTreeAdapter)', () => {
     expect(setTreeExpand).toHaveBeenCalledTimes(2)
     expect(setTreeExpand).toHaveBeenNthCalledWith(1, { id: 'a' }, true)
     expect(setTreeExpand).toHaveBeenNthCalledWith(2, { id: 'b' }, true)
+  })
+
+  // v3.5 hotfix-6：syncExpanded 末尾须调 cacheRowMap(true) 重建 vxe-table 行索引。
+  // 根因：vxe lazy=true 才走 loadTreeChildren（重建 fullAllDataRowIdData）；
+  // 我们用 useTreeData 自管懒加载 → setTreeExpand 不会重建 → 子节点
+  // rowRest.level=undefined → row--level-undefined + 缩进 0
+  it('syncExpanded 末尾调 cacheRowMap(true) 重建行索引（hotfix-6：vxe 子节点缩进）', () => {
+    const setTreeExpand = vi.fn()
+    const cacheRowMap = vi.fn()
+    const adapter = createVxeTreeAdapter(() => ({ setTreeExpand, cacheRowMap }))
+    adapter.syncExpanded([], new Map())
+    expect(cacheRowMap).toHaveBeenCalledWith(true)
+  })
+
+  it('cacheRowMap 缺失时不抛错（接口可选，向后兼容旧版 vxe）', () => {
+    const setTreeExpand = vi.fn()
+    const adapter = createVxeTreeAdapter(() => ({ setTreeExpand }))
+    expect(() => adapter.syncExpanded([], new Map())).not.toThrow()
   })
 
   it('getExpandedKeys 返回空数组（vxe 引擎侧展开状态由 useTreeData 主导）', () => {
