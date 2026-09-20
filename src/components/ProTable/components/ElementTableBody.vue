@@ -213,6 +213,7 @@ defineExpose({
       <ElTableColumn
         v-for="col in columns"
         :key="col.prop"
+        :column-key="col.prop"
         :prop="col.prop"
         :label="col.label"
         :resizable="props.columnResize"

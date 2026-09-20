@@ -79,6 +79,12 @@ const columns: ProColumn<Order>[] = [
     prop: 'dept',
     label: '部门',
     width: 100,
+    enum: [
+      { label: '技术部', value: 'tech', tagType: 'success' },
+      { label: '市场部', value: 'marketing', tagType: 'warning' },
+      { label: '财务部', value: 'finance', tagType: 'info' },
+      { label: '运营部', value: 'operations', tagType: 'primary' },
+    ],
     tableProps: { filters: deptFilters, filterMultiple: true },
   },
   { prop: 'createDate', label: '创建日期', width: 120, tableProps: { filters: [] } },
