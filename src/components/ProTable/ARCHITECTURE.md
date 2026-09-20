@@ -75,6 +75,19 @@
 > - **L1/L3/L4 优化**：assertValidResponse 上下文 + 命名工程化（isVxeEngine / extendedExpose）+ 模板内联箭头函数提取
 >
 > **完整改造计划**：[`docs/superpowers/plans/2026-09-14-protable-v3-refactor.md`](../../superpowers/plans/2026-09-14-protable-v3-refactor.md)
+>
+> ---
+>
+> **v3.5 PR3 增量摘要（6 子组件 generic 收口 cast）**：
+>
+> - **6 子组件加 `<script setup lang="ts" generic="T extends object = Record<string, unknown>">`**：SearchForm / TableHeader / ColSetting / ElementTableBody / ElementTableV2Body / VxeTableBody
+> - **ProTable.vue 移除 `asViewColumn` / `asViewColumns` cast 抹除函数**（v3.1.2 review 引入），模板直接传 typed columns
+> - **3 个 body 组件 props 绑 T**：`rows: T[]` + `columns: ProColumn<T>[]`，generic 从 ProTable 透传到子组件
+> - **保留 2 处不可避免 cast**：`props as unknown as ProTableProps<T>`（composable 入口）+ SelectedTags / VxeTableBody.columns 保留 `ProColumn[]`（vue-tsc 模板推导限制）
+> - **cast 总数**：从 v3.4 的 6+ 处 `as unknown as` 降到 2 处必要 cast + 8 处子组件内部 cast 边界（注释说明）
+> - **消费方体验**：`<ProTable<User>>` 显式标注时，列定义的 `prop: 'name' | 'role'` IDE 自动补全
+>
+> **完整实施计划**：[`docs/superpowers/plans/2026-09-18-protable-v3.5-generic-cast-cleanup.md`](../../superpowers/plans/2026-09-18-protable-v3.5-generic-cast-cleanup.md)
 
 ## 数据流（state owner = ProTable.vue）
 

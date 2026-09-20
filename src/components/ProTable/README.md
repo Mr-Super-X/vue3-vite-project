@@ -163,11 +163,17 @@ const columns: ProColumn<Order>[] = [
 
 T 未解析时 `ProColumn<T>` 双向均不可赋值（TS **bivariance** 仅对具体类型生效）。
 
-**处理方式**（v3.0 M3 过渡方案）：组件层声明 `<script setup lang="ts" generic="T extends object = Record<string, unknown>">`，
-模板绑定处经 `as ProColumn[]` cast 收口（命名 `*NonGeneric`，明确"丢泛型版本"语义）。
+**v3.5 PR3 处理**：6 个子组件（SearchForm / TableHeader / ColSetting / ElementTableBody / ElementTableV2Body / VxeTableBody）
+统一加 `<script setup lang="ts" generic="T extends object = Record<string, unknown>">`，
+并把 `asViewColumn` / `asViewColumns` cast 函数移除。ProTable.vue 模板直接传 typed columns
+（`columns.searchColumns` / `columns.allColumns.value` / `columns.sortedColumns.value`）给子组件，
+generic 透传到子组件的 T 默认 Record<string, unknown> 视角。bivariance 让 ProColumn<T> 自动满足 ProColumn<T> 默认 Record 视角。
 
-**完整消除 cast** 需 6 个子组件（SearchForm / TableHeader / ColSetting / ElementTableBody / VxeTableBody）
-改 `generic<T>`，影响面大，留待 v3.0.1。
+剩余 2 处不可避免 cast：
+
+- `props as unknown as ProTableProps<T>`：withDefaults 返回的 `LooseRequired<__VLS_Props>` 与 `ProTableProps<T>` 不严格等价，composable 入口需 cast 收敛（PR3 收口后保留唯一一处）
+- SelectedTags / VxeTableBody.columns prop type 仍为 `ProColumn[]`（不绑 T）：vue-tsc 模板推导对 generic 子组件 prop type 的 T 标注与父组件的 T 是两个独立 generic 参数，
+  类型不兼容；保留 ProColumn[] 默认 Record 视角让 ProTable.vue 传 typed columns 时兼容
 
 ### 2. `useColumns` 内部 cast 集中点
 
@@ -547,3 +553,38 @@ const columns: ProColumn<Order>[] = [
 ## v3.0 变更摘要
 
 完整 16 项修复 + 优化见 [`ARCHITECTURE.md`](./ARCHITECTURE.md) 顶部"v3.0 增量摘要" + 改造计划文档。
+
+## v3.5 变更摘要（6 子组件 generic 收口 cast）
+
+> 解决 ProTable → 子组件链上 generic 透传断层（消费方定义 `<ProTable<User>>` 时 IDE
+> 提示在子组件列定义处丢失 T 字段，迫使编排层写 `as unknown as` 双断言）。
+>
+> 前置：v3.0 L5 已识别此边界但影响面大留待后续；v3.5 PR3 完成 6 子组件 generic 声明 + prop 类型泛型化。
+
+### 改动要点
+
+- **6 子组件加 `generic="T extends object = Record<string, unknown>"`**：
+  `SearchForm / TableHeader / ColSetting / ElementTableBody / ElementTableV2Body / VxeTableBody`
+- **移除 `asViewColumn` / `asViewColumns` cast 函数**（v3.1.2 review 引入的 `ProColumn<T> → ProColumn` 投影）
+- **ProTable.vue 模板透传 typed columns**：`columns.searchColumns` / `allColumns.value` / `sortedColumns.value` 直接传子组件 generic
+- **保留 2 处不可避免 cast**（已加注释说明）：
+  - `props as unknown as ProTableProps<T>`：withDefaults 返回 `LooseRequired<__VLS_Props>` 与 `ProTableProps<T>` 不严格等价，composable 入口需 cast 收敛
+  - SelectedTags / VxeTableBody.columns 仍为 `ProColumn[]`（不绑 T）：vue-tsc 模板推导对 generic 子组件 prop type 的 T 与父组件的 T 是两个独立 generic 参数，类型不兼容；保留 ProColumn[] 默认 Record 视角让父组件传 typed columns 时兼容
+- **useTableCapabilities 标注 `ProColumn<T>` + 注释**：明确 T → Record 视角 cast 的必要边界（`useCellSpan` 不绑 T，cast 回 `ProColumn[]`；`useSummary` 绑 T，直接透传 T 视角）
+
+### 受影响文件
+
+- `ProTable.vue`（移除 asViewColumn/asViewColumns + 改 *NonGeneric 为 *Typed）
+- `components/SearchForm.vue`（generic<T> + columns: ProColumn<T>[]）
+- `components/TableHeader.vue`（generic<T> + columns/visibleColumns: ProColumn<T>[]）
+- `components/ColSetting.vue`（generic<T> + columns: ProColumn<T>[]）
+- `components/ElementTableBody.vue`（generic<T> + rows: T[] + columns: ProColumn<T>[]）
+- `components/ElementTableV2Body.vue`（generic<T> + rows: T[] + columns: ProColumn<T>[]）
+- `components/VxeTableBody.vue`（generic<T> + rows: T[]；columns 保持 ProColumn[] 默认 Record 视角）
+- `composables/useTableCapabilities.ts`（ProColumn<T>[] 标注 + cast 必要性注释）
+- `ProTable.integration.spec.ts`（+2 例泛型透传契约测试）
+- 各子组件 .spec.ts（保留默认 Record 视角 mount，向后兼容）
+
+### 完整实施计划
+
+- [`docs/superpowers/plans/2026-09-18-protable-v3.5-generic-cast-cleanup.md`](../../../docs/superpowers/plans/2026-09-18-protable-v3.5-generic-cast-cleanup.md)
