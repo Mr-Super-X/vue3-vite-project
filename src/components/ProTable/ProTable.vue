@@ -588,8 +588,8 @@ defineExpose({
         @clear-all="handleClearAllConditions"
       />
       <TableHeader
-        :columns="allColumnsTyped as ProColumn<Record<string, unknown>>[]"
-        :visible-columns="sortedColumnsTyped as ProColumn<Record<string, unknown>>[]"
+        :columns="allColumnsTyped"
+        :visible-columns="sortedColumnsTyped"
         :density="table.density.value"
         :col-setting-visible="columns.colSettingVisible.value"
         :fullscreen="isFullscreen"
