@@ -34,6 +34,7 @@ const mockApi: ProTableProps['requestApi'] = async () => ({
 describe('ProTable v2.0 集成（冲突矩阵 + 启动校验）', () => {
   beforeEach(() => {
     vi.spyOn(console, 'warn').mockImplementation(() => {})
+    vi.spyOn(console, 'debug').mockImplementation(() => {})
     vi.spyOn(console, 'error').mockImplementation(() => {})
   })
   afterEach(() => {
@@ -183,7 +184,8 @@ describe('ProTable v2.0 集成（冲突矩阵 + 启动校验）', () => {
       } as ProTableProps,
     })
     await new Promise((r) => setTimeout(r, 10))
-    expect(console.warn).toHaveBeenCalledWith(
+    // v3.5 hotfix-3：warn 降级 debug，减少 demo 噪音
+    expect(console.debug).toHaveBeenCalledWith(
       expect.stringContaining('vxe-table 引擎 + 树形 + 行拖拽 同时启用')
     )
   })
@@ -477,6 +479,7 @@ describe('ProTable v2.0 集成（冲突矩阵 + 启动校验）', () => {
 describe('ProTable v3.5 PR2 服务端筛选', () => {
   beforeEach(() => {
     vi.spyOn(console, 'warn').mockImplementation(() => {})
+    vi.spyOn(console, 'debug').mockImplementation(() => {})
     vi.spyOn(console, 'error').mockImplementation(() => {})
   })
   afterEach(() => {

@@ -10,6 +10,7 @@ import { useTableCapabilities } from './useTableCapabilities'
 describe('useTableCapabilities', () => {
   beforeEach(() => {
     vi.spyOn(console, 'warn').mockImplementation(() => {})
+    vi.spyOn(console, 'debug').mockImplementation(() => {})
     vi.spyOn(console, 'error').mockImplementation(() => {})
   })
   afterEach(() => {
@@ -223,8 +224,8 @@ describe('useTableCapabilities', () => {
       table: { data: ref([]) },
       engine: ref('vxe-table'),
     })
-    // setup 同步调用 → warn 立即记录
-    expect(console.warn).toHaveBeenCalledWith(
+    // setup 同步调用 → debug 立即记录（v3.5 hotfix-3：warn 降级 debug，减少 demo 噪音）
+    expect(console.debug).toHaveBeenCalledWith(
       expect.stringContaining('vxe-table 引擎 + 树形 + 行拖拽 同时启用')
     )
   })

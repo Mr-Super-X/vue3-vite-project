@@ -95,6 +95,7 @@ function makeProps(overrides: Partial<ProTableProps> = {}): ProTableProps {
 describe('ProTable v2.1 引擎切换', () => {
   beforeEach(() => {
     vi.spyOn(console, 'warn').mockImplementation(() => {})
+    vi.spyOn(console, 'debug').mockImplementation(() => {})
     vi.spyOn(console, 'error').mockImplementation(() => {})
   })
   afterEach(() => {
@@ -318,8 +319,8 @@ describe('ProTable v2.1 引擎切换', () => {
     })
     await flushPromises()
     await nextTick()
-    // 三者冲突 → 启动 warn sortablejs 与 vxe tree-node 行结构冲突
-    expect(console.warn).toHaveBeenCalledWith(
+    // 三者冲突 → 启动 debug sortablejs 与 vxe tree-node 行结构冲突（v3.5 hotfix-3：warn 降级 debug）
+    expect(console.debug).toHaveBeenCalledWith(
       expect.stringContaining('vxe-table 引擎 + 树形 + 行拖拽 同时启用')
     )
     expect(wrapper.findComponent(VxeTableBody).exists()).toBe(true)

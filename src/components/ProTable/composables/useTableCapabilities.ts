@@ -189,9 +189,14 @@ export function useTableCapabilities<T extends object = Record<string, unknown>>
   /** 启动校验（spec §七.3 + v3.5 PR1-B 引擎能力矩阵） */
   function validateCapabilities(): void {
     // v3.5 PR1-B：vxe 引擎 + 树形 + 行拖拽 三者冲突（sortablejs 与 vxe tree-node 行
-    // 结构不兼容，会引发拖拽错位）→ 不挂 sortablejs + warn 告知用户
+    // 结构不兼容，会引发拖拽错位）→ 不挂 sortablejs + console.debug 告知用户
+    //
+    // v3.5 hotfix-3：warn 降级 debug。原因——设计预期行为（spec §七.3 引擎能力矩阵）
+    // 自动忽略行拖拽；console.warn 在 demo（如 ProTableEngineCompare 演示双引擎能力对等
+    // 时故意同时启用三能力）构成噪音。dev 开发者可在浏览器 console 勾选「Verbose /
+    // Debug」级别查看；prod 完全静默。与 hotfix-1 useRowDrag.ts:94 warn 降级策略一致。
     if (isVxeEngine && props.enableTree && props.enableRowDrag) {
-      console.warn(
+      console.debug(
         '[ProTable] vxe-table 引擎 + 树形 + 行拖拽 同时启用：sortablejs 与 vxe tree-node 行结构冲突，已自动忽略行拖拽'
       )
     }
