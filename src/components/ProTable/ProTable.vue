@@ -230,8 +230,10 @@ const { maxHeight: autoHeightMax } = useAutoHeight({
   },
 })
 
-/** ElementTableBody 实例 ref —— 提前到 useTableEngineDom 之前声明，供 composable 接收 */
-const proTableEl = ref<InstanceType<typeof ElementTableBody> | null>(null)
+/** ElementTableBody 实例 ref —— 提前到 useTableEngineDom 之前声明，供 composable 接收。
+ * v3.5 PR3：ElementTableBody 加 `<script setup generic="T">` 后，`InstanceType<typeof ElementTableBody>`
+ * 不再适用（generic 组件无静态构造类型），改用结构化类型与 useTableEngineDom / watch elTable 字段对齐。 */
+const proTableEl = ref<{ $el?: HTMLElement; elTable?: ComponentPublicInstance | null } | null>(null)
 
 /** v2.1 vxe 引擎分支实例 ref —— 密度切换触发 vxe 行高重算 + useTableEngineDom vxe tbody 查询 */
 const proTableVxe = ref<InstanceType<typeof VxeTableBody> | null>(null)
@@ -646,9 +648,9 @@ defineExpose({
         <ElementTableBody
           v-else-if="effectiveEngine === 'element-plus'"
           ref="proTableEl"
-          :rows="treeData ? treeData.flatData.value : tableRows"
+          :rows="(treeData ? treeData.flatData.value : tableRows) as T[]"
           :loading="table.loading.value && hasTableMounted"
-          :columns="sortedColumnsTyped as ProColumn<Record<string, unknown>>[]"
+          :columns="sortedColumnsTyped"
           :row-key="props.rowKey"
           :row-edit="rowEdit"
           :tree-data="treeData"

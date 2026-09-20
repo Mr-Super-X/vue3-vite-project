@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup lang="ts" generic="T extends object = Record<string, unknown>">
 /**
  * ElementTableBody —— element-plus 引擎渲染分支（v2.1 P1 自 ProTable.vue 抽取）
  *
@@ -8,6 +8,9 @@
  *
  * 抽取动机：ProTable.vue 超 300 行业务组件上限；且 vxe-table 分支（VxeTableBody）
  * 需要同级的渲染分支插槽位（v2.1 决策 1）。
+ *
+ * v3.5 PR3：补 generic<T> 透传——rows / columns 都绑 T，消费方传 `ProColumn<User>`
+ * 时 IDE 提示贯穿到 ProColumn.render 的 row: T 形参。
  *
  * @see [`../ProTable.vue`](../ProTable.vue) 编排层 —— 唯一调用方
  * @see [`../adapters/cell-render`](../adapters/cell-render.ts) resolveCellContent 共用渲染逻辑
@@ -26,14 +29,14 @@ import CellContent from './CellContent.vue'
 
 const props = defineProps<{
   /** 渲染行（树形模式为扁平化后的 flatData） */
-  rows: Record<string, unknown>[]
+  rows: T[]
   /**
    * 后续刷新 loading（分页/排序/搜索请求期间的遮罩）。
    * 首次加载由编排层 AsyncState skeleton 承担，本组件收到时恒为 false —— 避免双重 loading。
    */
   loading: boolean
   /** 可见列（列设置抽屉排序后的结果） */
-  columns: ProColumn[]
+  columns: ProColumn<T>[]
   /** 行 key 字段名（缺省 'id'）；显式联合 undefined —— exactOptionalPropertyTypes 下模板绑定可能传 undefined */
   rowKey?: string | undefined
   /** 行编辑能力实例（未启用为 null，v-else-if 分支跳过） */
@@ -176,7 +179,7 @@ defineExpose({
     <ElTable
       ref="elTableRef"
       v-loading="loading"
-      :data="rows"
+      :data="rows as Record<string, unknown>[]"
       v-bind="{
         ...(rowKey ? { rowKey } : {}),
         // v3.1 自动高度：非 null 时绑定 max-height（exactOptionalPropertyTypes 下条件展开，
@@ -292,7 +295,7 @@ defineExpose({
             <EditCell
               v-else-if="rowEdit?.isEditing(rowKeyOf(scope.row)) && col.edit"
               :row-key="rowKeyOf(scope.row)"
-              :col="col"
+              :col="col as ProColumn"
               :value="rowEdit.getValue(rowKeyOf(scope.row), col.prop)"
               :density="density"
               @update="(prop, v) => rowEdit?.setValue(rowKeyOf(scope.row), prop, v)"
