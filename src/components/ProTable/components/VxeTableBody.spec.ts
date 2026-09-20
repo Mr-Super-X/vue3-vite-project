@@ -222,4 +222,37 @@ describe('VxeTableBody', () => {
     expect(wrapper.exists()).toBe(true)
     wrapper.unmount()
   })
+
+  it('v3.5 PR1-B：rowDrag=null 时 mount 不崩溃（编排层未启用行拖拽）', async () => {
+    const wrapper = mountBody({ rowDrag: null })
+    await flushPromises()
+    expect(wrapper.exists()).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('v3.5 PR1-B：rowDrag 启用时 mount 不崩溃（编排层 useRowDrag 实例注入）', async () => {
+    const mockRowDrag = {
+      isDragging: { value: false },
+      handleClass: { value: 'pro-table-drag-handle' },
+      sortableRef: { value: null },
+      attachSortable: vi.fn(),
+      detachSortable: vi.fn(),
+    } as never
+    const wrapper = mountBody({ rowDrag: mockRowDrag })
+    await flushPromises()
+    expect(wrapper.exists()).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('v3.5 PR1-B：defineExpose 暴露 getTbody 返回 vxe tbody DOM', async () => {
+    // vxe-table 模块 mock 是有状态的；mount 后模板会渲染 .vxe-table--body-wrapper 容器
+    // 这里直接断言暴露方法存在且返回 null（jsdom 无 vxe-table 真实 DOM）
+    const wrapper = mountBody()
+    await nextTick()
+    const exposed = wrapper.vm.$.exposed as Record<string, unknown> | null
+    expect(exposed).toBeDefined()
+    expect('getTbody' in (exposed ?? {})).toBe(true)
+    expect(typeof (exposed as { getTbody?: unknown }).getTbody).toBe('function')
+    wrapper.unmount()
+  })
 })

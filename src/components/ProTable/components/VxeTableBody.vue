@@ -24,6 +24,7 @@ import type { ProColumn, SortChangeEvent, TableDensity } from '../types'
 import type { useRowEdit } from '../composables/useRowEdit'
 import type { useCellSpan } from '../composables/useCellSpan'
 import type { useTreeData } from '../composables/useTreeData'
+import type { useRowDrag } from '../composables/useRowDrag'
 import { useVxeTable } from '../composables/useVxeTable'
 import { toVxeColumnProps, hasCustomSort, hasReserveSelection } from '../adapters/vxe-column'
 import { resolveCellContent } from '../adapters/cell-render'
@@ -62,6 +63,8 @@ const props = defineProps<{
   columnResize?: boolean | undefined
   /** v3.5 PR1-B：树形能力实例（未启用为 null；启用时由编排层 useTableCapabilities 注入） */
   treeData?: ReturnType<typeof useTreeData> | null
+  /** v3.5 PR1-B：行拖拽能力实例（未启用为 null；启用时由编排层 useTableCapabilities 注入） */
+  rowDrag?: ReturnType<typeof useRowDrag> | null
 }>()
 
 const emit = defineEmits<{
@@ -97,12 +100,30 @@ const vxeTableInst = ref<{ recalculate?: (reFull?: boolean) => Promise<unknown> 
  * 在切密度后调用（el 引擎行高是纯 CSS，无需此步）
  *
  * @see [`../../styles/element-protable-overwrite.scss`](../../styles/element-protable-overwrite.scss) 密度变量覆盖机制
+ *
+ * v3.5 PR1-B：getTbody 暴露给编排层 useTableEngineDom，让 useRowDrag 的 getTbody 回调
+ * 能查询到 vxe-table 的 .vxe-table--body-wrapper tbody DOM 节点
  */
 defineExpose({
   recalculate: () => {
     void vxeTableInst.value?.recalculate?.()
   },
+  /** v3.5 PR1-B：vxe-table 根 DOM（含 .vxe-table--body-wrapper tbody），useRowDrag 挂载点 */
+  getTbody(): HTMLElement | null {
+    // 优先从 vxe 实例 ref 拿根 DOM；退化走组件根 DOM（onMounted 前 ref 还未绑定）
+    const root = (vxeTableInst.value as unknown as { $el?: HTMLElement } | null)?.$el
+    if (root instanceof HTMLElement) {
+      return root.querySelector('.vxe-table--body-wrapper tbody') as HTMLElement | null
+    }
+    // onMounted 前：fallback 用 ref="proTableVxeRoot" 抓模板根 div 再 query
+    return proTableVxeRoot.value?.querySelector(
+      '.vxe-table--body-wrapper tbody'
+    ) as HTMLElement | null
+  },
 })
+
+/** 模板根 div ref —— vxe-table 尚未挂载时 fallback getTbody 用 */
+const proTableVxeRoot = ref<HTMLDivElement | null>(null)
 
 const { loadVxeTable } = useVxeTable()
 
@@ -274,7 +295,7 @@ watch(
     项目未安装，VxeUI.getComponent('VxeLoading') 返回 undefined → prop 传了也不渲染）。
     若未来引入 vxe-pc-ui，可换回 vxe 原生 loading prop
   -->
-  <div v-else-if="vxeTableComp" v-loading="loading">
+  <div v-else-if="vxeTableComp" ref="proTableVxeRoot" v-loading="loading">
     <component
       :is="vxeTableComp"
       ref="vxeTableInst"
