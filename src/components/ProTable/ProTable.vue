@@ -286,6 +286,15 @@ const { rowEdit, treeData, cellSpan, rowDrag, summary, extendedExpose } = useTab
   virtualScroll,
 })
 
+/**
+ * v3.5 hotfix-9：引擎 tbody 就绪（el 同步挂载 / vxe 异步加载后发 body-ready 事件）——
+ * 挂载行拖拽。事件驱动替代原 useRowDrag 内 setTimeout 盲轮询（vxe 引擎加载耗时不确定，
+ * 定时重试要么过早要么浪费；就绪事件精确且只挂一次）
+ */
+function handleTableBodyReady(): void {
+  rowDrag?.reattach()
+}
+
 /** v2.0 树形：data 变化时 normalize + 扁平化（flatData computed 随 expanded 自动重算） */
 const hasTableMounted = ref(false)
 /**
@@ -672,6 +681,7 @@ defineExpose({
           @cell-dblclick="events.handleCellDblclick"
           @sort-change="events.handleSortChange"
           @filter-change="events.handleFilterChange"
+          @body-ready="handleTableBodyReady"
         >
           <!-- 透传业务插槽（col.prop 命名插槽等），保持 v1 插槽契约不变 -->
           <template v-for="(_, name) in $slots" :key="name" #[name]="scope">
@@ -705,6 +715,7 @@ defineExpose({
           @sort-change="events.handleSortChange"
           @filter-change="events.handleFilterChange"
           @engine-fallback="handleEngineFallback"
+          @body-ready="handleTableBodyReady"
         >
           <!-- 透传业务插槽（col.prop 命名插槽等），与 el 分支契约一致 -->
           <template v-for="(_, name) in $slots" :key="name" #[name]="scope">
@@ -775,6 +786,15 @@ defineExpose({
   &.is-tree {
     .el-table__expand-icon,
     .el-table__expanded-cell {
+      display: none;
+    }
+
+    /*
+     * v3.5 hotfix-9：隐藏 vxe-table 内置展开钮 —— 它在 slot 内容之前渲染，
+     * 顺序不可控（与 el 的 [拖拽柄][箭头][文本] 冲突）；展开 UI 统一由树列 slot 内的
+     * .pro-table-tree-toggle 呈现（vxe / el 同标记同样式，箭头大小自然对齐）
+     */
+    .vxe-cell--tree-btn {
       display: none;
     }
   }

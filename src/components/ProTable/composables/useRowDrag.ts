@@ -185,15 +185,13 @@ export function useRowDrag(options: UseRowDragOptions) {
       () => nextTick(reattach),
       { flush: 'post' }
     )
-    // v3.5 hotfix-7：vxe-table 异步加载后 tbody 才出现，onMounted 跑得太早
-    // → sortablejs 没挂上 → 行拖拽失效。加 retry 兜底（200ms / 500ms / 1s 三次尝试）
-    // 满足 vxe-table engine async load + first-row-render 时序
-    onMounted(() => {
-      nextTick(reattach)
-      setTimeout(() => nextTick(reattach), 200)
-      setTimeout(() => nextTick(reattach), 500)
-      setTimeout(() => nextTick(reattach), 1000)
-    })
+    /*
+     * v3.5 hotfix-7：el 引擎 tbody 随组件同步渲染，onMounted + nextTick 即可挂载。
+     * vxe 引擎动态异步加载 —— 就绪后由 VxeTableBody 发 body-ready 事件、编排层调
+     * reattach()（见 useTableCapabilities 暴露）完成挂载。事件驱动替代原 setTimeout
+     * 盲轮询（原方案成功了也重复重挂 3 次，延迟值拍脑袋，hotfix-9 重构移除）
+     */
+    onMounted(() => nextTick(reattach))
   }
 
   return {
@@ -202,5 +200,7 @@ export function useRowDrag(options: UseRowDragOptions) {
     sortableRef,
     attachSortable,
     detachSortable,
+    /** 重新挂载（编排层在引擎 body-ready 后调用；vxe 异步加载完成才存在 tbody） */
+    reattach,
   }
 }

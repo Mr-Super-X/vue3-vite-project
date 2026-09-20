@@ -78,8 +78,9 @@ describe('TreeAdapter (vxeTreeAdapter)', () => {
     // trigger: 'default'（箭头点击），与 vxe-table v4 默认一致；
     // 原 'cell' 会让 vxe 不渲染展开箭头（v3.5 hotfix-4 修复）
     expect(tc.trigger).toBe('default')
-    // indent: 20 与 ProColumn.tree.indentSize 默认值对齐，避免子级与父级挤在一起
-    expect(tc.indent).toBe(20)
+    // v3.5 hotfix-9：indent 置 0 —— 视觉缩进由树列 slot 内联（_level * indentSize）统一控制，
+    // 避免与 vxe 内置 padding-left 叠加；内置展开钮同时隐藏（顺序不可控），UI 与 el 同标记
+    expect(tc.indent).toBe(0)
   })
 
   it('onExpand 调 vxe-table setTreeExpand(row, true)', () => {

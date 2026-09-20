@@ -207,4 +207,29 @@
       }
     }
   }
+
+  /* ─────────── vxe 引擎与 el 引擎视觉对齐（v3.5 hotfix-10） ─────────── */
+
+  /*
+   * 行高对齐：vxe td 默认 vertical-align: baseline —— 块级 flex 单元格（.vxe-cell）
+   * 参与基线对齐时被 baseline descent 修正撑高（实测 default 档表体 49.54px / 树形
+   * 53.57px / 表头 49.84px，el 引擎恒 48px）。对 td 设 height 无效（table 布局中
+   * height 只是最小值，仍被基线修正顶开）；改 vertical-align: middle 后 td 精确
+   * 48px（实测 48.0000038 浮点），双引擎行高对齐。表头表体都要覆盖（vxe 表头 cell
+   * 结构与表体一致，同样受基线修正影响）
+   */
+  .vxe-table--body td,
+  .vxe-table--header th {
+    vertical-align: middle;
+  }
+
+  /*
+   * 表头字重/颜色对齐 el：el th 为 font-weight 600 + --el-text-color-secondary，
+   * vxe 默认 700 + rgba(0,0,0,0.7) —— 700 的粗体在视觉上像"字号更大"，
+   * 统一后双引擎表头观感一致（字号两边同为 14px，无需调整）
+   */
+  .vxe-table--header .vxe-header--column {
+    font-weight: 600;
+    color: var(--el-text-color-secondary);
+  }
 }

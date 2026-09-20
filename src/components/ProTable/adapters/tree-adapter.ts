@@ -132,8 +132,11 @@ export function createVxeTreeAdapter(
           // trigger 改回 'default'（箭头点击），与 vxe-table v4 默认一致；
           // 原 'cell' 让 vxe 不渲染展开箭头（v3.5 hotfix-4 修复）
           trigger: 'default',
-          // 缩进 20px：与 ProColumn.tree.indentSize 默认值对齐；vxe 缺省可能为 0 导致子级与父级挤在一起
-          indent: 20,
+          // v3.5 hotfix-9：indent 置 0 —— 双引擎树列 UI 统一由 slot 内联缩进呈现
+          // （_level * col.tree.indentSize，见 ElementTableBody/VxeTableBody 树形分支），
+          // vxe 内置 padding-left 不叠加；同时隐藏内置 .vxe-cell--tree-btn（其在 slot
+          // 内容之前渲染、顺序不可控），展开钮统一走 .pro-table-tree-toggle（与 el 同标记）
+          indent: 0,
         },
       }
     },

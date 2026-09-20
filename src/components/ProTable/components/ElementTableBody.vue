@@ -89,6 +89,11 @@ const emit = defineEmits<{
    * 无 filterParamsAdapter 时编排层仅 UI 记忆（el-table 客户端筛选继续生效）
    */
   (e: 'filter-change', filters: FilterValuesMap): void
+  /**
+   * v3.5 hotfix-9：tbody 渲染就绪（el 同步挂载；vxe 异步加载完成后由 VxeTableBody 发出）——
+   * 编排层收到后挂载/重挂载行拖拽（rowDrag.reattach），事件驱动替代 setTimeout 轮询
+   */
+  (e: 'body-ready'): void
 }>()
 
 /** 统一取行 rowKey（props.rowKey 字段，默认 DEFAULT_ROW_KEY）—— 事件桥接与树形模板共用 */
@@ -167,6 +172,13 @@ defineExpose({
     return elTableRef.value?.$el as HTMLElement | undefined
   },
 })
+
+/*
+ * v3.5 hotfix-9：el 引擎同步渲染 —— onMounted + nextTick 后 tbody 已存在（数据异步
+ * 填充不影响 sortablejs 挂载点），发 body-ready 让编排层挂载行拖拽
+ * （与 VxeTableBody 同一事件契约，事件驱动替代 setTimeout 轮询）
+ */
+onMounted(() => nextTick(() => emit('body-ready')))
 </script>
 
 <template>

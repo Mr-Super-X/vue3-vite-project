@@ -80,6 +80,11 @@ const emit = defineEmits<{
   (e: 'sort-change', evt: SortChangeEvent): void
   /** 引擎加载失败 —— 编排层切回 element-plus */
   (e: 'engine-fallback'): void
+  /**
+   * v3.5 hotfix-9：vxe-table 组件挂载完成（内部数据已初始化、tbody 已渲染）——
+   * 编排层收到后回灌展开状态并挂载行拖拽（rowDrag.reattach），事件驱动替代 setTimeout 轮询
+   */
+  (e: 'body-ready'): void
   /** v3.5 PR1-B：树形展开/折叠（vxe toggle-tree-expand 已映射 rowKey；编排层转发给 treeData.toggle） */
   (e: 'expand-toggle', rowKey: string | number): void
   /**
@@ -148,6 +153,12 @@ const proTableVxeRoot = ref<HTMLDivElement | null>(null)
 const { loadVxeTable } = useVxeTable()
 
 /**
+ * hotfix-9：与 ElementTableBody 同源命名空间 —— 树形展开钮 / 叶子图标 / 拖拽柄
+ * 的 BEM 类名与 el 引擎严格一致（vv-pro-table__tree-toggle 等），保证双引擎样式统一
+ */
+const bem = createNamespace('pro-table')
+
+/**
  * v3.5 PR1-B：树形引擎适配器 —— 仅在 treeData 启用时实例化。
  * getVxeTable 是 getter 闭包：vxeTableInst.value 在 onMounted 异步加载完成后才有值，
  * 用 getter 而非 ref 直传避免捕获过期快照。
@@ -164,23 +175,42 @@ const treeConfigBinding = computed<Record<string, unknown> | undefined>(() =>
 )
 
 /**
- * v3.5 PR1-B：watch expandedKeys 把 useTreeData 状态全量回灌 vxe 引擎侧 Map。
- * 触发场景：① revealKeys 批量展开 ② 外部 expandNode/collapseNode API 调用
- * ③ defaultExpandDepth 启动默认展开。
+ * v3.5 PR1-B：把 useTreeData 展开状态全量回灌 vxe 引擎侧 Map。
+ * 触发场景：① expandedKeys 变化（revealKeys / expandNode / 默认展开 / 懒加载落地）
+ * ② v3.5 hotfix-9：引擎异步加载完成后补一次（见 onMounted —— normalize 触发的
+ * watch 可能早于引擎就绪被跳过，竞态导致默认展开在 vxe 侧不生效）
+ * ③ rows 变化（懒加载子节点落地后重建内部索引）。
  *
  * rowsByKey 用当前 props.rows 构造（vxe-table 平铺渲染后的视图行）。
  */
+function syncExpandedToVxe(): void {
+  if (!treeAdapter.value || !props.treeData) return
+  const keys = [...props.treeData.expandedKeys.value]
+  /*
+   * hotfix-9：键集合必须含嵌套子行 —— props.rows 是顶层数组，懒加载展开子节点时
+   * rowsByKey.get(子行key) 永远 undefined → setTreeExpand 被跳过（公司能展开、
+   * 部门不能的原因）。flatData 是含全部层级节点的扁平视图（行对象引用一致）
+   */
+  const src = props.treeData.flatData.value as Record<string, unknown>[]
+  const rowsByKey = new Map<string | number, Record<string, unknown>>()
+  for (const r of src) {
+    const k = r[props.rowKey ?? 'id'] as string | number | undefined
+    if (k !== undefined) rowsByKey.set(k, r)
+  }
+  treeAdapter.value.syncExpanded(keys, rowsByKey)
+}
+
 watch(
   () => (props.treeData ? [...props.treeData.expandedKeys.value] : []),
-  (keys) => {
-    if (!treeAdapter.value || !props.treeData) return
-    const rowsByKey = new Map<string | number, Record<string, unknown>>()
-    for (const r of props.rows) {
-      const k = (r as Record<string, unknown>)[props.rowKey ?? 'id'] as string | number | undefined
-      if (k !== undefined) rowsByKey.set(k, r as Record<string, unknown>)
-    }
-    treeAdapter.value.syncExpanded(keys, rowsByKey)
-  },
+  () => syncExpandedToVxe(),
+  { flush: 'post' }
+)
+
+// hotfix-9：懒加载子节点落地（props.rows 引用不变、行对象原地赋值 children）后，
+// vxe 内部 fullAllDataRowIdData 需重建才能渲染新子行 —— rows 变化即补一次同步
+watch(
+  () => props.rows,
+  () => nextTick(syncExpandedToVxe),
   { flush: 'post' }
 )
 
@@ -219,6 +249,20 @@ onMounted(async () => {
   } finally {
     engineLoading.value = false
   }
+})
+
+/*
+ * v3.5 hotfix-9：模板 ref 绑定 = vxe-table 组件挂载完成（内部 fullDataRowIdData 已建、
+ * tbody 已渲染）。nextTick 后：① syncExpandedToVxe 回灌展开状态（normalize 触发的
+ * expandedKeys watch 可能早于此被跳过，竞态导致默认展开不生效）② emit body-ready
+ * 通知编排层挂载行拖拽。事件驱动替代原 onMounted setTimeout 盲轮询
+ */
+watch(vxeTableInst, (inst) => {
+  if (!inst) return
+  nextTick(() => {
+    syncExpandedToVxe()
+    emit('body-ready')
+  })
 })
 
 /** 统一取行 rowKey（props.rowKey 字段，默认 'id'） */
@@ -417,9 +461,41 @@ watch(
             >
               ⋮⋮
             </span>
-            <!-- 行编辑控件（编辑态 + 含 edit 配置）；树形分支 vxe 引擎不支持，无对应模板 -->
+            <!--
+              v3.5 hotfix-9：树形分支 —— 与 ElementTableBody 完全相同的标记
+              （缩进 span + .pro-table-tree-toggle 展开钮 + CellContent）。
+              vxe 内置 .vxe-cell--tree-btn 在 slot 内容之前渲染（顺序不可控，与 el 的
+              [柄][箭头][文本] 顺序冲突），已由 ProTable.vue 样式隐藏；展开状态仍经
+              expandedKeys watch → syncExpanded 回灌 vxe 引擎（点钮走 treeData.toggle，
+              toggle-tree-expand 事件转发保留作 API 驱动展开的对齐通路）
+            -->
+            <template v-if="col.tree && treeData">
+              <span
+                :style="{
+                  paddingLeft:
+                    (((scope.row as Record<string, unknown>)['_level'] as number | undefined) ??
+                      0) *
+                      (col.tree.indentSize ?? 24) +
+                    'px',
+                }"
+              >
+                <button
+                  v-if="(scope.row as Record<string, unknown>)['_hasChildren']"
+                  type="button"
+                  class="pro-table-tree-toggle"
+                  :class="bem.e('tree-toggle')"
+                  :aria-expanded="treeData.isExpanded(rowKeyOf(scope.row))"
+                  aria-label="展开/折叠"
+                  @click="treeData.toggle(rowKeyOf(scope.row))"
+                >
+                  {{ treeData.isExpanded(rowKeyOf(scope.row)) ? '▾' : '▸' }}
+                </button>
+                <CellContent :content="resolveCellContent(col, scope.row, scope.rowIndex ?? 0)" />
+              </span>
+            </template>
+            <!-- 行编辑控件（编辑态 + 含 edit 配置）；树形列优先走上方树形分支 -->
             <EditCell
-              v-if="rowEdit?.isEditing(rowKeyOf(scope.row)) && col.edit"
+              v-else-if="rowEdit?.isEditing(rowKeyOf(scope.row)) && col.edit"
               :row-key="rowKeyOf(scope.row)"
               :col="col as ProColumn"
               :value="rowEdit.getValue(rowKeyOf(scope.row), col.prop)"
