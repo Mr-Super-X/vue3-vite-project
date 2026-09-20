@@ -212,35 +212,35 @@ assertValidResponse(adapted, props.tableKey ? { tableKey: props.tableKey } : {})
 
 ### A11y 三层结构
 
-| 层级       | 元素                              | ARIA 属性                                                               |
-| ---------- | --------------------------------- | ----------------------------------------------------------------------- |
-| 根容器     | `ProTable.vue` 根 div             | `role="grid"` + `aria-label="数据表格"` + `aria-rowcount` + `aria-busy` |
-| 工具栏     | `TableHeader.vue` 工具栏容器      | `role="toolbar"` + `aria-label="表格工具栏"`                            |
-| 工具栏按钮 | 刷新 / 全屏 / 列设置 / 密度切换   | `aria-label` + `aria-pressed`（密度切换）+ `aria-expanded`（列设置）    |
-| 搜索区     | `SearchForm.vue` 根 div           | `role="search"` + `aria-label="表格筛选"`                               |
-| 搜索区按钮 | 搜索 / 重置 / 高级筛选 / 展开收起 | `aria-label` + `aria-expanded`（折叠按钮）                              |
-| 已选条件区 | `SelectedTags.vue` 根 div         | `role="region"` + `aria-label="当前已选筛选条件"`                       |
-| 批量操作条 | `SelectionBar.vue` 根 div         | `role="status"` + `aria-live="polite"`（已 N 项自动朗读）               |
-| 编辑态     | `EditCell.vue` sr-only span       | `aria-live="polite"`（进入编辑态播报）                                  |
+| 层级       | 元素                              | ARIA 属性                                                                      |
+| ---------- | --------------------------------- | ------------------------------------------------------------------------------ |
+| 根容器     | `ProTable.vue` 根 div             | `role="grid"` + `aria-label="数据表格"` + `aria-rowcount` + `aria-busy`        |
+| 工具栏     | `TableHeader.vue` 工具栏容器      | `role="toolbar"` + `aria-label="表格工具栏"`                                   |
+| 工具栏按钮 | 刷新 / 全屏 / 列设置 / 密度切换   | `aria-label` + `aria-expanded`（列设置）+ `aria-haspopup`（密度下拉，EP 注入） |
+| 搜索区     | `SearchForm.vue` 根 div           | `role="search"` + `aria-label="表格筛选"`                                      |
+| 搜索区按钮 | 搜索 / 重置 / 高级筛选 / 展开收起 | `aria-label` + `aria-expanded`（折叠按钮）                                     |
+| 已选条件区 | `SelectedTags.vue` 根 div         | `role="region"` + `aria-label="当前已选筛选条件"`                              |
+| 批量操作条 | `SelectionBar.vue` 根 div         | `role="status"` + `aria-live="polite"`（已 N 项自动朗读）                      |
+| 编辑态     | `EditCell.vue` sr-only span       | `aria-live="polite"`（进入编辑态播报）                                         |
 
 ### 13 处 aria-label 清单
 
-| #   | 组件         | 元素          | aria-label                        |
-| --- | ------------ | ------------- | --------------------------------- |
-| 1   | ProTable     | 根 div        | `数据表格` / `数据表格（全屏）`   |
-| 2   | SearchForm   | 搜索按钮      | `搜索`                            |
-| 3   | SearchForm   | 重置按钮      | `重置筛选`                        |
-| 4   | SearchForm   | 高级筛选按钮  | `打开高级筛选`                    |
-| 5   | SearchForm   | 展开/收起按钮 | `展开搜索条件` / `收起搜索条件`   |
-| 6   | SelectedTags | tag × 按钮    | `清除筛选条件 ${label}`           |
-| 7   | SelectedTags | 清除全部      | `清除全部筛选条件`                |
-| 8   | TableHeader  | 刷新按钮      | `刷新表格`                        |
-| 9   | TableHeader  | 全屏按钮      | `进入全屏` / `退出全屏`           |
-| 10  | TableHeader  | 密度切换按钮  | `切换表格密度为${紧凑/默认/宽松}` |
-| 11  | TableHeader  | 列设置按钮    | `打开列设置`                      |
-| 12  | ColSetting   | checkbox      | `显示/隐藏 ${label}`              |
-| 13  | ColSetting   | 置顶按钮      | `置顶 ${label}`                   |
-| 14  | SelectionBar | 清除按钮      | `清除选择`                        |
+| #   | 组件         | 元素          | aria-label                                                  |
+| --- | ------------ | ------------- | ----------------------------------------------------------- |
+| 1   | ProTable     | 根 div        | `数据表格` / `数据表格（全屏）`                             |
+| 2   | SearchForm   | 搜索按钮      | `搜索`                                                      |
+| 3   | SearchForm   | 重置按钮      | `重置筛选`                                                  |
+| 4   | SearchForm   | 高级筛选按钮  | `打开高级筛选`                                              |
+| 5   | SearchForm   | 展开/收起按钮 | `展开搜索条件` / `收起搜索条件`                             |
+| 6   | SelectedTags | tag × 按钮    | `清除筛选条件 ${label}`                                     |
+| 7   | SelectedTags | 清除全部      | `清除全部筛选条件`                                          |
+| 8   | TableHeader  | 刷新按钮      | `刷新表格`                                                  |
+| 9   | TableHeader  | 全屏按钮      | `进入全屏` / `退出全屏`                                     |
+| 10  | TableHeader  | 密度触发钮    | `切换表格密度`（菜单项：`切换表格密度为${紧凑/默认/宽松}`） |
+| 11  | TableHeader  | 列设置按钮    | `打开列设置`                                                |
+| 12  | ColSetting   | checkbox      | `显示/隐藏 ${label}`                                        |
+| 13  | ColSetting   | 置顶按钮      | `置顶 ${label}`                                             |
+| 14  | SelectionBar | 清除按钮      | `清除选择`                                                  |
 
 ### 键盘可达修复
 

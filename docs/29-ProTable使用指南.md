@@ -689,7 +689,7 @@ tableRef.value?.refreshChildren('org-1') // 重新加载 org-1 子节点
 // 'compact' | 'default' | 'loose'
 ```
 
-`<TableHeader>` 提供密度切换按钮（紧凑 / 默认 / 宽松）。vxe 引擎切密度会触发 `recalculate` 重算行高（vxe 行高变量有缓存，data-density 变更不会自动重测）。
+`<TableHeader>` 提供密度切换：触发钮与刷新/全屏同为 circle icon 按钮，点击弹出三档下拉菜单（紧凑 / 默认 / 宽松，当前档带 ✓）。vxe 引擎切密度会触发 `recalculate` 重算行高（vxe 行高变量有缓存，data-density 变更不会自动重测）。
 
 ---
 
