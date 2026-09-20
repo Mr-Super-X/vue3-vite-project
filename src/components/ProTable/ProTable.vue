@@ -562,7 +562,7 @@ defineExpose({
     >
       <SearchForm
         v-if="columns.searchColumns.length > 0"
-        :columns="searchColumnsTyped as ProColumn<Record<string, unknown>>[]"
+        :columns="searchColumnsTyped"
         :search-params="search.searchParams.value"
         :search-rows="props.searchRows"
         v-bind="{
