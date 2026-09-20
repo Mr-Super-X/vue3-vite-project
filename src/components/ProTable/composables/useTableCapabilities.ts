@@ -122,7 +122,9 @@ export function useTableCapabilities<T extends object = Record<string, unknown>>
   const cellSpan = props.enableCellSpan
     ? useCellSpan({
         // v2.0 修复：传 Ref 让 useCellSpan watch 响应式（之前传快照导致 buildCache 永远用空数据）
+        // v3.5 PR3：useCellSpan 不绑 T，按默认 Record 视角处理（与 v3.4 行为一致）
         columns: columns.allColumns as Ref<ProColumn[]>,
+        // v3.5 PR3：T → Record<string, unknown> cast（useCellSpan 内部按 Record 视角处理）
         data: table.data as unknown as Ref<Record<string, unknown>[]>,
         ...(cellSpanConfig.value.maxMergeSpan !== undefined && {
           maxMergeSpan: cellSpanConfig.value.maxMergeSpan,
@@ -166,6 +168,7 @@ export function useTableCapabilities<T extends object = Record<string, unknown>>
     props.enableRowDrag && !isVxeTreeConflict
       ? useRowDrag({
           handle: rowDragConfig.value.handle ?? 'first-col',
+          // v3.5 PR3：T → Record 视角 cast（useRowDrag 内部按 Record 处理，与 T 相邻能力层 cast 边界对齐）
           data: table.data as unknown as Ref<Record<string, unknown>[]>,
           crossLevelDrag: !props.enableTree,
           ...(options.getTbody && { getTbody: options.getTbody }),
@@ -223,8 +226,10 @@ export function useTableCapabilities<T extends object = Record<string, unknown>>
   // v3.0 能力扩展 5a：客户端汇总行（条件实例化）
   const summary = props.enableSummary
     ? useSummary({
-        columns: columns.allColumns as Ref<ProColumn[]>,
-        data: table.data as unknown as Ref<Record<string, unknown>[]>,
+        // v3.5 PR3：useSummary 绑 T，columns 传 ProColumn<T>[]（与 v3.4 cast 抹除对齐）
+        columns: columns.allColumns as Ref<ProColumn<T>[]>,
+        // v3.5 PR3：table.data 类型是 Ref<T[] | null>，useSummary 期望 Ref<T[] | null> 直接透传
+        data: table.data as Ref<T[] | null>,
         config: typeof props.enableSummary === 'object' ? props.enableSummary : {},
       })
     : null
@@ -235,8 +240,8 @@ export function useTableCapabilities<T extends object = Record<string, unknown>>
     options.virtualScroll ??
     (props.virtualized
       ? useVirtualScroll({
-          // useVirtualScroll 不读泛型，仅用 props.tableEngine/props.virtualized/props.enableRowEdit，
-          // cast 到默认 Record 视角避免泛型传递的 index signature 报错
+          // v3.5 PR3：cast 到默认 Record 视角避免泛型传递的 index signature 报错
+          // （useVirtualScroll 不读泛型，仅用 props.tableEngine/props.virtualized/props.enableRowEdit）
           props: props as unknown as ProTableProps,
           engine: options.engine ?? ref('element-plus'),
           enableRowEdit: Boolean(props.enableRowEdit),
