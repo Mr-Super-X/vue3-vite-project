@@ -93,6 +93,7 @@ async function requestApi(params: Record<string, unknown>) {
 | `requestError`         | `(error: unknown) => void`                                   | `undefined`      | 请求错误回调                                                             |
 | `pagination`           | `boolean \| Record<string, unknown>`                         | `true`           | 是否显示分页 / 透传分页 props                                            |
 | `sortParamsAdapter`    | `(state: SortState<T>) => Record`                            | 缺省约定         | 排序参数序列化（默认 `{ orderByColumn, isAsc }`）                        |
+| `filterParamsAdapter`  | `(filters: FilterValuesMap) => Record<string, unknown>`      | 缺省直传         | 服务端筛选参数序列化（v3.5 PR2 新增；详见 §3.5）                         |
 | `responseAdapter`      | `(raw: unknown) => ProTableResponse<T>`                      | 缺省直通         | 响应结构适配（非约定后端用）                                             |
 | `tableEngine`          | `'element-plus' \| 'vxe-table'`                              | `'element-plus'` | 表格引擎（首次 mount 锁定）                                              |
 | `tableKey`             | `string`                                                     | `undefined`      | localStorage 持久化列设置的 key                                          |
@@ -131,6 +132,7 @@ interface ProTableExpose<T> {
   element: Ref<ComponentPublicInstance | null>
   engine: TableEngine
   getSortState(): SortState<T> | null
+  getFilterState(): FilterValuesMap // v3.5 PR2 新增；返回当前所有筛选列的 value 数组
 
   // —— 行内编辑（v2.0） ——
   startEdit(rowKey: string | number): void
@@ -146,6 +148,48 @@ interface ProTableExpose<T> {
   setRowOrder(newOrder: T[]): void
 }
 ```
+
+### 1.4 Events（v3.5 PR2 起完整披露）
+
+ProTable 通过 `defineEmits` 暴露 3 个对外事件，**v3.5 PR2 起 vxe/element-plus 双引擎均触发**（此前 PR1 之前部分事件仅在 element-plus 引擎下触发）：
+
+| Event             | Payload 类型                                      | 触发时机                                                                      | 适用场景                           |
+| ----------------- | ------------------------------------------------- | ----------------------------------------------------------------------------- | ---------------------------------- |
+| `sort-change`     | `SortState<T> \| null`                            | 排序列变化（点表头排序按钮）；`null` 表示无排序                               | 监听服务端排序 → 自定义请求参数    |
+| `filter-change`   | `Record<string, (string \| number \| boolean)[]>` | 任意筛选列值变化（多列同时变化时一并 emit，**v3.5 PR2 起 vxe 引擎同样支持**） | 服务端筛选的请求参数构造；状态回显 |
+| `engine-fallback` | `string`（降级原因）                              | 引擎自动降级（如 vxe + 树形 + 行拖拽三者冲突 → 退化为 element-plus）          | 上报降级事件用于监控               |
+
+**示例：监听服务端筛选**
+
+```vue
+<ProTable
+  :columns="columns"
+  :request-api="fetchUsers"
+  :filter-params-adapter="adaptFilters"
+  @filter-change="(f) => console.log('当前筛选：', f)"
+/>
+```
+
+**Payload 子类型**：
+
+```ts
+type FilterValue = string | number | boolean // 单个筛选值
+type FilterValuesMap = Record<string, FilterValue[]> // { 列字段名: 值数组 }
+type FilterParamsAdapter = (filters: FilterValuesMap) => Record<string, unknown>
+```
+
+> **设计取舍**：`FilterValue` 刻意排除 `null` / `undefined` —— 多选筛选时以「空数组」表达「无筛选」，与 `FilterParamsAdapter` 输出 `Record<string, unknown>` 解耦，让消费方自由映射到后端协议（如 `value.join(',')` 或 `value: undefined`）。
+
+### 1.5 Slots（v3.5 起完整披露）
+
+| Slot                                                      | 用途                                                                | 典型场景                        |
+| --------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------- |
+| `tableHeader`                                             | 表格上方自定义区域（透传给 TableHeader 组件）                       | 加导出按钮 / 自定义标题         |
+| `toolButton`                                              | 工具栏按钮区域                                                      | 加自定义按钮                    |
+| **`empty`**                                               | **空状态占位**（data 为空数组时显示；替换 Element Plus 默认空插画） | 自定义空态文案 / 引导按钮       |
+| **`paginationLeft`**                                      | **分页器左侧**                                                      | 显示「共 X 条」                 |
+| **`paginationRight`**                                     | **分页器右侧**                                                      | 加批量操作按钮 / 自定义分页扩展 |
+| `operation` / `expand` / `search-[prop]` / `selectionBar` | 业务插槽透传（§2.5 / §4.2 / §9.3 已述）                             | 业务自定义                      |
 
 ```vue
 <script setup lang="ts">
@@ -657,6 +701,36 @@ tableRef.value?.refreshChildren('org-1') // 重新加载 org-1 子节点
 ```ts
 { prop: 'sort', label: '拖拽', width: 60, draggable: true }
 ```
+
+### 7.5 客户端汇总 `enableSummary`（v3.0）
+
+```ts
+<ProTable :columns="columns" :request-api="requestApi" :enable-summary="{
+  aggregate: 'sum', // 'sum' | 'avg' | 'count' | 'max' | 'min' —— 全局聚合方式
+  label: '合计',     // 汇总行首列显示文案
+}" />
+```
+
+或按列单独配置：
+
+```ts
+{
+  prop: 'amount', label: '金额',
+  summary: { aggregate: 'sum', formatter: (v) => `¥${v.toFixed(2)}` },
+}
+```
+
+**`SummaryAggregate` 子类型**（v3.0 起；聚合方式枚举）：
+
+| 值        | 含义                     | 适用列类型             |
+| --------- | ------------------------ | ---------------------- |
+| `'sum'`   | 求和                     | number                 |
+| `'avg'`   | 平均值                   | number                 |
+| `'count'` | 非空行数（不依赖列类型） | any                    |
+| `'max'`   | 最大值                   | number / date / string |
+| `'min'`   | 最小值                   | number / date / string |
+
+> **设计取舍**：`SummaryAggregate` 仅覆盖 5 种最常用聚合；自定义聚合（如中位数、分位数）可在列级 `summary.formatter` 内联实现，避免过度抽象。
 
 ---
 

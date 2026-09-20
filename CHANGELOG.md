@@ -2,6 +2,57 @@
 
 ## 未发布
 
+### ✨ Feature | ProTable v3.5 PR2：服务端筛选 + 事件完整披露（filterParamsAdapter / sort-change / filter-change / engine-fallback）
+
+> v3.5 PR1-B 完成 vxe-table 引擎能力补齐后，PR2 解决「服务端筛选」与「事件契约」两个核心缺口。前者补 `filterParamsAdapter` prop + `getFilterState()` expose；后者将 `sort-change` / `filter-change` / `engine-fallback` 3 个事件完整披露到 `defineEmits` 公共 API。
+
+**新增 `filterParamsAdapter` prop**（v3.5 PR2）：
+
+- 类型：`(filters: FilterValuesMap) => Record<string, unknown>`
+- 默认行为：直接传 `{ [列字段名]: values }`（多数后端可直接消费）
+- 典型用法：将多选数组 join 成 `csv` 字符串传给 `?status=active,pending`
+- 详见 `docs/29-ProTable使用指南.md §3.5`
+
+**新增 `getFilterState()` expose**（v3.5 PR2）：
+
+- 返回当前所有筛选列的 `{ [列字段名]: value[] }` Map
+- 与 `getSortState()` 对称；用于状态回显 / 持久化
+
+**新增 3 个公共事件**（v3.5 PR2 起 vxe/element-plus 双引擎均触发）：
+
+| Event | Payload | 触发 |
+|-------|---------|------|
+| `sort-change` | `SortState<T> \| null` | 排序列变化 |
+| `filter-change` | `Record<string, (string \| number \| boolean)[]>` | 任意筛选列值变化 |
+| `engine-fallback` | `string` | 引擎自动降级（vxe + 树形 + 拖拽三者冲突） |
+
+**子类型对外披露**：`FilterValue` / `FilterValuesMap` / `FilterParamsAdapter` / `SummaryAggregate` 已添加到 `docs/29 §1.4 Events` 与 `§7.5 汇总`。
+
+---
+
+### ✨ Feature | ProTable v3.5 PR3：ProColumn\<T\> 泛型透传改造（9 commit）
+
+> v3.5 PR3 将 ProTable 的 7 个子组件泛型化（CellContent / SearchForm / VxeTableBody / SelectedTags / ColSetting / TableHeader / ElementTableBody），让 `ProColumn<T>` 的 T 可正确推导至各组件内部，包括 `render` 回调 / `formatter` / `cellRender` 的入参类型。
+
+**关键 commit**：
+
+- `8fb7cff` `c5ce5d6` `6b83168` `c0193ee` `7dfca28` `a5924cc` `4bdbbac` `8b40bf7`：ProColumn\<T\> 泛型改造 7 个组件（移除 `as ViewColumn` 强制 cast）
+- `a662760`：searchForm 加 `generic<T>` + spec 泛型透传测试
+- `0d2efb5` `5dd4fd4` `21dd800`：tableHeader/searchForm 回滚 ProColumn[]（与 PR3 配套）
+
+**消费方影响**：`render: (row) => row.xxx` 的 `row` 类型现在严格为 T（之前是 `any`）。
+
+---
+
+### ♿ A11y | ProTable v3.5 A11y 改造（10 commit）
+
+> v3.5 A11y 系列解决无障碍合规问题，对接 WCAG 2.1 AA：
+
+- `70f904a` `3fc08e9` `ab88e51` `d304819` `4bc3c9d` `2cf1c9d` `1ffab58` `98df3af` `da67ceb`：A11y 改进 9 commit（prefers-reduced-motion 媒体查询支持、aria-live 区域、role=toolbar / region、focus-visible 焦点样式）
+- `playwright e2e` 基建 + `vitest-axe` 集成：新增 `@playwright/test` ^1.63.0 + `vitest-axe` ^0.1.0 依赖，自动化 A11y 回归测试
+
+---
+
 ### ✨ Feature | ProTable v3.5 PR1-B：vxe-table 引擎树形 + 行拖拽能力补齐
 
 > v3.5 PR1-A 通过 A11y + E2E 后，PR1-B 解决 v2.1 决策 5 遗留：vxe-table 引擎能力与 element-plus 对等。树形 + 行拖拽两个 v2.0 起只支持 el 引擎的能力，PR1-B 起在 vxe 引擎下也完整可用。
