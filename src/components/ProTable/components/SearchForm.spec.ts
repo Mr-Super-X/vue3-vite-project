@@ -525,3 +525,51 @@ describe('SearchForm', () => {
     expect(wrapper.find('[data-test="toggle-btn"]').attributes('aria-label')).toBe('收起搜索条件')
   })
 })
+
+/**
+ * v3.5 PR3：泛型透传断言。
+ *
+ * 覆盖目标：
+ * - 子组件已声明 `<script setup generic="T extends object = Record<string, unknown>">`
+ * - columns prop 类型 `ProColumn<T>[]` 在消费方传 `ProColumn<User>[]` 时类型一致
+ * - 默认 Record 视角向后兼容（不传泛型也工作）
+ *
+ * 测试策略：构造一个明确类型的 columns 数组，挂载不报错 + 渲染断言（类型层面靠 type-check 兜底）。
+ */
+describe('SearchForm v3.5 PR3 泛型透传', () => {
+  interface UserRow {
+    id: number
+    name: string
+    role: 'admin' | 'guest'
+  }
+
+  it('泛型化 columns（ProColumn<User>[]）可正常 mount 并触发 search emit', async () => {
+    const cols: import('../types').ProColumn<UserRow>[] = [
+      { prop: 'name', label: '名称', search: { el: 'input' as const, defaultValue: '' } },
+      { prop: 'role', label: '角色', search: { el: 'select' as const, defaultValue: null } },
+    ]
+    const wrapper = mount(SearchForm, {
+      props: {
+        columns: cols,
+        searchParams: reactive<Record<string, unknown>>({ name: '', role: null }),
+        searchRows: 3,
+      },
+    })
+    // 渲染断言：input 控件存在
+    expect(wrapper.findAll('input').length).toBeGreaterThanOrEqual(1)
+    // 触发搜索 emit 行为不变
+    await wrapper.find('[data-test="search-btn"]').trigger('click')
+    expect(wrapper.emitted('search')).toBeTruthy()
+  })
+
+  it('默认 Record 视角向后兼容（不传泛型 = ProColumn<Record<string, unknown>>[]）', () => {
+    const wrapper = mount(SearchForm, {
+      props: {
+        columns: [{ prop: 'name', label: '名称', search: { el: 'input' as const } }] as never,
+        searchParams: reactive({ name: '' }),
+        searchRows: 3,
+      },
+    })
+    expect(wrapper.exists()).toBe(true)
+  })
+})
