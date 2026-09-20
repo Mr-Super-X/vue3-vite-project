@@ -94,24 +94,35 @@ flowchart TD
     L[Local storage] <--> H
     M[tableEngine prop] --> N[adapters/engine.ts]
     N --> O[vxe-table 回退 warn（v2.0 未实现）]
+    %% v3.5 PR2：服务端筛选数据流
+    P[用户列头筛选] --> Q[ElTable @filter-change / Vxe filter-change]
+    Q --> R[useProTableEvents.handleFilterChange]
+    R --> S[useTable.setFilter]
+    S --> T[useTable.filterState]
+    T --> U{filterParamsAdapter?}
+    U -->|是| V[adapter(filters)]
+    V --> C
+    U -->|否| W[仅 UI 记忆]
+    T --> R
+    R --> X[emit filter-change 给父级]
 ```
 
 ## Composables 依赖
 
-| Composable             | 依赖                                | 输出                                                     |
-| ---------------------- | ----------------------------------- | -------------------------------------------------------- |
-| `useSearch`            | props.columns（search 配置）        | searchParams / search() / reset()                        |
-| `useColumns`           | props.columns + Local               | sortedColumns / allColumns / toggleVisible               |
-| `useTable`             | props + useSearch + useColumns      | data / loading / pagination / selectedRows / sortState   |
-| `adapters/engine`      | props.tableEngine                   | Ref<TableEngine>（首次挂载锁定）                         |
-| **v3.0 新增**          |                                     |                                                          |
-| `_utils/pickDefined`   | —                                   | pickDefined / asConfig / castToRecordArray（公共工具）   |
-| `useTableEngineDom`    | proTableEl 模板 ref                 | getTbody()（DOM 访问层，v3.0 M5 抽取基础设施）           |
-| **v3.1 新增**          |                                     |                                                          |
-| `useAutoHeight`        | rootEl + props.autoHeight           | maxHeight（Ref<number \| null>，null 不绑定）            |
-| `useStatePersist`      | props.tableKey + props.statePersist | read() 快照 / attach() 写回监听（Local + session alive） |
-| `useFullscreen`        | —                                   | isFullscreen / toggleFullscreen / exitFullscreen         |
-| `adapters/cell-format` | —                                   | resolveFormatter（函数/预设 key → 可执行格式化函数）     |
+| Composable             | 依赖                                | 输出                                                                 |
+| ---------------------- | ----------------------------------- | -------------------------------------------------------------------- |
+| `useSearch`            | props.columns（search 配置）        | searchParams / search() / reset()                                    |
+| `useColumns`           | props.columns + Local               | sortedColumns / allColumns / toggleVisible                           |
+| `useTable`             | props + useSearch + useColumns      | data / loading / pagination / selectedRows / sortState / filterState |
+| `adapters/engine`      | props.tableEngine                   | Ref<TableEngine>（首次挂载锁定）                                     |
+| **v3.0 新增**          |                                     |                                                                      |
+| `_utils/pickDefined`   | —                                   | pickDefined / asConfig / castToRecordArray（公共工具）               |
+| `useTableEngineDom`    | proTableEl 模板 ref                 | getTbody()（DOM 访问层，v3.0 M5 抽取基础设施）                       |
+| **v3.1 新增**          |                                     |                                                                      |
+| `useAutoHeight`        | rootEl + props.autoHeight           | maxHeight（Ref<number \| null>，null 不绑定）                        |
+| `useStatePersist`      | props.tableKey + props.statePersist | read() 快照 / attach() 写回监听（Local + session alive）             |
+| `useFullscreen`        | —                                   | isFullscreen / toggleFullscreen / exitFullscreen                     |
+| `adapters/cell-format` | —                                   | resolveFormatter（函数/预设 key → 可执行格式化函数）                 |
 
 ## 状态归属
 
@@ -123,6 +134,7 @@ flowchart TD
 | 列设置        | useColumns      | ref + Local | ✅（Local `${tableKey}:columns`）                                                   |
 | 密度          | useTable        | ref         | 否                                                                                  |
 | 分页/排序状态 | useTable        | ref         | v3.1 可选（statePersist 时随快照持久化；M2 服务端排序不混入 searchParams，决策 D4） |
+| 筛选状态      | useTable        | ref         | 否（v3.5 PR2 新增；filterParamsAdapter 存在时入请求；reset 同步清空）               |
 | 全屏态        | useFullscreen   | ref         | 否（组件内状态，class 由编排层绑定）                                                |
 | 引擎          | adapters/engine | Ref         | 否（首次挂载锁定）                                                                  |
 

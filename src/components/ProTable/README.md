@@ -312,6 +312,93 @@ pnpm test:e2e           # 跑 E2E（baseURL=http://localhost:5174）
 - `ProTable.engine.spec.ts` + `useTableCapabilities.spec.ts` + `ProTable.integration.spec.ts`
   （capability matrix 测试）
 
+## v3.5 变更摘要（服务端筛选 filterParamsAdapter）
+
+> 解决电商订单筛选 / 多维度财务报表等含 5-30 个查询条件的服务端筛选场景。filterParamsAdapter
+> 与 sortParamsAdapter 对称：业务方声明「把全表筛选快照序列化为后端约定的请求参数形态」，
+> ProTable 自动接管 filter-change 事件 + 回第 1 页 + 触发请求 + emit filter-change 供父级联动。
+
+### 新增 API
+
+```ts
+import type { FilterParamsAdapter, FilterValuesMap } from '@/components/ProTable/types'
+
+const filterParamsAdapter: FilterParamsAdapter = (filters: FilterValuesMap) => ({
+  statusList: filters.status, // 状态多选 → statusList
+  deptList: filters.dept, // 部门多选 → deptList
+  dateRange: filters.dateRange, // 日期范围
+  amountRange: filters.amountRange, // 金额范围
+})
+
+<ProTable
+  :columns="columns"
+  :request-api="filterOrdersRequestApi"
+  :filter-params-adapter="filterParamsAdapter"
+  row-key="id"
+  @filter-change="(filters) => console.log('URL 同步 / 埋点:', filters)"
+/>
+```
+
+### 与 sortParamsAdapter 对称性
+
+| 维度       | sortParamsAdapter                   | filterParamsAdapter                                   |
+| ---------- | ----------------------------------- | ----------------------------------------------------- |
+| 入参形态   | `SortState`（单条记录）             | `FilterValuesMap`（全表快照 Record）                  |
+| 触发时机   | el-table @sort-change               | el-table @filter-change                               |
+| 入请求路径 | `serializeSort(state)` → params     | `serializeFilters(map)` → params（仅当 adapter 存在） |
+| 默认行为   | 内置 `{ orderByColumn, isAsc }`     | 不调用 adapter，el-table 客户端筛选默认值             |
+| 回第 1 页  | ✅                                  | ✅                                                    |
+| 状态记忆   | `getSortState()` + emit sort-change | `getFilterState()` + emit filter-change               |
+| reset 路径 | 不清 sortState（review 设计）       | reset 同步清空 filterState                            |
+
+### 三引擎支持矩阵
+
+| 引擎                   | filter-change 支持               | 备注                                                   |
+| ---------------------- | -------------------------------- | ------------------------------------------------------ |
+| element-plus（v1）     | ✅ 完整支持（el-table 原生协议） | 列头下拉由 `column.tableProps.filters` 声明            |
+| vxe-table（v2.1）      | ✅ 完整支持（filter-config）     | `VxeTableBody` 翻译 vxe 单列 payload → 全表快照形态    |
+| element-plus v2 虚拟化 | ⚠️ console.warn 占位             | el-table-v2 无内置列头筛选下拉 UI，v3.5 PR2 阶段不实现 |
+
+### 实现要点
+
+- `types/index.ts`：新增 `FilterValue / FilterValuesMap / FilterParamsAdapter` 三类型
+- `composables/useTable.ts`：filterState ref + `setFilter` + `serializeFilters` + `resetFilter`
+- `composables/useProTableEvents.ts`：handleFilterChange 桥接（与 handleSortChange 对称）
+- `components/ElementTableBody.vue`：监听 `@filter-change` 转发 useProTableEvents.handleFilterChange
+- `components/VxeTableBody.vue`：翻译 vxe 单列 payload → 全表快照（localFilterMap 累加多列）
+- `components/ElementTableV2Body.vue`：console.warn 占位（H3 同款实例级 ref 防多次 warn）
+- `ProTable.vue`：defineEmits 加 `filter-change` + 模板双引擎 `@filter-change` 绑定 + defineExpose `getFilterState`
+  - fetchHook reset 路径同步清空 filterState
+
+### 默认行为契约（无 adapter 时）
+
+- filterState 仍被维护（UI 记忆 + expose.getFilterState）
+- el-table 客户端筛选默认值继续生效
+- 不触发新请求
+- emit filter-change 仍触发（业务方可监听做 UI 联动）
+
+**演示**：`src/modules/demo/examples/ProTable/ProTableServerFilter.vue` 含 4 列筛选（状态 / 部门 /
+创建日期 / 金额范围）+ filterParamsAdapter 把全表快照序列化为 `{ statusList, deptList, dateRange, amountRange }` +
+监听 filter-change 事件做快照展示。
+
+**新增/修改文件**：
+
+- `types/index.ts`（FilterValue / FilterValuesMap / FilterParamsAdapter / getFilterState）
+- `composables/useTable.ts`（filterState + setFilter + resetFilter + serializeFilters）
+- `composables/useTable.spec.ts`（+5 例 PR2 覆盖）
+- `composables/useProTableEvents.ts`（handleFilterChange 桥接）
+- `composables/useProTableEvents.spec.ts`（新增 +4 例 PR2 覆盖）
+- `components/ElementTableBody.vue`（filter-change emit 转发）
+- `components/VxeTableBody.vue`（vxe filter-change 翻译 + localFilterMap）
+- `components/ElementTableV2Body.vue`（console.warn 占位）
+- `components/{ElementTableBody,ElementTableV2Body,VxeTableBody}.spec.ts`（各 +1 例 PR2 覆盖）
+- `ProTable.vue`（defineEmits + 双引擎 @filter-change + getFilterState expose + reset 路径）
+- `ProTable.integration.spec.ts`（+5 例 PR2 端到端测试）
+- `mock/pro-table/filter-orders.ts`（mock 数据 + requestApi + filterOrdersParamsAdapter）
+- `src/modules/demo/examples/ProTable/ProTableServerFilter.vue`（新增 demo）
+- `src/modules/demo/examples/ProTable/configs/protable-demos-api.ts`（3 张 ApiTable 数据）
+- `src/modules/demo/config/sidebar-groups.ts`（ProTableServerFilter sidebar 注册）
+
 ## v3.4 变更摘要（搜索区布局档位下放）
 
 > 真实业务两类场景不适配自动判定档位：① 宽屏页面 6 个字段想全平铺却被强制折叠；② `searchDisplay` 联动使字段数动态变化时档位在 flat/collapse 间跳变。本次把判定权下放，新增 `searchLayout` prop，`'auto'`（默认）保持自动行为完全向后兼容，显式档位跳过字段数判定。
