@@ -156,11 +156,10 @@ const { handleEngineFallback, effectiveEngine } = useEngineFallback({
 // 这是 v3.1.2 review 引入的边界处理，cast 是必要的（composable 不读 Loosened 类型）。
 const propsForComposables = props as unknown as ProTableProps<T>
 
-const columns = useColumns({ props: propsForComposables, engine: engineRef })
+const columns = useColumns({ props: propsForComposables })
 
 const search = useSearch({
   props: propsForComposables,
-  engine: engineRef,
   fetchHook: async (opts) => {
     // reset 且 page≠1 时仅 setPage(1) —— page watch 会触发请求，再手动 refresh 会双发
     if (opts?.reset) {
@@ -185,7 +184,6 @@ if (persistedSnapshot) search.updateParams(persistedSnapshot.searchParams)
 const table = useTable({
   props: propsForComposables,
   columns,
-  engine: engineRef,
   getSearchParams: () => search.searchParams.value,
   // v3.1：快照注入 page/pageSize/sortState 初值（exactOptionalPropertyTypes 下条件展开）
   ...(persistedSnapshot && { initialState: persistedSnapshot }),
@@ -423,33 +421,6 @@ const searchColumnsTyped: ProColumn<T>[] = columns.searchColumns
 const allColumnsTyped = computed<ProColumn<T>[]>(() => columns.allColumns.value)
 const sortedColumnsTyped = computed<ProColumn<T>[]>(() => columns.sortedColumns.value)
 
-/* ───────────── v3.1.1 review：模板条件展开合并为 computed 对象 ───────────── */
-
-/**
- * element-plus 引擎分支的 v-bind 对象 —— 消除模板 6 处条件展开三元。
- * 单一真相源：maxHeight / treeProps / spanMethod / summary / virtualScroll / columnResize
- * 在此集中按需注入；引用稳定时 ElTable 浅比较通过。
- *
- * exactOptionalPropertyTypes 下条件展开而非显式 undefined，避免 TS2379。
- */
-const elTableBindings = computed<Record<string, unknown>>(() => ({
-  ...(props.rowKey ? { rowKey: props.rowKey } : {}),
-  ...(autoHeightMax.value != null ? { maxHeight: autoHeightMax.value } : {}),
-  ...(treeData
-    ? {
-        // 树形行对象带 children 字段（useTreeData 懒加载赋值），
-        // 指向不存在的字段避免 el-table 默认 tree-props 重复渲染
-        treeProps: { children: '__pro_table_flat__', hasChildren: '__pro_table_flat__' },
-      }
-    : {}),
-  ...(cellSpan ? { spanMethod: cellSpan.spanMethod, cellClassName: cellSpan.cellClassName } : {}),
-  ...(summary && summaryMethod.value
-    ? { showSummary: true, summaryMethod: summaryMethod.value }
-    : {}),
-  ...(virtualScroll?.tableProps.value ?? {}),
-  ...(props.columnResize ? { border: true } : {}),
-}))
-
 /* ─────────── v3.2 升级：SelectedTags 数据 + 清除条件 handler ─────────── */
 
 /**
@@ -507,13 +478,6 @@ function handleClearAllConditions(): void {
   search.updateParams(updates)
   void search.search()
 }
-
-/** vxe-table 引擎分支的 v-bind 对象 */
-const vxeTableBindings = computed<Record<string, unknown>>(() => ({
-  ...(props.rowKey ? { rowKey: props.rowKey } : {}),
-  ...(autoHeightMax.value != null ? { maxHeight: autoHeightMax.value } : {}),
-  ...(props.columnResize ? { border: true } : {}),
-}))
 
 /** v3.0 5a：汇总行参数 —— el-table 内置 show-summary + summary-method 机制。 */
 const showSummary = computed(() => Boolean(summary))
@@ -674,7 +638,6 @@ defineExpose({
           :max-height="autoHeightMax"
           :density="table.density.value"
           :column-resize="props.columnResize"
-          v-bind="elTableBindings"
           @selection-change="events.handleSelectionChange"
           @radio-select="events.handleRadioSelect"
           @expand-toggle="events.handleExpandToggle"
@@ -707,7 +670,6 @@ defineExpose({
           :max-height="autoHeightMax"
           :density="table.density.value"
           :column-resize="props.columnResize"
-          v-bind="vxeTableBindings"
           @selection-change="events.handleSelectionChange"
           @radio-select="events.handleRadioSelect"
           @expand-toggle="events.handleExpandToggle"

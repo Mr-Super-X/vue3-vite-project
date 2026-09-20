@@ -13,6 +13,11 @@
 >
 > **唯一约束**：vxe + 树形 + 行拖拽 三者同时启用会触发 console.warn（sortablejs 与 vxe tree-node 行结构冲突），行拖拽自动退化 null。
 >
+> **v3.5 双引擎架构 review 优化**（2026-09-20）：
+>
+> - **死参数清理**：`useSearch` / `useTable` / `useColumns` options 中声明后从未读取的 `engine: Ref<TableEngine>` 删除（数据逻辑与引擎彻底解耦；`useVirtualScroll` / `useTableCapabilities` / `useProTableEvents` 的 engine 为真实消费，保留）
+> - **bindings 下沉**：编排层 `elTableBindings` 删除（与 ElementTableBody 内部模板绑定完全重复）；`vxeTableBindings` 的 `border` 条件注入下沉到 VxeTableBody 自持——编排层不再构造引擎表级 bindings
+>
 > ---
 >
 > **v3.5 PR1-A 增量摘要**（A11y + E2E）：
@@ -105,8 +110,10 @@ flowchart TD
     J[用户拖拽列设置] --> K[ColSetting 抽屉]
     K --> H
     L[Local storage] <--> H
-    M[tableEngine prop] --> N[adapters/engine.ts]
-    N --> O[vxe-table 回退 warn（v2.0 未实现）]
+    M[tableEngine prop] --> N[adapters/engine.ts 首次挂载锁定]
+    N --> O{effectiveEngine<br/>useEngineFallback}
+    O --> F
+    Y[VxeTableBody 动态加载失败<br/>emit engine-fallback] --> O
     %% v3.5 PR2：服务端筛选数据流
     P[用户列头筛选] --> Q[ElTable @filter-change / Vxe filter-change]
     Q --> R[useProTableEvents.handleFilterChange]
@@ -156,17 +163,22 @@ flowchart TD
 ```mermaid
 sequenceDiagram
     participant Setup as ProTable.vue setup
-    participant Engine as engineRef
-    participant EP as element-plus
+    participant Engine as resolveEngine
+    participant FB as useEngineFallback
+    participant Body as 引擎 Body 分支
     Setup->>Engine: resolveEngine(props.tableEngine)
-    alt tableEngine = 'vxe-table'（v2.0 未实现）
-        Engine-->>Setup: console.warn + ref<'element-plus'>
-    else
-        Engine-->>Setup: ref<'element-plus'>
+    Engine-->>Setup: engineRef（首次挂载锁定）
+    Setup->>FB: 注入 initialEngine = engineRef
+    FB-->>Setup: effectiveEngine
+    Note over FB: 运行时唯一生效引擎（vxe 加载失败回退后<br/>effectiveEngine 变为 element-plus，数据流单向）
+    alt effectiveEngine = element-plus
+        Setup->>Body: 挂载 ElementTableBody<br/>（virtualized 命中时优先 ElementTableV2Body）
+    else effectiveEngine = vxe-table
+        Setup->>Body: 挂载 VxeTableBody<br/>（useVxeTable 动态加载 vxe-table JS + CSS）
+        Body-->>FB: 加载失败 emit engine-fallback
+        FB-->>Body: effectiveEngine 回退 element-plus<br/>重渲染 ElementTableBody
     end
-    Note over Engine: 首次挂载锁定
-    Setup->>EP: v-if='element-plus'
-    Note over Setup: 运行时切换 prop 不生效
+    Note over Setup: 运行时修改 tableEngine prop 不生效（锁定语义）
 ```
 
 ## 错误处理
@@ -175,7 +187,7 @@ sequenceDiagram
 
 - `useRequest` 内置 AbortController + 三态（loading/error/data）
 - `Local.get` 内置 `safeParse` 清脏数据
-- vxe-table 引擎 v2.0 未实现：传入时 resolveEngine warn 并回退 element-plus（v2.1 交付）
+- vxe-table 引擎动态加载失败（JS / CSS 加载异常）：VxeTableBody emit `engine-fallback` → useEngineFallback 将 effectiveEngine 回退 element-plus + 编排层 emit 给父级（spec §九 #7，表格是页面主内容不白屏）；virtualized 与 vxe-table 不兼容时同理强制回退
 - `responseAdapter` 返回值结构非法 → console.error + 抛错（useRequest catch 进入 error 态 + requestError 回调，决策 D5）
 
 ## 文件清单
@@ -186,9 +198,12 @@ src/components/ProTable/
 ├── index.ts                      # 统一导出
 ├── types/index.ts                # 类型定义
 ├── adapters/
-│   ├── engine.ts                 # 引擎工厂（resolveEngine）
+│   ├── engine.ts                 # 引擎工厂（resolveEngine，首次挂载锁定）
 │   ├── cell-render.ts            # 单元格内容解析（双引擎共用）
-│   └── vxe-column.ts             # ProColumn → VxeColumn 映射（v2.1）
+│   ├── cell-format.ts            # formatter 预设解析（函数/预设 key → 可执行格式化函数）
+│   ├── vxe-column.ts             # ProColumn → VxeColumn 映射（v2.1）
+│   ├── tree-adapter.ts           # TreeAdapter 引擎胶水（el treeProps / vxe tree-config 双工厂）
+│   └── row-drag-adapter.ts       # RowDragAdapter 引擎胶水（el / vxe tbody 反查双工厂）
 ├── composables/                  # 17 个 composables（4 核心 useTable/useSearch/useColumns/
 │                                 # useTableCapabilities + 13 能力/引擎/事件：useRowEdit/useRowDrag/
 │                                 # useCellSpan/useTreeData/useSummary/useVirtualScroll/useAutoHeight/

@@ -43,8 +43,7 @@ describe('useColumns', () => {
   })
 
   it('allColumns 返回所有列（含隐藏）', () => {
-    const engine = ref('element-plus' as const)
-    const cols = useColumns({ props: makeProps(), engine })
+    const cols = useColumns({ props: makeProps() })
     expect(cols.allColumns.value).toHaveLength(3)
   })
 
@@ -57,8 +56,7 @@ describe('useColumns', () => {
       ],
       tableKey: 't',
     } as never
-    const engine = ref('element-plus' as const)
-    const cols = useColumns({ props, engine })
+    const cols = useColumns({ props })
     expect(cols.sortedColumns.value.map((c) => c.prop)).toEqual(['a', 'c'])
   })
 
@@ -70,21 +68,18 @@ describe('useColumns', () => {
       ],
       tableKey: 't',
     } as never
-    const engine = ref('element-plus' as const)
-    const cols = useColumns({ props, engine })
+    const cols = useColumns({ props })
     expect(cols.searchColumns.map((c) => c.prop)).toEqual(['a'])
   })
 
   it('toggleVisible 切换 hidden', () => {
-    const engine = ref('element-plus' as const)
-    const cols = useColumns({ props: makeProps(), engine })
+    const cols = useColumns({ props: makeProps() })
     cols.toggleVisible('a')
     expect(cols.sortedColumns.value.find((c) => c.prop === 'a')).toBeUndefined()
   })
 
   it('setColumnOrder 重新排序（同步 allColumns 与 sortedColumns）', () => {
-    const engine = ref('element-plus' as const)
-    const cols = useColumns({ props: makeProps(), engine })
+    const cols = useColumns({ props: makeProps() })
     cols.setColumnOrder(['c', 'a', 'b'])
     expect(cols.sortedColumns.value.map((c) => c.prop)).toEqual(['c', 'a', 'b'])
     expect(cols.allColumns.value.map((c) => c.prop)).toEqual(['c', 'a', 'b'])
@@ -94,24 +89,21 @@ describe('useColumns', () => {
     // 历史 bug：sortedColumns 按 setup 时的一次性 persisted.order 快照排序（非响应式），
     // 拖拽更新 allColumns 后表格仍按旧顺序渲染
     vi.mocked(Local.get).mockReturnValue({ order: ['a', 'b', 'c'] })
-    const engine = ref('element-plus' as const)
-    const cols = useColumns({ props: makeProps(), engine })
+    const cols = useColumns({ props: makeProps() })
     expect(cols.sortedColumns.value.map((c) => c.prop)).toEqual(['a', 'b', 'c'])
     cols.setColumnOrder(['b', 'c', 'a'])
     expect(cols.sortedColumns.value.map((c) => c.prop)).toEqual(['b', 'c', 'a'])
   })
 
   it('setColumnOrder 容忍 order 缺失的列（按原相对顺序追加到尾部）', () => {
-    const engine = ref('element-plus' as const)
-    const cols = useColumns({ props: makeProps(), engine })
+    const cols = useColumns({ props: makeProps() })
     cols.setColumnOrder(['c', 'a'])
     expect(cols.allColumns.value.map((c) => c.prop)).toEqual(['c', 'a', 'b'])
   })
 
   it('resetToDefault 恢复默认列顺序', () => {
     vi.mocked(Local.get).mockReturnValue({ order: ['c', 'b', 'a'] })
-    const engine = ref('element-plus' as const)
-    const cols = useColumns({ props: makeProps(), engine })
+    const cols = useColumns({ props: makeProps() })
     cols.setColumnOrder(['b', 'c', 'a'])
     cols.resetToDefault()
     expect(cols.sortedColumns.value.map((c) => c.prop)).toEqual(['a', 'b', 'c'])
@@ -125,8 +117,7 @@ describe('useColumns', () => {
       ],
       tableKey: 't',
     } as never
-    const engine = ref('element-plus' as const)
-    const cols = useColumns({ props, engine })
+    const cols = useColumns({ props })
     const before = cols.searchColumns[0]
     cols.resetToDefault()
     // 修复前：searchColumns 持有 reset 前的旧克隆对象；修复后：与 allColumns 同源于新克隆
@@ -146,8 +137,7 @@ describe('useColumns', () => {
       ],
       // 故意不传 tableKey
     } as never
-    const engine = ref('element-plus' as const)
-    const cols = useColumns({ props, engine })
+    const cols = useColumns({ props })
 
     cols.setColumnOrder(['b', 'c', 'a'])
     cols.toggleVisible('a')
@@ -167,8 +157,7 @@ describe('useColumns', () => {
       { prop: 'b', label: 'B', fixed: 'left' as const },
     ]
     const props = { columns: externalColumns, tableKey: 't' } as never
-    const engine = ref('element-plus' as const)
-    const cols = useColumns({ props, engine })
+    const cols = useColumns({ props })
 
     cols.toggleVisible('a') // 隐藏 a
     cols.toggleFixed('b', 'right') // 改 b 的固定方向
@@ -189,9 +178,8 @@ describe('useColumns', () => {
       { prop: 'b', label: 'B' },
     ]
     const props = { columns: sharedColumns, tableKey: 't' } as never
-    const engine = ref('element-plus' as const)
-    const first = useColumns({ props, engine })
-    const second = useColumns({ props, engine })
+    const first = useColumns({ props })
+    const second = useColumns({ props })
 
     first.toggleVisible('a')
 
@@ -206,8 +194,7 @@ describe('useColumns', () => {
       visible: { a: true, b: false, c: true },
       fixed: { c: 'left' },
     })
-    const engine = ref('element-plus' as const)
-    const cols = useColumns({ props: makeProps(), engine })
+    const cols = useColumns({ props: makeProps() })
     // visible 回填：b 不可见（order b,a,c 中 b 被过滤）
     expect(cols.visibleKeys.value).toEqual(['a', 'c'])
     expect(cols.sortedColumns.value.map((c) => c.prop)).toEqual(['a', 'c'])
@@ -217,8 +204,7 @@ describe('useColumns', () => {
   })
 
   it('v2.2-M1：抽屉取消勾选后 persist 的 visible 与回填语义一致（round-trip）', () => {
-    const engine = ref('element-plus' as const)
-    const cols = useColumns({ props: makeProps(), engine })
+    const cols = useColumns({ props: makeProps() })
     cols.setVisibleKeys(['a', 'c']) // 抽屉取消勾选 b
     const saved = vi.mocked(Local.set).mock.calls.at(-1)?.[1] as {
       visible: Record<string, boolean>
@@ -237,16 +223,14 @@ describe('useColumns', () => {
       ],
       tableKey: 't',
     } as never
-    const engine = ref('element-plus' as const)
-    const cols = useColumns({ props, engine })
+    const cols = useColumns({ props })
     expect(cols.allColumns.value.find((c) => c.prop === 'a')?.fixed).toBeUndefined()
     expect(cols.fixedKeys.value).toEqual([])
   })
 
   it('v2.2-M1：resetToDefault 同步重置 fixedKeys（与列副本口径一致）', () => {
     vi.mocked(Local.get).mockReturnValue({ fixed: { b: 'left' } })
-    const engine = ref('element-plus' as const)
-    const cols = useColumns({ props: makeProps(), engine })
+    const cols = useColumns({ props: makeProps() })
     expect(cols.fixedKeys.value).toEqual(['b'])
     cols.resetToDefault()
     // makeProps 无初始 fixed：恢复默认后 fixedKeys 应为空
@@ -259,8 +243,7 @@ describe('useColumns', () => {
       columns: [{ prop: 'a', label: 'A', hidden: externalHidden }],
       tableKey: 't',
     } as never
-    const engine = ref('element-plus' as const)
-    const cols = useColumns({ props, engine })
+    const cols = useColumns({ props })
 
     // 外部程序化隐藏 → 副本联动（sortedColumns 排除 a）
     externalHidden.value = true
@@ -279,8 +262,7 @@ describe('useColumns', () => {
       columns: [{ prop: 'name', label: 'Name', hidden: externalHidden }],
       tableKey: 't',
     } as never
-    const engine = ref('element-plus' as const)
-    const cols = useColumns({ props, engine })
+    const cols = useColumns({ props })
 
     // reset 前：外部隐藏 → 联动排除
     externalHidden.value = true
@@ -308,8 +290,7 @@ describe('useColumns', () => {
       ],
       tableKey: 't',
     } as never
-    const engine = ref('element-plus' as const)
-    const cols = useColumns({ props, engine })
+    const cols = useColumns({ props })
 
     // 触发 persist：调用 setVisibleKeys 或其他写入路径
     cols.setVisibleKeys(['static1', 'dynamic'])

@@ -11,7 +11,6 @@
  * @group ProTable composables 测试
  */
 import { describe, it, expect, vi } from 'vitest'
-import { ref } from 'vue'
 import { useSearch } from './useSearch'
 
 describe('useSearch', () => {
@@ -25,22 +24,19 @@ describe('useSearch', () => {
     }) as never
 
   it('初始化时填入 defaultValue + initParam', () => {
-    const engine = ref('element-plus' as const)
-    const search = useSearch({ props: makeProps(), engine })
+    const search = useSearch({ props: makeProps() })
     expect(search.searchParams.value).toEqual({ tenantId: 't1', name: '', status: null })
   })
 
   it('reset() 恢复 defaultValue + 清空用户输入', async () => {
-    const engine = ref('element-plus' as const)
-    const search = useSearch({ props: makeProps(), engine })
+    const search = useSearch({ props: makeProps() })
     search.searchParams.value.name = '张三'
     await search.reset()
     expect(search.searchParams.value).toEqual({ tenantId: 't1', name: '', status: null })
   })
 
   it('serializeParams 剔除 undefined / null / 空字符串（保留 0/false）', () => {
-    const engine = ref('element-plus' as const)
-    const search = useSearch({ props: makeProps(), engine })
+    const search = useSearch({ props: makeProps() })
     const out = search.serializeParams({
       a: 1,
       b: 0,
@@ -54,24 +50,21 @@ describe('useSearch', () => {
   })
 
   it('getParams 返回当前 searchParams 快照', () => {
-    const engine = ref('element-plus' as const)
-    const search = useSearch({ props: makeProps(), engine })
+    const search = useSearch({ props: makeProps() })
     expect(search.getParams()).toEqual({ tenantId: 't1', name: '', status: null })
   })
 
   it('setSearchParams 替换表单值', async () => {
-    const engine = ref('element-plus' as const)
     const fetchHook = vi.fn()
-    const search = useSearch({ props: makeProps(), engine, fetchHook })
+    const search = useSearch({ props: makeProps(), fetchHook })
     await search.setSearchParams({ name: '李四', status: 1 })
     expect(search.searchParams.value).toEqual({ name: '李四', status: 1, tenantId: 't1' })
     expect(fetchHook).toHaveBeenCalled()
   })
 
   it('updateParams 纯写参数且不触发 fetchHook（H2 修复：输入与请求解耦）', () => {
-    const engine = ref('element-plus' as const)
     const fetchHook = vi.fn()
-    const search = useSearch({ props: makeProps(), engine, fetchHook })
+    const search = useSearch({ props: makeProps(), fetchHook })
     search.updateParams({ name: '王五' })
     expect(search.searchParams.value).toEqual({ name: '王五', status: null, tenantId: 't1' })
     expect(fetchHook).not.toHaveBeenCalled()
@@ -79,7 +72,6 @@ describe('useSearch', () => {
 
   // review R1 回归：initParam 与搜索列同名时不再被 defaultValue ?? null 静默覆盖
   it('initParam 与搜索列同名时覆盖 defaultValue（修复静默丢失缺陷）', () => {
-    const engine = ref('element-plus' as const)
     const search = useSearch({
       props: {
         columns: [
@@ -88,7 +80,6 @@ describe('useSearch', () => {
         ],
         initParam: { status: 'paid', tenantId: 't1' },
       } as never,
-      engine,
     })
     // 修复前：status 被改写为 null，经 serializeParams 剔除后永久丢失
     expect(search.searchParams.value).toEqual({ name: '', status: 'paid', tenantId: 't1' })
@@ -99,7 +90,6 @@ describe('useSearch', () => {
   })
 
   it('reset() 时无 defaultValue 的字段回退恢复 initParam 同名键', async () => {
-    const engine = ref('element-plus' as const)
     const search = useSearch({
       props: {
         columns: [
@@ -108,7 +98,6 @@ describe('useSearch', () => {
         ],
         initParam: { status: 'paid' },
       } as never,
-      engine,
     })
     search.updateParams({ status: 'shipped' })
     await search.reset()

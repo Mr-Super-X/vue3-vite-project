@@ -14,7 +14,7 @@
  * @group ProTable composables
  */
 import { ref, type Ref } from 'vue'
-import type { ProTableProps, TableEngine } from '../types'
+import type { ProTableProps } from '../types'
 
 /** fetchHook 回调签名 —— 由 ProTable.vue setup 注入 */
 export type FetchHook = (opts?: { reset?: boolean }) => Promise<void>
@@ -34,7 +34,6 @@ export function serializeParams(params: Record<string, unknown>): Record<string,
 
 export interface UseSearchOptions<T extends object = Record<string, unknown>> {
   props: ProTableProps<T>
-  engine: Ref<TableEngine>
   fetchHook?: FetchHook
 }
 

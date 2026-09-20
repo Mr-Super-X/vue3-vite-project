@@ -35,7 +35,6 @@ import type {
   SortChangeEvent,
   SortState,
   TableDensity,
-  TableEngine,
   FilterValuesMap,
 } from '../types'
 
@@ -43,7 +42,6 @@ export interface UseTableOptions<T extends object = Record<string, unknown>> {
   props: ProTableProps<T>
   /** 列上下文（useColumns 返回值） */
   columns: { allColumns?: Ref<unknown[]>; sortedColumns?: Ref<unknown[]> }
-  engine: Ref<TableEngine>
   /**
    * 读取当前搜索参数 —— 由 ProTable.vue 注入 useSearch.searchParams（单一数据源）。
    * 第 1 步单源化：useTable 不再自持 searchParams 副本（原双份 + watch 桥接导致 H1 参数错配）。

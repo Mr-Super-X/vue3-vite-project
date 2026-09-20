@@ -420,6 +420,10 @@ watch(
           ? { spanMethod: cellSpan.spanMethod, cellClassName: cellSpan.cellClassName }
           : {}),
         ...(treeConfigBinding ?? {}),
+        // column-resize 前置 border：与 el 引擎同一注入时机（原编排层 vxeTableBindings 承担，
+        // v3.5 review 下沉引擎分支自持）；vxe 列级 resizable 开启时表级边框线即表头右缘
+        // 拖拽手柄命中区（与 el-table handleMouseMove 的 border 守卫同语义）
+        ...(columnResize ? { border: true } : {}),
       }"
       @sort-change="handleSortChange"
       @checkbox-change="handleCheckboxChange"

@@ -15,7 +15,7 @@
  * @group ProTable composables 测试
  */
 import { describe, it, expect, vi } from 'vitest'
-import { ref, nextTick } from 'vue'
+import { nextTick } from 'vue'
 import { useTable } from './useTable'
 import type { SortState } from '../types'
 
@@ -35,7 +35,6 @@ describe('useTable', () => {
         rowKey: 'id',
       } as never,
       columns: {} as never,
-      engine: ref('element-plus' as const),
       getSearchParams: () => ({ name: '' }),
     }
   }
