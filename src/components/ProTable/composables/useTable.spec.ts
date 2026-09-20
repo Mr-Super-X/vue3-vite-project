@@ -244,4 +244,94 @@ describe('useTable', () => {
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('rowKey 缺失'))
     warnSpy.mockRestore()
   })
+
+  // v3.5 PR2：服务端筛选 filterParamsAdapter
+  describe('v3.5 PR2 服务端筛选', () => {
+    it('setFilter 更新 filterState，filterParamsAdapter 存在时回第 1 页 + 触发请求', async () => {
+      const deps = makeDeps()
+      const adapter = vi.fn((filters: Record<string, (string | number | boolean)[]>) => ({
+        statusList: filters.status,
+      }))
+      deps.props.filterParamsAdapter = adapter
+      const table = useTable(deps)
+      await table.refresh()
+      // 翻到第 2 页验证回第 1 页逻辑
+      table.setPage(2)
+      await vi.waitFor(() => expect(deps.props.requestApi).toHaveBeenCalledTimes(2))
+
+      table.setFilter({ status: ['paid'] })
+      await vi.waitFor(() => expect(table.page.value).toBe(1))
+      // adapter 被调用 1 次，参数是 setFilter 入参
+      expect(adapter).toHaveBeenCalledWith({ status: ['paid'] })
+      // 请求带了 adapter 序列化结果
+      expect(deps.props.requestApi).toHaveBeenLastCalledWith(
+        expect.objectContaining({ statusList: ['paid'] })
+      )
+      // filterState 快照
+      expect(table.getFilterState()).toEqual({ status: ['paid'] })
+    })
+
+    it('无 filterParamsAdapter 时 setFilter 仅 UI 记忆，不触发额外请求', async () => {
+      const deps = makeDeps()
+      const table = useTable(deps)
+      await table.refresh()
+      const callsBefore = deps.props.requestApi.mock.calls.length
+      table.setFilter({ status: ['paid'] })
+      await new Promise((r) => setTimeout(r, 10))
+      // 无 adapter → 无新请求
+      expect(deps.props.requestApi.mock.calls.length).toBe(callsBefore)
+      // filterState 仍被记录（UI 记忆 + expose）
+      expect(table.getFilterState()).toEqual({ status: ['paid'] })
+    })
+
+    it('resetFilter 清空 filterState + 触发请求（filterParamsAdapter 存在时）', async () => {
+      const deps = makeDeps()
+      const adapter = vi.fn((filters: Record<string, (string | number | boolean)[]>) => ({
+        statusList: filters.status,
+      }))
+      deps.props.filterParamsAdapter = adapter
+      const table = useTable(deps)
+      await table.refresh()
+      table.setFilter({ status: ['paid'] })
+      await vi.waitFor(() => expect(deps.props.requestApi).toHaveBeenCalledTimes(2))
+
+      const callsBefore = deps.props.requestApi.mock.calls.length
+      table.resetFilter()
+      await vi.waitFor(() =>
+        expect(deps.props.requestApi.mock.calls.length).toBeGreaterThan(callsBefore)
+      )
+      // filterState 已清空
+      expect(table.getFilterState()).toEqual({})
+      // 第二次请求（resetFilter 触发）的 params 不含筛选字段（adapter 未被调用；
+      // serializeFilters 对空 state 直接 return {}，避免空键污染请求）
+      const lastCall = deps.props.requestApi.mock.calls.at(-1)![0] as Record<string, unknown>
+      expect(lastCall).not.toHaveProperty('statusList')
+    })
+
+    it('filterState 全空时 serializeFilters 返回空对象（不污染请求 params）', async () => {
+      const deps = makeDeps()
+      const adapter = vi.fn((filters: Record<string, (string | number | boolean)[]>) => ({
+        statusList: filters.status,
+      }))
+      deps.props.filterParamsAdapter = adapter
+      const table = useTable(deps)
+      await table.refresh()
+      // adapter 未被 setFilter 调用前未生效；空 filterState 时请求不带筛选字段
+      expect(deps.props.requestApi).toHaveBeenLastCalledWith({
+        pageNum: 1,
+        pageSize: 10,
+      })
+    })
+
+    it('setFilter 覆盖式赋值（不残留已被 UI 清除的列）', async () => {
+      const deps = makeDeps()
+      deps.props.filterParamsAdapter = () => ({})
+      const table = useTable(deps)
+      await table.refresh()
+      table.setFilter({ status: ['paid'], dept: ['tech'] })
+      // 用户清掉 status 列筛选（el-table 会发 { dept: ['tech'] } 的新快照）
+      table.setFilter({ dept: ['tech'] })
+      expect(table.getFilterState()).toEqual({ dept: ['tech'] })
+    })
+  })
 })

@@ -36,6 +36,7 @@ import type {
   SortState,
   TableDensity,
   TableEngine,
+  FilterValuesMap,
 } from '../types'
 
 export interface UseTableOptions<T extends object = Record<string, unknown>> {
@@ -91,6 +92,18 @@ export interface UseTableReturn<T extends object = Record<string, unknown>> {
   onSortChange: (evt: SortChangeEvent) => void
   /** 排序状态快照（ProTable.vue 经此向外 emit / expose） */
   getSortState: () => SortState<T> | null
+  /**
+   * v3.5 PR2：当前全表筛选快照（与 el-table filter-change 事件负载同形态）。
+   * 默认行为下 filterState 仅 UI 记忆；filterParamsAdapter 存在时该快照经适配器
+   * 序列化后入请求。
+   */
+  filterState: Ref<FilterValuesMap>
+  /** v3.5 PR2：filter-change 事件入口 —— 更新状态 + 回第 1 页 + 触发请求 */
+  setFilter: (newFilters: FilterValuesMap) => void
+  /** v3.5 PR2：清空筛选状态（reset 路径） */
+  resetFilter: () => void
+  /** v3.5 PR2：筛选状态快照（ProTable.vue 经此向外 emit / expose） */
+  getFilterState: () => FilterValuesMap
 }
 
 /**
@@ -195,12 +208,32 @@ export function useTable<T extends object = Record<string, unknown>>(
     return defaultSortParams(state)
   }
 
+  /**
+   * v3.5 PR2：筛选状态快照 —— 始终维护（UI 记忆 + expose.getFilterState）；
+   * 仅在 filterParamsAdapter 存在时入请求（与 serializeSort 对称：未排序/无 adapter 返回空对象）。
+   *
+   * 不混入 searchParams（D4 决策类比）：筛选是 el-table 列头交互状态，语义独立于搜索表单。
+   */
+  const filterState = ref<FilterValuesMap>({}) as Ref<FilterValuesMap>
+
+  /**
+   * v3.5 PR2：筛选参数序列化 —— 无 adapter 时返回空对象（不污染请求 params，
+   * 让 el-table 客户端筛选默认值继续生效）。有 adapter 时调用业务方把全表筛选
+   * 序列化为后端约定键名。
+   */
+  function serializeFilters(state: FilterValuesMap): Record<string, unknown> {
+    if (!props.filterParamsAdapter) return {}
+    if (Object.keys(state).length === 0) return {}
+    return props.filterParamsAdapter(state)
+  }
+
   // useRequest 包装（AbortController 内置；spec §九 #5 快速连续取消）
   const request = useRequest(
     async () => {
       const params = serializeParams({
         ...options.getSearchParams(),
         ...serializeSort(sortState.value),
+        ...serializeFilters(filterState.value),
         pageNum: page.value,
         pageSize: pageSize.value,
       })
@@ -331,6 +364,35 @@ export function useTable<T extends object = Record<string, unknown>>(
     return sortState.value
   }
 
+  /**
+   * v3.5 PR2：el-table filter-change 事件入口（服务端筛选）。
+   * newFilters 是 el-table 给的「当前全表筛选快照」（{ propA: [v1], propB: [v2, v3] }），
+   * 覆盖式赋值确保「用户在 UI 上清除某列筛选」时 filterState 同步清空对应列，
+   * 不残留 stale value。
+   *
+   * 无 adapter 时仅 UI 记忆，不触发请求（el-table 客户端筛选继续生效）；
+   * 有 adapter 时回第 1 页 + 触发请求（与 onSortChange 对称）。
+   */
+  function setFilter(newFilters: FilterValuesMap): void {
+    filterState.value = { ...newFilters }
+    if (!props.filterParamsAdapter) return
+    if (page.value !== 1) {
+      page.value = 1
+    } else {
+      void refresh()
+    }
+  }
+
+  /** v3.5 PR2：清空筛选状态 —— search.reset 路径调用（与 setFilter({}) 复用同一刷新逻辑） */
+  function resetFilter(): void {
+    setFilter({})
+  }
+
+  /** v3.5 PR2：筛选状态快照 —— ProTable.vue 经此向外 emit / expose */
+  function getFilterState(): FilterValuesMap {
+    return { ...filterState.value }
+  }
+
   // 首次 mount 触发请求
   onMounted(() => {
     void refresh()
@@ -369,5 +431,9 @@ export function useTable<T extends object = Record<string, unknown>>(
     sortState,
     onSortChange,
     getSortState,
+    filterState,
+    setFilter,
+    resetFilter,
+    getFilterState,
   }
 }
