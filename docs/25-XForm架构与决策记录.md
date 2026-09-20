@@ -4,7 +4,7 @@
 > **使用指南见 `docs/24-XForm使用指南.md`**；本文面向维护者与接手引擎开发的人。
 > **完整设计规范见 `src/components/form-schema/ARCHITECTURE.md`**。
 
-> **TL;DR** — form-schema 引擎分四层：Schema 定义层 → Composable 编排层 → Render 渲染层 → Demo 应用层。当前规模：**约 30 个 `.spec.ts` + 2 个 `.test-d.ts` 测试文件、54 个 demo（其中 `XForm.vue` 为主入口）** 覆盖全部关键能力。核心设计决策：schema 对象 DSL + 链式 Builder 双轨、自研跨字段 crossValidator、v-model 写入后主动触发（不依赖 watch）。
+> **TL;DR** — form-schema 引擎分四层：Schema 定义层 → Composable 编排层 → Render 渲染层 → Demo 应用层。当前规模：**62 个 `.spec.ts` + 2 个 `.test-d.ts` 测试文件、54 个 demo（其中 `XForm.vue` 为主入口）** 覆盖全部关键能力。核心设计决策：schema 对象 DSL + 链式 Builder 双轨、自研跨字段 crossValidator（三路径执行语义统一于 `cross-rule-runner.ts`）、v-model 写入后主动触发（不依赖 watch）。
 
 ---
 

@@ -1,9 +1,10 @@
 /**
- * SchemaNode 命名空间 —— 顶层配置（5 字段，双层语义）
+ * SchemaNode 命名空间 —— 顶层配置（7 字段，双层语义）
  *
  * P2-1 拆分：原 SchemaNode 31 字段拆为 9 个命名空间接口，本文件定义「顶层配置」子集：
- * labelPosition / labelWidth / scrollToError / scrollIntoViewOptions / debounceValidation
- * —— 通常在顶层 schema 配置，但字段级可 override。
+ * labelPosition / labelWidth / scrollToError / scrollIntoViewOptions / debounceValidation /
+ * watchFallback / schemaVersion —— 通常在顶层 schema 配置，但字段级可 override。
+ * schemaVersion 为低代码设计器演进接口预留（PM 审查发现 12，Wave4-3）。
  *
  * 业务用法：
  * - 直接 import 此接口用于"只需顶层配置 + 其他命名空间字段"的子类型场景
@@ -60,4 +61,27 @@ export interface SchemaNodeTopLevel {
    * @group 顶层 schema
    */
   debounceValidation?: number
+  /**
+   * 反向跨字段校验的 deep watch model 兜底开关（架构审查 #8，仅顶层 schema 生效，默认 true）
+   *
+   * true：常驻 deep watch 整个 model + 每键 lodash isEqual 快照 diff —— 覆盖「绕过 v-model
+   * 直改 model」（如 setModel / 外部 patch）的兜底场景；代价是大表单每键 isEqual 成本。
+   * false：关闭兜底 —— 纯 v-model 表单（所有写入都经 onValueChange）可省掉 deep watch，
+   * 但绕过 v-model 的写入不再自动触发跨字段校验（需调用方手动 trigger）。
+   *
+   * @see ../composables/use-cross-field-trigger.ts（watchFallback 消费处）
+   * @group 顶层 schema
+   */
+  watchFallback?: boolean
+  /**
+   * schema 版本号 —— 低代码设计器演进接口预留（PM 审查发现 12，Wave4-3，仅顶层 schema 生效）
+   *
+   * 语义：'major.minor.patch' 或业务自定义版本字符串；XForm 渲染管线不消费，
+   * 仅供 useFormPersist.restoreFilter 等升级裁剪钩子 + 设计器 schema 升级策略锚定。
+   * 业务无版本演进需求可不填。
+   *
+   * @see ../composables/use-form-persist.ts restoreFilter 消费侧
+   * @group 顶层 schema
+   */
+  schemaVersion?: string
 }

@@ -11,7 +11,6 @@
  */
 import { ref, reactive, computed, h } from 'vue'
 import { z } from 'zod'
-import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
@@ -166,7 +165,7 @@ const tocItems = [
       title="XForm 动态表单"
       source="src/components/form-schema/XForm.vue"
       :introductions="[
-        '基于 schema DSL 的动态表单引擎，支持全量 14 字段（component / props / on / children / name / label / rules / reaction ...）。',
+        '基于 schema DSL 的动态表单引擎，支持全量 19 字段（component / props / on / children / name / label / rules / reaction / formItem / modelProp / defaultValue / row / directives / asyncOptions / slots / disabled / permission / ignore / kind+array ...）。',
         '下方演示：基础渲染 / 反应式联动（Switch → path 联动）/ 自定义组件注入。',
       ]"
     >

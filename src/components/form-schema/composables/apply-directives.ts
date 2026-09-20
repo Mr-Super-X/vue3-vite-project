@@ -2,6 +2,8 @@
  * 把 node.directives 数组应用到 vnode（vue withDirectives 包装）：
  * 第二参数必须是元组数组 `[dir, value, arg, modifiers]`（Vue 按 .length 解构，对象会被静默跳过）。
  * 字符串指令名暂不可解析（注册表尚未接线），跳过；当前仅支持直接传 Directive 对象。
+ *
+ * @group 表单编排：渲染
  */
 import { withDirectives, type VNode, type Directive } from 'vue'
 import type { DirectiveConfig } from '../types'

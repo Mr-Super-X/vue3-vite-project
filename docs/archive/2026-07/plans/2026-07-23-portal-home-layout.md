@@ -248,7 +248,7 @@ export const FOOTER_GROUPS: FooterLinkGroup[] = [
     title: '系统链接',
     links: [
       { label: '广东省应急管理厅大数据中心', href: 'https://example.com/bigdata' },
-      { label: '应急指挥系统', href: 'https://example.com/command' },
+      { label: `${appTitle}系统`, href: 'https://example.com/command' }, // appTitle = import.meta.env.VITE_APP_TITLE（2026-09-10 起品牌文案统一走环境变量）
       { label: '信息报送与共享系统', href: 'https://example.com/share' },
       { label: '广东省应急管理厅', href: 'https://example.com/gov' },
     ],

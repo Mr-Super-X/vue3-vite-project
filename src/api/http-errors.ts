@@ -11,6 +11,10 @@ import { HttpStatus } from '@/enums/httpEnum'
  * - status undefined（网络异常/超时/取消）→ 走网络通用文案
  *
  * 三档 fallback 文案分开配置，避免所有错误都返回同一条 "网络异常" 的粗暴兜底。
+ *
+ * @see [`src/api/types/error.ts`](./types/error.ts) ApiError 类型定义
+ * @see [`src/api/http.ts`](./http.ts) 错误归一化拦截器
+ * @group 网络基建：错误处理
  */
 const STATUS_MESSAGES: Record<number, string> = {
   // 4xx 客户端错误

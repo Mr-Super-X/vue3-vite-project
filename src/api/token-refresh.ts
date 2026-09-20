@@ -6,13 +6,16 @@ import axios from 'axios'
  * 设计要点：
  * - 并发去重：同一时刻只发一个 refresh 请求；并发 401 共享结果
  * - httpOnly 凭证：refresh 成功后新 token 由后端 `Set-Cookie: HttpOnly` 自动写入，
- *   前端 JS 拿不到也无需拿到 token 字符串——refreshSession 只负责"让凭证续期"，
+ *   前端 JS 拿不到也无需拿到 token 字符串——`refreshSession` 只负责"让凭证续期"，
  *   续期成功后调用方直接重发原请求（cookie 自动携带新凭证）
  * - 配置化：endpoint + 自定义 refresh 函数可配（后端契约确定后调整）
  * - 失败传播：refresh 失败时抛出，由调用方（http.ts）决定后续行为（清标记 + 跳登录页）
  *
  * 注意：当前 refresh 接口契约暂未与后端确认，默认实现是占位。
- * 后端契约确定后，仅需修改 configureTokenRefresh 配置参数即可。
+ * 后端契约确定后，仅需修改 `configureTokenRefresh` 配置参数即可。
+ *
+ * @see [`src/api/http.ts`](./http.ts) `request<T>` 401 retry 调用点
+ * @group 网络基建：会话续期
  */
 
 const getAPIBaseURL = () => import.meta.env.VITE_API_BASE_URL

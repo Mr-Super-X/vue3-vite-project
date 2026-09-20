@@ -1,17 +1,15 @@
 /**
  * XForm 顶层 schema 自描述字段集合（11 个 computed）：
- * 从 schema 顶层字段派生 el-form 实例级属性（labelPosition / disabled / labelWidth /
- * scrollToError / scrollIntoViewOptions 等），必须从 schema 派生而非 XForm props 配置。
+ * 从 schema 顶层字段派生 el-form 实例级属性（labelPosition / disabled / labelWidth 等），
+ * 必须从 schema 派生而非 XForm props 配置。
+ * 例外：scrollToError / scrollIntoViewOptions 按 README 承诺「schema 优先、props 兜底」
+ * 双源合并 —— schema 未声明时读取 XForm props，修复 props 死 prop 契约缺口。
  * 函数 / 字符串值通过 resolveFunctionExpression 求值。
+ *
+ * @group 表单编排：顶层字段
  */
 import { computed, type ComputedRef } from 'vue'
-import type { SchemaNode, RowConfig } from '../types'
-
-/**
- * 字段错误状态（来自 use-form-instance.ts 的 FieldErrorState）
- * 这里只关心 keys 长度，不读内部结构 —— 用 Record<string, unknown> 避免循环依赖
- */
-export type TopLevelFieldErrors = Record<string, unknown>
+import type { SchemaNode, RowConfig, XFormProps } from '../types'
 
 /**
  * useTopLevelFields 入参 —— schema 响应式视图 + 工具函数注入
@@ -24,12 +22,15 @@ export interface UseTopLevelFieldsDeps {
   model: { value: Record<string, unknown> | undefined }
   /** 当前断点（xs/sm/md/lg/xl）—— row.responsive 拍平用 */
   currentBreakpoint: { value: string }
-  /** 字段错误状态 ref —— topLevelNodes 读取 keys 长度建立响应式依赖 */
-  fieldErrors: { value: TopLevelFieldErrors }
   /** 函数表达式解析器（与 use-expression.ts 的 resolveFunctionExpression 签名兼容） */
   resolveFunctionExpression: <T extends (...args: unknown[]) => unknown>(expr: string) => T | null
   /** row.responsive 拍平工具（与 render-schema-node 的 mergeRowResponsive 签名兼容） */
   mergeRowResponsive: (row: RowConfig | undefined, breakpoint: string) => RowConfig | undefined
+  /**
+   * XForm props —— scrollToError / scrollIntoViewOptions 的兜底来源（schema 优先）。
+   * 缺省不传时这两字段仅读 schema（向后兼容单测与旧调用方）
+   */
+  props?: XFormProps
 }
 
 /**
@@ -83,18 +84,20 @@ export function useTopLevelFields(deps: UseTopLevelFieldsDeps): UseTopLevelField
     reactiveSchema,
     model,
     currentBreakpoint,
-    fieldErrors,
     resolveFunctionExpression,
     mergeRowResponsive,
+    props,
   } = deps
 
   /**
-   * 顶层节点列表（直接从 reactiveSchema 派生，含 reaction 修改后能触发重渲染）
-   * 读 fieldErrors.value 建立响应式依赖 —— 否则 setFieldError 写 fieldErrors 后
-   * computed 命中缓存，模板不重渲染
+   * 顶层节点列表（直接从 reactiveSchema 派生）
+   *
+   * ⚠️ 曾在此 fake-read fieldErrors（void Object.keys(...)）建立「响应式依赖」——
+   * 2026-09-18 架构审查 #4 实证为失效代码：setFieldError 走 reactive 键级写入，
+   * computed 对 ref 的浅层依赖监听不到键 mutation，fake read 从未实际失效过本 computed。
+   * 渲染兜底由 XForm.vue 的 :data-field-errors 绑定与 render-form-item 渲染期读键覆盖。
    */
   const nodes = computed<SchemaNode[]>(() => {
-    void Object.keys(fieldErrors.value).length
     const s = reactiveSchema.value
     if (Array.isArray(s)) return s as SchemaNode[]
     if (typeof s === 'string') return []
@@ -174,14 +177,13 @@ export function useTopLevelFields(deps: UseTopLevelFieldsDeps): UseTopLevelField
 
   const scrollToError = computed<boolean>(() => {
     const s = readTopLevelNode(reactiveSchema)
-    if (!s) return false
-    return s.scrollToError ?? false
+    // schema 显式值优先（含显式 false），props 兜底 —— 「schema 优先、props 兜底」承诺
+    return s?.scrollToError ?? props?.scrollToError ?? false
   })
 
   const scrollIntoViewOptions = computed<boolean | ScrollIntoViewOptions>(() => {
     const s = readTopLevelNode(reactiveSchema)
-    if (!s) return true
-    return s.scrollIntoViewOptions ?? true
+    return s?.scrollIntoViewOptions ?? props?.scrollIntoViewOptions ?? true
   })
 
   /** 顶层 schema.debounceValidation → 跨字段默认 debounce ms（0 = 实时） */

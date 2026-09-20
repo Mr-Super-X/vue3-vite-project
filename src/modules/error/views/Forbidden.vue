@@ -1,4 +1,11 @@
 <script setup lang="ts">
+/**
+ * 403 无权访问页（v-auth 守卫拒绝后跳此路由）。
+ *
+ * @see [`../../router/guards/auth`](../../router/guards/auth.ts) 守卫消费方
+ * @see [`../routes/index.ts`](../routes/index.ts) 路由 /403
+ * @group 业务模块：Error
+ */
 // BEM 工具由 unplugin-auto-import 自动注入，无须显式 import
 const bem = createNamespace('forbidden')
 </script>

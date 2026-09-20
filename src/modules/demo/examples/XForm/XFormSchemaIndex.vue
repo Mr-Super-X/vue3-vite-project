@@ -22,7 +22,6 @@
  */
 import { computed, reactive, ref, watch } from 'vue'
 import { ElButton, ElMessage, ElTag } from 'element-plus'
-import XForm from '@/components/form-schema/XForm.vue'
 import { useSchemaIndex } from '@/components/form-schema/composables/use-schema-index'
 import { scanForForbidden } from '@/components/form-schema/composables/use-scan-forbidden'
 import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
@@ -648,7 +647,7 @@ const tocItems = [
   }
   &__card-size {
     font-weight: 600;
-    color: #303133 !important;
+    color: #303133;
   }
 
   // 4 类业务问题入口卡片（顶部）
@@ -690,10 +689,10 @@ const tocItems = [
   }
 
   &__problem-example {
-    color: var(--el-text-color-secondary) !important;
+    color: var(--el-text-color-secondary);
     font-style: italic;
-    font-size: 12px !important;
-    margin-top: 6px !important;
+    font-size: 12px;
+    margin-top: 6px;
     padding-top: 6px;
     border-top: 1px dashed var(--el-color-primary-light-7);
   }

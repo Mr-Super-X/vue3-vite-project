@@ -27,6 +27,9 @@ import { request } from './http'
  *   method: 'get',
  * })
  * ```
+ *
+ * @see [`src/api/http.ts`](./http.ts) `request<T>` 底层实现
+ * @group 网络基建：响应验证
  */
 
 /**

@@ -5,7 +5,10 @@ import type { Pagination } from './types/api.d'
  * 不指定则使用默认（v2 后端约定）。
  *
  * 设计要点：page-adapter 可被任意分页约定复用，零改源码。
- * 业务模块只传 usePageAdapter: true 即可，无需关心字段映射。
+ * 业务模块只传 `usePageAdapter: true` 即可，无需关心字段映射。
+ *
+ * @see [`src/api/http.ts`](./http.ts) `usePageAdapter` config 字段触发点
+ * @group 网络基建：分页适配
  */
 export interface PageQueryFieldMap {
   /** 后端"当前页"字段名，默认 'pageIndex' */

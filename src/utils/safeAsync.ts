@@ -17,7 +17,10 @@
  * ```
  *
  * 与 errorHandler 插件集成：通过 errorHandler install 时调用
- * _configureSafeAsync() 注入 reporter，业务侧无需关心。
+ * `_configureSafeAsync` 注入 reporter，业务侧无需关心。
+ *
+ * @see [`src/plugins/errorHandler.ts`](../plugins/errorHandler.ts) 注入点
+ * @group 错误兜底
  */
 
 import type { ErrorHandlerOptions, ErrorSource } from '@/plugins/errorHandler.d'

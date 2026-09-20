@@ -10,6 +10,10 @@ import type { ElHTMLElement, InputDebounceBinding } from './inputDebounce.d'
  * - 中文输入法支持：compositionstart/end 标记 composing 状态，input 事件跳过
  * - 兼容封装组件：通过 findInput BFS 找到子 INPUT 元素（Element Plus 的 el-input 等）
  * - 完整清理：beforeUnmount 移除 input + compositionstart + compositionend 三个监听
+ *
+ * @see [`./_utils.ts`](./_utils.ts) debounce + findInput 工具
+ * @see [`./buttonDebounce.ts`](./buttonDebounce.ts) click 防重指令
+ * @group 指令：防抖
  */
 interface InputDebounceContext {
   input: HTMLInputElement

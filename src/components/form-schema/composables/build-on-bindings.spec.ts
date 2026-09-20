@@ -115,4 +115,17 @@ describe('buildOnBindings', () => {
     const result = buildOnBindings(node, {})
     expect(result['onUpdate:modelValue']).toBe(fn)
   })
+
+  it('H2：注入 resolveFunctionExpression 优先于模块级（on 字符串表达式）', () => {
+    const node = {
+      component: 'Input',
+      name: 'a',
+      on: { customEvent: '{{ () => tag() }}' },
+    } as unknown as Parameters<typeof buildOnBindings>[0]
+    // as never 兼容泛型签名：注入解析器任何表达式都返回 () => 'INJECTED'
+    const injected = () => (() => 'INJECTED') as never
+    const bindings = buildOnBindings(node, {}, injected)
+    expect((bindings as Record<string, unknown>).onCustomEvent).toBeInstanceOf(Function)
+    expect(((bindings as Record<string, unknown>).onCustomEvent as () => string)()).toBe('INJECTED')
+  })
 })

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { effectScope, nextTick, reactive } from 'vue'
 import type { SchemaNode } from '../types'
-import { containsReaction, applyReactions } from './use-reaction'
+import { containsReaction, applyReactions, createBudget } from './use-reaction'
 
 describe('containsReaction(schema)', () => {
   it('returns true if any node has reaction field', () => {
@@ -368,5 +368,127 @@ describe('P2-3 reactionBudget 可配置化', () => {
     scope.stop()
     stoppers.forEach((s) => s())
     errSpy.mockRestore()
+  })
+})
+
+describe('H1 修复：standalone disabled/hidden 函数形态克隆阶段归一化', () => {
+  it('containsReaction：standalone 函数 / {{ }} 形态 disabled/hidden 视为含 reaction', () => {
+    expect(
+      containsReaction({ component: 'Input', name: 'a', disabled: () => true } as SchemaNode)
+    ).toBe(true)
+    expect(
+      containsReaction({
+        component: 'Input',
+        name: 'a',
+        hidden: '{{ (m) => !!m.x }}',
+      } as SchemaNode)
+    ).toBe(true)
+    // 字面量 boolean 维持原状（不触发 watch 管线）
+    expect(
+      containsReaction({
+        component: 'Input',
+        name: 'a',
+        disabled: true,
+        hidden: false,
+      } as SchemaNode)
+    ).toBe(false)
+    expect(containsReaction({ component: 'Input', name: 'a' } as SchemaNode)).toBe(false)
+  })
+
+  it('applyReactions：函数 disabled 求值写回 node，且随 model 联动', async () => {
+    const model = reactive<Record<string, unknown>>({ agree: false })
+    const node = reactive({
+      component: 'Input',
+      name: 'a',
+      disabled: (m: Record<string, unknown>) => !m.agree,
+    }) as SchemaNode
+    const stoppers: (() => void)[] = []
+    applyReactions(node, model, stoppers)
+
+    // sync 策略 setup 立即求值一次：agree=false → disabled=true
+    expect(node.disabled).toBe(true)
+    model.agree = true
+    await nextTick()
+    expect(node.disabled).toBe(false)
+
+    stoppers.forEach((s) => s())
+  })
+
+  it('applyReactions：{{ }} 表达式 hidden 求值写回 node.hidden', async () => {
+    const model = reactive<Record<string, unknown>>({ vip: true })
+    const node = reactive({
+      component: 'Input',
+      name: 'a',
+      hidden: '{{ (m) => !m.vip }}',
+    }) as SchemaNode
+    const stoppers: (() => void)[] = []
+    applyReactions(node, model, stoppers)
+
+    expect(node.hidden).toBe(false)
+    model.vip = false
+    await nextTick()
+    expect(node.hidden).toBe(true)
+
+    stoppers.forEach((s) => s())
+  })
+
+  it('applyReactions：reaction 已有同名 key 时 reaction 优先，standalone 被忽略', async () => {
+    const model = reactive<Record<string, unknown>>({ agree: false })
+    const node = reactive({
+      component: 'Input',
+      name: 'a',
+      disabled: () => true, // standalone：reaction 已有 disabled → 被忽略
+      reaction: { disabled: (m: Record<string, unknown>) => !m.agree },
+    }) as SchemaNode
+    const stoppers: (() => void)[] = []
+    applyReactions(node, model, stoppers)
+
+    // reaction 求值：agree=false → disabled=true；standalone 的 () => true 未生效
+    expect(node.disabled).toBe(true)
+    model.agree = true
+    await nextTick()
+    expect(node.disabled).toBe(false)
+
+    stoppers.forEach((s) => s())
+  })
+
+  it('applyReactions：无 reaction 且无 standalone 动态形态 → 不注册 watcher', () => {
+    const model = reactive<Record<string, unknown>>({})
+    const node = reactive({ component: 'Input', name: 'a', disabled: true }) as SchemaNode
+    const stoppers: (() => void)[] = []
+    applyReactions(node, model, stoppers)
+    expect(stoppers).toHaveLength(0)
+  })
+})
+
+describe('H2：applyReactions 注入 resolveFunctionExpression（实例级沙箱）', () => {
+  it('注入的 resolve 优先于模块级：node.label 用注入解析器的结果', () => {
+    const model: Record<string, unknown> = {}
+    const node = reactive({
+      component: 'Input',
+      name: 'a',
+      reaction: { label: '{{ () => tag() }}' },
+    }) as SchemaNode
+    // 注入解析器：任何表达式都返回 () => 'INJECTED'（as never 兼容泛型签名）
+    const injectedResolve = () => (() => 'INJECTED') as never
+    const stoppers: (() => void)[] = []
+    applyReactions(node, model, stoppers, createBudget(), injectedResolve)
+
+    expect(node.label).toBe('INJECTED')
+    stoppers.forEach((s) => s())
+  })
+
+  it('未注入 resolve → 回退模块级（向后兼容）', () => {
+    const model: Record<string, unknown> = {}
+    const node = reactive({
+      component: 'Input',
+      name: 'a',
+      reaction: { label: '{{ (m) => "plain" }}' },
+    }) as SchemaNode
+    const stoppers: (() => void)[] = []
+    applyReactions(node, model, stoppers) // 无第 5 参
+
+    expect(node.label).toBe('plain')
+    stoppers.forEach((s) => s())
   })
 })

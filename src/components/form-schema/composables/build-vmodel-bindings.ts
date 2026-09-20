@@ -1,3 +1,15 @@
+/**
+ * build-vmodel-bindings —— beforeChange 3 层钩子 + node.modelProp → vue v-model 装配
+ *
+ * 关键责任：
+ * - layer1 全局 Props / namespaceRules 动态命名空间 / fieldBeforeChange 字段级 三层 beforeChange 编排
+ * - makeCtx 每字段独立 ctx（setFieldValue / setFieldError / abort）
+ * - onValueChange 写入 model 后触发（跨字段校验 + dirty 追踪）
+ *
+ * 类型断言（`as never`）归因见 types/TYPE-CAST-AUDIT.md。
+ *
+ * @group 表单编排：v-model
+ */
 import { get, set } from 'lodash-es'
 import type {
   BeforeChangeCtx,

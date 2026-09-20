@@ -17,9 +17,8 @@
  * 实际校验仍生效:点击「保存」时 validateForm() 跑 el-form.validate + runCrossFieldValidation,
  * 失败时 setFieldError 写入错误 + toast 提示
  */
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
@@ -151,6 +150,77 @@ const schema: SchemaNode = {
         },
       ],
     },
+    // ── H3 验证：嵌套路径直改触发跨字段重算 ─────────────────────────
+    // 字段挂在 model.user.age（嵌套路径），通过下方「直改 model」按钮绕过
+    // v-model 直接改值 —— 修复前 watch 兜底浅拷贝 diff 不到嵌套变化，红字不动；
+    // 修复后 deps 值快照 diff 命中 → crossValidator 自动重算，红字消失。
+    // 本字段自引用 deps 覆盖 target 快照分支；下方「监护人」dependsOn 本路径，
+    // 覆盖真正的跨字段 dep 分支 —— 两条分支由同一个直改按钮一并验证
+    {
+      label: '年龄（嵌套 user.age）',
+      name: 'user.age',
+      // InputNumber 的 v-model 输出 number，与初始值/直改按钮的类型一致，
+      // 手输、加减按钮、直改三条路径都不会触发 async-validator 类型校验
+      component: 'InputNumber',
+      props: { placeholder: '请输入年龄', min: 0 },
+      rules: [
+        {
+          // 显式声明 type: 'number' —— async-validator 对未声明 type 的规则默认按
+          // string 校验（dist-node getType: rule.type || 'string'），与本字段 number 值不匹配
+          type: 'number',
+          dependsOn: ['user.age'],
+          crossValidator: (_value: unknown, age: unknown) =>
+            age === '' || age === undefined || age === null || Number(age) >= 18 || '未成年',
+          trigger: 'change',
+        },
+      ],
+    },
+    {
+      label: '监护人',
+      name: 'guardian',
+      component: 'Input',
+      props: { placeholder: '未成年时必填', clearable: true },
+      rules: [
+        {
+          // 真正的跨字段：依赖嵌套路径 user.age。年龄 ≥18 时本字段无要求；
+          // 点「直改 model」后 deps 快照 diff 命中 → 本字段红字自动消失（H3 dep 分支）。
+          // 注：实时触发有空值跳过语义（target 为空直接 clearValidate），
+          // 所以「须填监护人」红字先由「保存」写入，再由直改按钮验证自动清除
+          dependsOn: ['user.age'],
+          crossValidator: (guardian: unknown, age: unknown) =>
+            age === '' ||
+            age === undefined ||
+            age === null ||
+            Number(age) >= 18 ||
+            Boolean(guardian) ||
+            '未成年须填写监护人',
+          trigger: 'change',
+        },
+      ],
+    },
+    // ── H1 验证：standalone 函数形态 disabled / hidden ──────────────
+    // 不用 reaction 简写，直接写字段级函数形态 —— 修复前函数被原样 spread 进
+    // 组件 props（dev 报 prop type 警告 + 字段永久禁用/恒隐藏）；
+    // 修复后克隆阶段归一化为 reaction 条目求值，随 agree 开关联动
+    {
+      label: '同意协议（联动开关）',
+      name: 'agree',
+      component: 'Switch',
+    },
+    {
+      label: 'standalone disabled 字段',
+      name: 'h1DisabledField',
+      component: 'Input',
+      props: { placeholder: '打开上方开关后启用' },
+      disabled: (m: Record<string, unknown>) => !m.agree,
+    },
+    {
+      label: 'standalone hidden 字段',
+      name: 'h1HiddenField',
+      component: 'Input',
+      props: { placeholder: '打开上方开关后显示' },
+      hidden: '{{ (m) => !m.agree }}',
+    },
   ],
 }
 
@@ -161,7 +231,20 @@ const model = reactive<Record<string, unknown>>({
   endDate: '',
   primaryContact: '',
   backupContact: '',
+  // H3 验证：嵌套路径字段 + 跨字段监护人
+  user: { age: 10 },
+  guardian: '',
+  // H1 验证：联动开关（默认关 → 下方 standalone 字段禁用/隐藏）
+  agree: false,
+  h1DisabledField: '',
+  h1HiddenField: '',
 })
+
+/**
+ * 错误浮窗 OSD 开关 —— 演示 XFormProps.showErrorToast（默认关闭）
+ * 开启后跨字段校验失败的 errorBus 事件以右上角 toast 弹出（5s 固定窗口去重）
+ */
+const showErrorToast = ref(false)
 
 async function onSave() {
   if (!formRef.value) return
@@ -176,6 +259,14 @@ async function onSave() {
     duration: 0,
     showClose: true,
   })
+}
+
+/** H3 验证：直改嵌套路径（绕过 v-model / onValueChange）
+ * 先点「保存」制造两处红字（年龄「未成年」+ 监护人「须填写监护人」），
+ * 再点本按钮直改 model.user.age = 30
+ * 预期：两处红字都自动消失（deps 值快照 diff 命中 → crossValidator 重算 → clearValidate） */
+function onDirectSetAge() {
+  ;(model.user as { age: number }).age = 30
 }
 
 /** 演示 validateDetail：异步返回所有跨字段错误（用于调试或自定义展示） */
@@ -206,22 +297,35 @@ const tocItems = [
       title="跨字段校验（crossValidator）"
       source="src/components/form-schema/XForm.vue"
       :introductions="[
-        'RuleItem 新增 dependsOn + crossValidator 两个字段,声明式跨字段校验:',
+        'RuleItem dependsOn + crossValidator 两个字段,声明式跨字段校验:',
         '1. 密码 = 确认密码 — dependsOn: [\'password\']',
         '2. 开始日期 ≤ 结束日期 — 结束日期 dependsOn: [\'startDate\']',
         '3. 主/备用联系人至少填一个 — 双向 dependsOn 互相校验',
         'crossValidator 返回 true 表示通过,返回 string 作为错误信息(form-schema 自动写入对应 form-item)',
         'validateDetail() 同步返回完整跨字段错误列表(用于调试或自定义展示)',
+        'H3 验证：「年龄」挂在嵌套路径 user.age、「监护人」dependsOn 该嵌套路径 —— 年龄 10 时点「保存」制造两处红字(未成年 / 须填监护人),再点「直改 model.user.age = 30」按钮(绕过 v-model),两处红字都应自动消失',
+        'H1 验证：「standalone disabled/hidden 字段」使用字段级函数形态(非 reaction 简写)—— 切换「同意协议」开关,两字段应联动禁用/启用、隐藏/显示,dev 控制台无 prop type 警告',
+        'showErrorToast：打开右侧「浮窗」开关后点「保存」,跨字段校验失败的 errorBus 事件会以右上角 toast 弹出(默认关闭;同码错误 5s 固定窗口去重)',
       ]"
     >
       <section id="demo-cross-field">
         <DemoField label="跨字段校验" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
+          <XForm ref="formRef" :schema="schema" :model="model" :show-error-toast="showErrorToast" />
           <div :class="bem.e('actions')">
             <el-button @click="onReset">重置</el-button>
             <el-button type="primary" @click="onSave">保存</el-button>
             <el-button @click="onInspectDetail">查看跨字段详情</el-button>
+            <el-button type="warning" plain @mousedown.prevent @click="onDirectSetAge">
+              直改 model.user.age = 30（H3）
+            </el-button>
             <el-button @click="copySchema">复制 schema</el-button>
+            <el-switch
+              v-model="showErrorToast"
+              inline-prompt
+              active-text="浮窗开"
+              inactive-text="浮窗关"
+              style="margin-left: auto"
+            />
           </div>
           <ModelPreview :model="model" />
         </DemoField>

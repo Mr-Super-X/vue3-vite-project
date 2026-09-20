@@ -1,6 +1,24 @@
 <script setup lang="ts">
+/**
+ * 应用根组件。
+ *
+ * 三层职责：
+ * 1. ElConfigProvider：注入 Element Plus 全局配置（locale / size / button 配置）
+ * 2. ErrorBoundary：捕获子树渲染错误，提供"恢复"按钮
+ * 3. AsyncState + RouterView：路由出口，remote 模式下首次进入时显示骨架屏
+ *
+ * i18n 同步：监听 vue-i18n 的 locale 变化，自动更新 Element Plus 语言包；
+ * 若 `elementLocales` 缺失目标 locale 则 fallback 到 zhCn（避免新增 locale 后忘记注册）。
+ *
+ * @see [`@/router`](./router/index.ts) 路由配置
+ * @see [`@/locales`](./locales/index.ts) i18n 入口
+ * @see [`./components/common/ErrorBoundary.vue`](./components/common/ErrorBoundary.vue) 错误边界
+ * @see [`./components/common/AsyncState.vue`](./components/common/AsyncState.vue) 三态容器
+ * @group 应用根
+ */
 import { useI18n } from 'vue-i18n'
 import { useRouterStore } from '@store/modules/router'
+import { useAppStore } from '@store/modules/app'
 import ErrorBoundary from '@/components/common/ErrorBoundary.vue'
 import AsyncState from '@/components/common/AsyncState.vue'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
@@ -11,6 +29,7 @@ import type { Language } from 'element-plus/es/locale'
 const bem = createNamespace('app')
 
 const routerStore = useRouterStore()
+const appStore = useAppStore()
 const { isLoadingRemoteMenu } = storeToRefs(routerStore)
 const route = useRoute()
 const { locale: i18nLocale } = useI18n()
@@ -30,14 +49,27 @@ const elementLocales: Record<string, Language> = {
   'en-US': en,
 }
 
-// ElConfigProvider 全局默认值（避开 vue-tsc 对 Element Plus PropType 元数据推断报错：
-// 用窄自定义类型替代 Partial<ConfigProviderProps>，避免 element-plus 元数据推断缺陷）。
+// 语言同步总线：appStore.locale 是唯一事实源（持久化），此处 watch 同步到
+// vue-i18n 全局实例（i18nLocale 可写）与 <html lang>（SEO / 无障碍）。
+// { immediate: true } 兼做刷新后的初始化回灌（persist 恢复 store 后生效）。
+// 任何调用 appStore.setLocale() 的入口（default 布局 LocaleDropdown 等）都自动生效。
+watch(
+  () => appStore.locale,
+  (l) => {
+    i18nLocale.value = l
+    document.documentElement.lang = l
+  },
+  { immediate: true }
+)
+
+// 类型归因：element-plus 2.x ConfigProviderProps 是 ExtractPropTypes 元组
+// （type/required/validator/__epPropKey）形态，与运行时值类型不等价（C1 根因，
+// 详见 types/TYPE-CAST-AUDIT.md）。locale 是 Language 对象、size 是 string，
+// 运行时均生效；TS 层用 Record<string, unknown> 替代 `as any`（全局 §1.5 违规，
+// 归因详见 src/components/form-schema/types/TYPE-CAST-AUDIT.md）。
+// 模板 <ElConfigProvider v-bind="elementConfig"> 接受 string-keyed 对象。
 // locale 跟随 Vue I18n 当前语言自动切换。
-const elementConfig = computed<{
-  locale: Language
-  size: 'default'
-  button: { autoInsertSpace: true }
-}>(() => ({
+const elementConfig = computed<Record<string, unknown>>(() => ({
   locale: elementLocales[i18nLocale.value] ?? zhCn,
   size: 'default',
   button: { autoInsertSpace: true },
@@ -46,8 +78,7 @@ const elementConfig = computed<{
 
 <template>
   <div :class="bem.b()">
-    <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- element-plus 2.14 PropType 元数据推断缺陷，template v-bind 需 as any 兜底 -->
-    <ElConfigProvider v-bind="elementConfig as any">
+    <ElConfigProvider v-bind="elementConfig">
       <ErrorBoundary>
         <!--
           remote 模式首次进入时，守卫在后台拉取菜单，

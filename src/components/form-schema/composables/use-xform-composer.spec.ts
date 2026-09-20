@@ -8,7 +8,7 @@
  * 4. exposed.getNames() 反映 schema 字段（含/不含 ignore）
  * 5. installDevDebugHook 挂载/不挂载 window.__xform_debug（按 import.meta.env.DEV 分支）
  * 6. 顶层 column/row/disabled/labelPosition 透传到 topLevelXxx computed
- * 7. 表达式注册（expressionFunctions）走 setExpressionFunctions
+ * 7. H2：expressionFunctions 写入实例级 ExpressionScope（同页多 composer 实例互不污染）
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { effectScope, nextTick, reactive } from 'vue'
@@ -22,8 +22,8 @@ import { useXFormComposer, type UseXFormComposerReturn } from './use-xform-compo
 import type { XFormExpose, XFormProps } from '../types'
 
 // ────────────────────────────────────────────────────────────────────────────
-// 工具：在 effect scope 中跑 composer，scope 由测试自身 stop（不要自动 stop，
-// 否则 onScopeDispose 会清掉 expressionFunctions 状态，影响后续断言）
+// 工具：在 effect scope 中跑 composer，scope 由测试自身 stop 释放 watcher。
+// H2 修复后表达式沙箱是实例私有（createExpressionScope），无模块级清表副作用。
 // ────────────────────────────────────────────────────────────────────────────
 
 interface MountHandle {
@@ -194,6 +194,37 @@ describe('useXFormComposer', () => {
     expect(composer.fieldErrors.value).toEqual({})
   })
 
+  describe('错误传播链路验证（架构审查 #4）', () => {
+    const triggerRenderCount = () =>
+      (globalThis as { __triggerRenderCalled?: number }).__triggerRenderCalled ?? 0
+
+    it('setFieldError 键级写入不触发 composer watch（ref 源监听不到 reactive 键 mutation）', async () => {
+      const { composer } = mount(SIMPLE_SCHEMA)
+      const baseline = triggerRenderCount()
+      // 真实路径：externalErrors.value[name] = {...}（reactive 对象键写入，非 ref 重赋值）
+      composer.exposed.setFieldError('email', '服务端返回的错误')
+      await nextTick()
+      // watch(fieldErrors) 的源是 ref —— 键级 mutation 不触发 ref 的 dep，计数不变
+      // 这是「疑似失效 watch」的实证：该 watch 对 setFieldError 路径从未生效过
+      expect(triggerRenderCount()).toBe(baseline)
+    })
+
+    it('渲染兜底路径有效：Object.keys 派生（模拟 XForm.vue :data-field-errors 绑定）随键级写入更新', async () => {
+      const { composer, dispose } = mount(SIMPLE_SCHEMA)
+      // 模拟 XForm.vue fieldErrorKeys computed —— 渲染期读取 reactive 键建立追踪
+      const scope = effectScope()
+      const keysSig = scope.run(() =>
+        computed(() => Object.keys(composer.fieldErrors.value).join(','))
+      )
+      expect(keysSig?.value).toBe('')
+      composer.exposed.setFieldError('email', '服务端返回的错误')
+      await nextTick()
+      expect(keysSig?.value).toBe('email')
+      scope.stop()
+      dispose()
+    })
+  })
+
   it('顶层 readonly 反应式装配不崩溃（值通过 internal renderOpts.globalReadonly 消费）', () => {
     // readonly 是顶层字段，composer 内部消费于 renderOpts.globalReadonly，
     // 不直接对外暴露 —— 此处验证 composer 装配过程未崩溃
@@ -221,24 +252,39 @@ describe('useXFormComposer', () => {
     expect(composer.topLevelColumn.value).toBeUndefined()
   })
 
-  it('expressionFunctions 透传到 setExpressionFunctions —— scope dispose 前可调用', async () => {
-    // 注意：scope.stop() 会触发 setExpressionFunctions(undefined) 清空函数表
-    // 因此断言必须在 dispose() 之前完成
-    const { composer } = mount({
-      schema: [{ component: 'Input', name: 'a' }],
-      model: reactive({ a: '' }),
-      expressionFunctions: {
-        double: (v: unknown) => Number(v) * 2,
-      },
+  it('H2 回归：同页两个 composer 实例的 expressionFunctions 互不污染', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    // 两个实例注册同名函数 tag，各自返回 from-A / from-B
+    const schema = [{ component: 'Input', name: 'a', reaction: { label: '{{ () => tag() }}' } }]
+    const modelA = reactive({ a: '' })
+    const modelB = reactive({ a: '' })
+    const mountA = mount({
+      schema,
+      model: modelA,
+      expressionFunctions: { tag: () => 'from-A' },
     } as unknown as XFormProps)
-    void composer
+    const mountB = mount({
+      schema,
+      model: modelB,
+      expressionFunctions: { tag: () => 'from-B' },
+    } as unknown as XFormProps)
+
     await nextTick()
-    // 通过 resolveFunctionExpression 验证注册成功（避免直接依赖模块级 EXPRESSION_FNS）
-    const { resolveFunctionExpression, setExpressionFunctions } = await import('./use-expression')
-    const fn = resolveFunctionExpression<(v: unknown) => unknown>('{{ (m) => double(m.x) }}')
-    expect(fn).not.toBeNull()
-    expect(fn!({ x: 3 })).toBe(6)
-    setExpressionFunctions(undefined)
+    // 污染形态 1：改 A 的 model 触发其 reaction 重算 —— 必须仍用 A 的函数表
+    //（修复前 B 的 immediate 注册覆盖模块表，A 重算后变 from-B）
+    modelA.a = 'trigger'
+    await nextTick()
+    expect(mountA.composer.topLevelNodes.value[0].label).toBe('from-A')
+    expect(mountB.composer.topLevelNodes.value[0].label).toBe('from-B')
+
+    // 污染形态 2：A 卸载后 B 的 reaction 重算不得 ReferenceError
+    //（修复前 A 的 onScopeDispose 清模块表会毁掉 B 的注册）
+    mountA.dispose()
+    modelB.a = 'trigger'
+    await nextTick()
+    expect(mountB.composer.topLevelNodes.value[0].label).toBe('from-B')
+    expect(errorSpy).not.toHaveBeenCalled()
+    errorSpy.mockRestore()
   })
 
   it('ComponentPublicInstance 类型兼容 —— ref 暴露后支持 ref.value.validate()', () => {

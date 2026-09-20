@@ -177,7 +177,7 @@ pnpm dev
 /**
  * 文件顶部注释：一句话说明本 demo 的目的、场景、验证方法
  */
-import XForm from '@/components/form-schema/XForm.vue'
+import XForm from '@/components/form-schema/components/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
@@ -507,7 +507,7 @@ const bem = createNamespace('demo-x-form-my-feature')
  * 3. 输入非法邮箱并 blur → 提示「邮箱格式不正确」。
  */
 import { reactive } from 'vue'
-import XForm from '@/components/form-schema/XForm.vue'
+import XForm from '@/components/form-schema/components/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'

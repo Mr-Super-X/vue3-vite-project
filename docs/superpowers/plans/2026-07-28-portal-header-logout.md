@@ -12,11 +12,11 @@
 
 ## 文件清单
 
-| 操作 | 路径 | 行数 | 说明 |
-|------|------|------|------|
-| 备份 | `.claude/backups/portal-header-logout/PortalHeader.vue.bak` | 127 | 实施前备份（CLAUDE.md §七 方案隔离） |
-| 修改 | `src/layouts/portal/components/PortalHeader.vue` | 127 → ~160 | 加 el-dropdown 包裹 + 箭头图标 + 菜单项 |
-| 新建 | `src/layouts/portal/components/PortalHeader.spec.ts` | ~100 | 4 个单测用例 |
+| 操作 | 路径                                                        | 行数       | 说明                                    |
+| ---- | ----------------------------------------------------------- | ---------- | --------------------------------------- |
+| 备份 | `.claude/backups/portal-header-logout/PortalHeader.vue.bak` | 127        | 实施前备份（CLAUDE.md §七 方案隔离）    |
+| 修改 | `src/layouts/portal/components/PortalHeader.vue`            | 127 → ~160 | 加 el-dropdown 包裹 + 箭头图标 + 菜单项 |
+| 新建 | `src/layouts/portal/components/PortalHeader.spec.ts`        | ~100       | 4 个单测用例                            |
 
 **src/ 写操作清单**（CLAUDE.md §2.5 必须列出）：
 - `src/layouts/portal/components/PortalHeader.vue`（修改 — §2.3 例外已生效）
@@ -321,8 +321,8 @@ async function onCommand(cmd: string) {
 
 :deep(.el-dropdown-menu__item:not(.is-disabled)) {
   &:hover {
-    background: rgba(56, 189, 248, 0.15) !important;
-    color: #fff !important;
+    background: rgba(56, 189, 248, 0.15);
+    color: #fff;
   }
 }
 ```

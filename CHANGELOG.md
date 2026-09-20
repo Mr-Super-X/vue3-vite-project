@@ -2,6 +2,1002 @@
 
 ## 未发布
 
+### ✨ Feature | ProTable v3.5 PR1-B：vxe-table 引擎树形 + 行拖拽能力补齐
+
+> v3.5 PR1-A 通过 A11y + E2E 后，PR1-B 解决 v2.1 决策 5 遗留：vxe-table 引擎能力与 element-plus 对等。树形 + 行拖拽两个 v2.0 起只支持 el 引擎的能力，PR1-B 起在 vxe 引擎下也完整可用。
+
+**新增 Adapter 引擎胶水层**（`src/components/ProTable/adapters/`）：
+
+- `tree-adapter.ts` + `tree-adapter.spec.ts`：`TreeAdapter` 接口 + `createElementPlusTreeAdapter`（el: treeProps 占位符 + flatData 重算）+ `createVxeTreeAdapter(getVxeTable)`（vxe: tree-config 协议 + `setTreeExpand(row, expanded)` 双向同步 + `syncExpanded(keys, rowsByKey)` 全量回灌）
+- `row-drag-adapter.ts` + `row-drag-adapter.spec.ts`：`RowDragAdapter` 接口 + `createElementPlusRowDragAdapter(rowKey='id')`（el: `.el-table__body-wrapper tbody` + `:data-row-key` 反查）+ `createVxeRowDragAdapter({ getRowsByIndex, getLevelByViewIndex, rowKey })`（vxe: `.vxe-table--body-wrapper tbody` + 视图索引 → `props.rows` 反查 + 可选 tree 模式 `_level`）
+
+**VxeTableBody.vue 接线**：
+
+- 新增 `treeData` + `rowDrag` props（`ReturnType<typeof useTreeData | useRowDrag> | null`）
+- 新增 `expand-toggle` emit（vxe `toggle-tree-expand` 事件已映射 rowKey）
+- 实例化 `createVxeTreeAdapter`（getter 闭包访问 `vxeTableInst.value`，适配器与组件实例生命周期一致）
+- `treeConfigBinding` computed + `treeColumnIndex` computed 定位首个 `col.tree` 列
+- watch `expandedKeys` 全量回灌 vxe 引擎侧 Map（覆盖 revealKeys 批量展开、外部 expandNode/collapseNode API、defaultExpandDepth 启动默认展开三个场景）
+- `handleToggleTreeExpand` 把 vxe UI 触发展开/折叠回流 `useTreeData`，双引擎共享同一 useTreeData 实例
+- defineExpose 新增 `getTbody`：优先从 vxe 实例 ref 拿根 DOM 再 query `.vxe-table--body-wrapper tbody`；onMounted 前 fallback 用模板根 div ref query
+
+**ProTable.vue + useTableCapabilities.ts 双引擎条件透传**：
+
+- `useTableCapabilities` 移除 `treeData !isVxeEngine` 守卫：vxe 引擎也支持树形
+- 移除 `rowDrag !isVxeEngine` 守卫：vxe 引擎也支持拖拽
+- 新增 `isVxeTreeConflict` 检测：vxe + 树形 + 拖拽 三者同时启用时 rowDrag 退化 null（sortablejs 与 vxe tree-node 行结构冲突）
+- `useTableEngineDom` 双引擎 tbody 路由：新增 `proTableVxe` + `effectiveEngine` 参数，按 `effectiveEngine.value === 'vxe-table'` 走 vxe tbody 查询路径
+- `validateCapabilities` 改写：单一 warn「三者冲突」替代原 vxe 不支持树形/拖拽两条
+- ProTable.vue `vxeTableBindings` 接收 treeData + rowDrag（与 elTableBindings 对称）
+- 顶层解构 useTableCapabilities 加 rowDrag（之前漏掉）
+
+**测试覆盖**：
+
+- `tree-adapter.spec.ts` 13 例：elementPlusTreeAdapter 5 例 + vxeTreeAdapter 8 例
+- `row-drag-adapter.spec.ts` 23 例：elementPlusRowDragAdapter 10 例 + vxeRowDragAdapter 11 例 + 3 个常量导出断言
+- `VxeTableBody.spec.ts` 新增 6 例：treeData 启用 / toggle 事件 / treeData=null 不绑 tree-config / rowDrag=null / rowDrag 启用 / getTbody 暴露
+- `useTableCapabilities.spec.ts` 改写：vxe + enableTree → treeData 正常实例化；vxe + enableRowDrag → rowDrag 正常实例化；vxe + 树形 + 拖拽 三者冲突 → rowDrag 退化 null + warn
+- `ProTable.engine.spec.ts` 新增 4 例 capability matrix：vxe + enableTree mount / vxe + enableRowDrag mount / el + enableTree 回归保护 / vxe + 树形 + 拖拽 三者冲突 warn
+- `ProTable.integration.spec.ts` 改写旧断言：vxe + 纯 enableTree / 纯 enableRowDrag 不再 warn「暂不支持」；vxe + 树形 + 拖拽 三者冲突 warn
+
+**Demo 更新**：
+
+- `ProTableEngineCompare.vue` 新增「树形 + 行拖拽双引擎对照」section：左右两栏分别渲染 el-table 和 vxe-table 引擎同一份 columns + enable-tree + enable-row-drag，验证 v3.5 PR1-B 起双引擎行为一致
+- `engineMatrixItems` 树形/行拖拽两行从「❌ 暂不支持」改为「✅ 支持」+ 描述
+
+**文档**：
+
+- `README.md` §引擎能力矩阵（v2.1 → v3.5 PR1-B）：树形/行拖拽两行升级 + 三者冲突 warn 说明
+- `README.md` 新增 v3.5 PR1-B 变更摘要段：TreeAdapter/RowDragAdapter 4 个工厂对照表 + 双引擎能力对照（v2.1 → v3.5 PR1-B）+ 实现要点 + 唯一约束
+- `ARCHITECTURE.md` 顶部「当前版本」从 v3.4 升到 v3.5（PR1-A + PR1-B），新增 PR1-B 增量摘要
+
+**已知约束**：
+
+- vxe + 树形 + 行拖拽 **三者同时启用**会触发 console.warn（sortablejs 与 vxe tree-node 行结构不兼容），行拖拽自动退化 null，业务方按需取舍
+- 视觉对照：本环境下无浏览器截图能力，由用户在 dev server 打开 `/demo/pro-table-engine-compare` 手动验证双引擎树形 + 行拖拽对等
+
+### 🐛 Bug Fixes | XForm 布局容器节点：column 分区失效，children 全堆单 ElCol 纵向排列（xform-grid 模式3）
+
+> 用户实测 `/demo/xform-grid` 模式3「布局容器节点」：demo 设计意图是「无 name 节点带 row/column → 渲染为纯栅格容器，分区组织字段」（分区1 `column:2` 放订单号+状态 2 列并排，分区2 `column:3` 放金额+日期+备注 3 列并排），实际渲染成 5 个字段全纵向单列堆叠。根因：`renderWithRowColumn`（无组件无 name 的 row/column 容器节点渲染路径，dispatch 顺序 permission → array → tabs/steps → visual → formItem → **rowColumn** → default）把 `node.column` 错当「整个分区占 `24/column` 宽」，children 全塞进**单个** ElCol——column 的语义应是「该容器内 children 分配到 N 个独立 ElCol」。**既有实现缺陷**（087f000 引入 grid demo 时即如此），非本轮 SchemaField 重构回归——但 SchemaField 系列修复后此路径暴露为可见 bug。与视觉容器 Card 的 `renderToComponentWithGrid` 对齐（column 分配优先，child 自有 col 在 column 容器内不另包，避免双嵌套 ElCol）。模式1（column 统一分配）/ 模式2（row+col.span）经浏览器实测**不受影响**（顶层 column 与 col 对象语义保留原路径）。
+
+* **fix(src/components/form-schema/composables/render-form-item.ts):** `renderWithRowColumn` 新增分支——`node.column !== undefined && children 非空数组` 时走 grid 分区：每个 child 经 `opts.render(c)` 递归渲染后包独立 ElCol（`span=Math.floor(24/column)`，key 取 `c.key ?? i`），ElRow 沿用 `mergeRowResponsive` 拍平；`col` 对象（span/offset/responsive）而无 column、或 children 为空时保留「单 ElCol 整段占宽」原语义（向后兼容现有测试与 Card 兜底路径）
+* **test(src/components/form-schema/composables/render-form-item.spec.ts):** 新增 2 例——`column:2 + 2 children → 2 个 ElCol 各 span=12` / `column:3 + 3 children → 3 个 ElCol 各 span=8`；新增 `findAllVNodesByType` 辅助函数（slot 展开 + 数组递归，支持「分配成 N 个 vnode」类断言）
+* **已验证:** `pnpm vitest run src/components/form-schema` 65 文件 1175 例全绿（+2 例）+ `pnpm type-check` 0 错误 + `pnpm exec eslint` 改动文件 0 警告；浏览器实测（chrome-devtools，真实 DOM 结构）——模式3：分区1 `directCols:2 spans:[12,12]`（订单号/订单状态各占一列）、分区2 `directCols:3 spans:[8,8,8]`（金额/日期/备注各占一列）；回归确认模式1 `spans:[8,8,8,8,8]`、模式2 `spans:[6,6,12,12,12]` 均不变
+
+### 🐛 Bug Fixes | XForm SchemaField：reaction 写回 node 属性不触发重渲（xform-expression demo「功能都失效」根因）
+
+> 用户打开 `/demo/xform-expression` 反馈「功能都失效」。浏览器实证分两类：(A) **reaction 写回类**（币种联动 label / 选「其他」显隐补充说明）——根因是 2026-09-18 把 `rendered` computed 改为 `renderNode()` 普通函数后，Card 等视觉容器经多层 slot 闭包（`renderVisualContainer → renderToComponentWithGrid`）递归渲染子字段，子字段 `node.label` / `node.hidden` 的读取被推迟到 ElCard patch 期的 slot 调用栈，**脱离 SchemaField 自身 render effect 的同步执行期**——之前 computed 的 deps 容器会收纳这些深层读取并挂到本组件 effect，改动后该机制丢失，reaction 写回正确但 DOM 不刷新；(B) **表达式求值类**（顶层 readonly 锁定 / permission 三态 / on.change 日志）——根因是表达式沙箱 `toSafeDtoCached` 深拷贝 model 为安全 DTO，切断响应式追踪（顶层 readonly computed 只依赖 `props.model` 引用 + `reactiveSchema.value`，model 字段 mutation 不触发重算），此为引擎自 ba8879d 诞生起的固有架构行为，**非本轮回归**。
+
+* **fix(src/components/form-schema/components/SchemaField.vue):** 新增 deep watch `props.node` → `tick++` 重渲兜底——node 任一属性（含深层 children 字段的 label/hidden）变化时触发本字段重渲，重建等价于旧 computed deps 的响应式订阅；成本为每 SchemaField 一个 deep watcher，仅属性实际变化时 tick++
+* **fix(src/components/form-schema/composables/use-model-expression-rerender.ts):** 新增 composable——检测 schema 是否含「model 依赖表达式」（顶层 readonly/disabled 或字段 permission 的函数/'{{ }}' 形态），含则挂 `watch(model, {deep})` → `triggerRender()` + `onModelChange()` 重渲兜底；**按需启用**（无这类表达式的纯 v-model 表单零 deep watch 开销，保留字段级重渲隔离性能卖点）。解决表达式沙箱 `toSafeDtoCached` 深拷贝切断响应式追踪的固有缺口——这类表达式的宿主 computed 只依赖 `props.model` 引用，model 字段 mutation 不重算
+* **fix(src/components/form-schema/components/SchemaField.vue):** `renderNode()` 返回值改**三态语义**区分「合法空」与「渲染失败」——`null`=合法空渲染（permission 'hidden' / node.ignore / 无组件映射等 renderFn 正常返回 undefined 的场景）、`undefined`=渲染失败（renderFn 同步 throw / patch 阶段 renderError）。模板判定从 `!renderNode()` 改为 `renderNode() === undefined`。修复 `permission: 'hidden'` 字段（internalNote / 权限码 admin.delete 等）被误报「字段渲染失败（详见 console）」红色占位——hidden 是「按设计消失」而非「渲染出错」（2026-09-18 用户反馈 xform-field-permission 两个字段渲染失败根因）；`<component :is="null">` 渲染为空节点，hidden 字段正常从 DOM 消失
+* **fix(src/components/form-schema/composables/use-render-root.ts):** `renderToComponent` 新增订阅 `modelExpressionEpoch`——model 依赖表达式的求值在 Card 等视觉容器的 slot 闭包里（`resolvePermission`），脱离 SchemaField 自身 render effect 同步追踪；composer bump 此 epoch 强制整树 SchemaField 重跑，permission 才得以重算（顶层 readonly 走 `topLevelReadonly` computed 追踪无需 epoch，permission 在 slot 闭包必须靠 epoch）
+* **fix(src/components/form-schema/composables/use-xform-composer.ts):** 接线 `useModelExpressionRerender` + 创建 `modelExpressionEpoch` 传 useRenderRoot
+* **已验证(A+B 类修复):** `pnpm vitest run src/components/form-schema` 65 文件 1173 例全绿 + `pnpm type-check` 0 错误；浏览器实测（chrome-devtools，真实 UI 交互）——① 锁定开关切 on → 6 字段 view 化、切 off 恢复可编辑；② 币种切 USD → 金额 label 联动 `报销金额（美元 $）`；③ 费用类型选「其他」→ 补充说明显示；④ on.change 日志面板追加「费用类型 → xxx」；⑤ 角色切 viewer → 审批意见 view 纯文本、切回 admin → 恢复可编辑；⑥ **xform-field-permission**：permission 'hidden' 字段（内部备注 / 权限码-管理员）不再误报「字段渲染失败」红色占位（`errCount:0`），正常从 DOM 消失；动态权限函数形态（adminNote 随 role 切 admin/guest 显隐）正常
+
+### 🐛 Bug Fixes | XForm Tabs/Steps demo：三条用户反馈修复（onTabChange 误报 / budget 类型 / 首 tab 未选中）
+
+> 用户打开 `/demo/x-form-tabs-steps` 反馈 2 条控制台警告 + 1 条交互异常：(1) dev props 校验误报「Tabs props 包含未声明键：onTabChange」——事件回调形态（`onTabChange` / `onUpdate:modelValue`）合法透传但不在 Component.props 反射白名单内；(2) ElInputNumber `modelValue` 要求 `Number | Null`，demo 初始值 `''` 触发类型检查警告；(3) Tabs 首 tab「基础信息」初始未选中，需手动点击才渲染表单——根因是 schema 给 Tabs 加了 `beforeLeave: async`（EP beforeLeave 须同步返 false 才阻止，async 恒真不阻止；且初始 mount 走 Promise 分支 + schema computed 重求值新闭包，打乱首个 tab 初始渲染）。KISS 修复：校验器加 `^on[A-Z]` 豁免 / demo 初始值改 `null` / Tabs 回归纯视觉容器（门控只保留在 Steps「下一步」按钮）。
+
+* **fix(src/components/form-schema/components/SchemaField.vue):** `rendered` computed 改为 `renderNode()` 普通函数——`renderFn` 内可能含 `applyDirectives → withDirectives`，后者要求活跃渲染上下文（currentRenderingInstance !== null）；computed 求值可能在 watch flush / 副作用阶段，此时 rendering instance 已清空 → withDirectives 守卫命中警告 + **跳过指令挂载**（2026-09-18 用户反馈 xform-directives demo 控制台警告根因，此前 focus / audit 指令均不生效）。真正的组件 render() 函数执行期渲染上下文必定活跃，故改为模板内 `{{ renderNode() }}` 调用（每次组件重渲染重新执行）
+* **fix(src/components/form-schema/components/SchemaField.spec.ts):** 改写「字段级重渲隔离」用例——renderNode 是普通函数（非 computed 缓存），调用次数从精确 2 次放宽为 >= 2；关键断言保持 node1/node2 各自被独立调用（隔离语义不变）
+* **fix(src/modules/demo/examples/XForm/XFormDirectives.vue):** 临时调试标记已移除（验证 mounted 真实执行后清理）
+* **fix(src/components/form-schema/composables/render-tabs-steps-node.spec.ts):** 改写「children 每项 → ElStep」用例——断言 title prop 映射 + label prop 不存在；新增「Steps child.label 缺省 → title 回退 `面板 N`」用例
+* **fix(src/components/form-schema/composables/validate-component-props.spec.ts):** 新增 1 例——Tabs + `modelValue` / `onTabChange` / `onUpdate:modelValue` 不警告（合法透传）
+* **fix(src/components/form-schema/composables/render-tabs-steps-node.ts):** `renderPanes` 把 `child.name` 透传为 ElTabPane 的 `name` prop——EP 用 `currentName`（来自 modelValue）匹配 `paneName` 决定 active pane；此前不传 name 时 paneName fallback 到 index（'0'/'1'），与 modelValue（如 'basic'）永远不匹配，导致所有 pane `v-show=none`（首次打开看不到表单，2026-09-18 用户反馈二次根因；首次误判为 beforeLeave 副作用已回滚）
+* **fix(src/components/form-schema/composables/render-tabs-steps-node.spec.ts):** 新增 2 例——child.name 透传为 pane name（回归）/ child.name 缺省不传 name prop（EP fallback 到 index）
+* **fix(src/components/form-schema/composables/apply-default-values.ts):** `setInitialValues` 快照同步限定为**仅首次**——此前 `watch(() => props.schema, {deep: true})` 在 schema 任何重求值（含业务把 schema 包成 computed 依赖 model 字段的场景）都会触发 `applyDefaultsAndSync → setInitialValues(props.model)`，把当前脏 model 同步为 el-form 的 initialValue 快照；用户随后点重置时 `resetField` 回到被污染的快照（=当前值），表现为「重置没反应」。修复后首次挂载同步一次快照，后续 schema watch 只应用 `defaultValue` 不再覆盖快照；**这是通用 XForm 引擎 bug**（所有 schema 是 computed 的 41 个 demo 均受影响），2026-09-18 用户反馈第四次根因
+* **fix(src/components/form-schema/composables/apply-default-values.spec.ts):** 改写「schema 引用变化时重跑」用例——断言 setInitialValues 在后续 watch 触发时**不再被调**（仍 1 次）+ 新增 1 例 `applyDefaultsAndSync(syncSnapshot=false)` 只应用 defaultValue 不同步快照
+* **feat(src/modules/demo/examples/XForm/XFormTabsSteps.vue):** 重置按钮升级为 `onResetAll`——除 `resetFields()` 外同步归零 `activeStep=0` + `activeTab='basic'`（此前只清表单字段，step 进度和 tab 停留原位，用户看到「空白表单 + step 停在 2」困惑）；CSS 覆盖区分 `is-process`（当前激活）vs `is-success`（已完成）vs `is-wait`（未到达）三态视觉——EP 把 state class 加在 `.el-step__head` 而非 `.el-step` 本身（demo 初次覆盖选择器写错已修正），给 `is-process` 图标加 3px 主色粗边框 + 4px 光晕 + 连接线主色，让用户一眼看到「当前在哪一步」
+* **已验证:** `pnpm type-check` 0 错误；`pnpm vitest run src/components/form-schema` 64 文件 1156 例全绿；浏览器实测（chrome-devtools MCP）pane id=`pane-basic` + `is-active` + 3 个 `el-form-item` 渲染成功
+
+### 📚 Docs | 修正 CLAUDE.md §1.7 组件自动注册范围描述：三目录 deep 注册（Wave4-4 决策）
+
+> Wave4-4 触发 AskUserQuestion 决策（选 B 修订 CLAUDE.md）：vite.config `dirs: ['src/components/common', 'src/components/ProTable', 'src/components/form-schema']` + `deep: true` 实际**深扫三目录所有 .vue**（含 ProDialog/ / XForm / ProTable 子组件），与 CLAUDE.md §1.7 旧描述「只扫 components/common 一级 / 子目录组件需显式 import」矛盾。保留 vite.config 现状，同步修订 CLAUDE.md §1.7 / §1.6 / §4 #15 三处 + vite.config 注释。
+
+* **docs(CLAUDE.md §1.7):** 修订「自动扫描 components/common/**」→「dirs 三目录（common + ProTable + form-schema）+ deep: true 深扫所有 .vue」；范围段同步明确 ProDialog / ProDialogForm / XForm / ProTable / SearchForm 等均自动注册不要 import；删除「unplugin 默认 dirs 只扫一级」错误机制说明；检测方法从「删除 import from '@/components/common/...'」泛化为「删除 import from '...'」
+* **docs(CLAUDE.md §1.6):** 「全局组件」行扩为三目录示例（BaseChart / ProTable / XForm）；「子目录组件（非自动注册）」反例从「form-schema/ProDialog/ 等」改为「components/ 下其他自建子目录」（因 form-schema/ProDialog 实际在 dirs 内自动注册）
+* **docs(CLAUDE.md §4 #15 + 头部 v1.7.0 变更记录):** 约束表同步三目录描述 + 本次修订归因
+* **docs(vite.config.ts):** Components dirs 注释明确三目录 + deep: true 语义 + 指向 CLAUDE.md §1.7
+* **已验证:** 全项目 Grep 无其他「只扫一级 / 子目录不自动注册」残留描述；`pnpm type-check` 0 错误；`pnpm check:doc-currency` 13/13 通过
+
+### ✨ Features | XForm 设计器演进类型字段预留：id / meta / schemaVersion 三字段（PM 审查发现 12）
+
+> 产品经理审查发现 12：低代码设计器接口预留评估——基础良好（schema 纯 JSON 可序列化、{{ }} 表达式支持后端下发、类型契约完整导出），但缺顶层 `schemaVersion` 字段（schema 升级靠 useFormPersist.restoreFilter 手工裁剪）+ 节点级 `id`/`meta` 约定（设计器选中/锚定/回写需要）。本轮仅做**接口预留**（不实现设计器）：SchemaNode 加可选 `id?: string` / `meta?: Record<string, unknown>`（节点级，identity 命名空间），顶层容器加可选 `schemaVersion?: string`（SchemaNodeTopLevel）；可视化工具有了锚点后再评估 PoC。
+
+* **feat(src/components/form-schema/types/identity.ts):** `SchemaNodeIdentity` 加 `id?: string`（节点稳定 id，同层唯一，设计器选中/锚定/回写；XForm 渲染与校验不消费，仍按 name/key 做标识）+ `meta?: Record<string, unknown>`（透传不透明键值对，不消费/不校验/不序列化到 model；建议仅放可 JSON 序列化的纯数据）——4 → 6 字段
+* **feat(src/components/form-schema/types/top-level.ts):** `SchemaNodeTopLevel` 加 `schemaVersion?: string`（'major.minor.patch' 或业务自定义；XForm 渲染不消费，供 useFormPersist.restoreFilter 升级裁剪 + 设计器 schema 升级策略锚定）——6 → 7 字段
+* **feat(src/components/form-schema/types/schema-node.ts):** SchemaNode 文件头字段分组表 + @see 同步（31 → 35 字段；identity 4 → 6 / top-level 5 → 7）
+* **test(src/components/form-schema/index.spec.ts):** 新增「设计器演进字段类型契约」2 例——SchemaNode 接受 id/meta/schemaVersion 可选字段（值正确透传）/ 三字段均可缺省（业务手写 schema 无设计器需求不填）
+* **docs(src/components/form-schema/README.md):** 新增「设计器演进接口预留」小节——三字段语义/消费侧/缺省约定对照表
+* **docs(src/components/form-schema/ARCHITECTURE.md):** §2.1 字段分类表节点标识 4 → 6（加 id/meta）+ 顶层配置 5 → 7（加 watchFallback/schemaVersion）+ 合计 31 → 35；目录树 identity/top-level/schema-node 字段数注释同步
+* **ci(scripts/check-doc-currency.ts):** SchemaNode 字段数 expected 32 → 35（注释同步「Wave4-3 +3 id/meta/schemaVersion」）
+* **已验证:** index.spec 9/9 通过；`pnpm type-check` 0 错误；`pnpm check:doc-currency` SchemaNode 字段数 35/35 通过
+
+### ✨ Features | XForm Tabs/Steps 视觉容器内置：children 即面板 + 激活态绑定 model + 校验门控（PM 审查发现 9）
+
+> 产品经理审查发现：Tabs/折叠分组容器 / Steps 分步表单在能力矩阵标「❌ 缺失（仅 Card）」，CONTRIBUTING §3.2 已铺好扩展路径。本轮复用 render-visual-container 分支模式新增 Tabs/Steps 视觉容器——`component: 'Tabs'/'Steps'`（或 El 全名），children 每项 → ElTabPane/ElStep 面板（label 取 child.label，缺省回退 `面板 N`）。定位纯视觉容器（与 Card 同级），激活态绑定 / 校验门控通过**透传 EP 原生 props/events** 实现（Tabs：`modelValue` + `onTabChange` + `beforeLeave`；Steps：`active` + 外层按钮驱动），不在 XForm 侧做二次抽象。
+
+* **feat(src/components/form-schema/composables/render-tabs-steps-node.ts):** 新增 Tabs/Steps 视觉容器渲染分支——`isTabsNode` / `isStepsNode` 判定（短名 / El 全名 / 组件对象三形态）；`renderPanes` 把 children 每项映射为 ElTabPane / ElStep（label 取 child.label 缺省回退 `面板 N`）；面板内容 child.row/column 走 renderToComponentWithGrid 栅格；props 合并优先级与 renderVisualContainer 对齐（componentProps → node.props → asyncProps → disabled/key）
+* **feat(src/components/form-schema/composables/render-schema-node.ts):** 主调度加分支 2b（Tabs/Steps 视觉容器）——先于 Card 视觉容器判定，无 name + children 数组才命中，否则返回 undefined 落入后续分支
+* **feat(src/components/form-schema/composables/resolve-component.ts):** EL_COMPONENT_MAP 加 `Tabs: ElTabs` / `TabPane: ElTabPane` / `Steps: ElSteps` / `Step: ElStep` 四项
+* **feat(src/components/form-schema/types/schema-node.ts):** ComponentPropsRegistry 加 `Tabs: ElTabsProps` / `TabPane: ElTabPaneProps` / `Steps: ElStepsProps` / `Step: ElStepProps` 四项
+* **feat(src/components/form-schema/builders/containers.ts + index.ts):** 新增 `xTabs` / `xSteps` 链式 builder（Ext 方法：Tabs.modelValue/beforeLeave；Steps.active/processStatus）；builder 入口 27 → 29
+* **test(src/components/form-schema/composables/render-tabs-steps-node.spec.ts):** 新增 14 例——isTabsNode/isStepsNode 三形态判定 / Tabs children → ElTabPane（label 取 child.label）/ label 缺省回退 / modelValue 透传 / child.row/column 走 grid（产出 ElRow）/ Steps children → ElStep / 非 Tabs-Steps（Card）返回 undefined / 有 name / children 非数组 / children 空数组边界
+* **demo(src/modules/demo/examples/XForm/XFormTabsSteps.vue):** 活动创建场景——Tabs 分组（基础信息 / 高级设置）+ Steps 分步（填写 / 确认 / 完成）；schema 用 computed 包让 modelValue/active 随 model 响应；Tabs beforeLeave 校验门控（切走 basic 前 validateField BASIC_FIELDS，失败 return false 阻止切换 + ElMessage 提示）；Steps 外层「上一步 / 下一步」按钮驱动 activeStep；sidebar 注册「Tabs/Steps 容器」
+* **docs(src/components/form-schema/README.md):** 新增「视觉容器（Card / Tabs / Steps，children 即面板）」小节——容器/面板组件/label 来源/激活态+校验门控对照表；demo 计数 55 → 56 三处
+* **docs(docs/24-XForm使用指南.md):** §19 示例索引 55 → 56 + 加 `/demo/x-form-tabs-steps` 行
+* **docs(src/components/form-schema/ARCHITECTURE.md):** §8.1 builder 工厂 27 → 29 + builders.ts 目录树注释 + 表加 xTabs / xSteps 两行
+* **ci(scripts/check-doc-currency.ts):** XForm demo 数 expected 55 → 56；builder 入口数 expected 27 → 29（注释同步「Wave4-2 +2 xTabs/xSteps」）
+* **已验证:** 全量 form-schema 64 文件 1151 例通过；`pnpm type-check` 0 错误；`pnpm check:doc-currency` 13/13 通过
+
+### ⚡ Performance | XForm 性能三热点优化：表达式 toSafeDto 微任务缓存 84x + cross-field watchFallback 逃逸口 + schema 管线文档化（架构师审查 #7/#8/#6）
+
+> 架构师审查性能三热点一次性落地：① 表达式沙箱每次 compiled 调用都对 model 全量深拷贝（`toSafeDto`），同 tick 多字段 reaction 同批触发时重复拷贝 N 次——加微任务级缓存同 tick 只拷一次（跨 tick 失效保行为一致，bench 实证 84x 加速）；② cross-field 反向校验常驻 deep watch + 每键 lodash isEqual 快照 diff，纯 v-model 表单（所有写入经 onValueChange）是白白付的成本——加 `watchFallback: false` 逃逸口（schema 顶层字段）显式关闭；③ schema 变更管线对根引用 deep watch + cloneDeep 重建（含索引 / reaction 预算 / crossRule 拍平等 N 次 walk），原地 mutate 深层字段不会热更——文档化「须整体替换」约束。
+
+* **perf(架构审查 #7, src/components/form-schema/composables/use-expression.ts):** 新增模块级 `safeDtoCache: { raw, dto }` + `queueMicrotask` 失效——`compiled()` 同 tick 多次调用只深拷贝一次（N reaction 同批触发场景），跨 tick 缓存失效保证行为一致（WeakMap 方案被否：嵌套对象变化会读旧快照）
+* **perf(架构审查 #7, src/components/form-schema/bench/expression-safe-dto.bench.ts):** 新增 vitest bench 两例（同 tick 缓存命中 vs 跨 tick 每次新建）；实测 17,509 hz vs 207 hz = **84.23x faster**
+* **perf(架构审查 #8, src/components/form-schema/composables/use-cross-field-trigger.ts):** `UseCrossFieldTriggerOptions` 新增 `watchFallback?: boolean`（默认 true 向后兼容）；deep watch 兜底块包在 `if (opts.watchFallback !== false)`——纯 v-model 表单可关 deep watch 省每键 isEqual 成本；JSDoc 量化 trade-off
+* **perf(架构审查 #8, src/components/form-schema/types/top-level.ts):** `SchemaNodeTopLevel` 新增 `watchFallback?: boolean`（仅顶层 schema 生效，SchemaNodeTopLevel 5→6 字段 / SchemaNode 31→32 字段）
+* **perf(架构审查 #8, src/components/form-schema/composables/use-xform-composer.ts):** useCrossFieldTrigger 调用接线 `watchFallback: reactiveSchema.value.watchFallback ?? true`
+* **docs(架构审查 #6, docs/24-XForm使用指南.md):** §17 故障排查 + §18 已知限制各加一行——schema 变更管线对根引用 deep watch + cloneDeep 重建（含 N 次 walk），不支持原地 mutate 热更，须整体赋新引用触发单次重建
+* **test(src/components/form-schema/composables/use-cross-field-trigger.spec.ts):** 新增 watchFallback 3 例（false → 直改 model 不触发 / false → 精确 trigger 路径仍可用 / 缺省向后兼容同显式 true）；makeOpts 扩 extra 透传；33/33 通过
+* **ci(scripts/check-doc-currency.ts):** SchemaNode 字段数 expected 31 → 32（注释同步「Wave4-1 +1 watchFallback」）
+* **已验证:** 全量 form-schema 63 文件 1137 例通过；`pnpm type-check` 0 错误；`pnpm check:doc-currency` 13/13 通过；`pnpm vitest bench src/components/form-schema/bench/expression-safe-dto.bench.ts` 84.23x 加速
+
+### ✨ Features | XForm 交互增强：F7 拖拽落点指示线 + F9 size 密度 + F13 dirty 标记（设计师审查）
+
+> 设计师审查的三个交互/体验增强一次性落地：数组行拖拽排序新增落点指示线 + 源行拖拽态（此前只有 dragover preventDefault，无任何视觉反馈）；XFormProps 新增 `size` 透传 ElConfigProvider（此前内部硬编码 'default'，中后台紧凑表单场景需外层再包一层 ConfigProvider）；XFormProps 新增 `showDirtyMark` 字段级 dirty 视觉指示（此前 dirty 追踪能力完整但表单上无任何视觉线索，"我改了哪里"只能靠外挂面板）。
+
+* **feat(F9 密度控制, src/components/form-schema/types/xform.ts):** XFormProps 新增 `size?: 'large' | 'default' | 'small'`，JSDoc 说明场景 / 向后兼容（未传入保持 'default'）/ schema 顶层不预留 size（密度是表单级视觉决策）
+* **feat(F9, src/components/form-schema/components/XForm.vue):** `elConfig.size` 由硬编码 `'default'` 改 `props.size ?? 'default'`
+* **feat(F13 dirty 标记, src/components/form-schema/types/xform.ts):** XFormProps 新增 `showDirtyMark?: boolean`（默认 false）；JSDoc 说明数据侧能力已就绪 + resetDirty 自动清空
+* **feat(F13, src/components/form-schema/composables/use-form-dirty.ts):** 新增 `dirtyFieldsRef: Readonly<Ref<ReadonlySet<string>>>` 响应式导出——recompute 时整体替换新 Set 触发响应式依赖（render-form-item 的 is-dirty class 绑定订阅它）；`recompute` 由原地 clear/add 改构造新 Set 赋 value
+* **feat(F13, src/components/form-schema/composables/use-render-root.ts + render-schema-node.ts + use-xform-composer.ts):** `showDirtyMark` / `dirtyFields` 沿 renderOpts 链路透传到 render-form-item；exactOptionalPropertyTypes 用 `| undefined` 联合 + 条件展开兼容
+* **feat(F13, src/components/form-schema/composables/render-form-item.ts):** form-item h() props 加 `class: 'is-dirty'` 条件（showDirtyMark 开启 + node.name 在 dirtyFields 集合中）；render effect 内 `.has()` 建立响应式依赖
+* **feat(F13, src/components/form-schema/styles/element-form-overwrite.scss):** `.el-form-item.is-dirty .el-form-item__label::after` 6px 圆点（`--el-color-warning`）
+* **feat(F7 拖拽指示, src/components/form-schema/composables/render-array-node.ts):** 模块级 `dragSourceIndex` / `dropTargetIndex` / `dropPosition` ref（同一时刻只在一个数组上拖拽）；`onDragstart` 记源 index；`onDragover` 计算鼠标在行内垂直位置（上半 before / 下半 after）；`onDragleave` 清落点；`onDrop` 换算落点（before → index-1 / after → index）调 moveItem；`onDragend` 清状态；row class 数组拼 `is-dragging` / `is-drop-before` / `is-drop-after`
+* **feat(F7, src/components/form-schema/styles/element-form-overwrite.scss):** `.array-node__row.is-dragging { opacity: 0.5 }` + `.is-drop-before::before` / `.is-drop-after::after` 2px `--el-color-primary` 插入线（绝对定位跨整行宽度）
+* **test(src/components/form-schema/composables/use-form-dirty.spec.ts):** 新增 dirtyFieldsRef 响应式 1 例（recompute 触发 Set 替换 / has 查询 / resetDirty 清空），16/16 通过
+* **test(src/components/form-schema/index.spec.ts):** XFormProps 契约快照补 `size: true` / `showDirtyMark: true`，toHaveLength(16) → (18)
+* **docs(docs/24-XForm使用指南.md):** §2 Props 表标题 16→18 + 补 size / showDirtyMark 两行 + 表尾「18 个 prop」
+* **docs(src/components/form-schema/README.md):** §props 标题 16→18 + 表补 size / showDirtyMark 两行
+* **ci(scripts/check-doc-currency.ts):** XFormProps 字段数 expected 16 → 18（注释同步「Wave3-6 交互增强 +2 size/showDirtyMark」）
+* **已验证:** 全量 form-schema 63 文件 1134 例通过；`pnpm type-check` 0 错误；`pnpm check:doc-currency` 13/13 通过
+
+### ✨ Features | 概念地图页 + deps/dependsOn 命名统一（PM 审查发现 4）
+
+> 产品经理审查发现：XForm 有 ~20 个核心概念，其中「三套依赖 / 三种隐藏 / 三层拦截」三组近义词是新人主要认知税；reaction/asyncOptions 用 `deps`、跨字段校验用 `dependsOn`，命名不统一加剧学习成本。本轮在 README 新增「概念地图」章节（三组近义概念对照），并把 `deps` 统一为跨字段校验的推荐别名（`dependsOn` 保留向后兼容）。
+
+* **docs(src/components/form-schema/README.md):** 新增「概念地图」章节——三种「依赖」（reaction deps / asyncOptions deps / crossValidator dependsOn|deps）对照表 + 三种「隐藏」（hidden / ignore / permission:'hidden'）语义光谱表 + 三层「写入前拦截」（Props 全局 → beforeChangeRules 命名空间 → 字段级）对照表；下沉引用 docs/24 §4.2 / §10 详细决策树
+* **feat(src/components/form-schema/types/rule.ts):** `RuleItem` 新增 `deps?: string | string[]` 作为 `dependsOn` 的别名（与 reaction / asyncOptions 命名统一）；JSDoc 说明优先级（dependsOn 优先）+ 推荐新代码写 deps
+* **feat(src/components/form-schema/composables/cross-rule-runner.ts):** `runCrossRuleMaybeSync` / `runCrossRule` 签名扩 `deps`；取值归一改为 `rule.dependsOn ?? rule.deps`
+* **feat(src/components/form-schema/composables/use-cross-field-rule-trigger.ts):** 事件触发路径过滤条件 `!rule.dependsOn` → `!(rule.dependsOn ?? rule.deps)`（不漏 deps 别名）
+* **feat(src/components/form-schema/composables/use-validate.ts):** 批量 validate 路径同上
+* **feat(src/components/form-schema/composables/use-schema-index.builder.ts):** 反向触发索引构建的 dependsOn 提取改为 `ri.dependsOn ?? ri.deps`（同时声明时 dependsOn 优先）；存在性过滤放宽（不再要求 'dependsOn' in r，由 raw 存在性兜底）
+* **test(src/components/form-schema/composables/cross-rule-runner.spec.ts):** 新增 3 例——deps 别名等效 / dependsOn 优先于 deps / 缺 dependsOn 与 deps 时 threw（不调 crossValidator）
+* **docs(docs/24-XForm使用指南.md):** §5.2 标题改「dependsOn / deps + crossValidator」+ blockquote 说明命名统一 + 示例 dependsOn → deps
+* **已验证:** 全量 form-schema 63 文件 1133 例通过；`pnpm type-check` 0 错误；`pnpm check:doc-currency` 13/13 通过
+
+### ✨ Features | XForm label 函数式 i18n + XFormProps.t 注入（PM 审查发现 3）
+
+> 产品经理审查发现：XForm 无任何 i18n 机制，多语言场景 label 只能预烘焙字符串，切换语言需重建 schema。本轮落地「label 函数式」方案——label 类型放宽为 `string | (t) => string`，函数由 XForm 渲染期以注入的 t 求值；XForm 不绑定 i18n 库（vue-i18n 的 t / 字典闭包均可注入），缺省 identity。t 在 render effect 内求值，vue-i18n 场景语言切换自动重渲，无需重建 schema。
+
+* **feat(src/components/form-schema/types/identity.ts):** 新增 `XFormTranslateFn = (key: string) => string` + `XFormLabelFn = (t) => string`；`label?: string | XFormLabelFn`（含与 reaction 函数式风格区分的 JSDoc——reaction.label 在管线求值成 string 后才写入 node.label，渲染层拿到的函数必是 i18n 函数）
+* **feat(src/components/form-schema/types/xform.ts):** XFormProps 新增 `t?: XFormTranslateFn`（JSDoc 说明分层铁律：components/ 不 import locales/；调用方注入 vue-i18n 的 t 或字典闭包；缺省 identity）；字段数 15 → 16
+* **feat(src/components/form-schema/utils/resolve-label.ts):** 新建 `resolveLabel(label, t?)`——函数式 label 以注入 t（缺省 FALLBACK_T identity）求值；string label 原样返回
+* **feat(src/components/form-schema/composables/render-form-item.ts):** `resolveLabel(node.label, opts.t)` 求值后传入 ElFormItem.label + compileRules 默认「<label>必填」消息（函数式 label 不会漏成 undefined）
+* **feat(src/components/form-schema/composables/render-schema-node.ts):** view 态 label 前缀同步 resolveLabel；RenderSchemaNodeOptions 加 `t?: XFormProps['t']`
+* **feat(src/components/form-schema/composables/render-array-node.ts):** 数组行 title `cfg.title ?? resolveLabel(node.label, opts.t) ?? listName`
+* **feat(src/components/form-schema/composables/use-render-root.ts):** renderOpts 加 `t: (key) => props.t?.(key) ?? key`——getter 闭包非 setup 快照，父级换 t 引用无需 optsEpoch 覆盖
+* **feat(src/components/form-schema/builders/core.ts + containers.ts):** `label(label: string | XFormLabelFn): this`（import XFormLabelFn）
+* **feat(src/components/form-schema/types.ts):** barrel 补 `export { type XFormTranslateFn }` / `export { type XFormLabelFn }`（带 JSDoc）
+* **test(src/components/form-schema/components/XForm.spec.ts):** ElFormItemStub 加 `props: ['label']` + template 渲染 `.fi-label`；新增 i18n describe 3 例（t 注入渲染翻译文案 / 未注入 identity / setProps 换 t 重渲）；断言目标 `.el-form-item__label`（render-form-item.ts 直接 import ElFormItem 不走 global.components stub）
+* **test(src/components/form-schema/index.spec.ts):** 契约快照补 `t: true`，toHaveLength(16)
+* **demo(src/modules/demo/examples/XForm/XFormI18n.vue):** 新增 label 函数式 i18n demo——字典 DICTS zh/en + locale ref + t computed 闭包（模拟 vue-i18n）；三字段函数式 label + crossValidator 密码确认；语言切换按钮（zh/en）
+* **demo(src/modules/demo/examples/XForm/configs/xform-demos-api.ts):** `i18nItems` 3 项 API 说明
+* **demo(src/modules/demo/config/sidebar-groups.ts):** `XFormI18n: 'label 函数式 i18n'`（插在 XFormIgnore 前）
+* **docs(docs/24-XForm使用指南.md):** §2 Props 表加 `t` 行（类型 XFormTranslateFn）+ 标题「15 个」→「16 个」+ line 77「15 个 prop」→16；§19 示例索引加 XFormI18n 行
+* **docs(src/components/form-schema/README.md):** §props 标题 15→16 + 说明行 + 表补 `t` 行
+* **ci(scripts/check-doc-currency.ts):** XFormProps 字段数注释补「Wave3-4 i18n +1 t」；XForm demo 数 54→55（含注释）
+* **已验证:** 全量 form-schema 63 文件 1130 例通过；`pnpm type-check` 0 错误；`pnpm check:doc-currency` 13/13 通过
+
+### ♻️ Refactor | cross 校验三路径执行语义统一于 cross-rule-runner（架构审查 #11）
+
+> 三条 crossValidator 执行路径（反向 model 触发 / 正向 blur-change 事件触发 / validate 批量全量）各自手写「dependsOn 取值 + 同步异步分流 + 抛错兜底 + seq 竞态令牌」，共 3 份重复实现。收敛为单一原语模块，行为保持（含同步 crossValidator 同步写入、seq bump 时机、空值三策略差异）。
+
+* **refactor(src/components/form-schema/composables/cross-rule-runner.ts):** 新建——`runCrossRuleMaybeSync`（同步 crossValidator 直返 outcome 保持同步写入语义；异步返回 Promise）+ `runCrossRule`（async 包装，事件/批量路径 await 串行消费）+ `createCrossSeqGuard`（seq 令牌原语 begin/isCurrent/clear）；文件头显式声明「刻意不统一」清单（seq bump 时机、空值策略、结果写入三路径语义不同，保留调用方）
+* **refactor(use-cross-field-trigger.ts):** executeRule 改经 runner——空值清错 + seq bump 在空值检查后（原语义）+ 同步结果同步写入 / 异步 then 内 seq 过期丢弃
+* **refactor(use-cross-field-rule-trigger.ts):** seq Map 收敛为 createCrossSeqGuard（bump 时机 = 触发开始先于空值检查，原语义）；循环内 await runCrossRule，pass → setFieldError(name,'','')，fail → setFieldError(name,msg)，threw → 继续下一条（原 catch-continue 语义）
+* **refactor(use-validate.ts):** runNodeCrossRules 内层 try/catch + Promise.resolve 收敛为 await runCrossRule（批量路径无空值跳过、无 seq，原语义）；移除 lodash get import
+* **refactor(use-form-validation.ts):** 删除 line 72-77 过时注释（seq Map 本体早已迁走），改为指向 runner 的函数级 JSDoc
+* **style:** console.error 文案三处统一为 `[XForm] crossValidator threw:`（原 reverse/blur trigger 变体）；2 处 spec 断言同步更新
+* **test(cross-rule-runner.spec.ts):** 新增 15 例（同步直返 / 异步分流 / dependsOn 归一 / 抛错兜底 / 嵌套路径 / seq 递增-过期-clear）
+* **docs(ARCHITECTURE.md):** §9.1 表 61 → 62（composables 48→49）；§4 #11 行 48→49 spec 文件；docs/25 TL;DR 61 → 62
+* **ci(scripts/check-doc-currency.ts):** spec 文件数 expected 61 → 62（tolerance 收紧同步）
+* **已验证:** cross 相关 5 文件 128 例通过；全量 form-schema 套件通过；`pnpm type-check` 0 错误；`pnpm check:doc-currency` 13/13 通过
+
+### ♻️ Refactor | 组件映射表单源化：EL_COMPONENT_MAP 唯一 runtime 真源（架构审查 #2）
+
+> 架构审查发现组件映射存在两份手写表：adapters/element-plus-adapter.ts 的 DEFAULT_COMPONENT_MAP（31 条 name→string）与 composables/resolve-component.ts 的 EL_COMPONENT_MAP（30 条 name→Component），新增组件需双处登记必然漂移（Icon 已在 adapter 侧独存）。本轮收敛为单一真源 + 派生表，并修复 builders 拆分的 import 路径与 composer 返回类型两处遗留类型错误。
+
+* **refactor(src/components/form-schema/composables/resolve-component.ts):** EL_COMPONENT_MAP 补 `Icon: ElIcon`，升级为唯一 runtime 真源（31 条），header 注释声明「DEFAULT_COMPONENT_MAP 从此表派生，禁止再手写第二份映射表」
+* **refactor(src/components/form-schema/adapters/element-plus-adapter.ts):** DEFAULT_COMPONENT_MAP 31 条手写表 → `deriveComponentNameMap()` 从 EL_COMPONENT_MAP 派生（依赖 EP 组件对象稳定 `.name` 属性；InputPassword/ElInputTextArea 等别名键共享 ElInput 对象自动派生正确；缺 `.name` 时回退短名键）；JSDoc 说明派生关系与假设
+* **test(src/components/form-schema/adapters/element-plus-adapter.spec.ts):** 新增 2 例——键集合与 EL_COMPONENT_MAP 一致（防双表漂移契约）+ Icon/别名键 `.name` 派生正确；45/45 通过
+* **fix(src/components/form-schema/builders/core.ts + containers.ts):** Wave3-1 拆分的 import 路径修正 `'../../types'` → `'../types'`（types.ts 与 types/ 目录并存时文件优先解析，vue-tsc 编译失败但 vitest 解析通过致当时漏检）
+* **fix(src/components/form-schema/composables/use-xform-composer.ts):** `UseXFormComposerReturn` 接口 + return 补 `scrollToField`（Wave2-2 banner @locate 接线时 XForm.vue 已解构使用，返回类型遗漏声明）
+* **已验证:** adapter/resolve-component/use-dev-runtime/use-validate 92 例通过；builders/composer/XForm 72 例通过；`pnpm type-check` 0 错误；`pnpm check:doc-currency` 13/13 通过
+
+### 🐛 Fixes | XForm scrollToError/scrollIntoViewOptions 死 prop 修复（schema 优先、props 兜底）
+
+> 三视角审查（架构师/设计师/产品经理）发现：`scrollToError` / `scrollIntoViewOptions` 两个 props 仅声明从未接线——`use-top-level-fields.ts` 只从 schema 顶层节点读取，props 传入时被静默忽略。修复后形成「schema 显式配置 > props 兜底 > false」三级优先级。
+
+* **fix(src/components/form-schema/composables/use-top-level-fields.ts):** 两个 computed 增加 props 兜底分支（`s?.scrollToError ?? props?.scrollToError ?? false`）；header 注释更新说明例外
+* **fix(src/components/form-schema/composables/use-xform-composer.ts):** deps 传入 `props`
+* **test(src/components/form-schema/composables/use-top-level-fields.spec.ts):** 新增 5 例（props 兜底 true / schema 显式 false 优先于 props true / 双缺省 false / scrollIntoViewOptions 透传 / schema 优先级），58/58 通过
+
+### ✨ Features | ProDialogForm xformProps 透传 + 稳定 rules 引用 + asyncOptions 不可达位置 dev 警告 + 数组行默认布局
+
+> 同一轮审查的四个集成/体验缺口一次性补齐。ProDialogForm 此前仅透传 3/15 个 XForm props（schema/model/rules），其余能力（components/zodSchema/beforeChange/permissionResolver/showErrorToast 等）完全无法使用；数组节点行内布局样式缺失导致控件错位挤压。
+
+* **feat(src/components/common/ProDialogForm/):** 新增 `xformProps?: Partial<XFormProps>` 透传入口（`v-bind="xformProps"`，同名键优先级：显式 props > xformProps）；`:rules` 缺省改绑模块级 `EMPTY_RULES` 稳定空对象——修复 `props.rules ?? {}` 每次渲染新建引用导致 XForm renderOpts 全量失效的性能隐患
+* **test(src/components/common/ProDialogForm/ProDialogForm.spec.ts):** 新增 `xformProps 透传` describe 3 例（透传 / 优先级深比较 / 引用稳定性 toBe），21/21 通过
+* **feat(src/components/form-schema/):** 新增 `use-scan-async-options.ts`（walkSchema 集差扫描：全量遍历 minus registerAsyncOptions 实际遍历，自动跟随 walker 选项，单一事实源）——dev 环境下 asyncOptions 位于不支持位置（formItem.slots / array.itemSchema 内）时 console.warn + errorBus.report（新错误码 `ASYNC_OPTIONS_UNSUPPORTED_POSITION`），debug banner 同步渲染警告行
+* **test(src/components/form-schema/):** 新增 `use-scan-async-options.spec.ts` 6 例 + dev-runtime 集成 1 例，21/21 通过
+* **style(src/components/form-schema/styles/element-form-overwrite.scss):** 数组行补齐默认布局——`.array-node__row`（flex + gap 12）/ `__row-body`（flex:1）/ `__row-actions`（flex-shrink:0 + `--xform-array-actions-offset` 对齐变量）/ `__empty`（虚线占位空态）
+* **fix(src/components/form-schema/composables/render-array-node.ts):** 空态文案改为「暂无数据，点击上方「添加X」按钮添加一行」（原「右上角」与实际按钮位置不符）
+* **test(src/components/form-schema/):** render-array-node 19/19 通过
+* **docs(docs/31-ProDialogForm使用指南.md):** Props 表补 `xformProps` 行 + 「XForm 能力透传」blockquote（用法示例 + 优先级说明）
+* **docs(docs/24-XForm使用指南.md):** §8 asyncOptions 字段表后补「位置限制」警告块（formItem.slots / array.itemSchema 内不发起请求）
+
+### ♻️ Refactor | builders.ts 621 行拆分 builders/ 子目录 + 兼容 barrel（架构审查 #3）
+
+> builders.ts 621 行超项目 400 行硬上限 1.45 倍；27 个 builder 的「makeBuilder + Ext 子类 + xXxx 入口」三件套是纯结构重复。按域拆 6 文件，导出面 27 入口 + NodeBuilder + ArrayBuilder 完全不变。
+
+* **refactor(src/components/form-schema/builders/):** 新建 core.ts（NodeBuilder 基类 + makeBuilder/makeSimpleBuilder 工厂）+ fields-input.ts（Input/Textarea/InputNumber/Mention 等 7 个）+ fields-select.ts（Select/Autocomplete/Cascader/RadioGroup/Checkbox 等 11 个）+ fields-date.ts（DatePicker/TimePicker/TimeSelect）+ fields-data.ts（Transfer/TreeSelect/Upload/ColorPicker）+ containers.ts（Card + ArrayBuilder）+ index.ts barrel
+* **refactor(builders.ts):** 621 行 → 兼容 barrel（`export * from './builders/index'`）；⚠️ 必须保留本文件 —— 全部消费方（14 处 demo/docs/spec）以无扩展名路径导入，Vite/TS 在 builders.ts 与 builders/ 并存时优先解析文件
+* **ci(scripts/check-doc-currency.ts):** countBuilders 扫描范围 builders.ts → builders/ 子目录（排除 index barrel）；实测 27/27 不变
+* **docs(ARCHITECTURE.md):** 目录树补 builders/ 条目；模块表 builders.ts → builders/；相关文件链接更新；composer 行「1 个 watch 守护」描述同步 Wave2-3 的删除
+* **已验证:** form-schema 全量 61 文件 1107 例通过；`pnpm type-check` 0 错误（含 custom-component.test-d.ts 对 '../builders' 路径的类型推导）；builders.spec 45/45 不变
+
+### ♻️ Refactor | composer 失效 watch 实证删除 + 错误传播依赖路径收敛（架构审查 #4）
+
+> 架构审查发现 composer 的 `watch(fieldErrors, () => triggerRender())` 疑似失效：setFieldError 走 reactive 键级写入，watch 的 ref 源监听不到键 mutation。本轮先写 spec 实证，再删除死代码并收敛隐式耦合。
+
+* **test(use-xform-composer.spec.ts):** 新增「错误传播链路验证」describe 2 例 —— ①setFieldError 键级写入后 `window.__triggerRenderCalled` 计数不变（实证 watch 从未生效）②Object.keys 派生（模拟 XForm.vue `:data-field-errors` 绑定）随键级写入更新（实证渲染兜底路径有效）
+* **refactor(use-xform-composer.ts):** 删除失效的 `watch(fieldErrors, () => triggerRender())` 与 `triggerRender` 解构/unused `watch` import；注释说明真实依赖路径（XForm.vue `:data-field-errors` 显式绑定 + render-form-item 渲染期读键），并警示勿复活该 watch
+* **refactor(use-top-level-fields.ts):** 删除 `nodes` computed 内的 `void Object.keys(fieldErrors.value).length` fake read（同为失效代码）+ `UseTopLevelFieldsDeps` 移除无人消费的 `fieldErrors` 字段与 `TopLevelFieldErrors` 类型
+* **test(use-top-level-fields.spec.ts):** 删除断言恒真的假用例「fieldErrors 写入时 nodes computed 重新求值」；makeDeps 同步收敛
+* **已验证:** form-schema + ProDialogForm 全量 64 文件 1138 例通过；`pnpm type-check` 0 错误
+
+### ✨ Features | XForm 错误反馈层集群改造（三视角审查 F3/F4/F5/F6）
+
+> 设计师审查发现错误反馈层「面向用户的界面是开发者语义」：SCHEMA_VALIDATE_FAILED 这类 code 排在 toast 视觉前排、toast 永不自动消失、超量无聚合、debug banner 只能看不能点。四个发现一次性改造。
+
+* **feat(use-form-error-bus.ts):** `FormErrorEvent` 新增 `userMessage?: string` —— toast 展示优先级高于 message；dev 语义 message 保留供 console 留痕
+* **feat(components/XFormErrorToastItem.vue):** 标题主体改为 `userMessage ?? message`（F3）；code/source 降为 dev-only 弱化 meta 行（prod 零渲染）；色板全面替换为 EP CSS 变量（F6），暗色模式随主题自动切换
+* **feat(components/XFormErrorToast.vue):** 三项体验改造（F4）——①新 toast 7s 自动 dismiss（定时器以 id 为 key 手动管理，卸载/手动 dismiss 双向清理防泄漏）②TransitionGroup 进出过渡对称（slideIn/slideOut）③可见 toast 超 3 条聚合为「还有 N 条错误」卡片 + 「全部关闭」按钮（emit dismissAll，XForm 接线 errorBus.dismissAll）
+* **feat(components/XFormDebugBanner.vue):** 三项交互改造（F5）——①keyPath 序列化为 EP 风格 `items[0].name`（与 async-validator 报错格式对齐）②点击错误项 emit `locate(path)` → XForm `scrollToField` 滚到对应字段（role="button" + Enter 键支持）③「复制全部」按钮复制纯文本错误清单（clipboard API + execCommand 双降级，✓ 已复制 1.5s 反馈）；色板同步 EP 变量（F6）
+* **test:** use-form-error-bus +1（userMessage 透传）/ ToastItem +2（userMessage 优先 / message 兜底）/ Toast +5（聚合卡 3 + 自动 dismiss 时序 2；解除 VTU transition-group stub 以真实渲染 ul）/ DebugBanner +3（EP keyPath / locate emit / 复制入口）——form-schema 全量 61 文件 1106 例通过
+* **docs(docs/24-XForm使用指南.md):** showErrorToast props 行补行为描述（userMessage 分层 / 7s 自动消失 / 超量聚合）
+
+### 🛡️ CI | check-doc-currency 扩展 + XFormProps 契约快照（Wave2-1）
+
+> 三视角审查 Wave1-5 一次性同步的 9 处硬数据（props 15 个 / demo 54 个 / spec 61 个等）此前无任何机制守护，重构后必然再次漂移。本轮把最关键的三项纳入 CI 阻断校验，并加编译期契约测试互锁。
+
+* **ci(scripts/check-doc-currency.ts):** 新增 2 项校验——`XFormProps 字段数`（types/xform.ts interface 体 = 15，对应 docs/24 §2 + README）与 `XForm demo 数`（examples/XForm/ 下 .vue = 54，对应 docs/24 §19）；`spec 文件数`统计范围扩展为全目录（composables + components + adapters + utils + 根级），expected 52±5 → 61±2；`composable 文件数`收紧 44±4 → 46±2（Wave1-5 后的精确地面真值）；头部覆盖清单同步更新至 13 项。实测 13/13 PASS
+* **test(src/components/form-schema/index.spec.ts):** 新增 `XFormProps 契约` describe——`satisfies Record<keyof XFormProps, true>` 编译期锁定字段集合（漏字段/多字段直接 TS 报错）+ `toHaveLength(15)` 运行期锁数量；与 check-doc-currency 第 12 项互锁。7/7 通过
+
+### 📝 Docs | XForm 文档硬数据一次性同步（三视角审查收尾）
+> Wave1-1~1-4 功能变更引发的 9 处文档硬数据漂移一次性对齐：props 计数、demo 计数、spec 计数、行数、composables 清单。此后由 Wave2-1 的 check-doc-currency 扩展持续守护。
+
+* **docs(src/components/form-schema/README.md):** props 段改为「15 个」并补 permissionResolver/reactionBudget 行、scrollToError 描述改为「schema 优先、props 兜底」；demo 计数统一为「54 个 XForm demo + 4 个通用组件 demo」；§29 示例表头改为「38 个高频入门 demo（全量 54 个见 docs/24 §19）」+ 单一事实源维护注释
+* **docs(docs/24-XForm使用指南.md):** §2 Props 改为「15 个」并补 4 行；§13.2 builder 计数 28 → 27；§19 表头改为「54 个 demo，含 1 个主入口」
+* **docs(src/components/form-schema/ARCHITECTURE.md):** 组件树 XForm.vue 121 → 149 行；composables 清单补 11 个遗漏条目（use-xform-expose / use-cross-field-rule-trigger / use-render-root / use-zod-validator / validate-component-props / use-scan-async-options / use-dev-runtime / use-expression-functions / apply-default-values / array-row-key / barrel）；§9 测试统计 61 个 spec（composables 48 + components 5 + adapters 1 + utils 4 + 根级 3）；§4 #6/#7/#11 行数与 spec 覆盖描述同步
+* **docs(docs/25-XForm架构与决策记录.md):** TL;DR spec 计数「约 30 个」→「61 个 `.spec.ts` + 2 个 `.test-d.ts`」（实测磁盘计数）
+
+### 🐛 Fixes | ProTable SelectedTags 回显区永不渲染（showSelectedTags 默认值失效）
+
+> 高级筛选抽屉选值后「当前筛选」tag 区不出现的根因：`showSelectedTags` 仅声明类型（`showSelectedTags?: boolean`）未进 `withDefaults`，Vue 对 absent Boolean prop 做 **boolean casting（absent → false）**，原守卫 `v-if="props.showSelectedTags !== false"` 恒为 false，组件从未挂载。文档契约「默认开启」在运行时失效。
+
+* **fix(src/components/ProTable/ProTable.vue):** `withDefaults` 显式声明 `showSelectedTags: true`；v-if 由 `!== false` 改为真值判断（`props.showSelectedTags && columns.searchColumns.length > 0`），与 README/ARCHITECTURE「默认 true」契约对齐
+* **test(src/components/ProTable/ProTable.integration.spec.ts):** 新增「SelectedTags 已选条件回显区」3 例回归（默认开启渲染 tag / 显式 false 不渲染 / 显式 true 渲染），锁死三态
+* **已验证:** ProTable 全量 39 spec 402 例通过；浏览器实测 drawer 选值 → 回显区出现 → 单个 × / 清除全部均正常
+
+### ✨ Features | ProTable 工具栏 / 批量操作条 / CSV 导入导出
+
+> 真实业务页面的「新增 / 批量 / 导入 / 导出」按钮扩展能力落地。设计 spec：`docs/superpowers/specs/2026-09-18-pro-table-toolbar-design.md`（L1 slot 作用域增强 → L2 配置式 toolbar → L3 内置 SelectionBar → L4 CSV utils 四层渐进）。
+
+* **feat(src/components/ProTable/types/index.ts):** 新增 `ToolbarCtx`（selectedRows/selectedCount/loading/refresh）+ `ToolbarAction`（label/type/icon/perm/confirm/disabled/hidden/loading/onClick/children）+ `ToolbarConfirm` 类型；`ProTableProps` 末尾新增 `toolbar` / `selectionBarActions` / `maxVisibleActions`（默认 3）三 prop。⚠️ 类型文件刻意不 import `@/composables/useConfirm`（vue-tsc --build 下会触发 ProDialog.vue 全局 auto-import 声明丢失 TS2304×15，ToolbarConfirm 字段内联声明规避）
+* **feat(src/components/ProTable/components/ToolbarRenderer.vue + SelectionBar.vue):** 工具栏渲染管线（perm 过滤 → hidden 计算 → maxVisibleActions 截断折叠「更多」下拉 → useConfirm 包装 → onClick(ctx)，Promise 未结算锁定防重入）+ 批量操作条（选中 > 0 浮出，配置式 actions 与 `#selectionBar` slot 完全接管双通道，slot 优先；`role="status"` + `aria-live="polite"` 无障碍）
+* **feat(src/components/ProTable/utils/):** 零依赖 CSV 导入导出——`exportCsv`（BOM 防 Excel 中文乱码 + RFC4180 引号转义 + Blob 下载）+ `importCsv`/`parseCsvText`（引号感知状态机 + 表头 label→prop 映射 + 全空行剔除 + BOM 去除）。职责边界：utils 只管「行数据 ↔ 文件」，全量拉取/类型转换/校验/提交归业务层
+* **feat(src/components/ProTable/ProTable.vue + TableHeader.vue + composables/useAutoHeight.ts):** `toolbarCtx` computed 下发 + SelectionBar 挂载（TableHeader 后、AsyncState 前）+ `#tableHeader`/`#toolButton` slot 作用域透传 ToolbarCtx（向后兼容）+ `selectors.selectionBar` 高度扣除
+* **test(src/components/ProTable/):** 新增 4 个 spec 共 41 例（ToolbarRenderer 9 / SelectionBar 6 / exportCsv 7 / importCsv 7 + TableHeader 适配重写 12），全部通过；`pnpm type-check:full` 0 错误
+* **demo(src/modules/demo/examples/ProTable/):** 新增 `ProTableHeaderActions.vue`（toolbar 配置 + 双通道 SelectionBar + slot 作用域）与 `ProTableImportExport.vue`（CSV 导出/导入业务接线），sidebar 中文名 + demo API 表同步注册（路由 `/demo/pro-table-header-actions` / `/demo/pro-table-import-export`）
+* **docs(docs/29-ProTable使用指南.md):** 新增 §9 工具栏与批量操作（toolbar 渲染管线 / ToolbarAction 字段表 / SelectionBar 双通道 / slot 作用域增强 / CSV utils 用法与职责边界）；§1.2 Props 表补 3 行；§13 测试覆盖表 +4 spec；§16 示例索引 19 → 21 个 demo；原 §9~§15 顺延为 §10~§16
+
+### 📝 Docs | 文档深度同步：useDict v2 契约形态 / useConfirm 章节 / 项目推荐说明
+
+> 扫描全量 docs/ 与最新 src/ 代码，按 P0/P1/P2 分级产出 9 项差异清单并完成修复。无代码变更，纯文档与 README/CLAUDE.md 顶部同步。
+
+* **docs(docs/11-字典使用规范.md):** v2 重写 —— `useDict` 由旧版「单 key 返回 `{ options, getLabel, refresh, loading }`」改为「多 code 契约形态 `useDict('gender', 'user_status') → { gender, user_status, refreshDict }`」。补 §2.1 核心 API + §2.4 强制刷新 + §9 v1→v2 迁移速查；§7 单测覆盖同步（useDict.spec.ts 5 例新描述）
+* **docs(docs/27-ProDialog使用指南.md):** 新增 §8.5 `useConfirm` 命令式二次确认章节（基础用法 / HTML 富文本 / 与 ElMessageBox.confirm 差异表 / 已知限制）；顶部"覆盖范围"扩到 `useDialog + useConfirm`；§3 三种入口对比表 + §1 痛点表补 useConfirm 行；§8 测试覆盖表补 `useConfirm.spec.ts` 4 例
+* **docs(docs/10-新手指引.md):** 新增 §3.7 命令式弹窗（useConfirm 一行 API + useDialog + DialogCancelledError 错误识别）
+* **docs(docs/26-项目推荐说明.md):** 新增"组件级杀手锏"小节（ProTable v3.4 / ProDialog v1.1 / ProDialogForm / XForm / RichTextEditor / BaseChart / AsyncState / ErrorBoundary / DictSelect / DictTag）+ Composable 一行 API 总览；版本号升 v1.0.0 → v1.1.0；补 5 篇相关文档外链（27/29/30/31/32）
+* **docs(docs/32-常用交互指令.md):** 修正 §3 `docs/34-权限设计.md` 错位路径 → `docs/23-权限设计.md`；顶部"源码位置"补 `import.meta.glob` 自动扫描说明；§7 相关文档补 v-copy 自身引用 + 指令数从 5 改为 6
+* **docs(docs/04-构建与测试工具.md):** 测试覆盖表 composables 行补 `useDialog` / `useConfirm` / `useTheme` 三个 spec
+* **docs(README.md):** 顶部"最近更新"对齐本轮同步范围（6 项 docs/ 改动）
+* **docs(CLAUDE.md):** 文档版本 v1.5.0 → v1.6.0；新增"最近更新（2026-09-17）"段列出本轮同步明细
+* **未改动（已对齐无需更新）:** `docs/29-ProTable使用指南.md` Props 表 + §4.4 searchLayout + v3.4 变更摘要、`docs/27-ProDialog使用指南.md` §2.8 resizeMinToInitial、`docs/32-常用交互指令.md` §1 v-copy + §2 防抖指令、`src/components/ProTable/{README,ARCHITECTURE,CONTRIBUTING}.md`、`docs/08-模块化架构总览.md` 主表
+* **已验证（无代码变更无须跑测试）:** 仅 markdownlint 风格警告（表格对齐 / 代码内空格），与内容正确性无关
+
+### 📝 Docs | demo 索引修复 + 9 月 spec 交付对照（深度扫描第二轮）
+
+> 实测 `src/modules/demo/examples/` 下 94 个 `.vue` 文件后，按 demo 数量与主入口错位产出 7 项差异（DP-1~DP-7），并核对 9 月份 12 个 design spec 全部已交付代码。无代码变更，纯文档。
+
+* **fix(docs/24-XForm使用指南.md):** DP-1 §19 示例索引从 38 → 54 个 demo（+16）；主入口错位 `XForm.vue` → `XFormOverview.vue`；按"基础 → 反应式联动 → 校验 → 异步 → 数组 → 样式与扩展"重排分组
+* **fix(docs/29-ProTable使用指南.md):** DP-2 §15 新增示例索引（19 个 demo 完整表格）；§12 测试覆盖表"9 个 demo" → "19 个 demo + 详见 §15"
+* **fix(docs/28-BaseChart使用指南.md):** DP-4 §11 新增示例索引（5 个 demo：Overview / Dashboard / RealTime / SaleFunnel / InDialog）
+* **fix(docs/27-ProDialog使用指南.md):** DP-6 §概述 demo 站描述补全（3 个 ProDialog demo + 1 个 ProDialogForm demo）
+* **fix(docs/30-RichTextEditor使用指南.md):** DP-3 末尾 demo 描述改为"单文件 RichTextEditor.vue 按 tab 内嵌三类场景"
+* **fix(docs/31-ProDialogForm使用指南.md):** DP-7 末尾 demo 描述改为"ProDialogFormOverview.vue 单 demo 分章节演示"
+* **fix(docs/32-常用交互指令.md):** DP-5 演示站描述补 DirectiveOverview 总览（实际 7 个 demo 不是 6 个）
+* **verify(specs/2026-09-*):** DP-8 9 月份 12 个 design spec 全部已在 14 天窗口内交付：beforeChange 三层（form-schema composables 落地）/ demo sidebar 搜索（commit b423c62）/ ProTable v1-v3.0.1 全周期（types+composables+demos）/ form-schema 架构审计 3 批次 / vite.config 工程化抽离（build/ + generate-tsconfig-paths.ts）
+* **未改动（已对齐无需更新）:** 12 个 spec 文档自身、CHANGELOG 时间线与 git log 9 月以来 commit 完全对齐
+* **已验证（无代码变更无须跑测试）:** markdownlint + cSpell 累计 ~30 条警告（表格对齐 MD060 + 拼写 mousemove/vueuse），与内容正确性无关
+
+### 📝 Docs | 第五轮扫描：mock URL 约定 + ESLint 规则范围对齐
+
+> 第四轮扫描发现 5 项 DS-* 文档差异（mock URL vs API URL 的 `/api` 前缀约定 + ESLint `no-restricted-imports` 覆盖范围与 CLAUDE.md §1.5 措辞不一致）。修复 4 项（DS-3/4/6/7/8），DS-1（ESLint 新增 useUserStore 拦截规则）由项目配置保护 hook 拦截，未执行。
+
+* **docs(docs/22-mock使用规范.md):** DS-3/DS-6 §10 字典 mock 段补"API URL vs mock URL 关键约定"——API 代码 url 字段**不含** `/api` 前缀（由 http.ts baseURL 统一拼装），mock URL **必含** `/api` 前缀（vite-plugin-mock 直连独立 mock 服务器）；典型错误示例 `request({ url: '/api/user/list' })` → 实际变成 `/api/api/user/list`（双拼 404）+ 正确写法 `request({ url: '/user/list' })`
+* **docs(docs/02-代码质量工具链.md):** DS-4/DS-7 新增 §"项目自定义 ESLint 规则"章节，列当前已配置 2 条规则（vue-router/useRouter + axios）与 CLAUDE.md §1.5 强制 5 条的对照表 + 解释"为什么不全量加规则"（误报风险/重构成本/CALUDE.md 措辞）+ "后续扩展"草稿方案（启用前需全局排查 5+ 处 useUserStore 越级）
+* **docs(CLAUDE.md):** DS-8 §1.5 标题与表格修订 —— 标题改为"ESLint 规则 + 规范双轨制"，表格新增"ESLint 规则约束"列（✅ 已约束 / ⚠️ 规范 + code review 兜底），明确"5 条封装实际只有 2 条走 ESLint 自动 warning，其他 3 条靠规范 + code review 兜底"
+* **verify(eslint.config.mjs):** DS-1/DS-2 评估完成。ESLint 配置保护 hook 拦截了 useUserStore 规则新增（"禁止修改 eslint.config.mjs"）→ 尊重项目工程纪律，DS-1 不执行；DS-2（环境变量硬编码凭证）项目当前无对应违规实例，规则加不加影响为零，亦不执行。两项均通过 docs/02 §"项目自定义 ESLint 规则" / §"未来扩展"作为待办记录
+* **未改动（已对齐无需更新）:** 4 个模块 index.ts 全部符合 §1.2 铁律；API 类型 `UserItem` / `Pagination<T>` 与 mock 返回结构一致；6 个 types/*.d.ts 文档引用一致；9 个核心组件 JSDoc 完善
+* **已验证（无代码变更无须跑测试）:** markdownlint 累计 ~50 条风格警告（新增 docs/02 §自定义规则表格），与内容正确性无关；eslint.config.mjs 未改动（git diff 验证）
+
+### ✨ Feat | ProDialog resizeMinToInitial：resize 最小尺寸锁定初始打开宽高（只能放大）
+
+> 此前 resizable 开启后最小尺寸硬编码 320×200，业务方无法阻止用户把弹窗拖到比内容设计尺寸还小导致排版错乱。本次新增 `resize-min-to-initial` 开关：开启后本次打开弹窗的初始宽高即最小可缩尺寸（只能放大、不能缩小到初始以下），每次重新打开重新记录；关闭时保持原有 320×200 行为完全兼容
+
+* **feat(src/components/common/ProDialog/ProDialog.vue):** 新增 `resizeMinToInitial` prop（默认 false）；open 事件经 `nextTick` 记录本次打开初始宽高（`initialDialogSize`），`useProDialogResize` 钳制最小值改为经 `ResizeMinSource` 注入（get 取最小值 / ensure 在 open 记录未就绪时首次拖拽补记，兼容弹窗内容异步挂载时序）；上限仍 viewport - 16px 不变（可放大）；全屏态禁用 resize 行为不变
+* **feat(src/components/common/ProDialog/types.ts):** `ProDialogProps.resizeMinToInitial?: boolean`（JSDoc 含默认值与语义），命令式 `useDialog` 经 `UseDialogOptions` 自动获得该配置
+* **feat(src/modules/demo/examples/ProDialog/ProDialogResizable.vue):** 新增「⑤ 最小尺寸锁定初始打开宽高」演示（480px 初始宽弹窗：左下拖钳回初始 / 右上拖正常放大），DemoFrame 钳制规则说明与目录同步
+* **已验证：** ProDialog spec 15 用例全通过（新增 2 个：钳制到初始 400×300 + 可放大断言 / 开关关闭仍为 320×200 断言，prototype 级 offset mock 覆盖打开即记录时序）、`vue-tsc --build` 无报错、ESLint 无告警
+
+### 🔍 Review | ProTable 深度 Code Review 批次修复（review R1-R13）
+
+> 对 ProTable 全目录（编排层 + 8 composables + 子组件 + 类型层）的深度审查批次修复。R1 为真实功能缺陷（initParam 与搜索列同名时被 `defaultValue ?? null` 静默覆盖丢失），其余为性能/可维护性/类型诚实性修复；交互行为默认不变（R3 抽屉即改即搜语义涉及业务确认，本次未动）。完整审查报告见 `.claude/.agent-reports/2026-09-17-protable-deep-review.md`
+
+* **fix(src/components/ProTable/composables/useSearch.ts):** review R1 —— 初始化合并顺序调整为「字段 defaultValue 先、initParam 后覆盖」，reset 时无 defaultValue 的字段回退恢复 initParam 同名键；修复固定查询参数被静默丢失的缺陷（useSearch spec + 2 回归用例锁定）
+* **refactor(src/components/ProTable/components/SelectedTags.vue):** review R2 + R12 —— 删除为「原地 mutation 生产者」设计的 deep watch + version 计数器（useSearch v3.2 起契约即 re-assign 新引用，浅依赖 props.searchParams 即可），消除每次变更 O(n) deep traverse；对象值显示不再 `JSON.stringify` 截断（防内部字段泄露 + 多字节截断乱码），daterange 二元组显示 `start ~ end`、其余对象显示 `[对象]`
+* **refactor(src/components/ProTable/composables/useTable.ts + ProTable.vue):** review R5 —— 新增 `waitForRefresh()`（pendingRefresh 统一登记所有刷新路径的 in-flight 句柄），reset 且 page≠1 时 fetchHook 经 `nextTick` 等 page watcher flush 后再等请求完成，`reset()`/`setSearchParams()` 的 Promise 语义修正为「数据刷新完成后 resolve」
+* **chore(src/components/ProTable/components/SearchForm.vue):** review R4 —— 删除死代码：Transition 挂载点 `v-show` 恒为 true 导致 6 个 JS 过渡钩子永不执行（约 40 行），折叠展开行为删除前后完全一致（均无动画）
+* **refactor(src/components/ProTable/types/index.ts + 4 处消费方):** review R7 —— `DEFAULT_ROW_KEY` 常量上移至 types 并全链路消费（原 ProTable.vue 局部常量声称「三处共用」实际 4 处硬编码 `'id'`：useTableCapabilities ×2 / ElementTableBody / useTreeData）
+* **refactor(src/components/ProTable/components/ElementTableBody.vue):** review R8 —— 模板 5 处内联箭头事件 handler 改为具名函数（稳定引用，与编排层 useProTableEvents「零内联箭头」同一标准）
+* **fix(src/components/ProTable/composables/useTreeData.ts):** review R6 —— 懒加载 timer 触发后即从 timers Map 移除，防长会话无界累积
+* **fix(src/components/ProTable/composables/useColumns.ts):** review R11 —— `searchColumns` 改 `let` + return getter 暴露，resetToDefault 重建 allColumns 后同步重建，消除旧克隆快照「同一数据两个真相」陷阱（spec + 1 回归用例锁定与 allColumns 同源）
+* **refactor(src/components/ProTable/types/index.ts):** review R13 —— 移除 `SummaryConfig.position`（运行时从未实现，类型承诺超出能力）；`initParam` JSDoc 补注同名键合并语义
+* **docs(src/components/ProTable/composables/useTable.ts):** review R9 —— hasWarnedMissingRowKey 注释修正（模块级 = 应用生命周期一次，非「composable 实例级」）
+* **已验证：** ProTable 全部 35 个 spec 364 用例通过（新增 4 个回归用例）、`vue-tsc --build --force` 无报错；浏览器实测（chrome-devtools）见下方验证记录
+
+### ⚙️ Chore | 构建产物分目录输出：js / css / img 各归其位
+
+> 此前 dist 产物全部平铺在 assets/ 单目录，运维排查与 CDN 差异化缓存策略不便。本次按资源类型分目录：js → dist/js/、css → dist/css/、常见图片（png/jpg/jpeg/gif/svg/webp/ico/bmp/avif/tiff/apng）→ dist/img/，字体等其它资源兜底 dist/assets/（本项目当前无字体产物，目录在有对应资源时生成）
+
+* **chore(vite.config.ts):** `build.rollupOptions.output` 新增 `entryFileNames` / `chunkFileNames`（统一 js/ 前缀）+ `assetFileNames` 函数按扩展名分流 css/ → img/ → assets/ 兜底；`assetInfo.name` 在 rolldown 类型中已 @deprecated，改用 `names` 数组（取首个原始文件名判定）
+* **已验证：** `pnpm type-check:full` 通过、`pnpm build` 产物实测（js 26 / css 16 / img 10 全部归位，根目录无散落资源）、index.html 引用路径正确（`/js/*` `/css/*`）、css 内 `url(/img/*)` 绝对路径无相对路径 404 风险、`vite preview` 实测 index/js/css/img 全部 HTTP 200
+
+### ✨ Feat | ProTable searchLayout：搜索区布局档位下放业务方（v3.4）
+
+> 此前 SearchForm 布局档位（flat/collapse/flat-large/drawer）纯按 basic 字段数自动判定，真实业务两类场景不适配：① 宽屏页面 6 个字段想全平铺却被强制折叠（字段数 ≠ 页面空间需求）② searchDisplay 联动使字段数动态变化时档位在 flat/collapse 间跳变（展开/收起按钮时有时无、布局抖动）。本次把判定权下放：新增 `searchLayout` prop，'auto'（默认）保持自动行为完全向后兼容，显式档位跳过字段数判定
+
+* **feat(src/components/ProTable/types/index.ts):** `SearchLayoutMode = 'auto' | 'flat' | 'collapse' | 'flat-large' | 'drawer'` + `ProTableProps.searchLayout?: SearchLayoutMode`；`index.ts` barrel 同步导出
+* **feat(src/components/ProTable/components/SearchForm.vue):** `layoutMode` 判定顺序调整为「advanced 字段存在（永远 drawer，保证 advanced 字段可达，优先级高于强制档位——防止强制 flat 时 advanced 字段静默丢失）> searchLayout 非 auto 强制档位 > 字段数自动判定」；文件头档位矩阵注释同步
+* **feat(src/components/ProTable/ProTable.vue):** SearchForm v-bind 透传 `searchLayout`（缺省不传，保持子组件默认）
+* **feat(src/modules/demo/examples/ProTable/ProTableSearchAdvanced.vue):** 新增 ⑩ 号演示「searchLayout：6 basic 强制 flat 档」——与 ② 号 demo 同字段对照（自动 collapse vs 强制 flat 平铺）
+* **已验证：** SearchForm spec + 3 新用例（强制 flat 6 字段无 toggle 全平铺 / 强制 collapse 2 字段有 toggle / advanced 存在时强制 flat 让位 drawer）全通过、`vue-tsc --build` 无报错、ESLint 无告警
+
+### ✨ Feat | ProTable 列设置置顶 + 列宽拖拽 column-resize（默认关闭）
+
+> ① 列设置抽屉每列新增置顶按钮（复用 reorder 通道——useColumns.setColumnOrder 同步顺序并持久化，与拖拽排序同一链路，零 composable 改动）② ProTable 新增 column-resize 属性：开启后表头列边框可拖动调宽，默认关闭
+
+* **feat(src/components/ProTable/components/ColSetting.vue):** 每列 item 尾部新增置顶按钮（Top 图标 + tooltip，首位列禁用）——点击 emit reorder `[目标列, ...其余保持原序]`
+* **feat(src/components/ProTable/types/index.ts + ProTable.vue):** `ProTableProps.columnResize?: boolean`（默认 false）——el 引擎显式绑 el-table-column `resizable`（ep 默认 true，必须显式 false 才能默认关闭；`:resizable` 置于列级 `tableProps` 展开之前，列级显式配置可覆盖组件级）；vxe 引擎映射列级 `resizable: true`（vxe 默认 false，语义天然契合）；virtualized（TableV2）分支不支持（列宽受控，留待后续）
+* **fix(src/components/ProTable/components/ElementTableBody.vue):** column-resize 联动表级 `border` —— ep 列宽拖拽硬依赖 border（`table-header/event-helper.mjs` handleMouseMove 首行守卫 `if (!props.border) return`，边框线即 th 右缘拖拽手柄命中区）；首版仅绑 resizable 未联动 border，用户实测光标无变化不可拖，本次修复（DOM 级 spec 断言 `.el-table--border` class 锁定联动）
+* **feat(src/modules/demo/examples/ProTable/ProTableColumnResize.vue):** 新 demo——开启/默认关闭双表对照（悬停表头边框光标 col-resize vs 不可拖）
+* **已验证：** ColSetting + integration 新用例（置顶 emit reorder 断言 / columnResize 默认 false 与开启 true 透传断言）全通过、`vue-tsc --build` 无报错、ESLint 无告警
+
+### 🐛 Fix | ProTable 列设置抽屉：未命名列空显示 + 拖拽热区误导
+
+> 用户验证列设置抽屉两处体验缺陷：① 列未设置 label（空串）时复选框后空白无法辨别是哪列 ② 整条 item 显示 grab 手型暗示可拖，但 sortablejs handle 仅限 ⋮⋮ 图标、可拖区域过小交互不流畅
+
+* **fix(src/components/ProTable/components/ColSetting.vue):** 未命名列（label 空串/缺失）以 prop 兜底展示，灰色斜体弱化样式标识「这是字段名不是显示名」；`data-drag-handle` 从图标 span 上移到 item 根 div（拖拽热区 = 整行），sortablejs 新增 `filter: '.el-checkbox'` 排除勾选区（命中 filter 不启动拖拽、checkbox 正常勾选——handle 原注释「避免 checkbox 抢 pointer event」的诉求改由 filter 承接）；拖拽图标负边距外扩点击热区 + hover 高亮
+* **feat(src/types/sortablejs.d.ts):** 最小声明补 `filter?: string` 字段
+* **已验证：** ColSetting spec + 2 新用例（label 兜底渲染断言 / sortable filter 配置 + handle 位置断言）全通过、`vue-tsc --build` 无报错、ESLint 无告警
+
+### ✨ Feat | ProTable 新 demo：操作列下拉收纳 + 表头 Tooltip
+
+> 真实业务操作按钮众多时的收纳模式演示。两项能力本身已存在（`type:'operation'` 插槽 / `headerRender` 双引擎接线），本次补齐演示与文档化写法
+
+* **feat(src/modules/demo/examples/ProTable/ProTableOperation.vue):** 新增聚焦 demo —— 操作列「编辑/详情」高频直出 + 「更多」ElDropdown 折叠低频操作（trigger:'click' 防悬停误触，fixed:'right' 惯例）；表头 Tooltip 经 `headerRender` + ElTooltip 函数式默认插槽挂问号图标（label + 图标 BEM 类名经非 scoped 全局样式命中 el-table 表头内部 DOM）
+* **已验证：** sidebar-groups spec（CN_NAMES 注册一致性）通过、`vue-tsc --build` 无报错、ESLint 无告警
+
+### ✨ Feat | ProTable v3.1 能力补全：自动高度 / 状态保持 / 全屏 / 单选列 / 内置格式化器
+
+> 对照社区最佳实践（vue-pure-admin / vben-admin）能力清单审查：12 项中 7 项已具备，4 项部分缺失、2 项完全缺失，本次全部补齐。第三方 API 全部经 node_modules 运行时代码实证（vxe `radio-change` 事件 / `checkboxOpts.reserve` / 表级 `max-height`；ep `reserveSelection` / ElRadio `value` prop / `FullScreen` 图标），无凭记忆编造
+
+* **feat(src/components/ProTable/composables/useAutoHeight.ts):** 表格区自动撑满视口剩余高度 —— 表头/分页器固定、表体随窗口伸缩滚动。算法实测 DOM（视口高 - 根容器 top - 搜索区/工具栏/分页器高度 - 固定间距 - 用户 offset），重算时机 mounted + window resize + ResizeObserver(根容器)；jsdom/SSR 无 ResizeObserver 走 typeof 守卫（与 ElementTableV2Body 同模式）；窄视口钳制下限 100px。`autoHeight: true | { offset }`，virtualized 同开时忽略并 warn
+* **feat(src/components/ProTable/composables/useStatePersist.ts):** 搜索参数/页码/每页大小/排序状态路由级持久化。localStorage 存快照（`${tableKey}:state`）+ sessionStorage 存 alive 标记：组件 mounted 写 alive、window beforeunload 清 alive —— 路由跳走返回恢复、F5 刷新/新标签页不恢复（用户决策的全量恢复粒度）。快照经 initialState 注入 useTable ref 初值（setup 早期同步，避开 page watcher 与 onMounted 双发）；快照结构 fail-safe 校验（version/字段类型不符丢弃并清除）
+* **feat(src/components/ProTable/composables/useFullscreen.ts):** 表格全屏切换（CSS fixed 方案：z-index 1500 低于 el-dialog 遮罩，全屏内开弹窗不遮挡；Esc 退出 + 组件卸载兜底清监听；watch flush:'sync' 消除"切换后瞬间 Esc 未监听"竞态）
+* **feat(src/components/ProTable/components/TableHeader.vue):** 工具栏新增全屏按钮（全屏态 primary 高亮 + tooltip 切换文案）
+* **feat(src/components/ProTable/adapters/cell-format.ts):** 内置格式化器预设 —— `formatter: 'dateTime' | 'date' | 'time' | 'amount' | 'percent' | 'boolTag'`，非法输入（非数字金额/非法日期/null）一律原样返回不吞错。`ProColumn.formatter` 类型放宽为 `ColumnFormatter<T>`（函数 | 预设 key），向后兼容
+* **fix(src/components/ProTable/adapters/cell-render.ts):** formatter 分支接线补齐 —— v3.0.1 引入 formatter 时仅虚拟滚动分支（ElementTableV2Body）生效，el/vxe 引擎分支缺失本次修复；优先级链对齐 v2 分支（render > formatter > enum > raw）。ElementTableV2Body.renderByFormatter 同步走 resolveFormatter 统一解析层，三引擎格式化行为一致
+* **feat(src/components/ProTable):** radio 单选列（el 引擎自绘 ElRadio 控件——ep 无内置 radio 列；vxe 引擎映射内置 type='radio'，运行时代码 isRadioType 分支实证）。选中收敛到 useTable 统一选中区（selectedRows 单元素），`getSelectedRows` / `clearSelection` 多选单选同构，跨页保持天然支持
+* **feat(src/components/ProTable):** 多选跨页保持一等字段 `ProColumn.reserveSelection`（el 引擎透传 el-table-column reserve-selection、vxe 引擎映射 checkbox-config.reserve——checkboxOpts.reserve 运行时代码实证），替代 `tableProps: { reserveSelection: true }` 手写透传
+* **feat(src/components/ProTable/components/ElementTableBody.vue + VxeTableBody.vue):** autoHeight 的 maxHeight 透传（el 引擎绑 ElTable max-height、vxe 引擎绑表级 max-height）
+* **test:** 新增 4 个 spec 文件 46 用例 —— cell-format（分发四态/日期/金额/百分比/布尔标签 22 用例）/ useFullscreen（切换/Esc/竞态/清理 8 用例）/ useStatePersist（恢复时机/写回/beforeunload/清理 9 用例）/ useAutoHeight（算法/resize/钳制/守卫 7 用例）
+* **docs:** README v3.1 摘要 + 新能力用法示例；ARCHITECTURE 版本 v3.1 + composables 依赖表 + 状态归属表同步
+* **已验证：** 新增 46 用例全通过、ProTable 全量测试套件（23 文件 204+ 用例）无回归、`vue-tsc --build` 无报错
+
+### 🐛 Fix | ProTable 列分组 demo 分组样式失效：非 scoped 样式下 `:deep()` 被浏览器整条丢弃
+
+> 用户验证 `/demo/pro-table-grouped-header` 不通过：表格渲染正常但蓝/绿分组边框、父标题列着色全部缺失。根因：`ProTableGroupedHeader.vue` 的 `<style lang="scss">` 按项目 BEM 规范**非 scoped**，其中 5 处 `:deep()` 无编译器接管、被浏览器当未知伪类**整条规则丢弃**（CLAUDE.md §3.3 反模式 #8）
+
+* **fix(src/modules/demo/examples/ProTable/ProTableGroupedHeader.vue):** 5 处 `:deep(.xxx)` 全部改为直接后代选择器（`.vv-demo-pro-table-grouped-header .xxx`）；文件头验证步骤描述与渲染实际对齐（蓝/绿组各 4 列、ID 列无边框），并补样式注意事项注释防再犯
+* **chore(src/modules/demo/examples/ProTable/ProTableSummary.vue):** 移除 demo 内多加的密度切换 radio-group（`density` ref / `handleDensityChange` / `:density` 绑定 / el-radio-group）——ProTable 工具栏（TableHeader）已自带密度切换，demo 内重复添加属多余；刷新按钮与汇总演示不受影响
+* **feat(src/components/ProTable/styles/element-protable-overwrite.scss):** `.vv-pro-table-search` 块新增 `&__actions { display: flex; justify-content: flex-end; }`——搜索/重置/展开按钮组在 el-col 内默认左对齐，改为右对齐（对齐多数中后台工具栏惯例）
+* **已验证：** `vue-tsc --build` 无报错、ESLint 无告警、ProTable 23 测试文件 204 用例全通过；浏览器实测（5174 dev server）：分组 demo 9 列 + 蓝绿边框 + 父标题着色生效（注：姓名列此前被列设置抽屉持久化隐藏，清理 `demo-pro-table-grouped-header:columns` 后完整 9 列——持久化功能本身正常）、汇总 demo 密度 radio 已移除且汇总行正常、overview 搜索按钮右对齐
+
+### 🐛 Fix | ProTable el-table-v2 虚拟化分支功能修复：排序 / 密度切换 / loading / 搜索接入
+
+> 上一轮 v3.0.1 虚拟化引擎落地后实测：列设置可用，但排序点击无响应、密度切换不生效、刷新/重置无 loading、demo 无搜索项无法验证。根因全部定位到 element-plus TableV2 的 API 差异（源码层实证）
+
+* **fix(src/components/ProTable/components/ElementTableV2Body.vue):** 四项引擎适配修复
+  * 排序接线：TableV2 不 emit `sort-change`，需传 `onColumnSort` callback prop（接收 `{key, order:'asc'|'desc'}`），翻译为编排层 `SortChangeEvent`（`'ascending'|'descending'`）后 emit；本地 `sortBy` ref 回传驱动表头 SortIcon（初始 `'desc'` 使首击升序，与 el-table v1 默认行为一致）
+  * 密度切换：`estimated-row-height`（DynamicSizeGrid）按 rowKey 缓存实测行高，density 变更不重新测量 → 改用 fixed-size `row-height`，prop 变更即重排且滚动性能更好
+  * loading：TableV2 无 `loading` prop（此前传了无效 prop）→ 容器 `v-loading` 指令（与 v1 引擎 ElementTableBody 一致）
+  * 列宽：传 table 级 `fixed` prop=true 开启 rigid 布局（useColumns 强制 flexGrow/flexShrink=0 且忽略 column.minWidth，源码 calcColumnStyle 实证 → 列宽精确 = 配置值、总宽超出容器撑出横向滚动条；flex 模式实证永远无横向滚动条）。剩余空间填充由适配层自实现 v1 算法：列宽数值化（el-table v1 允许数字字符串，`toPxWidth` 归一），可拉伸列（仅 minWidth 无 width）按 minWidth 比例分配、末列吸收取整余数，总和精确 = 容器宽；`sortable` 归一 boolean
+* **fix(src/components/ProTable/ProTable.vue):** v2 分支 `@selection-change`（TableV2 无此事件，死代码）→ `@sort-change="handleSortChange"`（服务端排序链路复用）
+* **feat(src/components/ProTable/components/ElementTableV2Body.vue):** 强隔离补漏 —— `type="selection"` 列在 v2 分支 warn + 忽略（原先把 v1 的 selection 列类型透传给 TableV2 是无效字段，静默丢列）
+* **fix(mock/pro-table/big-data.ts):** ① `sortByField` 的 `isAsc` 判定从 `'ascending'` 改为项目约定 `'asc'|'desc'`（useTable serializeSort D2 决策），此前排序恒为降序；② `BigDataRequest` 新增 `name` 参数（与 `keyword` 等义），支持搜索表单挂列直传
+* **feat(src/modules/demo/examples/ProTable/ProTableVirtualScroll.vue):** name 列挂 `search: { el: 'input' }`，搜索/重置可验证；验证步骤补排序/密度/搜索
+* **test(src/components/ProTable/components/ElementTableV2Body.spec.ts):** 10 用例（原 5 改造 + 新增 5）：rowHeight fixed-size 传递 / density 优先 / 列适配 v1 填充算法（按 minWidth 比例、总和精确 = 容器宽、无 flexGrow）/ rigid 溢出（容器窄于列总宽时列宽不被压缩）/ selection 过滤 + warn / onColumnSort→sort-change 翻译 / v-loading 遮罩
+* **docs(src/components/ProTable/README.md + ARCHITECTURE.md):** 保留能力清单去除「多选」（v2 不支持），补 v2 关键实现决策（fixed rigid 布局 + v1 填充算法 / row-height 模式 / onColumnSort 回调）
+* **已验证：** 9/9 单测通过、`vue-tsc --build` 无报错、浏览器实测（5174 dev server）：排序升/降 + 图标、密度 32/48/64、刷新 loading 遮罩、搜索过滤 + 重置、10 万行滚至第 5 万行固定列同步、列弹性填充无横向滚动条
+
+### ♻️ Refactor | RichTextEditor 源头处理「视觉为空」映射：v-model emit('') 而非占位段落，消费方无须做字符串剥离
+
+> 之前 demo 把字符串 `'required'` 改成 RuleItem 数组（含自定义 validator + trigger: 'change'）来兜底 wangEditor V5 永远输出 `<p><br></p>` 占位段落的问题——但这是让消费方为组件内部数据形态买单。本应在组件源头完成语义映射：编辑器内容「视觉为空」时 v-model emit 空字符串 `''`，让业务方继续用 `rules: 'required'` 这种标准写法
+
+* **feat(src/components/common/RichTextEditor/RichTextEditor.vue):** 新增 `isVisualEmpty(html)` 工具 —— 剥 HTML 标签 + `&nbsp;` + trim 判空。handleChange 检测「视觉为空」时 emit('') 而非 sanitizeHtml 后内容；watch 处理外部 prop 置空场景——编辑器已视觉为空时跳过 setHtml 防循环（setHtml('') 后 wangEditor 仍可能保留占位段落，与 emit('') 会形成 setHtml 循环）
+* **test(src/components/common/RichTextEditor/RichTextEditor.spec.ts):** 新增 4 个用例覆盖源头修复：① `<p><br></p>` 占位段落 → emit('')；② 内容仅 `&nbsp;` 占位 → emit('')；③ 外部 prop 置空 + 编辑器非空 → setHtml('') 清空；④ 外部 prop 置空 + 编辑器已空 → 跳过 setHtml（防循环）。原 8 用例 + 新增 4 用例 12/12 通过
+* **refactor(src/modules/demo/examples/XForm/XFormBase.vue):** RichTextEditor 字段 rules 由 RuleItem 数组（自定义 validator + trigger: 'change'）改回字符串 `'required'`。源头修好，业务侧无须做字符串处理与 trigger 调整，与项目中其他 Input / Select 等原生组件写法一致
+* **不变量：** v-model 协议语义不变——`update:modelValue` 仍 emit 字符串，仅当内容「视觉为空」时把占位段落的非空字符串映射为 `''`，业务侧按字符串标准理解即可
+
+### ♻️ Refactor | resolveComponentFor 全局组件 fallback：schema.component 直接写项目级组件名
+
+### ♻️ Refactor | resolveComponentFor 全局组件 fallback：schema.component 直接写项目级组件名
+
+> 此前 schema.component 字符串仅支持 4 类解析——userComponents 注册 / EL 短名 / ElXxx 全名 / 原生 HTML 标签。项目级组件（如 RichTextEditor）必须通过 XFormProps.components 重复注册一遍才能用，冗余且增加 boilerplate。借助 unplugin-vue-components 已把 src/components/common/** 自动注入到 GlobalComponents 的事实，把 vue.resolveComponent 加入解析链 fallback
+
+* **feat(src/components/form-schema/composables/resolve-component.ts:resolveComponentFor):** 在原生 HTML 标签判定的 fallthrough 前追加 `try { resolveComponent(name) } catch {}` —— vue 命中返回组件对象，fallthrough 返回 null（与 ElXxx 路径同语义）。JSDoc 同步更新。userComponents / EL_COMPONENT_MAP / ElXxx 优先级不变
+* **feat(src/components/form-schema/composables/use-dev-runtime.ts):** 新增 `collectResolvableComponents(schema, userComponents)` 工具 —— 递归收集 schema.component 字符串名（去重），过滤 builtin / ElXxx / 原生 HTML 后逐个调用 resolveComponentFor 探测，命中者（unplugin-vue-components 自动注册的项目级组件如 RichTextEditor / BaseChart）加入 dev validate 的 user 集合。watch callback 在 validate 调用前同步注入 runtimeResolved 集合。**目的：** dev mode validate 不感知运行时 resolveComponentFor 的 fallback 能力，会把 RichTextEditor 误报为「未知组件名」（实测堆栈：`use-validate.ts:77 → use-dev-runtime.ts:81 → use-form-error-bus.ts:179`）；此处动态探测让 dev 校验与运行时解析对齐。**拼写错误检测能力保留** —— Inpurt 这类 resolveComponentFor 返回 null 的错误仍被识别
+* **test(src/components/form-schema/composables/resolve-component.spec.ts):** 文件顶层 `vi.mock('vue')` 拦截 resolveComponent（默认实现 mock 出 vue 未命中行为 `name => name`，让 fallback → null 路径可断言）；新增 3 个用例：① RichTextEditor 命中返回组件对象；② 未注册返回字符串 → fallthrough → null（拼写错误如 Inpurt 仍被正确识别为错误）；③ userComponents 优先于全局 fallback。原 24 用例 + 新增 3 用例 27/27 通过
+* **test(src/components/form-schema/composables/use-dev-runtime.spec.ts):** 文件顶层 `vi.mock('./resolve-component')` 拦截 resolveComponentFor（保留其他导出实际实现）；新增 3 个用例：① schema 含 RichTextEditor（mock 解析成功）→ validateErrors 为空；② schema 含 Inpurt（mock 解析失败）→ validateErrors 仍含 1 项「未知组件名」；③ props.components 显式注册 → 不依赖运行时探测。原 11 用例 + 新增 3 用例 14/14 通过
+* **feat(src/modules/demo/examples/XForm/XFormBase.vue):** schema 末尾追加「商品描述」字段（col span 24 + props height: '320px' + placeholder），component: 'RichTextEditor'，无 :components 注册；introductions 段落同步说明 fallback 机制
+* **fix(src/modules/demo/examples/XForm/XFormBase.vue):** RichTextEditor 字段 rules 由字符串 `'required'` 改为 RuleItem 数组（含自定义 validator + trigger: 'change'）。双 bug 修复：① wangEditor V5 空内容时 emit 永远输出 `<p><br></p>` 占位段落而非空字符串，async-validator 的 required 规则对非空字符串视为已填 → 自定义 validator 去掉 HTML 标签 + `&nbsp;` 后再判空；② XForm 默认 rules trigger='blur'，RichTextEditor 内容变化走 update:modelValue 不触发 blur → 显式声明 trigger='change' 才能在保存前自动校验（实测：不修复则清空富文本后点保存不触发红字）
+* **不变量：** 未在 builtin/user/全局命中的字符串仍返回 null（拼写错误检查能力不变）；原生 HTML 标签（小写）走 `name === name.toLowerCase()` 兜底，不进 vue.resolveComponent
+
+### ♻️ Refactor | RichTextEditor 目录化整改：单文件散落 common/ 一级 → ProDialogForm 同款四件套
+
+> 对齐项目复合组件编写规范（ProDialog / ProDialogForm 模式），此前 `RichTextEditor.vue` 单文件散落在 `components/common/` 一级、Props/Emits 内联未导出、缺 spec
+
+* **refactor(src/components/common/RichTextEditor.vue → src/components/common/RichTextEditor/):** 组件移入独立目录，四件套齐备
+  * `RichTextEditor.vue` 组件本体（逻辑零变更）+ script 级 JSDoc + `defineOptions({ name: 'RichTextEditor' })`
+  * `types.ts` 抽出 `RichTextEditorProps / RichTextEditorEmits / UploadResult` 命名导出（此前内联 `interface Props/Emits` 不可复用）
+  * `index.ts` barrel 导出组件 + 全部类型（与 ProDialogForm 同模式；全局自动注册不受影响——unplugin dirs deep 扫描，注册名按文件名不变）
+  * `RichTextEditor.spec.ts` 新增 8 个用例：挂载渲染 / onChange 清洗 emit（script 剔除）/ watch 回写 sanitize / 防循环不重复 setHtml / customUpload 成功·未传·失败 3 分支 / 卸载 destroy。stub 掉 Editor/Toolbar（jsdom 不完整支持 Selection/Range），`vi.hoisted` 提升 fake editor 规避 mock 工厂 TDZ
+* **refactor(src/modules/demo/examples/RichTextEditor.vue):** `?raw` 源码提取路径 + `source=` 字符串同步到新路径（2 处）
+* **已验证：** 新 spec 8/8 通过、`vue-tsc --build` 无报错、demo 页全局注册渲染正常
+
+### 🐛 Fix | RichTextEditor 加粗/斜体"HTML 对但视觉无效"：reset.css `*` 重置压平 Slate 文本 span
+
+> 工具栏加粗/斜体命令生效、HTML 结构正确，但视觉无变化；连在 strong 上手写 `element.style font-style: italic` 也无效
+
+* **fix(src/components/common/RichTextEditor/RichTextEditor.vue):** 样式覆盖选择器补 `[data-slate-string]` 后代——WangEditor V5 基于 Slate，文本渲染在 `<strong><span data-slate-string>文本</span></strong>` 的内层 span；项目 `reset.css` 的 `*{font-weight:normal;font-style:normal}` 以「指定值优先于继承」直接压平该 span（仅恢复 strong/b 包裹层无效，strong 计算 700 是假正常）。b/strong/i/em 均扩展命中文本层；text-decoration 按规范贯穿内联后代，u/s 无需扩展
+* **已验证：** 浏览器实测内层 span 字重 400→700，截图视觉加粗生效
+* **排查方向沉淀：** 见项目 memory `reset-css-rich-text-fontweight.md`（查最内层文本元素计算样式 / element.style 无效⇒后代指定值打断继承 / Slate 文本永远在 `[data-slate-string]` span 上）
+
+### ✨ Features | RichTextEditor 富文本编辑器组件：WangEditor V5 + DOMPurify XSS 防御 + 自定义图片上传
+
+> 基于 `@wangeditor/editor@5.1.23` + `@wangeditor/editor-for-vue@5.1.12`（Vue3 next 分支）封装的 `v-model` 富文本编辑器，把 WangEditor V5 工具栏/编辑区分离的复杂度、emit HTML 的 XSS 风险、自定义上传接入样板收敛到一个组件，业务方只关心 `modelValue` + `uploadApi` 两件事
+
+* **feat(src/components/common/RichTextEditor.vue):** 4 大核心能力
+  * `v-model` 双向绑定 HTML 内容 + `height / placeholder / readOnly / uploadApi` props
+  * **🛡 双向 XSS 防御**：`SANITIZE_CONFIG` 单一入口（USE_PROFILES.html + 显式 FORBID_TAGS 黑名单 `style/script/iframe/object/embed/form` + FORBID_ATTR 黑名单 `onerror/onclick/onload/onmouseover/onfocus/style/formaction`），watch 和 handleChange **共用**同一份配置；emit 链路清洗掉用户输入里的脏数据，prop 链路清洗掉父组件传入的脏数据——之前只清洗 emit 链路导致 `<img onerror=...>` / `<a href="javascript:...">` 通过 `props.modelValue` 直接 `setHtml` 进入编辑器 DOM 并被浏览器执行，是真实 XSS 漏洞，本次修复堵上
+  * **防循环更新**：watch `props.modelValue` 时只有与 `editor.getHtml()` 不一致才 `setHtml`；不传 `:model-value` 给 Editor 组件，绕过其内部 `update:modelValue` emit 未清洗 HTML 的通路，由组件自己 watch + onChange + DOMPurify 全链路接管
+  * **自定义图片上传**：`editorConfig.MENU_CONF['uploadImage'].customUpload` 拦截默认 base64 调用 `props.uploadApi(file)`，成功 `insertFn(url, alt, href)` 插入，失败 `ElMessage.error` + `console.error`（不静默吞错）；不传 `uploadApi` 时点上传会 `ElMessage.warning` 友好提示
+  * **生命周期**：`onBeforeUnmount` 必调 `editor.destroy()` 并把 `editorRef.value` 置 null，避免 toolbar/编辑区 DOM 监听器泄漏；shallowRef 而非 ref（WangEditor 内部 Slate 数据结构深响应化会拖慢渲染）
+* **feat(src/components/common/RichTextEditor.vue):** BEM 命名空间 `rich-text-editor`（自动注册到 `components.d.ts`，IDE hover 走 `GlobalComponents` 路径展示完整 `DefineComponent` 类型，无需显式 import）
+* **feat(src/modules/demo/examples/RichTextEditor.vue):** 演示页 5 段——基础 v-model + DOMPurify XSS 防御 / 自定义图片上传（axios 模拟 OSS，1.2s 延迟 + 50% 失败率）/ 只读模式切换 / 防循环更新验证（onChange 计数器 + 控制台日志）/ XSS payload 可视化（`<script>` / `onerror` / `javascript:` 等 4 种典型攻击）+ Props/Events/Slots API 表（extractApi 自动提取 + description 字典 merge）；路由 `DemoRichTextEditor` 由 `import.meta.glob` 自动派生
+* **refactor(src/modules/demo/config/sidebar-groups.ts):** CN_NAMES 追加 1 行 `RichTextEditor: '富文本编辑器（WangEditor V5）'`，自动归到「通用组件」分组
+* **chore(package.json):** 新增依赖 `@wangeditor/editor@^5.1.23` + `@wangeditor/editor-for-vue@^5.1.12` + `dompurify@^3.4.15`（DOMPurify 3.x 内置类型，无需 `@types/dompurify`）
+* **⚠ 已知限制：** `@wangeditor/editor-for-vue@5.1.12` 的 package.json `exports` 字段缺 `types` 条件，vue-tsc 找不到 d.ts。组件 import 处加 `@ts-expect-error` + 注释兜底（运行时 vite 用 `module` 字段解析 esm.js 不受影响）。待上游修复或本项目提 PR 加 paths 配置后移除
+* **⚠ height 约束：** `height` 不建议 < 300px——WangEditor V5 modal/hoverbar 定位依赖编辑区高度，否则 console 报警告且部分快捷交互偏离。默认 '300px' 是这个临界值，JSDoc 已说明
+
+### ✨ Features | ProDialogForm 弹窗表单组合组件：ProDialog + XForm 内置「校验 → 提交 → 自动关闭 → 自动重置」
+
+> 把「ProDialog 弹窗 + XForm 表单 + 异步提交 + 校验重置」4 个常见样板编排收敛到一个组件，业务方只关心 schema / model / onSubmit 三件事。沿用 ProDialog 子目录 + barrel 模式（与 ProDialog / XForm 调用方式一致）
+
+* **feat(src/components/common/ProDialogForm/ProDialogForm.vue):** 4 大核心能力
+  * `v-model` 显隐 + ProDialog 原生 props（width / close-on-click-modal / beforeClose / ...）透传
+  * 内置「确定 / 取消」footer：点确定自动 validate → 调 onSubmit → 成功后自动关闭 + emit('success')
+  * 关闭弹窗后（动画结束 ~300ms）自动 resetFields 清空数据与校验状态（`setTimeout(resetFields, 300)` 模拟 EP 默认动画时长，避免闪烁感）
+  * 防重复提交：submitLoading 标志 + try/finally（即使按钮被绕过也阻断二次提交）
+* **feat(src/components/common/ProDialogForm/types.ts):** Props / Emits / Expose 完整契约
+  * Props：`modelValue / title / width? / schema / model / rules? / onSubmit / submitButtonText? / cancelButtonText? / resetOnClose?`
+  * Emits：`update:modelValue / success / submit-failed`（submit-failed 在 onSubmit reject 时触发，**不** throw 避免 500 重定向）
+  * Expose：透传 XFormExpose 全部 19 个方法（validate / resetFields / setFieldError / addItem / isDirty / ...）
+* **feat(src/components/common/ProDialogForm/index.ts):** barrel 导出 `ProDialogForm` + 全部类型 + `XFormExpose` re-export
+* **feat(src/modules/demo/examples/ProDialogForm/ProDialogFormOverview.vue):** 演示页 5 段——基础用法 / 提交失败（emit submit-failed）/ 关闭自动重置 / footer 作用域插槽 / expose 方法（setFieldError 模拟服务端 422 回填）；路由 + sidebar 通过 glob 自动注册
+* **refactor(src/modules/demo/config/sidebar-groups.ts):** CN_NAMES 追加 1 行 `ProDialogFormOverview: '用法总览（弹窗表单）'`，自动归到「ProDialog 弹窗组件」分组
+
+### 🐛 Fix | ProDialogForm onSubmit 失败处理改用 emit 而非 throw：避免全局 errorHandler 500 重定向
+
+> 初始实现用 `throw err` 把 onSubmit 抛出的错误冒泡到全局，导致调用方未监听时 Vue app.config.errorHandler 触发项目全局 500 跳转。改用 emit('submit-failed', err) 让调用方完全控制错误处理（toast / 字段红字 / 静默）
+
+* **fix(src/components/common/ProDialogForm/ProDialogForm.vue):** catch 块改为 `emit('submitFailed', err)`，移除 `throw err`；JSDoc 注释说明设计动机（Vue 模板事件处理器调 async 函数时 Promise reject 会冒泡到 errorHandler）
+* **refactor(src/components/common/ProDialogForm/ProDialogForm.vue):** defineExpose 从 Proxy 改为显式对象字面量代理 —— 之前 Proxy.get 在 formRef.value 未就绪时返回 undefined，调用方访问 expose 方法报 `setFieldError is not a function`；现在每个方法都是真实函数（`formRef.value?.xxx`），永远不会"消失"
+* **fix(src/modules/demo/examples/ProDialogForm/ProDialogFormOverview.vue):** demo 新增 `onSubmitFailed` 处理函数（toast 提示错误）+ 模板 `@submit-failed` 监听；演示文案更新
+
+### ✨ Features | 字典功能契约化重构：DictItem 类型契约 + Promise 防抖池 + DictSelect / DictTag 组件
+
+> 「前端主导数据结构」落地：字典契约（DictItem）定义在 src/types/dict.ts，后端 / Mock 按 `/api/dict/:code` 返回数组配合实现。useDict 升级为多 code 契约形态（按 code 解构 `Ref<DictItem[]>` + `refreshDict`），store 层 16ms 轮询并发合并替换为 Promise 防抖池（Map<code, Promise>，并发共享同一次请求）。新增 DictSelect（el-select 封装，$attrs 透传 + disabled 契约字段）/ DictTag（el-tag 封装，未命中显示 value 原文）全局组件与 /demo/dict 演示页
+
+* **feat(src/types/dict.ts):** 新增字典类型契约单一来源 —— DictItem（value / label / type / disabled / cssClass + unknown 索引签名严格化契约的 any）+ DictTagType；放 types/ 而非 api 层，API / store / composable / 组件四层平级引用，依赖方向干净
+* **feat(mock/dict.ts):** 重写为单条动态路由 `/api/dict/:code` + DICT_DATA 数据表（新增字典只加键值，路由零改动）；gender / user_status / order_type 为契约演示字典（locked 项 `disabled: true`），role（登录预加载依赖）/ order_status 保留兼容
+* **refactor(src/api/modules/dict.ts):** `dictApi.getByType(type)` → `getDict(code)`，对齐契约用语；类型从 `@/types/dict` 导入；继续走项目 request 封装（http 层 30s GET 缓存作为防抖池之前的第一层合并）
+* **refactor(src/store/modules/dict.ts):** Promise 防抖池（`Map<code, Promise>`，finally 自动出池）替换 16ms setInterval 轮询 —— 零延迟、无定时器；刻意用普通函数而非 async function（async 会把池中 Promise 展开再包新实例，丢失共享语义）；保留 5min TTL / preloadDict / getLabel / clear
+* **refactor(src/composables/useDict.ts):** 契约形态 `useDict<T extends string>(...codes): Record<T, Ref<DictItem[]>> & { refreshDict }` —— 泛型保留 code 字面量，解构类型精确；Ref 用 computed 实现（数据所有权在 store，composable 只建视图）；lazy fetch 失败 console.error 降级（Ref 保持 []），消除旧版 unhandled rejection 隐患；移除 onMounted 双触发（防抖池已保证并发安全）
+* **feat(src/components/common/DictSelect.vue / DictTag.vue):** 全局组件（构建期自动注册，消费方免 import）——DictSelect 内部自动调用 useDict + `v-bind="$attrs"` 透传 clearable / filterable 等 + 契约 disabled 映射 el-option；DictTag 按 value 匹配 label / type / cssClass，未命中显示 value 原文、空值 '-' 占位
+* **feat(src/modules/demo/examples/Dict.vue):** 演示页（表单下拉 + 表格状态列 + useDict 契约形态 / refreshDict 演示），路由 / demo 侧边栏「通用组件」组自动注册
+* **feat(vite.config.ts):** AutoImport 注册 `useDict` —— CLAUDE.md §1.6 声称已在列但实际缺失，补上后组件内免 import 调用才成立
+* **test(dict.spec.ts / useDict.spec.ts):** 19 用例同步 —— 防抖池「并发共享一次请求」、失败出池后重试、契约形态解构 / 响应式 / refreshDict / 失败降级
+* **验证：** `pnpm type-check:full` 0 error；`pnpm lint` 0；`pnpm test` 19/19 通过
+
+### 🐛 Fix | useConfirm.content 类型谎言：VNode 运行时会渲染成 [object Object]
+
+> `UseConfirmOptions.content` 之前声明为 `string | VNode`，但 EP 2.14.3 message-box 模板 (`message-box/src/index.vue:85-94`) 里 message 只被 `textContent` / `innerHTML` 字符串消费，传 VNode 进去 `toDisplayString(vnode)` 只会拿到 `[object Object]`。类型上写允许但运行时不靠谱，等于给调用方挖坑。类型收紧为 `string` 后：
+> - 编译期拦截所有「以为支持 VNode」的误用（`type-check:full` 0 错即证明现有 4 个调用方无 VNode 误用）
+> - 注释明确指出「业务组件请用 useDialog」—— useConfirm / useDialog 分工固化到代码层
+> - 仍然支持 HTML 富文本：传 HTML 字符串 + `dangerouslyUseHTMLString: true`，EP 走 `innerHTML` 分支可渲染 `<el-tag>` 等全局注册组件
+
+* **fix(composables/useConfirm.ts):** `content` 类型由 `string | VNode` 收紧为 `string`；删除冗余的 `import type { VNode }`；JSDoc 注释补三段说明——EP 模板分支机制（`textContent` / `innerHTML`）/ 类型谎言为何根治 / useConfirm vs useDialog 分工
+* **验证：** `pnpm type-check:full` 0 error（编译期拦截所有 VNode 误用）；`pnpm test useConfirm + useLogout` 20/20 通过（无回归）；`pnpm lint` 0
+
+### ✨ Features | useConfirm 二次确认 Hook：取消即 resolve(false)
+
+> 封装 `ElMessageBox.confirm`，把取消/关闭从 reject 重塑为 resolve(false)，业务侧可以 `if (await useConfirm('...'))` 一行表达确认流程，无须 try/catch，根除控制台 `Uncaught (in promise) cancel` 噪音；与 `useDialog` 互补分工（前者 bool 询问 / 后者组件级弹窗 reject `DialogCancelledError`）
+
+* **feat(composables/useConfirm.ts):** 新增二次确认 Hook —— 重载双形态 API（位置参数 `useConfirm(content, title?)` / 对象参数 `useConfirm({...})`），danger 危险操作预设（确认按钮转红 + 警告图标，预设可被显式同名字段覆盖），appContext 三层回退（显式 > setup 同步期 > main.ts 通过 useDialog 注册的全局上下文），VNode 形态 content 上下文透传（项目按需引入 EP 不调 `app.use(ElementPlus)`，不补上下文全局组件 / Pinia / i18n 会失效）
+* **test(composables/useConfirm.spec.ts):** 16 用例覆盖 —— Promise 重塑（resolve true / 'cancel'→false / 'close'→false / 业务异常原样上抛 / 非哨兵字符串上抛）、参数归一（位置/对象/title 覆盖/HTML 透传）、danger 预设（默认值/字段覆盖/不泄漏）、appContext 透传（缺省回退/显式 null 不回退/不泄漏）
+* **feat(composables/useDialog.ts):** 新增 `getDialogAppContext()` 导出 —— 供 useConfirm 复用 main.ts 已注册的 app 上下文，避免每个动态挂载场景各建一套 setXxxAppContext
+* **feat(vite.config.ts):** AutoImport 注册 useConfirm —— 与 useDialog 同级待遇，setup 内免 import
+* **refactor(composables/useLogout.ts):** 用 useConfirm 替换 9 行 try/catch 样板，confirmLogout 主体从 9 行降至 6 行；useLogout.spec.ts 同步把 mock 从 `element-plus` 切到 `@/composables/useConfirm`
+* **docs(CLAUDE.md):** §1.5 命令式弹窗表新增 useConfirm 行（与 useDialog 分工互补）；§1.6 AutoImport 标识符表与 §1.6.1 注释提示表补 useConfirm
+* **验证：** `pnpm test src/composables/useConfirm.spec.ts src/composables/useLogout.spec.ts` 20/20 通过；`pnpm type-check:full` 0 error；`pnpm lint` 0；`auto-imports.d.ts:76` 已自动生成 `useConfirm` 声明
+
+### 🔧 Refactor | vite.config.ts 工程化抽离：消除 alias 双维护痛点
+
+> 把 `vite.config.ts` 内的构建期配置抽离到 `build/` 工程配置目录，建立 src 子目录别名的**单一来源**，并通过生成器自动同步 `tsconfig.app.json` 的 `paths` 块，消除双维护痛点；同时为未来大概率需要的 proxy / devServer 等配置预留位置
+
+* **feat(build/):** 新增 6 个语义化模块
+  * `aliases.ts` — SRC_DIR_ALIASES 单一来源（15 个别名 `@` + 14 个 `@xxx`），导出 `resolveSrcDirAliases()` (vite resolve) + `generateTsconfigPaths()` (tsconfig paths)
+  * `vendor-chunks.ts` — VENDOR_CHUNKS 配置（顺序敏感：vendor-vue / vendor-ui）
+  * `proxy.ts` — `createProxyConfig(env)` 预留空壳（联调真实后端时启用）
+  * `server.ts` — SERVER_DEFAULTS（port 5174 / strictPort）
+  * `scss.ts` — SCSS additionalData 注入 + silenceDeprecations（bem mixin 兼容）
+  * `index.ts` — barrel re-export
+* **feat(build/scripts/generate-tsconfig-paths.ts):** tsconfig.app.json paths 块自动生成器——读 build/aliases.ts → 写入 tsconfig.app.json；hash 比对无变更秒跳过；`--check` 模式供 CI 校验
+* **chore(tsconfig.app.base.json):** 新建手写 base（无 paths），`tsconfig.app.json` 改为 extends base + paths 由生成器注入（单一来源）
+* **feat(scripts/check-aliases.ts):** 新增 `pnpm check:aliases` 校验脚本——比对 build/aliases.ts 与 tsconfig.app.json paths，不一致 CI 失败阻断
+* **feat(package.json scripts):** 新增 `pnpm generate:tsconfig-paths` 与 `pnpm check:aliases`
+* **chore(.husky/pre-commit):** 接入 `pnpm generate:tsconfig-paths`（头）+ `pnpm check:aliases`（lint-staged 之后）—— pre-commit 阶段保证 paths 永远同步
+* **refactor(vite.config.ts):** 5 处内联配置替换为 `build/*` import——SRC_DIR_ALIASES / resolveSrcDirAliases / vendorChunks / server / scss；行为完全等价（alias / vendors / scss 注入不变）
+* **chore(tsconfig.node.json):** include 加 `build/**/*.ts`（build 模块纳入 type-check）；启用 `allowImportingTsExtensions`（生成器跨文件 .ts import）
+* **test(build/):** 新增 7 个 spec / 23 个用例——aliases (9) / vendor-chunks (4) / proxy (2) / server (2) / scss (3) / generate-tsconfig-paths (3)；覆盖单一来源、顺序敏感、hash 比对
+* **建议验证：** `pnpm type-check:full` 0 error；`pnpm test` 1779/1779 通过；`pnpm lint` 0；`pnpm build` vendor-vue (6.14 kB) / vendor-ui (708.97 kB) / vendor-utils (1316.55 kB) 三组 chunk 正常生成；`pnpm check:aliases` ✅；漂移测试（手动在 build/aliases.ts 加 `@fake` → 跑生成器 → tsconfig.app.json 自动写入 2 条新 paths → 还原后自动删除）；spec 路径 `docs/superpowers/specs/2026-09-10-vite-config-split-design.md` / plan 路径 `docs/superpowers/plans/2026-09-10-vite-config-split.md`
+
+#### 增量补丁：echarts 单独 chunk + barrel 整合 + 注释
+
+> 4 项反馈落地：echarts 单独打包 / 生成器重复维护确认已修复（用 import 不用内联）/ vite.config.ts 与原版 diff 对比 plugins 数组无意外变更 + 添加必要注释 / vite.config.ts 5 个独立 import 整合为 build/index.ts barrel
+
+* **feat(build/vendor-chunks.ts):** 新增 `vendor-charts` 组（patterns: `['/echarts/']`），单独打包 echarts（~1.1MB）避免污染 vendor-ui 缓存命中；vendor-utils 从 1316 kB 缩至 195 kB
+* **refactor(vite.config.ts):** 5 个分散 import（aliases / vendor-chunks / proxy / server / scss）整合为 1 个 build/index.ts barrel re-export
+* **docs(vite.config.ts):** 添加 4 处必要注释——文件级 JSDoc（说明本文件定位 + 历史）/ server 字段（说明 SERVER_DEFAULTS + createProxyConfig 来源）/ scss 字段（指向 build/scss.ts）/ manualChunks（强调 VENDOR_CHUNKS 顺序敏感）
+* **验证：** git diff vs HEAD 显示 plugins 数组（line 26-84）零变更；`pnpm type-check:full --force` 0 error；`pnpm lint` 0；`pnpm test` 1779/1779；`pnpm build` vendor-vue (6.14 kB) / vendor-ui (708.97 kB) / vendor-charts (1117.85 kB) / vendor-utils (195.64 kB) 四组 chunk 正常；`pnpm check:aliases` ✅
+
+### ✨ Features | demo 模块 sidebar 宽度升级为 localStorage 持久化
+
+> 当前 demo 文档布局（DocLayout）拖拽调宽后只在模块级 ref 保留，刷新 / 跨浏览器会话即丢失。升级为 `Local.set/get` 持久化，跨会话保留用户偏好
+
+* **feat(demo/layouts/sidebar-state):** sidebarWidth 持久化升级——模块加载时 `Local.get('demo-sidebar-width')` 读取初始值（合法 number 直接采用；非 number / null / 字符串等非法值兜底 200）；`watch(sidebarWidth, ...)` 注册 300ms debounce 自动写回，避免 `useSidebarDrag` 拖拽过程中 mousemove 高频触发 setItem。钳制到 [150, 400] 边界由 `useSidebarDrag` 承担（DocLayout 注入），sidebar-state 不重复硬编码边界；存储 key `demo-sidebar-width` 走 storage.ts 自动加 `<APP_NAMESPACE>:` 前缀，与 `app-ui` / `theme-mode` 等 key 命名规则一致
+* **test(demo/layouts/sidebar-state):** 新增 8 用例——合法值采用 / 缺值兜底 200 / 字符串兜底 / null 兜底 / 浮点四舍五入 / watch 触发写回 / 拖拽高频写 debounce 合并（连续 250/260/280 改值只写最后一次）/ 跨模块加载一致性（A 模块改值 → reload B 模块读 Local 一致）；`vi.resetModules` 处理模块级单例 + watch 重置，`vi.useFakeTimers` 处理 debounce 时序
+* **建议验证：** 浏览器实测 `/demo/pro-table-overview` 拖拽 sidebar 边缘到 320px → 关闭并重新打开浏览器/标签页 → 仍是 320px；浏览器 DevTools 看 `localStorage[vue3-vite-project:demo-sidebar-width]` 数值正确；多次拖拽仅在停止拖拽 300ms 后才落盘（Network/storage 面板观察）；`pnpm type-check` / `pnpm lint` / `pnpm test src/modules/demo --run`（6 文件 49 用例全绿）
+
+### ✨ Features | ProDialog 新增 resizable 可拖拉调整宽高能力
+
+> 需求：弹窗支持右下角三角手柄拖拽调整宽高（企业常见：详情 / 审批 / 报告预览动态调整内容区域），硬编码钳制 min 320×200 / max viewport - 16；为兼容 `useDialog` 命令式入口，新增 `resizeChange` 事件而非暴露 API（弹窗组件不增加方法表面积）
+
+* **feat(components/common/ProDialog):** 新增 `resizable?: boolean` 与 `resizeChange: [w, h]` 事件——mousedown / move / up 事件链；右下角 12×12 px 三角手柄（CSS `::after` 三角 + hover 变蓝）；`resizableEnabled` computed 聚合 `props.resizable && !isFullScreen && visible` 与 draggable 互斥同步策略；钳制常量 `MIN_WIDTH=320 / MIN_HEIGHT=200 / VIEWPORT_MARGIN=8` 硬编码（与 draggable 同风格，YAGNI）；`toggleFullScreen` 加 width / height 内联清理（避免 resize 后切全屏再退出，残留尺寸导致 EP 默认 width 不生效——与 v-draggable 清理 left / top 同思路）；onUnmounted 清 document mousemove / mouseup 监听（防内存泄漏）
+* **feat(components/common/ProDialog/types):** `ProDialogProps` 加 `resizable` 字段、`ProDialogEmits` 加 `resizeChange` 事件，JSDoc 完整（默认 `false`、仅 mouseup 抛、与 `draggable` 同步禁用）
+* **test(components/common/ProDialog):** ProDialog.spec.ts 4 → 13 用例，新增 8 个 resizable 测试（resizable=true 渲染 handle / resizable=false 无 handle / mousedown-mousemove-mouseup 完整链路抛 resizeChange / 钳制最小 320×200 / 钳制最大 viewport-16 / 全屏态禁用 handle / resize 后切全屏内联 width-height 被清除 / mousemove 不抛事件仅 mouseup 抛 / onUnmounted 清监听）；`mockLayout` 改 getter 模式让 offsetWidth 跟随 style 动态计算（贴近真实浏览器重排行为，避免 emit 拿到 mock 固定值的陷阱）；`mountOpen` 扩展支持 `listeners` 参数（Vue3 `createApp` 第二参数 `onXxx` 自动识别为 emit listener）
+* **demo(demo/examples/ProDialog):** 新增 `ProDialogResizable.vue`（305 行，4 个 DemoField：① 基础可调整 ② 视口边界钳制 ③ resizeChange 事件日志 ④ 全屏×resize 交叉），沿用 DocLayout + DemoFrame + DemoField + DocToc 模板
+* **fix(demo/ProDialogResizable):** ④ 全屏×resize 交叉 demo 状态字段「最后一次 resize 尺寸」原依赖手动点「记录当前尺寸」按钮（反直觉），改为 `@resize-change="onFullResize"` 直接驱动，删除冗余按钮——状态与用户操作（拖拽）实时同步
+* **chore(demo/config):** CN_NAMES 加 `ProDialogResizable: '可拖拉调整宽高'`，自动归入「ProDialog 弹窗组件」分组（分组前缀 `ProDialog` 已存在，无需改 SIDEBAR_GROUPS）
+* **chore(.gitignore):** 新增 `.verify/`（浏览器验证截图存档目录不入库）
+* **建议验证：** dev `/demo/pro-dialog-resizable` 拖右下角三角，鼠标变 ↘ 光标、body 文字不被选中；事件 demo 日志 mousemove 不刷屏、mouseup 仅一次记录；全屏×resize 交叉 demo 先拖大再切全屏退出，应回到 EP 默认 480 而非拖拽尺寸；浏览器实测基础 demo `480×259 → 680×409`（+200/+150）、最小钳制 `320×200`、最大钳制 `1425×885`（viewport `1441×901 - 16`）；`pnpm type-check:full` / `pnpm lint` / `vitest ProDialog.spec.ts`（13/13）/ `pnpm check:routes` 全绿
+
+### 📖 Documentation | demo 模块文案对齐：清理过期描述与失效 API 引用
+
+> 全量扫描 `src/modules/demo/examples/`（63 个 demo 文件）后批量修正过期文案，确保 sidebar 中文名 / 演示页 introductions / DemoField label 与当前代码实现一致
+
+* **fix(demo/ProTable/ProTableOverview):** propsItems 描述里 `v2.0 传入 'vxe-table' 会 console.warn 并回退 element-plus，v2.1 计划支持` 改为 `v2.1 起支持 vxe-table 引擎，动态按需加载，chunk 不进首屏`（v2.1 实装后 src/components/ProTable/adapters/engine.ts 已删除 vxe 回退分支，原描述过期）
+* **fix(demo/ProTable/ProTableOverview):** DemoFrame introductions 与 start-here 引导卡同步 demo 实际包含的 7 个演示区（基础 / enum / render / 插槽 / defineExpose / 多选 / 四类能力）——原 4 场景卡片未涵盖 render / selection / 能力切换三个新增 section
+* **fix(demo/ProTable/ProTableOverview):** DemoField label `v2.0 4 类能力一键切换` 与 toc 项改为普适描述（`四类能力一键切换（行内编辑 / 树形 / 单元格合并 / 行拖拽）`）——版本号从用户面文案去除，避免后续版本演进再过期
+* **fix(demo/XForm/XFormOverview):** introductions `支持全量 14 字段` 改为 `支持全量 19 字段`（按 configs/xform-api.ts schemaNodeItems 实测条目数：component / props / on / children / name / label / rules / reaction / formItem / modelProp / defaultValue / row / directives / asyncOptions / slots / disabled / permission / ignore / kind+array）
+* **fix(demo/XForm/XFormAsyncOptionsError):** 删除 `formRef.refreshOptions(fieldName)` 引用——该方法在 form-schema 实例中不存在（grep src/components/form-schema 无匹配）；"变通方案"改为推荐 asyncOptions.deps 字段依赖（其他字段变化触发 source 重跑）作为实际可用的重试机制，与本 demo「强制失败开关 deps: 'forceFail'」演示一致
+* **fix(demo/XForm/XFormBase + XFormNested):** 文件头注释 `参考开源 form-schema 实现的 demo（form/base.vue）` 改为 `XForm 基础用法 demo —— 对照参考仓场景命名（form/base）`——form-schema 是项目自有组件（src/components/form-schema/），非开源 fork；保留括号内命名作为对照溯源
+* **fix(demo/config/sidebar-groups):** `XFormValidationDebounce: '实时校验和debounce'` typo 改为 `跨字段校验 debounce`——与 XFormValidationDebounce.vue 实际标题「跨字段校验 debounce 调度（高频输入减负）」对齐
+* **建议验证：** `pnpm type-check` / `pnpm lint` / `pnpm test src/modules/demo/config/sidebar-groups.spec.ts`（5 用例全绿）；浏览器实测 `/demo/pro-table-overview` start-here 卡片显示 7 场景、propsItems 描述新文案；`/demo/x-form-async-options-error` 变通方案段落显示 asyncOptions.deps 推荐用法
+
+> 第二轮扫描补充修复（P0 关键描述错误 / 版本号泄漏 user-facing 文案）
+
+* **fix(demo/ProTable/ProTableEngineCompare):** user-facing 文案去除 `v2.1` 标记——introductions L78 改为「vxe-table（动态按需加载）」、h4 标题去 `（v2.1 引擎）`、ApiTable 标题去 `（v2.1）`；开发注释保留版本溯源
+* **fix(demo/ProTable/ProTableServerSort):** introductions `经 responseAdapter 映射（M3）` 改为 `经 responseAdapter 映射为约定结构`——M3 是开发里程碑，用户文案不应出现
+* **fix(demo/ProTable/ProTableTree):** introductions `vxe-table 引擎 v2.0 不支持树形能力` 改为 `vxe-table 引擎不支持树形能力（启动时 console.warn 并忽略），仅 element-plus 引擎生效`——v2.0 标记混淆当前能力边界
+* **fix(demo/ProTable/configs/protable-demos-api):** `启用行内编辑能力（v2.0）` 改为 `启用行内编辑能力`——API 描述去除版本号
+* **fix(demo/XForm/XFormDisabled):** introductions `SchemaNode 新增 disabled: ReactionValue<boolean>` 改为 `SchemaNode disabled: ReactionValue<boolean>`——「新增」暗示曾经不存在，与现状不符
+* **fix(demo/XForm/XFormCrossField):** introductions `RuleItem 新增 dependsOn + crossValidator` 改为 `RuleItem dependsOn + crossValidator`——同上
+* **fix(demo/XForm/XFormBase):** introductions `订单查询表单 ... 5 字段` 改为 `4 字段`——实际只有 4 个字段（订单号 / 状态 / 日期区间 / 备注）
+* **fix(demo/XForm/XFormGlobalDisabled):** 顶层 disabled 写法 `3 种` 改为 `4 种`——demo 实际演示 `literal_true / literal_false / fn / expr` 四种 mode，与源代码 schema computed 一致
+
+### ✨ Features | ProDialog 高级弹窗组件（声明式 + 命令式双入口）
+
+> 需求：弹窗支持模板 `v-model` 调用与 `useDialog` 纯 JS 命令式调用双模式，头部可拖拽（限制在视口边界内）、可全屏切换，全程 TS 强类型
+
+* **feat(components/common):** 新增 `ProDialog` 组件（`src/components/common/ProDialog/`）——ElDialog 原生 Props 全量继承（`InstanceType<typeof ElDialog>['$props']` 推导，避开 EP 内部导出路径），扩展 `draggable`（默认 true，全屏态自动禁用）/ `fullScreen`（默认 false，头部带切换按钮，走 EP 原生 `fullscreen` 机制）/ `showFullScreenButton`；透传 default/header/footer 插槽；内置「取消/确定」footer 并抛出语义化事件（`confirm` 仅确定按钮触发，`close` 为所有关闭途径的兜底）。组件经 `@/components/index.ts` 扫描自动全局注册，也可具名导入
+* **feat(directives):** 新增 `v-draggable` 指令（`src/directives/draggable.ts`，按现有 install 约定自动全局注册）——绑定元素即拖拽手柄，只有按住手柄才能拖；首次拖拽把 EP「margin 居中」定位切换为 left/top（相对全屏 fixed 的 el-overlay，坐标即视口坐标）；`clampPosition` 把弹窗钳制在视口边界内，下缘保留手柄高度可抓回（而非贴 0）。弃用 EP 原生 draggable 的原因：原生无边界限制，拖出视口后无法找回
+* **feat(composables):** 新增 `useDialog` Hook（`src/composables/useDialog.ts`）——接收 Vue 组件 + 配置返回 `{ open, close, setProps, isOpen }`；open 时创建容器 div 挂 body 用 `render()` 动态挂载，EP `closed` 事件（关闭动画结束）后 `render(null)` + `remove()` 销毁，无 DOM 残留；**appContext 双保险继承**：setup 内调用捕获 `getCurrentInstance().appContext`，纯 JS 调用回退到 main.ts `setDialogAppContext(app)` 注册的全局上下文（`main.ts` 追加一行，必须在所有 `app.use` 之后调用），动态挂载的弹窗及其子组件因此可正常访问全局注册的组件 / Pinia / Router / i18n；open() 返回 Promise——点「确定」resolve，取消/关闭/X/ESC/遮罩 reject `DialogCancelledError`（instanceof 可识别，语义对齐 ElMessageBox.confirm）；`setProps` 经响应式状态 + 包装组件 render 实时生效
+* **test:** 新增 `draggable.spec.ts`（4 组 clampPosition 边界数学 + 4 用例指令行为：拖拽位移/边界钳制/禁用/动态恢复）与 `useDialog.spec.ts`（6 用例：确认 resolve + 容器销毁、取消 reject、X 关闭 reject、setProps 实时更新、contentProps 透传、close() 语义）；useDialog 测试通过注册 ElDialog/ElButton/v-draggable 的最小上下文模拟纯 JS 调用，`.el-dialog` 能被渲染即证明 appContext 继承生效
+* **demo:** 新增 `examples/ProDialog/ProDialogOverview.vue`（声明式：v-model + 原生 props 透传 / 拖拽边界实时坐标 / 全屏×拖拽交叉 / header-footer 插槽）与 `ProDialogUseDialog.vue`（命令式：open Promise 结果反馈 / contentProps + setProps / 句柄复用回归 / appContext 继承验证），sidebar 新增「ProDialog 弹窗组件」分组
+* **建议验证：** 页面模板里 `<ProDialog v-model="visible" title="测试" draggable>` 验证拖拽不越界 + 全屏按钮切换；某按钮回调里 `useDialog(组件).open()` 验证命令式唤起、确定/取消的 Promise 语义、弹窗内 el 组件与 Pinia 正常可用
+
+### 🐛 Bug Fixes | ProDialog demo 实测反馈（头部对齐 + 二次拖拽偏移）
+
+> 来源：demo 页 `/demo/pro-dialog-overview` 真实浏览器验证反馈
+
+* **fix(directives/draggable):** 二次拖拽位置偏移——`originLeft/Top` 只在首次拖拽缓存、之后不更新，第二次拖拽以初始位置为原点计算位移，弹窗按下瞬间跳回偏移前位置。改为每次 mousedown 重读 `getBoundingClientRect` 作为原点（上次落点即本次起点）；同时「margin→left/top 定位切换」由一次性 flag 改为按内联 style 实际状态判断，修复全屏切换清除内联定位后拖拽失灵的隐患；垂直钳制由「视口高 - 手柄高」改为「视口高 - 弹窗高」，整个弹窗留在视口内，不再触发 EP `.el-overlay { overflow: auto }` 的滚动条。补 2 个回归用例（连续拖拽坐标累计 / 内联定位被外部清除后自动重切换）
+* **fix(components/common/ProDialog):** 头部样式——EP 原生 X 按钮绝对定位、与 flex 流内的全屏按钮对不齐（`padding-right: 44px` 预留间距不可控）。收编为完全自定义头部：全屏 + 关闭按钮组成 actions 组靠右对齐（24×24 等宽），`show-close` 从 $attrs 剥离避免 EP 重复渲染原生 X；自绘关闭按钮语义对齐原生 X——`before-close` 存在时交由它决定是否关闭（kebab/camel 两种写法均识别）。补 2 个用例（beforeClose 拦截 / show-close=false 隐藏）
+* **chore(vite.config):** `useDialog` 加入 unplugin-auto-import 注入列表（与 `useAppRouter`/`useRequest`/`useAuth`/`useLogout` 同级），业务 `<script setup>` 内可直接 `useDialog(...)` 无须 import；同模块的 `DialogCancelledError`（class 名 AutoImport 不注入）与 `setDialogAppContext`（仅 main.ts 一次性调用，不应污染 setup 全局）保持具名 import
+
+### 🐛 Bug Fixes | 经典侧栏折叠弹层过高（限高对齐水平弹层策略）
+
+* **fix(layouts/default):** 折叠态 hover 图标弹出的 vertical 二级菜单限高 `calc(100vh - 20px)` 实测 933px 近全屏（demo 模块 60+ 项），用户反馈过高——改为与用户方定值的水平弹层同一偏移 `calc(100vh - 300px)`（实测 653px，约 14 项可见 + 内部滚动），两处弹层限高策略一致。实测定位 top 71→bottom 724 视口内、单层滚动条、docOverflow false，暗色样式无回归
+
+### ♻️ Code Refactoring | 全项目 !important 清零（规范 §4#13 收尾，用户方执行）
+
+> 继 default 布局 AppMenu 24 处之后，用户将其余文件中的 !important 全部清除——`src/` 下声明级 `!important` 已清零（grep 仅剩注释提及）。共 5 文件 29 处
+
+* **refactor(styles):** `reset.css` autofill 3 处 / `PortalHeader.vue` 下拉悬停 2 处 / `PortalNav.vue` 子菜单标题 7 处 / `login.scss` 登录卡片·输入框·复选框 13 处 / `XFormSchemaIndex.vue` 4 处。替代策略与 AppMenu 同一思路——BEM 命名空间/深层嵌套选择器特异性压过 EP 单/双类默认规则，等特异性靠源码顺序决胜，不再依赖 !important
+* **保留关注（reset.css autofill）：** Chrome UA 样式表对 autofill 背景色/文字色是 UA 级 !important，作者普通声明本就无法覆盖——原 `!important` 在这三行实际是无效声明；真正压住 UA 自动填充底色的是同行的 `box-shadow: 0 0 0 1000px #f9fafc inset`（盒阴影不在 UA 覆盖范围），该行未动、机制不受影响
+* **文档同步：** `2026-07-28-login-ui-refresh.md` / `2026-07-28-portal-header-logout.md` 内嵌代码片段已由用户方同步去 !important
+* **建议验证：** 登录页用已保存账号触发浏览器自动填充，确认输入框底色仍被盒阴影盖住（无 UA 黄色泄漏）；portal 布局导航悬停、头部下拉悬停、登录页卡片/输入框聚焦态目测无回归
+
+### ♻️ Code Refactoring | layouts/default 全面清除 !important（对齐项目规范 §4#13）
+
+> 用户要求「检查 default 中的样式，不要出现 !important」——`src/layouts/default` 下 24 处 `!important` 全部清除（全部集中在 AppMenu.vue），视觉零回归
+
+* **refactor(layouts/default):** 根因釜底抽薪——EP el-menu 的 `background-color`/`text-color`/`active-text-color` props 会被以内联样式落到每个 `.el-menu-item`/`.el-sub-menu__title` 及弹层上，CSS 侧覆盖只能上 `!important`（这 24 处的历史来源）。移除三个 props，改走 EP 官方 CSS 变量通道 `--el-menu-bg-color`/`--el-menu-text-color`/`--el-menu-active-color`：容器块与 vertical/horizontal 弹层分别定义（弹层 teleport 到 body，继承不到容器作用域变量），菜单项基色/激活色交给 EP 默认规则按变量渲染。实测菜单项内联 style 属性彻底消失（`(none)`）
+* **refactor(layouts/default):** 剩余优先级冲突全部改用特异性解决——`.el-menu` 内部规则（0-3-0/0-4-0）压 EP 单/双类默认规则；弹层边框三件套带 `.el-popper` 前缀（0-2-0）压 EP `.el-popper.is-light`（0-2-0 等特异性靠源码顺序决胜，组件样式注入晚于 EP）；折叠态 `padding: 0`（原 `padding: 0 !important`）平权即胜
+* **保留不动：** horizontal 弹层局部 EP 主色变量（teleport 取不到容器作用域紫色主色）+ 文件底部暗色覆盖块（`[data-theme='dark']` 下 #818cf8/#252c49）；用户方改过的水平弹层限高 `calc(100vh - 300px)` 原值保留
+* **验证：** `grep !important src/layouts/default` 仅剩注释提及、声明清零；CDP 四模式实测——经典侧栏/折叠态（48px 居中）/top 水平菜单基色·悬停·激活 computed 值亮暗双主题全部正确（暗色 #818cf8/#252c49 覆盖生效）、vertical/horizontal 弹层背景/边框/圆角/阴影/条目色正确、水平弹层内层单层滚动条（外层无）；`pnpm type-check:full` + ESLint + layouts 23 用例全绿
+
+### 🐛 Bug Fixes | top 布局水平菜单弹层超高撑出 body 滚动条
+
+* **fix(layouts/default):** `.vv-app-menu-popper--horizontal` 补限高——vertical 折叠弹层已有 `max-height: calc(100vh - 20px)` 策略，水平弹层遗漏且 `overflow: hidden`，demo 模块 60+ 页时弹层实测 2334px 超出视口、撑出 documentElement 滚动条
+* **fix(layouts/default):** 限高引发二次问题——EP 2.14 会把 popper-class **同时复制到外层 el-popper 与内层 .el-menu--popup-container**，两处都挂 max-height + overflow-y 出现双层滚动条。滚动收敛到内层容器（`&.el-menu--popup-container` 限定），实测外层 overflow visible 无滚动条、内层单条滚动条（扣除边框后精确判定），docOverflow false；vertical 弹层行为不变
+
+### 🐛 Bug Fixes | 双栏/混合主导航空项 + 顶部导航子菜单箭头叠字
+
+> 三个布局模式菜单渲染问题一次修复，同根因两项 + CSS 一项
+
+* **fix(layouts/default):** PrimaryNav（mixed 顶横排 / dual 侧栏 rail）直接消费菜单树**原始顶层节点**——`/user` 这类纯布局包装路由自身无 meta（title/icon 为空），渲染出空图标空文案项（dual rail 实测第 3 项空白），混合模式顶横排同因少一项。修复：与 AppMenu 同一套 `resolveSingleChild` 提升语义，显示用 `displayItems` 单子项时替换为子项标题/图标；激活态匹配与 select 事件载荷仍用 raw 顶层节点（提升后子项 path `/user/list ≠ /user`，直接替换会丢激活态）。实测 dual rail 四项齐全、点用户管理跳转 /user/list 且激活态正确；mixed 顶横排四项齐全 + 二级侧栏正常
+* **fix(layouts/default):** top 布局水平菜单子菜单标题 `padding: 0 15px` 未给箭头预留空间——EP 水平箭头绝对定位于标题右侧（实测 right:20px、宽 12px），长标题文案伸进箭头下方叠压（工作台/组件示例多级菜单实测）。子菜单标题右内边距改为 34px，实测文案右缘与箭头间距 2px 不再叠压；菜单项（无箭头）padding 不变。新增 `PrimaryNav.spec.ts` 4 用例（提升渲染 / raw path 激活态 / raw 载荷 / rail 模式），layouts 27 用例全绿
+
+### 🐛 Bug Fixes | 切换暗色主题后刷新回到亮色（主题持久化读取格式失配）
+
+* **fix(store/theme):** `readInitialMode` 只比对裸字符串（`'light'/'dark'/'auto'`），而 persist 插件实际写入的是 JSON 序列化对象 `{"mode":"dark"}`——比对永不命中，每次刷新都兜底回 `'auto'`（亮色系统下表现为暗色丢失；legacy key 迁移逻辑同款失配一并修复）。新增 `parseStoredMode` 兼容三种历史格式：JSON 对象 `{"mode":"dark"}`（当前 persist 格式）、JSON 字符串 `"dark"`、裸字符串 `dark`，非法值仍兜底 `'auto'`。浏览器实证修复前后 localStorage 实况（key `vue3-vite-project:theme-mode` 值为 `{"mode":"dark"}` 但刷新后 data-theme 丢失）；修复后往返验证：UI 切浅色/暗色 → 存储格式正确 → 刷新恢复暗色 + 暗色布局变量生效（内容区 bg #0b1120）。新增 `theme.spec.ts` 7 用例覆盖格式兼容 / legacy 迁移 / 非法值兜底 / setMode 应用
+
+### ✨ Features | default 布局页签刷新可见反馈（内容区 180ms 淡入）
+
+> 验收反馈「工作台首页、分析页点刷新没看到任何反馈，用户管理和监控页有反馈」——实证确认刷新机制对全部页面生效（填字→刷新→字被清空 = 组件重挂载），差异在页面内容性质：user/list 有 useRequest 骨架闪烁、监控页有输入状态变化可感知，纯静态页重挂载后像素不变、无可捕捉反馈
+
+* **feat(layouts/default):** AppView 监听布局壳注入的 `refreshKey`，页签刷新命令触发时给 `__content` 挂一次性 `is-refresh-fade`（220ms 后摘除），CSS 动画 `vv-app-view-refresh-fade` 180ms 淡入——静态页刷新"已发生"可感知。关键设计：① watch 只盯 refreshKey，路由切换不触发（负面对照实测无 class、无动画）；② 用 CSS animation 而非 `<Transition>`：避免与 keep-alive out-in 的已知交互风险，且 class 与应用同帧提交、新视图挂载即带动画类；③ 220ms 定时器摘除 class 防无关重渲染误触发，onUnmounted 清理定时器。实测：刷新 60ms 时 class 在 + 动画运行，300ms 后摘除；切页签零触发；23 用例全绿、控制台零警告
+
+### 🐛 Bug Fixes | default 布局暗色主题 el-table stripe 条纹行泛白割裂
+
+* **fix(layouts/default):** `default-tokens.scss` 的 `default-layout-ep-dark` mixin 补齐 fill 阶梯缺失的两档——`--el-fill-color-lighter: #232f45`、`--el-fill-color-extra-light: #2c3a54`。EP el-table 的 stripe 条纹行底色取 `--el-fill-color-lighter`，mixin 原只覆盖到 light/dark 档，缺失档回落 EP 出厂亮色值 #fafafa——暗色下条纹行整块泛白、深色表体+白条纹强烈割裂（/user/list 实测）。暗色阶梯现完整：dark #0f1726 → base #1a2436 → light #1c2638 → lighter #232f45 → extra-light #2c3a54；亮色未动（EP 默认 #fafafa，实测无回归）
+
+### 🐛 Bug Fixes | default 布局面包屑：无标题包装层记录渲染成孤立 "/"（对标参考仓）
+
+* **fix(layouts/default):** Breadcrumb 过滤条件补「必须有标题来源」（`meta.title ?? meta.titleKey`）——`/user` 这类纯布局包装层父记录 meta 为空，原过滤（仅排除 visible/breadcrumb === false）把它放行，`resolveRouteTitle` 兜底返回 `''`，渲染出开头一个空标题可点击项 + 孤立 "/" 分隔符。对标参考仓「只渲染有 title 的记录」：实测 `/user/list` 面包屑从「/ 用户管理」修正为单层「用户管理」（当前页纯文本不可点）；`/workbench/analysis` 多层「工作台/分析页」不受影响
+
+### 🐛 Bug Fixes | workbench 视图与 AppView 双层 padding
+
+* **fix(modules/workbench):** 移除三个视图（Index/Analysis/Monitor）根节点的 `padding: var(--app-content-padding)`——页面级内容区内边距由布局层 `AppView __content` 统一提供（24px，demo 等 60+ 页面均依赖该基线），视图再自加一层叠加成 48px 大间距。全仓 grep 确认仅这 3 个视图有重复，已全清并留 Why 注释防再犯。实测：视图根 padding 0、卡片距内容区边缘 24px
+
+### 🐛 Bug Fixes | default 布局面包屑 duplicate key 警告
+
+* **fix(layouts/default):** Breadcrumb 的 `el-breadcrumb-item` key 由 `crumb.path` 改 `` `${crumb.path}-${index}` ``——空 path 的 index 子路由（`path: ''`）经 vue-router 规范化后与父记录同 path（`/workbench` 的父记录与子记录都是 '/workbench'），父/子标题不同（工作台 / 工作台首页）时相邻去重保留两条、path key 重复触发 `[Vue warn]: Duplicate keys found during update: "/workbench"`。key 加 index 后缀消除重复，面包屑渲染与跳转行为不变（实测 /workbench 控制台零警告、工作台→监控页 crumbs 正常）
+
+### ✨ Features | default 布局折叠侧栏菜单项 hover tooltip
+
+> 折叠态下菜单只剩图标，hover 仅背景高亮、用户无从知晓目标页——补 tooltip 提示
+
+* **feat(layouts/default):** 折叠侧栏（vertical 根实例）的叶子菜单项 hover 弹 `el-tooltip`（placement right、show-after 300ms、dark 主题）——内容为 `promotedNode(node).title`，与展开态可见文字同源，随 locale 切换自动更新；tooltip 默认 teleport 到 body，不被 el-scrollbar 裁剪。实现要点：① 仅根实例生效（`showCollapsedTooltip = isCollapsed && !isNested`）——递归实例渲染在 hover 弹层内（展开态、文字完整可见），且弹层菜单项文字完整，无需 tooltip；② 仅叶子菜单项——折叠态 hover 分组本就会弹子项浮层（有上下文），tooltip 会与浮层重叠冲突；③ tooltip 分支不渲染标题 span——EP collapse 样式本就把直接子 span 隐藏（0×0 + visibility:hidden），等效且保证 tooltip 单根触发；④ 展开态 / horizontal 模式 / 弹层内渲染走原 v-else 分支，零影响。浏览器实测：折叠 hover 仪表盘图标 → dark tooltip「仪表盘」右侧弹出；hover 分组仅弹子项浮层、无 tooltip
+
+### 🐛 Bug Fixes | default 布局折叠菜单不可见修复（图标 kebab→PascalCase 解析 + 折叠弹层限高）
+
+> 用户反馈「经典布局收起左侧菜单栏后，菜单不可见，鼠标 hover 时有一块背景」逐项修复
+
+* **fix(layouts/default):** MenuIcon 图标解析加 `pascalCase` 转换——路由 `meta.icon` 存 kebab-case（`'magic-stick'`），而 `@element-plus/icons-vue` 导出键是 PascalCase（`'MagicStick'`），原实现直接以 kebab-case 取键恒为 `undefined`，导致菜单图标（含折叠态唯一的可见内容）从不渲染；折叠后菜单"只剩一块背景"。经 `pascalCase()` 转换后取键，折叠态 4 个图标 22×22 居中恢复（浏览器实测）
+* **fix(layouts/default):** 折叠 hover 弹层（`.vv-app-menu-popper--vertical`）限高——demo 模块 60+ 子项时弹层撑至 1159px 超出视口；加 `max-height: calc(100vh - 20px); overflow-y: auto`，弹层内部可滚动
+* **test(layouts/default):** 新增 `MenuIcon.spec.ts` 4 用例——kebab-case 解析（magic-stick→MagicStick）/ 单词名解析 / 未命中不渲染 / 空 name 不渲染，防回归
+
+> Phase 5 功能审查（中英文切换 / 折叠 / 页签刷新 / 左右滚动 / 更多菜单全链路实测）后的用户反馈逐项修复
+
+* **fix(plugins):** errorHandler 增加已知良性错误白名单——`ResizeObserver loop completed with undelivered notifications`（Chromium 布局观测噪声，EP el-scrollbar / 弹层动画高频触发、无堆栈无损害）在 window error 监听处直接丢弃，不再 console.error 也不进上报通道，避免污染 Sentry；真实错误仍正常上报（实测 dispatch 两类错误验证）
+* **chore(components):** 删除死代码 `src/components/common/TagsView/`（无任何模板引用，default 布局复刻后仅剩历史包袱；其全局非 scoped 样式曾占用 `vv-tags-view` 命名空间与布局版冲突）——同步清理 `types/components.d.ts` 两处全局组件声明、`tags-view.ts` @see 指向、`TagsView.vue` 命名空间注释改历史说明（`default-tags-view` 命名空间保留不回迁）
+* **fix(store):** Pinia persist key 命名空间化——`utils/storage.ts` 新增导出 `namespacedStorageKey()`（与 Local/Session 写入规则一致），`theme.ts` persist key 改 `vue3-vite-project:theme-mode`（保留老裸 key 一次性读取兜底并清除），`app.ts` 改 `vue3-vite-project:app-ui`；实测两个 key 均按新规则落盘、刷新回灌正常。docs/06/10/18/19/21 同步更新（§4.4「裸 key」旧决策重写为「必须经 namespacedStorageKey 拼接」）
+* **test(utils):** storage.spec 新增 1 用例——`namespacedStorageKey()` 与 `Local.set` 写入的 key 规则一致
+* **verified(layouts/default):** 页签左右滚动按钮实测通过——溢出场景（scrollWidth 1600 > clientWidth 488）下点击右滚 scrollLeft 0→200、左滚 200→0；自动化浏览器 smooth 动画被冻结属测试环境限制，降级瞬时验证按钮真实逻辑（handler → scrollBy(±200) → wrapRef 链路完整）。页签刷新实测正常（输入清空重建 + keep-alive 保留），用户侧如遇失效为 HMR 旧状态，硬刷新即可
+
+### 📖 Documentation | CLAUDE.md BEM 规范新增「非 scoped 样式禁止 :deep()」约束
+
+* **docs(claude-md):** §3.2 强制约定新增第 10 条 + §3.3 反模式新增第 8 条——非 scoped 样式下 `:deep()` / `::v-deep` / `:v-deep` 不会被编译，会以伪类原样输出到浏览器并被整条规则丢弃；BEM 模式下覆盖第三方库组件样式必须直接写后代选择器；§3.2 第 5 条补充交叉引用，文档版本升至 v1.2.0
+
+### ✨ Features | default 布局复刻 vue-element-plus-admin（四模式 + 多页签 + 工作流组件全家桶）
+
+> 计划：`docs/superpowers/plans/2026-09-09-default-layout-replica.md`。复刻 [vue-element-plus-admin](https://github.com/kailong321200875/vue-element-plus-admin) 布局结构与组件功能，对齐 `layouts/portal` 自包含组织约定（components / config / styles，不引用 `@/components/`）
+
+* **feat(layouts/default):** 四模式布局外壳——sidebar（经典侧栏）/ top（顶部导航）/ mixed（顶栏主导航 + 二级侧栏）/ dual（图标 rail + 二级侧栏），移动端（≤767px）自动降级抽屉侧栏 + 遮罩；旧 `Header.vue` / `Sidebar.vue` 删除，14 个自包含组件重写（`index.vue` + `components/{Logo,Collapse,Breadcrumb,AppMenu,PrimaryNav,LayoutSwitcher,LocaleDropdown,UserInfo,ToolHeader,ContextMenu,TagsView,AppView,MenuIcon}.vue`）
+* **feat(layouts/default):** 路由 → 菜单树派生（`config/menu.ts`）——基于 vue-router 5 `getRoutes()` 平铺语义构建，覆盖 index 子路由（`path: ''`）/ 单子项提升（`resolveSingleChild`，复刻 `hasOneShowingChild`）/ `menuVisible` 过滤 / affix 页签收集（`filterAffixRoutes`）；外链新窗口打开
+* **feat(store):** `app` store 新增 `layout: LayoutMode`（localStorage 持久化）+ `mobile`（matchMedia 监听，移动端强制折叠）；`tags-view` store 新增 `closeLeft` / `closeRight` / `removeCachedView`（页签刷新剔除 keep-alive 缓存）
+* **feat(layouts/default):** 多页签 TagsView——滚动页签条 + 右键菜单（刷新 / 关闭 / 关闭左 / 右侧 / 其他 / 全部）+ 左右滚动 / 刷新 / 更多工具按钮；刷新用 AppView 内部 key 重建实现（provide/inject），不新增 `/redirect` 路由
+* **feat(modules/workbench):** default 布局验收模块——`pnpm new-module workbench` 生成，父分组菜单（首页 index 子路由 + 分析页 + 监控页），视图 `defineOptions({ name })` 对齐路由 name 保证 keep-alive 缓存命中，页签内输入内容切换后保留可验证
+* **fix(layouts/default):** 菜单树构建两处边界——空 path 子路由（home/workbench 首页形态）解析为父路径本身（消除 '/home/' 幽灵路径导致的重复菜单项），index 子路由的标题 / 图标继承到父节点（mixed/dual 模式 PrimaryNav 消费顶层节点 title 不再为空）
+* **style(layouts/default):** `styles/default-tokens.scss` 对齐参考仓 `var.css` 精确值（亮：白侧栏 + 紫主色 #5b5bd6 + slate 文字色；暗：#111827/#0b1120/#818cf8）——EP 变量覆盖以 mixin 导出、施加在 `.vv-default-layout` 容器作用域（不污染项目全局主题与 portal 布局），布局专用变量（`--left-menu-*` 等）全局定义供 teleport 菜单弹层取用；顶栏 / 工具条 / 页签条毛玻璃（`color-mix` 94%/96% + `backdrop-filter: blur(16px)` + 双层 slate 阴影），侧栏 224/72、顶栏 60px、页签 38px、内容 padding 24px
+* **style(layouts/default):** Logo mark 38px + 按布局模式分色标题；菜单补箭头 1em / 内嵌子菜单列间隙 / 折叠图标 22px；内容区 `min-height` 扣除顶栏页签；TagsView 背景移交布局壳统一毛玻璃；Breadcrumb 修复 EP 2.14 + TS6 下 `:to="undefined"` 的 TS2379（改显式分支渲染）
+* **style(layouts/default):** 新增 `styles/element-overwrite.scss`——EP 弹层变量映射：default 布局挂载时 `index.vue` 往 `<html>` 写 `data-layout="default"`（卸载清除），teleport 到 body 的弹层（下拉 / Select / Dialog / Message 等）经 `[data-layout='default']` 选择器命中与容器相同的 EP mixin，获得紫色主题（亮：hover #eeeeff/#5b5bd6；暗：#252c49/#818cf8）；属性随路由切换，portal 布局页面无泄漏；不逐组件写覆盖规则（弹层类名与 portal 全局共享，无法限定作用域）
+* **fix(layouts/default):** 滚动职责归位——布局根 `height: 100%` 因 App.vue 的 ErrorBoundary / AsyncState 包装层（block + auto 高）截断 #app→布局的百分比高度链，退化为内容高度、页脚 50px 溢出致 body 滚动；布局根改 `100vh/100dvh` 锚定视口（自包含，不碰全局组件），`__scroll`（main 区）恢复为唯一滚动容器；AppView 内容 `min-height` 补扣 `--app-footer-height`，短内容页页脚恰好沉底
+* **fix(layouts/default):** TagsView 页签高度 22px → 31.4286px（与官网逐位一致）——非 scoped 样式下 `:deep()` 规则整体被浏览器丢弃致 `.el-scrollbar__view` 高度链断裂，AppMenu 8 处同款问题一并改为普通后代选择器（菜单 44px / radius 10px / gap 10px 定制恢复生效）；布局 TagsView 命名空间 `tags-view` → `default-tags-view`，规避 `src/components/common/TagsView`（无模板引用的死代码）全局非 scoped 样式的同名命名空间冲突（align-items / padding 被篡改）；`item-body` / `link` 逐级 `font-weight: inherit` 恢复激活页签 600 字重（reset.css 对 div/a 设 normal 阻断继承链）
+* **test(layouts/default):** 新增 `config/menu.spec.ts` 15 用例（createRouter 真实实例验证平铺语义：index 子路由无重复 / 单子项提升 / 分组过滤 / 排除项 / affix 收集 / i18n titleKey 优先）
+* **i18n:** `menu.workbench*` 4 键入 zh-CN / en-US
+* **fix(layouts/default):** 语言切换全链路修复（功能审查实测发现的 Phase 1 遗留）——全仓无写 `i18n.global.locale` 的代码导致切换语言 UI 永不翻译；App.vue watch `appStore.locale` 同步 vue-i18n 实例 + `<html lang>`（immediate 兼刷新回灌），`app` store persist pick 增 `locale`（`app-ui` 实测写入 localStorage）
+* **i18n:** 菜单/页签/面包屑随语言热更新——home/user/demo 路由补 `meta.titleKey`（`menu.home` 文案对齐「仪表盘」、新增 `menu.demo`）；`TagView` 增可选 `titleKey`（`toTag` / `filterAffixRoutes` 携带），TagsView 渲染改 `tagTitle() = titleKey ? t(titleKey) : title`；Breadcrumb 改 `resolveRouteTitle(record, t)`；zh/en 同步新增 `header.*` 15 键（布局面板/折叠/dark/退出登录等）与 `tagsView.*` 11 键（工具 aria + 右键菜单 6 项），Collapse/LayoutSwitcher/ToolHeader/UserInfo/LocaleDropdown/遮罩全部接 t()；顺带修正 en-US `app.title` 残留错误产品名
+* **fix(layouts/default):** 页签刷新静默失效——TagsView 与 AppView 是 `<main>` 平级兄弟，AppView provide 的 `default-layout-refresh` 对 TagsView 不可见（控制台 injection not found 告警、refresh 空转）；refresh 句柄与 refreshKey 上提 `default/index.vue` 统一 provide，AppView 改 inject key。实测：keep-alive 切走切回输入保留、刷新后组件重建输入清空
+
+### ♻️ Code Refactoring | form-schema 错误守护 watcher 按需挂载（批次 3-3：L2）
+
+> 审计与设计：`docs/superpowers/specs/2026-09-09-form-schema-arch-audit.md`。行为等价重构，零公开 API 变更
+
+* **refactor(form-schema):** `useSetFieldError` 路径 B 守护从「全字段挂载」改为「按需挂载」（`use-set-field-error.ts`）——仅「当前有外部错误条目」的字段挂 validateState watcher，条目清除即 stop。大表单常态（无外部错误）watcher 数从 O(字段数) 降为 0；无条目的字段守护回调本就恒空跑，白挂 watcher 纯属浪费
+* **docs(form-schema):** 评估结论写入实现注释——审计原建议「合并为单次遍历比对」不可行：守护的职责是实时纠正（el-form blur 校验通过把 validateState 改回 success 时 externalErrors 未变，须在 ref 变化瞬间纠正），合并后纠正只在 externalErrors 变化时发生，两次变化之间的 drift（红字消失）将可见，属行为回归
+* **test(form-schema):** 行为等价由现有 19 个用例锁定（纠正语义 / diff 精准清理 / 幂等 / scope 清理全绿）
+
+### ✨ Features | form-schema 错误浮窗 OSD 可配置化（showErrorToast prop）
+
+* **feat(form-schema):** 新增 `showErrorToast?: boolean` prop（`XFormProps`）——XFormErrorToast 从「耦合 showDebugBanner（dev 环境恒开 / prod 恒关、用户不可控）」改为独立开关，**全环境默认 false（关闭）**，传 `:show-error-toast="true"` 开启；错误主反馈始终是字段红字 + console 留痕，toast 仅为补充提醒，默认开启会对连续输入校验失败场景造成弹窗噪音
+* **docs(form-schema):** README §props（10→11 个）+ §prod 错误反馈表 + 生产推荐配置段、ARCHITECTURE.md 目录树与三层错误展示表、XFormErrorToast/XForm 模板注释同步「dev only」旧描述
+* **demo(form-schema):** `XFormCrossField.vue` 新增「错误浮窗 OSD」开关，演示 showErrorToast 开启效果（跨字段失败 toast 即时可见）
+* **test(form-schema):** XForm 集成 spec 新增 2 用例——未传 prop 时错误事件不渲染浮窗（默认关闭）、传 `show-error-toast` 时渲染
+
+### 🐛 Bug Fixes | form-schema errorBus 去重窗口改固定窗口（批次 3-4：L1）
+
+> 审计与设计：`docs/superpowers/specs/2026-09-09-form-schema-arch-audit.md`
+
+* **fix(form-schema):** 去重命中不再刷新窗口起点 —— 原滑动窗口语义下，高频同码错误（如每键触发的 crossValidator 失败）每次命中都顺延窗口起点，持续触发时首次弹窗后**永不重复展示**；改为固定窗口（节流语义：距上次入列满 5s 后下一条立即入列），错误重新出现后最迟 5s 内再次提醒
+* **fix(form-schema):** dedupeCache 增加容量上限 100 —— 历史「code|message」组合原本无限累积导致 Map 无界增长；触顶时先清理窗口起点已过期的条目，仍超限则整体清空（最坏后果 = 去重短暂失效，无正确性影响）
+* **docs(form-schema):** `report` JSDoc 明确去重粒度契约：去重键 = code + message，message 变化的错误视为新错误立即入列，调用方须保证 message 承载区分信息（如含字段名/失败数量）或传 `force: true`（9 个现有调用点逐一核对均满足）
+* **test(form-schema):** 新增 2 个用例锁定固定窗口语义（命中不刷新窗口起点）与容量上限行为
+
+### 🐛 Bug Fixes | form-schema 错误清除语义修复（跨字段 demo 实测）
+
+> 用户在 `/demo/xform-cross-field` 实测反馈两个错误清除语义 bug，经 chrome-devtools MCP 浏览器实证定位根因后修复
+
+* **fix(form-schema):** 路径 B watch 清理逻辑从「无外部错误条目即清错」改为「上一轮有外部错误条目、本轮没有才清错」的 diff 精准清理（`use-set-field-error.ts`）——修复 el-form 内部错误（如 required 红字）被误清的问题：空保存后填确认密码触发跨字段错误时，日期字段未触碰但其 required 红字被 watch else 分支无差别清空
+* **fix(form-schema):** `useCrossFieldTrigger` 新增 `onFormReset()`（取消排队 debounce runner + 重拍 deps 快照），composer 包装 `exposed.resetFields` 在实例重置后同 tick 调用（`use-cross-field-trigger.ts` / `use-xform-composer.ts`）——对齐 el-form 官方「resetFields 后不重新校验」惯例，修复重置后兜底 watch 把「重置造成的值变化」当普通变化重跑 crossValidator 的问题（如 user.age 重置回 10 时「未成年」红字复现）
+* **test(form-schema):** 新增 4 个回归用例锁定两个语义（外部错误新增不误清 el-form 内部错误 / 条目删除仅清对应字段；onFormReset 后兜底 watch 空跑不重校验 / 取消排队 debounce runner）
+
+### ♻️ Code Refactoring | form-schema 抽取 walkSchema 公共遍历器（批次 3-2：M5）
+
+> 审计与设计：`docs/superpowers/specs/2026-09-09-form-schema-arch-audit.md` | 计划：`docs/superpowers/plans/2026-09-09-form-schema-batch3-2-walk-schema.md`。零公开 API 变更、零行为变更（各调用方遍历方向集合经 opts 精确保持）
+
+* **refactor(form-schema):** 新增 `utils/walk-schema.ts` —— schema 树「children / slots / formItem.slots / array.itemSchema」四向递归公共遍历器（visitor 模式 + early-exit + 三方向 opts 开关），统一 6 处手写递归：use-reaction.ts `containsReaction` / `applyReactions`、use-schema-renderer.ts `containsAsyncOptions` / `registerAsyncOptions`、use-validate.ts `collectCrossRuleFields`（顺带删除从不消费的 keyPath 死参数）、use-schema-index.builder.ts `buildIndex`（顺带删除本地 traverse / isSchemaNodeLike）。新增一种容器字段类型从改 5+ 处收敛到改 1 处（开闭原则）；净 -131 行
+* **refactor(form-schema):** `traverseCross`（use-validate.ts）保持独立不复用 —— array 节点按 model[name] 运行时行数展开 itemSchema，遍历形状由 model 驱动而非 schema 静态结构，语义与静态遍历器本质不同；文件头加 `@see` 注释说明
+* **docs(form-schema):** ARCHITECTURE.md 目录树补 utils/ 区块（含批次 1-1 两个 util，此前未列入）；审计文档批次 3 表格 3-2 标完成
+
+### 🐛 Bug Fixes | form-schema 表达式沙箱实例级化（批次 2-3：H2）
+
+> 审计与设计：`docs/superpowers/specs/2026-09-09-form-schema-arch-audit.md` | 计划：`docs/superpowers/plans/2026-09-09-form-schema-batch2-3-expression-scope.md`
+
+* **fix(form-schema):** 表达式沙箱从模块级共享状态改为 per-instance `createExpressionScope()`（H2）——此前函数表 + 编译缓存为模块级共享，同页多 XForm 实例互相污染（浏览器实测三种形态：B mount 覆盖 A 的函数表、A unmount 清表致 B 表达式 ReferenceError、A 重挂载覆盖 B）。composer 统一注入实例 scope 到 4 个消费点：`useTopLevelFields` / `useSchemaRenderer`（reaction 管线 traverse → applyReactions → applyReactionFields）/ `useRenderRoot`（on 事件绑定 / permission 表达式）；`useExpressionFunctions` 改为写注入 scope，删除 onScopeDispose 清表（scope 随实例 GC）
+* **deprecate(form-schema):** 模块级 `setExpressionFunctions` / `resolveFunctionExpression` 标 `@deprecated`（对外公共 API，直接删除是 breaking change；form-schema 内部已全部改用实例 scope）
+
+### 🐛 Bug Fixes | form-schema 行为修复（批次 2：H3 + H1）
+
+> 审计与设计：`docs/superpowers/specs/2026-09-09-form-schema-arch-audit.md` | 计划：`docs/superpowers/plans/2026-09-09-form-schema-batch2-behavior-fixes.md`
+
+* **fix(form-schema):** 跨字段兜底 watch 从顶层浅拷贝 diff 改为按 rule 的 deps 值快照 diff（`use-cross-field-trigger.ts`，对齐 use-reaction deps 快照模式）——修复嵌套路径直改（`model.user.age = 30` 绕过 v-model）时新旧快照同引用恒判未变、crossValidator 漏触发的问题（H3）
+* **fix(form-schema):** 字段级 `disabled`/`hidden` 的 standalone 函数 / `'{{ fn }}'` 形态在克隆阶段由 `applyReactions` 归一化为 reaction 条目走既有 watch 求值管线（`use-reaction.ts`）——修复函数形态被原样 spread 进组件 props（dev prop type 警告 + 字段永久禁用/恒隐藏）的问题（H1）
+
+### ♻️ Code Refactoring | form-schema 校验/错误子系统内部重构（批次 1）
+
+> 审计与设计：`docs/superpowers/specs/2026-09-09-form-schema-arch-audit.md` | 计划：`docs/superpowers/plans/2026-09-09-form-schema-batch1-refactor.md`。零公开 API 变更、零行为变更
+
+* **refactor(form-schema):** 抽取 `utils/collect-el-field-errors.ts` —— 三处对 `ef.fields` 的 `toRaw → validateState==='error' → validateMessage → propString||prop` 扫描结构重复（use-form-instance validateField / use-form-validation validateForm / validateDetail）统一为单一工具，element-plus 3.0 升级 diff 面从 3 处收敛到 1 处
+* **refactor(form-schema):** 抽取 `utils/run-el-form-validate.ts` —— el-form.validate「callback + reject 双轨」Promise 包装两处重复统一；EP 2.x 即使传 callback 仍 reject errorsMap 的兜底行为单点维护
+* **refactor(form-schema):** 删除 useFormValidation 死依赖 `crossFieldTrigger`（deps 接口 / 解构 / `void` 占位 / composer 传参 / spec mock 五处同步），合并 validateForm 两个逐字重复的守卫分支
+* **refactor(form-schema):** 删除 useFormInstance.validateForm 死代码（生产零调用方，与 useFormValidation.validateForm 同名不同语义，属维护陷阱）+ spec 4 个用例；XFormExpose 上的 validateForm 来自 useFormValidation，对外契约不变
+* **perf(form-schema):** composer 的 fieldErrors watch 去 `deep: true` —— setFieldError 对外部错误的写入均为顶层键赋值/删除，浅 watch 即可捕获（use-set-field-error 路径 B 守护内的 deep watch 保留不动）
+* **docs(form-schema):** 修正 render-form-item 阶段 3.1 过时注释（原称「不直接修改 elForm.fields[i]」，实际双路径设计——路径 B 的 watch 守护恰恰直接写字段内部 ref）；triggerRender 的 window 调试计数器收敛至 use-dev-runtime 的 `trackTriggerRender()`
+
+### ♻️ Code Refactoring | form-schema 目录归位（components/ + adapters/）
+
+* **refactor(form-schema):** 5 个 Vue 组件（XForm / SchemaField / XFormDebugBanner / XFormErrorToast / XFormErrorToastItem，含各自 spec）从根目录移入 `components/`；`element-plus-adapter.ts`（含 spec）移入 `adapters/`。纯目录归位，零逻辑变更（git mv 保留历史）
+* **refactor(form-schema):** 同步修复 70+ 处 import 路径 —— barrel `index.ts`、编排层（use-xform-composer / use-dev-runtime）、被移文件内部对 `types` / `composables` / `styles` 的引用、`xform-contract.spec.ts` 的 CSS 路径正则（`./styles` → `../styles`）、demo 模块 48 个示例 + demo 文档 2 处直接 import 旧路径（`@/components/form-schema/XForm.vue` → `…/components/XForm.vue`）
+* **refactor(form-schema):** 2 个编译期类型测试移入 `types/` 并去掉冗余 `types.` 前缀——`types/types-derivation.test-d.ts`、`types/custom-component.test-d.ts`（就近被测对象原则）；demo 提示文案同步
+* **docs(form-schema):** ARCHITECTURE.md 目录树 + 演进时间线（v3.1.0）+ spec 分布说明同步；README 生产配置示例 import 路径、CONTRIBUTING 自定义组件指引路径同步
+
+### 💄 Style | ProTable 树形展开箭头改内联自定义图标
+
+* **fix(ProTable):** 树形模式展开开关此前借用 `type:'expand'` 列的 el-table 自带 icon——箭头固定在独立 48px 列、不随 `_level` 缩进，层级感缺失；改为树列内联自定义箭头（`▾`/`▸`，随缩进内联于节点名前），按钮 reset 浏览器默认外观 + hover 主题色
+* **fix(ProTable):** 隐藏规则收进 `is-tree` 作用域——根节点新增 `bem.is('tree')` 状态类，el-table 自带 expand icon / 展开行内容仅在树形模式隐藏（此前 `.el-table__expanded-cell` 无条件隐藏，非树形场景 expand 列的「展开行内容」能力被误伤，README 列类型表承诺的 expand 能力随之恢复）
+* **fix(ProTable):** 树形懒加载展开后控制台 `Duplicate keys found during update` 警告 + 子行重复渲染——树形行对象带 `children` 字段（useTreeData 懒加载赋值），el-table 默认 `tree-props` 识别该字段把行递归渲染为树节点，与 ProTable 自行扁平化的 flatData 平铺行双渲染同一节点；树形模式下 `treeProps` 指向哨兵字段（`__pro_table_flat__`），el-table 按纯平铺渲染，展开/懒加载由 useTreeData 单一职责接管。mock 中历史「深拷贝防 Duplicate keys」注释的误修根源即此
+* **test(ProTable):** 集成 spec 补树形回归用例——懒加载 mount 后断言表体行数 = flatData 行数（修复前多渲染 1 行）且 console.warn 无 Duplicate keys（真实 mount ElTable 复现）。测试 156 → 157
+* **docs(demo):** `ProTableTree` 移除 `__expand__` 列（48px icon 列不再需要），展开交互统一走树列内联箭头
+
+### 🐛 Bug Fixes | ProTable 多选列渲染 + 刷新保持表格实例 + 刷新 loading 遮罩
+
+> 由 overview demo 新增「勾选 / 清除勾选」验证入口暴露（此前多选无任何 demo 可验）
+
+* **fix(ProTable):** element-plus 引擎 `type: 'selection'` 列行内勾选框不渲染——`ElementTableBody` 对 ElTableColumn **统一提供 default slot**，覆盖 el-table 对 selection 列的内置 checkbox 渲染（`cellForced.renderCell` 仅在无 default slot 时生效），行内单元格空白只剩表头全选框；selection 列排除出 default slot（`v-if="col.type !== 'selection'"`），交还 el-table 自渲染
+* **fix(ProTable):** 多选跨页记忆（`reserve-selection`）失效——`AsyncState` 的 loading 分支以 skeleton 替换插槽，每次翻页/搜索刷新都**卸载重建 ElTable 实例**，其 store 内多选选区 / 展开行等交互态全部丢失；`initialLoading` 收窄判定（仅「从未渲染过数据」时 skeleton，之后刷新保留表格实例、loading 期间展示旧数据），配合 `tableProps: { reserveSelection: true }` 跨页累计选区可用
+* **fix(ProTable):** 切分页/排序/搜索刷新期间表格无 loading 指示——`initialLoading` 收窄的补偿缺口：后续刷新表格保持挂载但缺少遮罩；`ElementTableBody` / `VxeTableBody` 新增 `loading` prop，编排层传 `table.loading && hasTableMounted`（首次 skeleton 与表格遮罩不叠加）。el 引擎走 `v-loading` 指令；vxe 引擎走外层容器 `v-loading` —— vxe 自带 `loading` prop 的遮罩组件 `VxeLoading` 由未安装的 vxe-pc-ui 提供（vxe-table esm 版不含，UMD 才内置），`VxeUI.getComponent('VxeLoading')` 返回 undefined 致原生 prop 无效；待评估引入 vxe-pc-ui 后可换回原生 prop（tooltip 等组件同此依赖）
+* **fix(ProTable):** el 引擎切密度（紧凑/默认/宽松）时表头高度不变、且与表体行高不对齐——密度覆盖只作用于表体 `.el-table__row td`（`height` 显式设定），表头 `th.el-table__cell` 仅补 padding 时高度 = 内容行高(约 23.6px) + padding，默认档实测 39.57px vs 表体 48px，两引擎并排 demo 出现高度差；表头同步设 `height`（table 布局中按最小高度生效）与表体对齐。vxe 引擎表头与表体共用 `--vxe-ui-table-row-height-*` 变量，无此问题
+* **refactor(ProTable):** 密度档位值（行高 32/48/64、垂直 padding 4/8/12）提取为 Sass map 设计令牌（`$pro-table-density-tokens`）+ `@each` 生成 el 表体/表头、vxe 四尺寸键共 21 处分散硬编码——调档/新增档位单点维护（压缩编译产物 diff 验证零行为变化）
+* **test(ProTable):** 集成 spec 补回归用例——selection 列行内渲染 el-table 内置 checkbox（真实 mount 断言 `.el-table__body .el-checkbox`）；切分页请求挂起期间断言 `.el-loading-mask` 出现、数据到达后消失；测试 154 → 156
+* **docs(demo):** overview 新增「多选（勾选 / 清除勾选，含跨页记忆）」演示区块（`#demo-selection`）——`getSelectedRows` / `clearSelection` 外部按钮 + reserve-selection 跨页验证入口
+
+### 🐛 Bug Fixes | ProTable v2.2-M1 正确性修复（深度审计驱动）
+
+> 审计与设计：`docs/superpowers/specs/2026-09-08-protable-v2.2-arch-audit-design.md`
+
+* **fix(ProTable):** `element` expose 恒为 null——`useTable.tableRef` 创建后从未接线；`ElementTableBody` 经 defineExpose 转发 ElTable 实例（getter 透传 `$el`，保持 getTbody 行拖拽挂载点可用），编排层 watch 同步进 `table.tableRef`；`clearSelection()` 同步调用 el-table 实例的 `clearSelection()` 清 UI 勾选态（vxe 引擎 tableRef 为 null，可选链兜底）
+* **fix(ProTable):** 列设置持久化只恢复列顺序——`persist()` 写入的 `visible`/`fixed` 在加载路径从不读取（隐藏的列、固定的列刷新后复原）；setup 回填 `persisted.visible` → `visibleKeys`、`persisted.fixed` → 列副本 + `fixedKeys`（未收录的列显式取消固定，防 props 初始 fixed 回移）；`resetToDefault` 同步重置 `fixedKeys`；`persist()` 的 visible 口径改为有效可见性（`hidden` 字段与抽屉 `visibleKeys` 取交集），与回填口径一致，round-trip 不漂移
+* **fix(ProTable):** 跨页 reset / setSearchParams 双发请求——fetchHook 对齐 `onSortChange` 同场景模式：page≠1 时仅 `setPage(1)` 由 page watch 触发请求，不再紧接手动 `refresh()` 第二次
+* **refactor(ProTable):** 移除僵尸配置字段（类型层承诺但运行时零读取点）——`RowEditConfig.trigger/exclusive`、`TreeConfig.showLine`、`CellSpanConfig.judge/spanHeader`、`ProColumn.isFilterEnum/fieldNames`
+* **test(ProTable):** 测试 147 → 154（element expose 接线并断言穿透至 ElTable 实例方法 / clearSelection UI 联动 / 持久化回填与 round-trip / fixed 取消固定不回移 / resetToDefault 重置 fixedKeys / 跨页 reset 单请求）
+
+### 🐛 Bug Fixes | ProTable vxe 引擎密度 / 列设置不生效
+
+* **fix(ProTable):** vxe 引擎密度行高对齐机制修正——vxe-table 由 JS 测量 CSS 变量 `--vxe-ui-table-row-height-*`（隐藏尺寸元素 `.vxe-table-var-*`）并以「内联 min-height」写进 `.vxe-cell`，此前对 `.vxe-body--row td` 设 height/padding 会被内联 min-height 顶开（default 档实测行高 64px，与 el 引擎 48px 并排差 ~180px）；密度改为覆盖该组变量（四尺寸键同值，compact 档同步缩 `.vxe-cell` 垂直 padding 防 38px 底），双引擎表格高度差收敛到 ~26px（残余为 vxe 单元格边框 ~1.5px/行 + 表头 ~10px）；测量结果有缓存，动态切密度由 `handleDensityChange` 触发 VxeTableBody 暴露的 `recalculate()` 重算（el 引擎纯 CSS 即时生效无需此步）；列设置抽屉被 `v-if="engineRef === 'element-plus'"` 排除，vxe 引擎点击无反应——ColSetting 操作引擎无关数据层（useColumns），移除引擎限制；列设置拖拽排序后 vxe 表格列序不更新——vxe-table 在 VxeColumn 挂载时按 DOM 序注册 staticColumns，Vue 按 key 移动组件实例不触发重注册，VxeColumn 的 key 由 `col.prop` 改为带序位 `` `${col.prop}:${index}` ``，重排时全量 remount 按新 DOM 序重新注册；窄容器下 vxe 表格 enum 列（ElTag 固有宽度内容）被自动列宽压到 tag 宽度以下，tag 溢出单元格被表格容器裁剪——toVxeColumnProps 对未显式声明 width/minWidth 且无自定义 render 的 enum 列补 minWidth 80px 兜底（el-table 自动布局按内容撑开列，无此问题）
+* **test(ProTable):** engine spec 补 2 用例（vxe 引擎下 ColSetting 渲染 + 列设置按钮开抽屉 + 密度按钮桥接 data-density + 密度切换触发 vxe recalculate；列重排后列组件全量 remount + DOM 新序）
+
+### 🐛 Bug Fixes | ProTable 搜索区窄容器宽度塌陷
+
+* **fix(ProTable):** SearchForm 固定 4 列布局在窄容器（如引擎对比 demo 双栏 pane ~630px）下列宽压到 ~150px、输入框 ~80px 不可用。element-protable-overwrite.scss 新增 CSS 容器查询（container-type: inline-size）：搜索区 ≤900px 自动降 2 列、≤560px 降 1 列；element-plus 栅格断点基于视口宽度，对"视口宽但容器窄"场景无效，容器查询按组件自身宽度降级
+
+### 🐛 Bug Fixes | vxe-table 引擎 dev 模式 `@vxe-ui/core` 解析失败
+
+* **fix(deps):** vxe-table@4.21.x 的 es 产物运行时 import `@vxe-ui/core`，但包未声明依赖 → pnpm 严格 node_modules 下依赖缺失，vite dev 预构建产物保留裸导入导致 `Failed to resolve import "@vxe-ui/core"`。经 `pnpm-workspace.yaml` 的 `packageExtensions` 补声明 `@vxe-ui/core ^4.4.0`（连带 xe-utils / dom-zindex 进依赖图）+ `publicHoistPattern` 提升三个包到根 node_modules
+* **chore(pnpm):** 修复 `.npmrc` 第 2 行两行粘连的配置损坏（`onlyBuiltDependencies[]=@parcel/watchershamefully-hoist=true`，`shamefully-hoist` 从未生效）；pnpm 11 项目级配置统一迁移至 `pnpm-workspace.yaml`（`pnpm config list` 不再读取项目 .npmrc）
+
+### ✨ Features | ProTable v2.1 —— vxe-table 引擎
+
+> 设计稿：`docs/superpowers/specs/2026-09-08-protable-v2.1-vxe-engine-design.md` | 计划：`docs/superpowers/plans/2026-09-08-protable-v2.1-vxe-engine.md`
+
+* **feat(pro-table):** `table-engine="vxe-table"` 渲染引擎实装——`useVxeTable` 动态加载（JS + CSS 按需注入 + app 安装，chunk 不进首屏），加载失败自动回退 element-plus 并 console.warn
+* **feat(pro-table):** ElTable 渲染分支抽离为 `ElementTableBody.vue`（纯移动，行为零变化）；新增 `VxeTableBody.vue` 第二引擎分支
+* **feat(pro-table):** vxe 列映射层 `adapters/vxe-column.ts`（prop→field / label→title / selection→checkbox 等）+ `ProColumn.vxeProps` 恢复（补充不覆盖派生值）
+* **feat(pro-table):** vxe 事件适配——checkbox-change/checkbox-all 合并为 selection-change（选区按 rowKey 比较，兼容 vxe 内部数据代理）、sort-change 负载 { field, order } → { prop, order }
+* **feat(pro-table):** vxe 引擎能力矩阵对齐——行编辑/单元格合并/服务端排序/多选支持；树形/行拖拽启动校验 warn 并忽略
+* **test(ProTable):** 新增 `ProTable.engine.spec.ts` 引擎切换 4 用例（vxe 渲染 / fallback 回退 / checkbox 合并选区 / sort 负载适配）
+* **docs(ProTable):** README 引擎章节（用法 + 能力矩阵 + vxeProps）；ARCHITECTURE 文件清单同步；CONTRIBUTING 删除 v2.1 接入清单、更新已知限制；新增引擎对比 demo（ProTableEngineCompare）
+
+### ✨ Features | ProTable 下一迭代（M1 泛型化 → M2 服务端排序 → M3 响应适配器）
+
+> 计划文档：`docs/superpowers/plans/2026-09-08-protable-next-iteration.md`
+
+* **feat(pro-table):** ProColumn/ProTableProps 泛型化（render row 精确到 T，默认 `Record<string, unknown>` 向后兼容；方法语法 bivariance 保证下游子组件零改动）
+* **feat(pro-table):** 服务端排序（`sortable: 'custom'` 接线 + `sortParamsAdapter` 序列化适配 + `sort-change` 事件 + `getSortState` 暴露；排序状态归 useTable，不混入 searchParams）
+* **feat(pro-table):** `responseAdapter` 响应结构适配 + fail-fast 校验（data 非数组 / total 非数字 → console.error + 错误态）
+* **test(ProTable):** 测试 96 → 111（新增排序 4 用例 + 集成接线 3 用例 + responseAdapter 2 用例 + 类型层断言 spec）
+* **docs(ProTable):** README 新增泛型/服务端排序/响应适配三节；ARCHITECTURE 状态归属/依赖/错误处理同步；新增服务端排序 demo（ProTableServerSort）
+
+### 🐛 Bug Fixes | ProTable 行拖拽取消二次确认后顺序已变（DOM 未还原）
+
+* **fix(ProTable):** `useRowDrag` `onEnd` 先还原 sortablejs 物理移动过的 DOM 行再走确认/取消/跳过分支——取消、onSortChange 抛错、树形映射失败时 DOM 不再残留错位（与 ColSetting 列设置拖拽修复同理：Vue 保持唯一数据源）
+* **test(ProTable):** useRowDrag 增 2 用例（取消还原 DOM / 映射失败还原 DOM）
+
+### 🔧 Refactors | ProTable 架构优化（5 步计划，2026-09-08 评估驱动）
+
+> 计划文档：`docs/superpowers/plans/2026-09-08-protable-arch-refactor.md`
+
+* **fix(ProTable):** searchParams 单源化（H1/H2）——唯一真相源收归 `useSearch`，`useTable` 改为 `getSearchParams` 读取回调；修复「程序化 setSearchParams 后请求参数错配」与「输入即搜无防抖」两个缺陷；输入路径（`updateParams` 纯写）与请求路径（按钮门控）分离
+* **fix(ProTable):** useRowEdit 硬编码 `r.id`（H5）——注入 `props.rowKey`，自定义行 key 表格保存/错误回调不再失效
+* **fix(ProTable):** 树形拖拽索引错位（H6）——DOM 视图行 key 映射回顶层数组索引后 splice，映射失败 console.warn 并跳过（替代静默错位）
+* **refactor(ProTable):** 能力编排归位（H4）——`useRowDrag` 自持 DOM 挂载生命周期（onMounted + watch data flush:'post'），删除 ProTable.vue 3 个 setTimeout + 2 个 watch；`useTreeData.flatData` 响应式化 + `dispose()` 资源清理；抽取 `EditCell.vue` / `CellContent.vue` 子组件（ProTable.vue 384 行 ≤400 达标）
+* **refactor(ProTable):** props 保护（M2/M5）——`useColumns` 白名单拷贝列对象，外部 columns 常量不再被反向 mutation，多实例共享互不污染；`validateCapabilities` 消除原地改写调用方配置
+* **refactor(ProTable):** 行为等价清理——删除 `useVxeTable` 死路径（方案 A：vxe-table 引擎 warn 并回退 element-plus，骨架可从 aaedabf 恢复，v2.1 接入清单见 CONTRIBUTING.md）、删除模板死代码与 useTable 死字段、`colSettingVisible` 单源化、engine 锁定语义统一
+* **test(ProTable):** 测试 75 → 96（新增 searchParams 单源化 / 树形拖拽映射 / 列拷贝保护 / vxe 回退 / 自定义 rowKey 等 21 个用例）
+* **docs(ProTable):** README / ARCHITECTURE / CONTRIBUTING 同步，旧实现计划文档标注 vxeProps 已移除
+
+### 🐛 Bug Fixes | ProTable 列设置拖拽排序不生效（双根因修复）
+
+* **fix(ProTable):** 列设置抽屉拖拽后表格列顺序不更新
+  * 根因 1（`ColSetting.vue`）：sortablejs 拖拽过程中即移动真实 DOM 节点，旧实现取 `children[newIndex]` 作目标列，但该位置恰为被拖元素本身 → `to === from` 被守卫拦截，`reorder` 事件从未发出。改为 `onStart` 捕获旧顺序、`onEnd` 从 DOM 读取完整新顺序 emit（`reorder: [string[]]`）+ 还原 DOM 让 Vue v-for 保持唯一数据源
+  * 根因 2（`useColumns.ts`）：`sortedColumns` 按 setup 时的一次性 `persisted.order` 快照排序（非响应式），即使事件到达、allColumns 已重排，表格仍按旧顺序渲染。改为响应式 `columnOrder` ref；`reorderColumns(from, to)` 重构为 `setColumnOrder(order)`
+  * `resetToDefault` 同步重置列顺序；持久化 order 由"仅可见列"改为"完整列顺序"（隐藏列重新显示后位置不再漂移）
+  * `src/types/sortablejs.d.ts` 补 `onStart` 回调声明
+* **test(ProTable):** useColumns 增 4 用例（setColumnOrder 排序 / 持久化 order 存在时回归 / order 缺列容错 / resetToDefault 恢复顺序）；ColSetting 增 onEnd 回归用例（emit 完整顺序 + DOM 还原）
+
+### ✨ Features | ProTable v2.0 —— 4 类核心能力扩展
+
+* **feat(ProTable):** 行内编辑（双击进入 + 多行并行 + 异步校验 + 草稿保留）
+  * 新增 `useRowEdit` composable（71 行，9 个单测）
+  * `ProColumn.edit?: ColumnEditConfig` 字段（el / props / rules / editable）
+  * ProTableExpose 新增 `startEdit` / `cancelEdit` / `saveEdit`
+* **feat(ProTable):** 树形数据（懒加载 + 默认展开 + 搜索命中自动展开）
+  * 新增 `useTreeData` composable（76 行，8 个单测）
+  * 客户端遍历匹配 + 祖先路径自动展开 + 未加载节点 lazy load 触发
+* **feat(ProTable):** 单元格合并（element-plus spanMethod 包装 + 自定义 judge + 合并上限）
+  * 新增 `useCellSpan` composable（67 行，7 个单测）
+  * 同列相邻值自动纵向合并 / 自定义判定 / 跨列合并（_spanTarget 标记）
+* **feat(ProTable):** 行拖拽排序（sortablejs 绑定 + 业务拦截 + 跨层拖拽阻止）
+  * 新增 `useRowDrag` composable（80 行，8 个单测）
+  * 手柄列 / 整行拖拽 / `onSortChange` 异步确认 / `onMove` 跨层拦截
+* **feat(ProTable):** 能力冲突矩阵（6 条规则 + 启动校验 + warn 不 throw）
+* **refactor(ProTable):** `ProTable.vue` 编排层集成 4 个 composable + 启动校验 + 8 个 v2 expose 方法（303 → 421 行）
+* **refactor(useTable):** 新增 `editingKeys` / `treeExpandedKeys` / `isTreeMode` 状态字段（198 → 212 行）
+* **chore(types):** 新增 7 个 config interface（`ColumnEditConfig` / `ColumnTreeConfig` / `ColumnSpanConfig` / `RowEditConfig` / `TreeConfig` / `CellSpanConfig` / `RowDragConfig`），`ProColumn` 增 4 字段，`ProTableProps` 增 4 prop
+* **chore(types):** `sortablejs.d.ts` ambient module declaration（项目使用 sortablejs ^1.15.7 但无 .d.ts）
+* **feat(demo):** 5 个 demo 覆盖 4 类能力（编辑 / 树形 / 合并 / 拖拽 / 总览升级）
+* **test(ProTable):** 集成 spec 6 用例（冲突矩阵 + 启动校验 + 能力 prop 形式兼容）
+
+**已知限制**：vxe-table 引擎 v2.0 不适配 4 类能力（v2.1 议题）
+
+测试：v1 共 30 → v2.0 共 **75**（composable 32 + 集成 6 + demo 0 + v1 30 + 类型间接测试）
+
+### ✨ Features | 新增 ProTable 组件（配置驱动 + 双引擎架构）
+
+* **`src/components/ProTable/`**：新增配置驱动的企业级表格组件（Element Plus + vxe-table 双引擎）
+  * `columns` 数组同时定义表格列与搜索项（`ProColumn` 类型，~100 行类型契约）
+  * 自动生成搜索区（响应式布局 + 展开/收起，搜索按钮在前，附录 A #4）
+  * 工具栏：刷新 + 密度切换 + 列设置（复选框切换可见性，附录 A #6 "恢复默认"）
+  * 分页区（基于 el-pagination，page / pageSize 自动同步）
+  * 插槽系统：tableHeader / toolButton / [prop] / operation / search-[prop] / empty / paginationLeft / paginationRight
+  * 多选跨页记忆（el-table reserve-selection + row-key，附录 A #1 保留多选）
+  * 双引擎切换：`table-engine="element-plus" | "vxe-table"`，**vxe-table 动态按需加载**（spec 决策 1）
+  * `defineExpose`：`refresh` / `reset` / `getSelectedRows` / `clearSelection` / `getSearchParams` / `setSearchParams` / `element` / `engine`
+  * 类型安全：`ProTableProps` / `ProColumn` / `ProTableExpose` / `EnumProps` / `SearchElType` / `TableEngine` / `TableDensity`
+  * 4 个 composables：`useSearch` / `useTable` / `useColumns` / `useVxeTable`（每个 ≤150 行）
+  * 3 个子组件：`SearchForm` / `TableHeader` / `ColSetting`
+  * 测试覆盖：7 个 .spec.ts，共 **30 个测试全过**
+
 ### ♻️ Refactor | XForm demo 可理解性深度修复（13 项 P0/P1/P2）
 
 基于批量可理解性审查（48 个 demo 评估 + 已读 13 个关键 demo 代码交叉验证）的修复批次：

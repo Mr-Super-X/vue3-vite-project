@@ -1,4 +1,14 @@
 <script setup lang="ts">
+/**
+ * 搜索框（type select + keyword input + submit button）。
+ *
+ * v-model 双向绑定：父组件通过 `v-model:model-value-type` + `v-model:model-value-keyword`
+ * 同步两个独立状态。提交条件：非 loading + keyword 去除首尾空格后非空。
+ *
+ * @see [`@/modules/home/config/types`](../config/types.ts) SearchTypeOption
+ * @see [`./HeroSection.vue`](./HeroSection.vue) 父容器
+ * @group 业务模块：Home
+ */
 import type { SearchTypeOption } from '@/modules/home/config/types'
 
 // BEM 工具由 unplugin-auto-import 自动注入，无须显式 import

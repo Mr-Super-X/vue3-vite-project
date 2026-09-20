@@ -1,4 +1,14 @@
 <script setup lang="ts">
+/**
+ * 数据总览错误态：错误信息 + 重新加载按钮。
+ *
+ * emit('retry') 由父容器（OverviewSection）重新触发 store.fetch()。
+ *
+ * A11y：`role="alert"` 让屏幕阅读器立即播报错误内容。
+ *
+ * @see [`./OverviewSection.vue`](./OverviewSection.vue) 父容器
+ * @group 业务模块：Home
+ */
 import { CircleCloseFilled } from '@element-plus/icons-vue'
 
 // BEM 工具由 unplugin-auto-import 自动注入，无须显式 import

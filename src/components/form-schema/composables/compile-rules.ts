@@ -1,6 +1,8 @@
 /**
  * 校验规则编译：字符串规则名查表 + 未注册警告（拼写错误静默降级极难排查，必须显式告警）；
  * 必需字段默认 message 自动注入（label-aware，避免英文 message 透出）。
+ *
+ * @group 表单编排：校验
  */
 import type { SchemaNode, XFormProps } from '../types'
 

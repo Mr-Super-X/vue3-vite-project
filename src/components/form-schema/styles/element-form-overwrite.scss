@@ -5,6 +5,11 @@
     width: 100%;
   }
 
+  /* el-input-number 样式覆盖 */
+  .el-input-number {
+    width: 100%;
+  }
+
   /* Card / Row / FormItem 等顶层 schema 节点同辈垂直间距：
      关键洞察——element-plus + XForm 渲染逻辑：
        schema.column = 1 → 全部 child 包在同一个 row 内，每个 child 一个 col-24，
@@ -39,9 +44,81 @@
     gap: 12px;
   }
   /* ArrayNode body 内部 row 与 row 间距：
-     每个 row 是 array-node__row-body + array-node__row-actions 组成的 flex 容器；
      兄弟选择器 + row 给同辈 row 之间加 12px 垂直间距，避开 :last-child 陷阱 */
   .array-node__body > * + * {
     margin-top: 12px;
+  }
+
+  /* ArrayNode 行布局：row-body（行内表单字段栅格）与 row-actions（上移/下移/删除）
+     水平排列。render-array-node 渲染结构即 body+actions 两个 div，此前引擎未提供
+     默认布局，消费者被迫自行补 CSS（见 XFormStyleOverride demo 的场景补丁） */
+  .array-node__row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    /* F7 拖拽排序：源行半透明（dragstart 加 .is-dragging，dragend 清除） */
+    &.is-dragging {
+      opacity: 0.5;
+    }
+    /* F7 落点指示线：dragover 时按鼠标垂直位置（上半/下半）加 .is-drop-before / .is-drop-after，
+       用 ::before/::after 渲染 2px --el-color-primary 插入线（绝对定位跨整行宽度） */
+    &.is-drop-before,
+    &.is-drop-after {
+      position: relative;
+      &::before,
+      &::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--el-color-primary);
+        pointer-events: none;
+      }
+    }
+    &.is-drop-before::before {
+      top: -1px;
+    }
+    &.is-drop-after::after {
+      bottom: -1px;
+    }
+  }
+  .array-node__row-body {
+    /* 占据剩余宽度；min-width:0 允许内部 el-row 栅格收缩，防止长字段撑破行 */
+    flex: 1;
+    min-width: 0;
+  }
+  .array-node__row-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+    /* 操作区垂直落位对齐首行表单控件；标签置顶（labelPosition=top）等场景
+       消费方可覆盖 --xform-array-actions-offset 微调 */
+    // padding-top: var(--xform-array-actions-offset, 24px);
+  }
+
+  /* ArrayNode 空态：虚线框 + 占位文字，避免空态文案无视觉边界裸奔 */
+  .array-node__empty {
+    padding: 24px 16px;
+    text-align: center;
+    color: var(--el-text-color-placeholder);
+    font-size: 13px;
+    border: 1px dashed var(--el-border-color);
+    border-radius: 6px;
+  }
+
+  /* 字段级 dirty 标记（设计师审查 F13）：showDirtyMark=true 时被修改字段的 label 右侧
+     追加橙色圆点（--el-color-warning），给用户"我改了哪里"的视觉线索。
+     数据侧 use-form-dirty.ts 维护 dirtyFieldsRef 响应式集合，render-form-item 给
+     对应 el-form-item 追加 .is-dirty class，此处用 ::after 渲染圆点本身 */
+  .el-form-item.is-dirty .el-form-item__label::after {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--el-color-warning);
+    margin-left: 4px;
+    vertical-align: middle;
   }
 }

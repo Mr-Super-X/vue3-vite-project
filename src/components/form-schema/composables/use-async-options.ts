@@ -1,3 +1,13 @@
+/**
+ * use-async-options —— Select/Cascader/TreeSelect/Autocomplete 远程数据源 composable
+ *
+ * 关键设计：
+ * - deps watcher 监 config.deps 变化（其他字段值变化触发重拉）
+ * - 序号令牌：旧 Promise 后返回不得覆盖新结果（异步竞态防护）
+ * - stop() 在 schema 替换或组件卸载时使 in-flight 响应失效
+ *
+ * @group 表单编排：异步选项
+ */
 import { ref, watch, onScopeDispose, type Ref } from 'vue'
 import { get } from 'lodash-es'
 import type { SchemaNode, AsyncOptionsConfig } from '../types'

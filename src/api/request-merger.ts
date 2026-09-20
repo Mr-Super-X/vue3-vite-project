@@ -40,6 +40,9 @@
  * - 业务侧 `import { withMerge }` 后按需包装，零侵入；
  * - 合并桶在模块加载期常驻（进程生命周期），无需手动清理；
  *   测试场景下用 `_resetMerger()` 清空避免用例间污染。
+ *
+ * @see [`src/api/http.ts`](./http.ts) 请求入口
+ * @group 网络基建：请求合并
  */
 import type { AxiosRequestConfig } from 'axios'
 

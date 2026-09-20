@@ -95,6 +95,23 @@ describe('validate-component-props', () => {
       validateSchemaProps(node, bus)
       expect(warnSpy).not.toHaveBeenCalled()
     })
+
+    it('onXxx 事件回调（onTabChange / onUpdate:modelValue 等）→ 合法透传不警告', () => {
+      const bus = mountBus()
+      // Vue 事件监听在 props 对象里以 on + 驼峰事件名形式透传（等价模板 @tab-change），
+      // 不在 Component.props 反射的 prop 声明白名单内 —— 校验器须豁免，否则误报
+      const node: SchemaNode = {
+        component: 'Tabs',
+        props: {
+          modelValue: 'basic',
+          onTabChange: () => undefined,
+          'onUpdate:modelValue': () => undefined,
+        },
+      }
+      validateSchemaProps(node, bus)
+      expect(warnSpy).not.toHaveBeenCalled()
+      expect(bus.events.value).toHaveLength(0)
+    })
   })
 
   describe('未知 props 触发警告 + OSD', () => {

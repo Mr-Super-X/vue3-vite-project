@@ -1,3 +1,16 @@
+/**
+ * 用户登录态 + profile + 权限码（全局共享 store）。
+ *
+ * 设计要点：
+ * - httpOnly 凭证：cookie 由后端管理，前端不可读；用 `Session.get('auth')` 标记位供守卫同步判断
+ * - 乐观退出：先清本地状态（用户立即"已退出"），后端 logout fire-and-forget
+ * - 不依赖 router 实例：避免 store → router → guards → store 的循环依赖
+ *
+ * @see [`@composables/useAuth`](../composables/useAuth.ts) 权限判断上层封装
+ * @see [`@composables/useLogout`](../composables/useLogout.ts) 退出登录流程
+ * @see [`./dict.ts`](./dict.ts) 登录后字典预加载
+ * @group 状态管理：用户登录
+ */
 import { authApi, type LoginPayload, type UserProfile } from '@/api/modules/auth'
 import { Session } from '@/utils/storage'
 import { globalAbort } from '@/api/global-abort'

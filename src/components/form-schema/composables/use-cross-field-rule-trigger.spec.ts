@@ -161,10 +161,7 @@ describe('useCrossFieldRuleTrigger', () => {
       ],
     }
     await triggerCrossFieldValidator(node, 'blur')
-    expect(errorSpy).toHaveBeenCalledWith(
-      '[XForm] crossValidator blur trigger threw:',
-      expect.any(Error)
-    )
+    expect(errorSpy).toHaveBeenCalledWith('[XForm] crossValidator threw:', expect.any(Error))
     // 不写错误（异常 catch 后 continue）
     expect(setFieldError).not.toHaveBeenCalled()
   })

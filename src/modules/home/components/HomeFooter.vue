@@ -1,6 +1,12 @@
 <script setup lang="ts">
-// 首页底部：全宽色块 + 横向链接矩阵 + 版权信息
-// 规格：源自 MeaXure 1920 artboard；上块 (links) y=994..1216 / 下块 (copyright) y=1216..1288
+/**
+ * 首页底部：全宽色块 + 横向链接矩阵 + 版权信息。
+ *
+ * 规格：源自 MeaXure 1920 artboard；上块 (links) y=994..1216 / 下块 (copyright) y=1216..1288。
+ *
+ * @see [`@/modules/home/config/footer.ts`](../config/footer.ts) 链接 / 版权 / 备案配置
+ * @group 业务模块：Home
+ */
 import { FOOTER_LINKS, FOOTER_COPYRIGHT, FOOTER_BEIAN } from '@/modules/home/config/footer'
 
 // BEM 工具由 unplugin-auto-import 自动注入，无须显式 import

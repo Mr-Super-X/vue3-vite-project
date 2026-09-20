@@ -2,6 +2,8 @@
  * Schema 元数据查询的中央索引（O(1) 查表替代 O(n) 遍历）：
  * 一次遍历构建 byName / fieldNames / allNames / crossRules / reverseIndex / dependsOnMap。
  * schema 整体替换时自动重建；局部修改需手动调 reindex()（与 reactiveSchema 行为一致）。
+ *
+ * @group 表单编排：索引
  */
 import { ref, watch, type Ref } from 'vue'
 import type { SchemaNode } from '../types'

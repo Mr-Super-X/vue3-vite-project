@@ -1,6 +1,8 @@
 <script setup lang="ts">
 /**
- * 参考开源 form-schema 实现的 demo（form/base.vue）—— 基础用法
+ * XForm 基础用法 demo —— 2 列栅格 + 字符串 / 函数校验规则
+ *
+ * 对照参考仓场景命名（form/base）—— 业务模块可参照本 demo 搭建订单 / 用户等查询表单。
  *
  * 🠶 三种"隐藏"语义对比（hidden / ignore / permission: 'hidden'）：见 docs/24-XForm使用指南.md §4.2
  *
@@ -11,7 +13,6 @@
 import { reactive } from 'vue'
 import dayjs from 'dayjs'
 import { ElMessage } from 'element-plus'
-import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
@@ -176,6 +177,19 @@ const schema: SchemaNode = {
       defaultValue: 1,
       props: { min: 0 },
     },
+    {
+      label: '商品描述',
+      name: 'description',
+      col: { span: 24 },
+      // 不在 EL 组件集、未通过 :components 注册 —— 演示 resolveComponentFor 全局组件 fallback
+      // （unplugin-vue-components 把 src/components/common/** 自动注册到 GlobalComponents）
+      component: 'RichTextEditor',
+      // RichTextEditor 内部 handleChange 已把「视觉为空」映射为 emit('')，业务方可直接用
+      // 字符串 'required' 触发 el-form 标准校验（async-validator），无须自定义 validator
+      rules: 'required',
+      defaultValue: '<p>富文本编辑器默认内容</p>',
+      props: { height: '320px', placeholder: '请输入商品描述（支持富文本）' },
+    },
   ],
 }
 
@@ -207,11 +221,12 @@ const tocItems = [
       title="基础用法（订单查询表单）"
       source="src/components/form-schema/XForm.vue"
       :introductions="[
-        '订单查询表单：订单号 / 状态 / 日期区间 / 备注 5 字段。',
+        '订单查询表单：订单号 / 状态 / 日期区间 / 备注 4 字段。',
         '顶层 row.gutter: 24 + 节点级 col.span 分配列宽：前 4 字段各 12 列，备注 24 列整行占满。',
         '注意：顶层 column 会把每个节点包进固定 span 的 ElCol，节点级 col.span 无法突破半宽——混用列宽时用 row + col.span 组合。',
         'rules 支持 「required」字符串 + validator 函数。订单号带格式校验，结束日期不能晚于今天。',
         '新增组件字段：密码 / 描述 / 技能标签 / 主题色 / 负责人 / 评分 / 最低价（验证 InputPassword/InputTextArea/InputTag/ColorPicker/Mention/Rate 别名、默认 props、节点覆盖与 v-model）。',
+        '商品描述字段演示「全局组件 fallback」：schema.component 直接写 RichTextEditor，依赖 unplugin-vue-components 自动注册到 GlobalComponents，无需在 XForm 上 :components 重复注册。',
       ]"
     >
       <section id="demo-base">

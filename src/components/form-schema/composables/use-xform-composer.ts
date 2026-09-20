@@ -6,8 +6,13 @@
  * defaultValue→./apply-default-values、XFormExpose→./use-xform-expose。
  *
  * 类型断言（`as never`）归因见 types/TYPE-CAST-AUDIT.md。
+ *
+ * 为什么 as never 而非 as any：仅用于把 props 引用"喂"给 el-form / el-form-item 的 props union
+ * （XFormExpose 内部方法签名），运行时已通过单元测试验证，TS 层用 as never 标记受控逃逸点。
+ *
+ * @group 表单编排：编排入口
  */
-import { computed, watch, type ComputedRef, type Ref } from 'vue'
+import { computed, ref, type ComputedRef, type Ref } from 'vue'
 
 import { useSchemaRenderer } from './use-schema-renderer'
 import { useSchemaIndex } from './use-schema-index'
@@ -19,14 +24,15 @@ import { useFormDirty } from './use-form-dirty'
 import { useServerError } from './use-server-error'
 import { useFormValidation } from './use-form-validation'
 import { useTopLevelFields } from './use-top-level-fields'
-import { resolveFunctionExpression } from './use-expression'
+import { createExpressionScope } from './use-expression'
 import { useExpressionFunctions } from './use-expression-functions'
 import { useDevRuntime } from './use-dev-runtime'
 import { useApplyDefaults } from './apply-default-values'
 import { useXFormExpose } from './use-xform-expose'
 import { useRenderRoot, type RenderFn } from './use-render-root'
+import { useModelExpressionRerender } from './use-model-expression-rerender'
 import { mergeRowResponsive } from './barrel'
-import { DEFAULT_COMPONENT_PROPS } from '../element-plus-adapter'
+import { DEFAULT_COMPONENT_PROPS } from '../adapters/element-plus-adapter'
 import type { RuleItem, RowConfig, SchemaNode, XFormExpose, XFormProps } from '../types'
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -72,6 +78,8 @@ export interface UseXFormComposerReturn {
   validateErrors: Ref<Array<{ keyPath: (string | number)[]; message: string }>>
   /** 仅 dev：表达式沙箱黑名单命中 */
   forbiddenErrors: Ref<string[]>
+  /** 仅 dev：asyncOptions 位于不支持位置（formItem.slots / array.itemSchema 内） */
+  asyncOptionsWarnings: Ref<string[]>
   /** dev = true / prod = false */
   showDebugBanner: Ref<boolean>
   /** XForm 通过 defineExpose 透传给 ref */
@@ -80,6 +88,8 @@ export interface UseXFormComposerReturn {
   installDevDebugHook: () => void
   /** XForm 模板挂载 XFormErrorToast 消费 */
   errorBus: ReturnType<typeof import('./use-form-error-bus').useFormErrorBus>
+  /** XFormDebugBanner @locate 回调：按字段名滚动定位（透传 useFormInstance） */
+  scrollToField: (name: string) => void
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -97,9 +107,14 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
   // viewport 变化时响应式 ColConfig 自动拍平
   const currentBreakpoint = useCurrentBreakpoint()
 
+  // H2 修复：表达式沙箱实例级化 —— 每实例独立函数表 + 编译缓存，
+  // 消除「同页多 XForm 共享模块级表互相覆盖/清表」污染（审计 2026-09-09 浏览器实测确认）
+  const exprScope = createExpressionScope()
+
   // 白名单函数表注册必须在 useSchemaRenderer 之前：schema watcher immediate 触发 reaction 求值时
-  // 若 EXPRESSION_FNS 还未注册，沙箱 new Function 找不到白名单参数 → ReferenceError
-  useExpressionFunctions({ expressionFunctions: () => props.expressionFunctions })
+  // 若 exprScope 函数表还未注册，沙箱 new Function 找不到白名单参数 → ReferenceError。
+  // 跨实例竞争已消除（exprScope 实例私有，不再有「B 的 immediate 注册覆盖/清表毁掉 A」）
+  useExpressionFunctions({ scope: exprScope, expressionFunctions: () => props.expressionFunctions })
 
   const { reactiveSchema, triggerRender } = useSchemaRenderer({
     schema: computed(() => props.schema),
@@ -107,16 +122,30 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     formData: computed(() => props.model ?? {}) as never,
     // 阶段 P2-3：reactionBudget 透传（默认 50 向后兼容）
     ...(props.reactionBudget !== undefined ? { reactionBudget: props.reactionBudget } : {}),
+    // H2：reaction 管线（traverse → applyReactions → applyReactionFields）统一用实例沙箱
+    resolveFunctionExpression: exprScope.resolveFunctionExpression,
   })
 
   // schema 元数据中央索引 —— 替代每次遍历 O(n) 的 getNames/collectCrossRuleFields
   const schemaIndex = useSchemaIndex(() => reactiveSchema.value)
 
+  // model 依赖表达式（顶层 readonly/disabled / 字段 permission 的函数或 '{{ }}' 形态）
+  // 的重渲兜底：沙箱深拷贝切断响应式追踪，这类表达式的宿主 computed 不会因 model
+  // 字段 mutation 重算 —— 仅当 schema 含这类表达式时挂 watch(model) → bump modelEpoch
+  // + triggerRender（按需，无这类表达式的纯 v-model 表单零开销）
+  const modelExpressionEpoch = ref(0)
+  useModelExpressionRerender({
+    schema: reactiveSchema,
+    model: computed(() => props.model) as never,
+    triggerRender,
+    onModelChange: () => modelExpressionEpoch.value++,
+  })
+
   const {
     elFormRef,
     getRef,
     clearValidate,
-    resetFields,
+    resetFields: instanceResetFields,
     setInitialValues,
     validateField,
     scrollToField,
@@ -151,11 +180,12 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     reactiveSchema: computed(() => reactiveSchema.value),
     model: computed(() => props.model),
     currentBreakpoint,
-    fieldErrors,
-    resolveFunctionExpression,
+    resolveFunctionExpression: exprScope.resolveFunctionExpression,
     // useTopLevelFields deps 接受 string；mergeRowResponsive 真实签名是 specific union —— wrap 一层
     mergeRowResponsive: (row, bp) =>
       mergeRowResponsive(row, bp as 'xs' | 'sm' | 'md' | 'lg' | 'xl'),
+    // scrollToError / scrollIntoViewOptions 的 props 兜底来源（schema 优先）
+    props,
   })
 
   const crossFieldTrigger = useCrossFieldTrigger({
@@ -170,7 +200,22 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     setFieldError,
     clearValidate,
     defaultDebounceMs: () => topLevelDebounceMs.value,
+    // watchFallback（架构审查 #8）：schema 顶层 watchFallback 字段控制 deep watch 兜底开关
+    // 未声明默认 true（向后兼容）；纯 v-model 表单可显式 false 省每键 isEqual 成本
+    watchFallback:
+      (reactiveSchema.value as { watchFallback?: boolean } | undefined)?.watchFallback ?? true,
   })
+
+  /**
+   * resetFields 包装 —— 在实例重置（清 externalErrors + el-form 官方重置 model）之后
+   * 同 tick 调 crossFieldTrigger.onFormReset()：重拍 deps 快照使随后到达的兜底 watch
+   * pass 空跑，并取消排队中的 debounce runner —— 对齐 el-form 官方「重置后不重新
+   * 校验」的惯例（否则 crossValidator 会把重置回初始值的字段重新标红，如未成年场景）
+   */
+  function resetFields(names?: string | string[]): void {
+    instanceResetFields(names)
+    crossFieldTrigger.onFormReset()
+  }
 
   const formDirty = useFormDirty({
     model: () => props.model,
@@ -179,8 +224,13 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
   // 立即拍基线
   formDirty.resetDirty()
 
-  // fieldErrors 变化时强制 reactiveSchema 引用变化
-  watch(fieldErrors, () => triggerRender(), { deep: true })
+  // ⚠️ 曾在此处挂 watch(fieldErrors, () => triggerRender()) —— 2026-09-18 架构审查 #4
+  // 实证为死代码（use-xform-composer.spec.ts「错误传播链路验证」）：
+  // setFieldError 走 externalErrors.value[name] = {...} 键级写入，watch 的 ref 源
+  // 监听不到 reactive 键 mutation，从未触发；渲染兜底由两条真实路径覆盖 ——
+  // ① XForm.vue :data-field-errors="fieldErrorKeys"（Object.keys 派生，见 fieldErrorKeys computed）
+  // ② render-form-item 每字段 render 期读取 fieldErrors[key] 建立响应式追踪
+  // 故删除该 watch；若未来需要「错误变化强制整表单重渲」的场景，请改用 errorBus 订阅而非复活此 watch
 
   const serverError = useServerError({
     setFieldError,
@@ -197,7 +247,6 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     setFieldError,
     scrollToField,
     topLevelScrollToError,
-    crossFieldTrigger,
     errorBus,
   })
 
@@ -206,7 +255,13 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     ...props.componentProps,
   }))
 
-  const { validateErrors, forbiddenErrors, showDebugBanner, installDevDebugHook } = useDevRuntime({
+  const {
+    validateErrors,
+    forbiddenErrors,
+    asyncOptionsWarnings,
+    showDebugBanner,
+    installDevDebugHook,
+  } = useDevRuntime({
     props,
     errorBus,
     setFieldError,
@@ -229,9 +284,17 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     mergedComponentProps,
     // exactOptionalPropertyTypes: 条件展开避免传 undefined
     ...(props.permissionResolver ? { permissionResolver: props.permissionResolver } : {}),
+    // H2：render 层（on 事件绑定 / permission 表达式）用实例沙箱
+    resolveFunctionExpression: exprScope.resolveFunctionExpression,
+    // dirty 标记（设计师审查 F13）：showDirtyMark 透传 + dirtyFieldsRef 响应式订阅（render-form-item 的 is-dirty class）
+    // exactOptionalPropertyTypes: 条件展开避免传 undefined
+    ...(props.showDirtyMark !== undefined ? { showDirtyMark: props.showDirtyMark } : {}),
+    dirtyFields: formDirty.dirtyFieldsRef,
+    // model 依赖表达式（permission 等 slot 闭包内求值）重渲 epoch —— useModelExpressionRerender 触发
+    modelExpressionEpoch,
   })
 
-  // 白名单函数表已提前到 useSchemaRenderer 之前注册（修复 setup 顺序 race condition）
+  // 表达式沙箱（exprScope）已先于 useSchemaRenderer 创建并注册，见 setup 顶部说明
 
   function getNames(includesIgnore = false): string[] {
     return [...schemaIndex.getFieldNames(includesIgnore)]
@@ -276,9 +339,11 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
     mergedComponentProps,
     validateErrors,
     forbiddenErrors,
+    asyncOptionsWarnings,
     showDebugBanner,
     exposed,
     installDevDebugHook,
     errorBus,
+    scrollToField,
   }
 }

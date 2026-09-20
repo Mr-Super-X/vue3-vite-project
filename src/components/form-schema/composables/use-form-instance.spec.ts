@@ -56,61 +56,6 @@ describe('useFormInstance(model, zodSchema)', () => {
     })
   })
 
-  describe('validateForm()', () => {
-    it('resolves false + console.error when elFormRef is null（M2：不再静默通过）', async () => {
-      // 此前 resolve(true) 会把"配置/时序错误"伪装成"校验通过"，提交链路带病继续
-      const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-      const { validateForm } = useFormInstance(
-        () => ({}),
-        () => undefined
-      )
-      await expect(validateForm()).resolves.toBe(false)
-      expect(errSpy).toHaveBeenCalledWith(expect.stringContaining('el-form 实例未绑定'))
-      errSpy.mockRestore()
-    })
-
-    it('resolves true on validate callback (valid)', async () => {
-      const { elFormRef, validateForm } = useFormInstance(
-        () => ({}),
-        () => undefined
-      )
-      const mock = createMockElForm()
-      mock.validate = vi.fn((cb: (v: boolean) => void) => {
-        cb(true)
-        return Promise.resolve(true)
-      })
-      elFormRef.value = mock as never
-      await expect(validateForm()).resolves.toBe(true)
-    })
-
-    it('resolves false on validate callback (invalid)', async () => {
-      const { elFormRef, validateForm } = useFormInstance(
-        () => ({}),
-        () => undefined
-      )
-      const mock = createMockElForm()
-      mock.validate = vi.fn((cb: (v: boolean) => void) => {
-        cb(false)
-        return Promise.resolve(false)
-      })
-      elFormRef.value = mock as never
-      await expect(validateForm()).resolves.toBe(false)
-    })
-
-    it('resolves false when validate rejects (element-plus errorsMap)', async () => {
-      const { elFormRef, validateForm } = useFormInstance(
-        () => ({}),
-        () => undefined
-      )
-      const mock = createMockElForm()
-      mock.validate = vi.fn(() => {
-        return Promise.reject(new Error('validation failed'))
-      })
-      elFormRef.value = mock as never
-      await expect(validateForm()).resolves.toBe(false)
-    })
-  })
-
   describe('clearValidate / resetFields / scrollToField', () => {
     it('clearValidate delegates to elFormRef', () => {
       const { elFormRef, clearValidate } = useFormInstance(

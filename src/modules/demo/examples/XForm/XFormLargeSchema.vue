@@ -19,7 +19,6 @@
  */
 import { reactive, ref, shallowRef, onMounted, nextTick, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
@@ -136,7 +135,7 @@ const tocItems = [
             <span :class="bem.e('control-label')">字段数切换：</span>
             <el-radio-group
               :model-value="currentFieldCount"
-              @update:model-value="(v) => setFieldCount(Number(v))"
+              @update:model-value="(v: unknown) => setFieldCount(Number(v))"
             >
               <el-radio-button
                 v-for="n in FIELD_COUNT_OPTIONS"

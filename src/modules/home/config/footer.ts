@@ -1,8 +1,20 @@
+/**
+ * 首页底部链接 + 版权 + 备案信息（演示配置）。
+ *
+ * 数据来源当前是硬编码，待接入运营后台 CMS 后由接口返回。
+ *
+ * @see [`./types`](./types.ts) FooterLink
+ * @see [`../components/HomeFooter.vue`](../components/HomeFooter.vue) 消费方
+ * @group 业务模块：Home
+ */
 import type { FooterLink } from './types'
+
+// 品牌文案统一走 VITE_APP_TITLE（与 main.ts 初始化 document.title 同源），避免硬编码业务名
+const appTitle = import.meta.env.VITE_APP_TITLE || '企业中后台管理'
 
 export const FOOTER_LINKS: FooterLink[] = [
   { label: '广东省应急管理厅大数据中心', href: 'https://example.com/bigdata' },
-  { label: '应急指挥系统', href: 'https://example.com/command' },
+  { label: `${appTitle}系统`, href: 'https://example.com/command' },
   { label: '信息报送与共享系统', href: 'https://example.com/share' },
   { label: '广东省应急管理厅', href: 'https://example.com/gov' },
   { label: '广东省应急管理厅', href: 'https://example.com/gov' },

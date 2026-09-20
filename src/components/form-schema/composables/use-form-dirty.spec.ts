@@ -35,6 +35,22 @@ describe('useFormDirty / 基础', () => {
     expect(dirty.isDirty()).toBe(false)
   })
 
+  it('dirtyFieldsRef 响应式（F13）：recompute 时整体替换新 Set，触发响应式依赖', async () => {
+    const model = ref<Record<string, unknown>>({ name: 'a', age: 18 })
+    const dirty = useFormDirty({ model: () => model.value, fieldNames: () => ['name', 'age'] })
+    dirty.resetDirty()
+    // 初始为 empty Set
+    expect(dirty.dirtyFieldsRef.value.size).toBe(0)
+    // 修改 name → dirtyFieldsRef 含 name
+    model.value = { name: 'b', age: 18 }
+    await nextTick()
+    expect(dirty.dirtyFieldsRef.value.has('name')).toBe(true)
+    expect(dirty.dirtyFieldsRef.value.has('age')).toBe(false)
+    // resetDirty → dirtyFieldsRef 清空
+    dirty.resetDirty()
+    expect(dirty.dirtyFieldsRef.value.size).toBe(0)
+  })
+
   it('未拍基线时 isTouched 返回 false', () => {
     const dirty = useFormDirty({
       model: () => ({ name: 'a' }),

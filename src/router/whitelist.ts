@@ -1,18 +1,23 @@
-// 路由白名单（单一事实来源）
-//
-// 用途：白名单路由跳过登录检查 + 跳过权限检查
-// 判定依据：路由的 `name` 在 ROUTE_WHITE_LIST 中（按 name 而非 path 匹配）
-//
-// 为什么用 name 而不是 path：
-//   - 路由 path 可能变化（如 `/login` → `/signin`），name 更稳定
-//   - 后端菜单可能用任意 path 注入，按 name 校验更可控
-//
-// 注意：白名单路由仍建议挂载 layout（避免裸路由破布局）
-//
-// 自动吸收 demo 路由名：dev 模式从 src/modules/demo/routes 展开，
-// prod 构建时 Vite 静态替换 import.meta.env.DEV 为 false，
-// `...(false ? demoRouteNames : [])` 被 Rollup 优化为 `...[]` 并消除，
-// demo 字符串不进入生产包。scripts/check-routes.ts 已对 'Demo' 前缀做一致性豁免。
+/**
+ * 路由白名单（单一事实来源）。
+ *
+ * 用途：白名单路由跳过登录检查 + 跳过权限检查
+ * 判定依据：路由的 `name` 在 `ROUTE_WHITE_LIST` 中（按 name 而非 path 匹配）
+ *
+ * 为什么用 name 而不是 path：
+ * - 路由 path 可能变化（如 `/login` → `/signin`），name 更稳定
+ * - 后端菜单可能用任意 path 注入，按 name 校验更可控
+ *
+ * 注意：白名单路由仍建议挂载 layout（避免裸路由破布局）
+ *
+ * 自动吸收 demo 路由名：dev 模式从 `src/modules/demo/routes` 展开，
+ * prod 构建时 Vite 静态替换 `import.meta.env.DEV` 为 false，
+ * `...(false ? demoRouteNames : [])` 被 Rollup 优化为 `...[]` 并消除，
+ * demo 字符串不进入生产包。`scripts/check-routes.ts` 已对 `'Demo'` 前缀做一致性豁免。
+ *
+ * @see [`./guards/auth.ts`](./guards/auth.ts) `isWhiteListed` 调用点
+ * @group 路由：白名单
+ */
 
 import { routeNames as demoRouteNames } from '@/modules/demo/routes'
 

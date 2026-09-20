@@ -5,6 +5,8 @@
  *
  * @see ./use-validate.ts validateWithZod 底层实现
  * @see ./use-form-instance.ts 装配方
+ *
+ * @group 表单编排：校验
  */
 import type { ZodError, ZodType } from 'zod'
 import { validateWithZod } from './use-validate'

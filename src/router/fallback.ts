@@ -1,7 +1,12 @@
-// 路由兜底（catch-all 404）
-//
-// 必须注册在所有业务路由之后（保证最后匹配）。
-// 单独从 auto-register 抽出来，避免错误页模块的字典序导致 /user/* 被错误拦截。
+/**
+ * 路由兜底（catch-all 404）。
+ *
+ * 必须注册在所有业务路由之后（保证最后匹配）。
+ * 单独从 auto-register 抽出来，避免错误页模块的字典序导致 `/user/*` 被错误拦截。
+ *
+ * @see [`./index.ts`](./index.ts) 路由注册顺序
+ * @group 路由：兜底
+ */
 
 import type { RouteRecordRaw } from 'vue-router'
 

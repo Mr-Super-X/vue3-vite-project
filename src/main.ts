@@ -1,3 +1,26 @@
+/**
+ * 应用入口：装配所有全局设施。
+ *
+ * 装配顺序（顺序敏感）：
+ * 1. brandColor 注入：必须在 createApp 之前完成，避免首屏闪烁
+ * 2. document.title：与守卫并行设置，避免标题短暂停留在 index.html 默认值
+ * 3. assertNoMockInProd：prod 环境防 mock 残留
+ * 4. pinia → router → i18n → GlobalComponents → Directives → Plugins
+ *
+ * 浏览器基线：
+ * - normalize.css：跨浏览器默认值统一
+ * - virtual:uno.css：UnoCSS 按需原子类
+ * - `@/assets/styles/index.scss`：项目 SCSS 入口
+ *
+ * @see [`./App.vue`](./App.vue) 根组件
+ * @see [`./router`](./router/index.ts) 路由
+ * @see [`./store`](./store/index.ts) Pinia
+ * @see [`./locales`](./locales/index.ts) i18n
+ * @see [`@directives`](./directives/index.ts) 指令注册
+ * @see [`@components`](./components/index.ts) 组件注册
+ * @see [`@plugins`](./plugins/index.ts) 插件注册
+ * @group 应用入口
+ */
 import App from './App.vue'
 import router from './router'
 import pinia from './store'
@@ -5,6 +28,7 @@ import i18n from './locales'
 import Directives from '@directives'
 import GlobalComponents from '@components'
 import Plugins from '@plugins'
+import { setDialogAppContext } from '@composables/useDialog'
 import { assertNoMockInProd } from '@/api/mock-guard'
 
 // 浏览器基线统一（必须在所有自定义样式之前）。
@@ -54,5 +78,10 @@ app.use(i18n)
 app.use(GlobalComponents)
 app.use(Directives)
 app.use(Plugins)
+
+// 命令式弹窗（useDialog）的上下文来源：纯 JS 调用（无 setup 实例可捕获）时，
+// 动态挂载的弹窗依赖这里注册的全局 appContext 才能访问 Pinia/Router/全局组件。
+// 必须在所有 app.use 之后调用——_context 的 provides 由插件 install 写入
+setDialogAppContext(app)
 
 app.mount('#app')

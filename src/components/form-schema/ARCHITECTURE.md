@@ -6,8 +6,8 @@
 
 | 属性     | 值                            |
 | -------- | ----------------------------- |
-| 版本     | v3.0.0                        |
-| 日期     | 2026-09-01                    |
+| 版本     | v3.1.0                        |
+| 日期     | 2026-09-09                    |
 | 状态     | 当前实现（生产可用）          |
 | 关联分支 | `feature/form-engine`         |
 | 关联代码 | `src/components/form-schema/` |
@@ -16,17 +16,18 @@
 
 ## 0. 演进时间线
 
-| 日期       | 阶段         | 主要内容                                                                                |
-| ---------- | ------------ | --------------------------------------------------------------------------------------- |
-| 2026-08-19 | 设计稿       | 整体设计：架构、DSL、API、安全、测试                                                    |
-| 2026-08-20 | v1 实现      | 基础 schema 渲染、reaction 联动、表达式沙箱                                             |
-| 2026-08-21 | 异步选项     | `asyncOptions` 字段 + 自动渲染 + deps 触发                                              |
-| 2026-08-21 | 类型推导     | `SchemaNodeFor<C>` 按 component 字段推导 props 类型                                     |
-| 2026-08-28 | 默认组件扩展 | 6 个新快捷名（InputPassword / InputTextArea / InputTag / ColorPicker / Mention / Rate） |
-| 2026-08-28 | 上传 demo    | `XFormUpload.vue` 演示 7 种上传场景                                                     |
-| 2026-09-01 | P0 重构      | 拆 XForm.vue 95 行 + builders.ts 去重 + 类型断言归因                                    |
-| 2026-09-01 | P1 重构      | types.ts 拆 9 文件 + 模块级状态清理 + OSD 错误反馈                                      |
-| 2026-09-01 | P2 重构      | 超大 composable 拆分 + render-schema-node 拆 4 文件                                     |
+| 日期       | 阶段         | 主要内容                                                                                      |
+| ---------- | ------------ | --------------------------------------------------------------------------------------------- |
+| 2026-08-19 | 设计稿       | 整体设计：架构、DSL、API、安全、测试                                                          |
+| 2026-08-20 | v1 实现      | 基础 schema 渲染、reaction 联动、表达式沙箱                                                   |
+| 2026-08-21 | 异步选项     | `asyncOptions` 字段 + 自动渲染 + deps 触发                                                    |
+| 2026-08-21 | 类型推导     | `SchemaNodeFor<C>` 按 component 字段推导 props 类型                                           |
+| 2026-08-28 | 默认组件扩展 | 6 个新快捷名（InputPassword / InputTextArea / InputTag / ColorPicker / Mention / Rate）       |
+| 2026-08-28 | 上传 demo    | `XFormUpload.vue` 演示 7 种上传场景                                                           |
+| 2026-09-01 | P0 重构      | 拆 XForm.vue 95 行 + builders.ts 去重 + 类型断言归因                                          |
+| 2026-09-01 | P1 重构      | types.ts 拆 9 文件 + 模块级状态清理 + OSD 错误反馈                                            |
+| 2026-09-01 | P2 重构      | 超大 composable 拆分 + render-schema-node 拆 4 文件                                           |
+| 2026-09-09 | 目录归位     | 5 个 Vue 组件移入 `components/` + element-plus-adapter 移入 `adapters/`（纯移动，零逻辑变更） |
 
 ---
 
@@ -36,11 +37,14 @@
 
 ```text
 src/components/form-schema/
-├── XForm.vue                      # 入口组件（121 行：P2 后 setup 块零业务逻辑；模板 + props/attrs 透传 + ElConfigProvider + ElForm 骨架）
-├── XFormDebugBanner.vue           # dev mode 调试面板（schema 校验错误 + 安全扫描）
-├── XFormErrorToast.vue            # dev mode 错误 OSD toast（OPT-7 user-facing）
-├── SchemaField.vue                # 节点级渲染容器（B-2：字段级重渲隔离）
-├── element-plus-adapter.ts        # 内置 EL 组件映射表 + 默认 props
+├── components/                    # Vue 组件集中（2026-09-09 从根目录归位）
+│   ├── XForm.vue                  # 入口组件（149 行：P2 后 setup 块零业务逻辑；模板 + props/attrs 透传 + ElConfigProvider + ElForm 骨架）
+│   ├── XFormDebugBanner.vue       # dev mode 调试面板（schema 校验错误 + 安全扫描）
+│   ├── XFormErrorToast.vue        # 错误 OSD toast（OPT-7 user-facing，showErrorToast prop 控制默认关闭）
+│   ├── XFormErrorToastItem.vue    # OSD toast 单条错误项
+│   └── SchemaField.vue            # 节点级渲染容器（B-2：字段级重渲隔离）
+├── adapters/                      # 组件库适配层（2026-09-09 从根目录归位）
+│   └── element-plus-adapter.ts    # 内置 EL 组件映射表 + 默认 props
 ├── types.ts                       # barrel re-export（→ types/ 子目录）
 ├── types/                         # P1-OPT-4 拆分后
 │   ├── base.ts                    # EventFn / FunctionExpression / SchemaSlot
@@ -50,40 +54,51 @@ src/components/form-schema/
 │   ├── array.ts                   # ArrayNodeConfig
 │   ├── layout.ts                  # RowConfig / ColConfig（响应式断点）
 │   ├── async-options.ts           # AsyncOptionsConfig
-│   ├── schema-node.ts             # SchemaNode（31 字段）+ ComponentPropsRegistry + SchemaNodeFor
+│   ├── schema-node.ts             # SchemaNode（35 字段）+ ComponentPropsRegistry + SchemaNodeFor
 │   ├── xform.ts                   # XFormProps / XFormExpose / ValidateOptions / ValidateResult
-│   ├── identity.ts                # SchemaNodeIdentity（4 字段：component/name/label/key）
+│   ├── identity.ts                # SchemaNodeIdentity（6 字段：component/name/label/key + id/meta 设计器预留）
 │   ├── render.ts                  # SchemaNodeRender（5 字段：props/on/children/slots/directives）
 │   ├── validate.ts                # SchemaNodeValidate（2 字段：rules/defaultValue）
-│   ├── top-level.ts               # SchemaNodeTopLevel（5 字段：labelPosition/labelWidth/scrollToError/scrollIntoViewOptions/debounceValidation）
+│   ├── top-level.ts               # SchemaNodeTopLevel（7 字段：labelPosition/labelWidth/scrollToError/scrollIntoViewOptions/debounceValidation/watchFallback + schemaVersion 设计器预留）
 │   └── v-model.ts                 # SchemaNodeVModel（1 字段：modelProp）
-├── builders.ts                    # 27 个链式 builder（OPT-2：makeBuilder 工厂已简化）
+├── builders.ts                    # 兼容 barrel → builders/（29 个链式 builder，架构审查 #3 拆分；Wave4-2 +2 xTabs/xSteps）
+├── builders/                      # 链式 builder 实现（core 基类 + fields-input/select/date/data + containers）
 ├── index.ts                        # 公共导出 + Vue 插件形式
 ├── README.md                      # 简明使用说明
 ├── styles/
 │   └── element-form-overwrite.scss   # form-schema 自定义样式覆盖
-├── composables/                   # 一文件一能力（P2 拆分后）
+├── composables/                   # 一文件一能力（47 个，P2 拆分后）
+│   ├── barrel.ts                  # 子模块公共导出聚合
 │   ├── use-xform-composer.ts      # 顶层编排（composition root）
+│   ├── use-xform-expose.ts        # XFormExpose 装配（实例方法对外契约）
 │   ├── use-form-instance.ts       # el-form 实例方法编排（P2-A1：200 行）
-│   ├── use-set-field-error.ts     # setFieldError 双路径 + watch 守护（P2-A1：185 行）
+│   ├── use-set-field-error.ts     # setFieldError 双路径 + watch 守护（P2-A1：219 行）
 │   ├── use-form-validation.ts     # validateForm / validateDetail / applyCrossErrors
 │   ├── use-cross-field-trigger.ts # 反向跨字段实时触发 + debounce
+│   ├── use-cross-field-rule-trigger.ts # 正向跨字段（blur/change 触发）+ 序号令牌竞态防护
 │   ├── use-form-dirty.ts          # dirty 状态追踪（阶段 2.2）
 │   ├── use-form-persist.ts        # 草稿持久化（草稿存储到 localStorage）
 │   ├── use-server-error.ts        # 服务端 422 → 表单字段错误映射（阶段 2.1）
 │   ├── use-top-level-fields.ts     # 顶层 schema 字段解析（11 个 computed）
 │   ├── use-schema-renderer.ts     # watch(schema) + reaction traverse
+│   ├── use-render-root.ts         # 渲染根维护（renderOpts 快照 + optsEpoch 失效广播）
 │   ├── use-schema-index.ts        # 字段元数据中央索引（O(1) getNames）
 │   ├── use-schema-index.builder.ts # 索引构建器
 │   ├── use-validate.ts            # validate() 静态校验 + validateWithZod
+│   ├── use-zod-validator.ts       # zod 校验执行器（validateWithZod 实现）
+│   ├── validate-component-props.ts # 节点 props 静态校验（dev 拼写检测）
 │   ├── use-scan-forbidden.ts      # 表达式沙箱关键字黑名单扫描
-│   ├── use-expression.ts          # resolveFunctionExpression + 模块级缓存
+│   ├── use-scan-async-options.ts  # asyncOptions 不可达位置扫描（formItem.slots / array.itemSchema）
+│   ├── use-dev-runtime.ts         # dev 运行时（schema 校验 + 扫描 + debug hook 挂载）
+│   ├── use-expression.ts          # ExpressionScope 实例沙箱 + 模块级兼容 API（@deprecated）
+│   ├── use-expression-functions.ts # 白名单函数表管理（expressionFunctions 注册/清空）
 │   ├── use-async-options.ts       # 异步选项数据源 + Autocomplete fetcher
 │   ├── use-field-permission.ts    # view/edit/hidden 权限 gate
 │   ├── use-current-breakpoint.ts  # 响应式断点检测
 │   ├── use-reaction.ts            # reaction applyReactionFields + watchEffect
 │   ├── use-form-error-bus.ts      # OPT-7：错误事件总线（provide/inject + OSD）
 │   ├── apply-reaction-fields.ts   # reaction 字段值求值
+│   ├── apply-default-values.ts    # 默认值填充（schema.defaultValue → model）
 │   ├── apply-directives.ts        # withDirectives 包装
 │   ├── build-vmodel-bindings.ts   # v-model 双向绑定（含 beforeChange 拦截）
 │   ├── build-on-bindings.ts       # on 事件绑定（函数 / 函数表达式字符串）
@@ -95,22 +110,28 @@ src/components/form-schema/
 │   ├── render-form-item.ts        # formItem 包装 + row+column 布局
 │   ├── render-visual-container.ts # 视觉容器（Card 等无 name 节点）
 │   ├── render-array-node.ts       # 数组节点（kind: 'array'）
+│   ├── array-row-key.ts           # 数组行身份 key（rowKeyOf / rewriteNamePath 名路径前缀化）
 │   ├── render-with-grid.ts        # row+column 布局辅助
 │   ├── with-hidden.ts             # display:none wrapper
 │   └── draft-storage.ts           # 草稿存储后端
+├── utils/                         # 纯函数工具（跨 composable 复用、无响应式状态）
+│   ├── read-ref-str.ts            # ref/string 归一化读取
+│   ├── collect-el-field-errors.ts # el-form 错误对象扁平化收集（批次 1-1）
+│   ├── run-el-form-validate.ts    # el-form validate Promise 化（批次 1-1）
+│   └── walk-schema.ts             # M5：schema 树四向递归公共遍历器（批次 3-2，统一 5 处手写递归）
 └── bench/
     └── large-schema.bench.ts       # 大 schema 性能基线
 ```
 
 ### 1.2 模块职责分层
 
-| 层级                   | 职责                                                                         | 边界                                |
-| ---------------------- | ---------------------------------------------------------------------------- | ----------------------------------- |
-| **XForm.vue**          | 模板 + props/attrs 透传 + setup 零业务逻辑                                   | 仅依赖 useXFormComposer             |
-| **use-xform-composer** | 顶层编排（composition root）：11 个 composable + 1 个 watch 守护 + opts 同步 | 编排其他 composable，不重复业务逻辑 |
-| **composables/**       | 一文件一能力（<200 行）                                                      | 仅依赖 types/ + 其他 composable     |
-| **types/**             | Schema DSL 类型契约                                                          | 无运行时逻辑                        |
-| **builders.ts**        | 链式 API（builder 模式）                                                     | 类型强推导                          |
+| 层级                   | 职责                                                                                                             | 边界                                |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| **XForm.vue**          | 模板 + props/attrs 透传 + setup 零业务逻辑                                                                       | 仅依赖 useXFormComposer             |
+| **use-xform-composer** | 顶层编排（composition root）：11 个 composable 装配 + opts 同步（watch 守护已于 2026-09-18 实证删除，见审查 #4） | 编排其他 composable，不重复业务逻辑 |
+| **composables/**       | 一文件一能力（<200 行）                                                                                          | 仅依赖 types/ + 其他 composable     |
+| **types/**             | Schema DSL 类型契约                                                                                              | 无运行时逻辑                        |
+| **builders/**          | 链式 API（builder 模式，builders.ts 为兼容 barrel）                                                              | 类型强推导                          |
 
 ### 1.3 数据流
 
@@ -143,18 +164,18 @@ RenderSchemaNode 主调度（render-schema-node.ts）
 
 ### 2.1 字段分类
 
-| 类别             | 字段                                                                                          | 数     |
-| ---------------- | --------------------------------------------------------------------------------------------- | ------ |
-| **节点标识**     | `component`, `name`, `key`, `label`                                                           | 4      |
-| **渲染属性**     | `props`, `on`, `children`, `slots`, `directives`                                              | 5      |
-| **布局**         | `row`, `column`, `col`, `formItem`                                                            | 4      |
-| **校验**         | `rules`, `defaultValue`                                                                       | 2      |
-| **响应式**       | `reaction`, `disabled`, `permission`, `readonly`, `hidden`, `ignore`, `beforeChange`          | 7      |
-| **数组节点**     | `kind: 'array'`, `array: ArrayNodeConfig`                                                     | 2      |
-| **数据加载**     | `asyncOptions`                                                                                | 1      |
-| **顶层配置**     | `labelPosition`, `labelWidth`, `scrollToError`, `scrollIntoViewOptions`, `debounceValidation` | 5      |
-| **v-model 适配** | `modelProp`                                                                                   | 1      |
-| **合计**         |                                                                                               | **31** |
+| 类别             | 字段                                                                                                                            | 数     |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| **节点标识**     | `component`, `name`, `key`, `label`, `id`, `meta`                                                                               | 6      |
+| **渲染属性**     | `props`, `on`, `children`, `slots`, `directives`                                                                                | 5      |
+| **布局**         | `row`, `column`, `col`, `formItem`                                                                                              | 4      |
+| **校验**         | `rules`, `defaultValue`                                                                                                         | 2      |
+| **响应式**       | `reaction`, `disabled`, `permission`, `readonly`, `hidden`, `ignore`, `beforeChange`                                            | 7      |
+| **数组节点**     | `kind: 'array'`, `array: ArrayNodeConfig`                                                                                       | 2      |
+| **数据加载**     | `asyncOptions`                                                                                                                  | 1      |
+| **顶层配置**     | `labelPosition`, `labelWidth`, `scrollToError`, `scrollIntoViewOptions`, `debounceValidation`, `watchFallback`, `schemaVersion` | 7      |
+| **v-model 适配** | `modelProp`                                                                                                                     | 1      |
+| **合计**         |                                                                                                                                 | **35** |
 
 完整字段定义见 `types/schema-node.ts`。
 
@@ -359,6 +380,16 @@ const schema: SchemaNode = {
 - **trigger 匹配（match-trigger.ts）**：字段 blur/change 事件触发时按 `rule.trigger` 过滤——`'manual'` 永不响应事件，array 形式 `['blur','change']` 任一命中即匹配，未指定默认 `blur`
 - **validateForm 批量 + 短路**：`runCrossFieldValidation` 遍历 schema 跑全部 crossValidator（含 `'manual'`），但 `validateForm` 字段规则失败时直接 `false` 不跑跨字段（短路逻辑）
 
+> **H3 修复（2026-09-09）**：model watch 兜底从顶层浅拷贝 diff 改为按 rule 的 deps 值快照 diff
+> （`use-cross-field-trigger.ts`，对齐 use-reaction deps 快照模式），嵌套路径直改
+> （`model.user.age = 30` 绕过 v-model）不再漏触发。
+>
+> **reset 语义（2026-09-09）**：`resetFields` 走 composer 包装 —— 实例重置后同 tick 调
+> `crossFieldTrigger.onFormReset()`（取消排队 debounce runner + 重拍 deps 快照），
+> 兜底 watch 随后到达时快照一致空跑，**重置后不重新校验**（对齐 el-form 官方惯例）。
+> 无此防护时，重置回初始值的字段会被兜底 watch 当普通变化重跑 crossValidator
+> （如 user.age 重置回 10 时「未成年」红字复现）。setModel 不经此包装，仍走兜底校验。
+
 ### 4.3 服务端错误映射（OPT 2.1）
 
 ```typescript
@@ -376,6 +407,11 @@ exposed.validateFromServer({
 ---
 
 ## 5. 反应式（reaction）
+
+> **H1 修复（2026-09-09）**：字段级 `disabled`/`hidden` 的函数 / `'{{ fn }}'` 形态在克隆阶段
+> 由 `applyReactions` 归一化为 reaction 条目求值（`use-reaction.ts` 入口），boolean 结果写回 node。
+> `permission`（渲染时 `resolvePermission` 求值）与顶层 `disabled`/`readonly`
+> （`useTopLevelFields` computed 求值）本就工作，不在归一化范围。
 
 ### 5.1 字段覆盖范围
 
@@ -406,11 +442,11 @@ reaction: {
 
 ### 6.1 三层错误展示
 
-| 层                                     | 触发                                            | 可见性         |
-| -------------------------------------- | ----------------------------------------------- | -------------- |
-| **form 红字**                          | el-form-item 校验失败                           | 用户           |
-| **XFormDebugBanner**（dev only）       | schema 静态校验失败 / 表达式含 forbidden 标识符 | 开发者右下角   |
-| **XFormErrorToast**（dev only，OPT-7） | 跨字段校验失败 / schema 非法 / 服务端错误       | 用户右上角浮窗 |
+| 层                                                            | 触发                                            | 可见性         |
+| ------------------------------------------------------------- | ----------------------------------------------- | -------------- |
+| **form 红字**                                                 | el-form-item 校验失败                           | 用户           |
+| **XFormDebugBanner**（dev only）                              | schema 静态校验失败 / 表达式含 forbidden 标识符 | 开发者右下角   |
+| **XFormErrorToast**（`showErrorToast` prop，默认关闭，OPT-7） | 跨字段校验失败 / schema 非法 / 服务端错误       | 用户右上角浮窗 |
 
 ### 6.2 OSD 输出格式
 
@@ -462,6 +498,22 @@ const FORBIDDEN_REG =
   /\b(window|document|globalThis|eval|Function|setTimeout|setInterval|fetch|XMLHttpRequest)\b/
 ```
 
+**H2 修复（2026-09-09）：沙箱状态实例级化**
+
+此前函数表（`EXPRESSION_FNS`）与编译缓存（`EXPRESSION_CACHE`）是模块级共享状态，同页多 XForm
+实例互相污染（浏览器实测三种形态：B mount 覆盖 A 的函数表 / A unmount 清表致 B 表达式
+ReferenceError / A 重挂载覆盖 B）。修复后：
+
+- composer setup 顶部用 `createExpressionScope()` 创建**每实例一份**的函数表 + 编译缓存
+- 4 个消费点统一注入 `exprScope.resolveFunctionExpression`：
+  `useTopLevelFields`（顶层自描述字段）→ `useSchemaRenderer`（reaction 管线
+  traverse → applyReactions → applyReactionFields）→ `useRenderRoot`（render 层
+  on 事件绑定 / permission 表达式）
+- `useExpressionFunctions` 改为把 props.expressionFunctions 写入注入 scope，
+  不再操作模块级状态，也无 onScopeDispose 清表（scope 随实例 GC）
+- 模块级 `setExpressionFunctions` / `resolveFunctionExpression` 保留并标 `@deprecated`
+  （对外公共 API，直接删除是 breaking change）
+
 ### 7.2 schema 来源约束
 
 | 来源                               | 是否允许                                |
@@ -484,7 +536,7 @@ const FORBIDDEN_REG =
 
 ## 8. Builder 链式 API
 
-### 8.1 27 个 builder 工厂
+### 8.1 29 个 builder 工厂
 
 | builder          | 组件名          | 特有方法                                                                                              |
 | ---------------- | --------------- | ----------------------------------------------------------------------------------------------------- |
@@ -514,6 +566,8 @@ const FORBIDDEN_REG =
 | `xRate`          | `Rate`          | -                                                                                                     |
 | `xSlider`        | `Slider`        | -                                                                                                     |
 | `xCard`          | `Card`          | `title` / `column` / `gutter`                                                                         |
+| `xTabs`          | `Tabs`          | `modelValue` / `beforeLeave`                                                                          |
+| `xSteps`         | `Steps`         | `active` / `processStatus`                                                                            |
 | `xArray`         | (array node)    | `item` / `initialLength` / `minItems` / `maxItems` / `showActions` / `labels` / `title` / `draggable` |
 
 ### 8.2 用法示例
@@ -540,19 +594,22 @@ const schema = {
 
 ---
 
-## 9. 测试策略（52 个 `.spec.ts` + 2 个 `.test-d.ts`）
+## 9. 测试策略（62 个 `.spec.ts` + 2 个 `.test-d.ts`）
 
 ### 9.1 测试分布
 
 | 类别                         | 文件数 | 测试数                  | 覆盖率目标 |
 | ---------------------------- | ------ | ----------------------- | ---------- |
-| composables（含 XForm 编排） | 43     | 主体回归                | ≥80%       |
-| 根 *.spec.ts                 | 9      | 主入口 + 辅助组件       | ≥80%       |
+| composables（含 XForm 编排） | 49     | 主体回归                | ≥80%       |
+| components                   | 5      | 组件行为                | ≥80%       |
+| adapters                     | 1      | 适配层                  | ≥80%       |
+| utils                        | 4      | 纯函数                  | ≥80%       |
+| 根 *.spec.ts                 | 3      | 主入口 + 契约           | ≥80%       |
 | types (test-d)               | 2      | 编译期                  | N/A        |
-| **合计（spec 文件）**        | **52** | 见 `pnpm test` 实际输出 | ≥80%       |
+| **合计（spec 文件）**        | **62** | 见 `pnpm test` 实际输出 | ≥80%       |
 
 > 测试用例总计数应通过 `pnpm test --reporter=verbose` 实测，文档不在此处硬编码（避免与实际运行结果失真）。
-> 根 *.spec.ts 包括 XForm/SchemaField/builders/element-plus-adapter/index/xform-contract/XFormDebugBanner/XFormErrorToast/XFormErrorToastItem 共 9 个。
+> 根目录 spec 为 builders / index / xform-contract 共 3 个；components/ 下 5 个（XForm/SchemaField/XFormDebugBanner/XFormErrorToast/XFormErrorToastItem）；adapters/ 下 1 个（element-plus-adapter）；utils/ 下 4 个。
 
 ### 9.2 关键回归保护（源码级静态断言）
 
@@ -656,10 +713,10 @@ pnpm build             # vite build
 | §1.6   | AutoImport                       | ✅ 全程不显式 import ref / watch / createNamespace                                                                                                                                                                                                                                      |
 | §2     | src/ Architecture Lockdown       | ✅ 本目录稳定，所有改动经 §2.4 申请                                                                                                                                                                                                                                                     |
 | §3     | BEM 命名规范                     | ✅ XForm.vue 使用 `createNamespace('x-form')` + `<style lang="scss">` 无 scoped                                                                                                                                                                                                         |
-| §4 #6  | 文件行数限制                     | ✅ XForm 125 / composables <300 / types/ <220                                                                                                                                                                                                                                           |
-| §4 #7  | Hook/Composable 行数             | ⚠️ P0/P1 拆分后 5 个 composable >200 行：useXFormComposer (387)、useFormValidation (311)、useFormInstance (303)、useValidate (292)、useCrossFieldTrigger (230)。均按 §3.4 备注"cohesive orchestrator 例外"接受；后续如再需拆分会改变公开签名，触发 spec 大量改写（详见 §10 路线图 P0+） |
+| §4 #6  | 文件行数限制                     | ✅ XForm 149 / composables ≤315 / types/ ≤227                                                                                                                                                                                                                                           |
+| §4 #7  | Hook/Composable 行数             | ⚠️ P0/P1 拆分后 5 个 composable >200 行：useXFormComposer (315)、useValidate (288)、useCrossFieldTrigger (290)、useFormInstance (268)、useFormValidation (236)。均按 §3.4 备注"cohesive orchestrator 例外"接受；后续如再需拆分会改变公开签名，触发 spec 大量改写（详见 §10 路线图 P0+） |
 | §4 #10 | npm 包验证                       | ✅ 仅 element-plus / lodash-es / zod（项目已装）                                                                                                                                                                                                                                        |
-| §4 #11 | 新增 composable 需 .spec.ts      | ✅ composables/ 下 43 个 composable + useXFormComposer 全部配 spec                                                                                                                                                                                                                      |
+| §4 #11 | 新增 composable 需 .spec.ts      | ✅ composables/ 下 47 个实现文件全部配 spec（49 个 spec 文件，含 barrel.spec 与 cross-rule-runner.spec）                                                                                                                                                                                |
 
 ---
 
@@ -667,11 +724,12 @@ pnpm build             # vite build
 
 ### 13.1 核心代码
 
-- 入口组件：`src/components/form-schema/XForm.vue`
+- 入口组件：`src/components/form-schema/components/XForm.vue`
+- 组件适配层：`src/components/form-schema/adapters/element-plus-adapter.ts`
 - 顶层编排：`src/components/form-schema/composables/use-xform-composer.ts`
 - 主调度：`src/components/form-schema/composables/render-schema-node.ts`
 - 类型契约：`src/components/form-schema/types/schema-node.ts`
-- 链式 builder：`src/components/form-schema/builders.ts`
+- 链式 builder：`src/components/form-schema/builders/`（`builders.ts` 为兼容 barrel）
 
 ### 13.2 历史决策档案
 
@@ -715,14 +773,14 @@ pnpm build             # vite build
 
 ### 15.1 审计范围
 
-| 类别                                                               | 文件数      | 改动条数（约） |
-| ------------------------------------------------------------------ | ----------- | -------------- |
-| 核心入口（XForm + composer + 主调度 + 校验编排 + el-form 编排）    | 5           | ~80 行精简     |
-| 渲染子模块（render-* / wrap-* / build-* / resolve-* / compile-*）  | 9           | ~40 行精简     |
-| composables/ 编排层（27 个）                                       | 27          | ~120 行精简    |
-| 入口与适配（builders + index + element-plus-adapter + 4 Vue 组件） | 7           | ~30 行精简     |
-| types barrel                                                       | 1           | ~10 行精简     |
-| **合计**                                                           | **49 文件** | **~280 行**    |
+| 类别                                                                   | 文件数      | 改动条数（约） |
+| ---------------------------------------------------------------------- | ----------- | -------------- |
+| 核心入口（XForm + composer + 主调度 + 校验编排 + el-form 编排）        | 5           | ~80 行精简     |
+| 渲染子模块（render-* / wrap-* / build-* / resolve-* / compile-*）      | 9           | ~40 行精简     |
+| composables/ 编排层（27 个）                                           | 27          | ~120 行精简    |
+| 入口与适配（builders + index + components/ 5 组件 + adapters/ 适配器） | 7           | ~30 行精简     |
+| types barrel                                                           | 1           | ~10 行精简     |
+| **合计**                                                               | **49 文件** | **~280 行**    |
 
 ### 15.2 处理原则
 

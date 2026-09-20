@@ -1,3 +1,11 @@
+/**
+ * draft-storage —— 草稿 localStorage / sessionStorage 读写工具（纯函数层）
+ *
+ * 拆出独立文件便于 use-form-persist 测试时 mock storage；本文件不持有任何 reactive state。
+ * 数据损坏由 storage.ts 的 safeParse 自动清脏（读出 null），无需在本层处理。
+ *
+ * @group 表单编排：草稿
+ */
 import { cloneDeep, omit } from 'lodash-es'
 import { Local, Session } from '@/utils/storage'
 

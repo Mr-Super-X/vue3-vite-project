@@ -1,7 +1,11 @@
 /**
  * 全局 AbortController 单例 + signal 合并工具。
+ *
  * 用途：logout 等需要"一次性取消所有在途请求"的场景。
  * 单例 signal 注入 http.ts 请求拦截器，logout 时统一 abort()。
+ *
+ * @see [`src/api/http.ts`](./http.ts) 拦截器注入点
+ * @group 网络基建：取消控制
  */
 
 class GlobalAbortController {

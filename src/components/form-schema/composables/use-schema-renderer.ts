@@ -1,5 +1,16 @@
+/**
+ * use-schema-renderer —— schema 整体替换 + identity-preserving clone + markRaw 包装
+ *
+ * 关键责任：
+ * - 监听 schema 引用换代；旧 schema 走 cloneDeepWith 复刻，新 schema 走 identity-preserving 浅克隆
+ * - identity-preserving clone：component 字段保持引用（避免 Vue 整字段 remount）
+ * - markRaw(component)：用户传 Component 对象时排除响应式追踪（消除 "reactive object" 警告）
+ *
+ * @group 表单编排：渲染
+ */
 import { watch, ref, reactive, markRaw, onScopeDispose, type Ref } from 'vue'
 import { cloneDeepWith } from 'lodash-es'
+import { trackTriggerRender } from './use-dev-runtime'
 
 /**
  * identity-preserving clone：行为同 cloneDeep，但不深入 component 字段 ——
@@ -27,6 +38,8 @@ import {
   type ReactionBudget,
 } from './use-reaction'
 import { useAsyncOptions, resolveAsyncOptionsProp } from './use-async-options'
+import type { ExpressionScope } from './use-expression'
+import { walkSchema } from '../utils/walk-schema'
 
 interface UseSchemaRendererOptions {
   schema: Ref<SchemaNode | SchemaNode[]>
@@ -41,6 +54,12 @@ interface UseSchemaRendererOptions {
    * @see ./use-reaction.ts
    */
   reactionBudget?: number
+  /**
+   * H2：实例级表达式解析器（composer 用 createExpressionScope() 创建，每实例一份）。
+   * 注入后 reaction 管线全部节点用实例私有沙箱求值，缺省回退模块级（向后兼容）。
+   * @see ./use-expression.ts createExpressionScope
+   */
+  resolveFunctionExpression?: ExpressionScope['resolveFunctionExpression']
 }
 
 /**
@@ -75,7 +94,13 @@ export function useSchemaRenderer(opts: UseSchemaRendererOptions) {
       if (hasRx) {
         // 阶段 P2-3：reactionBudget 透传到 reaction 执行预算（默认 50 向后兼容）
         const budget: ReactionBudget = createBudget(opts.reactionBudget ?? DEFAULT_REACTION_BUDGET)
-        traverse(cloned as SchemaNode, opts.formData.value, stoppers, budget)
+        traverse(
+          cloned as SchemaNode,
+          opts.formData.value,
+          stoppers,
+          budget,
+          opts.resolveFunctionExpression
+        )
       }
       reactiveSchema.value = cloned
     },
@@ -98,11 +123,7 @@ export function useSchemaRenderer(opts: UseSchemaRendererOptions) {
      * （Vue 3 优化：computed 返回值引用未变时依赖方不重新执行 render）
      */
     triggerRender: () => {
-      // 阶段 3.1 调试：仅在 dev 环境标记，避免生产环境污染全局
-      if (import.meta.env.DEV) {
-        ;(window as unknown as { __triggerRenderCalled?: number }).__triggerRenderCalled =
-          ((window as unknown as { __triggerRenderCalled?: number }).__triggerRenderCalled ?? 0) + 1
-      }
+      trackTriggerRender()
       reactiveSchema.value = { ...reactiveSchema.value } as SchemaNode | SchemaNode[]
     },
   }
@@ -112,13 +133,14 @@ function traverse(
   node: SchemaNode | SchemaNode[],
   model: Record<string, unknown>,
   stoppers: (() => void)[],
-  budget: ReactionBudget
+  budget: ReactionBudget,
+  resolve?: ExpressionScope['resolveFunctionExpression']
 ): void {
   if (Array.isArray(node)) {
-    node.forEach((n) => traverse(n, model, stoppers, budget))
+    node.forEach((n) => traverse(n, model, stoppers, budget, resolve))
     return
   }
-  applyReactions(node, model, stoppers, budget)
+  applyReactions(node, model, stoppers, budget, resolve)
 }
 
 /**
@@ -133,79 +155,40 @@ function registerAsyncOptions(
   model: Ref<Record<string, unknown>>,
   stoppers: (() => void)[]
 ): void {
-  if (Array.isArray(node)) {
-    node.forEach((n) => registerAsyncOptions(n, model, stoppers))
-    return
-  }
-  if (node.asyncOptions) {
-    const state = useAsyncOptions(node, model)
-    stoppers.push(state.stop)
-    const stopState = watch(
-      () => [state.data.value, state.loading.value],
-      () => {
-        const targetProp = resolveAsyncOptionsProp(node)
-        node.props = { ...(node.props ?? {}), loading: state.loading.value }
-        if (targetProp) {
-          node.props = { ...node.props, [targetProp]: state.data.value }
-        }
-      },
-      { immediate: true, deep: true }
-    )
-    stoppers.push(stopState)
-  }
-  if (node.children) {
-    if (Array.isArray(node.children)) {
-      registerAsyncOptions(node.children, model, stoppers)
-    } else if (typeof node.children === 'object') {
-      registerAsyncOptions(node.children, model, stoppers)
-    }
-  }
-  if (node.slots) {
-    for (const slot of Object.values(node.slots)) {
-      if (typeof slot === 'function') continue
-      if (slot && typeof slot === 'object' && !Array.isArray(slot)) {
-        registerAsyncOptions(slot, model, stoppers)
-      } else if (Array.isArray(slot)) {
-        slot.forEach((s) => registerAsyncOptions(s, model, stoppers))
-      }
-    }
-  }
+  // 遍历范围保持既有行为：只走 children + node.slots 两向，故意不遍历
+  // formItem.slots 与 array.itemSchema —— 既有实现漏遍历这两处的 asyncOptions，
+  // 行为修复（补遍历后可能改变请求触发时机）不属本批次，M5 只统一遍历器
+  walkSchema(
+    node,
+    (n) => {
+      if (!n.asyncOptions) return
+      const state = useAsyncOptions(n, model)
+      stoppers.push(state.stop)
+      const stopState = watch(
+        () => [state.data.value, state.loading.value],
+        () => {
+          const targetProp = resolveAsyncOptionsProp(n)
+          n.props = { ...(n.props ?? {}), loading: state.loading.value }
+          if (targetProp) {
+            n.props = { ...n.props, [targetProp]: state.data.value }
+          }
+        },
+        { immediate: true, deep: true }
+      )
+      stoppers.push(stopState)
+    },
+    { includeFormItemSlots: false, includeArrayItemSchema: false }
+  )
 }
 
-/** 检查 schema 中是否含 asyncOptions 字段（含字段时才需启用 reactive） */
+/** 检查 schema 中是否含 asyncOptions 字段（含字段时才需启用 reactive）—— 经 walkSchema 四向遍历（M5 统一） */
 function containsAsyncOptions(node: SchemaNode | SchemaNode[]): boolean {
   let found = false
-  traverse(node)
-  return found
-
-  function traverse(n: unknown): void {
-    if (found || n === null || typeof n !== 'object') return
-    const o = n as Record<string, unknown>
-    if (o.asyncOptions) {
+  walkSchema(node, (n) => {
+    if (n.asyncOptions) {
       found = true
-      return
+      return false
     }
-    if (Array.isArray(o.children)) o.children.forEach(traverse)
-    else if (o.children && typeof o.children === 'object') traverse(o.children)
-    if (o.slots && typeof o.slots === 'object') {
-      for (const slot of Object.values(o.slots as Record<string, unknown>)) {
-        if (typeof slot === 'function') continue
-        traverse(slot)
-      }
-    }
-    if (o.formItem && typeof o.formItem === 'object') {
-      const fi = o.formItem as Record<string, unknown>
-      if (fi.slots && typeof fi.slots === 'object') {
-        for (const slot of Object.values(fi.slots as Record<string, unknown>)) {
-          if (typeof slot === 'function') continue
-          traverse(slot)
-        }
-      }
-    }
-    // 数组节点（kind: 'array'）：递归遍历 itemSchema 子树
-    if (o.kind === 'array' && o.array && typeof o.array === 'object') {
-      const itemSchema = (o.array as Record<string, unknown>).itemSchema
-      traverse(itemSchema)
-    }
-  }
+  })
+  return found
 }

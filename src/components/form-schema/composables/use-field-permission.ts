@@ -7,10 +7,12 @@
  *
  * @see ../types/xform.ts XFormProps.permissionResolver —— XForm 入参契约
  * @see render-schema-node.ts RenderSchemaNodeOptions.permissionResolver —— 渲染层注入点
+ *
+ * @group 表单编排：权限
  */
 import type { SchemaNode } from '../types'
 import { get } from 'lodash-es'
-import { resolveFunctionExpression } from './use-expression'
+import { resolveFunctionExpression, type ExpressionScope } from './use-expression'
 
 export type FieldPermission = 'view' | 'edit' | 'hidden'
 
@@ -18,6 +20,13 @@ export interface ResolvePermissionOptions {
   model: () => Record<string, unknown> | undefined
   /** 权限码 → 三态映射；默认 identity。业务可注入 useAuth().hasPerm */
   permissionResolver?: (perm: string) => FieldPermission
+  /**
+   * H2：实例级表达式解析器（缺省回退模块级，向后兼容）。
+   * 由 composer 注入 createExpressionScope() 产物，保证同页多 XForm 实例的
+   * 权限表达式各用各的函数表。
+   * @see ./use-expression.ts createExpressionScope
+   */
+  resolveFunctionExpression?: ExpressionScope['resolveFunctionExpression']
 }
 
 /** 字段权限解析：字面量 / 函数 / '{{ fn }}' 三种来源，返回 view | edit | hidden */
@@ -37,8 +46,8 @@ export function resolvePermission(
     }
     // 字符串
     if (typeof raw === 'string') {
-      // 1) 尝试函数表达式解析（与 reaction 一致）
-      const fn = resolveFunctionExpression(raw)
+      // 1) 尝试函数表达式解析（与 reaction 一致；H2：优先实例级注入解析器）
+      const fn = (opts.resolveFunctionExpression ?? resolveFunctionExpression)(raw)
       if (fn) {
         const model = opts.model() ?? {}
         const result = (fn as (m: Record<string, unknown>) => unknown)(model)

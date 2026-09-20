@@ -1,11 +1,14 @@
 /**
  * XForm 组件对外契约 —— Props / Expose / Validate 入出参
+ *
+ * @group 类型系统
  */
 import type { ComponentPublicInstance, Directive } from 'vue'
 import type { ZodType } from 'zod'
 
 import type { RuleItem } from './rule'
 import type { SchemaNode } from './schema-node'
+import type { XFormTranslateFn } from './identity'
 
 /**
  * beforeChange 钩子上下文 —— 允许在字段级钩子里联动修改其他字段 / 取消写入
@@ -58,6 +61,19 @@ export interface XFormProps {
   components?: Record<string, unknown>
   rules?: Record<string, RuleItem>
   directives?: Record<string, Directive>
+  /**
+   * i18n 翻译函数注入（架构审查 PM 发现 3，2026-09-18 落地）
+   *
+   * - 用于求值 SchemaNode.label 的函数式（XFormLabelFn）：label: (t) => t('form.email')
+   * - XForm 不绑定具体 i18n 库（分层铁律：components/ 不得 import locales/）——
+   *   调用方在 modules 层注入 vue-i18n 的 t 或自研字典查表函数
+   * - 求值发生在 render effect 内：vue-i18n 的 t 借此建立 locale 依赖，
+   *   语言切换自动重渲（无需重建 schema）
+   * - 缺省 identity ((key) => key)：函数式 label 收到 key 原样返回（业务可完全闭包自译）
+   *
+   * @see ./identity.ts XFormLabelFn / XFormTranslateFn
+   */
+  t?: XFormTranslateFn
   /**
    * 全局 Props beforeChange（第 1 层：横切关注点）
    * - 返回新值 → 透传给下一层
@@ -123,6 +139,16 @@ export interface XFormProps {
    */
   permissionResolver?: (perm: string) => 'view' | 'edit' | 'hidden'
   /**
+   * 开启错误浮窗 OSD（XFormErrorToast，右上角 toast 展示 errorBus 事件）
+   *
+   * - 默认 false（全环境含 dev 均不渲染浮窗）——错误主反馈始终是字段红字 + console 留痕，
+   *   toast 是补充提醒，默认开启会对连续输入校验失败的场景造成弹窗噪音
+   * - 传 true 开启：跨字段校验失败 / 表达式解析失败 / 服务端 422 回填等
+   *   errorBus 事件以浮窗形式可见
+   * - 与 DebugBanner 相互独立（showDebugBanner 只控制 schema 校验 + 安全扫描横幅）
+   */
+  showErrorToast?: boolean
+  /**
    * 单批次 reaction 执行预算（阶段 P2-3 可配置化入口）
    *
    * 用途:reaction 函数允许写 model 副作用，deep watch 会再次触发 runner，
@@ -142,6 +168,33 @@ export interface XFormProps {
    * - 透传链路完整（spec 覆盖：use-reaction.spec.ts line 342 验证 budget.max 反映在 console.error 文案）
    */
   reactionBudget?: number
+  /**
+   * 表单密度尺寸（透传 ElForm.size），未传入时跟随全局 size（App 层默认 'default'）
+   *
+   * 场景（设计师审查 F9）：中后台常见"紧凑表格页内嵌紧凑筛选表单"，业务一处传入即可。
+   * ElForm 通过 provide/formItemSize 注入所有后代 EP 组件（EP 的 useSize 优先取 form 注入），
+   * 无需再包一层 ElConfigProvider。
+   *
+   * - 'large' / 'default' / 'small' 与 element-plus 语义一致
+   * - schema 顶层节点不预留 size 字段（密度是表单级视觉决策，字段级不开放）
+   *
+   * @see ./components/XForm.vue（ElForm size 绑定处）
+   */
+  size?: 'large' | 'default' | 'small'
+  /**
+   * 字段级 dirty 视觉指示（设计师审查 F13）
+   *
+   * 开启后，被修改过的字段（getDirtyFields 返回的非空集合）对应的 form-item label
+   * 会追加 `is-dirty` class，配合样式（`__label::after` 圆点）给用户"我改了哪里"的视觉线索。
+   *
+   * - 默认 false（不开启，避免侵入消费方现有视觉）
+   * - 数据侧 getDirtyFields / isDirty / resetDirty 已就绪，本 prop 只接渲染层
+   * - dirty 集合随 resetDirty() 调用自动清空（响应式）
+   *
+   * @see ./composables/use-form-dirty.ts（能力层）
+   * @see ./components/XForm.vue（class 绑定处）
+   */
+  showDirtyMark?: boolean
 }
 
 /** XForm 组件实例方法 */

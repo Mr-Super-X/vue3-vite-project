@@ -11,6 +11,8 @@
  * - mount < 100ms(桌面)
  * - 输入响应 < 16ms(60fps)
  * - 100 字段批量更新 < 50ms
+ *
+ * @group XForm 基准
  */
 import { describe, bench, beforeEach } from 'vitest'
 import { effectScope, nextTick, reactive, ref } from 'vue'

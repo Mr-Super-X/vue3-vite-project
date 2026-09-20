@@ -1,14 +1,20 @@
-// 路由类型定义
-//
-// 设计变更（2026-07-24 方案 A）：
-//   - 移除 RouteName 联合类型（单一事实源是 routes/index.ts）
-//   - auto-register.ts 通过 import.meta.glob 派生所有 name
-//   - 拼写校验靠 zod runtime（remote.ts）+ pushByNameStrict dev 校验
-//   - 不再有"加新模块要同步 types.ts"的负担
-//
-// 校验脚本：scripts/check-routes.ts（pnpm check:routes）
-//   - 不再读 RouteName 联合
-//   - 改为校验"whitelist ⊆ 实际 routes name + 系统路由必存在"
+/**
+ * 路由类型定义。
+ *
+ * 设计变更（2026-07-24 方案 A）：
+ * - 移除 RouteName 联合类型（单一事实源是 `routes/index.ts`）
+ * - `auto-register.ts` 通过 `import.meta.glob` 派生所有 name
+ * - 拼写校验靠 zod runtime（`remote.ts`）+ `pushByNameStrict` dev 校验
+ * - 不再有"加新模块要同步 types.ts"的负担
+ *
+ * 校验脚本：`scripts/check-routes.ts`（`pnpm check:routes`）
+ * - 不再读 RouteName 联合
+ * - 改为校验"whitelist ⊆ 实际 routes name + 系统路由必存在"
+ *
+ * @see [`./auto-register.ts`](./auto-register.ts) 派生所有 name
+ * @see [`./remote.ts`](./remote.ts) zod runtime 校验
+ * @group 路由类型
+ */
 
 import type { RouteMeta } from 'vue-router'
 
@@ -41,6 +47,20 @@ declare module 'vue-router' {
     permissions?: string[]
     /** 路由可见性，false 时菜单隐藏且禁止直接访问（hidden 后端菜单转换目标） */
     visible?: boolean
+    /**
+     * 菜单可见性（**仅作用于侧边栏渲染过滤，不影响路由守卫**）。
+     *
+     * 与 `visible` 的语义差异：
+     *   - `visible: false` → 菜单隐藏 **+ 守卫拦截直访**（双屏蔽，用于"真隐藏"页面，如隐藏订单详情）
+     *   - `menuVisible: false` → **仅菜单隐藏**，路由仍可被 URL 直访（场景：客服邮件链接直达运营报表）
+     *
+     * 设计动机：reports 模块注释承诺"运营报表不希望出现在侧边栏，但客服可通过邮件链接直达"，
+     * 但 `visible` 是双语义字段无法单独表达"只藏菜单不禁访问"，故新增本字段解耦。
+     *
+     * @see {@link file://./guards/visibility.ts} 守卫消费 `visible`（不消费 `menuVisible`）
+     * @see {@link file://../layouts/default/config/menu.ts} isMenuHidden 消费 `menuVisible`
+     */
+    menuVisible?: boolean
     /** keepAlive 缓存开关（业务页面切换时是否保留组件实例） */
     keepAlive?: boolean
     /** 面包屑是否展示（侧边栏无关，紧凑型页面用 false） */

@@ -43,9 +43,9 @@
 
 | 文件           | 职责                                                     | 持久化                                                                                               |
 | -------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `app.ts`       | 侧边栏折叠 + 全局 loading + 语言（zh-CN/en-US）          | 否                                                                                                   |
+| `app.ts`       | 侧边栏折叠 + 全局 loading + 语言（zh-CN/en-US）          | 是（pick: `layout`/`locale`，key: `vue3-vite-project:app-ui`）                                       |
 | `user.ts`      | 登录标记（`authenticated`）+ profile + permissions       | 否（httpOnly：凭证 cookie 由后端 Set，前端不持有 token，sessionStorage `auth` 标记也仅用于守卫同步） |
-| `theme.ts`     | 主题模式（light/dark/auto）                              | 是（pick: `mode`，key: `theme-mode`）                                                                |
+| `theme.ts`     | 主题模式（light/dark/auto）                              | 是（pick: `mode`，key: `vue3-vite-project:theme-mode`）                                              |
 | `router.ts`    | 路由 UI 状态（`isLoadingRemoteMenu` + `lastRouteError`） | 否                                                                                                   |
 | `dict.ts`      | 字典（5min 业务层缓存 + 30s 网络层缓存）                 | 否                                                                                                   |
 | `tags-view.ts` | 多页签状态（visitedViews + cachedViews）                 | 否（避免换账号残留上个账号的 tab）                                                                   |
@@ -141,7 +141,7 @@ export * from './modules/dict'
 ### 4.2 在 store 内启用（pick 字段）
 
 ```ts
-// src/store/modules/theme.ts（实际 key 是 'theme-mode'，不带 namespace 前缀）
+// src/store/modules/theme.ts（persist key 经 namespacedStorageKey() 拼接 namespace）
 export const useThemeStore = defineStore(
   'theme',
   () => {
@@ -156,7 +156,8 @@ export const useThemeStore = defineStore(
   },
   {
     persist: {
-      key: 'theme-mode', // pinia persist 直接写 localStorage，不拼接 VITE_STORAGE_NAMESPACE
+      // 与 utils/storage 的 Local/Session 共用同一命名空间规则，避免多项目同域冲突
+      key: namespacedStorageKey('theme-mode'),
       pick: ['mode'], // ← 仅持久化 mode，isDark 是派生 computed 不持久化
     },
   }
@@ -177,15 +178,22 @@ export const useThemeStore = defineStore(
 
 `VITE_STORAGE_NAMESPACE` env 变量（默认 `'vue3-vite-project'`，见 `src/types/env.d.ts:19` + `src/utils/storage.ts:30`）**只影响 `utils/storage.ts` 的 `Local/Session` 工具类**，给业务手写的 `Local.set('foo', ...)` 自动拼接 `vue3-vite-project:foo` 前缀。
 
-**不会自动应用到 pinia-plugin-persistedstate**——该插件直接用 `persist.key` 写 `localStorage[key]`，不会读取 `VITE_STORAGE_NAMESPACE`。如果需要命名空间隔离，写到 `localStorage` 的 key 上手动加前缀即可，例如：
+**不会自动应用到 pinia-plugin-persistedstate**——该插件直接用 `persist.key` 写 `localStorage[key]`，不会读取 `VITE_STORAGE_NAMESPACE`。
+
+> **2026-09-09 决策变更**：项目约定所有 persist key **必须**经 `namespacedStorageKey()`（`@/utils/storage` 导出）拼接 namespace，与 Local/Session 规则保持一致，避免多项目部署在同一域名下时 localStorage key 冲突：
 
 ```ts
-persist: {
-  key: 'vue3-vite-project:theme-mode', // 不推荐——更难排查冲突，storeId 已天然隔离
-}
+import { namespacedStorageKey } from '@/utils/storage'
+
+defineStore('theme', setupFn, {
+  persist: {
+    key: namespacedStorageKey('theme-mode'), // → localStorage['vue3-vite-project:theme-mode']
+    pick: ['mode'],
+  },
+})
 ```
 
-> 实际项目所有 store 的 `persist.key` 都是裸 key（`'theme-mode'` 等），靠 storeId 天然隔离多业务冲突；`VITE_STORAGE_NAMESPACE` 仅约束 utils/storage.ts 工具类。
+> 历史版本曾采用裸 key（`'theme-mode'` 等）依赖 storeId 隔离；`theme.ts` 保留了老裸 key 的一次性读取兜底（命中即迁移清除），`app.ts` 老 key 残留无害（回灌失败仅回退默认值）。
 
 ### 4.5 手动清缓存
 
@@ -282,8 +290,8 @@ describe('useThemeStore', () => {
   it('pick 字段持久化', () => {
     const store = useThemeStore()
     store.setMode('light')
-    // 实际 key 是 'theme-mode'（不带 namespace 前缀）
-    expect(localStorage.getItem('theme-mode')).toContain('light')
+    // persist key 经 namespacedStorageKey() 拼接 namespace
+    expect(localStorage.getItem('vue3-vite-project:theme-mode')).toContain('light')
   })
 })
 ```

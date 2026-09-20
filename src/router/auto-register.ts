@@ -1,23 +1,29 @@
-// 路由自动注册
-//
-// 自动扫描 src/modules/<dir>/routes/index.ts 并注册到全局路由。
-// 业务模块无需在 router/index.ts 中手动 import —— 新增页面后自动生效。
-//
-// 使用 Vite import.meta.glob 特性（构建期扫描，不影响运行时性能）：
-//   - 路径以 '/' 开头表示项目根
-//   - eager: true 表示同步加载（路由配置需要立即可用）
-//   - 返回值是 { [path]: Module } 字典
-//
-// 排除规则：
-//   - error 模块的具名错误页走自动注册（src/modules/error/routes/index.ts）
-//   - catch-all 404 兜底单独在 router/fallback.ts 注册（保证最后匹配）
-//
-// 新增业务模块的标准流程（无需改 router 目录）：
-//   1. 创建 src/modules/<feature>/routes/index.ts
-//   2. 在 types.ts 追加 RouteName
-//   3. 在 component-registry.ts 追加同名映射
-//   4. 完成 —— 路由自动可用
-//   （scripts/check-routes.ts 可一键校验 3 处一致性）
+/**
+ * 路由自动注册。
+ *
+ * 自动扫描 `src/modules/<dir>/routes/index.ts` 并注册到全局路由。
+ * 业务模块无需在 `router/index.ts` 中手动 import —— 新增页面后自动生效。
+ *
+ * 使用 Vite `import.meta.glob` 特性（构建期扫描，不影响运行时性能）：
+ * - 路径以 `/` 开头表示项目根
+ * - `eager: true` 表示同步加载（路由配置需要立即可用）
+ * - 返回值是 `{ [path]: Module }` 字典
+ *
+ * 排除规则：
+ * - error 模块的具名错误页走自动注册（`src/modules/error/routes/index.ts`）
+ * - catch-all 404 兜底单独在 `router/fallback.ts` 注册（保证最后匹配）
+ *
+ * 新增业务模块的标准流程（无需改 router 目录）：
+ * 1. 创建 `src/modules/<feature>/routes/index.ts`
+ * 2. ~~在 types.ts 追加 RouteName~~（2026-07-24 方案 A 移除）
+ * 3. ~~在 component-registry.ts 追加同名映射~~（已合并到本文件）
+ * 4. 完成 —— 路由自动可用
+ * （`scripts/check-routes.ts` 可一键校验）
+ *
+ * @see [`./fallback.ts`](./fallback.ts) catch-all 404 注册
+ * @see [`./remote.ts`](./remote.ts) `COMPONENT_REGISTRY` 使用方
+ * @group 路由：自动注册
+ */
 
 import type { RouteRecordRaw } from 'vue-router'
 import { autoImport } from '@/utils/autoImport'

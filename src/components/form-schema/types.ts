@@ -21,6 +21,8 @@
  * @see ./types/schema-node.ts —— SchemaNode 完整字段表（30 字段）请看这个文件
  * @see ./types/xform.ts —— XFormProps / XFormExpose / beforeChange 完整说明
  * @see ./types/rule.ts —— RuleItem 跨字段规则 + crossValidator / debounceMs
+ *
+ * @group 类型系统
  */
 
 /**
@@ -91,6 +93,10 @@ export { type SchemaNode } from './types/schema-node'
  * @see ./types/schema-node.ts 字段分组对照表
  */
 export { type SchemaNodeIdentity } from './types/identity'
+/** XFormTranslateFn —— i18n 翻译函数签名（调用方注入 vue-i18n 的 t 或自研字典函数） */
+export { type XFormTranslateFn } from './types/identity'
+/** XFormLabelFn —— i18n 函数式 label（收 t，渲染期在 render effect 内求值，语言切换自动重渲） */
+export { type XFormLabelFn } from './types/identity'
 export { type SchemaNodeRender } from './types/render'
 export { type SchemaNodeLayout } from './types/layout'
 export { type SchemaNodeValidate } from './types/validate'

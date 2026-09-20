@@ -117,11 +117,11 @@
 | 元素 | 字号 | 字重 | 颜色 |
 |------|------|------|------|
 | 主标题"企业中后台管理" | 24px | 600 | `var(--login-text-primary)` |
-| 副标题"应急指挥 · 数据中台" | 13px | 400 | `var(--login-text-secondary)` |
+| 副标题"{{ appTitle }} · 数据中台"（VITE_APP_TITLE 驱动） | 13px | 400 | `var(--login-text-secondary)` |
 | 表单 label | 13px | 500 | `var(--login-text-secondary)` |
 | 输入文字 | 14px | 400 | `var(--login-text-primary)` |
 | 按钮文字 | 15px | 600 | `#0a1428` |
-| 底部版权"© 2026 应急指挥中心" | 12px | 400 | `var(--login-text-muted)` |
+| 底部版权"© 2026 {{ appTitle }}中心"（VITE_APP_TITLE 驱动） | 12px | 400 | `var(--login-text-muted)` |
 
 字体策略：系统字体栈（避免外部字体加载）：
 ```
@@ -151,7 +151,7 @@ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Micr
 │        ┌──────────────────┐             │
 │        │   🔷 LOGO         │             │
 │        │   企业中后台管理 │             │
-│        │   应急指挥·数据中台│             │
+│        │   企业中后台管理·数据中台│             │
 │        │   ──────────      │             │
 │        │   账号            │             │
 │        │   [admin____]     │             │
@@ -288,7 +288,7 @@ const { bem, BEM_PREFIX } = createNamespace('auth-login')
       <div :class="bem.e('brand')">
         <div :class="bem.e('logo')" />
         <h1 :class="bem.e('title')">企业中后台管理</h1>
-        <p :class="bem.e('subtitle')">应急指挥 · 数据中台</p>
+        <p :class="bem.e('subtitle')">{{ appTitle }} · 数据中台</p>
       </div>
 
       <el-form
@@ -335,7 +335,7 @@ const { bem, BEM_PREFIX } = createNamespace('auth-login')
         </el-button>
       </el-form>
 
-      <p :class="bem.e('footer')">© 2026 应急指挥中心</p>
+      <p :class="bem.e('footer')">© 2026 {{ appTitle }}中心</p>
     </el-card>
   </div>
 </template>

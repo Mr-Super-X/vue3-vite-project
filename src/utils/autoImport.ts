@@ -49,6 +49,10 @@
  *   })
  * }
  * ```
+ *
+ * @see [`src/router/auto-register.ts`](../router/auto-register.ts) 路由聚合场景
+ * @see [`src/directives/index.ts`](../directives/index.ts) 指令安装场景
+ * @group 自动导入
  */
 
 export interface AutoImportOptions<M, R = void> {

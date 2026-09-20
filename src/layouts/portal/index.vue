@@ -1,7 +1,15 @@
 <script setup lang="ts">
-// PortalLayout：限定门户专用头部 + 路由出口
-// 职责：只负责头部（由 PortalHeader 单组件承担，含品牌区与导航区），以及一行内边距留空。
-//      导航以下的所有内容（首页 hero、时间问候、数据总览、底部、AI 助手等）由 home 模块自管。
+/**
+ * Portal 布局：限定门户专用头部 + 路由出口。
+ *
+ * 职责：只负责头部（由 PortalHeader 单组件承担，含品牌区与导航区），以及一行内边距留空。
+ *      导航以下的所有内容（首页 hero、时间问候、数据总览、底部、AI 助手等）由 home 模块自管。
+ *
+ * @see [`./components/PortalHeader.vue`](./components/PortalHeader.vue) 门户头部
+ * @see [`./components/PortalNav.vue`](./components/PortalNav.vue) 顶部导航
+ * @see [`@/modules/home`](../../modules/home) 首页业务内容
+ * @group 布局
+ */
 import PortalHeader from './components/PortalHeader.vue'
 
 const bem = createNamespace('portal-layout')

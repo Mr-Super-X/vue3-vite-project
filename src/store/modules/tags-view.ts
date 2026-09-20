@@ -1,14 +1,20 @@
-// 多页签状态管理
-//
-// 设计要点：
-//   - visitedViews: 已访问路由的 UI 渲染列表（按访问顺序）
-//   - cachedViews: 实际进入 keep-alive 的 name 列表（与 visitedViews 同步，但排除已关闭的非 affix）
-//   - affix: meta.affix === true 的路由（如 Home）始终保留，用户无法关闭
-//   - 不持久化：避免换账号看到上个账号的 tab（设计取舍）
-//
-// 路由参数变化策略（如 /user/1 → /user/2）：
-//   - 同一 name 在 visitedViews 中只保留一条，path 更新到最新
-//   - cachedViews 不变（keep-alive 缓存复用，组件实例仍在）
+/**
+ * 多页签状态管理。
+ *
+ * 设计要点：
+ *   - visitedViews: 已访问路由的 UI 渲染列表（按访问顺序）
+ *   - cachedViews: 实际进入 keep-alive 的 name 列表（与 visitedViews 同步，但排除已关闭的非 affix）
+ *   - affix: meta.affix === true 的路由（如 Home）始终保留，用户无法关闭
+ *   - 不持久化：避免换账号看到上个账号的 tab（设计取舍）
+ *
+ * 路由参数变化策略（如 /user/1 → /user/2）：
+ *   - 同一 name 在 visitedViews 中只保留一条，path 更新到最新
+ *   - cachedViews 不变（keep-alive 缓存复用，组件实例仍在）
+ *
+ * @see [`../../layouts/default/components/TagsView.vue`](../../layouts/default/components/TagsView.vue) UI 渲染
+ * @see [`../../router/guards/remote-menu.ts`](../../router/guards/remote-menu.ts) 触发 addRouteView
+ * @group 状态管理：多页签
+ */
 
 import type { RouteLocationNormalized } from 'vue-router'
 
@@ -17,8 +23,12 @@ export interface TagView {
   name: string
   /** 完整路径（含 query），用于路由切换 */
   path: string
-  /** 渲染名（meta.title || name） */
+  /** 渲染名（meta.title || name）。有 titleKey 时 UI 层应优先 t(titleKey) 实现语言热切换 */
   title: string
+  /** i18n 键（meta.titleKey），存在时页签/面包屑等 UI 随语言切换实时翻译 */
+  titleKey?: string
+  /** 菜单图标（Element Plus 图标名，页签前缀图标用） */
+  icon?: string
   /** meta.affix === true 时为固定 tag（如 Home），不可关闭 */
   affix?: boolean
 }
@@ -32,10 +42,15 @@ export interface TagView {
  */
 function toTag(route: RouteLocationNormalized): TagView | null {
   if (!route.name) return null
+  const icon = route.meta?.icon as string | undefined
+  const titleKey = (route.meta as { titleKey?: string }).titleKey
   return {
     name: String(route.name),
     path: route.fullPath,
     title: (route.meta?.title as string | undefined) ?? String(route.name),
+    // exactOptionalPropertyTypes：undefined 不入对象，用条件展开
+    ...(titleKey ? { titleKey } : {}),
+    ...(icon ? { icon } : {}),
     affix: route.meta?.affix === true,
   }
 }
@@ -84,6 +99,27 @@ export const useTagsViewStore = defineStore('tags-view', () => {
     )
   }
 
+  /** 关闭左侧：保留当前 tag 及其右侧 + 所有 affix tag。 */
+  function closeLeft(view: TagView): void {
+    const index = visitedViews.value.findIndex((v) => v.name === view.name)
+    if (index < 0) return
+    visitedViews.value = visitedViews.value.filter((v, i) => v.affix || i >= index)
+    cachedViews.value = visitedViews.value.map((v) => v.name)
+  }
+
+  /** 关闭右侧：保留当前 tag 及其左侧 + 所有 affix tag。 */
+  function closeRight(view: TagView): void {
+    const index = visitedViews.value.findIndex((v) => v.name === view.name)
+    if (index < 0) return
+    visitedViews.value = visitedViews.value.filter((v, i) => v.affix || i <= index)
+    cachedViews.value = visitedViews.value.map((v) => v.name)
+  }
+
+  /** 从 keep-alive 缓存中剔除指定 name（页签"刷新"用：剔除后重挂载组件） */
+  function removeCachedView(name: string): void {
+    cachedViews.value = cachedViews.value.filter((n) => n !== name)
+  }
+
   /** router.afterEach 钩子入口（仅展示用），已处理路由无 name 的情况。 */
   function addRouteView(route: RouteLocationNormalized): void {
     const tag = toTag(route)
@@ -97,6 +133,9 @@ export const useTagsViewStore = defineStore('tags-view', () => {
     removeView,
     closeOthers,
     closeAll,
+    closeLeft,
+    closeRight,
+    removeCachedView,
     addRouteView,
   }
 })

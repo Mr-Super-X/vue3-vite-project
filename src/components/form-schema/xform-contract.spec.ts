@@ -19,7 +19,7 @@
  - ./ARCHITECTURE.md §9.2 关键回归保护
  */
 import { describe, it, expect } from 'vitest'
-import XFormSource from './XForm.vue?raw'
+import XFormSource from './components/XForm.vue?raw'
 
 describe('XForm.vue validate-trigger 回归保护', () => {
   /**
@@ -59,7 +59,7 @@ describe('XForm.vue 全局 CSS 导入回归保护', () => {
   /**
    * 根因回归：OPT-1 重构 XForm.vue 时漏掉了两行 CSS 导入
    *   import 'element-plus/dist/index.css'
-   *   import './styles/element-form-overwrite.scss'
+   *   import '../styles/element-form-overwrite.scss'
    * 导致 element-plus 全局样式与 form-schema 自定义覆盖样式均未加载，
    * 整个表单页面样式全部失效。
    *
@@ -70,8 +70,9 @@ describe('XForm.vue 全局 CSS 导入回归保护', () => {
     expect(XFormSource).toMatch(/import\s+['"]element-plus\/dist\/index\.css['"]/)
   })
 
-  it('XForm.vue 必须 import ./styles/element-form-overwrite.scss（form-schema 自定义覆盖）', () => {
-    expect(XFormSource).toMatch(/import\s+['"]\.\/styles\/element-form-overwrite\.scss['"]/)
+  it('XForm.vue 必须 import ../styles/element-form-overwrite.scss（form-schema 自定义覆盖）', () => {
+    // 2026-09-09 目录归位：XForm.vue 移入 components/，样式路径由 ./styles 变为 ../styles
+    expect(XFormSource).toMatch(/import\s+['"]\.\.\/styles\/element-form-overwrite\.scss['"]/)
   })
 
   it('CSS import 必须位于 <script setup> 顶层（非条件分支）', () => {

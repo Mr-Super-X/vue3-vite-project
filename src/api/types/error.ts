@@ -8,6 +8,9 @@
  *
  * 注意：项目 tsconfig 启用了 exactOptionalPropertyTypes，可选字段必须显式
  * `| undefined` 才能在调用处安全传 undefined。
+ *
+ * @see [`src/api/http-errors.ts`](../http-errors.ts) HTTP 状态码映射
+ * @group 网络基建：类型定义
  */
 export class ApiError extends Error {
   public readonly code: number

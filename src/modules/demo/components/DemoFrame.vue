@@ -1,8 +1,10 @@
 <script setup lang="ts">
 /**
- * 演示页统一容器（参考开源 form-schema 实现 demo 容器 frame.vue 的简化版）
+ * 演示页统一容器——demo 模块所有 examples/*.vue 的三段式外壳（标题 / 简介 / 主内容）。
  *
- * 用途：每个组件示例页都用它包裹，提供标题、简介、主内容三段式结构。
+ * 对照参考仓 demo 容器 frame 的简化版（项目自有 form-schema 不复刻参考仓目录布局，
+ * 只复用「标题 + 多点简介 + 内容」三段式结构 + 源码路径展示）。
+ *
  * 不提供"在编辑器打开组件"按钮（项目未配置 vite-plugin-vue-inspector）。
  */
 

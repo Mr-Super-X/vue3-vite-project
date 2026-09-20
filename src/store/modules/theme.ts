@@ -1,30 +1,70 @@
-// 主题 store
-//
-// 持久化：mode 字段通过 pinia-plugin-persistedstate 自动写入 localStorage
-// 跟随系统：mode === 'auto' 时监听 prefers-color-scheme 媒体查询
-//
-// 切换 API：
-//   useThemeStore().setMode('dark')   // 强制深色
-//   useThemeStore().setMode('light')  // 强制浅色
-//   useThemeStore().setMode('auto')   // 跟随系统
-//   useThemeStore().toggleMode()      // 智能切换（auto → 显式；light ↔ dark）
-//
-// 推荐在组件中使用 useTheme() composable（@composables/useTheme），更简洁。
+/**
+ * 主题 store（持久化）。
+ *
+ * 持久化：mode 字段通过 pinia-plugin-persistedstate 自动写入 localStorage
+ * 跟随系统：mode === 'auto' 时监听 prefers-color-scheme 媒体查询
+ *
+ * 切换 API：
+ *   useThemeStore().setMode('dark')   // 强制深色
+ *   useThemeStore().setMode('light')  // 强制浅色
+ *   useThemeStore().setMode('auto')   // 跟随系统
+ *   useThemeStore().toggleMode()      // 智能切换（auto → 显式；light ↔ dark）
+ *
+ * 推荐在组件中使用 useTheme() composable（@composables/useTheme），更简洁。
+ *
+ * @see [`@composables/useTheme`](../composables/useTheme.ts) 推荐消费入口
+ * @group 状态管理：主题
+ */
+
+import { namespacedStorageKey } from '@/utils/storage'
 
 /** 主题模式：light（强制浅色）/ dark（强制深色）/ auto（跟随系统） */
 export type ThemeMode = 'light' | 'dark' | 'auto'
 
-const STORAGE_KEY = 'theme-mode'
+// persist key 与 utils/storage 的 Local/Session 共用同一命名空间规则
+// （vue3-vite-project:theme-mode），避免多项目同域部署时互相覆盖
+const STORAGE_KEY = namespacedStorageKey('theme-mode')
+// 2026-09-09 之前 persist key 是裸 'theme-mode'，老用户 localStorage 可能残留该 key，
+// 一次性读取兜底并在命中后清除（persist 订阅随后只写新 key）
+const LEGACY_STORAGE_KEY = 'theme-mode'
+
+function isThemeMode(value: unknown): value is ThemeMode {
+  return value === 'light' || value === 'dark' || value === 'auto'
+}
+
+/**
+ * 解析 localStorage 里持久化的 mode，非法值返回 null。
+ * 必须兼容两种历史格式：
+ * - pinia-plugin-persistedstate 的 JSON 序列化对象 `{"mode":"dark"}`（当前 persist 写入格式）
+ * - 早期版本直存的裸字符串 `dark`（含 JSON 字符串 `"dark"`）
+ * 只比对裸字符串是本项目历史 bug：persist 写入的 JSON 永不命中，每次刷新都兜底
+ * 回 'auto'（亮色系统下表现为"切暗色刷新又回到亮色"，2026-09-10 实证修复）
+ */
+function parseStoredMode(raw: string | null): ThemeMode | null {
+  if (raw === null) return null
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    if (typeof parsed === 'string') return isThemeMode(parsed) ? parsed : null
+    if (parsed !== null && typeof parsed === 'object' && 'mode' in parsed) {
+      const { mode } = parsed as { mode: unknown }
+      return isThemeMode(mode) ? mode : null
+    }
+    return null
+  } catch {
+    return isThemeMode(raw) ? raw : null
+  }
+}
 
 /**
  * 从 localStorage 读取初始 mode，非法值兜底为 'auto'。
  */
 function readInitialMode(): ThemeMode {
-  const stored = localStorage.getItem(STORAGE_KEY)
-  if (stored === 'light' || stored === 'dark' || stored === 'auto') {
-    return stored
+  const legacy = parseStoredMode(localStorage.getItem(LEGACY_STORAGE_KEY))
+  if (legacy !== null) {
+    localStorage.removeItem(LEGACY_STORAGE_KEY)
+    return legacy
   }
-  return 'auto'
+  return parseStoredMode(localStorage.getItem(STORAGE_KEY)) ?? 'auto'
 }
 
 export const useThemeStore = defineStore(

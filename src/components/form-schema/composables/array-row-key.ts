@@ -2,6 +2,8 @@
  * 数组节点行身份与 name 路径前缀化工具：rewriteNamePath 把子 schema 的 name 路径前缀化为
  * `list[i].subName` 让 el-form 嵌套校验；rowKeyOf 按行对象身份（WeakMap）分配稳定 key，
  * 避免 index 作 key 时删/移行导致重挂载焦点丢失。
+ *
+ * @group 表单编排：渲染
  */
 import type { SchemaNode } from '../types'
 
@@ -83,6 +85,8 @@ export function rewriteNamePath(
     // 用户显式配置的 key 优先；否则用行身份前缀派生稳定 key
     if (keyPrefix && cloned.key === undefined) cloned.key = `${keyPrefix}${sep}${originalName}`
   }
+  // 类型归因：递归后的子 schema union 与 SchemaNode 字面量在 children/slots/formItem.slots 三处
+  // 不等价（C1 根因，详见 types/TYPE-CAST-AUDIT.md）；运行时已验证 el-form 嵌套路径校验通过，TS 层用 as never 兜底。
   if (cloned.children !== undefined) {
     cloned.children = rewriteNamePath(cloned.children, prefix, sep, keyPrefix) as never
   }

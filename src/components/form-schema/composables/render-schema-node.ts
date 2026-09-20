@@ -7,6 +7,8 @@
  *
  * 类型断言（`as never`）归因见 types/TYPE-CAST-AUDIT.md。
  * @see ./render-form-item / render-array-node / render-visual-container 接收 RenderSchemaNodeOptions
+ *
+ * @group 表单编排：渲染
  */
 import { h, type VNode, type ComponentPublicInstance, type Ref } from 'vue'
 import { createNamespace } from '@/utils/bem'
@@ -25,14 +27,17 @@ import type {
 import { resolveComponentFor } from './resolve-component'
 import { wrapWithElCol } from './wrap-with-elcol'
 import { buildAsyncProps, buildUploadDefaultSlot, getComponentDefaultProps } from './build-slots'
+import { resolveLabel } from '../utils/resolve-label'
 
 import { buildVModelBindings } from './build-vmodel-bindings'
 import { buildOnBindings } from './build-on-bindings'
 import { renderArrayNode } from './render-array-node'
 import { renderVisualContainer } from './render-visual-container'
+import { renderTabsStepsNode } from './render-tabs-steps-node'
 import { renderWithFormItem, renderWithRowColumn } from './render-form-item'
 import { resolvePermission, renderViewPlaceholder } from './use-field-permission'
 import { validateSchemaProps } from './validate-component-props'
+import type { ExpressionScope } from './use-expression'
 
 type RenderFn = (
   node: SchemaNode | SchemaNode[] | string | undefined | null
@@ -52,6 +57,8 @@ export interface RenderSchemaNodeOptions {
   model: XFormProps['model']
   components: XFormProps['components']
   beforeChange: XFormProps['beforeChange']
+  /** i18n 翻译函数（XFormProps.t 透传）——label 函数式在 render effect 内以它求值 */
+  t?: XFormProps['t']
   beforeChangeRules?: BeforeChangeRule[] | undefined
   /** ctx 工厂（每字段独立 ctx 实例） */
   makeBeforeChangeCtx?: ((node: SchemaNode) => BeforeChangeCtx) | undefined
@@ -86,6 +93,12 @@ export interface RenderSchemaNodeOptions {
    */
   permissionResolver?: (perm: string) => 'view' | 'edit' | 'hidden'
   /**
+   * H2：实例级表达式解析器（composer 注入 createExpressionScope() 产物）。
+   * on 事件绑定与 permission 表达式经它解析，缺省回退模块级（向后兼容）。
+   * @see ./use-expression.ts createExpressionScope
+   */
+  resolveFunctionExpression?: ExpressionScope['resolveFunctionExpression']
+  /**
    * 整体只读（顶层 schema readonly 字段解析结果，由 XForm 注入）：
    * 返回 true 时未 hidden 的字段一律按 view 态纯文本展示（hidden 优先级仍最高）
    */
@@ -98,6 +111,15 @@ export interface RenderSchemaNodeOptions {
     string,
     { error: string; validateStatus: '' | 'validating' | 'success' | 'error' }
   >
+  /**
+   * 字段级 dirty 视觉指示（XFormProps.showDirtyMark 透传，设计师审查 F13）
+   * - showDirtyMark: 是否开启 dirty 标记（默认 false）
+   * - dirtyFields: 响应式 dirty 字段集合（composer 注入 useFormDirty.dirtyFieldsRef）
+   * 二者同时存在时，render-form-item 给对应 el-form-item 追加 `is-dirty` class
+   * exactOptionalPropertyTypes: 可选 + undefined 联合以兼容条件展开
+   */
+  showDirtyMark?: boolean | undefined
+  dirtyFields?: Readonly<Ref<ReadonlySet<string>>> | undefined
 }
 
 /** 主调度入口 —— 5 类渲染分支按顺序委托给子函数 */
@@ -116,7 +138,7 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
           [
             node.label
               ? h('label', { class: bem.e('view-field__label') } as Record<string, unknown>, {
-                  default: () => `${node.label}：`,
+                  default: () => `${resolveLabel(node.label, opts.t)}：`,
                 })
               : null,
             h('span', { class: bem.e('view-field__value') } as Record<string, unknown>, {
@@ -148,7 +170,7 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
         formRef: opts.formRef,
         onValueChange: opts.onValueChange,
       }),
-      ...buildOnBindings(node, opts.model),
+      ...buildOnBindings(node, opts.model, opts.resolveFunctionExpression),
     }
     const asyncProps = buildAsyncProps(node)
     return { Comp, eventBindings, asyncProps }
@@ -162,6 +184,16 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
   ): VNode | string | VNode[] | undefined {
     if (!Comp || (!node.slots && node.children === undefined) || node.name) return undefined
     return renderVisualContainer(node, Comp as object, opts, asyncProps)
+  }
+
+  /** 分支 2b：Tabs / Steps 视觉容器（children 每项 → ElTabPane / ElStep 面板） */
+  function renderTabsStepsBranch(
+    node: SchemaNode,
+    Comp: ReturnType<typeof resolveComponentFor>,
+    asyncProps: Record<string, unknown>
+  ): VNode | string | VNode[] | undefined {
+    if (!Comp) return undefined
+    return renderTabsStepsNode(node, Comp as object, opts, asyncProps) ?? undefined
   }
 
   /** 分支 3：FormItem 包装（含 name 或 formItem: true）—— 有 fall-through（result 为空时继续） */
@@ -189,6 +221,8 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
     asyncProps: Record<string, unknown>
   ): VNode | string | VNode[] | undefined {
     if (!Comp) return undefined
+    // 类型归因：动态 Comp（resolveComponentFor 返回 object | string）与 h() 第一参 union 不等价
+    // （C1 根因，详见 types/TYPE-CAST-AUDIT.md）；运行时已验证 render 正常，TS 层用 as never 兜底。
     return wrapWithElCol(
       node,
       h(
@@ -219,6 +253,9 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
     const permission = resolvePermission(node, {
       model: () => opts.model ?? {},
       ...(opts.permissionResolver ? { permissionResolver: opts.permissionResolver } : {}),
+      ...(opts.resolveFunctionExpression
+        ? { resolveFunctionExpression: opts.resolveFunctionExpression }
+        : {}),
     })
     if (permission === 'hidden') return undefined
     // 顶层 schema readonly：未 hidden 的字段一律按 view 态展示
@@ -233,7 +270,11 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
     // 共享上下文准备（dev mode 白名单校验 + Comp + eventBindings + asyncProps）
     const { Comp, eventBindings, asyncProps } = resolveNodeContext(node)
 
-    // 2) 视觉容器（Card 等带 row/column，无 name）
+    // 2) Tabs / Steps 视觉容器（children 即面板）——先于 Card 视觉容器判定
+    const tabsStepsResult = renderTabsStepsBranch(node, Comp, asyncProps)
+    if (tabsStepsResult !== undefined) return tabsStepsResult
+
+    // 2b) 视觉容器（Card 等带 row/column，无 name）
     const visualResult = renderVisualBranch(node, Comp, asyncProps)
     if (visualResult !== undefined) return visualResult
 

@@ -1,12 +1,22 @@
-// 设计要点：
-// - 单一来源：所有 API url 都不带 /api 前缀，由 baseURL 统一拼装（避免 /api/api 双拼）
-// - 拦截器职责单一：响应只管副作用（toast + 401 跳转）+ 抛 ApiError
-// - 业务码解包与 data 提取下沉到 request<T>()，拦截器签名天然满足 AxiosInterceptorFulfilled 类型
-//   （AxiosResponse -> AxiosResponse），避免使用 `as any` / `as never` 逃类型
-// - 认证模式（2026-08-12 httpOnly 改造）：凭证 token 由后端 Set-Cookie: HttpOnly 下发，
-//   前端 JS 不可读；请求靠 withCredentials 让浏览器自动携带 cookie，不再注入 Bearer header
-// - 所有抛出错误归一为 ApiError，调用方 `err instanceof ApiError` 即可 narrowing
-// - 可选能力（cancel/retry/merge/pageAdapter/cache/request-id/token-refresh）拆到独立模块，request<T> 保持简单，业务层零迁移
+/**
+ * HTTP 客户端核心：axios 实例 + 拦截器链 + 业务侧统一入口 `request<T>()`。
+ *
+ * 设计要点：
+ * - 单一来源：所有 API url 都不带 /api 前缀，由 baseURL 统一拼装（避免 /api/api 双拼）
+ * - 拦截器职责单一：响应只管副作用（toast + 401 跳转）+ 抛 ApiError
+ * - 业务码解包与 data 提取下沉到 `request<T>()`，拦截器签名天然满足 AxiosInterceptorFulfilled 类型
+ *   （AxiosResponse -> AxiosResponse），避免使用 `as any` / `as never` 逃类型
+ * - 认证模式（2026-08-12 httpOnly 改造）：凭证 token 由后端 Set-Cookie: HttpOnly 下发，
+ *   前端 JS 不可读；请求靠 `withCredentials` 让浏览器自动携带 cookie，不再注入 Bearer header
+ * - 所有抛出错误归一为 `ApiError`，调用方 `err instanceof ApiError` 即可 narrowing
+ * - 可选能力（cancel/retry/merge/pageAdapter/cache/request-id/token-refresh）拆到独立模块，
+ *   `request<T>` 保持简单，业务层零迁移
+ *
+ * @see [`src/api/token-refresh.ts`](./token-refresh.ts) 401 自动续期
+ * @see [`src/api/page-adapter.ts`](./page-adapter.ts) 分页自动适配
+ * @see [`src/api/cache.ts`](./cache.ts) GET 内存缓存
+ * @group 网络基建：核心
+ */
 
 import axios, {
   type AxiosInstance,

@@ -1,14 +1,20 @@
-// 守卫 - 登录态检查（独立可测的纯函数）
-//
-// 业务背景：未登录用户访问需登录页面时跳转登录页，并保留 redirect 参数。
-// httpOnly 模式（2026-08-12 改造）：凭证 cookie 前端不可读，用 sessionStorage
-// 登录标记做同步初判；hard refresh 后标记仍在但 store 状态丢失时，
-// 通过 fetchProfile 让后端用 cookie 凭证完成真正的校验。
-//
-// 设计要点：
-//  - 函数不直接读 storage，而是接受 userStore 与可选的标记读取器
-//  - fetchProfile 失败时清本地登录标记并跳登录页（防止卡死在半登录态）
-//  - 返回 null 表示放行，RouteLocationRaw 表示跳转目标
+/**
+ * 守卫 —— 登录态检查（独立可测的纯函数）。
+ *
+ * 业务背景：未登录用户访问需登录页面时跳转登录页，并保留 `redirect` 参数。
+ * httpOnly 模式（2026-08-12 改造）：凭证 cookie 前端不可读，用 sessionStorage
+ * 登录标记做同步初判；hard refresh 后标记仍在但 store 状态丢失时，
+ * 通过 `fetchProfile` 让后端用 cookie 凭证完成真正的校验。
+ *
+ * 设计要点：
+ * - 函数不直接读 storage，而是接受 `userStore` 与可选的标记读取器
+ * - `fetchProfile` 失败时清本地登录标记并跳登录页（防止卡死在半登录态）
+ * - 返回 null 表示放行，`RouteLocationRaw` 表示跳转目标
+ *
+ * @see [`./auth.ts`](./auth.ts) `checkLoginState` 调用点
+ * @see [`src/utils/storage.ts`](../../utils/storage.ts) `Session.get('auth')` 标记来源
+ * @group 路由：登录守卫
+ */
 
 import type { RouteLocationNormalized, RouteLocationRaw } from 'vue-router'
 import type { useUserStore } from '@/store/modules/user'

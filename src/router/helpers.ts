@@ -1,6 +1,10 @@
-// 路由辅助函数（标题解析、meta 提取）
-//
-// 提供给 sidebar / breadcrumb / 页面组件使用，统一 i18n 解析逻辑。
+/**
+ * 路由辅助函数（标题解析、meta 提取）。
+ *
+ * 提供给 sidebar / breadcrumb / 页面组件使用，统一 i18n 解析逻辑。
+ *
+ * @group 路由：辅助函数
+ */
 
 import type { RouteLocationNormalized, RouteMeta } from 'vue-router'
 

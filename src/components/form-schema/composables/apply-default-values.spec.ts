@@ -172,7 +172,7 @@ describe('useApplyDefaults', () => {
     scope.stop()
   })
 
-  it('schema 引用变化时重跑', async () => {
+  it('schema 引用变化时重跑 defaultValue 填充，但不重复同步 initialValues 快照', async () => {
     const scope = effectScope()
     const setInitialValues = vi.fn()
     // 关键：props 必须是 reactive 才能让 watch(() => props.schema) 追踪到引用变化
@@ -186,13 +186,31 @@ describe('useApplyDefaults', () => {
       useApplyDefaults(propsRef, setInitialValues)
     })
 
-    const initialCalls = setInitialValues.mock.calls.length
-    // 替换 schema 为新引用
+    // 首次同步：applyDefaults + setInitialValues 各 1 次
+    expect(setInitialValues).toHaveBeenCalledTimes(1)
+    expect(model.a).toBe(1)
+
+    // 替换 schema 为新引用 → 只应用新 defaultValue，不再覆盖 initialValues 快照
     propsRef.schema = { name: 'b', defaultValue: 2 }
     await nextTick()
-    expect(setInitialValues.mock.calls.length).toBeGreaterThan(initialCalls)
     expect(model.b).toBe(2)
+    // 回归：setInitialValues 仍只被调 1 次（首次），避免脏 model 污染快照
+    // （2026-09-18 用户反馈「点重置没反应」根因：schema computed 重求值触发 deep watch
+    // 反复 setInitialValues(props.model)，把当前脏 model 同步为快照）
+    expect(setInitialValues).toHaveBeenCalledTimes(1)
 
     scope.stop()
+  })
+
+  it('applyDefaultsAndSync 显式传 syncSnapshot=false 时只应用 defaultValue 不同步快照', () => {
+    const setInitialValues = vi.fn()
+    const model = reactive<Record<string, unknown>>({})
+    const props = {
+      schema: { name: 'email', defaultValue: 'a@b.com' },
+      model,
+    } as unknown as XFormProps
+    applyDefaultsAndSync(props, props.schema, setInitialValues, false)
+    expect(model.email).toBe('a@b.com')
+    expect(setInitialValues).not.toHaveBeenCalled()
   })
 })

@@ -11,28 +11,17 @@
  * - 滚动：字段失败由 el-form 原生 scrollToError；跨字段失败由 scrollToFirstError
  *
  * @see ./use-cross-field-rule-trigger.ts 委托实现 triggerCrossFieldValidator
+ *
+ * @group 表单编排：校验
  */
-import { nextTick, toRaw, type Ref } from 'vue'
+import { nextTick } from 'vue'
 import { get } from 'lodash-es'
 import { runCrossFieldValidation } from './use-validate'
 import { useCrossFieldRuleTrigger } from './use-cross-field-rule-trigger'
 import type { UseFormErrorBusReturn } from './use-form-error-bus'
 import type { ValidateResult, RuleItem, SchemaNode } from '../types'
-import { readRefStr } from '../utils/read-ref-str'
-
-/** 解包 ref-like 字段值为 unknown（element-plus ElFormItemContext.fieldValue 是 ComputedRef<unknown>） */
-function readRefVal(v: unknown): unknown {
-  if (v === undefined || v === null) return undefined
-  if (typeof v === 'object' && 'value' in v) {
-    return (v as { value: unknown }).value
-  }
-  return v
-}
-
-/** toRaw 后再读（element-plus 内部字段可能被 reactive 包裹） */
-function toRawLike<T>(v: T): T {
-  return toRaw(v as object) as T
-}
+import { collectElFieldErrors } from '../utils/collect-el-field-errors'
+import { runElFormValidate } from '../utils/run-el-form-validate'
 
 /**
  * useFormValidation 入参 —— 由 useXFormComposer 装配
@@ -59,10 +48,6 @@ export interface UseFormValidationDeps {
   ) => void
   scrollToField: (name: string) => void
   topLevelScrollToError: { value: boolean }
-  /** 当前未直接使用 —— 保留以备扩展 */
-  crossFieldTrigger: {
-    trigger: (name: string) => void
-  }
   /** 显式传递避免 provide/inject 在 composable 嵌套场景失效 */
   errorBus?: UseFormErrorBusReturn
 }
@@ -85,10 +70,10 @@ export interface UseFormValidationReturn {
 }
 
 /**
- * 跨字段触发序号 —— 异步 crossValidator 竞态防护（H3）
+ * useFormValidation —— XForm 校验编排（el-form.validate + crossValidator + scrollToError）
  *
- * 实例级：每个 useFormValidation 调用独立一份 Map，组件 unmount 时随 composable scope 一起 GC
- * 改前是模块级 Map（多实例共享，组件卸载后仍持有 entry 浪费内存）—— OPT-5
+ * 跨字段执行语义（seq 竞态令牌 / 异常兜底 / 取值归一）统一收敛到
+ * ./cross-rule-runner.ts；字段事件触发委托 ./use-cross-field-rule-trigger
  */
 export function useFormValidation(deps: UseFormValidationDeps): UseFormValidationReturn {
   // 显式从 deps 传入（避免 composable 内 provide/inject 静默失效）
@@ -101,7 +86,6 @@ export function useFormValidation(deps: UseFormValidationDeps): UseFormValidatio
     setFieldError,
     scrollToField,
     topLevelScrollToError,
-    crossFieldTrigger,
   } = deps
 
   // setFieldError 直接传引用，保留第 3 参数 state（spec 断言 3 参数调用）
@@ -123,45 +107,21 @@ export function useFormValidation(deps: UseFormValidationDeps): UseFormValidatio
     if (!m) return true
     const ef = elFormRef.value
     if (!ef?.validate) {
+      // el-form 未挂载时降级只跑跨字段校验（开发场景）
       const result = await runCrossFieldValidation(reactiveSchema.value, m, rules.value)
       applyCrossErrors(result)
       scrollToFirstError(firstCrossErrorField(result))
       return result.isValid
     }
     const efValidate = ef.validate
-    if (!efValidate) {
-      const result = await runCrossFieldValidation(reactiveSchema.value, m, rules.value)
-      applyCrossErrors(result)
-      scrollToFirstError(firstCrossErrorField(result))
-      return result.isValid
-    }
     // 字段规则失败时 ElForm 原生 scrollToError 已处理滚动（第一个 .el-form-item.is-error）
-    const elValid = await new Promise<boolean>((resolve) => {
-      const maybePromise = efValidate((v: boolean) => resolve(v))
-      // 关键：el-form 2.x 即使传 callback 仍 reject errorsMap（避免 unhandled rejection）
-      Promise.resolve(maybePromise).catch(() => resolve(false))
-    })
+    const elValid = await runElFormValidate(efValidate)
     if (!elValid) {
       // el-form 内置规则失败（含 async-validator / validator callback 失败）也需 OSD 提示
       // 扫描 ef.fields 提取 is-error 字段名 + validateMessage + fieldValue
-      const elFields = (ef as unknown as { fields?: unknown[] }).fields ?? []
-      const details: Array<{ field: string; message: string; value?: unknown }> = []
-      for (const f of elFields) {
-        const raw = toRawLike(f) as {
-          propString?: string | Ref<string>
-          prop?: string | Ref<string>
-          validateState?: string | Ref<string>
-          validateMessage?: string | Ref<string>
-          fieldValue?: unknown
-        }
-        const state = readRefStr(raw.validateState)
-        if (state !== 'error') continue
-        const msg = readRefStr(raw.validateMessage)
-        if (!msg) continue
-        const name = readRefStr(raw.propString) || readRefStr(raw.prop)
-        if (!name) continue
-        details.push({ field: name, message: msg, value: readRefVal(raw.fieldValue) })
-      }
+      const details = collectElFieldErrors(ef as unknown as { fields?: unknown[] }, {
+        includeValue: true,
+      })
       if (details.length > 0) {
         // el-form.validate() 失败 → 字段内规则（required/pattern/validator callback），
         // 不是 cross-field，code 用 EL_FORM_VALIDATION_FAILED 与跨字段区分
@@ -250,26 +210,10 @@ export function useFormValidation(deps: UseFormValidationDeps): UseFormValidatio
     const ef = elFormRef.value
     const efValidate = ef?.validate
     if (efValidate) {
-      const elValid = await new Promise<boolean>((resolve) => {
-        const maybePromise = efValidate((v: boolean) => resolve(v))
-        Promise.resolve(maybePromise).catch(() => resolve(false))
-      })
+      const elValid = await runElFormValidate(efValidate)
       if (!elValid) {
-        const elFields = (ef as unknown as { fields?: unknown[] }).fields ?? []
-        for (const f of elFields) {
-          const raw = toRawLike(f) as {
-            propString?: string | Ref<string>
-            prop?: string | Ref<string>
-            validateState?: string | Ref<string>
-            validateMessage?: string | Ref<string>
-          }
-          const state = readRefStr(raw.validateState)
-          if (state !== 'error') continue
-          const msg = readRefStr(raw.validateMessage)
-          if (!msg) continue
-          const name = readRefStr(raw.propString) || readRefStr(raw.prop)
-          if (!name) continue
-          errors.push({ keyPath: [name], message: msg })
+        for (const d of collectElFieldErrors(ef as unknown as { fields?: unknown[] })) {
+          errors.push({ keyPath: [d.field], message: d.message })
         }
       }
     }
@@ -280,9 +224,6 @@ export function useFormValidation(deps: UseFormValidationDeps): UseFormValidatio
 
     return { isValid: errors.length === 0, errors }
   }
-
-  // 不直接调用 crossFieldTrigger —— 业务通过 onValueChange 显式触发 trigger
-  void crossFieldTrigger
 
   return {
     validateForm,

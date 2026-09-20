@@ -1,12 +1,16 @@
 import type { PortalNavItem } from './types'
 
 /**
- * 顶部导航配置
+ * 顶部导航配置。
  *
  * 父项含 children → 渲染为 el-sub-menu（hover 弹出，无点击交互）
  * 父项 external=true → 点击新窗口打开 path（外链）
  *
  * 注：sub-menu 条目为占位实现，待业务方给出具体二级页面后再细化 path / 增删
+ *
+ * @see [`./types.ts`](./types.ts) PortalNavItem 类型定义
+ * @see [`../components/PortalNav.vue`](../components/PortalNav.vue) 渲染消费方
+ * @group 布局：Portal
  */
 export const PORTAL_NAV: PortalNavItem[] = [
   { key: 'home', label: '首页', path: '/home' },

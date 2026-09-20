@@ -1,18 +1,28 @@
-// 运行时 BEM 类名拼接工具（TypeScript 版本）。
-//
-// 与 `src/assets/styles/mixins/bem.scss` 的 SCSS 编译期 mixin 互补：
-// - SCSS mixin：在编译期把 BEM 拼接写入 CSS（适合纯样式场景）
-// - 本工具：在运行时拼接类名并返回字符串（适合 :class / class 动态控制场景）
-//
-// 命名规则（对齐 Element Plus / Vant 等 Vue 生态主流约定）：
-// - Block：      `{prefix}-{name}`            （前缀来自 `VITE_BEM_PREFIX`，默认 `vv`）
-// - Block 后缀： `{prefix}-{name}-{suffix}`   （同一 Block 的多个变体）
-// - Element：    `{prefix}-{name}__{element}`
-// - Modifier：   `{prefix}-{name}--{modifier}`
-// - State：      `is-{state}`                 （独立类名，通过 `is()` 生成）
-//
-// 前缀可通过环境变量 `VITE_BEM_PREFIX` 调整（如改为 `''` 输出无前缀类名）。
-// SCSS 端同名变量由 vite.config.ts 的 `additionalData` 同步注入，保证两套工具输出对齐。
+/**
+ * 运行时 BEM 类名拼接工具（TypeScript 版本）。
+ *
+ * 角色：utils 工具模块，被 `unplugin-auto-import` 自动注入到 `<script setup>` 全局作用域，
+ * 业务侧无须 `import { createNamespace } from '@/utils/bem'`。
+ *
+ * 与 `src/assets/styles/mixins/bem.scss` 的 SCSS 编译期 mixin 互补：
+ * - SCSS mixin：在编译期把 BEM 拼接写入 CSS（适合纯样式场景）
+ * - 本工具：在运行时拼接类名并返回字符串（适合 `:class` / `class` 动态控制场景）
+ *
+ * 命名规则（对齐 Element Plus / Vant 等 Vue 生态主流约定）：
+ * - Block：      `{prefix}-{name}`            （前缀来自 `VITE_BEM_PREFIX`，默认 `vv`）
+ * - Block 后缀： `{prefix}-{name}-{suffix}`   （同一 Block 的多个变体）
+ * - Element：    `{prefix}-{name}__{element}`
+ * - Modifier：   `{prefix}-{name}--{modifier}`
+ * - State：      `is-{state}`                 （独立类名，通过 `is()` 生成）
+ *
+ * 前缀可通过环境变量 `VITE_BEM_PREFIX` 调整（如改为 `''` 输出无前缀类名）。
+ * SCSS 端同名变量由 vite.config.ts 的 `additionalData` 同步注入，保证两套工具输出对齐。
+ *
+ * @see [`src/assets/styles/mixins/bem.scss`](../assets/styles/mixins/bem.scss) 编译期 SCSS 端 mixin
+ * @see [`vite.config.ts`](../../vite.config.ts) `$BEM_PREFIX` 注入配置
+ * @see [`src/types/auto-imports.d.ts`](../types/auto-imports.d.ts) 全局注入声明
+ * @group BEM 类名
+ */
 
 // 模块加载时一次性读取 env，避免每次 createNamespace 重复解引用 import.meta.env。
 // vitest 默认不注入 VITE_* 变量，单测中用 vi.stubEnv('VITE_BEM_PREFIX', 'custom') mock。

@@ -20,7 +20,6 @@ function makeDeps(overrides: Partial<UseTopLevelFieldsDeps> = {}) {
   const reactiveSchema = ref<SchemaNode | SchemaNode[] | string | undefined>({})
   const model = ref<Record<string, unknown> | undefined>({})
   const currentBreakpoint = ref('md')
-  const fieldErrors = ref<Record<string, unknown>>({})
 
   // 默认 mergeRowResponsive：直接返回 row（原实现细节由其自身 spec 覆盖）
   const mergeRowResponsive = vi.fn((row: RowConfig | undefined) => row)
@@ -42,7 +41,6 @@ function makeDeps(overrides: Partial<UseTopLevelFieldsDeps> = {}) {
     reactiveSchema: reactiveSchema as { value: SchemaNode | SchemaNode[] | string | undefined },
     model: model as { value: Record<string, unknown> | undefined },
     currentBreakpoint: currentBreakpoint as { value: string },
-    fieldErrors: fieldErrors as { value: Record<string, unknown> },
     resolveFunctionExpression,
     mergeRowResponsive,
     ...overrides,
@@ -52,7 +50,6 @@ function makeDeps(overrides: Partial<UseTopLevelFieldsDeps> = {}) {
     reactiveSchema,
     model,
     currentBreakpoint,
-    fieldErrors,
     mergeRowResponsive,
     resolveFunctionExpression,
   }
@@ -64,7 +61,8 @@ describe('useTopLevelFields', () => {
   })
 
   // ============================================================
-  // nodes —— 顶层节点列表（含 fieldErrors 响应式依赖）
+  // nodes —— 顶层节点列表（仅依赖 reactiveSchema；错误态渲染由
+  // XForm.vue :data-field-errors 绑定与 render-form-item 读键兜底，见架构审查 #4）
   // ============================================================
   describe('nodes', () => {
     it('数组形态 → 返回 schema 数组', () => {
@@ -118,18 +116,6 @@ describe('useTopLevelFields', () => {
       reactiveSchema.value = undefined
       const api = useTopLevelFields(deps)
       expect(api.nodes.value).toEqual([])
-    })
-
-    it('fieldErrors 写入时 nodes computed 重新求值（响应式依赖）', () => {
-      const { deps, reactiveSchema, fieldErrors } = makeDeps()
-      reactiveSchema.value = { children: [{ component: 'Input', name: 'a' }] }
-      const api = useTopLevelFields(deps)
-      const v1 = api.nodes.value
-      fieldErrors.value = { a: { error: 'x' } } // 写入 fieldErrors
-      const v2 = api.nodes.value
-      // 引用应重算（虽然值相同，因为 effect 触发）
-      expect(v1).toBe(v2) // 实际值一样；但 effect 已触发
-      expect(api.nodes.value).toEqual([{ component: 'Input', name: 'a' }])
     })
   })
 
@@ -419,6 +405,34 @@ describe('useTopLevelFields', () => {
       const api = useTopLevelFields(deps)
       expect(api.scrollToError.value).toBe(true)
     })
+
+    // props 兜底契约（死 prop 修复）：schema 缺省时读取 XForm props
+    it('schema 未设置 + props.scrollToError=true → true（props 兜底）', () => {
+      const { deps, reactiveSchema } = makeDeps({
+        props: { scrollToError: true } as UseTopLevelFieldsDeps['props'],
+      })
+      reactiveSchema.value = { children: [] }
+      const api = useTopLevelFields(deps)
+      expect(api.scrollToError.value).toBe(true)
+    })
+
+    it('schema 显式 false 优先于 props true', () => {
+      const { deps, reactiveSchema } = makeDeps({
+        props: { scrollToError: true } as UseTopLevelFieldsDeps['props'],
+      })
+      reactiveSchema.value = { children: [], scrollToError: false }
+      const api = useTopLevelFields(deps)
+      expect(api.scrollToError.value).toBe(false)
+    })
+
+    it('schema 与 props 均未设置 → false', () => {
+      const { deps, reactiveSchema } = makeDeps({
+        props: {} as UseTopLevelFieldsDeps['props'],
+      })
+      reactiveSchema.value = { children: [] }
+      const api = useTopLevelFields(deps)
+      expect(api.scrollToError.value).toBe(false)
+    })
   })
 
   describe('scrollIntoViewOptions', () => {
@@ -449,6 +463,27 @@ describe('useTopLevelFields', () => {
 
     it('scrollIntoViewOptions=false → false', () => {
       const { deps, reactiveSchema } = makeDeps()
+      reactiveSchema.value = { children: [], scrollIntoViewOptions: false }
+      const api = useTopLevelFields(deps)
+      expect(api.scrollIntoViewOptions.value).toBe(false)
+    })
+
+    // props 兜底契约（死 prop 修复）：schema 缺省时读取 XForm props
+    it('schema 未设置 + props.scrollIntoViewOptions={behavior:"smooth"} → 透传 props 值', () => {
+      const { deps, reactiveSchema } = makeDeps({
+        props: {
+          scrollIntoViewOptions: { behavior: 'smooth' },
+        } as UseTopLevelFieldsDeps['props'],
+      })
+      reactiveSchema.value = { children: [] }
+      const api = useTopLevelFields(deps)
+      expect(api.scrollIntoViewOptions.value).toEqual({ behavior: 'smooth' })
+    })
+
+    it('schema 显式值优先于 props', () => {
+      const { deps, reactiveSchema } = makeDeps({
+        props: { scrollIntoViewOptions: { behavior: 'smooth' } } as UseTopLevelFieldsDeps['props'],
+      })
       reactiveSchema.value = { children: [], scrollIntoViewOptions: false }
       const api = useTopLevelFields(deps)
       expect(api.scrollIntoViewOptions.value).toBe(false)

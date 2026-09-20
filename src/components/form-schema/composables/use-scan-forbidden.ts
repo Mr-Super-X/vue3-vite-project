@@ -5,6 +5,8 @@
  * 不阻断渲染。真实安全边界是 schema 来自可信配置（README §安全）；本扫描仅做兜底提醒。
  *
  * 性能防护：WeakSet 去重 + MAX_DEPTH 32 + MAX_NODES 10000 防止恶意巨型 schema 拖死诊断路径。
+ *
+ * @group 表单编排：开发态
  */
 import type { SchemaNode } from '../types'
 

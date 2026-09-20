@@ -11,6 +11,8 @@
  * - 用户通过 components prop 注册的自定义组件
  * - Component 对象（非 string 组件名）
  * - 类型错误（TS 编译期拦截）
+ *
+ * @group 表单编排：开发态
  */
 import type { UseFormErrorBusReturn } from './use-form-error-bus'
 import type { SchemaNode } from '../types'
@@ -21,23 +23,18 @@ const KNOWN_PROP_KEYS: Record<string, Set<string>> = {}
 
 /**
  * 一次性从 EL_COMPONENT_MAP 反射所有组件的 props keys
- * 在 import 时立即执行（同步操作，启动成本 < 1ms）
- * 用户自定义组件（如 MyInput）未注册到 EL_COMPONENT_MAP → 自动跳过
+ * 懒构建（2026-09-16 review 优化）：首次 validateSchemaProps 调用时才构建，
+ * 启动期无副作用；prod 模式下 validate 入口直接 return，永不构建。
+ *
+ * 结构说明（2026-09-16 review 收敛）：此前存在第二段「仅为 El 开头键补建」的循环，
+ * 其与第一段的条件差异在数学上不可达（第一段已无条件尝试填充同键，props 存在与否
+ * 两段判定完全一致）——属死代码，删除。保留第三段短名 → ElXxx 全名别名补全。
  */
 function buildKnownPropKeys(): void {
   for (const [name, comp] of Object.entries(EL_COMPONENT_MAP)) {
     const props = (comp as { props?: Record<string, unknown> }).props
     if (props && typeof props === 'object') {
       KNOWN_PROP_KEYS[name] = new Set(Object.keys(props))
-    }
-  }
-  // 同时为 ElXxx 全名建立别名（如果与短名不同）
-  for (const [name, comp] of Object.entries(EL_COMPONENT_MAP)) {
-    if (name.startsWith('El') && !KNOWN_PROP_KEYS[name]) {
-      const props = (comp as { props?: Record<string, unknown> }).props
-      if (props && typeof props === 'object') {
-        KNOWN_PROP_KEYS[name] = new Set(Object.keys(props))
-      }
     }
   }
   // 显式补全：所有 EL 组件短名（Input / Select / ...）的 ElXxx 全名（即使不在 EL_COMPONENT_MAP 中）
@@ -50,11 +47,26 @@ function buildKnownPropKeys(): void {
     }
   }
 }
-buildKnownPropKeys()
+
+/** 懒构建守卫 —— 多次调用只构建一次 */
+let built = false
+
+/** 测试用：触发懒构建（spec 可直接调用） */
+export function _ensureBuilt(): void {
+  if (built) return
+  buildKnownPropKeys()
+  built = true
+}
+
+/** 测试用：重置缓存以便重新构建（仅测试 import 后调用） */
+export function _resetForTesting(): void {
+  for (const k of Object.keys(KNOWN_PROP_KEYS)) delete KNOWN_PROP_KEYS[k]
+  built = false
+}
 
 /** dev mode 校验结果 */
 interface ValidationResult {
-  /** 未未未未在白名单的 props（拼写错误 / 错误组件） */
+  /** 未在白名单的 props（拼写错误 / 错误组件） */
   unknown: string[]
   /** props 中缺失 el-form 推荐的关键字段（仅 info 提示） */
   suspicious: string[]
@@ -97,6 +109,9 @@ function validateNodeProps(node: SchemaNode): ValidationResult {
 
   const unknown: string[] = []
   for (const key of Object.keys(node.props)) {
+    // Vue 事件监听在 props 对象里以 on + 驼峰事件名形式透传（等价模板 @tab-change），
+    // 不在 Component.props 反射的 prop 声明白名单内 —— 合法透传，跳过校验
+    if (/^on[A-Z]/.test(key)) continue
     if (!known.has(key) && !FORM_KEY_ALIASES.has(key)) {
       unknown.push(key)
     }
@@ -118,6 +133,7 @@ export function validateSchemaProps(
 ): void {
   if (!import.meta.env.DEV) return
   if (!root) return
+  _ensureBuilt()
   traverse(root)
 
   function traverse(node: SchemaNode | SchemaNode[] | string | undefined): void {
@@ -159,5 +175,7 @@ export function validateSchemaProps(
 
 /** 测试用：获取某组件白名单（用于 spec 验证） */
 export function getKnownPropKeys(componentName: string): Set<string> | undefined {
+  // 测试场景下可能直接访问缓存而不走 validateSchemaProps；显式触发懒构建
+  _ensureBuilt()
   return KNOWN_PROP_KEYS[componentName]
 }

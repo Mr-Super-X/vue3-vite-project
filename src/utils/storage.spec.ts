@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { Local, Session } from './storage'
+import { Local, Session, namespacedStorageKey } from './storage'
 
 // 测试期间 vitest 加载 .env.development，VITE_STORAGE_NAMESPACE 是配置的 storage
 // 隔离标识（如 'vue3-vite-project'）。fallback 'vue3-vite-project' 与 storage.ts 保持一致。
@@ -34,6 +34,12 @@ describe('storage 工具', () => {
       const raw = window.localStorage.getItem(APP_NAMESPACE + 'key1')
       expect(raw).not.toBeNull()
       expect(Local.get('key1')).toBe('value1')
+    })
+
+    it('namespacedStorageKey 与 Local.set 写入的 key 规则一致（供 Pinia persist key 等直接场景）', () => {
+      Local.set('same-rule', 'v')
+      expect(namespacedStorageKey('same-rule')).toBe(APP_NAMESPACE + 'same-rule')
+      expect(window.localStorage.getItem(namespacedStorageKey('same-rule'))).toBe('"v"')
     })
 
     it('remove 移除指定 key', () => {

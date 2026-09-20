@@ -1,11 +1,15 @@
 /**
- * 指令通用工具（debounce + isFunction）
+ * 指令通用工具（debounce + isFunction + findInput）
  *
  * 与具体指令解耦：inputDebounce / buttonDebounce 复用同一套 debounce 工具，
  * 保证项目内防抖/节流行为一致。
  *
  * 注意：debounce 是 trailing edge 实现（最后次触发后 delay 才执行），
  * buttonDebounce 若需 leading edge 行为（首次立即执行），需自己实现。
+ *
+ * @see [`./inputDebounce.ts`](./inputDebounce.ts) 防抖指令
+ * @see [`./buttonDebounce.ts`](./buttonDebounce.ts) 防重指令
+ * @group 指令工具
  */
 
 /** 通用事件处理函数类型 */

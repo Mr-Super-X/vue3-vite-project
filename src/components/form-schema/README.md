@@ -26,7 +26,7 @@ const schema = {
 
 ## 文档导航图
 
-XForm 共有 5 份文档 + 54 个 demo（XForm 52 个 + AsyncState/ErrorBoundary 2 个），按角色 / 任务选读，避免到处翻：
+XForm 共有 5 份文档 + 56 个 XForm demo + 4 个通用组件 demo（AsyncState / ErrorBoundary / Dict / RichTextEditor，位于 `examples/` 根），按角色 / 任务选读，避免到处翻：
 
 | 你的角色 / 任务                                 | 先看这个                                                | 再看这个                                                              | 跳过            |
 | ----------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------- | --------------- |
@@ -50,7 +50,7 @@ XForm 共有 5 份文档 + 54 个 demo（XForm 52 个 + AsyncState/ErrorBoundary
 
 ### 小白上手路径（新人入门 4 步走）
 
-> 共 54 个 demo（XForm 52 + AsyncState/ErrorBoundary 2），按「先建体感 → 再深入单能力 → 最后查缺补漏」三阶段阅读，避免在 30+ demo 间来回跳转。
+> 共 56 个 XForm demo（`examples/XForm/`）+ 4 个通用组件 demo（`examples/` 根），按「先建体感 → 再深入单能力 → 最后查缺补漏」三阶段阅读，避免在 50+ demo 间来回跳转。
 
 | 阶段                           | 路径                                                                  | 目标                                                                                 | 耗时   |
 | ------------------------------ | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ------ |
@@ -93,24 +93,30 @@ XForm 共有 5 份文档 + 54 个 demo（XForm 52 个 + AsyncState/ErrorBoundary
 
 ---
 
-## props（10 个）
+## props（18 个）
 
-> 10 个 prop 中 `schema` 必填；`scrollToError` / `scrollIntoViewOptions` 同时作为 schema 顶层字段（仅顶层容器形态生效）。
+> 18 个 prop 中 `schema` 必填；`scrollToError` / `scrollIntoViewOptions` 同时作为 schema 顶层字段（schema 优先，props 兜底）。
 
-| 属性                    | 类型                                      | 必填 | 说明                                                                                                       |
-| ----------------------- | ----------------------------------------- | ---- | ---------------------------------------------------------------------------------------------------------- |
-| `schema`                | `SchemaNode \| SchemaNode[]`              | ✅   | 表单 schema                                                                                                |
-| `model`                 | `Record<string, unknown>`                 |      | 响应式数据对象（需用 `reactive()` 包装）                                                                   |
-| `components`            | `Record<string, Component>`               |      | 自定义组件映射                                                                                             |
-| `rules`                 | `Record<string, RuleItem>`                |      | 校验规则命名引用                                                                                           |
-| `directives`            | `Record<string, Directive>`               |      | 自定义指令映射                                                                                             |
-| `beforeChange`          | `BeforeChangeFn`                          |      | 全局 Props beforeChange（第 1 层：横切关注点：埋点 / 全局拦截）                                            |
-| `beforeChangeRules`     | `BeforeChangeRule[]`                      |      | 动态命名空间规则（第 2 层：按 pattern 匹配字段路径）                                                       |
-| `zodSchema`             | `ZodType`                                 |      | zod 校验 schema（配合 `validateWithZod()`）                                                                |
-| `componentProps`        | `Record<string, Record<string, unknown>>` |      | 按组件名注入默认 props（节点级 props 可覆盖）                                                              |
-| `expressionFunctions`   | `Record<string, Function>`                |      | 白名单函数表：{{ }} 表达式可直接引用注册名（**模块级，多实例共享**，组件卸载时清空避免跨实例污染）         |
-| `scrollToError`         | `boolean`                                 |      | 校验失败自动滚动到第一个错误字段（仅顶层 schema 生效，默认 false；字段规则走 ElForm 原生，跨字段走 XForm） |
-| `scrollIntoViewOptions` | `ScrollIntoViewOptions \| boolean`        |      | 滚动行为选项（仅顶层 schema 生效，默认 true）                                                              |
+| 属性                    | 类型                                             | 必填 | 说明                                                                                                            |
+| ----------------------- | ------------------------------------------------ | ---- | --------------------------------------------------------------------------------------------------------------- |
+| `schema`                | `SchemaNode \| SchemaNode[]`                     | ✅   | 表单 schema                                                                                                     |
+| `model`                 | `Record<string, unknown>`                        |      | 响应式数据对象（需用 `reactive()` 包装）                                                                        |
+| `components`            | `Record<string, Component>`                      |      | 自定义组件映射                                                                                                  |
+| `rules`                 | `Record<string, RuleItem>`                       |      | 校验规则命名引用                                                                                                |
+| `directives`            | `Record<string, Directive>`                      |      | 自定义指令映射                                                                                                  |
+| `t`                     | `XFormTranslateFn`                               |      | i18n 翻译函数注入：label 函数式 `(t) => t('form.email')` 渲染期以它求值（XForm 不绑定 i18n 库，缺省 identity）  |
+| `beforeChange`          | `BeforeChangeFn`                                 |      | 全局 Props beforeChange（第 1 层：横切关注点：埋点 / 全局拦截）                                                 |
+| `beforeChangeRules`     | `BeforeChangeRule[]`                             |      | 动态命名空间规则（第 2 层：按 pattern 匹配字段路径）                                                            |
+| `zodSchema`             | `ZodType`                                        |      | zod 校验 schema（配合 `validateWithZod()`）                                                                     |
+| `expressionFunctions`   | `Record<string, Function>`                       |      | 白名单函数表：{{ }} 表达式可直接引用注册名（**实例级沙箱**，同页多 XForm 实例互不污染，2-3 起）                 |
+| `scrollToError`         | `boolean`                                        |      | 校验失败自动滚动到第一个错误字段（schema 优先、props 兜底，默认 false）                                         |
+| `scrollIntoViewOptions` | `ScrollIntoViewOptions \| boolean`               |      | 滚动行为选项（schema 优先、props 兜底，默认 true）                                                              |
+| `componentProps`        | `Record<string, Record<string, unknown>>`        |      | 按组件名注入默认 props（节点级 props 可覆盖）                                                                   |
+| `permissionResolver`    | `(perm: string) => 'view' \| 'edit' \| 'hidden'` |      | 权限码 → 字段状态映射（节点 `permission` 为权限码字面量时调用；默认 identity）                                  |
+| `showErrorToast`        | `boolean`                                        |      | 开启错误浮窗 OSD（XFormErrorToast，右上角 toast 展示 errorBus 事件；**全环境默认 false**，与 DebugBanner 独立） |
+| `reactionBudget`        | `number`                                         |      | 单批次 reaction 执行预算（默认 50；防循环联动卡死，耗尽跳过大并报错）                                           |
+| `size`                  | `'large' \| 'default' \| 'small'`                |      | 表单密度尺寸（F9）：透传 ElForm.size，未传入跟随全局 size。紧凑表格页内嵌紧凑筛选表单场景一处传入               |
+| `showDirtyMark`         | `boolean`                                        |      | 字段级 dirty 视觉指示（F13，默认 false）：被修改字段 label 追加 `is-dirty` class + 橙色圆点                     |
 
 ---
 
@@ -150,6 +156,45 @@ formRef.value?.getDirtyFields() // → ['email', 'address.city', ...]
 formRef.value?.isTouched('email') // → boolean
 formRef.value?.resetDirty() // 当前状态设为新基线（提交后归零）
 ```
+
+---
+
+## 概念地图（三组近义概念对照）
+
+> XForm 有 ~20 个核心概念，其中「三套依赖 / 三种隐藏 / 三层拦截」三组近义词是新人主要认知税。本节一次性对照，避免在文档间来回跳。
+>
+> 详细决策树见 docs/24 §4.2（隐藏三态）/ §10（beforeChange 三层）。
+
+### 三种「依赖」—— 都是「声明当前节点关心哪些字段」
+
+| 机制           | 字段名                | 所在位置                                  | 用途                                  | 触发时机                        |
+| -------------- | --------------------- | ----------------------------------------- | ------------------------------------- | ------------------------------- |
+| reaction       | `deps: string[]`      | 节点 `reaction`                           | 值联动（A 变 → B 自动算/禁用/改文案） | 任一 deps 变化时重算 effect     |
+| asyncOptions   | `deps: string[]`      | 节点 `asyncOptions`                       | 选项联动（A 变 → 重新拉 B 的选项）    | 任一 deps 变化时重新执行 source |
+| crossValidator | `dependsOn` 或 `deps` | 节点 `rules[].dependsOn` / `rules[].deps` | 跨字段校验（密码 == 确认密码）        | blur/change/validate 时跑一次   |
+
+> **命名约定**：三套机制统一支持 `deps` 别名（crossValidator 的 `dependsOn` 是历史名，`deps` 是推荐写法）。同时声明时 `dependsOn` 优先。
+
+### 三种「隐藏」—— 从「不显示」到「不存在」的语义光谱
+
+| 关键字                 | 是否渲染 DOM       | 是否参与校验 | 是否入 model / 提交 | 是否入 getNames | 典型场景                                   |
+| ---------------------- | ------------------ | ------------ | ------------------- | --------------- | ------------------------------------------ |
+| `hidden: true`         | ❌（display:none） | ✅           | ✅                  | ✅              | 临时隐藏但仍需保留值（如高级选项默认收起） |
+| `ignore: true`         | ✅                 | ❌           | ❌                  | ❌              | 纯展示字段（预览图、辅助说明），不提交     |
+| `permission: 'hidden'` | ❌                 | ❌           | ❌                  | ❌              | 权限不足时的安全隐藏（服务端不回来字段）   |
+
+> **决策口诀**：值还要提交 → `hidden`；纯展示不入提交 → `ignore`；按权限隐藏 → `permission:'hidden'`。
+> 完整决策树见 docs/24 §4.2。
+
+### 三层「写入前拦截」—— 全局 → 命名空间 → 字段
+
+| 层  | 配置位置                                           | 作用范围                      | 典型场景                                                       |
+| --- | -------------------------------------------------- | ----------------------------- | -------------------------------------------------------------- |
+| 1   | `XFormProps.beforeChange`                          | 全表单所有字段                | 横切关注点：埋点、全局格式化、权限兜底                         |
+| 2   | `XFormProps.beforeChangeRules: BeforeChangeRule[]` | 按 pattern 匹配的字段路径子集 | 数组节点（`items[i].phone`）字段级配置繁琐时按命名空间批量拦截 |
+| 3   | 节点 `beforeChange`                                | 单字段                        | 字段专属逻辑：手机号格式化、金额取整、拒绝某些输入             |
+
+> **执行顺序**：层 1 → 层 2 → 层 3，每层返回值作为下一层入参；任一返回非 `undefined` 即替换写入值。详见 docs/24 §10。
 
 ---
 
@@ -209,6 +254,18 @@ formRef.value?.resetDirty() // 当前状态设为新基线（提交后归零）
 | `hidden`       | `boolean \| ReactionValue<boolean>`           | 字段级            | 节点隐藏（仍创建，display:none，不参与校验）                                          |
 | `ignore`       | `boolean`                                     | 字段级            | 跳过渲染（不参与 `getNames`）                                                         |
 | `beforeChange` | `BeforeChangeFn \| BeforeChangeRule[]`        | 字段级            | 字段值拦截（详见 `XFormBeforeChange.vue` demo）                                       |
+
+### 视觉容器（Card / Tabs / Steps，children 即面板）
+
+`component: 'Card' | 'Tabs' | 'Steps'`（或全名 `'ElCard' | 'ElTabs' | 'ElSteps'`）的**无 name 节点**走视觉容器分支——不绑 formItem、不进 getNames，仅做视觉分组。children 每项即一个面板：
+
+| 容器      | 面板组件    | 面板 label 来源                | 激活态 / 校验门控（EP 原生 props 透传）                                                                 |
+| --------- | ----------- | ------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| `'Card'`  | —（单面板） | slots.header 或 props.header   | —                                                                                                       |
+| `'Tabs'`  | `ElTabPane` | `child.label`（缺省 `面板 N`） | `props.modelValue` + `props.onTabChange`（绑 model）；`props.beforeLeave` 校验门控（返 false 阻止切换） |
+| `'Steps'` | `ElStep`    | `child.label`（缺省 `面板 N`） | `props.active`（绑 model）+ 外层按钮驱动；`props.processStatus` 完成态                                  |
+
+面板内布局：child 配 `row/column` 走栅格（同 Card）。示例见 `/demo/x-form-tabs-steps`（Tabs + Steps + 校验门控完整桥接）与 `/demo/x-form-nested`（Card 多组）。
 
 ### 数组节点（2）
 
@@ -498,6 +555,9 @@ const node: SchemaNodeFor<'MyInput'> = {
 }
 ```
 
+> standalone 简写（与 `reaction.disabled` 完全等价，克隆阶段自动归一化）：
+> `disabled: (m) => !m.enablePath`
+
 **调度策略**：`strategy: 'sync' | 'debounce' | 'throttle'` + `delay`（ms）。
 
 **性能优化 —— `deps` 精确监听**：默认情况下含动态值的 reaction 会 deep watch 整棵 model（任意字段变化都触发求值）。声明 `deps` 后仅监听指定路径：
@@ -555,6 +615,18 @@ persist.clear()
 
 **已知限制**：File/Blob/函数等不可序列化值会退化丢失；多标签页并发编辑不同步（后写覆盖先写）；含密码/证件号等字段必须配置 `exclude`。
 
+### 设计器演进接口预留（PM 审查发现 12，Wave4-3）
+
+为低代码设计器铺路预留的**纯类型契约**字段（XForm 渲染/校验不消费；可视化工具有了锚点后再评估 PoC）：
+
+| 字段                             | 层级        | 语义                                                                                                                         |
+| -------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `id?: string`                    | 节点级      | 节点稳定 id（同层唯一）—— 设计器选中/锚定/回写；XForm 仍按 `name`/`key` 做渲染与校验标识                                     |
+| `meta?: Record<string, unknown>` | 节点级      | 节点扩展元数据（设计器私有状态/业务标注）—— 透传不透明键值对，不消费/不校验/不序列化到 model；建议仅放可 JSON 序列化的纯数据 |
+| `schemaVersion?: string`         | 顶层 schema | schema 版本号（'major.minor.patch' 或业务自定义）—— `useFormPersist.restoreFilter` 升级裁剪 + 设计器 schema 升级策略锚定     |
+
+业务手写 schema 无版本演进/设计器需求时，三个字段均可不填。
+
 ---
 
 ## 决策指南
@@ -588,9 +660,12 @@ dev 模式下 XFormDebugBanner 会自动在右下角浮窗显示 schema 校验�
 
 ---
 
-## 示例（38 个 demo，全部位于 `src/modules/demo/examples/XForm*.vue`）
+## 示例（下表 38 个高频入门 demo，全量 56 个见 docs/24 §19）
 
-> 38 个 demo 中 `/demo/x-form`（即 `XForm.vue`）是主入口，承载 Props/Events/Slots 完整 API 表；其余 37 个按主题分组覆盖各能力边界。
+> 下表为按主题精选的入门子集；**完整索引（56 个，按主题分组、含新增即维护的单一来源）见
+> [`docs/24-XForm使用指南.md`](../../../docs/24-XForm使用指南.md) §19**。新增 demo 只需维护 §19 一处，本表不再扩容。
+>
+> 其中 `/demo/x-form`（即 `XForm.vue`）是主入口，承载 Props/Events/Slots 完整 API 表。
 
 完整在线演示站点：`pnpm dev` → `/demo`（左侧「XForm 表单引擎」分组），路由 = `/demo/x-form-<kebab-case>`。
 
@@ -643,32 +718,30 @@ dev 模式下 XFormDebugBanner 会自动在右下角浮窗显示 schema 校验�
 
 XForm 错误反馈分 4 层（form 红字 / OSD toast / console / Debug Banner），生产环境与开发环境可见性不同：
 
-| 层                                              | 触发场景                                                                | dev 可见 | prod 可见                                    | 用户感知          |
-| ----------------------------------------------- | ----------------------------------------------------------------------- | -------- | -------------------------------------------- | ----------------- |
-| **form 红字**（el-form-item 下方）              | el-form 字段规则失败 / `setFieldError` 写入 / `validateFromServer` 回填 | ✅       | ✅                                           | ✅ 用户可感知     |
-| **OSD 错误浮窗**（XFormErrorToast）             | 跨字段校验失败 / 服务端 422 回填 / schema 严重校验失败                  | ✅       | ❌ 默认关闭（需 `showDebugBanner` 强制开启） | ❌ 默认无感       |
-| **Debug Banner**（右下角浮窗）                  | schema 静态校验失败 / 表达式含 forbidden 标识符 / model 缺失            | ✅       | ❌ 仅 dev                                    | ❌ 仅 dev 可见    |
-| **console**（`console.error` / `console.warn`） | 所有错误 + 部分 warn（如 model 缺失）                                   | ✅       | ✅ 保留 `console.error`                      | ❌ 仅开发者控制台 |
+| 层                                              | 触发场景                                                                | dev 可见                                | prod 可见                               | 用户感知          |
+| ----------------------------------------------- | ----------------------------------------------------------------------- | --------------------------------------- | --------------------------------------- | ----------------- |
+| **form 红字**（el-form-item 下方）              | el-form 字段规则失败 / `setFieldError` 写入 / `validateFromServer` 回填 | ✅                                      | ✅                                      | ✅ 用户可感知     |
+| **OSD 错误浮窗**（XFormErrorToast）             | 跨字段校验失败 / 服务端 422 回填 / schema 严重校验失败                  | ❌ 默认关闭（传 `showErrorToast` 开启） | ❌ 默认关闭（传 `showErrorToast` 开启） | ❌ 默认无感       |
+| **Debug Banner**（右下角浮窗）                  | schema 静态校验失败 / 表达式含 forbidden 标识符 / model 缺失            | ✅                                      | ❌ 仅 dev                               | ❌ 仅 dev 可见    |
+| **console**（`console.error` / `console.warn`） | 所有错误 + 部分 warn（如 model 缺失）                                   | ✅                                      | ✅ 保留 `console.error`                 | ❌ 仅开发者控制台 |
 
 ### 生产环境推荐配置
 
 ```ts
-import XForm from '@/components/form-schema/XForm.vue'
+import XForm from '@/components/form-schema/components/XForm.vue'
 
-// 默认行为已适合 prod：form 红字全环境可见，OSD / Banner 仅 dev
+// 默认行为已适合 prod：form 红字全环境可见，OSD / Banner 默认关闭
 <XForm :schema="schema" :model="form" />
 
-// 如果希望 prod 也显示 OSD toast（不推荐，仅用于错误诊断场景）：
-const formRef = ref<XFormComponentInstance>()
-// 调用方自行实现错误浮窗（业务错误浮窗组件）
-formRef.value?.validateFromServer?.({ success: false, errors: {...} })
-// 然后业务浮窗组件接 fetch 错误展示用户提示
+// 如果希望显示 OSD toast（错误诊断场景，不推荐面向终端用户）：
+<XForm :schema="schema" :model="form" :show-error-toast="true" />
+// 错误事件（跨字段失败 / 服务端 422 回填等）以右上角浮窗可见
 ```
 
 ### 重要行为
 
 1. **默认 prod 用户能感知的错误** 仅 form 红字一种 —— 这与 element-plus 原生行为一致
-2. **OSD toast 默认 dev only** —— 避免生产环境弹出调试信息干扰用户
+2. **OSD toast 全环境默认关闭** —— 错误主反馈是字段红字 + console 留痕，toast 是补充提醒，显式传 `showErrorToast` 开启（与运行环境无关）
 3. **console.error 全环境保留** —— 出问题时浏览器 console / Sentry 仍能捕获
 4. **schema 静态校验失败不阻塞渲染** —— 字段仍会渲染，但 `console.error` + dev Banner 提示开发者
 

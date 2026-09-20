@@ -11,7 +11,6 @@
 import { reactive, h, ref, computed, defineComponent } from 'vue'
 import { ElMessage } from 'element-plus'
 import { ElTag, ElInput } from 'element-plus'
-import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
@@ -182,7 +181,7 @@ const tocItems = [
         'components prop 注册业务自定义 Component，schema 内 component 字符串自动解析',
         '本 demo 演示 MyTagSelector：chips 显示已选标签 + 快速选择 + 输入框添加新标签 + ElTag closable 删除',
         'props.modelValue / update:modelValue 双向绑定（与 el-input 同模式，无需 modelProp）',
-        '配合 module augmentation 扩展 ComponentPropsRegistry 可获得完整 TS 类型推导（见 types.custom-component.test-d.ts）',
+        '配合 module augmentation 扩展 ComponentPropsRegistry 可获得完整 TS 类型推导（见 types/custom-component.test-d.ts）',
       ]"
     >
       <section id="demo-custom-component">

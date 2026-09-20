@@ -1,4 +1,20 @@
 <script setup lang="ts">
+/**
+ * 登录页（blank 布局）。
+ *
+ * 提交流程：
+ * 1. `formRef.value.validate()` 同步校验账号 / 密码（≥3 / ≥6 位）
+ * 2. 调用 `userStore.login(form)` 触发 authApi
+ * 3. 成功后读 `route.query.redirect` 跳回原页面（守卫写入），fallback `/home`
+ * 4. 失败统一 ElMessage.error，错误对象归一化（Error.message / '登录失败'）
+ *
+ * 表单默认值：`admin / 123456`（仅演示用，生产应改 SSO / 短信验证码）。
+ *
+ * @see [`@/store/modules/user`](../../../store/modules/user.ts) 登录态
+ * @see [`@/router/guards/auth`](../../../router/guards/auth.ts) 写 redirect
+ * @see [`../styles/login.scss`](../styles/login.scss) 样式抽离
+ * @group 业务模块：Auth
+ */
 // ElMessage 由 unplugin-auto-import 注入（importStyle 自动带样式，勿显式 import）
 import { User, Lock, View, Hide } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/modules/user'
@@ -15,6 +31,9 @@ const form = reactive({ username: 'admin', password: '123456' })
 const loading = ref(false)
 const showPassword = ref(false)
 const rememberMe = ref(false)
+
+// 品牌文案统一走 VITE_APP_TITLE（与 main.ts 初始化 document.title 同源），避免硬编码业务名
+const appTitle = import.meta.env.VITE_APP_TITLE || '企业中后台管理'
 
 const rules = {
   username: [
@@ -69,7 +88,7 @@ async function handleSubmit() {
           <span :class="bem.e('logo-piece')" />
         </div>
         <h1 :class="bem.e('title')">企业中后台管理</h1>
-        <p :class="bem.e('subtitle')">应急指挥 · 数据中台</p>
+        <p :class="bem.e('subtitle')">{{ appTitle }} · 数据中台</p>
       </div>
 
       <!-- 表单 -->
@@ -123,7 +142,7 @@ async function handleSubmit() {
         </button>
       </el-form>
 
-      <p :class="bem.e('footer')">© 2026 应急指挥中心</p>
+      <p :class="bem.e('footer')">© 2026 {{ appTitle }}中心</p>
     </el-card>
   </div>
 </template>

@@ -1,6 +1,10 @@
+# tsconfig.app.json paths 自动同步（生成器仅在 hash 不一致时写入，秒级）
+pnpm generate:tsconfig-paths
 # 暂存区文件先自动格式化 + ESLint fix（lint-staged 仅处理变更文件，不全库扫描）
 pnpm lint-staged
 # 全局类型检查（防止 lint-staged 漏掉的文件引入类型错误）
 pnpm type-check
+# alias 单一来源校验（CI 兜底，防止生成器被绕过）
+pnpm check:aliases
 # 路由一致性检查（RouteName 联合类型 + whitelist + 实际 routes 三者一致，防止漏改）
 pnpm check:routes

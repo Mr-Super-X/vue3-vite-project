@@ -12,8 +12,10 @@
  * - snapshot 由调用方负责初始化：XForm.vue 在 setup 末尾立即调一次 resetDirty() 拍基线
  *   避免 setup 时 model 为空导致"全字段 dirty"假象
  * - watch model deep 触发 dirty 重算（响应式）
+ *
+ * @group 表单编排：dirty
  */
-import { watch } from 'vue'
+import { watch, ref, type Ref } from 'vue'
 import { isEqual, get, cloneDeep } from 'lodash-es'
 
 /**
@@ -39,13 +41,19 @@ export interface UseFormDirtyReturn {
   resetDirty: () => void
   /** 内部清理（组件 unmount 时调用） */
   stop: () => void
+  /**
+   * 响应式 dirty 字段集合（设计师审查 F13）
+   * recompute 时整体替换新 Set 触发响应式依赖（render-form-item 的 is-dirty class 绑定订阅它）
+   */
+  dirtyFieldsRef: Readonly<Ref<ReadonlySet<string>>>
 }
 
 /** useFormDirty —— dirty 状态追踪 + 基线管理 */
 export function useFormDirty(opts: UseFormDirtyOptions): UseFormDirtyReturn {
   /** 各字段的初始值快照（lodash path → 初始值） */
   const initialSnapshot = new Map<string, unknown>()
-  const dirtyFields = new Set<string>()
+  /** 当前 dirty 字段集合（每次 recompute 整体替换新 Set，触发响应式） */
+  const dirtyFieldsRef = ref<ReadonlySet<string>>(new Set<string>())
 
   function captureSnapshot(): void {
     const model = opts.model()
@@ -56,18 +64,19 @@ export function useFormDirty(opts: UseFormDirtyOptions): UseFormDirtyReturn {
       // 用户原位修改（model.addr.city = x）时快照同步变化，isEqual 恒 true → dirty 漏检
       initialSnapshot.set(name, cloneDeep(get(model, name)))
     }
-    dirtyFields.clear()
+    dirtyFieldsRef.value = new Set<string>()
   }
 
   function recompute(): void {
     const model = opts.model()
     if (!model) return
-    dirtyFields.clear()
     // 仅比较已拍 snapshot 的字段（避免未拍基线时误判全字段 dirty）
+    const next = new Set<string>()
     for (const [name, initialValue] of initialSnapshot) {
       const currentValue = get(model, name)
-      if (!isEqual(currentValue, initialValue)) dirtyFields.add(name)
+      if (!isEqual(currentValue, initialValue)) next.add(name)
     }
+    dirtyFieldsRef.value = next
   }
 
   function resetDirty(): void {
@@ -78,13 +87,13 @@ export function useFormDirty(opts: UseFormDirtyOptions): UseFormDirtyReturn {
     // snapshot 为空（未初始化）→ 视为未 dirty
     if (initialSnapshot.size === 0) return false
     recompute()
-    return dirtyFields.size > 0
+    return dirtyFieldsRef.value.size > 0
   }
 
   function getDirtyFields(): string[] {
     if (initialSnapshot.size === 0) return []
     recompute()
-    return [...dirtyFields]
+    return [...dirtyFieldsRef.value]
   }
 
   function isTouched(name: string): boolean {
@@ -103,5 +112,6 @@ export function useFormDirty(opts: UseFormDirtyOptions): UseFormDirtyReturn {
     isTouched,
     resetDirty,
     stop: () => stopWatch(),
+    dirtyFieldsRef,
   }
 }

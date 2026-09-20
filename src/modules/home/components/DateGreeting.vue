@@ -1,7 +1,13 @@
 <script setup lang="ts">
-// 时间问候条：全宽 #F2F2F2 背景，左侧钟表图标 + 标语 + 日期
-// 规格：y=480..546 / 图标 18x18 / 标语 304x20 / 日期 130x17
-
+/**
+ * 时间问候条：全宽 #F2F2F2 背景，左侧钟表图标 + 标语 + 日期。
+ *
+ * 规格：y=480..546 / 图标 18x18 / 标语 304x20 / 日期 130x17
+ *
+ * A11y：`aria-label="时间问候"` 标识区域语义。
+ *
+ * @group 业务模块：Home
+ */
 // BEM 工具由 unplugin-auto-import 自动注入，无须显式 import
 const bem = createNamespace('date-greeting')
 

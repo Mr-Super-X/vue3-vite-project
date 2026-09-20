@@ -11,7 +11,6 @@
  */
 import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
-import XForm from '@/components/form-schema/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import { useConsoleCapture } from '../../composables/useConsoleCapture'
@@ -63,7 +62,7 @@ const tocItems = [
       title="model 缺省 dev 警告"
       source="src/components/form-schema/XForm.vue"
       :introductions="[
-        'model prop 未传入时，dev mode 触发 console.error。',
+        'model prop 未传入时，dev mode 触发 console.warn（双通道：console + errorBus 各 1 条）。',
         '下方「控制台输出」面板实时显示 XForm 的警告（不需打开 DevTools）。',
         '场景 1：未传 model → 自动捕获 [XForm] model 警告',
         '场景 2：reactive({}) → 合法（不警告，字段始终为空）',
@@ -106,7 +105,7 @@ const tocItems = [
       <ConsoleLogPanel
         :logs="logs"
         title="XForm 控制台输出"
-        empty="暂无警告（场景 1 应捕获 1 条 [XForm] model 警告）"
+        empty="暂无警告（场景 1 应捕获 2 条 [XForm] model 警告：console.warn + errorBus 双通道）"
         @clear="clear"
       />
     </DemoFrame>

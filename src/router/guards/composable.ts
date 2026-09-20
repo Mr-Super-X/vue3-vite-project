@@ -1,11 +1,16 @@
-// 守卫 - 统一编排器（chain guards）
-//
-// 把多个 guard 串成一个调用链，任一 guard 返回非 null 即终止。
-//
-// 设计要点：
-//  - 类似 koa / express 的 middleware chain，返回 RouteLocationRaw 即 next('error')
-//  - 支持 async guards（fetchProfile / ensureRemoteMenuLoaded 都需要异步）
-//  - 任何 guard 抛错时记录 console.error 并放行（避免守卫自身错误阻塞整个 SPA）
+/**
+ * 守卫 —— 统一编排器（chain guards）。
+ *
+ * 把多个 guard 串成一个调用链，任一 guard 返回非 null 即终止。
+ *
+ * 设计要点：
+ * - 类似 koa / express 的 middleware chain，返回 `RouteLocationRaw` 即 `next('error')`
+ * - 支持 async guards（`fetchProfile` / `ensureRemoteMenuLoaded` 都需要异步）
+ * - 任何 guard 抛错时记录 `console.error` 并放行（避免守卫自身错误阻塞整个 SPA）
+ *
+ * @see [`./auth.ts`](./auth.ts) `composeGuards` 调用方
+ * @group 路由：守卫编排
+ */
 
 import type { RouteLocationNormalized, RouteLocationRaw } from 'vue-router'
 

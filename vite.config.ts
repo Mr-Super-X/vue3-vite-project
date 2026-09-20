@@ -1,39 +1,17 @@
-import { fileURLToPath, URL } from 'node:url'
-
+/**
+ * Vite 工程配置
+ *
+ * 本文件定位：
+ *   - **装配清单**：负责组合 plugins 数组 + 各 defineConfig 字段
+ *   - **工程配置**：路径别名 / vendorChunks / server / scs 注入等已迁移到 `build/` 子模块
+ *     （单一来源详见 build/index.ts barrel re-export，避免与 tsconfig.app.json 双维护）
+ *
+ * 历史：
+ *   - 2026-09-10: 抽出 SRC_DIR_ALIASES / vendorChunks / server / scss 到 build/* 单一来源
+ *   - 详见 docs/superpowers/specs/2026-09-10-vite-config-split-design.md
+ */
 import { defineConfig } from 'vite'
 
-/**
- * src 下子目录别名映射（与 tsconfig.app.json paths 配置保持同步）
- *
- * key: alias 名（裸别名 + /* 两种用法）；value: src 下的子目录名
- * 维护规则：新增子目录时同时改本表 + tsconfig.app.json
- */
-const SRC_DIR_ALIASES = {
-  '@': '',
-  '@api': 'api',
-  '@assets': 'assets',
-  '@components': 'components',
-  '@composables': 'composables',
-  '@directives': 'directives',
-  '@enums': 'enums',
-  '@layouts': 'layouts',
-  '@locales': 'locales',
-  '@modules': 'modules',
-  '@plugins': 'plugins',
-  '@router': 'router',
-  '@store': 'store',
-  '@types': 'types',
-  '@utils': 'utils',
-} as const
-
-/** 把 SRC_DIR_ALIASES 解析为 vite resolve.alias 格式 */
-function resolveSrcDirAliases(): Record<string, string> {
-  const map: Record<string, string> = {}
-  for (const [alias, sub] of Object.entries(SRC_DIR_ALIASES)) {
-    map[alias] = fileURLToPath(new URL(`./src/${sub}`, import.meta.url))
-  }
-  return map
-}
 import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
 import vueDevTools from 'vite-plugin-vue-devtools'
@@ -45,20 +23,15 @@ import { viteMockServe } from 'vite-plugin-mock'
 import { visualizer } from 'rollup-plugin-visualizer'
 import { cleanMockBundled } from './scripts/vite-plugin-clean-mock'
 
-// 第三方库 vendor chunk 分组配置（顺序敏感——先匹配先返回）
-// 新增分组只需在此处追加一项，无需修改 manualChunks 内部逻辑
-const vendorChunks: ReadonlyArray<{ name: string; patterns: ReadonlyArray<string> }> = [
-  {
-    // Vue 核心：vue / vue-router / pinia / @vue/*
-    name: 'vendor-vue',
-    patterns: ['/vue/', '/pinia/', '/@vue/'],
-  },
-  {
-    // UI 库：element-plus / @element-plus/icons-vue / unplugin-vue-components
-    name: 'vendor-ui',
-    patterns: ['/element-plus/', '/unplugin-vue-components/'],
-  },
-]
+// 工程配置（单一来源：build/index.ts barrel re-export）
+// 详见 docs/superpowers/specs/2026-09-10-vite-config-split-design.md
+import {
+  resolveSrcDirAliases,
+  VENDOR_CHUNKS,
+  createProxyConfig,
+  SERVER_DEFAULTS,
+  SCSS_PREPROCESSOR_OPTIONS,
+} from './build'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -79,6 +52,15 @@ export default defineConfig({
         { from: '@/composables/useLogout', imports: [{ name: 'useLogout' }] },
         { from: '@/composables/useRequest', imports: [{ name: 'useRequest' }] },
         { from: '@/composables/useAppRouter', imports: [{ name: 'useAppRouter' }] },
+        // useDict：字典组合式 API（详见 src/composables/useDict，契约形态按 code 解构）
+        { from: '@/composables/useDict', imports: [{ name: 'useDict' }] },
+        // useDialog：命令式弹窗（详见 src/composables/useDialog）
+        // 同模块的 DialogCancelledError / setDialogAppContext / getDialogAppContext 不注入：
+        // 第一个是类型（不参与运行时），后两个只在 main.ts / useConfirm 内部调用（不应污染 setup 全局作用域）
+        { from: '@/composables/useDialog', imports: [{ name: 'useDialog' }] },
+        // useConfirm：二次确认（详见 src/composables/useConfirm）
+        // 取消时 resolve(false) 而非 reject，故调用方无须 try/catch
+        { from: '@/composables/useConfirm', imports: [{ name: 'useConfirm' }] },
         // 业务侧高频 utils（详见 src/utils/*）
         { from: '@/utils/bem', imports: [{ name: 'createNamespace' }] },
       ],
@@ -91,6 +73,13 @@ export default defineConfig({
     }),
     Components({
       resolvers: [ElementPlusResolver({ importStyle: 'css' })],
+      /**
+       * 声明要自动导入的全局组件 —— 三目录下所有 .vue（deep: true 含任意深度子目录）
+       * 均注册到 vue.GlobalComponents，消费方模板直接用 <BaseChart /> / <ProTable /> /
+       * <XForm /> 等，不要显式 import（CLAUDE.md §1.7 强约束）
+       */
+      dirs: ['src/components/common', 'src/components/ProTable', 'src/components/form-schema'],
+      deep: true,
       dts: 'src/types/components.d.ts',
     }),
     // mock 启用开关由 VITE_USE_MOCK 控制（2026-07-27 切换）。
@@ -118,9 +107,11 @@ export default defineConfig({
       : []),
   ],
   server: {
-    // 项目固定使用 5174 端口（与默认 5173 错开，避免与并行项目端口冲突）
-    port: 5174,
-    strictPort: true, // 5174 被占用时直接报错而非自动找下一个端口，避免端口混淆
+    // port 5174 / strictPort: true 来自 build/server.ts 的 SERVER_DEFAULTS
+    // proxy 来自 build/proxy.ts 的 createProxyConfig(env) —— 当前返回 {} 占位
+    // 联调真实后端时在 build/proxy.ts 内按需补充 _env 字段解析
+    ...SERVER_DEFAULTS,
+    proxy: createProxyConfig(process.env),
   },
   resolve: {
     alias: resolveSrcDirAliases(),
@@ -149,10 +140,9 @@ export default defineConfig({
       //     标记 if-function 为 deprecation 但函数仍可用。改用 @if 块会让表达式级赋值退化为
       //     block 级冗余代码，CSS 模式 if(...: ...; else:) 在 SCSS 文件中 sass 1.101 解析拒绝，
       //     暂时静默该 deprecation。
-      scss: {
-        silenceDeprecations: ['new-global', 'if-function'],
-        additionalData: `@use '@/assets/styles/mixins/bem' as * with ($BEM_PREFIX: '${process.env.VITE_BEM_PREFIX ?? 'vv'}');\n`,
-      },
+      //
+      // 实际 additionalData 值 + silenceDeprecations 数组见 build/scss.ts 的 SCSS_PREPROCESSOR_OPTIONS
+      scss: SCSS_PREPROCESSOR_OPTIONS,
       less: { javascriptEnabled: true },
     },
   },
@@ -191,13 +181,43 @@ export default defineConfig({
       //
       // 完整字段见 @rolldown/types 或 node_modules/.pnpm/rolldown@1.1.5/.../define-config-BhJ90aEv.d.mts
       output: {
+        // ===== 产物文件分类输出：js / css / img 分目录，其它资源归 assets/ =====
+        // 目的：dist 目录结构清晰，运维可按目录维度排查问题 + CDN 按目录配置差异化缓存策略
+        // 注：rolldown 兼容 rollup 的 entryFileNames / chunkFileNames / assetFileNames 语义
+        entryFileNames: 'js/[name]-[hash].js',
+        chunkFileNames: 'js/[name]-[hash].js',
+        assetFileNames(assetInfo) {
+          // 按资源扩展名分目录：css → css/；常见图片 → img/；字体等其它资源 → assets/
+          // 注：rolldown 的 PreRenderedAsset.name 已 @deprecated，改用 names 数组（取首个原始文件名判定）
+          const assetName = assetInfo.names[0] ?? ''
+          if (assetName.endsWith('.css')) return 'css/[name]-[hash][extname]'
+          const IMG_EXTENSIONS = [
+            '.png',
+            '.jpg',
+            '.jpeg',
+            '.gif',
+            '.svg',
+            '.webp',
+            '.ico',
+            '.bmp',
+            '.avif',
+            '.tiff',
+            '.apng',
+          ]
+          if (IMG_EXTENSIONS.some((ext) => assetName.endsWith(ext)))
+            return 'img/[name]-[hash][extname]'
+          return 'assets/[name]-[hash][extname]'
+        },
+
         // 手动拆分第三方库（vendor chunk）→ 利用浏览器强缓存
         // 业务代码 (src/) 变化时只更新业务 chunk，第三方库 chunk 命中缓存
         // 注：Vite 8 用 rolldown 替代 rollup，manualChunks 必须是函数（不能是对象）
         manualChunks(id) {
           // 业务代码不归 vendor
           if (!id.includes('node_modules')) return undefined
-          for (const { name, patterns } of vendorChunks) {
+          // VENDOR_CHUNKS 来自 build/vendor-chunks.ts —— 顺序敏感（vue → ui → charts）
+          // 顺序敏感：先匹配先返回，新加组必须 append 到末尾
+          for (const { name, patterns } of VENDOR_CHUNKS) {
             if (patterns.some((pattern) => id.includes(pattern))) return name
           }
           // 其他第三方库：axios / vue-i18n / 等

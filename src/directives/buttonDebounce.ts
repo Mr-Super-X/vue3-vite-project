@@ -13,6 +13,10 @@ import type { ElHTMLElement, ButtonDebounceBinding } from './buttonDebounce.d'
  * - click 事件不涉及中文输入法（无 composition 事件）
  * - 仍然使用 findInput 兼容封装按钮组件（如 el-button 内部真实 click 在子元素）
  * - 完整 beforeUnmount 清理防止内存泄漏
+ *
+ * @see [`./_utils.ts`](./_utils.ts) debounce 工具
+ * @see [`./inputDebounce.ts`](./inputDebounce.ts) input 防抖指令
+ * @group 指令：防抖
  */
 export default {
   install(app: App) {

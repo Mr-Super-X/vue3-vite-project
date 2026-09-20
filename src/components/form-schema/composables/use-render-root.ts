@@ -13,6 +13,10 @@
  * - renderOpts.model/components/rules/beforeChange/componentProps 在 setup 期捕获 props 快照，
  *   父级替换引用时通过同步 watch 写入新值（修复 B4 静默断裂问题）
  * - onValueChange 必须先 clearValidate 再 trigger —— delay=0 实时模式下顺序倒置会导致红字被立即清除
+ * - watch 为默认 pre-flush：父组件渲染周期内 props 换代时，回调在本组件重渲**前**执行，
+ *   renderOpts 更新 + optsEpoch bump 先于渲染生效，本轮字段渲染即使用新值（2026-09-16 注释对齐）
+ *
+ * @group 表单编排：渲染
  */
 import { ref, watch, type ComputedRef, type Ref, type VNode } from 'vue'
 
@@ -23,6 +27,7 @@ import { applyDirectives } from './apply-directives'
 import type { SchemaNode, XFormExpose, XFormProps } from '../types'
 import type { FieldErrorState } from './use-form-instance'
 import type { UseFormErrorBusReturn } from './use-form-error-bus'
+import type { ExpressionScope } from './use-expression'
 
 /** 渲染闭包签名 —— 与 useRenderSchemaNode.render 一致 */
 export type RenderFn = (
@@ -69,6 +74,30 @@ export interface UseRenderRootDeps {
    * @see ../../../types/xform.ts XFormProps.permissionResolver
    */
   permissionResolver?: (perm: string) => 'view' | 'edit' | 'hidden'
+  /**
+   * H2：实例级表达式解析器（composer 用 createExpressionScope() 创建，每实例一份）。
+   * 透传到 renderOpts 供 on 事件绑定 / permission 表达式使用实例私有沙箱。
+   * @see ./use-expression.ts createExpressionScope
+   */
+  resolveFunctionExpression?: ExpressionScope['resolveFunctionExpression']
+  /**
+   * 字段级 dirty 视觉指示（XFormProps.showDirtyMark 透传，设计师审查 F13）
+   * dirtyFields 由 composer 注入（useFormDirty.dirtyFieldsRef，响应式 Set）
+   * render-form-item 在 render effect 内订阅它，dirty 集合变化时自动重渲对应字段
+   * exactOptionalPropertyTypes: 可选 + undefined 联合以兼容条件展开
+   */
+  showDirtyMark?: boolean | undefined
+  dirtyFields?: Readonly<Ref<ReadonlySet<string>>> | undefined
+  /**
+   * model 表达式重渲 epoch（composer 注入）——
+   * useModelExpressionRerender 检测到 model 变化且 schema 含 model 依赖表达式
+   * （顶层 readonly/disabled / 字段 permission 的函数或 '{{ }}' 形态）时 bump 它，
+   * 使所有 SchemaField 的 renderFn 重跑。为什么需要：这些表达式的求值在 Card 等
+   * 视觉容器的 slot 闭包里（render-schema-node resolvePermission），脱离 SchemaField
+   * 自身 render effect 同步追踪，且收沙箱深拷贝副本不追踪 model —— 必须靠 epoch
+   * 强制整树重建才能让 permission 重算（2026-09-18 xform-expression 角色切换失效根因）
+   */
+  modelExpressionEpoch?: Readonly<Ref<number>> | undefined
 }
 
 /** useRenderRoot 返回值 —— 仅暴露 renderToComponent（optsEpoch 是内部订阅细节） */
@@ -93,6 +122,10 @@ export function useRenderRoot(deps: UseRenderRootDeps): UseRenderRootReturn {
     topLevelReadonly,
     mergedComponentProps,
     permissionResolver,
+    resolveFunctionExpression,
+    showDirtyMark,
+    dirtyFields,
+    modelExpressionEpoch,
   } = deps
 
   // opts 换代计数器 —— 父级替换 props 引用时 bump，让所有 SchemaField 的 render effect 失效重渲
@@ -105,11 +138,20 @@ export function useRenderRoot(deps: UseRenderRootDeps): UseRenderRootReturn {
   ): VNode | string | VNode[] | undefined {
     // 订阅 optsEpoch：B4 watch 在 props 引用换代时 bump 它，字段 effect 随之失效重渲
     void optsEpoch.value
+    // 订阅 modelExpressionEpoch：model 依赖表达式（顶层 readonly/disabled / 字段 permission）
+    // 的求值在 slot 闭包里脱离本组件 effect 追踪，靠 composer bump 此 epoch 强制整树重建
+    void modelExpressionEpoch?.value
     if (node === null || node === undefined) return undefined
     if (typeof node === 'string') return node
     if (Array.isArray(node)) return node.map(renderToComponent) as VNode[]
+    //                                                    ^^^^^^^^^^^^^^^^
+    // 类型断言安全说明：renderToComponent 返回联合含 string | undefined，但 schema
+    // 约束下数组子节点只会递归出 VNode —— string 形态在上方 `typeof node === 'string'`
+    // 已早退返回，不可能混入数组。断言仅为满足 TS 联合 narrow，运行时无 string 元素。
     if (node.ignore) return undefined
     const result = renderInner(node)
+    // 类型归因：renderInner 返回 VNode | string | VNode[] | undefined 联合，TS 推导为 VNode 后
+    // 此处 narrow 仅 string | VNode[] 分支需要 as never 兜底（C1 根因，详见 types/TYPE-CAST-AUDIT.md）。
     if (!result || typeof result === 'string' || Array.isArray(result)) return result as never
 
     if (node.hidden) {
@@ -125,6 +167,9 @@ export function useRenderRoot(deps: UseRenderRootDeps): UseRenderRootReturn {
     components: props.components,
     beforeChange: props.beforeChange,
     beforeChangeRules: props.beforeChangeRules,
+    // i18n t 用 getter 闭包而非 setup 快照：父级替换 t 引用（语言切换）无需等 optsEpoch 覆盖，
+    // resolveLabel 每次渲染实时读 props.t；vue-i18n 的 t 在 render effect 内被调用以建立 locale 依赖
+    t: (key) => props.t?.(key) ?? key,
     // getter 闭包延迟解析 exposed —— 闭包内访问的 exposed 在本函数末尾才构造
     makeBeforeChangeCtx: (node) =>
       makeDefaultBeforeChangeCtx(node, (props.model ?? {}) as Record<string, unknown>, getExposed),
@@ -132,6 +177,9 @@ export function useRenderRoot(deps: UseRenderRootDeps): UseRenderRootReturn {
     componentProps: mergedComponentProps.value,
     render: renderToComponent,
     externalErrors: () => fieldErrors.value,
+    // dirty 标记（设计师审查 F13）：showDirtyMark 透传 + dirtyFields 响应式订阅
+    showDirtyMark: showDirtyMark ?? false,
+    dirtyFields,
     arrayActions,
     triggerCrossFieldValidator: (node, eventType) => triggerCrossFieldValidator(node, eventType),
     validateField: async (name: string) => {
@@ -167,11 +215,13 @@ export function useRenderRoot(deps: UseRenderRootDeps): UseRenderRootReturn {
     globalReadonly: () => topLevelReadonly.value,
     // exactOptionalPropertyTypes: 条件展开避免传 undefined
     ...(permissionResolver ? { permissionResolver } : {}),
+    ...(resolveFunctionExpression ? { resolveFunctionExpression } : {}),
   }
 
   const renderInner = useRenderSchemaNode(renderOpts)
 
-  // props 引用换代时同步 renderOpts + bump optsEpoch
+  // props 引用换代时更新 renderOpts + bump optsEpoch
+  // 默认 pre-flush：回调在本组件重渲前执行，保证本轮渲染读取的已是新值
   watch(
     () => [
       props.model,

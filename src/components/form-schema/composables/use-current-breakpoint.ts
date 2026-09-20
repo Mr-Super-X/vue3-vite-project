@@ -3,6 +3,8 @@
  *
  * 设计：SSR 安全（无 window 时返回 'md' 中位默认值）；onMounted 注册 + onUnmounted 清理；
  * resize 走 100ms 节流（断点 6 档逐帧更新是浪费）。
+ *
+ * @group 表单编排：响应式
  */
 import { ref, onMounted, onUnmounted, type Ref } from 'vue'
 import { throttle } from 'lodash-es'

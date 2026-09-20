@@ -13,6 +13,8 @@
  * @see ../composables/use-cross-field-rule-trigger.ts 跨字段触发器实现
  * @see ../composables/use-form-validation.ts 校验编排入口
  * @see ./xform.ts ValidateOptions.validateFirst 入参说明
+ *
+ * @group 类型系统
  */
 
 /** 单条字段校验规则（async-validator 兼容 + 跨字段扩展） */
@@ -31,6 +33,10 @@ export interface RuleItem {
    *  - 多字段依赖：dependsOn: ['password', 'confirmPassword']
    *  仅与 crossValidator 配合使用；单独写无意义 */
   dependsOn?: string | string[]
+  /** dependsOn 的别名，与 reaction / asyncOptions 的 deps 命名保持一致（PM 审查发现 4）
+   *  - 优先读 dependsOn，未声明时回退读 deps（二者同时声明时 dependsOn 优先）
+   *  - 新代码建议写 deps（命名更短，与另两套依赖机制一致）；dependsOn 保留向后兼容 */
+  deps?: string | string[]
   /** 跨字段校验函数（替代 async-validator 的 callback validator，支持同步/异步）
    *  - 第 1 个参数：当前字段 value（lodash get 取自 model）
    *  - 后续参数：按 dependsOn 声明顺序传入依赖字段的 value

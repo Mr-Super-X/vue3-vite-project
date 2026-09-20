@@ -1,6 +1,7 @@
 import type { SchemaNode, RuleItem, ValidateOptions, ValidateResult } from '../types'
 import type { ZodType } from 'zod'
-import { get } from 'lodash-es'
+import { walkSchema } from '../utils/walk-schema'
+import { runCrossRule } from './cross-rule-runner'
 
 /**
  * use-validate —— schema 静态校验 + 运行时跨字段校验 + zod 顶层校验
@@ -15,6 +16,8 @@ import { get } from 'lodash-es'
  *
  * @see ./use-form-validation.ts validateForm 主流程调用
  * @see ./use-cross-field-trigger.ts collectCrossRuleFields 使用方
+ *
+ * @group 表单编排：校验
  */
 export function validate(
   schema: SchemaNode | SchemaNode[] | unknown,
@@ -136,6 +139,12 @@ export async function runCrossFieldValidation(
   return { isValid: errors.length === 0, errors }
 }
 
+/**
+ * 模型驱动的异步跨字段遍历 —— 不复用 walkSchema：
+ * array 节点按 model[name] 当前行数展开 itemSchema（name 重写为 items[i].subName），
+ * 遍历形状由运行时 model 决定而非 schema 静态结构，语义与静态遍历器本质不同。
+ * @see ../utils/walk-schema.ts
+ */
 async function traverseCross(
   node: SchemaNode | SchemaNode[] | string | undefined,
   model: Record<string, unknown>,
@@ -234,72 +243,37 @@ async function runNodeCrossRules(
     const resolvedRule = typeof r === 'string' ? namedRules?.[r] : r
     if (typeof resolvedRule !== 'object' || resolvedRule === null) continue
     const rule = resolvedRule as RuleItem
-    if (!rule.crossValidator || !rule.dependsOn) continue
+    if (!rule.crossValidator || !(rule.dependsOn ?? rule.deps)) continue
     if (!node.name) continue
-    const value = get(model, node.name)
-    const depsList = (Array.isArray(rule.dependsOn) ? rule.dependsOn : [rule.dependsOn]).map(
-      (dep) => get(model, dep)
-    )
-    let result: true | string
-    try {
-      // 兼容同步和异步返回值
-      result = await Promise.resolve(rule.crossValidator(value, ...depsList))
-    } catch (err) {
-      console.error('[XForm] crossValidator threw:', err)
-      continue
+    // 批量路径无空值跳过（空值照跑 crossValidator）——与其他两条路径的差异见 cross-rule-runner 文件头
+    const outcome = await runCrossRule(rule, model, node.name)
+    if (outcome.kind === 'fail') {
+      errors.push({ keyPath: [...keyPath, node.name], message: outcome.message })
     }
-    if (result !== true) {
-      errors.push({ keyPath: [...keyPath, node.name], message: result })
-    }
+    // pass / threw：不写 errors（threw 已在 runCrossRule 内 console.error）
   }
 }
 
 /**
  * 收集 schema 中所有含 cross rule 的字段节点
- * - 递归 children / formItem.slots / slots / array.itemSchema
+ * - 递归 children / formItem.slots / array.itemSchema（不含 node.slots，与既有行为一致）
  * - 用于 XForm setup 时为这些字段建立独立 watcher(model 变化触发 cross rules)
  */
 export function collectCrossRuleFields(
   schema: SchemaNode | SchemaNode[] | string | undefined
 ): SchemaNode[] {
   const result: SchemaNode[] = []
-  traverse(schema, [], (n) => {
-    if (!n.rules || !n.name) return
-    const arr = Array.isArray(n.rules) ? n.rules : [n.rules]
-    const hasCross = arr.some(
-      (r) => typeof r === 'object' && r !== null && 'crossValidator' in r && 'dependsOn' in r
-    )
-    if (hasCross) result.push(n)
-  })
+  walkSchema(
+    schema,
+    (n) => {
+      if (!n.rules || !n.name) return
+      const arr = Array.isArray(n.rules) ? n.rules : [n.rules]
+      const hasCross = arr.some(
+        (r) => typeof r === 'object' && r !== null && 'crossValidator' in r && 'dependsOn' in r
+      )
+      if (hasCross) result.push(n)
+    },
+    { includeNodeSlots: false }
+  )
   return result
-
-  function traverse(
-    node: SchemaNode | SchemaNode[] | string | undefined,
-    keyPath: (string | number)[],
-    visit: (n: SchemaNode) => void
-  ): void {
-    if (!node || typeof node === 'string') return
-    if (Array.isArray(node)) {
-      node.forEach((c, i) => traverse(c, [...keyPath, i], visit))
-      return
-    }
-    visit(node)
-    if (node.kind === 'array' && node.array) {
-      traverse(node.array.itemSchema, [...keyPath, 'array', 'itemSchema'], visit)
-    }
-    if (node.children) {
-      if (Array.isArray(node.children)) {
-        node.children.forEach((c, i) => traverse(c, [...keyPath, 'children', i], visit))
-      } else if (typeof node.children === 'object') {
-        traverse(node.children, [...keyPath, 'children'], visit)
-      }
-    }
-    if (node.formItem && typeof node.formItem === 'object' && node.formItem.slots) {
-      for (const [k, v] of Object.entries(node.formItem.slots)) {
-        if (v && typeof v === 'object') {
-          traverse(v, [...keyPath, 'formItem', 'slots', k], visit)
-        }
-      }
-    }
-  }
 }

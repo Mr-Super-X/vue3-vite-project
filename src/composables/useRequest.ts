@@ -39,6 +39,9 @@ import type { Ref, ComputedRef, WatchSource } from 'vue'
  * const { cancel, aborted } = useRequest(...)
  * onUnmounted(() => cancel())
  * ```
+ *
+ * @see [`src/components/common/AsyncState.vue`](../components/common/AsyncState.vue) 配套 UI 组件
+ * @group 请求组合式 API
  */
 
 /**

@@ -8,13 +8,15 @@
  * - zod 校验内部委托 ./use-zod-validator.ts
  *
  * 已抽离：setFieldError 双路径+watch 守护→./use-set-field-error、zod→./use-zod-validator。
+ *
+ * @group 表单编排：实例
  */
 import { ref, toRaw, type ComponentPublicInstance, type Ref } from 'vue'
 import { get, set } from 'lodash-es'
 import { useSetFieldError, type FieldErrorState } from './use-set-field-error'
 import { useZodValidator } from './use-zod-validator'
 import type { UseFormErrorBusReturn } from './use-form-error-bus'
-import { readRefStr } from '../utils/read-ref-str'
+import { collectElFieldErrors } from '../utils/collect-el-field-errors'
 import type { ZodType } from 'zod'
 
 /**
@@ -76,22 +78,6 @@ export function useFormInstance(
     return (map[key] as ComponentPublicInstance | HTMLElement) ?? null
   }
 
-  function validateForm(): Promise<boolean> {
-    return new Promise((resolve) => {
-      const ef = elFormRef.value
-      // 未绑定 el-form 时按失败处理并给出可诊断错误日志：
-      // 静默 resolve(true) 会把"配置/时序错误"伪装成"校验通过"，提交链路带着未校验数据继续走
-      if (!ef?.validate) {
-        console.error(
-          '[XForm] validate 调用时 el-form 实例未绑定（elFormRef 为空），已按校验失败处理'
-        )
-        return resolve(false)
-      }
-      // element-plus 2.x 即使传 callback 仍 reject errorsMap（微任务），需 Promise.catch 接住
-      Promise.resolve(ef.validate((valid: boolean) => resolve(valid))).catch(() => resolve(false))
-    })
-  }
-
   /** 从 el-form field 上下文提取字段路径名（优先 propString，兼容 ref/字符串两种形态） */
   function extractFieldName(field: unknown): string | null {
     const raw = toRaw(field) as {
@@ -109,35 +95,6 @@ export function useFormInstance(
   }
 
   /** 从 ref-like 值解包字符串 —— 已迁移到 ../utils/read-ref-str（element-plus 内部字段状态常用 ref<string> 形态） */
-
-  /**
-   * 从 el-form fields 提取 validateState=error 的字段详情，仅命中过滤集合的字段
-   * 用于 validateField 失败时构造 OSD toast 与 console.error 输出（与 validateForm 对齐）
-   */
-  function collectElFieldErrors(
-    ef: { fields?: unknown[] },
-    filterNames: Set<string>
-  ): Array<{ field: string; message: string; value?: unknown }> {
-    const fields = ef.fields ?? []
-    const details: Array<{ field: string; message: string; value?: unknown }> = []
-    for (const f of fields) {
-      const raw = toRaw(f) as {
-        propString?: string | Ref<string>
-        prop?: string | Ref<string>
-        validateState?: string | Ref<string>
-        validateMessage?: string | Ref<string>
-        fieldValue?: unknown
-      }
-      const validateState = readRefStr(raw.validateState)
-      if (validateState !== 'error') continue
-      const msg = readRefStr(raw.validateMessage)
-      if (!msg) continue
-      const fieldName = readRefStr(raw.propString) || readRefStr(raw.prop)
-      if (!fieldName || !filterNames.has(fieldName)) continue
-      details.push({ field: fieldName, message: msg, value: raw.fieldValue })
-    }
-    return details
-  }
 
   /**
    * 数组删/移后按行清理失效的校验态 —— 此前直接调无参 clearValidate() 会清空
@@ -215,7 +172,10 @@ export function useFormInstance(
       // 校验失败：与 validateForm 对齐 —— 扫描 ef.fields 提取命中字段的错误详情
       const efAny = ef as unknown as { fields?: unknown[] }
       const targetNames = Array.isArray(name) ? name : [name]
-      const details = collectElFieldErrors(efAny, new Set(targetNames))
+      const details = collectElFieldErrors(efAny, {
+        filterNames: new Set(targetNames),
+        includeValue: true,
+      })
       if (details.length > 0) {
         console.error('[XForm] validateField failed:', details)
         // force: true —— 用户主动 validateField() 调用场景，每次都应反馈（不被 5s 去重）
@@ -291,7 +251,6 @@ export function useFormInstance(
   return {
     elFormRef,
     getRef,
-    validateForm,
     clearValidate,
     resetFields,
     setInitialValues,

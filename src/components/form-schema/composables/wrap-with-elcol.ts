@@ -1,6 +1,8 @@
 /**
  * 栅格响应式包装：节点 col 响应式断点选取（移动优先，降级到基础配置），
  * col / row.responsive 拍平后注入 ElCol（el-row gutter 只对 ElCol 生效）。
+ *
+ * @group 表单编排：栅格
  */
 import { h, type VNode } from 'vue'
 import { ElCol } from 'element-plus'
@@ -22,6 +24,8 @@ export function wrapWithElCol(
   const offset = baseConfig?.offset ?? colObj?.offset
   // 关键修复:使用 ElCol 而非 ElFormItem —— ElFormItem 在 el-form 内响应栅格,
   // 但 el-row 内的 gutter(padding-left/right)只对 ElCol 生效
+  // 类型归因：ElCol / props 对象 与 SchemaNode 字面类型不等价（C1 根因，详见 types/TYPE-CAST-AUDIT.md）；
+  // 运行时已验证 render 正常，TS 层用 as never 兜底而非 as any（全局 §1.5 违规）。
   return h(
     ElCol as never,
     {
