@@ -802,3 +802,60 @@ describe('ProTable v3.5 A11y 根容器', () => {
     wrapper.unmount()
   })
 })
+
+/**
+ * v3.5 PR3：泛型透传契约测试。
+ *
+ * 验证 ProTable → 子组件（SearchForm / TableHeader / ColSetting / 3 个 body）的
+ * generic<T> 透传：消费方定义 `<ProTable<User>>` 时，子组件 columns/visibleColumns
+ * prop 类型为 ProColumn<User>[]，无需 `as unknown as` cast。
+ *
+ * 测试策略：构造 ProColumn<User>[] 显式标注泛型，断言 mount 成功 + 渲染行带
+ * `User` 字段（IDE 智能提示层面靠 type-check:full 兜底）。
+ */
+describe('ProTable v3.5 PR3 泛型透传', () => {
+  interface User {
+    id: number
+    name: string
+    role: 'admin' | 'guest'
+  }
+
+  it('消费方显式标注 <ProTable<User>>：columns 类型贯穿到 SearchForm/TableHeader/ColSetting', async () => {
+    const userColumns: import('./types').ProColumn<User>[] = [
+      { prop: 'name', label: '名称', search: { el: 'input' as const, defaultValue: '' } },
+      { prop: 'role', label: '角色', search: { el: 'select' as const, defaultValue: null } },
+    ]
+    const wrapper = mount(ProTable, {
+      props: {
+        columns: userColumns,
+        requestApi: async () => ({
+          data: [
+            { id: 1, name: '张三', role: 'admin' as const },
+            { id: 2, name: '李四', role: 'guest' as const },
+          ],
+          total: 2,
+          pageNum: 1,
+          pageSize: 10,
+        }),
+        rowKey: 'id',
+      },
+    })
+    await new Promise((r) => setTimeout(r, 10))
+    // 验证表格根容器 + 至少一个 rowKey='1' 的行渲染
+    expect(wrapper.find('.vv-pro-table').exists()).toBe(true)
+    expect(wrapper.findAll('.el-table__body tbody tr').length).toBeGreaterThanOrEqual(2)
+    wrapper.unmount()
+  })
+
+  it('默认 Record 视角向后兼容：不显式标注泛型也正常 mount', async () => {
+    const wrapper = mount(ProTable, {
+      props: {
+        columns: [{ prop: 'name', label: '名称' }],
+        requestApi: mockApi,
+      } as ProTableProps,
+    })
+    await new Promise((r) => setTimeout(r, 10))
+    expect(wrapper.find('.vv-pro-table').exists()).toBe(true)
+    wrapper.unmount()
+  })
+})

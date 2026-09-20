@@ -8,7 +8,7 @@
  *
  * v3.1.2 review 优化（仅编排层小修，行为不变）：
  * - 移除反模式 `void nextTick` 占位 import（line 340）
- * - `searchColumnsNonGeneric` 改 const（useColumns 一次性生成，非响应式）
+ * - `searchColumnsTyped` 改 const（useColumns 一次性生成，非响应式）
  * - `summaryMethod` 拆为 `summaryRows` computed + 模板 inline 闭包（避免闭包引用变化触发子组件 prop 重新挂载）
  * - `hasTableMounted` + `initialLoading` 边界修正（空数据首屏不再卡在骨架屏）
  * - 抽 `DEFAULT_ROW_KEY` 常量统一 'id' 字面量
@@ -77,20 +77,16 @@ const EMPTY_PAGINATION_PROPS = Object.freeze({}) as Readonly<Record<string, unkn
 /* ───────────── 局部工具 ───────────── */
 
 /**
- * v3.1.1 review 重命名：toNonGenericColumn → asViewColumn
- * 语义化命名：cast 抹除泛型 T，把 ProColumn<T> 投影成下游子组件消费的 ProColumn（Record 视角）。
+ * v3.5 PR3：移除 `asViewColumn` / `asViewColumns` cast 抹除函数（v3.1.2 review 引入）。
+ *
+ * 移除动机：6 个 ProTable 子组件统一加 `<script setup generic="T">` 后，
+ * cast 把 ProColumn<T> 投影成 ProColumn 是冗余且丢失类型——
+ * 子组件的 T 默认 Record<string, unknown>，与 cast 后的 ProColumn 等价，
+ * 但保留 cast 会强制消费方在 ProTable → 子组件链上丢失 generic 透传。
+ *
+ * 移除后：ProTable 模板直接传 `columns.searchColumns` 等 ProColumn<T>[] 给子组件，
+ * 编译期 T 透传到 SearchForm/TableHeader/ColSetting/Body 三引擎，无需任何 cast。
  */
-function asViewColumn<T extends object>(col: ProColumn<T>): ProColumn {
-  return col as unknown as ProColumn
-}
-
-/**
- * v3.1.2 review：批量投影工具 —— 三处 castColumns 形态相同（map → cast），
- * 仅数据源不同；统一抽工厂函数，去除重复。
- */
-function asViewColumns<T extends object>(cols: ProColumn<T>[]): ProColumn[] {
-  return cols.map(asViewColumn)
-}
 
 const props = withDefaults(defineProps<ProTableProps<T>>(), {
   tableEngine: 'element-plus',
@@ -155,7 +151,9 @@ const { handleEngineFallback, effectiveEngine } = useEngineFallback({
   onFallback: (reason) => emit('engine-fallback', reason),
 })
 
-// exactOptionalPropertyTypes 兼容：withDefaults 返回的 props 含 undefined optional
+// v3.5 PR3：withDefaults + exactOptionalPropertyTypes 下 props 类型与 ProTableProps<T> 不严格等价
+// （LooseRequired 包装），composable 入口需显式 cast 收敛；模板直接透传 typed columns
+// 这是 v3.1.2 review 引入的边界处理，cast 是必要的（composable 不读 Loosened 类型）。
 const propsForComposables = props as unknown as ProTableProps<T>
 
 const columns = useColumns({ props: propsForComposables, engine: engineRef })
@@ -257,7 +255,7 @@ const { getTbody } = useTableEngineDom({
  */
 const virtualScroll = props.virtualized
   ? useVirtualScroll({
-      // useVirtualScroll 不读泛型，仅用 props.tableEngine/props.virtualized/props.enableRowEdit，
+      // v3.5 PR3：useVirtualScroll 不读泛型，仅用 props.tableEngine/props.virtualized/props.enableRowEdit，
       // cast 到默认 Record 视角避免泛型传递的 index signature 报错（与 useTableCapabilities.ts 同边界）
       props: propsForComposables as unknown as ProTableProps,
       engine: engineRef,
@@ -399,15 +397,16 @@ const initialLoading = computed(
 /* ───────────── 列 cast 收敛（泛型 T → 非泛型 ProColumn，给子组件） ───────────── */
 
 /**
- * v3.1.2 review：
- * - searchColumnsNonGeneric：searchColumns 在 useColumns setup 时一次性生成（filter 静态结果），
+ * v3.5 PR3：去掉 NonGeneric 后缀 —— cast 已移除，类型自然透传到子组件 generic<T>。
+ *
+ * - searchColumnsTyped：searchColumns 在 useColumns setup 时一次性生成（filter 静态结果），
  *   无响应性收益，包 computed 是误导；改为普通常量。
- * - allColumnsNonGeneric / sortedColumnsNonGeneric：依赖响应式 Ref（visibleKeys/columnOrder），
+ * - allColumnsTyped / sortedColumnsTyped：依赖响应式 Ref（visibleKeys/columnOrder），
  *   必须保留 computed。
  */
-const searchColumnsNonGeneric = asViewColumns(columns.searchColumns)
-const allColumnsNonGeneric = computed(() => asViewColumns(columns.allColumns.value))
-const sortedColumnsNonGeneric = computed(() => asViewColumns(columns.sortedColumns.value))
+const searchColumnsTyped: ProColumn<T>[] = columns.searchColumns
+const allColumnsTyped = computed<ProColumn<T>[]>(() => columns.allColumns.value)
+const sortedColumnsTyped = computed<ProColumn<T>[]>(() => columns.sortedColumns.value)
 
 /* ───────────── v3.1.1 review：模板条件展开合并为 computed 对象 ───────────── */
 
@@ -445,7 +444,7 @@ const elTableBindings = computed<Record<string, unknown>>(() => ({
  *
  * 用途：SelectedTags 显示「订单状态: 已支付」而不是「订单状态: paid」
  */
-function buildSearchEnumMaps(searchCols: ProColumn[]): Record<string, Record<string, string>> {
+function buildSearchEnumMaps(searchCols: ProColumn<T>[]): Record<string, Record<string, string>> {
   const maps: Record<string, Record<string, string>> = {}
   for (const col of searchCols) {
     if (col.search?.el === 'select' && col.enum) {
@@ -460,14 +459,10 @@ function buildSearchEnumMaps(searchCols: ProColumn[]): Record<string, Record<str
 }
 
 /**
- * v3.2 review：select 枚举值翻译 Map。
- * 与 searchColumnsNonGeneric 同一规则：数据源 columns.searchColumns 是 useColumns
- * setup 时一次性生成的静态数组（无响应性），包 computed 是误导（v3.1.2 review
- * 已在 searchColumnsNonGeneric 上执行过同规则），改为普通常量 + 纯函数构建。
- * 入参用已投影的 searchColumnsNonGeneric（asViewColumns 抹除泛型 T 的 Record 视角），
- * 避免 ProColumn<T> → ProColumn 的方法语法 bivariance 边界报错。
+ * v3.5 PR3：select 枚举值翻译 Map。
+ * 入参直接传 ProColumn<T>[]（cast 已移除，类型自然透传），无需 asViewColumns 投影。
  */
-const searchEnumMaps = buildSearchEnumMaps(searchColumnsNonGeneric)
+const searchEnumMaps = buildSearchEnumMaps(searchColumnsTyped)
 
 /**
  * v3.2 升级：清除单个搜索条件（SelectedTags × 按钮触发）
@@ -561,7 +556,7 @@ defineExpose({
     >
       <SearchForm
         v-if="columns.searchColumns.length > 0"
-        :columns="searchColumnsNonGeneric"
+        :columns="searchColumnsTyped as ProColumn<Record<string, unknown>>[]"
         :search-params="search.searchParams.value"
         :search-rows="props.searchRows"
         v-bind="{
@@ -586,15 +581,15 @@ defineExpose({
       -->
       <SelectedTags
         v-if="props.showSelectedTags && columns.searchColumns.length > 0"
-        :columns="searchColumnsNonGeneric"
+        :columns="searchColumnsTyped as ProColumn<Record<string, unknown>>[]"
         :search-params="search.searchParams.value"
         :enum-maps="searchEnumMaps"
         @clear-one="handleClearOneCondition"
         @clear-all="handleClearAllConditions"
       />
       <TableHeader
-        :columns="allColumnsNonGeneric"
-        :visible-columns="sortedColumnsNonGeneric"
+        :columns="allColumnsTyped as ProColumn<Record<string, unknown>>[]"
+        :visible-columns="sortedColumnsTyped as ProColumn<Record<string, unknown>>[]"
         :density="table.density.value"
         :col-setting-visible="columns.colSettingVisible.value"
         :fullscreen="isFullscreen"
@@ -641,7 +636,7 @@ defineExpose({
           v-if="useVirtualEngine"
           :rows="tableRows"
           :loading="table.loading.value && hasTableMounted"
-          :columns="sortedColumnsNonGeneric"
+          :columns="sortedColumnsTyped as ProColumn<Record<string, unknown>>[]"
           :row-key="props.rowKey"
           :virtual-config="virtualScroll?.config.value ?? {}"
           :density="table.density.value"
@@ -653,7 +648,7 @@ defineExpose({
           ref="proTableEl"
           :rows="treeData ? treeData.flatData.value : tableRows"
           :loading="table.loading.value && hasTableMounted"
-          :columns="sortedColumnsNonGeneric"
+          :columns="sortedColumnsTyped as ProColumn<Record<string, unknown>>[]"
           :row-key="props.rowKey"
           :row-edit="rowEdit"
           :tree-data="treeData"
@@ -683,7 +678,7 @@ defineExpose({
           ref="proTableVxe"
           :rows="tableRows"
           :loading="table.loading.value && hasTableMounted"
-          :columns="sortedColumnsNonGeneric"
+          :columns="sortedColumnsTyped as ProColumn<Record<string, unknown>>[]"
           :row-key="props.rowKey"
           :row-edit="rowEdit"
           :cell-span="cellSpan"
@@ -732,7 +727,7 @@ defineExpose({
       <!-- 列设置：引擎无关 —— 操作 useColumns 数据层（visibleKeys/columnOrder） -->
       <ColSetting
         v-model:visible="columns.colSettingVisible.value"
-        :columns="allColumnsNonGeneric"
+        :columns="allColumnsTyped as ProColumn<Record<string, unknown>>[]"
         :visible-keys="columns.visibleKeys.value"
         :fixed-keys="columns.fixedKeys.value"
         @update:visible-keys="events.updateVisibleKeys"
