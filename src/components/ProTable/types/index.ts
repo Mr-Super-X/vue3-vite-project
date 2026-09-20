@@ -178,6 +178,46 @@ export interface SortChangeEvent {
 }
 
 /**
+ * 列筛选项单值类型 —— el-table column.filteredValue 元素联合（v3.5 PR2）。
+ *
+ * 设计动机：后端筛选参数常含多种基础类型（订单状态 = string、金额范围 = number、
+ * 是否禁用 = boolean），统一 union 后由业务方在 filterParamsAdapter 内自定义序列化
+ * （如 boolean→'1'/'0'、数字→字符串拼接）。
+ *
+ * @group ProTable 类型
+ */
+export type FilterValue = string | number | boolean
+
+/**
+ * 列筛选项映射 —— 与 el-table filter-change 事件负载形态对齐（v3.5 PR2）。
+ *
+ * - key = 列 prop（与 ProColumn.prop 同源）
+ * - value = 该列当前生效的筛选项数组（多选语义；空数组 = 该列无筛选）
+ *
+ * 与 sortParamsAdapter 对称：sortParamsAdapter 接收单条 SortState，本类型接收全表
+ * 筛选快照（el-table 一次 filter-change 事件携带所有列的最新筛选）。
+ *
+ * @group ProTable 类型
+ */
+export type FilterValuesMap = Record<string, FilterValue[]>
+
+/**
+ * 筛选参数适配器 —— 业务方把全表筛选快照序列化为后端期望的请求参数形态（v3.5 PR2）。
+ *
+ * 与 sortParamsAdapter 对称：sortParamsAdapter 把 SortState 序列化为单条记录参数；
+ * 本适配器把 FilterValuesMap 序列化为可并入 requestApi params 的 Record。
+ *
+ * 不传时走 el-table 客户端筛选默认值（filterState 仅用于 UI 记忆，不入请求）。
+ *
+ * 典型场景：
+ * - 5-30 个查询条件的中后台业务（电商订单筛选、多维度财务报表）
+ * - 后端约定 { status: ['paid', 'shipped'], dateRange: ['2026-01-01', '2026-12-31'] }
+ *
+ * @group ProTable 类型
+ */
+export type FilterParamsAdapter = (filters: FilterValuesMap) => Record<string, unknown>
+
+/**
  * 枚举项（与 element-plus el-option / ProTable enum 渲染对齐）。
  *
  * @group ProTable 类型
@@ -526,6 +566,17 @@ export interface ProTableProps<T extends object = Record<string, unknown>> {
    */
   sortParamsAdapter?: (state: SortState<T>) => Record<string, unknown>
   /**
+   * v3.5 PR2 新增：筛选参数序列化适配 —— 与 sortParamsAdapter 对称。
+   * 缺省走 el-table 客户端筛选（filterState 仅 UI 记忆，不入请求）；
+   * 传了之后 filter-change 事件触发时调用本适配器，把全表筛选序列化为后端约定形态并入 requestApi。
+   *
+   * 典型场景：5-30 个查询条件的中后台业务（电商订单筛选 / 多维度财务报表），
+   * 后端期望 { status: ['paid'], dateRange: ['2026-01-01', '2026-12-31'] } 等约定键名。
+   *
+   * @see FilterParamsAdapter
+   */
+  filterParamsAdapter?: FilterParamsAdapter
+  /**
    * 响应结构适配器（决策 D5 fail-fast）—— 兼容非 { data, total, pageNum, pageSize } 约定的后端。
    * requestApi 可原样返回后端结构（类型侧 cast 一次），由本回调映射为 ProTableResponse<T>；
    * 映射结果结构非法（data 非数组 / total 非数字）时 console.error + 抛错（经 useRequest 错误通道进入 error 态）。
@@ -670,6 +721,15 @@ export interface ProTableExpose<T extends object = Record<string, unknown>> {
   engine: TableEngine
   /** 当前排序状态（null = 未排序；M2 服务端排序） */
   getSortState: () => SortState<T> | null
+  /**
+   * v3.5 PR2 新增：当前全表筛选快照（与 el-table filter-change 事件负载同形态）。
+   *
+   * 父组件可在 setFilter 后读取该值同步 URL / 上报埋点；空对象 = 无筛选（所有列无筛选值）。
+   * v3.5 PR2 实施后为 required，未启用 filterParamsAdapter 时编排层 expose 占位实现返回空对象。
+   *
+   * @see FilterValuesMap
+   */
+  getFilterState?: () => FilterValuesMap
   // 行内编辑（v2.0 —— Task 7 实施后改为 required）
   startEdit?: (rowKey: string | number) => void
   cancelEdit?: (rowKey?: string | number) => void
