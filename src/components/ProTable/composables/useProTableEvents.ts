@@ -19,7 +19,14 @@
  * @group ProTable composables
  */
 import { nextTick, type Ref } from 'vue'
-import type { ProColumn, SortChangeEvent, SortState, TableDensity, TableEngine } from '../types'
+import type {
+  FilterValuesMap,
+  ProColumn,
+  SortChangeEvent,
+  SortState,
+  TableDensity,
+  TableEngine,
+} from '../types'
 import type { useTreeData } from './useTreeData'
 
 /**
@@ -35,6 +42,10 @@ export interface UseProTableEventsTable<T extends object = Record<string, unknow
   setDensity: (d: TableDensity) => void
   onSortChange: (evt: SortChangeEvent) => void
   setSelectedRows: (rows: T[]) => void
+  /** v3.5 PR2：el-table filter-change 事件入口 —— 更新筛选状态 + 触发请求 */
+  setFilter: (newFilters: FilterValuesMap) => void
+  /** v3.5 PR2：清空筛选状态 —— 编排层 search.reset 路径同步调用 */
+  resetFilter: () => void
 }
 
 /**
@@ -73,12 +84,12 @@ export interface UseProTableEventsEngineContext {
 
 /**
  * emit 函数接口（只声明本 composable 实际 emit 的事件）——
- * 对齐 ProTable.vue defineEmits 的 sort-change 签名。
+ * 对齐 ProTable.vue defineEmits 的 sort-change + filter-change 签名。
  */
-export type UseProTableEventsEmit<T extends object = Record<string, unknown>> = (
-  event: 'sort-change',
-  payload: SortState<T> | null
-) => void
+export type UseProTableEventsEmit<T extends object = Record<string, unknown>> = {
+  (event: 'sort-change', payload: SortState<T> | null): void
+  (event: 'filter-change', payload: FilterValuesMap): void
+}
 
 export interface UseProTableEventsOptions<T extends object = Record<string, unknown>> {
   table: UseProTableEventsTable<T>
@@ -100,6 +111,12 @@ export interface UseProTableEventsReturn {
   handleDensityChange: (d: TableDensity) => void
   /** 服务端排序桥接 —— 仅 sortable='custom' 列生效，向外 emit sort-change */
   handleSortChange: (evt: SortChangeEvent) => void
+  /**
+   * v3.5 PR2：服务端筛选桥接 —— 经 useTable.setFilter 更新状态 + 触发请求（adapter 存在时），
+   * 随后 emit 当前全表筛选快照供父级消费（URL 同步 / 埋点 / 上报）。
+   * 无 adapter 时 setFilter 仅 UI 记忆；emit 仍触发（业务方可监听做 UI 联动）。
+   */
+  handleFilterChange: (newFilters: FilterValuesMap) => void
   /** 多选变化 —— el-table @selection-change */
   handleSelectionChange: (rows: Record<string, unknown>[]) => void
   /** 单选列选中 —— 复用 useTable 统一选中区（selectedRows 单元素） */
@@ -155,6 +172,16 @@ export function useProTableEvents<T extends object = Record<string, unknown>>(
     emit('sort-change', table.sortState.value)
   }
 
+  /**
+   * v3.5 PR2：服务端筛选桥接 —— 与 handleSortChange 对称（不同点：filter-change
+   * 没有 sortable==='custom' 的列级开关；列头筛选 UI 由 element-plus column.filters
+   * 配置声明，业务方启用筛选即视为走服务端协议）。无 adapter 时仅 UI 记忆。
+   */
+  function handleFilterChange(newFilters: FilterValuesMap): void {
+    table.setFilter(newFilters)
+    emit('filter-change', newFilters)
+  }
+
   /** 多选变化桥接 —— el-table 事件行为 Record 视角（cast 收口到 selectedRows） */
   function handleSelectionChange(rows: Record<string, unknown>[]): void {
     table.setSelectedRows(rows as T[])
@@ -200,6 +227,7 @@ export function useProTableEvents<T extends object = Record<string, unknown>>(
     handleSizeChange,
     handleDensityChange,
     handleSortChange,
+    handleFilterChange,
     handleSelectionChange,
     handleRadioSelect,
     handleExpandToggle,

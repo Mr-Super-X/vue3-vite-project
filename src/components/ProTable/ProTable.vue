@@ -111,6 +111,8 @@ defineOptions({ inheritAttrs: false })
 const emit = defineEmits<{
   /** 服务端排序变化（仅 sortable='custom' 列触发；payload 为 null 表示清除排序） */
   (e: 'sort-change', payload: SortState<T> | null): void
+  /** v3.5 PR2：服务端筛选变化（payload 为当前全表筛选快照；空对象 = 全部列无筛选） */
+  (e: 'filter-change', payload: Record<string, (string | number | boolean)[]>): void
   /** 引擎回退事件。vxe-table 加载失败时触发,父组件可联动监控/提示用户 */
   (e: 'engine-fallback', reason: string): void
 }>()
