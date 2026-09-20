@@ -38,7 +38,7 @@ import { SEARCH_CONTROL_MAP } from '../composables/_utils/searchControlRegistry'
 import { debounceFn } from '../composables/_utils/debounce'
 
 interface Props {
-  columns: ProColumn<T>[]
+  columns: ProColumn[]
   searchParams: Record<string, unknown>
   searchRows: number
   /**
@@ -172,7 +172,7 @@ function toggleCollapsed(): void {
 
 const lazyEnumLoaded = new Set<string>() // 已加载过 lazy enum 的 prop
 
-function handleColVisibleChange(col: ProColumn<T>, visible: boolean): void {
+function handleColVisibleChange(col: ProColumn, visible: boolean): void {
   // 仅 select 类 + lazyEnum=true + 首次展开时触发
   if (!visible) return
   if (col.search?.el !== 'select') return
@@ -207,7 +207,7 @@ const advancedVisible = ref(false)
 /**
  * v3.2 字段联动显隐过滤 + 过滤无 search 配置的列
  */
-const allBasicColumns = computed<ProColumn<T>[]>(() => {
+const allBasicColumns = computed<ProColumn[]>(() => {
   const display = props.searchDisplay?.(localParams.value) ?? {}
   return props.columns.filter((col) => {
     if (!col.search) return false
@@ -247,7 +247,7 @@ const layoutMode = computed<'flat' | 'collapse' | 'flat-large' | 'drawer'>(() =>
  * - collapse 档：折叠时只显示前 4 个，展开后显示全部
  * - flat / flat-large / drawer 档：全部平铺（不受 collapsed 控制）
  */
-const mainFormColumns = computed<ProColumn<T>[]>(() => {
+const mainFormColumns = computed<ProColumn[]>(() => {
   if (layoutMode.value === 'collapse' && collapsed.value) {
     return allBasicColumns.value.slice(0, COLLAPSED_INLINE_LIMIT)
   }
@@ -263,7 +263,7 @@ const showAdvancedBtn = computed(() => layoutMode.value === 'drawer')
 /**
  * v3.2 高级筛选字段集合
  */
-const advancedColumns = computed<ProColumn<T>[]>(() => {
+const advancedColumns = computed<ProColumn[]>(() => {
   const display = props.searchDisplay?.(localParams.value) ?? {}
   return props.columns.filter((col) => {
     if (!col.search) return false
@@ -315,7 +315,7 @@ function emitCurrentSnapshot(): void {
 
 const debounceHandlers = new Map<string, ReturnType<typeof debounceFn>>()
 
-function getOrCreateDebounceSearch(col: ProColumn<T>): ReturnType<typeof debounceFn> {
+function getOrCreateDebounceSearch(col: ProColumn): ReturnType<typeof debounceFn> {
   let handler = debounceHandlers.get(col.prop)
   if (!handler) {
     const delay = col.search?.debounce ?? 0
@@ -334,7 +334,7 @@ const previousValues = new Map<string, unknown>()
  * - onChange 钩子：值变化时调用，支持业务方清空联动
  * - searchTrigger 触发：'change' 立即搜索 / 'enter' 等回车 / debounce > 0 防抖搜索
  */
-function handleColUpdate(col: ProColumn<T>, v: unknown): void {
+function handleColUpdate(col: ProColumn, v: unknown): void {
   const oldVal = previousValues.get(col.prop) ?? localParams.value[col.prop]
   // onChange 钩子：业务方可在钩子里改写 params（清空联动）
   if (col.search?.onChange) {
@@ -435,7 +435,7 @@ onBeforeUnmount(() => {
 })
 
 /** input placeholder —— 根据控件 prefix 动态生成 */
-function buildPlaceholder(col: ProColumn<T>, prefix: '请输入' | '请选择' | undefined): string {
+function buildPlaceholder(col: ProColumn, prefix: '请输入' | '请选择' | undefined): string {
   return prefix ? `${prefix}${col.label}` : ''
 }
 </script>
