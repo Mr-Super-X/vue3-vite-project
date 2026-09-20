@@ -235,8 +235,12 @@ const { maxHeight: autoHeightMax } = useAutoHeight({
  * 不再适用（generic 组件无静态构造类型），改用结构化类型与 useTableEngineDom / watch elTable 字段对齐。 */
 const proTableEl = ref<{ $el?: HTMLElement; elTable?: ComponentPublicInstance | null } | null>(null)
 
-/** v2.1 vxe 引擎分支实例 ref —— 密度切换触发 vxe 行高重算 + useTableEngineDom vxe tbody 查询 */
-const proTableVxe = ref<InstanceType<typeof VxeTableBody> | null>(null)
+/** v2.1 vxe 引擎分支实例 ref —— 密度切换触发 vxe 行高重算 + useTableEngineDom vxe tbody 查询
+ * v3.5 PR3：VxeTableBody 加 generic<T> 后 InstanceType 不适用，改用结构化类型保留递归数实例。 */
+const proTableVxe = ref<{
+  recalculate?: () => Promise<unknown>
+  getTbody?: () => HTMLElement | null
+} | null>(null)
 
 /** tbody DOM 访问点 —— 经 useTableEngineDom composable 收敛；v3.5 PR1-B 起支持 el + vxe 双引擎路由 */
 const { getTbody } = useTableEngineDom({

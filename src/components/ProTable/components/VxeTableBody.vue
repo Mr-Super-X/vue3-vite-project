@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup lang="ts" generic="T extends object = Record<string, unknown>">
 /**
  * VxeTableBody —— vxe-table 引擎渲染分支（v2.1 P3 + v3.5 PR1-B 树形/拖拽补齐）
  *
@@ -11,6 +11,8 @@
  * - 树形：通过 createVxeTreeAdapter 把 useTreeData 状态映射到 vxe-table tree-config
  *   + 监听 toggle-tree-expand 把 vxe UI 变化回流 useTreeData
  * - 行拖拽：通过 useRowDrag 挂 vxe 行 DOM（v3.5 PR1-B Task 6 接线）
+ *
+ * v3.5 PR3：补 generic<T> 透传——rows / columns 绑 T，与 ElementTableBody 对齐。
  *
  * @see [`../ProTable.vue`](../ProTable.vue) 编排层 —— 唯一调用方
  * @see [`../composables/useVxeTable`](../composables/useVxeTable.ts) 动态加载与安装
@@ -34,7 +36,7 @@ import CellContent from './CellContent.vue'
 
 const props = defineProps<{
   /** 渲染行 */
-  rows: Record<string, unknown>[]
+  rows: T[]
   /**
    * 后续刷新 loading（分页/排序/搜索请求期间的遮罩）。
    * 首次加载由编排层 AsyncState skeleton 承担，本组件收到时恒为 false —— 避免双重 loading。
@@ -226,7 +228,7 @@ function rowKeyOf(row: unknown): string | number {
 }
 
 /** vxe 多选无合并的 selection-change，需自行维护选区 */
-const selectedRows = ref<Record<string, unknown>[]>([])
+const selectedRows = ref<T[]>([])
 
 /**
  * 选区比较必须按 rowKey 而非引用相等：
@@ -239,20 +241,33 @@ function sameRow(a: Record<string, unknown>, b: Record<string, unknown>): boolea
 }
 
 /** 单选 toggle（同 key 先移除再追加，防代理引用不同导致重复入区） */
-function handleCheckboxChange(payload: { row: Record<string, unknown>; checked: boolean }): void {
-  const rest = selectedRows.value.filter((r) => !sameRow(r, payload.row))
-  selectedRows.value = payload.checked ? [...rest, payload.row] : rest
-  emit('selection-change', selectedRows.value)
+function handleCheckboxChange(payload: { row: T; checked: boolean }): void {
+  // v3.5 PR3：selectedRows.value 类型是 UnwrapRefSimple<T>，与 T 不完全等价，cast Record 视角
+  const rest = selectedRows.value.filter(
+    (r) =>
+      !sameRow(
+        r as unknown as Record<string, unknown>,
+        payload.row as unknown as Record<string, unknown>
+      )
+  )
+  selectedRows.value = (payload.checked ? [...rest, payload.row] : rest) as T[]
+  emit('selection-change', selectedRows.value as unknown as Record<string, unknown>[])
 }
 
 /** 全选 toggle：checked 时并入受影响行（同 key 去重），取消时移除（payload.rows 缺省退化全部可见行） */
-function handleCheckboxAll(payload: { checked: boolean; rows?: Record<string, unknown>[] }): void {
+function handleCheckboxAll(payload: { checked: boolean; rows?: T[] }): void {
   const affected = payload.rows ?? props.rows
   const rest = selectedRows.value.filter(
-    (r) => !affected.some((affectedRow) => sameRow(affectedRow, r))
+    (r) =>
+      !affected.some((affectedRow) =>
+        sameRow(
+          affectedRow as unknown as Record<string, unknown>,
+          r as unknown as Record<string, unknown>
+        )
+      )
   )
-  selectedRows.value = payload.checked ? [...rest, ...affected] : rest
-  emit('selection-change', selectedRows.value)
+  selectedRows.value = (payload.checked ? [...rest, ...affected] : rest) as T[]
+  emit('selection-change', selectedRows.value as unknown as Record<string, unknown>[])
 }
 
 /** vxe sort-change 负载 { field, order: 'asc'|'desc'|null } → 内部 SortChangeEvent */
@@ -315,7 +330,7 @@ function handleRadioChange(payload: { row: Record<string, unknown> }): void {
  * checkbox-config.reserve（vxe 运行时代码 checkboxOpts.reserve 分支实证）
  */
 const checkboxConfig = computed(() =>
-  hasReserveSelection(props.columns) ? { reserve: true } : undefined
+  hasReserveSelection(props.columns as ProColumn[]) ? { reserve: true } : undefined
 )
 
 /** 双击单元格 → 行编辑进入（纯事件转发：编排层 useProTableEvents 调 rowEdit._start） */
@@ -332,7 +347,7 @@ function handleCellDblclick(payload: { row: Record<string, unknown> }): void {
 watch(
   () => props.rows,
   () => {
-    if (hasReserveSelection(props.columns)) return
+    if (hasReserveSelection(props.columns as ProColumn[])) return
     if (selectedRows.value.length === 0) return
     selectedRows.value = []
     emit('selection-change', [])
@@ -355,7 +370,7 @@ watch(
       :data="rows"
       :max-height="maxHeight ?? undefined"
       :row-config="{ keyField: rowKey ?? 'id' }"
-      :sort-config="hasCustomSort(columns) ? { remote: true } : undefined"
+      :sort-config="hasCustomSort(columns as ProColumn[]) ? { remote: true } : undefined"
       :checkbox-config="checkboxConfig"
       v-bind="{
         ...(cellSpan
@@ -394,7 +409,7 @@ watch(
             <EditCell
               v-if="rowEdit?.isEditing(rowKeyOf(scope.row)) && col.edit"
               :row-key="rowKeyOf(scope.row)"
-              :col="col"
+              :col="col as ProColumn"
               :value="rowEdit.getValue(rowKeyOf(scope.row), col.prop)"
               :density="density"
               @update="(prop, v) => rowEdit?.setValue(rowKeyOf(scope.row), prop, v)"
