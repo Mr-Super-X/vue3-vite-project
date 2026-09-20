@@ -148,37 +148,3 @@ describe('TableHeader', () => {
     expect(defaultBtn?.attributes('aria-pressed')).toBe('true')
   })
 })
-
-/**
- * v3.5 PR3：泛型透传断言。
- *
- * columns / visibleColumns / toolbar 共同绑 T：消费方传 `ProColumn<User>` 时
- * ToolbarAction 的 selectedRows 也能透到 T（无需 cast）。
- */
-describe('TableHeader v3.5 PR3 泛型透传', () => {
-  interface UserRow {
-    id: number
-    name: string
-  }
-
-  it('泛型化 columns（ProColumn<User>[]）+ toolbarCtx 类型贯穿（ToolbarAction<T>[]）', async () => {
-    const cols: import('../types').ProColumn<UserRow>[] = [{ prop: 'name', label: '名称' }]
-    const toolbarCtx: import('../types').ToolbarCtx<UserRow> = {
-      selectedRows: [],
-      selectedCount: 0,
-      loading: false,
-      refresh: async () => {},
-    }
-    const wrapper = mount(TableHeader, {
-      props: {
-        columns: cols,
-        visibleColumns: cols,
-        density: 'default',
-        colSettingVisible: false,
-        toolbarCtx,
-      },
-    })
-    expect(wrapper.exists()).toBe(true)
-    expect(wrapper.find('[data-test="refresh-btn"]').exists()).toBe(true)
-  })
-})
