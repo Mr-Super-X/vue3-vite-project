@@ -138,6 +138,28 @@ describe('ElementTableV2Body', () => {
     wrapper.unmount()
   })
 
+  it('v3.5 PR2：列声明 tableProps.filters 时 warn（v2 引擎暂不支持列头筛选）', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const wrapper = mount(ElementTableV2Body, {
+      props: {
+        rows: baseRows,
+        columns: [
+          {
+            prop: 'status',
+            label: '状态',
+            tableProps: { filters: [{ text: '已支付', value: 'paid' }] },
+          },
+        ],
+        rowKey: 'id',
+        loading: false,
+        virtualConfig: {},
+      },
+    })
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('列头筛选'))
+    warnSpy.mockRestore()
+    wrapper.unmount()
+  })
+
   it('onColumnSort 回调翻译为 sort-change 事件（asc/desc → ascending/descending）', async () => {
     const wrapper = mount(ElementTableV2Body, {
       props: {

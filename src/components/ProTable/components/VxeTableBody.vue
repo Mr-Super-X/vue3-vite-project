@@ -20,7 +20,7 @@
  */
 import { onMounted, shallowRef, ref, computed, watch } from 'vue' // vue 生命周期/底层 API（CLAUDE.md §1.6.1）
 import { ElSkeleton } from 'element-plus' // element-plus 按需注入（unplugin-vue-components 只管模板，script 中显式 import）
-import type { ProColumn, SortChangeEvent, TableDensity } from '../types'
+import type { FilterValuesMap, ProColumn, SortChangeEvent, TableDensity } from '../types'
 import type { useRowEdit } from '../composables/useRowEdit'
 import type { useCellSpan } from '../composables/useCellSpan'
 import type { useTreeData } from '../composables/useTreeData'
@@ -80,6 +80,17 @@ const emit = defineEmits<{
   (e: 'engine-fallback'): void
   /** v3.5 PR1-B：树形展开/折叠（vxe toggle-tree-expand 已映射 rowKey；编排层转发给 treeData.toggle） */
   (e: 'expand-toggle', rowKey: string | number): void
+  /**
+   * v3.5 PR2：列头筛选变化（vxe filter-change 协议 → 全表快照形态）。
+   *
+   * vxe 内置 filter 协议（@filter-change）payload = { property, values, ... }，
+   * 单列触发；本组件维护 localFilterMap 合并多列筛选后转全表快照形态 emit 给编排层，
+   * 与 el-table filter-change 事件负载形态对齐（useTable.filterState 可直接接收）。
+   *
+   * 业务方启用筛选：在 column.vxeProps.filters 声明 + filter-config.remote=true
+   * （服务端筛选）；本地筛选时 vxe 自身处理，本组件仅做协议翻译。
+   */
+  (e: 'filter-change', filters: FilterValuesMap): void
 }>()
 
 /** vxe-table 引擎加载状态（true = 加载中 / 未加载，渲染骨架屏） */
@@ -252,6 +263,48 @@ function handleSortChange(payload: { field?: string; order?: 'asc' | 'desc' | nu
   })
 }
 
+/**
+ * v3.5 PR2：vxe 筛选快照（与 el-table filter-change 协议对齐）。
+ *
+ * vxe filter-change 事件是单列触发（payload 含 property + values），本组件维护
+ * localFilterMap 累加多列筛选后以全表快照形态 emit；useTable.filterState 接收
+ * 形态一致，直接覆盖式更新（用户清除某列筛选时 localFilterMap.delete 同步）。
+ */
+const localFilterMap = ref<FilterValuesMap>({})
+
+/**
+ * vxe filter-change 负载 → 全表筛选快照（合并到 localFilterMap 后 emit）。
+ * - payload.property = 列字段名（field）
+ * - payload.values = 该列当前筛选值数组（空数组 = 清除该列筛选）
+ * - payload.filters / filterList = 全表已选筛选项（vxe 内部维护，备选数据源）
+ */
+function handleFilterChange(payload: {
+  property?: string
+  values?: unknown[]
+  filterList?: Array<{ column?: unknown; property?: string; values?: unknown[] }>
+}): void {
+  // 优先用 filterList（vxe 全表聚合）；退化用 property+values 单列更新
+  if (payload.filterList && payload.filterList.length > 0) {
+    const next: FilterValuesMap = {}
+    for (const f of payload.filterList) {
+      if (f.property) {
+        next[f.property] = (f.values ?? []) as FilterValuesMap[string]
+      }
+    }
+    localFilterMap.value = next
+  } else if (payload.property !== undefined) {
+    // 单列更新语义：空 values = 清除该列
+    const next = { ...localFilterMap.value }
+    if (!payload.values || payload.values.length === 0) {
+      delete next[payload.property]
+    } else {
+      next[payload.property] = payload.values as FilterValuesMap[string]
+    }
+    localFilterMap.value = next
+  }
+  emit('filter-change', { ...localFilterMap.value })
+}
+
 /** v3.1：vxe 内置 radio 列选中（radio-change 负载含 row，运行时代码实证）→ 上行编排层统一选中区 */
 function handleRadioChange(payload: { row: Record<string, unknown> }): void {
   emit('radio-select', payload.row)
@@ -316,6 +369,7 @@ watch(
       @radio-change="handleRadioChange"
       @cell-dblclick="handleCellDblclick"
       @toggle-tree-expand="handleToggleTreeExpand"
+      @filter-change="handleFilterChange"
     >
       <!-- key 必须带序位：vxe-table 在 VxeColumn 挂载时按 DOM 位置注册 staticColumns，
          此后按注册序（renderSortNumber）渲染表头，Vue 按 key 移动组件实例不会触发重注册。

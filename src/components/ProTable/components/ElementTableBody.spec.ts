@@ -3,7 +3,7 @@
  *
  * 覆盖矩阵（v2.1 P1 抽取的核心 el 引擎分支）：
  * - mount 不崩溃（最小 props）
- * - 4 个 emit 事件（selection-change / cell-dblclick / expand-toggle / sort-change）
+ * - 5 个 emit 事件（selection-change / cell-dblclick / expand-toggle / sort-change / filter-change v3.5 PR2）
  * - 能力 props 副作用（rowEdit._start / cellSpan 调用）
  * - 插槽渲染（行自定义插槽）
  * - defineExpose.elTable / $el getter
@@ -146,6 +146,14 @@ describe('ElementTableBody', () => {
     const sortEvt = { prop: 'id', order: 'ascending' }
     wrapper.vm.$emit('sort-change', sortEvt)
     expect(wrapper.emitted('sort-change')![0]).toEqual([sortEvt])
+    wrapper.unmount()
+  })
+
+  it('v3.5 PR2：filter-change 事件转发（el-table 全表筛选快照负载）', async () => {
+    const wrapper = mountBody()
+    const filters = { status: ['paid'], dept: ['tech'] }
+    wrapper.vm.$emit('filter-change', filters)
+    expect(wrapper.emitted('filter-change')![0]).toEqual([filters])
     wrapper.unmount()
   })
 

@@ -1,12 +1,13 @@
 /**
  * VxeTableBody 单元测试
  *
- * 覆盖矩阵（v2.1 P3 vxe 引擎分支）：
+ * 覆盖矩阵（v2.1 P3 + v3.5 PR1-B + v3.5 PR2）：
  * - mount 不崩溃（vxe-table 模块 mock 化）
  * - 加载成功路径：onMounted 异步解析 VxeTable/VxeColumn → 渲染组件（非 skeleton）
  * - 加载失败路径：emit engine-fallback + console.warn 兜底
- * - 4 个 emit 事件（selection-change / cell-dblclick / sort-change / engine-fallback）
+ * - 5 个 emit 事件（selection-change / cell-dblclick / sort-change / engine-fallback / filter-change v3.5 PR2）
  * - sort-change 翻译：vxe 'asc'/'desc' → SortChangeEvent 'ascending'/'descending'/null
+ * - filter-change 翻译：vxe 单列 property+values / filterList → 全表快照形态
  * - 多选合并：handleCheckboxChange / handleCheckboxAll 按 rowKey 去重
  * - defineExpose.recalculate（vxe 行高重算入口）
  *
@@ -124,6 +125,14 @@ describe('VxeTableBody', () => {
     const wrapper = mountBody()
     wrapper.vm.$emit('engine-fallback')
     expect(wrapper.emitted('engine-fallback')).toBeTruthy()
+    wrapper.unmount()
+  })
+
+  it('v3.5 PR2：filter-change 事件转发（emit 契约；handler 翻译行为由集成测试覆盖）', async () => {
+    const wrapper = mountBody()
+    const filters = { status: ['paid'], dept: ['tech'] }
+    wrapper.vm.$emit('filter-change', filters)
+    expect(wrapper.emitted('filter-change')![0]).toEqual([filters])
     wrapper.unmount()
   })
 

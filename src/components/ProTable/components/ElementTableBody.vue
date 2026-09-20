@@ -16,7 +16,7 @@
 import { ElTable, ElTableColumn, ElRadio } from 'element-plus' // element-plus 按需注入（unplugin-vue-components 只管模板，script 中显式 import）
 import type { ComponentPublicInstance } from 'vue' // 类型导入（TS 编译器需要，不参与运行时）
 import { DEFAULT_ROW_KEY } from '../types' // 行 key 缺省值单一来源（review R7）
-import type { ProColumn, SortChangeEvent, TableDensity } from '../types'
+import type { FilterValuesMap, ProColumn, SortChangeEvent, TableDensity } from '../types'
 import type { useRowEdit } from '../composables/useRowEdit'
 import type { useTreeData } from '../composables/useTreeData'
 import type { useCellSpan } from '../composables/useCellSpan'
@@ -80,6 +80,12 @@ const emit = defineEmits<{
   (e: 'expand-toggle', rowKey: string | number): void
   /** 排序变化（原始 el-table 负载；编排层判定 sortable==='custom' 后走 M2 服务端排序） */
   (e: 'sort-change', evt: SortChangeEvent): void
+  /**
+   * v3.5 PR2：列头筛选变化（el-table @filter-change 原始负载是当前全表筛选快照）。
+   * 编排层转发给 useProTableEvents.handleFilterChange（与 sort-change 对称）；
+   * 无 filterParamsAdapter 时编排层仅 UI 记忆（el-table 客户端筛选继续生效）
+   */
+  (e: 'filter-change', filters: FilterValuesMap): void
 }>()
 
 /** 统一取行 rowKey（props.rowKey 字段，默认 DEFAULT_ROW_KEY）—— 事件桥接与树形模板共用 */
@@ -129,6 +135,17 @@ function onExpandChange(row: unknown): void {
 }
 function onSortChange(evt: SortChangeEvent): void {
   emit('sort-change', evt)
+}
+
+/**
+ * v3.5 PR2：列头筛选变化 handler（el-table @filter-change）。
+ * el-table 给的 filters 是当前全表筛选快照（{ propA: [v1], propB: [v2] }），
+ * 直接透传 — 编排层 useProTableEvents.handleFilterChange 经 table.setFilter 覆盖式更新
+ * （不残留 UI 已清除的列）。
+ */
+function onFilterChange(filters: Record<string, unknown[]>): void {
+  // el-table FilterValue 联合 string|number|boolean，与 FilterValuesMap 形态一致直接断言
+  emit('filter-change', filters as FilterValuesMap)
 }
 
 /**
@@ -188,6 +205,7 @@ defineExpose({
       @cell-dblclick="onCellDblclick"
       @expand-change="onExpandChange"
       @sort-change="onSortChange"
+      @filter-change="onFilterChange"
     >
       <ElTableColumn
         v-for="col in columns"

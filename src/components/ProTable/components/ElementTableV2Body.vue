@@ -386,6 +386,30 @@ watch(
   { immediate: true }
 )
 
+/**
+ * v3.5 PR2：列头筛选守卫 —— el-table-v2（fixed-size 虚拟滚动容器）无内置列筛选下拉 UI
+ * （v2 设计上不暴露 column.filters 渲染接口）。v3.5 PR2 阶段不内置实现，业务方启用
+ * 筛选（column.filters 声明）时给一次性 warn 提示，避免静默丢失筛选功能。
+ *
+ * 实例级 ref（H3 同款修复）：多个 ProTable 实例下每个实例独立计数。
+ */
+const filterWarned = ref(false)
+watch(
+  () =>
+    props.columns.some(
+      (c) => Array.isArray(c.tableProps?.filters) && c.tableProps.filters.length > 0
+    ),
+  (hasFilter) => {
+    if (hasFilter && !filterWarned.value) {
+      filterWarned.value = true
+      console.warn(
+        '[ProTable] virtualized（el-table-v2）暂不支持列头筛选（v3.5 PR2），请改用 element-plus 引擎（ProColumn.sortable 默认）或 vxe-table 引擎（vxeProps.filters）'
+      )
+    }
+  },
+  { immediate: true }
+)
+
 const bem = createNamespace('pro-table-v2')
 
 defineExpose({})
