@@ -111,16 +111,18 @@ const columns: ProColumn<Order>[] = [
 
 > 注意：引擎 prop 仅在首次 mount 前生效，运行时修改需 reload（spec 决策 4）。
 
-### vxe 引擎能力矩阵（v2.1）
+### vxe 引擎能力矩阵（v3.5 PR1-B 补齐后）
 
-| 能力           | element-plus | vxe-table                         |
-| -------------- | ------------ | --------------------------------- |
-| 多选 selection | ✅           | ✅（checkbox-change/all 合并）    |
-| 服务端排序     | ✅           | ✅（同一 sortParamsAdapter 协议） |
-| 行内编辑       | ✅           | ✅                                |
-| 单元格合并     | ✅           | ✅                                |
-| 树形数据       | ✅           | ❌ 暂不支持（warn 并忽略）        |
-| 行拖拽排序     | ✅           | ❌ 暂不支持（warn 并忽略）        |
+| 能力           | element-plus | vxe-table                                             |
+| -------------- | ------------ | ----------------------------------------------------- |
+| 多选 selection | ✅           | ✅（checkbox-change/all 合并）                        |
+| 服务端排序     | ✅           | ✅（同一 sortParamsAdapter 协议）                     |
+| 行内编辑       | ✅           | ✅                                                    |
+| 单元格合并     | ✅           | ✅                                                    |
+| 树形数据       | ✅           | ✅（v3.5 PR1-B 补齐，vxeTreeAdapter + tree-config）   |
+| 行拖拽排序     | ✅           | ✅（v3.5 PR1-B 补齐，vxeRowDragAdapter + sortablejs） |
+
+> **vxe + 树形 + 行拖拽 同时启用会触发 console.warn**：sortablejs 与 vxe tree-node 行结构冲突，行拖拽自动退化（树形仍生效）。业务方按需取舍。
 
 ### ProColumn.vxeProps
 
@@ -198,9 +200,9 @@ assertValidResponse(adapted, { tableKey: props.tableKey })
 assertValidResponse(adapted, props.tableKey ? { tableKey: props.tableKey } : {})
 ```
 
-## v3.5 变更摘要（A11y 改造 + E2E）
+## v3.5 变更摘要（A11y 改造 + E2E + vxe 引擎补齐）
 
-> 目标：让 ProTable 通过 WCAG 2.1 AA 合规审查 + E2E 测试覆盖关键用户路径（搜索→列表→选中→批量操作）。
+> 目标：让 ProTable 通过 WCAG 2.1 AA 合规审查 + E2E 测试覆盖关键用户路径（搜索→列表→选中→批量操作）+ 双引擎能力对等（树形 + 行拖拽）。
 
 ### A11y 三层结构
 
@@ -265,6 +267,50 @@ pnpm test:e2e:install   # 首次下载 Chromium（约 100MB）
 pnpm dev                # 后台启动 dev server
 pnpm test:e2e           # 跑 E2E（baseURL=http://localhost:5174）
 ```
+
+## v3.5 变更摘要（vxe 引擎补齐树形 + 行拖拽）
+
+> v3.5 PR1-A 通过 A11y + E2E 后，PR1-B 解决 v2.1 决策 5 遗留：vxe-table 引擎能力与 element-plus 对等。
+
+### TreeAdapter / RowDragAdapter 引擎胶水层
+
+| Adapter                           | 引擎差异点                                                        |
+| --------------------------------- | ----------------------------------------------------------------- |
+| `createElementPlusTreeAdapter`    | `treeProps: { children: '__pro_table_flat__', hasChildren: ... }` |
+| `createVxeTreeAdapter`            | `treeConfig` + `setTreeExpand(row, expanded)` 双向同步            |
+| `createElementPlusRowDragAdapter` | `.el-table__body tbody` + `data-row-key` 属性反查                 |
+| `createVxeRowDragAdapter`         | `.vxe-table--body-wrapper tbody` + 视图索引 → `props.rows` 反查   |
+
+### 双引擎能力对等（README §引擎能力矩阵 v2.1 → v3.5 PR1-B 更新）
+
+| 能力       | v2.1 vxe 引擎            | v3.5 PR1-B vxe 引擎 |
+| ---------- | ------------------------ | ------------------- |
+| 树形数据   | ❌ 暂不支持（warn 忽略） | ✅ 完整支持         |
+| 行拖拽排序 | ❌ 暂不支持（warn 忽略） | ✅ 完整支持         |
+
+**实现要点**：
+
+- 树形：`createVxeTreeAdapter(getVxeTable)` 提供 vxe-table tree-config 协议 + `setTreeExpand` 同步；
+  `VxeTableBody.vue` 接收 `treeData` prop + watch expandedKeys 全量回灌 vxe 引擎侧 Map
+- 行拖拽：`createVxeRowDragAdapter({ getRowsByIndex })` 反查行 rowKey；`VxeTableBody.vue` 暴露
+  `getTbody` 给编排层 `useTableEngineDom`，按 effectiveEngine 路由到正确 tbody DOM
+
+**唯一约束**：vxe 引擎 + 树形 + 行拖拽 **三者同时启用**会触发 console.warn（sortablejs 直接 DOM
+操作与 vxe tree-node 行结构不兼容），行拖拽自动退化 null，业务方按需取舍。
+
+**演示**：`ProTableEngineCompare.vue` demo 新增「树形 + 行拖拽双引擎对照」section，左右两栏分别
+渲染 el-table 和 vxe-table 引擎同一份 columns + enable-tree + enable-row-drag，验证双引擎行为一致。
+
+**新增/修改文件**：
+
+- `adapters/tree-adapter.ts` + `tree-adapter.spec.ts`（新增）
+- `adapters/row-drag-adapter.ts` + `row-drag-adapter.spec.ts`（新增）
+- `composables/useTableEngineDom.ts`（双引擎 tbody 路由）
+- `composables/useTableCapabilities.ts`（vxe 引擎能力补齐 + 三者冲突检测）
+- `components/VxeTableBody.vue`（treeData + rowDrag prop + tree-config + getTbody 暴露）
+- `ProTable.vue`（双引擎条件透传 treeData/rowDrag）
+- `ProTable.engine.spec.ts` + `useTableCapabilities.spec.ts` + `ProTable.integration.spec.ts`
+  （capability matrix 测试）
 
 ## v3.4 变更摘要（搜索区布局档位下放）
 

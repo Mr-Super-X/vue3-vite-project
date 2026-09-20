@@ -1,8 +1,29 @@
 # ProTable 架构文档
 
-> **当前版本**：v3.4（搜索区布局档位下放 + v3.2 已选回显/字段联动）
+> **当前版本**：v3.5（PR1-A A11y + E2E + PR1-B vxe 引擎树形/拖拽补齐）
 >
-> **v3.4 增量摘要**：
+> **v3.5 PR1-B 增量摘要**（vxe 引擎能力补齐）：
+>
+> - **TreeAdapter 引擎胶水层**：`adapters/tree-adapter.ts` 抽象 TreeAdapter 接口（getTreeConfig / onExpand / onCollapse / getExpandedKeys / syncExpanded / hasChildren）；`createElementPlusTreeAdapter` 用 `treeProps` 字段 + flatData 重算驱动视图（引擎侧 noop），`createVxeTreeAdapter` 用 vxe-table v4 `tree-config` 协议 + `setTreeExpand(row, expanded)` 双向同步
+> - **RowDragAdapter 引擎胶水层**：`adapters/row-drag-adapter.ts` 抽象 RowDragAdapter 接口（getTbody / extractRowKey / getRowLevel 可选）；`createElementPlusRowDragAdapter` 用 `.el-table__body tbody` + `:data-row-key` 属性反查，`createVxeRowDragAdapter` 用 `.vxe-table--body-wrapper tbody` + 视图索引反查 props.rows
+> - **useTableEngineDom 双引擎 tbody 路由**：新增 `proTableVxe` + `effectiveEngine` 参数，按 effectiveEngine.value === 'vxe-table' 时走 vxe tbody 查询路径
+> - **useTableCapabilities vxe 引擎能力补齐**：移除 treeData/rowDrag 的 `!isVxeEngine` 守卫；新增三者冲突检测（vxe + 树形 + 拖拽 同时启用时 rowDrag 退化 null + warn）
+> - **VxeTableBody 接线**：新增 treeData + rowDrag prop + defineExpose.getTbody（onMounted 前 fallback 用模板根 div ref query）
+> - **ProTable.vue 双引擎条件透传**：vxeTableBindings 接收 treeData + rowDrag 与 enable-row-drag
+>
+> **唯一约束**：vxe + 树形 + 行拖拽 三者同时启用会触发 console.warn（sortablejs 与 vxe tree-node 行结构冲突），行拖拽自动退化 null。
+>
+> ---
+>
+> **v3.5 PR1-A 增量摘要**（A11y + E2E）：
+>
+> - 13 处 aria-label + 键盘可达修复 + prefers-reduced-motion 全局 CSS
+> - vitest-axe 集成 + Playwright e2e 2 个关键路径覆盖
+> - 详见 `README.md` v3.5 变更摘要段
+>
+> ---
+>
+> **v3.4 增量摘要**（搜索区布局档位下放）：
 >
 > - **searchLayout prop**：新增 `SearchLayoutMode = 'auto' \| 'flat' \| 'collapse' \| 'flat-large' \| 'drawer'` 类型 + ProTableProps.searchLayout prop。SearchForm.vue layoutMode 判定顺序调整为：advanced 字段存在（永远 drawer，保证 advanced 字段可达，优先级最高）> searchLayout 非 auto 强制档位 > 字段数自动判定。真实业务两类场景不适配：① 宽屏页面想平铺更多字段却被强制折叠（字段数 ≠ 页面空间需求）；② searchDisplay 联动使字段数动态变化时档位在 flat/collapse 间跳变（展开/收起按钮时有时无、布局抖动）
 >
