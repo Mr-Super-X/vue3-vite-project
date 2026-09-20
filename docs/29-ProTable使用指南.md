@@ -159,6 +159,8 @@ ProTable 通过 `defineEmits` 暴露 3 个对外事件，**v3.5 PR2 起 vxe/elem
 | `filter-change`   | `Record<string, (string \| number \| boolean)[]>` | 任意筛选列值变化（多列同时变化时一并 emit，**v3.5 PR2 起 vxe 引擎同样支持**） | 服务端筛选的请求参数构造；状态回显 |
 | `engine-fallback` | `string`（降级原因）                              | 引擎自动降级（如 vxe + 树形 + 行拖拽三者冲突 → 退化为 element-plus）          | 上报降级事件用于监控               |
 
+> **内部转发事件（非公共契约）**：`expand-toggle` 是 ProTable 内部转发 `VxeTableBody` 的树形展开/折叠事件（v3.5 PR1-B 起），业务方**无需**也**不应**监听。如需程序化展开/折叠树节点，请用 `defineExpose` 的 `expandNode(rowKey, expanded?)` / `collapseNode(rowKey)` 方法（见 §1.3）。该事件不出现在本表，避免与 ProTable 自身 emit 的公共事件混淆。
+
 **示例：监听服务端筛选**
 
 ```vue

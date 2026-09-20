@@ -275,6 +275,8 @@ const { data } = storeToRefs(useUserStore())
 
 **检测 / 自检方法：** 若 IDE hover 模板中的 `<XxxComponent>` 只显示 `import XxxComponent`，按本节规则删除对应 `import XxxComponent from '...'` 即可。
 
+**例外：** `<script setup>` 中若需要 `InstanceType<typeof Xxx>` 作为 ref 类型声明（如 `ref<InstanceType<typeof ProTable>>()` 用于取 `defineExpose` 暴露的方法），仍需显式 `import ProTable from '@/components/ProTable/ProTable.vue'`。模板自动注册只解决 hover 智能提示，不解决 `<script>` 中的构造类型引用——这是 demo 模块普遍显式 import 自动注册组件的**唯一合法场景**（如 `src/modules/demo/examples/ProTable/ProTableAutoHeight.vue:24`）。
+
 ---
 
 ## §2 ⚠️ src/ Architecture Lockdown（最高优先级）
