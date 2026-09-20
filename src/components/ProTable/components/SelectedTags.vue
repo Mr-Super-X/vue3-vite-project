@@ -45,15 +45,31 @@ const bem = createNamespace('pro-table-selected-tags')
 
 /**
  * 非 select 字段的显示值格式化（review R12）
- * - 二元组（如 el-date-picker daterange 的 [start, end]）：`start ~ end`
+ * - Date（el-date-picker 单日期默认返回 Date 对象）：YYYY-MM-DD
+ * - 二元组（如 el-date-picker daterange 的 [start, end]，元素可能是 Date / string / number）：
+ *   `start ~ end`，每个元素按各自类型格式化
  * - 其余数组：`[N 项]`
  * - 对象：`[对象]` —— 不再 JSON.stringify 截断展示（避免内部字段泄露到 UI +
  *   UTF-16 按单元截断多字节字符产生乱码）
  */
 function formatDisplayValue(v: unknown): string {
+  if (v instanceof Date) {
+    // el-date-picker type='date' 默认返回 Date 对象（type='datetime' 返回 Date，
+    // type='daterange' / 'datetimerange' 返回 [Date, Date]）；toISOString 输出 ISO 8601
+    // 字符串，slice(0, 10) 截取 YYYY-MM-DD（datetime 类场景下会丢失时分秒，但 UI
+    // 回显区只需要日期维度；时分秒用户能从原输入框回看，截断是可接受的精度折中）
+    return v.toISOString().slice(0, 10)
+  }
   if (Array.isArray(v)) {
-    const isPair = v.length === 2 && v.every((item) => ['string', 'number'].includes(typeof item))
-    if (isPair) return `${String(v[0])} ~ ${String(v[1])}`
+    const isPair =
+      v.length === 2 &&
+      v.every((item) => ['string', 'number'].includes(typeof item) || item instanceof Date)
+    if (isPair) {
+      // 数组元素按各自类型格式化：Date → YYYY-MM-DD；string/number → String()
+      const fmt = (item: unknown): string =>
+        item instanceof Date ? item.toISOString().slice(0, 10) : String(item)
+      return `${fmt(v[0])} ~ ${fmt(v[1])}`
+    }
     return `[${v.length} 项]`
   }
   if (typeof v === 'object' && v !== null) return '[对象]'
