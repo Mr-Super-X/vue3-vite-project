@@ -2,6 +2,20 @@
 
 ## 未发布
 
+### 🐞 Fix | XFormReactionArrayRow 行内 reaction 不触发（真 bug 修复）
+
+> 真实浏览器实测发现：XFormReactionArrayRow demo 改数量时小计和采购合计不变。
+> 根因：`use-reaction.ts:156` 实现 `source = () => deps.map(d => get(model, d))` 在根 model 查找 deps，
+> demo 用相对路径 `'qty'/'price'/...` 在根 model 不可达，永久返回 undefined，Vue watch 永不触发。
+
+- **XFormReactionArrayRow.vue**：deps 改为绝对路径 `'arrayRows.0.qty'/'arrayRows.0.price'/...`（2 行 × 4 字段 = 8 个路径）+ 注释说明 XForm 引擎未来改造方向（让 use-reaction 在 array row 渲染时把行 model 透传给 reaction，自动解析相对路径）
+- **真实浏览器验证**：
+  - 数量 1→2 → 行 1 小计 100→200，合计 ¥206→¥306 ✅
+  - 数量 2→3 → 行 1 小计 200→300，合计 ¥306→¥406 ✅
+- **Pattern L（建议加到 docs/36）**：XForm 行内 reaction deps 必须用绝对路径（`arrayRows.<rowIndex>.xxx`），相对路径在 XForm 引擎改造前不可用。
+
+---
+
 ### 🐞 Fix | v3.6 D 阶段审计 P1 HIGH 重度 4 条修复 + 1 误报
 
 > D 阶段深度审计 27 条 HIGH 中 14 条简单 + 8 条中度已修，本批修 5 条重度。其中 P1H-1 为 Agent 误报（dashboardRef 实际已正确声明并被使用），其余 4 条完成。

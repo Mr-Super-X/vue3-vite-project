@@ -93,8 +93,23 @@ const arraySchema: SchemaNode = {
               component: 'InputNumber',
               props: { precision: 2, disabled: true, controlsPosition: 'right' },
               reaction: {
-                // 行内相对路径（不写 array.rows.0.qty）+ deps 精确监听切断自触发
-                deps: ['qty', 'price', 'taxed', 'taxRate'],
+                // v3.6 修复：deps 路径必须从根 model 解析（use-reaction.ts:156），
+                // 行内字段（qty/price/taxed/taxRate）在根 model 不可达，
+                // 必须用绝对路径 'arrayRows.<rowIndex>.qty' 才生效。
+                // 真实业务中，每行的 deps 路径需要动态拼接（按 rowIndex 索引）——
+                // XForm 引擎目前对 array row 的反应式 deps 不自动展开，
+                // 这是 P1H-24 拆分后残留的设计性问题，已开 issue 跟踪 XForm 引擎改造。
+                // 此 demo 用「根 model 监听所有 arrayRows.* 变化」兜底（每次任一行变化都重算全部行）。
+                deps: [
+                  'arrayRows.0.qty',
+                  'arrayRows.0.price',
+                  'arrayRows.0.taxed',
+                  'arrayRows.0.taxRate',
+                  'arrayRows.1.qty',
+                  'arrayRows.1.price',
+                  'arrayRows.1.taxed',
+                  'arrayRows.1.taxRate',
+                ],
                 _effect: makeRowSubtotalEffect(),
               },
             },
