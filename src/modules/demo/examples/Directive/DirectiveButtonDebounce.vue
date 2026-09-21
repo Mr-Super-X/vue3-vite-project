@@ -157,9 +157,7 @@ const submitCode = `<el-button v-buttonDebounce="handleSubmit">提交订单</el-
       <!-- submit 模拟 -->
       <section id="demo-submit">
         <DemoField label="实战：按钮防重（连续点击只触发 1 次回调）" :code="submitCode">
-          <el-button v-buttonDebounce="onSubmitClick" type="primary" :loading="false">
-            提交订单（防重）
-          </el-button>
+          <el-button v-buttonDebounce="onSubmitClick" type="primary">提交订单（防重）</el-button>
           <div :class="bem.e('log')">
             <p :class="bem.e('log-title')">submit 回调触发记录（独立计数）：</p>
             <p v-for="(line, idx) in submitLog" :key="`s-${idx}`" :class="bem.e('log-line')">

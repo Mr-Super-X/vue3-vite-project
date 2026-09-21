@@ -245,7 +245,12 @@ const tocItems = [
                 <el-radio-button value="ORD-A">A · 已发货</el-radio-button>
                 <el-radio-button value="ORD-B">B · 草稿</el-radio-button>
               </el-radio-group>
-              <el-button size="small" :disabled="loading" @click="() => loadOrder('FAIL')">
+              <el-button
+                size="small"
+                :disabled="loading"
+                title="onError 回调触发：模拟 422 服务端校验失败，演示 XForm 自动展示 ElMessage.error + 字段红字"
+                @click="() => loadOrder('FAIL')"
+              >
                 请求失败路径
               </el-button>
               <el-button size="small" :loading="loading" @click="() => loadOrder()">

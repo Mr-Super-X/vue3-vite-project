@@ -53,12 +53,6 @@ const model = reactive({
     discountLevel: 'normal',
     discountRate: 1,
   },
-  array: {
-    rows: [
-      { name: '商品 A', qty: 1, price: 100, taxed: false, taxRate: 0.13, subtotal: 100 },
-      { name: '商品 B', qty: 2, price: 50, taxed: true, taxRate: 0.06, subtotal: 106 },
-    ],
-  },
   // 数组节点字段名 = model 顶层 key（XForm 找 model[name]）；嵌套路径不识别
   arrayRows: [
     { name: '商品 A', qty: 1, price: 100, taxed: false, taxRate: 0.13, subtotal: 100 },

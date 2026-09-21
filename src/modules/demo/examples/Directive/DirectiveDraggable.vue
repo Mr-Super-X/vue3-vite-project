@@ -100,15 +100,16 @@ const clampCode = `clampPosition({ left, top }, { maxLeft, maxTop })`
               draggable.ts 内部通过 el.closest('.el-dialog') 找到 dialog 容器进行拖拽
             -->
             <template #header>
-              <div v-draggable class="vv-demo-directive-draggable__header">
-                可拖拽弹窗（按住此标题栏拖动）
-              </div>
+              <div v-draggable :class="bem.e('header')">可拖拽弹窗（按住此标题栏拖动）</div>
             </template>
             <p :class="bem.e('content')">
               按住标题栏拖动弹窗。尝试拖到视口左/上/右/下边缘——
               弹窗会被钳制在视口内，不会被拖出屏幕外。
             </p>
-            <p :class="bem.e('content')">关闭弹窗后再次打开，位置应回到中央。</p>
+            <p :class="bem.e('content')">
+              关闭弹窗后再次打开保持上次位置（除非 reload）—— element-plus 默认行为，v-draggable
+              不干预位置持久化。
+            </p>
           </el-dialog>
         </DemoField>
       </section>
@@ -120,7 +121,7 @@ const clampCode = `clampPosition({ left, top }, { maxLeft, maxTop })`
           <el-dialog v-model="disabledVisible" width="500px">
             <!-- 禁用态：不绑 v-draggable；如要响应式控制可见用 v-draggable="false" 在 div 上 -->
             <template #header>
-              <div class="vv-demo-directive-draggable__header">不可拖拽弹窗（无 v-draggable）</div>
+              <div :class="bem.e('header')">不可拖拽弹窗（无 v-draggable）</div>
             </template>
             <p :class="bem.e('content')">尝试按住标题栏拖动——无任何反应。</p>
             <p :class="bem.e('content')">常用于「全屏态」或「流程确认中不可打断」的弹窗。</p>
@@ -142,13 +143,11 @@ const clampCode = `clampPosition({ left, top }, { maxLeft, maxTop })`
           <el-button @click="toggleVisible = true">打开弹窗</el-button>
           <el-dialog v-model="toggleVisible" width="500px">
             <template #header>
-              <div v-draggable="dragEnabled" class="vv-demo-directive-draggable__header">
+              <div v-draggable="dragEnabled" :class="bem.e('header')">
                 {{ dragEnabled ? '可拖拽（开关已开）' : '不可拖拽（开关已关）' }}
               </div>
             </template>
-            <p :class="bem.e('content')">
-              关闭弹窗 → 切换上方开关 → 再次打开 —— 拖拽行为随开关变化。
-            </p>
+            <p :class="bem.e('content')">无需关闭弹窗，直接切换上方开关即可看到拖拽行为变化。</p>
             <p :class="bem.e('content')">
               原理：v-draggable 的 updated 钩子在 binding 变化时同步 state.enabled， 无需重新挂载。
             </p>

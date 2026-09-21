@@ -2,6 +2,30 @@
 
 ## 未发布
 
+### 🐞 Fix | v3.6 D 阶段审计 P1 HIGH 简单 14 条修复（10 个 demo）
+
+> D 阶段深度审计发现 27 条 HIGH，本次修其中 14 条简单 edit（跳过 13 条 design——需新增 demo section 或联动 XForm 组件改造）。
+
+- **BaseChartSaleFunIntroductions 第三条** (P1H-3)：改「刷新数据演示数据响应式；切换指标模式演示 metric 切换触发 tooltip 重渲染（label 保持 retention 不变）」
+- **BaseChartDashboard `itemStyle.color`** (P1H-2)：回调参数类型 `Record<string, unknown>` 改为 echarts 真实类型 `CallbackDataParams`（避免类型失真）
+- **DirectiveCopy 顶部覆盖场景** (P1H-4)：补「降级原理」第 5 项
+- **DirectiveCopy `copyTimestamp` 一致化** (P1H-5)：去掉 `lastTimestamp` 副作用使函数变 pure + 删相关 SNIPPET 注释，与 v-copy 真实行为对齐
+- **DirectiveInputDebounce `rawInputCode`** (P1H-7)：改为 inline handler 与实际模板一致
+- **DirectiveInputDebounce 回调签名提示** (P1H-9)：从源码顶部搬到 SNIPPET 注释 + 「11 次回调」加 IME 边界说明
+- **DirectiveButtonDebounce 死 prop** (P1H-11)：删除硬编码 `:loading="false"`（永远 false 无意义）
+- **DirectiveDraggable 硬编码 class** (P1H-15)：3 处 `'vv-demo-directive-draggable__header'` → `:class="bem.e('header')"`（§3 BEM 合规）
+- **DirectiveDraggable 「动态启用/禁用」文案** (P1H-16)：改「无需关闭弹窗，直接切换上方开关即可看到拖拽行为变化」
+- **DirectiveDraggable 「关闭弹窗后位置」文案** (P1H-17)：改 EP 默认行为说明（位置保持上次）
+- **XFormBase InputPassword rules** (P1H-21)：`'required'` → `{ required: true, message: '请输入密码', trigger: 'blur' }`
+- **XFormDetailFill 「请求失败路径」按钮 tooltip** (P1H-22)：明确 onError 回调触发链路
+- **XFormSlots Upload `modelProp`** (P1H-26)：uploadField 加 `modelProp: 'fileList'` 让 v-model 双向绑定生效
+- **XFormReactionAdvanced 死字段** (P1H-23)：删 `model.array.rows`（从未被 schema 引用）
+
+**跳过（设计性，需独立 plan）**：
+- P1H-1 dashboardRef 模板绑定 / P1H-6 降级原理可执行验证 / P1H-8 timing 量化对比 / P1H-10 submit title 改实现 / P1H-12 input vs button 对照演示 / P1H-13 timing 时间分布 / P1H-14 边界钳制 SVG 交互 / P1H-18 ProTableServerFilter 4 列 vs 2 列 / P1H-19 ProTableServerSort sortParamsAdapter 演示 / P1H-20 XFormNestedArray getRef / P1H-24 XFormReactionAdvanced 拆分 / P1H-25 XFormLabelLayout labelPosition 文档 / P1H-27 XFormAsyncOptionsError 引擎 bug 跟踪
+
+---
+
 ### 🐞 Fix | v3.6 D 阶段审计 P0 CRITICAL 简单 4 条修复
 
 > D 阶段深度审计（66 demo / 88 条问题）发现 8 条 CRITICAL。本次修其中 4 条简单修改（5 条已在之前会话修复或 P0-5 ProTableStyleOverride 顶部说明已在 P1R-8 修复）。

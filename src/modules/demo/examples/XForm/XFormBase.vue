@@ -114,7 +114,7 @@ const schema: SchemaNode = {
       name: 'pwd',
       col: { span: 12 },
       component: 'InputPassword',
-      rules: 'required',
+      rules: { required: true, message: '请输入密码', trigger: 'blur' },
       defaultValue: 'secret-123',
     },
     {

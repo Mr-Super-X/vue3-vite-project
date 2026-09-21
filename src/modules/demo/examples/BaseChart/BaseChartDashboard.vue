@@ -12,6 +12,10 @@
  * 5. 排行榜柱图动态着色：itemStyle.color 支持函数返回值
  */
 import { ElMessage } from 'element-plus'
+// 注：echarts 6.1.0 的 types 子路径（echarts/types）未在 package.json exports 中暴露，
+// 实际可用类型仅 `echarts` 根入口。itemStyle.color 回调参数类型走项目内通用约定
+// （params.dataIndex / params.value / params.name 在所有 ECharts series 都存在），
+// 用 `params: Record<string, unknown>` + 显式 cast 即可，运行时无影响。
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import DocLayout from '../../layouts/DocLayout.vue'
@@ -87,6 +91,8 @@ const rankOption = computed(() => ({
       type: 'bar',
       data: [1820, 1630, 1450, 1300, 1090, 932, 820],
       // itemStyle.color 支持函数：按 dataIndex 返回不同色（演示高亮 Top 3）
+      // 回调参数用通用 Record<string, unknown>——ECharts series 回调通用字段
+      // dataIndex / value / name 在所有 series 都存在；cast 不影响运行时
       itemStyle: {
         color: (params: Record<string, unknown>) => {
           const palette = [

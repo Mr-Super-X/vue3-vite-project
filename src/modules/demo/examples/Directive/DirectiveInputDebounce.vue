@@ -20,8 +20,6 @@ const bem = createNamespace('demo-directive-input-debounce')
 /* ───── 演示数据 ───────────── */
 
 // 默认 300ms 防抖
-// v-inputDebounce 回调签名是 (event: Event) => void（与原生 input listener 一致），
-// 不是 (value: string) — 这是 demo 之前签名错误的根因，调用方需自己从 event.target 取值
 const searchDefault = ref('')
 const defaultLog = ref<string[]>([])
 function onSearchDefault(event: Event): void {
@@ -83,11 +81,21 @@ const argItems = [
 
 /* ───── code 字符串（避免 inline `<>` 触发 Vue 模板解析错误） ───────────── */
 
+// v-inputDebounce 回调签名是 (event: Event) => void（与原生 input listener 一致），
+// 不是 (value: string) — 调用方需自己从 event.target 取值（见下方 onSearchDefault 实现）。
 const defaultDebounceCode = `<el-input v-inputDebounce="onSearch" v-model="keyword" />`
 
 const customDebounceCode = `<el-input v-inputDebounce:500="onSearch" v-model="keyword" />`
 
-const rawInputCode = `<el-input @input="onRawInput" v-model="raw" />`
+const rawInputCode = `<el-input
+  :model-value="searchRaw"
+  @input="
+    (v: string) => {
+      searchRaw = v
+      onSearchRaw(v)
+    }
+  "
+/>`
 
 const compositionCode = `<el-input v-inputDebounce="onSearch" v-model="keyword" />
 // 内部：compositionstart → composing=true 跳过回调
@@ -169,6 +177,10 @@ const compositionCode = `<el-input v-inputDebounce="onSearch" v-model="keyword" 
           <p :class="bem.e('hint')">
             同样输入「hello world」共 11 字符 → 实时触发 11 次回调（每次按键 1 次），
             而上方防抖后只触发 1 次。防抖显著降低搜索请求频率。
+            <br />
+            注意：本统计仅适用于纯英文 / 数字输入。中英文混合输入或中文输入法场景下，
+            <code>@input</code>
+            触发时机受 IME composing 状态影响，次数可能小于字符数（拼音阶段不触发）。
           </p>
         </DemoField>
       </section>
