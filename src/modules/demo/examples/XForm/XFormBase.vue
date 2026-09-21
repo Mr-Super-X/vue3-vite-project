@@ -237,6 +237,32 @@ const tocItems = [
             <el-button @click="copySchema">复制 schema</el-button>
           </div>
           <ModelPreview :model="model" />
+          <p :class="bem.e('hint')">
+            <strong>特殊字段操作指引：</strong>
+            <br />
+            <strong>技能标签（InputTag）：</strong>
+            1) 在输入框输入
+            <code>Vue3</code>
+            → 2) 按回车确认 → 3) 重复添加 2~3 个 tag → 4) 点击 tag 右侧 × 删除；支持失焦自动确认。
+            <br />
+            <strong>主题色（ColorPicker）：</strong>
+            1) 点击色块打开拾色器 → 2) 拖动色相滑块选色 → 3) 在饱和度面板点击精确取色 → 4) 按 Enter
+            或点击外部关闭，model.color 同步为 hex 字符串。
+            <br />
+            <strong>负责人（Mention）：</strong>
+            1) 输入框输入
+            <code>@</code>
+            触发提及下拉 → 2) 输入
+            <code>al</code>
+            模糊匹配
+            <code>alice</code>
+            → 3) 鼠标点击或回车选中 → model.owner 写入完整
+            <code>@alice</code>
+            字符串。
+            <br />
+            <strong>评分（Rate）：</strong>
+            1) 鼠标悬停星星预览分数 → 2) 点击第 N 颗星锁定分数（1~5）→ model.score 即为数值。
+          </p>
         </DemoField>
       </section>
 

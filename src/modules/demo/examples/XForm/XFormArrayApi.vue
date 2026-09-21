@@ -179,6 +179,15 @@ const tocItems = [
             <el-button @click="copySchema">复制 schema</el-button>
           </div>
           <ModelPreview :model="model" />
+          <p :class="bem.e('hint')">
+            <strong>addItem vs maxItems 步骤：</strong>
+            连点 11 次「批量导入」按钮可看到
+            <code>maxItems=10</code>
+            不限制
+            <code>addItem</code>
+            API（业务侧自行控制），ModelPreview 实时显示当前 N 项； 第 10 次 addItem 后仍有 11
+            次会越过上限，最终数组会有 13 项（初始 2 + 11 追加）。
+          </p>
         </DemoField>
       </section>
       <ApiTable

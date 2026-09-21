@@ -77,8 +77,10 @@ const tocItems = [
 const bindingItems = [
   {
     name: 'value',
-    type: 'string | () => string',
+    type: 'string | (() => string)',
     required: true,
+    // CopyValue 来自 src/directives/copy.d.ts:22 —— `string | (() => string)`，
+    // 与此处 type 字段严格对齐（不要漏写函数返回类型 string，否则 copy.ts:40 resolveCopyValue 推导会失败）
     description: '复制内容。字符串直传；函数每次点击实时执行，避免闭包陈旧',
   },
 ]

@@ -80,6 +80,38 @@ function forceDialogOffscreen(): void {
   })
 }
 
+/* ───── 状态泄漏验证（Heap snapshot） ───────────── */
+
+/**
+ * 一键模拟「快速开关 3 个弹窗 10 次」——重复挂载/卸载 el-dialog
+ * 暴露的 directive state（WeakMap 引用），用于在 DevTools Memory 里
+ * 观察 heap snapshot 是否稳定。若 directive 在 unmounted 钩子
+ * 正确清理 WeakMap entry，快照前后 detached DOM 数量应无明显增长。
+ */
+let leakTestRunning = false
+const leakTestProgress = ref<string[]>([])
+async function runLeakTest(): Promise<void> {
+  if (leakTestRunning) return
+  leakTestRunning = true
+  leakTestProgress.value = []
+  for (let i = 1; i <= 10; i++) {
+    enabledVisible.value = true
+    disabledVisible.value = true
+    toggleVisible.value = true
+    await new Promise<void>((r) => setTimeout(r, 80))
+    enabledVisible.value = false
+    disabledVisible.value = false
+    toggleVisible.value = false
+    await new Promise<void>((r) => setTimeout(r, 80))
+    leakTestProgress.value = [...leakTestProgress.value, `第 ${i} 轮：3 个弹窗全开 → 全关`]
+  }
+  leakTestRunning = false
+  leakTestProgress.value = [
+    ...leakTestProgress.value,
+    '完成：打开 DevTools → Memory → Heap snapshot → 对比快照前后「Detached HTMLDivElement」数量',
+  ]
+}
+
 /* ───── 演示数据 ───────────── */
 
 // 三个 demo 区段各自独立 ref：避免两个 <el-dialog v-model> 共享同一 ref
@@ -96,6 +128,7 @@ const tocItems = [
   { id: 'demo-disabled', label: '禁用拖拽' },
   { id: 'demo-toggle', label: '动态启用/禁用' },
   { id: 'demo-boundary', label: '边界钳制' },
+  { id: 'demo-state-leak', label: '状态泄漏验证' },
   { id: 'api-binding', label: 'Binding 类型' },
 ]
 
@@ -150,7 +183,7 @@ const clampCode = `clampPosition({ left, top }, { maxLeft, maxTop })`
       <section id="demo-enabled">
         <DemoField label="启用拖拽（默认）" :code="enabledDragCode">
           <el-button type="primary" @click="enabledVisible = true">打开可拖拽弹窗</el-button>
-          <el-dialog v-model="enabledVisible" width="500px">
+          <el-dialog v-model="enabledVisible" width="400px">
             <!--
               关键：v-draggable 必须绑在 DOM 元素上，不能直接绑 el-dialog 组件
               （组件根节点非元素时 Vue 会 warn）。这里在 #header 插槽的 div 上绑指令，
@@ -176,12 +209,28 @@ const clampCode = `clampPosition({ left, top }, { maxLeft, maxTop })`
         <DemoField label='禁用拖拽（v-draggable="false"）' :code="disabledDragCode">
           <el-button @click="disabledVisible = true">打开不可拖拽弹窗</el-button>
           <el-dialog v-model="disabledVisible" width="500px">
+            <!-- 500px 中等大小：演示边界钳制对中等宽度弹窗同样生效 -->
             <!-- 禁用态：不绑 v-draggable；如要响应式控制可见用 v-draggable="false" 在 div 上 -->
             <template #header>
               <div :class="bem.e('header')">不可拖拽弹窗（无 v-draggable）</div>
             </template>
             <p :class="bem.e('content')">尝试按住标题栏拖动——无任何反应。</p>
-            <p :class="bem.e('content')">常用于「全屏态」或「流程确认中不可打断」的弹窗。</p>
+            <p :class="bem.e('content')">
+              常用于「全屏态」或「流程确认中不可打断」的弹窗。验证 DevTools 路径：F12 → Elements →
+              选中 header div → Console 输入
+              <code>$0.__vnode?.ctx?.bindings?.value</code>
+              或展开
+              <code>__draggable_ctx</code>
+              （WeakMap 不便直接看）→ 可在 directive 源码的
+              <code>updated</code>
+              钩子加临时 console.log 打印
+              <code>state.enabled</code>
+              /
+              <code>stateMap</code>
+              验证
+              <code>v-draggable="false"</code>
+              模式下内部 state.enabled 切到 false。
+            </p>
           </el-dialog>
         </DemoField>
       </section>
@@ -198,15 +247,15 @@ const clampCode = `clampPosition({ left, top }, { maxLeft, maxTop })`
             />
           </div>
           <el-button @click="toggleVisible = true">打开弹窗</el-button>
-          <el-dialog v-model="toggleVisible" width="500px">
+          <el-dialog v-model="toggleVisible" width="700px">
+            <!-- 700px 大宽度：演示钳制对宽弹窗（接近视口宽度时只剩 0~几百像素移动范围）同样生效 -->
             <template #header>
               <div v-draggable="dragEnabled" :class="bem.e('header')">
                 {{ dragEnabled ? '可拖拽（开关已开）' : '不可拖拽（开关已关）' }}
               </div>
             </template>
-            <p :class="bem.e('content')">无需关闭弹窗，直接切换上方开关即可看到拖拽行为变化。</p>
             <p :class="bem.e('content')">
-              原理：v-draggable 的 updated 钩子在 binding 变化时同步 state.enabled， 无需重新挂载。
+              无需关弹窗，updated 钩子自动同步 state.enabled；切换开关即看到拖拽行为变化。
             </p>
           </el-dialog>
         </DemoField>
@@ -218,7 +267,15 @@ const clampCode = `clampPosition({ left, top }, { maxLeft, maxTop })`
           <p :class="bem.e('content')">
             边界钳制公式：弹窗的 left / top 不能小于 0，也不能大于
             <code>(viewportWidth - dialogWidth, viewportHeight - dialogHeight)</code>
-            。
+            。当弹窗边缘距视口边界
+            <code>0px</code>
+            时即钳制生效——可开 DevTools → Elements → 选中
+            <code>.el-dialog</code>
+            → 看 Styles 面板底部「Computed」或 inline style 的
+            <code>left</code>
+            /
+            <code>top</code>
+            值，验证是否被钉在 0 / maxLeft 边界。
           </p>
           <p :class="bem.e('content')">
             实现位于
@@ -343,6 +400,43 @@ const clampCode = `clampPosition({ left, top }, { maxLeft, maxTop })`
         </DemoField>
       </section>
 
+      <!-- 状态泄漏验证（Heap snapshot） -->
+      <section id="demo-state-leak">
+        <DemoField label="状态泄漏验证（Heap snapshot）" :code="''">
+          <p :class="bem.e('content')">
+            v-draggable 用
+            <code>WeakMap</code>
+            存储每个 dialog 元素的 state 引用——理论上 unmounted 钩子会清理 entry， 弹窗销毁后 state
+            应随之 GC。下面用一键脚本反复开关 3 个弹窗，配合 DevTools 观察是否有泄漏。
+          </p>
+          <el-button type="warning" plain :disabled="leakTestRunning" @click="runLeakTest">
+            {{ leakTestRunning ? '验证进行中...' : '一键开关 3 个弹窗 × 10 轮' }}
+          </el-button>
+          <div :class="bem.e('leak-log')">
+            <p v-for="(line, idx) in leakTestProgress" :key="`leak-${idx}`">
+              {{ line }}
+            </p>
+          </div>
+          <p :class="bem.e('content')">
+            <strong>验证方法：</strong>
+            打开 DevTools → Memory 面板 → 「Heap snapshot」→ 点 Take snapshot 拍基线 →
+            点上方按钮跑完 10 轮 → 再拍一次快照 → 在 Comparison 视图对比两次快照的
+            <code>Detached HTMLDivElement</code>
+            节点数。若差值稳定在 ≤ 10，说明 directive 清理无泄漏；若有几十甚至上百的持续增长， 说明
+            stateMap 引用未释放。
+          </p>
+          <p :class="bem.e('content')">
+            <em>说明：</em>
+            Element Plus 自身可能在关闭弹窗后短暂保留 detached DOM（teleport 节点未及时回收）， 这是
+            EP 内部 cleanup 时序问题，
+            <strong>不属于本 demo 验证范围</strong>
+            。重点观察
+            <code>Detached &lt;div&gt;</code>
+            是否随轮次线性增长（线性增长 = 泄漏；稳定 = 无泄漏）。
+          </p>
+        </DemoField>
+      </section>
+
       <ApiTable title="v-draggable Binding" :items="bindingItems" anchor="api-binding" />
     </DemoFrame>
 
@@ -432,6 +526,22 @@ const clampCode = `clampPosition({ left, top }, { maxLeft, maxTop })`
     border: 1px solid var(--el-border-color-lighter);
     border-radius: 4px;
     margin-bottom: 8px;
+  }
+
+  // Heap snapshot 验证日志（V3.6-31 design fix）
+  &__leak-log {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: var(--el-fill-color-light);
+    border-radius: 4px;
+    min-height: 40px;
+    font-family: monospace;
+    font-size: 12px;
+    color: var(--el-text-color-regular);
+
+    p {
+      margin: 2px 0;
+    }
   }
 }
 </style>

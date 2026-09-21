@@ -140,10 +140,11 @@ const tocItems = [
             <el-button @click="onReset">重置</el-button>
             <el-button type="primary" @click="onSave">保存</el-button>
             <el-button @click="copySchema">复制 schema</el-button>
-            <span :class="bem.e('total')">
-              总计：
-              <strong>¥{{ grandTotal }}</strong>
-            </span>
+          </div>
+          <!-- 总计独立 block 显示：与操作按钮区分视觉层级，强提示聚合结果 -->
+          <div :class="bem.e('total-bar')">
+            <span :class="bem.e('total-label')">总计</span>
+            <strong :class="bem.e('total-value')">¥{{ grandTotal }}</strong>
           </div>
           <div :class="bem.e('state')">
             <div>model.items（{{ Array.isArray(model.items) ? model.items.length : 0 }} 行）</div>
@@ -153,7 +154,11 @@ const tocItems = [
           <p :class="bem.e('hint')">
             <strong>边界演示步骤 4：</strong>
             点 5 次「新增明细」→ 第 6 次按钮变为 disabled（maxItems=5 触发上限）。 再点 5
-            次「删除」→ 第 5 次删除按钮 disabled（minItems=1 触发下限）。
+            次「删除」→ 第 5 次删除按钮 disabled（minItems=1 触发下限）：
+            <code>
+              点 4 次「删除明细」→ 第 5 次删除按钮 disabled（minItems=1 触发下限，无法删除最后一行）
+            </code>
+            ——这是最常见的边界场景，先验证此再验证 maxItems 上限。
           </p>
         </DemoField>
       </section>
@@ -185,6 +190,31 @@ const tocItems = [
       font-size: 18px;
       margin-left: 4px;
     }
+  }
+
+  /* 总计独立 block：与上方按钮区分视觉层级，强提示聚合结果 */
+  &__total-bar {
+    margin-top: 12px;
+    padding: 10px 16px;
+    background: linear-gradient(90deg, #ecf5ff 0%, #f0f9ff 100%);
+    border-left: 3px solid var(--el-color-primary);
+    border-radius: 4px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  &__total-label {
+    font-size: 13px;
+    color: var(--el-text-color-regular);
+    font-weight: 500;
+  }
+
+  &__total-value {
+    color: var(--el-color-primary);
+    font-size: 22px;
+    font-weight: 600;
+    font-family: ui-monospace, 'Cascadia Code', Menlo, monospace;
   }
 
   &__state {

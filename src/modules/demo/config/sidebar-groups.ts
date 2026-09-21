@@ -75,6 +75,7 @@ export const CN_NAMES: Record<string, string> = {
   XFormExpression: '动态脚本表达式',
   XFormExpressionSandbox: '表达式沙箱与白名单',
   XFormFieldPermission: '字段权限',
+  XFormFieldPermissionResolver: '字段权限解析器',
   XFormGrid: '栅格布局',
   XFormInvalidComponent: '无效组件校验',
   XFormLargeSchema: '大 schema 性能',

@@ -16,7 +16,14 @@
  *
  * 路由：自动注册为 /demo/pro-table-import-export
  */
-import { ElButton, ElMessage, ElTable, ElTableColumn } from 'element-plus'
+import {
+  ElButton,
+  ElMessage,
+  ElTable,
+  ElTableColumn,
+  ElUpload,
+  type UploadFile,
+} from 'element-plus'
 import { Download, Upload } from '@element-plus/icons-vue' // 显式 import（§1.6.1 来源注释）
 import { exportCsv, importCsv, type CsvColumn } from '@/components/ProTable/utils'
 import DocLayout from '../../layouts/DocLayout.vue'
@@ -42,7 +49,6 @@ const csvColumns: CsvColumn[] = [
 const exporting = ref(false)
 /** 导入解析结果（值均为 string —— 类型转换与校验归业务层） */
 const importedRows = ref<Record<string, unknown>[]>([])
-const fileInput = useTemplateRef<HTMLInputElement>('file-input')
 
 /** 导出：业务自行拉全量（组件不内建分页全量），utils 只负责文件生成 */
 async function handleExport(): Promise<void> {
@@ -60,18 +66,14 @@ async function handleExport(): Promise<void> {
 }
 
 /** 导入：File → importCsv → 业务校验位（此处仅展示解析结果） */
-async function handleFileChange(event: Event): Promise<void> {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
+async function handleFileChange(uploadFile: UploadFile): Promise<void> {
+  const file = uploadFile.raw
   if (!file) return
   try {
     importedRows.value = await importCsv(file, { columns: csvColumns })
     ElMessage.success(`解析成功 ${importedRows.value.length} 行（类型转换/校验归业务层）`)
   } catch (err) {
     ElMessage.error(`解析失败：${err instanceof Error ? err.message : String(err)}`)
-  } finally {
-    // 允许重复选择同一文件（change 事件依赖 value 变化）
-    input.value = ''
   }
 }
 
@@ -127,14 +129,14 @@ const tocItems = [
           <p :class="bem.e('hint')">
             验证：选刚导出的 CSV → 解析结果展示（值均为 string）；表头多出的列自动忽略
           </p>
-          <ElButton :icon="Upload" @click="fileInput?.click()">选择 CSV 导入</ElButton>
-          <input
-            ref="file-input"
-            type="file"
+          <ElUpload
+            :show-file-list="false"
+            :auto-upload="false"
             accept=".csv"
-            :class="bem.e('file-input')"
-            @change="handleFileChange"
-          />
+            :on-change="handleFileChange"
+          >
+            <ElButton :icon="Upload">选择 CSV 导入</ElButton>
+          </ElUpload>
           <ElTable
             v-if="importedRows.length > 0"
             :data="importedRows.slice(0, 8)"

@@ -204,10 +204,10 @@ const tocItems = [
             </div>
 
             <div :class="bem.e('counter')">
-              <strong>搜索调用次数(每输入一词 debounce 300ms 后 +1):</strong>
+              <strong>搜索调用次数（停止输入 300ms 后 searchCallCount +1）:</strong>
               {{ searchCallCount }}
               <br />
-              <strong>保存触发次数(每输入 throttle 1s 后 +1):</strong>
+              <strong>保存触发次数（throttle 1s 后 +1）:</strong>
               {{ saveCallCount }}
               <br />
               <strong>最近一次保存时间:</strong>

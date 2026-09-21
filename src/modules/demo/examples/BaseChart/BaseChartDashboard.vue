@@ -260,6 +260,13 @@ const tocItems = [{ id: 'demo-dashboard', label: '运营仪表盘组合' }]
           <p :class="bem.e('tip')">
             改变浏览器窗口宽度（断点 xs / sm / md / lg），栅格自动重排，每个 BaseChart 内部
             ResizeObserver 触发并各自 resize。进入全屏后所有图表同步放大； 退出全屏恢复原始布局。
+            <br />
+            <strong>全屏失败路径测试：</strong>
+            F12 → Console → 在非用户手势下手动调用
+            <code>toggleFullscreen()</code>
+            验证 catch 分支触发
+            <code>ElMessage.warning</code>
+            提示「全屏切换失败」（浏览器会拒绝非用户手势的 requestFullscreen 调用）。
           </p>
         </DemoField>
       </section>

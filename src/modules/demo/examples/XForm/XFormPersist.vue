@@ -83,18 +83,13 @@ function onRestore() {
     ElMessage.warning('当前没有草稿（先填几个字段刷新页面再试）')
     return
   }
-  // 读取原始草稿用于错误诊断
-  const rawDraft = window.localStorage.getItem('vue3-vite-project:demo.x-form-persist.draft')
-  if (!rawDraft) {
-    // hasDraft=true 但 localStorage 为空 → 状态不一致（罕见）
-    // 直接重置 hasDraft 让 UI 与真实存储状态一致
-    persist.clear()
-    ElMessage.warning('草稿状态异常，已自动重置（先填几个字段刷新页面再试）')
-    return
-  }
+  // 直接调 persist.load()：hasDraft=true 但 localStorage 为空时，load() 内部会返回 false，
+  // 我们据此降级为「草稿状态异常」并清空；不再硬编码 'vue3-vite-project:' 前缀读 localStorage（prefix
+  // 应统一从 persist 配置读取，避免 key 变更时 demo 跟进遗漏）
   const ok = persist.load()
   if (!ok) {
-    ElMessage.warning('草稿已失效（版本不匹配或数据损坏），已自动清除')
+    persist.clear()
+    ElMessage.warning('草稿状态异常或版本不匹配，已自动重置（先填几个字段刷新页面再试）')
     return
   }
   formRef.value?.resetDirty() // 草稿为新基线：isDirty 从草稿起算

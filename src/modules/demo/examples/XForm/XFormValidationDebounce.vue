@@ -186,7 +186,8 @@ const tocItems = [
               <strong>confirmPassword 校验次数：</strong>
               {{ counter.confirmPassword }}
               <span :class="bem.e('counter-tip')">
-                连打 6 字符：A 模式应 6 次，B 模式应 1 次，C 模式应 1 次（1000ms 后）
+                连打 6 字符：A 模式应 6 次，B 模式应 1 次，C 模式应 1 次（停止打字后等 1 秒：C 模式
+                confirmPassword 防抖 1000ms 后触发）
               </span>
             </div>
             <div :class="bem.e('counter')">

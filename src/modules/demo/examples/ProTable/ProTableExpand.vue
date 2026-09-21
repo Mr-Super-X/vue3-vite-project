@@ -20,15 +20,7 @@
  *   kebab-case JSX 标签运行时走 resolveComponent 会解析失败（AutoImport 只自动补 ElXxx 标识符）
  * - 多按钮组 + Popconfirm 确认交互（删除等高风险操作）
  */
-import {
-  ElButton,
-  ElMessage,
-  ElMessageBox,
-  ElPopconfirm,
-  ElProgress,
-  ElTable,
-  ElTableColumn,
-} from 'element-plus'
+import { ElButton, ElMessage, ElPopconfirm, ElProgress, ElTable, ElTableColumn } from 'element-plus'
 import { ArrowDown, View } from '@element-plus/icons-vue'
 import type { ProColumn, ProTableExpose } from '@/components/ProTable'
 import type { OrderItem, ExpandOrder } from '@mock/pro-table/expand'
@@ -68,22 +60,25 @@ function isItemChecked(orderNo: string, sku: string): boolean {
   return (expandedItemCheck.value[orderNo] ?? []).includes(sku)
 }
 
-function batchRefund(orderNo: string): void {
+async function batchRefund(orderNo: string): Promise<void> {
   const skus = expandedItemCheck.value[orderNo] ?? []
   if (skus.length === 0) {
     ElMessage.warning('请先勾选要退款的子项')
     return
   }
-  ElMessageBox.confirm(`确认对订单 ${orderNo} 的 ${skus.length} 个子项发起退款？`, '批量退款', {
+  // 走 §1.5 useConfirm composable：取消 resolve false（vs ElMessageBox 原生 reject cancel 字符串）
+  // 不再需要 .then/.catch try-catch，调用方一行 await 即可
+  const ok = await useConfirm({
+    title: '批量退款',
+    content: `确认对订单 ${orderNo} 的 ${skus.length} 个子项发起退款？`,
     type: 'warning',
   })
-    .then(() => {
-      ElMessage.success(`已对 ${skus.length} 个子项发起退款`)
-      expandedItemCheck.value = { ...expandedItemCheck.value, [orderNo]: [] }
-    })
-    .catch(() => {
-      ElMessage.info('已取消')
-    })
+  if (ok) {
+    ElMessage.success(`已对 ${skus.length} 个子项发起退款`)
+    expandedItemCheck.value = { ...expandedItemCheck.value, [orderNo]: [] }
+  } else {
+    ElMessage.info('已取消')
+  }
 }
 
 /* ───────────── 列定义（覆盖 ③ 复杂单元格） ───────────── */

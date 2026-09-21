@@ -229,15 +229,12 @@ async function refreshAll(): Promise<void> {
 /* ───────────── TOC 锚点 ───────────── */
 
 // tocItems 说明：
-// ①②③④ 五个场景（行条件样式 / 单元格条件样式 / 列对齐+格式化 / 自定义表头 / 固定列）
+// ①②③④⑤ 五个场景（行条件样式 / 单元格条件样式 / 列对齐+格式化 / 自定义表头 / 固定列）
 // 在同一张大 ProTable 中一并演示（避免 5 个独立 ProTable 5 倍 mock 数据），
-// 所以 tocItems[1..3] 的 id 共享 demo-row-cell-styling 锚点，label 标注"见上文 ①"。
+// 故 tocItems 只保留一条 demo-row-cell-styling 锚点，序号 ②③④ 在 label 内合并说明。
 // 如需每场景独立表格，参见 ProTableEngineCompare（v3.5 PR1-B 重构的并行演示模式）。
 const tocItems = [
-  { id: 'demo-row-cell-styling', label: '① 行/单元格条件样式' },
-  { id: 'demo-row-cell-styling', label: '② 列对齐 + 数字格式化（见上文 ①）' },
-  { id: 'demo-row-cell-styling', label: '③ 自定义表头（见上文 ①）' },
-  { id: 'demo-row-cell-styling', label: '④ 固定列组合（见上文 ①）' },
+  { id: 'demo-row-cell-styling', label: '① ② ③ ④ ⑤ 一表演示' },
   { id: 'demo-density-compare', label: '⑤ 密度切换对比' },
   { id: 'demo-theme-override', label: '⑥ 主题色覆盖' },
   { id: 'hook-cheatsheet', label: '可覆盖钩子清单' },
@@ -288,6 +285,7 @@ const densityCode = `<ProTable density="compact" :columns="columns" :request-api
         '业务方接 ProTable 后最常问的问题——怎么高亮某些行、怎么让金额右对齐、怎么换主题色。',
         '本 demo 覆盖 6 个高频样式定制场景：行/单元格条件样式、列对齐、自定义表头、固定列组合、密度切换、主题色覆盖。',
         '技术要点：行条件样式不走 rowClassName 透传（ProTable 未暴露），改用「在 render VNode 上注入 className + CSS :has() 反向命中整行」，0 侵入、纯声明式扩展。',
+        '完整可覆盖 CSS 钩子清单见下方 #hook-cheatsheet 章节（按选择器稳定性高/中/低分档）。',
       ]"
     >
       <!-- 场景 ①②③④⑤：行/单元格条件样式 + 列对齐 + 数字格式化 + 自定义表头 + 固定列组合（一表演示） -->
@@ -322,7 +320,7 @@ const densityCode = `<ProTable density="compact" :columns="columns" :request-api
       </section>
 
       <!-- 场景 ⑤：密度切换对比（3 个 ProTable 紧邻展示差异） -->
-      <section :id="tocItems[4]!.id" :class="bem.b()">
+      <section :id="tocItems[1]!.id" :class="bem.b()">
         <DemoField
           label="⑤ 密度切换对比：compact / default / loose 三档同列定义并排"
           :code="densityCode"
@@ -347,7 +345,7 @@ const densityCode = `<ProTable density="compact" :columns="columns" :request-api
       </section>
 
       <!-- 场景 ⑥：主题色覆盖（演示独立的作用域样式切换） -->
-      <section :id="tocItems[5]!.id" :class="bem.b()">
+      <section :id="tocItems[2]!.id" :class="bem.b()">
         <DemoField label="⑥ 主题色覆盖：通过 CSS 变量驱动 el-color-primary" :code="themeCode">
           <p :class="bem.e('hint')">
             下方面包屑选择器内的 ProTable 主题色从蓝色切换为红色 —— 通过 BEM 嵌套

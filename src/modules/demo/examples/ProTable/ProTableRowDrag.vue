@@ -12,7 +12,6 @@
  * 2. 拖拽第 1 行到第 3 位 → 弹确认框
  * 3. 点「确定」→ 数据顺序变化；点「取消」→ 顺序不变
  */
-import { ElMessageBox } from 'element-plus'
 import type { ProColumn } from '@/components/ProTable/types'
 import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
@@ -36,13 +35,10 @@ const columns: ProColumn[] = [
 
 const dragConfig = {
   handle: '__drag__',
+  // useConfirm 取消 resolve false、确认 resolve true；与 ElMessageBox 原生 reject cancel 字符串不同
+  // （v3.5 §1.5 全项目规范：业务侧统一 useConfirm，避开 Uncaught (in promise) cancel 噪音）
   onSortChange: async (_newOrder: Record<string, unknown>[]) => {
-    try {
-      await ElMessageBox.confirm('确认调整任务顺序？', '提示')
-      return true
-    } catch {
-      return false
-    }
+    return await useConfirm({ title: '提示', content: '确认调整任务顺序？' })
   },
 }
 

@@ -30,14 +30,14 @@ function onDefaultClick(): void {
     ...defaultLog.value,
     `第 ${defaultClickCount.value} 次触发（${new Date().toLocaleTimeString()}）`,
   ].slice(-8)
-  ElMessage.success(`默认防抖触发（累计 ${defaultClickCount.value} 次）`)
+  ElMessage.success(`默认防抖触发（500ms，累计 ${defaultClickCount.value} 次）`)
 }
 
 // 自定义 1000ms 防抖：customClickCount 仅累加命中次数（无独立 log，演示只用 ElMessage）
 const customClickCount = ref(0)
 function onCustomClick(): void {
   customClickCount.value++
-  ElMessage.success(`1000ms 防抖触发（累计 ${customClickCount.value} 次）`)
+  ElMessage.success(`自定义防抖触发（1000ms，累计 ${customClickCount.value} 次）`)
 }
 
 // 无防抖对比：rawClickCount 累加原始点击次数（每次点击都 +1，不防抖）；
@@ -78,7 +78,7 @@ function onSubmitClick(): void {
     `第 ${submitClickCount.value} 次提交（${new Date().toLocaleTimeString()}）`,
   ].slice(-8)
   submitLoading.value = true
-  ElMessage.success(`submit 防抖触发（累计 ${submitClickCount.value} 次）`)
+  ElMessage.success(`submit 防抖触发（500ms，累计 ${submitClickCount.value} 次）`)
   // 1s 后解除 loading —— 模拟真实接口请求耗时
   setTimeout(() => {
     submitLoading.value = false
@@ -168,7 +168,7 @@ function startInputVsButtonBurst(): void {
       source="src/directives/buttonDebounce.ts"
       :introductions="[
         '全局指令：click 事件防抖触发，默认 500ms（trailing edge）。',
-        '适用场景：submit / 支付 / 短信发送等需要避免快速连点的按钮。',
+        '适用场景：submit（已演示）+ 支付 / 短信发送（待新增 section，避免快速连点）。',
         '与 v-inputDebounce 的差异：click 事件没有中文输入法 composition 问题，实现更简单。',
       ]"
     >
@@ -223,8 +223,10 @@ function startInputVsButtonBurst(): void {
             <p v-if="!rawLog.length" :class="bem.e('log-empty')">（手动连点或点上方一键演示）</p>
           </div>
           <p :class="bem.e('hint')">
-            同样连续点 5 次：回调触发 5 次——这正是 v-buttonDebounce 要避免的场景。 一键演示按
-            300ms/次触发 10 次（合计 3 秒），观察时间戳分布与默认 500ms 防抖按钮的对照差异。
+            同样连续点 5 次：回调触发 5 次——这正是 v-buttonDebounce 要避免的场景。
+            <strong>5 次连点耗时 1.5s（300ms/次）vs 防抖后只触发 1 次（耗时 0.5s 静默期）</strong>
+            ，请求量降低 5 倍。一键演示按 300ms/次触发 10 次（合计 3 秒），观察时间戳分布与默认
+            500ms 防抖按钮的对照差异。
           </p>
         </DemoField>
       </section>
@@ -232,7 +234,7 @@ function startInputVsButtonBurst(): void {
       <!-- submit 模拟 -->
       <section id="demo-submit">
         <DemoField label="实战：连续点击按钮（独立计数演示）" :code="submitCode">
-          <el-button v-buttonDebounce="onSubmitClick" type="primary" :loading="submitLoading">
+          <el-button v-buttonDebounce="onSubmitClick" type="danger" :loading="submitLoading">
             提交订单（防重）
           </el-button>
           <div :class="bem.e('log')">

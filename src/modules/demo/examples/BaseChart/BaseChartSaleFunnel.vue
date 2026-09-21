@@ -99,7 +99,7 @@ const tocItems = [{ id: 'demo-funnel', label: '销售转化漏斗' }]
       :introductions="[
         'funnel 类型是企业转化分析的标配：销售漏斗、用户行为漏斗、招聘流程漏斗。',
         '本演示重点：label 内嵌格式化（绝对值 + 留存率）、tooltip 显示阶段转化率、sort: descending 默认排序。',
-        '刷新数据演示数据响应式；切换指标模式演示 metric 切换触发 tooltip 重渲染（label 保持 retention 不变）。',
+        '刷新数据演示数据响应式；切换指标模式（整体留存率 ↔ 阶段转化率）演示 metric 切换触发 tooltip 重渲染；label 保持 retention 不变，仅 tooltip 文案随 mode 变化。',
       ]"
     >
       <section id="demo-funnel">

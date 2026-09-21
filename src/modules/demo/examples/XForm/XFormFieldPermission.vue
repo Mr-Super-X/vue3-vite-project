@@ -22,7 +22,7 @@
  * - 第二个 XForm 中"权限码-可编辑"字段可正常输入；"权限码-只读"以只读纯文本显示；"权限码-管理员"在 DOM 中不出现
  */
 import { ElMessage } from 'element-plus'
-import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
@@ -145,75 +145,8 @@ function checkDOM() {
   debugInfo.value = `DOM 检查：内部备注${hasInternal ? '存在（hidden 失败）' : '不存在（hidden 成功）'}；管理备注${hasAdmin ? '存在' : '不存在'}`
 }
 
-// ---------- permissionResolver 演示：业务侧权限码 → 三态映射 ----------
-// 模拟业务侧 useAuth().hasPerm 封装：当前 mock 用户拥有的权限（仅 'user.edit' / 'order.view'）
-function mockHasPerm(perm: string): boolean {
-  const ownedPerms = new Set(['user.edit', 'order.view'])
-  return ownedPerms.has(perm)
-}
-
-// 业务侧把权限码映射为三态：拥有权限 → edit；只读权限 → view；无权限 → hidden
-// 这是 XFormProps.permissionResolver 的标准注入形态（参考 types/xform.ts 阶段 2.3 契约）
-const permissionResolver = (perm: string): 'view' | 'edit' | 'hidden' => {
-  if (perm.endsWith('.edit')) return mockHasPerm(perm) ? 'edit' : 'hidden'
-  if (perm.endsWith('.view')) return 'view'
-  return 'hidden' // 未识别权限码 → 兜底隐藏（最保守的可见策略）
-}
-
-// 关键代码片段（用于 DemoField 展示）
-const resolverCode = `// 业务侧把 useAuth().hasPerm 封装注入 XForm
-// permission 字符串字面量（如 'user.edit'）会作为权限码传入 resolver
-const permissionResolver = (perm) => {
-  if (perm.endsWith('.edit')) return hasPerm(perm) ? 'edit' : 'hidden'
-  if (perm.endsWith('.view')) return 'view'
-  return 'hidden'  // 未识别权限码 → 兜底隐藏
-}
-
-<XForm :permission-resolver="permissionResolver" :schema="schema" :model="model" />`
-
-// 第二个 XForm 实例：演示权限码 → resolver 映射
-const formRef2 = ref<XFormExpose | null>(null)
-
-const schemaWithCodes: SchemaNode = {
-  column: 2,
-  row: { gutter: 24 },
-  children: [
-    {
-      // 权限码形式：当前用户拥有 'user.edit' → resolver 返回 'edit'（可编辑）
-      name: 'editByCode',
-      label: '权限码-可编辑',
-      component: 'Input',
-      permission: 'user.edit',
-      defaultValue: '可编辑字段',
-    },
-    {
-      // 权限码形式：'order.view' 走 .view 后缀 → resolver 返回 'view'（只读纯文本）
-      name: 'viewByCode',
-      label: '权限码-只读',
-      component: 'Input',
-      permission: 'order.view',
-      defaultValue: '只读字段',
-    },
-    {
-      // 权限码形式：当前用户无 'admin.delete' → resolver 返回 'hidden'（不渲染）
-      name: 'adminByCode',
-      label: '权限码-管理员',
-      component: 'Input',
-      permission: 'admin.delete',
-      defaultValue: '此字段不渲染',
-    },
-  ],
-}
-
-const model2 = reactive<Record<string, unknown>>({
-  editByCode: '可编辑字段',
-  viewByCode: '只读字段',
-  adminByCode: '此字段不渲染',
-})
-
 const tocItems = [
   { id: 'demo-field-permission', label: '权限演示' },
-  { id: 'demo-permission-resolver', label: 'permissionResolver 注入' },
   { id: 'api-permission', label: 'permission 字段' },
 ]
 </script>
@@ -252,35 +185,16 @@ const tocItems = [
         </DemoField>
       </section>
 
-      <section id="demo-permission-resolver">
-        <DemoField label="permissionResolver 注入" :code="resolverCode">
-          <div :class="bem.b()">
-            <div :class="bem.e('resolver-section')">
-              <XForm
-                ref="formRef2"
-                :schema="schemaWithCodes"
-                :model="model2"
-                :permission-resolver="permissionResolver"
-              />
-              <p :class="bem.e('resolver-hint')">说明：</p>
-              <ul :class="bem.e('resolver-list')">
-                <li>
-                  <code>user.edit</code>
-                  → 当前用户拥有 → edit 态（可编辑）
-                </li>
-                <li>
-                  <code>order.view</code>
-                  → 只读权限 → view 态（纯文本）
-                </li>
-                <li>
-                  <code>admin.delete</code>
-                  → 无权限 → hidden 态（不渲染）
-                </li>
-              </ul>
-            </div>
-          </div>
-        </DemoField>
-      </section>
+      <el-alert type="info" :closable="false" show-icon :class="bem.e('cross-link')">
+        <template #title>
+          <router-link to="/demo/xform-field-permission-resolver">
+            permissionResolver 注入演示（业务侧权限码 → 三态映射）
+          </router-link>
+          已拆分为独立 demo，参见
+          <code>XFormFieldPermissionResolver.vue</code>
+          。
+        </template>
+      </el-alert>
 
       <ApiTable
         title="permission 字段 + permissionResolver 注入"
@@ -309,20 +223,27 @@ const tocItems = [
     margin-top: 8px;
     color: #409eff;
   }
-  &__resolver-section {
-    margin-top: 8px;
-  }
-  &__resolver-hint {
-    margin-top: 12px;
-    color: #303133;
-    font-weight: 500;
-  }
-  &__resolver-list {
-    margin-top: 8px;
-    padding-left: 20px;
-    color: #606266;
-    line-height: 1.8;
-    list-style: disc;
+  // 拆分后的 cross-link 提示（V3.6-42 refactor）
+  &__cross-link {
+    margin-top: 16px;
+
+    a {
+      color: var(--el-color-primary);
+      font-weight: 600;
+      text-decoration: none;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+
+    code {
+      padding: 1px 4px;
+      background: var(--el-fill-color-light);
+      border-radius: 2px;
+      font-family: monospace;
+      font-size: 12px;
+    }
   }
 }
 

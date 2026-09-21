@@ -465,8 +465,11 @@ const tocItems = [
                   <strong>dependsOnMap</strong>
                   <p>目标字段 → 它依赖哪些字段（正向链）</p>
                   <p :class="bem.e('card-size')">
-                    {{ indexSnapshot.dependsOnMap.length }} 条依赖条目（数组，源于
-                    dependsOnMap.entries()）
+                    {{ indexSnapshot.dependsOnMap.length }}
+                    条依赖条目（注意：indexSnapshot.dependsOnMap 是
+                    <code>Array.from(dependsOnMap.value.entries())</code>
+                    转换后的数组；原始 dependsOnMap 是 Map，用 .size 看节点数；此处 length
+                    表示「目标字段数」，不是 schema 字段总数）
                   </p>
                 </div>
               </div>

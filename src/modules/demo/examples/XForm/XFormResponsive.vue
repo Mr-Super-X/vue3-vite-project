@@ -195,9 +195,9 @@ const tocItems = [
             </div>
             <div>
               <strong>说明:</strong>
-              请
-              <strong>调整浏览器窗口宽度</strong>
-              ,观察:
+              切换
+              <code>mode (schema ref)</code>
+              可观察响应式；当前 XForm 不支持 viewport resize 自动重渲染。
               <ul>
                 <li>
                   <strong>字段间距</strong>
@@ -212,7 +212,8 @@ const tocItems = [
                   :col.responsive 控制 span(xs=24 占满 / md=6 占 1/4)
                 </li>
               </ul>
-              resize 后立即可见字段间距和对齐方式变化。
+              当前 XForm 已知限制：el-row / el-col 不自动监听 viewport resize（v3.5 集成中），需
+              DevTools 切 viewport 断点 + 刷新页面才能看到 gutter/span 变化。
             </div>
             <ModelPreview :model="model" />
           </div>

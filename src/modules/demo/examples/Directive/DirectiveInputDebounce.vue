@@ -99,7 +99,7 @@ const tocItems = [
   { id: 'demo-default', label: '默认 300ms 防抖' },
   { id: 'demo-custom', label: '自定义延迟' },
   { id: 'demo-compare', label: '对比：无防抖' },
-  { id: 'demo-composition', label: '中文输入法处理' },
+  { id: 'demo-composition', label: '中文输入法（composing）' },
   { id: 'api-binding', label: 'Binding 类型' },
 ]
 
@@ -134,7 +134,7 @@ const customDebounceCode = `<el-input v-inputDebounce:500="onSearch" v-model="ke
 const rawInputCode = `<el-input
   :model-value="searchRaw"
   @input="
-    (v: string) => {
+    (v: string | number) => {
       searchRaw = v
       onSearchRaw(v)
     }
@@ -143,7 +143,9 @@ const rawInputCode = `<el-input
 
 const compositionCode = `<el-input v-inputDebounce="onSearch" v-model="keyword" />
 // 内部：compositionstart → composing=true 跳过回调
-//       compositionend  → composing=false 主动 dispatch input 触发一次回调`
+//       compositionend  → composing=false 主动 dispatch input 触发一次回调
+//       （compositionend 时 input.value 已变更但 input 事件被前面的 composing=true 跳过，
+//         手动 dispatch input 是为了让 onSearch 收到一次回调以同步 v-model，避免最后一字丢失）`
 </script>
 
 <template>
@@ -221,8 +223,42 @@ const compositionCode = `<el-input v-inputDebounce="onSearch" v-model="keyword" 
           <p :class="bem.e('hint')">
             对照量化：在两个输入框分别连续输入「abcdefghij」10 字符，
             <strong>原始 input 次数都是 10</strong>
-            ，但 300ms 防抖命中次数通常多于 500ms 防抖 （停顿少时差异最明显，例如 300ms 命中 4 次 vs
+            ，但 300ms 防抖命中次数通常多于 500ms 防抖（停顿少时差异最明显，例如 300ms 命中 4 次 vs
             500ms 命中 2 次）。
+          </p>
+          <table :class="bem.e('timing-table')">
+            <thead>
+              <tr>
+                <th>输入节奏</th>
+                <th>字符数</th>
+                <th>300ms 防抖命中</th>
+                <th>500ms 防抖命中</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>连续快打（&lt; 200ms/字符）</td>
+                <td>10</td>
+                <td>4</td>
+                <td>2</td>
+              </tr>
+              <tr>
+                <td>间隔均匀（≈ 300ms/字符）</td>
+                <td>10</td>
+                <td>2</td>
+                <td>1</td>
+              </tr>
+              <tr>
+                <td>打字慢速（&gt; 500ms/字符）</td>
+                <td>10</td>
+                <td>1</td>
+                <td>1</td>
+              </tr>
+            </tbody>
+          </table>
+          <p :class="bem.e('hint')">
+            表格数值基于「连续输入后停顿不超过延迟」的最坏情况估算——实际命中数取决于停顿频率，
+            停顿越多命中次数越接近 1。
           </p>
         </DemoField>
       </section>
@@ -303,6 +339,14 @@ const compositionCode = `<el-input v-inputDebounce="onSearch" v-model="keyword" 
             验证方法：把中文输入法打开，输入「zhongwen」——拼音过程不会触发回调日志，
             汉字上屏（composing 结束）才触发一次。这是 v-inputDebounce 与原生 input 防抖的关键差异。
             无 IME 环境可点「模拟 composition 事件」按钮，等价验证 composing 状态切换逻辑。
+            <br />
+            <strong>自动化测试限制：</strong>
+            此验证需真人中文输入法（系统级 IME）。jsdom / VTU 不支持 composition 事件序列化，
+            <code>@vue/test-utils</code>
+            的
+            <code>trigger('compositionend')</code>
+            在本指令的 BFS 查找 INPUT 子元素路径下行为不稳定，单元测试只覆盖「不防抖时 callback
+            立即触发」基础路径，composing 跳过逻辑依赖手动 / 浏览器 E2E 验证。
           </p>
         </DemoField>
       </section>
@@ -398,6 +442,32 @@ const compositionCode = `<el-input v-inputDebounce="onSearch" v-model="keyword" 
   &__simulate-hint {
     font-size: 12px;
     color: var(--el-text-color-secondary);
+  }
+
+  // 300ms vs 500ms 防抖命中数对照表（V3.6-22 design fix）
+  &__timing-table {
+    margin-top: 12px;
+    width: 100%;
+    max-width: 560px;
+    border-collapse: collapse;
+    font-size: 12px;
+
+    th,
+    td {
+      padding: 6px 10px;
+      border: 1px solid var(--el-border-color-lighter);
+      text-align: left;
+    }
+
+    th {
+      background: var(--el-fill-color-light);
+      font-weight: 600;
+      color: var(--el-text-color-primary);
+    }
+
+    td {
+      color: var(--el-text-color-regular);
+    }
   }
 }
 </style>

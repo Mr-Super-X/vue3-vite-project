@@ -23,6 +23,12 @@ import { summaryConfigItems, summaryColumnItems } from './configs/protable-demos
 
 const bem = createNamespace('demo-pro-table-summary')
 
+/**
+ * 本地 Order interface 与 mock 模块独立：mock 模块（@mock/pro-table/summary-orders）
+ * 未导出 Order 类型（mock 仅暴露 requestApi 返回 Record<string, unknown>[]），
+ * 为 ProColumn<Order> 泛式强类型推导 + 业务可读性，按需保留独立 interface。
+ * 不要反向去 mock 模块加 Order 类型导出（会破坏 mock 与其他 demo 共享的「字段弱类型」契约）。
+ */
 interface Order {
   id: number
   product: string

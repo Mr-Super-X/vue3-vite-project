@@ -39,6 +39,7 @@ const FIELD_COUNT_OPTIONS = [30, 120, 300] as const
 const currentFieldCount = ref<number>(FIELD_COUNT_OPTIONS[1])
 const mountTime = ref<number>(0)
 const buildTime = ref<number>(0)
+const inputLatency = ref<number>(0)
 
 function buildSchema(count: number): SchemaNode {
   const children: SchemaNode[] = []
@@ -118,6 +119,23 @@ function perfLevel(ms: number): { label: string; type: 'success' | 'warning' | '
   return { label: '需优化（> 500ms）', type: 'danger' }
 }
 
+/**
+ * 测量 input latency：在第一个字段（f0）连续模拟输入 100 字符，
+ * 记录每字符平均 onInput 回调耗时（ms/字符）。
+ * > 5 ms 即可感知卡顿，> 16 ms 即掉帧（60Hz）。
+ */
+async function measureInputLatency(): Promise<void> {
+  const samples: number[] = []
+  for (let i = 0; i < 100; i++) {
+    const t0 = performance.now()
+    // 直接写 model 触发响应式更新链（与 el-input 真实输入等价，触发 watch / validate）
+    model[`f${i % Math.max(currentFieldCount.value, 1)}`] = `v-${i}`
+    await nextTick()
+    samples.push(performance.now() - t0)
+  }
+  inputLatency.value = samples.reduce((a, b) => a + b, 0) / samples.length
+}
+
 const tocItems = [
   { id: 'demo-large-schema', label: '性能演示' },
   { id: 'perf-baseline', label: '性能基准对照' },
@@ -181,8 +199,15 @@ const tocItems = [
               <el-button type="primary" @click="onSave">
                 保存（全量校验 {{ currentFieldCount }} 字段）
               </el-button>
+              <el-button @click="measureInputLatency">测量 input latency</el-button>
               <el-button @click="copySchema">复制 schema</el-button>
             </div>
+            <p v-if="inputLatency > 0" :class="bem.e('latency')">
+              <strong>input latency:</strong>
+              连续输入 100 字符 → 平均 onInput 回调耗时
+              <code>{{ inputLatency.toFixed(2) }} ms / 字符</code>
+              （生产可接受阈值 &lt; 5 ms；&gt; 16 ms 即掉帧）
+            </p>
           </div>
           <ModelPreview
             :model="model"

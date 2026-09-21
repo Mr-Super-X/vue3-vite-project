@@ -158,7 +158,7 @@ const tocItems = [
             <el-radio-button value="literal_false">字面量 false</el-radio-button>
             <el-radio-button value="fn">函数</el-radio-button>
             <el-radio-button value="expr">
-              <span v-pre>{{ fn }}</span>
+              <code>{{ '{' }}{{ '{' }} fn {{ '}' }}{{ '}' }}</code>
               表达式
             </el-radio-button>
           </el-radio-group>

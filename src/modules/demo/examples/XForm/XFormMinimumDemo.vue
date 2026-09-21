@@ -67,7 +67,7 @@ const tocItems = [
         <XForm ref="formRef" :schema="schema" :model="model" />
         <div :class="bem.e('actions')">
           <el-button @click="onReset">重置</el-button>
-          <el-button type="primary" @click="onSave">提交</el-button>
+          <el-button type="primary" @click="onSave">保存</el-button>
           <el-button @click="copySchema">复制 schema</el-button>
         </div>
         <ModelPreview :model="model" />

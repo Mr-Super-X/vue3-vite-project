@@ -60,6 +60,7 @@ const tocItems = [{ id: 'demo-in-dialog', label: 'BaseChart 嵌入 ProDialog' }]
       :introductions="[
         '企业常见：详情弹窗看图表、审批弹窗展示历史趋势、报告预览。',
         'BaseChart 嵌入 ProDialog 时，弹窗拉伸 / 全屏切换 → ResizeObserver 自动 resize；弹窗关闭 → BaseChart 卸载 → dispose 清理。',
+        'ProDialog 通过 props.draggable 启用拖拽（v-draggable 指令实现，含边界钳制，详见 src/components/common/ProDialog/ProDialog.vue:63 + draggable.ts）。',
         '验证重点：拖拽弹窗右边缘 → 图表跟随放大；反复打开 / 关闭 → DevTools 内存不单调上涨。',
       ]"
     >

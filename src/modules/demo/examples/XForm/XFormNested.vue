@@ -188,6 +188,16 @@ const tocItems = [
           <el-button @click="onReset" class="mt-2">重置</el-button>
           <el-button @click="copySchema" class="mt-2">复制 schema</el-button>
           <ModelPreview :model="model" />
+          <p :class="bem.e('hint')">
+            <strong>嵌套 FormItem 边界验证：</strong>
+            1) 在「昵称」字段输入
+            <code>plain text</code>
+            等非法值（含空格 / 特殊字符）→ 2) 观察 XForm 控制台或保存时
+            <code>formRef.validate()</code>
+            返回值：
+            <code>{ nickname: '昵称格式不合法' }</code>
+            → 3) 错误信息按字段路径返回，可直接用于 el-form-item error-message 渲染。
+          </p>
         </DemoField>
       </section>
 
