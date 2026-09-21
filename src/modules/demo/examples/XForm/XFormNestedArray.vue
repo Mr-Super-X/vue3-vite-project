@@ -177,11 +177,10 @@ function onReset() {
 
 /** 路径前缀化自检：渲染后 el-form-item 的 prop 应为 orders[0].items[0].product 等 */
 function onCheckPath() {
-  const elFormRef = formRef.value as unknown as {
-    getRef?: (key: string) => HTMLElement | null
-  } | null
+  // getRef 是 XFormExpose 的合法公共方法（见 types/xform.ts:202）：
+  //   getRef(key: string): ComponentPublicInstance | HTMLElement | null
   // 通过 getRef 拿到 el-form DOM，从 data-prop 属性读取 prop 路径
-  const elForm = elFormRef?.getRef?.('elFormRef')
+  const elForm = formRef.value?.getRef?.('elFormRef') as HTMLElement | undefined
   const formItems = elForm ? Array.from(elForm.querySelectorAll('.el-form-item')) : []
   const propPaths = formItems.map((fi) => (fi as HTMLElement).dataset.prop ?? '')
   ElMessage({

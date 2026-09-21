@@ -149,6 +149,14 @@ const tocItems = [
             <strong>进度</strong>
             ：见 use-async-options.ts 内部 issues 跟踪；本 demo 不演示该字段实际行为。
           </p>
+          <p>
+            <strong>Backlog</strong>
+            ：见
+            <code>.claude/.agent-reports/2026-09-21-p1-high-checklist.json</code>
+            第 27 项 +
+            <code>use-async-options.ts</code>
+            内部 comments。
+          </p>
         </el-collapse-item>
       </el-collapse>
       <ApiTable

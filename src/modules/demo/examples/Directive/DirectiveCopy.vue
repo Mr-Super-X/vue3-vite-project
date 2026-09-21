@@ -39,6 +39,32 @@ function copyTimestamp(): string {
 // 空内容
 const EMPTY_TEXT = ''
 
+/* ───── 强制降级验证（P1H-6：可执行降级路径） ───────────── */
+// 当前是否处于强制降级状态（用户点击「强制降级」后为 true）
+const isDegradedForced = ref(false)
+// 当前 window.isSecureContext 真实值（响应式追踪，配合强制降级按钮实时刷新）
+const currentSecureContext = ref(window.isSecureContext)
+
+/** 用 Object.defineProperty 把只读的 window.isSecureContext 强制改写为 false，
+ * 模拟 HTTP 部署场景。注意：必须用 configurable: true 才能被 resetSecureContext 还原。 */
+function forceDegrade(): void {
+  Object.defineProperty(window, 'isSecureContext', { value: false, configurable: true })
+  isDegradedForced.value = true
+  currentSecureContext.value = false
+  ElMessage.warning('已强制 isSecureContext=false，复制将走 textarea 降级路径')
+}
+
+/** 还原 window.isSecureContext 为初始真实值（devTools 加载页面时的真实状态） */
+function resetSecureContext(): void {
+  // 真实环境的 isSecureContext 无法被还原（浏览器原生只读）；
+  // 但 Object.defineProperty 改过的属性可以通过 delete + 重新 define 还原
+  // 此处直接恢复为 true —— 因为 Object.defineProperty 拦截了原型 getter，真实值已经丢失
+  Object.defineProperty(window, 'isSecureContext', { value: true, configurable: true })
+  isDegradedForced.value = false
+  currentSecureContext.value = true
+  ElMessage.success('已还原 isSecureContext=true')
+}
+
 const tocItems = [
   { id: 'demo-static', label: '静态字符串' },
   { id: 'demo-ref', label: '响应式 ref' },
@@ -145,6 +171,21 @@ const degradeCode = `// 1. secure context + clipboard API 可用 → navigator.c
             <code>navigator.clipboard === undefined</code>
             ，指令自动走 textarea 降级路径。
           </p>
+          <!-- 强制降级验证：用 Object.defineProperty 改写只读属性，模拟 HTTP 部署环境 -->
+          <div :class="bem.e('degrade-actions')">
+            <el-button type="warning" @click="forceDegrade">
+              强制降级（isSecureContext=false）
+            </el-button>
+            <el-button @click="resetSecureContext">还原</el-button>
+            <el-button v-copy="'降级路径验证文本'" type="primary" :disabled="!isDegradedForced">
+              点击复制（降级路径走 textarea）
+            </el-button>
+          </div>
+          <p :class="bem.e('hint')">
+            当前 isSecureContext：
+            <code>{{ currentSecureContext }}</code>
+            <span v-if="isDegradedForced" :class="bem.e('badge')">已强制降级</span>
+          </p>
         </DemoField>
       </section>
 
@@ -181,6 +222,22 @@ const degradeCode = `// 1. secure context + clipboard API 可用 → navigator.c
       font-family: monospace;
       font-size: 12px;
     }
+  }
+
+  &__degrade-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+
+  &__badge {
+    margin-left: 8px;
+    padding: 1px 6px;
+    background: var(--el-color-warning);
+    color: #fff;
+    border-radius: 3px;
+    font-size: 11px;
   }
 }
 </style>

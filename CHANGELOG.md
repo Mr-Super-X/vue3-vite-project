@@ -2,6 +2,26 @@
 
 ## 未发布
 
+### 🐞 Fix | v3.6 D 阶段审计 P1 HIGH 重度 4 条修复 + 1 误报
+
+> D 阶段深度审计 27 条 HIGH 中 14 条简单 + 8 条中度已修，本批修 5 条重度。其中 P1H-1 为 Agent 误报（dashboardRef 实际已正确声明并被使用），其余 4 条完成。
+
+- **`DirectiveCopy.vue`**（P1H-6）：新增 `forceDegrade()`（`Object.defineProperty(window,'isSecureContext',{value:false,configurable:true})`）+ `resetSecureContext()` + 第三个复制按钮（强制降级态下走 textarea 兜底路径）+ `currentSecureContext` / `isDegradedForced` 响应式追踪 + BEM `__degrade-actions` / `__badge` 样式——降级原理终于可执行验证
+- **`XFormNestedArray.vue`**（P1H-20）：删除不安全 `as unknown as { getRef?: ... }` 断言；改为 `formRef.value?.getRef?.('elFormRef') as HTMLElement | undefined` 直接走 XFormExpose 合法公共方法（`types/xform.ts:202` 签名）+ JSDoc 注释说明
+- **`XFormReactionAdvanced.vue`**（P1H-24）：原文件 427 行 → 135 行导航总览页（4 个 Overview 卡片 + el-link 跳转）+ **新建 4 个子 demo 文件（每个 < 200 行）**：
+  - `XFormReactionCalcField.vue`（149 行，① 计算字段：数量×单价×折扣）
+  - `XFormReactionCascadeClear.vue`（189 行，② 级联清空：省/市/区 + 商品/型号）
+  - `XFormReactionReactiveProps.vue`（181 行，③ 反应式 props/rules/options 联动：度量单位切换）
+  - `XFormReactionArrayRow.vue`（190 行，④ 数组行内嵌 reaction：每行数量×单价=小计 + 含税切换）
+  - 子 demo 路由由 `routes/index.ts:40-46` 自动 glob 扫描注册（无需手改路由表）
+- **`XFormAsyncOptionsError.vue`**（P1H-27）：el-collapse「进度」段后新增「Backlog」段落，指向 checklist JSON 第 27 项 + `use-async-options.ts` 内部 comments 跟踪位置
+
+**误报说明（P1H-1）**：
+- Agent D-1 + P1H 报告均称「dashboardRef 模板未绑定」——实际 `BaseChartDashboard.vue:115` 已 `const dashboardRef = ref<HTMLElement | null>(null)`，template line 194 `ref="dashboardRef"` 已绑定，`toggleFullscreen` line 130/133 读取 `dashboardRef.value`——**链路完整无 bug**
+- 后续审计应更精确地标注「疑似问题」而非直接「模糊」HIGH级结论
+
+---
+
 ### 🐞 Fix | v3.6 D 阶段审计 P1 HIGH 中度 8 条修复（6 个 demo）
 
 > D 阶段深度审计 27 条 HIGH 中 14 条简单已修（P1H batch1），本批修 8 条中度 design。剩余 5 条 batch3 重度需独立 plan。
