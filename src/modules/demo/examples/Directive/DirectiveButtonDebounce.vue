@@ -156,7 +156,7 @@ const submitCode = `<el-button v-buttonDebounce="handleSubmit">提交订单</el-
 
       <!-- submit 模拟 -->
       <section id="demo-submit">
-        <DemoField label="实战：模拟表单提交" :code="submitCode">
+        <DemoField label="实战：按钮防重（连续点击只触发 1 次回调）" :code="submitCode">
           <el-button v-buttonDebounce="onSubmitClick" type="primary" :loading="false">
             提交订单（防重）
           </el-button>

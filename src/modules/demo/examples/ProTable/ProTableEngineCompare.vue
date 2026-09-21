@@ -11,7 +11,13 @@
  * 1. 左侧 el-table / 右侧 vxe-table 均正常渲染 12 行订单（分页各 10 行）
  * 2. 点两侧「金额」表头 → 均触发服务端排序（Network 带 orderByColumn=amount）
  * 3. 勾选两侧复选框 → selection-change 行集合一致（vxe 分支合并 checkbox-change/checkbox-all）
- * 4. vxe 引擎不支持树形 / 行拖拽（启动 console.warn 并忽略），本 demo 不演示
+ *
+ * 引擎能力说明（v3.5 PR1-B 后双引擎对齐）：
+ * - 排序：双引擎均支持（已演示步骤 2）
+ * - 多选：双引擎均支持（已演示步骤 3）
+ * - 树形：双引擎均支持（v3.5 PR1-B 后 vxe 引擎补齐，参见 demo-tree-drag-compare 演示）
+ * - 行拖拽：双引擎均支持（v3.5 PR1-B 后 vxe 引擎补齐）
+ * - vxe 引擎加载失败自动回退 element-plus（engine-fallback）
  */
 import type { ProColumn } from '@/components/ProTable/types'
 import DocLayout from '../../layouts/DocLayout.vue'

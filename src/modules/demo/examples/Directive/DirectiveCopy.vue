@@ -30,6 +30,8 @@ function regenerateOrderId(): void {
 }
 
 // 动态函数：每次点击实时求值
+// 关键：函数体可同时返回 + 写副作用（更新 lastTimestamp.value）——
+// v-copy 的回调接住返回值后,ElMessage 会展示「复制了 lastTimestamp」，与下方「上次复制时间戳」状态联动。
 const lastTimestamp = ref('')
 function copyTimestamp(): string {
   const now = new Date().toISOString()
@@ -65,7 +67,7 @@ const staticCode = `<el-button v-copy="'客服电话：400-100-1001'">复制客�
 const refCode = `<el-input v-model="orderId" />
 <el-button v-copy="orderId">复制订单号</el-button>`
 
-const functionCode = `<el-button v-copy="() => new Date().toISOString()">复制当前时间戳</el-button>`
+const functionCode = `<el-button v-copy="() => { const now = new Date().toISOString(); /* 可在函数体内写副作用 */; return now }">复制当前时间戳</el-button>`
 
 const emptyCode = `<el-button v-copy="">复制空字符串</el-button>`
 

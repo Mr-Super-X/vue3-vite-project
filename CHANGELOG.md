@@ -2,6 +2,23 @@
 
 ## 未发布
 
+### 🐞 Fix | v3.6 D 阶段审计 P0 CRITICAL 简单 4 条修复
+
+> D 阶段深度审计（66 demo / 88 条问题）发现 8 条 CRITICAL。本次修其中 4 条简单修改（5 条已在之前会话修复或 P0-5 ProTableStyleOverride 顶部说明已在 P1R-8 修复）。
+
+- **XFormResponsive.vue**：① 头部注释明确「v3.5 已知限制：运行时 resize 字段布局不会实时变化（XForm 暂未集成 useResizeObserver）」+ 验证方式改为「DevTools 切 viewport 断点 + 刷新页面」 ② introductions 第 3 条加 ⚠️ 警告——消除「声称支持 viewport resize 但运行时无变化」的演示与文档不符
+- **ProTableEngineCompare.vue**：① 顶部 docstring 步骤 4 删除「vxe 不支持树形/行拖拽」错误描述（v3.5 PR1-B 后已支持）② 新增「引擎能力说明」section，明确双引擎在排序/多选/树形/行拖拽 4 项能力上均已对齐 + 指出 vxe 加载失败自动回退（engine-fallback）
+- **DirectiveCopy.vue**：① `copyTimestamp` 函数体加注释说明「可在函数体内写副作用」并与下方「上次复制时间戳」状态联动 ② `functionCode` SNIPPET 改为「const now = ...; 可在函数体内写副作用; return now」，与真实实现对齐
+- **DirectiveButtonDebounce.vue**：① DemoField label 「实战：模拟表单提交」→「实战：按钮防重（连续点击只触发 1 次回调）」——消除「title 与实现严重脱节」CRITICAL（实现仅 counter+toast，无 setTimeout/loading/失败重试）
+
+**跳过（设计性问题，需重构）**：
+- DirectiveCopy「降级原理」section 加可执行验证按钮（需交互设计）
+- DirectiveDraggable「边界钳制」加 SVG 交互面板（需 SVG 设计）
+- XFormBuilder 拆分 3 文件（需整体重构）
+- XFormUpload 拆分 2 文件（需整体重构）
+
+---
+
 ### 📝 Docs | v3.5 末次审计 P1 剩余 HIGH 排查结论
 
 > 重盘点发现 63 条 HIGH，实际属于「P1R-9~12 已修（45 条）+ ALIAS-4 已修（14 条）」Agent 滞后报告。真正剩余未修 HIGH 仅 6 条，其中 4 条为设计性问题需重构，2 条为设计性故意保留。
