@@ -4,7 +4,7 @@
  * 设计要点：
  *   - visitedViews: 已访问路由的 UI 渲染列表（按访问顺序）
  *   - cachedViews: 实际进入 keep-alive 的 name 列表（与 visitedViews 同步，但排除已关闭的非 affix）
- *   - affix: meta.affix === true 的路由（如 Home）始终保留，用户无法关闭
+ *   - affix: meta.affix === true 的路由（如 Workbench 工作台首页）始终保留，用户无法关闭
  *   - 不持久化：避免换账号看到上个账号的 tab（设计取舍）
  *
  * 路由参数变化策略（如 /user/1 → /user/2）：
@@ -34,21 +34,29 @@ export interface TagView {
 }
 
 /**
- * 不出现在多页签的系统页路由名。
+ * 不出现在多页签的路由名。
  *
- * 业务背景：Login（blank layout，无侧边栏上下文）与 403/404/500（全屏裸路由）
- * 出现在多页签中没有承载意义。守卫跳转登录页（未登录 redirect / 退出登录）时
- * afterEach 仍会触发并把 Login 加入页签，必须在此显式排除——这正是 toTag 注释
- * 声明"排除白名单本身"但实现遗漏的部分。
+ * 分两类：
+ *   - 系统页：Login（blank layout，无侧边栏上下文）与 403/404/500（全屏裸路由），
+ *     出现在多页签中没有承载意义。守卫跳转登录页（未登录 redirect / 退出登录）时
+ *     afterEach 仍会触发并把 Login 加入页签，必须在此显式排除——这正是 toTag 注释
+ *     声明"排除白名单本身"但实现遗漏的部分。
+ *   - Home：portal 落地页，经顶部导航/Logo 返回即可，无页签上下文切换需求，
+ *     产品决策刻意完全排除（含其曾标记的 affix 固定形态）。
  *
  * 不复用守卫白名单 isWhiteListed 的原因：dev 模式白名单包含全部 demo 路由名
  * （demo 页免登录但属正常业务页，页签应正常展示），按白名单过滤会误伤 demo 页签。
+ *
+ * 注意：本名单仅约束 toTag（afterEach 动态加入路径）。affix 预置走
+ * filterAffixRoutes 直读路由表，不经 toTag——若给上述路由配 meta.affix，
+ * 仍会被 TagsView 初始化钉进页签，两处需同步维护。
  */
 const NO_TAGS_ROUTE_NAMES: ReadonlySet<string> = new Set([
   'Login', // 登录页（blank layout）
   'Forbidden', // 403 无权限
   'NotFound', // 404 页面
   'ServerError', // 500 页面
+  'Home', // 首页（portal 落地页，产品决策排除，见上方注释）
 ])
 
 /**

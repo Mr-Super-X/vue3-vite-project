@@ -116,8 +116,10 @@ function countComposables(): number {
 /**
  * 数 form-schema 全目录 spec 文件（composables + components + adapters + utils + 根级）
  *
- * 当前 62 个：composables 49（47 实现各 1 + barrel.spec + cross-rule-runner.spec）
- * + components 5 + adapters 1 + utils 4 + 根级 3。docs/25 TL;DR 与 ARCHITECTURE.md §9.1 表「合计」行写 62。
+ * 当前 65 个：composables 51（49 实现各 1 + barrel.spec + cross-rule-runner.spec）
+ * + components 5 + adapters 1 + utils 5 + 根级 3。docs/25 TL;DR 与 ARCHITECTURE.md §9.1 表「合计」行写 65。
+ * 2026-09-21 再锚定：fdc5809 批次 +3（render-tabs-steps-node / use-model-expression-rerender /
+ * use-scan-async-options 各 1）。
  */
 function countSpecFiles(): number {
   const dirs = ['composables', 'components', 'adapters', 'utils']
@@ -244,23 +246,29 @@ const checks: Check[] = [
     tolerance: 0,
   },
   {
-    // ARCHITECTURE.md 头部写「一文件一能力（47 个）」含 barrel.ts；本函数排除 barrel 数实现文件 = 46
+    // ARCHITECTURE.md 头部写「一文件一能力（50 个）」含 barrel.ts；本函数排除 barrel 数实现文件 = 49。
+    // 2026-09-21 再锚定：fdc5809 批次 +3（render-tabs-steps-node / use-model-expression-rerender / use-scan-async-options）。
     name: 'composable 文件数 (ARCHITECTURE.md §1.1 目录树)',
     actual: countComposables,
-    expected: 46,
+    expected: 49,
     tolerance: 2,
   },
   {
-    // 62 = ARCHITECTURE.md §9.1 表合计行 + docs/25 TL;DR（2026-09-18 Wave3-3 +1 cross-rule-runner.spec）
+    // 65 = ARCHITECTURE.md §9.1 表合计行 + docs/25 TL;DR（2026-09-21 再锚定，构成见 countSpecFiles 注释）
     name: 'spec 文件数 (ARCHITECTURE.md §9.1 表格)',
     actual: countSpecFiles,
-    expected: 62,
+    expected: 65,
     tolerance: 2,
   },
   {
+    // 2026-09-21 再锚定 285→300（容差 50 → 250-350）：Wave4 能力装配使 composer 达 350（split 计数），
+    // 增量来自 composition root 的接线（useModelExpressionRerender + modelExpressionEpoch /
+    // showDirtyMark / permissionResolver 条件展开），非业务逻辑膨胀。
+    // 已贴近上限：下次增长应先抽离 cross-field 编排块（composer 内约 30 行，含 resetFields tick 包装），
+    // 而非继续放宽阈值。
     name: 'use-xform-composer.ts 行数 (顶层编排膨胀预警)',
     actual: () => countLines('src/components/form-schema/composables/use-xform-composer.ts'),
-    expected: 285,
+    expected: 300,
     tolerance: 50,
   },
   {

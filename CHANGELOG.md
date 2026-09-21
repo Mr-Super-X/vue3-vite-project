@@ -2,6 +2,28 @@
 
 ## 未发布
 
+### 🔧 Chore | check:doc-currency 阈值再锚定（13 项全过）
+
+> 3 项校验失败系 `fdc5809`（form-schema 引擎多批次能力升级）提交时未同步文档阈值所致，属历史遗留漂移，非本次代码改动引入。
+
+- composable 文件数 46→49（+3：render-tabs-steps-node / use-model-expression-rerender / use-scan-async-options，fdc5809 批次）
+- spec 文件数 62→65（+3：上述 3 个新 composable 各配 1 spec；utils 4→5）
+- use-xform-composer.ts 行数上限 285→300（容差 50 → 250-350）：Wave4 能力装配使 composer 达 350 行（split 计数），增量为 composition root 接线（useModelExpressionRerender + modelExpressionEpoch / showDirtyMark / permissionResolver 条件展开），非业务逻辑膨胀。**已贴近上限：下次增长应先抽离 cross-field 编排块（composer 内约 30 行，含 resetFields tick 包装），而非继续放宽阈值**
+- 同步更新：`scripts/check-doc-currency.ts` 阈值与构成注释、`src/components/form-schema/ARCHITECTURE.md`（§1.1 目录树 47→50 含 barrel、§9.1 表 62→65 及分项、§4 #7 行数清单校正为实测值、§4 #11 实现/spec 配平数）、`docs/25` TL;DR 62→65
+
+---
+
+### 💄 Style | 首页移除多页签固定形态（Home 完全排除 tags-view）
+
+> 产品决策：首页是 portal 落地页，经顶部导航 / Logo 返回即可，无页签上下文切换需求，不再作为固定页签常驻（也不再出现在页签中）。固定页签由 Workbench 工作台首页（default 布局，`meta.affix: true`，用户自行添加）承接。
+
+- `store/modules/tags-view.ts`：`NO_TAGS_ROUTE_NAMES` 新增 `Home`（此前已暂存），补全排除 rationale 注释（系统页 / 首页两类），并标注与 `filterAffixRoutes` 直读路由表路径的同步维护约束
+- `modules/home/routes/index.ts`：移除 `meta.affix: true`——affix 预置走 `filterAffixRoutes` 直读路由表、不经 `NO_TAGS` 名单，残留标记会把首页重新钉回页签；标题"仪表盘"→"首页"（此前已暂存）
+- 同步过时描述：`TagsView.vue` 预置注释（"如首页"）、`docs/23-权限设计.md` 3 处（RouteMeta 注释 + 2 处后端菜单 JSON 示例不再给 Home 配 affix）
+- 测试：`tags-view.spec.ts` 修复 Home 排除后必然失败的 affix 用例（fixture 改名 `Pinned`），新增"首页不加入页签"用例（含残留 affix 标记的防御场景）
+
+---
+
 ### ✨ Feature | default 布局侧栏拖拽调宽（主栏 + mixed/dual 二级侧栏）
 
 > sidebar 模式左栏与 mixed/dual 二级侧栏右缘新增拖拽手柄，实时调整宽度；折叠 / 移动端（抽屉态）不渲染手柄，行为不变。

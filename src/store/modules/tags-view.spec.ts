@@ -6,7 +6,7 @@
 //   - closeOthers：保留 current + affix
 //   - closeAll：仅保留 affix
 //   - cachedViews 与 visitedViews 同步性
-//   - addRouteView：跳过无 name 路由 + 跳过系统页（Login/403/404/500）
+//   - addRouteView：跳过无 name 路由 + 跳过系统页（Login/403/404/500）与首页 Home
 
 import { describe, it, expect, beforeEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
@@ -15,9 +15,9 @@ import type { RouteLocationNormalized } from 'vue-router'
 
 function makeTag(overrides: Partial<TagView> = {}): TagView {
   return {
-    name: 'Home',
-    path: '/home',
-    title: '仪表盘',
+    name: 'A',
+    path: '/a',
+    title: '页面 A',
     affix: false,
     ...overrides,
   }
@@ -76,15 +76,15 @@ describe('useTagsViewStore', () => {
 
     it('affix tag 拒绝删除', () => {
       const store = useTagsViewStore()
-      const dashboard = makeTag({ name: 'Home', affix: true })
-      store.addView(dashboard)
+      const pinned = makeTag({ name: 'Pinned', path: '/pinned', affix: true })
+      store.addView(pinned)
       store.addView(makeTag({ name: 'A' }))
 
-      const ok = store.removeView(dashboard)
+      const ok = store.removeView(pinned)
 
       expect(ok).toBe(false)
-      expect(store.visitedViews.map((v) => v.name)).toEqual(['Home', 'A'])
-      expect(store.cachedViews).toEqual(['Home', 'A'])
+      expect(store.visitedViews.map((v) => v.name)).toEqual(['Pinned', 'A'])
+      expect(store.cachedViews).toEqual(['Pinned', 'A'])
     })
 
     it('删除不存在的 tag 返回 false', () => {
@@ -97,29 +97,29 @@ describe('useTagsViewStore', () => {
   describe('closeOthers', () => {
     it('保留 current + 所有 affix tag', () => {
       const store = useTagsViewStore()
-      store.addView(makeTag({ name: 'Home', affix: true, path: '/home' }))
+      store.addView(makeTag({ name: 'Pinned', affix: true, path: '/pinned' }))
       store.addView(makeTag({ name: 'A', path: '/a' }))
       store.addView(makeTag({ name: 'B', path: '/b' }))
       store.addView(makeTag({ name: 'C', path: '/c' }))
 
       store.closeOthers(makeTag({ name: 'B' }))
 
-      expect(store.visitedViews.map((v) => v.name)).toEqual(['Home', 'B'])
-      expect(store.cachedViews).toEqual(['Home', 'B'])
+      expect(store.visitedViews.map((v) => v.name)).toEqual(['Pinned', 'B'])
+      expect(store.cachedViews).toEqual(['Pinned', 'B'])
     })
   })
 
   describe('closeAll', () => {
     it('仅保留 affix tag', () => {
       const store = useTagsViewStore()
-      store.addView(makeTag({ name: 'Home', affix: true }))
+      store.addView(makeTag({ name: 'Pinned', affix: true }))
       store.addView(makeTag({ name: 'A' }))
       store.addView(makeTag({ name: 'B' }))
 
       store.closeAll()
 
-      expect(store.visitedViews.map((v) => v.name)).toEqual(['Home'])
-      expect(store.cachedViews).toEqual(['Home'])
+      expect(store.visitedViews.map((v) => v.name)).toEqual(['Pinned'])
+      expect(store.cachedViews).toEqual(['Pinned'])
     })
   })
 
@@ -133,8 +133,16 @@ describe('useTagsViewStore', () => {
 
     it('带 meta.affix === true 的路由标记为 affix', () => {
       const store = useTagsViewStore()
-      store.addRouteView(makeRoute('Home', { title: 'Home', affix: true }))
+      store.addRouteView(makeRoute('Pinned', { title: '固定页', affix: true }))
       expect(store.visitedViews[0]?.affix).toBe(true)
+    })
+
+    it('首页 Home 不加入页签（产品决策：portal 落地页无页签承载意义）', () => {
+      const store = useTagsViewStore()
+      // 复现：即使路由残留 meta.affix 标记，afterEach 路径也不能把首页加进页签
+      store.addRouteView(makeRoute('Home', { title: '首页', affix: true }))
+      expect(store.visitedViews).toEqual([])
+      expect(store.cachedViews).toEqual([])
     })
 
     it('系统页（Login/403/404/500）不加入页签', () => {
