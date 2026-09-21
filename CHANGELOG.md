@@ -2,6 +2,16 @@
 
 ## 未发布
 
+### 💄 Style | default 布局头部下拉箭头随展开旋转（布局/语言/用户信息）
+
+> 交互反馈补全：三个下拉（LayoutSwitcher / LocaleDropdown / UserInfo）展开时右侧 `ArrowDown` 旋转 180°，收起回正，与面板 fade/slide 动画同节奏（160ms）。
+
+- `LayoutSwitcher.vue`：箭头挂 `__trigger-caret` + `is-open`（open ref 为根节点既有面板状态，直接复用）
+- `LocaleDropdown.vue` / `UserInfo.vue`：el-dropdown 不自动给 trigger 加状态 class，新增 `open` ref 经 `visible-change` 事件同步，箭头挂 `__caret` + `is-open`
+- 三处样式统一：`transition: transform 160ms ease` + `.is-open { rotate(180deg) }`，无新增依赖
+
+---
+
 ### 🔧 Chore | check:doc-currency 阈值再锚定（13 项全过）
 
 > 3 项校验失败系 `fdc5809`（form-schema 引擎多批次能力升级）提交时未同步文档阈值所致，属历史遗留漂移，非本次代码改动引入。
