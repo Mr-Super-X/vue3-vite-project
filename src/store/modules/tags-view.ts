@@ -34,14 +34,35 @@ export interface TagView {
 }
 
 /**
+ * 不出现在多页签的系统页路由名。
+ *
+ * 业务背景：Login（blank layout，无侧边栏上下文）与 403/404/500（全屏裸路由）
+ * 出现在多页签中没有承载意义。守卫跳转登录页（未登录 redirect / 退出登录）时
+ * afterEach 仍会触发并把 Login 加入页签，必须在此显式排除——这正是 toTag 注释
+ * 声明"排除白名单本身"但实现遗漏的部分。
+ *
+ * 不复用守卫白名单 isWhiteListed 的原因：dev 模式白名单包含全部 demo 路由名
+ * （demo 页免登录但属正常业务页，页签应正常展示），按白名单过滤会误伤 demo 页签。
+ */
+const NO_TAGS_ROUTE_NAMES: ReadonlySet<string> = new Set([
+  'Login', // 登录页（blank layout）
+  'Forbidden', // 403 无权限
+  'NotFound', // 404 页面
+  'ServerError', // 500 页面
+])
+
+/**
  * 把 RouteLocationNormalized 转为 TagView。
  *
- * 排除无 name 的路由（layout 包裹层、404 catch-all、白名单本身）。
+ * 排除两类路由：
+ *   - 无 name：layout 包裹层、404 catch-all 兜底
+ *   - 系统页（NO_TAGS_ROUTE_NAMES）：登录/错误页不进多页签
  *
- * @returns TagView 或 null（路由无 name 时）
+ * @returns TagView 或 null（路由无 name 或为系统页时）
  */
 function toTag(route: RouteLocationNormalized): TagView | null {
   if (!route.name) return null
+  if (NO_TAGS_ROUTE_NAMES.has(String(route.name))) return null
   const icon = route.meta?.icon as string | undefined
   const titleKey = (route.meta as { titleKey?: string }).titleKey
   return {

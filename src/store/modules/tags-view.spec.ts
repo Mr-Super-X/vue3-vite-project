@@ -6,7 +6,7 @@
 //   - closeOthers：保留 current + affix
 //   - closeAll：仅保留 affix
 //   - cachedViews 与 visitedViews 同步性
-//   - addRouteView：跳过无 name 路由
+//   - addRouteView：跳过无 name 路由 + 跳过系统页（Login/403/404/500）
 
 import { describe, it, expect, beforeEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
@@ -135,6 +135,23 @@ describe('useTagsViewStore', () => {
       const store = useTagsViewStore()
       store.addRouteView(makeRoute('Home', { title: 'Home', affix: true }))
       expect(store.visitedViews[0]?.affix).toBe(true)
+    })
+
+    it('系统页（Login/403/404/500）不加入页签', () => {
+      const store = useTagsViewStore()
+      // 复现：退出登录跳 /login?redirect=/workbench，afterEach 把 Login 加进页签
+      for (const name of ['Login', 'Forbidden', 'NotFound', 'ServerError']) {
+        store.addRouteView(makeRoute(name, { title: name }))
+      }
+      expect(store.visitedViews).toEqual([])
+      expect(store.cachedViews).toEqual([])
+    })
+
+    it('系统页排除不影响普通业务页加入', () => {
+      const store = useTagsViewStore()
+      store.addRouteView(makeRoute('Login', { title: '登录' }))
+      store.addRouteView(makeRoute('Workbench', { title: '工作台' }))
+      expect(store.visitedViews.map((v) => v.name)).toEqual(['Workbench'])
     })
   })
 })

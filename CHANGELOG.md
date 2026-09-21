@@ -2,6 +2,17 @@
 
 ## 未发布
 
+### 🐞 Fix | 多页签排除系统页（Login/403/404/500 不再污染 tags-view）
+
+> 修复：退出登录跳 `/login?redirect=/workbench` 后重新登录，"登录"页签残留在多页签栏。
+
+- 根因：`router.afterEach` 对所有导航触发 `addRouteView`，`toTag` 仅排除无 name 路由，Login 具名且带 title 被加入 `visitedViews`
+- 修复：`tags-view.ts` 新增 `NO_TAGS_ROUTE_NAMES` 名单（Login / Forbidden / NotFound / ServerError），`toTag` 显式排除系统页；顺带修复访问 403/404/500 时错误页签污染同类问题
+- 说明：未复用守卫白名单 `isWhiteListed`——dev 模式白名单含全部 demo 路由名，按白名单过滤会误伤 demo 页签
+- 测试：`tags-view.spec.ts` 补 2 例（系统页不加入 / 不影响业务页正常加入）
+
+---
+
 ### ✨ Feature | ProTable v3.5 PR2：服务端筛选 + 事件完整披露（filterParamsAdapter / sort-change / filter-change / engine-fallback）
 
 > v3.5 PR1-B 完成 vxe-table 引擎能力补齐后，PR2 解决「服务端筛选」与「事件契约」两个核心缺口。前者补 `filterParamsAdapter` prop + `getFilterState()` expose；后者将 `sort-change` / `filter-change` / `engine-fallback` 3 个事件完整披露到 `defineEmits` 公共 API。
