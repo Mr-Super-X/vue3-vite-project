@@ -18,7 +18,7 @@
  */
 import { ElButton, ElMessage, ElTag } from 'element-plus'
 import { Download } from '@element-plus/icons-vue' // 显式 import（§1.6.1 来源注释）
-import { ProTable, type ProColumn, type ToolbarAction } from '@/components/ProTable'
+import type { ProColumn, ToolbarAction } from '@/components/ProTable'
 import { exportCsv } from '@/components/ProTable/utils'
 import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'

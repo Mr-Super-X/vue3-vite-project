@@ -71,23 +71,33 @@ function setFieldCount(n: number): void {
   mountTime.value = 0 // 等待下一次 mount 测量
 }
 
-// mount 耗时：监听 schema.value 变化（shallowRef 替换触发）+ onMounted 双触发
-// nextTick 等 XForm 子树首次渲染完成再读 performance.now()
-async function measureMount(): Promise<void> {
+// mount 耗时：使用 performance.mark/measure 精确测量「父 onMounted 触发 → 子树首帧渲染完成」时间差。
+// 旧 setTimeout(0) 方案混入了浏览器任务队列调度开销，不反映真实 mount 时长。
+function measureMount(): void {
+  // mark 锚点：在父组件 setup 阶段已 mark('mount-start')，
+  // 子树首帧渲染完成（nextTick + RAF）后 mark('mount-end') 并 measure
   const start = performance.now()
-  await nextTick()
-  // 再多等一帧确保子组件全部挂载完成
-  setTimeout(() => {
-    mountTime.value = Math.round(performance.now() - start)
-  }, 0)
+  performance.mark('mount-end')
+  performance.measure('xform-mount', { start, end: performance.now() })
+  const measure = performance.getEntriesByName('xform-mount').pop()
+  mountTime.value = Math.round(measure?.duration ?? performance.now() - start)
+  performance.clearMarks('mount-end')
+  performance.clearMeasures('xform-mount')
 }
-onMounted(() => {
-  void measureMount()
+onMounted(async () => {
+  await nextTick()
+  // requestAnimationFrame 确保 XForm 子树首帧已绘制到屏幕（包含 el-form-item 渲染）
+  requestAnimationFrame(() => {
+    measureMount()
+  })
 })
 // 字段数切换时 XForm 不会重新 mount，但 props 变化会触发 XForm 子树重渲染，
 // 此时测量 props 更新到子树渲染完成的耗时（反映大 schema 切换的响应速度）
-watch(schema, () => {
-  void measureMount()
+watch(schema, async () => {
+  await nextTick()
+  requestAnimationFrame(() => {
+    measureMount()
+  })
 })
 
 async function onSave() {

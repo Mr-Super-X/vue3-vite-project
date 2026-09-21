@@ -45,7 +45,7 @@ const schema = [
         {
           component: 'a',
           children: '更多',
-          props: { href: '#', class: bem.e('card-link'), style: 'float: right;' },
+          props: { href: '#', class: bem.e('card-link'), style: { float: 'right' } },
         },
       ],
     },

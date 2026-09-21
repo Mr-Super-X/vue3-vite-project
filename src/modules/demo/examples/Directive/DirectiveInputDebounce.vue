@@ -24,13 +24,13 @@ const searchDefault = ref('')
 const defaultLog = ref<string[]>([])
 const defaultCounter = ref(0) // 防抖命中计数
 const defaultRawCounter = ref(0) // 原始 input 事件计数
-function onSearchDefault(event: Event): void {
+function onInputDefault(event: Event): void {
   const value = (event.target as HTMLInputElement).value
   // 防抖触发后才进 log
   defaultCounter.value++
-  defaultLog.value = [...defaultLog.value, `防抖命中 ${defaultCounter.value}：${value}`].slice(-5)
+  defaultLog.value = [...defaultLog.value, `防抖命中 ${defaultCounter.value}：${value}`].slice(-8)
 }
-function onSearchDefaultRaw(): void {
+function onInputDefaultRaw(): void {
   // 每次按键都触发，用于对照「无防抖 vs 300ms 防抖」差异
   defaultRawCounter.value++
 }
@@ -40,14 +40,14 @@ const searchCustom = ref('')
 const customLog = ref<string[]>([])
 const customCounter = ref(0)
 const customRawCounter = ref(0)
-function onSearchCustom(event: Event): void {
+function onInputCustom(event: Event): void {
   const value = (event.target as HTMLInputElement).value
   customCounter.value++
   customLog.value = [...customLog.value, `500ms 防抖命中 ${customCounter.value}：${value}`].slice(
-    -5
+    -8
   )
 }
-function onSearchCustomRaw(): void {
+function onInputCustomRaw(): void {
   customRawCounter.value++
 }
 
@@ -55,9 +55,36 @@ function onSearchCustomRaw(): void {
 // 否则两个 input 双向同步 v-model 且回调日志会相互覆盖，演示效果失真）
 const searchComposition = ref('')
 const compositionLog = ref<string[]>([])
-function onSearchComposition(event: Event): void {
+function onInputComposition(event: Event): void {
   const value = (event.target as HTMLInputElement).value
-  compositionLog.value = [...compositionLog.value, `组合结束触发：${value}`].slice(-5)
+  compositionLog.value = [...compositionLog.value, `组合结束触发：${value}`].slice(-8)
+}
+
+// 模拟 composition 事件序列——用于在无中文 IME 环境下验证 v-inputDebounce 的 composing 跳过逻辑
+// 真实 IME 输入需要打开系统输入法并切换到拼音，操作门槛高；该函数直接 dispatch
+// `compositionstart` / `compositionend`，让 jsdom / 真实浏览器统一可测
+const compositionTrace = ref<string[]>([])
+function simulateComposition(): void {
+  const el = document.querySelector<HTMLInputElement>('[data-debounce="composition"]')
+  if (!el) {
+    compositionTrace.value = [
+      ...compositionTrace.value,
+      '未找到中文输入法输入框（请确认 demo 已渲染）',
+    ]
+    return
+  }
+  // compositionstart：标记 composing=true，v-inputDebounce 在此期间跳过 input 回调
+  el.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }))
+  compositionTrace.value = [...compositionTrace.value, `compositionstart @${Date.now() % 100000}`]
+  // 500ms 后触发 compositionend：v-inputDebounce 同步 composing=false 并主动 dispatch input
+  setTimeout(() => {
+    el.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: '中文' }))
+    compositionTrace.value = [
+      ...compositionTrace.value,
+      `compositionend data="中文" @${Date.now() % 100000}`,
+    ]
+    console.log('[DemoInputDebounce] composition sequence end — 应触发一次 onInputComposition')
+  }, 500)
 }
 
 // 实时（无防抖）对比——直接接受 EP el-input @input 的字符串参数，
@@ -85,6 +112,8 @@ const bindingItems = [
   },
 ]
 
+// argItems[0].type: 'string' 是数字字符串写法：Vue 模板 `v-inputDebounce:500="onInput"` 中 :500
+// 自动字符串化为 '500'；指令内部 parseInt 还原成毫秒数。不必传字符串字面量 '500'。
 const argItems = [
   {
     name: 'arg',
@@ -97,7 +126,7 @@ const argItems = [
 /* ───── code 字符串（避免 inline `<>` 触发 Vue 模板解析错误） ───────────── */
 
 // v-inputDebounce 回调签名是 (event: Event) => void（与原生 input listener 一致），
-// 不是 (value: string) — 调用方需自己从 event.target 取值（见下方 onSearchDefault 实现）。
+// 不是 (value: string) — 调用方需自己从 event.target 取值（见下方 onInputDefault 实现）。
 const defaultDebounceCode = `<el-input v-inputDebounce="onSearch" v-model="keyword" />`
 
 const customDebounceCode = `<el-input v-inputDebounce:500="onSearch" v-model="keyword" />`
@@ -131,12 +160,13 @@ const compositionCode = `<el-input v-inputDebounce="onSearch" v-model="keyword" 
       <!-- 默认防抖 -->
       <section id="demo-default">
         <DemoField label="默认 300ms 防抖（v-inputDebounce）" :code="defaultDebounceCode">
+          <span :class="bem.e('chip')">300ms 防抖</span>
           <el-input
-            v-inputDebounce="onSearchDefault"
+            v-inputDebounce="onInputDefault"
             v-model="searchDefault"
             placeholder="尝试连续输入字符，观察日志"
             clearable
-            @input="onSearchDefaultRaw"
+            @input="onInputDefaultRaw"
           />
           <div :class="bem.e('counters')">
             <span>
@@ -161,12 +191,13 @@ const compositionCode = `<el-input v-inputDebounce="onSearch" v-model="keyword" 
       <!-- 自定义延迟 -->
       <section id="demo-custom">
         <DemoField label="自定义延迟（v-inputDebounce:500）" :code="customDebounceCode">
+          <span :class="bem.e('chip')">500ms 防抖</span>
           <el-input
-            v-inputDebounce:500="onSearchCustom"
+            v-inputDebounce:500="onInputCustom"
             v-model="searchCustom"
             placeholder="500ms 防抖间隔"
             clearable
-            @input="onSearchCustomRaw"
+            @input="onInputCustomRaw"
           />
           <div :class="bem.e('counters')">
             <span>
@@ -199,6 +230,7 @@ const compositionCode = `<el-input v-inputDebounce="onSearch" v-model="keyword" 
       <!-- 对比无防抖 -->
       <section id="demo-compare">
         <DemoField label="对比：实时（无防抖）" :code="rawInputCode">
+          <span :class="bem.e('chip')">无防抖</span>
           <el-input
             :model-value="searchRaw"
             placeholder="无防抖，每次按键都触发回调"
@@ -231,12 +263,20 @@ const compositionCode = `<el-input v-inputDebounce="onSearch" v-model="keyword" 
       <!-- 中文输入法 -->
       <section id="demo-composition">
         <DemoField label="中文输入法兼容（拼音阶段不触发）" :code="compositionCode">
+          <span :class="bem.e('chip')">中文输入法</span>
           <el-input
-            v-inputDebounce="onSearchComposition"
+            v-inputDebounce="onInputComposition"
             v-model="searchComposition"
+            data-debounce="composition"
             placeholder="输入拼音（如 zhongwen），拼音阶段不触发回调，组合完成才触发一次"
             clearable
           />
+          <div :class="bem.e('simulate-row')">
+            <el-button size="small" @click="simulateComposition">模拟 composition 事件</el-button>
+            <span :class="bem.e('simulate-hint')">
+              无中文 IME 环境也能验证 — 派发合成事件序列，console.log 输出 composing 切换过程
+            </span>
+          </div>
           <div :class="bem.e('log')">
             <p :class="bem.e('log-title')">组合结束回调日志：</p>
             <p v-for="(line, idx) in compositionLog" :key="`cmp-${idx}`" :class="bem.e('log-line')">
@@ -246,9 +286,23 @@ const compositionCode = `<el-input v-inputDebounce="onSearch" v-model="keyword" 
               （打开中文输入法，输入拼音——只有汉字上屏才进日志）
             </p>
           </div>
+          <div :class="bem.e('log')">
+            <p :class="bem.e('log-title')">模拟事件轨迹（compositionstart → compositionend）：</p>
+            <p
+              v-for="(line, idx) in compositionTrace"
+              :key="`sim-${idx}`"
+              :class="bem.e('log-line')"
+            >
+              {{ line }}
+            </p>
+            <p v-if="!compositionTrace.length" :class="bem.e('log-empty')">
+              （点击「模拟 composition 事件」按钮触发）
+            </p>
+          </div>
           <p :class="bem.e('hint')">
             验证方法：把中文输入法打开，输入「zhongwen」——拼音过程不会触发回调日志，
             汉字上屏（composing 结束）才触发一次。这是 v-inputDebounce 与原生 input 防抖的关键差异。
+            无 IME 环境可点「模拟 composition 事件」按钮，等价验证 composing 状态切换逻辑。
           </p>
         </DemoField>
       </section>
@@ -317,6 +371,33 @@ const compositionCode = `<el-input v-inputDebounce="onSearch" v-model="keyword" 
       color: var(--el-color-primary);
       margin: 0 4px;
     }
+  }
+
+  // chip 标签：4 个 input 上方的视觉区分（300ms / 500ms / 无防抖 / 中文输入法）
+  &__chip {
+    display: inline-block;
+    margin-bottom: 4px;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--el-color-primary);
+    background: var(--el-color-primary-light-9);
+    border: 1px solid var(--el-color-primary-light-7);
+  }
+
+  // 模拟 composition 事件按钮行
+  &__simulate-row {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  &__simulate-hint {
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
   }
 }
 </style>

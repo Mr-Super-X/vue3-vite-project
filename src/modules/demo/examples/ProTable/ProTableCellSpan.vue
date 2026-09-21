@@ -53,7 +53,8 @@ const columns = [
 
 /* ───────────── Demo 2：列合并（_spanTarget + colspan） ───────────── */
 
-// 包装 mock：每行带 amount + _spanTarget
+// 包装 mock：每行带 amount（随机分布）+ _spanTarget（高金额订单触发合并）
+// 业务判定：amount > 10000 视为高金额 → orderNo 列横向合并到 product
 async function loadOrdersWithColSpan(): Promise<{
   data: Record<string, unknown>[]
   total: number
@@ -61,11 +62,13 @@ async function loadOrdersWithColSpan(): Promise<{
   pageSize: number
 }> {
   const res = await ordersRequestApi({} as Record<string, unknown>)
-  const data = res.data.map((row, i) => {
-    const isHighAmount = i === 0 || i === 2 || i === 4
+  const data = res.data.map((row) => {
+    // 随机分布金额：5000~20000 之间，避开 10000 临界值 ±500 让高/低金额分层明确
+    const amount = Math.round(5000 + Math.random() * 15000)
+    const isHighAmount = amount > 10000
     return {
       ...row,
-      amount: [15000, 8000, 20000, 12000, 5000, 18000][i] ?? 10000,
+      amount,
       // 高金额订单合并 orderNo+product 为 1 列（_spanTarget='orderNo' → orderNo 列 colspan=2）
       ...(isHighAmount ? { _spanTarget: 'orderNo' } : {}),
     }
@@ -180,6 +183,7 @@ const tocItems = [
             :request-api="ordersRequestApi"
             :enable-cell-span="true"
             row-key="id"
+            :page-size="12"
           />
         </DemoField>
       </section>
@@ -200,6 +204,7 @@ const tocItems = [
             :request-api="loadOrdersWithColSpan"
             :enable-cell-span="true"
             row-key="id"
+            :page-size="12"
           />
         </DemoField>
       </section>
@@ -220,6 +225,7 @@ const tocItems = [
             :request-api="loadOrdersWithAmount"
             :enable-cell-span="true"
             row-key="id"
+            :page-size="12"
           />
         </DemoField>
       </section>

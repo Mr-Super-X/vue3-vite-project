@@ -107,7 +107,7 @@ const degradeCode = `// 1. secure context + clipboard API 可用 → navigator.c
         '全局指令：点击元素触发剪贴板复制，自动选择 navigator.clipboard.writeText 或降级到 execCommand。',
         '降级策略：HTTPS / localhost / file: 走现代 API；HTTP 环境或 API 失败时自动 fallback 到 textarea + execCommand。',
         '视觉反馈：通过 ElMessage 提示「复制成功」「复制失败」「内容为空」三种状态。',
-        '点击按钮后到任意输入框 Ctrl+V 验证粘贴内容。',
+        '验证步骤：步骤 1 点击按钮 → 步骤 2 打开任意输入框 → 步骤 3 Ctrl+V 粘贴验证。',
       ]"
     >
       <!-- 静态字符串 -->
@@ -115,8 +115,10 @@ const degradeCode = `// 1. secure context + clipboard API 可用 → navigator.c
         <DemoField label="静态字符串（字面量）" :code="staticCode">
           <el-button v-copy="STATIC_TEXT">复制客服电话</el-button>
           <p :class="bem.e('hint')">
-            binding.value 是字符串字面量；指令在 updated 钩子中整体替换 ctx.binding
-            引用以同步最新值。
+            STATIC_TEXT 是模块级常量；绑定后会随 updated 钩子同步到 ctx.binding。 此外，v-copy
+            默认会给宿主元素添加
+            <code>cursor: pointer</code>
+            ；hover 时可观察到鼠标变化。
           </p>
         </DemoField>
       </section>
@@ -131,6 +133,7 @@ const degradeCode = `// 1. secure context + clipboard API 可用 → navigator.c
           </div>
           <p :class="bem.e('hint')">
             修改输入框或点「换一个」会改变 orderId；点击「复制订单号」时拿到当前最新值。
+            机制：updated 钩子在每次 binding 变化时同步 ctx.binding 引用，使指令内部始终拿到最新值。
           </p>
         </DemoField>
       </section>

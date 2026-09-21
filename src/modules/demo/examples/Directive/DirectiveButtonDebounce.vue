@@ -21,7 +21,7 @@ const bem = createNamespace('demo-directive-button-debounce')
 
 /* ───── 演示数据 ───────────── */
 
-// 默认 500ms 防抖
+// 默认 500ms 防抖：defaultClickCount 仅累加点击次数（防抖后命中），defaultLog 记录每次触发时间
 const defaultClickCount = ref(0)
 const defaultLog = ref<string[]>([])
 function onDefaultClick(): void {
@@ -33,14 +33,15 @@ function onDefaultClick(): void {
   ElMessage.success(`默认防抖触发（累计 ${defaultClickCount.value} 次）`)
 }
 
-// 自定义 1000ms 防抖
+// 自定义 1000ms 防抖：customClickCount 仅累加命中次数（无独立 log，演示只用 ElMessage）
 const customClickCount = ref(0)
 function onCustomClick(): void {
   customClickCount.value++
   ElMessage.success(`1000ms 防抖触发（累计 ${customClickCount.value} 次）`)
 }
 
-// 无防抖对比
+// 无防抖对比：rawClickCount 累加原始点击次数（每次点击都 +1，不防抖）；
+// rawLog 同时记录命中次数对应的毫秒级时间戳（HH:MM:SS.mmm 截取），用于直观对照连点频率
 const rawClickCount = ref(0)
 const rawLog = ref<string[]>([])
 function onRawClick(): void {
@@ -63,18 +64,25 @@ function startRawAutoBurst(): void {
   }, 300) // 3 秒 ÷ 10 次 ≈ 300ms/次
 }
 
-// 实战 submit：独立回调 + 独立计数，避免与「默认 500ms 防抖」按钮的
+// 实战 submit：独立回调 + 独立计数 + loading 状态，避免与「默认 500ms 防抖」按钮的
 // onDefaultClick 共用——共用会让两个按钮点击都增加 defaultClickCount，
 // 视觉上像「多次触发」（实际上每个按钮自己仍是防抖 1 次）。
+// submitLoading 模拟「提交中」状态，按钮按下后短暂锁定 1s 内不可重复点
 const submitClickCount = ref(0)
 const submitLog = ref<string[]>([])
+const submitLoading = ref(false)
 function onSubmitClick(): void {
   submitClickCount.value++
   submitLog.value = [
     ...submitLog.value,
     `第 ${submitClickCount.value} 次提交（${new Date().toLocaleTimeString()}）`,
-  ].slice(-5)
+  ].slice(-8)
+  submitLoading.value = true
   ElMessage.success(`submit 防抖触发（累计 ${submitClickCount.value} 次）`)
+  // 1s 后解除 loading —— 模拟真实接口请求耗时
+  setTimeout(() => {
+    submitLoading.value = false
+  }, 1000)
 }
 
 const tocItems = [
@@ -224,7 +232,9 @@ function startInputVsButtonBurst(): void {
       <!-- submit 模拟 -->
       <section id="demo-submit">
         <DemoField label="实战：连续点击按钮（独立计数演示）" :code="submitCode">
-          <el-button v-buttonDebounce="onSubmitClick" type="primary">提交订单（防重）</el-button>
+          <el-button v-buttonDebounce="onSubmitClick" type="primary" :loading="submitLoading">
+            提交订单（防重）
+          </el-button>
           <div :class="bem.e('log')">
             <p :class="bem.e('log-title')">submit 回调触发记录（独立计数）：</p>
             <p v-for="(line, idx) in submitLog" :key="`s-${idx}`" :class="bem.e('log-line')">

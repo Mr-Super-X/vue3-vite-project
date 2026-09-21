@@ -18,7 +18,7 @@
  * 7. console 演示：当 virtualized + enableSummary 命中时输出 warn
  */
 import { ElTag } from 'element-plus'
-import { ProTable, type ProColumn, type ProTableExpose } from '@/components/ProTable'
+import type { ProColumn } from '@/components/ProTable'
 import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
@@ -64,9 +64,6 @@ const columns: ProColumn<BigRow>[] = [
   },
   { prop: 'remark', label: '备注', minWidth: 200 },
 ]
-
-const tableRef = ref<ProTableExpose | null>(null)
-void tableRef.value // 占位：未使用但保留为 API 入口
 
 /** 代码片段 */
 const basicCode = `<template>

@@ -127,11 +127,24 @@ async function onMoveFirstToLast() {
 }
 
 async function onBatchImport() {
-  // 批量导入：连续 addItem 5 行
-  for (let i = 0; i < 5; i++) {
+  // 批量导入：连续 addItem 11 行 —— schema.maxItems=10，循环 11 次演示 addItem
+  // 不受 maxItems 限制（业务侧自行控制），初始 2 行 + 11 次 = 13 行，超出 maxItems=10 上限 3 行
+  const MAX_ITEMS = 10 // schema.maxItems
+  let reachedLimitAt = -1
+  for (let i = 0; i < 11; i++) {
     await formRef.value?.addItem('items', { product: 'sku-001', qty: i + 1, price: 89 })
+    const currentLen = (model.items as unknown[]).length
+    if (currentLen === MAX_ITEMS && reachedLimitAt === -1) {
+      reachedLimitAt = i + 1
+    }
+    if (reachedLimitAt !== -1 && currentLen > MAX_ITEMS && currentLen === MAX_ITEMS + 1) {
+      // 第一次越过上限时 toast 反馈（仅触发一次）
+      ElMessage.warning(`已达上限 ${MAX_ITEMS}，但 addItem API 不拦截（业务侧自行控制）`)
+    }
   }
-  ElMessage.success('已批量导入 5 行')
+  ElMessage.success(
+    `已批量导入 11 行（到达上限 ${MAX_ITEMS} 后仍可继续添加，当前共 ${(model.items as unknown[]).length} 行）`
+  )
 }
 
 const tocItems = [
@@ -162,7 +175,7 @@ const tocItems = [
             <el-button @click="onPrepend">插到头部</el-button>
             <el-button @click="onRemoveLast">删除最后</el-button>
             <el-button @click="onMoveFirstToLast">首行→末行</el-button>
-            <el-button @click="onBatchImport">批量导入 5 行</el-button>
+            <el-button @click="onBatchImport">批量导入 11 行（超过 maxItems=10）</el-button>
             <el-button @click="copySchema">复制 schema</el-button>
           </div>
           <ModelPreview :model="model" />

@@ -36,8 +36,14 @@ const schema: SchemaNode = {
   ],
 }
 
-function onSave() {
-  ElMessage.success('提交成功')
+async function onSave() {
+  // 演示 XForm validate 链路：先校验 → 通过才提示成功；失败时 ElMessage 报错
+  const valid = await formRef.value?.validate()
+  if (!valid) {
+    ElMessage.error('校验失败，请检查必填项')
+    return
+  }
+  ElMessage.success('保存成功（已通过 validate 校验）')
 }
 
 const tocItems = [

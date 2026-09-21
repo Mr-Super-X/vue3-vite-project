@@ -16,7 +16,7 @@
  * 路由：自动注册为 /demo/pro-table-row-select
  */
 import { ElButton, ElMessage } from 'element-plus'
-import { ProTable, type ProColumn, type ProTableExpose } from '@/components/ProTable'
+import type { ProColumn, ProTableExpose } from '@/components/ProTable'
 import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'

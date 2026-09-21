@@ -85,8 +85,8 @@ function shuffleData() {
   ElMessage.success('漏斗数据已刷新（±10% 抖动）')
 }
 
-const SNIPPET = `<BaseChart :option="funnelOption" />
-// funnelOption 见 buildOption() 实现；sort: 'descending' 保证漏斗惯例排序`
+const SNIPPET = `<BaseChart :option="option" />
+// option 见上方 computed();sort: 'descending' 保证漏斗惯例排序`
 
 const tocItems = [{ id: 'demo-funnel', label: '销售转化漏斗' }]
 </script>

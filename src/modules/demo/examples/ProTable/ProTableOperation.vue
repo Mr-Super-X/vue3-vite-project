@@ -27,7 +27,7 @@ import {
   ElTooltip,
 } from 'element-plus'
 import { ArrowDown, QuestionFilled } from '@element-plus/icons-vue'
-import { ProTable, type ProColumn } from '@/components/ProTable'
+import type { ProColumn } from '@/components/ProTable'
 import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'

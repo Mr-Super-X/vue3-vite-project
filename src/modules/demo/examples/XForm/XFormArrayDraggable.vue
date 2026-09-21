@@ -119,7 +119,7 @@ const tocItems = [
       source="src/components/form-schema/XForm.vue"
       :introductions="[
         '1. 链式调用末尾 .draggable() 开启行拖拽，等价于 schema 上 array.draggable: true',
-        '2. 按住任意一行的空白区域拖到目标行松开即换位 —— HTML5 Drag & Drop，drop 后调 moveItem 更新 model',
+        '2. 按住行的任意位置拖到目标行松开即换位 —— HTML5 Drag & Drop，drop 后调 moveItem 更新 model',
         '3. 「数据换位」而非仅视图换位：先在某一行的输入框里改内容，再拖动该行 —— 已编辑的值会跟着行走',
         '4. 与上移/下移按钮共存，两条交互路径共用同一个 moveItem，model 只有一份真相',
         '5. 未配置 draggable 时行不可拖，其余行为完全一致',

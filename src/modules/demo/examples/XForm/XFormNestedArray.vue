@@ -191,6 +191,28 @@ function onCheckPath() {
   })
 }
 
+/**
+ * 触发嵌套校验失败演示：清空必填字段后调 validateDetail()，弹窗完整展示 keyPath 数组
+ * — 演示 errors[].keyPath 含两层数组下标（如 ['orders', 0, 'items', 1, 'product']）
+ */
+async function onValidateFail(): Promise<void> {
+  if (!formRef.value) return
+  // 故意清空必填字段，确保触发嵌套校验失败
+  model.orders = [{ orderNo: '', items: [{ product: '', qty: undefined, price: undefined }] }]
+  await nextTick()
+  const detail = await formRef.value.validateDetail()
+  const lines = detail.errors.map(
+    (e, i) =>
+      `${i + 1}. [${e.keyPath.map((k) => (typeof k === 'number' ? `[${k}]` : `'${k}'`)).join(', ')}] → ${e.message}`
+  )
+  ElMessage({
+    message: `嵌套校验失败 ${detail.errors.length} 项：\n${lines.join('\n')}`,
+    type: 'error',
+    duration: 0,
+    showClose: true,
+  })
+}
+
 const tocItems = [
   { id: 'demo-nested-array', label: '嵌套 ArrayNode 演示' },
   { id: 'api-nested-array', label: '实现说明' },
@@ -216,6 +238,7 @@ const tocItems = [
           <div :class="bem.e('summary')">
             <el-button @click="onReset">重置</el-button>
             <el-button type="primary" @click="onSave">保存并校验</el-button>
+            <el-button type="danger" @click="onValidateFail">触发嵌套校验失败</el-button>
             <el-button @click="onCheckPath">检查 prop 路径</el-button>
             <el-button @click="copySchema">复制 schema</el-button>
           </div>

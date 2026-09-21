@@ -79,6 +79,14 @@ const schema: SchemaNode = {
         },
       ],
     },
+    // 数组字段：用于演示 keyPath 包含数字索引（如 ['phones', 0, 'number']）
+    {
+      label: '联系电话（数组）',
+      name: 'phones',
+      component: 'Input',
+      // schema 写法：用 props 提示数组语义，运行时仍是字符串字段；validateDetail 路径按数组项校验
+      props: { placeholder: '演示数组 keyPath：实际场景用 xArray 节点' },
+    },
   ],
 }
 
@@ -87,6 +95,7 @@ const model = reactive<Record<string, unknown>>({
   email: '',
   password: '',
   passwordConfirm: '',
+  phones: ['', ''],
 })
 
 // ---- validateDetail 返回值结构（与 types/xform.ts ValidateResult 对齐） ----
@@ -133,8 +142,23 @@ function keyPathToString(keyPath: (string | number)[]): string {
 const tocItems = [
   { id: 'demo-validate-detail', label: 'validateDetail 演示' },
   { id: 'demo-compare-validate', label: '与 validate 对比' },
+  { id: 'demo-keypath-array', label: '数组字段 keyPath（含数字索引）' },
   { id: 'api-validate-detail', label: 'API' },
 ]
+
+// 数组字段 keyPath 结构示例：用于「演示 keyPath 含 [i] 数字索引」对照面板
+const keyPathArrayExample = `// 示例：嵌套数组的 validateDetail().errors 结构
+[
+  {
+    keyPath: ['orders', 0, 'items', 1, 'product'],
+    // ↑ 字符串 = 字段名；数字 = 数组下标
+    message: '请选择商品',
+  },
+  {
+    keyPath: ['orders', 1, 'orderNo'],
+    message: '请输入订单号',
+  },
+]`
 </script>
 
 <template>
@@ -231,6 +255,30 @@ const tocItems = [
         :items="validateDetailItems"
         anchor="api-validate-detail"
       />
+
+      <!-- 数组字段的 keyPath 演示：展示 keyPath 含数字索引 [i] 的结构 -->
+      <section id="demo-keypath-array">
+        <DemoField label="数组字段的 keyPath（含数字索引）" :code="keyPathArrayExample">
+          <p :class="bem.e('keypath-intro')">
+            当字段位于数组节点（xArray / 嵌套 array）内时，
+            <code>validateDetail()</code>
+            返回的
+            <code>errors[].keyPath</code>
+            数组会包含数字下标，而非字符串。例如：
+            <code>['orders', 0, 'items', 1, 'product']</code>
+            表示「orders 数组第 0 行的 items 数组第 1 项的 product 字段」。 string = 字段名，number
+            = 数组下标 —— 可用于：
+            <code>setFieldError(keyPath.join('.'), message)</code>
+            或在 UI 上 highlight 对应字段。
+          </p>
+          <p :class="bem.e('keypath-hint')">
+            本 demo 注册表单故意留空触发校验后，右侧错误面板会展示完整的 keyPath 数组 （含字段名 +
+            嵌套结构）；若需演示纯数组下标场景，请切换到
+            <code>/demo/x-form-nested-array</code>
+            （嵌套 array 验证失败时 keyPath 含两层 [i]）。
+          </p>
+        </DemoField>
+      </section>
     </DemoFrame>
 
     <template #toc>
@@ -363,6 +411,19 @@ const tocItems = [
   &__success-msg {
     color: #67c23a;
     font-size: 13px;
+  }
+
+  // 数组 keyPath 演示段：解释为何 keyPath 含 [i] 数字索引
+  &__keypath-intro,
+  &__keypath-hint {
+    margin: 8px 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--el-text-color-regular);
+  }
+
+  &__keypath-hint {
+    color: var(--el-text-color-secondary);
   }
 }
 </style>

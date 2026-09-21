@@ -13,7 +13,7 @@
  * 4. prod 模式 console 静默，仅显示占位 UI
  */
 import { h, defineComponent } from 'vue'
-import { ElInput } from 'element-plus'
+import { ElInput, ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
@@ -85,6 +85,24 @@ const model = reactive<Record<string, unknown>>({
   broken: '',
 })
 
+/** 占位 className 检查：断言 broken 字段渲染降级后占位元素含 x-form-render-error class
+ *  用户可以此验证 SchemaField.safeRender 兜底是否生效（与 dev mode console.error 双重确认） */
+function checkErrorPlaceholderClass(): void {
+  const placeholders = document.querySelectorAll<HTMLElement>('.x-form-render-error')
+  const count = placeholders.length
+  if (count === 0) {
+    ElMessage.warning('未找到占位元素——broken 字段可能未触发 throw')
+    return
+  }
+  // 输出每个占位元素的 className + 父字段名（含 data-attribute 方便定位）
+  placeholders.forEach((el, idx) => {
+    console.log(
+      `[XFormRenderRecovery] 占位 #${idx + 1} className="${el.className}" parent="${el.parentElement?.tagName ?? 'unknown'}"`
+    )
+  })
+  ElMessage.success(`找到 ${count} 个占位元素（class 包含 x-form-render-error），详情见 Console`)
+}
+
 const tocItems = [
   { id: 'demo-render-recovery', label: '字段渲染失败降级演示' },
   { id: 'api-render-recovery', label: 'SchemaField.safeRender 行为速查' },
@@ -96,6 +114,7 @@ const introductions = [
   'dev 模式：console.error 留痕（[XForm][SchemaField] render failed for node "..."）',
   'prod 模式：console 静默，仅显示占位 UI（节省性能开销）',
   '同一 schema 内正常字段照常渲染，broken 字段的 throw 被边界隔离',
+  '验证步骤：点击下方「检查占位 className」按钮 → console 输出 broken 字段占位元素的 className（含 x-form-render-error）',
 ]
 </script>
 
@@ -112,6 +131,9 @@ const introductions = [
           <div :class="bem.e('actions')">
             <el-button @click="onReset">重置</el-button>
             <el-button @click="copySchema">复制 schema</el-button>
+            <el-button type="info" plain @click="checkErrorPlaceholderClass">
+              检查占位 className
+            </el-button>
           </div>
           <ModelPreview :model="model" />
         </DemoField>

@@ -105,7 +105,7 @@ const clickOption = {
 // ③ SNIPPET_INSTANCE 不含 console.log（用户复制后会污染 DevTools）：
 // 真实场景是业务侧埋点 / ElMessage 提示 / 写 store，注释位占位
 const SNIPPET_INSTANCE = `// ① 用组件已暴露的方法类型（无需 import BaseChart）
-const chartRef = useTemplateRef<BaseChartExposed>('chart')
+const chartRef = useTemplateRef<BaseChartExposed>('chartRef')
 const instance = chartRef.value?.getInstance()
 instance?.on('click', params => {
   // 真实业务：埋点上报 / ElMessage 提示 / 写 store
