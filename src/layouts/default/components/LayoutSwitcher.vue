@@ -56,7 +56,9 @@ function closeOnBlur(event: FocusEvent) {
     >
       <el-icon :size="18"><MenuIconEp /></el-icon>
       <span :class="bem.e('trigger-label')">{{ currentLabel }}</span>
-      <el-icon :size="12"><ArrowDown /></el-icon>
+      <el-icon :class="[bem.e('trigger-caret'), bem.is('open', open)]" :size="12">
+        <ArrowDown />
+      </el-icon>
     </button>
 
     <div :class="bem.e('panel')">
@@ -111,6 +113,15 @@ function closeOnBlur(event: FocusEvent) {
 
   &__trigger-label {
     font-size: 13px;
+  }
+
+  // 箭头随面板展开旋转 180°（open 状态由根节点 is-open 同步到 trigger 箭头）
+  &__trigger-caret {
+    transition: transform 160ms ease;
+
+    &.is-open {
+      transform: rotate(180deg);
+    }
   }
 
   &__panel {

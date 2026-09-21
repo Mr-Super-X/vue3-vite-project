@@ -20,16 +20,28 @@ const userStore = useUserStore()
 const { loggingOut, confirmLogout } = useLogout()
 const { t } = useI18n()
 
+/** 面板展开态 —— el-dropdown 无 trigger 状态 class，须手动同步以驱动箭头旋转 */
+const open = ref(false)
+
 const userName = computed(() => userStore.profile?.name ?? '游客')
 const avatarText = computed(() => userStore.profile?.name?.charAt(0) ?? '?')
+
+function onVisibleChange(visible: boolean) {
+  open.value = visible
+}
 </script>
 
 <template>
-  <el-dropdown :class="bem.b()" trigger="click" @command="confirmLogout">
+  <el-dropdown
+    :class="bem.b()"
+    trigger="click"
+    @command="confirmLogout"
+    @visible-change="onVisibleChange"
+  >
     <button :class="bem.e('trigger')" type="button" aria-haspopup="menu">
       <span :class="bem.e('avatar')">{{ avatarText }}</span>
       <span :class="bem.e('name')">{{ userName }}</span>
-      <el-icon :class="bem.e('caret')" :size="12"><ArrowDown /></el-icon>
+      <el-icon :class="[bem.e('caret'), bem.is('open', open)]" :size="12"><ArrowDown /></el-icon>
     </button>
     <template #dropdown>
       <el-dropdown-menu>
@@ -82,6 +94,11 @@ const avatarText = computed(() => userStore.profile?.name?.charAt(0) ?? '?')
 
   &__caret {
     color: var(--el-text-color-secondary);
+    transition: transform 160ms ease;
+
+    &.is-open {
+      transform: rotate(180deg);
+    }
   }
 }
 </style>
