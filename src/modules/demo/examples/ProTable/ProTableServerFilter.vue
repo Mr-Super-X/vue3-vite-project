@@ -3,15 +3,18 @@
  * ProTable 服务端筛选 demo（v3.5 PR2 新增）
  *
  * 演示能力：
- * - filterParamsAdapter 把全表筛选快照序列化为后端约定的 { statusList, deptList, dateRange, amountRange } 形态
- * - el-table column.tableProps.filters 声明列头筛选下拉（4 列：状态 / 部门 / 日期范围 / 金额范围）
+ * - filterParamsAdapter 把全表筛选快照序列化为后端约定的 { statusList, deptList } 形态
+ * - el-table column.tableProps.filters 声明列头筛选下拉（2 列启用：状态 / 部门）
+ * - createDate / amount 列在业务侧常用「日期范围 / 金额范围」弹窗作为筛选入口，
+ *   此类场景通常由业务方自行驱动，不一定走 el-table 原生 column.filters 协议——
+ *   本 demo 用空数组占位列头位以演示 filterParamsAdapter 对此类字段仍能透传
  * - 筛选变化自动回第 1 页 + 触发请求（与 sortParamsAdapter 对称）
  * - 父级监听 filter-change 事件可做 URL 同步 / 埋点上报
  *
  * 验证步骤：
  * 1. 12 行订单，点击「状态」表头筛选下拉 → 选「已支付」「已发货」→ 表格行数减少
  * 2. Network 面板确认请求带 statusList=['paid','shipped'] 参数
- * 3. 同时选部门 / 日期范围 / 金额范围：filterParamsAdapter 合并入请求
+ * 3. 同时选部门：filterParamsAdapter 把 dept 序列化为 deptList 入请求
  * 4. 点击「重置」按钮 → 筛选清空 + 回到默认页
  */
 import type { ProColumn } from '@/components/ProTable/types'
@@ -53,7 +56,7 @@ const deptFilters = [
 ]
 
 /**
- * 列定义 —— 4 列启用列头筛选下拉（tableProps.filters 协议）。
+ * 列定义 —— 2 列启用列头筛选下拉（tableProps.filters 协议）。
  * - status / dept：单列多选下拉（el-table 原生 column.filters）
  * - createDate / amount：业务方用 onChange + 表头按钮驱动「日期范围 / 金额范围」弹窗，
  *   此处用「点击列头筛选图标触发 dialog」示意（demo 简化省略 dialog 部分代码，
@@ -152,7 +155,10 @@ const onFilterChange = (filters) => {
       ]"
     >
       <section id="demo-server-filter" :class="bem.b()">
-        <DemoField label="基本用法（4 列筛选 + adapter 序列化 + 事件监听）" :code="basicCode">
+        <DemoField
+          label="基本用法（status/dept 列筛选 + adapter 序列化 + 事件监听）"
+          :code="basicCode"
+        >
           <ProTable
             :columns="columns"
             :request-api="filterOrdersRequestApi"

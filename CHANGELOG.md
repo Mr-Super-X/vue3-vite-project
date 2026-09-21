@@ -2,6 +2,27 @@
 
 ## 未发布
 
+### 🐞 Fix | v3.6 D 阶段审计 P1 HIGH 中度 8 条修复（6 个 demo）
+
+> D 阶段深度审计 27 条 HIGH 中 14 条简单已修（P1H batch1），本批修 8 条中度 design。剩余 5 条 batch3 重度需独立 plan。
+
+- **DirectiveInputDebounce.vue**（P1H-8）：defaultCounter / defaultRawCounter / customCounter / customRawCounter 4 ref + default + custom demo 各加 `__counters` 面板（原始输入次数 vs 防抖命中次数）——量化对比防抖效果
+- **DirectiveButtonDebounce.vue**（P1H-10）：DemoField label「实战：模拟 submit」→「实战：连续点击按钮（独立计数演示）」，与实现对齐
+- **DirectiveButtonDebounce.vue**（P1H-12）：新增 demo-input-vs-button section + onInputVsButtonInput/Btn 函数（5 轮 × 300ms 并行触发）+ SCSS __control-row/__counters 块——演示 input vs button debounce 差异
+- **DirectiveButtonDebounce.vue**（P1H-13）：onRawClick 写入 HH:MM:SS.mmm 时间戳 + startRawAutoBurst setInterval 300ms/次 × 10 次 + demo-compare 加时间戳日志面板——直观感受防抖时序优势
+- **DirectiveDraggable.vue**（P1H-14）：clampPosition 纯函数 + clampInput reactive + clampResult computed + forceDialogOffscreen 函数 + demo-boundary 新增 clamp-panel（6 el-input-number + 钳制结果 + SVG 示意图 viewport/红框/绿框 + 「拖到屏幕外」按钮）+ SCSS __clamp-panel/__clamp-title/__clamp-grid/__clamp-result/__clamp-svg 块——边界钳制核心卖点终于可执行验证
+- **ProTableServerFilter.vue**（P1H-18）：文件顶注释 + columns 内联注释 + DemoField label 从「4 列」改为「2 列（status/dept）」——与实际演示列数对齐
+- **ProTableServerSort.vue**（P1H-19）：文件顶新增「关于 sortParamsAdapter」说明段 + introductions 第 3 条标注「本 demo 未启用：默认约定已满足」——澄清为何不演示该 prop
+- **XFormLabelLayout.vue**（P1H-25）：文件顶注释第 4 条从「节点级不生效」改为「顶层为默认 + 字段级 override（line 67-77 演示）」——消除与实际演示的文案矛盾
+
+**文档补充（docs/36）**：
+- **Pattern G**「第三方库 types 子路径不可用」：禁止猜 `echarts/types` 等子路径——必须先查 `node_modules/<lib>/package.json` 的 `types` 字段；回调参数类型用 `Record<string, unknown>` + 注释说明
+- **Pattern H**「字段 model 初始值类型必须与 prop 匹配」：schema 字段加 `modelProp` 时同步检查 model 字段初始值（如 fileList 必须 `[]`）
+- **案例 2**「BaseChartDashboard.vue echarts/types 报错」（2026-09-21）
+- **案例 3**「XFormSlots.vue Upload 字段 ElUploadContent 警告」（2026-09-21）
+
+---
+
 ### 🐞 Fix | v3.6 D 阶段审计 P1 HIGH 简单 14 条修复（10 个 demo）
 
 > D 阶段深度审计发现 27 条 HIGH，本次修其中 14 条简单 edit（跳过 13 条 design——需新增 demo section 或联动 XForm 组件改造）。

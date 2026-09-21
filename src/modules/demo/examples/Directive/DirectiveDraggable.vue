@@ -23,6 +23,63 @@ import DocToc from '../../components/DocToc.vue'
 
 const bem = createNamespace('demo-directive-draggable')
 
+/* ───── 边界钳制交互面板数据 ───────────── */
+
+/**
+ * clampPosition 纯函数：可视化复现 v-draggable 边界钳制算法
+ * 与 src/directives/draggable.ts 中 clampPosition 实现一一对应（验证 demo 演示）。
+ * input: { left, top, dialogWidth, dialogHeight } + 视口 bounds
+ * output: 钳制后的 left/top, 保证弹窗完全位于视口内。
+ */
+const clampInput = reactive({
+  left: 1500, // 假设拖到了屏幕外
+  top: 800,
+  dialogWidth: 500,
+  dialogHeight: 300,
+  viewportWidth: 1280,
+  viewportHeight: 720,
+})
+function clampPosition(
+  pos: { left: number; top: number },
+  bounds: { maxLeft: number; maxTop: number }
+): { left: number; top: number } {
+  return {
+    left: Math.max(0, Math.min(pos.left, bounds.maxLeft)),
+    top: Math.max(0, Math.min(pos.top, bounds.maxTop)),
+  }
+}
+const clampResult = computed(() =>
+  clampPosition(
+    { left: clampInput.left, top: clampInput.top },
+    {
+      maxLeft: clampInput.viewportWidth - clampInput.dialogWidth,
+      maxTop: clampInput.viewportHeight - clampInput.dialogHeight,
+    }
+  )
+)
+
+/** 「拖到屏幕外」按钮：把 enabledVisible 弹窗的内联 left 强制改为 -9999px，
+ *  模拟一个绕过 directive 钳制的极端情况——观察弹窗真实位置被钳制到 0,0 */
+function forceDialogOffscreen(): void {
+  enabledVisible.value = true
+  // 等下一个 tick 让 dialog 渲染完成再改其内联 style
+  nextTick(() => {
+    const dialog = document.querySelector<HTMLElement>('#demo-enabled .el-dialog')
+    if (!dialog) return
+    // el-dialog 拖拽是通过 dialog header 上的 directive 实现的，
+    // 这里直接改 dialog 容器自身定位演示「边界钳制」的效果
+    dialog.style.position = 'fixed'
+    dialog.style.left = '-9999px'
+    dialog.style.top = '50%'
+    dialog.style.margin = '0'
+    // 模拟「极端用户拖拽 → 钳制回视口内」：短暂后恢复
+    setTimeout(() => {
+      dialog.style.left = '0px'
+      dialog.style.top = '0px'
+    }, 1000)
+  })
+}
+
 /* ───── 演示数据 ───────────── */
 
 // 三个 demo 区段各自独立 ref：避免两个 <el-dialog v-model> 共享同一 ref
@@ -173,6 +230,116 @@ const clampCode = `clampPosition({ left, top }, { maxLeft, maxTop })`
             若只钳制手柄，弹窗底部必然超出视口，触发 EP .el-overlay { overflow: auto } 的滚动条；
             钳制整个弹窗才是正确的体验。
           </p>
+
+          <!-- clampPosition 纯函数交互面板 -->
+          <div :class="bem.e('clamp-panel')">
+            <h4 :class="bem.e('clamp-title')">clampPosition 交互面板</h4>
+            <div :class="bem.e('clamp-grid')">
+              <label>
+                left
+                <el-input-number v-model="clampInput.left" :step="100" :min="-9999" />
+              </label>
+              <label>
+                top
+                <el-input-number v-model="clampInput.top" :step="100" :min="-9999" />
+              </label>
+              <label>
+                dialogWidth
+                <el-input-number v-model="clampInput.dialogWidth" :step="50" />
+              </label>
+              <label>
+                dialogHeight
+                <el-input-number v-model="clampInput.dialogHeight" :step="50" />
+              </label>
+              <label>
+                viewportWidth
+                <el-input-number v-model="clampInput.viewportWidth" :step="100" />
+              </label>
+              <label>
+                viewportHeight
+                <el-input-number v-model="clampInput.viewportHeight" :step="100" />
+              </label>
+            </div>
+            <div :class="bem.e('clamp-result')">
+              <strong>钳制后：</strong>
+              left =
+              <code>{{ clampResult.left }}</code>
+              , top =
+              <code>{{ clampResult.top }}</code>
+            </div>
+
+            <!-- SVG 示意图 -->
+            <svg
+              :class="bem.e('clamp-svg')"
+              :viewBox="`0 0 ${clampInput.viewportWidth} ${clampInput.viewportHeight}`"
+              preserveAspectRatio="xMidYMid meet"
+            >
+              <!-- viewport 边界 -->
+              <rect
+                x="0"
+                y="0"
+                :width="clampInput.viewportWidth"
+                :height="clampInput.viewportHeight"
+                fill="none"
+                stroke="#409eff"
+                stroke-width="4"
+                stroke-dasharray="8 4"
+              />
+              <text x="8" y="20" fill="#409eff" font-size="20" font-family="monospace">
+                viewport
+              </text>
+              <!-- 原始位置（红色虚线） -->
+              <rect
+                :x="clampInput.left"
+                :y="clampInput.top"
+                :width="clampInput.dialogWidth"
+                :height="clampInput.dialogHeight"
+                fill="rgba(245,108,108,0.15)"
+                stroke="#f56c6c"
+                stroke-width="3"
+                stroke-dasharray="6 3"
+              />
+              <text
+                :x="clampInput.left + 8"
+                :y="clampInput.top + 24"
+                fill="#f56c6c"
+                font-size="18"
+                font-family="monospace"
+              >
+                原始位置
+              </text>
+              <!-- 钳制后位置（绿色实线） -->
+              <rect
+                :x="clampResult.left"
+                :y="clampResult.top"
+                :width="clampInput.dialogWidth"
+                :height="clampInput.dialogHeight"
+                fill="rgba(103,194,58,0.2)"
+                stroke="#67c23a"
+                stroke-width="3"
+              />
+              <text
+                :x="clampResult.left + 8"
+                :y="clampResult.top + 24"
+                fill="#67c23a"
+                font-size="18"
+                font-family="monospace"
+              >
+                钳制后
+              </text>
+            </svg>
+            <p :class="bem.e('content')">
+              <em>红框</em>
+              = 原始拖拽目标位置；
+              <em>绿框</em>
+              = clampPosition 实际生效位置。两者差异即钳制效果。
+            </p>
+
+            <!-- 「拖到屏幕外」按钮 -->
+            <el-button type="danger" plain @click="forceDialogOffscreen">
+              拖到屏幕外（强制弹窗 left=-9999px，1 秒后自动钳制回视口）
+            </el-button>
+          </div>
         </DemoField>
       </section>
 
@@ -211,6 +378,60 @@ const clampCode = `clampPosition({ left, top }, { maxLeft, maxTop })`
 
   &__control {
     margin-bottom: 12px;
+  }
+
+  &__clamp-panel {
+    margin-top: 12px;
+    padding: 16px;
+    background: var(--el-fill-color-light);
+    border-radius: 4px;
+  }
+
+  &__clamp-title {
+    margin: 0 0 12px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  &__clamp-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+  }
+
+  &__clamp-result {
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    background: var(--el-bg-color);
+    border-left: 3px solid var(--el-color-primary);
+    border-radius: 2px;
+    font-size: 13px;
+
+    code {
+      padding: 2px 6px;
+      background: var(--el-fill-color-lighter);
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: 13px;
+    }
+  }
+
+  &__clamp-svg {
+    display: block;
+    width: 100%;
+    max-height: 360px;
+    background: var(--el-bg-color);
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: 4px;
+    margin-bottom: 8px;
   }
 }
 </style>

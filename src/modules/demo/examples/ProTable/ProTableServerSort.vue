@@ -6,11 +6,18 @@
  * - ProColumn.sortable: 'custom' → 点击表头触发服务端排序（参数 orderByColumn/isAsc）
  * - 泛型列定义 ProColumn<Order> —— render/枚举类型安全（M1）
  * - 排序变化回第 1 页；第三击清除排序
+ * - 默认参数序列化已满足本 demo 后端约定（orderByColumn/isAsc），未使用 sortParamsAdapter
  *
  * 验证步骤：
  * 1. 12 行订单，点击「金额」表头 → 升序；再点 → 降序；三击 → 恢复
  * 2. Network 面板确认请求带 orderByColumn=amount&isAsc=asc|desc
  * 3. 翻页到第 2 页后点排序 → 自动回第 1 页
+ *
+ * 关于 sortParamsAdapter：
+ * 默认约定是「单列排序 + orderByColumn + isAsc」三参数（多数后端已能满足）。
+ * 当后端约定不同（多列排序 / 自定义键名 / 嵌套字段路径）时，通过 sortParamsAdapter 改序列化形态，
+ * 用法与 filterParamsAdapter 对称。本 demo 后端直接吃默认约定，无需额外 adapter。
+ * 如需演示多列排序 / 自定义键名，可参考 filterParamsAdapter 写法。
  */
 import type { ProColumn } from '@/components/ProTable/types'
 import DocLayout from '../../layouts/DocLayout.vue'
@@ -82,7 +89,7 @@ const sortOrdersResponseAdapter = (raw) => ({
       :introductions="[
         'sortable: \'custom\' 的列表头点击后，排序参数随请求发给后端（默认 orderByColumn/isAsc）。',
         '排序变化自动回第 1 页；第三击清除排序（el-table 原生三连点语义）。',
-        '后端约定不同可用 sortParamsAdapter 改序列化形态。',
+        '后端约定不同可用 sortParamsAdapter 改序列化形态（本 demo 未启用：默认约定已满足）。',
         '本 demo 后端返回 { records, totalCount }，经 responseAdapter 映射为约定结构。',
       ]"
     >

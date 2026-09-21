@@ -22,18 +22,33 @@ const bem = createNamespace('demo-directive-input-debounce')
 // 默认 300ms 防抖
 const searchDefault = ref('')
 const defaultLog = ref<string[]>([])
+const defaultCounter = ref(0) // 防抖命中计数
+const defaultRawCounter = ref(0) // 原始 input 事件计数
 function onSearchDefault(event: Event): void {
   const value = (event.target as HTMLInputElement).value
   // 防抖触发后才进 log
-  defaultLog.value = [...defaultLog.value, `防抖触发：${value}`].slice(-5)
+  defaultCounter.value++
+  defaultLog.value = [...defaultLog.value, `防抖命中 ${defaultCounter.value}：${value}`].slice(-5)
+}
+function onSearchDefaultRaw(): void {
+  // 每次按键都触发，用于对照「无防抖 vs 300ms 防抖」差异
+  defaultRawCounter.value++
 }
 
 // 自定义 500ms 防抖（arg 语法）
 const searchCustom = ref('')
 const customLog = ref<string[]>([])
+const customCounter = ref(0)
+const customRawCounter = ref(0)
 function onSearchCustom(event: Event): void {
   const value = (event.target as HTMLInputElement).value
-  customLog.value = [...customLog.value, `500ms 防抖触发：${value}`].slice(-5)
+  customCounter.value++
+  customLog.value = [...customLog.value, `500ms 防抖命中 ${customCounter.value}：${value}`].slice(
+    -5
+  )
+}
+function onSearchCustomRaw(): void {
+  customRawCounter.value++
 }
 
 // 中文输入法：独立 ref + 独立回调 + 独立日志（与默认防抖示例隔离，
@@ -121,7 +136,18 @@ const compositionCode = `<el-input v-inputDebounce="onSearch" v-model="keyword" 
             v-model="searchDefault"
             placeholder="尝试连续输入字符，观察日志"
             clearable
+            @input="onSearchDefaultRaw"
           />
+          <div :class="bem.e('counters')">
+            <span>
+              原始 input 次数：
+              <strong>{{ defaultRawCounter }}</strong>
+            </span>
+            <span>
+              300ms 防抖命中：
+              <strong>{{ defaultCounter }}</strong>
+            </span>
+          </div>
           <div :class="bem.e('log')">
             <p :class="bem.e('log-title')">回调日志（防抖后）：</p>
             <p v-for="(line, idx) in defaultLog" :key="`d-${idx}`" :class="bem.e('log-line')">
@@ -140,7 +166,18 @@ const compositionCode = `<el-input v-inputDebounce="onSearch" v-model="keyword" 
             v-model="searchCustom"
             placeholder="500ms 防抖间隔"
             clearable
+            @input="onSearchCustomRaw"
           />
+          <div :class="bem.e('counters')">
+            <span>
+              原始 input 次数：
+              <strong>{{ customRawCounter }}</strong>
+            </span>
+            <span>
+              500ms 防抖命中：
+              <strong>{{ customCounter }}</strong>
+            </span>
+          </div>
           <div :class="bem.e('log')">
             <p :class="bem.e('log-title')">回调日志（500ms 防抖）：</p>
             <p v-for="(line, idx) in customLog" :key="`c-${idx}`" :class="bem.e('log-line')">
@@ -150,6 +187,12 @@ const compositionCode = `<el-input v-inputDebounce="onSearch" v-model="keyword" 
               （输入字符触发 500ms 防抖回调）
             </p>
           </div>
+          <p :class="bem.e('hint')">
+            对照量化：在两个输入框分别连续输入「abcdefghij」10 字符，
+            <strong>原始 input 次数都是 10</strong>
+            ，但 300ms 防抖命中次数通常多于 500ms 防抖 （停顿少时差异最明显，例如 300ms 命中 4 次 vs
+            500ms 命中 2 次）。
+          </p>
         </DemoField>
       </section>
 
@@ -260,6 +303,20 @@ const compositionCode = `<el-input v-inputDebounce="onSearch" v-model="keyword" 
     color: #999;
     font-style: italic;
     font-size: 12px;
+  }
+
+  &__counters {
+    display: flex;
+    gap: 24px;
+    margin: 12px 0;
+    font-size: 13px;
+    color: var(--el-text-color-regular);
+
+    strong {
+      font-family: monospace;
+      color: var(--el-color-primary);
+      margin: 0 4px;
+    }
   }
 }
 </style>

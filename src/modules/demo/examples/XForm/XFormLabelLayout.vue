@@ -6,7 +6,7 @@
  *   1. labelPosition: 'top' —— 移动端友好（label 在字段上方）
  *   2. labelPosition: 'left' + labelWidth: '120px' —— 桌面端标准
  *   3. 切换演示三种 labelPosition 的视觉差异
- *   4. 强调：这两个字段写在节点级不生效，必须从顶层 schema 派生
+ *   4. labelPosition / labelWidth 顶层为默认；字段级可声明 override 顶层（line 67-77 演示）
  */
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
