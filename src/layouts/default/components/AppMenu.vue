@@ -7,6 +7,8 @@
  *   父菜单"提升"为单菜单项（显示子项标题/图标，路径指向子项）——参考仓标志性行为
  * - 外链：path 为 http(s)/ftp URL 时点击新窗口打开
  * - vertical 模式：跟随 appStore.sidebarCollapsed 折叠（仅显示图标，弹层悬浮）
+ * - 展开态标题溢出：OverflowText 在文字被 ellipsis 截断时 hover 出完整 tooltip
+ *   （栏宽被拖拽手柄改变后长标题场景）
  * - horizontal 模式：用于 top 布局顶栏导航
  * - 激活项：meta.activeMenu 优先，否则当前路由 path
  * - 手风琴：config.ui.uniqueOpened 仅作用于 vertical
@@ -28,6 +30,7 @@ import { isUrl, resolveSingleChild } from '../config/menu'
 import { defaultLayoutConfig } from '../config/app'
 import { useAppStore } from '@/store/modules/app'
 import MenuIcon from './MenuIcon.vue'
+import OverflowText from './OverflowText.vue'
 
 const bem = createNamespace('app-menu')
 
@@ -116,7 +119,7 @@ function handleSelect(index: string): void {
             </el-tooltip>
             <template v-else>
               <MenuIcon v-if="promotedNode(node).icon" :name="promotedNode(node).icon" />
-              <span :class="bem.e('title')">{{ promotedNode(node).title }}</span>
+              <OverflowText :text="promotedNode(node).title" />
             </template>
           </el-menu-item>
 
@@ -125,7 +128,7 @@ function handleSelect(index: string): void {
           <el-sub-menu v-else :index="node.path as any" teleported :popper-class="popperClass">
             <template #title>
               <MenuIcon v-if="node.icon" :name="node.icon" />
-              <span :class="bem.e('title')">{{ node.title }}</span>
+              <OverflowText :text="node.title" />
             </template>
             <AppMenu :menu-nodes="node.children ?? []" :mode="mode" is-nested />
           </el-sub-menu>
@@ -143,13 +146,13 @@ function handleSelect(index: string): void {
       <template v-for="node in menuNodes" :key="node.path">
         <el-menu-item v-if="isPromotedItem(node)" :index="promotedNode(node).path">
           <MenuIcon v-if="promotedNode(node).icon" :name="promotedNode(node).icon" />
-          <span :class="bem.e('title')">{{ promotedNode(node).title }}</span>
+          <OverflowText :text="promotedNode(node).title" />
         </el-menu-item>
         <!-- as any 原因同上（EP 2.14 + TS6 prop 类型 bug） -->
         <el-sub-menu v-else :index="node.path as any" teleported :popper-class="popperClass">
           <template #title>
             <MenuIcon v-if="node.icon" :name="node.icon" />
-            <span :class="bem.e('title')">{{ node.title }}</span>
+            <OverflowText :text="node.title" />
           </template>
           <AppMenu :menu-nodes="node.children ?? []" :mode="mode" is-nested />
         </el-sub-menu>
@@ -162,13 +165,13 @@ function handleSelect(index: string): void {
     <template v-for="node in menuNodes" :key="node.path">
       <el-menu-item v-if="isPromotedItem(node)" :index="promotedNode(node).path">
         <MenuIcon v-if="promotedNode(node).icon" :name="promotedNode(node).icon" />
-        <span :class="bem.e('title')">{{ promotedNode(node).title }}</span>
+        <OverflowText :text="promotedNode(node).title" />
       </el-menu-item>
       <!-- as any 原因同上（EP 2.14 + TS6 prop 类型 bug） -->
       <el-sub-menu v-else :index="node.path as any" teleported :popper-class="popperClass">
         <template #title>
           <MenuIcon v-if="node.icon" :name="node.icon" />
-          <span :class="bem.e('title')">{{ node.title }}</span>
+          <OverflowText :text="node.title" />
         </template>
         <AppMenu :menu-nodes="node.children ?? []" :mode="mode" is-nested />
       </el-sub-menu>
@@ -196,9 +199,10 @@ function handleSelect(index: string): void {
     height: 100%;
   }
 
-  // 展开/折叠宽度
+  // 展开宽度跟随父容器（aside 宽度可被拖拽手柄改变，见 ../config/resize.ts），
+  // 折叠宽度仍为固定 token（折叠是预设档位，无需跟随）
   &--vertical:not(.is-collapsed) {
-    width: var(--left-menu-max-width);
+    width: 100%;
   }
   &--vertical.is-collapsed {
     width: var(--left-menu-min-width);
@@ -364,12 +368,6 @@ function handleSelect(index: string): void {
         padding-right: 34px;
       }
     }
-  }
-
-  &__title {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 }
 

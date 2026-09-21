@@ -2,6 +2,21 @@
 
 ## 未发布
 
+### ✨ Feature | default 布局侧栏拖拽调宽（主栏 + mixed/dual 二级侧栏）
+
+> sidebar 模式左栏与 mixed/dual 二级侧栏右缘新增拖拽手柄，实时调整宽度；折叠 / 移动端（抽屉态）不渲染手柄，行为不变。
+
+- 数据：`appStore` 新增 `sidebarWidth` / `secondaryWidth`（`number | null`，null = 跟随设计 token 默认 224px），纳入 `persist` `pick` 持久化
+- 交互原语：`layouts/default/components/SidebarResizer.vue`——纯鼠标/键盘交互组件（mousedown→document 级 mousemove→mouseup，拖出窗口 mouseleave 兜底；`ArrowLeft/Right` 步进 8px，含 `role="separator"` + aria 值域），emit 实时宽度（v-model）与 `commit` 最终值，不感知 store 语义
+- 钳制：`layouts/default/config/resize.ts`——`clampMenuWidth` 上下界 160/480px + 默认值 224（与 `--left-menu-max-width` 双真源，改 token 需同步），持久化脏值回灌同样过钳制
+- 细节：拖拽中 `is-resizing` 禁用 width 过渡（防橡皮筋滞后）；`body.vv-menu-resizing` 全局禁文本选择 + 锁定 col-resize 光标；组件卸载兜底清理全局监听
+- 修复：AppMenu 根节点展开态宽度由写死 `var(--left-menu-max-width)`（恒 224px）改为 `100%` 跟随 aside——拖拽加宽后菜单不同步留白的问题；顺带消除移动端小屏抽屉（82vw < 224px 时）菜单溢出 aside 的隐患
+- 溢出 tooltip：新增 `OverflowText.vue`——ResizeObserver 检测 `scrollWidth > clientWidth`，仅文字被 ellipsis 截断时启用 el-tooltip（未溢出弹提示是干扰），折叠态仍走 AppMenu 原生折叠 tooltip 分支；AppMenu 菜单标题 6 处（根实例 4 + 递归实例 2）全部接入，原 `__title` ellipsis 样式迁入组件
+- 布局壳拆分：`useMenuResizing`（拖拽调宽接线）+ `useMenuTree`（菜单树派生）抽至 `config/`，`index.vue` 463 → 424 行回到浮动上限内
+- 测试：`resize.spec.ts` 5 例（回退/取整/上下界）+ `SidebarResizer.spec.ts` 7 例（事件序列/钳制/清理/键盘/a11y/卸载兜底）+ `OverflowText.spec.ts` 4 例（RO mock 驱动溢出联动）
+
+---
+
 ### 🐞 Fix | 多页签排除系统页（Login/403/404/500 不再污染 tags-view）
 
 > 修复：退出登录跳 `/login?redirect=/workbench` 后重新登录，"登录"页签残留在多页签栏。

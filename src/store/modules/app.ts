@@ -32,6 +32,14 @@ export const useAppStore = defineStore(
     const locale = ref<'zh-CN' | 'en-US'>('zh-CN')
     /** 布局模式（四模式切换，ToolHeader 的 LayoutSwitcher 修改） */
     const layout = ref<LayoutMode>('sidebar')
+    /**
+     * 用户自定义侧栏宽度（px，拖拽手柄写入）。null = 跟随设计 token 默认
+     * （--left-menu-max-width）。属用户偏好故持久化；回灌时经 clampMenuWidth 钳制
+     * @see [`../../layouts/default/config/resize.ts`](../../layouts/default/config/resize.ts) 边界定义
+     */
+    const sidebarWidth = ref<number | null>(null)
+    /** 二级侧栏宽度（px，mixed/dual 模式），语义同 sidebarWidth */
+    const secondaryWidth = ref<number | null>(null)
     /** 是否移动端断点（≤767px），由 matchMedia 监听驱动；移动端侧栏变抽屉并显示遮罩 */
     const mobile = ref(false)
 
@@ -69,6 +77,8 @@ export const useAppStore = defineStore(
       globalLoading,
       locale,
       layout,
+      sidebarWidth,
+      secondaryWidth,
       mobile,
       toggleSidebar,
       setGlobalLoading,
@@ -83,7 +93,8 @@ export const useAppStore = defineStore(
       key: namespacedStorageKey('app-ui'),
       storage: localStorage,
       // locale 一并持久化：刷新后 App.vue 的 watch（immediate）回灌到 i18n 实例
-      pick: ['layout', 'locale'],
+      // sidebarWidth / secondaryWidth 属用户偏好，随 layout 一并持久化
+      pick: ['layout', 'locale', 'sidebarWidth', 'secondaryWidth'],
     },
   }
 )
