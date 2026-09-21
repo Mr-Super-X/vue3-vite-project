@@ -3,7 +3,6 @@
  * 最小可运行示例 —— 展示 XForm 最简用法
  * 一个 input + 校验按钮 + 提交反馈
  */
-import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'

@@ -19,7 +19,7 @@ import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
 import DocToc from '../../components/DocToc.vue'
-import { tasksRequestApi } from '../../../../../mock/pro-table/tasks'
+import { tasksRequestApi } from '@mock/pro-table/tasks'
 import {
   rowDragColumnItems,
   rowDragConfigItems,

@@ -12,7 +12,6 @@
  * reaction 函数副作用承载约定：使用 _effect 字段存放副作用函数，返回 undefined →
  * use-reaction 的 isEqual 比较 target._effect 与 undefined 相等 → 跳过写入节点字段
  */
-import { computed, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'

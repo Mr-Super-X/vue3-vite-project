@@ -11,7 +11,6 @@
  * 4. onUnmounted 清定时器：组件卸载后定时器仍会触发回调导致泄漏，必须清理
  * 5. 高频更新下 ResizeObserver + 150ms 防抖：图表跟随容器自动 resize（容器拖拽不卡顿）
  */
-import { computed, onUnmounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'

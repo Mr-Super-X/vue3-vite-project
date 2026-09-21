@@ -8,7 +8,6 @@
  * 3. 上下移按钮与拖拽共存，同一条 moveItem 数据通路
  * 4. minItems / maxItems 边界约束照常生效
  */
-import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { xArray } from '@/components/form-schema/builders'

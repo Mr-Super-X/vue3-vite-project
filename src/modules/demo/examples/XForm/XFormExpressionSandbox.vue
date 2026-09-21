@@ -8,7 +8,6 @@
  *   3. 沙箱安全：含 document / window / fetch / eval 等 forbidden 标识符 → console.error + Debug Banner 红字
  *   4. 与 XFormExpression 互补：本 demo 专门讲白名单与安全边界
  */
-import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'

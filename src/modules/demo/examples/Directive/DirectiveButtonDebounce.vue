@@ -10,7 +10,6 @@
  *
  * 路由：/demo/directive-button-debounce
  */
-import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'

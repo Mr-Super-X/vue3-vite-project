@@ -19,7 +19,6 @@
  *
  * 路由：自动注册为 /demo/pro-table-auto-height
  */
-import { ref } from 'vue'
 import { ElButton, ElDialog } from 'element-plus'
 import { ProTable, type ProColumn } from '@/components/ProTable'
 import DocLayout from '../../layouts/DocLayout.vue'

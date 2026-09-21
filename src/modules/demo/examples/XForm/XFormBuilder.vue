@@ -11,7 +11,6 @@
  * 5. Autocomplete(自动补全):props.fetchSuggestions/triggerOnFocus
  * 6. TreeSelect(树形选择):props.data/multiple
  */
-import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
 import {

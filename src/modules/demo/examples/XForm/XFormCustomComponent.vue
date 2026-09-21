@@ -8,7 +8,7 @@
  *   3. schema 内 component: 'MyTagSelector' 自动解析
  *   4. props.modelValue + emit('update:modelValue') 自动双向绑定
  */
-import { reactive, h, ref, computed, defineComponent } from 'vue'
+import { h, defineComponent } from 'vue'
 import { ElMessage } from 'element-plus'
 import { ElTag, ElInput } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'

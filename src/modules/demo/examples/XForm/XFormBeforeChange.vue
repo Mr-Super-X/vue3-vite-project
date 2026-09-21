@@ -6,7 +6,6 @@
  * B. 字段级（第 3 层）：输入手机号自动去空格 + 选城市联动清空区（ctx.setFieldValue）
  * C. 命名空间（第 2 层）：数组 items[*].phone 用正则统一格式化
  */
-import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { BeforeChangeFn, BeforeChangeRule, SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'

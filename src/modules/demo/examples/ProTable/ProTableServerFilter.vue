@@ -14,7 +14,6 @@
  * 3. 同时选部门 / 日期范围 / 金额范围：filterParamsAdapter 合并入请求
  * 4. 点击「重置」按钮 → 筛选清空 + 回到默认页
  */
-import { ref } from 'vue'
 import type { ProColumn } from '@/components/ProTable/types'
 import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
@@ -25,7 +24,7 @@ import {
   filterOrdersRequestApi,
   filterOrdersParamsAdapter,
   type Order,
-} from '../../../../../mock/pro-table/filter-orders'
+} from '@mock/pro-table/filter-orders'
 import {
   filterColumnItems,
   filterPropsItems,
@@ -133,8 +132,8 @@ const filterOrdersParamsAdapter = (filters) => ({
 })
 
 const onFilterChange = (filters) => {
-  // URL 同步 / 埋点上报
-  console.log('筛选快照:', filters)
+  // URL 同步 / 埋点上报（避免 console 污染 DevTools——真实业务应调 Sentry / ElMessage 提示）
+  /* 处理筛选快照：filters */
 }
 <\/script>`
 </script>

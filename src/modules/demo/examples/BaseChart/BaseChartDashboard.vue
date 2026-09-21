@@ -11,7 +11,6 @@
  * 4. 全屏切换：requestFullscreen API（浏览器原生全屏），所有图表重新 resize
  * 5. 排行榜柱图动态着色：itemStyle.color 支持函数返回值
  */
-import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'

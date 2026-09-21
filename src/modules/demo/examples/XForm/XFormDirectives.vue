@@ -10,7 +10,6 @@
  *   3. rules 命名引用：node.rules 写字符串 'phone'，从 XFormProps.rules 命名表取规则
  *   4. 节点级 props 覆盖：备注字段 clearable: false 覆盖全局默认
  */
-import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { Directive } from 'vue'
 import type { SchemaNode, RuleItem } from '@/components/form-schema/types'

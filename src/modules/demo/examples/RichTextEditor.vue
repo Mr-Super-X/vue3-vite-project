@@ -17,7 +17,6 @@
   ④ 点「外部设置 HTML」→ 编辑器内容立刻更新，且控制台只打一次 change 日志（验证防循环）
 -->
 <script setup lang="ts">
-import { ref } from 'vue'
 import RichTextEditorSource from '@/components/common/RichTextEditor/RichTextEditor.vue?raw'
 import DemoField from '../components/DemoField.vue'
 import DemoFrame from '../components/DemoFrame.vue'

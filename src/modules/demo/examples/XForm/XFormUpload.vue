@@ -19,7 +19,7 @@
  * script 块是 lang="tsx" 而非 lang="ts"：场景 10 的 JSX 写法需要它。
  * 前置条件是 eslint.config.mjs 的 withVueTs 已声明 scriptLangs: ['ts', 'tsx']。
  */
-import { reactive, h } from 'vue'
+import { h } from 'vue'
 import { ElMessage, ElIcon, ElButton } from 'element-plus'
 import { UploadFilled, Document } from '@element-plus/icons-vue'
 import type { UploadRawFile, UploadUserFile, UploadRequestOptions } from 'element-plus'

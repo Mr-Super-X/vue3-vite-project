@@ -10,7 +10,6 @@
  *
  * 路由：/demo/directive-copy
  */
-import { ref } from 'vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import DocLayout from '../../layouts/DocLayout.vue'

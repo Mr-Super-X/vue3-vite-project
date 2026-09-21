@@ -7,7 +7,6 @@
  *   2. validateWithZod() 异步返回 { success, errors }
  *   3. 与 el-form 校验互补：zod 覆盖复杂业务规则（如密码含大写字母 + 数字）
  */
-import { reactive } from 'vue'
 import { z } from 'zod'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'

@@ -16,14 +16,13 @@
  * 3. 双击工资改 88888 → 编辑中数据不生效，失焦后才同步（blur 模式）→ 保存 → 红字「工资超限」
  * 4. 双击姓名 + 双击部门 → 两个字段同时进入编辑
  */
-import { ref } from 'vue'
 import type { ProColumn, ProTableExpose } from '@/components/ProTable/types'
 import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
 import DocToc from '../../components/DocToc.vue'
-import { employeeRequestApi } from '../../../../../mock/pro-table/employee'
+import { employeeRequestApi } from '@mock/pro-table/employee'
 import {
   rowEditPropsItems,
   rowEditColumnItems,
@@ -116,7 +115,6 @@ const basicCode = `<template>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import type { ProColumn } from '@/components/ProTable/types'
 
 const columns: ProColumn[] = [

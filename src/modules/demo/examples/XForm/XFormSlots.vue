@@ -8,7 +8,7 @@
  *   3. JSX 产物：函数内部用 h() 模拟 JSX 编译结果
  *   4. 字符串 slot：保持现有行为，走 schema 渲染
  */
-import { reactive, h } from 'vue'
+import { h } from 'vue'
 import { ElButton, ElIcon } from 'element-plus'
 import { Upload } from '@element-plus/icons-vue'
 import type { SchemaNode } from '@/components/form-schema/types'

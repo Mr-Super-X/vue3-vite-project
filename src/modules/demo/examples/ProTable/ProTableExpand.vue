@@ -20,7 +20,6 @@
  *   kebab-case JSX 标签运行时走 resolveComponent 会解析失败（AutoImport 只自动补 ElXxx 标识符）
  * - 多按钮组 + Popconfirm 确认交互（删除等高风险操作）
  */
-import { ref } from 'vue'
 import {
   ElButton,
   ElMessage,
@@ -32,8 +31,8 @@ import {
 } from 'element-plus'
 import { ArrowDown, View } from '@element-plus/icons-vue'
 import type { ProColumn, ProTableExpose } from '@/components/ProTable'
-import type { OrderItem, ExpandOrder } from '../../../../../mock/pro-table/expand'
-import { expandRequestApi } from '../../../../../mock/pro-table/expand'
+import type { OrderItem, ExpandOrder } from '@mock/pro-table/expand'
+import { expandRequestApi } from '@mock/pro-table/expand'
 import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'

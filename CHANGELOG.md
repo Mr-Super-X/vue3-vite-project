@@ -2,6 +2,121 @@
 
 ## 未发布
 
+### 📝 Docs | v3.5 末次审计 P1 剩余 HIGH 排查结论
+
+> 重盘点发现 63 条 HIGH，实际属于「P1R-9~12 已修（45 条）+ ALIAS-4 已修（14 条）」Agent 滞后报告。真正剩余未修 HIGH 仅 6 条，其中 4 条为设计性问题需重构，2 条为设计性故意保留。
+
+**已修（Agent 报告滞后）**：
+- §1.6 AutoImport 45 条已在 P1R-9~12（65 文件清理）覆盖
+- §4 #14 深层路径 14 条已在 ALIAS-4（12 demo @mock 替换）覆盖
+- BaseChartOverview SNIPPET_INSTANCE 残留 console.log 已在 P1R-1 修复
+- XFormOrderCreate「30」→「50+」文案已在 P1R-2 修复
+- ProTableServerFilter SNIPPET console.log 已在 P1R-3 修复
+
+**设计性问题跳过（需重构，超出 demo 范围）**：
+- `DirectiveAuth.vue` + `DirectivePermission.vue`：`userStore.permissions = [...val]` 绕过 useAuth——需 useAuth 暴露 setter 后改写（设计层）
+- `ProTableOverview.vue` line 83-89：操作列 `@click` 直接传 row 到 ElMessage 未走 useAppRouter——演示代码与 §1.5 业务封装规范差异（设计层）
+- `ProTableStyleOverride.vue` line 59-61：`isRecent(iso)` 边缘 case（mock 相对时间 + Date.now() 间隔）——需重新设计 mock 数据（绝对时间）
+
+**设计性故意保留（demo 本身机制需要）**：
+- `RichTextEditor.vue` line 82：`console.log('[防循环验证] onChange 触发第 N 次')` —— 反例 demo，控制台计数是核心验证机制
+- `XFormPersistSchemaVersion.vue` line 44：`console.info('[restoreFilter] 已裁剪废弃字段')` —— v2 schema 升级诊断输出
+
+---
+
+### ✨ Feature | 新增 `@mock` alias + 12 个 ProTable demo 路径规范化
+
+> `mock/` 目录在项目根（不在 `src/`），原 12 个 ProTable demo 用 `../../../../../mock/...` 5 层相对路径（违反 CLAUDE.md §4 #14）。本次新增 `PROJECT_ROOT_ALIASES` 抽象，支持「项目根目录别名」与「src 子目录别名」并存，并替换 12 个 demo 路径。
+
+- **`build/aliases.ts`**：
+  - 新增 `PROJECT_ROOT_ALIASES = { '@mock': 'mock' } as const`（独立于 `SRC_DIR_ALIASES`）
+  - `resolveSrcDirAliases()` 合并策略：src 子目录优先 + 项目根目录兜底（同名冲突时 src 优先）
+  - `generateTsconfigPaths()` 同步处理两条路径：`./mock/index.ts` + `./mock/*`（项目根，不带 `src/`）
+  - 旧函数 API 不变（rename 是内部逻辑），现有 15 个 src 别名零影响
+- **`build/aliases.spec.ts`**：测试断言数 15→16 / 29→31 + 新增 `PROJECT_ROOT_ALIASES` + `@mock` 解析路径 4 条断言（13/13 PASS）
+- **`tsconfig.app.json`**：`pnpm generate:tsconfig-paths` 自动同步，`@mock: [./mock/index.ts]` + `@mock/*: [./mock/*]`
+- **12 个 ProTable demo 路径替换**：`ProTableCellSpan / Expand / EngineCompare / GroupedHeader / RowDrag / RowEdit / ServerSort / ServerFilter / StyleOverride / Summary / Tree / VirtualScroll.vue` —— `../../../../../mock/pro-table/xxx` → `@mock/pro-table/xxx`（共 14 行，ProTableExpand + EngineCompare 各 2 行）
+- **验证**：`pnpm type-check:full` + `pnpm lint` + `pnpm check:aliases` + `pnpm check:routes` 全部 PASS
+
+---
+
+### 🐞 Fix | demo §1.6 AutoImport 系统性清理（65 文件）
+
+> v3.5 末次审计重盘点发现 39 个 demo 含 `import { ref/computed/watch/... } from 'vue'` 冗余 import（CLAUDE.md §1.6 AutoImport 约束）。Agent 批处理实际扫描发现 65 个文件命中，删除 67 行冗余 import。
+
+- 范围：RichTextEditor / BaseChart × 4 / Directive × 6 / ProTable × 5 / XForm × 46 / ProDialogForm × 1 等共 65 个 demo
+- 单文件删除 1 个 API（62 文件） / 2 个 API（3 文件） / ≥3 个 API（4 文件，最多的 XFormLargeSchema 删 6 个）
+- 部分保留 8 文件（含 `h` 或 `defineComponent`，不在 AutoImport 范围）：ProTableOperation / ProTableStyleOverride / XFormOverview / XFormRenderRecovery / XFormSlots / XFormUpload / XFormCustomComponent / XFormCustomFormItem —— 仅删 AutoImport 部分
+- 验证：`pnpm type-check:full` + `pnpm lint` 全过；Grep 双重确认 AutoImport 残留 0
+
+---
+
+### 🐞 Fix | v3.5 末次审计 P1 demo 剩余 15 条修复（8 简单 + 2 批处理）
+
+> 简单 8 条：console.log 污染 + 文案一致性 + 死代码清理。系统化批处理见上方 §1.6 AutoImport 清理条目。
+
+- **BaseChartOverview.vue SNIPPET_INSTANCE**：line 105 注释声称已删 console.log 但代码残留——重新删除 + 注释位占位（避免用户复制 demo 污染 DevTools）
+- **XFormOrderCreate.vue**：line 14 + line 330 「30 个独立 demo」→「50+ 个」文案（与实际 XForm 系列 demo 数对齐）
+- **ProTableServerFilter.vue SNIPPET**：line 137 `console.log('筛选快照:', filters)` → 注释占位（避免 console 污染）
+- **ProDialogFormOverview.vue onSubmit**：3 处真实 `console.log` 全部删除（其他 demo 全用 ElMessage），改为注释位占位
+- **XFormSchemaIndex.vue SCSS**：删 `.tag` 死代码（v3.5 末次审计发现的 SCSS 死类）
+- **XFormSchemaIndex.vue**：dependsOnMap.length 加注释「数组，源于 dependsOnMap.entries()」（澄清语义）
+- **ProTableStyleOverride.vue 顶部 comment**：注释「6 个场景」+ tocItems 11 项标注「+ 1 个可覆盖钩子清单」+ 场景 ①②③④⑤ 共用一张 ProTable 详情
+
+---
+
+### 🐞 Fix | v3.5 末次审计 P1 demo 重点修复（8 项 HIGH）
+
+> v3.5 末次审计（98 demo / 89 问题）暴露的 31 条 HIGH 中优先修复 8 项：3 处 §1.7 违规、1 处 §1.6 冗余、1 处引导未闭环、3 处死代码/死参数、1 处 mock 数据外迁。
+
+- **`ProDialogOverview.vue`**：删 line 13 `import { ProDialog }` —— `components/common/ProDialog` 全局自动注册，模板直接 `<ProDialog v-model>` 无需 InstanceType，确认是 §1.7 违规（不是 §1.7 例外条款的合法使用）
+- **`ProDialogResizable.vue`**：删 line 18 `import { ref } from 'vue'` + line 20 `import { ProDialog }` —— §1.6 AutoImport + §1.7 全局组件注册 双重违规
+- **`BaseChartInDialog.vue`**：删 line 14 `import { ProDialog }` —— §1.7 违规（同 ProDialogOverview 情况）
+- **`BaseChartOverview.vue`**：② notMerge section 加「先 hover 柱子触发 tooltip 再切换类型」step 提示——原版文案假设用户已 hover，缺前置步骤导致引导未闭环
+- **`ProTableStyleOverride.vue`**：删 line 572-577 `tr:has(__tag-on)` 空 CSS 规则（注释「空规则占位，仅演示」但无任何样式输出，是历史遗留死代码）
+- **`XFormOrderCreate.vue`**：① 删 line 258 `successMessage: false`（useXFormDemo 默认值，显式传 false 反而误导——读代码的人会以为是关掉了某个能力）② `guideActive = ref([])` → `ref(['guide'])`（默认展开 7 步验证指引——本 demo 是「建议新接入 XForm 先看」入口，默认折叠会与 introductions 矛盾，反而隐藏了 7 步价值）
+- **`ProTable/configs/projects-users.ts`**：新建——ProTableOverview 的 UserRow + generateMockData + mockRequestApi + STATUS/ROLE 字典 外迁到 configs 层（与 ProTableStyleOverride 的 `configs/projects.ts` 模式一致）；ProTableOverview.vue 删 56 行内嵌 mock 代码 + import 新文件 + 7 处 `:request-api` 改为 `overviewRequestApi`
+
+---
+
+### 🐞 Fix | v3.5 末次审计 P0 demo 全部修复（7 个 CRITICAL demo）
+
+> v3.5 末次审计（98 demo / 89 问题）暴露的 7 个 CRITICAL 问题全部修复。修复以「演示合理性 = 实际行为」「代码-注释-TOC 三方一致」「不传播错误用法」三原则为指引。
+
+- **`DirectiveAuth.vue`**：① line 47-54 `userStore.permissions = [...val]` 加 `⚠️ DEMO-ONLY` 注释（明确真实业务应走 `useAuth()` 封装 setter，避免读者照搬错误用法到生产代码）② line 66 注释改为实际行为（`useAuth().permissions` watchEffect 驱动，无需 binding 自身响应式）③ line 102 `aria-hidden=false` → `aria-disabled=true`（与 `auth.ts:78-85` 实现一致）
+- **`XFormSchemaIndex.vue`**：line 16 注释 `80+ 字段` → `28 字段（4 父列 + 12 子列 + 12 server-error 字段）`（与实际生成数量对齐，避免性能基线误导）
+- **`ProTableStyleOverride.vue`**：① 7 项 tocItems 中 ②③④⑤ 共享 `demo-row-cell-styling` 锚点 + label 标注「见上文 ①」（避免 5 个 TOC 项无对应 section）② 删 line 291 空三元 `${densityList[0] ? '' : ''}`（历史遗留死代码）
+- **`ProTableGroupedHeader.vue`**：① introductions 加「ProColumn.children 字段 API 已规划，v3.0 暂未实装完整 el-table-column 嵌套多级表头」说明 ② ApiTable title 加「（v3.0 已规划，暂未实装）」标注（避免读者按 demo 复制 `children` 字段得不到预期）
+- **`DirectiveOverview.vue`**：加 3 个真实可交互 demo（v-copy / v-inputDebounce / v-buttonDebounce）—— 解决「0 个可交互控件，纯静态速查表」CRITICAL 问题
+- **`ProTableOverview.vue`**：补齐 `<ProTable>` 条件渲染（`:enable-row-edit / enable-tree / enable-cell-span / enable-row-drag` 接 capabilityConfig）—— 解决「能力切换面板只渲染开关没渲染 ProTable，演示是假的」CRITICAL 问题
+- **`XFormOrderCreate.vue`**：删 `import xFormSource from './XFormOrderCreate.vue?raw'`（脆弱的自引用 + 514 行 raw 过长），改为 `JSON.stringify(schema, null, 2)`（DemoField 展示 schema 本体 ~80 行 JSON，可读、可复制、可作为业务参考）
+
+---
+
+### 🐞 Fix | demo SNIPPET 编译失败 bug（BaseChartOverview.vue）
+
+> BaseChart Overview 页两个 SNIPPET 字符串含「复制即坏」的演示代码：用户复制后会编译失败。
+
+- `BaseChartOverview.vue:101-106` `SNIPPET_INSTANCE`：`const ref = useTemplateRef<InstanceType<typeof BaseChart>>('chart')` 中 `const ref` 遮蔽 AutoImport 的 `ref()`，且 `InstanceType<typeof BaseChart>` 要求消费方 import BaseChart 违反 §1.7
+- 修复：变量重命名为 `chartRef`；用文件内已定义的 `BaseChartExposed` interface（line 23-27）替代 `InstanceType`；删除污染性的 `console.log`，改用注释占位
+- `BaseChartOverview.vue:170-173` `SNIPPET_MANUAL`：`<BaseChart ref="ref" :option="...">` 模板 ref 名 `ref` 与 AutoImport `ref()` 冲突；`<button @click="ref?.resize()">` 同名变量更混乱
+- 修复：模板 ref 名重命名为 `chartRef`（与 SNIPPET_INSTANCE 保持命名一致）
+- 模板中**实际**的 `<BaseChart ref="chartRef" :option="clickOption" />`（line 228）和 `<BaseChart ref="manualChartRef" :option="resizeOption" :auto-resize="false" />`（line 277）已用正确名称，无需改
+- 演示逻辑完全不变（SNIPPET 仅是给用户看的代码片段）
+- 详见 `docs/36-demo-质量检查清单.md` §四 Pattern B 与 §四 案例 1
+
+---
+
+### 📝 Docs | 新增 demo 质量检查清单
+
+> 防止 demo 模块出现 v3.5 末次审计（89 条问题）暴露的「演示合理性 ≠ 实际行为」「复制即坏」「§1.6/§1.7 违规」等系统性问题。
+
+- `docs/36-demo-质量检查清单.md`：4 维度检查清单（演示合理性 / 文案准确性 / 测试步骤完整性 / 用户可理解性）+ 5 类 Pattern 预防清单 + 自动化检查路线图 + 历史问题案例库（BaseChartOverview 案例）
+- 关联 v3.5 末次审计：`.claude/.agent-reports/2026-09-21-demo-audit-report.md`（98 demo / 89 问题 / 10 CRITICAL / 31 HIGH）
+- 后续 PR 模板建议新增 check：「本次涉及的 demo 是否已同步 `introductions` / `<DocToc>` / `source` 属性？」
+
+---
+
 ### 💄 Style | default 布局头部下拉箭头随展开旋转（布局/语言/用户信息）
 
 > 交互反馈补全：三个下拉（LayoutSwitcher / LocaleDropdown / UserInfo）展开时右侧 `ArrowDown` 旋转 180°，收起回正，与面板 fade/slide 动画同节奏（160ms）。

@@ -13,14 +13,13 @@
  *
  * 【本 demo 设计】
  * 1. 概念卡片：6 个 Map 一图看清，标注每个 Map 的实际用途
- * 2. 大 schema 演示：80+ 字段，但只展示"重点字段"——跨字段、required 字段
+ * 2. 大 schema 演示：28 字段（4 父列 + 12 子列 + 12 server-error 字段），覆盖跨字段 / required / 隐藏字段场景
  * 3. 索引快照：实时显示当前 schema 的 6 个 Map 内容
  * 4. 交互闭环：操作按钮 + 状态展示 集中显示，所见即所得
  * 5. dirty 演示：拍基线 → 改字段 → 改字段瞬间的自动重算
  * 6. server error 演示：模拟多个字段错误 → success=true 一次清空
  * 7. 性能统计：节点数、构建耗时、索引大小
  */
-import { computed, reactive, ref, watch } from 'vue'
 import { ElButton, ElMessage, ElTag } from 'element-plus'
 import { useSchemaIndex } from '@/components/form-schema/composables/use-schema-index'
 import { scanForForbidden } from '@/components/form-schema/composables/use-scan-forbidden'
@@ -465,7 +464,10 @@ const tocItems = [
                 <div :class="bem.e('card')">
                   <strong>dependsOnMap</strong>
                   <p>目标字段 → 它依赖哪些字段（正向链）</p>
-                  <p :class="bem.e('card-size')">{{ indexSnapshot.dependsOnMap.length }} 条依赖</p>
+                  <p :class="bem.e('card-size')">
+                    {{ indexSnapshot.dependsOnMap.length }} 条依赖条目（数组，源于
+                    dependsOnMap.entries()）
+                  </p>
                 </div>
               </div>
 
@@ -763,15 +765,6 @@ const tocItems = [
     font-size: 12px;
     color: #909399;
     font-style: italic;
-  }
-  .tag {
-    display: inline-block;
-    padding: 2px 6px;
-    background: #e6f7ff;
-    color: #1890ff;
-    border-radius: 3px;
-    font-size: 12px;
-    margin: 0 4px;
   }
 }
 </style>

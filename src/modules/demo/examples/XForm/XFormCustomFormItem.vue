@@ -8,7 +8,7 @@
  *   3. formItem: { slots: { label } } —— 自定义 label 内容（如加 icon）
  *   4. formItem: { component: 'FormItemPlus' } —— 用自定义组件替代 ElFormItem
  */
-import { reactive, h, defineComponent } from 'vue'
+import { h, defineComponent } from 'vue'
 import { ElMessage, ElFormItem } from 'element-plus'
 import { InfoFilled } from '@element-plus/icons-vue'
 import type { SchemaNode } from '@/components/form-schema/types'

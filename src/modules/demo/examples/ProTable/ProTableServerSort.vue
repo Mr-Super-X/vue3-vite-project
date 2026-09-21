@@ -22,7 +22,7 @@ import {
   sortOrdersRequestApi,
   sortOrdersResponseAdapter,
   type Order,
-} from '../../../../../mock/pro-table/sort-orders'
+} from '@mock/pro-table/sort-orders'
 import { sortColumnItems, sortPropsItems, sortExposeItems } from './configs/protable-demos-api'
 
 const bem = createNamespace('demo-pro-table-server-sort')

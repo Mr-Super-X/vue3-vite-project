@@ -18,7 +18,7 @@ import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
 import DocToc from '../../components/DocToc.vue'
-import { summaryOrdersRequestApi } from '../../../../../mock/pro-table/summary-orders'
+import { summaryOrdersRequestApi } from '@mock/pro-table/summary-orders'
 import { summaryConfigItems, summaryColumnItems } from './configs/protable-demos-api'
 
 const bem = createNamespace('demo-pro-table-summary')

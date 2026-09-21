@@ -18,7 +18,6 @@
  *   - XFormReactionDeps：reaction 自循环 + 预算兜底（默认 50，本 demo 显式配置 5）
  *   - XFormExpression / XFormExpressionSandbox：{{ fn }} 字符串表达式 + 白名单
  */
-import { reactive } from 'vue'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'

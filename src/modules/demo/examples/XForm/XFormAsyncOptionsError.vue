@@ -8,7 +8,6 @@
  *   3. 当前限制：immediate: false 节点创建时不请求（依赖 visibleChange 监听，
  *      引擎未实装）；可用 deps 字段依赖或 on.change 事件触发 source 重跑
  */
-import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'

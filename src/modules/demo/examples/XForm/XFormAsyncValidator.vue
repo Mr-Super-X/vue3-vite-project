@@ -7,7 +7,6 @@
  * 2. 邮箱黑名单：asyncValidator 检查预定义黑名单,命中时返回错误信息
  * 3. 跨字段异步校验：crossValidator 返回 Promise,模拟"服务端密码强度比对"
  */
-import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { xInput } from '@/components/form-schema/builders'

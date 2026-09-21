@@ -12,7 +12,6 @@
  * 3. 嵌套 children（formItem 内含 input + 'a' HTML）
  * 4. 多列布局（column: 2 / 3）
  */
-import { reactive } from 'vue'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'

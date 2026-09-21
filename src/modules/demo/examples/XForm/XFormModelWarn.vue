@@ -9,7 +9,6 @@
  *
  * 验证方法：打开 DevTools Console 查看场景 1 的警告
  */
-import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'

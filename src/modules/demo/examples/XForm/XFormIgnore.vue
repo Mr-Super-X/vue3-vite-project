@@ -7,7 +7,6 @@
  *   2. 隐藏必填校验：忽略字段即使有 rules 也不参与校验
  *   3. getNames 不包含 ignore 字段
  */
-import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'

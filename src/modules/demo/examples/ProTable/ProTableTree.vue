@@ -20,7 +20,7 @@ import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
 import DocToc from '../../components/DocToc.vue'
-import { orgChartRequestApi, loadOrgChildren } from '../../../../../mock/pro-table/org-chart'
+import { orgChartRequestApi, loadOrgChildren } from '@mock/pro-table/org-chart'
 import { treeConfigItems, treeExposeItems } from './configs/protable-demos-api'
 
 const bem = createNamespace('demo-pro-table-tree')

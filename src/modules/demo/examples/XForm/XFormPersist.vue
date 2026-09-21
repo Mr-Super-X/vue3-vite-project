@@ -10,7 +10,6 @@
  * 5. 点"模拟提交"→ 草稿清除，再刷新 hasDraft=false
  * 6. DevTools Application 面板可直接查看 localStorage 中的草稿内容（确认无 cardNo）
  */
-import { computed, reactive, ref, watch } from 'vue'
 import { ElButton, ElMessage, ElTag } from 'element-plus'
 import { useFormPersist } from '@/components/form-schema'
 import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'

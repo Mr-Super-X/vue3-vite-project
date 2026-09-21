@@ -12,7 +12,7 @@
  * 3. UI：同 schema 内 `name` / `email` 字段正常渲染，不受 broken 影响
  * 4. prod 模式 console 静默，仅显示占位 UI
  */
-import { h, reactive, defineComponent } from 'vue'
+import { h, defineComponent } from 'vue'
 import { ElInput } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'

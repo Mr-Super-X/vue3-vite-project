@@ -8,7 +8,6 @@
  *      t 内部响应 locale，语言切换自动重渲，无需重建 schema）
  *   3. 未注入 t 时函数式 label 收到 identity（key 原样返回）
  */
-import { computed, reactive, ref } from 'vue'
 import type { SchemaNode, XFormTranslateFn } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'

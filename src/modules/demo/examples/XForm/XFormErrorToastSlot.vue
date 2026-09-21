@@ -18,7 +18,6 @@
  *   （内部 crossValidator/serverError 等自动调用），本 demo 用 schema.on.change
  *   主动触发业务侧 toast 来演示 slot 接管能力
  */
-import { reactive, ref } from 'vue'
 import { ElNotification } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'

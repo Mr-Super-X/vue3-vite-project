@@ -19,7 +19,7 @@ import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
 import DocToc from '../../components/DocToc.vue'
-import { ordersRequestApi } from '../../../../../mock/pro-table/orders'
+import { ordersRequestApi } from '@mock/pro-table/orders'
 import { cellSpanColumnItems, cellSpanConfigItems } from './configs/protable-demos-api'
 
 const bem = createNamespace('demo-pro-table-cell-span')

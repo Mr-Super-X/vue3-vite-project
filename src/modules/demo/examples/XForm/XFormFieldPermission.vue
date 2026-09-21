@@ -21,7 +21,6 @@
  * - 角色切到 admin → 管理备注出现（可编辑）；切到 guest → 隐藏
  * - 第二个 XForm 中"权限码-可编辑"字段可正常输入；"权限码-只读"以只读纯文本显示；"权限码-管理员"在 DOM 中不出现
  */
-import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'

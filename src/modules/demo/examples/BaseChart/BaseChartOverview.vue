@@ -98,9 +98,19 @@ const clickOption = {
   yAxis: {},
   series: [{ type: 'bar', data: [10, 22, 15, 30], itemStyle: { color: '#67c23a' } }],
 }
-const SNIPPET_INSTANCE = `const ref = useTemplateRef<InstanceType<typeof BaseChart>>('chart')
-const instance = ref.value?.getInstance()
-instance?.on('click', params => console.log(params.name, params.value))`
+// SNIPPET_INSTANCE：演示「绑定点击事件」完整流程
+// ① 重命名为 chartRef 避免遮蔽 AutoImport 的 ref()
+// ② 用 BaseChartExposed interface 替代 InstanceType<typeof BaseChart>，
+//    避免演示代码要求消费方 import BaseChart 触发 §1.7 hover 失效
+// ③ SNIPPET_INSTANCE 不含 console.log（用户复制后会污染 DevTools）：
+// 真实场景是业务侧埋点 / ElMessage 提示 / 写 store，注释位占位
+const SNIPPET_INSTANCE = `// ① 用组件已暴露的方法类型（无需 import BaseChart）
+const chartRef = useTemplateRef<BaseChartExposed>('chart')
+const instance = chartRef.value?.getInstance()
+instance?.on('click', params => {
+  // 真实业务：埋点上报 / ElMessage 提示 / 写 store
+  /* 处理点击事件：params.name / params.value */
+})`
 
 // —— ④ ResizeObserver 自动 resize ——
 const containerWidth = ref(600)
@@ -163,9 +173,12 @@ function manualResize() {
   manualChartRef.value?.resize()
   ElMessage.info(`容器改为 ${manualWidth.value}px，已手动调用 resize()`)
 }
-const SNIPPET_MANUAL = `<BaseChart ref="ref" :option="option" :auto-resize="false" />
+// SNIPPET_MANUAL：演示「关闭 autoResize 后手动 resize()」
+// 重命名为 chartRef：与 line 101 的 SNIPPET_INSTANCE 保持命名一致
+// 避免模板 ref 名 ref 与 AutoImport 的 ref() 命名冲突（用户复制后会编译失败）
+const SNIPPET_MANUAL = `<BaseChart ref="chartRef" :option="option" :auto-resize="false" />
 <!-- 父容器尺寸变化后必须手动触发 -->
-<button @click="ref?.resize()">resize</button>`
+<button @click="chartRef?.resize()">resize</button>`
 
 const tocItems = [
   { id: 'demo-basic', label: '基础用法 + Loading' },
@@ -212,8 +225,9 @@ const tocItems = [
             <BaseChart :option="reactiveOption" />
           </div>
           <p :class="bem.e('tip')">
-            切换时若有 tooltip 残留（旧 series 的高亮未清掉）说明 notMerge 没生效——本组件强制开启
-            notMerge: true。
+            <strong>验证步骤：</strong>
+            先 hover 柱子触发 tooltip，再切换 bar / line；若 tooltip 残留（旧 series 高亮未清掉）
+            说明 notMerge 没生效——本组件强制开启 notMerge: true。
           </p>
         </DemoField>
       </section>

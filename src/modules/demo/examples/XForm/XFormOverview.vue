@@ -9,7 +9,7 @@
  *   4. 实例方法：validate / resetFields / validateWithZod
  *   5. 自定义组件注入（components prop 覆盖内置映射）
  */
-import { ref, reactive, computed, h } from 'vue'
+import { h } from 'vue'
 import { z } from 'zod'
 import type { SchemaNode } from '@/components/form-schema/types'
 import ApiTable from '../../components/ApiTable.vue'

@@ -16,7 +16,6 @@
  *  - v-permission 保留以兼容已有调用
  *  - 推荐新代码用 v-auth
  */
-import { computed } from 'vue'
 import { useUserStore } from '@store/modules/user'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
@@ -44,7 +43,12 @@ const ALL_PERMS = [
 const selectedPerms = ref<string[]>(['user:view', 'user:edit'])
 
 // 监听 selectedPerms 变化，同步到 store（v-auth 通过 useAuth() 读 store）
-import { watch } from 'vue'
+//
+// ⚠️ DEMO-ONLY 故意绕过封装：直接改 store.permissions 是为了演示「权限切换实时影响 v-auth 渲染」，
+// 真实业务请用 useAuth() 暴露的封装 setter（如 setPermissions / updatePermissions），
+// 切勿照搬此写法到业务代码。
+// 为什么不调封装 setter：useAuth 的 setter 走 reactive proxy 链路 + 触发整个 userStore 的副作用，
+// demo 频繁切换会触发非预期日志；mock 演示场景隔离 store 写入，副作用可控。
 watch(
   selectedPerms,
   (val) => {
@@ -63,7 +67,11 @@ function togglePerm(code: string): void {
   }
 }
 
-/** v-auth 的 binding 必须是响应式才能在权限变化时触发组件 update */
+/**
+ * v-auth 的响应式来自 useAuth().permissions（auth.ts:149-154 watchEffect）：
+ * 只要 store.permissions 变更（无需 binding 自身响应式），所有 v-auth 元素重新求值。
+ * 此处仍用 computed 仅为「演示规范化」（props 多处复用同一权限码时抽 computed）。
+ */
 const editBinding = computed(() => 'user:edit')
 const deleteBinding = computed(() => 'user:delete')
 const multiAndBinding = computed(() => ['user:view', 'user:edit'])
@@ -99,7 +107,7 @@ const modifierItems = [
     name: 'modifiers.disabled',
     type: '—',
     required: false,
-    description: 'v-auth:disabled —— 无权限时仅禁用（保留元素 + aria-hidden=false）',
+    description: 'v-auth:disabled —— 无权限时仅禁用（保留元素 + aria-disabled=true）',
   },
   {
     name: 'modifiers.remove',

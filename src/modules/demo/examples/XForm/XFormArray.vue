@@ -10,7 +10,6 @@
  * 3. 行内子 schema 嵌套渲染（row + column 栅格）
  * 4. 小计 = 数量 × 单价（在模板里展示,model 中存储原值）
  */
-import { reactive, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { xArray } from '@/components/form-schema/builders'

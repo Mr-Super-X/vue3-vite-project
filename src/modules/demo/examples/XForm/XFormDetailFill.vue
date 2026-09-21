@@ -9,7 +9,6 @@
  * ④数组批量回填 ⑤dirty 基线（首载即拍 / 原地切换须 resetDirty / 保存归零）
  * ⑥三态防御（首载 AsyncState 骨架屏 + Error 重试）
  */
-import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { xArray } from '@/components/form-schema/builders'

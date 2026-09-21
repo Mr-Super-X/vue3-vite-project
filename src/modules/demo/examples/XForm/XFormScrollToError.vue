@@ -11,7 +11,6 @@
  *   3. 前 8 个字段带 defaultValue 挂载自动填充（非必填），licenseNo 必填留空作为滚动目标
  *   4. 跨字段错误同样参与自动滚动（XForm 内部按 keyPath 滚动，见 XFormCrossField demo）
  */
-import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'

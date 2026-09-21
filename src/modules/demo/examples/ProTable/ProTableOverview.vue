@@ -17,7 +17,6 @@
  *
  * 路由：自动注册为 `/demo/pro-table-overview`
  */
-import { ref } from 'vue'
 import { ElButton, ElTag, ElMessage } from 'element-plus'
 import { Refresh, Search } from '@element-plus/icons-vue'
 import type { ProColumn } from '@/components/ProTable'
@@ -27,67 +26,14 @@ import DemoField from '../../components/DemoField.vue'
 import DocLayout from '../../layouts/DocLayout.vue'
 import DocToc from '../../components/DocToc.vue'
 import ApiTable from '../../components/ApiTable.vue'
+import {
+  overviewRequestApi,
+  STATUS_OPTIONS,
+  ROLE_OPTIONS,
+  type OverviewUserRow,
+} from './configs/projects-users'
 
 const bem = createNamespace('demo-pro-table')
-
-/* ───────────── mock 数据 ───────────── */
-
-interface UserRow extends Record<string, unknown> {
-  id: number
-  name: string
-  age: number
-  status: number
-  role: string
-  createdAt: string
-}
-
-const STATUS_OPTIONS = [
-  { label: '启用', value: 1, tagType: 'success' as const },
-  { label: '禁用', value: 0, tagType: 'info' as const },
-  { label: '锁定', value: -1, tagType: 'danger' as const },
-]
-
-const ROLE_OPTIONS = [
-  { label: '管理员', value: 'admin' },
-  { label: '编辑', value: 'editor' },
-  { label: '访客', value: 'guest' },
-]
-
-function generateMockData(total: number): UserRow[] {
-  return Array.from({ length: total }, (_, i) => ({
-    id: i + 1,
-    name: `用户-${i + 1}`,
-    age: 20 + (i % 40),
-    status: [1, 1, 1, 0, -1][i % 5]!,
-    role: ['admin', 'editor', 'guest'][i % 3]!,
-    createdAt: `2026-09-${String((i % 30) + 1).padStart(2, '0')} 10:00:00`,
-  }))
-}
-
-const ALL_MOCK = generateMockData(127)
-
-async function mockRequestApi(params: Record<string, unknown>) {
-  await new Promise((resolve) => setTimeout(resolve, 500))
-  const { name, status, role, pageNum = 1, pageSize = 10 } = params
-  let filtered = ALL_MOCK
-  if (typeof name === 'string' && name) {
-    filtered = filtered.filter((u) => u.name.includes(name))
-  }
-  if (status !== undefined && status !== null && status !== '') {
-    filtered = filtered.filter((u) => u.status === status)
-  }
-  if (typeof role === 'string' && role) {
-    filtered = filtered.filter((u) => u.role === role)
-  }
-  const start = (Number(pageNum) - 1) * Number(pageSize)
-  const result = {
-    data: filtered.slice(start, start + Number(pageSize)),
-    total: filtered.length,
-    pageNum: Number(pageNum),
-    pageSize: Number(pageSize),
-  }
-  return result
-}
 
 /* ───────────── 列定义 ───────────── */
 
@@ -134,11 +80,11 @@ async function handleReset(): Promise<void> {
 }
 
 function handleViewDetail(row: Record<string, unknown>): void {
-  ElMessage.info(`查看详情：${(row as UserRow).name}`)
+  ElMessage.info(`查看详情：${(row as OverviewUserRow).name}`)
 }
 
 function handleDelete(row: Record<string, unknown>): void {
-  ElMessage.warning(`删除：${(row as UserRow).name}`)
+  ElMessage.warning(`删除：${(row as OverviewUserRow).name}`)
 }
 
 /* ───────────── 多选（勾选 / 清除勾选，v2.2-M1 验证入口） ───────────── */
@@ -167,7 +113,7 @@ function handleGetSelected(): void {
     ElMessage.info('当前未选中任何行')
     return
   }
-  const names = rows.map((r) => (r as UserRow).name).join('、')
+  const names = rows.map((r) => (r as OverviewUserRow).name).join('、')
   ElMessage.success(`已选中 ${rows.length} 行：${names}`)
 }
 
@@ -319,7 +265,7 @@ const columnsItems = [
 const basicCode = `<template>
   <ProTable
     :columns="columns"
-    :request-api="mockRequestApi"
+    :request-api="overviewRequestApi"
     table-key="demo"
     row-key="id"
   />
@@ -471,7 +417,7 @@ const renderColumns: ProColumn[] = [
           type="warning"
           link
           size="small"
-          onClick={() => ElMessage.info(`编辑 ${(row as UserRow).name}`)}
+          onClick={() => ElMessage.info(`编辑 ${(row as OverviewUserRow).name}`)}
         >
           编辑
         </el-button>
@@ -479,7 +425,7 @@ const renderColumns: ProColumn[] = [
           type="danger"
           link
           size="small"
-          onClick={() => ElMessage.warning(`删除 ${(row as UserRow).name}`)}
+          onClick={() => ElMessage.warning(`删除 ${(row as OverviewUserRow).name}`)}
         >
           删除
         </el-button>
@@ -583,7 +529,7 @@ const capabilityOverviewCode = `<template>
         <DemoField label="基础用法（columns 驱动搜索 + 表格）" :code="basicCode">
           <ProTable
             :columns="columns"
-            :request-api="mockRequestApi"
+            :request-api="overviewRequestApi"
             table-key="demo-pro-table-basic"
             row-key="id"
             :page-size="5"
@@ -621,7 +567,7 @@ const capabilityOverviewCode = `<template>
         <DemoField label="自定义渲染（render 函数返回 VNode）" :code="renderCode">
           <ProTable
             :columns="renderColumns"
-            :request-api="mockRequestApi"
+            :request-api="overviewRequestApi"
             table-key="demo-pro-table-render"
             row-key="id"
             :page-size="5"
@@ -633,7 +579,7 @@ const capabilityOverviewCode = `<template>
         <DemoField label="自定义插槽" :code="slotsCode">
           <ProTable
             :columns="columns"
-            :request-api="mockRequestApi"
+            :request-api="overviewRequestApi"
             table-key="demo-pro-table-slots"
             row-key="id"
             :page-size="3"
@@ -668,7 +614,7 @@ const capabilityOverviewCode = `<template>
           <ProTable
             ref="proTableRef"
             :columns="columns"
-            :request-api="mockRequestApi"
+            :request-api="overviewRequestApi"
             table-key="demo-pro-table-expose"
             row-key="id"
             :page-size="3"
@@ -691,7 +637,7 @@ const capabilityOverviewCode = `<template>
           <ProTable
             ref="selectionRef"
             :columns="selectionColumns"
-            :request-api="mockRequestApi"
+            :request-api="overviewRequestApi"
             table-key="demo-pro-table-selection"
             row-key="id"
             :page-size="5"
@@ -730,6 +676,23 @@ const capabilityOverviewCode = `<template>
             <code>row-drag</code>
             。
           </p>
+          <!--
+            v3.5 末次审计 CRITICAL 修复：
+            原版只有开关 UI + 代码片段，缺一个受开关控制的 ProTable 实例 → 开关看似无效果。
+            现按 capabilityOverviewCode 真实渲染表格，开关变化时表格行为实时变化。
+            tree 开关对 flat mock 数据（无 children 字段）视觉无变化是预期——树形需带 children 的数据。
+          -->
+          <ProTable
+            :columns="columns"
+            :request-api="overviewRequestApi"
+            :enable-row-edit="capabilityConfig.rowEdit"
+            :enable-tree="capabilityConfig.tree"
+            :enable-cell-span="capabilityConfig.cellSpan"
+            :enable-row-drag="capabilityConfig.rowDrag"
+            table-key="demo-pro-table-overview-capabilities"
+            row-key="id"
+            :page-size="5"
+          />
         </DemoField>
       </section>
     </DemoFrame>

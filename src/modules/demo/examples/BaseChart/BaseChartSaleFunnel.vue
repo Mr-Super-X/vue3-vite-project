@@ -10,7 +10,6 @@
  * 3. tooltip 自定义格式化：同时显示绝对值 + 阶段转化率
  * 4. option 响应式：刷新数据 / 切换指标模式 → setOption(notMerge) 整体替换
  */
-import { computed, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'

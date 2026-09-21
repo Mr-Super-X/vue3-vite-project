@@ -17,7 +17,6 @@
  *   - keyPath 是 (string | number)[]：字符串 = 字段名，number = 数组下标
  *     → 可拼 lodash 路径 string 展示，也可直接喂给 setFieldError(path.join('.'), message)
  */
-import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'

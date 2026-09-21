@@ -16,7 +16,6 @@
  * 4. 校验门控：Steps「下一步」前进前 validateField BASIC_FIELDS，失败则阻止推进
  *    —— 不在 Tabs 上加 beforeLeave（EP 初始渲染 + async 闭包有副作用，见 schema 注释）
  */
-import { computed, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'

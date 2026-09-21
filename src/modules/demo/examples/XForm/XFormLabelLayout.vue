@@ -8,7 +8,6 @@
  *   3. 切换演示三种 labelPosition 的视觉差异
  *   4. 强调：这两个字段写在节点级不生效，必须从顶层 schema 派生
  */
-import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'

@@ -10,8 +10,6 @@
  * 3. 弹窗关闭 → BaseChart 卸载 → onBeforeUnmount 三步清理触发 dispose
  * 4. 反复打开 / 关闭弹窗：DevTools 内存应回到基线（dispose 链路打通）
  */
-import { ref } from 'vue'
-import { ProDialog } from '@/components/common/ProDialog'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import DocLayout from '../../layouts/DocLayout.vue'

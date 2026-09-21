@@ -7,7 +7,6 @@
  *   2. 本 demo 演示外部代码通过 formRef 调用相同 API 实现编程式操控
  *   3. 应用场景：批量导入、模板填充、撤销/重做、第三方按钮触发等
  */
-import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { xArray } from '@/components/form-schema/builders'

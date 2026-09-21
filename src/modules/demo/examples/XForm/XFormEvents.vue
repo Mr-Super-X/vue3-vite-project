@@ -11,7 +11,6 @@
  *   4. beforeChange 异步拦截：金额 > 100000 模拟风控 reject → 跳过更新
  *   5. beforeChange 返回 undefined → 放行原值（默认行为）
  */
-import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'

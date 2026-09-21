@@ -23,8 +23,8 @@ import {
   sortOrdersRequestApi,
   sortOrdersResponseAdapter,
   type Order,
-} from '../../../../../mock/pro-table/sort-orders'
-import { orgChartRequestApi, loadOrgChildren } from '../../../../../mock/pro-table/org-chart'
+} from '@mock/pro-table/sort-orders'
+import { orgChartRequestApi, loadOrgChildren } from '@mock/pro-table/org-chart'
 import {
   engineColumnItems,
   engineMatrixItems,

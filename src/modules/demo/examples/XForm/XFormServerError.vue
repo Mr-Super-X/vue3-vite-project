@@ -13,7 +13,6 @@
  * 注:本 demo 用 mock 模拟 fetch(不真实发请求),演示完整流程
  * 单一职责：仅演示服务端错误映射，响应式断点见 XFormResponsive demo
  */
-import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'

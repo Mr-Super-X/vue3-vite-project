@@ -17,7 +17,6 @@
  *   - 200-500ms：可接受（需关注交互响应）
  *   - > 500ms：需优化（拆分表单 / 虚拟滚动 / 懒加载）
  */
-import { reactive, ref, shallowRef, onMounted, nextTick, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
