@@ -2,6 +2,33 @@
 
 ## 未发布
 
+### 🐞 Fix | XForm 引擎层修复 array 行内 reaction 不触发（取代 91f2a6e workaround）
+
+> 上一版（91f2a6e）用「deps 写绝对路径 `arrayRows.N.xxx`」workaround 绕过；本版从引擎层根治：
+> 行内 reaction 在 renderRow 内独立注册，model 上下文 = 行对象，相对 deps 自动生效。
+> 根因：use-schema-renderer.ts 顶层 traverse 内的 applyReactions 会经 walkSchema 递归进
+> array.itemSchema，对每个行内节点 registerNodeReaction → delete node.reaction + 用根 model
+> 注册一份错误 watcher（行内相对 deps 在根 model 不可达；sync 立即执行 _effect(root) 把
+> NaN 写到根 model 污染数据）。等到 renderArrayNode 执行时 itemSchema 的 reaction 已被
+> delete，行级 applyReactions 拿到空 schema 注册 0 个 watcher —— 行内 reaction 永远不触发。
+
+- **`use-reaction.ts`**：`applyReactions` 加可选第 6 参 `walkOpts?: WalkSchemaOptions` 透传给 walkSchema（缺省全开，向后兼容外部直接调用方）
+- **`use-schema-renderer.ts`**：顶层 `traverse` 调 `applyReactions` 传 `{ includeArrayItemSchema: false }`，把 itemSchema 的 reaction 注册权完全交给 renderArrayNode（嵌套 array 同理由内层 renderArrayNode 递归接管）
+- **`render-array-node.ts`**：renderRow 内调 `applyReactions(rewritten, row, ...)` 把行子树作为 model 传入；模块级 `rowReactionStoppers` Map 管理 watcher 生命周期（同 rowKey 先停旧的再注册新的；renderArrayNode 入口 stale 清理已删行的 watcher，按 listName 前缀隔离避免误清其他 array 容器）
+- **`XFormReactionArrayRow.vue`**：deps 从硬编码 `arrayRows.0.qty` / `arrayRows.1.qty` 绝对路径改回 `'qty'/'price'/'taxed'/'taxRate'` 相对路径；`_effect` 从「遍历全行重算」改为「直接写行 model 的 m.subtotal」——真正的行级封装
+- **回归测试**：新增 `array-row-reaction.spec.ts` 4 用例（顶层 traverse 后 itemSchema.reaction 字段不被 delete / renderArrayNode 改 qty 触发 _effect 重算 subtotal / taxRate.hidden 用行 model 求值按行隔离 / applyReactions 缺省第 6 参向后兼容）
+- **真实浏览器验证**（http://localhost:5174/vue3-vite-project/demo/xform-reaction-array-row）：
+  - 初始 mount：行 0 税率隐藏（taxed=false）/ 行 1 税率显示 / 小计 100 + 106 = 206 ✅
+  - 行 0 数量 1→3 → 小计 100→300，合计 ¥206→¥406 ✅
+  - 行 0 切含税 → 税率显示 + 小计 300→339（3×100×1.13），合计→¥445 ✅
+  - 添加新行 → 新行 _effect sync 执行（subtotal 初始 NaN）+ hidden 按 taxed=undefined→true 隐藏 ✅
+  - 新行切 Switch taxed=true/false → 税率 display 切换 ✅
+  - 删除新行 → 剩 2 行无 stale 影响；改 qty 3→1 → 小计 339→113，合计→¥219 ✅
+  - 关联 demo 无回归：xform-array 渲染正常 + console 干净；xform-reaction 顶层 reaction 联动正常（需要发票=false → 发票抬头 hidden）✅
+- **迁移说明（BREAKING）**：`kind: 'array'` 的 itemSchema 内配置的 reaction，deps 必须用行内相对路径（`'qty'`），不再支持 `'arrayRows.N.qty'` 绝对路径（行 model 上下文解析不到）。全项目 grep 确认仅 XFormReactionArrayRow.vue 一处使用，已同步迁移
+
+---
+
 ### 🐞 Fix | XFormReactionArrayRow 行内 reaction 不触发（真 bug 修复）
 
 > 真实浏览器实测发现：XFormReactionArrayRow demo 改数量时小计和采购合计不变。

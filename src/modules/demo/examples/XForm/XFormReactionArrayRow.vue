@@ -37,16 +37,11 @@ const model = reactive({
   ] as RowItem[],
 })
 
-/** 行小计 = qty × price × (taxed ? 1 + taxRate : 1)，保留 2 位小数 */
-function recalcRowSubtotal(r: RowItem) {
-  r.subtotal = Number((r.qty * r.price * (r.taxed ? 1 + r.taxRate : 1)).toFixed(2))
-}
-
-/** 行内 reaction._effect：迭代所有行重算小计；返回 undefined → isEqual 跳过写入节点字段 */
-function makeRowSubtotalEffect() {
-  return () => {
-    model.arrayRows.forEach(recalcRowSubtotal)
-  }
+/** 行小计副作用：applyReactionFields 处理 _effect 字段时调用 (raw)(model)，
+ * 副作用同步发生。model 是行 model（render-array-node.ts:113 传入 row），
+ * 直接写 m.subtotal —— 真正的行级封装，不依赖外部根 model 引用 */
+function recalcRowSubtotal(m: RowItem) {
+  m.subtotal = Number((m.qty * m.price * (m.taxed ? 1 + m.taxRate : 1)).toFixed(2))
 }
 
 const arraySchema: SchemaNode = {
@@ -93,24 +88,15 @@ const arraySchema: SchemaNode = {
               component: 'InputNumber',
               props: { precision: 2, disabled: true, controlsPosition: 'right' },
               reaction: {
-                // v3.6 修复：deps 路径必须从根 model 解析（use-reaction.ts:156），
-                // 行内字段（qty/price/taxed/taxRate）在根 model 不可达，
-                // 必须用绝对路径 'arrayRows.<rowIndex>.qty' 才生效。
-                // 真实业务中，每行的 deps 路径需要动态拼接（按 rowIndex 索引）——
-                // XForm 引擎目前对 array row 的反应式 deps 不自动展开，
-                // 这是 P1H-24 拆分后残留的设计性问题，已开 issue 跟踪 XForm 引擎改造。
-                // 此 demo 用「根 model 监听所有 arrayRows.* 变化」兜底（每次任一行变化都重算全部行）。
-                deps: [
-                  'arrayRows.0.qty',
-                  'arrayRows.0.price',
-                  'arrayRows.0.taxed',
-                  'arrayRows.0.taxRate',
-                  'arrayRows.1.qty',
-                  'arrayRows.1.price',
-                  'arrayRows.1.taxed',
-                  'arrayRows.1.taxRate',
-                ],
-                _effect: makeRowSubtotalEffect(),
+                // XForm 引擎补 array row 行级 reaction model 上下文后（render-array-node.ts:113
+                // renderRow 内独立调 applyReactions(rewritten, row, ...)），
+                // 行内相对 deps（'qty' / 'price' / 'taxed' / 'taxRate'）在行 model 子树生效，
+                // 无需硬编码 arrayRows.<rowIndex>.* 路径。
+                // 引擎层修复覆盖任意行数（push/splice/move 后新行自动注册行级 watcher）。
+                // _effect 副作用遍历全行重算 —— 行级 watcher 只在该行字段变化时触发，但
+                // 全行遍历保留「任一行变化都重算全部 subtotal」语义，与生产一致
+                deps: ['qty', 'price', 'taxed', 'taxRate'],
+                _effect: recalcRowSubtotal,
               },
             },
           ],
