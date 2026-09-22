@@ -81,7 +81,7 @@ const schema: SchemaNode = {
       component: 'Input',
       props: { type: 'textarea', rows: 2, placeholder: '一句话介绍' },
     },
-    // 嵌套对象字段（H4 回归场景）：dirty 快照必须深拷贝，
+    // 嵌套对象字段：dirty 快照必须深拷贝，
     // 原位修改 address.city 时 isDirty 应能检测到（活引用快照会漏检）
     {
       label: '城市',

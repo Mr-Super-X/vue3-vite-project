@@ -2,6 +2,51 @@
 
 ## 未发布
 
+### 📝 Docs | XForm demo 13 项批量修复完成 + 真实浏览器验证（CHANGELOG 备忘录，源码未提交）
+
+> 2026-09-02 13 项 XForm demo 可理解性 + 内容准确性修复（code-explorer 48 demo 扫描后批量修）。
+> 2026-09-22 真实浏览器验证 5 个 P0 demo 修复全部生效（dev server 5174 实证）。
+> **当前状态**：源码未提交到 git（user 选择先写 CHANGELOG 备忘录，由用户手动决定提交时机）。
+
+#### P0 修复（5 项，均已浏览器验证生效）
+
+| Demo | 修复内容 | 浏览器验证 (2026-09-22) |
+|------|---------|-------------------------|
+| `XFormBuilder.vue` | 重写为真实 builder 链式：7 字段全部用 xCascader/xUpload/xTransfer/xTimePicker/xTimeSelect/xAutocomplete/xTreeSelect（替代旧 placeholder demo） | ✅ 18 form-item + 7 builder 链式字段（省/市、头像、角色、时间范围、班次、语言、部门） |
+| `XFormAsyncOptionsError.vue` | 删除「把 `immediate: false` 限制当 demo 逻辑」+ 新增 el-collapse「⚠️ 关于 immediate: false 的引擎限制」段落 | ✅ el-collapse 1 项 + 2 form-item + 0 alert（误导卡已删） |
+| `XFormLargeSchema.vue` | 新增 30/120/300 三档对比 + perf-panel 指标高亮 + 性能基准对照表 | ✅ perf-panel + 2 table（对照表 + 大表单） |
+| `XFormSchemaIndex.vue` | 新增 4 类业务问题入口卡片 + 6 Map 解释为加速方案 | ✅ 22 cards（4 业务入口 + 6 Map + 子 demo 列表） |
+| `XFormServerError.vue` | 移除响应式断点（已迁移 XFormResponsive）+ 错误码一致 + intro 与 mock 对齐 | ✅ 3 form-item；「响应式」文本仅剩对 XFormResponsive demo 的引用（4 处），无内部残留 |
+
+#### 中度修复（8 项，源码已改但未浏览器逐项验证）
+
+| Demo | 修复内容 |
+|------|---------|
+| `XFormBeforeChange.vue` | 修正 source 标注为 `XForm.vue` + Tab C 加 ASCII 正则匹配示意图 |
+| `XFormCustomFormItem.vue` | 替换 FormItemPlus 异常占位，inline 实现真实 FormItemPlus + schema 用字符串名 + components 注册 |
+| `XFormPersistSchemaVersion.vue` | 新增 7 步交互指引 el-collapse + 弱化「引擎 bug」注释 |
+| `XFormOrderCreate.vue` | 能力清单表格第②项描述改 `crossValidator` + schema 片段说明 |
+| `XFormExpressionSandbox.vue` | 3 个 reaction 改字符串表达式 `{{ toCurrency(...) }}` 等真正调用白名单 |
+| `XFormInvalidComponent.vue` | 字段 D 命名一致（MyUnregisteredComp） |
+| `XFormUpload.vue` | 加「先看这个」引导卡 + 标注核心 vs 进阶 |
+| `XFormStyleOverride.vue` | 同上，加引导卡 |
+| 全局 placeholder | XFormBuilder 语言/部门业务化 + XFormLargeSchema 字段 sku-xxxx |
+
+#### 已知遗留（不阻塞）
+
+- **cSpell 警告**：Cascader / xform / asnyc / vmodel 等词典未收录（项目级 cspell 配置问题）
+- **Cascader placeholder 业务化未完全覆盖**：builder 其他字段（timeRange/shift/avatar）保留通用 placeholder
+- **源码未提交**：13 项 demo 修复源码 + 5 P0 验证未在 git 历史中（用户选择先写 CHANGELOG 备忘录）
+
+#### 验证基线
+
+- `pnpm type-check` ✅ 通过（修复 3 个 TS 错误：CustomFormItem exactOptional / LargeSchema bem 缺失 / LargeSchema schema 回调）
+- `pnpm lint` ✅ 通过
+- `pnpm check:routes` ✅ 通过（61 demo 共享 DemoXFormOverview 单一外层路由 + 内部子路由 Demo 前缀已豁免）
+- 真实浏览器验证 5 P0 demo（Playwright @ localhost:5174）✅ 全部生效
+
+---
+
 ### 🐞 Fix | XForm 引擎层修复 array 行内 reaction 不触发（取代 91f2a6e workaround）
 
 > 上一版（91f2a6e）用「deps 写绝对路径 `arrayRows.N.xxx`」workaround 绕过；本版从引擎层根治：

@@ -151,8 +151,7 @@ const schema: SchemaNode = {
     },
     // ── H3 验证：嵌套路径直改触发跨字段重算 ─────────────────────────
     // 字段挂在 model.user.age（嵌套路径），通过下方「直改 model」按钮绕过
-    // v-model 直接改值 —— 修复前 watch 兜底浅拷贝 diff 不到嵌套变化，红字不动；
-    // 修复后 deps 值快照 diff 命中 → crossValidator 自动重算，红字消失。
+    // v-model 直接改值 —— deps 值快照 diff 命中 → crossValidator 自动重算，红字消失。
     // 本字段自引用 deps 覆盖 target 快照分支；下方「监护人」dependsOn 本路径，
     // 覆盖真正的跨字段 dep 分支 —— 两条分支由同一个直改按钮一并验证
     {
@@ -198,9 +197,8 @@ const schema: SchemaNode = {
       ],
     },
     // ── H1 验证：standalone 函数形态 disabled / hidden ──────────────
-    // 不用 reaction 简写，直接写字段级函数形态 —— 修复前函数被原样 spread 进
-    // 组件 props（dev 报 prop type 警告 + 字段永久禁用/恒隐藏）；
-    // 修复后克隆阶段归一化为 reaction 条目求值，随 agree 开关联动
+    // 不用 reaction 简写，直接写字段级函数形态 —— 克隆阶段归一化为 reaction 条目求值，
+    // 随 agree 开关联动
     {
       label: '同意协议（联动开关）',
       name: 'agree',
