@@ -2,23 +2,24 @@
 /**
  * 演示 XForm 错误 toast 容器替换 —— #toastContainer slot
  *
- * 场景：业务希望用 element-plus ElNotification 替代默认 XFormErrorToast
- * （更轻量的顶部弹出 + 完整自定义样式），无需 fork XFormErrorToast 组件。
+ * 场景：业务希望用 element-plus ElNotification 替代默认 XFormErrorToast，
+ * 通过 slot 完整接管错误提示容器（接入业务统一通知体系/自定义样式）。
  *
- * 验证点（手动触发，不依赖 XForm errorBus）：
- * 1. 必填校验失败（密码 / 确认密码留空）→ 字段红字
- * 2. 点"触发自定义 toast"按钮 → slot 接管的 ElNotification 弹出
- * 3. 对比：不传 slot时 XForm 默认 XFormErrorToast 接管
+ * 演示闭环（已接通 errorBus 真实事件流，非空转）：
+ * 1. 密码与确认密码填不一致（或留空必填项）→ 点「校验」
+ * 2. validateForm() 失败 → errorBus.report(...) → slot 注入的 events 更新
+ * 3. 桥接组件 XFormElNotificationHost watch 到新事件 → 命令式 ElNotification 右上角弹出
+ * 4. 同时 el-form 字段红字（错误定位能力不受容器替换影响）
  *
- * 关联优化：
- * - XForm.vue 新增 <slot name="toastContainer" :events="errorBus.events.value">
- * - 默认 fallback 走 XFormErrorToast，业务可接管
+ * 关键认知：
+ * - ElNotification 是命令式 API —— slot 内声明式 <ElNotification v-for> 会把通知
+ *   内容内联渲染进表单 DOM，而非 body 浮层；正确姿势是 watch events → 命令式调用
+ * - slot 契约仅注入 { events }（见 docs/24 §Slots），errorBus.dismiss 对消费方不可达，
+ *   业务单向接管即可；不传 slot 时 fallback 走默认 XFormErrorToast，行为与升级前一致
  *
- * - 已知限制：XFormExpose 未暴露 errorBus 实例，外部无法直接调 errorBus.report
- *   （内部 crossValidator/serverError 等自动调用），本 demo 用 schema.on.change
- *   主动触发业务侧 toast 来演示 slot 接管能力
+ * @see ./utils/XFormElNotificationHost.vue （events → ElNotification 桥接实现）
+ * @see src/components/form-schema/components/XForm.vue （slot 定义处）
  */
-import { ElNotification } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
@@ -29,18 +30,14 @@ import DocToc from '../../components/DocToc.vue'
 import { errorToastSlotItems } from './configs/xform-demos-api'
 import xFormErrorToastSlotSource from './XFormErrorToastSlot.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
+import XFormElNotificationHost from './utils/XFormElNotificationHost.vue'
 
-const { bem, onReset, copySchema } = useXFormDemo({
+// formRef 必须解构进 setup 作用域，模板 ref="formRef" 才能回填（漏解构会让重置静默失效）
+const { formRef, bem, onReset, copySchema } = useXFormDemo({
   name: 'error-toast-slot',
   schema: () => schema,
   model: () => model,
 })
-
-/**
- * 自定义事件计数器 —— 用于演示 slot 接管的实时性
- * 每次 ElNotification 触发，notifyCount 自增，slot 内可响应式渲染
- */
-const notifyCount = ref(0)
 
 const schema: SchemaNode = {
   column: 1,
@@ -58,18 +55,21 @@ const schema: SchemaNode = {
       component: 'Input',
       props: { type: 'password', placeholder: '6 位以上', clearable: true },
       rules: [{ required: true, message: '请输入密码', trigger: 'change' }],
-      // on.change 触发自定义 toast —— 演示 toast 容器在 schema 钩子内可被驱动
-      on: {
-        change: () => {
-          ElNotification({
-            title: 'XForm 字段变化通知',
-            message: `密码字段已修改（第 ${++notifyCount.value} 次）`,
-            type: 'success',
-            duration: 3000,
-            position: 'top-right',
-          })
+    },
+    {
+      label: '确认密码',
+      name: 'confirmPassword',
+      component: 'Input',
+      props: { type: 'password', placeholder: '再次输入密码（演示跨字段校验）', clearable: true },
+      rules: [
+        { required: true, message: '请再次输入密码', trigger: 'change' },
+        // 提交时跨字段兜底 —— 校验失败经 errorBus 上报，由 slot 接管的 ElNotification 弹出
+        {
+          dependsOn: ['password'],
+          crossValidator: (value: unknown, password: unknown) =>
+            value === password || '两次密码不一致',
         },
-      },
+      ],
     },
   ],
 }
@@ -77,22 +77,15 @@ const schema: SchemaNode = {
 const model = reactive<Record<string, unknown>>({
   username: '',
   password: '',
+  confirmPassword: '',
 })
 
 /**
- * 手动触发 toast —— 演示 #toastContainer slot 完全接管错误容器
- *
- * 替代方案：本 demo 直接调 ElNotification（不通过 XForm errorBus），
- * 验证 slot 接管后业务可自由选择 toast 库/样式/触发方式
+ * 触发校验 —— 失败反馈完全走 slot 接管的 ElNotification，不额外弹 ElMessage，
+ * 避免默认反馈渠道掩盖「容器已被业务接管」的演示效果
  */
-function triggerCustomToast() {
-  ElNotification({
-    title: '自定义 toast 演示',
-    message: `slot 接管后，业务侧用 ElNotification 弹窗（已触发 ${++notifyCount.value} 次）`,
-    type: 'warning',
-    duration: 5000,
-    position: 'top-right',
-  })
+async function onValidate(): Promise<void> {
+  await formRef.value?.validate()
 }
 
 const tocItems = [
@@ -101,11 +94,11 @@ const tocItems = [
 ]
 
 const introductions = [
-  'XForm 默认嵌入 XFormErrorToast 显示 errorBus 事件；通过 #toastContainer slot 完整接管',
-  'slot props 暴露 events 数组（（响应式）+ 任意业务需要的的 dispatch 函数（如 errorBus.dismiss）',
-  '业务可用 ElNotification / ElMessage / 自建 ToastList / Sonner 等任意实现',
-  '默认 fallback 走 XFormErrorToast，未传 slot 时行为与升级前完全一致',
-  '验证：修改密码字段 / 点"触发自定义 toast"按钮 → 右上角弹 ElNotification',
+  'XForm 默认嵌入 XFormErrorToast 展示 errorBus 事件；通过 #toastContainer slot 可完整接管容器',
+  'slot 契约仅注入响应式 events 数组（FormErrorEvent[]，含 dismissed 标记），errorBus.dismiss 对消费方不可达（见 docs/24 §Slots）',
+  'ElNotification 是命令式 API：slot 里声明式 <ElNotification v-for> 会把通知内联渲染进表单 DOM，正确姿势是 watch events → 命令式调用',
+  '演示闭环：密码与确认密码填不一致（或留空必填项）→ 点「校验」→ errorBus 事件经桥接组件弹出 ElNotification，同时表单字段红字',
+  '不传 slot 时 fallback 走默认 XFormErrorToast，行为与升级前完全一致',
 ]
 </script>
 
@@ -120,26 +113,16 @@ const introductions = [
         <DemoField label="toastContainer 替换演示" :code="xFormErrorToastSlotSource">
           <XForm ref="formRef" :schema="schema" :model="model">
             <!--
-              slot 接管示例 —— 业务可用任意组件替换默认 XFormErrorToast
-              本 demo 的 events 为空（errorBus 未触发），slot 内的 v-for 无内容
-              —— 但代码逻辑已切换（ElNotification 会响应 schema on.change）
+              slot 接管：events 经桥接组件转为命令式 ElNotification。
+              host 不渲染 DOM（ElNotification 自带 teleport to body），
+              此处挂 slot 只为替换默认 XFormErrorToast 的渲染层
             -->
             <template #toastContainer="{ events }">
-              <template v-for="e in events" :key="e.id">
-                <ElNotification
-                  :title="`[${e.code}] ${e.message}`"
-                  :type="
-                    e.severity === 'error' ? 'error' : e.severity === 'warn' ? 'warning' : 'info'
-                  "
-                  :message="e.details?.[0]?.message ?? e.message"
-                  :duration="5000"
-                  position="top-right"
-                />
-              </template>
+              <XFormElNotificationHost :events="events" />
             </template>
           </XForm>
           <div :class="bem.e('actions')">
-            <el-button type="primary" @click="triggerCustomToast">触发自定义 toast</el-button>
+            <el-button type="primary" @click="onValidate">校验</el-button>
             <el-button @click="onReset">重置</el-button>
             <el-button @click="copySchema">复制 schema</el-button>
           </div>
