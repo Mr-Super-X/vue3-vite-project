@@ -106,7 +106,7 @@
   },
   "engines": {
     "node": "^22.18.0 || >=24.12.0",
-    "pnpm": ">=11.0.0 < 12.0.0"
+    "pnpm": ">=11.0.0 < 13.0.0"
   },
   "sideEffects": [
     "*.css",
@@ -120,5 +120,8 @@
   "repository": {
     "type": "git",
     "url": "git@github.com:Mr-Super-X/vue3-vite-project.git"
+  },
+  "volta": {
+    "node": "22.18.0"
   }
 }
