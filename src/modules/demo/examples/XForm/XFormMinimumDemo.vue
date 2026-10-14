@@ -3,7 +3,6 @@
  * 最小可运行示例 —— 展示 XForm 最简用法
  * 一个 input + 校验按钮 + 提交反馈
  */
-import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
@@ -37,8 +36,14 @@ const schema: SchemaNode = {
   ],
 }
 
-function onSave() {
-  ElMessage.success('提交成功')
+async function onSave() {
+  // 演示 XForm validate 链路：先校验 → 通过才提示成功；失败时 ElMessage 报错
+  const valid = await formRef.value?.validate()
+  if (!valid) {
+    ElMessage.error('校验失败，请检查必填项')
+    return
+  }
+  ElMessage.success('保存成功（已通过 validate 校验）')
 }
 
 const tocItems = [
@@ -62,7 +67,7 @@ const tocItems = [
         <XForm ref="formRef" :schema="schema" :model="model" />
         <div :class="bem.e('actions')">
           <el-button @click="onReset">重置</el-button>
-          <el-button type="primary" @click="onSave">提交</el-button>
+          <el-button type="primary" @click="onSave">保存</el-button>
           <el-button @click="copySchema">复制 schema</el-button>
         </div>
         <ModelPreview :model="model" />

@@ -16,7 +16,6 @@
  * - CrossField 演示正向触发（字段失焦时跑自己的 cross rules）
  * - CrossFieldReverse 演示反向触发（依赖方变化时目标字段自动重算）
  */
-import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'

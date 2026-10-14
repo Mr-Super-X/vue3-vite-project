@@ -1,13 +1,14 @@
 <script setup lang="ts">
 /**
- * 演示异步校验（asyncValidator + 异步 crossValidator）
+ * 演示异步校验（asyncValidator callback 形式）
  *
  * 场景：
  * 1. 用户名唯一性：asyncValidator 模拟 500ms 远程接口,blur 后 el-form-item 显示 loading 图标
  * 2. 邮箱黑名单：asyncValidator 检查预定义黑名单,命中时返回错误信息
- * 3. 跨字段异步校验：crossValidator 返回 Promise,模拟"服务端密码强度比对"
+ * 3. 服务端密码强度校验：asyncValidator 模拟「服务端强度比对」,无跨字段依赖
+ *
+ * 注：跨字段异步校验见 XFormCrossField demo（dependsOn + crossValidator 形式）
  */
-import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { xInput } from '@/components/form-schema/builders'
@@ -138,14 +139,15 @@ const tocItems = [
 <template>
   <DocLayout>
     <DemoFrame
-      title="异步校验（asyncValidator + 异步 crossValidator）"
+      title="异步校验（asyncValidator callback）"
       source="src/components/form-schema/XForm.vue"
       :introductions="[
-        '演示 element-plus 原生 validating loading + form-schema 异步 crossValidator:',
+        '演示 element-plus 原生 validating loading + form-schema asyncValidator 异步 callback:',
         '1. 用户名唯一性：xInput.asyncValidator(fn, \'blur\') 模拟 500ms 远程接口,blur 后 form-item 显示 loading 图标',
         '2. 邮箱黑名单：async 校验器检查预定义黑名单,300ms 返回;邮箱格式 + 黑名单 两条规则并行触发',
-        '3. 跨字段异步校验：crossValidator 返回 Promise<true | string>,自动 await（密码强度比对）',
+        '3. 服务端密码强度校验：asyncValidator 模拟「服务端强度比对」,300ms 返回（无跨字段依赖）',
         '说明：el-form 的 async callback validator 自动管理 validating 状态(loading 图标),form-schema 无需介入',
+        '跨字段异步校验（dependsOn + crossValidator）见 XFormCrossField demo',
       ]"
     >
       <section id="demo-async">

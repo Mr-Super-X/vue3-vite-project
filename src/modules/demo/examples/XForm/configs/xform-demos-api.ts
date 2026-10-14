@@ -1427,7 +1427,8 @@ export const errorToastSlotItems: XFormApiItem[] = [
   {
     name: 'slot props',
     type: '{ events: FormErrorEvent[] }',
-    description: '注入 errorBus 当前事件列表（响应式，已过滤 dismissed）',
+    description:
+      '注入 errorBus 当前事件列表（响应式原始数组，含 dismissed 标记，消费方自行过滤/去重）',
   },
   {
     name: '默认 fallback',
@@ -1441,9 +1442,9 @@ export const errorToastSlotItems: XFormApiItem[] = [
       'element-plus ElNotification / ElMessage / Sonner / 自建 ToastList / 业务埋点上报点',
   },
   {
-    name: 'dismiss 处理',
-    type: 'errorBus.dismiss(id)',
+    name: 'dismiss 边界',
+    type: 'errorBus.dismiss(id) 不可达',
     description:
-      '业务侧 toast 关闭时调 errorBus.dismiss(id) —— errorBus 内部 timer 自动清理（onScopeDispose 兜底）',
+      'slot 契约仅注入 events，消费方拿不到 errorBus 实例 —— 单向接管即可（errorBus 内部 MAX_EVENTS 截断，无泄漏）；dismiss 回写仅默认容器内部接线',
   },
 ]

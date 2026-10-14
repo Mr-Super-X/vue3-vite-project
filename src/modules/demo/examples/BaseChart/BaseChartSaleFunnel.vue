@@ -10,7 +10,6 @@
  * 3. tooltip 自定义格式化：同时显示绝对值 + 阶段转化率
  * 4. option 响应式：刷新数据 / 切换指标模式 → setOption(notMerge) 整体替换
  */
-import { computed, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
@@ -86,8 +85,8 @@ function shuffleData() {
   ElMessage.success('漏斗数据已刷新（±10% 抖动）')
 }
 
-const SNIPPET = `<BaseChart :option="funnelOption" />
-// funnelOption 见 buildOption() 实现；sort: 'descending' 保证漏斗惯例排序`
+const SNIPPET = `<BaseChart :option="option" />
+// option 见上方 computed();sort: 'descending' 保证漏斗惯例排序`
 
 const tocItems = [{ id: 'demo-funnel', label: '销售转化漏斗' }]
 </script>
@@ -100,7 +99,7 @@ const tocItems = [{ id: 'demo-funnel', label: '销售转化漏斗' }]
       :introductions="[
         'funnel 类型是企业转化分析的标配：销售漏斗、用户行为漏斗、招聘流程漏斗。',
         '本演示重点：label 内嵌格式化（绝对值 + 留存率）、tooltip 显示阶段转化率、sort: descending 默认排序。',
-        '点击「刷新数据」或切换指标模式，验证 option prop 响应式 → setOption(notMerge) 整体替换路径。',
+        '刷新数据演示数据响应式；切换指标模式（整体留存率 ↔ 阶段转化率）演示 metric 切换触发 tooltip 重渲染；label 保持 retention 不变，仅 tooltip 文案随 mode 变化。',
       ]"
     >
       <section id="demo-funnel">

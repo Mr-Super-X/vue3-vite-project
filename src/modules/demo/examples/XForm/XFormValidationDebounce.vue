@@ -12,7 +12,6 @@
  * 注意：crossValidator 走 use-cross-field-trigger 路径（享受 debounce）；
  *      element-plus 原生 async-validator（rule.validator）不走此路径，不受 debounce 影响
  */
-import { computed, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
@@ -187,7 +186,8 @@ const tocItems = [
               <strong>confirmPassword 校验次数：</strong>
               {{ counter.confirmPassword }}
               <span :class="bem.e('counter-tip')">
-                连打 6 字符：A 模式应 6 次，B 模式应 1 次，C 模式应 1 次（1000ms 后）
+                连打 6 字符：A 模式应 6 次，B 模式应 1 次，C 模式应 1 次（停止打字后等 1 秒：C 模式
+                confirmPassword 防抖 1000ms 后触发）
               </span>
             </div>
             <div :class="bem.e('counter')">

@@ -8,7 +8,7 @@
  *   3. formItem: { slots: { label } } —— 自定义 label 内容（如加 icon）
  *   4. formItem: { component: 'FormItemPlus' } —— 用自定义组件替代 ElFormItem
  */
-import { reactive, h, defineComponent } from 'vue'
+import { h, defineComponent } from 'vue'
 import { ElMessage, ElFormItem } from 'element-plus'
 import { InfoFilled } from '@element-plus/icons-vue'
 import type { SchemaNode } from '@/components/form-schema/types'
@@ -94,7 +94,6 @@ const schema: SchemaNode = {
         props: { labelWidth: '220px' },
         slots: {
           // ⭐ 用 bem 实例生成 class——确保 BEM 前缀与 SCSS 根选择器匹配
-          // 修复前手写 'demo-x-form-custom-form-item__label' 导致 .vv- 前缀不匹配，样式不生效
           label: () =>
             h('span', { class: bem.e('label') }, [
               '👤 用户名（自定义 label）',

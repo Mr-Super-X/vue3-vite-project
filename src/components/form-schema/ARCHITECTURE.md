@@ -67,7 +67,7 @@ src/components/form-schema/
 ├── README.md                      # 简明使用说明
 ├── styles/
 │   └── element-form-overwrite.scss   # form-schema 自定义样式覆盖
-├── composables/                   # 一文件一能力（47 个，P2 拆分后）
+├── composables/                   # 一文件一能力（50 个含 barrel.ts，P2 拆分后）
 │   ├── barrel.ts                  # 子模块公共导出聚合
 │   ├── use-xform-composer.ts      # 顶层编排（composition root）
 │   ├── use-xform-expose.ts        # XFormExpose 装配（实例方法对外契约）
@@ -594,22 +594,22 @@ const schema = {
 
 ---
 
-## 9. 测试策略（62 个 `.spec.ts` + 2 个 `.test-d.ts`）
+## 9. 测试策略（65 个 `.spec.ts` + 2 个 `.test-d.ts`）
 
 ### 9.1 测试分布
 
 | 类别                         | 文件数 | 测试数                  | 覆盖率目标 |
 | ---------------------------- | ------ | ----------------------- | ---------- |
-| composables（含 XForm 编排） | 49     | 主体回归                | ≥80%       |
+| composables（含 XForm 编排） | 51     | 主体回归                | ≥80%       |
 | components                   | 5      | 组件行为                | ≥80%       |
 | adapters                     | 1      | 适配层                  | ≥80%       |
-| utils                        | 4      | 纯函数                  | ≥80%       |
+| utils                        | 5      | 纯函数                  | ≥80%       |
 | 根 *.spec.ts                 | 3      | 主入口 + 契约           | ≥80%       |
 | types (test-d)               | 2      | 编译期                  | N/A        |
-| **合计（spec 文件）**        | **62** | 见 `pnpm test` 实际输出 | ≥80%       |
+| **合计（spec 文件）**        | **65** | 见 `pnpm test` 实际输出 | ≥80%       |
 
 > 测试用例总计数应通过 `pnpm test --reporter=verbose` 实测，文档不在此处硬编码（避免与实际运行结果失真）。
-> 根目录 spec 为 builders / index / xform-contract 共 3 个；components/ 下 5 个（XForm/SchemaField/XFormDebugBanner/XFormErrorToast/XFormErrorToastItem）；adapters/ 下 1 个（element-plus-adapter）；utils/ 下 4 个。
+> 根目录 spec 为 builders / index / xform-contract 共 3 个；components/ 下 5 个（XForm/SchemaField/XFormDebugBanner/XFormErrorToast/XFormErrorToastItem）；adapters/ 下 1 个（element-plus-adapter）；utils/ 下 5 个。
 
 ### 9.2 关键回归保护（源码级静态断言）
 
@@ -706,17 +706,17 @@ pnpm build             # vite build
 
 ## 12. 与项目 CLAUDE.md 硬约束对齐
 
-| §      | 约束                             | 状态                                                                                                                                                                                                                                                                                    |
-| ------ | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| §1.2   | 模块边界                         | ✅ types.ts barrel + composables 一文件一能力                                                                                                                                                                                                                                           |
-| §1.4   | 防御性 UI（Loading/Error/Empty） | ⚠️ 不在 XForm 内部，由调用方用 `<AsyncState>` 包装                                                                                                                                                                                                                                      |
-| §1.6   | AutoImport                       | ✅ 全程不显式 import ref / watch / createNamespace                                                                                                                                                                                                                                      |
-| §2     | src/ Architecture Lockdown       | ✅ 本目录稳定，所有改动经 §2.4 申请                                                                                                                                                                                                                                                     |
-| §3     | BEM 命名规范                     | ✅ XForm.vue 使用 `createNamespace('x-form')` + `<style lang="scss">` 无 scoped                                                                                                                                                                                                         |
-| §4 #6  | 文件行数限制                     | ✅ XForm 149 / composables ≤315 / types/ ≤227                                                                                                                                                                                                                                           |
-| §4 #7  | Hook/Composable 行数             | ⚠️ P0/P1 拆分后 5 个 composable >200 行：useXFormComposer (315)、useValidate (288)、useCrossFieldTrigger (290)、useFormInstance (268)、useFormValidation (236)。均按 §3.4 备注"cohesive orchestrator 例外"接受；后续如再需拆分会改变公开签名，触发 spec 大量改写（详见 §10 路线图 P0+） |
-| §4 #10 | npm 包验证                       | ✅ 仅 element-plus / lodash-es / zod（项目已装）                                                                                                                                                                                                                                        |
-| §4 #11 | 新增 composable 需 .spec.ts      | ✅ composables/ 下 47 个实现文件全部配 spec（49 个 spec 文件，含 barrel.spec 与 cross-rule-runner.spec）                                                                                                                                                                                |
+| §      | 约束                             | 状态                                                                                                                                                                                                                                                                                                              |
+| ------ | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| §1.2   | 模块边界                         | ✅ types.ts barrel + composables 一文件一能力                                                                                                                                                                                                                                                                     |
+| §1.4   | 防御性 UI（Loading/Error/Empty） | ⚠️ 不在 XForm 内部，由调用方用 `<AsyncState>` 包装                                                                                                                                                                                                                                                                |
+| §1.6   | AutoImport                       | ✅ 全程不显式 import ref / watch / createNamespace                                                                                                                                                                                                                                                                |
+| §2     | src/ Architecture Lockdown       | ✅ 本目录稳定，所有改动经 §2.4 申请                                                                                                                                                                                                                                                                               |
+| §3     | BEM 命名规范                     | ✅ XForm.vue 使用 `createNamespace('x-form')` + `<style lang="scss">` 无 scoped                                                                                                                                                                                                                                   |
+| §4 #6  | 文件行数限制                     | ✅ XForm 149 / composables ≤315 / types/ ≤227                                                                                                                                                                                                                                                                     |
+| §4 #7  | Hook/Composable 行数             | ⚠️ P0/P1 拆分后 5 个 composable >200 行：useXFormComposer (349)、useValidate (279)、useCrossFieldTrigger (306)、useFormInstance (268)、useFormValidation (236)。均按 §3.4 备注"cohesive orchestrator 例外"接受；composer 已贴近 doc-currency 预警上限（350/350），下次增长应先抽离 cross-field 编排块而非放宽阈值 |
+| §4 #10 | npm 包验证                       | ✅ 仅 element-plus / lodash-es / zod（项目已装）                                                                                                                                                                                                                                                                  |
+| §4 #11 | 新增 composable 需 .spec.ts      | ✅ composables/ 下 49 个实现文件全部配 spec（51 个 spec 文件，含 barrel.spec 与 cross-rule-runner.spec）                                                                                                                                                                                                          |
 
 ---
 

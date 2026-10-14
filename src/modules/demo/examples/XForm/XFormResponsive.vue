@@ -14,11 +14,13 @@
  * - lg: ≥ 1200px(桌面)
  * - xl: ≥ 1920px(大屏)
  *
- * 注:element-plus el-row 不自动监听 viewport resize 切换断点 —— 运行时响应式
- * 联动需要 XForm 内部 useResizeObserver 触发 schema 重渲染。
- * 本次仅支持 schema 字段透传,字段值会传给 el-row / el-col props。
+ * 注:v3.5 已知限制 —— element-plus el-row 不自动监听 viewport resize,
+ * 运行时调整浏览器窗口宽度,字段间距(gutter)和对齐(justify)不会实时变化。
+ * 字段宽度(col.span)同理：需 XForm 内部 useResizeObserver 触发 schema 重渲染（未实装），
+ * 当前仅支持 schema 字段透传到 el-row / el-col props（mount 时一次性渲染）。
+ *
+ * 验证方式:刷新页面 + DevTools 切 viewport 断点 + 看 gutter/span 不变(已知限制)。
  */
-import { reactive, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
@@ -171,7 +173,7 @@ const tocItems = [
       :introductions="[
         'RowConfig.responsive / ColConfig.responsive：不同断点下不同的 gutter / span / offset 等布局参数。',
         '断点（element-plus 标准 5 档）：xs < 768 / sm < 992 / md < 1200 / lg < 1920 / xl ≥ 1920',
-        '注：el-row 不自动监听 viewport resize，运行时联动需 XForm 内部 useResizeObserver。',
+        '⚠️ v3.5 已知限制：运行时 resize 浏览器窗口,字段布局不会实时变化（XForm 暂未集成 useResizeObserver）—— 验证方式是「DevTools 切 viewport 断点 + 刷新页面」看 gutter/span 变化。',
       ]"
     >
       <section id="demo-responsive">
@@ -193,9 +195,9 @@ const tocItems = [
             </div>
             <div>
               <strong>说明:</strong>
-              请
-              <strong>调整浏览器窗口宽度</strong>
-              ,观察:
+              切换
+              <code>mode (schema ref)</code>
+              可观察响应式；当前 XForm 不支持 viewport resize 自动重渲染。
               <ul>
                 <li>
                   <strong>字段间距</strong>
@@ -210,7 +212,8 @@ const tocItems = [
                   :col.responsive 控制 span(xs=24 占满 / md=6 占 1/4)
                 </li>
               </ul>
-              resize 后立即可见字段间距和对齐方式变化。
+              当前 XForm 已知限制：el-row / el-col 不自动监听 viewport resize（v3.5 集成中），需
+              DevTools 切 viewport 断点 + 刷新页面才能看到 gutter/span 变化。
             </div>
             <ModelPreview :model="model" />
           </div>

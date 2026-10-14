@@ -2,13 +2,17 @@
 /**
  * ProTable 样式定制 demo —— 用户提出的真实痛点 #1
  *
- * 演示 6 个业务高频样式定制场景：
+ * 演示 6 个业务高频样式定制场景 + 1 个可覆盖钩子清单：
  * ① 行条件样式：VIP 行蓝色左边条 / 清仓行黄色左边条 / 停售行半透明
  * ② 单元格条件样式：高客单（>=10000）金色背景 / 缺货（stock=0）红字 / 最近 3 天绿色
  * ③ 列对齐 + 数字格式化：金额右对齐 + 千分位（toLocaleString）
  * ④ 自定义表头：headerRender + el-tooltip + icon 提示
  * ⑤ 固定列组合：左侧固定名称 + 右侧固定操作（同时启用）
  * ⑥ 主题色覆盖：通过 CSS 变量驱动 el-color-primary（演示如何「换肤」）
+ * ⑦ 可覆盖钩子清单：按「选择器稳定性三档」列出可覆写 EP CSS 变量（高/中/低）
+ *
+ * 场景 ①②③④⑤ 在同一张大 ProTable 中一并演示（避免 5 个独立 ProTable 5 倍 mock 数据），
+ * 详见 tocItems 注释 + section 拆分。
  *
  * 技术要点：
  * - 行条件样式不走 rowClassName 透传（ProTable 未暴露该接口），改用「在 render VNode 上
@@ -16,14 +20,10 @@
  * - 列对齐 / sortable 通过 ProColumn.tableProps 透传 ElTableColumn props
  * - 主题覆盖通过 BEM 嵌套 .vv-pro-table 选择器 + CSS 变量
  */
-import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { InfoFilled } from '@element-plus/icons-vue'
 import type { ProColumn, ProTableExpose } from '@/components/ProTable'
-import {
-  styleOverrideRequestApi,
-  type StyleOverrideProduct,
-} from '../../../../../mock/pro-table/style-override'
+import { styleOverrideRequestApi, type StyleOverrideProduct } from '@mock/pro-table/style-override'
 import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
@@ -228,11 +228,13 @@ async function refreshAll(): Promise<void> {
 
 /* ───────────── TOC 锚点 ───────────── */
 
+// tocItems 说明：
+// ①②③④⑤ 五个场景（行条件样式 / 单元格条件样式 / 列对齐+格式化 / 自定义表头 / 固定列）
+// 在同一张大 ProTable 中一并演示（避免 5 个独立 ProTable 5 倍 mock 数据），
+// 故 tocItems 只保留一条 demo-row-cell-styling 锚点，序号 ②③④ 在 label 内合并说明。
+// 如需每场景独立表格，参见 ProTableEngineCompare（v3.5 PR1-B 重构的并行演示模式）。
 const tocItems = [
-  { id: 'demo-row-cell-styling', label: '① 行/单元格条件样式' },
-  { id: 'demo-align-format', label: '② 列对齐 + 数字格式化' },
-  { id: 'demo-custom-header', label: '③ 自定义表头' },
-  { id: 'demo-fixed-columns', label: '④ 固定列组合' },
+  { id: 'demo-row-cell-styling', label: '① ② ③ ④ ⑤ 一表演示' },
   { id: 'demo-density-compare', label: '⑤ 密度切换对比' },
   { id: 'demo-theme-override', label: '⑥ 主题色覆盖' },
   { id: 'hook-cheatsheet', label: '可覆盖钩子清单' },
@@ -283,12 +285,13 @@ const densityCode = `<ProTable density="compact" :columns="columns" :request-api
         '业务方接 ProTable 后最常问的问题——怎么高亮某些行、怎么让金额右对齐、怎么换主题色。',
         '本 demo 覆盖 6 个高频样式定制场景：行/单元格条件样式、列对齐、自定义表头、固定列组合、密度切换、主题色覆盖。',
         '技术要点：行条件样式不走 rowClassName 透传（ProTable 未暴露），改用「在 render VNode 上注入 className + CSS :has() 反向命中整行」，0 侵入、纯声明式扩展。',
+        '完整可覆盖 CSS 钩子清单见下方 #hook-cheatsheet 章节（按选择器稳定性高/中/低分档）。',
       ]"
     >
-      <!-- 场景 ①②：行/单元格条件样式 + 列对齐 + 数字格式化 + 自定义表头 + 固定列 -->
+      <!-- 场景 ①②③④⑤：行/单元格条件样式 + 列对齐 + 数字格式化 + 自定义表头 + 固定列组合（一表演示） -->
       <section :id="tocItems[0]!.id" :class="bem.b()">
         <DemoField
-          :label="`${densityList[0] ? '' : ''}① ② ③ ④ ⑤：行/单元格条件样式 + 列对齐 + 数字格式化 + 自定义表头 + 固定列组合`"
+          label="① ② ③ ④ ⑤ 一表演示：行条件样式 + 单元格条件样式 + 列对齐+数字格式化 + 自定义表头 + 固定列"
           :code="basicCode"
         >
           <p :class="bem.e('hint')">
@@ -317,7 +320,7 @@ const densityCode = `<ProTable density="compact" :columns="columns" :request-api
       </section>
 
       <!-- 场景 ⑤：密度切换对比（3 个 ProTable 紧邻展示差异） -->
-      <section :id="tocItems[4]!.id" :class="bem.b()">
+      <section :id="tocItems[1]!.id" :class="bem.b()">
         <DemoField
           label="⑤ 密度切换对比：compact / default / loose 三档同列定义并排"
           :code="densityCode"
@@ -342,7 +345,7 @@ const densityCode = `<ProTable density="compact" :columns="columns" :request-api
       </section>
 
       <!-- 场景 ⑥：主题色覆盖（演示独立的作用域样式切换） -->
-      <section :id="tocItems[5]!.id" :class="bem.b()">
+      <section :id="tocItems[2]!.id" :class="bem.b()">
         <DemoField label="⑥ 主题色覆盖：通过 CSS 变量驱动 el-color-primary" :code="themeCode">
           <p :class="bem.e('hint')">
             下方面包屑选择器内的 ProTable 主题色从蓝色切换为红色 —— 通过 BEM 嵌套
@@ -562,14 +565,6 @@ const densityCode = `<ProTable density="compact" :columns="columns" :request-api
 
 <style lang="scss">
 /* ───────────── ① 行条件样式（CSS :has() 反向命中） ───────────── */
-
-/* VIP 行：第一列左侧 4px 蓝色条 + 整行淡蓝背景 */
-.#{$BEM_PREFIX}-demo-pro-table-style-override
-  .#{$BEM_PREFIX}-pro-table
-  .el-table__body
-  tr:has(.#{$BEM_PREFIX}-demo-pro-table-style-override__tag-on) {
-  /* 空规则占位，仅演示 */
-}
 
 /* VIP 行（status='在售' 但 isVip=true）：通过 status='在售' 标识行 + 第一列渲染 VIP 徽标 */
 .#{$BEM_PREFIX}-demo-pro-table-style-override

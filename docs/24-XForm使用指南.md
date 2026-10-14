@@ -83,6 +83,46 @@ const schema = {
 
 ---
 
+### Slots（2 个）
+
+XForm 暴露 2 个具名插槽（v3.5 起完整披露；`toastContainer` 为关键可扩展点）：
+
+| Slot                 | Scope                          | 用途                                                                                                                                                                                  |
+| -------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `footer`             | —                              | 自定义整个表单底部（替换默认的「重置/提交」按钮区域）；典型场景：再加一个「保存草稿」按钮                                                                                             |
+| **`toastContainer`** | **`{ events: ToastEvent[] }`** | **自定义错误提示容器**：替换默认的 XFormErrorToast（带堆叠、合并、自动消失）；scope 传入当前待显示的 `events` 数组，业务可接管渲染层。**v3.5 OPT-7 优化点（2026-09-15 review 落地）** |
+
+**示例：替换默认错误提示容器**
+
+```vue
+<XForm :schema="schema" :model="model">
+  <template #toastContainer="{ events }">
+    <MyCustomToast :events="events" @dismiss="..." />
+  </template>
+</XForm>
+```
+
+**典型场景**：
+
+- 替换为公司统一的 notification 系统
+- 国际化由业务方控制（默认 toast 文案硬编码中文）
+- 加声音提醒 / 持久化到 localStorage
+
+**ToastEvent 类型**：
+
+```ts
+interface ToastEvent {
+  key: string // 字段路径（如 'address.city / address'）
+  message: string // 错误消息
+  type: 'error' | 'warning' | 'info'
+  trigger: 'blur' | 'change' | 'submit' | 'manual'
+  createdAt: number // 时间戳
+  // ... 详见 src/components/form-schema/composables/use-form-error-bus.ts
+}
+```
+
+---
+
 ## 3. 实例方法（19 个）
 
 通过 `ref` 获取：`const formRef = ref<XFormExpose>()` → `<XForm ref="formRef" ...>`。

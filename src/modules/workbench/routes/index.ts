@@ -36,6 +36,7 @@ const routes: RouteRecordRaw[] = [
           titleKey: 'menu.workbenchHome',
           icon: 'odometer',
           requiresAuth: true,
+          affix: true,
         },
       },
       {

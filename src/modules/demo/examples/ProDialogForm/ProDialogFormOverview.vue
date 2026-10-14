@@ -22,7 +22,6 @@
  * ⑥ 任意状态下点「取消 / X / 遮罩」→ 弹窗关闭 + 表单重置
  * ⑦ 点「服务端错误回填（expose）」→ 调 setFieldError 写「用户名已被占用」红字
  */
-import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import type { ProDialogFormExpose } from '@/components/common/ProDialogForm'
@@ -105,17 +104,17 @@ const formSchema: SchemaNode = {
 }
 
 // —— 异步提交：模拟 800ms API 请求；failNextSubmit=true 时返回 reject ——
+// 注意：原版 3 处 console.log 全部删除（用户复制 demo 代码后不会污染 DevTools）；
+// 真实业务场景应走 Sentry 埋点 / ElMessage 提示。
 async function onSubmit(model: Record<string, unknown>): Promise<unknown> {
-  console.log('[ProDialogForm demo] submitting:', model)
+  // 提交埋点位置（真实业务：Sentry.captureMessage / analytics.track）
   await new Promise<void>((resolve) => setTimeout(resolve, 800))
 
   if (failNextSubmit.value) {
     // 故意抛错：演示「失败不关闭弹窗 + 错误向上抛出」
-    console.log('[ProDialogForm demo] simulated submit failure')
     throw new Error('提交失败：服务端返回 500（模拟）')
   }
 
-  console.log('[ProDialogForm demo] submit success')
   return { id: Date.now(), ...model }
 }
 

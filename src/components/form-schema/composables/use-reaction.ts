@@ -16,7 +16,7 @@ import { applyReactionFields } from './apply-reaction-fields'
 // 注意：第 5 参缺省值故意引用 @deprecated 模块级 API —— 旧调用方不传 resolve 时
 // 必须回退模块级表保持行为不变，这是向后兼容设计
 import { resolveFunctionExpression, type ExpressionScope } from './use-expression'
-import { walkSchema } from '../utils/walk-schema'
+import { walkSchema, type WalkSchemaOptions } from '../utils/walk-schema'
 
 /** 单 flush 内 reaction 最大执行次数 —— 必须低于 Vue 调度器自身递归上限（100），
  *  先一步拦截避免 "Maximum recursive updates exceeded" 未处理异常把卡死降级为 console.error */
@@ -86,17 +86,27 @@ export function containsReaction(schema: SchemaNode | SchemaNode[]): boolean {
  * - deps: string[] —— 声明后精确 watch 这些路径；未声明保持 deep watch 整棵 model 旧行为
  * @param resolve H2：实例级表达式解析器（缺省回退模块级，向后兼容旧调用方）；
  *   透传给全部递归子树，保证嵌套节点与顶层节点用同一份沙箱
+ * @param walkOpts M6：walkSchema 方向开关（缺省全开）。顶层 traverse 传
+ *   `{ includeArrayItemSchema: false }` 跳过 array.itemSchema —— 行级 reaction 由
+ *   render-array-node.ts 在 renderRow 内按行实例化注册（model 上下文 = 行对象），
+ *   若顶层不跳过，registerNodeReaction 会先 delete 行内节点 reaction 并用根 model
+ *   注册一份错误 watcher（行内相对 deps 在根 model 不可达、_effect(root) 污染根 model）
  */
 export function applyReactions(
   node: SchemaNode,
   model: Record<string, unknown>,
   stoppers: (() => void)[],
   budget: ReactionBudget = createBudget(),
-  resolve: ExpressionScope['resolveFunctionExpression'] = resolveFunctionExpression
+  resolve: ExpressionScope['resolveFunctionExpression'] = resolveFunctionExpression,
+  walkOpts?: WalkSchemaOptions
 ): void {
-  walkSchema(node, (n) => {
-    registerNodeReaction(n, model, stoppers, budget, resolve)
-  })
+  walkSchema(
+    node,
+    (n) => {
+      registerNodeReaction(n, model, stoppers, budget, resolve)
+    },
+    walkOpts
+  )
 }
 
 /** 单节点：H1 归一化 standalone 函数/'{{ }}'形态 disabled/hidden → reaction 条目，按需注册 watch */

@@ -8,7 +8,6 @@
  *   3. 沙箱安全：含 document / window / fetch / eval 等 forbidden 标识符 → console.error + Debug Banner 红字
  *   4. 与 XFormExpression 互补：本 demo 专门讲白名单与安全边界
  */
-import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
@@ -104,6 +103,7 @@ const schema: SchemaNode = {
       // 演示 4：沙箱安全——document 在沙箱中被屏蔽（字符串表达式触发拒绝）
       // 字符串表达式 '{{ (m) => document.title }}' 编译时扫描到 document → console.error + Debug Banner 红字
       // 注意：内联函数不经过沙箱（直接 Vue 文件作用域），所以必须用字符串表达式才能触发拒绝
+      // 沙箱 = 函数体执行环境，与 model 副本 + 全局黑名单（document/fetch/eval/window 等）双重隔离
       label: '安全测试（含 document）',
       name: 'securityTest',
       component: 'Input',

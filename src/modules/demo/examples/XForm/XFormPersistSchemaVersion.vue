@@ -8,7 +8,6 @@
  *   3. 切到 v2 schema: 移除 oldField，新增 c（恢复时字段映射）
  *   4. 加载草稿时 restoreFilter 裁剪旧字段
  */
-import { reactive, ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useFormPersist } from '@/components/form-schema'
 import type { SchemaNode } from '@/components/form-schema/types'

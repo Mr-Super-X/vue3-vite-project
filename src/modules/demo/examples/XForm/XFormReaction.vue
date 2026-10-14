@@ -7,7 +7,6 @@
  * 2. 自动保存节流(throttle):model 任意字段变化 → 最多 1 秒一次自动保存
  * 3. 普通反应式(default sync):开关切换 → 立即更新显示
  */
-import { reactive } from 'vue'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
@@ -126,7 +125,7 @@ const schema: SchemaNode = {
       },
     },
 
-    // 4. hidden + 必填（H9 回归场景）：隐藏的必填字段不参与校验
+    // 4. hidden + 必填：隐藏的必填字段不参与校验
     // 关（默认）→ 发票抬头隐藏，点「保存」校验直接通过
     // 开 → 发票抬头显示，留空点「保存」→ 报必填红字
     {
@@ -205,10 +204,10 @@ const tocItems = [
             </div>
 
             <div :class="bem.e('counter')">
-              <strong>搜索调用次数(每输入一词 debounce 300ms 后 +1):</strong>
+              <strong>搜索调用次数（停止输入 300ms 后 searchCallCount +1）:</strong>
               {{ searchCallCount }}
               <br />
-              <strong>保存触发次数(每输入 throttle 1s 后 +1):</strong>
+              <strong>保存触发次数（throttle 1s 后 +1）:</strong>
               {{ saveCallCount }}
               <br />
               <strong>最近一次保存时间:</strong>

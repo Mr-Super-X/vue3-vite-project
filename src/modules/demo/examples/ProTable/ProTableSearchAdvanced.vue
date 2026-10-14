@@ -20,7 +20,7 @@
  * 路由：自动注册为 /demo/pro-table-search-advanced
  */
 import { ElMessage } from 'element-plus'
-import { ProTable, type ProTableExpose } from '@/components/ProTable'
+import type { ProTableExpose } from '@/components/ProTable'
 import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'

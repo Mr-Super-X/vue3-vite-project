@@ -12,17 +12,23 @@
  * 2. 翻页 → 汇总行随当前页数据重算
  * 3. 翻到第 2 页（10 行后 11-20 行）→ 数量合计、平均单价变化（与第 1 页不同）
  */
-import { ProTable, type ProColumn, type ProTableExpose } from '@/components/ProTable'
+import type { ProColumn, ProTableExpose } from '@/components/ProTable'
 import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
 import DocToc from '../../components/DocToc.vue'
-import { summaryOrdersRequestApi } from '../../../../../mock/pro-table/summary-orders'
+import { summaryOrdersRequestApi } from '@mock/pro-table/summary-orders'
 import { summaryConfigItems, summaryColumnItems } from './configs/protable-demos-api'
 
 const bem = createNamespace('demo-pro-table-summary')
 
+/**
+ * 本地 Order interface 与 mock 模块独立：mock 模块（@mock/pro-table/summary-orders）
+ * 未导出 Order 类型（mock 仅暴露 requestApi 返回 Record<string, unknown>[]），
+ * 为 ProColumn<Order> 泛式强类型推导 + 业务可读性，按需保留独立 interface。
+ * 不要反向去 mock 模块加 Order 类型导出（会破坏 mock 与其他 demo 共享的「字段弱类型」契约）。
+ */
 interface Order {
   id: number
   product: string

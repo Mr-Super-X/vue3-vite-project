@@ -45,6 +45,7 @@ export const CN_NAMES: Record<string, string> = {
   ProTableStatePersist: '状态保持恢复',
   ProTableOperation: '操作收纳/表头 Tooltip',
   ProTableColumnResize: '列宽拖拽',
+  ProTableAsyncState: '三态实战（loading/empty/error）',
   // ProTable SearchForm 架构升级（默认折叠 / 高级弹窗 / 联动 / 防抖 / 响应式）
   ProTableSearchAdvanced: '表单高级筛选',
   // ProTable 工具栏 / 批量操作条 / CSV 导入导出（2026-09-18）
@@ -74,6 +75,7 @@ export const CN_NAMES: Record<string, string> = {
   XFormExpression: '动态脚本表达式',
   XFormExpressionSandbox: '表达式沙箱与白名单',
   XFormFieldPermission: '字段权限',
+  XFormFieldPermissionResolver: '字段权限解析器',
   XFormGrid: '栅格布局',
   XFormInvalidComponent: '无效组件校验',
   XFormLargeSchema: '大 schema 性能',
@@ -87,7 +89,11 @@ export const CN_NAMES: Record<string, string> = {
   XFormPersistSchemaVersion: '草稿持久化',
   XFormPropsAdvanced: 'XFormProps 高级配置',
   XFormReaction: '反应式联动',
-  XFormReactionAdvanced: '反应式联动·进阶',
+  XFormReactionAdvanced: '反应式联动·进阶总览',
+  XFormReactionCalcField: '反应式联动·计算字段',
+  XFormReactionCascadeClear: '反应式联动·级联清空',
+  XFormReactionReactiveProps: '反应式联动·反应式 props',
+  XFormReactionArrayRow: '反应式联动·数组行内嵌',
   XFormReactionDeps: '反应式联动·deps 动机',
   XFormReactionStrategy: '反应式联动·调度策略',
   XFormRenderRecovery: '字段渲染失败降级',

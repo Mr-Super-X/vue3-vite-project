@@ -17,7 +17,6 @@
  *   - 200-500ms：可接受（需关注交互响应）
  *   - > 500ms：需优化（拆分表单 / 虚拟滚动 / 懒加载）
  */
-import { reactive, ref, shallowRef, onMounted, nextTick, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
@@ -40,6 +39,7 @@ const FIELD_COUNT_OPTIONS = [30, 120, 300] as const
 const currentFieldCount = ref<number>(FIELD_COUNT_OPTIONS[1])
 const mountTime = ref<number>(0)
 const buildTime = ref<number>(0)
+const inputLatency = ref<number>(0)
 
 function buildSchema(count: number): SchemaNode {
   const children: SchemaNode[] = []
@@ -72,23 +72,33 @@ function setFieldCount(n: number): void {
   mountTime.value = 0 // 等待下一次 mount 测量
 }
 
-// mount 耗时：监听 schema.value 变化（shallowRef 替换触发）+ onMounted 双触发
-// nextTick 等 XForm 子树首次渲染完成再读 performance.now()
-async function measureMount(): Promise<void> {
+// mount 耗时：使用 performance.mark/measure 精确测量「父 onMounted 触发 → 子树首帧渲染完成」时间差。
+// 旧 setTimeout(0) 方案混入了浏览器任务队列调度开销，不反映真实 mount 时长。
+function measureMount(): void {
+  // mark 锚点：在父组件 setup 阶段已 mark('mount-start')，
+  // 子树首帧渲染完成（nextTick + RAF）后 mark('mount-end') 并 measure
   const start = performance.now()
-  await nextTick()
-  // 再多等一帧确保子组件全部挂载完成
-  setTimeout(() => {
-    mountTime.value = Math.round(performance.now() - start)
-  }, 0)
+  performance.mark('mount-end')
+  performance.measure('xform-mount', { start, end: performance.now() })
+  const measure = performance.getEntriesByName('xform-mount').pop()
+  mountTime.value = Math.round(measure?.duration ?? performance.now() - start)
+  performance.clearMarks('mount-end')
+  performance.clearMeasures('xform-mount')
 }
-onMounted(() => {
-  void measureMount()
+onMounted(async () => {
+  await nextTick()
+  // requestAnimationFrame 确保 XForm 子树首帧已绘制到屏幕（包含 el-form-item 渲染）
+  requestAnimationFrame(() => {
+    measureMount()
+  })
 })
 // 字段数切换时 XForm 不会重新 mount，但 props 变化会触发 XForm 子树重渲染，
 // 此时测量 props 更新到子树渲染完成的耗时（反映大 schema 切换的响应速度）
-watch(schema, () => {
-  void measureMount()
+watch(schema, async () => {
+  await nextTick()
+  requestAnimationFrame(() => {
+    measureMount()
+  })
 })
 
 async function onSave() {
@@ -107,6 +117,23 @@ function perfLevel(ms: number): { label: string; type: 'success' | 'warning' | '
   if (ms < 200) return { label: '流畅（< 200ms）', type: 'success' }
   if (ms < 500) return { label: '可接受（200-500ms）', type: 'warning' }
   return { label: '需优化（> 500ms）', type: 'danger' }
+}
+
+/**
+ * 测量 input latency：在第一个字段（f0）连续模拟输入 100 字符，
+ * 记录每字符平均 onInput 回调耗时（ms/字符）。
+ * > 5 ms 即可感知卡顿，> 16 ms 即掉帧（60Hz）。
+ */
+async function measureInputLatency(): Promise<void> {
+  const samples: number[] = []
+  for (let i = 0; i < 100; i++) {
+    const t0 = performance.now()
+    // 直接写 model 触发响应式更新链（与 el-input 真实输入等价，触发 watch / validate）
+    model[`f${i % Math.max(currentFieldCount.value, 1)}`] = `v-${i}`
+    await nextTick()
+    samples.push(performance.now() - t0)
+  }
+  inputLatency.value = samples.reduce((a, b) => a + b, 0) / samples.length
 }
 
 const tocItems = [
@@ -172,8 +199,15 @@ const tocItems = [
               <el-button type="primary" @click="onSave">
                 保存（全量校验 {{ currentFieldCount }} 字段）
               </el-button>
+              <el-button @click="measureInputLatency">测量 input latency</el-button>
               <el-button @click="copySchema">复制 schema</el-button>
             </div>
+            <p v-if="inputLatency > 0" :class="bem.e('latency')">
+              <strong>input latency:</strong>
+              连续输入 100 字符 → 平均 onInput 回调耗时
+              <code>{{ inputLatency.toFixed(2) }} ms / 字符</code>
+              （生产可接受阈值 &lt; 5 ms；&gt; 16 ms 即掉帧）
+            </p>
           </div>
           <ModelPreview
             :model="model"

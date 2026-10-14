@@ -23,51 +23,39 @@
  */
 import { useAppStore } from '@/store/modules/app'
 import { useI18n } from 'vue-i18n'
-import type { MenuNode } from './config/types'
-import { buildMenuTree, firstRoutePath, isUrl } from './config/menu'
+import { useMenuResizing } from './config/useMenuResizing'
+import { useMenuTree } from './config/useMenuTree'
 import Logo from './components/Logo.vue'
 import AppMenu from './components/AppMenu.vue'
 import PrimaryNav from './components/PrimaryNav.vue'
 import ToolHeader from './components/ToolHeader.vue'
 import TagsView from './components/TagsView.vue'
 import AppView from './components/AppView.vue'
+import SidebarResizer from './components/SidebarResizer.vue'
 
 const bem = createNamespace('default-layout')
 
 const appStore = useAppStore()
-const route = useRoute()
-const { router } = useAppRouter()
 const { t } = useI18n()
 
-/** 全量菜单树（各业务模块顶层路由） */
-const menuTree = computed(() => buildMenuTree(router, t))
+/** 菜单树派生与主导航跳转（四模式菜单数据源，@see ./config/useMenuTree） */
+const { menuTree, activePrimary, secondaryNodes, selectPrimary } = useMenuTree()
+
+/** 侧栏拖拽调宽状态与派生样式（主栏 + 二级侧栏，@see ./config/useMenuResizing） */
+const {
+  sidebarLiveWidth,
+  secondaryLiveWidth,
+  sidebarWidthPx,
+  secondaryWidthPx,
+  sidebarAsideStyle,
+  secondaryAsideStyle,
+} = useMenuResizing()
 
 /** 移动端强制 sidebar 抽屉模式 */
 const layout = computed(() => (appStore.mobile ? 'sidebar' : appStore.layout))
 
-/** 当前路由所属的顶层模块节点（mixed/dual 的二级菜单与主导航激活态） */
-const activePrimary = computed<MenuNode | undefined>(() => {
-  const path = route.path
-  return menuTree.value.find(
-    (node) => !isUrl(node.path) && (path === node.path || path.startsWith(`${node.path}/`))
-  )
-})
-
-/** mixed/dual 模式的二级侧栏菜单 = 当前顶层模块的子菜单 */
-const secondaryNodes = computed<MenuNode[]>(() => activePrimary.value?.children ?? [])
-
 /** Backtop 目标滚动容器类名（动态拼接 BEM，避免硬编码前缀） */
 const backtopTarget = computed(() => `.${bem.e('scroll')}`)
-
-/** 主导航点击：跳转该模块第一个可见叶子页（外链新窗口打开） */
-function selectPrimary(node: MenuNode) {
-  const path = firstRoutePath(node)
-  if (isUrl(path)) {
-    window.open(path, '_blank', 'noopener,noreferrer')
-  } else {
-    router.push(path)
-  }
-}
 
 /** 移动端点遮罩收起抽屉 */
 function closeMobileMenu() {
@@ -137,10 +125,18 @@ onUnmounted(clearLayoutScope)
           bem.e('sidebar'),
           bem.is('collapsed', appStore.sidebarCollapsed),
           bem.is('mobile', appStore.mobile),
+          bem.is('resizing', sidebarLiveWidth !== null),
         ]"
+        :style="sidebarAsideStyle"
       >
         <Logo />
         <AppMenu :menu-nodes="menuTree" />
+        <SidebarResizer
+          v-if="!appStore.mobile && !appStore.sidebarCollapsed"
+          v-model="sidebarLiveWidth"
+          :base="sidebarWidthPx"
+          @commit="appStore.sidebarWidth = $event"
+        />
       </aside>
 
       <!-- dual 模式一级 rail -->
@@ -159,12 +155,23 @@ onUnmounted(clearLayoutScope)
       <!-- mixed / dual 模式二级侧栏 -->
       <aside
         v-if="layout === 'mixed' || layout === 'dual'"
-        :class="[bem.e('secondary'), bem.is('collapsed', appStore.sidebarCollapsed)]"
+        :class="[
+          bem.e('secondary'),
+          bem.is('collapsed', appStore.sidebarCollapsed),
+          bem.is('resizing', secondaryLiveWidth !== null),
+        ]"
+        :style="secondaryAsideStyle"
       >
         <div v-if="!appStore.sidebarCollapsed" :class="bem.e('secondary-title')">
           {{ activePrimary?.title ?? '' }}
         </div>
         <AppMenu :menu-nodes="secondaryNodes" />
+        <SidebarResizer
+          v-if="!appStore.mobile && !appStore.sidebarCollapsed"
+          v-model="secondaryLiveWidth"
+          :base="secondaryWidthPx"
+          @commit="appStore.secondaryWidth = $event"
+        />
       </aside>
 
       <main :class="bem.e('workspace')">
@@ -258,10 +265,17 @@ onUnmounted(clearLayoutScope)
       width var(--transition-time-02),
       transform var(--transition-time-02);
     flex: none;
+
+    // 拖拽调宽期间禁用过渡（否则 width 动画造成橡皮筋滞后）；
+    // 仅 sidebar/secondary 会绑 is-resizing（手柄 v-if 在折叠/移动端不渲染）
+    &.is-resizing {
+      transition: none;
+    }
   }
 
-  // sidebar 模式左栏
+  // sidebar 模式左栏（position: relative 为拖拽手柄提供定位上下文）
   &__sidebar {
+    position: relative;
     width: var(--left-menu-max-width);
 
     &.is-collapsed {
@@ -269,8 +283,9 @@ onUnmounted(clearLayoutScope)
     }
   }
 
-  // mixed / dual 二级侧栏（底色稍浅区分层级）
+  // mixed / dual 二级侧栏（底色稍浅区分层级；position: relative 同主栏）
   &__secondary {
+    position: relative;
     width: var(--left-menu-max-width);
     background: var(--left-menu-bg-light-color);
 
@@ -362,6 +377,13 @@ onUnmounted(clearLayoutScope)
     border: 0;
     backdrop-filter: blur(2px);
   }
+}
+
+// ─── 拖拽调宽全局态（SidebarResizer 在拖拽中加/移该类）────────────────
+// 禁文本选择 + 锁定 col-resize 光标：鼠标移出手柄热区后选择/光标行为仍可控
+body.#{$BEM_PREFIX}-resizing {
+  cursor: col-resize;
+  user-select: none;
 }
 
 // ─── 暗色：EP 变量覆盖（与 theme store 的 data-theme 机制对齐）──

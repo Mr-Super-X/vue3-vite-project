@@ -19,6 +19,8 @@
       "@layouts/*": ["./src/layouts/*"],
       "@locales": ["./src/locales/index.ts"],
       "@locales/*": ["./src/locales/*"],
+      "@mock": ["./mock/index.ts"],
+      "@mock/*": ["./mock/*"],
       "@modules": ["./src/modules/index.ts"],
       "@modules/*": ["./src/modules/*"],
       "@plugins": ["./src/plugins/index.ts"],

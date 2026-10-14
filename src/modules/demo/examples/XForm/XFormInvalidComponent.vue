@@ -13,7 +13,6 @@
  * - 打开 DevTools Console 查看 [XForm][validate] 警告
  * - 右下角 Debug Banner（dev 模式）应显示红条 + 错误列表
  */
-import { reactive } from 'vue'
 import { ElMessage, ElInput } from 'element-plus'
 import type { SchemaNode, XFormProps } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'

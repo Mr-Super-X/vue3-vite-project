@@ -8,7 +8,7 @@
  *   3. JSX 产物：函数内部用 h() 模拟 JSX 编译结果
  *   4. 字符串 slot：保持现有行为，走 schema 渲染
  */
-import { reactive, h } from 'vue'
+import { h } from 'vue'
 import { ElButton, ElIcon } from 'element-plus'
 import { Upload } from '@element-plus/icons-vue'
 import type { SchemaNode } from '@/components/form-schema/types'
@@ -27,8 +27,11 @@ const { bem, onReset, copySchema } = useXFormDemo({
   schema: () => schema,
 })
 
+// model 中 file 是 Upload 组件的 fileList（modelProp: 'fileList'）——
+// el-upload 期望 Array，初始必须 [] 而非 ''（否则触发 ElUploadContent 的
+// Invalid prop 警告：Expected Array, got String）
 const model = reactive<Record<string, unknown>>({
-  file: '',
+  file: [],
 })
 
 // 函数 slot：header 区域渲染一个 ElButton
@@ -77,6 +80,7 @@ const schema: SchemaNode = {
       component: 'Upload',
       name: 'file',
       label: '上传组件',
+      modelProp: 'fileList',
       props: {
         autoUpload: false,
         listType: 'text',

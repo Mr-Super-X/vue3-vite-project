@@ -7,7 +7,6 @@
  * 2. resetFields(names)：模拟服务端 422 双字段红字后，只重置其中一个，
  *    另一个红字保留（全量 resetFields 会清掉所有）
  */
-import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'

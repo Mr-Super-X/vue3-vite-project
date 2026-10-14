@@ -10,7 +10,6 @@
  * 5. header / footer 插槽覆盖（header 插槽只替换标题文本，拖拽手柄与全屏按钮保留）
  */
 import { Bell } from '@element-plus/icons-vue'
-import { ProDialog } from '@/components/common/ProDialog'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import DocLayout from '../../layouts/DocLayout.vue'

@@ -11,14 +11,27 @@
  * 4. 全屏切换：requestFullscreen API（浏览器原生全屏），所有图表重新 resize
  * 5. 排行榜柱图动态着色：itemStyle.color 支持函数返回值
  */
-import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import DemoFrame from '../../components/DemoFrame.vue'
-import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+// 注：echarts 6.1.0 的 types 子路径（echarts/types）未在 package.json exports 中暴露，
+// 实际可用类型仅 `echarts` 根入口。itemStyle.color 回调参数类型走项目内通用约定
+// （params.dataIndex / params.value / params.name 在所有 ECharts series 都存在），
+// 用 `params: Record<string, unknown>` + 显式 cast 即可，运行时无影响。
+// demo 业务组件不在 unplugin-vue-components 自动注册范围（dirs 三目录外的组件），
+// 必须显式 import；BaseChart 等三目录内组件无需 import，靠 GlobalComponents 解析
+import DemoFrame from '../../components/DemoFrame.vue' // demo 业务组件 @modules/demo/components
+import DemoField from '../../components/DemoField.vue' // demo 业务组件 @modules/demo/components
+import DocLayout from '../../layouts/DocLayout.vue' // demo 文档布局 @modules/demo/layouts
+import DocToc from '../../components/DocToc.vue' // demo 文档目录 @modules/demo/components
 
 const bem = createNamespace('demo-base-chart-dashboard')
+
+/** ECharts series 回调通用字段（echarts/types 未暴露，用本地 interface 替代 ItemStyleCallbackParams）。
+ * 涵盖 itemStyle.color / tooltip.formatter / label.formatter 等所有 series 回调。 */
+interface EChartCallbackParams {
+  dataIndex?: number
+  value?: number | string | (string | number)[]
+  name?: string
+}
 
 // —— KPI 卡数据 ——
 const kpis = ref([
@@ -88,8 +101,11 @@ const rankOption = computed(() => ({
       type: 'bar',
       data: [1820, 1630, 1450, 1300, 1090, 932, 820],
       // itemStyle.color 支持函数：按 dataIndex 返回不同色（演示高亮 Top 3）
+      // 回调参数用本地 EChartCallbackParams interface：echarts/types 子路径未在
+      // package.json exports 中暴露，无法直接用 ItemStyleCallbackParams；
+      // 该 interface 涵盖所有 ECharts series 回调的共有字段（dataIndex/value/name）
       itemStyle: {
-        color: (params: Record<string, unknown>) => {
+        color: (params: EChartCallbackParams) => {
           const palette = [
             '#f56c6c',
             '#e6a23c',
@@ -244,6 +260,13 @@ const tocItems = [{ id: 'demo-dashboard', label: '运营仪表盘组合' }]
           <p :class="bem.e('tip')">
             改变浏览器窗口宽度（断点 xs / sm / md / lg），栅格自动重排，每个 BaseChart 内部
             ResizeObserver 触发并各自 resize。进入全屏后所有图表同步放大； 退出全屏恢复原始布局。
+            <br />
+            <strong>全屏失败路径测试：</strong>
+            F12 → Console → 在非用户手势下手动调用
+            <code>toggleFullscreen()</code>
+            验证 catch 分支触发
+            <code>ElMessage.warning</code>
+            提示「全屏切换失败」（浏览器会拒绝非用户手势的 requestFullscreen 调用）。
           </p>
         </DemoField>
       </section>

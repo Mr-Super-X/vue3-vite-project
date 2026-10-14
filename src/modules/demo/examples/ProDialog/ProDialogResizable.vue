@@ -15,9 +15,7 @@
  * - 全屏态自动禁用 resize（resizableEnabled computed 已聚合）
  * - onUnmounted 清 document 监听（防内存泄漏）
  */
-import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { ProDialog } from '@/components/common/ProDialog'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import DocLayout from '../../layouts/DocLayout.vue'

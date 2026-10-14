@@ -4,11 +4,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > 本文档是 `~/.claude/CLAUDE.md` 的项目级补充。所有全局规则（§一～§十一）自动适用，遇到冲突以**本文档为准**。
 >
-> **文档版本**：v1.7.0 | **生成日期**：2026-09-18 | **生效分支**：`master`
+> **文档版本**：v1.9.0 | **生成日期**：2026-09-20 | **生效分支**：`feature/engine-optimization`
 >
-> **最近更新**（2026-09-18）：修正 §1.7 组件自动注册范围描述（Wave4-4 决策）
+> **最近更新**（2026-09-20）：3 专项审计同步（18 项全部修复）
 >
-> - **v1.7 变更**：§1.7 / §1.6 / §4 #15 三处修订——`unplugin-vue-components` 实际 dirs 为 `['src/components/common', 'src/components/ProTable', 'src/components/form-schema']` + `deep: true`（vite.config.ts:74-82），三目录下所有 .vue（含深层子目录，如 `ProDialog/` / `XForm` / `ProTable`）均自动注册，**都不要显式 import**。旧版「只扫 components/common 一级 / 子目录组件（form-schema/ProDialog/ 等）需显式 import」描述与 vite.config 实际配置矛盾（Wave4-4 AskUserQuestion 决策选 B 修订 CLAUDE.md，保留 vite.config 现状）
+> - **v1.9 变更**：3 专项审计（8 composable + 5 组件 + 单测/CHANGELOG）共发现 18 项差异，**全部已修复**：
+>   - **组件契约**（docs/29 + docs/24）：ProTable 新增 §1.4 Events 表（sort-change/filter-change/engine-fallback）+ §1.5 Slots 表 + §7.5 SummaryAggregate 枚举；新增 `filterParamsAdapter` prop + `getFilterState()` expose；XForm 新增 Slots 段（footer/toastContainer）
+>   - **Composable 契约**（docs/07 + docs/23 + docs/27）：useAppRouter 新增 `pushByNameStrict` + `name: string` 类型放宽说明；useLogout 切 `useConfirm` 路径同步 + `loggingOut` 字段补全；useAuth 空数组语义；useConfirm 默认值表
+>   - **单测/CHANGELOG**（docs/04 + CHANGELOG）：line 596 deduper/request-coalescer 笔误修复；line 595 useTheme 幽灵 spec 修正；§常用命令补 `test:e2e` + `test:e2e:install`；§测试清单补 4 行（ProDialogForm/form-schema 子目录/layouts/default/demo）；CHANGELOG 顶部新增 v3.5 PR2（filterParamsAdapter / 事件完整披露）+ PR3（ProColumn\<T\> 泛型 9 commit）+ A11y 改造（10 commit）三条独立章节
+> - **v1.8 变更**（同日，前一轮全代码库审计）：§1.3 状态管理分层修订——明确 barrel `src/store/index.ts` 实际导出 5 个全局 store（app/user/theme/tags-view/dict），`tags-view` 多页签刻意不持久化、`dict` 5min TTL；`useRouterStore`（`src/store/modules/router.ts`）**不在 barrel**，由 `router/guards/remote-menu.ts` 内部消费，不属于跨模块共享
+> - 同步修订 `README.md`：§1.2 架构图、`§3 状态管理分层`、`§4 Layout 速选`（新增 portal）、`§6 BEM`（新增 bem.em() 语义）、`§目录结构`（composables 列表补全）、`§Mock 数据` 表格式、`§环境变量`（VITE_API_BASE_URL 默认值修正）
+> - 同步修订 `docs/04-构建与测试工具.md` §测试文件清单：补 caseConvert/theme/plugins/ProTable/form-schema/demo/portal/auth/build 等遗漏条目
+> - 同步修订 `docs/07-路由模块设计.md` §Layout 选择速查：新增 portal layout（顶部水平导航）
+>
+> **v1.7 变更**（2026-09-18）：§1.7 / §1.6 / §4 #15 三处修订——`unplugin-vue-components` 实际 dirs 为 `['src/components/common', 'src/components/ProTable', 'src/components/form-schema']` + `deep: true`（vite.config.ts:74-82），三目录下所有 .vue（含深层子目录，如 `ProDialog/` / `XForm` / `ProTable`）均自动注册，**都不要显式 import**。旧版「只扫 components/common 一级 / 子目录组件（form-schema/ProDialog/ 等）需显式 import」描述与 vite.config 实际配置矛盾（Wave4-4 AskUserQuestion 决策选 B 修订 CLAUDE.md，保留 vite.config 现状）
+>
 > - 同步删除「unplugin 默认 dirs 只扫一级」错误机制说明（实际 deep: true 深扫）
 > - 检测方法从「删除 `import Xxx from '@/components/common/...'`」泛化为「删除 `import Xxx from '...'`」
 >
@@ -104,7 +114,13 @@ Feature-Sliced 风格的中后台门户前端（`vue3-vite-project`，企业中�
 
 ### 1.3 状态管理分层
 
-- **全局 `store/modules/`**：仅跨模块共享（`app` 侧边栏/语言、`user` token/profile/权限、`theme` 主题持久化、`router` UI 状态）
+- **全局 `store/modules/`**（经 `src/store/index.ts` barrel 导出）：仅跨模块共享
+  - `app`（侧边栏/语言/布局模式/移动端断点/globalLoading，`pick: ['layout', 'locale']` 持久化）
+  - `user`（token/profile/权限，`pick: ['token', 'profile']` 持久化）
+  - `theme`（主题模式 + 品牌色，`pick: ['mode', 'primaryColor']` 持久化）
+  - `tags-view`（已访问路由 + keep-alive 缓存名单，**刻意不持久化**避免换账号看到老 tab）
+  - `dict`（字典项业务层缓存，5min TTL + Promise 防抖池）
+  - 注：`src/store/modules/router.ts` 内的 `useRouterStore`（远程菜单加载态/路由错误）**不在 barrel**，由 `router/guards/remote-menu.ts` 直接消费，不属于跨模块共享
 - **模块私有 store**：归 `modules/<m>/store/`，业务状态不污染全局
 - **风格**：Pinia Setup Store（接近 composables 心智，便于复用）
 - **持久化**：`pinia-plugin-persistedstate` 仅对 store 字段 `pick` 持久化（避免整体写 localStorage）
@@ -258,6 +274,8 @@ const { data } = storeToRefs(useUserStore())
 **对照 Vant 第三方库：** vant 不需要显式 import，hover 时显示 `WithInstall<DefineComponent<ExtractPropTypes<{...}>, ...>>`——本项目走 GlobalComponents 路径时行为完全一致。
 
 **检测 / 自检方法：** 若 IDE hover 模板中的 `<XxxComponent>` 只显示 `import XxxComponent`，按本节规则删除对应 `import XxxComponent from '...'` 即可。
+
+**例外：** `<script setup>` 中若需要 `InstanceType<typeof Xxx>` 作为 ref 类型声明（如 `ref<InstanceType<typeof ProTable>>()` 用于取 `defineExpose` 暴露的方法），仍需显式 `import ProTable from '@/components/ProTable/ProTable.vue'`。模板自动注册只解决 hover 智能提示，不解决 `<script>` 中的构造类型引用——这是 demo 模块普遍显式 import 自动注册组件的**唯一合法场景**（如 `src/modules/demo/examples/ProTable/ProTableAutoHeight.vue:24`）。
 
 ---
 

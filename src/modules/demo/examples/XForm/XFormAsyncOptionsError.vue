@@ -8,7 +8,6 @@
  *   3. 当前限制：immediate: false 节点创建时不请求（依赖 visibleChange 监听，
  *      引擎未实装）；可用 deps 字段依赖或 on.change 事件触发 source 重跑
  */
-import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
@@ -34,7 +33,10 @@ const CITIES = [
 ]
 
 // 模拟接口：根据参数决定成败
+// 计数器：每次 source 被调用 +1（首次 mount + 每次 deps 触发），UI 实时显示调用次数
+let sourceCallCount = 0
 async function mockFetchCities(_keyword?: string): Promise<typeof CITIES> {
+  sourceCallCount++
   await new Promise<void>((r) => setTimeout(r, 400))
   // 测试 1: 让 source 故意抛错 → onError 接管
   if (model.forceFail) {
@@ -123,6 +125,13 @@ const tocItems = [
             <el-button type="primary" @click="onSave">保存</el-button>
             <el-button @click="copySchema">复制 schema</el-button>
           </div>
+          <div :class="bem.e('counter')">
+            <span>「城市」字段 source 被调用次数：</span>
+            <strong>{{ sourceCallCount }}</strong>
+            <span :class="bem.e('counter-hint')">
+              （首次 mount + 切换「强制失败」开关触发 deps 重跑，每次 +1）
+            </span>
+          </div>
           <ModelPreview :model="model" />
         </DemoField>
       </section>
@@ -150,6 +159,14 @@ const tocItems = [
             <strong>进度</strong>
             ：见 use-async-options.ts 内部 issues 跟踪；本 demo 不演示该字段实际行为。
           </p>
+          <p>
+            <strong>Backlog</strong>
+            ：见
+            <code>.claude/.agent-reports/2026-09-21-p1-high-checklist.json</code>
+            第 27 项 +
+            <code>use-async-options.ts</code>
+            内部 comments。
+          </p>
         </el-collapse-item>
       </el-collapse>
       <ApiTable
@@ -168,6 +185,28 @@ const tocItems = [
     margin-top: 16px;
     display: flex;
     gap: 8px;
+  }
+
+  // source 调用计数器展示：让用户直观看到 deps 触发的重试次数
+  &__counter {
+    margin-top: 12px;
+    padding: 8px 12px;
+    background: var(--el-fill-color-light);
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--el-text-color-regular);
+
+    strong {
+      font-family: monospace;
+      color: var(--el-color-primary);
+      margin: 0 4px;
+    }
+  }
+
+  &__counter-hint {
+    margin-left: 8px;
+    color: var(--el-text-color-secondary);
+    font-size: 12px;
   }
 }
 </style>

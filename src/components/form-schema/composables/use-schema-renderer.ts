@@ -140,7 +140,13 @@ function traverse(
     node.forEach((n) => traverse(n, model, stoppers, budget, resolve))
     return
   }
-  applyReactions(node, model, stoppers, budget, resolve)
+  // M6：跳过 array.itemSchema —— 行级 reaction 由 render-array-node.ts 在 renderRow 内
+  // 按行实例化注册（model 上下文 = 行对象，行内相对 deps 才有值）。若此处不跳过，
+  // registerNodeReaction 会先 delete 行内节点 reaction 并用根 model 注册一份错误
+  // watcher（行内 deps 在根 model 不可达、sync 立即执行 _effect(root) 污染根 model），
+  // renderArrayNode 拿到的 itemSchema 已无 reaction 字段，行级 applyReactions 空跑。
+  // 嵌套 array（itemSchema 内再嵌 array）同理由内层 renderArrayNode 递归接管。
+  applyReactions(node, model, stoppers, budget, resolve, { includeArrayItemSchema: false })
 }
 
 /**

@@ -7,11 +7,33 @@
  *
  * 路由：/demo/directive-overview
  */
+import { ElMessage } from 'element-plus'
 import DemoFrame from '../../components/DemoFrame.vue'
+import DemoField from '../../components/DemoField.vue'
 import DocLayout from '../../layouts/DocLayout.vue'
 import DocToc from '../../components/DocToc.vue'
 
 const bem = createNamespace('demo-directive-overview')
+
+/* ───── 可交互演示：search input + button debounce + copy ───────────── */
+
+const searchInput = ref('')
+function onSearchInput(e: Event): void {
+  // 真实业务：发请求 / ElMessage 提示
+  // 这里仅 demo 演示，不输出 console（避免 DevTools 噪音）
+  ElMessage.info(`v-inputDebounce 已触发（300ms 节流后）: ${(e.target as HTMLInputElement).value}`)
+}
+const fastClickCount = ref(0)
+function onFastClick(): void {
+  fastClickCount.value++
+  ElMessage.success(`v-buttonDebounce 触发第 ${fastClickCount.value} 次`)
+}
+
+// DemoField :code 常量：模板字符串在 .ts 中合法（无 \" 转义问题），
+// 比 template 内联 `v-copy="\'Hello\'"` 干净，避免 vue/no-parsing-error
+const vCopyCode = `v-copy="'Hello vue3-vite-project!'"`
+const vInputDebounceCode = `v-inputDebounce="onSearchInput"`
+const vButtonDebounceCode = `v-buttonDebounce="onFastClick"`
 
 interface DirectiveEntry {
   name: string
@@ -63,6 +85,7 @@ const tocItems = [
   { id: 'overview-table', label: '指令速查' },
   { id: 'overview-usage', label: '使用约定' },
   { id: 'overview-architecture', label: '注册机制' },
+  { id: 'overview-interactive', label: '可交互演示' },
 ]
 </script>
 
@@ -160,6 +183,30 @@ const tocItems = [
             一行注册全部。
           </li>
         </ol>
+      </section>
+
+      <!-- 可交互演示：补齐 Overview demo 的 0 控件问题（v3.5 末次审计 CRITICAL） -->
+      <section id="overview-interactive">
+        <h3 :class="bem.e('heading')">可交互演示</h3>
+        <DemoField label="v-copy：点击按钮复制文本" :code="vCopyCode">
+          <el-button v-copy="'Hello vue3-vite-project!'" type="primary">复制 Hello</el-button>
+        </DemoField>
+        <DemoField label="v-inputDebounce：输入防抖 300ms" :code="vInputDebounceCode">
+          <el-input
+            v-model="searchInput"
+            v-inputDebounce="onSearchInput"
+            placeholder="尝试快速输入（300ms 后才触发 onSearchInput）"
+            clearable
+          />
+        </DemoField>
+        <DemoField label="v-buttonDebounce：按钮节流 500ms" :code="vButtonDebounceCode">
+          <el-space>
+            <el-button v-buttonDebounce="onFastClick" type="success">
+              快速连点 5 次，验证只触发 1 次
+            </el-button>
+            <el-tag type="info">已触发 {{ fastClickCount }} 次</el-tag>
+          </el-space>
+        </DemoField>
       </section>
     </DemoFrame>
 

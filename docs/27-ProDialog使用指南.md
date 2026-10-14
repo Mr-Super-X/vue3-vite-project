@@ -486,6 +486,18 @@ if (
 await api.removeOrder(orderId)
 ```
 
+**默认值（useConfirm 字段缺省时）**：
+
+| 字段                | 默认值            | 来源                                                      |
+| ------------------- | ----------------- | --------------------------------------------------------- |
+| `title`             | `'系统提示'`      | `DEFAULT_TITLE` 常量（useConfirm.ts:18）                  |
+| `confirmButtonText` | `'确定'`          | useConfirm.ts:20                                          |
+| `cancelButtonText`  | `'取消'`          | useConfirm.ts:21                                          |
+| `danger`            | `false`           | 显式开启后启用 `DANGER_PRESET`（确认按钮转红 + 警告图标） |
+| `type`              | 未设时不显示 icon | 仅 `danger: true` 时自动设 `'warning'`                    |
+
+````
+
 ### 8.5.2 HTML 富文本
 
 ```ts
@@ -494,7 +506,7 @@ await useConfirm({
   dangerouslyUseHTMLString: true, // 走 EP innerHTML 分支，可渲染全局注册的 <el-tag> 等
   confirmButtonText: '我已知晓风险',
 })
-```
+````
 
 > **类型刻意只允许 `string`**：EP 模板里 message 只被字符串消费，VNode/Component 形态运行时渲染成 `[object Object]`。需要业务组件作为内容（表单 / 多选）请用 `useDialog`。
 

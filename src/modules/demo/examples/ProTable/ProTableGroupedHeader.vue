@@ -22,7 +22,7 @@ import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
 import DocToc from '../../components/DocToc.vue'
-import { groupedEmployeesRequestApi } from '../../../../../mock/pro-table/grouped-employees'
+import { groupedEmployeesRequestApi } from '@mock/pro-table/grouped-employees'
 import {
   groupedHeaderColumnItems,
   groupedHeaderKnownLimitsItems,
@@ -144,8 +144,9 @@ const tocItems = [
       title="ProTableGroupedHeader 列分组"
       source="src/components/ProTable/components/GroupedHeader.vue"
       :introductions="[
-        '基于 children 字段声明 + cellClassName 视觉分组的列分组方案（v3.0 务实版）。',
+        '基于 cellClassName 视觉分组的列分组方案（v3.0 务实版）。',
         '下方演示：「【基础信息】」「【业务信息】」两个父标题列 + 子列 CSS 左侧 border 区分。',
+        '⚠️ ProColumn.children 字段 API 已规划（见下方 ApiTable），v3.0 暂未实装完整 el-table-column 嵌套多级表头；如需多级表头请走 cellClassName 方案或等待 v3.0.1。',
         'R1 决策：父子扁平化持久化（按 prop 维度统一 storage key），列设置抽屉独立存储父子列。',
       ]"
     >
@@ -161,7 +162,7 @@ const tocItems = [
       </section>
 
       <ApiTable
-        title="ProColumn.children 字段（v3.0 新增）"
+        title="ProColumn.children 字段（v3.0 已规划，暂未实装 — 完整多级表头留待 v3.0.1）"
         :items="groupedHeaderColumnItems"
         anchor="api-grouped-column"
       />

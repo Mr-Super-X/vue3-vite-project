@@ -7,10 +7,10 @@
  *  - 响应式 ref（updated 时同步最新值）
  *  - 箭头函数（每次点击实时求值，避免闭包陈旧）
  *  - 空内容（warning 提示，底层 API 不调用）
+ *  - 降级原理（secure context / clipboard API 不可用时的 textarea + execCommand 兜底）
  *
  * 路由：/demo/directive-copy
  */
-import { ref } from 'vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import DocLayout from '../../layouts/DocLayout.vue'
@@ -31,15 +31,39 @@ function regenerateOrderId(): void {
 }
 
 // 动态函数：每次点击实时求值
-const lastTimestamp = ref('')
+// 关键：函数体只返回新时间戳，无副作用；v-copy 接住返回值后通过 ElMessage 提示复制内容。
 function copyTimestamp(): string {
-  const now = new Date().toISOString()
-  lastTimestamp.value = now
-  return now
+  return new Date().toISOString()
 }
 
 // 空内容
 const EMPTY_TEXT = ''
+
+/* ───── 强制降级验证（P1H-6：可执行降级路径） ───────────── */
+// 当前是否处于强制降级状态（用户点击「强制降级」后为 true）
+const isDegradedForced = ref(false)
+// 当前 window.isSecureContext 真实值（响应式追踪，配合强制降级按钮实时刷新）
+const currentSecureContext = ref(window.isSecureContext)
+
+/** 用 Object.defineProperty 把只读的 window.isSecureContext 强制改写为 false，
+ * 模拟 HTTP 部署场景。注意：必须用 configurable: true 才能被 resetSecureContext 还原。 */
+function forceDegrade(): void {
+  Object.defineProperty(window, 'isSecureContext', { value: false, configurable: true })
+  isDegradedForced.value = true
+  currentSecureContext.value = false
+  ElMessage.warning('已强制 isSecureContext=false，复制将走 textarea 降级路径')
+}
+
+/** 还原 window.isSecureContext 为初始真实值（devTools 加载页面时的真实状态） */
+function resetSecureContext(): void {
+  // 真实环境的 isSecureContext 无法被还原（浏览器原生只读）；
+  // 但 Object.defineProperty 改过的属性可以通过 delete + 重新 define 还原
+  // 此处直接恢复为 true —— 因为 Object.defineProperty 拦截了原型 getter，真实值已经丢失
+  Object.defineProperty(window, 'isSecureContext', { value: true, configurable: true })
+  isDegradedForced.value = false
+  currentSecureContext.value = true
+  ElMessage.success('已还原 isSecureContext=true')
+}
 
 const tocItems = [
   { id: 'demo-static', label: '静态字符串' },
@@ -53,8 +77,10 @@ const tocItems = [
 const bindingItems = [
   {
     name: 'value',
-    type: 'string | () => string',
+    type: 'string | (() => string)',
     required: true,
+    // CopyValue 来自 src/directives/copy.d.ts:22 —— `string | (() => string)`，
+    // 与此处 type 字段严格对齐（不要漏写函数返回类型 string，否则 copy.ts:40 resolveCopyValue 推导会失败）
     description: '复制内容。字符串直传；函数每次点击实时执行，避免闭包陈旧',
   },
 ]
@@ -66,7 +92,7 @@ const staticCode = `<el-button v-copy="'客服电话：400-100-1001'">复制客�
 const refCode = `<el-input v-model="orderId" />
 <el-button v-copy="orderId">复制订单号</el-button>`
 
-const functionCode = `<el-button v-copy="() => new Date().toISOString()">复制当前时间戳</el-button>`
+const functionCode = `<el-button v-copy="() => { const now = new Date().toISOString(); return now }">复制当前时间戳</el-button>`
 
 const emptyCode = `<el-button v-copy="">复制空字符串</el-button>`
 
@@ -83,7 +109,7 @@ const degradeCode = `// 1. secure context + clipboard API 可用 → navigator.c
         '全局指令：点击元素触发剪贴板复制，自动选择 navigator.clipboard.writeText 或降级到 execCommand。',
         '降级策略：HTTPS / localhost / file: 走现代 API；HTTP 环境或 API 失败时自动 fallback 到 textarea + execCommand。',
         '视觉反馈：通过 ElMessage 提示「复制成功」「复制失败」「内容为空」三种状态。',
-        '点击按钮后到任意输入框 Ctrl+V 验证粘贴内容。',
+        '验证步骤：步骤 1 点击按钮 → 步骤 2 打开任意输入框 → 步骤 3 Ctrl+V 粘贴验证。',
       ]"
     >
       <!-- 静态字符串 -->
@@ -91,8 +117,10 @@ const degradeCode = `// 1. secure context + clipboard API 可用 → navigator.c
         <DemoField label="静态字符串（字面量）" :code="staticCode">
           <el-button v-copy="STATIC_TEXT">复制客服电话</el-button>
           <p :class="bem.e('hint')">
-            binding.value 是字符串字面量；指令在 updated 钩子中整体替换 ctx.binding
-            引用以同步最新值。
+            STATIC_TEXT 是模块级常量；绑定后会随 updated 钩子同步到 ctx.binding。 此外，v-copy
+            默认会给宿主元素添加
+            <code>cursor: pointer</code>
+            ；hover 时可观察到鼠标变化。
           </p>
         </DemoField>
       </section>
@@ -107,6 +135,7 @@ const degradeCode = `// 1. secure context + clipboard API 可用 → navigator.c
           </div>
           <p :class="bem.e('hint')">
             修改输入框或点「换一个」会改变 orderId；点击「复制订单号」时拿到当前最新值。
+            机制：updated 钩子在每次 binding 变化时同步 ctx.binding 引用，使指令内部始终拿到最新值。
           </p>
         </DemoField>
       </section>
@@ -115,10 +144,6 @@ const degradeCode = `// 1. secure context + clipboard API 可用 → navigator.c
       <section id="demo-function">
         <DemoField label="动态函数（每次点击实时求值）" :code="functionCode">
           <el-button v-copy="copyTimestamp" type="success">复制当前时间戳</el-button>
-          <p :class="bem.e('hint')" v-if="lastTimestamp">
-            最近一次复制的内容：
-            <code>{{ lastTimestamp }}</code>
-          </p>
           <p :class="bem.e('hint')">
             函数返回 ISO
             时间戳；连续点击若干次，到输入框粘贴能看到不同的时间——证明函数被实时调用，无闭包陈旧。
@@ -150,6 +175,21 @@ const degradeCode = `// 1. secure context + clipboard API 可用 → navigator.c
             非 secure context 下
             <code>navigator.clipboard === undefined</code>
             ，指令自动走 textarea 降级路径。
+          </p>
+          <!-- 强制降级验证：用 Object.defineProperty 改写只读属性，模拟 HTTP 部署环境 -->
+          <div :class="bem.e('degrade-actions')">
+            <el-button type="warning" @click="forceDegrade">
+              强制降级（isSecureContext=false）
+            </el-button>
+            <el-button @click="resetSecureContext">还原</el-button>
+            <el-button v-copy="'降级路径验证文本'" type="primary" :disabled="!isDegradedForced">
+              点击复制（降级路径走 textarea）
+            </el-button>
+          </div>
+          <p :class="bem.e('hint')">
+            当前 isSecureContext：
+            <code>{{ currentSecureContext }}</code>
+            <span v-if="isDegradedForced" :class="bem.e('badge')">已强制降级</span>
           </p>
         </DemoField>
       </section>
@@ -187,6 +227,22 @@ const degradeCode = `// 1. secure context + clipboard API 可用 → navigator.c
       font-family: monospace;
       font-size: 12px;
     }
+  }
+
+  &__degrade-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+
+  &__badge {
+    margin-left: 8px;
+    padding: 1px 6px;
+    background: var(--el-color-warning);
+    color: #fff;
+    border-radius: 3px;
+    font-size: 11px;
   }
 }
 </style>

@@ -173,7 +173,8 @@ function createContextMenu(view: TagView): ContextMenuItem[] {
   return items
 }
 
-// 初始化：预置 affix 固定页签（如首页）
+// 初始化：预置 affix 固定页签（当前本地仅 Workbench 工作台首页，远程菜单也可标记 affix）
+// 注意：此路径直读路由表、不经 tags-view 的 NO_TAGS 名单，两个出口需同步维护
 onMounted(() => {
   filterAffixRoutes(router, t).forEach((view) => tagsViewStore.addView(view))
 })

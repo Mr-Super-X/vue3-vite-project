@@ -13,7 +13,6 @@
  *   6. expressionFunctions 白名单注入：pushLog / toCurrency 在表达式内直接引用
  */
 // BEM 工具由 unplugin-auto-import 全局注入（@utils/bem）
-import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'

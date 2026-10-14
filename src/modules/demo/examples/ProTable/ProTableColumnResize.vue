@@ -17,7 +17,7 @@
  *
  * 路由：自动注册为 /demo/pro-table-column-resize
  */
-import { ProTable, type ProColumn } from '@/components/ProTable'
+import type { ProColumn } from '@/components/ProTable'
 import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'

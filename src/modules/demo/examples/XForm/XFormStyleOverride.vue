@@ -9,7 +9,6 @@
  * 落地方式：新建本文件，路由 / sidebar 由 import.meta.glob + sidebar-groups.ts
  * CN_NAMES 自动派生，**不需要改 routes/index.ts**。
  */
-import { reactive } from 'vue'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import DemoFrame from '../../components/DemoFrame.vue'

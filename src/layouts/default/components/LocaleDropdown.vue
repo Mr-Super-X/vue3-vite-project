@@ -17,6 +17,9 @@ const bem = createNamespace('locale-dropdown')
 const appStore = useAppStore()
 const { t } = useI18n()
 
+/** 面板展开态 —— el-dropdown 无 trigger 状态 class，须手动同步以驱动箭头旋转 */
+const open = ref(false)
+
 const OPTIONS = [
   { value: 'zh-CN', label: '简体中文' },
   { value: 'en-US', label: 'English' },
@@ -27,13 +30,22 @@ function onCommand(value: string) {
     appStore.setLocale(value)
   }
 }
+
+function onVisibleChange(visible: boolean) {
+  open.value = visible
+}
 </script>
 
 <template>
-  <el-dropdown :class="bem.b()" trigger="click" @command="onCommand">
+  <el-dropdown
+    :class="bem.b()"
+    trigger="click"
+    @command="onCommand"
+    @visible-change="onVisibleChange"
+  >
     <button :class="bem.e('trigger')" type="button" :aria-label="t('header.switchLanguage')">
       <span :class="bem.e('current')">{{ appStore.locale === 'zh-CN' ? '中文' : 'En' }}</span>
-      <el-icon :size="12"><ArrowDown /></el-icon>
+      <el-icon :class="[bem.e('caret'), bem.is('open', open)]" :size="12"><ArrowDown /></el-icon>
     </button>
     <template #dropdown>
       <el-dropdown-menu>
@@ -75,6 +87,15 @@ function onCommand(value: string) {
 
   &__current {
     font-size: 13px;
+  }
+
+  // 箭头随面板展开旋转 180°
+  &__caret {
+    transition: transform 160ms ease;
+
+    &.is-open {
+      transform: rotate(180deg);
+    }
   }
 }
 </style>

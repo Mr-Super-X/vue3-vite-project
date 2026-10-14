@@ -17,7 +17,6 @@
  * P0-3 修复背景：嵌套 array 场景下 rewriteNamePath 加防重复前缀逻辑
  * （见 src/components/form-schema/composables/array-row-key.ts）
  */
-import { reactive, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { xArray } from '@/components/form-schema/builders'
@@ -178,16 +177,37 @@ function onReset() {
 
 /** 路径前缀化自检：渲染后 el-form-item 的 prop 应为 orders[0].items[0].product 等 */
 function onCheckPath() {
-  const elFormRef = formRef.value as unknown as {
-    getRef?: (key: string) => HTMLElement | null
-  } | null
+  // getRef 是 XFormExpose 的合法公共方法（见 types/xform.ts:202）：
+  //   getRef(key: string): ComponentPublicInstance | HTMLElement | null
   // 通过 getRef 拿到 el-form DOM，从 data-prop 属性读取 prop 路径
-  const elForm = elFormRef?.getRef?.('elFormRef')
+  const elForm = formRef.value?.getRef?.('elFormRef') as HTMLElement | undefined
   const formItems = elForm ? Array.from(elForm.querySelectorAll('.el-form-item')) : []
   const propPaths = formItems.map((fi) => (fi as HTMLElement).dataset.prop ?? '')
   ElMessage({
     message: `el-form-item prop 路径（前 5 个）：\n${propPaths.slice(0, 5).join('\n')}`,
     type: 'info',
+    duration: 0,
+    showClose: true,
+  })
+}
+
+/**
+ * 触发嵌套校验失败演示：清空必填字段后调 validateDetail()，弹窗完整展示 keyPath 数组
+ * — 演示 errors[].keyPath 含两层数组下标（如 ['orders', 0, 'items', 1, 'product']）
+ */
+async function onValidateFail(): Promise<void> {
+  if (!formRef.value) return
+  // 故意清空必填字段，确保触发嵌套校验失败
+  model.orders = [{ orderNo: '', items: [{ product: '', qty: undefined, price: undefined }] }]
+  await nextTick()
+  const detail = await formRef.value.validateDetail()
+  const lines = detail.errors.map(
+    (e, i) =>
+      `${i + 1}. [${e.keyPath.map((k) => (typeof k === 'number' ? `[${k}]` : `'${k}'`)).join(', ')}] → ${e.message}`
+  )
+  ElMessage({
+    message: `嵌套校验失败 ${detail.errors.length} 项：\n${lines.join('\n')}`,
+    type: 'error',
     duration: 0,
     showClose: true,
   })
@@ -218,6 +238,7 @@ const tocItems = [
           <div :class="bem.e('summary')">
             <el-button @click="onReset">重置</el-button>
             <el-button type="primary" @click="onSave">保存并校验</el-button>
+            <el-button type="danger" @click="onValidateFail">触发嵌套校验失败</el-button>
             <el-button @click="onCheckPath">检查 prop 路径</el-button>
             <el-button @click="copySchema">复制 schema</el-button>
           </div>

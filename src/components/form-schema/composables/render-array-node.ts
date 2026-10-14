@@ -12,6 +12,7 @@ import { get } from 'lodash-es'
 import type { SchemaNode } from '../types'
 import { resolveLabel } from '../utils/resolve-label'
 import { mergeColResponsive } from './barrel'
+import { applyReactions, createBudget } from './use-reaction'
 import type { RenderSchemaNodeOptions } from './render-schema-node'
 import { rowKeyOf, rewriteNamePath } from './array-row-key'
 
@@ -25,6 +26,30 @@ import { ref } from 'vue'
 const dragSourceIndex = ref<number | null>(null)
 const dropTargetIndex = ref<number | null>(null)
 const dropPosition = ref<'before' | 'after'>('after')
+
+/**
+ * 行级 reaction stopper 桶 —— key = `${listName}#${rowKey}`
+ *
+ * 行级 reaction 在 renderRow 内独立注册（与 use-schema-renderer 顶层 reaction 并行），
+ * 把 row 子树对象作为 model 透传给 applyReactions —— 解决行内相对 deps（'qty' 等）
+ * 在根 model 不可达、Vue watch 永不触发的引擎层根因。
+ *
+ * 跨渲染复用：同 rowKey 旧 stopper 在 renderRow 内被 stop + 替换（同 row 对象身份稳定时
+ * 无变化；rowKeyOf 用 WeakMap 提供跨渲染身份，删/移一行后旧 key 已不在桶里被复用）。
+ *
+ * stale 清理：list 重渲（push/splice/move 后）由 renderArrayNode 入口遍历清掉已不存在的
+ * rowKey 对应 watcher，防止被删行的旧 watcher 长期监听并触发（model 引用被 GC 前）。
+ */
+const rowReactionStoppers = new Map<string, () => void>()
+
+/** stop 单个行级 reaction stopper 并从桶中移除 */
+function stopRowReaction(key: string): void {
+  const stop = rowReactionStoppers.get(key)
+  if (stop) {
+    stop()
+    rowReactionStoppers.delete(key)
+  }
+}
 
 /** renderArrayNode —— 数组节点渲染（kind='array'，ElCard + 行 + 行内控件） */
 export function renderArrayNode(
@@ -53,6 +78,17 @@ export function renderArrayNode(
   const min = cfg.minItems ?? 0
   const max = cfg.maxItems ?? Infinity
 
+  // 行级 reaction stale 清理 —— list 重渲（push/splice/move 后）停掉已不在当前 list
+  // 的旧行 watcher。prefix 限定 listName 避免误清其他 array 容器的 watcher
+  // （多个 array 并存时按 listName 隔离）
+  const currentRowKeys = new Set(list.map((row, i) => `${listName}#${rowKeyOf(row, i)}`))
+  const listPrefix = `${listName}#`
+  for (const key of rowReactionStoppers.keys()) {
+    if (key.startsWith(listPrefix) && !currentRowKeys.has(key)) {
+      stopRowReaction(key)
+    }
+  }
+
   const renderRow = (row: unknown, index: number): VNode => {
     const rowKey = rowKeyOf(row, index)
     // name 前缀 = 位置路径（el-form 校验用，随 index 走）；
@@ -64,6 +100,30 @@ export function renderArrayNode(
       sep,
       `${listName}#${rowKey}`
     )
+    // 行级 reaction 独立注册（与顶层 use-schema-renderer.applyReactions 并行）：
+    // 把 row 子树对象作为 model 传入 —— 行内相对 deps（'qty' / 'price' 等）在
+    // 根 model 不可达，用行 model 解析后 use-reaction.ts:156 lodash.get 才有值。
+    // 同 rowKey 旧 watcher 先停（同 rowKey 重渲时 rewritten 引用已变，
+    // 旧 watcher 闭包持有的 reactionConfig 已被 delete，残留会读已删字段）。
+    // stopper 桶由 renderArrayNode 入口 stale 清理兜底（push/splice/move 场景）。
+    if (rewritten) {
+      const rowStopKey = `${listName}#${rowKey}`
+      stopRowReaction(rowStopKey)
+      const rowStoppers: (() => void)[] = []
+      applyReactions(
+        rewritten as SchemaNode,
+        row as Record<string, unknown>,
+        rowStoppers,
+        // 行内 reaction 数量通常远小于顶层 schema，独立预算避免抢顶层 budget 配额；
+        // 无限循环场景由 runner 内 budget.enter() 兜底 + console.error 告警
+        // （与 use-reaction.ts:140-147 顶层 reaction 同一机制）
+        createBudget(),
+        opts.resolveFunctionExpression
+      )
+      if (rowStoppers.length > 0) {
+        rowReactionStoppers.set(rowStopKey, () => rowStoppers.forEach((s) => s()))
+      }
+    }
     const inner = rewritten
       ? opts.render({
           ...(rewritten as object),

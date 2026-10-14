@@ -7,7 +7,6 @@
  * 2. 区域选择：依赖 city 字段，city 变化时自动重新加载
  * 3. 错误处理：演示 source 抛错时的 onError 回调
  */
-import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'

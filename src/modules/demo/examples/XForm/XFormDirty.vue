@@ -25,7 +25,6 @@
  * - 依次操作上述场景，观察 isDirty 按钮状态变化
  * - getDirtyFields 列表实时更新
  */
-import { reactive, ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
 import ApiTable from '../../components/ApiTable.vue'
@@ -82,7 +81,7 @@ const schema: SchemaNode = {
       component: 'Input',
       props: { type: 'textarea', rows: 2, placeholder: '一句话介绍' },
     },
-    // 嵌套对象字段（H4 回归场景）：dirty 快照必须深拷贝，
+    // 嵌套对象字段：dirty 快照必须深拷贝，
     // 原位修改 address.city 时 isDirty 应能检测到（活引用快照会漏检）
     {
       label: '城市',
@@ -163,7 +162,6 @@ const touchedStatus = computed(() => {
 })
 
 /** 监听 model 变化 → 刷新 dirty 状态显示 */
-import { watch } from 'vue'
 watch(
   () => [model.username, model.email, model.age, model.bio, model.address],
   () => refreshDirtyState(),

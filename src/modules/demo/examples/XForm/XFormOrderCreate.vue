@@ -11,7 +11,7 @@
  *   6. 草稿持久化（useFormPersist 刷新不丢、exclude 排除 orderNo）
  *   7. dirty 追踪（实时显示 isDirty + dirty 字段）
  *
- * 设计目标：让新人 5 分钟看完整 XForm 业务形态，避免在 30 个独立 demo 间来回跳转。
+ * 设计目标：让新人 5 分钟看完整 XForm 业务形态，避免在 50+ 个独立 demo 间来回跳转。
  * 路由：/demo/x-form-order-create（由 import.meta.glob 自动派生）
  *
  * 验证清单：
@@ -23,7 +23,6 @@
  *   ⑥ 填几个字段 → F5 刷新 → 点「恢复草稿」→ 数据恢复 + isDirty 重置
  *   ⑦ 改任意字段 → isDirty=true（isDirty 与 getDirtyFields 实时同步）
  */
-import { reactive, ref, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useFormPersist } from '@/components/form-schema'
 import type { SchemaNode } from '@/components/form-schema/types'
@@ -34,7 +33,13 @@ import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import DocToc from '../../components/DocToc.vue'
 import ModelPreview from '../../components/ModelPreview.vue'
-import xFormSource from './XFormOrderCreate.vue?raw'
+
+// v3.5 末次审计 CRITICAL 修复：原 demo 用 ?raw 自引用 514 行 raw 文本给 DemoField，
+// 脆弱（重命名/移动即坏）+ 演示代码过长（用户复制会粘出整个 demo 文件）。
+// 现改为 schema 字符串化：DemoField 专注展示 schema 本体（约 80 行 JSON），
+// 真实可读、可复制、可作为业务参考。
+// schema 是普通 SchemaNode 对象（非 ref），computed 包装以满足 <DemoField> 类型推断
+const xFormSchemaCode = computed(() => JSON.stringify(schema, null, 2))
 
 // —— Mock 字典数据（真实项目从后端拉）——
 const STATUS_OPTIONS = [
@@ -249,7 +254,6 @@ const { formRef, bem, onReset, copySchema } = useXFormDemo({
   name: 'order-create',
   schema: () => schema,
   model: () => model,
-  successMessage: false,
 })
 
 /**
@@ -301,8 +305,11 @@ onMounted(() => {
   refreshDirty()
 })
 
-/** 验证指引面板展开状态（默认折叠，用户主动展开） */
-const guideActive = ref<string[]>([])
+/**
+ * 验证指引面板展开状态（默认展开——本 demo 是「建议新接入 XForm 先看」入口，
+ * 默认折叠会与 introductions 「建议新接入先看本 demo」矛盾，反而隐藏了 7 步价值）
+ */
+const guideActive = ref<string[]>(['guide'])
 
 const tocItems = [
   { id: 'demo-order-create', label: '订单创建演示' },
@@ -319,7 +326,7 @@ const tocItems = [
       :introductions="[
         '本 demo 串联 XForm 7 大能力的「完整业务形态」：基础校验 + 跨字段 + 联动必填 + 异步级联 + 数组节点 + 草稿持久化 + dirty 追踪。',
         '对应真实中后台编辑页标准链路：拉数据 → 表单交互 → 校验 → 提交 → dirty 基线归零 / 草稿恢复。',
-        '建议新接入 XForm 的同学先看本 demo，再按需点开 30 个独立 demo 深入单个能力。',
+        '建议新接入 XForm 的同学先看本 demo，再按需点开 50+ 个独立 demo 深入单个能力。',
         '下方「验证指引」面板按 7 步走完即可体验全部能力（默认折叠）。',
       ]"
     >
@@ -337,7 +344,7 @@ const tocItems = [
         </el-collapse-item>
       </el-collapse>
       <section id="demo-order-create">
-        <DemoField label="端到端业务演示：订单创建（拉详情 → 校验 → 提交）" :code="xFormSource">
+        <DemoField label="端到端业务演示：订单创建（拉详情 → 校验 → 提交）" :code="xFormSchemaCode">
           <div :class="bem.b()">
             <div :class="bem.e('toolbar')">
               <el-button @click="onReset">重置字段</el-button>
