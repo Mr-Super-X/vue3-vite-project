@@ -35,6 +35,7 @@ export const ROUTE_WHITE_LIST: ReadonlySet<string> = new Set<string>([
   'Forbidden', // 403 无权限
   'NotFound', // 404 页面
   'ServerError', // 500 页面
+  'H5Demo', // H5 示例页（h5 layout 验收；免登录方便真机扫码预览）
   // dev 模式追加 demo 路由；prod 整个 spread 被 Rollup 消除
   ...(import.meta.env.DEV ? demoRouteNames : []),
 ])
