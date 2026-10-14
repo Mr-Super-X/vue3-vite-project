@@ -235,3 +235,14 @@ jsdom 的 `documentElement.clientWidth` 默认 0，用 `Object.defineProperty` m
 | `README.md` | §4 Layout 速选加 h5 行 |
 | `docs/07-路由模块设计.md` | §Layout 选择速查加 h5 行 |
 | `CHANGELOG.md` | 新功能条目 |
+
+---
+
+## 附录：实施偏差记录（2026-10-14 验收后回填）
+
+实施期发现两处与设计稿的偏差，均以代码事实为准（实现文件头注释有完整根因记录）：
+
+1. **§5.1 exclude 形态**：设计为「exclude 函数反向判定」，实测 postcss-pxtorem v6.1.0 函数形态有源码缺陷（函数返回 false 时 fall through 到 `filePath.match(fn)` 抛 SyntaxError，index.js:135）。实际交付为 `H5_EXCLUDE_REGEX` 负向先行正则（`build/postcss.ts`），`isH5RemTarget()` 保留为独立可测导出。
+2. **§5.3 视口宽度读取**：设计为 `documentElement.clientWidth`，实施改为 `window.innerWidth`——clientWidth 在限宽（html.style.width=540px）生效后读到的是元素自身残留宽度，宽屏 resize 回窄屏会算错 fontSize。innerWidth 恒为视口宽，不受 html 内联 width 影响。
+
+验收实测（chrome-devtools MCP）：375 屏 fontSize=37.5px、200px 卡片渲染 90.57px（≈理论 90.58）；1280 屏限 540px 居中（左留白 370px）；h5→/login SPA 内切换后 html 内联 fontSize/width/margin 全部恢复清空。
