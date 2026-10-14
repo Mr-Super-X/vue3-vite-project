@@ -2,6 +2,15 @@
 
 ## 未发布
 
+### ✨ Feature | 新增 h5 layout + rem 适配（H5 移动端面板能力）
+
+- routes 父记录挂 `@/layouts/h5/index.vue` 即获得 H5 面板能力（与 portal/default 同构）
+- 编译时：`build/postcss.ts`（postcss-pxtorem）仅转换 `src/layouts/h5/` 与 `src/modules/h5-*/`（h5- 前缀约定），rootValue=82.8（828 设计稿/10），样式直接写设计稿 px
+- 运行时：`src/layouts/h5/config/rem.ts` 按 `min(视口宽,540)/10` 动态计算 html fontSize，宽屏限 540px 居中；激活/恢复绑定 h5 layout 生命周期，离开对后台零残留
+- 插件：`src/plugins/remAdaptation.ts` viewport meta 幂等确保（PluginsOptions.remAdaptation 可关闭）
+- 示例：`src/modules/h5-demo`（`/h5-demo` 免登录白名单，含字号阶梯/200px 卡片/1px 边框对照演示）
+- 文档：`docs/34-H5布局与rem适配.md`；单测：postcss / remAdaptation / rem 三个 spec 全绿（用例数随迭代变化，以 spec 文件为准）
+
 ### 📝 Docs | XForm demo 13 项批量修复完成 + 真实浏览器验证（CHANGELOG 备忘录，源码未提交）
 
 > 2026-09-02 13 项 XForm demo 可理解性 + 内容准确性修复（code-explorer 48 demo 扫描后批量修）。
