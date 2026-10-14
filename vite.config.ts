@@ -31,6 +31,7 @@ import {
   createProxyConfig,
   SERVER_DEFAULTS,
   SCSS_PREPROCESSOR_OPTIONS,
+  POSTCSS_PLUGINS,
 } from './build'
 
 // https://vite.dev/config/
@@ -117,6 +118,8 @@ export default defineConfig({
     alias: resolveSrcDirAliases(),
   },
   css: {
+    // h5 rem 适配（postcss-pxtorem）：仅转换 src/layouts/h5/ 与 src/modules/h5-*/（见 build/postcss.ts）
+    postcss: { plugins: POSTCSS_PLUGINS },
     preprocessorOptions: {
       // SCSS 'new-global' deprecation：Dart Sass 1.78+ 警告 "b() 内 !global 设新变量"，
       // 由于 bem mixin 设计依赖此模式但每个 <style scoped> 是独立 stylesheet 根，
