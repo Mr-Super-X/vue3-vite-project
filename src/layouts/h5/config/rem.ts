@@ -36,6 +36,9 @@ let recalcTimer: ReturnType<typeof setTimeout> | undefined
 function applyRootMetrics(): void {
   const html = document.documentElement
   const viewportWidth = window.innerWidth
+  // 隐藏 iframe / 预渲染等极端场景 innerWidth 可能为 0：跳过本次计算保持现状，
+  // 等页面可见后的 resize/pageshow 自愈（写 0px 会导致全部 rem 元素塌陷）
+  if (viewportWidth <= 0) return
   const effectiveWidth = Math.min(viewportWidth, H5_REM_MAX_WIDTH)
   html.style.fontSize = `${effectiveWidth / REM_DIVISOR}px`
 

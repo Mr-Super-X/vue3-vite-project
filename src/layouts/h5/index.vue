@@ -35,6 +35,8 @@ onUnmounted(deactivateRem)
 // 本文件在 postcss-pxtorem 转换范围内（src/layouts/h5/），直接写 828 设计稿 px 即可
 .#{$BEM_PREFIX}-h5-layout {
   min-height: 100vh;
+  // 100dvh 渐进增强：规避 iOS Safari 地址栏收缩导致的 100vh 溢出（与 default 布局同策略）
+  min-height: 100dvh;
   background: #f7f8fa;
 }
 </style>

@@ -107,6 +107,36 @@ describe('layouts/h5/config/rem — rem 运行时激活与恢复', () => {
     expect(document.documentElement.style.fontSize).toBe('') // 快照原值（空）已恢复且未被重算覆盖
   })
 
+  it('pageshow persisted=false（普通加载）不重算', () => {
+    mockViewportWidth(375)
+    activateRem()
+    mockViewportWidth(414)
+    firePageShow(false)
+    vi.advanceTimersByTime(H5_REM_RESIZE_DELAY * 2)
+    expect(document.documentElement.style.fontSize).toBe('37.5px') // 负分支：不触发重算
+  })
+
+  it('innerWidth=0（隐藏 iframe/预渲染）不写 0px，保持现状等自愈', () => {
+    mockViewportWidth(375)
+    activateRem()
+    expect(document.documentElement.style.fontSize).toBe('37.5px')
+    mockViewportWidth(0)
+    window.dispatchEvent(new Event('resize'))
+    vi.advanceTimersByTime(H5_REM_RESIZE_DELAY * 2)
+    expect(document.documentElement.style.fontSize).toBe('37.5px') // 卫语句跳过计算，未塌陷为 0px
+  })
+
+  it('窄屏 resize 到宽屏：fontSize 切到 54px 并出现限宽', () => {
+    mockViewportWidth(375)
+    activateRem()
+    expect(document.documentElement.style.width).toBe('')
+    mockViewportWidth(600)
+    window.dispatchEvent(new Event('resize'))
+    vi.advanceTimersByTime(H5_REM_RESIZE_DELAY)
+    expect(document.documentElement.style.fontSize).toBe('54px')
+    expect(document.documentElement.style.width).toBe('540px')
+  })
+
   it('H5_REM_MAX_WIDTH 常量为 540', () => {
     expect(H5_REM_MAX_WIDTH).toBe(540)
   })

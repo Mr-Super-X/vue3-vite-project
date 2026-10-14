@@ -12,9 +12,9 @@
  *
  * 实现选型备注（postcss-pxtorem v6.1.0 源码实测，README 过时）：
  *   - 无 include 选项；exclude 默认为 null（不配则全量转换）
- *   - exclude 的函数形态有缺陷：函数返回 false（不排除）时会 fall through 到
- *     `filePath.match(exclude)`（index.js:135），函数被强制转正则抛 SyntaxError
- *     「Invalid regular expression: /(filePath) => ...」—— 故只能用 RegExp 形态
+ *   - exclude 的函数形态行为不确定：函数返回 false（不排除）时会 fall through 到
+ *     `filePath.match(exclude)`（index.js:135）——函数被强制转为正则，视函数字符串化
+ *     结果可能抛 SyntaxError（本仓实测）或静默产生错误匹配 —— 故只能用 RegExp 形态
  *   - 负向先行 `^(?!.*目标段).*$` 实现 include 语义：路径不含 h5 目标段即排除
  *   - 正则兼容 vite 在 win 下的 input.file 形态（D:/... 正斜杠 + ?vue query 后缀）
  *

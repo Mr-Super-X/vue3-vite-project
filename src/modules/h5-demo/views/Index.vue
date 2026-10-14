@@ -17,23 +17,23 @@ function refreshMetrics(): void {
   viewportWidth.value = window.innerWidth
 }
 
-// 防抖 350ms：必须大于 rem.ts 的 300ms 重算防抖（见 @/layouts/h5/config/rem.ts），
-// 保证指标条读到的是 html fontSize 重算完成后的稳定值而非中间态
-let metricsTimer: ReturnType<typeof setTimeout> | undefined
-function scheduleRefreshMetrics(): void {
-  clearTimeout(metricsTimer)
-  metricsTimer = setTimeout(refreshMetrics, 350)
-}
+// html fontSize 由 layouts/h5/config/rem.ts 激活与重算（防抖 300ms）。
+// 用 MutationObserver 订阅 html style 属性变化（而非定时器猜测重算时机）：
+// fontSize 真正写入时读数必然准确，与 rem.ts 的防抖周期零耦合。
+// resize 监听兜底视口宽读数（宽屏间切换 fontSize 恒为 54px，不触发 style 变更）
+let observer: MutationObserver | undefined
 
 onMounted(() => {
   // 父级 h5 layout 的 activateRem 在同一 flush 的父 onMounted 才设置 html fontSize；
   // 子组件直接读会拿到浏览器默认 16px，nextTick 后才是激活后的真实值
   nextTick(refreshMetrics)
-  window.addEventListener('resize', scheduleRefreshMetrics)
+  observer = new MutationObserver(refreshMetrics)
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] })
+  window.addEventListener('resize', refreshMetrics)
 })
 onUnmounted(() => {
-  clearTimeout(metricsTimer)
-  window.removeEventListener('resize', scheduleRefreshMetrics)
+  observer?.disconnect()
+  window.removeEventListener('resize', refreshMetrics)
 })
 </script>
 
@@ -78,6 +78,8 @@ onUnmounted(() => {
 // 本文件在 postcss-pxtorem 转换范围内（src/modules/h5-demo/），直接写 828 设计稿 px
 .#{$BEM_PREFIX}-h5-demo {
   min-height: 100vh;
+  // 100dvh 渐进增强：规避 iOS Safari 地址栏收缩溢出（与 layouts/h5 同策略）
+  min-height: 100dvh;
   padding: 24px;
 
   &__header {
