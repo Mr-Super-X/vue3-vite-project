@@ -36,41 +36,35 @@ export interface TagView {
 /**
  * 不出现在多页签的路由名。
  *
- * 分两类：
- *   - 系统页：Login（blank layout，无侧边栏上下文）与 403/404/500（全屏裸路由），
- *     出现在多页签中没有承载意义。守卫跳转登录页（未登录 redirect / 退出登录）时
- *     afterEach 仍会触发并把 Login 加入页签，必须在此显式排除——这正是 toTag 注释
- *     声明"排除白名单本身"但实现遗漏的部分。
+ * meta.noTags 声明式排除（2026-10-15 起，替代原 NO_TAGS_ROUTE_NAMES 硬编码名单）：
+ *   - 系统页（Login 与 403/404/500）：出现在多页签中没有承载意义。守卫跳转登录页
+ *     （未登录 redirect / 退出登录）时 afterEach 仍会触发并把 Login 加入页签，
+ *     必须显式排除——这正是 toTag 注释曾声明"排除白名单本身"但实现遗漏的部分。
  *   - Home：portal 落地页，经顶部导航/Logo 返回即可，无页签上下文切换需求，
  *     产品决策刻意完全排除（含其曾标记的 affix 固定形态）。
+ *   - 免登录演示页（H5Demo/BigDemo/BigDemoWide）：从 workbench"四栖能力演示"
+ *     直达的验收页，非工作流页面，不应污染页签。
  *
  * 不复用守卫白名单 isWhiteListed 的原因：dev 模式白名单包含全部 demo 路由名
  * （demo 页免登录但属正常业务页，页签应正常展示），按白名单过滤会误伤 demo 页签。
  *
- * 注意：本名单仅约束 toTag（afterEach 动态加入路径）。affix 预置走
- * filterAffixRoutes 直读路由表，不经 toTag——若给上述路由配 meta.affix，
+ * 注意：noTags 仅约束 toTag（afterEach 动态加入路径）。affix 预置走
+ * filterAffixRoutes 直读路由表，不经 toTag——若给 noTags 路由配 meta.affix，
  * 仍会被 TagsView 初始化钉进页签，两处需同步维护。
  */
-const NO_TAGS_ROUTE_NAMES: ReadonlySet<string> = new Set([
-  'Login', // 登录页（blank layout）
-  'Forbidden', // 403 无权限
-  'NotFound', // 404 页面
-  'ServerError', // 500 页面
-  'Home', // 首页（portal 落地页，产品决策排除，见上方注释）
-])
 
 /**
  * 把 RouteLocationNormalized 转为 TagView。
  *
  * 排除两类路由：
  *   - 无 name：layout 包裹层、404 catch-all 兜底
- *   - 系统页（NO_TAGS_ROUTE_NAMES）：登录/错误页不进多页签
+ *   - meta.noTags 声明排除：系统页 / 门户落地页 / 免登录演示页（路由作者声明）
  *
  * @returns TagView 或 null（路由无 name 或为系统页时）
  */
 function toTag(route: RouteLocationNormalized): TagView | null {
   if (!route.name) return null
-  if (NO_TAGS_ROUTE_NAMES.has(String(route.name))) return null
+  if (route.meta?.noTags) return null
   const icon = route.meta?.icon as string | undefined
   const titleKey = (route.meta as { titleKey?: string }).titleKey
   return {

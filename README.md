@@ -1,44 +1,35 @@
-# 企业中后台管理 (vue3-vite-project)
+# vue3-vite-project · 四栖工程模板
 
-基于 Vue 3 + Vite 8 + TypeScript 6 的中后台脚手架，Feature-Sliced 风格，支持模块独立开发、不依赖后端即可联调。
+对内中后台 + 对外门户 + H5 移动端 + 数据大屏，一套代码四种面板。Feature-Sliced 风格，模块独立开发，不依赖后端即可联调。
 
 > 🆕 **新同事请先看 [docs/10-新手指引.md](docs/10-新手指引.md)** —— 30 分钟 5 任务，带你从 clone 到加新模块。
 >
-> **最近更新**：2026-09-20 — **3 专项审计同步（18 项全部修复）**：
+> **最近更新**：2026-10-15 — **四栖能力 + 开源首发准备**：
 >
-> **Batch A — 组件契约 CRITICAL+HIGH**（docs/29 + docs/24）：
+> - **v2.1 big 大屏布局**（[docs/35](docs/35-大屏布局与scale适配.md)）：transform: scale 等比缩放，1920/2560/4K/9000px 拼接屏，`meta.bigScreen` 声明异形设计稿
+> - **v2.0 h5 移动端布局**（[docs/34](docs/34-H5布局与rem适配.md)）：编译时 postcss-pxtorem + 运行时 rem 双层适配，样式直写设计稿 px
+> - **/autoplan 多视角审查 15 项任务落地**（详见 [CHANGELOG.md](CHANGELOG.md)）：BigChart 显存钳制、h5 首帧 FOUC 消除、MIT LICENSE、h5/big ADR、Fork 升级与版本策略
+> - **组件渲染层测试从 0 到 14 例**（BigChart 8 + big/h5 layout 各 3）
 >
-> - `docs/29-ProTable使用指南.md`：§1.2 新增 `filterParamsAdapter` prop（v3.5 PR2）+ §1.3 新增 `getFilterState()` expose + §1.4 新增 Events 表（`sort-change` / `filter-change` / `engine-fallback` 3 个事件完整披露）+ §1.5 新增 Slots 表
-> - `docs/24-XForm使用指南.md`：新增 Slots 段（`footer` + `toastContainer` + ToastEvent 类型契约）
->
-> **Batch B — Composable P1**（docs/07 + docs/23）：
->
-> - `docs/07-路由模块设计.md`：§"路由高层 API" 新增 `pushByNameStrict`（dev 模式 throw 兜底）+ 8 方法速查表 + 类型放宽说明（`name: string` 替代 RouteName 联合类型，2026-07-24 方案 A 后）
-> - `docs/23-权限设计.md`：§5.10 useLogout 改 `useConfirm` composable 调用（v1.14.2 改造）+ 新增 `loggingOut: Ref<boolean>` 字段说明
->
-> **Batch C — 组件 MEDIUM**（docs/29）：§7.5 新增 `SummaryAggregate` 枚举表（`sum`/`avg`/`count`/`max`/`min`）
->
-> **Batch D — 配置 MEDIUM**（docs/04 + CHANGELOG）：
->
-> - `docs/04-构建与测试工具.md`：line 596 修复 `deduper`/`request-coalescer` 笔误（实际是 `request-merger`）
-> - `CHANGELOG.md`：顶部新增 v3.5 PR2（filterParamsAdapter / 事件完整披露）+ PR3（ProColumn\<T\> 泛型 9 commit）+ A11y 改造（10 commit）三条独立章节
->
-> **Batch E — LOW 6 项小修补**（docs/04 + docs/23 + docs/27）：
->
-> - `docs/23 §5.7.1` 新增 useAuth 空数组语义行
-> - `docs/27 §8.5.1` 新增 useConfirm 默认值表
-> - `docs/04 line 595` 移除 useTheme 幽灵 spec（由 theme.spec.ts 间接覆盖）
-> - `docs/04 §常用命令` 补 `pnpm test:e2e` + `pnpm test:e2e:install`
-> - `docs/04 §测试清单` 补 4 行（ProDialogForm / form-schema 子目录 / layouts/default / modules/demo）
->
-> 上轮同步（2026-09-20）：全代码库审计 9 项修复 + 3 项误判，详见本节原历史段。
+> 上轮同步（2026-09-20）：全代码库审计 9 项修复 + 3 项误判，详见 [CHANGELOG.md](CHANGELOG.md)。
 > 上轮同步（2026-09-17）：docs/11 useDict v2 多 code 契约、docs/27 §8.5 useConfirm、docs/10 §3.7 命令式弹窗、docs/26 组件级杀手锏、docs/32 §3 错位路径、docs/04 测试覆盖；详见 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
 
 ## 📋 项目简介
 
-工贸统一登录方向的中后台门户前端基线，支持多业务模块（认证、用户管理、首页）、中后台交互模式（表格、表单、权限控制）、不依赖后端即可独立跑通业务流程。
+基于 Vue 3 + Vite 8 + TypeScript 6 的**四栖工程模板**：对内中后台 + 对外门户 + H5 移动端 + 数据大屏，一套代码四种面板（路由挂对应 layout 即获得能力）。Feature-Sliced 风格，支持模块独立开发、不依赖后端即可联调。
+
+| 面板               | 入口示例     | 能力来源                                                                     |
+| ------------------ | ------------ | ---------------------------------------------------------------------------- |
+| 中后台管理（对内） | `/workbench` | `default` layout：侧栏 + 顶栏 + 多页签（[docs/07](docs/07-路由模块设计.md)） |
+| 门户展示（对外）   | `/home`      | `portal` layout：顶部水平导航 + 无侧栏（[docs/07](docs/07-路由模块设计.md)） |
+| H5 移动端          | `/h5-demo`   | `h5` layout + rem 适配（[docs/34](docs/34-H5布局与rem适配.md)）              |
+| 数据大屏           | `/big-demo`  | `big` layout + scale 适配（[docs/35](docs/35-大屏布局与scale适配.md)）       |
+
+> "四栖"按**业务面板形态**划分：对内管理 / 对外门户 / 移动 H5 / 数据大屏，各配独立 layout。blank layout 是登录/回调纯壳，无独立业务场景，不计入。
+
+开源 MIT，版本策略与 fork 升级见 [docs/36](docs/36-Fork升级与版本策略.md)。
 
 **设计原则**：
 

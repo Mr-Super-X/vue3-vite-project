@@ -6,7 +6,7 @@
 //   - closeOthers：保留 current + affix
 //   - closeAll：仅保留 affix
 //   - cachedViews 与 visitedViews 同步性
-//   - addRouteView：跳过无 name 路由 + 跳过系统页（Login/403/404/500）与首页 Home
+//   - addRouteView：跳过无 name 路由 + 跳过 meta.noTags 声明路由（系统页/Home/演示页）
 
 import { describe, it, expect, beforeEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
@@ -137,27 +137,36 @@ describe('useTagsViewStore', () => {
       expect(store.visitedViews[0]?.affix).toBe(true)
     })
 
-    it('首页 Home 不加入页签（产品决策：portal 落地页无页签承载意义）', () => {
+    it('首页 Home 不加入页签（meta.noTags；即使路由残留 affix 标记，afterEach 路径也不能加入）', () => {
       const store = useTagsViewStore()
-      // 复现：即使路由残留 meta.affix 标记，afterEach 路径也不能把首页加进页签
-      store.addRouteView(makeRoute('Home', { title: '首页', affix: true }))
+      store.addRouteView(makeRoute('Home', { title: '首页', affix: true, noTags: true }))
       expect(store.visitedViews).toEqual([])
       expect(store.cachedViews).toEqual([])
     })
 
-    it('系统页（Login/403/404/500）不加入页签', () => {
+    it('系统页（Login/403/404/500）不加入页签（meta.noTags）', () => {
       const store = useTagsViewStore()
       // 复现：退出登录跳 /login?redirect=/workbench，afterEach 把 Login 加进页签
       for (const name of ['Login', 'Forbidden', 'NotFound', 'ServerError']) {
-        store.addRouteView(makeRoute(name, { title: name }))
+        store.addRouteView(makeRoute(name, { title: name, noTags: true }))
       }
       expect(store.visitedViews).toEqual([])
       expect(store.cachedViews).toEqual([])
     })
 
-    it('系统页排除不影响普通业务页加入', () => {
+    it('workbench 直达的演示页（H5Demo/BigDemo/BigDemoWide）不加入页签（meta.noTags）', () => {
       const store = useTagsViewStore()
-      store.addRouteView(makeRoute('Login', { title: '登录' }))
+      // 回归：workbench"四栖能力演示"跳免登录验收页，不应污染页签
+      for (const name of ['H5Demo', 'BigDemo', 'BigDemoWide']) {
+        store.addRouteView(makeRoute(name, { title: name, requiresAuth: false, noTags: true }))
+      }
+      expect(store.visitedViews).toEqual([])
+      expect(store.cachedViews).toEqual([])
+    })
+
+    it('noTags 排除不影响普通业务页加入', () => {
+      const store = useTagsViewStore()
+      store.addRouteView(makeRoute('Login', { title: '登录', noTags: true }))
       store.addRouteView(makeRoute('Workbench', { title: '工作台' }))
       expect(store.visitedViews.map((v) => v.name)).toEqual(['Workbench'])
     })

@@ -11,12 +11,27 @@ defineOptions({ name: 'Workbench' })
 
 const bem = createNamespace('workbench-home')
 
+// 项目路由封装（unplugin-auto-import 注入 @composables/*），按 name 跳转（类型安全，禁止直接 useRouter）
+const { pushByName } = useAppRouter()
+
 const note = ref('')
 const todoItems = [
   '四模式布局切换（顶栏右侧 LayoutSwitcher）',
   '侧边栏折叠 / 页签右键菜单',
   '主题明暗切换',
   '中英文切换',
+]
+
+/** 四栖能力演示入口：免登录白名单页不在左侧菜单，从这里直达（/autoplan Phase 2 D-IA-1） */
+const panelLinks = [
+  { name: 'Home', label: '门户首页演示', desc: 'portal 顶部导航布局（亦在左侧菜单"首页"）' },
+  { name: 'H5Demo', label: 'H5 移动端演示', desc: 'rem 适配 · 桌面打开后请用 DevTools 设备模拟' },
+  { name: 'BigDemo', label: '数据大屏演示（1920）', desc: 'transform scale 等比缩放' },
+  {
+    name: 'BigDemoWide',
+    label: '超宽拼接屏演示（9000×1080）',
+    desc: 'meta.bigScreen 异形设计稿',
+  },
 ]
 </script>
 
@@ -46,6 +61,18 @@ const todoItems = [
       </template>
       <ul :class="bem.e('list')">
         <li v-for="item in todoItems" :key="item">{{ item }}</li>
+      </ul>
+    </el-card>
+
+    <el-card shadow="never" :class="bem.e('card')">
+      <template #header>
+        <span :class="bem.e('heading')">四栖能力演示</span>
+      </template>
+      <ul :class="bem.e('list')">
+        <li v-for="item in panelLinks" :key="item.name">
+          <el-link type="primary" @click="pushByName(item.name)">{{ item.label }}</el-link>
+          —— {{ item.desc }}
+        </li>
       </ul>
     </el-card>
   </div>

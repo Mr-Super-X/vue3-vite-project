@@ -19,5 +19,7 @@ module.exports = {
     'header-max-length': [2, 'always', 72],
     // 不强制 scope（保持灵活）
     'scope-empty': [0],
+    // 关闭 subject-case 规则，允许 subject 中出现大写字母
+    'subject-case': [0]
   },
 }

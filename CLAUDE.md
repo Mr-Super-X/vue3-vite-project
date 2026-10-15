@@ -122,7 +122,7 @@ Feature-Sliced 风格的中后台门户前端（`vue3-vite-project`，企业中�
 
 - **全局 `store/modules/`**（经 `src/store/index.ts` barrel 导出）：仅跨模块共享
   - `app`（侧边栏/语言/布局模式/移动端断点/globalLoading，`pick: ['layout', 'locale']` 持久化）
-  - `user`（token/profile/权限，`pick: ['token', 'profile']` 持久化）
+  - `user`（authenticated 标记 / profile / 权限码。2026-08-12 起 httpOnly cookie 模式：凭证由后端 Set-Cookie 管理、前端不可读，`Session.get('auth')`（sessionStorage）仅为守卫同步判断的登录标记；**无 token 落 localStorage**，profile/permissions 内存态不持久化）
   - `theme`（主题模式 + 品牌色，`pick: ['mode', 'primaryColor']` 持久化）
   - `tags-view`（已访问路由 + keep-alive 缓存名单，**刻意不持久化**避免换账号看到老 tab）
   - `dict`（字典项业务层缓存，5min TTL + Promise 防抖池）

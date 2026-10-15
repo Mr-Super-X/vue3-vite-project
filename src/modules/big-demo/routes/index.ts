@@ -27,6 +27,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: '数据大屏',
           requiresAuth: false,
+          noTags: true, // workbench 直达的验收页，不污染 TagsView
         },
       },
       {
@@ -36,6 +37,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: '超宽拼接大屏',
           requiresAuth: false,
+          noTags: true, // workbench 直达的验收页，不污染 TagsView
           bigScreen: { width: 9000, height: 1080 },
         },
       },
