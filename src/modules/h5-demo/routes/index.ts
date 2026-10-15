@@ -9,7 +9,7 @@
  * - 本模块路径在 postcss-pxtorem 转换范围（src/modules/h5- 前缀约定），
  *   视图样式直接写 828 设计稿 px，构建时自动转 rem
  *
- * @see [`../views/Index.vue`](../views/Index.vue) rem 适配演示页
+ * @see [`../views/index.vue`](../views/index.vue) rem 适配演示页
  * @group 业务模块：H5Demo
  */
 
@@ -23,7 +23,7 @@ const routes: RouteRecordRaw[] = [
       {
         path: '',
         name: 'H5Demo',
-        component: () => import('../views/Index.vue'),
+        component: () => import('../views/index.vue'),
         meta: {
           title: 'H5 示例',
           requiresAuth: false,

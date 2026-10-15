@@ -5,7 +5,7 @@
  *
  * @see [`./store`](./store/index.ts) 模块私有 store
  * @see [`./routes`](./routes/index.ts) 路由定义
- * @see [`./views/Index.vue`](./views/Index.vue) 首页入口
+ * @see [`./views/index.vue`](./views/index.vue) 首页入口
  * @group 业务模块：Home
  */
 export { useHomeStore } from './store'

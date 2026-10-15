@@ -18,7 +18,7 @@ const routes: RouteRecordRaw[] = [
       {
         path: '',
         name: 'BigXxx',
-        component: () => import('../views/Index.vue'),
+        component: () => import('../views/index.vue'),
         // 大屏典型场景需要免登录（演示厅直接打开）：meta 声明 + 白名单注册双管齐下
         meta: { title: '大屏标题', requiresAuth: false },
       },
@@ -145,7 +145,7 @@ console 全程零 error/warn；生产构建 Wide chunk 独立（GeoJSON 不拖�
 | `src/layouts/big/index.vue`                       | 纯壳布局（fixed 容器 + stage + provide） |
 | `src/layouts/big/config/scale.ts`                 | scale 纯计算 + meta 守卫 + inject 契约   |
 | `src/layouts/big/config/scale.spec.ts`            | 18 用例（四视口/非法 meta/防御回退）     |
-| `src/modules/big-demo/views/Index.vue`            | 1920 标准大屏                            |
+| `src/modules/big-demo/views/index.vue`            | 1920 标准大屏                            |
 | `src/modules/big-demo/views/Wide.vue`             | 9000 超宽拼接屏                          |
 | `src/modules/big-demo/components/BigChart.vue`    | ECharts 薄封装（dpr×scale 防模糊）       |
 | `src/modules/big-demo/components/PanelBox.vue`    | 四角装饰面板（高度契约见文件头）         |

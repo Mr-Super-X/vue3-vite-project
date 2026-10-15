@@ -16,12 +16,12 @@ describe('build/postcss — h5 rem 转换配置', () => {
   it.each([
     ['win 反斜杠 h5 layout', 'D:\\proj\\src\\layouts\\h5\\index.vue', true],
     ['posix h5 layout', '/proj/src/layouts/h5/index.vue', true],
-    ['win h5-demo 模块', 'D:\\proj\\src\\modules\\h5-demo\\views\\Index.vue', true],
-    ['posix h5 前缀模块（未来扩展）', '/proj/src/modules/h5-mall/views/Index.vue', true],
+    ['win h5-demo 模块', 'D:\\proj\\src\\modules\\h5-demo\\views\\index.vue', true],
+    ['posix h5 前缀模块（未来扩展）', '/proj/src/modules/h5-mall/views/index.vue', true],
     ['default layout 不命中', 'D:\\proj\\src\\layouts\\default\\index.vue', false],
     ['portal layout 不命中', '/proj/src/layouts/portal/index.vue', false],
     ['普通模块不命中', '/proj/src/modules/user/views/List.vue', false],
-    ['非 h5 前缀模块不命中', '/proj/src/modules/demo/views/Index.vue', false],
+    ['非 h5 前缀模块不命中', '/proj/src/modules/demo/views/index.vue', false],
     ['空字符串不命中', '', false],
   ])('isH5RemTarget: %s', (_label, filePath, expected) => {
     expect(isH5RemTarget(filePath)).toBe(expected)
@@ -43,7 +43,7 @@ describe('build/postcss — h5 rem 转换配置', () => {
     ],
     [
       'h5-demo 模块（正斜杠+query）不排除',
-      'D:/proj/src/modules/h5-demo/views/Index.vue?vue&type=style&index=0&lang.scss',
+      'D:/proj/src/modules/h5-demo/views/index.vue?vue&type=style&index=0&lang.scss',
       false,
     ],
     ['h5 layout（win 反斜杠）不排除', 'D:\\proj\\src\\layouts\\h5\\index.vue', false],

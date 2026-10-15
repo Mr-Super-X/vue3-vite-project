@@ -10,7 +10,7 @@
  *   保证 keep-alive include（按组件 name 匹配）真正生效，可用于验证页签缓存
  * - meta.titleKey 走 i18n（menu.workbench* 键已加入 locales），切换语言验证菜单热更新
  *
- * @see [`../views/Index.vue`](../views/Index.vue) index 子路由视图
+ * @see [`../views/index.vue`](../views/index.vue) index 子路由视图
  * @group 业务模块：Workbench
  */
 
@@ -30,7 +30,7 @@ const routes: RouteRecordRaw[] = [
       {
         path: '',
         name: 'Workbench',
-        component: () => import('../views/Index.vue'),
+        component: () => import('../views/index.vue'),
         meta: {
           title: '工作台首页',
           titleKey: 'menu.workbenchHome',

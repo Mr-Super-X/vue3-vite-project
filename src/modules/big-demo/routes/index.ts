@@ -8,7 +8,7 @@
  * - requiresAuth: false + 白名单（src/router/whitelist.ts）→ 免登录，演示厅直接打开
  * - 超宽页通过 meta.bigScreen 声明 9000×1080 设计稿尺寸（缺省 1920×1080）
  *
- * @see [`../views/Index.vue`](../views/Index.vue) 1920 标准大屏
+ * @see [`../views/index.vue`](../views/index.vue) 1920 标准大屏
  * @see [`../views/Wide.vue`](../views/Wide.vue) 9000×1080 超宽拼接屏示例
  * @group 业务模块：BigDemo
  */
@@ -23,7 +23,7 @@ const routes: RouteRecordRaw[] = [
       {
         path: '',
         name: 'BigDemo',
-        component: () => import('../views/Index.vue'),
+        component: () => import('../views/index.vue'),
         meta: {
           title: '数据大屏',
           requiresAuth: false,

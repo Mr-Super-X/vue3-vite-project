@@ -16,7 +16,7 @@ const routes: RouteRecordRaw[] = [
       {
         path: '',
         name: 'H5Xxx',
-        component: () => import('../views/Index.vue'),
+        component: () => import('../views/index.vue'),
         // H5 典型场景需要免登录（真机扫码预览）：meta 声明 + 白名单注册双管齐下
         meta: { title: 'H5 页面标题', requiresAuth: false },
       },

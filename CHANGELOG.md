@@ -2,6 +2,12 @@
 
 ## 未发布
 
+### 🔧 Refactor | views 入口视图统一小写命名（`Index.vue` → `index.vue`）
+
+- 重命名 5 个模块入口视图：`home` / `reports` / `workbench` / `h5-demo` / `big-demo` 的 `views/Index.vue` → `views/index.vue`（Windows 经 `git mv -f` 入暂存，规避 core.ignorecase 下 git 识别不到 rename、Linux CI 构建报错的隐患）
+- 同步更新全部引用：5 处路由懒加载 import + 7 处 JSDoc `@see`（`scripts/new-module.ts` 脚手架模板同步改为生成 `views/index.vue`，根除新建模块"复发"源头）
+- 测试数据对齐：`build/postcss.spec.ts` 示例路径同步小写；现行指南文档（`docs/07` / `docs/10` / `docs/34` / `docs/35`）同步更新
+
 ### ✨ Feature | 新增 big layout + scale 适配（数据大屏/拼接屏面板能力）
 
 - routes 父记录挂 `@/layouts/big/index.vue` 即获得大屏面板能力（与 portal/default/h5 同构）

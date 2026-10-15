@@ -6,7 +6,7 @@
  * - 错误由 `http.ts` 响应拦截器归一为 `ApiError`，业务侧无须 try/catch
  * - 缓存策略由调用方 `useRequest` 决定（默认无缓存）
  *
- * @see [`src/modules/home/views/Index.vue`](../../modules/home/views/Index.vue) 业务调用示例
+ * @see [`src/modules/home/views/index.vue`](../../modules/home/views/index.vue) 业务调用示例
  * @see [`src/modules/home/types/portal-overview.ts`](../../modules/home/types/portal-overview.ts) 数据结构
  * @group 业务 API：门户总览
  */
