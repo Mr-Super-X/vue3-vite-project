@@ -164,6 +164,20 @@ describe('renderWithFormItem', () => {
     expect(vnodeProps.validateStatus).toBe('error')
   })
 
+  // A4 渲染层（docs/audit/2026-10-15，浏览器实测发现）：validating 态不得注入 error——
+  // EP 的 error prop 优先级高于 validateStatus，同传时 is-validating/loading 图标被 is-error 覆盖
+  it('externalErrors validating 态 → 只注入 validateStatus，不注入 error（loading 图标可见）', () => {
+    const node: SchemaNode = { component: 'Input', name: 'email' }
+    const opts = makeOpts({
+      externalErrors: () => ({ email: { error: '异步校验中…', validateStatus: 'validating' } }),
+    })
+    const vnode = renderWithFormItem(node, 'Input' as never, opts)
+    const vnodeProps = (vnode as unknown as { props: { error?: string; validateStatus?: string } })
+      .props
+    expect(vnodeProps.error).toBeUndefined()
+    expect(vnodeProps.validateStatus).toBe('validating')
+  })
+
   it('externalErrors 无该字段 → 不注入 error/validateStatus', () => {
     const node: SchemaNode = { component: 'Input', name: 'email' }
     const opts = makeOpts({

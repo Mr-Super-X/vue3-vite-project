@@ -95,12 +95,16 @@ export function useSetFieldError(opts: UseSetFieldErrorOptions): UseSetFieldErro
     silent?: boolean
   ): void {
     // 路径 A：element-plus 官方 props 路径
-    if (state === 'error' && message) {
+    // A4（docs/audit/2026-10-15）：message 非空即写入条目（error / validating 均支持，
+    // validating 用于异步校验中的 loading 图标）；仅 error 态触发 OSD 上报。
+    // 修复前「state==='error' && message」把非空 message 的 validating 挤进 else 分支
+    // 删除条目——异步校验中误清已有红字，且 validating 态永不生效。
+    if (message) {
       externalErrors.value[name] = { error: message, validateStatus: state }
       // OPT-7：realtime 路径触发 OSD；validateForm 批量场景传 silent=true 跳过
       // OPT-C：setFieldError 是单字段错误的通用入口（realtime cross / 服务端 422 都可能调用），
       // 用通用 FIELD_ERROR code；区分来源由调用方的 source 字段标识
-      if (!silent) {
+      if (state === 'error' && !silent) {
         errorBus?.report({
           severity: 'error',
           code: 'FIELD_ERROR',
@@ -165,10 +169,13 @@ export function useSetFieldError(opts: UseSetFieldErrorOptions): UseSetFieldErro
       () => (vs as { value: string }).value,
       (newState) => {
         const current = externalErrors.value?.[fieldName]
-        if (current?.error && newState !== 'error') {
-          ;(vs as { value: string }).value = 'error'
+        if (!current?.error) return
+        // A4：按条目的 validateStatus 纠正（validating 不被守护覆盖成 error，loading 图标可见）
+        const want = current.validateStatus ?? 'error'
+        if (newState !== want) {
+          ;(vs as { value: string }).value = want
           if (vm && typeof vm === 'object' && 'value' in vm) {
-            ;(vm as { value: string }).value = current.error
+            ;(vm as { value: string }).value = want === 'error' ? current.error : ''
           }
         }
       }
@@ -195,11 +202,15 @@ export function useSetFieldError(opts: UseSetFieldErrorOptions): UseSetFieldErro
         const vm = rawField.validateMessage
         if (target?.error) {
           currentErrorFields.add(fieldName)
-          if (vs && typeof vs === 'object' && 'value' in vs && vs.value !== 'error') {
-            ;(vs as { value: string }).value = 'error'
+          // A4：按条目的 validateStatus 同步——validating 显示 loading 图标（非红字），
+          // 文案只在 error 态写入（validating 态 EP 无文案位，loading 图标即反馈）
+          const want = target.validateStatus ?? 'error'
+          if (vs && typeof vs === 'object' && 'value' in vs && vs.value !== want) {
+            ;(vs as { value: string }).value = want
           }
-          if (vm && typeof vm === 'object' && 'value' in vm && vm.value !== target.error) {
-            ;(vm as { value: string }).value = target.error
+          const wantMsg = want === 'error' ? target.error : ''
+          if (vm && typeof vm === 'object' && 'value' in vm && vm.value !== wantMsg) {
+            ;(vm as { value: string }).value = wantMsg
           }
         } else if (prevErrorFields.has(fieldName)) {
           // 仅当「上一轮有外部错误条目、这一轮没有」才清除显示状态；

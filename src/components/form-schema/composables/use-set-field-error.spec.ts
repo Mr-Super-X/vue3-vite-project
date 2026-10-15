@@ -112,6 +112,26 @@ describe('useSetFieldError — 路径 A（externalErrors 写入 + errorBus）', 
     scope.stop()
   })
 
+  // A4（docs/audit/2026-10-15）：message 非空的 validating 态应写入条目（loading 图标）——
+  // 修复前走 else 分支删除条目，"异步校验中误清已有红字"且 validating 态永不生效。
+  // 当前唯一生产调用点（use-form-instance.ts:248）传空 message（清除意图），新旧语义一致；
+  // 本用例覆盖文档承诺的 validating 写入路径。
+  it('A4: message 非空 + state=validating → 写入条目（不触发 errorBus 上报）', () => {
+    externalErrors.value.email = { error: '旧错误', validateStatus: 'error' }
+    const scope = effectScope()
+    const reportSpy = vi.spyOn(errorBus, 'report')
+    scope.run(() => {
+      const { setFieldError } = useSetFieldError({ externalErrors, getFields, errorBus })
+      setFieldError('email', '异步校验中…', 'validating')
+    })
+    expect(externalErrors.value.email).toEqual({
+      error: '异步校验中…',
+      validateStatus: 'validating',
+    })
+    expect(reportSpy).not.toHaveBeenCalled()
+    scope.stop()
+  })
+
   it('state=success → 删除 externalErrors', () => {
     externalErrors.value.email = { error: 'x', validateStatus: 'error' }
     const scope = effectScope()
@@ -174,6 +194,25 @@ describe('useSetFieldError — 路径 B（el-form fields 同步）', () => {
     expect(field.validateState.value).toBe('')
     expect(field.validateMessage.value).toBe('')
 
+    scope.stop()
+  })
+
+  // A4 路径 B（docs/audit/2026-10-15，浏览器实测）：validating 条目须同步 validateState='validating'
+  // （EP 显示 loading 图标）——修复前守护无条件写成 'error'，把路径 A 的 validating 覆盖掉
+  it('validating 条目 → validateState 同步为 validating（不写 validateMessage）', async () => {
+    const externalErrors = ref<Record<string, FieldErrorState>>({})
+    const field = makeField('email', '', '')
+    const getFields = vi.fn(() => [field])
+    const errorBus = makeErrorBus()
+
+    const scope = effectScope()
+    scope.run(() => {
+      useSetFieldError({ externalErrors, getFields, errorBus })
+    })
+    externalErrors.value = { email: { error: '校验中…', validateStatus: 'validating' } }
+    await nextTick()
+    expect(field.validateState.value).toBe('validating')
+    expect(field.validateMessage.value).toBe('')
     scope.stop()
   })
 
