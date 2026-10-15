@@ -9,11 +9,11 @@
  * 测试隔离：rem.ts 的 snapshot/recalcTimer 是模块级单例，用例间必须
  * deactivateRem() 复位（与 rem.spec.ts 同一纪律）。
  */
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { defineComponent, ref } from 'vue'
 import H5Layout from './index.vue'
-import { deactivateRem } from './config/rem'
+import { deactivateRem, H5_REM_RESIZE_DELAY } from './config/rem'
 
 function mockViewportWidth(width: number): void {
   Object.defineProperty(window, 'innerWidth', { value: width, writable: true, configurable: true })
@@ -66,5 +66,24 @@ describe('layouts/h5 — 布局壳激活链路', () => {
     expect(document.documentElement.style.fontSize).toBe('16px')
     expect(document.documentElement.style.width).toBe('')
     expect(document.documentElement.style.margin).toBe('')
+  })
+
+  it('视口 resize：300ms 防抖窗口内不重算，窗口后 fontSize 按新视口重算', () => {
+    vi.useFakeTimers()
+    try {
+      const wrapper = mount(H5Layout, { global: { components: { RouterView: Probe } } })
+      expect(document.documentElement.style.fontSize).toBe('54px') // min(1024,540)/10
+
+      mockViewportWidth(375)
+      window.dispatchEvent(new Event('resize'))
+      // 防抖窗口内保持旧值（resize 高频触发不抖动）
+      expect(document.documentElement.style.fontSize).toBe('54px')
+
+      vi.advanceTimersByTime(H5_REM_RESIZE_DELAY)
+      expect(document.documentElement.style.fontSize).toBe('37.5px') // 375/10
+      wrapper.unmount()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

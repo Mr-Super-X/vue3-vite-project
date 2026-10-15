@@ -1,17 +1,14 @@
 /**
- * Playwright E2E 配置（v3.5 PR1-A）
+ * Playwright E2E 配置。
  *
- * 覆盖范围：
- * - Chromium only（减小 CI 体积）
- * - baseURL 指向本地 vite dev server（pnpm dev:local 默认 5173 端口；5174 是远程菜单模式）
- * - spec.ts 位于 tests/e2e/** （项目惯例：tests 不在 src 下，避免 vitest 单元测试扫描到）
+ * 修复记录（2026-10-15，/autoplan TODOS #3）：
+ *   - 原配置放在 tests/e2e/playwright.config.ts——playwright 只从项目根发现配置文件，
+ *     旧文件从未生效。现迁至根目录。
+ *   - baseURL 端口以 `build/server.ts` 的 SERVER_DEFAULTS（port: 5174 + strictPort）为
+ *     唯一事实源——dev server 固定 5174（strictPort 保证确定性，不会自动漂移 +1）。
+ *   - webServer 本地与 CI 均启用（本地复用已运行的 server，跑 e2e 前无需手动起 dev）。
  *
- * 启动方式：
- *   pnpm test:e2e
- *   等价 pnpm exec playwright test
- *
- * CI 阶段需先执行：
- *   pnpm exec playwright install --with-deps chromium
+ * 启动：pnpm test:e2e（首次需 pnpm test:e2e:install 下载 Chromium）
  *
  * @group E2E 配置
  */
@@ -34,15 +31,12 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
   },
-  // 启动 dev server（CI 场景下）
-  webServer: process.env.CI
-    ? {
-        command: 'pnpm dev',
-        url: 'http://localhost:5174',
-        reuseExistingServer: !process.env.CI,
-        timeout: 60 * 1000,
-      }
-    : undefined,
+  webServer: {
+    command: 'pnpm dev:local',
+    url: 'http://localhost:5174',
+    reuseExistingServer: !process.env.CI,
+    timeout: 60 * 1000,
+  },
   projects: [
     {
       name: 'chromium',

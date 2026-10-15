@@ -331,13 +331,13 @@ cd vue3-vite-project
 # 2. 安装依赖
 pnpm install
 
-# 3. 启动开发服务器（默认 http://localhost:5173/，remote 菜单模式）
+# 3. 启动开发服务器（默认 http://localhost:5174/，remote 菜单模式）
 pnpm dev
 # 或切到 local 模式（无需接口）
 pnpm dev:local
 ```
 
-启动后访问 `http://localhost:5173/login`，输入默认账号 **admin / 123456** 登录。
+启动后访问 `http://localhost:5174/login`，输入默认账号 **admin / 123456** 登录。
 
 ### 常用脚本
 

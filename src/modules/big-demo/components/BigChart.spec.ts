@@ -145,6 +145,37 @@ describe('BigChart', () => {
         vi.useRealTimers()
       }
     })
+
+    it('scale 防抖窗口内连续变化：多次触发合并为一次重建', async () => {
+      vi.useFakeTimers()
+      try {
+        const state = ref<BigScaleState>({
+          scale: 1,
+          offsetX: 0,
+          offsetY: 0,
+          designWidth: 1920,
+          designHeight: 1080,
+        })
+        mount(BigChart, {
+          props: { option: baseOption },
+          global: { provide: { [BIG_SCALE_STATE_KEY]: readonly(state) } },
+        })
+        expect(mocks.initMock).toHaveBeenCalledTimes(1)
+
+        // 150ms 窗口内连续 3 次变化：每次只重排防抖定时器，不重建
+        for (const s of [1.4, 1.8, 2]) {
+          state.value = { ...state.value, scale: s }
+          await nextTick()
+        }
+        expect(mocks.initMock).toHaveBeenCalledTimes(1)
+
+        vi.advanceTimersByTime(150)
+        expect(mocks.echartsInstance.dispose).toHaveBeenCalledTimes(1)
+        expect(mocks.initMock).toHaveBeenCalledTimes(2)
+      } finally {
+        vi.useRealTimers()
+      }
+    })
   })
 
   describe('卸载清理', () => {
