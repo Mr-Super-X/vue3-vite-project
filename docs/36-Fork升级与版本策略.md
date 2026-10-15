@@ -64,12 +64,14 @@ flowchart TD
 ## 5. 发布者侧（本仓库维护者）
 
 ```bash
+# 前提：在 master 分支 + 工作区干净（dry-run 与正式 release 执行同一套前置校验）
+git switch master
 pnpm release:dry   # 干跑：预览版本号与 CHANGELOG 归档，0 副作用
 pnpm release       # 正式：type-check + test → bump → CHANGELOG 归档 → tag → push → GitHub Release
 ```
 
 - release-it 配置（`.release-it.json`）：tag 名 `v${version}`；`npm.publish: false`（模板不走 npm 分发）；`github.release: true`（tag 推送后自动生成 GitHub Release，fork 者据此跟进）。
-- 仅限 `master` 与 `release/*` 分支发布；工作区必须干净（`requireCleanWorkingDir`）。
+- `requireBranch: ["master", "release/*"]` + `requireCleanWorkingDir` + `requireUpstream` **对 dry-run 同样生效**（release-it 的设计：预览即模拟真实发布的全部前置校验）。在 `feature/*` 分支或未提交改动状态下跑 `pnpm release:dry` 会报 `Must be on branch master,release/*`——这是保护在正常工作，不是故障。
 - CHANGELOG 的"## 未发布"段由 conventional commit 消息在发布时自动归档，**不要手工移动**。
 
 ## 6. 相关文档
