@@ -7,7 +7,7 @@ describe('plugins/remAdaptation — viewport meta 幂等确保', () => {
     document.querySelectorAll('meta[name="viewport"]').forEach((el) => el.remove())
   })
 
-  it('无 viewport meta 时创建，content 与 index.html 约定一致', () => {
+  it('无 viewport meta 时创建，content 与 VIEWPORT_CONTENT 唯一事实源一致', () => {
     ensureViewportMeta()
     const meta = document.querySelector('meta[name="viewport"]')
     expect(meta).not.toBeNull()

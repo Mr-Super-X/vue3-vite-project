@@ -354,7 +354,6 @@ pnpm dev:local
 | `pnpm test:coverage`           | 测试覆盖率报告（含 HTML 报告，输出 `coverage/`）                            |
 | `pnpm test:ui`                 | 单元测试 UI 模式（Vitest UI 可视化）                                        |
 | `pnpm bench`                   | 跑基准测试（vitest bench，记录每次性能数据）                                |
-| `pnpm bench:check`             | 跑基准测试（与历史基线对比回归检测）                                        |
 | `pnpm type-check`              | TypeScript 类型检查（增量，husky pre-commit 用）                            |
 | `pnpm type-check:full`         | TypeScript 类型检查（强制重建 .tsbuildinfo 缓存；build 前必跑）             |
 | `pnpm check:routes`            | 校验 RouteName / component-registry / whitelist 一致性（CI 阶段强制）       |

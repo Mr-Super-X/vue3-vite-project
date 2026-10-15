@@ -58,7 +58,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 跑单测（watch 模式）                      | `pnpm test:watch`                                            |
 | 跑单个测试文件                            | `pnpm test <path>`（如 `pnpm test src/utils/dayjs.spec.ts`） |
 | 单测覆盖率（含 UI 报告）                  | `pnpm test:coverage` / `pnpm test:ui`                        |
-| 跑基准测试（vitest bench）                | `pnpm bench` / `pnpm bench:check`                            |
+| 跑基准测试（vitest bench）                | `pnpm bench`                                                 |
 | 类型校验（增量）                          | `pnpm type-check`                                            |
 | 类型校验（强制全量，build 前必跑）        | `pnpm type-check:full`                                       |
 | 构建生产包                                | `pnpm build`                                                 |

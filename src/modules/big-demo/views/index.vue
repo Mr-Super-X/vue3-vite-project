@@ -6,7 +6,8 @@
  *   标题栏 80px + 内容区（左栏 460 / 中央 flex:1 / 右栏 460，间距 30，页边距 30）
  *
  * 实时感：setInterval 每 3s 抖动 KPI 数值（onUnmounted 清理）。
- * 标题栏副行显示当前视口与 scale，作为适配生效的直接证据（照 h5-demo 先例）。
+ * 标题栏副行常驻时钟；视口与 scale 适配指标默认折叠（点击展开）——
+ * 验收证据保留但不抢首屏视觉（/autoplan Phase 2 T5）。
  */
 import { BIG_SCALE_STATE_KEY } from '@/layouts/big/config/scale'
 import { LIVE_FEED, OVERVIEW_KPIS, REGION_RANK, SIDE_KPIS, jitterValue } from '../apis'
@@ -35,6 +36,9 @@ const scaleLabel = computed(() => {
   const s = scaleState?.value.scale ?? 1
   return String(Math.round(s * 1000) / 1000)
 })
+
+/** 适配指标折叠态：默认收起（验收证据不抢首屏视觉），点击展开 */
+const showMetrics = ref(false)
 
 // ─── KPI 实时抖动 ──────────────────────────────────────────
 const kpis = ref(OVERVIEW_KPIS.map((k) => ({ ...k })))
@@ -65,7 +69,18 @@ const regionItems: RankingItem[] = REGION_RANK.map((r) => ({ ...r }))
   <div :class="bem.b()">
     <header :class="bem.e('header')">
       <h1 :class="bem.e('title')">集团经营数据大屏</h1>
-      <p :class="bem.e('meta')">{{ clock }} · 视口 {{ viewportLabel }} · scale ×{{ scaleLabel }}</p>
+      <p :class="bem.e('meta')">
+        {{ clock }}
+        <button
+          type="button"
+          :class="bem.e('metrics-toggle')"
+          :aria-expanded="showMetrics"
+          @click="showMetrics = !showMetrics"
+        >
+          适配指标 {{ showMetrics ? '▾' : '▸' }}
+        </button>
+        <span v-if="showMetrics">视口 {{ viewportLabel }} · scale ×{{ scaleLabel }}</span>
+      </p>
     </header>
 
     <main :class="bem.e('main')">
@@ -154,9 +169,28 @@ const regionItems: RankingItem[] = REGION_RANK.map((r) => ({ ...r }))
   }
 
   &__meta {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
     margin: 4px 0 0;
     font-size: 14px;
     color: #5f7bab;
+  }
+
+  &__metrics-toggle {
+    padding: 0 6px;
+    font-size: 13px;
+    color: #4da3ff;
+    cursor: pointer;
+    background: transparent;
+    border: 1px solid rgba(77, 163, 255, 0.35);
+    border-radius: 3px;
+
+    &:hover {
+      color: #8fc3ff;
+      border-color: rgba(77, 163, 255, 0.6);
+    }
   }
 
   &__main {

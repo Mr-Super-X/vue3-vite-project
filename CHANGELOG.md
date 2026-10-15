@@ -4,6 +4,18 @@
 
 ## 未发布
 
+### 🔧 Chore | /autoplan 多视角审查 15 项任务批落地（2026-10-15 起）
+
+- **安全/性能**：BigChart 有效像素比钳制 `MAX_EFFECTIVE_DPR = 2.5`（4K 拼接屏 × 高 DPR 防 GPU 显存失控）+ 组件单测 8 例
+- **质量**：h5 layout 的 `activateRem` 移至 setup 顶层同步激活，消除首帧 FOUC（回归防线：子组件 setup 探针用例，退回 onMounted 即红）；postcss 真实转换集成 4 例（顺带修正 docs/34 换算精度笔误 2.4155→2.41546rem）
+- **测试**：组件渲染层从 0 突破——big/h5 layout 组件 spec 各 3 例（stage 样式 / inject 链路 / meta watch；激活链路 / 限宽 / 快照恢复）
+- **开源**：MIT LICENSE + CHANGELOG 版本口径声明（v1.0.0 开源首发，v3.x 内部叙事保留）+ `docs/36` Fork 升级与版本策略 + `docs/37`/`docs/38` h5/big ADR + `.release-it.json` 开启 GitHub Release
+- **DX**：`.nvmrc` + docs/10 §1.1 按被拦位置分路径修复指引 + §3.7 措辞对齐 DS-8 披露（ESLint 实际仅硬约束 2 条）
+- **文档**：docs/34 20px 边界示范定位注记 + §4 setup 顶层激活同步；docs/35 §3 拼接屏字号系数 ×1.5~1.8 与 KPI 三态沉淀；docs/36 §5 补 dry-run 分支约束说明
+- **工程**：viewport meta 收敛为 remAdaptation 插件唯一事实源（删除 index.html 静态拷贝，install 时序先于首帧）；删除 `bench:check` 冗余脚本（内容与 bench 完全相同，文档宣称的基线对比从未实现）
+- **演示**：big-demo 标题栏适配指标默认折叠（点击展开），验收证据不抢首屏视觉
+- **依赖**：`postcss@8.5.19` 显式 devDependency（对齐 vite 8 传递依赖版本，消除双实例类型冲突）
+
 ### 🔧 Refactor | views 入口视图统一小写命名（`Index.vue` → `index.vue`）
 
 - 重命名 5 个模块入口视图：`home` / `reports` / `workbench` / `h5-demo` / `big-demo` 的 `views/Index.vue` → `views/index.vue`（Windows 经 `git mv -f` 入暂存，规避 core.ignorecase 下 git 识别不到 rename、Linux CI 构建报错的隐患）
