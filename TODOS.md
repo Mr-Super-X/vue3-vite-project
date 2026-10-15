@@ -34,3 +34,4 @@
 ## 已关闭（本次审查周期内完成）
 
 15 项批准任务 T1–T16（详见 CHANGELOG「未发布」段 2026-10-15 条目）：BigChart 钳制、FOUC 消除、postcss 集成测试、组件冒烟 6 例、MIT LICENSE、版本单轨、Fork 升级指南、ADR×2、.nvmrc、engines 指引、20px 注记、viewport 收敛、bench 清理、指标折叠、DS-8 措辞对齐。
+延后项关闭：README 四栖叙事（E2）/ 五态示范（#1）/ a11y 策略（#8）/ 四栖 e2e 首批（#3）/ DESIGN.md（#4）/ 英文 README（#5）/ 组件层剩余测试（#6）/ 任务索引（#7）/ **protable e2e 漂移修复**（发布准备批：作用域 + aria-rowcount 断言重写）。

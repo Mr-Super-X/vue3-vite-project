@@ -4,6 +4,15 @@
 
 ## 未发布
 
+### ✅ Tests | 测试矩阵补完（五态示范批 + 测试深度批 + 发布准备批，2026-10-15）
+
+- **big-demo 五态示范页** `/big-demo/state-demo`：成功/加载/错误/空/断连五态切换 + 每态设计要点说明；Wide 页地图二级懒加载（GeoJSON 退二级 chunk，页面壳先渲染、地图区就地加载/失败/重试）
+- **四栖 e2e 首批 6 条**（`tests/e2e/panels/four-panels.spec.ts`）：登录 → 四栖导航齐全 → H5 rem 激活/零残留 → big stage 缩放 → wide 9000px → 五态骨架切换 → **TagsView 页签守恒（meta.noTags 真实环境验证）**；`playwright.config.ts` 迁至根目录（旧 `tests/e2e/` 下配置从未被 playwright 发现）+ webServer 自动起 dev:local（本地/CI 一致）+ Chromium 经 npmmirror 镜像安装
+- **组件渲染层 +5 例**（合计 18 例全绿）：BigChart 防抖合并（窗口内 3 次变化 → 1 次重建）/ big layout resize 150ms 防抖 + bfcache pageshow / h5 layout resize 300ms 防抖
+- **protable e2e 3 条漂移修复**：overview 页已演进为多场景文档页（DocLayout + 6 个 ProTable 实例），全部断言改作用域（主表 `.vv-pro-table` first / 选择表 `:has(.el-checkbox__input)`）；行数断言改 `aria-rowcount` 对 pageSize 免疫（并修正「用户-1 匹配 19 行」旧注释为实际的 39 行 includes 语义）
+- **demo 数校准**：ProTable 23 / XForm 61（check-doc-currency 脚本期望值 + docs/24 §19 + docs/29 三处同步，13 项校验全绿）
+- **文档端口漂移修正 ×5**（README×2 / docs/09×2 / docs/10×1）：dev server 端口以 `build/server.ts` SERVER_DEFAULTS（5174 + strictPort）为单一事实源
+
 ### 🔧 Chore | /autoplan 多视角审查 15 项任务批落地（2026-10-15 起）
 
 - **安全/性能**：BigChart 有效像素比钳制 `MAX_EFFECTIVE_DPR = 2.5`（4K 拼接屏 × 高 DPR 防 GPU 显存失控）+ 组件单测 8 例
