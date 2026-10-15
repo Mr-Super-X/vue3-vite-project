@@ -853,9 +853,9 @@ col: {
 
 ---
 
-## 19. 示例索引（56 个 demo，含 1 个主入口）
+## 19. 示例索引（61 个 demo，含 1 个主入口）
 
-在线演示站点：`pnpm dev` → `/demo`（左侧「XForm 表单引擎」分组），路由 = `/demo/x-form-<kebab-case>`。所有 demo 源码位于 `src/modules/demo/examples/XForm/`（56 个 `.vue` 文件 + 1 个 configs/ 工具 + 1 个 utils/ 工具）。
+在线演示站点：`pnpm dev` → `/demo`（左侧「XForm 表单引擎」分组），路由 = `/demo/x-form-<kebab-case>`。所有 demo 源码位于 `src/modules/demo/examples/XForm/`（61 个 `.vue` 文件 + 1 个 configs/ 工具 + 1 个 utils/ 工具）。
 
 | 路由                                  | 内容                                                                                   |
 | ------------------------------------- | -------------------------------------------------------------------------------------- |

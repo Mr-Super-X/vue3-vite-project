@@ -3,7 +3,7 @@
 > **文档版本**：v3.4.0 | **最后更新**：2026-09-17
 > **覆盖版本**：v2.0（含 v2.1 vxe-table 引擎 + 服务端排序）
 > **源码位置**：`src/components/ProTable/`
-> **demo 站**：`/demo/pro-table-overview`（22 个演示：21 个能力 demo + 主入口，完整清单见 §16 示例索引）
+> **demo 站**：`/demo/pro-table-overview`（23 个演示：22 个能力 demo + 主入口，完整清单见 §16 示例索引）
 
 ---
 
@@ -955,7 +955,7 @@ ProTable 内部已与 `<AsyncState>` 集成：
 | `src/components/ProTable/components/SelectionBar.spec.ts`    | 批量条双通道：配置渲染 / slot 接管 / clearSelection            |
 | `src/components/ProTable/utils/exportCsv.spec.ts`            | BOM 字节断言 / RFC4180 转义 / filename 缺省                    |
 | `src/components/ProTable/utils/importCsv.spec.ts`            | 引号感知解析 / 表头映射 / 空行剔除 / BOM 去除                  |
-| `src/modules/demo/examples/ProTable/ProTable*.vue`           | 21 个 demo 覆盖所有主路径 + 各能力边界（详见 §16 示例索引）    |
+| `src/modules/demo/examples/ProTable/ProTable*.vue`           | 22 个 demo 覆盖所有主路径 + 各能力边界（详见 §16 示例索引）    |
 
 完整 demo 站：`/demo/pro-table-overview` 等 9 个路径（auto-import 自动注册）。
 
@@ -1001,14 +1001,14 @@ const rows = tableRef.value?.getSelectedRows()
 - 类型导出：`src/components/ProTable/types/index.ts`
 - composables：`src/components/ProTable/composables/`
 - 引擎适配：`src/components/ProTable/adapters/`
-- Demo 站：`src/modules/demo/examples/ProTable/`（21 个 demo，详见 §16）
+- Demo 站：`src/modules/demo/examples/ProTable/`（22 个 demo，详见 §16）
 - Element Plus Table 文档：https://element-plus.org/zh-CN/component/table.html
 - vxe-table 文档：https://vxetable.cn/
 - 设计 spec：`docs/superpowers/specs/2026-09-07-protable-design.md` + `2026-09-08-protable-v2.1-vxe-engine-design.md`
 
 ---
 
-## 16. 示例索引（21 个 demo + 1 个主入口）
+## 16. 示例索引（22 个 demo + 1 个主入口）
 
 在线演示站点：`pnpm dev` → `/demo`（左侧「ProTable 企业级表格」分组），路由 = `/demo/pro-table-<kebab-case>`。所有 demo 源码位于 `src/modules/demo/examples/ProTable/`（21 个 `.vue` 文件）。
 
