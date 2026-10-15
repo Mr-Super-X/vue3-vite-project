@@ -212,6 +212,83 @@ describe('runCrossFieldValidation(schema, model)', () => {
     expect((await runCrossFieldValidation(schema, { a: 5, b: 2 })).isValid).toBe(false)
   })
 
+  // A2（docs/audit/2026-10-15-engine-audit-summary.md）：嵌套数组（array 套 array）的内层数组
+  // 展开时 model[node.name] 直索引取不到 'orders[0].items' 形式的嵌套路径 → 内层行静默跳过校验
+  it('A2: 嵌套数组（array 套 array）内层行字段的 crossValidator 应执行', async () => {
+    const schema = {
+      kind: 'array',
+      name: 'orders',
+      array: {
+        itemSchema: [
+          {
+            name: 'total',
+            rules: [
+              {
+                dependsOn: ['max'],
+                crossValidator: (v: unknown, max: unknown) =>
+                  (v as number) <= (max as number) || 'total 超过 max',
+              },
+            ],
+          },
+          {
+            kind: 'array',
+            name: 'items',
+            array: {
+              itemSchema: {
+                name: 'sub',
+                rules: [
+                  {
+                    dependsOn: ['qty'],
+                    crossValidator: (v: unknown, qty: unknown) =>
+                      (v as number) === (qty as number) * 2 || 'sub 必须等于 qty×2',
+                  },
+                ],
+              },
+            },
+          },
+        ],
+      },
+    }
+    const model = {
+      orders: [{ max: 100, total: 50, items: [{ qty: 2, sub: 5 }] }], // sub=5 ≠ 4 → 应报错
+    }
+    const result = await runCrossFieldValidation(schema, model)
+    expect(result.isValid).toBe(false)
+    expect(result.errors.some((e) => e.message === 'sub 必须等于 qty×2')).toBe(true)
+  })
+
+  // A1 批量路径（docs/audit）：数组行内 crossValidator 的 dependsOn 相对路径
+  // 未随 name 一起加 items[i] 前缀 → get(model, 'qty') 取到顶层 undefined，行内比对失真
+  it('A1-批量: 数组行内 crossValidator 的 dependsOn 相对路径按行解析', async () => {
+    const schema = {
+      kind: 'array',
+      name: 'rows',
+      array: {
+        itemSchema: [
+          { name: 'min' },
+          {
+            name: 'max',
+            rules: [
+              {
+                dependsOn: ['min'],
+                crossValidator: (v: unknown, min: unknown) =>
+                  (v as number) >= (min as number) || 'max 必须不小于 min',
+              },
+            ],
+          },
+        ],
+      },
+    }
+    const model = { rows: [{ min: 10, max: 5 }] } // 行内 max=5 < min=10 → 应报错
+    const result = await runCrossFieldValidation(schema, model)
+    expect(result.isValid).toBe(false)
+    expect(result.errors.some((e) => e.message === 'max 必须不小于 min')).toBe(true)
+
+    // 反向场景：行内依赖值正确时应 pass——修复前 dependsOn 取顶层 undefined 会误报
+    const pass = await runCrossFieldValidation(schema, { rows: [{ min: 1, max: 5 }] })
+    expect(pass.isValid).toBe(true)
+  })
+
   it('expands array nodes: applies itemSchema rules per array element', async () => {
     const schema = {
       component: 'Card',

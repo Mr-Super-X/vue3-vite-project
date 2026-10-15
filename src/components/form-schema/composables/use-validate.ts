@@ -1,5 +1,6 @@
 import type { SchemaNode, RuleItem, ValidateOptions, ValidateResult } from '../types'
 import type { ZodType } from 'zod'
+import { get } from 'lodash-es'
 import { walkSchema } from '../utils/walk-schema'
 import { runCrossRule } from './cross-rule-runner'
 
@@ -162,8 +163,10 @@ async function traverseCross(
   }
 
   // 数组节点：按 model[name] 当前长度展开每个元素，把 itemSchema 内 name 重写为 items[i].subName
+  // A2（docs/audit/2026-10-15）：必须 lodash get 取值——嵌套数组（array 套 array）时 name 已被
+  // 重写为 'orders[0].items' 形式，直索引取不到（model 是嵌套结构，不是扁平 key 表）
   if (node.kind === 'array' && node.array && node.name) {
-    const listRaw = model[node.name]
+    const listRaw = get(model, node.name)
     if (Array.isArray(listRaw)) {
       for (let i = 0; i < listRaw.length; i++) {
         await traverseArrayItem(
@@ -237,14 +240,20 @@ async function runNodeCrossRules(
 ): Promise<void> {
   const rules = node.rules
   if (!rules) return
+  // A1（docs/audit/2026-10-15）：行内字段 name 已被重写为 'rows[0].max' 全路径，
+  // dependsOn 仍是相对路径（['min']）——须加行前缀，否则 get(model, 'min') 取到顶层 undefined
+  // （fail 场景碰巧报错、pass 场景误报）。顶层字段无 '.' 时前缀为空 = 不重写。
+  const prefix =
+    node.name && node.name.includes('.') ? node.name.slice(0, node.name.lastIndexOf('.')) : ''
   const arr = Array.isArray(rules) ? rules : [rules]
   for (const r of arr) {
     // 字符串规则名 → 查注册表解析（'required' 简写无 crossValidator，自然跳过）
     const resolvedRule = typeof r === 'string' ? namedRules?.[r] : r
     if (typeof resolvedRule !== 'object' || resolvedRule === null) continue
-    const rule = resolvedRule as RuleItem
-    if (!rule.crossValidator || !(rule.dependsOn ?? rule.deps)) continue
+    if (!resolvedRule.crossValidator || !(resolvedRule.dependsOn ?? resolvedRule.deps)) continue
     if (!node.name) continue
+    // 副本重写 dependsOn（行内相对优先、顶层绝对回退），不污染 namedRules 注册表 / 原 rule 对象
+    const rule = (prefix ? rewriteRuleDeps(resolvedRule, prefix, model) : resolvedRule) as RuleItem
     // 批量路径无空值跳过（空值照跑 crossValidator）——与其他两条路径的差异见 cross-rule-runner 文件头
     const outcome = await runCrossRule(rule, model, node.name)
     if (outcome.kind === 'fail') {
@@ -252,6 +261,30 @@ async function runNodeCrossRules(
     }
     // pass / threw：不写 errors（threw 已在 runCrossRule 内 console.error）
   }
+}
+
+/**
+ * A1：规则副本重写 dependsOn/deps（dependsOn 优先，deps 为别名，语义同 cross-rule-runner）。
+ *
+ * 路径语义「行内相对优先、顶层绝对回退」：dependsOn 写的是行内同名字段（'min'）时
+ * 重写为 'rows[0].min' 按行取值；写的是顶层绝对路径（'max'，如"行小计 ≤ 全局上限"）
+ * 时行内无此键，保留原路径。行内与顶层同键时取行内（就近原则）。
+ */
+function rewriteRuleDeps(rule: RuleItem, prefix: string, model: Record<string, unknown>): RuleItem {
+  const resolve = (dep: string): string => {
+    const rowRelative = `${prefix}.${dep}`
+    return get(model, rowRelative) !== undefined ? rowRelative : dep
+  }
+  const clone = { ...rule }
+  if (rule.dependsOn) {
+    clone.dependsOn = Array.isArray(rule.dependsOn)
+      ? rule.dependsOn.map(resolve)
+      : resolve(rule.dependsOn)
+  }
+  if (rule.deps) {
+    clone.deps = Array.isArray(rule.deps) ? rule.deps.map(resolve) : resolve(rule.deps)
+  }
+  return clone
 }
 
 /**
