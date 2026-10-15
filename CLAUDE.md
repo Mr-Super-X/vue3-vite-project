@@ -455,3 +455,25 @@ const bem = createNamespace('form-engine') // kebab-case，必须与 sass 根选
 ---
 
 **承诺**：所有对 `src/` 的写操作按 §2 src/ Architecture Lockdown 执行——§2.3 例外条款（用户明确指定文件路径）直接实施；其他必须先输出 §2.4 修改申请并等用户单独批准。每次任务完成的合规简报需附「src/ 写操作清单」（§2.5）。
+
+---
+
+## Skill routing（gstack）
+
+当用户请求匹配到可用 gstack skill 时，通过 Skill 工具调用；不确定时优先调用。
+
+关键路由规则：
+
+- 产品想法/头脑风暴 → `/office-hours`
+- 战略/范围 → `/plan-ceo-review`
+- 架构 → `/plan-eng-review`
+- 设计体系/计划审查 → `/design-consultation` 或 `/plan-design-review`
+- 完整多视角审查管道 → `/autoplan`
+- Bug/报错 → `/investigate`
+- QA/站点行为验证 → `/qa` 或 `/qa-only`
+- 代码审查/diff 检查 → `/review`
+- 视觉打磨 → `/design-review`
+- 发布/部署/PR → `/ship` 或 `/land-and-deploy`
+- 保存进度 → `/context-save`
+- 恢复上下文 → `/context-restore`
+- 编写 backlog 就绪的 spec/issue → `/spec`
