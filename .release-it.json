@@ -41,7 +41,7 @@
     "publish": false
   },
   "github": {
-    "release": false
+    "release": true
   },
   "gitlab": {
     "release": false
