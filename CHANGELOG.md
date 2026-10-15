@@ -2,6 +2,16 @@
 
 ## 未发布
 
+### ✨ Feature | 新增 big layout + scale 适配（数据大屏/拼接屏面板能力）
+
+- routes 父记录挂 `@/layouts/big/index.vue` 即获得大屏面板能力（与 portal/default/h5 同构）
+- 适配方案：transform: scale 容器整体等比缩放 + 居中留白（`scale = min(vw/dw, vh/dh)`），只缩放 layout 自有容器不碰 html/body，对其它布局零残留；不经 postcss 转换，样式写死设计稿 px
+- 设计稿尺寸契约：路由 `meta.bigScreen = { width, height }` 声明（缺省 1920×1080），同 layout 内跳转 watch meta 立即热切换
+- 适配覆盖：1920×1080 / 2560×1440 / 4K / 9000px 拼接屏（等比缩放居中留白）+ 独立 9000×1080 超宽设计稿示例
+- 示例：`src/modules/big-demo`（`/big-demo` 1920 标准大屏 + `/big-demo/wide` 9000×1080 超宽拼接屏，均免登录白名单；ECharts geo 地图 + 涟漪散点 + 飞线，GeoJSON 内置独立 chunk）
+- 组件：BigChart（devicePixelRatio×scale 防模糊薄封装）/ PanelBox（四角装饰面板）/ KpiCard / RankingList / SwitchGroup + useClock composable
+- 文档：`docs/35-大屏布局与scale适配.md`；单测：scale.spec.ts 18 用例 + useClock.spec.ts 3 用例；chrome-devtools 六视口实测 + default/h5 回归零影响
+
 ### ✨ Feature | 新增 h5 layout + rem 适配（H5 移动端面板能力）
 
 - routes 父记录挂 `@/layouts/h5/index.vue` 即获得 H5 面板能力（与 portal/default 同构）

@@ -105,7 +105,7 @@
 │   ├── theme.ts            ← 主题模式（pick 持久化 mode+primaryColor）
 │   ├── tags-view.ts        ← 多页签（已访问路由缓存；刻意不持久化，避免换账号看到老 tab）
 │   └── dict.ts             ← 字典缓存（5min TTL + Promise 防抖池）
-└── layouts/                ← 路由级布局（default/blank/portal/h5）
+└── layouts/                ← 路由级布局（default/blank/portal/h5/big）
 ```
 
 > **模块化范式（v1.0.0+）**：`directives/` 与 `plugins/` 均采用 `export default { install(app) {...} }` 模式，每个模块独立 `.d.ts` 类型文件，`index.ts` 统一注册入口。main.ts 集中 `app.use()` 接入。详见 [`docs/08-模块化架构总览.md`](docs/08-模块化架构总览.md)。
@@ -273,9 +273,9 @@ vue3-vite-project/
 │   │   ├── permission.{ts,d.ts}       # v-permission 权限
 │   │   └── index.ts      # install 模式统一注册
 │   ├── enums/           # httpEnum、roleEnum
-│   ├── layouts/         # default/ + blank/ + portal/ + h5/
+│   ├── layouts/         # default/ + blank/ + portal/ + h5/ + big/
 │   ├── locales/         # zh-CN、en-US
-│   ├── modules/         # auth、user、home、orders、reports、demo、error、workbench
+│   ├── modules/         # auth、user、home、orders、reports、demo、error、workbench、h5-demo、big-demo
 │   │                    # 每个模块含 views/ + routes/ + store/ + apis/ + components/ + index.ts
 │   │                    # 由 `pnpm new-module` 自动生成；删除用 `pnpm remove-module`
 │   ├── plugins/         # Vue 插件（install 模式 + .d.ts 分离）
@@ -393,12 +393,13 @@ pnpm dev:local
 
 #### Layout 速选（先决定用哪个）
 
-| Layout      | 组件                          | 视觉特征                                 | 适用场景                       |
-| ----------- | ----------------------------- | ---------------------------------------- | ------------------------------ |
-| **default** | `@/layouts/default/index.vue` | 左侧 Sidebar + 顶 Header + TagsView      | 业务页（首页 / 列表 / 表单）   |
-| **blank**   | `@/layouts/blank/index.vue`   | 居中、无侧栏无顶栏                       | 登录页 / 注册页 / 第三方回调   |
-| **portal**  | `@/layouts/portal/index.vue`  | 顶部导航 + 内容区（无侧栏）              | 门户 / 对外展示 / 公开站点首页 |
-| **h5**      | `@/layouts/h5/index.vue`      | 移动端 rem 适配面板（宽屏限 540px 居中） | H5 移动端页面                  |
+| Layout      | 组件                          | 视觉特征                                                 | 适用场景                                 |
+| ----------- | ----------------------------- | -------------------------------------------------------- | ---------------------------------------- |
+| **default** | `@/layouts/default/index.vue` | 左侧 Sidebar + 顶 Header + TagsView                      | 业务页（首页 / 列表 / 表单）             |
+| **blank**   | `@/layouts/blank/index.vue`   | 居中、无侧栏无顶栏                                       | 登录页 / 注册页 / 第三方回调             |
+| **portal**  | `@/layouts/portal/index.vue`  | 顶部导航 + 内容区（无侧栏）                              | 门户 / 对外展示 / 公开站点首页           |
+| **h5**      | `@/layouts/h5/index.vue`      | 移动端 rem 适配面板（宽屏限 540px 居中）                 | H5 移动端页面                            |
+| **big**     | `@/layouts/big/index.vue`     | 大屏 scale 等比缩放居中（meta.bigScreen 声明设计稿尺寸） | 数据大屏 / 拼接屏（1920/2560/4K/9000px） |
 
 > ✅ Sidebar 菜单渲染已在 v3 实现：从 `router.getRoutes()` 自动派生 + 多级递归 + i18n + 折叠态联动（`src/layouts/default/components/Sidebar.vue`）。新业务模块的菜单只需按 `modules/<m>/routes/index.ts` 声明路由即自动出现，无需手动维护菜单列表。
 
