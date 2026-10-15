@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import postcss from 'postcss'
 import {
   H5_DESIGN_WIDTH,
   H5_EXCLUDE_REGEX,
@@ -70,5 +71,44 @@ describe('build/postcss — h5 rem 转换配置', () => {
     ['uno 虚拟 css 排除', 'D:/proj/src/__uno.css', true],
   ])('H5_EXCLUDE_REGEX: %s', (_label, filePath, shouldExclude) => {
     expect(H5_EXCLUDE_REGEX.test(filePath)).toBe(shouldExclude)
+  })
+})
+
+/**
+ * T9 真实转换集成（防"配置回归全绿"）：
+ * 上面的用例只断言插件对象存在与正则形态——rootValue / minPixelValue / mediaQuery
+ * 被误改时单测依然全绿。这里经 postcss 核心真实跑转换，输出值即防线。
+ */
+describe('build/postcss — POSTCSS_PLUGINS 真实转换集成', () => {
+  it('h5 目标路径：200px → 2.41546rem、28px → 0.33816rem（828 稿 / unitPrecision 默认 5 位）', async () => {
+    const result = await postcss(POSTCSS_PLUGINS).process(
+      '.card { width: 200px; font-size: 28px; }',
+      { from: 'src/modules/h5-demo/views/index.vue' }
+    )
+    expect(result.css).toContain('width: 2.41546rem')
+    expect(result.css).toContain('font-size: 0.33816rem')
+  })
+
+  it('minPixelValue=2：1px 边框不转换（保持物理 1px 细线）', async () => {
+    const result = await postcss(POSTCSS_PLUGINS).process('.a { border: 1px solid #eee; }', {
+      from: 'src/layouts/h5/index.vue',
+    })
+    expect(result.css).toContain('border: 1px solid #eee')
+  })
+
+  it('mediaQuery=false：@media 参数不转换，块内声明仍转换', async () => {
+    const result = await postcss(POSTCSS_PLUGINS).process(
+      '@media (min-width: 600px) { .a { width: 200px } }',
+      { from: 'src/layouts/h5/index.vue' }
+    )
+    expect(result.css).toContain('@media (min-width: 600px)') // 参数原样（mediaQuery: false）
+    expect(result.css).toContain('width: 2.41546rem') // 块内声明照常 rem 化
+  })
+
+  it('exclude 正则集成：非 h5 路径样式原样输出（default/portal/EP 零污染契约）', async () => {
+    const result = await postcss(POSTCSS_PLUGINS).process('.a { width: 200px }', {
+      from: 'src/layouts/default/index.vue',
+    })
+    expect(result.css).toContain('width: 200px')
   })
 })

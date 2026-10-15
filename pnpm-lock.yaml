@@ -173,6 +173,9 @@ importers:
       pinia-plugin-persistedstate:
         specifier: ^4.7.1
         version: 4.7.1(pinia@3.0.4(typescript@6.0.3)(vue@3.6.0-beta.17(typescript@6.0.3)))
+      postcss:
+        specifier: 8.5.19
+        version: 8.5.19
       postcss-pxtorem:
         specifier: ^6.1.0
         version: 6.1.0(postcss@8.5.19)

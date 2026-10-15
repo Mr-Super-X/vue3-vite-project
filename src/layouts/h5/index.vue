@@ -8,7 +8,7 @@
  * 能力来源：
  *   - 编译时：本目录（src/layouts/h5/）与 src/modules/h5-xxx/（h5- 前缀模块）下的样式写 px，
  *     postcss-pxtorem 自动转 rem（见 build/postcss.ts）
- *   - 运行时：onMounted 激活 html fontSize 动态计算（宽屏限 540px 居中），
+ *   - 运行时：setup 顶层激活 html fontSize 动态计算（首帧渲染前生效，无 FOUC；宽屏限 540px 居中），
  *     onUnmounted 恢复进入前状态——对 default / portal 布局零残留（见 ./config/rem.ts）
  *
  * 注意：本布局不设计为被 keep-alive 缓存（项目 keep-alive 只作用于 default 内业务页）。
@@ -21,7 +21,11 @@ import { activateRem, deactivateRem } from './config/rem'
 // 运行时 BEM 命名空间：vv-h5-layout
 const bem = createNamespace('h5-layout')
 
-onMounted(activateRem)
+// setup 顶层即激活 rem（activateRem 首次应用同步写 html fontSize，纯 DOM 操作零 Vue 依赖、
+// 无 SSR 顾虑，与 big layout setup 顶层初始化同策略）：保证组件首帧渲染前 fontSize 已生效，
+// 消除"浏览器默认 16px → 激活值"的跳变（FOUC）。
+// 重复挂载安全：activateRem 自带幂等（先恢复快照再激活，见 ./config/rem.ts）
+activateRem()
 onUnmounted(deactivateRem)
 </script>
 

@@ -1,6 +1,7 @@
 # 大屏布局与 scale 适配使用指南
 
 > 适用：数据大屏 / 拼接屏页面开发。routes 挂 big layout 即获得 scale 等比缩放能力，样式直接写设计稿 px。
+> 决策记录（transform scale / meta 契约 / BigChart 自治的根因）见 [docs/38-big-scale适配决策记录.md](38-big-scale适配决策记录.md)。
 >
 > 与 h5 rem 适配（docs/34）同为「编译时/运行时双层」思路的大屏变体——但 big 走 **transform: scale 容器缩放**，不改 html fontSize、不经 postcss 转换，比 h5 更干净（零全局残留风险）。
 
