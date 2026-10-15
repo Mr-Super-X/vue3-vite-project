@@ -22,7 +22,7 @@ const todoItems = [
   '中英文切换',
 ]
 
-/** 四栖能力演示入口：免登录白名单页不在左侧菜单，从这里直达（/autoplan Phase 2 D-IA-1） */
+/** 能力演示入口：免登录白名单页不在左侧菜单，从这里直达（/autoplan Phase 2 D-IA-1） */
 const panelLinks = [
   { name: 'Home', label: '门户首页演示', desc: 'portal 顶部导航布局（亦在左侧菜单"首页"）' },
   { name: 'H5Demo', label: 'H5 移动端演示', desc: 'rem 适配 · 桌面打开后请用 DevTools 设备模拟' },
@@ -31,6 +31,11 @@ const panelLinks = [
     name: 'BigDemoWide',
     label: '超宽拼接屏演示（9000×1080）',
     desc: 'meta.bigScreen 异形设计稿',
+  },
+  {
+    name: 'BigDemoStateDemo',
+    label: '大屏五态示范',
+    desc: '成功/加载/错误/空/断连形态 + Wide 页真实异步',
   },
 ]
 </script>
@@ -66,7 +71,7 @@ const panelLinks = [
 
     <el-card shadow="never" :class="bem.e('card')">
       <template #header>
-        <span :class="bem.e('heading')">四栖能力演示</span>
+        <span :class="bem.e('heading')">能力演示导航</span>
       </template>
       <ul :class="bem.e('list')">
         <li v-for="item in panelLinks" :key="item.name">

@@ -125,6 +125,7 @@ const bem = createNamespace('big-xxx')
 3. `src/router/whitelist.ts` 追加路由 name（需免登录时）
 4. 视图按 §3 约束编写（写死设计稿 px、显式 import 模块组件）
 5. `pnpm check:routes` 校验一致性
+6. （推荐）照抄五态实践：`/big-demo/state-demo` 集中示范异步数据在大屏场景的五种形态（成功/加载中/错误/空/断连，每态附设计要点）；Wide 页地图区是真实异步加载场景（GeoJSON 二级 chunk，页面壳先渲染、地图区就地呈现加载/失败态）
 
 ## 6. 验证记录（2026-10-15 chrome-devtools 实测）
 

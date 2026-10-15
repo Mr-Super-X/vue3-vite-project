@@ -38,6 +38,7 @@ export const ROUTE_WHITE_LIST: ReadonlySet<string> = new Set<string>([
   'H5Demo', // H5 示例页（h5 layout 验收；免登录方便真机扫码预览）
   'BigDemo', // 数据大屏（big layout 验收；免登录方便演示厅直接打开）
   'BigDemoWide', // 超宽拼接大屏示例（9000×1080 设计稿）
+  'BigDemoStateDemo', // 五态示范页（异步数据形态验收；与 BigDemo 同权限语义）
   // dev 模式追加 demo 路由；prod 整个 spread 被 Rollup 消除
   ...(import.meta.env.DEV ? demoRouteNames : []),
 ])
