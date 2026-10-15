@@ -182,7 +182,7 @@ function countBaseChartProps(): number {
 /**
  * 数 build/ 顶层模块数（*.ts 排除 .spec.ts 与 scripts/ 子目录）
  *
- * 包含：aliases.ts / vendor-chunks.ts / scss.ts / server.ts / proxy.ts / index.ts
+ * 包含：aliases.ts / vendor-chunks.ts / scss.ts / server.ts / proxy.ts / postcss.ts / index.ts
  * 不包含：scripts/generate-tsconfig-paths.ts（子目录下的脚本，由单独检查覆盖）
  */
 function countBuildModules(): number {
@@ -286,7 +286,7 @@ const checks: Check[] = [
   {
     name: 'build/ 顶层模块数 (docs/04 §1.1 表格)',
     actual: countBuildModules,
-    expected: 6,
+    expected: 7,
     tolerance: 0,
   },
   {

@@ -1,6 +1,7 @@
 import type { App } from 'vue'
 import errorHandler from './errorHandler'
 import webVitals from './webVitals'
+import remAdaptation from './remAdaptation'
 import type { PluginsOptions } from './errorHandler.d'
 
 /**
@@ -40,7 +41,11 @@ const install = (app: App, options: PluginsOptions = {}): void => {
     app.use(webVitals, options.webVitals)
   }
 
-  // 3. 未来扩展点：analytics、sentry、permission 等
+  // 3. REM 适配（H5）：viewport meta 幂等确保（默认启用；传 false 可关闭）
+  //    html fontSize 激活/恢复不在此处 —— 由 layouts/h5 组件生命周期驱动（见 remAdaptation.ts 头注释）
+  if (options.remAdaptation !== false) {
+    app.use(remAdaptation)
+  }
 }
 
 export default install

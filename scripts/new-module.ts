@@ -4,7 +4,7 @@
 // 用途：为新业务模块生成最简骨架，省去手动建 5 处目录。
 //   1. 验证 kebab-case 命名
 //   2. 创建 src/modules/<name>/{views,routes,store,apis,components} 5 个子目录 + 6 个产物文件
-//      ─ views/Index.vue（默认 layout 业务页）
+//      ─ views/index.vue（默认 layout 业务页）
 //      ─ routes/index.ts（默认 layout 包裹 + 自动注册）
 //      ─ store/index.ts（Setup Store 骨架）
 //      ─ apis/index.ts（模块本地 API 层，与 src/api/modules/<name>.ts 互斥）
@@ -87,7 +87,7 @@ function createModuleDirs(moduleDir: string): void {
   mkdirSync(join(moduleDir, 'apis'), { recursive: true })
 }
 
-/** views/Index.vue：BEM 骨架 + "本页面由 new-module 生成"提示。 */
+/** views/index.vue：BEM 骨架 + "本页面由 new-module 生成"提示。 */
 function buildIndexVue(name: string, pascal: string): string {
   return `<script setup lang="ts">
 // 模块入口视图
@@ -145,7 +145,7 @@ const routes: RouteRecordRaw[] = [
       {
         path: '',
         name: '${pascal}',
-        component: () => import('../views/Index.vue'),
+        component: () => import('../views/index.vue'),
         meta: {
           title: '${pascal} 首页',
           titleKey: 'menu.${name}',
@@ -417,7 +417,7 @@ import { ${name}Api, type ${pascal}ListParams, type ${pascal}ListResponse } from
 /**
  * ${pascal} 列表请求（三态：loading / error / empty）。
  *
- * 用法（在 views/Index.vue）：
+ * 用法（在 views/index.vue）：
  *   const { data, loading, error, isEmpty, execute } = use${pascal}List({ page: 1, pageSize: 10 })
  *
  * 详见 docs/17-useRequest使用规范.md。
@@ -441,7 +441,7 @@ function writeSkeleton(
   createModuleDirs(moduleDir)
 
   const files: ReadonlyArray<readonly [string, string]> = [
-    ['views/Index.vue', buildIndexVue(name, pascal)],
+    ['views/index.vue', buildIndexVue(name, pascal)],
     ['routes/index.ts', buildRoutesTs(name, pascal)],
     ['store/index.ts', buildStoreTs(name, pascal)],
     ['apis/index.ts', buildApisIndexTs(name, pascal)],
@@ -484,7 +484,7 @@ function printNextSteps(name: string): void {
     `  1. 编辑 src/modules/${name}/apis/index.ts 完善 API 业务字段（${name}Api 占位已生成）`
   )
   console.log('')
-  console.log(`  2. 编辑 src/modules/${name}/views/Index.vue 把"首页骨架"换成真实页面`)
+  console.log(`  2. 编辑 src/modules/${name}/views/index.vue 把"首页骨架"换成真实页面`)
   console.log('')
   console.log(`  3. 在 src/locales/{zh-CN,en-US}.ts 的 menu 段加 'menu.${name}' 翻译键`)
   console.log('')

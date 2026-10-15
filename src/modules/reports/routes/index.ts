@@ -9,7 +9,7 @@
  * 适用场景：客服通过邮件链接直达报表页（不暴露在常规菜单）。
  *
  * @see [`@/router/auto-register.ts`](../../../router/auto-register.ts) 自动注册入口
- * @see [`../views/Index.vue`](../views/Index.vue) 报表页
+ * @see [`../views/index.vue`](../views/index.vue) 报表页
  * @group 业务模块：Reports
  */
 
@@ -23,7 +23,7 @@ const routes: RouteRecordRaw[] = [
       {
         path: '',
         name: 'Reports',
-        component: () => import('../views/Index.vue'),
+        component: () => import('../views/index.vue'),
         meta: {
           title: '运营报表',
           icon: 'data-analysis',

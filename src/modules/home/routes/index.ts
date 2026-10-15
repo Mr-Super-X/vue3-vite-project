@@ -12,7 +12,7 @@
  * - 远程菜单模式下，后端返回的菜单项会覆盖本地静态路由
  *
  * @see [`@/router/auto-register.ts`](../../../router/auto-register.ts) 自动注册入口
- * @see [`../views/Index.vue`](../views/Index.vue) 首页视图
+ * @see [`../views/index.vue`](../views/index.vue) 首页视图
  * @group 业务模块：Home
  */
 
@@ -26,7 +26,7 @@ const routes: RouteRecordRaw[] = [
       {
         path: '',
         name: 'Home',
-        component: () => import('../views/Index.vue'),
+        component: () => import('../views/index.vue'),
         meta: {
           title: '首页',
           titleKey: 'menu.home',
