@@ -6,8 +6,8 @@
  * @group 表单编排：索引
  */
 import { ref, watch, type Ref } from 'vue'
-import type { SchemaNode } from '../types'
-import { buildIndex, type SchemaIndex } from './use-schema-index.builder'
+import type { SchemaNode, RuleItem } from '../types'
+import { buildIndex, type SchemaIndex, type CrossRuleEntry } from './use-schema-index.builder'
 
 /**
  * useSchemaIndex 返回值：schema 元数据中央索引（O(1) 查表），含 6 个响应式 ref
@@ -69,3 +69,28 @@ export function useSchemaIndex(
 
 export { buildIndex } from './use-schema-index.builder'
 export type { SchemaIndex, CrossRuleEntry } from './use-schema-index.builder'
+
+/**
+ * 拍平 crossRules Map → 反向触发用扁平数组（rowScoped 行模板标记随条目透传）。
+ * useCrossFieldTrigger 的 crossRules getter 由本函数承载 —— 抽离后 use-xform-composer
+ * 不再内联双层循环（顶层编排膨胀预警：composer 行数硬阈值见 scripts/check-doc-currency）
+ *
+ * @see ./use-cross-field-trigger.ts ReverseRule 消费形态
+ */
+export function flattenCrossRules(
+  crossRules: ReadonlyMap<string, CrossRuleEntry[]>
+): Array<{ target: string; deps: string[]; rule: RuleItem; rowScoped?: boolean }> {
+  const out: Array<{ target: string; deps: string[]; rule: RuleItem; rowScoped?: boolean }> = []
+  for (const list of crossRules.values()) {
+    for (const e of list) {
+      out.push({
+        target: e.target,
+        deps: e.deps,
+        rule: e.rule,
+        // A1-反向：行模板标记透传（数组行内 cross 规则反向触发用）
+        ...(e.rowScoped ? { rowScoped: true } : {}),
+      })
+    }
+  }
+  return out
+}

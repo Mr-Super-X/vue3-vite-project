@@ -15,7 +15,7 @@
 import { computed, ref, type ComputedRef, type Ref } from 'vue'
 
 import { useSchemaRenderer } from './use-schema-renderer'
-import { useSchemaIndex } from './use-schema-index'
+import { useSchemaIndex, flattenCrossRules } from './use-schema-index'
 import { useFormErrorBus } from './use-form-error-bus'
 import { useCurrentBreakpoint } from './use-current-breakpoint'
 import { useFormInstance, type FieldErrorState } from './use-form-instance'
@@ -33,7 +33,7 @@ import { useRenderRoot, type RenderFn } from './use-render-root'
 import { useModelExpressionRerender } from './use-model-expression-rerender'
 import { mergeRowResponsive } from './barrel'
 import { DEFAULT_COMPONENT_PROPS } from '../adapters/element-plus-adapter'
-import type { RuleItem, RowConfig, SchemaNode, XFormExpose, XFormProps } from '../types'
+import type { RowConfig, SchemaNode, XFormExpose, XFormProps } from '../types'
 
 // ────────────────────────────────────────────────────────────────────────────
 // 公共类型
@@ -189,26 +189,8 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
   })
 
   const crossFieldTrigger = useCrossFieldTrigger({
-    crossRules: () => {
-      const out: Array<{
-        target: string
-        deps: string[]
-        rule: RuleItem
-        rowScoped?: boolean
-      }> = []
-      for (const list of schemaIndex.crossRules.value.values()) {
-        for (const e of list) {
-          out.push({
-            target: e.target,
-            deps: e.deps,
-            rule: e.rule,
-            // A1-反向：行模板标记透传（数组行内 cross 规则反向触发用）
-            ...(e.rowScoped ? { rowScoped: true } : {}),
-          })
-        }
-      }
-      return out
-    },
+    // A1-反向：flattenCrossRules 拍平索引 + 透传 rowScoped 行模板标记（数组行内 cross 规则反向触发用）
+    crossRules: () => flattenCrossRules(schemaIndex.crossRules.value),
     model: () => props.model,
     setFieldError,
     clearValidate,
