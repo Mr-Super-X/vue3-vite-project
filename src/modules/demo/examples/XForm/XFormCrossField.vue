@@ -6,6 +6,7 @@
  * 1. 密码 = 确认密码（dependsOn: ['password']）
  * 2. 开始日期 ≤ 结束日期（双向：互相依赖）
  * 3. 主联系人 / 备用联系人不能同时为空（A xor B）
+ * 4. 未成年须填写监护人（年龄 dependsOn guardian 联动：填监护人两处红字一起消）
  *
  * ⚠️ 已知限制（element-plus 2.14 shallowRef 内部响应式限制）:
  * - 密码 / 确认密码等 Input 字段:失焦立即实时校验 ✅
@@ -152,8 +153,8 @@ const schema: SchemaNode = {
     // ── H3 验证：嵌套路径直改触发跨字段重算 ─────────────────────────
     // 字段挂在 model.user.age（嵌套路径），通过下方「直改 model」按钮绕过
     // v-model 直接改值 —— deps 值快照 diff 命中 → crossValidator 自动重算，红字消失。
-    // 本字段自引用 deps 覆盖 target 快照分支；下方「监护人」dependsOn 本路径，
-    // 覆盖真正的跨字段 dep 分支 —— 两条分支由同一个直改按钮一并验证
+    // 年龄规则 dependsOn 含自引用（target 快照分支）+ guardian（跨字段 dep 分支）：
+    // 两条分支由「填监护人」与「直改按钮」分别验证（见 rules 内注释）
     {
       label: '年龄（嵌套 user.age）',
       name: 'user.age',
@@ -166,9 +167,23 @@ const schema: SchemaNode = {
           // 显式声明 type: 'number' —— async-validator 对未声明 type 的规则默认按
           // string 校验（dist-node getType: rule.type || 'string'），与本字段 number 值不匹配
           type: 'number',
-          dependsOn: ['user.age'],
-          crossValidator: (_value: unknown, age: unknown) =>
-            age === '' || age === undefined || age === null || Number(age) >= 18 || '未成年',
+          /**
+           * 产品语义：未成年**且未填监护人**才标红。真实用户改不了年龄，
+           * 「未成年」必须是一条可消除的联动提示（填 guardian 即消），
+           * 而不是只能靠把年龄改成 ≥18 才能消除的死胡同红字。
+           * 与 guardian 规则同文案（同「主/备联系人」成对报错模式）。
+           * dependsOn 同时含自引用 'user.age'（引擎 target 快照分支：
+           * 改自身重算）与 'guardian'（跨字段 dep 分支：填监护人反向重算）——
+           * 两条分支由下方「直改 model」按钮 + 填 guardian 动作一并验证
+           */
+          dependsOn: ['user.age', 'guardian'],
+          crossValidator: (age: unknown, _ageDep: unknown, guardian: unknown) =>
+            age === '' ||
+            age === undefined ||
+            age === null ||
+            Number(age) >= 18 ||
+            Boolean(guardian) ||
+            '未成年须填写监护人',
           trigger: 'change',
         },
       ],
@@ -259,9 +274,10 @@ async function onSave() {
 }
 
 /** H3 验证：直改嵌套路径（绕过 v-model / onValueChange）
- * 先点「保存」制造两处红字（年龄「未成年」+ 监护人「须填写监护人」），
+ * 先点「保存」制造两处红字（年龄 + 监护人「未成年须填写监护人」），
  * 再点本按钮直改 model.user.age = 30
- * 预期：两处红字都自动消失（deps 值快照 diff 命中 → crossValidator 重算 → clearValidate） */
+ * 预期：两处红字都自动消失（deps 值快照 diff 命中 → crossValidator 重算 → clearValidate）
+ * 对照路径：不点本按钮、改填「监护人」字段 → 反向触发年龄规则重算 → 两处红字也应一起消失 */
 function onDirectSetAge() {
   ;(model.user as { age: number }).age = 30
 }
@@ -300,7 +316,7 @@ const tocItems = [
         '3. 主/备用联系人至少填一个 — 双向 dependsOn 互相校验',
         'crossValidator 返回 true 表示通过,返回 string 作为错误信息(form-schema 自动写入对应 form-item)',
         'validateDetail() 同步返回完整跨字段错误列表(用于调试或自定义展示)',
-        'H3 验证：「年龄」挂在嵌套路径 user.age、「监护人」dependsOn 该嵌套路径 —— 年龄 10 时点「保存」制造两处红字(未成年 / 须填监护人),再点「直改 model.user.age = 30」按钮(绕过 v-model),两处红字都应自动消失',
+        'H3 验证：「年龄」挂在嵌套路径 user.age，「监护人」dependsOn 该嵌套路径（年龄亦 dependsOn guardian 联动）—— 年龄 10 时点「保存」制造两处红字(未成年须填写监护人)；① 填「监护人」→ 两处红字一起消失(跨字段反向重算)；② 或点「直改 model.user.age = 30」按钮(绕过 v-model 走兜底 watch)—— 两处红字也应自动消失',
         'H1 验证：「standalone disabled/hidden 字段」使用字段级函数形态(非 reaction 简写)—— 切换「同意协议」开关,两字段应联动禁用/启用、隐藏/显示,dev 控制台无 prop type 警告',
         'showErrorToast：打开右侧「浮窗」开关后点「保存」,跨字段校验失败的 errorBus 事件会以右上角 toast 弹出(默认关闭;同码错误 5s 固定窗口去重)',
       ]"
