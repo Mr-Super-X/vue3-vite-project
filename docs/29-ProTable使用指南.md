@@ -414,6 +414,33 @@ const adaptedRequestApi = (params: Record<string, unknown>) =>
 
 ---
 
+## 3.5 服务端筛选（`filterParamsAdapter`）— v3.5 PR2
+
+列头筛选（`ProColumn.tableProps.filters` 声明，element-plus 原生 column.filters 协议）默认走客户端筛选；声明 `filterParamsAdapter` 后筛选条件序列化为请求参数，走后端过滤：
+
+```ts
+<ProTable
+  :columns="columns"
+  :request-api="requestApi"
+  :filter-params-adapter="filters => ({ statusList: filters.status, deptList: filters.dept })"
+  row-key="id"
+/>
+```
+
+**协议要点**：
+
+- 入参 `FilterValuesMap`：全表筛选快照（`{ [列 field]: 选中值数组 }`）；返回对象并入请求 params（与 `sortParamsAdapter` 同层对称）。
+- 触发时机：列头筛选 UI 操作 → `filter-change` → 合并进 filterState → 回第 1 页 + 触发请求。
+- merge 语义（hotfix-2）：element-plus 2.14.x 的 `filter-change` 可能仅携带变化列 —— useTable 按列 merge 保留未变化列；空数组 = 用户清空该列（delete 语义，不残留空键）。
+- 无 adapter 缺省行为：不传 `filterParamsAdapter` 时 el-table 客户端筛选默认值继续生效，`filterState` 仅作 UI 记忆 + `getFilterState()` 快照，不入请求。
+- 双引擎协议对齐：vxe 引擎的 filter-change 是单列触发（payload 含 property/values），VxeTableBody 经 localFilterMap 合并成全表快照形态 emit —— 与 el-table 协议一致，消费方写法不依赖引擎选择。
+- reset 复位：搜索区「重置」同步清空 filterState + 双引擎列头筛选 UI（el-table `clearFilter()` / vxe `clearFilter()`），旧筛选条件不会「复活」。
+- 事件与快照：`filter-change` 事件 payload 为变化后的全表快照（父级可监听做 URL 同步 / 埋点）；`getFilterState()` expose 返回当前合并态。
+
+完整示例见 `src/modules/demo/examples/ProTable/ProTableServerFilter.vue`（`/demo/pro-table-server-filter`）。
+
+---
+
 ## 4. 搜索表单（自动渲染）
 
 `columns` 中声明 `search` 的列会自动出现在 `<SearchForm>`（默认 3 行，超出可展开）。
@@ -589,16 +616,20 @@ function handleEngineFallback() {
 
 回退完成后 `engine` expose 返回 `'element-plus'`，业务代码无需关心。
 
-### 6.4 vxe 引擎能力缺失
+### 6.4 vxe 引擎能力对等矩阵
 
-`useTableCapabilities` 在 vxe 引擎下会启动时 `console.warn` 并忽略以下能力（仅 element-plus 引擎生效）：
+v3.5 PR1-B 起 vxe-table 引擎已补齐树形 / 行拖拽 / 单元格合并 / 行内编辑四大能力，与 element-plus 引擎基本对等（virtualized 引擎仍为能力受限分支）：
 
-- 树形数据（vxe-tree 实现差异较大）
-- 行拖拽（vxe 自带 drag-sort 但 API 不一致）
-- 单元格合并（vxe 自带 span-method 但配置不同）
-- 行内编辑（vxe 自带 edit-config 但事件流不同）
+| 能力             | element-plus | vxe-table                                  | virtualized（el-table-v2） |
+| ---------------- | ------------ | ------------------------------------------ | -------------------------- |
+| 树形             | ✓            | ✓（tree-config + toggle-tree-expand 回流） | ✗                          |
+| 行拖拽           | ✓            | ✓（sortablejs 挂 vxe tbody）               | ✗                          |
+| 单元格合并       | ✓            | ✓（spanMethod / cellClassName 已接线）     | ✗                          |
+| 行内编辑         | ✓            | ✓（EditCell 分支齐备）                     | ✗                          |
+| 列头筛选         | ✓            | ✓（v3.5 PR2 翻译层与 el 协议对齐）         | ✗                          |
+| 多选跨页 reserve | ✓            | ✓（checkbox-config.reserve + 镜像回同步）  | ✗（selection 列忽略）      |
 
-**这 4 个能力仅在 element-plus 引擎下生效**。
+**已知观察项**：vxe + 树形 + 行拖拽三者同开时，sortablejs 与展开行 DOM 变化的兼容性尚在观察（console.debug 提示）——如遇拖拽错位，树形 / 拖拽二选一或向维护方反馈。
 
 ---
 
@@ -928,15 +959,15 @@ ProTable 内部已与 `<AsyncState>` 集成：
 
 ## 12. 已知限制
 
-| #   | 限制                                                                                       | 应对方式                      |
-| --- | ------------------------------------------------------------------------------------------ | ----------------------------- |
-| 1   | 引擎运行时切换不支持（首次 mount 锁定）                                                    | reload 页面 / 重新挂载        |
-| 2   | 树形 + 编辑互斥（编辑仅作用于叶子节点；`exclusive: true` 禁用编辑按钮）                    | 二选一                        |
-| 3   | vxe 引擎不支持 4 大能力（树形 / 拖拽 / 合并 / 编辑）—— 启动 warn + 忽略                    | 切回 element-plus 引擎        |
-| 4   | vxe 行高变量有缓存，密度切换后需手动 `recalculate()`                                       | ProTable 内部已自动处理       |
-| 5   | `responseAdapter` 映射非法结构会抛错                                                       | `console.error` + 走 error 态 |
-| 6   | `setSearchParams` 会回到第 1 页（如不要回到第 1 页，先 `getSearchParams` 再手动 setState） | 自定义场景                    |
-| 7   | 多选 + 跨页记忆依赖 `rowKey`，未配会清不掉选区                                             | 业务必填 `rowKey`             |
+| #   | 限制                                                                                         | 应对方式                      |
+| --- | -------------------------------------------------------------------------------------------- | ----------------------------- |
+| 1   | 引擎运行时切换不支持（首次 mount 锁定）                                                      | reload 页面 / 重新挂载        |
+| 2   | 树形 + 编辑互斥（编辑仅作用于叶子节点；`exclusive: true` 禁用编辑按钮）                      | 二选一                        |
+| 3   | vxe + 树形 + 行拖拽三者同开时拖拽柄与展开行 DOM 可能错位（console.debug 提示，兼容性观察中） | 树形 / 拖拽二选一或反馈       |
+| 4   | vxe 行高变量有缓存，密度切换后需手动 `recalculate()`                                         | ProTable 内部已自动处理       |
+| 5   | `responseAdapter` 映射非法结构会抛错                                                         | `console.error` + 走 error 态 |
+| 6   | `setSearchParams` 会回到第 1 页（如不要回到第 1 页，先 `getSearchParams` 再手动 setState）   | 自定义场景                    |
+| 7   | 多选 + 跨页记忆依赖 `rowKey`，未配会清不掉选区                                               | 业务必填 `rowKey`             |
 
 ---
 

@@ -82,6 +82,18 @@
 
 **浏览器验证面说明**：B1/B2 均无对应 demo（全项目无 vxe+selection 列 demo、无 Autocomplete+asyncOptions demo），由 spec 覆盖（与批 A「数组+cross」同型缺口，可入批 C 补 demo）；B4 无动态 pageSize demo。浏览器回归面 = EngineCompare vxe 引擎页（B1 改动后 vxe 渲染链路正常）。
 
+## 批 C 收尾（2026-10-15 第四轮：C1–C4，批 C 全部关闭 = 审计修复批全量完成）
+
+| 项               | 处理                                                                                                                                                                                                                                                                                             | 证据                                         |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------- |
+| C1（protable#5） | docs/29 §6.4 重写为「vxe 引擎能力对等矩阵」（el/vxe/virtualized 三列 × 能力行，PR1-B 四大能力对齐 + vxe+tree+drag 观察项）；§12 #3 同步改为观察项表述                                                                                                                                            | check:doc-currency 13 项全过                 |
+| C2（protable#6） | docs/29 补写 §3.5「服务端筛选（filterParamsAdapter）」：协议形态/触发时机/merge 语义/无 adapter 缺省/双引擎翻译层/reset 复位/事件与快照——§1.2 表 + ProTable.vue emit 注释 + types JSDoc 三处「详见 §3.5」断链全部落地                                                                            | 同上                                         |
+| C3               | 三项防线 spec 核对：**全部已就位无需补**——use-validate 嵌套数组（8ebe4ee TDD 已有）、行级 reaction 双实例（批 B B3 已补）、setFieldValidating 真实行为（22c12bb 已有三态断言）                                                                                                                   | use-validate + use-set-field-error 62 例全绿 |
+| C4（xform#9-13） | docs/24 五处：①§2 expressionFunctions 改实例级沙箱语义（H2）②§5.2 补 cross 空值三路径差异（实时跳过 vs 批量照跑）③§18 删除已过时的「permission 权限码映射未透传」行④§4 schema 级字段表补 `watchFallback` 行⑤§19 索引补 5 个缺失 demo（ReactionArrayRow 等，56→61 闭环，「其余 53 个」同步改 60） | check:doc-currency 13 项全过                 |
+| 附带             | `flattenCrossRules` 抽离（A1 的 crossRules 拍平从 composer 移到 use-schema-index.ts）——批 A 提交后 composer 363 行突破 check-doc-currency 250-350 膨胀预警，抽离后 345 行解除                                                                                                                    | check:doc-currency 13 项全过                 |
+
+**审计修复批 A/B/C 全量完成。** 剩余未处理项均为审计清单外新增观察（reset 不发 filter-change 事件、docs/24 路由前缀漂移 x-form-/xform-、vxe+selection/Autocomplete 异步 demo 缺口），已在本文件各收尾节记录，供后续 sprint 决策。
+
 ## 使用说明
 
 - 每批开工时按本清单建任务，修复后把对应行标记 ✅ 并补回归 spec（C3 是各批的验收成分）

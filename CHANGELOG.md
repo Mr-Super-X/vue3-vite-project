@@ -15,6 +15,12 @@
 - **A5 行级 reaction 全量重注册 + 模块级 stopper 桶泄漏**：stopper 桶 value 升级 `RowReactionEntry` 四元组（同 rowKey+index+itemSchema 引用未变则复用 watcher+副本跳过重注册）；`useRenderSchemaNode` 每实例建桶经 opts 注入、卸载时 onScopeDispose 统一 stop+clear——修复前每次渲染全量 churn + 卸载后模块级 Map 无限增长 + 原始值行 key 跨实例碰撞误停
 - **测试基建修正**：vxe-table mock 补具名导出 `VxeTable/VxeColumn`（镜像真实 v4 模块形态）——原 mock 缺 named export 致 `vxeTableComp` 恒 null，"加载成功"断言空洞化
 
+### 📖 Docs | 引擎加固批 C：文档契约对齐（2026-10-15 第四轮，audit 批 C 全部关闭）
+
+- **docs/29**：§6.4 重写为 vxe 引擎能力对等矩阵（v3.5 PR1-B 后四大能力已对齐，修正「vxe 不支持树形/拖拽/合并/编辑」过时表述）+ §12 #3 同步；补写 §3.5「服务端筛选（filterParamsAdapter）」——修复 §1.2 表 / ProTable.vue emit 注释 / types JSDoc 三处断链
+- **docs/24**：expressionFunctions 改实例级沙箱语义（H2 后旧「模块级共享」表述）；§5.2 补 cross 空值三路径差异（实时跳过 vs validate() 批量照跑）；§18 删除已过时的「permission 权限码映射未透传」；schema 级字段表补 `watchFallback`；§19 索引补 5 个缺失 demo（56→61 闭环）
+- **chore**：`flattenCrossRules` 抽离至 use-schema-index.ts —— 解除 check-doc-currency 的 composer 行数膨胀预警（363→345）
+
 ### 🐞 Fix | 引擎加固批 B：状态一致性（2026-10-15 第三轮，audit `docs/audit/2026-10-15-engine-audit-summary.md` 批 B）
 
 - **B1 vxe 选区**：`VxeTableBody` expose `clearSelection()`（clearCheckboxRow/clearRadioRow + 引擎侧本地镜像）——修复 vxe 引擎下 `clearSelection` 只清 useTable 镜像不清 UI 勾选；reserve 模式翻页后经 `getCheckboxRecords()` 回同步全量跨页镜像（key 集合无变化不 emit），修复跨页选区镜像残缺
