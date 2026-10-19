@@ -627,6 +627,10 @@ describe('ProTable v3.5 PR2 服务端筛选', () => {
     // reset 触发的新请求 params 不含筛选字段（filterState 空 → adapter 不被调）
     const lastCall = requestApi.mock.calls.at(-1)![0] as Record<string, unknown>
     expect(lastCall).not.toHaveProperty('statusList')
+    // 观察项闭环：reset 补发 filter-change（payload 为清空后的全表快照 {}）——
+    // 父级靠事件维护的筛选快照（URL 同步 / 埋点上报）随 reset 回同步，不再滞留旧条件
+    const filterChangeEvents = wrapper.emitted('filter-change') ?? []
+    expect(filterChangeEvents.at(-1)).toEqual([{}])
     wrapper.unmount()
   })
 })

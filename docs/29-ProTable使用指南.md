@@ -434,7 +434,7 @@ const adaptedRequestApi = (params: Record<string, unknown>) =>
 - merge 语义（hotfix-2）：element-plus 2.14.x 的 `filter-change` 可能仅携带变化列 —— useTable 按列 merge 保留未变化列；空数组 = 用户清空该列（delete 语义，不残留空键）。
 - 无 adapter 缺省行为：不传 `filterParamsAdapter` 时 el-table 客户端筛选默认值继续生效，`filterState` 仅作 UI 记忆 + `getFilterState()` 快照，不入请求。
 - 双引擎协议对齐：vxe 引擎的 filter-change 是单列触发（payload 含 property/values），VxeTableBody 经 localFilterMap 合并成全表快照形态 emit —— 与 el-table 协议一致，消费方写法不依赖引擎选择。
-- reset 复位：搜索区「重置」同步清空 filterState + 双引擎列头筛选 UI（el-table `clearFilter()` / vxe `clearFilter()`），旧筛选条件不会「复活」。
+- reset 复位：搜索区「重置」同步清空 filterState + 双引擎列头筛选 UI（el-table `clearFilter()` / vxe `clearFilter()`），旧筛选条件不会「复活」；并补发一次 `filter-change`（payload 为清空后的 `{}`），父级靠事件维护的筛选快照 / 埋点随 reset 回同步。
 - 事件与快照：`filter-change` 事件 payload 为变化后的全表快照（父级可监听做 URL 同步 / 埋点）；`getFilterState()` expose 返回当前合并态。
 
 完整示例见 `src/modules/demo/examples/ProTable/ProTableServerFilter.vue`（`/demo/pro-table-server-filter`）。

@@ -182,6 +182,10 @@ const search = useSearch({
       // vxe 引擎 tableRef 为 null，走 VxeTableBody expose 通道（清 localFilterMap + vxe 内部状态）；
       // el 模式下 proTableVxe 为 null，结构化可选调用自然短路
       proTableVxe.value?.clearFilter?.()
+      // 观察项闭环：reset 补发 filter-change（payload = 清空后的全表快照，恒 {}）——
+      // 与 setFilter 路径事件契约一致（§3.5「payload 恒为全表快照」）；父级靠本事件做
+      // URL 同步 / 埋点的消费方不再滞留 reset 前的旧筛选条件
+      emit('filter-change', table.getFilterState())
       if (table.page.value !== 1) {
         table.setPage(1)
         // review R5：setPage 触发的刷新由 page watcher 异步发起，原实现直接 return 导致
