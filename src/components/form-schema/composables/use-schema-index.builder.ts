@@ -41,6 +41,13 @@ export interface CrossRuleEntry {
   target: string
   deps: string[]
   rule: RuleItem
+  /**
+   * 行模板标记（A1-反向，docs/audit/2026-10-15-engine-audit-summary）：
+   * 规则节点来自 array.itemSchema 时置 true —— target/deps 为行内相对名
+   * （渲染时才 rewriteNamePath 加 'items[i]' 前缀），反向触发收到全路径
+   * 'items[0].qty' 需先按行前缀 concrete 化再执行
+   */
+  rowScoped?: boolean
 }
 
 /**
@@ -55,6 +62,27 @@ export function buildIndex(schema: SchemaNode | SchemaNode[] | string | undefine
   const reverseIndex = new Map<string, string[]>()
   const dependsOnMap = new Map<string, string[]>()
   const seenNames = new Set<string>()
+
+  // A1-反向：收集所有 array.itemSchema 的后代节点 —— 其 cross rule 的 target/deps
+  // 是行内相对名（渲染时才 rewriteNamePath 加 'items[i]' 前缀）。嵌套数组的内层
+  // itemSchema 后代同样命中（运行时行前缀取自 changedField 本身，如 'orders[0].items[1]'）。
+  // 遍历方向与主 walk 对齐（includeNodeSlots: false，与 buildIndex 主遍历一致）
+  const rowScopedNodes = new Set<SchemaNode>()
+  walkSchema(
+    schema,
+    (n) => {
+      if (n.kind === 'array' && n.array?.itemSchema) {
+        walkSchema(
+          n.array.itemSchema,
+          (x) => {
+            rowScopedNodes.add(x)
+          },
+          { includeNodeSlots: false }
+        )
+      }
+    },
+    { includeNodeSlots: false }
+  )
 
   walkSchema(
     schema,
@@ -83,6 +111,7 @@ export function buildIndex(schema: SchemaNode | SchemaNode[] | string | undefine
         )
         if (deps.length === 0) continue
         const entry: CrossRuleEntry = { target, deps, rule: r as RuleItem }
+        if (rowScopedNodes.has(n)) entry.rowScoped = true
         const list = crossRules.get(target)
         if (list) list.push(entry)
         else crossRules.set(target, [entry])

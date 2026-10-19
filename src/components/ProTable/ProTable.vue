@@ -177,6 +177,11 @@ const search = useSearch({
     if (opts?.reset) {
       // v3.5 PR2：reset 路径同步清空筛选状态（仅清 state 不触发请求，由下方 setPage/refresh 接管一次）
       table.resetFilter()
+      // A3（docs/audit/2026-10-15-engine-audit-summary）：vxe 引擎列头筛选 UI 清理 ——
+      // el 引擎由 useTable.resetFilter 内经 tableRef 调官方 clearFilter()；
+      // vxe 引擎 tableRef 为 null，走 VxeTableBody expose 通道（清 localFilterMap + vxe 内部状态）；
+      // el 模式下 proTableVxe 为 null，结构化可选调用自然短路
+      proTableVxe.value?.clearFilter?.()
       if (table.page.value !== 1) {
         table.setPage(1)
         // review R5：setPage 触发的刷新由 page watcher 异步发起，原实现直接 return 导致
@@ -250,6 +255,8 @@ const proTableEl = ref<{ $el?: HTMLElement; elTable?: ComponentPublicInstance | 
 const proTableVxe = ref<{
   recalculate?: () => Promise<unknown>
   getTbody?: () => HTMLElement | null
+  /** A3：reset 清列头筛选 UI 通道（清 vxe 内部筛选状态 + 本地 localFilterMap 快照） */
+  clearFilter?: () => void
 } | null>(null)
 
 /** tbody DOM 访问点 —— 经 useTableEngineDom composable 收敛；v3.5 PR1-B 起支持 el + vxe 双引擎路由 */

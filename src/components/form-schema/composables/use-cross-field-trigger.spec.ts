@@ -17,6 +17,11 @@ import { useCrossFieldTrigger, type UseCrossFieldTriggerOptions } from './use-cr
 interface ReverseRule {
   target: string
   deps: string[]
+  /**
+   * 行模板标记（useSchemaIndex 对 array.itemSchema 产出的条目）：
+   * target/deps 为行内相对名，trigger 收到全路径时按行前缀 concrete 化后执行
+   */
+  rowScoped?: boolean
   rule: RuleItem
 }
 
@@ -956,5 +961,237 @@ describe('useCrossFieldTrigger / 同 tick 双路径去重', () => {
     model.password = '3'
     await nextTick()
     expect(call).toBe(2)
+  })
+})
+
+describe('useCrossFieldTrigger / 数组行模板规则（A1-反向）', () => {
+  /**
+   * 行模板形态：useSchemaIndex 对 array.itemSchema 产出的条目 ——
+   * target/deps 是行内相对名（'subtotal' / ['qty','price']），rowScoped 标记。
+   * 运行时 XForm onValueChange 传入全路径 'items[0].qty'，需按行前缀 concrete 化后执行。
+   */
+  function makeRowTemplateRule(): ReverseRule {
+    return {
+      target: 'subtotal',
+      deps: ['qty', 'price'],
+      rowScoped: true,
+      rule: {
+        crossValidator: (v: unknown, qty: unknown, price: unknown) =>
+          Number(v) === Number(qty) * Number(price) ? true : '行小计不等于数量×单价',
+        dependsOn: ['qty', 'price'],
+        trigger: 'change',
+      },
+    }
+  }
+
+  it('trigger("items[0].qty") → 命中行模板，错误写入 items[0].subtotal 全路径', async () => {
+    const model: Record<string, unknown> = {
+      items: [{ qty: 2, price: 3, subtotal: 99 }],
+    }
+    const opts = makeOpts([makeRowTemplateRule()], () => model)
+    const { trigger } = useCrossFieldTrigger(opts)
+
+    trigger('items[0].qty')
+    await nextTick()
+    expect(opts.setFieldError).toHaveBeenCalledWith('items[0].subtotal', '行小计不等于数量×单价')
+  })
+
+  it('行模板 pass → clearValidate 用全路径清错', async () => {
+    const model: Record<string, unknown> = {
+      items: [{ qty: 2, price: 3, subtotal: 6 }],
+    }
+    const opts = makeOpts([makeRowTemplateRule()], () => model)
+    const { trigger } = useCrossFieldTrigger(opts)
+
+    trigger('items[0].qty')
+    await nextTick()
+    expect(opts.clearValidate).toHaveBeenCalledWith(['items[0].subtotal'])
+    expect(opts.setFieldError).not.toHaveBeenCalled()
+  })
+
+  it('validator 收到的 dep 值来自本行（非顶层同名字段）—— 行内相对优先', async () => {
+    const seen: unknown[] = []
+    const rules: ReverseRule[] = [
+      {
+        target: 'subtotal',
+        deps: ['qty'],
+        rowScoped: true,
+        rule: {
+          crossValidator: (v: unknown, qty: unknown) => {
+            seen.push(qty)
+            return true as const
+          },
+          dependsOn: ['qty'],
+          trigger: 'change',
+        },
+      },
+    ]
+    // 顶层有同名 qty=999，行内 qty=2 —— 必须取行内值
+    const model: Record<string, unknown> = {
+      qty: 999,
+      items: [{ qty: 2, subtotal: 0 }],
+    }
+    const opts = makeOpts(rules, () => model)
+    const { trigger } = useCrossFieldTrigger(opts)
+
+    trigger('items[0].qty')
+    await nextTick()
+    expect(seen).toEqual([2])
+  })
+
+  it('混合语义「顶层绝对回退」：行内无该键时 dep 取顶层值', async () => {
+    const seen: unknown[] = []
+    const rules: ReverseRule[] = [
+      {
+        target: 'amount',
+        deps: ['cap'],
+        rowScoped: true,
+        rule: {
+          crossValidator: (v: unknown, cap: unknown) => {
+            seen.push(cap)
+            return true as const
+          },
+          dependsOn: ['cap'],
+          trigger: 'change',
+        },
+      },
+    ]
+    // 「行小计 ≤ 全局上限」场景：行内无 cap，顶层 cap=100
+    const model: Record<string, unknown> = {
+      cap: 100,
+      items: [{ amount: 150 }],
+    }
+    const opts = makeOpts(rules, () => model)
+    const { trigger } = useCrossFieldTrigger(opts)
+
+    trigger('items[0].amount')
+    await nextTick()
+    expect(seen).toEqual([100])
+  })
+
+  it('多行隔离：trigger("items[1].qty") 只写 items[1].subtotal', async () => {
+    const model: Record<string, unknown> = {
+      items: [
+        { qty: 2, price: 3, subtotal: 6 },
+        { qty: 1, price: 1, subtotal: 99 },
+      ],
+    }
+    const opts = makeOpts([makeRowTemplateRule()], () => model)
+    const { trigger } = useCrossFieldTrigger(opts)
+
+    trigger('items[1].qty')
+    await nextTick()
+    expect(opts.setFieldError).toHaveBeenCalledTimes(1)
+    expect(opts.setFieldError).toHaveBeenCalledWith('items[1].subtotal', '行小计不等于数量×单价')
+  })
+
+  it('trigger("items[0].subtotal")（target 命中）→ 也触发本行规则', async () => {
+    const model: Record<string, unknown> = {
+      items: [{ qty: 2, price: 3, subtotal: 99 }],
+    }
+    const opts = makeOpts([makeRowTemplateRule()], () => model)
+    const { trigger } = useCrossFieldTrigger(opts)
+
+    trigger('items[0].subtotal')
+    await nextTick()
+    expect(opts.setFieldError).toHaveBeenCalledWith('items[0].subtotal', '行小计不等于数量×单价')
+  })
+
+  it('无关字段变化不触发模板（trigger("other") → 不跑）', async () => {
+    let call = 0
+    const rules: ReverseRule[] = [
+      {
+        target: 'subtotal',
+        deps: ['qty'],
+        rowScoped: true,
+        rule: {
+          crossValidator: () => {
+            call++
+            return 'err'
+          },
+          dependsOn: ['qty'],
+          trigger: 'change',
+        },
+      },
+    ]
+    const model: Record<string, unknown> = { other: 'x', items: [{ qty: 1, subtotal: 1 }] }
+    const opts = makeOpts(rules, () => model)
+    const { trigger } = useCrossFieldTrigger(opts)
+
+    trigger('other')
+    await nextTick()
+    expect(call).toBe(0)
+    expect(opts.setFieldError).not.toHaveBeenCalled()
+  })
+
+  it('rowScoped 未标记的规则保持原行为：相对 deps 不匹配全路径 changedField（防误伤顶层规则）', async () => {
+    let call = 0
+    const rules: ReverseRule[] = [
+      {
+        // 顶层规则但 deps 是相对名（如手写 schema 未走 itemSchema）——rowScoped 未标记
+        target: 'total',
+        deps: ['qty'],
+        rule: {
+          crossValidator: () => {
+            call++
+            return 'err'
+          },
+          dependsOn: ['qty'],
+          trigger: 'change',
+        },
+      },
+    ]
+    const model: Record<string, unknown> = { total: 0, items: [{ qty: 1 }] }
+    const opts = makeOpts(rules, () => model)
+    const { trigger } = useCrossFieldTrigger(opts)
+
+    trigger('items[0].qty')
+    await nextTick()
+    expect(call).toBe(0)
+  })
+
+  it('嵌套数组：trigger("orders[0].items[1].qty") → 写 orders[0].items[1].subtotal', async () => {
+    const model: Record<string, unknown> = {
+      orders: [
+        {
+          items: [
+            { qty: 1, price: 1, subtotal: 1 },
+            { qty: 2, price: 3, subtotal: 99 },
+          ],
+        },
+      ],
+    }
+    const opts = makeOpts([makeRowTemplateRule()], () => model)
+    const { trigger } = useCrossFieldTrigger(opts)
+
+    trigger('orders[0].items[1].qty')
+    await nextTick()
+    expect(opts.setFieldError).toHaveBeenCalledWith(
+      'orders[0].items[1].subtotal',
+      '行小计不等于数量×单价'
+    )
+  })
+
+  it('行内空值跳过语义保持：target（concrete 后）为空 → clearValidate 全路径', async () => {
+    const rules: ReverseRule[] = [
+      {
+        target: 'subtotal',
+        deps: ['qty'],
+        rowScoped: true,
+        rule: {
+          crossValidator: () => 'err',
+          dependsOn: ['qty'],
+          trigger: 'change',
+        },
+      },
+    ]
+    const model: Record<string, unknown> = { items: [{ qty: 1, subtotal: '' }] }
+    const opts = makeOpts(rules, () => model)
+    const { trigger } = useCrossFieldTrigger(opts)
+
+    trigger('items[0].qty')
+    await nextTick()
+    expect(opts.clearValidate).toHaveBeenCalledWith(['items[0].subtotal'])
+    expect(opts.setFieldError).not.toHaveBeenCalled()
   })
 })

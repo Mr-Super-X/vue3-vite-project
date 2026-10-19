@@ -4,6 +4,17 @@
 
 ## 未发布
 
+### 🐞 Fix | 引擎加固批 A：XForm / ProTable 数据正确性与状态一致性（2026-10-15，audit `docs/audit/2026-10-15-engine-audit-summary.md`）
+
+> 来源：/autoplan 引擎健康度审计 33 项发现中的批 A（P0）。每项 = 单测红绿（净增 21 例）+ 受影响 demo 浏览器实测（fresh reload）双证据。
+
+- **A1 数组行 crossValidator 双路径失效**：批量路径 `rewriteRuleDeps`（行内相对优先、顶层绝对回退）+ 反向路径三层修复（builder 预遍历标记 `rowScoped` → composer 透传 → `resolveConcreteRule` 按行前缀 concrete 化，连 `rule.dependsOn` 一起副本重写）——修复前数组行内跨字段校验批量取错值、反向恒不触发
+- **A2 嵌套数组校验直索引静默跳过**：`model[node.name]` → `get(model, node.name)`（lodash 解析 `orders[0].items` 嵌套路径）
+- **A3 ProTable `reset()` 后筛选复活**：`useTable.resetFilter` 内经 tableRef 结构化调 el-table 官方 `clearFilter()`（clearSelection 同款模式）+ `VxeTableBody` expose `clearFilter()`（清 localFilterMap 快照 + vxe 内部态）+ 编排层 reset 路径补调（el 模式下 vxe ref 为 null 自然短路）——修复前 reset 后列头筛选 UI 残留旧条件、下次操作静默回参
+- **A4 validating 三态链路**：写入层 message 非空优先 + 渲染层 validating 不注入 `:error`（EP error prop 优先级压过 validateStatus）+ 守护层按条目 validateStatus 同步——修复前 validating 态永不生效且误清已有红字
+- **A5 行级 reaction 全量重注册 + 模块级 stopper 桶泄漏**：stopper 桶 value 升级 `RowReactionEntry` 四元组（同 rowKey+index+itemSchema 引用未变则复用 watcher+副本跳过重注册）；`useRenderSchemaNode` 每实例建桶经 opts 注入、卸载时 onScopeDispose 统一 stop+clear——修复前每次渲染全量 churn + 卸载后模块级 Map 无限增长 + 原始值行 key 跨实例碰撞误停
+- **测试基建修正**：vxe-table mock 补具名导出 `VxeTable/VxeColumn`（镜像真实 v4 模块形态）——原 mock 缺 named export 致 `vxeTableComp` 恒 null，"加载成功"断言空洞化
+
 ### ✅ Tests | 测试矩阵补完（五态示范批 + 测试深度批 + 发布准备批，2026-10-15）
 
 - **big-demo 五态示范页** `/big-demo/state-demo`：成功/加载/错误/空/断连五态切换 + 每态设计要点说明；Wide 页地图二级懒加载（GeoJSON 退二级 chunk，页面壳先渲染、地图区就地加载/失败/重试）

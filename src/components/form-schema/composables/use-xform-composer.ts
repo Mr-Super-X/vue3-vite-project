@@ -190,9 +190,22 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
 
   const crossFieldTrigger = useCrossFieldTrigger({
     crossRules: () => {
-      const out: Array<{ target: string; deps: string[]; rule: RuleItem }> = []
+      const out: Array<{
+        target: string
+        deps: string[]
+        rule: RuleItem
+        rowScoped?: boolean
+      }> = []
       for (const list of schemaIndex.crossRules.value.values()) {
-        for (const e of list) out.push({ target: e.target, deps: e.deps, rule: e.rule })
+        for (const e of list) {
+          out.push({
+            target: e.target,
+            deps: e.deps,
+            rule: e.rule,
+            // A1-反向：行模板标记透传（数组行内 cross 规则反向触发用）
+            ...(e.rowScoped ? { rowScoped: true } : {}),
+          })
+        }
       }
       return out
     },

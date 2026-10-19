@@ -110,7 +110,10 @@ const vxeColumnComp = shallowRef<unknown>(null)
  * vxe 表格组件实例（vxe v4 setup 返回 $xeTable 全量方法，模板 ref 可直接调 recalculate）。
  * 类型只声明用到的 recalculate —— 动态组件实例无静态类型可引（vxe 类型链依赖未安装的 vxe-pc-ui）
  */
-const vxeTableInst = ref<{ recalculate?: (reFull?: boolean) => Promise<unknown> } | null>(null)
+const vxeTableInst = ref<{
+  recalculate?: (reFull?: boolean) => Promise<unknown>
+  clearFilter?: () => Promise<unknown>
+} | null>(null)
 
 /**
  * 密度切换后重算行高 —— vxe 行高变量（--vxe-ui-table-row-height-*）经隐藏尺寸元素测量后
@@ -125,6 +128,16 @@ const vxeTableInst = ref<{ recalculate?: (reFull?: boolean) => Promise<unknown> 
 defineExpose({
   recalculate: () => {
     void vxeTableInst.value?.recalculate?.()
+  },
+  /**
+   * A3（docs/audit/2026-10-15-engine-audit-summary）：清空 vxe 列头筛选 —— reset 路径编排层调用。
+   * vxe 官方 clearFilter 清内部筛选状态 + 列头 UI；同时清本地 localFilterMap 累加快照
+   * （否则 reset 后下一次单列 filter-change 会把旧列条件重新 merge 进快照 emit → 筛选复活）。
+   * 结构化可选调用：引擎异步加载未完成时 vxeTableInst 为 null，自然短路
+   */
+  clearFilter(): void {
+    localFilterMap.value = {}
+    void vxeTableInst.value?.clearFilter?.()
   },
   /** v3.5 PR1-B：vxe-table 根 DOM，useRowDrag 挂载点 */
   getTbody(): HTMLElement | null {

@@ -12,7 +12,7 @@ import {
   ElIcon,
   ElButton,
 } from 'element-plus'
-import { h, type VNode } from 'vue'
+import { h, reactive, effectScope, nextTick, type VNode } from 'vue'
 import { Plus, UploadFilled } from '@element-plus/icons-vue'
 
 /** 创建一个最小可用的 RenderSchemaNode options */
@@ -1027,5 +1027,70 @@ describe('buildUploadTipSlot', () => {
     const slot = buildUploadTipSlot(tipNode, renderSpy)
     slot?.()
     expect(renderSpy).toHaveBeenCalledWith(tipNode)
+  })
+})
+
+describe('useRenderSchemaNode 行级 reaction 清理（A5）', () => {
+  /**
+   * 行渲染在 vnode slot 内惰性执行 —— 结构无关遍历强制求值
+   * （与 render-array-node.spec.ts 的 forceRows 同款）
+   */
+  function forceRows(vnode: unknown): void {
+    const walk = (v: unknown): void => {
+      if (!v || typeof v !== 'object') return
+      if (Array.isArray(v)) {
+        v.forEach(walk)
+        return
+      }
+      const ch = (v as unknown as Record<string, unknown>).children
+      if (Array.isArray(ch)) ch.forEach(walk)
+      else if (ch && typeof ch === 'object') {
+        for (const slot of Object.values(ch)) {
+          walk(typeof slot === 'function' ? (slot as () => unknown)() : slot)
+        }
+      }
+    }
+    walk(vnode)
+  }
+
+  it('渲染器 scope dispose（组件卸载）→ 行级 reaction 条目全部 stop + 桶清空', async () => {
+    let evalCount = 0
+    const arrayNode: SchemaNode = {
+      kind: 'array',
+      name: 'items',
+      array: {
+        itemSchema: {
+          component: 'Input',
+          name: 'qty',
+          reaction: {
+            disabled: () => {
+              evalCount++
+              return false
+            },
+          },
+        },
+      },
+    }
+    // reactive model：模拟真实表单（watcher 绑定行 model 的 deep watch 依赖此响应性）
+    const model = reactive<Record<string, unknown>>({ items: [{ qty: 1 }] })
+    // A5：注入外部桶便于直接观测清理行为（useRenderSchemaNode 缺省时本会自动创建实例桶）
+    const bucket = new Map<string, unknown>()
+    const scope = effectScope()
+    let render!: ReturnType<typeof useRenderSchemaNode>
+    scope.run(() => {
+      const { opts } = makeOpts({ model, rowReactionStoppers: bucket as never })
+      render = useRenderSchemaNode(opts)
+      // 行级 watcher 注册发生在 slot 惰性求值时 —— 须在 scope 活跃期内强制求值
+      forceRows(render(arrayNode))
+    })
+    expect(evalCount).toBe(1) // 注册时 sync 立即求值一次
+    expect(bucket.size).toBe(1) // 行级 reaction 条目已注册进注入桶
+
+    scope.stop() // 模拟组件卸载：onScopeDispose 须停止全部行级 watcher 并清空桶
+    expect(bucket.size).toBe(0) // ★ 判别断言：模块级桶时代卸载后条目永留、重复挂载无限增长
+    ;(model.items as Array<{ qty: number }>)[0]!.qty = 2
+    await nextTick()
+    // watcher 已停止：model 变化不再触发 reaction 求值
+    expect(evalCount).toBe(1)
   })
 })

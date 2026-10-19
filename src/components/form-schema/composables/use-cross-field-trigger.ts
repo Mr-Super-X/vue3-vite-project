@@ -38,6 +38,11 @@ interface ReverseRule {
   /** 规则依赖的字段路径集合（lodash get 支持 'items[0].qty'） */
   deps: string[]
   rule: RuleItem
+  /**
+   * 行模板标记（A1-反向）：规则来自 array.itemSchema 时由 useSchemaIndex 置 true ——
+   * target/deps 为行内相对名，trigger 收到全路径 changedField 时按行前缀 concrete 化后执行
+   */
+  rowScoped?: boolean
 }
 
 /**
@@ -173,6 +178,52 @@ export function useCrossFieldTrigger(opts: UseCrossFieldTriggerOptions): {
   }
 
   /**
+   * A1-反向（docs/audit/2026-10-15-engine-audit-summary）：把规则解析为本次应执行的具体规则
+   * - 无 changedField（全量路径：resetFields / setModel 整体替换）→ 原样返回
+   * - 直接命中（deps 含 changedField 或 target === changedField，绝对路径规则）→ 原样返回
+   * - rowScoped 行模板：changedField 带行前缀（'items[0].qty' / 'orders[0].items[1].qty'）
+   *   且行内相对名命中模板 deps/target → 返回 concrete 副本执行
+   * - 都不命中 → undefined（跳过）
+   */
+  function resolveConcreteRule(r: ReverseRule, changedField?: string): ReverseRule | undefined {
+    if (!changedField) return r
+    if (r.deps.includes(changedField) || r.target === changedField) return r
+    if (!r.rowScoped) return undefined
+    // 行前缀 = changedField 去掉最后一段（'items[0].qty' → 'items[0]'；嵌套数组取最深行）
+    const dot = changedField.lastIndexOf('.')
+    if (dot <= 0) return undefined
+    const prefix = changedField.slice(0, dot)
+    const rel = changedField.slice(dot + 1)
+    if (!r.deps.includes(rel) && r.target !== rel) return undefined
+    return concretizeRowRule(r, prefix)
+  }
+
+  /**
+   * 行模板 concrete 化：target/deps 重写为 `${prefix}.<相对名>` 绝对路径副本。
+   * 逐 dep 按「行内相对优先、顶层绝对回退」解析（与 use-validate.rewriteRuleDeps
+   * 同语义，兼容「行小计 ≤ 全局上限」混合写法：行内有该键取行内，行内无取顶层）。
+   * 执行原语 runCrossRuleMaybeSync 从 rule.dependsOn 取值，故 rule 也必须副本重写，
+   * 否则 crossValidator 收到的是根 model 上 undefined 的相对路径值
+   */
+  function concretizeRowRule(r: ReverseRule, prefix: string): ReverseRule {
+    const model = opts.model()
+    const resolve = (dep: string): string => {
+      const rowPath = `${prefix}.${dep}`
+      return model !== undefined && get(model, rowPath) !== undefined ? rowPath : dep
+    }
+    const rule: RuleItem = { ...r.rule }
+    if (r.rule.dependsOn) {
+      rule.dependsOn = Array.isArray(r.rule.dependsOn)
+        ? r.rule.dependsOn.map(resolve)
+        : resolve(r.rule.dependsOn)
+    }
+    if (r.rule.deps) {
+      rule.deps = Array.isArray(r.rule.deps) ? r.rule.deps.map(resolve) : resolve(r.rule.deps)
+    }
+    return { ...r, target: `${prefix}.${r.target}`, deps: r.deps.map(resolve), rule }
+  }
+
+  /**
    * 内部实现：跑 rules 的核心逻辑
    * - changedField 为空/undefined 时跑所有 rules（兜底路径：resetFields / setModel 整个替换）
    * - changedField 有值时只跑 deps 包含 changedField 的 rules（精确路径）
@@ -184,10 +235,10 @@ export function useCrossFieldTrigger(opts: UseCrossFieldTriggerOptions): {
       // 精确双向触发：
       // - 反向：deps 包含 changedField（"改 A 触发 B 重算"）
       // - 正向：target === changedField（"改 B 触发 B 自己的跨字段规则重算"）
-      if (changedField && !r.deps.includes(changedField) && r.target !== changedField) {
-        continue
-      }
-      const runner = getRunner(r)
+      // - A1-反向：rowScoped 行模板按行前缀 concrete 化后匹配（数组行内 cross 校验）
+      const concrete = resolveConcreteRule(r, changedField)
+      if (!concrete) continue
+      const runner = getRunner(concrete)
       runner()
     }
   }

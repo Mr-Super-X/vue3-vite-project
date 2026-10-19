@@ -326,3 +326,186 @@ describe('renderArrayNode / 拖拽排序（P2-3 回归）', () => {
     expect(moveItem).not.toHaveBeenCalled()
   })
 })
+
+describe('renderArrayNode / 行级 reaction 生命周期（A5）', () => {
+  /**
+   * 行渲染在 vnode slot 内惰性执行 —— 结构无关遍历强制求值（与文件内 collectKeys 同款）
+   */
+  function forceRows(vnode: VNode | undefined): void {
+    const walk = (v: unknown): void => {
+      if (!v || typeof v !== 'object') return
+      if (Array.isArray(v)) {
+        v.forEach(walk)
+        return
+      }
+      const ch = (v as unknown as Record<string, unknown>).children
+      if (Array.isArray(ch)) ch.forEach(walk)
+      else if (ch && typeof ch === 'object') {
+        for (const slot of Object.values(ch)) {
+          walk(typeof slot === 'function' ? (slot as () => unknown)() : slot)
+        }
+      }
+    }
+    walk(vnode)
+  }
+
+  function makeReactionNode(itemSchema: SchemaNode): SchemaNode {
+    return {
+      name: 'items',
+      kind: 'array',
+      component: 'div',
+      array: { itemSchema },
+    } as SchemaNode
+  }
+
+  function makeBucketOpts(model: Record<string, unknown>, bucket: Map<string, unknown>) {
+    return {
+      model,
+      render: () => h('div'),
+      arrayActions: {
+        addItem: () => {},
+        removeItem: () => {},
+        moveItem: () => {},
+      },
+      rowReactionStoppers: bucket,
+    } as never
+  }
+
+  it('配置未变（同 rowKey + 同 index + 同 itemSchema 引用）重渲染 → 复用 watcher，不重复注册', () => {
+    let evalCount = 0
+    const itemSchema: SchemaNode = {
+      name: 'qty',
+      component: 'Input',
+      reaction: {
+        disabled: (m: Record<string, unknown>) => {
+          evalCount++
+          return m.lock === true
+        },
+      },
+    } as SchemaNode
+    const node = makeReactionNode(itemSchema)
+    const model: Record<string, unknown> = { lock: false, items: [{ qty: 1 }] }
+    const bucket = new Map<string, unknown>()
+    const opts = makeBucketOpts(model, bucket)
+
+    forceRows(renderArrayNode(node, opts))
+    expect(evalCount).toBe(1) // 首次注册 sync 策略立即求值
+    expect(bucket.size).toBe(1)
+    const firstEntry = [...bucket.values()][0]
+
+    forceRows(renderArrayNode(node, opts))
+    // A5：复用已注册 watcher —— 不重复注册则求值次数不增、桶内条目引用不变（非停旧换新）
+    expect(evalCount).toBe(1)
+    expect(bucket.size).toBe(1)
+    expect([...bucket.values()][0]).toBe(firstEntry)
+  })
+
+  it('itemSchema 引用变化（schema 替换）→ 停旧 watcher + 重注册新条目', () => {
+    let evalCount = 0
+    const mkItem = (): SchemaNode =>
+      ({
+        name: 'qty',
+        component: 'Input',
+        reaction: {
+          disabled: () => {
+            evalCount++
+            return false
+          },
+        },
+      }) as SchemaNode
+    const node1 = makeReactionNode(mkItem())
+    const node2 = makeReactionNode(mkItem()) // 新 itemSchema 引用（模拟 schema 替换后重渲）
+    const model: Record<string, unknown> = { items: [{ qty: 1 }] }
+    const bucket = new Map<string, unknown>()
+    const opts1 = makeBucketOpts(model, bucket)
+    const opts2 = makeBucketOpts(model, bucket)
+
+    forceRows(renderArrayNode(node1, opts1))
+    expect(evalCount).toBe(1)
+    const firstEntry = [...bucket.values()][0]
+
+    forceRows(renderArrayNode(node2, opts2))
+    expect(evalCount).toBe(2) // 重注册 → sync 立即再求值
+    expect(bucket.size).toBe(1)
+    expect([...bucket.values()][0]).not.toBe(firstEntry) // 停旧换新
+  })
+
+  it('行移动（index 变化）→ 两行的 name 前缀都变，全部重注册', () => {
+    let evalCount = 0
+    const itemSchema: SchemaNode = {
+      name: 'qty',
+      component: 'Input',
+      reaction: {
+        disabled: () => {
+          evalCount++
+          return false
+        },
+      },
+    } as SchemaNode
+    const node = makeReactionNode(itemSchema)
+    const rowA = { qty: 1 }
+    const rowB = { qty: 2 }
+    const model: Record<string, unknown> = { items: [rowA, rowB] }
+    const bucket = new Map<string, unknown>()
+    const opts = makeBucketOpts(model, bucket)
+
+    forceRows(renderArrayNode(node, opts))
+    expect(evalCount).toBe(2) // 两行各注册各求值一次
+    const firstEntryA = [...bucket.values()][0]
+
+    ;(model.items as unknown[]).reverse() // rowB: index 1→0，rowA: 0→1
+    forceRows(renderArrayNode(node, opts))
+    expect(evalCount).toBe(4) // index 变化 → 全部重注册
+    expect(bucket.size).toBe(2)
+    expect([...bucket.values()][0]).not.toBe(firstEntryA)
+  })
+
+  it('删除行 → 该行 watcher 经 stale 清理停止，桶只留现存行（原行为保持）', () => {
+    let evalCount = 0
+    const itemSchema: SchemaNode = {
+      name: 'qty',
+      component: 'Input',
+      reaction: {
+        disabled: () => {
+          evalCount++
+          return false
+        },
+      },
+    } as SchemaNode
+    const node = makeReactionNode(itemSchema)
+    const rowA = { qty: 1 }
+    const rowB = { qty: 2 }
+    const model: Record<string, unknown> = { items: [rowA, rowB] }
+    const bucket = new Map<string, unknown>()
+    const opts = makeBucketOpts(model, bucket)
+
+    forceRows(renderArrayNode(node, opts))
+    expect(bucket.size).toBe(2)
+    expect(evalCount).toBe(2) // 两行各注册求值一次
+
+    ;(model.items as unknown[]).splice(0, 1) // 删除 rowA
+    forceRows(renderArrayNode(node, opts))
+    expect(bucket.size).toBe(1) // rowA 的 entry 被清
+    // 被删行不重注册；幸存行 rowB 因 index 1→0 变化重注册一次（2 + 1）
+    expect(evalCount).toBe(3)
+  })
+
+  it('注入桶透传：渲染复用 opts.rowReactionStoppers（不经模块级退回桶）', () => {
+    const itemSchema: SchemaNode = {
+      name: 'qty',
+      component: 'Input',
+      reaction: { disabled: () => false },
+    } as SchemaNode
+    const node = makeReactionNode(itemSchema)
+    const model: Record<string, unknown> = { items: [{ qty: 1 }] }
+    const bucketA = new Map<string, unknown>()
+    const bucketB = new Map<string, unknown>()
+
+    forceRows(renderArrayNode(node, makeBucketOpts(model, bucketA)))
+    forceRows(renderArrayNode(node, makeBucketOpts(model, bucketB)))
+
+    // 两个独立桶各存一份 —— 若走模块级共享桶，第二次渲染会因同 rowKey 命中而复用（bucketA  size 不变已证）
+    expect(bucketA.size).toBe(1)
+    expect(bucketB.size).toBe(1)
+  })
+})

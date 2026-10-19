@@ -20,13 +20,18 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { nextTick } from 'vue'
 
-// ───────────── vxe-table 模块 mock（与 useVxeTable.spec.ts 一致）─────────────
+// ───────────── vxe-table 模块 mock（useVxeTable.spec.ts 同款模式 + 具名导出）─────────────
+// A3 修复：补具名导出 VxeTable/VxeColumn —— VxeTableBody 经 mod.VxeTable 取组件
+// （真实 vxe-table v4 模块形态：export { VxeTable, VxeColumn }）。原 mock 缺 named
+// export 导致 vxeTableComp 恒 null，内层组件在测试中从未渲染（"加载成功"断言空洞化）
 vi.mock('vxe-table', () => ({
   default: {
     install: vi.fn(),
     Table: { name: 'VxeTable', render: () => null },
     Column: { name: 'VxeColumn', render: () => null },
   },
+  VxeTable: { name: 'VxeTable', render: () => null },
+  VxeColumn: { name: 'VxeColumn', render: () => null },
 }))
 vi.mock('vxe-table/lib/style.css', () => ({}))
 
@@ -143,6 +148,36 @@ describe('VxeTableBody', () => {
     expect(exposed).toBeDefined()
     expect('recalculate' in (exposed ?? {})).toBe(true)
     expect(typeof (exposed as { recalculate?: unknown }).recalculate).toBe('function')
+    wrapper.unmount()
+  })
+
+  it('A3：defineExpose 暴露 clearFilter（reset 清列头筛选 UI 通道）', async () => {
+    const wrapper = mountBody()
+    await nextTick()
+    const exposed = wrapper.vm.$.exposed as Record<string, unknown> | null
+    expect(typeof (exposed as { clearFilter?: unknown })?.clearFilter).toBe('function')
+    wrapper.unmount()
+  })
+
+  it('A3：clearFilter 清空 localFilterMap —— reset 后单列筛选不再携带旧列快照（防复活）', async () => {
+    const wrapper = mountBody()
+    await flushPromises()
+    // 经内部 vxe 组件触发筛选（模板 @filter-change 绑定在解析后的 VxeTable 组件上）
+    const vxe = wrapper.findComponent({ name: 'VxeTable' })
+    vxe.vm.$emit('filter-change', { property: 'status', values: ['paid'] })
+    vxe.vm.$emit('filter-change', { property: 'dept', values: ['tech'] })
+    await nextTick()
+    // 两列已累加进全表快照
+    expect(wrapper.emitted('filter-change')!.at(-1)).toEqual([{ status: ['paid'], dept: ['tech'] }])
+
+    // reset 路径：编排层调暴露的 clearFilter
+    ;(wrapper.vm.$.exposed as { clearFilter: () => void }).clearFilter()
+    await nextTick()
+
+    // 再次筛选单列：快照只含该列 —— 旧 dept 条件不复活（不清 localFilterMap 时会被 merge 回来）
+    vxe.vm.$emit('filter-change', { property: 'status', values: ['pending'] })
+    await nextTick()
+    expect(wrapper.emitted('filter-change')!.at(-1)).toEqual([{ status: ['pending'] }])
     wrapper.unmount()
   })
 

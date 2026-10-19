@@ -401,9 +401,15 @@ export function useTable<T extends object = Record<string, unknown>>(
    * v3.5 PR2：清空筛选状态 —— search.reset 路径调用。
    * 仅清空 state 不触发请求；编排层 reset 流程已含 setPage(1) + refresh，
    * 复用同一次请求避免 resetFilter 与 page watcher 双发。
+   *
+   * A3（docs/audit/2026-10-15-engine-audit-summary）：el-table 列头筛选 UI 非受控 ——
+   * 只清 filterState 时旧条件残留在列头，reset 后下次筛选操作静默回参（筛选复活）。
+   * 同步调官方 clearFilter() 清 UI；结构化可选调用 —— vxe 引擎 tableRef 为 null 自然短路
+   * （与 useTable.clearSelection 清 el-table UI 勾选态同一模式）
    */
   function resetFilter(): void {
     filterState.value = {}
+    ;(tableRef.value as { clearFilter?: () => void } | null)?.clearFilter?.()
   }
 
   /** v3.5 PR2：筛选状态快照 —— ProTable.vue 经此向外 emit / expose */
