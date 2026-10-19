@@ -134,13 +134,30 @@ export function getComponentDefaultProps(
   return componentProps?.[node.component] ?? {}
 }
 
+/**
+ * Autocomplete fetcher 缓存：key = asyncOptions 配置引用。
+ * B2 实证修正（2026-10-19 浏览器实测）：渲染层每次重渲染都调 buildAsyncProps——原实现
+ * 每次新建 fetcher 实例（seq 闭包归零），每次输入都用到 seq=1 的"新"实例，慢响应
+ * 全部落地，竞态令牌形同虚设。按配置引用复用后 seq 在同节点生命周期内累计；
+ * asyncOptions 整体替换（新引用）自动获得新 fetcher，旧实例随 GC 回收。
+ */
+const autocompleteFetcherCache = new WeakMap<
+  NonNullable<SchemaNode['asyncOptions']>,
+  ReturnType<typeof buildAutocompleteFetcher>
+>()
+
 /** 构造 Autocomplete 异步选项所需的 props */
 export function buildAsyncProps(node: SchemaNode): Record<string, unknown> {
   if (!node.asyncOptions) return {}
   const name = typeof node.component === 'string' ? node.component : null
   if (name !== 'Autocomplete' && name !== 'ElAutocomplete') return {}
+  let fetcher = autocompleteFetcherCache.get(node.asyncOptions)
+  if (!fetcher) {
+    fetcher = buildAutocompleteFetcher(node.asyncOptions)
+    autocompleteFetcherCache.set(node.asyncOptions, fetcher)
+  }
   return {
-    fetchSuggestions: buildAutocompleteFetcher(node.asyncOptions),
+    fetchSuggestions: fetcher,
   }
 }
 

@@ -174,7 +174,13 @@ function registerAsyncOptions(
         () => [state.data.value, state.loading.value],
         () => {
           const targetProp = resolveAsyncOptionsProp(n)
-          n.props = { ...(n.props ?? {}), loading: state.loading.value }
+          // Autocomplete/ElAutocomplete 无 loading prop（EP 未声明）——统一注入会触发
+          // XForm prop 校验「未声明键 loading」警告（docs/audit 2026-10-19 浏览器实测暴露）。
+          // loading 态由 Autocomplete 输入框自身交互体现，跳过注入；其余组件（Select 等）保留。
+          const compName = typeof n.component === 'string' ? n.component : null
+          if (compName !== 'Autocomplete' && compName !== 'ElAutocomplete') {
+            n.props = { ...(n.props ?? {}), loading: state.loading.value }
+          }
           if (targetProp) {
             n.props = { ...n.props, [targetProp]: state.data.value }
           }

@@ -48,6 +48,7 @@ mock/**/_*.bundled_*.cjs
 .claude/tmp/
 .claude/.agent-reports/
 .claude/verify/
+.claude/.snapshots/
 .claude/scheduled_tasks.lock
 .omc/state/
 .omc/sessions/

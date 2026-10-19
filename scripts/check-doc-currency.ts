@@ -21,7 +21,7 @@
 //   8. build/ 顶层模块数 —— docs/04-构建与测试工具.md §1.1 表格
 //   9. VENDOR_CHUNKS 具名组数 —— docs/04 §1.1 表格（vendor-vue / vendor-ui / vendor-charts）
 //  10. ProTable composables 数 —— docs/29-ProTable使用指南.md §概述「17 composables」
-//  11. ProTable 顶级 demo 数 —— docs/29-ProTable使用指南.md §概述「23 个演示」（22 能力 demo + ProTableOverview 主入口）
+//  11. ProTable 顶级 demo 数 —— docs/29-ProTable使用指南.md §概述「25 个演示」（24 能力 demo + ProTableOverview 主入口）
 //  12. XFormProps 字段数 —— docs/24 §2 + form-schema README「18 个」（三视角审查 Wave1-5 同步后的硬数据；Wave3-4 i18n +1 t；Wave3-6 交互增强 +2 size/showDirtyMark）
 //  13. XForm demo 数 —— docs/24 §19 示例索引「56 个」+ README（src/modules/demo/examples/XForm/ 下 .vue 数）
 //
@@ -219,8 +219,8 @@ function countProTableComposables(): number {
 /**
  * 数 ProTable 顶级 demo 文件（ProTable*.vue，排除 configs/ 子目录）
  *
- * 当前 23 个：22 个能力 demo + ProTableOverview 主入口（2026-09-18 新增 HeaderActions / ImportExport；
- * 2026-10-15 阈值与文档同步校准）
+ * 当前 25 个：24 个能力 demo + ProTableOverview 主入口（2026-09-18 新增 HeaderActions / ImportExport；
+ * 2026-10-19 新增 VxeRowSelect / SearchFilter——审计 demo 缺口补齐）
  */
 function countProTableDemos(): number {
   const files = readdirSync(join(ROOT, 'src/modules/demo/examples/ProTable'))
@@ -305,7 +305,7 @@ const checks: Check[] = [
   {
     name: 'ProTable 顶级 demo 数 (docs/29 §概述)',
     actual: countProTableDemos,
-    expected: 23,
+    expected: 25,
     tolerance: 0,
   },
   {
@@ -315,9 +315,9 @@ const checks: Check[] = [
     tolerance: 0,
   },
   {
-    name: 'XForm demo 数 (docs/24 §19「61 个」+ README)',
+    name: 'XForm demo 数 (docs/24 §19「63 个」+ README)',
     actual: countXFormDemos,
-    expected: 61,
+    expected: 63,
     tolerance: 0,
   },
 ]

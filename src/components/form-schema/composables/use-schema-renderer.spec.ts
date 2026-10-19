@@ -136,6 +136,44 @@ describe('useSchemaRenderer(opts)', () => {
     scope.stop()
   })
 
+  // Autocomplete（ElAutocomplete）无 loading prop —— 统一注入会触发 XForm prop 校验
+  // 「未声明键 loading」警告（docs/audit 2026-10-19 demo 缺口补齐浏览器实测暴露，B2 竞态修复的姊妹缺口）。
+  // loading 态由 Autocomplete 输入框自身交互体现，无需注入。
+  it('asyncOptions 对 Autocomplete 不注入 loading prop（EP 未声明），Select 保持注入', async () => {
+    const schema = ref<SchemaNode>({
+      column: 1,
+      children: [
+        {
+          component: 'Autocomplete',
+          name: 'owner',
+          asyncOptions: { source: async () => [{ name: '张三' }] },
+        },
+        {
+          component: 'Select',
+          name: 'city',
+          asyncOptions: { source: async () => [{ id: 1, name: 'A' }] },
+        },
+      ],
+    })
+    const formData = ref({})
+    const scope = effectScope()
+    let reactiveSchema: ReturnType<typeof useSchemaRenderer>['reactiveSchema'] | undefined
+    scope.run(() => {
+      reactiveSchema = useSchemaRenderer({
+        schema,
+        components: ref(undefined),
+        formData,
+      }).reactiveSchema
+    })
+    await new Promise((r) => setTimeout(r, 0))
+    const rs = reactiveSchema!.value as SchemaNode
+    const autoNode = (rs.children as SchemaNode[])[0]!
+    const selectNode = (rs.children as SchemaNode[])[1]!
+    expect(autoNode.props?.loading).toBeUndefined()
+    expect(typeof selectNode.props?.loading).toBe('boolean')
+    scope.stop()
+  })
+
   it('clones schema as reactive when asyncOptions present (does not preserve identity)', () => {
     const original: SchemaNode = {
       component: 'Select',

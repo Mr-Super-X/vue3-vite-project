@@ -4,6 +4,35 @@
 
 ## 未发布
 
+### ✨ Feat | 审计 demo 缺口补齐：4 个浏览器验证入口（2026-10-19）
+
+> 来源：audit `docs/audit/2026-10-15-engine-audit-summary.md` 批 A/B/D 修复场景长期无 demo（"数组+cross / Autocomplete+asyncOptions / vxe+selection / search+filter 组合"四缺口），修复只能由 spec 覆盖、无法浏览器复验。本批补齐验证入口，审计观察项至此全量闭环。
+
+- **XFormArrayCrossField**（数组+cross）：数组行内 crossValidator——行内相对 `dependsOn`（`['price','discount']` 按行解析）+ 反向触发（改原价/折扣 → 折后价自动重算红/消红）+ 批量路径（保存时全行校验）——批 A1 修复场景验证入口（修复前该组合 demo 为 0，缺陷即因无 demo 无复验而长期潜伏）
+- **XFormAsyncAutocomplete**（Autocomplete+asyncOptions）：`source(query)` 远程搜索每键触发 + **竞态令牌可视化**——请求日志面板精确配对「发起 #N → 落地 #N」，落地数 < 发起数即旧响应被丢弃的证据（延迟随词长递减制造乱序）——批 B2 修复场景验证入口
+- **ProTableVxeRowSelect**（vxe+selection）：`table-engine="vxe-table"` 下 radio 单选 / selection 多选 / reserveSelection 跨页累计 + `clearSelection()` 双清按钮（UI 勾选 + 本地镜像）——批 B1 修复场景验证入口
+- **ProTableSearchFilter**（search+filter 组合）：SearchForm 关键字搜索 + 列头筛选 AND 合并入同一请求 + `filter-change` 全表快照面板 + reset 双清（搜索/筛选/列头 UI 一并清空、快照归 `{}`）——批 D「reset 补发 filter-change」修复场景验证入口
+- **配套**：mock `filter-orders` 扩展 `orderNo`/`customer` 关键字搜索参数（被组合 demo 复用）；docs/24 §19 索引 61→63、docs/29 §16 索引 23→25；check-doc-currency 硬数据同步（13 项全过）
+
+### 🐞 Fix | demo 验证轮暴露的引擎适配缺口 ×2（2026-10-19，四页浏览器实测 CDP 真实输入）
+
+> 4 个新 demo 的浏览器实测（真实输入管线）连环暴露 2 项引擎缺陷，全部 TDD 修复（RED → GREEN）+ 受影响目录回归。详见 `docs/audit/2026-10-15-engine-audit-summary.md`「demo 浏览器实测暴露的清单外缺陷」节。
+
+- **vxe reserve 跨页镜像回同步 API 误用（HIGH，批 B1 #3 的实证修正）**：浏览器实测发现 `getCheckboxRecords()` 在 reserve 开启时**仅返回当前页勾选**（`[项目-6]`），跨页保留行在 `getCheckboxReserveRecords()`（`[项目-1, 项目-2]`）——批 B 修复只用前者回同步，翻页后跨页行被从镜像冲掉（「第 1 页勾 2 行 + 第 2 页勾 1 行」只读出 1 行）。根因链含 spec mock 与真实 vxe v4 行为不符（与批 A「mock 须镜像真实模块形态」同型教训）。修复：rows watch reserve 分支改两 API 合并 + keyField 去重回同步全量镜像；spec mock 补 `getCheckboxReserveRecords` 并修正语义。修复后浏览器实测：跨页累计 3 行 ✓ 翻回勾选保留 ✓ clearSelection 双清 ✓
+- **Autocomplete asyncOptions loading 注入未适配（批 B2 姊妹缺口）**：`use-schema-renderer` 对全部 asyncOptions 节点无条件注入 `loading` prop，EP Autocomplete 未声明 → dev 模式 `[XForm][PROP_VALIDATION] 未声明键 loading` 警告 ×22。修复：注入前按组件名条件排除（Autocomplete/ElAutocomplete），loading 态由其输入框自身交互体现。spec +1 防线（Autocomplete 不注入 / Select 保持注入）
+- **vxe 引擎 radio 列跨页保持未接线（用户手动验证暴露）**：el 引擎 radio 选中由统一选中区受控驱动、翻页后天然保持；vxe 内置 radio 列选中态由 vxe 内部管理，须显式 `radio-config.reserve` 才恢复（vxe v4 运行时代码 `radioOpts.reserve` 分支实证）——原未接线致翻页丢选中。修复：有 radio 列即配 `radioConfig={reserve:true}` 对齐 el 语义 + spec ×2（含 mock 组件 props 声明修正——未声明的绑定落 attrs 断言不到）
+
+### 🐞 Fix | 返工轮浏览器实测再暴露的引擎缺陷 ×2（2026-10-19 第二轮，demo 场景即真实业务形态的实证价值）
+
+> 用户手动验证 4 个新 demo 反馈不通过后返工，返工场景（对象容器 itemSchema / 同字段多 cross 规则）连环暴露 2 个潜伏更深的引擎缺陷——均为 A1 修复的漏网，此前所有 demo 的形态（itemSchema 数组平铺 / 单 cross 规则）恰好绕开。
+
+- **A1 批量路径行前缀不递归 children（HIGH）**：`traverseCross` 的原行前缀重写只在 `traverseArrayItem` 处理直接子节点；itemSchema 为 **column/row 布局对象**（容器无 name，字段在 children 里）时 children 的 name 没加 `rows[i]` 前缀 → 批量 cross 的 `dependsOn` 取顶层 `undefined` 被空值跳过，**该行全部 cross 规则静默通过**（保存照样绿）。修复：`traverseCross` 加 `namePrefix` 参数统一在递归中透传（children/formItem.slots 全覆盖，嵌套数组语义保持）+ spec ×1（对象容器形态多规则批量必报）
+- **反向触发 runner 缓存键冲突致同 target 多规则只执行第一条（HIGH）**：`useCrossFieldTrigger.getRunner` 缓存 key 原为 `${target}|${delay}` 字符串——同 target 多条 cross 规则（不同 deps，如「数量≤库存」+「数量≤上限」）key 相同，第二条命中第一条的缓存 runner（闭包绑第一条的 rule 引用）→ **第二条规则永不执行**（改上限不标红）。修复：缓存 key 改 rule 引用（Map&lt;ReverseRule, Runner&gt;），同 target 每条规则独立 runner，同 target 不同 delay 的旧 runner 清理逻辑保持 + spec ×1（两规则分别 trigger 各自 deps 都执行）
+- **Autocomplete 竞态令牌被渲染层重建 fetcher 架空（HIGH，批 B2 的实证修正）**：`buildAsyncProps` 在**每次重渲染**时都 `buildAutocompleteFetcher` 新建实例——seq 闭包随实例归零，每次输入都用到 seq=1 的"新"fetcher，慢响应全部落地，**竞态令牌形同虚设**（浏览器实测：发起 5 / 落地 5 零丢弃）。批 B2 的 spec 只测了单实例多次调用，未覆盖"实例是否被复用"。修复：`WeakMap<asyncOptions 引用, fetcher>` 按配置复用——同节点生命周期内 seq 累计，配置整体替换自动获得新 fetcher。修复后浏览器实测：输「张三丰」（逐字 3 次搜索）→ **发起 3 / 落地 1，2 个旧响应被丢弃** ✓ spec ×2（重渲染引用相等 / 复用实例竞态丢弃）
+
+**已知留后续 sprint**：cross 规则透传 el-form 致 number 目标字段保存时被 async-validator 默认 `type:'string'` 拦截（既有 demo 未暴露因 cross 目标均为 string；demo 层以显式 `type:'number'` 声明规避，引擎根治 = compileRules 过滤 cross 规则，影响面涉全部现存 demo 需独立回归批次）。
+
+
 ### 🐞 Fix | 引擎加固批 A：XForm / ProTable 数据正确性与状态一致性（2026-10-15，audit `docs/audit/2026-10-15-engine-audit-summary.md`）
 
 > 来源：/autoplan 引擎健康度审计 33 项发现中的批 A（P0）。每项 = 单测红绿（净增 21 例）+ 受影响 demo 浏览器实测（fresh reload）双证据。

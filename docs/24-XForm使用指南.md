@@ -854,9 +854,9 @@ col: {
 
 ---
 
-## 19. 示例索引（61 个 demo，含 1 个主入口）
+## 19. 示例索引（63 个 demo，含 1 个主入口）
 
-在线演示站点：`pnpm dev` → `/demo`（左侧「XForm 表单引擎」分组），路由 = `/demo/xform-<kebab-case>`。所有 demo 源码位于 `src/modules/demo/examples/XForm/`（61 个 `.vue` 文件 + 1 个 configs/ 工具 + 1 个 utils/ 工具）。
+在线演示站点：`pnpm dev` → `/demo`（左侧「XForm 表单引擎」分组），路由 = `/demo/xform-<kebab-case>`。所有 demo 源码位于 `src/modules/demo/examples/XForm/`（63 个 `.vue` 文件 + 1 个 configs/ 工具 + 1 个 utils/ 工具）。
 
 | 路由                                    | 内容                                                                                   |
 | --------------------------------------- | -------------------------------------------------------------------------------------- |
@@ -893,10 +893,12 @@ col: {
 | `/demo/xform-cross-field-reverse`       | 反向跨字段（精确触发）                                                                 |
 | `/demo/xform-async-options`             | 异步选项                                                                               |
 | `/demo/xform-async-options-error`       | 异步选项加载失败降级                                                                   |
+| `/demo/xform-async-autocomplete`        | Autocomplete 远程搜索（asyncOptions 竞态令牌，快速连打不闪回）                         |
 | `/demo/xform-async-validator`           | 异步校验（loading 态）                                                                 |
 | `/demo/xform-array`                     | 数组节点（增删/上下移/min-max 限制）                                                   |
 | `/demo/xform-array-api`                 | 数组节点 + 远程 API 同步                                                               |
 | `/demo/xform-array-draggable`           | 数组行拖拽排序                                                                         |
+| `/demo/xform-array-cross-field`         | 数组行内跨字段校验（行内相对 dependsOn + 反向触发）                                    |
 | `/demo/xform-before-change`             | beforeChange 三层校验                                                                  |
 | `/demo/xform-persist`                   | 草稿持久化（自动保存 + 刷新恢复）                                                      |
 | `/demo/xform-persist-schema-version`    | 草稿持久化 + schema 版本不兼容检测                                                     |
@@ -922,7 +924,7 @@ col: {
 | `/demo/xform-zod`                       | Zod schema 校验                                                                        |
 | `/demo/xform-upload`                    | 文件上传（单文件/多文件/拖拽/图片墙/校验/回显）                                        |
 
-> **主 demo 入口**：`/demo/x-form`（对应 `XFormOverview.vue`）—— 查阅全部 prop、事件、实例方法的入口。其余 60 个 demo 按「基础 → 进阶 → 反应式联动 → 校验 → 异步 → 数组 → 样式与扩展」分组覆盖各能力边界。
+> **主 demo 入口**：`/demo/x-form`（对应 `XFormOverview.vue`）—— 查阅全部 prop、事件、实例方法的入口。其余 62 个 demo 按「基础 → 进阶 → 反应式联动 → 校验 → 异步 → 数组 → 样式与扩展」分组覆盖各能力边界。
 >
 > **配套工具**：`src/modules/demo/examples/XForm/configs/`（共享 schema 配置）+ `src/modules/demo/examples/XForm/utils/`（演示用工具函数）。
 

@@ -4,6 +4,7 @@
  * 演示能力：
  * - filterParamsAdapter 把全表筛选快照序列化为后端约定的 { statusList, deptList, dateRange, amountRange } 形态
  * - requestApi 接收筛选参数 + 状态枚举筛选 + 部门多选 + 日期范围 + 金额范围
+ * - orderNo / customer 关键字搜索（ProTableSearchFilter search+filter 组合 demo 复用）
  *
  * 数据范围：12 行订单，覆盖 3 种状态 / 4 个部门 / 多种金额 + 日期。
  */
@@ -132,10 +133,14 @@ const mockOrders: Order[] = [
   },
 ]
 
-/** 后端约定的筛选参数形态（filterParamsAdapter 序列化产物） */
+/** 后端约定的筛选参数形态（filterParamsAdapter 序列化产物 + SearchForm 关键字搜索参数） */
 export interface FilterOrdersParams {
   pageNum?: number
   pageSize?: number
+  /** SearchForm 关键字：订单号模糊匹配 */
+  orderNo?: string
+  /** SearchForm 关键字：客户模糊匹配 */
+  customer?: string
   statusList?: string[]
   deptList?: string[]
   /** ISO 日期范围 [start, end] */
@@ -151,6 +156,14 @@ export const filterOrdersRequestApi: ProTableRequestApi<Order> = async (rawParam
   const pageSize = params.pageSize ?? 10
 
   let rows = [...mockOrders]
+
+  // 关键字搜索（SearchForm）：订单号 / 客户模糊匹配
+  if (params.orderNo) {
+    rows = rows.filter((o) => o.orderNo.includes(params.orderNo!))
+  }
+  if (params.customer) {
+    rows = rows.filter((o) => o.customer.includes(params.customer!))
+  }
 
   // 状态筛选（多选）
   if (params.statusList && params.statusList.length > 0) {

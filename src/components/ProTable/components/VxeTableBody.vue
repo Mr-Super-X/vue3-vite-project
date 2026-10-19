@@ -414,6 +414,16 @@ const checkboxConfig = computed(() =>
   hasReserveSelection(props.columns as ProColumn[]) ? { reserve: true } : undefined
 )
 
+/**
+ * v3.1 对齐 el 引擎的 radio 跨页保持：el 引擎单选由 selectedRowKey（统一选中区）受控驱动，
+ * 翻页后回来天然保持；vxe 内置 radio 列选中态由 vxe 内部管理，须显式 radio-config.reserve
+ * 才会在翻页后按 keyField 恢复（vxe v4 运行时代码 radioOpts.reserve 分支实证 table.js:2843/3047；
+ * 2026-10-19 demo 浏览器实测暴露未接线时翻页丢选中）。有 radio 列即开启——对齐 el 无条件保持语义
+ */
+const radioConfig = computed(() =>
+  (props.columns as ProColumn[]).some((c) => c.type === 'radio') ? { reserve: true } : undefined
+)
+
 /** 双击单元格 → 行编辑进入（纯事件转发：编排层 useProTableEvents 调 rowEdit._start） */
 function handleCellDblclick(payload: { row: Record<string, unknown> }): void {
   emit('cell-dblclick', rowKeyOf(payload.row), payload.row)
@@ -431,10 +441,30 @@ watch(
     if (hasReserveSelection(props.columns as ProColumn[])) {
       // B1（docs/audit/2026-10-15 #3）：reserve 模式翻页/数据变化后，vxe 内部按 keyField
       // 恢复跨页勾选是内部行为、不逐行派发事件 —— 本地镜像只剩当前页操作过的行，
-      // ToolbarCtx「含其他页选中行」承诺失效。nextTick 后从实例 getCheckboxRecords
-      // 回同步全量选区；key 集合无变化不 emit，防每次刷新噪声
+      // ToolbarCtx「含其他页选中行」承诺失效。nextTick 后从实例回同步全量选区。
+      // 2026-10-19 浏览器实测修正：真实 vxe v4 运行时 getCheckboxRecords 仅返回当前页勾选，
+      // 跨页保留行须从 getCheckboxReserveRecords 取 —— 两集合并按 keyField 去重成全量镜像
+      // （批 B #3 只用前者，翻页后跨页行被从镜像冲掉；spec mock 曾错误假设前者为全量）。
+      // key 集合无变化不 emit，防每次刷新噪声
       nextTick(() => {
-        const records = (vxeTableInst.value?.getCheckboxRecords?.() ?? []) as T[]
+        const inst = vxeTableInst.value as
+          | {
+              getCheckboxRecords?: () => T[]
+              getCheckboxReserveRecords?: () => T[]
+            }
+          | null
+          | undefined
+        const keyField = (props.rowKey ?? 'id') as keyof T
+        const seen = new Set<unknown>()
+        const records = [
+          ...(inst?.getCheckboxReserveRecords?.() ?? []),
+          ...(inst?.getCheckboxRecords?.() ?? []),
+        ].filter((row) => {
+          const key = row?.[keyField]
+          if (seen.has(key)) return false
+          seen.add(key)
+          return true
+        })
         if (sameSelection(records, selectedRows.value as T[])) return
         selectedRows.value = records
         emit('selection-change', records as unknown as Record<string, unknown>[])
@@ -465,6 +495,7 @@ watch(
       :row-config="{ keyField: rowKey ?? 'id' }"
       :sort-config="hasCustomSort(columns as ProColumn[]) ? { remote: true } : undefined"
       :checkbox-config="checkboxConfig"
+      :radio-config="radioConfig"
       v-bind="{
         ...(cellSpan
           ? { spanMethod: cellSpan.spanMethod, cellClassName: cellSpan.cellClassName }

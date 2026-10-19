@@ -112,6 +112,38 @@
 
 **审计清单 19+14+8 项至此 100% 关闭（HIGH 全清 / MEDIUM 全清 / LOW 全清）。** 清单外观察项：~~reset 事件~~（已闭环——reset 补发 `filter-change({})`，§3.5 披露）、~~路由前缀漂移~~（已闭环——docs/24 全文 61 处修订为 `/demo/xform-`）、demo 缺口（vxe+selection / Autocomplete+asyncOptions / 数组+cross / search+filter 组合）维持留后续 sprint。
 
+## demo 缺口补齐（2026-10-19 后续 sprint 闭环）
+
+| 缺口                          | 验证入口                                                        | 覆盖修复场景                                       |
+| ----------------------------- | --------------------------------------------------------------- | -------------------------------------------------- |
+| ~~数组+cross~~                | `XFormArrayCrossField.vue`（/demo/x-form-array-cross-field）    | 批 A1 行内相对 dependsOn + 反向触发 + 批量路径     |
+| ~~Autocomplete+asyncOptions~~ | `XFormAsyncAutocomplete.vue`（/demo/x-form-async-autocomplete） | 批 B2 竞态令牌（发起/落地日志可视化）              |
+| ~~vxe+selection~~             | `ProTableVxeRowSelect.vue`（/demo/pro-table-vxe-row-select）    | 批 B1 clearSelection 双清 + reserve 跨页镜像回同步 |
+| ~~search+filter 组合~~        | `ProTableSearchFilter.vue`（/demo/pro-table-search-filter）     | 批 D reset 补发 filter-change({}) 双清             |
+
+**至此审计发现的所有缺口 100% 闭环**（含清单内 41 项 + 清单外 5 项观察）。配套：mock filter-orders 扩展 orderNo/customer 搜索参数；docs/24 §19（61→63）/ docs/29 §16（23→25）索引与 check-doc-currency 硬数据同步。
+
+## demo 浏览器实测暴露的清单外缺陷（2026-10-19 验证轮，2 项）
+
+| 缺陷                                                                                 | 根因                                                                                                                                                                                                                                                                                                              | 处理                                                                                                                                                                                                                                                       |
+| ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ~~**vxe reserve 跨页镜像回同步 API 误用**（HIGH）~~                                  | 批 B1 #3 修复用 `getCheckboxRecords()` 回同步——浏览器实测该 API 仅返回**当前页**勾选（`[项目-6]`），跨页保留行在 `getCheckboxReserveRecords()`（`[项目-1, 项目-2]`）。翻页后旧行被从镜像冲掉，跨页累计读取只剩当前页。spec mock 曾错误假设前者为全量（与批 A「mock 须镜像真实形态」同型教训）                     | **已修复**：rows watch reserve 分支改两 API 合并 + keyField 去重；spec mock 补 `getCheckboxReserveRecords` 并修正语义（TDD：先 RED 后 GREEN）；浏览器实测「第 1 页勾 2 行 + 第 2 页勾 1 行 = 累计 3 行」实证                                               |
+| ~~**cross 规则透传 el-form 致 number 目标字段保存被拦截**~~（MEDIUM，留后续 sprint） | XForm `compileRules` 把含 `crossValidator` 的规则原样透传 el-form-item → async-validator `getValidationMethod` 对「非纯 required」规则回退 `type: 'string'`（源码 `rule.type \|\| 'string'`）→ cross 目标字段为 number 时保存全量校验报「is not a string」。既有 demo 未暴露因 cross 目标均为 string（日期/密码） | **demo 层已绕过**：cross 规则显式 `type: 'number'`（XFormAsyncAutocomplete 同款语义声明）；**引擎根治**（compileRules 过滤 cross 规则不传给 el-form，三路径由 XForm 自有机制接管）留后续 sprint——影响面涉全部现存 demo 的 el-form 校验行为，需独立回归批次 |
+
+## 返工轮再暴露的引擎缺陷（2026-10-19 第二轮，demo 场景 = 真实业务形态的实证）
+
+> 用户手动验证反馈后返工，返工场景恰好命中此前所有 demo 都绕开的两个形态：**itemSchema 对象容器**（column/row 布局）与**同字段多条 cross 规则**——A1 修复的两处漏网。
+
+| 缺陷                                                                           | 根因                                                                                                                                                                                                                                                                                            | 处理                                                                                                                                                                                                                                           |
+| ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ~~**A1 批量路径行前缀不递归 children**（HIGH）~~                               | `traverseCross` 的行前缀重写只在 `traverseArrayItem` 处理直接子节点；itemSchema 为对象容器（无 name、字段在 children）时 children 的 name 没加 `rows[i]` 前缀 → 批量 cross 的 `dependsOn` 取顶层 `undefined` 空值跳过，**该行全部 cross 规则静默通过**（spec 复现：`isValid: true` 应为 false） | **已修复**：`traverseCross` 加 `namePrefix` 参数在 children/formItem.slots 递归中透传（嵌套数组语义保持）+ spec ×1（use-validate.spec 对象容器形态防线）                                                                                       |
+| ~~**反向触发 runner 缓存键冲突，同 target 多规则只执行第一条**（HIGH）~~       | `getRunner` 缓存 key 为 `${target}\|${delay}` 字符串——同 target 多条 cross 规则（「数量≤库存」+「数量≤上限」）key 相同，第二条命中第一条的缓存 runner（闭包绑第一条 rule 引用）→ 第二条规则永不执行（实测：改上限不标红，保存批量路径正常——两路径行为分裂是定位关键线索）                       | **已修复**：缓存 key 改 rule 引用 `Map<ReverseRule, Runner>`，同 target 每条规则独立 runner + 同 target 不同 delay 清理逻辑保持 + spec ×1（use-cross-field-trigger.spec 两规则分别 trigger 各自 deps）                                         |
+| ~~**Autocomplete 竞态令牌被渲染层重建 fetcher 架空**（HIGH，批 B2 实证修正）~~ | `buildAsyncProps` 每次重渲染都新建 `buildAutocompleteFetcher` 实例——seq 闭包归零，每次输入都用 seq=1 的"新"实例 → 慢响应全部落地，竞态令牌形同虚设（浏览器实测：发起 5 / 落地 5 零丢弃）。批 B2 spec 只测单实例多次调用，未覆盖实例复用                                                         | **已修复**：`WeakMap<asyncOptions 引用, fetcher>` 按配置复用（同节点 seq 累计，配置替换自动失效）+ spec ×2（build-slots.spec：重渲染引用相等 / 复用实例竞态丢弃）。修复后实测：输「张三丰」逐字 3 次搜索 → 发起 3 / 落地 1，2 个旧响应被丢弃 ✓ |
+
+**验证方法论教训（第二轮）**：①「保存批量路径正常 + 实时反向路径失效」的行为分裂 = 两条路径独立排查的分界证据，比全链路盲查快得多；②demo 场景选型即回归形态选型——数组平铺 itemSchema + 单 cross 规则的 demo 形态恰好同时绕开这两个 bug，返工引入的对象容器 + 多规则形态才让缺陷现形。
+
+另：**Autocomplete asyncOptions loading 注入未适配**（批 B2 姊妹缺口）与 **vxe radio 跨页保持未接线**（radio-config.reserve，用户手动验证暴露）同轮修复，见 CHANGELOG。
+
 ## 使用说明
 
 - 每批开工时按本清单建任务，修复后把对应行标记 ✅ 并补回归 spec（C3 是各批的验收成分）

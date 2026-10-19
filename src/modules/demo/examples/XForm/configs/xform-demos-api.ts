@@ -1417,6 +1417,66 @@ export const renderRecoveryItems: XFormApiItem[] = [
   },
 ]
 
+// XFormAsyncAutocomplete —— Autocomplete asyncOptions 差异点
+export const autocompleteAsyncItems: XFormApiItem[] = [
+  {
+    name: '注入协议',
+    type: 'fetchSuggestions',
+    description:
+      'Autocomplete 无 options prop：asyncOptions 经 ElAutocomplete 原生 fetchSuggestions 协议注入（resolveAsyncOptionsProp 对 Autocomplete 返回 null）',
+  },
+  {
+    name: 'source(query)',
+    type: '(query: string) => Promise<T[]>',
+    description: '每键入一字符触发一次，query 为当前输入关键词；Select 形态 source() 无参',
+  },
+  {
+    name: 'B2 竞态令牌',
+    type: '—',
+    description:
+      'fetcher 内序号令牌：旧响应后到时被丢弃（落地前校验），快速连打时下拉不闪回旧结果；过期 reject 静默',
+  },
+  {
+    name: 'transform',
+    type: '(raw: T[]) => { value: unknown }[]',
+    description:
+      'Autocomplete suggestion 必须有 value 字段；transform 在令牌校验后执行——只处理未过期响应',
+  },
+  {
+    name: 'onError',
+    type: '(err) => void',
+    description: '过期响应的错误不触发 onError（静默）；最新响应的错误正常回调',
+  },
+]
+
+// XFormArrayCrossField —— 行内 cross 语义（A1 修复点）
+export const arrayCrossItems: XFormApiItem[] = [
+  {
+    name: 'dependsOn（行内相对）',
+    type: 'string | string[]',
+    description:
+      "写在 array.itemSchema 的规则里时按行解析：'price' 取 rows[i].price（行内相对优先）；行内无此字段时回退顶层 model.price（绝对路径）",
+  },
+  {
+    name: 'crossValidator 形参',
+    type: '(value, ...deps) => true | string',
+    description:
+      'deps 顺序与 dependsOn 数组一致——本 demo (value, price, discount)；返回 string 作为行内红字文案',
+  },
+  {
+    name: '反向触发',
+    type: '—',
+    description:
+      '改行内 price/discount → 同 row 的 finalPrice 自动重算（依赖字段变化触发目标字段校验，无需失焦）',
+  },
+  {
+    name: '批量路径',
+    type: 'validate() 触发',
+    description:
+      '点保存时全部行的 cross 规则一次性校验；相对路径未加行前缀时取到顶层 undefined 会误报（A1 修复前缺陷）',
+  },
+]
+
 // XFormErrorToastSlot —— toastContainer slot 替换速查
 export const errorToastSlotItems: XFormApiItem[] = [
   {

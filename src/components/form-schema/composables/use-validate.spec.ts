@@ -289,6 +289,53 @@ describe('runCrossFieldValidation(schema, model)', () => {
     expect(pass.isValid).toBe(true)
   })
 
+  // A1 漏网（2026-10-19 浏览器实测暴露）：itemSchema 为对象容器形态（column/row 布局，无 name）
+  // 时，容器 children 的字段名没加 rows[i] 行前缀 → 批量 cross 的 dependsOn 取顶层 undefined
+  // 被空值跳过（rules 静默全过）。行前缀须在 children 递归中透传（traverseCross namePrefix）。
+  it('A1-批量: itemSchema 对象容器形态（column/row 布局）时 children 行前缀须透传', async () => {
+    const schema = {
+      kind: 'array' as const,
+      name: 'rows',
+      array: {
+        itemSchema: {
+          column: 4,
+          row: { gutter: 12 },
+          children: [
+            { name: 'stock' },
+            { name: 'maxQty' },
+            {
+              name: 'qty',
+              rules: [
+                {
+                  dependsOn: ['stock'],
+                  crossValidator: (v: unknown, s: unknown) =>
+                    !s || Number(v) <= Number(s) || '超库存',
+                },
+                {
+                  dependsOn: ['maxQty'],
+                  crossValidator: (v: unknown, m: unknown) =>
+                    !m || Number(v) <= Number(m) || '超上限',
+                },
+              ],
+            },
+          ],
+        } as never,
+      },
+    }
+    // qty=10 ≤ stock=20 ✓ 但 > maxQty=8 ✗ —— 第 2 条必须报（修复前取顶层 undefined 静默通过）
+    const r = await runCrossFieldValidation(schema, {
+      rows: [{ stock: 20, maxQty: 8, qty: 10 }],
+    })
+    expect(r.isValid).toBe(false)
+    expect(r.errors.some((e) => e.message === '超上限')).toBe(true)
+
+    // 全部满足时通过（行前缀解析到行内值而非顶层）
+    const pass = await runCrossFieldValidation(schema, {
+      rows: [{ stock: 20, maxQty: 8, qty: 6 }],
+    })
+    expect(pass.isValid).toBe(true)
+  })
+
   it('expands array nodes: applies itemSchema rules per array element', async () => {
     const schema = {
       component: 'Card',

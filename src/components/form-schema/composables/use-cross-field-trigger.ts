@@ -110,9 +110,11 @@ export function useCrossFieldTrigger(opts: UseCrossFieldTriggerOptions): {
   // 序号令牌：异步 crossValidator 连续触发时，旧 Promise 后返回不得覆盖新结果（H3）
   // seq 原语统一收敛到 cross-rule-runner；本路径 bump 时机 = 空值检查之后（行为保持，见 runner 文件头）
   const seqGuard = createCrossSeqGuard()
-  // runner 缓存：key = `${target}|${delayMs}`，同字段同 delay 共享一个 lodash.debounce 实例
-  // rules 整体替换时清空缓存（旧 runner 引用的 rule 引用已失效）
-  const runnerCache = new Map<string, (() => void) & { cancel?: () => void }>()
+  // runner 缓存：key = rule 引用（2026-10-19 修复：原为 `${target}|${delay}` 字符串——
+  // 同 target 多条 cross 规则（不同 deps）时 key 相同，第二条命中第一条的缓存 runner
+  // （闭包绑第一条的 rule 引用）→ 第二条规则永不执行。rule 引用作 key 后同 target
+  // 每条规则独立 runner；rules 数组整体替换时由 crossRules watch 统一取消 + 清空）
+  const runnerCache = new Map<ReverseRule, Runner>()
   // 同 tick 去重窗口：XForm.onValueChange 在 v-model 更新时同步调 trigger(field)，
   // 同一 tick 内 deep watch model 又会 diff 出同一字段 —— 两条路径都 run(field) 会让
   // delay=0（实时模式）的 crossValidator 每键执行 2 次（demo counter 虚高）。
@@ -152,18 +154,20 @@ export function useCrossFieldTrigger(opts: UseCrossFieldTriggerOptions): {
 
   /** 取 rule 的 debounce runner：0 = 同步执行；>0 = lodash.debounce
    *  关键：delay 用 getter 形式（r.rule.debounceMs ?? opts.defaultDebounceMs?.() ?? 0）
-   *  保证 schema 全局 debounceValidation 改变后立即生效，不需要重建 useCrossFieldTrigger 实例 */
+   *  保证 schema 全局 debounceValidation 改变后立即生效，不需要重建 useCrossFieldTrigger 实例
+   *  缓存 key = rule 引用：同 target 多条规则各自独立 runner（同 target 不同 delay 的旧 runner 仍清理） */
   function getRunner(r: ReverseRule): Runner {
     const defaultMs = opts.defaultDebounceMs?.() ?? 0
     const delay = r.rule.debounceMs ?? defaultMs ?? 0
-    const key = `${r.target}|${delay}`
-    const cached = runnerCache.get(key)
+    const cached = runnerCache.get(r)
     if (cached) return cached
     // 同 target 其他 delay 的旧 runner 取消 + 删除（模式切换延迟变化时缓存清理）
-    for (const [k, old] of runnerCache) {
-      if (k.startsWith(`${r.target}|`) && k !== key) {
+    for (const [oldRule, old] of runnerCache) {
+      if (oldRule === r) continue
+      const oldDelay = oldRule.rule.debounceMs ?? defaultMs ?? 0
+      if (oldRule.target === r.target && oldDelay !== delay) {
         old.cancel?.()
-        runnerCache.delete(k)
+        runnerCache.delete(oldRule)
       }
     }
     const fn: Runner =
@@ -173,7 +177,7 @@ export function useCrossFieldTrigger(opts: UseCrossFieldTriggerOptions): {
             return d as unknown as Runner
           })()
         : (Object.assign(() => executeRule(r), { cancel: () => {} }) as Runner)
-    runnerCache.set(key, fn)
+    runnerCache.set(r, fn)
     return fn
   }
 

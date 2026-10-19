@@ -1194,4 +1194,58 @@ describe('useCrossFieldTrigger / 数组行模板规则（A1-反向）', () => {
     expect(opts.clearValidate).toHaveBeenCalledWith(['items[0].subtotal'])
     expect(opts.setFieldError).not.toHaveBeenCalled()
   })
+
+  // 2026-10-19 浏览器实测暴露：同一 target 多条 cross 规则（不同 deps）时，runner 缓存
+  // key 为 `${target}|${delay}` —— 两规则 key 相同，第二条命中第一条的缓存 runner
+  // （闭包绑第一条的 rule 引用）→ 第二条规则永不被执行。修复后缓存 key 为 rule 引用。
+  it('同 target 多条规则：分别 trigger 各自 deps，两条规则都必须执行', async () => {
+    const seen: string[] = []
+    const rules: ReverseRule[] = [
+      {
+        target: 'qty',
+        deps: ['stock'],
+        rowScoped: true,
+        rule: {
+          crossValidator: (v: unknown, stock: unknown) => {
+            seen.push(`stock-rule:${String(stock)}`)
+            return Number(v) <= Number(stock) ? true : '超库存'
+          },
+          dependsOn: ['stock'],
+          trigger: 'change',
+        },
+      },
+      {
+        target: 'qty',
+        deps: ['maxQty'],
+        rowScoped: true,
+        rule: {
+          crossValidator: (v: unknown, maxQty: unknown) => {
+            seen.push(`maxQty-rule:${String(maxQty)}`)
+            return Number(v) <= Number(maxQty) ? true : '超上限'
+          },
+          dependsOn: ['maxQty'],
+          trigger: 'change',
+        },
+      },
+    ]
+    const model: Record<string, unknown> = {
+      rows: [{ stock: 20, maxQty: 8, qty: 10 }],
+    }
+    const opts = makeOpts(rules, () => model)
+    const { trigger } = useCrossFieldTrigger(opts)
+
+    // 改 stock：只应执行规则 1（10 ≤ 20 pass → clearValidate）
+    trigger('rows[0].stock')
+    await nextTick()
+    expect(seen).toEqual(['stock-rule:20'])
+    expect(opts.clearValidate).toHaveBeenCalledWith(['rows[0].qty'])
+
+    // 改 maxQty：只应执行规则 2（10 > 8 fail → setFieldError「超上限」）
+    // 修复前：命中规则 1 的缓存 runner，实际又跑了规则 1（10 ≤ 20 pass），此断言红
+    seen.length = 0
+    trigger('rows[0].maxQty')
+    await nextTick()
+    expect(seen).toEqual(['maxQty-rule:8'])
+    expect(opts.setFieldError).toHaveBeenCalledWith('rows[0].qty', '超上限')
+  })
 })

@@ -3,7 +3,7 @@
 > **文档版本**：v3.4.0 | **最后更新**：2026-09-17
 > **覆盖版本**：v2.0（含 v2.1 vxe-table 引擎 + 服务端排序）
 > **源码位置**：`src/components/ProTable/`
-> **demo 站**：`/demo/pro-table-overview`（23 个演示：22 个能力 demo + 主入口，完整清单见 §16 示例索引）
+> **demo 站**：`/demo/pro-table-overview`（25 个演示：24 个能力 demo + 主入口，完整清单见 §16 示例索引）
 
 ---
 
@@ -983,7 +983,7 @@ ProTable 内部已与 `<AsyncState>` 集成：
 | `adapters/`（5 个 spec）                           | vxe-column 列映射 / cell-format 格式化预设 / cell-render / row-drag-adapter / tree-adapter                                                                                                                                                                                                       |
 | `utils/`（2 个 spec）                              | exportCsv（BOM/RFC4180）/ importCsv（引号感知解析）                                                                                                                                                                                                                                              |
 | 根目录（2 个 spec）                                | ProTable.integration（端到端 mount 全链路）/ ProTable.engine（引擎分支与回退）                                                                                                                                                                                                                   |
-| `src/modules/demo/examples/ProTable/ProTable*.vue` | 23 个 demo 覆盖所有主路径 + 各能力边界（详见 §16 示例索引）                                                                                                                                                                                                                                      |
+| `src/modules/demo/examples/ProTable/ProTable*.vue` | 25 个 demo 覆盖所有主路径 + 各能力边界（详见 §16 示例索引）                                                                                                                                                                                                                                      |
 
 完整 demo 站：`/demo/pro-table-overview` 等 9 个路径（auto-import 自动注册）。
 
@@ -1029,16 +1029,16 @@ const rows = tableRef.value?.getSelectedRows()
 - 类型导出：`src/components/ProTable/types/index.ts`
 - composables：`src/components/ProTable/composables/`
 - 引擎适配：`src/components/ProTable/adapters/`
-- Demo 站：`src/modules/demo/examples/ProTable/`（23 个 demo，详见 §16）
+- Demo 站：`src/modules/demo/examples/ProTable/`（25 个 demo，详见 §16）
 - Element Plus Table 文档：https://element-plus.org/zh-CN/component/table.html
 - vxe-table 文档：https://vxetable.cn/
 - 设计 spec：`docs/superpowers/specs/2026-09-07-protable-design.md` + `2026-09-08-protable-v2.1-vxe-engine-design.md`
 
 ---
 
-## 16. 示例索引（23 个 demo，含主入口）
+## 16. 示例索引（25 个 demo，含主入口）
 
-在线演示站点：`pnpm dev` → `/demo`（左侧「ProTable 企业级表格」分组），路由 = `/demo/pro-table-<kebab-case>`。所有 demo 源码位于 `src/modules/demo/examples/ProTable/`（23 个 `.vue` 文件）。
+在线演示站点：`pnpm dev` → `/demo`（左侧「ProTable 企业级表格」分组），路由 = `/demo/pro-table-<kebab-case>`。所有 demo 源码位于 `src/modules/demo/examples/ProTable/`（25 个 `.vue` 文件）。
 
 | 路由                              | 内容                                                                      |
 | --------------------------------- | ------------------------------------------------------------------------- |
@@ -1052,9 +1052,11 @@ const rows = tableRef.value?.getSelectedRows()
 | `/demo/pro-table-formatter`       | v3.1 内置格式化器（dateTime/amount/percent/boolTag）+ 自定义函数          |
 | `/demo/pro-table-server-sort`     | 服务端排序（`sortable: 'custom'` + `sortParamsAdapter`）                  |
 | `/demo/pro-table-server-filter`   | v3.5 PR2 服务端筛选（列头筛选 + `filterParamsAdapter` + filter-change）   |
+| `/demo/pro-table-search-filter`   | SearchForm + 列头筛选组合（AND 合并 + reset 双清 + 快照面板）             |
 | `/demo/pro-table-async-state`     | 三态实战（loading / empty / error 手动切换 + 重试）                       |
 | `/demo/pro-table-row-edit`        | 行内编辑（`enableRowEdit` 完整生命周期）                                  |
 | `/demo/pro-table-row-select`      | 单选列 / 多选列 / 跨页保持选中 / `getSelectedRows`/`clearSelection`       |
+| `/demo/pro-table-vxe-row-select`  | vxe 引擎行选择（radio/selection/reserveSelection 跨页 + clearSelection）  |
 | `/demo/pro-table-row-drag`        | 行拖拽排序（`enableRowDrag` + `setRowOrder`）                             |
 | `/demo/pro-table-expand`          | 展开行（`type: 'expand'` + `expand` 插槽）                                |
 | `/demo/pro-table-tree`            | 树形数据（`enableTree` + 懒加载 + 展开折叠）                              |
@@ -1066,6 +1068,6 @@ const rows = tableRef.value?.getSelectedRows()
 | `/demo/pro-table-header-actions`  | 工具栏与批量操作（toolbar 配置式 API + SelectionBar 双通道，2026-09-18）  |
 | `/demo/pro-table-import-export`   | CSV 导入导出（零依赖 utils：BOM + RFC4180 + 表头映射，2026-09-18）        |
 
-> **主 demo 入口**：`/demo/pro-table-overview`（对应 `ProTableOverview.vue`）—— 查阅全部 prop、事件、实例方法的入口。其余 20 个 demo 按「基础 → 引擎 → 搜索 → 虚拟化 → 编辑 → 选择/拖拽/展开 → 树形/合并/汇总 → 工具栏/批量 → 导入导出 → 样式」分组覆盖各能力边界。
+> **主 demo 入口**：`/demo/pro-table-overview`（对应 `ProTableOverview.vue`）—— 查阅全部 prop、事件、实例方法的入口。其余 22 个 demo 按「基础 → 引擎 → 搜索 → 虚拟化 → 编辑 → 选择/拖拽/展开 → 树形/合并/汇总 → 工具栏/批量 → 导入导出 → 样式」分组覆盖各能力边界。
 >
 > **配套 mock**：`src/mock/pro-table/big-data.ts`（10 万行 × 10 列含固定列）+ `src/mock/pro-table/scenarios.ts`（各 demo 业务数据）。
