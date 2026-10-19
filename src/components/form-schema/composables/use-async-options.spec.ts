@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { ref, nextTick } from 'vue'
-import { useAsyncOptions } from './use-async-options'
+import { useAsyncOptions, buildAutocompleteFetcher } from './use-async-options'
 import type { SchemaNode } from '../types'
 
 describe('useAsyncOptions', () => {
@@ -122,5 +122,61 @@ describe('useAsyncOptions / 竞态防护（② 回归）', () => {
     resolveReq(['x'])
     await new Promise((r) => setTimeout(r, 0))
     expect(state.data.value).toEqual([])
+  })
+})
+
+describe('buildAutocompleteFetcher / B2 竞态令牌（docs/audit/2026-10-15 xform#8）', () => {
+  function deferredSource() {
+    const resolvers: Array<{ resolve: (v: unknown) => void; reject: (e: unknown) => void }> = []
+    const source = vi.fn(
+      () =>
+        new Promise((resolve, reject) => {
+          resolvers.push({ resolve, reject })
+        })
+    )
+    return { source, resolvers }
+  }
+
+  it('快速连续查询：旧查询慢响应后返回不得覆盖新结果（过期 cb 不触发）', async () => {
+    const { source, resolvers } = deferredSource()
+    const fetcher = buildAutocompleteFetcher({ source })
+    const cbA = vi.fn()
+    const cbAB = vi.fn()
+
+    fetcher('a', cbA) // 第 1 次查询（慢）
+    fetcher('ab', cbAB) // 第 2 次查询（新）
+
+    // 新查询先返回 → 新结果落地
+    resolvers[1]!.resolve([{ value: 'new-result' }])
+    await new Promise((r) => setTimeout(r, 0))
+    expect(cbAB).toHaveBeenCalledWith([{ value: 'new-result' }])
+
+    // 旧查询后返回（过期）→ 不得调 cb（修复前会把旧结果刷进下拉）
+    resolvers[0]!.resolve([{ value: 'stale-result' }])
+    await new Promise((r) => setTimeout(r, 0))
+    expect(cbA).not.toHaveBeenCalled()
+  })
+
+  it('最新查询 reject → onError + cb([])；过期 reject 静默（不 onError 不 cb）', async () => {
+    const { source, resolvers } = deferredSource()
+    const onError = vi.fn()
+    const fetcher = buildAutocompleteFetcher({ source, onError })
+    const cbA = vi.fn()
+    const cbAB = vi.fn()
+
+    fetcher('a', cbA)
+    fetcher('ab', cbAB)
+
+    // 旧查询后 reject（过期）→ 静默
+    resolvers[0]!.reject(new Error('stale boom'))
+    await new Promise((r) => setTimeout(r, 0))
+    expect(onError).not.toHaveBeenCalled()
+    expect(cbA).not.toHaveBeenCalled()
+
+    // 新查询 reject → onError + cb([]) 正常落地
+    resolvers[1]!.reject(new Error('latest boom'))
+    await new Promise((r) => setTimeout(r, 0))
+    expect(onError).toHaveBeenCalledTimes(1)
+    expect(cbAB).toHaveBeenCalledWith([])
   })
 })

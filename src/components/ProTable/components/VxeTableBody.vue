@@ -113,6 +113,10 @@ const vxeColumnComp = shallowRef<unknown>(null)
 const vxeTableInst = ref<{
   recalculate?: (reFull?: boolean) => Promise<unknown>
   clearFilter?: () => Promise<unknown>
+  /** B1：多选/单选 UI 清理 + reserve 全量选区读取（vxe v4 API，结构化可选调用） */
+  clearCheckboxRow?: () => void
+  clearRadioRow?: () => void
+  getCheckboxRecords?: () => unknown[]
 } | null>(null)
 
 /**
@@ -138,6 +142,17 @@ defineExpose({
   clearFilter(): void {
     localFilterMap.value = {}
     void vxeTableInst.value?.clearFilter?.()
+  },
+  /**
+   * B1（docs/audit/2026-10-15 #2）：清空 vxe 选区 UI + 本地镜像。
+   * 多选 clearCheckboxRow / 单选 clearRadioRow（vxe v4 API）；useTable 侧镜像由编排层
+   * table.clearSelection() 清，本 expose 供 ProTable 编排层双通道并调（el 模式下 ref 为 null
+   * 自然短路，同 A3 clearFilter 模式）。结构化可选调用：引擎加载未完成时实例为 null 短路
+   */
+  clearSelection(): void {
+    selectedRows.value = []
+    vxeTableInst.value?.clearCheckboxRow?.()
+    vxeTableInst.value?.clearRadioRow?.()
   },
   /** v3.5 PR1-B：vxe-table 根 DOM，useRowDrag 挂载点 */
   getTbody(): HTMLElement | null {
@@ -296,6 +311,16 @@ function sameRow(a: Record<string, unknown>, b: Record<string, unknown>): boolea
   return rowKeyOf(a) === rowKeyOf(b)
 }
 
+/** B1：选区 key 集合相等判定（reserve 回同步噪声防护 —— 无变化不重复 emit selection-change） */
+function sameSelection(a: T[], b: T[]): boolean {
+  if (a.length !== b.length) return false
+  return a.every((row) =>
+    b.some((r) =>
+      sameRow(r as unknown as Record<string, unknown>, row as unknown as Record<string, unknown>)
+    )
+  )
+}
+
 /** 单选 toggle（同 key 先移除再追加，防代理引用不同导致重复入区） */
 function handleCheckboxChange(payload: { row: T; checked: boolean }): void {
   // v3.5 PR3：selectedRows.value 类型是 UnwrapRefSimple<T>，与 T 不完全等价，cast Record 视角
@@ -403,7 +428,19 @@ function handleCellDblclick(payload: { row: Record<string, unknown> }): void {
 watch(
   () => props.rows,
   () => {
-    if (hasReserveSelection(props.columns as ProColumn[])) return
+    if (hasReserveSelection(props.columns as ProColumn[])) {
+      // B1（docs/audit/2026-10-15 #3）：reserve 模式翻页/数据变化后，vxe 内部按 keyField
+      // 恢复跨页勾选是内部行为、不逐行派发事件 —— 本地镜像只剩当前页操作过的行，
+      // ToolbarCtx「含其他页选中行」承诺失效。nextTick 后从实例 getCheckboxRecords
+      // 回同步全量选区；key 集合无变化不 emit，防每次刷新噪声
+      nextTick(() => {
+        const records = (vxeTableInst.value?.getCheckboxRecords?.() ?? []) as T[]
+        if (sameSelection(records, selectedRows.value as T[])) return
+        selectedRows.value = records
+        emit('selection-change', records as unknown as Record<string, unknown>[])
+      })
+      return
+    }
     if (selectedRows.value.length === 0) return
     selectedRows.value = []
     emit('selection-change', [])

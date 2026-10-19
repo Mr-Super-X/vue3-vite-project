@@ -257,6 +257,8 @@ const proTableVxe = ref<{
   getTbody?: () => HTMLElement | null
   /** A3：reset 清列头筛选 UI 通道（清 vxe 内部筛选状态 + 本地 localFilterMap 快照） */
   clearFilter?: () => void
+  /** B1：清 vxe 选区 UI 勾选（多选 + 单选）+ 引擎侧本地选区镜像 */
+  clearSelection?: () => void
 } | null>(null)
 
 /** tbody DOM 访问点 —— 经 useTableEngineDom composable 收敛；v3.5 PR1-B 起支持 el + vxe 双引擎路由 */
@@ -525,7 +527,14 @@ defineExpose({
   refresh: () => table.refresh(),
   reset: () => search.reset(),
   getSelectedRows: () => table.getSelectedRows(),
-  clearSelection: () => table.clearSelection(),
+  clearSelection: () => {
+    table.clearSelection()
+    // B1（docs/audit/2026-10-15 #2）：vxe 引擎 UI 勾选清理 —— el 引擎由 useTable 内经
+    // tableRef 调官方 clearSelection()；vxe 引擎 tableRef 为 null，走 VxeTableBody expose
+    // 通道（clearCheckboxRow/clearRadioRow + 引擎侧本地镜像）；el 模式下 proTableVxe 为
+    // null 自然短路（同 A3 clearFilter 双通道模式）
+    proTableVxe.value?.clearSelection?.()
+  },
   getSearchParams: () => search.getParams(),
   setSearchParams: (params: Record<string, unknown>) => search.setSearchParams(params),
   element: table.tableRef,

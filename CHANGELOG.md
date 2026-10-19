@@ -15,6 +15,13 @@
 - **A5 行级 reaction 全量重注册 + 模块级 stopper 桶泄漏**：stopper 桶 value 升级 `RowReactionEntry` 四元组（同 rowKey+index+itemSchema 引用未变则复用 watcher+副本跳过重注册）；`useRenderSchemaNode` 每实例建桶经 opts 注入、卸载时 onScopeDispose 统一 stop+clear——修复前每次渲染全量 churn + 卸载后模块级 Map 无限增长 + 原始值行 key 跨实例碰撞误停
 - **测试基建修正**：vxe-table mock 补具名导出 `VxeTable/VxeColumn`（镜像真实 v4 模块形态）——原 mock 缺 named export 致 `vxeTableComp` 恒 null，"加载成功"断言空洞化
 
+### 🐞 Fix | 引擎加固批 B：状态一致性（2026-10-15 第三轮，audit `docs/audit/2026-10-15-engine-audit-summary.md` 批 B）
+
+- **B1 vxe 选区**：`VxeTableBody` expose `clearSelection()`（clearCheckboxRow/clearRadioRow + 引擎侧本地镜像）——修复 vxe 引擎下 `clearSelection` 只清 useTable 镜像不清 UI 勾选；reserve 模式翻页后经 `getCheckboxRecords()` 回同步全量跨页镜像（key 集合无变化不 emit），修复跨页选区镜像残缺
+- **B2 Autocomplete 竞态**：`buildAutocompleteFetcher` 补序号令牌（与 useAsyncOptions.fetchSeq 同模式）——快速连续输入时慢的旧响应不再覆盖新下拉结果，过期 reject 静默
+- **B3 双实例隔离防线**：补 spec 锁定 A5 成果——同 listName+原始值行双实例的 stopper 桶互不干扰（i${index} key 跨实例碰撞结构性消除）
+- **B4 pageSize 跟随**：`useTable` 补 `watch(() => props.pageSize)`（density v3.0.1 同款改造的同类漏网）——父级 v-model:page-size 运行时变更即时生效并联动刷新
+
 ### ✅ Tests | 测试矩阵补完（五态示范批 + 测试深度批 + 发布准备批，2026-10-15）
 
 - **big-demo 五态示范页** `/big-demo/state-demo`：成功/加载/错误/空/断连五态切换 + 每态设计要点说明；Wide 页地图二级懒加载（GeoJSON 退二级 chunk，页面壳先渲染、地图区就地加载/失败/重试）

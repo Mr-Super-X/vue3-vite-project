@@ -70,6 +70,18 @@
 
 **验证方法论补充（本轮教训）**：①popper 常驻 DOM（display:none）——判断面板开关须读计算样式（既有记忆的复现）②EP 筛选面板"筛选"按钮在勾选后会被 Vue 重渲染替换引用——合成事件须在重查后的节点上派发 ③vxe-table 测试 mock 须镜像真实模块具名导出形态，否则组件解析路径在测试里恒空跑。④**合成事件对隐藏按钮也会派发（不检查可见性）——首轮 A3 验证点的「重置」实为隐藏筛选面板里的按钮，根本没走到 ProTable reset 编排链路；且 el-switch/checkbox 的 a11y uid 解析到隐藏原生 input，uid 直点报"not interactive"，真实交互须走「Tab 移焦点 + CDP Space/click」或坐标级输入**。引擎修复的浏览器验证必须以真实输入管线为准，合成事件仅用于无交互断言。
 
+## 批 B 收尾（2026-10-15 第三轮：B1–B4，批 B 全部关闭）
+
+| 项    | 修复要点                                                                                                                                                                                        | 验证                                                                             |
+| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| B1 #2 | vxe 引擎 clearSelection 只清镜像不清 UI：`VxeTableBody` expose `clearSelection()`（clearCheckboxRow/clearRadioRow 清 UI + 引擎侧本地镜像），ProTable expose 双通道并调（A3 clearFilter 同模式） | spec×3；EngineCompare 真实页面回归（双 vxe 实例渲染 13 行 + console 零异常）     |
+| B1 #3 | reserve 跨页选区镜像残缺（vxe 恢复勾选不派发事件）：rows watch 在 reserve 分支改为 nextTick 后经 `getCheckboxRecords()` 回同步全量镜像，key 集合无变化不 emit（噪声防护）                       | spec×2（回同步全量 / 无变化不 emit）                                             |
+| B2    | `buildAutocompleteFetcher` 无竞态令牌（useAsyncOptions 已有 fetchSeq，fetcher 是漏网）：per-fetcher seq，过期 resolve/reject 静默（新查询拥有 UI）。RED 经 stash 补验                           | spec×2（过期 cb 不触发 / 过期 reject 静默），stash 恢复旧实现确认 2 红           |
+| B3    | 原始值行 i${index} key 跨实例碰撞：A5 实例桶已结构性消除，本批补双实例防线 spec（同 listName+同原始值行，B 渲染不得停 A 的 watcher / 换 A 的桶条目；A 重渲染命中自己缓存）                      | spec×1（曾定位出 makeOpts 返回包装对象而非 opts 的测试自身 bug，探针 DUMP 定位） |
+| B4    | `pageSize` 只读初始化未跟随 density 改造：补 `watch(() => props.pageSize)`（density v3.0.1 同款；变化经既有 [page,pageSize] watcher 自动刷新；卸载 stop 合并进既有 onUnmounted）                | spec×2（跟随 / 联动刷新），RED 2 例先行                                          |
+
+**浏览器验证面说明**：B1/B2 均无对应 demo（全项目无 vxe+selection 列 demo、无 Autocomplete+asyncOptions demo），由 spec 覆盖（与批 A「数组+cross」同型缺口，可入批 C 补 demo）；B4 无动态 pageSize demo。浏览器回归面 = EngineCompare vxe 引擎页（B1 改动后 vxe 渲染链路正常）。
+
 ## 使用说明
 
 - 每批开工时按本清单建任务，修复后把对应行标记 ✅ 并补回归 spec（C3 是各批的验收成分）

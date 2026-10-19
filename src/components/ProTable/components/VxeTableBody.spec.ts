@@ -24,13 +24,32 @@ import { nextTick } from 'vue'
 // A3 修复：补具名导出 VxeTable/VxeColumn —— VxeTableBody 经 mod.VxeTable 取组件
 // （真实 vxe-table v4 模块形态：export { VxeTable, VxeColumn }）。原 mock 缺 named
 // export 导致 vxeTableComp 恒 null，内层组件在测试中从未渲染（"加载成功"断言空洞化）
+// B1：mock 组件补 setup 返回实例方法 —— 模板 ref="vxeTableInst" 经组件公开实例可达
+// （getCheckboxRecords / clearCheckboxRow / clearRadioRow / clearFilter / recalculate）
+const vxeInstMocks = vi.hoisted(() => ({
+  getCheckboxRecords: vi.fn<() => unknown[]>(() => []),
+  clearCheckboxRow: vi.fn(),
+  clearRadioRow: vi.fn(),
+  clearFilter: vi.fn(),
+  recalculate: vi.fn(),
+}))
 vi.mock('vxe-table', () => ({
   default: {
     install: vi.fn(),
     Table: { name: 'VxeTable', render: () => null },
     Column: { name: 'VxeColumn', render: () => null },
   },
-  VxeTable: { name: 'VxeTable', render: () => null },
+  VxeTable: {
+    name: 'VxeTable',
+    render: () => null,
+    setup: () => ({
+      recalculate: vxeInstMocks.recalculate,
+      clearFilter: vxeInstMocks.clearFilter,
+      clearCheckboxRow: vxeInstMocks.clearCheckboxRow,
+      clearRadioRow: vxeInstMocks.clearRadioRow,
+      getCheckboxRecords: vxeInstMocks.getCheckboxRecords,
+    }),
+  },
   VxeColumn: { name: 'VxeColumn', render: () => null },
 }))
 vi.mock('vxe-table/lib/style.css', () => ({}))
@@ -297,6 +316,85 @@ describe('VxeTableBody', () => {
     expect(exposed).toBeDefined()
     expect('getTbody' in (exposed ?? {})).toBe(true)
     expect(typeof (exposed as { getTbody?: unknown }).getTbody).toBe('function')
+    wrapper.unmount()
+  })
+})
+
+describe('VxeTableBody / B1 选区清理与跨页镜像（docs/audit/2026-10-15 #2/#3）', () => {
+  // 本 describe 为顶层独立块 —— 不与主 describe 共享 helper，自定义最小挂载（与主 describe 的 mountBody 同语义）
+  const b1Columns: ProColumn[] = [
+    { prop: 'id', label: 'ID', width: 80 },
+    { prop: 'name', label: '名称', minWidth: 160 },
+  ]
+  const b1Rows = [
+    { id: 1, name: 'A' },
+    { id: 2, name: 'B' },
+  ]
+  function mountBody(extraProps: Record<string, unknown> = {}) {
+    return mount(VxeTableBody, {
+      props: {
+        rows: b1Rows,
+        columns: b1Columns,
+        rowKey: 'id',
+        loading: false,
+        rowEdit: null,
+        cellSpan: null,
+        ...extraProps,
+      },
+    })
+  }
+
+  it('defineExpose 暴露 clearSelection（清本地镜像 + vxe UI 勾选）', async () => {
+    const wrapper = mountBody()
+    await flushPromises()
+    const exposed = wrapper.vm.$.exposed as { clearSelection?: () => void } | null
+    expect(typeof exposed?.clearSelection).toBe('function')
+
+    // 预置本地镜像：模拟用户在 vxe 里勾选一行（内部组件事件 → handleCheckboxChange）
+    const vxe = wrapper.findComponent({ name: 'VxeTable' })
+    vxe.vm.$emit('checkbox-change', { row: { id: 1, name: 'A' }, checked: true })
+    await nextTick()
+    expect(wrapper.emitted('selection-change')!.at(-1)).toEqual([[{ id: 1, name: 'A' }]])
+
+    vxeInstMocks.clearCheckboxRow.mockClear()
+    exposed!.clearSelection!()
+    expect(vxeInstMocks.clearCheckboxRow).toHaveBeenCalledTimes(1)
+    // 本地镜像已清：后续勾选新行不残留旧行
+    vxe.vm.$emit('checkbox-change', { row: { id: 2, name: 'B' }, checked: true })
+    await nextTick()
+    expect(wrapper.emitted('selection-change')!.at(-1)).toEqual([[{ id: 2, name: 'B' }]])
+    wrapper.unmount()
+  })
+
+  it('reserve 模式 rows 变化（翻页）→ 经 getCheckboxRecords 回同步全量跨页镜像', async () => {
+    const columnsWithReserve: ProColumn[] = [
+      { type: 'selection', reserveSelection: true, prop: 'sel', label: '' },
+      ...b1Columns,
+    ]
+    const wrapper = mountBody({ columns: columnsWithReserve })
+    await flushPromises()
+    // 模拟 vxe 内部跨页选区：当前页 rows 是第 2 页数据，reserve 恢复的第 1 页行也在选区里
+    vxeInstMocks.getCheckboxRecords.mockReturnValue([{ id: 1 }, { id: 2 }])
+    await wrapper.setProps({ rows: [{ id: 3 }, { id: 4 }] })
+    await nextTick()
+    await nextTick()
+    expect(wrapper.emitted('selection-change')!.at(-1)).toEqual([[{ id: 1 }, { id: 2 }]])
+    wrapper.unmount()
+  })
+
+  it('reserve 回同步：选区 key 集合无变化时不重复 emit（噪声防护）', async () => {
+    const columnsWithReserve: ProColumn[] = [
+      { type: 'selection', reserveSelection: true, prop: 'sel', label: '' },
+      ...b1Columns,
+    ]
+    const wrapper = mountBody({ columns: columnsWithReserve })
+    await flushPromises()
+    const emitCountBefore = wrapper.emitted('selection-change')?.length ?? 0
+    vxeInstMocks.getCheckboxRecords.mockReturnValue([]) // 空选区 == 空镜像
+    await wrapper.setProps({ rows: [{ id: 9 }] })
+    await nextTick()
+    await nextTick()
+    expect(wrapper.emitted('selection-change')?.length ?? 0).toBe(emitCountBefore)
     wrapper.unmount()
   })
 })

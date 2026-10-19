@@ -106,17 +106,27 @@ export function resolveAsyncOptionsProp(node: SchemaNode): string | null {
   return 'options'
 }
 
-/** 为 Autocomplete 构造 fetchSuggestions 回调：source(query) → transform → cb；失败 cb([]) + onError */
+/**
+ * 为 Autocomplete 构造 fetchSuggestions 回调：source(query) → transform → cb；失败 cb([]) + onError
+ *
+ * B2（docs/audit/2026-10-15 xform#8）：fetchSuggestions 每次输入触发一次 source(query)，
+ * 无令牌时慢的旧响应会后到覆盖新结果（快速连续输入下拉闪回旧选项）。序号令牌与
+ * useAsyncOptions.fetchSeq 同模式：每次发起自增，落地前校验，过期响应丢弃
+ */
 export function buildAutocompleteFetcher(
   cfg: AsyncOptionsConfig
 ): (queryString: string, cb: (suggestions: Array<{ value: unknown }>) => void) => void {
+  let seq = 0
   return (queryString, cb) => {
+    const mySeq = ++seq
     Promise.resolve(cfg.source(queryString))
       .then((raw) => {
+        if (mySeq !== seq) return // 已有更新的查询发起，丢弃过期响应
         const data = cfg.transform ? cfg.transform(raw) : raw
         cb(data as Array<{ value: unknown }>)
       })
       .catch((err) => {
+        if (mySeq !== seq) return // 过期 reject 静默：新查询拥有 UI，不让旧错误干扰
         cfg.onError?.(err)
         cb([])
       })

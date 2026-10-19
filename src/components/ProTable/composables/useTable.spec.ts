@@ -15,7 +15,7 @@
  * @group ProTable composables 测试
  */
 import { describe, it, expect, vi } from 'vitest'
-import { nextTick } from 'vue'
+import { nextTick, reactive } from 'vue'
 import { useTable } from './useTable'
 import type { SortState } from '../types'
 
@@ -366,5 +366,40 @@ describe('useTable', () => {
       table.setFilter({ status: [], dept: ['tech'] })
       expect(table.getFilterState()).toEqual({ dept: ['tech'] })
     })
+  })
+})
+
+describe('useTable / B4 props.pageSize 运行时跟随（density 同款 watch，docs/audit/2026-10-15）', () => {
+  function makeReactiveDeps(pageSize = 10) {
+    const requestApi = vi.fn().mockResolvedValue({ data: [], total: 0, pageNum: 1, pageSize })
+    // 生产环境 props 是响应式对象 —— 模拟父级 v-model:page-size / 动态调整的运行时变更
+    const props = reactive({
+      columns: [{ prop: 'name', label: '名称' }],
+      requestApi,
+      pageSize,
+      rowKey: 'id',
+    }) as never
+    return { props, requestApi, columns: {} as never, getSearchParams: () => ({}) }
+  }
+
+  it('props.pageSize 运行时变化 → pageSize 跟随（此前只读初始化，e923cb8 density 改造的同类漏网）', async () => {
+    const deps = makeReactiveDeps(10)
+    const table = useTable(deps)
+    expect(table.pageSize.value).toBe(10)
+    ;(deps.props as unknown as { pageSize: number }).pageSize = 20
+    await nextTick()
+    expect(table.pageSize.value).toBe(20)
+  })
+
+  it('pageSize 运行时变化触发自动刷新（既有 [page, pageSize] watcher 联动）', async () => {
+    const deps = makeReactiveDeps(10)
+    const table = useTable(deps)
+    await table.refresh()
+    expect(deps.requestApi).toHaveBeenLastCalledWith(expect.objectContaining({ pageSize: 10 }))
+    ;(deps.props as unknown as { pageSize: number }).pageSize = 20
+    await nextTick()
+    await vi.waitFor(() =>
+      expect(deps.requestApi).toHaveBeenLastCalledWith(expect.objectContaining({ pageSize: 20 }))
+    )
   })
 })

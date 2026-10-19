@@ -189,8 +189,21 @@ export function useTable<T extends object = Record<string, unknown>>(
     },
     { immediate: false }
   )
+  // B4（docs/audit/2026-10-15）：props.pageSize 此前只读初始化（e923cb8 density 改造的同类漏网）——
+  // 对齐 density watch 语义：父级 v-model:page-size / 动态调整运行时可变；变化经下方
+  // [page, pageSize] watcher 自动触发刷新。初始值仍由 snapshot?.pageSize ?? props.pageSize 决定
+  const stopPageSizeWatch = watch(
+    () => props.pageSize,
+    (newSize) => {
+      if (newSize && newSize !== pageSize.value) {
+        pageSize.value = newSize
+      }
+    },
+    { immediate: false }
+  )
   onUnmounted(() => {
     stopDensityWatch()
+    stopPageSizeWatch()
   })
 
   /** 排序状态 —— 不混入 searchParams（D4：排序是表格交互状态，非表单输入，useSearch 语义保持纯净） */
