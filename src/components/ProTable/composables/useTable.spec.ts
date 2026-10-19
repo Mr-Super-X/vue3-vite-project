@@ -403,3 +403,41 @@ describe('useTable / B4 props.pageSize 运行时跟随（density 同款 watch，
     )
   })
 })
+
+describe('useTable / D(#9) 持久化快照恢复筛选', () => {
+  // 本 describe 为顶层独立块 —— 自定义最小 makeDeps（与主 describe 同语义）
+  function makeDeps() {
+    const requestApi = vi.fn().mockResolvedValue({
+      data: [{ id: 1, name: 'a' }],
+      total: 1,
+      pageNum: 1,
+      pageSize: 10,
+    })
+    return {
+      props: {
+        columns: [{ prop: 'name', label: '名称' }],
+        requestApi,
+        pageSize: 10,
+        rowKey: 'id',
+      } as never,
+      columns: {} as never,
+      getSearchParams: () => ({ name: '' }),
+    }
+  }
+
+  it('initialState.filterState → filterState 初值（路由返回场景恢复列头筛选）', () => {
+    const deps = makeDeps()
+    const table = useTable({
+      ...deps,
+      initialState: { filterState: { status: ['paid'] } } as never,
+    })
+    expect(table.getFilterState()).toEqual({ status: ['paid'] })
+  })
+
+  it('initialState 无 filterState → 缺省空筛选（向后兼容 v1 快照）', () => {
+    const deps = makeDeps()
+    const table = useTable({ ...deps, initialState: { page: 2 } as never })
+    expect(table.getFilterState()).toEqual({})
+    expect(table.page.value).toBe(2)
+  })
+})

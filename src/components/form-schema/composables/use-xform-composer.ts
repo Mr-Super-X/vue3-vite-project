@@ -127,7 +127,12 @@ export function useXFormComposer(options: UseXFormComposerOptions): UseXFormComp
   })
 
   // schema 元数据中央索引 —— 替代每次遍历 O(n) 的 getNames/collectCrossRuleFields
-  const schemaIndex = useSchemaIndex(() => reactiveSchema.value)
+  // D(#6)：props.rules 命名规则注册表传入 —— 字符串命名 cross 规则（rules: 'myRule'）经
+  // 注册表解析进索引，与批量路径 namedRules?.[r] 对齐（此前静默漏配反向触发）
+  const schemaIndex = useSchemaIndex(
+    () => reactiveSchema.value,
+    () => props.rules
+  )
 
   // model 依赖表达式（顶层 readonly/disabled / 字段 permission 的函数或 '{{ }}' 形态）
   // 的重渲兜底：沙箱深拷贝切断响应式追踪，这类表达式的宿主 computed 不会因 model

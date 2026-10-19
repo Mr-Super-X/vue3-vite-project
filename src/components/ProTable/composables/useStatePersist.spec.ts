@@ -16,6 +16,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { ref, effectScope, nextTick } from 'vue'
 import { Local } from '@/utils/storage'
 import { useStatePersist, type PersistedTableState } from './useStatePersist'
+import type { FilterValuesMap } from '../types'
 
 const TABLE_KEY = 'test-table'
 
@@ -34,7 +35,8 @@ function makeSnapshot(overrides: Partial<PersistedTableState> = {}): PersistedTa
 function attachInScope(sources: Parameters<ReturnType<typeof useStatePersist>['attach']>[0]) {
   const persist = useStatePersist({ tableKey: TABLE_KEY, enabled: true })
   const scope = effectScope()
-  scope.run(() => persist.attach(sources))
+  // D(#9)：filterState 缺省 {} —— 旧调用方（v1 时代的测试）无筛选源时自动补齐
+  scope.run(() => persist.attach({ filterState: ref({}), ...sources }))
   return { persist, dispose: () => scope.stop() }
 }
 
@@ -173,5 +175,52 @@ describe('attach 写回', () => {
     )
     expect(sessionStorage.getItem(`${TABLE_KEY}:state-alive`)).toBeNull()
     scope.stop()
+  })
+})
+
+describe('D(#9) filterState 参与路由级持久化', () => {
+  it('attach 写回 v2 快照含 filterState（version 升 2）', async () => {
+    const filterState = ref<FilterValuesMap>({ status: ['paid'] })
+    const page = ref(1)
+    const { dispose } = attachInScope({
+      searchParams: ref({}),
+      page,
+      pageSize: ref(10),
+      sortState: ref(null),
+      filterState,
+    })
+    // 触发一次变更（watch 非 immediate）——筛选变化驱动写回
+    filterState.value = { status: ['paid', 'refunded'] }
+    await nextTick()
+    const snap = Local.get(`${TABLE_KEY}:state`) as Record<string, unknown>
+    expect(snap['version']).toBe(2)
+    expect(snap['filterState']).toEqual({ status: ['paid', 'refunded'] })
+    dispose()
+  })
+
+  it('v1 旧快照（无 filterState）读时向后兼容——恢复为 filterState {}', () => {
+    sessionStorage.setItem(`${TABLE_KEY}:state-alive`, '1')
+    // v1 旧快照结构（PR2 之前的持久化数据）：无 filterState 字段
+    Local.set(`${TABLE_KEY}:state`, {
+      version: 1,
+      searchParams: {},
+      page: 2,
+      pageSize: 20,
+      sortState: null,
+    })
+    const persist = useStatePersist({ tableKey: TABLE_KEY, enabled: true })
+    const snap = persist.read()
+    expect(snap?.page).toBe(2) // 其余字段照常恢复
+    expect(snap?.filterState ?? {}).toEqual({}) // 筛选缺省为空（不报错不丢其余状态）
+  })
+
+  it('v2 快照 filterState 类型非法 → 视为无快照（fail-safe 一致性）', () => {
+    sessionStorage.setItem(`${TABLE_KEY}:state-alive`, '1')
+    Local.set(`${TABLE_KEY}:state`, {
+      ...makeSnapshot({ version: 2 as never }),
+      filterState: 'bad' as never,
+    })
+    const persist = useStatePersist({ tableKey: TABLE_KEY, enabled: true })
+    expect(persist.read()).toBeNull()
   })
 })

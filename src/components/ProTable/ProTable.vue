@@ -211,6 +211,8 @@ statePersist.attach({
   page: table.page,
   pageSize: table.pageSize,
   sortState: table.sortState,
+  // D(#9)：列头筛选状态随路由级持久化（路由返回后筛选条件不丢）
+  filterState: table.filterState,
 })
 
 /* ───────────── v3.1：根容器 ref + 全屏 + 自动高度 ───────────── */
@@ -718,13 +720,16 @@ defineExpose({
           </slot>
         </template>
       </AsyncState>
+      <!-- D（docs/audit/2026-10-15 protable#8）：paginationProps 的 v-bind 须在前 —— 业务 pagination
+           props 在后会覆盖内部受控绑定（current-page/page-size/total）导致分页状态失控；
+           受控绑定后置优先（v-bind 顺序即合并优先级，后者覆盖前者） -->
       <ElPagination
         v-if="props.pagination !== false"
+        v-bind="paginationProps"
         :total="table.total.value"
         :current-page="table.page.value"
         :page-size="table.pageSize.value"
         layout="total, sizes, prev, pager, next, jumper"
-        v-bind="paginationProps"
         @current-change="events.handlePageChange"
         @size-change="events.handleSizeChange"
       >

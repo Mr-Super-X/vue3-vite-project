@@ -225,7 +225,10 @@ export function useTable<T extends object = Record<string, unknown>>(
    *
    * 不混入 searchParams（D4 决策类比）：筛选是 el-table 列头交互状态，语义独立于搜索表单。
    */
-  const filterState = ref<FilterValuesMap>({}) as Ref<FilterValuesMap>
+  const filterState = ref<FilterValuesMap>(
+    // D(#9)：路由级持久化快照恢复筛选状态（v3.5 PR2 后筛选成一等状态，与 sortState 同待遇）
+    (snapshot?.filterState as FilterValuesMap | undefined) ?? {}
+  ) as Ref<FilterValuesMap>
 
   /**
    * v3.5 PR2：筛选参数序列化 —— 无 adapter 时返回空对象（不污染请求 params，

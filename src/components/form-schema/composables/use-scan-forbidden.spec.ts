@@ -261,3 +261,25 @@ describe('scanForForbidden / 安全扫描', () => {
     expect(errors).toEqual([])
   })
 })
+
+describe('scanForForbidden / D(#5) hidden/readonly 扫描补齐', () => {
+  it('hidden 的 {{ }} 函数表达式命中危险标识符 → 报错（此前漏扫）', () => {
+    const schema = {
+      name: 'a',
+      component: 'Input',
+      hidden: '{{ () => window.__hacked }}',
+    } as unknown as SchemaNode
+    const errors = scanForForbidden(schema)
+    expect(errors.some((e) => e.startsWith('hidden:'))).toBe(true)
+  })
+
+  it('readonly 的 {{ }} 函数表达式命中危险标识符 → 报错（此前漏扫）', () => {
+    const schema = {
+      name: 'a',
+      component: 'Input',
+      readonly: '{{ () => document.__hacked }}',
+    } as unknown as SchemaNode
+    const errors = scanForForbidden(schema)
+    expect(errors.some((e) => e.startsWith('readonly:'))).toBe(true)
+  })
+})

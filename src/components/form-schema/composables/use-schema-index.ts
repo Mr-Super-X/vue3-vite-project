@@ -28,9 +28,11 @@ export interface UseSchemaIndexReturn {
 
 /** useSchemaIndex —— schema 元数据中央索引（O(1) 查表替代 O(n) 遍历） */
 export function useSchemaIndex(
-  schemaGetter: () => SchemaNode | SchemaNode[] | string | undefined
+  schemaGetter: () => SchemaNode | SchemaNode[] | string | undefined,
+  /** D(#6)：props.rules 命名规则注册表（getter 形式，注册表运行时可变）——字符串命名 cross 规则解析用 */
+  namedRulesGetter?: () => Record<string, RuleItem> | undefined
 ): UseSchemaIndexReturn {
-  const initial = buildIndex(schemaGetter())
+  const initial = buildIndex(schemaGetter(), namedRulesGetter?.())
   const byName = ref(initial.byName) as Ref<SchemaIndex['byName']>
   const fieldNames = ref(initial.fieldNames) as Ref<readonly string[]>
   const allNames = ref(initial.allNames) as Ref<readonly string[]>
@@ -39,7 +41,7 @@ export function useSchemaIndex(
   const dependsOnMap = ref(initial.dependsOnMap) as Ref<SchemaIndex['dependsOnMap']>
 
   function rebuild(): void {
-    const idx = buildIndex(schemaGetter())
+    const idx = buildIndex(schemaGetter(), namedRulesGetter?.())
     byName.value = idx.byName
     fieldNames.value = idx.fieldNames
     allNames.value = idx.allNames
@@ -50,6 +52,8 @@ export function useSchemaIndex(
 
   // schema 整体替换时重建（与 reactiveSchema 顶层 watch 一致）
   watch(schemaGetter, rebuild)
+  // D(#6)：命名规则注册表整体替换时同样重建（字符串引用解析随注册表走）
+  if (namedRulesGetter) watch(namedRulesGetter, rebuild)
 
   function getFieldNames(includeIgnore: boolean): readonly string[] {
     return includeIgnore ? allNames.value : fieldNames.value

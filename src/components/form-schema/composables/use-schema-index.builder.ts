@@ -53,8 +53,15 @@ export interface CrossRuleEntry {
 /**
  * 构建索引 —— 一次遍历搞定所有查询表
  * 覆盖：children / array.itemSchema / formItem.slots
+ *
+ * @param namedRules D(#6)：props.rules 命名规则注册表 —— `rules: 'myRule'`（字符串引用
+ *   注册表中含 crossValidator 的规则）经此解析进 crossRules/reverseIndex/dependsOnMap，
+ *   与 use-validate 批量路径的 namedRules?.[r] 解析对齐（此前字符串规则静默漏配反向触发）
  */
-export function buildIndex(schema: SchemaNode | SchemaNode[] | string | undefined): SchemaIndex {
+export function buildIndex(
+  schema: SchemaNode | SchemaNode[] | string | undefined,
+  namedRules?: Record<string, RuleItem>
+): SchemaIndex {
   const byName = new Map<string, SchemaNode>()
   const fieldNames: string[] = []
   const allNames: string[] = []
@@ -99,8 +106,11 @@ export function buildIndex(schema: SchemaNode | SchemaNode[] | string | undefine
       if (!n.rules) return
       const arr = Array.isArray(n.rules) ? n.rules : [n.rules]
       for (const r of arr) {
-        if (typeof r !== 'object' || !r || !('crossValidator' in r)) continue
-        const ri = r as RuleItem
+        // D(#6)：字符串命名规则（rules: 'myRule'）经 namedRules 注册表解析 —— 与 use-validate
+        // 批量路径 namedRules?.[r] 对齐；注册表缺失该名称时跳过（fail-safe，不抛错）
+        const ri: RuleItem | undefined =
+          typeof r === 'string' ? namedRules?.[r] : ((r as RuleItem) ?? undefined)
+        if (!ri || typeof ri !== 'object' || !('crossValidator' in ri)) continue
         // deps 是 dependsOn 的别名（命名统一，PM 审查发现 4）：优先 dependsOn，回退 deps
         const raw = ri.dependsOn ?? ri.deps
         if (!raw) continue
@@ -110,7 +120,7 @@ export function buildIndex(schema: SchemaNode | SchemaNode[] | string | undefine
           (d): d is string => typeof d === 'string'
         )
         if (deps.length === 0) continue
-        const entry: CrossRuleEntry = { target, deps, rule: r as RuleItem }
+        const entry: CrossRuleEntry = { target, deps, rule: ri }
         if (rowScopedNodes.has(n)) entry.rowScoped = true
         const list = crossRules.get(target)
         if (list) list.push(entry)
@@ -122,7 +132,7 @@ export function buildIndex(schema: SchemaNode | SchemaNode[] | string | undefine
         } else {
           dependsOnMap.set(target, [...deps])
         }
-        const trigger = (r as RuleItem).trigger
+        const trigger = ri.trigger
         if (trigger === 'manual') continue // manual 仅 validateForm 跑，不进反向索引
         for (const d of deps) {
           const arr2 = reverseIndex.get(d)

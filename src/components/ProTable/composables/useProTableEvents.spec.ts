@@ -18,7 +18,10 @@ import type { FilterValuesMap, SortState } from '../types'
 
 describe('useProTableEvents v3.5 PR2', () => {
   const makeDeps = () => {
-    const setFilter = vi.fn()
+    // D(#7)：filterState 状态模拟 —— setFilter merge 进状态，getFilterState 返回全表快照
+    const filterState: FilterValuesMap = {}
+    const setFilter = vi.fn((f: FilterValuesMap) => Object.assign(filterState, f))
+    const getFilterState = vi.fn(() => ({ ...filterState }))
     const resetFilter = vi.fn()
     const sortState = ref<SortState | null>(null)
     const onSortChange = vi.fn()
@@ -34,6 +37,7 @@ describe('useProTableEvents v3.5 PR2', () => {
         onSortChange,
         setSelectedRows: vi.fn(),
         setFilter,
+        getFilterState,
         resetFilter,
       } as never,
       columns: {
@@ -64,12 +68,11 @@ describe('useProTableEvents v3.5 PR2', () => {
     expect(deps.setFilter).toHaveBeenCalledWith(newFilters)
   })
 
-  it('handleFilterChange emit filter-change 事件，payload 为 newFilters', () => {
+  it('handleFilterChange emit filter-change 事件，payload 为全表合并快照（D#7 语义）', () => {
     const deps = makeDeps()
     const events = useProTableEvents(deps)
-    const newFilters: FilterValuesMap = { status: ['paid'] }
-    events.handleFilterChange(newFilters)
-    expect(deps.emit).toHaveBeenCalledWith('filter-change', newFilters)
+    events.handleFilterChange({ status: ['paid'] })
+    expect(deps.emit).toHaveBeenCalledWith('filter-change', deps.table.getFilterState())
   })
 
   it('多次 handleFilterChange：setFilter 与 emit 调用次数与顺序一致', () => {
@@ -81,8 +84,12 @@ describe('useProTableEvents v3.5 PR2', () => {
     events.handleFilterChange(f2)
     expect(deps.setFilter).toHaveBeenNthCalledWith(1, f1)
     expect(deps.setFilter).toHaveBeenNthCalledWith(2, f2)
-    expect(deps.emit).toHaveBeenNthCalledWith(1, 'filter-change', f1)
-    expect(deps.emit).toHaveBeenNthCalledWith(2, 'filter-change', f2)
+    // D(#7)：每次 emit 均为当时的全表合并快照（第二次含第一次的列）
+    expect(deps.emit).toHaveBeenNthCalledWith(1, 'filter-change', { status: ['paid'] })
+    expect(deps.emit).toHaveBeenNthCalledWith(2, 'filter-change', {
+      status: ['paid'],
+      dept: ['tech'],
+    })
   })
 
   it('handleFilterChange({})：清空筛选（调用方清空列筛选项时）', () => {
@@ -91,5 +98,49 @@ describe('useProTableEvents v3.5 PR2', () => {
     events.handleFilterChange({})
     expect(deps.setFilter).toHaveBeenCalledWith({})
     expect(deps.emit).toHaveBeenCalledWith('filter-change', {})
+  })
+})
+
+describe('useProTableEvents D(#7) filter-change 全表快照', () => {
+  const makeDeps = () => {
+    const setFilter = vi.fn()
+    const mergedSnapshot = { status: ['paid'], dept: ['tech'] } // setFilter merge 后的全表状态
+    const getFilterState = vi.fn(() => mergedSnapshot)
+    return {
+      table: {
+        page: ref(1),
+        pageSize: ref(10),
+        selectedRows: ref([]),
+        sortState: ref<SortState | null>(null),
+        setPage: vi.fn(),
+        setPageSize: vi.fn(),
+        setDensity: vi.fn(),
+        onSortChange: vi.fn(),
+        setSelectedRows: vi.fn(),
+        setFilter,
+        getFilterState,
+        resetFilter: vi.fn(),
+      } as never,
+      columns: { sortedColumns: ref([]), colSettingVisible: ref(false) } as never,
+      search: { updateParams: vi.fn() } as never,
+      treeData: null,
+      rowEdit: null,
+      engine: { effectiveEngine: ref('element-plus' as const), proTableVxe: ref(null) } as never,
+      emit: vi.fn() as never,
+      setFilter,
+      getFilterState,
+      mergedSnapshot,
+    }
+  }
+
+  it('handleFilterChange 的 emit payload = getFilterState() 全表合并快照（EP 2.14 增量负载不外泄）', () => {
+    const deps = makeDeps()
+    const events = useProTableEvents(deps)
+    // 模拟 EP 2.14 filter-change 仅携带变化列的增量负载
+    events.handleFilterChange({ status: ['paid'] })
+    expect(deps.setFilter).toHaveBeenCalledWith({ status: ['paid'] })
+    // ★ emit 必须是 merge 后的全表快照（与 getFilterState() 一致），消费方不感知引擎差异
+    expect(deps.emit).toHaveBeenCalledWith('filter-change', deps.mergedSnapshot)
+    expect(deps.getFilterState).toHaveBeenCalled()
   })
 })

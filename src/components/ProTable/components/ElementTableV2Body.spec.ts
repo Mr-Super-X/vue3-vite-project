@@ -400,3 +400,55 @@ describe('ElementTableV2Body', () => {
     }
   })
 })
+
+describe('ElementTableV2Body D(#13) sortable=true 守卫', () => {
+  it('sortable=true（客户端排序）列点击 → 一次性 warn（v2 无内置客户端排序，编排层会拦截）', async () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const columns: ProColumn[] = [{ prop: 'name', label: '名称', minWidth: 200, sortable: true }]
+    const wrapper = mount(ElementTableV2Body, {
+      props: {
+        rows: [
+          { id: 1, name: 'A' },
+          { id: 2, name: 'B' },
+        ],
+        columns,
+        rowKey: 'id',
+        loading: false,
+        virtualConfig: {},
+      },
+    })
+    const table = wrapper.findComponent(ElTableV2)
+    // 模拟 v2 排序点击（onColumnSort 是 callback prop）
+    table.props('onColumnSort')({ key: 'name', order: 'asc' })
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining('sortable=true'))
+    // 实例级一次性：再次点击不重复 warn
+    table.props('onColumnSort')({ key: 'name', order: 'desc' })
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(1)
+    wrapper.unmount()
+    spy.mockRestore()
+  })
+
+  it('sortable=custom 列点击 → 不 warn（服务端排序路径正常）', async () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const columns: ProColumn[] = [
+      { prop: 'name', label: '名称', minWidth: 200, sortable: 'custom' },
+    ]
+    const wrapper = mount(ElementTableV2Body, {
+      props: {
+        rows: [{ id: 1, name: 'A' }],
+        columns,
+        rowKey: 'id',
+        loading: false,
+        virtualConfig: {},
+      },
+    })
+    wrapper.findComponent(ElTableV2).props('onColumnSort')({ key: 'name', order: 'asc' })
+    await nextTick()
+    expect(spy).not.toHaveBeenCalled()
+    wrapper.unmount()
+    spy.mockRestore()
+  })
+})

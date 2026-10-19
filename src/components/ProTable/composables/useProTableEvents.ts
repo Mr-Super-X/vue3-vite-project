@@ -44,6 +44,8 @@ export interface UseProTableEventsTable<T extends object = Record<string, unknow
   setSelectedRows: (rows: T[]) => void
   /** v3.5 PR2：el-table filter-change 事件入口 —— 更新筛选状态 + 触发请求 */
   setFilter: (newFilters: FilterValuesMap) => void
+  /** D(#7)：filter-change 事件 payload 来源 —— merge 后全表筛选快照（与 emit 同形态） */
+  getFilterState: () => FilterValuesMap
   /** v3.5 PR2：清空筛选状态 —— 编排层 search.reset 路径同步调用 */
   resetFilter: () => void
 }
@@ -176,10 +178,14 @@ export function useProTableEvents<T extends object = Record<string, unknown>>(
    * v3.5 PR2：服务端筛选桥接 —— 与 handleSortChange 对称（不同点：filter-change
    * 没有 sortable==='custom' 的列级开关；列头筛选 UI 由 element-plus column.filters
    * 配置声明，业务方启用筛选即视为走服务端协议）。无 adapter 时仅 UI 记忆。
+   *
+   * D（docs/audit/2026-10-15 protable#7）：emit payload 统一为 `getFilterState()` 全表合并快照 ——
+   * EP 2.14 的 filter-change 可能仅携带变化列（增量），vxe 翻译层则已是全表快照；
+   * 统一经 getFilterState 发出，消费方拿到的恒为 merge 后全表状态，不感知引擎差异
    */
   function handleFilterChange(newFilters: FilterValuesMap): void {
     table.setFilter(newFilters)
-    emit('filter-change', newFilters)
+    emit('filter-change', table.getFilterState())
   }
 
   /** 多选变化桥接 —— el-table 事件行为 Record 视角（cast 收口到 selectedRows） */

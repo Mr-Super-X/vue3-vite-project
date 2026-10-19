@@ -328,3 +328,32 @@ describe('buildIndex / 数组行模板标记（A1-反向）', () => {
     expect(idx.crossRules.get('items')?.[0]?.rowScoped).toBeUndefined()
   })
 })
+
+describe('buildIndex / D(#6) 字符串命名 cross 规则解析', () => {
+  it("rules: 'namedRule' 经 namedRules 解析进 crossRules/reverseIndex（与批量路径对齐）", () => {
+    const namedRules = {
+      pairRule: {
+        crossValidator: () => true as const,
+        dependsOn: ['a'],
+        trigger: 'change' as const,
+      },
+    }
+    const schema: SchemaNode = {
+      component: 'Input',
+      name: 'b',
+      rules: 'pairRule' as never, // 字符串命名规则（props.rules 注册表引用）
+    }
+    const idx = buildIndex(schema, namedRules)
+    // 修复前：'crossValidator' in r 对字符串恒 false → 静默漏配反向触发
+    expect(idx.crossRules.get('b')).toHaveLength(1)
+    expect(idx.crossRules.get('b')?.[0]?.deps).toEqual(['a'])
+    expect(idx.reverseIndex.get('a')).toEqual(['b'])
+    expect(idx.dependsOnMap.get('b')).toEqual(['a'])
+  })
+
+  it('namedRules 缺该名称 → 跳过不抛错（fail-safe 与批量路径一致）', () => {
+    const schema: SchemaNode = { component: 'Input', name: 'b', rules: 'ghost' as never }
+    const idx = buildIndex(schema, {})
+    expect(idx.crossRules.has('b')).toBe(false)
+  })
+})

@@ -12,8 +12,10 @@
  * - sessionStorage 按标签页隔离：新开标签页打开同页不会误恢复
  *
  * 时序约束：read() 必须在 useTable 创建之前同步调用（快照作为 initialState
- * 注入 ref 初值，避开 useTable 内 page watcher 双发问题）；attach() 在 mounted
- * 后调用（此时首次请求已发出，开始监听写回）。
+ * 注入 ref 初值，避开 useTable 内 page watcher 双发问题）；attach() 在 setup 期
+ * （read 之后、首次请求发出前）同步调用一次（D#17 修订：旧注释称「mounted 后」，
+ * 实际 ProTable.vue setup 内同步调用 —— 写回监听须在用户交互前挂上）。
+ * 首个 watch flush（post）时若状态已变也会写回，挂载时序不影响持久化完整性。
  *
  * v3.1.1 review 优化：
  * - 原实现 4 个独立 watch（searchParams/page/pageSize/sortState），各自触发 persist，
@@ -25,15 +27,21 @@
  */
 import { watch, onScopeDispose, type Ref } from 'vue' // vue（生命周期/底层 API）
 import { Local } from '@/utils/storage' // 与 useColumns 同款封装（plan critical review #5）
-import type { SortState } from '../types'
+import type { SortState, FilterValuesMap } from '../types'
 
-/** 快照结构 —— version 字段预留未来迁移（结构变更时按版本分派恢复逻辑） */
+/**
+ * 快照结构 —— version 字段用于迁移：
+ * - v1（v3.5 PR2 之前）：searchParams / page / pageSize / sortState，无筛选状态
+ * - v2（D#9 起）：追加 filterState（列头筛选成一等持久化状态，与 sortState 待遇对等）。
+ *   filterState 可选字段 —— v1 旧快照读时向后兼容（消费方 `?? {}` 缺省空筛选）
+ */
 export interface PersistedTableState {
-  version: 1
+  version: 1 | 2
   searchParams: Record<string, unknown>
   page: number
   pageSize: number
   sortState: SortState | null
+  filterState?: FilterValuesMap
 }
 
 export interface UseStatePersistOptions {
@@ -49,6 +57,8 @@ export interface PersistSources {
   page: Ref<number>
   pageSize: Ref<number>
   sortState: Ref<SortState | null>
+  /** D(#9)：列头筛选状态（filterState）—— v3.5 PR2 后筛选成一等状态，持久化与 sortState 对等 */
+  filterState: Ref<FilterValuesMap>
 }
 
 export interface UseStatePersistReturn {
@@ -89,12 +99,16 @@ export function useStatePersist(options: UseStatePersistOptions): UseStatePersis
     }
   }
 
-  /** 快照结构校验（fail-safe：字段缺失/类型不符一律视为无快照，不部分恢复） */
+  /** 快照结构校验（fail-safe：字段缺失/类型不符一律视为无快照，不部分恢复）。
+   *  D(#9)：version 1（v1 旧结构，无 filterState）与 2 均合法；v2 若带 filterState 必须是对象 */
   function isValidSnapshot(raw: unknown): raw is PersistedTableState {
     if (!raw || typeof raw !== 'object') return false
     const s = raw as Record<string, unknown>
+    const versionOk = s.version === 1 || s.version === 2
+    const filterStateOk = s.filterState === undefined || typeof s.filterState === 'object'
     return (
-      s.version === 1 &&
+      versionOk &&
+      filterStateOk &&
       typeof s.searchParams === 'object' &&
       s.searchParams !== null &&
       typeof s.page === 'number' &&
@@ -125,22 +139,29 @@ export function useStatePersist(options: UseStatePersistOptions): UseStatePersis
     /** 合并写回（单一写入点，避免多 watcher 各自序列化） */
     function persist(): void {
       const snapshot: PersistedTableState = {
-        version: 1,
+        version: 2,
         searchParams: { ...sources.searchParams.value },
         page: sources.page.value,
         pageSize: sources.pageSize.value,
         sortState: sources.sortState.value,
+        filterState: { ...sources.filterState.value },
       }
       Local.set(stateKey, snapshot)
     }
 
     /**
-     * 4 个 ref 合并为单一 watch，flush: 'post' 让同帧（microtask）多次变更合并为 1 次回调。
+     * 5 个 ref 合并为单一 watch，flush: 'post' 让同帧（microtask）多次变更合并为 1 次回调。
      * 例：用户修改 searchParams 后点击搜索按钮（触发 page 变化）→ microtask 内仅 1 次 persist。
      * deep: true 保留 searchParams 内部字段变化的响应性。
      */
     const stop = watch(
-      [sources.searchParams, sources.page, sources.pageSize, sources.sortState],
+      [
+        sources.searchParams,
+        sources.page,
+        sources.pageSize,
+        sources.sortState,
+        sources.filterState,
+      ],
       persist,
       { deep: true, flush: 'post' }
     )

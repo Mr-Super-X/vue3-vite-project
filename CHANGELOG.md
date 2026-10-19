@@ -15,6 +15,16 @@
 - **A5 行级 reaction 全量重注册 + 模块级 stopper 桶泄漏**：stopper 桶 value 升级 `RowReactionEntry` 四元组（同 rowKey+index+itemSchema 引用未变则复用 watcher+副本跳过重注册）；`useRenderSchemaNode` 每实例建桶经 opts 注入、卸载时 onScopeDispose 统一 stop+clear——修复前每次渲染全量 churn + 卸载后模块级 Map 无限增长 + 原始值行 key 跨实例碰撞误停
 - **测试基建修正**：vxe-table mock 补具名导出 `VxeTable/VxeColumn`（镜像真实 v4 模块形态）——原 mock 缺 named export 致 `vxeTableComp` 恒 null，"加载成功"断言空洞化
 
+### 🐞 Fix | 引擎加固批 D：审计清单收官（2026-10-15 第五轮，audit 清单 100% 关闭）
+
+- **protable#4（HIGH）**：vxe 引擎 `enableSummary` 不再静默失效——warn + 忽略（VxeTableBody 无汇总渲染接线）
+- **protable#7**：`filter-change` payload 统一为 `getFilterState()` 全表合并快照（浏览器实测连续筛两列输出合并快照），消费方不感知引擎差异
+- **protable#8**：ElPagination 业务 paginationProps 不再覆盖内部受控绑定（v-bind 顺序修正）
+- **protable#9**：statePersist 快照 v2 追加 filterState——列头筛选随路由级持久化（v1 旧快照向后兼容）
+- **protable#10/#13/#11**：vxe+树形+拖拽文案对齐实现（观察中）· v2 sortable=true 一次性 warn · 三入口分页语义文档披露
+- **xform#5/#6/#7**：危险表达式扫描补 hidden/readonly · 字符串命名 cross 规则经 namedRules 解析进反向索引（三路径对齐）· reaction deps 对象路径内部变化可触发（deep watch）
+- **LOW×8**：docs/29 六处补披露 + §13 测试表分组补全（39 spec）+ §16 索引 23 闭环 · docs/24 行级 budget 披露 · useStatePersist 注释修正
+
 ### 📖 Docs | 引擎加固批 C：文档契约对齐（2026-10-15 第四轮，audit 批 C 全部关闭）
 
 - **docs/29**：§6.4 重写为 vxe 引擎能力对等矩阵（v3.5 PR1-B 后四大能力已对齐，修正「vxe 不支持树形/拖拽/合并/编辑」过时表述）+ §12 #3 同步；补写 §3.5「服务端筛选（filterParamsAdapter）」——修复 §1.2 表 / ProTable.vue emit 注释 / types JSDoc 三处断链
