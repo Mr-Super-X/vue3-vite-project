@@ -12,7 +12,7 @@
  *   7. dirty 追踪（实时显示 isDirty + dirty 字段）
  *
  * 设计目标：让新人 5 分钟看完整 XForm 业务形态，避免在 50+ 个独立 demo 间来回跳转。
- * 路由：/demo/x-form-order-create（由 import.meta.glob 自动派生）
+ * 路由：/demo/xform-order-create（由 import.meta.glob 自动派生）
  *
  * 验证清单：
  *   ① 客户名/电话都留空 → 点保存 → 提示「至少填一个」
@@ -346,16 +346,23 @@ const tocItems = [
       <section id="demo-order-create">
         <DemoField label="端到端业务演示：订单创建（拉详情 → 校验 → 提交）" :code="xFormSchemaCode">
           <div :class="bem.b()">
-            <div :class="bem.e('toolbar')">
-              <el-button @click="onReset">重置字段</el-button>
-              <el-button type="warning" :disabled="!persist.hasDraft.value" @click="onRestoreDraft">
-                恢复草稿
-              </el-button>
-              <el-button type="primary" @click="onSave">保存订单</el-button>
-              <el-button @click="copySchema">复制 schema</el-button>
-            </div>
-
-            <XForm ref="formRef" :schema="schema" :model="model" />
+            <!--
+              Enter 提交示范（设计师审查 F10）：ElForm 渲染原生 form 但不 prevent submit，
+              @submit.prevent 经 attrs 继承落到 XForm 根 div，form 内 submit 冒泡到此被拦截 → onSave。
+              「保存订单」用 native-type="submit" 而不绑 @click —— 点击与 Enter 统一走 submit 单路径，避免双触发。
+            -->
+            <XForm ref="formRef" :schema="schema" :model="model" @submit.prevent="onSave">
+              <template #footer>
+                <div :class="bem.e('toolbar')">
+                  <el-button @click="onReset">重置字段</el-button>
+                  <el-button plain :disabled="!persist.hasDraft.value" @click="onRestoreDraft">
+                    恢复草稿
+                  </el-button>
+                  <el-button native-type="submit" type="primary">保存订单</el-button>
+                  <el-button @click="copySchema">复制 schema</el-button>
+                </div>
+              </template>
+            </XForm>
             <ModelPreview :model="model" />
           </div>
         </DemoField>
@@ -397,7 +404,7 @@ const tocItems = [
             <tr>
               <td>① 基础校验</td>
               <td>客户名/电话/区域/订单状态 rules 必填</td>
-              <td><code>/demo/x-form-base</code></td>
+              <td><code>/demo/xform-base</code></td>
             </tr>
             <tr>
               <td>② 跨字段校验</td>
@@ -405,32 +412,32 @@ const tocItems = [
                 <code>crossValidator</code>
                 ：客户名/电话至少一个（schema rules 自动触发，无需 onSave 内检查）
               </td>
-              <td><code>/demo/x-form-cross-field</code></td>
+              <td><code>/demo/xform-cross-field</code></td>
             </tr>
             <tr>
               <td>③ 反应式联动</td>
               <td>needInvoice → invoiceTitle hidden + 必填</td>
-              <td><code>/demo/x-form-reaction</code></td>
+              <td><code>/demo/xform-reaction</code></td>
             </tr>
             <tr>
               <td>④ 异步级联选项</td>
               <td>城市/区域：asyncOptions + deps: 'city'</td>
-              <td><code>/demo/x-form-async-options</code></td>
+              <td><code>/demo/xform-async-options</code></td>
             </tr>
             <tr>
               <td>⑤ 数组节点</td>
               <td>订单明细：xArray + minItems + maxItems</td>
-              <td><code>/demo/x-form-array</code></td>
+              <td><code>/demo/xform-array</code></td>
             </tr>
             <tr>
               <td>⑥ 草稿持久化</td>
               <td>useFormPersist + exclude: ['orderNo']</td>
-              <td><code>/demo/x-form-persist</code></td>
+              <td><code>/demo/xform-persist</code></td>
             </tr>
             <tr>
               <td>⑦ dirty 追踪</td>
               <td>isDirty + getDirtyFields 实时同步</td>
-              <td><code>/demo/x-form-dirty</code></td>
+              <td><code>/demo/xform-dirty</code></td>
             </tr>
           </tbody>
         </table>
@@ -448,7 +455,7 @@ const tocItems = [
   &__toolbar {
     display: flex;
     gap: 8px;
-    margin-bottom: 16px;
+    margin: 16px 0;
     flex-wrap: wrap;
   }
 

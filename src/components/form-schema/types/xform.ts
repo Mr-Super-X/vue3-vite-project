@@ -4,7 +4,7 @@
  * @group 类型系统
  */
 import type { ComponentPublicInstance, Directive } from 'vue'
-import type { ZodType } from 'zod'
+import type { ZodError, ZodType } from 'zod'
 
 import type { RuleItem } from './rule'
 import type { SchemaNode } from './schema-node'
@@ -210,7 +210,7 @@ export interface XFormExpose {
   /** 校验指定字段（透传 el-form validateField）：成功 true；失败/未绑定 false */
   validateField(name: string | string[]): Promise<boolean>
   scrollToField(name: string): void
-  validateWithZod(): { success: boolean; errors: import('zod').ZodError | null }
+  validateWithZod(): { success: boolean; errors: ZodError | null }
   /** 手动写入某个字段的错误信息（用于服务端 422 等场景） */
   setFieldError(
     name: string,

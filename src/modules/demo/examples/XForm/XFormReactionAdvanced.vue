@@ -6,16 +6,16 @@
  * 故拆分为 4 个独立 demo，本文件作为导航总览：
  *
  *   ① 计算字段 + deps 精确监听（数量×单价×折扣=折后价）
- *     → /demo/x-form-reaction-calc-field
+ *     → /demo/xform-reaction-calc-field
  *
  *   ② 跨字段级联清空（省/市/区 + 商品/型号）
- *     → /demo/x-form-reaction-cascade-clear
+ *     → /demo/xform-reaction-cascade-clear
  *
  *   ③ 反应式 props/rules/options 联动（度量单位 + 折扣等级）
- *     → /demo/x-form-reaction-reactive-props
+ *     → /demo/xform-reaction-reactive-props
  *
  *   ④ 数组行内嵌 reaction（采购明细行内联动）
- *     → /demo/x-form-reaction-array-row
+ *     → /demo/xform-reaction-array-row
  *
  * XFormReaction 基础 4 场景（基础计数 / 可见性 / props 替换 / 数组）见
  * XFormReaction.vue，与本 demo 不重叠。

@@ -4,6 +4,19 @@
 
 ## 未发布
 
+### 🔧 Refactor | 09-18 三视角审查 Wave1 收尾：39 条发现正式闭环（2026-10-19）
+
+> 来源：`.claude/.agent-reports/2026-09-18-form-schema-{architect,designer,pm}-review.md`（39 条发现）的 2026-10-19 全量复核。核查结论已标注于三份报告头部：**37 条已闭环、2 条正式 defer**。其中 33 条系此前批次（2026-10-15 引擎加固批 A–D / demo 修复轮）顺带修复，本次补齐剩余尾项。
+
+- **本次补齐（4 项）**：
+  - **architect #12**：`types/xform.ts` 的 `validateWithZod` 返回类型 ZodError 内联 import 改顶部 `import type { ZodError, ZodType } from 'zod'`
+  - **architect #13**：`resolveFunctionExpression` 的 @deprecated 补 v4.0 移除锚点注释
+  - **architect #14**：getRef 依赖 el-form 实例内部 `$` 结构（非 EP 公开 API，EP 3.0 升级风险）补入 ARCHITECTURE.md §10.1 已知限制
+  - **designer F10 + F12**：XFormOrderCreate 按钮区移入 `#footer` slot——「保存订单」改 `native-type="submit"` 不绑 @click（点击与 Enter 统一走 submit 单路径），`@submit.prevent` 经 attrs 继承落 XForm 根 div 拦截原生刷新；恢复草稿 `type="warning"` → `plain` 语义色修正。浏览器实测（CDP 真实输入管线）：点击/Enter 各触发一次 onSave 不双触发 ✓ 文本框 Enter 提交成功（orderNo 生成实证）✓ Select（readonly input）Enter 不误触 implicit submission ✓
+- **正式 defer（2 项，理由已写入报告）**：pm #10 选型量化阈值（需 bench 实测基线，并入 TODOS #12「bench 基线对比」立项，不虚构数据）；designer F8 数组行删除确认/undo/增删过渡（新 API + 视觉变更，单独立项；键盘路径由 showActions.move 默认按钮兜底）
+- **核查面确认（33 条此前批次已修，摘录）**：F1 数组行样式 / F2 asyncOptions 位置扫描警告（`scanAsyncOptionsUnsupported` + `ASYNC_OPTIONS_UNSUPPORTED_POSITION` + docs/24 红字）/ F3 userMessage / F4 toast 7s 自动消失 + TransitionGroup + 超量聚合 / F5 keyPath EP 格式 / F6 色板 EP 变量 / F7 拖拽落点指示 / F9 size / F13 showDirtyMark；architect #1 scrollToError 死 prop / #2 组件映射双表单源化 / #3 builders 拆分 / #4 失效 watch 删除 / #5 ProDialogForm EMPTY_RULES / #6 schema 整体替换文档声明 / #7 表达式沙箱缓存 / #8 watchFallback / #9 cross-rule-runner 统一 / #10 文档硬数据锁定 / #11 vite dirs 决策；pm #1 xformProps 透传 / #2 props 口径 check-doc-currency 锁定 / #3 i18n（XFormTranslateFn + xform-i18n demo）/ #4 概念地图 / #7 上手标注 / #11 keyof XFormProps 契约测试 / #12 schemaVersion 预留
+- **路由前缀修正（用户验证反馈）**：XForm demo 路由前缀漂移修复扩面——除 docs/24 外，`form-schema/README.md`（64 处）与 4 个 demo 文件（XFormOrderCreate 能力清单 7 行 + 头注释、XFormReactionAdvanced 4 处、XFormValidateDetail 1 处）及 `如何写好一个 demo.md` 示例均残留 `/demo/x-form-xxx` 旧前缀（check-doc-currency 只校验 demo 计数不校验路径，故此前全绿未暴露），全部修正为 `/demo/xform-xxx`（XForm 前缀不拆词）；另修正 README 裸路径 `/x-form-reaction` ×3 为带 `/demo/` 前缀的正确形态。`docs/audit`、`docs/superpowers/{plans,specs}` 历史快照中的旧前缀为历史事实，保留原貌
+
 ### ✨ Feat | 审计 demo 缺口补齐：4 个浏览器验证入口（2026-10-19）
 
 > 来源：audit `docs/audit/2026-10-15-engine-audit-summary.md` 批 A/B/D 修复场景长期无 demo（"数组+cross / Autocomplete+asyncOptions / vxe+selection / search+filter 组合"四缺口），修复只能由 spec 覆盖、无法浏览器复验。本批补齐验证入口，审计观察项至此全量闭环。

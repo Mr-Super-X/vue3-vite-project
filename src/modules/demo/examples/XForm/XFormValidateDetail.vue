@@ -274,7 +274,7 @@ const keyPathArrayExample = `// 示例：嵌套数组的 validateDetail().errors
           <p :class="bem.e('keypath-hint')">
             本 demo 注册表单故意留空触发校验后，右侧错误面板会展示完整的 keyPath 数组 （含字段名 +
             嵌套结构）；若需演示纯数组下标场景，请切换到
-            <code>/demo/x-form-nested-array</code>
+            <code>/demo/xform-nested-array</code>
             （嵌套 array 验证失败时 keyPath 含两层 [i]）。
           </p>
         </DemoField>

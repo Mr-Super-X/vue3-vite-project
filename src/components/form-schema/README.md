@@ -20,7 +20,7 @@ const schema = {
 }
 ```
 
-完整 demo 在 `/demo/x-form-minimum-demo`（详见 `src/modules/demo/examples/XForm/`，路由由 `src/modules/demo/routes/index.ts` 自动派生）。
+完整 demo 在 `/demo/xform-minimum-demo`（详见 `src/modules/demo/examples/XForm/`，路由由 `src/modules/demo/routes/index.ts` 自动派生）。
 
 ---
 
@@ -28,13 +28,13 @@ const schema = {
 
 XForm 共有 5 份文档 + 56 个 XForm demo + 4 个通用组件 demo（AsyncState / ErrorBoundary / Dict / RichTextEditor，位于 `examples/` 根），按角色 / 任务选读，避免到处翻：
 
-| 你的角色 / 任务                                 | 先看这个                                                | 再看这个                                                              | 跳过            |
-| ----------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------- | --------------- |
-| **新人首次集成**（5 分钟上手）                  | 本 README 上方「30 秒上手」                             | `/demo/x-form-minimum-demo`                                           | —               |
-| **业务开发者集成 XForm**                        | 本 README「DSL 字段速查表」+「链式构建器」+「决策指南」 | `/demo/x-form-base`                                                   | ARCHITECTURE.md |
-| **想理解底层机制**（reaction / 跨字段 / dirty） | ARCHITECTURE.md §3-5                                    | 对应 demo（`/x-form-reaction` `/x-form-cross-field` `/x-form-dirty`） | —               |
-| **排查 bug 或自定义场景**                       | 本 README「故障排查」+「自定义组件类型扩展」            | `types/TYPE-CAST-AUDIT.md`（85 处类型断言归因）                       | —               |
-| **架构师 / 重构决策**                           | `ARCHITECTURE.md` §1-13                                 | `types/TYPE-CAST-AUDIT.md` + 项目根 `CLAUDE.md` §1-2                  | 各 demo         |
+| 你的角色 / 任务                                 | 先看这个                                                | 再看这个                                                                          | 跳过            |
+| ----------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------- | --------------- |
+| **新人首次集成**（5 分钟上手）                  | 本 README 上方「30 秒上手」                             | `/demo/xform-minimum-demo`                                                        | —               |
+| **业务开发者集成 XForm**                        | 本 README「DSL 字段速查表」+「链式构建器」+「决策指南」 | `/demo/xform-base`                                                                | ARCHITECTURE.md |
+| **想理解底层机制**（reaction / 跨字段 / dirty） | ARCHITECTURE.md §3-5                                    | 对应 demo（`/demo/xform-reaction` `/demo/xform-cross-field` `/demo/xform-dirty`） | —               |
+| **排查 bug 或自定义场景**                       | 本 README「故障排查」+「自定义组件类型扩展」            | `types/TYPE-CAST-AUDIT.md`（85 处类型断言归因）                                   | —               |
+| **架构师 / 重构决策**                           | `ARCHITECTURE.md` §1-13                                 | `types/TYPE-CAST-AUDIT.md` + 项目根 `CLAUDE.md` §1-2                              | 各 demo         |
 
 ### 文档清单
 
@@ -54,8 +54,8 @@ XForm 共有 5 份文档 + 56 个 XForm demo + 4 个通用组件 demo（AsyncSta
 
 | 阶段                           | 路径                                                                  | 目标                                                                                 | 耗时   |
 | ------------------------------ | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ------ |
-| **① 5 分钟建体感**             | `/demo/x-form-minimum-demo` → `/demo/x-form-base`                     | 跑通「写 schema → 传 model → 渲染 → 校验」最小闭环                                   | 5 min  |
-| **② 30 分钟看完整业务形态**    | `/demo/x-form-order-create`（**新人首选**）                           | 一个 demo 串联 7 大能力：基础校验 / 跨字段 / 反应式 / 异步级联 / 数组 / 草稿 / dirty | 30 min |
+| **① 5 分钟建体感**             | `/demo/xform-minimum-demo` → `/demo/xform-base`                       | 跑通「写 schema → 传 model → 渲染 → 校验」最小闭环                                   | 5 min  |
+| **② 30 分钟看完整业务形态**    | `/demo/xform-order-create`（**新人首选**）                            | 一个 demo 串联 7 大能力：基础校验 / 跨字段 / 反应式 / 异步级联 / 数组 / 草稿 / dirty | 30 min |
 | **③ 按需深入单能力**           | reaction / dirty / persist / upload / array / cross-field（按症状选） | 单独吃透某个能力                                                                     | 半天   |
 | **④ 查缺补漏（2026-09 新增）** | 见下方「补全 demo」清单                                               | 补齐 README §props / §schema 字段中**零示例**的能力点                                | 按需   |
 
@@ -63,33 +63,33 @@ XForm 共有 5 份文档 + 56 个 XForm demo + 4 个通用组件 demo（AsyncSta
 
 > 此前 README 列出的 props / 实例方法 / schema 字段中存在「无独立 demo」的能力点，本批新增 demo 一一覆盖。
 
-| 路由                                  | 演示的能力点                                                            | 重要性 | 文件                            |
-| ------------------------------------- | ----------------------------------------------------------------------- | ------ | ------------------------------- |
-| `/demo/x-form-before-change`          | `XFormProps.beforeChange` 拦截器（值写入 model 前）                     | 🥇 P0  | `XFormBeforeChange.vue`         |
-| `/demo/x-form-zod`                    | `XFormProps.zodSchema` + `validateWithZod()` 异步校验                   | 🥇 P0  | `XFormZod.vue`                  |
-| `/demo/x-form-custom-component`       | `XFormProps.components` 自定义组件注册                                  | 🥇 P0  | `XFormCustomComponent.vue`      |
-| `/demo/x-form-ignore`                 | `schema.ignore` 字段（不渲染、不校验、不入 getNames）                   | 🥈 P1  | `XFormIgnore.vue`               |
-| `/demo/x-form-custom-form-item`       | `schema.formItem` 自定义 form-item 包装（含 slots / props / component） | 🥈 P1  | `XFormCustomFormItem.vue`       |
-| `/demo/x-form-label-layout`           | 顶层 `labelPosition` / `labelWidth`（响应式布局）                       | 🥈 P1  | `XFormLabelLayout.vue`          |
-| `/demo/x-form-array-api`              | `addItem` / `removeItem` / `moveItem` 实例方法（编程式操控）            | 🥉 P2  | `XFormArrayApi.vue`             |
-| `/demo/x-form-expression-sandbox`     | `expressionFunctions` 白名单 + 沙箱安全（scanForForbidden）             | P3     | `XFormExpressionSandbox.vue`    |
-| `/demo/x-form-persist-schema-version` | `useFormPersist.restoreFilter`（schema 升级裁剪旧草稿）                 | P3     | `XFormPersistSchemaVersion.vue` |
-| `/demo/x-form-async-options-error`    | `asyncOptions.onError` 错误处理 + `immediate: false` 延迟加载           | P3     | `XFormAsyncOptionsError.vue`    |
+| 路由                                 | 演示的能力点                                                            | 重要性 | 文件                            |
+| ------------------------------------ | ----------------------------------------------------------------------- | ------ | ------------------------------- |
+| `/demo/xform-before-change`          | `XFormProps.beforeChange` 拦截器（值写入 model 前）                     | 🥇 P0  | `XFormBeforeChange.vue`         |
+| `/demo/xform-zod`                    | `XFormProps.zodSchema` + `validateWithZod()` 异步校验                   | 🥇 P0  | `XFormZod.vue`                  |
+| `/demo/xform-custom-component`       | `XFormProps.components` 自定义组件注册                                  | 🥇 P0  | `XFormCustomComponent.vue`      |
+| `/demo/xform-ignore`                 | `schema.ignore` 字段（不渲染、不校验、不入 getNames）                   | 🥈 P1  | `XFormIgnore.vue`               |
+| `/demo/xform-custom-form-item`       | `schema.formItem` 自定义 form-item 包装（含 slots / props / component） | 🥈 P1  | `XFormCustomFormItem.vue`       |
+| `/demo/xform-label-layout`           | 顶层 `labelPosition` / `labelWidth`（响应式布局）                       | 🥈 P1  | `XFormLabelLayout.vue`          |
+| `/demo/xform-array-api`              | `addItem` / `removeItem` / `moveItem` 实例方法（编程式操控）            | 🥉 P2  | `XFormArrayApi.vue`             |
+| `/demo/xform-expression-sandbox`     | `expressionFunctions` 白名单 + 沙箱安全（scanForForbidden）             | P3     | `XFormExpressionSandbox.vue`    |
+| `/demo/xform-persist-schema-version` | `useFormPersist.restoreFilter`（schema 升级裁剪旧草稿）                 | P3     | `XFormPersistSchemaVersion.vue` |
+| `/demo/xform-async-options-error`    | `asyncOptions.onError` 错误处理 + `immediate: false` 延迟加载           | P3     | `XFormAsyncOptionsError.vue`    |
 
 #### 「按症状定位」对照表（出问题时快速跳转）
 
-| 现象                              | 跳到 demo                                |
-| --------------------------------- | ---------------------------------------- |
-| 反应式不响应 / 写 model 后无变化  | `/demo/x-form-reaction-deps`             |
-| 校验规则写了不触发                | `/demo/x-form-validate-field`            |
-| 跨字段校验不生效                  | `/demo/x-form-cross-field-reverse`       |
-| 表单填错很多要展示服务端错误      | `/demo/x-form-server-error`              |
-| 性能问题（100+ 字段卡顿）         | `/demo/x-form-large-schema`              |
-| 控制台报错但 UI 没提示            | `/demo/x-form-invalid-component`         |
-| 草稿数据回填字段对不上            | `/demo/x-form-persist-schema-version` ⭐ |
-| 自定义组件被识别为原生标签        | `/demo/x-form-custom-component`          |
-| 接入 schema 后字段全失效          | `/demo/x-form-model-warn`                |
-| 想拦截输入值（自动格式化 / 拒绝） | `/demo/x-form-before-change`             |
+| 现象                              | 跳到 demo                               |
+| --------------------------------- | --------------------------------------- |
+| 反应式不响应 / 写 model 后无变化  | `/demo/xform-reaction-deps`             |
+| 校验规则写了不触发                | `/demo/xform-validate-field`            |
+| 跨字段校验不生效                  | `/demo/xform-cross-field-reverse`       |
+| 表单填错很多要展示服务端错误      | `/demo/xform-server-error`              |
+| 性能问题（100+ 字段卡顿）         | `/demo/xform-large-schema`              |
+| 控制台报错但 UI 没提示            | `/demo/xform-invalid-component`         |
+| 草稿数据回填字段对不上            | `/demo/xform-persist-schema-version` ⭐ |
+| 自定义组件被识别为原生标签        | `/demo/xform-custom-component`          |
+| 接入 schema 后字段全失效          | `/demo/xform-model-warn`                |
+| 想拦截输入值（自动格式化 / 拒绝） | `/demo/xform-before-change`             |
 
 ---
 
@@ -265,7 +265,7 @@ formRef.value?.resetDirty() // 当前状态设为新基线（提交后归零）
 | `'Tabs'`  | `ElTabPane` | `child.label`（缺省 `面板 N`） | `props.modelValue` + `props.onTabChange`（绑 model）；`props.beforeLeave` 校验门控（返 false 阻止切换） |
 | `'Steps'` | `ElStep`    | `child.label`（缺省 `面板 N`） | `props.active`（绑 model）+ 外层按钮驱动；`props.processStatus` 完成态                                  |
 
-面板内布局：child 配 `row/column` 走栅格（同 Card）。示例见 `/demo/x-form-tabs-steps`（Tabs + Steps + 校验门控完整桥接）与 `/demo/x-form-nested`（Card 多组）。
+面板内布局：child 配 `row/column` 走栅格（同 Card）。示例见 `/demo/xform-tabs-steps`（Tabs + Steps + 校验门控完整桥接）与 `/demo/xform-nested`（Card 多组）。
 
 ### 数组节点（2）
 
@@ -667,48 +667,48 @@ dev 模式下 XFormDebugBanner 会自动在右下角浮窗显示 schema 校验�
 >
 > 其中 `/demo/x-form`（即 `XForm.vue`）是主入口，承载 Props/Events/Slots 完整 API 表。
 
-完整在线演示站点：`pnpm dev` → `/demo`（左侧「XForm 表单引擎」分组），路由 = `/demo/x-form-<kebab-case>`。
+完整在线演示站点：`pnpm dev` → `/demo`（左侧「XForm 表单引擎」分组），路由 = `/demo/xform-<kebab-case>`。
 
-| 路由                               | 内容                                                |
-| ---------------------------------- | --------------------------------------------------- |
-| `/demo/x-form`                     | 用法总览（主 demo：Props/Events/Slots 完整 API 表） |
-| `/demo/x-form-minimum-demo`        | 最小示例（5 分钟上手）                              |
-| `/demo/x-form-base`                | 基础用法（多字段 + 校验 + 重置）                    |
-| `/demo/x-form-nested`              | 复杂布局（Card 容器 + slots + 嵌套）                |
-| `/demo/x-form-builder`             | 链式构建器                                          |
-| `/demo/x-form-reaction`            | 反应式联动（含防抖/节流）                           |
-| `/demo/x-form-reaction-deps`       | reaction `deps` 精确监听                            |
-| `/demo/x-form-reaction-advanced`   | reaction 进阶用法                                   |
-| `/demo/x-form-expression`          | `{{ }}` 函数表达式沙箱                              |
-| `/demo/x-form-cross-field`         | 跨字段校验                                          |
-| `/demo/x-form-cross-field-reverse` | 反向跨字段（精确触发）                              |
-| `/demo/x-form-async-options`       | 异步选项                                            |
-| `/demo/x-form-async-validator`     | 异步校验（loading 态）                              |
-| `/demo/x-form-array`               | 数组节点（增删/上下移/min-max 限制）                |
-| `/demo/x-form-array-draggable`     | 数组行拖拽排序                                      |
-| `/demo/x-form-persist`             | 草稿持久化（自动保存 + 刷新恢复）                   |
-| `/demo/x-form-responsive`          | 响应式布局（断点拍平）                              |
-| `/demo/x-form-grid`                | row + column 栅格布局                               |
-| `/demo/x-form-dirty`               | 脏状态追踪                                          |
-| `/demo/x-form-disabled`            | 禁用状态（反应式）                                  |
-| `/demo/x-form-global-disabled`     | 整体禁用（顶层 schema `disabled`）                  |
-| `/demo/x-form-global-readonly`     | 整体只读（顶层 schema `readonly`）                  |
-| `/demo/x-form-field-permission`    | 字段权限（view/edit/hidden）                        |
-| `/demo/x-form-directives`          | 自定义指令                                          |
-| `/demo/x-form-events`              | `on` 事件绑定（函数 + 表达式）                      |
-| `/demo/x-form-server-error`        | 服务端错误映射                                      |
-| `/demo/x-form-slots`               | 插槽系统                                            |
-| `/demo/x-form-invalid-component`   | 无效组件校验（div 占位 + DebugBanner）              |
-| `/demo/x-form-large-schema`        | 大 schema 性能                                      |
-| `/demo/x-form-model-warn`          | model 缺失警告                                      |
-| `/demo/x-form-schema-index`        | 索引快照（getNames/getRef）                         |
-| `/demo/x-form-detail-fill`         | 详情页回填（加载 + resetDirty）                     |
-| `/demo/x-form-order-create`        | 业务综合示例（订单创建）                            |
-| `/demo/x-form-scroll-to-error`     | 校验失败自动滚动                                    |
-| `/demo/x-form-validate-field`      | `validateField` 单字段校验                          |
-| `/demo/x-form-validation-debounce` | 跨字段 debounce 调优                                |
-| `/demo/x-form-style-override`      | 样式覆盖（BEM 命名空间）                            |
-| `/demo/x-form-upload`              | 文件上传（单文件/多文件/拖拽/图片墙/校验/回显）     |
+| 路由                              | 内容                                                |
+| --------------------------------- | --------------------------------------------------- |
+| `/demo/x-form`                    | 用法总览（主 demo：Props/Events/Slots 完整 API 表） |
+| `/demo/xform-minimum-demo`        | 最小示例（5 分钟上手）                              |
+| `/demo/xform-base`                | 基础用法（多字段 + 校验 + 重置）                    |
+| `/demo/xform-nested`              | 复杂布局（Card 容器 + slots + 嵌套）                |
+| `/demo/xform-builder`             | 链式构建器                                          |
+| `/demo/xform-reaction`            | 反应式联动（含防抖/节流）                           |
+| `/demo/xform-reaction-deps`       | reaction `deps` 精确监听                            |
+| `/demo/xform-reaction-advanced`   | reaction 进阶用法                                   |
+| `/demo/xform-expression`          | `{{ }}` 函数表达式沙箱                              |
+| `/demo/xform-cross-field`         | 跨字段校验                                          |
+| `/demo/xform-cross-field-reverse` | 反向跨字段（精确触发）                              |
+| `/demo/xform-async-options`       | 异步选项                                            |
+| `/demo/xform-async-validator`     | 异步校验（loading 态）                              |
+| `/demo/xform-array`               | 数组节点（增删/上下移/min-max 限制）                |
+| `/demo/xform-array-draggable`     | 数组行拖拽排序                                      |
+| `/demo/xform-persist`             | 草稿持久化（自动保存 + 刷新恢复）                   |
+| `/demo/xform-responsive`          | 响应式布局（断点拍平）                              |
+| `/demo/xform-grid`                | row + column 栅格布局                               |
+| `/demo/xform-dirty`               | 脏状态追踪                                          |
+| `/demo/xform-disabled`            | 禁用状态（反应式）                                  |
+| `/demo/xform-global-disabled`     | 整体禁用（顶层 schema `disabled`）                  |
+| `/demo/xform-global-readonly`     | 整体只读（顶层 schema `readonly`）                  |
+| `/demo/xform-field-permission`    | 字段权限（view/edit/hidden）                        |
+| `/demo/xform-directives`          | 自定义指令                                          |
+| `/demo/xform-events`              | `on` 事件绑定（函数 + 表达式）                      |
+| `/demo/xform-server-error`        | 服务端错误映射                                      |
+| `/demo/xform-slots`               | 插槽系统                                            |
+| `/demo/xform-invalid-component`   | 无效组件校验（div 占位 + DebugBanner）              |
+| `/demo/xform-large-schema`        | 大 schema 性能                                      |
+| `/demo/xform-model-warn`          | model 缺失警告                                      |
+| `/demo/xform-schema-index`        | 索引快照（getNames/getRef）                         |
+| `/demo/xform-detail-fill`         | 详情页回填（加载 + resetDirty）                     |
+| `/demo/xform-order-create`        | 业务综合示例（订单创建）                            |
+| `/demo/xform-scroll-to-error`     | 校验失败自动滚动                                    |
+| `/demo/xform-validate-field`      | `validateField` 单字段校验                          |
+| `/demo/xform-validation-debounce` | 跨字段 debounce 调优                                |
+| `/demo/xform-style-override`      | 样式覆盖（BEM 命名空间）                            |
+| `/demo/xform-upload`              | 文件上传（单文件/多文件/拖拽/图片墙/校验/回显）     |
 
 > 主 demo `/demo/x-form` 展示 Props/Events/Slots 完整 API 表，是查阅全部 prop 与实例方法的入口。
 
