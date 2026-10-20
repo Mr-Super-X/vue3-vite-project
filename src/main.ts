@@ -92,7 +92,9 @@ setDialogAppContext(app)
 // 常规生产构建两个条件均为 false，整分支 tree-shake，产物不含 mock
 if (import.meta.env.PROD && import.meta.env.VITE_USE_MOCK === 'true') {
   const { setupProdMockServer } = await import('../mock/mockProdServer')
-  setupProdMockServer()
+  // await 至 mockjs 加载完成、XHR 劫持激活后再 mount——否则守卫启动请求
+  // 会穿过拦截窗口打到静态服务器（SPA fallback 返回 HTML 致 profile 拉取失败）
+  await setupProdMockServer()
 }
 
 app.mount('#app')
