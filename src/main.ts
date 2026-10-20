@@ -73,6 +73,17 @@ assertNoMockInProd()
 
 const app = createApp(App)
 
+// 生产构建且 VITE_USE_MOCK==='true' 时（CI gh-pages 产物）动态挂接浏览器端 mock。
+// 位置强约束：必须早于 app.use(router)——Vue Router install 会立即触发初始导航，
+// 守卫的 fetchProfile 与 main.ts 后续语句并行执行；若挂接在 use 之后，
+// 守卫请求会先于 mockjs 激活发出，穿透到静态服务器（404 → 资源不存在 toast）。
+// PROD 守卫防 dev 双重劫持（dev 下 node 中间件与本分支同时命中，auth rawResponse
+// 被 client 侧解构为 undefined → dev 登录必挂）；常规生产构建整分支 tree-shake。
+if (import.meta.env.PROD && import.meta.env.VITE_USE_MOCK === 'true') {
+  const { setupProdMockServer } = await import('../mock/mockProdServer')
+  await setupProdMockServer()
+}
+
 app.use(pinia)
 app.use(router)
 app.use(i18n)
@@ -84,17 +95,5 @@ app.use(Plugins)
 // 动态挂载的弹窗依赖这里注册的全局 appContext 才能访问 Pinia/Router/全局组件。
 // 必须在所有 app.use 之后调用——_context 的 provides 由插件 install 写入
 setDialogAppContext(app)
-
-// 生产构建且 VITE_USE_MOCK==='true' 时（CI gh-pages 产物）动态挂接浏览器端 mock；
-// PROD 守卫是防双重劫持的关键：dev 下 .env.development 的 VITE_USE_MOCK=true 会同时命中
-// node 侧 viteMockServe 中间件与本分支，mockjs 在 XHR 层拦截后请求到不了 dev server，
-// 而 auth.ts 的 rawResponse（Node 语义）在 client 侧解构为 undefined → dev 登录必挂
-// 常规生产构建两个条件均为 false，整分支 tree-shake，产物不含 mock
-if (import.meta.env.PROD && import.meta.env.VITE_USE_MOCK === 'true') {
-  const { setupProdMockServer } = await import('../mock/mockProdServer')
-  // await 至 mockjs 加载完成、XHR 劫持激活后再 mount——否则守卫启动请求
-  // 会穿过拦截窗口打到静态服务器（SPA fallback 返回 HTML 致 profile 拉取失败）
-  await setupProdMockServer()
-}
 
 app.mount('#app')

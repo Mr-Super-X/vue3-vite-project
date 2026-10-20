@@ -19,7 +19,8 @@
  * mockjs 伪造响应写不进 cookie 也校验不了。故本文件内联 prod 版 auth（response 形态，无 cookie
  * 语义），供 VITE_DEMO_NO_AUTH 演示模式（守卫跳过登录校验但仍拉 profile）消费；
  * 权限码字面量与 mock/auth.ts MOCK_PERMISSIONS 保持同步（两处无运行时共享，手工对齐）。
- * 拦截窗口时序问题已根治：main.ts 阻塞式挂接（await setupProdMockServer 后再 mount，见函数 JSDoc）。
+ * 拦截窗口时序问题已根治：main.ts 阻塞式挂接（createApp 后、app.use(router) 前
+ * await setupProdMockServer——router install 即触发初始导航，挂接晚于 use 则守卫请求穿透）。
  * @trigger 新增 mock 路由模块时须同步登记本文件与 mock/index.ts（dev 聚合入口），两处清单不许分叉
  * @see src/main.ts 入口挂接
  * @see src/router/guards/login.ts VITE_DEMO_NO_AUTH 演示模式守卫
@@ -77,10 +78,11 @@ const mockModules: MockMethod[] = [...prodAuthMocks, ...dict, ...menu, ...portal
 /**
  * 注册生产 mock（浏览器端 mockjs XHR 劫持）。
  * 仅在 VITE_USE_MOCK==='true' 的产物中由 main.ts 调用；
- * 返回 Promise——main.ts 顶层 await 本函数后再 mount，保证 mockjs 加载完成、
- * 劫持激活后应用才对外发请求（守卫的 profile 拉取等），彻底消除「启动请求
- * 穿过拦截窗口打到静态服务器」的时序 bug（2026-10-20 preview 目检实锤：
- * 刷新后守卫先于 mockjs 就绪执行，SPA fallback 返回 HTML 致 fetchProfile 失败）。
+ * 返回 Promise——main.ts 在 createApp 后、app.use(router) 前顶层 await 本函数，
+ * 保证 mockjs 加载完成、劫持激活后才安装 router（router install 即触发初始导航，
+ * 守卫的 profile 拉取必然在劫持之后发出），彻底消除「启动请求穿过拦截窗口
+ * 打到静态服务器」的时序 bug（2026-10-20 两轮 preview 目检实锤：mount 前
+ * await 仍不够——守卫链与 main.ts 后续语句并行执行，SPA fallback 返回 HTML）。
  */
 export function setupProdMockServer(): Promise<void> {
   return createProdMockServer(mockModules)
