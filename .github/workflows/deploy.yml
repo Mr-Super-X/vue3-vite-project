@@ -1,12 +1,14 @@
+# 职责：构建 gh-pages 产物并部署（不跑 lint/test/check:routes——同次 push 的 ci.yml 已做完整门禁，本 workflow 只构建 + 发布）
 name: Deploy to GitHub Pages
 
-# 触发条件：push 到 master 自动部署（与 ci.yml 触发分支对齐）+ 手动兜底
+# 触发条件：push 到 master 自动部署（仅 master 发布；develop 只过 CI 不发布，见 job 级 if 守卫）+ 手动兜底
 on:
   push:
     branches: [master]
   workflow_dispatch:
 
 permissions:
+  contents: read # checkout 需要；public 仓库匿名读可运行，显式声明与官方模板对齐
   pages: write
   id-token: write
 
@@ -24,6 +26,9 @@ env:
 jobs:
   deploy:
     name: Build + Deploy
+    # ref 守卫：workflow_dispatch 手动触发可选任意含本文件的分支，
+    # 无守卫会把 develop 等未发布分支构建推到 Pages（违背 master 即线上单一真相源）
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:
@@ -52,8 +57,8 @@ jobs:
         run: pnpm type-check:full
 
       - name: Build
-        # vite 静态资源 base 走 CLI；vue-router basename 由 env.VITE_BASE 供客户端消费
-        run: pnpm build-only --base=/vue3-vite-project/
+        # vite 静态资源 base 复用 env.VITE_BASE 单源（与 vue-router basename 同源，避免两处维护分叉）
+        run: pnpm build-only --base=${{ env.VITE_BASE }}
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
