@@ -164,9 +164,6 @@ const schema: SchemaNode = {
       props: { placeholder: '请输入年龄', min: 0 },
       rules: [
         {
-          // 显式声明 type: 'number' —— async-validator 对未声明 type 的规则默认按
-          // string 校验（dist-node getType: rule.type || 'string'），与本字段 number 值不匹配
-          type: 'number',
           /**
            * 产品语义：未成年**且未填监护人**才标红。真实用户改不了年龄，
            * 「未成年」必须是一条可消除的联动提示（填 guardian 即消），
@@ -175,6 +172,7 @@ const schema: SchemaNode = {
            * dependsOn 同时含自引用 'user.age'（引擎 target 快照分支：
            * 改自身重算）与 'guardian'（跨字段 dep 分支：填监护人反向重算）——
            * 两条分支由下方「直改 model」按钮 + 填 guardian 动作一并验证
+           * （cross 规则由 XForm 三路径接管，不透传 el-form——无需 type 声明）
            */
           dependsOn: ['user.age', 'guardian'],
           crossValidator: (age: unknown, _ageDep: unknown, guardian: unknown) =>

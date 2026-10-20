@@ -106,4 +106,41 @@ describe('compileRules', () => {
     expect(out).toEqual([{ required: true, message: '必填' }])
     errorSpy.mockRestore()
   })
+
+  describe('crossValidator 规则 el-form 透传根治（audit 2026-10-15 遗留 P1）', () => {
+    const crossRule = {
+      dependsOn: ['qty'],
+      crossValidator: (value: unknown, ...deps: unknown[]) =>
+        (deps[0] as number) >= (value as number) || '数量超出库存',
+    }
+
+    it('纯 cross 规则（number 目标、无 type 声明）→ 整条不进 el-form', () => {
+      // 根治 async-validator 默认 type:'string' 致 number 目标字段保存被拦（is not a string）
+      const rules: SchemaNode['rules'] = [{ ...crossRule, trigger: 'blur' }]
+      const out = compileRules(rules, {}, '数量')
+      expect(out).toEqual([])
+    })
+
+    it('纯 cross 规则仅带调度键（trigger）→ 也无校验实质，整体丢弃', () => {
+      const rules: SchemaNode['rules'] = [
+        { crossValidator: crossRule.crossValidator, trigger: 'change' },
+      ]
+      const out = compileRules(rules, {})
+      expect(out).toEqual([])
+    })
+
+    it('混合规则（crossValidator + required 同条）→ 拆分：剔除 XForm 扩展键，字段校验部分保留', () => {
+      const rules: SchemaNode['rules'] = [{ required: true, ...crossRule }]
+      const out = compileRules(rules, {}, '数量')
+      expect(out).toEqual([{ required: true, message: '数量必填' }])
+      expect(out[0]).not.toHaveProperty('crossValidator')
+      expect(out[0]).not.toHaveProperty('dependsOn')
+    })
+
+    it('propsRules 注册的 cross 规则（字符串名查表）→ 同样过滤', () => {
+      const propsRules = { stockRule: { ...crossRule } }
+      const out = compileRules('stockRule' as never, propsRules)
+      expect(out).toEqual([])
+    })
+  })
 })

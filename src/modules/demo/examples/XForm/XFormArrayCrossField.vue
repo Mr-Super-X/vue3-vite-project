@@ -53,8 +53,8 @@ const MATERIAL_OPTIONS = [
  *
  * - dependsOn: ['stock'] / ['maxQty'] 指同 row 的字段（行内相对优先），
  *   不是顶层 model.stock（顶层绝对回退仅在行内无此字段时生效）
- * - 显式 type: 'number' —— XForm 把 cross 规则原样透传 el-form，async-validator
- *   对无 type 规则默认 string，number 目标字段保存时会被误拦（audit 清单外缺陷，已披露）
+ * - cross 规则由 XForm 自有机制接管，compileRules 不再透传 el-form
+ *   （audit 2026-10-15 遗留 P1 已根治，无需 type 声明规避 async-validator 默认 string）
  */
 const purchaseItemSchema: SchemaNode = {
   column: 4,
@@ -77,14 +77,12 @@ const purchaseItemSchema: SchemaNode = {
         {
           dependsOn: ['stock'],
           trigger: 'change',
-          type: 'number',
           crossValidator: (value: unknown, stock: unknown) =>
             !stock || Number(value) <= Number(stock) || `不能超库存余量 ${stock}`,
         },
         {
           dependsOn: ['maxQty'],
           trigger: 'change',
-          type: 'number',
           crossValidator: (value: unknown, maxQty: unknown) =>
             !maxQty || Number(value) <= Number(maxQty) || `不能超本行上限 ${maxQty}`,
         },

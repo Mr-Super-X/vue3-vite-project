@@ -4,7 +4,14 @@
 
 ## 未发布
 
-### 🔧 Refactor | 09-18 三视角审查 Wave1 收尾：39 条发现正式闭环（2026-10-19）
+### 🐞 Fix | cross 规则 el-form 透传根治：number 目标字段保存不再被 async-validator 误拦（2026-10-19，audit 遗留 P1 闭环）
+
+> 来源：`docs/audit/2026-10-15-engine-audit-summary.md`「已知留后续 sprint」唯一遗留项。含 `crossValidator` 的规则原样透传 el-form → async-validator 对非纯 required 规则默认 `type:'string'` → number 目标字段（InputNumber 输出）保存全量校验被拦「is not a string」。
+
+- **根治（`compileRules` 拆分，TDD spec ×4 红→绿）**：含 crossValidator 的规则编译时剔除 XForm 扩展键（crossValidator/dependsOn/deps/debounceMs）——**纯 cross 规则整条不进 el-form**（由 XForm 三路径全权接管）；**混合规则**（crossValidator 与 required 等同条）剔除后保留字段校验部分，防止整条过滤导致必填校验静默丢失（数据正确性回归防线）；仅剩调度/展示键（trigger/message）而无校验实质的规则整体丢弃
+- **demo 规避写法撤销**：XFormCrossField（user.age）与 XFormArrayCrossField（qty 双规则）的显式 `type:'number'` 声明及过时注释——撤销本身即根治有效性的验收证据；全目录核查无其他残留
+- **浏览器实测（CDP 真实输入）**：XFormArrayCrossField qty=150（>库存 8 且 >上限 20）→ 保存批量路径 `FIELD_ERROR` ×2 + `CROSS_VALIDATION_FAILED 2 项`（同 target 多规则齐执行，批 A 修复复验）**console 零类型误拦**；改回 5 → 反向路径红字清零 ✓；XFormCrossField age=10 保存 → el-form 仅报其他字段必填（短路语义保持），age 零误拦 ✓
+- **回归**：form-schema 全目录 1221 例全绿（+4 新 spec）、type-check PASS——现有 cross 断言全部走 XForm 自有路径，不依赖 el-form 透传（风险预判验证）
 
 > 来源：`.claude/.agent-reports/2026-09-18-form-schema-{architect,designer,pm}-review.md`（39 条发现）的 2026-10-19 全量复核。核查结论已标注于三份报告头部：**37 条已闭环、2 条正式 defer**。其中 33 条系此前批次（2026-10-15 引擎加固批 A–D / demo 修复轮）顺带修复，本次补齐剩余尾项。
 
