@@ -88,27 +88,26 @@ jobs:
 - vite `base` 通过 CLI `--base` 传入；vue-router `base` 通过 `VITE_BASE` 环境变量（`import.meta.env` 客户端侧）——同名变量双端语义在环境变量表（§4.3）中说明
 - `pnpm build`（=`build-only` + `type-check:full`）拆为两步显式执行，避免 npm-run-all 参数透传 `{@}` 链条的不确定性
 
-### 4.2 修改 `vite.config.ts`（唯一代码改动，1 行新增）
+### 4.2 生产 mock 接线（修订：prodEnabled 方案作废）
 
-```ts
-viteMockServe({
-  mockPath: 'mock',
-  enable: process.env.VITE_USE_MOCK !== 'false',
-  // gh-pages 纯静态托管无后端：CI 构建时 VITE_USE_MOCK=true 让 mock 拦截注入生产产物
-  // 本地/常规生产构建不含 mock，产物体积与现状一致
-  prodEnabled: process.env.VITE_USE_MOCK === 'true',
-  watchFiles: true,
-}),
-```
+> **作废记录**：初版设计采用 `viteMockServe.prodEnabled`，实施验证 `vite-plugin-mock@3.0.2` **无此选项**（2.9.x 旧版特性；3.0.0 起插件重写为纯 dev-server 中间件，build 时 no-op）。证据链：全包 grep `prodEnabled` 零匹配、`ViteMockOptions` 仅 8 字段（传入触发 TS excess property check）、`dist/index.mjs` 仅 serve 钩子、实测 `VITE_USE_MOCK=true pnpm build-only` 产物无 mock 特征串。审计报告：`.claude/.agent-reports/2026-10-20-task1-prod-enabled-blocked.md`。
 
-兼容性核对矩阵（`process.env.VITE_USE_MOCK` 为 node 侧读取）：
+修订为 3.0.2 官方 client 侧接线方案（用户已批准 2026-10-20）：
 
-| 场景 | 变量值 | `enable` | `prodEnabled` | 行为 |
-|------|--------|----------|---------------|------|
-| 本地 dev 默认（无 .env） | `undefined` | `true` | `false` | dev mock 开；生产构建不注入——**与现状一致** |
-| `.env.development` | `false` | `false` | `false` | 全关（联调真实后端场景） |
-| `.env.production` | `false` | `false` | `false` | 常规生产构建不含 mock——**与现状一致** |
-| CI deploy 构建 | `true` | `true` | `true` | mock 注入 gh-pages 产物（本次新增行为） |
+- **新增 `mock/mockProdServer.ts`**：显式 import **5 个真实 mock 路由模块**（auth/dict/menu/portal-overview/user，含 `mock/` 目录全部 `url: '/api/*'` 定义）+ `createProdMockServer(modules)` 注册（浏览器端 mockjs XHR 劫持）
+  - 注意：`mock/index.ts` 只聚合 auth/user/menu；`pro-table/` 下 11 个文件**不是 mock 路由**（具名导出 `xxxRequestApi: ProTableRequestApi`，demo 组件直连数据源、无 XHR 依赖）——dev 靠 viteMockServe 目录扫描、prod 无需接线（实施验证 2026-10-20）
+- **修改 `src/main.ts`**：`if (import.meta.env.VITE_USE_MOCK === 'true')` 动态 import 挂接（mount 前，+4 行）
+- **`vite.config.ts` 无需改动**（viteMockServe 保持 dev-only 现状）
+
+构建时静态字符串比较 → 常规生产构建（`.env.production` 为 `'false'`）整分支被 tree-shake，产物不含 mock（体积与现状一致）；CI 构建（`'true'`）mockjs@1.1.0 + 全量 mock 进 bundle（mockjs 已在 vite-plugin-mock 依赖树，**零新增依赖**）。
+
+兼容性核对矩阵（`import.meta.env.VITE_USE_MOCK` 为客户端侧读取）：
+
+| 场景 | 变量值 | main.ts 分支 | 产物含 mock？ | 行为 |
+|------|--------|--------------|---------------|------|
+| 本地 dev（无 .env / .env.development=false） | `undefined` / `'false'` | 消除 | 否 | dev mock 由 viteMockServe 中间件提供——**与现状一致** |
+| `.env.production` | `'false'` | 消除 | 否 | 常规生产构建不含 mock——**与现状一致** |
+| CI deploy 构建 | `'true'` | 保留并执行 | 是 | mockjs XHR 劫持激活，gh-pages demo 全功能（本次新增行为） |
 
 ### 4.3 构建环境变量语义表
 
@@ -118,7 +117,7 @@ viteMockServe({
 | `VITE_BASE` | `src/router/config.ts` ROUTER_CONFIG.base | 客户端（import.meta.env） | vue-router basename |
 | `VITE_HISTORY_MODE=hash` | `src/router/config.ts` | 客户端 | `createWebHashHistory` |
 | `VITE_MENU_SOURCE=local` | `src/router/config.ts` | 客户端 | 菜单走本地静态路由，不请求后端 |
-| `VITE_USE_MOCK=true` | `vite.config.ts` viteMockServe | node | enable + prodEnabled，mock 注入生产产物 |
+| `VITE_USE_MOCK=true` | `src/main.ts` 条件分支 | 客户端（import.meta.env） | 动态 import 挂接 `setupProdMockServer`，mockjs 浏览器端 XHR 劫持激活 |
 
 ### 4.4 同步更新
 
@@ -138,7 +137,7 @@ viteMockServe({
 
 | 项 | 内容 |
 |----|------|
-| src/ 改动 | **零**（vite.config.ts 位于根目录，且改动已获用户明确批准） |
+| src/ 改动 | `src/main.ts` +4 行条件挂接（已获用户批准 2026-10-20，§4.2 修订方案）；新增 `mock/mockProdServer.ts` 位于 src/ 外不受 §2 约束；`vite.config.ts` 无需改动 |
 | 常规生产构建产物 | 体积/内容不变（prodEnabled 默认 false） |
 | 回滚 | 删除 `deploy.yml` + revert `vite.config.ts` 一行即可；Pages 站点可在 Settings 中随时下线 |
 | 新增依赖 | 无 |

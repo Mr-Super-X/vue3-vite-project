@@ -84,4 +84,11 @@ app.use(Plugins)
 // 必须在所有 app.use 之后调用——_context 的 provides 由插件 install 写入
 setDialogAppContext(app)
 
+// VITE_USE_MOCK==='true' 时（CI 构建 gh-pages 产物）动态挂接浏览器端 mock；
+// 常规生产构建静态比较为 false，整分支 tree-shake，产物不含 mock
+if (import.meta.env.VITE_USE_MOCK === 'true') {
+  const { setupProdMockServer } = await import('../mock/mockProdServer')
+  setupProdMockServer()
+}
+
 app.mount('#app')
