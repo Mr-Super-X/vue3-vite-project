@@ -1,13 +1,15 @@
 <script setup lang="ts">
 /**
- * Portal 布局：限定门户专用头部 + 路由出口。
+ * Portal 布局：企业官网专用头部 + 路由出口。
  *
- * 职责：只负责头部（由 PortalHeader 单组件承担，含品牌区与导航区），以及一行内边距留空。
- *      导航以下的所有内容（首页 hero、时间问候、数据总览、底部、AI 助手等）由 home 模块自管。
+ * 职责：只负责头部（PortalHeader：品牌区 + 锚点导航 + 登录/用户双态）与一行内容出口。
+ *      导航以下的所有官网区块（Hero/特性/数据/关于/页脚）由 home 模块自管。
+ *
+ * 2026-10-20 改造：头部从 180px 位图政务风改为 64px 白底极简风（见 PortalHeader 头注释）。
  *
  * @see [`./components/PortalHeader.vue`](./components/PortalHeader.vue) 门户头部
- * @see [`./components/PortalNav.vue`](./components/PortalNav.vue) 顶部导航
- * @see [`@/modules/home`](../../modules/home) 首页业务内容
+ * @see [`./components/PortalNav.vue`](./components/PortalNav.vue) 顶部锚点导航
+ * @see [`@/modules/home`](../../modules/home) 官网业务内容
  * @group 布局
  */
 import PortalHeader from './components/PortalHeader.vue'

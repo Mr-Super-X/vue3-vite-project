@@ -4,6 +4,16 @@
 
 ## 未发布
 
+### ♻ Refactor | 门户首页重构为「星澜科技」黑白极简企业官网（2026-10-20）
+
+> 设计：[docs/superpowers/specs/2026-10-20-home-portal-enterprise-site-design.md](docs/superpowers/specs/2026-10-20-home-portal-enterprise-site-design.md) ｜ 计划：[docs/superpowers/plans/2026-10-20-home-portal-enterprise-site.md](docs/superpowers/plans/2026-10-20-home-portal-enterprise-site.md)。门户从「政务工作台首页」转型为纯静态企业官网（3-4 屏：Hero / 特性 / 数据 / 关于 + 页脚；黑白极简、全 SVG 素材、锚点平滑滚动）。
+
+- **⚠ BREAKING**：旧门户首页数据链路整体移除——`OverviewSection` / `HomeFooter` / `SearchBar` 等 13 个组件 + 3 份单测、`usePortalOverviewStore`、`src/api/modules/portal-overview.ts`、`mock/portal-overview.ts`、portal 三张位图（logo / biaoyu / layout-head-bg）共 38 文件删除；下游若引用上述导出需自行迁移
+- **portal 布局**：头部从 180px 位图政务风改为 64px 白底极简顶栏（内联 SVG 字标 + 锚点导航 + 登录/用户双态，caret 旋转走 `@visible-change` 范式对齐 UserInfo）；`portal-tokens.scss` 重写为黑白极简 8 变量（`--portal-ink` 等）；顶部导航从 el-menu 收窄为纯锚点链接列表（IntersectionObserver scroll-spy + aria-current）
+- **路由**：`/home` 经 `ROUTE_WHITE_LIST` 公开访问（事实核查：`checkLoginState` 不读 `meta.requiresAuth`，白名单是唯一公开机制）
+- **home 模块**：新增 `config/site.ts` 文案/数据单源 + `SiteHero` / `SiteFeatures` / `SiteStats` / `SiteAbout` / `SiteFooter` 5 个展示组件（Hero 手绘线条 SVG 示意图、tabler 静态图标、全站唯一动效为 Hero fade-up 且支持 prefers-reduced-motion 降级）+ 首页 smoke spec
+- **文档同步**：docs/04（测试清单）、docs/05（BEM 示例表）、docs/18 / docs/22 / docs/33 / README（mock 清单与表）portal-overview 及旧组件引用清理；default 布局 2 处「同 PortalNav」陈旧注释一并修正
+
 ### 🚀 CI | gh-pages 自动化部署：push master 即发布线上 demo（2026-10-20）
 
 > 设计文档：[docs/superpowers/specs/2026-10-20-gh-pages-deploy-design.md](docs/superpowers/specs/2026-10-20-gh-pages-deploy-design.md)。push 到 `master` 自动构建并部署到 `https://Mr-Super-X.github.io/vue3-vite-project/`（首次需在仓库 Settings → Pages 把 Source 设为 "GitHub Actions"）。

@@ -38,7 +38,7 @@ function onCommand(item: ContextMenuItem) {
 </script>
 
 <template>
-  <!-- as any：EP 2.14 + TS6 下 popper-class prop 类型被推断为元对象（同 PortalNav.vue el-sub-menu index 的已知 bug） -->
+  <!-- as any：EP 2.14 + TS6 下 popper-class prop 类型被推断为元对象（EP 已知 prop 类型 bug） -->
   <el-dropdown
     :trigger="trigger"
     placement="bottom-start"

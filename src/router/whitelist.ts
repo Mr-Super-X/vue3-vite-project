@@ -32,6 +32,7 @@ import { routeNames as demoRouteNames } from '@/modules/demo/routes'
  */
 export const ROUTE_WHITE_LIST: ReadonlySet<string> = new Set<string>([
   'Login', // 登录页
+  'Home', // 企业官网首页（公开访问：门户落地页免登录，登录入口在页内顶栏）
   'Forbidden', // 403 无权限
   'NotFound', // 404 页面
   'ServerError', // 500 页面

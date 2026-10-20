@@ -61,6 +61,7 @@ src/types/components.d.ts
 src/types/auto-imports.d.ts
 .gstack/
 .verify/
+.superpowers/
 
 # Playwright产物
 .playwright-mcp/

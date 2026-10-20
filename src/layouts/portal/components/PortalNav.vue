@@ -1,18 +1,18 @@
 <script setup lang="ts">
 /**
- * PortalNav：基于 el-menu 的门户顶部导航。
+ * PortalNav：企业官网顶部锚点导航（纯链接列表）。
  *
- * 行为矩阵：
- * - 父项无 children → 直接菜单项（点击 router.push 或外链）
- * - 父项有 children → 子菜单父项（hover 弹出子菜单，父项本身不响应点击）
- * - 子菜单项点击 → router.push 或外链
- * - activeIndex 计算：当前路由 path 命中某顶层或某子项 → 把对应顶层 key 标为高亮
+ * 2026-10-20 企业官网改造：弃用 el-menu（hover 子菜单/激活态是后台管理范式），
+ * 改为真实 <a href="#anchor"> 链接：
+ * - 点击 → click.prevent 后 scrollIntoView 平滑滚动（保留 href 供无 JS / SEO 降级）
+ * - 当前区块高亮 → IntersectionObserver scroll-spy（rootMargin 顶部偏移 header 高度 64px）
+ * - jsdom / 旧浏览器无 IntersectionObserver 时静默跳过（守卫判断，点击高亮仍可用）
  *
- * @see [`../config/nav.ts`](../config/nav.ts) 默认导航配置
+ * @see [`../config/nav.ts`](../config/nav.ts) 锚点配置
  * @see [`../config/types.ts`](../config/types.ts) PortalNavItem 类型
  * @group 布局：Portal
  */
-import type { PortalNavItem, PortalNavSubItem } from '@/layouts/portal/config/types'
+import type { PortalNavItem } from '@/layouts/portal/config/types'
 
 const bem = createNamespace('portal-nav')
 
@@ -20,158 +20,94 @@ const props = defineProps<{
   items: PortalNavItem[]
 }>()
 
-const route = useRoute()
-const router = useRouter()
+/** 当前高亮导航 key（初始首项；点击 / scroll-spy 回写） */
+const activeKey = ref(props.items[0]?.key ?? '')
 
-/** 当前路由对应的顶层 nav key（用于 default-active 高亮父项） */
-const activeIndex = computed<string>(() => {
-  const path = route.path
+let observer: IntersectionObserver | undefined
+
+function scrollTo(item: PortalNavItem): void {
+  activeKey.value = item.key
+  document.querySelector(item.anchor)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+onMounted(() => {
+  // jsdom 与部分旧浏览器无 IntersectionObserver，跳过 scroll-spy
+  if (typeof IntersectionObserver === 'undefined') return
+  observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) activeKey.value = entry.target.id
+      }
+    },
+    // 顶部 -64px（header 高度）：区块顶边越过 header 下沿才算进入视口；
+    // 数值与 portal-tokens.scss 的 --portal-header-h 保持同步（CSS 无法将 rootMargin 绑到变量）
+    { rootMargin: '-64px 0px -70% 0px' }
+  )
   for (const item of props.items) {
-    if (item.children?.length) {
-      const match = item.children.find((c) => c.path === path)
-      if (match) return item.key
-    } else if (item.path && item.path === path) {
-      return item.key
-    }
+    const el = document.querySelector(item.anchor)
+    if (el) observer.observe(el)
   }
-  return ''
 })
 
-function openExternal(url: string): void {
-  window.open(url, '_blank', 'noopener,noreferrer')
-}
-
-function findSubItem(index: string): PortalNavSubItem | undefined {
-  const [parentKey, childKey] = index.split(':')
-  if (!parentKey || !childKey) return undefined
-  const parent = props.items.find((i) => i.key === parentKey)
-  return parent?.children?.find((c) => c.key === childKey)
-}
-
-function handleSelect(index: string): void {
-  // 子项：parent:child 格式
-  if (index.includes(':')) {
-    const child = findSubItem(index)
-    if (!child) return
-    if (child.external) {
-      openExternal(typeof child.external === 'string' ? child.external : child.path)
-    } else {
-      router.push(child.path)
-    }
-    return
-  }
-
-  // 顶层：仅在无 children 时才响应点击（子菜单父项忽略）
-  const item = props.items.find((i) => i.key === index)
-  if (!item || item.children?.length) return
-  if (item.external) {
-    openExternal(typeof item.external === 'string' ? item.external : (item.path ?? ''))
-    return
-  }
-  if (item.path) router.push(item.path)
-}
+onUnmounted(() => {
+  observer?.disconnect()
+})
 </script>
 
 <template>
-  <el-menu
-    :class="bem.b()"
-    mode="horizontal"
-    :default-active="activeIndex"
-    :ellipsis="false"
-    menu-trigger="hover"
-    @select="handleSelect"
-  >
-    <template v-for="item in items" :key="item.key">
-      <el-sub-menu v-if="item.children?.length" :index="item.key as any">
-        <template #title>
-          <span :class="bem.e('label')">{{ item.label }}</span>
-        </template>
-        <el-menu-item
-          v-for="child in item.children"
-          :key="child.key"
-          :index="`${item.key}:${child.key}`"
-        >
-          {{ child.label }}
-        </el-menu-item>
-      </el-sub-menu>
-
-      <el-menu-item v-else :index="item.key">
-        <span :class="bem.e('label')">{{ item.label }}</span>
-      </el-menu-item>
-    </template>
-  </el-menu>
+  <nav :class="bem.b()" aria-label="主导航">
+    <a
+      v-for="item in items"
+      :key="item.key"
+      :href="item.anchor"
+      :class="[bem.e('link'), bem.is('active', activeKey === item.key)]"
+      :aria-current="activeKey === item.key ? 'location' : undefined"
+      @click.prevent="scrollTo(item)"
+    >
+      {{ item.label }}
+    </a>
+  </nav>
 </template>
 
 <style lang="scss">
 .#{$BEM_PREFIX}-portal-nav {
-  // 顶部导航透明背景（叠在 header 蓝渐变上）
-  background: transparent;
-  border-bottom: none;
-  --el-menu-bg-color: transparent;
-  --el-menu-border-color: transparent;
-  --el-menu-text-color: rgba(255, 255, 255, 0.8);
-  --el-menu-hover-color: #fff;
-  --el-menu-active-color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 32px;
 
-  .el-menu-item,
-  .el-sub-menu__title {
-    height: 52px;
-    line-height: 52px;
-    padding: 0;
-    margin-right: 80px;
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 20px;
-    font-family: 'PingFang SC', 'Alibaba PuHuiTi', sans-serif;
-    background: transparent;
+  &__link {
+    position: relative;
+    font-size: 15px;
+    color: var(--portal-ink-2);
+    text-decoration: none;
+    line-height: var(--portal-header-h);
+    transition: color 0.2s ease;
 
     &:hover {
-      color: #fff;
-      background: transparent;
+      color: var(--portal-ink);
+    }
+
+    // 激活态：黑色短下划线
+    &.is-active {
+      color: var(--portal-ink);
+      font-weight: 600;
+
+      &::after {
+        content: '';
+        position: absolute;
+        left: 50%;
+        bottom: 14px;
+        transform: translateX(-50%);
+        width: 16px;
+        height: 2px;
+        background: var(--portal-ink);
+      }
     }
   }
 
-  .el-menu-item:last-child,
-  .el-sub-menu:last-child > .el-sub-menu__title {
-    margin-right: 0;
-  }
-
-  // 激活态：白色下划线 + 中间对齐
-  .el-menu-item.is-active {
-    color: #fff;
-    font-weight: 500;
-    border-bottom: 4px solid #fff;
-    border-radius: 0;
-  }
-
-  .el-sub-menu.is-active > .el-sub-menu__title {
-    color: #fff;
-    border-bottom: 4px solid #fff;
-    border-radius: 0;
-  }
-
-  // 弹层子菜单样式
-  .el-menu--horizontal .el-menu .el-menu-item {
-    height: 40px;
-    line-height: 40px;
-    margin-right: 0;
-    padding: 0 16px;
-    font-size: 14px;
-    color: #303133;
-    background: #fff;
-
-    &:hover {
-      background: #ecf5ff;
-      color: var(--el-color-primary);
-    }
-  }
-
-  // 折叠箭头隐藏
-  .el-sub-menu__icon-arrow {
+  // 窄屏隐藏锚点导航，保留品牌 + 登录入口（移动端无汉堡菜单，KISS）
+  @media (max-width: 768px) {
     display: none;
-  }
-
-  &__label {
-    display: inline-block;
   }
 }
 </style>

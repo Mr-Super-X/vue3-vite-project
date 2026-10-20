@@ -322,24 +322,24 @@ enable: process.env.VITE_USE_MOCK !== 'false'
 
 ## 9. 相关代码与文档
 
-| 路径                                     | 职责                                                                          |
-| ---------------------------------------- | ----------------------------------------------------------------------------- |
-| `package.json:8-9`                       | script 定义                                                                   |
-| `src/types/env.d.ts:32`                  | `VITE_MENU_SOURCE` 类型声明                                                   |
-| `src/types/env.d.ts:17`                  | `VITE_USE_MOCK` 类型声明                                                      |
-| `src/router/config.ts:22-28`             | `resolveMenuSource()` 解析                                                    |
-| `vite.config.ts:89-93`                   | `viteMockServe` 中间件（读取 `process.env.VITE_USE_MOCK`）                    |
-| `src/router/remote.ts`                   | `fetchRemoteRoutes` + Zod 校验 + `convertMenu`                                |
-| `src/router/guards/remote-menu.ts:56`    | 模式分叉点（`if source !== 'remote' return null`）                            |
-| `src/api/modules/menu.ts`                | `menuApi.getMenu` 接口定义                                                    |
-| `src/layouts/default/config/menu.ts:117` | `buildMenuTree` 从 router 派生菜单树（local 模式核心）                        |
-| `src/router/auto-register.ts`            | 本地路由注册（local 模式的"单一事实源"）                                      |
-| `mock/*.ts`                              | `vite-plugin-mock` 数据源（auth/menu/dict/user/portal-overview/pro-table 等） |
-| `docs/07-路由模块设计.md` §107-114       | 路由菜单模式详细机制                                                          |
-| `docs/22-mock使用规范.md` §257-277       | vite-plugin-mock 配置详解                                                     |
-| `docs/23-权限设计.md` §588               | 权限矩阵（按命令维度）                                                        |
-| `docs/04-构建与测试工具.md` §612         | 工具链表格（dev / dev:local 命令对照）                                        |
-| `README.md` §574-575                     | 环境变量表                                                                    |
+| 路径                                     | 职责                                                          |
+| ---------------------------------------- | ------------------------------------------------------------- |
+| `package.json:8-9`                       | script 定义                                                   |
+| `src/types/env.d.ts:32`                  | `VITE_MENU_SOURCE` 类型声明                                   |
+| `src/types/env.d.ts:17`                  | `VITE_USE_MOCK` 类型声明                                      |
+| `src/router/config.ts:22-28`             | `resolveMenuSource()` 解析                                    |
+| `vite.config.ts:89-93`                   | `viteMockServe` 中间件（读取 `process.env.VITE_USE_MOCK`）    |
+| `src/router/remote.ts`                   | `fetchRemoteRoutes` + Zod 校验 + `convertMenu`                |
+| `src/router/guards/remote-menu.ts:56`    | 模式分叉点（`if source !== 'remote' return null`）            |
+| `src/api/modules/menu.ts`                | `menuApi.getMenu` 接口定义                                    |
+| `src/layouts/default/config/menu.ts:117` | `buildMenuTree` 从 router 派生菜单树（local 模式核心）        |
+| `src/router/auto-register.ts`            | 本地路由注册（local 模式的"单一事实源"）                      |
+| `mock/*.ts`                              | `vite-plugin-mock` 数据源（auth/menu/dict/user/pro-table 等） |
+| `docs/07-路由模块设计.md` §107-114       | 路由菜单模式详细机制                                          |
+| `docs/22-mock使用规范.md` §257-277       | vite-plugin-mock 配置详解                                     |
+| `docs/23-权限设计.md` §588               | 权限矩阵（按命令维度）                                        |
+| `docs/04-构建与测试工具.md` §612         | 工具链表格（dev / dev:local 命令对照）                        |
+| `README.md` §574-575                     | 环境变量表                                                    |
 
 ---
 

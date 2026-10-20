@@ -153,12 +153,15 @@ const bem = createNamespace('user-card')
 
 转换示例：
 
-| ❌ PascalCase          | ✅ kebab-case            |
-| ---------------------- | ------------------------ |
-| `OrdersList`           | `orders-list`            |
-| `HomeFooter`           | `home-footer`            |
-| `OverviewCardSkeleton` | `overview-card-skeleton` |
-| `UserLogin`            | `user-login`             |
+| ❌ PascalCase  | ✅ kebab-case   |
+| -------------- | --------------- |
+| `OrdersList`   | `orders-list`   |
+| `SiteHero`     | `site-hero`     |
+| `SiteFeatures` | `site-features` |
+| `SiteStats`    | `site-stats`    |
+| `SiteAbout`    | `site-about`    |
+| `SiteFooter`   | `site-footer`   |
+| `UserLogin`    | `user-login`    |
 
 ---
 

@@ -29,7 +29,6 @@ mock/
 ├── user.ts              # /api/user/* 用户管理
 ├── menu.ts              # /api/menu 远程菜单
 ├── dict.ts              # /api/dict/* 字典
-├── portal-overview.ts   # /api/portal/overview 首页数据
 ├── index.ts             # 聚合导出（vite-plugin-mock 自动扫描）
 └── <feature>.ts         # 新业务模块的 mock
 ```

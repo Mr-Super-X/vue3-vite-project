@@ -1,11 +1,14 @@
-// Portal 视觉 token
-// 用途：portal-layout 全局 CSS 变量；门户首页专属的卡片底色/趋势色由 home 模块自管
+// Portal 视觉 token（2026-10-20 企业官网改造）
+// 黑白极简：无彩色，层级靠字重 + 留白 + 1px 细线
 
 :root {
   // 布局常量
-  --portal-max-width: 1400px; // 内容区宽度（设计稿 1920 artboard，左右各 260px 留白）
-  --portal-header-h: 180px; // 顶部 = 品牌区(80px) + 间距(56px) + 导航区(44px)
-  --portal-bg: #f5f7fa;
-  --portal-divider: rgba(255, 255, 255, 0.2);
-  --portal-z-index-header: 1000; // 顶部导航栏 z-index
+  --portal-header-h: 64px; // sticky 顶栏高度
+  --portal-max-width: 1200px; // 内容区宽度
+  --portal-bg: #ffffff; // 页面底
+  --portal-bg-alt: #fafafa; // 分区底（特性区）
+  --portal-ink: #111111; // 主文字
+  --portal-ink-2: #555555; // 次要文字
+  --portal-line: #eeeeee; // 1px 细线
+  --portal-z-index-header: 1000; // 顶栏 z-index
 }
