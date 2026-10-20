@@ -34,6 +34,8 @@ const props = defineProps<{
   code: string
   /** 高亮语言（默认 xml，兼容 .vue 模板） */
   language?: Language
+  /** 示例标题（渲染在示例区上方；不传则不渲染标题栏——兼容既有 demo 的纯 attrs 用法） */
+  label?: string
 }>()
 
 function escapeHtml(s: string): string {
@@ -108,6 +110,8 @@ const bem = createNamespace('demo-field')
 
 <template>
   <div :class="bem.b()">
+    <div v-if="label" :class="bem.e('label')">{{ label }}</div>
+
     <div v-if="$slots.default" :class="bem.e('demo')">
       <slot />
     </div>
@@ -148,6 +152,15 @@ const bem = createNamespace('demo-field')
   overflow: hidden;
   background: #fff;
   margin-bottom: 20px;
+
+  &__label {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--el-border-color-lighter, #ebeef5);
+    background: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--el-text-color-primary, #303133);
+  }
 
   &__demo {
     padding: 16px;

@@ -4,6 +4,17 @@
 
 ## 未发布
 
+### ✨ Feat | 团队级图标体系落地：unplugin-icons 编译期内联 + 双语法 + app 本地集合（2026-10-20）
+
+> 一套语法、零体积焦虑、类型安全、离线可用。验收 6 条全过：`<i-ep-plus />` 写完即生效（Volar 补全）、错误图标名 IDE+构建期双层报错、产物零 iconify 请求、断网 dev 正常、现有页面零破坏（type-check:full + test 196 文件/2507 例 + build + lint 全绿）。文档：[docs/39-图标体系与使用规范.md](docs/39-图标体系与使用规范.md)，demo：`/demo/icon-usage`。
+
+- **静态语法**：`<i-集合-图标 />`（`<i-ep-plus />` / `<i-tabler-home />` / `<i-app-logo />`），unplugin-icons 编译期解析为内联 SVG 组件，按需打包、产物零外部请求；`IconsResolver` 白名单只放行 ep / tabler / app，写错集合名的标签不被解析 → 构建期直接报错
+- **动态语法**：`<AppDynamicIcon name="集合:图标" />`（`src/components/common/AppDynamicIcon.vue`，全局自动注册）。经 `src/assets/icons/registry.ts` 查表渲染——用 `virtual:icons/*` 编译期导入组装映射，`name` 为 keyof 字面量联合类型（写错 vue-tsc 报错），零外部请求 + 按需 + 离线三不误；**不引入 @iconify/vue**（其离线模式需整包 icons.json 进 bundle，违背按需原则，取舍记录于 docs/39 Q4）
+- **本地 app 集合**：`src/assets/icons/*.svg` 经 `FileSystemIconLoader` 编译期读取，transform 把非 none 的 fill/stroke 强制 currentColor（跟随 CSS color）；SVG 源文件 git 管理、编译期校验
+- **类型链路（取舍修正）**：不加 GlobalComponents 级组件通配声明（会放行错误图标名，与验收#2 矛盾），改为 `env.d.ts` 只引 `unplugin-icons/types/vue` 的 virtual 模块声明（v24 类型包仅模块声明、无组件通配，经 node_modules 实证）+ `components.d.ts` 入库（`.gitignore` 移除该行）——用过的图标有精确类型与补全，写错的 IDE 期即报「找不到组件」
+- **注意**：unplugin-vue-components v32 已移除内置 IconsResolver，图标解析器从 `unplugin-icons/resolver` 导入（配置差异已写入 docs/39 §1.2）
+- **配套**：demo 页 `/demo/icon-usage`（按 `如何写好一个 demo.md` 范式：DocLayout/DemoFrame/DemoField 交互示例 + 代码复制 + ApiTable 双语法速查与 AppDynamicIcon Props（extractApi 自动提取）+ DocToc，sidebar 中文名已登记）；**「去哪找图标」指引**（demo 页首区块 + docs/39 §2.0：ep → element-plus.org 官方图标页（组件名转 kebab 技巧）、tabler → icon-sets.iconify.design/tabler、全集合中文搜索入口 + 白名单警示、app 本地目录）；spec ×7（AppDynamicIcon 4 例查表渲染/切换/size 透传/aria-hidden + registry 3 例守卫真假分支/解析返回值，vi.mock 绕过 vitest 无法解析 virtual 模块）；**用户验证反馈修复**：AppDynamicIcon 不传 size 时图标隐身（`:width="undefined"` 移除编译产物默认 1.2em 尺寸 + `display:inline-flex` 使 SVG 作为 flex item 塌陷为 0，双重根因）——改条件 v-bind（不传不绑 width/height）+ SVG 根去 flex，spec 增至 5 例锁定回归；**用户验证反馈修复 ×2**：① DemoField 组件补 `label` prop 渲染示例标题（原组件仅有 code/language，全模块 demo 的 label 均不显示——范式文档与实现补齐）；② demo-find 代码块长行折行，「显示代码」展开内容完整无横向截断；**DocToc 滚动感知 + 侧边栏中文名补齐**（用户验证反馈 ×2）：① DocToc 从「纯锚点跳转基础版」升级为滚动感知楼层导航——scroll capture 监听 + 「区块顶部越过视口中线取最后一个」贪心算法（IntersectionObserver 方案实测败于「长区块底部持续 intersecting」，IO 回调 entries-only 且几何判定需全量状态，弃用并记录取舍）、点击后 600ms 锁定保持点击意图（不被 smooth 滚动滑过的中间项抢走）、激活项蓝色竖线 + 加粗样式——全模块 demo 的右侧导航同时受益；② 侧边栏 CN_NAMES 补 4 条缺失中文名（ProTableVxeRowSelect / ProTableSearchFilter / XFormArrayCrossField / XFormAsyncAutocomplete，2026-10-19 审计缺口批新增 demo 漏登记）；code-reviewer WARNING 轮 8 项全修（components.d.ts 入库版本改以 dev 生成为准补回 i- 图标条目、docs Q2 区分「白名单内图标名错误 vs 白名单外集合名」拦截强度、SVG 属性双引号规范、多色图标机制表述、demo 类型复用 AppIconName 等）
+
 ### 📝 Docs | TODOS P3 四项评估收官：#10 魔法时刻落地，#9/#11/#12 决定不做（2026-10-20，TODOS.md 全零）
 
 > 按「只做必要部分，改动大于收益则不做」逐项评估，决定与理由均记录在案：

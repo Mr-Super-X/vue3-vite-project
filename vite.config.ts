@@ -19,6 +19,10 @@ import UnoCSS from 'unocss/vite'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+// unplugin-vue-components v32 已移除内置 IconsResolver，图标解析器改从 unplugin-icons/resolver 导入
+import Icons from 'unplugin-icons/vite'
+import IconsResolver from 'unplugin-icons/resolver'
+import { FileSystemIconLoader } from 'unplugin-icons/loaders'
 import { viteMockServe } from 'vite-plugin-mock'
 import { visualizer } from 'rollup-plugin-visualizer'
 import { cleanMockBundled } from './scripts/vite-plugin-clean-mock'
@@ -72,8 +76,32 @@ export default defineConfig({
       ],
       dts: 'src/types/auto-imports.d.ts',
     }),
+    // ===== 图标体系（docs/39）=====
+    // 编译期把模板中的 <i-ep-plus /> 等标签解析为内联 SVG Vue 组件，
+    // 图标按需打包、产物零外部请求（插件只认 ~icons/* 虚拟模块导入）
+    Icons({
+      compiler: 'vue3',
+      customCollections: {
+        // app 集合：本地 SVG 资产（git 管理），编译期由 FileSystemIconLoader 从 src/assets/icons 读取；
+        // transform 把非 none 的 fill/stroke 强制 currentColor，使图标跟随父级 color / CSS 变量换色
+        app: FileSystemIconLoader('src/assets/icons', (svg) =>
+          svg
+            .replace(/fill="(?!none")[^"]*"/g, 'fill="currentColor"')
+            .replace(/stroke="(?!none")[^"]*"/g, 'stroke="currentColor"')
+        ),
+      },
+    }),
     Components({
-      resolvers: [ElementPlusResolver({ importStyle: 'css' })],
+      resolvers: [
+        ElementPlusResolver({ importStyle: 'css' }),
+        // 图标标签解析：只放行 ep / tabler / app 三个集合，
+        // 写错集合名/图标名的 i-* 标签不被解析 → 构建期虚拟模块解析失败直接报错（验收#2）
+        IconsResolver({
+          prefix: 'i',
+          enabledCollections: ['ep', 'tabler'],
+          customCollections: ['app'],
+        }),
+      ],
       /**
        * 声明要自动导入的全局组件 —— 三目录下所有 .vue（deep: true 含任意深度子目录）
        * 均注册到 vue.GlobalComponents，消费方模板直接用 <BaseChart /> / <ProTable /> /

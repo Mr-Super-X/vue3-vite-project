@@ -1,4 +1,7 @@
 /// <reference types="vite/client" />
+// unplugin-icons 虚拟模块声明（virtual:icons/* 与 ~icons/* → FunctionalComponent）——
+// v24 类型包仅含模块声明、无 GlobalComponents 通配，不影响「错误图标名 IDE 报错」的拦截设计
+/// <reference types="unplugin-icons/types/vue" />
 
 interface ImportMetaEnv {
   /** BEM 类名前缀；空串表示无前缀。详见 src/utils/bem.ts。 */

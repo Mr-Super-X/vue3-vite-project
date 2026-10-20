@@ -53,7 +53,8 @@ mock/**/_*.bundled_*.cjs
 .omc/state/
 .omc/sessions/
 .omc/notepad.md
-src/types/components.d.ts
+# components.d.ts 入库（2026-10-20 图标体系落地）：GlobalComponents 精确类型需团队共享，
+# 保证「clone 后未跑 dev 也有类型/错误图标名 IDE 报错」；auto-imports.d.ts 仍忽略（纯机器注入标识符）
 src/types/auto-imports.d.ts
 .gstack/
 .verify/
