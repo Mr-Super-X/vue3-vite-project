@@ -53,13 +53,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Type check (full)
-        # --force 强制重建 .tsbuildinfo 防缓存陈旧（与 ci.yml 一致）
-        run: pnpm type-check:full
-
       - name: Build
+        # 顺序强约束：必须先于 type-check——unplugin 在 build 时生成 auto-imports.d.ts /
+        # components.d.ts（两者 gitignore 不入库），CI 干净 checkout 下 type-check 依赖
+        # 这些生成文件（本地有 dev 残留所以不显）；与 package.json build 脚本
+        # 「build-only 先行生成」的既定顺序对齐
         # vite 静态资源 base 复用 env.VITE_BASE 单源（与 vue-router basename 同源，避免两处维护分叉）
         run: pnpm build-only --base=${{ env.VITE_BASE }}
+
+      - name: Type check (full)
+        # --force 强制重建 .tsbuildinfo 防缓存陈旧（在 build 之后跑，类型声明文件已生成）
+        run: pnpm type-check:full
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
