@@ -4,6 +4,16 @@
 
 ## 未发布
 
+### 🚀 CI | gh-pages 自动化部署：push master 即发布线上 demo（2026-10-20）
+
+> 设计文档：[docs/superpowers/specs/2026-10-20-gh-pages-deploy-design.md](docs/superpowers/specs/2026-10-20-gh-pages-deploy-design.md)。push 到 `master` 自动构建并部署到 `https://Mr-Super-X.github.io/vue3-vite-project/`（首次需在仓库 Settings → Pages 把 Source 设为 "GitHub Actions"）。
+
+- **workflow**（`.github/workflows/deploy.yml`）：官方 `actions/upload-pages-artifact` + `actions/deploy-pages`（permissions 收敛 `contents:read` + `pages:write` + `id-token:write`，无需 gh-pages 分支）；job 级 `if: github.ref == 'refs/heads/master'` 守卫防手动 dispatch 误发非 master 分支；Node 24.12.0 + pnpm 12 与 ci.yml 对齐；`--base=${{ env.VITE_BASE }}` 与 vue-router basename 单源复用；type-check:full + build（lint/test/check:routes 由同次 push 的 ci.yml 门禁，职责单一）
+- **构建四开关**：`VITE_BASE=/vue3-vite-project/`（子路径 basename）+ `VITE_HISTORY_MODE=hash`（gh-pages 无 SPA fallback，刷新/深层链接不 404）+ `VITE_MENU_SOURCE=local`（纯静态托管无后端，菜单走本地静态路由）+ `VITE_USE_MOCK=true`（生产客户端 mock）
+- **mock 生产接线**（`mock/mockProdServer.ts` + `src/main.ts`）：`vite-plugin-mock@3.0.2` 无 `prodEnabled`（2.9.x 旧版特性；3.0.0 起重写为纯 dev-server 中间件），改 client 侧 `createProdMockServer` 手动接线 5 个真实 mock 路由模块（auth/dict/menu/portal-overview/user；pro-table/ 是 `ProTableRequestApi` 组件直连数据源无需接线）；`src/main.ts` 挂接条件 `import.meta.env.PROD && VITE_USE_MOCK==='true'`——**PROD 守卫防 dev 双重劫持**（`.env.development=true` 时 node 中间件与 client mockjs 曾同时命中，auth 的 rawResponse 被 client 侧静默忽略 → dev 登录必挂）；常规生产构建整分支 tree-shake，产物体积不变
+- **dev 工具链修复**（`scripts/vite-plugin-clean-mock.ts`）：撤掉 fs.watch 500ms 抢删层——mock 文件增至 19 个后 bundle 窗口越过阈值，抢删致 ENOENT → vite-plugin-mock 静默清空 mockData（dev mock 全灭）；保留启动/closeBundle 双层清理，临时文件由 `.gitignore:43-44` 兜底屏蔽提交（已实证 check-ignore 全命中 + `git add --dry-run` 零命中）
+- **已知限制**：gh-pages 上登录接口暂不可用（auth 4 条 rawResponse 在 client 侧被静默忽略，列为部署后验证项）；mockjs 异步加载完成前发出的启动请求错过拦截窗口（local 菜单规避首请求，风险低）
+
 ### ✨ Feat | 团队级图标体系落地：unplugin-icons 编译期内联 + 双语法 + app 本地集合（2026-10-20）
 
 > 一套语法、零体积焦虑、类型安全、离线可用。验收 6 条全过：`<i-ep-plus />` 写完即生效（Volar 补全）、错误图标名 IDE+构建期双层报错、产物零 iconify 请求、断网 dev 正常、现有页面零破坏（type-check:full + test 196 文件/2507 例 + build + lint 全绿）。文档：[docs/39-图标体系与使用规范.md](docs/39-图标体系与使用规范.md)，demo：`/demo/icon-usage`。
