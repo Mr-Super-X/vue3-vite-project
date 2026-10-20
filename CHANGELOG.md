@@ -12,7 +12,8 @@
 - **构建四开关**：`VITE_BASE=/vue3-vite-project/`（子路径 basename）+ `VITE_HISTORY_MODE=hash`（gh-pages 无 SPA fallback，刷新/深层链接不 404）+ `VITE_MENU_SOURCE=local`（纯静态托管无后端，菜单走本地静态路由）+ `VITE_USE_MOCK=true`（生产客户端 mock）
 - **mock 生产接线**（`mock/mockProdServer.ts` + `src/main.ts`）：`vite-plugin-mock@3.0.2` 无 `prodEnabled`（2.9.x 旧版特性；3.0.0 起重写为纯 dev-server 中间件），改 client 侧 `createProdMockServer` 手动接线 5 个真实 mock 路由模块（auth/dict/menu/portal-overview/user；pro-table/ 是 `ProTableRequestApi` 组件直连数据源无需接线）；`src/main.ts` 挂接条件 `import.meta.env.PROD && VITE_USE_MOCK==='true'`——**PROD 守卫防 dev 双重劫持**（`.env.development=true` 时 node 中间件与 client mockjs 曾同时命中，auth 的 rawResponse 被 client 侧静默忽略 → dev 登录必挂）；常规生产构建整分支 tree-shake，产物体积不变
 - **dev 工具链修复**（`scripts/vite-plugin-clean-mock.ts`）：撤掉 fs.watch 500ms 抢删层——mock 文件增至 19 个后 bundle 窗口越过阈值，抢删致 ENOENT → vite-plugin-mock 静默清空 mockData（dev mock 全灭）；保留启动/closeBundle 双层清理，临时文件由 `.gitignore:43-44` 兜底屏蔽提交（已实证 check-ignore 全命中 + `git add --dry-run` 零命中）
-- **已知限制**：gh-pages 上登录接口暂不可用（auth 4 条 rawResponse 在 client 侧被静默忽略，列为部署后验证项）；mockjs 异步加载完成前发出的启动请求错过拦截窗口（local 菜单规避首请求，风险低）
+- **演示模式**（`src/router/guards/login.ts` + `permission.ts` + `mockProdServer` 内联 prod auth）：`VITE_DEMO_NO_AUTH=true` 时守卫跳过登录/权限校验、演示账号 Admin（admin/123456）全链路可点——prod 版 auth mock 为 response 形态（dev 版 rawResponse 的 Set-Cookie HttpOnly 凭证流在 mockjs XHR 劫持下本质不可模拟，无法也不应模拟）；按钮级 v-auth 仍按真实 permissions 渲染，权限控制效果不受影响
+- **已知限制**：mockjs 异步加载完成前发出的启动请求错过拦截窗口（local 菜单规避首请求，风险低）
 
 ### ✨ Feat | 团队级图标体系落地：unplugin-icons 编译期内联 + 双语法 + app 本地集合（2026-10-20）
 

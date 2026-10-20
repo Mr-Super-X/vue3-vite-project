@@ -109,6 +109,8 @@ jobs:
 | `.env.production` | `'false'` | 消除 | 否 | 常规生产构建不含 mock——**与现状一致** |
 | CI deploy 构建 | `'true'` | 保留并执行 | 是 | mockjs XHR 劫持激活，gh-pages demo 全功能（本次新增行为） |
 
+已知限制与演进（2026-10-20 演示模式修订）：初版生产 mock 接线后 gh-pages 登录接口不可用（auth 4 条 rawResponse 在 client 侧被静默忽略——Set-Cookie HttpOnly 凭证流在 mockjs XHR 劫持下本质不可模拟）。**演示模式**：CI 构建 `VITE_DEMO_NO_AUTH=true` 时守卫跳过登录/权限校验（`src/router/guards/login.ts` + `permission.ts`，仍拉 profile 供演示账号全链路），prod 版 auth mock（`mockProdServer.ts` 内联 response 形态）提供演示账号 Admin（admin/123456）；常规构建不受影响。
+
 ### 4.3 构建环境变量语义表
 
 | 变量 | 消费方 | 侧 | 作用 |
@@ -118,6 +120,7 @@ jobs:
 | `VITE_HISTORY_MODE=hash` | `src/router/config.ts` | 客户端 | `createWebHashHistory` |
 | `VITE_MENU_SOURCE=local` | `src/router/config.ts` | 客户端 | 菜单走本地静态路由，不请求后端 |
 | `VITE_USE_MOCK=true` | `src/main.ts` 条件分支 | 客户端（import.meta.env） | 动态 import 挂接 `setupProdMockServer`，mockjs 浏览器端 XHR 劫持激活 |
+| `VITE_DEMO_NO_AUTH=true` | `src/router/guards/login.ts` + `permission.ts` | 客户端（import.meta.env） | 演示模式：守卫跳过登录/权限校验，prod 版 auth mock 提供演示账号（Admin，2026-10-20 新增） |
 
 ### 4.4 同步更新
 

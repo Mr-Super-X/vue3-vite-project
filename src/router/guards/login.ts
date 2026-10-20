@@ -13,6 +13,7 @@
  *
  * @see [`./auth.ts`](./auth.ts) `checkLoginState` 调用点
  * @see [`src/utils/storage.ts`](../../utils/storage.ts) `Session.get('auth')` 标记来源
+ * @see [`../../../mock/mockProdServer.ts`](../../../mock/mockProdServer.ts) VITE_DEMO_NO_AUTH 演示模式说明
  * @group 路由：登录守卫
  */
 
@@ -33,6 +34,20 @@ export async function checkLoginState(
   to: RouteLocationNormalized,
   userStore: UserStore
 ): Promise<RouteLocationRaw | null> {
+  // 演示模式（gh-pages CI 构建 VITE_DEMO_NO_AUTH=true）：跳过登录校验直接放行。
+  // 仍尝试拉一次 profile——prod 版 auth mock（mock/mockProdServer.ts 内联）返回演示账号，
+  // 拉取成功则用户名/权限码/按钮级 v-auth 全链路可演示；拉取失败降级放行（演示站不卡人）。
+  // 常规构建开关缺省/false 时本分支被静态消除，行为与现状一致。
+  if (import.meta.env.VITE_DEMO_NO_AUTH === 'true') {
+    userStore.authenticated = true
+    try {
+      if (!userStore.profile) await userStore.fetchProfile()
+    } catch {
+      userStore.resetLocalState()
+    }
+    return null
+  }
+
   // 已登录且 profile 已恢复 → 直接放行
   if (userStore.isLoggedIn && userStore.profile) return null
 

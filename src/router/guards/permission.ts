@@ -30,6 +30,12 @@ export function checkPermission(
   to: RouteLocationNormalized,
   userStore: UserStore
 ): RouteLocationRaw | null {
+  // 演示模式（gh-pages CI 构建 VITE_DEMO_NO_AUTH=true）：路由级权限校验跳过——
+  // prod 版 profile mock 的演示权限码未必覆盖全部路由 meta.permissions；
+  // 按钮级 v-auth 仍按真实 permissions 渲染（profile 拉取成功时），权限控制效果不受影响。
+  // 常规构建本分支被静态消除。
+  if (import.meta.env.VITE_DEMO_NO_AUTH === 'true') return null
+
   const requiredPerms = (to.meta as { permissions?: string[] }).permissions
   if (!requiredPerms?.length) return null
 

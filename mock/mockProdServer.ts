@@ -8,28 +8,70 @@
  * 挂接点：src/main.ts 条件分支（仅 VITE_USE_MOCK==='true' 的动态 import），
  * 常规生产构建（'false'）整分支被 tree-shake，产物不含 mock。
  *
- * 模块清单说明：仅含 5 个真实 mock 路由模块（mock/ 目录全部 url: '/api/*' 定义处）。
- * mock/index.ts 只聚合 auth/user/menu；pro-table/ 下 11 个文件是具名导出
- * xxxRequestApi（ProTableRequestApi 组件直连数据源，无 XHR 依赖），无需接线。
+ * 模块清单说明：4 个 data 模块（dict/menu/portal-overview/user）+ 内联 prod 版 auth（prodAuthMocks）。
+ * mock/index.ts 只聚合 auth/user/menu（dev 模式 viteMockServe 按目录扫描不受此限）。
+ * pro-table/ 下 11 个文件是具名导出 xxxRequestApi（ProTableRequestApi 组件直连数据源，
+ * 无 XHR 依赖），无需接线。
  *
  * 已知限制：mock/auth.ts 的 login/profile/logout/refresh 用 rawResponse（Node req/res 语义），
  * client 侧 createProdMockServer 只消费 response 函数（client.mjs 解构 4 字段，rawResponse 被
- * 静默忽略）→ gh-pages 上登录接口返回空对象、登录流程不可用。data 类 4 模块不受影响。
- * 修复路径（待 Task 4 验证后决策）：auth.ts 改写为 response 函数形态（双端兼容）。
- * @see src/main.ts 入口挂接
+ * 静默忽略）——更深层原因是 rawResponse 模拟的 Set-Cookie HttpOnly 凭证流依赖真实网络栈，
+ * mockjs 伪造响应写不进 cookie 也校验不了。故本文件内联 prod 版 auth（response 形态，无 cookie
+ * 语义），供 VITE_DEMO_NO_AUTH 演示模式（守卫跳过登录校验但仍拉 profile）消费；
+ * 权限码字面量与 mock/auth.ts MOCK_PERMISSIONS 保持同步（两处无运行时共享，手工对齐）。
  * @trigger 新增 mock 路由模块时须同步登记本文件与 mock/index.ts（dev 聚合入口），两处清单不许分叉
+ * @see src/main.ts 入口挂接
+ * @see src/router/guards/login.ts VITE_DEMO_NO_AUTH 演示模式守卫
  */
 import type { MockMethod } from 'vite-plugin-mock'
 import { createProdMockServer } from 'vite-plugin-mock/client'
 
-import auth from './auth'
 import dict from './dict'
 import menu from './menu'
 import portalOverview from './portal-overview'
 import user from './user'
 
-/** 全量 mock 路由清单（与 mock/ 目录全部 url: '/api/*' 定义一一对应） */
-const mockModules: MockMethod[] = [...auth, ...dict, ...menu, ...portalOverview, ...user]
+/**
+ * prod 版 auth mock（response 函数形态，无 cookie 语义）。
+ * dev 版（mock/auth.ts）用 rawResponse 模拟 Set-Cookie 凭证流，浏览器端无法模拟，见文件头注。
+ */
+const prodAuthMocks: MockMethod[] = [
+  {
+    url: '/api/auth/login',
+    method: 'post',
+    response: ({ body }: { body: { username?: string; password?: string } }) =>
+      body.username === 'admin' && body.password === '123456'
+        ? { code: 200, message: 'ok', data: { profile: { id: 1, name: 'Admin' } } }
+        : { code: 401, message: '账号或密码错误', data: null },
+  },
+  {
+    url: '/api/auth/profile',
+    method: 'get',
+    response: () => ({
+      code: 200,
+      message: 'ok',
+      data: {
+        id: 1,
+        name: 'Admin',
+        // 与 mock/auth.ts MOCK_PERMISSIONS 保持同步（两处无运行时共享，手工对齐）
+        permissions: ['dashboard:view', 'user:view', 'user:edit', 'orders:view', 'reports:view'],
+      },
+    }),
+  },
+  {
+    url: '/api/auth/logout',
+    method: 'post',
+    response: () => ({ code: 200, message: 'ok', data: null }),
+  },
+  {
+    url: '/api/auth/refresh',
+    method: 'post',
+    response: () => ({ code: 200, message: 'ok', data: null }),
+  },
+]
+
+/** 全量 mock 路由清单（data 模块 + prod 版 auth） */
+const mockModules: MockMethod[] = [...prodAuthMocks, ...dict, ...menu, ...portalOverview, ...user]
 
 /**
  * 注册生产 mock（浏览器端 mockjs XHR 劫持）。

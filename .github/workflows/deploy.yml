@@ -22,6 +22,7 @@ env:
   VITE_HISTORY_MODE: hash # gh-pages 无 SPA fallback，hash 模式刷新/深层链接不 404
   VITE_MENU_SOURCE: local # 纯静态托管无后端，菜单走本地静态路由
   VITE_USE_MOCK: 'true' # 生产构建客户端 mock 挂接开关（src/main.ts PROD && 判定 → createProdMockServer 浏览器端 XHR 劫持）
+  VITE_DEMO_NO_AUTH: 'true' # 演示模式：守卫跳过登录/权限校验（gh-pages 纯演示站无敏感数据，prod 版 auth mock 提供演示账号）
 
 jobs:
   deploy:
