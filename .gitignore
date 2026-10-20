@@ -53,8 +53,11 @@ mock/**/_*.bundled_*.cjs
 .omc/state/
 .omc/sessions/
 .omc/notepad.md
-# components.d.ts 入库（2026-10-20 图标体系落地）：GlobalComponents 精确类型需团队共享，
-# 保证「clone 后未跑 dev 也有类型/错误图标名 IDE 报错」；auto-imports.d.ts 仍忽略（纯机器注入标识符）
+# components.d.ts / auto-imports.d.ts 均为 unplugin 自动生成物（2026-10-20 图标体系：components.d.ts 恢复忽略）。
+# components.d.ts 内容随「最近一次 dev/build 类型 + transform 到的组件」摇摆（build 会因 demo DEV 门控
+# 冲掉 i- 图标条目），入库必然产生提交后 dirty 噪音；type-check 依赖由 build 脚本保证（build 先行生成）。
+# 以本地生成为准，勿提交、勿手工编辑。
+src/types/components.d.ts
 src/types/auto-imports.d.ts
 .gstack/
 .verify/
