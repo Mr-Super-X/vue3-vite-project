@@ -1,0 +1,65 @@
+name: Deploy to GitHub Pages
+
+# 触发条件：push 到 master 自动部署（与 ci.yml 触发分支对齐）+ 手动兜底
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  pages: write
+  id-token: write
+
+# 取消同 branch 上的旧 workflow（与 ci.yml 同策略）
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  VITE_BASE: /vue3-vite-project/ # vue-router basename（src/router/config.ts 消费）
+  VITE_HISTORY_MODE: hash # gh-pages 无 SPA fallback，hash 模式刷新/深层链接不 404
+  VITE_MENU_SOURCE: local # 纯静态托管无后端，菜单走本地静态路由
+  VITE_USE_MOCK: 'true' # 生产构建客户端 mock 挂接开关（src/main.ts PROD && 判定 → createProdMockServer 浏览器端 XHR 劫持）
+
+jobs:
+  deploy:
+    name: Build + Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.12.0'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check (full)
+        # --force 强制重建 .tsbuildinfo 防缓存陈旧（与 ci.yml 一致）
+        run: pnpm type-check:full
+
+      - name: Build
+        # vite 静态资源 base 走 CLI；vue-router basename 由 env.VITE_BASE 供客户端消费
+        run: pnpm build-only --base=/vue3-vite-project/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
