@@ -4,6 +4,15 @@
 
 ## 未发布
 
+### 📝 Docs | TODOS P3 四项评估收官：#10 魔法时刻落地，#9/#11/#12 决定不做（2026-10-20，TODOS.md 全零）
+
+> 按「只做必要部分，改动大于收益则不做」逐项评估，决定与理由均记录在案：
+
+- **#10 魔法时刻包装 ✅ 做**（DX subagent）：`docs/10` 新增 §1.4「60 秒建一个业务模块」——dev 运行中 `pnpm new-module about` 后路由**即时注册**（vite `import.meta.glob` dev 热更，无需重启）+ 未登录访问被守卫拦下并记住 `?redirect=`（登录后自动跳回），均经浏览器实测后写入文档；含 `remove-module --force` 一键清理闭环
+- **#9 语义级一致性抽查机制 ❌ 不做**：语义漂移的自动检测没有可靠低成本落地路径（真语义校验 = AI 审查级），既有季度全代码库审计轮（v1.6 惯例）已覆盖该需求，专门机制属过度设计
+- **#11 `src/.omc` 运行态产物外移 ❌ 不做**：实证 `.gitignore` 已覆盖任意层级（line 21 `.omc`）、vite/scripts 不扫描、git 不追踪——对工程零实际干扰；外移需改动用户 shell 环境配置（OMC_STATE_DIR），改动 > 收益
+- **#12 bench 基线对比 ❌ 不做**：TODOS 原文自带 YAGNI 信号（「如未来需要回归检测」），当前无真实回归检测需求；pm #10 选型量化阈值维持 defer，待 bench 需求真实出现时一并立项（届时有真实基线数据可测）
+
 ### 🐞 Fix | cross 规则 el-form 透传根治：number 目标字段保存不再被 async-validator 误拦（2026-10-19，audit 遗留 P1 闭环）
 
 > 来源：`docs/audit/2026-10-15-engine-audit-summary.md`「已知留后续 sprint」唯一遗留项。含 `crossValidator` 的规则原样透传 el-form → async-validator 对非纯 required 规则默认 `type:'string'` → number 目标字段（InputNumber 输出）保存全量校验被拦「is not a string」。
