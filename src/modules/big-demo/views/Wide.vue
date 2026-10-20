@@ -6,14 +6,16 @@
  * 本页经路由 meta.bigScreen = { width: 9000, height: 1080 } 声明设计稿尺寸，
  * big layout 据此缩放；普通 1920 显示器打开时整体缩小预览（scale≈0.21），开发无需真拼接屏。
  *
- * 地图 option 在 ../config/china-map.ts（含 GeoJSON 注册副作用，独立 chunk 不拖累 1920 页）；
+ * 地图 option 在 ../config/china-map.ts（含 GeoJSON 注册副作用）；本页经动态 import() 加载该模块——
+ * 159KB GeoJSON 退到二级 chunk，路由 chunk 秒载、页面壳先渲染，地图区先呈现加载/失败态
+ * （/autoplan Phase 2 D-SC-1 五态示范的真实异步场景）；
  * 面板静态数据在 ../apis（WIDE_* 常量）；开关组交互在 ../components/SwitchGroup.vue。
  *
  * 字号尺度：本页 1:1 物理显示且观看距离远（5~15 米），字号按 1920 稿 ×1.5~1.8 取
  * （标题 56px、正文 22~30px），非按比例 4.7 倍（4.7 倍是等比缩放场景的算法，本页原生分辨率直出）。
  * 面板内容密度经 9000×1080 实测紧凑化（排行/按钮/指标压缩），保证三栏总高不溢出不裁剪。
  */
-import { chinaMapOption } from '../config/china-map'
+import type { EChartsOption } from 'echarts'
 import { useClock } from '../composables/useClock'
 // 模块内组件不在 unplugin-vue-components 全局注册范围（仅 components/common|ProTable|form-schema），需显式 import
 import BigChart from '../components/BigChart.vue'
@@ -25,6 +27,27 @@ const bem = createNamespace('big-demo-wide')
 
 // 实时时钟（模块 composable，scope 销毁自动清理）
 const clock = useClock()
+
+// ─── 地图二级懒加载（真实异步场景的五态示范载体）──────────────
+// china-map.ts 含 159KB GeoJSON：动态 import 让路由 chunk 秒载、壳先渲染；
+// 加载期/失败期在地图区就地呈现（不整页 loading），失败可重试。
+// shallowRef 而非 ref：echarts option 大对象只需替换级响应式，避免深度代理开销
+// （且 deep UnwrapRef 会把含索引签名的大对象类型变形，exactOptionalPropertyTypes 下传 prop 报错）
+const mapOption = shallowRef<EChartsOption | null>(null)
+const mapError = ref(false)
+
+function loadMap(): void {
+  mapError.value = false
+  import('../config/china-map')
+    .then((mod) => {
+      mapOption.value = mod.chinaMapOption
+    })
+    .catch(() => {
+      mapError.value = true
+    })
+}
+
+onMounted(loadMap)
 
 // ─── 面板交互状态（内联控件：不使用 teleport 弹层组件）────────
 const activeDimension = ref<(typeof WIDE_DIMENSIONS)[number]>('按大区')
@@ -62,9 +85,14 @@ const activeDimension = ref<(typeof WIDE_DIMENSIONS)[number]>('按大区')
         </PanelBox>
       </aside>
 
-      <!-- 中间地图 -->
+      <!-- 中间地图（二级懒加载：壳先渲染，加载/失败态就地呈现） -->
       <section :class="bem.e('map')">
-        <BigChart :option="chinaMapOption" />
+        <BigChart v-if="mapOption" :option="mapOption" />
+        <div v-else-if="mapError" :class="bem.e('map-fallback')">
+          <p :class="bem.e('map-fallback-text')">地图数据加载失败</p>
+          <button type="button" :class="bem.e('map-retry')" @click="loadMap">重试</button>
+        </div>
+        <div v-else :class="bem.e('map-loading')">地图加载中…</div>
       </section>
 
       <!-- 右操作面板 -->
@@ -178,6 +206,40 @@ const activeDimension = ref<(typeof WIDE_DIMENSIONS)[number]>('按大区')
   &__map {
     flex: 1;
     min-width: 0;
+  }
+
+  &__map-loading,
+  &__map-fallback {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    font-size: 24px;
+    color: #5f7bab;
+    background: rgba(10, 24, 48, 0.4);
+    border: 1px dashed rgba(62, 140, 255, 0.25);
+    border-radius: 12px;
+  }
+
+  &__map-fallback-text {
+    margin: 0;
+    color: #f56c6c;
+  }
+
+  &__map-retry {
+    padding: 8px 32px;
+    font-size: 20px;
+    color: #ffffff;
+    cursor: pointer;
+    background: rgba(77, 163, 255, 0.3);
+    border: 1px solid #4da3ff;
+    border-radius: 6px;
+
+    &:hover {
+      background: rgba(77, 163, 255, 0.5);
+    }
   }
 
   &__metrics {

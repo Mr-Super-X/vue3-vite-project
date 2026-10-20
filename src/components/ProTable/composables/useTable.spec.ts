@@ -15,7 +15,7 @@
  * @group ProTable composables 测试
  */
 import { describe, it, expect, vi } from 'vitest'
-import { nextTick } from 'vue'
+import { nextTick, reactive } from 'vue'
 import { useTable } from './useTable'
 import type { SortState } from '../types'
 
@@ -303,6 +303,31 @@ describe('useTable', () => {
       expect(table.getFilterState()).toEqual({})
     })
 
+    it('A3：resetFilter 同步调 el-table clearFilter() 清列头筛选 UI（防旧条件残留复活）', async () => {
+      const deps = makeDeps()
+      const table = useTable(deps)
+      await table.refresh()
+      const clearFilter = vi.fn()
+      table.tableRef.value = { clearFilter } as never
+      table.setFilter({ status: ['paid'] })
+
+      table.resetFilter()
+      // 列头筛选 UI（el-table 内部非受控状态）必须经官方 clearFilter 清除，
+      // 否则 reset 后旧条件残留在列头，下次筛选操作静默回参
+      expect(clearFilter).toHaveBeenCalledTimes(1)
+      expect(table.getFilterState()).toEqual({})
+    })
+
+    it('A3：tableRef 为 null（vxe 引擎 / 未挂载）时 resetFilter 不抛错、仍清空 state', async () => {
+      const deps = makeDeps()
+      const table = useTable(deps)
+      await table.refresh()
+      table.setFilter({ status: ['paid'] })
+      // tableRef 初始为 null（makeDeps 未同步 el 实例）——结构化可选调用须自然短路
+      expect(() => table.resetFilter()).not.toThrow()
+      expect(table.getFilterState()).toEqual({})
+    })
+
     it('filterState 全空时 serializeFilters 返回空对象（不污染请求 params）', async () => {
       const deps = makeDeps()
       const adapter = vi.fn((filters: Record<string, (string | number | boolean)[]>) => ({
@@ -341,5 +366,78 @@ describe('useTable', () => {
       table.setFilter({ status: [], dept: ['tech'] })
       expect(table.getFilterState()).toEqual({ dept: ['tech'] })
     })
+  })
+})
+
+describe('useTable / B4 props.pageSize 运行时跟随（density 同款 watch，docs/audit/2026-10-15）', () => {
+  function makeReactiveDeps(pageSize = 10) {
+    const requestApi = vi.fn().mockResolvedValue({ data: [], total: 0, pageNum: 1, pageSize })
+    // 生产环境 props 是响应式对象 —— 模拟父级 v-model:page-size / 动态调整的运行时变更
+    const props = reactive({
+      columns: [{ prop: 'name', label: '名称' }],
+      requestApi,
+      pageSize,
+      rowKey: 'id',
+    }) as never
+    return { props, requestApi, columns: {} as never, getSearchParams: () => ({}) }
+  }
+
+  it('props.pageSize 运行时变化 → pageSize 跟随（此前只读初始化，e923cb8 density 改造的同类漏网）', async () => {
+    const deps = makeReactiveDeps(10)
+    const table = useTable(deps)
+    expect(table.pageSize.value).toBe(10)
+    ;(deps.props as unknown as { pageSize: number }).pageSize = 20
+    await nextTick()
+    expect(table.pageSize.value).toBe(20)
+  })
+
+  it('pageSize 运行时变化触发自动刷新（既有 [page, pageSize] watcher 联动）', async () => {
+    const deps = makeReactiveDeps(10)
+    const table = useTable(deps)
+    await table.refresh()
+    expect(deps.requestApi).toHaveBeenLastCalledWith(expect.objectContaining({ pageSize: 10 }))
+    ;(deps.props as unknown as { pageSize: number }).pageSize = 20
+    await nextTick()
+    await vi.waitFor(() =>
+      expect(deps.requestApi).toHaveBeenLastCalledWith(expect.objectContaining({ pageSize: 20 }))
+    )
+  })
+})
+
+describe('useTable / D(#9) 持久化快照恢复筛选', () => {
+  // 本 describe 为顶层独立块 —— 自定义最小 makeDeps（与主 describe 同语义）
+  function makeDeps() {
+    const requestApi = vi.fn().mockResolvedValue({
+      data: [{ id: 1, name: 'a' }],
+      total: 1,
+      pageNum: 1,
+      pageSize: 10,
+    })
+    return {
+      props: {
+        columns: [{ prop: 'name', label: '名称' }],
+        requestApi,
+        pageSize: 10,
+        rowKey: 'id',
+      } as never,
+      columns: {} as never,
+      getSearchParams: () => ({ name: '' }),
+    }
+  }
+
+  it('initialState.filterState → filterState 初值（路由返回场景恢复列头筛选）', () => {
+    const deps = makeDeps()
+    const table = useTable({
+      ...deps,
+      initialState: { filterState: { status: ['paid'] } } as never,
+    })
+    expect(table.getFilterState()).toEqual({ status: ['paid'] })
+  })
+
+  it('initialState 无 filterState → 缺省空筛选（向后兼容 v1 快照）', () => {
+    const deps = makeDeps()
+    const table = useTable({ ...deps, initialState: { page: 2 } as never })
+    expect(table.getFilterState()).toEqual({})
+    expect(table.page.value).toBe(2)
   })
 })

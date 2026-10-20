@@ -492,3 +492,36 @@ describe('H2：applyReactions 注入 resolveFunctionExpression（实例级沙箱
     stoppers.forEach((s) => s())
   })
 })
+
+describe('use-reaction / D(#7) deps 对象路径 deep watch', () => {
+  it('deps 指向对象路径（user）时，对象内部嵌套变化（user.age）也触发重算', async () => {
+    const runnerSpy = vi.fn()
+    const node = {
+      reaction: {
+        deps: ['user'],
+        label: (m: { user: { age: number } }) => {
+          runnerSpy()
+          return `age=${m.user.age}`
+        },
+      },
+    } as unknown as SchemaNode
+    const model = reactive({ user: { age: 10 }, other: 1 })
+    const stoppers: (() => void)[] = []
+    const scope = effectScope()
+    scope.run(() => {
+      applyReactions(node, model, stoppers)
+    })
+    expect(runnerSpy).toHaveBeenCalledTimes(1)
+    // ★ 对象路径内部嵌套变化：修复前 watch 无 deep，锚定 user 引用不重算
+    model.user.age = 30
+    await nextTick()
+    expect(runnerSpy).toHaveBeenCalledTimes(2)
+    expect(node.label).toBe('age=30')
+    // 无关字段仍不触发（deps 精确监听语义保持）
+    model.other = 2
+    await nextTick()
+    expect(runnerSpy).toHaveBeenCalledTimes(2)
+    scope.stop()
+    stoppers.forEach((s) => s())
+  })
+})

@@ -189,8 +189,21 @@ export function useTable<T extends object = Record<string, unknown>>(
     },
     { immediate: false }
   )
+  // B4（docs/audit/2026-10-15）：props.pageSize 此前只读初始化（e923cb8 density 改造的同类漏网）——
+  // 对齐 density watch 语义：父级 v-model:page-size / 动态调整运行时可变；变化经下方
+  // [page, pageSize] watcher 自动触发刷新。初始值仍由 snapshot?.pageSize ?? props.pageSize 决定
+  const stopPageSizeWatch = watch(
+    () => props.pageSize,
+    (newSize) => {
+      if (newSize && newSize !== pageSize.value) {
+        pageSize.value = newSize
+      }
+    },
+    { immediate: false }
+  )
   onUnmounted(() => {
     stopDensityWatch()
+    stopPageSizeWatch()
   })
 
   /** 排序状态 —— 不混入 searchParams（D4：排序是表格交互状态，非表单输入，useSearch 语义保持纯净） */
@@ -212,7 +225,10 @@ export function useTable<T extends object = Record<string, unknown>>(
    *
    * 不混入 searchParams（D4 决策类比）：筛选是 el-table 列头交互状态，语义独立于搜索表单。
    */
-  const filterState = ref<FilterValuesMap>({}) as Ref<FilterValuesMap>
+  const filterState = ref<FilterValuesMap>(
+    // D(#9)：路由级持久化快照恢复筛选状态（v3.5 PR2 后筛选成一等状态，与 sortState 同待遇）
+    (snapshot?.filterState as FilterValuesMap | undefined) ?? {}
+  ) as Ref<FilterValuesMap>
 
   /**
    * v3.5 PR2：筛选参数序列化 —— 无 adapter 时返回空对象（不污染请求 params，
@@ -401,9 +417,15 @@ export function useTable<T extends object = Record<string, unknown>>(
    * v3.5 PR2：清空筛选状态 —— search.reset 路径调用。
    * 仅清空 state 不触发请求；编排层 reset 流程已含 setPage(1) + refresh，
    * 复用同一次请求避免 resetFilter 与 page watcher 双发。
+   *
+   * A3（docs/audit/2026-10-15-engine-audit-summary）：el-table 列头筛选 UI 非受控 ——
+   * 只清 filterState 时旧条件残留在列头，reset 后下次筛选操作静默回参（筛选复活）。
+   * 同步调官方 clearFilter() 清 UI；结构化可选调用 —— vxe 引擎 tableRef 为 null 自然短路
+   * （与 useTable.clearSelection 清 el-table UI 勾选态同一模式）
    */
   function resetFilter(): void {
     filterState.value = {}
+    ;(tableRef.value as { clearFilter?: () => void } | null)?.clearFilter?.()
   }
 
   /** v3.5 PR2：筛选状态快照 —— ProTable.vue 经此向外 emit / expose */

@@ -1,6 +1,7 @@
 # 大屏布局与 scale 适配使用指南
 
 > 适用：数据大屏 / 拼接屏页面开发。routes 挂 big layout 即获得 scale 等比缩放能力，样式直接写设计稿 px。
+> 决策记录（transform scale / meta 契约 / BigChart 自治的根因）见 [docs/38-big-scale适配决策记录.md](38-big-scale适配决策记录.md)。
 >
 > 与 h5 rem 适配（docs/34）同为「编译时/运行时双层」思路的大屏变体——但 big 走 **transform: scale 容器缩放**，不改 html fontSize、不经 postcss 转换，比 h5 更干净（零全局残留风险）。
 
@@ -106,6 +107,8 @@ const bem = createNamespace('big-xxx')
 5. **PanelBox 高度契约**：组件根不写 `height:100%`（flex item 下 basis:auto 时 100% 会劫持为父容器全高导致塌陷）；消费侧用 flex grow 比例提供高度
 6. **BEM 无 scoped scss**（§3 规范），穿透第三方组件直接写后代选择器
 7. **背景图实践**（来自 Vue2 大屏 mixin 流派的实战经验）：若设计师给了整屏背景图，容器底色取**背景图最边缘颜色**、图片 `background-size: cover` 铺满——cover 裁切产生的缝隙与底色无缝衔接，比例不符的留白区不突兀
+8. **拼接屏字号系数**：超宽/远距离观看页（如 9000 稿拼接屏，观看距离 5~15 米）字号按 1920 稿 **×1.5~1.8** 取——1:1 物理显示下 1920 稿字号在远距不可读（Wide.vue 字号尺度注释即先例）；标准 1920 近距离屏保持 1:1
+9. **KPI 指标卡三态**：KpiCard 的 trend 支持升/降/平三态配色，数值实时抖动演示走 `jitterValue` 基准抖动（±5% 围绕基准值，非当前值复利）——长跑不漂移
 
 ## 4. 已知限制（必读）
 
@@ -122,6 +125,7 @@ const bem = createNamespace('big-xxx')
 3. `src/router/whitelist.ts` 追加路由 name（需免登录时）
 4. 视图按 §3 约束编写（写死设计稿 px、显式 import 模块组件）
 5. `pnpm check:routes` 校验一致性
+6. （推荐）照抄五态实践：`/big-demo/state-demo` 集中示范异步数据在大屏场景的五种形态（成功/加载中/错误/空/断连，每态附设计要点）；Wide 页地图区是真实异步加载场景（GeoJSON 二级 chunk，页面壳先渲染、地图区就地呈现加载/失败态）
 
 ## 6. 验证记录（2026-10-15 chrome-devtools 实测）
 

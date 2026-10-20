@@ -25,19 +25,19 @@ const routes: RouteRecordRaw[] = [
     path: '/403',
     name: 'Forbidden',
     component: () => import('../views/Forbidden.vue'),
-    meta: { title: '403' },
+    meta: { title: '403', noTags: true },
   },
   {
     path: '/404',
     name: 'NotFound',
     component: () => import('../views/NotFound.vue'),
-    meta: { title: '404' },
+    meta: { title: '404', noTags: true },
   },
   {
     path: '/500',
     name: 'ServerError',
     component: () => import('../views/ServerError.vue'),
-    meta: { title: '500' },
+    meta: { title: '500', noTags: true },
   },
 ]
 

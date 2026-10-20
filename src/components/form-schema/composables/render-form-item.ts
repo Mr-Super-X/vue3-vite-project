@@ -106,7 +106,10 @@ export function renderWithFormItem(
       // rules 为空即恒通过。hidden ≠ ignore：值仍保留在 model 中会提交
       rules:
         node.hidden === true ? [] : (compileRules(node.rules, opts.rules, resolvedLabel) as never),
-      ...(ext?.error ? { error: ext.error } : {}),
+      // A4 渲染层（docs/audit/2026-10-15，浏览器实测）：validating 态不注入 error——
+      // EP 的 error prop 优先级高于 validateStatus，同传时 is-validating/loading 图标被 is-error 覆盖，
+      // loading 态永不出现。校验中文案在 error 态透传。
+      ...(ext?.error && ext.validateStatus !== 'validating' ? { error: ext.error } : {}),
       ...(ext?.validateStatus ? { validateStatus: ext.validateStatus } : {}),
       ...(onFocusout ? { onFocusout } : {}),
       ...fiProps,

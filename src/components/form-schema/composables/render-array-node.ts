@@ -28,26 +28,34 @@ const dropTargetIndex = ref<number | null>(null)
 const dropPosition = ref<'before' | 'after'>('after')
 
 /**
- * 行级 reaction stopper 桶 —— key = `${listName}#${rowKey}`
- *
- * 行级 reaction 在 renderRow 内独立注册（与 use-schema-renderer 顶层 reaction 并行），
- * 把 row 子树对象作为 model 透传给 applyReactions —— 解决行内相对 deps（'qty' 等）
- * 在根 model 不可达、Vue watch 永不触发的引擎层根因。
- *
- * 跨渲染复用：同 rowKey 旧 stopper 在 renderRow 内被 stop + 替换（同 row 对象身份稳定时
- * 无变化；rowKeyOf 用 WeakMap 提供跨渲染身份，删/移一行后旧 key 已不在桶里被复用）。
- *
- * stale 清理：list 重渲（push/splice/move 后）由 renderArrayNode 入口遍历清掉已不存在的
- * rowKey 对应 watcher，防止被删行的旧 watcher 长期监听并触发（model 引用被 GC 前）。
+ * 行级 reaction 注册条目（A5）—— stopper 桶 value 从纯函数升级为四元组：
+ * - stop：停止本行全部 reaction watcher
+ * - index：注册时的行序位 —— move 后 index 变化必须重注册（rewritten name 前缀随序位）
+ * - itemSchema：注册时的 itemSchema 引用 —— schema 替换 / 深改后引用变化必须重注册
+ * - rewritten：注册时 rewriteNamePath 产出的副本（reaction 结果写入这份副本；
+ *   配置未变时跨渲染复用该副本 + watcher，跳过重注册 —— 原实现每次渲染全量
+ *   stop + applyReactions 重注册，行数 × 渲染次数级别的无谓 churn）
  */
-const rowReactionStoppers = new Map<string, () => void>()
+export interface RowReactionEntry {
+  stop: () => void
+  index: number
+  itemSchema: SchemaNode | SchemaNode[] | string | undefined
+  rewritten: SchemaNode
+}
 
-/** stop 单个行级 reaction stopper 并从桶中移除 */
-function stopRowReaction(key: string): void {
-  const stop = rowReactionStoppers.get(key)
-  if (stop) {
-    stop()
-    rowReactionStoppers.delete(key)
+/**
+ * 直调 renderArrayNode（不经 useRenderSchemaNode）时的退回桶 ——
+ * 生产路径由 useRenderSchemaNode 注入实例级桶（组件卸载时 onScopeDispose 统一清理，
+ * @see ./render-schema-node.ts）；本桶仅兼容单测 / bench 直调场景（与改前行为等价）
+ */
+const fallbackRowReactionStoppers = new Map<string, RowReactionEntry>()
+
+/** stop 单个行级 reaction 条目并从桶中移除 */
+function stopRowReaction(bucket: Map<string, RowReactionEntry>, key: string): void {
+  const entry = bucket.get(key)
+  if (entry) {
+    entry.stop()
+    bucket.delete(key)
   }
 }
 
@@ -78,15 +86,58 @@ export function renderArrayNode(
   const min = cfg.minItems ?? 0
   const max = cfg.maxItems ?? Infinity
 
+  // A5：行级 reaction 桶 —— 优先用 useRenderSchemaNode 注入的实例级桶（卸载有清理路径），
+  // 直调场景（单测 / bench）退回模块级桶
+  const rowBucket = opts.rowReactionStoppers ?? fallbackRowReactionStoppers
+
   // 行级 reaction stale 清理 —— list 重渲（push/splice/move 后）停掉已不在当前 list
   // 的旧行 watcher。prefix 限定 listName 避免误清其他 array 容器的 watcher
   // （多个 array 并存时按 listName 隔离）
   const currentRowKeys = new Set(list.map((row, i) => `${listName}#${rowKeyOf(row, i)}`))
   const listPrefix = `${listName}#`
-  for (const key of rowReactionStoppers.keys()) {
+  for (const key of rowBucket.keys()) {
     if (key.startsWith(listPrefix) && !currentRowKeys.has(key)) {
-      stopRowReaction(key)
+      stopRowReaction(rowBucket, key)
     }
+  }
+
+  /**
+   * A5：取本行的 rewritten 副本（含行级 reaction 注册）——
+   * - 桶内同 rowKey 条目且 index + itemSchema 引用均未变 → 复用缓存副本（watcher 仍
+   *   存活、reaction 结果已写入副本），跳过重注册（原实现每次渲染全量 stop +
+   *   applyReactions 重注册，行数 × 渲染次数级别的无谓 churn）
+   * - 否则（新行 / 移动后序位变化 / schema 替换）→ 停旧 watcher，重建副本 + 重注册
+   */
+  const resolveRowRewritten = (row: unknown, rowKey: string, index: number) => {
+    const rowStopKey = `${listName}#${rowKey}`
+    const cached = rowBucket.get(rowStopKey)
+    if (cached && cached.index === index && cached.itemSchema === cfg.itemSchema) {
+      return cached.rewritten
+    }
+    if (cached) stopRowReaction(rowBucket, rowStopKey)
+    const rewritten = rewriteNamePath(cfg.itemSchema, `${listName}[${index}]`, sep, rowStopKey)
+    if (rewritten && typeof rewritten === 'object') {
+      // 行级 reaction 独立注册（与顶层 use-schema-renderer reaction 并行）：
+      // 把 row 子树对象作为 model 传入 —— 行内相对 deps（'qty' / 'price' 等）在
+      // 根 model 不可达，用行 model 解析后 use-reaction.ts lodash.get 才有值。
+      // 行内 reaction 数量通常远小于顶层 schema，独立预算避免抢顶层 budget 配额；
+      // 无限循环场景由 runner 内 budget.enter() 兜底 + console.error 告警
+      const rowStoppers: (() => void)[] = []
+      applyReactions(
+        rewritten as SchemaNode,
+        row as Record<string, unknown>,
+        rowStoppers,
+        createBudget(),
+        opts.resolveFunctionExpression
+      )
+      rowBucket.set(rowStopKey, {
+        stop: () => rowStoppers.forEach((s) => s()),
+        index,
+        itemSchema: cfg.itemSchema,
+        rewritten: rewritten as SchemaNode,
+      })
+    }
+    return rewritten
   }
 
   const renderRow = (row: unknown, index: number): VNode => {
@@ -94,36 +145,7 @@ export function renderArrayNode(
     // name 前缀 = 位置路径（el-form 校验用，随 index 走）；
     // keyPrefix = 行对象身份（vnode key 用，随行数据走）——两者必须分离，
     // 否则删/移行后内部 form-item 的 key（fi-items[0].qty）漂移，整行重挂载
-    const rewritten = rewriteNamePath(
-      cfg.itemSchema,
-      `${listName}[${index}]`,
-      sep,
-      `${listName}#${rowKey}`
-    )
-    // 行级 reaction 独立注册（与顶层 use-schema-renderer.applyReactions 并行）：
-    // 把 row 子树对象作为 model 传入 —— 行内相对 deps（'qty' / 'price' 等）在
-    // 根 model 不可达，用行 model 解析后 use-reaction.ts:156 lodash.get 才有值。
-    // 同 rowKey 旧 watcher 先停（同 rowKey 重渲时 rewritten 引用已变，
-    // 旧 watcher 闭包持有的 reactionConfig 已被 delete，残留会读已删字段）。
-    // stopper 桶由 renderArrayNode 入口 stale 清理兜底（push/splice/move 场景）。
-    if (rewritten) {
-      const rowStopKey = `${listName}#${rowKey}`
-      stopRowReaction(rowStopKey)
-      const rowStoppers: (() => void)[] = []
-      applyReactions(
-        rewritten as SchemaNode,
-        row as Record<string, unknown>,
-        rowStoppers,
-        // 行内 reaction 数量通常远小于顶层 schema，独立预算避免抢顶层 budget 配额；
-        // 无限循环场景由 runner 内 budget.enter() 兜底 + console.error 告警
-        // （与 use-reaction.ts:140-147 顶层 reaction 同一机制）
-        createBudget(),
-        opts.resolveFunctionExpression
-      )
-      if (rowStoppers.length > 0) {
-        rowReactionStoppers.set(rowStopKey, () => rowStoppers.forEach((s) => s()))
-      }
-    }
+    const rewritten = resolveRowRewritten(row, rowKey, index)
     const inner = rewritten
       ? opts.render({
           ...(rewritten as object),

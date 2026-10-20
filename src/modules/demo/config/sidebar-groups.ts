@@ -51,10 +51,15 @@ export const CN_NAMES: Record<string, string> = {
   // ProTable 工具栏 / 批量操作条 / CSV 导入导出（2026-09-18）
   ProTableHeaderActions: '工具栏与批量操作',
   ProTableImportExport: 'CSV 导入导出',
+  // ProTable 审计缺口补齐（2026-10-19，audit 批 B1/B2/D 修复场景验证入口）
+  ProTableVxeRowSelect: 'vxe 引擎行选择',
+  ProTableSearchFilter: '搜索+列头筛选组合',
   // XForm 表单引擎
   XFormOverview: '用法总览',
   XFormArray: '数组节点',
   XFormArrayApi: '数组节点 API',
+  XFormArrayCrossField: '数组行内跨字段校验',
+  XFormAsyncAutocomplete: 'Autocomplete 异步搜索',
   XFormArrayDraggable: '数组行拖拽排序',
   XFormAsyncOptions: '异步选项',
   XFormAsyncOptionsError: '异步选项·错误处理',
@@ -137,6 +142,7 @@ export const CN_NAMES: Record<string, string> = {
   ErrorBoundary: '错误边界',
   Dict: '字典组件（DictSelect / DictTag）',
   RichTextEditor: '富文本编辑器',
+  IconUsage: '图标体系（静态/动态/本地集合）',
 }
 
 /** 返回组件名所属分组标题（未命中任何前缀时归入兜底组） */

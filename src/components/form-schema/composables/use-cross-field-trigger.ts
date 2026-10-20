@@ -38,6 +38,11 @@ interface ReverseRule {
   /** 规则依赖的字段路径集合（lodash get 支持 'items[0].qty'） */
   deps: string[]
   rule: RuleItem
+  /**
+   * 行模板标记（A1-反向）：规则来自 array.itemSchema 时由 useSchemaIndex 置 true ——
+   * target/deps 为行内相对名，trigger 收到全路径 changedField 时按行前缀 concrete 化后执行
+   */
+  rowScoped?: boolean
 }
 
 /**
@@ -105,9 +110,11 @@ export function useCrossFieldTrigger(opts: UseCrossFieldTriggerOptions): {
   // 序号令牌：异步 crossValidator 连续触发时，旧 Promise 后返回不得覆盖新结果（H3）
   // seq 原语统一收敛到 cross-rule-runner；本路径 bump 时机 = 空值检查之后（行为保持，见 runner 文件头）
   const seqGuard = createCrossSeqGuard()
-  // runner 缓存：key = `${target}|${delayMs}`，同字段同 delay 共享一个 lodash.debounce 实例
-  // rules 整体替换时清空缓存（旧 runner 引用的 rule 引用已失效）
-  const runnerCache = new Map<string, (() => void) & { cancel?: () => void }>()
+  // runner 缓存：key = rule 引用（2026-10-19 修复：原为 `${target}|${delay}` 字符串——
+  // 同 target 多条 cross 规则（不同 deps）时 key 相同，第二条命中第一条的缓存 runner
+  // （闭包绑第一条的 rule 引用）→ 第二条规则永不执行。rule 引用作 key 后同 target
+  // 每条规则独立 runner；rules 数组整体替换时由 crossRules watch 统一取消 + 清空）
+  const runnerCache = new Map<ReverseRule, Runner>()
   // 同 tick 去重窗口：XForm.onValueChange 在 v-model 更新时同步调 trigger(field)，
   // 同一 tick 内 deep watch model 又会 diff 出同一字段 —— 两条路径都 run(field) 会让
   // delay=0（实时模式）的 crossValidator 每键执行 2 次（demo counter 虚高）。
@@ -147,18 +154,20 @@ export function useCrossFieldTrigger(opts: UseCrossFieldTriggerOptions): {
 
   /** 取 rule 的 debounce runner：0 = 同步执行；>0 = lodash.debounce
    *  关键：delay 用 getter 形式（r.rule.debounceMs ?? opts.defaultDebounceMs?.() ?? 0）
-   *  保证 schema 全局 debounceValidation 改变后立即生效，不需要重建 useCrossFieldTrigger 实例 */
+   *  保证 schema 全局 debounceValidation 改变后立即生效，不需要重建 useCrossFieldTrigger 实例
+   *  缓存 key = rule 引用：同 target 多条规则各自独立 runner（同 target 不同 delay 的旧 runner 仍清理） */
   function getRunner(r: ReverseRule): Runner {
     const defaultMs = opts.defaultDebounceMs?.() ?? 0
     const delay = r.rule.debounceMs ?? defaultMs ?? 0
-    const key = `${r.target}|${delay}`
-    const cached = runnerCache.get(key)
+    const cached = runnerCache.get(r)
     if (cached) return cached
     // 同 target 其他 delay 的旧 runner 取消 + 删除（模式切换延迟变化时缓存清理）
-    for (const [k, old] of runnerCache) {
-      if (k.startsWith(`${r.target}|`) && k !== key) {
+    for (const [oldRule, old] of runnerCache) {
+      if (oldRule === r) continue
+      const oldDelay = oldRule.rule.debounceMs ?? defaultMs ?? 0
+      if (oldRule.target === r.target && oldDelay !== delay) {
         old.cancel?.()
-        runnerCache.delete(k)
+        runnerCache.delete(oldRule)
       }
     }
     const fn: Runner =
@@ -168,8 +177,54 @@ export function useCrossFieldTrigger(opts: UseCrossFieldTriggerOptions): {
             return d as unknown as Runner
           })()
         : (Object.assign(() => executeRule(r), { cancel: () => {} }) as Runner)
-    runnerCache.set(key, fn)
+    runnerCache.set(r, fn)
     return fn
+  }
+
+  /**
+   * A1-反向（docs/audit/2026-10-15-engine-audit-summary）：把规则解析为本次应执行的具体规则
+   * - 无 changedField（全量路径：resetFields / setModel 整体替换）→ 原样返回
+   * - 直接命中（deps 含 changedField 或 target === changedField，绝对路径规则）→ 原样返回
+   * - rowScoped 行模板：changedField 带行前缀（'items[0].qty' / 'orders[0].items[1].qty'）
+   *   且行内相对名命中模板 deps/target → 返回 concrete 副本执行
+   * - 都不命中 → undefined（跳过）
+   */
+  function resolveConcreteRule(r: ReverseRule, changedField?: string): ReverseRule | undefined {
+    if (!changedField) return r
+    if (r.deps.includes(changedField) || r.target === changedField) return r
+    if (!r.rowScoped) return undefined
+    // 行前缀 = changedField 去掉最后一段（'items[0].qty' → 'items[0]'；嵌套数组取最深行）
+    const dot = changedField.lastIndexOf('.')
+    if (dot <= 0) return undefined
+    const prefix = changedField.slice(0, dot)
+    const rel = changedField.slice(dot + 1)
+    if (!r.deps.includes(rel) && r.target !== rel) return undefined
+    return concretizeRowRule(r, prefix)
+  }
+
+  /**
+   * 行模板 concrete 化：target/deps 重写为 `${prefix}.<相对名>` 绝对路径副本。
+   * 逐 dep 按「行内相对优先、顶层绝对回退」解析（与 use-validate.rewriteRuleDeps
+   * 同语义，兼容「行小计 ≤ 全局上限」混合写法：行内有该键取行内，行内无取顶层）。
+   * 执行原语 runCrossRuleMaybeSync 从 rule.dependsOn 取值，故 rule 也必须副本重写，
+   * 否则 crossValidator 收到的是根 model 上 undefined 的相对路径值
+   */
+  function concretizeRowRule(r: ReverseRule, prefix: string): ReverseRule {
+    const model = opts.model()
+    const resolve = (dep: string): string => {
+      const rowPath = `${prefix}.${dep}`
+      return model !== undefined && get(model, rowPath) !== undefined ? rowPath : dep
+    }
+    const rule: RuleItem = { ...r.rule }
+    if (r.rule.dependsOn) {
+      rule.dependsOn = Array.isArray(r.rule.dependsOn)
+        ? r.rule.dependsOn.map(resolve)
+        : resolve(r.rule.dependsOn)
+    }
+    if (r.rule.deps) {
+      rule.deps = Array.isArray(r.rule.deps) ? r.rule.deps.map(resolve) : resolve(r.rule.deps)
+    }
+    return { ...r, target: `${prefix}.${r.target}`, deps: r.deps.map(resolve), rule }
   }
 
   /**
@@ -184,10 +239,10 @@ export function useCrossFieldTrigger(opts: UseCrossFieldTriggerOptions): {
       // 精确双向触发：
       // - 反向：deps 包含 changedField（"改 A 触发 B 重算"）
       // - 正向：target === changedField（"改 B 触发 B 自己的跨字段规则重算"）
-      if (changedField && !r.deps.includes(changedField) && r.target !== changedField) {
-        continue
-      }
-      const runner = getRunner(r)
+      // - A1-反向：rowScoped 行模板按行前缀 concrete 化后匹配（数组行内 cross 校验）
+      const concrete = resolveConcreteRule(r, changedField)
+      if (!concrete) continue
+      const runner = getRunner(concrete)
       runner()
     }
   }

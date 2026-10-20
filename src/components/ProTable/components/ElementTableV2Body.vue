@@ -365,12 +365,26 @@ const effectiveRowHeight = computed(() => {
  * 通过 `sortBy` prop 强制预设排序状态，需注意此差异。详见 demo ProTableVirtualScroll
  * 验证步骤 4。 */
 const sortBy = ref<{ key: string; order: 'asc' | 'desc' }>({ key: '', order: 'desc' })
+/** D(#13)：sortable=true 客户端排序一次性 warn 标记（实例级，防多实例下只响一次） */
+let sortableClientWarned = false
 
 /**
  * TableV2 排序点击回调 —— onColumnSort 是 callback prop，TableV2 不 emit sort-change。
  * 把 'asc'|'desc' 翻译为编排层 SortChangeEvent 的 'ascending'|'descending' 后抛出。
  */
 function handleColumnSort(param: { key: string; order: 'asc' | 'desc' }): void {
+  // D（docs/audit/2026-10-15 protable#13）：v2 无内置客户端排序 —— sortable=true 列的点击
+  // 经编排层 custom 判定拦截后无效果（此前静默）。实例级一次性 warn 提示改 custom / 自排序
+  // （与下方 selection 列守卫同款实例级纪律：模块级只 warn 一次会让后续实例静默丢失）
+  if (
+    !sortableClientWarned &&
+    props.columns.some((c) => c.prop === param.key && c.sortable === true)
+  ) {
+    sortableClientWarned = true
+    console.warn(
+      '[ProTable] virtualized 引擎 sortable=true（客户端排序）点击无效果：v2 无内置客户端排序，请改 sortable="custom" 走服务端排序或自排序'
+    )
+  }
   sortBy.value = { key: param.key, order: param.order }
   emit('sort-change', {
     prop: param.key,

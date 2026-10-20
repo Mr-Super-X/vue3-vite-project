@@ -10,7 +10,14 @@
  *
  * @group 表单编排：渲染
  */
-import { h, type VNode, type ComponentPublicInstance, type Ref } from 'vue'
+import {
+  getCurrentScope,
+  h,
+  onScopeDispose,
+  type VNode,
+  type ComponentPublicInstance,
+  type Ref,
+} from 'vue'
 import { createNamespace } from '@/utils/bem'
 
 // 与 XForm.vue / build-slots.ts 同一 block 命名空间
@@ -31,7 +38,7 @@ import { resolveLabel } from '../utils/resolve-label'
 
 import { buildVModelBindings } from './build-vmodel-bindings'
 import { buildOnBindings } from './build-on-bindings'
-import { renderArrayNode } from './render-array-node'
+import { renderArrayNode, type RowReactionEntry } from './render-array-node'
 import { renderVisualContainer } from './render-visual-container'
 import { renderTabsStepsNode } from './render-tabs-steps-node'
 import { renderWithFormItem, renderWithRowColumn } from './render-form-item'
@@ -120,10 +127,34 @@ export interface RenderSchemaNodeOptions {
    */
   showDirtyMark?: boolean | undefined
   dirtyFields?: Readonly<Ref<ReadonlySet<string>>> | undefined
+  /**
+   * A5：行级 reaction stopper 桶。缺省时 useRenderSchemaNode 每实例自动创建一份并在
+   * 卸载时经 onScopeDispose 统一 stop + clear；显式注入（测试 / 高级场景）时直接用
+   * 注入桶。renderArrayNode 消费该桶做行级 reaction 注册 / stale 清理 /
+   * 配置未变跳过重注册（@see ./render-array-node.ts RowReactionEntry）
+   */
+  rowReactionStoppers?: Map<string, RowReactionEntry>
 }
 
 /** 主调度入口 —— 5 类渲染分支按顺序委托给子函数 */
 export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
+  /**
+   * A5：行级 reaction stopper 桶 —— 默认每渲染器实例一份（原 render-array-node 模块级
+   * Map 跨实例共享：①组件卸载后桶条目无清理路径——stale 清理只在渲染时执行，卸载后
+   * 不再渲染，重复挂载会让模块级 Map 无限增长（条目持有 rewritten 副本 = schema 克隆）；
+   * ②原始值行 i${index} key 跨实例碰撞互相误停 watcher）。桶随 opts 注入
+   * renderArrayNode；渲染器所在 setup 卸载时统一 stop + clear。
+   * getCurrentScope 守卫：无活跃 scope 的直调场景（单测 / bench）退化为不注册清理，
+   * 与 useSchemaRenderer 的 onScopeDispose 边界一致
+   */
+  const rowReactionStoppers = opts.rowReactionStoppers ?? new Map<string, RowReactionEntry>()
+  if (getCurrentScope()) {
+    onScopeDispose(() => {
+      for (const entry of rowReactionStoppers.values()) entry.stop()
+      rowReactionStoppers.clear()
+    })
+  }
+
   /** view 态占位（permission: 'view' 或顶层 readonly）—— 纯文本不包 formItem 不走校验 */
   function renderViewField(node: SchemaNode): VNode {
     return h(
@@ -265,7 +296,7 @@ export function useRenderSchemaNode(opts: RenderSchemaNodeOptions) {
     }
 
     // 数组节点独立分支：进入即截断，即使 renderArrayNode 返回 undefined
-    if (node.kind === 'array') return renderArrayNode(node, opts)
+    if (node.kind === 'array') return renderArrayNode(node, { ...opts, rowReactionStoppers })
 
     // 共享上下文准备（dev mode 白名单校验 + Comp + eventBindings + asyncProps）
     const { Comp, eventBindings, asyncProps } = resolveNodeContext(node)

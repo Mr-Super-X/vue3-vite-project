@@ -110,7 +110,14 @@ const vxeColumnComp = shallowRef<unknown>(null)
  * vxe 表格组件实例（vxe v4 setup 返回 $xeTable 全量方法，模板 ref 可直接调 recalculate）。
  * 类型只声明用到的 recalculate —— 动态组件实例无静态类型可引（vxe 类型链依赖未安装的 vxe-pc-ui）
  */
-const vxeTableInst = ref<{ recalculate?: (reFull?: boolean) => Promise<unknown> } | null>(null)
+const vxeTableInst = ref<{
+  recalculate?: (reFull?: boolean) => Promise<unknown>
+  clearFilter?: () => Promise<unknown>
+  /** B1：多选/单选 UI 清理 + reserve 全量选区读取（vxe v4 API，结构化可选调用） */
+  clearCheckboxRow?: () => void
+  clearRadioRow?: () => void
+  getCheckboxRecords?: () => unknown[]
+} | null>(null)
 
 /**
  * 密度切换后重算行高 —— vxe 行高变量（--vxe-ui-table-row-height-*）经隐藏尺寸元素测量后
@@ -125,6 +132,27 @@ const vxeTableInst = ref<{ recalculate?: (reFull?: boolean) => Promise<unknown> 
 defineExpose({
   recalculate: () => {
     void vxeTableInst.value?.recalculate?.()
+  },
+  /**
+   * A3（docs/audit/2026-10-15-engine-audit-summary）：清空 vxe 列头筛选 —— reset 路径编排层调用。
+   * vxe 官方 clearFilter 清内部筛选状态 + 列头 UI；同时清本地 localFilterMap 累加快照
+   * （否则 reset 后下一次单列 filter-change 会把旧列条件重新 merge 进快照 emit → 筛选复活）。
+   * 结构化可选调用：引擎异步加载未完成时 vxeTableInst 为 null，自然短路
+   */
+  clearFilter(): void {
+    localFilterMap.value = {}
+    void vxeTableInst.value?.clearFilter?.()
+  },
+  /**
+   * B1（docs/audit/2026-10-15 #2）：清空 vxe 选区 UI + 本地镜像。
+   * 多选 clearCheckboxRow / 单选 clearRadioRow（vxe v4 API）；useTable 侧镜像由编排层
+   * table.clearSelection() 清，本 expose 供 ProTable 编排层双通道并调（el 模式下 ref 为 null
+   * 自然短路，同 A3 clearFilter 模式）。结构化可选调用：引擎加载未完成时实例为 null 短路
+   */
+  clearSelection(): void {
+    selectedRows.value = []
+    vxeTableInst.value?.clearCheckboxRow?.()
+    vxeTableInst.value?.clearRadioRow?.()
   },
   /** v3.5 PR1-B：vxe-table 根 DOM，useRowDrag 挂载点 */
   getTbody(): HTMLElement | null {
@@ -283,6 +311,16 @@ function sameRow(a: Record<string, unknown>, b: Record<string, unknown>): boolea
   return rowKeyOf(a) === rowKeyOf(b)
 }
 
+/** B1：选区 key 集合相等判定（reserve 回同步噪声防护 —— 无变化不重复 emit selection-change） */
+function sameSelection(a: T[], b: T[]): boolean {
+  if (a.length !== b.length) return false
+  return a.every((row) =>
+    b.some((r) =>
+      sameRow(r as unknown as Record<string, unknown>, row as unknown as Record<string, unknown>)
+    )
+  )
+}
+
 /** 单选 toggle（同 key 先移除再追加，防代理引用不同导致重复入区） */
 function handleCheckboxChange(payload: { row: T; checked: boolean }): void {
   // v3.5 PR3：selectedRows.value 类型是 UnwrapRefSimple<T>，与 T 不完全等价，cast Record 视角
@@ -376,6 +414,16 @@ const checkboxConfig = computed(() =>
   hasReserveSelection(props.columns as ProColumn[]) ? { reserve: true } : undefined
 )
 
+/**
+ * v3.1 对齐 el 引擎的 radio 跨页保持：el 引擎单选由 selectedRowKey（统一选中区）受控驱动，
+ * 翻页后回来天然保持；vxe 内置 radio 列选中态由 vxe 内部管理，须显式 radio-config.reserve
+ * 才会在翻页后按 keyField 恢复（vxe v4 运行时代码 radioOpts.reserve 分支实证 table.js:2843/3047；
+ * 2026-10-19 demo 浏览器实测暴露未接线时翻页丢选中）。有 radio 列即开启——对齐 el 无条件保持语义
+ */
+const radioConfig = computed(() =>
+  (props.columns as ProColumn[]).some((c) => c.type === 'radio') ? { reserve: true } : undefined
+)
+
 /** 双击单元格 → 行编辑进入（纯事件转发：编排层 useProTableEvents 调 rowEdit._start） */
 function handleCellDblclick(payload: { row: Record<string, unknown> }): void {
   emit('cell-dblclick', rowKeyOf(payload.row), payload.row)
@@ -390,7 +438,39 @@ function handleCellDblclick(payload: { row: Record<string, unknown> }): void {
 watch(
   () => props.rows,
   () => {
-    if (hasReserveSelection(props.columns as ProColumn[])) return
+    if (hasReserveSelection(props.columns as ProColumn[])) {
+      // B1（docs/audit/2026-10-15 #3）：reserve 模式翻页/数据变化后，vxe 内部按 keyField
+      // 恢复跨页勾选是内部行为、不逐行派发事件 —— 本地镜像只剩当前页操作过的行，
+      // ToolbarCtx「含其他页选中行」承诺失效。nextTick 后从实例回同步全量选区。
+      // 2026-10-19 浏览器实测修正：真实 vxe v4 运行时 getCheckboxRecords 仅返回当前页勾选，
+      // 跨页保留行须从 getCheckboxReserveRecords 取 —— 两集合并按 keyField 去重成全量镜像
+      // （批 B #3 只用前者，翻页后跨页行被从镜像冲掉；spec mock 曾错误假设前者为全量）。
+      // key 集合无变化不 emit，防每次刷新噪声
+      nextTick(() => {
+        const inst = vxeTableInst.value as
+          | {
+              getCheckboxRecords?: () => T[]
+              getCheckboxReserveRecords?: () => T[]
+            }
+          | null
+          | undefined
+        const keyField = (props.rowKey ?? 'id') as keyof T
+        const seen = new Set<unknown>()
+        const records = [
+          ...(inst?.getCheckboxReserveRecords?.() ?? []),
+          ...(inst?.getCheckboxRecords?.() ?? []),
+        ].filter((row) => {
+          const key = row?.[keyField]
+          if (seen.has(key)) return false
+          seen.add(key)
+          return true
+        })
+        if (sameSelection(records, selectedRows.value as T[])) return
+        selectedRows.value = records
+        emit('selection-change', records as unknown as Record<string, unknown>[])
+      })
+      return
+    }
     if (selectedRows.value.length === 0) return
     selectedRows.value = []
     emit('selection-change', [])
@@ -415,6 +495,7 @@ watch(
       :row-config="{ keyField: rowKey ?? 'id' }"
       :sort-config="hasCustomSort(columns as ProColumn[]) ? { remote: true } : undefined"
       :checkbox-config="checkboxConfig"
+      :radio-config="radioConfig"
       v-bind="{
         ...(cellSpan
           ? { spanMethod: cellSpan.spanMethod, cellClassName: cellSpan.cellClassName }

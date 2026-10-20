@@ -242,4 +242,46 @@ describe('buildAsyncProps', () => {
     const result = buildAsyncProps(node)
     expect(result.fetchSuggestions).toBeTypeOf('function')
   })
+
+  // B2 实证修正（2026-10-19 浏览器实测）：渲染层每次重渲染都调 buildAsyncProps——
+  // 若每次新建 fetcher 实例，seq 闭包归零，每次输入都用到 seq=1 的"新"实例，
+  // 竞态令牌形同虚设（旧响应全部落地）。fetcher 必须按 asyncOptions 引用复用。
+  it('重复调用（重渲染）返回同一 fetcher 引用 —— seq 在同一节点生命周期内累计', () => {
+    const node: SchemaNode = {
+      component: 'Autocomplete',
+      asyncOptions: { source: () => Promise.resolve([]) } as never,
+    }
+    const first = buildAsyncProps(node).fetchSuggestions
+    const second = buildAsyncProps(node).fetchSuggestions
+    expect(second).toBe(first)
+  })
+
+  it('复用的 fetcher 实例竞态防护生效：旧响应后到被丢弃', async () => {
+    let resolveSecond: ((v: unknown[]) => void) | null = null
+    const node: SchemaNode = {
+      component: 'Autocomplete',
+      asyncOptions: {
+        source: (query?: string) =>
+          query === '慢'
+            ? new Promise((r) => setTimeout(() => r(['慢-结果']), 30))
+            : new Promise((r) => {
+                resolveSecond = r as (v: unknown[]) => void
+              }),
+      } as never,
+    }
+    // 连续两次渲染拿到的同一实例（模拟两次输入都用它）
+    const fetcher = buildAsyncProps(node).fetchSuggestions as (
+      q: string,
+      cb: (s: Array<{ value: unknown }>) => void
+    ) => void
+
+    const landed: unknown[] = []
+    fetcher('慢', (suggestions) => landed.push(suggestions))
+    fetcher('快', (suggestions) => landed.push(suggestions))
+    resolveSecond!([['快-结果']])
+    await new Promise((r) => setTimeout(r, 60))
+
+    // 「慢」响应（mySeq=1）后返回，seq 已为 2 → 丢弃；只有「快」落地
+    expect(landed).toEqual([[['快-结果']]])
+  })
 })

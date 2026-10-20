@@ -602,6 +602,31 @@ export const reserveSelectionColumnItems: ApiItem[] = [
   },
 ]
 
+// ProTableVxeRowSelect —— vxe 引擎 clearSelection 双通道（B1 修复点）
+export const vxeSelectionItems: ApiItem[] = [
+  {
+    name: 'clearSelection()',
+    type: '() => void',
+    required: false,
+    description:
+      'B1 修复点：vxe 引擎同时清 UI 勾选（VxeTableBody expose → clearCheckboxRow / clearRadioRow）与本地镜像。修复前 tableRef 恒 null 只清镜像不清 UI。',
+  },
+  {
+    name: 'reserve 镜像回同步',
+    type: 'getCheckboxRecords()',
+    required: false,
+    description:
+      'vxe 恢复跨页勾选不派发事件，rows watch 在 reserve 分支 nextTick 后经 getCheckboxRecords() 回同步全量镜像——翻页后 getSelectedRows() 仍完整。',
+  },
+  {
+    name: 'table-engine',
+    type: "'vxe-table'",
+    required: false,
+    description:
+      '引擎切换：vxe-table 走 VxeTableBody 渲染，radio/selection 列由 vxe 内置列类型接管，选中仍收敛 ProTable 统一选中区。',
+  },
+]
+
 /* ───────────── v3.1 操作列 demo（ProTableOperation） ───────────── */
 
 export const operationColumnItems: ApiItem[] = [

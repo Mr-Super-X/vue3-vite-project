@@ -58,7 +58,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 跑单测（watch 模式）                      | `pnpm test:watch`                                            |
 | 跑单个测试文件                            | `pnpm test <path>`（如 `pnpm test src/utils/dayjs.spec.ts`） |
 | 单测覆盖率（含 UI 报告）                  | `pnpm test:coverage` / `pnpm test:ui`                        |
-| 跑基准测试（vitest bench）                | `pnpm bench` / `pnpm bench:check`                            |
+| 跑基准测试（vitest bench）                | `pnpm bench`                                                 |
 | 类型校验（增量）                          | `pnpm type-check`                                            |
 | 类型校验（强制全量，build 前必跑）        | `pnpm type-check:full`                                       |
 | 构建生产包                                | `pnpm build`                                                 |
@@ -122,7 +122,7 @@ Feature-Sliced 风格的中后台门户前端（`vue3-vite-project`，企业中�
 
 - **全局 `store/modules/`**（经 `src/store/index.ts` barrel 导出）：仅跨模块共享
   - `app`（侧边栏/语言/布局模式/移动端断点/globalLoading，`pick: ['layout', 'locale']` 持久化）
-  - `user`（token/profile/权限，`pick: ['token', 'profile']` 持久化）
+  - `user`（authenticated 标记 / profile / 权限码。2026-08-12 起 httpOnly cookie 模式：凭证由后端 Set-Cookie 管理、前端不可读，`Session.get('auth')`（sessionStorage）仅为守卫同步判断的登录标记；**无 token 落 localStorage**，profile/permissions 内存态不持久化）
   - `theme`（主题模式 + 品牌色，`pick: ['mode', 'primaryColor']` 持久化）
   - `tags-view`（已访问路由 + keep-alive 缓存名单，**刻意不持久化**避免换账号看到老 tab）
   - `dict`（字典项业务层缓存，5min TTL + Promise 防抖池）
@@ -455,3 +455,25 @@ const bem = createNamespace('form-engine') // kebab-case，必须与 sass 根选
 ---
 
 **承诺**：所有对 `src/` 的写操作按 §2 src/ Architecture Lockdown 执行——§2.3 例外条款（用户明确指定文件路径）直接实施；其他必须先输出 §2.4 修改申请并等用户单独批准。每次任务完成的合规简报需附「src/ 写操作清单」（§2.5）。
+
+---
+
+## Skill routing（gstack）
+
+当用户请求匹配到可用 gstack skill 时，通过 Skill 工具调用；不确定时优先调用。
+
+关键路由规则：
+
+- 产品想法/头脑风暴 → `/office-hours`
+- 战略/范围 → `/plan-ceo-review`
+- 架构 → `/plan-eng-review`
+- 设计体系/计划审查 → `/design-consultation` 或 `/plan-design-review`
+- 完整多视角审查管道 → `/autoplan`
+- Bug/报错 → `/investigate`
+- QA/站点行为验证 → `/qa` 或 `/qa-only`
+- 代码审查/diff 检查 → `/review`
+- 视觉打磨 → `/design-review`
+- 发布/部署/PR → `/ship` 或 `/land-and-deploy`
+- 保存进度 → `/context-save`
+- 恢复上下文 → `/context-restore`
+- 编写 backlog 就绪的 spec/issue → `/spec`

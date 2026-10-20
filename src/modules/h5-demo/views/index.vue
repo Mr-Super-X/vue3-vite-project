@@ -24,8 +24,8 @@ function refreshMetrics(): void {
 let observer: MutationObserver | undefined
 
 onMounted(() => {
-  // 父级 h5 layout 的 activateRem 在同一 flush 的父 onMounted 才设置 html fontSize；
-  // 子组件直接读会拿到浏览器默认 16px，nextTick 后才是激活后的真实值
+  // 父级 h5 layout 在 setup 顶层同步激活 activateRem（首帧渲染前 html fontSize 已生效），
+  // 挂载时直读已准确；nextTick + MutationObserver 双保险兜 resize 重算的时序
   nextTick(refreshMetrics)
   observer = new MutationObserver(refreshMetrics)
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] })

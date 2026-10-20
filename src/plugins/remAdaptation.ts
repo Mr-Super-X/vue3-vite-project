@@ -16,13 +16,18 @@
 
 import type { App } from 'vue'
 
-/** 与 index.html 静态声明保持一致（重复创建是冗余，幂等检查跳过） */
+/**
+ * viewport meta content 唯一事实源（index.html 不再静态拷贝，install 时创建——
+ * app.use 序列先于 app.mount，首帧渲染前 meta 已就位）。
+ * 幂等检查只查存在性：宿主 HTML 自带不同 content 的 meta 时尊重宿主（只兜"缺失"）。
+ */
 const VIEWPORT_CONTENT =
   'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'
 
 /**
  * 确保 viewport meta 存在（幂等）。
- * index.html 已静态声明时跳过；插件被其他入口 HTML 复用时兜底创建。
+ * install 是唯一创建路径（plugins/index.ts 默认启用，可用 remAdaptation: false 关闭——
+ * 关闭即自担 viewport 责任，适用于宿主 HTML 自行管理的场景）。
  * 业务方经 default export 的 install 间接受用；具名导出仅供测试与 layouts/h5 直接调用。
  */
 export function ensureViewportMeta(): void {

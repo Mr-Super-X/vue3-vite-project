@@ -1,5 +1,5 @@
 /**
- * E2E 关键路径 —— 选中→批量操作（v3.5 PR1-A Task 13）
+ * E2E 关键路径 —— 选中→批量操作（v3.5 PR1-A Task 13；2026-10-15 作用域修复）
  *
  * 路径：
  *   1. 打开 `/demo/pro-table-overview`
@@ -7,67 +7,81 @@
  *   3. 验证 SelectionBar 的 role=status + aria-live=polite
  *   4. 点 SelectionBar 清除按钮 → 断言勾选清空 + SelectionBar 消失
  *
- * 准备：
- *   pnpm test:e2e:install  # 首次需下载 Chromium
- *   pnpm dev               # 后台启动 dev server（baseURL=http://localhost:5174）
+ * 2026-10-15 修复：overview 页现有两个 ProTable（主表 + 跨页选择演示表），
+ * 勾选 / SelectionBar / 清除按钮断言全部限定主表（第一个 .vv-pro-table）作用域。
+ *
+ * dev server 由 playwright.config.ts 的 webServer 自动启动（pnpm dev:local）。
  *
  * @group E2E 测试
  */
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
+
+/**
+ * 选中→批量操作目标表：overview 页含两个 ProTable——
+ * 第一个（主表）无多选列；多选/跨页选择/SelectionBar 在第二个表（474 行选择演示）。
+ * 用 :has() 定位"含行 checkbox 的 ProTable"，不依赖 DOM 顺序。
+ */
+function selectTable(page: Page) {
+  return page.locator('.vv-pro-table:has(.el-table__body .el-checkbox__input)').first()
+}
 
 test.describe('ProTable E2E 选中→批量操作', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/demo/pro-table-overview')
-    await page.waitForSelector('.el-table__body tbody tr', { timeout: 10000 })
+    await expect(selectTable(page).locator('.el-table__body tbody tr').first()).toBeVisible({
+      timeout: 10000,
+    })
   })
 
   test('勾选 3 行 → SelectionBar 出现 + 「已选 3 项」+ aria-live=polite', async ({ page }) => {
     // 勾选前 3 行（element-plus 内置 checkbox 在 .el-table__body tbody 第一列）
-    const checkboxes = page.locator('.el-table__body tbody tr .el-checkbox__input')
+    const checkboxes = selectTable(page).locator('.el-table__body tbody tr .el-checkbox__input')
     const count = Math.min(3, await checkboxes.count())
     for (let i = 0; i < count; i++) {
       await checkboxes.nth(i).click()
     }
 
     // SelectionBar 应出现（role=status）
-    const selectionBar = page.locator('[role="status"][aria-live="polite"]').first()
+    const selectionBar = selectTable(page).locator('[role="status"][aria-live="polite"]').first()
     await expect(selectionBar).toBeVisible()
     await expect(selectionBar).toContainText('已选')
     await expect(selectionBar).toContainText('3')
     await expect(selectionBar).toContainText('项')
 
     // 验证 aria-live 播报区也更新
-    const liveRegion = page.locator('span.sr-only[aria-live="polite"]').first()
+    const liveRegion = selectTable(page).locator('span.sr-only[aria-live="polite"]').first()
     await expect(liveRegion).toContainText('已选 3 项')
   })
 
   test('点 SelectionBar 清除按钮 → 勾选清空 + SelectionBar 消失', async ({ page }) => {
     // 勾选 2 行
-    const checkboxes = page.locator('.el-table__body tbody tr .el-checkbox__input')
+    const checkboxes = selectTable(page).locator('.el-table__body tbody tr .el-checkbox__input')
     await checkboxes.nth(0).click()
     await checkboxes.nth(1).click()
 
     // 出现 SelectionBar
-    await expect(page.locator('[role="status"][aria-live="polite"]').first()).toBeVisible()
+    await expect(
+      selectTable(page).locator('[role="status"][aria-live="polite"]').first()
+    ).toBeVisible()
 
     // 点击清除按钮（data-test=selection-clear）
-    await page.locator('[data-test="selection-clear"]').click()
+    await selectTable(page).locator('[data-test="selection-clear"]').click()
 
     // SelectionBar 消失（v-if 卸载）
-    await expect(page.locator('[role="status"][aria-live="polite"]').first()).toHaveCount(0)
+    await expect(selectTable(page).locator('[role="status"][aria-live="polite"]')).toHaveCount(0)
 
     // 验证所有 checkbox 已取消勾选（is-checked class 被移除）
-    const checkedCount = await page
+    const checkedCount = await selectTable(page)
       .locator('.el-table__body tbody tr .el-checkbox__input.is-checked')
       .count()
     expect(checkedCount).toBe(0)
   })
 
   test('SelectionBar 清除按钮 aria-label="清除选择"', async ({ page }) => {
-    const checkboxes = page.locator('.el-table__body tbody tr .el-checkbox__input')
+    const checkboxes = selectTable(page).locator('.el-table__body tbody tr .el-checkbox__input')
     await checkboxes.nth(0).click()
 
-    const clearBtn = page.locator('[data-test="selection-clear"]')
+    const clearBtn = selectTable(page).locator('[data-test="selection-clear"]')
     await expect(clearBtn).toHaveAttribute('aria-label', '清除选择')
   })
 })

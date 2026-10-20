@@ -9,7 +9,7 @@
  *   读到的恒为 540 —— 从宽屏 resize 回窄屏时读到残留值，fontSize 计算错误。
  *   innerWidth 永远是视口宽度，不受 html 内联 width 影响。
  *
- * @see [`../index.vue`](../index.vue) 生命周期驱动方（onMounted/onUnmounted）
+ * @see [`../index.vue`](../index.vue) 生命周期驱动方（setup 顶层激活 / onUnmounted 恢复）
  * @see [`build/postcss.ts`](../../../../build/postcss.ts) 编译时 px→rem 换算约定
  * @group 布局：H5
  */

@@ -6,6 +6,7 @@
  * 2. document.title：与守卫并行设置，避免标题短暂停留在 index.html 默认值
  * 3. assertNoMockInProd：prod 环境防 mock 残留
  * 4. pinia → router → i18n → GlobalComponents → Directives → Plugins
+ * 5. 生产 mock 挂接：PROD && VITE_USE_MOCK==='true' 才执行（mount 之前，顶层 await）
  *
  * 浏览器基线：
  * - normalize.css：跨浏览器默认值统一
@@ -71,6 +72,17 @@ document.title = import.meta.env.VITE_APP_TITLE || '企业中后台管理'
 assertNoMockInProd()
 
 const app = createApp(App)
+
+// 生产构建且 VITE_USE_MOCK==='true' 时（CI gh-pages 产物）动态挂接浏览器端 mock。
+// 位置强约束：必须早于 app.use(router)——Vue Router install 会立即触发初始导航，
+// 守卫的 fetchProfile 与 main.ts 后续语句并行执行；若挂接在 use 之后，
+// 守卫请求会先于 mockjs 激活发出，穿透到静态服务器（404 → 资源不存在 toast）。
+// PROD 守卫防 dev 双重劫持（dev 下 node 中间件与本分支同时命中，auth rawResponse
+// 被 client 侧解构为 undefined → dev 登录必挂）；常规生产构建整分支 tree-shake。
+if (import.meta.env.PROD && import.meta.env.VITE_USE_MOCK === 'true') {
+  const { setupProdMockServer } = await import('../mock/mockProdServer')
+  await setupProdMockServer()
+}
 
 app.use(pinia)
 app.use(router)

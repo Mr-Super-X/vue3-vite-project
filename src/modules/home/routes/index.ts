@@ -6,7 +6,7 @@
  * 设计：
  * - `/home` 使用 `portal` 布局（含门户头部 / 顶部导航）
  * - 首页刻意不进多页签：portal 落地页通过顶部导航/Logo 返回即可，
- *   无页签上下文切换需求（排除名单见 `store/modules/tags-view.ts` NO_TAGS_ROUTE_NAMES）
+ *   无页签上下文切换需求（经路由 meta.noTags: true 声明排除，见 store/modules/tags-view.ts）
  * - 不在此标记 meta.affix：affix 预置走 filterAffixRoutes 直读路由表，
  *   不受 NO_TAGS 名单约束，残留 affix 会把首页重新钉回页签
  * - 远程菜单模式下，后端返回的菜单项会覆盖本地静态路由
@@ -32,6 +32,7 @@ const routes: RouteRecordRaw[] = [
           titleKey: 'menu.home',
           icon: 'odometer',
           requiresAuth: true,
+          noTags: true,
         },
       },
     ],

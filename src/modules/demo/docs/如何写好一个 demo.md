@@ -79,7 +79,7 @@ src/modules/demo/
 文件名规则：
 
 - 使用 **PascalCase**（如 `XFormAsyncOptions.vue`）。
-- 多单词组件用驼峰，路由会自动转为 kebab-case（如 `XFormAsyncOptions` → `/demo/x-form-async-options`）。
+- 多单词组件用驼峰，路由会自动转为 kebab-case（如 `XFormAsyncOptions` → `/demo/xform-async-options`；注意 `XForm` 前缀不拆词，是 `xform-` 而非 `x-form-`）。
 - 如果示例复杂需要拆分子组件，可用文件夹形式：`examples/XFormAsyncOptions/index.vue`。
 
 > 不需要改 `routes/index.ts`，`import.meta.glob` 会自动扫描。

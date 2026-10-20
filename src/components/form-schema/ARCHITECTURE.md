@@ -637,6 +637,7 @@ pnpm build             # vite build
 ### 10.1 已知限制
 
 - **Element Plus 2.x 内部耦合**：setFieldError 双路径依赖 el-form.fields[i].validateState/validateMessage ref，element-plus 3.0 升级需重新验证
+- **getRef 依赖 el-form 实例内部 `$` 结构**（非 EP 公开 API，架构审查 #14）：`use-form-instance.ts` 的 `getRef()` 经内部 `$` 字段取 el-form 暴露，EP 3.0 升级窗口期需与 setFieldError 路径 B 一并验证
 - **element-plus 2.14 shallowRef 限制**：日期/Select/Cascader 等复杂控件失焦时不触发 crossValidator 红字（点击保存才触发）—— 这是 element-plus 自身实现
 - **validateStateDebounced (100ms)**：setFieldError 写入后 100ms 才显示红字（element-plus 内部节流）
 - **reaction 嵌套无深度检查**：循环 reaction 可能触发"Maximum recursive updates"（已实现 50 次/flush 预算作为兜底并 `console.error` 告警）

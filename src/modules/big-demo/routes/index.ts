@@ -27,6 +27,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: '数据大屏',
           requiresAuth: false,
+          noTags: true, // workbench 直达的验收页，不污染 TagsView
         },
       },
       {
@@ -36,8 +37,16 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: '超宽拼接大屏',
           requiresAuth: false,
+          noTags: true, // workbench 直达的验收页，不污染 TagsView
           bigScreen: { width: 9000, height: 1080 },
         },
+      },
+      {
+        // 五态示范页（/autoplan Phase 2 D-SC-1）：异步数据在大屏场景的五种形态集中演示
+        path: 'state-demo',
+        name: 'BigDemoStateDemo',
+        component: () => import('../views/StateDemo.vue'),
+        meta: { title: '五态示范', requiresAuth: false, noTags: true },
       },
     ],
   },

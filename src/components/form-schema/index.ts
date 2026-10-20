@@ -42,6 +42,7 @@ export {
  *
  * @deprecated 2026-09-09（H2）：模块级共享缓存 + 函数表导致多 XForm 实例互相污染。
  * 新代码请用 createExpressionScope()（每实例一份）。保留是为向后兼容已接入的旧调用方。
+ * 移除锚点：v4.0（架构审查 #13，2026-09-18）——届时删除本导出，调用方须迁移到 createExpressionScope
  */
 export { resolveFunctionExpression } from './composables/use-expression'
 /** resolveElComponentName —— schema.component 字符串解析到最终组件名 */

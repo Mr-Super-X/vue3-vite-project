@@ -6,8 +6,8 @@
  * @group 表单编排：索引
  */
 import { ref, watch, type Ref } from 'vue'
-import type { SchemaNode } from '../types'
-import { buildIndex, type SchemaIndex } from './use-schema-index.builder'
+import type { SchemaNode, RuleItem } from '../types'
+import { buildIndex, type SchemaIndex, type CrossRuleEntry } from './use-schema-index.builder'
 
 /**
  * useSchemaIndex 返回值：schema 元数据中央索引（O(1) 查表），含 6 个响应式 ref
@@ -28,9 +28,11 @@ export interface UseSchemaIndexReturn {
 
 /** useSchemaIndex —— schema 元数据中央索引（O(1) 查表替代 O(n) 遍历） */
 export function useSchemaIndex(
-  schemaGetter: () => SchemaNode | SchemaNode[] | string | undefined
+  schemaGetter: () => SchemaNode | SchemaNode[] | string | undefined,
+  /** D(#6)：props.rules 命名规则注册表（getter 形式，注册表运行时可变）——字符串命名 cross 规则解析用 */
+  namedRulesGetter?: () => Record<string, RuleItem> | undefined
 ): UseSchemaIndexReturn {
-  const initial = buildIndex(schemaGetter())
+  const initial = buildIndex(schemaGetter(), namedRulesGetter?.())
   const byName = ref(initial.byName) as Ref<SchemaIndex['byName']>
   const fieldNames = ref(initial.fieldNames) as Ref<readonly string[]>
   const allNames = ref(initial.allNames) as Ref<readonly string[]>
@@ -39,7 +41,7 @@ export function useSchemaIndex(
   const dependsOnMap = ref(initial.dependsOnMap) as Ref<SchemaIndex['dependsOnMap']>
 
   function rebuild(): void {
-    const idx = buildIndex(schemaGetter())
+    const idx = buildIndex(schemaGetter(), namedRulesGetter?.())
     byName.value = idx.byName
     fieldNames.value = idx.fieldNames
     allNames.value = idx.allNames
@@ -50,6 +52,8 @@ export function useSchemaIndex(
 
   // schema 整体替换时重建（与 reactiveSchema 顶层 watch 一致）
   watch(schemaGetter, rebuild)
+  // D(#6)：命名规则注册表整体替换时同样重建（字符串引用解析随注册表走）
+  if (namedRulesGetter) watch(namedRulesGetter, rebuild)
 
   function getFieldNames(includeIgnore: boolean): readonly string[] {
     return includeIgnore ? allNames.value : fieldNames.value
@@ -69,3 +73,28 @@ export function useSchemaIndex(
 
 export { buildIndex } from './use-schema-index.builder'
 export type { SchemaIndex, CrossRuleEntry } from './use-schema-index.builder'
+
+/**
+ * 拍平 crossRules Map → 反向触发用扁平数组（rowScoped 行模板标记随条目透传）。
+ * useCrossFieldTrigger 的 crossRules getter 由本函数承载 —— 抽离后 use-xform-composer
+ * 不再内联双层循环（顶层编排膨胀预警：composer 行数硬阈值见 scripts/check-doc-currency）
+ *
+ * @see ./use-cross-field-trigger.ts ReverseRule 消费形态
+ */
+export function flattenCrossRules(
+  crossRules: ReadonlyMap<string, CrossRuleEntry[]>
+): Array<{ target: string; deps: string[]; rule: RuleItem; rowScoped?: boolean }> {
+  const out: Array<{ target: string; deps: string[]; rule: RuleItem; rowScoped?: boolean }> = []
+  for (const list of crossRules.values()) {
+    for (const e of list) {
+      out.push({
+        target: e.target,
+        deps: e.deps,
+        rule: e.rule,
+        // A1-反向：行模板标记透传（数组行内 cross 规则反向触发用）
+        ...(e.rowScoped ? { rowScoped: true } : {}),
+      })
+    }
+  }
+  return out
+}

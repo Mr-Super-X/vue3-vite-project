@@ -1,6 +1,148 @@
 # Changelog
 
+> **版本口径**（2026-10-15 起）：版本号唯一事实源为 `package.json` 与 git tag；开源首发 **v1.0.0**（仓库添加 MIT LICENSE 后的首个公开版本，以 `pnpm release` 发布的 tag 为准）。历史中 `v3.5` / `v3.6` 等 `v3.x` 段为内部开发期版本叙事，仅作开发历史保留，与现行 semver 无对应关系。fork 后的版本跟进与升级策略见 [docs/36-Fork升级与版本策略.md](docs/36-Fork升级与版本策略.md)。
+
 ## 未发布
+
+### 🚀 CI | gh-pages 自动化部署：push master 即发布线上 demo（2026-10-20）
+
+> 设计文档：[docs/superpowers/specs/2026-10-20-gh-pages-deploy-design.md](docs/superpowers/specs/2026-10-20-gh-pages-deploy-design.md)。push 到 `master` 自动构建并部署到 `https://Mr-Super-X.github.io/vue3-vite-project/`（首次需在仓库 Settings → Pages 把 Source 设为 "GitHub Actions"）。
+
+- **workflow**（`.github/workflows/deploy.yml`）：官方 `actions/upload-pages-artifact` + `actions/deploy-pages`（permissions 收敛 `contents:read` + `pages:write` + `id-token:write`，无需 gh-pages 分支）；job 级 `if: github.ref == 'refs/heads/master'` 守卫防手动 dispatch 误发非 master 分支；Node 24.12.0 + pnpm 12 与 ci.yml 对齐；`--base=${{ env.VITE_BASE }}` 与 vue-router basename 单源复用；type-check:full + build（lint/test/check:routes 由同次 push 的 ci.yml 门禁，职责单一）
+- **构建四开关**：`VITE_BASE=/vue3-vite-project/`（子路径 basename）+ `VITE_HISTORY_MODE=hash`（gh-pages 无 SPA fallback，刷新/深层链接不 404）+ `VITE_MENU_SOURCE=local`（纯静态托管无后端，菜单走本地静态路由）+ `VITE_USE_MOCK=true`（生产客户端 mock）
+- **mock 生产接线**（`mock/mockProdServer.ts` + `src/main.ts`）：`vite-plugin-mock@3.0.2` 无 `prodEnabled`（2.9.x 旧版特性；3.0.0 起重写为纯 dev-server 中间件），改 client 侧 `createProdMockServer` 手动接线 5 个真实 mock 路由模块（auth/dict/menu/portal-overview/user；pro-table/ 是 `ProTableRequestApi` 组件直连数据源无需接线）；`src/main.ts` 挂接条件 `import.meta.env.PROD && VITE_USE_MOCK==='true'`——**PROD 守卫防 dev 双重劫持**（`.env.development=true` 时 node 中间件与 client mockjs 曾同时命中，auth 的 rawResponse 被 client 侧静默忽略 → dev 登录必挂）；常规生产构建整分支 tree-shake，产物体积不变
+- **dev 工具链修复**（`scripts/vite-plugin-clean-mock.ts`）：撤掉 fs.watch 500ms 抢删层——mock 文件增至 19 个后 bundle 窗口越过阈值，抢删致 ENOENT → vite-plugin-mock 静默清空 mockData（dev mock 全灭）；保留启动/closeBundle 双层清理，临时文件由 `.gitignore:43-44` 兜底屏蔽提交（已实证 check-ignore 全命中 + `git add --dry-run` 零命中）
+- **演示模式**（`src/router/guards/login.ts` + `permission.ts` + `mockProdServer` 内联 prod auth）：`VITE_DEMO_NO_AUTH=true` 时守卫跳过登录/权限校验、演示账号 Admin（admin/123456）全链路可点——prod 版 auth mock 为 response 形态（dev 版 rawResponse 的 Set-Cookie HttpOnly 凭证流在 mockjs XHR 劫持下本质不可模拟，无法也不应模拟）；按钮级 v-auth 仍按真实 permissions 渲染，权限控制效果不受影响
+- **已知限制**：mockjs 异步加载窗口导致的启动请求穿透已根治（最终形态：挂接块位于 `createApp` 后、`app.use(router)` 前并 `await setupProdMockServer`——mount 前 await 仍不够，Vue Router install 即触发初始导航、守卫 fetchProfile 与 main.ts 并行执行会抢先穿透；2026-10-20 两轮 preview 目检 + CDP 对照实证修复，排除 mockjs 配置兼容问题）；字典接口 prod 静态展开注册（client wrapper 不支持路径参数 → prod 下 query.code 恒 undefined 命中防御分支 400，登录预加载字典双 toast；prod 逐条静态注册、dev/prod 双形态由 mock/dict-data.ts 单源供数）
+
+### ✨ Feat | 团队级图标体系落地：unplugin-icons 编译期内联 + 双语法 + app 本地集合（2026-10-20）
+
+> 一套语法、零体积焦虑、类型安全、离线可用。验收 6 条全过：`<i-ep-plus />` 写完即生效（Volar 补全）、错误图标名 IDE+构建期双层报错、产物零 iconify 请求、断网 dev 正常、现有页面零破坏（type-check:full + test 196 文件/2507 例 + build + lint 全绿）。文档：[docs/39-图标体系与使用规范.md](docs/39-图标体系与使用规范.md)，demo：`/demo/icon-usage`。
+
+- **静态语法**：`<i-集合-图标 />`（`<i-ep-plus />` / `<i-tabler-home />` / `<i-app-logo />`），unplugin-icons 编译期解析为内联 SVG 组件，按需打包、产物零外部请求；`IconsResolver` 白名单只放行 ep / tabler / app，写错集合名的标签不被解析 → 构建期直接报错
+- **动态语法**：`<AppDynamicIcon name="集合:图标" />`（`src/components/common/AppDynamicIcon.vue`，全局自动注册）。经 `src/assets/icons/registry.ts` 查表渲染——用 `virtual:icons/*` 编译期导入组装映射，`name` 为 keyof 字面量联合类型（写错 vue-tsc 报错），零外部请求 + 按需 + 离线三不误；**不引入 @iconify/vue**（其离线模式需整包 icons.json 进 bundle，违背按需原则，取舍记录于 docs/39 Q4）
+- **本地 app 集合**：`src/assets/icons/*.svg` 经 `FileSystemIconLoader` 编译期读取，transform 把非 none 的 fill/stroke 强制 currentColor（跟随 CSS color）；SVG 源文件 git 管理、编译期校验
+- **类型链路（取舍修正）**：不加 GlobalComponents 级组件通配声明（会放行错误图标名，与验收#2 矛盾），改为 `env.d.ts` 只引 `unplugin-icons/types/vue` 的 virtual 模块声明（v24 类型包仅模块声明、无组件通配，经 node_modules 实证）+ ~~components.d.ts 入库~~ → **components.d.ts 恢复 gitignore**（2026-10-20 用户验证回退：文件随 dev/build 类型摇摆——build 因 demo DEV 门控冲掉 i- 图标条目，入库必带提交后 dirty 噪音；与 auto-imports.d.ts 及项目历史策略一致；type-check 依赖由 build 脚本「build-only 先行生成」保证，已实测全绿）——用过的图标本地 dev 后有精确类型与补全，写错的 IDE 期即报「找不到组件」
+- **注意**：unplugin-vue-components v32 已移除内置 IconsResolver，图标解析器从 `unplugin-icons/resolver` 导入（配置差异已写入 docs/39 §1.2）
+- **配套**：demo 页 `/demo/icon-usage`（按 `如何写好一个 demo.md` 范式：DocLayout/DemoFrame/DemoField 交互示例 + 代码复制 + ApiTable 双语法速查与 AppDynamicIcon Props（extractApi 自动提取）+ DocToc，sidebar 中文名已登记）；**「去哪找图标」指引**（demo 页首区块 + docs/39 §2.0：ep → element-plus.org 官方图标页（组件名转 kebab 技巧）、tabler → icon-sets.iconify.design/tabler、全集合中文搜索入口 + 白名单警示、app 本地目录）；spec ×7（AppDynamicIcon 4 例查表渲染/切换/size 透传/aria-hidden + registry 3 例守卫真假分支/解析返回值，vi.mock 绕过 vitest 无法解析 virtual 模块）；**用户验证反馈修复**：AppDynamicIcon 不传 size 时图标隐身（`:width="undefined"` 移除编译产物默认 1.2em 尺寸 + `display:inline-flex` 使 SVG 作为 flex item 塌陷为 0，双重根因）——改条件 v-bind（不传不绑 width/height）+ SVG 根去 flex，spec 增至 5 例锁定回归；**用户验证反馈修复 ×2**：① DemoField 组件补 `label` prop 渲染示例标题（原组件仅有 code/language，全模块 demo 的 label 均不显示——范式文档与实现补齐）；② demo-find 代码块长行折行，「显示代码」展开内容完整无横向截断；**DocToc 滚动感知 + 侧边栏中文名补齐**（用户验证反馈 ×2）：① DocToc 从「纯锚点跳转基础版」升级为滚动感知楼层导航——scroll capture 监听 + 「区块顶部越过视口中线取最后一个」贪心算法（IntersectionObserver 方案实测败于「长区块底部持续 intersecting」，IO 回调 entries-only 且几何判定需全量状态，弃用并记录取舍）、点击后 600ms 锁定保持点击意图（不被 smooth 滚动滑过的中间项抢走）、激活项蓝色竖线 + 加粗样式——全模块 demo 的右侧导航同时受益；② 侧边栏 CN_NAMES 补 4 条缺失中文名（ProTableVxeRowSelect / ProTableSearchFilter / XFormArrayCrossField / XFormAsyncAutocomplete，2026-10-19 审计缺口批新增 demo 漏登记）；code-reviewer WARNING 轮 8 项全修（components.d.ts 入库版本改以 dev 生成为准补回 i- 图标条目、docs Q2 区分「白名单内图标名错误 vs 白名单外集合名」拦截强度、SVG 属性双引号规范、多色图标机制表述、demo 类型复用 AppIconName 等）
+
+### 📝 Docs | TODOS P3 四项评估收官：#10 魔法时刻落地，#9/#11/#12 决定不做（2026-10-20，TODOS.md 全零）
+
+> 按「只做必要部分，改动大于收益则不做」逐项评估，决定与理由均记录在案：
+
+- **#10 魔法时刻包装 ✅ 做**（DX subagent）：`docs/10` 新增 §1.4「60 秒建一个业务模块」——dev 运行中 `pnpm new-module about` 后路由**即时注册**（vite `import.meta.glob` dev 热更，无需重启）+ 未登录访问被守卫拦下并记住 `?redirect=`（登录后自动跳回），均经浏览器实测后写入文档；含 `remove-module --force` 一键清理闭环
+- **#9 语义级一致性抽查机制 ❌ 不做**：语义漂移的自动检测没有可靠低成本落地路径（真语义校验 = AI 审查级），既有季度全代码库审计轮（v1.6 惯例）已覆盖该需求，专门机制属过度设计
+- **#11 `src/.omc` 运行态产物外移 ❌ 不做**：实证 `.gitignore` 已覆盖任意层级（line 21 `.omc`）、vite/scripts 不扫描、git 不追踪——对工程零实际干扰；外移需改动用户 shell 环境配置（OMC_STATE_DIR），改动 > 收益
+- **#12 bench 基线对比 ❌ 不做**：TODOS 原文自带 YAGNI 信号（「如未来需要回归检测」），当前无真实回归检测需求；pm #10 选型量化阈值维持 defer，待 bench 需求真实出现时一并立项（届时有真实基线数据可测）
+
+### 🐞 Fix | cross 规则 el-form 透传根治：number 目标字段保存不再被 async-validator 误拦（2026-10-19，audit 遗留 P1 闭环）
+
+> 来源：`docs/audit/2026-10-15-engine-audit-summary.md`「已知留后续 sprint」唯一遗留项。含 `crossValidator` 的规则原样透传 el-form → async-validator 对非纯 required 规则默认 `type:'string'` → number 目标字段（InputNumber 输出）保存全量校验被拦「is not a string」。
+
+- **根治（`compileRules` 拆分，TDD spec ×4 红→绿）**：含 crossValidator 的规则编译时剔除 XForm 扩展键（crossValidator/dependsOn/deps/debounceMs）——**纯 cross 规则整条不进 el-form**（由 XForm 三路径全权接管）；**混合规则**（crossValidator 与 required 等同条）剔除后保留字段校验部分，防止整条过滤导致必填校验静默丢失（数据正确性回归防线）；仅剩调度/展示键（trigger/message）而无校验实质的规则整体丢弃
+- **demo 规避写法撤销**：XFormCrossField（user.age）与 XFormArrayCrossField（qty 双规则）的显式 `type:'number'` 声明及过时注释——撤销本身即根治有效性的验收证据；全目录核查无其他残留
+- **浏览器实测（CDP 真实输入）**：XFormArrayCrossField qty=150（>库存 8 且 >上限 20）→ 保存批量路径 `FIELD_ERROR` ×2 + `CROSS_VALIDATION_FAILED 2 项`（同 target 多规则齐执行，批 A 修复复验）**console 零类型误拦**；改回 5 → 反向路径红字清零 ✓；XFormCrossField age=10 保存 → el-form 仅报其他字段必填（短路语义保持），age 零误拦 ✓
+- **回归**：form-schema 全目录 1221 例全绿（+4 新 spec）、type-check PASS——现有 cross 断言全部走 XForm 自有路径，不依赖 el-form 透传（风险预判验证）
+
+> 来源：`.claude/.agent-reports/2026-09-18-form-schema-{architect,designer,pm}-review.md`（39 条发现）的 2026-10-19 全量复核。核查结论已标注于三份报告头部：**37 条已闭环、2 条正式 defer**。其中 33 条系此前批次（2026-10-15 引擎加固批 A–D / demo 修复轮）顺带修复，本次补齐剩余尾项。
+
+- **本次补齐（4 项）**：
+  - **architect #12**：`types/xform.ts` 的 `validateWithZod` 返回类型 ZodError 内联 import 改顶部 `import type { ZodError, ZodType } from 'zod'`
+  - **architect #13**：`resolveFunctionExpression` 的 @deprecated 补 v4.0 移除锚点注释
+  - **architect #14**：getRef 依赖 el-form 实例内部 `$` 结构（非 EP 公开 API，EP 3.0 升级风险）补入 ARCHITECTURE.md §10.1 已知限制
+  - **designer F10 + F12**：XFormOrderCreate 按钮区移入 `#footer` slot——「保存订单」改 `native-type="submit"` 不绑 @click（点击与 Enter 统一走 submit 单路径），`@submit.prevent` 经 attrs 继承落 XForm 根 div 拦截原生刷新；恢复草稿 `type="warning"` → `plain` 语义色修正。浏览器实测（CDP 真实输入管线）：点击/Enter 各触发一次 onSave 不双触发 ✓ 文本框 Enter 提交成功（orderNo 生成实证）✓ Select（readonly input）Enter 不误触 implicit submission ✓
+- **正式 defer（2 项，理由已写入报告）**：pm #10 选型量化阈值（需 bench 实测基线，并入 TODOS #12「bench 基线对比」立项，不虚构数据）；designer F8 数组行删除确认/undo/增删过渡（新 API + 视觉变更，单独立项；键盘路径由 showActions.move 默认按钮兜底）
+- **核查面确认（33 条此前批次已修，摘录）**：F1 数组行样式 / F2 asyncOptions 位置扫描警告（`scanAsyncOptionsUnsupported` + `ASYNC_OPTIONS_UNSUPPORTED_POSITION` + docs/24 红字）/ F3 userMessage / F4 toast 7s 自动消失 + TransitionGroup + 超量聚合 / F5 keyPath EP 格式 / F6 色板 EP 变量 / F7 拖拽落点指示 / F9 size / F13 showDirtyMark；architect #1 scrollToError 死 prop / #2 组件映射双表单源化 / #3 builders 拆分 / #4 失效 watch 删除 / #5 ProDialogForm EMPTY_RULES / #6 schema 整体替换文档声明 / #7 表达式沙箱缓存 / #8 watchFallback / #9 cross-rule-runner 统一 / #10 文档硬数据锁定 / #11 vite dirs 决策；pm #1 xformProps 透传 / #2 props 口径 check-doc-currency 锁定 / #3 i18n（XFormTranslateFn + xform-i18n demo）/ #4 概念地图 / #7 上手标注 / #11 keyof XFormProps 契约测试 / #12 schemaVersion 预留
+- **路由前缀修正（用户验证反馈）**：XForm demo 路由前缀漂移修复扩面——除 docs/24 外，`form-schema/README.md`（64 处）与 4 个 demo 文件（XFormOrderCreate 能力清单 7 行 + 头注释、XFormReactionAdvanced 4 处、XFormValidateDetail 1 处）及 `如何写好一个 demo.md` 示例均残留 `/demo/x-form-xxx` 旧前缀（check-doc-currency 只校验 demo 计数不校验路径，故此前全绿未暴露），全部修正为 `/demo/xform-xxx`（XForm 前缀不拆词）；另修正 README 裸路径 `/x-form-reaction` ×3 为带 `/demo/` 前缀的正确形态。`docs/audit`、`docs/superpowers/{plans,specs}` 历史快照中的旧前缀为历史事实，保留原貌
+
+### ✨ Feat | 审计 demo 缺口补齐：4 个浏览器验证入口（2026-10-19）
+
+> 来源：audit `docs/audit/2026-10-15-engine-audit-summary.md` 批 A/B/D 修复场景长期无 demo（"数组+cross / Autocomplete+asyncOptions / vxe+selection / search+filter 组合"四缺口），修复只能由 spec 覆盖、无法浏览器复验。本批补齐验证入口，审计观察项至此全量闭环。
+
+- **XFormArrayCrossField**（数组+cross）：数组行内 crossValidator——行内相对 `dependsOn`（`['price','discount']` 按行解析）+ 反向触发（改原价/折扣 → 折后价自动重算红/消红）+ 批量路径（保存时全行校验）——批 A1 修复场景验证入口（修复前该组合 demo 为 0，缺陷即因无 demo 无复验而长期潜伏）
+- **XFormAsyncAutocomplete**（Autocomplete+asyncOptions）：`source(query)` 远程搜索每键触发 + **竞态令牌可视化**——请求日志面板精确配对「发起 #N → 落地 #N」，落地数 < 发起数即旧响应被丢弃的证据（延迟随词长递减制造乱序）——批 B2 修复场景验证入口
+- **ProTableVxeRowSelect**（vxe+selection）：`table-engine="vxe-table"` 下 radio 单选 / selection 多选 / reserveSelection 跨页累计 + `clearSelection()` 双清按钮（UI 勾选 + 本地镜像）——批 B1 修复场景验证入口
+- **ProTableSearchFilter**（search+filter 组合）：SearchForm 关键字搜索 + 列头筛选 AND 合并入同一请求 + `filter-change` 全表快照面板 + reset 双清（搜索/筛选/列头 UI 一并清空、快照归 `{}`）——批 D「reset 补发 filter-change」修复场景验证入口
+- **配套**：mock `filter-orders` 扩展 `orderNo`/`customer` 关键字搜索参数（被组合 demo 复用）；docs/24 §19 索引 61→63、docs/29 §16 索引 23→25；check-doc-currency 硬数据同步（13 项全过）
+
+### 🐞 Fix | demo 验证轮暴露的引擎适配缺口 ×2（2026-10-19，四页浏览器实测 CDP 真实输入）
+
+> 4 个新 demo 的浏览器实测（真实输入管线）连环暴露 2 项引擎缺陷，全部 TDD 修复（RED → GREEN）+ 受影响目录回归。详见 `docs/audit/2026-10-15-engine-audit-summary.md`「demo 浏览器实测暴露的清单外缺陷」节。
+
+- **vxe reserve 跨页镜像回同步 API 误用（HIGH，批 B1 #3 的实证修正）**：浏览器实测发现 `getCheckboxRecords()` 在 reserve 开启时**仅返回当前页勾选**（`[项目-6]`），跨页保留行在 `getCheckboxReserveRecords()`（`[项目-1, 项目-2]`）——批 B 修复只用前者回同步，翻页后跨页行被从镜像冲掉（「第 1 页勾 2 行 + 第 2 页勾 1 行」只读出 1 行）。根因链含 spec mock 与真实 vxe v4 行为不符（与批 A「mock 须镜像真实模块形态」同型教训）。修复：rows watch reserve 分支改两 API 合并 + keyField 去重回同步全量镜像；spec mock 补 `getCheckboxReserveRecords` 并修正语义。修复后浏览器实测：跨页累计 3 行 ✓ 翻回勾选保留 ✓ clearSelection 双清 ✓
+- **Autocomplete asyncOptions loading 注入未适配（批 B2 姊妹缺口）**：`use-schema-renderer` 对全部 asyncOptions 节点无条件注入 `loading` prop，EP Autocomplete 未声明 → dev 模式 `[XForm][PROP_VALIDATION] 未声明键 loading` 警告 ×22。修复：注入前按组件名条件排除（Autocomplete/ElAutocomplete），loading 态由其输入框自身交互体现。spec +1 防线（Autocomplete 不注入 / Select 保持注入）
+- **vxe 引擎 radio 列跨页保持未接线（用户手动验证暴露）**：el 引擎 radio 选中由统一选中区受控驱动、翻页后天然保持；vxe 内置 radio 列选中态由 vxe 内部管理，须显式 `radio-config.reserve` 才恢复（vxe v4 运行时代码 `radioOpts.reserve` 分支实证）——原未接线致翻页丢选中。修复：有 radio 列即配 `radioConfig={reserve:true}` 对齐 el 语义 + spec ×2（含 mock 组件 props 声明修正——未声明的绑定落 attrs 断言不到）
+
+### 🐞 Fix | 返工轮浏览器实测再暴露的引擎缺陷 ×2（2026-10-19 第二轮，demo 场景即真实业务形态的实证价值）
+
+> 用户手动验证 4 个新 demo 反馈不通过后返工，返工场景（对象容器 itemSchema / 同字段多 cross 规则）连环暴露 2 个潜伏更深的引擎缺陷——均为 A1 修复的漏网，此前所有 demo 的形态（itemSchema 数组平铺 / 单 cross 规则）恰好绕开。
+
+- **A1 批量路径行前缀不递归 children（HIGH）**：`traverseCross` 的原行前缀重写只在 `traverseArrayItem` 处理直接子节点；itemSchema 为 **column/row 布局对象**（容器无 name，字段在 children 里）时 children 的 name 没加 `rows[i]` 前缀 → 批量 cross 的 `dependsOn` 取顶层 `undefined` 被空值跳过，**该行全部 cross 规则静默通过**（保存照样绿）。修复：`traverseCross` 加 `namePrefix` 参数统一在递归中透传（children/formItem.slots 全覆盖，嵌套数组语义保持）+ spec ×1（对象容器形态多规则批量必报）
+- **反向触发 runner 缓存键冲突致同 target 多规则只执行第一条（HIGH）**：`useCrossFieldTrigger.getRunner` 缓存 key 原为 `${target}|${delay}` 字符串——同 target 多条 cross 规则（不同 deps，如「数量≤库存」+「数量≤上限」）key 相同，第二条命中第一条的缓存 runner（闭包绑第一条的 rule 引用）→ **第二条规则永不执行**（改上限不标红）。修复：缓存 key 改 rule 引用（Map&lt;ReverseRule, Runner&gt;），同 target 每条规则独立 runner，同 target 不同 delay 的旧 runner 清理逻辑保持 + spec ×1（两规则分别 trigger 各自 deps 都执行）
+- **Autocomplete 竞态令牌被渲染层重建 fetcher 架空（HIGH，批 B2 的实证修正）**：`buildAsyncProps` 在**每次重渲染**时都 `buildAutocompleteFetcher` 新建实例——seq 闭包随实例归零，每次输入都用到 seq=1 的"新"fetcher，慢响应全部落地，**竞态令牌形同虚设**（浏览器实测：发起 5 / 落地 5 零丢弃）。批 B2 的 spec 只测了单实例多次调用，未覆盖"实例是否被复用"。修复：`WeakMap<asyncOptions 引用, fetcher>` 按配置复用——同节点生命周期内 seq 累计，配置整体替换自动获得新 fetcher。修复后浏览器实测：输「张三丰」（逐字 3 次搜索）→ **发起 3 / 落地 1，2 个旧响应被丢弃** ✓ spec ×2（重渲染引用相等 / 复用实例竞态丢弃）
+
+**已知留后续 sprint**：cross 规则透传 el-form 致 number 目标字段保存时被 async-validator 默认 `type:'string'` 拦截（既有 demo 未暴露因 cross 目标均为 string；demo 层以显式 `type:'number'` 声明规避，引擎根治 = compileRules 过滤 cross 规则，影响面涉全部现存 demo 需独立回归批次）。
+
+
+### 🐞 Fix | 引擎加固批 A：XForm / ProTable 数据正确性与状态一致性（2026-10-15，audit `docs/audit/2026-10-15-engine-audit-summary.md`）
+
+> 来源：/autoplan 引擎健康度审计 33 项发现中的批 A（P0）。每项 = 单测红绿（净增 21 例）+ 受影响 demo 浏览器实测（fresh reload）双证据。
+
+- **A1 数组行 crossValidator 双路径失效**：批量路径 `rewriteRuleDeps`（行内相对优先、顶层绝对回退）+ 反向路径三层修复（builder 预遍历标记 `rowScoped` → composer 透传 → `resolveConcreteRule` 按行前缀 concrete 化，连 `rule.dependsOn` 一起副本重写）——修复前数组行内跨字段校验批量取错值、反向恒不触发
+- **A2 嵌套数组校验直索引静默跳过**：`model[node.name]` → `get(model, node.name)`（lodash 解析 `orders[0].items` 嵌套路径）
+- **A3 ProTable `reset()` 后筛选复活**：`useTable.resetFilter` 内经 tableRef 结构化调 el-table 官方 `clearFilter()`（clearSelection 同款模式）+ `VxeTableBody` expose `clearFilter()`（清 localFilterMap 快照 + vxe 内部态）+ 编排层 reset 路径补调（el 模式下 vxe ref 为 null 自然短路）——修复前 reset 后列头筛选 UI 残留旧条件、下次操作静默回参
+- **A4 validating 三态链路**：写入层 message 非空优先 + 渲染层 validating 不注入 `:error`（EP error prop 优先级压过 validateStatus）+ 守护层按条目 validateStatus 同步——修复前 validating 态永不生效且误清已有红字
+- **A5 行级 reaction 全量重注册 + 模块级 stopper 桶泄漏**：stopper 桶 value 升级 `RowReactionEntry` 四元组（同 rowKey+index+itemSchema 引用未变则复用 watcher+副本跳过重注册）；`useRenderSchemaNode` 每实例建桶经 opts 注入、卸载时 onScopeDispose 统一 stop+clear——修复前每次渲染全量 churn + 卸载后模块级 Map 无限增长 + 原始值行 key 跨实例碰撞误停
+- **测试基建修正**：vxe-table mock 补具名导出 `VxeTable/VxeColumn`（镜像真实 v4 模块形态）——原 mock 缺 named export 致 `vxeTableComp` 恒 null，"加载成功"断言空洞化
+
+### 🐞 Fix | 观察项闭环：reset 补发 filter-change + docs/24 路由前缀修订（2026-10-15）
+
+- **reset 补发 filter-change**：搜索区「重置」清空筛选后补发一次事件（payload 为清空后的 `{}` 全表快照）——父级靠事件做 URL 同步 / 埋点上报的消费方不再滞留 reset 前的旧筛选条件（审计清单外观察项，§3.5 已披露）
+- **docs/24 路由前缀修订**：全文 61 处 `/demo/x-form-<kebab>` 修订为实际路由形态 `/demo/xform-<kebab>`（项目 kebabCase 对 `XForm` 前缀不拆词）
+
+### 🐞 Fix | 引擎加固批 D：审计清单收官（2026-10-15 第五轮，audit 清单 100% 关闭）
+
+- **protable#4（HIGH）**：vxe 引擎 `enableSummary` 不再静默失效——warn + 忽略（VxeTableBody 无汇总渲染接线）
+- **protable#7**：`filter-change` payload 统一为 `getFilterState()` 全表合并快照（浏览器实测连续筛两列输出合并快照），消费方不感知引擎差异
+- **protable#8**：ElPagination 业务 paginationProps 不再覆盖内部受控绑定（v-bind 顺序修正）
+- **protable#9**：statePersist 快照 v2 追加 filterState——列头筛选随路由级持久化（v1 旧快照向后兼容）
+- **protable#10/#13/#11**：vxe+树形+拖拽文案对齐实现（观察中）· v2 sortable=true 一次性 warn · 三入口分页语义文档披露
+- **xform#5/#6/#7**：危险表达式扫描补 hidden/readonly · 字符串命名 cross 规则经 namedRules 解析进反向索引（三路径对齐）· reaction deps 对象路径内部变化可触发（deep watch）
+- **LOW×8**：docs/29 六处补披露 + §13 测试表分组补全（39 spec）+ §16 索引 23 闭环 · docs/24 行级 budget 披露 · useStatePersist 注释修正
+
+### 📖 Docs | 引擎加固批 C：文档契约对齐（2026-10-15 第四轮，audit 批 C 全部关闭）
+
+- **docs/29**：§6.4 重写为 vxe 引擎能力对等矩阵（v3.5 PR1-B 后四大能力已对齐，修正「vxe 不支持树形/拖拽/合并/编辑」过时表述）+ §12 #3 同步；补写 §3.5「服务端筛选（filterParamsAdapter）」——修复 §1.2 表 / ProTable.vue emit 注释 / types JSDoc 三处断链
+- **docs/24**：expressionFunctions 改实例级沙箱语义（H2 后旧「模块级共享」表述）；§5.2 补 cross 空值三路径差异（实时跳过 vs validate() 批量照跑）；§18 删除已过时的「permission 权限码映射未透传」；schema 级字段表补 `watchFallback`；§19 索引补 5 个缺失 demo（56→61 闭环）
+- **chore**：`flattenCrossRules` 抽离至 use-schema-index.ts —— 解除 check-doc-currency 的 composer 行数膨胀预警（363→345）
+
+### 🐞 Fix | 引擎加固批 B：状态一致性（2026-10-15 第三轮，audit `docs/audit/2026-10-15-engine-audit-summary.md` 批 B）
+
+- **B1 vxe 选区**：`VxeTableBody` expose `clearSelection()`（clearCheckboxRow/clearRadioRow + 引擎侧本地镜像）——修复 vxe 引擎下 `clearSelection` 只清 useTable 镜像不清 UI 勾选；reserve 模式翻页后经 `getCheckboxRecords()` 回同步全量跨页镜像（key 集合无变化不 emit），修复跨页选区镜像残缺
+- **B2 Autocomplete 竞态**：`buildAutocompleteFetcher` 补序号令牌（与 useAsyncOptions.fetchSeq 同模式）——快速连续输入时慢的旧响应不再覆盖新下拉结果，过期 reject 静默
+- **B3 双实例隔离防线**：补 spec 锁定 A5 成果——同 listName+原始值行双实例的 stopper 桶互不干扰（i${index} key 跨实例碰撞结构性消除）
+- **B4 pageSize 跟随**：`useTable` 补 `watch(() => props.pageSize)`（density v3.0.1 同款改造的同类漏网）——父级 v-model:page-size 运行时变更即时生效并联动刷新
+
+### ✅ Tests | 测试矩阵补完（五态示范批 + 测试深度批 + 发布准备批，2026-10-15）
+
+- **big-demo 五态示范页** `/big-demo/state-demo`：成功/加载/错误/空/断连五态切换 + 每态设计要点说明；Wide 页地图二级懒加载（GeoJSON 退二级 chunk，页面壳先渲染、地图区就地加载/失败/重试）
+- **四栖 e2e 首批 6 条**（`tests/e2e/panels/four-panels.spec.ts`）：登录 → 四栖导航齐全 → H5 rem 激活/零残留 → big stage 缩放 → wide 9000px → 五态骨架切换 → **TagsView 页签守恒（meta.noTags 真实环境验证）**；`playwright.config.ts` 迁至根目录（旧 `tests/e2e/` 下配置从未被 playwright 发现）+ webServer 自动起 dev:local（本地/CI 一致）+ Chromium 经 npmmirror 镜像安装
+- **组件渲染层 +5 例**（合计 18 例全绿）：BigChart 防抖合并（窗口内 3 次变化 → 1 次重建）/ big layout resize 150ms 防抖 + bfcache pageshow / h5 layout resize 300ms 防抖
+- **protable e2e 3 条漂移修复**：overview 页已演进为多场景文档页（DocLayout + 6 个 ProTable 实例），全部断言改作用域（主表 `.vv-pro-table` first / 选择表 `:has(.el-checkbox__input)`）；行数断言改 `aria-rowcount` 对 pageSize 免疫（并修正「用户-1 匹配 19 行」旧注释为实际的 39 行 includes 语义）
+- **demo 数校准**：ProTable 23 / XForm 61（check-doc-currency 脚本期望值 + docs/24 §19 + docs/29 三处同步，13 项校验全绿）
+- **文档端口漂移修正 ×5**（README×2 / docs/09×2 / docs/10×1）：dev server 端口以 `build/server.ts` SERVER_DEFAULTS（5174 + strictPort）为单一事实源
+
+### 🔧 Chore | /autoplan 多视角审查 15 项任务批落地（2026-10-15 起）
+
+- **安全/性能**：BigChart 有效像素比钳制 `MAX_EFFECTIVE_DPR = 2.5`（4K 拼接屏 × 高 DPR 防 GPU 显存失控）+ 组件单测 8 例
+- **质量**：h5 layout 的 `activateRem` 移至 setup 顶层同步激活，消除首帧 FOUC（回归防线：子组件 setup 探针用例，退回 onMounted 即红）；postcss 真实转换集成 4 例（顺带修正 docs/34 换算精度笔误 2.4155→2.41546rem）
+- **测试**：组件渲染层从 0 突破——big/h5 layout 组件 spec 各 3 例（stage 样式 / inject 链路 / meta watch；激活链路 / 限宽 / 快照恢复）
+- **开源**：MIT LICENSE + CHANGELOG 版本口径声明（v1.0.0 开源首发，v3.x 内部叙事保留）+ `docs/36` Fork 升级与版本策略 + `docs/37`/`docs/38` h5/big ADR + `.release-it.json` 开启 GitHub Release
+- **DX**：`.nvmrc` + docs/10 §1.1 按被拦位置分路径修复指引 + §3.7 措辞对齐 DS-8 披露（ESLint 实际仅硬约束 2 条）
+- **文档**：docs/34 20px 边界示范定位注记 + §4 setup 顶层激活同步；docs/35 §3 拼接屏字号系数 ×1.5~1.8 与 KPI 三态沉淀；docs/36 §5 补 dry-run 分支约束说明
+- **工程**：viewport meta 收敛为 remAdaptation 插件唯一事实源（删除 index.html 静态拷贝，install 时序先于首帧）；删除 `bench:check` 冗余脚本（内容与 bench 完全相同，文档宣称的基线对比从未实现）
+- **演示**：big-demo 标题栏适配指标默认折叠（点击展开），验收证据不抢首屏视觉
+- **依赖**：`postcss@8.5.19` 显式 devDependency（对齐 vite 8 传递依赖版本，消除双实例类型冲突）
 
 ### 🔧 Refactor | views 入口视图统一小写命名（`Index.vue` → `index.vue`）
 

@@ -1,5 +1,6 @@
 import type { SchemaNode, RuleItem, ValidateOptions, ValidateResult } from '../types'
 import type { ZodType } from 'zod'
+import { get } from 'lodash-es'
 import { walkSchema } from '../utils/walk-schema'
 import { runCrossRule } from './cross-rule-runner'
 
@@ -150,25 +151,37 @@ async function traverseCross(
   model: Record<string, unknown>,
   keyPath: (string | number)[],
   errors: ValidateResult['errors'],
-  namedRules?: Record<string, RuleItem>
+  namedRules?: Record<string, RuleItem>,
+  /**
+   * 数组行前缀（形如 'rows[0]'）——itemSchema 后代字段的 name 统一在此拼接。
+   * 2026-10-19 浏览器实测暴露的 A1 漏网：此前只在 traverseArrayItem 重写直接子节点的
+   * name，itemSchema 为 column/row 布局对象（容器无 name）时 children 字段没加行前缀，
+   * 批量 cross 的 dependsOn 取顶层 undefined 被空值跳过（rules 全静默通过）。
+   */
+  namePrefix = ''
 ): Promise<void> {
   if (!node) return
   if (typeof node === 'string') return
   if (Array.isArray(node)) {
     for (let i = 0; i < node.length; i++) {
-      await traverseCross(node[i], model, [...keyPath, i], errors, namedRules)
+      await traverseCross(node[i], model, [...keyPath, i], errors, namedRules, namePrefix)
     }
     return
   }
 
-  // 数组节点：按 model[name] 当前长度展开每个元素，把 itemSchema 内 name 重写为 items[i].subName
-  if (node.kind === 'array' && node.array && node.name) {
-    const listRaw = model[node.name]
+  // 行内后代字段：name 拼前缀成 items[i].subName 全路径（顶层节点 namePrefix 为空 = 原样）
+  const effNode = namePrefix && node.name ? { ...node, name: `${namePrefix}.${node.name}` } : node
+
+  // 数组节点：按 model[name] 当前长度展开每个元素，itemSchema 后代经 traverseArrayItem 透传行前缀
+  // A2（docs/audit/2026-10-15）：必须 lodash get 取值——嵌套数组（array 套 array）时 name 已被
+  // 重写为 'orders[0].items' 形式，直索引取不到（model 是嵌套结构，不是扁平 key 表）
+  if (effNode.kind === 'array' && effNode.array && effNode.name) {
+    const listRaw = get(model, effNode.name)
     if (Array.isArray(listRaw)) {
       for (let i = 0; i < listRaw.length; i++) {
         await traverseArrayItem(
-          node.array!.itemSchema,
-          `${node.name}[${i}]`,
+          effNode.array!.itemSchema,
+          `${effNode.name}[${i}]`,
           model,
           errors,
           namedRules
@@ -179,11 +192,11 @@ async function traverseCross(
   }
 
   // 普通节点：检查 rules 内的 crossValidator
-  if (node.rules && node.name) {
-    await runNodeCrossRules(node, model, keyPath, errors, namedRules)
+  if (effNode.rules && effNode.name) {
+    await runNodeCrossRules(effNode, model, keyPath, errors, namedRules)
   }
 
-  // 递归 children / formItem.slots
+  // 递归 children / formItem.slots（行前缀透传给后代）
   if (node.children) {
     if (Array.isArray(node.children)) {
       for (let i = 0; i < node.children.length; i++) {
@@ -192,17 +205,32 @@ async function traverseCross(
           model,
           [...keyPath, 'children', i],
           errors,
-          namedRules
+          namedRules,
+          namePrefix
         )
       }
     } else if (typeof node.children === 'object') {
-      await traverseCross(node.children, model, [...keyPath, 'children'], errors, namedRules)
+      await traverseCross(
+        node.children,
+        model,
+        [...keyPath, 'children'],
+        errors,
+        namedRules,
+        namePrefix
+      )
     }
   }
   if (node.formItem && typeof node.formItem === 'object' && node.formItem.slots) {
     for (const [k, v] of Object.entries(node.formItem.slots)) {
       if (v && typeof v === 'object') {
-        await traverseCross(v, model, [...keyPath, 'formItem', 'slots', k], errors, namedRules)
+        await traverseCross(
+          v,
+          model,
+          [...keyPath, 'formItem', 'slots', k],
+          errors,
+          namedRules,
+          namePrefix
+        )
       }
     }
   }
@@ -223,9 +251,9 @@ async function traverseArrayItem(
     }
     return
   }
-  // 把子节点 name 拼成 items[i].subName 形式
-  const rewritten: SchemaNode = sub.name ? { ...sub, name: `${prefix}.${sub.name}` } : sub
-  await traverseCross(rewritten, model, [], errors, namedRules)
+  // 行前缀经 traverseCross 的 namePrefix 统一拼接（直接子节点与 children 嵌套后代走同一路径）——
+  // 不在此重写 sub.name，避免对象容器（column/row 布局的 itemSchema）的 children 漏前缀
+  await traverseCross(sub, model, [], errors, namedRules, prefix)
 }
 
 async function runNodeCrossRules(
@@ -237,14 +265,20 @@ async function runNodeCrossRules(
 ): Promise<void> {
   const rules = node.rules
   if (!rules) return
+  // A1（docs/audit/2026-10-15）：行内字段 name 已被重写为 'rows[0].max' 全路径，
+  // dependsOn 仍是相对路径（['min']）——须加行前缀，否则 get(model, 'min') 取到顶层 undefined
+  // （fail 场景碰巧报错、pass 场景误报）。顶层字段无 '.' 时前缀为空 = 不重写。
+  const prefix =
+    node.name && node.name.includes('.') ? node.name.slice(0, node.name.lastIndexOf('.')) : ''
   const arr = Array.isArray(rules) ? rules : [rules]
   for (const r of arr) {
     // 字符串规则名 → 查注册表解析（'required' 简写无 crossValidator，自然跳过）
     const resolvedRule = typeof r === 'string' ? namedRules?.[r] : r
     if (typeof resolvedRule !== 'object' || resolvedRule === null) continue
-    const rule = resolvedRule as RuleItem
-    if (!rule.crossValidator || !(rule.dependsOn ?? rule.deps)) continue
+    if (!resolvedRule.crossValidator || !(resolvedRule.dependsOn ?? resolvedRule.deps)) continue
     if (!node.name) continue
+    // 副本重写 dependsOn（行内相对优先、顶层绝对回退），不污染 namedRules 注册表 / 原 rule 对象
+    const rule = (prefix ? rewriteRuleDeps(resolvedRule, prefix, model) : resolvedRule) as RuleItem
     // 批量路径无空值跳过（空值照跑 crossValidator）——与其他两条路径的差异见 cross-rule-runner 文件头
     const outcome = await runCrossRule(rule, model, node.name)
     if (outcome.kind === 'fail') {
@@ -252,6 +286,30 @@ async function runNodeCrossRules(
     }
     // pass / threw：不写 errors（threw 已在 runCrossRule 内 console.error）
   }
+}
+
+/**
+ * A1：规则副本重写 dependsOn/deps（dependsOn 优先，deps 为别名，语义同 cross-rule-runner）。
+ *
+ * 路径语义「行内相对优先、顶层绝对回退」：dependsOn 写的是行内同名字段（'min'）时
+ * 重写为 'rows[0].min' 按行取值；写的是顶层绝对路径（'max'，如"行小计 ≤ 全局上限"）
+ * 时行内无此键，保留原路径。行内与顶层同键时取行内（就近原则）。
+ */
+function rewriteRuleDeps(rule: RuleItem, prefix: string, model: Record<string, unknown>): RuleItem {
+  const resolve = (dep: string): string => {
+    const rowRelative = `${prefix}.${dep}`
+    return get(model, rowRelative) !== undefined ? rowRelative : dep
+  }
+  const clone = { ...rule }
+  if (rule.dependsOn) {
+    clone.dependsOn = Array.isArray(rule.dependsOn)
+      ? rule.dependsOn.map(resolve)
+      : resolve(rule.dependsOn)
+  }
+  if (rule.deps) {
+    clone.deps = Array.isArray(rule.deps) ? rule.deps.map(resolve) : resolve(rule.deps)
+  }
+  return clone
 }
 
 /**

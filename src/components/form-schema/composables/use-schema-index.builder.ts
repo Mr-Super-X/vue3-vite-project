@@ -41,13 +41,27 @@ export interface CrossRuleEntry {
   target: string
   deps: string[]
   rule: RuleItem
+  /**
+   * 行模板标记（A1-反向，docs/audit/2026-10-15-engine-audit-summary）：
+   * 规则节点来自 array.itemSchema 时置 true —— target/deps 为行内相对名
+   * （渲染时才 rewriteNamePath 加 'items[i]' 前缀），反向触发收到全路径
+   * 'items[0].qty' 需先按行前缀 concrete 化再执行
+   */
+  rowScoped?: boolean
 }
 
 /**
  * 构建索引 —— 一次遍历搞定所有查询表
  * 覆盖：children / array.itemSchema / formItem.slots
+ *
+ * @param namedRules D(#6)：props.rules 命名规则注册表 —— `rules: 'myRule'`（字符串引用
+ *   注册表中含 crossValidator 的规则）经此解析进 crossRules/reverseIndex/dependsOnMap，
+ *   与 use-validate 批量路径的 namedRules?.[r] 解析对齐（此前字符串规则静默漏配反向触发）
  */
-export function buildIndex(schema: SchemaNode | SchemaNode[] | string | undefined): SchemaIndex {
+export function buildIndex(
+  schema: SchemaNode | SchemaNode[] | string | undefined,
+  namedRules?: Record<string, RuleItem>
+): SchemaIndex {
   const byName = new Map<string, SchemaNode>()
   const fieldNames: string[] = []
   const allNames: string[] = []
@@ -55,6 +69,27 @@ export function buildIndex(schema: SchemaNode | SchemaNode[] | string | undefine
   const reverseIndex = new Map<string, string[]>()
   const dependsOnMap = new Map<string, string[]>()
   const seenNames = new Set<string>()
+
+  // A1-反向：收集所有 array.itemSchema 的后代节点 —— 其 cross rule 的 target/deps
+  // 是行内相对名（渲染时才 rewriteNamePath 加 'items[i]' 前缀）。嵌套数组的内层
+  // itemSchema 后代同样命中（运行时行前缀取自 changedField 本身，如 'orders[0].items[1]'）。
+  // 遍历方向与主 walk 对齐（includeNodeSlots: false，与 buildIndex 主遍历一致）
+  const rowScopedNodes = new Set<SchemaNode>()
+  walkSchema(
+    schema,
+    (n) => {
+      if (n.kind === 'array' && n.array?.itemSchema) {
+        walkSchema(
+          n.array.itemSchema,
+          (x) => {
+            rowScopedNodes.add(x)
+          },
+          { includeNodeSlots: false }
+        )
+      }
+    },
+    { includeNodeSlots: false }
+  )
 
   walkSchema(
     schema,
@@ -71,8 +106,11 @@ export function buildIndex(schema: SchemaNode | SchemaNode[] | string | undefine
       if (!n.rules) return
       const arr = Array.isArray(n.rules) ? n.rules : [n.rules]
       for (const r of arr) {
-        if (typeof r !== 'object' || !r || !('crossValidator' in r)) continue
-        const ri = r as RuleItem
+        // D(#6)：字符串命名规则（rules: 'myRule'）经 namedRules 注册表解析 —— 与 use-validate
+        // 批量路径 namedRules?.[r] 对齐；注册表缺失该名称时跳过（fail-safe，不抛错）
+        const ri: RuleItem | undefined =
+          typeof r === 'string' ? namedRules?.[r] : ((r as RuleItem) ?? undefined)
+        if (!ri || typeof ri !== 'object' || !('crossValidator' in ri)) continue
         // deps 是 dependsOn 的别名（命名统一，PM 审查发现 4）：优先 dependsOn，回退 deps
         const raw = ri.dependsOn ?? ri.deps
         if (!raw) continue
@@ -82,7 +120,8 @@ export function buildIndex(schema: SchemaNode | SchemaNode[] | string | undefine
           (d): d is string => typeof d === 'string'
         )
         if (deps.length === 0) continue
-        const entry: CrossRuleEntry = { target, deps, rule: r as RuleItem }
+        const entry: CrossRuleEntry = { target, deps, rule: ri }
+        if (rowScopedNodes.has(n)) entry.rowScoped = true
         const list = crossRules.get(target)
         if (list) list.push(entry)
         else crossRules.set(target, [entry])
@@ -93,7 +132,7 @@ export function buildIndex(schema: SchemaNode | SchemaNode[] | string | undefine
         } else {
           dependsOnMap.set(target, [...deps])
         }
-        const trigger = (r as RuleItem).trigger
+        const trigger = ri.trigger
         if (trigger === 'manual') continue // manual 仅 validateForm 跑，不进反向索引
         for (const d of deps) {
           const arr2 = reverseIndex.get(d)

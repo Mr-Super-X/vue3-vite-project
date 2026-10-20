@@ -2,10 +2,12 @@
  * 9000 超宽页 · 中国地图配置（geo 底图 + 涟漪散点 + 飞线）。
  *
  * 独立文件而非并入 charts.ts 的原因：china.json（159KB）经本文件 import，
- * 只有 Wide.vue（/big-demo/wide 路由）依赖本模块——路由懒加载让 GeoJSON
- * 只进超宽页的异步 chunk，1920 标准页零体积负担。
+ * 只有 Wide.vue（/big-demo/wide 路由）依赖本模块。Wide.vue 以动态 import() 加载本模块
+ * （二级 chunk）：路由 chunk 不含 GeoJSON、页面壳先渲染，加载/失败态就地呈现（见 Wide.vue）。
+ * 1920 标准页零体积负担。
  *
- * registerMap 在模块加载期执行（echarts 全局注册表，同名幂等覆盖）。
+ * registerMap 在模块执行期运行（动态 import resolve 后、option 消费前完成，时序安全；
+ * echarts 全局注册表同名幂等覆盖）。
  * 注意：echarts 无 unregister API，视图卸载后注册表残留属可接受设计（一次性 159KB 常驻），
  * 勿误判为内存泄漏。
  */

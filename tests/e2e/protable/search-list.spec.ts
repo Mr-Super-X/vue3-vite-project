@@ -1,65 +1,71 @@
 /**
- * E2E 关键路径 —— 搜索→列表（v3.5 PR1-A Task 12）
+ * E2E 关键路径 —— 搜索→列表（v3.5 PR1-A Task 12；2026-10-15 作用域修复）
  *
  * 路径：
  *   1. 打开 `/demo/pro-table-overview`
- *   2. 填搜索框 "用户-1" → 等 300ms 防抖 → 断言表格行数减少（127 → 1~19）
- *   3. 清空搜索 → 断言恢复 10 行 / 页
+ *   2. 填搜索框 "用户-1" → 等 mock 返回 → 断言表格行数减少（127 → 1~19）
+ *   3. 重置搜索 → 断言恢复分页行数
  *
- * 真实业务数据：demo 内置 127 行 mock，name 含「用户-1」的有 19 行
- * （id 1 / 10~19，索引 0 / 9~18 中 name 为「用户-1」「用户-10」~「用户-19」）。
+ * 2026-10-15 修复（/autoplan 发布准备批）：
+ *   - overview 页含两个 ProTable（主表 + 跨页选择演示表，src/modules/demo/examples/ProTable/ProTableOverview.vue），
+ *     所有行数/搜索断言限定主表（第一个 .vv-pro-table）作用域，两表行数不再互相污染
+ *   - 搜索列 label 为「姓名」（原用例按"名称"匹配是列名漂移）
  *
- * 准备：
- *   pnpm test:e2e:install  # 首次需下载 Chromium
- *   pnpm dev               # 后台启动 dev server（baseURL=http://localhost:5174）
+ * dev server 由 playwright.config.ts 的 webServer 自动启动（pnpm dev:local）。
  *
  * @group E2E 测试
  */
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
+
+/** 主表作用域：overview 页第一个 ProTable（第二个为跨页选择演示表） */
+function mainTable(page: Page) {
+  return page.locator('.vv-pro-table').first()
+}
 
 test.describe('ProTable E2E 搜索→列表', () => {
   test.beforeEach(async ({ page }) => {
-    // 进入 ProTable 概览 demo 页面（mock 127 行）
     await page.goto('/demo/pro-table-overview')
-    // 等待首次加载完成（mock API 延迟 500ms）
-    await page.waitForSelector('.el-table__body tbody tr', { timeout: 10000 })
-    // 等待 ProTable 根 grid 渲染
-    await expect(page.locator('[role="grid"][aria-label="数据表格"]').first()).toBeVisible()
+    // 等待首次加载完成（mock API 延迟 500ms）；主表根本身即 role=grid[aria-label=数据表格]
+    await expect(mainTable(page).locator('.el-table__body tbody tr').first()).toBeVisible({
+      timeout: 10000,
+    })
+    await expect(mainTable(page)).toBeVisible()
   })
 
-  test('搜索「用户-1」后表格行数从 10 降到 ≤10（127 → 19）', async ({ page }) => {
-    // 初始分页第一页 = 10 行
-    const initialRows = await page.locator('.el-table__body tbody tr').count()
-    expect(initialRows).toBeGreaterThan(0)
-    expect(initialRows).toBeLessThanOrEqual(10)
+  test('搜索「用户-1」后总行数收敛（127 → 39）', async ({ page }) => {
+    const grid = mainTable(page)
+    // aria-rowcount = total + 1（ProTable 根 grid 语义属性，对 pageSize 免疫——
+    // overview 首个场景表 pageSize=5，行数断言会满载 5↔5 失真，total 才是真证据）
+    const totalRows = () => grid.getAttribute('aria-rowcount').then((n) => Number(n))
+    expect(await totalRows()).toBe(128) // 127 行 + 表头
 
-    // 填搜索框（按 label=名称 的 input）
-    const nameInput = page.locator('input[placeholder*="名称"]').first()
+    const nameInput = mainTable(page).locator('input[placeholder*="姓名"]').first()
     await nameInput.fill('用户-1')
     // 点击搜索按钮触发（data-test=search-btn 是 SearchForm 测试钩子）
-    await page.locator('[data-test="search-btn"]').click()
+    await mainTable(page).locator('[data-test="search-btn"]').click()
     // 等请求完成 + 列表刷新
     await page.waitForTimeout(800)
-    const filteredRows = await page.locator('.el-table__body tbody tr').count()
+    // includes 语义匹配 39 行：用户-1 / 用户-10~19 / 用户-100~127（旧注释"19 行"漏算 100+ 段）
+    expect(await totalRows()).toBe(40)
+    // 第一页满载但不超过 pageSize
+    const filteredRows = await grid.locator('.el-table__body tbody tr').count()
     expect(filteredRows).toBeGreaterThan(0)
-    expect(filteredRows).toBeLessThan(initialRows)
+    expect(filteredRows).toBeLessThanOrEqual(5)
   })
 
-  test('清空搜索后表格恢复全量 10 行', async ({ page }) => {
-    // 填搜索并搜索
-    const nameInput = page.locator('input[placeholder*="名称"]').first()
-    await nameInput.fill('用户-100')
-    await page.locator('[data-test="search-btn"]').click()
-    await page.waitForTimeout(800)
-    // 搜索「用户-100」应该精确匹配 1 行（id=100）
-    const filteredCount = await page.locator('.el-table__body tbody tr').count()
-    expect(filteredCount).toBe(1)
+  test('重置搜索后总行数恢复 127', async ({ page }) => {
+    const grid = mainTable(page)
+    const totalRows = () => grid.getAttribute('aria-rowcount').then((n) => Number(n))
 
-    // 清空搜索（点击已选条件区「× 用户-100」tag 或重置按钮）
-    await page.locator('[data-test="reset-btn"]').click()
+    const nameInput = mainTable(page).locator('input[placeholder*="姓名"]').first()
+    await nameInput.fill('用户-100')
+    await mainTable(page).locator('[data-test="search-btn"]').click()
     await page.waitForTimeout(800)
-    // 重置后恢复 10 行
-    const restoredRows = await page.locator('.el-table__body tbody tr').count()
-    expect(restoredRows).toBeGreaterThan(filteredCount)
+    expect(await totalRows()).toBe(2) // 精确匹配 id=100 一行 + 表头
+
+    // 「重置筛选」按钮（作用域内有 2 个 data-test=reset-btn：筛选重置 + 列设置重置，按可访问名区分）
+    await mainTable(page).getByRole('button', { name: '重置筛选' }).click()
+    await page.waitForTimeout(800)
+    expect(await totalRows()).toBe(128)
   })
 })

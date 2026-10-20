@@ -177,6 +177,15 @@ const search = useSearch({
     if (opts?.reset) {
       // v3.5 PR2：reset 路径同步清空筛选状态（仅清 state 不触发请求，由下方 setPage/refresh 接管一次）
       table.resetFilter()
+      // A3（docs/audit/2026-10-15-engine-audit-summary）：vxe 引擎列头筛选 UI 清理 ——
+      // el 引擎由 useTable.resetFilter 内经 tableRef 调官方 clearFilter()；
+      // vxe 引擎 tableRef 为 null，走 VxeTableBody expose 通道（清 localFilterMap + vxe 内部状态）；
+      // el 模式下 proTableVxe 为 null，结构化可选调用自然短路
+      proTableVxe.value?.clearFilter?.()
+      // 观察项闭环：reset 补发 filter-change（payload = 清空后的全表快照，恒 {}）——
+      // 与 setFilter 路径事件契约一致（§3.5「payload 恒为全表快照」）；父级靠本事件做
+      // URL 同步 / 埋点的消费方不再滞留 reset 前的旧筛选条件
+      emit('filter-change', table.getFilterState())
       if (table.page.value !== 1) {
         table.setPage(1)
         // review R5：setPage 触发的刷新由 page watcher 异步发起，原实现直接 return 导致
@@ -206,6 +215,8 @@ statePersist.attach({
   page: table.page,
   pageSize: table.pageSize,
   sortState: table.sortState,
+  // D(#9)：列头筛选状态随路由级持久化（路由返回后筛选条件不丢）
+  filterState: table.filterState,
 })
 
 /* ───────────── v3.1：根容器 ref + 全屏 + 自动高度 ───────────── */
@@ -250,6 +261,10 @@ const proTableEl = ref<{ $el?: HTMLElement; elTable?: ComponentPublicInstance | 
 const proTableVxe = ref<{
   recalculate?: () => Promise<unknown>
   getTbody?: () => HTMLElement | null
+  /** A3：reset 清列头筛选 UI 通道（清 vxe 内部筛选状态 + 本地 localFilterMap 快照） */
+  clearFilter?: () => void
+  /** B1：清 vxe 选区 UI 勾选（多选 + 单选）+ 引擎侧本地选区镜像 */
+  clearSelection?: () => void
 } | null>(null)
 
 /** tbody DOM 访问点 —— 经 useTableEngineDom composable 收敛；v3.5 PR1-B 起支持 el + vxe 双引擎路由 */
@@ -518,7 +533,14 @@ defineExpose({
   refresh: () => table.refresh(),
   reset: () => search.reset(),
   getSelectedRows: () => table.getSelectedRows(),
-  clearSelection: () => table.clearSelection(),
+  clearSelection: () => {
+    table.clearSelection()
+    // B1（docs/audit/2026-10-15 #2）：vxe 引擎 UI 勾选清理 —— el 引擎由 useTable 内经
+    // tableRef 调官方 clearSelection()；vxe 引擎 tableRef 为 null，走 VxeTableBody expose
+    // 通道（clearCheckboxRow/clearRadioRow + 引擎侧本地镜像）；el 模式下 proTableVxe 为
+    // null 自然短路（同 A3 clearFilter 双通道模式）
+    proTableVxe.value?.clearSelection?.()
+  },
   getSearchParams: () => search.getParams(),
   setSearchParams: (params: Record<string, unknown>) => search.setSearchParams(params),
   element: table.tableRef,
@@ -702,13 +724,16 @@ defineExpose({
           </slot>
         </template>
       </AsyncState>
+      <!-- D（docs/audit/2026-10-15 protable#8）：paginationProps 的 v-bind 须在前 —— 业务 pagination
+           props 在后会覆盖内部受控绑定（current-page/page-size/total）导致分页状态失控；
+           受控绑定后置优先（v-bind 顺序即合并优先级，后者覆盖前者） -->
       <ElPagination
         v-if="props.pagination !== false"
+        v-bind="paginationProps"
         :total="table.total.value"
         :current-page="table.page.value"
         :page-size="table.pageSize.value"
         layout="total, sizes, prev, pager, next, jumper"
-        v-bind="paginationProps"
         @current-change="events.handlePageChange"
         @size-change="events.handleSizeChange"
       >

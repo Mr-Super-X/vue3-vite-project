@@ -207,9 +207,20 @@ export function useTableCapabilities<T extends object = Record<string, unknown>>
     // 自动忽略行拖拽；console.warn 在 demo（如 ProTableEngineCompare 演示双引擎能力对等
     // 时故意同时启用三能力）构成噪音。dev 开发者可在浏览器 console 勾选「Verbose /
     // Debug」级别查看；prod 完全静默。与 hotfix-1 useRowDrag.ts:94 warn 降级策略一致。
+    //
+    // D（docs/audit/2026-10-15 protable#10）：hotfix-7 已取消「自动忽略行拖拽」守卫
+    // （实测 sortablejs 挂 vxe tbody 可正常拖拽）——文案从「已自动忽略」改为「兼容性观察中」，
+    // 与实现一致（旧文案误导排查）
     if (isVxeEngine && props.enableTree && props.enableRowDrag) {
       console.debug(
-        '[ProTable] vxe-table 引擎 + 树形 + 行拖拽 同时启用：sortablejs 与 vxe tree-node 行结构冲突，已自动忽略行拖拽'
+        '[ProTable] vxe-table 引擎 + 树形 + 行拖拽 同时启用：sortablejs 与 vxe tree-node 行结构兼容性观察中，如遇拖拽错位请树形/拖拽二选一或反馈'
+      )
+    }
+    // D（docs/audit/2026-10-15 protable#4）：vxe 引擎无汇总行渲染接线（VxeTableBody 未消费
+    // useSummary），enableSummary 在 vxe 下静默失效 —— 对齐 virtualized 强隔离策略：warn + 忽略
+    if (isVxeEngine && props.enableSummary) {
+      console.warn(
+        '[ProTable] vxe-table 引擎暂不支持 enableSummary 汇总行，已忽略（请切 element-plus 引擎）'
       )
     }
     // vxe 下 enableTree 已被忽略，「编辑仅作用于叶子节点」的前提不存在，跳过避免误导
@@ -241,15 +252,18 @@ export function useTableCapabilities<T extends object = Record<string, unknown>>
   validateCapabilities()
 
   // v3.0 能力扩展 5a：客户端汇总行（条件实例化）
-  const summary = props.enableSummary
-    ? useSummary({
-        // v3.5 PR3：useSummary 绑 T，columns 传 ProColumn<T>[]（与 v3.4 cast 抹除对齐）
-        columns: columns.allColumns as Ref<ProColumn<T>[]>,
-        // v3.5 PR3：table.data 类型是 Ref<T[] | null>，useSummary 期望 Ref<T[] | null> 直接透传
-        data: table.data as Ref<T[] | null>,
-        config: typeof props.enableSummary === 'object' ? props.enableSummary : {},
-      })
-    : null
+  // D（docs/audit/2026-10-15 protable#4）：vxe 引擎不实例化 —— VxeTableBody 无汇总渲染接线，
+  // 实例化只会产生一份无人消费的 summary 计算（静默失效），validateCapabilities 已 warn
+  const summary =
+    props.enableSummary && !isVxeEngine
+      ? useSummary({
+          // v3.5 PR3：useSummary 绑 T，columns 传 ProColumn<T>[]（与 v3.4 cast 抹除对齐）
+          columns: columns.allColumns as Ref<ProColumn<T>[]>,
+          // v3.5 PR3：table.data 类型是 Ref<T[] | null>，useSummary 期望 Ref<T[] | null> 直接透传
+          data: table.data as Ref<T[] | null>,
+          config: typeof props.enableSummary === 'object' ? props.enableSummary : {},
+        })
+      : null
 
   // v3.0 能力扩展 5b：虚拟滚动（条件实例化；启用时禁用行内编辑 R2 决策）
   // v3.1.3 review：编排层可选注入；未传则按 props.virtualized 内部创建（向后兼容单测）

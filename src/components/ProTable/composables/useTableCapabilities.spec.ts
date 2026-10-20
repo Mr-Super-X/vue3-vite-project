@@ -265,3 +265,66 @@ describe('useTableCapabilities', () => {
     )
   })
 })
+
+describe('useTableCapabilities D(#4/#10) vxe 汇总守卫 + 拖拽文案', () => {
+  // 本 describe 为顶层独立块 —— 自带 console spy（主 describe 的 beforeEach 不覆盖此处）
+  beforeEach(() => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    vi.spyOn(console, 'debug').mockImplementation(() => {})
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('D(#4)：vxe 引擎 + enableSummary → warn + summary 不实例化（VxeTableBody 无汇总渲染接线）', () => {
+    const result = useTableCapabilities({
+      props: {
+        columns: [],
+        requestApi: async () => ({ data: [], total: 0, pageNum: 1, pageSize: 10 }),
+        tableEngine: 'vxe-table',
+        enableSummary: true,
+      } as never,
+      columns: { allColumns: ref([]) },
+      table: { data: ref([]) },
+      engine: ref('vxe-table'),
+    })
+    expect(result.summary).toBeNull()
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('enableSummary'))
+  })
+
+  it('D(#4)：element-plus 引擎 + enableSummary → summary 正常实例化（回归）', () => {
+    const result = useTableCapabilities({
+      props: {
+        columns: [],
+        requestApi: async () => ({ data: [], total: 0, pageNum: 1, pageSize: 10 }),
+        enableSummary: true,
+      } as never,
+      columns: { allColumns: ref([]) },
+      table: { data: ref([]) },
+      engine: ref('element-plus'),
+    })
+    expect(result.summary).not.toBeNull()
+  })
+
+  it('D(#10)：vxe+树形+拖拽 的 debug 文案为「兼容性观察中」（不再谎称已忽略行拖拽）', () => {
+    useTableCapabilities({
+      props: {
+        columns: [],
+        requestApi: async () => ({ data: [], total: 0, pageNum: 1, pageSize: 10 }),
+        tableEngine: 'vxe-table',
+        enableTree: true,
+        enableRowDrag: true,
+      } as never,
+      columns: { allColumns: ref([]) },
+      table: { data: ref([]) },
+      engine: ref('vxe-table'),
+    })
+    expect(console.debug).toHaveBeenCalledWith(
+      expect.stringContaining('vxe-table 引擎 + 树形 + 行拖拽 同时启用')
+    )
+    expect(console.debug).toHaveBeenCalledWith(expect.stringContaining('兼容性观察中'))
+    // 旧文案「已自动忽略行拖拽」与实现矛盾（hotfix-7 起拖拽照常挂载），不得再出现
+    const allArgs = (console.debug as ReturnType<typeof vi.fn>).mock.calls.flat()
+    expect(allArgs.some((a) => String(a).includes('已自动忽略行拖拽'))).toBe(false)
+  })
+})

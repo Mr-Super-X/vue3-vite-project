@@ -163,8 +163,11 @@ function registerNodeReaction(
       }
       // 声明 deps → 精确监听路径（浅比较每次求值的快照数组）；
       // 未声明 → 向后兼容：deep watch 整棵 model
+      // D(#7)：deps 路径声明后 watchOpts 同样 deep —— deps 指向对象路径（如 'user'）时，
+      // Vue 依赖追踪锚定 model.user 引用，user.age 等内部变化不重算 source（reaction 不触发）。
+      // deep 让对象路径内部嵌套变化可触发；标量 deps 无内部结构，触发点不变（成本仅深比较）
       const source = deps && deps.length > 0 ? () => deps.map((d) => get(model, d)) : () => model
-      const watchOpts = deps && deps.length > 0 ? {} : { deep: true as const }
+      const watchOpts = { deep: true as const }
       let stop: () => void
       if (strategy === 'debounce' && delay > 0) {
         const debounced = debounce(runner, delay)

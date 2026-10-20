@@ -27,6 +27,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: 'H5 示例',
           requiresAuth: false,
+          noTags: true, // workbench 直达的验收页，不污染 TagsView
         },
       },
     ],

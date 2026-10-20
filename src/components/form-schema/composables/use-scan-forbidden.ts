@@ -48,6 +48,10 @@ export function scanForForbidden(schema: SchemaNode | SchemaNode[]): string[] {
     // disabled / permission 同样接受函数表达式字符串（ReactionValue），不能只扫 on/reaction
     scanValue(obj.disabled, 'disabled')
     scanValue(obj.permission, 'permission')
+    // D(#5)：hidden / readonly 的函数与 '{{ }}' 形态经 hasReactiveStandaloneField /
+    // use-top-level-fields 归一化进沙箱求值（可达 new Function 的字段），此前漏扫
+    scanValue(obj.hidden, 'hidden')
+    scanValue(obj.readonly, 'readonly')
     if (Array.isArray(obj.directives)) {
       for (const d of obj.directives) {
         if (d && typeof d === 'object') {

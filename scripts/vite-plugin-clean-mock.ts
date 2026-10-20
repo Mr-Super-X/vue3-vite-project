@@ -6,24 +6,32 @@
  * `getOutputFile` 规则落到与源 mock 文件同目录（mock/），每次启动 / mock 变更
  * 都会生成新的带时间戳的副本，长期累积污染工作区。
  *
- * 清理策略：
+ * 竞争事故记录（2026-10-20，df9f19c 触雷）：bundle-require import 临时文件后
+ * 执行无容错的 fs.unlink（bundle-require@4.2.1 dist/index.js:172）；旧实现用
+ * fs.watch 对新生成文件延迟 500ms 删除，mock/ 第 19 个文件（mockProdServer.ts）
+ * 使并发 bundle 窗口越过 500ms 阈值 → 清理插件抢删 → bundle-require unlink
+ * ENOENT → vite-plugin-mock getMockConfig 的 Promise.all reject → catch 静默
+ * 清空 mockData → dev mock 中间件全空（接口返回 index.html / 404）。
+ *
+ * 清理策略（方案 B 修订，用户已批准 2026-10-20）：
  * 1. 启动时（configureServer）一次性清空已有 bundled 文件
- * 2. 监听 mock/ 目录，对新生成的 bundled 文件延迟 500ms 后删除
- *    （延迟是因为 plugin 在生成后还需 `require()` 加载到内存，立即删除会触发 ENOENT）
+ * 2. dev 会话期间临时文件保留（.gitignore:43-44 兜底屏蔽提交），
+ *    server 关闭时 closeBundle 统一清理
+ *
+ * 设计决策：撤销 watch 即时删除层是为彻底消除「并发删除 vs bundle-require
+ * import」竞争窗口，非临时方案——只要存在运行时抢删，文件数/磁盘时序就可能
+ * 再次越过任何固定延迟阈值。
  *
  * 安全：
  * - 只匹配 `mock/` 目录（含子目录，如 mock/pro-table/），不影响其它位置
  * - 文件名硬约束 `_*.bundled_*.mjs` / `_*.bundled_*.cjs`，与 vite-plugin-mock
  *   自身 `ignored` 规则一致，不会误删真实 mock 文件
- * - 递归 watcher 下 filename 可能是 `pro-table/_xxx.bundled_*.mjs` 形式的
- *   相对路径，判定与删除前需先取 basename 再拼回绝对路径
  */
-import { existsSync, readdirSync, unlinkSync, watch } from 'node:fs'
+import { existsSync, readdirSync, unlinkSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import type { Plugin } from 'vite'
 
 const BUNDLED_RE = /^_.*\.bundled_.*\.(?:mjs|cjs)$/
-const CLEANUP_DELAY_MS = 500
 
 /** 递归收集 mock 目录下所有 bundled 临时文件的绝对路径 */
 function collectBundledFiles(dir: string, acc: string[] = []): string[] {
@@ -42,7 +50,6 @@ function collectBundledFiles(dir: string, acc: string[] = []): string[] {
 
 export function cleanMockBundled(): Plugin {
   const mockDir = resolve(process.cwd(), 'mock')
-  let watcher: ReturnType<typeof watch> | null = null
 
   function cleanupOnce(): void {
     for (const full of collectBundledFiles(mockDir)) {
@@ -59,30 +66,8 @@ export function cleanMockBundled(): Plugin {
     apply: 'serve',
     configureServer() {
       cleanupOnce()
-      try {
-        // recursive: true 在 Windows/macOS 由 fs.watch 原生支持；
-        // 失败（如 mock 目录不存在）静默降级，一次性清理仍生效
-        watcher = watch(mockDir, { recursive: true }, (_event, filename) => {
-          // 递归模式下 filename 是相对路径（可能带子目录前缀），需取 basename 判定
-          const name = filename?.split(/[\\/]/).pop() ?? ''
-          if (!name || !BUNDLED_RE.test(name)) return
-          // 延迟删除：bundle-require 内部会 await import / require 加载，
-          // 立即 unlink 在某些 Node 版本上会触发 EBUSY。500ms 经验值足够。
-          setTimeout(() => {
-            try {
-              unlinkSync(join(mockDir, filename ?? ''))
-            } catch {
-              // 已被删除则忽略
-            }
-          }, CLEANUP_DELAY_MS)
-        })
-      } catch {
-        // watch 启动失败（mock 目录不存在等）静默降级，仅一次性清理仍生效
-      }
     },
     closeBundle() {
-      watcher?.close()
-      watcher = null
       cleanupOnce()
     },
   }

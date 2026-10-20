@@ -3,7 +3,7 @@
 > **文档版本**：v3.4.0 | **最后更新**：2026-09-17
 > **覆盖版本**：v2.0（含 v2.1 vxe-table 引擎 + 服务端排序）
 > **源码位置**：`src/components/ProTable/`
-> **demo 站**：`/demo/pro-table-overview`（22 个演示：21 个能力 demo + 主入口，完整清单见 §16 示例索引）
+> **demo 站**：`/demo/pro-table-overview`（25 个演示：24 个能力 demo + 主入口，完整清单见 §16 示例索引）
 
 ---
 
@@ -153,11 +153,11 @@ interface ProTableExpose<T> {
 
 ProTable 通过 `defineEmits` 暴露 3 个对外事件，**v3.5 PR2 起 vxe/element-plus 双引擎均触发**（此前 PR1 之前部分事件仅在 element-plus 引擎下触发）：
 
-| Event             | Payload 类型                                      | 触发时机                                                                      | 适用场景                           |
-| ----------------- | ------------------------------------------------- | ----------------------------------------------------------------------------- | ---------------------------------- |
-| `sort-change`     | `SortState<T> \| null`                            | 排序列变化（点表头排序按钮）；`null` 表示无排序                               | 监听服务端排序 → 自定义请求参数    |
-| `filter-change`   | `Record<string, (string \| number \| boolean)[]>` | 任意筛选列值变化（多列同时变化时一并 emit，**v3.5 PR2 起 vxe 引擎同样支持**） | 服务端筛选的请求参数构造；状态回显 |
-| `engine-fallback` | `string`（降级原因）                              | 引擎自动降级（如 vxe + 树形 + 行拖拽三者冲突 → 退化为 element-plus）          | 上报降级事件用于监控               |
+| Event             | Payload 类型                                      | 触发时机                                                                                                              | 适用场景                                                                                                           |
+| ----------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `sort-change`     | `SortState<T> \| null`                            | 排序列变化（点表头排序按钮）；`null` 表示无排序；**仅 `sortable: 'custom'` 列触发**（客户端排序列变化不 emit）        | 监听服务端排序 → 自定义请求参数                                                                                    |
+| `filter-change`   | `Record<string, (string \| number \| boolean)[]>` | 任意筛选列值变化（**payload 恒为 merge 后全表快照**，与 `getFilterState()` 同形态；**v3.5 PR2 起 vxe 引擎同样支持**） | 服务端筛选的请求参数构造；状态回显（无 `filterParamsAdapter` 时 payload 为 el-table 客户端筛选快照，仅供 UI 联动） |
+| `engine-fallback` | `string`（降级原因）                              | 引擎自动降级（如 vxe + 树形 + 行拖拽三者冲突 → 退化为 element-plus）                                                  | 上报降级事件用于监控                                                                                               |
 
 > **内部转发事件（非公共契约）**：`expand-toggle` 是 ProTable 内部转发 `VxeTableBody` 的树形展开/折叠事件（v3.5 PR1-B 起），业务方**无需**也**不应**监听。如需程序化展开/折叠树节点，请用 `defineExpose` 的 `expandNode(rowKey, expanded?)` / `collapseNode(rowKey)` 方法（见 §1.3）。该事件不出现在本表，避免与 ProTable 自身 emit 的公共事件混淆。
 
@@ -414,6 +414,33 @@ const adaptedRequestApi = (params: Record<string, unknown>) =>
 
 ---
 
+## 3.5 服务端筛选（`filterParamsAdapter`）— v3.5 PR2
+
+列头筛选（`ProColumn.tableProps.filters` 声明，element-plus 原生 column.filters 协议）默认走客户端筛选；声明 `filterParamsAdapter` 后筛选条件序列化为请求参数，走后端过滤：
+
+```ts
+<ProTable
+  :columns="columns"
+  :request-api="requestApi"
+  :filter-params-adapter="filters => ({ statusList: filters.status, deptList: filters.dept })"
+  row-key="id"
+/>
+```
+
+**协议要点**：
+
+- 入参 `FilterValuesMap`：全表筛选快照（`{ [列 field]: 选中值数组 }`）；返回对象并入请求 params（与 `sortParamsAdapter` 同层对称）。
+- 触发时机：列头筛选 UI 操作 → `filter-change` → 合并进 filterState → 回第 1 页 + 触发请求。
+- merge 语义（hotfix-2）：element-plus 2.14.x 的 `filter-change` 可能仅携带变化列 —— useTable 按列 merge 保留未变化列；空数组 = 用户清空该列（delete 语义，不残留空键）。
+- 无 adapter 缺省行为：不传 `filterParamsAdapter` 时 el-table 客户端筛选默认值继续生效，`filterState` 仅作 UI 记忆 + `getFilterState()` 快照，不入请求。
+- 双引擎协议对齐：vxe 引擎的 filter-change 是单列触发（payload 含 property/values），VxeTableBody 经 localFilterMap 合并成全表快照形态 emit —— 与 el-table 协议一致，消费方写法不依赖引擎选择。
+- reset 复位：搜索区「重置」同步清空 filterState + 双引擎列头筛选 UI（el-table `clearFilter()` / vxe `clearFilter()`），旧筛选条件不会「复活」；并补发一次 `filter-change`（payload 为清空后的 `{}`），父级靠事件维护的筛选快照 / 埋点随 reset 回同步。
+- 事件与快照：`filter-change` 事件 payload 为变化后的全表快照（父级可监听做 URL 同步 / 埋点）；`getFilterState()` expose 返回当前合并态。
+
+完整示例见 `src/modules/demo/examples/ProTable/ProTableServerFilter.vue`（`/demo/pro-table-server-filter`）。
+
+---
+
 ## 4. 搜索表单（自动渲染）
 
 `columns` 中声明 `search` 的列会自动出现在 `<SearchForm>`（默认 3 行，超出可展开）。
@@ -451,6 +478,8 @@ await tableRef.value?.setSearchParams({ status: 'active' })
 // 重置搜索参数 + 分页 + 刷新（保留多选）
 await tableRef.value?.reset()
 ```
+
+> **三种入口的分页语义差异（D#18 披露）**：搜索按钮（`search()`）与 SelectedTags「清除单个/全部条件」**保留当前页**（仅重置搜索值后刷新）；`setSearchParams()` 与「重置」按钮**回到第 1 页**。差异理由：搜索按钮视为「同条件下换页查看」，重置视为「全新查询」。需要清条件回第 1 页时请用 `reset()`。
 
 ### 4.4 searchLayout：搜索区布局档位（v3.4）
 
@@ -589,16 +618,20 @@ function handleEngineFallback() {
 
 回退完成后 `engine` expose 返回 `'element-plus'`，业务代码无需关心。
 
-### 6.4 vxe 引擎能力缺失
+### 6.4 vxe 引擎能力对等矩阵
 
-`useTableCapabilities` 在 vxe 引擎下会启动时 `console.warn` 并忽略以下能力（仅 element-plus 引擎生效）：
+v3.5 PR1-B 起 vxe-table 引擎已补齐树形 / 行拖拽 / 单元格合并 / 行内编辑四大能力，与 element-plus 引擎基本对等（virtualized 引擎仍为能力受限分支）：
 
-- 树形数据（vxe-tree 实现差异较大）
-- 行拖拽（vxe 自带 drag-sort 但 API 不一致）
-- 单元格合并（vxe 自带 span-method 但配置不同）
-- 行内编辑（vxe 自带 edit-config 但事件流不同）
+| 能力             | element-plus | vxe-table                                  | virtualized（el-table-v2） |
+| ---------------- | ------------ | ------------------------------------------ | -------------------------- |
+| 树形             | ✓            | ✓（tree-config + toggle-tree-expand 回流） | ✗                          |
+| 行拖拽           | ✓            | ✓（sortablejs 挂 vxe tbody）               | ✗                          |
+| 单元格合并       | ✓            | ✓（spanMethod / cellClassName 已接线）     | ✗                          |
+| 行内编辑         | ✓            | ✓（EditCell 分支齐备）                     | ✗                          |
+| 列头筛选         | ✓            | ✓（v3.5 PR2 翻译层与 el 协议对齐）         | ✗                          |
+| 多选跨页 reserve | ✓            | ✓（checkbox-config.reserve + 镜像回同步）  | ✗（selection 列忽略）      |
 
-**这 4 个能力仅在 element-plus 引擎下生效**。
+**已知观察项**：vxe + 树形 + 行拖拽三者同开时，sortablejs 与展开行 DOM 变化的兼容性尚在观察（console.debug 提示）——如遇拖拽错位，树形 / 拖拽二选一或向维护方反馈。
 
 ---
 
@@ -928,34 +961,29 @@ ProTable 内部已与 `<AsyncState>` 集成：
 
 ## 12. 已知限制
 
-| #   | 限制                                                                                       | 应对方式                      |
-| --- | ------------------------------------------------------------------------------------------ | ----------------------------- |
-| 1   | 引擎运行时切换不支持（首次 mount 锁定）                                                    | reload 页面 / 重新挂载        |
-| 2   | 树形 + 编辑互斥（编辑仅作用于叶子节点；`exclusive: true` 禁用编辑按钮）                    | 二选一                        |
-| 3   | vxe 引擎不支持 4 大能力（树形 / 拖拽 / 合并 / 编辑）—— 启动 warn + 忽略                    | 切回 element-plus 引擎        |
-| 4   | vxe 行高变量有缓存，密度切换后需手动 `recalculate()`                                       | ProTable 内部已自动处理       |
-| 5   | `responseAdapter` 映射非法结构会抛错                                                       | `console.error` + 走 error 态 |
-| 6   | `setSearchParams` 会回到第 1 页（如不要回到第 1 页，先 `getSearchParams` 再手动 setState） | 自定义场景                    |
-| 7   | 多选 + 跨页记忆依赖 `rowKey`，未配会清不掉选区                                             | 业务必填 `rowKey`             |
+| #   | 限制                                                                                                         | 应对方式                                       |
+| --- | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------- |
+| 1   | 引擎运行时切换不支持（首次 mount 锁定）                                                                      | reload 页面 / 重新挂载                         |
+| 2   | 树形 + 编辑互斥（编辑仅作用于叶子节点；`exclusive: true` 禁用编辑按钮）                                      | 二选一                                         |
+| 3   | vxe + 树形 + 行拖拽三者同开时拖拽柄与展开行 DOM 可能错位（console.debug 提示，兼容性观察中）                 | 树形 / 拖拽二选一或反馈                        |
+| 4   | vxe 行高变量有缓存，密度切换后需手动 `recalculate()`                                                         | ProTable 内部已自动处理                        |
+| 5   | `responseAdapter` 映射非法结构会抛错                                                                         | `console.error` + 走 error 态                  |
+| 6   | `setSearchParams` 会回到第 1 页（如不要回到第 1 页，先 `getSearchParams` 再手动 setState）                   | 自定义场景                                     |
+| 7   | 多选 + 跨页记忆依赖 `rowKey`，未配会清不掉选区                                                               | 业务必填 `rowKey`                              |
+| 8   | virtualized（el-table-v2）引擎不支持多选 / 列头筛选 / 树形 / 汇总 / 合并 / 展开 / 拖拽（命中即 warn + 忽略） | 需要这些能力请用 element-plus / vxe-table 引擎 |
 
 ---
 
 ## 13. 测试覆盖
 
-| 文件                                                         | 覆盖范围                                                       |
-| ------------------------------------------------------------ | -------------------------------------------------------------- |
-| `src/components/ProTable/composables/useSearch.spec.ts`      | 搜索参数管理 + 重置 + 程序化 setParams                         |
-| `src/components/ProTable/composables/useColumns.spec.ts`     | 列解析 / 隐藏 / 持久化 / 列设置                                |
-| `src/components/ProTable/composables/useTable.spec.ts`       | 数据请求 / 分页 / 排序 / 响应适配                              |
-| `src/components/ProTable/composables/useCellSpan.spec.ts`    | 单元格合并边界数学                                             |
-| `src/components/ProTable/composables/useRowDrag.spec.ts`     | 行拖拽位移 / 边界                                              |
-| `src/components/ProTable/composables/useRowEdit.spec.ts`     | 行内编辑生命周期                                               |
-| `src/components/ProTable/adapters/vxe-column.spec.ts`        | vxe 列映射                                                     |
-| `src/components/ProTable/components/ToolbarRenderer.spec.ts` | 工具栏渲染管线：perm 过滤 / hidden / 折叠 / confirm / 重入锁定 |
-| `src/components/ProTable/components/SelectionBar.spec.ts`    | 批量条双通道：配置渲染 / slot 接管 / clearSelection            |
-| `src/components/ProTable/utils/exportCsv.spec.ts`            | BOM 字节断言 / RFC4180 转义 / filename 缺省                    |
-| `src/components/ProTable/utils/importCsv.spec.ts`            | 引号感知解析 / 表头映射 / 空行剔除 / BOM 去除                  |
-| `src/modules/demo/examples/ProTable/ProTable*.vue`           | 21 个 demo 覆盖所有主路径 + 各能力边界（详见 §16 示例索引）    |
+| 目录/文件                                          | 覆盖范围                                                                                                                                                                                                                                                                                         |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `composables/`（17 个 spec）                       | useSearch / useColumns / useTable（请求/分页/排序/筛选/持久化恢复）/ useCellSpan / useRowDrag / useRowEdit / useTreeData / useSummary / useStatePersist / useVirtualScroll / useEngineFallback / useProTableEvents / useTableCapabilities / useAutoHeight / useFullscreen / useTableEngineDom 等 |
+| `components/`（13 个 spec）                        | VxeTableBody（引擎加载/事件翻译/筛选/选区清理）/ ElementTableBody / ElementTableV2Body（虚拟滚动）/ SearchForm / SelectedTags / SelectionBar / ToolbarRenderer / ColSetting / EditCell / CellContent / GroupedHeader / SummaryRow / TableHeader                                                  |
+| `adapters/`（5 个 spec）                           | vxe-column 列映射 / cell-format 格式化预设 / cell-render / row-drag-adapter / tree-adapter                                                                                                                                                                                                       |
+| `utils/`（2 个 spec）                              | exportCsv（BOM/RFC4180）/ importCsv（引号感知解析）                                                                                                                                                                                                                                              |
+| 根目录（2 个 spec）                                | ProTable.integration（端到端 mount 全链路）/ ProTable.engine（引擎分支与回退）                                                                                                                                                                                                                   |
+| `src/modules/demo/examples/ProTable/ProTable*.vue` | 25 个 demo 覆盖所有主路径 + 各能力边界（详见 §16 示例索引）                                                                                                                                                                                                                                      |
 
 完整 demo 站：`/demo/pro-table-overview` 等 9 个路径（auto-import 自动注册）。
 
@@ -1001,16 +1029,16 @@ const rows = tableRef.value?.getSelectedRows()
 - 类型导出：`src/components/ProTable/types/index.ts`
 - composables：`src/components/ProTable/composables/`
 - 引擎适配：`src/components/ProTable/adapters/`
-- Demo 站：`src/modules/demo/examples/ProTable/`（21 个 demo，详见 §16）
+- Demo 站：`src/modules/demo/examples/ProTable/`（25 个 demo，详见 §16）
 - Element Plus Table 文档：https://element-plus.org/zh-CN/component/table.html
 - vxe-table 文档：https://vxetable.cn/
 - 设计 spec：`docs/superpowers/specs/2026-09-07-protable-design.md` + `2026-09-08-protable-v2.1-vxe-engine-design.md`
 
 ---
 
-## 16. 示例索引（21 个 demo + 1 个主入口）
+## 16. 示例索引（25 个 demo，含主入口）
 
-在线演示站点：`pnpm dev` → `/demo`（左侧「ProTable 企业级表格」分组），路由 = `/demo/pro-table-<kebab-case>`。所有 demo 源码位于 `src/modules/demo/examples/ProTable/`（21 个 `.vue` 文件）。
+在线演示站点：`pnpm dev` → `/demo`（左侧「ProTable 企业级表格」分组），路由 = `/demo/pro-table-<kebab-case>`。所有 demo 源码位于 `src/modules/demo/examples/ProTable/`（25 个 `.vue` 文件）。
 
 | 路由                              | 内容                                                                      |
 | --------------------------------- | ------------------------------------------------------------------------- |
@@ -1023,8 +1051,12 @@ const rows = tableRef.value?.getSelectedRows()
 | `/demo/pro-table-column-resize`   | 列宽拖拽（`columnResize`）                                                |
 | `/demo/pro-table-formatter`       | v3.1 内置格式化器（dateTime/amount/percent/boolTag）+ 自定义函数          |
 | `/demo/pro-table-server-sort`     | 服务端排序（`sortable: 'custom'` + `sortParamsAdapter`）                  |
+| `/demo/pro-table-server-filter`   | v3.5 PR2 服务端筛选（列头筛选 + `filterParamsAdapter` + filter-change）   |
+| `/demo/pro-table-search-filter`   | SearchForm + 列头筛选组合（AND 合并 + reset 双清 + 快照面板）             |
+| `/demo/pro-table-async-state`     | 三态实战（loading / empty / error 手动切换 + 重试）                       |
 | `/demo/pro-table-row-edit`        | 行内编辑（`enableRowEdit` 完整生命周期）                                  |
 | `/demo/pro-table-row-select`      | 单选列 / 多选列 / 跨页保持选中 / `getSelectedRows`/`clearSelection`       |
+| `/demo/pro-table-vxe-row-select`  | vxe 引擎行选择（radio/selection/reserveSelection 跨页 + clearSelection）  |
 | `/demo/pro-table-row-drag`        | 行拖拽排序（`enableRowDrag` + `setRowOrder`）                             |
 | `/demo/pro-table-expand`          | 展开行（`type: 'expand'` + `expand` 插槽）                                |
 | `/demo/pro-table-tree`            | 树形数据（`enableTree` + 懒加载 + 展开折叠）                              |
@@ -1036,6 +1068,6 @@ const rows = tableRef.value?.getSelectedRows()
 | `/demo/pro-table-header-actions`  | 工具栏与批量操作（toolbar 配置式 API + SelectionBar 双通道，2026-09-18）  |
 | `/demo/pro-table-import-export`   | CSV 导入导出（零依赖 utils：BOM + RFC4180 + 表头映射，2026-09-18）        |
 
-> **主 demo 入口**：`/demo/pro-table-overview`（对应 `ProTableOverview.vue`）—— 查阅全部 prop、事件、实例方法的入口。其余 20 个 demo 按「基础 → 引擎 → 搜索 → 虚拟化 → 编辑 → 选择/拖拽/展开 → 树形/合并/汇总 → 工具栏/批量 → 导入导出 → 样式」分组覆盖各能力边界。
+> **主 demo 入口**：`/demo/pro-table-overview`（对应 `ProTableOverview.vue`）—— 查阅全部 prop、事件、实例方法的入口。其余 22 个 demo 按「基础 → 引擎 → 搜索 → 虚拟化 → 编辑 → 选择/拖拽/展开 → 树形/合并/汇总 → 工具栏/批量 → 导入导出 → 样式」分组覆盖各能力边界。
 >
 > **配套 mock**：`src/mock/pro-table/big-data.ts`（10 万行 × 10 列含固定列）+ `src/mock/pro-table/scenarios.ts`（各 demo 业务数据）。

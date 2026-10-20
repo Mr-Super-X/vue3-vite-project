@@ -1,4 +1,7 @@
 /// <reference types="vite/client" />
+// unplugin-icons 虚拟模块声明（virtual:icons/* 与 ~icons/* → FunctionalComponent）——
+// v24 类型包仅含模块声明、无 GlobalComponents 通配，不影响「错误图标名 IDE 报错」的拦截设计
+/// <reference types="unplugin-icons/types/vue" />
 
 interface ImportMetaEnv {
   /** BEM 类名前缀；空串表示无前缀。详见 src/utils/bem.ts。 */
@@ -15,6 +18,15 @@ interface ImportMetaEnv {
    * 前者在 client 端可见，后者 vite-config 在构建期读取。
    */
   readonly VITE_USE_MOCK?: string
+  /**
+   * 演示模式开关（gh-pages CI 构建置 `'true'`，`src/router/guards/login.ts` 与
+   * `permission.ts` 读取，2026-10-20 接通）。
+   *
+   * 命中时：登录守卫跳过校验（仍拉 profile 供演示账号全链路）、路由级权限校验跳过；
+   * 按钮级 v-auth 仍按真实 permissions 渲染。prod 版 auth mock 由 mock/mockProdServer.ts 内联提供。
+   * 常规构建开关缺省/false，相关分支被静态消除。
+   */
+  readonly VITE_DEMO_NO_AUTH?: string
   /** storage 命名空间（隔离多项目共用 localStorage/sessionStorage 时的冲突） */
   readonly VITE_STORAGE_NAMESPACE: string
   /**
