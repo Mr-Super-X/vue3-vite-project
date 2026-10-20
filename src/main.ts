@@ -6,6 +6,7 @@
  * 2. document.title：与守卫并行设置，避免标题短暂停留在 index.html 默认值
  * 3. assertNoMockInProd：prod 环境防 mock 残留
  * 4. pinia → router → i18n → GlobalComponents → Directives → Plugins
+ * 5. 生产 mock 挂接：PROD && VITE_USE_MOCK==='true' 才执行（mount 之前，顶层 await）
  *
  * 浏览器基线：
  * - normalize.css：跨浏览器默认值统一
@@ -84,9 +85,12 @@ app.use(Plugins)
 // 必须在所有 app.use 之后调用——_context 的 provides 由插件 install 写入
 setDialogAppContext(app)
 
-// VITE_USE_MOCK==='true' 时（CI 构建 gh-pages 产物）动态挂接浏览器端 mock；
-// 常规生产构建静态比较为 false，整分支 tree-shake，产物不含 mock
-if (import.meta.env.VITE_USE_MOCK === 'true') {
+// 生产构建且 VITE_USE_MOCK==='true' 时（CI gh-pages 产物）动态挂接浏览器端 mock；
+// PROD 守卫是防双重劫持的关键：dev 下 .env.development 的 VITE_USE_MOCK=true 会同时命中
+// node 侧 viteMockServe 中间件与本分支，mockjs 在 XHR 层拦截后请求到不了 dev server，
+// 而 auth.ts 的 rawResponse（Node 语义）在 client 侧解构为 undefined → dev 登录必挂
+// 常规生产构建两个条件均为 false，整分支 tree-shake，产物不含 mock
+if (import.meta.env.PROD && import.meta.env.VITE_USE_MOCK === 'true') {
   const { setupProdMockServer } = await import('../mock/mockProdServer')
   setupProdMockServer()
 }

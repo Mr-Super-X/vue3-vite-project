@@ -96,7 +96,7 @@ jobs:
 
 - **新增 `mock/mockProdServer.ts`**：显式 import **5 个真实 mock 路由模块**（auth/dict/menu/portal-overview/user，含 `mock/` 目录全部 `url: '/api/*'` 定义）+ `createProdMockServer(modules)` 注册（浏览器端 mockjs XHR 劫持）
   - 注意：`mock/index.ts` 只聚合 auth/user/menu；`pro-table/` 下 11 个文件**不是 mock 路由**（具名导出 `xxxRequestApi: ProTableRequestApi`，demo 组件直连数据源、无 XHR 依赖）——dev 靠 viteMockServe 目录扫描、prod 无需接线（实施验证 2026-10-20）
-- **修改 `src/main.ts`**：`if (import.meta.env.VITE_USE_MOCK === 'true')` 动态 import 挂接（mount 前，+4 行）
+- **修改 `src/main.ts`**：`if (import.meta.env.PROD && import.meta.env.VITE_USE_MOCK === 'true')` 动态 import 挂接（mount 前；PROD 守卫防 dev 双重劫持，+4 行）
 - **`vite.config.ts` 无需改动**（viteMockServe 保持 dev-only 现状）
 
 构建时静态字符串比较 → 常规生产构建（`.env.production` 为 `'false'`）整分支被 tree-shake，产物不含 mock（体积与现状一致）；CI 构建（`'true'`）mockjs@1.1.0 + 全量 mock 进 bundle（mockjs 已在 vite-plugin-mock 依赖树，**零新增依赖**）。
@@ -105,7 +105,7 @@ jobs:
 
 | 场景 | 变量值 | main.ts 分支 | 产物含 mock？ | 行为 |
 |------|--------|--------------|---------------|------|
-| 本地 dev（无 .env / .env.development=false） | `undefined` / `'false'` | 消除 | 否 | dev mock 由 viteMockServe 中间件提供——**与现状一致** |
+| 本地 dev（.env.development=true） | `'true'`（PROD=false） | 消除（PROD 守卫） | 否 | dev mock 仅由 viteMockServe 中间件提供——无双重劫持（C1 修复，PROD && 守卫） |
 | `.env.production` | `'false'` | 消除 | 否 | 常规生产构建不含 mock——**与现状一致** |
 | CI deploy 构建 | `'true'` | 保留并执行 | 是 | mockjs XHR 劫持激活，gh-pages demo 全功能（本次新增行为） |
 
