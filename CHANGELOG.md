@@ -4,6 +4,15 @@
 
 ## 未发布
 
+### 🐛 Fix | gh-pages 演示站恢复 demo 路由可见（2026-10-21）
+
+> 背景：gh-pages 部署后发现 demo 路由整站消失（菜单与直达访问均 404）。根因：`src/modules/demo/routes/index.ts` 的 `import.meta.env.DEV` 编译期门控使 prod 构建时 demo 路由数组恒为 `[]`、examples 组件全链 tree-shake——该设计原本只面向「常规 prod 不进 demo」，与 gh-pages「全站演示」目标冲突。
+
+- **demo 路由门控放宽**：新增 `isDemoRoutesEnabled`（`import.meta.env.DEV || import.meta.env.VITE_DEMO_NO_AUTH === 'true'`），dev 本地与 gh-pages 演示构建（CI 已设 `VITE_DEMO_NO_AUTH=true`）均注册 demo 路由与 glob 组件；常规 prod 构建仍整体剔除（tree-shake 意图不变，实测 36 chunk / 4.0M vs 演示构建 182 chunk / 11M）
+- **白名单同条件吸收**：`src/router/whitelist.ts` 提取 `demoWhitelistNames` 模块级常量替代内联 spread（条件与路由注册开关联动）。提取为常量的原因：`scripts/check-routes.ts` 的 `extractWhitelist` 正则 `[^\]]+` 遇内联 `[]` 提前截断，把 `'true'` 误捕获为路由名致 CI 失败（实测踩坑后回退为常量形态，check:routes 复跑通过）
+- **单测全绿**：199 spec / 2506 用例通过；`pnpm check:routes` 通过
+- **文档同步**：docs/09（头部双形态描述 + §8 tree-shake 验证改常规 prod 口径 + 演示构建形态说明）、docs/07（whitelist spread 描述）、docs/23（两处代码引用）、docs/39（components.d.ts 冲掉机制的门控措辞）
+
 ### 📝 Docs | 全量文档同步轮：5 份审计报告 + 60+ 项修复 + 2 篇新文档（2026-10-20）
 
 > 来源：5 个并行审计 agent（modules / global / infra / entry-docs / cross-docs），报告在 `.claude/.agent-reports/2026-10-20-audit-*.md`。发现 P0 × 5、P1 × 20+、P2 × 20+，**除明确移交项外全部闭环**。主代理 + 3 个修复 agent 分工执行，全部改动仅限 `docs/` / `README.md` / `CLAUDE.md` / `CHANGELOG.md`，**零 src/ 写操作**。

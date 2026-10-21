@@ -1,4 +1,4 @@
-// demo 模块路由（仅开发环境）
+// demo 模块路由（dev 本地开发 + gh-pages 演示构建；常规 prod 构建整模块 tree-shake）
 //
 // cspell:disable xform — demo 辅助 .ts 文件按 kebab-case 命名（xform-api 等），
 //                          与 AutoImport 标准不同，不算可拼写错误
@@ -19,25 +19,28 @@
 //                                       （组件子目录的 index 作为该组件的「总览」入口，
 //                                        与按文件命名 Overview 等价，方案二选一）
 //
-// DEV 门控：生产构建时 import.meta.env.DEV === false，整个数组被替换为 []，
-// Rollup tree-shake 会把整个模块连同其依赖的视图组件一并剔除。
-
+// DEMO 路由注册开关：dev 本地开发 或 gh-pages 演示构建（VITE_DEMO_NO_AUTH=true）时注册；
+// 常规 prod 构建两者皆否 → 路由数组为 []，Rollup tree-shake 把整模块
+// 连同其依赖的视图组件一并剔除（「demo 不进生产包」意图仅针对常规 prod 成立，
+// gh-pages 是纯演示站，需要 demo 全量可见）。
 import type { RouteRecordRaw } from 'vue-router'
 import type { Component } from 'vue'
 import { pascalCase, kebabCase, autoImport } from '@/utils'
+
+const isDemoRoutesEnabled = import.meta.env.DEV || import.meta.env.VITE_DEMO_NO_AUTH === 'true'
 
 // Vite import.meta.glob 扫描 examples 下所有 .vue 入口
 // 路径相对当前文件（routes/index.ts），examples 在父目录 → 用 '../examples/...'
 // 路径必须是字面量字符串（Vite 编译期限制）。
 //
-// DEV 门控：prod 构建时整个表达式替换为 {}，import.meta.glob 不展开，
+// DEMO 门控：未启用时整个表达式替换为 {}，import.meta.glob 不展开，
 // examples 文件不进 bundle，整模块 tree-shake 干净。
 //
 // ★ 第三条 `../examples/*/*.vue` 支持「按组件建子目录」模式：
 //   例如 XForm 目录下 56 个 XForm*.vue + 6 个 XForm/*.ts 辅助文件，
 //   各自派生为独立路由（.ts 不进 glob）；XForm/index.vue 派生为该组件总览页。
 //   文件名包含完整 PascalCase（如 XFormArray），不会与父目录重复。
-const exampleModules: Record<string, () => Promise<{ default: Component }>> = import.meta.env.DEV
+const exampleModules: Record<string, () => Promise<{ default: Component }>> = isDemoRoutesEnabled
   ? import.meta.glob<{ default: Component }>([
       '../examples/*.vue',
       '../examples/*/index.vue',
@@ -86,7 +89,7 @@ const exampleRoutes = buildExampleRoutes()
  * 治本方案：函数式 redirect 在路由守卫阶段触发，可等待目标 route 完成注册。
  * fallback：当 exampleRoutes 为空或解析失败时，跳到 /demo（避免无限循环）。
  */
-const routes: RouteRecordRaw[] = import.meta.env.DEV
+const routes: RouteRecordRaw[] = isDemoRoutesEnabled
   ? [
       {
         path: '/demo',
