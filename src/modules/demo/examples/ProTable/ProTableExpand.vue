@@ -359,7 +359,6 @@ const columns = [
   { prop: 'orderNo', label: '订单号' },
   { prop: 'customer', label: '客户' },
 ]
-
 <\/script>`
 
 const complexCellCode = `// 复杂单元格：金额带进度条
