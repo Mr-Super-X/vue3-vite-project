@@ -4,9 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > 本文档是 `~/.claude/CLAUDE.md` 的项目级补充。所有全局规则（§一～§十一）自动适用，遇到冲突以**本文档为准**。
 >
-> **文档版本**：v2.1.0 | **生成日期**：2026-10-15 | **生效分支**：`feature/h5-layout`
+> **文档版本**：v2.2.0 | **生成日期**：2026-10-20 | **生效分支**：`feature/engine-optimization`
 >
-> **最近更新**（2026-10-15）：新增 big layout + scale 适配（数据大屏/拼接屏面板能力）
+> **最近更新**（2026-10-20）：门户企业官网重构 + gh-pages 自动部署 + 团队级图标体系
+>
+> - **v2.2 变更**：① home 模块重构为「星澜科技」黑白极简企业官网（portal 布局 64px 极简顶栏 + 锚点导航 scroll-spy；`SiteHero` / `SiteFeatures` / `SiteStats` / `SiteAbout` / `SiteFooter` 5 个静态展示组件 + `config/site.ts` 文案单源；`/home` 走白名单公开访问）② gh-pages 自动化部署（`.github/workflows/deploy.yml`，push master 发布线上 demo；构建四开关 `VITE_BASE` / `VITE_HISTORY_MODE=hash` / `VITE_MENU_SOURCE=local` / `VITE_USE_MOCK=true`）③ mock 生产接线（`mock/mockProdServer.ts` client 侧 `createProdMockServer`，vite-plugin-mock@3.0.2 无 prodEnabled；`main.ts` PROD 守卫防 dev 双重劫持 + `use(router)` 前阻塞 await 根治拦截窗口穿透）④ 团队级图标体系（unplugin-icons 编译期内联 + `<i-ep-* />` 静态语法 / `<AppDynamicIcon>` 动态语法 + `src/assets/icons/` 本地 app 集合，见 docs/39）⑤ `VITE_DEMO_NO_AUTH` 演示模式（守卫跳过登录/权限校验，gh-pages 全站可演示）
+> - 同步修订 `README.md`：顶部最近更新、§1/§3 user store 口径（httpOnly cookie，无 token 落 localStorage）、§目录结构（modules 去 orders / common 组件清单补全 / store 补 tags-view+dict / plugins 补 remAdaptation+webVitals / directives 补 auth+copy+draggable / mock 补 dict+pro-table+mockProdServer）、§常用脚本补 test:e2e(e2e:install)、§环境变量补 VITE_DEMO_NO_AUTH、§测试节实测阈值 50/48/45/50 + e2e、§相关文档表补 docs/30-39、§CI/CD 指向真实 ci.yml/deploy.yml、§技术栈补 unplugin-icons
+>
+> **v2.1 变更**（2026-10-15）：新增 big layout + scale 适配（数据大屏/拼接屏面板能力）
 >
 > - **v2.1 变更**：`src/layouts/big/`（纯壳布局 + config/scale.ts 运行时，transform: scale 等比缩放 + 居中留白，只缩放自有容器不碰 html/body）+ `src/modules/big-demo` 示例模块（`/big-demo` 1920 标准屏 + `/big-demo/wide` 9000×1080 超宽拼接屏，均免登录白名单）；设计稿尺寸经路由 `meta.bigScreen = { width, height }` 声明（缺省 1920×1080）；适配 1920/2560/4K/9000px 拼接屏；使用指南见 `docs/35-大屏布局与scale适配.md`
 >
@@ -48,34 +53,34 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-| 任务                                      | 命令                                                         |
-| ----------------------------------------- | ------------------------------------------------------------ |
-| 安装依赖                                  | `pnpm install`                                               |
-| 启动 dev（远程菜单模式，默认）            | `pnpm dev`                                                   |
-| 启动 dev（本地菜单模式，无需后端联调）    | `pnpm dev:local`                                             |
-| 启动 dev（启用浏览器 DevTools）           | `vite`（含 vite-plugin-vue-devtools）                        |
-| 跑全部单测                                | `pnpm test`                                                  |
-| 跑单测（watch 模式）                      | `pnpm test:watch`                                            |
-| 跑单个测试文件                            | `pnpm test <path>`（如 `pnpm test src/utils/dayjs.spec.ts`） |
-| 单测覆盖率（含 UI 报告）                  | `pnpm test:coverage` / `pnpm test:ui`                        |
-| 跑基准测试（vitest bench）                | `pnpm bench`                                                 |
-| 类型校验（增量）                          | `pnpm type-check`                                            |
-| 类型校验（强制全量，build 前必跑）        | `pnpm type-check:full`                                       |
-| 构建生产包                                | `pnpm build`                                                 |
-| 预览生产包                                | `pnpm preview`                                               |
-| 包体积分析（输出 dist/stats.html）        | `pnpm analyze`                                               |
-| Lint 检查                                 | `pnpm lint`                                                  |
-| Lint 自动修复                             | `pnpm lint:fix`                                              |
-| Prettier 格式化                           | `pnpm format` / `pnpm format:check`                          |
-| 路由一致性校验（CI 阶段强制）             | `pnpm check:routes`                                          |
-| alias 单一来源一致性校验（CI 阻断）       | `pnpm check:aliases`                                         |
-| 文档与代码硬数据一致性校验（CI 阻断）     | `pnpm check:doc-currency`                                    |
-| 从 build/aliases.ts 同步 tsconfig paths   | `pnpm generate:tsconfig-paths`                               |
-| 新建业务模块（自动生成 6 个骨架文件）     | `pnpm new-module <kebab-name>`                               |
-| 移除业务模块（默认 dry-run + 确认）       | `pnpm remove-module <kebab-name>`                            |
-| 提交并推送（add + cz + push 一站式）      | `pnpm push`                                                  |
-| 发布版本（bump + CHANGELOG + tag + push） | `pnpm release`                                               |
-| 发布预览（dry-run，0 副作用）             | `pnpm release:dry`                                           |
+| 任务                                        | 命令                                                         |
+| ------------------------------------------- | ------------------------------------------------------------ |
+| 安装依赖                                    | `pnpm install`                                               |
+| 启动 dev（远程菜单模式，默认）              | `pnpm dev`                                                   |
+| 启动 dev（本地菜单模式，无需后端联调）      | `pnpm dev:local`                                             |
+| 启动 dev（启用浏览器 DevTools）             | `vite`（含 vite-plugin-vue-devtools）                        |
+| 跑全部单测                                  | `pnpm test`                                                  |
+| 跑单测（watch 模式）                        | `pnpm test:watch`                                            |
+| 跑单个测试文件                              | `pnpm test <path>`（如 `pnpm test src/utils/dayjs.spec.ts`） |
+| 单测覆盖率（含 UI 报告）                    | `pnpm test:coverage` / `pnpm test:ui`                        |
+| 跑基准测试（vitest bench）                  | `pnpm bench`                                                 |
+| 类型校验（增量）                            | `pnpm type-check`                                            |
+| 类型校验（强制全量；`pnpm build` 内第二步） | `pnpm type-check:full`                                       |
+| 构建生产包                                  | `pnpm build`                                                 |
+| 预览生产包                                  | `pnpm preview`                                               |
+| 包体积分析（输出 dist/stats.html）          | `pnpm analyze`                                               |
+| Lint 检查                                   | `pnpm lint`                                                  |
+| Lint 自动修复                               | `pnpm lint:fix`                                              |
+| Prettier 格式化                             | `pnpm format` / `pnpm format:check`                          |
+| 路由一致性校验（CI 阶段强制）               | `pnpm check:routes`                                          |
+| alias 单一来源一致性校验（CI 阻断）         | `pnpm check:aliases`                                         |
+| 文档与代码硬数据一致性校验（CI 阻断）       | `pnpm check:doc-currency`                                    |
+| 从 build/aliases.ts 同步 tsconfig paths     | `pnpm generate:tsconfig-paths`                               |
+| 新建业务模块（自动生成 6 个骨架文件）       | `pnpm new-module <kebab-name>`                               |
+| 移除业务模块（默认 dry-run + 确认）         | `pnpm remove-module <kebab-name>`                            |
+| 提交并推送（add + cz + push 一站式）        | `pnpm push`                                                  |
+| 发布版本（bump + CHANGELOG + tag + push）   | `pnpm release`                                               |
+| 发布预览（dry-run，0 副作用）               | `pnpm release:dry`                                           |
 
 **环境要求**：Node `>=22.18` 或 `>=24.12`，pnpm `>=11.x`（`package.json:engines` + `preinstall` 硬强制 `only-allow pnpm`）。
 
@@ -289,25 +294,26 @@ const { data } = storeToRefs(useUserStore())
 
 ### 2.1 当前基线快照（2026-08-19）
 
-`src/` 下 15 个一级目录的职责如下。任何变更都会破坏现有约定，**未经用户明确批准，禁止任何形式的增、删、改、移动、重命名**：
+`src/` 下 16 个一级目录的职责如下。任何变更都会破坏现有约定，**未经用户明确批准，禁止任何形式的增、删、改、移动、重命名**：
 
 | #   | 目录           | 职责                                                                                                                                                                                                          |
 | --- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | `api/`         | 跨模块网络请求基建（`http`/`cache`/`retry`/`token-refresh` 等）+ `api/modules/` 跨模块共享接口                                                                                                                |
-| 2   | `components/`  | 全局通用组件（`common/`）。**禁止**放置任何布局专用子组件（`Header` / `Sidebar` 等）—— 布局相关组件必须落在 `layouts/<m>/components/` 下随 layout 自包含                                                      |
-| 3   | `composables/` | 业务侧组合式函数封装（`useAppRouter`/`useRequest`/`useAuth`/`useDialog`/`useConfirm`/`useDict`/`useLogout`/`useTheme` 等）                                                                                    |
-| 4   | `directives/`  | 自定义指令（`v-inputDebounce`/`v-buttonDebounce`/`v-permission`/`v-auth`/`v-draggable`/`v-copy`）                                                                                                             |
-| 5   | `enums/`       | 枚举常量（`httpEnum`/`roleEnum` 等）                                                                                                                                                                          |
-| 6   | `layouts/`     | 路由级布局基座（`default`/`blank`/`portal`/`h5`/`big`）—— 每个 layout **自包含**，子组件放 `./components/`、配置放 `./config/`、资源放 `./images/`、样式放 `./styles/`；禁止跨目录到 `@/components/` 引用组件 |
-| 7   | `locales/`     | 国际化文案（`zh-CN`/`en-US`）                                                                                                                                                                                 |
-| 8   | `modules/`     | 业务模块（`auth`/`home`/`orders`/`reports`/`user`/`demo`/`error`/`workbench`/`h5-demo`/`big-demo`），按需要含 `views/`+`routes/`+`store/`+`apis/`+`components/`+`index.ts`（见 docs/08）                      |
-| 9   | `plugins/`     | Vue 插件（`errorHandler`/`webVitals` 等）                                                                                                                                                                     |
-| 10  | `router/`      | 路由配置 + 守卫 + 自动注册 + 白名单 + 远程菜单                                                                                                                                                                |
-| 11  | `store/`       | Pinia 根配置 + `modules/` 全局 Store                                                                                                                                                                          |
-| 12  | `types/`       | TS 全局类型 + `.d.ts`                                                                                                                                                                                         |
-| 13  | `utils/`       | 纯函数工具（`dayjs`/`format`/`bem`/`storage` 等，与框架解耦）                                                                                                                                                 |
-| 14  | `App.vue`      | 根组件                                                                                                                                                                                                        |
-| 15  | `main.ts`      | 应用入口                                                                                                                                                                                                      |
+| 2   | `assets/`      | 静态资源（`styles/` 全局样式 + `icons/` 本地图标集合 SVG 源文件，经 `FileSystemIconLoader` 编译期读取，见 docs/39）                                                                                           |
+| 3   | `components/`  | 全局通用组件（`common/`）。**禁止**放置任何布局专用子组件（`Header` / `Sidebar` 等）—— 布局相关组件必须落在 `layouts/<m>/components/` 下随 layout 自包含                                                      |
+| 4   | `composables/` | 业务侧组合式函数封装（`useAppRouter`/`useRequest`/`useAuth`/`useDialog`/`useConfirm`/`useDict`/`useLogout`/`useTheme` 等）                                                                                    |
+| 5   | `directives/`  | 自定义指令（`v-inputDebounce`/`v-buttonDebounce`/`v-permission`/`v-auth`/`v-draggable`/`v-copy`）                                                                                                             |
+| 6   | `enums/`       | 枚举常量（`httpEnum`/`roleEnum` 等）                                                                                                                                                                          |
+| 7   | `layouts/`     | 路由级布局基座（`default`/`blank`/`portal`/`h5`/`big`）—— 每个 layout **自包含**，子组件放 `./components/`、配置放 `./config/`、资源放 `./images/`、样式放 `./styles/`；禁止跨目录到 `@/components/` 引用组件 |
+| 8   | `locales/`     | 国际化文案（`zh-CN`/`en-US`）                                                                                                                                                                                 |
+| 9   | `modules/`     | 业务模块（`auth`/`home`/`reports`/`user`/`demo`/`error`/`workbench`/`h5-demo`/`big-demo`），按需要含 `views/`+`routes/`+`store/`+`apis/`+`components/`+`index.ts`（见 docs/08）                               |
+| 10  | `plugins/`     | Vue 插件（`errorHandler`/`webVitals`/`remAdaptation` 等）                                                                                                                                                     |
+| 11  | `router/`      | 路由配置 + 守卫 + 自动注册 + 白名单 + 远程菜单                                                                                                                                                                |
+| 12  | `store/`       | Pinia 根配置 + `modules/` 全局 Store                                                                                                                                                                          |
+| 13  | `types/`       | TS 全局类型 + `.d.ts`                                                                                                                                                                                         |
+| 14  | `utils/`       | 纯函数工具（`dayjs`/`format`/`bem`/`storage` 等，与框架解耦）                                                                                                                                                 |
+| 15  | `App.vue`      | 根组件                                                                                                                                                                                                        |
+| 16  | `main.ts`      | 应用入口                                                                                                                                                                                                      |
 
 ### 2.2 禁止行为（最严格）
 
@@ -429,7 +435,7 @@ const bem = createNamespace('form-engine') // kebab-case，必须与 sass 根选
 | 6   | `utils/` 不得依赖 Vue/Pinia                                                                                                                                                    | 与框架解耦                                                                         |
 | 7   | `store/` 不存网络请求中间态                                                                                                                                                    | loading 放组件 / composable                                                        |
 | 8   | 路由一致性校验：`pnpm check:routes`                                                                                                                                            | CI 阶段强制                                                                        |
-| 9   | 类型校验：`pnpm type-check:full`（build 前必过）                                                                                                                               | `package.json:scripts`                                                             |
+| 9   | 类型校验：`pnpm type-check:full`（`pnpm build` 内第二步：build-only 先生成声明，再全量门禁）                                                                                   | `package.json:scripts`                                                             |
 | 10  | 第三方 npm 包引用前必先 `npm view <pkg>` 验证                                                                                                                                  | 全局规则                                                                           |
 | 11  | 新增 composable / store / 类型必须带 `.spec.ts`（覆盖率 ≥ 80%）                                                                                                                | Vitest                                                                             |
 | 12  | 功能性变更同步 `CHANGELOG.md`（仅 typo 免记）                                                                                                                                  | 项目约定                                                                           |
@@ -446,6 +452,7 @@ const bem = createNamespace('form-engine') // kebab-case，必须与 sass 根选
 | 新人首次接触项目                                                      | `docs/10-新手指引.md`（30 分钟 5 任务）                                                              |
 | 判断代码归属（utils / composable / store / api / plugin / directive） | `docs/18-代码组织决策表.md` §2 决策矩阵 + §4 Mermaid 决策树                                          |
 | 加新业务模块                                                          | `pnpm new-module <kebab-name>` → 跑 `pnpm check:routes`                                              |
+| 用图标（静态 `<i-ep-* />` / 动态 `<AppDynamicIcon>` / 新增本地图标）  | `docs/39-图标体系与使用规范.md`（去哪找图标 + 双语法 + registry 查表法）                             |
 | 改 ESLint 规则 / 架构级约定                                           | 先在 `docs/superpowers/specs/` 写设计稿 + plan，等用户批准后再实施                                   |
 | 改 docs 之外的设计文档                                                | 命名 `[序号]-中文主题.md`；复杂内容画 Mermaid 流程图                                                 |
 | 提交变更                                                              | 中文 commit msg（`feat:`/`fix:`/`refactor:`/`docs:`/`test:`/`chore:`/`perf:`） + 同步 `CHANGELOG.md` |

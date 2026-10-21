@@ -4,7 +4,7 @@
 > **使用指南见 `docs/24-XForm使用指南.md`**；本文面向维护者与接手引擎开发的人。
 > **完整设计规范见 `src/components/form-schema/ARCHITECTURE.md`**。
 
-> **TL;DR** — form-schema 引擎分四层：Schema 定义层 → Composable 编排层 → Render 渲染层 → Demo 应用层。当前规模：**65 个 `.spec.ts` + 2 个 `.test-d.ts` 测试文件、54 个 demo（其中 `XForm.vue` 为主入口）** 覆盖全部关键能力。核心设计决策：schema 对象 DSL + 链式 Builder 双轨、自研跨字段 crossValidator（三路径执行语义统一于 `cross-rule-runner.ts`）、v-model 写入后主动触发（不依赖 watch）。
+> **TL;DR** — form-schema 引擎分四层：Schema 定义层 → Composable 编排层 → Render 渲染层 → Demo 应用层。当前规模：**66 个 `.spec.ts` + 2 个 `.test-d.ts` 测试文件、63 个 demo（全部位于 `examples/XForm/` 目录，`XForm.vue` 为主入口）** 覆盖全部关键能力。核心设计决策：schema 对象 DSL + 链式 Builder 双轨、自研跨字段 crossValidator（三路径执行语义统一于 `cross-rule-runner.ts`）、v-model 写入后主动触发（不依赖 watch）。
 
 ---
 
@@ -13,7 +13,7 @@
 ```text
 ┌──────────────────────────────────────────────────────────┐
 │ 应用层：src/modules/demo/examples/XForm*.vue            │
-│   （54 个 demo 文件：XForm 目录 52 个 + 根目录 2 个）     │
+│   （63 个 demo 文件，全部位于 XForm 目录）                │
 ├──────────────────────────────────────────────────────────┤
 │ 引擎层：src/components/form-schema/                      │
 │                                                          │
@@ -42,8 +42,8 @@
 │   use-form-persist（+ draft-storage）                    │
 │   use-scan-forbidden（表达式安全扫描）                    │
 │                                                          │
-│   types/（P1 拆 14 文件；SchemaNode 31 字段 + SchemaNodeFor）│
-│   builders.ts（27 个链式 builder，含 ArrayBuilder）       │
+│   types/（P1 拆 14 文件；SchemaNode 35 字段 + SchemaNodeFor）│
+│   builders/（29 个链式 builder 入口，含 ArrayBuilder）    │
 │   element-plus-adapter.ts（29 个短名映射 + 默认 props）   │
 │   index.ts（插件 + 具名导出）                             │
 └──────────────────────────────────────────────────────────┘
@@ -122,7 +122,7 @@ setFieldError（阶段 3.1 重构后的双路径）
 
 - **备选**：JSON Schema（标准但跨字段联动表达弱）/ JSX（类型好但运行时不灵活）/ 对象字面量 + Builder
 - **决策**：对象字面量 + Builder 双轨——简单场景用字面量，类型安全场景用 Builder
-- **影响**：SchemaNode 30 字段、27 个链式 builder（含 ArrayBuilder，builders.ts 实际导出 27 个 `xXxx` 入口）、链式 TS 推断有 cast 残留（见 ADR-007）
+- **影响**：SchemaNode 35 字段、29 个链式 builder 入口（含 ArrayBuilder，builders/ 目录实际导出 29 个 `xXxx` 入口）、链式 TS 推断有 cast 残留（见 ADR-007）
 
 ### ADR-002：自研 crossValidator 而非 el-form validator ✅
 

@@ -89,7 +89,7 @@ TypeError: Cannot read properties of null (reading 'matches')
 ### 项目侧配置（保持现状）
 
 - `package.json` 中 `"preinstall": "npx only-allow pnpm"` 保留（虽然 npm 解析阶段会先崩溃，但不影响 pnpm 流程，保留作为意图声明）
-- `engines.pnpm: ">=11.0.0 < 12.0.0"` 强制 pnpm 版本
+- `engines.pnpm: ">=11.0.0 < 13.0.0"` 强制 pnpm 版本（2026-10 起上界从 <12 放宽到 <13，CI 已用 pnpm 12 验证）
 - 文档明确"本项目使用 pnpm，请勿使用 npm/yarn"
 
 ### 团队规范

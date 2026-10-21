@@ -6,13 +6,13 @@
 
 > 🆕 **新同事请先看 [docs/10-新手指引.md](docs/10-新手指引.md)** —— 30 分钟 5 任务，带你从 clone 到加新模块。
 >
-> **最近更新**：2026-10-15 — **四栖能力 + 开源首发准备**：
+> **最近更新**：2026-10-20 — **门户企业官网 + gh-pages 一键部署 + 团队级图标体系**：
 >
-> - **v2.1 big 大屏布局**（[docs/35](docs/35-大屏布局与scale适配.md)）：transform: scale 等比缩放，1920/2560/4K/9000px 拼接屏，`meta.bigScreen` 声明异形设计稿
-> - **v2.0 h5 移动端布局**（[docs/34](docs/34-H5布局与rem适配.md)）：编译时 postcss-pxtorem + 运行时 rem 双层适配，样式直写设计稿 px
-> - **/autoplan 多视角审查 15 项任务落地**（详见 [CHANGELOG.md](CHANGELOG.md)）：BigChart 显存钳制、h5 首帧 FOUC 消除、MIT LICENSE、h5/big ADR、Fork 升级与版本策略
-> - **组件渲染层测试从 0 到 14 例**（BigChart 8 + big/h5 layout 各 3）
+> - **门户首页重构为「星澜科技」黑白极简企业官网**（[CHANGELOG.md](CHANGELOG.md)）：portal 布局极简顶栏 + home 模块 5 个静态展示组件（SiteHero / SiteFeatures / SiteStats / SiteAbout / SiteFooter），`/home` 走白名单公开访问
+> - **gh-pages 自动化部署**（设计：[docs/superpowers/specs/2026-10-20-gh-pages-deploy-design.md](docs/superpowers/specs/2026-10-20-gh-pages-deploy-design.md)）：push `master` 即发布线上 demo，`VITE_DEMO_NO_AUTH` 演示模式免登录全站可点
+> - **团队级图标体系**（[docs/39](docs/39-图标体系与使用规范.md)）：unplugin-icons 编译期内联 + `<i-ep-* />` 静态语法 / `<AppDynamicIcon>` 动态语法 + app 本地集合
 >
+> 上轮同步（2026-10-15）：四栖能力 + 开源首发准备——v2.1 big 大屏布局、v2.0 h5 移动端布局、/autoplan 多视角审查 15 项落地、组件渲染层测试 14 例，详见 [CHANGELOG.md](CHANGELOG.md)。
 > 上轮同步（2026-09-20）：全代码库审计 9 项修复 + 3 项误判，详见 [CHANGELOG.md](CHANGELOG.md)。
 > 上轮同步（2026-09-17）：docs/11 useDict v2 多 code 契约、docs/27 §8.5 useConfirm、docs/10 §3.7 命令式弹窗、docs/26 组件级杀手锏、docs/32 §3 错位路径、docs/04 测试覆盖；详见 [CHANGELOG.md](CHANGELOG.md)。
 
@@ -22,12 +22,12 @@
 
 基于 Vue 3 + Vite 8 + TypeScript 6 的**四栖工程模板**：对内中后台 + 对外门户 + H5 移动端 + 数据大屏，一套代码四种面板（路由挂对应 layout 即获得能力）。Feature-Sliced 风格，支持模块独立开发、不依赖后端即可联调。
 
-| 面板               | 入口示例     | 能力来源                                                                     |
-| ------------------ | ------------ | ---------------------------------------------------------------------------- |
-| 中后台管理（对内） | `/workbench` | `default` layout：侧栏 + 顶栏 + 多页签（[docs/07](docs/07-路由模块设计.md)） |
-| 门户展示（对外）   | `/home`      | `portal` layout：顶部水平导航 + 无侧栏（[docs/07](docs/07-路由模块设计.md)） |
-| H5 移动端          | `/h5-demo`   | `h5` layout + rem 适配（[docs/34](docs/34-H5布局与rem适配.md)）              |
-| 数据大屏           | `/big-demo`  | `big` layout + scale 适配（[docs/35](docs/35-大屏布局与scale适配.md)）       |
+| 面板               | 入口示例     | 能力来源                                                                                   |
+| ------------------ | ------------ | ------------------------------------------------------------------------------------------ |
+| 中后台管理（对内） | `/workbench` | `default` layout：侧栏 + 顶栏 + 多页签（[docs/07](docs/07-路由模块设计.md)）               |
+| 门户展示（对外）   | `/home`      | `portal` layout：顶部锚点导航 + 无侧栏（企业官网形态，[docs/07](docs/07-路由模块设计.md)） |
+| H5 移动端          | `/h5-demo`   | `h5` layout + rem 适配（[docs/34](docs/34-H5布局与rem适配.md)）                            |
+| 数据大屏           | `/big-demo`  | `big` layout + scale 适配（[docs/35](docs/35-大屏布局与scale适配.md)）                     |
 
 > "四栖"按**业务面板形态**划分：对内管理 / 对外门户 / 移动 H5 / 数据大屏，各配独立 layout。blank layout 是登录/回调纯壳，无独立业务场景，不计入。
 
@@ -64,6 +64,7 @@
 | API Mock     | vite-plugin-mock            | ^3.0.2                                                                                   |
 | Cookie 工具  | js-cookie                   | ^3.0.8（仅非敏感偏好场景预留；凭证走 httpOnly cookie，JS 不可读写，严禁用其存 token）    |
 | 测试框架     | Vitest                      | ^4.1.9 + @vue/test-utils + jsdom                                                         |
+| 图标体系     | unplugin-icons              | ^24.0.0 + @iconify-json/ep + @iconify-json/tabler（编译期内联 SVG，见 docs/39）          |
 | Pinia 持久化 | pinia-plugin-persistedstate | ^4.7.1（仅 store 字段 pick 持久化）                                                      |
 
 ---
@@ -94,7 +95,7 @@
 │   └── ...
 ├── store/modules/          ← 跨模块共享 Pinia（src/store/index.ts barrel）
 │   ├── app.ts              ← 侧边栏/语言/布局/移动端/全局 loading（pick 持久化 layout+locale）
-│   ├── user.ts             ← token/profile/权限（pick 持久化 token+profile）
+│   ├── user.ts             ← 登录态/profile/权限（httpOnly cookie 模式，凭证不落 localStorage）
 │   ├── theme.ts            ← 主题模式（pick 持久化 mode+primaryColor）
 │   ├── tags-view.ts        ← 多页签（已访问路由缓存；刻意不持久化，避免换账号看到老 tab）
 │   └── dict.ts             ← 字典缓存（5min TTL + Promise 防抖池）
@@ -120,7 +121,7 @@
 
 - **全局 store/modules/**（经 `src/store/index.ts` barrel 导出）：仅跨模块共享
   - `app`（侧边栏/语言/布局模式/移动端断点/globalLoading，`pick: ['layout', 'locale']` 持久化）
-  - `user`（token/profile/权限，`pick: ['token', 'profile']` 持久化）
+  - `user`（authenticated 标记 / profile / 权限码。2026-08-12 起 httpOnly cookie 模式：凭证由后端 Set-Cookie 管理、前端不可读，`Session.get('auth')`（sessionStorage）仅为守卫同步判断的登录标记；**无 token 落 localStorage**，profile/permissions 内存态不持久化）
   - `theme`（主题模式 + 品牌色，`pick: ['mode', 'primaryColor']` 持久化）
   - `tags-view`（已访问路由 + keep-alive 缓存名单，**刻意不持久化**，避免换账号看到老 tab）
   - `dict`（字典项业务层缓存，5min TTL + Promise 防抖池；不持久化）
@@ -255,7 +256,8 @@ vue3-vite-project/
 │   ├── assets/          # 静态资源（styles/、icons/）
 │   │   └── styles/      # 全局样式：reset / variables / theme / transition / element-overwrite / custom + mixins/
 │   ├── components/      # common/（通用无业务，跨模块复用）
-│   │   ├── common/      # AsyncState / ErrorBoundary
+│   │   ├── common/      # AsyncState / ErrorBoundary / AppDynamicIcon / BaseChart / DictSelect / DictTag
+│   │   │                # + ProDialog/ ProDialogForm/ RichTextEditor/ 子目录（unplugin-vue-components 自动注册）
 │   │   └── index.ts     # install 模式自动注册 common/ 下的 .vue
 │   ├── composables/     # useAppRouter / useRequest / useAuth / useLogout / useDialog / useConfirm / useDict / useTheme
 │                    # （全部由 unplugin-auto-import 全局注入，<script setup> 无须显式 import）
@@ -264,15 +266,20 @@ vue3-vite-project/
 │   │   ├── inputDebounce.{ts,d.ts}    # v-inputDebounce 输入防抖
 │   │   ├── buttonDebounce.{ts,d.ts}   # v-buttonDebounce 点击防抖
 │   │   ├── permission.{ts,d.ts}       # v-permission 权限
+│   │   ├── auth.{ts,d.ts}             # v-auth 按钮级权限（AND/ANY + disabled/remove）
+│   │   ├── copy.{ts,d.ts}             # v-copy 文本复制（modern API + legacy 双降级）
+│   │   ├── draggable.{ts,d.ts}        # v-draggable 视口边界钳制（ProDialog 默认消费）
 │   │   └── index.ts      # install 模式统一注册
 │   ├── enums/           # httpEnum、roleEnum
 │   ├── layouts/         # default/ + blank/ + portal/ + h5/ + big/
 │   ├── locales/         # zh-CN、en-US
-│   ├── modules/         # auth、user、home、orders、reports、demo、error、workbench、h5-demo、big-demo
+│   ├── modules/         # auth、user、home、reports、demo、error、workbench、h5-demo、big-demo
 │   │                    # 每个模块含 views/ + routes/ + store/ + apis/ + components/ + index.ts
 │   │                    # 由 `pnpm new-module` 自动生成；删除用 `pnpm remove-module`
 │   ├── plugins/         # Vue 插件（install 模式 + .d.ts 分离）
 │   │   ├── errorHandler.{ts,d.ts}    # 全局错误处理
+│   │   ├── remAdaptation.{ts,d.ts}   # H5 rem 运行时适配（h5 layout 专用，见 docs/34）
+│   │   ├── webVitals.{ts,d.ts}       # Web Vitals 性能采集上报（见 docs/12）
 │   │   └── index.ts      # 统一注册入口（PluginsOptions 聚合）
 │   ├── router/          # 自动注册 + 白名单 + 远程菜单 + 守卫
 │   │   ├── index.ts                  # 入口：autoRegisteredRoutes + fallbackRoute
@@ -283,7 +290,7 @@ vue3-vite-project/
 │   │   ├── types.ts                  # RouteName 联合类型 + RemoteMenuItem 协议
 │   │   ├── remote.ts                 # 远程菜单加载 + JSON → RouteRecordRaw 转换
 │   │   └── guards/auth.ts            # 白名单 + 登录态 + 远程加载 + 权限校验
-│   ├── store/           # 全局：app、user、theme（含持久化）、router
+│   ├── store/           # 全局：app、user、theme（含持久化）、tags-view、dict（+ router store 不在 barrel）
 │   ├── types/           # global、env、auto-imports、components
 │   ├── utils/           # 通用工具（纯函数 + Vitest 单测）
 │   │   ├── storage.{ts,spec.ts}      # Local/Session/clearCookies（命名空间隔离）
@@ -294,7 +301,9 @@ vue3-vite-project/
 │   │       └── （注意：`src/components/common/_internal/naming.ts` 是组件命名工具，仅 components 模块内部使用）
 │   └── App.vue / main.ts
 ├── mock/                # vite-plugin-mock 数据
-│   ├── auth.ts / user.ts / menu.ts  # 接口 mock
+│   ├── auth.ts / user.ts / menu.ts / dict.ts / dict-data.ts  # 接口 mock（dev 自动扫描）
+│   ├── pro-table/       # ProTable 具名数据源（11 个 xxxRequestApi 直连，无 XHR 依赖）
+│   ├── mockProdServer.ts  # 生产 mock 接线（createProdMockServer，gh-pages 静态部署用，见 docs/22 §15）
 │   └── index.ts          # 聚合导出（vite-plugin-mock 自动扫描）
 ├── docs/                # 项目规范文档
 └── 配置文件             # vite.config.ts / tsconfig*.json / uno.config.ts / vitest.config.ts
@@ -321,7 +330,7 @@ vue3-vite-project/
 | 工具    | 版本要求           |
 | ------- | ------------------ |
 | Node.js | >=22.18 或 >=24.12 |
-| pnpm    | >=11.x             |
+| pnpm    | >=11.x 且 <13.x    |
 
 ### 快速开始
 
@@ -345,50 +354,56 @@ pnpm dev:local
 
 > 完整定义见 `package.json:scripts`，本表是常用命令速查（按使用频率排序）。
 
-| 命令                           | 用途                                                                        |
-| ------------------------------ | --------------------------------------------------------------------------- |
-| `pnpm dev`                     | 启动开发服务器（默认 remote 菜单模式；含 vite-plugin-vue-devtools）         |
-| `pnpm dev:local`               | 启动开发服务器（切到 local 菜单模式，无接口可用）                           |
-| `pnpm build`                   | 生产构建（先 `type-check:full` 再 `vite build`，CI 完整门）                 |
-| `pnpm build-only`              | 仅 `vite build`（不含类型校验；调试构建产物用）                             |
-| `pnpm preview`                 | 预览构建产物（本地起静态服务）                                              |
-| `pnpm analyze`                 | 生产构建 + 生成包体积分析报告（`dist/stats.html`）                          |
-| `pnpm test`                    | 运行单元测试（一次性）                                                      |
-| `pnpm test <path>`             | 跑单个测试文件（如 `pnpm test src/utils/dayjs.spec.ts`）                    |
-| `pnpm test:watch`              | 单元测试 watch 模式                                                         |
-| `pnpm test:coverage`           | 测试覆盖率报告（含 HTML 报告，输出 `coverage/`）                            |
-| `pnpm test:ui`                 | 单元测试 UI 模式（Vitest UI 可视化）                                        |
-| `pnpm bench`                   | 跑基准测试（vitest bench，记录每次性能数据）                                |
-| `pnpm type-check`              | TypeScript 类型检查（增量，husky pre-commit 用）                            |
-| `pnpm type-check:full`         | TypeScript 类型检查（强制重建 .tsbuildinfo 缓存；build 前必跑）             |
-| `pnpm check:routes`            | 校验 RouteName / component-registry / whitelist 一致性（CI 阶段强制）       |
-| `pnpm check:aliases`           | alias 单一来源（`build/aliases.ts`）与 tsconfig paths 一致性校验（CI 阻断） |
-| `pnpm check:doc-currency`      | 文档与代码硬数据一致性校验（CI 阻断；防 CHANGELOG / 命令表 / Props 表漂移） |
-| `pnpm generate:tsconfig-paths` | 从 `build/aliases.ts` 自动同步到 `tsconfig.app.json`（pre-commit 钩子自动） |
-| `pnpm new-module <name>`       | 一键生成业务模块骨架（kebab-case 名 → 6 个骨架文件）                        |
-| `pnpm remove-module <name>`    | 一键移除业务模块（默认 dry-run + y/N 确认；CI / 管道传 `--force`）          |
-| `pnpm lint`                    | ESLint 检查全项目                                                           |
-| `pnpm lint:fix`                | ESLint 自动修复                                                             |
-| `pnpm format`                  | Prettier 格式化全项目                                                       |
-| `pnpm format:check`            | Prettier 检查（不修改；CI 用）                                              |
-| `pnpm commit`                  | 交互式 commit（仅提交不推送）                                               |
-| `pnpm push`                    | **推荐**：一站式提交并推送（add + cz + push）                               |
-| `pnpm release`                 | **发布版本**：bump + CHANGELOG + tag + push（master/release/*）             |
-| `pnpm release:dry`             | 发布预览：dry-run 模式（0 副作用，任意分支）                                |
+| 命令                           | 用途                                                                                                |
+| ------------------------------ | --------------------------------------------------------------------------------------------------- |
+| `pnpm dev`                     | 启动开发服务器（默认 remote 菜单模式；含 vite-plugin-vue-devtools）                                 |
+| `pnpm dev:local`               | 启动开发服务器（切到 local 菜单模式，无接口可用）                                                   |
+| `pnpm build`                   | 生产构建（先 `build-only` 生成声明与产物，再 `type-check:full` 全量门禁——干净环境类型声明由此保证） |
+| `pnpm build-only`              | 仅 `vite build`（不含类型校验；调试构建产物用）                                                     |
+| `pnpm preview`                 | 预览构建产物（本地起静态服务）                                                                      |
+| `pnpm analyze`                 | 生产构建 + 生成包体积分析报告（`dist/stats.html`）                                                  |
+| `pnpm test`                    | 运行单元测试（一次性）                                                                              |
+| `pnpm test <path>`             | 跑单个测试文件（如 `pnpm test src/utils/dayjs.spec.ts`）                                            |
+| `pnpm test:watch`              | 单元测试 watch 模式                                                                                 |
+| `pnpm test:coverage`           | 测试覆盖率报告（含 HTML 报告，输出 `coverage/`）                                                    |
+| `pnpm test:ui`                 | 单元测试 UI 模式（Vitest UI 可视化）                                                                |
+| `pnpm test:e2e`                | Playwright 端到端测试（关键用户流程）                                                               |
+| `pnpm test:e2e:install`        | 安装 Playwright 浏览器依赖（chromium + --with-deps）                                                |
+| `pnpm bench`                   | 跑基准测试（vitest bench，记录每次性能数据）                                                        |
+| `pnpm type-check`              | TypeScript 类型检查（增量，husky pre-commit 用）                                                    |
+| `pnpm type-check:full`         | TypeScript 类型检查（强制重建 .tsbuildinfo 缓存；build 前必跑）                                     |
+| `pnpm check:routes`            | 校验 RouteName / component-registry / whitelist 一致性（pre-commit 强制 + CI 阶段强制）             |
+| `pnpm check:aliases`           | alias 单一来源（`build/aliases.ts`）与 tsconfig paths 一致性校验（pre-commit 强制）                 |
+| `pnpm check:doc-currency`      | 文档与代码硬数据一致性校验（13 项锁定；手动 / 发布前跑，尚未接入 CI）                               |
+| `pnpm generate:tsconfig-paths` | 从 `build/aliases.ts` 自动同步到 `tsconfig.app.json`（pre-commit 钩子自动）                         |
+| `pnpm new-module <name>`       | 一键生成业务模块骨架（kebab-case 名 → 6 个骨架文件）                                                |
+| `pnpm remove-module <name>`    | 一键移除业务模块（默认 dry-run + y/N 确认；CI / 管道传 `--force`）                                  |
+| `pnpm lint`                    | ESLint 检查全项目                                                                                   |
+| `pnpm lint:fix`                | ESLint 自动修复                                                                                     |
+| `pnpm format`                  | Prettier 格式化全项目                                                                               |
+| `pnpm format:check`            | Prettier 检查（不修改；CI 用）                                                                      |
+| `pnpm commit`                  | 交互式 commit（仅提交不推送）                                                                       |
+| `pnpm push`                    | **推荐**：一站式提交并推送（add + cz + push）                                                       |
+| `pnpm release`                 | **发布版本**：bump + CHANGELOG + tag + push（master/release/*）                                     |
+| `pnpm release:dry`             | 发布预览：dry-run 模式（0 副作用，任意分支）                                                        |
 
 ### Mock 数据
 
-开发模式默认启用 vite-plugin-mock（由 `vite.config.ts` 按 `VITE_USE_MOCK !== 'false'` 控制，2026-07-27 切换；用户 clone 后未建 `.env.development` 时默认开，与原行为一致），内置 mock 模块：
+开发模式默认启用 vite-plugin-mock（由 `vite.config.ts` 按 `VITE_USE_MOCK !== 'false'` 控制；用户 clone 后未建 `.env.development` 时默认开，与原行为一致），`mock/` 目录按文件自动扫描（dev 模式不受 `mock/index.ts` 聚合清单限制）：
 
-| 模块         | 接口                                                       | 默认账号       |
-| ------------ | ---------------------------------------------------------- | -------------- |
-| auth         | `/api/auth/login`、`/api/auth/profile`、`/api/auth/logout` | admin / 123456 |
-| user         | `/api/user/list`、`/api/user/:id`                          | -              |
-| menu（远程） | `/api/menu`（远程菜单，remote 模式守卫调用）               | -              |
+| 模块         | 接口                                                                                | 默认账号       |
+| ------------ | ----------------------------------------------------------------------------------- | -------------- |
+| auth         | `/api/auth/login`、`/api/auth/profile`、`/api/auth/logout`                          | admin / 123456 |
+| user         | `/api/user/list`、`/api/user/:id`                                                   | -              |
+| menu（远程） | `/api/menu`（远程菜单，remote 模式守卫调用）                                        | -              |
+| dict         | `/api/dict/:code`（字典，配合 `useDict`，见 docs/11）                               | -              |
+| pro-table/   | 11 个具名导出 `xxxRequestApi`（ProTable 直连数据源，无 XHR 依赖，pro 环境同样可用） | -              |
 
-> `/api/menu`（远程菜单）在 remote 模式下由守卫调用。已内置 mock（Home + UserList），无需额外配置即可跑通端到端流程。
+> `/api/menu`（远程菜单）在 remote 模式下由守卫调用。已内置 mock（Home / UserList + Reports 隐藏菜单），无需额外配置即可跑通端到端流程。
 
-生产构建不启用 vite-plugin-mock（`VITE_USE_MOCK` 未设或非 `'false'` 即关闭——vite build 时 dotenv 不读取 `.env.development`，故 prod 自然落入"关闭"分支）；联调真实后端时同时设 `VITE_USE_MOCK=false` + `VITE_API_BASE_URL=<真实后端 URL>`，并使用 `pnpm build && pnpm preview` 验证生产路径。菜单加载方式仍由 `VITE_MENU_SOURCE` 控制。
+**生产构建的 mock 接线（2026-10-20 新增）**：vite-plugin-mock@3.0.2 为纯 dev-server 插件（2.9.x 的 `prodEnabled` 已移除），`mock/mockProdServer.ts` 通过 client 侧 `createProdMockServer` 手动接线 4 个模块（2 个 data 直引 menu/user + 2 组内联 prod 版 auth/dict）。挂接条件 `import.meta.env.PROD && VITE_USE_MOCK==='true'`（`src/main.ts`），常规生产构建整分支 tree-shake。配套 `VITE_DEMO_NO_AUTH=true` 演示模式：守卫跳过登录/权限校验，演示账号 Admin（admin/123456）全链路可点（gh-pages 线上 demo 方案）。**挂接时序硬约束**：必须在 `createApp` 后、`app.use(router)` 前 `await setupProdMockServer()`——router install 即触发初始导航，晚于 use 则守卫请求穿透拦截窗口。详见 [docs/22-mock使用规范.md](docs/22-mock使用规范.md) §15。
+
+常规生产构建（`VITE_USE_MOCK` 未设或非 `'true'`）不启用 mock；联调真实后端时同时设 `VITE_USE_MOCK=false` + `VITE_API_BASE_URL=<真实后端 URL>`，并使用 `pnpm build && pnpm preview` 验证生产路径。菜单加载方式仍由 `VITE_MENU_SOURCE` 控制。
 
 ### 路由架构（自动注册）
 
@@ -569,12 +584,19 @@ app.use(Plugins, { errorHandler: { report: ... } })
 
 ### 与 Husky 集成
 
-| Hook       | 命令                   | 作用                       |
-| ---------- | ---------------------- | -------------------------- |
-| pre-commit | `pnpm type-check`      | 防止 TS 类型错误入库       |
-| pre-commit | `pnpm type-check:full` | （build 时）强制重建缓存   |
-| pre-commit | lint-staged            | prettier + eslint 自动修复 |
-| pre-push   | `pnpm test`            | 防止测试不通过的代码推送   |
+`.husky/pre-commit` 实跑 5 步（按顺序）：
+
+| 序  | 命令                           | 作用                                                                   |
+| --- | ------------------------------ | ---------------------------------------------------------------------- |
+| 1   | `pnpm generate:tsconfig-paths` | tsconfig.app.json paths 自动同步（生成器仅在 hash 不一致时写入，秒级） |
+| 2   | `pnpm lint-staged`             | 暂存区文件 prettier + eslint 自动修复（仅变更文件，不全库扫描）        |
+| 3   | `pnpm type-check`              | 全局类型检查（防止 lint-staged 漏掉的文件引入类型错误）                |
+| 4   | `pnpm check:aliases`           | alias 单一来源校验（防生成器被绕过）                                   |
+| 5   | `pnpm check:routes`            | 路由一致性检查（声明 / whitelist / 实际 routes 三者一致，防漏改）      |
+
+| Hook     | 命令        | 作用                     |
+| -------- | ----------- | ------------------------ |
+| pre-push | `pnpm test` | 防止测试不通过的代码推送 |
 
 > 注：lint 未集成到 pre-commit 的**全量检查**（避免每次 commit 等待），开发期手动 `pnpm lint:fix`，CI 阶段跑 `pnpm lint`。
 
@@ -610,6 +632,7 @@ pnpm build
 | `VITE_API_BASE_URL`      | API 基础 URL（`src/api/http.ts:106` `getAPIBaseURL()` 直接读取；axios 未设 baseURL 时回退到当前 origin，dev 默认同源，prod 需显式配）                         | 未设=当前 origin    |
 | `VITE_USE_MOCK`          | mock 数据开关（`vite.config.ts` viteMockServe 读取；`true`/未设=启用，`false`=关闭用于联调真后端）                                                            | dev 默认开启        |
 | `VITE_MENU_SOURCE`       | 菜单加载模式（`local` / `remote`，未设置时默认 `remote`）                                                                                                     | `remote`            |
+| `VITE_DEMO_NO_AUTH`      | 演示模式开关（prod + `VITE_USE_MOCK=true` 时生效）：守卫跳过登录/权限校验，演示账号 Admin（admin/123456）全链路可点；按钮级 v-auth 仍按真实 permissions 渲染  | 不设 = 关闭         |
 | `VITE_HISTORY_MODE`      | 路由历史模式（`web` / `hash`，用于子路径或静态托管部署）                                                                                                      | `web`               |
 | `VITE_BASE`              | 路由部署基础路径（必须以 `/` 开头和结尾）                                                                                                                     | `/`                 |
 | `VITE_STORAGE_NAMESPACE` | storage 命名空间（隔离多项目共用 localStorage）                                                                                                               | `vue3-vite-project` |
@@ -689,10 +712,22 @@ docker build -t vue3-vite-project:1.0.0 .
 docker run -d --name vue3-vite-project -p 8080:80 vue3-vite-project:1.0.0
 ```
 
-### CI/CD（GitHub Actions 示例）
+### CI/CD（GitHub Actions）
+
+项目已内置两条真实 workflow（`.github/workflows/`）：
+
+| Workflow     | 触发                         | 职责                                                                                                                                                                                                                             |
+| ------------ | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ci.yml`     | push / PR 至 master、develop | 质量门禁 4 步：Lint + Build（`pnpm build` 内部 build-only → type-check:full）+ Unit tests + Check routes                                                                                                                         |
+| `deploy.yml` | push 至 master               | gh-pages 自动部署：`--base` 单源复用 env、构建四开关（VITE_BASE / VITE_HISTORY_MODE=hash / VITE_MENU_SOURCE=local / VITE_USE_MOCK=true）+ `VITE_DEMO_NO_AUTH` 演示模式，发布到 `https://Mr-Super-X.github.io/vue3-vite-project/` |
+
+> check:aliases 仅在 pre-commit 强制（ci.yml 不跑）；check:doc-currency 尚未接入 CI（手动 / 发布前跑）。
+> 首次启用需在仓库 Settings → Pages 把 Source 设为 "GitHub Actions"。设计文档：[docs/superpowers/specs/2026-10-20-gh-pages-deploy-design.md](docs/superpowers/specs/2026-10-20-gh-pages-deploy-design.md)。
+
+如需对接自己的部署环境（Nginx / Docker / 对象存储），下方保留一份通用模板参考：
 
 ```yaml
-# .github/workflows/deploy.yml
+# 通用静态部署模板（非本项目 workflow，仅作接入参考）
 name: Deploy
 on:
   push:
@@ -721,16 +756,21 @@ jobs:
 pnpm test              # 单次运行（CI 用）
 pnpm test:watch        # 开发用 watch
 pnpm test:coverage     # 覆盖率报告（输出到 coverage/）
+pnpm test:e2e          # Playwright 端到端测试
+pnpm bench             # vitest bench 基准测试
 ```
 
-测试文件与源码同级（`foo.ts` 对应 `foo.spec.ts`），覆盖：
+测试文件与源码同级（`foo.ts` 对应 `foo.spec.ts`），按目录一一对应：
 
-- `utils/` — dayjs、storage、bem
-- `composables/` — useRequest
-- `components/common/` — AsyncState
-- `components/`（自动注册） — global-plugin
+- `utils/` — dayjs、storage、bem、format、validate、safeAsync 等纯函数
+- `composables/` — useRequest / useAuth / useDialog / useConfirm / useDict / useLogout / useAppRouter 等 8+ 个
+- `components/common/` — AsyncState、BaseChart、DictSelect、DictTag、ErrorBoundary、AppDynamicIcon 等
+- `components/ProTable/`、`components/form-schema/` — 引擎与 composer 全目录 spec
+- `layouts/` — default/portal/h5/big 布局渲染层
+- `modules/demo/` 等 — 各模块 views/components 行为级 smoke
+- 集成层 — global-plugin、router/auto-register、build 脚本（mock/ 目录无 spec，靠 type-check:full 与 dev 手测兜底）
 
-覆盖率阈值：lines/functions 70%，branches 60%（脚手架阶段宽松，业务阶段建议提到 80%）。
+覆盖率阈值（`vitest.config.ts` 实际值，渐进基线）：lines/statements 50、functions 48、branches 45——脚手架阶段宽松起步，注释已规划 v4.0 提至 70/70/65/70、业务阶段再提 80。当前 199 个 spec 文件 / 2506+ 用例（src 192 + build 7，不含 tests/e2e 的 3 个 playwright spec）+ Playwright e2e 首批（四栖 6 条 + ProTable 3 条），详见 [docs/04-构建与测试工具.md](docs/04-构建与测试工具.md) §测试文件清单。
 
 ---
 
@@ -765,10 +805,22 @@ pnpm test:coverage     # 覆盖率报告（输出到 coverage/）
 | 权限设计               | `docs/23-权限设计.md`                         | 权限模型 + useAuth + v-permission + v-auth 双层组合                                      |
 | XForm 使用指南         | `docs/24-XForm使用指南.md`                    | Schema DSL 动态表单 + 11 Props / 19 方法 + 多查询条件联动                                |
 | XForm 架构与决策       | `docs/25-XForm架构与决策记录.md`              | SchemaField 容错 + 反应式依赖追踪 + 错误降级                                             |
-| 项目推荐说明           | `docs/26-项目推荐说明.md`                     | 项目定位 + 适用场景 + 与同类脚手架差异                                                   |
+| 项目推荐说明           | `docs/26-项目推荐说明.md`                     | 项目定位 + 适用场景 + 与同类脚手架差异 + 组件级杀手锏速览                                |
 | **ProDialog 使用指南** | `docs/27-ProDialog使用指南.md`                | 声明式 `<ProDialog>` + 命令式 `useDialog()` + 拖拽指令（v1.1 新增 `resizeMinToInitial`） |
 | BaseChart 使用指南     | `docs/28-BaseChart使用指南.md`                | ECharts 容器 + 主题/自适应 + 数据更新策略                                                |
 | **ProTable 使用指南**  | `docs/29-ProTable使用指南.md`                 | 配置驱动表格（v3.4 `searchLayout` + 双引擎 + 4 大能力 + v3.1 自动高度/状态保持）         |
+| RichTextEditor 指南    | `docs/30-RichTextEditor使用指南.md`           | wangEditor V5 封装 + 双向 sanitize + required 自定义校验（见 docs/30 §常见坑）           |
+| ProDialogForm 指南     | `docs/31-ProDialogForm使用指南.md`            | ProDialog + XForm 命令式弹窗表单组合                                                     |
+| 常用交互指令           | `docs/32-常用交互指令.md`                     | v-copy / v-draggable / v-auth 等 6 个指令速查                                            |
+| dev / dev:local 对比   | `docs/33-pnpm-dev与dev-local模式对比.md`      | remote / local 两种菜单模式的选择与差异                                                  |
+| H5 布局与 rem 适配     | `docs/34-H5布局与rem适配.md`                  | h5 layout + 编译时 postcss-pxtorem + 运行时 rem 双层适配                                 |
+| 大屏布局与 scale 适配  | `docs/35-大屏布局与scale适配.md`              | big layout + transform: scale 等比缩放（1920/2560/4K/9000px 拼接屏）                     |
+| Fork 升级与版本策略    | `docs/36-Fork升级与版本策略.md`               | 开源 MIT 后的版本口径 + fork 跟进上游策略                                                |
+| h5-rem 适配决策记录    | `docs/37-h5-rem适配决策记录.md`               | H5 双层适配 ADR                                                                          |
+| big-scale 适配决策记录 | `docs/38-big-scale适配决策记录.md`            | 大屏 scale ADR                                                                           |
+| 图标体系与使用规范     | `docs/39-图标体系与使用规范.md`               | unplugin-icons 双语法 + app 本地集合 + 去哪找图标                                        |
+| gh-pages 自动部署      | `docs/40-GitHubPages自动部署.md`              | push master 即发布线上 demo：workflow + 构建四开关 + 生产 mock 接线 + 排查               |
+| 门户企业官网站点       | `docs/41-门户企业官网站点.md`                 | /home 门面：文案单源 site.ts + 锚点导航三处同步 + 白名单公开约定                         |
 
 ### 架构评估
 
@@ -778,7 +830,7 @@ pnpm test:coverage     # 覆盖率报告（输出到 coverage/）
 
 ### 设计 / 计划（已归档）
 
-历史设计与计划按月归档到 `docs/archive/`，仅作为时间线追溯；最新规范请直接读 `docs/01-12` 与 README 当前章节。
+历史设计与计划按月归档到 `docs/archive/`，仅作为时间线追溯；最新规范请直接读 `docs/01-39` 编号文档与 README 当前章节。
 
 | 目录                             | 内容                               |
 | -------------------------------- | ---------------------------------- |

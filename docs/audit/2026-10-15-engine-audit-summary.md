@@ -110,7 +110,7 @@
 | xform#7            | reaction deps 声明后 watchOpts 同样 deep——deps 指向对象路径（'user'）时 user.age 内部变化可触发（此前锚定引用不重算）；标量 deps 触发点不变                                                                                                                                                                                  | spec×1 + form-schema 全目录 1212 例回归                                                                                                    |
 | LOW×8              | docs/29 §12 补 virtualized 行 · §13 测试表按目录分组补全（composables 17/components 13/adapters 5/utils 2/根 2）· §1.4 补 sort-change 仅 custom + filter-change 无 adapter 披露 · §16 索引补 AsyncState/ServerFilter（22→23 闭环）· §4.3 分页语义 · useStatePersist 注释（setup 期调用）· docs/24 §18 补行级 budget 上限披露 | check:doc-currency 13 项全过                                                                                                               |
 
-**审计清单 19+14+8 项至此 100% 关闭（HIGH 全清 / MEDIUM 全清 / LOW 全清）。** 清单外观察项：~~reset 事件~~（已闭环——reset 补发 `filter-change({})`，§3.5 披露）、~~路由前缀漂移~~（已闭环——docs/24 全文 61 处修订为 `/demo/xform-`）、demo 缺口（vxe+selection / Autocomplete+asyncOptions / 数组+cross / search+filter 组合）维持留后续 sprint。
+**审计清单 19+14+8 项至此 100% 关闭（HIGH 全清 / MEDIUM 全清 / LOW 全清）。** ⚠️ 例外（2026-10-20 文档同步轮复核确认）：fixpatterns 子报告**隐患 #3（SelectedTags Date 回显 `toISOString` 东八区少一天，`SelectedTags.vue:61,70`）未落地修复**——本 summary 原表述与 fixpatterns 子报告矛盾，以此注记为准，该项移交后续 sprint（1-3 行修复 + Date/daterange/时区 3 个 spec 用例）。清单外观察项：~~reset 事件~~（已闭环——reset 补发 `filter-change({})`，§3.5 披露）、~~路由前缀漂移~~（已闭环——docs/24 全文 61 处修订为 `/demo/xform-`）、demo 缺口（vxe+selection / Autocomplete+asyncOptions / 数组+cross / search+filter 组合）维持留后续 sprint。
 
 ## demo 缺口补齐（2026-10-19 后续 sprint 闭环）
 

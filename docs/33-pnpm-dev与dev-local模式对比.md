@@ -229,18 +229,18 @@ pnpm dev
 
 ### 6.2 核心差异
 
-| 维度         | `VITE_MENU_SOURCE`                         | `VITE_USE_MOCK`                               |
-| ------------ | ------------------------------------------ | --------------------------------------------- |
-| 解决的问题   | "菜单从哪来？"                             | "HTTP 请求被谁拦截？"                         |
-| 作用域       | 仅 `/api/menu` 一个接口                    | **所有** `/api/*` 接口                        |
-| 读取时机     | 客户端运行时（`import.meta.env`）          | 构建期（`process.env`）                       |
-| 读取位置     | `src/router/config.ts:24`（已打入 bundle） | `vite.config.ts:91`（vite 启动时）            |
-| 消费方       | `src/router/guards/remote-menu.ts` 守卫    | `vite-plugin-mock`（dev 阶段中间件）          |
-| 生效阶段     | 运行时（应用代码逻辑分支）                 | 构建期（中间件是否挂载）                      |
-| 默认值       | `remote`（未设/非法→静默 fallback）        | `true`（`undefined !== 'false'` 判定为开）    |
-| 典型值       | `local` / `remote`                         | `true` / `false`                              |
-| 关联命令     | `pnpm dev:local`（cross-env 注入）         | 无专属命令，需在 `.env.development` 设置      |
-| 生产构建影响 | 有（代码分支逻辑）                         | **无**（`vite-plugin-mock` 自身在 prod 禁用） |
+| 维度         | `VITE_MENU_SOURCE`                         | `VITE_USE_MOCK`                                                                                                         |
+| ------------ | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| 解决的问题   | "菜单从哪来？"                             | "HTTP 请求被谁拦截？"                                                                                                   |
+| 作用域       | 仅 `/api/menu` 一个接口                    | **所有** `/api/*` 接口                                                                                                  |
+| 读取时机     | 客户端运行时（`import.meta.env`）          | 构建期（`process.env`）                                                                                                 |
+| 读取位置     | `src/router/config.ts:24`（已打入 bundle） | `vite.config.ts:91`（vite 启动时）                                                                                      |
+| 消费方       | `src/router/guards/remote-menu.ts` 守卫    | `vite-plugin-mock`（dev 阶段中间件）                                                                                    |
+| 生效阶段     | 运行时（应用代码逻辑分支）                 | 构建期（中间件是否挂载）                                                                                                |
+| 默认值       | `remote`（未设/非法→静默 fallback）        | `true`（`undefined !== 'false'` 判定为开）                                                                              |
+| 典型值       | `local` / `remote`                         | `true` / `false`                                                                                                        |
+| 关联命令     | `pnpm dev:local`（cross-env 注入）         | 无专属命令，需在 `.env.development` 设置                                                                                |
+| 生产构建影响 | 有（代码分支逻辑）                         | 常规构建**无**（tree-shake）；`true` 时经 `mockProdServer.ts` client 侧接线（gh-pages 演示，见 docs/22 §15 与 docs/40） |
 
 ### 6.3 读取时机详解
 

@@ -1,5 +1,7 @@
 # gh-pages 自动化部署 Implementation Plan
 
+> **⚠️ 终态指针（2026-10-20 实施终态）**：本 plan 为过程快照，部分 Task 描述已被实施取代——终态方案 = client 侧 `createProdMockServer`（非 viteMockServe prodEnabled）+ `build-only` → `type-check:full` 顺序 + `use(router)` 前顶层 await 挂接。**准确描述以 [docs/40-GitHubPages自动部署.md](../../40-GitHubPages自动部署.md) 为准**，本 plan 保留作执行时间线追溯。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** push 到 `master` 时通过 GitHub Actions 自动构建（hash 路由 + local 菜单 + mock 生产注入 + 子路径 base）并部署到 GitHub Pages。
