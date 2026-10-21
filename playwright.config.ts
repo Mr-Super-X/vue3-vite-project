@@ -32,7 +32,7 @@ export default defineConfig({
     video: 'retain-on-failure',
   },
   webServer: {
-    command: 'pnpm dev:local',
+    command: 'pnpm -C apps/admin dev:local',
     url: 'http://localhost:5174',
     reuseExistingServer: !process.env.CI,
     timeout: 60 * 1000,

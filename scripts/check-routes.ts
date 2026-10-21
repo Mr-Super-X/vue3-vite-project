@@ -23,8 +23,8 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
 const ROOT = resolve(import.meta.dirname, '..')
-const ROUTER_DIR = resolve(ROOT, 'src/router')
-const MODULES_DIR = resolve(ROOT, 'src/modules')
+const ROUTER_DIR = resolve(ROOT, 'apps/admin/src/router')
+const MODULES_DIR = resolve(ROOT, 'apps/admin/src/modules')
 
 function readRouterFile(relativePath: string): string {
   // 统一换行符：Windows CRLF → LF，避免正则 ^ 锚点跨平台失效

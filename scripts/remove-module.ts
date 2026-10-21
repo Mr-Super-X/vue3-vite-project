@@ -23,9 +23,9 @@ import { existsSync, readFileSync, writeFileSync, rmSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
 const ROOT = resolve(import.meta.dirname, '..')
-const MODULES_DIR = resolve(ROOT, 'src/modules')
+const MODULES_DIR = resolve(ROOT, 'apps/admin/src/modules')
 const MOCK_DIR = resolve(ROOT, 'mock')
-const LOCALES_DIR = resolve(ROOT, 'src/locales')
+const LOCALES_DIR = resolve(ROOT, 'apps/admin/src/locales')
 
 /**
  * 解析 argv。支持 `--force` flag 跳过交互确认。

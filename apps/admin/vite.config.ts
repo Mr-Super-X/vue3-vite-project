@@ -10,6 +10,7 @@
  *   - 2026-09-10: 抽出 SRC_DIR_ALIASES / vendorChunks / server / scss 到 build/* 单一来源
  *   - 详见 docs/superpowers/specs/2026-09-10-vite-config-split-design.md
  */
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 
 import vue from '@vitejs/plugin-vue'
@@ -25,7 +26,8 @@ import IconsResolver from 'unplugin-icons/resolver'
 import { FileSystemIconLoader } from 'unplugin-icons/loaders'
 import { viteMockServe } from 'vite-plugin-mock'
 import { visualizer } from 'rollup-plugin-visualizer'
-import { cleanMockBundled } from './scripts/vite-plugin-clean-mock'
+// P0-2：本文件已迁入 apps/admin，scripts/ 与 build/ 仍在仓库根，相对路径上探两级
+import { cleanMockBundled } from '../../scripts/vite-plugin-clean-mock'
 
 // 工程配置（单一来源：build/index.ts barrel re-export）
 // 详见 docs/superpowers/specs/2026-09-10-vite-config-split-design.md
@@ -36,7 +38,7 @@ import {
   SERVER_DEFAULTS,
   SCSS_PREPROCESSOR_OPTIONS,
   POSTCSS_PLUGINS,
-} from './build'
+} from '../../build'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -115,8 +117,11 @@ export default defineConfig({
     // dev 默认开启：用户 clone 后未建 .env 时，VITE_USE_MOCK=undefined，
     // `!== 'false'` 判定为 true，与原 NODE_ENV 行为一致。
     // 联调真实后端：在 .env.development 设 VITE_USE_MOCK=false。
+    // P0-2：mock/ 仍在仓库根（P1-2 才迁 @vv/mock）。vite-plugin-mock 以
+    // path.join(cwd, mockPath) 解析（dist/index.mjs:224），dev 从 apps/admin 启动时
+    // cwd=apps/admin，必须上探两级才能命中根 mock/
     viteMockServe({
-      mockPath: 'mock',
+      mockPath: '../../mock',
       enable: process.env.VITE_USE_MOCK !== 'false',
       watchFiles: true,
     }),
@@ -143,7 +148,14 @@ export default defineConfig({
     proxy: createProxyConfig(process.env),
   },
   resolve: {
-    alias: resolveSrcDirAliases(),
+    alias: {
+      ...resolveSrcDirAliases(),
+      // P0-2：build/aliases.ts 的 PROJECT_ROOT_ALIASES 按 process.cwd() 解析
+      // （cwd=apps/admin 时会指向 apps/admin/mock 空目录），mock/ 仍在仓库根，
+      // 这里显式覆盖 @mock 指向根 mock（与 apps/admin/tsconfig.app.json 的
+      // @mock paths 上探两级同理）；P1-2 迁 @vv/mock 后此覆盖随别名一并移除
+      '@mock': fileURLToPath(new URL('../../mock', import.meta.url)),
+    },
   },
   css: {
     // h5 rem 适配（postcss-pxtorem）：仅转换 src/layouts/h5/ 与 src/modules/h5-*/（见 build/postcss.ts）

@@ -27,9 +27,9 @@ import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
 const ROOT = resolve(import.meta.dirname, '..')
-const MODULES_DIR = resolve(ROOT, 'src/modules')
+const MODULES_DIR = resolve(ROOT, 'apps/admin/src/modules')
 const MOCK_DIR = resolve(ROOT, 'mock')
-const LOCALES_DIR = resolve(ROOT, 'src/locales')
+const LOCALES_DIR = resolve(ROOT, 'apps/admin/src/locales')
 
 function kebabToPascal(s: string): string {
   return s.replace(/(^|-)(\w)/g, (_, __, c) => c.toUpperCase())
