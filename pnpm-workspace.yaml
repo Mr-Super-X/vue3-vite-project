@@ -1,3 +1,15 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+catalog:
+  vue: '^3.5.38'
+  vue-router: '^5.1.0'
+  pinia: '^3.0.4'
+  element-plus: '^2.14.3'
+  axios: '^1.18.1'
+  dayjs: '^1.11.21'
+  vue-i18n: '^11.4.6'
+
 allowBuilds:
   '@parcel/watcher': true
   es5-ext: false
