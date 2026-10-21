@@ -13,8 +13,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { validateFieldItems } from './configs/xform-demos-api'
 import xFormSource from './XFormValidateField.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
@@ -105,69 +104,65 @@ const tocItems = [
   { id: 'demo-reset-fields', label: 'resetFields 演示' },
   { id: 'api-validate-field', label: 'API' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="validateField 逐字段校验 + resetFields 部分重置"
-      source="src/components/form-schema/composables/use-form-instance.ts"
-      :introductions="[
-        'validateField(name)：透传 el-form 逐字段校验，返回 boolean —— 提交前逐字段预检，不用全量 validate。',
-        'resetFields(names)：部分重置指定字段（值 + 红字），其他字段与红字保留；不传 names 为全量重置。',
-        '演示：先点「校验此字段」逐个预检；再模拟服务端 422 双红字，对比部分重置与全量重置的差异。',
-      ]"
-    >
-      <section id="demo-validate-field">
-        <DemoField label="员工入职登记（4 字段）" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
+  <DemoFrame
+    title="validateField 逐字段校验 + resetFields 部分重置"
+    source="src/components/form-schema/composables/use-form-instance.ts"
+    :introductions="[
+      'validateField(name)：透传 el-form 逐字段校验，返回 boolean —— 提交前逐字段预检，不用全量 validate。',
+      'resetFields(names)：部分重置指定字段（值 + 红字），其他字段与红字保留；不传 names 为全量重置。',
+      '演示：先点「校验此字段」逐个预检；再模拟服务端 422 双红字，对比部分重置与全量重置的差异。',
+    ]"
+  >
+    <section id="demo-validate-field">
+      <DemoField label="员工入职登记（4 字段）" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
 
-          <div :class="bem.e('group')">
-            <div :class="bem.e('group-title')">① validateField(name) 逐字段校验</div>
-            <div :class="bem.e('actions')">
-              <el-button size="small" @click="validateOne('name', '姓名')">校验姓名</el-button>
-              <el-button size="small" @click="validateOne('email', '邮箱')">校验邮箱</el-button>
-              <el-button size="small" @click="validateOne('dept', '部门')">校验部门</el-button>
-              <el-button size="small" @click="validateOne('hireDate', '入职日期')">
-                校验入职日期
-              </el-button>
-            </div>
-            <ul :class="bem.e('results')">
-              <li v-for="(result, field) in fieldResults" :key="field">{{ result }}</li>
-              <li v-if="Object.keys(fieldResults).length === 0" :class="bem.e('placeholder')">
-                （点击上方按钮，结果逐字段显示在这里）
-              </li>
-            </ul>
+        <div :class="bem.e('group')">
+          <div :class="bem.e('group-title')">① validateField(name) 逐字段校验</div>
+          <div :class="bem.e('actions')">
+            <el-button size="small" @click="validateOne('name', '姓名')">校验姓名</el-button>
+            <el-button size="small" @click="validateOne('email', '邮箱')">校验邮箱</el-button>
+            <el-button size="small" @click="validateOne('dept', '部门')">校验部门</el-button>
+            <el-button size="small" @click="validateOne('hireDate', '入职日期')">
+              校验入职日期
+            </el-button>
           </div>
+          <ul :class="bem.e('results')">
+            <li v-for="(result, field) in fieldResults" :key="field">{{ result }}</li>
+            <li v-if="Object.keys(fieldResults).length === 0" :class="bem.e('placeholder')">
+              （点击上方按钮，结果逐字段显示在这里）
+            </li>
+          </ul>
+        </div>
 
-          <div :class="bem.e('group')" id="demo-reset-fields">
-            <div :class="bem.e('group-title')">② resetFields(names) 部分重置</div>
-            <div :class="bem.e('actions')">
-              <el-button size="small" type="warning" @click="mockServerError">
-                模拟服务端 422（双红字）
-              </el-button>
-              <el-button size="small" type="primary" @click="resetOnlyName">
-                只重置 name（email 红字保留）
-              </el-button>
-              <el-button size="small" @click="resetAll">全部重置</el-button>
-            </div>
+        <div :class="bem.e('group')" id="demo-reset-fields">
+          <div :class="bem.e('group-title')">② resetFields(names) 部分重置</div>
+          <div :class="bem.e('actions')">
+            <el-button size="small" type="warning" @click="mockServerError">
+              模拟服务端 422（双红字）
+            </el-button>
+            <el-button size="small" type="primary" @click="resetOnlyName">
+              只重置 name（email 红字保留）
+            </el-button>
+            <el-button size="small" @click="resetAll">全部重置</el-button>
           </div>
+        </div>
 
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
 
-      <ApiTable
-        title="validateField / resetFields API"
-        :items="validateFieldItems"
-        anchor="api-validate-field"
-      />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable
+      title="validateField / resetFields API"
+      :items="validateFieldItems"
+      anchor="api-validate-field"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

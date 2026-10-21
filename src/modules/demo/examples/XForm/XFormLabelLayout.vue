@@ -14,8 +14,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { labelLayoutItems } from './configs/xform-demos-api'
 import xFormSource from './XFormLabelLayout.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
@@ -102,53 +101,52 @@ const tocItems = [
   { id: 'demo-label-layout', label: 'label 布局演示' },
   { id: 'api-label-layout', label: 'labelPosition / labelWidth 字段速查' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="labelPosition / labelWidth —— 顶层默认 + 字段级 override"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        'labelPosition / labelWidth 顶层配置为表单整体默认；字段级可声明 override 顶层',
-        'top：移动端推荐（label 在字段上方，节省横向空间）',
-        'left：桌面端标准（label 左对齐 + 120px 宽）',
-        'right：右对齐（少见，用于对齐要求严格的表单）',
-        'element-plus el-form-item 原生支持 labelPosition / labelWidth，字段级与顶层可独立设置',
-        '字段级未声明时 el-form-item 自动继承 el-form 顶层（element-plus 原生行为）',
-      ]"
-    >
-      <section id="demo-label-layout">
-        <div :class="bem.e('controls')">
-          <span>labelPosition：</span>
-          <el-radio-group v-model="position">
-            <el-radio-button value="left">left</el-radio-button>
-            <el-radio-button value="right">right</el-radio-button>
-            <el-radio-button value="top">top（推荐移动端）</el-radio-button>
-          </el-radio-group>
-          <span>labelWidth：</span>
-          <el-input v-model="width" placeholder="如 120px / 160px" style="width: 140px" />
-          <!-- 「应用」按钮保留作为手动 rebuild 入口（watch 已自动触发，可省略） -->
-        </div>
+  <DemoFrame
+    title="labelPosition / labelWidth —— 顶层默认 + 字段级 override"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      'labelPosition / labelWidth 顶层配置为表单整体默认；字段级可声明 override 顶层',
+      'top：移动端推荐（label 在字段上方，节省横向空间）',
+      'left：桌面端标准（label 左对齐 + 120px 宽）',
+      'right：右对齐（少见，用于对齐要求严格的表单）',
+      'element-plus el-form-item 原生支持 labelPosition / labelWidth，字段级与顶层可独立设置',
+      '字段级未声明时 el-form-item 自动继承 el-form 顶层（element-plus 原生行为）',
+    ]"
+  >
+    <section id="demo-label-layout">
+      <div :class="bem.e('controls')">
+        <span>labelPosition：</span>
+        <el-radio-group v-model="position">
+          <el-radio-button value="left">left</el-radio-button>
+          <el-radio-button value="right">right</el-radio-button>
+          <el-radio-button value="top">top（推荐移动端）</el-radio-button>
+        </el-radio-group>
+        <span>labelWidth：</span>
+        <el-input v-model="width" placeholder="如 120px / 160px" style="width: 140px" />
+        <!-- 「应用」按钮保留作为手动 rebuild 入口（watch 已自动触发，可省略） -->
+      </div>
 
-        <DemoField label="用户录入（label 布局切换）" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onSave">保存</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-          </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
-      <ApiTable
-        title="labelPosition / labelWidth 字段速查"
-        :items="labelLayoutItems"
-        anchor="api-label-layout"
-      />
-    </DemoFrame>
-    <template #toc><DocToc :items="tocItems" /></template>
-  </DocLayout>
+      <DemoField label="用户录入（label 布局切换）" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onSave">保存</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
+    <ApiTable
+      title="labelPosition / labelWidth 字段速查"
+      :items="labelLayoutItems"
+      anchor="api-label-layout"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

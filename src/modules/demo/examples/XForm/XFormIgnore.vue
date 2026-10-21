@@ -13,8 +13,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { ignoreItems } from './configs/xform-demos-api'
 import xFormSource from './XFormIgnore.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
@@ -86,37 +85,36 @@ const tocItems = [
   { id: 'demo-ignore', label: 'ignore 字段演示' },
   { id: 'api-ignore', label: 'ignore 字段速查' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="schema 字段 ignore —— 节点跳过渲染"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        'ignore: true 节点不创建 DOM、不参与校验、不参与 getNames()',
-        '已写入 model 的字段值静默保留——可作「传给后端的隐藏字段」',
-        '测试 1: 必填校验只在 action 上跑（operatorId / createdAt 即使有 rules 也不触发）',
-        '测试 2: 点「getNames」 → 仅返回 [action]，不含 ignore 字段',
-        '与 hidden 区别：hidden 渲染但 display:none + 参与校验；ignore 完全不渲染 + 跳过校验',
-      ]"
-    >
-      <section id="demo-ignore">
-        <DemoField label="审计日志表单（含 ignore 字段）" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onSave">保存</el-button>
-            <el-button @click="onShowNames">getNames()</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-          </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
-      <ApiTable title="ignore 字段速查" :items="ignoreItems" anchor="api-ignore" />
-    </DemoFrame>
-    <template #toc><DocToc :items="tocItems" /></template>
-  </DocLayout>
+  <DemoFrame
+    title="schema 字段 ignore —— 节点跳过渲染"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      'ignore: true 节点不创建 DOM、不参与校验、不参与 getNames()',
+      '已写入 model 的字段值静默保留——可作「传给后端的隐藏字段」',
+      '测试 1: 必填校验只在 action 上跑（operatorId / createdAt 即使有 rules 也不触发）',
+      '测试 2: 点「getNames」 → 仅返回 [action]，不含 ignore 字段',
+      '与 hidden 区别：hidden 渲染但 display:none + 参与校验；ignore 完全不渲染 + 跳过校验',
+    ]"
+  >
+    <section id="demo-ignore">
+      <DemoField label="审计日志表单（含 ignore 字段）" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onSave">保存</el-button>
+          <el-button @click="onShowNames">getNames()</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
+    <ApiTable title="ignore 字段速查" :items="ignoreItems" anchor="api-ignore" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

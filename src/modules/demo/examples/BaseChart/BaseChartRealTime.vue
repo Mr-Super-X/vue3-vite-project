@@ -14,8 +14,7 @@
 import { ElMessage } from 'element-plus'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 
 const bem = createNamespace('demo-base-chart-realtime')
 
@@ -120,53 +119,49 @@ onUnmounted(() => {
 <BaseChart :option="option" />`
 
 const tocItems = [{ id: 'demo-realtime', label: '实时监控（CPU 折线图）' }]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="BaseChart · 实时监控"
-      source="src/components/common/BaseChart.vue"
-      :introductions="[
-        '折线图 + setInterval 模拟实时数据流：每秒推入一个点，滑动窗口 60 个点。',
-        '企业用途：服务器 CPU 监控、网络流量、业务实时指标、运维大盘。',
-        '重点验证：暂停 / 继续 / 重置 / onUnmounted 清定时器（防内存泄漏 + 定时器泄漏）。',
-      ]"
-    >
-      <section id="demo-realtime">
-        <DemoField :code="SNIPPET" label="① CPU 实时监控（1 Hz 推送 + 滑动窗口）">
-          <div :class="bem.e('controls')">
-            <el-button v-if="!running" type="primary" @click="start">开始推送</el-button>
-            <el-button v-else @click="pause">暂停</el-button>
-            <el-button @click="resetAll">重置</el-button>
-            <span :class="bem.e('status')">
-              状态：
-              <b>{{ running ? '运行中' : '已暂停' }}</b>
-              · 累计推送 {{ pushCount }} 次
-            </span>
-          </div>
-          <div :class="bem.e('canvas')">
-            <BaseChart :option="option" />
-          </div>
-          <p :class="bem.e('tip')">
-            切换标签页时浏览器会节流 setInterval（最低 1s），回到本页恢复推送。 离开本页（路由切换 /
-            组件卸载）onUnmounted 会清理定时器，不再推送数据。 反复挂载/卸载 → DevTools
-            内存应回到基线，无单调上涨。
-            <br />
-            <strong>GC 说明：</strong>
-            本 demo 用 1 Hz（每秒推一次）+ 60 元素数组，每分钟重建 60 次数组（每次 60 个
-            number），GC 压力可忽略；如需
-            <code>&gt; 10 Hz</code>
-            高频场景，建议改用 ring buffer（固定长度 Float64Array + 索引覆盖）避免重复 GC。
-          </p>
-        </DemoField>
-      </section>
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+  <DemoFrame
+    title="BaseChart · 实时监控"
+    source="src/components/common/BaseChart.vue"
+    :introductions="[
+      '折线图 + setInterval 模拟实时数据流：每秒推入一个点，滑动窗口 60 个点。',
+      '企业用途：服务器 CPU 监控、网络流量、业务实时指标、运维大盘。',
+      '重点验证：暂停 / 继续 / 重置 / onUnmounted 清定时器（防内存泄漏 + 定时器泄漏）。',
+    ]"
+  >
+    <section id="demo-realtime">
+      <DemoField :code="SNIPPET" label="① CPU 实时监控（1 Hz 推送 + 滑动窗口）">
+        <div :class="bem.e('controls')">
+          <el-button v-if="!running" type="primary" @click="start">开始推送</el-button>
+          <el-button v-else @click="pause">暂停</el-button>
+          <el-button @click="resetAll">重置</el-button>
+          <span :class="bem.e('status')">
+            状态：
+            <b>{{ running ? '运行中' : '已暂停' }}</b>
+            · 累计推送 {{ pushCount }} 次
+          </span>
+        </div>
+        <div :class="bem.e('canvas')">
+          <BaseChart :option="option" />
+        </div>
+        <p :class="bem.e('tip')">
+          切换标签页时浏览器会节流 setInterval（最低 1s），回到本页恢复推送。 离开本页（路由切换 /
+          组件卸载）onUnmounted 会清理定时器，不再推送数据。 反复挂载/卸载 → DevTools
+          内存应回到基线，无单调上涨。
+          <br />
+          <strong>GC 说明：</strong>
+          本 demo 用 1 Hz（每秒推一次）+ 60 元素数组，每分钟重建 60 次数组（每次 60 个 number），GC
+          压力可忽略；如需
+          <code>&gt; 10 Hz</code>
+          高频场景，建议改用 ring buffer（固定长度 Float64Array + 索引覆盖）避免重复 GC。
+        </p>
+      </DemoField>
+    </section>
+  </DemoFrame>
 </template>
 
 <style lang="scss">

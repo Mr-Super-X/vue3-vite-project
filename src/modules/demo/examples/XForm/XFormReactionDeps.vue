@@ -18,8 +18,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { reactionDepsItems } from './configs/xform-demos-api'
 import xFormSource from './XFormReactionDeps.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
@@ -204,67 +203,66 @@ const tocItems = [
   { id: 'demo-deps', label: 'deps 三动机演示' },
   { id: 'api-deps', label: 'deps 字段速查' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="reaction.deps 三动机（为什么用 deps）"
-      source="src/components/form-schema/composables/use-reaction.ts"
-      :introductions="[
-        'XFormReactionAdvanced Section ① 演示 deps 怎么用；本页单独讲 deps 为什么用——三个使用动机：',
-        '① deps 切断无关字段触发：默认 deep watch 整棵 model，distractor.* 任意字段变化都跑 reaction；声明 deps 后仅精确路径触发；观察 runCount 次数差异',
-        '② deps 切断循环联动：reaction 函数体写自身依赖字段时，无 deps 会无限循环触发——use-reaction 预算 MAX_CHAIN_PER_FLUSH=50 兜底 console.error；声明 deps 切断自触发',
-        '③ deps 路径声明（可读性）：同一段计算逻辑，无 deps 靠函数体内引用追踪（隐式），有 deps 显式列出依赖（推荐：重构安全 + 阅读一目了然）',
-        '顶部开关切换 A 模式（无 deps）/ B 模式（写 deps），schema 自动重新注册 reaction，旧 stoppers 清理。',
-      ]"
-    >
-      <section id="demo-deps">
-        <div :class="bem.e('controls')">
-          <el-radio-group v-model="useDeps" size="large">
-            <el-radio-button :value="false">A 模式：无 deps（深 watch）</el-radio-button>
-            <el-radio-button :value="true">B 模式：写 deps（精确监听）</el-radio-button>
-          </el-radio-group>
-          <span :class="bem.e('hint')">切换时自动重置数据（避免 runCount / loopCount 累计）</span>
-        </div>
+  <DemoFrame
+    title="reaction.deps 三动机（为什么用 deps）"
+    source="src/components/form-schema/composables/use-reaction.ts"
+    :introductions="[
+      'XFormReactionAdvanced Section ① 演示 deps 怎么用；本页单独讲 deps 为什么用——三个使用动机：',
+      '① deps 切断无关字段触发：默认 deep watch 整棵 model，distractor.* 任意字段变化都跑 reaction；声明 deps 后仅精确路径触发；观察 runCount 次数差异',
+      '② deps 切断循环联动：reaction 函数体写自身依赖字段时，无 deps 会无限循环触发——use-reaction 预算 MAX_CHAIN_PER_FLUSH=50 兜底 console.error；声明 deps 切断自触发',
+      '③ deps 路径声明（可读性）：同一段计算逻辑，无 deps 靠函数体内引用追踪（隐式），有 deps 显式列出依赖（推荐：重构安全 + 阅读一目了然）',
+      '顶部开关切换 A 模式（无 deps）/ B 模式（写 deps），schema 自动重新注册 reaction，旧 stoppers 清理。',
+    ]"
+  >
+    <section id="demo-deps">
+      <div :class="bem.e('controls')">
+        <el-radio-group v-model="useDeps" size="large">
+          <el-radio-button :value="false">A 模式：无 deps（深 watch）</el-radio-button>
+          <el-radio-button :value="true">B 模式：写 deps（精确监听）</el-radio-button>
+        </el-radio-group>
+        <span :class="bem.e('hint')">切换时自动重置数据（避免 runCount / loopCount 累计）</span>
+      </div>
 
-        <DemoField label="三个动机对比（共享 model，开关切换 A/B）" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onSave">校验</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-          </div>
-          <div :class="bem.e('panels')">
-            <div :class="bem.e('panel')">
-              <strong>① 触发次数：</strong>
-              {{ model.perf.runCount }}
-              <div :class="bem.e('tip')">
-                A 模式：改 distractor.noise1 也会 +1；B 模式：仅改 perf.a/perf.b 时 +1
-              </div>
-            </div>
-            <div :class="bem.e('panel')">
-              <strong>② 循环次数：</strong>
-              {{ model.cycle.loopCount }}
-              <div :class="bem.e('tip')">
-                A 模式：改 cycle.a 会触发 ~50 次循环 + console.error；B 模式：仅 +1
-              </div>
-            </div>
-            <div :class="bem.e('panel')">
-              <strong>③ 合计：</strong>
-              ¥{{ model.readable.sum }}
-              <div :class="bem.e('tip')">
-                A/B 模式表现一致（说明 deps 不是功能开关，而是性能与可读性优化）
-              </div>
+      <DemoField label="三个动机对比（共享 model，开关切换 A/B）" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onSave">校验</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <div :class="bem.e('panels')">
+          <div :class="bem.e('panel')">
+            <strong>① 触发次数：</strong>
+            {{ model.perf.runCount }}
+            <div :class="bem.e('tip')">
+              A 模式：改 distractor.noise1 也会 +1；B 模式：仅改 perf.a/perf.b 时 +1
             </div>
           </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
-      <ApiTable title="reaction.deps 字段速查" :items="reactionDepsItems" anchor="api-deps" />
-    </DemoFrame>
-    <template #toc><DocToc :items="tocItems" /></template>
-  </DocLayout>
+          <div :class="bem.e('panel')">
+            <strong>② 循环次数：</strong>
+            {{ model.cycle.loopCount }}
+            <div :class="bem.e('tip')">
+              A 模式：改 cycle.a 会触发 ~50 次循环 + console.error；B 模式：仅 +1
+            </div>
+          </div>
+          <div :class="bem.e('panel')">
+            <strong>③ 合计：</strong>
+            ¥{{ model.readable.sum }}
+            <div :class="bem.e('tip')">
+              A/B 模式表现一致（说明 deps 不是功能开关，而是性能与可读性优化）
+            </div>
+          </div>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
+    <ApiTable title="reaction.deps 字段速查" :items="reactionDepsItems" anchor="api-deps" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

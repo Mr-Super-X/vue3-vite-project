@@ -23,8 +23,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { validateDetailItems } from './configs/xform-demos-api'
 import xFormSource from './XFormValidateDetail.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
@@ -146,6 +145,8 @@ const tocItems = [
   { id: 'api-validate-detail', label: 'API' },
 ]
 
+useDocToc(tocItems)
+
 // 数组字段 keyPath 结构示例：用于「演示 keyPath 含 [i] 数字索引」对照面板
 const keyPathArrayExample = `// 示例：嵌套数组的 validateDetail().errors 结构
 [
@@ -162,129 +163,121 @@ const keyPathArrayExample = `// 示例：嵌套数组的 validateDetail().errors
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="validateDetail 详细返回 —— 与 validate 对比"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        'validate() 只返回 boolean（true = 全部通过；false = 有错），适合「提交按钮 loading/disabled」快速判断。',
-        'validateDetail() 返回完整结构 { isValid, errors: [{ keyPath, message }] }，适合「错误详情展示 / 自定义错误面板 / 调试日志」场景。',
-        'keyPath 是 (string | number)[] 数组：字符串 = 字段名，number = 数组下标；可用于 setFieldError(keyPath.join(\'.\'), message) 或在 UI 上 highlight 对应字段。',
-      ]"
-    >
-      <section id="demo-validate-detail">
-        <DemoField label="注册表单（4 字段 + 跨字段）" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onSave">
-              提交（同时调 validate + validateDetail）
-            </el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-            <el-button @click="clearResult">清空结果</el-button>
-          </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="validateDetail 详细返回 —— 与 validate 对比"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      'validate() 只返回 boolean（true = 全部通过；false = 有错），适合「提交按钮 loading/disabled」快速判断。',
+      'validateDetail() 返回完整结构 { isValid, errors: [{ keyPath, message }] }，适合「错误详情展示 / 自定义错误面板 / 调试日志」场景。',
+      'keyPath 是 (string | number)[] 数组：字符串 = 字段名，number = 数组下标；可用于 setFieldError(keyPath.join(\'.\'), message) 或在 UI 上 highlight 对应字段。',
+    ]"
+  >
+    <section id="demo-validate-detail">
+      <DemoField label="注册表单（4 字段 + 跨字段）" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onSave">
+            提交（同时调 validate + validateDetail）
+          </el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+          <el-button @click="clearResult">清空结果</el-button>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
 
-      <section id="demo-compare-validate" :class="bem.e('section')">
-        <div :class="bem.e('section-title')">与 validate() 返回值对比</div>
+    <section id="demo-compare-validate" :class="bem.e('section')">
+      <div :class="bem.e('section-title')">与 validate() 返回值对比</div>
 
-        <div :class="bem.e('compare')">
-          <!-- ① validate() 返回值 -->
-          <div :class="bem.e('compare-card')">
-            <div :class="bem.e('compare-label')">① validate() —— boolean</div>
-            <div :class="bem.e('compare-value')">
-              <template v-if="validateBool === null">
-                <span :class="bem.e('placeholder')">（点击「提交」触发校验）</span>
-              </template>
-              <template v-else>
-                <div>
-                  返回值:
-                  <code :class="bem.e('compare-code')">{{ validateBool }}</code>
-                </div>
-                <div :class="bem.e('compare-hint')">
-                  {{
-                    validateBool ? '✅ 全部通过（详细错误见右侧）' : '❌ 有错误（具体错误见右侧）'
-                  }}
-                </div>
-              </template>
-            </div>
-          </div>
-
-          <!-- ② validateDetail() 返回值 -->
-          <div :class="bem.e('compare-card')">
-            <div :class="bem.e('compare-label')">② validateDetail() —— ValidateResult</div>
-            <div :class="bem.e('compare-value')">
-              <template v-if="validateResult === null">
-                <span :class="bem.e('placeholder')">（点击「提交」触发校验）</span>
-              </template>
-              <template v-else>
-                <div :class="bem.e('detail-summary')">
-                  isValid:
-                  <code :class="bem.e('compare-code')">{{ validateResult.isValid }}</code>
-                  · 错误数:
-                  <code :class="bem.e('compare-code')">{{ validateResult.errors.length }}</code>
-                </div>
-
-                <div v-if="validateResult.errors.length > 0" :class="bem.e('error-list')">
-                  <div :class="bem.e('error-title')">
-                    校验失败 {{ validateResult.errors.length }} 项
-                  </div>
-                  <div
-                    v-for="(err, idx) in validateResult.errors"
-                    :key="idx"
-                    :class="bem.e('error-item')"
-                  >
-                    <span :class="bem.e('error-index')">#{{ idx + 1 }}</span>
-                    <span :class="bem.e('error-path')">{{ keyPathToString(err.keyPath) }}</span>
-                    <span :class="bem.e('error-sep')">→</span>
-                    <span :class="bem.e('error-message')">{{ err.message }}</span>
-                  </div>
-                </div>
-
-                <div v-else :class="bem.e('success-msg')">✅ 无错误（errors 数组为空）</div>
-              </template>
-            </div>
+      <div :class="bem.e('compare')">
+        <!-- ① validate() 返回值 -->
+        <div :class="bem.e('compare-card')">
+          <div :class="bem.e('compare-label')">① validate() —— boolean</div>
+          <div :class="bem.e('compare-value')">
+            <template v-if="validateBool === null">
+              <span :class="bem.e('placeholder')">（点击「提交」触发校验）</span>
+            </template>
+            <template v-else>
+              <div>
+                返回值:
+                <code :class="bem.e('compare-code')">{{ validateBool }}</code>
+              </div>
+              <div :class="bem.e('compare-hint')">
+                {{ validateBool ? '✅ 全部通过（详细错误见右侧）' : '❌ 有错误（具体错误见右侧）' }}
+              </div>
+            </template>
           </div>
         </div>
-      </section>
 
-      <ApiTable
-        title="validate() / validateDetail() API"
-        :items="validateDetailItems"
-        anchor="api-validate-detail"
-      />
+        <!-- ② validateDetail() 返回值 -->
+        <div :class="bem.e('compare-card')">
+          <div :class="bem.e('compare-label')">② validateDetail() —— ValidateResult</div>
+          <div :class="bem.e('compare-value')">
+            <template v-if="validateResult === null">
+              <span :class="bem.e('placeholder')">（点击「提交」触发校验）</span>
+            </template>
+            <template v-else>
+              <div :class="bem.e('detail-summary')">
+                isValid:
+                <code :class="bem.e('compare-code')">{{ validateResult.isValid }}</code>
+                · 错误数:
+                <code :class="bem.e('compare-code')">{{ validateResult.errors.length }}</code>
+              </div>
 
-      <!-- 数组字段的 keyPath 演示：展示 keyPath 含数字索引 [i] 的结构 -->
-      <section id="demo-keypath-array">
-        <DemoField label="数组字段的 keyPath（含数字索引）" :code="keyPathArrayExample">
-          <p :class="bem.e('keypath-intro')">
-            当字段位于数组节点（xArray / 嵌套 array）内时，
-            <code>validateDetail()</code>
-            返回的
-            <code>errors[].keyPath</code>
-            数组会包含数字下标，而非字符串。例如：
-            <code>['orders', 0, 'items', 1, 'product']</code>
-            表示「orders 数组第 0 行的 items 数组第 1 项的 product 字段」。 string = 字段名，number
-            = 数组下标 —— 可用于：
-            <code>setFieldError(keyPath.join('.'), message)</code>
-            或在 UI 上 highlight 对应字段。
-          </p>
-          <p :class="bem.e('keypath-hint')">
-            本 demo 注册表单故意留空触发校验后，右侧错误面板会展示完整的 keyPath 数组 （含字段名 +
-            嵌套结构）；若需演示纯数组下标场景，请切换到
-            <code>/demo/xform-nested-array</code>
-            （嵌套 array 验证失败时 keyPath 含两层 [i]）。
-          </p>
-        </DemoField>
-      </section>
-    </DemoFrame>
+              <div v-if="validateResult.errors.length > 0" :class="bem.e('error-list')">
+                <div :class="bem.e('error-title')">
+                  校验失败 {{ validateResult.errors.length }} 项
+                </div>
+                <div
+                  v-for="(err, idx) in validateResult.errors"
+                  :key="idx"
+                  :class="bem.e('error-item')"
+                >
+                  <span :class="bem.e('error-index')">#{{ idx + 1 }}</span>
+                  <span :class="bem.e('error-path')">{{ keyPathToString(err.keyPath) }}</span>
+                  <span :class="bem.e('error-sep')">→</span>
+                  <span :class="bem.e('error-message')">{{ err.message }}</span>
+                </div>
+              </div>
 
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+              <div v-else :class="bem.e('success-msg')">✅ 无错误（errors 数组为空）</div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <ApiTable
+      title="validate() / validateDetail() API"
+      :items="validateDetailItems"
+      anchor="api-validate-detail"
+    />
+
+    <!-- 数组字段的 keyPath 演示：展示 keyPath 含数字索引 [i] 的结构 -->
+    <section id="demo-keypath-array">
+      <DemoField label="数组字段的 keyPath（含数字索引）" :code="keyPathArrayExample">
+        <p :class="bem.e('keypath-intro')">
+          当字段位于数组节点（xArray / 嵌套 array）内时，
+          <code>validateDetail()</code>
+          返回的
+          <code>errors[].keyPath</code>
+          数组会包含数字下标，而非字符串。例如：
+          <code>['orders', 0, 'items', 1, 'product']</code>
+          表示「orders 数组第 0 行的 items 数组第 1 项的 product 字段」。 string = 字段名，number =
+          数组下标 —— 可用于：
+          <code>setFieldError(keyPath.join('.'), message)</code>
+          或在 UI 上 highlight 对应字段。
+        </p>
+        <p :class="bem.e('keypath-hint')">
+          本 demo 注册表单故意留空触发校验后，右侧错误面板会展示完整的 keyPath 数组 （含字段名 +
+          嵌套结构）；若需演示纯数组下标场景，请切换到
+          <code>/demo/xform-nested-array</code>
+          （嵌套 array 验证失败时 keyPath 含两层 [i]）。
+        </p>
+      </DemoField>
+    </section>
+  </DemoFrame>
 </template>
 
 <style lang="scss">

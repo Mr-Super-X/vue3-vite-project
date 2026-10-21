@@ -16,8 +16,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { slotTypeItems } from './configs/xform-demos-api'
 import xFormSlotsSource from './XFormSlots.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
@@ -108,39 +107,35 @@ const tocItems = [
   { id: 'demo-slots', label: '插槽演示' },
   { id: 'api-slots-type', label: '插槽三种形式' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="XForm Slots 支持 render function / JSX"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        'schema.slots 支持三种内容：SchemaNode / 字符串 / 函数。',
-        '函数 slot 会被直接作为 Vue slot 函数使用，支持 scoped slot（接收 scope 参数）。',
-        'JSX 编译产物本质上就是返回 VNode 的函数，因此同样受支持。',
-      ]"
-    >
-      <section id="demo-slots">
-        <DemoField label="slots 渲染演示" :code="xFormSlotsSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onValidate">校验</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-            <span :class="bem.e('msg')">{{ msg }}</span>
-          </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="XForm Slots 支持 render function / JSX"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      'schema.slots 支持三种内容：SchemaNode / 字符串 / 函数。',
+      '函数 slot 会被直接作为 Vue slot 函数使用，支持 scoped slot（接收 scope 参数）。',
+      'JSX 编译产物本质上就是返回 VNode 的函数，因此同样受支持。',
+    ]"
+  >
+    <section id="demo-slots">
+      <DemoField label="slots 渲染演示" :code="xFormSlotsSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onValidate">校验</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+          <span :class="bem.e('msg')">{{ msg }}</span>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
 
-      <ApiTable title="插槽三种形式" :items="slotTypeItems" anchor="api-slots-type" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="插槽三种形式" :items="slotTypeItems" anchor="api-slots-type" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

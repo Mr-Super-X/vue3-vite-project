@@ -14,8 +14,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { asyncOptionsItems } from './configs/xform-demos-api'
 import xFormSource from './XFormAsyncOptionsError.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
@@ -101,82 +100,81 @@ const tocItems = [
   { id: 'demo-async-options-error', label: 'asyncOptions 错误处理演示' },
   { id: 'api-async-options', label: 'AsyncOptionsConfig 速查' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="asyncOptions.onError 错误处理（deps 触发重试）"
-      source="src/components/form-schema/composables/use-async-options.ts"
-      :introductions="[
-        'asyncOptions.onError：source 抛错时触发——业务侧可接管 toast / 上报 / fallback',
-        'asyncOptions.deps：字段依赖——其他字段变化时自动触发 source 重跑（演示重试机制）',
-        '默认行为：error 写入节点内部 state，AsyncOptions UI 显示「加载失败」提示',
-        '测试 1: 开启「强制失败」开关 → onError toast 立即弹出（deps 触发「城市」字段 source 重跑）',
-        '测试 2: 关闭「强制失败」→ 「城市」下拉显示 3 个城市（deps 触发 source 重跑成功）',
-        '对比 demos：immediate 行为（默认/手动）见 XFormAsyncOptions；批量 deps 重试见本 demo',
-      ]"
-    >
-      <section id="demo-async-options-error">
-        <DemoField label="asyncOptions 错误处理" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onSave">保存</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-          </div>
-          <div :class="bem.e('counter')">
-            <span>「城市」字段 source 被调用次数：</span>
-            <strong>{{ sourceCallCount }}</strong>
-            <span :class="bem.e('counter-hint')">
-              （首次 mount + 切换「强制失败」开关触发 deps 重跑，每次 +1）
-            </span>
-          </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="asyncOptions.onError 错误处理（deps 触发重试）"
+    source="src/components/form-schema/composables/use-async-options.ts"
+    :introductions="[
+      'asyncOptions.onError：source 抛错时触发——业务侧可接管 toast / 上报 / fallback',
+      'asyncOptions.deps：字段依赖——其他字段变化时自动触发 source 重跑（演示重试机制）',
+      '默认行为：error 写入节点内部 state，AsyncOptions UI 显示「加载失败」提示',
+      '测试 1: 开启「强制失败」开关 → onError toast 立即弹出（deps 触发「城市」字段 source 重跑）',
+      '测试 2: 关闭「强制失败」→ 「城市」下拉显示 3 个城市（deps 触发 source 重跑成功）',
+      '对比 demos：immediate 行为（默认/手动）见 XFormAsyncOptions；批量 deps 重试见本 demo',
+    ]"
+  >
+    <section id="demo-async-options-error">
+      <DemoField label="asyncOptions 错误处理" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onSave">保存</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <div :class="bem.e('counter')">
+          <span>「城市」字段 source 被调用次数：</span>
+          <strong>{{ sourceCallCount }}</strong>
+          <span :class="bem.e('counter-hint')">
+            （首次 mount + 切换「强制失败」开关触发 deps 重跑，每次 +1）
+          </span>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
 
-      <!-- API 限制说明：与本 demo 演示内容分离，避免把 bug 展示当功能 demo -->
-      <el-collapse :class="bem.e('limit-collapse')">
-        <el-collapse-item title="⚠️ 关于 immediate: false 的引擎限制" name="immediate-limit">
-          <p>
-            <strong>设计意图</strong>
-            ：immediate: false 用于大表单按需加载（节省初次 N 个并发请求）。
-          </p>
-          <p>
-            <strong>当前限制</strong>
-            ：XForm 引擎未实现 visibleChange 监听，immediate: false 字段的 source 永远不调用。
-          </p>
-          <p>
-            <strong>变通方案</strong>
-            ：用
-            <code>asyncOptions.deps</code>
-            声明字段依赖（其他字段变化触发 source 重跑，参考本 demo）；或保持
-            <code>immediate: true</code>
-            由 deps 控制懒加载。
-          </p>
-          <p>
-            <strong>进度</strong>
-            ：见 use-async-options.ts 内部 issues 跟踪；本 demo 不演示该字段实际行为。
-          </p>
-          <p>
-            <strong>Backlog</strong>
-            ：见
-            <code>.claude/.agent-reports/2026-09-21-p1-high-checklist.json</code>
-            第 27 项 +
-            <code>use-async-options.ts</code>
-            内部 comments。
-          </p>
-        </el-collapse-item>
-      </el-collapse>
-      <ApiTable
-        title="AsyncOptionsConfig 速查"
-        :items="asyncOptionsItems"
-        anchor="api-async-options"
-      />
-    </DemoFrame>
-    <template #toc><DocToc :items="tocItems" /></template>
-  </DocLayout>
+    <!-- API 限制说明：与本 demo 演示内容分离，避免把 bug 展示当功能 demo -->
+    <el-collapse :class="bem.e('limit-collapse')">
+      <el-collapse-item title="⚠️ 关于 immediate: false 的引擎限制" name="immediate-limit">
+        <p>
+          <strong>设计意图</strong>
+          ：immediate: false 用于大表单按需加载（节省初次 N 个并发请求）。
+        </p>
+        <p>
+          <strong>当前限制</strong>
+          ：XForm 引擎未实现 visibleChange 监听，immediate: false 字段的 source 永远不调用。
+        </p>
+        <p>
+          <strong>变通方案</strong>
+          ：用
+          <code>asyncOptions.deps</code>
+          声明字段依赖（其他字段变化触发 source 重跑，参考本 demo）；或保持
+          <code>immediate: true</code>
+          由 deps 控制懒加载。
+        </p>
+        <p>
+          <strong>进度</strong>
+          ：见 use-async-options.ts 内部 issues 跟踪；本 demo 不演示该字段实际行为。
+        </p>
+        <p>
+          <strong>Backlog</strong>
+          ：见
+          <code>.claude/.agent-reports/2026-09-21-p1-high-checklist.json</code>
+          第 27 项 +
+          <code>use-async-options.ts</code>
+          内部 comments。
+        </p>
+      </el-collapse-item>
+    </el-collapse>
+    <ApiTable
+      title="AsyncOptionsConfig 速查"
+      :items="asyncOptionsItems"
+      anchor="api-async-options"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

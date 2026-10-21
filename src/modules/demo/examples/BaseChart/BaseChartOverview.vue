@@ -14,8 +14,7 @@ import { ElMessage } from 'element-plus'
 import type { ECharts } from 'echarts'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 
 const bem = createNamespace('demo-base-chart')
 
@@ -188,120 +187,116 @@ const tocItems = [
   { id: 'demo-theme', label: '主题切换' },
   { id: 'demo-manual', label: 'autoResize 关闭 + 手动 resize' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="BaseChart 用法总览"
-      source="src/components/common/BaseChart.vue"
-      :introductions="[
-        '通用 ECharts 容器组件：option 驱动渲染 + ResizeObserver 自适应 + 三步内存清理。',
-        '通过 getInstance() 暴露原生实例，可绑定 click / hover 等事件或调用 dispatchAction。',
-        '本页用真实交互验证：loading 切换、option 响应式、事件绑定、主题切换、resize 控制。',
-      ]"
-    >
-      <section id="demo-basic">
-        <DemoField :code="SNIPPET_BASIC" label="① 基础用法 + Loading">
-          <div :class="bem.e('controls')">
-            <el-button type="primary" @click="toggleBasicLoading">
-              {{ basicLoading ? '关闭 Loading' : '打开 Loading' }}
-            </el-button>
-            <span :class="bem.e('status')">loading = {{ basicLoading }}</span>
-          </div>
-          <div :class="bem.e('canvas')">
-            <BaseChart :option="basicOption" :loading="basicLoading" />
-          </div>
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="BaseChart 用法总览"
+    source="src/components/common/BaseChart.vue"
+    :introductions="[
+      '通用 ECharts 容器组件：option 驱动渲染 + ResizeObserver 自适应 + 三步内存清理。',
+      '通过 getInstance() 暴露原生实例，可绑定 click / hover 等事件或调用 dispatchAction。',
+      '本页用真实交互验证：loading 切换、option 响应式、事件绑定、主题切换、resize 控制。',
+    ]"
+  >
+    <section id="demo-basic">
+      <DemoField :code="SNIPPET_BASIC" label="① 基础用法 + Loading">
+        <div :class="bem.e('controls')">
+          <el-button type="primary" @click="toggleBasicLoading">
+            {{ basicLoading ? '关闭 Loading' : '打开 Loading' }}
+          </el-button>
+          <span :class="bem.e('status')">loading = {{ basicLoading }}</span>
+        </div>
+        <div :class="bem.e('canvas')">
+          <BaseChart :option="basicOption" :loading="basicLoading" />
+        </div>
+      </DemoField>
+    </section>
 
-      <section id="demo-reactive">
-        <DemoField :code="SNIPPET_REACTIVE" label="② option 响应式 + notMerge 整体替换">
-          <div :class="bem.e('controls')">
-            <el-button @click="switchDataset">切换 bar / line</el-button>
-            <span :class="bem.e('status')">当前类型：{{ datasetType }}</span>
-          </div>
-          <div :class="bem.e('canvas')">
-            <BaseChart :option="reactiveOption" />
-          </div>
-          <p :class="bem.e('tip')">
-            <strong>验证步骤：</strong>
-            先 hover 柱子触发 tooltip，再切换 bar / line；若 tooltip 残留（旧 series 高亮未清掉）
-            说明 notMerge 没生效——本组件强制开启 notMerge: true。
-          </p>
-        </DemoField>
-      </section>
+    <section id="demo-reactive">
+      <DemoField :code="SNIPPET_REACTIVE" label="② option 响应式 + notMerge 整体替换">
+        <div :class="bem.e('controls')">
+          <el-button @click="switchDataset">切换 bar / line</el-button>
+          <span :class="bem.e('status')">当前类型：{{ datasetType }}</span>
+        </div>
+        <div :class="bem.e('canvas')">
+          <BaseChart :option="reactiveOption" />
+        </div>
+        <p :class="bem.e('tip')">
+          <strong>验证步骤：</strong>
+          先 hover 柱子触发 tooltip，再切换 bar / line；若 tooltip 残留（旧 series 高亮未清掉） 说明
+          notMerge 没生效——本组件强制开启 notMerge: true。
+        </p>
+      </DemoField>
+    </section>
 
-      <section id="demo-instance">
-        <DemoField :code="SNIPPET_INSTANCE" label="③ getInstance() 获取原生实例绑定事件">
-          <div :class="bem.e('controls')">
-            <el-button type="primary" @click="bindClick">绑定点击事件</el-button>
-            <el-button @click="clickLog = []">清空记录</el-button>
-          </div>
-          <div :class="bem.e('canvas')">
-            <BaseChart ref="chartRef" :option="clickOption" />
-          </div>
-          <ul :class="bem.e('log')">
-            <li v-if="clickLog.length === 0" :class="bem.e('log-empty')">绑定后点击柱子试试</li>
-            <li v-for="(line, i) in clickLog" :key="i">{{ line }}</li>
-          </ul>
-        </DemoField>
-      </section>
+    <section id="demo-instance">
+      <DemoField :code="SNIPPET_INSTANCE" label="③ getInstance() 获取原生实例绑定事件">
+        <div :class="bem.e('controls')">
+          <el-button type="primary" @click="bindClick">绑定点击事件</el-button>
+          <el-button @click="clickLog = []">清空记录</el-button>
+        </div>
+        <div :class="bem.e('canvas')">
+          <BaseChart ref="chartRef" :option="clickOption" />
+        </div>
+        <ul :class="bem.e('log')">
+          <li v-if="clickLog.length === 0" :class="bem.e('log-empty')">绑定后点击柱子试试</li>
+          <li v-for="(line, i) in clickLog" :key="i">{{ line }}</li>
+        </ul>
+      </DemoField>
+    </section>
 
-      <section id="demo-resize">
-        <DemoField :code="SNIPPET_RESIZE" label="④ ResizeObserver 自动 resize（150ms 防抖）">
-          <div :class="bem.e('controls')">
-            <el-button @click="shrink">- 缩小 100px</el-button>
-            <el-button @click="expand">+ 放大 100px</el-button>
-            <span :class="bem.e('status')">容器宽度：{{ containerWidth }}px</span>
-          </div>
-          <div :class="bem.e('canvas')" :style="{ width: containerWidth + 'px', maxWidth: '100%' }">
-            <BaseChart :option="resizeOption" />
-          </div>
-          <p :class="bem.e('tip')">
-            改变宽度时，BaseChart 内部 ResizeObserver 触发并 150ms 防抖后调用 resize()。
-            离开本页（组件卸载）时 dispose 会断开观察器释放 DOM 引用。
-          </p>
-        </DemoField>
-      </section>
+    <section id="demo-resize">
+      <DemoField :code="SNIPPET_RESIZE" label="④ ResizeObserver 自动 resize（150ms 防抖）">
+        <div :class="bem.e('controls')">
+          <el-button @click="shrink">- 缩小 100px</el-button>
+          <el-button @click="expand">+ 放大 100px</el-button>
+          <span :class="bem.e('status')">容器宽度：{{ containerWidth }}px</span>
+        </div>
+        <div :class="bem.e('canvas')" :style="{ width: containerWidth + 'px', maxWidth: '100%' }">
+          <BaseChart :option="resizeOption" />
+        </div>
+        <p :class="bem.e('tip')">
+          改变宽度时，BaseChart 内部 ResizeObserver 触发并 150ms 防抖后调用 resize()。
+          离开本页（组件卸载）时 dispose 会断开观察器释放 DOM 引用。
+        </p>
+      </DemoField>
+    </section>
 
-      <section id="demo-theme">
-        <DemoField :code="SNIPPET_THEME" label="⑤ 主题切换（销毁重建路径）">
-          <div :class="bem.e('controls')">
-            <el-button @click="toggleTheme">切换 light / dark</el-button>
-            <span :class="bem.e('status')">当前主题：{{ theme }}</span>
-          </div>
-          <p :class="bem.e('tip')">
-            ECharts 没有 setTheme API，本组件 watch theme 变化后 dispose → init
-            重建实例（任何旧状态会被清掉）。
-          </p>
-          <div :class="bem.e('canvas')">
-            <BaseChart :option="themeOption" :theme="theme" />
-          </div>
-        </DemoField>
-      </section>
+    <section id="demo-theme">
+      <DemoField :code="SNIPPET_THEME" label="⑤ 主题切换（销毁重建路径）">
+        <div :class="bem.e('controls')">
+          <el-button @click="toggleTheme">切换 light / dark</el-button>
+          <span :class="bem.e('status')">当前主题：{{ theme }}</span>
+        </div>
+        <p :class="bem.e('tip')">
+          ECharts 没有 setTheme API，本组件 watch theme 变化后 dispose → init
+          重建实例（任何旧状态会被清掉）。
+        </p>
+        <div :class="bem.e('canvas')">
+          <BaseChart :option="themeOption" :theme="theme" />
+        </div>
+      </DemoField>
+    </section>
 
-      <section id="demo-manual">
-        <DemoField :code="SNIPPET_MANUAL" label="⑥ autoResize 关闭 + 手动 resize()">
-          <div :class="bem.e('controls')">
-            <el-button type="primary" @click="manualResize">改尺寸 + 手动 resize</el-button>
-            <span :class="bem.e('status')">容器宽度：{{ manualWidth }}px</span>
-          </div>
-          <div :class="bem.e('canvas')" :style="{ width: manualWidth + 'px', maxWidth: '100%' }">
-            <BaseChart ref="manualChartRef" :option="resizeOption" :auto-resize="false" />
-          </div>
-          <p :class="bem.e('tip')">
-            autoResize 设为 false 后，父容器尺寸变化不会自动 resize； 本例在改尺寸的同时手动调用
-            ref.resize() 让图表跟随。
-          </p>
-        </DemoField>
-      </section>
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <section id="demo-manual">
+      <DemoField :code="SNIPPET_MANUAL" label="⑥ autoResize 关闭 + 手动 resize()">
+        <div :class="bem.e('controls')">
+          <el-button type="primary" @click="manualResize">改尺寸 + 手动 resize</el-button>
+          <span :class="bem.e('status')">容器宽度：{{ manualWidth }}px</span>
+        </div>
+        <div :class="bem.e('canvas')" :style="{ width: manualWidth + 'px', maxWidth: '100%' }">
+          <BaseChart ref="manualChartRef" :option="resizeOption" :auto-resize="false" />
+        </div>
+        <p :class="bem.e('tip')">
+          autoResize 设为 false 后，父容器尺寸变化不会自动 resize； 本例在改尺寸的同时手动调用
+          ref.resize() 让图表跟随。
+        </p>
+      </DemoField>
+    </section>
+  </DemoFrame>
 </template>
 
 <style lang="scss">

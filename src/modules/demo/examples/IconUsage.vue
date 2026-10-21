@@ -8,11 +8,10 @@
  * 3. 「本地自定义集合」区按代码片段步骤可复刻出 app:logo 图标（新增流程见 docs/39 §3.2/§3.3）。
  */
 import type { AppIconName } from '@/assets/icons/registry'
-import DocLayout from '../layouts/DocLayout.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
 import ApiTable from '../components/ApiTable.vue'
-import DocToc from '../components/DocToc.vue'
+import { useDocToc } from '../composables/useDocToc'
 import { extractApi } from '../utils/extractApi'
 import appDynamicIconSource from '@/components/common/AppDynamicIcon.vue?raw'
 
@@ -34,6 +33,8 @@ const tocItems = [
   { id: 'api-syntax', label: '语法速查' },
   { id: 'api-props', label: 'AppDynamicIcon Props' },
 ]
+
+useDocToc(tocItems)
 
 // —— 查找入口：新人最频繁的问题「这个图标去哪找」——集合 → 官方索引地址 + 命名转换技巧 ——
 const finderRows: { collection: string; url: string; urlText: string; tip: string }[] = [
@@ -103,152 +104,146 @@ const syntaxItems = [
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="IconUsage 图标体系"
-      source="src/assets/icons/registry.ts"
-      :introductions="[
-        '一套语法、零体积焦虑、类型安全、离线可用：图标编译期内联 SVG，产物零 iconify API 请求。',
-        '静态 <i-集合-图标 /> 覆盖 99% 场景；图标名来自数据时用 &lt;AppDynamicIcon name=&quot;集合:图标&quot; /&gt;。',
-        '业务私有图标放 src/assets/icons（app 集合），git 管理、编译期校验、随包分发。',
-      ]"
-    >
-      <section id="demo-find" :class="bem.b()">
-        <DemoField
-          label="去哪找图标：官方索引 + 命名技巧"
-          :code="`ep     → https://element-plus.org/zh-CN/component/icon\n         （组件名转 kebab：Plus → i-ep-plus、MagicStick → i-ep-magic-stick）\ntabler → https://icon-sets.iconify.design/tabler/\n         （图标名即 kebab，直接拼 i-tabler-<名字>）\n全集合 → https://icon-sets.iconify.design/（支持中文搜索；\n         白名单外集合先走 docs/39 §3.1 新增流程）\napp    → src/assets/icons/（本地 SVG，三步走见「本地自定义集合」）`"
-        >
-          <table :class="bem.e('finder')">
-            <thead>
-              <tr>
-                <th>集合</th>
-                <th>查找地址</th>
-                <th>命名技巧</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="row in finderRows" :key="row.collection">
-                <td>
-                  <code>{{ row.collection }}</code>
-                </td>
-                <td>
-                  <a
-                    v-if="row.url"
-                    :href="row.url"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    :class="bem.e('link')"
-                  >
-                    {{ row.urlText }}
-                  </a>
-                  <code v-else>{{ row.urlText }}</code>
-                </td>
-                <td>{{ row.tip }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="IconUsage 图标体系"
+    source="src/assets/icons/registry.ts"
+    :introductions="[
+      '一套语法、零体积焦虑、类型安全、离线可用：图标编译期内联 SVG，产物零 iconify API 请求。',
+      '静态 <i-集合-图标 /> 覆盖 99% 场景；图标名来自数据时用 &lt;AppDynamicIcon name=&quot;集合:图标&quot; /&gt;。',
+      '业务私有图标放 src/assets/icons（app 集合），git 管理、编译期校验、随包分发。',
+    ]"
+  >
+    <section id="demo-find" :class="bem.b()">
+      <DemoField
+        label="去哪找图标：官方索引 + 命名技巧"
+        :code="`ep     → https://element-plus.org/zh-CN/component/icon\n         （组件名转 kebab：Plus → i-ep-plus、MagicStick → i-ep-magic-stick）\ntabler → https://icon-sets.iconify.design/tabler/\n         （图标名即 kebab，直接拼 i-tabler-<名字>）\n全集合 → https://icon-sets.iconify.design/（支持中文搜索；\n         白名单外集合先走 docs/39 §3.1 新增流程）\napp    → src/assets/icons/（本地 SVG，三步走见「本地自定义集合」）`"
+      >
+        <table :class="bem.e('finder')">
+          <thead>
+            <tr>
+              <th>集合</th>
+              <th>查找地址</th>
+              <th>命名技巧</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in finderRows" :key="row.collection">
+              <td>
+                <code>{{ row.collection }}</code>
+              </td>
+              <td>
+                <a
+                  v-if="row.url"
+                  :href="row.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  :class="bem.e('link')"
+                >
+                  {{ row.urlText }}
+                </a>
+                <code v-else>{{ row.urlText }}</code>
+              </td>
+              <td>{{ row.tip }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </DemoField>
+    </section>
 
-      <section id="demo-static" :class="bem.b()">
-        <DemoField
-          label="静态用法：三集合"
-          :code="`<i-ep-plus />\n<i-tabler-home />\n<i-app-logo />`"
-        >
-          <div :class="bem.e('grid')">
-            <span :class="bem.e('cell')">
-              <i-ep-plus />
-              <code>i-ep-plus</code>
-            </span>
-            <span :class="bem.e('cell')">
-              <i-ep-edit />
-              <code>i-ep-edit</code>
-            </span>
-            <span :class="bem.e('cell')">
-              <i-tabler-home />
-              <code>i-tabler-home</code>
-            </span>
-            <span :class="bem.e('cell')">
-              <i-tabler-settings />
-              <code>i-tabler-settings</code>
-            </span>
-            <span :class="bem.e('cell')">
-              <i-app-logo />
-              <code>i-app-logo</code>
-            </span>
-            <span :class="bem.e('cell')">
-              <i-app-close />
-              <code>i-app-close</code>
-            </span>
-          </div>
-        </DemoField>
+    <section id="demo-static" :class="bem.b()">
+      <DemoField
+        label="静态用法：三集合"
+        :code="`<i-ep-plus />\n<i-tabler-home />\n<i-app-logo />`"
+      >
+        <div :class="bem.e('grid')">
+          <span :class="bem.e('cell')">
+            <i-ep-plus />
+            <code>i-ep-plus</code>
+          </span>
+          <span :class="bem.e('cell')">
+            <i-ep-edit />
+            <code>i-ep-edit</code>
+          </span>
+          <span :class="bem.e('cell')">
+            <i-tabler-home />
+            <code>i-tabler-home</code>
+          </span>
+          <span :class="bem.e('cell')">
+            <i-tabler-settings />
+            <code>i-tabler-settings</code>
+          </span>
+          <span :class="bem.e('cell')">
+            <i-app-logo />
+            <code>i-app-logo</code>
+          </span>
+          <span :class="bem.e('cell')">
+            <i-app-close />
+            <code>i-app-close</code>
+          </span>
+        </div>
+      </DemoField>
 
-        <DemoField
-          label="尺寸与颜色：跟随 CSS（currentColor）"
-          :code="`<span style=&quot;font-size: 32px; color: var(--el-color-primary)&quot;>\n  <i-ep-plus />\n</span>`"
-        >
-          <div :class="bem.e('row')">
-            <span style="font-size: 16px"><i-ep-plus /></span>
-            <span style="font-size: 24px"><i-ep-plus /></span>
-            <span style="font-size: 32px"><i-ep-plus /></span>
-            <span style="color: var(--el-color-primary); font-size: 24px"><i-tabler-home /></span>
-            <span style="color: var(--el-color-success); font-size: 24px"><i-tabler-home /></span>
-            <span style="color: var(--el-color-danger); font-size: 24px"><i-app-logo /></span>
-          </div>
-        </DemoField>
-      </section>
+      <DemoField
+        label="尺寸与颜色：跟随 CSS（currentColor）"
+        :code="`<span style=&quot;font-size: 32px; color: var(--el-color-primary)&quot;>\n  <i-ep-plus />\n</span>`"
+      >
+        <div :class="bem.e('row')">
+          <span style="font-size: 16px"><i-ep-plus /></span>
+          <span style="font-size: 24px"><i-ep-plus /></span>
+          <span style="font-size: 32px"><i-ep-plus /></span>
+          <span style="color: var(--el-color-primary); font-size: 24px"><i-tabler-home /></span>
+          <span style="color: var(--el-color-success); font-size: 24px"><i-tabler-home /></span>
+          <span style="color: var(--el-color-danger); font-size: 24px"><i-app-logo /></span>
+        </div>
+      </DemoField>
+    </section>
 
-      <section id="demo-dynamic">
-        <DemoField
-          label="动态用法：AppDynamicIcon（名字来自数据）"
-          :code="`<AppDynamicIcon v-for=&quot;m in menuItems&quot; :key=&quot;m.icon&quot; :name=&quot;m.icon&quot; />\n<AppDynamicIcon name=&quot;tabler:settings&quot; :size=&quot;20&quot; />`"
-        >
-          <div :class="bem.e('grid')">
-            <span v-for="item in dynamicList" :key="item.name" :class="bem.e('cell')">
-              <AppDynamicIcon :name="item.name" />
-              <code>name="{{ item.label }}"</code>
-            </span>
-            <span :class="bem.e('cell')">
-              <AppDynamicIcon name="tabler:settings" :size="20" />
-              <code>:size="20"</code>
-            </span>
-          </div>
-        </DemoField>
-      </section>
+    <section id="demo-dynamic">
+      <DemoField
+        label="动态用法：AppDynamicIcon（名字来自数据）"
+        :code="`<AppDynamicIcon v-for=&quot;m in menuItems&quot; :key=&quot;m.icon&quot; :name=&quot;m.icon&quot; />\n<AppDynamicIcon name=&quot;tabler:settings&quot; :size=&quot;20&quot; />`"
+      >
+        <div :class="bem.e('grid')">
+          <span v-for="item in dynamicList" :key="item.name" :class="bem.e('cell')">
+            <AppDynamicIcon :name="item.name" />
+            <code>name="{{ item.label }}"</code>
+          </span>
+          <span :class="bem.e('cell')">
+            <AppDynamicIcon name="tabler:settings" :size="20" />
+            <code>:size="20"</code>
+          </span>
+        </div>
+      </DemoField>
+    </section>
 
-      <section id="demo-custom">
-        <DemoField
-          label="本地自定义集合 app:：新增与使用（完整流程）"
-          :code="`// ① 存入 SVG 资产（源文件规范见 docs/39 §4.3）\n// src/assets/icons/logo.svg\n\n// ② 静态用法：模板直接用\n<i-app-logo />\n\n// ③ 动态用法：registry.ts 登记一行\nimport AppLogo from 'virtual:icons/app/logo'\nconst registry = { /* ... */, 'app:logo': AppLogo } as const`"
-        >
-          <div :class="bem.e('grid')">
-            <span :class="bem.e('cell')">
-              <i-app-logo />
-              <code>静态 &lt;i-app-logo /&gt;</code>
-            </span>
-            <span :class="bem.e('cell')">
-              <AppDynamicIcon name="app:logo" />
-              <code>动态 name="app:logo"</code>
-            </span>
-          </div>
-          <p :class="bem.e('tip')">
-            上方两个图标来自同一份
-            <code>src/assets/icons/logo.svg</code>
-            ；新增图标按左侧代码三步走，详见
-            <code>docs/39-图标体系与使用规范.md</code>
-            §3.2 / §3.3。
-          </p>
-        </DemoField>
-      </section>
+    <section id="demo-custom">
+      <DemoField
+        label="本地自定义集合 app:：新增与使用（完整流程）"
+        :code="`// ① 存入 SVG 资产（源文件规范见 docs/39 §4.3）\n// src/assets/icons/logo.svg\n\n// ② 静态用法：模板直接用\n<i-app-logo />\n\n// ③ 动态用法：registry.ts 登记一行\nimport AppLogo from 'virtual:icons/app/logo'\nconst registry = { /* ... */, 'app:logo': AppLogo } as const`"
+      >
+        <div :class="bem.e('grid')">
+          <span :class="bem.e('cell')">
+            <i-app-logo />
+            <code>静态 &lt;i-app-logo /&gt;</code>
+          </span>
+          <span :class="bem.e('cell')">
+            <AppDynamicIcon name="app:logo" />
+            <code>动态 name="app:logo"</code>
+          </span>
+        </div>
+        <p :class="bem.e('tip')">
+          上方两个图标来自同一份
+          <code>src/assets/icons/logo.svg</code>
+          ；新增图标按左侧代码三步走，详见
+          <code>docs/39-图标体系与使用规范.md</code>
+          §3.2 / §3.3。
+        </p>
+      </DemoField>
+    </section>
 
-      <ApiTable title="双语法速查" :items="syntaxItems" anchor="api-syntax" />
-      <ApiTable title="AppDynamicIcon Props" :items="propsItems" anchor="api-props" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="双语法速查" :items="syntaxItems" anchor="api-syntax" />
+    <ApiTable title="AppDynamicIcon Props" :items="propsItems" anchor="api-props" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

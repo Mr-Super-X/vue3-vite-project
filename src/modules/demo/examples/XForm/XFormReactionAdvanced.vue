@@ -24,8 +24,7 @@
  * use-reaction 的 isEqual 比较 target._effect 与 undefined 相等 → 跳过写入节点字段。
  */
 import DemoFrame from '../../components/DemoFrame.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 
 const bem = createNamespace('demo-x-form-reaction-advanced')
 
@@ -70,35 +69,34 @@ function gotoSubDemo(name: string) {
 }
 
 const tocItems = [{ id: 'demo-overview', label: '四个进阶场景导航' }]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="反应式联动·进阶总览（4 大场景）"
-      source="src/components/form-schema/composables/use-reaction.ts"
-      :introductions="[
-        'XFormReaction 基础 4 场景之外的复杂联动。原 427 行 demo 已拆分到 4 个独立子页面：',
-        '① 计算字段：reaction 闭包副作用 + deps 精确监听切断自触发',
-        '② 级联清空：上级 on.change 清空下级 + reaction.props 动态切 options',
-        '③ 反应式 props/rules：单个 reaction 节点同时改 label + props，rules 用 {{ fn }} 表达式',
-        '④ 数组行内嵌：行内 deps 用相对路径（不写 array.rows.0.qty）',
-      ]"
-    >
-      <section id="demo-overview">
-        <el-row :gutter="16" :class="bem.e('grid')">
-          <el-col v-for="d in SUB_DEMOS" :key="d.name" :xs="24" :md="12">
-            <div :class="bem.e('card')">
-              <h3 :class="bem.e('card-title')">{{ d.idx }} {{ d.title }}</h3>
-              <p :class="bem.e('card-desc')">{{ d.desc }}</p>
-              <el-link type="primary" @click="gotoSubDemo(d.name)">打开子 demo →</el-link>
-            </div>
-          </el-col>
-        </el-row>
-      </section>
-    </DemoFrame>
-    <template #toc><DocToc :items="tocItems" /></template>
-  </DocLayout>
+  <DemoFrame
+    title="反应式联动·进阶总览（4 大场景）"
+    source="src/components/form-schema/composables/use-reaction.ts"
+    :introductions="[
+      'XFormReaction 基础 4 场景之外的复杂联动。原 427 行 demo 已拆分到 4 个独立子页面：',
+      '① 计算字段：reaction 闭包副作用 + deps 精确监听切断自触发',
+      '② 级联清空：上级 on.change 清空下级 + reaction.props 动态切 options',
+      '③ 反应式 props/rules：单个 reaction 节点同时改 label + props，rules 用 {{ fn }} 表达式',
+      '④ 数组行内嵌：行内 deps 用相对路径（不写 array.rows.0.qty）',
+    ]"
+  >
+    <section id="demo-overview">
+      <el-row :gutter="16" :class="bem.e('grid')">
+        <el-col v-for="d in SUB_DEMOS" :key="d.name" :xs="24" :md="12">
+          <div :class="bem.e('card')">
+            <h3 :class="bem.e('card-title')">{{ d.idx }} {{ d.title }}</h3>
+            <p :class="bem.e('card-desc')">{{ d.desc }}</p>
+            <el-link type="primary" @click="gotoSubDemo(d.name)">打开子 demo →</el-link>
+          </div>
+        </el-col>
+      </el-row>
+    </section>
+  </DemoFrame>
 </template>
 
 <style lang="scss">

@@ -28,8 +28,7 @@ import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import { responsiveItems } from './configs/xform-demos-api'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import xFormSource from './XFormResponsive.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
 
@@ -163,70 +162,66 @@ const tocItems = [
   { id: 'demo-responsive', label: '响应式布局演示' },
   { id: 'api-responsive', label: 'responsive 配置' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="响应式栅格"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        'RowConfig.responsive / ColConfig.responsive：不同断点下不同的 gutter / span / offset 等布局参数。',
-        '断点（element-plus 标准 5 档）：xs < 768 / sm < 992 / md < 1200 / lg < 1920 / xl ≥ 1920',
-        '⚠️ v3.5 已知限制：运行时 resize 浏览器窗口,字段布局不会实时变化（XForm 暂未集成 useResizeObserver）—— 验证方式是「DevTools 切 viewport 断点 + 刷新页面」看 gutter/span 变化。',
-      ]"
-    >
-      <section id="demo-responsive">
-        <DemoField label="响应式" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('actions')">
-            <el-button type="primary" @click="onSave">保存</el-button>
-            <el-button @click="onReset">重置</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
+  <DemoFrame
+    title="响应式栅格"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      'RowConfig.responsive / ColConfig.responsive：不同断点下不同的 gutter / span / offset 等布局参数。',
+      '断点（element-plus 标准 5 档）：xs < 768 / sm < 992 / md < 1200 / lg < 1920 / xl ≥ 1920',
+      '⚠️ v3.5 已知限制：运行时 resize 浏览器窗口,字段布局不会实时变化（XForm 暂未集成 useResizeObserver）—— 验证方式是「DevTools 切 viewport 断点 + 刷新页面」看 gutter/span 变化。',
+    ]"
+  >
+    <section id="demo-responsive">
+      <DemoField label="响应式" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('actions')">
+          <el-button type="primary" @click="onSave">保存</el-button>
+          <el-button @click="onReset">重置</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <div :class="bem.e('state')">
+          <div>
+            <strong>当前断点:</strong>
+            <el-tag size="large" type="primary">{{ currentBreakpoint }}</el-tag>
+            <span style="margin-left: 12px">
+              <strong>视口宽度:</strong>
+              {{ width }}px
+            </span>
           </div>
-          <div :class="bem.e('state')">
-            <div>
-              <strong>当前断点:</strong>
-              <el-tag size="large" type="primary">{{ currentBreakpoint }}</el-tag>
-              <span style="margin-left: 12px">
-                <strong>视口宽度:</strong>
-                {{ width }}px
-              </span>
-            </div>
-            <div>
-              <strong>说明:</strong>
-              切换
-              <code>mode (schema ref)</code>
-              可观察响应式；当前 XForm 不支持 viewport resize 自动重渲染。
-              <ul>
-                <li>
-                  <strong>字段间距</strong>
-                  :xs=0 → sm=16 → md=40 → lg=60 → xl=80 (px)
-                </li>
-                <li>
-                  <strong>水平对齐</strong>
-                  :xs=左对齐 → md=居中 → lg=右对齐 → xl=两端分散
-                </li>
-                <li>
-                  <strong>字段宽度</strong>
-                  :col.responsive 控制 span(xs=24 占满 / md=6 占 1/4)
-                </li>
-              </ul>
-              当前 XForm 已知限制：el-row / el-col 不自动监听 viewport resize（v3.5 集成中），需
-              DevTools 切 viewport 断点 + 刷新页面才能看到 gutter/span 变化。
-            </div>
-            <ModelPreview :model="model" />
+          <div>
+            <strong>说明:</strong>
+            切换
+            <code>mode (schema ref)</code>
+            可观察响应式；当前 XForm 不支持 viewport resize 自动重渲染。
+            <ul>
+              <li>
+                <strong>字段间距</strong>
+                :xs=0 → sm=16 → md=40 → lg=60 → xl=80 (px)
+              </li>
+              <li>
+                <strong>水平对齐</strong>
+                :xs=左对齐 → md=居中 → lg=右对齐 → xl=两端分散
+              </li>
+              <li>
+                <strong>字段宽度</strong>
+                :col.responsive 控制 span(xs=24 占满 / md=6 占 1/4)
+              </li>
+            </ul>
+            当前 XForm 已知限制：el-row / el-col 不自动监听 viewport resize（v3.5 集成中），需
+            DevTools 切 viewport 断点 + 刷新页面才能看到 gutter/span 变化。
           </div>
-        </DemoField>
-      </section>
+          <ModelPreview :model="model" />
+        </div>
+      </DemoField>
+    </section>
 
-      <ApiTable title="responsive 配置" :items="responsiveItems" anchor="api-responsive" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="responsive 配置" :items="responsiveItems" anchor="api-responsive" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

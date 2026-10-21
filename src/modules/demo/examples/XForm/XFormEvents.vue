@@ -17,8 +17,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { beforeChangeItems, onEventItems } from './configs/xform-demos-api'
 import xFormSource from './XFormEvents.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
@@ -172,40 +171,36 @@ const tocItems = [
   { id: 'api-before-change', label: 'beforeChange 值拦截' },
   { id: 'api-on-events', label: 'node.on 字段事件' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="字段事件与值拦截（on + beforeChange）"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        'node.on 支持函数与 {{ fn }} 表达式两种形式：函数形式闭包可直接读写真实 model（推荐）；表达式形式运行在沙箱中，model 为只读副本，仅适合日志类副作用。',
-        'beforeChange 在每次 v-model 写入前拦截：同步返回值替换新值，Promise reject 跳过更新，返回 undefined 放行原值。',
-        '演示点：订单号输入自动转大写；金额超 10 万被风控拦截并回弹；切换收货城市自动清空区县；备注实时字数统计。',
-      ]"
-    >
-      <section id="demo-events">
-        <DemoField label="订单录入（事件 + 拦截）" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" :before-change="beforeChange" />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onValidate">校验</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-            <span :class="bem.e('remark-count')">备注字数：{{ remarkLength }} / 200</span>
-          </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="字段事件与值拦截（on + beforeChange）"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      'node.on 支持函数与 {{ fn }} 表达式两种形式：函数形式闭包可直接读写真实 model（推荐）；表达式形式运行在沙箱中，model 为只读副本，仅适合日志类副作用。',
+      'beforeChange 在每次 v-model 写入前拦截：同步返回值替换新值，Promise reject 跳过更新，返回 undefined 放行原值。',
+      '演示点：订单号输入自动转大写；金额超 10 万被风控拦截并回弹；切换收货城市自动清空区县；备注实时字数统计。',
+    ]"
+  >
+    <section id="demo-events">
+      <DemoField label="订单录入（事件 + 拦截）" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" :before-change="beforeChange" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onValidate">校验</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+          <span :class="bem.e('remark-count')">备注字数：{{ remarkLength }} / 200</span>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
 
-      <ApiTable title="beforeChange 值拦截" :items="beforeChangeItems" anchor="api-before-change" />
-      <ApiTable title="node.on 字段事件" :items="onEventItems" anchor="api-on-events" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="beforeChange 值拦截" :items="beforeChangeItems" anchor="api-before-change" />
+    <ApiTable title="node.on 字段事件" :items="onEventItems" anchor="api-on-events" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

@@ -16,8 +16,7 @@ import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import { arrayItems } from './configs/xform-demos-api'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import xFormSource from './XFormArrayDraggable.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
 
@@ -126,73 +125,69 @@ const tocItems = [
   { id: 'demo-array-draggable', label: '拖拽排序演示' },
   { id: 'api-array-draggable', label: 'ArrayNodeConfig' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="数组行拖拽排序（ArrayNode draggable）"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        '1. 链式调用末尾 .draggable() 开启行拖拽，等价于 schema 上 array.draggable: true',
-        '2. 按住行的任意位置拖到目标行松开即换位 —— HTML5 Drag & Drop，drop 后调 moveItem 更新 model',
-        '3. 「数据换位」而非仅视图换位：先在某一行的输入框里改内容，再拖动该行 —— 已编辑的值会跟着行走',
-        '4. 与上移/下移按钮共存，两条交互路径共用同一个 moveItem，model 只有一份真相',
-        '5. 未配置 draggable 时行不可拖，其余行为完全一致',
-      ]"
-    >
-      <section id="demo-array-draggable">
-        <DemoField label="任务队列（按住行拖拽排序）" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('summary')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onSave">保存</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-            <el-button type="info" plain @click="logGetNames">console.log(getNames())</el-button>
+  <DemoFrame
+    title="数组行拖拽排序（ArrayNode draggable）"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      '1. 链式调用末尾 .draggable() 开启行拖拽，等价于 schema 上 array.draggable: true',
+      '2. 按住行的任意位置拖到目标行松开即换位 —— HTML5 Drag & Drop，drop 后调 moveItem 更新 model',
+      '3. 「数据换位」而非仅视图换位：先在某一行的输入框里改内容，再拖动该行 —— 已编辑的值会跟着行走',
+      '4. 与上移/下移按钮共存，两条交互路径共用同一个 moveItem，model 只有一份真相',
+      '5. 未配置 draggable 时行不可拖，其余行为完全一致',
+    ]"
+  >
+    <section id="demo-array-draggable">
+      <DemoField label="任务队列（按住行拖拽排序）" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('summary')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onSave">保存</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+          <el-button type="info" plain @click="logGetNames">console.log(getNames())</el-button>
+        </div>
+        <div :class="bem.e('state')">
+          <div>model.tasks 当前顺序（拖拽后实时刷新）：</div>
+          <pre>{{ taskOrderText }}</pre>
+        </div>
+        <div v-if="lastGetNamesResult.length" :class="bem.e('names-log')">
+          <div>
+            <strong>getNames() 返回</strong>
+            <span :class="bem.e('names-at')">（{{ lastGetNamesAt }}）</span>
+            ：
           </div>
-          <div :class="bem.e('state')">
-            <div>model.tasks 当前顺序（拖拽后实时刷新）：</div>
-            <pre>{{ taskOrderText }}</pre>
-          </div>
-          <div v-if="lastGetNamesResult.length" :class="bem.e('names-log')">
-            <div>
-              <strong>getNames() 返回</strong>
-              <span :class="bem.e('names-at')">（{{ lastGetNamesAt }}）</span>
-              ：
-            </div>
-            <pre>{{ lastGetNamesResult.join('\n') }}</pre>
-            <p :class="bem.e('names-hint')">
-              拖拽换位后字段路径（如
-              <code>tasks.0.title</code>
-              /
-              <code>tasks.1.title</code>
-              ）保持稳定——路径由 数组下标决定，下标在 moveItem 时同步更新。所以「拖拽换位后点保存 →
-              validate 仍通过」， 不会因为换位产生 false-positive 校验失败。
-            </p>
-          </div>
-          <ModelPreview :model="model" />
-          <p :class="bem.e('hint')">
-            <strong>验证步骤（validate 链路）：</strong>
-            1) 拖动某行换位 → 2) 修改某行的「任务名称」输入框验证内容跟着行走 → 3) 点「保存」 → 触发
-            <code>formRef.validate()</code>
-            → ElMessage 显示「保存成功，当前顺序：...」+ 校验通过。无 false-positive
-            报错（字段路径稳定 + 必填项仍由各行自己持有）。
-            <br />
-            <strong>拖拽失败兜底：</strong>
-            HTML5 拖拽在 Element Plus Card 遮罩层 / 嵌套容器下偶发失效（如 drop event 未冒泡），
-            此时请用每行右侧的「上移」「下移」按钮（与拖拽共享同一 moveItem
-            数据通路），按钮演示结果与拖拽完全一致——既能验证行换位逻辑，也能在拖拽失效时作为后备交互。
+          <pre>{{ lastGetNamesResult.join('\n') }}</pre>
+          <p :class="bem.e('names-hint')">
+            拖拽换位后字段路径（如
+            <code>tasks.0.title</code>
+            /
+            <code>tasks.1.title</code>
+            ）保持稳定——路径由 数组下标决定，下标在 moveItem 时同步更新。所以「拖拽换位后点保存 →
+            validate 仍通过」， 不会因为换位产生 false-positive 校验失败。
           </p>
-        </DemoField>
-      </section>
+        </div>
+        <ModelPreview :model="model" />
+        <p :class="bem.e('hint')">
+          <strong>验证步骤（validate 链路）：</strong>
+          1) 拖动某行换位 → 2) 修改某行的「任务名称」输入框验证内容跟着行走 → 3) 点「保存」 → 触发
+          <code>formRef.validate()</code>
+          → ElMessage 显示「保存成功，当前顺序：...」+ 校验通过。无 false-positive
+          报错（字段路径稳定 + 必填项仍由各行自己持有）。
+          <br />
+          <strong>拖拽失败兜底：</strong>
+          HTML5 拖拽在 Element Plus Card 遮罩层 / 嵌套容器下偶发失效（如 drop event 未冒泡），
+          此时请用每行右侧的「上移」「下移」按钮（与拖拽共享同一 moveItem
+          数据通路），按钮演示结果与拖拽完全一致——既能验证行换位逻辑，也能在拖拽失效时作为后备交互。
+        </p>
+      </DemoField>
+    </section>
 
-      <ApiTable title="ArrayNodeConfig" :items="arrayItems" anchor="api-array-draggable" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="ArrayNodeConfig" :items="arrayItems" anchor="api-array-draggable" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

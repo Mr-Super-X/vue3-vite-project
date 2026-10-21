@@ -11,9 +11,8 @@
 import type { SchemaNode, XFormTranslateFn } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import ModelPreview from '../../components/ModelPreview.vue'
 import { i18nItems } from './configs/xform-demos-api'
 
@@ -86,42 +85,38 @@ const tocItems = [
   { id: 'demo-i18n', label: 'label 函数式 i18n' },
   { id: 'api-i18n', label: 'i18n 接入要点' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="XForm label 函数式 i18n"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        'label 支持函数式：label: (t) => t(\'form.email\')，渲染期以注入的 t 求值。',
-        'XForm 不绑定 i18n 库 —— t 由调用方注入（demo 用字典闭包；真实项目传 vue-i18n 的 t）。',
-        '切换语言按钮 = 换 t 引用；vue-i18n 场景下 t 内部响应 locale，无需重建 schema。',
-        '未注入 t 时函数式 label 收到 identity（key 原样返回），可用于调试 key。',
-      ]"
-    >
-      <section id="demo-i18n" :class="bem.b()">
-        <div :class="bem.e('toolbar')">
-          <el-radio-group :model-value="locale" @update:model-value="switchLocale">
-            <el-radio-button value="zh">中文</el-radio-button>
-            <el-radio-button value="en">English</el-radio-button>
-          </el-radio-group>
-        </div>
-        <XForm ref="formRef" :schema="schema" :model="model" :t="t" />
-        <div :class="bem.e('actions')">
-          <el-button @click="onReset">重置</el-button>
-          <el-button @click="copySchema">复制 schema</el-button>
-        </div>
-        <ModelPreview :model="model" />
-      </section>
+  <DemoFrame
+    title="XForm label 函数式 i18n"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      'label 支持函数式：label: (t) => t(\'form.email\')，渲染期以注入的 t 求值。',
+      'XForm 不绑定 i18n 库 —— t 由调用方注入（demo 用字典闭包；真实项目传 vue-i18n 的 t）。',
+      '切换语言按钮 = 换 t 引用；vue-i18n 场景下 t 内部响应 locale，无需重建 schema。',
+      '未注入 t 时函数式 label 收到 identity（key 原样返回），可用于调试 key。',
+    ]"
+  >
+    <section id="demo-i18n" :class="bem.b()">
+      <div :class="bem.e('toolbar')">
+        <el-radio-group :model-value="locale" @update:model-value="switchLocale">
+          <el-radio-button value="zh">中文</el-radio-button>
+          <el-radio-button value="en">English</el-radio-button>
+        </el-radio-group>
+      </div>
+      <XForm ref="formRef" :schema="schema" :model="model" :t="t" />
+      <div :class="bem.e('actions')">
+        <el-button @click="onReset">重置</el-button>
+        <el-button @click="copySchema">复制 schema</el-button>
+      </div>
+      <ModelPreview :model="model" />
+    </section>
 
-      <ApiTable title="i18n 接入要点" :items="i18nItems" anchor="api-i18n" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="i18n 接入要点" :items="i18nItems" anchor="api-i18n" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

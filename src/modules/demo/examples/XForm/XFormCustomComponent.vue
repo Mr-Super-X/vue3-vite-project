@@ -16,8 +16,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { customComponentItems } from './configs/xform-demos-api'
 import xFormSource from './XFormCustomComponent.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
@@ -170,39 +169,38 @@ const tocItems = [
   { id: 'demo-custom-component', label: '自定义组件演示' },
   { id: 'api-custom-component', label: 'components prop 字段速查' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="XFormProps.components —— 注册业务自定义组件"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        'components prop 注册业务自定义 Component，schema 内 component 字符串自动解析',
-        '本 demo 演示 MyTagSelector：chips 显示已选标签 + 快速选择 + 输入框添加新标签 + ElTag closable 删除',
-        'props.modelValue / update:modelValue 双向绑定（与 el-input 同模式，无需 modelProp）',
-        '配合 module augmentation 扩展 ComponentPropsRegistry 可获得完整 TS 类型推导（见 types/custom-component.test-d.ts）',
-      ]"
-    >
-      <section id="demo-custom-component">
-        <DemoField label="工单录入（自定义组件）" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" :components="{ MyTagSelector }" />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onSave">保存</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-          </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
-      <ApiTable
-        title="components prop 字段速查"
-        :items="customComponentItems"
-        anchor="api-custom-component"
-      />
-    </DemoFrame>
-    <template #toc><DocToc :items="tocItems" /></template>
-  </DocLayout>
+  <DemoFrame
+    title="XFormProps.components —— 注册业务自定义组件"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      'components prop 注册业务自定义 Component，schema 内 component 字符串自动解析',
+      '本 demo 演示 MyTagSelector：chips 显示已选标签 + 快速选择 + 输入框添加新标签 + ElTag closable 删除',
+      'props.modelValue / update:modelValue 双向绑定（与 el-input 同模式，无需 modelProp）',
+      '配合 module augmentation 扩展 ComponentPropsRegistry 可获得完整 TS 类型推导（见 types/custom-component.test-d.ts）',
+    ]"
+  >
+    <section id="demo-custom-component">
+      <DemoField label="工单录入（自定义组件）" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" :components="{ MyTagSelector }" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onSave">保存</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
+    <ApiTable
+      title="components prop 字段速查"
+      :items="customComponentItems"
+      anchor="api-custom-component"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

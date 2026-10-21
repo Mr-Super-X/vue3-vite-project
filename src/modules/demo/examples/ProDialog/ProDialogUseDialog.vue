@@ -20,8 +20,7 @@ import { ElInput, ElTag } from 'element-plus'
 import { DialogCancelledError } from '@/composables/useDialog'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 
 const bem = createNamespace('demo-pro-dialog-hook')
 
@@ -179,113 +178,109 @@ const tocItems = [
   { id: 'demo-command-reuse', label: '句柄复用（回归点）' },
   { id: 'demo-command-confirm', label: 'useConfirm：取消即 resolve(false)' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="ProDialog 命令式调用（useDialog）"
-      source="src/composables/useDialog.ts"
-      :introductions="[
-        'useDialog(内容组件, 选项) 返回 { open, close, setProps, isOpen }，纯 JS/TS 即可唤起弹窗。',
-        'open() 返回 Promise：点「确定」resolve；取消 / X / ESC / 遮罩 reject（DialogCancelledError）。',
-        '动态挂载的弹窗通过 setup 期捕获 + main.ts 注册的双保险拿到主应用 appContext，内容组件内可直接用全局组件和 Router。',
-      ]"
-    >
-      <section id="demo-command-basic">
-        <DemoField :code="SNIPPET_BASIC" label="① open() 的 Promise 语义">
-          <div :class="bem.e('controls')">
-            <el-button type="primary" @click="openBasic">唤起弹窗</el-button>
-          </div>
-          <el-alert
-            :title="basicResult"
-            :type="basicResult.startsWith('✅') ? 'success' : 'info'"
-            :closable="false"
+  <DemoFrame
+    title="ProDialog 命令式调用（useDialog）"
+    source="src/composables/useDialog.ts"
+    :introductions="[
+      'useDialog(内容组件, 选项) 返回 { open, close, setProps, isOpen }，纯 JS/TS 即可唤起弹窗。',
+      'open() 返回 Promise：点「确定」resolve；取消 / X / ESC / 遮罩 reject（DialogCancelledError）。',
+      '动态挂载的弹窗通过 setup 期捕获 + main.ts 注册的双保险拿到主应用 appContext，内容组件内可直接用全局组件和 Router。',
+    ]"
+  >
+    <section id="demo-command-basic">
+      <DemoField :code="SNIPPET_BASIC" label="① open() 的 Promise 语义">
+        <div :class="bem.e('controls')">
+          <el-button type="primary" @click="openBasic">唤起弹窗</el-button>
+        </div>
+        <el-alert
+          :title="basicResult"
+          :type="basicResult.startsWith('✅') ? 'success' : 'info'"
+          :closable="false"
+        />
+        <p :class="bem.e('tip')">
+          弹窗内容就是本页内联的 DemoContent 组件——同时观察内容区是否正常渲染（appContext
+          验证见组件内部）。
+        </p>
+      </DemoField>
+    </section>
+
+    <section id="demo-command-props">
+      <DemoField :code="SNIPPET_PROPS" label="② contentProps 透传 + setProps 实时更新">
+        <div :class="bem.e('controls')">
+          <el-button type="primary" @click="openProps">唤起弹窗</el-button>
+          <el-input
+            v-model="titleDraft"
+            :class="bem.e('title-input')"
+            size="small"
+            placeholder="输入新标题"
           />
-          <p :class="bem.e('tip')">
-            弹窗内容就是本页内联的 DemoContent 组件——同时观察内容区是否正常渲染（appContext
-            验证见组件内部）。
-          </p>
-        </DemoField>
-      </section>
+          <el-button @click="applyTitle">setProps 改标题</el-button>
+        </div>
+        <el-alert :title="propsResult" type="info" :closable="false" />
+        <p :class="bem.e('tip')">
+          弹窗保持打开时点「setProps 改标题」，标题应立即变化；内容组件收到的 userName
+          应显示「小明（来自 open 的 contentProps）」。
+        </p>
+      </DemoField>
+    </section>
 
-      <section id="demo-command-props">
-        <DemoField :code="SNIPPET_PROPS" label="② contentProps 透传 + setProps 实时更新">
-          <div :class="bem.e('controls')">
-            <el-button type="primary" @click="openProps">唤起弹窗</el-button>
-            <el-input
-              v-model="titleDraft"
-              :class="bem.e('title-input')"
-              size="small"
-              placeholder="输入新标题"
-            />
-            <el-button @click="applyTitle">setProps 改标题</el-button>
-          </div>
-          <el-alert :title="propsResult" type="info" :closable="false" />
-          <p :class="bem.e('tip')">
-            弹窗保持打开时点「setProps 改标题」，标题应立即变化；内容组件收到的 userName
-            应显示「小明（来自 open 的 contentProps）」。
-          </p>
-        </DemoField>
-      </section>
+    <section id="demo-command-reuse">
+      <DemoField :code="SNIPPET_REUSE" label="③ 句柄复用：确认/取消后再 open（CRITICAL 回归点）">
+        <div :class="bem.e('controls')">
+          <el-button type="primary" @click="openReuse">第 {{ reuseCount + 1 }} 次唤起</el-button>
+          <el-tag>已打开 {{ reuseCount }} 次</el-tag>
+        </div>
+        <el-alert :title="reuseResult" type="warning" :closable="false" />
+        <p :class="bem.e('tip')">
+          每次打开后任意确认或取消关闭，再点按钮唤起下一次——若第二次弹窗卡死或结果不更新， 说明
+          settled 复位逻辑回归。
+        </p>
+      </DemoField>
+    </section>
 
-      <section id="demo-command-reuse">
-        <DemoField :code="SNIPPET_REUSE" label="③ 句柄复用：确认/取消后再 open（CRITICAL 回归点）">
-          <div :class="bem.e('controls')">
-            <el-button type="primary" @click="openReuse">第 {{ reuseCount + 1 }} 次唤起</el-button>
-            <el-tag>已打开 {{ reuseCount }} 次</el-tag>
-          </div>
-          <el-alert :title="reuseResult" type="warning" :closable="false" />
-          <p :class="bem.e('tip')">
-            每次打开后任意确认或取消关闭，再点按钮唤起下一次——若第二次弹窗卡死或结果不更新， 说明
-            settled 复位逻辑回归。
-          </p>
-        </DemoField>
-      </section>
+    <section id="demo-command-confirm">
+      <DemoField
+        :code="SNIPPET_CONFIRM_BASIC"
+        label="④ useConfirm：取消 resolve(false)，无须 try/catch"
+      >
+        <p :class="bem.e('tip')">
+          对比上方 useDialog 的 try/catch + DialogCancelledError 模式—— useConfirm 把取消统一重塑为
+          resolve(false)，业务代码无需异常捕获路径， 且彻底消除控制台 `Uncaught (in promise) cancel`
+          噪音。
+        </p>
+        <div :class="bem.e('controls')">
+          <el-button type="primary" @click="handleSimpleConfirm">普通确认</el-button>
+        </div>
+        <el-alert
+          :title="confirmResult"
+          :type="confirmResult.startsWith('✅') ? 'success' : 'info'"
+          :closable="false"
+        />
+        <p :class="bem.e('tip')">
+          点击「取消」或按 ESC / 点遮罩 → 状态显示「resolve false」，控制台应 0 警告。
+        </p>
+      </DemoField>
 
-      <section id="demo-command-confirm">
-        <DemoField
-          :code="SNIPPET_CONFIRM_BASIC"
-          label="④ useConfirm：取消 resolve(false)，无须 try/catch"
-        >
-          <p :class="bem.e('tip')">
-            对比上方 useDialog 的 try/catch + DialogCancelledError 模式—— useConfirm
-            把取消统一重塑为 resolve(false)，业务代码无需异常捕获路径， 且彻底消除控制台 `Uncaught
-            (in promise) cancel` 噪音。
-          </p>
-          <div :class="bem.e('controls')">
-            <el-button type="primary" @click="handleSimpleConfirm">普通确认</el-button>
-          </div>
-          <el-alert
-            :title="confirmResult"
-            :type="confirmResult.startsWith('✅') ? 'success' : 'info'"
-            :closable="false"
-          />
-          <p :class="bem.e('tip')">
-            点击「取消」或按 ESC / 点遮罩 → 状态显示「resolve false」，控制台应 0 警告。
-          </p>
-        </DemoField>
-
-        <DemoField :code="SNIPPET_CONFIRM_DANGER" label="⑤ useConfirm danger 预设：危险操作高亮">
-          <div :class="bem.e('controls')">
-            <el-button type="danger" @click="handleDangerConfirm">危险操作</el-button>
-          </div>
-          <el-alert
-            :title="dangerResult"
-            :type="dangerResult.startsWith('✅') ? 'success' : 'warning'"
-            :closable="false"
-          />
-          <p :class="bem.e('tip')">
-            弹窗应显示红色「删除」按钮 + 黄色警告图标，按钮文案已被显式字段覆盖。
-          </p>
-        </DemoField>
-      </section>
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+      <DemoField :code="SNIPPET_CONFIRM_DANGER" label="⑤ useConfirm danger 预设：危险操作高亮">
+        <div :class="bem.e('controls')">
+          <el-button type="danger" @click="handleDangerConfirm">危险操作</el-button>
+        </div>
+        <el-alert
+          :title="dangerResult"
+          :type="dangerResult.startsWith('✅') ? 'success' : 'warning'"
+          :closable="false"
+        />
+        <p :class="bem.e('tip')">
+          弹窗应显示红色「删除」按钮 + 黄色警告图标，按钮文案已被显式字段覆盖。
+        </p>
+      </DemoField>
+    </section>
+  </DemoFrame>
 </template>
 
 <style lang="scss">

@@ -20,8 +20,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { globalDisabledItems } from './configs/xform-demos-api'
 import xFormSource from './XFormGlobalDisabled.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
@@ -137,56 +136,55 @@ const tocItems = [
   { id: 'demo-global-disabled', label: '全局 disabled 演示' },
   { id: 'api-global-disabled', label: '字段速查' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="顶层 schema.disabled（全局禁用整个表单）"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        'XFormDisabled 演示字段级 node.disabled；本页演示顶层 schema.disabled（透传 el-form disabled，与 labelPosition 同模式）。',
-        'XForm 顶层 disabled 写法 4 种：字面量 true / 字面量 false / 函数 / {{ fn }} 表达式（顶层 disabled 是 ReactionValue<boolean>，不支持 reaction 对象）。',
-        '优先级：permission: hidden（最高，不渲染） > 字段级 props.disabled > 顶层 schema.disabled',
-        'el-form 自动跳过 disabled 字段的校验（async-validator 行为）。',
-      ]"
-    >
-      <section id="demo-global-disabled">
-        <div :class="bem.e('controls')">
-          <el-radio-group v-model="mode" size="large">
-            <el-radio-button value="literal_true">字面量 true</el-radio-button>
-            <el-radio-button value="literal_false">字面量 false</el-radio-button>
-            <el-radio-button value="fn">函数</el-radio-button>
-            <el-radio-button value="expr">
-              <code>{{ '{' }}{{ '{' }} fn {{ '}' }}{{ '}' }}</code>
-              表达式
-            </el-radio-button>
-          </el-radio-group>
-          <el-switch
-            v-model="model.lockAll"
-            :disabled="mode === 'literal_true' || mode === 'literal_false'"
-            active-text="lockAll"
-          />
-          <span :class="bem.e('hint')">当前模式：{{ currentModeLabel }}</span>
+  <DemoFrame
+    title="顶层 schema.disabled（全局禁用整个表单）"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      'XFormDisabled 演示字段级 node.disabled；本页演示顶层 schema.disabled（透传 el-form disabled，与 labelPosition 同模式）。',
+      'XForm 顶层 disabled 写法 4 种：字面量 true / 字面量 false / 函数 / {{ fn }} 表达式（顶层 disabled 是 ReactionValue<boolean>，不支持 reaction 对象）。',
+      '优先级：permission: hidden（最高，不渲染） > 字段级 props.disabled > 顶层 schema.disabled',
+      'el-form 自动跳过 disabled 字段的校验（async-validator 行为）。',
+    ]"
+  >
+    <section id="demo-global-disabled">
+      <div :class="bem.e('controls')">
+        <el-radio-group v-model="mode" size="large">
+          <el-radio-button value="literal_true">字面量 true</el-radio-button>
+          <el-radio-button value="literal_false">字面量 false</el-radio-button>
+          <el-radio-button value="fn">函数</el-radio-button>
+          <el-radio-button value="expr">
+            <code>{{ '{' }}{{ '{' }} fn {{ '}' }}{{ '}' }}</code>
+            表达式
+          </el-radio-button>
+        </el-radio-group>
+        <el-switch
+          v-model="model.lockAll"
+          :disabled="mode === 'literal_true' || mode === 'literal_false'"
+          active-text="lockAll"
+        />
+        <span :class="bem.e('hint')">当前模式：{{ currentModeLabel }}</span>
+      </div>
+      <DemoField label="演示表单（切换 RadioGroup 看顶层 disabled 表现）" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onSave">校验</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
         </div>
-        <DemoField label="演示表单（切换 RadioGroup 看顶层 disabled 表现）" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onSave">校验</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-          </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
-      <ApiTable
-        title="顶层 schema.disabled 字段速查"
-        :items="globalDisabledItems"
-        anchor="api-global-disabled"
-      />
-    </DemoFrame>
-    <template #toc><DocToc :items="tocItems" /></template>
-  </DocLayout>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
+    <ApiTable
+      title="顶层 schema.disabled 字段速查"
+      :items="globalDisabledItems"
+      anchor="api-global-disabled"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

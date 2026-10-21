@@ -22,8 +22,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import ModelPreview from '../../components/ModelPreview.vue'
 import { reactionStrategyItems } from './configs/xform-demos-api'
 
@@ -201,69 +200,65 @@ const tocItems = [
   { id: 'demo-strategy', label: '三策略对比' },
   { id: 'api-reaction-strategy', label: 'reaction.strategy 速查' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="reaction.strategy 三种调度策略对比"
-      source="src/components/form-schema/composables/use-reaction.ts"
-      :introductions="[
-        'ReactionConfig 的 strategy 字段决定 reaction 函数的调度时机，本 demo 对比三种策略的行为差异：',
-        '① sync（默认）：依赖变化立即同步执行 —— 连续输入 5 字符 → reaction 跑 5 次',
-        '② debounce(300ms)：依赖停止变化 300ms 后执行一次 —— 连续输入 5 字符 → reaction 跑 1 次',
-        '③ throttle(300ms)：300ms 内最多执行一次 —— 连续输入 5 字符 → reaction 跑 1~2 次',
-        '计数器必须写到 model 外部 ref —— 写到 model 内会被 deep watch 监听自身写入造成死循环',
-        '三个 DemoField 区块分别展示 sync / debounce / throttle 三种写法',
-      ]"
-    >
-      <section id="demo-strategy">
-        <DemoField label="strategy 三策略对比（sync / debounce / throttle）" :code="strategyCode">
-          <div :class="bem.e('hint')">
-            在三个输入框中连续输入字符（例如「abcdef」），观察下方的计数器差异： sync ≈
-            字符数，debounce = 1，throttle ≈ 字符数 / (delay ms)
+  <DemoFrame
+    title="reaction.strategy 三种调度策略对比"
+    source="src/components/form-schema/composables/use-reaction.ts"
+    :introductions="[
+      'ReactionConfig 的 strategy 字段决定 reaction 函数的调度时机，本 demo 对比三种策略的行为差异：',
+      '① sync（默认）：依赖变化立即同步执行 —— 连续输入 5 字符 → reaction 跑 5 次',
+      '② debounce(300ms)：依赖停止变化 300ms 后执行一次 —— 连续输入 5 字符 → reaction 跑 1 次',
+      '③ throttle(300ms)：300ms 内最多执行一次 —— 连续输入 5 字符 → reaction 跑 1~2 次',
+      '计数器必须写到 model 外部 ref —— 写到 model 内会被 deep watch 监听自身写入造成死循环',
+      '三个 DemoField 区块分别展示 sync / debounce / throttle 三种写法',
+    ]"
+  >
+    <section id="demo-strategy">
+      <DemoField label="strategy 三策略对比（sync / debounce / throttle）" :code="strategyCode">
+        <div :class="bem.e('hint')">
+          在三个输入框中连续输入字符（例如「abcdef」），观察下方的计数器差异： sync ≈
+          字符数，debounce = 1，throttle ≈ 字符数 / (delay ms)
+        </div>
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('actions')">
+          <el-button @click="resetAll">重置计数 + 表单</el-button>
+          <el-button @click="onReset">仅重置表单</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <div :class="bem.e('counters')">
+          <div :class="bem.e('counter')">
+            <strong>sync 触发次数：</strong>
+            <span :class="bem.e('num')">{{ syncCount }}</span>
+            <div :class="bem.e('tip')">每输入一字符立即 +1</div>
           </div>
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('actions')">
-            <el-button @click="resetAll">重置计数 + 表单</el-button>
-            <el-button @click="onReset">仅重置表单</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
+          <div :class="bem.e('counter')">
+            <strong>debounce 触发次数：</strong>
+            <span :class="bem.e('num')">{{ debounceCount }}</span>
+            <div :class="bem.e('tip')">连续输入 → 停止 300ms 后 +1</div>
           </div>
-          <div :class="bem.e('counters')">
-            <div :class="bem.e('counter')">
-              <strong>sync 触发次数：</strong>
-              <span :class="bem.e('num')">{{ syncCount }}</span>
-              <div :class="bem.e('tip')">每输入一字符立即 +1</div>
-            </div>
-            <div :class="bem.e('counter')">
-              <strong>debounce 触发次数：</strong>
-              <span :class="bem.e('num')">{{ debounceCount }}</span>
-              <div :class="bem.e('tip')">连续输入 → 停止 300ms 后 +1</div>
-            </div>
-            <div :class="bem.e('counter')">
-              <strong>throttle 触发次数：</strong>
-              <span :class="bem.e('num')">{{ throttleCount }}</span>
-              <div :class="bem.e('tip')">300ms 内最多 +1</div>
-            </div>
+          <div :class="bem.e('counter')">
+            <strong>throttle 触发次数：</strong>
+            <span :class="bem.e('num')">{{ throttleCount }}</span>
+            <div :class="bem.e('tip')">300ms 内最多 +1</div>
           </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
 
-      <h3>三种 strategy 写法对比</h3>
-      <DemoField label="sync / debounce / throttle 三种写法对比" :code="strategyCodeCombined" />
-    </DemoFrame>
+    <h3>三种 strategy 写法对比</h3>
+    <DemoField label="sync / debounce / throttle 三种写法对比" :code="strategyCodeCombined" />
+  </DemoFrame>
 
-    <ApiTable
-      title="reaction.strategy 调度策略"
-      :items="reactionStrategyItems"
-      anchor="api-reaction-strategy"
-    />
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+  <ApiTable
+    title="reaction.strategy 调度策略"
+    :items="reactionStrategyItems"
+    anchor="api-reaction-strategy"
+  />
 </template>
 
 <style lang="scss">

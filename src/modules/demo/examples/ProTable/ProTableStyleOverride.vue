@@ -24,11 +24,10 @@ import { ElMessage } from 'element-plus'
 import { InfoFilled } from '@element-plus/icons-vue'
 import type { ProColumn, ProTableExpose } from '@/components/ProTable'
 import { styleOverrideRequestApi, type StyleOverrideProduct } from '@mock/pro-table/style-override'
-import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { styleOverrideItems } from './configs/protable-demos-api'
 
 const bem = createNamespace('demo-pro-table-style-override')
@@ -240,6 +239,8 @@ const tocItems = [
   { id: 'hook-cheatsheet', label: '可覆盖钩子清单' },
 ]
 
+useDocToc(tocItems)
+
 /* ───────────── 代码片段 ───────────── */
 
 const basicCode = `<script setup lang="ts">
@@ -277,290 +278,280 @@ const densityCode = `<ProTable density="compact" :columns="columns" :request-api
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="ProTableStyleOverride 样式定制"
-      source="src/modules/demo/examples/ProTable/ProTableStyleOverride.vue"
-      :introductions="[
-        '业务方接 ProTable 后最常问的问题——怎么高亮某些行、怎么让金额右对齐、怎么换主题色。',
-        '本 demo 覆盖 6 个高频样式定制场景：行/单元格条件样式、列对齐、自定义表头、固定列组合、密度切换、主题色覆盖。',
-        '技术要点：行条件样式不走 rowClassName 透传（ProTable 未暴露），改用「在 render VNode 上注入 className + CSS :has() 反向命中整行」，0 侵入、纯声明式扩展。',
-        '完整可覆盖 CSS 钩子清单见下方 #hook-cheatsheet 章节（按选择器稳定性高/中/低分档）。',
-      ]"
-    >
-      <!-- 场景 ①②③④⑤：行/单元格条件样式 + 列对齐 + 数字格式化 + 自定义表头 + 固定列组合（一表演示） -->
-      <section :id="tocItems[0]!.id" :class="bem.b()">
-        <DemoField
-          label="① ② ③ ④ ⑤ 一表演示：行条件样式 + 单元格条件样式 + 列对齐+数字格式化 + 自定义表头 + 固定列"
-          :code="basicCode"
-        >
-          <p :class="bem.e('hint')">
-            观察点：
-            <strong>行</strong>
-            —— VIP/清仓商品左边条、停售商品半透明；
-            <strong>单元格</strong>
-            —— 高客单金色背景、缺货红字、最近更新绿色；
-            <strong>对齐</strong>
-            —— 库存/价格右对齐、状态/分类居中；
-            <strong>表头</strong>
-            —— 名称列嵌入 info icon + tooltip；
-            <strong>固定列</strong>
-            —— 左右同时固定（横向滚动时名称/操作不消失）
-          </p>
-          <el-button type="primary" @click="refreshAll">手动 refresh 验证 Expose</el-button>
-          <ProTable
-            ref="ref0"
-            :columns="columns"
-            :request-api="styleOverrideRequestApi"
-            table-key="demo-pro-table-style-override"
-            row-key="id"
-            :page-size="6"
-          />
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="ProTableStyleOverride 样式定制"
+    source="src/modules/demo/examples/ProTable/ProTableStyleOverride.vue"
+    :introductions="[
+      '业务方接 ProTable 后最常问的问题——怎么高亮某些行、怎么让金额右对齐、怎么换主题色。',
+      '本 demo 覆盖 6 个高频样式定制场景：行/单元格条件样式、列对齐、自定义表头、固定列组合、密度切换、主题色覆盖。',
+      '技术要点：行条件样式不走 rowClassName 透传（ProTable 未暴露），改用「在 render VNode 上注入 className + CSS :has() 反向命中整行」，0 侵入、纯声明式扩展。',
+      '完整可覆盖 CSS 钩子清单见下方 #hook-cheatsheet 章节（按选择器稳定性高/中/低分档）。',
+    ]"
+  >
+    <!-- 场景 ①②③④⑤：行/单元格条件样式 + 列对齐 + 数字格式化 + 自定义表头 + 固定列组合（一表演示） -->
+    <section :id="tocItems[0]!.id" :class="bem.b()">
+      <DemoField
+        label="① ② ③ ④ ⑤ 一表演示：行条件样式 + 单元格条件样式 + 列对齐+数字格式化 + 自定义表头 + 固定列"
+        :code="basicCode"
+      >
+        <p :class="bem.e('hint')">
+          观察点：
+          <strong>行</strong>
+          —— VIP/清仓商品左边条、停售商品半透明；
+          <strong>单元格</strong>
+          —— 高客单金色背景、缺货红字、最近更新绿色；
+          <strong>对齐</strong>
+          —— 库存/价格右对齐、状态/分类居中；
+          <strong>表头</strong>
+          —— 名称列嵌入 info icon + tooltip；
+          <strong>固定列</strong>
+          —— 左右同时固定（横向滚动时名称/操作不消失）
+        </p>
+        <el-button type="primary" @click="refreshAll">手动 refresh 验证 Expose</el-button>
+        <ProTable
+          ref="ref0"
+          :columns="columns"
+          :request-api="styleOverrideRequestApi"
+          table-key="demo-pro-table-style-override"
+          row-key="id"
+          :page-size="6"
+        />
+      </DemoField>
+    </section>
 
-      <!-- 场景 ⑤：密度切换对比（3 个 ProTable 紧邻展示差异） -->
-      <section :id="tocItems[1]!.id" :class="bem.b()">
-        <DemoField
-          label="⑤ 密度切换对比：compact / default / loose 三档同列定义并排"
-          :code="densityCode"
-        >
-          <div :class="bem.e('density-grid')">
-            <div v-for="d in densityList" :key="d.key" :class="bem.e('density-pane')">
-              <h4 :class="bem.e('density-title')">
-                {{ d.label }}
-                <small :class="bem.e('density-desc')">{{ d.desc }}</small>
-              </h4>
-              <ProTable
-                :columns="columns.slice(0, 5)"
-                :request-api="styleOverrideRequestApi"
-                :table-key="`demo-pro-table-style-override-density-${d.key}`"
-                row-key="id"
-                :density="d.key"
-                :page-size="4"
-              />
-            </div>
-          </div>
-        </DemoField>
-      </section>
-
-      <!-- 场景 ⑥：主题色覆盖（演示独立的作用域样式切换） -->
-      <section :id="tocItems[2]!.id" :class="bem.b()">
-        <DemoField label="⑥ 主题色覆盖：通过 CSS 变量驱动 el-color-primary" :code="themeCode">
-          <p :class="bem.e('hint')">
-            下方面包屑选择器内的 ProTable 主题色从蓝色切换为红色 —— 通过 BEM 嵌套
-            <code>.#{$BEM_PREFIX}-pro-table</code>
-            选择器改写 CSS 变量，无需
-            <code>:deep()</code>
-            （CLAUDE.md §3 禁止）。
-          </p>
-          <div :class="bem.e('theme-scope')">
+    <!-- 场景 ⑤：密度切换对比（3 个 ProTable 紧邻展示差异） -->
+    <section :id="tocItems[1]!.id" :class="bem.b()">
+      <DemoField
+        label="⑤ 密度切换对比：compact / default / loose 三档同列定义并排"
+        :code="densityCode"
+      >
+        <div :class="bem.e('density-grid')">
+          <div v-for="d in densityList" :key="d.key" :class="bem.e('density-pane')">
+            <h4 :class="bem.e('density-title')">
+              {{ d.label }}
+              <small :class="bem.e('density-desc')">{{ d.desc }}</small>
+            </h4>
             <ProTable
               :columns="columns.slice(0, 5)"
               :request-api="styleOverrideRequestApi"
-              table-key="demo-pro-table-style-override-red"
+              :table-key="`demo-pro-table-style-override-density-${d.key}`"
               row-key="id"
-              :page-size="5"
+              :density="d.key"
+              :page-size="4"
             />
           </div>
-        </DemoField>
-      </section>
-
-      <!-- 可覆盖钩子清单（对齐 XFormStyleOverride 结构：选择器 / 作用域 / 稳定 / 适用场景） -->
-      <section id="hook-cheatsheet" :class="bem.b()">
-        <h2 :class="bem.e('cheatsheet-title')">可覆盖钩子清单</h2>
-        <p :class="bem.e('cheatsheet-hint')">
-          选择器按稳定性分三档：
-          <strong>高</strong>
-          = 项目自有（ProTable BEM 类名），不随第三方变动；
-          <strong>中</strong>
-          = Element Plus 类（el-table / el-pagination），升级 element-plus 大版本可能变动；
-          <strong>低</strong>
-          = Element Plus CSS 变量（--el-color-* / --el-text-*），理论上稳定但版本间可能微调。
-        </p>
-        <div :class="bem.e('cheatsheet-wrap')">
-          <table :class="bem.e('cheatsheet-table')">
-            <thead>
-              <tr>
-                <th>选择器 / 变量</th>
-                <th>作用域</th>
-                <th>稳定</th>
-                <th>适用场景</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><code>.vv-pro-table</code></td>
-                <td>ProTable 根节点</td>
-                <td>高</td>
-                <td>表格整体品牌化（通过 ProTable 父级 :class 锁作用域）</td>
-              </tr>
-              <tr>
-                <td><code>.vv-pro-table__header / __body / __footer</code></td>
-                <td>表头 / 表体 / 表脚容器</td>
-                <td>高</td>
-                <td>局部区域背景色 / 边框 / 圆角</td>
-              </tr>
-              <tr>
-                <td><code>.vv-pro-table__toolbar / __title / __toolbar-buttons</code></td>
-                <td>工具栏（标题 + 操作按钮）</td>
-                <td>高</td>
-                <td>工具栏对齐 / 按钮组样式</td>
-              </tr>
-              <tr>
-                <td>
-                  <code>.vv-pro-table__vip-badge / __high-price / __out-of-stock / __recent</code>
-                </td>
-                <td>单元格条件样式标记</td>
-                <td>高</td>
-                <td>业务方自渲染 VNode 时注入 cell-* 标记，CSS :has() 反向命中整行</td>
-              </tr>
-              <tr>
-                <td><code>.el-table / .el-table__inner-wrapper</code></td>
-                <td>el-table 根 + 内部容器</td>
-                <td>中</td>
-                <td>表格整体边框 / 圆角（element-plus 升级风险）</td>
-              </tr>
-              <tr>
-                <td><code>.el-table__header-wrapper / __header</code></td>
-                <td>表头容器 + th 单元格</td>
-                <td>中</td>
-                <td>表头背景 / 高度 / 边框 / 字体加粗</td>
-              </tr>
-              <tr>
-                <td><code>.el-table__body-wrapper / tr / td</code></td>
-                <td>表体容器 / 行 / 单元格</td>
-                <td>中</td>
-                <td>行高 / 单元格 padding / 边框 / 斑马纹</td>
-              </tr>
-              <tr>
-                <td><code>.el-table__row--striped</code></td>
-                <td>斑马纹行</td>
-                <td>中</td>
-                <td>奇偶行差异化背景</td>
-              </tr>
-              <tr>
-                <td><code>.el-table__row:hover / .el-table__row--current</code></td>
-                <td>hover / 高亮行</td>
-                <td>中</td>
-                <td>交互态背景色</td>
-              </tr>
-              <tr>
-                <td><code>.el-table__fixed / __fixed-left / __fixed-right</code></td>
-                <td>固定列容器</td>
-                <td>中</td>
-                <td>固定列阴影 / 背景（避免与滚动内容重叠）</td>
-              </tr>
-              <tr>
-                <td><code>.el-table__column-filter-trigger</code></td>
-                <td>列筛选触发器</td>
-                <td>中</td>
-                <td>列筛选图标染色 / 尺寸</td>
-              </tr>
-              <tr>
-                <td><code>.el-table__sort-icon / .sort-caret</code></td>
-                <td>排序箭头</td>
-                <td>中</td>
-                <td>排序状态颜色 / 箭头大小</td>
-              </tr>
-              <tr>
-                <td>
-                  <code>
-                    .el-pagination / .el-pagination__total / __sizes / __prev / __next / __pager /
-                    __jump
-                  </code>
-                </td>
-                <td>分页器 7 区块</td>
-                <td>中</td>
-                <td>分页器对齐 / 按钮颜色 / 输入框尺寸</td>
-              </tr>
-              <tr>
-                <td><code>.el-empty / .el-empty__description</code></td>
-                <td>空状态容器</td>
-                <td>中</td>
-                <td>空状态图标 / 文案 / 居中布局</td>
-              </tr>
-              <tr>
-                <td><code>.el-loading-mask / .el-loading-spinner</code></td>
-                <td>loading 遮罩</td>
-                <td>中</td>
-                <td>loading 背景透明度 / spinner 颜色</td>
-              </tr>
-              <tr>
-                <td><code>--el-color-primary / light-3/5/7/8/9 / dark-2</code></td>
-                <td>主色 + 浅色阶</td>
-                <td>低</td>
-                <td>品牌色全局覆盖（6 个色阶），影响所有 el-table / 分页器 / 按钮</td>
-              </tr>
-              <tr>
-                <td><code>--el-color-success / warning / danger / info</code></td>
-                <td>语义色</td>
-                <td>低</td>
-                <td>行 / 单元格条件样式的语义色（成功 / 警告 / 错误 / 中性）</td>
-              </tr>
-              <tr>
-                <td>
-                  <code>
-                    --el-text-color-primary / regular / secondary / placeholder / disabled
-                  </code>
-                </td>
-                <td>文字层级色</td>
-                <td>低</td>
-                <td>文字层级、对比度、placeholder 提示色</td>
-              </tr>
-              <tr>
-                <td>
-                  <code>
-                    --el-border-color / --el-border-color-light / --el-border-color-lighter
-                  </code>
-                </td>
-                <td>边框色</td>
-                <td>低</td>
-                <td>表格 / 单元格边框深浅</td>
-              </tr>
-              <tr>
-                <td>
-                  <code>
-                    --el-fill-color / --el-fill-color-light / --el-fill-color-lighter /
-                    --el-fill-color-blank
-                  </code>
-                </td>
-                <td>背景填充色</td>
-                <td>低</td>
-                <td>行 hover / 表头 / 斑马纹背景</td>
-              </tr>
-              <tr>
-                <td><code>--el-border-radius-base / small / round</code></td>
-                <td>圆角基调</td>
-                <td>低</td>
-                <td>表格 / 单元格 / 控件圆角</td>
-              </tr>
-              <tr>
-                <td>
-                  <code>
-                    --el-font-size-extra-large / large / medium / base / small / extra-small
-                  </code>
-                </td>
-                <td>字号档位</td>
-                <td>低</td>
-                <td>表头 / 单元格 / 注释文字大小</td>
-              </tr>
-            </tbody>
-          </table>
         </div>
-      </section>
+      </DemoField>
+    </section>
 
-      <ApiTable
-        title="样式定制技巧（v3.1）"
-        :items="styleOverrideItems"
-        anchor="api-style-override"
-      />
-    </DemoFrame>
+    <!-- 场景 ⑥：主题色覆盖（演示独立的作用域样式切换） -->
+    <section :id="tocItems[2]!.id" :class="bem.b()">
+      <DemoField label="⑥ 主题色覆盖：通过 CSS 变量驱动 el-color-primary" :code="themeCode">
+        <p :class="bem.e('hint')">
+          下方面包屑选择器内的 ProTable 主题色从蓝色切换为红色 —— 通过 BEM 嵌套
+          <code>.#{$BEM_PREFIX}-pro-table</code>
+          选择器改写 CSS 变量，无需
+          <code>:deep()</code>
+          （CLAUDE.md §3 禁止）。
+        </p>
+        <div :class="bem.e('theme-scope')">
+          <ProTable
+            :columns="columns.slice(0, 5)"
+            :request-api="styleOverrideRequestApi"
+            table-key="demo-pro-table-style-override-red"
+            row-key="id"
+            :page-size="5"
+          />
+        </div>
+      </DemoField>
+    </section>
 
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <!-- 可覆盖钩子清单（对齐 XFormStyleOverride 结构：选择器 / 作用域 / 稳定 / 适用场景） -->
+    <section id="hook-cheatsheet" :class="bem.b()">
+      <h2 :class="bem.e('cheatsheet-title')">可覆盖钩子清单</h2>
+      <p :class="bem.e('cheatsheet-hint')">
+        选择器按稳定性分三档：
+        <strong>高</strong>
+        = 项目自有（ProTable BEM 类名），不随第三方变动；
+        <strong>中</strong>
+        = Element Plus 类（el-table / el-pagination），升级 element-plus 大版本可能变动；
+        <strong>低</strong>
+        = Element Plus CSS 变量（--el-color-* / --el-text-*），理论上稳定但版本间可能微调。
+      </p>
+      <div :class="bem.e('cheatsheet-wrap')">
+        <table :class="bem.e('cheatsheet-table')">
+          <thead>
+            <tr>
+              <th>选择器 / 变量</th>
+              <th>作用域</th>
+              <th>稳定</th>
+              <th>适用场景</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>.vv-pro-table</code></td>
+              <td>ProTable 根节点</td>
+              <td>高</td>
+              <td>表格整体品牌化（通过 ProTable 父级 :class 锁作用域）</td>
+            </tr>
+            <tr>
+              <td><code>.vv-pro-table__header / __body / __footer</code></td>
+              <td>表头 / 表体 / 表脚容器</td>
+              <td>高</td>
+              <td>局部区域背景色 / 边框 / 圆角</td>
+            </tr>
+            <tr>
+              <td><code>.vv-pro-table__toolbar / __title / __toolbar-buttons</code></td>
+              <td>工具栏（标题 + 操作按钮）</td>
+              <td>高</td>
+              <td>工具栏对齐 / 按钮组样式</td>
+            </tr>
+            <tr>
+              <td>
+                <code>.vv-pro-table__vip-badge / __high-price / __out-of-stock / __recent</code>
+              </td>
+              <td>单元格条件样式标记</td>
+              <td>高</td>
+              <td>业务方自渲染 VNode 时注入 cell-* 标记，CSS :has() 反向命中整行</td>
+            </tr>
+            <tr>
+              <td><code>.el-table / .el-table__inner-wrapper</code></td>
+              <td>el-table 根 + 内部容器</td>
+              <td>中</td>
+              <td>表格整体边框 / 圆角（element-plus 升级风险）</td>
+            </tr>
+            <tr>
+              <td><code>.el-table__header-wrapper / __header</code></td>
+              <td>表头容器 + th 单元格</td>
+              <td>中</td>
+              <td>表头背景 / 高度 / 边框 / 字体加粗</td>
+            </tr>
+            <tr>
+              <td><code>.el-table__body-wrapper / tr / td</code></td>
+              <td>表体容器 / 行 / 单元格</td>
+              <td>中</td>
+              <td>行高 / 单元格 padding / 边框 / 斑马纹</td>
+            </tr>
+            <tr>
+              <td><code>.el-table__row--striped</code></td>
+              <td>斑马纹行</td>
+              <td>中</td>
+              <td>奇偶行差异化背景</td>
+            </tr>
+            <tr>
+              <td><code>.el-table__row:hover / .el-table__row--current</code></td>
+              <td>hover / 高亮行</td>
+              <td>中</td>
+              <td>交互态背景色</td>
+            </tr>
+            <tr>
+              <td><code>.el-table__fixed / __fixed-left / __fixed-right</code></td>
+              <td>固定列容器</td>
+              <td>中</td>
+              <td>固定列阴影 / 背景（避免与滚动内容重叠）</td>
+            </tr>
+            <tr>
+              <td><code>.el-table__column-filter-trigger</code></td>
+              <td>列筛选触发器</td>
+              <td>中</td>
+              <td>列筛选图标染色 / 尺寸</td>
+            </tr>
+            <tr>
+              <td><code>.el-table__sort-icon / .sort-caret</code></td>
+              <td>排序箭头</td>
+              <td>中</td>
+              <td>排序状态颜色 / 箭头大小</td>
+            </tr>
+            <tr>
+              <td>
+                <code>
+                  .el-pagination / .el-pagination__total / __sizes / __prev / __next / __pager /
+                  __jump
+                </code>
+              </td>
+              <td>分页器 7 区块</td>
+              <td>中</td>
+              <td>分页器对齐 / 按钮颜色 / 输入框尺寸</td>
+            </tr>
+            <tr>
+              <td><code>.el-empty / .el-empty__description</code></td>
+              <td>空状态容器</td>
+              <td>中</td>
+              <td>空状态图标 / 文案 / 居中布局</td>
+            </tr>
+            <tr>
+              <td><code>.el-loading-mask / .el-loading-spinner</code></td>
+              <td>loading 遮罩</td>
+              <td>中</td>
+              <td>loading 背景透明度 / spinner 颜色</td>
+            </tr>
+            <tr>
+              <td><code>--el-color-primary / light-3/5/7/8/9 / dark-2</code></td>
+              <td>主色 + 浅色阶</td>
+              <td>低</td>
+              <td>品牌色全局覆盖（6 个色阶），影响所有 el-table / 分页器 / 按钮</td>
+            </tr>
+            <tr>
+              <td><code>--el-color-success / warning / danger / info</code></td>
+              <td>语义色</td>
+              <td>低</td>
+              <td>行 / 单元格条件样式的语义色（成功 / 警告 / 错误 / 中性）</td>
+            </tr>
+            <tr>
+              <td>
+                <code>--el-text-color-primary / regular / secondary / placeholder / disabled</code>
+              </td>
+              <td>文字层级色</td>
+              <td>低</td>
+              <td>文字层级、对比度、placeholder 提示色</td>
+            </tr>
+            <tr>
+              <td>
+                <code>--el-border-color / --el-border-color-light / --el-border-color-lighter</code>
+              </td>
+              <td>边框色</td>
+              <td>低</td>
+              <td>表格 / 单元格边框深浅</td>
+            </tr>
+            <tr>
+              <td>
+                <code>
+                  --el-fill-color / --el-fill-color-light / --el-fill-color-lighter /
+                  --el-fill-color-blank
+                </code>
+              </td>
+              <td>背景填充色</td>
+              <td>低</td>
+              <td>行 hover / 表头 / 斑马纹背景</td>
+            </tr>
+            <tr>
+              <td><code>--el-border-radius-base / small / round</code></td>
+              <td>圆角基调</td>
+              <td>低</td>
+              <td>表格 / 单元格 / 控件圆角</td>
+            </tr>
+            <tr>
+              <td>
+                <code>
+                  --el-font-size-extra-large / large / medium / base / small / extra-small
+                </code>
+              </td>
+              <td>字号档位</td>
+              <td>低</td>
+              <td>表头 / 单元格 / 注释文字大小</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <ApiTable
+      title="样式定制技巧（v3.1）"
+      :items="styleOverrideItems"
+      anchor="api-style-override"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

@@ -23,8 +23,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { largeSchemaItems } from './configs/xform-demos-api'
 import xFormSource from './XFormLargeSchema.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
@@ -141,123 +140,119 @@ const tocItems = [
   { id: 'perf-baseline', label: '性能基准对照' },
   { id: 'api-large-schema', label: '性能观察要点' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="大 schema 性能测试（学习目标 + 三档对比 + 基准对照）"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        '【学习目标】观察 XForm 在不同 schema 规模下的 mount 耗时与输入响应，建立性能基准感',
-        '【三档对比】30 字段（小表单）/ 120 字段（中后台标准）/ 300 字段（复杂配置页）',
-        '【观察指标】mount 耗时、输入响应感、滚动 / 校验 / 重置流畅度、构建耗时',
-        '【性能基准】mount < 200ms 流畅 / 200-500ms 可接受 / > 500ms 需优化（详见下方对照表）',
-      ]"
-    >
-      <section id="demo-large-schema">
-        <DemoField label="大 schema" :code="xFormSource">
-          <!-- 字段数切换 + 性能指标高亮 -->
-          <div :class="bem.e('controls')">
-            <span :class="bem.e('control-label')">字段数切换：</span>
-            <el-radio-group
-              :model-value="currentFieldCount"
-              @update:model-value="(v: unknown) => setFieldCount(Number(v))"
-            >
-              <el-radio-button
-                v-for="n in FIELD_COUNT_OPTIONS"
-                :key="n"
-                :value="n"
-                :label="`${n} 字段`"
-              />
-            </el-radio-group>
+  <DemoFrame
+    title="大 schema 性能测试（学习目标 + 三档对比 + 基准对照）"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      '【学习目标】观察 XForm 在不同 schema 规模下的 mount 耗时与输入响应，建立性能基准感',
+      '【三档对比】30 字段（小表单）/ 120 字段（中后台标准）/ 300 字段（复杂配置页）',
+      '【观察指标】mount 耗时、输入响应感、滚动 / 校验 / 重置流畅度、构建耗时',
+      '【性能基准】mount < 200ms 流畅 / 200-500ms 可接受 / > 500ms 需优化（详见下方对照表）',
+    ]"
+  >
+    <section id="demo-large-schema">
+      <DemoField label="大 schema" :code="xFormSource">
+        <!-- 字段数切换 + 性能指标高亮 -->
+        <div :class="bem.e('controls')">
+          <span :class="bem.e('control-label')">字段数切换：</span>
+          <el-radio-group
+            :model-value="currentFieldCount"
+            @update:model-value="(v: unknown) => setFieldCount(Number(v))"
+          >
+            <el-radio-button
+              v-for="n in FIELD_COUNT_OPTIONS"
+              :key="n"
+              :value="n"
+              :label="`${n} 字段`"
+            />
+          </el-radio-group>
+        </div>
+
+        <XForm ref="formRef" :schema="schema" :model="model" />
+
+        <!-- 性能指标高亮面板 -->
+        <div :class="bem.e('perf-panel')">
+          <div :class="bem.e('perf-item')">
+            <div :class="bem.e('perf-label')">当前字段数</div>
+            <div :class="bem.e('perf-value')">{{ currentFieldCount }}</div>
           </div>
-
-          <XForm ref="formRef" :schema="schema" :model="model" />
-
-          <!-- 性能指标高亮面板 -->
-          <div :class="bem.e('perf-panel')">
-            <div :class="bem.e('perf-item')">
-              <div :class="bem.e('perf-label')">当前字段数</div>
-              <div :class="bem.e('perf-value')">{{ currentFieldCount }}</div>
-            </div>
-            <div :class="bem.e('perf-item')">
-              <div :class="bem.e('perf-label')">Schema 构建耗时</div>
-              <div :class="bem.e('perf-value')">{{ buildTime.toFixed(2) }} ms</div>
-            </div>
-            <div :class="bem.e('perf-item')">
-              <div :class="bem.e('perf-label')">Mount 耗时</div>
-              <div :class="bem.e('perf-value')">
-                {{ mountTime }} ms
-                <el-tag :type="perfLevel(mountTime).type" size="small">
-                  {{ perfLevel(mountTime).label }}
-                </el-tag>
-              </div>
-            </div>
-            <div :class="bem.e('perf-actions')">
-              <el-button @click="onReset">重置</el-button>
-              <el-button type="primary" @click="onSave">
-                保存（全量校验 {{ currentFieldCount }} 字段）
-              </el-button>
-              <el-button @click="measureInputLatency">测量 input latency</el-button>
-              <el-button @click="copySchema">复制 schema</el-button>
-            </div>
-            <p v-if="inputLatency > 0" :class="bem.e('latency')">
-              <strong>input latency:</strong>
-              连续输入 100 字符 → 平均 onInput 回调耗时
-              <code>{{ inputLatency.toFixed(2) }} ms / 字符</code>
-              （生产可接受阈值 &lt; 5 ms；&gt; 16 ms 即掉帧）
-            </p>
+          <div :class="bem.e('perf-item')">
+            <div :class="bem.e('perf-label')">Schema 构建耗时</div>
+            <div :class="bem.e('perf-value')">{{ buildTime.toFixed(2) }} ms</div>
           </div>
-          <ModelPreview
-            :model="model"
-            :summary="`查看完整 model（JSON，${currentFieldCount} 字段）`"
-          />
-        </DemoField>
-      </section>
+          <div :class="bem.e('perf-item')">
+            <div :class="bem.e('perf-label')">Mount 耗时</div>
+            <div :class="bem.e('perf-value')">
+              {{ mountTime }} ms
+              <el-tag :type="perfLevel(mountTime).type" size="small">
+                {{ perfLevel(mountTime).label }}
+              </el-tag>
+            </div>
+          </div>
+          <div :class="bem.e('perf-actions')">
+            <el-button @click="onReset">重置</el-button>
+            <el-button type="primary" @click="onSave">
+              保存（全量校验 {{ currentFieldCount }} 字段）
+            </el-button>
+            <el-button @click="measureInputLatency">测量 input latency</el-button>
+            <el-button @click="copySchema">复制 schema</el-button>
+          </div>
+          <p v-if="inputLatency > 0" :class="bem.e('latency')">
+            <strong>input latency:</strong>
+            连续输入 100 字符 → 平均 onInput 回调耗时
+            <code>{{ inputLatency.toFixed(2) }} ms / 字符</code>
+            （生产可接受阈值 &lt; 5 ms；&gt; 16 ms 即掉帧）
+          </p>
+        </div>
+        <ModelPreview
+          :model="model"
+          :summary="`查看完整 model（JSON，${currentFieldCount} 字段）`"
+        />
+      </DemoField>
+    </section>
 
-      <!-- 性能基准对照表 -->
-      <section id="perf-baseline">
-        <h3>性能基准对照（生产中后台参考）</h3>
-        <table :class="bem.e('baseline-table')">
-          <thead>
-            <tr>
-              <th>档位</th>
-              <th>mount 耗时</th>
-              <th>适用场景</th>
-              <th>建议</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><el-tag type="success" size="small">流畅</el-tag></td>
-              <td>&lt; 200ms</td>
-              <td>30-100 字段常规表单</td>
-              <td>直接使用</td>
-            </tr>
-            <tr>
-              <td><el-tag type="warning" size="small">可接受</el-tag></td>
-              <td>200-500ms</td>
-              <td>100-200 字段中后台</td>
-              <td>关注交互响应</td>
-            </tr>
-            <tr>
-              <td><el-tag type="danger" size="small">需优化</el-tag></td>
-              <td>&gt; 500ms</td>
-              <td>300+ 字段复杂页</td>
-              <td>拆分表单 / 虚拟滚动 / 懒加载</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
+    <!-- 性能基准对照表 -->
+    <section id="perf-baseline">
+      <h3>性能基准对照（生产中后台参考）</h3>
+      <table :class="bem.e('baseline-table')">
+        <thead>
+          <tr>
+            <th>档位</th>
+            <th>mount 耗时</th>
+            <th>适用场景</th>
+            <th>建议</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><el-tag type="success" size="small">流畅</el-tag></td>
+            <td>&lt; 200ms</td>
+            <td>30-100 字段常规表单</td>
+            <td>直接使用</td>
+          </tr>
+          <tr>
+            <td><el-tag type="warning" size="small">可接受</el-tag></td>
+            <td>200-500ms</td>
+            <td>100-200 字段中后台</td>
+            <td>关注交互响应</td>
+          </tr>
+          <tr>
+            <td><el-tag type="danger" size="small">需优化</el-tag></td>
+            <td>&gt; 500ms</td>
+            <td>300+ 字段复杂页</td>
+            <td>拆分表单 / 虚拟滚动 / 懒加载</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
 
-      <ApiTable title="性能观察要点" :items="largeSchemaItems" anchor="api-large-schema" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="性能观察要点" :items="largeSchemaItems" anchor="api-large-schema" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

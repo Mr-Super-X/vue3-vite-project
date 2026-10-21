@@ -17,11 +17,10 @@
  * 丢弃，分组样式必须直接写后代选择器（修复记录：v3.0.1 验证不通过根因）
  */
 import { type ProColumn } from '@/components/ProTable'
-import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { groupedEmployeesRequestApi } from '@mock/pro-table/grouped-employees'
 import {
   groupedHeaderColumnItems,
@@ -136,47 +135,39 @@ const tocItems = [
   { id: 'api-grouped-column', label: 'ProColumn.children 字段' },
   { id: 'api-grouped-limits', label: '已知限制' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="ProTableGroupedHeader 列分组"
-      source="src/components/ProTable/components/GroupedHeader.vue"
-      :introductions="[
-        '基于 cellClassName 视觉分组的列分组方案（v3.0 务实版）。',
-        '下方演示：「【基础信息】」「【业务信息】」两个父标题列 + 子列 CSS 左侧 border 区分。',
-        '⚠️ ProColumn.children 字段 API 已规划（见下方 ApiTable），v3.0 暂未实装完整 el-table-column 嵌套多级表头；如需多级表头请走 cellClassName 方案或等待 v3.0.1。',
-        'R1 决策：父子扁平化持久化（按 prop 维度统一 storage key），列设置抽屉独立存储父子列。',
-      ]"
-    >
-      <section id="demo-grouped-header" :class="bem.b()">
-        <DemoField label="视觉分组" :code="basicCode">
-          <ProTable
-            :columns="columns"
-            :request-api="groupedEmployeesRequestApi"
-            table-key="demo-pro-table-grouped-header"
-            row-key="id"
-          />
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="ProTableGroupedHeader 列分组"
+    source="src/components/ProTable/components/GroupedHeader.vue"
+    :introductions="[
+      '基于 cellClassName 视觉分组的列分组方案（v3.0 务实版）。',
+      '下方演示：「【基础信息】」「【业务信息】」两个父标题列 + 子列 CSS 左侧 border 区分。',
+      '⚠️ ProColumn.children 字段 API 已规划（见下方 ApiTable），v3.0 暂未实装完整 el-table-column 嵌套多级表头；如需多级表头请走 cellClassName 方案或等待 v3.0.1。',
+      'R1 决策：父子扁平化持久化（按 prop 维度统一 storage key），列设置抽屉独立存储父子列。',
+    ]"
+  >
+    <section id="demo-grouped-header" :class="bem.b()">
+      <DemoField label="视觉分组" :code="basicCode">
+        <ProTable
+          :columns="columns"
+          :request-api="groupedEmployeesRequestApi"
+          table-key="demo-pro-table-grouped-header"
+          row-key="id"
+        />
+      </DemoField>
+    </section>
 
-      <ApiTable
-        title="ProColumn.children 字段（v3.0 已规划，暂未实装 — 完整多级表头留待 v3.0.1）"
-        :items="groupedHeaderColumnItems"
-        anchor="api-grouped-column"
-      />
-      <ApiTable
-        title="已知限制"
-        :items="groupedHeaderKnownLimitsItems"
-        anchor="api-grouped-limits"
-      />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable
+      title="ProColumn.children 字段（v3.0 已规划，暂未实装 — 完整多级表头留待 v3.0.1）"
+      :items="groupedHeaderColumnItems"
+      anchor="api-grouped-column"
+    />
+    <ApiTable title="已知限制" :items="groupedHeaderKnownLimitsItems" anchor="api-grouped-limits" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

@@ -11,8 +11,7 @@ import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import xFormSource from './XFormReactionArrayRow.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
 
@@ -127,40 +126,39 @@ async function onSave() {
 }
 
 const tocItems = [{ id: 'demo-array-row', label: '数组行内嵌 reaction' }]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="reaction 数组行内嵌（采购明细行内联动）"
-      source="src/components/form-schema/composables/use-reaction.ts"
-      :introductions="[
-        '④ 数组行内嵌 reaction：行内 deps 用相对路径（不写 array.rows.0.qty）',
-        'use-reaction 用 lodash get 在行 model 子树自动解析相对依赖',
-        '每行数量×单价×单价(税率) = 小计，「含税」切换显示/隐藏税率并参与计算',
-        '行内 reaction 改 subtotal → grandSubtotal 自动汇总',
-      ]"
-    >
-      <section id="demo-array-row">
-        <DemoField label="数组行内嵌 reaction" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onSave">校验</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
+  <DemoFrame
+    title="reaction 数组行内嵌（采购明细行内联动）"
+    source="src/components/form-schema/composables/use-reaction.ts"
+    :introductions="[
+      '④ 数组行内嵌 reaction：行内 deps 用相对路径（不写 array.rows.0.qty）',
+      'use-reaction 用 lodash get 在行 model 子树自动解析相对依赖',
+      '每行数量×单价×单价(税率) = 小计，「含税」切换显示/隐藏税率并参与计算',
+      '行内 reaction 改 subtotal → grandSubtotal 自动汇总',
+    ]"
+  >
+    <section id="demo-array-row">
+      <DemoField label="数组行内嵌 reaction" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onSave">校验</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <div :class="bem.e('panels')">
+          <div :class="bem.e('panel')">
+            <strong>采购小计合计：</strong>
+            ¥{{ grandSubtotal }}
           </div>
-          <div :class="bem.e('panels')">
-            <div :class="bem.e('panel')">
-              <strong>采购小计合计：</strong>
-              ¥{{ grandSubtotal }}
-            </div>
-          </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
-    </DemoFrame>
-    <template #toc><DocToc :items="tocItems" /></template>
-  </DocLayout>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
+  </DemoFrame>
 </template>
 
 <style lang="scss">

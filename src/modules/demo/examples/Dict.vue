@@ -15,7 +15,6 @@
  */
 import DictSelectSource from '@/components/common/DictSelect.vue?raw'
 import DictTagSource from '@/components/common/DictTag.vue?raw'
-import DocLayout from '../layouts/DocLayout.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
 import type { DictItem, DictTagType } from '@/types/dict'
@@ -71,97 +70,93 @@ async function onRefreshOrderType() {
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="Dict 字典组件"
-      source="src/components/common/DictSelect.vue + DictTag.vue"
-      :introductions="[
-        '前端主导数据结构：DictItem 契约定义在 src/types/dict.ts，后端 /api/dict/:code 按契约返回数组。',
-        'DictSelect / DictTag 传 dictCode 即可用，字典加载、缓存、并发合并内部完成（useDict + store 防抖池）。',
-        '字典项支持 type（el-tag 主题）/ disabled（下拉禁选）/ cssClass（自定义样式钩子）扩展字段。',
-      ]"
-    >
-      <!-- 演示 1：DictSelect 表单下拉 -->
-      <section :class="bem.e('section')">
-        <h2 :class="bem.e('subtitle')">DictSelect 表单下拉（clearable + filterable）</h2>
-        <DemoField :code="DictSelectSource" language="xml">
-          <el-form :class="bem.e('form')" label-width="80px">
-            <el-form-item label="性别">
-              <DictSelect
-                v-model="form.gender"
-                dict-code="gender"
-                clearable
-                filterable
-                placeholder="请选择性别"
-              />
-            </el-form-item>
-            <el-form-item label="用户状态">
-              <DictSelect
-                v-model="form.status"
-                dict-code="user_status"
-                clearable
-                filterable
-                placeholder="请选择状态"
-              />
-            </el-form-item>
-            <el-form-item>
-              <el-button @click="resetForm">重置</el-button>
-              <span :class="bem.e('form-value')">表单值：{{ JSON.stringify(form) }}</span>
-            </el-form-item>
-          </el-form>
-          <p :class="bem.e('hint')">
-            「锁定」项在 mock 中带 disabled: true —— 下拉中可见但不可选。
-          </p>
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="Dict 字典组件"
+    source="src/components/common/DictSelect.vue + DictTag.vue"
+    :introductions="[
+      '前端主导数据结构：DictItem 契约定义在 src/types/dict.ts，后端 /api/dict/:code 按契约返回数组。',
+      'DictSelect / DictTag 传 dictCode 即可用，字典加载、缓存、并发合并内部完成（useDict + store 防抖池）。',
+      '字典项支持 type（el-tag 主题）/ disabled（下拉禁选）/ cssClass（自定义样式钩子）扩展字段。',
+    ]"
+  >
+    <!-- 演示 1：DictSelect 表单下拉 -->
+    <section :class="bem.e('section')">
+      <h2 :class="bem.e('subtitle')">DictSelect 表单下拉（clearable + filterable）</h2>
+      <DemoField :code="DictSelectSource" language="xml">
+        <el-form :class="bem.e('form')" label-width="80px">
+          <el-form-item label="性别">
+            <DictSelect
+              v-model="form.gender"
+              dict-code="gender"
+              clearable
+              filterable
+              placeholder="请选择性别"
+            />
+          </el-form-item>
+          <el-form-item label="用户状态">
+            <DictSelect
+              v-model="form.status"
+              dict-code="user_status"
+              clearable
+              filterable
+              placeholder="请选择状态"
+            />
+          </el-form-item>
+          <el-form-item>
+            <el-button @click="resetForm">重置</el-button>
+            <span :class="bem.e('form-value')">表单值：{{ JSON.stringify(form) }}</span>
+          </el-form-item>
+        </el-form>
+        <p :class="bem.e('hint')">「锁定」项在 mock 中带 disabled: true —— 下拉中可见但不可选。</p>
+      </DemoField>
+    </section>
 
-      <!-- 演示 2：DictTag 表格状态列 -->
-      <section :class="bem.e('section')">
-        <h2 :class="bem.e('subtitle')">DictTag 表格状态列</h2>
-        <DemoField :code="DictTagSource" language="xml">
-          <el-table :data="users" border>
-            <el-table-column prop="name" label="姓名" min-width="160" />
-            <el-table-column label="性别" width="120">
-              <template #default="{ row }">
-                <DictTag dict-code="gender" :value="(row as DemoUser).gender" />
-              </template>
-            </el-table-column>
-            <el-table-column label="状态" width="120">
-              <template #default="{ row }">
-                <DictTag dict-code="user_status" :value="(row as DemoUser).status" />
-              </template>
-            </el-table-column>
-          </el-table>
-          <p :class="bem.e('hint')">
-            「女」标签经字典项 cssClass 钩子渲染粉色（vv-dict-tag--female）；脏数据 legacy
-            不在字典中直接显示原文；性别为空显示 - 占位。
-          </p>
-        </DemoField>
-      </section>
+    <!-- 演示 2：DictTag 表格状态列 -->
+    <section :class="bem.e('section')">
+      <h2 :class="bem.e('subtitle')">DictTag 表格状态列</h2>
+      <DemoField :code="DictTagSource" language="xml">
+        <el-table :data="users" border>
+          <el-table-column prop="name" label="姓名" min-width="160" />
+          <el-table-column label="性别" width="120">
+            <template #default="{ row }">
+              <DictTag dict-code="gender" :value="(row as DemoUser).gender" />
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" width="120">
+            <template #default="{ row }">
+              <DictTag dict-code="user_status" :value="(row as DemoUser).status" />
+            </template>
+          </el-table-column>
+        </el-table>
+        <p :class="bem.e('hint')">
+          「女」标签经字典项 cssClass 钩子渲染粉色（vv-dict-tag--female）；脏数据 legacy
+          不在字典中直接显示原文；性别为空显示 - 占位。
+        </p>
+      </DemoField>
+    </section>
 
-      <!-- 演示 3：useDict 契约形态 -->
-      <section :class="bem.e('section')">
-        <h2 :class="bem.e('subtitle')">useDict 契约形态（按 code 解构 + refreshDict）</h2>
-        <DemoField
-          :code="`const { order_type, refreshDict } = useDict('order_type')\nawait refreshDict('order_type') // 强制刷新`"
-          language="typescript"
-        >
-          <div :class="bem.e('chips')">
-            <el-tag v-for="item in order_type" :key="item.value" v-bind="tagTypeOf(item)">
-              {{ item.label }}
-            </el-tag>
-            <el-button :loading="refreshing" size="small" @click="onRefreshOrderType">
-              refreshDict('order_type')
-            </el-button>
-          </div>
-          <p :class="bem.e('hint')">
-            多字典场景：const {'{'} gender, user_status, refreshDict {'}'} = useDict('gender',
-            'user_status')。
-          </p>
-        </DemoField>
-      </section>
-    </DemoFrame>
-  </DocLayout>
+    <!-- 演示 3：useDict 契约形态 -->
+    <section :class="bem.e('section')">
+      <h2 :class="bem.e('subtitle')">useDict 契约形态（按 code 解构 + refreshDict）</h2>
+      <DemoField
+        :code="`const { order_type, refreshDict } = useDict('order_type')\nawait refreshDict('order_type') // 强制刷新`"
+        language="typescript"
+      >
+        <div :class="bem.e('chips')">
+          <el-tag v-for="item in order_type" :key="item.value" v-bind="tagTypeOf(item)">
+            {{ item.label }}
+          </el-tag>
+          <el-button :loading="refreshing" size="small" @click="onRefreshOrderType">
+            refreshDict('order_type')
+          </el-button>
+        </div>
+        <p :class="bem.e('hint')">
+          多字典场景：const {'{'} gender, user_status, refreshDict {'}'} = useDict('gender',
+          'user_status')。
+        </p>
+      </DemoField>
+    </section>
+  </DemoFrame>
 </template>
 
 <style lang="scss">

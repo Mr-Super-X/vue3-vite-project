@@ -16,8 +16,7 @@ import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import { disabledItems } from './configs/xform-demos-api'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import xFormSource from './XFormDisabled.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
 
@@ -112,40 +111,36 @@ const tocItems = [
   { id: 'demo-disabled', label: '禁用状态演示' },
   { id: 'api-disabled', label: 'disabled 字段' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="disabled 字段状态（支持反应式）"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        'SchemaNode disabled: ReactionValue<boolean> 字段,支持 3 种粒度:',
-        '1. 静态 disabled：xInput(\'username\').disabled(true) — 字段始终禁用(如业务标识字段)',
-        '2. 反应式 disabled：开关状态联动——「同意条款」=true 时,「不同意原因」字段禁用',
-        '3. 反应式 disabled：业务模式联动——「海运」时,「空运保价金额」字段禁用',
-        'disabled 字段由 el-form 自动跳过校验;model 中值仍保留,可正常提交',
-      ]"
-    >
-      <section id="demo-disabled">
-        <DemoField label="disabled 链式与反应式" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onSave">保存</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-          </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="disabled 字段状态（支持反应式）"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      'SchemaNode disabled: ReactionValue<boolean> 字段,支持 3 种粒度:',
+      '1. 静态 disabled：xInput(\'username\').disabled(true) — 字段始终禁用(如业务标识字段)',
+      '2. 反应式 disabled：开关状态联动——「同意条款」=true 时,「不同意原因」字段禁用',
+      '3. 反应式 disabled：业务模式联动——「海运」时,「空运保价金额」字段禁用',
+      'disabled 字段由 el-form 自动跳过校验;model 中值仍保留,可正常提交',
+    ]"
+  >
+    <section id="demo-disabled">
+      <DemoField label="disabled 链式与反应式" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onSave">保存</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
 
-      <ApiTable title="disabled 字段" :items="disabledItems" anchor="api-disabled" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="disabled 字段" :items="disabledItems" anchor="api-disabled" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

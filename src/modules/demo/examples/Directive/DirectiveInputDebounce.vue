@@ -11,9 +11,8 @@
  */
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
 import ApiTable from '../../components/ApiTable.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 
 const bem = createNamespace('demo-directive-input-debounce')
 
@@ -103,6 +102,8 @@ const tocItems = [
   { id: 'api-binding', label: 'Binding 类型' },
 ]
 
+useDocToc(tocItems)
+
 const bindingItems = [
   {
     name: 'value',
@@ -149,217 +150,207 @@ const compositionCode = `<el-input v-inputDebounce="onSearch" v-model="keyword" 
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="v-inputDebounce 输入防抖"
-      source="src/directives/inputDebounce.ts"
-      :introductions="[
-        '全局指令：input 事件防抖触发，默认 300ms。通过 arg 自定义延迟（如 :500 / :1000）。',
-        '中文输入法支持：compositionstart/end 标记 composing 状态，拼音阶段不触发回调，组合结束后再统一触发一次。',
-        '兼容封装组件：通过 BFS 查找子 INPUT 元素（Element Plus el-input 等）。',
-      ]"
-    >
-      <!-- 默认防抖 -->
-      <section id="demo-default">
-        <DemoField label="默认 300ms 防抖（v-inputDebounce）" :code="defaultDebounceCode">
-          <span :class="bem.e('chip')">300ms 防抖</span>
-          <el-input
-            v-inputDebounce="onInputDefault"
-            v-model="searchDefault"
-            placeholder="尝试连续输入字符，观察日志"
-            clearable
-            @input="onInputDefaultRaw"
-          />
-          <div :class="bem.e('counters')">
-            <span>
-              原始 input 次数：
-              <strong>{{ defaultRawCounter }}</strong>
-            </span>
-            <span>
-              300ms 防抖命中：
-              <strong>{{ defaultCounter }}</strong>
-            </span>
-          </div>
-          <div :class="bem.e('log')">
-            <p :class="bem.e('log-title')">回调日志（防抖后）：</p>
-            <p v-for="(line, idx) in defaultLog" :key="`d-${idx}`" :class="bem.e('log-line')">
-              {{ line }}
-            </p>
-            <p v-if="!defaultLog.length" :class="bem.e('log-empty')">（输入字符触发防抖回调）</p>
-          </div>
-        </DemoField>
-      </section>
-
-      <!-- 自定义延迟 -->
-      <section id="demo-custom">
-        <DemoField label="自定义延迟（v-inputDebounce:500）" :code="customDebounceCode">
-          <span :class="bem.e('chip')">500ms 防抖</span>
-          <el-input
-            v-inputDebounce:500="onInputCustom"
-            v-model="searchCustom"
-            placeholder="500ms 防抖间隔"
-            clearable
-            @input="onInputCustomRaw"
-          />
-          <div :class="bem.e('counters')">
-            <span>
-              原始 input 次数：
-              <strong>{{ customRawCounter }}</strong>
-            </span>
-            <span>
-              500ms 防抖命中：
-              <strong>{{ customCounter }}</strong>
-            </span>
-          </div>
-          <div :class="bem.e('log')">
-            <p :class="bem.e('log-title')">回调日志（500ms 防抖）：</p>
-            <p v-for="(line, idx) in customLog" :key="`c-${idx}`" :class="bem.e('log-line')">
-              {{ line }}
-            </p>
-            <p v-if="!customLog.length" :class="bem.e('log-empty')">
-              （输入字符触发 500ms 防抖回调）
-            </p>
-          </div>
-          <p :class="bem.e('hint')">
-            对照量化：在两个输入框分别连续输入「abcdefghij」10 字符，
-            <strong>原始 input 次数都是 10</strong>
-            ，但 300ms 防抖命中次数通常多于 500ms 防抖（停顿少时差异最明显，例如 300ms 命中 4 次 vs
-            500ms 命中 2 次）。
+  <DemoFrame
+    title="v-inputDebounce 输入防抖"
+    source="src/directives/inputDebounce.ts"
+    :introductions="[
+      '全局指令：input 事件防抖触发，默认 300ms。通过 arg 自定义延迟（如 :500 / :1000）。',
+      '中文输入法支持：compositionstart/end 标记 composing 状态，拼音阶段不触发回调，组合结束后再统一触发一次。',
+      '兼容封装组件：通过 BFS 查找子 INPUT 元素（Element Plus el-input 等）。',
+    ]"
+  >
+    <!-- 默认防抖 -->
+    <section id="demo-default">
+      <DemoField label="默认 300ms 防抖（v-inputDebounce）" :code="defaultDebounceCode">
+        <span :class="bem.e('chip')">300ms 防抖</span>
+        <el-input
+          v-inputDebounce="onInputDefault"
+          v-model="searchDefault"
+          placeholder="尝试连续输入字符，观察日志"
+          clearable
+          @input="onInputDefaultRaw"
+        />
+        <div :class="bem.e('counters')">
+          <span>
+            原始 input 次数：
+            <strong>{{ defaultRawCounter }}</strong>
+          </span>
+          <span>
+            300ms 防抖命中：
+            <strong>{{ defaultCounter }}</strong>
+          </span>
+        </div>
+        <div :class="bem.e('log')">
+          <p :class="bem.e('log-title')">回调日志（防抖后）：</p>
+          <p v-for="(line, idx) in defaultLog" :key="`d-${idx}`" :class="bem.e('log-line')">
+            {{ line }}
           </p>
-          <table :class="bem.e('timing-table')">
-            <thead>
-              <tr>
-                <th>输入节奏</th>
-                <th>字符数</th>
-                <th>300ms 防抖命中</th>
-                <th>500ms 防抖命中</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>连续快打（&lt; 200ms/字符）</td>
-                <td>10</td>
-                <td>4</td>
-                <td>2</td>
-              </tr>
-              <tr>
-                <td>间隔均匀（≈ 300ms/字符）</td>
-                <td>10</td>
-                <td>2</td>
-                <td>1</td>
-              </tr>
-              <tr>
-                <td>打字慢速（&gt; 500ms/字符）</td>
-                <td>10</td>
-                <td>1</td>
-                <td>1</td>
-              </tr>
-            </tbody>
-          </table>
-          <p :class="bem.e('hint')">
-            表格数值基于「连续输入后停顿不超过延迟」的最坏情况估算——实际命中数取决于停顿频率，
-            停顿越多命中次数越接近 1。
+          <p v-if="!defaultLog.length" :class="bem.e('log-empty')">（输入字符触发防抖回调）</p>
+        </div>
+      </DemoField>
+    </section>
+
+    <!-- 自定义延迟 -->
+    <section id="demo-custom">
+      <DemoField label="自定义延迟（v-inputDebounce:500）" :code="customDebounceCode">
+        <span :class="bem.e('chip')">500ms 防抖</span>
+        <el-input
+          v-inputDebounce:500="onInputCustom"
+          v-model="searchCustom"
+          placeholder="500ms 防抖间隔"
+          clearable
+          @input="onInputCustomRaw"
+        />
+        <div :class="bem.e('counters')">
+          <span>
+            原始 input 次数：
+            <strong>{{ customRawCounter }}</strong>
+          </span>
+          <span>
+            500ms 防抖命中：
+            <strong>{{ customCounter }}</strong>
+          </span>
+        </div>
+        <div :class="bem.e('log')">
+          <p :class="bem.e('log-title')">回调日志（500ms 防抖）：</p>
+          <p v-for="(line, idx) in customLog" :key="`c-${idx}`" :class="bem.e('log-line')">
+            {{ line }}
           </p>
-        </DemoField>
-      </section>
-
-      <!-- 对比无防抖 -->
-      <section id="demo-compare">
-        <DemoField label="对比：实时（无防抖）" :code="rawInputCode">
-          <span :class="bem.e('chip')">无防抖</span>
-          <el-input
-            :model-value="searchRaw"
-            placeholder="无防抖，每次按键都触发回调"
-            clearable
-            @input="
-              (v: string) => {
-                searchRaw = v
-                onSearchRaw(v)
-              }
-            "
-          />
-          <div :class="bem.e('log')">
-            <p :class="bem.e('log-title')">实时回调日志：</p>
-            <p v-for="(line, idx) in rawLog" :key="`r-${idx}`" :class="bem.e('log-line')">
-              {{ line }}
-            </p>
-            <p v-if="!rawLog.length" :class="bem.e('log-empty')">（输入字符实时回调）</p>
-          </div>
-          <p :class="bem.e('hint')">
-            同样输入「hello world」共 11 字符 → 实时触发 11 次回调（每次按键 1 次），
-            而上方防抖后只触发 1 次。防抖显著降低搜索请求频率。
-            <br />
-            注意：本统计仅适用于纯英文 / 数字输入。中英文混合输入或中文输入法场景下，
-            <code>@input</code>
-            触发时机受 IME composing 状态影响，次数可能小于字符数（拼音阶段不触发）。
+          <p v-if="!customLog.length" :class="bem.e('log-empty')">
+            （输入字符触发 500ms 防抖回调）
           </p>
-        </DemoField>
-      </section>
+        </div>
+        <p :class="bem.e('hint')">
+          对照量化：在两个输入框分别连续输入「abcdefghij」10 字符，
+          <strong>原始 input 次数都是 10</strong>
+          ，但 300ms 防抖命中次数通常多于 500ms 防抖（停顿少时差异最明显，例如 300ms 命中 4 次 vs
+          500ms 命中 2 次）。
+        </p>
+        <table :class="bem.e('timing-table')">
+          <thead>
+            <tr>
+              <th>输入节奏</th>
+              <th>字符数</th>
+              <th>300ms 防抖命中</th>
+              <th>500ms 防抖命中</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>连续快打（&lt; 200ms/字符）</td>
+              <td>10</td>
+              <td>4</td>
+              <td>2</td>
+            </tr>
+            <tr>
+              <td>间隔均匀（≈ 300ms/字符）</td>
+              <td>10</td>
+              <td>2</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td>打字慢速（&gt; 500ms/字符）</td>
+              <td>10</td>
+              <td>1</td>
+              <td>1</td>
+            </tr>
+          </tbody>
+        </table>
+        <p :class="bem.e('hint')">
+          表格数值基于「连续输入后停顿不超过延迟」的最坏情况估算——实际命中数取决于停顿频率，
+          停顿越多命中次数越接近 1。
+        </p>
+      </DemoField>
+    </section>
 
-      <!-- 中文输入法 -->
-      <section id="demo-composition">
-        <DemoField label="中文输入法兼容（拼音阶段不触发）" :code="compositionCode">
-          <span :class="bem.e('chip')">中文输入法</span>
-          <el-input
-            v-inputDebounce="onInputComposition"
-            v-model="searchComposition"
-            data-debounce="composition"
-            placeholder="输入拼音（如 zhongwen），拼音阶段不触发回调，组合完成才触发一次"
-            clearable
-          />
-          <div :class="bem.e('simulate-row')">
-            <el-button size="small" @click="simulateComposition">模拟 composition 事件</el-button>
-            <span :class="bem.e('simulate-hint')">
-              无中文 IME 环境也能验证 — 派发合成事件序列，console.log 输出 composing 切换过程
-            </span>
-          </div>
-          <div :class="bem.e('log')">
-            <p :class="bem.e('log-title')">组合结束回调日志：</p>
-            <p v-for="(line, idx) in compositionLog" :key="`cmp-${idx}`" :class="bem.e('log-line')">
-              {{ line }}
-            </p>
-            <p v-if="!compositionLog.length" :class="bem.e('log-empty')">
-              （打开中文输入法，输入拼音——只有汉字上屏才进日志）
-            </p>
-          </div>
-          <div :class="bem.e('log')">
-            <p :class="bem.e('log-title')">模拟事件轨迹（compositionstart → compositionend）：</p>
-            <p
-              v-for="(line, idx) in compositionTrace"
-              :key="`sim-${idx}`"
-              :class="bem.e('log-line')"
-            >
-              {{ line }}
-            </p>
-            <p v-if="!compositionTrace.length" :class="bem.e('log-empty')">
-              （点击「模拟 composition 事件」按钮触发）
-            </p>
-          </div>
-          <p :class="bem.e('hint')">
-            验证方法：把中文输入法打开，输入「zhongwen」——拼音过程不会触发回调日志，
-            汉字上屏（composing 结束）才触发一次。这是 v-inputDebounce 与原生 input 防抖的关键差异。
-            无 IME 环境可点「模拟 composition 事件」按钮，等价验证 composing 状态切换逻辑。
-            <br />
-            <strong>自动化测试限制：</strong>
-            此验证需真人中文输入法（系统级 IME）。jsdom / VTU 不支持 composition 事件序列化，
-            <code>@vue/test-utils</code>
-            的
-            <code>trigger('compositionend')</code>
-            在本指令的 BFS 查找 INPUT 子元素路径下行为不稳定，单元测试只覆盖「不防抖时 callback
-            立即触发」基础路径，composing 跳过逻辑依赖手动 / 浏览器 E2E 验证。
+    <!-- 对比无防抖 -->
+    <section id="demo-compare">
+      <DemoField label="对比：实时（无防抖）" :code="rawInputCode">
+        <span :class="bem.e('chip')">无防抖</span>
+        <el-input
+          :model-value="searchRaw"
+          placeholder="无防抖，每次按键都触发回调"
+          clearable
+          @input="
+            (v: string) => {
+              searchRaw = v
+              onSearchRaw(v)
+            }
+          "
+        />
+        <div :class="bem.e('log')">
+          <p :class="bem.e('log-title')">实时回调日志：</p>
+          <p v-for="(line, idx) in rawLog" :key="`r-${idx}`" :class="bem.e('log-line')">
+            {{ line }}
           </p>
-        </DemoField>
-      </section>
+          <p v-if="!rawLog.length" :class="bem.e('log-empty')">（输入字符实时回调）</p>
+        </div>
+        <p :class="bem.e('hint')">
+          同样输入「hello world」共 11 字符 → 实时触发 11 次回调（每次按键 1 次），
+          而上方防抖后只触发 1 次。防抖显著降低搜索请求频率。
+          <br />
+          注意：本统计仅适用于纯英文 / 数字输入。中英文混合输入或中文输入法场景下，
+          <code>@input</code>
+          触发时机受 IME composing 状态影响，次数可能小于字符数（拼音阶段不触发）。
+        </p>
+      </DemoField>
+    </section>
 
-      <!-- API 文档 -->
-      <ApiTable title="Binding" :items="bindingItems" anchor="api-binding" />
-      <ApiTable title="Arg（修饰参数）" :items="argItems" />
-    </DemoFrame>
+    <!-- 中文输入法 -->
+    <section id="demo-composition">
+      <DemoField label="中文输入法兼容（拼音阶段不触发）" :code="compositionCode">
+        <span :class="bem.e('chip')">中文输入法</span>
+        <el-input
+          v-inputDebounce="onInputComposition"
+          v-model="searchComposition"
+          data-debounce="composition"
+          placeholder="输入拼音（如 zhongwen），拼音阶段不触发回调，组合完成才触发一次"
+          clearable
+        />
+        <div :class="bem.e('simulate-row')">
+          <el-button size="small" @click="simulateComposition">模拟 composition 事件</el-button>
+          <span :class="bem.e('simulate-hint')">
+            无中文 IME 环境也能验证 — 派发合成事件序列，console.log 输出 composing 切换过程
+          </span>
+        </div>
+        <div :class="bem.e('log')">
+          <p :class="bem.e('log-title')">组合结束回调日志：</p>
+          <p v-for="(line, idx) in compositionLog" :key="`cmp-${idx}`" :class="bem.e('log-line')">
+            {{ line }}
+          </p>
+          <p v-if="!compositionLog.length" :class="bem.e('log-empty')">
+            （打开中文输入法，输入拼音——只有汉字上屏才进日志）
+          </p>
+        </div>
+        <div :class="bem.e('log')">
+          <p :class="bem.e('log-title')">模拟事件轨迹（compositionstart → compositionend）：</p>
+          <p v-for="(line, idx) in compositionTrace" :key="`sim-${idx}`" :class="bem.e('log-line')">
+            {{ line }}
+          </p>
+          <p v-if="!compositionTrace.length" :class="bem.e('log-empty')">
+            （点击「模拟 composition 事件」按钮触发）
+          </p>
+        </div>
+        <p :class="bem.e('hint')">
+          验证方法：把中文输入法打开，输入「zhongwen」——拼音过程不会触发回调日志，
+          汉字上屏（composing 结束）才触发一次。这是 v-inputDebounce 与原生 input 防抖的关键差异。
+          无 IME 环境可点「模拟 composition 事件」按钮，等价验证 composing 状态切换逻辑。
+          <br />
+          <strong>自动化测试限制：</strong>
+          此验证需真人中文输入法（系统级 IME）。jsdom / VTU 不支持 composition 事件序列化，
+          <code>@vue/test-utils</code>
+          的
+          <code>trigger('compositionend')</code>
+          在本指令的 BFS 查找 INPUT 子元素路径下行为不稳定，单元测试只覆盖「不防抖时 callback
+          立即触发」基础路径，composing 跳过逻辑依赖手动 / 浏览器 E2E 验证。
+        </p>
+      </DemoField>
+    </section>
 
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <!-- API 文档 -->
+    <ApiTable title="Binding" :items="bindingItems" anchor="api-binding" />
+    <ApiTable title="Arg（修饰参数）" :items="argItems" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

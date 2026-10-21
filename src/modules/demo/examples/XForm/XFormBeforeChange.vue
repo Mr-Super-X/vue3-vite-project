@@ -12,8 +12,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { beforeChangePropsItems } from './configs/xform-demos-api'
 import xFormSource from './XFormBeforeChange.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
@@ -25,6 +24,8 @@ const tocItems = [
   { id: 'demo-before-change', label: '3 层 beforeChange 演示' },
   { id: 'api-before-change', label: 'beforeChange 字段速查' },
 ]
+
+useDocToc(tocItems)
 
 // ════════════════════════════════════════════════════════════
 // Tab A: 全局 Props（第 1 层：横切关注点）
@@ -228,55 +229,54 @@ async function onSave(): Promise<void> {
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="XForm 3 层 beforeChange 拦截"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        'beforeChange 升级为 3 层拦截：全局 Props（第 1 层）→ 命名空间规则（第 2 层）→ 字段级（第 3 层）',
-        '每层返回新值透传给下一层；任何层返回 Promise.reject / 抛异常 → 中断写入',
-        'ctx 提供 setFieldValue / setFieldError / abort / name 4 个能力',
-        '拦截执行位于 composables/build-vmodel-bindings.ts 的 invokeBeforeChange 阶段',
-        '切换 Tab 体验不同拦截层级',
-      ]"
-    >
-      <section id="demo-before-change">
-        <div :class="bem.e('tabs')">
-          <el-radio-group v-model="activeTab">
-            <el-radio-button value="global">A. 全局 Props（第 1 层）</el-radio-button>
-            <el-radio-button value="field">B. 字段级（第 3 层）</el-radio-button>
-            <el-radio-button value="namespace">C. 命名空间（第 2 层）</el-radio-button>
-          </el-radio-group>
-        </div>
+  <DemoFrame
+    title="XForm 3 层 beforeChange 拦截"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      'beforeChange 升级为 3 层拦截：全局 Props（第 1 层）→ 命名空间规则（第 2 层）→ 字段级（第 3 层）',
+      '每层返回新值透传给下一层；任何层返回 Promise.reject / 抛异常 → 中断写入',
+      'ctx 提供 setFieldValue / setFieldError / abort / name 4 个能力',
+      '拦截执行位于 composables/build-vmodel-bindings.ts 的 invokeBeforeChange 阶段',
+      '切换 Tab 体验不同拦截层级',
+    ]"
+  >
+    <section id="demo-before-change">
+      <div :class="bem.e('tabs')">
+        <el-radio-group v-model="activeTab">
+          <el-radio-button value="global">A. 全局 Props（第 1 层）</el-radio-button>
+          <el-radio-button value="field">B. 字段级（第 3 层）</el-radio-button>
+          <el-radio-button value="namespace">C. 命名空间（第 2 层）</el-radio-button>
+        </el-radio-group>
+      </div>
 
-        <!-- Tab A -->
-        <DemoField
-          v-if="activeTab === 'global'"
-          label="提现金额（全局 Props 拦截 + 格式化）"
-          :code="xFormSource"
-        >
-          <XForm ref="formRef" :schema="schemaA" :model="modelA" :before-change="beforeChangeA" />
-        </DemoField>
+      <!-- Tab A -->
+      <DemoField
+        v-if="activeTab === 'global'"
+        label="提现金额（全局 Props 拦截 + 格式化）"
+        :code="xFormSource"
+      >
+        <XForm ref="formRef" :schema="schemaA" :model="modelA" :before-change="beforeChangeA" />
+      </DemoField>
 
-        <!-- Tab B -->
-        <DemoField
-          v-else-if="activeTab === 'field'"
-          label="手机号/城市/备注（字段级 beforeChange）"
-          :code="xFormSource"
-        >
-          <XForm ref="formRef" :schema="schemaB" :model="modelB" />
-        </DemoField>
+      <!-- Tab B -->
+      <DemoField
+        v-else-if="activeTab === 'field'"
+        label="手机号/城市/备注（字段级 beforeChange）"
+        :code="xFormSource"
+      >
+        <XForm ref="formRef" :schema="schemaB" :model="modelB" />
+      </DemoField>
 
-        <!-- Tab C -->
-        <DemoField v-else label="数组联系人手机号（命名空间正则匹配）" :code="xFormSource">
-          <XForm
-            ref="formRef"
-            :schema="schemaC"
-            :model="modelC"
-            :before-change-rules="beforeChangeRulesC"
-          />
-          <!-- 正则匹配路径示意 -->
-          <pre :class="bem.e('pattern-diagram')">
+      <!-- Tab C -->
+      <DemoField v-else label="数组联系人手机号（命名空间正则匹配）" :code="xFormSource">
+        <XForm
+          ref="formRef"
+          :schema="schemaC"
+          :model="modelC"
+          :before-change-rules="beforeChangeRulesC"
+        />
+        <!-- 正则匹配路径示意 -->
+        <pre :class="bem.e('pattern-diagram')">
 正则: /&#94;contacts\[\d+\]\.phone$/
        ↓ 命中以下动态路径:
        ├─ contacts[0].phone → trimContactsPhone
@@ -284,24 +284,22 @@ async function onSave(): Promise<void> {
        ├─ contacts[2].phone → trimContactsPhone
        └─ ... (新增行自动应用)
           </pre>
-        </DemoField>
+      </DemoField>
 
-        <div :class="bem.e('actions')">
-          <el-button @click="onReset">重置</el-button>
-          <el-button @click="copySchema">复制 schema</el-button>
-          <el-button @click="onSave">打印 model</el-button>
-        </div>
+      <div :class="bem.e('actions')">
+        <el-button @click="onReset">重置</el-button>
+        <el-button @click="copySchema">复制 schema</el-button>
+        <el-button @click="onSave">打印 model</el-button>
+      </div>
 
-        <ModelPreview :model="currentModel()" />
-      </section>
-      <ApiTable
-        title="beforeChange 字段速查"
-        :items="beforeChangePropsItems"
-        anchor="api-before-change"
-      />
-    </DemoFrame>
-    <template #toc><DocToc :items="tocItems" /></template>
-  </DocLayout>
+      <ModelPreview :model="currentModel()" />
+    </section>
+    <ApiTable
+      title="beforeChange 字段速查"
+      :items="beforeChangePropsItems"
+      anchor="api-before-change"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

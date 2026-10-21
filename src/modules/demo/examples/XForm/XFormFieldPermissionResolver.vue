@@ -22,8 +22,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { permissionItems } from './configs/xform-demos-api'
 import ModelPreview from '../../components/ModelPreview.vue'
 
@@ -113,68 +112,64 @@ const tocItems = [
   { id: 'demo-permission-resolver', label: 'permissionResolver 注入' },
   { id: 'api-permission', label: 'permission 字段' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="permissionResolver 注入（权限码 → 三态映射）"
-      source="src/components/form-schema/composables/use-field-permission.ts"
-      :introductions="[
-        'permissionResolver：业务侧把权限码字符串（如 user.edit）映射为 XForm 的 view/edit/hidden 三态。',
-        '1) 权限码-可编辑：user.edit + 当前用户拥有 → edit（可编辑）',
-        '2) 权限码-只读：order.view 走 .view 后缀 → view（纯文本只读）',
-        '3) 权限码-管理员：admin.delete 无权限 → hidden（DOM 中不渲染）',
-        '4) 未识别权限码：兜底隐藏，避免默认可见带来的越权风险',
-      ]"
-    >
-      <section id="demo-permission-resolver">
-        <DemoField label="permissionResolver 注入" :code="resolverCode">
-          <div :class="bem.b()">
-            <div :class="bem.e('resolver-section')">
-              <XForm
-                ref="formRef"
-                :schema="schemaWithCodes"
-                :model="model"
-                :permission-resolver="permissionResolver"
-              />
-              <p :class="bem.e('resolver-hint')">说明：</p>
-              <ul :class="bem.e('resolver-list')">
-                <li>
-                  <code>user.edit</code>
-                  → 当前用户拥有 → edit 态（可编辑）
-                </li>
-                <li>
-                  <code>order.view</code>
-                  → 只读权限 → view 态（纯文本）
-                </li>
-                <li>
-                  <code>admin.delete</code>
-                  → 无权限 → hidden 态（不渲染）
-                </li>
-              </ul>
-            </div>
-            <div :class="bem.e('actions')">
-              <el-button @click="onReset">重置</el-button>
-              <el-button type="primary" @click="onSave">保存</el-button>
-              <el-button @click="copySchema">复制 schema</el-button>
-            </div>
-            <ModelPreview :model="model" />
+  <DemoFrame
+    title="permissionResolver 注入（权限码 → 三态映射）"
+    source="src/components/form-schema/composables/use-field-permission.ts"
+    :introductions="[
+      'permissionResolver：业务侧把权限码字符串（如 user.edit）映射为 XForm 的 view/edit/hidden 三态。',
+      '1) 权限码-可编辑：user.edit + 当前用户拥有 → edit（可编辑）',
+      '2) 权限码-只读：order.view 走 .view 后缀 → view（纯文本只读）',
+      '3) 权限码-管理员：admin.delete 无权限 → hidden（DOM 中不渲染）',
+      '4) 未识别权限码：兜底隐藏，避免默认可见带来的越权风险',
+    ]"
+  >
+    <section id="demo-permission-resolver">
+      <DemoField label="permissionResolver 注入" :code="resolverCode">
+        <div :class="bem.b()">
+          <div :class="bem.e('resolver-section')">
+            <XForm
+              ref="formRef"
+              :schema="schemaWithCodes"
+              :model="model"
+              :permission-resolver="permissionResolver"
+            />
+            <p :class="bem.e('resolver-hint')">说明：</p>
+            <ul :class="bem.e('resolver-list')">
+              <li>
+                <code>user.edit</code>
+                → 当前用户拥有 → edit 态（可编辑）
+              </li>
+              <li>
+                <code>order.view</code>
+                → 只读权限 → view 态（纯文本）
+              </li>
+              <li>
+                <code>admin.delete</code>
+                → 无权限 → hidden 态（不渲染）
+              </li>
+            </ul>
           </div>
-        </DemoField>
-      </section>
+          <div :class="bem.e('actions')">
+            <el-button @click="onReset">重置</el-button>
+            <el-button type="primary" @click="onSave">保存</el-button>
+            <el-button @click="copySchema">复制 schema</el-button>
+          </div>
+          <ModelPreview :model="model" />
+        </div>
+      </DemoField>
+    </section>
 
-      <ApiTable
-        title="permission 字段 + permissionResolver 注入"
-        :items="permissionItems"
-        anchor="api-permission"
-      />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable
+      title="permission 字段 + permissionResolver 注入"
+      :items="permissionItems"
+      anchor="api-permission"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

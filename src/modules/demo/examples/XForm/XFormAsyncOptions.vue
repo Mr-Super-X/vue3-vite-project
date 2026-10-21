@@ -14,8 +14,7 @@ import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import { asyncOptionsItems } from './configs/xform-demos-api'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import xFormSource from './XFormAsyncOptions.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
 
@@ -125,38 +124,34 @@ const tocItems = [
   { id: 'demo-async-options', label: '异步数据源演示' },
   { id: 'api-async-options', label: 'AsyncOptionsConfig' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="异步选项（asyncOptions）"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        '城市选择：组件创建时自动调用 source 加载 options。',
-        '区域选择：通过 deps: \'city\' 实现依赖联动，city 变化时自动重新加载。',
-        '错误处理：source 抛错时触发 onError，并通过 ElMessage 提示。',
-      ]"
-    >
-      <section id="demo-async-options">
-        <DemoField label="异步数据源表单" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onSave">保存</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-          </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="异步选项（asyncOptions）"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      '城市选择：组件创建时自动调用 source 加载 options。',
+      '区域选择：通过 deps: \'city\' 实现依赖联动，city 变化时自动重新加载。',
+      '错误处理：source 抛错时触发 onError，并通过 ElMessage 提示。',
+    ]"
+  >
+    <section id="demo-async-options">
+      <DemoField label="异步数据源表单" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onSave">保存</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
 
-      <ApiTable title="AsyncOptionsConfig" :items="asyncOptionsItems" anchor="api-async-options" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="AsyncOptionsConfig" :items="asyncOptionsItems" anchor="api-async-options" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

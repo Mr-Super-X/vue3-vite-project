@@ -25,11 +25,10 @@ import { ArrowDown, View } from '@element-plus/icons-vue'
 import type { ProColumn, ProTableExpose } from '@/components/ProTable'
 import type { OrderItem, ExpandOrder } from '@mock/pro-table/expand'
 import { expandRequestApi } from '@mock/pro-table/expand'
-import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { expandColumnItems, expandSlotItems } from './configs/protable-demos-api'
 
 const bem = createNamespace('demo-pro-table-expand')
@@ -332,6 +331,8 @@ const ExpandPanel = (props: { row: Record<string, unknown> }) => {
 
 const tocItems = [{ id: 'demo-expand', label: '① ② ③ ④ 综合演示' }]
 
+useDocToc(tocItems)
+
 /* ───────────── 代码片段 ───────────── */
 
 const expandCode = `<template>
@@ -358,6 +359,7 @@ const columns = [
   { prop: 'orderNo', label: '订单号' },
   { prop: 'customer', label: '客户' },
 ]
+
 <\/script>`
 
 const complexCellCode = `// 复杂单元格：金额带进度条
@@ -375,83 +377,70 @@ const complexCellCode = `// 复杂单元格：金额带进度条
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="ProTableExpand 表格内嵌"
-      source="src/modules/demo/examples/ProTable/ProTableExpand.vue"
-      :introductions="[
-        '业务真实痛点：订单表点开要看商品明细，用户表点开要看详情，单元格内要塞进度条/状态点/多按钮。',
-        '本 demo 覆盖 4 个高频场景：① 展开行内嵌子表格 ② 展开行内嵌详情卡片 ③ 复杂单元格 ④ 展开行内嵌批量操作。',
-        '展开列 type=&quot;expand&quot;，展开行内容走与列 prop 同名的插槽（如 prop=&quot;expand&quot; → #expand=&quot;{ row }&quot;）。',
-        '子表格复用 ElTable + ElTableColumn，不嵌 ProTable（避免嵌套请求/状态污染）。',
-      ]"
-    >
-      <section :id="tocItems[0]!.id" :class="bem.b()">
-        <DemoField
-          label="① ② ③ ④：展开行子表 + 详情卡片 + 复杂单元格 + 批量操作"
-          :code="expandCode"
+  <DemoFrame
+    title="ProTableExpand 表格内嵌"
+    source="src/modules/demo/examples/ProTable/ProTableExpand.vue"
+    :introductions="[
+      '业务真实痛点：订单表点开要看商品明细，用户表点开要看详情，单元格内要塞进度条/状态点/多按钮。',
+      '本 demo 覆盖 4 个高频场景：① 展开行内嵌子表格 ② 展开行内嵌详情卡片 ③ 复杂单元格 ④ 展开行内嵌批量操作。',
+      '展开列 type=&quot;expand&quot;，展开行内容走与列 prop 同名的插槽（如 prop=&quot;expand&quot; → #expand=&quot;{ row }&quot;）。',
+      '子表格复用 ElTable + ElTableColumn，不嵌 ProTable（避免嵌套请求/状态污染）。',
+    ]"
+  >
+    <section :id="tocItems[0]!.id" :class="bem.b()">
+      <DemoField label="① ② ③ ④：展开行子表 + 详情卡片 + 复杂单元格 + 批量操作" :code="expandCode">
+        <p :class="bem.e('hint')">
+          操作：点任意行左侧「▸」展开 →
+          <strong>①</strong>
+          上方「商品明细」子表格（SKU/名称/数量/单价/小计） +
+          <strong>②</strong>
+          下方「订单详情」卡片（收货人/电话/地址/备注） +
+          <strong>④</strong>
+          「批量退款」勾选子项后一键退款
+        </p>
+        <p :class="bem.e('hint')">
+          <strong>③</strong>
+          复杂单元格：订单号带状态点 · 金额带进度条 · 操作列多按钮组（含 Popconfirm 二次确认）
+        </p>
+        <el-button type="primary" :icon="ArrowDown" @click="refreshAll">手动 refresh</el-button>
+        <el-button :icon="View" @click="ref0?.setSearchParams?.({ status: '部分退款' })">
+          程序化搜索「部分退款」
+        </el-button>
+        <ProTable
+          ref="ref0"
+          :columns="columns"
+          :request-api="expandRequestApi"
+          table-key="demo-pro-table-expand"
+          row-key="id"
+          :page-size="5"
         >
-          <p :class="bem.e('hint')">
-            操作：点任意行左侧「▸」展开 →
-            <strong>①</strong>
-            上方「商品明细」子表格（SKU/名称/数量/单价/小计） +
-            <strong>②</strong>
-            下方「订单详情」卡片（收货人/电话/地址/备注） +
-            <strong>④</strong>
-            「批量退款」勾选子项后一键退款
-          </p>
-          <p :class="bem.e('hint')">
-            <strong>③</strong>
-            复杂单元格：订单号带状态点 · 金额带进度条 · 操作列多按钮组（含 Popconfirm 二次确认）
-          </p>
-          <el-button type="primary" :icon="ArrowDown" @click="refreshAll">手动 refresh</el-button>
-          <el-button :icon="View" @click="ref0?.setSearchParams?.({ status: '部分退款' })">
-            程序化搜索「部分退款」
-          </el-button>
-          <ProTable
-            ref="ref0"
-            :columns="columns"
-            :request-api="expandRequestApi"
-            table-key="demo-pro-table-expand"
-            row-key="id"
-            :page-size="5"
-          >
-            <!-- 展开行：综合 ① 子表格 + ② 详情卡片 + ④ 批量操作 -->
-            <!-- 插槽名 = 展开列的 prop 名（ElementTableBody 按 col.prop 透传） -->
-            <!-- ExpandPanel 为函数式组件，:row 传父表行数据 -->
-            <template #expand="{ row }">
-              <div :class="bem.e('expand-panel')">
-                <ExpandPanel :row="row" />
-              </div>
-            </template>
-          </ProTable>
-        </DemoField>
-      </section>
+          <!-- 展开行：综合 ① 子表格 + ② 详情卡片 + ④ 批量操作 -->
+          <!-- 插槽名 = 展开列的 prop 名（ElementTableBody 按 col.prop 透传） -->
+          <!-- ExpandPanel 为函数式组件，:row 传父表行数据 -->
+          <template #expand="{ row }">
+            <div :class="bem.e('expand-panel')">
+              <ExpandPanel :row="row" />
+            </div>
+          </template>
+        </ProTable>
+      </DemoField>
+    </section>
 
-      <!-- ③ 复杂单元格代码片段 -->
-      <section :class="bem.b()">
-        <DemoField
-          label="③ 复杂单元格代码片段（金额带进度条 + 订单号带状态点）"
-          :code="complexCellCode"
-        >
-          <p :class="bem.e('hint')">
-            上方 ProTable 已完整演示。下方代码片段演示核心写法（render 返回复杂 VNode 树）。
-          </p>
-        </DemoField>
-      </section>
+    <!-- ③ 复杂单元格代码片段 -->
+    <section :class="bem.b()">
+      <DemoField
+        label="③ 复杂单元格代码片段（金额带进度条 + 订单号带状态点）"
+        :code="complexCellCode"
+      >
+        <p :class="bem.e('hint')">
+          上方 ProTable 已完整演示。下方代码片段演示核心写法（render 返回复杂 VNode 树）。
+        </p>
+      </DemoField>
+    </section>
 
-      <ApiTable
-        title="expand 列字段（v3.1）"
-        :items="expandColumnItems"
-        anchor="api-expand-column"
-      />
-      <ApiTable title="expand 插槽与内嵌用法" :items="expandSlotItems" anchor="api-expand-slot" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="expand 列字段（v3.1）" :items="expandColumnItems" anchor="api-expand-column" />
+    <ApiTable title="expand 插槽与内嵌用法" :items="expandSlotItems" anchor="api-expand-slot" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

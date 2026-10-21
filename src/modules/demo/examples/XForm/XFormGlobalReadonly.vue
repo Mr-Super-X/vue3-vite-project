@@ -22,8 +22,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { globalReadonlyItems } from './configs/xform-demos-api'
 import xFormSource from './XFormGlobalReadonly.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
@@ -133,56 +132,55 @@ const tocItems = [
   { id: 'demo-global-readonly', label: '全局 readonly 演示' },
   { id: 'api-global-readonly', label: '字段速查' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="顶层 schema.readonly（全局只读：所有字段 view 化）"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        'XFormFieldPermission 演示字段级 permission；本页演示顶层 schema.readonly（透传 XForm globalReadonly → permission gate 走 view 态渲染）。',
-        '与全局 disabled 区别：disabled 字段仍渲染为可识别控件但不可编辑；readonly 字段渲染为纯文本（view 态），跳过校验，不包 form-item 包装。',
-        'XForm 顶层 readonly 写法 3 种：字面量 / 函数 / {{ fn }} 表达式（顶层 readonly 是 ReactionValue<boolean>）。',
-        '优先级：hidden > readonly(view) > edit；字段级只读请用 permission: view。',
-      ]"
-    >
-      <section id="demo-global-readonly">
-        <div :class="bem.e('controls')">
-          <el-radio-group v-model="mode" size="large">
-            <el-radio-button value="literal_true">字面量 true</el-radio-button>
-            <el-radio-button value="literal_false">字面量 false</el-radio-button>
-            <el-radio-button value="fn">函数</el-radio-button>
-            <el-radio-button value="expr">
-              <span v-pre>{{ fn }}</span>
-              表达式
-            </el-radio-button>
-          </el-radio-group>
-          <el-switch
-            v-model="model.lockAll"
-            :disabled="mode === 'literal_true' || mode === 'literal_false'"
-            active-text="lockAll"
-          />
-          <span :class="bem.e('hint')">当前模式：{{ currentModeLabel }}</span>
+  <DemoFrame
+    title="顶层 schema.readonly（全局只读：所有字段 view 化）"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      'XFormFieldPermission 演示字段级 permission；本页演示顶层 schema.readonly（透传 XForm globalReadonly → permission gate 走 view 态渲染）。',
+      '与全局 disabled 区别：disabled 字段仍渲染为可识别控件但不可编辑；readonly 字段渲染为纯文本（view 态），跳过校验，不包 form-item 包装。',
+      'XForm 顶层 readonly 写法 3 种：字面量 / 函数 / {{ fn }} 表达式（顶层 readonly 是 ReactionValue<boolean>）。',
+      '优先级：hidden > readonly(view) > edit；字段级只读请用 permission: view。',
+    ]"
+  >
+    <section id="demo-global-readonly">
+      <div :class="bem.e('controls')">
+        <el-radio-group v-model="mode" size="large">
+          <el-radio-button value="literal_true">字面量 true</el-radio-button>
+          <el-radio-button value="literal_false">字面量 false</el-radio-button>
+          <el-radio-button value="fn">函数</el-radio-button>
+          <el-radio-button value="expr">
+            <span v-pre>{{ fn }}</span>
+            表达式
+          </el-radio-button>
+        </el-radio-group>
+        <el-switch
+          v-model="model.lockAll"
+          :disabled="mode === 'literal_true' || mode === 'literal_false'"
+          active-text="lockAll"
+        />
+        <span :class="bem.e('hint')">当前模式：{{ currentModeLabel }}</span>
+      </div>
+      <DemoField label="演示表单（切换 RadioGroup 看顶层 readonly 表现）" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onSave">校验</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
         </div>
-        <DemoField label="演示表单（切换 RadioGroup 看顶层 readonly 表现）" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onSave">校验</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-          </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
-      <ApiTable
-        title="顶层 schema.readonly 字段速查"
-        :items="globalReadonlyItems"
-        anchor="api-global-readonly"
-      />
-    </DemoFrame>
-    <template #toc><DocToc :items="tocItems" /></template>
-  </DocLayout>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
+    <ApiTable
+      title="顶层 schema.readonly 字段速查"
+      :items="globalReadonlyItems"
+      anchor="api-global-readonly"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

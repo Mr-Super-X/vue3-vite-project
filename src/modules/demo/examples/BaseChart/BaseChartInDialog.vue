@@ -12,8 +12,7 @@
  */
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 
 const bem = createNamespace('demo-base-chart-in-dialog')
 
@@ -50,58 +49,54 @@ const SNIPPET = `<ProDialog v-model="visible" title="详情" width="640px" dragg
 </ProDialog>`
 
 const tocItems = [{ id: 'demo-in-dialog', label: 'BaseChart 嵌入 ProDialog' }]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="BaseChart · 嵌入 ProDialog"
-      source="src/components/common/BaseChart.vue"
-      :introductions="[
-        '企业常见：详情弹窗看图表、审批弹窗展示历史趋势、报告预览。',
-        'BaseChart 嵌入 ProDialog 时，弹窗拉伸 / 全屏切换 → ResizeObserver 自动 resize；弹窗关闭 → BaseChart 卸载 → dispose 清理。',
-        'ProDialog 通过 props.draggable 启用拖拽（v-draggable 指令实现，含边界钳制，详见 src/components/common/ProDialog/ProDialog.vue:63 + draggable.ts）。',
-        '验证重点：拖拽弹窗右边缘 → 图表跟随放大；反复打开 / 关闭 → DevTools 内存不单调上涨。',
-      ]"
-    >
-      <section id="demo-in-dialog">
-        <DemoField :code="SNIPPET" label="① 在 ProDialog 中嵌入 BaseChart">
-          <div :class="bem.e('controls')">
-            <el-button type="primary" @click="dialogVisible = true">打开弹窗</el-button>
-            <el-button @click="eventLog = []">清空日志</el-button>
-          </div>
-          <div :class="bem.e('log')">
-            <div :class="bem.e('log-label')">事件记录（最多 5 条）：</div>
-            <template v-if="eventLog.length">
-              <div v-for="(line, i) in eventLog" :key="i">{{ line }}</div>
-            </template>
-            <span v-else :class="bem.e('log-empty')">暂无事件，打开弹窗试试</span>
-          </div>
+  <DemoFrame
+    title="BaseChart · 嵌入 ProDialog"
+    source="src/components/common/BaseChart.vue"
+    :introductions="[
+      '企业常见：详情弹窗看图表、审批弹窗展示历史趋势、报告预览。',
+      'BaseChart 嵌入 ProDialog 时，弹窗拉伸 / 全屏切换 → ResizeObserver 自动 resize；弹窗关闭 → BaseChart 卸载 → dispose 清理。',
+      'ProDialog 通过 props.draggable 启用拖拽（v-draggable 指令实现，含边界钳制，详见 src/components/common/ProDialog/ProDialog.vue:63 + draggable.ts）。',
+      '验证重点：拖拽弹窗右边缘 → 图表跟随放大；反复打开 / 关闭 → DevTools 内存不单调上涨。',
+    ]"
+  >
+    <section id="demo-in-dialog">
+      <DemoField :code="SNIPPET" label="① 在 ProDialog 中嵌入 BaseChart">
+        <div :class="bem.e('controls')">
+          <el-button type="primary" @click="dialogVisible = true">打开弹窗</el-button>
+          <el-button @click="eventLog = []">清空日志</el-button>
+        </div>
+        <div :class="bem.e('log')">
+          <div :class="bem.e('log-label')">事件记录（最多 5 条）：</div>
+          <template v-if="eventLog.length">
+            <div v-for="(line, i) in eventLog" :key="i">{{ line }}</div>
+          </template>
+          <span v-else :class="bem.e('log-empty')">暂无事件，打开弹窗试试</span>
+        </div>
 
-          <ProDialog
-            v-model="dialogVisible"
-            title="销售趋势详情"
-            width="640px"
-            draggable
-            @open="logEvent('open')"
-            @close="logEvent('close')"
-          >
-            <div :class="bem.e('chart-wrap')">
-              <BaseChart :option="chartOption" />
-            </div>
-            <p :class="bem.e('note')">
-              在弹窗内拖拽右边缘或点头部全屏按钮 → 图表跟随放大。 关闭弹窗后 BaseChart 卸载，触发
-              onBeforeUnmount 三步清理（dispose + disconnect + 清防抖定时器）。
-            </p>
-          </ProDialog>
-        </DemoField>
-      </section>
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+        <ProDialog
+          v-model="dialogVisible"
+          title="销售趋势详情"
+          width="640px"
+          draggable
+          @open="logEvent('open')"
+          @close="logEvent('close')"
+        >
+          <div :class="bem.e('chart-wrap')">
+            <BaseChart :option="chartOption" />
+          </div>
+          <p :class="bem.e('note')">
+            在弹窗内拖拽右边缘或点头部全屏按钮 → 图表跟随放大。 关闭弹窗后 BaseChart 卸载，触发
+            onBeforeUnmount 三步清理（dispose + disconnect + 清防抖定时器）。
+          </p>
+        </ProDialog>
+      </DemoField>
+    </section>
+  </DemoFrame>
 </template>
 
 <style lang="scss">

@@ -10,8 +10,7 @@
 import { ElMessage } from 'element-plus'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 
 const bem = createNamespace('demo-directive-overview')
 
@@ -87,133 +86,129 @@ const tocItems = [
   { id: 'overview-architecture', label: '注册机制' },
   { id: 'overview-interactive', label: '可交互演示' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="自定义指令总览"
-      source="src/directives/"
-      :introductions="[
-        '全局指令位于 src/directives/，由 directives/index.ts 通过 import.meta.glob 自动扫描注册，main.ts 中 app.use(Directives) 一行覆盖。',
-        '本分组共 6 个指令：v-copy / v-draggable / v-auth / v-permission / v-inputDebounce / v-buttonDebounce。',
-        '所有指令以 install 模式 default export，类型声明与 .d.ts 分离（参考 inputDebounce / buttonDebounce / draggable 范式）。',
-      ]"
-    >
-      <!-- 速查表 -->
-      <section id="overview-table">
-        <el-table :data="directives" border :class="bem.e('table')">
-          <el-table-column prop="name" label="指令" width="180" />
-          <el-table-column prop="desc" label="说明" min-width="280" />
-          <el-table-column label="用法示例" min-width="240">
-            <template #default="{ row }">
-              <code v-for="ex in (row as DirectiveEntry).examples" :key="ex" :class="bem.e('code')">
-                {{ ex }}
-              </code>
-            </template>
-          </el-table-column>
-          <el-table-column label="查看" width="100" align="center">
-            <template #default="{ row }">
-              <el-link :href="(row as DirectiveEntry).route" type="primary">→ Demo</el-link>
-            </template>
-          </el-table-column>
-        </el-table>
-      </section>
+  <DemoFrame
+    title="自定义指令总览"
+    source="src/directives/"
+    :introductions="[
+      '全局指令位于 src/directives/，由 directives/index.ts 通过 import.meta.glob 自动扫描注册，main.ts 中 app.use(Directives) 一行覆盖。',
+      '本分组共 6 个指令：v-copy / v-draggable / v-auth / v-permission / v-inputDebounce / v-buttonDebounce。',
+      '所有指令以 install 模式 default export，类型声明与 .d.ts 分离（参考 inputDebounce / buttonDebounce / draggable 范式）。',
+    ]"
+  >
+    <!-- 速查表 -->
+    <section id="overview-table">
+      <el-table :data="directives" border :class="bem.e('table')">
+        <el-table-column prop="name" label="指令" width="180" />
+        <el-table-column prop="desc" label="说明" min-width="280" />
+        <el-table-column label="用法示例" min-width="240">
+          <template #default="{ row }">
+            <code v-for="ex in (row as DirectiveEntry).examples" :key="ex" :class="bem.e('code')">
+              {{ ex }}
+            </code>
+          </template>
+        </el-table-column>
+        <el-table-column label="查看" width="100" align="center">
+          <template #default="{ row }">
+            <el-link :href="(row as DirectiveEntry).route" type="primary">→ Demo</el-link>
+          </template>
+        </el-table-column>
+      </el-table>
+    </section>
 
-      <!-- 使用约定 -->
-      <section id="overview-usage">
-        <h3 :class="bem.e('heading')">使用约定</h3>
-        <ul :class="bem.e('list')">
-          <li>
-            <strong>JS 自动可用：</strong>
-            指令无需 import，在任何 .vue 模板中直接
-            <code>v-xxx</code>
-            即可（注册由 directives/index.ts 自动完成）。
-          </li>
-          <li>
-            <strong>类型安全：</strong>
-            每个指令配套 .d.ts 文件，IDE hover 时显示完整类型签名。
-          </li>
-          <li>
-            <strong>生命周期：</strong>
-            所有指令遵循 Vue 3 标准三钩子（mounted / updated / unmounted），状态用 WeakMap
-            持有避免污染 DOM 类型。
-          </li>
-          <li>
-            <strong>新增指令：</strong>
-            只需在 src/directives/ 下添加
-            <code>v-xxx.ts</code>
-            +
-            <code>v-xxx.d.ts</code>
-            ，路由 / sidebar / main.ts 均无需改动。
-          </li>
-        </ul>
-      </section>
+    <!-- 使用约定 -->
+    <section id="overview-usage">
+      <h3 :class="bem.e('heading')">使用约定</h3>
+      <ul :class="bem.e('list')">
+        <li>
+          <strong>JS 自动可用：</strong>
+          指令无需 import，在任何 .vue 模板中直接
+          <code>v-xxx</code>
+          即可（注册由 directives/index.ts 自动完成）。
+        </li>
+        <li>
+          <strong>类型安全：</strong>
+          每个指令配套 .d.ts 文件，IDE hover 时显示完整类型签名。
+        </li>
+        <li>
+          <strong>生命周期：</strong>
+          所有指令遵循 Vue 3 标准三钩子（mounted / updated / unmounted），状态用 WeakMap
+          持有避免污染 DOM 类型。
+        </li>
+        <li>
+          <strong>新增指令：</strong>
+          只需在 src/directives/ 下添加
+          <code>v-xxx.ts</code>
+          +
+          <code>v-xxx.d.ts</code>
+          ，路由 / sidebar / main.ts 均无需改动。
+        </li>
+      </ul>
+    </section>
 
-      <!-- 注册机制 -->
-      <section id="overview-architecture">
-        <h3 :class="bem.e('heading')">注册机制</h3>
-        <ol :class="bem.e('list')">
-          <li>
-            <code>src/directives/index.ts</code>
-            用
-            <code>import.meta.glob(['./*.ts', ...])</code>
-            扫描本目录所有指令文件。
-          </li>
-          <li>
-            排除规则：
-            <code>*.d.ts</code>
-            （类型）/
-            <code>*.spec.ts</code>
-            （单测，会触发 vi.mock 运行时崩溃）/
-            <code>_*</code>
-            （内部工具）/
-            <code>index.ts</code>
-            自身。
-          </li>
-          <li>
-            每个被扫到的模块调用
-            <code>app.directive('xxx', ...)</code>
-            ，指令名与文件名 v- 前缀后部分一致。
-          </li>
-          <li>
-            <code>src/main.ts</code>
-            通过
-            <code>app.use(Directives)</code>
-            一行注册全部。
-          </li>
-        </ol>
-      </section>
+    <!-- 注册机制 -->
+    <section id="overview-architecture">
+      <h3 :class="bem.e('heading')">注册机制</h3>
+      <ol :class="bem.e('list')">
+        <li>
+          <code>src/directives/index.ts</code>
+          用
+          <code>import.meta.glob(['./*.ts', ...])</code>
+          扫描本目录所有指令文件。
+        </li>
+        <li>
+          排除规则：
+          <code>*.d.ts</code>
+          （类型）/
+          <code>*.spec.ts</code>
+          （单测，会触发 vi.mock 运行时崩溃）/
+          <code>_*</code>
+          （内部工具）/
+          <code>index.ts</code>
+          自身。
+        </li>
+        <li>
+          每个被扫到的模块调用
+          <code>app.directive('xxx', ...)</code>
+          ，指令名与文件名 v- 前缀后部分一致。
+        </li>
+        <li>
+          <code>src/main.ts</code>
+          通过
+          <code>app.use(Directives)</code>
+          一行注册全部。
+        </li>
+      </ol>
+    </section>
 
-      <!-- 可交互演示：补齐 Overview demo 的 0 控件问题（v3.5 末次审计 CRITICAL） -->
-      <section id="overview-interactive">
-        <h3 :class="bem.e('heading')">可交互演示</h3>
-        <DemoField label="v-copy：点击按钮复制文本" :code="vCopyCode">
-          <el-button v-copy="'Hello vue3-vite-project!'" type="primary">复制 Hello</el-button>
-        </DemoField>
-        <DemoField label="v-inputDebounce：输入防抖 300ms" :code="vInputDebounceCode">
-          <el-input
-            v-model="searchInput"
-            v-inputDebounce="onSearchInput"
-            placeholder="尝试快速输入（300ms 后才触发 onSearchInput）"
-            clearable
-          />
-        </DemoField>
-        <DemoField label="v-buttonDebounce：按钮节流 500ms" :code="vButtonDebounceCode">
-          <el-space>
-            <el-button v-buttonDebounce="onFastClick" type="success">
-              快速连点 5 次，验证只触发 1 次
-            </el-button>
-            <el-tag type="info">已触发 {{ fastClickCount }} 次</el-tag>
-          </el-space>
-        </DemoField>
-      </section>
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <!-- 可交互演示：补齐 Overview demo 的 0 控件问题（v3.5 末次审计 CRITICAL） -->
+    <section id="overview-interactive">
+      <h3 :class="bem.e('heading')">可交互演示</h3>
+      <DemoField label="v-copy：点击按钮复制文本" :code="vCopyCode">
+        <el-button v-copy="'Hello vue3-vite-project!'" type="primary">复制 Hello</el-button>
+      </DemoField>
+      <DemoField label="v-inputDebounce：输入防抖 300ms" :code="vInputDebounceCode">
+        <el-input
+          v-model="searchInput"
+          v-inputDebounce="onSearchInput"
+          placeholder="尝试快速输入（300ms 后才触发 onSearchInput）"
+          clearable
+        />
+      </DemoField>
+      <DemoField label="v-buttonDebounce：按钮节流 500ms" :code="vButtonDebounceCode">
+        <el-space>
+          <el-button v-buttonDebounce="onFastClick" type="success">
+            快速连点 5 次，验证只触发 1 次
+          </el-button>
+          <el-tag type="info">已触发 {{ fastClickCount }} 次</el-tag>
+        </el-space>
+      </DemoField>
+    </section>
+  </DemoFrame>
 </template>
 
 <style lang="scss">

@@ -17,8 +17,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { ruleItems } from './configs/xform-demos-api'
 import xFormSource from './XFormBase.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
@@ -212,67 +211,63 @@ const tocItems = [
   { id: 'demo-base', label: '基础用法演示' },
   { id: 'api-rule', label: 'RuleItem 常用字段' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="基础用法（订单查询表单）"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        '订单查询表单：订单号 / 状态 / 日期区间 / 备注 4 字段。',
-        '顶层 row.gutter: 24 + 节点级 col.span 分配列宽：前 4 字段各 12 列，备注 24 列整行占满。',
-        '注意：顶层 column 会把每个节点包进固定 span 的 ElCol，节点级 col.span 无法突破半宽——混用列宽时用 row + col.span 组合。',
-        'rules 支持 「required」字符串 + validator 函数。订单号带格式校验，结束日期不能晚于今天。',
-        '新增组件字段：密码 / 描述 / 技能标签 / 主题色 / 负责人 / 评分 / 最低价（验证 InputPassword/InputTextArea/InputTag/ColorPicker/Mention/Rate 别名、默认 props、节点覆盖与 v-model）。',
-        '商品描述字段演示「全局组件 fallback」：schema.component 直接写 RichTextEditor，依赖 unplugin-vue-components 自动注册到 GlobalComponents，无需在 XForm 上 :components 重复注册。',
-      ]"
-    >
-      <section id="demo-base">
-        <DemoField label="订单查询（2 列栅格）" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onSave">保存</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-          </div>
-          <ModelPreview :model="model" />
-          <p :class="bem.e('hint')">
-            <strong>特殊字段操作指引：</strong>
-            <br />
-            <strong>技能标签（InputTag）：</strong>
-            1) 在输入框输入
-            <code>Vue3</code>
-            → 2) 按回车确认 → 3) 重复添加 2~3 个 tag → 4) 点击 tag 右侧 × 删除；支持失焦自动确认。
-            <br />
-            <strong>主题色（ColorPicker）：</strong>
-            1) 点击色块打开拾色器 → 2) 拖动色相滑块选色 → 3) 在饱和度面板点击精确取色 → 4) 按 Enter
-            或点击外部关闭，model.color 同步为 hex 字符串。
-            <br />
-            <strong>负责人（Mention）：</strong>
-            1) 输入框输入
-            <code>@</code>
-            触发提及下拉 → 2) 输入
-            <code>al</code>
-            模糊匹配
-            <code>alice</code>
-            → 3) 鼠标点击或回车选中 → model.owner 写入完整
-            <code>@alice</code>
-            字符串。
-            <br />
-            <strong>评分（Rate）：</strong>
-            1) 鼠标悬停星星预览分数 → 2) 点击第 N 颗星锁定分数（1~5）→ model.score 即为数值。
-          </p>
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="基础用法（订单查询表单）"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      '订单查询表单：订单号 / 状态 / 日期区间 / 备注 4 字段。',
+      '顶层 row.gutter: 24 + 节点级 col.span 分配列宽：前 4 字段各 12 列，备注 24 列整行占满。',
+      '注意：顶层 column 会把每个节点包进固定 span 的 ElCol，节点级 col.span 无法突破半宽——混用列宽时用 row + col.span 组合。',
+      'rules 支持 「required」字符串 + validator 函数。订单号带格式校验，结束日期不能晚于今天。',
+      '新增组件字段：密码 / 描述 / 技能标签 / 主题色 / 负责人 / 评分 / 最低价（验证 InputPassword/InputTextArea/InputTag/ColorPicker/Mention/Rate 别名、默认 props、节点覆盖与 v-model）。',
+      '商品描述字段演示「全局组件 fallback」：schema.component 直接写 RichTextEditor，依赖 unplugin-vue-components 自动注册到 GlobalComponents，无需在 XForm 上 :components 重复注册。',
+    ]"
+  >
+    <section id="demo-base">
+      <DemoField label="订单查询（2 列栅格）" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onSave">保存</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <ModelPreview :model="model" />
+        <p :class="bem.e('hint')">
+          <strong>特殊字段操作指引：</strong>
+          <br />
+          <strong>技能标签（InputTag）：</strong>
+          1) 在输入框输入
+          <code>Vue3</code>
+          → 2) 按回车确认 → 3) 重复添加 2~3 个 tag → 4) 点击 tag 右侧 × 删除；支持失焦自动确认。
+          <br />
+          <strong>主题色（ColorPicker）：</strong>
+          1) 点击色块打开拾色器 → 2) 拖动色相滑块选色 → 3) 在饱和度面板点击精确取色 → 4) 按 Enter
+          或点击外部关闭，model.color 同步为 hex 字符串。
+          <br />
+          <strong>负责人（Mention）：</strong>
+          1) 输入框输入
+          <code>@</code>
+          触发提及下拉 → 2) 输入
+          <code>al</code>
+          模糊匹配
+          <code>alice</code>
+          → 3) 鼠标点击或回车选中 → model.owner 写入完整
+          <code>@alice</code>
+          字符串。
+          <br />
+          <strong>评分（Rate）：</strong>
+          1) 鼠标悬停星星预览分数 → 2) 点击第 N 颗星锁定分数（1~5）→ model.score 即为数值。
+        </p>
+      </DemoField>
+    </section>
 
-      <ApiTable title="RuleItem 常用字段" :items="ruleItems" anchor="api-rule" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="RuleItem 常用字段" :items="ruleItems" anchor="api-rule" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

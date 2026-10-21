@@ -8,9 +8,8 @@
 import errorBoundarySource from '@/components/common/ErrorBoundary.vue?raw'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
-import DocLayout from '../layouts/DocLayout.vue'
 import ApiTable from '../components/ApiTable.vue'
-import DocToc from '../components/DocToc.vue'
+import { useDocToc } from '../composables/useDocToc'
 import { extractApi } from '../utils/extractApi'
 
 const bem = createNamespace('demo-error-boundary')
@@ -63,41 +62,37 @@ const tocItems = [
   { id: 'api-events', label: 'Events' },
   { id: 'api-slots', label: 'Slots' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="ErrorBoundary 错误边界"
-      source="src/components/common/ErrorBoundary.vue"
-      :introductions="[
-        '基于 onErrorCaptured 实现的错误边界。',
-        '包裹业务组件后，子组件渲染抛错时不会白屏，而是显示降级 UI + 恢复按钮。',
-        '恢复按钮会 emit(reset) 事件，demo 父组件同步清掉触发开关，BoomChild 重新挂载后正常显示。',
-      ]"
-    >
-      <section id="demo-basic">
-        <DemoField :code="errorBoundarySource" label="被演示组件源码（ErrorBoundary.vue）">
-          <div :class="bem.e('controls')">
-            <el-button type="danger" :disabled="errorTrigger" @click="errorTrigger = true">
-              触发子组件错误
-            </el-button>
-          </div>
+  <DemoFrame
+    title="ErrorBoundary 错误边界"
+    source="src/components/common/ErrorBoundary.vue"
+    :introductions="[
+      '基于 onErrorCaptured 实现的错误边界。',
+      '包裹业务组件后，子组件渲染抛错时不会白屏，而是显示降级 UI + 恢复按钮。',
+      '恢复按钮会 emit(reset) 事件，demo 父组件同步清掉触发开关，BoomChild 重新挂载后正常显示。',
+    ]"
+  >
+    <section id="demo-basic">
+      <DemoField :code="errorBoundarySource" label="被演示组件源码（ErrorBoundary.vue）">
+        <div :class="bem.e('controls')">
+          <el-button type="danger" :disabled="errorTrigger" @click="errorTrigger = true">
+            触发子组件错误
+          </el-button>
+        </div>
 
-          <ErrorBoundary @reset="errorTrigger = false">
-            <BoomChild :should-throw="errorTrigger" />
-          </ErrorBoundary>
-        </DemoField>
-      </section>
+        <ErrorBoundary @reset="errorTrigger = false">
+          <BoomChild :should-throw="errorTrigger" />
+        </ErrorBoundary>
+      </DemoField>
+    </section>
 
-      <ApiTable title="Events" :items="eventItems" anchor="api-events" />
-      <ApiTable title="Slots" :items="slotItems" anchor="api-slots" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="Events" :items="eventItems" anchor="api-events" />
+    <ApiTable title="Slots" :items="slotItems" anchor="api-slots" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

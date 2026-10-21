@@ -19,11 +19,10 @@
  */
 import { ElTag } from 'element-plus'
 import type { ProColumn } from '@/components/ProTable'
-import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { bigDataRequestApi, type BigRow } from '@mock/pro-table/big-data'
 import {
   virtualScrollConfigItems,
@@ -186,155 +185,151 @@ const tocItems = [
   { id: 'api-virtual-scroll-column', label: '列字段（新）' },
   { id: 'api-virtual-scroll-limits', label: '已知限制' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="ProTableVirtualScroll 虚拟滚动（el-table-v2）"
-      source="src/components/ProTable/composables/useVirtualScroll.ts"
-      :introductions="[
-        'v3.0.1 升级：从假虚拟化（CSS overflow）切换到 el-table-v2 真虚拟化引擎，支持 10 万行 × 10 列流畅渲染。',
-        '强隔离策略：启用 virtualized 时其他能力（行内编辑/树形/汇总/合并/拖拽）一律 warn + 忽略，vxe-table 引擎自动回落 element-plus。',
-        '列设置 / 排序 / 搜索 / 密度切换在虚拟化分支保留可用。',
-        '性能目标：首屏渲染 < 1s，滚动 avgFPS ≥ 100。',
-      ]"
-    >
-      <section id="demo-virtual-scroll" :class="bem.b()">
-        <DemoField label="基本用法（10 万行 × 10 列含固定列）" :code="basicCode">
-          <ProTable
-            ref="tableRef"
-            :columns="columns"
-            :request-api="bigDataRequestApi"
-            table-key="demo-pro-table-virtual-scroll"
-            row-key="id"
-            :pagination="false"
-            :virtualized="{ rowHeight: 48, height: 500, width: 'auto' }"
-          />
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="ProTableVirtualScroll 虚拟滚动（el-table-v2）"
+    source="src/components/ProTable/composables/useVirtualScroll.ts"
+    :introductions="[
+      'v3.0.1 升级：从假虚拟化（CSS overflow）切换到 el-table-v2 真虚拟化引擎，支持 10 万行 × 10 列流畅渲染。',
+      '强隔离策略：启用 virtualized 时其他能力（行内编辑/树形/汇总/合并/拖拽）一律 warn + 忽略，vxe-table 引擎自动回落 element-plus。',
+      '列设置 / 排序 / 搜索 / 密度切换在虚拟化分支保留可用。',
+      '性能目标：首屏渲染 < 1s，滚动 avgFPS ≥ 100。',
+    ]"
+  >
+    <section id="demo-virtual-scroll" :class="bem.b()">
+      <DemoField label="基本用法（10 万行 × 10 列含固定列）" :code="basicCode">
+        <ProTable
+          ref="tableRef"
+          :columns="columns"
+          :request-api="bigDataRequestApi"
+          table-key="demo-pro-table-virtual-scroll"
+          row-key="id"
+          :pagination="false"
+          :virtualized="{ rowHeight: 48, height: 500, width: 'auto' }"
+        />
+      </DemoField>
+    </section>
 
-      <section id="demo-virtual-scroll-formatter" :class="bem.b()">
-        <DemoField label="v3.0.2 新增：formatter 字段 + 具名插槽透传" :code="formatterCode">
-          <p style="margin: 0 0 8px; color: var(--el-text-color-secondary); font-size: 13px">
-            •
-            <strong>score 列</strong>
-            ：用
-            <code>formatter</code>
-            千分位格式化（轻量场景，无需完整 VNode）
-            <br />
-            •
-            <strong>status 列</strong>
-            ：用
-            <code>&lt;template #status&gt;</code>
-            具名插槽透传（C1 修复：v1/v2 引擎写法对齐）
-            <br />
-            • 优先级链：
-            <code>render</code>
-            &gt;
-            <code>具名插槽</code>
-            &gt;
-            <code>formatter</code>
-            &gt;
-            <code>enum</code>
-            &gt; 默认文本
-          </p>
-          <ProTable
-            :columns="formatterColumns"
-            :request-api="bigDataRequestApi"
-            table-key="demo-pro-table-virtual-scroll-formatter"
-            row-key="id"
-            :pagination="false"
-            :virtualized="{ rowHeight: 48, height: 400, width: 'auto' }"
-          >
-            <template #status="{ row }">
-              <ElTag :type="row.status === 'active' ? 'success' : 'info'" size="small">
-                {{ row.status === 'active' ? '在职' : '离职' }}
-              </ElTag>
-            </template>
-          </ProTable>
-        </DemoField>
-      </section>
-
-      <section id="demo-virtual-scroll-fixed-height" :class="bem.b()">
-        <DemoField
-          label="v3.0.2 H2 修复：virtualConfig.height 数字固定表格高度"
-          :code="fixedHeightCode"
+    <section id="demo-virtual-scroll-formatter" :class="bem.b()">
+      <DemoField label="v3.0.2 新增：formatter 字段 + 具名插槽透传" :code="formatterCode">
+        <p style="margin: 0 0 8px; color: var(--el-text-color-secondary); font-size: 13px">
+          •
+          <strong>score 列</strong>
+          ：用
+          <code>formatter</code>
+          千分位格式化（轻量场景，无需完整 VNode）
+          <br />
+          •
+          <strong>status 列</strong>
+          ：用
+          <code>&lt;template #status&gt;</code>
+          具名插槽透传（C1 修复：v1/v2 引擎写法对齐）
+          <br />
+          • 优先级链：
+          <code>render</code>
+          &gt;
+          <code>具名插槽</code>
+          &gt;
+          <code>formatter</code>
+          &gt;
+          <code>enum</code>
+          &gt; 默认文本
+        </p>
+        <ProTable
+          :columns="formatterColumns"
+          :request-api="bigDataRequestApi"
+          table-key="demo-pro-table-virtual-scroll-formatter"
+          row-key="id"
+          :pagination="false"
+          :virtualized="{ rowHeight: 48, height: 400, width: 'auto' }"
         >
-          <p style="margin: 0 0 8px; color: var(--el-text-color-secondary); font-size: 13px">
-            •
-            <code>virtualConfig.height: 300</code>
-            表示用户期望表格固定 300px
-            <br />
-            • 即便父容器 ResizeObserver 测量到不同高度（如视口过小/0），配置 300 优先
-            <br />
-            • 未配置
-            <code>height</code>
-            时走「实测 fallback」路径（v3.0.1 行为不变）
-          </p>
-          <ProTable
-            :columns="fixedHeightColumns"
-            :request-api="bigDataRequestApi"
-            table-key="demo-pro-table-virtual-scroll-fixed-height"
-            row-key="id"
-            :pagination="false"
-            :virtualized="{ rowHeight: 48, height: 300 }"
-          />
-        </DemoField>
-      </section>
+          <template #status="{ row }">
+            <ElTag :type="row.status === 'active' ? 'success' : 'info'" size="small">
+              {{ row.status === 'active' ? '在职' : '离职' }}
+            </ElTag>
+          </template>
+        </ProTable>
+      </DemoField>
+    </section>
 
-      <section id="demo-virtual-scroll-limits" :class="bem.b()">
-        <DemoField label="强隔离策略：开启虚拟化时其他能力被忽略" :code="limitsCode">
-          <ul style="line-height: 1.8; padding-left: 20px">
-            <li>
-              <strong>enableRowEdit</strong>
-              （行内编辑）：行索引漂移破坏 edit state，禁用
-            </li>
-            <li>
-              <strong>enableTree</strong>
-              （树形数据）：el-table-v2 无 tree-props，禁用
-            </li>
-            <li>
-              <strong>enableSummary</strong>
-              （汇总行）：el-table-v2 无 show-summary，禁用
-            </li>
-            <li>
-              <strong>enableCellSpan</strong>
-              （单元格合并）：el-table-v2 无 span-method，禁用
-            </li>
-            <li>
-              <strong>enableRowDrag</strong>
-              （行拖拽）：Sortable.js 找不到 tbody，禁用
-            </li>
-            <li>
-              <strong>tableEngine="vxe-table"</strong>
-              ：虚拟化仅 element-plus 引擎支持，自动回落
-            </li>
-          </ul>
-        </DemoField>
-      </section>
+    <section id="demo-virtual-scroll-fixed-height" :class="bem.b()">
+      <DemoField
+        label="v3.0.2 H2 修复：virtualConfig.height 数字固定表格高度"
+        :code="fixedHeightCode"
+      >
+        <p style="margin: 0 0 8px; color: var(--el-text-color-secondary); font-size: 13px">
+          •
+          <code>virtualConfig.height: 300</code>
+          表示用户期望表格固定 300px
+          <br />
+          • 即便父容器 ResizeObserver 测量到不同高度（如视口过小/0），配置 300 优先
+          <br />
+          • 未配置
+          <code>height</code>
+          时走「实测 fallback」路径（v3.0.1 行为不变）
+        </p>
+        <ProTable
+          :columns="fixedHeightColumns"
+          :request-api="bigDataRequestApi"
+          table-key="demo-pro-table-virtual-scroll-fixed-height"
+          row-key="id"
+          :pagination="false"
+          :virtualized="{ rowHeight: 48, height: 300 }"
+        />
+      </DemoField>
+    </section>
 
-      <ApiTable
-        title="virtualized 配置"
-        :items="virtualScrollConfigItems"
-        anchor="api-virtual-scroll-config"
-      />
-      <ApiTable
-        title="v3.0.2 新增：列字段"
-        :items="virtualScrollColumnItems"
-        anchor="api-virtual-scroll-column"
-      />
-      <ApiTable
-        title="已知限制"
-        :items="virtualScrollLimitsItems"
-        anchor="api-virtual-scroll-limits"
-      />
-    </DemoFrame>
+    <section id="demo-virtual-scroll-limits" :class="bem.b()">
+      <DemoField label="强隔离策略：开启虚拟化时其他能力被忽略" :code="limitsCode">
+        <ul style="line-height: 1.8; padding-left: 20px">
+          <li>
+            <strong>enableRowEdit</strong>
+            （行内编辑）：行索引漂移破坏 edit state，禁用
+          </li>
+          <li>
+            <strong>enableTree</strong>
+            （树形数据）：el-table-v2 无 tree-props，禁用
+          </li>
+          <li>
+            <strong>enableSummary</strong>
+            （汇总行）：el-table-v2 无 show-summary，禁用
+          </li>
+          <li>
+            <strong>enableCellSpan</strong>
+            （单元格合并）：el-table-v2 无 span-method，禁用
+          </li>
+          <li>
+            <strong>enableRowDrag</strong>
+            （行拖拽）：Sortable.js 找不到 tbody，禁用
+          </li>
+          <li>
+            <strong>tableEngine="vxe-table"</strong>
+            ：虚拟化仅 element-plus 引擎支持，自动回落
+          </li>
+        </ul>
+      </DemoField>
+    </section>
 
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable
+      title="virtualized 配置"
+      :items="virtualScrollConfigItems"
+      anchor="api-virtual-scroll-config"
+    />
+    <ApiTable
+      title="v3.0.2 新增：列字段"
+      :items="virtualScrollColumnItems"
+      anchor="api-virtual-scroll-column"
+    />
+    <ApiTable
+      title="已知限制"
+      :items="virtualScrollLimitsItems"
+      anchor="api-virtual-scroll-limits"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

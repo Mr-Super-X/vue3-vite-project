@@ -14,8 +14,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { zodItems } from './configs/xform-demos-api'
 import xFormSource from './XFormZod.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
@@ -89,35 +88,34 @@ const tocItems = [
   { id: 'demo-zod', label: 'zod 校验演示' },
   { id: 'api-zod', label: 'zodSchema 字段速查' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="XFormProps.zodSchema + validateWithZod()"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        'zodSchema prop 接收 ZodType，validateWithZod() 异步返回 { success, errors: [{ path, message }] }',
-        '业务规则集中声明（邮箱格式 / 年龄区间 / 密码强度），schema 保持简洁',
-        '与 el-form 字段规则互补：zod 处理跨字段、复杂业务；el-form 处理必填 / 正则等基础规则',
-        '测试：邮箱「abc」 → 失败；年龄 12 → 失败；密码「abc」 → 失败（同时满足长度+大写+数字）',
-      ]"
-    >
-      <section id="demo-zod">
-        <DemoField label="用户注册（zod 校验）" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" :zod-schema="userZodSchema" />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onZodValidate">zod 校验</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-          </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
-      <ApiTable title="zodSchema 字段速查" :items="zodItems" anchor="api-zod" />
-    </DemoFrame>
-    <template #toc><DocToc :items="tocItems" /></template>
-  </DocLayout>
+  <DemoFrame
+    title="XFormProps.zodSchema + validateWithZod()"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      'zodSchema prop 接收 ZodType，validateWithZod() 异步返回 { success, errors: [{ path, message }] }',
+      '业务规则集中声明（邮箱格式 / 年龄区间 / 密码强度），schema 保持简洁',
+      '与 el-form 字段规则互补：zod 处理跨字段、复杂业务；el-form 处理必填 / 正则等基础规则',
+      '测试：邮箱「abc」 → 失败；年龄 12 → 失败；密码「abc」 → 失败（同时满足长度+大写+数字）',
+    ]"
+  >
+    <section id="demo-zod">
+      <DemoField label="用户注册（zod 校验）" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" :zod-schema="userZodSchema" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onZodValidate">zod 校验</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
+    <ApiTable title="zodSchema 字段速查" :items="zodItems" anchor="api-zod" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

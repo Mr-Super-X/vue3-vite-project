@@ -13,9 +13,8 @@
  */
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
 import ApiTable from '../../components/ApiTable.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 
 const bem = createNamespace('demo-directive-copy')
 
@@ -74,6 +73,8 @@ const tocItems = [
   { id: 'api-binding', label: 'Binding 类型' },
 ]
 
+useDocToc(tocItems)
+
 const bindingItems = [
   {
     name: 'value',
@@ -101,107 +102,101 @@ const degradeCode = `// 1. secure context + clipboard API 可用 → navigator.c
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="v-copy 文本复制"
-      source="src/directives/copy.ts"
-      :introductions="[
-        '全局指令：点击元素触发剪贴板复制，自动选择 navigator.clipboard.writeText 或降级到 execCommand。',
-        '降级策略：HTTPS / localhost / file: 走现代 API；HTTP 环境或 API 失败时自动 fallback 到 textarea + execCommand。',
-        '视觉反馈：通过 ElMessage 提示「复制成功」「复制失败」「内容为空」三种状态。',
-        '验证步骤：步骤 1 点击按钮 → 步骤 2 打开任意输入框 → 步骤 3 Ctrl+V 粘贴验证。',
-      ]"
-    >
-      <!-- 静态字符串 -->
-      <section id="demo-static">
-        <DemoField label="静态字符串（字面量）" :code="staticCode">
-          <el-button v-copy="STATIC_TEXT">复制客服电话</el-button>
-          <p :class="bem.e('hint')">
-            STATIC_TEXT 是模块级常量；绑定后会随 updated 钩子同步到 ctx.binding。 此外，v-copy
-            默认会给宿主元素添加
-            <code>cursor: pointer</code>
-            ；hover 时可观察到鼠标变化。
-          </p>
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="v-copy 文本复制"
+    source="src/directives/copy.ts"
+    :introductions="[
+      '全局指令：点击元素触发剪贴板复制，自动选择 navigator.clipboard.writeText 或降级到 execCommand。',
+      '降级策略：HTTPS / localhost / file: 走现代 API；HTTP 环境或 API 失败时自动 fallback 到 textarea + execCommand。',
+      '视觉反馈：通过 ElMessage 提示「复制成功」「复制失败」「内容为空」三种状态。',
+      '验证步骤：步骤 1 点击按钮 → 步骤 2 打开任意输入框 → 步骤 3 Ctrl+V 粘贴验证。',
+    ]"
+  >
+    <!-- 静态字符串 -->
+    <section id="demo-static">
+      <DemoField label="静态字符串（字面量）" :code="staticCode">
+        <el-button v-copy="STATIC_TEXT">复制客服电话</el-button>
+        <p :class="bem.e('hint')">
+          STATIC_TEXT 是模块级常量；绑定后会随 updated 钩子同步到 ctx.binding。 此外，v-copy
+          默认会给宿主元素添加
+          <code>cursor: pointer</code>
+          ；hover 时可观察到鼠标变化。
+        </p>
+      </DemoField>
+    </section>
 
-      <!-- 响应式 ref -->
-      <section id="demo-ref">
-        <DemoField label="响应式 ref（点击复制最新值）" :code="refCode">
-          <div :class="bem.e('row')">
-            <el-input v-model="orderId" placeholder="订单号" style="width: 280px" />
-            <el-button v-copy="orderId" type="primary">复制订单号</el-button>
-            <el-button @click="regenerateOrderId">换一个</el-button>
-          </div>
-          <p :class="bem.e('hint')">
-            修改输入框或点「换一个」会改变 orderId；点击「复制订单号」时拿到当前最新值。
-            机制：updated 钩子在每次 binding 变化时同步 ctx.binding 引用，使指令内部始终拿到最新值。
-          </p>
-        </DemoField>
-      </section>
+    <!-- 响应式 ref -->
+    <section id="demo-ref">
+      <DemoField label="响应式 ref（点击复制最新值）" :code="refCode">
+        <div :class="bem.e('row')">
+          <el-input v-model="orderId" placeholder="订单号" style="width: 280px" />
+          <el-button v-copy="orderId" type="primary">复制订单号</el-button>
+          <el-button @click="regenerateOrderId">换一个</el-button>
+        </div>
+        <p :class="bem.e('hint')">
+          修改输入框或点「换一个」会改变 orderId；点击「复制订单号」时拿到当前最新值。 机制：updated
+          钩子在每次 binding 变化时同步 ctx.binding 引用，使指令内部始终拿到最新值。
+        </p>
+      </DemoField>
+    </section>
 
-      <!-- 动态函数 -->
-      <section id="demo-function">
-        <DemoField label="动态函数（每次点击实时求值）" :code="functionCode">
-          <el-button v-copy="copyTimestamp" type="success">复制当前时间戳</el-button>
-          <p :class="bem.e('hint')">
-            函数返回 ISO
-            时间戳；连续点击若干次，到输入框粘贴能看到不同的时间——证明函数被实时调用，无闭包陈旧。
-          </p>
-        </DemoField>
-      </section>
+    <!-- 动态函数 -->
+    <section id="demo-function">
+      <DemoField label="动态函数（每次点击实时求值）" :code="functionCode">
+        <el-button v-copy="copyTimestamp" type="success">复制当前时间戳</el-button>
+        <p :class="bem.e('hint')">
+          函数返回 ISO
+          时间戳；连续点击若干次，到输入框粘贴能看到不同的时间——证明函数被实时调用，无闭包陈旧。
+        </p>
+      </DemoField>
+    </section>
 
-      <!-- 空内容 -->
-      <section id="demo-empty">
-        <DemoField label="空内容保护" :code="emptyCode">
-          <el-button v-copy="EMPTY_TEXT" type="warning">复制空字符串</el-button>
-          <p :class="bem.e('hint')">
-            触发 ElMessage.warning("复制内容为空")，底层剪贴板 API
-            不被调用，避免「点了没反应」的困惑。
-          </p>
-        </DemoField>
-      </section>
+    <!-- 空内容 -->
+    <section id="demo-empty">
+      <DemoField label="空内容保护" :code="emptyCode">
+        <el-button v-copy="EMPTY_TEXT" type="warning">复制空字符串</el-button>
+        <p :class="bem.e('hint')">
+          触发 ElMessage.warning("复制内容为空")，底层剪贴板 API
+          不被调用，避免「点了没反应」的困惑。
+        </p>
+      </DemoField>
+    </section>
 
-      <!-- 降级原理 -->
-      <section id="demo-degrade">
-        <DemoField label="降级原理（决策矩阵）" :code="degradeCode">
-          <p :class="bem.e('hint')">
-            浏览器 Console 执行
-            <code>window.isSecureContext</code>
-            可查看当前是否为 HTTPS 环境。本地 dev（localhost）通常返回 true；部署到 HTTP 站点返回
-            false。
-          </p>
-          <p :class="bem.e('hint')">
-            非 secure context 下
-            <code>navigator.clipboard === undefined</code>
-            ，指令自动走 textarea 降级路径。
-          </p>
-          <!-- 强制降级验证：用 Object.defineProperty 改写只读属性，模拟 HTTP 部署环境 -->
-          <div :class="bem.e('degrade-actions')">
-            <el-button type="warning" @click="forceDegrade">
-              强制降级（isSecureContext=false）
-            </el-button>
-            <el-button @click="resetSecureContext">还原</el-button>
-            <el-button v-copy="'降级路径验证文本'" type="primary" :disabled="!isDegradedForced">
-              点击复制（降级路径走 textarea）
-            </el-button>
-          </div>
-          <p :class="bem.e('hint')">
-            当前 isSecureContext：
-            <code>{{ currentSecureContext }}</code>
-            <span v-if="isDegradedForced" :class="bem.e('badge')">已强制降级</span>
-          </p>
-        </DemoField>
-      </section>
+    <!-- 降级原理 -->
+    <section id="demo-degrade">
+      <DemoField label="降级原理（决策矩阵）" :code="degradeCode">
+        <p :class="bem.e('hint')">
+          浏览器 Console 执行
+          <code>window.isSecureContext</code>
+          可查看当前是否为 HTTPS 环境。本地 dev（localhost）通常返回 true；部署到 HTTP 站点返回
+          false。
+        </p>
+        <p :class="bem.e('hint')">
+          非 secure context 下
+          <code>navigator.clipboard === undefined</code>
+          ，指令自动走 textarea 降级路径。
+        </p>
+        <!-- 强制降级验证：用 Object.defineProperty 改写只读属性，模拟 HTTP 部署环境 -->
+        <div :class="bem.e('degrade-actions')">
+          <el-button type="warning" @click="forceDegrade">
+            强制降级（isSecureContext=false）
+          </el-button>
+          <el-button @click="resetSecureContext">还原</el-button>
+          <el-button v-copy="'降级路径验证文本'" type="primary" :disabled="!isDegradedForced">
+            点击复制（降级路径走 textarea）
+          </el-button>
+        </div>
+        <p :class="bem.e('hint')">
+          当前 isSecureContext：
+          <code>{{ currentSecureContext }}</code>
+          <span v-if="isDegradedForced" :class="bem.e('badge')">已强制降级</span>
+        </p>
+      </DemoField>
+    </section>
 
-      <!-- API 文档 -->
-      <ApiTable title="v-copy Binding" :items="bindingItems" anchor="api-binding" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <!-- API 文档 -->
+    <ApiTable title="v-copy Binding" :items="bindingItems" anchor="api-binding" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

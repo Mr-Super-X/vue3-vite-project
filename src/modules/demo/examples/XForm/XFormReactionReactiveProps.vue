@@ -11,8 +11,7 @@ import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import xFormSource from './XFormReactionReactiveProps.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
 import {
@@ -113,44 +112,43 @@ async function onSave() {
 }
 
 const tocItems = [{ id: 'demo-reactive-props', label: '反应式 props 联动' }]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="reaction 反应式 props / rules / options（度量单位 + 折扣等级）"
-      source="src/components/form-schema/composables/use-reaction.ts"
-      :introductions="[
-        '③ 反应式 label / props / rules 联动：单个 reaction 节点同时改 label 和 props',
-        'rules 用 {{ fn }} 表达式与 reaction 协同（不在 node.rules 写字符串，会被当成命名引用查表）',
-        '切度量单位 → label / min / max / precision / placeholder 整体联动（reaction.props 整体覆盖）',
-        '切折扣等级 → discountRate 字段反应式 _effect 计算（deps 精确监听 discountLevel）',
-      ]"
-    >
-      <section id="demo-reactive-props">
-        <DemoField label="反应式 props/rules/options 联动" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onSave">校验</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
+  <DemoFrame
+    title="reaction 反应式 props / rules / options（度量单位 + 折扣等级）"
+    source="src/components/form-schema/composables/use-reaction.ts"
+    :introductions="[
+      '③ 反应式 label / props / rules 联动：单个 reaction 节点同时改 label 和 props',
+      'rules 用 {{ fn }} 表达式与 reaction 协同（不在 node.rules 写字符串，会被当成命名引用查表）',
+      '切度量单位 → label / min / max / precision / placeholder 整体联动（reaction.props 整体覆盖）',
+      '切折扣等级 → discountRate 字段反应式 _effect 计算（deps 精确监听 discountLevel）',
+    ]"
+  >
+    <section id="demo-reactive-props">
+      <DemoField label="反应式 props/rules/options 联动" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onSave">校验</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <div :class="bem.e('panels')">
+          <div :class="bem.e('panel')">
+            <strong>当前度量单位：</strong>
+            {{ model.metric }}（label / min / max 联动切换）
           </div>
-          <div :class="bem.e('panels')">
-            <div :class="bem.e('panel')">
-              <strong>当前度量单位：</strong>
-              {{ model.metric }}（label / min / max 联动切换）
-            </div>
-            <div :class="bem.e('panel')">
-              <strong>当前折扣率：</strong>
-              {{ model.discountRate }}（{{ model.discountLevel }} 等级）
-            </div>
+          <div :class="bem.e('panel')">
+            <strong>当前折扣率：</strong>
+            {{ model.discountRate }}（{{ model.discountLevel }} 等级）
           </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
-    </DemoFrame>
-    <template #toc><DocToc :items="tocItems" /></template>
-  </DocLayout>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
+  </DemoFrame>
 </template>
 
 <style lang="scss">

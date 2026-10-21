@@ -20,9 +20,8 @@
 import RichTextEditorSource from '@/components/common/RichTextEditor/RichTextEditor.vue?raw'
 import DemoField from '../components/DemoField.vue'
 import DemoFrame from '../components/DemoFrame.vue'
-import DocLayout from '../layouts/DocLayout.vue'
 import ApiTable from '../components/ApiTable.vue'
-import DocToc from '../components/DocToc.vue'
+import { useDocToc } from '../composables/useDocToc'
 import { extractApi, type ApiItem, type SlotItem } from '../utils/extractApi'
 
 const bem = createNamespace('demo-rich-text-editor')
@@ -213,98 +212,91 @@ const tocItems = [
   { id: 'demo-cycle', label: '防循环更新验证' },
   { id: 'demo-xss', label: 'XSS 防御可视化' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="RichTextEditor 富文本编辑器"
-      source="src/components/common/RichTextEditor/RichTextEditor.vue"
-      :introductions="[
-        '基于 WangEditor V5（@wangeditor/editor-for-vue@5.x）封装的 v-model 富文本编辑器。',
-        '内置 DOMPurify XSS 防御（emit 前过滤 <script>/onerror 等危险内容）+ 自定义图片上传 + 防循环更新。',
-        'V5 工具栏与编辑区是分离的两个组件，本封装通过 :editor prop 关联，无需手动处理。',
-      ]"
-    >
-      <!-- ① 基础 v-model -->
-      <section id="demo-basic">
-        <DemoField :code="SNIPPET_BASIC" label="① 基础 v-model + DOMPurify XSS 防御">
-          <RichTextEditor v-model="basicHtml" height="320px" />
-          <p :class="bem.e('hint')">当前 modelValue（清洗后，对比编辑器里粘贴的内容看差异）</p>
-          <pre :class="bem.e('html-preview')">{{ basicHtml }}</pre>
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="RichTextEditor 富文本编辑器"
+    source="src/components/common/RichTextEditor/RichTextEditor.vue"
+    :introductions="[
+      '基于 WangEditor V5（@wangeditor/editor-for-vue@5.x）封装的 v-model 富文本编辑器。',
+      '内置 DOMPurify XSS 防御（emit 前过滤 <script>/onerror 等危险内容）+ 自定义图片上传 + 防循环更新。',
+      'V5 工具栏与编辑区是分离的两个组件，本封装通过 :editor prop 关联，无需手动处理。',
+    ]"
+  >
+    <!-- ① 基础 v-model -->
+    <section id="demo-basic">
+      <DemoField :code="SNIPPET_BASIC" label="① 基础 v-model + DOMPurify XSS 防御">
+        <RichTextEditor v-model="basicHtml" height="320px" />
+        <p :class="bem.e('hint')">当前 modelValue（清洗后，对比编辑器里粘贴的内容看差异）</p>
+        <pre :class="bem.e('html-preview')">{{ basicHtml }}</pre>
+      </DemoField>
+    </section>
 
-      <!-- ② 自定义图片上传 -->
-      <section id="demo-upload">
-        <DemoField :code="SNIPPET_UPLOAD" label="② 自定义图片上传：uploadApi 接管默认 base64">
-          <p :class="bem.e('hint')">
-            工具栏点「图片」→ 选文件 → 1.2s 后随机成功（图片插入）/失败（ElMessage 错误）
-          </p>
-          <RichTextEditor v-model="uploadHtml" :upload-api="mockUploadApi" height="320px" />
-          <p :class="bem.e('hint')">uploadHtml（清洗后）</p>
-          <pre :class="bem.e('html-preview')">{{ uploadHtml }}</pre>
-        </DemoField>
-      </section>
+    <!-- ② 自定义图片上传 -->
+    <section id="demo-upload">
+      <DemoField :code="SNIPPET_UPLOAD" label="② 自定义图片上传：uploadApi 接管默认 base64">
+        <p :class="bem.e('hint')">
+          工具栏点「图片」→ 选文件 → 1.2s 后随机成功（图片插入）/失败（ElMessage 错误）
+        </p>
+        <RichTextEditor v-model="uploadHtml" :upload-api="mockUploadApi" height="320px" />
+        <p :class="bem.e('hint')">uploadHtml（清洗后）</p>
+        <pre :class="bem.e('html-preview')">{{ uploadHtml }}</pre>
+      </DemoField>
+    </section>
 
-      <!-- ③ 只读模式 -->
-      <section id="demo-readonly">
-        <DemoField :code="SNIPPET_READONLY" label="③ 只读模式（readOnly prop）">
-          <el-switch v-model="readOnlyMode" active-text="只读" inactive-text="可编辑" />
-          <RichTextEditor v-model="readOnlyHtml" :read-only="readOnlyMode" height="320px" />
-        </DemoField>
-      </section>
+    <!-- ③ 只读模式 -->
+    <section id="demo-readonly">
+      <DemoField :code="SNIPPET_READONLY" label="③ 只读模式（readOnly prop）">
+        <el-switch v-model="readOnlyMode" active-text="只读" inactive-text="可编辑" />
+        <RichTextEditor v-model="readOnlyHtml" :read-only="readOnlyMode" height="320px" />
+      </DemoField>
+    </section>
 
-      <!-- ④ 防循环更新验证 -->
-      <section id="demo-cycle">
-        <DemoField :code="SNIPPET_CYCLE" label="④ 防循环更新：外部 setHtml 后 onChange 只触发一次">
-          <p :class="bem.e('hint')">
-            点下方按钮「外部设置 HTML」→ 编辑器内容更新，DevTools console 应只打一次
-            onChange（说明循环被阻断）
-          </p>
-          <el-button type="primary" @click="externalSetHtml">外部设置 HTML</el-button>
-          <RichTextEditor v-model="cycleHtml" height="320px" @update:model-value="onCycleChange" />
-          <p :class="bem.e('counter')">onChange 触发次数：{{ cycleChangeCount }}</p>
-        </DemoField>
-      </section>
+    <!-- ④ 防循环更新验证 -->
+    <section id="demo-cycle">
+      <DemoField :code="SNIPPET_CYCLE" label="④ 防循环更新：外部 setHtml 后 onChange 只触发一次">
+        <p :class="bem.e('hint')">
+          点下方按钮「外部设置 HTML」→ 编辑器内容更新，DevTools console 应只打一次
+          onChange（说明循环被阻断）
+        </p>
+        <el-button type="primary" @click="externalSetHtml">外部设置 HTML</el-button>
+        <RichTextEditor v-model="cycleHtml" height="320px" @update:model-value="onCycleChange" />
+        <p :class="bem.e('counter')">onChange 触发次数：{{ cycleChangeCount }}</p>
+      </DemoField>
+    </section>
 
-      <!-- ⑤ XSS 防御可视化 -->
-      <section id="demo-xss">
-        <DemoField
-          :code="SNIPPET_XSS"
-          label="⑤ XSS 防御可视化：脏 HTML 不入编辑器，直接对比清洗前后"
+    <!-- ⑤ XSS 防御可视化 -->
+    <section id="demo-xss">
+      <DemoField :code="SNIPPET_XSS" label="⑤ XSS 防御可视化：脏 HTML 不入编辑器，直接对比清洗前后">
+        <p :class="bem.e('hint')">
+          点击下列 payload，「清洗前」累积原始 HTML，「清洗后」实时展示 DOMPurify 处理结果。
+          注意对比：script / onerror / javascript: 等危险内容被剥离；style
+          内联样式保留（字号/颜色功能依赖）。
+        </p>
+        <el-button
+          v-for="(payload, i) in XSS_PAYLOADS"
+          :key="i"
+          size="small"
+          :class="bem.e('payload-btn')"
+          @click="injectPayload(payload)"
         >
-          <p :class="bem.e('hint')">
-            点击下列 payload，「清洗前」累积原始 HTML，「清洗后」实时展示 DOMPurify 处理结果。
-            注意对比：script / onerror / javascript: 等危险内容被剥离；style
-            内联样式保留（字号/颜色功能依赖）。
-          </p>
-          <el-button
-            v-for="(payload, i) in XSS_PAYLOADS"
-            :key="i"
-            size="small"
-            :class="bem.e('payload-btn')"
-            @click="injectPayload(payload)"
-          >
-            {{ payload }}
-          </el-button>
-          <p :class="bem.e('hint')">清洗前（原始累积，可能含 XSS）</p>
-          <pre :class="bem.e('html-preview')">{{ rawHtml || '（点击上方按钮注入 payload）' }}</pre>
-          <p :class="bem.e('hint')">清洗后（DOMPurify 处理，与组件内部共用同一份配置）</p>
-          <pre :class="bem.e('html-preview')">{{ cleanHtml || '（同上）' }}</pre>
-        </DemoField>
-      </section>
+          {{ payload }}
+        </el-button>
+        <p :class="bem.e('hint')">清洗前（原始累积，可能含 XSS）</p>
+        <pre :class="bem.e('html-preview')">{{ rawHtml || '（点击上方按钮注入 payload）' }}</pre>
+        <p :class="bem.e('hint')">清洗后（DOMPurify 处理，与组件内部共用同一份配置）</p>
+        <pre :class="bem.e('html-preview')">{{ cleanHtml || '（同上）' }}</pre>
+      </DemoField>
+    </section>
 
-      <!-- API 文档 -->
-      <ApiTable title="Props" :items="propsItems" anchor="api-props" />
-      <ApiTable title="Events" :items="eventsItems" anchor="api-events" />
-      <ApiTable title="Slots" :items="slotsItems" anchor="api-slots" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <!-- API 文档 -->
+    <ApiTable title="Props" :items="propsItems" anchor="api-props" />
+    <ApiTable title="Events" :items="eventsItems" anchor="api-events" />
+    <ApiTable title="Slots" :items="slotsItems" anchor="api-slots" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

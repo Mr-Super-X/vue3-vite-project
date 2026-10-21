@@ -13,8 +13,7 @@ import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import xFormSource from './XFormReactionCalcField.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
 
@@ -85,40 +84,39 @@ async function onSave() {
 }
 
 const tocItems = [{ id: 'demo-calc-field', label: '计算字段演示' }]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="reaction 计算字段（数量×单价×折扣=折后价）"
-      source="src/components/form-schema/composables/use-reaction.ts"
-      :introductions="[
-        '① deps 精确监听 + 反应式闭包写 model：数量×单价×折扣=折后价',
-        'reaction 函数体副作用写 model.total + 自增 calcCount（写 null 自动禁用字段）',
-        'deps 精确监听 qty/price/discount → 改其他字段不会 +1',
-        '反应式 _effect 函数体闭包写 model，返回 undefined → use-reaction 跳过写入节点字段',
-      ]"
-    >
-      <section id="demo-calc-field">
-        <DemoField label="计算字段 + deps 精确监听" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onSave">校验</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
+  <DemoFrame
+    title="reaction 计算字段（数量×单价×折扣=折后价）"
+    source="src/components/form-schema/composables/use-reaction.ts"
+    :introductions="[
+      '① deps 精确监听 + 反应式闭包写 model：数量×单价×折扣=折后价',
+      'reaction 函数体副作用写 model.total + 自增 calcCount（写 null 自动禁用字段）',
+      'deps 精确监听 qty/price/discount → 改其他字段不会 +1',
+      '反应式 _effect 函数体闭包写 model，返回 undefined → use-reaction 跳过写入节点字段',
+    ]"
+  >
+    <section id="demo-calc-field">
+      <DemoField label="计算字段 + deps 精确监听" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onSave">校验</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <div :class="bem.e('panels')">
+          <div :class="bem.e('panel')">
+            <strong>计算次数：</strong>
+            {{ model.calcCount }}（应只在 qty/price/discount 变化时 +1）
           </div>
-          <div :class="bem.e('panels')">
-            <div :class="bem.e('panel')">
-              <strong>计算次数：</strong>
-              {{ model.calcCount }}（应只在 qty/price/discount 变化时 +1）
-            </div>
-          </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
-    </DemoFrame>
-    <template #toc><DocToc :items="tocItems" /></template>
-  </DocLayout>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
+  </DemoFrame>
 </template>
 
 <style lang="scss">

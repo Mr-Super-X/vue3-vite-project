@@ -16,8 +16,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoField from '../../components/DemoField.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { asyncValidatorItems } from './configs/xform-demos-api'
 import xFormSource from './XFormAsyncValidator.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
@@ -134,41 +133,37 @@ const tocItems = [
   { id: 'demo-async', label: '异步校验演示' },
   { id: 'api-async-validator', label: '异步校验' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="异步校验（asyncValidator callback）"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        '演示 element-plus 原生 validating loading + form-schema asyncValidator 异步 callback:',
-        '1. 用户名唯一性：xInput.asyncValidator(fn, \'blur\') 模拟 500ms 远程接口,blur 后 form-item 显示 loading 图标',
-        '2. 邮箱黑名单：async 校验器检查预定义黑名单,300ms 返回;邮箱格式 + 黑名单 两条规则并行触发',
-        '3. 服务端密码强度校验：asyncValidator 模拟「服务端强度比对」,300ms 返回（无跨字段依赖）',
-        '说明：el-form 的 async callback validator 自动管理 validating 状态(loading 图标),form-schema 无需介入',
-        '跨字段异步校验（dependsOn + crossValidator）见 XFormCrossField demo',
-      ]"
-    >
-      <section id="demo-async">
-        <DemoField label="异步校验" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onSave">保存</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-          </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="异步校验（asyncValidator callback）"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      '演示 element-plus 原生 validating loading + form-schema asyncValidator 异步 callback:',
+      '1. 用户名唯一性：xInput.asyncValidator(fn, \'blur\') 模拟 500ms 远程接口,blur 后 form-item 显示 loading 图标',
+      '2. 邮箱黑名单：async 校验器检查预定义黑名单,300ms 返回;邮箱格式 + 黑名单 两条规则并行触发',
+      '3. 服务端密码强度校验：asyncValidator 模拟「服务端强度比对」,300ms 返回（无跨字段依赖）',
+      '说明：el-form 的 async callback validator 自动管理 validating 状态(loading 图标),form-schema 无需介入',
+      '跨字段异步校验（dependsOn + crossValidator）见 XFormCrossField demo',
+    ]"
+  >
+    <section id="demo-async">
+      <DemoField label="异步校验" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onSave">保存</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
 
-      <ApiTable title="异步校验" :items="asyncValidatorItems" anchor="api-async-validator" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="异步校验" :items="asyncValidatorItems" anchor="api-async-validator" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

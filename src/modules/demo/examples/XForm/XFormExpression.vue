@@ -19,8 +19,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { expressionItems, expressionSandboxItems } from './configs/xform-demos-api'
 import xFormSource from './XFormExpression.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
@@ -168,66 +167,62 @@ const tocItems = [
   { id: 'api-mount-points', label: '挂载位速查' },
   { id: 'api-sandbox-notes', label: '沙箱上下文与边界' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="{{ fn }} 动态脚本（沙箱表达式）"
-      source="src/components/form-schema/composables/use-expression.ts"
-      :introductions="[
-        '{{ }} 是声明式 schema 里嵌入 JS 逻辑的通道：整段字符串被编译为函数，首个入参永远是 model 安全副本，其后才是组件事件参数。',
-        '本页一次覆盖五类挂载位：顶层 readonly / node.on 事件 / reaction 显隐与文案 / permission 三态 / expressionFunctions 白名单注入——日志面板可视化了沙箱内的每次执行。',
-        '安全边界：model 经深净化副本传入且无法回写真实表单；无参形态 {{ () => xxx }} 合法但收不到任何参数；需要写真实 model 或对接埋点 SDK 时请改用原生函数形式。',
-      ]"
-    >
-      <section id="demo-expression">
-        <div :class="bem.e('controls')">
-          <el-switch v-model="model.locked" active-text="锁定单据（① 整表只读）" />
-          <el-radio-group v-model="model.role">
-            <el-radio-button value="admin">管理员 admin</el-radio-button>
-            <el-radio-button value="viewer">查看者 viewer</el-radio-button>
-          </el-radio-group>
-          <span :class="bem.e('hint')">角色切换驱动 ⑤ 审批意见权限</span>
-        </div>
+  <DemoFrame
+    title="{{ fn }} 动态脚本（沙箱表达式）"
+    source="src/components/form-schema/composables/use-expression.ts"
+    :introductions="[
+      '{{ }} 是声明式 schema 里嵌入 JS 逻辑的通道：整段字符串被编译为函数，首个入参永远是 model 安全副本，其后才是组件事件参数。',
+      '本页一次覆盖五类挂载位：顶层 readonly / node.on 事件 / reaction 显隐与文案 / permission 三态 / expressionFunctions 白名单注入——日志面板可视化了沙箱内的每次执行。',
+      '安全边界：model 经深净化副本传入且无法回写真实表单；无参形态 {{ () => xxx }} 合法但收不到任何参数；需要写真实 model 或对接埋点 SDK 时请改用原生函数形式。',
+    ]"
+  >
+    <section id="demo-expression">
+      <div :class="bem.e('controls')">
+        <el-switch v-model="model.locked" active-text="锁定单据（① 整表只读）" />
+        <el-radio-group v-model="model.role">
+          <el-radio-button value="admin">管理员 admin</el-radio-button>
+          <el-radio-button value="viewer">查看者 viewer</el-radio-button>
+        </el-radio-group>
+        <span :class="bem.e('hint')">角色切换驱动 ⑤ 审批意见权限</span>
+      </div>
 
-        <DemoField label="报销审批单（五类挂载位联动）" :code="xFormSource">
-          <XForm
-            ref="formRef"
-            :schema="schema"
-            :model="model"
-            :expression-functions="expressionFunctions"
-          />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onValidate">校验</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-          </div>
-          <div :class="bem.e('panels')">
-            <ModelPreview :model="model" />
-            <div :class="bem.e('logs')">
-              <div>沙箱执行日志（白名单 pushLog 出口）：</div>
-              <pre v-if="sandboxLogs.length">{{ sandboxLogs.join('\n') }}</pre>
-              <div v-else :class="bem.e('logs-empty')">
-                空态：操作「费用类型 / 报销金额」后这里会显示表达式执行结果
-              </div>
+      <DemoField label="报销审批单（五类挂载位联动）" :code="xFormSource">
+        <XForm
+          ref="formRef"
+          :schema="schema"
+          :model="model"
+          :expression-functions="expressionFunctions"
+        />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onValidate">校验</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <div :class="bem.e('panels')">
+          <ModelPreview :model="model" />
+          <div :class="bem.e('logs')">
+            <div>沙箱执行日志（白名单 pushLog 出口）：</div>
+            <pre v-if="sandboxLogs.length">{{ sandboxLogs.join('\n') }}</pre>
+            <div v-else :class="bem.e('logs-empty')">
+              空态：操作「费用类型 / 报销金额」后这里会显示表达式执行结果
             </div>
           </div>
-        </DemoField>
-      </section>
+        </div>
+      </DemoField>
+    </section>
 
-      <ApiTable title="{{ fn }} 五类挂载位" :items="expressionItems" anchor="api-mount-points" />
-      <ApiTable
-        title="沙箱上下文与安全边界"
-        :items="expressionSandboxItems"
-        anchor="api-sandbox-notes"
-      />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="{{ fn }} 五类挂载位" :items="expressionItems" anchor="api-mount-points" />
+    <ApiTable
+      title="沙箱上下文与安全边界"
+      :items="expressionSandboxItems"
+      anchor="api-sandbox-notes"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">
