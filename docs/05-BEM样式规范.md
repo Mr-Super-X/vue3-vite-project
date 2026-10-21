@@ -88,7 +88,7 @@
 ### 完整使用模板
 
 ```vue
-<!-- src/modules/user/components/UserCard.vue -->
+<!-- 教学示例（user 模块当前无 components/UserCard.vue，模式适用于任意业务组件） -->
 <script setup lang="ts">
 // createNamespace 由 unplugin-auto-import 自动注入（vite.config.ts 第 83 行），
 // 无须显式 import。BEM 前缀来自 import.meta.env.VITE_BEM_PREFIX ?? 'vv'。
@@ -153,12 +153,15 @@ const bem = createNamespace('user-card')
 
 转换示例：
 
-| ❌ PascalCase          | ✅ kebab-case            |
-| ---------------------- | ------------------------ |
-| `OrdersList`           | `orders-list`            |
-| `HomeFooter`           | `home-footer`            |
-| `OverviewCardSkeleton` | `overview-card-skeleton` |
-| `UserLogin`            | `user-login`             |
+| ❌ PascalCase  | ✅ kebab-case   |
+| -------------- | --------------- |
+| `OrdersList`   | `orders-list`   |
+| `SiteHero`     | `site-hero`     |
+| `SiteFeatures` | `site-features` |
+| `SiteStats`    | `site-stats`    |
+| `SiteAbout`    | `site-about`    |
+| `SiteFooter`   | `site-footer`   |
+| `UserLogin`    | `user-login`    |
 
 ---
 
@@ -467,12 +470,12 @@ scss: {
 
 ### 何时写全局样式（放在 `src/assets/styles/`）
 
-| 场景                       | 处理                                                         |
-| -------------------------- | ------------------------------------------------------------ |
-| 全局 reset / 工具类        | 放在 `src/assets/styles/`，**不写 scoped**（无 BEM 命名）    |
-| Element Plus 主题覆盖      | 放在 `src/assets/styles/element-overwrite.scss`              |
-| 路由过渡 / fade keyframes  | 放在 `src/assets/styles/transition.scss`                     |
-| **禁止** Element Plus 穿透 | ❌ 禁止写 `:deep(.el-button)`——去掉 scoped 后 `:deep()` 非法 |
+| 场景                       | 处理                                                                    |
+| -------------------------- | ----------------------------------------------------------------------- |
+| 全局 reset / 工具类        | 放在 `src/assets/styles/`，**不写 scoped**（无 BEM 命名）               |
+| Element Plus 主题覆盖      | 放在 `src/assets/styles/element-overwrite/`（目录，按组件维度拆分文件） |
+| 路由过渡 / fade keyframes  | 放在 `src/assets/styles/transition.scss`                                |
+| **禁止** Element Plus 穿透 | ❌ 禁止写 `:deep(.el-button)`——去掉 scoped 后 `:deep()` 非法            |
 
 ---
 
@@ -485,7 +488,7 @@ src/assets/styles/
 ├── variables.scss          # 主题无关变量（品牌色 / 间距 / 圆角 / 字号 / 字重 / 行高 / 阴影 / z-index / 动画时长 / 缓动）
 ├── theme.scss              # 主题感知变量（背景 / 文字 / 边框，light + dark 双主题）
 ├── transition.scss         # 全局过渡动画（5 个 @keyframes + 3 个过渡工具类 + reduced-motion 适配）
-├── element-overwrite.scss  # Element Plus 5 个主色 × 5 个灯色阶 = 25 个 CSS 变量覆盖
+├── element-overwrite/      # Element Plus 主题覆盖（目录，按组件维度拆分文件）
 ├── custom.scss             # 复合场景工具类（.vv-flex-center / .vv-flex-between / .vv-ellipsis-* 等）
 └── mixins/
     ├── bem.scss            # BEM mixin（仅 v1 过渡用，v2 已弃用，保留以兼容旧组件）
@@ -724,4 +727,4 @@ pnpm check:routes    # 如果改了 routes/* 跑一致性
 - 设计规范：`docs/superpowers/specs/2026-07-17-vue3-vite-ts-scaffold-design.md`
 - BEM 运行时工具：`src/utils/bem.ts`
 - BEM mixin（方案 B）：`src/assets/styles/mixins/bem.scss`
-- 示范组件：`src/layouts/default/components/Header.vue`、`src/components/common/AsyncState.vue`
+- 示范组件：`src/layouts/default/components/ToolHeader.vue`、`src/components/common/AsyncState.vue`

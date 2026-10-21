@@ -3,16 +3,16 @@
  *
  * 自动注册：被 `src/router/auto-register.ts` 扫描到，无需手动 import。
  *
- * 设计：
- * - `/home` 使用 `portal` 布局（含门户头部 / 顶部导航）
- * - 首页刻意不进多页签：portal 落地页通过顶部导航/Logo 返回即可，
- *   无页签上下文切换需求（经路由 meta.noTags: true 声明排除，见 store/modules/tags-view.ts）
- * - 不在此标记 meta.affix：affix 预置走 filterAffixRoutes 直读路由表，
- *   不受 NO_TAGS 名单约束，残留 affix 会把首页重新钉回页签
+ * 设计（2026-10-20 企业官网改造）：
+ * - `/home` 使用 `portal` 布局（简约顶栏 + 锚点导航的企业官网）
+ * - 公开访问：经 `src/router/whitelist.ts` 的 ROUTE_WHITE_LIST 按 name 豁免登录/权限检查
+ *   （守卫 checkLoginState 不读 meta.requiresAuth，白名单是唯一公开机制）
+ * - 首页刻意不进多页签（meta.noTags: true），portal 落地页通过顶部锚点导航返回即可
  * - 远程菜单模式下，后端返回的菜单项会覆盖本地静态路由
  *
  * @see [`@/router/auto-register.ts`](../../../router/auto-register.ts) 自动注册入口
- * @see [`../views/index.vue`](../views/index.vue) 首页视图
+ * @see [`@/router/whitelist.ts`](../../../router/whitelist.ts) 公开访问白名单
+ * @see [`../views/index.vue`](../views/index.vue) 官网首页视图
  * @group 业务模块：Home
  */
 
@@ -31,7 +31,6 @@ const routes: RouteRecordRaw[] = [
           title: '首页',
           titleKey: 'menu.home',
           icon: 'odometer',
-          requiresAuth: true,
           noTags: true,
         },
       },

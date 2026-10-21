@@ -1,6 +1,8 @@
 # gh-pages 自动化部署设计
 
-> 日期：2026-10-20 | 状态：已批准（用户确认 3 项决策 + 方案 A）
+> **⚠️ 终态指针（2026-10-20 实施终态，读本文前先读）**：本文档为设计稿快照，**部分早期方案已被实施取代**——① viteMockServe `prodEnabled` 在 vite-plugin-mock@3.0.2 已移除，终态改 client 侧 `createProdMockServer`（`mock/mockProdServer.ts`）；② 构建顺序终态为 `build-only` → `type-check:full`（干净环境类型声明由 build 生成）；③ mock 挂接终态为 `use(router)` 前顶层 await（拦截窗口穿透根治）。**准确描述以 [docs/40-GitHubPages自动部署.md](../../40-GitHubPages自动部署.md) 与 `mock/mockProdServer.ts` 头注为准**，本文保留作决策过程追溯。
+>
+> 日期：2026-10-20 | 状态：已批准（用户确认 3 项决策 + 方案 A）+ 已实施（终态见上指针）
 > 分支预期合入：master（触发部署）
 
 ## 1. 背景与目标

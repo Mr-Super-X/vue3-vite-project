@@ -42,9 +42,13 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      - name: Type check (full)
-        # --force 强制重建 .tsbuildinfo 防缓存陈旧
-        run: pnpm type-check:full
+      - name: Build
+        # 顺序强约束：build 必须先于任何 type-check——unplugin 在 build 时生成
+        # auto-imports.d.ts / components.d.ts（gitignore 不入库），CI 干净 checkout 下
+        # 任何 type-check 都依赖这些生成文件（本地有 dev 残留所以不显）。
+        # pnpm build 内部 = build-only（生成声明）+ type-check:full（--force 全量），
+        # 类型检查由本步骤覆盖，不再单独跑 type-check step（避免二次全量）
+        run: pnpm build
 
       - name: Unit tests
         run: pnpm test --run
@@ -52,9 +56,6 @@ jobs:
       - name: Check routes consistency
         # 校验 RouteName 联合类型 + 实际 routes/*.ts + whitelist 三者一致
         run: pnpm check:routes
-
-      - name: Build
-        run: pnpm build
 
       - name: Upload build artifact
         if: success()

@@ -1,21 +1,22 @@
 # Mock 数据使用规范
 
-> **文档版本**：v1.0.1 | **最后更新**：2026-09-04
-> **覆盖范围**：mock 文件组织、`MockMethod[]` + `response`/`rawResponse` 用法、与 Zod schema 集成、prod 防御层（mock-guard）、CI 验证
-> **适用读者**：第一次给页面加 mock 数据的新人 + 联调真实后端前期的开发者
-> **配套文档**：`docs/15-请求层缓存-合并-分页适配使用规范.md`（cache + merge + pageAdapter 三件套）、`docs/14-zod请求参数校验使用规范.md`（Zod schema）
+> **文档版本**：v1.1.0 | **最后更新**：2026-10-20
+> **覆盖范围**：mock 文件组织、`MockMethod[]` + `response`/`rawResponse` 用法、与 Zod schema 集成、prod 防御层（mock-guard）、**生产 mock 接线（mockProdServer.ts，gh-pages 静态部署用）**、CI 验证
+> **适用读者**：第一次给页面加 mock 数据的新人 + 联调真实后端前期的开发者 + 配置 gh-pages 演示部署的维护者
+> **配套文档**：`docs/15-请求层缓存-合并-分页适配使用规范.md`（cache + merge + pageAdapter 三件套）、`docs/14-zod请求参数校验使用规范.md`（Zod schema）、`docs/40-GitHubPages自动部署.md`（生产 mock 的部署侧上下文）
 
 ---
 
 ## 1. 决策表：什么时候需要 mock
 
-| 场景                         | 用 mock     | 直接调真接口 | 备注                               |
-| ---------------------------- | ----------- | ------------ | ---------------------------------- |
-| 后端接口尚未就绪             | ✅          | ❌           | 必须 mock，否则无法开发            |
-| 后端接口已就绪但本地无法访问 | ✅          | ❌           | 演示、离线、出差场景               |
-| 单元测试                     | ❌          | ❌           | 用 vi.mock，**不要**用 mock-server |
-| 关键用户流程 E2E             | ⚠️          | ✅           | 真实环境跑                         |
-| 生产构建                     | ❌ 自动剔除 | ✅           | vite-plugin-mock prod 自动不启用   |
+| 场景                         | 用 mock        | 直接调真接口 | 备注                                                               |
+| ---------------------------- | -------------- | ------------ | ------------------------------------------------------------------ |
+| 后端接口尚未就绪             | ✅             | ❌           | 必须 mock，否则无法开发                                            |
+| 后端接口已就绪但本地无法访问 | ✅             | ❌           | 演示、离线、出差场景                                               |
+| 单元测试                     | ❌             | ❌           | 用 vi.mock，**不要**用 mock-server                                 |
+| 关键用户流程 E2E             | ⚠️             | ✅           | 真实环境跑                                                         |
+| 生产构建（常规）             | ❌ 自动剔除    | ✅           | vite-plugin-mock 3.x 为纯 dev-server 插件，prod 构建不附带         |
+| 生产构建（gh-pages 演示）    | ✅ 客户端 mock | ❌           | `VITE_USE_MOCK=true` 时经 `mockProdServer.ts` client 侧接线（§15） |
 
 **项目约定**：开发期所有未对接的接口都走 `mock/<feature>.ts`，**禁止**在组件里写死假数据。
 
@@ -25,20 +26,23 @@
 
 ```
 mock/
-├── auth.ts              # /api/auth/* 登录相关
+├── auth.ts              # /api/auth/* 登录相关（dev rawResponse 形态）
 ├── user.ts              # /api/user/* 用户管理
 ├── menu.ts              # /api/menu 远程菜单
-├── dict.ts              # /api/dict/* 字典
-├── portal-overview.ts   # /api/portal/overview 首页数据
-├── index.ts             # 聚合导出（vite-plugin-mock 自动扫描）
+├── dict.ts              # /api/dict/:code 字典（动态路由，dev 形态）
+├── dict-data.ts         # DICT_DATA 字典数据单源（dev/prod 双形态共用）
+├── _utils.ts            # mock 公共工具（分页/延迟等）
+├── pro-table/           # ProTable 具名数据源（11 个 xxxRequestApi 导出，组件直连无 XHR）
+├── mockProdServer.ts    # 生产 mock 接线（client 侧 createProdMockServer，§15）
+├── index.ts             # 聚合导出（dev viteMockServe 按目录扫描实际不受此限）
 └── <feature>.ts         # 新业务模块的 mock
 ```
 
 **约定**：
 
 - 每个业务模块一个 mock 文件，文件名与 `src/api/modules/<feature>.ts` 对应
-- `vite-plugin-mock` 自动扫描 `mock/**/*.ts`，无需手动注册
-- 跨业务共享的 mock 抽到独立文件（如 `dict.ts`）
+- `vite-plugin-mock` dev 模式自动扫描 `mock/**/*.ts`，无需手动注册；**prod 接线不受扫描机制保护，须手动在 `mockProdServer.ts` 登记（§15 的 @trigger 约定）**
+- 跨业务共享的 mock 抽到独立文件（如 `dict.ts` / `dict-data.ts`）
 
 ---
 
@@ -150,7 +154,8 @@ response: ({ query, params }) => {
 把 mock 数据走 Zod schema，**让 mock 与生产 schema 共享一份类型契约**。
 
 ```ts
-// src/modules/user/types.ts
+// src/modules/user/types.ts（教学示例路径——user 模块当前未建 types.ts，
+// 实际项目里对应你的业务模块 types 文件，模式相同）
 import { z } from 'zod'
 
 export const UserSchema = z.object({
@@ -278,11 +283,16 @@ plugins: [
 
 ---
 
-## 8. prod 防御层（src/api/mock-guard.ts）
+## 8. prod 防御层（src/api/mock-guard.ts）与 prod 双形态总览
 
-**问题**：vite-plugin-mock 仅在 dev 启用；如果代码里有 mock 数据残留，prod 会带入。
+**背景**：vite-plugin-mock@3.0.2 起为纯 dev-server 插件（2.9.x 的 `prodEnabled` 已移除），mock 在 prod 的形态分两种：
 
-**项目方案**：`src/api/mock-guard.ts` 提供 prod 断言钩子（实际兜底由 vite 构建配置保证；mock 模块在 prod 构建自然被 tree-shake 剔除）。
+| 形态              | 条件                                          | 行为                                                                                                   |
+| ----------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 常规生产构建      | `VITE_USE_MOCK` 未设或非 `'true'`             | 不启用任何 mock（viteMockServe 不介入 + `src/main.ts` PROD 守卫不挂接 client mock），整分支 tree-shake |
+| gh-pages 演示构建 | `VITE_USE_MOCK=true` + `import.meta.env.PROD` | `mock/mockProdServer.ts` 经 client 侧 `createProdMockServer` 手动接线（§15），浏览器端 mockjs 劫持 XHR |
+
+**项目方案**：`src/api/mock-guard.ts` 提供 prod 断言钩子（实际兜底由 vite 构建配置 + main.ts 挂接条件保证；mock 模块在常规 prod 构建自然被 tree-shake 剔除）。
 
 ```ts
 // src/api/mock-guard.ts（实际实现，2026-08 现状）
@@ -296,11 +306,9 @@ export function assertNoMockInProd(): void {
 
 **使用场景**：
 
-- 当前实现为**空操作 + 扩展点**——prod 包不包含 mock 是由 vite build 配置 + tree-shake 自然保证
+- 当前实现为**空操作 + 扩展点**——常规 prod 包不包含 mock 是由 vite build 配置 + tree-shake 自然保证
+- 演示构建（`VITE_USE_MOCK=true`）是显式选择的产物形态，须配合 `VITE_DEMO_NO_AUTH` 演示模式与 gh-pages 部署上下文阅读（docs/40）
 - 未来如需运行时校验（如扫描 import.meta.glob 确认无 mock 导入），在 `assertNoMockInProd` 内部加实现即可
-- 用 MSW 等浏览器端 mock 替换 vite-plugin-mock 不在此处处理（属于独立基础设施）
-
-**默认行为**：prod 环境无任何 mock；所有请求走真实接口（或返回网络错误）。
 
 ---
 
@@ -327,38 +335,49 @@ export default [
           path: '/user/list',
           meta: { title: '用户管理', icon: 'user', permissions: ['user:view'] },
         },
-        // ⚠️ 路由 name 必须与 RouteName 联合类型 + COMPONENT_REGISTRY 一致
+        // ⚠️ 路由 name 必须与 modules/<m>/routes/index.ts 声明一致（remote 模式按 name 查 COMPONENT_REGISTRY）
       ],
     }),
   },
 ] as MockMethod[]
 ```
 
-**注意**：路由 `name` 必须在 `src/router/types.ts` 与 `src/router/auto-register.ts` 同时注册。
+**注意**：路由 `name` 必须与业务模块 `routes/index.ts` 的声明一致——remote 模式由 `COMPONENT_REGISTRY`（从 autoRegisteredRoutes 派生）按 name 查组件 loader；写不存在的 name 会在守卫侧报「组件未注册」。`pnpm check:routes` 校验的是 whitelist ↔ 实际 routes 的一致性（§12），不直接校验 mock/menu.ts 内的 name。
 
 ---
 
 ## 10. 字典 mock（与 useDict 集成）
 
 ```ts
-// mock/dict.ts（节选）
+// mock/dict.ts（节选）——dev 形态：动态路由 /api/dict/:code
+// ⚠️ vite-plugin-mock 3.0.2 不给 response 传 params——:code 被合并进 query
+// （requestMiddleware: query = urlMatch(reqUrl).params），须从 query.code 取并做防御
 import type { MockMethod } from 'vite-plugin-mock'
+import { DICT_DATA } from './dict-data'
 
 export default [
   {
-    url: '/api/dict/user_status',
+    url: '/api/dict/:code',
     method: 'get',
-    response: () => ({
-      code: 200,
-      data: [
-        { value: 'active', label: '启用' },
-        { value: 'inactive', label: '禁用' },
-      ],
-    }),
+    timeout: 100,
+    response: ({ query }: { query: { code?: string } }) => {
+      const code = query.code
+      if (!code) return { code: 400, message: '缺少字典 code 参数', data: [] }
+      const list = DICT_DATA[code]
+      return list
+        ? { code: 200, message: 'ok', data: list }
+        : { code: 404, message: `字典 ${code} 不存在`, data: [] }
+    },
   },
   // 业务侧用法详见 docs/11-字典使用规范.md
 ] as MockMethod[]
 ```
+
+**dev/prod 双形态**（2026-10-20 字典 prod 静态展开，git 659cd6a）：
+
+- **dev**：`/api/dict/:code` 动态路由（如上），数据单源 `mock/dict-data.ts` 的 `DICT_DATA`
+- **prod**：client wrapper 不从路径提取参数（`:code` 恒 undefined 命中防御分支 400），故 `mockProdServer.ts` 内联 `prodDictMocks` 把 `DICT_DATA` **逐条静态展开**为 `/api/dict/<code>` 独立 url 注册，每条 url 的 code 由闭包固化
+- **新增字典**：只需在 `mock/dict-data.ts` 的 `DICT_DATA` 加键值，dev 动态路由与 prod 静态展开双形态自动覆盖，**无需**改动 dict.ts / mockProdServer.ts
 
 > **DS-3 关键约定（mock URL vs API URL）**：
 >
@@ -393,11 +412,9 @@ vi.mock('@/api/modules/user', () => ({
 
 ## 12. CI 验证
 
-`pnpm check:routes` 会校验：
+`pnpm check:routes`（pre-commit + CI 强制）校验 whitelist ↔ 实际 routes 的 4 项一致性（A 白名单元素必须有 route 实现 / B 系统兜底路由必须在白名单 / C 系统兜底路由必须有真实实现 / D 双向一致性汇总，豁免前缀不参与对比）。**不再校验 RouteName 联合类型**——`types.ts` 的 `RouteName` 自 2026-07-24 方案 A 起已改为 string alias，组件注册经 `COMPONENT_REGISTRY` 派生，新增路由无须多处同步类型。
 
-- 路由 `RouteName` 与 `auto-register.ts` 双向一致
-- `mock/menu.ts` 返回的 `name` 必须在 `RouteName` 联合类型内
-- `mock/<feature>.ts` 的 URL 路径必须在文档中声明（避免孤儿接口）
+mock 相关的路由约束靠约定兜底：远程菜单 mock 返回的 `name` 必须能在 `COMPONENT_REGISTRY` 查到组件（§9）。
 
 ---
 
@@ -409,8 +426,8 @@ vi.mock('@/api/modules/user', () => ({
 □ 3. 同步数据用 `response: ({ query, params }) => ...` + `timeout` 字段；需要异步/Set-Cookie/读 body 时切 `rawResponse: (req, res) => ...`？
 □ 4. mock 数据类型与 Zod schema 一致（避免字段漂移）？
 □ 5. 错误码用业务字段 code 而非 HTTP status（除非要测 500）？
-□ 6. 远程菜单 mock 的 name 在 RouteName 联合类型中？
-□ 7. prod 模式不需要 mock 时已确认 vite build 自动 tree-shake（mock-guard 提供 `assertNoMockInProd` 扩展点，按需启用）？
+□ 6. 远程菜单 mock 的 name 能在 COMPONENT_REGISTRY 查到组件（与 modules/<m>/routes/index.ts 声明一致）？
+□ 7. prod 形态已确认：常规构建 tree-shake 不含 mock；演示构建（VITE_USE_MOCK=true）已同步登记 mockProdServer.ts（§15 的 @trigger 约定）？
 □ 8. 单测用 vi.mock 而非 mock-server？
 ```
 
@@ -418,14 +435,66 @@ vi.mock('@/api/modules/user', () => ({
 
 ## 14. 常见坑
 
-| 症状                                | 原因                                                                                                    | 解法                                                                                               |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| mock 修改后没生效                   | dev server 未重启 + watchFiles 未开                                                                     | `vite.config.ts` 加 `watchFiles: true`                                                             |
-| prod 包包含 mock 残留               | vite build 不读 `.env.development`，未设/非 `'false'` 自动关闭；如遇 prod mock 残留，多半是代码静态引用 | 检查 `vite.config.ts` 的 `enable` 契约                                                             |
-| `response` 写 async 不生效          | `response` 字段必须同步（vite-plugin-mock v3 设计）                                                     | 改用同步 + `timeout: ms`；如需真异步用 `rawResponse: async (req, res) => ...`（参考 mock/auth.ts） |
-| params 是字符串                     | URL 动态参数永远是 string                                                                               | `Number(params.id)` 手动转                                                                         |
-| 后端字段名改了但前端没改            | mock 与生产 schema 漂移                                                                                 | 用 Zod schema 共享类型                                                                             |
-| 远程菜单 mock 报"未注册的路由 name" | name 不在 COMPONENT_REGISTRY                                                                            | 先在 modules/<m>/routes/index.ts 声明                                                              |
+| 症状                                                 | 原因                                                                                                   | 解法                                                                                                  |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| mock 修改后没生效                                    | dev server 未重启 + watchFiles 未开                                                                    | `vite.config.ts` 加 `watchFiles: true`                                                                |
+| 常规 prod 包包含 mock 残留                           | vite build 不读 `.env.development`，未设/非 `'true'` 自动关闭；如遇 prod mock 残留，多半是代码静态引用 | 检查 `vite.config.ts` 的 `enable` 契约                                                                |
+| 演示构建（VITE_USE_MOCK=true）请求穿透打到静态服务器 | mockjs 挂接晚于 router install——Vue Router install 即触发初始导航，守卫请求在劫持激活前发出            | 挂接块必须位于 `createApp` 后、`app.use(router)` 前并 `await setupProdMockServer()`（§15 时序硬约束） |
+| `response` 写 async 不生效                           | `response` 字段必须同步（vite-plugin-mock v3 设计）                                                    | 改用同步 + `timeout: ms`；如需真异步用 `rawResponse: async (req, res) => ...`（参考 mock/auth.ts）    |
+| dev 动态路由 `:code` 读 params 得 undefined          | vite-plugin-mock 3.0.2 把路径参数合并进 `query`（requestMiddleware），不单独传 `params`                | 从 `query.code` 取并做缺失防御（参考 mock/dict.ts 文件头注释）                                        |
+| params 是字符串                                      | URL 动态参数永远是 string                                                                              | `Number(params.id)` 手动转                                                                            |
+| 后端字段名改了但前端没改                             | mock 与生产 schema 漂移                                                                                | 用 Zod schema 共享类型                                                                                |
+| 远程菜单 mock 报"未注册的路由 name"                  | name 不在 COMPONENT_REGISTRY                                                                           | 先在 modules/<m>/routes/index.ts 声明                                                                 |
+
+---
+
+## 15. 生产 mock 接线（mockProdServer.ts，gh-pages 静态部署用）
+
+> 2026-10-20 落地（git df9f19c + cb39d00 + 659cd6a + 6d0db79 连环修复终态）。设计文档：[docs/superpowers/specs/2026-10-20-gh-pages-deploy-design.md](../superpowers/specs/2026-10-20-gh-pages-deploy-design.md)；部署侧上下文见 docs/40。
+
+### 15.1 为什么需要
+
+`vite-plugin-mock@3.0.2` 是**纯 dev-server 插件**——2.9.x 的 `prodEnabled` 在 3.0.0 重写为 dev 中间件后已移除。gh-pages 纯静态托管无 node 中间件，要让线上 demo 有数据，必须在浏览器端手动接线：mockjs 劫持 XHR。
+
+### 15.2 接线架构
+
+```
+src/main.ts
+  └─ if (import.meta.env.PROD && import.meta.env.VITE_USE_MOCK === 'true')
+       await setupProdMockServer()          ← createApp 后、app.use(router) 前，顶层 await
+            │
+            ▼
+mock/mockProdServer.ts
+  ├─ prodAuthMocks（内联，response 形态）
+  ├─ prodDictMocks（内联，DICT_DATA 逐条静态展开）
+  ├─ menu.ts（data 直引）
+  └─ user.ts（data 直引）
+            │
+            ▼
+createProdMockServer(mockModules)  ← vite-plugin-mock/client，浏览器端 mockjs 劫持
+```
+
+**挂接时序硬约束**（两轮 preview 目检 + CDP 实证）：必须在 `createApp` 之后、`app.use(router)` **之前**顶层 `await`。Vue Router install 即触发初始导航——挂接晚于 `use(router)`，守卫的 profile 拉取会抢在 mockjs 劫持激活之前发出（穿透拦截窗口打到静态服务器返回 HTML）。「mount 前 await」也不够：守卫链与 main.ts 后续语句并行执行。
+
+### 15.3 prod 内联 auth/dict 的原因
+
+- **auth**：dev 版 `mock/auth.ts` 用 `rawResponse` 模拟 Set-Cookie HttpOnly 凭证流，client 侧 `createProdMockServer` 只消费 `response` 函数（client.mjs 解构 4 字段，rawResponse 被静默忽略）——更深层是 mockjs 伪造响应写不进 cookie 也校验不了。故 prod 版内联 `response` 形态的 login/profile/logout/refresh，供 `VITE_DEMO_NO_AUTH` 演示模式消费；权限码字面量与 dev 版 `MOCK_PERMISSIONS` **手工对齐**（两处无运行时共享）。
+- **dict**：client wrapper 不从路径提取参数（`:code` 恒 undefined → 命中 400 防御分支）。故把 `DICT_DATA` 逐条静态展开为 `/api/dict/<code>` 独立 url，每条 code 由闭包固化。
+
+### 15.4 新增 mock 模块的同步登记约定
+
+**@trigger**：新增 `mock/<feature>.ts` 路由模块时，须同步登记两处——
+
+1. `mock/index.ts`（dev 聚合导出）
+2. `mock/mockProdServer.ts`（prod 接线清单，`data` 直引或按需内联 prod 版）
+
+两处清单**不许分叉**。`pro-table/` 下的具名导出 `xxxRequestApi` 是组件直连数据源（无 XHR 依赖），两形态均无需接线。
+
+### 15.5 演示模式配合
+
+`VITE_DEMO_NO_AUTH=true` 时守卫跳过登录/权限校验（`src/router/guards/login.ts` + `permission.ts`），演示账号 Admin（admin/123456）全链路可点；按钮级 `v-auth` 仍按真实 permissions 渲染，权限控制演示效果不受影响。
+
+---
 
 ## 🔗 相关文档
 
@@ -437,8 +506,10 @@ vi.mock('@/api/modules/user', () => ({
 | `docs/11-字典使用规范.md`                     | dict mock 用法             |
 | `docs/07-路由模块设计.md` §远程菜单 JSON      | 远程菜单 mock 协议         |
 | `src/api/mock-guard.ts`                       | prod 防御层源码            |
+| `mock/mockProdServer.ts`                      | 生产 mock 接线源码（§15）  |
+| `docs/40-GitHubPages自动部署.md`              | 部署侧上下文（四开关）     |
 | `vite.config.ts`                              | vite-plugin-mock 配置      |
 
 ---
 
-_文档版本：v1.0.1 | 编写日期：2026-09-04 | 配套项目版本：vue3-vite-project 0.x | 修订记录：v1.0.1 (2026-09-04) §3-7 同步 vite-plugin-mock v3（`body`→`response` + `defineMock`→`MockMethod[]` + `rawResponse` 异步契约）；§8 mock-guard 实际实现为 `assertNoMockInProd`（旧 `setupProdMockServer` 不存在）_
+_文档版本：v1.1.0 | 编写日期：2026-09-04 | 配套项目版本：vue3-vite-project 1.0.0 | 修订记录：v1.0.1 (2026-09-04) §3-7 同步 vite-plugin-mock v3（`body`→`response` + `defineMock`→`MockMethod[]` + `rawResponse` 异步契约）；v1.1.0 (2026-10-20) 新增 §15 生产 mock 接线（createProdMockServer 手动接线 + PROD 守卫防 dev 双重劫持 + use(router) 前 await 时序硬约束 + 字典 prod 静态展开双形态 + @trigger 同步登记约定）；§1 决策表/§8 增补 prod 客户端 mock 双形态（修正「prod 无任何 mock」旧表述）；§2 文件组织补 dict-data.ts/_utils.ts/pro-table//mockProdServer.ts；§9/§12 清除 RouteName 联合类型旧表述（2026-07-24 方案 A 起 types.ts 已改 string alias，check-routes 不校验 mock menu name）；§10 字典改 /api/dict/:code 动态路由（query.code 取值坑）+ prod 静态展开；§13 Checklist 第 6/7 条同步；§14 常见坑补穿透挂接时序坑与 query.code 坑_

@@ -35,8 +35,11 @@ pnpm commit              ← 交互式（仅提交，不推送）
 pnpm push                ← 推荐：一站式（add + cz + push）
    ↓
 [husky pre-commit 触发]
-   ├── pnpm lint-staged     ← 对暂存文件跑 eslint --fix + prettier --write
-   └── pnpm type-check      ← 全项目类型检查
+   ├── pnpm generate:tsconfig-paths  ← tsconfig paths 自动同步（hash 不一致才写入，秒级）
+   ├── pnpm lint-staged              ← 对暂存文件跑 eslint --fix + prettier --write
+   ├── pnpm type-check               ← 全项目类型检查（防 lint-staged 漏检）
+   ├── pnpm check:aliases            ← alias 单一来源校验（防生成器被绕过）
+   └── pnpm check:routes             ← 路由一致性（声明 / whitelist / 实际 routes）
    ↓
 [husky commit-msg 触发]
    └── pnpm exec commitlint --edit "$1"  ← 校验 Angular 规范（中文输出）
@@ -72,10 +75,16 @@ pnpm push                ← 推荐：一站式（add + cz + push）
 ### `.husky/pre-commit`
 
 ```sh
+# tsconfig.app.json paths 自动同步（生成器仅在 hash 不一致时写入，秒级）
+pnpm generate:tsconfig-paths
 # 暂存区文件先自动格式化 + ESLint fix（lint-staged 仅处理变更文件，不全库扫描）
 pnpm lint-staged
 # 全局类型检查（防止 lint-staged 漏掉的文件引入类型错误）
 pnpm type-check
+# alias 单一来源校验（CI 兜底，防止生成器被绕过）
+pnpm check:aliases
+# 路由一致性检查（RouteName 联合类型 + whitelist + 实际 routes 三者一致，防止漏改）
+pnpm check:routes
 ```
 
 ### `.husky/commit-msg`
@@ -407,9 +416,11 @@ git push origin HEAD + git push origin v${version}
 
 #### 1. requireBranch 报错 "Must be on branch master,release/*"
 
-**根因**：数组 `["master", "release/*"]` 被 release-it 21 内部 `castArray` 拼成字符串后传给 `wildcard-match`，但 wildcard-match 把它当单 pattern，错误信息说 "Must be on branch master,release/*"（数组被 toString 拼接）。
+**现象**：`.release-it.json` 配置为数组 `"requireBranch": ["master", "release/*"]`，在非 master/release 分支发布时，报错信息把数组 toString 拼成 `"master,release/*"` 显示（视觉上像单 pattern），让人误以为配置被错误合并。
 
-**解决**：改用 single string + comma-separated OR：`"requireBranch": "master,release/*"`（wildcard-match 官方支持的 OR 语法）。
+**实况**：数组形态是**当前实配且可正常工作**——release-it 内部 `castArray` 后逐元素做 wildcard 匹配，master 与 release/* 分支都能正常发布；只是报错信息拼接显示有误导性。
+
+**处理**：无需改配置。若报错出现在 master/release 分支之外的合法场景（如 hotfix 分支），临时在该分支跑 `pnpm release` 前改用 `--no-git.requireBranch` 跳过，或把分支名临时加入数组。
 
 ### 相关文档
 

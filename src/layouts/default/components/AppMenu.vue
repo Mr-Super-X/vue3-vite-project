@@ -124,7 +124,7 @@ function handleSelect(index: string): void {
           </el-menu-item>
 
           <!-- 父菜单分组 -->
-          <!-- el-sub-menu :index 的 as any：EP 2.14 + TS6 已知 prop 类型 bug（同 PortalNav.vue），非业务逻辑 -->
+          <!-- el-sub-menu :index 的 as any：EP 2.14 + TS6 已知 prop 类型 bug，非业务逻辑 -->
           <el-sub-menu v-else :index="node.path as any" teleported :popper-class="popperClass">
             <template #title>
               <MenuIcon v-if="node.icon" :name="node.icon" />

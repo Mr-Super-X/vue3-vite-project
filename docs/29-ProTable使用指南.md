@@ -1070,4 +1070,4 @@ const rows = tableRef.value?.getSelectedRows()
 
 > **主 demo 入口**：`/demo/pro-table-overview`（对应 `ProTableOverview.vue`）—— 查阅全部 prop、事件、实例方法的入口。其余 22 个 demo 按「基础 → 引擎 → 搜索 → 虚拟化 → 编辑 → 选择/拖拽/展开 → 树形/合并/汇总 → 工具栏/批量 → 导入导出 → 样式」分组覆盖各能力边界。
 >
-> **配套 mock**：`src/mock/pro-table/big-data.ts`（10 万行 × 10 列含固定列）+ `src/mock/pro-table/scenarios.ts`（各 demo 业务数据）。
+> **配套 mock**：`mock/pro-table/`（11 个具名导出 `xxxRequestApi` 文件，组件直连数据源无 XHR 依赖；big-data.ts 为 10 万行 × 10 列含固定列的大数据场景）。

@@ -144,18 +144,21 @@ console 全程零 error/warn；生产构建 Wide chunk 独立（GeoJSON 不拖�
 
 ## 7. 相关文件索引
 
-| 文件                                              | 职责                                     |
-| ------------------------------------------------- | ---------------------------------------- |
-| `src/layouts/big/index.vue`                       | 纯壳布局（fixed 容器 + stage + provide） |
-| `src/layouts/big/config/scale.ts`                 | scale 纯计算 + meta 守卫 + inject 契约   |
-| `src/layouts/big/config/scale.spec.ts`            | 18 用例（四视口/非法 meta/防御回退）     |
-| `src/modules/big-demo/views/index.vue`            | 1920 标准大屏                            |
-| `src/modules/big-demo/views/Wide.vue`             | 9000 超宽拼接屏                          |
-| `src/modules/big-demo/components/BigChart.vue`    | ECharts 薄封装（dpr×scale 防模糊）       |
-| `src/modules/big-demo/components/PanelBox.vue`    | 四角装饰面板（高度契约见文件头）         |
-| `src/modules/big-demo/components/KpiCard.vue`     | 指标卡（trend 三态）                     |
-| `src/modules/big-demo/components/RankingList.vue` | 排名列表（1920 稿尺度）                  |
-| `src/modules/big-demo/components/SwitchGroup.vue` | 联动开关组（9000 页）                    |
-| `src/modules/big-demo/composables/useClock.ts`    | 实时时钟（onScopeDispose，带 spec）      |
-| `src/modules/big-demo/config/charts.ts`           | 1920 页三个图表 option                   |
-| `src/modules/big-demo/config/china-map.ts`        | 地图 option + GeoJSON 注册（独立 chunk） |
+| 文件                                              | 职责                                         |
+| ------------------------------------------------- | -------------------------------------------- |
+| `src/layouts/big/index.vue`                       | 纯壳布局（fixed 容器 + stage + provide）     |
+| `src/layouts/big/config/scale.ts`                 | scale 纯计算 + meta 守卫 + inject 契约       |
+| `src/layouts/big/config/scale.spec.ts`            | 18 用例（四视口/非法 meta/防御回退）         |
+| `src/modules/big-demo/views/index.vue`            | 1920 标准大屏                                |
+| `src/modules/big-demo/views/Wide.vue`             | 9000 超宽拼接屏                              |
+| `src/modules/big-demo/views/StateDemo.vue`        | 异步数据五态实践页（成功/加载/错误/空/断连） |
+| `src/modules/big-demo/components/BigChart.vue`    | ECharts 薄封装（dpr×scale 防模糊）           |
+| `src/modules/big-demo/components/PanelBox.vue`    | 四角装饰面板（高度契约见文件头）             |
+| `src/modules/big-demo/components/KpiCard.vue`     | 指标卡（trend 三态）                         |
+| `src/modules/big-demo/components/RankingList.vue` | 排名列表（1920 稿尺度）                      |
+| `src/modules/big-demo/components/SwitchGroup.vue` | 联动开关组（9000 页）                        |
+| `src/modules/big-demo/composables/useClock.ts`    | 实时时钟（onScopeDispose，带 spec）          |
+| `src/modules/big-demo/config/charts.ts`           | 1920 页三个图表 option                       |
+| `src/modules/big-demo/config/china-map.ts`        | 地图 option + GeoJSON 注册（独立 chunk）     |
+| `src/modules/big-demo/apis/index.ts`              | 静态 mock 数据层 + jitterValue 数值抖动      |
+| `src/modules/big-demo/store/index.ts`             | 模块私有 store（useBigDemoStore 草稿态）     |

@@ -1,11 +1,12 @@
 /**
- * home 模块公开出口（barrel re-export）。
+ * home 模块公开出口（barrel）。
  *
- * 外部消费方统一从 `@/modules/home` 引入，模块内部 store / views / routes 不对外暴露。
+ * 2026-10-20 企业官网改造：官网为纯静态展示页（文案集中在 `./config/site.ts`），
+ * 不再有对外暴露的 store / composable；本文件仅保留模块说明。
  *
- * @see [`./store`](./store/index.ts) 模块私有 store
- * @see [`./routes`](./routes/index.ts) 路由定义
- * @see [`./views/index.vue`](./views/index.vue) 首页入口
+ * @see [`./routes`](./routes/index.ts) 路由定义（被 router/auto-register 扫描）
+ * @see [`./config/site.ts`](./config/site.ts) 站点文案/数据单源
+ * @see [`./views/index.vue`](./views/index.vue) 官网首页入口
  * @group 业务模块：Home
  */
-export { useHomeStore } from './store'
+export {}

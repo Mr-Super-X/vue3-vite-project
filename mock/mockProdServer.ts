@@ -8,7 +8,7 @@
  * 挂接点：src/main.ts 条件分支（仅 VITE_USE_MOCK==='true' 的动态 import），
  * 常规生产构建（'false'）整分支被 tree-shake，产物不含 mock。
  *
- * 模块清单说明：3 个 data 直引模块（menu/portal-overview/user）+ 2 个内联 prod 版
+ * 模块清单说明：2 个 data 直引模块（menu/user）+ 2 个内联 prod 版
  * （prodAuthMocks / prodDictMocks——字典静态展开，client wrapper 不支持路径参数）。
  * mock/index.ts 只聚合 auth/user/menu（dev 模式 viteMockServe 按目录扫描不受此限）。
  * pro-table/ 下 11 个文件是具名导出 xxxRequestApi（ProTableRequestApi 组件直连数据源，
@@ -31,7 +31,6 @@ import { createProdMockServer } from 'vite-plugin-mock/client'
 
 import { DICT_DATA } from './dict-data'
 import menu from './menu'
-import portalOverview from './portal-overview'
 import user from './user'
 
 /**
@@ -86,13 +85,7 @@ const prodDictMocks: MockMethod[] = Object.entries(DICT_DATA).map(([code, list])
 }))
 
 /** 全量 mock 路由清单（data 直引模块 + prod 版 auth/dict 内联） */
-const mockModules: MockMethod[] = [
-  ...prodAuthMocks,
-  ...prodDictMocks,
-  ...menu,
-  ...portalOverview,
-  ...user,
-]
+const mockModules: MockMethod[] = [...prodAuthMocks, ...prodDictMocks, ...menu, ...user]
 
 /**
  * 注册生产 mock（浏览器端 mockjs XHR 劫持）。
