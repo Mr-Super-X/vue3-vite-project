@@ -13,8 +13,7 @@ import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import { reactionItems } from './configs/xform-demos-api'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import xFormSource from './XFormReaction.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
 
@@ -161,69 +160,65 @@ const tocItems = [
   { id: 'demo-reaction', label: '反应式联动演示' },
   { id: 'api-reaction', label: 'ReactionConfig' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="反应式防抖 / 节流（strategy + delay）"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        'ReactionConfig 的 strategy + delay 字段，应对 reaction 函数被高频调用的场景：',
-        '1. 远程搜索 debounce 300ms:输入「苹果」,连续打字 5 字符只触发 1 次远程(mockRemoteSearch)',
-        '2. 自动保存 throttle 1s:输入备注时,1 秒内多次 input 只触发 1 次 lastSavedAt',
-        '3. 默认 sync:开关切换通知,通知类型 Select 立即禁用/启用',
-        '4. hidden 必填回归:关闭「需要发票」时发票抬头隐藏,留空点保存也通过;打开后留空保存报必填',
-        '注意:searchCallCount / saveCallCount 显示在 model 区域,直观看到防抖/节流效果',
-      ]"
-    >
-      <section id="demo-reaction">
-        <DemoField label="防抖/节流" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('actions')">
-            <el-button type="primary" @click="onSave">保存</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
+  <DemoFrame
+    title="反应式防抖 / 节流（strategy + delay）"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      'ReactionConfig 的 strategy + delay 字段，应对 reaction 函数被高频调用的场景：',
+      '1. 远程搜索 debounce 300ms:输入「苹果」,连续打字 5 字符只触发 1 次远程(mockRemoteSearch)',
+      '2. 自动保存 throttle 1s:输入备注时,1 秒内多次 input 只触发 1 次 lastSavedAt',
+      '3. 默认 sync:开关切换通知,通知类型 Select 立即禁用/启用',
+      '4. hidden 必填回归:关闭「需要发票」时发票抬头隐藏,留空点保存也通过;打开后留空保存报必填',
+      '注意:searchCallCount / saveCallCount 显示在 model 区域,直观看到防抖/节流效果',
+    ]"
+  >
+    <section id="demo-reaction">
+      <DemoField label="防抖/节流" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('actions')">
+          <el-button type="primary" @click="onSave">保存</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <div :class="bem.e('state')">
+          <ModelPreview :model="model" />
+
+          <!-- 搜索结果:输入框正下方实时显示,更醒目 -->
+          <div v-if="model.keyword" :class="bem.e('results')">
+            <strong>搜索结果({{ reactionStore.searchResults.length }} 项):</strong>
+            <span v-if="reactionStore.searchResults.length > 0">
+              <el-tag
+                v-for="item in reactionStore.searchResults"
+                :key="item"
+                :class="bem.e('tag')"
+                size="small"
+              >
+                {{ item }}
+              </el-tag>
+            </span>
+            <span v-else style="color: #909399">无匹配(试试输入"苹果"/"Apple"/"ban")</span>
           </div>
-          <div :class="bem.e('state')">
-            <ModelPreview :model="model" />
 
-            <!-- 搜索结果:输入框正下方实时显示,更醒目 -->
-            <div v-if="model.keyword" :class="bem.e('results')">
-              <strong>搜索结果({{ reactionStore.searchResults.length }} 项):</strong>
-              <span v-if="reactionStore.searchResults.length > 0">
-                <el-tag
-                  v-for="item in reactionStore.searchResults"
-                  :key="item"
-                  :class="bem.e('tag')"
-                  size="small"
-                >
-                  {{ item }}
-                </el-tag>
-              </span>
-              <span v-else style="color: #909399">无匹配(试试输入"苹果"/"Apple"/"ban")</span>
-            </div>
-
-            <div :class="bem.e('counter')">
-              <strong>搜索调用次数（停止输入 300ms 后 searchCallCount +1）:</strong>
-              {{ searchCallCount }}
-              <br />
-              <strong>保存触发次数（throttle 1s 后 +1）:</strong>
-              {{ saveCallCount }}
-              <br />
-              <strong>最近一次保存时间:</strong>
-              {{ reactionStore.lastSavedAt || '(尚未保存)' }}
-            </div>
+          <div :class="bem.e('counter')">
+            <strong>搜索调用次数（停止输入 300ms 后 searchCallCount +1）:</strong>
+            {{ searchCallCount }}
+            <br />
+            <strong>保存触发次数（throttle 1s 后 +1）:</strong>
+            {{ saveCallCount }}
+            <br />
+            <strong>最近一次保存时间:</strong>
+            {{ reactionStore.lastSavedAt || '(尚未保存)' }}
           </div>
-        </DemoField>
-      </section>
+        </div>
+      </DemoField>
+    </section>
 
-      <ApiTable title="ReactionConfig" :items="reactionItems" anchor="api-reaction" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="ReactionConfig" :items="reactionItems" anchor="api-reaction" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

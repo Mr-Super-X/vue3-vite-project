@@ -21,11 +21,10 @@
  */
 import { ElButton, ElDialog } from 'element-plus'
 import { ProTable, type ProColumn } from '@/components/ProTable'
-import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { autoHeightItems, autoHeightConfigItems } from './configs/protable-demos-api'
 import { projectRequestApi, type ProjectRow } from './configs/projects'
 
@@ -58,53 +57,54 @@ const tocItems = [
   { id: 'api-autoheight', label: 'autoHeight Prop' },
   { id: 'api-autoheight-config', label: 'AutoHeightConfig' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="ProTableAutoHeight 自动高度 + 全屏"
-      source="src/components/ProTable/composables/useAutoHeight.ts"
-      :introductions="[
-        'autoHeight 让表格区撑满视口剩余高度（表头固定 + 表体滚动 + 分页器常驻）。',
-        '工具栏全屏按钮与刷新按钮紧贴成组，复合在本页一起验证布局能力。',
-      ]"
-    >
-      <section id="demo-autoheight" :class="bem.b()">
-        <DemoField label="autoHeight（缩小窗口验证）" :code="autoHeightCode">
-          <p :class="bem.e('hint')">
-            验证：① 缩小浏览器窗口高度 → 表体出现纵向滚动条、分页器始终可见 ② 拖回窗口 →
-            表体高度跟随伸缩 ③ 与 virtualized 同开会 console.warn（互斥，本页未同开）
-          </p>
-          <ProTable
-            :columns="columns"
-            :request-api="projectRequestApi"
-            table-key="demo-v31-autoheight"
-            row-key="id"
-            auto-height
-          />
-        </DemoField>
+  <DemoFrame
+    title="ProTableAutoHeight 自动高度 + 全屏"
+    source="src/components/ProTable/composables/useAutoHeight.ts"
+    :introductions="[
+      'autoHeight 让表格区撑满视口剩余高度（表头固定 + 表体滚动 + 分页器常驻）。',
+      '工具栏全屏按钮与刷新按钮紧贴成组，复合在本页一起验证布局能力。',
+    ]"
+  >
+    <section id="demo-autoheight" :class="bem.b()">
+      <DemoField label="autoHeight（缩小窗口验证）" :code="autoHeightCode">
+        <p :class="bem.e('hint')">
+          验证：① 缩小浏览器窗口高度 → 表体出现纵向滚动条、分页器始终可见 ② 拖回窗口 →
+          表体高度跟随伸缩 ③ 与 virtualized 同开会 console.warn（互斥，本页未同开）
+        </p>
+        <ProTable
+          :columns="columns"
+          :request-api="projectRequestApi"
+          table-key="demo-v31-autoheight"
+          row-key="id"
+          auto-height
+        />
+      </DemoField>
 
-        <DemoField
-          id="demo-fullscreen"
-          label="工具栏全屏 + el-dialog 联动（z-index 1500 < 2000+）"
-          :code="fullscreenCode"
-        >
-          <p :class="bem.e('hint')">
-            验证：① 点击工具栏全屏按钮 → 表格 fixed 铺满视口、按钮高亮 ② Esc 或再次点击退出 ③
-            全屏状态下点下方"打开 el-dialog"按钮 → dialog 显示在最上层（z-index 2000+ > 全屏层
-            1500，dialog 蒙层 + body 完整可见）
-          </p>
-          <!-- ProTable 启用 autoHeight + 工具栏内置全屏按钮 -->
-          <ProTable
-            :columns="columns"
-            :request-api="projectRequestApi"
-            table-key="demo-v31-fullscreen"
-            row-key="id"
-            auto-height
-            :page-size="5"
-          />
-          <!--
+      <DemoField
+        id="demo-fullscreen"
+        label="工具栏全屏 + el-dialog 联动（z-index 1500 < 2000+）"
+        :code="fullscreenCode"
+      >
+        <p :class="bem.e('hint')">
+          验证：① 点击工具栏全屏按钮 → 表格 fixed 铺满视口、按钮高亮 ② Esc 或再次点击退出 ③
+          全屏状态下点下方"打开 el-dialog"按钮 → dialog 显示在最上层（z-index 2000+ > 全屏层
+          1500，dialog 蒙层 + body 完整可见）
+        </p>
+        <!-- ProTable 启用 autoHeight + 工具栏内置全屏按钮 -->
+        <ProTable
+          :columns="columns"
+          :request-api="projectRequestApi"
+          table-key="demo-v31-fullscreen"
+          row-key="id"
+          auto-height
+          :page-size="5"
+        />
+        <!--
             全屏层 z-index 验证：用项目外的 ElDialog（element-plus 原生）演示 z-index 优先级。
             位置在 ProTable 之外（demo 区域），而非 ProTable 内部插槽 —— 验证"全屏后弹窗
             不被遮挡"是组件库层级问题，与 ProTable 内部结构无关。
@@ -113,47 +113,42 @@ const tocItems = [
             - 全屏态 → 点下方按钮 → dialog 在最上层（dialog z-index 2000+ > 全屏 1500）
             - 非全屏态 → 点下方按钮 → dialog 在全屏之上依然成立（控制对照）
           -->
-          <div :class="bem.e('dialog-trigger')">
-            <ElButton type="primary" plain @click="dialogVisible = true">
-              打开 el-dialog（验证全屏内不被遮挡）
-            </ElButton>
-            <ElDialog
-              v-model="dialogVisible"
-              title="全屏内打开 el-dialog"
-              width="520"
-              align-center
-              append-to-body
-            >
-              <p :class="bem.e('dialog-text')">此 dialog 应渲染在 ProTable 全屏层之上。</p>
-              <p :class="bem.e('dialog-text')">
-                element-plus ElDialog 默认 z-index 2000+，ProTable 全屏 z-index 1500 —— 层级关系保证
-                dialog 永远在最上层。
-              </p>
-              <p :class="bem.e('dialog-text')">
-                <strong>验证手法：</strong>
-                先点工具栏「⛶ 全屏」按钮（表格 fixed 铺满）→ 再点下方按钮 → 观察 dialog
-                蒙层是否覆盖全屏表格 + dialog body 是否可见。
-              </p>
-              <template #footer>
-                <ElButton @click="dialogVisible = false">关闭</ElButton>
-              </template>
-            </ElDialog>
-          </div>
-        </DemoField>
-      </section>
+        <div :class="bem.e('dialog-trigger')">
+          <ElButton type="primary" plain @click="dialogVisible = true">
+            打开 el-dialog（验证全屏内不被遮挡）
+          </ElButton>
+          <ElDialog
+            v-model="dialogVisible"
+            title="全屏内打开 el-dialog"
+            width="520"
+            align-center
+            append-to-body
+          >
+            <p :class="bem.e('dialog-text')">此 dialog 应渲染在 ProTable 全屏层之上。</p>
+            <p :class="bem.e('dialog-text')">
+              element-plus ElDialog 默认 z-index 2000+，ProTable 全屏 z-index 1500 —— 层级关系保证
+              dialog 永远在最上层。
+            </p>
+            <p :class="bem.e('dialog-text')">
+              <strong>验证手法：</strong>
+              先点工具栏「⛶ 全屏」按钮（表格 fixed 铺满）→ 再点下方按钮 → 观察 dialog
+              蒙层是否覆盖全屏表格 + dialog body 是否可见。
+            </p>
+            <template #footer>
+              <ElButton @click="dialogVisible = false">关闭</ElButton>
+            </template>
+          </ElDialog>
+        </div>
+      </DemoField>
+    </section>
 
-      <ApiTable title="autoHeight Prop" :items="autoHeightItems" anchor="api-autoheight" />
-      <ApiTable
-        title="AutoHeightConfig 字段"
-        :items="autoHeightConfigItems"
-        anchor="api-autoheight-config"
-      />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="autoHeight Prop" :items="autoHeightItems" anchor="api-autoheight" />
+    <ApiTable
+      title="AutoHeightConfig 字段"
+      :items="autoHeightConfigItems"
+      anchor="api-autoheight-config"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

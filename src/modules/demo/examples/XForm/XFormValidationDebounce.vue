@@ -18,8 +18,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { debounceItems } from './configs/xform-demos-api'
 import xFormSource from './XFormValidationDebounce.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
@@ -145,66 +144,65 @@ const tocItems = [
   { id: 'demo-debounce', label: 'debounce 调度演示' },
   { id: 'api-debounce', label: '字段速查' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="跨字段校验 debounce 调度（高频输入减负）"
-      source="src/components/form-schema/composables/use-cross-field-trigger.ts"
-      :introductions="[
-        '跨字段校验默认每键触发（密码/确认密码高频输入会视觉干扰）。',
-        'A 模式（实时）：每键触发 confirmPassword 校验，counter 飙升；',
-        'B 模式（全局 500ms）：停止输入 500ms 后只跑 1 次，counter +1；',
-        'C 模式（全局 500ms + 字段级覆盖）：confirmPassword 1000ms（更慢），email 字段覆盖 debounceMs: 0（实时，跨字段 asyncValidator 演示），',
-        'schema.debounceValidation 顶层全局默认，rules[i].debounceMs 字段级覆盖（0 = 强制实时）。',
-      ]"
-    >
-      <section id="demo-debounce">
-        <div :class="bem.e('controls')">
-          <el-radio-group v-model="mode" size="large">
-            <el-radio-button value="realtime">A 实时</el-radio-button>
-            <el-radio-button value="debounce500">B 全局 500ms</el-radio-button>
-            <el-radio-button value="mixed">C 全局 500ms + 字段覆盖</el-radio-button>
-          </el-radio-group>
-          <span :class="bem.e('hint')">当前模式：{{ currentModeLabel }}</span>
+  <DemoFrame
+    title="跨字段校验 debounce 调度（高频输入减负）"
+    source="src/components/form-schema/composables/use-cross-field-trigger.ts"
+    :introductions="[
+      '跨字段校验默认每键触发（密码/确认密码高频输入会视觉干扰）。',
+      'A 模式（实时）：每键触发 confirmPassword 校验，counter 飙升；',
+      'B 模式（全局 500ms）：停止输入 500ms 后只跑 1 次，counter +1；',
+      'C 模式（全局 500ms + 字段级覆盖）：confirmPassword 1000ms（更慢），email 字段覆盖 debounceMs: 0（实时，跨字段 asyncValidator 演示），',
+      'schema.debounceValidation 顶层全局默认，rules[i].debounceMs 字段级覆盖（0 = 强制实时）。',
+    ]"
+  >
+    <section id="demo-debounce">
+      <div :class="bem.e('controls')">
+        <el-radio-group v-model="mode" size="large">
+          <el-radio-button value="realtime">A 实时</el-radio-button>
+          <el-radio-button value="debounce500">B 全局 500ms</el-radio-button>
+          <el-radio-button value="mixed">C 全局 500ms + 字段覆盖</el-radio-button>
+        </el-radio-group>
+        <span :class="bem.e('hint')">当前模式：{{ currentModeLabel }}</span>
+      </div>
+      <DemoField label="高频输入演示：连打 6 字符 '123456' 看 counter 变化" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onSave">校验</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+          <el-button
+            @click="Object.keys(counter).forEach((k) => (counter[k as keyof typeof counter] = 0))"
+          >
+            清零 counter
+          </el-button>
         </div>
-        <DemoField label="高频输入演示：连打 6 字符 '123456' 看 counter 变化" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onSave">校验</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-            <el-button
-              @click="Object.keys(counter).forEach((k) => (counter[k as keyof typeof counter] = 0))"
-            >
-              清零 counter
-            </el-button>
+        <div :class="bem.e('counters')">
+          <div :class="bem.e('counter')">
+            <strong>confirmPassword 校验次数：</strong>
+            {{ counter.confirmPassword }}
+            <span :class="bem.e('counter-tip')">
+              连打 6 字符：A 模式应 6 次，B 模式应 1 次，C 模式应 1 次（停止打字后等 1 秒：C 模式
+              confirmPassword 防抖 1000ms 后触发）
+            </span>
           </div>
-          <div :class="bem.e('counters')">
-            <div :class="bem.e('counter')">
-              <strong>confirmPassword 校验次数：</strong>
-              {{ counter.confirmPassword }}
-              <span :class="bem.e('counter-tip')">
-                连打 6 字符：A 模式应 6 次，B 模式应 1 次，C 模式应 1 次（停止打字后等 1 秒：C 模式
-                confirmPassword 防抖 1000ms 后触发）
-              </span>
-            </div>
-            <div :class="bem.e('counter')">
-              <strong>confirmEmail 校验次数：</strong>
-              {{ counter.confirmEmail }}
-              <span :class="bem.e('counter-tip')">
-                连打 6 字符：A 模式应 6 次，B 模式应 1 次，C 模式应 6 次（debounceMs: 0 强制实时）
-              </span>
-            </div>
+          <div :class="bem.e('counter')">
+            <strong>confirmEmail 校验次数：</strong>
+            {{ counter.confirmEmail }}
+            <span :class="bem.e('counter-tip')">
+              连打 6 字符：A 模式应 6 次，B 模式应 1 次，C 模式应 6 次（debounceMs: 0 强制实时）
+            </span>
           </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
-      <ApiTable title="debounce 字段速查" :items="debounceItems" anchor="api-debounce" />
-    </DemoFrame>
-    <template #toc><DocToc :items="tocItems" /></template>
-  </DocLayout>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
+    <ApiTable title="debounce 字段速查" :items="debounceItems" anchor="api-debounce" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

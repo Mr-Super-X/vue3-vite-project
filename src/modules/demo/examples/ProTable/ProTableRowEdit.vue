@@ -17,11 +17,10 @@
  * 4. 双击姓名 + 双击部门 → 两个字段同时进入编辑
  */
 import type { ProColumn, ProTableExpose } from '@/components/ProTable/types'
-import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { employeeRequestApi } from '@mock/pro-table/employee'
 import {
   rowEditPropsItems,
@@ -102,6 +101,8 @@ const tocItems = [
   { id: 'api-row-edit-expose', label: 'Expose API' },
 ]
 
+useDocToc(tocItems)
+
 /* ───────────── 代码片段 ───────────── */
 
 const basicCode = `<template>
@@ -139,51 +140,45 @@ async function saveAll() {
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="ProTableRowEdit 行内编辑"
-      source="src/components/ProTable/composables/useRowEdit.ts"
-      :introductions="[
-        '基于 useRowEdit composable 实现的行级编辑状态机：双击进入 / 多行并行 / 异步校验 / 草稿独立。',
-        '下方演示：双击姓名（input 实时同步）+ 下拉部门 + 数字工资（blur 失焦同步，双模式对比）+ 异步校验（工资超限）。',
-        '配套 ProColumn.edit 字段声明哪些列可编辑（含 updateEvent 同步时机），ProTableExpose 提供 saveEdit/cancelEdit/startEdit API。',
-      ]"
-    >
-      <!-- 演示区 -->
-      <section id="demo-row-edit" :class="bem.b()">
-        <DemoField label="基本用法" :code="basicCode">
-          <ProTable
-            ref="tableRef"
-            :columns="columns"
-            :request-api="employeeRequestApi"
-            :enable-row-edit="config"
-            row-key="id"
-          />
-          <div :class="bem.e('actions')">
-            <el-button type="primary" @click="handleSaveAll">保存全部</el-button>
-            <el-button @click="handleCancelAll">取消全部</el-button>
-          </div>
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="ProTableRowEdit 行内编辑"
+    source="src/components/ProTable/composables/useRowEdit.ts"
+    :introductions="[
+      '基于 useRowEdit composable 实现的行级编辑状态机：双击进入 / 多行并行 / 异步校验 / 草稿独立。',
+      '下方演示：双击姓名（input 实时同步）+ 下拉部门 + 数字工资（blur 失焦同步，双模式对比）+ 异步校验（工资超限）。',
+      '配套 ProColumn.edit 字段声明哪些列可编辑（含 updateEvent 同步时机），ProTableExpose 提供 saveEdit/cancelEdit/startEdit API。',
+    ]"
+  >
+    <!-- 演示区 -->
+    <section id="demo-row-edit" :class="bem.b()">
+      <DemoField label="基本用法" :code="basicCode">
+        <ProTable
+          ref="tableRef"
+          :columns="columns"
+          :request-api="employeeRequestApi"
+          :enable-row-edit="config"
+          row-key="id"
+        />
+        <div :class="bem.e('actions')">
+          <el-button type="primary" @click="handleSaveAll">保存全部</el-button>
+          <el-button @click="handleCancelAll">取消全部</el-button>
+        </div>
+      </DemoField>
+    </section>
 
-      <!-- API 文档 -->
-      <ApiTable title="enableRowEdit 配置" :items="rowEditPropsItems" anchor="api-row-edit" />
-      <ApiTable
-        title="ProColumn.edit 字段"
-        :items="rowEditColumnItems"
-        anchor="api-row-edit-column"
-      />
-      <ApiTable
-        title="Expose API（saveEdit/cancelEdit/startEdit）"
-        :items="rowEditExposeItems"
-        anchor="api-row-edit-expose"
-      />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <!-- API 文档 -->
+    <ApiTable title="enableRowEdit 配置" :items="rowEditPropsItems" anchor="api-row-edit" />
+    <ApiTable
+      title="ProColumn.edit 字段"
+      :items="rowEditColumnItems"
+      anchor="api-row-edit-column"
+    />
+    <ApiTable
+      title="Expose API（saveEdit/cancelEdit/startEdit）"
+      :items="rowEditExposeItems"
+      anchor="api-row-edit-expose"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

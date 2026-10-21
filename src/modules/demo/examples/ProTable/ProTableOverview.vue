@@ -23,8 +23,7 @@ import type { ProColumn } from '@/components/ProTable'
 import type { ProTableExpose } from '@/components/ProTable/types'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import ApiTable from '../../components/ApiTable.vue'
 import {
   overviewRequestApi,
@@ -138,6 +137,8 @@ const tocItems = [
   { id: 'api-expose', label: 'Expose', level: 2 },
   { id: 'api-columns', label: 'ProColumn 字段', level: 2 },
 ]
+
+useDocToc(tocItems)
 
 /* ───────────── API 文档 items（移到变量，避免模板字符串解析问题） ───────────── */
 
@@ -483,224 +484,218 @@ const capabilityOverviewCode = `<template>
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="ProTable 配置驱动表格"
-      source="src/components/ProTable/ProTable.vue"
-      :introductions="[
-        '基于 columns schema 的配置驱动表格组件，同一 columns 数组同时驱动搜索项与表格列。',
-        '下方演示：基础用法 / enum 自动渲染 ElTag / 自定义渲染（render） / 自定义插槽 / defineExpose 调用 / 多选勾选清除 / 四类能力一键切换。',
-      ]"
-    >
-      <div :class="bem.e('start-here')">
-        <strong>👀 先看这个 —— 7 个场景按推荐顺序浏览</strong>
-        <p>
-          <strong>① 基础</strong>
-          （必看）—— columns 同时驱动搜索与表格
-        </p>
-        <p>
-          <strong>② enum</strong>
-          （必看）—— 字典自动渲染 ElTag
-        </p>
-        <p>
-          <strong>③ render</strong>
-          （进阶）—— JSX 自定义单元格渲染
-        </p>
-        <p>
-          <strong>④ 插槽</strong>
-          （进阶）—— tableHeader / toolButton / operation / id
-        </p>
-        <p>
-          <strong>⑤ defineExpose</strong>
-          （进阶）—— refresh / reset 外部调用
-        </p>
-        <p>
-          <strong>⑥ 多选</strong>
-          （进阶）—— 勾选 / 清除勾选 + 跨页记忆
-        </p>
-        <p>
-          <strong>⑦ 4 类能力</strong>
-          （参考）—— 行内编辑 / 树形 / 单元格合并 / 行拖拽一键开关
-        </p>
-      </div>
+  <DemoFrame
+    title="ProTable 配置驱动表格"
+    source="src/components/ProTable/ProTable.vue"
+    :introductions="[
+      '基于 columns schema 的配置驱动表格组件，同一 columns 数组同时驱动搜索项与表格列。',
+      '下方演示：基础用法 / enum 自动渲染 ElTag / 自定义渲染（render） / 自定义插槽 / defineExpose 调用 / 多选勾选清除 / 四类能力一键切换。',
+    ]"
+  >
+    <div :class="bem.e('start-here')">
+      <strong>👀 先看这个 —— 7 个场景按推荐顺序浏览</strong>
+      <p>
+        <strong>① 基础</strong>
+        （必看）—— columns 同时驱动搜索与表格
+      </p>
+      <p>
+        <strong>② enum</strong>
+        （必看）—— 字典自动渲染 ElTag
+      </p>
+      <p>
+        <strong>③ render</strong>
+        （进阶）—— JSX 自定义单元格渲染
+      </p>
+      <p>
+        <strong>④ 插槽</strong>
+        （进阶）—— tableHeader / toolButton / operation / id
+      </p>
+      <p>
+        <strong>⑤ defineExpose</strong>
+        （进阶）—— refresh / reset 外部调用
+      </p>
+      <p>
+        <strong>⑥ 多选</strong>
+        （进阶）—— 勾选 / 清除勾选 + 跨页记忆
+      </p>
+      <p>
+        <strong>⑦ 4 类能力</strong>
+        （参考）—— 行内编辑 / 树形 / 单元格合并 / 行拖拽一键开关
+      </p>
+    </div>
 
-      <!-- 基础用法 -->
-      <section id="demo-basic">
-        <DemoField label="基础用法（columns 驱动搜索 + 表格）" :code="basicCode">
-          <ProTable
-            :columns="columns"
-            :request-api="overviewRequestApi"
-            table-key="demo-pro-table-basic"
-            row-key="id"
-            :page-size="5"
-          >
-            <template #operation="{ row }">
-              <ElButton link type="primary" size="small" @click="handleViewDetail(row)">
-                查看
-              </ElButton>
-            </template>
-            <template #id="{ row }">
-              <ElTag size="small">#{{ row.id }}</ElTag>
-            </template>
-          </ProTable>
-        </DemoField>
-      </section>
-
-      <!-- enum 自动渲染 ElTag -->
-      <section id="demo-enum">
-        <DemoField label="enum 自动渲染 ElTag" :code="enumCode">
-          <p :class="bem.e('hint')">
-            <code>enum</code>
-            字段自动渲染为 ElTag，搜索项自动生成下拉（见上方"基础用法"演示）。
-          </p>
-          <div :class="bem.e('tag-demo')">
-            <ElTag v-for="opt in STATUS_OPTIONS" :key="String(opt.value)" :type="opt.tagType">
-              {{ opt.label }} ({{ opt.value }})
-            </ElTag>
-          </div>
-        </DemoField>
-      </section>
-
-      <!-- 自定义插槽 -->
-      <!-- 自定义渲染（col.render） -->
-      <section id="demo-render">
-        <DemoField label="自定义渲染（render 函数返回 VNode）" :code="renderCode">
-          <ProTable
-            :columns="renderColumns"
-            :request-api="overviewRequestApi"
-            table-key="demo-pro-table-render"
-            row-key="id"
-            :page-size="5"
-          />
-        </DemoField>
-      </section>
-
-      <section id="demo-slots">
-        <DemoField label="自定义插槽" :code="slotsCode">
-          <ProTable
-            :columns="columns"
-            :request-api="overviewRequestApi"
-            table-key="demo-pro-table-slots"
-            row-key="id"
-            :page-size="3"
-          >
-            <template #tableHeader>
-              <strong>用户列表（自定义标题，演示 tableHeader 插槽）</strong>
-            </template>
-            <template #toolButton>
-              <ElButton size="small">自定义按钮（演示 toolButton 插槽）</ElButton>
-            </template>
-            <template #operation="{ row }">
-              <ElButton link type="primary" size="small" @click="handleViewDetail(row)">
-                查看
-              </ElButton>
-              <ElButton link type="danger" size="small" @click="handleDelete(row)">删除</ElButton>
-            </template>
-            <template #id="{ row }">
-              <ElTag size="small" type="warning">#{{ row.id }}</ElTag>
-            </template>
-          </ProTable>
-        </DemoField>
-      </section>
-
-      <!-- defineExpose -->
-      <section id="demo-expose">
-        <DemoField label="defineExpose 调用（refresh / reset）" :code="exposeCode">
-          <div :class="bem.e('actions')">
-            <ElButton :icon="Refresh" type="primary" @click="handleRefresh">手动 refresh</ElButton>
-            <ElButton :icon="Search" @click="handleReset">手动 reset</ElButton>
-            <span :class="bem.e('msg')">外部按钮触发 ProTable 实例方法</span>
-          </div>
-          <ProTable
-            ref="proTableRef"
-            :columns="columns"
-            :request-api="overviewRequestApi"
-            table-key="demo-pro-table-expose"
-            row-key="id"
-            :page-size="3"
-          >
-            <template #id="{ row }">
-              <ElTag size="small">#{{ row.id }}</ElTag>
-            </template>
-          </ProTable>
-        </DemoField>
-      </section>
-
-      <!-- 多选（勾选 / 清除勾选） -->
-      <section id="demo-selection">
-        <DemoField label="多选（勾选 / 清除勾选，含跨页记忆）" :code="selectionCode">
-          <div :class="bem.e('actions')">
-            <ElButton type="primary" @click="handleGetSelected">获取选中行</ElButton>
-            <ElButton @click="handleClearSelection">清除勾选</ElButton>
-            <span :class="bem.e('msg')">勾选多行后点按钮验证；翻到第 2 页再勾选，可验跨页记忆</span>
-          </div>
-          <ProTable
-            ref="selectionRef"
-            :columns="selectionColumns"
-            :request-api="overviewRequestApi"
-            table-key="demo-pro-table-selection"
-            row-key="id"
-            :page-size="5"
-          />
-        </DemoField>
-      </section>
-
-      <!-- API 文档 -->
-      <ApiTable title="ProTable Props" :items="propsItems" />
-      <ApiTable title="ProTable Slots" :items="slotsItems" />
-      <ApiTable title="ProTable Expose（ref）" :items="exposeItems" />
-      <ApiTable title="ProColumn 关键字段" :items="columnsItems" />
-
-      <!-- v2.0 能力切换面板（Task 12） -->
-      <section id="demo-v2-capabilities">
-        <DemoField
-          label="四类能力一键切换（行内编辑 / 树形 / 单元格合并 / 行拖拽）"
-          :code="capabilityOverviewCode"
+    <!-- 基础用法 -->
+    <section id="demo-basic">
+      <DemoField label="基础用法（columns 驱动搜索 + 表格）" :code="basicCode">
+        <ProTable
+          :columns="columns"
+          :request-api="overviewRequestApi"
+          table-key="demo-pro-table-basic"
+          row-key="id"
+          :page-size="5"
         >
-          <div :class="bem.e('capability-panel')">
-            <ElSwitch v-model="capabilityConfig.rowEdit" active-text="行内编辑" />
-            <ElSwitch v-model="capabilityConfig.tree" active-text="树形数据" />
-            <ElSwitch v-model="capabilityConfig.cellSpan" active-text="单元格合并" />
-            <ElSwitch v-model="capabilityConfig.rowDrag" active-text="行拖拽" />
-            <ElButton size="small" @click="setAllCapabilities(true)">一键全开</ElButton>
-            <ElButton size="small" @click="setAllCapabilities(false)">恢复默认</ElButton>
-          </div>
-          <p :class="bem.e('hint')">
-            切换上方 4 个开关，下方表格实时启用对应能力。 详细场景见：
-            <code>/demo/pro-table-row-edit</code>
-            /
-            <code>tree</code>
-            /
-            <code>cell-span</code>
-            /
-            <code>row-drag</code>
-            。
-          </p>
-          <!--
+          <template #operation="{ row }">
+            <ElButton link type="primary" size="small" @click="handleViewDetail(row)">
+              查看
+            </ElButton>
+          </template>
+          <template #id="{ row }">
+            <ElTag size="small">#{{ row.id }}</ElTag>
+          </template>
+        </ProTable>
+      </DemoField>
+    </section>
+
+    <!-- enum 自动渲染 ElTag -->
+    <section id="demo-enum">
+      <DemoField label="enum 自动渲染 ElTag" :code="enumCode">
+        <p :class="bem.e('hint')">
+          <code>enum</code>
+          字段自动渲染为 ElTag，搜索项自动生成下拉（见上方"基础用法"演示）。
+        </p>
+        <div :class="bem.e('tag-demo')">
+          <ElTag v-for="opt in STATUS_OPTIONS" :key="String(opt.value)" :type="opt.tagType">
+            {{ opt.label }} ({{ opt.value }})
+          </ElTag>
+        </div>
+      </DemoField>
+    </section>
+
+    <!-- 自定义插槽 -->
+    <!-- 自定义渲染（col.render） -->
+    <section id="demo-render">
+      <DemoField label="自定义渲染（render 函数返回 VNode）" :code="renderCode">
+        <ProTable
+          :columns="renderColumns"
+          :request-api="overviewRequestApi"
+          table-key="demo-pro-table-render"
+          row-key="id"
+          :page-size="5"
+        />
+      </DemoField>
+    </section>
+
+    <section id="demo-slots">
+      <DemoField label="自定义插槽" :code="slotsCode">
+        <ProTable
+          :columns="columns"
+          :request-api="overviewRequestApi"
+          table-key="demo-pro-table-slots"
+          row-key="id"
+          :page-size="3"
+        >
+          <template #tableHeader>
+            <strong>用户列表（自定义标题，演示 tableHeader 插槽）</strong>
+          </template>
+          <template #toolButton>
+            <ElButton size="small">自定义按钮（演示 toolButton 插槽）</ElButton>
+          </template>
+          <template #operation="{ row }">
+            <ElButton link type="primary" size="small" @click="handleViewDetail(row)">
+              查看
+            </ElButton>
+            <ElButton link type="danger" size="small" @click="handleDelete(row)">删除</ElButton>
+          </template>
+          <template #id="{ row }">
+            <ElTag size="small" type="warning">#{{ row.id }}</ElTag>
+          </template>
+        </ProTable>
+      </DemoField>
+    </section>
+
+    <!-- defineExpose -->
+    <section id="demo-expose">
+      <DemoField label="defineExpose 调用（refresh / reset）" :code="exposeCode">
+        <div :class="bem.e('actions')">
+          <ElButton :icon="Refresh" type="primary" @click="handleRefresh">手动 refresh</ElButton>
+          <ElButton :icon="Search" @click="handleReset">手动 reset</ElButton>
+          <span :class="bem.e('msg')">外部按钮触发 ProTable 实例方法</span>
+        </div>
+        <ProTable
+          ref="proTableRef"
+          :columns="columns"
+          :request-api="overviewRequestApi"
+          table-key="demo-pro-table-expose"
+          row-key="id"
+          :page-size="3"
+        >
+          <template #id="{ row }">
+            <ElTag size="small">#{{ row.id }}</ElTag>
+          </template>
+        </ProTable>
+      </DemoField>
+    </section>
+
+    <!-- 多选（勾选 / 清除勾选） -->
+    <section id="demo-selection">
+      <DemoField label="多选（勾选 / 清除勾选，含跨页记忆）" :code="selectionCode">
+        <div :class="bem.e('actions')">
+          <ElButton type="primary" @click="handleGetSelected">获取选中行</ElButton>
+          <ElButton @click="handleClearSelection">清除勾选</ElButton>
+          <span :class="bem.e('msg')">勾选多行后点按钮验证；翻到第 2 页再勾选，可验跨页记忆</span>
+        </div>
+        <ProTable
+          ref="selectionRef"
+          :columns="selectionColumns"
+          :request-api="overviewRequestApi"
+          table-key="demo-pro-table-selection"
+          row-key="id"
+          :page-size="5"
+        />
+      </DemoField>
+    </section>
+
+    <!-- API 文档 -->
+    <ApiTable title="ProTable Props" :items="propsItems" />
+    <ApiTable title="ProTable Slots" :items="slotsItems" />
+    <ApiTable title="ProTable Expose（ref）" :items="exposeItems" />
+    <ApiTable title="ProColumn 关键字段" :items="columnsItems" />
+
+    <!-- v2.0 能力切换面板（Task 12） -->
+    <section id="demo-v2-capabilities">
+      <DemoField
+        label="四类能力一键切换（行内编辑 / 树形 / 单元格合并 / 行拖拽）"
+        :code="capabilityOverviewCode"
+      >
+        <div :class="bem.e('capability-panel')">
+          <ElSwitch v-model="capabilityConfig.rowEdit" active-text="行内编辑" />
+          <ElSwitch v-model="capabilityConfig.tree" active-text="树形数据" />
+          <ElSwitch v-model="capabilityConfig.cellSpan" active-text="单元格合并" />
+          <ElSwitch v-model="capabilityConfig.rowDrag" active-text="行拖拽" />
+          <ElButton size="small" @click="setAllCapabilities(true)">一键全开</ElButton>
+          <ElButton size="small" @click="setAllCapabilities(false)">恢复默认</ElButton>
+        </div>
+        <p :class="bem.e('hint')">
+          切换上方 4 个开关，下方表格实时启用对应能力。 详细场景见：
+          <code>/demo/pro-table-row-edit</code>
+          /
+          <code>tree</code>
+          /
+          <code>cell-span</code>
+          /
+          <code>row-drag</code>
+          。
+        </p>
+        <!--
             v3.5 末次审计 CRITICAL 修复：
             原版只有开关 UI + 代码片段，缺一个受开关控制的 ProTable 实例 → 开关看似无效果。
             现按 capabilityOverviewCode 真实渲染表格，开关变化时表格行为实时变化。
             tree 开关对 flat mock 数据（无 children 字段）视觉无变化是预期——树形需带 children 的数据。
           -->
-          <ProTable
-            :columns="columns"
-            :request-api="overviewRequestApi"
-            :enable-row-edit="capabilityConfig.rowEdit"
-            :enable-tree="capabilityConfig.tree"
-            :enable-cell-span="capabilityConfig.cellSpan"
-            :enable-row-drag="capabilityConfig.rowDrag"
-            table-key="demo-pro-table-overview-capabilities"
-            row-key="id"
-            :page-size="5"
-          />
-        </DemoField>
-      </section>
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+        <ProTable
+          :columns="columns"
+          :request-api="overviewRequestApi"
+          :enable-row-edit="capabilityConfig.rowEdit"
+          :enable-tree="capabilityConfig.tree"
+          :enable-cell-span="capabilityConfig.cellSpan"
+          :enable-row-drag="capabilityConfig.rowDrag"
+          table-key="demo-pro-table-overview-capabilities"
+          row-key="id"
+          :page-size="5"
+        />
+      </DemoField>
+    </section>
+  </DemoFrame>
 </template>
 
 <style lang="scss">

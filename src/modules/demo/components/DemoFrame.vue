@@ -54,12 +54,13 @@ const bem = createNamespace('demo-frame')
     margin: 0;
     font-size: 20px;
     font-weight: 600;
+    color: var(--el-text-color-primary);
   }
 
   &__source {
     font-size: 12px;
-    color: #999;
-    background: #f5f5f5;
+    color: var(--el-text-color-secondary);
+    background: var(--el-fill-color-light);
     padding: 2px 6px;
     border-radius: 4px;
   }
@@ -67,10 +68,11 @@ const bem = createNamespace('demo-frame')
   &__intro {
     margin: 0;
     padding: 12px 16px 12px 28px;
-    background: #fafafa;
-    border-radius: 6px;
+    background: var(--el-fill-color-light);
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: 8px;
     list-style-position: inside;
-    color: #666;
+    color: var(--el-text-color-regular);
     font-size: 13px;
     line-height: 1.8;
 

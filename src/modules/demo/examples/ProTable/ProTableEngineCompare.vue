@@ -20,11 +20,10 @@
  * - vxe 引擎加载失败自动回退 element-plus（engine-fallback）
  */
 import type { ProColumn } from '@/components/ProTable/types'
-import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import {
   sortOrdersRequestApi,
   sortOrdersResponseAdapter,
@@ -78,6 +77,8 @@ const tocItems = [
   { id: 'api-engine-matrix', label: 'vxe 能力矩阵' },
 ]
 
+useDocToc(tocItems)
+
 const engineCode = `<template>
   <!-- 默认引擎 element-plus；vxe-table 首次 mount 时动态加载（JS + CSS 按需注入） -->
   <ProTable table-engine="vxe-table" :columns="columns" :request-api="sortOrdersRequestApi" />
@@ -115,85 +116,79 @@ const treeConfig = {
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="ProTableEngineCompare 引擎对比"
-      source="src/components/ProTable/components/VxeTableBody.vue"
-      :introductions="[
-        'tableEngine 切换渲染引擎：element-plus（默认）/ vxe-table（动态按需加载）。',
-        'vxe-table 引擎按需动态加载，chunk 不进首屏；加载失败自动回退 element-plus。',
-        '同一份 columns / requestApi 双引擎并排，验证列映射与事件适配（sort / selection）。',
-        'v3.5 PR1-B 起 vxe 引擎也支持树形 + 行拖拽，与 element-plus 引擎能力对等。',
-      ]"
-    >
-      <section id="demo-engine-compare" :class="bem.b()">
-        <DemoField label="双引擎并排（同一份 columns / mock 接口）" :code="engineCode">
-          <div :class="bem.e('grid')">
-            <div :class="bem.e('pane')">
-              <h4 :class="bem.e('engine-title')">element-plus（默认引擎）</h4>
-              <ProTable
-                :columns="columns"
-                :request-api="sortOrdersRequestApi"
-                :response-adapter="sortOrdersResponseAdapter"
-                row-key="id"
-              />
-            </div>
-            <div :class="bem.e('pane')">
-              <h4 :class="bem.e('engine-title')">vxe-table 引擎</h4>
-              <ProTable
-                table-engine="vxe-table"
-                :columns="columns"
-                :request-api="sortOrdersRequestApi"
-                :response-adapter="sortOrdersResponseAdapter"
-                row-key="id"
-              />
-            </div>
+  <DemoFrame
+    title="ProTableEngineCompare 引擎对比"
+    source="src/components/ProTable/components/VxeTableBody.vue"
+    :introductions="[
+      'tableEngine 切换渲染引擎：element-plus（默认）/ vxe-table（动态按需加载）。',
+      'vxe-table 引擎按需动态加载，chunk 不进首屏；加载失败自动回退 element-plus。',
+      '同一份 columns / requestApi 双引擎并排，验证列映射与事件适配（sort / selection）。',
+      'v3.5 PR1-B 起 vxe 引擎也支持树形 + 行拖拽，与 element-plus 引擎能力对等。',
+    ]"
+  >
+    <section id="demo-engine-compare" :class="bem.b()">
+      <DemoField label="双引擎并排（同一份 columns / mock 接口）" :code="engineCode">
+        <div :class="bem.e('grid')">
+          <div :class="bem.e('pane')">
+            <h4 :class="bem.e('engine-title')">element-plus（默认引擎）</h4>
+            <ProTable
+              :columns="columns"
+              :request-api="sortOrdersRequestApi"
+              :response-adapter="sortOrdersResponseAdapter"
+              row-key="id"
+            />
           </div>
-        </DemoField>
-      </section>
-
-      <!-- v3.5 PR1-B：树形 + 行拖拽双引擎对照演示 -->
-      <section id="demo-tree-drag-compare" :class="bem.b()">
-        <DemoField label="树形 + 行拖拽 双引擎对照（v3.5 PR1-B 补齐）" :code="treeDragCode">
-          <div :class="bem.e('grid')">
-            <div :class="bem.e('pane')">
-              <h4 :class="bem.e('engine-title')">element-plus（默认引擎）</h4>
-              <ProTable
-                :columns="treeDragColumns"
-                :request-api="orgChartRequestApi"
-                :enable-tree="treeConfig"
-                :enable-row-drag="{ handle: '__all__' }"
-                row-key="id"
-              />
-            </div>
-            <div :class="bem.e('pane')">
-              <h4 :class="bem.e('engine-title')">vxe-table 引擎</h4>
-              <ProTable
-                table-engine="vxe-table"
-                :columns="treeDragColumns"
-                :request-api="orgChartRequestApi"
-                :enable-tree="treeConfig"
-                :enable-row-drag="{ handle: '__all__' }"
-                row-key="id"
-              />
-            </div>
+          <div :class="bem.e('pane')">
+            <h4 :class="bem.e('engine-title')">vxe-table 引擎</h4>
+            <ProTable
+              table-engine="vxe-table"
+              :columns="columns"
+              :request-api="sortOrdersRequestApi"
+              :response-adapter="sortOrdersResponseAdapter"
+              row-key="id"
+            />
           </div>
-        </DemoField>
-      </section>
+        </div>
+      </DemoField>
+    </section>
 
-      <ApiTable title="引擎 Props" :items="enginePropsItems" anchor="api-engine-props" />
-      <ApiTable
-        title="ProColumn.vxeProps 字段"
-        :items="engineColumnItems"
-        anchor="api-engine-column"
-      />
-      <ApiTable title="vxe 引擎能力矩阵" :items="engineMatrixItems" anchor="api-engine-matrix" />
-    </DemoFrame>
+    <!-- v3.5 PR1-B：树形 + 行拖拽双引擎对照演示 -->
+    <section id="demo-tree-drag-compare" :class="bem.b()">
+      <DemoField label="树形 + 行拖拽 双引擎对照（v3.5 PR1-B 补齐）" :code="treeDragCode">
+        <div :class="bem.e('grid')">
+          <div :class="bem.e('pane')">
+            <h4 :class="bem.e('engine-title')">element-plus（默认引擎）</h4>
+            <ProTable
+              :columns="treeDragColumns"
+              :request-api="orgChartRequestApi"
+              :enable-tree="treeConfig"
+              :enable-row-drag="{ handle: '__all__' }"
+              row-key="id"
+            />
+          </div>
+          <div :class="bem.e('pane')">
+            <h4 :class="bem.e('engine-title')">vxe-table 引擎</h4>
+            <ProTable
+              table-engine="vxe-table"
+              :columns="treeDragColumns"
+              :request-api="orgChartRequestApi"
+              :enable-tree="treeConfig"
+              :enable-row-drag="{ handle: '__all__' }"
+              row-key="id"
+            />
+          </div>
+        </div>
+      </DemoField>
+    </section>
 
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="引擎 Props" :items="enginePropsItems" anchor="api-engine-props" />
+    <ApiTable
+      title="ProColumn.vxeProps 字段"
+      :items="engineColumnItems"
+      anchor="api-engine-column"
+    />
+    <ApiTable title="vxe 引擎能力矩阵" :items="engineMatrixItems" anchor="api-engine-matrix" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

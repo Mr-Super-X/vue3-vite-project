@@ -25,8 +25,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { errorToastSlotItems } from './configs/xform-demos-api'
 import xFormErrorToastSlotSource from './XFormErrorToastSlot.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
@@ -93,6 +92,8 @@ const tocItems = [
   { id: 'api-error-toast-slot', label: 'toastContainer slot 速查' },
 ]
 
+useDocToc(tocItems)
+
 const introductions = [
   'XForm 默认嵌入 XFormErrorToast 展示 errorBus 事件；通过 #toastContainer slot 可完整接管容器',
   'slot 契约仅注入响应式 events 数组（FormErrorEvent[]，含 dismissed 标记），errorBus.dismiss 对消费方不可达（见 docs/24 §Slots）',
@@ -103,42 +104,38 @@ const introductions = [
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="XForm 错误 toast 容器替换 —— #toastContainer slot"
-      source="src/components/form-schema/components/XForm.vue"
-      :introductions="introductions"
-    >
-      <section id="demo-error-toast-slot">
-        <DemoField label="toastContainer 替换演示" :code="xFormErrorToastSlotSource">
-          <XForm ref="formRef" :schema="schema" :model="model">
-            <!--
+  <DemoFrame
+    title="XForm 错误 toast 容器替换 —— #toastContainer slot"
+    source="src/components/form-schema/components/XForm.vue"
+    :introductions="introductions"
+  >
+    <section id="demo-error-toast-slot">
+      <DemoField label="toastContainer 替换演示" :code="xFormErrorToastSlotSource">
+        <XForm ref="formRef" :schema="schema" :model="model">
+          <!--
               slot 接管：events 经桥接组件转为命令式 ElNotification。
               host 不渲染 DOM（ElNotification 自带 teleport to body），
               此处挂 slot 只为替换默认 XFormErrorToast 的渲染层
             -->
-            <template #toastContainer="{ events }">
-              <XFormElNotificationHost :events="events" />
-            </template>
-          </XForm>
-          <div :class="bem.e('actions')">
-            <el-button type="primary" @click="onValidate">校验</el-button>
-            <el-button @click="onReset">重置</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-          </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
+          <template #toastContainer="{ events }">
+            <XFormElNotificationHost :events="events" />
+          </template>
+        </XForm>
+        <div :class="bem.e('actions')">
+          <el-button type="primary" @click="onValidate">校验</el-button>
+          <el-button @click="onReset">重置</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
 
-      <ApiTable
-        title="toastContainer slot 速查"
-        :items="errorToastSlotItems"
-        anchor="api-error-toast-slot"
-      />
-    </DemoFrame>
-
-    <template #toc><DocToc :items="tocItems" /></template>
-  </DocLayout>
+    <ApiTable
+      title="toastContainer slot 速查"
+      :items="errorToastSlotItems"
+      anchor="api-error-toast-slot"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

@@ -21,8 +21,7 @@ import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import xFormSource from './XFormTabsSteps.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
 
@@ -161,6 +160,8 @@ async function nextStep() {
 
 const tocItems = [{ id: 'demo-tabs-steps', label: 'Tabs/Steps 演示' }]
 
+useDocToc(tocItems)
+
 /** 覆盖 useXFormDemo 的 onReset：除重置表单字段外，同步归零 Steps 进度 + Tabs 激活 tab */
 function onResetAll(): void {
   formRef.value?.resetFields()
@@ -170,38 +171,32 @@ function onResetAll(): void {
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="Tabs / Steps 视觉容器（children 即面板）"
-      source="src/components/form-schema/composables/render-tabs-steps-node.ts"
-      :introductions="[
-        'Tabs：component \'Tabs\'，children 每项 → ElTabPane，label 取 child.label。激活态绑定 model.activeTab（modelValue + onTabChange 双向桥接）。',
-        '校验门控：Steps「下一步」前进前 validateField 基础字段，失败则阻止推进（Tabs 保持纯视觉切换）。',
-        'Steps：component \'Steps\'，children 每项 → ElStep；active 绑定 model.activeStep，外层按钮驱动切换。',
-        '两种容器均为纯视觉分组，与 Card 同级；面板内布局用 child.row/column 走栅格。',
-      ]"
-    >
-      <section id="demo-tabs-steps">
-        <DemoField label="Tabs / Steps 容器" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div class="mt-2">
-            <el-button @click="prevStep" :disabled="activeStep === 0">上一步</el-button>
-            <el-button @click="nextStep" type="primary" :disabled="activeStep === 2">
-              下一步
-            </el-button>
-            <el-button @click="onResetAll">重置</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-            <el-button @click="copyModel">复制 model</el-button>
-          </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+  <DemoFrame
+    title="Tabs / Steps 视觉容器（children 即面板）"
+    source="src/components/form-schema/composables/render-tabs-steps-node.ts"
+    :introductions="[
+      'Tabs：component \'Tabs\'，children 每项 → ElTabPane，label 取 child.label。激活态绑定 model.activeTab（modelValue + onTabChange 双向桥接）。',
+      '校验门控：Steps「下一步」前进前 validateField 基础字段，失败则阻止推进（Tabs 保持纯视觉切换）。',
+      'Steps：component \'Steps\'，children 每项 → ElStep；active 绑定 model.activeStep，外层按钮驱动切换。',
+      '两种容器均为纯视觉分组，与 Card 同级；面板内布局用 child.row/column 走栅格。',
+    ]"
+  >
+    <section id="demo-tabs-steps">
+      <DemoField label="Tabs / Steps 容器" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div class="mt-2">
+          <el-button @click="prevStep" :disabled="activeStep === 0">上一步</el-button>
+          <el-button @click="nextStep" type="primary" :disabled="activeStep === 2">
+            下一步
+          </el-button>
+          <el-button @click="onResetAll">重置</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+          <el-button @click="copyModel">复制 model</el-button>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
+  </DemoFrame>
 </template>
 
 <style lang="scss">

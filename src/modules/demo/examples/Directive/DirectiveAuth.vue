@@ -19,9 +19,8 @@
 import { useUserStore } from '@store/modules/user'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
 import ApiTable from '../../components/ApiTable.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 
 const bem = createNamespace('demo-directive-auth')
 
@@ -87,6 +86,8 @@ const tocItems = [
   { id: 'api-binding', label: 'Binding 类型' },
 ]
 
+useDocToc(tocItems)
+
 const bindingItems = [
   {
     name: 'value',
@@ -132,98 +133,92 @@ const removeAuthCode = `<el-button v-auth:remove="refundBinding">订单退款</e
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="v-auth 权限指令（推荐）"
-      source="src/directives/auth.ts"
-      :introductions="[
-        '全局指令：根据当前用户的权限码，控制元素的显示 / 禁用。',
-        '支持单权限、多权限 AND / ANY、disabled / remove 修饰符；',
-        '响应 userStore.permissions 变化，权限码增加 / 移除时元素实时显示 / 隐藏。',
-        '下方「权限切换面板」控制当前模拟用户拥有的权限码——观察各按钮 / select 的可见性变化。',
-      ]"
-    >
-      <!-- 权限切换面板 -->
-      <section id="demo-control">
-        <h3 :class="bem.e('heading')">权限切换面板（修改 store.permissions）</h3>
-        <div :class="bem.e('control')">
-          <el-checkbox
-            v-for="p in ALL_PERMS"
-            :key="p.code"
-            :model-value="selectedPerms.includes(p.code)"
-            :label="p.code"
-            @change="() => togglePerm(p.code)"
-          >
-            {{ p.label }} ({{ p.code }})
-          </el-checkbox>
+  <DemoFrame
+    title="v-auth 权限指令（推荐）"
+    source="src/directives/auth.ts"
+    :introductions="[
+      '全局指令：根据当前用户的权限码，控制元素的显示 / 禁用。',
+      '支持单权限、多权限 AND / ANY、disabled / remove 修饰符；',
+      '响应 userStore.permissions 变化，权限码增加 / 移除时元素实时显示 / 隐藏。',
+      '下方「权限切换面板」控制当前模拟用户拥有的权限码——观察各按钮 / select 的可见性变化。',
+    ]"
+  >
+    <!-- 权限切换面板 -->
+    <section id="demo-control">
+      <h3 :class="bem.e('heading')">权限切换面板（修改 store.permissions）</h3>
+      <div :class="bem.e('control')">
+        <el-checkbox
+          v-for="p in ALL_PERMS"
+          :key="p.code"
+          :model-value="selectedPerms.includes(p.code)"
+          :label="p.code"
+          @change="() => togglePerm(p.code)"
+        >
+          {{ p.label }} ({{ p.code }})
+        </el-checkbox>
+      </div>
+      <p :class="bem.e('hint')">
+        当前 store.permissions：
+        <code>[{{ selectedPerms.join(', ') || '(空)' }}]</code>
+      </p>
+    </section>
+
+    <!-- 单权限 -->
+    <section id="demo-single">
+      <DemoField label='单权限（v-auth="权限码"）' :code="singleAuthCode">
+        <div :class="bem.e('row')">
+          <el-button v-auth="editBinding" type="primary">编辑用户</el-button>
+          <el-button v-auth="deleteBinding" type="danger">删除用户</el-button>
         </div>
         <p :class="bem.e('hint')">
-          当前 store.permissions：
-          <code>[{{ selectedPerms.join(', ') || '(空)' }}]</code>
+          取消勾选「用户编辑」权限 → 编辑按钮消失；勾选「用户删除」 → 删除按钮出现。
         </p>
-      </section>
+      </DemoField>
+    </section>
 
-      <!-- 单权限 -->
-      <section id="demo-single">
-        <DemoField label='单权限（v-auth="权限码"）' :code="singleAuthCode">
-          <div :class="bem.e('row')">
-            <el-button v-auth="editBinding" type="primary">编辑用户</el-button>
-            <el-button v-auth="deleteBinding" type="danger">删除用户</el-button>
-          </div>
-          <p :class="bem.e('hint')">
-            取消勾选「用户编辑」权限 → 编辑按钮消失；勾选「用户删除」 → 删除按钮出现。
-          </p>
-        </DemoField>
-      </section>
+    <!-- 多权限 AND -->
+    <section id="demo-and">
+      <DemoField label='多权限 AND（v-auth="数组"）' :code="andAuthCode">
+        <el-button v-auth="multiAndBinding" type="success">
+          查看+编辑（需 user:view AND user:edit）
+        </el-button>
+        <p :class="bem.e('hint')">取消勾选「用户查看」或「用户编辑」任一权限 → 按钮消失。</p>
+      </DemoField>
+    </section>
 
-      <!-- 多权限 AND -->
-      <section id="demo-and">
-        <DemoField label='多权限 AND（v-auth="数组"）' :code="andAuthCode">
-          <el-button v-auth="multiAndBinding" type="success">
-            查看+编辑（需 user:view AND user:edit）
-          </el-button>
-          <p :class="bem.e('hint')">取消勾选「用户查看」或「用户编辑」任一权限 → 按钮消失。</p>
-        </DemoField>
-      </section>
+    <!-- 多权限 ANY -->
+    <section id="demo-any">
+      <DemoField label='多权限 ANY（v-auth:any="数组"）' :code="anyAuthCode">
+        <el-button v-auth:any="multiAnyBinding" type="warning">
+          高级操作（user:delete OR report:export）
+        </el-button>
+        <p :class="bem.e('hint')">勾选「用户删除」或「报表导出」任一权限 → 按钮出现。</p>
+      </DemoField>
+    </section>
 
-      <!-- 多权限 ANY -->
-      <section id="demo-any">
-        <DemoField label='多权限 ANY（v-auth:any="数组"）' :code="anyAuthCode">
-          <el-button v-auth:any="multiAnyBinding" type="warning">
-            高级操作（user:delete OR report:export）
-          </el-button>
-          <p :class="bem.e('hint')">勾选「用户删除」或「报表导出」任一权限 → 按钮出现。</p>
-        </DemoField>
-      </section>
+    <!-- 修饰符 -->
+    <section id="demo-modifier">
+      <DemoField label="修饰符：disabled（禁用而非移除）" :code="disabledAuthCode">
+        <div :class="bem.e('row')">
+          <el-button v-auth:disabled="refundBinding">订单退款（无权限时禁用）</el-button>
+        </div>
+        <p :class="bem.e('hint')">
+          无权限时按钮仍可见但禁用；适合「存在但不可操作」的语义（如管理员可见但被撤销了权限）。
+        </p>
+      </DemoField>
 
-      <!-- 修饰符 -->
-      <section id="demo-modifier">
-        <DemoField label="修饰符：disabled（禁用而非移除）" :code="disabledAuthCode">
-          <div :class="bem.e('row')">
-            <el-button v-auth:disabled="refundBinding">订单退款（无权限时禁用）</el-button>
-          </div>
-          <p :class="bem.e('hint')">
-            无权限时按钮仍可见但禁用；适合「存在但不可操作」的语义（如管理员可见但被撤销了权限）。
-          </p>
-        </DemoField>
+      <DemoField label="修饰符：remove（显式移除，默认行为）" :code="removeAuthCode">
+        <div :class="bem.e('row')">
+          <el-button v-auth:remove="refundBinding">订单退款（无权限时移除）</el-button>
+        </div>
+        <p :class="bem.e('hint')">与不带修饰符行为一致——display: none + aria-hidden="true"。</p>
+      </DemoField>
+    </section>
 
-        <DemoField label="修饰符：remove（显式移除，默认行为）" :code="removeAuthCode">
-          <div :class="bem.e('row')">
-            <el-button v-auth:remove="refundBinding">订单退款（无权限时移除）</el-button>
-          </div>
-          <p :class="bem.e('hint')">与不带修饰符行为一致——display: none + aria-hidden="true"。</p>
-        </DemoField>
-      </section>
-
-      <!-- API 文档 -->
-      <ApiTable title="v-auth Binding" :items="bindingItems" anchor="api-binding" />
-      <ApiTable title="Arg / Modifiers" :items="modifierItems" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <!-- API 文档 -->
+    <ApiTable title="v-auth Binding" :items="bindingItems" anchor="api-binding" />
+    <ApiTable title="Arg / Modifiers" :items="modifierItems" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

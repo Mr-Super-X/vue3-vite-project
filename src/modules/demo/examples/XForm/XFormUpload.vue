@@ -28,8 +28,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { uploadItems } from './configs/xform-demos-api'
 import xFormSource from './XFormUpload.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
@@ -410,71 +409,66 @@ const tocItems = [
   { id: 'demo-upload-custom', label: '自定义样式方案' },
   { id: 'api-upload', label: 'Upload 字段配置' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="文件上传（7 个企业常见场景）"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        'XForm 的 Upload 组件对应 Element Plus ElUpload。',
-        '关键：ElUpload 的 v-model 属性是 file-list，所以节点必须配置 modelProp: \'fileList\'，否则双向绑定不生效。',
-        '本页覆盖单文件头像、多文件附件、拖拽上传、图片墙、手动上传、上传前校验、已上传文件回显。',
-        '所有上传均走 httpRequest 模拟接口，demo 无需真实后端即可看到上传成功效果。',
-        '触发区默认由 XForm 按类型注入（picture-card → Plus 图标、drag → 云朵图标 + 文案、其余 → 「点击上传」按钮）；产品要定制时用下方三种方案覆盖。',
-      ]"
-    >
-      <!-- 先看这个引导卡：上传场景较多，新人易迷失 -->
-      <div :class="bem.e('start-here')">
-        <strong>👀 先看这个——上传场景按推荐顺序浏览</strong>
-        <p>
-          <strong>① 头像 / 附件列表</strong>
-          （必看） —— 掌握 modelProp: 'fileList' + httpRequest mock 的最小模式
-        </p>
-        <p>
-          <strong>② 拖拽 / 图片墙 / 手动上传 / 上传前校验</strong>
-          （进阶） —— 各场景独立 props 配置
-        </p>
-        <p>
-          <strong>③ 定制三方案</strong>
-          （高级） —— 类名覆盖 / slots.default 接管触发区 / slots.file 自定义列表项（JSX vs h()
-          对照）
-        </p>
-      </div>
+  <DemoFrame
+    title="文件上传（7 个企业常见场景）"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      'XForm 的 Upload 组件对应 Element Plus ElUpload。',
+      '关键：ElUpload 的 v-model 属性是 file-list，所以节点必须配置 modelProp: \'fileList\'，否则双向绑定不生效。',
+      '本页覆盖单文件头像、多文件附件、拖拽上传、图片墙、手动上传、上传前校验、已上传文件回显。',
+      '所有上传均走 httpRequest 模拟接口，demo 无需真实后端即可看到上传成功效果。',
+      '触发区默认由 XForm 按类型注入（picture-card → Plus 图标、drag → 云朵图标 + 文案、其余 → 「点击上传」按钮）；产品要定制时用下方三种方案覆盖。',
+    ]"
+  >
+    <!-- 先看这个引导卡：上传场景较多，新人易迷失 -->
+    <div :class="bem.e('start-here')">
+      <strong>👀 先看这个——上传场景按推荐顺序浏览</strong>
+      <p>
+        <strong>① 头像 / 附件列表</strong>
+        （必看） —— 掌握 modelProp: 'fileList' + httpRequest mock 的最小模式
+      </p>
+      <p>
+        <strong>② 拖拽 / 图片墙 / 手动上传 / 上传前校验</strong>
+        （进阶） —— 各场景独立 props 配置
+      </p>
+      <p>
+        <strong>③ 定制三方案</strong>
+        （高级） —— 类名覆盖 / slots.default 接管触发区 / slots.file 自定义列表项（JSX vs h() 对照）
+      </p>
+    </div>
 
-      <section id="demo-upload">
-        <DemoField label="上传场景集合" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onSave">保存</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-          </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
+    <section id="demo-upload">
+      <DemoField label="上传场景集合" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onSave">保存</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
 
-      <section id="demo-upload-custom">
-        <DemoField
-          label="自定义样式三方案（类名覆盖 / 自定义触发区 / 自定义列表项）"
-          :code="xFormSource"
-        >
-          <XForm :schema="customSchema" :model="customModel" />
-          <div :class="bem.e('actions')">
-            <el-button type="primary" @click="onSaveCustom">查看定制表单数据</el-button>
-          </div>
-          <ModelPreview :model="customModel" />
-        </DemoField>
-      </section>
+    <section id="demo-upload-custom">
+      <DemoField
+        label="自定义样式三方案（类名覆盖 / 自定义触发区 / 自定义列表项）"
+        :code="xFormSource"
+      >
+        <XForm :schema="customSchema" :model="customModel" />
+        <div :class="bem.e('actions')">
+          <el-button type="primary" @click="onSaveCustom">查看定制表单数据</el-button>
+        </div>
+        <ModelPreview :model="customModel" />
+      </DemoField>
+    </section>
 
-      <ApiTable title="Upload 字段配置" :items="uploadItems" anchor="api-upload" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="Upload 字段配置" :items="uploadItems" anchor="api-upload" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

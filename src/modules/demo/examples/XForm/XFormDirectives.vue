@@ -17,8 +17,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { componentPropsItems, directivesItems, ruleRefItems } from './configs/xform-demos-api'
 import xFormSource from './XFormDirectives.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
@@ -125,51 +124,47 @@ const tocItems = [
   { id: 'api-component-props', label: 'componentProps 全局默认 props' },
   { id: 'api-rule-ref', label: 'rules 命名引用' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="节点指令 + 全局默认 props + 规则命名引用"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        'node.directives 直接传带钩子的 Directive 对象（mounted / updated…），value / arg / modifiers 透传 binding。',
-        '已知限制：字符串指令名 + XFormProps.directives 注册表暂未接线，当前请直接传 Directive 对象。',
-        'componentProps 按组件名注入默认 props（与内置默认合并），节点级 props 优先级最高。',
-        'node.rules 写字符串时查 XFormProps.rules 命名表：命中取对应 RuleItem，未命中退化为 required。',
-      ]"
-    >
-      <section id="demo-directives">
-        <DemoField label="供应商录入（指令 + 全局配置）" :code="xFormSource">
-          <XForm
-            ref="formRef"
-            :schema="schema"
-            :model="model"
-            :rules="rules"
-            :component-props="componentProps"
-          />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onValidate">校验</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-          </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="节点指令 + 全局默认 props + 规则命名引用"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      'node.directives 直接传带钩子的 Directive 对象（mounted / updated…），value / arg / modifiers 透传 binding。',
+      '已知限制：字符串指令名 + XFormProps.directives 注册表暂未接线，当前请直接传 Directive 对象。',
+      'componentProps 按组件名注入默认 props（与内置默认合并），节点级 props 优先级最高。',
+      'node.rules 写字符串时查 XFormProps.rules 命名表：命中取对应 RuleItem，未命中退化为 required。',
+    ]"
+  >
+    <section id="demo-directives">
+      <DemoField label="供应商录入（指令 + 全局配置）" :code="xFormSource">
+        <XForm
+          ref="formRef"
+          :schema="schema"
+          :model="model"
+          :rules="rules"
+          :component-props="componentProps"
+        />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onValidate">校验</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
 
-      <ApiTable title="node.directives 节点指令" :items="directivesItems" anchor="api-directives" />
-      <ApiTable
-        title="componentProps 全局默认 props"
-        :items="componentPropsItems"
-        anchor="api-component-props"
-      />
-      <ApiTable title="rules 命名引用" :items="ruleRefItems" anchor="api-rule-ref" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="node.directives 节点指令" :items="directivesItems" anchor="api-directives" />
+    <ApiTable
+      title="componentProps 全局默认 props"
+      :items="componentPropsItems"
+      anchor="api-component-props"
+    />
+    <ApiTable title="rules 命名引用" :items="ruleRefItems" anchor="api-rule-ref" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

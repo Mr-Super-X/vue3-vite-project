@@ -22,11 +22,10 @@
  */
 import { ElButton, ElMessage } from 'element-plus'
 import type { ProColumn, ProTableExpose, ProTableResponse } from '@/components/ProTable'
-import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 
 const bem = createNamespace('demo-pro-table-async-state')
 
@@ -140,6 +139,8 @@ const tocItems = [
   { id: 'api-pro-table-expose-refresh', label: 'refresh() 重试语义' },
 ]
 
+useDocToc(tocItems)
+
 const refreshApiItems = [
   {
     name: 'refresh',
@@ -160,59 +161,53 @@ const refreshApiItems = [
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="ProTableAsyncState 三态实战（loading / empty / error）"
-      source="src/components/ProTable"
-      :introductions="[
-        '三态 = 异步数据的常态：loading（请求中）、empty（无数据）、error（请求失败）。',
-        'ProTable 内置三态 UI（v-loading / ElEmpty / 错误占位），request-api 控制分支即可。',
-        '错误态可点「手动重试」调用 expose.refresh() 重新执行当前搜索条件。',
-      ]"
-    >
-      <section id="demo-scenario-switcher" :class="bem.b()">
-        <DemoField label="四场景切换面板" :code="scenarioCode">
-          <p :class="bem.e('hint')">
-            验证：① 点「正常」→ 5 行 mock 数据展示 ② 点「慢响应」→ 表格 v-loading 圈 2.5s ③
-            点「空数据」→ ElEmpty 占位 ④ 点「服务端失败」→ 错误占位 + 「手动重试」按钮调
-            <code>refresh()</code>
-          </p>
-          <div :class="bem.e('toolbar')">
-            <ElButton
-              v-for="key in ['normal', 'loading', 'empty', 'error'] as const"
-              :key="key"
-              size="small"
-              :type="scenario === key ? 'primary' : 'default'"
-              @click="switchScenario(key)"
-            >
-              {{ SCENARIO_LABEL[key] }}
-            </ElButton>
-            <span :class="bem.e('scenario-label')">当前：{{ SCENARIO_LABEL[scenario] }}</span>
-          </div>
-          <ProTable
-            ref="tableRef"
-            :columns="columns"
-            :request-api="mockRequestApi"
-            table-key="demo-async-state"
-            row-key="id"
-            :page-size="5"
-            :show-retry-button="true"
-            @retry="handleRetry"
-          />
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="ProTableAsyncState 三态实战（loading / empty / error）"
+    source="src/components/ProTable"
+    :introductions="[
+      '三态 = 异步数据的常态：loading（请求中）、empty（无数据）、error（请求失败）。',
+      'ProTable 内置三态 UI（v-loading / ElEmpty / 错误占位），request-api 控制分支即可。',
+      '错误态可点「手动重试」调用 expose.refresh() 重新执行当前搜索条件。',
+    ]"
+  >
+    <section id="demo-scenario-switcher" :class="bem.b()">
+      <DemoField label="四场景切换面板" :code="scenarioCode">
+        <p :class="bem.e('hint')">
+          验证：① 点「正常」→ 5 行 mock 数据展示 ② 点「慢响应」→ 表格 v-loading 圈 2.5s ③
+          点「空数据」→ ElEmpty 占位 ④ 点「服务端失败」→ 错误占位 + 「手动重试」按钮调
+          <code>refresh()</code>
+        </p>
+        <div :class="bem.e('toolbar')">
+          <ElButton
+            v-for="key in ['normal', 'loading', 'empty', 'error'] as const"
+            :key="key"
+            size="small"
+            :type="scenario === key ? 'primary' : 'default'"
+            @click="switchScenario(key)"
+          >
+            {{ SCENARIO_LABEL[key] }}
+          </ElButton>
+          <span :class="bem.e('scenario-label')">当前：{{ SCENARIO_LABEL[scenario] }}</span>
+        </div>
+        <ProTable
+          ref="tableRef"
+          :columns="columns"
+          :request-api="mockRequestApi"
+          table-key="demo-async-state"
+          row-key="id"
+          :page-size="5"
+          :show-retry-button="true"
+          @retry="handleRetry"
+        />
+      </DemoField>
+    </section>
 
-      <ApiTable
-        title="ProTableExpose 重试相关 API"
-        :items="refreshApiItems"
-        anchor="api-pro-table-expose-refresh"
-      />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable
+      title="ProTableExpose 重试相关 API"
+      :items="refreshApiItems"
+      anchor="api-pro-table-expose-refresh"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

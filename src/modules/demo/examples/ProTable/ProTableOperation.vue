@@ -28,11 +28,10 @@ import {
 } from 'element-plus'
 import { ArrowDown, QuestionFilled } from '@element-plus/icons-vue'
 import type { ProColumn } from '@/components/ProTable'
-import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { operationColumnItems, headerRenderItems } from './configs/protable-demos-api'
 import { projectRequestApi, type ProjectRow } from './configs/projects'
 
@@ -118,89 +117,85 @@ const tocItems = [
   { id: 'api-operation-column', label: 'operation 列字段' },
   { id: 'api-header-render', label: 'headerRender 字段' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="ProTableOperation 操作列（下拉收纳 + 表头 Tooltip）"
-      source="src/components/ProTable/components/ElementTableBody.vue"
-      :introductions="[
-        '操作按钮众多时的收纳模式：type:\'operation\' 列 + #operation 插槽内 ElDropdown 折叠低频操作。',
-        '表头 Tooltip：headerRender 自定义表头（双引擎接线），问号图标气泡说明列业务口径。',
-      ]"
-    >
-      <section :class="bem.b()">
-        <DemoField
-          id="demo-operation-dropdown"
-          label="操作列下拉收纳（高频直出 + 低频折叠）"
-          :code="operationCode"
+  <DemoFrame
+    title="ProTableOperation 操作列（下拉收纳 + 表头 Tooltip）"
+    source="src/components/ProTable/components/ElementTableBody.vue"
+    :introductions="[
+      '操作按钮众多时的收纳模式：type:\'operation\' 列 + #operation 插槽内 ElDropdown 折叠低频操作。',
+      '表头 Tooltip：headerRender 自定义表头（双引擎接线），问号图标气泡说明列业务口径。',
+    ]"
+  >
+    <section :class="bem.b()">
+      <DemoField
+        id="demo-operation-dropdown"
+        label="操作列下拉收纳（高频直出 + 低频折叠）"
+        :code="operationCode"
+      >
+        <p :class="bem.e('hint')">
+          验证：① 「编辑/详情」直出按钮点击弹提示 ② 点「更多」展开下拉（复制/导出/停用） ③ 操作列
+          fixed:'right' 横向滚动时固定在右侧
+        </p>
+        <ProTable
+          :columns="operationColumns"
+          :request-api="projectRequestApi"
+          table-key="demo-operation"
+          row-key="id"
+          :page-size="5"
         >
-          <p :class="bem.e('hint')">
-            验证：① 「编辑/详情」直出按钮点击弹提示 ② 点「更多」展开下拉（复制/导出/停用） ③ 操作列
-            fixed:'right' 横向滚动时固定在右侧
-          </p>
-          <ProTable
-            :columns="operationColumns"
-            :request-api="projectRequestApi"
-            table-key="demo-operation"
-            row-key="id"
-            :page-size="5"
-          >
-            <template #operation="{ row }">
-              <div :class="bem.e('ops')">
-                <ElButton link type="primary" size="small" @click="handleOp('编辑', row)">
-                  编辑
+          <template #operation="{ row }">
+            <div :class="bem.e('ops')">
+              <ElButton link type="primary" size="small" @click="handleOp('编辑', row)">
+                编辑
+              </ElButton>
+              <ElButton link type="primary" size="small" @click="handleOp('详情', row)">
+                详情
+              </ElButton>
+              <ElDropdown trigger="click" @command="(cmd: string) => handleOp(cmd, row)">
+                <ElButton link type="primary" size="small">
+                  更多
+                  <ElIcon><ArrowDown /></ElIcon>
                 </ElButton>
-                <ElButton link type="primary" size="small" @click="handleOp('详情', row)">
-                  详情
-                </ElButton>
-                <ElDropdown trigger="click" @command="(cmd: string) => handleOp(cmd, row)">
-                  <ElButton link type="primary" size="small">
-                    更多
-                    <ElIcon><ArrowDown /></ElIcon>
-                  </ElButton>
-                  <template #dropdown>
-                    <ElDropdownMenu>
-                      <ElDropdownItem command="复制">复制</ElDropdownItem>
-                      <ElDropdownItem command="导出">导出</ElDropdownItem>
-                      <ElDropdownItem command="停用" divided>停用</ElDropdownItem>
-                    </ElDropdownMenu>
-                  </template>
-                </ElDropdown>
-              </div>
-            </template>
-          </ProTable>
-        </DemoField>
+                <template #dropdown>
+                  <ElDropdownMenu>
+                    <ElDropdownItem command="复制">复制</ElDropdownItem>
+                    <ElDropdownItem command="导出">导出</ElDropdownItem>
+                    <ElDropdownItem command="停用" divided>停用</ElDropdownItem>
+                  </ElDropdownMenu>
+                </template>
+              </ElDropdown>
+            </div>
+          </template>
+        </ProTable>
+      </DemoField>
 
-        <DemoField
-          id="demo-header-tooltip"
-          label="表头 Tooltip（headerRender + ElTooltip）"
-          :code="tooltipCode"
-        >
-          <p :class="bem.e('hint')">验证：悬停「项目」「金额」表头的问号图标 → 弹出说明气泡</p>
-          <ProTable
-            :columns="tooltipColumns"
-            :request-api="projectRequestApi"
-            table-key="demo-header-tooltip"
-            row-key="id"
-            :page-size="5"
-          />
-        </DemoField>
-      </section>
+      <DemoField
+        id="demo-header-tooltip"
+        label="表头 Tooltip（headerRender + ElTooltip）"
+        :code="tooltipCode"
+      >
+        <p :class="bem.e('hint')">验证：悬停「项目」「金额」表头的问号图标 → 弹出说明气泡</p>
+        <ProTable
+          :columns="tooltipColumns"
+          :request-api="projectRequestApi"
+          table-key="demo-header-tooltip"
+          row-key="id"
+          :page-size="5"
+        />
+      </DemoField>
+    </section>
 
-      <ApiTable
-        title="operation 列字段（v3.1）"
-        :items="operationColumnItems"
-        anchor="api-operation-column"
-      />
-      <ApiTable title="headerRender 字段" :items="headerRenderItems" anchor="api-header-render" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable
+      title="operation 列字段（v3.1）"
+      :items="operationColumnItems"
+      anchor="api-operation-column"
+    />
+    <ApiTable title="headerRender 字段" :items="headerRenderItems" anchor="api-header-render" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

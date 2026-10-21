@@ -18,11 +18,10 @@
  * 路由：自动注册为 /demo/pro-table-search-filter
  */
 import type { ProColumn } from '@/components/ProTable/types'
-import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import {
   filterOrdersRequestApi,
   filterOrdersParamsAdapter,
@@ -122,6 +121,8 @@ const tocItems = [
   { id: 'api-search-filter-expose', label: 'Expose API' },
 ]
 
+useDocToc(tocItems)
+
 const basicCode = `<template>
   <ProTable
     :columns="columns"
@@ -146,68 +147,62 @@ const columns = [
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="ProTableSearchFilter 搜索 + 列头筛选组合"
-      source="src/components/ProTable/composables/useTable.ts"
-      :introductions="[
-        'SearchForm（顶部关键字搜索）与列头筛选（tableProps.filters）共存，AND 语义合并入同一请求。',
-        'filter-change payload 为全表合并快照（EP 2.14 增量负载不外泄，批 D 修复点）。',
-        'reset 同时清搜索表单 / filterState / 列头筛选 UI，并补发 filter-change({})——快照面板随 reset 清空。',
-      ]"
-    >
-      <section id="demo-search-filter" :class="bem.b()">
-        <DemoField label="基本用法（SearchForm + 列头筛选 + adapter + 事件监听）" :code="basicCode">
-          <p :class="bem.e('hint')">
-            两个筛选通道如何关联？
-            <strong>看下方「本次请求实际参数」面板</strong>
-            ：顶部 SearchForm 输入的 orderNo/customer 与列头筛选经 adapter 序列化的
-            statusList/deptList，AND 合并进
-            <strong>同一请求</strong>
-            。验证：① 顶部订单号搜「FO-202601」→ 参数带 orderNo、行 1 行 ② 列头筛 状态=已支付 → 快照
-            {"status":["paid"]}、参数叠加 statusList ③ 再筛 部门=技术部 →
-            快照合并两列、参数三条件并存 ④ 点「重置筛选」→ 参数只剩分页、快照 {}
-          </p>
-          <ProTable
-            :columns="columns"
-            :request-api="searchFilterRequestApi"
-            :filter-params-adapter="filterOrdersParamsAdapter"
-            row-key="id"
-            table-key="demo-search-filter"
-            @filter-change="
-              (filters: Record<string, (string | number | boolean)[]>) => (filterSnapshot = filters)
-            "
-          />
-        </DemoField>
+  <DemoFrame
+    title="ProTableSearchFilter 搜索 + 列头筛选组合"
+    source="src/components/ProTable/composables/useTable.ts"
+    :introductions="[
+      'SearchForm（顶部关键字搜索）与列头筛选（tableProps.filters）共存，AND 语义合并入同一请求。',
+      'filter-change payload 为全表合并快照（EP 2.14 增量负载不外泄，批 D 修复点）。',
+      'reset 同时清搜索表单 / filterState / 列头筛选 UI，并补发 filter-change({})——快照面板随 reset 清空。',
+    ]"
+  >
+    <section id="demo-search-filter" :class="bem.b()">
+      <DemoField label="基本用法（SearchForm + 列头筛选 + adapter + 事件监听）" :code="basicCode">
+        <p :class="bem.e('hint')">
+          两个筛选通道如何关联？
+          <strong>看下方「本次请求实际参数」面板</strong>
+          ：顶部 SearchForm 输入的 orderNo/customer 与列头筛选经 adapter 序列化的
+          statusList/deptList，AND 合并进
+          <strong>同一请求</strong>
+          。验证：① 顶部订单号搜「FO-202601」→ 参数带 orderNo、行 1 行 ② 列头筛 状态=已支付 → 快照
+          {"status":["paid"]}、参数叠加 statusList ③ 再筛 部门=技术部 → 快照合并两列、参数三条件并存
+          ④ 点「重置筛选」→ 参数只剩分页、快照 {}
+        </p>
+        <ProTable
+          :columns="columns"
+          :request-api="searchFilterRequestApi"
+          :filter-params-adapter="filterOrdersParamsAdapter"
+          row-key="id"
+          table-key="demo-search-filter"
+          @filter-change="
+            (filters: Record<string, (string | number | boolean)[]>) => (filterSnapshot = filters)
+          "
+        />
+      </DemoField>
 
-        <DemoField label="当前全表筛选快照（filter-change 事件 payload）" :code="''">
-          <pre :class="bem.e('snapshot')">{{ JSON.stringify(filterSnapshot, null, 2) }}</pre>
-        </DemoField>
+      <DemoField label="当前全表筛选快照（filter-change 事件 payload）" :code="''">
+        <pre :class="bem.e('snapshot')">{{ JSON.stringify(filterSnapshot, null, 2) }}</pre>
+      </DemoField>
 
-        <DemoField label="本次请求实际参数（搜索 + 筛选 AND 合并入同一请求）" :code="''">
-          <pre :class="bem.e('snapshot')">{{
-            JSON.stringify(lastRequestParams, null, 2) ?? '（触发任意搜索/筛选/翻页后显示）'
-          }}</pre>
-        </DemoField>
-      </section>
+      <DemoField label="本次请求实际参数（搜索 + 筛选 AND 合并入同一请求）" :code="''">
+        <pre :class="bem.e('snapshot')">{{
+          JSON.stringify(lastRequestParams, null, 2) ?? '（触发任意搜索/筛选/翻页后显示）'
+        }}</pre>
+      </DemoField>
+    </section>
 
-      <ApiTable title="列头筛选字段" :items="filterColumnItems" anchor="api-search-filter-column" />
-      <ApiTable
-        title="filterParamsAdapter Props"
-        :items="filterPropsItems"
-        anchor="api-search-filter-props"
-      />
-      <ApiTable
-        title="Expose API（getFilterState + filter-change）"
-        :items="filterExposeItems"
-        anchor="api-search-filter-expose"
-      />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="列头筛选字段" :items="filterColumnItems" anchor="api-search-filter-column" />
+    <ApiTable
+      title="filterParamsAdapter Props"
+      :items="filterPropsItems"
+      anchor="api-search-filter-props"
+    />
+    <ApiTable
+      title="Expose API（getFilterState + filter-change）"
+      :items="filterExposeItems"
+      anchor="api-search-filter-expose"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

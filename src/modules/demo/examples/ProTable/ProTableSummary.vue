@@ -13,11 +13,10 @@
  * 3. 翻到第 2 页（10 行后 11-20 行）→ 数量合计、平均单价变化（与第 1 页不同）
  */
 import type { ProColumn, ProTableExpose } from '@/components/ProTable'
-import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { summaryOrdersRequestApi } from '@mock/pro-table/summary-orders'
 import { summaryConfigItems, summaryColumnItems } from './configs/protable-demos-api'
 
@@ -85,62 +84,54 @@ const tocItems = [
   { id: 'api-summary-config', label: 'enableSummary 配置' },
   { id: 'api-summary-column', label: 'ColumnSummaryConfig 字段' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="ProTableSummary 客户端汇总行"
-      source="src/components/ProTable/composables/useSummary.ts"
-      :introductions="[
-        '基于 useSummary composable 实现的客户端聚合：sum/avg/count/max/min 五种聚合，data 变化自动重算。',
-        '下方演示：本页合计（quantity sum + price avg + discount max）+ 自定义 formatter（金额前缀 ¥）。',
-        '配套 ProTableProps.enableSummary 声明汇总配置，columns[prop].summary 或独立 config.columns 控制列级聚合。',
-      ]"
-    >
-      <section id="demo-summary" :class="bem.b()">
-        <DemoField label="基本用法" :code="basicCode">
-          <ProTable
-            ref="tableRef"
-            :columns="columns"
-            :request-api="summaryOrdersRequestApi"
-            table-key="demo-pro-table-summary"
-            row-key="id"
-            :enable-summary="{
-              label: '本页合计',
-              columns: {
-                quantity: { aggregate: 'sum', label: '数量合计' },
-                price: {
-                  aggregate: 'avg',
-                  label: '平均单价',
-                  formatter: (v) => `¥${v.toFixed(2)}`,
-                },
-                discount: { aggregate: 'max', label: '最高折扣' },
+  <DemoFrame
+    title="ProTableSummary 客户端汇总行"
+    source="src/components/ProTable/composables/useSummary.ts"
+    :introductions="[
+      '基于 useSummary composable 实现的客户端聚合：sum/avg/count/max/min 五种聚合，data 变化自动重算。',
+      '下方演示：本页合计（quantity sum + price avg + discount max）+ 自定义 formatter（金额前缀 ¥）。',
+      '配套 ProTableProps.enableSummary 声明汇总配置，columns[prop].summary 或独立 config.columns 控制列级聚合。',
+    ]"
+  >
+    <section id="demo-summary" :class="bem.b()">
+      <DemoField label="基本用法" :code="basicCode">
+        <ProTable
+          ref="tableRef"
+          :columns="columns"
+          :request-api="summaryOrdersRequestApi"
+          table-key="demo-pro-table-summary"
+          row-key="id"
+          :enable-summary="{
+            label: '本页合计',
+            columns: {
+              quantity: { aggregate: 'sum', label: '数量合计' },
+              price: {
+                aggregate: 'avg',
+                label: '平均单价',
+                formatter: (v) => `¥${v.toFixed(2)}`,
               },
-            }"
-          />
-          <div :class="bem.e('actions')">
-            <el-button type="primary" @click="handleRefresh">刷新（验证 data 变化重算）</el-button>
-          </div>
-        </DemoField>
-      </section>
+              discount: { aggregate: 'max', label: '最高折扣' },
+            },
+          }"
+        />
+        <div :class="bem.e('actions')">
+          <el-button type="primary" @click="handleRefresh">刷新（验证 data 变化重算）</el-button>
+        </div>
+      </DemoField>
+    </section>
 
-      <ApiTable
-        title="enableSummary 配置"
-        :items="summaryConfigItems"
-        anchor="api-summary-config"
-      />
-      <ApiTable
-        title="ColumnSummaryConfig 字段"
-        :items="summaryColumnItems"
-        anchor="api-summary-column"
-      />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="enableSummary 配置" :items="summaryConfigItems" anchor="api-summary-config" />
+    <ApiTable
+      title="ColumnSummaryConfig 字段"
+      :items="summaryColumnItems"
+      anchor="api-summary-column"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

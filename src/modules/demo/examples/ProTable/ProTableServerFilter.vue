@@ -18,11 +18,10 @@
  * 4. 点击「重置」按钮 → 筛选清空 + 回到默认页
  */
 import type { ProColumn } from '@/components/ProTable/types'
-import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import {
   filterOrdersRequestApi,
   filterOrdersParamsAdapter,
@@ -100,6 +99,8 @@ const tocItems = [
   { id: 'api-filter-expose', label: 'Expose API' },
 ]
 
+useDocToc(tocItems)
+
 const basicCode = `<template>
   <ProTable
     :columns="columns"
@@ -142,56 +143,50 @@ const onFilterChange = (filters) => {
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="ProTableServerFilter 服务端筛选"
-      source="src/components/ProTable/composables/useTable.ts"
-      :introductions="[
-        'filterParamsAdapter: (filters) => params —— 把全表筛选快照序列化为后端约定键名。',
-        '列头筛选下拉：ProColumn.tableProps.filters 声明（el-table 原生 column.filters 协议）。',
-        '筛选变化自动回第 1 页 + 触发请求（与 sortParamsAdapter 对称）。',
-        '父级监听 filter-change 事件可做 URL 同步 / 埋点 / 上报。',
-        '虚拟滚动（el-table-v2）引擎暂不支持列头筛选，本 demo 走 element-plus v1 引擎。',
-      ]"
-    >
-      <section id="demo-server-filter" :class="bem.b()">
-        <DemoField
-          label="基本用法（status/dept 列筛选 + adapter 序列化 + 事件监听）"
-          :code="basicCode"
-        >
-          <ProTable
-            :columns="columns"
-            :request-api="filterOrdersRequestApi"
-            :filter-params-adapter="filterOrdersParamsAdapter"
-            row-key="id"
-            @filter-change="
-              (filters: Record<string, (string | number | boolean)[]>) => (filterSnapshot = filters)
-            "
-          />
-        </DemoField>
+  <DemoFrame
+    title="ProTableServerFilter 服务端筛选"
+    source="src/components/ProTable/composables/useTable.ts"
+    :introductions="[
+      'filterParamsAdapter: (filters) => params —— 把全表筛选快照序列化为后端约定键名。',
+      '列头筛选下拉：ProColumn.tableProps.filters 声明（el-table 原生 column.filters 协议）。',
+      '筛选变化自动回第 1 页 + 触发请求（与 sortParamsAdapter 对称）。',
+      '父级监听 filter-change 事件可做 URL 同步 / 埋点 / 上报。',
+      '虚拟滚动（el-table-v2）引擎暂不支持列头筛选，本 demo 走 element-plus v1 引擎。',
+    ]"
+  >
+    <section id="demo-server-filter" :class="bem.b()">
+      <DemoField
+        label="基本用法（status/dept 列筛选 + adapter 序列化 + 事件监听）"
+        :code="basicCode"
+      >
+        <ProTable
+          :columns="columns"
+          :request-api="filterOrdersRequestApi"
+          :filter-params-adapter="filterOrdersParamsAdapter"
+          row-key="id"
+          @filter-change="
+            (filters: Record<string, (string | number | boolean)[]>) => (filterSnapshot = filters)
+          "
+        />
+      </DemoField>
 
-        <DemoField label="当前全表筛选快照（filter-change 事件 payload）" :code="''">
-          <pre :class="bem.e('snapshot')">{{ JSON.stringify(filterSnapshot, null, 2) }}</pre>
-        </DemoField>
-      </section>
+      <DemoField label="当前全表筛选快照（filter-change 事件 payload）" :code="''">
+        <pre :class="bem.e('snapshot')">{{ JSON.stringify(filterSnapshot, null, 2) }}</pre>
+      </DemoField>
+    </section>
 
-      <ApiTable title="列头筛选字段" :items="filterColumnItems" anchor="api-filter-column" />
-      <ApiTable
-        title="filterParamsAdapter Props"
-        :items="filterPropsItems"
-        anchor="api-filter-props"
-      />
-      <ApiTable
-        title="Expose API（getFilterState + filter-change）"
-        :items="filterExposeItems"
-        anchor="api-filter-expose"
-      />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="列头筛选字段" :items="filterColumnItems" anchor="api-filter-column" />
+    <ApiTable
+      title="filterParamsAdapter Props"
+      :items="filterPropsItems"
+      anchor="api-filter-props"
+    />
+    <ApiTable
+      title="Expose API（getFilterState + filter-change）"
+      :items="filterExposeItems"
+      anchor="api-filter-expose"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

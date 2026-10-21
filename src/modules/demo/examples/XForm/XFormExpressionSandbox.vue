@@ -15,8 +15,7 @@ import { useConsoleCapture } from '../../composables/useConsoleCapture'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import ConsoleLogPanel from '../../components/ConsoleLogPanel.vue'
 import { expressionSandboxItems } from './configs/xform-demos-api'
 import xFormSource from './XFormExpressionSandbox.vue?raw'
@@ -162,55 +161,54 @@ const tocItems = [
   { id: 'demo-expression-sandbox', label: '白名单 + 沙箱安全演示' },
   { id: 'api-expression-sandbox', label: '沙箱字段速查' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="expressionFunctions 白名单 + 沙箱安全"
-      source="src/components/form-schema/composables/use-expression.ts"
-      :introductions="[
-        '【注册白名单】expressionFunctions prop 注入白名单函数名（toCurrency / upper / concat）',
-        '【应用场景】后端 JSON 配置表单：表达式字符串 `{{ (m) => toCurrency(m.x) }}` 可直接引用注册名（无需打包编译）',
-        '【字符串表达式支持】reaction.disabled 等字段已验证支持 `{{ (m) => ... }}` 字符串表达式（见 XForm.vue）',
-        '【reaction.label / reaction.rules 实践】本 demo 用内联函数（避免字符串表达式与白名单注册的时序耦合）',
-        '【沙箱安全】含 document / fetch / eval / window 等 forbidden 标识符 → console.error + Debug Banner 红字',
-        '测试 1: 修改 price / qty → 合计/代码/拼接 label 实时更新（内联基线）',
-        '测试 2: 加载页面即触发 → 下方「控制台输出」面板显示 document / fetch 沙箱拒绝原因（无需打开 DevTools）',
-        '测试 3: 在「反应式 rules」字段 blur（先 focus 再点别处）→ price/qty 留空时显示动态红字',
-        '⚠️ 安全规则：禁止把 schema 来自 URL 参数 / localStorage / 用户输入——仅允许后端预校验或项目硬编码',
-      ]"
-    >
-      <section id="demo-expression-sandbox">
-        <DemoField label="白名单函数 + 沙箱安全" :code="xFormSource">
-          <XForm
-            ref="formRef"
-            :schema="schema"
-            :model="model"
-            :expression-functions="expressionFunctions"
-          />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onSave">保存</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-          </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
-      <ApiTable
-        title="沙箱字段速查"
-        :items="expressionSandboxItems"
-        anchor="api-expression-sandbox"
-      />
-      <ConsoleLogPanel
-        :logs="logs"
-        title="沙箱拒绝原因（实时捕获）"
-        empty="暂无警告（应仅安全测试字段变更后出现 [XForm] scanForForbidden 日志）"
-        @clear="clear"
-      />
-    </DemoFrame>
-    <template #toc><DocToc :items="tocItems" /></template>
-  </DocLayout>
+  <DemoFrame
+    title="expressionFunctions 白名单 + 沙箱安全"
+    source="src/components/form-schema/composables/use-expression.ts"
+    :introductions="[
+      '【注册白名单】expressionFunctions prop 注入白名单函数名（toCurrency / upper / concat）',
+      '【应用场景】后端 JSON 配置表单：表达式字符串 `{{ (m) => toCurrency(m.x) }}` 可直接引用注册名（无需打包编译）',
+      '【字符串表达式支持】reaction.disabled 等字段已验证支持 `{{ (m) => ... }}` 字符串表达式（见 XForm.vue）',
+      '【reaction.label / reaction.rules 实践】本 demo 用内联函数（避免字符串表达式与白名单注册的时序耦合）',
+      '【沙箱安全】含 document / fetch / eval / window 等 forbidden 标识符 → console.error + Debug Banner 红字',
+      '测试 1: 修改 price / qty → 合计/代码/拼接 label 实时更新（内联基线）',
+      '测试 2: 加载页面即触发 → 下方「控制台输出」面板显示 document / fetch 沙箱拒绝原因（无需打开 DevTools）',
+      '测试 3: 在「反应式 rules」字段 blur（先 focus 再点别处）→ price/qty 留空时显示动态红字',
+      '⚠️ 安全规则：禁止把 schema 来自 URL 参数 / localStorage / 用户输入——仅允许后端预校验或项目硬编码',
+    ]"
+  >
+    <section id="demo-expression-sandbox">
+      <DemoField label="白名单函数 + 沙箱安全" :code="xFormSource">
+        <XForm
+          ref="formRef"
+          :schema="schema"
+          :model="model"
+          :expression-functions="expressionFunctions"
+        />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onSave">保存</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
+    <ApiTable
+      title="沙箱字段速查"
+      :items="expressionSandboxItems"
+      anchor="api-expression-sandbox"
+    />
+    <ConsoleLogPanel
+      :logs="logs"
+      title="沙箱拒绝原因（实时捕获）"
+      empty="暂无警告（应仅安全测试字段变更后出现 [XForm] scanForForbidden 日志）"
+      @clear="clear"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

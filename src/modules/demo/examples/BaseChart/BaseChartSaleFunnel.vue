@@ -13,8 +13,7 @@
 import { ElMessage } from 'element-plus'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 
 const bem = createNamespace('demo-base-chart-funnel')
 
@@ -89,44 +88,40 @@ const SNIPPET = `<BaseChart :option="option" />
 // option 见上方 computed();sort: 'descending' 保证漏斗惯例排序`
 
 const tocItems = [{ id: 'demo-funnel', label: '销售转化漏斗' }]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="BaseChart · 销售转化漏斗"
-      source="src/components/common/BaseChart.vue"
-      :introductions="[
-        'funnel 类型是企业转化分析的标配：销售漏斗、用户行为漏斗、招聘流程漏斗。',
-        '本演示重点：label 内嵌格式化（绝对值 + 留存率）、tooltip 显示阶段转化率、sort: descending 默认排序。',
-        '刷新数据演示数据响应式；切换指标模式（整体留存率 ↔ 阶段转化率）演示 metric 切换触发 tooltip 重渲染；label 保持 retention 不变，仅 tooltip 文案随 mode 变化。',
-      ]"
-    >
-      <section id="demo-funnel">
-        <DemoField :code="SNIPPET" label="① 销售转化漏斗（绝对值 + 留存率 / 阶段转化率）">
-          <div :class="bem.e('controls')">
-            <el-radio-group v-model="metric">
-              <el-radio-button value="retention">整体留存率</el-radio-button>
-              <el-radio-button value="conversion">阶段转化率</el-radio-button>
-            </el-radio-group>
-            <el-button @click="shuffleData">刷新数据 (±10%)</el-button>
-            <span :class="bem.e('status')">总访问量：{{ stages[0]?.value }}</span>
-          </div>
-          <div :class="bem.e('canvas')">
-            <BaseChart :option="option" />
-          </div>
-          <p :class="bem.e('tip')">
-            hover 任一阶段：tooltip 显示当前指标的转化率；label 内嵌显示绝对值 + 整体留存率。sort:
-            'descending' 保证漏斗从大到小排列——上游阶段永远 ≥ 下游阶段。
-          </p>
-        </DemoField>
-      </section>
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+  <DemoFrame
+    title="BaseChart · 销售转化漏斗"
+    source="src/components/common/BaseChart.vue"
+    :introductions="[
+      'funnel 类型是企业转化分析的标配：销售漏斗、用户行为漏斗、招聘流程漏斗。',
+      '本演示重点：label 内嵌格式化（绝对值 + 留存率）、tooltip 显示阶段转化率、sort: descending 默认排序。',
+      '刷新数据演示数据响应式；切换指标模式（整体留存率 ↔ 阶段转化率）演示 metric 切换触发 tooltip 重渲染；label 保持 retention 不变，仅 tooltip 文案随 mode 变化。',
+    ]"
+  >
+    <section id="demo-funnel">
+      <DemoField :code="SNIPPET" label="① 销售转化漏斗（绝对值 + 留存率 / 阶段转化率）">
+        <div :class="bem.e('controls')">
+          <el-radio-group v-model="metric">
+            <el-radio-button value="retention">整体留存率</el-radio-button>
+            <el-radio-button value="conversion">阶段转化率</el-radio-button>
+          </el-radio-group>
+          <el-button @click="shuffleData">刷新数据 (±10%)</el-button>
+          <span :class="bem.e('status')">总访问量：{{ stages[0]?.value }}</span>
+        </div>
+        <div :class="bem.e('canvas')">
+          <BaseChart :option="option" />
+        </div>
+        <p :class="bem.e('tip')">
+          hover 任一阶段：tooltip 显示当前指标的转化率；label 内嵌显示绝对值 + 整体留存率。sort:
+          'descending' 保证漏斗从大到小排列——上游阶段永远 ≥ 下游阶段。
+        </p>
+      </DemoField>
+    </section>
+  </DemoFrame>
 </template>
 
 <style lang="scss">

@@ -16,8 +16,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { customFormItemItems } from './configs/xform-demos-api'
 import xFormSource from './XFormCustomFormItem.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
@@ -163,39 +162,38 @@ const tocItems = [
   { id: 'demo-custom-form-item', label: 'formItem 自定义演示' },
   { id: 'api-custom-form-item', label: 'formItem 字段速查' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="schema 字段 formItem —— 自定义 form-item 包装"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        'formItem: false —— 不包 form-item，裸渲染组件（展示型 UI 块）',
-        'formItem: { props } —— 单字段 label 宽度 / 必填样式独立于全局',
-        'formItem: { slots } —— 自定义 label 内容（如加 icon / 提示）',
-        'formItem: { component } —— 用业务自定义 FormItemPlus 替代 ElFormItem（需在 components 注册）',
-      ]"
-    >
-      <section id="demo-custom-form-item">
-        <DemoField label="用户录入（formItem 自定义）" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" :components="{ FormItemPlus }" />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onSave">保存</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-          </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
-      <ApiTable
-        title="formItem 字段速查"
-        :items="customFormItemItems"
-        anchor="api-custom-form-item"
-      />
-    </DemoFrame>
-    <template #toc><DocToc :items="tocItems" /></template>
-  </DocLayout>
+  <DemoFrame
+    title="schema 字段 formItem —— 自定义 form-item 包装"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      'formItem: false —— 不包 form-item，裸渲染组件（展示型 UI 块）',
+      'formItem: { props } —— 单字段 label 宽度 / 必填样式独立于全局',
+      'formItem: { slots } —— 自定义 label 内容（如加 icon / 提示）',
+      'formItem: { component } —— 用业务自定义 FormItemPlus 替代 ElFormItem（需在 components 注册）',
+    ]"
+  >
+    <section id="demo-custom-form-item">
+      <DemoField label="用户录入（formItem 自定义）" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" :components="{ FormItemPlus }" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onSave">保存</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
+    <ApiTable
+      title="formItem 字段速查"
+      :items="customFormItemItems"
+      anchor="api-custom-form-item"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

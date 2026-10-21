@@ -14,8 +14,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { arrayApiItems } from './configs/xform-demos-api'
 import xFormSource from './XFormArrayApi.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
@@ -151,53 +150,52 @@ const tocItems = [
   { id: 'demo-array-api', label: '编程式数组操控演示' },
   { id: 'api-array-api', label: 'addItem / removeItem / moveItem 字段速查' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="addItem / removeItem / moveItem 实例方法"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        'XFormArray demo 演示了 UI 按钮；本 demo 演示外部代码通过 formRef 调用相同 API',
-        '应用场景：批量导入、模板填充、撤销/重做、第三方按钮触发、AI 助手编程式编辑等',
-        'addItem 总追加到末尾（要插头部 → addItem + moveItem）',
-        'removeItem 受 minItems 限制；addItem 不受 maxItems 限制（业务侧自行控制）',
-        'moveItem 与 array.draggable 拖拽 drop handler 内部调用一致',
-      ]"
-    >
-      <section id="demo-array-api">
-        <DemoField label="编程式操控数组节点" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('actions')">
-            <el-button @click="onResetOverride">重置</el-button>
-            <el-button @click="onAppend">追加</el-button>
-            <el-button @click="onPrepend">插到头部</el-button>
-            <el-button @click="onRemoveLast">删除最后</el-button>
-            <el-button @click="onMoveFirstToLast">首行→末行</el-button>
-            <el-button @click="onBatchImport">批量导入 11 行（超过 maxItems=10）</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-          </div>
-          <ModelPreview :model="model" />
-          <p :class="bem.e('hint')">
-            <strong>addItem vs maxItems 步骤：</strong>
-            连点 11 次「批量导入」按钮可看到
-            <code>maxItems=10</code>
-            不限制
-            <code>addItem</code>
-            API（业务侧自行控制），ModelPreview 实时显示当前 N 项； 第 10 次 addItem 后仍有 11
-            次会越过上限，最终数组会有 13 项（初始 2 + 11 追加）。
-          </p>
-        </DemoField>
-      </section>
-      <ApiTable
-        title="addItem / removeItem / moveItem 字段速查"
-        :items="arrayApiItems"
-        anchor="api-array-api"
-      />
-    </DemoFrame>
-    <template #toc><DocToc :items="tocItems" /></template>
-  </DocLayout>
+  <DemoFrame
+    title="addItem / removeItem / moveItem 实例方法"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      'XFormArray demo 演示了 UI 按钮；本 demo 演示外部代码通过 formRef 调用相同 API',
+      '应用场景：批量导入、模板填充、撤销/重做、第三方按钮触发、AI 助手编程式编辑等',
+      'addItem 总追加到末尾（要插头部 → addItem + moveItem）',
+      'removeItem 受 minItems 限制；addItem 不受 maxItems 限制（业务侧自行控制）',
+      'moveItem 与 array.draggable 拖拽 drop handler 内部调用一致',
+    ]"
+  >
+    <section id="demo-array-api">
+      <DemoField label="编程式操控数组节点" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onResetOverride">重置</el-button>
+          <el-button @click="onAppend">追加</el-button>
+          <el-button @click="onPrepend">插到头部</el-button>
+          <el-button @click="onRemoveLast">删除最后</el-button>
+          <el-button @click="onMoveFirstToLast">首行→末行</el-button>
+          <el-button @click="onBatchImport">批量导入 11 行（超过 maxItems=10）</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <ModelPreview :model="model" />
+        <p :class="bem.e('hint')">
+          <strong>addItem vs maxItems 步骤：</strong>
+          连点 11 次「批量导入」按钮可看到
+          <code>maxItems=10</code>
+          不限制
+          <code>addItem</code>
+          API（业务侧自行控制），ModelPreview 实时显示当前 N 项； 第 10 次 addItem 后仍有 11
+          次会越过上限，最终数组会有 13 项（初始 2 + 11 追加）。
+        </p>
+      </DemoField>
+    </section>
+    <ApiTable
+      title="addItem / removeItem / moveItem 字段速查"
+      :items="arrayApiItems"
+      anchor="api-array-api"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

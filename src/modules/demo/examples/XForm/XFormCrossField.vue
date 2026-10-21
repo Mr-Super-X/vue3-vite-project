@@ -25,8 +25,7 @@ import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import { crossFieldItems } from './configs/xform-demos-api'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import xFormSource from './XFormCrossField.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
 
@@ -300,55 +299,51 @@ const tocItems = [
   { id: 'demo-cross-field', label: '跨字段校验演示' },
   { id: 'api-cross-field', label: 'RuleItem 跨字段' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="跨字段校验（crossValidator）"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        'RuleItem dependsOn + crossValidator 两个字段,声明式跨字段校验:',
-        '1. 密码 = 确认密码 — dependsOn: [\'password\']',
-        '2. 开始日期 ≤ 结束日期 — 结束日期 dependsOn: [\'startDate\']',
-        '3. 主/备用联系人至少填一个 — 双向 dependsOn 互相校验',
-        'crossValidator 返回 true 表示通过,返回 string 作为错误信息(form-schema 自动写入对应 form-item)',
-        'validateDetail() 同步返回完整跨字段错误列表(用于调试或自定义展示)',
-        'H3 验证：「年龄」挂在嵌套路径 user.age，「监护人」dependsOn 该嵌套路径（年龄亦 dependsOn guardian 联动）—— 年龄 10 时点「保存」制造两处红字(未成年须填写监护人)；① 填「监护人」→ 两处红字一起消失(跨字段反向重算)；② 或点「直改 model.user.age = 30」按钮(绕过 v-model 走兜底 watch)—— 两处红字也应自动消失',
-        'H1 验证：「standalone disabled/hidden 字段」使用字段级函数形态(非 reaction 简写)—— 切换「同意协议」开关,两字段应联动禁用/启用、隐藏/显示,dev 控制台无 prop type 警告',
-        'showErrorToast：打开右侧「浮窗」开关后点「保存」,跨字段校验失败的 errorBus 事件会以右上角 toast 弹出(默认关闭;同码错误 5s 固定窗口去重)',
-      ]"
-    >
-      <section id="demo-cross-field">
-        <DemoField label="跨字段校验" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" :show-error-toast="showErrorToast" />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onSave">保存</el-button>
-            <el-button @click="onInspectDetail">查看跨字段详情</el-button>
-            <el-button type="warning" plain @mousedown.prevent @click="onDirectSetAge">
-              直改 model.user.age = 30（H3）
-            </el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-            <el-switch
-              v-model="showErrorToast"
-              inline-prompt
-              active-text="浮窗开"
-              inactive-text="浮窗关"
-              style="margin-left: auto"
-            />
-          </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="跨字段校验（crossValidator）"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      'RuleItem dependsOn + crossValidator 两个字段,声明式跨字段校验:',
+      '1. 密码 = 确认密码 — dependsOn: [\'password\']',
+      '2. 开始日期 ≤ 结束日期 — 结束日期 dependsOn: [\'startDate\']',
+      '3. 主/备用联系人至少填一个 — 双向 dependsOn 互相校验',
+      'crossValidator 返回 true 表示通过,返回 string 作为错误信息(form-schema 自动写入对应 form-item)',
+      'validateDetail() 同步返回完整跨字段错误列表(用于调试或自定义展示)',
+      'H3 验证：「年龄」挂在嵌套路径 user.age，「监护人」dependsOn 该嵌套路径（年龄亦 dependsOn guardian 联动）—— 年龄 10 时点「保存」制造两处红字(未成年须填写监护人)；① 填「监护人」→ 两处红字一起消失(跨字段反向重算)；② 或点「直改 model.user.age = 30」按钮(绕过 v-model 走兜底 watch)—— 两处红字也应自动消失',
+      'H1 验证：「standalone disabled/hidden 字段」使用字段级函数形态(非 reaction 简写)—— 切换「同意协议」开关,两字段应联动禁用/启用、隐藏/显示,dev 控制台无 prop type 警告',
+      'showErrorToast：打开右侧「浮窗」开关后点「保存」,跨字段校验失败的 errorBus 事件会以右上角 toast 弹出(默认关闭;同码错误 5s 固定窗口去重)',
+    ]"
+  >
+    <section id="demo-cross-field">
+      <DemoField label="跨字段校验" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" :show-error-toast="showErrorToast" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onSave">保存</el-button>
+          <el-button @click="onInspectDetail">查看跨字段详情</el-button>
+          <el-button type="warning" plain @mousedown.prevent @click="onDirectSetAge">
+            直改 model.user.age = 30（H3）
+          </el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+          <el-switch
+            v-model="showErrorToast"
+            inline-prompt
+            active-text="浮窗开"
+            inactive-text="浮窗关"
+            style="margin-left: auto"
+          />
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
 
-      <ApiTable title="RuleItem 跨字段" :items="crossFieldItems" anchor="api-cross-field" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="RuleItem 跨字段" :items="crossFieldItems" anchor="api-cross-field" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

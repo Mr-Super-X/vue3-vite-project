@@ -10,8 +10,7 @@ import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import xFormSource from './XFormReactionCascadeClear.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
 import {
@@ -125,40 +124,39 @@ async function onSave() {
 }
 
 const tocItems = [{ id: 'demo-cascade-clear', label: '级联清空演示' }]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="reaction 级联清空（省/市/区 + 商品/型号）"
-      source="src/components/form-schema/composables/use-reaction.ts"
-      :introductions="[
-        '② 跨字段级联清空：上级字段 on.change 闭包清空下级',
-        '下级 reaction.props 按上级值查字典动态切 options（PROVINCES → CITIES_BY_PROVINCE → DISTRICTS_BY_CITY）',
-        '商品类型 → 型号链路演示 reaction.props 的动态切 options',
-        'clearCount 计数器：每次切上级字段 +1，证明清空逻辑被触发',
-      ]"
-    >
-      <section id="demo-cascade-clear">
-        <DemoField label="跨字段级联清空" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onSave">校验</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
+  <DemoFrame
+    title="reaction 级联清空（省/市/区 + 商品/型号）"
+    source="src/components/form-schema/composables/use-reaction.ts"
+    :introductions="[
+      '② 跨字段级联清空：上级字段 on.change 闭包清空下级',
+      '下级 reaction.props 按上级值查字典动态切 options（PROVINCES → CITIES_BY_PROVINCE → DISTRICTS_BY_CITY）',
+      '商品类型 → 型号链路演示 reaction.props 的动态切 options',
+      'clearCount 计数器：每次切上级字段 +1，证明清空逻辑被触发',
+    ]"
+  >
+    <section id="demo-cascade-clear">
+      <DemoField label="跨字段级联清空" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onSave">校验</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <div :class="bem.e('panels')">
+          <div :class="bem.e('panel')">
+            <strong>级联清空次数：</strong>
+            {{ model.clearCount }}
           </div>
-          <div :class="bem.e('panels')">
-            <div :class="bem.e('panel')">
-              <strong>级联清空次数：</strong>
-              {{ model.clearCount }}
-            </div>
-          </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
-    </DemoFrame>
-    <template #toc><DocToc :items="tocItems" /></template>
-  </DocLayout>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
+  </DemoFrame>
 </template>
 
 <style lang="scss">

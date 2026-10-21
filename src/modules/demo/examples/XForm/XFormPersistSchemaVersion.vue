@@ -15,8 +15,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { persistItems } from './configs/xform-demos-api'
 import xFormSource from './XFormPersistSchemaVersion.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
@@ -165,77 +164,76 @@ const tocItems = [
   { id: 'demo-step-guide', label: '7 步交互指引' },
   { id: 'api-persist-schema-version', label: 'useFormPersist 配置速查' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="useFormPersist.restoreFilter —— schema 升级后裁剪旧草稿"
-      source="src/components/form-schema/composables/use-form-persist.ts"
-      :introductions="[
-        '【应用场景】schema 升级时字段会重命名 / 移除 / 新增；存量用户的草稿不能因为字段变更就丢',
-        '【restoreFilter】在 load() 时裁剪旧字段 + 注入新字段默认值',
-        '下方按 7 步交互指引走完整个升级流程：v1 填字段 → 切 v2 → 加载草稿 → 验证裁剪',
-      ]"
-    >
-      <section id="demo-persist-schema-version">
-        <!-- 7 步交互指引（折叠面板，默认折叠让用户主动展开） -->
-        <el-collapse :class="bem.e('guide-collapse')">
-          <el-collapse-item title="📋 7 步交互指引（按顺序走完整个升级流程）" name="guide">
-            <ol :class="bem.e('guide-list')">
-              <li>
-                <strong>v1 模式</strong>
-                填字段：a=hello、b=world、oldField=legacy（v1 独有字段）
-              </li>
-              <li>点「保存草稿」→ 草稿写入 localStorage（key 含 v1 数据）</li>
-              <li>
-                切到
-                <strong>v2</strong>
-                （radio）→ schema 切换到 v2 版本
-              </li>
-              <li>点「加载草稿」→ restoreFilter 裁剪 oldField + 注入 c=v2-default</li>
-              <li>验证：表单显示 a=hello、b=world、c=v2-default，oldField 字段消失</li>
-              <li>
-                控制台查看
-                <code>[restoreFilter] 已裁剪废弃字段 oldField: legacy</code>
-              </li>
-              <li>点「清除草稿」→ 重置 + 清 localStorage，可重新开始</li>
-            </ol>
-          </el-collapse-item>
-        </el-collapse>
+  <DemoFrame
+    title="useFormPersist.restoreFilter —— schema 升级后裁剪旧草稿"
+    source="src/components/form-schema/composables/use-form-persist.ts"
+    :introductions="[
+      '【应用场景】schema 升级时字段会重命名 / 移除 / 新增；存量用户的草稿不能因为字段变更就丢',
+      '【restoreFilter】在 load() 时裁剪旧字段 + 注入新字段默认值',
+      '下方按 7 步交互指引走完整个升级流程：v1 填字段 → 切 v2 → 加载草稿 → 验证裁剪',
+    ]"
+  >
+    <section id="demo-persist-schema-version">
+      <!-- 7 步交互指引（折叠面板，默认折叠让用户主动展开） -->
+      <el-collapse :class="bem.e('guide-collapse')">
+        <el-collapse-item title="📋 7 步交互指引（按顺序走完整个升级流程）" name="guide">
+          <ol :class="bem.e('guide-list')">
+            <li>
+              <strong>v1 模式</strong>
+              填字段：a=hello、b=world、oldField=legacy（v1 独有字段）
+            </li>
+            <li>点「保存草稿」→ 草稿写入 localStorage（key 含 v1 数据）</li>
+            <li>
+              切到
+              <strong>v2</strong>
+              （radio）→ schema 切换到 v2 版本
+            </li>
+            <li>点「加载草稿」→ restoreFilter 裁剪 oldField + 注入 c=v2-default</li>
+            <li>验证：表单显示 a=hello、b=world、c=v2-default，oldField 字段消失</li>
+            <li>
+              控制台查看
+              <code>[restoreFilter] 已裁剪废弃字段 oldField: legacy</code>
+            </li>
+            <li>点「清除草稿」→ 重置 + 清 localStorage，可重新开始</li>
+          </ol>
+        </el-collapse-item>
+      </el-collapse>
 
-        <div :class="bem.e('controls')">
-          <span>schema 版本：</span>
-          <el-radio-group
-            v-model="version"
-            @change="(v: string | number | boolean | undefined) => switchVersion(v as Version)"
-          >
-            <el-radio-button value="v1">v1（含 oldField）</el-radio-button>
-            <el-radio-button value="v2">v2（移除 oldField，新增 c）</el-radio-button>
-          </el-radio-group>
-          <el-button @click="onSaveDraft">保存草稿</el-button>
-          <el-button @click="onLoadDraft" :disabled="!hasDraftOrSaved">加载草稿</el-button>
-          <el-button @click="onClearDraft">清除草稿</el-button>
-          <el-button @click="copySchema">复制 schema</el-button>
-          <span :class="bem.e('hint')">
-            草稿状态：
-            <strong>{{ hasDraftOrSaved ? '存在' : '无' }}</strong>
-          </span>
-        </div>
+      <div :class="bem.e('controls')">
+        <span>schema 版本：</span>
+        <el-radio-group
+          v-model="version"
+          @change="(v: string | number | boolean | undefined) => switchVersion(v as Version)"
+        >
+          <el-radio-button value="v1">v1（含 oldField）</el-radio-button>
+          <el-radio-button value="v2">v2（移除 oldField，新增 c）</el-radio-button>
+        </el-radio-group>
+        <el-button @click="onSaveDraft">保存草稿</el-button>
+        <el-button @click="onLoadDraft" :disabled="!hasDraftOrSaved">加载草稿</el-button>
+        <el-button @click="onClearDraft">清除草稿</el-button>
+        <el-button @click="copySchema">复制 schema</el-button>
+        <span :class="bem.e('hint')">
+          草稿状态：
+          <strong>{{ hasDraftOrSaved ? '存在' : '无' }}</strong>
+        </span>
+      </div>
 
-        <DemoField label="schema 版本切换 + 草稿裁剪" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
-      <ApiTable
-        title="useFormPersist 配置速查"
-        :items="persistItems"
-        anchor="api-persist-schema-version"
-      />
-    </DemoFrame>
-    <template #toc><DocToc :items="tocItems" /></template>
-  </DocLayout>
+      <DemoField label="schema 版本切换 + 草稿裁剪" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
+    <ApiTable
+      title="useFormPersist 配置速查"
+      :items="persistItems"
+      anchor="api-persist-schema-version"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

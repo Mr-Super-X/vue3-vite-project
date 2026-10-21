@@ -31,8 +31,7 @@ import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import { builderItems } from './configs/xform-demos-api'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import xFormSource from './XFormBuilder.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
 
@@ -346,58 +345,54 @@ const tocItems = [
   { id: 'demo-builder-card', label: 'xCard 演示' },
   { id: 'api-builder', label: 'builder 链式方法' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="builder 链式 API（7 个复杂控件真实链式写法）"
-      source="src/components/form-schema/builders.ts"
-      :introductions="[
-        'XForm 提供 27 个 xXxx() 链式 builder：每个绑死 component 名 + props 类型，链式调用时 IDE 自动补全 props 字段名',
-        '核心价值：编译时类型校验 —— 拼错字段（如 listTyp）编译报错；等价对象字面量写法则运行时静默失效',
-        '本 demo 覆盖 7 个复杂控件的真实链式写法：xCascader / xUpload / xTransfer / xTimePicker / xTimeSelect / xAutocomplete / xTreeSelect',
-        '使用边界：builder 不支持 slots / asyncOptions / on.change —— 含这些字段时用 builder.build() + 对象字面量展开（如 Upload 字段演示）',
-        '建议接入顺序：先用对象字面量理解 schema DSL → 复杂表单再用 builder 获得类型安全',
-      ]"
-    >
-      <section id="demo-builder">
-        <DemoField label="builder 链式" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('actions')">
-            <el-button type="primary" @click="onSave">保存</el-button>
-            <el-button @click="onReset">重置</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-          </div>
-          <ModelPreview :model="model" />
+  <DemoFrame
+    title="builder 链式 API（7 个复杂控件真实链式写法）"
+    source="src/components/form-schema/builders.ts"
+    :introductions="[
+      'XForm 提供 27 个 xXxx() 链式 builder：每个绑死 component 名 + props 类型，链式调用时 IDE 自动补全 props 字段名',
+      '核心价值：编译时类型校验 —— 拼错字段（如 listTyp）编译报错；等价对象字面量写法则运行时静默失效',
+      '本 demo 覆盖 7 个复杂控件的真实链式写法：xCascader / xUpload / xTransfer / xTimePicker / xTimeSelect / xAutocomplete / xTreeSelect',
+      '使用边界：builder 不支持 slots / asyncOptions / on.change —— 含这些字段时用 builder.build() + 对象字面量展开（如 Upload 字段演示）',
+      '建议接入顺序：先用对象字面量理解 schema DSL → 复杂表单再用 builder 获得类型安全',
+    ]"
+  >
+    <section id="demo-builder">
+      <DemoField label="builder 链式" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('actions')">
+          <el-button type="primary" @click="onSave">保存</el-button>
+          <el-button @click="onReset">重置</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
+
+    <section id="demo-builder-array">
+      <div :class="bem.e('new-section')">
+        <DemoField label="xArray 数组节点" :code="arrayCode">
+          <XForm ref="arrayFormRef" :schema="schemaWithArray" :model="modelArray" />
+          <ModelPreview :model="modelArray" />
         </DemoField>
-      </section>
+      </div>
+    </section>
 
-      <section id="demo-builder-array">
-        <div :class="bem.e('new-section')">
-          <DemoField label="xArray 数组节点" :code="arrayCode">
-            <XForm ref="arrayFormRef" :schema="schemaWithArray" :model="modelArray" />
-            <ModelPreview :model="modelArray" />
-          </DemoField>
-        </div>
-      </section>
+    <section id="demo-builder-card">
+      <div :class="bem.e('new-section')">
+        <DemoField label="xCard 视觉容器" :code="cardCode">
+          <XForm ref="cardFormRef" :schema="schemaWithCard" :model="modelCard" />
+          <ModelPreview :model="modelCard" />
+        </DemoField>
+      </div>
+    </section>
 
-      <section id="demo-builder-card">
-        <div :class="bem.e('new-section')">
-          <DemoField label="xCard 视觉容器" :code="cardCode">
-            <XForm ref="cardFormRef" :schema="schemaWithCard" :model="modelCard" />
-            <ModelPreview :model="modelCard" />
-          </DemoField>
-        </div>
-      </section>
-
-      <ApiTable title="builder 链式方法" :items="builderItems" anchor="api-builder" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="builder 链式方法" :items="builderItems" anchor="api-builder" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

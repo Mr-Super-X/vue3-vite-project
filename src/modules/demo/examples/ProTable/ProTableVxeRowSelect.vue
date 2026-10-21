@@ -28,11 +28,10 @@
  */
 import { ElButton, ElMessage } from 'element-plus'
 import type { ProColumn, ProTableExpose } from '@/components/ProTable'
-import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import {
   radioColumnItems,
   reserveSelectionColumnItems,
@@ -139,153 +138,147 @@ const tocItems = [
   { id: 'demo-vxe-reserve', label: '③ reserveSelection 跨页累计' },
   { id: 'api-vxe-selection', label: 'vxe 引擎 clearSelection 双通道' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="ProTableVxeRowSelect vxe 引擎行选择（radio / selection / 跨页多选）"
-      source="src/components/ProTable/components/VxeTableBody.vue"
-      :introductions="[
-        'table-engine=\'vxe-table\'：radio/selection 列由 vxe-table 内置列类型渲染，选中收敛统一选中区。',
-        'B1 修复点：clearSelection 同时清 vxe UI 勾选（clearCheckboxRow/clearRadioRow）与本地镜像。',
-        'reserveSelection 跨页：翻页勾选保留，读取时经 getCheckboxRecords() 回同步全量镜像。',
-      ]"
-    >
-      <section :class="bem.b()">
-        <!-- 三表行为对照：先明确预期，再逐个验证 -->
-        <DemoField id="demo-behavior-map" label="三种行选择的翻页行为对照" :code="behaviorCode">
-          <table :class="bem.e('compare')">
-            <thead>
-              <tr>
-                <th>表</th>
-                <th>列类型</th>
-                <th>翻页后选区</th>
-                <th>机制</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>① radio 单选</td>
-                <td><code>type: 'radio'</code></td>
-                <td>✅ 保持</td>
-                <td>选中收敛统一选中区；vxe 经 radio-config.reserve 按 keyField 恢复 UI</td>
-              </tr>
-              <tr>
-                <td>② selection 多选</td>
-                <td><code>type: 'selection'</code></td>
-                <td>❌ 清空（设计行为）</td>
-                <td>与 el 引擎非 reserve 一致：翻页清选区，防跨页误批量操作</td>
-              </tr>
-              <tr>
-                <td>③ selection + reserveSelection</td>
-                <td><code>type: 'selection', reserveSelection: true</code></td>
-                <td>✅ 跨页累计</td>
-                <td>v3.1 一等字段 → vxe checkbox-config.reserve，跨页累计勾选</td>
-              </tr>
-            </tbody>
-          </table>
-          <p :class="bem.e('hint')">
-            注意：② 翻页清空选区是
-            <strong>设计行为</strong>
-            （与 el 引擎一致），不是 bug。需要跨页保持请用 ③ 的 reserveSelection。
-          </p>
-        </DemoField>
+  <DemoFrame
+    title="ProTableVxeRowSelect vxe 引擎行选择（radio / selection / 跨页多选）"
+    source="src/components/ProTable/components/VxeTableBody.vue"
+    :introductions="[
+      'table-engine=\'vxe-table\'：radio/selection 列由 vxe-table 内置列类型渲染，选中收敛统一选中区。',
+      'B1 修复点：clearSelection 同时清 vxe UI 勾选（clearCheckboxRow/clearRadioRow）与本地镜像。',
+      'reserveSelection 跨页：翻页勾选保留，读取时经 getCheckboxRecords() 回同步全量镜像。',
+    ]"
+  >
+    <section :class="bem.b()">
+      <!-- 三表行为对照：先明确预期，再逐个验证 -->
+      <DemoField id="demo-behavior-map" label="三种行选择的翻页行为对照" :code="behaviorCode">
+        <table :class="bem.e('compare')">
+          <thead>
+            <tr>
+              <th>表</th>
+              <th>列类型</th>
+              <th>翻页后选区</th>
+              <th>机制</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>① radio 单选</td>
+              <td><code>type: 'radio'</code></td>
+              <td>✅ 保持</td>
+              <td>选中收敛统一选中区；vxe 经 radio-config.reserve 按 keyField 恢复 UI</td>
+            </tr>
+            <tr>
+              <td>② selection 多选</td>
+              <td><code>type: 'selection'</code></td>
+              <td>❌ 清空（设计行为）</td>
+              <td>与 el 引擎非 reserve 一致：翻页清选区，防跨页误批量操作</td>
+            </tr>
+            <tr>
+              <td>③ selection + reserveSelection</td>
+              <td><code>type: 'selection', reserveSelection: true</code></td>
+              <td>✅ 跨页累计</td>
+              <td>v3.1 一等字段 → vxe checkbox-config.reserve，跨页累计勾选</td>
+            </tr>
+          </tbody>
+        </table>
+        <p :class="bem.e('hint')">
+          注意：② 翻页清空选区是
+          <strong>设计行为</strong>
+          （与 el 引擎一致），不是 bug。需要跨页保持请用 ③ 的 reserveSelection。
+        </p>
+      </DemoField>
 
-        <DemoField id="demo-vxe-radio" label="① vxe radio 单选列（翻页保持）" :code="radioCode">
-          <p :class="bem.e('hint')">
-            验证：① 点单选圆点选中一行 ②
-            <strong>翻到第 2 页再翻回</strong>
-            → 圆点仍在（跨页保持）③ 「读取 radio 选中」提示单行 ④
-            「清除选中」后圆点消失（B1：UI+镜像双清）
-          </p>
-          <div :class="bem.e('actions')">
-            <ElButton type="primary" size="small" @click="handleGetRadio">读取 radio 选中</ElButton>
-            <ElButton size="small" @click="handleClear(radioRef, 'radio')">清除选中</ElButton>
-          </div>
-          <ProTable
-            ref="radioRef"
-            table-engine="vxe-table"
-            :columns="vxeRadioColumns"
-            :request-api="projectRequestApi"
-            table-key="demo-vxe-radio"
-            row-key="id"
-            :page-size="5"
-          />
-        </DemoField>
+      <DemoField id="demo-vxe-radio" label="① vxe radio 单选列（翻页保持）" :code="radioCode">
+        <p :class="bem.e('hint')">
+          验证：① 点单选圆点选中一行 ②
+          <strong>翻到第 2 页再翻回</strong>
+          → 圆点仍在（跨页保持）③ 「读取 radio 选中」提示单行 ④
+          「清除选中」后圆点消失（B1：UI+镜像双清）
+        </p>
+        <div :class="bem.e('actions')">
+          <ElButton type="primary" size="small" @click="handleGetRadio">读取 radio 选中</ElButton>
+          <ElButton size="small" @click="handleClear(radioRef, 'radio')">清除选中</ElButton>
+        </div>
+        <ProTable
+          ref="radioRef"
+          table-engine="vxe-table"
+          :columns="vxeRadioColumns"
+          :request-api="projectRequestApi"
+          table-key="demo-vxe-radio"
+          row-key="id"
+          :page-size="5"
+        />
+      </DemoField>
 
-        <DemoField
-          id="demo-vxe-selection"
-          label="② vxe selection 多选（本页，翻页清选区）"
-          :code="selectionCode"
-        >
-          <p :class="bem.e('hint')">
-            验证：勾选 2 行 → 「读取勾选」提示 2 行 → 「清除选中」后 checkbox 全部清空。
-            翻页会清空选区（设计行为，见上方对照表）——跨页保持请用下方 reserveSelection 表。
-          </p>
-          <div :class="bem.e('actions')">
-            <ElButton type="primary" size="small" @click="handleGetSelection">读取勾选</ElButton>
-            <ElButton size="small" @click="handleClear(selectionRef, 'selection')">
-              清除选中
-            </ElButton>
-          </div>
-          <ProTable
-            ref="selectionRef"
-            table-engine="vxe-table"
-            :columns="vxeSelectionColumns"
-            :request-api="projectRequestApi"
-            table-key="demo-vxe-selection"
-            row-key="id"
-            :page-size="5"
-          />
-        </DemoField>
+      <DemoField
+        id="demo-vxe-selection"
+        label="② vxe selection 多选（本页，翻页清选区）"
+        :code="selectionCode"
+      >
+        <p :class="bem.e('hint')">
+          验证：勾选 2 行 → 「读取勾选」提示 2 行 → 「清除选中」后 checkbox 全部清空。
+          翻页会清空选区（设计行为，见上方对照表）——跨页保持请用下方 reserveSelection 表。
+        </p>
+        <div :class="bem.e('actions')">
+          <ElButton type="primary" size="small" @click="handleGetSelection">读取勾选</ElButton>
+          <ElButton size="small" @click="handleClear(selectionRef, 'selection')">清除选中</ElButton>
+        </div>
+        <ProTable
+          ref="selectionRef"
+          table-engine="vxe-table"
+          :columns="vxeSelectionColumns"
+          :request-api="projectRequestApi"
+          table-key="demo-vxe-selection"
+          row-key="id"
+          :page-size="5"
+        />
+      </DemoField>
 
-        <DemoField
-          id="demo-vxe-reserve"
-          label="③ vxe reserveSelection 跨页多选（B1 核心验证）"
-          :code="reserveCode"
-        >
-          <p :class="bem.e('hint')">
-            验证：第 1 页勾 2 行 → 翻第 2 页勾 1 行 → 「读取跨页勾选」累计 3 行 → 翻回第 1
-            页勾选保留（镜像回同步）→ 「清除选中」全部清空
-          </p>
-          <div :class="bem.e('actions')">
-            <ElButton type="primary" size="small" @click="handleGetReserve">读取跨页勾选</ElButton>
-            <ElButton size="small" @click="handleClear(reserveRef, 'reserve')">清除选中</ElButton>
-          </div>
-          <ProTable
-            ref="reserveRef"
-            table-engine="vxe-table"
-            :columns="vxeReserveColumns"
-            :request-api="projectRequestApi"
-            table-key="demo-vxe-reserve"
-            row-key="id"
-            :page-size="5"
-          />
-        </DemoField>
-      </section>
+      <DemoField
+        id="demo-vxe-reserve"
+        label="③ vxe reserveSelection 跨页多选（B1 核心验证）"
+        :code="reserveCode"
+      >
+        <p :class="bem.e('hint')">
+          验证：第 1 页勾 2 行 → 翻第 2 页勾 1 行 → 「读取跨页勾选」累计 3 行 → 翻回第 1
+          页勾选保留（镜像回同步）→ 「清除选中」全部清空
+        </p>
+        <div :class="bem.e('actions')">
+          <ElButton type="primary" size="small" @click="handleGetReserve">读取跨页勾选</ElButton>
+          <ElButton size="small" @click="handleClear(reserveRef, 'reserve')">清除选中</ElButton>
+        </div>
+        <ProTable
+          ref="reserveRef"
+          table-engine="vxe-table"
+          :columns="vxeReserveColumns"
+          :request-api="projectRequestApi"
+          table-key="demo-vxe-reserve"
+          row-key="id"
+          :page-size="5"
+        />
+      </DemoField>
+    </section>
 
-      <ApiTable
-        title="radio 单选列字段（v3.1）"
-        :items="radioColumnItems"
-        anchor="api-radio-column"
-      />
-      <ApiTable
-        title="reserveSelection 字段（v3.1）"
-        :items="reserveSelectionColumnItems"
-        anchor="api-reserve-selection"
-      />
-      <ApiTable
-        title="vxe 引擎 clearSelection 双通道（B1）"
-        :items="vxeSelectionItems"
-        anchor="api-vxe-selection"
-      />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable
+      title="radio 单选列字段（v3.1）"
+      :items="radioColumnItems"
+      anchor="api-radio-column"
+    />
+    <ApiTable
+      title="reserveSelection 字段（v3.1）"
+      :items="reserveSelectionColumnItems"
+      anchor="api-reserve-selection"
+    />
+    <ApiTable
+      title="vxe 引擎 clearSelection 双通道（B1）"
+      :items="vxeSelectionItems"
+      anchor="api-vxe-selection"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

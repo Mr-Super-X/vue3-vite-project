@@ -20,8 +20,7 @@ import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import { serverErrorMethods } from './configs/xform-demos-api'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import xFormSource from './XFormServerError.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
 
@@ -149,56 +148,52 @@ const tocItems = [
   { id: 'demo-server-error', label: '服务端错误演示' },
   { id: 'api-server-error', label: '相关实例方法' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="服务端错误映射（4 类错误场景演示）"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        '后端返回 422 with errors[] → 前端循环调用 setFieldError(field, message) → UI 显示红字',
-        '本 demo 模拟 4 类独立错误场景，每个错误单独触发：用户名冲突 / 邮箱重复 / 邮箱黑名单 / 密码强度不足',
-        '测试场景（每个输入独立触发对应错误，互不耦合）:',
-        '   - 用户名=admin → 红字「用户名已存在」',
-        '   - 邮箱=admin@example.com → 红字「该邮箱已被注册」',
-        '   - 邮箱=test@spam.com → 红字「该邮箱域名在黑名单中」',
-        '   - 密码=123456 → 前端 min:6 通过，红字「必须包含字母」（后端额外规则）',
-        '   - 密码=123 → 前端失焦红字「密码长度不足」（本地 min:6 规则）',
-        '对比 demos：响应式断点见 XFormResponsive；批量校验见 XFormOrderCreate',
-      ]"
-    >
-      <section id="demo-server-error">
-        <DemoField label="服务端错误映射" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('actions')">
-            <el-button type="primary" @click="onSave">保存(测试后端 422 错误)</el-button>
-            <el-button @click="onReset">重置</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
+  <DemoFrame
+    title="服务端错误映射（4 类错误场景演示）"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      '后端返回 422 with errors[] → 前端循环调用 setFieldError(field, message) → UI 显示红字',
+      '本 demo 模拟 4 类独立错误场景，每个错误单独触发：用户名冲突 / 邮箱重复 / 邮箱黑名单 / 密码强度不足',
+      '测试场景（每个输入独立触发对应错误，互不耦合）:',
+      '   - 用户名=admin → 红字「用户名已存在」',
+      '   - 邮箱=admin@example.com → 红字「该邮箱已被注册」',
+      '   - 邮箱=test@spam.com → 红字「该邮箱域名在黑名单中」',
+      '   - 密码=123456 → 前端 min:6 通过，红字「必须包含字母」（后端额外规则）',
+      '   - 密码=123 → 前端失焦红字「密码长度不足」（本地 min:6 规则）',
+      '对比 demos：响应式断点见 XFormResponsive；批量校验见 XFormOrderCreate',
+    ]"
+  >
+    <section id="demo-server-error">
+      <DemoField label="服务端错误映射" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('actions')">
+          <el-button type="primary" @click="onSave">保存(测试后端 422 错误)</el-button>
+          <el-button @click="onReset">重置</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <div :class="bem.e('state')">
+          <div>
+            <strong>测试 422 错误场景（4 类独立错误）:</strong>
+            <ul>
+              <li>用户名=admin → 红字「用户名已存在」</li>
+              <li>邮箱=admin@example.com → 红字「该邮箱已被注册」</li>
+              <li>邮箱=test@spam.com → 红字「该邮箱域名在黑名单中」</li>
+              <li>密码=123456 → 前端通过，保存后红字「必须包含字母」</li>
+              <li>密码=123 → 前端失焦红字「密码长度不足」</li>
+            </ul>
           </div>
-          <div :class="bem.e('state')">
-            <div>
-              <strong>测试 422 错误场景（4 类独立错误）:</strong>
-              <ul>
-                <li>用户名=admin → 红字「用户名已存在」</li>
-                <li>邮箱=admin@example.com → 红字「该邮箱已被注册」</li>
-                <li>邮箱=test@spam.com → 红字「该邮箱域名在黑名单中」</li>
-                <li>密码=123456 → 前端通过，保存后红字「必须包含字母」</li>
-                <li>密码=123 → 前端失焦红字「密码长度不足」</li>
-              </ul>
-            </div>
-            <ModelPreview :model="model" />
-          </div>
-        </DemoField>
-      </section>
+          <ModelPreview :model="model" />
+        </div>
+      </DemoField>
+    </section>
 
-      <ApiTable title="相关实例方法" :items="serverErrorMethods" anchor="api-server-error" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="相关实例方法" :items="serverErrorMethods" anchor="api-server-error" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

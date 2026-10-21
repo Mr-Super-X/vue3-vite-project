@@ -18,10 +18,9 @@ import type { SchemaNode, XFormProps } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import { useConsoleCapture } from '../../composables/useConsoleCapture'
 import ApiTable from '../../components/ApiTable.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import ConsoleLogPanel from '../../components/ConsoleLogPanel.vue'
 import { invalidComponentItems } from './configs/xform-demos-api'
 import ModelPreview from '../../components/ModelPreview.vue'
@@ -114,59 +113,55 @@ const tocItems = [
   { id: 'demo-invalid-component', label: '校验演示' },
   { id: 'api-invalid-component', label: '组件名解析规则' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="组件名校验"
-      source="src/components/form-schema/composables/use-validate.ts"
-      :introductions="[
-        'schema component 字段拼写错误时，dev mode 触发 console.error + Debug Banner 错误。',
-        '下方「控制台输出」面板自动展示 XForm 触发的错误（不需打开 DevTools）。',
-        '字段 A（应通过）、B（应通过）、E（应通过）不触发警告；字段 C（应警告）、D（应警告）触发警告。',
-        '右下角 Debug Banner（dev 模式）会显示红色错误条。',
-      ]"
-    >
-      <section id="demo-invalid-component">
-        <DemoField label="场景 1：含拼写错误组件名（预期 2 个警告）" :code="invalidComponentCode">
-          <div :class="bem.b()">
-            <XForm :schema="schema" :model="model" />
-            <el-button :class="bem.e('submit')" @click="onSaveA">提交</el-button>
-            <ModelPreview :model="model" />
-          </div>
-        </DemoField>
+  <DemoFrame
+    title="组件名校验"
+    source="src/components/form-schema/composables/use-validate.ts"
+    :introductions="[
+      'schema component 字段拼写错误时，dev mode 触发 console.error + Debug Banner 错误。',
+      '下方「控制台输出」面板自动展示 XForm 触发的错误（不需打开 DevTools）。',
+      '字段 A（应通过）、B（应通过）、E（应通过）不触发警告；字段 C（应警告）、D（应警告）触发警告。',
+      '右下角 Debug Banner（dev 模式）会显示红色错误条。',
+    ]"
+  >
+    <section id="demo-invalid-component">
+      <DemoField label="场景 1：含拼写错误组件名（预期 2 个警告）" :code="invalidComponentCode">
+        <div :class="bem.b()">
+          <XForm :schema="schema" :model="model" />
+          <el-button :class="bem.e('submit')" @click="onSaveA">提交</el-button>
+          <ModelPreview :model="model" />
+        </div>
+      </DemoField>
 
-        <DemoField label="场景 2：userComponents 已注册（无警告）" :code="registeredComponentCode">
-          <div :class="bem.b()">
-            <XForm
-              :schema="registeredSchema"
-              :model="registeredModel"
-              :components="customComponents"
-            />
-            <el-button :class="bem.e('submit')" @click="onSaveE">提交</el-button>
-            <ModelPreview :model="registeredModel" />
-          </div>
-        </DemoField>
-      </section>
+      <DemoField label="场景 2：userComponents 已注册（无警告）" :code="registeredComponentCode">
+        <div :class="bem.b()">
+          <XForm
+            :schema="registeredSchema"
+            :model="registeredModel"
+            :components="customComponents"
+          />
+          <el-button :class="bem.e('submit')" @click="onSaveE">提交</el-button>
+          <ModelPreview :model="registeredModel" />
+        </div>
+      </DemoField>
+    </section>
 
-      <ApiTable
-        title="组件名解析规则"
-        :items="invalidComponentItems"
-        anchor="api-invalid-component"
-      />
-      <ConsoleLogPanel
-        :logs="logs"
-        title="XForm 控制台输出（实时捕获）"
-        empty="暂无警告（应仅字段 C/D 触发 [XForm] validate 警告）"
-        @clear="clear"
-      />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable
+      title="组件名解析规则"
+      :items="invalidComponentItems"
+      anchor="api-invalid-component"
+    />
+    <ConsoleLogPanel
+      :logs="logs"
+      title="XForm 控制台输出（实时捕获）"
+      empty="暂无警告（应仅字段 C/D 触发 [XForm] validate 警告）"
+      @clear="clear"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

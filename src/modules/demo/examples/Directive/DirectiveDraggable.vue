@@ -17,9 +17,8 @@
  */
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
 import ApiTable from '../../components/ApiTable.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 
 const bem = createNamespace('demo-directive-draggable')
 
@@ -132,6 +131,8 @@ const tocItems = [
   { id: 'api-binding', label: 'Binding 类型' },
 ]
 
+useDocToc(tocItems)
+
 const bindingItems = [
   {
     name: 'value',
@@ -169,281 +170,273 @@ const clampCode = `clampPosition({ left, top }, { maxLeft, maxTop })`
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="v-draggable 弹窗拖拽"
-      source="src/directives/draggable.ts"
-      :introductions="[
-        '全局指令：让元素（通常用于 el-dialog）可被鼠标拖动。',
-        '相比 Element Plus 原生 draggable：补齐边界钳制（弹窗不会拖出视口）、重置原点（避免二次拖拽跳位）。',
-        '适用场景：可拖拽的弹窗、抽屉等浮层组件。',
-      ]"
-    >
-      <!-- 启用拖拽 -->
-      <section id="demo-enabled">
-        <DemoField label="启用拖拽（默认）" :code="enabledDragCode">
-          <el-button type="primary" @click="enabledVisible = true">打开可拖拽弹窗</el-button>
-          <el-dialog v-model="enabledVisible" width="400px">
-            <!--
+  <DemoFrame
+    title="v-draggable 弹窗拖拽"
+    source="src/directives/draggable.ts"
+    :introductions="[
+      '全局指令：让元素（通常用于 el-dialog）可被鼠标拖动。',
+      '相比 Element Plus 原生 draggable：补齐边界钳制（弹窗不会拖出视口）、重置原点（避免二次拖拽跳位）。',
+      '适用场景：可拖拽的弹窗、抽屉等浮层组件。',
+    ]"
+  >
+    <!-- 启用拖拽 -->
+    <section id="demo-enabled">
+      <DemoField label="启用拖拽（默认）" :code="enabledDragCode">
+        <el-button type="primary" @click="enabledVisible = true">打开可拖拽弹窗</el-button>
+        <el-dialog v-model="enabledVisible" width="400px">
+          <!--
               关键：v-draggable 必须绑在 DOM 元素上，不能直接绑 el-dialog 组件
               （组件根节点非元素时 Vue 会 warn）。这里在 #header 插槽的 div 上绑指令，
               draggable.ts 内部通过 el.closest('.el-dialog') 找到 dialog 容器进行拖拽
             -->
-            <template #header>
-              <div v-draggable :class="bem.e('header')">可拖拽弹窗（按住此标题栏拖动）</div>
-            </template>
-            <p :class="bem.e('content')">
-              按住标题栏拖动弹窗。尝试拖到视口左/上/右/下边缘——
-              弹窗会被钳制在视口内，不会被拖出屏幕外。
-            </p>
-            <p :class="bem.e('content')">
-              关闭弹窗后再次打开保持上次位置（除非 reload）—— element-plus 默认行为，v-draggable
-              不干预位置持久化。
-            </p>
-          </el-dialog>
-        </DemoField>
-      </section>
-
-      <!-- 禁用拖拽 -->
-      <section id="demo-disabled">
-        <DemoField label='禁用拖拽（v-draggable="false"）' :code="disabledDragCode">
-          <el-button @click="disabledVisible = true">打开不可拖拽弹窗</el-button>
-          <el-dialog v-model="disabledVisible" width="500px">
-            <!-- 500px 中等大小：演示边界钳制对中等宽度弹窗同样生效 -->
-            <!-- 禁用态：不绑 v-draggable；如要响应式控制可见用 v-draggable="false" 在 div 上 -->
-            <template #header>
-              <div :class="bem.e('header')">不可拖拽弹窗（无 v-draggable）</div>
-            </template>
-            <p :class="bem.e('content')">尝试按住标题栏拖动——无任何反应。</p>
-            <p :class="bem.e('content')">
-              常用于「全屏态」或「流程确认中不可打断」的弹窗。验证 DevTools 路径：F12 → Elements →
-              选中 header div → Console 输入
-              <code>$0.__vnode?.ctx?.bindings?.value</code>
-              或展开
-              <code>__draggable_ctx</code>
-              （WeakMap 不便直接看）→ 可在 directive 源码的
-              <code>updated</code>
-              钩子加临时 console.log 打印
-              <code>state.enabled</code>
-              /
-              <code>stateMap</code>
-              验证
-              <code>v-draggable="false"</code>
-              模式下内部 state.enabled 切到 false。
-            </p>
-          </el-dialog>
-        </DemoField>
-      </section>
-
-      <!-- 动态启用/禁用 -->
-      <section id="demo-toggle">
-        <DemoField label="动态启用/禁用（响应式 binding）" :code="toggleCode">
-          <div :class="bem.e('control')">
-            <el-switch
-              v-model="dragEnabled"
-              active-text="启用拖拽"
-              inactive-text="禁用拖拽"
-              inline-prompt
-            />
-          </div>
-          <el-button @click="toggleVisible = true">打开弹窗</el-button>
-          <el-dialog v-model="toggleVisible" width="700px">
-            <!-- 700px 大宽度：演示钳制对宽弹窗（接近视口宽度时只剩 0~几百像素移动范围）同样生效 -->
-            <template #header>
-              <div v-draggable="dragEnabled" :class="bem.e('header')">
-                {{ dragEnabled ? '可拖拽（开关已开）' : '不可拖拽（开关已关）' }}
-              </div>
-            </template>
-            <p :class="bem.e('content')">
-              无需关弹窗，updated 钩子自动同步 state.enabled；切换开关即看到拖拽行为变化。
-            </p>
-          </el-dialog>
-        </DemoField>
-      </section>
-
-      <!-- 边界钳制 -->
-      <section id="demo-boundary">
-        <DemoField label="边界钳制（数学钳制到视口内）" :code="clampCode">
+          <template #header>
+            <div v-draggable :class="bem.e('header')">可拖拽弹窗（按住此标题栏拖动）</div>
+          </template>
           <p :class="bem.e('content')">
-            边界钳制公式：弹窗的 left / top 不能小于 0，也不能大于
-            <code>(viewportWidth - dialogWidth, viewportHeight - dialogHeight)</code>
-            。当弹窗边缘距视口边界
-            <code>0px</code>
-            时即钳制生效——可开 DevTools → Elements → 选中
-            <code>.el-dialog</code>
-            → 看 Styles 面板底部「Computed」或 inline style 的
-            <code>left</code>
+            按住标题栏拖动弹窗。尝试拖到视口左/上/右/下边缘——
+            弹窗会被钳制在视口内，不会被拖出屏幕外。
+          </p>
+          <p :class="bem.e('content')">
+            关闭弹窗后再次打开保持上次位置（除非 reload）—— element-plus 默认行为，v-draggable
+            不干预位置持久化。
+          </p>
+        </el-dialog>
+      </DemoField>
+    </section>
+
+    <!-- 禁用拖拽 -->
+    <section id="demo-disabled">
+      <DemoField label='禁用拖拽（v-draggable="false"）' :code="disabledDragCode">
+        <el-button @click="disabledVisible = true">打开不可拖拽弹窗</el-button>
+        <el-dialog v-model="disabledVisible" width="500px">
+          <!-- 500px 中等大小：演示边界钳制对中等宽度弹窗同样生效 -->
+          <!-- 禁用态：不绑 v-draggable；如要响应式控制可见用 v-draggable="false" 在 div 上 -->
+          <template #header>
+            <div :class="bem.e('header')">不可拖拽弹窗（无 v-draggable）</div>
+          </template>
+          <p :class="bem.e('content')">尝试按住标题栏拖动——无任何反应。</p>
+          <p :class="bem.e('content')">
+            常用于「全屏态」或「流程确认中不可打断」的弹窗。验证 DevTools 路径：F12 → Elements →
+            选中 header div → Console 输入
+            <code>$0.__vnode?.ctx?.bindings?.value</code>
+            或展开
+            <code>__draggable_ctx</code>
+            （WeakMap 不便直接看）→ 可在 directive 源码的
+            <code>updated</code>
+            钩子加临时 console.log 打印
+            <code>state.enabled</code>
             /
-            <code>top</code>
-            值，验证是否被钉在 0 / maxLeft 边界。
+            <code>stateMap</code>
+            验证
+            <code>v-draggable="false"</code>
+            模式下内部 state.enabled 切到 false。
           </p>
-          <p :class="bem.e('content')">
-            实现位于
-            <code>src/directives/draggable.ts:clampPosition</code>
-            ， 是纯函数导出供单测直接覆盖边界数学。
-          </p>
-          <p :class="bem.e('content')">
-            <strong>为什么不只钳制手柄高度：</strong>
-            若只钳制手柄，弹窗底部必然超出视口，触发 EP .el-overlay { overflow: auto } 的滚动条；
-            钳制整个弹窗才是正确的体验。
-          </p>
+        </el-dialog>
+      </DemoField>
+    </section>
 
-          <!-- clampPosition 纯函数交互面板 -->
-          <div :class="bem.e('clamp-panel')">
-            <h4 :class="bem.e('clamp-title')">clampPosition 交互面板</h4>
-            <div :class="bem.e('clamp-grid')">
-              <label>
-                left
-                <el-input-number v-model="clampInput.left" :step="100" :min="-9999" />
-              </label>
-              <label>
-                top
-                <el-input-number v-model="clampInput.top" :step="100" :min="-9999" />
-              </label>
-              <label>
-                dialogWidth
-                <el-input-number v-model="clampInput.dialogWidth" :step="50" />
-              </label>
-              <label>
-                dialogHeight
-                <el-input-number v-model="clampInput.dialogHeight" :step="50" />
-              </label>
-              <label>
-                viewportWidth
-                <el-input-number v-model="clampInput.viewportWidth" :step="100" />
-              </label>
-              <label>
-                viewportHeight
-                <el-input-number v-model="clampInput.viewportHeight" :step="100" />
-              </label>
+    <!-- 动态启用/禁用 -->
+    <section id="demo-toggle">
+      <DemoField label="动态启用/禁用（响应式 binding）" :code="toggleCode">
+        <div :class="bem.e('control')">
+          <el-switch
+            v-model="dragEnabled"
+            active-text="启用拖拽"
+            inactive-text="禁用拖拽"
+            inline-prompt
+          />
+        </div>
+        <el-button @click="toggleVisible = true">打开弹窗</el-button>
+        <el-dialog v-model="toggleVisible" width="700px">
+          <!-- 700px 大宽度：演示钳制对宽弹窗（接近视口宽度时只剩 0~几百像素移动范围）同样生效 -->
+          <template #header>
+            <div v-draggable="dragEnabled" :class="bem.e('header')">
+              {{ dragEnabled ? '可拖拽（开关已开）' : '不可拖拽（开关已关）' }}
             </div>
-            <div :class="bem.e('clamp-result')">
-              <strong>钳制后：</strong>
-              left =
-              <code>{{ clampResult.left }}</code>
-              , top =
-              <code>{{ clampResult.top }}</code>
-            </div>
+          </template>
+          <p :class="bem.e('content')">
+            无需关弹窗，updated 钩子自动同步 state.enabled；切换开关即看到拖拽行为变化。
+          </p>
+        </el-dialog>
+      </DemoField>
+    </section>
 
-            <!-- SVG 示意图 -->
-            <svg
-              :class="bem.e('clamp-svg')"
-              :viewBox="`0 0 ${clampInput.viewportWidth} ${clampInput.viewportHeight}`"
-              preserveAspectRatio="xMidYMid meet"
+    <!-- 边界钳制 -->
+    <section id="demo-boundary">
+      <DemoField label="边界钳制（数学钳制到视口内）" :code="clampCode">
+        <p :class="bem.e('content')">
+          边界钳制公式：弹窗的 left / top 不能小于 0，也不能大于
+          <code>(viewportWidth - dialogWidth, viewportHeight - dialogHeight)</code>
+          。当弹窗边缘距视口边界
+          <code>0px</code>
+          时即钳制生效——可开 DevTools → Elements → 选中
+          <code>.el-dialog</code>
+          → 看 Styles 面板底部「Computed」或 inline style 的
+          <code>left</code>
+          /
+          <code>top</code>
+          值，验证是否被钉在 0 / maxLeft 边界。
+        </p>
+        <p :class="bem.e('content')">
+          实现位于
+          <code>src/directives/draggable.ts:clampPosition</code>
+          ， 是纯函数导出供单测直接覆盖边界数学。
+        </p>
+        <p :class="bem.e('content')">
+          <strong>为什么不只钳制手柄高度：</strong>
+          若只钳制手柄，弹窗底部必然超出视口，触发 EP .el-overlay { overflow: auto } 的滚动条；
+          钳制整个弹窗才是正确的体验。
+        </p>
+
+        <!-- clampPosition 纯函数交互面板 -->
+        <div :class="bem.e('clamp-panel')">
+          <h4 :class="bem.e('clamp-title')">clampPosition 交互面板</h4>
+          <div :class="bem.e('clamp-grid')">
+            <label>
+              left
+              <el-input-number v-model="clampInput.left" :step="100" :min="-9999" />
+            </label>
+            <label>
+              top
+              <el-input-number v-model="clampInput.top" :step="100" :min="-9999" />
+            </label>
+            <label>
+              dialogWidth
+              <el-input-number v-model="clampInput.dialogWidth" :step="50" />
+            </label>
+            <label>
+              dialogHeight
+              <el-input-number v-model="clampInput.dialogHeight" :step="50" />
+            </label>
+            <label>
+              viewportWidth
+              <el-input-number v-model="clampInput.viewportWidth" :step="100" />
+            </label>
+            <label>
+              viewportHeight
+              <el-input-number v-model="clampInput.viewportHeight" :step="100" />
+            </label>
+          </div>
+          <div :class="bem.e('clamp-result')">
+            <strong>钳制后：</strong>
+            left =
+            <code>{{ clampResult.left }}</code>
+            , top =
+            <code>{{ clampResult.top }}</code>
+          </div>
+
+          <!-- SVG 示意图 -->
+          <svg
+            :class="bem.e('clamp-svg')"
+            :viewBox="`0 0 ${clampInput.viewportWidth} ${clampInput.viewportHeight}`"
+            preserveAspectRatio="xMidYMid meet"
+          >
+            <!-- viewport 边界 -->
+            <rect
+              x="0"
+              y="0"
+              :width="clampInput.viewportWidth"
+              :height="clampInput.viewportHeight"
+              fill="none"
+              stroke="#409eff"
+              stroke-width="4"
+              stroke-dasharray="8 4"
+            />
+            <text x="8" y="20" fill="#409eff" font-size="20" font-family="monospace">viewport</text>
+            <!-- 原始位置（红色虚线） -->
+            <rect
+              :x="clampInput.left"
+              :y="clampInput.top"
+              :width="clampInput.dialogWidth"
+              :height="clampInput.dialogHeight"
+              fill="rgba(245,108,108,0.15)"
+              stroke="#f56c6c"
+              stroke-width="3"
+              stroke-dasharray="6 3"
+            />
+            <text
+              :x="clampInput.left + 8"
+              :y="clampInput.top + 24"
+              fill="#f56c6c"
+              font-size="18"
+              font-family="monospace"
             >
-              <!-- viewport 边界 -->
-              <rect
-                x="0"
-                y="0"
-                :width="clampInput.viewportWidth"
-                :height="clampInput.viewportHeight"
-                fill="none"
-                stroke="#409eff"
-                stroke-width="4"
-                stroke-dasharray="8 4"
-              />
-              <text x="8" y="20" fill="#409eff" font-size="20" font-family="monospace">
-                viewport
-              </text>
-              <!-- 原始位置（红色虚线） -->
-              <rect
-                :x="clampInput.left"
-                :y="clampInput.top"
-                :width="clampInput.dialogWidth"
-                :height="clampInput.dialogHeight"
-                fill="rgba(245,108,108,0.15)"
-                stroke="#f56c6c"
-                stroke-width="3"
-                stroke-dasharray="6 3"
-              />
-              <text
-                :x="clampInput.left + 8"
-                :y="clampInput.top + 24"
-                fill="#f56c6c"
-                font-size="18"
-                font-family="monospace"
-              >
-                原始位置
-              </text>
-              <!-- 钳制后位置（绿色实线） -->
-              <rect
-                :x="clampResult.left"
-                :y="clampResult.top"
-                :width="clampInput.dialogWidth"
-                :height="clampInput.dialogHeight"
-                fill="rgba(103,194,58,0.2)"
-                stroke="#67c23a"
-                stroke-width="3"
-              />
-              <text
-                :x="clampResult.left + 8"
-                :y="clampResult.top + 24"
-                fill="#67c23a"
-                font-size="18"
-                font-family="monospace"
-              >
-                钳制后
-              </text>
-            </svg>
-            <p :class="bem.e('content')">
-              <em>红框</em>
-              = 原始拖拽目标位置；
-              <em>绿框</em>
-              = clampPosition 实际生效位置。两者差异即钳制效果。
-            </p>
-
-            <!-- 「拖到屏幕外」按钮 -->
-            <el-button type="danger" plain @click="forceDialogOffscreen">
-              拖到屏幕外（强制弹窗 left=-9999px，1 秒后自动钳制回视口）
-            </el-button>
-          </div>
-        </DemoField>
-      </section>
-
-      <!-- 状态泄漏验证（Heap snapshot） -->
-      <section id="demo-state-leak">
-        <DemoField label="状态泄漏验证（Heap snapshot）" :code="''">
+              原始位置
+            </text>
+            <!-- 钳制后位置（绿色实线） -->
+            <rect
+              :x="clampResult.left"
+              :y="clampResult.top"
+              :width="clampInput.dialogWidth"
+              :height="clampInput.dialogHeight"
+              fill="rgba(103,194,58,0.2)"
+              stroke="#67c23a"
+              stroke-width="3"
+            />
+            <text
+              :x="clampResult.left + 8"
+              :y="clampResult.top + 24"
+              fill="#67c23a"
+              font-size="18"
+              font-family="monospace"
+            >
+              钳制后
+            </text>
+          </svg>
           <p :class="bem.e('content')">
-            v-draggable 用
-            <code>WeakMap</code>
-            存储每个 dialog 元素的 state 引用——理论上 unmounted 钩子会清理 entry， 弹窗销毁后 state
-            应随之 GC。下面用一键脚本反复开关 3 个弹窗，配合 DevTools 观察是否有泄漏。
+            <em>红框</em>
+            = 原始拖拽目标位置；
+            <em>绿框</em>
+            = clampPosition 实际生效位置。两者差异即钳制效果。
           </p>
-          <el-button type="warning" plain :disabled="leakTestRunning" @click="runLeakTest">
-            {{ leakTestRunning ? '验证进行中...' : '一键开关 3 个弹窗 × 10 轮' }}
+
+          <!-- 「拖到屏幕外」按钮 -->
+          <el-button type="danger" plain @click="forceDialogOffscreen">
+            拖到屏幕外（强制弹窗 left=-9999px，1 秒后自动钳制回视口）
           </el-button>
-          <div :class="bem.e('leak-log')">
-            <p v-for="(line, idx) in leakTestProgress" :key="`leak-${idx}`">
-              {{ line }}
-            </p>
-          </div>
-          <p :class="bem.e('content')">
-            <strong>验证方法：</strong>
-            打开 DevTools → Memory 面板 → 「Heap snapshot」→ 点 Take snapshot 拍基线 →
-            点上方按钮跑完 10 轮 → 再拍一次快照 → 在 Comparison 视图对比两次快照的
-            <code>Detached HTMLDivElement</code>
-            节点数。若差值稳定在 ≤ 10，说明 directive 清理无泄漏；若有几十甚至上百的持续增长， 说明
-            stateMap 引用未释放。
-          </p>
-          <p :class="bem.e('content')">
-            <em>说明：</em>
-            Element Plus 自身可能在关闭弹窗后短暂保留 detached DOM（teleport 节点未及时回收）， 这是
-            EP 内部 cleanup 时序问题，
-            <strong>不属于本 demo 验证范围</strong>
-            。重点观察
-            <code>Detached &lt;div&gt;</code>
-            是否随轮次线性增长（线性增长 = 泄漏；稳定 = 无泄漏）。
-          </p>
-        </DemoField>
-      </section>
+        </div>
+      </DemoField>
+    </section>
 
-      <ApiTable title="v-draggable Binding" :items="bindingItems" anchor="api-binding" />
-    </DemoFrame>
+    <!-- 状态泄漏验证（Heap snapshot） -->
+    <section id="demo-state-leak">
+      <DemoField label="状态泄漏验证（Heap snapshot）" :code="''">
+        <p :class="bem.e('content')">
+          v-draggable 用
+          <code>WeakMap</code>
+          存储每个 dialog 元素的 state 引用——理论上 unmounted 钩子会清理 entry， 弹窗销毁后 state
+          应随之 GC。下面用一键脚本反复开关 3 个弹窗，配合 DevTools 观察是否有泄漏。
+        </p>
+        <el-button type="warning" plain :disabled="leakTestRunning" @click="runLeakTest">
+          {{ leakTestRunning ? '验证进行中...' : '一键开关 3 个弹窗 × 10 轮' }}
+        </el-button>
+        <div :class="bem.e('leak-log')">
+          <p v-for="(line, idx) in leakTestProgress" :key="`leak-${idx}`">
+            {{ line }}
+          </p>
+        </div>
+        <p :class="bem.e('content')">
+          <strong>验证方法：</strong>
+          打开 DevTools → Memory 面板 → 「Heap snapshot」→ 点 Take snapshot 拍基线 → 点上方按钮跑完
+          10 轮 → 再拍一次快照 → 在 Comparison 视图对比两次快照的
+          <code>Detached HTMLDivElement</code>
+          节点数。若差值稳定在 ≤ 10，说明 directive 清理无泄漏；若有几十甚至上百的持续增长， 说明
+          stateMap 引用未释放。
+        </p>
+        <p :class="bem.e('content')">
+          <em>说明：</em>
+          Element Plus 自身可能在关闭弹窗后短暂保留 detached DOM（teleport 节点未及时回收）， 这是
+          EP 内部 cleanup 时序问题，
+          <strong>不属于本 demo 验证范围</strong>
+          。重点观察
+          <code>Detached &lt;div&gt;</code>
+          是否随轮次线性增长（线性增长 = 泄漏；稳定 = 无泄漏）。
+        </p>
+      </DemoField>
+    </section>
 
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="v-draggable Binding" :items="bindingItems" anchor="api-binding" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

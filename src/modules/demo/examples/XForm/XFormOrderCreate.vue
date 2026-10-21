@@ -28,10 +28,9 @@ import { useFormPersist } from '@/components/form-schema'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { xArray } from '@/components/form-schema/builders'
 import { useXFormDemo } from '../../composables/useXFormDemo'
-import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import ModelPreview from '../../components/ModelPreview.vue'
 
 // v3.5 末次审计 CRITICAL 修复：原 demo 用 ?raw 自引用 514 行 raw 文本给 DemoField，
@@ -316,138 +315,134 @@ const tocItems = [
   { id: 'demo-draft', label: '草稿与 dirty' },
   { id: 'capability-summary', label: '能力覆盖清单' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="XFormOrderCreate —— 端到端业务示例（订单创建页）"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        '本 demo 串联 XForm 7 大能力的「完整业务形态」：基础校验 + 跨字段 + 联动必填 + 异步级联 + 数组节点 + 草稿持久化 + dirty 追踪。',
-        '对应真实中后台编辑页标准链路：拉数据 → 表单交互 → 校验 → 提交 → dirty 基线归零 / 草稿恢复。',
-        '建议新接入 XForm 的同学先看本 demo，再按需点开 50+ 个独立 demo 深入单个能力。',
-        '下方「验证指引」面板按 7 步走完即可体验全部能力（默认折叠）。',
-      ]"
-    >
-      <el-collapse v-model="guideActive" :class="bem.e('guide-collapse')">
-        <el-collapse-item title="📋 验证指引（7 步覆盖 XForm 7 大能力）" name="guide">
-          <ol :class="bem.e('guide-list')">
-            <li>客户名/电话都留空 → 点保存 → 提示「客户名称、联系电话至少填一个」</li>
-            <li>填电话 13800 → blur → 红字「手机号格式不正确」</li>
-            <li>城市选「北京」→ 区域 options 自动加载</li>
-            <li>开「需要发票」→ 发票抬头显示 + 必填；关闭 → 隐藏</li>
-            <li>点「新增明细」→ 加一行；删到 1 行时删除按钮禁用</li>
-            <li>填几个字段 → F5 刷新 → 点「恢复草稿」→ 数据恢复 + isDirty 重置</li>
-            <li>改任意字段 → isDirty=true（isDirty 与 getDirtyFields 实时同步）</li>
-          </ol>
-        </el-collapse-item>
-      </el-collapse>
-      <section id="demo-order-create">
-        <DemoField label="端到端业务演示：订单创建（拉详情 → 校验 → 提交）" :code="xFormSchemaCode">
-          <div :class="bem.b()">
-            <!--
+  <DemoFrame
+    title="XFormOrderCreate —— 端到端业务示例（订单创建页）"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      '本 demo 串联 XForm 7 大能力的「完整业务形态」：基础校验 + 跨字段 + 联动必填 + 异步级联 + 数组节点 + 草稿持久化 + dirty 追踪。',
+      '对应真实中后台编辑页标准链路：拉数据 → 表单交互 → 校验 → 提交 → dirty 基线归零 / 草稿恢复。',
+      '建议新接入 XForm 的同学先看本 demo，再按需点开 50+ 个独立 demo 深入单个能力。',
+      '下方「验证指引」面板按 7 步走完即可体验全部能力（默认折叠）。',
+    ]"
+  >
+    <el-collapse v-model="guideActive" :class="bem.e('guide-collapse')">
+      <el-collapse-item title="📋 验证指引（7 步覆盖 XForm 7 大能力）" name="guide">
+        <ol :class="bem.e('guide-list')">
+          <li>客户名/电话都留空 → 点保存 → 提示「客户名称、联系电话至少填一个」</li>
+          <li>填电话 13800 → blur → 红字「手机号格式不正确」</li>
+          <li>城市选「北京」→ 区域 options 自动加载</li>
+          <li>开「需要发票」→ 发票抬头显示 + 必填；关闭 → 隐藏</li>
+          <li>点「新增明细」→ 加一行；删到 1 行时删除按钮禁用</li>
+          <li>填几个字段 → F5 刷新 → 点「恢复草稿」→ 数据恢复 + isDirty 重置</li>
+          <li>改任意字段 → isDirty=true（isDirty 与 getDirtyFields 实时同步）</li>
+        </ol>
+      </el-collapse-item>
+    </el-collapse>
+    <section id="demo-order-create">
+      <DemoField label="端到端业务演示：订单创建（拉详情 → 校验 → 提交）" :code="xFormSchemaCode">
+        <div :class="bem.b()">
+          <!--
               Enter 提交示范（设计师审查 F10）：ElForm 渲染原生 form 但不 prevent submit，
               @submit.prevent 经 attrs 继承落到 XForm 根 div，form 内 submit 冒泡到此被拦截 → onSave。
               「保存订单」用 native-type="submit" 而不绑 @click —— 点击与 Enter 统一走 submit 单路径，避免双触发。
             -->
-            <XForm ref="formRef" :schema="schema" :model="model" @submit.prevent="onSave">
-              <template #footer>
-                <div :class="bem.e('toolbar')">
-                  <el-button @click="onReset">重置字段</el-button>
-                  <el-button plain :disabled="!persist.hasDraft.value" @click="onRestoreDraft">
-                    恢复草稿
-                  </el-button>
-                  <el-button native-type="submit" type="primary">保存订单</el-button>
-                  <el-button @click="copySchema">复制 schema</el-button>
-                </div>
-              </template>
-            </XForm>
-            <ModelPreview :model="model" />
-          </div>
-        </DemoField>
-      </section>
-
-      <section id="demo-draft">
-        <h4>实时状态（草稿 + dirty）</h4>
-        <div :class="bem.e('state')">
-          <div>
-            草稿：
-            <strong :class="bem.is('active', persist.hasDraft.value)">
-              {{ persist.hasDraft.value ? '存在（刷新不丢）' : '无' }}
-            </strong>
-          </div>
-          <div>
-            isDirty：
-            <strong :class="bem.is('dirty', isDirty)">
-              {{ isDirty ? `是（${dirtyFields.join(', ') || '整体'}）` : '否（相对基线）' }}
-            </strong>
-          </div>
-          <div v-if="model.orderNo">
-            最新订单号：
-            <strong>{{ model.orderNo }}</strong>
-          </div>
+          <XForm ref="formRef" :schema="schema" :model="model" @submit.prevent="onSave">
+            <template #footer>
+              <div :class="bem.e('toolbar')">
+                <el-button @click="onReset">重置字段</el-button>
+                <el-button plain :disabled="!persist.hasDraft.value" @click="onRestoreDraft">
+                  恢复草稿
+                </el-button>
+                <el-button native-type="submit" type="primary">保存订单</el-button>
+                <el-button @click="copySchema">复制 schema</el-button>
+              </div>
+            </template>
+          </XForm>
+          <ModelPreview :model="model" />
         </div>
-      </section>
+      </DemoField>
+    </section>
 
-      <section id="capability-summary">
-        <h4>本 demo 覆盖的 XForm 能力清单</h4>
-        <table :class="bem.e('capability-table')">
-          <thead>
-            <tr>
-              <th>能力</th>
-              <th>本 demo 中的具体体现</th>
-              <th>对应独立 demo</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>① 基础校验</td>
-              <td>客户名/电话/区域/订单状态 rules 必填</td>
-              <td><code>/demo/xform-base</code></td>
-            </tr>
-            <tr>
-              <td>② 跨字段校验</td>
-              <td>
-                <code>crossValidator</code>
-                ：客户名/电话至少一个（schema rules 自动触发，无需 onSave 内检查）
-              </td>
-              <td><code>/demo/xform-cross-field</code></td>
-            </tr>
-            <tr>
-              <td>③ 反应式联动</td>
-              <td>needInvoice → invoiceTitle hidden + 必填</td>
-              <td><code>/demo/xform-reaction</code></td>
-            </tr>
-            <tr>
-              <td>④ 异步级联选项</td>
-              <td>城市/区域：asyncOptions + deps: 'city'</td>
-              <td><code>/demo/xform-async-options</code></td>
-            </tr>
-            <tr>
-              <td>⑤ 数组节点</td>
-              <td>订单明细：xArray + minItems + maxItems</td>
-              <td><code>/demo/xform-array</code></td>
-            </tr>
-            <tr>
-              <td>⑥ 草稿持久化</td>
-              <td>useFormPersist + exclude: ['orderNo']</td>
-              <td><code>/demo/xform-persist</code></td>
-            </tr>
-            <tr>
-              <td>⑦ dirty 追踪</td>
-              <td>isDirty + getDirtyFields 实时同步</td>
-              <td><code>/demo/xform-dirty</code></td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
-    </DemoFrame>
+    <section id="demo-draft">
+      <h4>实时状态（草稿 + dirty）</h4>
+      <div :class="bem.e('state')">
+        <div>
+          草稿：
+          <strong :class="bem.is('active', persist.hasDraft.value)">
+            {{ persist.hasDraft.value ? '存在（刷新不丢）' : '无' }}
+          </strong>
+        </div>
+        <div>
+          isDirty：
+          <strong :class="bem.is('dirty', isDirty)">
+            {{ isDirty ? `是（${dirtyFields.join(', ') || '整体'}）` : '否（相对基线）' }}
+          </strong>
+        </div>
+        <div v-if="model.orderNo">
+          最新订单号：
+          <strong>{{ model.orderNo }}</strong>
+        </div>
+      </div>
+    </section>
 
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <section id="capability-summary">
+      <h4>本 demo 覆盖的 XForm 能力清单</h4>
+      <table :class="bem.e('capability-table')">
+        <thead>
+          <tr>
+            <th>能力</th>
+            <th>本 demo 中的具体体现</th>
+            <th>对应独立 demo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>① 基础校验</td>
+            <td>客户名/电话/区域/订单状态 rules 必填</td>
+            <td><code>/demo/xform-base</code></td>
+          </tr>
+          <tr>
+            <td>② 跨字段校验</td>
+            <td>
+              <code>crossValidator</code>
+              ：客户名/电话至少一个（schema rules 自动触发，无需 onSave 内检查）
+            </td>
+            <td><code>/demo/xform-cross-field</code></td>
+          </tr>
+          <tr>
+            <td>③ 反应式联动</td>
+            <td>needInvoice → invoiceTitle hidden + 必填</td>
+            <td><code>/demo/xform-reaction</code></td>
+          </tr>
+          <tr>
+            <td>④ 异步级联选项</td>
+            <td>城市/区域：asyncOptions + deps: 'city'</td>
+            <td><code>/demo/xform-async-options</code></td>
+          </tr>
+          <tr>
+            <td>⑤ 数组节点</td>
+            <td>订单明细：xArray + minItems + maxItems</td>
+            <td><code>/demo/xform-array</code></td>
+          </tr>
+          <tr>
+            <td>⑥ 草稿持久化</td>
+            <td>useFormPersist + exclude: ['orderNo']</td>
+            <td><code>/demo/xform-persist</code></td>
+          </tr>
+          <tr>
+            <td>⑦ dirty 追踪</td>
+            <td>isDirty + getDirtyFields 实时同步</td>
+            <td><code>/demo/xform-dirty</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </DemoFrame>
 </template>
 
 <style lang="scss">

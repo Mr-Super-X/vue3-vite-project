@@ -31,8 +31,7 @@ import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import { dirtyMethods } from './configs/xform-demos-api'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import ModelPreview from '../../components/ModelPreview.vue'
 
 const bem = createNamespace('demo-x-form-dirty')
@@ -172,69 +171,62 @@ const tocItems = [
   { id: 'demo-dirty', label: '脏状态演示' },
   { id: 'api-dirty', label: '相关实例方法' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="表单 dirty 状态追踪"
-      source="src/components/form-schema/composables/use-form-dirty.ts"
-      :introductions="[
-        'isDirty / getDirtyFields / isTouched / resetDirty：回答「用户改了表单但没保存」的标准信号。',
-        'XForm 启动时自动拍一次空基线，加载后直接改任意字段即触发 isDirty=true。',
-        '「标记基线」把当前 model 设为新基线（提交后归零）；「关闭表单」模拟未保存提示。',
-        '城市/街道是嵌套字段（address.city / address.street）：原位修改嵌套属性也必须被 dirty 检测到（快照深拷贝）。',
-      ]"
-    >
-      <section id="demo-dirty">
-        <DemoField
-          label="dirty 追踪：6 字段表单（含 2 个嵌套字段）+ 实时状态显示"
-          :code="dirtyCode"
-        >
-          <div :class="bem.b()">
-            <XForm ref="formRef" :schema="schema" :model="model" />
-            <div :class="bem.e('status')">
-              <div>
-                isDirty:
-                <strong :class="isDirtyState ? bem.e('dirty-yes') : bem.e('dirty-no')">
-                  {{ isDirtyState ? '是（有未保存修改）' : '否（无修改）' }}
-                </strong>
-              </div>
-              <div>
-                dirty 字段:
-                <strong>
-                  {{ dirtyFieldsState.length === 0 ? '（无）' : dirtyFieldsState.join(', ') }}
-                </strong>
-              </div>
-              <div>
-                字段级 touched：
-                <ul :class="bem.e('touched')">
-                  <li>username: {{ touchedStatus.username ? '✓' : '·' }}</li>
-                  <li>email: {{ touchedStatus.email ? '✓' : '·' }}</li>
-                  <li>age: {{ touchedStatus.age ? '✓' : '·' }}</li>
-                  <li>bio: {{ touchedStatus.bio ? '✓' : '·' }}</li>
-                  <li>address.city: {{ touchedStatus['address.city'] ? '✓' : '·' }}</li>
-                  <li>address.street: {{ touchedStatus['address.street'] ? '✓' : '·' }}</li>
-                </ul>
-              </div>
+  <DemoFrame
+    title="表单 dirty 状态追踪"
+    source="src/components/form-schema/composables/use-form-dirty.ts"
+    :introductions="[
+      'isDirty / getDirtyFields / isTouched / resetDirty：回答「用户改了表单但没保存」的标准信号。',
+      'XForm 启动时自动拍一次空基线，加载后直接改任意字段即触发 isDirty=true。',
+      '「标记基线」把当前 model 设为新基线（提交后归零）；「关闭表单」模拟未保存提示。',
+      '城市/街道是嵌套字段（address.city / address.street）：原位修改嵌套属性也必须被 dirty 检测到（快照深拷贝）。',
+    ]"
+  >
+    <section id="demo-dirty">
+      <DemoField label="dirty 追踪：6 字段表单（含 2 个嵌套字段）+ 实时状态显示" :code="dirtyCode">
+        <div :class="bem.b()">
+          <XForm ref="formRef" :schema="schema" :model="model" />
+          <div :class="bem.e('status')">
+            <div>
+              isDirty:
+              <strong :class="isDirtyState ? bem.e('dirty-yes') : bem.e('dirty-no')">
+                {{ isDirtyState ? '是（有未保存修改）' : '否（无修改）' }}
+              </strong>
             </div>
-            <div :class="bem.e('actions')">
-              <el-button @click="onMarkBaseline">标记基线（resetDirty）</el-button>
-              <el-button @click="onResetFields">重置字段（resetFields）</el-button>
-              <el-button type="danger" @click="onCloseForm">关闭表单（模拟未保存提示）</el-button>
+            <div>
+              dirty 字段:
+              <strong>
+                {{ dirtyFieldsState.length === 0 ? '（无）' : dirtyFieldsState.join(', ') }}
+              </strong>
             </div>
-            <ModelPreview :model="model" />
+            <div>
+              字段级 touched：
+              <ul :class="bem.e('touched')">
+                <li>username: {{ touchedStatus.username ? '✓' : '·' }}</li>
+                <li>email: {{ touchedStatus.email ? '✓' : '·' }}</li>
+                <li>age: {{ touchedStatus.age ? '✓' : '·' }}</li>
+                <li>bio: {{ touchedStatus.bio ? '✓' : '·' }}</li>
+                <li>address.city: {{ touchedStatus['address.city'] ? '✓' : '·' }}</li>
+                <li>address.street: {{ touchedStatus['address.street'] ? '✓' : '·' }}</li>
+              </ul>
+            </div>
           </div>
-        </DemoField>
-      </section>
+          <div :class="bem.e('actions')">
+            <el-button @click="onMarkBaseline">标记基线（resetDirty）</el-button>
+            <el-button @click="onResetFields">重置字段（resetFields）</el-button>
+            <el-button type="danger" @click="onCloseForm">关闭表单（模拟未保存提示）</el-button>
+          </div>
+          <ModelPreview :model="model" />
+        </div>
+      </DemoField>
+    </section>
 
-      <ApiTable title="相关实例方法" :items="dirtyMethods" anchor="api-dirty" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="相关实例方法" :items="dirtyMethods" anchor="api-dirty" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

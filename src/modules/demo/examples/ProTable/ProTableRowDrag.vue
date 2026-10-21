@@ -13,11 +13,10 @@
  * 3. 点「确定」→ 数据顺序变化；点「取消」→ 顺序不变
  */
 import type { ProColumn } from '@/components/ProTable/types'
-import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { tasksRequestApi } from '@mock/pro-table/tasks'
 import {
   rowDragColumnItems,
@@ -49,6 +48,8 @@ const tocItems = [
   { id: 'api-row-drag-expose', label: 'Expose API' },
 ]
 
+useDocToc(tocItems)
+
 const basicCode = `<template>
   <ProTable
     :columns="columns"
@@ -75,48 +76,38 @@ const dragConfig = {
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="ProTableRowDrag 行拖拽排序"
-      source="src/components/ProTable/composables/useRowDrag.ts"
-      :introductions="[
-        '基于 useRowDrag composable 绑定 sortablejs 到 el-table tbody。',
-        '业务拦截点：onSortChange 返回 false 阻止更新 / 返回 Promise 等待异步确认。',
-        '树形模式下自动启用跨层拖拽拦截（crossLevelDrag=false）。',
-      ]"
-    >
-      <section id="demo-row-drag" :class="bem.b()">
-        <DemoField label="基本用法（手柄列 + 业务拦截）" :code="basicCode">
-          <ProTable
-            :columns="columns"
-            :request-api="tasksRequestApi"
-            :enable-row-drag="dragConfig"
-            row-key="id"
-          />
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="ProTableRowDrag 行拖拽排序"
+    source="src/components/ProTable/composables/useRowDrag.ts"
+    :introductions="[
+      '基于 useRowDrag composable 绑定 sortablejs 到 el-table tbody。',
+      '业务拦截点：onSortChange 返回 false 阻止更新 / 返回 Promise 等待异步确认。',
+      '树形模式下自动启用跨层拖拽拦截（crossLevelDrag=false）。',
+    ]"
+  >
+    <section id="demo-row-drag" :class="bem.b()">
+      <DemoField label="基本用法（手柄列 + 业务拦截）" :code="basicCode">
+        <ProTable
+          :columns="columns"
+          :request-api="tasksRequestApi"
+          :enable-row-drag="dragConfig"
+          row-key="id"
+        />
+      </DemoField>
+    </section>
 
-      <ApiTable
-        title="ProColumn.draggable 字段"
-        :items="rowDragColumnItems"
-        anchor="api-row-drag-column"
-      />
-      <ApiTable
-        title="RowDragConfig 配置"
-        :items="rowDragConfigItems"
-        anchor="api-row-drag-config"
-      />
-      <ApiTable
-        title="Expose API（setRowOrder）"
-        :items="rowDragExposeItems"
-        anchor="api-row-drag-expose"
-      />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable
+      title="ProColumn.draggable 字段"
+      :items="rowDragColumnItems"
+      anchor="api-row-drag-column"
+    />
+    <ApiTable title="RowDragConfig 配置" :items="rowDragConfigItems" anchor="api-row-drag-config" />
+    <ApiTable
+      title="Expose API（setRowOrder）"
+      :items="rowDragExposeItems"
+      anchor="api-row-drag-expose"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

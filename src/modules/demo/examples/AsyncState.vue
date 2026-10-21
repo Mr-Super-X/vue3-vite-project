@@ -8,9 +8,8 @@
 import asyncStateSource from '@/components/common/AsyncState.vue?raw'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
-import DocLayout from '../layouts/DocLayout.vue'
 import ApiTable from '../components/ApiTable.vue'
-import DocToc from '../components/DocToc.vue'
+import { useDocToc } from '../composables/useDocToc'
 import { extractApi, type ApiItem, type SlotItem } from '../utils/extractApi'
 
 const bem = createNamespace('demo-async-state')
@@ -83,62 +82,58 @@ const tocItems = [
   { id: 'api-events', label: 'Events' },
   { id: 'api-slots', label: 'Slots' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="AsyncState 异步三态"
-      source="src/components/common/AsyncState.vue"
-      :introductions="[
-        '通用异步三态组件，根据 loading / error / isEmpty 三个 props 自动渲染对应 UI。',
-        'loading / error / empty 三种状态都支持插槽覆盖（slot 名同名），error 插槽可拿到 error 对象和 retry 函数。',
-        '点击下方切换按钮模拟不同状态，error 状态点【重试】会触发 retry 事件。',
-      ]"
-    >
-      <section id="demo-basic">
-        <DemoField :code="asyncStateSource" label="被演示组件源码（AsyncState.vue）">
-          <div :class="bem.e('controls')">
-            <span>模拟状态：</span>
-            <el-radio-group v-model="mode" size="small">
-              <el-radio-button value="data">data</el-radio-button>
-              <el-radio-button value="loading">loading</el-radio-button>
-              <el-radio-button value="error">error</el-radio-button>
-              <el-radio-button value="empty">empty</el-radio-button>
-            </el-radio-group>
-            <span :class="bem.e('retry')">已重试 {{ retryCount }} 次</span>
-          </div>
+  <DemoFrame
+    title="AsyncState 异步三态"
+    source="src/components/common/AsyncState.vue"
+    :introductions="[
+      '通用异步三态组件，根据 loading / error / isEmpty 三个 props 自动渲染对应 UI。',
+      'loading / error / empty 三种状态都支持插槽覆盖（slot 名同名），error 插槽可拿到 error 对象和 retry 函数。',
+      '点击下方切换按钮模拟不同状态，error 状态点【重试】会触发 retry 事件。',
+    ]"
+  >
+    <section id="demo-basic">
+      <DemoField :code="asyncStateSource" label="被演示组件源码（AsyncState.vue）">
+        <div :class="bem.e('controls')">
+          <span>模拟状态：</span>
+          <el-radio-group v-model="mode" size="small">
+            <el-radio-button value="data">data</el-radio-button>
+            <el-radio-button value="loading">loading</el-radio-button>
+            <el-radio-button value="error">error</el-radio-button>
+            <el-radio-button value="empty">empty</el-radio-button>
+          </el-radio-group>
+          <span :class="bem.e('retry')">已重试 {{ retryCount }} 次</span>
+        </div>
 
-          <AsyncState
-            :loading="state.loading"
-            :error="state.error"
-            :is-empty="state.isEmpty"
-            @retry="onRetry"
-          >
-            <ul :class="bem.e('data')">
-              <li v-for="i in 3" :key="i">数据项 {{ i }}</li>
-            </ul>
+        <AsyncState
+          :loading="state.loading"
+          :error="state.error"
+          :is-empty="state.isEmpty"
+          @retry="onRetry"
+        >
+          <ul :class="bem.e('data')">
+            <li v-for="i in 3" :key="i">数据项 {{ i }}</li>
+          </ul>
 
-            <template #error="{ error, retry }">
-              <el-result icon="error" :title="error.message">
-                <template #extra>
-                  <el-button type="primary" @click="retry()">自定义重试</el-button>
-                </template>
-              </el-result>
-            </template>
-          </AsyncState>
-        </DemoField>
-      </section>
+          <template #error="{ error, retry }">
+            <el-result icon="error" :title="error.message">
+              <template #extra>
+                <el-button type="primary" @click="retry()">自定义重试</el-button>
+              </template>
+            </el-result>
+          </template>
+        </AsyncState>
+      </DemoField>
+    </section>
 
-      <ApiTable title="Props" :items="propsItems" anchor="api-props" />
-      <ApiTable title="Events" :items="eventsItems" anchor="api-events" />
-      <ApiTable title="Slots" :items="slotsItems" anchor="api-slots" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="Props" :items="propsItems" anchor="api-props" />
+    <ApiTable title="Events" :items="eventsItems" anchor="api-events" />
+    <ApiTable title="Slots" :items="slotsItems" anchor="api-slots" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

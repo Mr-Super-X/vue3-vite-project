@@ -27,8 +27,7 @@ import type { SchemaNode } from '@/components/form-schema/types'
 import type { ProDialogFormExpose } from '@/components/common/ProDialogForm'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 
 const bem = createNamespace('demo-pro-dialog-form')
 
@@ -169,125 +168,117 @@ const tocItems = [
   { id: 'demo-footer', label: '自定义 footer（作用域插槽）' },
   { id: 'demo-expose', label: 'expose 方法（setFieldError 422 回填）' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="ProDialogForm 用法总览（ProDialog + XForm 高级弹窗表单）"
-      source="src/components/common/ProDialogForm/ProDialogForm.vue"
-      :introductions="[
-        'ProDialog + XForm 的高级弹窗表单组合：内置「校验 → 异步提交 → 自动关闭 → 自动重置」全链路。',
-        '点「确 定」时自动校验 XForm，校验通过后调用 onSubmit；onSubmit 返回 resolve 后自动关闭弹窗 + emit success；reject 时弹窗保持打开。',
-        '提交期间按钮 loading 防重复提交；关闭弹窗后（动画结束）自动 resetFields 清空数据。',
-        '通过 defineExpose 暴露 XFormExpose 全部 19 个方法（validate / resetFields / setFieldError / ...），父组件可直接调用。',
-      ]"
-    >
-      <!-- ① 基础用法 -->
-      <section id="demo-basic">
-        <DemoField :code="SNIPPET_BASIC" label="① 基础用法：v-model + onSubmit + success">
-          <div :class="bem.e('controls')">
-            <el-button type="primary" @click="visible = true">打开弹窗</el-button>
-            <el-switch
-              v-model="failNextSubmit"
-              active-text="下次提交失败"
-              inactive-text="正常提交"
-            />
-          </div>
-          <p :class="bem.e('para')">
-            点「打开弹窗」→ 留空必填项点「确 定」→ 字段红字（不关闭）；填齐后点「确 定」→ 按钮
-            loading → 800ms 后弹窗关闭 + success 提示。
-          </p>
-          <ProDialogForm
-            ref="proDialogFormRef"
-            v-model="visible"
-            title="新建用户（基础用法）"
-            width="640px"
-            :schema="formSchema"
-            :model="formModel"
-            :on-submit="onSubmit"
-            submit-button-text="提 交"
-            @success="onSuccess"
-            @submit-failed="onSubmitFailed"
-          />
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="ProDialogForm 用法总览（ProDialog + XForm 高级弹窗表单）"
+    source="src/components/common/ProDialogForm/ProDialogForm.vue"
+    :introductions="[
+      'ProDialog + XForm 的高级弹窗表单组合：内置「校验 → 异步提交 → 自动关闭 → 自动重置」全链路。',
+      '点「确 定」时自动校验 XForm，校验通过后调用 onSubmit；onSubmit 返回 resolve 后自动关闭弹窗 + emit success；reject 时弹窗保持打开。',
+      '提交期间按钮 loading 防重复提交；关闭弹窗后（动画结束）自动 resetFields 清空数据。',
+      '通过 defineExpose 暴露 XFormExpose 全部 19 个方法（validate / resetFields / setFieldError / ...），父组件可直接调用。',
+    ]"
+  >
+    <!-- ① 基础用法 -->
+    <section id="demo-basic">
+      <DemoField :code="SNIPPET_BASIC" label="① 基础用法：v-model + onSubmit + success">
+        <div :class="bem.e('controls')">
+          <el-button type="primary" @click="visible = true">打开弹窗</el-button>
+          <el-switch v-model="failNextSubmit" active-text="下次提交失败" inactive-text="正常提交" />
+        </div>
+        <p :class="bem.e('para')">
+          点「打开弹窗」→ 留空必填项点「确 定」→ 字段红字（不关闭）；填齐后点「确 定」→ 按钮 loading
+          → 800ms 后弹窗关闭 + success 提示。
+        </p>
+        <ProDialogForm
+          ref="proDialogFormRef"
+          v-model="visible"
+          title="新建用户（基础用法）"
+          width="640px"
+          :schema="formSchema"
+          :model="formModel"
+          :on-submit="onSubmit"
+          submit-button-text="提 交"
+          @success="onSuccess"
+          @submit-failed="onSubmitFailed"
+        />
+      </DemoField>
+    </section>
 
-      <!-- ② 提交失败 -->
-      <section id="demo-failure">
-        <DemoField
-          label="② 提交失败处理：弹窗不关闭 + emit('submit-failed') 通知父组件"
-          :code="onSubmit.toString()"
-        >
-          <p :class="bem.e('para')">
-            勾选上方「下次提交失败」开关 → 填齐所有字段 → 点「确 定」→ loading 结束后弹窗保持打开，
-            右上角弹出
-            <code>ElMessage.error</code>
-            提示（来自
-            <code>@submit-failed="onSubmitFailed"</code>
-            监听器）， 控制台同时有
-            <code>[ProDialogForm] onSubmit failed</code>
-            日志便于排查。
-          </p>
-          <p :class="bem.e('para')">
-            <b>关键设计</b>
-            ：组件
-            <b>不</b>
-            通过
-            <code>throw err</code>
-            上抛错误（会冒泡到全局 errorHandler → 重定向 500）， 改用
-            <code>emit('submit-failed', err)</code>
-            让调用方完全控制错误处理（toast / 字段红字 / 静默均可）。
-          </p>
-        </DemoField>
-      </section>
+    <!-- ② 提交失败 -->
+    <section id="demo-failure">
+      <DemoField
+        label="② 提交失败处理：弹窗不关闭 + emit('submit-failed') 通知父组件"
+        :code="onSubmit.toString()"
+      >
+        <p :class="bem.e('para')">
+          勾选上方「下次提交失败」开关 → 填齐所有字段 → 点「确 定」→ loading 结束后弹窗保持打开，
+          右上角弹出
+          <code>ElMessage.error</code>
+          提示（来自
+          <code>@submit-failed="onSubmitFailed"</code>
+          监听器）， 控制台同时有
+          <code>[ProDialogForm] onSubmit failed</code>
+          日志便于排查。
+        </p>
+        <p :class="bem.e('para')">
+          <b>关键设计</b>
+          ：组件
+          <b>不</b>
+          通过
+          <code>throw err</code>
+          上抛错误（会冒泡到全局 errorHandler → 重定向 500）， 改用
+          <code>emit('submit-failed', err)</code>
+          让调用方完全控制错误处理（toast / 字段红字 / 静默均可）。
+        </p>
+      </DemoField>
+    </section>
 
-      <!-- ③ 关闭自动重置 -->
-      <section id="demo-reset">
-        <DemoField label="③ 关闭后自动重置表单（动画结束后）" :code="''">
-          <p :class="bem.e('para')">
-            弹窗关闭时（动画结束 ~300ms 后），自动调用 XForm 的
-            <code>resetFields()</code>
-            清空数据与校验红字。 再次打开弹窗应看到空白表单，而非上次填写的内容。取消按钮 / X / ESC
-            / 遮罩点击均会触发重置。
-          </p>
-        </DemoField>
-      </section>
+    <!-- ③ 关闭自动重置 -->
+    <section id="demo-reset">
+      <DemoField label="③ 关闭后自动重置表单（动画结束后）" :code="''">
+        <p :class="bem.e('para')">
+          弹窗关闭时（动画结束 ~300ms 后），自动调用 XForm 的
+          <code>resetFields()</code>
+          清空数据与校验红字。 再次打开弹窗应看到空白表单，而非上次填写的内容。取消按钮 / X / ESC /
+          遮罩点击均会触发重置。
+        </p>
+      </DemoField>
+    </section>
 
-      <!-- ④ 自定义 footer -->
-      <section id="demo-footer">
-        <DemoField :code="SNIPPET_CUSTOM_FOOTER" label="④ 自定义 footer：作用域插槽保留默认行为">
-          <p :class="bem.e('para')">
-            <code>#footer</code>
-            插槽为作用域插槽，暴露
-            <code>submit / cancel / loading</code>
-            三个参数，调用方可完全自定义底部 UI（按钮文案 / 图标 / 拆分布局）， 同时复用组件内置的
-            loading + 校验 + 关闭逻辑，避免重复实现。
-          </p>
-        </DemoField>
-      </section>
+    <!-- ④ 自定义 footer -->
+    <section id="demo-footer">
+      <DemoField :code="SNIPPET_CUSTOM_FOOTER" label="④ 自定义 footer：作用域插槽保留默认行为">
+        <p :class="bem.e('para')">
+          <code>#footer</code>
+          插槽为作用域插槽，暴露
+          <code>submit / cancel / loading</code>
+          三个参数，调用方可完全自定义底部 UI（按钮文案 / 图标 / 拆分布局）， 同时复用组件内置的
+          loading + 校验 + 关闭逻辑，避免重复实现。
+        </p>
+      </DemoField>
+    </section>
 
-      <!-- ⑤ expose 方法 -->
-      <section id="demo-expose">
-        <DemoField :code="SNIPPET_EXPOSE" label="⑤ expose 方法：setFieldError 模拟服务端 422 回填">
-          <div :class="bem.e('controls')">
-            <el-button @click="simulateServerError">写入服务端错误（用户名 + 邮箱）</el-button>
-          </div>
-          <p :class="bem.e('para')">
-            通过
-            <code>ref</code>
-            拿到 ProDialogForm 实例后，可直接调用 XFormExpose 全部 19 个方法。 本例演示
-            <code>setFieldError(name, message)</code>
-            模拟服务端 422 错误回填到字段红字。
-          </p>
-        </DemoField>
-      </section>
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <!-- ⑤ expose 方法 -->
+    <section id="demo-expose">
+      <DemoField :code="SNIPPET_EXPOSE" label="⑤ expose 方法：setFieldError 模拟服务端 422 回填">
+        <div :class="bem.e('controls')">
+          <el-button @click="simulateServerError">写入服务端错误（用户名 + 邮箱）</el-button>
+        </div>
+        <p :class="bem.e('para')">
+          通过
+          <code>ref</code>
+          拿到 ProDialogForm 实例后，可直接调用 XFormExpose 全部 19 个方法。 本例演示
+          <code>setFieldError(name, message)</code>
+          模拟服务端 422 错误回填到字段红字。
+        </p>
+      </DemoField>
+    </section>
+  </DemoFrame>
 </template>
 
 <style lang="scss">

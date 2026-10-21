@@ -7,9 +7,8 @@ import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import ModelPreview from '../../components/ModelPreview.vue'
 import { minimumItems } from './configs/xform-demos-api'
 
@@ -50,36 +49,32 @@ const tocItems = [
   { id: 'demo-minimum', label: '最小示例' },
   { id: 'api-minimum', label: '最小示例三要素' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="XForm 最小可运行示例"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        'XForm 最简用法：写 schema + 传 model + 渲染。',
-        'defaultValue 会在挂载时自动填充到 model（如果未设置）。',
-        'rules 支持 async-validator 格式，必填 + 正则校验。',
-      ]"
-    >
-      <section id="demo-minimum" :class="bem.b()">
-        <XForm ref="formRef" :schema="schema" :model="model" />
-        <div :class="bem.e('actions')">
-          <el-button @click="onReset">重置</el-button>
-          <el-button type="primary" @click="onSave">保存</el-button>
-          <el-button @click="copySchema">复制 schema</el-button>
-        </div>
-        <ModelPreview :model="model" />
-      </section>
+  <DemoFrame
+    title="XForm 最小可运行示例"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      'XForm 最简用法：写 schema + 传 model + 渲染。',
+      'defaultValue 会在挂载时自动填充到 model（如果未设置）。',
+      'rules 支持 async-validator 格式，必填 + 正则校验。',
+    ]"
+  >
+    <section id="demo-minimum" :class="bem.b()">
+      <XForm ref="formRef" :schema="schema" :model="model" />
+      <div :class="bem.e('actions')">
+        <el-button @click="onReset">重置</el-button>
+        <el-button type="primary" @click="onSave">保存</el-button>
+        <el-button @click="copySchema">复制 schema</el-button>
+      </div>
+      <ModelPreview :model="model" />
+    </section>
 
-      <ApiTable title="最小示例三要素" :items="minimumItems" anchor="api-minimum" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="最小示例三要素" :items="minimumItems" anchor="api-minimum" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

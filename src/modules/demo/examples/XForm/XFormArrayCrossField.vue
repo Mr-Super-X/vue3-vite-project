@@ -30,8 +30,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import ModelPreview from '../../components/ModelPreview.vue'
 import { arrayCrossItems } from './configs/xform-demos-api'
 import xFormSource from './XFormArrayCrossField.vue?raw'
@@ -137,47 +136,43 @@ const tocItems = [
   { id: 'demo-array-cross', label: '数组行内 cross 校验' },
   { id: 'api-array-cross', label: '行内 cross 语义' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="数组行内跨字段校验（行内相对 dependsOn + 反向触发）"
-      source="src/components/form-schema/composables/use-validate.ts"
-      :introductions="[
-        '纯校验场景：申请数量是输入值不是计算值 —— 改库存/上限只会让数量标红或消红，不会改数量的值（值联动见 /demo/xform-reaction-array-row）。',
-        'dependsOn 写行内相对路径（[\'stock\', \'maxQty\']）——XForm 按行加 items[i] 前缀解析，取到同一行的字段。',
-        '反向触发：改库存/上限 → 该行数量自动重算红字，无需失焦；保存时全部行批量校验（validate 会 await）。',
-      ]"
-    >
-      <section id="demo-array-cross">
-        <DemoField label="采购申请明细（数量 ≤ 库存 且 ≤ 上限）" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onSave">保存</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-          </div>
-          <p :class="bem.e('hint')">
-            验证（每步看「申请数量」红字）：① 初始 5 ≤ 8 且 ≤ 20 无红字 ② 数量改 10 →
-            失焦红字（>库存）③ 库存改 20 → 自动消红（反向）④ 上限改 8 → 自动标红（>上限）⑤ 数量改 6
-            → 红消 ⑥ 保存 → 批量通过
-          </p>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="数组行内跨字段校验（行内相对 dependsOn + 反向触发）"
+    source="src/components/form-schema/composables/use-validate.ts"
+    :introductions="[
+      '纯校验场景：申请数量是输入值不是计算值 —— 改库存/上限只会让数量标红或消红，不会改数量的值（值联动见 /demo/xform-reaction-array-row）。',
+      'dependsOn 写行内相对路径（[\'stock\', \'maxQty\']）——XForm 按行加 items[i] 前缀解析，取到同一行的字段。',
+      '反向触发：改库存/上限 → 该行数量自动重算红字，无需失焦；保存时全部行批量校验（validate 会 await）。',
+    ]"
+  >
+    <section id="demo-array-cross">
+      <DemoField label="采购申请明细（数量 ≤ 库存 且 ≤ 上限）" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onSave">保存</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <p :class="bem.e('hint')">
+          验证（每步看「申请数量」红字）：① 初始 5 ≤ 8 且 ≤ 20 无红字 ② 数量改 10 →
+          失焦红字（>库存）③ 库存改 20 → 自动消红（反向）④ 上限改 8 → 自动标红（>上限）⑤ 数量改 6 →
+          红消 ⑥ 保存 → 批量通过
+        </p>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
 
-      <ApiTable
-        title="行内 cross 语义（A1 修复点）"
-        :items="arrayCrossItems"
-        anchor="api-array-cross"
-      />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable
+      title="行内 cross 语义（A1 修复点）"
+      :items="arrayCrossItems"
+      anchor="api-array-cross"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

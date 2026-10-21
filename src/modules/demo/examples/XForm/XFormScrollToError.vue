@@ -17,8 +17,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { scrollToErrorItems } from './configs/xform-demos-api'
 import xFormSource from './XFormScrollToError.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
@@ -164,45 +163,41 @@ const tocItems = [
   { id: 'demo-scroll-to-error', label: '自动滚动演示' },
   { id: 'api-scroll-to-error', label: 'scrollToError API' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="校验失败自动滚动（scrollToError）"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        'scrollToError 开启时，validate() 失败自动滚动到第一个错误字段：字段规则失败由 element-plus ElForm 原生处理，跨字段失败由 XForm 内部滚动。',
-        '演示：前 8 个字段已由 defaultValue 自动填充，仅「生产许可证号」必填留空 —— 点校验后页面滚动到底部红字字段。',
-        '切换开关后再次校验对比滚动行为差异。scrollToError / scrollIntoViewOptions 在 schema 顶层配置（同 labelPosition）。',
-      ]"
-    >
-      <section id="demo-scroll-to-error">
-        <DemoField label="供应商入库登记（10 字段长表单）" :code="xFormSource">
-          <div :class="bem.e('actions')">
-            <span :class="bem.e('switch-label')">自动滚动：</span>
-            <el-switch v-model="scrollToError" />
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onValidate">校验</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-            <span :class="bem.e('result')">{{ lastResult }}</span>
-          </div>
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="校验失败自动滚动（scrollToError）"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      'scrollToError 开启时，validate() 失败自动滚动到第一个错误字段：字段规则失败由 element-plus ElForm 原生处理，跨字段失败由 XForm 内部滚动。',
+      '演示：前 8 个字段已由 defaultValue 自动填充，仅「生产许可证号」必填留空 —— 点校验后页面滚动到底部红字字段。',
+      '切换开关后再次校验对比滚动行为差异。scrollToError / scrollIntoViewOptions 在 schema 顶层配置（同 labelPosition）。',
+    ]"
+  >
+    <section id="demo-scroll-to-error">
+      <DemoField label="供应商入库登记（10 字段长表单）" :code="xFormSource">
+        <div :class="bem.e('actions')">
+          <span :class="bem.e('switch-label')">自动滚动：</span>
+          <el-switch v-model="scrollToError" />
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onValidate">校验</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+          <span :class="bem.e('result')">{{ lastResult }}</span>
+        </div>
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
 
-      <ApiTable
-        title="scrollToError 自动滚动"
-        :items="scrollToErrorItems"
-        anchor="api-scroll-to-error"
-      />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable
+      title="scrollToError 自动滚动"
+      :items="scrollToErrorItems"
+      anchor="api-scroll-to-error"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

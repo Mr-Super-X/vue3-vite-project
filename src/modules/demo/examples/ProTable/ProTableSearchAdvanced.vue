@@ -21,11 +21,10 @@
  */
 import { ElMessage } from 'element-plus'
 import type { ProTableExpose } from '@/components/ProTable'
-import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import {
   orderRequestApi,
   advancedSearchColumns,
@@ -173,6 +172,8 @@ const tocItems = [
   { id: 'api-protable-props', label: 'ProTable.Props 新字段' },
 ]
 
+useDocToc(tocItems)
+
 /* API 表格数据 */
 const searchConfigItems = [
   {
@@ -228,247 +229,236 @@ const proTablePropsItems = [
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="ProTableSearchAdvanced 多条件搜索（v3.3 4 档自适应 + v3.2 高级特性）"
-      source="src/components/ProTable/components/SearchForm.vue"
-      :introductions="[
-        'v3.3 重大升级：SearchForm 按 basic 字段数 + advanced 字段数自动选 4 档布局（flat / collapse / flat-large / drawer），对开发者透明。',
-        '前 4 个 demo（①-④）演示 4 档矩阵的差异；后 5 个 demo（⑤-⑨）演示 v3.2 在 drawer 档下的进阶能力。',
-      ]"
-    >
-      <section :class="bem.b()">
-        <!--
+  <DemoFrame
+    title="ProTableSearchAdvanced 多条件搜索（v3.3 4 档自适应 + v3.2 高级特性）"
+    source="src/components/ProTable/components/SearchForm.vue"
+    :introductions="[
+      'v3.3 重大升级：SearchForm 按 basic 字段数 + advanced 字段数自动选 4 档布局（flat / collapse / flat-large / drawer），对开发者透明。',
+      '前 4 个 demo（①-④）演示 4 档矩阵的差异；后 5 个 demo（⑤-⑨）演示 v3.2 在 drawer 档下的进阶能力。',
+    ]"
+  >
+    <section :class="bem.b()">
+      <!--
           ─────────── v3.3 新增：4 档布局矩阵 ───────────
           每个 demo 独立 tableKey，互不影响展开状态持久化。
           共享同一份 orderRequestApi mock（50 行订单数据）。
         -->
 
-        <DemoField
-          id="demo-mode-flat"
-          label="① flat 档：3 个 basic + 无 advanced —— 全部平铺、无任何按钮"
-          :code="codeFlatColumns"
-        >
-          <p :class="bem.e('hint')">
-            验证：① 主表单直接显示 orderNo / userName / status 共 3 个字段 ②
-            右侧只有「搜索」「重置」两个按钮，**没有「展开/收起」也没有「高级筛选」** ③
-            触发条件：basic ≤ 3（且无 advanced 字段）
-          </p>
-          <ProTable
-            :columns="flatModeColumns"
-            :request-api="orderRequestApi"
-            table-key="demo-mode-flat"
-            row-key="id"
-            :page-size="5"
-          />
-        </DemoField>
+      <DemoField
+        id="demo-mode-flat"
+        label="① flat 档：3 个 basic + 无 advanced —— 全部平铺、无任何按钮"
+        :code="codeFlatColumns"
+      >
+        <p :class="bem.e('hint')">
+          验证：① 主表单直接显示 orderNo / userName / status 共 3 个字段 ②
+          右侧只有「搜索」「重置」两个按钮，**没有「展开/收起」也没有「高级筛选」** ③
+          触发条件：basic ≤ 3（且无 advanced 字段）
+        </p>
+        <ProTable
+          :columns="flatModeColumns"
+          :request-api="orderRequestApi"
+          table-key="demo-mode-flat"
+          row-key="id"
+          :page-size="5"
+        />
+      </DemoField>
 
-        <DemoField
-          id="demo-mode-collapse"
-          label="② collapse 档：6 个 basic + 无 advanced —— 展开/收起按钮"
-          :code="codeCollapseColumns"
-        >
-          <p :class="bem.e('hint')">
-            验证：① 默认折叠显示前 3 个字段（orderNo / userName / status） ②
-            点击「展开」按钮显示全部 6 个字段 ③ 右侧有「展开/收起」按钮，**没有「高级筛选」** ④
-            触发条件：basic > 3 且 {{ '<= 8' }}（且无 advanced 字段）
-          </p>
-          <ProTable
-            :columns="collapseModeColumns"
-            :request-api="orderRequestApi"
-            table-key="demo-mode-collapse"
-            row-key="id"
-            :page-size="5"
-          />
-        </DemoField>
+      <DemoField
+        id="demo-mode-collapse"
+        label="② collapse 档：6 个 basic + 无 advanced —— 展开/收起按钮"
+        :code="codeCollapseColumns"
+      >
+        <p :class="bem.e('hint')">
+          验证：① 默认折叠显示前 3 个字段（orderNo / userName / status） ② 点击「展开」按钮显示全部
+          6 个字段 ③ 右侧有「展开/收起」按钮，**没有「高级筛选」** ④ 触发条件：basic > 3 且
+          {{ '<= 8' }}（且无 advanced 字段）
+        </p>
+        <ProTable
+          :columns="collapseModeColumns"
+          :request-api="orderRequestApi"
+          table-key="demo-mode-collapse"
+          row-key="id"
+          :page-size="5"
+        />
+      </DemoField>
 
-        <DemoField
-          id="demo-mode-flat-large"
-          label="③ flat-large 档：10 个 basic + 无 advanced —— 全部平铺、无折叠按钮"
-          :code="codeFlatLargeColumns"
-        >
-          <p :class="bem.e('hint')">
-            验证：① 全部 10 个字段全部 inline 平铺展示（不折叠） ②
-            右侧只有「搜索」「重置」，**没有「展开/收起」也没有「高级筛选」** ③ 触发条件：basic >
-            8（且无 advanced 字段）—— 因为展开 8+ 字段会严重摧毁表格可视高度
-          </p>
-          <ProTable
-            :columns="flatLargeModeColumns"
-            :request-api="orderRequestApi"
-            table-key="demo-mode-flat-large"
-            row-key="id"
-            :page-size="5"
-          />
-        </DemoField>
+      <DemoField
+        id="demo-mode-flat-large"
+        label="③ flat-large 档：10 个 basic + 无 advanced —— 全部平铺、无折叠按钮"
+        :code="codeFlatLargeColumns"
+      >
+        <p :class="bem.e('hint')">
+          验证：① 全部 10 个字段全部 inline 平铺展示（不折叠） ②
+          右侧只有「搜索」「重置」，**没有「展开/收起」也没有「高级筛选」** ③ 触发条件：basic >
+          8（且无 advanced 字段）—— 因为展开 8+ 字段会严重摧毁表格可视高度
+        </p>
+        <ProTable
+          :columns="flatLargeModeColumns"
+          :request-api="orderRequestApi"
+          table-key="demo-mode-flat-large"
+          row-key="id"
+          :page-size="5"
+        />
+      </DemoField>
 
-        <DemoField
-          id="demo-mode-drawer"
-          label="④ drawer 档：8 basic + 5 advanced —— basic inline 平铺 + 抽屉装 advanced"
-          :code="codeColumns"
-        >
-          <p :class="bem.e('hint')">
-            验证：① 主表单展示 8 个 basic 字段全部平铺（不折叠） ②
-            右侧有「高级筛选」按钮（**没有「展开/收起」** —— 抽屉与折叠互斥） ③
-            点「高级筛选」打开抽屉，里面是 5 个 advanced 字段 ④ 触发条件：任一字段的 search.level
-            === 'advanced'
-          </p>
-          <ProTable
-            :columns="advancedSearchColumns"
-            :request-api="orderRequestApi"
-            :search-display="advancedSearchDisplay"
-            table-key="demo-mode-drawer"
-            row-key="id"
-            :page-size="5"
-          />
-        </DemoField>
+      <DemoField
+        id="demo-mode-drawer"
+        label="④ drawer 档：8 basic + 5 advanced —— basic inline 平铺 + 抽屉装 advanced"
+        :code="codeColumns"
+      >
+        <p :class="bem.e('hint')">
+          验证：① 主表单展示 8 个 basic 字段全部平铺（不折叠） ②
+          右侧有「高级筛选」按钮（**没有「展开/收起」** —— 抽屉与折叠互斥） ③
+          点「高级筛选」打开抽屉，里面是 5 个 advanced 字段 ④ 触发条件：任一字段的 search.level ===
+          'advanced'
+        </p>
+        <ProTable
+          :columns="advancedSearchColumns"
+          :request-api="orderRequestApi"
+          :search-display="advancedSearchDisplay"
+          table-key="demo-mode-drawer"
+          row-key="id"
+          :page-size="5"
+        />
+      </DemoField>
 
-        <!--
+      <!--
           ─────────── v3.2 既有能力（drawer 档下展示）────────────
           以下 5 个 demo 都用 drawer 档，复用 advancedSearchColumns / advancedSearchDisplay。
           共享同一份 13 字段 columns，差异在交互能力（默认折叠 / 抽屉 / 防抖 / 联动 / 响应式）。
         -->
-        <DemoField
-          id="demo-default-collapsed"
-          label="⑤ drawer 档 · 默认折叠 + 展开按钮（主表单只展示前 4 个字段）"
-          :code="codeColumns"
-        >
-          <p :class="bem.e('hint')">
-            验证：① drawer 档下，basic
-            字段默认**全部展开**（不再受折叠约束，因为有抽屉分流高级字段） ② 8 个 basic 字段全部展示
-            ③ 5 个 advanced 字段藏在「高级筛选」抽屉里
-          </p>
-          <div :class="bem.e('actions')">
-            <ElButton size="small" @click="handleReload">重新加载（refresh）</ElButton>
-            <ElButton size="small" type="danger" plain @click="handleReset">重置（reset）</ElButton>
-          </div>
-          <ProTable
-            ref="proTableRef"
-            :columns="advancedSearchColumns"
-            :request-api="orderRequestApi"
-            :search-display="advancedSearchDisplay"
-            table-key="demo-advanced-search"
-            row-key="id"
-            :page-size="5"
-          />
-        </DemoField>
+      <DemoField
+        id="demo-default-collapsed"
+        label="⑤ drawer 档 · 默认折叠 + 展开按钮（主表单只展示前 4 个字段）"
+        :code="codeColumns"
+      >
+        <p :class="bem.e('hint')">
+          验证：① drawer 档下，basic 字段默认**全部展开**（不再受折叠约束，因为有抽屉分流高级字段）
+          ② 8 个 basic 字段全部展示 ③ 5 个 advanced 字段藏在「高级筛选」抽屉里
+        </p>
+        <div :class="bem.e('actions')">
+          <ElButton size="small" @click="handleReload">重新加载（refresh）</ElButton>
+          <ElButton size="small" type="danger" plain @click="handleReset">重置（reset）</ElButton>
+        </div>
+        <ProTable
+          ref="proTableRef"
+          :columns="advancedSearchColumns"
+          :request-api="orderRequestApi"
+          :search-display="advancedSearchDisplay"
+          table-key="demo-advanced-search"
+          row-key="id"
+          :page-size="5"
+        />
+      </DemoField>
 
-        <DemoField
-          id="demo-advanced-dialog"
-          label="⑥ drawer 档 · 高级筛选弹窗 + 已选数量角标"
-          :code="codeLevel"
-        >
-          <p :class="bem.e('hint')">
-            验证：① 主表单右上角有「高级」按钮（因为有 6 个 advanced 字段）② 点击后弹窗出现 6 个
-            advanced 字段 ③ 在弹窗设置值后，关闭时主表单按钮上「角标」会显示已选数量 ④
-            「应用」按钮触发搜索 + 关闭弹窗；「清空」清空所有 advanced；「取消」不丢当前值
-          </p>
-          <ProTable
-            :columns="advancedSearchColumns"
-            :request-api="orderRequestApi"
-            :search-display="advancedSearchDisplay"
-            table-key="demo-advanced-advanced"
-            row-key="id"
-            :page-size="5"
-          />
-        </DemoField>
+      <DemoField
+        id="demo-advanced-dialog"
+        label="⑥ drawer 档 · 高级筛选弹窗 + 已选数量角标"
+        :code="codeLevel"
+      >
+        <p :class="bem.e('hint')">
+          验证：① 主表单右上角有「高级」按钮（因为有 6 个 advanced 字段）② 点击后弹窗出现 6 个
+          advanced 字段 ③ 在弹窗设置值后，关闭时主表单按钮上「角标」会显示已选数量 ④
+          「应用」按钮触发搜索 + 关闭弹窗；「清空」清空所有 advanced；「取消」不丢当前值
+        </p>
+        <ProTable
+          :columns="advancedSearchColumns"
+          :request-api="orderRequestApi"
+          :search-display="advancedSearchDisplay"
+          table-key="demo-advanced-advanced"
+          row-key="id"
+          :page-size="5"
+        />
+      </DemoField>
 
-        <DemoField
-          id="demo-debounce"
-          label="⑦ drawer 档 · 字段级防抖：orderNo 输入即自动搜索（300ms）"
-          :code="codeDebounce"
-        >
-          <p :class="bem.e('hint')">
-            验证：① 在「订单号」输入框连续敲字符（如「O」「OR」「ORD」），观察网络请求（500ms 延迟）
-            ② 防抖后只有 1 次请求（最后一次停顿 300ms 后触发）③ 而 userName（无
-            debounce）输入不触发搜索，需按回车或点搜索按钮
-          </p>
-          <ProTable
-            :columns="advancedSearchColumns"
-            :request-api="orderRequestApi"
-            :search-display="advancedSearchDisplay"
-            table-key="demo-advanced-debounce"
-            row-key="id"
-            :page-size="5"
-          />
-        </DemoField>
+      <DemoField
+        id="demo-debounce"
+        label="⑦ drawer 档 · 字段级防抖：orderNo 输入即自动搜索（300ms）"
+        :code="codeDebounce"
+      >
+        <p :class="bem.e('hint')">
+          验证：① 在「订单号」输入框连续敲字符（如「O」「OR」「ORD」），观察网络请求（500ms 延迟） ②
+          防抖后只有 1 次请求（最后一次停顿 300ms 后触发）③ 而 userName（无
+          debounce）输入不触发搜索，需按回车或点搜索按钮
+        </p>
+        <ProTable
+          :columns="advancedSearchColumns"
+          :request-api="orderRequestApi"
+          :search-display="advancedSearchDisplay"
+          table-key="demo-advanced-debounce"
+          row-key="id"
+          :page-size="5"
+        />
+      </DemoField>
 
-        <DemoField
-          id="demo-display"
-          label="⑧ drawer 档 · searchDisplay 联动显隐：状态 = 已退款时显示「退款原因」"
-          :code="codeDisplay"
-        >
-          <p :class="bem.e('hint')">
-            验证：① 默认「订单状态」为空 → 「退款原因」「发货日期」都隐藏（不在主表单也不在弹窗） ②
-            选「已退款」 → 弹窗内「退款原因」自动出现 ③ 选「已发货」 →
-            「退款原因」消失，「发货日期」出现
-          </p>
-          <ProTable
-            :columns="advancedSearchColumns"
-            :request-api="orderRequestApi"
-            :search-display="advancedSearchDisplay"
-            table-key="demo-advanced-display"
-            row-key="id"
-            :page-size="5"
-          />
-        </DemoField>
+      <DemoField
+        id="demo-display"
+        label="⑧ drawer 档 · searchDisplay 联动显隐：状态 = 已退款时显示「退款原因」"
+        :code="codeDisplay"
+      >
+        <p :class="bem.e('hint')">
+          验证：① 默认「订单状态」为空 → 「退款原因」「发货日期」都隐藏（不在主表单也不在弹窗） ②
+          选「已退款」 → 弹窗内「退款原因」自动出现 ③ 选「已发货」 →
+          「退款原因」消失，「发货日期」出现
+        </p>
+        <ProTable
+          :columns="advancedSearchColumns"
+          :request-api="orderRequestApi"
+          :search-display="advancedSearchDisplay"
+          table-key="demo-advanced-display"
+          row-key="id"
+          :page-size="5"
+        />
+      </DemoField>
 
-        <DemoField
-          id="demo-responsive"
-          label="⑨ drawer 档 · 响应式栅格：缩放浏览器看效果"
-          :code="responsiveCode"
-        >
-          <p :class="bem.e('hint')">
-            验证：① 浏览器窗口 ≥ 1200px（xl）→ 每个字段 1/4 屏宽 ② 768-1200px（md）→ 1/3 屏宽 ③
-            480-768px（sm）→ 1/2 屏宽 ④ {{ '< 480px' }}（xs）→ 整行（移动端 1 列） ⑤ 控制台会看到
-            el-col 响应式 class（el-col-xs-24 / el-col-sm-12 / el-col-md-8 / el-col-lg-6）
-          </p>
-          <ProTable
-            :columns="advancedSearchColumns"
-            :request-api="orderRequestApi"
-            :search-display="advancedSearchDisplay"
-            table-key="demo-advanced-responsive"
-            row-key="id"
-            :page-size="5"
-          />
-        </DemoField>
+      <DemoField
+        id="demo-responsive"
+        label="⑨ drawer 档 · 响应式栅格：缩放浏览器看效果"
+        :code="responsiveCode"
+      >
+        <p :class="bem.e('hint')">
+          验证：① 浏览器窗口 ≥ 1200px（xl）→ 每个字段 1/4 屏宽 ② 768-1200px（md）→ 1/3 屏宽 ③
+          480-768px（sm）→ 1/2 屏宽 ④ {{ '< 480px' }}（xs）→ 整行（移动端 1 列） ⑤ 控制台会看到
+          el-col 响应式 class（el-col-xs-24 / el-col-sm-12 / el-col-md-8 / el-col-lg-6）
+        </p>
+        <ProTable
+          :columns="advancedSearchColumns"
+          :request-api="orderRequestApi"
+          :search-display="advancedSearchDisplay"
+          table-key="demo-advanced-responsive"
+          row-key="id"
+          :page-size="5"
+        />
+      </DemoField>
 
-        <DemoField
-          id="demo-search-layout"
-          label="⑩ v3.4 searchLayout：6 basic 强制 flat 档（自动判定本应是 collapse）"
-          :code="searchLayoutCode"
-        >
-          <p :class="bem.e('hint')">
-            验证：① 与 ② 号 demo 同样的 6 个 basic 字段，加 search-layout="flat" 后强制平铺 ②
-            右侧**没有「展开/收起」按钮**，6 个字段全部直接可见（对照 ② 号 demo 默认折叠为前 3） ③
-            自动判定规则被显式配置覆盖 —— 字段数与页面空间需求不匹配时的下放手段
-          </p>
-          <ProTable
-            :columns="collapseModeColumns"
-            :request-api="orderRequestApi"
-            table-key="demo-search-layout"
-            row-key="id"
-            search-layout="flat"
-            :page-size="5"
-          />
-        </DemoField>
-      </section>
+      <DemoField
+        id="demo-search-layout"
+        label="⑩ v3.4 searchLayout：6 basic 强制 flat 档（自动判定本应是 collapse）"
+        :code="searchLayoutCode"
+      >
+        <p :class="bem.e('hint')">
+          验证：① 与 ② 号 demo 同样的 6 个 basic 字段，加 search-layout="flat" 后强制平铺 ②
+          右侧**没有「展开/收起」按钮**，6 个字段全部直接可见（对照 ② 号 demo 默认折叠为前 3） ③
+          自动判定规则被显式配置覆盖 —— 字段数与页面空间需求不匹配时的下放手段
+        </p>
+        <ProTable
+          :columns="collapseModeColumns"
+          :request-api="orderRequestApi"
+          table-key="demo-search-layout"
+          row-key="id"
+          search-layout="flat"
+          :page-size="5"
+        />
+      </DemoField>
+    </section>
 
-      <ApiTable
-        title="SearchConfig 新增字段"
-        :items="searchConfigItems"
-        anchor="api-search-config"
-      />
-      <ApiTable
-        title="ProTable.Props 新增字段"
-        :items="proTablePropsItems"
-        anchor="api-protable-props"
-      />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="SearchConfig 新增字段" :items="searchConfigItems" anchor="api-search-config" />
+    <ApiTable
+      title="ProTable.Props 新增字段"
+      :items="proTablePropsItems"
+      anchor="api-protable-props"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

@@ -15,11 +15,10 @@
  * 4. 搜索「张三」→ 自动展开命中路径
  */
 import type { ProColumn } from '@/components/ProTable/types'
-import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { orgChartRequestApi, loadOrgChildren } from '@mock/pro-table/org-chart'
 import { treeConfigItems, treeExposeItems } from './configs/protable-demos-api'
 
@@ -42,6 +41,8 @@ const tocItems = [
   { id: 'api-tree-config', label: 'TreeConfig 字段' },
   { id: 'api-tree-expose', label: 'Expose API' },
 ]
+
+useDocToc(tocItems)
 
 const basicCode = `<template>
   <ProTable
@@ -69,39 +70,33 @@ const treeConfig = {
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="ProTableTree 树形数据"
-      source="src/components/ProTable/composables/useTreeData.ts"
-      :introductions="[
-        '基于 useTreeData composable 实现的树形表格：懒加载 + 默认展开深度 + 搜索命中路径自动展开。',
-        '下方演示 4 层组织架构：点击展开触发 loadChildren（200ms mock 延迟），搜索命中自动展开祖先。',
-        'vxe-table 引擎不支持树形能力（启动时 console.warn 并忽略），仅 element-plus 引擎生效。',
-      ]"
-    >
-      <section id="demo-tree" :class="bem.b()">
-        <DemoField label="基本用法（懒加载 + 默认展开）" :code="basicCode">
-          <ProTable
-            :columns="columns"
-            :request-api="orgChartRequestApi"
-            :enable-tree="treeConfig"
-            row-key="id"
-          />
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="ProTableTree 树形数据"
+    source="src/components/ProTable/composables/useTreeData.ts"
+    :introductions="[
+      '基于 useTreeData composable 实现的树形表格：懒加载 + 默认展开深度 + 搜索命中路径自动展开。',
+      '下方演示 4 层组织架构：点击展开触发 loadChildren（200ms mock 延迟），搜索命中自动展开祖先。',
+      'vxe-table 引擎不支持树形能力（启动时 console.warn 并忽略），仅 element-plus 引擎生效。',
+    ]"
+  >
+    <section id="demo-tree" :class="bem.b()">
+      <DemoField label="基本用法（懒加载 + 默认展开）" :code="basicCode">
+        <ProTable
+          :columns="columns"
+          :request-api="orgChartRequestApi"
+          :enable-tree="treeConfig"
+          row-key="id"
+        />
+      </DemoField>
+    </section>
 
-      <ApiTable title="TreeConfig 字段" :items="treeConfigItems" anchor="api-tree-config" />
-      <ApiTable
-        title="Expose API（expandNode/collapseNode/refreshChildren）"
-        :items="treeExposeItems"
-        anchor="api-tree-expose"
-      />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="TreeConfig 字段" :items="treeConfigItems" anchor="api-tree-config" />
+    <ApiTable
+      title="Expose API（expandNode/collapseNode/refreshChildren）"
+      :items="treeExposeItems"
+      anchor="api-tree-expose"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

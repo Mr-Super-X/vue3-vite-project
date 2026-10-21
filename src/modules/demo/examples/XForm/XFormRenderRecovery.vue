@@ -19,8 +19,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { renderRecoveryItems } from './configs/xform-demos-api'
 import xFormRenderRecoverySource from './XFormRenderRecovery.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
@@ -108,6 +107,8 @@ const tocItems = [
   { id: 'api-render-recovery', label: 'SchemaField.safeRender 行为速查' },
 ]
 
+useDocToc(tocItems)
+
 const introductions = [
   'SchemaField.safeRender 包裹 renderFn 调用：业务自定义组件 throw 时降级到占位 UI',
   '占位 UI：红色虚线 + 错误字段名 (class=x-form-render-error)，便于定位',
@@ -119,35 +120,31 @@ const introductions = [
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="SchemaField 安全渲染 —— 单字段 throw 不污染全表单"
-      source="src/components/form-schema/components/SchemaField.vue"
-      :introductions="introductions"
-    >
-      <section id="demo-render-recovery">
-        <DemoField label="故障字段降级演示" :code="xFormRenderRecoverySource">
-          <XForm ref="formRef" :schema="schema" :model="model" :components="{ BrokenInput }" />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-            <el-button type="info" plain @click="checkErrorPlaceholderClass">
-              检查占位 className
-            </el-button>
-          </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="SchemaField 安全渲染 —— 单字段 throw 不污染全表单"
+    source="src/components/form-schema/components/SchemaField.vue"
+    :introductions="introductions"
+  >
+    <section id="demo-render-recovery">
+      <DemoField label="故障字段降级演示" :code="xFormRenderRecoverySource">
+        <XForm ref="formRef" :schema="schema" :model="model" :components="{ BrokenInput }" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+          <el-button type="info" plain @click="checkErrorPlaceholderClass">
+            检查占位 className
+          </el-button>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
 
-      <ApiTable
-        title="SchemaField.safeRender 行为速查"
-        :items="renderRecoveryItems"
-        anchor="api-render-recovery"
-      />
-    </DemoFrame>
-
-    <template #toc><DocToc :items="tocItems" /></template>
-  </DocLayout>
+    <ApiTable
+      title="SchemaField.safeRender 行为速查"
+      :items="renderRecoveryItems"
+      anchor="api-render-recovery"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

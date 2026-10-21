@@ -17,8 +17,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { nestedItems } from './configs/xform-demos-api'
 import xFormSource from './XFormNested.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
@@ -168,46 +167,42 @@ const tocItems = [
   { id: 'demo-nested', label: '嵌套布局演示' },
   { id: 'api-nested', label: 'Card 分组布局' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="复杂布局（用户资料 Card 分组）"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        '三个 Card 分组：基本信息 / 联系方式 / 偏好设置，分别为 2 列 / 2 列 / 3 列栅格。',
-        'slots.header 自定义标题（图标 + 文本 + 右上角链接）——注意 ElCard 的标题 API 是 header，不是 title / extra。',
-        '昵称字段含嵌套 children：Input + 「命名规范」HTML 链接。',
-        'component 支持原生 HTML 标签（全小写，如 a / span）：直接渲染原生元素，适合链接、图标等轻量内容。',
-      ]"
-    >
-      <section id="demo-nested">
-        <DemoField label="嵌套布局" :code="xFormSource">
-          <XForm :schema="schema" :model="model" />
-          <el-button @click="onReset" class="mt-2">重置</el-button>
-          <el-button @click="copySchema" class="mt-2">复制 schema</el-button>
-          <ModelPreview :model="model" />
-          <p :class="bem.e('hint')">
-            <strong>嵌套 FormItem 边界验证：</strong>
-            1) 在「昵称」字段输入
-            <code>plain text</code>
-            等非法值（含空格 / 特殊字符）→ 2) 观察 XForm 控制台或保存时
-            <code>formRef.validate()</code>
-            返回值：
-            <code>{ nickname: '昵称格式不合法' }</code>
-            → 3) 错误信息按字段路径返回，可直接用于 el-form-item error-message 渲染。
-          </p>
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="复杂布局（用户资料 Card 分组）"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      '三个 Card 分组：基本信息 / 联系方式 / 偏好设置，分别为 2 列 / 2 列 / 3 列栅格。',
+      'slots.header 自定义标题（图标 + 文本 + 右上角链接）——注意 ElCard 的标题 API 是 header，不是 title / extra。',
+      '昵称字段含嵌套 children：Input + 「命名规范」HTML 链接。',
+      'component 支持原生 HTML 标签（全小写，如 a / span）：直接渲染原生元素，适合链接、图标等轻量内容。',
+    ]"
+  >
+    <section id="demo-nested">
+      <DemoField label="嵌套布局" :code="xFormSource">
+        <XForm :schema="schema" :model="model" />
+        <el-button @click="onReset" class="mt-2">重置</el-button>
+        <el-button @click="copySchema" class="mt-2">复制 schema</el-button>
+        <ModelPreview :model="model" />
+        <p :class="bem.e('hint')">
+          <strong>嵌套 FormItem 边界验证：</strong>
+          1) 在「昵称」字段输入
+          <code>plain text</code>
+          等非法值（含空格 / 特殊字符）→ 2) 观察 XForm 控制台或保存时
+          <code>formRef.validate()</code>
+          返回值：
+          <code>{ nickname: '昵称格式不合法' }</code>
+          → 3) 错误信息按字段路径返回，可直接用于 el-form-item error-message 渲染。
+        </p>
+      </DemoField>
+    </section>
 
-      <ApiTable title="Card 分组布局" :items="nestedItems" anchor="api-nested" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="Card 分组布局" :items="nestedItems" anchor="api-nested" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

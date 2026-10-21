@@ -14,11 +14,10 @@
  * - Demo 3：金额范围（>=10000 标记为"高金额"）自定义 judge 合并
  */
 import type { ProColumn } from '@/components/ProTable/types'
-import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { ordersRequestApi } from '@mock/pro-table/orders'
 import { cellSpanColumnItems, cellSpanConfigItems } from './configs/protable-demos-api'
 
@@ -159,93 +158,89 @@ const tocItems = [
   { id: 'api-cell-span-column', label: 'ProColumn.span 字段' },
   { id: 'api-cell-span-config', label: 'CellSpanConfig 配置' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="ProTableCellSpan 单元格合并"
-      source="src/components/ProTable/composables/useCellSpan.ts"
-      :introductions="[
-        '基于 useCellSpan composable 包装 element-plus spanMethod 协议。',
-        '三种合并模式：① 同列相邻值自动纵向合并 ② 自定义 judge 判定合并 ③ 跨列合并（_spanTarget 标记）。',
-        '下方 3 个 demo 分别演示：行合并、列合并、自定义 judge。',
-      ]"
-    >
-      <!-- Demo 1：行合并 -->
-      <section id="demo-cell-span-row" :class="bem.b()">
-        <DemoField label="① 行合并（span.direction='row'，相邻同值自动合并）" :code="rowSpanCode">
-          <div :class="bem.e('row-merge-legend')">
-            🔵 蓝色左边框 = rowspan 锚点单元格（被合并的起始格）
-          </div>
-          <ProTable
-            :columns="rowSpanColumns"
-            :request-api="ordersRequestApi"
-            :enable-cell-span="true"
-            row-key="id"
-            :page-size="12"
-          />
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="ProTableCellSpan 单元格合并"
+    source="src/components/ProTable/composables/useCellSpan.ts"
+    :introductions="[
+      '基于 useCellSpan composable 包装 element-plus spanMethod 协议。',
+      '三种合并模式：① 同列相邻值自动纵向合并 ② 自定义 judge 判定合并 ③ 跨列合并（_spanTarget 标记）。',
+      '下方 3 个 demo 分别演示：行合并、列合并、自定义 judge。',
+    ]"
+  >
+    <!-- Demo 1：行合并 -->
+    <section id="demo-cell-span-row" :class="bem.b()">
+      <DemoField label="① 行合并（span.direction='row'，相邻同值自动合并）" :code="rowSpanCode">
+        <div :class="bem.e('row-merge-legend')">
+          🔵 蓝色左边框 = rowspan 锚点单元格（被合并的起始格）
+        </div>
+        <ProTable
+          :columns="rowSpanColumns"
+          :request-api="ordersRequestApi"
+          :enable-cell-span="true"
+          row-key="id"
+          :page-size="12"
+        />
+      </DemoField>
+    </section>
 
-      <!-- Demo 2：列合并（高金额订单才合并） -->
-      <section id="demo-cell-span-col" :class="bem.b()">
-        <DemoField
-          label="② 列合并（span.direction='column' + row._spanTarget 字段标记）"
-          :code="colSpanCode"
-        >
-          <div :class="bem.e('col-merge-legend')">
-            🟢 绿色上边框 = colspan 锚点单元格（订单号 + 商品 合并为 1 列）
-            <br />
-            注：只有高金额订单（≥ 10000）会触发合并
-          </div>
-          <ProTable
-            :columns="colSpanColumns"
-            :request-api="loadOrdersWithColSpan"
-            :enable-cell-span="true"
-            row-key="id"
-            :page-size="12"
-          />
-        </DemoField>
-      </section>
+    <!-- Demo 2：列合并（高金额订单才合并） -->
+    <section id="demo-cell-span-col" :class="bem.b()">
+      <DemoField
+        label="② 列合并（span.direction='column' + row._spanTarget 字段标记）"
+        :code="colSpanCode"
+      >
+        <div :class="bem.e('col-merge-legend')">
+          🟢 绿色上边框 = colspan 锚点单元格（订单号 + 商品 合并为 1 列）
+          <br />
+          注：只有高金额订单（≥ 10000）会触发合并
+        </div>
+        <ProTable
+          :columns="colSpanColumns"
+          :request-api="loadOrdersWithColSpan"
+          :enable-cell-span="true"
+          row-key="id"
+          :page-size="12"
+        />
+      </DemoField>
+    </section>
 
-      <!-- Demo 3：自定义 judge -->
-      <section id="demo-cell-span-judge" :class="bem.b()">
-        <DemoField
-          label="③ 自定义 judge（span.judge：金额 ≥ 10000 视为高金额合并）"
-          :code="customJudgeCode"
-        >
-          <div :class="bem.e('judge-merge-legend')">
-            🟠 橙色左边框 = 自定义 judge 合并的起始格
-            <br />
-            注：amount ≥ 10000 的相邻订单会被合并（如 ORD002+ORD003 均为 ≥10000）
-          </div>
-          <ProTable
-            :columns="customJudgeColumns"
-            :request-api="loadOrdersWithAmount"
-            :enable-cell-span="true"
-            row-key="id"
-            :page-size="12"
-          />
-        </DemoField>
-      </section>
+    <!-- Demo 3：自定义 judge -->
+    <section id="demo-cell-span-judge" :class="bem.b()">
+      <DemoField
+        label="③ 自定义 judge（span.judge：金额 ≥ 10000 视为高金额合并）"
+        :code="customJudgeCode"
+      >
+        <div :class="bem.e('judge-merge-legend')">
+          🟠 橙色左边框 = 自定义 judge 合并的起始格
+          <br />
+          注：amount ≥ 10000 的相邻订单会被合并（如 ORD002+ORD003 均为 ≥10000）
+        </div>
+        <ProTable
+          :columns="customJudgeColumns"
+          :request-api="loadOrdersWithAmount"
+          :enable-cell-span="true"
+          row-key="id"
+          :page-size="12"
+        />
+      </DemoField>
+    </section>
 
-      <ApiTable
-        title="ProColumn.span 字段"
-        :items="cellSpanColumnItems"
-        anchor="api-cell-span-column"
-      />
-      <ApiTable
-        title="CellSpanConfig 配置（maxMergeSpan 等）"
-        :items="cellSpanConfigItems"
-        anchor="api-cell-span-config"
-      />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable
+      title="ProColumn.span 字段"
+      :items="cellSpanColumnItems"
+      anchor="api-cell-span-column"
+    />
+    <ApiTable
+      title="CellSpanConfig 配置（maxMergeSpan 等）"
+      :items="cellSpanConfigItems"
+      anchor="api-cell-span-config"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

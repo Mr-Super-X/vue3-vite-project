@@ -35,8 +35,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import ModelPreview from '../../components/ModelPreview.vue'
 import { autocompleteAsyncItems } from './configs/xform-demos-api'
 import xFormSource from './XFormAsyncAutocomplete.vue?raw'
@@ -152,88 +151,83 @@ const tocItems = [
   { id: 'demo-async-autocomplete', label: '远程搜索 + 竞态防护' },
   { id: 'api-async-autocomplete', label: 'Autocomplete asyncOptions' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="Autocomplete 远程搜索（asyncOptions + 竞态令牌）"
-      source="src/components/form-schema/composables/use-async-options.ts"
-      :introductions="[
-        '场景：远程搜索员工——每键触发一次后端搜索。后端延迟有波动时，旧查询的慢响应会后到。',
-        '无防护的后果：你输「张」又改成「张三丰」，下拉最终闪回「张」的结果（旧响应覆盖新输入）。',
-        '本页下方的「防护判定」直接告诉你下拉结果来自哪个词——✅ 最后一次输入（防护生效）或 ❌ 旧词（防护失效）。',
-      ]"
-    >
-      <section id="demo-async-autocomplete">
-        <DemoField label="远程搜索负责人" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onSave">保存</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-            <el-button @click="clearLog">清空记录</el-button>
+  <DemoFrame
+    title="Autocomplete 远程搜索（asyncOptions + 竞态令牌）"
+    source="src/components/form-schema/composables/use-async-options.ts"
+    :introductions="[
+      '场景：远程搜索员工——每键触发一次后端搜索。后端延迟有波动时，旧查询的慢响应会后到。',
+      '无防护的后果：你输「张」又改成「张三丰」，下拉最终闪回「张」的结果（旧响应覆盖新输入）。',
+      '本页下方的「防护判定」直接告诉你下拉结果来自哪个词——✅ 最后一次输入（防护生效）或 ❌ 旧词（防护失效）。',
+    ]"
+  >
+    <section id="demo-async-autocomplete">
+      <DemoField label="远程搜索负责人" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onSave">保存</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+          <el-button @click="clearLog">清空记录</el-button>
+        </div>
+
+        <!-- 竞态防护结果断言：对错一眼可见 -->
+        <div
+          :class="[
+            bem.e('verdict'),
+            raceVerdict.ok === true ? bem.em('verdict', 'ok') : '',
+            raceVerdict.ok === false ? bem.em('verdict', 'fail') : '',
+          ]"
+        >
+          {{ raceVerdict.text }}
+        </div>
+
+        <p :class="bem.e('hint')">
+          <strong>日志怎么读：</strong>
+          「发起」= 向后端发起搜索的次数；「落地」= 响应通过竞态校验、真正进下拉的次数。 两者相等 =
+          没有竞态；
+          <strong>落地 &lt; 发起 = 有旧响应被竞态令牌丢弃（防护生效）</strong>
+          。 中文输入法整句上屏（如拼音组词）一次输入只触发 1 次搜索，属正常。
+        </p>
+        <p :class="bem.e('hint')">
+          <strong>操作步骤（符合中文输入习惯）</strong>
+          ：① 用输入法打「张三丰」并上屏——IME 整句上屏只触发 1 次搜索（发起 1 / 落地 1，属正常）②
+          <strong>快速连按 2 次退格</strong>
+          删到「张」—— 删「丰」立即搜「张三」(500ms)、删「三」立即搜「张」(800ms)，累计发起 3
+          次：两键间隔 &lt; 500ms 时「张三」的响应被丢弃（落地
+          2）；间隔较大则无丢弃——无论哪种，判定区显示 ✅ 即防护生效（下拉始终跟随你最后一次输入）。
+        </p>
+
+        <div :class="bem.e('log-panel')">
+          <div :class="bem.e('log-title')">
+            请求日志：发起 {{ issuedCount }} 次 / 落地 {{ landedCount }} 次
+            <template v-if="issuedCount > 0">
+              （{{
+                landedCount < issuedCount
+                  ? '有 ' + (issuedCount - landedCount) + ' 个旧响应被丢弃 ✓'
+                  : '暂无丢弃'
+              }}）
+            </template>
           </div>
+          <pre :class="bem.e('log')">{{
+            requestLog.join('\n') ||
+            '（输入关键词后此处出现请求记录——点击输入框/打开页面不会触发，已关闭 focus 自动拉取与挂载拉取）'
+          }}</pre>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
 
-          <!-- 竞态防护结果断言：对错一眼可见 -->
-          <div
-            :class="[
-              bem.e('verdict'),
-              raceVerdict.ok === true ? bem.em('verdict', 'ok') : '',
-              raceVerdict.ok === false ? bem.em('verdict', 'fail') : '',
-            ]"
-          >
-            {{ raceVerdict.text }}
-          </div>
-
-          <p :class="bem.e('hint')">
-            <strong>日志怎么读：</strong>
-            「发起」= 向后端发起搜索的次数；「落地」= 响应通过竞态校验、真正进下拉的次数。 两者相等
-            = 没有竞态；
-            <strong>落地 &lt; 发起 = 有旧响应被竞态令牌丢弃（防护生效）</strong>
-            。 中文输入法整句上屏（如拼音组词）一次输入只触发 1 次搜索，属正常。
-          </p>
-          <p :class="bem.e('hint')">
-            <strong>操作步骤（符合中文输入习惯）</strong>
-            ：① 用输入法打「张三丰」并上屏——IME 整句上屏只触发 1 次搜索（发起 1 / 落地 1，属正常）②
-            <strong>快速连按 2 次退格</strong>
-            删到「张」—— 删「丰」立即搜「张三」(500ms)、删「三」立即搜「张」(800ms)，累计发起 3
-            次：两键间隔 &lt; 500ms 时「张三」的响应被丢弃（落地
-            2）；间隔较大则无丢弃——无论哪种，判定区显示 ✅
-            即防护生效（下拉始终跟随你最后一次输入）。
-          </p>
-
-          <div :class="bem.e('log-panel')">
-            <div :class="bem.e('log-title')">
-              请求日志：发起 {{ issuedCount }} 次 / 落地 {{ landedCount }} 次
-              <template v-if="issuedCount > 0">
-                （{{
-                  landedCount < issuedCount
-                    ? '有 ' + (issuedCount - landedCount) + ' 个旧响应被丢弃 ✓'
-                    : '暂无丢弃'
-                }}）
-              </template>
-            </div>
-            <pre :class="bem.e('log')">{{
-              requestLog.join('\n') ||
-              '（输入关键词后此处出现请求记录——点击输入框/打开页面不会触发，已关闭 focus 自动拉取与挂载拉取）'
-            }}</pre>
-          </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
-
-      <ApiTable
-        title="Autocomplete asyncOptions 差异点"
-        :items="autocompleteAsyncItems"
-        anchor="api-async-autocomplete"
-      />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable
+      title="Autocomplete asyncOptions 差异点"
+      :items="autocompleteAsyncItems"
+      anchor="api-async-autocomplete"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

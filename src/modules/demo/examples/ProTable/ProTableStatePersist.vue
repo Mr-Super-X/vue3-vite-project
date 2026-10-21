@@ -16,11 +16,10 @@
  */
 import { ElButton } from 'element-plus'
 import type { ProColumn } from '@/components/ProTable'
-import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { statePersistItems, statePersistStorageItems } from './configs/protable-demos-api'
 import { projectRequestApi, type ProjectRow } from './configs/projects'
 
@@ -57,52 +56,48 @@ const tocItems = [
   { id: 'api-state-persist', label: 'statePersist Prop' },
   { id: 'api-state-persist-storage', label: '存储约定' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="ProTableStatePersist 状态保持"
-      source="src/components/ProTable/composables/useStatePersist.ts"
-      :introductions="[
-        '搜索 / 分页 / 排序的路由级持久化：跳走再回来恢复，F5 刷新不恢复。',
-        '恢复时机靠 localStorage 快照 + sessionStorage alive 标记双重判定。',
-      ]"
-    >
-      <section id="demo-state-persist" :class="bem.b()">
-        <DemoField label="statePersist（路由返回恢复 / F5 不恢复）" :code="persistCode">
-          <p :class="bem.e('hint')">
-            验证：① 搜索框输入「项目-1」、翻到第 2 页、点 ID 表头排序 ② 点下方按钮跳走 →
-            浏览器「后退」回来 → 搜索词 / 页码 / 排序全部恢复 ③ 按 F5 刷新 → 不恢复（全新会话）
-          </p>
-          <div :class="bem.e('actions')">
-            <ElButton size="small" @click="goOverview">跳去 Overview 页面（验证返回恢复）</ElButton>
-            <span :class="bem.e('msg')">跳走后点浏览器「后退」回到本页</span>
-          </div>
-          <ProTable
-            :columns="columns"
-            :request-api="projectRequestApi"
-            table-key="demo-v31-persist"
-            row-key="id"
-            state-persist
-            :page-size="5"
-            :show-selected-tags="false"
-          />
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="ProTableStatePersist 状态保持"
+    source="src/components/ProTable/composables/useStatePersist.ts"
+    :introductions="[
+      '搜索 / 分页 / 排序的路由级持久化：跳走再回来恢复，F5 刷新不恢复。',
+      '恢复时机靠 localStorage 快照 + sessionStorage alive 标记双重判定。',
+    ]"
+  >
+    <section id="demo-state-persist" :class="bem.b()">
+      <DemoField label="statePersist（路由返回恢复 / F5 不恢复）" :code="persistCode">
+        <p :class="bem.e('hint')">
+          验证：① 搜索框输入「项目-1」、翻到第 2 页、点 ID 表头排序 ② 点下方按钮跳走 →
+          浏览器「后退」回来 → 搜索词 / 页码 / 排序全部恢复 ③ 按 F5 刷新 → 不恢复（全新会话）
+        </p>
+        <div :class="bem.e('actions')">
+          <ElButton size="small" @click="goOverview">跳去 Overview 页面（验证返回恢复）</ElButton>
+          <span :class="bem.e('msg')">跳走后点浏览器「后退」回到本页</span>
+        </div>
+        <ProTable
+          :columns="columns"
+          :request-api="projectRequestApi"
+          table-key="demo-v31-persist"
+          row-key="id"
+          state-persist
+          :page-size="5"
+          :show-selected-tags="false"
+        />
+      </DemoField>
+    </section>
 
-      <ApiTable title="statePersist Prop" :items="statePersistItems" anchor="api-state-persist" />
-      <ApiTable
-        title="存储约定（localStorage + sessionStorage）"
-        :items="statePersistStorageItems"
-        anchor="api-state-persist-storage"
-      />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="statePersist Prop" :items="statePersistItems" anchor="api-state-persist" />
+    <ApiTable
+      title="存储约定（localStorage + sessionStorage）"
+      :items="statePersistStorageItems"
+      anchor="api-state-persist-storage"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

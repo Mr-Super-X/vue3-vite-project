@@ -20,11 +20,10 @@ import { ElButton, ElMessage, ElTag } from 'element-plus'
 import { Download } from '@element-plus/icons-vue' // 显式 import（§1.6.1 来源注释）
 import type { ProColumn, ToolbarAction } from '@/components/ProTable'
 import { exportCsv } from '@/components/ProTable/utils'
-import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { toolbarActionItems, toolbarPropsItems } from './configs/protable-demos-api'
 import { projectRequestApi, type ProjectRow } from './configs/projects'
 
@@ -156,80 +155,76 @@ const tocItems = [
   { id: 'api-toolbar-action', label: 'ToolbarAction 字段' },
   { id: 'api-toolbar-props', label: '新增 props' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="ProTableHeaderActions 工具栏与批量操作（toolbar 配置式 API）"
-      source="src/components/ProTable/components/ToolbarRenderer.vue"
-      :introductions="[
-        '配置式 toolbar：权限（perm）/ 二次确认（confirm）/ 折叠收纳（maxVisibleActions）由组件代管，业务只写行为。',
-        '选中行 > 0 时浮出批量操作条：selectionBarActions 配置或 #selectionBar slot 完全接管（slot 优先）。',
-        '#tableHeader / #toolButton slot 作用域下发 ToolbarCtx（selectedRows/selectedCount/loading/refresh），向后兼容。',
-      ]"
-    >
-      <section :class="bem.b()">
-        <DemoField
-          id="demo-toolbar-config"
-          label="配置式：toolbar + selectionBarActions（禁用联动 / 危险确认 / 折叠）"
-          :code="configCode"
+  <DemoFrame
+    title="ProTableHeaderActions 工具栏与批量操作（toolbar 配置式 API）"
+    source="src/components/ProTable/components/ToolbarRenderer.vue"
+    :introductions="[
+      '配置式 toolbar：权限（perm）/ 二次确认（confirm）/ 折叠收纳（maxVisibleActions）由组件代管，业务只写行为。',
+      '选中行 > 0 时浮出批量操作条：selectionBarActions 配置或 #selectionBar slot 完全接管（slot 优先）。',
+      '#tableHeader / #toolButton slot 作用域下发 ToolbarCtx（selectedRows/selectedCount/loading/refresh），向后兼容。',
+    ]"
+  >
+    <section :class="bem.b()">
+      <DemoField
+        id="demo-toolbar-config"
+        label="配置式：toolbar + selectionBarActions（禁用联动 / 危险确认 / 折叠）"
+        :code="configCode"
+      >
+        <p :class="bem.e('hint')">
+          验证：① 未勾选时「导出选中」灰置 → 勾选 2 行变可用 ② 批量条浮出「已选 N 项」③
+          「批量删除」弹确认框（确认按钮红色）④ toolbar 第 4 个按钮「归档」收进「更多」
+        </p>
+        <ProTable
+          :columns="columns"
+          :request-api="projectRequestApi"
+          table-key="demo-header-actions"
+          row-key="id"
+          :page-size="5"
+          :toolbar="toolbar"
+          :selection-bar-actions="selectionBarActions"
+          :max-visible-actions="3"
+        />
+      </DemoField>
+
+      <DemoField
+        id="demo-toolbar-slot"
+        label="slot 通道：作用域读选中数 + #selectionBar 完全接管"
+        :code="slotCode"
+      >
+        <p :class="bem.e('hint')">
+          验证：① #tableHeader 的 ElTag 随勾选实时更新 ② 勾选后批量区显示「自定义批量区：N 行」 ③
+          点「清除选中」批量条消失
+        </p>
+        <ProTable
+          :columns="columns"
+          :request-api="projectRequestApi"
+          table-key="demo-header-actions-slot"
+          row-key="id"
+          :page-size="5"
         >
-          <p :class="bem.e('hint')">
-            验证：① 未勾选时「导出选中」灰置 → 勾选 2 行变可用 ② 批量条浮出「已选 N 项」③
-            「批量删除」弹确认框（确认按钮红色）④ toolbar 第 4 个按钮「归档」收进「更多」
-          </p>
-          <ProTable
-            :columns="columns"
-            :request-api="projectRequestApi"
-            table-key="demo-header-actions"
-            row-key="id"
-            :page-size="5"
-            :toolbar="toolbar"
-            :selection-bar-actions="selectionBarActions"
-            :max-visible-actions="3"
-          />
-        </DemoField>
+          <template #tableHeader="{ selectedCount }">
+            <ElTag type="primary">已选 {{ selectedCount }} 项</ElTag>
+          </template>
+          <template #selectionBar="{ selectedRows, clearSelection }">
+            <span :class="bem.e('custom-bar')">自定义批量区：{{ selectedRows.length }} 行</span>
+            <ElButton size="small" type="danger" @click="clearSelection">清除选中</ElButton>
+          </template>
+        </ProTable>
+      </DemoField>
+    </section>
 
-        <DemoField
-          id="demo-toolbar-slot"
-          label="slot 通道：作用域读选中数 + #selectionBar 完全接管"
-          :code="slotCode"
-        >
-          <p :class="bem.e('hint')">
-            验证：① #tableHeader 的 ElTag 随勾选实时更新 ② 勾选后批量区显示「自定义批量区：N 行」 ③
-            点「清除选中」批量条消失
-          </p>
-          <ProTable
-            :columns="columns"
-            :request-api="projectRequestApi"
-            table-key="demo-header-actions-slot"
-            row-key="id"
-            :page-size="5"
-          >
-            <template #tableHeader="{ selectedCount }">
-              <ElTag type="primary">已选 {{ selectedCount }} 项</ElTag>
-            </template>
-            <template #selectionBar="{ selectedRows, clearSelection }">
-              <span :class="bem.e('custom-bar')">自定义批量区：{{ selectedRows.length }} 行</span>
-              <ElButton size="small" type="danger" @click="clearSelection">清除选中</ElButton>
-            </template>
-          </ProTable>
-        </DemoField>
-      </section>
-
-      <ApiTable
-        title="ToolbarAction 字段（2026-09-18）"
-        :items="toolbarActionItems"
-        anchor="api-toolbar-action"
-      />
-      <ApiTable title="新增 props" :items="toolbarPropsItems" anchor="api-toolbar-props" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable
+      title="ToolbarAction 字段（2026-09-18）"
+      :items="toolbarActionItems"
+      anchor="api-toolbar-action"
+    />
+    <ApiTable title="新增 props" :items="toolbarPropsItems" anchor="api-toolbar-props" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

@@ -17,8 +17,7 @@ import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import { persistItems } from './configs/xform-demos-api'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import persistSource from './XFormPersist.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
 
@@ -140,62 +139,58 @@ const tocItems = [
   { id: 'demo-x-form-persist', label: '草稿持久化演示' },
   { id: 'api-persist', label: 'useFormPersist API' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="useFormPersist —— 表单草稿持久化"
-      source="src/components/form-schema/composables/use-form-persist.ts"
-      :introductions="[
-        'model 防抖（400ms）自动落盘 + beforeunload 同步 flush 兜底：刷新页面前 400ms 内的输入也不会丢。',
-        'exclude 敏感字段剔除（银行卡号不落 localStorage）；hasDraft / load / save / clear 按需恢复与手动补丁。',
-        '恢复草稿后 resetDirty() 拍基线，isDirty 从草稿起算；提交成功后 clear() 清草稿。',
-      ]"
-    >
-      <section id="demo-x-form-persist">
-        <DemoField :code="persistSource">
-          <div :class="bem.b()">
-            <div :class="bem.e('status')">
-              <ElTag :type="persist.hasDraft.value ? 'warning' : 'info'">
-                草稿：{{ persist.hasDraft.value ? '存在' : '无' }}
-              </ElTag>
-              <ElTag type="success">最后保存：{{ lastSavedText }}</ElTag>
-              <ElTag :type="isDirtyState ? 'danger' : 'success'">
-                isDirty：{{ isDirtyState ? '是' : '否' }}
-              </ElTag>
-            </div>
-
-            <XForm ref="formRef" :schema="schema" :model="model" />
-
-            <div :class="bem.e('actions')">
-              <ElButton type="primary" :disabled="!persist.hasDraft.value" @click="onRestore">
-                恢复草稿（load + resetDirty）
-              </ElButton>
-              <ElButton @click="onClear">清除草稿（clear）</ElButton>
-              <ElButton type="success" @click="onSimulateSubmit">
-                模拟提交（clear + resetDirty）
-              </ElButton>
-              <ElButton @click="onReset">重置</ElButton>
-              <ElButton @click="copySchema">复制 schema</ElButton>
-            </div>
-            <ModelPreview :model="model" />
-
-            <p :class="bem.e('hint')">
-              验证步骤：① 填用户名 + 银行卡号 → ② F5 刷新 → ③ 点"恢复草稿"：
-              用户名恢复、银行卡号不恢复 → ④ 点"模拟提交" → ⑤ 再刷新：草稿已无。
-            </p>
+  <DemoFrame
+    title="useFormPersist —— 表单草稿持久化"
+    source="src/components/form-schema/composables/use-form-persist.ts"
+    :introductions="[
+      'model 防抖（400ms）自动落盘 + beforeunload 同步 flush 兜底：刷新页面前 400ms 内的输入也不会丢。',
+      'exclude 敏感字段剔除（银行卡号不落 localStorage）；hasDraft / load / save / clear 按需恢复与手动补丁。',
+      '恢复草稿后 resetDirty() 拍基线，isDirty 从草稿起算；提交成功后 clear() 清草稿。',
+    ]"
+  >
+    <section id="demo-x-form-persist">
+      <DemoField :code="persistSource">
+        <div :class="bem.b()">
+          <div :class="bem.e('status')">
+            <ElTag :type="persist.hasDraft.value ? 'warning' : 'info'">
+              草稿：{{ persist.hasDraft.value ? '存在' : '无' }}
+            </ElTag>
+            <ElTag type="success">最后保存：{{ lastSavedText }}</ElTag>
+            <ElTag :type="isDirtyState ? 'danger' : 'success'">
+              isDirty：{{ isDirtyState ? '是' : '否' }}
+            </ElTag>
           </div>
-        </DemoField>
-      </section>
 
-      <ApiTable title="useFormPersist API" :items="persistItems" anchor="api-persist" />
-    </DemoFrame>
+          <XForm ref="formRef" :schema="schema" :model="model" />
 
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+          <div :class="bem.e('actions')">
+            <ElButton type="primary" :disabled="!persist.hasDraft.value" @click="onRestore">
+              恢复草稿（load + resetDirty）
+            </ElButton>
+            <ElButton @click="onClear">清除草稿（clear）</ElButton>
+            <ElButton type="success" @click="onSimulateSubmit">
+              模拟提交（clear + resetDirty）
+            </ElButton>
+            <ElButton @click="onReset">重置</ElButton>
+            <ElButton @click="copySchema">复制 schema</ElButton>
+          </div>
+          <ModelPreview :model="model" />
+
+          <p :class="bem.e('hint')">
+            验证步骤：① 填用户名 + 银行卡号 → ② F5 刷新 → ③ 点"恢复草稿"：
+            用户名恢复、银行卡号不恢复 → ④ 点"模拟提交" → ⑤ 再刷新：草稿已无。
+          </p>
+        </div>
+      </DemoField>
+    </section>
+
+    <ApiTable title="useFormPersist API" :items="persistItems" anchor="api-persist" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

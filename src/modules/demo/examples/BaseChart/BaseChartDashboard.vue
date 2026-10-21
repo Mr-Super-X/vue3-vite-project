@@ -20,8 +20,7 @@ import { ElMessage } from 'element-plus'
 // 必须显式 import；BaseChart 等三目录内组件无需 import，靠 GlobalComponents 解析
 import DemoFrame from '../../components/DemoFrame.vue' // demo 业务组件 @modules/demo/components
 import DemoField from '../../components/DemoField.vue' // demo 业务组件 @modules/demo/components
-import DocLayout from '../../layouts/DocLayout.vue' // demo 文档布局 @modules/demo/layouts
-import DocToc from '../../components/DocToc.vue' // demo 文档目录 @modules/demo/components
+import { useDocToc } from '../../composables/useDocToc'
 
 const bem = createNamespace('demo-base-chart-dashboard')
 
@@ -177,105 +176,101 @@ const SNIPPET = `<el-row :gutter="12">
 <!-- 全屏：dashboardRef.requestFullscreen() -->`
 
 const tocItems = [{ id: 'demo-dashboard', label: '运营仪表盘组合' }]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="BaseChart · 多图表组合仪表盘"
-      source="src/components/common/BaseChart.vue"
-      :introductions="[
-        '企业常见：运营仪表盘、监控大屏、BI 看板。',
-        '4 个 KPI 卡 + 趋势折线 + 类目占比 + 排行榜，el-row/el-col 栅格 + 响应式断点。',
-        '每个 BaseChart 独立 ResizeObserver，窗口 / 容器尺寸变化各自跟随；全屏切换所有图表同步放大。',
-      ]"
-    >
-      <section id="demo-dashboard">
-        <DemoField :code="SNIPPET" label="① 运营仪表盘（多 BaseChart 组合 + 全屏）">
-          <div :class="bem.e('controls')">
-            <el-button type="primary" @click="toggleFullscreen">
-              {{ fullscreen ? '退出全屏' : '进入全屏' }}
-            </el-button>
-            <span :class="bem.e('status')">
-              全屏状态：
-              <b>{{ fullscreen ? '是' : '否' }}</b>
-            </span>
-          </div>
+  <DemoFrame
+    title="BaseChart · 多图表组合仪表盘"
+    source="src/components/common/BaseChart.vue"
+    :introductions="[
+      '企业常见：运营仪表盘、监控大屏、BI 看板。',
+      '4 个 KPI 卡 + 趋势折线 + 类目占比 + 排行榜，el-row/el-col 栅格 + 响应式断点。',
+      '每个 BaseChart 独立 ResizeObserver，窗口 / 容器尺寸变化各自跟随；全屏切换所有图表同步放大。',
+    ]"
+  >
+    <section id="demo-dashboard">
+      <DemoField :code="SNIPPET" label="① 运营仪表盘（多 BaseChart 组合 + 全屏）">
+        <div :class="bem.e('controls')">
+          <el-button type="primary" @click="toggleFullscreen">
+            {{ fullscreen ? '退出全屏' : '进入全屏' }}
+          </el-button>
+          <span :class="bem.e('status')">
+            全屏状态：
+            <b>{{ fullscreen ? '是' : '否' }}</b>
+          </span>
+        </div>
 
-          <div ref="dashboardRef" :class="bem.e('dashboard')">
-            <!-- KPI 卡 -->
-            <el-row :gutter="12">
-              <el-col v-for="(kpi, i) in kpis" :key="i" :xs="12" :sm="12" :md="6">
-                <div :class="bem.e('kpi')">
-                  <div :class="bem.e('kpi-label')">{{ kpi.label }}</div>
-                  <div :class="bem.e('kpi-value')">
-                    {{ kpi.value }}
-                    <span :class="bem.e('kpi-unit')">{{ kpi.unit }}</span>
-                  </div>
-                  <div
-                    :class="[
-                      bem.e('kpi-delta'),
-                      kpi.delta >= 0 ? bem.e('kpi-up') : bem.e('kpi-down'),
-                    ]"
-                  >
-                    {{ kpi.delta >= 0 ? '↑' : '↓' }} {{ Math.abs(kpi.delta) }}%
-                  </div>
+        <div ref="dashboardRef" :class="bem.e('dashboard')">
+          <!-- KPI 卡 -->
+          <el-row :gutter="12">
+            <el-col v-for="(kpi, i) in kpis" :key="i" :xs="12" :sm="12" :md="6">
+              <div :class="bem.e('kpi')">
+                <div :class="bem.e('kpi-label')">{{ kpi.label }}</div>
+                <div :class="bem.e('kpi-value')">
+                  {{ kpi.value }}
+                  <span :class="bem.e('kpi-unit')">{{ kpi.unit }}</span>
                 </div>
-              </el-col>
-            </el-row>
-
-            <!-- 趋势 + 占比 -->
-            <el-row :gutter="12" :class="bem.e('charts-row')">
-              <el-col :xs="24" :md="16">
-                <div :class="bem.e('chart-card')">
-                  <div :class="bem.e('chart-title')">7 日销售趋势</div>
-                  <div :class="bem.e('chart-canvas')">
-                    <BaseChart :option="trendOption" />
-                  </div>
+                <div
+                  :class="[
+                    bem.e('kpi-delta'),
+                    kpi.delta >= 0 ? bem.e('kpi-up') : bem.e('kpi-down'),
+                  ]"
+                >
+                  {{ kpi.delta >= 0 ? '↑' : '↓' }} {{ Math.abs(kpi.delta) }}%
                 </div>
-              </el-col>
-              <el-col :xs="24" :md="8">
-                <div :class="bem.e('chart-card')">
-                  <div :class="bem.e('chart-title')">流量来源占比</div>
-                  <div :class="bem.e('chart-canvas')">
-                    <BaseChart :option="pieOption" />
-                  </div>
+              </div>
+            </el-col>
+          </el-row>
+
+          <!-- 趋势 + 占比 -->
+          <el-row :gutter="12" :class="bem.e('charts-row')">
+            <el-col :xs="24" :md="16">
+              <div :class="bem.e('chart-card')">
+                <div :class="bem.e('chart-title')">7 日销售趋势</div>
+                <div :class="bem.e('chart-canvas')">
+                  <BaseChart :option="trendOption" />
                 </div>
-              </el-col>
-            </el-row>
-
-            <!-- 排行榜 -->
-            <el-row :gutter="12">
-              <el-col :span="24">
-                <div :class="bem.e('chart-card')">
-                  <div :class="bem.e('chart-title')">商品销量排行 TOP 7</div>
-                  <div :class="bem.e('chart-canvas')" style="height: 280px">
-                    <BaseChart :option="rankOption" />
-                  </div>
+              </div>
+            </el-col>
+            <el-col :xs="24" :md="8">
+              <div :class="bem.e('chart-card')">
+                <div :class="bem.e('chart-title')">流量来源占比</div>
+                <div :class="bem.e('chart-canvas')">
+                  <BaseChart :option="pieOption" />
                 </div>
-              </el-col>
-            </el-row>
-          </div>
+              </div>
+            </el-col>
+          </el-row>
 
-          <p :class="bem.e('tip')">
-            改变浏览器窗口宽度（断点 xs / sm / md / lg），栅格自动重排，每个 BaseChart 内部
-            ResizeObserver 触发并各自 resize。进入全屏后所有图表同步放大； 退出全屏恢复原始布局。
-            <br />
-            <strong>全屏失败路径测试：</strong>
-            F12 → Console → 在非用户手势下手动调用
-            <code>toggleFullscreen()</code>
-            验证 catch 分支触发
-            <code>ElMessage.warning</code>
-            提示「全屏切换失败」（浏览器会拒绝非用户手势的 requestFullscreen 调用）。
-          </p>
-        </DemoField>
-      </section>
-    </DemoFrame>
+          <!-- 排行榜 -->
+          <el-row :gutter="12">
+            <el-col :span="24">
+              <div :class="bem.e('chart-card')">
+                <div :class="bem.e('chart-title')">商品销量排行 TOP 7</div>
+                <div :class="bem.e('chart-canvas')" style="height: 280px">
+                  <BaseChart :option="rankOption" />
+                </div>
+              </div>
+            </el-col>
+          </el-row>
+        </div>
 
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+        <p :class="bem.e('tip')">
+          改变浏览器窗口宽度（断点 xs / sm / md / lg），栅格自动重排，每个 BaseChart 内部
+          ResizeObserver 触发并各自 resize。进入全屏后所有图表同步放大； 退出全屏恢复原始布局。
+          <br />
+          <strong>全屏失败路径测试：</strong>
+          F12 → Console → 在非用户手势下手动调用
+          <code>toggleFullscreen()</code>
+          验证 catch 分支触发
+          <code>ElMessage.warning</code>
+          提示「全屏切换失败」（浏览器会拒绝非用户手势的 requestFullscreen 调用）。
+        </p>
+      </DemoField>
+    </section>
+  </DemoFrame>
 </template>
 
 <style lang="scss">

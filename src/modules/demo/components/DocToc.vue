@@ -86,9 +86,9 @@ const bem = createNamespace('doc-toc')
 
   &__title {
     margin: 0 0 8px;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
-    color: #909399;
+    color: var(--el-text-color-secondary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
@@ -97,7 +97,7 @@ const bem = createNamespace('doc-toc')
     margin: 0;
     padding: 0;
     list-style: none;
-    border-left: 1px solid var(--el-border-color-lighter, #ebeef5);
+    border-left: 1px solid var(--el-border-color-light);
   }
 
   &__link {
@@ -105,7 +105,7 @@ const bem = createNamespace('doc-toc')
     padding: 4px 12px;
     margin-left: -1px;
     border-left: 1px solid transparent;
-    color: #606266;
+    color: var(--el-text-color-regular);
     text-decoration: none;
     line-height: 1.6;
     transition:
@@ -113,14 +113,14 @@ const bem = createNamespace('doc-toc')
       border-color 0.15s;
 
     &:hover {
-      color: #409eff;
-      border-left-color: #409eff;
+      color: var(--el-color-primary);
+      border-left-color: var(--el-color-primary);
     }
 
     // 当前激活楼层：左侧竖线 + 主色 + 加粗（滚动跟随与点击跳转都会进入此态）
     &--active {
-      color: #409eff;
-      border-left-color: #409eff;
+      color: var(--el-color-primary);
+      border-left-color: var(--el-color-primary);
       font-weight: 600;
     }
   }

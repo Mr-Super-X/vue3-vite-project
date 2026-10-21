@@ -17,8 +17,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import ModelPreview from '../../components/ModelPreview.vue'
 import { gridItems } from './configs/xform-demos-api'
 import xFormSource from './XFormGrid.vue?raw'
@@ -146,6 +145,8 @@ const tocItems = [
   { id: 'api-grid', label: '栅格配置速查' },
 ]
 
+useDocToc(tocItems)
+
 /** 校验当前激活模式的表单（formRef 由 :key="activeKey" 在切换时强制重建） */
 function onSaveGrid() {
   formRef.value
@@ -164,50 +165,39 @@ function onSaveGrid() {
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="栅格布局（column / row + col.span / 布局容器）"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        '三种栅格配置方式对照，同一组字段渲染效果差异一目了然。',
-        'column：等宽 N 列，最简配置；row + col.span：列宽自由组合；布局容器节点：按业务块分区。',
-        '注意：顶层 column 与节点级 col.span 混用无效（节点被锁进固定 span 的 ElCol），需要不等宽时用 row + col.span。',
-      ]"
-    >
-      <section id="demo-grid">
-        <DemoField label="三种栅格配置对照（切换查看）" :code="xFormSource">
-          <div :class="bem.e('actions')">
-            <el-radio-group v-model="activeKey" size="small">
-              <el-radio-button value="column">column 统一分配</el-radio-button>
-              <el-radio-button value="row-col">row + col.span</el-radio-button>
-              <el-radio-button value="container">布局容器节点</el-radio-button>
-            </el-radio-group>
-          </div>
-          <div :class="bem.e('hint')">{{ MODE_HINTS[activeKey] }}</div>
-          <XForm
-            ref="formRef"
-            :key="activeKey"
-            :schema="currentSchema"
-            :model="models[activeKey]"
-          />
-          <div :class="bem.e('form-actions')">
-            <el-button @click="onReset">重置字段</el-button>
-            <el-button type="primary" @click="onSaveGrid">校验/保存</el-button>
-          </div>
-          <ModelPreview
-            :model="models[activeKey]"
-            :summary="`查看完整 model（JSON，${activeKey}）`"
-          />
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="栅格布局（column / row + col.span / 布局容器）"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      '三种栅格配置方式对照，同一组字段渲染效果差异一目了然。',
+      'column：等宽 N 列，最简配置；row + col.span：列宽自由组合；布局容器节点：按业务块分区。',
+      '注意：顶层 column 与节点级 col.span 混用无效（节点被锁进固定 span 的 ElCol），需要不等宽时用 row + col.span。',
+    ]"
+  >
+    <section id="demo-grid">
+      <DemoField label="三种栅格配置对照（切换查看）" :code="xFormSource">
+        <div :class="bem.e('actions')">
+          <el-radio-group v-model="activeKey" size="small">
+            <el-radio-button value="column">column 统一分配</el-radio-button>
+            <el-radio-button value="row-col">row + col.span</el-radio-button>
+            <el-radio-button value="container">布局容器节点</el-radio-button>
+          </el-radio-group>
+        </div>
+        <div :class="bem.e('hint')">{{ MODE_HINTS[activeKey] }}</div>
+        <XForm ref="formRef" :key="activeKey" :schema="currentSchema" :model="models[activeKey]" />
+        <div :class="bem.e('form-actions')">
+          <el-button @click="onReset">重置字段</el-button>
+          <el-button type="primary" @click="onSaveGrid">校验/保存</el-button>
+        </div>
+        <ModelPreview
+          :model="models[activeKey]"
+          :summary="`查看完整 model（JSON，${activeKey}）`"
+        />
+      </DemoField>
+    </section>
 
-      <ApiTable title="栅格配置速查" :items="gridItems" anchor="api-grid" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="栅格配置速查" :items="gridItems" anchor="api-grid" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

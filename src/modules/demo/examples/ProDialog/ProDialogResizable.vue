@@ -18,8 +18,7 @@
 import { ElMessage } from 'element-plus'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 
 const bem = createNamespace('demo-pro-dialog-resizable')
 
@@ -119,191 +118,185 @@ const tocItems = [
   { id: 'demo-fullscreen', label: '全屏 × resize 交叉' },
   { id: 'demo-min-initial', label: '最小尺寸锁定初始' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="ProDialog 可拖拉调整宽高"
-      source="src/components/common/ProDialog/ProDialog.vue"
-      :introductions="[
-        '在 ElDialog 基础上扩展：右下角三角手柄，mousedown → mousemove 改尺寸 → mouseup 抛 resizeChange。',
-        '钳制规则：最小 320×200（resize-min-to-initial 开启时为本次打开的初始宽高）/ 最大 viewport - 16px；全屏态自动禁用。',
-        '仅在 mouseup 时抛一次事件，mousemove 高频不抛——避免父组件重渲染抖动（可持久化用户偏好）。',
-      ]"
-    >
-      <section id="demo-basic">
-        <DemoField :code="SNIPPET_BASIC" label="① 基础可调整（拖拽右下角三角手柄）">
-          <div :class="bem.e('controls')">
-            <el-button type="primary" @click="basicVisible = true">打开可调整弹窗</el-button>
-            <span :class="bem.e('status')">当前尺寸：{{ basicSize }}</span>
-          </div>
-          <ProDialog
-            v-model="basicVisible"
-            title="可调整宽高（默认 480px）"
-            width="480px"
-            resizable
-            @resize-change="onBasicResize"
-          >
-            <p :class="bem.e('para')">
-              按住
-              <b>右下角三角</b>
-              拖拽，鼠标变 ↘ 光标；放开后抛 resizeChange 事件。
-            </p>
-            <p :class="bem.e('para')">拖拽中观察：</p>
-            <ul :class="bem.e('list')">
-              <li>body 内的文字不会被选中（user-select: none）</li>
-              <li>鼠标光标全程保持 se-resize</li>
-              <li>拖到视口边界 / 最小尺寸时被钳制</li>
-            </ul>
-          </ProDialog>
-        </DemoField>
-      </section>
-
-      <section id="demo-bounds">
-        <DemoField :code="SNIPPET_BOUNDS" label="② 视口边界 + 最小尺寸钳制">
-          <div :class="bem.e('controls')">
-            <el-button type="primary" @click="boundsVisible = true">打开弹窗</el-button>
-            <el-button @click="tryShrink">提示：拖小（验证 320×200）</el-button>
-            <el-button @click="tryExpand">提示：拖大（验证 viewport - 16）</el-button>
-            <el-button @click="boundsLog = []">清空日志</el-button>
-          </div>
-          <div :class="bem.e('log')">
-            <span :class="bem.e('log-label')">尺寸变化日志（最多 5 条）：</span>
-            <template v-if="boundsLog.length">
-              <div v-for="(line, i) in boundsLog" :key="i">{{ line }}</div>
-            </template>
-            <span v-else :class="bem.e('log-empty')">尚未拖拽调整</span>
-          </div>
-          <ProDialog
-            v-model="boundsVisible"
-            title="边界钳制演示"
-            width="400px"
-            resizable
-            @resize-change="onBoundsResize"
-          >
-            <p :class="bem.e('para')">
-              硬编码钳制（不可配置）：最小 320×200、最大 viewport - 16px。
-            </p>
-            <p :class="bem.e('para')">
-              拖拽至左下角继续往左下：尺寸冻结在 320×200；拖拽至右上角继续往右上： 尺寸冻结在
-              viewport - 16px。
-            </p>
-          </ProDialog>
-        </DemoField>
-      </section>
-
-      <section id="demo-event">
-        <DemoField :code="SNIPPET_EVENT" label="③ resizeChange 事件（仅 mouseup 触发一次）">
-          <div :class="bem.e('controls')">
-            <el-button type="primary" @click="eventVisible = true">打开弹窗</el-button>
-            <el-button @click="eventLog = []">清空事件日志</el-button>
-          </div>
-          <div :class="bem.e('log')">
-            <span :class="bem.e('log-label')">resizeChange 事件记录：</span>
-            <template v-if="eventLog.length">
-              <div v-for="(line, i) in eventLog" :key="i">{{ line }}</div>
-            </template>
-            <span v-else :class="bem.e('log-empty')">
-              拖拽放开手后应出现一条新日志，mousemove 中不会刷屏
-            </span>
-          </div>
-          <ProDialog
-            v-model="eventVisible"
-            title="resizeChange 事件日志"
-            width="500px"
-            resizable
-            @resize-change="onEventResize"
-          >
-            <p :class="bem.e('para')">
-              拖拽中观察：日志
-              <b>不会</b>
-              持续刷新；松手瞬间出现一条新记录。 这是有意的——高频 mousemove
-              抛事件会让父组件重渲染抖动。
-            </p>
-            <p :class="bem.e('para')">
-              实用场景：父组件把 size 持久化到 localStorage，下一次打开弹窗时按此尺寸渲染。
-            </p>
-          </ProDialog>
-        </DemoField>
-      </section>
-
-      <section id="demo-fullscreen">
-        <DemoField :code="SNIPPET_FULL" label="④ 全屏 × resize 交叉（回归验证）">
-          <div :class="bem.e('controls')">
-            <el-button type="primary" @click="fullVisible = true">打开弹窗</el-button>
-            <el-tag :type="fullState.includes('全屏') ? 'warning' : 'info'">{{ fullState }}</el-tag>
-          </div>
+  <DemoFrame
+    title="ProDialog 可拖拉调整宽高"
+    source="src/components/common/ProDialog/ProDialog.vue"
+    :introductions="[
+      '在 ElDialog 基础上扩展：右下角三角手柄，mousedown → mousemove 改尺寸 → mouseup 抛 resizeChange。',
+      '钳制规则：最小 320×200（resize-min-to-initial 开启时为本次打开的初始宽高）/ 最大 viewport - 16px；全屏态自动禁用。',
+      '仅在 mouseup 时抛一次事件，mousemove 高频不抛——避免父组件重渲染抖动（可持久化用户偏好）。',
+    ]"
+  >
+    <section id="demo-basic">
+      <DemoField :code="SNIPPET_BASIC" label="① 基础可调整（拖拽右下角三角手柄）">
+        <div :class="bem.e('controls')">
+          <el-button type="primary" @click="basicVisible = true">打开可调整弹窗</el-button>
+          <span :class="bem.e('status')">当前尺寸：{{ basicSize }}</span>
+        </div>
+        <ProDialog
+          v-model="basicVisible"
+          title="可调整宽高（默认 480px）"
+          width="480px"
+          resizable
+          @resize-change="onBasicResize"
+        >
           <p :class="bem.e('para')">
-            操作路径：
-            <b>先拖大弹窗到任意尺寸</b>
-            → 点头部全屏按钮 → 应贴满视口 → 退出全屏 → 应回到
-            <b>EP 默认 width</b>
-            （不是拖拽后的尺寸），否则说明内联 width 残留回归。
+            按住
+            <b>右下角三角</b>
+            拖拽，鼠标变 ↘ 光标；放开后抛 resizeChange 事件。
+          </p>
+          <p :class="bem.e('para')">拖拽中观察：</p>
+          <ul :class="bem.e('list')">
+            <li>body 内的文字不会被选中（user-select: none）</li>
+            <li>鼠标光标全程保持 se-resize</li>
+            <li>拖到视口边界 / 最小尺寸时被钳制</li>
+          </ul>
+        </ProDialog>
+      </DemoField>
+    </section>
+
+    <section id="demo-bounds">
+      <DemoField :code="SNIPPET_BOUNDS" label="② 视口边界 + 最小尺寸钳制">
+        <div :class="bem.e('controls')">
+          <el-button type="primary" @click="boundsVisible = true">打开弹窗</el-button>
+          <el-button @click="tryShrink">提示：拖小（验证 320×200）</el-button>
+          <el-button @click="tryExpand">提示：拖大（验证 viewport - 16）</el-button>
+          <el-button @click="boundsLog = []">清空日志</el-button>
+        </div>
+        <div :class="bem.e('log')">
+          <span :class="bem.e('log-label')">尺寸变化日志（最多 5 条）：</span>
+          <template v-if="boundsLog.length">
+            <div v-for="(line, i) in boundsLog" :key="i">{{ line }}</div>
+          </template>
+          <span v-else :class="bem.e('log-empty')">尚未拖拽调整</span>
+        </div>
+        <ProDialog
+          v-model="boundsVisible"
+          title="边界钳制演示"
+          width="400px"
+          resizable
+          @resize-change="onBoundsResize"
+        >
+          <p :class="bem.e('para')">硬编码钳制（不可配置）：最小 320×200、最大 viewport - 16px。</p>
+          <p :class="bem.e('para')">
+            拖拽至左下角继续往左下：尺寸冻结在 320×200；拖拽至右上角继续往右上： 尺寸冻结在 viewport
+            - 16px。
+          </p>
+        </ProDialog>
+      </DemoField>
+    </section>
+
+    <section id="demo-event">
+      <DemoField :code="SNIPPET_EVENT" label="③ resizeChange 事件（仅 mouseup 触发一次）">
+        <div :class="bem.e('controls')">
+          <el-button type="primary" @click="eventVisible = true">打开弹窗</el-button>
+          <el-button @click="eventLog = []">清空事件日志</el-button>
+        </div>
+        <div :class="bem.e('log')">
+          <span :class="bem.e('log-label')">resizeChange 事件记录：</span>
+          <template v-if="eventLog.length">
+            <div v-for="(line, i) in eventLog" :key="i">{{ line }}</div>
+          </template>
+          <span v-else :class="bem.e('log-empty')">
+            拖拽放开手后应出现一条新日志，mousemove 中不会刷屏
+          </span>
+        </div>
+        <ProDialog
+          v-model="eventVisible"
+          title="resizeChange 事件日志"
+          width="500px"
+          resizable
+          @resize-change="onEventResize"
+        >
+          <p :class="bem.e('para')">
+            拖拽中观察：日志
+            <b>不会</b>
+            持续刷新；松手瞬间出现一条新记录。 这是有意的——高频 mousemove
+            抛事件会让父组件重渲染抖动。
           </p>
           <p :class="bem.e('para')">
-            最后一次 resize 尺寸：
-            <b>{{ sizeBeforeFullScreen || '尚未操作' }}</b>
+            实用场景：父组件把 size 持久化到 localStorage，下一次打开弹窗时按此尺寸渲染。
           </p>
-          <ProDialog
-            v-model="fullVisible"
-            title="全屏 × resize 交叉"
-            width="520px"
-            resizable
-            @resize-change="onFullResize"
-            @full-screen-change="onFullScreenChange"
-          >
-            <p :class="bem.e('para')">
-              拖拽后下方「最后一次 resize 尺寸」应立刻更新；
-              退出全屏后弹窗异常（仍是拖拽尺寸）说明内联 width/height
-              清除逻辑回归——应保持与拖拽清理同一思路。
-            </p>
-          </ProDialog>
-        </DemoField>
-      </section>
+        </ProDialog>
+      </DemoField>
+    </section>
 
-      <section id="demo-min-initial">
-        <DemoField :code="SNIPPET_MIN_INIT" label="⑤ 最小尺寸锁定初始打开宽高（只能放大）">
-          <div :class="bem.e('controls')">
-            <el-button type="primary" @click="minInitVisible = true">打开弹窗</el-button>
-            <span :class="bem.e('status')">当前尺寸：{{ minInitSize }}</span>
-          </div>
+    <section id="demo-fullscreen">
+      <DemoField :code="SNIPPET_FULL" label="④ 全屏 × resize 交叉（回归验证）">
+        <div :class="bem.e('controls')">
+          <el-button type="primary" @click="fullVisible = true">打开弹窗</el-button>
+          <el-tag :type="fullState.includes('全屏') ? 'warning' : 'info'">{{ fullState }}</el-tag>
+        </div>
+        <p :class="bem.e('para')">
+          操作路径：
+          <b>先拖大弹窗到任意尺寸</b>
+          → 点头部全屏按钮 → 应贴满视口 → 退出全屏 → 应回到
+          <b>EP 默认 width</b>
+          （不是拖拽后的尺寸），否则说明内联 width 残留回归。
+        </p>
+        <p :class="bem.e('para')">
+          最后一次 resize 尺寸：
+          <b>{{ sizeBeforeFullScreen || '尚未操作' }}</b>
+        </p>
+        <ProDialog
+          v-model="fullVisible"
+          title="全屏 × resize 交叉"
+          width="520px"
+          resizable
+          @resize-change="onFullResize"
+          @full-screen-change="onFullScreenChange"
+        >
           <p :class="bem.e('para')">
-            <code>resize-min-to-initial</code>
-            开启后，本次打开弹窗的初始宽高即为最小可缩尺寸——往左下拖会被钳制回初始尺寸，往右上拖可正常放大。
+            拖拽后下方「最后一次 resize 尺寸」应立刻更新；
+            退出全屏后弹窗异常（仍是拖拽尺寸）说明内联 width/height
+            清除逻辑回归——应保持与拖拽清理同一思路。
           </p>
-          <p :class="bem.e('para')">
-            适用场景：弹窗内容按设计稿固定了舒适尺寸（如 480px
-            宽表单），不允许用户拖小到内容排版错乱。
-            关闭后重新打开，钳制基准会重新按本次打开的初始尺寸计算。
-          </p>
-          <ProDialog
-            v-model="minInitVisible"
-            title="只能放大（初始 480px）"
-            width="480px"
-            resizable
-            resize-min-to-initial
-            @resize-change="onMinInitResize"
-          >
-            <p :class="bem.e('para')">
-              初始宽 480px：尝试往
-              <b>左下</b>
-              拖小——尺寸会停在初始宽高；往
-              <b>右上</b>
-              拖大不受限。
-            </p>
-            <p :class="bem.e('para')">
-              对比：上方「② 边界钳制」不传本开关时，往左下最小只能到硬编码的 320×200。
-            </p>
-          </ProDialog>
-        </DemoField>
-      </section>
-    </DemoFrame>
+        </ProDialog>
+      </DemoField>
+    </section>
 
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <section id="demo-min-initial">
+      <DemoField :code="SNIPPET_MIN_INIT" label="⑤ 最小尺寸锁定初始打开宽高（只能放大）">
+        <div :class="bem.e('controls')">
+          <el-button type="primary" @click="minInitVisible = true">打开弹窗</el-button>
+          <span :class="bem.e('status')">当前尺寸：{{ minInitSize }}</span>
+        </div>
+        <p :class="bem.e('para')">
+          <code>resize-min-to-initial</code>
+          开启后，本次打开弹窗的初始宽高即为最小可缩尺寸——往左下拖会被钳制回初始尺寸，往右上拖可正常放大。
+        </p>
+        <p :class="bem.e('para')">
+          适用场景：弹窗内容按设计稿固定了舒适尺寸（如 480px
+          宽表单），不允许用户拖小到内容排版错乱。
+          关闭后重新打开，钳制基准会重新按本次打开的初始尺寸计算。
+        </p>
+        <ProDialog
+          v-model="minInitVisible"
+          title="只能放大（初始 480px）"
+          width="480px"
+          resizable
+          resize-min-to-initial
+          @resize-change="onMinInitResize"
+        >
+          <p :class="bem.e('para')">
+            初始宽 480px：尝试往
+            <b>左下</b>
+            拖小——尺寸会停在初始宽高；往
+            <b>右上</b>
+            拖大不受限。
+          </p>
+          <p :class="bem.e('para')">
+            对比：上方「② 边界钳制」不传本开关时，往左下最小只能到硬编码的 320×200。
+          </p>
+        </ProDialog>
+      </DemoField>
+    </section>
+  </DemoFrame>
 </template>
 
 <style lang="scss">

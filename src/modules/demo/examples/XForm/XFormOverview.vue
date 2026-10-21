@@ -15,8 +15,7 @@ import type { SchemaNode } from '@/components/form-schema/types'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import {
   eventsItems,
   methodsItems,
@@ -157,95 +156,90 @@ const tocItems = [
   { id: 'api-slots', label: 'Slots' },
   { id: 'api-methods', label: '实例方法' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="XForm 动态表单"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        '基于 schema DSL 的动态表单引擎，支持全量 19 字段（component / props / on / children / name / label / rules / reaction / formItem / modelProp / defaultValue / row / directives / asyncOptions / slots / disabled / permission / ignore / kind+array ...）。',
-        '下方演示：基础渲染 / 反应式联动（Switch → path 联动）/ 自定义组件注入。',
-      ]"
-    >
-      <!-- 先看这个引导卡：减少 30 个 demo 的信息压迫感 -->
-      <div :class="bem.e('start-here')">
-        <strong>👀 先看这个——3 个场景按推荐顺序浏览</strong>
-        <p>
-          <strong>① 基础</strong>
-          （必看） —— schema + async-validator 校验 + el-form 标准 validate
-        </p>
-        <p>
-          <strong>② 反应式</strong>
-          （进阶） —— Switch 联动 path 字段的 disabled / rules 切换
-        </p>
-        <p>
-          <strong>③ 自定义组件</strong>
-          （进阶） —— 通过 components prop 注入 CustomTagInput 覆盖默认映射
-        </p>
-      </div>
+  <DemoFrame
+    title="XForm 动态表单"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      '基于 schema DSL 的动态表单引擎，支持全量 19 字段（component / props / on / children / name / label / rules / reaction / formItem / modelProp / defaultValue / row / directives / asyncOptions / slots / disabled / permission / ignore / kind+array ...）。',
+      '下方演示：基础渲染 / 反应式联动（Switch → path 联动）/ 自定义组件注入。',
+    ]"
+  >
+    <!-- 先看这个引导卡：减少 30 个 demo 的信息压迫感 -->
+    <div :class="bem.e('start-here')">
+      <strong>👀 先看这个——3 个场景按推荐顺序浏览</strong>
+      <p>
+        <strong>① 基础</strong>
+        （必看） —— schema + async-validator 校验 + el-form 标准 validate
+      </p>
+      <p>
+        <strong>② 反应式</strong>
+        （进阶） —— Switch 联动 path 字段的 disabled / rules 切换
+      </p>
+      <p>
+        <strong>③ 自定义组件</strong>
+        （进阶） —— 通过 components prop 注入 CustomTagInput 覆盖默认映射
+      </p>
+    </div>
 
-      <section id="demo-basic">
-        <DemoField label="基础用法（async-validator 校验）" :code="xFormSource">
-          <div :class="bem.e('actions')">
-            <el-radio-group v-model="activeKey" size="small">
-              <el-radio-button value="basic">基础</el-radio-button>
-              <el-radio-button value="reactive">反应式</el-radio-button>
-              <el-radio-button value="custom">自定义组件</el-radio-button>
-            </el-radio-group>
+    <section id="demo-basic">
+      <DemoField label="基础用法（async-validator 校验）" :code="xFormSource">
+        <div :class="bem.e('actions')">
+          <el-radio-group v-model="activeKey" size="small">
+            <el-radio-button value="basic">基础</el-radio-button>
+            <el-radio-button value="reactive">反应式</el-radio-button>
+            <el-radio-button value="custom">自定义组件</el-radio-button>
+          </el-radio-group>
+        </div>
+
+        <!-- 基础 -->
+        <template v-if="activeKey === 'basic'">
+          <XForm
+            ref="basicFormRef"
+            :schema="basicSchema"
+            :model="basicModel"
+            :zod-schema="basicZodSchema"
+          />
+          <div :class="bem.e('buttons')">
+            <el-button type="primary" @click="onSubmitBasic">校验</el-button>
+            <el-button @click="onSubmitZod">zod 校验</el-button>
+            <el-button @click="resetBasic">重置</el-button>
+            <span :class="bem.e('msg')">{{ validateMsg }} {{ zodMsg }}</span>
           </div>
+          <ModelPreview :model="basicModel" />
+        </template>
 
-          <!-- 基础 -->
-          <template v-if="activeKey === 'basic'">
-            <XForm
-              ref="basicFormRef"
-              :schema="basicSchema"
-              :model="basicModel"
-              :zod-schema="basicZodSchema"
-            />
-            <div :class="bem.e('buttons')">
-              <el-button type="primary" @click="onSubmitBasic">校验</el-button>
-              <el-button @click="onSubmitZod">zod 校验</el-button>
-              <el-button @click="resetBasic">重置</el-button>
-              <span :class="bem.e('msg')">{{ validateMsg }} {{ zodMsg }}</span>
-            </div>
-            <ModelPreview :model="basicModel" />
-          </template>
+        <!-- 反应式 -->
+        <template v-else-if="activeKey === 'reactive'">
+          <XForm :schema="reactiveSchema" :model="reactiveModel" />
+          <div :class="bem.e('hint')">
+            提示：关闭「启用自定义路径」开关 → 路径字段自动禁用且非必填；开启 → 路径字段启用且必填。
+          </div>
+          <ModelPreview :model="reactiveModel" />
+        </template>
 
-          <!-- 反应式 -->
-          <template v-else-if="activeKey === 'reactive'">
-            <XForm :schema="reactiveSchema" :model="reactiveModel" />
-            <div :class="bem.e('hint')">
-              提示：关闭「启用自定义路径」开关 → 路径字段自动禁用且非必填；开启 →
-              路径字段启用且必填。
-            </div>
-            <ModelPreview :model="reactiveModel" />
-          </template>
+        <!-- 自定义组件 -->
+        <template v-else>
+          <XForm :schema="customSchema" :model="customModel" :components="{ CustomTagInput }" />
+          <div :class="bem.e('hint')">
+            提示：通过 components prop 注入 CustomTagInput 组件覆盖默认映射。当前值：
+            <b>{{ customModel.tag || '（空）' }}</b>
+          </div>
+          <ModelPreview :model="customModel" />
+        </template>
+      </DemoField>
+    </section>
 
-          <!-- 自定义组件 -->
-          <template v-else>
-            <XForm :schema="customSchema" :model="customModel" :components="{ CustomTagInput }" />
-            <div :class="bem.e('hint')">
-              提示：通过 components prop 注入 CustomTagInput 组件覆盖默认映射。当前值：
-              <b>{{ customModel.tag || '（空）' }}</b>
-            </div>
-            <ModelPreview :model="customModel" />
-          </template>
-        </DemoField>
-      </section>
-
-      <ApiTable title="Props" :items="propsItems" anchor="api-props" />
-      <ApiTable title="SchemaNode 字段（DSL）" :items="schemaNodeItems" anchor="api-schema-node" />
-      <ApiTable title="Events" :items="eventsItems" anchor="api-events" />
-      <ApiTable title="Slots" :items="slotsItems" anchor="api-slots" />
-      <ApiTable title="实例方法（ref）" :items="methodsItems" anchor="api-methods" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="Props" :items="propsItems" anchor="api-props" />
+    <ApiTable title="SchemaNode 字段（DSL）" :items="schemaNodeItems" anchor="api-schema-node" />
+    <ApiTable title="Events" :items="eventsItems" anchor="api-events" />
+    <ApiTable title="Slots" :items="slotsItems" anchor="api-slots" />
+    <ApiTable title="实例方法（ref）" :items="methodsItems" anchor="api-methods" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

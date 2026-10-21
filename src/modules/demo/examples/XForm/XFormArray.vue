@@ -18,8 +18,7 @@ import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import { arrayItems } from './configs/xform-demos-api'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import xFormSource from './XFormArray.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
 
@@ -117,59 +116,55 @@ const tocItems = [
   { id: 'demo-array', label: '订单明细演示' },
   { id: 'api-array', label: 'ArrayNodeConfig' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="数组节点 ArrayNode（订单明细）"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        '演示 kind: array 容器节点：',
-        '1. 每行 itemSchema 是一份「商品 + 数量 + 单价」的子 schema，套到 model.items 的每个数组元素',
-        '2. 行末按钮支持 上移 / 下移 / 删除，顶部「新增明细」追加行',
-        '3. minItems: 1 限制删除按钮（最后一行禁用），maxItems: 5 限制新增按钮（达上限禁用）',
-        '4. 字段名自动重写为 items[0].qty 形式,el-form 按嵌套路径校验',
-        '5. 小计与总计在模板里 computed 展示(不污染 schema)',
-      ]"
-    >
-      <section id="demo-array">
-        <DemoField label="数组节点" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('summary')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onSave">保存</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-          </div>
-          <!-- 总计独立 block 显示：与操作按钮区分视觉层级，强提示聚合结果 -->
-          <div :class="bem.e('total-bar')">
-            <span :class="bem.e('total-label')">总计</span>
-            <strong :class="bem.e('total-value')">¥{{ grandTotal }}</strong>
-          </div>
-          <div :class="bem.e('state')">
-            <div>model.items（{{ Array.isArray(model.items) ? model.items.length : 0 }} 行）</div>
-            <ModelPreview :model="model" />
-            <div>小计：{{ subtotals.join(' / ') }}（元）</div>
-          </div>
-          <p :class="bem.e('hint')">
-            <strong>边界演示步骤 4：</strong>
-            点 5 次「新增明细」→ 第 6 次按钮变为 disabled（maxItems=5 触发上限）。 再点 5
-            次「删除」→ 第 5 次删除按钮 disabled（minItems=1 触发下限）：
-            <code>
-              点 4 次「删除明细」→ 第 5 次删除按钮 disabled（minItems=1 触发下限，无法删除最后一行）
-            </code>
-            ——这是最常见的边界场景，先验证此再验证 maxItems 上限。
-          </p>
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="数组节点 ArrayNode（订单明细）"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      '演示 kind: array 容器节点：',
+      '1. 每行 itemSchema 是一份「商品 + 数量 + 单价」的子 schema，套到 model.items 的每个数组元素',
+      '2. 行末按钮支持 上移 / 下移 / 删除，顶部「新增明细」追加行',
+      '3. minItems: 1 限制删除按钮（最后一行禁用），maxItems: 5 限制新增按钮（达上限禁用）',
+      '4. 字段名自动重写为 items[0].qty 形式,el-form 按嵌套路径校验',
+      '5. 小计与总计在模板里 computed 展示(不污染 schema)',
+    ]"
+  >
+    <section id="demo-array">
+      <DemoField label="数组节点" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('summary')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onSave">保存</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <!-- 总计独立 block 显示：与操作按钮区分视觉层级，强提示聚合结果 -->
+        <div :class="bem.e('total-bar')">
+          <span :class="bem.e('total-label')">总计</span>
+          <strong :class="bem.e('total-value')">¥{{ grandTotal }}</strong>
+        </div>
+        <div :class="bem.e('state')">
+          <div>model.items（{{ Array.isArray(model.items) ? model.items.length : 0 }} 行）</div>
+          <ModelPreview :model="model" />
+          <div>小计：{{ subtotals.join(' / ') }}（元）</div>
+        </div>
+        <p :class="bem.e('hint')">
+          <strong>边界演示步骤 4：</strong>
+          点 5 次「新增明细」→ 第 6 次按钮变为 disabled（maxItems=5 触发上限）。 再点 5 次「删除」→
+          第 5 次删除按钮 disabled（minItems=1 触发下限）：
+          <code>
+            点 4 次「删除明细」→ 第 5 次删除按钮 disabled（minItems=1 触发下限，无法删除最后一行）
+          </code>
+          ——这是最常见的边界场景，先验证此再验证 maxItems 上限。
+        </p>
+      </DemoField>
+    </section>
 
-      <ApiTable title="ArrayNodeConfig" :items="arrayItems" anchor="api-array" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="ArrayNodeConfig" :items="arrayItems" anchor="api-array" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

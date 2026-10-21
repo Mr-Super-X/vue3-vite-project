@@ -26,11 +26,10 @@ import {
 } from 'element-plus'
 import { Download, Upload } from '@element-plus/icons-vue' // 显式 import（§1.6.1 来源注释）
 import { exportCsv, importCsv, type CsvColumn } from '@/components/ProTable/utils'
-import DocLayout from '../../layouts/DocLayout.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { csvColumnItems } from './configs/protable-demos-api'
 import { projectRequestApi } from './configs/projects'
 
@@ -98,75 +97,71 @@ const tocItems = [
   { id: 'demo-csv-import', label: '导入（importCsv）' },
   { id: 'api-csv-column', label: 'CsvColumn 字段' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="ProTableImportExport CSV 导入导出（零依赖 utils）"
-      source="src/components/ProTable/utils/exportCsv.ts"
-      :introductions="[
-        '零依赖 CSV：BOM 防 Excel 中文乱码 + RFC4180 引号转义（含逗号/换行/引号的字段安全往返）。',
-        '职责边界：utils 只负责「行数据 ↔ 文件」；分页全量拉取、类型转换、逐行校验、错误明细回显归业务层。',
-        '需要 .xlsx 或服务端大文件异步导出时再独立立项（spec 2026-09-18 非目标）。',
-      ]"
-    >
-      <section :class="bem.b()">
-        <DemoField id="demo-csv-export" label="导出：拉全量 + 枚举翻译 + BOM" :code="exportCode">
-          <p :class="bem.e('hint')">
-            验证：点按钮 → 下载「项目台账.csv」→ Excel 打开中文不乱码、「状态」列已翻译为中文
-          </p>
-          <ElButton type="primary" :loading="exporting" :icon="Download" @click="handleExport">
-            导出全部（CSV）
-          </ElButton>
-        </DemoField>
+  <DemoFrame
+    title="ProTableImportExport CSV 导入导出（零依赖 utils）"
+    source="src/components/ProTable/utils/exportCsv.ts"
+    :introductions="[
+      '零依赖 CSV：BOM 防 Excel 中文乱码 + RFC4180 引号转义（含逗号/换行/引号的字段安全往返）。',
+      '职责边界：utils 只负责「行数据 ↔ 文件」；分页全量拉取、类型转换、逐行校验、错误明细回显归业务层。',
+      '需要 .xlsx 或服务端大文件异步导出时再独立立项（spec 2026-09-18 非目标）。',
+    ]"
+  >
+    <section :class="bem.b()">
+      <DemoField id="demo-csv-export" label="导出：拉全量 + 枚举翻译 + BOM" :code="exportCode">
+        <p :class="bem.e('hint')">
+          验证：点按钮 → 下载「项目台账.csv」→ Excel 打开中文不乱码、「状态」列已翻译为中文
+        </p>
+        <ElButton type="primary" :loading="exporting" :icon="Download" @click="handleExport">
+          导出全部（CSV）
+        </ElButton>
+      </DemoField>
 
-        <DemoField
-          id="demo-csv-import"
-          label="导入：File → 行数据（表头列名映射）"
-          :code="importCode"
+      <DemoField
+        id="demo-csv-import"
+        label="导入：File → 行数据（表头列名映射）"
+        :code="importCode"
+      >
+        <p :class="bem.e('hint')">
+          验证：选刚导出的 CSV → 解析结果展示（值均为 string）；表头多出的列自动忽略
+        </p>
+        <ElUpload
+          :show-file-list="false"
+          :auto-upload="false"
+          accept=".csv"
+          :on-change="handleFileChange"
         >
-          <p :class="bem.e('hint')">
-            验证：选刚导出的 CSV → 解析结果展示（值均为 string）；表头多出的列自动忽略
-          </p>
-          <ElUpload
-            :show-file-list="false"
-            :auto-upload="false"
-            accept=".csv"
-            :on-change="handleFileChange"
-          >
-            <ElButton :icon="Upload">选择 CSV 导入</ElButton>
-          </ElUpload>
-          <ElTable
-            v-if="importedRows.length > 0"
-            :data="importedRows.slice(0, 8)"
-            :class="bem.e('result')"
-            size="small"
-            border
-          >
-            <ElTableColumn prop="id" label="ID" width="70" />
-            <ElTableColumn prop="title" label="项目" min-width="140" />
-            <ElTableColumn prop="amount" label="金额" width="120" />
-            <ElTableColumn prop="done" label="状态" width="100" />
-            <ElTableColumn prop="createdAt" label="创建时间" width="170" />
-          </ElTable>
-          <p v-if="importedRows.length > 8" :class="bem.e('hint')">
-            仅展示前 8 行，共解析 {{ importedRows.length }} 行
-          </p>
-        </DemoField>
-      </section>
+          <ElButton :icon="Upload">选择 CSV 导入</ElButton>
+        </ElUpload>
+        <ElTable
+          v-if="importedRows.length > 0"
+          :data="importedRows.slice(0, 8)"
+          :class="bem.e('result')"
+          size="small"
+          border
+        >
+          <ElTableColumn prop="id" label="ID" width="70" />
+          <ElTableColumn prop="title" label="项目" min-width="140" />
+          <ElTableColumn prop="amount" label="金额" width="120" />
+          <ElTableColumn prop="done" label="状态" width="100" />
+          <ElTableColumn prop="createdAt" label="创建时间" width="170" />
+        </ElTable>
+        <p v-if="importedRows.length > 8" :class="bem.e('hint')">
+          仅展示前 8 行，共解析 {{ importedRows.length }} 行
+        </p>
+      </DemoField>
+    </section>
 
-      <ApiTable
-        title="CsvColumn 字段（2026-09-18）"
-        :items="csvColumnItems"
-        anchor="api-csv-column"
-      />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable
+      title="CsvColumn 字段（2026-09-18）"
+      :items="csvColumnItems"
+      anchor="api-csv-column"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

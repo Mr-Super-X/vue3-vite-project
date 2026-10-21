@@ -16,9 +16,8 @@
 import { useUserStore } from '@store/modules/user'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
 import ApiTable from '../../components/ApiTable.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 
 const bem = createNamespace('demo-directive-permission')
 
@@ -65,6 +64,8 @@ const tocItems = [
   { id: 'api-binding', label: 'Binding 类型' },
 ]
 
+useDocToc(tocItems)
+
 const bindingItems = [
   {
     name: 'value',
@@ -104,126 +105,120 @@ const compareCode = `// v-auth 可用：
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="v-permission 权限指令（兼容）"
-      source="src/directives/permission.ts"
-      :introductions="permissionIntroductions"
-    >
-      <!-- 权限切换面板 -->
-      <section id="demo-control">
-        <h3 :class="bem.e('heading')">权限切换面板</h3>
-        <div :class="bem.e('control')">
-          <el-checkbox
-            v-for="p in ALL_PERMS"
-            :key="p.code"
-            :model-value="selectedPerms.includes(p.code)"
-            :label="p.code"
-            @change="() => togglePerm(p.code)"
-          >
-            {{ p.label }} ({{ p.code }})
-          </el-checkbox>
+  <DemoFrame
+    title="v-permission 权限指令（兼容）"
+    source="src/directives/permission.ts"
+    :introductions="permissionIntroductions"
+  >
+    <!-- 权限切换面板 -->
+    <section id="demo-control">
+      <h3 :class="bem.e('heading')">权限切换面板</h3>
+      <div :class="bem.e('control')">
+        <el-checkbox
+          v-for="p in ALL_PERMS"
+          :key="p.code"
+          :model-value="selectedPerms.includes(p.code)"
+          :label="p.code"
+          @change="() => togglePerm(p.code)"
+        >
+          {{ p.label }} ({{ p.code }})
+        </el-checkbox>
+      </div>
+      <p :class="bem.e('hint')">
+        当前 store.permissions：
+        <code>[{{ selectedPerms.join(', ') || '(空)' }}]</code>
+      </p>
+    </section>
+
+    <!-- 单权限 -->
+    <section id="demo-single">
+      <DemoField label="单权限" :code="singleCode">
+        <el-button v-permission="editBinding" type="primary">编辑用户</el-button>
+        <p :class="bem.e('hint')">取消勾选「用户编辑」权限 → 按钮消失；勾选 → 按钮出现。</p>
+      </DemoField>
+    </section>
+
+    <!-- 多权限 AND -->
+    <section id="demo-and">
+      <DemoField label="多权限 AND" :code="andCode">
+        <el-button v-permission="multiAndBinding" type="success">
+          查看+编辑（user:view AND user:edit）
+        </el-button>
+        <p :class="bem.e('hint')">取消任一权限 → 按钮消失。</p>
+      </DemoField>
+    </section>
+
+    <!-- 多权限 ANY -->
+    <section id="demo-any">
+      <DemoField label="多权限 ANY（v-permission:any）" :code="anyCode">
+        <el-button v-permission:any="multiAnyBinding" type="warning">
+          高级操作（user:delete OR report:export）
+        </el-button>
+        <p :class="bem.e('hint')">勾选任一权限 → 按钮出现。</p>
+      </DemoField>
+    </section>
+
+    <!-- 与 v-auth 对比 -->
+    <section id="demo-vs-auth">
+      <DemoField label="与 v-auth 对比（仅 remove 模式，无 disabled）" :code="compareCode">
+        <div :class="bem.e('compare-table')">
+          <table :class="bem.e('table')">
+            <thead>
+              <tr>
+                <th>特性</th>
+                <th>v-auth（推荐）</th>
+                <th>v-permission（兼容）</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>单权限</td>
+                <td><code>v-auth="'user:edit'"</code></td>
+                <td><code>v-permission="'user:edit'"</code></td>
+              </tr>
+              <tr>
+                <td>多权限 AND</td>
+                <td><code>v-auth="['a','b']"</code></td>
+                <td><code>v-permission="['a','b']"</code></td>
+              </tr>
+              <tr>
+                <td>多权限 ANY</td>
+                <td><code>v-auth:any="['a','b']"</code></td>
+                <td><code>v-permission:any="['a','b']"</code></td>
+              </tr>
+              <tr>
+                <td>无权限时禁用</td>
+                <td><code>v-auth:disabled</code></td>
+                <td>❌ 不支持</td>
+              </tr>
+              <tr>
+                <td>显式移除</td>
+                <td><code>v-auth:remove</code></td>
+                <td>❌ 不支持</td>
+              </tr>
+              <tr>
+                <td>行为固定</td>
+                <td>display:none（默认）</td>
+                <td>display:none</td>
+              </tr>
+              <tr>
+                <td>状态来源</td>
+                <td><code>useAuth() → userStore.permissions</code></td>
+                <td><code>useAuth() → userStore.permissions</code></td>
+              </tr>
+            </tbody>
+          </table>
         </div>
         <p :class="bem.e('hint')">
-          当前 store.permissions：
-          <code>[{{ selectedPerms.join(', ') || '(空)' }}]</code>
+          新代码推荐 v-auth；遇到旧项目 / 存量调用保持 v-permission 不动。
         </p>
-      </section>
+      </DemoField>
+    </section>
 
-      <!-- 单权限 -->
-      <section id="demo-single">
-        <DemoField label="单权限" :code="singleCode">
-          <el-button v-permission="editBinding" type="primary">编辑用户</el-button>
-          <p :class="bem.e('hint')">取消勾选「用户编辑」权限 → 按钮消失；勾选 → 按钮出现。</p>
-        </DemoField>
-      </section>
-
-      <!-- 多权限 AND -->
-      <section id="demo-and">
-        <DemoField label="多权限 AND" :code="andCode">
-          <el-button v-permission="multiAndBinding" type="success">
-            查看+编辑（user:view AND user:edit）
-          </el-button>
-          <p :class="bem.e('hint')">取消任一权限 → 按钮消失。</p>
-        </DemoField>
-      </section>
-
-      <!-- 多权限 ANY -->
-      <section id="demo-any">
-        <DemoField label="多权限 ANY（v-permission:any）" :code="anyCode">
-          <el-button v-permission:any="multiAnyBinding" type="warning">
-            高级操作（user:delete OR report:export）
-          </el-button>
-          <p :class="bem.e('hint')">勾选任一权限 → 按钮出现。</p>
-        </DemoField>
-      </section>
-
-      <!-- 与 v-auth 对比 -->
-      <section id="demo-vs-auth">
-        <DemoField label="与 v-auth 对比（仅 remove 模式，无 disabled）" :code="compareCode">
-          <div :class="bem.e('compare-table')">
-            <table :class="bem.e('table')">
-              <thead>
-                <tr>
-                  <th>特性</th>
-                  <th>v-auth（推荐）</th>
-                  <th>v-permission（兼容）</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>单权限</td>
-                  <td><code>v-auth="'user:edit'"</code></td>
-                  <td><code>v-permission="'user:edit'"</code></td>
-                </tr>
-                <tr>
-                  <td>多权限 AND</td>
-                  <td><code>v-auth="['a','b']"</code></td>
-                  <td><code>v-permission="['a','b']"</code></td>
-                </tr>
-                <tr>
-                  <td>多权限 ANY</td>
-                  <td><code>v-auth:any="['a','b']"</code></td>
-                  <td><code>v-permission:any="['a','b']"</code></td>
-                </tr>
-                <tr>
-                  <td>无权限时禁用</td>
-                  <td><code>v-auth:disabled</code></td>
-                  <td>❌ 不支持</td>
-                </tr>
-                <tr>
-                  <td>显式移除</td>
-                  <td><code>v-auth:remove</code></td>
-                  <td>❌ 不支持</td>
-                </tr>
-                <tr>
-                  <td>行为固定</td>
-                  <td>display:none（默认）</td>
-                  <td>display:none</td>
-                </tr>
-                <tr>
-                  <td>状态来源</td>
-                  <td><code>useAuth() → userStore.permissions</code></td>
-                  <td><code>useAuth() → userStore.permissions</code></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <p :class="bem.e('hint')">
-            新代码推荐 v-auth；遇到旧项目 / 存量调用保持 v-permission 不动。
-          </p>
-        </DemoField>
-      </section>
-
-      <!-- API 文档 -->
-      <ApiTable title="v-permission Binding" :items="bindingItems" anchor="api-binding" />
-      <ApiTable title="Arg（修饰参数）" :items="argItems" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <!-- API 文档 -->
+    <ApiTable title="v-permission Binding" :items="bindingItems" anchor="api-binding" />
+    <ApiTable title="Arg（修饰参数）" :items="argItems" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

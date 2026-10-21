@@ -23,8 +23,7 @@ import { xArray } from '@/components/form-schema/builders'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import DemoField from '../../components/DemoField.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import xFormSource from './XFormNestedArray.vue?raw'
 import ModelPreview from '../../components/ModelPreview.vue'
 
@@ -217,77 +216,73 @@ const tocItems = [
   { id: 'demo-nested-array', label: '嵌套 ArrayNode 演示' },
   { id: 'api-nested-array', label: '实现说明' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="嵌套 ArrayNode（外层 array 内嵌 array）"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        '1. 外层 array(orders) 每行含订单号 + 内层 array(items)，演示嵌套 array 场景',
-        '2. 路径前缀化：内层字段实际 prop 为 orders[0].items[0].product（两层 [i] 索引）',
-        '3. P0-3 修复：rewriteNamePath 加防重复前缀逻辑，避免嵌套 array 误用时重复前缀',
-        '4. 「检查 prop 路径」按钮：渲染后从 el-form-item data-prop 读实际路径，验证前缀化正确',
-        '5. 两条 array 独立 addItem/removeItem/moveItem，外层和内层互不干扰',
-      ]"
-    >
-      <section id="demo-nested-array">
-        <DemoField label="嵌套 array（订单 + 订单明细）" :code="xFormSource">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('summary')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onSave">保存并校验</el-button>
-            <el-button type="danger" @click="onValidateFail">触发嵌套校验失败</el-button>
-            <el-button @click="onCheckPath">检查 prop 路径</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-          </div>
-          <div :class="bem.e('state')">
-            <div>订单小计：</div>
-            <pre>{{ orderSummaries.join('\n') }}</pre>
-          </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="嵌套 ArrayNode（外层 array 内嵌 array）"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      '1. 外层 array(orders) 每行含订单号 + 内层 array(items)，演示嵌套 array 场景',
+      '2. 路径前缀化：内层字段实际 prop 为 orders[0].items[0].product（两层 [i] 索引）',
+      '3. P0-3 修复：rewriteNamePath 加防重复前缀逻辑，避免嵌套 array 误用时重复前缀',
+      '4. 「检查 prop 路径」按钮：渲染后从 el-form-item data-prop 读实际路径，验证前缀化正确',
+      '5. 两条 array 独立 addItem/removeItem/moveItem，外层和内层互不干扰',
+    ]"
+  >
+    <section id="demo-nested-array">
+      <DemoField label="嵌套 array（订单 + 订单明细）" :code="xFormSource">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('summary')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onSave">保存并校验</el-button>
+          <el-button type="danger" @click="onValidateFail">触发嵌套校验失败</el-button>
+          <el-button @click="onCheckPath">检查 prop 路径</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <div :class="bem.e('state')">
+          <div>订单小计：</div>
+          <pre>{{ orderSummaries.join('\n') }}</pre>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
 
-      <section id="api-nested-array">
-        <DemoField label="实现说明" :code="xFormSource">
-          <p>本 demo 验证 P0-3 嵌套 array 路径前缀化修复。</p>
-          <p>
-            关键点：
-            <code>xArray('orders').item(orderItemSchema)</code>
-            中
-            <code>orderItemSchema.children</code>
-            含一个嵌套
-            <code>xArray('items').item(orderDetailSchema)</code>
-            。
-          </p>
-          <p>
-            渲染链路：外层 array (orders) 渲染时 → 内层 array 节点 (items) name 前缀化为
-            <code>orders[0].items</code>
-            → 内层 array 渲染时 →
-            <code>orderDetailSchema.children</code>
-            字段 name 前缀化为
-            <code>orders[0].items[0].product</code>
-            等。
-          </p>
-          <p>
-            防重复前缀：
-            <code>array-row-key.ts rewriteNamePath</code>
-            检测若节点 name 已包含 prefix（如
-            <code>orders[0].items</code>
-            以
-            <code>orders[0].items[</code>
-            开头），则跳过再次加 prefix。
-          </p>
-        </DemoField>
-      </section>
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <section id="api-nested-array">
+      <DemoField label="实现说明" :code="xFormSource">
+        <p>本 demo 验证 P0-3 嵌套 array 路径前缀化修复。</p>
+        <p>
+          关键点：
+          <code>xArray('orders').item(orderItemSchema)</code>
+          中
+          <code>orderItemSchema.children</code>
+          含一个嵌套
+          <code>xArray('items').item(orderDetailSchema)</code>
+          。
+        </p>
+        <p>
+          渲染链路：外层 array (orders) 渲染时 → 内层 array 节点 (items) name 前缀化为
+          <code>orders[0].items</code>
+          → 内层 array 渲染时 →
+          <code>orderDetailSchema.children</code>
+          字段 name 前缀化为
+          <code>orders[0].items[0].product</code>
+          等。
+        </p>
+        <p>
+          防重复前缀：
+          <code>array-row-key.ts rewriteNamePath</code>
+          检测若节点 name 已包含 prefix（如
+          <code>orders[0].items</code>
+          以
+          <code>orders[0].items[</code>
+          开头），则跳过再次加 prefix。
+        </p>
+      </DemoField>
+    </section>
+  </DemoFrame>
 </template>
 
 <style lang="scss">

@@ -22,8 +22,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { reverseCrossItems } from './configs/xform-demos-api'
 import ModelPreview from '../../components/ModelPreview.vue'
 
@@ -152,43 +151,39 @@ const tocItems = [
   { id: 'demo-cross-field-reverse', label: '反向校验演示' },
   { id: 'api-reverse-cross', label: '反向触发机制' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="反向跨字段实时校验"
-      source="src/components/form-schema/composables/use-cross-field-trigger.ts"
-      :introductions="[
-        '任一字段变化 → 依赖它的 cross rules 自动重算并写错误到目标字段。',
-        '无需失焦、无需点保存 —— 改字段 A，依赖 B 的 crossValidator 自动触发，把红字写到目标字段。',
-        `1) 改 startDate → endDate 自动校验结束日期不能早于开始日期`,
-        `2) 改 endDate → startDate 自动校验开始日期不能晚于结束日期`,
-        `3) 改 password → passwordConfirm 自动校验两次密码不一致`,
-      ]"
-    >
-      <section id="demo-cross-field-reverse">
-        <DemoField label="反向校验：日期范围 + 密码一致" :code="reverseTriggerCode">
-          <div :class="bem.b()">
-            <XForm ref="formRef" :schema="schema" :model="model" />
-            <div :class="bem.e('actions')">
-              <el-button @click="onReset">重置</el-button>
-              <el-button type="primary" @click="onSave">保存</el-button>
-              <el-button @click="makeConflict">一键制造日期冲突</el-button>
-              <el-button @click="clearDates">清空日期</el-button>
-            </div>
-            <ModelPreview :model="model" />
+  <DemoFrame
+    title="反向跨字段实时校验"
+    source="src/components/form-schema/composables/use-cross-field-trigger.ts"
+    :introductions="[
+      '任一字段变化 → 依赖它的 cross rules 自动重算并写错误到目标字段。',
+      '无需失焦、无需点保存 —— 改字段 A，依赖 B 的 crossValidator 自动触发，把红字写到目标字段。',
+      `1) 改 startDate → endDate 自动校验结束日期不能早于开始日期`,
+      `2) 改 endDate → startDate 自动校验开始日期不能晚于结束日期`,
+      `3) 改 password → passwordConfirm 自动校验两次密码不一致`,
+    ]"
+  >
+    <section id="demo-cross-field-reverse">
+      <DemoField label="反向校验：日期范围 + 密码一致" :code="reverseTriggerCode">
+        <div :class="bem.b()">
+          <XForm ref="formRef" :schema="schema" :model="model" />
+          <div :class="bem.e('actions')">
+            <el-button @click="onReset">重置</el-button>
+            <el-button type="primary" @click="onSave">保存</el-button>
+            <el-button @click="makeConflict">一键制造日期冲突</el-button>
+            <el-button @click="clearDates">清空日期</el-button>
           </div>
-        </DemoField>
-      </section>
+          <ModelPreview :model="model" />
+        </div>
+      </DemoField>
+    </section>
 
-      <ApiTable title="反向触发机制" :items="reverseCrossItems" anchor="api-reverse-cross" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="反向触发机制" :items="reverseCrossItems" anchor="api-reverse-cross" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

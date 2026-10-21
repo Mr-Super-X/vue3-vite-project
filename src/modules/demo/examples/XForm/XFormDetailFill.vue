@@ -16,8 +16,7 @@ import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import { detailFillItems } from './configs/xform-demos-api'
 import { fetchCities, fetchDistricts, fetchOrderDetail } from './utils/xform-detail-fill-mock'
 import xFormSource from './XFormDetailFill.vue?raw'
@@ -217,86 +216,80 @@ const tocItems = [
   { id: 'demo-detail-fill', label: '详情回填演示' },
   { id: 'api-detail-fill', label: '回填要点速查' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="详情数据回填（远程数据 × 联动复杂情况）"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        '编辑页标准链路：拉详情 → Object.assign 整体回填 → clearValidate → resetDirty（基线=服务端值）。',
-        '级联回填时序：城市+区域同时写入，options 就绪前区域短暂显示裸 id（如 22）；手选城市经 on.change 清空区域，整体回填不经组件事件故不会误清。',
-        'hidden 字段回归：B 单 needInvoice=false 时发票抬头隐藏、空值保留；手动开启后重新出现（必填生效）。',
-        '只读联动：A 单 status=已发货，客户名称/联系电话/备注回填完成即变灰。',
-        'dirty 基线：原地切换订单必须 resetDirty 重拍；保存成功后归零，观察下方 isDirty 变化。',
-      ]"
-    >
-      <section id="demo-detail-fill">
-        <DemoField label="订单编辑页模拟（含请求失败重试）" :code="xFormSource">
-          <div :class="bem.b()">
-            <div :class="bem.e('toolbar')">
-              <el-radio-group
-                v-model="currentId"
-                size="small"
-                :disabled="loading"
-                @change="() => loadOrder()"
-              >
-                <el-radio-button value="ORD-A">A · 已发货</el-radio-button>
-                <el-radio-button value="ORD-B">B · 草稿</el-radio-button>
-              </el-radio-group>
-              <el-button
-                size="small"
-                :disabled="loading"
-                title="onError 回调触发：模拟 422 服务端校验失败，演示 XForm 自动展示 ElMessage.error + 字段红字"
-                @click="() => loadOrder('FAIL')"
-              >
-                请求失败路径
-              </el-button>
-              <el-button size="small" :loading="loading" @click="() => loadOrder()">
-                重新加载
-              </el-button>
-              <el-button size="small" :disabled="loading" @click="onReset">重置</el-button>
-              <el-button size="small" :disabled="loading" @click="copySchema">
-                复制 schema
-              </el-button>
-              <el-button type="primary" size="small" :disabled="loading" @click="onSave">
-                保存
-              </el-button>
-            </div>
-
-            <!-- 首载走三态容器（骨架屏/错误重试）；已加载后的切换不再卸载表单 -->
-            <AsyncState
-              :loading="firstLoading"
-              :error="error"
-              :is-empty="false"
-              @retry="() => loadOrder()"
+  <DemoFrame
+    title="详情数据回填（远程数据 × 联动复杂情况）"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      '编辑页标准链路：拉详情 → Object.assign 整体回填 → clearValidate → resetDirty（基线=服务端值）。',
+      '级联回填时序：城市+区域同时写入，options 就绪前区域短暂显示裸 id（如 22）；手选城市经 on.change 清空区域，整体回填不经组件事件故不会误清。',
+      'hidden 字段回归：B 单 needInvoice=false 时发票抬头隐藏、空值保留；手动开启后重新出现（必填生效）。',
+      '只读联动：A 单 status=已发货，客户名称/联系电话/备注回填完成即变灰。',
+      'dirty 基线：原地切换订单必须 resetDirty 重拍；保存成功后归零，观察下方 isDirty 变化。',
+    ]"
+  >
+    <section id="demo-detail-fill">
+      <DemoField label="订单编辑页模拟（含请求失败重试）" :code="xFormSource">
+        <div :class="bem.b()">
+          <div :class="bem.e('toolbar')">
+            <el-radio-group
+              v-model="currentId"
+              size="small"
+              :disabled="loading"
+              @change="() => loadOrder()"
             >
-              <XForm ref="formRef" :schema="schema" :model="model" />
-            </AsyncState>
-
-            <div :class="bem.e('state')">
-              <div>
-                isDirty:
-                <strong :class="bem.is('dirty', isDirtyState)">
-                  {{
-                    isDirtyState ? `是（${dirtyFieldsState.join(', ')}）` : '否（相对服务端最新值）'
-                  }}
-                </strong>
-              </div>
-              <ModelPreview :model="model" />
-            </div>
+              <el-radio-button value="ORD-A">A · 已发货</el-radio-button>
+              <el-radio-button value="ORD-B">B · 草稿</el-radio-button>
+            </el-radio-group>
+            <el-button
+              size="small"
+              :disabled="loading"
+              title="onError 回调触发：模拟 422 服务端校验失败，演示 XForm 自动展示 ElMessage.error + 字段红字"
+              @click="() => loadOrder('FAIL')"
+            >
+              请求失败路径
+            </el-button>
+            <el-button size="small" :loading="loading" @click="() => loadOrder()">
+              重新加载
+            </el-button>
+            <el-button size="small" :disabled="loading" @click="onReset">重置</el-button>
+            <el-button size="small" :disabled="loading" @click="copySchema">复制 schema</el-button>
+            <el-button type="primary" size="small" :disabled="loading" @click="onSave">
+              保存
+            </el-button>
           </div>
-        </DemoField>
-      </section>
 
-      <ApiTable title="回填要点速查" :items="detailFillItems" anchor="api-detail-fill" />
-    </DemoFrame>
+          <!-- 首载走三态容器（骨架屏/错误重试）；已加载后的切换不再卸载表单 -->
+          <AsyncState
+            :loading="firstLoading"
+            :error="error"
+            :is-empty="false"
+            @retry="() => loadOrder()"
+          >
+            <XForm ref="formRef" :schema="schema" :model="model" />
+          </AsyncState>
 
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+          <div :class="bem.e('state')">
+            <div>
+              isDirty:
+              <strong :class="bem.is('dirty', isDirtyState)">
+                {{
+                  isDirtyState ? `是（${dirtyFieldsState.join(', ')}）` : '否（相对服务端最新值）'
+                }}
+              </strong>
+            </div>
+            <ModelPreview :model="model" />
+          </div>
+        </div>
+      </DemoField>
+    </section>
+
+    <ApiTable title="回填要点速查" :items="detailFillItems" anchor="api-detail-fill" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

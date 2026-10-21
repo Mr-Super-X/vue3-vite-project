@@ -21,8 +21,7 @@
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
-import DocLayout from '../../layouts/DocLayout.vue'
-import DocToc from '../../components/DocToc.vue'
+import { useDocToc } from '../../composables/useDocToc'
 import ConsoleLogPanel from '../../components/ConsoleLogPanel.vue'
 import { useConsoleCapture } from '../../composables/useConsoleCapture'
 import { propsAdvancedItems } from './configs/xform-demos-api'
@@ -116,136 +115,130 @@ const tocItems = [
   { id: 'demo-expression-functions', label: '4. expressionFunctions' },
   { id: 'api-props-advanced', label: '高级配置速查' },
 ]
+
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="XFormProps 高级配置"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        '集中演示 4 个 XFormProps 字段：permissionResolver / componentProps / reactionBudget / expressionFunctions。',
-        '每个 section 独立 XForm 实例 + DemoField 包裹 —— 与 element-plus 官网演示风格一致。',
-        '1. permissionResolver：把字符串字面量权限码映射为 view / edit / hidden 三态，业务侧注入 useAuth().hasPerm 即可。',
-        '2. componentProps：按组件名注入默认 props，节点级 props 可覆盖（适合批量调整全局 UI 风格）。',
-        '3. reactionBudget：reaction 循环联动兜底，本 demo 用 5 次预算演示超限 console.error。',
-        '4. expressionFunctions：业务函数白名单，字符串表达式 {{ fn }} 直接按名引用（适合后端 JSON 配置场景）。',
-      ]"
-    >
-      <!-- Section 1: permissionResolver —— 独立 XForm 实例 + DemoField 包裹 -->
-      <section id="demo-permission-resolver" :class="bem.e('section')">
-        <h3>1. permissionResolver —— 权限码 → 三态映射</h3>
-        <p>
-          本段演示：业务侧把字符串权限码交给 resolver 映射三态。
-          <code>phone</code>
-          与
-          <code>submitter</code>
-          因 resolver 返回
-          <code>'hidden'</code>
-          而完全不渲染；
-          <code>username</code>
-          映射为
-          <code>'view'</code>
-          渲染为只读纯文本。
-        </p>
-        <DemoField label="permissionResolver 用法" :code="permissionCode">
-          <XForm :schema="permissionResolverSchema" :model="permissionModel" v-bind="sharedProps" />
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="XFormProps 高级配置"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      '集中演示 4 个 XFormProps 字段：permissionResolver / componentProps / reactionBudget / expressionFunctions。',
+      '每个 section 独立 XForm 实例 + DemoField 包裹 —— 与 element-plus 官网演示风格一致。',
+      '1. permissionResolver：把字符串字面量权限码映射为 view / edit / hidden 三态，业务侧注入 useAuth().hasPerm 即可。',
+      '2. componentProps：按组件名注入默认 props，节点级 props 可覆盖（适合批量调整全局 UI 风格）。',
+      '3. reactionBudget：reaction 循环联动兜底，本 demo 用 5 次预算演示超限 console.error。',
+      '4. expressionFunctions：业务函数白名单，字符串表达式 {{ fn }} 直接按名引用（适合后端 JSON 配置场景）。',
+    ]"
+  >
+    <!-- Section 1: permissionResolver —— 独立 XForm 实例 + DemoField 包裹 -->
+    <section id="demo-permission-resolver" :class="bem.e('section')">
+      <h3>1. permissionResolver —— 权限码 → 三态映射</h3>
+      <p>
+        本段演示：业务侧把字符串权限码交给 resolver 映射三态。
+        <code>phone</code>
+        与
+        <code>submitter</code>
+        因 resolver 返回
+        <code>'hidden'</code>
+        而完全不渲染；
+        <code>username</code>
+        映射为
+        <code>'view'</code>
+        渲染为只读纯文本。
+      </p>
+      <DemoField label="permissionResolver 用法" :code="permissionCode">
+        <XForm :schema="permissionResolverSchema" :model="permissionModel" v-bind="sharedProps" />
+      </DemoField>
+    </section>
 
-      <!-- Section 2: componentProps -->
-      <section id="demo-component-props" :class="bem.e('section')">
-        <h3>2. componentProps —— 全局默认 props（节点级可覆盖）</h3>
-        <p>
-          所有
-          <code>Input</code>
-          默认
-          <code>clearable + size=small</code>
-          ；
-          <code>Select</code>
-          默认
-          <code>filterable + clearable</code>
-          。
-          <code>qty</code>
-          节点显式
-          <code>size: 'default'</code>
-          覆盖全局默认。
-        </p>
-        <DemoField label="componentProps 用法" :code="componentPropsCode">
-          <XForm :schema="componentPropsSchema" :model="componentPropsModel" v-bind="sharedProps" />
-        </DemoField>
-      </section>
+    <!-- Section 2: componentProps -->
+    <section id="demo-component-props" :class="bem.e('section')">
+      <h3>2. componentProps —— 全局默认 props（节点级可覆盖）</h3>
+      <p>
+        所有
+        <code>Input</code>
+        默认
+        <code>clearable + size=small</code>
+        ；
+        <code>Select</code>
+        默认
+        <code>filterable + clearable</code>
+        。
+        <code>qty</code>
+        节点显式
+        <code>size: 'default'</code>
+        覆盖全局默认。
+      </p>
+      <DemoField label="componentProps 用法" :code="componentPropsCode">
+        <XForm :schema="componentPropsSchema" :model="componentPropsModel" v-bind="sharedProps" />
+      </DemoField>
+    </section>
 
-      <!-- Section 3: reactionBudget -->
-      <section id="demo-reaction-budget" :class="bem.e('section')">
-        <h3>3. reactionBudget —— 循环联动预算</h3>
-        <p>
-          改
-          <code>A</code>
-          → 触发
-          <code>loopReactionA</code>
-          → 写
-          <code>B</code>
-          → 触发
-          <code>loopReactionB</code>
-          → 写
-          <code>A</code>
-          → 死循环。
-          <code>reactionBudget=5</code>
-          在第 6 次
-          <code>console.error</code>
-          后跳过，观察下方
-          <code>reaction 实际执行次数</code>
-          应稳定在
-          <span :class="bem.e('trigger-count')">5</span>
-          。
-        </p>
-        <DemoField label="reactionBudget 用法" :code="reactionBudgetCode">
-          <XForm :schema="reactionBudgetSchema" :model="reactionBudgetModel" v-bind="sharedProps" />
-        </DemoField>
-      </section>
+    <!-- Section 3: reactionBudget -->
+    <section id="demo-reaction-budget" :class="bem.e('section')">
+      <h3>3. reactionBudget —— 循环联动预算</h3>
+      <p>
+        改
+        <code>A</code>
+        → 触发
+        <code>loopReactionA</code>
+        → 写
+        <code>B</code>
+        → 触发
+        <code>loopReactionB</code>
+        → 写
+        <code>A</code>
+        → 死循环。
+        <code>reactionBudget=5</code>
+        在第 6 次
+        <code>console.error</code>
+        后跳过，观察下方
+        <code>reaction 实际执行次数</code>
+        应稳定在
+        <span :class="bem.e('trigger-count')">5</span>
+        。
+      </p>
+      <DemoField label="reactionBudget 用法" :code="reactionBudgetCode">
+        <XForm :schema="reactionBudgetSchema" :model="reactionBudgetModel" v-bind="sharedProps" />
+      </DemoField>
+    </section>
 
-      <!-- Section 4: expressionFunctions -->
-      <section id="demo-expression-functions" :class="bem.e('section')">
-        <h3>4. expressionFunctions —— 业务白名单 + 字符串表达式引用</h3>
-        <p>
-          修改
-          <code>单价</code>
-          /
-          <code>数量</code>
-          /
-          <code>代码</code>
-          ， 观察
-          <code>合计</code>
-          与
-          <code>拼接大写</code>
-          label 实时变化 —— 字符串表达式按名引用白名单函数（与 XFormExpressionSandbox
-          共用同一套机制）。
-        </p>
-        <DemoField label="expressionFunctions 用法" :code="expressionFunctionsCode">
-          <XForm
-            :schema="expressionFunctionsSchema"
-            :model="expressionFunctionsModel"
-            v-bind="sharedProps"
-          />
-        </DemoField>
-      </section>
+    <!-- Section 4: expressionFunctions -->
+    <section id="demo-expression-functions" :class="bem.e('section')">
+      <h3>4. expressionFunctions —— 业务白名单 + 字符串表达式引用</h3>
+      <p>
+        修改
+        <code>单价</code>
+        /
+        <code>数量</code>
+        /
+        <code>代码</code>
+        ， 观察
+        <code>合计</code>
+        与
+        <code>拼接大写</code>
+        label 实时变化 —— 字符串表达式按名引用白名单函数（与 XFormExpressionSandbox
+        共用同一套机制）。
+      </p>
+      <DemoField label="expressionFunctions 用法" :code="expressionFunctionsCode">
+        <XForm
+          :schema="expressionFunctionsSchema"
+          :model="expressionFunctionsModel"
+          v-bind="sharedProps"
+        />
+      </DemoField>
+    </section>
 
-      <ApiTable
-        title="XFormProps 高级配置"
-        :items="propsAdvancedItems"
-        anchor="api-props-advanced"
-      />
-      <ConsoleLogPanel
-        :logs="logs"
-        title="[XForm] 日志（reaction 预算超限等告警）"
-        empty="暂无警告（修改 reactionBudget 段 A 字段后会触发循环联动 console.error）"
-        @clear="clear"
-      />
-    </DemoFrame>
-
-    <template #toc><DocToc :items="tocItems" /></template>
-  </DocLayout>
+    <ApiTable title="XFormProps 高级配置" :items="propsAdvancedItems" anchor="api-props-advanced" />
+    <ConsoleLogPanel
+      :logs="logs"
+      title="[XForm] 日志（reaction 预算超限等告警）"
+      empty="暂无警告（修改 reactionBudget 段 A 字段后会触发循环联动 console.error）"
+      @clear="clear"
+    />
+  </DemoFrame>
 </template>
 
 <style lang="scss">

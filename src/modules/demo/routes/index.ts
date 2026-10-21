@@ -94,7 +94,8 @@ const routes: RouteRecordRaw[] = isDemoRoutesEnabled
       {
         path: '/demo',
         name: 'Demo',
-        component: () => import('@/layouts/blank/index.vue'),
+        // 路由级布局：DocLayout 固定为父组件，子路由切换不重挂载侧栏（见 layouts/DemoDocs.vue）
+        component: () => import('../layouts/DemoDocs.vue'),
         redirect: () => {
           // exampleRoutes[0] 是按字母序排序的第一个 demo（demo 模块内部保证非空，
           // 若空则 fallback 到 /demo 自身，无限循环由 ErrorBoundary 兜底）
