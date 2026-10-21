@@ -4,10 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > 本文档是 `~/.claude/CLAUDE.md` 的项目级补充。所有全局规则（§一～§十一）自动适用，遇到冲突以**本文档为准**。
 >
-> **文档版本**：v2.2.0 | **生成日期**：2026-10-20 | **生效分支**：`feature/engine-optimization`
+> **文档版本**：v2.2.1 | **生成日期**：2026-10-21 | **生效分支**：`feature/engine-optimization`
 >
-> **最近更新**（2026-10-20）：门户企业官网重构 + gh-pages 自动部署 + 团队级图标体系
+> **最近更新**（2026-10-21）：gh-pages 演示站 demo 路由可见性修复
 >
+> - **v2.2.1 变更**（2026-10-21）：gh-pages 演示站恢复 demo 路由——`src/modules/demo/routes/index.ts` 的 DEV 门控放宽为 `isDemoRoutesEnabled`（dev 或 `VITE_DEMO_NO_AUTH=true` 演示构建均注册 demo 路由 + glob 组件，常规 prod 仍整体 tree-shake 剔除，实测 36 chunk/4.0M vs 演示构建 182 chunk/11M）；`src/router/whitelist.ts` 提取 `demoWhitelistNames` 模块级常量同条件吸收（内联 `[]` 会截断 check-routes 的正则提取，实测踩坑）；CHANGELOG「未发布」区新增 fix 节；docs/07/09/23/39 + README 文档表同步
 > - **v2.2 变更**：① home 模块重构为「星澜科技」黑白极简企业官网（portal 布局 64px 极简顶栏 + 锚点导航 scroll-spy；`SiteHero` / `SiteFeatures` / `SiteStats` / `SiteAbout` / `SiteFooter` 5 个静态展示组件 + `config/site.ts` 文案单源；`/home` 走白名单公开访问）② gh-pages 自动化部署（`.github/workflows/deploy.yml`，push master 发布线上 demo；构建四开关 `VITE_BASE` / `VITE_HISTORY_MODE=hash` / `VITE_MENU_SOURCE=local` / `VITE_USE_MOCK=true`）③ mock 生产接线（`mock/mockProdServer.ts` client 侧 `createProdMockServer`，vite-plugin-mock@3.0.2 无 prodEnabled；`main.ts` PROD 守卫防 dev 双重劫持 + `use(router)` 前阻塞 await 根治拦截窗口穿透）④ 团队级图标体系（unplugin-icons 编译期内联 + `<i-ep-* />` 静态语法 / `<AppDynamicIcon>` 动态语法 + `src/assets/icons/` 本地 app 集合，见 docs/39）⑤ `VITE_DEMO_NO_AUTH` 演示模式（守卫跳过登录/权限校验，gh-pages 全站可演示）
 > - 同步修订 `README.md`：顶部最近更新、§1/§3 user store 口径（httpOnly cookie，无 token 落 localStorage）、§目录结构（modules 去 orders / common 组件清单补全 / store 补 tags-view+dict / plugins 补 remAdaptation+webVitals / directives 补 auth+copy+draggable / mock 补 dict+pro-table+mockProdServer）、§常用脚本补 test:e2e(e2e:install)、§环境变量补 VITE_DEMO_NO_AUTH、§测试节实测阈值 50/48/45/50 + e2e、§相关文档表补 docs/30-39、§CI/CD 指向真实 ci.yml/deploy.yml、§技术栈补 unplugin-icons
 >

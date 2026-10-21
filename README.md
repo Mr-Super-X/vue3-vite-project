@@ -788,7 +788,7 @@ pnpm bench             # vitest bench 基准测试
 | 主题管理规范           | `docs/06-主题管理规范.md`                     | 双主题架构 + CSS 变量速查 + useTheme API                                                 |
 | 路由模块设计           | `docs/07-路由模块设计.md`                     | 自动注册 + 白名单 + 远程菜单 + 3 步新增流程                                              |
 | **模块化架构总览**     | `docs/08-模块化架构总览.md`                   | 4 块公共范式（directives/plugins/components/utils）+ 扩展流程                            |
-| 组件示例站点开发指引   | `docs/09-组件示例站点开发指引.md`             | dev-only demo 模块，1 文件 1 demo + 自动 API 提取                                        |
+| 组件示例站点开发指引   | `docs/09-组件示例站点开发指引.md`             | dev / gh-pages 演示双形态 demo 模块，1 文件 1 demo + 自动 API 提取                       |
 | **新手指引**           | `docs/10-新手指引.md`                         | 30 分钟 5 任务：clone → 加模块 → 加 API → 调常见问题                                     |
 | 字典使用规范           | `docs/11-字典使用规范.md`                     | 三层架构速查 + 业务侧用法 + 缓存策略 + 7 条常见坑                                        |
 | Web Vitals 使用规范    | `docs/12-web-vitals性能监控使用规范.md`       | LCP/INP/CLS/TTFB 采集 + 4 种上报端点接入示例                                             |
