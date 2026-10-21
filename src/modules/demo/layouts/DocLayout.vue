@@ -8,8 +8,8 @@
  *     映射见 config/sidebar-groups.ts），组可点击展开收起，右缘可拖拽调整宽度
  *     （150~400px，逻辑见 use-sidebar-drag.ts）。
  *     顶部有"返回首页"按钮，点击回到项目根路由（dashboard /）。
- *   - 中间 main：演示页内容（default slot）
- *   - 右侧 toc：本页锚点导航（toc slot，由各 demo 页面提供）
+ *   - 中间 main：演示页内容（default slot，路由级布局 DemoDocs.vue 注入 <RouterView />）
+ *   - 右侧 toc：本页锚点导航（toc slot，由 DemoDocs.vue 注入 useDocToc 数据渲染）
  *
  * 边界：sidebar 在内容超长时保持 sticky；toc 同理。
  */
@@ -132,19 +132,21 @@ const bem = createNamespace('doc-layout')
             <span :class="bem.e('group-name')">{{ group.title }}</span>
             <span :class="bem.e('group-count')">{{ group.items.length }}</span>
           </button>
-          <ul
-            v-show="isSearchActive || !collapsedGroups.has(group.title)"
-            :class="bem.e('group-list')"
-          >
-            <li v-for="item in group.items" :key="item.name">
-              <RouterLink
-                :to="item.path"
-                :class="[bem.e('link'), bem.is('active', route.name === item.name)]"
-              >
-                {{ item.label }}
-              </RouterLink>
-            </li>
-          </ul>
+          <el-collapse-transition>
+            <ul
+              v-show="isSearchActive || !collapsedGroups.has(group.title)"
+              :class="bem.e('group-list')"
+            >
+              <li v-for="item in group.items" :key="item.name">
+                <RouterLink
+                  :to="item.path"
+                  :class="[bem.e('link'), bem.is('active', route.name === item.name)]"
+                >
+                  {{ item.label }}
+                </RouterLink>
+              </li>
+            </ul>
+          </el-collapse-transition>
         </li>
       </ul>
       <div v-if="isSearchActive && filteredGroups.length === 0" :class="bem.e('search-empty')">
@@ -204,6 +206,8 @@ const bem = createNamespace('doc-layout')
     position: sticky;
     top: 0;
     z-index: 2;
+    // 纯色底：侧栏内部滚动时本容器覆盖在菜单上，透明底会文字叠文字
+    background: var(--el-bg-color-page);
     padding-bottom: 12px;
   }
 
@@ -214,10 +218,10 @@ const bem = createNamespace('doc-layout')
     width: 100%;
     margin-bottom: 12px;
     padding: 6px 10px;
-    background: var(--el-bg-color, #fff);
-    border: 1px solid var(--el-border-color-lighter, #ebeef5);
-    border-radius: 4px;
-    color: #606266;
+    background: var(--el-bg-color);
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: 6px;
+    color: var(--el-text-color-secondary);
     font-size: 13px;
     cursor: pointer;
     transition:
@@ -226,9 +230,9 @@ const bem = createNamespace('doc-layout')
       border-color 0.15s;
 
     &:hover {
-      background: #f5f7fa;
-      color: #409eff;
-      border-color: #409eff;
+      background: var(--el-color-primary-light-9);
+      color: var(--el-color-primary);
+      border-color: var(--el-color-primary-light-7);
     }
   }
 
@@ -247,7 +251,7 @@ const bem = createNamespace('doc-layout')
   &__search-empty {
     padding: 24px 8px;
     text-align: center;
-    color: var(--el-text-color-secondary, #909399);
+    color: var(--el-text-color-secondary);
     font-size: 13px;
   }
 
@@ -258,15 +262,15 @@ const bem = createNamespace('doc-layout')
   &__search-empty-btn {
     padding: 4px 12px;
     background: transparent;
-    border: 1px solid var(--el-border-color, #dcdfe6);
-    border-radius: 4px;
-    color: var(--el-color-primary, #409eff);
+    border: 1px solid var(--el-border-color);
+    border-radius: 6px;
+    color: var(--el-color-primary);
     font-size: 12px;
     cursor: pointer;
     transition: background 0.15s;
 
     &:hover {
-      background: var(--el-color-primary-light-9, #ecf5ff);
+      background: var(--el-color-primary-light-9);
     }
   }
 
@@ -285,18 +289,21 @@ const bem = createNamespace('doc-layout')
     align-items: center;
     gap: 4px;
     width: 100%;
-    padding: 6px 8px;
+    padding: 7px 8px;
     background: transparent;
     border: none;
-    border-radius: 4px;
-    font-size: 13px;
+    border-radius: 6px;
+    font-size: 12px;
     font-weight: 600;
-    color: #909399;
+    color: var(--el-text-color-secondary);
     cursor: pointer;
+    transition:
+      background 0.15s,
+      color 0.15s;
 
     &:hover {
-      background: #f5f7fa;
-      color: #606266;
+      background: var(--el-fill-color-light);
+      color: var(--el-text-color-primary);
     }
   }
 
@@ -308,12 +315,14 @@ const bem = createNamespace('doc-layout')
   &__group-name {
     flex: 1;
     text-align: left;
+    letter-spacing: 0.02em;
   }
 
   &__group-count {
     flex-shrink: 0;
     font-size: 11px;
-    color: #c0c4cc;
+    font-weight: 400;
+    color: var(--el-text-color-placeholder);
   }
 
   &__group-list {
@@ -334,7 +343,7 @@ const bem = createNamespace('doc-layout')
     cursor: col-resize;
 
     &:hover {
-      background: rgba(64, 158, 255, 0.3);
+      background: var(--el-color-primary-light-7);
     }
   }
 
@@ -345,22 +354,36 @@ const bem = createNamespace('doc-layout')
     padding: 6px 12px;
     margin: 2px 0;
     font-size: 13px;
-    color: #606266;
+    color: var(--el-text-color-regular);
     text-decoration: none;
-    border-radius: 4px;
+    border-radius: 6px;
     transition:
       background 0.15s,
       color 0.15s;
 
     &:hover {
-      background: #f5f7fa;
-      color: #409eff;
+      background: var(--el-fill-color-light);
+      color: var(--el-color-primary);
     }
 
+    // EP 官网标志选中态：左侧 3px 主色竖条 + tint 底（竖条对齐分组标题左缘）
     &.is-active {
-      background: #ecf5ff;
-      color: #409eff;
+      position: relative;
+      background: var(--el-color-primary-light-9);
+      color: var(--el-color-primary);
       font-weight: 500;
+
+      &::before {
+        content: '';
+        position: absolute;
+        left: -8px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 3px;
+        height: 16px;
+        border-radius: 0 2px 2px 0;
+        background: var(--el-color-primary);
+      }
     }
   }
 }
