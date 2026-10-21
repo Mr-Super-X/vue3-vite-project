@@ -11,7 +11,7 @@
 - **路由级持久布局（根治滚动重置）**：新增 `src/modules/demo/layouts/DemoDocs.vue` 作为 `/demo` 父路由组件，`DocLayout` 三栏壳跨子路由永久驻留——侧栏滚动位置、搜索词、折叠偏好、拖拽宽度跨页全保留（滚动归零实测消失）；`/demo` 路由 component 由 blank 布局改接 DemoDocs，redirect / glob 自动注册逻辑不变
 - **toc 数据驱动改造**：新增 `composables/useDocToc.ts`（模块级 `currentDocToc` + onScopeDispose 引用守卫自动清除，配 4 例 spec）；demo 页 `useDocToc(tocItems)` 注册替代原 `#toc` slot 跨 RouterView 透传
 - **113 个 demo 页批量迁移**：一次性 codemod 去自包 DocLayout / #toc 块（跑完即删）；迁移后常规 prod 构建仍 tree-shake demo（实测 36 chunk / 4.0M），gh-pages 演示构建全量可见（186 chunk / 11M），200 spec / 2510 用例全绿
-- **UI 对标 Element Plus 官网**：菜单选中项左侧 3px 主色竖条 + tint 底（EP 标志样式）；分组展开收起接 `el-collapse-transition` 高度动画；`DocLayout` / `DocToc` / `DemoFrame` 颜色全量切换 Element Plus CSS 变量（暗色主题自动兼容）；分组标题小字号 + 字间距、计数徽标弱化；sticky 顶栏补纯色底防文字叠影
+- **UI 对标 Element Plus 官网**：菜单选中项左侧 3px 主色竖条 + tint 底（EP 标志样式）；分组展开收起接 `el-collapse-transition` 高度动画；`DocLayout` / `DocToc` / `DemoFrame` 颜色全量切换 Element Plus CSS 变量（暗色主题自动兼容）；分组标题 13px 加粗主色强化层级、计数徽标可见不隐身；侧栏/toc 统一灰面板底（sticky 顶栏无悬浮遮挡）、「返回首页」轻量化文字链、搜索框前置图标
 - **文档同步**：docs/09 模板 + 关键点、demo 模块《如何写好一个 demo.md》（目录树 / XForm 模板 / checklist / §6.5 / 最小示例 5 处）
 
 ### 🐛 Fix | gh-pages 演示站恢复 demo 路由可见（2026-10-21）

@@ -13,7 +13,7 @@
  *
  * 边界：sidebar 在内容超长时保持 sticky；toc 同理。
  */
-import { ArrowDown, ArrowRight, Back } from '@element-plus/icons-vue'
+import { ArrowDown, ArrowRight, Back, Search } from '@element-plus/icons-vue'
 import { useAppRouter } from '@composables/useAppRouter'
 import { getSidebarGroup, getSidebarLabel, SIDEBAR_GROUPS } from '../config/sidebar-groups'
 import { useDemoSearch, type DemoSearchItem } from '../composables/useDemoSearch'
@@ -90,6 +90,33 @@ function toggleGroup(groupTitle: string) {
   collapsedGroups.value = next
 }
 
+// —— 顶栏粘顶态感知（哨兵 + IntersectionObserver）——
+// 默认文档流态顶栏完全透明，与画布融为一体（无色块感）；滚动压住哨兵后
+// isStuck = true，才铺底色 + 发丝线遮挡下方穿行的菜单文字。
+// CSS 没有 :stuck 伪类，IO 哨兵是实现「滚动才粘顶显形」的标准方案
+const sidebarEl = ref<HTMLElement>()
+const sentinelEl = ref<HTMLElement>()
+const isStuck = ref(false)
+let stuckObserver: IntersectionObserver | null = null
+
+onMounted(() => {
+  const root = sidebarEl.value
+  const sentinel = sentinelEl.value
+  if (!root || !sentinel) return
+  stuckObserver = new IntersectionObserver(
+    ([entry]) => {
+      isStuck.value = !entry?.isIntersecting
+    },
+    { root, threshold: 0 }
+  )
+  stuckObserver.observe(sentinel)
+})
+
+onUnmounted(() => {
+  stuckObserver?.disconnect()
+  stuckObserver = null
+})
+
 // —— 拖拽调整 sidebar 宽度（150~400px 钳制；状态模块级保留，逻辑见 use-sidebar-drag） ——
 const { onResizerMousedown } = useSidebarDrag(sidebarWidth, 150, 400)
 
@@ -101,8 +128,10 @@ const bem = createNamespace('doc-layout')
     :class="bem.b()"
     :style="{ gridTemplateColumns: `${sidebarWidth}px 0 minmax(0, 1fr) 180px` }"
   >
-    <aside :class="bem.e('sidebar')">
-      <div :class="bem.e('sidebar-top')">
+    <aside ref="sidebarEl" :class="bem.e('sidebar')">
+      <!-- 哨兵：被滚动压出侧栏视口顶部 = 顶栏进入粘顶态（IntersectionObserver 监听） -->
+      <div ref="sentinelEl" :class="bem.e('sentinel')" aria-hidden="true" />
+      <div :class="[bem.e('sidebar-top'), bem.is('stuck', isStuck)]">
         <button :class="bem.e('home')" type="button" @click="goHome">
           <el-icon :class="bem.e('home-icon')"><Back /></el-icon>
           <span>返回首页</span>
@@ -113,6 +142,7 @@ const bem = createNamespace('doc-layout')
             placeholder="搜索 demo"
             clearable
             size="default"
+            :prefix-icon="Search"
             :class="bem.e('search-input')"
           />
         </div>
@@ -188,11 +218,16 @@ const bem = createNamespace('doc-layout')
     top: 16px;
     max-height: calc(100vh - 32px);
     overflow-y: auto;
-    padding: 16px;
+    // 刻意不加背景色：侧栏透明融入画布，避免色块补丁感。
+    // sidebar 自身 padding 置 0、水平内边距交给内部块——sticky 顶栏需
+    // 完整通栏铺底色，负 margin + sticky 组合会产生错位
+    padding: 0;
   }
 
   &__toc {
     margin-left: 24px;
+    // toc 无 sticky 子块，恢复常规内边距
+    padding: 16px;
   }
 
   &__main {
@@ -200,39 +235,55 @@ const bem = createNamespace('doc-layout')
     margin-left: 24px;
   }
 
+  &__sentinel {
+    // 1px 哨兵撑在侧栏内容最顶部：被滚动压出视口即代表顶栏进入粘顶态
+    // （0 高度元素 IntersectionObserver 触发不稳，取 1px）
+    height: 1px;
+  }
+
   &__sidebar-top {
     // 把 home + search 包成一个 sticky 容器：sidebar 内容超长滚动时
-    // 「返回首页」按钮与搜索框始终可见，避免检索流程被滚动打断
+    // 「返回首页」与搜索框始终可见。默认文档流态完全透明（与画布融为一体，
+    // 无色块）；滚动压住哨兵后 is-stuck 铺底色，挡住下方穿行的菜单文字
     position: sticky;
     top: 0;
     z-index: 2;
-    // 纯色底：侧栏内部滚动时本容器覆盖在菜单上，透明底会文字叠文字
-    background: var(--el-bg-color-page);
-    padding-bottom: 12px;
+    padding: 14px 16px 12px;
+    background: transparent;
+    border-bottom: 1px solid transparent;
+    transition:
+      background 0.2s,
+      border-color 0.2s;
+
+    &.is-stuck {
+      // 底色用 --el-bg-color（与画布同色）：light 下即白色，遮挡穿行文字
+      // 的同时几乎不显现色块边界
+      background: var(--el-bg-color);
+      border-bottom-color: var(--el-border-color-lighter);
+    }
   }
 
   &__home {
+    // 轻量文字链（对齐 EP 官网顶部返回链接）：去框去白底，避免全宽按钮抢戏
     display: flex;
     align-items: center;
     gap: 6px;
     width: 100%;
-    margin-bottom: 12px;
-    padding: 6px 10px;
-    background: var(--el-bg-color);
-    border: 1px solid var(--el-border-color-lighter);
+    margin-bottom: 10px;
+    padding: 6px 8px;
+    background: transparent;
+    border: none;
     border-radius: 6px;
     color: var(--el-text-color-secondary);
     font-size: 13px;
     cursor: pointer;
     transition:
       background 0.15s,
-      color 0.15s,
-      border-color 0.15s;
+      color 0.15s;
 
     &:hover {
-      background: var(--el-color-primary-light-9);
+      background: var(--el-fill-color-light);
       color: var(--el-color-primary);
-      border-color: var(--el-color-primary-light-7);
     }
   }
 
@@ -249,7 +300,7 @@ const bem = createNamespace('doc-layout')
   }
 
   &__search-empty {
-    padding: 24px 8px;
+    padding: 24px 16px;
     text-align: center;
     color: var(--el-text-color-secondary);
     font-size: 13px;
@@ -275,8 +326,9 @@ const bem = createNamespace('doc-layout')
   }
 
   &__nav {
+    // sidebar padding 置 0 后，菜单区自管内边距：顶部留出与搜索框的呼吸距离
     margin: 0;
-    padding: 0;
+    padding: 12px 16px 16px;
     list-style: none;
   }
 
@@ -289,13 +341,16 @@ const bem = createNamespace('doc-layout')
     align-items: center;
     gap: 4px;
     width: 100%;
-    padding: 7px 8px;
+    padding: 8px;
     background: transparent;
     border: none;
     border-radius: 6px;
-    font-size: 12px;
+    // 分组标题：与子菜单同字号（13px），靠字重 + 深色区分层级——
+    // 此前 12px 灰字比子项还弱，层级感颠倒
+    font-size: 13px;
     font-weight: 600;
-    color: var(--el-text-color-secondary);
+    line-height: 18px;
+    color: var(--el-text-color-primary);
     cursor: pointer;
     transition:
       background 0.15s,
@@ -303,7 +358,7 @@ const bem = createNamespace('doc-layout')
 
     &:hover {
       background: var(--el-fill-color-light);
-      color: var(--el-text-color-primary);
+      color: var(--el-color-primary);
     }
   }
 
@@ -320,9 +375,10 @@ const bem = createNamespace('doc-layout')
 
   &__group-count {
     flex-shrink: 0;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 400;
-    color: var(--el-text-color-placeholder);
+    // 计数弱化但不隐身：placeholder 色在灰底上几乎不可读
+    color: var(--el-text-color-secondary);
   }
 
   &__group-list {
