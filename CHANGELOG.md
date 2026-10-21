@@ -4,6 +4,16 @@
 
 ## 未发布
 
+### ✨ Features | demo 文档站体验优化：路由级持久布局 + Element Plus 官网文档风（2026-10-21）
+
+> 背景：demo 站（/demo/*）是组件能力的第一展示面，但「左侧菜单点击切换路由时侧栏自身滚动位置重置」长期影响浏览（菜单很长时滚到中间点一项，侧栏立刻跳回顶部）。根因：113 个 demo 页各自 `<DocLayout>` 包裹，路由切换整棵三栏布局重挂载，scrollTop / 搜索词等组件局部状态归零。设计稿 `docs/superpowers/specs/2026-10-21-demo-site-ux-design.md`，实施计划 `docs/superpowers/plans/2026-10-21-demo-site-ux.md`。
+
+- **路由级持久布局（根治滚动重置）**：新增 `src/modules/demo/layouts/DemoDocs.vue` 作为 `/demo` 父路由组件，`DocLayout` 三栏壳跨子路由永久驻留——侧栏滚动位置、搜索词、折叠偏好、拖拽宽度跨页全保留（滚动归零实测消失）；`/demo` 路由 component 由 blank 布局改接 DemoDocs，redirect / glob 自动注册逻辑不变
+- **toc 数据驱动改造**：新增 `composables/useDocToc.ts`（模块级 `currentDocToc` + onScopeDispose 引用守卫自动清除，配 4 例 spec）；demo 页 `useDocToc(tocItems)` 注册替代原 `#toc` slot 跨 RouterView 透传
+- **113 个 demo 页批量迁移**：一次性 codemod 去自包 DocLayout / #toc 块（跑完即删）；迁移后常规 prod 构建仍 tree-shake demo（实测 36 chunk / 4.0M），gh-pages 演示构建全量可见（186 chunk / 11M），200 spec / 2510 用例全绿
+- **UI 对标 Element Plus 官网**：菜单选中项左侧 3px 主色竖条 + tint 底（EP 标志样式）；分组展开收起接 `el-collapse-transition` 高度动画；`DocLayout` / `DocToc` / `DemoFrame` 颜色全量切换 Element Plus CSS 变量（暗色主题自动兼容）；分组标题小字号 + 字间距、计数徽标弱化；sticky 顶栏补纯色底防文字叠影
+- **文档同步**：docs/09 模板 + 关键点、demo 模块《如何写好一个 demo.md》（目录树 / XForm 模板 / checklist / §6.5 / 最小示例 5 处）
+
 ### 🐛 Fix | gh-pages 演示站恢复 demo 路由可见（2026-10-21）
 
 > 背景：gh-pages 部署后发现 demo 路由整站消失（菜单与直达访问均 404）。根因：`src/modules/demo/routes/index.ts` 的 `import.meta.env.DEV` 编译期门控使 prod 构建时 demo 路由数组恒为 `[]`、examples 组件全链 tree-shake——该设计原本只面向「常规 prod 不进 demo」，与 gh-pages「全站演示」目标冲突。

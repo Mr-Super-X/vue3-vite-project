@@ -58,7 +58,8 @@ src/modules/demo/
 │   │   ├── configs/       # 纯数据 .ts（API 表格条目、字典、schema、代码片段）— 见 §三、1.1
 │   │   └── utils/         # 工具函数 .ts（如 mock 异步接口）— 见 §三、1.1
 ├── layouts/
-│   ├── DocLayout.vue      # 三栏文档布局
+│   ├── DocLayout.vue      # 三栏文档布局壳（sidebar / main / toc）
+│   ├── DemoDocs.vue       # 路由级布局：固定 DocLayout + RouterView + useDocToc 锚点
 │   ├── sidebar-state.ts    # 侧边栏状态模块（自动注册）
 │   └── use-sidebar-drag.ts # 侧边栏拖拽 composable（自动注册）
 ├── routes/
@@ -181,11 +182,10 @@ import XForm from '@/components/form-schema/components/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
-import DocLayout from '../layouts/DocLayout.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
-import DocToc from '../components/DocToc.vue'
 import ModelPreview from '../components/ModelPreview.vue'
+import { useDocToc } from '../composables/useDocToc'
 import { myFeatureItems } from './xform-demos-api'
 
 const { bem, formRef, onSave, onReset, copySchema } = useXFormDemo({
@@ -209,38 +209,35 @@ const tocItems = [
   { id: 'demo-my-feature', label: '能力演示' },
   { id: 'api-my-feature', label: 'API 说明' },
 ]
+
+// 注册右侧锚点（路由级布局 DemoDocs.vue 统一渲染 DocToc，页面不自包布局）
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="XFormMyFeature —— 能力一句话描述"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        '第一点：这个能力解决什么问题。',
-        '第二点：核心用法是什么。',
-        '第三点：有什么边界或注意事项。',
-      ]"
-    >
-      <section id="demo-my-feature" :class="bem.b()">
-        <DemoField label="基本用法" :code="`<XForm :schema="schema" :model="model" />`">
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onSave">提交</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-          </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="XFormMyFeature —— 能力一句话描述"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      '第一点：这个能力解决什么问题。',
+      '第二点：核心用法是什么。',
+      '第三点：有什么边界或注意事项。',
+    ]"
+  >
+    <section id="demo-my-feature" :class="bem.b()">
+      <DemoField label="基本用法" :code="`<XForm :schema="schema" :model="model" />`">
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onSave">提交</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
 
-      <ApiTable title="本能力相关 API" :items="myFeatureItems" anchor="api-my-feature" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="本能力相关 API" :items="myFeatureItems" anchor="api-my-feature" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">
@@ -257,11 +254,11 @@ const tocItems = [
 ### 4.1 必备元素 checklist
 
 - [ ] 顶部注释说明目的、场景、验证方法。
-- [ ] 使用 `DocLayout` 包裹整体。
+- [ ] **不要自包 `DocLayout`**（路由级布局 `DemoDocs.vue` 自动包裹所有 demo 页）。
 - [ ] 使用 `DemoFrame` 提供标题、source 路径、简介列表。
 - [ ] 使用 `DemoField` 包裹每一个可交互示例（每个示例配一段代码）。
 - [ ] 使用 `ApiTable` 列出本 demo 专属的 API/字段/配置。
-- [ ] 使用 `DocToc` 提供右侧锚点导航。
+- [ ] 用 `useDocToc(tocItems)` 注册右侧锚点（不写 `<template #toc>`）。
 - [ ] 复杂 demo 使用 `ModelPreview` 展示 model 状态。
 - [ ] BEM 命名空间与 `createNamespace('demo-x-form-xxx')` 对齐。
 
@@ -374,13 +371,14 @@ interface ApiItem {
 
 用于展示当前 model 的 JSON，帮助用户理解数据流。
 
-### 6.5 DocToc
+### 6.5 DocToc（useDocToc 注册）
 
-```vue
-<template #toc>
-  <DocToc :items="tocItems" />
-</template>
+```ts
+// script setup 中 tocItems 定义之后注册一次
+useDocToc(tocItems)
 ```
+
+右侧锚点由路由级布局（`DemoDocs.vue`）统一渲染，页面只负责注册数据（不自包 `DocLayout`、不写 `<template #toc>`）。
 
 `tocItems` 与页面内的 `id` 一一对应：
 
@@ -511,11 +509,10 @@ import XForm from '@/components/form-schema/components/XForm.vue'
 import type { SchemaNode } from '@/components/form-schema/types'
 import { useXFormDemo } from '../composables/useXFormDemo'
 import ApiTable from '../components/ApiTable.vue'
-import DocLayout from '../layouts/DocLayout.vue'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
-import DocToc from '../components/DocToc.vue'
 import ModelPreview from '../components/ModelPreview.vue'
+import { useDocToc } from '../composables/useDocToc'
 import { minimumItems } from './xform-demos-api'
 
 const { bem, formRef, onReset, onSave, copySchema } = useXFormDemo({
@@ -545,41 +542,38 @@ const tocItems = [
   { id: 'demo-hello', label: '最小示例' },
   { id: 'api-hello', label: '三要素' },
 ]
+
+// 注册右侧锚点（路由级布局 DemoDocs.vue 统一渲染 DocToc，页面不自包布局）
+useDocToc(tocItems)
 </script>
 
 <template>
-  <DocLayout>
-    <DemoFrame
-      title="XFormHello —— 最小可运行示例"
-      source="src/components/form-schema/XForm.vue"
-      :introductions="[
-        'XForm 最简用法：写 schema + 传 model + 渲染。',
-        'defaultValue 会在挂载时自动填充到 model。',
-        'rules 支持 async-validator 格式。',
-      ]"
-    >
-      <section id="demo-hello" :class="bem.b()">
-        <DemoField
-          label="最小示例"
-          :code="`<XForm ref=&quot;formRef&quot; :schema=&quot;schema&quot; :model=&quot;model&quot; />`"
-        >
-          <XForm ref="formRef" :schema="schema" :model="model" />
-          <div :class="bem.e('actions')">
-            <el-button @click="onReset">重置</el-button>
-            <el-button type="primary" @click="onSave">提交</el-button>
-            <el-button @click="copySchema">复制 schema</el-button>
-          </div>
-          <ModelPreview :model="model" />
-        </DemoField>
-      </section>
+  <DemoFrame
+    title="XFormHello —— 最小可运行示例"
+    source="src/components/form-schema/XForm.vue"
+    :introductions="[
+      'XForm 最简用法：写 schema + 传 model + 渲染。',
+      'defaultValue 会在挂载时自动填充到 model。',
+      'rules 支持 async-validator 格式。',
+    ]"
+  >
+    <section id="demo-hello" :class="bem.b()">
+      <DemoField
+        label="最小示例"
+        :code="`<XForm ref=&quot;formRef&quot; :schema=&quot;schema&quot; :model=&quot;model&quot; />`"
+      >
+        <XForm ref="formRef" :schema="schema" :model="model" />
+        <div :class="bem.e('actions')">
+          <el-button @click="onReset">重置</el-button>
+          <el-button type="primary" @click="onSave">提交</el-button>
+          <el-button @click="copySchema">复制 schema</el-button>
+        </div>
+        <ModelPreview :model="model" />
+      </DemoField>
+    </section>
 
-      <ApiTable title="最小示例三要素" :items="minimumItems" anchor="api-hello" />
-    </DemoFrame>
-
-    <template #toc>
-      <DocToc :items="tocItems" />
-    </template>
-  </DocLayout>
+    <ApiTable title="最小示例三要素" :items="minimumItems" anchor="api-hello" />
+  </DemoFrame>
 </template>
 
 <style lang="scss">
