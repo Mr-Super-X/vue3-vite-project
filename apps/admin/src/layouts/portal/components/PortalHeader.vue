@@ -13,8 +13,9 @@
  * @see [`@composables/useLogout`](../../../composables/useLogout.ts) 退出流程
  * @group 布局：Portal
  */
-import { useUserStore } from '@/store/modules/user'
-import { useLogout } from '@composables/useLogout'
+import { useUserStore } from '@store/modules/user'
+// useLogout 依赖 useConfirm→useDialog→ProDialog（admin 组件，P1-4 才迁包），暂留 app 私有
+import { useLogout } from '@/composables/useLogout'
 import { ArrowDown, SwitchButton } from '@element-plus/icons-vue'
 import { PORTAL_NAV } from '@/layouts/portal/config/nav'
 import PortalNav from './PortalNav.vue'

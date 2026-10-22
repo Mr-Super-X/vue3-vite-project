@@ -17,7 +17,7 @@
  * @see [`@/store/modules/app`](../../../store/modules/app.ts) sidebarWidth / secondaryWidth 持久化字段
  * @group 布局：Default
  */
-import { useAppStore } from '@/store/modules/app'
+import { useAppStore } from '@store/modules/app'
 import { clampMenuWidth } from './resize'
 
 /** 主栏（sidebar 模式）+ 二级侧栏（mixed/dual）的拖拽调宽状态与派生样式 */

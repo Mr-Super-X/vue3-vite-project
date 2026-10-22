@@ -19,8 +19,10 @@
  */
 
 // useConfirm 由 unplugin-auto-import 注入（详见 vite.config.ts 的 AutoImport 配置）
-import { useUserStore } from '@/store/modules/user'
-import { useAppRouter } from './useAppRouter'
+import { useUserStore } from '@store/modules/user'
+// useAppRouter 自 P1-3 起归 @vv/shared（@composables 别名指向包源码）；
+// 本文件与 useDialog/useConfirm 因依赖 admin 侧 ProDialog 暂留 admin（P1-4 随组件迁走）
+import { useAppRouter } from '@composables/useAppRouter'
 
 export function useLogout() {
   const userStore = useUserStore()

@@ -10,7 +10,7 @@
  */
 import { ArrowDown } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
-import { useAppStore } from '@/store/modules/app'
+import { useAppStore } from '@store/modules/app'
 
 const bem = createNamespace('locale-dropdown')
 

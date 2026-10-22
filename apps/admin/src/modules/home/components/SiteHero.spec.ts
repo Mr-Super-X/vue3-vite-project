@@ -2,7 +2,7 @@ import { mount } from '@vue/test-utils'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 
 const mockGoLogin = vi.fn()
-vi.mock('@/composables/useAppRouter', () => ({
+vi.mock('@composables/useAppRouter', () => ({
   useAppRouter: () => ({ goLogin: mockGoLogin }),
 }))
 

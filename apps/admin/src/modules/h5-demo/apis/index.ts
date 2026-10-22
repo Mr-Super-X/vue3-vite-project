@@ -6,7 +6,7 @@
 //
 // 自动应用 http.ts 基建：401 refresh、retry、cache、abort、pageAdapter 等。
 
-import { request } from '@/api/http'
+import { request } from '@api/http'
 
 /** 业务实体类型定义（按需扩展） */
 export interface H5DemoItem {

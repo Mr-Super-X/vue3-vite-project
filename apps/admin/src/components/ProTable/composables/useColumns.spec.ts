@@ -14,10 +14,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ref } from 'vue'
 import { useColumns } from './useColumns'
-import { Local } from '@/utils/storage'
+import { Local } from '@utils/storage'
 
 // mock Local（plan critical review #5：Local 不在 auto-import，显式 mock 模块）
-vi.mock('@/utils/storage', () => ({
+vi.mock('@utils/storage', () => ({
   Local: {
     get: vi.fn().mockReturnValue(null),
     set: vi.fn(),

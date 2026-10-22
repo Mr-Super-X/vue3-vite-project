@@ -1,4 +1,4 @@
-import type { LayoutMode } from '@/store/modules/app'
+import type { LayoutMode } from '@store/modules/app'
 
 /**
  * Default 布局配置类型。

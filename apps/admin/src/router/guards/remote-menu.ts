@@ -18,7 +18,7 @@
  */
 
 import type { RouteLocationNormalized, RouteLocationRaw, Router } from 'vue-router'
-import type { useUserStore } from '@/store/modules/user'
+import type { useUserStore } from '@store/modules/user'
 import type { useRouterStore } from '@/store/modules/router'
 import { showBadge } from '@utils/consoleBadge'
 import { ROUTER_CONFIG } from '../config'

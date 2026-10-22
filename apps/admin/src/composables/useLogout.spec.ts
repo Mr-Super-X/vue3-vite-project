@@ -11,11 +11,11 @@ vi.mock('@/composables/useConfirm', () => ({
   useConfirm: mockUseConfirm,
 }))
 
-vi.mock('@/store/modules/user', () => ({
+vi.mock('@store/modules/user', () => ({
   useUserStore: () => ({ logout: mockStoreLogout }),
 }))
 
-vi.mock('@/composables/useAppRouter', () => ({
+vi.mock('@composables/useAppRouter', () => ({
   useAppRouter: () => ({ goLogin: mockGoLogin }),
 }))
 

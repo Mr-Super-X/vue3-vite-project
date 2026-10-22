@@ -14,7 +14,7 @@
  */
 import { h } from 'vue' // vue 底层 API（CLAUDE.md §1.6.1）
 import { ElTag } from 'element-plus' // 第三方 UI 库组件（TS 代码中需显式 import）
-import { dayjs } from '@/utils/dayjs' // 项目日期工具（框架无关）
+import { dayjs } from '@utils/dayjs' // 项目日期工具（框架无关）
 import type { ColumnFormatterPreset, ProColumn } from '../types'
 
 /** 预设格式化函数签名 —— 对齐 ProColumn.formatter 函数形态（row/column/cellValue/index 四参） */

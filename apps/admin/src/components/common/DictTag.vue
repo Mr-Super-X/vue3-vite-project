@@ -24,7 +24,7 @@
  * @group 字典组件
  */
 import type { Ref } from 'vue'
-import type { DictItem } from '@/types/dict'
+import type { DictItem } from '@vv/shared'
 
 interface Props {
   /** 字典 code（对应后端 /api/dict/:code） */

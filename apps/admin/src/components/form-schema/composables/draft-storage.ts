@@ -7,7 +7,7 @@
  * @group 表单编排：草稿
  */
 import { cloneDeep, omit } from 'lodash-es'
-import { Local, Session } from '@/utils/storage'
+import { Local, Session } from '@utils/storage'
 
 /** 草稿存储介质 */
 export type DraftStorageKind = 'local' | 'session'

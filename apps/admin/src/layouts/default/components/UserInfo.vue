@@ -12,7 +12,7 @@
  */
 import { ArrowDown, SwitchButton } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
-import { useUserStore } from '@/store/modules/user'
+import { useUserStore } from '@store/modules/user'
 
 const bem = createNamespace('user-info')
 

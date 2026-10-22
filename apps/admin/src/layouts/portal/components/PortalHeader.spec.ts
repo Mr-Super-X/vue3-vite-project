@@ -2,9 +2,9 @@ import { mount } from '@vue/test-utils'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { nextTick, ref, reactive } from 'vue'
 
-// mock useAppRouter（auto-import 在 vitest 走同一 vite 管线，解析到 '@/composables/useAppRouter'）
+// mock useAppRouter（auto-import 在 vitest 走同一 vite 管线，解析到 '@composables/useAppRouter'）
 const mockGoLogin = vi.fn()
-vi.mock('@/composables/useAppRouter', () => ({
+vi.mock('@composables/useAppRouter', () => ({
   useAppRouter: () => ({ goLogin: mockGoLogin }),
 }))
 
@@ -15,7 +15,7 @@ const mockUserStore = reactive({
   permissions: [] as string[],
   isLoggedIn: true,
 })
-vi.mock('@/store/modules/user', () => ({
+vi.mock('@store/modules/user', () => ({
   useUserStore: () => mockUserStore,
 }))
 

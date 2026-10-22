@@ -22,8 +22,8 @@
 
 import type { RouteRecordRaw } from 'vue-router'
 import { z } from 'zod'
-import { menuApi } from '@/api/modules/menu'
-import { withRetry } from '@/api/retry'
+import { menuApi } from '@api/modules/menu'
+import { withRetry } from '@api/retry'
 import { COMPONENT_REGISTRY } from './auto-register'
 import type { RouteName, RemoteMenuItem } from './types'
 

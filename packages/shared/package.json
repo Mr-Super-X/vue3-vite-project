@@ -1,0 +1,32 @@
+{
+  "name": "@vv/shared",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./store": "./src/store/index.ts",
+    "./router-guards": "./src/router-guards/index.ts",
+    "./*": "./src/*"
+  },
+  "scripts": {
+    "type-check": "vue-tsc --build",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "vue": "catalog:",
+    "vue-router": "catalog:",
+    "pinia": "catalog:",
+    "axios": "catalog:",
+    "vue-i18n": "catalog:",
+    "element-plus": "catalog:"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.0",
+    "vitest": "^4.1.9",
+    "vue-tsc": "^3.3.11",
+    "jsdom": "^29.1.1",
+    "unplugin-auto-import": "^21.0.0",
+    "unplugin-vue-components": "^32.1.0"
+  }
+}

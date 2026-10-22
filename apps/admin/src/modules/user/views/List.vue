@@ -12,7 +12,7 @@
  * @see [`@/api/modules/user`](../../../api/modules/user.ts) getList 接口
  * @group 业务模块：User
  */
-import { userApi } from '@/api/modules/user'
+import { userApi } from '@api/modules/user'
 import AsyncState from '@/components/common/AsyncState.vue'
 
 const { data, loading, error, isEmpty, execute } = useRequest(() =>

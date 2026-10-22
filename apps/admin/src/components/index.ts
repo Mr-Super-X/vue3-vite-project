@@ -17,8 +17,8 @@
  */
 import type { App, Component } from 'vue'
 import { isExcluded, resolveComponentName } from './common/_internal/naming'
-import { autoImport } from '@/utils/autoImport'
-import { showBadge } from '@/utils/consoleBadge'
+import { autoImport } from '@utils/autoImport'
+import { showBadge } from '@utils/consoleBadge'
 
 /**
  * 在 Vite 构建时同步内联 common 下所有 .vue 模块

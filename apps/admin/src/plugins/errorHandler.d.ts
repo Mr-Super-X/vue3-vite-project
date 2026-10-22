@@ -3,32 +3,12 @@
 
 import type { WebVitalsOptions } from './webVitals'
 
-/**
- * 错误来源标识
- *
- * - 已知值（errorHandler 内部使用）：'vue' | 'window.error' | 'unhandledrejection'
- * - 业务自定义：任意字符串（如 'parse-config'、'third-party-sdk'）
- *
- * 设为 string 而非 union 是为了支持 safeAsync 等工具自由传入上下文标签。
- */
-export type ErrorSource = string
+// P1-3 包化：ErrorSource / ErrorContext / ErrorReporter 契约随 safeAsync 下沉到
+// @vv/shared（shared 不反向依赖 app 的 plugins）；此处 re-export 保持既有消费方
+// （errorHandler.ts / plugins/index.ts / safeAsync 注入链）零改动。
+export type { ErrorSource, ErrorContext, ErrorReporter } from '@utils/safeAsync'
 
-/**
- * 错误上下文（透传给 report 回调）
- */
-export interface ErrorContext {
-  source: ErrorSource
-  /** 附加信息（Vue 错误时是 lifecycle hook name 等） */
-  extra?: unknown
-}
-
-/**
- * 错误上报回调签名
- *
- * 生产环境对接 Sentry / 自建日志服务时实现此函数。
- * 默认 undefined（仅 console 输出）。
- */
-export type ErrorReporter = (error: Error, context: ErrorContext) => void
+import type { ErrorReporter } from '@utils/safeAsync'
 
 /**
  * errorHandler 插件 options

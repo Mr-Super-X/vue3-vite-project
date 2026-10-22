@@ -8,7 +8,7 @@
 import { h, type VNode } from 'vue'
 import { ElButton, ElIcon, ElUpload } from 'element-plus'
 import { Plus, UploadFilled } from '@element-plus/icons-vue'
-import { createNamespace } from '@/utils/bem'
+import { createNamespace } from '@utils/bem'
 import type { SchemaNode, SchemaSlot } from '../types'
 import { isElUpload, isPictureCardUpload, isDragUpload } from './resolve-component'
 import { buildAutocompleteFetcher } from './use-async-options'

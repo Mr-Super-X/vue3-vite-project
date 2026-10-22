@@ -25,7 +25,7 @@
 // gh-pages 是纯演示站，需要 demo 全量可见）。
 import type { RouteRecordRaw } from 'vue-router'
 import type { Component } from 'vue'
-import { pascalCase, kebabCase, autoImport } from '@/utils'
+import { pascalCase, kebabCase, autoImport } from '@utils'
 
 const isDemoRoutesEnabled = import.meta.env.DEV || import.meta.env.VITE_DEMO_NO_AUTH === 'true'
 

@@ -4,11 +4,11 @@
  * 定位：把「插件装配 + 路径别名 + css 预处理 + 构建分包」收敛为包内唯一实现，
  * 各 app 的 vite.config.ts 只声明 app 参数（appRoot/appName/mockPath/...）与私有插件。
  *
- * 迁移注记（P1-1 过渡态）：
- *   - packages/ui、packages/shared 尚未落地（P1-3/P1-4 迁入），组件目录 / 本地图标集合 /
- *     别名经 resolvePkgFirst 回落到 app 旧位置；包落地后 existsSync 自动切换，无需改这里
- *   - AutoImport 的 composables/utils 暂保留 '@/...' 形式注入（from 仍指 app 自身 src），
- *     P1-3 @vv/shared 落地后改包名注入（{ from: '@vv/shared', imports: [...] }）
+ * 迁移注记（P1-3 过渡态）：
+ *   - packages/ui 尚未落地（P1-4 迁入），组件目录 / 本地图标集合经 resolvePkgFirst
+ *     回落到 app 旧位置；包落地后 existsSync 自动切换，无需改这里
+ *   - AutoImport：已迁入 @vv/shared 的 composables/utils 走包名注入（from: '@vv/shared'）；
+ *     弹窗族（useDialog/useConfirm/useLogout）依赖 app 侧 ProDialog，P1-4 前保持 '@/...' 注入
  */
 import { existsSync } from 'node:fs'
 import path from 'node:path'
@@ -79,24 +79,26 @@ export function createViteConfig({
           'vue',
           'vue-router',
           'pinia',
-          // 业务侧高频 composables（详见 app src/composables/*）
+          // 业务侧高频 composables
           // 显式列名不走 dirs 自动扫描——避免误扫到同目录的 *.spec.ts（vitest 解析会异常）
+          // P1-3：已迁入 @vv/shared 的 composables 改包名注入（根 barrel 聚合导出）；
           // useAppRouter 是项目自研的路由高层 API（区别于 vue-router 自带的 useRouter）
-          // P1-1 过渡态：from 仍指 app 自身 src（'@/' 别名）；P1-3 迁入 @vv/shared 后改包名注入
-          { from: '@/composables/useAuth', imports: [{ name: 'useAuth' }] },
-          { from: '@/composables/useLogout', imports: [{ name: 'useLogout' }] },
-          { from: '@/composables/useRequest', imports: [{ name: 'useRequest' }] },
-          { from: '@/composables/useAppRouter', imports: [{ name: 'useAppRouter' }] },
+          { from: '@vv/shared', imports: [{ name: 'useAuth' }] },
+          { from: '@vv/shared', imports: [{ name: 'useRequest' }] },
+          { from: '@vv/shared', imports: [{ name: 'useAppRouter' }] },
           // useDict：字典组合式 API（契约形态按 code 解构）
-          { from: '@/composables/useDict', imports: [{ name: 'useDict' }] },
+          { from: '@vv/shared', imports: [{ name: 'useDict' }] },
+          // 弹窗族（useDialog/useConfirm/useLogout）依赖 admin 侧 ProDialog 组件，
+          // P1-4 组件迁包前留在 app 私有 composables，from 维持 app 路径
           // useDialog：命令式弹窗；同模块的 DialogCancelledError / setDialogAppContext /
           // getDialogAppContext 不注入：第一个是类型（不参与运行时），后两个只在
           // main.ts / useConfirm 内部调用（不应污染 setup 全局作用域）
           { from: '@/composables/useDialog', imports: [{ name: 'useDialog' }] },
           // useConfirm：二次确认；取消时 resolve(false) 而非 reject，调用方无须 try/catch
           { from: '@/composables/useConfirm', imports: [{ name: 'useConfirm' }] },
-          // 业务侧高频 utils（BEM 类名工具）
-          { from: '@/utils/bem', imports: [{ name: 'createNamespace' }] },
+          { from: '@/composables/useLogout', imports: [{ name: 'useLogout' }] },
+          // 业务侧高频 utils（BEM 类名工具，P1-3 起归 @vv/shared）
+          { from: '@vv/shared', imports: [{ name: 'createNamespace' }] },
         ],
         resolvers: [
           // importStyle: 'css' —— 组件/API（ElMessage 等）样式按需自动注入，

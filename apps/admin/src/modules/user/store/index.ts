@@ -7,7 +7,7 @@
  * @see [`@/api/modules/user`](../../../api/modules/user.ts) 用户接口
  * @group 业务模块：User
  */
-import type { UserItem } from '@/api/modules/user'
+import type { UserItem } from '@api/modules/user'
 
 export const useUserListStore = defineStore('module-user-list', () => {
   const keyword = ref('')

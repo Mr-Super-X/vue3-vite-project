@@ -18,7 +18,7 @@ import {
   type ComponentPublicInstance,
   type Ref,
 } from 'vue'
-import { createNamespace } from '@/utils/bem'
+import { createNamespace } from '@utils/bem'
 
 // 与 XForm.vue / build-slots.ts 同一 block 命名空间
 const bem = createNamespace('x-form')

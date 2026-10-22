@@ -17,7 +17,8 @@
  * @group 应用根
  */
 import { useI18n } from 'vue-i18n'
-import { useRouterStore } from '@store/modules/router'
+// router store 是 admin 私有（P1-3：@store 别名指向 @vv/shared，仅含 4 个共享 store）
+import { useRouterStore } from '@/store/modules/router'
 import { useAppStore } from '@store/modules/app'
 import ErrorBoundary from '@/components/common/ErrorBoundary.vue'
 import AsyncState from '@/components/common/AsyncState.vue'

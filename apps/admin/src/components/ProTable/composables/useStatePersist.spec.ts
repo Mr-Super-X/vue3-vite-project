@@ -14,7 +14,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { ref, effectScope, nextTick } from 'vue'
-import { Local } from '@/utils/storage'
+import { Local } from '@utils/storage'
 import { useStatePersist, type PersistedTableState } from './useStatePersist'
 import type { FilterValuesMap } from '../types'
 

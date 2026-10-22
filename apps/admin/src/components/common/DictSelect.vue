@@ -32,7 +32,7 @@
 // 模板 <el-select> / <el-option> 标签走全局注册（运行时正常 + 样式按需注入）。
 import type { Ref } from 'vue'
 import type { ElOption, ElSelect } from 'element-plus'
-import type { DictItem } from '@/types/dict'
+import type { DictItem } from '@vv/shared'
 
 /**
  * 本地版 ComponentProps 提取（与 form-schema/types/schema-node.ts:50 同款）。

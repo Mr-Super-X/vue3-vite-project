@@ -21,7 +21,7 @@
  * @see [`@/store/modules/app`](../../store/modules/app.ts) layout / sidebarCollapsed / mobile
  * @group 布局
  */
-import { useAppStore } from '@/store/modules/app'
+import { useAppStore } from '@store/modules/app'
 import { useI18n } from 'vue-i18n'
 import { useMenuResizing } from './config/useMenuResizing'
 import { useMenuTree } from './config/useMenuTree'

@@ -25,12 +25,14 @@
 import App from './App.vue'
 import router from './router'
 import pinia from './store'
-import i18n from './locales'
+// i18n 实例自 P1-3 起归 @vv/shared（@locales 别名指向包源码）
+import i18n from '@locales'
 import Directives from '@directives'
 import GlobalComponents from '@components'
 import Plugins from '@plugins'
-import { setDialogAppContext } from '@composables/useDialog'
-import { assertNoMockInProd } from '@/api/mock-guard'
+// useDialog 依赖 admin 侧 ProDialog 组件，P1-4 前留在 app 私有 composables
+import { setDialogAppContext } from '@/composables/useDialog'
+import { assertNoMockInProd } from '@api/mock-guard'
 
 // 浏览器基线统一（必须在所有自定义样式之前）。
 // 详见 https://necolas.github.io/normalize.css/

@@ -2,7 +2,9 @@
  * 路由守卫 —— 编排入口。
  *
  * 把 5 段检查（白名单 → 可见性 → 登录态 → 远程菜单 → 权限）串成一个流水线。
- * 每个段都是独立可测的纯函数（见同目录其他文件）。
+ * 纯函数守卫段（可见性/登录态/权限）+ 编排器自 P1-3 起归 @vv/shared
+ * （packages/shared/src/router-guards）；本文件保留 admin 编排职责：
+ * 注入 admin 私有白名单数据、远程菜单加载器与各 store 实例。
  *
  * 顺序说明（顺序敏感）：白名单必须最前，否则登录页本身会被拦截；
  * 可见性必须在登录前否则未登录用户访问 hidden 路由会看到 `/login` 重定向，体验糟糕。
@@ -11,22 +13,35 @@
  * - 远程菜单加载失败 → console.warn + 保持 local（`fetchRemoteRoutes` 内部已捕获）
  * - 动态 import 失败 → `src/router/index.ts` 的 `error-boundary.ts` 处理
  *
- * @see [`./composable.ts`](./composable.ts) `composeGuards` 链式编排
- * @see [`../whitelist.ts`](../whitelist.ts) 白名单判定
+ * @see [`@vv/shared/router-guards`](../../../../packages/shared/src/router-guards/index.ts) 守卫骨架
+ * @see [`../whitelist.ts`](../whitelist.ts) 白名单数据与判定接线
  * @group 路由：守卫编排
  */
 
 import type { Router } from 'vue-router'
-import { useUserStore } from '@/store/modules/user'
+import {
+  checkVisibility,
+  checkLoginState,
+  checkPermission,
+  composeGuards,
+} from '@vv/shared/router-guards'
+import { registerLocalStateResetHook, useUserStore } from '@store/modules/user'
 import { useRouterStore } from '@/store/modules/router'
-import { isWhiteListed } from '../whitelist'
-import { checkVisibility } from './visibility'
-import { checkLoginState } from './login'
+import { isAdminWhiteListed } from '../whitelist'
 import { ensureRemoteMenuLoaded, resetAuthGuardState } from './remote-menu'
-import { checkPermission } from './permission'
-import { composeGuards } from './composable'
 
 export { resetAuthGuardState }
+
+// user store 复位接线（P1-3 DI）：shared 的 user store 不反向依赖 app，
+// 登出/凭证失效时的守卫状态 + 路由 UI store 复位经钩子挂接。
+// 模块级注册：本文件由 router/index.ts 在启动期 import，先于任何 logout 发生
+registerLocalStateResetHook(() => {
+  resetAuthGuardState()
+  const routerStore = useRouterStore()
+  if (typeof routerStore.$reset === 'function') {
+    routerStore.$reset()
+  }
+})
 
 /**
  * 注册路由守卫到 vue-router。
@@ -37,7 +52,7 @@ export { resetAuthGuardState }
 export function setupAuthGuard(router: Router): void {
   router.beforeEach(async (to) => {
     // 1. 白名单：跳过所有检查（按路由 name 匹配）
-    if (isWhiteListed(to.name)) return true
+    if (isAdminWhiteListed(to.name)) return true
 
     const userStore = useUserStore()
     const routerStore = useRouterStore()

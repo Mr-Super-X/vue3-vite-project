@@ -100,26 +100,10 @@ export type AppRouteMeta = RouteMeta
 export type RouteName = string
 
 /**
- * 后端返回的菜单项 JSON 格式（与后端约定）。
- *
- * 设计要点：
- *  - name 是业务路由名（前端通过 auto-register.ts 派生的 COMPONENT_REGISTRY 校验）
- *  - 不返回 component 路径（避免泄露前端源码结构）
- *  - children 嵌套支持多级菜单
- *  - hidden: true → 前端转换为 meta.visible: false（守卫拦截）
+ * RemoteMenuItem 契约已随 P1-3 下沉到 @vv/shared（api/modules/menu.ts，
+ * 与菜单请求出口同址）。此处 re-export 保持 remote.ts / mock 等既有消费方零改动。
  *
  * zod schema 已在 src/router/remote.ts:34 实现（RemoteMenuItemSchema），
- * 本类型作为 TS 静态契约；运行时校验由 remote.ts 守卫加载时执行。
+ * 运行时校验由 remote.ts 守卫加载时执行。
  */
-export interface RemoteMenuItem {
-  name: string
-  path: string
-  meta?: AppRouteMeta & {
-    /**
-     * 后端标记菜单是否隐藏。后端用 `hidden: true`（行业惯例），
-     * 前端转换为 `meta.visible: false`（统一内部约定）。
-     */
-    hidden?: boolean
-  }
-  children?: RemoteMenuItem[]
-}
+export type { RemoteMenuItem } from '@api/modules/menu'

@@ -9,10 +9,10 @@
  * - storage 介质切换：local vs session
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { Local, Session } from '@/utils/storage'
+import { Local, Session } from '@utils/storage'
 import { readDraft, removeDraft, writeDraft } from './draft-storage'
 
-vi.mock('@/utils/storage', () => ({
+vi.mock('@utils/storage', () => ({
   Local: {
     storage: new Map<string, string>(),
     get: vi.fn((key: string) => {

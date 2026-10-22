@@ -47,11 +47,25 @@ describe('createAppAliases', () => {
     expect(MOCK_ROOT_DIR).toBe(path.join(REPO_ROOT, 'packages/mock/src'))
   })
 
-  it('过渡态回落：packages/shared、packages/ui 不存在时指向 legacyRoot 对应子目录', () => {
-    // 真实 fs：packages/shared、packages/ui 在 P1-3/P1-4 前不存在
+  it('P1-3 后：packages/shared 已落地 → 8 个别名恒指包源码（真实 fs existsSync 命中）', () => {
     const aliases = createAppAliases(APP_ROOT, APP_ROOT)
-    expect(aliases['@api']).toBe(path.join(APP_ROOT, 'src/api'))
-    expect(aliases['@utils']).toBe(path.join(APP_ROOT, 'src/utils'))
+    for (const name of [
+      '@api',
+      '@composables',
+      '@directives',
+      '@enums',
+      '@locales',
+      '@store',
+      '@types',
+      '@utils',
+    ]) {
+      const sub = name.slice(1) // '@api' → 'api'
+      expect(aliases[name]).toBe(path.join(SHARED_SRC_DIR, sub))
+    }
+  })
+
+  it('过渡态回落：packages/ui 不存在时（P1-4 前）@components/@assets 指向 legacyRoot', () => {
+    const aliases = createAppAliases(APP_ROOT, APP_ROOT)
     expect(aliases['@components']).toBe(path.join(APP_ROOT, 'src/components'))
     expect(aliases['@assets']).toBe(path.join(APP_ROOT, 'src/assets'))
   })

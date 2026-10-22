@@ -26,7 +26,7 @@
  * @group ProTable composables
  */
 import { watch, onScopeDispose, type Ref } from 'vue' // vue（生命周期/底层 API）
-import { Local } from '@/utils/storage' // 与 useColumns 同款封装（plan critical review #5）
+import { Local } from '@utils/storage' // 与 useColumns 同款封装（plan critical review #5）
 import type { SortState, FilterValuesMap } from '../types'
 
 /**

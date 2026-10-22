@@ -1,5 +1,5 @@
 import { ref, watch } from 'vue'
-import { Local } from '@/utils/storage'
+import { Local } from '@utils/storage'
 
 /**
  * DocLayout sidebar 的模块级状态：

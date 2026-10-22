@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router'
 import type { RouteRecordRaw, RouterScrollBehavior } from 'vue-router'
+import { registerAppRouter } from '@vv/shared'
 import { autoRegisteredRoutes } from './auto-register'
 import { fallbackRoute } from './fallback'
 import { setupAuthGuard } from './guards/auth'
@@ -54,6 +55,10 @@ export const router = createRouter({
   routes: [rootRedirect, ...autoRegisteredRoutes, fallbackRoute],
   scrollBehavior,
 })
+
+// 把实例注入 @vv/shared（useAppRouter / http 401 登出跳转经 DI 读取）；
+// 必须先于 setupAuthGuard——守卫链内 checkLoginState / 远程菜单加载会触发请求与跳转
+registerAppRouter(router)
 
 setupAuthGuard(router)
 

@@ -13,11 +13,11 @@ vi.mock('vue-router', () => ({
 
 const mockLogin = vi.fn()
 const mockUserStore = { login: mockLogin }
-vi.mock('@/store/modules/user', () => ({
+vi.mock('@store/modules/user', () => ({
   useUserStore: () => mockUserStore,
 }))
 
-vi.mock('@/composables/useAppRouter', () => ({
+vi.mock('@composables/useAppRouter', () => ({
   useAppRouter: () => ({ router: { push: mockPush } }),
 }))
 

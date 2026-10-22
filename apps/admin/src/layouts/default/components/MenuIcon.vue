@@ -11,7 +11,7 @@
  * @group 布局：Default
  */
 import * as ElIcons from '@element-plus/icons-vue'
-import { pascalCase } from '@/utils'
+import { pascalCase } from '@utils'
 
 const props = defineProps<{
   /** Element Plus 图标名（如 'odometer'）；空/未命中不渲染 */

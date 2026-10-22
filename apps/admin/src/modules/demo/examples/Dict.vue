@@ -17,7 +17,7 @@ import DictSelectSource from '@/components/common/DictSelect.vue?raw'
 import DictTagSource from '@/components/common/DictTag.vue?raw'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
-import type { DictItem, DictTagType } from '@/types/dict'
+import type { DictItem, DictTagType } from '@vv/shared'
 
 const bem = createNamespace('demo-dict')
 

@@ -22,6 +22,7 @@
  */
 
 import { routeNames as demoRouteNames } from '@/modules/demo/routes'
+import { isWhiteListed } from '@vv/shared/router-guards'
 
 /**
  * demo 路由名吸收集合：dev 本地开发 或 gh-pages 演示构建（VITE_DEMO_NO_AUTH=true）
@@ -58,13 +59,15 @@ export const ROUTE_WHITE_LIST: ReadonlySet<string> = new Set<string>([
 ])
 
 /**
- * 判断路由是否在白名单内（跳过登录 + 权限检查）。
+ * 判定路由是否在 admin 白名单内（跳过登录 + 权限检查）。
+ *
+ * 判定谓词 `isWhiteListed` 归 @vv/shared（P1-3 守卫骨架下沉）；
+ * 数据 ROUTE_WHITE_LIST 归 admin 私有，两者在此接线。
  *
  * @param routeName 路由 name（Vue Router 中可能是 string | symbol | null | undefined；
  *                   symbol 用于命名空间，本系统未使用，统一按 string 处理）
  * @returns true 表示在白名单内，可直接放行
  */
-export function isWhiteListed(routeName: unknown): boolean {
-  if (typeof routeName !== 'string') return false
-  return ROUTE_WHITE_LIST.has(routeName)
+export function isAdminWhiteListed(routeName: unknown): boolean {
+  return isWhiteListed(routeName, ROUTE_WHITE_LIST)
 }

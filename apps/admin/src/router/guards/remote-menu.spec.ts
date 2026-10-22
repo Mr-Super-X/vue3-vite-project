@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { RouteLocationNormalized, Router } from 'vue-router'
-import type { useUserStore } from '@/store/modules/user'
+import type { useUserStore } from '@store/modules/user'
 import type { useRouterStore } from '@/store/modules/router'
 
 const { mockFetchRemoteRoutes, mockRouterConfig } = vi.hoisted(() => ({

@@ -28,7 +28,7 @@
 import type { MenuNode } from '../config/types'
 import { isUrl, resolveSingleChild } from '../config/menu'
 import { defaultLayoutConfig } from '../config/app'
-import { useAppStore } from '@/store/modules/app'
+import { useAppStore } from '@store/modules/app'
 import MenuIcon from './MenuIcon.vue'
 import OverflowText from './OverflowText.vue'
 

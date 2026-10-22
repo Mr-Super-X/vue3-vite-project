@@ -7,7 +7,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { effectScope, nextTick, reactive, type EffectScope } from 'vue'
 import { useFormPersist } from './use-form-persist'
-import { Local, Session } from '@/utils/storage'
+import { Local, Session } from '@utils/storage'
 
 const KEY = 'form-persist.spec.draft'
 

@@ -12,7 +12,7 @@
  * @group ProTable composables
  */
 import { ref, computed, type Ref } from 'vue'
-import { Local } from '@/utils/storage' // plan critical review #5：Local 不在 auto-import 列表
+import { Local } from '@utils/storage' // plan critical review #5：Local 不在 auto-import 列表
 import { isValidPersistedSetting } from './_utils/validatePersisted' // v3.1.4 review：持久化形状 fail-safe 守卫
 import type { ProColumn, ProTableProps } from '../types'
 
