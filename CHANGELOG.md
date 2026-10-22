@@ -4,6 +4,17 @@
 
 ## 未发布
 
+### ✨ Features | Monorepo P5-A：工程脚本多包重写 + ESLint 包边界规则（2026-10-22）
+
+> 背景：6 应用（auth/portal/admin/h5/big/docs）独立后，`scripts/` 工程脚本仍锚定旧单应用路径（check-routes 只扫 admin、new/remove-module 无 app 概念、check-doc-currency 第 8 项已知 FAIL），ESLint 也无 Monorepo 包边界约束。本任务把工具链治理对齐多包结构。
+
+- **check-routes 多包化**（`scripts/check-routes.ts`）：自动发现 `apps/*` 下含 `src/modules/` 的应用，逐 app 独立校验 A/B/C/D 四规则并分组输出；whitelist 支持 `...xxxRouteNames` 展开的 import 表解析（与运行时吸收行为一致）；`src/router/index.ts` 根级具名路由（各 app 的 NotFound 兜底页）纳入实现集；系统兜底名单按 app 差异化——auth 查 Login、admin 查 Forbidden/NotFound/ServerError、portal/h5/big/docs 只查 NotFound
+- **new-module / remove-module 增加 `--app`**：目标路径参数化为 `apps/<app>/src/modules`（默认 admin），非法 app 拒绝并列出合法清单；模板注释与下一步指引中的 `src/modules` 路径同步改 `apps/<app>/src/modules`；`--with-i18n` 对无应用私有 locales 目录的目标跳过并告警（menu 文案已随 P1-3 迁 `packages/shared/src/locales`）
+- **check-doc-currency 13/13 全 PASS**：第 8 项「build/ 顶层模块数」锚定迁包后实际位置 `packages/config/src/`（9 模块：app-aliases / clean-mock-bundled / create-vite-config / index / postcss / proxy / scss / server / vendor-chunks），expected 7 → 9 消除迁移期已知 FAIL；其余 12 项路径逐一确认在新结构可达
+- **ESLint 包边界规则**（`eslint.config.mjs`，error 级）：`packages/**` 禁引用 app 私有别名（`@modules/*`/`@layouts/*`/`@router/*`/`@plugins/*`）+ 禁任何 `apps/**` 路径；逐 app 生成 `app/boundary-apps-<a>` 规则组，禁相对逃逸（`../<other-app>/` 深度 1-7 全覆盖，自身 app 名不参与 ban 防误伤）与绝对路径引用其他 5 个 app；顺带修复 business-wrap-rule 的 files glob（旧 `src/**` 在 Monorepo 下匹配不到任何文件，规则名存实亡，改为 `apps/*/src/{modules,components}/**`）
+- **探针验证**：`packages/shared` 引入 `apps/admin/...`、`apps/portal` 相对逃逸 `../../admin/...` 均被 error 拦截（消息指向 workspace 包出口），验后探针还原
+- **门禁**：`pnpm check:routes` 6 应用分组全过；`pnpm check:doc-currency` 13/13 PASS；`pnpm lint` 0 error；`pnpm test` 9 任务全绿（ui 1921 / shared 344 / admin 77 等）
+
 ### ✨ Features | Monorepo P4：auth 应用独立 + 跨应用统一登录协议（2026-10-22）
 
 > 背景：Monorepo 迁移收官——admin 内的 auth 模块独立为第 6 应用 `apps/auth`（`@vv-app/auth`，portOffset 5 → dev 5179），admin 收敛为纯业务端（user/reports/workbench/error + default layout + tags-view + 远程菜单）。登录/登出统一收口 auth 应用，跨 app 跳转走整页 `location.href`（跨应用无共享 router 实例）。

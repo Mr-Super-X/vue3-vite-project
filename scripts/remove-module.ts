@@ -2,8 +2,8 @@
 // 模块拆卸
 //
 // 用途：与 scripts/new-module.ts 对偶的移除命令。
-//   1. 验证 kebab-case 命名
-//   2. 检查 src/modules/<name>/ 存在（不存在则报错）
+//   1. 验证 kebab-case 命名 + --app 目标应用（默认 admin）
+//   2. 检查 apps/<app>/src/modules/<name>/ 存在（不存在则报错）
 //   3. 收集"将删清单"：模块目录 + mock/<name>.ts + locales menu.<name> 死键
 //   4. dry-run：打印清单 + 计数；非 --force 时 stdin 询问 y/N
 //   5. 执行：rmSync 删目录与 mock + 改写 locales 文件移除 key
@@ -14,31 +14,74 @@
 //   - types.ts RouteName：项目已改为 string alias，无联合类型需同步
 //   - component-registry.ts：已被 auto-register 派生映射替代
 //
+// P5-A 变更：目标路径从 apps/admin/src/modules 参数化为 apps/<app>/src/modules（--app 指定）。
+//
 // 用法：
-//   pnpm remove-module <kebab-case-name>           # 交互式确认
-//   pnpm remove-module <kebab-case-name> --force   # 跳过 y/N（适合 CI）
-//   pnpm remove-module <kebab-case-name> --force   # 管道/CI 环境必须传 --force
+//   pnpm remove-module <kebab-case-name> [--app <app-name>]           # 交互式确认
+//   pnpm remove-module <kebab-case-name> --app portal --force         # 跳过 y/N（适合 CI）
+//   pnpm remove-module <kebab-case-name> --force                      # 管道/CI 环境必须传 --force
 
-import { existsSync, readFileSync, writeFileSync, rmSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync, rmSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
 const ROOT = resolve(import.meta.dirname, '..')
-const MODULES_DIR = resolve(ROOT, 'apps/admin/src/modules')
+const APPS_DIR = resolve(ROOT, 'apps')
 const MOCK_DIR = resolve(ROOT, 'mock')
-const LOCALES_DIR = resolve(ROOT, 'apps/admin/src/locales')
 
 /**
- * 解析 argv。支持 `--force` flag 跳过交互确认。
+ * 列出 apps/ 下所有含 src/modules/ 的合法目标应用（与 check-routes 同口径）。
+ * 用于 --app 校验的错误提示。
+ */
+function listValidApps(): string[] {
+  return readdirSync(APPS_DIR, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && existsSync(join(APPS_DIR, entry.name, 'src/modules')))
+    .map((entry) => entry.name)
+    .sort()
+}
+
+/**
+ * 校验 --app 目标应用存在且含 src/modules/。错误时打印合法应用列表并 process.exit(1)。
+ */
+function resolveAppModulesDir(app: string): string {
+  const appModulesDir = join(APPS_DIR, app, 'src/modules')
+  if (!existsSync(appModulesDir)) {
+    console.error(`✖ 目标应用 "${app}" 不存在或缺少 src/modules/：${appModulesDir}`)
+    console.error(`  合法应用：${listValidApps().join(' / ')}`)
+    process.exit(1)
+  }
+  return appModulesDir
+}
+
+/**
+ * 解析 argv。支持 `--app <app-name>`（默认 admin）与 `--force` flag 跳过交互确认。
  * 错误时 process.exit(1)。
  */
-function parseNameArg(argv: string[]): { name: string; force: boolean } {
-  const flags = new Set(argv.slice(2).filter((a) => a.startsWith('--')))
-  const positional = argv.slice(2).filter((a) => !a.startsWith('--'))
+function parseArgs(argv: string[]): { name: string; app: string; force: boolean } {
+  const args = argv.slice(2)
+  const rest: string[] = []
+  let app = 'admin'
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]!
+    if (arg === '--app') {
+      const value = args[++i]
+      if (!value || value.startsWith('--')) {
+        console.error('✖ --app 需要一个应用名（如 --app admin）')
+        process.exit(1)
+      }
+      app = value
+    } else if (arg.startsWith('--app=')) {
+      app = arg.slice('--app='.length)
+    } else {
+      rest.push(arg)
+    }
+  }
+  const flags = new Set(rest.filter((a) => a.startsWith('--')))
+  const positional = rest.filter((a) => !a.startsWith('--'))
   const name = positional[0]
   if (!name) {
-    console.error('✖ 用法: pnpm remove-module <kebab-case-name> [--force]')
+    console.error('✖ 用法: pnpm remove-module <kebab-case-name> [--app <app-name>] [--force]')
     console.error('  示例: pnpm remove-module orders')
-    console.error('         pnpm remove-module orders --force   # CI 脚本')
+    console.error('         pnpm remove-module orders --app admin --force   # CI 脚本')
     process.exit(1)
   }
   if (!/^[a-z][a-z0-9-]*$/.test(name)) {
@@ -46,7 +89,7 @@ function parseNameArg(argv: string[]): { name: string; force: boolean } {
     console.error(`  当前: "${name}"`)
     process.exit(1)
   }
-  return { name, force: flags.has('--force') }
+  return { name, app, force: flags.has('--force') }
 }
 
 /** 检查 stdin 是否是 TTY（管道 / CI 环境为 false）。 */
@@ -107,18 +150,18 @@ async function askConfirm(): Promise<boolean> {
 }
 
 /** 收集"将删清单"：模块目录 + mock 文件（可选）+ i18n 死键（可选）。 */
-function collectTargets(name: string): string[] {
+function collectTargets(name: string, app: string, localesDir: string): string[] {
   const targets: string[] = []
-  targets.push(`src/modules/${name}/`)
+  targets.push(`apps/${app}/src/modules/${name}/`)
   const mockPath = join(MOCK_DIR, `${name}.ts`)
   if (existsSync(mockPath)) targets.push(`mock/${name}.ts`)
   for (const locale of ['zh-CN', 'en-US'] as const) {
-    const localePath = join(LOCALES_DIR, `${locale}.ts`)
+    const localePath = join(localesDir, `${locale}.ts`)
     if (!existsSync(localePath)) continue
     const content = readFileSync(localePath, 'utf-8')
     // 检测 key 在 `^` 行首 / `{` 后 / `,` 后三种位置，覆盖单行与多行 menu 段
     if (new RegExp(`(?:^\\s*|[,{]\\s*)(?:'${name}'|${name}):\\s*'`, 'm').test(content)) {
-      targets.push(`locales/${locale}.ts 的 menu.${name} 键`)
+      targets.push(`apps/${app}/src/locales/${locale}.ts 的 menu.${name} 键`)
     }
   }
   return targets
@@ -126,7 +169,9 @@ function collectTargets(name: string): string[] {
 
 // ─── 入口 ─────────────────────────────────────────────────────────
 
-const { name, force } = parseNameArg(process.argv)
+const { name, app, force } = parseArgs(process.argv)
+const MODULES_DIR = resolveAppModulesDir(app)
+const LOCALES_DIR = join(APPS_DIR, app, 'src/locales')
 const moduleDir = join(MODULES_DIR, name)
 
 if (!existsSync(moduleDir)) {
@@ -134,9 +179,9 @@ if (!existsSync(moduleDir)) {
   process.exit(1)
 }
 
-const targets = collectTargets(name)
+const targets = collectTargets(name, app, LOCALES_DIR)
 
-console.log(`📦 将删除模块：${name}`)
+console.log(`📦 将删除模块：${name}（app: ${app}）`)
 console.log('')
 console.log('将影响以下文件 / 键：')
 for (const item of targets) console.log(`  · ${item}`)
@@ -153,7 +198,7 @@ if (!force) {
 
 // 执行删除。locales 读写失败会自然抛出，避免半完成状态。
 rmSync(moduleDir, { recursive: true, force: true })
-console.log(`  ✓ 删除 src/modules/${name}/`)
+console.log(`  ✓ 删除 apps/${app}/src/modules/${name}/`)
 
 const mockPath = join(MOCK_DIR, `${name}.ts`)
 if (existsSync(mockPath)) {
@@ -164,7 +209,7 @@ if (existsSync(mockPath)) {
 for (const locale of ['zh-CN', 'en-US'] as const) {
   const localePath = join(LOCALES_DIR, `${locale}.ts`)
   if (removeI18nKey(localePath, name)) {
-    console.log(`  ✓ 从 locales/${locale}.ts 移除 menu.${name}`)
+    console.log(`  ✓ 从 apps/${app}/src/locales/${locale}.ts 移除 menu.${name}`)
   }
 }
 

@@ -10,6 +10,21 @@ import skipFormatting from '@vue/eslint-config-prettier/skip-formatting'
 // configureVueProject 改全局状态，而 demo 的 JSX 插槽示例需要 <script setup lang="tsx">。
 // 规则等级保持 vueTsConfigs.recommended（与迁移前的 vueTsEslintConfig() 默认值一致）——
 // 升级到 recommendedTypeChecked 会给全项目引入类型感知规则并显著拖慢 lint，属独立议题。
+// ─── Monorepo 包边界常量（P5-A）────────────────────────────
+// 独立应用清单（apps/ 下含 src/modules 的 6 个应用）与相对逃逸深度表。
+// 深度 1-7 层：从 apps/<a>/src/** 任何深度向上越过 src → <a> → apps 三级区间
+// 即可能进入兄弟 app（如 src/main.ts 的 '../portal/...' 直达 apps/portal）。
+const MONOREPO_APPS = ['admin', 'auth', 'portal', 'h5', 'big', 'docs']
+const SIBLING_APP_ESCAPE_DEPTHS = [
+  '../',
+  '../../',
+  '../../../',
+  '../../../../',
+  '../../../../../',
+  '../../../../../../',
+  '../../../../../../../',
+]
+
 export default withVueTs(
   // scriptLangs 默认 ['ts']，显式加 'tsx' 才允许 .vue 内写 JSX。
   // 代价：lang="tsx" 的 .vue 会落入 typescript-eslint 的 disableTypeChecked 名单——
@@ -42,9 +57,11 @@ export default withVueTs(
   // - 拦截 useRouter：业务代码必须用 @composables/useAppRouter
   // - 拦截 axios：业务代码必须用 @composables/useRequest 或 @api/_http
   // - 白名单：composables/router/plugins/main.ts 默认不受限
+  // P5-A 修订：files 从旧单应用 src/modules|src/components 改为 apps/*/src/...，
+  // 否则 Monorepo 结构下 glob 匹配不到任何文件，规则名存实亡
   {
     name: 'app/business-wrap-rule',
-    files: ['src/modules/**/*.{ts,vue}', 'src/components/**/*.{ts,vue}'],
+    files: ['apps/*/src/modules/**/*.{ts,vue}', 'apps/*/src/components/**/*.{ts,vue}'],
     rules: {
       'no-restricted-imports': [
         'warn',
@@ -66,6 +83,66 @@ export default withVueTs(
       ],
     },
   },
+  // ─── Monorepo 包边界规则（P5-A）────────────────────────────
+  //
+  // 边界铁律（CLAUDE.md §1.2 的 ESLint 兜底）：
+  //   - packages/** 不得依赖任何 app（禁 app 私有别名 @modules/@layouts/@router/@plugins + 禁 apps/** 路径）
+  //   - apps/<a>/** 不得引用其他 app（禁相对逃逸 ../<other-app>/ 与绝对路径 apps/<other-app>/）
+  //
+  // 跨 app 共享能力一律经 workspace 包（@vv/shared / @vv/ui / @vv/mock / @vv/config）出口引用。
+  // 规则为 error 级：CI 阶段 pnpm lint 直接阻断越界引用。
+  {
+    name: 'app/boundary-packages',
+    files: ['packages/**/*.{ts,mts,tsx,vue}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@modules/*', '@layouts/*', '@router/*', '@plugins/*'],
+              message:
+                'packages/** 禁止引用 app 私有别名（@modules/@layouts/@router/@plugins 指向具体 app 的 src）；跨包能力请经 @vv/shared / @vv/ui 包出口引用',
+            },
+            {
+              group: ['apps/*', 'apps/**/*', '**/apps/**'],
+              message:
+                'packages/** 禁止引用 apps/**（包不得依赖应用）；跨 app 共享能力请下沉到 packages/*',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // 逐 app 生成边界规则：apps/<a>/src/** 禁引用其他 5 个 app。
+  //
+  // 相对逃逸覆盖深度 1-7 层：自身 app 名不参与 ban（避免 apps/auth 的
+  // src/modules/auth 等同级目录被误伤）；其余 5 个 app 名在任意 ../ 深度前缀下
+  // 出现即判定为跨 app 相对引用。
+  ...MONOREPO_APPS.flatMap((app) => {
+    const siblingPatterns = MONOREPO_APPS.filter((other) => other !== app).flatMap(
+      (other) => SIBLING_APP_ESCAPE_DEPTHS.map((depth) => `${depth}${other}/**`)
+    )
+    return [
+      {
+        name: `app/boundary-apps-${app}`,
+        files: [`apps/${app}/src/**/*.{ts,mts,tsx,vue}`],
+        rules: {
+          'no-restricted-imports': [
+            'error',
+            {
+              patterns: [
+                {
+                  group: ['apps/*', 'apps/**/*', '**/apps/**', ...siblingPatterns],
+                  message: `apps/${app} 禁止引用其他应用（跨 app 共享能力请经 @vv/shared / @vv/ui / @vv/mock workspace 包出口引用，而不是直接 import 兄弟 app 的路径）`,
+                },
+              ],
+            },
+          ],
+        },
+      },
+    ]
+  }),
   // 项目级规则覆盖：
   // - 关闭单字组件名（项目刻意保持简洁命名）
   // - 允许 _ 前缀变量被忽略（用于"解构但暂不使用"的场景）
