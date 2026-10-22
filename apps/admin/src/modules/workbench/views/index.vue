@@ -24,7 +24,8 @@ const todoItems = [
 
 /** 能力演示入口：免登录白名单页不在左侧菜单，从这里直达（/autoplan Phase 2 D-IA-1） */
 const panelLinks = [
-  { name: 'Home', label: '门户首页演示', desc: 'portal 顶部导航布局（亦在左侧菜单"首页"）' },
+  // P3-1 起门户首页独立为 apps/portal（跨应用，admin 内不再有 Home 路由），
+  // 「门户首页演示」入口随 home 模块一并摘除
   { name: 'H5Demo', label: 'H5 移动端演示', desc: 'rem 适配 · 桌面打开后请用 DevTools 设备模拟' },
   { name: 'BigDemo', label: '数据大屏演示（1920）', desc: 'transform scale 等比缩放' },
   {

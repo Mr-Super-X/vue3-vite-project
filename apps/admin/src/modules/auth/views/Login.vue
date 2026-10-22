@@ -5,7 +5,8 @@
  * 提交流程：
  * 1. `formRef.value.validate()` 同步校验账号 / 密码（≥3 / ≥6 位）
  * 2. 调用 `userStore.login(form)` 触发 authApi
- * 3. 成功后读 `route.query.redirect` 跳回原页面（守卫写入），fallback `/home`
+ * 3. 成功后读 `route.query.redirect` 跳回原页面（守卫写入），fallback `/workbench`
+ *    （P3-1 起 admin 落地页为工作台；原门户官网已独立为 apps/portal）
  * 4. 失败统一 ElMessage.error，错误对象归一化（Error.message / '登录失败'）
  *
  * 表单默认值：`admin / 123456`（仅演示用，生产应改 SSO / 短信验证码）。
@@ -55,7 +56,7 @@ async function handleSubmit() {
   try {
     await userStore.login(form)
     ElMessage.success('登录成功')
-    const redirect = (route.query.redirect as string) || '/home'
+    const redirect = (route.query.redirect as string) || '/workbench'
     router.push(redirect)
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : '登录失败，请重试'

@@ -82,13 +82,13 @@ describe('Login.vue（深色科技感重构）', () => {
     expect(mockPush).not.toHaveBeenCalled()
   })
 
-  it('5. 无 redirect 时默认跳 /home', async () => {
+  it('5. 无 redirect 时默认跳 /workbench', async () => {
     mockLogin.mockResolvedValueOnce({ token: 'xxx' })
     mockRedirect = undefined
     const w = mount(Login)
     await w.find('form').trigger('submit.prevent')
     await flushPromises()
-    expect(mockPush).toHaveBeenCalledWith('/home')
+    expect(mockPush).toHaveBeenCalledWith('/workbench')
   })
 
   it('6. 密码显隐切换：点击 👁 后 input type 切换', async () => {

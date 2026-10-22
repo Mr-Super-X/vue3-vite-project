@@ -11,7 +11,9 @@
  * 注意：白名单路由仍建议挂载 layout（避免裸路由破布局）
  *
  * P2 变更：demo 模块物理独立到 apps/docs（连同 `demoWhitelistNames` 吸收链），
- * 本集合只剩 admin 仍承载的公开路由（Home/H5Demo/BigDemo 系列——P3 抽离时随迁）。
+ * 本集合只剩 admin 仍承载的公开路由（H5Demo/BigDemo 系列）。
+ * P3-1 变更：home 模块（企业官网）物理独立到 apps/portal（连同 'Home' 白名单行），
+ * admin 不再有公开落地页——未登录访问 `/` 由守卫跳 /login（rootRedirect 已指向 /workbench）。
  *
  * @see [`./guards/auth.ts`](./guards/auth.ts) `isWhiteListed` 调用点
  * @group 路由：白名单
@@ -30,7 +32,6 @@ import { isWhiteListed } from '@vv/shared/router-guards'
  */
 export const ROUTE_WHITE_LIST: ReadonlySet<string> = new Set<string>([
   'Login', // 登录页
-  'Home', // 企业官网首页（公开访问：门户落地页免登录，登录入口在页内顶栏）
   'Forbidden', // 403 无权限
   'NotFound', // 404 页面
   'ServerError', // 500 页面

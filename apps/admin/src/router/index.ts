@@ -9,7 +9,7 @@ import { ROUTER_CONFIG } from './config'
 import { useTagsViewStore } from '@/store/modules/tags-view'
 
 /**
- * 根路径重定向：访问 `/` 时跳到首页（仪表盘）。
+ * 根路径重定向：访问 `/` 时跳到工作台（admin 登录后的默认落地页）。
  *
  * 为什么不放 fallback：fallback 是 catch-all（`/:pathMatch(.*)*`），会把 `/` 也吞掉
  * 跳到 `/404` —— 与"打开站点应该看到首页"的预期不符
@@ -17,18 +17,21 @@ import { useTagsViewStore } from '@/store/modules/tags-view'
  * 为什么不放业务模块的 `routes/index.ts`：根路径不属于任何业务模块，
  * 是全局级入口，集中在 `router/` 目录管理
  *
- * 守卫行为：redirect 后 vue-router 会对 `/home` 重新触发守卫链
+ * P3-1 变更：原落地页 /home（portal 布局官网）独立为 apps/portal，
+ * admin 落地页改为 /workbench（workbench 是 default 布局验收模块的 index 子路由）。
+ *
+ * 守卫行为：redirect 后 vue-router 会对 `/workbench` 重新触发守卫链
  * （白名单 → 可见性 → 登录态 → 远程菜单 → 权限），未登录用户最终会跳 `/login`
  *
  * @group 路由：根重定向
  */
 const rootRedirect: RouteRecordRaw = {
   path: '/',
-  redirect: '/home',
+  redirect: '/workbench',
 }
 
 // 路由注册顺序：
-//   1. rootRedirect      根路径 → 首页（先匹配，避免被 fallback 拦截）
+//   1. rootRedirect      根路径 → 工作台（先匹配，避免被 fallback 拦截）
 //   2. autoRegisteredRoutes：业务模块（src/modules/**/routes/index.ts），自动扫描
 //   3. fallbackRoute：catch-all 404 兜底（必须在最后，单独注册避免字典序问题）
 //
