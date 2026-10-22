@@ -27,7 +27,7 @@ afterEach(() => {
 })
 
 describe('createAppAliases', () => {
-  it('返回 16 条别名（@ + 9 shared + 2 ui + @mock + 4 app 私有）', () => {
+  it('返回 16 条别名（@ + 8 shared + 2 ui + @mock + 4 app 私有）', () => {
     expect(Object.keys(createAppAliases(APP_ROOT, APP_ROOT))).toHaveLength(16)
   })
 

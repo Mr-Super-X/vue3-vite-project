@@ -65,7 +65,7 @@ export function cleanMockBundled(mockDir: string = resolve(process.cwd(), 'mock'
   }
 
   return {
-    name: 'vv-portal:clean-mock-bundled',
+    name: 'vv:clean-mock-bundled',
     apply: 'serve',
     configureServer() {
       cleanupOnce()

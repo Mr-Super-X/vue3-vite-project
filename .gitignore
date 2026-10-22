@@ -64,6 +64,7 @@ mock/**/_*.bundled_*.cjs
 .gstack/
 .verify/
 .superpowers/
+.turbo/
 
 # Playwright产物
 .playwright-mcp/

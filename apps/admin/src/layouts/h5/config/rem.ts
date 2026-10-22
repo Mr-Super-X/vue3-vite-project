@@ -10,7 +10,7 @@
  *   innerWidth 永远是视口宽度，不受 html 内联 width 影响。
  *
  * @see [`../index.vue`](../index.vue) 生命周期驱动方（setup 顶层激活 / onUnmounted 恢复）
- * @see [`build/postcss.ts`](../../../../build/postcss.ts) 编译时 px→rem 换算约定
+ * @see [`packages/config/src/postcss.ts`](../../../../../../packages/config/src/postcss.ts) 编译时 px→rem 换算约定
  * @group 布局：H5
  */
 
@@ -18,7 +18,7 @@
 export const H5_REM_MAX_WIDTH = 540
 /** resize / pageshow 重算防抖间隔（ms） */
 export const H5_REM_RESIZE_DELAY = 300
-/** rem 换算除数：1rem = 生效宽度 / 10（与 build/postcss.ts 的 rootValue = 设计稿宽/10 配套） */
+/** rem 换算除数：1rem = 生效宽度 / 10（与 packages/config/src/postcss.ts 的 rootValue = 设计稿宽/10 配套） */
 const REM_DIVISOR = 10
 
 /** 进入 h5 前的 html 内联样式快照（deactivate 时原样写回） */
