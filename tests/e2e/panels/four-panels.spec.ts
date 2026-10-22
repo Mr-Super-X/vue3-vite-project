@@ -23,16 +23,16 @@ test.beforeEach(async ({ page }) => {
   await page.getByRole('button', { name: /登/ }).click()
   // 等待登录完成（守卫写入登录态并跳转落地页）——立刻 goto 会中断进行中的登录请求
   await expect(page).not.toHaveURL(/\/login/)
-  // 落地页（/ 或 /home）与用例无关，显式去工作台
+  // 落地页（/ → /workbench）与用例无关，显式去工作台
   await page.goto('/workbench')
   await expect(page.locator('.vv-workbench-home')).toBeVisible()
 })
 
 test('能力演示导航卡：四栖 + 五态链接齐全', async ({ page }) => {
   const card = page.locator('.vv-workbench-home__card', { hasText: '能力演示导航' })
-  // 断言 workbench panelLinks 五行的完整链接文本
+  // 断言 workbench panelLinks 四行的完整链接文本（P3-1 起门户首页演示随 home 模块
+  // 独立到 apps/portal，admin 侧只剩 H5/Big 四链接）
   for (const label of [
-    '门户首页演示',
     'H5 移动端演示',
     '数据大屏演示（1920）',
     '超宽拼接屏演示（9000×1080）',
