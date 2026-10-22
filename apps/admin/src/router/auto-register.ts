@@ -40,8 +40,9 @@ interface RouteModuleExport {
  *   2. 必须放在 `src/modules/<feature>/` 目录下
  *   3. 导出格式必须是 `export default RouteRecordRaw[]`
  *
- * 路径前缀 `/src/` 与 Vite 项目根对应；如调整 src 别名（如改用 `srcDir`），
- * 需要同步修改本字符串。
+ * 路径前缀 `/` 以 Vite 项目根为基准（Monorepo 下每个 app 的 vite root = 自身目录，
+ * 因此该字面量可跨 app 原样复用——docs/portal/h5/big 抽离时无需改写；
+ * 曾评估的相对字面量方案（'../modules/**'）无此优势，P1-5 确认不采纳）。
  *
  * 为什么不能用变量：Vite 在编译期扫描源码中 `import.meta.glob(...)` 的字面量参数，
  * 动态变量无法被静态分析。详见 https://cn.vitejs.dev/guide/features.html#glob-import
