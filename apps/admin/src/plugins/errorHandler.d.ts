@@ -27,6 +27,6 @@ export interface PluginsOptions {
   errorHandler?: ErrorHandlerOptions | false
   /** Web Vitals 上报（不传则默认 dev console.log / prod noop；传 false 完全关闭） */
   webVitals?: WebVitalsOptions | false
-  /** REM 适配（H5）：viewport meta 幂等确保；传 false 完全关闭。fontSize 激活归 layouts/h5 */
+  /** REM 适配（H5）：viewport meta 幂等确保；传 false 完全关闭（fontSize 激活归 apps/h5 的 layouts/h5） */
   remAdaptation?: false
 }
