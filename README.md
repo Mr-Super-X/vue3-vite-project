@@ -6,11 +6,13 @@
 
 > 🆕 **新同事请先看 [docs/10-新手指引.md](docs/10-新手指引.md)** —— 30 分钟 5 任务，带你从 clone 到加新模块。
 >
-> **最近更新**：2026-10-20 — **门户企业官网 + gh-pages 一键部署 + 团队级图标体系**：
+> **最近更新**：2026-10-22 — **Monorepo 改造完成（pnpm workspace + turbo）**：
 >
-> - **门户首页重构为「星澜科技」黑白极简企业官网**（[CHANGELOG.md](CHANGELOG.md)）：portal 布局极简顶栏 + home 模块 5 个静态展示组件（SiteHero / SiteFeatures / SiteStats / SiteAbout / SiteFooter），`/home` 走白名单公开访问
-> - **gh-pages 自动化部署**（设计：[docs/superpowers/specs/2026-10-20-gh-pages-deploy-design.md](docs/superpowers/specs/2026-10-20-gh-pages-deploy-design.md)）：push `master` 即发布线上 demo，`VITE_DEMO_NO_AUTH` 演示模式免登录全站可点
-> - **团队级图标体系**（[docs/39](docs/39-图标体系与使用规范.md)）：unplugin-icons 编译期内联 + `<i-ep-* />` 静态语法 / `<AppDynamicIcon>` 动态语法 + app 本地集合
+> - **六应用四包结构**（[docs/43-Monorepo结构与开发指引.md](docs/43-Monorepo结构与开发指引.md)，评估 [docs/42](docs/42-Monorepo多应用改造评估.md)）：`apps/admin`（中后台）/ `apps/auth`（统一登录）/ `apps/portal`（门户）/ `apps/h5`（移动端）/ `apps/big`（数据大屏）/ `apps/docs`（组件示例文档）+ `packages/config|mock|shared|ui` 共享包（源码直链 workspace 消费）
+> - **统一登录协议**：未登录守卫整页跳 `/auth/login?redirect=...`（`VITE_AUTH_ORIGIN` env 注入），cookie 同域漫游；本地经 docker 网关 :8080 复现（`pnpm dev:gateway` + `docker compose up`）
+> - **CI/CD 改造**：ci.yml 走 turbo affected（PR 只构建变更波及 app，`.turbo` 缓存上 actions/cache）；deploy.yml 走 `pnpm build:pages` 六应用聚合发布 gh-pages（落地页 + 6 子目录）
+>
+> 上轮同步（2026-10-20）：门户企业官网 + gh-pages 一键部署 + 团队级图标体系，详见 [CHANGELOG.md](CHANGELOG.md)。
 >
 > 上轮同步（2026-10-15）：四栖能力 + 开源首发准备——v2.1 big 大屏布局、v2.0 h5 移动端布局、/autoplan 多视角审查 15 项落地、组件渲染层测试 14 例，详见 [CHANGELOG.md](CHANGELOG.md)。
 > 上轮同步（2026-09-20）：全代码库审计 9 项修复 + 3 项误判，详见 [CHANGELOG.md](CHANGELOG.md)。
@@ -50,7 +52,8 @@
 | 核心框架     | Vue                         | ^3.5.38                                                                                  |
 | 构建工具     | Vite                        | ^8.0.16                                                                                  |
 | 语言         | TypeScript                  | ~6.0.0（strict 模式）                                                                    |
-| 包管理器     | pnpm                        | >=11.x                                                                                   |
+| 包管理器     | pnpm                        | >=11.x（workspace + catalog 单版本源）                                                   |
+| 编排构建     | Turborepo                   | ^2.11（`turbo run build/test` 拓扑序；CI 走 affected 只构建变更波及 app）                |
 | Node 要求    | -                           | >=22.18 或 >=24.12                                                                       |
 | UI 组件库    | Element Plus                | ^2.14.3                                                                                  |
 | 原子化 CSS   | UnoCSS                      | ^66.7.5（兼容 SCSS/LESS/原生 CSS）                                                       |
@@ -250,64 +253,29 @@ utils/      ← validate.ts      └── routes/index.ts（自动注册）
 ## 📂 目录结构
 
 ```
-vue3-vite-project/
-├── src/
-│   ├── api/             # 网络层（http.ts + modules/）
-│   ├── assets/          # 静态资源（styles/、icons/）
-│   │   └── styles/      # 全局样式：reset / variables / theme / transition / element-overwrite / custom + mixins/
-│   ├── components/      # common/（通用无业务，跨模块复用）
-│   │   ├── common/      # AsyncState / ErrorBoundary / AppDynamicIcon / BaseChart / DictSelect / DictTag
-│   │   │                # + ProDialog/ ProDialogForm/ RichTextEditor/ 子目录（unplugin-vue-components 自动注册）
-│   │   └── index.ts     # install 模式自动注册 common/ 下的 .vue
-│   ├── composables/     # useAppRouter / useRequest / useAuth / useLogout / useDialog / useConfirm / useDict / useTheme
-│                    # （全部由 unplugin-auto-import 全局注入，<script setup> 无须显式 import）
-│   ├── directives/      # 自定义指令（install 模式 + .d.ts 分离）
-│   │   ├── _utils.ts      # 通用 debounce + isFunction
-│   │   ├── inputDebounce.{ts,d.ts}    # v-inputDebounce 输入防抖
-│   │   ├── buttonDebounce.{ts,d.ts}   # v-buttonDebounce 点击防抖
-│   │   ├── permission.{ts,d.ts}       # v-permission 权限
-│   │   ├── auth.{ts,d.ts}             # v-auth 按钮级权限（AND/ANY + disabled/remove）
-│   │   ├── copy.{ts,d.ts}             # v-copy 文本复制（modern API + legacy 双降级）
-│   │   ├── draggable.{ts,d.ts}        # v-draggable 视口边界钳制（ProDialog 默认消费）
-│   │   └── index.ts      # install 模式统一注册
-│   ├── enums/           # httpEnum、roleEnum
-│   ├── layouts/         # default/ + blank/ + portal/ + h5/ + big/
-│   ├── locales/         # zh-CN、en-US
-│   ├── modules/         # auth、user、home、reports、demo、error、workbench、h5-demo、big-demo
-│   │                    # 每个模块含 views/ + routes/ + store/ + apis/ + components/ + index.ts
-│   │                    # 由 `pnpm new-module` 自动生成；删除用 `pnpm remove-module`
-│   ├── plugins/         # Vue 插件（install 模式 + .d.ts 分离）
-│   │   ├── errorHandler.{ts,d.ts}    # 全局错误处理
-│   │   ├── remAdaptation.{ts,d.ts}   # H5 rem 运行时适配（h5 layout 专用，见 docs/34）
-│   │   ├── webVitals.{ts,d.ts}       # Web Vitals 性能采集上报（见 docs/12）
-│   │   └── index.ts      # 统一注册入口（PluginsOptions 聚合）
-│   ├── router/          # 自动注册 + 白名单 + 远程菜单 + 守卫
-│   │   ├── index.ts                  # 入口：autoRegisteredRoutes + fallbackRoute
-│   │   ├── auto-register.ts          # import.meta.glob 扫描 + COMPONENT_REGISTRY 派生
-│   │   ├── fallback.ts               # catch-all 404（单独注册保证最后）
-│   │   ├── config.ts                 # 菜单模式（local/remote，默认 remote）
-│   │   ├── whitelist.ts              # 路由 name 白名单
-│   │   ├── types.ts                  # RouteName 联合类型 + RemoteMenuItem 协议
-│   │   ├── remote.ts                 # 远程菜单加载 + JSON → RouteRecordRaw 转换
-│   │   └── guards/auth.ts            # 白名单 + 登录态 + 远程加载 + 权限校验
-│   ├── store/           # 全局：app、user、theme（含持久化）、tags-view、dict（+ router store 不在 barrel）
-│   ├── types/           # global、env、auto-imports、components
-│   ├── utils/           # 通用工具（纯函数 + Vitest 单测）
-│   │   ├── storage.{ts,spec.ts}      # Local/Session/clearCookies（命名空间隔离）
-│   │   ├── dayjs.{ts,spec.ts}        # 5 个工具函数（formatDate/formatRelative/...）
-│   │   ├── bem.ts                    # createNamespace 运行时 BEM 工具
-│   │   ├── format.ts / validate.ts / safeAsync.ts / consoleBadge.ts / autoImport.ts
-│   │   └── _utils/*                   # （内部工具，按需放）
-│   │       └── （注意：`src/components/common/_internal/naming.ts` 是组件命名工具，仅 components 模块内部使用）
-│   └── App.vue / main.ts
-├── mock/                # vite-plugin-mock 数据
-│   ├── auth.ts / user.ts / menu.ts / dict.ts / dict-data.ts  # 接口 mock（dev 自动扫描）
-│   ├── pro-table/       # ProTable 具名数据源（11 个 xxxRequestApi 直连，无 XHR 依赖）
-│   ├── mockProdServer.ts  # 生产 mock 接线（createProdMockServer，gh-pages 静态部署用，见 docs/22 §15）
-│   └── index.ts          # 聚合导出（vite-plugin-mock 自动扫描）
-├── docs/                # 项目规范文档
-└── 配置文件             # vite.config.ts / tsconfig*.json / uno.config.ts / vitest.config.ts
+vue3-vite-project/            # pnpm workspace + turbo@2（Monorepo）
+├── apps/                     # 6 个独立应用（各自 dev/build/test 完整工程）
+│   ├── admin/                # 中后台管理（端口 5174）：user/reports/workbench/error 主干业务
+│   ├── auth/                 # 统一登录（端口 5179）：登录页 + 登出 + 跨应用重定向协议
+│   ├── portal/               # 门户企业官网（端口 5176）：home + portal layout
+│   ├── h5/                   # H5 移动端（端口 5177）：h5-demo + rem 适配
+│   ├── big/                  # 数据大屏（端口 5178）：big-demo + scale 适配
+│   └── docs/                 # 组件示例文档（端口 5175）：demo 模块 + DemoDocs 布局
+│       └── src/              # app 内部沿用 Feature-Sliced：api/assets/components/composables/
+│                             # directives/enums/layouts/locales/modules/plugins/router/store/types/utils
+├── packages/                 # 4 个共享包（workspace:* 源码直链消费，不建 dist）
+│   ├── config/               # @vv/config：vite 工厂 createViteConfig（插件/别名/css/分包单点）
+│   ├── mock/                 # @vv/mock：vite-plugin-mock 数据源
+│   ├── shared/               # @vv/shared：网络层基建 + 全局 store + useAppRouter/useRequest/useAuth/useDict
+│   └── ui/                   # @vv/ui：全局组件三目录 + 弹窗族（useDialog/useConfirm/useLogout）+ 图标/样式
+├── scripts/                  # 工程脚本（check-routes/check-aliases/build-pages/dev-gateway/new-module…）
+├── docker/                   # 本地同域网关 nginx 配置（配合根 docker-compose.yml，见 docs/43 §6）
+├── docs/                     # 项目规范文档（本文档体系）
+├── .github/workflows/        # ci.yml（turbo affected）+ deploy.yml（build:pages 六应用聚合）
+└── 配置文件                  # package.json / turbo.json / pnpm-workspace.yaml / eslint.config.mjs / tsconfig*.json
 ```
+
+> 依赖方向铁律（CLAUDE.md §2.1）：`apps/* → packages/*`；包间 config → mock → shared → ui 单向；apps 互不依赖（跨 app 走统一登录整页跳转协议，见 docs/43 §5）。单 app 使用场景只需取 `apps/admin` + `packages/*`。
 
 ---
 

@@ -11,6 +11,8 @@
     "type-check": "vue-tsc --build",
     "type-check:full": "vue-tsc --build --force",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
     "test:watch": "vitest",
     "bench": "vitest bench --run --reporter=basic",
     "preview": "vite preview"

@@ -4,9 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > 本文档是 `~/.claude/CLAUDE.md` 的项目级补充。所有全局规则（§一～§十一）自动适用，遇到冲突以**本文档为准**。
 >
-> **文档版本**：v2.2.1 | **生成日期**：2026-10-21 | **生效分支**：`feature/engine-optimization`
+> **文档版本**：v3.0.0 | **生成日期**：2026-10-22 | **生效分支**：`feature/monorepo`
 >
-> **最近更新**（2026-10-21）：gh-pages 演示站 demo 路由可见性修复
+> **最近更新**（2026-10-22）：P5-B Monorepo 工具链治理收尾
+>
+> - **v3.0.0 变更**（2026-10-22）：单应用 `src/` 正式升级为 pnpm workspace + turbo Monorepo（设计稿 `docs/superpowers/specs/2026-10-21-monorepo-migration-design.md`，评估 `docs/42`）——
+>   - **结构**：6 应用（`apps/admin` 中后台 / `apps/auth` 统一登录 / `apps/portal` 门户 / `apps/h5` 移动端 / `apps/big` 数据大屏 / `apps/docs` 组件示例文档）+ 4 包（`packages/config` vite 工厂 / `packages/mock` mock 数据 / `packages/shared` 网络层·store·composables / `packages/ui` 全局组件·弹窗族），详见 docs/43
+>   - **§2 全面改写**：src/ Architecture Lockdown → apps/packages workspace 治理版（依赖方向铁律 + 例外/申请/验证机制保留）
+>   - **CI/CD**：ci.yml 改 turbo affected（PR `--filter=[origin/master]...`，master 全量，`.turbo` 缓存接 actions/cache）；deploy.yml 改 `pnpm build:pages` 六应用聚合（base 由脚本内 `REPO_PREFIX` 按 app 注入）
+>   - **本地同域网关**：`docker-compose.yml` + `docker/nginx.dev.conf`（:8080 反代 5174-5179，保留前缀）+ `pnpm dev:gateway`（6 app 带 base 并行 dev，scripts/dev-gateway.ts）
+>   - **统一登录协议**：未登录守卫整页跳 `${VITE_AUTH_ORIGIN}/login?redirect=...`（缺省 `/auth`，env 注入），cookie 同域漫游
+>
+> **v2.2.1 及更早版本历史**（单应用 src/ 时期，治理条款已由 v3.0.0 §2 取代）：
 >
 > - **v2.2.1 变更**（2026-10-21）：gh-pages 演示站恢复 demo 路由——`src/modules/demo/routes/index.ts` 的 DEV 门控放宽为 `isDemoRoutesEnabled`（dev 或 `VITE_DEMO_NO_AUTH=true` 演示构建均注册 demo 路由 + glob 组件，常规 prod 仍整体 tree-shake 剔除，实测 36 chunk/4.0M vs 演示构建 182 chunk/11M）；`src/router/whitelist.ts` 提取 `demoWhitelistNames` 模块级常量同条件吸收（内联 `[]` 会截断 check-routes 的正则提取，实测踩坑）；CHANGELOG「未发布」区新增 fix 节；docs/07/09/23/39 + README 文档表同步
 > - **v2.2 变更**：① home 模块重构为「星澜科技」黑白极简企业官网（portal 布局 64px 极简顶栏 + 锚点导航 scroll-spy；`SiteHero` / `SiteFeatures` / `SiteStats` / `SiteAbout` / `SiteFooter` 5 个静态展示组件 + `config/site.ts` 文案单源；`/home` 走白名单公开访问）② gh-pages 自动化部署（`.github/workflows/deploy.yml`，push master 发布线上 demo；构建四开关 `VITE_BASE` / `VITE_HISTORY_MODE=hash` / `VITE_MENU_SOURCE=local` / `VITE_USE_MOCK=true`）③ mock 生产接线（`mock/mockProdServer.ts` client 侧 `createProdMockServer`，vite-plugin-mock@3.0.2 无 prodEnabled；`main.ts` PROD 守卫防 dev 双重劫持 + `use(router)` 前阻塞 await 根治拦截窗口穿透）④ 团队级图标体系（unplugin-icons 编译期内联 + `<i-ep-* />` 静态语法 / `<AppDynamicIcon>` 动态语法 + `src/assets/icons/` 本地 app 集合，见 docs/39）⑤ `VITE_DEMO_NO_AUTH` 演示模式（守卫跳过登录/权限校验，gh-pages 全站可演示）
@@ -54,34 +63,34 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-| 任务                                        | 命令                                                         |
-| ------------------------------------------- | ------------------------------------------------------------ |
-| 安装依赖                                    | `pnpm install`                                               |
-| 启动 dev（远程菜单模式，默认）              | `pnpm dev`                                                   |
-| 启动 dev（本地菜单模式，无需后端联调）      | `pnpm dev:local`                                             |
-| 启动 dev（启用浏览器 DevTools）             | `vite`（含 vite-plugin-vue-devtools）                        |
-| 跑全部单测                                  | `pnpm test`                                                  |
-| 跑单测（watch 模式）                        | `pnpm test:watch`                                            |
-| 跑单个测试文件                              | `pnpm test <path>`（如 `pnpm test src/utils/dayjs.spec.ts`） |
-| 单测覆盖率（含 UI 报告）                    | `pnpm test:coverage` / `pnpm test:ui`                        |
-| 跑基准测试（vitest bench）                  | `pnpm bench`                                                 |
-| 类型校验（增量）                            | `pnpm type-check`                                            |
-| 类型校验（强制全量；`pnpm build` 内第二步） | `pnpm type-check:full`                                       |
-| 构建生产包                                  | `pnpm build`                                                 |
-| 预览生产包                                  | `pnpm preview`                                               |
-| 包体积分析（输出 dist/stats.html）          | `pnpm analyze`                                               |
-| Lint 检查                                   | `pnpm lint`                                                  |
-| Lint 自动修复                               | `pnpm lint:fix`                                              |
-| Prettier 格式化                             | `pnpm format` / `pnpm format:check`                          |
-| 路由一致性校验（CI 阶段强制）               | `pnpm check:routes`                                          |
-| alias 单一来源一致性校验（CI 阻断）         | `pnpm check:aliases`                                         |
-| 文档与代码硬数据一致性校验（CI 阻断）       | `pnpm check:doc-currency`                                    |
-| 从 build/aliases.ts 同步 tsconfig paths     | `pnpm generate:tsconfig-paths`                               |
-| 新建业务模块（自动生成 6 个骨架文件）       | `pnpm new-module <kebab-name>`                               |
-| 移除业务模块（默认 dry-run + 确认）         | `pnpm remove-module <kebab-name>`                            |
-| 提交并推送（add + cz + push 一站式）        | `pnpm push`                                                  |
-| 发布版本（bump + CHANGELOG + tag + push）   | `pnpm release`                                               |
-| 发布预览（dry-run，0 副作用）               | `pnpm release:dry`                                           |
+| 任务                                                | 命令                                                                                   |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| 安装依赖                                            | `pnpm install`                                                                         |
+| 启动 dev（turbo 并行全部 app，remote 菜单模式）     | `pnpm dev`                                                                             |
+| 启动单 app dev（如只起 admin）                      | `pnpm -C apps/<a> dev`（或 `dev:local` 本地菜单模式）                                  |
+| 同域网关 dev（6 app 带 base 并行，配 docker 网关）  | `pnpm dev:gateway`（另终端 `docker compose up` → :8080）                               |
+| 跑全部单测（turbo 拓扑序 6 app + 4 包）             | `pnpm test`                                                                            |
+| 跑单 app / 单文件单测                               | `pnpm -C apps/<a> test [path]`（如 `pnpm -C apps/admin test src/utils/dayjs.spec.ts`） |
+| 单测覆盖率 / UI 模式（admin 口径）                  | `pnpm test:coverage` / `pnpm test:ui`                                                  |
+| 跑基准测试（vitest bench，admin）                   | `pnpm bench`                                                                           |
+| 类型校验（turbo，各 app vue-tsc --build）           | `pnpm type-check`（单 app 增量）/ `pnpm -C apps/<a> type-check:full`（全量）           |
+| 构建生产包（turbo 拓扑序；含 type-check:full 门禁） | `pnpm build`                                                                           |
+| 单 app 仅构建（不门禁类型）                         | `pnpm -C apps/<a> build-only`                                                          |
+| 预览单 app 生产包                                   | `pnpm -C apps/<a> preview`                                                             |
+| gh-pages 六应用聚合构建（自动发现 apps/*）          | `pnpm build:pages`（产物根 `dist/<app>/` + 落地页）                                    |
+| 包体积分析（输出 dist/stats.html，admin）           | `pnpm analyze`                                                                         |
+| Lint 检查                                           | `pnpm lint`                                                                            |
+| Lint 自动修复                                       | `pnpm lint:fix`                                                                        |
+| Prettier 格式化                                     | `pnpm format` / `pnpm format:check`                                                    |
+| 路由一致性校验（CI 阶段强制）                       | `pnpm check:routes`                                                                    |
+| alias 单一来源一致性校验（CI 阻断）                 | `pnpm check:aliases`                                                                   |
+| 文档与代码硬数据一致性校验（CI 阻断）               | `pnpm check:doc-currency`                                                              |
+| 从 build/aliases.ts 同步 tsconfig paths             | `pnpm generate:tsconfig-paths`                                                         |
+| 新建业务模块（自动生成 6 个骨架文件）               | `pnpm new-module <kebab-name>`                                                         |
+| 移除业务模块（默认 dry-run + 确认）                 | `pnpm remove-module <kebab-name>`                                                      |
+| 提交并推送（add + cz + push 一站式）                | `pnpm push`                                                                            |
+| 发布版本（bump + CHANGELOG + tag + push）           | `pnpm release`                                                                         |
+| 发布预览（dry-run，0 副作用）                       | `pnpm release:dry`                                                                     |
 
 **环境要求**：Node `>=22.18` 或 `>=24.12`，pnpm `>=11.x`（`package.json:engines` + `preinstall` 硬强制 `only-allow pnpm`）。
 
@@ -163,16 +172,16 @@ Feature-Sliced 风格的中后台门户前端（`vue3-vite-project`，企业中�
 
 ### 1.6 AutoImport 自动导入（无须显式 `import`）
 
-> `vite.config.ts` 第 70-91 行通过 `unplugin-auto-import` 配置了**5 类**自动注入到 `<script setup>` 全局作用域（详见 `src/types/auto-imports.d.ts`）。
+> `packages/config/src/create-vite-config.ts` 通过 `unplugin-auto-import` 配置了**5 类**自动注入到 `<script setup>` 全局作用域（详见各 app 的 `apps/<a>/src/types/auto-imports.d.ts`，dev/build 时生成）。
 > **写代码时这些内容无须再写 `import` 语句**——会自动可用。
 
-| 类别                 | 来源              | 自动注入的标识符（示例）                                                                                                                              |
-| -------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Vue 核心**         | `'vue'`           | `ref`、`reactive`、`computed`、`watch`、`watchEffect`、`onMounted`、`onUnmounted`、`nextTick`、`defineProps`、`defineEmits`、`defineModel` 等         |
-| **Vue Router**       | `'vue-router'`    | `useRoute`、`useRouter`、`useLink`、`RouterLink`、`RouterView` 等                                                                                     |
-| **Pinia**            | `'pinia'`         | `defineStore`、`storeToRefs`、`acceptHMRUpdate` 等                                                                                                    |
-| **业务 composables** | `@/composables/*` | `useAppRouter`、`useRequest`、`useAuth`、`useLogout`、`useDialog`、`useConfirm`、`useDict`、`useTheme` 等（详见 `vite.config.ts` 的 AutoImport 配置） |
-| **业务 utils**       | `@/utils/bem`     | `createNamespace`（详见 `vite.config.ts` 第 83 行）                                                                                                   |
+| 类别                 | 来源                                      | 自动注入的标识符（示例）                                                                                                                      |
+| -------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Vue 核心**         | `'vue'`                                   | `ref`、`reactive`、`computed`、`watch`、`watchEffect`、`onMounted`、`onUnmounted`、`nextTick`、`defineProps`、`defineEmits`、`defineModel` 等 |
+| **Vue Router**       | `'vue-router'`                            | `useRoute`、`useRouter`、`useLink`、`RouterLink`、`RouterView` 等                                                                             |
+| **Pinia**            | `'pinia'`                                 | `defineStore`、`storeToRefs`、`acceptHMRUpdate` 等                                                                                            |
+| **业务 composables** | `'@vv/shared'` + `'@vv/ui/composables/*'` | `useAppRouter`、`useRequest`、`useAuth`、`useDict`、`useTheme`（`@vv/shared`）；`useDialog`、`useConfirm`、`useLogout`（`@vv/ui` 包路径注入） |
+| **业务 utils**       | `'@vv/shared'`                            | `createNamespace`（BEM 运行时工具）                                                                                                           |
 
 #### 正确示例
 
@@ -189,26 +198,26 @@ const { data } = storeToRefs(useUserStore())
 // ❌ 冗余 import：与 AutoImport 冲突，导致重复声明警告
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { createNamespace } from '@/utils/bem'
-import { useAppRouter } from '@/composables/useAppRouter'
+import { createNamespace } from '@vv/shared'
+import { useAppRouter } from '@vv/shared'
 ```
 
 #### 仍需显式 import 的内容
 
 AutoImport **未覆盖**以下内容，仍必须写 import：
 
-> **路径约定**：src/ 内跨目录引用优先用 alias（`@/`、`@components/`、`@utils/` 等，共 15 个，见 `vite.config.ts` 的 `SRC_DIR_ALIASES`）；同目录兄弟文件用 `./` 相对路径即可。别名表与 `tsconfig.app.json` paths 双处维护，新增子目录需两处同步。
+> **路径约定**：app 内跨目录引用优先用 alias（`@/` 等，由 `packages/config/src/app-aliases.ts` 的 `createAppAliases(appRoot)` 统一生成）；同目录兄弟文件用 `./` 相对路径即可。新增子目录需同步 app-aliases.ts 与 tsconfig paths（`pnpm generate:tsconfig-paths` 自动收敛）。
 
-| 类型                                                            | 示例                                                                     | 原因                                                                                                                                                        |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 第三方 UI 库组件                                                | `import { User, Lock } from '@element-plus/icons-vue'`                   | element-plus 用 `unplugin-vue-components` 按需注入，与 AutoImport 是两套机制                                                                                |
-| 第三方工具库                                                    | `import dayjs from 'dayjs'`                                              | 不在 AutoImport 配置列表中                                                                                                                                  |
-| 全局组件（`components/common/` + `ProTable/` + `form-schema/`） | **不要 import**，模板直接 `<BaseChart />` / `<ProTable />` / `<XForm />` | `unplugin-vue-components` 自动注入到 `vue.GlobalComponents`（dirs 三目录，deep: true）；显式 import 会让 IDE hover 丢失 `DefineComponent` 展开（详见 §1.7） |
-| 其他子目录组件（非自动注册）                                    | `import Xxx from '@/components/sub/Xxx.vue'`                             | 仅当组件不在 dirs 三目录下时才需显式 import（如 `components/` 下其他自建子目录）                                                                            |
-| 类型导入                                                        | `import type { UserProfile } from '@/api/modules/auth'`                  | 类型 import 不参与运行时，但 TS 编译器需要                                                                                                                  |
-| SCSS / 资源文件                                                 | `import './styles/login.scss'`（在 `<style>` 中用 `@use`）               | CSS 走 vite 资源管线，与 JS AutoImport 解耦                                                                                                                 |
+| 类型                                                       | 示例                                                                     | 原因                                                                                                                                                                                                 |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 第三方 UI 库组件                                           | `import { User, Lock } from '@element-plus/icons-vue'`                   | element-plus 用 `unplugin-vue-components` 按需注入，与 AutoImport 是两套机制                                                                                                                         |
+| 第三方工具库                                               | `import dayjs from 'dayjs'`                                              | 不在 AutoImport 配置列表中                                                                                                                                                                           |
+| 全局组件（`@vv/ui` 包三目录 + app 私有 `src/components/`） | **不要 import**，模板直接 `<BaseChart />` / `<ProTable />` / `<XForm />` | `unplugin-vue-components` 自动注入到 `vue.GlobalComponents`（dirs 含 @vv/ui 包源码三目录 + appRoot/src/components，deep: true）；显式 import 会让 IDE hover 丢失 `DefineComponent` 展开（详见 §1.7） |
+| app 内其他子目录组件（非自动注册）                         | `import Xxx from '@/components/sub/Xxx.vue'`                             | 仅当组件不在自动注册 dirs 内时才需显式 import                                                                                                                                                        |
+| 类型导入                                                   | `import type { UserProfile } from '@/api/modules/auth'`                  | 类型 import 不参与运行时，但 TS 编译器需要                                                                                                                                                           |
+| SCSS / 资源文件                                            | `import './styles/login.scss'`（在 `<style>` 中用 `@use`）               | CSS 走 vite 资源管线，与 JS AutoImport 解耦                                                                                                                                                          |
 
-> **新增可自动注入的标识符**：编辑 `vite.config.ts` 的 `AutoImport.imports` 数组 + 重启 dev server，**无须**为每个组件手动加 import。
+> **新增可自动注入的标识符**：改 `packages/config/src/create-vite-config.ts` 的 `AutoImport.imports` 数组 + 重启 dev server，**无须**为每个组件手动加 import（工厂单点，全 app 生效）。
 
 ### 1.6.1 不常见 API 必须加来源注释
 
@@ -226,13 +235,14 @@ AutoImport **未覆盖**以下内容，仍必须写 import：
 
 #### 不常见 API（必须加注释）
 
-| 标识符（举例）                                                                                         | 来源包提示（注释怎么写）                       |
-| ------------------------------------------------------------------------------------------------------ | ---------------------------------------------- |
-| `RouterLink`、`RouterView`、`useLink`                                                                  | `// vue-router 组件`                           |
-| `storeToRefs`、`acceptHMRUpdate`                                                                       | `// pinia 工具`                                |
-| `useAppRouter`、`useRequest`、`useAuth`、`useLogout`、`useDialog`、`useConfirm`、`useDict`、`useTheme` | `// 项目 composable @composables/*`            |
-| `createNamespace`                                                                                      | `// 项目 BEM 工具 @utils/bem（vite 自动注入）` |
-| `watchEffect`、`nextTick`、`onErrorCaptured`、`shallowRef`                                             | `// vue（生命周期/底层 API）`                  |
+| 标识符（举例）                                                 | 来源包提示（注释怎么写）                         |
+| -------------------------------------------------------------- | ------------------------------------------------ |
+| `RouterLink`、`RouterView`、`useLink`                          | `// vue-router 组件`                             |
+| `storeToRefs`、`acceptHMRUpdate`                               | `// pinia 工具`                                  |
+| `useAppRouter`、`useRequest`、`useAuth`、`useDict`、`useTheme` | `// 项目 composable @vv/shared（vite 自动注入）` |
+| `useDialog`、`useConfirm`、`useLogout`                         | `// 项目 composable @vv/ui（vite 自动注入）`     |
+| `createNamespace`                                              | `// 项目 BEM 工具 @vv/shared（vite 自动注入）`   |
+| `watchEffect`、`nextTick`、`onErrorCaptured`、`shallowRef`     | `// vue（生命周期/底层 API）`                    |
 
 #### 注释格式与位置
 
@@ -267,7 +277,7 @@ const { data } = storeToRefs(useUserStore())
 
 ### 1.7 组件全局注册与 IDE 智能提示（强约束）
 
-`unplugin-vue-components`（`vite.config.ts:74-82`）按 `dirs: ['src/components/common', 'src/components/ProTable', 'src/components/form-schema']` + `deep: true` 自动扫描**三个目录下所有 .vue 文件**（含任意深度子目录），按文件名（PascalCase）注册到 `vue.GlobalComponents` 接口，输出 `src/types/components.d.ts`。该文件由 `.gitignore:56` 屏蔽，**仅在 `pnpm dev` / `pnpm build` 时由 unplugin 重新生成**。
+`unplugin-vue-components`（`packages/config/src/create-vite-config.ts` 的 `Components` 段）按 `dirs` 自动扫描**目录下所有 .vue 文件**（`deep: true`，含任意深度子目录）——`@vv/ui` 包源码三目录（`components/common` + `components/ProTable` + `components/form-schema`）+ 各 app 的 `src/components/`（若存在）——按文件名（PascalCase）注册到 `vue.GlobalComponents` 接口，输出 `apps/<a>/src/types/components.d.ts`。该文件由 `.gitignore` 屏蔽，**仅在 `pnpm dev` / `pnpm build` 时由 unplugin 重新生成**。
 
 **消费方规则（强约束）：**
 
@@ -281,77 +291,91 @@ const { data } = storeToRefs(useUserStore())
 | `GlobalComponents.BaseChart`（来自 components.d.ts）  | `vue.GlobalComponents` 接口合并 + 完整模板类型检查 | 完整 `DefineComponent<Props, Expose, ...>` 展开 |
 | `import BaseChart from '...vue'`（消费方 ESM import） | 模块加载类型推导 + `<script setup>` 宏简化         | 仅显示 import 来源，丢失展开                    |
 
-**范围**：dirs 三目录（`components/common/` + `components/ProTable/` + `components/form-schema/`）下所有 .vue 文件均自动注册，含深层子目录（`deep: true`）——`BaseChart` / `AsyncState` / `ProTable` / `SearchForm` / `XForm` / `ProDialog` / `ProDialogForm` 等。`components/` 下其他自建子目录**不**在 dirs 内，需显式 import。
+**范围**：自动注册 dirs = `@vv/ui` 包源码三目录（`components/common/` + `components/ProTable/` + `components/form-schema/`）+ 各 app 私有 `src/components/`（若存在），均含深层子目录（`deep: true`）——`BaseChart` / `AsyncState` / `ProTable` / `SearchForm` / `XForm` / `ProDialog` / `ProDialogForm` 等全局可用。app 内 `src/components/` 以外自建子目录**不**在 dirs 内，需显式 import。
 
 **对照 Vant 第三方库：** vant 不需要显式 import，hover 时显示 `WithInstall<DefineComponent<ExtractPropTypes<{...}>, ...>>`——本项目走 GlobalComponents 路径时行为完全一致。
 
 **检测 / 自检方法：** 若 IDE hover 模板中的 `<XxxComponent>` 只显示 `import XxxComponent`，按本节规则删除对应 `import XxxComponent from '...'` 即可。
 
-**例外：** `<script setup>` 中若需要 `InstanceType<typeof Xxx>` 作为 ref 类型声明（如 `ref<InstanceType<typeof ProTable>>()` 用于取 `defineExpose` 暴露的方法），仍需显式 `import ProTable from '@/components/ProTable/ProTable.vue'`。模板自动注册只解决 hover 智能提示，不解决 `<script>` 中的构造类型引用——这是 demo 模块普遍显式 import 自动注册组件的**唯一合法场景**（如 `src/modules/demo/examples/ProTable/ProTableAutoHeight.vue:24`）。
+**例外：** `<script setup>` 中若需要 `InstanceType<typeof Xxx>` 作为 ref 类型声明（如 `ref<InstanceType<typeof ProTable>>()` 用于取 `defineExpose` 暴露的方法），仍需显式 `import ProTable from '@vv/ui/components/ProTable/ProTable.vue'`。模板自动注册只解决 hover 智能提示，不解决 `<script>` 中的构造类型引用——这是 demo 模块普遍显式 import 自动注册组件的**唯一合法场景**（如 `apps/docs/src/modules/demo/examples/ProTable/ProTableAutoHeight.vue`）。
 
 ---
 
-## §2 ⚠️ src/ Architecture Lockdown（最高优先级）
+## §2 ⚠️ apps/packages Architecture Lockdown（最高优先级）
 
-### 2.1 当前基线快照（2026-08-19）
+> v3.0.0 起由单应用 `src/` Lockdown 升级而来：锁定对象从「`src/` 16 个一级目录」扩展为
+> 「workspace 两级拓扑（`apps/*` 6 应用 × `packages/*` 4 包）+ 各 app 内部 src 结构」。
+> 治理精神不变：**结构即契约，未经明确批准不得变更**。
 
-`src/` 下 16 个一级目录的职责如下。任何变更都会破坏现有约定，**未经用户明确批准，禁止任何形式的增、删、改、移动、重命名**：
+### 2.1 当前基线快照（2026-10-22，P5-B 定稿）
 
-| #   | 目录           | 职责                                                                                                                                                                                                          |
-| --- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `api/`         | 跨模块网络请求基建（`http`/`cache`/`retry`/`token-refresh` 等）+ `api/modules/` 跨模块共享接口                                                                                                                |
-| 2   | `assets/`      | 静态资源（`styles/` 全局样式 + `icons/` 本地图标集合 SVG 源文件，经 `FileSystemIconLoader` 编译期读取，见 docs/39）                                                                                           |
-| 3   | `components/`  | 全局通用组件（`common/`）。**禁止**放置任何布局专用子组件（`Header` / `Sidebar` 等）—— 布局相关组件必须落在 `layouts/<m>/components/` 下随 layout 自包含                                                      |
-| 4   | `composables/` | 业务侧组合式函数封装（`useAppRouter`/`useRequest`/`useAuth`/`useDialog`/`useConfirm`/`useDict`/`useLogout`/`useTheme` 等）                                                                                    |
-| 5   | `directives/`  | 自定义指令（`v-inputDebounce`/`v-buttonDebounce`/`v-permission`/`v-auth`/`v-draggable`/`v-copy`）                                                                                                             |
-| 6   | `enums/`       | 枚举常量（`httpEnum`/`roleEnum` 等）                                                                                                                                                                          |
-| 7   | `layouts/`     | 路由级布局基座（`default`/`blank`/`portal`/`h5`/`big`）—— 每个 layout **自包含**，子组件放 `./components/`、配置放 `./config/`、资源放 `./images/`、样式放 `./styles/`；禁止跨目录到 `@/components/` 引用组件 |
-| 8   | `locales/`     | 国际化文案（`zh-CN`/`en-US`）                                                                                                                                                                                 |
-| 9   | `modules/`     | 业务模块（`auth`/`home`/`reports`/`user`/`demo`/`error`/`workbench`/`h5-demo`/`big-demo`），按需要含 `views/`+`routes/`+`store/`+`apis/`+`components/`+`index.ts`（见 docs/08）                               |
-| 10  | `plugins/`     | Vue 插件（`errorHandler`/`webVitals`/`remAdaptation` 等）                                                                                                                                                     |
-| 11  | `router/`      | 路由配置 + 守卫 + 自动注册 + 白名单 + 远程菜单                                                                                                                                                                |
-| 12  | `store/`       | Pinia 根配置 + `modules/` 全局 Store                                                                                                                                                                          |
-| 13  | `types/`       | TS 全局类型 + `.d.ts`                                                                                                                                                                                         |
-| 14  | `utils/`       | 纯函数工具（`dayjs`/`format`/`bem`/`storage` 等，与框架解耦）                                                                                                                                                 |
-| 15  | `App.vue`      | 根组件                                                                                                                                                                                                        |
-| 16  | `main.ts`      | 应用入口                                                                                                                                                                                                      |
+**workspace 拓扑**（pnpm workspace + turbo@2，`pnpm-workspace.yaml` 声明 `apps/*` + `packages/*`）：
+
+| #   | 路径                 | 职责                                                                                                                              |
+| --- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `apps/admin`         | 中后台管理（`@vv-app/admin`，端口 5174）：user/reports/workbench/error 归位后的主干业务 app                                       |
+| 2   | `apps/auth`          | 统一登录（`@vv-app/auth`，端口 5179）：登录页 + 登出落地 + 跨应用重定向协议实现方                                                 |
+| 3   | `apps/portal`        | 门户企业官网（`@vv-app/portal`，端口 5176）：home 模块 + portal layout                                                            |
+| 4   | `apps/h5`            | H5 移动端（`@vv-app/h5`，端口 5177）：h5-demo + h5 layout + rem 适配                                                              |
+| 5   | `apps/big`           | 数据大屏（`@vv-app/big`，端口 5178）：big-demo + big layout + scale 适配                                                          |
+| 6   | `apps/docs`          | 组件示例文档（`@vv-app/docs`，端口 5175）：demo 模块 + DemoDocs 布局 + 全部组件示例                                               |
+| 7   | `packages/config`    | `@vv/config`：vite 工厂 `createViteConfig`（插件装配/别名/css 预处理/分包单点）+ server/postcss/proxy 等构建配置                  |
+| 8   | `packages/mock`      | `@vv/mock`：vite-plugin-mock 数据源（原 `mock/` 目录职责），admin/auth/h5/big/portal/docs 按需接线                                |
+| 9   | `packages/shared`    | `@vv/shared`：网络层基建（http/cache/retry/token-refresh）+ 全局 store + `useAppRouter`/`useRequest`/`useAuth`/`useDict` 等       |
+| 10  | `packages/ui`        | `@vv/ui`：全局组件（common/ProTable/form-schema 三目录）+ 弹窗族 composables（useDialog/useConfirm/useLogout）+ 图标/样式资产     |
+| 11  | `scripts/`           | 工程脚本（check-routes/check-aliases/build-pages/dev-gateway/new-module 等，`node --experimental-strip-types` 直跑）              |
+| 12  | `docker/`            | 本地同域网关 nginx 配置（配合根 `docker-compose.yml`，见 docs/43）                                                                |
+| 13  | `.github/workflows/` | ci.yml（turbo affected）+ deploy.yml（build:pages 六应用聚合）                                                                    |
+| 14  | 根配置文件           | `package.json`（turbo scripts）/ `turbo.json` / `pnpm-workspace.yaml`（catalog 单版本源）/ `eslint.config.mjs` / `tsconfig*.json` |
+
+**依赖方向铁律（比目录锁更优先）：**
+
+```text
+apps/*  ──可依赖──▶  packages/*
+apps/*  ──✗ 互相依赖──  apps/*（跨 app 通信走整页跳转协议，见 docs/43 §统一登录协议）
+packages/*  ──单向──▶  config → mock → shared → ui（下游可引用上游；上游禁止反向依赖下游）
+packages/*  ──✗ 依赖──  apps/*；运行时依赖（vue/element-plus 等）一律 peerDependencies + catalog
+```
+
+> 边界机械强制手段：`eslint.config.mjs` 的 `no-restricted-imports`（app/business-wrap-rule）+
+> code review 兜底（**规则 files 模式随 P5-A 多包化落地后生效**，生效前以本表 + review 为准）。
+> 单 app 时期「模块边界铁律」平移进各 app 内部：`src/modules/<m>` 模块间禁止互 import，
+> 模块间通信走 `modules/<m>/index.ts` 对外接口。
 
 ### 2.2 禁止行为（最严格）
 
-未经用户在每次具体任务中**明确批准**，**严禁**对 `src/` 下任何路径实施以下任何操作：
+未经用户在每次具体任务中**明确批准**，**严禁**对 workspace 内任何路径实施以下任何操作：
 
-- ❌ **新增**一级目录 / 子目录 / 任何文件
-- ❌ **删除**任何文件 / 目录
-- ❌ **重命名**任何文件 / 目录
-- ❌ **移动**文件到其他目录
-- ❌ 改变任何目录的**职责定位**（例如把 `utils/` 改成依赖 Vue）
-- ❌ 修改 `src/` 的 `package.json`、`vite.config.ts`、`tsconfig.*`、`eslint.config.mjs` 中任何与 src/ 解析相关的配置
+- ❌ **新增 / 删除 / 重命名 / 移动**任何 app（`apps/<a>`）、包（`packages/<p>`）或根一级目录
+- ❌ 违反 §2.1 依赖方向铁律（如 `@vv/shared` 反向 import `@vv/ui`、`apps/*` 互相 import）
+- ❌ 改变任何 app / 包内部一级目录的**职责定位**（如把 `packages/shared` 改成依赖 Element Plus）
+- ❌ 修改 `pnpm-workspace.yaml`、`turbo.json`、根 `package.json` scripts、各 app `vite.config.ts`、`packages/config` 工厂、根 `tsconfig.*`、`eslint.config.mjs` 中任何与 workspace 解析相关的配置
+- ❌ app 内部 `src/` 目录沿用单应用时期 Lockdown：一级目录（api/assets/components/composables/directives/enums/layouts/locales/modules/plugins/router/store/types/utils）不得增删改移动重命名
 
 ### 2.3 例外条款
 
-用户在当前轮对话中**明确指定**目标文件路径（格式如：「在 `src/xxx/yyy.ts` 加 xxx」「新增 `src/modules/foo/views/Bar.vue`」「改 `src/utils/dayjs.ts` 的 format 函数」），视为已对**该单次操作**预先批准——无需再次询问。
+用户在当前轮对话中**明确指定**目标文件路径（格式如：「在 `packages/shared/src/api/http.ts` 加 xxx」「新增 `apps/admin/src/modules/foo/views/Bar.vue`」「改 `scripts/build-pages.ts` 的 REPO_PREFIX」），视为已对**该单次操作**预先批准——无需再次询问。
 
 > 例外只覆盖**该次明确提及的文件**，不延伸到其他文件。即便在同一段回复里提到多个文件，每个文件路径也需清晰可识别。
 
 ### 2.4 修改申请模板
 
-如需对 `src/` 做 §2.2 所列任一操作（且不属于 §2.3 例外），必须先输出**修改申请**（≤10 行）并等用户**单独批准**后才能动手：
+如需做 §2.2 所列任一操作（且不属于 §2.3 例外），必须先输出**修改申请**（≤10 行）并等用户**单独批准**后才能动手：
 
 ```markdown
-【src 修改申请】<方案名>
+【workspace 修改申请】<方案名>
 
-- 操作类型：[新增 / 删除 / 重命名 / 移动 / 改职责]
-- 目标路径：src/xxx/yyy（可多行）
+- 操作类型：[新增 app / 新增包 / 删除 / 重命名 / 移动 / 改职责 / 改依赖方向]
+- 目标路径：apps|packages|scripts/xxx（可多行）
 - 原因：[业务原因，≤2 句]
-- 影响面：[影响哪些模块/组件/调用方/路由/类型]
-- 备选：[是否考虑过其他目录归属，引用 docs/18 §2 决策矩阵]
+- 影响面：[影响哪些 app/包/调用方/路由/类型/turbo 拓扑]
+- 备选：[是否考虑过其他归属，引用 docs/43 / docs/18 §2 决策矩阵]
 - 回退：[如何恢复，是否需要备份]
 ```
 
 ### 2.5 验证机制
 
-每次任务完成后，**必须**在合规简报中单独列出「本次对 src/ 的所有写操作清单」，由用户复核。无清单 = 未完成。
-
+每次任务完成后，**必须**在合规简报中单独列出「本次对 workspace 的所有写操作清单」（含 apps/* / packages/* / scripts/ / 根配置），由用户复核。无清单 = 未完成。
 ---
 
 ## §3 组件 BEM 编写规范（强约束）
@@ -426,23 +450,23 @@ const bem = createNamespace('form-engine') // kebab-case，必须与 sass 根选
 
 ## §4 Project Constraints
 
-| #   | 约束                                                                                                                                                                           | 落地方式                                                                           |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| 1   | 包管理强制 pnpm                                                                                                                                                                | `package.json:scripts.preinstall` → `only-allow pnpm`                              |
-| 2   | 新增业务模块**必须**用 `pnpm new-module <kebab-name>`                                                                                                                          | `scripts/new-module.ts`（自动追加 RouteName）                                      |
-| 3   | 业务代码**必须**用 `useAppRouter` / `useRequest` / `useAuth` / `useDialog` 封装                                                                                                | ESLint `no-restricted-imports`                                                     |
-| 4   | 模块间通信走 `modules/<m>/index.ts`                                                                                                                                            | 见 §1.2 模块边界铁律                                                               |
-| 5   | `common` 组件不得 `import` 自 `modules/`                                                                                                                                       | 保护 tree-shake                                                                    |
-| 6   | `utils/` 不得依赖 Vue/Pinia                                                                                                                                                    | 与框架解耦                                                                         |
-| 7   | `store/` 不存网络请求中间态                                                                                                                                                    | loading 放组件 / composable                                                        |
-| 8   | 路由一致性校验：`pnpm check:routes`                                                                                                                                            | CI 阶段强制                                                                        |
-| 9   | 类型校验：`pnpm type-check:full`（`pnpm build` 内第二步：build-only 先生成声明，再全量门禁）                                                                                   | `package.json:scripts`                                                             |
-| 10  | 第三方 npm 包引用前必先 `npm view <pkg>` 验证                                                                                                                                  | 全局规则                                                                           |
-| 11  | 新增 composable / store / 类型必须带 `.spec.ts`（覆盖率 ≥ 80%）                                                                                                                | Vitest                                                                             |
-| 12  | 功能性变更同步 `CHANGELOG.md`（仅 typo 免记）                                                                                                                                  | 项目约定                                                                           |
-| 13  | 编写 CSS 禁止使用 `!important` 解决问题                                                                                                                                        | 仅当用户主动要求时才可使用；优先级应通过选择器特异性 / BEM 命名空间 / 源码顺序解决 |
-| 14  | src/ 内跨目录引用**优先 alias 路径**（`@/` 等 15 个别名，见 `vite.config.ts` `SRC_DIR_ALIASES`），禁止 `../../` 深层相对路径                                                   | 项目约定                                                                           |
-| 15  | `components/common/` + `ProTable/` + `form-schema/` 三目录下所有 .vue 全局组件**不要显式 import**，依赖 `unplugin-vue-components` 自动注册获得 IDE hover 智能提示（详见 §1.7） | IDE 体验                                                                           |
+| #   | 约束                                                                                                                                                              | 落地方式                                                                           |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| 1   | 包管理强制 pnpm                                                                                                                                                   | `package.json:scripts.preinstall` → `only-allow pnpm`                              |
+| 2   | 新增业务模块**必须**用 `pnpm new-module <kebab-name>`                                                                                                             | `scripts/new-module.ts`（自动追加 RouteName）                                      |
+| 3   | 业务代码**必须**用项目封装：`useAppRouter` / `useRequest` / `useAuth` / `useDict`（`@vv/shared`）+ `useDialog` / `useConfirm` / `useLogout`（`@vv/ui`）           | ESLint `no-restricted-imports`（files 模式随 P5-A 落地后生效）                     |
+| 4   | app 内模块间通信走 `modules/<m>/index.ts`；跨 app 通信走整页跳转协议（docs/43）                                                                                   | 见 §1.2 / §2.1                                                                     |
+| 5   | `@vv/ui` 组件不得 `import` 自任何 `apps/*`                                                                                                                        | 保护 tree-shake                                                                    |
+| 6   | workspace 依赖方向铁律（§2.1）：`apps/* → packages/*`，包间 config → mock → shared → ui 单向，运行时依赖 peerDependencies + catalog                               | turbo 拓扑 + code review                                                           |
+| 7   | `store/` 不存网络请求中间态                                                                                                                                       | loading 放组件 / composable                                                        |
+| 8   | 路由一致性校验：`pnpm check:routes`（monorepo 版，6 app 逐个校验）                                                                                                | CI 阶段强制                                                                        |
+| 9   | 类型校验：各 app `type-check:full`（`pnpm build` = turbo 拓扑序，内部 build-only 先生成声明再全量门禁）                                                           | `package.json:scripts`                                                             |
+| 10  | 第三方 npm 包引用前必先 `npm view <pkg>` 验证                                                                                                                     | 全局规则                                                                           |
+| 11  | 新增 composable / store / 类型必须带 `.spec.ts`（覆盖率 ≥ 80%）                                                                                                   | Vitest                                                                             |
+| 12  | 功能性变更同步 `CHANGELOG.md`（仅 typo 免记）                                                                                                                     | 项目约定                                                                           |
+| 13  | 编写 CSS 禁止使用 `!important` 解决问题                                                                                                                           | 仅当用户主动要求时才可使用；优先级应通过选择器特异性 / BEM 命名空间 / 源码顺序解决 |
+| 14  | app 内跨目录引用**优先 alias 路径**（`@/` 等，由 `packages/config/src/app-aliases.ts` 统一生成），禁止 `../../` 深层相对路径                                      | 项目约定                                                                           |
+| 15  | `@vv/ui` 三目录 + app 私有 `src/components/` 下所有 .vue 全局组件**不要显式 import**，依赖 `unplugin-vue-components` 自动注册获得 IDE hover 智能提示（详见 §1.7） | IDE 体验                                                                           |
 
 ---
 
@@ -462,7 +486,7 @@ const bem = createNamespace('form-engine') // kebab-case，必须与 sass 根选
 
 ---
 
-**承诺**：所有对 `src/` 的写操作按 §2 src/ Architecture Lockdown 执行——§2.3 例外条款（用户明确指定文件路径）直接实施；其他必须先输出 §2.4 修改申请并等用户单独批准。每次任务完成的合规简报需附「src/ 写操作清单」（§2.5）。
+**承诺**：所有对 workspace 的写操作按 §2 apps/packages Architecture Lockdown 执行——§2.3 例外条款（用户明确指定文件路径）直接实施；其他必须先输出 §2.4 修改申请并等用户单独批准。每次任务完成的合规简报需附「workspace 写操作清单」（§2.5）。
 
 ---
 

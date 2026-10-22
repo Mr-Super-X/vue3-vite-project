@@ -107,6 +107,8 @@ function main(): void {
   }
   console.log(`🔍 发现 ${apps.length} 个应用：${apps.join(', ')}`)
 
+  // 先清空聚合目录：根 dist/ 可能残留历史单应用构建产物（Pages 整目录发布，陈旧文件会被一并带上）
+  rmSync(OUT_DIR, { recursive: true, force: true })
   mkdirSync(OUT_DIR, { recursive: true })
   for (const name of apps) {
     console.log(`🏗️  构建 [${name}]…`)
