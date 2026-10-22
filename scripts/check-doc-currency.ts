@@ -34,7 +34,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
 const ROOT = resolve(import.meta.dirname, '..')
-const FORM_SCHEMA = join(ROOT, 'src/components/form-schema')
+const FORM_SCHEMA = join(ROOT, 'apps/admin/src/components/form-schema')
 
 interface Check {
   name: string
@@ -56,15 +56,42 @@ function countLines(relativePath: string): number {
 
 /** SchemaNode 命名空间子接口清单（P2-1 重构后） */
 const SCHEMA_NODE_NAMESPACES = [
-  { file: 'src/components/form-schema/types/identity.ts', interfaceName: 'SchemaNodeIdentity' },
-  { file: 'src/components/form-schema/types/render.ts', interfaceName: 'SchemaNodeRender' },
-  { file: 'src/components/form-schema/types/layout.ts', interfaceName: 'SchemaNodeLayout' },
-  { file: 'src/components/form-schema/types/validate.ts', interfaceName: 'SchemaNodeValidate' },
-  { file: 'src/components/form-schema/types/reaction.ts', interfaceName: 'SchemaNodeReactive' },
-  { file: 'src/components/form-schema/types/array.ts', interfaceName: 'SchemaNodeArray' },
-  { file: 'src/components/form-schema/types/async-options.ts', interfaceName: 'SchemaNodeData' },
-  { file: 'src/components/form-schema/types/v-model.ts', interfaceName: 'SchemaNodeVModel' },
-  { file: 'src/components/form-schema/types/top-level.ts', interfaceName: 'SchemaNodeTopLevel' },
+  {
+    file: 'apps/admin/src/components/form-schema/types/identity.ts',
+    interfaceName: 'SchemaNodeIdentity',
+  },
+  {
+    file: 'apps/admin/src/components/form-schema/types/render.ts',
+    interfaceName: 'SchemaNodeRender',
+  },
+  {
+    file: 'apps/admin/src/components/form-schema/types/layout.ts',
+    interfaceName: 'SchemaNodeLayout',
+  },
+  {
+    file: 'apps/admin/src/components/form-schema/types/validate.ts',
+    interfaceName: 'SchemaNodeValidate',
+  },
+  {
+    file: 'apps/admin/src/components/form-schema/types/reaction.ts',
+    interfaceName: 'SchemaNodeReactive',
+  },
+  {
+    file: 'apps/admin/src/components/form-schema/types/array.ts',
+    interfaceName: 'SchemaNodeArray',
+  },
+  {
+    file: 'apps/admin/src/components/form-schema/types/async-options.ts',
+    interfaceName: 'SchemaNodeData',
+  },
+  {
+    file: 'apps/admin/src/components/form-schema/types/v-model.ts',
+    interfaceName: 'SchemaNodeVModel',
+  },
+  {
+    file: 'apps/admin/src/components/form-schema/types/top-level.ts',
+    interfaceName: 'SchemaNodeTopLevel',
+  },
 ] as const
 
 /** 解析 interface 体内的字段数（精确：仅 interface body 内的字段声明） */
@@ -101,7 +128,9 @@ function countSchemaNodeFields(): number {
 function countBuilders(): number {
   const dir = join(FORM_SCHEMA, 'builders')
   const files = readdirSync(dir).filter((f) => f.endsWith('.ts') && f !== 'index.ts')
-  const content = files.map((f) => readText(`src/components/form-schema/builders/${f}`)).join('\n')
+  const content = files
+    .map((f) => readText(`apps/admin/src/components/form-schema/builders/${f}`))
+    .join('\n')
   const matches = content.match(/^export const x[A-Z]\w+\s*[:=]/gm)
   return matches ? matches.length : 0
 }
@@ -141,7 +170,10 @@ function countSpecFiles(): number {
  * 'XFormProps 契约快照' 用例互锁 —— 增删 prop 时两处同时失败。
  */
 function countXFormProps(): number {
-  return countInterfaceFields(readText('src/components/form-schema/types/xform.ts'), 'XFormProps')
+  return countInterfaceFields(
+    readText('apps/admin/src/components/form-schema/types/xform.ts'),
+    'XFormProps'
+  )
 }
 
 /**
@@ -151,7 +183,7 @@ function countXFormProps(): number {
  * 2026-09-18 Wave4-2 新增 XFormTabsSteps：55 → 56。
  */
 function countXFormDemos(): number {
-  return readdirSync(join(ROOT, 'src/modules/demo/examples/XForm')).filter((f) =>
+  return readdirSync(join(ROOT, 'apps/admin/src/modules/demo/examples/XForm')).filter((f) =>
     f.endsWith('.vue')
   ).length
 }
@@ -163,7 +195,7 @@ function countXFormDemos(): number {
  * 解析规则：扫 `interface Props { ... }` 内 `^\s+name\??:\s` 模式。
  */
 function countProDialogProps(): number {
-  const content = readText('src/components/common/ProDialog/ProDialog.vue')
+  const content = readText('apps/admin/src/components/common/ProDialog/ProDialog.vue')
   const m = content.match(/interface Props \{([\s\S]*?)\n\}/)
   if (!m) return 0
   return m[1].split('\n').filter((line) => /^\s+[a-z][a-zA-Z]*\??:\s/.test(line)).length
@@ -173,7 +205,7 @@ function countProDialogProps(): number {
  * 数 BaseChart 显式声明的 Props（BaseChartProps interface 体）
  */
 function countBaseChartProps(): number {
-  const content = readText('src/components/common/BaseChart.vue')
+  const content = readText('apps/admin/src/components/common/BaseChart.vue')
   const m = content.match(/interface BaseChartProps \{([\s\S]*?)\n\}/)
   if (!m) return 0
   return m[1].split('\n').filter((line) => /^\s+[a-z][a-zA-Z]*\??:\s/.test(line)).length
@@ -212,7 +244,7 @@ function countVendorChunksNamed(): number {
  * docs/29 §概述写「17 composables」是概数；脚本校验精确值 = 17。
  */
 function countProTableComposables(): number {
-  const files = readdirSync(join(ROOT, 'src/components/ProTable/composables'))
+  const files = readdirSync(join(ROOT, 'apps/admin/src/components/ProTable/composables'))
   return files.filter((f) => f.endsWith('.ts') && !f.endsWith('.spec.ts')).length
 }
 
@@ -223,12 +255,12 @@ function countProTableComposables(): number {
  * 2026-10-19 新增 VxeRowSelect / SearchFilter——审计 demo 缺口补齐）
  */
 function countProTableDemos(): number {
-  const files = readdirSync(join(ROOT, 'src/modules/demo/examples/ProTable'))
+  const files = readdirSync(join(ROOT, 'apps/admin/src/modules/demo/examples/ProTable'))
   return files.filter(
     (f) =>
       f.endsWith('.vue') &&
       f !== 'configs' &&
-      statSync(join(ROOT, 'src/modules/demo/examples/ProTable', f)).isFile()
+      statSync(join(ROOT, 'apps/admin/src/modules/demo/examples/ProTable', f)).isFile()
   ).length
 }
 
@@ -268,7 +300,8 @@ const checks: Check[] = [
     // 已贴近上限：下次增长应先抽离 cross-field 编排块（composer 内约 30 行，含 resetFields tick 包装），
     // 而非继续放宽阈值。
     name: 'use-xform-composer.ts 行数 (顶层编排膨胀预警)',
-    actual: () => countLines('src/components/form-schema/composables/use-xform-composer.ts'),
+    actual: () =>
+      countLines('apps/admin/src/components/form-schema/composables/use-xform-composer.ts'),
     expected: 300,
     tolerance: 50,
   },
