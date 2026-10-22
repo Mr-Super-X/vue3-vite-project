@@ -15,7 +15,7 @@ import type { TagView } from '@/store/modules/tags-view'
  * 过滤语义（对齐本项目 RouteMeta，参考仓的 meta.hidden 对应本项目 meta.visible）：
  *   - meta.visible === false 或 meta.menuVisible === false → 菜单隐藏
  *   - meta.requiresAuth === false（登录页等空白页）→ 不进后台菜单
- *   - 白名单/错误页 name（Login / Forbidden / NotFound / ServerError）→ 不进菜单
+ *   - 白名单/错误页 name（Forbidden / NotFound / ServerError）→ 不进菜单
  *   - path 含动态段（:param / catch-all）→ 跳过
  *
  * @see [`./types.ts`](./types.ts) MenuNode 类型
@@ -24,8 +24,8 @@ import type { TagView } from '@/store/modules/tags-view'
  * @group 布局：Default
  */
 
-/** 白名单/错误页路由名（与 router/whitelist.ts 保持同步，见 docs/07） */
-const EXCLUDED_ROUTE_NAMES = new Set(['Login', 'Forbidden', 'NotFound', 'ServerError'])
+/** 白名单/错误页路由名（与 router/whitelist.ts 保持同步，见 docs/07；P4 起 Login 迁 apps/auth，不在 admin 路由表中） */
+const EXCLUDED_ROUTE_NAMES = new Set(['Forbidden', 'NotFound', 'ServerError'])
 
 /** 判断是否为外链 URL（http/https/ftp 协议头） */
 export function isUrl(path: string): boolean {

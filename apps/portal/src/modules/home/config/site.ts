@@ -28,10 +28,10 @@ export const SITE_HERO = {
   /** 主标题两行（模板用 <br> 连接） */
   titleLines: ['让数据成为', '企业增长的引擎'] as const,
   subtitle: '一站式云端数据平台，助力企业快速构建智能应用，释放数据的全部价值。',
-  /** 主按钮：跳登录（项目无注册页，免费试用 = 登录后开通） */
-  primaryCta: { label: '免费试用', to: '/login' },
+  /** 主按钮：跳统一登录（P4 起整页跳 apps/auth；项目无注册页，免费试用 = 登录后开通） */
+  primaryCta: { label: '免费试用' },
   /** 次按钮：同为登录（预约演示由登录后流程承接） */
-  secondaryCta: { label: '预约演示', to: '/login' },
+  secondaryCta: { label: '预约演示' },
 } as const
 
 /** 产品特性（id=features，3 卡；icon 为组件内静态 tabler 标签，见 SiteFeatures.vue） */

@@ -7,6 +7,17 @@ vi.mock('../utils/storage.ts', () => ({
   Local: { set: vi.fn(), get: vi.fn(), remove: vi.fn(), clear: vi.fn() },
 }))
 
+// P4 跨应用登录协议：未登录改 redirectToAuthLogin 整页跳 apps/auth；
+// mock 掉真实实现（会赋 location.href + throw），本 spec 只断言调用契约
+const { mockRedirectToAuthLogin } = vi.hoisted(() => ({
+  mockRedirectToAuthLogin: vi.fn(() => {
+    throw new Error('AUTH_REDIRECTING')
+  }),
+}))
+vi.mock('../auth/redirect.ts', () => ({
+  redirectToAuthLogin: mockRedirectToAuthLogin,
+}))
+
 import { checkLoginState } from './login'
 import { Session } from '../utils/storage.ts'
 
@@ -27,6 +38,7 @@ const makeStore = (overrides: Partial<UserStore> = {}): UserStore =>
 
 beforeEach(() => {
   mockSessionGet.mockReset()
+  mockRedirectToAuthLogin.mockClear()
 })
 
 describe('checkLoginState（httpOnly 登录标记模式）', () => {
@@ -39,11 +51,12 @@ describe('checkLoginState（httpOnly 登录标记模式）', () => {
     expect(store.fetchProfile).not.toHaveBeenCalled()
   })
 
-  it('无登录标记 → 跳 /login 并携带 redirect', async () => {
+  it('无登录标记 → 整页跳 apps/auth 登录页并携带 redirect（P4）', async () => {
     mockSessionGet.mockReturnValue(null)
     const store = makeStore()
-    const result = await checkLoginState(to, store)
-    expect(result).toEqual({ path: '/login', query: { redirect: '/orders?page=1' } })
+    // mock 的 redirectToAuthLogin 抛 AUTH_REDIRECTING（与真实实现同形态）
+    await expect(checkLoginState(to, store)).rejects.toThrow('AUTH_REDIRECTING')
+    expect(mockRedirectToAuthLogin).toHaveBeenCalledWith('/orders?page=1')
     expect(store.fetchProfile).not.toHaveBeenCalled()
   })
 
@@ -56,13 +69,13 @@ describe('checkLoginState（httpOnly 登录标记模式）', () => {
     expect(result).toBeNull()
   })
 
-  it('凭证失效（fetchProfile 失败）→ 清本地标记并跳 /login', async () => {
+  it('凭证失效（fetchProfile 失败）→ 清本地标记并整页跳 apps/auth 登录页（P4）', async () => {
     mockSessionGet.mockReturnValue(true)
     const store = makeStore({
       fetchProfile: vi.fn().mockRejectedValue(new Error('401')),
     })
-    const result = await checkLoginState(to, store)
+    await expect(checkLoginState(to, store)).rejects.toThrow('AUTH_REDIRECTING')
     expect(store.resetLocalState).toHaveBeenCalledTimes(1)
-    expect(result).toEqual({ path: '/login', query: { redirect: '/orders?page=1' } })
+    expect(mockRedirectToAuthLogin).toHaveBeenCalledWith('/orders?page=1')
   })
 })

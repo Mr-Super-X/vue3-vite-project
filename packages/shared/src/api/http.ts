@@ -41,6 +41,7 @@ import { generateRequestId, REQUEST_ID_HEADER } from './request-id'
 import { cacheGet, cacheSet, buildCacheKey } from './cache'
 import { refreshSession, _getCurrentConfig } from './token-refresh'
 import { getAppRouter } from '../app-router.ts'
+import { redirectToAuthLogin } from '../auth/redirect.ts'
 
 /**
  * 扩展 AxiosRequestConfig：标记分页列表请求 / 内存缓存（一次性的可插拔能力）。
@@ -230,20 +231,28 @@ function handleGenericError(
 }
 
 /**
- * 登出副作用：toast + 清登录标记 + 跳登录页。
+ * 登出副作用：toast + 清登录标记 + 整页跳统一登录应用（apps/auth）。
  * 由 refresh 失败流程调用（凭证彻底失效，无法续期）。
+ *
+ * P4 变更：不再 `router.push('/login')`（auth 独立后消费方 app 内无登录路由），
+ * 改 `redirectToAuthLogin` 整页跳转；其中断信号（AUTH_REDIRECTING throw）在本层吞掉——
+ * 保持调用方 request<T>() 抛出原 ApiError 的既有契约（见 http.spec.ts）。
  *
  * router 实例经 DI 读取（getAppRouter，P1-3 包化改造）：静态 import app 侧 router
  * 会形成 http → router → guards → store → api 的包间循环依赖；app 启动时已
  * registerAppRouter（守卫在 createRouter 之后才执行，时序安全）。
- * 子路径部署走 vue-router 的 base 配置，不硬编码绝对路径。
+ * 子路径部署的 origin/前缀由 VITE_AUTH_ORIGIN env 注入（见 ../auth/redirect.ts）。
  * 凭证 cookie（HttpOnly）前端删不掉，由后端 logout/refresh 失效处理；
  * 前端只清无敏感信息的登录标记。
  */
 async function performLogout(): Promise<void> {
   ElMessage.error('登录已过期，请重新登录')
   Session.remove('auth')
-  await getAppRouter().push('/login')
+  try {
+    redirectToAuthLogin(getAppRouter().currentRoute.value.fullPath)
+  } catch {
+    // AUTH_REDIRECTING 中断信号：整页跳转已发起，吞掉以保持原 ApiError 契约
+  }
 }
 
 // 业务码 → 副作用处理器查表。

@@ -1,15 +1,11 @@
 import { mount, flushPromises } from '@vue/test-utils'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 
-// mock 路由 + pinia
-const mockPush = vi.fn().mockResolvedValue(undefined)
-let mockRedirect: string | undefined = undefined
-vi.mock('vue-router', () => ({
-  useRoute: () => ({ query: { redirect: mockRedirect } }),
-  useRouter: () => ({ push: mockPush }),
-}))
+// P4 跨应用统一登录协议：登录成功改整页 location.href 回跳（跨 app 无共享 router），
+// 不再有 vue-router push；jsdom 的 Location.href 不可拦截，经 stubGlobal 整体替换
+const fakeLocation = { href: 'http://localhost/login', search: '' }
 
 const mockLogin = vi.fn()
 const mockUserStore = { login: mockLogin }
@@ -17,9 +13,15 @@ vi.mock('@store/modules/user', () => ({
   useUserStore: () => mockUserStore,
 }))
 
-vi.mock('@composables/useAppRouter', () => ({
-  useAppRouter: () => ({ router: { push: mockPush } }),
+// resolvePostLoginRedirect 归 @vv/shared 根 barrel；importOriginal 保留其余导出
+// （createNamespace 等 AutoImport 注入标识符的真实实现不受影响）
+const { mockResolvePostLoginRedirect } = vi.hoisted(() => ({
+  mockResolvePostLoginRedirect: vi.fn(() => '/admin/'),
 }))
+vi.mock('@vv/shared', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@vv/shared')>()
+  return { ...actual, resolvePostLoginRedirect: mockResolvePostLoginRedirect }
+})
 
 vi.mock('element-plus', async () => {
   const actual = await vi.importActual<typeof import('element-plus')>('element-plus')
@@ -32,16 +34,22 @@ vi.mock('element-plus', async () => {
 // 引入被测组件（必须在 mock 之后）
 import Login from './Login.vue'
 
-describe('Login.vue（深色科技感重构）', () => {
+describe('Login.vue（apps/auth 统一登录页）', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockRedirect = undefined
+    fakeLocation.href = 'http://localhost/login'
+    fakeLocation.search = ''
+    vi.stubGlobal('location', fakeLocation)
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it('1. 渲染默认结构：品牌区 + 表单 + 按钮 + 版权', () => {
     const w = mount(Login)
     expect(w.find('h1').exists()).toBe(true)
-    expect(w.text()).toContain('企业中后台管理')
+    expect(w.text()).toContain('统一登录')
     expect(w.findAll('input').length).toBeGreaterThanOrEqual(2)
     expect(w.find('button').exists()).toBe(true)
     expect(w.text()).toContain('© 2026')
@@ -59,36 +67,40 @@ describe('Login.vue（深色科技感重构）', () => {
     await w.find('form').trigger('submit.prevent')
     await flushPromises()
     expect(mockLogin).not.toHaveBeenCalled()
-    expect(mockPush).not.toHaveBeenCalled()
+    expect(mockResolvePostLoginRedirect).not.toHaveBeenCalled()
   })
 
-  it('3. 登录成功：toast success + 跳转到 query.redirect', async () => {
+  it('3. 登录成功：toast success + 整页回跳（resolvePostLoginRedirect 解析目标）', async () => {
     mockLogin.mockResolvedValueOnce({ token: 'xxx' })
-    mockRedirect = '/orders'
+    fakeLocation.search = '?redirect=%2Fworkbench'
+    mockResolvePostLoginRedirect.mockReturnValueOnce('/workbench')
     const w = mount(Login)
     await w.find('form').trigger('submit.prevent')
     await flushPromises()
     expect(mockLogin).toHaveBeenCalledWith({ username: 'admin', password: '123456' })
     expect(ElMessage.success).toHaveBeenCalledWith('登录成功')
-    expect(mockPush).toHaveBeenCalledWith('/orders')
+    expect(mockResolvePostLoginRedirect).toHaveBeenCalledWith('/admin/')
+    expect(window.location.href).toBe('/workbench')
   })
 
-  it('4. 登录失败：toast error + 不跳转（无静默吞错）', async () => {
+  it('4. 登录失败：toast error + 不回跳（无静默吞错）', async () => {
     mockLogin.mockRejectedValueOnce(new Error('密码错误'))
     const w = mount(Login)
     await w.find('form').trigger('submit.prevent')
     await flushPromises()
     expect(ElMessage.error).toHaveBeenCalledWith('密码错误')
-    expect(mockPush).not.toHaveBeenCalled()
+    expect(mockResolvePostLoginRedirect).not.toHaveBeenCalled()
+    expect(window.location.href).toBe('http://localhost/login')
   })
 
-  it('5. 无 redirect 时默认跳 /workbench', async () => {
+  it('5. 回跳 fallback 由 resolvePostLoginRedirect 承担（/admin/ 默认回管理端）', async () => {
     mockLogin.mockResolvedValueOnce({ token: 'xxx' })
-    mockRedirect = undefined
+    // 无 redirect 查询参数：组件固定传 '/admin/' 作 fallback，防开放重定向校验在 shared 层
     const w = mount(Login)
     await w.find('form').trigger('submit.prevent')
     await flushPromises()
-    expect(mockPush).toHaveBeenCalledWith('/workbench')
+    expect(mockResolvePostLoginRedirect).toHaveBeenCalledWith('/admin/')
+    expect(window.location.href).toBe('/admin/')
   })
 
   it('6. 密码显隐切换：点击 👁 后 input type 切换', async () => {

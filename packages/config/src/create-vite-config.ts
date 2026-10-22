@@ -170,6 +170,22 @@ export function createViteConfig({
     define: {
       'import.meta.env.VITE_APP_ID': JSON.stringify(appName),
     },
+    // 浏览器消费的 @vv/* 源码链接包禁止预打包（2026-10-22 P4 实证）：
+    // esbuild 预打包不经 unplugin-auto-import 转换，shared store 内 auto-import 注入的
+    // defineStore/ref 在 bundle 里是自由变量 → 模块求值即 ReferenceError（dev 冷缓存必现）；
+    // 排除后按源码 /@fs/ 逐个服务，auto-import 正常注入且 HMR 生效（portal/h5/big 长期形态）。
+    // 注：rolldown-vite 扫描器把每个包子路径当独立 dep id（根包 exclude 不覆盖），
+    // '@vv/ui/composables/*' 三条 auto-import 注入入口须逐条点名
+    optimizeDeps: {
+      exclude: [
+        '@vv/shared',
+        '@vv/ui',
+        '@vv/mock',
+        '@vv/ui/composables/useDialog',
+        '@vv/ui/composables/useConfirm',
+        '@vv/ui/composables/useLogout',
+      ],
+    },
     server: {
       ...SERVER_DEFAULTS,
       port: SERVER_DEFAULTS.port + portOffset,

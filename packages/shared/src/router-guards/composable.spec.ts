@@ -37,6 +37,21 @@ describe('composeGuards', () => {
     errSpy.mockRestore()
   })
 
+  it('AUTH_REDIRECTING 中断信号不吞：透传 throw 且终止后续 guard（P4 跨应用登录协议）', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const second = vi.fn(() => null)
+    const guards: RouteGuard[] = [
+      () => {
+        throw new Error('AUTH_REDIRECTING')
+      },
+      second,
+    ]
+    await expect(composeGuards(to, guards)).rejects.toThrow('AUTH_REDIRECTING')
+    expect(second).not.toHaveBeenCalled()
+    expect(errSpy).not.toHaveBeenCalled()
+    errSpy.mockRestore()
+  })
+
   it('context 参数透传给每个 guard', async () => {
     const received: unknown[] = []
     const guards: RouteGuard[] = [

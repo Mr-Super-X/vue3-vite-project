@@ -3,18 +3,30 @@
  * 官网 Hero 首屏（id=hero）：左文案 + 右线条 SVG 产品示意图。
  *
  * 设计：
- * - 文案来自 `config/site.ts`（SITE_HERO）；两个 CTA 均 goLogin（项目无注册页，见 site.ts 注释）
+ * - 文案来自 `config/site.ts`（SITE_HERO）；两个 CTA 均 goAuthLogin——P4 起整页跳
+ *   apps/auth 统一登录（项目无注册页，见 site.ts 注释）
  * - 右侧示意图为内联 SVG（折线 + 柱状 + 网格，单色 stroke），仅此处使用故不独立成文件
  * - 入场动画 fade-up（≤0.6s 递增 delay）；prefers-reduced-motion 时关闭（a11y）
  *
  * @see [`../config/site.ts`](../config/site.ts) SITE_HERO 文案单源
  * @group 业务模块：Home
  */
+import { redirectToAuthLogin } from '@vv/shared'
 import { SITE_HERO } from '../config/site'
 
 const bem = createNamespace('site-hero')
 
-const { goLogin } = useAppRouter() // 项目 composable @composables/useAppRouter（vite 自动注入）
+/**
+ * 跳统一登录应用（apps/auth）：整页 location.href（跨 app 无共享 router 实例），
+ * 回跳地址取当前路径；AUTH_REDIRECTING 中断信号吞掉（整页已发起，勿误报 errorHandler）
+ */
+function goAuthLogin(): void {
+  try {
+    redirectToAuthLogin(window.location.pathname)
+  } catch {
+    // 中断信号，非错误
+  }
+}
 
 /** SVG 示意图横向网格线 y 坐标（viewBox 内部坐标；提为常量避免模板数组字面量每轮渲染重建） */
 const GRID_LINES = [100, 150, 200, 250, 300]
@@ -32,10 +44,10 @@ const GRID_LINES = [100, 150, 200, 250, 300]
         </h1>
         <p :class="bem.e('subtitle')">{{ SITE_HERO.subtitle }}</p>
         <div :class="bem.e('actions')">
-          <button type="button" :class="[bem.e('btn'), bem.m('primary')]" @click="goLogin()">
+          <button type="button" :class="[bem.e('btn'), bem.m('primary')]" @click="goAuthLogin">
             {{ SITE_HERO.primaryCta.label }}
           </button>
-          <button type="button" :class="[bem.e('btn'), bem.m('ghost')]" @click="goLogin()">
+          <button type="button" :class="[bem.e('btn'), bem.m('ghost')]" @click="goAuthLogin">
             {{ SITE_HERO.secondaryCta.label }}
           </button>
         </div>

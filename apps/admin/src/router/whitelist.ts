@@ -5,7 +5,7 @@
  * 判定依据：路由的 `name` 在 `ROUTE_WHITE_LIST` 中（按 name 而非 path 匹配）
  *
  * 为什么用 name 而不是 path：
- * - 路由 path 可能变化（如 `/login` → `/signin`），name 更稳定
+ * - 路由 path 可能变化（如 `/profile` → `/account`），name 更稳定
  * - 后端菜单可能用任意 path 注入，按 name 校验更可控
  *
  * 注意：白名单路由仍建议挂载 layout（避免裸路由破布局）
@@ -14,7 +14,9 @@
  * P3-1 变更：home 模块物理独立到 apps/portal（连同 'Home' 白名单行）。
  * P3-2 变更：H5Demo 随迁至 apps/h5（h5-demo 模块 + h5 layout 整体抽离）。
  * P3-3 变更：big-demo 模块随 big layout 物理独立到 apps/big。
- * admin 不再有公开落地页——未登录访问 `/` 由守卫跳 /login（rootRedirect 已指向 /workbench）。
+ * P4 变更：auth 模块物理独立到 apps/auth（连同 'Login' 白名单行）——
+ * admin 无任何公开页：未登录访问一律由守卫经 `redirectToAuthLogin` 整页跳
+ * apps/auth（跨应用统一登录协议，@vv/shared auth/redirect.ts）。
  *
  * @see [`./guards/auth.ts`](./guards/auth.ts) `isWhiteListed` 调用点
  * @group 路由：白名单
@@ -32,7 +34,6 @@ import { isWhiteListed } from '@vv/shared/router-guards'
  * ```
  */
 export const ROUTE_WHITE_LIST: ReadonlySet<string> = new Set<string>([
-  'Login', // 登录页
   'Forbidden', // 403 无权限
   'NotFound', // 404 页面
   'ServerError', // 500 页面

@@ -67,6 +67,13 @@ interface ImportMetaEnv {
    * （`store/modules/{app,theme}.ts`，D6/R8）；未注入时回落 'app'。
    */
   readonly VITE_APP_ID?: string
+  /**
+   * 统一登录应用（apps/auth）的 origin/路径前缀（P4 跨应用登录协议，
+   * `auth/redirect.ts` 读取，由各 app env 注入——包内不硬编码 app 名）。
+   * 缺省 '/auth'（同源子路径语义）；生产按部署形态覆盖
+   * （如 gh-pages 子路径 '/vue3-vite-project/auth' 或独立域名绝对 URL）。
+   */
+  readonly VITE_AUTH_ORIGIN?: string
 }
 
 interface ImportMeta {

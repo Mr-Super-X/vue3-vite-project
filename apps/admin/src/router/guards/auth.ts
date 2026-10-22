@@ -6,8 +6,8 @@
  * （packages/shared/src/router-guards）；本文件保留 admin 编排职责：
  * 注入 admin 私有白名单数据、远程菜单加载器与各 store 实例。
  *
- * 顺序说明（顺序敏感）：白名单必须最前，否则登录页本身会被拦截；
- * 可见性必须在登录前否则未登录用户访问 hidden 路由会看到 `/login` 重定向，体验糟糕。
+ * 顺序说明（顺序敏感）：白名单必须最前，否则错误页本身会被拦截；
+ * 可见性必须在登录前，否则未登录用户访问 hidden 路由会被跳去登录页，体验糟糕。
  *
  * 错误处理：
  * - 远程菜单加载失败 → console.warn + 保持 local（`fetchRemoteRoutes` 内部已捕获）
@@ -48,6 +48,11 @@ registerLocalStateResetHook(() => {
  *
  * 调用一次（在 src/router/index.ts 创建 router 后）。
  * 守卫内部用 composeGuards 串接所有 check，确保顺序、可测性、可中断。
+ *
+ * P4 跨应用登录协议：checkLoginState 未登录时经 redirectToAuthLogin 整页跳
+ * apps/auth（location.href 已发起），其 AUTH_REDIRECTING 中断信号由
+ * composeGuards 透传到此——return false 取消本次 SPA 导航，静候整页跳转，
+ * 不再走 vue-router 内部 redirect（admin 内已无 /login 路由）。
  */
 export function setupAuthGuard(router: Router): void {
   router.beforeEach(async (to) => {
@@ -59,14 +64,20 @@ export function setupAuthGuard(router: Router): void {
 
     // 2-5. 顺序检查：可见性 → 登录态 → 远程菜单 → 权限
     // 任一返回 RouteLocationRaw 立即终止（vue-router 跳转到该路由）
-    const result = await composeGuards(to, [
-      (route) => checkVisibility(route),
-      (route) => checkLoginState(route, userStore),
-      (route) => ensureRemoteMenuLoaded(route, userStore, routerStore, router),
-      (route) => checkPermission(route, userStore),
-    ])
+    try {
+      const result = await composeGuards(to, [
+        (route) => checkVisibility(route),
+        (route) => checkLoginState(route, userStore),
+        (route) => ensureRemoteMenuLoaded(route, userStore, routerStore, router),
+        (route) => checkPermission(route, userStore),
+      ])
 
-    // null = 放行；非 null = vue-router 内部跳转到 RouteLocationRaw
-    return result ?? true
+      // null = 放行；非 null = vue-router 内部跳转到 RouteLocationRaw
+      return result ?? true
+    } catch (err) {
+      // AUTH_REDIRECTING：整页跳 apps/auth 已发起，取消本次导航即可（非错误）
+      if (err instanceof Error && err.message === 'AUTH_REDIRECTING') return false
+      throw err
+    }
   })
 }

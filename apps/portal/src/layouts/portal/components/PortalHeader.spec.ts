@@ -2,11 +2,15 @@ import { mount } from '@vue/test-utils'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { nextTick, ref, reactive } from 'vue'
 
-// mock useAppRouter（auto-import 在 vitest 走同一 vite 管线，解析到 '@composables/useAppRouter'）
-const mockGoLogin = vi.fn()
-vi.mock('@composables/useAppRouter', () => ({
-  useAppRouter: () => ({ goLogin: mockGoLogin }),
+// P4 跨应用统一登录协议：登录按钮改 redirectToAuthLogin 整页跳 apps/auth；
+// mock 掉真实实现（会赋 location.href + throw AUTH_REDIRECTING）
+const { mockRedirectToAuthLogin } = vi.hoisted(() => ({
+  mockRedirectToAuthLogin: vi.fn(),
 }))
+vi.mock('@vv/shared', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@vv/shared')>()
+  return { ...actual, redirectToAuthLogin: mockRedirectToAuthLogin }
+})
 
 // mock useUserStore（组件仅消费 profile）
 const mockProfile = ref<{ name: string } | null>({ name: '张三' })
@@ -46,13 +50,14 @@ describe('PortalHeader 企业官网顶栏', () => {
     expect(w.text()).toContain('产品')
   })
 
-  it('2. 未登录显示「登录」按钮，点击调 goLogin', async () => {
+  it('2. 未登录显示「登录」按钮，点击整页跳 apps/auth 统一登录（P4）', async () => {
     mockProfile.value = null
     const w = mount(PortalHeader, { global: { mocks: { $t: mockT } } })
     const btn = w.find('.vv-portal-header__login')
     expect(btn.exists()).toBe(true)
     await btn.trigger('click')
-    expect(mockGoLogin).toHaveBeenCalledTimes(1)
+    expect(mockRedirectToAuthLogin).toHaveBeenCalledTimes(1)
+    expect(mockRedirectToAuthLogin).toHaveBeenCalledWith(window.location.pathname)
   })
 
   it('3. 已登录显示用户菜单，下拉「退出」触发 confirmLogout', async () => {

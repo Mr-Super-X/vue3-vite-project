@@ -60,9 +60,12 @@ vi.mock('axios', async () => {
 })
 
 // httpOnly 模式：refreshSession 由 token-refresh 模块提供，mock 掉以控制 401 流程
-const { mockRefreshSession, mockRouterPush } = vi.hoisted(() => ({
+const { mockRefreshSession, mockRouterPush, mockRedirectToAuthLogin } = vi.hoisted(() => ({
   mockRefreshSession: vi.fn(),
   mockRouterPush: vi.fn().mockResolvedValue(undefined),
+  // P4 跨应用登录协议：performLogout 改整页跳 apps/auth（mock 不 throw，
+  // 模拟 performLogout 内部 catch 中断信号后的正常返回路径）
+  mockRedirectToAuthLogin: vi.fn(),
 }))
 
 vi.mock('./token-refresh', () => ({
@@ -70,9 +73,14 @@ vi.mock('./token-refresh', () => ({
   _getCurrentConfig: () => ({ url: '/auth/refresh', refresh: vi.fn() }),
 }))
 
-// performLogout 经 DI 读取 app router 实例（P1-3 包化改造，见 ../app-router.ts）
+// performLogout 经 DI 读取 app router 实例（P1-3 包化改造，见 ../app-router.ts）；
+// P4 起取 currentRoute.fullPath 作为登录后回跳目标
 vi.mock('../app-router.ts', () => ({
-  getAppRouter: () => ({ push: mockRouterPush }),
+  getAppRouter: () => ({ push: mockRouterPush, currentRoute: { value: { fullPath: '/x' } } }),
+}))
+
+vi.mock('../auth/redirect.ts', () => ({
+  redirectToAuthLogin: mockRedirectToAuthLogin,
 }))
 
 // 必须在 mock 之后；动态 import 让 mock 生效
@@ -99,6 +107,7 @@ beforeEach(() => {
   window.sessionStorage.clear()
   mockRefreshSession.mockReset()
   mockRouterPush.mockReset().mockResolvedValue(undefined)
+  mockRedirectToAuthLogin.mockReset()
   vi.clearAllMocks()
 })
 
@@ -304,9 +313,10 @@ describe('http.ts 拦截器契约', () => {
       expect(result).toEqual({ id: 2 })
       // 未触发登出
       expect(mockRouterPush).not.toHaveBeenCalled()
+      expect(mockRedirectToAuthLogin).not.toHaveBeenCalled()
     })
 
-    it('refresh 失败时清登录标记并跳登录页（performLogout）', async () => {
+    it('refresh 失败时清登录标记并整页跳 apps/auth 登录页（performLogout，P4）', async () => {
       const requestMock = httpInstance.request as ReturnType<typeof vi.fn>
       requestMock.mockReset()
       requestMock.mockRejectedValueOnce(
@@ -317,7 +327,8 @@ describe('http.ts 拦截器契约', () => {
       await expect(request({ url: '/x' })).rejects.toThrow('unauthorized')
 
       expect(mockRefreshSession).toHaveBeenCalledTimes(1)
-      expect(mockRouterPush).toHaveBeenCalledWith('/login')
+      expect(mockRedirectToAuthLogin).toHaveBeenCalledWith('/x')
+      expect(mockRouterPush).not.toHaveBeenCalled()
     })
 
     it('refresh 端点自身的 401 不触发 refresh（防循环）', async () => {

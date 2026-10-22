@@ -10,9 +10,12 @@
 //   - 单一事实源：src/modules/<feature>/routes/index.ts 的 name 字段
 //   - auto-register.ts 自动捕获（Vite 编译期 import.meta.glob）
 //
+// P4 变更：auth 模块独立为 apps/auth，'Login' 从 admin 兜底名单移除
+// （登录页不再是 admin 路由；admin 未登录经 redirectToAuthLogin 整页跳 apps/auth）。
+//
 // 4 个校验：
 //   A. whitelist ⊆ implementedNames（白名单元素必须有 route 实现）
-//   B. implementedNames ⊆ whitelist（系统兜底路由必须含 Login/Forbidden/NotFound/ServerError）
+//   B. implementedNames ⊆ whitelist（系统兜底路由必须含 Forbidden/NotFound/ServerError）
 //   C. 系统级白名单必须存在（任何项目都必须能匿名访问的兜底）
 //   D. 双向一致性最终汇总
 //
@@ -79,13 +82,8 @@ const whitelistContent = readRouterFile('whitelist.ts')
 const whitelistedNames = new Set(extractWhitelist(whitelistContent))
 const implementedNames = new Set(extractImplementedNames())
 
-// 系统级白名单必须存在（Login/F403/F404/F500 是兜底页面）
-const REQUIRED_WHITELIST: ReadonlySet<string> = new Set([
-  'Login',
-  'Forbidden',
-  'NotFound',
-  'ServerError',
-])
+// 系统级白名单必须存在（F403/F404/F500 是兜底页面；P4 起 Login 迁 apps/auth）
+const REQUIRED_WHITELIST: ReadonlySet<string> = new Set(['Forbidden', 'NotFound', 'ServerError'])
 
 /**
  * 一致性豁免前缀——以这些字符串开头的路由 name 跳过 A/D 两处一致性校验。

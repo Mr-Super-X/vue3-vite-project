@@ -1,30 +1,30 @@
 <script setup lang="ts">
 /**
- * 登录页（blank 布局）。
+ * 登录页（blank 布局，apps/auth 统一登录入口）。
  *
  * 提交流程：
  * 1. `formRef.value.validate()` 同步校验账号 / 密码（≥3 / ≥6 位）
  * 2. 调用 `userStore.login(form)` 触发 authApi
- * 3. 成功后读 `route.query.redirect` 跳回原页面（守卫写入），fallback `/workbench`
- *    （P3-1 起 admin 落地页为工作台；原门户官网已独立为 apps/portal）
+ * 3. 成功后 `resolvePostLoginRedirect('/admin/')` 解析回跳目标（同源前缀校验，
+ *    防开放重定向），整页 `location.href` 跳回原 app——跨应用无共享 router 实例，
+ *    不可 router.push（P4 跨应用统一登录协议，@vv/shared auth/redirect.ts）
  * 4. 失败统一 ElMessage.error，错误对象归一化（Error.message / '登录失败'）
  *
  * 表单默认值：`admin / 123456`（仅演示用，生产应改 SSO / 短信验证码）。
  *
  * @see [`@/store/modules/user`](../../../store/modules/user.ts) 登录态
- * @see [`@/router/guards/auth`](../../../router/guards/auth.ts) 写 redirect
+ * @see [`@vv/shared/auth/redirect`](../../../../../packages/shared/src/auth/redirect.ts) 回跳协议
  * @see [`../styles/login.scss`](../styles/login.scss) 样式抽离
  * @group 业务模块：Auth
  */
 // ElMessage 由 unplugin-auto-import 注入（importStyle 自动带样式，勿显式 import）
 import { User, Lock, View, Hide } from '@element-plus/icons-vue'
 import { useUserStore } from '@store/modules/user'
+import { resolvePostLoginRedirect } from '@vv/shared'
 
 // BEM 工具由 unplugin-auto-import 自动注入，无须显式 import
 const bem = createNamespace('login')
 
-const { router } = useAppRouter()
-const route = useRoute()
 const userStore = useUserStore()
 
 const formRef = ref()
@@ -34,7 +34,7 @@ const showPassword = ref(false)
 const rememberMe = ref(false)
 
 // 品牌文案统一走 VITE_APP_TITLE（与 main.ts 初始化 document.title 同源），避免硬编码业务名
-const appTitle = import.meta.env.VITE_APP_TITLE || '企业中后台管理'
+const appTitle = import.meta.env.VITE_APP_TITLE || '统一登录'
 
 const rules = {
   username: [
@@ -56,8 +56,9 @@ async function handleSubmit() {
   try {
     await userStore.login(form)
     ElMessage.success('登录成功')
-    const redirect = (route.query.redirect as string) || '/workbench'
-    router.push(redirect)
+    // 跨应用回跳：redirect 查询参数由来源 app 的 redirectToAuthLogin 写入；
+    // fallback '/admin/'（登录后默认回管理端落地页）
+    window.location.href = resolvePostLoginRedirect('/admin/')
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : '登录失败，请重试'
     ElMessage.error(msg)
@@ -88,8 +89,8 @@ async function handleSubmit() {
           <span :class="bem.e('logo-piece')" />
           <span :class="bem.e('logo-piece')" />
         </div>
-        <h1 :class="bem.e('title')">企业中后台管理</h1>
-        <p :class="bem.e('subtitle')">{{ appTitle }} · 数据中台</p>
+        <h1 :class="bem.e('title')">{{ appTitle }}</h1>
+        <p :class="bem.e('subtitle')">跨应用统一登录入口</p>
       </div>
 
       <!-- 表单 -->

@@ -37,9 +37,9 @@ export interface TagView {
  * 不出现在多页签的路由名。
  *
  * meta.noTags 声明式排除（2026-10-15 起，替代原 NO_TAGS_ROUTE_NAMES 硬编码名单）：
- *   - 系统页（Login 与 403/404/500）：出现在多页签中没有承载意义。守卫跳转登录页
- *     （未登录 redirect / 退出登录）时 afterEach 仍会触发并把 Login 加入页签，
- *     必须显式排除——这正是 toTag 注释曾声明"排除白名单本身"但实现遗漏的部分。
+ *   - 系统页（403/404/500）：出现在多页签中没有承载意义。P4 起 Login 迁 apps/auth，
+ *     不再注册于 admin（历史上需排除是因守卫跳登录页时 afterEach 会把 Login 加入页签，
+ *     该场景随跨应用整页跳转一并消失）。
  *   - Home：portal 落地页，经顶部导航/Logo 返回即可，无页签上下文切换需求，
  *     产品决策刻意完全排除（含其曾标记的 affix 固定形态）。
  *   - Home/免登录演示页（H5Demo、BigDemo 系列）：已随 P3 各应用抽离随迁，

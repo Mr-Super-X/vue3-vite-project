@@ -4,6 +4,20 @@
 
 ## 未发布
 
+### ✨ Features | Monorepo P4：auth 应用独立 + 跨应用统一登录协议（2026-10-22）
+
+> 背景：Monorepo 迁移收官——admin 内的 auth 模块独立为第 6 应用 `apps/auth`（`@vv-app/auth`，portOffset 5 → dev 5179），admin 收敛为纯业务端（user/reports/workbench/error + default layout + tags-view + 远程菜单）。登录/登出统一收口 auth 应用，跨 app 跳转走整页 `location.href`（跨应用无共享 router 实例）。
+
+- **跨应用统一登录协议**（`packages/shared/src/auth/redirect.ts`，新增 + 8 例 spec）：`redirectToAuthLogin(redirect)`（`VITE_AUTH_ORIGIN` env 注入 origin/前缀、缺省 `/auth`、redirect 非 `/` 开头降级、赋 href 后抛 `AUTH_REDIRECTING` 中断守卫链）+ `resolvePostLoginRedirect(fallback='/admin/')`（同源前缀校验防开放重定向，`//` 协议相对 URL 与绝对 URL 均落 fallback）；`@vv/shared` 根 barrel 导出，`VITE_AUTH_ORIGIN` 类型声明入 `types/env.d.ts`
+- **3+1 消费点接线**：① `router-guards/login.ts` checkLoginState 未登录不再返回 app 内 `/login`（admin 内已无登录路由），改 `redirectToAuthLogin(to.fullPath)`；`composeGuards` 透传 `AUTH_REDIRECTING` 中断信号（其余错误仍吞并放行），admin `setupAuthGuard` catch 后 `return false` 静候整页跳转；② `http.ts` performLogout（refresh 失败）同改整页跳（中断信号内部吞掉，保持抛原 ApiError 契约）；③ `@vv/ui` useLogout 确认后 `location.href = ${VITE_AUTH_ORIGIN}/login`（终态操作不带 redirect 回跳参数）；④ portal 顶栏 PortalHeader 与 SiteHero 双 CTA 的 `goLogin` 悬空点（P3-1 登记，portal 无 Login 路由）改 `redirectToAuthLogin(window.location.pathname)`
+- **apps/auth 骨架**（照抄 apps/portal 同构）：登录页品牌改「统一登录 · 跨应用统一登录入口」（不再只挂 admin 产品名），登录成功 `window.location.href = resolvePostLoginRedirect('/admin/')`；自身守卫为白名单直通（登录页本身公开，routeNames 全量吸收 + NotFound）；mock 接线为必需（/api/auth/* 4 端点直接消费方）
+- **admin 摘除**：whitelist 移除 'Login'（admin 无任何公开页）；menu.ts `EXCLUDED_ROUTE_NAMES` 同步；auto-register.spec 修正 P3-1 残留的 `COMPONENT_REGISTRY.Home` 断言（基线实测 1 failed）+ 移除 Login 断言；tags-view/types.ts 注释中 Login 语义清理；`scripts/check-routes.ts` 系统兜底名单移除 'Login'
+- **env 接线**：admin(.env/.env.development) + portal/h5/big/docs(.env 新建) 注入 `VITE_AUTH_ORIGIN=/auth`；apps/auth 自带 `.env`（`VITE_API_BASE_URL=/api` + `VITE_APP_TITLE=统一登录`——无此前缀登录请求落 /auth/login 404，实测踩坑后补）
+- **vite 工程修复（P4 门禁实测拦截）**：`@vv/config` createViteConfig 新增 `optimizeDeps.exclude`（'@vv/shared' / '@vv/ui' / '@vv/mock' + '@vv/ui/composables/useDialog|useConfirm|useLogout' 逐条点名——rolldown-vite 扫描器把每个包子路径当独立 dep id，根包 exclude 不覆盖）；esbuild 预打包不经 unplugin-auto-import 转换，shared store 内 auto-import 注入的 `defineStore`/`ref` 在 bundle 里是自由变量 → 模块求值即 `ReferenceError: defineStore is not defined`（dev 冷缓存/锁文件变更重优化必现，portal/h5/big 旧缓存无此 bundle 是长期未爆原因）
+- **check-doc-currency 脚本修复（顺手修 P2 遗留崩溃）**：ProTable/XForm demo 计数扫描路径从已清空的 `apps/admin/src/modules/demo/examples/*` 随迁 `apps/docs/...`（原路径 ENOENT 直接崩溃，脚本未能跑到校验逻辑）；剩余 1 项 FAIL（build/ 顶层模块数 9 vs 7）为脚本注释明示的 P5-5 文档治理移交项，非本轮引入
+- **dev 冒烟实测（chrome-devtools 全链路证据）**：admin 5174 `/workbench` 未登录 → 整页跳 `/auth/login?redirect=%2Fworkbench%3Ffresh%3D2`；auth 5179 登录（mock admin/123456，`POST /api/auth/login` 200 + profile + 字典预加载全链）→ 回跳 redirect 参数 `/workbench`（无参时 fallback `/admin/`，document 请求链双重取证）；admin 内登录态（cookie + 标记）访问 /workbench 渲染 default 布局 → 用户下拉退出登录 → useConfirm 确认 → `POST /api/auth/logout` 200 → 整页跳 `/auth/login`
+- **门禁**：root `pnpm type-check` 10 包全绿；root `pnpm test` 9 任务全绿（ui 1921 用例 / shared 344 用例 / admin 77 / auth 7 / portal 12 等）；`check:aliases` / `check:routes` 通过；auth + admin 双构建通过
+
 ### ✨ Features | demo 文档站体验优化：路由级持久布局 + Element Plus 官网文档风（2026-10-21）
 
 > 背景：demo 站（/demo/*）是组件能力的第一展示面，但「左侧菜单点击切换路由时侧栏自身滚动位置重置」长期影响浏览（菜单很长时滚到中间点一项，侧栏立刻跳回顶部）。根因：113 个 demo 页各自 `<DocLayout>` 包裹，路由切换整棵三栏布局重挂载，scrollTop / 搜索词等组件局部状态归零。设计稿 `docs/superpowers/specs/2026-10-21-demo-site-ux-design.md`，实施计划 `docs/superpowers/plans/2026-10-21-demo-site-ux.md`。

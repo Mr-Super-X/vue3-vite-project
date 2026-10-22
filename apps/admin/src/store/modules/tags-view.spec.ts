@@ -144,10 +144,10 @@ describe('useTagsViewStore', () => {
       expect(store.cachedViews).toEqual([])
     })
 
-    it('系统页（Login/403/404/500）不加入页签（meta.noTags）', () => {
+    it('系统页（403/404/500）不加入页签（meta.noTags）', () => {
       const store = useTagsViewStore()
-      // 复现：退出登录跳 /login?redirect=/workbench，afterEach 把 Login 加进页签
-      for (const name of ['Login', 'Forbidden', 'NotFound', 'ServerError']) {
+      // P4 起 Login 迁 apps/auth（历史场景：退出登录 afterEach 把 Login 加进页签，已消失）
+      for (const name of ['Forbidden', 'NotFound', 'ServerError']) {
         store.addRouteView(makeRoute(name, { title: name, noTags: true }))
       }
       expect(store.visitedViews).toEqual([])
@@ -168,7 +168,7 @@ describe('useTagsViewStore', () => {
 
     it('noTags 排除不影响普通业务页加入', () => {
       const store = useTagsViewStore()
-      store.addRouteView(makeRoute('Login', { title: '登录', noTags: true }))
+      store.addRouteView(makeRoute('NotFound', { title: '404', noTags: true }))
       store.addRouteView(makeRoute('Workbench', { title: '工作台' }))
       expect(store.visitedViews.map((v) => v.name)).toEqual(['Workbench'])
     })

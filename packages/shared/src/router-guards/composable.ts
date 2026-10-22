@@ -24,6 +24,11 @@ export type RouteGuard = (
  *
  * 调用方按顺序传入 guards，链中任一 guard 返回 RouteLocationRaw 即终止。
  * 不修改路由或路由状态，不抛错（错误被吞并 console.error）。
+ *
+ * 例外（P4 跨应用登录协议）：guard 抛出的 `AUTH_REDIRECTING` 是
+ * redirectToAuthLogin 的中断信号（整页 location.href 已发起），**不吞**——
+ * 透传给 app 编排器 catch 后 return false 取消本次导航，避免吞掉后守卫链
+ * 继续空跑（未登录时白拉远程菜单 / 权限检查做无意义计算）。
  */
 export async function composeGuards(
   to: RouteLocationNormalized,
@@ -35,6 +40,7 @@ export async function composeGuards(
       const result = await guard(to, ...context)
       if (result !== null) return result
     } catch (err) {
+      if (err instanceof Error && err.message === 'AUTH_REDIRECTING') throw err
       console.error('[router/guards] guard 执行失败:', err)
       // 不中断链路，继续执行下一个 guard
     }

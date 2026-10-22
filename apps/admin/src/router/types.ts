@@ -71,7 +71,8 @@ declare module 'vue-router' {
      * 多页签排除（true = 不加入 TagsView 页签）。
      *
      * 声明式替代历史上的 store 硬编码名单（NO_TAGS_ROUTE_NAMES，2026-10-15 迁移）：
-     * 系统页（Login/403/404/500）；门户落地页（Home）与免登录演示页（h5-demo、big-demo 系列）
+     * 系统页（403/404/500；P4 起 Login 迁 apps/auth，不再注册于 admin）；
+     * 门户落地页（Home）与免登录演示页（h5-demo、big-demo 系列）
      * 已随 P3 各应用抽离随迁，admin 内不再注册——本字段现仅系统页消费
      * 均由路由作者在本字段声明——新增排除页只改路由 meta，零成本。
      *

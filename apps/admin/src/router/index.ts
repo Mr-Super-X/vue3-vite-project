@@ -21,7 +21,8 @@ import { useTagsViewStore } from '@/store/modules/tags-view'
  * admin 落地页改为 /workbench（workbench 是 default 布局验收模块的 index 子路由）。
  *
  * 守卫行为：redirect 后 vue-router 会对 `/workbench` 重新触发守卫链
- * （白名单 → 可见性 → 登录态 → 远程菜单 → 权限），未登录用户最终会跳 `/login`
+ * （白名单 → 可见性 → 登录态 → 远程菜单 → 权限），未登录用户最终经
+ * `redirectToAuthLogin` 整页跳 apps/auth 登录页（P4，admin 内已无 /login 路由）
  *
  * @group 路由：根重定向
  */

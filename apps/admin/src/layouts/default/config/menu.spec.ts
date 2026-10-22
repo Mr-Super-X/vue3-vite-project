@@ -78,10 +78,16 @@ function makeRouter(): ReturnType<typeof createRouter> {
     },
     // ─── 以下不应出现在菜单 ───
     {
-      path: '/login',
+      // P4 起 Login 迁 apps/auth；本例改用 Forbidden 验证"错误页 name 不进菜单"语义
+      path: '/403',
       component: Stub,
       children: [
-        { path: '', name: 'Login', component: Stub, meta: { title: '登录', requiresAuth: false } },
+        {
+          path: '',
+          name: 'Forbidden',
+          component: Stub,
+          meta: { title: '403', requiresAuth: false },
+        },
       ],
     },
     { path: '/404', name: 'NotFound', component: Stub, meta: { title: '404' } },
@@ -162,10 +168,10 @@ describe('buildMenuTree', () => {
     ])
   })
 
-  it('排除：登录页 / 错误页 / 动态段路由不进菜单', () => {
+  it('排除：错误页 / 动态段路由不进菜单', () => {
     const tree = buildMenuTree(makeRouter())
     const paths = tree.map((n) => n.path)
-    expect(paths).not.toContain('/login')
+    expect(paths).not.toContain('/403')
     expect(paths).not.toContain('/404')
     expect(paths).not.toContain('/detail')
     expect(paths).toContain('/home')

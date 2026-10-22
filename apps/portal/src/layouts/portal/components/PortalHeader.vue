@@ -4,7 +4,8 @@
  *
  * 对比旧版 180px 位图头部：
  * - 高度 64px；背景位图（layout-head-bg/logo/biaoyu 三张 png）→ 纯色 + 内联 SVG 字标
- * - 右侧双态：未登录 → 「登录」按钮（goLogin）；已登录 → 用户下拉（useLogout 退出流程保留）
+ * - 右侧双态：未登录 → 「登录」按钮（goAuthLogin，P4 起整页跳 apps/auth 统一登录）；
+ *   已登录 → 用户下拉（useLogout 退出流程保留）
  *
  * A11y：<header role="banner">；品牌区是真实锚点（href="#hero"）；导航 aria-label 由 PortalNav 承担
  * （本组件不再包裹 <nav>，避免与 PortalNav 内部 nav 嵌套重复 landmark）。
@@ -16,6 +17,8 @@
 import { useUserStore } from '@store/modules/user'
 // useLogout 随 ProDialog 族已迁 @vv/ui（P1-4），包子路径经 exports "./*" 解析
 import { useLogout } from '@vv/ui/composables/useLogout'
+// 跨应用统一登录协议（P4）：portal 无登录路由，整页跳 apps/auth
+import { redirectToAuthLogin } from '@vv/shared'
 import { ArrowDown, SwitchButton } from '@element-plus/icons-vue'
 import { PORTAL_NAV } from '@/layouts/portal/config/nav'
 import PortalNav from './PortalNav.vue'
@@ -23,7 +26,6 @@ import PortalNav from './PortalNav.vue'
 const bem = createNamespace('portal-header')
 
 const userStore = useUserStore()
-const { goLogin } = useAppRouter() // 项目 composable @composables/useAppRouter（vite 自动注入）
 const { loggingOut, confirmLogout } = useLogout()
 
 /** 下拉面板展开态 —— popper teleport 到 body 后 focus-within 失效，且菜单未开时悬停不应旋转，须以 visible-change 事件同步 */
@@ -31,6 +33,18 @@ const dropdownOpen = ref(false)
 
 function onVisibleChange(visible: boolean) {
   dropdownOpen.value = visible
+}
+
+/**
+ * 跳统一登录应用（apps/auth）：整页 location.href（跨 app 无共享 router 实例），
+ * 回跳地址取当前路径；AUTH_REDIRECTING 中断信号吞掉（整页已发起，勿误报 errorHandler）
+ */
+function goAuthLogin(): void {
+  try {
+    redirectToAuthLogin(window.location.pathname)
+  } catch {
+    // 中断信号，非错误
+  }
 }
 
 async function onCommand(cmd: string) {
@@ -69,7 +83,12 @@ async function onCommand(cmd: string) {
       <PortalNav :items="PORTAL_NAV" />
 
       <div :class="bem.e('actions')">
-        <button v-if="!userStore.profile" type="button" :class="bem.e('login')" @click="goLogin()">
+        <button
+          v-if="!userStore.profile"
+          type="button"
+          :class="bem.e('login')"
+          @click="goAuthLogin"
+        >
           {{ $t('auth.login') }}
         </button>
         <el-dropdown

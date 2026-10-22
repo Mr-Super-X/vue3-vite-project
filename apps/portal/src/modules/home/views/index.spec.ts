@@ -1,10 +1,5 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it, vi } from 'vitest'
-
-// Hero 内部按钮依赖 useAppRouter（auto-import），mock 掉避免路由副作用
-vi.mock('@composables/useAppRouter', () => ({
-  useAppRouter: () => ({ goLogin: vi.fn() }),
-}))
+import { describe, expect, it } from 'vitest'
 
 import HomeIndex from './index.vue'
 

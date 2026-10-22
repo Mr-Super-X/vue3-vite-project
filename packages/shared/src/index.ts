@@ -25,3 +25,5 @@ export * from './app-router.ts'
 export * from './router-title.ts'
 export * from './store/index.ts'
 export * from './router-guards/index.ts'
+// 跨应用统一登录协议（P4）：redirectToAuthLogin / resolvePostLoginRedirect
+export * from './auth/redirect.ts'

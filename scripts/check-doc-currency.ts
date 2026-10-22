@@ -178,13 +178,14 @@ function countXFormProps(): number {
 }
 
 /**
- * 数 XForm demo 文件（src/modules/demo/examples/XForm/ 下 .vue，含 XFormOverview 主入口）
+ * 数 XForm demo 文件（apps/docs/src/modules/demo/examples/XForm/ 下 .vue，含 XFormOverview 主入口）
  *
  * docs/24 §19 示例索引表「56 个 demo」与 README demo 计数段写 56；§19 表行数与此互锁。
  * 2026-09-18 Wave4-2 新增 XFormTabsSteps：55 → 56。
+ * P2 变更：demo 模块物理独立到 apps/docs，扫描路径随迁（原 admin 路径会 ENOENT 崩溃）
  */
 function countXFormDemos(): number {
-  return readdirSync(join(ROOT, 'apps/admin/src/modules/demo/examples/XForm')).filter((f) =>
+  return readdirSync(join(ROOT, 'apps/docs/src/modules/demo/examples/XForm')).filter((f) =>
     f.endsWith('.vue')
   ).length
 }
@@ -256,14 +257,16 @@ function countProTableComposables(): number {
  *
  * 当前 25 个：24 个能力 demo + ProTableOverview 主入口（2026-09-18 新增 HeaderActions / ImportExport；
  * 2026-10-19 新增 VxeRowSelect / SearchFilter——审计 demo 缺口补齐）
+ *
+ * P2 变更：demo 模块物理独立到 apps/docs，扫描路径随迁（原 admin 路径会 ENOENT 崩溃）
  */
 function countProTableDemos(): number {
-  const files = readdirSync(join(ROOT, 'apps/admin/src/modules/demo/examples/ProTable'))
+  const files = readdirSync(join(ROOT, 'apps/docs/src/modules/demo/examples/ProTable'))
   return files.filter(
     (f) =>
       f.endsWith('.vue') &&
       f !== 'configs' &&
-      statSync(join(ROOT, 'apps/admin/src/modules/demo/examples/ProTable', f)).isFile()
+      statSync(join(ROOT, 'apps/docs/src/modules/demo/examples/ProTable', f)).isFile()
   ).length
 }
 
