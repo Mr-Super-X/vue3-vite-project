@@ -17,15 +17,26 @@
  *   - 多 app 化（P5-1）时把 APP_ROOT 参数化遍历 apps/* 即可
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { createAppAliases } from '../packages/config/src/app-aliases.ts'
 
-/** 目标 app 根（绝对路径，锚定脚本位置而非 cwd） */
-const APP_ROOT = fileURLToPath(new URL('../apps/admin', import.meta.url))
-const TSCONFIG_APP = path.join(APP_ROOT, 'tsconfig.app.json')
+/**
+ * 目标 app 根清单（绝对路径，锚定脚本位置而非 cwd）。
+ *
+ * P2 参数化：遍历 apps/* 下所有存在 tsconfig.app.json 的目录（admin / docs / ...），
+ * 每个 app 独立生成/校验；新增 app 只需落 tsconfig.app.json，无需改本脚本。
+ */
+const APPS_DIR = fileURLToPath(new URL('../apps', import.meta.url))
+
+function findAppRoots(): string[] {
+  return readdirSync(APPS_DIR, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join(APPS_DIR, entry.name))
+    .filter((root) => existsSync(path.join(root, 'tsconfig.app.json')))
+}
 
 interface TsConfig {
   extends?: string
@@ -115,42 +126,54 @@ export function generateTsconfigContent(
   return compact + '\n'
 }
 
-/** 主流程：读取 → 计算 paths → 写入（或仅校验） */
-function main(): void {
-  const isCheck = process.argv.includes('--check')
-
-  if (!existsSync(TSCONFIG_APP)) {
-    console.error(`❌ ${TSCONFIG_APP} 不存在`)
-    process.exit(1)
-  }
-
-  const existing = JSON.parse(readFileSync(TSCONFIG_APP, 'utf-8')) as TsConfig
-  // legacyRoot 传 APP_ROOT 自身，与 create-vite-config 工厂消费形态一致
+/** 单 app 处理：读取 → 计算 paths → 写入（或仅校验）。返回 true 表示一致/已修复 */
+function processApp(appRoot: string, isCheck: boolean): boolean {
+  const appName = path.basename(appRoot)
+  const tsconfigApp = path.join(appRoot, 'tsconfig.app.json')
+  const existing = JSON.parse(readFileSync(tsconfigApp, 'utf-8')) as TsConfig
+  // legacyRoot 传 appRoot 自身，与 create-vite-config 工厂消费形态一致
   // （packages/shared、packages/ui 落地前回落 app 旧位置）
-  const expectedPaths = aliasesToTsconfigPaths(createAppAliases(APP_ROOT, APP_ROOT), APP_ROOT)
+  const expectedPaths = aliasesToTsconfigPaths(createAppAliases(appRoot, appRoot), appRoot)
   const newContent = generateTsconfigContent(existing, expectedPaths)
-  const currentContent = readFileSync(TSCONFIG_APP, 'utf-8')
+  const currentContent = readFileSync(tsconfigApp, 'utf-8')
   const newHash = createHash('sha256').update(newContent).digest('hex')
   const currentHash = createHash('sha256').update(currentContent).digest('hex')
 
   if (isCheck) {
     if (newHash === currentHash) {
-      console.log('✅ tsconfig.app.json 与 @vv/config app-aliases 一致')
-      process.exit(0)
+      console.log(`✅ [${appName}] tsconfig.app.json 与 @vv/config app-aliases 一致`)
+      return true
     }
-    console.error('❌ tsconfig.app.json 与 @vv/config app-aliases 不一致：')
+    console.error(`❌ [${appName}] tsconfig.app.json 与 @vv/config app-aliases 不一致：`)
     console.error('   跑 `pnpm generate:tsconfig-paths` 自动修复')
-    process.exit(1)
+    return false
   }
 
   // 默认模式：仅当内容变更时写入（避免 git diff 噪声）
   if (newHash === currentHash) {
-    console.log('✅ tsconfig.app.json 无变更（hash 一致）')
-    return
+    console.log(`✅ [${appName}] tsconfig.app.json 无变更（hash 一致）`)
+    return true
   }
 
-  writeFileSync(TSCONFIG_APP, newContent)
-  console.log('✅ tsconfig.app.json 已更新')
+  writeFileSync(tsconfigApp, newContent)
+  console.log(`✅ [${appName}] tsconfig.app.json 已更新`)
+  return true
+}
+
+/** 主流程：遍历 apps/* 下所有含 tsconfig.app.json 的 app */
+function main(): void {
+  const isCheck = process.argv.includes('--check')
+  const appRoots = findAppRoots()
+
+  if (appRoots.length === 0) {
+    console.error(`❌ ${APPS_DIR} 下未找到任何 tsconfig.app.json`)
+    process.exit(1)
+  }
+
+  const failed = appRoots.filter((root) => !processApp(root, isCheck))
+  if (failed.length > 0) {
+    process.exit(1)
+  }
 }
 
 // 入口判断：用绝对路径比对，兼容 Windows / POSIX

@@ -1,5 +1,5 @@
 /**
- * 路由白名单（单一事实来源）。
+ * 路由白名单（admin 单一事实来源）。
  *
  * 用途：白名单路由跳过登录检查 + 跳过权限检查
  * 判定依据：路由的 `name` 在 `ROUTE_WHITE_LIST` 中（按 name 而非 path 匹配）
@@ -10,31 +10,14 @@
  *
  * 注意：白名单路由仍建议挂载 layout（避免裸路由破布局）
  *
- * 自动吸收 demo 路由名：`demoWhitelistNames` 在 dev 本地开发 或 gh-pages 演示构建
- * （VITE_DEMO_NO_AUTH=true）时从 `src/modules/demo/routes` 展开为全部 demo 路由名；
- * 常规 prod 构建时条件被 Vite 静态替换为 false，常量折叠为空数组，
- * `...[]` spread 被 Rollup 消除，demo 字符串不进入生产包。
- * 条件与 demo 路由注册开关（src/modules/demo/routes/index.ts 的 isDemoRoutesEnabled）
- * 保持同步。`scripts/check-routes.ts` 已对 `'Demo'` 前缀做一致性豁免。
+ * P2 变更：demo 模块物理独立到 apps/docs（连同 `demoWhitelistNames` 吸收链），
+ * 本集合只剩 admin 仍承载的公开路由（Home/H5Demo/BigDemo 系列——P3 抽离时随迁）。
  *
  * @see [`./guards/auth.ts`](./guards/auth.ts) `isWhiteListed` 调用点
  * @group 路由：白名单
  */
 
-import { routeNames as demoRouteNames } from '@/modules/demo/routes'
 import { isWhiteListed } from '@vv/shared/router-guards'
-
-/**
- * demo 路由名吸收集合：dev 本地开发 或 gh-pages 演示构建（VITE_DEMO_NO_AUTH=true）
- * 时展开为全部 demo 路由名；常规 prod 构建静态折叠为空数组。
- * 条件与 demo 路由注册开关（src/modules/demo/routes/index.ts 的 isDemoRoutesEnabled）联动。
- *
- * 提取为独立常量而非内联 `...(cond ? demoRouteNames : [])` 的原因：
- * scripts/check-routes.ts 用正则提取 Set 字面量内容（`[^\]]+` 遇首个 `]` 截断），
- * 内联 false 分支的 `[]` 会截断提取串并把 `'true'` 误捕获成路由名（2026-10-21 实测踩坑）。
- */
-const demoWhitelistNames: readonly string[] =
-  import.meta.env.DEV || import.meta.env.VITE_DEMO_NO_AUTH === 'true' ? demoRouteNames : []
 
 /**
  * 白名单路由集合。增删只需修改下方字面量数组。
@@ -55,7 +38,6 @@ export const ROUTE_WHITE_LIST: ReadonlySet<string> = new Set<string>([
   'BigDemo', // 数据大屏（big layout 验收；免登录方便演示厅直接打开）
   'BigDemoWide', // 超宽拼接大屏示例（9000×1080 设计稿）
   'BigDemoStateDemo', // 五态示范页（异步数据形态验收；与 BigDemo 同权限语义）
-  ...demoWhitelistNames,
 ])
 
 /**

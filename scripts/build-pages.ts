@@ -1,0 +1,120 @@
+/**
+ * gh-pages 多应用聚合构建（Monorepo 版）。
+ *
+ * 依次构建 apps/* 下每个 app（env 注入 hash + local 菜单 + mock + base 子路径），
+ * 产物复制到根 `dist/<app>/`，并生成根 `dist/index.html` 落地导航页。
+ *
+ * 用法：
+ *   node --experimental-strip-types scripts/build-pages.ts
+ *
+ * 设计要点：
+ * - env 经 spawn 注入（不依赖 shell 展开，Windows Git Bash 无 MSYS2_ARG_CONV_EXCL 坑）
+ * - 每 app 的 base = `/vue3-vite-project/<app>/`（仓库名子路径；部署到根域时改 REPO_PREFIX）
+ * - hash 模式：Pages 无 SPA fallback，沿用各 app vite.config 的 VITE_HISTORY_MODE 机制
+ * - 新增 app 无需改本脚本：自动发现 apps/* 下含 vite.config.ts 的目录
+ *
+ * @see docs/40-GitHubPages自动部署.md（P5-3 将更新为 monorepo 版）
+ */
+
+import { spawnSync } from 'node:child_process'
+import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import path from 'node:path'
+
+const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url))
+const APPS_DIR = path.join(REPO_ROOT, 'apps')
+const OUT_DIR = path.join(REPO_ROOT, 'dist')
+/** 仓库名子路径前缀（gh-pages 项目页部署形态；自定义域部署时改为 '/'） */
+const REPO_PREFIX = '/vue3-vite-project'
+
+/** 自动发现 apps/* 下可构建的应用（含 vite.config.ts 即视为应用） */
+function findBuildableApps(): string[] {
+  return readdirSync(APPS_DIR, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .filter((name) => existsSync(path.join(APPS_DIR, name, 'vite.config.ts')))
+}
+
+/** 单 app 构建：注入演示 env 后跑 build-only（不做 type-check，CI 已先行门禁） */
+function buildApp(appName: string): void {
+  const env = {
+    ...process.env,
+    VITE_BASE: `${REPO_PREFIX}/${appName}/`,
+    VITE_HISTORY_MODE: 'hash',
+    VITE_MENU_SOURCE: 'local',
+    VITE_USE_MOCK: 'true',
+    VITE_DEMO_NO_AUTH: 'true',
+  }
+  const result = spawnSync('pnpm', ['-C', `apps/${appName}`, 'build-only'], {
+    cwd: REPO_ROOT,
+    env,
+    stdio: 'inherit',
+    shell: true,
+  })
+  if (result.status !== 0) {
+    throw new Error(`[${appName}] build-only 失败（exit ${result.status}）`)
+  }
+}
+
+/** 产物复制：apps/<a>/dist → 根 dist/<a>/ */
+function copyDist(appName: string): void {
+  const src = path.join(APPS_DIR, appName, 'dist')
+  const dest = path.join(OUT_DIR, appName)
+  if (!existsSync(src)) {
+    throw new Error(`[${appName}] 产物不存在：${src}`)
+  }
+  rmSync(dest, { recursive: true, force: true })
+  cpSync(src, dest, { recursive: true })
+  console.log(`✅ [${appName}] 产物已聚合 → dist/${appName}/`)
+}
+
+/** 落地导航页（根 dist/index.html）：列全部 app 入口 */
+function writeLandingPage(appNames: string[]): void {
+  const links = appNames
+    .map(
+      (name) =>
+        `    <li><a href="${REPO_PREFIX}/${name}/">${name === 'admin' ? '管理后台' : name === 'docs' ? '组件示例文档' : name}（/${name}/）</a></li>`
+    )
+    .join('\n')
+  const html = `<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>vue3-vite-project 演示导航</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 80px auto; padding: 0 24px; }
+    h1 { font-size: 20px; } li { margin: 12px 0; } a { color: #409eff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <h1>vue3-vite-project 演示导航</h1>
+  <ul>
+${links}
+  </ul>
+</body>
+</html>
+`
+  writeFileSync(path.join(OUT_DIR, 'index.html'), html, 'utf-8')
+  console.log('✅ 落地导航页 dist/index.html 已生成')
+}
+
+function main(): void {
+  const apps = findBuildableApps()
+  if (apps.length === 0) {
+    throw new Error('apps/* 下未发现可构建应用')
+  }
+  console.log(`🔍 发现 ${apps.length} 个应用：${apps.join(', ')}`)
+
+  mkdirSync(OUT_DIR, { recursive: true })
+  for (const name of apps) {
+    console.log(`🏗️  构建 [${name}]…`)
+    buildApp(name)
+    copyDist(name)
+  }
+  writeLandingPage(apps)
+  console.log(`\n🎉 聚合完成：dist/ 下 ${apps.length} 个应用 + 落地页`)
+}
+
+main()

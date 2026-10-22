@@ -1,5 +1,8 @@
-// demo 模块路由（dev 本地开发 + gh-pages 演示构建；常规 prod 构建整模块 tree-shake）
+// demo 模块路由（docs 应用唯一业务模块，始终注册）
 //
+// P2 变更：模块物理独立到 apps/docs 后，「常规 prod tree-shake 剔除」的 DEV 门控
+// 失去存在意义——docs 本身就是全量 demo 站点，不再与 admin 共享构建图。
+// isDemoRoutesEnabled / VITE_DEMO_NO_AUTH 环境判断随门控一并删除。
 // cspell:disable xform — demo 辅助 .ts 文件按 kebab-case 命名（xform-api 等），
 //                          与 AutoImport 标准不同，不算可拼写错误
 //
@@ -19,15 +22,9 @@
 //                                       （组件子目录的 index 作为该组件的「总览」入口，
 //                                        与按文件命名 Overview 等价，方案二选一）
 //
-// DEMO 路由注册开关：dev 本地开发 或 gh-pages 演示构建（VITE_DEMO_NO_AUTH=true）时注册；
-// 常规 prod 构建两者皆否 → 路由数组为 []，Rollup tree-shake 把整模块
-// 连同其依赖的视图组件一并剔除（「demo 不进生产包」意图仅针对常规 prod 成立，
-// gh-pages 是纯演示站，需要 demo 全量可见）。
 import type { RouteRecordRaw } from 'vue-router'
 import type { Component } from 'vue'
 import { pascalCase, kebabCase, autoImport } from '@utils'
-
-const isDemoRoutesEnabled = import.meta.env.DEV || import.meta.env.VITE_DEMO_NO_AUTH === 'true'
 
 // Vite import.meta.glob 扫描 examples 下所有 .vue 入口
 // 路径相对当前文件（routes/index.ts），examples 在父目录 → 用 '../examples/...'
@@ -40,13 +37,9 @@ const isDemoRoutesEnabled = import.meta.env.DEV || import.meta.env.VITE_DEMO_NO_
 //   例如 XForm 目录下 56 个 XForm*.vue + 6 个 XForm/*.ts 辅助文件，
 //   各自派生为独立路由（.ts 不进 glob）；XForm/index.vue 派生为该组件总览页。
 //   文件名包含完整 PascalCase（如 XFormArray），不会与父目录重复。
-const exampleModules: Record<string, () => Promise<{ default: Component }>> = isDemoRoutesEnabled
-  ? import.meta.glob<{ default: Component }>([
-      '../examples/*.vue',
-      '../examples/*/index.vue',
-      '../examples/*/*.vue',
-    ])
-  : {}
+const exampleModules: Record<string, () => Promise<{ default: Component }>> = import.meta.glob<{
+  default: Component
+}>(['../examples/*.vue', '../examples/*/index.vue', '../examples/*/*.vue'])
 
 /** 从 glob 返回的 key 中提取组件名（剥目录与 .vue 后缀） */
 function deriveComponentName(filePath: string): string {
@@ -89,24 +82,22 @@ const exampleRoutes = buildExampleRoutes()
  * 治本方案：函数式 redirect 在路由守卫阶段触发，可等待目标 route 完成注册。
  * fallback：当 exampleRoutes 为空或解析失败时，跳到 /demo（避免无限循环）。
  */
-const routes: RouteRecordRaw[] = isDemoRoutesEnabled
-  ? [
-      {
-        path: '/demo',
-        name: 'Demo',
-        // 路由级布局：DocLayout 固定为父组件，子路由切换不重挂载侧栏（见 layouts/DemoDocs.vue）
-        component: () => import('../layouts/DemoDocs.vue'),
-        redirect: () => {
-          // exampleRoutes[0] 是按字母序排序的第一个 demo（demo 模块内部保证非空，
-          // 若空则 fallback 到 /demo 自身，无限循环由 ErrorBoundary 兜底）
-          const firstPath = exampleRoutes[0]?.path
-          return firstPath ? { path: `/demo/${firstPath}` } : '/demo'
-        },
-        meta: { title: '组件示例', titleKey: 'menu.demo', icon: 'magic-stick' },
-        children: exampleRoutes,
-      },
-    ]
-  : []
+const routes: RouteRecordRaw[] = [
+  {
+    path: '/demo',
+    name: 'Demo',
+    // 路由级布局：DocLayout 固定为父组件，子路由切换不重挂载侧栏（见 layouts/DemoDocs.vue）
+    component: () => import('../layouts/DemoDocs.vue'),
+    redirect: () => {
+      // exampleRoutes[0] 是按字母序排序的第一个 demo（demo 模块内部保证非空，
+      // 若空则 fallback 到 /demo 自身，无限循环由 ErrorBoundary 兜底）
+      const firstPath = exampleRoutes[0]?.path
+      return firstPath ? { path: `/demo/${firstPath}` } : '/demo'
+    },
+    meta: { title: '组件示例', titleKey: 'menu.demo', icon: 'magic-stick' },
+    children: exampleRoutes,
+  },
+]
 
 /**
  * 自动从 routes 数组提取所有 demo 路由名（供 whitelist 吸收）。
