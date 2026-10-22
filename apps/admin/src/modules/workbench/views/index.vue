@@ -23,22 +23,10 @@ const todoItems = [
 ]
 
 /** 能力演示入口：免登录白名单页不在左侧菜单，从这里直达（/autoplan Phase 2 D-IA-1） */
-// P3-1/P3-2 变更：Home 独立为 apps/portal、H5Demo 独立为 apps/h5（跨应用，
-// admin 内不再注册这两类路由），两者入口随模块一并摘除；
-// P3-3 big 抽离后 BigDemo 系列也将随迁（见下方注释）。
-const panelLinks = [
-  { name: 'BigDemo', label: '数据大屏演示（1920）', desc: 'transform scale 等比缩放' },
-  {
-    name: 'BigDemoWide',
-    label: '超宽拼接屏演示（9000×1080）',
-    desc: 'meta.bigScreen 异形设计稿',
-  },
-  {
-    name: 'BigDemoStateDemo',
-    label: '大屏五态示范',
-    desc: '成功/加载/错误/空/断连形态 + Wide 页真实异步',
-  },
-]
+// P3-1/P3-2/P3-3 变更：Home 独立为 apps/portal、H5Demo 独立为 apps/h5、
+// BigDemo 系列独立为 apps/big（均跨应用，admin 内不再注册这些路由），
+// 全部演示入口随模块一并摘除，本数组暂空——后续 admin 私有演示在此补充。
+const panelLinks: { name: string; label: string; desc: string }[] = []
 </script>
 
 <template>

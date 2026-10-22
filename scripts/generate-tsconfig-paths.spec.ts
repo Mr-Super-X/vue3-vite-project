@@ -1,6 +1,13 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import path from 'node:path'
 import { aliasesToTsconfigPaths, generateTsconfigContent } from './generate-tsconfig-paths'
+
+// 精确映射仅在目标 index.ts 真实存在时生成（P1-3）：用例里的 appRoot 是假路径，
+// 统一 stub existsSync → true，让裸映射断言不受磁盘真实状态影响
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs')>()
+  return { ...actual, existsSync: () => true }
+})
 
 describe('generateTsconfigContent', () => {
   it('输入基础 base.json + paths 对象，输出完整 tsconfig.app.json 字符串', () => {
@@ -40,6 +47,21 @@ describe('generateTsconfigContent', () => {
     const aIndex = result.indexOf('"@a/*"')
     const zIndex = result.indexOf('"@z/*"')
     expect(aIndex).toBeLessThan(zIndex)
+  })
+
+  it('exclude 数组紧凑单行（与 prettier 回卷口径一致，P3-3：防生成器与 pre-commit 互相改写）', () => {
+    const base = {
+      extends: './base.json',
+      include: ['env.d.ts', 'src/**/*'],
+      exclude: ['src/**/__tests__/*', 'src/**/*.spec.ts', 'src/**/*.test-d.ts'],
+      compilerOptions: {},
+    }
+    const result = generateTsconfigContent(base, { '@/*': ['./src/*'] })
+
+    expect(result).toContain(
+      '"exclude": ["src/**/__tests__/*", "src/**/*.spec.ts", "src/**/*.test-d.ts"]'
+    )
+    expect(result).not.toContain('"exclude": [\n')
   })
 })
 

@@ -112,10 +112,10 @@ export function generateTsconfigContent(
   const expanded = JSON.stringify(result, null, 2)
 
   // 第二步：把所有「@ 别名数组 + include/exclude 数组」的展开格式替换为紧凑格式
-  // （include 必须一并处理：P1-3 手加的 shared d.ts 条目经 prettier 会回卷单行，
+  // （include/exclude 必须一并处理：P1-3 手加的 shared d.ts 条目经 prettier 会回卷单行，
   //  而 JSON.stringify 默认展开——两处形态不一致会让 check:aliases 永远报漂移；
-  //  exclude 同理由 P3-2 补入：prettier printWidth=100 下三条目单行 ~78 字符必被回卷，
-  //  不紧凑化会让 generate 输出与任何 prettier 格式化结果互相漂移）
+  //  P3-2/P3-3 补 exclude：lint-staged 对暂存 json 跑 prettier --write，展开形态会被当场压回，
+  //  生成器与 pre-commit 钩子在 tsconfig.app.json 上互相改写死循环）
   const compact = expanded.replace(
     /"((?:@\/?[^"]+)|(?:@[\w-]+)|include|exclude)": \[\s*\n(\s*"[^"]+"(?:,\s*\n\s*"[^"]+")*)\s*\n\s*\]/g,
     (_match, key: string, items: string) => {

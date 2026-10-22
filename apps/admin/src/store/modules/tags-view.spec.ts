@@ -154,10 +154,12 @@ describe('useTagsViewStore', () => {
       expect(store.cachedViews).toEqual([])
     })
 
-    it('workbench 直达的演示页（BigDemo/BigDemoWide/BigDemoStateDemo）不加入页签（meta.noTags）', () => {
+    it('任意 name 只要 meta.noTags 为真即不加入页签（机制级回归）', () => {
       const store = useTagsViewStore()
-      // 回归：workbench"能力演示"跳免登录验收页，不应污染页签
-      for (const name of ['BigDemo', 'BigDemoWide', 'BigDemoStateDemo']) {
+      // 回归：workbench"能力演示"跳免登录验收页不污染页签的机制。
+      // Home/H5Demo/BigDemo 系列已随 P3 各应用抽离，admin 不再注册这些路由——
+      // 用合成 name 覆盖「noTags 真值即排除」的纯机制，不绑定已迁出的具体路由名
+      for (const name of ['H5Demo', 'BigDemo']) {
         store.addRouteView(makeRoute(name, { title: name, requiresAuth: false, noTags: true }))
       }
       expect(store.visitedViews).toEqual([])

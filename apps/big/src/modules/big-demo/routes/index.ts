@@ -3,9 +3,13 @@
  *
  * 自动注册：被 `src/router/auto-register.ts` 扫描到，无需手动 import。
  *
+ * P3-3 变更：模块随 big layout 自 admin 物理独立到 apps/big；
+ * 白名单吸收改由本 app 的 src/router/whitelist.ts 经 routeNames 全量引入
+ * （noTags 在 big 无 TagsView 消费方，保留仅为 meta 契约语义，见 admin router/types.ts）。
+ *
  * 设计：
  * - 父记录 component 挂 `@/layouts/big/index.vue` → 获得大屏面板能力（scale 适配自动激活）
- * - requiresAuth: false + 白名单（src/router/whitelist.ts）→ 免登录，演示厅直接打开
+ * - requiresAuth: false + 白名单（本 app src/router/whitelist.ts）→ 免登录，演示厅直接打开
  * - 超宽页通过 meta.bigScreen 声明 9000×1080 设计稿尺寸（缺省 1920×1080）
  *
  * @see [`../views/index.vue`](../views/index.vue) 1920 标准大屏
@@ -14,6 +18,9 @@
  */
 
 import type { RouteRecordRaw } from 'vue-router'
+
+/** 白名单吸收依据：本模块全部路由名（apps/big/src/router/whitelist.ts 消费，勿手改不同步） */
+export const routeNames = ['BigDemo', 'BigDemoWide', 'BigDemoStateDemo'] as const
 
 const routes: RouteRecordRaw[] = [
   {
@@ -27,7 +34,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: '数据大屏',
           requiresAuth: false,
-          noTags: true, // workbench 直达的验收页，不污染 TagsView
+          noTags: true, // 免登录直达验收页语义（big 无 TagsView，契约字段保留）
         },
       },
       {
@@ -37,7 +44,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: '超宽拼接大屏',
           requiresAuth: false,
-          noTags: true, // workbench 直达的验收页，不污染 TagsView
+          noTags: true, // 免登录直达验收页语义（big 无 TagsView，契约字段保留）
           bigScreen: { width: 9000, height: 1080 },
         },
       },

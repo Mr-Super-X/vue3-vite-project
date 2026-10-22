@@ -42,8 +42,8 @@ export interface TagView {
  *     必须显式排除——这正是 toTag 注释曾声明"排除白名单本身"但实现遗漏的部分。
  *   - Home：portal 落地页，经顶部导航/Logo 返回即可，无页签上下文切换需求，
  *     产品决策刻意完全排除（含其曾标记的 affix 固定形态）。
- *   - 免登录演示页（BigDemo/BigDemoWide/BigDemoStateDemo）：从 workbench"能力演示"
- *     直达的验收页，非工作流页面，不应污染页签。
+ *   - Home/免登录演示页（H5Demo、BigDemo 系列）：已随 P3 各应用抽离随迁，
+ *     admin 内不再注册，此处仅保留历史语义说明（原 workbench"能力演示"直达场景）。
  *
  * 不复用守卫白名单 isWhiteListed 的原因：dev 模式白名单包含全部 demo 路由名
  * （demo 页免登录但属正常业务页，页签应正常展示），按白名单过滤会误伤 demo 页签。
