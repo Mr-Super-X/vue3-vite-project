@@ -337,8 +337,10 @@ packages/*  ──单向──▶  config → mock → shared → ui（下游可
 packages/*  ──✗ 依赖──  apps/*；运行时依赖（vue/element-plus 等）一律 peerDependencies + catalog
 ```
 
-> 边界机械强制手段：`eslint.config.mjs` 的 `no-restricted-imports`（app/business-wrap-rule）+
-> code review 兜底（**规则 files 模式随 P5-A 多包化落地后生效**，生效前以本表 + review 为准）。
+> 边界机械强制手段（P5-A 已落地，error 级）：`eslint.config.mjs` 的 `app/boundary-packages`
+> （packages/** 禁依赖 apps/**）+ `app/boundary-apps-<a>`（逐 app 禁相对逃逸/绝对路径引用其他 app）+
+> `app/business-wrap-rule`（files 已改 `apps/*/src/...`，拦截裸用 vue-router useRouter / axios）；
+> 覆盖不到的语义（如包间反向依赖的深层形式）以 code review 兜底。
 > 单 app 时期「模块边界铁律」平移进各 app 内部：`src/modules/<m>` 模块间禁止互 import，
 > 模块间通信走 `modules/<m>/index.ts` 对外接口。
 
@@ -454,7 +456,7 @@ const bem = createNamespace('form-engine') // kebab-case，必须与 sass 根选
 | --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | 1   | 包管理强制 pnpm                                                                                                                                                   | `package.json:scripts.preinstall` → `only-allow pnpm`                              |
 | 2   | 新增业务模块**必须**用 `pnpm new-module <kebab-name>`                                                                                                             | `scripts/new-module.ts`（自动追加 RouteName）                                      |
-| 3   | 业务代码**必须**用项目封装：`useAppRouter` / `useRequest` / `useAuth` / `useDict`（`@vv/shared`）+ `useDialog` / `useConfirm` / `useLogout`（`@vv/ui`）           | ESLint `no-restricted-imports`（files 模式随 P5-A 落地后生效）                     |
+| 3   | 业务代码**必须**用项目封装：`useAppRouter` / `useRequest` / `useAuth` / `useDict`（`@vv/shared`）+ `useDialog` / `useConfirm` / `useLogout`（`@vv/ui`）           | ESLint `no-restricted-imports`（P5-A 已落地 error 级）                             |
 | 4   | app 内模块间通信走 `modules/<m>/index.ts`；跨 app 通信走整页跳转协议（docs/43）                                                                                   | 见 §1.2 / §2.1                                                                     |
 | 5   | `@vv/ui` 组件不得 `import` 自任何 `apps/*`                                                                                                                        | 保护 tree-shake                                                                    |
 | 6   | workspace 依赖方向铁律（§2.1）：`apps/* → packages/*`，包间 config → mock → shared → ui 单向，运行时依赖 peerDependencies + catalog                               | turbo 拓扑 + code review                                                           |

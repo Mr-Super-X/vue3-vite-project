@@ -4,6 +4,18 @@
 
 ## 未发布
 
+### ✨ Features | Monorepo P5-B：CI turbo affected + 六应用 Pages 聚合部署 + docker 同域网关 + 治理文档（2026-10-22）
+
+> 背景：6 应用独立后 ci.yml/deploy.yml 仍是单应用形态（pnpm build / build-only --base=$VITE_BASE），本地无同域复现手段（统一登录 cookie 漫游验不了），CLAUDE.md §2 仍锁定旧 src/ 结构。本任务完成工具链治理收尾。
+
+- **ci.yml 改 turbo affected**（`.github/workflows/ci.yml`）：lint 保持根全仓一次；Build/Test 走 turbo——master push 全量（`turbo run build test`，内部含 build-only → type-check:full 顺序约束），PR / develop push 走 affected（`--filter=[origin/master]...`，未变更 app 命中 `.turbo` 缓存或跳过）；checkout `fetch-depth: 0` 供 affected 基线对比；turbo 本地缓存统一 `--cache-dir=.turbo` 并接 `actions/cache`；artifact 改 master 限定 + `apps/*/dist/`；`check:routes` 保留（P5-A 多包版）
+- **deploy.yml 改六应用聚合**（`.github/workflows/deploy.yml`）：Build 改 `pnpm build:pages`（`scripts/build-pages.ts` 自动发现 6 app，spawn 注入演示五开关，产物聚合根 `dist/<app>/` + 落地导航页）；`VITE_BASE` 移出 workflow env——base 不再单源，由脚本内 `REPO_PREFIX`（默认 `/vue3-vite-project`）按 app 注入，自定义域改脚本常量即可；四演示开关保留作 spawn 注入外兜底；删独立 type-check step（ci.yml 同次 push 已全量门禁）
+- **build-pages.ts 聚合目录预清**：构建前先 `rm -rf dist/`，防历史单应用产物（根 css/js/favicon）混入 Pages 发布包
+- **docker 本地同域网关**（`docker-compose.yml` + `docker/nginx.dev.conf` + `scripts/dev-gateway.ts` + 根 script `pnpm dev:gateway`）：nginx :8080 反代宿主机 5174-5179 六个 vite dev server，`proxy_pass` 无 URI 保留 base 前缀（与 `VITE_BASE=/<app>/` 严格对齐），Upgrade/Connection 透传支持 HMR websocket，`host.docker.internal:host-gateway` 兼容 Linux；`dev-gateway.ts` 因 turbo 不支持 per-app env 改 node 脚本并行 spawn 6 个 `pnpm -C apps/<a> dev` 并注入 `VITE_BASE`，任一异常退出整组停止，Windows `taskkill /T` 按进程树清理；`apps/admin/vite.config.ts` 补 `base: process.env.VITE_BASE ?? '/'` 与其余 5 app 同构
+- **脚本收容**：根 `package.json` 补 `test:coverage` / `test:ui`（admin 口径，`@vitest/ui` 入根 devDependencies）；`apps/admin/package.json` 补对应两 script（P0-1 审查登记的 Minor 关闭）
+- **治理文档**：`CLAUDE.md` 升 v3.0.0——§2 由「src/ Architecture Lockdown」改写为「apps/packages Architecture Lockdown」（workspace 拓扑表 + 依赖方向铁律 apps/*→packages/* 单向 + 例外/申请/验证机制保留，边界强制锚定 P5-A ESLint error 级规则）；§1.6 AutoImport 表改 `@vv/shared` / `@vv/ui` 包名形态；§1.6.1 / §1.7 同步包路径；§4 约束表 #3-#9/#14/#15 按多包口径修订；新增 `docs/43-Monorepo结构与开发指引.md`（6 app+4 包拓扑 / 端口表 / 新增应用流程 / 统一登录协议 / 同域网关用法 / CI-CD 形态）；README 顶部最近更新 + §目录结构（Monorepo 树）+ §常用脚本 + §环境变量补 `VITE_AUTH_ORIGIN` + 相关文档表补 42/43
+- **验证**：`docker compose config` 通过（daemon 未运行，nginx -t 待 Docker Desktop 启动后补跑）；`pnpm dev:gateway` 冒烟实测 6 dev 起后 `/admin/ /docs/ /portal/ /h5/ /big/ /auth/ /auth/login` 全部 200；`pnpm build:pages` 本地实测聚合 `dist/` 6 子目录 + 落地页（base 链接 `/vue3-vite-project/<app>/` 全部正确注入）
+
 ### ✨ Features | Monorepo P5-A：工程脚本多包重写 + ESLint 包边界规则（2026-10-22）
 
 > 背景：6 应用（auth/portal/admin/h5/big/docs）独立后，`scripts/` 工程脚本仍锚定旧单应用路径（check-routes 只扫 admin、new/remove-module 无 app 概念、check-doc-currency 第 8 项已知 FAIL），ESLint 也无 Monorepo 包边界约束。本任务把工具链治理对齐多包结构。

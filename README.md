@@ -322,38 +322,40 @@ pnpm dev:local
 
 > 完整定义见 `package.json:scripts`，本表是常用命令速查（按使用频率排序）。
 
-| 命令                           | 用途                                                                                                |
-| ------------------------------ | --------------------------------------------------------------------------------------------------- |
-| `pnpm dev`                     | 启动开发服务器（默认 remote 菜单模式；含 vite-plugin-vue-devtools）                                 |
-| `pnpm dev:local`               | 启动开发服务器（切到 local 菜单模式，无接口可用）                                                   |
-| `pnpm build`                   | 生产构建（先 `build-only` 生成声明与产物，再 `type-check:full` 全量门禁——干净环境类型声明由此保证） |
-| `pnpm build-only`              | 仅 `vite build`（不含类型校验；调试构建产物用）                                                     |
-| `pnpm preview`                 | 预览构建产物（本地起静态服务）                                                                      |
-| `pnpm analyze`                 | 生产构建 + 生成包体积分析报告（`dist/stats.html`）                                                  |
-| `pnpm test`                    | 运行单元测试（一次性）                                                                              |
-| `pnpm test <path>`             | 跑单个测试文件（如 `pnpm test src/utils/dayjs.spec.ts`）                                            |
-| `pnpm test:watch`              | 单元测试 watch 模式                                                                                 |
-| `pnpm test:coverage`           | 测试覆盖率报告（含 HTML 报告，输出 `coverage/`）                                                    |
-| `pnpm test:ui`                 | 单元测试 UI 模式（Vitest UI 可视化）                                                                |
-| `pnpm test:e2e`                | Playwright 端到端测试（关键用户流程）                                                               |
-| `pnpm test:e2e:install`        | 安装 Playwright 浏览器依赖（chromium + --with-deps）                                                |
-| `pnpm bench`                   | 跑基准测试（vitest bench，记录每次性能数据）                                                        |
-| `pnpm type-check`              | TypeScript 类型检查（增量，husky pre-commit 用）                                                    |
-| `pnpm type-check:full`         | TypeScript 类型检查（强制重建 .tsbuildinfo 缓存；build 前必跑）                                     |
-| `pnpm check:routes`            | 校验 RouteName / component-registry / whitelist 一致性（pre-commit 强制 + CI 阶段强制）             |
-| `pnpm check:aliases`           | alias 单一来源（`build/aliases.ts`）与 tsconfig paths 一致性校验（pre-commit 强制）                 |
-| `pnpm check:doc-currency`      | 文档与代码硬数据一致性校验（13 项锁定；手动 / 发布前跑，尚未接入 CI）                               |
-| `pnpm generate:tsconfig-paths` | 从 `build/aliases.ts` 自动同步到 `tsconfig.app.json`（pre-commit 钩子自动）                         |
-| `pnpm new-module <name>`       | 一键生成业务模块骨架（kebab-case 名 → 6 个骨架文件）                                                |
-| `pnpm remove-module <name>`    | 一键移除业务模块（默认 dry-run + y/N 确认；CI / 管道传 `--force`）                                  |
-| `pnpm lint`                    | ESLint 检查全项目                                                                                   |
-| `pnpm lint:fix`                | ESLint 自动修复                                                                                     |
-| `pnpm format`                  | Prettier 格式化全项目                                                                               |
-| `pnpm format:check`            | Prettier 检查（不修改；CI 用）                                                                      |
-| `pnpm commit`                  | 交互式 commit（仅提交不推送）                                                                       |
-| `pnpm push`                    | **推荐**：一站式提交并推送（add + cz + push）                                                       |
-| `pnpm release`                 | **发布版本**：bump + CHANGELOG + tag + push（master/release/*）                                     |
-| `pnpm release:dry`             | 发布预览：dry-run 模式（0 副作用，任意分支）                                                        |
+| 命令                               | 用途                                                                                                               |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `pnpm dev`                         | 全量 dev（turbo 并行 6 个 app，remote 菜单模式；admin 含 vite-plugin-vue-devtools）                                |
+| `pnpm -C apps/<a> dev`             | 单 app dev（如 `pnpm -C apps/admin dev`；`dev:local` 切本地菜单模式）                                              |
+| `pnpm dev:gateway`                 | 同域网关 dev：6 app 以 `VITE_BASE=/<app>/` 并行起（配 `docker compose up` → http://localhost:8080，见 docs/43 §6） |
+| `pnpm build`                       | 全量生产构建（turbo 拓扑序；各 app 内 `build-only` 生成声明 → `type-check:full` 全量门禁）                         |
+| `pnpm -C apps/<a> build-only`      | 单 app 仅 `vite build`（不含类型校验；调试构建产物用）                                                             |
+| `pnpm -C apps/<a> preview`         | 预览单 app 构建产物（本地起静态服务）                                                                              |
+| `pnpm build:pages`                 | gh-pages 六应用聚合构建（自动发现 `apps/*`，产物根 `dist/<app>/` + 落地导航页）                                    |
+| `pnpm analyze`                     | 生产构建 + 生成包体积分析报告（`dist/stats.html`，admin 口径）                                                     |
+| `pnpm test`                        | 全量单元测试（turbo 拓扑序，test 任务依赖上游 build）                                                              |
+| `pnpm -C apps/<a> test [path]`     | 单 app / 单文件测试（如 `pnpm -C apps/admin test src/utils/dayjs.spec.ts`）                                        |
+| `pnpm test:watch`                  | 单元测试 watch 模式（单 app `pnpm -C apps/<a> test:watch`）                                                        |
+| `pnpm test:coverage`               | 测试覆盖率报告（含 HTML 报告，输出 `coverage/`；admin 口径）                                                       |
+| `pnpm test:ui`                     | 单元测试 UI 模式（Vitest UI 可视化；admin 口径）                                                                   |
+| `pnpm test:e2e`                    | Playwright 端到端测试（关键用户流程）                                                                              |
+| `pnpm test:e2e:install`            | 安装 Playwright 浏览器依赖（chromium + --with-deps）                                                               |
+| `pnpm bench`                       | 跑基准测试（vitest bench，记录每次性能数据，admin 口径）                                                           |
+| `pnpm type-check`                  | TypeScript 类型检查（turbo 各 app `vue-tsc --build` 增量）                                                         |
+| `pnpm -C apps/<a> type-check:full` | TypeScript 类型检查（强制重建 .tsbuildinfo 缓存；单 app build 内第二步）                                           |
+| `pnpm check:routes`                | 校验 RouteName / component-registry / whitelist 一致性（pre-commit 强制 + CI 阶段强制）                            |
+| `pnpm check:aliases`               | alias 单一来源（`build/aliases.ts`）与 tsconfig paths 一致性校验（pre-commit 强制）                                |
+| `pnpm check:doc-currency`          | 文档与代码硬数据一致性校验（13 项锁定；手动 / 发布前跑，尚未接入 CI）                                              |
+| `pnpm generate:tsconfig-paths`     | 从 `build/aliases.ts` 自动同步到 `tsconfig.app.json`（pre-commit 钩子自动）                                        |
+| `pnpm new-module <name>`           | 一键生成业务模块骨架（kebab-case 名 → 6 个骨架文件）                                                               |
+| `pnpm remove-module <name>`        | 一键移除业务模块（默认 dry-run + y/N 确认；CI / 管道传 `--force`）                                                 |
+| `pnpm lint`                        | ESLint 检查全项目                                                                                                  |
+| `pnpm lint:fix`                    | ESLint 自动修复                                                                                                    |
+| `pnpm format`                      | Prettier 格式化全项目                                                                                              |
+| `pnpm format:check`                | Prettier 检查（不修改；CI 用）                                                                                     |
+| `pnpm commit`                      | 交互式 commit（仅提交不推送）                                                                                      |
+| `pnpm push`                        | **推荐**：一站式提交并推送（add + cz + push）                                                                      |
+| `pnpm release`                     | **发布版本**：bump + CHANGELOG + tag + push（master/release/*）                                                    |
+| `pnpm release:dry`                 | 发布预览：dry-run 模式（0 副作用，任意分支）                                                                       |
 
 ### Mock 数据
 
@@ -594,19 +596,20 @@ pnpm build
 
 ### 环境变量
 
-| 变量                     | 说明                                                                                                                                                          | 默认值              |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
-| `VITE_APP_TITLE`         | 应用标题首屏占位（`src/main.ts` 初始化；登录后由路由 `meta.title` 覆盖）                                                                                      | 企业中后台管理      |
-| `VITE_API_BASE_URL`      | API 基础 URL（`src/api/http.ts:106` `getAPIBaseURL()` 直接读取；axios 未设 baseURL 时回退到当前 origin，dev 默认同源，prod 需显式配）                         | 未设=当前 origin    |
-| `VITE_USE_MOCK`          | mock 数据开关（`vite.config.ts` viteMockServe 读取；`true`/未设=启用，`false`=关闭用于联调真后端）                                                            | dev 默认开启        |
-| `VITE_MENU_SOURCE`       | 菜单加载模式（`local` / `remote`，未设置时默认 `remote`）                                                                                                     | `remote`            |
-| `VITE_DEMO_NO_AUTH`      | 演示模式开关（prod + `VITE_USE_MOCK=true` 时生效）：守卫跳过登录/权限校验，演示账号 Admin（admin/123456）全链路可点；按钮级 v-auth 仍按真实 permissions 渲染  | 不设 = 关闭         |
-| `VITE_HISTORY_MODE`      | 路由历史模式（`web` / `hash`，用于子路径或静态托管部署）                                                                                                      | `web`               |
-| `VITE_BASE`              | 路由部署基础路径（必须以 `/` 开头和结尾）                                                                                                                     | `/`                 |
-| `VITE_STORAGE_NAMESPACE` | storage 命名空间（隔离多项目共用 localStorage）                                                                                                               | `vue3-vite-project` |
-| `VITE_BRAND_COLOR`       | 业务品牌色（HEX，覆盖 Element Plus 默认蓝 `#409eff`，含灯色阶联动，详见 [docs/06-主题管理规范.md](docs/06-主题管理规范.md)）                                  | `#409eff`           |
-| `VITE_QUIET_DEV`         | 关闭 dev 模式 GlobalComponents 自动注册徽章（专注调试时减少噪音，详见 `src/components/index.ts`）                                                             | 不设 = 输出徽章     |
-| `VITE_BEM_PREFIX`        | BEM 类名前缀（同时影响 TS 端 `createNamespace` 与 SCSS `bem mixin`；改一处即全站类名同步切换，详见 `src/utils/bem.ts` + `src/assets/styles/mixins/bem.scss`） | `vv`                |
+| 变量                     | 说明                                                                                                                                                                     | 默认值              |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------- |
+| `VITE_APP_TITLE`         | 应用标题首屏占位（`src/main.ts` 初始化；登录后由路由 `meta.title` 覆盖）                                                                                                 | 企业中后台管理      |
+| `VITE_API_BASE_URL`      | API 基础 URL（`src/api/http.ts:106` `getAPIBaseURL()` 直接读取；axios 未设 baseURL 时回退到当前 origin，dev 默认同源，prod 需显式配）                                    | 未设=当前 origin    |
+| `VITE_USE_MOCK`          | mock 数据开关（`vite.config.ts` viteMockServe 读取；`true`/未设=启用，`false`=关闭用于联调真后端）                                                                       | dev 默认开启        |
+| `VITE_MENU_SOURCE`       | 菜单加载模式（`local` / `remote`，未设置时默认 `remote`）                                                                                                                | `remote`            |
+| `VITE_DEMO_NO_AUTH`      | 演示模式开关（prod + `VITE_USE_MOCK=true` 时生效）：守卫跳过登录/权限校验，演示账号 Admin（admin/123456）全链路可点；按钮级 v-auth 仍按真实 permissions 渲染             | 不设 = 关闭         |
+| `VITE_HISTORY_MODE`      | 路由历史模式（`web` / `hash`，用于子路径或静态托管部署）                                                                                                                 | `web`               |
+| `VITE_BASE`              | 路由部署基础路径（必须以 `/` 开头和结尾；多应用聚合构建时由 `scripts/build-pages.ts` 内 `REPO_PREFIX` 按 app 注入，见 docs/43 §7）                                       | `/`                 |
+| `VITE_AUTH_ORIGIN`       | 统一登录重定向基址（`@vv/shared` redirect.ts 与各 app 守卫读取）：未登录整页跳 `${VITE_AUTH_ORIGIN}/login?redirect=...`，登出回跳同源；同域网关/子路径部署按实际前缀配置 | `/auth`             |
+| `VITE_STORAGE_NAMESPACE` | storage 命名空间（隔离多项目共用 localStorage）                                                                                                                          | `vue3-vite-project` |
+| `VITE_BRAND_COLOR`       | 业务品牌色（HEX，覆盖 Element Plus 默认蓝 `#409eff`，含灯色阶联动，详见 [docs/06-主题管理规范.md](docs/06-主题管理规范.md)）                                             | `#409eff`           |
+| `VITE_QUIET_DEV`         | 关闭 dev 模式 GlobalComponents 自动注册徽章（专注调试时减少噪音，详见 `src/components/index.ts`）                                                                        | 不设 = 输出徽章     |
+| `VITE_BEM_PREFIX`        | BEM 类名前缀（同时影响 TS 端 `createNamespace` 与 SCSS `bem mixin`；改一处即全站类名同步切换，详见 `src/utils/bem.ts` + `src/assets/styles/mixins/bem.scss`）            | `vv`                |
 
 > 环境变量读取：项目内显式通过 `import.meta.env.VITE_XXX` 访问。`baseURL` / `storage namespace` 单一来源在 `src/api/http.ts` 和 `src/utils/storage.ts`，不在各业务模块分散。
 
@@ -746,49 +749,51 @@ pnpm bench             # vitest bench 基准测试
 
 ### 项目规范
 
-| 文档                   | 路径                                          | 说明                                                                                     |
-| ---------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| 工具兼容性踩坑         | `docs/01-工具兼容性问题踩坑记录.md`           | npm/pnpm/Node 兼容性问题 + 解决方案                                                      |
-| 代码质量工具链         | `docs/02-代码质量工具链.md`                   | ESLint 10 + Prettier 3.9 + lint-staged 17                                                |
-| Git 工作流工具链       | `docs/03-Git工作流工具链.md`                  | Husky + commitlint + cz-customizable                                                     |
-| 构建与测试工具         | `docs/04-构建与测试工具.md`                   | Vite 8 + Vitest 4 + UnoCSS 66 + alias 系统                                               |
-| BEM 样式规范           | `docs/05-BEM样式规范.md`                      | 命名约定 + 样式隔离三层防线 + mixin + 运行时工具                                         |
-| 主题管理规范           | `docs/06-主题管理规范.md`                     | 双主题架构 + CSS 变量速查 + useTheme API                                                 |
-| 路由模块设计           | `docs/07-路由模块设计.md`                     | 自动注册 + 白名单 + 远程菜单 + 3 步新增流程                                              |
-| **模块化架构总览**     | `docs/08-模块化架构总览.md`                   | 4 块公共范式（directives/plugins/components/utils）+ 扩展流程                            |
-| 组件示例站点开发指引   | `docs/09-组件示例站点开发指引.md`             | dev / gh-pages 演示双形态 demo 模块，1 文件 1 demo + 自动 API 提取                       |
-| **新手指引**           | `docs/10-新手指引.md`                         | 30 分钟 5 任务：clone → 加模块 → 加 API → 调常见问题                                     |
-| 字典使用规范           | `docs/11-字典使用规范.md`                     | 三层架构速查 + 业务侧用法 + 缓存策略 + 7 条常见坑                                        |
-| Web Vitals 使用规范    | `docs/12-web-vitals性能监控使用规范.md`       | LCP/INP/CLS/TTFB 采集 + 4 种上报端点接入示例                                             |
-| **流式请求规范**       | `docs/13-stream流式请求使用规范.md`           | SSE / NDJSON / auto 三格式 + 取消联动 + vs request 对比                                  |
-| **Zod 校验规范**       | `docs/14-zod请求参数校验使用规范.md`          | requestValidated + Zod schema + 失败行为 + 进阶用法                                      |
-| **缓存/合并/分页适配** | `docs/15-请求层缓存-合并-分页适配使用规范.md` | cache + merge + pageAdapter 三件套速查 + 决策表                                          |
-| **Token 刷新与取消**   | `docs/16-token自动刷新与全局取消使用规范.md`  | 401 自动 refresh + globalAbort + AbortController 工具三件套                              |
-| **useRequest 三态**    | `docs/17-useRequest使用规范.md`               | VueUse 风格三态请求封装 + 与 AsyncState 组合 + 决策表                                    |
-| 代码组织决策表         | `docs/18-代码组织决策表.md`                   | utils / composable / store / api / plugin / directive 归属决策矩阵                       |
-| Pinia store 使用规范   | `docs/19-Pinia store使用规范.md`              | Setup Store 风格 + pick 持久化 + 模块边界                                                |
-| 测试编写入门           | `docs/20-测试编写入门.md`                     | Vitest 单测 + 覆盖率阈值 + AAA 模式                                                      |
-| i18n 使用规范          | `docs/21-i18n使用规范.md`                     | 多语言切换 + key 命名约定 + 按模块拆分                                                   |
-| mock 使用规范          | `docs/22-mock使用规范.md`                     | vite-plugin-mock + 自动扫描 + dev/prod 切换                                              |
-| 权限设计               | `docs/23-权限设计.md`                         | 权限模型 + useAuth + v-permission + v-auth 双层组合                                      |
-| XForm 使用指南         | `docs/24-XForm使用指南.md`                    | Schema DSL 动态表单 + 11 Props / 19 方法 + 多查询条件联动                                |
-| XForm 架构与决策       | `docs/25-XForm架构与决策记录.md`              | SchemaField 容错 + 反应式依赖追踪 + 错误降级                                             |
-| 项目推荐说明           | `docs/26-项目推荐说明.md`                     | 项目定位 + 适用场景 + 与同类脚手架差异 + 组件级杀手锏速览                                |
-| **ProDialog 使用指南** | `docs/27-ProDialog使用指南.md`                | 声明式 `<ProDialog>` + 命令式 `useDialog()` + 拖拽指令（v1.1 新增 `resizeMinToInitial`） |
-| BaseChart 使用指南     | `docs/28-BaseChart使用指南.md`                | ECharts 容器 + 主题/自适应 + 数据更新策略                                                |
-| **ProTable 使用指南**  | `docs/29-ProTable使用指南.md`                 | 配置驱动表格（v3.4 `searchLayout` + 双引擎 + 4 大能力 + v3.1 自动高度/状态保持）         |
-| RichTextEditor 指南    | `docs/30-RichTextEditor使用指南.md`           | wangEditor V5 封装 + 双向 sanitize + required 自定义校验（见 docs/30 §常见坑）           |
-| ProDialogForm 指南     | `docs/31-ProDialogForm使用指南.md`            | ProDialog + XForm 命令式弹窗表单组合                                                     |
-| 常用交互指令           | `docs/32-常用交互指令.md`                     | v-copy / v-draggable / v-auth 等 6 个指令速查                                            |
-| dev / dev:local 对比   | `docs/33-pnpm-dev与dev-local模式对比.md`      | remote / local 两种菜单模式的选择与差异                                                  |
-| H5 布局与 rem 适配     | `docs/34-H5布局与rem适配.md`                  | h5 layout + 编译时 postcss-pxtorem + 运行时 rem 双层适配                                 |
-| 大屏布局与 scale 适配  | `docs/35-大屏布局与scale适配.md`              | big layout + transform: scale 等比缩放（1920/2560/4K/9000px 拼接屏）                     |
-| Fork 升级与版本策略    | `docs/36-Fork升级与版本策略.md`               | 开源 MIT 后的版本口径 + fork 跟进上游策略                                                |
-| h5-rem 适配决策记录    | `docs/37-h5-rem适配决策记录.md`               | H5 双层适配 ADR                                                                          |
-| big-scale 适配决策记录 | `docs/38-big-scale适配决策记录.md`            | 大屏 scale ADR                                                                           |
-| 图标体系与使用规范     | `docs/39-图标体系与使用规范.md`               | unplugin-icons 双语法 + app 本地集合 + 去哪找图标                                        |
-| gh-pages 自动部署      | `docs/40-GitHubPages自动部署.md`              | push master 即发布线上 demo：workflow + 构建四开关 + 生产 mock 接线 + 排查               |
-| 门户企业官网站点       | `docs/41-门户企业官网站点.md`                 | /home 门面：文案单源 site.ts + 锚点导航三处同步 + 白名单公开约定                         |
+| 文档                        | 路径                                          | 说明                                                                                     |
+| --------------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| 工具兼容性踩坑              | `docs/01-工具兼容性问题踩坑记录.md`           | npm/pnpm/Node 兼容性问题 + 解决方案                                                      |
+| 代码质量工具链              | `docs/02-代码质量工具链.md`                   | ESLint 10 + Prettier 3.9 + lint-staged 17                                                |
+| Git 工作流工具链            | `docs/03-Git工作流工具链.md`                  | Husky + commitlint + cz-customizable                                                     |
+| 构建与测试工具              | `docs/04-构建与测试工具.md`                   | Vite 8 + Vitest 4 + UnoCSS 66 + alias 系统                                               |
+| BEM 样式规范                | `docs/05-BEM样式规范.md`                      | 命名约定 + 样式隔离三层防线 + mixin + 运行时工具                                         |
+| 主题管理规范                | `docs/06-主题管理规范.md`                     | 双主题架构 + CSS 变量速查 + useTheme API                                                 |
+| 路由模块设计                | `docs/07-路由模块设计.md`                     | 自动注册 + 白名单 + 远程菜单 + 3 步新增流程                                              |
+| **模块化架构总览**          | `docs/08-模块化架构总览.md`                   | 4 块公共范式（directives/plugins/components/utils）+ 扩展流程                            |
+| 组件示例站点开发指引        | `docs/09-组件示例站点开发指引.md`             | dev / gh-pages 演示双形态 demo 模块，1 文件 1 demo + 自动 API 提取                       |
+| **新手指引**                | `docs/10-新手指引.md`                         | 30 分钟 5 任务：clone → 加模块 → 加 API → 调常见问题                                     |
+| 字典使用规范                | `docs/11-字典使用规范.md`                     | 三层架构速查 + 业务侧用法 + 缓存策略 + 7 条常见坑                                        |
+| Web Vitals 使用规范         | `docs/12-web-vitals性能监控使用规范.md`       | LCP/INP/CLS/TTFB 采集 + 4 种上报端点接入示例                                             |
+| **流式请求规范**            | `docs/13-stream流式请求使用规范.md`           | SSE / NDJSON / auto 三格式 + 取消联动 + vs request 对比                                  |
+| **Zod 校验规范**            | `docs/14-zod请求参数校验使用规范.md`          | requestValidated + Zod schema + 失败行为 + 进阶用法                                      |
+| **缓存/合并/分页适配**      | `docs/15-请求层缓存-合并-分页适配使用规范.md` | cache + merge + pageAdapter 三件套速查 + 决策表                                          |
+| **Token 刷新与取消**        | `docs/16-token自动刷新与全局取消使用规范.md`  | 401 自动 refresh + globalAbort + AbortController 工具三件套                              |
+| **useRequest 三态**         | `docs/17-useRequest使用规范.md`               | VueUse 风格三态请求封装 + 与 AsyncState 组合 + 决策表                                    |
+| 代码组织决策表              | `docs/18-代码组织决策表.md`                   | utils / composable / store / api / plugin / directive 归属决策矩阵                       |
+| Pinia store 使用规范        | `docs/19-Pinia store使用规范.md`              | Setup Store 风格 + pick 持久化 + 模块边界                                                |
+| 测试编写入门                | `docs/20-测试编写入门.md`                     | Vitest 单测 + 覆盖率阈值 + AAA 模式                                                      |
+| i18n 使用规范               | `docs/21-i18n使用规范.md`                     | 多语言切换 + key 命名约定 + 按模块拆分                                                   |
+| mock 使用规范               | `docs/22-mock使用规范.md`                     | vite-plugin-mock + 自动扫描 + dev/prod 切换                                              |
+| 权限设计                    | `docs/23-权限设计.md`                         | 权限模型 + useAuth + v-permission + v-auth 双层组合                                      |
+| XForm 使用指南              | `docs/24-XForm使用指南.md`                    | Schema DSL 动态表单 + 11 Props / 19 方法 + 多查询条件联动                                |
+| XForm 架构与决策            | `docs/25-XForm架构与决策记录.md`              | SchemaField 容错 + 反应式依赖追踪 + 错误降级                                             |
+| 项目推荐说明                | `docs/26-项目推荐说明.md`                     | 项目定位 + 适用场景 + 与同类脚手架差异 + 组件级杀手锏速览                                |
+| **ProDialog 使用指南**      | `docs/27-ProDialog使用指南.md`                | 声明式 `<ProDialog>` + 命令式 `useDialog()` + 拖拽指令（v1.1 新增 `resizeMinToInitial`） |
+| BaseChart 使用指南          | `docs/28-BaseChart使用指南.md`                | ECharts 容器 + 主题/自适应 + 数据更新策略                                                |
+| **ProTable 使用指南**       | `docs/29-ProTable使用指南.md`                 | 配置驱动表格（v3.4 `searchLayout` + 双引擎 + 4 大能力 + v3.1 自动高度/状态保持）         |
+| RichTextEditor 指南         | `docs/30-RichTextEditor使用指南.md`           | wangEditor V5 封装 + 双向 sanitize + required 自定义校验（见 docs/30 §常见坑）           |
+| ProDialogForm 指南          | `docs/31-ProDialogForm使用指南.md`            | ProDialog + XForm 命令式弹窗表单组合                                                     |
+| 常用交互指令                | `docs/32-常用交互指令.md`                     | v-copy / v-draggable / v-auth 等 6 个指令速查                                            |
+| dev / dev:local 对比        | `docs/33-pnpm-dev与dev-local模式对比.md`      | remote / local 两种菜单模式的选择与差异                                                  |
+| H5 布局与 rem 适配          | `docs/34-H5布局与rem适配.md`                  | h5 layout + 编译时 postcss-pxtorem + 运行时 rem 双层适配                                 |
+| 大屏布局与 scale 适配       | `docs/35-大屏布局与scale适配.md`              | big layout + transform: scale 等比缩放（1920/2560/4K/9000px 拼接屏）                     |
+| Fork 升级与版本策略         | `docs/36-Fork升级与版本策略.md`               | 开源 MIT 后的版本口径 + fork 跟进上游策略                                                |
+| h5-rem 适配决策记录         | `docs/37-h5-rem适配决策记录.md`               | H5 双层适配 ADR                                                                          |
+| big-scale 适配决策记录      | `docs/38-big-scale适配决策记录.md`            | 大屏 scale ADR                                                                           |
+| 图标体系与使用规范          | `docs/39-图标体系与使用规范.md`               | unplugin-icons 双语法 + app 本地集合 + 去哪找图标                                        |
+| gh-pages 自动部署           | `docs/40-GitHubPages自动部署.md`              | push master 即发布线上 demo：workflow + 构建四开关 + 生产 mock 接线 + 排查               |
+| 门户企业官网站点            | `docs/41-门户企业官网站点.md`                 | /home 门面：文案单源 site.ts + 锚点导航三处同步 + 白名单公开约定                         |
+| Monorepo 改造评估           | `docs/42-Monorepo多应用改造评估.md`           | 单应用拆 6 app 的收益/成本评估与风险清单（R1-R9）                                        |
+| **Monorepo 结构与开发指引** | `docs/43-Monorepo结构与开发指引.md`           | 6 app + 4 包拓扑 / 端口表 / 新增应用流程 / 统一登录协议 / 同域网关 / CI-CD 形态          |
 
 ### 架构评估
 
