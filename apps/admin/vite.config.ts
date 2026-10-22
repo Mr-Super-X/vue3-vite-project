@@ -1,132 +1,33 @@
 /**
- * Vite 工程配置
+ * Vite 工程配置（admin 消费端）
  *
- * 本文件定位：
- *   - **装配清单**：负责组合 plugins 数组 + 各 defineConfig 字段
- *   - **工程配置**：路径别名 / vendorChunks / server / scs 注入等已迁移到 `build/` 子模块
- *     （单一来源详见 build/index.ts barrel re-export，避免与 tsconfig.app.json 双维护）
+ * 插件装配 / 别名 / css 预处理 / 构建分包全部收敛到 @vv/config 的 createViteConfig 工厂
+ * （packages/config/src/create-vite-config.ts，单一来源）；本文件只声明 app 参数与
+ * admin 私有插件（vueDevTools / visualizer）。
  *
  * 历史：
  *   - 2026-09-10: 抽出 SRC_DIR_ALIASES / vendorChunks / server / scss 到 build/* 单一来源
- *   - 详见 docs/superpowers/specs/2026-09-10-vite-config-split-design.md
+ *   - 2026-10-22: P1-1 收敛为 @vv/config 工厂消费（Monorepo 迁移）
  */
 import { fileURLToPath } from 'node:url'
-import { defineConfig } from 'vite'
-
-import vue from '@vitejs/plugin-vue'
-import vueJsx from '@vitejs/plugin-vue-jsx'
 import vueDevTools from 'vite-plugin-vue-devtools'
-import UnoCSS from 'unocss/vite'
-import AutoImport from 'unplugin-auto-import/vite'
-import Components from 'unplugin-vue-components/vite'
-import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
-// unplugin-vue-components v32 已移除内置 IconsResolver，图标解析器改从 unplugin-icons/resolver 导入
-import Icons from 'unplugin-icons/vite'
-import IconsResolver from 'unplugin-icons/resolver'
-import { FileSystemIconLoader } from 'unplugin-icons/loaders'
-import { viteMockServe } from 'vite-plugin-mock'
 import { visualizer } from 'rollup-plugin-visualizer'
-// P0-2：本文件已迁入 apps/admin，scripts/ 与 build/ 仍在仓库根，相对路径上探两级
-import { cleanMockBundled } from '../../scripts/vite-plugin-clean-mock'
+import { createViteConfig } from '@vv/config'
 
-// 工程配置（单一来源：build/index.ts barrel re-export）
-// 详见 docs/superpowers/specs/2026-09-10-vite-config-split-design.md
-import {
-  resolveSrcDirAliases,
-  VENDOR_CHUNKS,
-  createProxyConfig,
-  SERVER_DEFAULTS,
-  SCSS_PREPROCESSOR_OPTIONS,
-  POSTCSS_PLUGINS,
-} from '../../build'
+const appRoot = fileURLToPath(new URL('.', import.meta.url))
 
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [
-    vue(),
-    vueJsx(),
+export default createViteConfig({
+  appRoot,
+  appName: 'admin',
+  // vite-plugin-mock 以 isAbsPath 判定 mockPath（dist/index.mjs:224），绝对路径安全；
+  // mock/ 仍在仓库根，P1-2 迁入 @vv/mock 后改指 packages/mock/src
+  mockPath: fileURLToPath(new URL('../../mock', import.meta.url)),
+  // h5-demo 模块与 h5 layout P3-2 才抽离到 apps/h5；此前 admin 必须保持 rem 转换
+  // （行为等价），抽离后 admin 移除本开关、改由 apps/h5 开启
+  h5Rem: true,
+  extraPlugins: [
     vueDevTools(),
-    UnoCSS(),
-    AutoImport({
-      imports: [
-        'vue',
-        'vue-router',
-        'pinia',
-        // 业务侧高频 composables（详见 src/composables/*）
-        // 显式列名不走 dirs 自动扫描——避免误扫到同目录的 *.spec.ts（vitest 解析会异常）
-        // useAppRouter 是项目自研的路由高层 API（区别于 vue-router 自带的 useRouter）
-        { from: '@/composables/useAuth', imports: [{ name: 'useAuth' }] },
-        { from: '@/composables/useLogout', imports: [{ name: 'useLogout' }] },
-        { from: '@/composables/useRequest', imports: [{ name: 'useRequest' }] },
-        { from: '@/composables/useAppRouter', imports: [{ name: 'useAppRouter' }] },
-        // useDict：字典组合式 API（详见 src/composables/useDict，契约形态按 code 解构）
-        { from: '@/composables/useDict', imports: [{ name: 'useDict' }] },
-        // useDialog：命令式弹窗（详见 src/composables/useDialog）
-        // 同模块的 DialogCancelledError / setDialogAppContext / getDialogAppContext 不注入：
-        // 第一个是类型（不参与运行时），后两个只在 main.ts / useConfirm 内部调用（不应污染 setup 全局作用域）
-        { from: '@/composables/useDialog', imports: [{ name: 'useDialog' }] },
-        // useConfirm：二次确认（详见 src/composables/useConfirm）
-        // 取消时 resolve(false) 而非 reject，故调用方无须 try/catch
-        { from: '@/composables/useConfirm', imports: [{ name: 'useConfirm' }] },
-        // 业务侧高频 utils（详见 src/utils/*）
-        { from: '@/utils/bem', imports: [{ name: 'createNamespace' }] },
-      ],
-      resolvers: [
-        // importStyle: 'css' —— 组件/API（ElMessage 等）样式按需自动注入，
-        // main.ts 不再全量引入 element-plus/dist/index.css（gzip 省 ~30KB）
-        ElementPlusResolver({ importStyle: 'css' }),
-      ],
-      dts: 'src/types/auto-imports.d.ts',
-    }),
-    // ===== 图标体系（docs/39）=====
-    // 编译期把模板中的 <i-ep-plus /> 等标签解析为内联 SVG Vue 组件，
-    // 图标按需打包、产物零外部请求（插件只认 ~icons/* 虚拟模块导入）
-    Icons({
-      compiler: 'vue3',
-      customCollections: {
-        // app 集合：本地 SVG 资产（git 管理），编译期由 FileSystemIconLoader 从 src/assets/icons 读取；
-        // transform 把非 none 的 fill/stroke 强制 currentColor，使图标跟随父级 color / CSS 变量换色
-        app: FileSystemIconLoader('src/assets/icons', (svg) =>
-          svg
-            .replace(/fill="(?!none")[^"]*"/g, 'fill="currentColor"')
-            .replace(/stroke="(?!none")[^"]*"/g, 'stroke="currentColor"')
-        ),
-      },
-    }),
-    Components({
-      resolvers: [
-        ElementPlusResolver({ importStyle: 'css' }),
-        // 图标标签解析：只放行 ep / tabler / app 三个集合，
-        // 写错集合名/图标名的 i-* 标签不被解析 → 构建期虚拟模块解析失败直接报错（验收#2）
-        IconsResolver({
-          prefix: 'i',
-          enabledCollections: ['ep', 'tabler'],
-          customCollections: ['app'],
-        }),
-      ],
-      /**
-       * 声明要自动导入的全局组件 —— 三目录下所有 .vue（deep: true 含任意深度子目录）
-       * 均注册到 vue.GlobalComponents，消费方模板直接用 <BaseChart /> / <ProTable /> /
-       * <XForm /> 等，不要显式 import（CLAUDE.md §1.7 强约束）
-       */
-      dirs: ['src/components/common', 'src/components/ProTable', 'src/components/form-schema'],
-      deep: true,
-      dts: 'src/types/components.d.ts',
-    }),
-    // mock 启用开关由 VITE_USE_MOCK 控制（2026-07-27 切换）。
-    // dev 默认开启：用户 clone 后未建 .env 时，VITE_USE_MOCK=undefined，
-    // `!== 'false'` 判定为 true，与原 NODE_ENV 行为一致。
-    // 联调真实后端：在 .env.development 设 VITE_USE_MOCK=false。
-    // P0-2：mock/ 仍在仓库根（P1-2 才迁 @vv/mock）。vite-plugin-mock 以
-    // path.join(cwd, mockPath) 解析（dist/index.mjs:224），dev 从 apps/admin 启动时
-    // cwd=apps/admin，必须上探两级才能命中根 mock/
-    viteMockServe({
-      mockPath: '../../mock',
-      enable: process.env.VITE_USE_MOCK !== 'false',
-      watchFiles: true,
-    }),
-    // 清理 vite-plugin-mock 在 mock/ 生成的 _*.bundled_*.mjs 临时文件
-    cleanMockBundled(),
     // 包体积分析（默认关闭，通过 ANALYZE=true 启用）
     // peerDeps 支持 rolldown 1.x（Vite 8 用），无需额外配置
     ...(process.env.ANALYZE === 'true'
@@ -140,133 +41,4 @@ export default defineConfig({
         ]
       : []),
   ],
-  server: {
-    // port 5174 / strictPort: true 来自 build/server.ts 的 SERVER_DEFAULTS
-    // proxy 来自 build/proxy.ts 的 createProxyConfig(env) —— 当前返回 {} 占位
-    // 联调真实后端时在 build/proxy.ts 内按需补充 _env 字段解析
-    ...SERVER_DEFAULTS,
-    proxy: createProxyConfig(process.env),
-  },
-  resolve: {
-    alias: {
-      ...resolveSrcDirAliases(),
-      // P0-2：build/aliases.ts 的 PROJECT_ROOT_ALIASES 按 process.cwd() 解析
-      // （cwd=apps/admin 时会指向 apps/admin/mock 空目录），mock/ 仍在仓库根，
-      // 这里显式覆盖 @mock 指向根 mock（与 apps/admin/tsconfig.app.json 的
-      // @mock paths 上探两级同理）；P1-2 迁 @vv/mock 后此覆盖随别名一并移除
-      '@mock': fileURLToPath(new URL('../../mock', import.meta.url)),
-    },
-  },
-  css: {
-    // h5 rem 适配（postcss-pxtorem）：仅转换 src/layouts/h5/ 与 src/modules/h5-*/（见 build/postcss.ts）
-    postcss: { plugins: POSTCSS_PLUGINS },
-    preprocessorOptions: {
-      // SCSS 'new-global' deprecation：Dart Sass 1.78+ 警告 "b() 内 !global 设新变量"，
-      // 由于 bem mixin 设计依赖此模式但每个 <style scoped> 是独立 stylesheet 根，
-      // 全局静默该 deprecation 不影响 2.0 升级（届时需重构 bem mixin 不依赖 !global）。
-      //
-      // additionalData 注入到每个 <style lang="scss"> / .scss 文件开头，让 bem mixin
-      // 通过 $BEM_PREFIX 自动拼前缀；与 src/utils/bem.ts 的 import.meta.env.VITE_BEM_PREFIX
-      // 共享同一来源（环境变量，未设置时回退 'vv' 保持向后兼容）。
-      //
-      // 关键技术点：sass 的 @use 模块化语义要求「变量只在 module 内部定义」，
-      // 如果调用方 namespace 也声明 $BEM_PREFIX，会报 "This module and the new module
-      // both define" 编译错误。解决方案：用 sass 的 with 语法把变量值注入到 bem 模块
-      // 内部的 !default 兜底；bem.scss 内部用 !default，未传时回退 'vv'（单测/手写 SCSS）。
-      // 调用方文件因此**不要再**写 @use 'bem'，避免重复引入——由本 additionalData 统一引入。
-      //
-      // silenceDeprecations 白名单：
-      //   - 'new-global'：bem mixin 的 b() 内 $B: $block !global，Dart Sass 1.78+ 警告
-      //     "b() 内 !global 设新变量"。每个 <style scoped> 是独立 stylesheet 根，全局静默
-      //     不影响 2.0 升级（届时需重构 bem mixin 不依赖 !global）。
-      //   - 'if-function'：bem mixin 的 b() 内用 if($cond, $a, $b) 拼接前缀，Dart Sass 1.78+
-      //     标记 if-function 为 deprecation 但函数仍可用。改用 @if 块会让表达式级赋值退化为
-      //     block 级冗余代码，CSS 模式 if(...: ...; else:) 在 SCSS 文件中 sass 1.101 解析拒绝，
-      //     暂时静默该 deprecation。
-      //
-      // 实际 additionalData 值 + silenceDeprecations 数组见 build/scss.ts 的 SCSS_PREPROCESSOR_OPTIONS
-      scss: SCSS_PREPROCESSOR_OPTIONS,
-      less: { javascriptEnabled: true },
-    },
-  },
-  build: {
-    target: 'es2022',
-    sourcemap: false,
-    chunkSizeWarningLimit: 1000,
-    rollupOptions: {
-      // 显式启用 tree-shaking（true = rolldown 默认推荐配置：移除未引用的 export、合并变量声明、移除未使用参数）
-      // 注：Vite 8 用 rolldown 替代 rollup，类型只接受 boolean | TreeshakingOptions，不再支持 'recommended' 字符串
-      treeshake: true,
-
-      // 如果后续需要精细化定制（如标记纯函数、保留 console.log、处理 polyfill 副作用等），
-      // 可改为 TreeshakingOptions 对象。常用字段说明：
-      //
-      //   manualPureFunctions: ['composedPath', 'foo', 'bar']
-      //     // 告知打包器"这函数无副作用"，更激进摇树。
-      //     // 适用：utils/ 里有多个 export，但部分未被使用。
-      //
-      //   moduleSideEffects: (id) => boolean
-      //     // 动态判断某模块是否有副作用（false = 可摇，true = 保留）。
-      //     // 适用：项目里引入了修改全局变量的 polyfill 或 polyfill.io 的垫片。
-      //     //   例：if (id.includes('polyfill/')) return true
-      //
-      //   annotations: true
-      //     // 读取 /*#__PURE__*/ 注释作为摇树提示（手动控制粒度）。
-      //     // 适用：第三方库摇不掉，但你可以用注释告诉打包器"这调用无副作用"。
-      //
-      //   joinVars: true
-      //     // 合并多个变量声明（如 const a = 1; const b = 2; → const a = 1, b = 2;）。
-      //     // 收益：减少代码体积，但可能影响 source map 可读性。
-      //
-      //   correctVarValueBeforeDeclaration: false（默认 false，建议生产开启）
-      //     // 提前计算变量值（如 const x = 1 + 2; → const x = 3;）。
-      //     // 收益：减少运行时计算，但对 source map 不友好。
-      //
-      // 完整字段见 @rolldown/types 或 node_modules/.pnpm/rolldown@1.1.5/.../define-config-BhJ90aEv.d.mts
-      output: {
-        // ===== 产物文件分类输出：js / css / img 分目录，其它资源归 assets/ =====
-        // 目的：dist 目录结构清晰，运维可按目录维度排查问题 + CDN 按目录配置差异化缓存策略
-        // 注：rolldown 兼容 rollup 的 entryFileNames / chunkFileNames / assetFileNames 语义
-        entryFileNames: 'js/[name]-[hash].js',
-        chunkFileNames: 'js/[name]-[hash].js',
-        assetFileNames(assetInfo) {
-          // 按资源扩展名分目录：css → css/；常见图片 → img/；字体等其它资源 → assets/
-          // 注：rolldown 的 PreRenderedAsset.name 已 @deprecated，改用 names 数组（取首个原始文件名判定）
-          const assetName = assetInfo.names[0] ?? ''
-          if (assetName.endsWith('.css')) return 'css/[name]-[hash][extname]'
-          const IMG_EXTENSIONS = [
-            '.png',
-            '.jpg',
-            '.jpeg',
-            '.gif',
-            '.svg',
-            '.webp',
-            '.ico',
-            '.bmp',
-            '.avif',
-            '.tiff',
-            '.apng',
-          ]
-          if (IMG_EXTENSIONS.some((ext) => assetName.endsWith(ext)))
-            return 'img/[name]-[hash][extname]'
-          return 'assets/[name]-[hash][extname]'
-        },
-
-        // 手动拆分第三方库（vendor chunk）→ 利用浏览器强缓存
-        // 业务代码 (src/) 变化时只更新业务 chunk，第三方库 chunk 命中缓存
-        // 注：Vite 8 用 rolldown 替代 rollup，manualChunks 必须是函数（不能是对象）
-        manualChunks(id) {
-          // 业务代码不归 vendor
-          if (!id.includes('node_modules')) return undefined
-          // VENDOR_CHUNKS 来自 build/vendor-chunks.ts —— 顺序敏感（vue → ui → charts）
-          // 顺序敏感：先匹配先返回，新加组必须 append 到末尾
-          for (const { name, patterns } of VENDOR_CHUNKS) {
-            if (patterns.some((pattern) => id.includes(pattern))) return name
-          }
-          // 其他第三方库：axios / vue-i18n / 等
-          return 'vendor-utils'
-        },
-      },
-    },
-  },
 })

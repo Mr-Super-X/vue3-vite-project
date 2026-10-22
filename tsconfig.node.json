@@ -7,8 +7,6 @@
     "cypress.config.*",
     "playwright.config.*",
     "eslint.config.*",
-    "build/**/*.ts",
-    "build/scripts/**/*.ts",
     "scripts/**/*.ts"
   ],
   "compilerOptions": {
@@ -28,7 +26,7 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
 
     // 允许 import './foo.ts' 带 .ts 后缀（与 Node --experimental-strip-types 一致）
-    // 用于 build/scripts/generate-tsconfig-paths.ts 从 build/aliases.ts 拉取单一来源
+    // 用于 scripts/generate-tsconfig-paths.ts 从 packages/config/src/app-aliases.ts 拉取单一来源
     "allowImportingTsExtensions": true
   }
 }

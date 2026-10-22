@@ -22,8 +22,13 @@
  * import」竞争窗口，非临时方案——只要存在运行时抢删，文件数/磁盘时序就可能
  * 再次越过任何固定延迟阈值。
  *
+ * mockDir 入参（P1-1 包化修正）：bundled 文件落在 mock 源文件同目录，而 dev 的
+ * cwd 是各 app 目录（apps/<app>），cwd 相对解析必错——P0-2 迁移后本插件曾因
+ * resolve(cwd, 'mock') 指向 apps/admin/mock（不存在）而静默空转。改为由工厂
+ * 显式传入 mockPath（vite-plugin-mock 同款解析结果），默认值仅保向后兼容。
+ *
  * 安全：
- * - 只匹配 `mock/` 目录（含子目录，如 mock/pro-table/），不影响其它位置
+ * - 只匹配传入的 mockDir（含子目录，如 mock/pro-table/），不影响其它位置
  * - 文件名硬约束 `_*.bundled_*.mjs` / `_*.bundled_*.cjs`，与 vite-plugin-mock
  *   自身 `ignored` 规则一致，不会误删真实 mock 文件
  */
@@ -48,9 +53,7 @@ function collectBundledFiles(dir: string, acc: string[] = []): string[] {
   return acc
 }
 
-export function cleanMockBundled(): Plugin {
-  const mockDir = resolve(process.cwd(), 'mock')
-
+export function cleanMockBundled(mockDir: string = resolve(process.cwd(), 'mock')): Plugin {
   function cleanupOnce(): void {
     for (const full of collectBundledFiles(mockDir)) {
       try {

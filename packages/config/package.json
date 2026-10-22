@@ -1,0 +1,19 @@
+{
+  "name": "@vv/config",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*"
+  },
+  "scripts": {
+    "type-check": "vue-tsc --build",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.0",
+    "vitest": "^4.1.9",
+    "vue-tsc": "^3.3.11"
+  }
+}

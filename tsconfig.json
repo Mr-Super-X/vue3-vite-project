@@ -9,6 +9,9 @@
     },
     {
       "path": "./apps/admin/tsconfig.vitest.json"
+    },
+    {
+      "path": "./packages/config/tsconfig.json"
     }
   ]
 }

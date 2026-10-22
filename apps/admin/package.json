@@ -14,5 +14,8 @@
     "test:watch": "vitest",
     "bench": "vitest bench --run --reporter=basic",
     "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@vv/config": "workspace:*"
   }
 }

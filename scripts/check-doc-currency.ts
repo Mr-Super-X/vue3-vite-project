@@ -18,7 +18,8 @@
 //   5. use-xform-composer.ts 行数上限（顶层编排膨胀预警）
 //   6. ProDialog 自有 Props 数 —— docs/27-ProDialog使用指南.md §2.1 表格
 //   7. BaseChart Props 数 —— docs/28-BaseChart使用指南.md §1.1 表格
-//   8. build/ 顶层模块数 —— docs/04-构建与测试工具.md §1.1 表格
+//   8. build/ 顶层模块数（P1-1 起实际读 packages/config/src，build/ 已删）—— docs/04-构建与测试工具.md §1.1 表格
+//      ⚠️ 迁移期已知漂移：包内模块数（9）≠ docs/04 旧值（7），docs 治理在 P5-5 重建本校验时统一修订
 //   9. VENDOR_CHUNKS 具名组数 —— docs/04 §1.1 表格（vendor-vue / vendor-ui / vendor-charts）
 //  10. ProTable composables 数 —— docs/29-ProTable使用指南.md §概述「17 composables」
 //  11. ProTable 顶级 demo 数 —— docs/29-ProTable使用指南.md §概述「25 个演示」（24 能力 demo + ProTableOverview 主入口）
@@ -212,13 +213,15 @@ function countBaseChartProps(): number {
 }
 
 /**
- * 数 build/ 顶层模块数（*.ts 排除 .spec.ts 与 scripts/ 子目录）
+ * 数工程配置包顶层模块数（*.ts 排除 .spec.ts）
  *
- * 包含：aliases.ts / vendor-chunks.ts / scss.ts / server.ts / proxy.ts / postcss.ts / index.ts
- * 不包含：scripts/generate-tsconfig-paths.ts（子目录下的脚本，由单独检查覆盖）
+ * P1-1：build/ 已删除，配置模块迁入 packages/config/src/
+ * （scss / vendor-chunks / server / proxy / postcss / app-aliases / create-vite-config /
+ * clean-mock-bundled / index）；scripts/ 下的生成器由单独检查覆盖。
+ * expected 沿用 docs/04 §1.1 旧值 7，迁移期漂移待 P5-5 文档治理统一修订。
  */
 function countBuildModules(): number {
-  const files = readdirSync(join(ROOT, 'build'))
+  const files = readdirSync(join(ROOT, 'packages/config/src'))
   return files.filter((f) => f.endsWith('.ts') && !f.endsWith('.spec.ts')).length
 }
 
@@ -229,7 +232,7 @@ function countBuildModules(): number {
  * docs/04 §1.1 写「4 组」是包括 fallback 的总数，此处校验具名组数 = 3。
  */
 function countVendorChunksNamed(): number {
-  const content = readText('build/vendor-chunks.ts')
+  const content = readText('packages/config/src/vendor-chunks.ts')
   const matches = content.match(/name:\s*['"]vendor-/g)
   return matches ? matches.length : 0
 }

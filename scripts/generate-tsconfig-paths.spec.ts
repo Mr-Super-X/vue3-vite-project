@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { generateTsconfigContent } from './generate-tsconfig-paths'
+import path from 'node:path'
+import { aliasesToTsconfigPaths, generateTsconfigContent } from './generate-tsconfig-paths'
 
 describe('generateTsconfigContent', () => {
   it('输入基础 base.json + paths 对象，输出完整 tsconfig.app.json 字符串', () => {
@@ -39,5 +40,27 @@ describe('generateTsconfigContent', () => {
     const aIndex = result.indexOf('"@a/*"')
     const zIndex = result.indexOf('"@z/*"')
     expect(aIndex).toBeLessThan(zIndex)
+  })
+})
+
+describe('aliasesToTsconfigPaths', () => {
+  const appRoot = path.join('D:', 'proj', 'apps', 'admin')
+
+  it("@ 只生成 '@/*'（catch-all），不生成 bare '@'", () => {
+    const paths = aliasesToTsconfigPaths({ '@': path.join(appRoot, 'src') }, appRoot)
+    expect(paths).toEqual({ '@/*': ['./src/*'] })
+  })
+
+  it('常规别名生成 bare（index.ts）+ /* 两条', () => {
+    const paths = aliasesToTsconfigPaths({ '@api': path.join(appRoot, 'src/api') }, appRoot)
+    expect(paths['@api']).toEqual(['./src/api/index.ts'])
+    expect(paths['@api/*']).toEqual(['./src/api/*'])
+  })
+
+  it('appRoot 之外的路径输出上探形态（@mock → ../../mock，P0-2 手修语义必须保留）', () => {
+    const mockDir = path.join('D:', 'proj', 'mock')
+    const paths = aliasesToTsconfigPaths({ '@mock': mockDir }, appRoot)
+    expect(paths['@mock']).toEqual(['../../mock/index.ts'])
+    expect(paths['@mock/*']).toEqual(['../../mock/*'])
   })
 })
