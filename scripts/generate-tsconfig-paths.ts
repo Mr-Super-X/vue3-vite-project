@@ -55,7 +55,11 @@ export function aliasesToTsconfigPaths(
       paths['@/*'] = [`${rel}/*`]
       continue
     }
-    paths[alias] = [`${rel}/index.ts`]
+    // 精确映射仅在目标 index.ts 真实存在时生成：悬空映射会让 vite（目录解析命中）
+    // 与 tsconfig（指向不存在文件）分叉，首个 bare import 即编译错（P1-3 审查发现）
+    if (existsSync(path.join(absDir, 'index.ts'))) {
+      paths[alias] = [`${rel}/index.ts`]
+    }
     paths[`${alias}/*`] = [`${rel}/*`]
   }
   return paths
