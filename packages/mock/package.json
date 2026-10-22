@@ -1,0 +1,17 @@
+{
+  "name": "@vv/mock",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*"
+  },
+  "scripts": {
+    "type-check": "vue-tsc --build"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.0",
+    "vite-plugin-mock": "^3.0.2"
+  }
+}

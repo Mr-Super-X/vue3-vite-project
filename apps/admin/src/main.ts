@@ -80,7 +80,7 @@ const app = createApp(App)
 // PROD 守卫防 dev 双重劫持（dev 下 node 中间件与本分支同时命中，auth rawResponse
 // 被 client 侧解构为 undefined → dev 登录必挂）；常规生产构建整分支 tree-shake。
 if (import.meta.env.PROD && import.meta.env.VITE_USE_MOCK === 'true') {
-  const { setupProdMockServer } = await import('../../../mock/mockProdServer')
+  const { setupProdMockServer } = await import('@mock/mockProdServer')
   await setupProdMockServer()
 }
 

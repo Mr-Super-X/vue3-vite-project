@@ -40,9 +40,11 @@ describe('createAppAliases', () => {
     expect(aliases['@plugins']).toBe(path.join(APP_ROOT, 'src/plugins'))
   })
 
-  it('@mock 恒指仓库根 mock/（P1-2 迁入 @vv/mock 前不随包切换）', () => {
-    expect(createAppAliases(APP_ROOT, APP_ROOT)['@mock']).toBe(path.join(REPO_ROOT, 'mock'))
-    expect(MOCK_ROOT_DIR).toBe(path.join(REPO_ROOT, 'mock'))
+  it('@mock 恒指 @vv/mock 包源码（P1-2 起，不参与 existsSync 回落切换）', () => {
+    expect(createAppAliases(APP_ROOT, APP_ROOT)['@mock']).toBe(
+      path.join(REPO_ROOT, 'packages/mock/src')
+    )
+    expect(MOCK_ROOT_DIR).toBe(path.join(REPO_ROOT, 'packages/mock/src'))
   })
 
   it('过渡态回落：packages/shared、packages/ui 不存在时指向 legacyRoot 对应子目录', () => {

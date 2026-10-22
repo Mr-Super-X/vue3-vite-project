@@ -8,7 +8,7 @@
  *   prod 无法复用 :code 动态路由，只能静态展开（2026-10-20 用户目检实锤）
  * @trigger 新增字典：只需在本表加键值，dev/prod 双端自动生效
  */
-import type { DictItem } from '../apps/admin/src/types/dict'
+import type { DictItem } from '../../../apps/admin/src/types/dict'
 
 /**
  * 字典数据表：key = 字典 code（URL 路径参数）。

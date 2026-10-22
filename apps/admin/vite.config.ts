@@ -21,8 +21,8 @@ export default createViteConfig({
   appRoot,
   appName: 'admin',
   // vite-plugin-mock 以 isAbsPath 判定 mockPath（dist/index.mjs:224），绝对路径安全；
-  // mock/ 仍在仓库根，P1-2 迁入 @vv/mock 后改指 packages/mock/src
-  mockPath: fileURLToPath(new URL('../../mock', import.meta.url)),
+  // P1-2 起 mock 数据源在 @vv/mock 包（packages/mock/src）
+  mockPath: fileURLToPath(new URL('../../packages/mock/src', import.meta.url)),
   // h5-demo 模块与 h5 layout P3-2 才抽离到 apps/h5；此前 admin 必须保持 rem 转换
   // （行为等价），抽离后 admin 移除本开关、改由 apps/h5 开启
   h5Rem: true,

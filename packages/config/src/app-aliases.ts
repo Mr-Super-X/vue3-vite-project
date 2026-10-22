@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url'
  * 包界划分（设计稿 D4）：
  *   - @api/@composables/@directives/@enums/@locales/@store/@types/@utils → @vv/shared 包源码
  *   - @components/@assets → @vv/ui 包源码
- *   - @mock → 仓库根 mock/（见下方 MOCK_ROOT_DIR 注释）
+ *   - @mock → @vv/mock 包源码（packages/mock/src）
  *   - @、@modules、@layouts、@router、@plugins → 各 app 自身 src（app 私有，永不留包）
  */
 
@@ -21,9 +21,8 @@ import { fileURLToPath } from 'node:url'
 export const UI_SRC_DIR = fileURLToPath(new URL('../../ui/src', import.meta.url))
 /** @vv/shared 包 src 目录（P1-3 迁入前不存在，经 resolvePkgFirst 回落 legacy 位置） */
 export const SHARED_SRC_DIR = fileURLToPath(new URL('../../shared/src', import.meta.url))
-// R-A（控制器修正）：P1-2 才把 mock/ 迁入 packages/mock/src，本任务期间 @mock 暂指仓库根 mock/
-// P1-2 完成后改为 fileURLToPath(new URL('../../mock/src', import.meta.url))
-export const MOCK_ROOT_DIR = fileURLToPath(new URL('../../../mock', import.meta.url))
+// @mock 自 P1-2 起指 @vv/mock 包源码（P0 期间曾暂指仓库根 mock/）
+export const MOCK_ROOT_DIR = fileURLToPath(new URL('../../mock/src', import.meta.url))
 
 /**
  * 包目录优先、legacy 目录兜底的过渡态解析。
