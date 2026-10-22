@@ -35,7 +35,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
 const ROOT = resolve(import.meta.dirname, '..')
-const FORM_SCHEMA = join(ROOT, 'apps/admin/src/components/form-schema')
+const FORM_SCHEMA = join(ROOT, 'packages/ui/src/components/form-schema')
 
 interface Check {
   name: string
@@ -58,39 +58,39 @@ function countLines(relativePath: string): number {
 /** SchemaNode 命名空间子接口清单（P2-1 重构后） */
 const SCHEMA_NODE_NAMESPACES = [
   {
-    file: 'apps/admin/src/components/form-schema/types/identity.ts',
+    file: 'packages/ui/src/components/form-schema/types/identity.ts',
     interfaceName: 'SchemaNodeIdentity',
   },
   {
-    file: 'apps/admin/src/components/form-schema/types/render.ts',
+    file: 'packages/ui/src/components/form-schema/types/render.ts',
     interfaceName: 'SchemaNodeRender',
   },
   {
-    file: 'apps/admin/src/components/form-schema/types/layout.ts',
+    file: 'packages/ui/src/components/form-schema/types/layout.ts',
     interfaceName: 'SchemaNodeLayout',
   },
   {
-    file: 'apps/admin/src/components/form-schema/types/validate.ts',
+    file: 'packages/ui/src/components/form-schema/types/validate.ts',
     interfaceName: 'SchemaNodeValidate',
   },
   {
-    file: 'apps/admin/src/components/form-schema/types/reaction.ts',
+    file: 'packages/ui/src/components/form-schema/types/reaction.ts',
     interfaceName: 'SchemaNodeReactive',
   },
   {
-    file: 'apps/admin/src/components/form-schema/types/array.ts',
+    file: 'packages/ui/src/components/form-schema/types/array.ts',
     interfaceName: 'SchemaNodeArray',
   },
   {
-    file: 'apps/admin/src/components/form-schema/types/async-options.ts',
+    file: 'packages/ui/src/components/form-schema/types/async-options.ts',
     interfaceName: 'SchemaNodeData',
   },
   {
-    file: 'apps/admin/src/components/form-schema/types/v-model.ts',
+    file: 'packages/ui/src/components/form-schema/types/v-model.ts',
     interfaceName: 'SchemaNodeVModel',
   },
   {
-    file: 'apps/admin/src/components/form-schema/types/top-level.ts',
+    file: 'packages/ui/src/components/form-schema/types/top-level.ts',
     interfaceName: 'SchemaNodeTopLevel',
   },
 ] as const
@@ -130,7 +130,7 @@ function countBuilders(): number {
   const dir = join(FORM_SCHEMA, 'builders')
   const files = readdirSync(dir).filter((f) => f.endsWith('.ts') && f !== 'index.ts')
   const content = files
-    .map((f) => readText(`apps/admin/src/components/form-schema/builders/${f}`))
+    .map((f) => readText(`packages/ui/src/components/form-schema/builders/${f}`))
     .join('\n')
   const matches = content.match(/^export const x[A-Z]\w+\s*[:=]/gm)
   return matches ? matches.length : 0
@@ -172,7 +172,7 @@ function countSpecFiles(): number {
  */
 function countXFormProps(): number {
   return countInterfaceFields(
-    readText('apps/admin/src/components/form-schema/types/xform.ts'),
+    readText('packages/ui/src/components/form-schema/types/xform.ts'),
     'XFormProps'
   )
 }
@@ -192,11 +192,11 @@ function countXFormDemos(): number {
 /**
  * 数 ProDialog 显式声明的自有 Props（interface Props 体）
  *
- * 排除 ElDialog 通过 $attrs 透传的 Props（详见 src/components/common/ProDialog/ProDialog.vue 文件头）。
+ * 排除 ElDialog 通过 $attrs 透传的 Props（详见 packages/ui/src/components/common/ProDialog/ProDialog.vue 文件头）。
  * 解析规则：扫 `interface Props { ... }` 内 `^\s+name\??:\s` 模式。
  */
 function countProDialogProps(): number {
-  const content = readText('apps/admin/src/components/common/ProDialog/ProDialog.vue')
+  const content = readText('packages/ui/src/components/common/ProDialog/ProDialog.vue')
   const m = content.match(/interface Props \{([\s\S]*?)\n\}/)
   if (!m) return 0
   return m[1].split('\n').filter((line) => /^\s+[a-z][a-zA-Z]*\??:\s/.test(line)).length
@@ -206,7 +206,7 @@ function countProDialogProps(): number {
  * 数 BaseChart 显式声明的 Props（BaseChartProps interface 体）
  */
 function countBaseChartProps(): number {
-  const content = readText('apps/admin/src/components/common/BaseChart.vue')
+  const content = readText('packages/ui/src/components/common/BaseChart.vue')
   const m = content.match(/interface BaseChartProps \{([\s\S]*?)\n\}/)
   if (!m) return 0
   return m[1].split('\n').filter((line) => /^\s+[a-z][a-zA-Z]*\??:\s/.test(line)).length
@@ -247,7 +247,7 @@ function countVendorChunksNamed(): number {
  * docs/29 §概述写「17 composables」是概数；脚本校验精确值 = 17。
  */
 function countProTableComposables(): number {
-  const files = readdirSync(join(ROOT, 'apps/admin/src/components/ProTable/composables'))
+  const files = readdirSync(join(ROOT, 'packages/ui/src/components/ProTable/composables'))
   return files.filter((f) => f.endsWith('.ts') && !f.endsWith('.spec.ts')).length
 }
 
@@ -304,7 +304,7 @@ const checks: Check[] = [
     // 而非继续放宽阈值。
     name: 'use-xform-composer.ts 行数 (顶层编排膨胀预警)',
     actual: () =>
-      countLines('apps/admin/src/components/form-schema/composables/use-xform-composer.ts'),
+      countLines('packages/ui/src/components/form-schema/composables/use-xform-composer.ts'),
     expected: 300,
     tolerance: 50,
   },

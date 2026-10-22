@@ -8,7 +8,7 @@
  * - 支持 async guards（`fetchProfile` / `ensureRemoteMenuLoaded` 都需要异步）
  * - 任何 guard 抛错时记录 `console.error` 并放行（避免守卫自身错误阻塞整个 SPA）
  *
- * @see [`./auth.ts`](./auth.ts) `composeGuards` 调用方
+ * @see 编排器位于各 app 的 `router/guards/auth.ts`（如 apps/admin）—— `composeGuards` 调用方
  * @group 路由：守卫编排
  */
 

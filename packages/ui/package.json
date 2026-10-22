@@ -1,0 +1,37 @@
+{
+  "name": "@vv/ui",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./composables/useDialog": "./src/composables/useDialog.ts",
+    "./composables/useConfirm": "./src/composables/useConfirm.ts",
+    "./composables/useLogout": "./src/composables/useLogout.ts",
+    "./*": "./src/*"
+  },
+  "scripts": {
+    "type-check": "vue-tsc --build",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@vv/shared": "workspace:*"
+  },
+  "peerDependencies": {
+    "vue": "catalog:",
+    "vue-router": "catalog:",
+    "pinia": "catalog:",
+    "element-plus": "catalog:"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.7",
+    "@vv/config": "workspace:*",
+    "jsdom": "^29.1.1",
+    "typescript": "~6.0.0",
+    "unplugin-auto-import": "^21.0.0",
+    "unplugin-icons": "^24.0.0",
+    "unplugin-vue-components": "^32.1.0",
+    "vitest": "^4.1.9",
+    "vue-tsc": "^3.3.11"
+  }
+}

@@ -16,7 +16,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@vv/shared": "workspace:*"
+    "@vv/shared": "workspace:*",
+    "@vv/ui": "workspace:*"
   },
   "devDependencies": {
     "@vv/config": "workspace:*"

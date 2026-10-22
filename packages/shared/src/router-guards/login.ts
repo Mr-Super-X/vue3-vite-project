@@ -11,9 +11,9 @@
  * - `fetchProfile` 失败时清本地登录标记并跳登录页（防止卡死在半登录态）
  * - 返回 null 表示放行，`RouteLocationRaw` 表示跳转目标
  *
- * @see [`./auth.ts`](./auth.ts) `checkLoginState` 调用点
+ * @see 编排器位于各 app 的 `router/guards/auth.ts`（如 apps/admin）—— `checkLoginState` 调用点
  * @see [`src/utils/storage.ts`](../../utils/storage.ts) `Session.get('auth')` 标记来源
- * @see [`../../../mock/mockProdServer.ts`](../../../mock/mockProdServer.ts) VITE_DEMO_NO_AUTH 演示模式说明
+ * @see [`@vv/mock/src/mockProdServer.ts`](../../../mock/src/mockProdServer.ts) VITE_DEMO_NO_AUTH 演示模式说明
  * @group 路由：登录守卫
  */
 

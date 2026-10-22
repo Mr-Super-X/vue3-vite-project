@@ -4,11 +4,12 @@
  * 定位：把「插件装配 + 路径别名 + css 预处理 + 构建分包」收敛为包内唯一实现，
  * 各 app 的 vite.config.ts 只声明 app 参数（appRoot/appName/mockPath/...）与私有插件。
  *
- * 迁移注记（P1-3 过渡态）：
- *   - packages/ui 尚未落地（P1-4 迁入），组件目录 / 本地图标集合经 resolvePkgFirst
- *     回落到 app 旧位置；包落地后 existsSync 自动切换，无需改这里
+ * 迁移注记：
+ *   - packages/ui 已落地（P1-4）：组件目录 / 本地图标集合 / scss bem mixin 均经
+ *     UI_SRC_DIR 直取包源码；resolvePkgFirst 的 legacy 回落留待 P5 清理
  *   - AutoImport：已迁入 @vv/shared 的 composables/utils 走包名注入（from: '@vv/shared'）；
- *     弹窗族（useDialog/useConfirm/useLogout）依赖 app 侧 ProDialog，P1-4 前保持 '@/...' 注入
+ *     弹窗族（useDialog/useConfirm/useLogout）自 P1-4 随迁 @vv/ui，走 '@vv/ui/composables/*'
+ *     包子路径注入（exports "./*" 通配解析）
  */
 import { existsSync } from 'node:fs'
 import path from 'node:path'
@@ -62,7 +63,8 @@ export function createViteConfig({
   h5Rem = false,
   extraPlugins = [],
 }: AppViteOptions) {
-  // 本地 app 图标集合（i-app-*）：P1-4 迁入 @vv/ui 前回落到 app 旧位置
+  // 本地 app 图标集合（i-app-*）：P1-4 起命中 @vv/ui 包源码（existsSync 自动切换，
+  // legacyRoot 回落仅作过渡兜底，P5 清理）
   const iconsDir = resolvePkgFirst(
     path.join(UI_SRC_DIR, 'assets/icons'),
     path.join(appRoot, 'src/assets/icons')
@@ -88,15 +90,15 @@ export function createViteConfig({
           { from: '@vv/shared', imports: [{ name: 'useAppRouter' }] },
           // useDict：字典组合式 API（契约形态按 code 解构）
           { from: '@vv/shared', imports: [{ name: 'useDict' }] },
-          // 弹窗族（useDialog/useConfirm/useLogout）依赖 admin 侧 ProDialog 组件，
-          // P1-4 组件迁包前留在 app 私有 composables，from 维持 app 路径
+          // 弹窗族（useDialog/useConfirm/useLogout）自 P1-4 起随组件归 @vv/ui，
+          // from 走包子路径（exports "./*" 通配 → ./src/composables/*，vite 补全 .ts）
           // useDialog：命令式弹窗；同模块的 DialogCancelledError / setDialogAppContext /
           // getDialogAppContext 不注入：第一个是类型（不参与运行时），后两个只在
           // main.ts / useConfirm 内部调用（不应污染 setup 全局作用域）
-          { from: '@/composables/useDialog', imports: [{ name: 'useDialog' }] },
+          { from: '@vv/ui/composables/useDialog', imports: [{ name: 'useDialog' }] },
           // useConfirm：二次确认；取消时 resolve(false) 而非 reject，调用方无须 try/catch
-          { from: '@/composables/useConfirm', imports: [{ name: 'useConfirm' }] },
-          { from: '@/composables/useLogout', imports: [{ name: 'useLogout' }] },
+          { from: '@vv/ui/composables/useConfirm', imports: [{ name: 'useConfirm' }] },
+          { from: '@vv/ui/composables/useLogout', imports: [{ name: 'useLogout' }] },
           // 业务侧高频 utils（BEM 类名工具，P1-3 起归 @vv/shared）
           { from: '@vv/shared', imports: [{ name: 'createNamespace' }] },
         ],
@@ -136,9 +138,8 @@ export function createViteConfig({
         // 声明要自动导入的全局组件 —— 目录下所有 .vue（deep: true 含任意深度子目录）
         // 均注册到 vue.GlobalComponents，消费方模板直接用 <BaseChart /> / <ProTable /> /
         // <XForm /> 等，不要显式 import（CLAUDE.md §1.7 强约束）
-        // P1-1 过渡态：UI 包目录不存在被 filter 掉，实际只扫 appRoot/src/components
-        // （deep 扫描覆盖其下 common/ProTable/form-schema 三个子目录，与历史三目录形态等价）；
-        // P1-4 组件迁入 @vv/ui 后三个包目录自动生效
+        // P1-4 起三个包目录命中 @vv/ui 源码；appRoot/src/components 已删除，
+        // existsSync 过滤后仅作未来 app 私有组件目录的扩展位
         dirs: [
           path.join(UI_SRC_DIR, 'components/common'),
           path.join(UI_SRC_DIR, 'components/ProTable'),
@@ -175,7 +176,7 @@ export function createViteConfig({
       // 联调真实后端时在 proxy.ts 内按需补充 _env 字段解析（当前返回 {} 占位）
       proxy: createProxyConfig(process.env),
     },
-    // legacyRoot 传 appRoot 自身：packages/shared、packages/ui 落地前回落 app 旧位置
+    // legacyRoot 传 appRoot 自身：resolvePkgFirst 的过渡兜底（包已全落地，P5 清理）
     resolve: { alias: createAppAliases(appRoot, appRoot) },
     css: {
       // h5 rem 适配（postcss-pxtorem）：enableRem=true 时仅转换 appRoot/src 下
@@ -192,9 +193,10 @@ export function createViteConfig({
         //
         // silenceDeprecations（'new-global' / 'if-function'）原因见 scss.ts。
         //
-        // R-B：bemPath 用绝对路径（包化后 cwd 不再是注入参照系）；P1-4 迁入 @vv/ui 后改指包内路径
+        // R-B：bemPath 用绝对路径（包化后 cwd 不再是注入参照系）；
+        // P1-4 起指 @vv/ui 包内路径（bem.scss 随 assets 迁包）
         scss: createScssPreprocessorOptions({
-          bemPath: path.join(appRoot, 'src/assets/styles/mixins/bem'),
+          bemPath: path.join(UI_SRC_DIR, 'assets/styles/mixins/bem'),
         }),
         less: { javascriptEnabled: true },
       },

@@ -17,7 +17,7 @@
  *   - "权限码-管理员"（admin.delete，无权限）→ DOM 中不渲染
  */
 import { ElMessage } from 'element-plus'
-import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import type { SchemaNode, XFormExpose } from '@components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'

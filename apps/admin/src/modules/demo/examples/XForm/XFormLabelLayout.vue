@@ -9,7 +9,7 @@
  *   4. labelPosition / labelWidth 顶层为默认；字段级可声明 override 顶层（line 67-77 演示）
  */
 import { ElMessage } from 'element-plus'
-import type { SchemaNode } from '@/components/form-schema/types'
+import type { SchemaNode } from '@components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'

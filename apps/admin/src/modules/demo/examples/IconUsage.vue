@@ -7,13 +7,13 @@
  * 2. 「动态用法」区图标由数据驱动渲染，:size="20" 的齿轮明显小于其他。
  * 3. 「本地自定义集合」区按代码片段步骤可复刻出 app:logo 图标（新增流程见 docs/39 §3.2/§3.3）。
  */
-import type { AppIconName } from '@/assets/icons/registry'
+import type { AppIconName } from '@assets/icons/registry'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
 import ApiTable from '../components/ApiTable.vue'
 import { useDocToc } from '../composables/useDocToc'
 import { extractApi } from '../utils/extractApi'
-import appDynamicIconSource from '@/components/common/AppDynamicIcon.vue?raw'
+import appDynamicIconSource from '@components/common/AppDynamicIcon.vue?raw'
 
 // BEM 工具（createNamespace）由 unplugin-auto-import 自动注入，详见 CLAUDE.md §3
 const bem = createNamespace('demo-icon-usage')

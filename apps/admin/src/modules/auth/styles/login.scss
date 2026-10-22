@@ -1,7 +1,7 @@
 // 登录页样式（从 Login.vue 抽离，控制单文件行数 ≤400 的项目铁律）
 // BEM 根类：.#{$BEM_PREFIX}-login（与 Login.vue 的 createNamespace('Login') 对应）
 // 作为 @use 子模块不会获得 additionalData 注入，需自行引入 bem（不带 with，复用入口已配置的实例）
-@use '@/assets/styles/mixins/bem' as *;
+@use '@assets/styles/mixins/bem' as *;
 @use './login-bg.scss';
 
 .#{$BEM_PREFIX}-login {

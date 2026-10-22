@@ -5,7 +5,7 @@
  * 支持：分页 / customer 模糊搜索 / amount、orderNo 服务端排序回显。
  * 注：文件名取 sort-orders 而非 orders —— mock/pro-table/orders.ts 已被单元格合并 demo 占用。
  */
-import type { ProTableRequestApi, ProTableResponse } from '@/components/ProTable/types'
+import type { ProTableRequestApi, ProTableResponse } from '@components/ProTable/types'
 
 export interface Order {
   id: string

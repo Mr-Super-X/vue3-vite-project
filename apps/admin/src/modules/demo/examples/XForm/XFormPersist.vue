@@ -11,8 +11,8 @@
  * 6. DevTools Application 面板可直接查看 localStorage 中的草稿内容（确认无 cardNo）
  */
 import { ElButton, ElMessage, ElTag } from 'element-plus'
-import { useFormPersist } from '@/components/form-schema'
-import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import { useFormPersist } from '@components/form-schema'
+import type { SchemaNode, XFormExpose } from '@components/form-schema/types'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'

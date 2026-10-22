@@ -14,7 +14,7 @@
  * 3. 点击「前端组」→ 显示「张三」「李四」
  * 4. 搜索「张三」→ 自动展开命中路径
  */
-import type { ProColumn } from '@/components/ProTable/types'
+import type { ProColumn } from '@components/ProTable/types'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'

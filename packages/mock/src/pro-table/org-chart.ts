@@ -6,7 +6,7 @@
  * - 使用 useTreeData 约定的 `_hasChildren` 字段（而非业务侧的 `hasChildren`）
  * - loadChildren 返回深拷贝（JSON.parse(JSON.stringify(...))）避免 normalize 多次触发时共享同一 children 引用 → Vue v-for Duplicate keys 警告
  */
-import type { ProTableRequestApi } from '@/components/ProTable/types'
+import type { ProTableRequestApi } from '@components/ProTable/types'
 
 interface OrgNode extends Record<string, unknown> {
   id: string

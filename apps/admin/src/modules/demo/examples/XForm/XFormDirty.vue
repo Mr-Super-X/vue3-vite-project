@@ -26,7 +26,7 @@
  * - getDirtyFields 列表实时更新
  */
 import { ElMessage, ElMessageBox } from 'element-plus'
-import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import type { SchemaNode, XFormExpose } from '@components/form-schema/types'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import { dirtyMethods } from './configs/xform-demos-api'

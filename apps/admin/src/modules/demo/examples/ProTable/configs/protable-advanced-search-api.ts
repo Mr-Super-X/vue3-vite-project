@@ -8,7 +8,7 @@
  * @group Demo API
  */
 
-import type { ProColumn, EnumProps } from '@/components/ProTable'
+import type { ProColumn, EnumProps } from '@components/ProTable'
 
 /** 订单行模型 —— 故意覆盖 5+ 搜索维度，便于验证 v3.2 高级筛选 / 联动 / 防抖 */
 export interface OrderRow extends Record<string, unknown> {

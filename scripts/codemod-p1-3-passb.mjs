@@ -1,4 +1,6 @@
 /**
+ * ⚠️ 一次性迁移脚本（P1-3 已执行完毕），勿再运行；保留供历史追溯
+ *
  * P1-3 Pass B codemod：packages/shared 包内别名 import → 相对路径 + .ts 扩展名
  *
  *  scope：packages/shared/src/**（仅 .ts）

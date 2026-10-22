@@ -13,7 +13,7 @@
  * - Demo 2：金额 ≥ 10000 的订单「订单号 + 商品」列横向合并（colspan=2）
  * - Demo 3：金额范围（>=10000 标记为"高金额"）自定义 judge 合并
  */
-import type { ProColumn } from '@/components/ProTable/types'
+import type { ProColumn } from '@components/ProTable/types'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'

@@ -15,7 +15,7 @@
  *
  * 路由：自动注册为 /demo/pro-table-formatter
  */
-import type { ProColumn } from '@/components/ProTable'
+import type { ProColumn } from '@components/ProTable'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'

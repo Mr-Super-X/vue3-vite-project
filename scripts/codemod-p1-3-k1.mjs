@@ -1,4 +1,6 @@
 /**
+ * ⚠️ 一次性迁移脚本（P1-3 已执行完毕），勿再运行；保留供历史追溯
+ *
  * P1-3 K-1 codemod：'@/xxx' catch-all import → 精确别名
  *
  *  scope：apps/admin/src/** + apps/admin 根 *.ts（git ls-files 枚举）

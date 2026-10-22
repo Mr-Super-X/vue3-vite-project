@@ -21,9 +21,9 @@
  * 7. 性能统计：节点数、构建耗时、索引大小
  */
 import { ElButton, ElMessage, ElTag } from 'element-plus'
-import { useSchemaIndex } from '@/components/form-schema/composables/use-schema-index'
-import { scanForForbidden } from '@/components/form-schema/composables/use-scan-forbidden'
-import type { SchemaNode, XFormExpose } from '@/components/form-schema/types'
+import { useSchemaIndex } from '@components/form-schema/composables/use-schema-index'
+import { scanForForbidden } from '@components/form-schema/composables/use-scan-forbidden'
+import type { SchemaNode, XFormExpose } from '@components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'
@@ -62,7 +62,7 @@ const bigSchema = computed(() => {
 })`
 
 const securityCode = `// 配合 useSchemaIndex 的安全扫描
-import { scanForForbidden } from '@/components/form-schema/composables/use-scan-forbidden'
+import { scanForForbidden } from '@components/form-schema/composables/use-scan-forbidden'
 
 // 在 XForm setup 时调用，扫描所有可执行字段
 const errors = scanForForbidden(props.schema)

@@ -4,7 +4,7 @@
  * 一个 input + 校验按钮 + 提交反馈
  */
 import { ElMessage } from 'element-plus'
-import type { SchemaNode } from '@/components/form-schema/types'
+import type { SchemaNode } from '@components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'

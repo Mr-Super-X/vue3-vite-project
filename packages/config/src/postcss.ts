@@ -11,6 +11,10 @@
  *   样式被转换，后台（default）/ 门户（portal）/ element-plus 零污染；多 app 下转换范围
  *   锚定到各自 appRoot，不跨 app 误伤。
  *
+ *   交叉引用（P1-4 结转备注）：h5 布局样式（layouts/h5/styles）随 app 走、不进 @vv/ui 包；
+ *   若未来迁入 ui 包，本文件的 include 锚定（appRoot/src）须同步重设计——包内样式不走
+ *   任何单一 appRoot，负向先行正则需改为锚定 UI_SRC_DIR（见 app-aliases.ts）。
+ *
  * 实现选型备注（postcss-pxtorem v6.1.0 源码实测，README 过时）：
  *   - 无 include 选项；exclude 默认为 null（不配则全量转换）
  *   - exclude 的函数形态行为不确定：函数返回 false（不排除）时会 fall through 到

@@ -12,7 +12,7 @@
  *   4. 跨字段错误同样参与自动滚动（XForm 内部按 keyPath 滚动，见 XFormCrossField demo）
  */
 import { ElMessage } from 'element-plus'
-import type { SchemaNode } from '@/components/form-schema/types'
+import type { SchemaNode } from '@components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'

@@ -1,6 +1,6 @@
 // 登录页背景层动效（从 login.scss 二次抽离：单文件 ≤400 行铁律）
 // 由 login.scss @use 引入；bem 模块复用入口已配置实例
-@use '@/assets/styles/mixins/bem' as *;
+@use '@assets/styles/mixins/bem' as *;
 
 .#{$BEM_PREFIX}-login {
   &__bg {

@@ -13,8 +13,8 @@
  * 见 CLAUDE.md §1.7），模板直接 <DictSelect /> 使用，不要显式 import ——
  * 显式 import 会让 Volar 丢失 DefineComponent 类型展开。
  */
-import DictSelectSource from '@/components/common/DictSelect.vue?raw'
-import DictTagSource from '@/components/common/DictTag.vue?raw'
+import DictSelectSource from '@components/common/DictSelect.vue?raw'
+import DictTagSource from '@components/common/DictTag.vue?raw'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
 import type { DictItem, DictTagType } from '@vv/shared'

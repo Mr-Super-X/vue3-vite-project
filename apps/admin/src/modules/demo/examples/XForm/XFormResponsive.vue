@@ -22,7 +22,7 @@
  * 验证方式:刷新页面 + DevTools 切 viewport 断点 + 看 gutter/span 不变(已知限制)。
  */
 import { ElMessage } from 'element-plus'
-import type { SchemaNode } from '@/components/form-schema/types'
+import type { SchemaNode } from '@components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'

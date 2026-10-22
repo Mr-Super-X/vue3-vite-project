@@ -9,7 +9,7 @@
  * - 返回 null 表示放行；返回 `RouteLocationRaw` 表示跳转到该位置
  * - 不修改任何全局状态（无副作用）
  *
- * @see [`./auth.ts`](./auth.ts) `checkVisibility` 调用点
+ * @see 编排器位于各 app 的 `router/guards/auth.ts`（如 apps/admin）—— `checkVisibility` 调用点
  * @see [`../remote.ts`](../remote.ts) `hidden` → `visible` 转换
  * @group 路由：可见性守卫
  */

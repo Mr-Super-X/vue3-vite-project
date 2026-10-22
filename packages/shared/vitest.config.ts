@@ -5,7 +5,8 @@
  * （组件归 @vv/ui / app 侧），故不合并 vite 工厂配置，最小化到环境 + 根路径。
  *
  * - environment: jsdom —— storage / 指令 / store spec 需要 DOM（localStorage 等）
- * - 别名不需要：包内一律相对路径 + .ts 扩展名（Node 原生 ESM 语义，不补全扩展名）
+ * - 别名不需要：包内一律相对路径（不依赖 vite alias）；新写 import 带 .ts 扩展名
+ *   （Node 原生 ESM 语义不补全），存量无扩展名写法逐步收敛（当前约 74 处无 / 56 处有）
  * - AutoImport：包源码按 app 约定使用注入式全局（ref / defineStore / ElMessage 等），
  *   运行期必须由同一插件补齐，否则 ReferenceError；dts 关闭——类型层由
  *   src/types/auto-globals.d.ts 手工同构子集承担（避免生成文件随测试抖动）

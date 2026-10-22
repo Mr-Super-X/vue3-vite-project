@@ -19,8 +19,8 @@
  */
 import { ElButton, ElTag, ElMessage } from 'element-plus'
 import { Refresh, Search } from '@element-plus/icons-vue'
-import type { ProColumn } from '@/components/ProTable'
-import type { ProTableExpose } from '@/components/ProTable/types'
+import type { ProColumn } from '@components/ProTable'
+import type { ProTableExpose } from '@components/ProTable/types'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import { useDocToc } from '../../composables/useDocToc'
@@ -273,7 +273,7 @@ const basicCode = `<template>
 </template>
 
 <script setup lang="tsx">
-import type { ProColumn } from '@/components/ProTable'
+import type { ProColumn } from '@components/ProTable'
 
 const columns: ProColumn[] = [
   { prop: 'id', label: 'ID', width: 80 },

@@ -7,7 +7,7 @@
  * C. 命名空间（第 2 层）：数组 items[*].phone 用正则统一格式化
  */
 import { ElMessage } from 'element-plus'
-import type { BeforeChangeFn, BeforeChangeRule, SchemaNode } from '@/components/form-schema/types'
+import type { BeforeChangeFn, BeforeChangeRule, SchemaNode } from '@components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'

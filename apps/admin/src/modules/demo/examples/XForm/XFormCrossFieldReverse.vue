@@ -17,7 +17,7 @@
  * - CrossFieldReverse 演示反向触发（依赖方变化时目标字段自动重算）
  */
 import { ElMessage } from 'element-plus'
-import type { SchemaNode } from '@/components/form-schema/types'
+import type { SchemaNode } from '@components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'

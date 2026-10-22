@@ -11,10 +11,13 @@ import { fileURLToPath } from 'node:url'
  *   3. scripts/check-aliases.ts（一致性校验，CI 门禁）
  *
  * 包界划分（设计稿 D4）：
- *   - @api/@composables/@directives/@enums/@locales/@store/@types/@utils → @vv/shared 包源码
+ *   - @api/@composables/@directives/@enums/@locales/@store/@utils → @vv/shared 包源码
  *   - @components/@assets → @vv/ui 包源码
  *   - @mock → @vv/mock 包源码（packages/mock/src）
  *   - @、@modules、@layouts、@router、@plugins → 各 app 自身 src（app 私有，永不留包）
+ *
+ * 注：曾有的 '@types' 条目已删除（P1-4 结转）——'@types' 与 TS 的 @types 包解析命名空间
+ * 冲突（tsconfig paths 命中时报 TS6137），且全仓零消费；类型统一经 '@vv/shared' 包名引出。
  */
 
 /** @vv/ui 包 src 目录（P1-4 迁入前不存在，经 resolvePkgFirst 回落 legacy 位置） */
@@ -53,7 +56,6 @@ export function createAppAliases(appRoot: string, legacyRoot?: string): Record<s
     '@enums': pick(path.join(SHARED_SRC_DIR, 'enums'), 'src/enums'),
     '@locales': pick(path.join(SHARED_SRC_DIR, 'locales'), 'src/locales'),
     '@store': pick(path.join(SHARED_SRC_DIR, 'store'), 'src/store'),
-    '@types': pick(path.join(SHARED_SRC_DIR, 'types'), 'src/types'),
     '@utils': pick(path.join(SHARED_SRC_DIR, 'utils'), 'src/utils'),
     '@components': pick(path.join(UI_SRC_DIR, 'components'), 'src/components'),
     '@assets': pick(path.join(UI_SRC_DIR, 'assets'), 'src/assets'),

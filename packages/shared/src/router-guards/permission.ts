@@ -9,7 +9,7 @@
  * - 不修改任何全局状态（无副作用）
  * - `meta.permissions` 缺失或为空数组均视为"无权限要求"，返回放行
  *
- * @see [`./auth.ts`](./auth.ts) `checkPermission` 调用点
+ * @see 编排器位于各 app 的 `router/guards/auth.ts`（如 apps/admin）—— `checkPermission` 调用点
  * @see [`src/composables/useAuth.ts`](../../composables/useAuth.ts) `hasPerm` 语义对齐
  * @group 路由：权限守卫
  */

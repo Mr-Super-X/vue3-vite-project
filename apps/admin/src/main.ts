@@ -11,14 +11,14 @@
  * 浏览器基线：
  * - normalize.css：跨浏览器默认值统一
  * - virtual:uno.css：UnoCSS 按需原子类
- * - `@/assets/styles/index.scss`：项目 SCSS 入口
+ * - `@assets/styles/index.scss`：项目 SCSS 入口（P1-4 起物理位置在 @vv/ui 包）
  *
  * @see [`./App.vue`](./App.vue) 根组件
  * @see [`./router`](./router/index.ts) 路由
  * @see [`./store`](./store/index.ts) Pinia
  * @see [`./locales`](./locales/index.ts) i18n
  * @see [`@directives`](./directives/index.ts) 指令注册
- * @see [`@components`](./components/index.ts) 组件注册
+ * @see `@vv/ui` createGlobalComponents —— 组件注册（P1-4 起归包工厂）
  * @see [`@plugins`](./plugins/index.ts) 插件注册
  * @group 应用入口
  */
@@ -28,10 +28,11 @@ import pinia from './store'
 // i18n 实例自 P1-3 起归 @vv/shared（@locales 别名指向包源码）
 import i18n from '@locales'
 import Directives from '@directives'
-import GlobalComponents from '@components'
+// 全局组件注册工厂自 P1-4 起归 @vv/ui（components/assets 随包迁移）
+import { createGlobalComponents } from '@vv/ui'
 import Plugins from '@plugins'
-// useDialog 依赖 admin 侧 ProDialog 组件，P1-4 前留在 app 私有 composables
-import { setDialogAppContext } from '@/composables/useDialog'
+// 弹窗族 composable 自 P1-4 起随 ProDialog 一并归 @vv/ui（包子路径经 exports "./*" 解析）
+import { setDialogAppContext } from '@vv/ui/composables/useDialog'
 import { assertNoMockInProd } from '@api/mock-guard'
 
 // 浏览器基线统一（必须在所有自定义样式之前）。
@@ -40,7 +41,7 @@ import { assertNoMockInProd } from '@api/mock-guard'
 // 按组件/API 自动注入（2026-08-12 按需化），不再全量引入 index.css。
 import 'normalize.css'
 import 'virtual:uno.css'
-import '@/assets/styles/index.scss'
+import '@assets/styles/index.scss'
 
 /**
  * 业务品牌色注入（2026-07-24 审计补齐 P2-3）。
@@ -89,7 +90,7 @@ if (import.meta.env.PROD && import.meta.env.VITE_USE_MOCK === 'true') {
 app.use(pinia)
 app.use(router)
 app.use(i18n)
-app.use(GlobalComponents)
+app.use(createGlobalComponents())
 app.use(Directives)
 app.use(Plugins)
 

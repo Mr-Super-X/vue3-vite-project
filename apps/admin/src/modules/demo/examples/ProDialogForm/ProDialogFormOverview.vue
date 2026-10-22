@@ -23,8 +23,8 @@
  * ⑦ 点「服务端错误回填（expose）」→ 调 setFieldError 写「用户名已被占用」红字
  */
 import { ElMessage } from 'element-plus'
-import type { SchemaNode } from '@/components/form-schema/types'
-import type { ProDialogFormExpose } from '@/components/common/ProDialogForm'
+import type { SchemaNode } from '@components/form-schema/types'
+import type { ProDialogFormExpose } from '@components/common/ProDialogForm'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import { useDocToc } from '../../composables/useDocToc'

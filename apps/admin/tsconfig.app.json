@@ -5,9 +5,8 @@
     "paths": {
       "@/*": ["./src/*"],
       "@api/*": ["../../packages/shared/src/api/*"],
-      "@assets/*": ["./src/assets/*"],
-      "@components": ["./src/components/index.ts"],
-      "@components/*": ["./src/components/*"],
+      "@assets/*": ["../../packages/ui/src/assets/*"],
+      "@components/*": ["../../packages/ui/src/components/*"],
       "@composables/*": ["../../packages/shared/src/composables/*"],
       "@directives": ["../../packages/shared/src/directives/index.ts"],
       "@directives/*": ["../../packages/shared/src/directives/*"],
@@ -24,7 +23,6 @@
       "@router/*": ["./src/router/*"],
       "@store": ["../../packages/shared/src/store/index.ts"],
       "@store/*": ["../../packages/shared/src/store/*"],
-      "@types/*": ["../../packages/shared/src/types/*"],
       "@utils": ["../../packages/shared/src/utils/index.ts"],
       "@utils/*": ["../../packages/shared/src/utils/*"]
     }

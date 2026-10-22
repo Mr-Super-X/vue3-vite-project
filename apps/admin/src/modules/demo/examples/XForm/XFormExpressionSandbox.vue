@@ -9,7 +9,7 @@
  *   4. 与 XFormExpression 互补：本 demo 专门讲白名单与安全边界
  */
 import { ElMessage } from 'element-plus'
-import type { SchemaNode } from '@/components/form-schema/types'
+import type { SchemaNode } from '@components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import { useConsoleCapture } from '../../composables/useConsoleCapture'
 import ApiTable from '../../components/ApiTable.vue'

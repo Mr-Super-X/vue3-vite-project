@@ -18,7 +18,7 @@ import process from 'node:process'
  *     报 "Can't find stylesheet to import"（vite 8 + sass 1.101 实测）
  *   - 回退方案 = loadPaths：把 bemPath 拆为「目录进 loadPaths + 裸模块名进 @use」，
  *     由 sass 的模块搜索路径机制解析，等价于别名解析且对包化后任意 appRoot 成立
- *   - P1-4 迁入 @vv/ui 后由工厂改指包内路径（迁移设计稿 R7）
+ *   - P1-4 起工厂传入 @vv/ui 包内路径（bem.scss 随 assets 迁包，见 create-vite-config.ts）
  */
 export interface ScssPreprocessorOptions {
   silenceDeprecations: Array<'new-global' | 'if-function'>
@@ -28,12 +28,19 @@ export interface ScssPreprocessorOptions {
 }
 
 export function createScssPreprocessorOptions(options: {
-  /** bem mixin 文件路径（无扩展名，可含盘符）；拆分为 loadPaths 目录 + 模块名 */
+  /** bem mixin 文件路径（无扩展名，可含盘符）；拆分为 loadPaths 目录 + 模块名。
+   *  必须含至少一个路径分隔符（'dir/bem' 形态）——裸模块名（'bem'）会丢失 loadPaths 锚点，
+   *  sass 只能沿默认 cwd 解析，包化后行为不确定，故直接抛错 fail-fast */
   bemPath: string
 }): ScssPreprocessorOptions {
   // 反斜杠归一为正斜杠：Windows 路径在 sass @use / loadPaths 字符串里会被当转义符
   const normalized = options.bemPath.replace(/\\/g, '/')
   const sepIndex = normalized.lastIndexOf('/')
+  if (sepIndex === -1) {
+    throw new Error(
+      `[createScssPreprocessorOptions] bemPath 必须含目录段（如 'src/assets/styles/mixins/bem'），收到裸模块名: '${options.bemPath}'`
+    )
+  }
   const loadPath = normalized.slice(0, sepIndex)
   const moduleName = normalized.slice(sepIndex + 1)
   return {

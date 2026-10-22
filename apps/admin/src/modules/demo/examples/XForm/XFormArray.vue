@@ -11,8 +11,8 @@
  * 4. 小计 = 数量 × 单价（在模板里展示,model 中存储原值）
  */
 import { ElMessage } from 'element-plus'
-import type { SchemaNode } from '@/components/form-schema/types'
-import { xArray } from '@/components/form-schema/builders'
+import type { SchemaNode } from '@components/form-schema/types'
+import { xArray } from '@components/form-schema/builders'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'

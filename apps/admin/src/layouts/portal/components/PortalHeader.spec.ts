@@ -22,7 +22,7 @@ vi.mock('@store/modules/user', () => ({
 // mock useLogout
 const mockLoggingOut = ref(false)
 const mockConfirmLogout = vi.fn()
-vi.mock('@/composables/useLogout', () => ({
+vi.mock('@vv/ui/composables/useLogout', () => ({
   useLogout: () => ({ loggingOut: mockLoggingOut, confirmLogout: mockConfirmLogout }),
 }))
 

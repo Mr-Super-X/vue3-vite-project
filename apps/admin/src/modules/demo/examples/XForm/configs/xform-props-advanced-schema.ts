@@ -9,7 +9,7 @@
  *
  * @see ./XFormPropsAdvanced.vue —— 4 个独立 XForm 实例 + DemoField 包裹
  */
-import type { SchemaNode } from '@/components/form-schema/types'
+import type { SchemaNode } from '@components/form-schema/types'
 
 /**
  * 循环联动函数（reactionBudget 演示用）

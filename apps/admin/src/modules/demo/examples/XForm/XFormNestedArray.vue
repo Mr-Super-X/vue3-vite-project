@@ -18,8 +18,8 @@
  * （见 src/components/form-schema/composables/array-row-key.ts）
  */
 import { ElMessage } from 'element-plus'
-import type { SchemaNode } from '@/components/form-schema/types'
-import { xArray } from '@/components/form-schema/builders'
+import type { SchemaNode } from '@components/form-schema/types'
+import { xArray } from '@components/form-schema/builders'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import DemoField from '../../components/DemoField.vue'
 import DemoFrame from '../../components/DemoFrame.vue'

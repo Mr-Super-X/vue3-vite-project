@@ -26,7 +26,7 @@
  */
 import { ref, type Ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import type { XFormExpose, SchemaNode } from '@/components/form-schema/types'
+import type { XFormExpose, SchemaNode } from '@components/form-schema/types'
 
 export interface UseXFormDemoOptions {
   /** 必填：demo 简称（用于 bem 命名空间 demo-x-form-{name} 与 formRef 标识） */

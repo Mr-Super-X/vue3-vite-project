@@ -9,8 +9,8 @@
  * 4. minItems / maxItems 边界约束照常生效
  */
 import { ElMessage } from 'element-plus'
-import type { SchemaNode } from '@/components/form-schema/types'
-import { xArray } from '@/components/form-schema/builders'
+import type { SchemaNode } from '@components/form-schema/types'
+import { xArray } from '@components/form-schema/builders'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'

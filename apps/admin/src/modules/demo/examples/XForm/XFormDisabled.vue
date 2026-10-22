@@ -9,8 +9,8 @@
  *   - 选「海运」时,「空运保价」禁用(海运不走保价)
  */
 import { ElMessage } from 'element-plus'
-import type { SchemaNode } from '@/components/form-schema/types'
-import { xInput } from '@/components/form-schema/builders'
+import type { SchemaNode } from '@components/form-schema/types'
+import { xInput } from '@components/form-schema/builders'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'

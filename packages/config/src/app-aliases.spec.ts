@@ -27,8 +27,9 @@ afterEach(() => {
 })
 
 describe('createAppAliases', () => {
-  it('返回 16 条别名（@ + 8 shared + 2 ui + @mock + 4 app 私有）', () => {
-    expect(Object.keys(createAppAliases(APP_ROOT, APP_ROOT))).toHaveLength(16)
+  it('返回 15 条别名（@ + 7 shared + 2 ui + @mock + 4 app 私有）', () => {
+    // '@types' 条目已删除（P1-4 结转：TS6137 陷阱 + 零消费）
+    expect(Object.keys(createAppAliases(APP_ROOT, APP_ROOT))).toHaveLength(15)
   })
 
   it('@ 与 app 私有别名指向 app 自身 src', () => {
@@ -47,7 +48,7 @@ describe('createAppAliases', () => {
     expect(MOCK_ROOT_DIR).toBe(path.join(REPO_ROOT, 'packages/mock/src'))
   })
 
-  it('P1-3 后：packages/shared 已落地 → 8 个别名恒指包源码（真实 fs existsSync 命中）', () => {
+  it('P1-3 后：packages/shared 已落地 → 7 个别名恒指包源码（真实 fs existsSync 命中）', () => {
     const aliases = createAppAliases(APP_ROOT, APP_ROOT)
     for (const name of [
       '@api',
@@ -56,7 +57,6 @@ describe('createAppAliases', () => {
       '@enums',
       '@locales',
       '@store',
-      '@types',
       '@utils',
     ]) {
       const sub = name.slice(1) // '@api' → 'api'
@@ -64,7 +64,14 @@ describe('createAppAliases', () => {
     }
   })
 
-  it('过渡态回落：packages/ui 不存在时（P1-4 前）@components/@assets 指向 legacyRoot', () => {
+  it('P1-4 后：packages/ui 已落地 → @components/@assets 恒指包源码（真实 fs existsSync 命中）', () => {
+    const aliases = createAppAliases(APP_ROOT, APP_ROOT)
+    expect(aliases['@components']).toBe(path.join(UI_SRC_DIR, 'components'))
+    expect(aliases['@assets']).toBe(path.join(UI_SRC_DIR, 'assets'))
+  })
+
+  it('过渡态回落：包目录不存在时（mock existsSync=false）@components/@assets 指向 legacyRoot', () => {
+    mockedExistsSync.mockReturnValue(false)
     const aliases = createAppAliases(APP_ROOT, APP_ROOT)
     expect(aliases['@components']).toBe(path.join(APP_ROOT, 'src/components'))
     expect(aliases['@assets']).toBe(path.join(APP_ROOT, 'src/assets'))

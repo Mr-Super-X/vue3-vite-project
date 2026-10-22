@@ -1,0 +1,16 @@
+{
+  "extends": "../shared/tsconfig.base.json",
+  "include": [
+    "src/**/*",
+    "src/**/*.vue",
+    "../shared/src/types/env.d.ts",
+    "../shared/src/types/sortablejs.d.ts",
+    "../shared/src/types/auto-globals.d.ts"
+  ],
+  // 与 admin 语义对齐：spec 文件不做静态检查（apps/admin/tsconfig.app.base.json 同样排除
+  // *.spec.ts；spec 由 vitest 运行时验证）。包内 spec 存量类型杂音不属于静态门禁范围。
+  "exclude": ["src/**/*.spec.ts"],
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.tsbuildinfo"
+  }
+}
