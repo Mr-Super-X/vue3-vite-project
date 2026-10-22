@@ -1,0 +1,11 @@
+{
+  "extends": "../shared/tsconfig.base.json",
+  "include": ["src/**/*"],
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.tsbuildinfo",
+    // mock 仅消费 @components（ProTable 类型契约）；别名语义与 @vv/config app-aliases 对齐
+    "paths": {
+      "@components/*": ["../ui/src/components/*"]
+    }
+  }
+}
