@@ -20,6 +20,10 @@ const appRoot = fileURLToPath(new URL('.', import.meta.url))
 export default createViteConfig({
   appRoot,
   appName: 'admin',
+  // base 经 VITE_BASE 注入：与其余 5 app 同构（gh-pages 聚合构建 scripts/build-pages.ts 按
+  // /vue3-vite-project/admin/ 注入；本地同域网关 pnpm dev:gateway 按 /admin/ 注入）；
+  // CLI --base 优先级更高（vite 语义）
+  base: process.env.VITE_BASE ?? '/',
   // vite-plugin-mock 以 isAbsPath 判定 mockPath（dist/index.mjs:224），绝对路径安全；
   // P1-2 起 mock 数据源在 @vv/mock 包（packages/mock/src）
   mockPath: fileURLToPath(new URL('../../packages/mock/src', import.meta.url)),

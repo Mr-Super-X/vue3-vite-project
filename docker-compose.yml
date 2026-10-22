@@ -1,0 +1,19 @@
+# 本地同域网关（V5，设计稿 §4.3 / docs/43 §同域网关）：
+# 复现生产「同域 path 部署」形态——nginx :8080 反代宿主机 6 个 vite dev server，
+# 浏览器只访问 localhost:8080（同 origin），统一登录 cookie 跨 app 漫游可验。
+#
+# 用法（两个终端）：
+#   1. pnpm dev:gateway   # 6 个 app 以 VITE_BASE=/<app>/ 起 dev（端口 5174-5179 钉死，strictPort）
+#   2. docker compose up  # 起本网关
+# 验证：curl -I http://localhost:8080/admin/ 与 http://localhost:8080/auth/login 均 200
+services:
+  gateway:
+    image: nginx:alpine
+    container_name: vv-dev-gateway
+    ports:
+      - '8080:80'
+    volumes:
+      - ./docker/nginx.dev.conf:/etc/nginx/conf.d/default.conf:ro
+    extra_hosts:
+      # Linux 容器经 host-gateway 解析宿主机；Docker Desktop（Win/Mac）内置 host.docker.internal，本行对其为 no-op 兼容
+      - host.docker.internal:host-gateway

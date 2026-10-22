@@ -7,6 +7,7 @@
     "preinstall": "npx only-allow pnpm",
     "dev": "turbo run dev",
     "dev:local": "pnpm -C apps/admin dev:local",
+    "dev:gateway": "node --experimental-strip-types scripts/dev-gateway.ts",
     "build": "turbo run build",
     "test": "turbo run test",
     "type-check": "turbo run type-check",
