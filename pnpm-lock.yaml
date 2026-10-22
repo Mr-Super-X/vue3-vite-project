@@ -439,6 +439,22 @@ importers:
         specifier: workspace:*
         version: link:../../packages/config
 
+  apps/h5:
+    dependencies:
+      '@vv/mock':
+        specifier: workspace:*
+        version: link:../../packages/mock
+      '@vv/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      '@vv/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+    devDependencies:
+      '@vv/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+
   apps/portal:
     dependencies:
       '@vv/mock':

@@ -111,11 +111,13 @@ export function generateTsconfigContent(
   // 第一步：把整个 result 序列化为 2 空格缩进的字符串（paths 数组会被展开）
   const expanded = JSON.stringify(result, null, 2)
 
-  // 第二步：把所有「@ 别名数组 + include 数组」的展开格式替换为紧凑格式
+  // 第二步：把所有「@ 别名数组 + include/exclude 数组」的展开格式替换为紧凑格式
   // （include 必须一并处理：P1-3 手加的 shared d.ts 条目经 prettier 会回卷单行，
-  //  而 JSON.stringify 默认展开——两处形态不一致会让 check:aliases 永远报漂移）
+  //  而 JSON.stringify 默认展开——两处形态不一致会让 check:aliases 永远报漂移；
+  //  exclude 同理由 P3-2 补入：prettier printWidth=100 下三条目单行 ~78 字符必被回卷，
+  //  不紧凑化会让 generate 输出与任何 prettier 格式化结果互相漂移）
   const compact = expanded.replace(
-    /"((?:@\/?[^"]+)|(?:@[\w-]+)|include)": \[\s*\n(\s*"[^"]+"(?:,\s*\n\s*"[^"]+")*)\s*\n\s*\]/g,
+    /"((?:@\/?[^"]+)|(?:@[\w-]+)|include|exclude)": \[\s*\n(\s*"[^"]+"(?:,\s*\n\s*"[^"]+")*)\s*\n\s*\]/g,
     (_match, key: string, items: string) => {
       // items 是展开的多行内容，提取后用逗号拼接为单行
       const flat = items.replace(/\s*\n\s*/g, ' ').trim()
