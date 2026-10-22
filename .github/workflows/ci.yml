@@ -1,8 +1,8 @@
 name: CI
 
 # 触发条件：
-#   - push 到 master（主分支每次合入必跑）
-#   - PR 同步到 master 时（PR 合入前必跑）
+#   - push 到 master（主分支每次合入必跑，turbo 全量构建 6 app）
+#   - push 到 develop / PR 同步到 master、develop（turbo affected，只跑相对 origin/master 有变更的包及其下游）
 # 任何条件失败 → 阻止合入
 on:
   push:
@@ -17,13 +17,17 @@ concurrency:
 
 jobs:
   ci:
-    name: Lint + TypeCheck + Test + CheckRoutes + Build
+    name: Lint + Turbo(Build/Test) + CheckRoutes
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # turbo affected（--filter=[origin/master]...）需要完整 git 历史做基线对比，
+          # 默认 fetch-depth: 1 会让对比退化为「全部变更」
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -39,28 +43,45 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Cache turbo local cache
+        uses: actions/cache@v4
+        with:
+          # 统一经 --cache-dir 指向仓库根 .turbo（默认 node_modules/.cache/turbo 不便跨 job 复用）
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-${{ github.ref_name }}-
+            ${{ runner.os }}-turbo-
+
       - name: Lint
+        # lint 保持根全仓一次（turbo 不拆 lint：规则跨包引用，拆包跑反而漏跨包问题）
         run: pnpm lint
 
-      - name: Build
-        # 顺序强约束：build 必须先于任何 type-check——unplugin 在 build 时生成
-        # auto-imports.d.ts / components.d.ts（gitignore 不入库），CI 干净 checkout 下
-        # 任何 type-check 都依赖这些生成文件（本地有 dev 残留所以不显）。
-        # pnpm build 内部 = build-only（生成声明）+ type-check:full（--force 全量），
-        # 类型检查由本步骤覆盖，不再单独跑 type-check step（避免二次全量）
-        run: pnpm build
+      - name: Build + Test (master 全量)
+        # 仅 master push 全量（合入即发布候选，与 deploy.yml 同口径）。
+        # 顺序强约束：turbo run build 内部 = build-only（unplugin 生成 auto-imports.d.ts /
+        # components.d.ts 声明）→ type-check:full（--force 全量门禁），干净 checkout 下
+        # 类型检查依赖 build 先生成声明，故不单独拆 type-check step；
+        # test 任务 dependsOn ^build（turbo.json），拓扑序由 turbo 保证
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        run: pnpm exec turbo run build test --cache-dir=.turbo
 
-      - name: Unit tests
-        run: pnpm test --run
+      - name: Build + Test (affected)
+        # PR / develop push：affected 只构建相对 origin/master 有变更的包及其依赖下游，
+        # 未变更 app 命中 turbo 缓存或跳过（节省 CI 时间）
+        if: github.event_name == 'pull_request' || github.ref != 'refs/heads/master'
+        run: pnpm exec turbo run build test "--filter=[origin/master]..." --cache-dir=.turbo
 
       - name: Check routes consistency
-        # 校验 RouteName 联合类型 + 实际 routes/*.ts + whitelist 三者一致
+        # 校验 RouteName 联合类型 + 实际 routes/*.ts + whitelist 三者一致（monorepo 版脚本，多包兼容）
         run: pnpm check:routes
 
       - name: Upload build artifact
-        if: success()
+        # 仅 master 全量构建后保留产物供调试（PR affected 无完整 dist 可传）；
+        # 6 app 产物分目录在 apps/<app>/dist/，deploy.yml 独立构建发布、不消费本 artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master' && success()
         uses: actions/upload-artifact@v4
         with:
           name: dist-${{ github.sha }}
-          path: dist/
+          path: apps/*/dist/
           retention-days: 7

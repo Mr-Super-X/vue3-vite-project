@@ -18,7 +18,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VITE_BASE: /vue3-vite-project/ # vue-router basename（src/router/config.ts 消费）
+  # gh-pages 演示四开关（语义同 ci.yml 前身单应用版）：纯静态托管无后端，菜单走本地 + 浏览器端 mock + 免登录演示。
+  # VITE_BASE 有意不在此声明：多应用聚合后 base 不再是单源——scripts/build-pages.ts 内
+  # REPO_PREFIX（默认 /vue3-vite-project）按 app 注入 /vue3-vite-project/<app>/；
+  # 自定义域部署改脚本内 REPO_PREFIX 为 '/' 即可，本处声明会造成「改了却不生效」的误导。
+  # 四开关经 process.env 透传，作为 build-pages.ts spawn 注入之外的兜底默认值（脚本内显式覆盖）。
   VITE_HISTORY_MODE: hash # gh-pages 无 SPA fallback，hash 模式刷新/深层链接不 404
   VITE_MENU_SOURCE: local # 纯静态托管无后端，菜单走本地静态路由
   VITE_USE_MOCK: 'true' # 生产构建客户端 mock 挂接开关（src/main.ts PROD && 判定 → createProdMockServer 浏览器端 XHR 劫持）
@@ -31,7 +35,7 @@ jobs:
     # 无守卫会把 develop 等未发布分支构建推到 Pages（违背 master 即线上单一真相源）
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -53,19 +57,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build
-        # 顺序强约束：必须先于 type-check——unplugin 在 build 时生成 auto-imports.d.ts /
-        # components.d.ts（两者 gitignore 不入库），CI 干净 checkout 下 type-check 依赖
-        # 这些生成文件（本地有 dev 残留所以不显）；与 package.json build 脚本
-        # 「build-only 先行生成」的既定顺序对齐
-        # vite 静态资源 base 复用 env.VITE_BASE 单源（与 vue-router basename 同源，避免两处维护分叉）
-        run: pnpm build-only --base=${{ env.VITE_BASE }}
-
-      - name: Type check (full)
-        # --force 强制重建 .tsbuildinfo 防缓存陈旧（在 build 之后跑，类型声明文件已生成）
-        run: pnpm type-check:full
+      - name: Build (6 app 聚合)
+        # scripts/build-pages.ts：自动发现 apps/* 下含 vite.config.ts 的应用，
+        # 逐个 spawn 注入演示五开关（base 按 REPO_PREFIX/<app>/ 注入）跑 build-only，
+        # 产物聚合到根 dist/<app>/ 并生成落地导航页 dist/index.html。
+        # env 经 spawn 注入不依赖 shell 展开（Windows Git Bash 无 MSYS2_ARG_CONV_EXCL 坑）。
+        # 不再单独跑 type-check：同次 push 的 ci.yml（turbo build 内含 build-only → type-check:full）
+        # 已做全量门禁（顺序约束：unplugin 声明文件由 build 生成）
+        run: pnpm build:pages
 
       - name: Upload Pages artifact
+        # 聚合产物：dist/ 下 6 个 app 子目录 + 落地页 index.html，整目录发布
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist/
