@@ -23,20 +23,11 @@ const todoItems = [
 ]
 
 /** 能力演示入口：免登录白名单页不在左侧菜单，从这里直达（/autoplan Phase 2 D-IA-1） */
+// P3-3：BigDemo 系列（数据大屏/超宽拼接/五态示范）已独立为 apps/big，
+// 不再从 admin workbench 直达（跨 app 路由不存在，保留即 404）
 const panelLinks = [
   { name: 'Home', label: '门户首页演示', desc: 'portal 顶部导航布局（亦在左侧菜单"首页"）' },
   { name: 'H5Demo', label: 'H5 移动端演示', desc: 'rem 适配 · 桌面打开后请用 DevTools 设备模拟' },
-  { name: 'BigDemo', label: '数据大屏演示（1920）', desc: 'transform scale 等比缩放' },
-  {
-    name: 'BigDemoWide',
-    label: '超宽拼接屏演示（9000×1080）',
-    desc: 'meta.bigScreen 异形设计稿',
-  },
-  {
-    name: 'BigDemoStateDemo',
-    label: '大屏五态示范',
-    desc: '成功/加载/错误/空/断连形态 + Wide 页真实异步',
-  },
 ]
 </script>
 

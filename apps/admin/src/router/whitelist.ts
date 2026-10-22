@@ -10,8 +10,8 @@
  *
  * 注意：白名单路由仍建议挂载 layout（避免裸路由破布局）
  *
- * P2 变更：demo 模块物理独立到 apps/docs（连同 `demoWhitelistNames` 吸收链），
- * 本集合只剩 admin 仍承载的公开路由（Home/H5Demo/BigDemo 系列——P3 抽离时随迁）。
+ * P2/P3 变更：demo 模块物理独立到 apps/docs、big-demo 模块随 big layout 物理独立到
+ * apps/big（P3-3）后，本集合只剩 admin 仍承载的公开路由（Home/H5Demo）。
  *
  * @see [`./guards/auth.ts`](./guards/auth.ts) `isWhiteListed` 调用点
  * @group 路由：白名单
@@ -35,9 +35,6 @@ export const ROUTE_WHITE_LIST: ReadonlySet<string> = new Set<string>([
   'NotFound', // 404 页面
   'ServerError', // 500 页面
   'H5Demo', // H5 示例页（h5 layout 验收；免登录方便真机扫码预览）
-  'BigDemo', // 数据大屏（big layout 验收；免登录方便演示厅直接打开）
-  'BigDemoWide', // 超宽拼接大屏示例（9000×1080 设计稿）
-  'BigDemoStateDemo', // 五态示范页（异步数据形态验收；与 BigDemo 同权限语义）
 ])
 
 /**

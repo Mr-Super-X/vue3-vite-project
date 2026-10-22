@@ -71,7 +71,8 @@ declare module 'vue-router' {
      * 多页签排除（true = 不加入 TagsView 页签）。
      *
      * 声明式替代历史上的 store 硬编码名单（NO_TAGS_ROUTE_NAMES，2026-10-15 迁移）：
-     * 系统页（Login/403/404/500）、门户落地页（Home）、免登录演示页（h5-demo/big-demo）
+     * 系统页（Login/403/404/500）、门户落地页（Home）、免登录演示页（h5-demo；
+     * big-demo 已 P3-3 独立为 apps/big）
      * 均由路由作者在本字段声明——新增排除页只改路由 meta，零成本。
      *
      * 与 `affix` 的关系：noTags 只管 afterEach 动态加入路径（toTag）；affix 预置走

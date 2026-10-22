@@ -154,10 +154,11 @@ describe('useTagsViewStore', () => {
       expect(store.cachedViews).toEqual([])
     })
 
-    it('workbench 直达的演示页（H5Demo/BigDemo/BigDemoWide）不加入页签（meta.noTags）', () => {
+    it('workbench 直达的免登录演示页（H5Demo）不加入页签（meta.noTags）', () => {
       const store = useTagsViewStore()
-      // 回归：workbench"四栖能力演示"跳免登录验收页，不应污染页签
-      for (const name of ['H5Demo', 'BigDemo', 'BigDemoWide']) {
+      // 回归：workbench"能力演示"跳免登录验收页，不应污染页签
+      // （BigDemo 系列已 P3-3 独立为 apps/big，admin 侧仅剩 H5Demo）
+      for (const name of ['H5Demo']) {
         store.addRouteView(makeRoute(name, { title: name, requiresAuth: false, noTags: true }))
       }
       expect(store.visitedViews).toEqual([])
