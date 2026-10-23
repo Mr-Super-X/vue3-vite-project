@@ -19,7 +19,9 @@
     "pinia": "catalog:",
     "axios": "catalog:",
     "vue-i18n": "catalog:",
-    "element-plus": "catalog:"
+    "element-plus": "catalog:",
+    "lodash-es": "^4.18.1",
+    "dayjs": "catalog:"
   },
   "devDependencies": {
     "typescript": "~6.0.0",

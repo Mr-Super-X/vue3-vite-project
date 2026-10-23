@@ -10,6 +10,12 @@
   "scripts": {
     "type-check": "vue-tsc --build"
   },
+  "peerDependencies": {
+    "vue": "catalog:",
+    "element-plus": "catalog:",
+    "axios": "catalog:",
+    "lodash-es": "^4.18.1"
+  },
   "devDependencies": {
     "typescript": "~6.0.0",
     "vite-plugin-mock": "^3.0.2"

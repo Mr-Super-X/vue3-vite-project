@@ -11,6 +11,18 @@
     "type-check": "vue-tsc --build",
     "test": "vitest run"
   },
+  "peerDependencies": {
+    "vue": "catalog:",
+    "@vitejs/plugin-vue": "^6.0.7",
+    "@vitejs/plugin-vue-jsx": "^5.1.5",
+    "unplugin-auto-import": "^21.0.0",
+    "unplugin-vue-components": "^32.1.0",
+    "unplugin-icons": "^24.0.0",
+    "vite-plugin-mock": "^3.0.2",
+    "postcss": "8.5.19",
+    "postcss-pxtorem": "^6.1.0",
+    "sass": "^1.101.0"
+  },
   "devDependencies": {
     "typescript": "~6.0.0",
     "vitest": "^4.1.9",

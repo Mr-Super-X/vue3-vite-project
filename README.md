@@ -22,16 +22,18 @@
 
 ## 📋 项目简介
 
-基于 Vue 3 + Vite 8 + TypeScript 6 的**四栖工程模板**：对内中后台 + 对外门户 + H5 移动端 + 数据大屏，一套代码四种面板（路由挂对应 layout 即获得能力）。Feature-Sliced 风格，支持模块独立开发、不依赖后端即可联调。
+基于 Vue 3 + Vite 8 + TypeScript 6 的 **Monorepo 多应用工程模板**（pnpm workspace + turbo）：一套代码仓拆为 **6 个独立应用 + 4 个共享包**，统一登录、独立构建、源码直链消费。
 
-| 面板               | 入口示例     | 能力来源                                                                                   |
-| ------------------ | ------------ | ------------------------------------------------------------------------------------------ |
-| 中后台管理（对内） | `/workbench` | `default` layout：侧栏 + 顶栏 + 多页签（[docs/07](docs/07-路由模块设计.md)）               |
-| 门户展示（对外）   | `/home`      | `portal` layout：顶部锚点导航 + 无侧栏（企业官网形态，[docs/07](docs/07-路由模块设计.md)） |
-| H5 移动端          | `/h5-demo`   | `h5` layout + rem 适配（[docs/34](docs/34-H5布局与rem适配.md)）                            |
-| 数据大屏           | `/big-demo`  | `big` layout + scale 适配（[docs/35](docs/35-大屏布局与scale适配.md)）                     |
+| 应用          | 入口（dev 端口）     | 能力                                                                                                                       |
+| ------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `apps/admin`  | `/workbench`（5174） | 中后台管理：default layout（侧栏+顶栏+多页签）+ user/reports/workbench 业务（[docs/07](docs/07-路由模块设计.md)）          |
+| `apps/portal` | `/home`（5176）      | 门户企业官网：portal layout（顶部锚点导航），白名单公开访问                                                                |
+| `apps/h5`     | `/h5-demo`（5177）   | H5 移动端：h5 layout + rem 适配（[docs/34](docs/34-H5布局与rem适配.md)）                                                   |
+| `apps/big`    | `/big-demo`（5178）  | 数据大屏：big layout + scale 适配（[docs/35](docs/35-大屏布局与scale适配.md)）                                             |
+| `apps/docs`   | `/demo`（5175）      | 组件示例文档：demo 模块全量 + DemoDocs 布局                                                                                |
+| `apps/auth`   | `/login`（5179）     | 统一登录：跨应用重定向协议入口（登录/登出），其余应用未登录守卫整页跳此（[docs/43](docs/43-Monorepo结构与开发指引.md) §5） |
 
-> "四栖"按**业务面板形态**划分：对内管理 / 对外门户 / 移动 H5 / 数据大屏，各配独立 layout。blank layout 是登录/回调纯壳，无独立业务场景，不计入。
+4 个共享包（`packages/config|mock|shared|ui`）经 workspace `workspace:*` 源码直链消费，不建 dist。结构详见 [docs/43](docs/43-Monorepo结构与开发指引.md)。
 
 开源 MIT，版本策略与 fork 升级见 [docs/36](docs/36-Fork升级与版本策略.md)。
 
@@ -74,64 +76,45 @@
 
 ## 🏗️ 架构设计
 
-### 1. Feature-Sliced 风格 + 模块化范式
+### 1. Feature-Sliced 风格 + 共享包分层（Monorepo）
 
 ```
-全局层（跨模块共享）         业务模块层（独立自治）
-├── components/common/      ├── modules/auth/
-│   ├── AsyncState          │   ├── views/Login.vue
-│   ├── ErrorBoundary       │   ├── components/
-│   └── ...                 │   ├── store/
-├── directives/             │   └── routes/index.ts（自动注册）
-│   ├── _utils.ts            │
-│   ├── inputDebounce.*     └── modules/user/
-│   ├── buttonDebounce.*    └── modules/home/
-│   ├── permission.*
-│   ├── auth.*              ← v-auth（AND/ANY 语义 + disabled/remove 修饰符）
-│   ├── copy.*              ← v-copy（文本复制；modern API + legacy 双降级）
-│   └── draggable.*         ← v-draggable（视口边界钳制，被 ProDialog 默认消费）
-├── plugins/
-│   ├── errorHandler.*      ← Vue 插件（install 模式）
-│   └── index.ts            ← 统一注册入口
-├── utils/
-│   ├── storage.ts / dayjs.ts / bem.ts / _utils.ts
-│   └── ...
-├── store/modules/          ← 跨模块共享 Pinia（src/store/index.ts barrel）
-│   ├── app.ts              ← 侧边栏/语言/布局/移动端/全局 loading（pick 持久化 layout+locale）
-│   ├── user.ts             ← 登录态/profile/权限（httpOnly cookie 模式，凭证不落 localStorage）
-│   ├── theme.ts            ← 主题模式（pick 持久化 mode+primaryColor）
-│   ├── tags-view.ts        ← 多页签（已访问路由缓存；刻意不持久化，避免换账号看到老 tab）
-│   └── dict.ts             ← 字典缓存（5min TTL + Promise 防抖池）
-└── layouts/                ← 路由级布局（default/blank/portal/h5/big）
+共享包（packages/*，源码直链 workspace 消费）   应用内 Feature-Sliced（apps/*/src/）
+├── @vv/config    vite 工厂 createViteConfig      ├── modules/<m>/（业务模块，独立自治）
+├── @vv/mock      vite-plugin-mock 数据源          │   ├── views/ + routes/index.ts（自动注册）
+├── @vv/shared    网络基建 + store + composables    │   └── components/ + store/ + apis/
+│   ├── store/modules/（app/user/theme/dict barrel）├── layouts/（路由级布局，随 app）
+│   ├── composables/（useAppRouter/useRequest/...）├── router/ + plugins/ + directives/
+│   ├── router-guards/（守卫骨架 + isWhiteListed） └── 全局层 api/utils/enums/types/locales
+│   ├── api/（http/cache/retry/token-refresh）         经别名指回 @vv/shared / @vv/ui
+│   └── locales/ + directives/ + utils/ + enums/
+└── @vv/ui       全局组件 + 弹窗族 composables
+    ├── components/{common,ProTable,form-schema}/
+    ├── composables/（useDialog/useConfirm/useLogout）
+    └── assets/（icons + styles + bem）
 ```
 
-> **模块化范式（v1.0.0+）**：`directives/` 与 `plugins/` 均采用 `export default { install(app) {...} }` 模式，每个模块独立 `.d.ts` 类型文件，`index.ts` 统一注册入口。main.ts 集中 `app.use()` 接入。详见 [`docs/08-模块化架构总览.md`](docs/08-模块化架构总览.md)。
+> **分层范式**：共享逻辑下沉 `packages/*`（跨 app 复用），各 app `src/` 只保留模块/布局/路由/插件等 app 私有内容，全局层（api/utils/store/...）经别名 `@api`/`@utils`/`@store` 等指回共享包源码（单一来源 `@vv/config` 的 `createAppAliases`）。详见 [docs/43](docs/43-Monorepo结构与开发指引.md)。
 
-### 2. 模块边界铁律（强制）
+### 2. 依赖方向铁律（Monorepo 边界，ESLint error 级强制）
 
-| 层级                       | 允许引用                                      | 不允许引用         |
-| -------------------------- | --------------------------------------------- | ------------------ |
-| `modules/<m>/views`        | 本模块 components / composables / utils / api | 其他模块内部       |
-| `modules/<m>/components`   | 本模块 views / composables / utils            | 其他模块           |
-| `modules/<m>/store`        | 本模块 api / types                            | 其他模块 store     |
-| `components/common`        | utils / enums / types / store/modules         | 任何 modules/ 内容 |
-| `store/modules`（全局）    | api / utils / enums                           | modules/ 内容      |
-| `directives/` / `plugins/` | utils / enums / types / store/modules         | modules/ 内容      |
+| 方向                    | 允许                            | 禁止                                 |
+| ----------------------- | ------------------------------- | ------------------------------------ |
+| `apps/*` → `packages/*` | ✅ workspace `workspace:*` 包名 | —                                    |
+| `packages/*` 之间       | ✅ 单向 config→mock→shared→ui   | 反向依赖                             |
+| `packages/*` → `apps/*` | —                               | ❌ app 私有别名/路径                 |
+| `apps/<a>` → `apps/<b>` | —                               | ❌ 跨应用 import（走统一登录整页跳） |
+| app 内 `modules/<m>`    | 本模块内 + 共享包               | 其他模块内部                         |
 
-> 模块间通信通过 `modules/<m>/index.ts` 暴露的对外接口，**禁止直接 import 内部文件**。
+> 跨应用通信不 import，走统一登录协议整页跳转（[docs/43](docs/43-Monorepo结构与开发指引.md) §5）；ESLint `no-restricted-imports` 4 组规则 error 级兜底（P5-A 落地）。
 
 ### 3. 状态管理分层
 
-- **全局 store/modules/**（经 `src/store/index.ts` barrel 导出）：仅跨模块共享
-  - `app`（侧边栏/语言/布局模式/移动端断点/globalLoading，`pick: ['layout', 'locale']` 持久化）
-  - `user`（authenticated 标记 / profile / 权限码。2026-08-12 起 httpOnly cookie 模式：凭证由后端 Set-Cookie 管理、前端不可读，`Session.get('auth')`（sessionStorage）仅为守卫同步判断的登录标记；**无 token 落 localStorage**，profile/permissions 内存态不持久化）
-  - `theme`（主题模式 + 品牌色，`pick: ['mode', 'primaryColor']` 持久化）
-  - `tags-view`（已访问路由 + keep-alive 缓存名单，**刻意不持久化**，避免换账号看到老 tab）
-  - `dict`（字典项业务层缓存，5min TTL + Promise 防抖池；不持久化）
-  - 注：`src/store/modules/router.ts` 内有 `useRouterStore`（远程菜单加载态/路由错误），但**不在 barrel 内**，由 `router/guards/remote-menu.ts` 直接消费，不属于跨模块共享
-- **模块私有 store**：归 `modules/<m>/store/`，业务状态不污染全局
-- **Pinia Setup Store 风格**：更接近 composables 心智，便于复用
-- **持久化**：`pinia-plugin-persistedstate` 仅对 store 字段 `pick` 持久化（避免整体写 localStorage），各 store 具体 pick 字段见上方
+- **共享 store**（`packages/shared/src/store/`，barrel 导出）：仅跨 app 复用
+  - `app` / `user` / `theme` / `dict`（httpOnly cookie 会话模式，profile/permissions 内存态；persist key 带 `VITE_APP_ID` 前缀防同域多 app 串台）
+  - 各 app 经 `export * from '@vv/shared/store'` re-export 消费
+- **app 私有 store**：归 `apps/<a>/src/store/modules/`（如 admin `tags-view` 多页签），业务状态不污染共享层
+- **Pinia Setup Store 风格** + `pinia-plugin-persistedstate` 仅 `pick` 字段持久化
 
 ### 4. 防御性 UI 三态
 
@@ -217,10 +200,10 @@ utils/      ← validate.ts      └── routes/index.ts（自动注册）
 
 #### 3. 全局/模块双层状态管理
 
-| 层       | 路径                 | 放什么                                                                                                                                            | 不放什么       |
-| -------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| 全局     | `store/modules/`     | 跨模块共享（barrel 经 `src/store/index.ts` 导出）：`app`（UI 偏好）、`user`（登录态）、`theme`（主题）、`tags-view`（多页签）、`dict`（字典缓存） | 任何业务状态   |
-| 模块私有 | `modules/<m>/store/` | 业务状态：列表筛选、表单临时态、详情缓存                                                                                                          | 跨模块共享数据 |
+| 层       | 路径                          | 放什么                                                                                                                                                 | 不放什么        |
+| -------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------- |
+| 共享     | `packages/shared/src/store/`  | 跨 app 复用（barrel 导出）：`app`（UI 偏好）、`user`（登录态）、`theme`（主题）、`dict`（字典缓存）；admin 私有 `tags-view` 归 `apps/admin/src/store/` | 任何业务状态    |
+| app 私有 | `apps/<a>/src/store/modules/` | 业务状态：列表筛选、表单临时态、详情缓存                                                                                                               | 跨 app 共享数据 |
 
 #### 4. 技术栈替换零侵入
 
@@ -316,7 +299,17 @@ pnpm dev
 pnpm dev:local
 ```
 
-启动后访问 `http://localhost:5174/login`，输入默认账号 **admin / 123456** 登录。
+启动后访问 `http://localhost:5174/`（未登录由守卫整页跳统一登录）。
+
+> **单应用 dev 访问方式**（统一登录跨应用跳转，按场景选）：
+>
+> | 场景                                      | 命令                                                                      | 访问                                                                   |
+> | ----------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+> | 只改 admin 业务（免登录）                 | `pnpm -C apps/admin dev` + `.env.development` 加 `VITE_DEMO_NO_AUTH=true` | `localhost:5174/` → /workbench                                         |
+> | 测统一登录跨应用漫游                      | `pnpm dev:gateway` + `docker compose up`                                  | `localhost:8080/admin/`（未登录自动跳 `:8080/auth/login`，登录后回跳） |
+> | 单 app 独立调试（docs/portal 等公开应用） | `pnpm -C apps/<a> dev`                                                    | `localhost:<port>/`（docs 5175 等，白名单公开无需登录）                |
+>
+> 单应用 dev 下 admin 未登录跳 `/auth/login` 会 404（auth 在独立端口 5179），属预期——生产经同域网关 :8080 由 nginx 按 path 分流到对应 app。详见 [docs/43](docs/43-Monorepo结构与开发指引.md) §5/§6。
 
 ### 常用脚本
 
@@ -377,31 +370,31 @@ pnpm dev:local
 
 ### 路由架构（自动注册）
 
-业务模块的路由**无需在 `src/router/` 任何文件中手动 import**——在 `src/modules/<feature>/routes/index.ts` 声明后，`auto-register.ts` 通过 Vite `import.meta.glob` 自动扫描并注册。
+业务模块的路由**无需在 `apps/<a>/src/router/` 任何文件中手动 import**——在 `apps/<a>/src/modules/<feature>/routes/index.ts` 声明后，`auto-register.ts` 通过 Vite `import.meta.glob` 自动扫描并注册（每 app 独立扫描自身 `src/modules/**`）。
 
 #### Layout 速选（先决定用哪个）
 
-| Layout      | 组件                          | 视觉特征                                                 | 适用场景                                 |
-| ----------- | ----------------------------- | -------------------------------------------------------- | ---------------------------------------- |
-| **default** | `@/layouts/default/index.vue` | 左侧 Sidebar + 顶 Header + TagsView                      | 业务页（首页 / 列表 / 表单）             |
-| **blank**   | `@/layouts/blank/index.vue`   | 居中、无侧栏无顶栏                                       | 登录页 / 注册页 / 第三方回调             |
-| **portal**  | `@/layouts/portal/index.vue`  | 顶部导航 + 内容区（无侧栏）                              | 门户 / 对外展示 / 公开站点首页           |
-| **h5**      | `@/layouts/h5/index.vue`      | 移动端 rem 适配面板（宽屏限 540px 居中）                 | H5 移动端页面                            |
-| **big**     | `@/layouts/big/index.vue`     | 大屏 scale 等比缩放居中（meta.bigScreen 声明设计稿尺寸） | 数据大屏 / 拼接屏（1920/2560/4K/9000px） |
+| Layout      | 组件（admin 内，其余 app 随迁各自 layout） | 视觉特征                                                 | 适用场景                                 |
+| ----------- | ------------------------------------------ | -------------------------------------------------------- | ---------------------------------------- |
+| **default** | `apps/admin/src/layouts/default/index.vue` | 左侧 Sidebar + 顶 Header + TagsView                      | 业务页（首页 / 列表 / 表单）             |
+| **blank**   | `apps/auth/src/layouts/blank/index.vue`    | 居中、无侧栏无顶栏                                       | 登录页 / 注册页 / 第三方回调（auth app） |
+| **portal**  | `apps/portal/src/layouts/portal/index.vue` | 顶部导航 + 内容区（无侧栏）                              | 门户 / 对外展示 / 公开站点首页           |
+| **h5**      | `apps/h5/src/layouts/h5/index.vue`         | 移动端 rem 适配面板（宽屏限 540px 居中）                 | H5 移动端页面                            |
+| **big**     | `apps/big/src/layouts/big/index.vue`       | 大屏 scale 等比缩放居中（meta.bigScreen 声明设计稿尺寸） | 数据大屏 / 拼接屏（1920/2560/4K/9000px） |
 
-> ✅ Sidebar 菜单渲染已在 v3 实现：从 `router.getRoutes()` 自动派生 + 多级递归 + i18n + 折叠态联动（`src/layouts/default/components/Sidebar.vue`）。新业务模块的菜单只需按 `modules/<m>/routes/index.ts` 声明路由即自动出现，无需手动维护菜单列表。
+> ✅ Sidebar 菜单渲染已在 v3 实现：从 `router.getRoutes()` 自动派生 + 多级递归 + i18n + 折叠态联动。各 layout 已随 P3 抽离迁往对应 app（portal/h5/big），admin 仅留 default。新业务模块的菜单只需按 `modules/<m>/routes/index.ts` 声明路由即自动出现。布局随 app 归属见 [docs/43](docs/43-Monorepo结构与开发指引.md)。
 
-#### 新增业务模块的 3 步流程（无需改 router 目录）
+#### 新增业务模块的 3 步流程（以 admin 为例，`pnpm new-module order` 一键生成骨架）
 
 ```ts
-// 1. 写视图组件 src/modules/order/views/List.vue
+// 1. 写视图组件 apps/admin/src/modules/order/views/List.vue
 <template><div>订单列表</div></template>
 
-// 2. 声明路由 src/modules/order/routes/index.ts
+// 2. 声明路由 apps/admin/src/modules/order/routes/index.ts
 const routes: RouteRecordRaw[] = [
   {
     path: '/order',
-    component: () => import('@/layouts/default/index.vue'),  // ← 选 default
+    component: () => import('@/layouts/default/index.vue'),  // ← 选 default（admin 内）
     children: [
       {
         path: 'list',
@@ -413,17 +406,17 @@ const routes: RouteRecordRaw[] = [
   },
 ]
 
-// 3. 完成 —— 路由自动可用（auto-register 扫描 routes/index.ts），remote 模式自动可用
-//    无需在 src/router/ 任何文件手动 import 或追加类型（types.ts RouteName 已是 string alias）
+// 3. 完成 —— 路由自动可用（auto-register 扫描 routes/index.ts）
+//    新增 app 用 pnpm new-module <name> --app <app>；其余 app 流程同形
 ```
 
-#### 创建 blank layout 页面（登录页 / 注册页）
+#### 创建 blank layout 页面（auth app 登录页）
 
 ```ts
-// 与上面唯一区别：换 layout + 加白名单
+// auth 应用内（apps/auth/src/modules/auth/routes/index.ts）
 {
   path: '/login',
-  component: () => import('@/layouts/blank/index.vue'),  // ← 选 blank
+  component: () => import('@/layouts/blank/index.vue'),  // ← auth app 的 blank
   children: [{
     path: '',
     name: 'Login',
@@ -431,17 +424,17 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '登录', requiresAuth: false },
   }],
 }
-// 别忘了 src/router/whitelist.ts 加 'Login'
+// 别忘了 apps/auth/src/router/whitelist.ts 加 'Login'
 ```
 
 #### 自检
 
-新增路由后跑 `pnpm check:routes` 自动验证 5 个一致性校验（whitelist ⊆ 声明 / 双向 name 一致 / 系统路由必在白名单）。
+新增路由后跑 `pnpm check:routes` 自动验证 6 个应用的一致性（whitelist ⊆ 声明 / 双向 name 一致 / 系统路由必在白名单）。
 
 > **更多模板**（动态参数 `:id` / 多级菜单嵌套 / i18n titleKey / v-auth 双层防护 / keepAlive / breadcrumb）：见 [`docs/07-路由模块设计.md`](docs/07-路由模块设计.md) §「新增路由的标准流程」。
 
-> **默认菜单模式**：dev = `remote`（贴近生产，需 mock 接口），`pnpm dev:local` 切到 `local`（无需接口）。
-> **白名单**：跳过登录 + 权限校验，按**路由 name** 匹配（`router/whitelist.ts`）。
+> **默认菜单模式**：admin dev = `remote`（贴近生产，需 mock 接口），`pnpm -C apps/admin dev:local` 切到 `local`（无需接口）。
+> **白名单**：跳过登录 + 权限校验，按**路由 name** 匹配（各 app 自己的 `src/router/whitelist.ts`）。
 > **COMPONENT_REGISTRY**：从 `autoRegisteredRoutes` 递归提取 `(name, component)` 派生，remote 模式按 name 查找组件 loader。新增路由无需在多处同步。
 > 详见 `docs/07-路由模块设计.md`。
 
@@ -473,16 +466,16 @@ const { isDark, toggleMode } = useTheme()
 
 当前支持 `zh-CN`（默认）和 `en-US`，切换通过 `useAppStore().setLocale()`。
 
-### 模块化范式（directives / plugins）
+### 模块化范式（directives / plugins，各 app 私有）
 
-新增自定义指令：
+新增自定义指令（以某 app 的 `src/directives/` 为例）：
 
 ```ts
-// src/directives/xxx.d.ts
+// apps/<a>/src/directives/xxx.d.ts
 export type ElHTMLElement = HTMLElement
 export interface XxxBinding { value: (...args: unknown[]) => void; arg?: string }
 
-// src/directives/xxx.ts
+// apps/<a>/src/directives/xxx.ts
 export default {
   install(app: App) {
     app.directive<ElHTMLElement, XxxBinding['value']>('xxx', {
@@ -491,13 +484,13 @@ export default {
   }
 }
 
-// src/directives/index.ts
+// apps/<a>/src/directives/index.ts
 import xxx from './xxx'
 const install = (app: App) => app.use(xxx)
 export default install
 ```
 
-新增全局插件同形（参考 `src/plugins/errorHandler.ts`）。
+新增全局插件同形（参考 `apps/<a>/src/plugins/errorHandler.ts`）。
 
 main.ts 集中接入：
 

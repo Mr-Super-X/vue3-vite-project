@@ -7,7 +7,7 @@
 //      ─ views/index.vue（默认 layout 业务页）
 //      ─ routes/index.ts（默认 layout 包裹 + 自动注册）
 //      ─ store/index.ts（Setup Store 骨架）
-//      ─ apis/index.ts（模块本地 API 层，与 src/api/modules/<name>.ts 互斥）
+//      ─ apis/index.ts（模块本地 API 层，与 packages/shared/src/api/modules/<name>.ts 互斥）
 //      ─ index.ts（对外接口 stub）
 //      ─ components/.gitkeep（占位，让 components/ 目录被 git 跟踪）
 //   3. 可选选项：--with-mock / --with-store / --with-i18n / --with-request 一次性补齐模板
@@ -260,11 +260,11 @@ export {}
 }
 
 /**
- * apis/index.ts：模块本地 API 层（互斥于 src/api/modules/<name>.ts）。
+ * apis/index.ts：模块本地 API 层（互斥于 packages/shared/src/api/modules/<name>.ts）。
  *
- * 与 src/api/modules/<name>.ts 的取舍：
+ * 与 packages/shared/src/api/modules/<name>.ts 的取舍：
  *   - 仅本模块使用（强内聚）：放本目录（脚手架默认，强烈推荐新模块用此）
- *   - 跨模块共享（多页面共用同一接口）：迁到 src/api/modules/<name>.ts
+ *   - 跨模块共享（多页面共用同一接口）：迁到 packages/shared/src/api/modules/<name>.ts
  *
  * 自动应用 http.ts 全部基建（401 refresh、retry、cache、abort、pageAdapter、request-id 等）。
  */
@@ -273,9 +273,9 @@ function buildApisIndexTs(name: string, pascal: string): string {
   const camel = pascal.charAt(0).toLowerCase() + pascal.slice(1)
   return `// ${pascal} 模块的 API 层（模块内强内聚版本）。
 //
-// 与 src/api/modules/${name}.ts 互斥：
+// 与 packages/shared/src/api/modules/${name}.ts 互斥：
 //   - 仅本模块使用（强内聚）→ 放本目录（脚手架默认）
-//   - 跨模块共享            → 迁到 src/api/modules/${name}.ts
+//   - 跨模块共享            → 迁到 packages/shared/src/api/modules/${name}.ts
 //
 // 自动应用 http.ts 基建：401 refresh、retry、cache、abort、pageAdapter 等。
 
@@ -305,7 +305,7 @@ export interface ${pascal}ListResponse {
 /**
  * ${name} API 命名空间。
  *
- * 命名约定：函数名小驼峰，对象名 \`\${name}Api\`（与项目 src/api/modules/*.ts 风格一致）。
+ * 命名约定：函数名小驼峰，对象名 \`\${name}Api\`（与项目 packages/shared/src/api/modules/*.ts 风格一致）。
  * 全部走 \`request<T>()\`，由 http.ts 拦截器链统一注入 token / 401 retry / 缓存 / 分页适配等。
  */
 export const ${camel}Api = {
