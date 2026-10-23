@@ -544,15 +544,17 @@ app.use(Plugins, { errorHandler: { report: ... } })
 
 ### 与 Husky 集成
 
-`.husky/pre-commit` 实跑 5 步（按顺序）：
+`.husky/pre-commit` 实跑 **2 步**（Monorepo 迁移期精简版，秒级不卡提交）：
 
-| 序  | 命令                           | 作用                                                                   |
-| --- | ------------------------------ | ---------------------------------------------------------------------- |
-| 1   | `pnpm generate:tsconfig-paths` | tsconfig.app.json paths 自动同步（生成器仅在 hash 不一致时写入，秒级） |
-| 2   | `pnpm lint-staged`             | 暂存区文件 prettier + eslint 自动修复（仅变更文件，不全库扫描）        |
-| 3   | `pnpm type-check`              | 全局类型检查（防止 lint-staged 漏掉的文件引入类型错误）                |
-| 4   | `pnpm check:aliases`           | alias 单一来源校验（防生成器被绕过）                                   |
-| 5   | `pnpm check:routes`            | 路由一致性检查（声明 / whitelist / 实际 routes 三者一致，防漏改）      |
+| 序  | 命令                | 作用                                                              |
+| --- | ------------------- | ----------------------------------------------------------------- |
+| 1   | `pnpm lint-staged`  | 暂存区文件 prettier + eslint 自动修复（仅变更文件，不全库扫描）   |
+| 2   | `pnpm check:routes` | 路由一致性检查（声明 / whitelist / 实际 routes 三者一致，防漏改） |
+
+> **完整门禁在 CI 兜底**：type-check / check:aliases / check:mock-wiring / check:doc-currency
+> 不在 pre-commit（本地秒级提交体验优先），由 ci.yml 的 turbo build（内含 type-check:full）
+>
+> - 各 check 步骤统一拦截。原单应用时期的 5 步 pre-commit 链见 docs/03-Git工作流工具链.md 历史节。
 
 | Hook     | 命令        | 作用                     |
 | -------- | ----------- | ------------------------ |

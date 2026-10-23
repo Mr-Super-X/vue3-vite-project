@@ -34,12 +34,12 @@ pnpm commit              ← 交互式（仅提交，不推送）
    或
 pnpm push                ← 推荐：一站式（add + cz + push）
    ↓
-[husky pre-commit 触发]
-   ├── pnpm generate:tsconfig-paths  ← tsconfig paths 自动同步（hash 不一致才写入，秒级）
+[husky pre-commit 触发]（Monorepo 迁移期精简版，实跑 2 步）
    ├── pnpm lint-staged              ← 对暂存文件跑 eslint --fix + prettier --write
-   ├── pnpm type-check               ← 全项目类型检查（防 lint-staged 漏检）
-   ├── pnpm check:aliases            ← alias 单一来源校验（防生成器被绕过）
    └── pnpm check:routes             ← 路由一致性（声明 / whitelist / 实际 routes）
+   ⚠ type-check / check:aliases 不在本地 pre-commit（秒级提交体验优先），由 ci.yml
+     的 turbo build（内含 type-check:full）+ check:aliases 等步骤在 CI 统一拦截。
+     原单应用时期的 5 步链（generate:tsconfig-paths/type-check/check:aliases）见本文历史说明。
    ↓
 [husky commit-msg 触发]
    └── pnpm exec commitlint --edit "$1"  ← 校验 Angular 规范（中文输出）
@@ -75,15 +75,13 @@ pnpm push                ← 推荐：一站式（add + cz + push）
 ### `.husky/pre-commit`
 
 ```sh
-# tsconfig.app.json paths 自动同步（生成器仅在 hash 不一致时写入，秒级）
-pnpm generate:tsconfig-paths
-# 暂存区文件先自动格式化 + ESLint fix（lint-staged 仅处理变更文件，不全库扫描）
+# 【Monorepo 迁移期精简版】暂存区文件先自动格式化 + ESLint fix（lint-staged 仅处理变更文件，不全库扫描）
 pnpm lint-staged
-# 全局类型检查（防止 lint-staged 漏掉的文件引入类型错误）
-pnpm type-check
-# alias 单一来源校验（CI 兜底，防止生成器被绕过）
-pnpm check:aliases
-# 路由一致性检查（RouteName 联合类型 + whitelist + 实际 routes 三者一致，防止漏改）
+# 路由一致性检查（6 app 的 RouteName + whitelist + 实际 routes 三者一致）
+pnpm check:routes
+# ⚠ type-check / check:aliases 不在本地 pre-commit（秒级提交体验优先），由 ci.yml
+#   的 turbo build（内含 type-check:full）+ check:aliases / mock-wiring / doc-currency
+#   在 CI 统一拦截。原单应用 5 步链见下方历史说明。
 pnpm check:routes
 ```
 
