@@ -293,66 +293,63 @@ cd vue3-vite-project
 # 2. 安装依赖
 pnpm install
 
-# 3. 启动开发服务器（默认 http://localhost:5174/，remote 菜单模式）
-pnpm dev
-# 或切到 local 模式（无需接口）
+# 3. 启动开发服务器
+pnpm dev          # 全量 dev（turbo 并行 6 个 app，remote 菜单模式，端口 5174-5179）
+# 或只起 admin 单 app（local 模式，无需接口）
 pnpm dev:local
 ```
 
-启动后访问 `http://localhost:5174/`（未登录由守卫整页跳统一登录）。
+> **单 app dev 的 404 预期**：登录是跨应用特性（登录页在 `apps/auth`，admin 内已无 `/login` 路由）。`pnpm dev:local`（= `pnpm -C apps/admin dev:local`）只起 admin（5174），未登录时守卫整页跳 `/auth/login` 会 **404**（auth 是独立端口 5179 的 app，`VITE_AUTH_ORIGIN=/auth` 相对路径跨端口不可达）——属预期。按场景选访问路径：
 
-> **单应用 dev 访问方式**（统一登录跨应用跳转，按场景选）：
->
-> | 场景                                      | 命令                                                                      | 访问                                                                   |
-> | ----------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-> | 只改 admin 业务（免登录）                 | `pnpm -C apps/admin dev` + `.env.development` 加 `VITE_DEMO_NO_AUTH=true` | `localhost:5174/` → /workbench                                         |
-> | 测统一登录跨应用漫游                      | `pnpm dev:gateway` + `docker compose up`                                  | `localhost:8080/admin/`（未登录自动跳 `:8080/auth/login`，登录后回跳） |
-> | 单 app 独立调试（docs/portal 等公开应用） | `pnpm -C apps/<a> dev`                                                    | `localhost:<port>/`（docs 5175 等，白名单公开无需登录）                |
->
-> 单应用 dev 下 admin 未登录跳 `/auth/login` 会 404（auth 在独立端口 5179），属预期——生产经同域网关 :8080 由 nginx 按 path 分流到对应 app。详见 [docs/43](docs/43-Monorepo结构与开发指引.md) §5/§6。
+| 场景                                      | 命令                                                                      | 访问                                                                   |
+| ----------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| 只改 admin 业务（免登录）                 | `pnpm -C apps/admin dev` + `.env.development` 加 `VITE_DEMO_NO_AUTH=true` | `localhost:5174/` → /workbench                                         |
+| 测统一登录跨应用漫游                      | `pnpm dev:gateway` + `docker compose up`                                  | `localhost:8080/admin/`（未登录自动跳 `:8080/auth/login`，登录后回跳） |
+| 单 app 独立调试（docs/portal 等公开应用） | `pnpm -C apps/<a> dev`                                                    | `localhost:<port>/`（docs 5175 等，白名单公开无需登录）                |
+
+> 统一登录全链路必须经同域网关 `:8080`（nginx 按 path 分流到对应 app）；详见 [docs/43](docs/43-Monorepo结构与开发指引.md) §5/§6 与 §9 排障。
 
 ### 常用脚本
 
 > 完整定义见 `package.json:scripts`，本表是常用命令速查（按使用频率排序）。
 
-| 命令                               | 用途                                                                                                               |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `pnpm dev`                         | 全量 dev（turbo 并行 6 个 app，remote 菜单模式；admin 含 vite-plugin-vue-devtools）                                |
-| `pnpm -C apps/<a> dev`             | 单 app dev（如 `pnpm -C apps/admin dev`；`dev:local` 切本地菜单模式）                                              |
-| `pnpm dev:gateway`                 | 同域网关 dev：6 app 以 `VITE_BASE=/<app>/` 并行起（配 `docker compose up` → http://localhost:8080，见 docs/43 §6） |
-| `pnpm build`                       | 全量生产构建（turbo 拓扑序；各 app 内 `build-only` 生成声明 → `type-check:full` 全量门禁）                         |
-| `pnpm -C apps/<a> build-only`      | 单 app 仅 `vite build`（不含类型校验；调试构建产物用）                                                             |
-| `pnpm -C apps/<a> preview`         | 预览单 app 构建产物（本地起静态服务）                                                                              |
-| `pnpm build:pages`                 | gh-pages 六应用聚合构建（自动发现 `apps/*`，产物根 `dist/<app>/` + 落地导航页）                                    |
-| `pnpm analyze`                     | 生产构建 + 生成包体积分析报告（`dist/stats.html`，admin 口径）                                                     |
-| `pnpm test`                        | 全量单元测试（turbo 拓扑序，test 任务依赖上游 build）                                                              |
-| `pnpm -C apps/<a> test [path]`     | 单 app / 单文件测试（如 `pnpm -C apps/admin test src/utils/dayjs.spec.ts`）                                        |
-| `pnpm test:watch`                  | 单元测试 watch 模式（单 app `pnpm -C apps/<a> test:watch`）                                                        |
-| `pnpm test:coverage`               | 测试覆盖率报告（含 HTML 报告，输出 `coverage/`；admin 口径）                                                       |
-| `pnpm test:ui`                     | 单元测试 UI 模式（Vitest UI 可视化；admin 口径）                                                                   |
-| `pnpm test:e2e`                    | Playwright 端到端测试（关键用户流程）                                                                              |
-| `pnpm test:e2e:install`            | 安装 Playwright 浏览器依赖（chromium + --with-deps）                                                               |
-| `pnpm bench`                       | 跑基准测试（vitest bench，记录每次性能数据，admin 口径）                                                           |
-| `pnpm type-check`                  | TypeScript 类型检查（turbo 各 app `vue-tsc --build` 增量）                                                         |
-| `pnpm -C apps/<a> type-check:full` | TypeScript 类型检查（强制重建 .tsbuildinfo 缓存；单 app build 内第二步）                                           |
-| `pnpm check:routes`                | 校验 RouteName / component-registry / whitelist 一致性（pre-commit 强制 + CI 阶段强制）                            |
-| `pnpm check:aliases`               | alias 单一来源（`build/aliases.ts`）与 tsconfig paths 一致性校验（pre-commit 强制）                                |
-| `pnpm check:doc-currency`          | 文档与代码硬数据一致性校验（13 项锁定；手动 / 发布前跑，尚未接入 CI）                                              |
-| `pnpm generate:tsconfig-paths`     | 从 `build/aliases.ts` 自动同步到 `tsconfig.app.json`（pre-commit 钩子自动）                                        |
-| `pnpm new-module <name>`           | 一键生成业务模块骨架（kebab-case 名 → 6 个骨架文件）                                                               |
-| `pnpm remove-module <name>`        | 一键移除业务模块（默认 dry-run + y/N 确认；CI / 管道传 `--force`）                                                 |
-| `pnpm lint`                        | ESLint 检查全项目                                                                                                  |
-| `pnpm lint:fix`                    | ESLint 自动修复                                                                                                    |
-| `pnpm format`                      | Prettier 格式化全项目                                                                                              |
-| `pnpm format:check`                | Prettier 检查（不修改；CI 用）                                                                                     |
-| `pnpm commit`                      | 交互式 commit（仅提交不推送）                                                                                      |
-| `pnpm push`                        | **推荐**：一站式提交并推送（add + cz + push）                                                                      |
-| `pnpm release`                     | **发布版本**：bump + CHANGELOG + tag + push（master/release/*）                                                    |
-| `pnpm release:dry`                 | 发布预览：dry-run 模式（0 副作用，任意分支）                                                                       |
+| 命令                               | 用途                                                                                                                  |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`                         | 全量 dev（turbo 并行 6 个 app，remote 菜单模式；admin 含 vite-plugin-vue-devtools）                                   |
+| `pnpm -C apps/<a> dev`             | 单 app dev（如 `pnpm -C apps/admin dev`；`dev:local` 切本地菜单模式）                                                 |
+| `pnpm dev:gateway`                 | 同域网关 dev：6 app 以 `VITE_BASE=/<app>/` 并行起（配 `docker compose up` → http://localhost:8080，见 docs/43 §6）    |
+| `pnpm build`                       | 全量生产构建（turbo 拓扑序；各 app 内 `build-only` 生成声明 → `type-check:full` 全量门禁）                            |
+| `pnpm -C apps/<a> build-only`      | 单 app 仅 `vite build`（不含类型校验；调试构建产物用）                                                                |
+| `pnpm -C apps/<a> preview`         | 预览单 app 构建产物（本地起静态服务）                                                                                 |
+| `pnpm build:pages`                 | gh-pages 六应用聚合构建（自动发现 `apps/*`，产物根 `dist/<app>/` + 落地导航页）                                       |
+| `pnpm analyze`                     | 生产构建 + 生成包体积分析报告（`dist/stats.html`，admin 口径）                                                        |
+| `pnpm test`                        | 全量单元测试（turbo 拓扑序，test 任务依赖上游 build）                                                                 |
+| `pnpm -C apps/<a> test [path]`     | 单 app / 单文件测试（如 `pnpm -C apps/admin test src/utils/dayjs.spec.ts`；watch 模式 `pnpm -C apps/<a> test:watch`） |
+| `pnpm test:coverage`               | 测试覆盖率报告（含 HTML 报告，输出 `coverage/`；admin 口径）                                                          |
+| `pnpm test:ui`                     | 单元测试 UI 模式（Vitest UI 可视化；admin 口径）                                                                      |
+| `pnpm test:e2e`                    | Playwright 端到端测试（关键用户流程）                                                                                 |
+| `pnpm test:e2e:install`            | 安装 Playwright 浏览器依赖（chromium + --with-deps）                                                                  |
+| `pnpm bench`                       | 跑基准测试（vitest bench，记录每次性能数据，admin 口径）                                                              |
+| `pnpm type-check`                  | TypeScript 类型检查（turbo 各 app `vue-tsc --build` 增量）                                                            |
+| `pnpm -C apps/<a> type-check:full` | TypeScript 类型检查（强制重建 .tsbuildinfo 缓存；单 app build 内第二步）                                              |
+| `pnpm check:routes`                | 校验 RouteName / component-registry / whitelist 一致性（pre-commit 强制 + CI 阶段强制）                               |
+| `pnpm check:aliases`               | alias 单一来源（`build/aliases.ts`）与 tsconfig paths 一致性校验（pre-commit 强制）                                   |
+| `pnpm check:doc-currency`          | 文档与代码硬数据一致性校验（13 项锁定；手动 / 发布前跑，尚未接入 CI）                                                 |
+| `pnpm generate:tsconfig-paths`     | 从 `build/aliases.ts` 自动同步到 `tsconfig.app.json`（pre-commit 钩子自动）                                           |
+| `pnpm new-module <name>`           | 一键生成业务模块骨架（kebab-case 名 → 6 个骨架文件）                                                                  |
+| `pnpm remove-module <name>`        | 一键移除业务模块（默认 dry-run + y/N 确认；CI / 管道传 `--force`）                                                    |
+| `pnpm lint`                        | ESLint 检查全项目                                                                                                     |
+| `pnpm lint:fix`                    | ESLint 自动修复                                                                                                       |
+| `pnpm format`                      | Prettier 格式化全项目                                                                                                 |
+| `pnpm format:check`                | Prettier 检查（不修改；CI 用）                                                                                        |
+| `pnpm commit`                      | 交互式 commit（仅提交不推送）                                                                                         |
+| `pnpm push`                        | **推荐**：一站式提交并推送（add + cz + push）                                                                         |
+| `pnpm release`                     | **发布版本**：bump + CHANGELOG + tag + push（master/release/*）                                                       |
+| `pnpm release:dry`                 | 发布预览：dry-run 模式（0 副作用，任意分支）                                                                          |
 
 ### Mock 数据
 
-开发模式默认启用 vite-plugin-mock（由 `vite.config.ts` 按 `VITE_USE_MOCK !== 'false'` 控制；用户 clone 后未建 `.env.development` 时默认开，与原行为一致），`mock/` 目录按文件自动扫描（dev 模式不受 `mock/index.ts` 聚合清单限制）：
+开发模式默认启用 vite-plugin-mock（由 `@vv/config` 工厂在 config 期按 `process.env.VITE_USE_MOCK !== 'false'` 控制——**shell env 生效、`.env` 无效**；用户 clone 后未建 `.env.development` 时默认开，与原行为一致），`packages/mock/src/` 目录按文件自动扫描（dev 模式不受 `packages/mock/src/index.ts` 聚合清单限制）：
 
 | 模块         | 接口                                                                                | 默认账号       |
 | ------------ | ----------------------------------------------------------------------------------- | -------------- |
@@ -364,7 +361,7 @@ pnpm dev:local
 
 > `/api/menu`（远程菜单）在 remote 模式下由守卫调用。已内置 mock（Home / UserList + Reports 隐藏菜单），无需额外配置即可跑通端到端流程。
 
-**生产构建的 mock 接线（2026-10-20 新增）**：vite-plugin-mock@3.0.2 为纯 dev-server 插件（2.9.x 的 `prodEnabled` 已移除），`mock/mockProdServer.ts` 通过 client 侧 `createProdMockServer` 手动接线 4 个模块（2 个 data 直引 menu/user + 2 组内联 prod 版 auth/dict）。挂接条件 `import.meta.env.PROD && VITE_USE_MOCK==='true'`（`src/main.ts`），常规生产构建整分支 tree-shake。配套 `VITE_DEMO_NO_AUTH=true` 演示模式：守卫跳过登录/权限校验，演示账号 Admin（admin/123456）全链路可点（gh-pages 线上 demo 方案）。**挂接时序硬约束**：必须在 `createApp` 后、`app.use(router)` 前 `await setupProdMockServer()`——router install 即触发初始导航，晚于 use 则守卫请求穿透拦截窗口。详见 [docs/22-mock使用规范.md](docs/22-mock使用规范.md) §15。
+**生产构建的 mock 接线（2026-10-20 新增）**：vite-plugin-mock@3.0.2 为纯 dev-server 插件（2.9.x 的 `prodEnabled` 已移除），`packages/mock/src/mockProdServer.ts` 通过 client 侧 `createProdMockServer` 手动接线 4 个模块（2 个 data 直引 menu/user + 2 组内联 prod 版 auth/dict）。挂接条件 `import.meta.env.PROD && VITE_USE_MOCK==='true'`（各 app `main.ts`，如 `apps/admin/src/main.ts`），常规生产构建整分支 tree-shake。配套 `VITE_DEMO_NO_AUTH=true` 演示模式：守卫跳过登录/权限校验，演示账号 Admin（admin/123456）全链路可点（gh-pages 线上 demo 方案）。**挂接时序硬约束**：必须在 `createApp` 后、`app.use(router)` 前 `await setupProdMockServer()`——router install 即触发初始导航，晚于 use 则守卫请求穿透拦截窗口。详见 [docs/22-mock使用规范.md](docs/22-mock使用规范.md) §15。
 
 常规生产构建（`VITE_USE_MOCK` 未设或非 `'true'`）不启用 mock；联调真实后端时同时设 `VITE_USE_MOCK=false` + `VITE_API_BASE_URL=<真实后端 URL>`，并使用 `pnpm build && pnpm preview` 验证生产路径。菜单加载方式仍由 `VITE_MENU_SOURCE` 控制。
 
@@ -589,22 +586,22 @@ pnpm build
 
 ### 环境变量
 
-| 变量                     | 说明                                                                                                                                                                     | 默认值              |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------- |
-| `VITE_APP_TITLE`         | 应用标题首屏占位（`src/main.ts` 初始化；登录后由路由 `meta.title` 覆盖）                                                                                                 | 企业中后台管理      |
-| `VITE_API_BASE_URL`      | API 基础 URL（`src/api/http.ts:106` `getAPIBaseURL()` 直接读取；axios 未设 baseURL 时回退到当前 origin，dev 默认同源，prod 需显式配）                                    | 未设=当前 origin    |
-| `VITE_USE_MOCK`          | mock 数据开关（`vite.config.ts` viteMockServe 读取；`true`/未设=启用，`false`=关闭用于联调真后端）                                                                       | dev 默认开启        |
-| `VITE_MENU_SOURCE`       | 菜单加载模式（`local` / `remote`，未设置时默认 `remote`）                                                                                                                | `remote`            |
-| `VITE_DEMO_NO_AUTH`      | 演示模式开关（prod + `VITE_USE_MOCK=true` 时生效）：守卫跳过登录/权限校验，演示账号 Admin（admin/123456）全链路可点；按钮级 v-auth 仍按真实 permissions 渲染             | 不设 = 关闭         |
-| `VITE_HISTORY_MODE`      | 路由历史模式（`web` / `hash`，用于子路径或静态托管部署）                                                                                                                 | `web`               |
-| `VITE_BASE`              | 路由部署基础路径（必须以 `/` 开头和结尾；多应用聚合构建时由 `scripts/build-pages.ts` 内 `REPO_PREFIX` 按 app 注入，见 docs/43 §7）                                       | `/`                 |
-| `VITE_AUTH_ORIGIN`       | 统一登录重定向基址（`@vv/shared` redirect.ts 与各 app 守卫读取）：未登录整页跳 `${VITE_AUTH_ORIGIN}/login?redirect=...`，登出回跳同源；同域网关/子路径部署按实际前缀配置 | `/auth`             |
-| `VITE_STORAGE_NAMESPACE` | storage 命名空间（隔离多项目共用 localStorage）                                                                                                                          | `vue3-vite-project` |
-| `VITE_BRAND_COLOR`       | 业务品牌色（HEX，覆盖 Element Plus 默认蓝 `#409eff`，含灯色阶联动，详见 [docs/06-主题管理规范.md](docs/06-主题管理规范.md)）                                             | `#409eff`           |
-| `VITE_QUIET_DEV`         | 关闭 dev 模式 GlobalComponents 自动注册徽章（专注调试时减少噪音，详见 `src/components/index.ts`）                                                                        | 不设 = 输出徽章     |
-| `VITE_BEM_PREFIX`        | BEM 类名前缀（同时影响 TS 端 `createNamespace` 与 SCSS `bem mixin`；改一处即全站类名同步切换，详见 `src/utils/bem.ts` + `src/assets/styles/mixins/bem.scss`）            | `vv`                |
+| 变量                     | 说明                                                                                                                                                                                      | 默认值              |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| `VITE_APP_TITLE`         | 应用标题首屏占位（各 app `apps/<a>/src/main.ts` 初始化；登录后由路由 `meta.title` 覆盖）                                                                                                  | 企业中后台管理      |
+| `VITE_API_BASE_URL`      | API 基础 URL（`packages/shared/src/api/http.ts:108` `getAPIBaseURL()` 读取；**shell env 优先，未设时由 `@vv/config` 工厂 define 保底 `/api`**，`.env` 不生效，见 docs/43）                | 工厂保底 `/api`     |
+| `VITE_USE_MOCK`          | mock 数据开关（`@vv/config` 工厂 config 期 `process.env` 读取，`.env` 无效；`true`/未设=启用，`false`=关闭用于联调真后端）                                                                | dev 默认开启        |
+| `VITE_MENU_SOURCE`       | 菜单加载模式（`local` / `remote`，未设置时默认 `remote`）                                                                                                                                 | `remote`            |
+| `VITE_DEMO_NO_AUTH`      | 演示模式开关（prod + `VITE_USE_MOCK=true` 时生效）：守卫跳过登录/权限校验，演示账号 Admin（admin/123456）全链路可点；按钮级 v-auth 仍按真实 permissions 渲染                              | 不设 = 关闭         |
+| `VITE_HISTORY_MODE`      | 路由历史模式（`web` / `hash`，用于子路径或静态托管部署）                                                                                                                                  | `web`               |
+| `VITE_BASE`              | 路由部署基础路径（必须以 `/` 开头和结尾；多应用聚合构建时由 `scripts/build-pages.ts` 内 `REPO_PREFIX` 按 app 注入，见 docs/43 §7）                                                        | `/`                 |
+| `VITE_AUTH_ORIGIN`       | 统一登录重定向基址（`@vv/shared` redirect.ts 与各 app 守卫读取）：未登录整页跳 `${VITE_AUTH_ORIGIN}/login?redirect=...`，登出回跳同源；同域网关/子路径部署按实际前缀配置                  | `/auth`             |
+| `VITE_STORAGE_NAMESPACE` | storage 命名空间（隔离多项目共用 localStorage）                                                                                                                                           | `vue3-vite-project` |
+| `VITE_BRAND_COLOR`       | 业务品牌色（HEX，覆盖 Element Plus 默认蓝 `#409eff`，含灯色阶联动，详见 [docs/06-主题管理规范.md](docs/06-主题管理规范.md)）                                                              | `#409eff`           |
+| `VITE_QUIET_DEV`         | 关闭 dev 模式 GlobalComponents 自动注册徽章（专注调试时减少噪音，详见 `packages/ui/src/global-components.ts`）                                                                            | 不设 = 输出徽章     |
+| `VITE_BEM_PREFIX`        | BEM 类名前缀（同时影响 TS 端 `createNamespace` 与 SCSS `bem mixin`；改一处即全站类名同步切换，详见 `packages/shared/src/utils/bem.ts` + `packages/ui/src/assets/styles/mixins/bem.scss`） | `vv`                |
 
-> 环境变量读取：项目内显式通过 `import.meta.env.VITE_XXX` 访问。`baseURL` / `storage namespace` 单一来源在 `src/api/http.ts` 和 `src/utils/storage.ts`，不在各业务模块分散。
+> 环境变量读取：项目内显式通过 `import.meta.env.VITE_XXX` 访问。`baseURL` / `storage namespace` 单一来源在 `packages/shared/src/api/http.ts` 和 `packages/shared/src/utils/storage.ts`，不在各业务模块分散。
 
 ### Nginx 配置示例
 
@@ -732,7 +729,7 @@ pnpm bench             # vitest bench 基准测试
 - `components/ProTable/`、`components/form-schema/` — 引擎与 composer 全目录 spec
 - `layouts/` — default/portal/h5/big 布局渲染层
 - `modules/demo/` 等 — 各模块 views/components 行为级 smoke
-- 集成层 — global-plugin、router/auto-register、build 脚本（mock/ 目录无 spec，靠 type-check:full 与 dev 手测兜底）
+- 集成层 — global-plugin、router/auto-register、build 脚本（`packages/mock` 目录无 spec，靠 type-check:full 与 dev 手测兜底）
 
 覆盖率阈值（`vitest.config.ts` 实际值，渐进基线）：lines/statements 50、functions 48、branches 45——脚手架阶段宽松起步，注释已规划 v4.0 提至 70/70/65/70、业务阶段再提 80。当前 199 个 spec 文件 / 2506+ 用例（src 192 + build 7，不含 tests/e2e 的 3 个 playwright spec）+ Playwright e2e 首批（四栖 6 条 + ProTable 3 条），详见 [docs/04-构建与测试工具.md](docs/04-构建与测试工具.md) §测试文件清单。
 

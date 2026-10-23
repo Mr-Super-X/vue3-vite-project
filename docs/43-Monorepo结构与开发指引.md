@@ -44,21 +44,21 @@ vue3-vite-project（pnpm workspace + turbo@2）
 
 ## 3. 常用命令
 
-| 场景                                 | 命令                                                           |
-| ------------------------------------ | -------------------------------------------------------------- |
-| 安装全 workspace 依赖                | `pnpm install`                                                 |
-| 全量 dev（turbo 并行 6 app）         | `pnpm dev`                                                     |
-| 单 app dev                           | `pnpm -C apps/<a> dev`（`dev:local` = 本地菜单模式）           |
-| 同域网关 dev（6 app 带 base，见 §6） | `pnpm dev:gateway`                                             |
-| 全量构建（turbo 拓扑序 + 类型门禁）  | `pnpm build`                                                   |
-| 全量单测（turbo，test 依赖 ^build）  | `pnpm test`                                                    |
-| 单 app 测试 / 覆盖率 / UI            | `pnpm -C apps/admin test[:coverage                             | :ui]`；根 `pnpm test:coverage` 收容 |
-| 类型检查                             | `pnpm type-check`（turbo）/ `pnpm -C apps/<a> type-check:full` |
-| gh-pages 六应用聚合构建              | `pnpm build:pages`（产物根 `dist/<app>/` + 落地页）            |
-| 路由一致性（6 app 逐个校验）         | `pnpm check:routes`                                            |
-| alias 与 tsconfig paths 同步         | `pnpm generate:tsconfig-paths` / `pnpm check:aliases`          |
+| 场景                                 | 命令                                                                                                          |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| 安装全 workspace 依赖                | `pnpm install`                                                                                                |
+| 全量 dev（turbo 并行 6 app）         | `pnpm dev`                                                                                                    |
+| 单 app dev                           | `pnpm -C apps/<a> dev`（`dev:local` = 本地菜单模式）                                                          |
+| 同域网关 dev（6 app 带 base，见 §6） | `pnpm dev:gateway`                                                                                            |
+| 全量构建（turbo 拓扑序 + 类型门禁）  | `pnpm build`                                                                                                  |
+| 全量单测（turbo，test 依赖 ^build）  | `pnpm test`                                                                                                   |
+| 单 app 测试 / 覆盖率 / UI            | `pnpm -C apps/admin test`、`test:coverage`、`test:ui`；根 `pnpm test:coverage` / `test:ui` 收容（admin 口径） |
+| 类型检查                             | `pnpm type-check`（turbo）/ `pnpm -C apps/<a> type-check:full`                                                |
+| gh-pages 六应用聚合构建              | `pnpm build:pages`（产物根 `dist/<app>/` + 落地页）                                                           |
+| 路由一致性（6 app 逐个校验）         | `pnpm check:routes`                                                                                           |
+| alias 与 tsconfig paths 同步         | `pnpm generate:tsconfig-paths` / `pnpm check:aliases`                                                         |
 
-新增业务模块仍在 **app 内**执行：`pnpm new-module <kebab-name>`（在 app 目录上下文运行生成器，生成 `apps/<a>/src/modules/<name>/` 骨架）。
+新增业务模块：`pnpm new-module <kebab-name>`（默认生成到 `apps/admin/src/modules/<name>/`，`--app <a>` 指定其他 app，`--with-mock` 等选项见脚本头注）。脚本以 `import.meta.dirname` 定位仓库根，**在任意目录执行均可**，无须先 `cd` 进 app 目录。
 
 ## 4. 新增应用流程
 
@@ -88,7 +88,7 @@ vue3-vite-project（pnpm workspace + turbo@2）
 ```
 
 - `VITE_AUTH_ORIGIN` 由各 app `.env` 注入（生产缺省 `/auth`；子路径部署时按实际前缀改）；包内不硬编码 app 名。
-- dev 下单 app 起服务（如只起 admin）时 `VITE_AUTH_ORIGIN` 指向的 `/auth` 无网关可路由——这是预期行为，统一登录全链路须走 §6 网关或全量 `pnpm dev`。
+- dev 下**统一登录全链路必须走 §6 网关（:8080）**——单 app 起服务（如只起 admin）时 `VITE_AUTH_ORIGIN` 指向的 `/auth` 无路由可达，未登录跳 `/auth/login` **404 属预期**。注意全量 `pnpm dev` 也不可用：各 app 独立端口（5174-5179），`/auth` 是相对路径，在 5174 上跳 `/auth/login` 仍是 5174 的 404，不会跨端口到达 auth（5179）。
 
 ## 6. 本地同域网关（docker compose）
 
@@ -133,3 +133,40 @@ docker compose up
 - 全局组件不要显式 import（@vv/ui 三目录自动注册）：CLAUDE.md §1.7
 - AutoImport 标识符来源注释约定：CLAUDE.md §1.6.1
 - 单 app 使用场景（模板受众只取一个 app）：取 `apps/admin` + `packages/*` 即可，包与 app 间仅 workspace 链接耦合
+
+## 9. 本地开发排障（高频 4 场景）
+
+> **前置（网关相关场景）**：需 Docker Desktop 已启动。Win/Mac 内置 `host.docker.internal` 映射；Linux 靠 `docker-compose.yml` 的 `extra_hosts: host-gateway`，无需额外配置。
+
+### 9.1 dev 启动报 `Port 517X is already in use`
+
+`@vv/config` 的 `SERVER_DEFAULTS.strictPort: true`（`packages/config/src/server.ts`）——端口被占用**直接报错退出，不会自动漂移**（漂移会让 docker 网关 location 反代落空，排查困难）。端口表：
+
+| 端口 | 归属       | 端口 | 归属 |
+| ---- | ---------- | ---- | ---- |
+| 5174 | admin      | 5177 | h5   |
+| 5175 | docs       | 5178 | big  |
+| 5176 | portal     | 5179 | auth |
+| 8080 | nginx 网关 |      |      |
+
+处置：先找到占用进程释放（Windows `netstat -ano | findstr 5174`，macOS/Linux `lsof -i:5174`）。确需换端口时**三处同改**：目标 app `vite.config.ts` 的 `portOffset`、`scripts/dev-gateway.ts` 的 `APPS` 表、`docker/nginx.dev.conf` 的 location。
+
+### 9.2 网关 502：`http://localhost:8080/admin/` 返回 Bad Gateway
+
+宿主 IP 漂移：Docker Desktop 的 host-gateway IP（默认 `192.168.65.254`，WSL 网段网关）在重启 / 换网卡后可能变化，nginx 容器内直连旧 IP 即 502。改法：查当前宿主 IP（`ipconfig` 找 `vEthernet (WSL)` 网段的网关地址，或 Docker Desktop → Settings → Resources → Network），替换 `docker/nginx.dev.conf` 中 **6 组** `proxy_pass http://192.168.65.254:51XX` 的宿主 IP（`/admin` 与 `/api` 同为 5174，文件头注释有背景说明），然后 `docker compose restart`。
+
+### 9.3 mock 接口 404：`/api/auth/login` 等返回 404
+
+按序排查：
+
+1. **网关模式**：确认请求地址是 `:8080` 而非具体 app 端口——`/api/*` 由 `nginx.dev.conf` 的 `location /api/` 统一反代到 admin（5174，其 mock 最全：auth/user/menu 三模块）；不经网关直连单 app 端口时，由各 app 自己的 vite-plugin-mock 处理（同一 `@vv/mock` 数据源，响应一致）
+2. **mock 文件位置**：mock 已迁 `packages/mock/src/`（**不是**根 `mock/`）；新建 mock 文件要放进该目录（或被 viteMockServe 扫描到的约定目录）才会生效
+3. **new-module 未带 `--with-mock`**：该选项可选，未传时只生成业务骨架、不生成 mock——接口自然 404，补一个 mock 文件即可
+
+### 9.4 HMR 失效：console 报 `[vite] failed to connect to websocket ... client:865`
+
+经网关 dev 时，vite client 若把 ws 指向网关端口会握手失败（页面不热更）。**已内置修复**：`@vv/config` 工厂 `server.hmr` 段将 `port` / `clientPort` 固定为 app 自身端口（5174-5179），client 直连 vite 原生 ws 端点（与 `VITE_BASE=/<app>/` 的 hmrBase 匹配）。若仍报错，按序确认：
+
+1. app 由 `pnpm dev:gateway` 启动（带 `VITE_BASE=/<app>/`）——直连单 app dev 时同样生效，可用它区分是网关问题还是 vite 自身问题
+2. `docker/nginx.dev.conf` 的 `Upgrade` / `Connection` 头透传未被改动（server 级，丢失则 ws 经网关握手失败）
+3. 浏览器代理 / 安全软件未拦截 5174-5179 的 websocket 连接
