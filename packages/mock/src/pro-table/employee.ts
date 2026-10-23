@@ -3,7 +3,7 @@
  *
  * mock 数据：5 名员工，工资 1.2w~8w，其中钱七工资 8w 触发业务超限校验。
  */
-import type { ProTableRequestApi } from '@components/ProTable/types'
+import type { ProTableRequestApi } from '@vv/shared'
 
 interface Employee {
   id: string

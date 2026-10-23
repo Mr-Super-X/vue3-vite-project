@@ -1,11 +1,12 @@
 {
   "extends": "../shared/tsconfig.base.json",
-  "include": ["src/**/*"],
+  // env.d.ts / auto-globals.d.ts 与 packages/ui/tsconfig.json 同先例：mock 自 2026-10-23 起
+  // 经包名消费 @vv/shared（ProTable 契约类型），shared 源码需要 vite/client 的 ImportMeta
+  // 增强 + auto-import 注入标识符的全局声明（源码按宿主装配契约书写，见 shared README）才能类型通过
+  "include": ["src/**/*", "../shared/src/types/env.d.ts", "../shared/src/types/auto-globals.d.ts"],
   "compilerOptions": {
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.tsbuildinfo",
-    // mock 仅消费 @components（ProTable 类型契约）；别名语义与 @vv/config app-aliases 对齐
-    "paths": {
-      "@components/*": ["../ui/src/components/*"]
-    }
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.tsbuildinfo"
+    // ProTable 契约类型自 2026-10-23 起消费 @vv/shared 包名（依赖方向铁律：mock→shared 单向，
+    // 不再经 @components 别名直指 ui 源码）；本包已无别名消费，paths 随之移除
   }
 }

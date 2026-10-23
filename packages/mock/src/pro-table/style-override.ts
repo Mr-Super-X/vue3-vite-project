@@ -11,7 +11,7 @@
  *
  * @group Demo Mock
  */
-import type { ProTableRequestApi } from '@components/ProTable/types'
+import type { ProTableRequestApi } from '@vv/shared'
 
 export interface StyleOverrideProduct {
   id: number

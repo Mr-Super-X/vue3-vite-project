@@ -8,12 +8,14 @@
  * - `execute`：AsyncState 重试按钮触发 refetch
  *
  * @see [`@composables/useRequest`](../../../composables/useRequest.ts) 请求封装
- * @see [`@/components/common/AsyncState`](../../../components/common/AsyncState.vue) 三态容器
+ * @see `@vv/ui/components/common/AsyncState` 三态容器（全局自动注册，模板零 import）
  * @see [`@/api/modules/user`](../../../api/modules/user.ts) getList 接口
  * @group 业务模块：User
  */
 import { userApi } from '@api/modules/user'
-import AsyncState from '@components/common/AsyncState.vue'
+
+// AsyncState 经 unplugin-vue-components 全局自动注册（CLAUDE.md §1.7），
+// 模板直接用——显式 import 是 v3.0.1 codemod 漏网，2026-10-23 审查修复
 
 const { data, loading, error, isEmpty, execute } = useRequest(() =>
   userApi.getList({ page: 1, pageSize: 10 })

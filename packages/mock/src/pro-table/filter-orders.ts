@@ -8,7 +8,7 @@
  *
  * 数据范围：12 行订单，覆盖 3 种状态 / 4 个部门 / 多种金额 + 日期。
  */
-import type { ProTableRequestApi, ProTableResponse } from '@components/ProTable/types'
+import type { ProTableRequestApi, ProTableResponse } from '@vv/shared'
 
 export interface Order {
   id: string

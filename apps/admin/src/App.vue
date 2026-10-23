@@ -12,22 +12,24 @@
  *
  * @see [`@/router`](./router/index.ts) 路由配置
  * @see [`@/locales`](./locales/index.ts) i18n 入口
- * @see [`./components/common/ErrorBoundary.vue`](./components/common/ErrorBoundary.vue) 错误边界
- * @see [`./components/common/AsyncState.vue`](./components/common/AsyncState.vue) 三态容器
+ * @see `@vv/ui/components/common/ErrorBoundary.vue` 错误边界（全局自动注册）
+ * @see `@vv/ui/components/common/AsyncState.vue` 三态容器（全局自动注册）
  * @group 应用根
  */
 import { useI18n } from 'vue-i18n'
 // router store 是 admin 私有（P1-3：@store 别名指向 @vv/shared，仅含 4 个共享 store）
 import { useRouterStore } from '@/store/modules/router'
 import { useAppStore } from '@vv/shared'
-import ErrorBoundary from '@components/common/ErrorBoundary.vue'
-import AsyncState from '@components/common/AsyncState.vue'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import en from 'element-plus/es/locale/lang/en'
 import type { Language } from 'element-plus/es/locale'
 
 // BEM 工具由 unplugin-auto-import 自动注入，无须显式 import
 const bem = createNamespace('app')
+
+// ErrorBoundary / AsyncState 是 @vv/ui 全局自动注册组件（unplugin-vue-components 深扫
+// components/common，CLAUDE.md §1.7），模板直接用，禁止显式 import——显式 import 会让
+// IDE hover 丢失 DefineComponent 完整类型展开；2026-10-23 架构审查修复 v3.0.1 codemod 漏网
 
 const routerStore = useRouterStore()
 const appStore = useAppStore()

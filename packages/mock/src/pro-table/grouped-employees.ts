@@ -3,7 +3,7 @@
  *
  * mock 数据：60 名员工，部门在 研发/产品/设计/运营 间循环
  */
-import type { ProTableRequestApi } from '@components/ProTable/types'
+import type { ProTableRequestApi } from '@vv/shared'
 
 interface Employee {
   id: number

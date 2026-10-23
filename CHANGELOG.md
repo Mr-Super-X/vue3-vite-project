@@ -4,6 +4,16 @@
 
 ## 未发布
 
+### 🐛 Fixes | 架构审查 P0 四连修：mock→ui 反向依赖斩断 / §1.7 漏网 ×3 / 注册表反向校验 / 端口双写锁死（2026-10-23）
+
+> 背景：第四轮五维审计（易用性/可扩展性/可复用性/重复性/DX）产出 4 个 P0——mock 包经别名反向依赖 ui 源码违反 §2.1 单向铁律；admin 两处显式 import 全局组件违反 §1.7（v3.0.1 codemod 漏网）；apps/ 目录存在但 registry 漏登记时无任何脚本变红（静默失效）；registry.port 与 vite.config portOffset 双写无校验。
+
+- **ProTable 契约类型下沉 @vv/shared**（`packages/shared/src/types/pro-table.ts` 新增）：`ProTableResponse` / `ProTableRequestApi` 两类型原定义于 ui 的 ProTable/types，mock 的 10 个 pro-table 数据源经 `'@components/ProTable/types'` 别名（tsconfig paths 直指 ui 源码）消费——包边界类型侧不可见，ui 内部文件位移即炸 mock type-check。现 ui 侧改 `import type` + `export type` re-export（对外 API 与存量消费方零改动），mock 10 文件改经 `'@vv/shared'` 包名消费；`@vv/mock` 新增 `@vv/shared` 依赖 + 3 个宿主装配 peer（vue-router/pinia/pinia-plugin-persistedstate，auto-globals 全局声明解析所需），tsconfig 的 `@components` paths 移除、`env.d.ts`/`auto-globals.d.ts` 纳入 include（与 ui 包同先例）
+- **§1.7 全局组件显式 import 清零**：`apps/admin/src/App.vue`（ErrorBoundary + AsyncState）与 `apps/admin/src/modules/user/views/List.vue`（AsyncState）删除显式 import——两组件本就在 unplugin-vue-components 自动注册 dirs（@vv/ui/components/common deep 扫描），显式 import 反令 IDE hover 丢失 DefineComponent 完整类型展开；JSDoc `@see` 同步订正为 @vv/ui 包路径
+- **注册表反向校验**（`scripts/check-routes.ts` 新增 E 校验）：`apps/` 下发现的应用（含 src/modules）必须登记 `scripts/apps-registry.mjs`——漏登记原有三道静默失效：boundary-apps-<new> ESLint 规则不生成（跨 app 引用逃逸无 error 拦截）、`requiredFor` 空集让 B/C 校验静默跳过、网关校验不覆盖；唯有反向校验能暴露，现 CI 红
+- **端口双写锁死**（`scripts/check-gateway-conf.ts` 新增 `validatePortWiring()`）：registry 绝对 port（5174-5179）与各 app `vite.config.ts` portOffset（缺省 0）是同一事实两处手写，漂移时表现是「经网关 404 / waitForPort 超时」且报错现象误导网络层——现静态锁死 `SERVER_DEFAULTS.port + offset === registry.port`，check:routes 收尾段复跑（CI 双保险）
+- **验证**：`check:routes` 6 app A-E + 网关 + 端口锁死全过；shared/ui/mock/admin vue-tsc --force 全绿（mock 首次暴露并修复 env.d.ts/auto-globals 宿主装配缺口）；ui 1924 用例全过（ProTable 类型 spec 零回归）
+
 ### 📦 Refactor | 装配编排层收敛：bootstrapApp / createAppRouter 工厂（main.ts + router/index.ts 6 份拷贝 → 单源）（2026-10-23）
 
 > 背景：P5-P6 已下沉纯函数段（品牌色/标题/prod-mock/骨架三件套/fallback/plugins），但装配「编排层」仍 6 份逐字拷贝——6 app 的 main.ts（约 70 行×6）与 router/index.ts（约 75 行×6）装配序列逐字一致，仅标题/插件 presence/守卫编排因地而异。本任务把编排层也收敛为工厂，顺序契约代码化（spec 锁定）。

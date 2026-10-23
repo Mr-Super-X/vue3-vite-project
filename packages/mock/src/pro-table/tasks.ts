@@ -1,7 +1,7 @@
 /**
  * 行拖拽 demo —— 待办任务 mock（spec §八.3 / Task 11）
  */
-import type { ProTableRequestApi } from '@components/ProTable/types'
+import type { ProTableRequestApi } from '@vv/shared'
 
 interface Task {
   id: string

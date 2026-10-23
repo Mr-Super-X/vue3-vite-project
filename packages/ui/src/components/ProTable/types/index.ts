@@ -14,6 +14,14 @@ import type { Component, ComponentPublicInstance, Ref, VNode } from 'vue'
 // 链路 types → useConfirm → useDialog → ProDialog.vue。ToolbarConfirm 字段内联声明，
 // 结构类型与 UseConfirmOptions 子集等价（useConfirm(action.confirm) 编译通过）。
 
+// ProTable 契约类型（ProTableResponse / ProTableRequestApi）自 2026-10-23 起下沉
+// @vv/shared 单源（packages/shared/src/types/pro-table.ts）——mock 数据源与组件双方
+// 都依赖 shared，符合 config→mock→shared→ui 单向铁律；此处 import + re-export 使
+// 本文件既有引用（ProTableProps.requestApi / responseAdapter）与存量消费方零改动
+import type { ProTableRequestApi, ProTableResponse } from '@vv/shared'
+
+export type { ProTableRequestApi, ProTableResponse }
+
 /** 行内编辑配置 —— 列粒度控制哪些字段可编辑 @group ProTable 类型 */
 export interface ColumnEditConfig {
   el: 'input' | 'select' | 'input-number' | string
@@ -508,31 +516,6 @@ export interface ToolbarAction<T extends object = Record<string, unknown>> {
   /** 子操作：与父同级参与折叠计数，超出 maxVisibleActions 时随父收进「更多」 */
   children?: ToolbarAction<T>[]
 }
-
-/**
- * ProTable requestApi 响应结构 —— 后端约定（data + total + pageNum + pageSize）。
- *
- * 泛型 T = 行数据类型（M1 泛型化，默认 Record<string, unknown> 向后兼容）。
- *
- * @group ProTable 类型
- */
-export interface ProTableResponse<T extends object = Record<string, unknown>> {
-  data: T[]
-  total: number
-  pageNum: number
-  pageSize: number
-}
-
-/**
- * ProTable requestApi 方法签名。
- *
- * 泛型 T = 行数据类型（M1 泛型化，默认 Record<string, unknown> 向后兼容）。
- *
- * @group ProTable 类型
- */
-export type ProTableRequestApi<T extends object = Record<string, unknown>> = (
-  params: Record<string, unknown>
-) => Promise<ProTableResponse<T>>
 
 /**
  * ProTable 组件 props —— 公开 API 的类型契约（spec §4 / §7）。

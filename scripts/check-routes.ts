@@ -16,11 +16,13 @@
 //       其余 app（docs/portal/h5/big）→ ['NotFound']（全公开 app 只有 404 兜底）
 //   - 路由检查收尾时自动复跑网关配置校验（check-gateway-conf 同一函数，CI 单点覆盖）
 //
-// 4 个校验（语义与单应用时代一致，逐 app 执行）：
+// 5 个校验（语义与单应用时代一致，逐 app 执行）：
 //   A. whitelist ⊆ implementedNames（白名单元素必须有 route 实现）
 //   B. 系统兜底名单 ⊆ whitelist（任何项目都必须能匿名访问的兜底）
 //   C. 系统兜底名单 ⊆ implementedNames（兜底页面必须有真实路由）
 //   D. 双向一致性最终汇总
+//   E. 注册表反向校验：apps/ 下发现的应用必须登记 apps-registry.mjs（防静默失效）
+// 收尾另跑网关校验 + 端口双写锁死（check-gateway-conf 同函数，CI 单点覆盖）
 //
 // 设计变更（2026-07-24 方案 A）：
 //   - 移除 RouteName 联合类型校验（types.ts RouteName 改为 string alias）
@@ -34,7 +36,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
 import { APPS } from './apps-registry.mjs'
-import { validateGatewayConf } from './check-gateway-conf.ts'
+import { validateGatewayConf, validatePortWiring } from './check-gateway-conf.ts'
 
 const ROOT = resolve(import.meta.dirname, '..')
 const APPS_DIR = resolve(ROOT, 'apps')
@@ -161,6 +163,20 @@ let totalErrors = 0
 
 console.log(`🔍 检查路由配置一致性（${apps.length} 个应用）...\n`)
 
+// E. 注册表反向校验：apps/ 下发现的应用（含 src/modules）必须登记 apps-registry.mjs。
+//    漏登记是高危静默失效点（2026-10-23 扩展性审查 P0）——boundary-apps-<new> ESLint
+//    规则不会生成（新 app 引用兄弟 app 无 error 拦截），requiredFor 返回空集让 B/C
+//    校验静默跳过，网关校验也不覆盖它：三道防线同时失明，唯有反向校验能暴露。
+const registeredApps = new Set(APPS.map((entry) => entry.name))
+for (const app of apps) {
+  if (!registeredApps.has(app)) {
+    console.error(
+      `✖ [E] apps/${app} 存在 src/modules 但未登记 scripts/apps-registry.mjs（ESLint 边界规则 / B/C 兜底校验 / 网关校验将静默跳过它）`
+    )
+    totalErrors++
+  }
+}
+
 for (const app of apps) {
   const whitelistedNames = extractWhitelist(readAppText(app, 'src/router/whitelist.ts'), app)
   const implementedNames = extractImplementedNames(app)
@@ -236,6 +252,16 @@ if (gatewayErrors.length === 0) {
 } else {
   for (const message of gatewayErrors) console.error(`✖ ${message}`)
   totalErrors += gatewayErrors.length
+}
+console.log('')
+
+console.log('━━━ 端口双写锁死（apps-registry.mjs port ↔ vite.config.ts portOffset）━━━')
+const portErrors = validatePortWiring()
+if (portErrors.length === 0) {
+  console.log(`✓ ${APPS.length} 个 app 的注册表端口与 vite.config portOffset 推导一致`)
+} else {
+  for (const message of portErrors) console.error(`✖ ${message}`)
+  totalErrors += portErrors.length
 }
 console.log('')
 

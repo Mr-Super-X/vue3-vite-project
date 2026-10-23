@@ -20,6 +20,8 @@ export * from './utils/index.ts'
 export * from './enums/httpEnum.ts'
 export * from './enums/roleEnum.ts'
 export * from './types/dict.ts'
+// ProTable requestApi 契约（P0 审查：mock↔ui 共享类型下沉单源，ui 侧 re-export 兼容存量）
+export * from './types/pro-table.ts'
 export * from './composables/useAuth.ts'
 export * from './composables/useRequest.ts'
 export * from './composables/useDict.ts'

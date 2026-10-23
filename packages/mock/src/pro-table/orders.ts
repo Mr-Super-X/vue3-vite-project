@@ -3,7 +3,7 @@
  *
  * 6 条订单，按状态相邻自动纵向合并：待付款 2 条 / 已付款 3 条 / 已发货 1 条。
  */
-import type { ProTableRequestApi } from '@components/ProTable/types'
+import type { ProTableRequestApi } from '@vv/shared'
 
 interface Order {
   id: string

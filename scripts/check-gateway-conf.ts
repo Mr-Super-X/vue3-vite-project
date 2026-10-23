@@ -11,14 +11,21 @@
  *      （多余 location 即名单漂移，双向校验）；=/ 精确匹配与 /api/ 反代块不在此列
  *   2. 端口接线：每个注册 app 的 port 必须出现在某条 proxy_pass 目标中
  *      （location 名与端口错位的交叉漂移由 dev-gateway 直查端口 + 本校验的组合兜住）
+ *   3. 端口双写锁死（validatePortWiring）：注册表 port 与各 app vite.config.ts 的
+ *      portOffset 是同一事实的两处手写（port = SERVER_DEFAULTS.port + offset），
+ *      漂移时 dev 实际端口与网关/文档不符且报错现象误导（2026-10-23 扩展性审查 P0）
  *
  * 用法：pnpm check:gateway-conf（check-routes 汇总阶段自动复跑同一校验函数，CI 双保险）
  */
 
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { APPS } from './apps-registry.mjs'
+// SERVER_DEFAULTS.port 是 portOffset 的推导基准（packages/config/src/server.ts 单源），
+// 与 generate-tsconfig-paths 引 packages/config 源码同先例
+import { SERVER_DEFAULTS } from '../packages/config/src/server.ts'
 
 const CONF_PATH = fileURLToPath(new URL('../docker/nginx.dev.conf', import.meta.url))
 
@@ -59,15 +66,51 @@ export function validateGatewayConf(confText = readFileSync(CONF_PATH, 'utf-8'))
   return errors
 }
 
+/**
+ * 端口双写锁死：apps-registry.mjs 的绝对 port 与各 app vite.config.ts 的 portOffset
+ * 是同一事实的两处手写（port = SERVER_DEFAULTS.port + offset），历史上无任何静态
+ * 校验——dev 直启时实际端口与注册表漂移，表现是「某 app 经网关 404 / waitForPort 超时」
+ * 且报错现象指向网络层，排查成本高。此处静态锁死，漂移即 CI 红。
+ */
+export function validatePortWiring(): string[] {
+  const errors: string[] = []
+  const appsDir = resolve(fileURLToPath(new URL('..', import.meta.url)), 'apps')
+  for (const { name, port } of APPS) {
+    const viteConfigPath = join(appsDir, name, 'vite.config.ts')
+    if (!existsSync(viteConfigPath)) {
+      errors.push(`apps/${name}/vite.config.ts 不存在（注册表登记了该 app 但无 vite 配置）`)
+      continue
+    }
+    const text = readFileSync(viteConfigPath, 'utf-8')
+    if (!text.includes('createViteConfig(')) {
+      errors.push(
+        `apps/${name}/vite.config.ts 未调用 createViteConfig 工厂（无法推导实际 dev 端口）`
+      )
+      continue
+    }
+    // 工厂缺省 portOffset = 0（SERVER_DEFAULTS.port 即 admin 实际端口），缺省声明合法
+    const offsetMatch = text.match(/portOffset:\s*(\d+)/)
+    const actual = SERVER_DEFAULTS.port + (offsetMatch ? Number(offsetMatch[1]) : 0)
+    if (actual !== port) {
+      errors.push(
+        `apps/${name} 端口双写不一致：apps-registry.mjs port=${port}，但 vite.config.ts portOffset=${offsetMatch[1]} → 实际 dev 端口 ${actual}（须同步两处）`
+      )
+    }
+  }
+  return errors
+}
+
 function main(): void {
   const errors = validateGatewayConf()
-  if (errors.length > 0) {
-    console.error(`✖ 网关配置校验失败（docker/nginx.dev.conf，${errors.length} 处）：`)
-    for (const message of errors) console.error(`  - ${message}`)
+  const portErrors = validatePortWiring()
+  const all = [...errors, ...portErrors]
+  if (all.length > 0) {
+    console.error(`✖ 网关配置校验失败（docker/nginx.dev.conf + 端口双写，${all.length} 处）：`)
+    for (const message of all) console.error(`  - ${message}`)
     process.exit(1)
   }
   console.log(
-    `✓ 网关配置与注册表一致（${APPS.length} 个 app：${APPS.map((app) => `/${app.name}/ → :${app.port}`).join('，')}）`
+    `✓ 网关配置与注册表一致（${APPS.length} 个 app：${APPS.map((app) => `/${app.name}/ → :${app.port}`).join('，')}）；端口双写锁死通过`
   )
 }
 

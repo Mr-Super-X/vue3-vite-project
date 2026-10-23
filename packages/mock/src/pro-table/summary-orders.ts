@@ -3,7 +3,7 @@
  *
  * mock 数据：50 条订单，含数量 / 单价 / 折扣（用于 sum/avg/max 演示）
  */
-import type { ProTableRequestApi } from '@components/ProTable/types'
+import type { ProTableRequestApi } from '@vv/shared'
 
 interface Order {
   id: number
