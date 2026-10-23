@@ -167,6 +167,20 @@ function main(): void {
   const isCheck = process.argv.includes('--check')
   const appRoots = findAppRoots()
 
+  // 反向校验（2026-10-23 扩展性审查）：apps/ 下存在但缺 tsconfig.app.json 的目录被
+  // findAppRoots 静默跳过——paths 全缺会让该 app 的 IDE 跳转 / type-check 静默劣化。
+  // 新增 app 必须先落 tsconfig.app.json（可仿 apps/big/tsconfig.app.json 骨架）再跑本脚本。
+  const configuredNames = new Set(appRoots.map((root) => path.basename(root)))
+  const unconfigured = readdirSync(APPS_DIR, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && !configuredNames.has(entry.name))
+    .map((entry) => entry.name)
+  if (unconfigured.length > 0) {
+    console.error(
+      `❌ apps/${unconfigured.join('、')} 缺少 tsconfig.app.json（generate-tsconfig-paths 已静默跳过其 paths 生成）\n   先为该 app 建 tsconfig.app.json（仿 apps/big/tsconfig.app.json 骨架），再跑 pnpm generate:tsconfig-paths`
+    )
+    process.exit(1)
+  }
+
   if (appRoots.length === 0) {
     console.error(`❌ ${APPS_DIR} 下未找到任何 tsconfig.app.json`)
     process.exit(1)

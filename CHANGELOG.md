@@ -4,6 +4,19 @@
 
 ## 未发布
 
+### 📦 Refactor | 第四轮五维审查 P2 余项：e2e projects 注册表派生 / 死参数删除 / 静默跳过清零（2026-10-23）
+
+> 背景：可扩展性 + 可复用性审计的 P2 批——playwright projects 硬编码 4 app（新 app e2e 须手动加段）、`extraAutoImports` 零消费死参数、`generate-tsconfig-paths` 对缺 tsconfig.app.json 的新 app 静默跳过、`VITE_APP_ID` 无文档、`@vv/shared` 双轨出口动机未显式化。
+
+- **playwright.config.ts 从注册表派生**（扩展性审查）：4 个 app project（admin/docs/h5/big）的硬编码段改为 `APPS.filter((app) => existsSync(tests/e2e/<name>))` 单源派生——端口/名单与 dev-gateway / check-routes / eslint 边界同一份事实（apps-registry.mjs）；新增 app 只要建 `tests/e2e/<name>/` 目录即自动纳入 e2e 覆盖，无须改配置。`--list` 冒烟 14 tests/7 files 与改造前一致
+- **删除 `extraAutoImports` 死参数**（可复用性审查）：`AppViteOptions` 中唯一零消费方的扩展点删除（YAGNI）——全仓 6 app vite.config 无一传参，`VV_SOURCE_MODULES` 单源已是完备注入清单；新增注入需求改工厂常量
+- **generate-tsconfig-paths 反向校验**：apps/ 下存在但缺 `tsconfig.app.json` 的目录由静默跳过改为报错退出（附骨架指引）——原行为让新 app 的 IDE 跳转 / type-check 静默劣化无任何信号
+- **README 环境变量表补 `VITE_APP_ID`**：工厂按 `appName` define 注入的 persist key 前缀（`admin:app-ui`），多 app 同域部署时隔离各 app 持久化数据——此前代码已用但文档无条目
+- **`@vv/shared` 双轨出口动机显式化**：barrel 头注补具名子路径出口（`./store` / `./router-guards`）说明——为历史深路径 import / vi.mock 说明符留兼容位，新代码一律走根 barrel（§1.6.2 立场）
+- **顺手修**：`create-vitest-config.ts` 类型导入修正（vitest/config 不具名导出 UserConfig，改从 vite 导入经增强的类型，--force 全量暴露）
+- **审计误报澄清**：`auto-globals.d.ts` 声明 `useTheme` 并非超集漂移——该文件属 shared 包，shared 的 `store/modules/theme.ts` 确有裸用，声明准确，不动
+- **验证**：`pnpm type-check` turbo 全绿；`pnpm test` turbo 9/9 全绿；`playwright --list` 14 tests；`generate:tsconfig-paths --check` 6 app 一致；eslint 0 error
+
 ### 📦 Refactor | 第四轮五维审查 P1 收敛四连：AppShell 统一壳 / vitest 工厂 / vite 缺省下沉 / routeNames 单源（2026-10-23）
 
 > 背景：重复性审查 4 个 H 级发现——5 个非 admin App.vue 逐字同构（22 行×5）、6 份 vitest.config 的 test 块逐字同构、vite.config 的 base/mockPath 6 份逐字重复、routeNames 提取函数 3 份拷贝 + 1 份硬编码字面量（big 新增子路由白名单不跟随，漂移面最大）。

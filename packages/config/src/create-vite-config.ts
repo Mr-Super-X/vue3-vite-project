@@ -105,11 +105,6 @@ export interface AppViteOptions {
   h5Rem?: boolean
   /** app 私有插件（如 vite-plugin-vue-devtools / rollup-plugin-visualizer） */
   extraPlugins?: PluginOption[]
-  /**
-   * app 私有 auto-import 追加项（如 app 级 composable/utils 注入），合并进业务 imports 尾部；
-   * 工厂内置注入见 VV_SOURCE_MODULES，这里只做追加不改内置
-   */
-  extraAutoImports?: VvAutoImportEntry[]
 }
 
 export function createViteConfig({
@@ -120,7 +115,6 @@ export function createViteConfig({
   portOffset = 0,
   h5Rem = false,
   extraPlugins = [],
-  extraAutoImports = [],
 }: AppViteOptions) {
   // 本地 app 图标集合（i-app-*）：P1-4 起命中 @vv/ui 包源码（existsSync 自动切换，
   // legacyRoot 回落仅作过渡兜底，P5 清理）
@@ -142,7 +136,6 @@ export function createViteConfig({
           'pinia',
           // 业务侧注入条目由 VV_SOURCE_MODULES 派生（单源，见常量头注）
           ...VV_SOURCE_MODULES.filter((entry) => entry.imports.length > 0),
-          ...extraAutoImports,
         ],
         resolvers: [
           // importStyle: 'css' —— 组件/API（ElMessage 等）样式按需自动注入，

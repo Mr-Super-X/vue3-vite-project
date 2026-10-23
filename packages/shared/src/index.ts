@@ -14,6 +14,10 @@
  * - `./directives`（index 是 import.meta.glob 自动注册插件，仅 Vite 上下文可执行）
  * - `./api`（http.ts 模块加载即创建 axios 实例挂拦截器，按需在 app 内经 `@api/*` 别名消费）
  *
+ * 具名子路径出口（package.json exports 的 `./store` / `./router-guards`）：与根 barrel
+ * 重复暴露同一模块——动机是给历史深路径 import / vi.mock 说明符留兼容位（mock 按解析
+ * 路径生效），新代码一律走根 barrel（CLAUDE.md §1.6.2 首选 barrel 立场）
+ *
  * @group 包出口
  */
 export * from './utils/index.ts'

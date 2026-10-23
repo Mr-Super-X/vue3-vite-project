@@ -10,18 +10,52 @@
  *   - gateway project（:8080 同域网关，docker compose + dev:gateway）只承载真正
  *     跨应用漫游用例；无 docker 环境时用例自跳过（e2e 不硬依赖 docker）。
  *
- * 端口事实源：各 app 的 vite.config.ts 注释（admin 5174 / docs 5175 / portal 5176 /
- * h5 5177 / big 5178 / auth 5179，strictPort）。
+ * 变更记录（2026-10-23 晚，扩展性审查）：
+ *   - app projects 从 scripts/apps-registry.mjs 单源派生（端口/名单与 dev-gateway /
+ *     check-routes / eslint 边界同一份事实）——新增 app 只要建 `tests/e2e/<name>/`
+ *     目录即自动纳入 e2e 覆盖，无须改本配置；webServer 统一 `dev:local`（不依赖
+ *     remote 菜单后端，spec 可冷启动直跑）。
+ *
+ * 端口事实源：scripts/apps-registry.mjs（5174-5179，strictPort，check:gateway-conf 锁死）。
  *
  * 启动：pnpm test:e2e（首次需 pnpm test:e2e:install 下载 Chromium）
  * 单 project：pnpm test:e2e --project=docs
  *
  * @group E2E 配置
  */
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { defineConfig, devices } from '@playwright/test'
+
+// apps-registry 是 .mjs（eslint.config.mjs 直接加载的 Node 原生 ESM 约束），
+// 类型镜像在 apps-registry.d.mts；与 eslint.config.mjs / check-routes.ts 同消费形态
+import { APPS } from './scripts/apps-registry.mjs'
 
 /** 项目 dev server 启动超时（vite 冷启动 + mock 打包，本地给足余量） */
 const DEV_SERVER_TIMEOUT = 120 * 1000
+
+const REPO_ROOT = fileURLToPath(new URL('.', import.meta.url))
+const E2E_DIR = join(REPO_ROOT, 'tests', 'e2e')
+
+/**
+ * app projects 从注册表单源派生：apps/<name> 存在对应 tests/e2e/<name>/ spec 目录
+ * 才生成 project（portal/auth 现无 e2e 故不生成；新增 app 建目录即自动纳入）。
+ * dev:local = 本地菜单模式，不依赖 remote 菜单后端，spec 冷启动可直跑。
+ */
+function createAppProjects() {
+  return APPS.filter((app) => existsSync(join(E2E_DIR, app.name))).map((app) => ({
+    name: app.name,
+    testMatch: `tests/e2e/${app.name}/**/*.spec.ts`,
+    use: { ...devices['Desktop Chrome'], baseURL: `http://localhost:${app.port}` },
+    webServer: {
+      command: `pnpm -C apps/${app.name} dev:local`,
+      url: `http://localhost:${app.port}`,
+      reuseExistingServer: !process.env.CI,
+      timeout: DEV_SERVER_TIMEOUT,
+    },
+  }))
+}
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -40,50 +74,7 @@ export default defineConfig({
     video: 'retain-on-failure',
   },
   projects: [
-    {
-      name: 'admin',
-      testMatch: 'tests/e2e/admin/**/*.spec.ts',
-      use: { ...devices['Desktop Chrome'], baseURL: 'http://localhost:5174' },
-      webServer: {
-        command: 'pnpm -C apps/admin dev:local',
-        url: 'http://localhost:5174',
-        reuseExistingServer: !process.env.CI,
-        timeout: DEV_SERVER_TIMEOUT,
-      },
-    },
-    {
-      name: 'docs',
-      testMatch: 'tests/e2e/docs/**/*.spec.ts',
-      use: { ...devices['Desktop Chrome'], baseURL: 'http://localhost:5175' },
-      webServer: {
-        command: 'pnpm -C apps/docs dev:local',
-        url: 'http://localhost:5175',
-        reuseExistingServer: !process.env.CI,
-        timeout: DEV_SERVER_TIMEOUT,
-      },
-    },
-    {
-      name: 'h5',
-      testMatch: 'tests/e2e/h5/**/*.spec.ts',
-      use: { ...devices['Desktop Chrome'], baseURL: 'http://localhost:5177' },
-      webServer: {
-        command: 'pnpm -C apps/h5 dev:local',
-        url: 'http://localhost:5177',
-        reuseExistingServer: !process.env.CI,
-        timeout: DEV_SERVER_TIMEOUT,
-      },
-    },
-    {
-      name: 'big',
-      testMatch: 'tests/e2e/big/**/*.spec.ts',
-      use: { ...devices['Desktop Chrome'], baseURL: 'http://localhost:5178' },
-      webServer: {
-        command: 'pnpm -C apps/big dev:local',
-        url: 'http://localhost:5178',
-        reuseExistingServer: !process.env.CI,
-        timeout: DEV_SERVER_TIMEOUT,
-      },
-    },
+    ...createAppProjects(),
     {
       // 跨应用漫游用例（统一登录 + TagsView 守恒）——依赖 :8080 同域网关
       // （docker compose up + pnpm dev:gateway），e2e 不自动拉起 6 个 app，

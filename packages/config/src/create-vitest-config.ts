@@ -13,11 +13,12 @@
  * e2e/** 与 tests/e2e/** 排除在单测外（e2e 由 Playwright 专跑）。
  */
 import { mergeConfig, defineConfig, configDefaults } from 'vitest/config'
-import type { UserConfig as VitestUserConfig } from 'vitest/config'
+// vitest/config 不具名导出 UserConfig——test 字段由 vitest 的 `declare module 'vite'`
+// 类型增强挂到 vite 的 UserConfig 上（上方 values import 已拉入增强），类型侧统一从 'vite' 导入
 import type { UserConfig } from 'vite'
 
 /** coverage 块类型（仅 admin 消费；阈值基线属 app 自有调参，工厂不预设缺省） */
-type CoverageOptions = NonNullable<NonNullable<VitestUserConfig['test']>['coverage']>
+type CoverageOptions = NonNullable<NonNullable<UserConfig['test']>['coverage']>
 
 export interface CreateVitestConfigOptions {
   /** app 根目录（绝对路径，调用方用 fileURLToPath(new URL('.', import.meta.url))） */
