@@ -37,6 +37,50 @@ import { createScssPreprocessorOptions } from './scss.ts'
 import { SERVER_DEFAULTS } from './server.ts'
 import { VENDOR_CHUNKS } from './vendor-chunks.ts'
 
+/** auto-import 注入条目（unplugin-auto-import v21 数组语法：{ from, imports }） */
+interface VvAutoImportEntry {
+  from: string
+  imports: Array<string | { name: string; as: string }>
+}
+
+/**
+ * 以源码级消费的 @vv/* workspace 模块清单 —— 单一事实来源（新增包/子路径只改这里）：
+ *   ① optimizeDeps.exclude 逐条点名禁止 esbuild 预打包（2026-10-22 P4 实证：预打包不经
+ *     auto-import 转换，shared store 内注入的 defineStore/ref 会成为自由变量 → 模块求值即
+ *     ReferenceError；rolldown-vite 扫描器把每个包子路径当独立 dep id，根包 exclude 不覆盖
+ *     子路径，composables/* 三条注入入口必须逐条点名）；
+ *   ② 下方 AutoImport 的 from 字段从本清单派生（imports 非空的条目），同组包两处点名曾
+ *     是双写漂移点，收敛后不可能再偏。
+ * imports 为空的条目（'@vv/ui' 根包 / '@vv/mock'）只被显式 import（SFC 组件、mock 源），
+ * 不经 auto-import 注入，仅参与 ① 的 exclude。
+ */
+const VV_SOURCE_MODULES: readonly VvAutoImportEntry[] = [
+  {
+    from: '@vv/shared',
+    imports: [
+      // useAppRouter 是项目自研的路由高层 API（区别于 vue-router 自带的 useRouter）
+      'useAppRouter',
+      // 业务侧高频 composables：显式列名不走 dirs 自动扫描——避免误扫同目录 *.spec.ts
+      'useRequest',
+      'useAuth',
+      // 字典组合式 API（契约形态按 code 解构）
+      'useDict',
+      // BEM 类名工具
+      'createNamespace',
+    ],
+  },
+  { from: '@vv/ui', imports: [] },
+  { from: '@vv/mock', imports: [] },
+  // 弹窗族（useDialog/useConfirm/useLogout）自 P1-4 起随组件归 @vv/ui，from 走包子路径
+  // （exports "./*" 通配 → ./src/composables/*）。同模块的 DialogCancelledError /
+  // setDialogAppContext / getDialogAppContext 不注入：第一个是类型（不参与运行时），
+  // 后两个只在 main.ts / useConfirm 内部调用（不应污染 setup 全局作用域）
+  { from: '@vv/ui/composables/useDialog', imports: ['useDialog'] },
+  // useConfirm：二次确认；取消时 resolve(false) 而非 reject，调用方无须 try/catch
+  { from: '@vv/ui/composables/useConfirm', imports: ['useConfirm'] },
+  { from: '@vv/ui/composables/useLogout', imports: ['useLogout'] },
+]
+
 export interface AppViteOptions {
   /** app 根目录（绝对路径，调用方用 fileURLToPath(new URL('.', import.meta.url))） */
   appRoot: string
@@ -52,6 +96,11 @@ export interface AppViteOptions {
   h5Rem?: boolean
   /** app 私有插件（如 vite-plugin-vue-devtools / rollup-plugin-visualizer） */
   extraPlugins?: PluginOption[]
+  /**
+   * app 私有 auto-import 追加项（如 app 级 composable/utils 注入），合并进业务 imports 尾部；
+   * 工厂内置注入见 VV_SOURCE_MODULES，这里只做追加不改内置
+   */
+  extraAutoImports?: VvAutoImportEntry[]
 }
 
 export function createViteConfig({
@@ -62,6 +111,7 @@ export function createViteConfig({
   portOffset = 0,
   h5Rem = false,
   extraPlugins = [],
+  extraAutoImports = [],
 }: AppViteOptions) {
   // 本地 app 图标集合（i-app-*）：P1-4 起命中 @vv/ui 包源码（existsSync 自动切换，
   // legacyRoot 回落仅作过渡兜底，P5 清理）
@@ -81,26 +131,9 @@ export function createViteConfig({
           'vue',
           'vue-router',
           'pinia',
-          // 业务侧高频 composables
-          // 显式列名不走 dirs 自动扫描——避免误扫到同目录的 *.spec.ts（vitest 解析会异常）
-          // P1-3：已迁入 @vv/shared 的 composables 改包名注入（根 barrel 聚合导出）；
-          // useAppRouter 是项目自研的路由高层 API（区别于 vue-router 自带的 useRouter）
-          { from: '@vv/shared', imports: [{ name: 'useAuth' }] },
-          { from: '@vv/shared', imports: [{ name: 'useRequest' }] },
-          { from: '@vv/shared', imports: [{ name: 'useAppRouter' }] },
-          // useDict：字典组合式 API（契约形态按 code 解构）
-          { from: '@vv/shared', imports: [{ name: 'useDict' }] },
-          // 弹窗族（useDialog/useConfirm/useLogout）自 P1-4 起随组件归 @vv/ui，
-          // from 走包子路径（exports "./*" 通配 → ./src/composables/*，vite 补全 .ts）
-          // useDialog：命令式弹窗；同模块的 DialogCancelledError / setDialogAppContext /
-          // getDialogAppContext 不注入：第一个是类型（不参与运行时），后两个只在
-          // main.ts / useConfirm 内部调用（不应污染 setup 全局作用域）
-          { from: '@vv/ui/composables/useDialog', imports: [{ name: 'useDialog' }] },
-          // useConfirm：二次确认；取消时 resolve(false) 而非 reject，调用方无须 try/catch
-          { from: '@vv/ui/composables/useConfirm', imports: [{ name: 'useConfirm' }] },
-          { from: '@vv/ui/composables/useLogout', imports: [{ name: 'useLogout' }] },
-          // 业务侧高频 utils（BEM 类名工具，P1-3 起归 @vv/shared）
-          { from: '@vv/shared', imports: [{ name: 'createNamespace' }] },
+          // 业务侧注入条目由 VV_SOURCE_MODULES 派生（单源，见常量头注）
+          ...VV_SOURCE_MODULES.filter((entry) => entry.imports.length > 0),
+          ...extraAutoImports,
         ],
         resolvers: [
           // importStyle: 'css' —— 组件/API（ElMessage 等）样式按需自动注入，
@@ -181,16 +214,9 @@ export function createViteConfig({
     // defineStore/ref 在 bundle 里是自由变量 → 模块求值即 ReferenceError（dev 冷缓存必现）；
     // 排除后按源码 /@fs/ 逐个服务，auto-import 正常注入且 HMR 生效（portal/h5/big 长期形态）。
     // 注：rolldown-vite 扫描器把每个包子路径当独立 dep id（根包 exclude 不覆盖），
-    // '@vv/ui/composables/*' 三条 auto-import 注入入口须逐条点名
+    // composables/* 三条 auto-import 注入入口须逐条点名——清单单源 VV_SOURCE_MODULES
     optimizeDeps: {
-      exclude: [
-        '@vv/shared',
-        '@vv/ui',
-        '@vv/mock',
-        '@vv/ui/composables/useDialog',
-        '@vv/ui/composables/useConfirm',
-        '@vv/ui/composables/useLogout',
-      ],
+      exclude: VV_SOURCE_MODULES.map((entry) => entry.from),
     },
     server: {
       ...SERVER_DEFAULTS,

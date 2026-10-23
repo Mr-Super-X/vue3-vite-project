@@ -3,6 +3,8 @@ import pluginVue from 'eslint-plugin-vue'
 import { withVueTs, vueTsConfigs } from '@vue/eslint-config-typescript'
 import skipFormatting from '@vue/eslint-config-prettier/skip-formatting'
 
+import { APPS } from './scripts/apps-registry.mjs'
+
 // 单一职责：组合 Vue/TS/Prettier 三层规则
 // Prettier 规则必须放最后，避免与 Prettier 冲突
 //
@@ -14,7 +16,10 @@ import skipFormatting from '@vue/eslint-config-prettier/skip-formatting'
 // 独立应用清单（apps/ 下含 src/modules 的 6 个应用）与相对逃逸深度表。
 // 深度 1-7 层：从 apps/<a>/src/** 任何深度向上越过 src → <a> → apps 三级区间
 // 即可能进入兄弟 app（如 src/main.ts 的 '../portal/...' 直达 apps/portal）。
-const MONOREPO_APPS = ['admin', 'auth', 'portal', 'h5', 'big', 'docs']
+// MONOREPO_APPS 单一事实源是 scripts/apps-registry.mjs（纯 ESM，ESLint 加载本文件的
+// Node 进程不带 --experimental-strip-types，读不了 .ts，故注册表本体为 .mjs + .d.mts 镜像）；
+// 新增第 7 个 app 只改注册表，boundary-apps-<a> 规则自动随之生成。
+const MONOREPO_APPS = APPS.map((app) => app.name)
 const SIBLING_APP_ESCAPE_DEPTHS = [
   '../',
   '../../',
@@ -130,11 +135,13 @@ export default withVueTs(
           patterns: [
             {
               group: ['*/ProTable/*', '*/components/ProTable/*'],
-              message: 'form-schema 子系统禁止引用 ProTable（拆分子系统双向防腐化：保持编译期零互依）',
+              message:
+                'form-schema 子系统禁止引用 ProTable（拆分子系统双向防腐化：保持编译期零互依）',
             },
             {
               group: ['*/form-schema/*', '*/components/form-schema/*'],
-              message: 'ProTable 子系统禁止引用 form-schema（拆分子系统双向防腐化；common/ProDialogForm 的 XForm 封装属合理）',
+              message:
+                'ProTable 子系统禁止引用 form-schema（拆分子系统双向防腐化；common/ProDialogForm 的 XForm 封装属合理）',
             },
           ],
         },
@@ -148,8 +155,8 @@ export default withVueTs(
   // src/modules/auth 等同级目录被误伤）；其余 5 个 app 名在任意 ../ 深度前缀下
   // 出现即判定为跨 app 相对引用。
   ...MONOREPO_APPS.flatMap((app) => {
-    const siblingPatterns = MONOREPO_APPS.filter((other) => other !== app).flatMap(
-      (other) => SIBLING_APP_ESCAPE_DEPTHS.map((depth) => `${depth}${other}/**`)
+    const siblingPatterns = MONOREPO_APPS.filter((other) => other !== app).flatMap((other) =>
+      SIBLING_APP_ESCAPE_DEPTHS.map((depth) => `${depth}${other}/**`)
     )
     return [
       {

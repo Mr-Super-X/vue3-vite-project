@@ -10,10 +10,11 @@
 //   - 自动发现 apps/ 下含 src/modules/ 的应用，逐 app 独立校验、按 app 分组输出
 //   - whitelist 支持 `...xxxRouteNames` 展开语法：经 import 表解析到
 //     `@/modules/<m>/routes`，用该模块 routes 的实际 name 展开（与运行时吸收行为一致）
-//   - 系统兜底名单按 app 差异化（B/C 校验）：
-//       auth → ['Login']（唯一含登录路由的 app）
+//   - 系统兜底名单按 app 注册表差异化（B/C 校验），单一事实源 scripts/apps-registry.mjs：
+//       auth → ['Login', 'NotFound']（登录路由宿主 + 登出落地页匿名可达）
 //       admin → ['Forbidden', 'NotFound', 'ServerError']（系统错误页宿主）
-//       其余 app（portal/h5/big/docs）→ ['NotFound']（全公开 app 只有 404 兜底）
+//       其余 app（docs/portal/h5/big）→ ['NotFound']（全公开 app 只有 404 兜底）
+//   - 路由检查收尾时自动复跑网关配置校验（check-gateway-conf 同一函数，CI 单点覆盖）
 //
 // 4 个校验（语义与单应用时代一致，逐 app 执行）：
 //   A. whitelist ⊆ implementedNames（白名单元素必须有 route 实现）
@@ -32,6 +33,9 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
+import { APPS } from './apps-registry.mjs'
+import { validateGatewayConf } from './check-gateway-conf.ts'
+
 const ROOT = resolve(import.meta.dirname, '..')
 const APPS_DIR = resolve(ROOT, 'apps')
 
@@ -47,18 +51,11 @@ function discoverApps(): string[] {
 }
 
 /**
- * B/C 校验的系统兜底名单按 app 差异化（P5-A）：
- *   - auth：Login（唯一含登录路由的 app）
- *   - admin：Forbidden/NotFound/ServerError（系统错误页宿主）
- *   - 其余全公开 app（portal/h5/big/docs）：NotFound（根级 404 兜底）
+ * B/C 校验的系统兜底名单：由 app 注册表（scripts/apps-registry.mjs）派生，
+ * 名单语义（可匿名访问的兜底路由）在注册表条目注释中说明；未登记的 app 不校验。
  */
-const REQUIRED_BY_APP: Readonly<Record<string, readonly string[]>> = {
-  auth: ['Login'],
-  admin: ['Forbidden', 'NotFound', 'ServerError'],
-}
-
 function requiredFor(app: string): readonly string[] {
-  return REQUIRED_BY_APP[app] ?? ['NotFound']
+  return APPS.find((entry) => entry.name === app)?.requiredRoutes ?? []
 }
 
 /**
@@ -227,6 +224,20 @@ for (const app of apps) {
 
   totalErrors += appErrors
 }
+
+// ─── 网关配置校验（同 apps-registry 单源，CI 单点覆盖）──────────
+// nginx.dev.conf 是静态配置无法 import 注册表，漏配 location/<port> 只在
+// dev:gateway 真机访问时才暴露——此处复跑同一校验函数把漂移前置到 CI 阶段。
+
+console.log('━━━ 网关配置（docker/nginx.dev.conf vs apps-registry）━━━')
+const gatewayErrors = validateGatewayConf()
+if (gatewayErrors.length === 0) {
+  console.log(`✓ 网关 location 名单与端口接线一致（${APPS.length} 个 app）`)
+} else {
+  for (const message of gatewayErrors) console.error(`✖ ${message}`)
+  totalErrors += gatewayErrors.length
+}
+console.log('')
 
 if (totalErrors > 0) {
   console.error(`✖ 共 ${totalErrors} 个错误`)

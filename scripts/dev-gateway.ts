@@ -18,12 +18,13 @@
  * 见 packages/config/src/clean-mock-bundled.ts 头部事故记录）。
  * 串行（前一个端口就绪再启下一个）彻底消除并发编译窗口。
  *
- * 端口由 @vv/config server.ts（5174 + portOffset）与各 app vite.config 钉死（strictPort），
- * 本脚本只注入 VITE_BASE；新增 app 须同步本列表、portOffset 与 docker/nginx.dev.conf。
+ * 端口 = packages/config/src/server.ts SERVER_DEFAULTS.port(5174) + 各 app vite.config
+ * portOffset；名单与端口单一事实源是 scripts/apps-registry.mjs——本脚本只注入 VITE_BASE。
+ * 新增 app：注册表追加条目 + nginx.dev.conf 补 location 块（check-gateway-conf 校验兜底）。
  *
  * 为什么不用 turbo run dev：turbo 不支持 per-app env 注入，而 base 按 app 而异。
  *
- * 用法：pnpm dev:gateway
+ * 用法：pnpm dev:gateway（配置一致性另跑 pnpm check:gateway-conf）
  */
 
 import { spawn, type ChildProcess } from 'node:child_process'
@@ -31,17 +32,9 @@ import { createConnection } from 'node:net'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url))
+import { APPS } from './apps-registry.mjs'
 
-/** 6 应用 dev 端口表（与 packages/config/src/server.ts portOffset / nginx.dev.conf 同源） */
-const APPS = [
-  { name: 'admin', port: 5174 },
-  { name: 'docs', port: 5175 },
-  { name: 'portal', port: 5176 },
-  { name: 'h5', port: 5177 },
-  { name: 'big', port: 5178 },
-  { name: 'auth', port: 5179 },
-] as const
+const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url))
 
 const children: ChildProcess[] = []
 
@@ -113,7 +106,7 @@ async function startApp(name: string, port: number): Promise<void> {
 
 async function main(): Promise<void> {
   console.log(
-    '🚀 同域网关模式：串行启动 6 个 app dev（base=/<app>/，避免共享 mock 源并发编译竞态）…'
+    `🚀 同域网关模式：串行启动 ${APPS.length} 个 app dev（base=/<app>/，避免共享 mock 源并发编译竞态）…`
   )
   console.log('   网关：docker compose up → http://localhost:8080/（302 → /portal/）\n')
   // 串行：前一个 dev server 端口就绪（mock 编译完成）再启下一个，消除并发编译窗口
@@ -125,7 +118,7 @@ async function main(): Promise<void> {
       return
     }
   }
-  console.log('\n🎉 6 个 dev server 全部就绪，经网关 http://localhost:8080/ 访问')
+  console.log(`\n🎉 ${APPS.length} 个 dev server 全部就绪，经网关 http://localhost:8080/ 访问`)
   process.on('SIGINT', () => shutdown('收到 Ctrl+C'))
   process.on('SIGTERM', () => shutdown('收到 SIGTERM'))
 }

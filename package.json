@@ -20,6 +20,7 @@
     "test": "turbo run test",
     "type-check": "turbo run type-check",
     "check:routes": "node --experimental-strip-types scripts/check-routes.ts",
+    "check:gateway-conf": "node --experimental-strip-types scripts/check-gateway-conf.ts",
     "check:aliases": "node --experimental-strip-types scripts/check-aliases.ts",
     "generate:tsconfig-paths": "node --experimental-strip-types scripts/generate-tsconfig-paths.ts",
     "check:doc-currency": "node --experimental-strip-types scripts/check-doc-currency.ts",
