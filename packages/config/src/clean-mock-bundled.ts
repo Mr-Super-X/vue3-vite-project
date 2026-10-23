@@ -32,7 +32,7 @@
  * - 文件名硬约束 `_*.bundled_*.mjs` / `_*.bundled_*.cjs`，与 vite-plugin-mock
  *   自身 `ignored` 规则一致，不会误删真实 mock 文件
  */
-import { existsSync, readdirSync, unlinkSync } from 'node:fs'
+import { existsSync, readdirSync, statSync, unlinkSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import type { Plugin } from 'vite'
 
@@ -54,9 +54,19 @@ function collectBundledFiles(dir: string, acc: string[] = []): string[] {
 }
 
 export function cleanMockBundled(mockDir: string = resolve(process.cwd(), 'mock')): Plugin {
+  // mtime 门槛（毫秒）：只删创建时间早于该值的 bundled 文件，跳过「在飞」的（其他并行
+  // dev server 进程正要 import 的）——根治 `pnpm dev`（turbo 并行 6 app 共享同一 mock 源）
+  // 的启动竞态（A 进程 cleanupOnce 抢删 B 进程正在 import 的 bundled → B 的 mockData 静默清空
+  // → 接口 404）。dev:gateway 串行不涉此竞态，但 mtime 门槛对两条入口都安全（在飞文件本就不该删）。
+  const STALE_AGE_MS = 5000
+
   function cleanupOnce(): void {
+    const now = Date.now()
     for (const full of collectBundledFiles(mockDir)) {
       try {
+        // 只删「陈旧」文件（创建超 STALE_AGE_MS）；在飞文件（mtime 新）跳过，留给其持有者
+        const { birthtimeMs } = statSync(full)
+        if (now - birthtimeMs < STALE_AGE_MS) continue
         unlinkSync(full)
       } catch {
         // 文件可能已被其它进程 / 上面循环删掉，吞 ENOENT
