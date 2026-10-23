@@ -114,6 +114,34 @@ export default withVueTs(
       ],
     },
   },
+  // @vv/ui 两子系统目录边界：form-schema ⇄ ProTable 双向禁 import（防腐化，为后续按触发
+  // 条件拆包（@vv/pro-table + @vv/form-schema）铺路——拆分评估确认两子系统编译期零互依，
+  // 此规则保持该不变量；common/ProDialogForm 对 form-schema 的依赖属合理 XForm 弹窗封装）。
+  {
+    name: 'app/ui-subsystem-boundary',
+    files: [
+      'packages/ui/src/components/form-schema/**/*.{ts,mts,tsx,vue}',
+      'packages/ui/src/components/ProTable/**/*.{ts,mts,tsx,vue}',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['*/ProTable/*', '*/components/ProTable/*'],
+              message: 'form-schema 子系统禁止引用 ProTable（拆分子系统双向防腐化：保持编译期零互依）',
+            },
+            {
+              group: ['*/form-schema/*', '*/components/form-schema/*'],
+              message: 'ProTable 子系统禁止引用 form-schema（拆分子系统双向防腐化；common/ProDialogForm 的 XForm 封装属合理）',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
   // 逐 app 生成边界规则：apps/<a>/src/** 禁引用其他 5 个 app。
   //
   // 相对逃逸覆盖深度 1-7 层：自身 app 名不参与 ban（避免 apps/auth 的

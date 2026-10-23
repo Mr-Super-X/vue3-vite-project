@@ -25,7 +25,9 @@
     "lodash-es": "catalog:",
     "dayjs": "catalog:",
     "echarts": "^6.1.0",
-    "vxe-table": "^4.21.7"
+    "vxe-table": "^4.21.7",
+    "zod": "catalog:",
+    "sortablejs": "catalog:"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.7",

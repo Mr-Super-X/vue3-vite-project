@@ -179,12 +179,18 @@ catalogs:
     pinia:
       specifier: ^3.0.4
       version: 3.0.4
+    sortablejs:
+      specifier: ^1.15.7
+      version: 1.15.7
     vue-i18n:
       specifier: ^11.4.6
       version: 11.4.6
     vue-router:
       specifier: ^5.1.0
       version: 5.2.0
+    zod:
+      specifier: ^4.4.3
+      version: 4.4.3
 
 overrides:
   vue: beta
@@ -646,6 +652,9 @@ importers:
       pinia:
         specifier: 'catalog:'
         version: 3.0.4(typescript@6.0.3)(vue@3.6.0-beta.17(typescript@6.0.3))
+      sortablejs:
+        specifier: 'catalog:'
+        version: 1.15.7
       vue:
         specifier: beta
         version: 3.6.0-beta.17(typescript@6.0.3)
@@ -655,6 +664,9 @@ importers:
       vxe-table:
         specifier: ^4.21.7
         version: 4.21.7(vue@3.6.0-beta.17(typescript@6.0.3))
+      zod:
+        specifier: 'catalog:'
+        version: 4.4.3
     devDependencies:
       '@vitejs/plugin-vue':
         specifier: ^6.0.7
