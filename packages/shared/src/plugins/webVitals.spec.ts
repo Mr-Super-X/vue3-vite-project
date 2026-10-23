@@ -15,9 +15,11 @@ vi.mock('web-vitals', () => ({
   onCLS: mockOnCLS,
   onTTFB: mockOnTTFB,
 }))
-vi.mock('@utils/consoleBadge', () => ({ showBadge: vi.fn() }))
 
-import webVitals from './webVitals'
+// 单源后 consoleBadge 与插件同包，mock 走相对路径（原 app 侧 mock '@utils/consoleBadge'）
+vi.mock('../utils/consoleBadge.ts', () => ({ showBadge: vi.fn() }))
+
+import webVitals from './webVitals.ts'
 
 const app = {} as App
 

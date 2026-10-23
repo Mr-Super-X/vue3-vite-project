@@ -41,3 +41,11 @@ export * from './router-guards/index.ts'
 export * from './auth/redirect.ts'
 // REM 适配 viewport 幂等插件（P5 下沉：admin / h5 双拷贝收敛单源；模块加载无副作用，install 才碰 DOM）
 export { default as remAdaptationPlugin, ensureViewportMeta } from './plugins/remAdaptation.ts'
+// 全局插件族单源（P6 下沉：5 app errorHandler/webVitals 逐字拷贝收敛；模块加载无副作用，install 才接 DOM/指标库）
+export { default as errorHandlerPlugin } from './plugins/errorHandler.ts'
+export { default as webVitalsPlugin } from './plugins/webVitals.ts'
+// 插件统一注册入口工厂（P6：5 app plugins/index.ts 同构收敛，remAdaptation 装配由工厂参数控制）
+export { createAppPlugins } from './plugins/index.ts'
+export type { CreateAppPluginsOptions } from './plugins/index.ts'
+export type { ErrorHandlerOptions, PluginsOptions } from './plugins/errorHandler.d'
+export type { WebVitalsOptions, WebVitalName } from './plugins/webVitals.ts'

@@ -22,7 +22,8 @@
     "element-plus": "catalog:",
     "lodash-es": "catalog:",
     "dayjs": "catalog:",
-    "pinia-plugin-persistedstate": "catalog:"
+    "pinia-plugin-persistedstate": "catalog:",
+    "web-vitals": "catalog:"
   },
   "devDependencies": {
     "typescript": "~6.0.0",

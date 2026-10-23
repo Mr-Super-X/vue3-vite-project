@@ -5,11 +5,12 @@ const { mockBindErrorHandler } = vi.hoisted(() => ({
   mockBindErrorHandler: vi.fn(),
 }))
 
-vi.mock('@vv/shared', () => ({
+// 单源后 errorHandler 与 safeAsync 同包，mock 走相对路径（原 app 侧 mock '@vv/shared'）
+vi.mock('../utils/safeAsync.ts', () => ({
   _bindErrorHandler: mockBindErrorHandler,
 }))
 
-import errorHandler from './errorHandler'
+import errorHandler from './errorHandler.ts'
 
 const makeApp = (): App & { config: { errorHandler?: unknown } } =>
   ({ config: {} }) as unknown as App & { config: { errorHandler?: unknown } }

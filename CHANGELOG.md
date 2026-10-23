@@ -4,6 +4,18 @@
 
 ## 未发布
 
+### 📦 Refactor | plugins 三件套下沉 @vv/shared：errorHandler/webVitals 五份拷贝收敛 + createAppPlugins 工厂 + spec 单源（2026-10-23）
+
+> 背景：重复性审查 P0 漏网——P5 只下沉了 16 行 remAdaptation，同目录 errorHandler（85 行×5 逐字一致）与 webVitals（120 行×5 逐字一致）仍是全仓最大单块重复，且 errorHandler/webVitals/remAdaptation 三份 spec 仅有 admin（+h5）持有，4 app 跑同一份代码却零测试。
+
+- **单源下沉**（`packages/shared/src/plugins/`）：`errorHandler.ts`（+`errorHandler.d.ts` 类型）、`webVitals.ts`（+`webVitals.d.ts` vue 组件级配置类型增强，原仅 admin 持有）——原 5 app 逐字拷贝收敛，import 改相对路径（`../utils/safeAsync.ts` / `../utils/consoleBadge.ts`），barrel 新增 `errorHandlerPlugin` / `webVitalsPlugin` 命名导出
+- **plugins/index.ts 工厂化**：新增 `createAppPlugins({ remAdaptation?: boolean })`（P6）——auth/docs/portal 三份 29 行逐字一致 + admin（51 行）/ h5（39 行）的 remAdaptation 差异收敛为工厂参数；5 app plugins/index.ts 全部退化为单行薄封装；`PluginsOptions` 类型收敛为统一超集（`remAdaptation?: false` 仅工厂装配时生效）
+- **5 app 薄封装**：`apps/{admin,auth,portal,h5,docs}/src/plugins/{errorHandler,webVitals}.ts` 改为 `@vv/shared` re-export（保持 `./errorHandler` `./webVitals` 相对 import 路径不变，main.ts 零改动）；app 侧 5 份 `errorHandler.d.ts` + admin 独有 `webVitals.d.ts` 删除（类型归 shared）
+- **spec 随包单源**：errorHandler.spec（5 例）/ webVitals.spec（4 例）由 admin 迁入 shared（mock 由 `@vv/shared`/`@utils/consoleBadge` 改相对路径）；remAdaptation.spec 实为 admin/h5 双拷贝（0589f1c 未随迁），一并收敛单源；新增 `createAppPlugins` 工厂 spec（4 例：缺省装配/rem 装配/false 关闭/options 透传）——4 app 测试盲区补齐，6 app 同受益
+- **依赖接线**：`web-vitals` 入 pnpm-workspace catalog（`^6.2.1`）+ `@vv/shared` peerDependencies（沿用运行时依赖 peer + catalog 约定）
+- **顺手修存量测试偏差**：auth `Login.spec.ts` 断言对齐 65b3c96（『登录成功』→『登录成功，正在跳转…』，HEAD 即挂的存量失败，spec 未随迁所致）
+- **验证**：`pnpm type-check` turbo 10/10 全绿；`pnpm test` turbo 9 任务全绿（shared 42 文件 390 用例，含 plugins 4 文件 17 用例）；`check:routes` 6 app 全过；`check:doc-currency` 13/13 通过
+
 ### ✨ Features | 共享 ErrorPage 组件统一 6 app 错误页（补 admin 返回按钮缺口）（2026-10-23）
 
 > 背景：6 app 错误页模式重复且不一致——5 端 404 各自手写 h1 + 返回按钮（el-result 用法未统一），admin 的 404/403/500 则完全没有行动按钮（体验最差）。

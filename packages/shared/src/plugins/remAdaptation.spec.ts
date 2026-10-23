@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach } from 'vitest'
 import type { App } from 'vue'
-import remAdaptation, { ensureViewportMeta } from './remAdaptation'
+import remAdaptation, { ensureViewportMeta } from './remAdaptation.ts'
 
 describe('plugins/remAdaptation — viewport meta 幂等确保', () => {
   beforeEach(() => {

@@ -81,7 +81,8 @@ describe('Login.vue（apps/auth 统一登录页）', () => {
     await w.find('form').trigger('submit.prevent')
     await flushPromises()
     expect(mockLogin).toHaveBeenCalledWith({ username: 'admin', password: '123456' })
-    expect(ElMessage.success).toHaveBeenCalledWith('登录成功')
+    // 对齐 65b3c96 易用性修复：success toast 须存活到整页跳转，提示文案为「正在跳转…」
+    expect(ElMessage.success).toHaveBeenCalledWith('登录成功，正在跳转…')
     expect(mockResolvePostLoginRedirect).toHaveBeenCalledWith('/admin/')
     expect(window.location.href).toBe('/workbench')
   })
