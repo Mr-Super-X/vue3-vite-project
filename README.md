@@ -33,7 +33,7 @@
 | `apps/docs`   | `/demo`（5175）      | 组件示例文档：demo 模块全量 + DemoDocs 布局                                                                                |
 | `apps/auth`   | `/login`（5179）     | 统一登录：跨应用重定向协议入口（登录/登出），其余应用未登录守卫整页跳此（[docs/43](docs/43-Monorepo结构与开发指引.md) §5） |
 
-4 个共享包（`packages/config|mock|shared|ui`）经 workspace `workspace:*` 源码直链消费，不建 dist。结构详见 [docs/43](docs/43-Monorepo结构与开发指引.md)。
+4 个共享包（`packages/config|mock|shared|ui`）经 workspace `workspace:*` 源码直链消费，不建 dist。结构详见 [docs/43](docs/43-Monorepo结构与开发指引.md)。⚠️ 复用注意：workspace `overrides` 把 vue 钉在 **beta**，且包依赖宿主装配契约（见各包 README「宿主装配契约」）——包被其它 Vue3 工程复用时需一并知会（[docs/43](docs/43-Monorepo结构与开发指引.md) §8）。
 
 开源 MIT，版本策略与 fork 升级见 [docs/36](docs/36-Fork升级与版本策略.md)。
 

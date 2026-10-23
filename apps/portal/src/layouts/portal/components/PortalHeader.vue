@@ -11,7 +11,7 @@
  * （本组件不再包裹 <nav>，避免与 PortalNav 内部 nav 嵌套重复 landmark）。
  *
  * @see [`./PortalNav.vue`](./PortalNav.vue) 锚点导航
- * @see [`@vv/ui/composables/useLogout`](../../../../../../packages/ui/src/composables/useLogout.ts) 退出流程
+ * @see `@vv/ui/composables/useLogout` 退出流程
  * @group 布局：Portal
  */
 import { useUserStore, withRepoPrefix } from '@vv/shared'

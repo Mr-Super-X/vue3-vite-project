@@ -13,7 +13,7 @@
  * 表单默认值：`admin / 123456`（仅演示用，生产应改 SSO / 短信验证码）。
  *
  * @see [`@/store/modules/user`](../../../store/modules/user.ts) 登录态
- * @see [`@vv/shared/auth/redirect`](../../../../../packages/shared/src/auth/redirect.ts) 回跳协议
+ * @see `@vv/shared/auth/redirect` 回跳协议
  * @see [`../styles/login.scss`](../styles/login.scss) 样式抽离
  * @group 业务模块：Auth
  */

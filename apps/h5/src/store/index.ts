@@ -7,7 +7,7 @@
  *
  * 实例创建经 @vv/shared 的 createAppPinia（P5 下沉单源：原 6 app 逐字拷贝收敛）。
  *
- * @see [`@vv/shared/store`](../../../packages/shared/src/store/index.ts) 共享 store 出口
+ * @see `@vv/shared/store` 共享 store 出口
  * @group 状态管理
  */
 import { createAppPinia } from '@vv/shared/store'

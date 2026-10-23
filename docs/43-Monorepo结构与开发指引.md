@@ -133,6 +133,7 @@ docker compose up
 - 全局组件不要显式 import（@vv/ui 三目录自动注册）：CLAUDE.md §1.7
 - AutoImport 标识符来源注释约定：CLAUDE.md §1.6.1
 - 单 app 使用场景（模板受众只取一个 app）：取 `apps/admin` + `packages/*` 即可，包与 app 间仅 workspace 链接耦合
+- **vue beta 警示（复用隐性地雷）**：`pnpm-workspace.yaml` 的 `overrides` 把 vue 及全部 `@vue/*` 子包钉在 `beta` tag（catalog 的 `^3.5.38` 被覆盖）——4 个包的全部开发 / 测试都跑在 Vue **beta** 上；包被其它 Vue3 工程复用（宿主用稳定版 vue）时兼容性**未经验证**，且包源码的宿主装配契约（auto-import / scss 注入 / dirs 扫描，见各包 README）也须一并复刻
 
 ## 9. 本地开发排障（高频 4 场景）
 

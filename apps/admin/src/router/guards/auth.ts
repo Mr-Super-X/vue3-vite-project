@@ -13,7 +13,7 @@
  * - 远程菜单加载失败 → console.warn + 保持 local（`fetchRemoteRoutes` 内部已捕获）
  * - 动态 import 失败 → `src/router/index.ts` 的 `error-boundary.ts` 处理
  *
- * @see [`@vv/shared/router-guards`](../../../../packages/shared/src/router-guards/index.ts) 守卫骨架
+ * @see `@vv/shared/router-guards` 守卫骨架
  * @see [`../whitelist.ts`](../whitelist.ts) 白名单数据与判定接线
  * @group 路由：守卫编排
  */

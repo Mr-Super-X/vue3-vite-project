@@ -10,7 +10,7 @@
  *   innerWidth 永远是视口宽度，不受 html 内联 width 影响。
  *
  * @see [`../index.vue`](../index.vue) 生命周期驱动方（setup 顶层激活 / onUnmounted 恢复）
- * @see [`packages/config/src/postcss.ts`](../../../../../../packages/config/src/postcss.ts) 编译时 px→rem 换算约定
+ * @see `@vv/config/postcss.ts` 编译时 px→rem 换算约定
  * @group 布局：H5
  */
 

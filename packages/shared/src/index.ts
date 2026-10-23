@@ -5,6 +5,10 @@
  * （useAuth / useRequest / useDict / useAppRouter / createNamespace 等），
  * 以及 app 侧少量 `import { ... } from '@vv/shared'` 直接引用。
  *
+ * ⚠️ 宿主前置条件：本包是 workspace 源码直链包（非 npm 发布包），源码内 composable/store
+ * 依赖宿主 vite 装配还原编译期注入（auto-import 清单 / optimizeDeps.exclude / VITE_BEM_PREFIX）——
+ * 换宿主前必须逐项落实，详见包 README.md「宿主装配契约」，缺任一项模块求值即 ReferenceError。
+ *
  * 刻意不聚合：
  * - `./locales`（模块加载即 createI18n 副作用 + default export，app 经 `@locales` 别名消费）
  * - `./directives`（index 是 import.meta.glob 自动注册插件，仅 Vite 上下文可执行）

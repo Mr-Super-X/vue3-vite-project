@@ -5,7 +5,7 @@
  *
  * @see [`../../router/guards/auth`](../../router/guards/auth.ts) 守卫消费方
  * @see [`../routes/index.ts`](../routes/index.ts) 路由 /403
- * @see [`../../../../../../packages/ui/src/components/common/ErrorPage/ErrorPage.vue`](../../../../../../packages/ui/src/components/common/ErrorPage/ErrorPage.vue) 共享错误页组件
+ * @see `@vv/ui/components/common/ErrorPage/ErrorPage.vue` 共享错误页组件
  * @group 业务模块：Error
  */
 </script>

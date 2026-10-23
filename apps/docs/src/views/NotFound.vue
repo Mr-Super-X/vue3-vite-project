@@ -4,7 +4,7 @@
  * 视觉与交互统一走 @vv/ui 的 <ErrorPage />（全局自动注册，无须 import），返回组件示例首页。
  *
  * @see [`../../router/index.ts`](../../router/index.ts) /404 注册
- * @see [`../../../../packages/ui/src/components/common/ErrorPage/ErrorPage.vue`](../../../../packages/ui/src/components/common/ErrorPage/ErrorPage.vue) 共享错误页组件
+ * @see `@vv/ui/components/common/ErrorPage/ErrorPage.vue` 共享错误页组件
  * @group 视图：兜底
  */
 </script>

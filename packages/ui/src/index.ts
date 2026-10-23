@@ -3,6 +3,10 @@
  *
  * 当前唯一聚合出口：createGlobalComponents 工厂（app 入口 `app.use(createGlobalComponents())`）。
  *
+ * ⚠️ 宿主前置条件：本包是 workspace 源码直链包（非 npm 发布包），组件样式依赖宿主 scss
+ * additionalData 注入 $BEM_PREFIX、弹窗族依赖宿主 auto-import 注入、组件注册依赖宿主
+ * unplugin-vue-components 目录扫描——换宿主前必须逐项落实，详见包 README.md「宿主装配契约」。
+ *
  * 刻意不聚合：
  * - `./components/**`（组件经 unplugin-vue-components 按目录扫描自动注册，模板零 import；
  *   类型消费走 app 侧 '@components/*' 别名或 '@vv/ui/components/*' 包子路径）
