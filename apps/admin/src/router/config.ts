@@ -16,6 +16,9 @@
  * @group 路由配置
  */
 
+// base 路径解析自 P5 起归 @vv/shared（与 5 个兄弟 app 的 router/index.ts 单源同实现）
+import { resolveBasePath } from '@vv/shared'
+
 export type MenuSource = 'local' | 'remote'
 export type HistoryMode = 'web' | 'hash'
 
@@ -33,21 +36,6 @@ function resolveHistoryMode(): HistoryMode {
   if (raw === 'hash' || raw === 'web') return raw
   // 默认：web history（主流，需要后端 SPA fallback，见 README nginx 配置）
   return 'web'
-}
-
-/**
- * 解析 base 路径（`VITE_BASE`）。
- *
- * 必须以 `/` 开头、`/` 结尾（vue-router basename 要求）。
- * 子路径部署场景：在 `.env.production` 设 `VITE_BASE=/sub-path/`。
- */
-function resolveBasePath(): string {
-  // 子路径部署场景：在 .env.production 设 VITE_BASE=/sub-path/
-  const raw = import.meta.env.VITE_BASE ?? '/'
-  // 必须以 / 开头、/ 结尾（vue-router basename 要求）
-  if (!raw.startsWith('/')) return `/${raw}`
-  if (!raw.endsWith('/')) return `${raw}/`
-  return raw
 }
 
 export const ROUTER_CONFIG = {

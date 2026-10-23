@@ -34,6 +34,9 @@ import Plugins from '@plugins'
 // 弹窗族 composable 自 P1-4 起随 ProDialog 一并归 @vv/ui（包子路径经 exports "./*" 解析）
 import { setDialogAppContext } from '@vv/ui/composables/useDialog'
 import { assertNoMockInProd } from '@api/mock-guard'
+// prod-mock 挂接守卫自 P5 起归 @vv/shared（6 app 同款高危不变量单源化）；
+// @mock 别名仅 app 编译上下文可解析，故模块加载以回调注入
+import { setupProdMockIfNeeded } from '@vv/shared'
 
 // 浏览器基线统一（必须在所有自定义样式之前）。
 // 详见 https://necolas.github.io/normalize.css/
@@ -76,16 +79,11 @@ assertNoMockInProd()
 
 const app = createApp(App)
 
-// 生产构建且 VITE_USE_MOCK==='true' 时（CI gh-pages 产物）动态挂接浏览器端 mock。
-// 位置强约束：必须早于 app.use(router)——Vue Router install 会立即触发初始导航，
-// 守卫的 fetchProfile 与 main.ts 后续语句并行执行；若挂接在 use 之后，
-// 守卫请求会先于 mockjs 激活发出，穿透到静态服务器（404 → 资源不存在 toast）。
-// PROD 守卫防 dev 双重劫持（dev 下 node 中间件与本分支同时命中，auth rawResponse
-// 被 client 侧解构为 undefined → dev 登录必挂）；常规生产构建整分支 tree-shake。
-if (import.meta.env.PROD && import.meta.env.VITE_USE_MOCK === 'true') {
-  const { setupProdMockServer } = await import('@mock/mockProdServer')
-  await setupProdMockServer()
-}
+// 生产 mock 挂接：完整条件语义与「必须先于 app.use(router)」位置强约束见
+// @vv/shared setupProdMockIfNeeded——router install 即触发初始导航，守卫的
+// fetchProfile 与 main.ts 后续语句并行执行；挂接晚于 use 则首屏请求先于
+// mockjs 激活发出，穿透到静态服务器（SPA fallback 返回 HTML → 404 toast）。
+await setupProdMockIfNeeded(() => import('@mock/mockProdServer'))
 
 app.use(pinia)
 app.use(router)

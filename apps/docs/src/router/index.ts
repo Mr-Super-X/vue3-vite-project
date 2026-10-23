@@ -17,9 +17,15 @@
  */
 
 import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router'
-import type { RouteRecordRaw, RouterScrollBehavior } from 'vue-router'
-// registerAppRouter / checkVisibility 归 @vv/shared 根 barrel（P1-3 守卫骨架下沉）
-import { registerAppRouter, checkVisibility } from '@vv/shared'
+import type { RouteRecordRaw } from 'vue-router'
+// registerAppRouter / checkVisibility 归 @vv/shared 根 barrel（P1-3 守卫骨架下沉）；
+// resolveBasePath / createDefaultScrollBehavior 自 P5 起一并单源化（6 app 零差异段下沉裁决）
+import {
+  registerAppRouter,
+  checkVisibility,
+  resolveBasePath,
+  createDefaultScrollBehavior,
+} from '@vv/shared'
 import { autoRegisteredRoutes } from './auto-register'
 import { fallbackRoute } from './fallback'
 import { isDocsWhiteListed } from './whitelist'
@@ -45,28 +51,13 @@ const notFoundRoute: RouteRecordRaw = {
 /** history 模式：默认 web；VITE_HISTORY_MODE=hash 时走 hash（gh-pages 子路径部署免后端 rewrite） */
 const historyMode = import.meta.env.VITE_HISTORY_MODE === 'hash' ? 'hash' : 'web'
 
-/** base 路径（VITE_BASE，必须以 / 开头、/ 结尾——vue-router basename 要求） */
-function resolveBasePath(): string {
-  const raw = import.meta.env.VITE_BASE ?? '/'
-  if (!raw.startsWith('/')) return `/${raw}`
-  if (!raw.endsWith('/')) return `${raw}/`
-  return raw
-}
-
-// 路由切换后的滚动行为：前进/后退用 savedPosition；hash 锚点平滑滚动；其余回顶部
-const scrollBehavior: RouterScrollBehavior = (to, _from, savedPosition) => {
-  if (savedPosition) return savedPosition
-  if (to.hash) return { el: to.hash, behavior: 'smooth' }
-  return { top: 0, left: 0 }
-}
-
 export const router = createRouter({
   history:
     historyMode === 'hash'
       ? createWebHashHistory(resolveBasePath())
       : createWebHistory(resolveBasePath()),
   routes: [rootRedirect, notFoundRoute, ...autoRegisteredRoutes, fallbackRoute],
-  scrollBehavior,
+  scrollBehavior: createDefaultScrollBehavior(),
 })
 
 // 把实例注入 @vv/shared（useAppRouter / http 401 登出跳转经 DI 读取）；

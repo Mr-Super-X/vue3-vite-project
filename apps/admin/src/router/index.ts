@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router'
-import type { RouteRecordRaw, RouterScrollBehavior } from 'vue-router'
-import { registerAppRouter } from '@vv/shared'
+import type { RouteRecordRaw } from 'vue-router'
+// registerAppRouter 归 @vv/shared 根 barrel；createDefaultScrollBehavior 自 P5 起单源化
+// （6 app 零差异段下沉裁决）——base 路径仍由 ./config 的 ROUTER_CONFIG.base 承担
+import { registerAppRouter, createDefaultScrollBehavior } from '@vv/shared'
 import { autoRegisteredRoutes } from './auto-register'
 import { fallbackRoute } from './fallback'
 import { setupAuthGuard } from './guards/auth'
@@ -41,15 +43,8 @@ const rootRedirect: RouteRecordRaw = {
 //   - hash：URL 带 #，无需后端配合，适合子路径部署 / 静态托管
 //   通过 .env.development 或 .env.production 设 VITE_HISTORY_MODE=hash|web 覆盖
 
-// 路由切换后的滚动行为：
-//   - 浏览器前进/后退（popstate）：用浏览器记录的 savedPosition
-//   - 目标路由带 hash 锚点：平滑滚到对应元素（不同浏览器可能表现不一致）
-//   - 其他导航：滚到页面顶部
-const scrollBehavior: RouterScrollBehavior = (to, _from, savedPosition) => {
-  if (savedPosition) return savedPosition
-  if (to.hash) return { el: to.hash, behavior: 'smooth' }
-  return { top: 0, left: 0 }
-}
+// 路由切换后的滚动行为统一走 @vv/shared createDefaultScrollBehavior：
+// 前进/后退用 savedPosition；hash 锚点平滑滚动；其余回页面顶部
 
 export const router = createRouter({
   history:
@@ -57,7 +52,7 @@ export const router = createRouter({
       ? createWebHashHistory(ROUTER_CONFIG.base)
       : createWebHistory(ROUTER_CONFIG.base),
   routes: [rootRedirect, ...autoRegisteredRoutes, fallbackRoute],
-  scrollBehavior,
+  scrollBehavior: createDefaultScrollBehavior(),
 })
 
 // 把实例注入 @vv/shared（useAppRouter / http 401 登出跳转经 DI 读取）；

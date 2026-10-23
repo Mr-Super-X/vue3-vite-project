@@ -23,6 +23,9 @@ export * from './composables/useTheme.ts'
 export * from './composables/useAppRouter.ts'
 export * from './app-router.ts'
 export * from './router-title.ts'
+// 6 app 骨架零差异段单源化（P5）：router base 解析 / 统一 scroll 行为 / prod-mock 挂接守卫
+export * from './router/base.ts'
+export * from './prod-mock.ts'
 export * from './store/index.ts'
 export * from './router-guards/index.ts'
 // 跨应用统一登录协议（P4）：redirectToAuthLogin / resolvePostLoginRedirect
