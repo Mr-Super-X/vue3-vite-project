@@ -333,9 +333,11 @@ pnpm dev:local
 | `pnpm type-check`                  | TypeScript 类型检查（turbo 各 app `vue-tsc --build` 增量）                                                            |
 | `pnpm -C apps/<a> type-check:full` | TypeScript 类型检查（强制重建 .tsbuildinfo 缓存；单 app build 内第二步）                                              |
 | `pnpm check:routes`                | 校验 RouteName / component-registry / whitelist 一致性（pre-commit 强制 + CI 阶段强制）                               |
-| `pnpm check:aliases`               | alias 单一来源（`build/aliases.ts`）与 tsconfig paths 一致性校验（pre-commit 强制）                                   |
-| `pnpm check:doc-currency`          | 文档与代码硬数据一致性校验（13 项锁定；手动 / 发布前跑，尚未接入 CI）                                                 |
-| `pnpm generate:tsconfig-paths`     | 从 `build/aliases.ts` 自动同步到 `tsconfig.app.json`（pre-commit 钩子自动）                                           |
+| `pnpm check:aliases`               | alias 单一来源（`packages/config/src/app-aliases.ts`）与 tsconfig paths 一致性校验（pre-commit 强制 + CI 阶段强制）   |
+| `pnpm check:mock-wiring`           | mock 双接线一致性校验（mock 源文件清单 × 各 app prodServer 手动 import，CI 阶段强制）                                 |
+| `pnpm check:gateway-conf`          | 同域网关 nginx location / proxy_pass 与 apps-registry 端口名单一致性校验（CI 阶段强制，含端口双写锁死）               |
+| `pnpm check:doc-currency`          | 文档与代码硬数据一致性校验（13 项锁定；CI 阶段强制）                                                                  |
+| `pnpm generate:tsconfig-paths`     | 从 `packages/config/src/app-aliases.ts` 自动同步到各 app `tsconfig.app.json`（pre-commit 钩子自动）                   |
 | `pnpm new-module <name>`           | 一键生成业务模块骨架（kebab-case 名 → 6 个骨架文件）                                                                  |
 | `pnpm remove-module <name>`        | 一键移除业务模块（默认 dry-run + y/N 确认；CI / 管道传 `--force`）                                                    |
 | `pnpm lint`                        | ESLint 检查全项目                                                                                                     |
@@ -551,10 +553,7 @@ app.use(Plugins, { errorHandler: { report: ... } })
 | 1   | `pnpm lint-staged`  | 暂存区文件 prettier + eslint 自动修复（仅变更文件，不全库扫描）   |
 | 2   | `pnpm check:routes` | 路由一致性检查（声明 / whitelist / 实际 routes 三者一致，防漏改） |
 
-> **完整门禁在 CI 兜底**：type-check / check:aliases / check:mock-wiring / check:doc-currency
-> 不在 pre-commit（本地秒级提交体验优先），由 ci.yml 的 turbo build（内含 type-check:full）
->
-> - 各 check 步骤统一拦截。原单应用时期的 5 步 pre-commit 链见 docs/03-Git工作流工具链.md 历史节。
+> 各项一致性 check（check:aliases / check:mock-wiring / check:doc-currency / check:gateway-conf 含端口双写锁死）均在 CI 阶段随 check:routes 一并执行（见 ci.yml），不在 pre-commit（本地秒级提交体验优先）。原单应用时期的 5 步 pre-commit 链见 docs/03-Git工作流工具链.md 历史节。
 
 | Hook     | 命令        | 作用                     |
 | -------- | ----------- | ------------------------ |
@@ -684,7 +683,7 @@ docker run -d --name vue3-vite-project -p 8080:80 vue3-vite-project:1.0.0
 | `ci.yml`     | push / PR 至 master、develop | 质量门禁 4 步：Lint + Build（`pnpm build` 内部 build-only → type-check:full）+ Unit tests + Check routes                                                                                                                         |
 | `deploy.yml` | push 至 master               | gh-pages 自动部署：`--base` 单源复用 env、构建四开关（VITE_BASE / VITE_HISTORY_MODE=hash / VITE_MENU_SOURCE=local / VITE_USE_MOCK=true）+ `VITE_DEMO_NO_AUTH` 演示模式，发布到 `https://Mr-Super-X.github.io/vue3-vite-project/` |
 
-> check:aliases 仅在 pre-commit 强制（ci.yml 不跑）；check:doc-currency 尚未接入 CI（手动 / 发布前跑）。
+> 一致性 checks 全部由 CI 执行（ci.yml）：check:routes（内含网关 location 校验 + 端口双写锁死）/ check:aliases / check:mock-wiring / check:doc-currency；本地可用同名 script 预跑。
 > 首次启用需在仓库 Settings → Pages 把 Source 设为 "GitHub Actions"。设计文档：[docs/superpowers/specs/2026-10-20-gh-pages-deploy-design.md](docs/superpowers/specs/2026-10-20-gh-pages-deploy-design.md)。
 
 如需对接自己的部署环境（Nginx / Docker / 对象存储），下方保留一份通用模板参考：
@@ -716,11 +715,11 @@ jobs:
 ## 🧪 测试
 
 ```bash
-pnpm test              # 单次运行（CI 用）
-pnpm test:watch        # 开发用 watch
-pnpm test:coverage     # 覆盖率报告（输出到 coverage/）
-pnpm test:e2e          # Playwright 端到端测试
-pnpm bench             # vitest bench 基准测试
+pnpm test                           # 单次运行（CI 用；turbo 拓扑序全 app + 包）
+pnpm -C apps/admin test:watch      # 开发用 watch（根无此 script，app 级提供）
+pnpm test:coverage                 # 覆盖率报告（输出到 coverage/；admin 口径）
+pnpm test:e2e                      # Playwright 端到端测试
+pnpm bench                         # vitest bench 基准测试
 ```
 
 测试文件与源码同级（`foo.ts` 对应 `foo.spec.ts`），按目录一一对应：

@@ -53,8 +53,11 @@ css: {
 
 > 三条弹窗族入口走**包子路径**（`exports "./*"` 通配解析），单一事实来源：
 > `packages/config/src/create-vite-config.ts` 的 `VV_SOURCE_MODULES` 常量。
-> 同模块的 `DialogCancelledError`（纯类型）/ `setDialogAppContext` / `getDialogAppContext`
-> 不注入：前两者只在 app 入口接线，不应污染 setup 全局作用域，消费方显式 import。
+> 同模块的 `DialogCancelledError` / `setDialogAppContext` / `getDialogAppContext`
+> 不注入：三者都是命令式 API 或运行时类——`DialogCancelledError` 是 `extends Error` 的
+> 运行时 class（useDialog 取消时 reject 抛出，调用方 `instanceof` 判别），后两者只在
+> app 入口接线——不应污染 setup 全局作用域，消费方经 `@vv/ui/composables/useDialog`
+> 包子路径显式 import。
 
 ### ③ unplugin-vue-components `dirs` 扫描三目录（组件注册生死线）
 

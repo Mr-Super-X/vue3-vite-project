@@ -84,10 +84,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | Lint 检查                                           | `pnpm lint`                                                                            |
 | Lint 自动修复                                       | `pnpm lint:fix`                                                                        |
 | Prettier 格式化                                     | `pnpm format` / `pnpm format:check`                                                    |
-| 路由一致性校验（CI 阶段强制）                       | `pnpm check:routes`                                                                    |
+| 路由一致性校验（CI 阶段强制）                       | `pnpm check:routes`（内含网关校验 + 端口双写锁死 + 注册表反向校验）                    |
 | alias 单一来源一致性校验（CI 阻断）                 | `pnpm check:aliases`                                                                   |
+| mock 双接线一致性校验（CI 阻断）                    | `pnpm check:mock-wiring`                                                               |
 | 文档与代码硬数据一致性校验（CI 阻断）               | `pnpm check:doc-currency`                                                              |
-| 从 build/aliases.ts 同步 tsconfig paths             | `pnpm generate:tsconfig-paths`                                                         |
+| 从 app-aliases.ts 同步 tsconfig paths               | `pnpm generate:tsconfig-paths`（源：`packages/config/src/app-aliases.ts`）             |
 | 新建业务模块（自动生成 6 个骨架文件）               | `pnpm new-module <kebab-name>`                                                         |
 | 移除业务模块（默认 dry-run + 确认）                 | `pnpm remove-module <kebab-name>`                                                      |
 | 提交并推送（add + cz + push 一站式）                | `pnpm push`                                                                            |
@@ -182,7 +183,7 @@ Feature-Sliced 风格的中后台门户前端（`vue3-vite-project`，企业中�
 | **Vue 核心**         | `'vue'`                                   | `ref`、`reactive`、`computed`、`watch`、`watchEffect`、`onMounted`、`onUnmounted`、`nextTick`、`defineProps`、`defineEmits`、`defineModel` 等 |
 | **Vue Router**       | `'vue-router'`                            | `useRoute`、`useRouter`、`useLink`、`RouterLink`、`RouterView` 等                                                                             |
 | **Pinia**            | `'pinia'`                                 | `defineStore`、`storeToRefs`、`acceptHMRUpdate` 等                                                                                            |
-| **业务 composables** | `'@vv/shared'` + `'@vv/ui/composables/*'` | `useAppRouter`、`useRequest`、`useAuth`、`useDict`、`useTheme`（`@vv/shared`）；`useDialog`、`useConfirm`、`useLogout`（`@vv/ui` 包路径注入） |
+| **业务 composables** | `'@vv/shared'` + `'@vv/ui/composables/*'` | `useAppRouter`、`useRequest`、`useAuth`、`useDict`（`@vv/shared`）；`useDialog`、`useConfirm`、`useLogout`（`@vv/ui` 包路径注入）             |
 | **业务 utils**       | `'@vv/shared'`                            | `createNamespace`（BEM 运行时工具）                                                                                                           |
 
 #### 正确示例
@@ -216,6 +217,7 @@ AutoImport **未覆盖**以下内容，仍必须写 import：
 | 第三方工具库                                               | `import dayjs from 'dayjs'`                                              | 不在 AutoImport 配置列表中                                                                                                                                                                           |
 | 全局组件（`@vv/ui` 包三目录 + app 私有 `src/components/`） | **不要 import**，模板直接 `<BaseChart />` / `<ProTable />` / `<XForm />` | `unplugin-vue-components` 自动注入到 `vue.GlobalComponents`（dirs 含 @vv/ui 包源码三目录 + appRoot/src/components，deep: true）；显式 import 会让 IDE hover 丢失 `DefineComponent` 展开（详见 §1.7） |
 | app 内其他子目录组件（非自动注册）                         | `import Xxx from '@/components/sub/Xxx.vue'`                             | 仅当组件不在自动注册 dirs 内时才需显式 import                                                                                                                                                        |
+| 未注入的 shared composable（`useTheme`）                   | `import { useTheme } from '@vv/shared'`                                  | 工厂 `VV_SOURCE_MODULES` 未注入 `useTheme`（全仓仅 admin ToolHeader 消费，低频 API 不污染 setup 全局作用域）                                                                                         |
 | 类型导入                                                   | `import type { UserProfile } from '@/api/modules/auth'`                  | 类型 import 不参与运行时，但 TS 编译器需要                                                                                                                                                           |
 | SCSS / 资源文件                                            | `import './styles/login.scss'`（在 `<style>` 中用 `@use`）               | CSS 走 vite 资源管线，与 JS AutoImport 解耦                                                                                                                                                          |
 
@@ -237,14 +239,14 @@ AutoImport **未覆盖**以下内容，仍必须写 import：
 
 #### 不常见 API（必须加注释）
 
-| 标识符（举例）                                                 | 来源包提示（注释怎么写）                         |
-| -------------------------------------------------------------- | ------------------------------------------------ |
-| `RouterLink`、`RouterView`、`useLink`                          | `// vue-router 组件`                             |
-| `storeToRefs`、`acceptHMRUpdate`                               | `// pinia 工具`                                  |
-| `useAppRouter`、`useRequest`、`useAuth`、`useDict`、`useTheme` | `// 项目 composable @vv/shared（vite 自动注入）` |
-| `useDialog`、`useConfirm`、`useLogout`                         | `// 项目 composable @vv/ui（vite 自动注入）`     |
-| `createNamespace`                                              | `// 项目 BEM 工具 @vv/shared（vite 自动注入）`   |
-| `watchEffect`、`nextTick`、`onErrorCaptured`、`shallowRef`     | `// vue（生命周期/底层 API）`                    |
+| 标识符（举例）                                             | 来源包提示（注释怎么写）                         |
+| ---------------------------------------------------------- | ------------------------------------------------ |
+| `RouterLink`、`RouterView`、`useLink`                      | `// vue-router 组件`                             |
+| `storeToRefs`、`acceptHMRUpdate`                           | `// pinia 工具`                                  |
+| `useAppRouter`、`useRequest`、`useAuth`、`useDict`         | `// 项目 composable @vv/shared（vite 自动注入）` |
+| `useDialog`、`useConfirm`、`useLogout`                     | `// 项目 composable @vv/ui（vite 自动注入）`     |
+| `createNamespace`                                          | `// 项目 BEM 工具 @vv/shared（vite 自动注入）`   |
+| `watchEffect`、`nextTick`、`onErrorCaptured`、`shallowRef` | `// vue（生命周期/底层 API）`                    |
 
 #### 注释格式与位置
 

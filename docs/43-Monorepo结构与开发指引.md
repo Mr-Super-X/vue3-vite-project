@@ -31,14 +31,14 @@ vue3-vite-project（pnpm workspace + turbo@2）
 
 ## 2. 应用与包速查
 
-| app    | dev 端口 | 依赖的 @vv 包               | 说明                                             |
-| ------ | -------- | --------------------------- | ------------------------------------------------ |
-| admin  | 5174     | shared / ui（+ config dev） | 默认 remote 菜单模式；`dev:local` 切本地         |
-| docs   | 5175     | mock / shared / ui          | 组件示例站，白名单含全部 Demo 前缀               |
-| portal | 5176     | mock / shared / ui          | `/home` 公开访问                                 |
-| h5     | 5177     | mock / shared / ui          | rem 适配仅转换本 app h5 前缀目录                 |
-| big    | 5178     | mock / shared / ui          | scale 适配，路由 `meta.bigScreen` 声明设计稿尺寸 |
-| auth   | 5179     | mock / shared / ui          | 登录接口 mock 必需（4 端点）                     |
+| app    | dev 端口 | 依赖的 @vv 包                      | 说明                                             |
+| ------ | -------- | ---------------------------------- | ------------------------------------------------ |
+| admin  | 5174     | mock / shared / ui（+ config dev） | 默认 remote 菜单模式；`dev:local` 切本地         |
+| docs   | 5175     | mock / shared / ui                 | 组件示例站，白名单含全部 Demo 前缀               |
+| portal | 5176     | mock / shared / ui                 | `/home` 公开访问                                 |
+| h5     | 5177     | mock / shared / ui                 | rem 适配仅转换本 app h5 前缀目录                 |
+| big    | 5178     | mock / shared / ui                 | scale 适配，路由 `meta.bigScreen` 声明设计稿尺寸 |
+| auth   | 5179     | mock / shared / ui                 | 登录接口 mock 必需（4 端点）                     |
 
 端口 = `@vv/config` 的 `SERVER_DEFAULTS.port(5174) + portOffset`（各 app `vite.config.ts` 声明），`strictPort: true`——端口占用直接报错不漂移（docker 网关 location 与端口强绑定，漂移即 404 隐患）。
 
@@ -65,10 +65,10 @@ vue3-vite-project（pnpm workspace + turbo@2）
 > 属 CLAUDE.md §2.2 列管操作，**须先走 §2.4 修改申请获批**后按以下步骤执行：
 
 1. `mkdir apps/<name>` + 新建 `package.json`（name `@vv-app/<name>`，仿现有 6 app；dependencies 按需声明 `@vv/*` workspace 包）
-2. 新建 `vite.config.ts`：调 `createViteConfig({ appRoot, appName: '<name>', base: process.env.VITE_BASE ?? '/', portOffset: <下一个空闲偏移>, ... })`
+2. 新建 `vite.config.ts`：调 `createViteConfig({ appRoot, appName: '<name>', portOffset: <下一个空闲偏移>, ... })`（`base` / `mockPath` 走工厂缺省，6 app 同构已收敛进工厂；无 mock 依赖才显式传 `mockPath: ''`）
 3. `apps/<name>/src/` 最小骨架：`main.ts` / `App.vue` / `router/`（whitelist + fallback）/ `modules/<首模块>/`（views + routes）
 4. env 接线：`.env` 注入 `VITE_AUTH_ORIGIN=/auth`（统一登录回跳基址，缺省即 `/auth`）
-5. 端口登记三处同改：`portOffset`、`scripts/dev-gateway.ts` 的 `APPS` 表、`docker/nginx.dev.conf` 的 location
+5. 端口登记两处同改：`portOffset` 与 `scripts/apps-registry.mjs` 的 `port` 字段（注册表是 dev-gateway / check-routes / eslint 边界规则三消费的单源；`check:gateway-conf` 的端口双写锁死会校验 `5174 + portOffset === port`，漏改即红）+ `docker/nginx.dev.conf` 的 location 块（check-gateway-conf 双向校验兜底）
 6. `pnpm install` 锁 workspace 链接 → `pnpm -C apps/<name> dev` 起服务 → `pnpm check:routes`（脚本自动发现新 app）
 7. gh-pages 无需改脚本：`scripts/build-pages.ts` 自动发现含 `vite.config.ts` 的 app 目录并聚合部署
 
@@ -150,7 +150,7 @@ docker compose up
 | 5176 | portal     | 5179 | auth |
 | 8080 | nginx 网关 |      |      |
 
-处置：先找到占用进程释放（Windows `netstat -ano | findstr 5174`，macOS/Linux `lsof -i:5174`）。确需换端口时**三处同改**：目标 app `vite.config.ts` 的 `portOffset`、`scripts/dev-gateway.ts` 的 `APPS` 表、`docker/nginx.dev.conf` 的 location。
+处置：先找到占用进程释放（Windows `netstat -ano | findstr 5174`，macOS/Linux `lsof -i:5174`）。确需换端口时**两处同改**：目标 app `vite.config.ts` 的 `portOffset` 与 `scripts/apps-registry.mjs` 的 `port` 字段（`check:gateway-conf` 端口双写锁死校验，漂移即红）+ `docker/nginx.dev.conf` 的 location。
 
 ### 9.2 网关 502：`http://localhost:8080/admin/` 返回 Bad Gateway
 
@@ -163,6 +163,7 @@ docker compose up
 1. **网关模式**：确认请求地址是 `:8080` 而非具体 app 端口——`/api/*` 由 `nginx.dev.conf` 的 `location /api/` 统一反代到 admin（5174，其 mock 最全：auth/user/menu 三模块）；不经网关直连单 app 端口时，由各 app 自己的 vite-plugin-mock 处理（同一 `@vv/mock` 数据源，响应一致）
 2. **mock 文件位置**：mock 已迁 `packages/mock/src/`（**不是**根 `mock/`）；新建 mock 文件要放进该目录（或被 viteMockServe 扫描到的约定目录）才会生效
 3. **new-module 未带 `--with-mock`**：该选项可选，未传时只生成业务骨架、不生成 mock——接口自然 404，补一个 mock 文件即可
+4. **并行 dev 的 mock 竞态（`pnpm dev` 偶发全部 mock 404）**：6 app 共享同一 `@vv/mock` 源码目录，turbo 并行起 dev 时 vite-plugin-mock 的 bundle-require 会对 `_*.bundled_*.mjs` 临时文件无容错 unlink，并发编译下互相抢删会让某 app 的 mockData 静默清空（接口返回 index.html / 404）。**已内置修复**：`@vv/config` 的 `cleanMockBundled` 插件带 5 秒 mtime 门槛（只删创建超 5s 的陈旧临时文件，在飞文件不碰）；若老分支复现，重启该 app dev 即可，升级 `packages/config` 后根治
 
 ### 9.4 HMR 失效：console 报 `[vite] failed to connect to websocket ... client:865`
 
