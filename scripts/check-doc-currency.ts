@@ -19,8 +19,9 @@
 //   6. ProDialog 自有 Props 数 —— docs/27-ProDialog使用指南.md §2.1 表格
 //   7. BaseChart Props 数 —— docs/28-BaseChart使用指南.md §1.1 表格
 //   8. config 包顶层模块数（packages/config/src/*.ts 排除 .spec.ts）—— docs/04-构建与测试工具.md §1.1 表格
-//      P5-A 锚定：实际 9 个（app-aliases / clean-mock-bundled / create-vite-config / index / postcss /
-//      proxy / scss / server / vendor-chunks）；docs/04 旧值 7 的修订归 P5-5 文档治理
+//      P5-A 锚定 9 个（app-aliases / clean-mock-bundled / create-vite-config / index / postcss /
+//      proxy / scss / server / vendor-chunks）；2026-10-23 新增 create-vitest-config → 10 个
+//      （docs/04 §1.1 同步重写为 packages/config 口径，build/ 历史段落移除）
 //   9. VENDOR_CHUNKS 具名组数 —— docs/04 §1.1 表格（vendor-vue / vendor-ui / vendor-charts）
 //  10. ProTable composables 数 —— docs/29-ProTable使用指南.md §概述「17 composables」
 //  11. ProTable 顶级 demo 数 —— docs/29-ProTable使用指南.md §概述「25 个演示」（24 能力 demo + ProTableOverview 主入口）
@@ -324,10 +325,10 @@ const checks: Check[] = [
     tolerance: 0,
   },
   {
-    // P5-A 锚定实际 9（docs/04 §1.1 旧值 7 的修订归 P5-5 文档治理，构成见 countBuildModules 注释）
+    // P5-A 锚定 9 → 2026-10-23 create-vitest-config 工厂新增后 10（构成见文件头注 8）
     name: 'config 包顶层模块数 (docs/04 §1.1 表格)',
     actual: countBuildModules,
-    expected: 9,
+    expected: 10,
     tolerance: 0,
   },
   {
