@@ -169,6 +169,12 @@ export function createViteConfig({
     ],
     define: {
       'import.meta.env.VITE_APP_ID': JSON.stringify(appName),
+      // 统一注入 API baseURL 默认值 '/api'——所有 app 的 axios baseURL 单一来源
+      // （packages/shared/src/api/http.ts getAPIBaseURL 读取 VITE_API_BASE_URL，未设时
+      // 回退当前 origin，导致登录等请求落在 /auth/login 无 /api 前缀 → mock 404「资源不存在」；
+      // P4 auth 独立后实测踩坑）。env 显式配置（.env 的 VITE_API_BASE_URL）优先于本默认值
+      // （import.meta.env 在运行时经 Vite env 加载合并，define 仅补缺省）。
+      'import.meta.env.VITE_API_BASE_URL': JSON.stringify(process.env.VITE_API_BASE_URL ?? '/api'),
     },
     // 浏览器消费的 @vv/* 源码链接包禁止预打包（2026-10-22 P4 实证）：
     // esbuild 预打包不经 unplugin-auto-import 转换，shared store 内 auto-import 注入的
