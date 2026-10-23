@@ -25,6 +25,8 @@ export * from './app-router.ts'
 export * from './router-title.ts'
 // 6 app 骨架零差异段单源化（P5）：router base 解析 / 统一 scroll 行为 / prod-mock 挂接守卫
 export * from './router/base.ts'
+// catch-all 404 兜底路由工厂（原 6 app 逐字拷贝收敛，根治 h5 残留 docs 文案漂移）
+export * from './router/fallback.ts'
 export * from './prod-mock.ts'
 // 首屏装配段（P5 骨架下沉）：品牌色 CSS 变量注入 / document.title 占位初始化
 // （6 app main.ts 逐字重复段单源化，默认标题由调用方传入）
@@ -33,3 +35,5 @@ export * from './store/index.ts'
 export * from './router-guards/index.ts'
 // 跨应用统一登录协议（P4）：redirectToAuthLogin / resolvePostLoginRedirect
 export * from './auth/redirect.ts'
+// REM 适配 viewport 幂等插件（P5 下沉：admin / h5 双拷贝收敛单源；模块加载无副作用，install 才碰 DOM）
+export { default as remAdaptationPlugin, ensureViewportMeta } from './plugins/remAdaptation.ts'
