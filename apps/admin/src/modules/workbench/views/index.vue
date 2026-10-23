@@ -11,9 +11,6 @@ defineOptions({ name: 'Workbench' })
 
 const bem = createNamespace('workbench-home')
 
-// 项目路由封装（unplugin-auto-import 注入 @composables/*），按 name 跳转（类型安全，禁止直接 useRouter）
-const { pushByName } = useAppRouter()
-
 const note = ref('')
 const todoItems = [
   '四模式布局切换（顶栏右侧 LayoutSwitcher）',
@@ -22,11 +19,40 @@ const todoItems = [
   '中英文切换',
 ]
 
-/** 能力演示入口：免登录白名单页不在左侧菜单，从这里直达（/autoplan Phase 2 D-IA-1） */
-// P3-1/P3-2/P3-3 变更：Home 独立为 apps/portal、H5Demo 独立为 apps/h5、
-// BigDemo 系列独立为 apps/big（均跨应用，admin 内不再注册这些路由），
-// 全部演示入口随模块一并摘除，本数组暂空——后续 admin 私有演示在此补充。
-const panelLinks: { name: string; label: string; desc: string }[] = []
+/** 能力演示入口（跨应用整页跳转，P3 改造后 admin 内不再注册这些路由）。
+ *
+ * P3-1/P3-2/P3-3：Home→apps/portal、H5Demo→apps/h5、BigDemo 系列→apps/big，
+ * 均独立为跨应用。这里以整页跳转（新窗口打开）链接到各应用落地页——经同域网关
+ * （dev:gateway :8080）同源 path 可达；直查端口见各 desc 提示。 */
+interface PanelLink {
+  path: string
+  label: string
+  desc: string
+}
+const panelLinks: PanelLink[] = [
+  { path: '/portal/home', label: '门户首页', desc: 'portal 顶部导航布局（apps/portal）' },
+  {
+    path: '/h5/h5-demo',
+    label: 'H5 移动端演示',
+    desc: 'rem 适配 · 桌面打开请用 DevTools 设备模拟',
+  },
+  {
+    path: '/big/big-demo',
+    label: '数据大屏演示（1920）',
+    desc: 'transform scale 等比缩放（apps/big）',
+  },
+  {
+    path: '/big/big-demo/wide',
+    label: '超宽拼接屏演示（9000×1080）',
+    desc: 'meta.bigScreen 异形设计稿',
+  },
+  { path: '/big/big-demo/state-demo', label: '大屏五态示范', desc: '成功/加载/错误/空/断连形态' },
+]
+
+/** 跨应用整页跳转：新窗口打开目标 app（跨 app 无共享 router，须整页 location） */
+function openPanel(path: string): void {
+  window.open(path, '_blank')
+}
 </script>
 
 <template>
@@ -63,8 +89,8 @@ const panelLinks: { name: string; label: string; desc: string }[] = []
         <span :class="bem.e('heading')">能力演示导航</span>
       </template>
       <ul :class="bem.e('list')">
-        <li v-for="item in panelLinks" :key="item.name">
-          <el-link type="primary" @click="pushByName(item.name)">{{ item.label }}</el-link>
+        <li v-for="item in panelLinks" :key="item.path">
+          <el-link type="primary" @click="openPanel(item.path)">{{ item.label }}</el-link>
           —— {{ item.desc }}
         </li>
       </ul>
