@@ -37,6 +37,9 @@ import { assertNoMockInProd } from '@api/mock-guard'
 // prod-mock 挂接守卫自 P5 起归 @vv/shared（6 app 同款高危不变量单源化）；
 // @mock 别名仅 app 编译上下文可解析，故模块加载以回调注入
 import { setupProdMockIfNeeded } from '@vv/shared'
+// 品牌色注入 / 首屏标题初始化自 P5 起归 @vv/shared app-bootstrap
+//（6 app main.ts 逐字重复装配段单源化，默认标题由调用方传入）
+import { injectBrandColor, initDocumentTitle } from '@vv/shared'
 
 // 浏览器基线统一（必须在所有自定义样式之前）。
 // 详见 https://necolas.github.io/normalize.css/
@@ -46,33 +49,11 @@ import 'normalize.css'
 import 'virtual:uno.css'
 import '@assets/styles/index.scss'
 
-/**
- * 业务品牌色注入（2026-07-24 审计补齐 P2-3）。
- *
- * 在 createApp 之前应用：避免组件挂载后 CSS 变量未生效导致首屏闪烁。
- * 优先级：VITE_BRAND_COLOR > 默认 #409eff（Element Plus 默认蓝）。
- *
- * 配合 element-overwrite/index.scss 的灯色阶 mixin，
- * 业务侧改品牌色即可全局生效（含 Element Plus 按钮/标签等组件）。
- */
-const brandColor = import.meta.env.VITE_BRAND_COLOR || '#409eff'
-if (typeof document !== 'undefined') {
-  document.documentElement.style.setProperty('--color-primary', brandColor)
-}
-
-/**
- * 应用标题初始化（接通 env.d.ts 的 VITE_APP_TITLE，2026-07-27）。
- *
- * 在 createApp 之前注入：与路由守卫 / 远程菜单异步加载并行，
- * 避免首屏 document.title 短暂停留在 index.html 默认值。
- *
- * 优先级：VITE_APP_TITLE > 默认 '企业中后台管理'。
- *
- * 与 useAppRouter.pushWithTitle 的关系：登录完成、首次跳转后，
- * router 会按目标路由的 meta.title（或 i18n key）覆盖 document.title；
- * 本设置仅作为首屏占位，不影响运行时动态切换。
- */
-document.title = import.meta.env.VITE_APP_TITLE || '企业中后台管理'
+// 品牌色注入 + 首屏标题占位：6 app 逐字重复装配段单源化至 @vv/shared app-bootstrap（P5 骨架下沉）。
+// 必须在 createApp 之前调用——避免首屏闪烁 / 标题短暂停留 index.html 默认值（完整语义见包内 JSDoc）；
+// 标题仅作首屏占位，登录后由 router 按 meta.title 覆盖（与 useAppRouter.pushWithTitle 的关系见包内 JSDoc）
+injectBrandColor()
+initDocumentTitle('企业中后台管理')
 
 // Prod 模式防御层：vite-plugin-mock 在 prod 自动失效，本函数为扩展点
 assertNoMockInProd()
