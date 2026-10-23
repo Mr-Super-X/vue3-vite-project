@@ -25,7 +25,7 @@
 // 包内兄弟 composable 用显式相对导入（@vv/ui 包规范）；
 // app 侧消费本文件时 AutoImport 对显式导入的标识符跳过注入
 import { useConfirm } from './useConfirm.ts'
-import { useUserStore } from '@vv/shared'
+import { useUserStore, resolveAuthOrigin } from '@vv/shared'
 
 export function useLogout() {
   const userStore = useUserStore()
@@ -47,8 +47,7 @@ export function useLogout() {
       // 跨应用登出：清会话后整页跳 apps/auth 登录页（跨 app 无共享 router 实例）。
       // 与 redirectToAuthLogin 同 origin 语义，但不带 redirect 回跳参数、不抛中断信号——
       // 登出是终态操作，重登后回 fallback 落地页即可
-      const authOrigin = import.meta.env.VITE_AUTH_ORIGIN ?? '/auth'
-      window.location.href = `${authOrigin}/login`
+      window.location.href = `${resolveAuthOrigin()}/login`
     } finally {
       loggingOut.value = false
     }

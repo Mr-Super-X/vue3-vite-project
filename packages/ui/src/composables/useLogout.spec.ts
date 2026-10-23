@@ -15,9 +15,13 @@ vi.mock('@/composables/useConfirm', () => ({
   useConfirm: mockUseConfirm,
 }))
 
-vi.mock('@vv/shared', () => ({
-  useUserStore: () => ({ logout: mockStoreLogout }),
-}))
+vi.mock('@vv/shared', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@vv/shared')>()
+  return {
+    ...actual, // 保留 resolveAuthOrigin 等真实实现（M5 单源）
+    useUserStore: () => ({ logout: mockStoreLogout }),
+  }
+})
 
 import { useLogout } from './useLogout'
 

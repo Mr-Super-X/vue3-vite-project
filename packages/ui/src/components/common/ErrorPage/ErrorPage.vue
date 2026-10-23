@@ -64,8 +64,3 @@ const bem = createNamespace('error-page')
     </el-result>
   </div>
 </template>
-
-<style lang="scss">
-.#{$BEM_PREFIX}-error-page {
-}
-</style>

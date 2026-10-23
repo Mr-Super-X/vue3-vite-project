@@ -55,7 +55,10 @@ async function handleSubmit() {
   loading.value = true
   try {
     await userStore.login(form)
-    ElMessage.success('登录成功')
+    // 提示「正在跳转」而非「登录成功」——success toast 会被紧随的 location.href 整页跳转
+    // 即刻卸载（存活 <100ms 用户不可见），且 auth→目标 app 冷包加载期间用户看到白屏间隙。
+    // 「正在跳转…」提示存活到页面卸载，覆盖跳转过渡（易用性审查 H1）
+    ElMessage.success('登录成功，正在跳转…')
     // 跨应用回跳：redirect 查询参数由来源 app 的 redirectToAuthLogin 写入；
     // fallback 登录后默认回管理端落地页（经 withRepoPrefix 加部署前缀——gh-pages 不 404）
     window.location.href = resolvePostLoginRedirect(withRepoPrefix('/admin/'))

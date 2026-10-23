@@ -18,9 +18,15 @@
  * @group 跨应用登录协议
  */
 
+/** 解析统一登录应用 origin（缺省 '/auth' 同源子路径语义）——
+ *  单源在此（redirectToAuthLogin 与 @vv/ui useLogout 共用，避免两处缺省值拷贝漂移）。 */
+export function resolveAuthOrigin(): string {
+  return import.meta.env.VITE_AUTH_ORIGIN ?? '/auth'
+}
+
 /** 跨应用整页跳转（跨 app 无共享 router 实例，必须整页 location.href） */
 export function redirectToAuthLogin(redirect: string): never {
-  const authOrigin = import.meta.env.VITE_AUTH_ORIGIN ?? '/auth'
+  const authOrigin = resolveAuthOrigin()
   const safe = redirect.startsWith('/') ? redirect : '/'
   window.location.href = `${authOrigin}/login?redirect=${encodeURIComponent(safe)}`
   throw new Error('AUTH_REDIRECTING') // 中断当前守卫链（整页已发起）
