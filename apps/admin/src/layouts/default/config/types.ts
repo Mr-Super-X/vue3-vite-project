@@ -1,4 +1,4 @@
-import type { LayoutMode } from '@store/modules/app'
+import type { LayoutMode } from '@vv/shared'
 
 /**
  * Default 布局配置类型。

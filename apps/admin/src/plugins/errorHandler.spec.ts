@@ -5,7 +5,7 @@ const { mockBindErrorHandler } = vi.hoisted(() => ({
   mockBindErrorHandler: vi.fn(),
 }))
 
-vi.mock('@utils/safeAsync', () => ({
+vi.mock('@vv/shared', () => ({
   _bindErrorHandler: mockBindErrorHandler,
 }))
 

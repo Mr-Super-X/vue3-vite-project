@@ -25,7 +25,7 @@ import {
   checkPermission,
   composeGuards,
 } from '@vv/shared/router-guards'
-import { registerLocalStateResetHook, useUserStore } from '@store/modules/user'
+import { registerLocalStateResetHook, useUserStore } from '@vv/shared'
 import { useRouterStore } from '@/store/modules/router'
 import { isAdminWhiteListed } from '../whitelist'
 import { ensureRemoteMenuLoaded, resetAuthGuardState } from './remote-menu'

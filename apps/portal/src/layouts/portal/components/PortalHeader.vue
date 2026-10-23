@@ -14,7 +14,7 @@
  * @see [`@vv/ui/composables/useLogout`](../../../../../../packages/ui/src/composables/useLogout.ts) 退出流程
  * @group 布局：Portal
  */
-import { useUserStore } from '@store/modules/user'
+import { useUserStore } from '@vv/shared'
 // useLogout 随 ProDialog 族已迁 @vv/ui（P1-4），包子路径经 exports "./*" 解析
 import { useLogout } from '@vv/ui/composables/useLogout'
 // 跨应用统一登录协议（P4）：portal 无登录路由，整页跳 apps/auth

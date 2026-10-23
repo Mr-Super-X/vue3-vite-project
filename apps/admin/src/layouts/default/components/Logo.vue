@@ -13,7 +13,7 @@
  * @see [`@/store/modules/app`](../../../store/modules/app.ts) layout / sidebarCollapsed
  * @group 布局：Default
  */
-import { useAppStore } from '@store/modules/app'
+import { useAppStore } from '@vv/shared'
 import { defaultLayoutConfig } from '../config/app'
 
 const bem = createNamespace('app-logo')

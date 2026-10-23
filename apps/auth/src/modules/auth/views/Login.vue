@@ -19,7 +19,7 @@
  */
 // ElMessage 由 unplugin-auto-import 注入（importStyle 自动带样式，勿显式 import）
 import { User, Lock, View, Hide } from '@element-plus/icons-vue'
-import { useUserStore } from '@store/modules/user'
+import { useUserStore } from '@vv/shared'
 import { resolvePostLoginRedirect } from '@vv/shared'
 
 // BEM 工具由 unplugin-auto-import 自动注入，无须显式 import

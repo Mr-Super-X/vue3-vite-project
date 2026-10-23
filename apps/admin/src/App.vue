@@ -19,7 +19,7 @@
 import { useI18n } from 'vue-i18n'
 // router store 是 admin 私有（P1-3：@store 别名指向 @vv/shared，仅含 4 个共享 store）
 import { useRouterStore } from '@/store/modules/router'
-import { useAppStore } from '@store/modules/app'
+import { useAppStore } from '@vv/shared'
 import ErrorBoundary from '@components/common/ErrorBoundary.vue'
 import AsyncState from '@components/common/AsyncState.vue'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'

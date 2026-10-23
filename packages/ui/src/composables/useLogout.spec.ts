@@ -15,7 +15,7 @@ vi.mock('@/composables/useConfirm', () => ({
   useConfirm: mockUseConfirm,
 }))
 
-vi.mock('@store/modules/user', () => ({
+vi.mock('@vv/shared', () => ({
   useUserStore: () => ({ logout: mockStoreLogout }),
 }))
 

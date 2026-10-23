@@ -6,9 +6,9 @@ import type { WebVitalsOptions } from './webVitals'
 // P1-3 包化：ErrorSource / ErrorContext / ErrorReporter 契约随 safeAsync 下沉到
 // @vv/shared（shared 不反向依赖 app 的 plugins）；此处 re-export 保持既有消费方
 // （errorHandler.ts / plugins/index.ts / safeAsync 注入链）零改动。
-export type { ErrorSource, ErrorContext, ErrorReporter } from '@utils/safeAsync'
+export type { ErrorSource, ErrorContext, ErrorReporter } from '@vv/shared'
 
-import type { ErrorReporter } from '@utils/safeAsync'
+import type { ErrorReporter } from '@vv/shared'
 
 /**
  * errorHandler 插件 options

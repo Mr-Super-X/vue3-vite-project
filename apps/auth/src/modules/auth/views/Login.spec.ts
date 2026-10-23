@@ -7,20 +7,23 @@ import { ElMessage } from 'element-plus'
 // 不再有 vue-router push；jsdom 的 Location.href 不可拦截，经 stubGlobal 整体替换
 const fakeLocation = { href: 'http://localhost/login', search: '' }
 
-const mockLogin = vi.fn()
-const mockUserStore = { login: mockLogin }
-vi.mock('@store/modules/user', () => ({
-  useUserStore: () => mockUserStore,
-}))
-
-// resolvePostLoginRedirect 归 @vv/shared 根 barrel；importOriginal 保留其余导出
-// （createNamespace 等 AutoImport 注入标识符的真实实现不受影响）
-const { mockResolvePostLoginRedirect } = vi.hoisted(() => ({
-  mockResolvePostLoginRedirect: vi.fn(() => '/admin/'),
-}))
+// 单点 mock @vv/shared 根 barrel：useUserStore + resolvePostLoginRedirect 双覆盖
+// （importOriginal 保留其余导出——createNamespace 等 AutoImport 注入标识符的真实实现不受影响）
+const { mockLogin, mockUserStore, mockResolvePostLoginRedirect } = vi.hoisted(() => {
+  const mockLogin = vi.fn()
+  return {
+    mockLogin,
+    mockUserStore: { login: mockLogin },
+    mockResolvePostLoginRedirect: vi.fn(() => '/admin/'),
+  }
+})
 vi.mock('@vv/shared', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@vv/shared')>()
-  return { ...actual, resolvePostLoginRedirect: mockResolvePostLoginRedirect }
+  return {
+    ...actual,
+    useUserStore: () => mockUserStore,
+    resolvePostLoginRedirect: mockResolvePostLoginRedirect,
+  }
 })
 
 vi.mock('element-plus', async () => {

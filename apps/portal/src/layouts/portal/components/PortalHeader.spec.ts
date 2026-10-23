@@ -7,10 +7,6 @@ import { nextTick, ref, reactive } from 'vue'
 const { mockRedirectToAuthLogin } = vi.hoisted(() => ({
   mockRedirectToAuthLogin: vi.fn(),
 }))
-vi.mock('@vv/shared', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@vv/shared')>()
-  return { ...actual, redirectToAuthLogin: mockRedirectToAuthLogin }
-})
 
 // mock useUserStore（组件仅消费 profile）
 const mockProfile = ref<{ name: string } | null>({ name: '张三' })
@@ -19,9 +15,17 @@ const mockUserStore = reactive({
   permissions: [] as string[],
   isLoggedIn: true,
 })
-vi.mock('@store/modules/user', () => ({
-  useUserStore: () => mockUserStore,
-}))
+
+// 合并单点 mock @vv/shared 根 barrel：redirectToAuthLogin + useUserStore 双覆盖
+// （importOriginal 保留其余导出，createNamespace 等 AutoImport 注入标识符真实实现不受影响）
+vi.mock('@vv/shared', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@vv/shared')>()
+  return {
+    ...actual,
+    redirectToAuthLogin: mockRedirectToAuthLogin,
+    useUserStore: () => mockUserStore,
+  }
+})
 
 // mock useLogout
 const mockLoggingOut = ref(false)

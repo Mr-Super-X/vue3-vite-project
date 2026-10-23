@@ -11,7 +11,7 @@
  */
 import { ArrowDown, Check, Menu as MenuIconEp } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
-import { useAppStore, type LayoutMode } from '@store/modules/app'
+import { useAppStore, type LayoutMode } from '@vv/shared'
 
 const bem = createNamespace('layout-switcher')
 

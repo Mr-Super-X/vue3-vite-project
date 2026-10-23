@@ -5,9 +5,9 @@ import type { WebVitalsOptions } from './webVitals'
 
 // ErrorSource / ErrorContext / ErrorReporter 契约归 @vv/shared
 // （shared 不反向依赖 app 的 plugins）；此处 re-export 保持与 admin 同形态
-export type { ErrorSource, ErrorContext, ErrorReporter } from '@utils/safeAsync'
+export type { ErrorSource, ErrorContext, ErrorReporter } from '@vv/shared'
 
-import type { ErrorReporter } from '@utils/safeAsync'
+import type { ErrorReporter } from '@vv/shared'
 
 /**
  * errorHandler 插件 options

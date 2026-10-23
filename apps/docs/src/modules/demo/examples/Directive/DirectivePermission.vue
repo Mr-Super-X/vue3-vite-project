@@ -13,7 +13,7 @@
  * 推荐新代码使用 v-auth（统一指令，支持更多修饰符）；
  * v-permission 保留以兼容已有调用。
  */
-import { useUserStore } from '@store/modules/user'
+import { useUserStore } from '@vv/shared'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'

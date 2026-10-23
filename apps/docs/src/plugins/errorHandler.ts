@@ -1,6 +1,6 @@
 import type { App } from 'vue'
 import type { ErrorHandlerOptions, ErrorSource } from './errorHandler.d'
-import { _bindErrorHandler } from '@utils/safeAsync'
+import { _bindErrorHandler } from '@vv/shared'
 
 /**
  * 全局错误处理插件

@@ -15,6 +15,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 >   - **本地同域网关**：`docker-compose.yml` + `docker/nginx.dev.conf`（:8080 反代 5174-5179，保留前缀）+ `pnpm dev:gateway`（6 app 带 base 并行 dev，scripts/dev-gateway.ts）
 >   - **统一登录协议**：未登录守卫整页跳 `${VITE_AUTH_ORIGIN}/login?redirect=...`（缺省 `/auth`，env 注入），cookie 同域漫游
 >
+> **v3.0.1 变更**（2026-10-23）：架构审查「别名→包名迁移立场」落地——新增 §1.6.2「包消费约定」：立场定为「别名为 app 内部快捷方式（`@/` 永久保留），跨包消费走 `@vv/shared` / `@vv/ui` 包名 barrel；别名深层路径（`@utils/@store/@api` 等直达包内部）定性为 D4 平滑迁移的过渡态遗留，新代码禁止新增、存量渐进收敛」；配套 codemod 收敛 3 个深层热点（`@utils/safeAsync`×15 / `@store/modules/app`×10 / `@store/modules/user`×7 + vi.mock 说明符×4，31 文件 36 处，`scripts/codemod-alias-hotspots.mjs` 一次性执行后删除）；别名定义（`packages/config/src/app-aliases.ts`）原样保留以兼容存量
+>
 > **v2.2.1 及更早版本历史**（单应用 src/ 时期，治理条款已由 v3.0.0 §2 取代）：
 >
 > - **v2.2.1 变更**（2026-10-21）：gh-pages 演示站恢复 demo 路由——`src/modules/demo/routes/index.ts` 的 DEV 门控放宽为 `isDemoRoutesEnabled`（dev 或 `VITE_DEMO_NO_AUTH=true` 演示构建均注册 demo 路由 + glob 组件，常规 prod 仍整体 tree-shake 剔除，实测 36 chunk/4.0M vs 演示构建 182 chunk/11M）；`src/router/whitelist.ts` 提取 `demoWhitelistNames` 模块级常量同条件吸收（内联 `[]` 会截断 check-routes 的正则提取，实测踩坑）；CHANGELOG「未发布」区新增 fix 节；docs/07/09/23/39 + README 文档表同步
@@ -272,6 +274,28 @@ const { data } = storeToRefs(useUserStore())
 ```
 
 > **例外**：业务模块的 `import { useUserStore } from '@/store/modules/user'` 本身就有路径注释（IDE hover 显示），无需额外标注。
+
+---
+
+### 1.6.2 包消费约定（别名 vs 包名，治理立场 2026-10-23）
+
+架构审查对「别名深层路径」给出明确立场（设计稿 D4 平滑迁移策略的收尾裁决）：
+
+| 消费场景                                                                                         | 约定引用方式                                                 | 定性                                                      |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ | --------------------------------------------------------- |
+| app 引用**自身 src** 文件                                                                        | `@/` 别名（或同目录 `./` 相对路径）                          | 合法、**永久保留**（`@/` 恒指本 app）                     |
+| app 消费 `@vv/shared` 公共能力（utils / enums / store / composables / 登录协议 / router-guards） | `import { ... } from '@vv/shared'`（根 barrel）              | **首选**——包边界可见，barrel 收敛公共 API                 |
+| app 消费 `@vv/ui`（useDialog / useConfirm / useLogout 等）                                       | 包名路径（`@vv/ui/composables/useDialog`）或 AutoImport 注入 | 组件本体按 §1.7 走自动注册，不 import                     |
+| `@api` / `@locales` / `@directives` / `@mock`                                                    | 别名                                                         | **既定例外**（barrel 刻意不聚合，见下）                   |
+| `@utils/*` / `@store/*` / `@enums/*` / `@composables/*` 等别名深层路径                           | ——                                                           | **过渡态遗留**：新代码禁止新增，存量渐进收敛至包名 barrel |
+
+规则要点：
+
+1. **别名机制本身保留**：`packages/config/src/app-aliases.ts` 别名定义原样保留（vite/tsconfig/check-aliases 三处消费），收敛只改消费侧 import，不动别名定义。
+2. **为什么收敛**：别名深层路径让包边界在消费代码中不可见（看不到 `@vv/shared` 字样），且绕过 barrel 的公共 API 收敛——包内部文件路径变化会直接炸消费方；barrel 单点才能承载「公共 API 演进」。
+3. **既有例外不要误伤**：`packages/shared/src/index.ts` 头注刻意不聚合 `./api`（模块加载即建 axios 实例）、`./directives`（import.meta.glob 注册插件）、`./locales`（createI18n 副作用）——这三类消费经别名是 **sanctioned 既定路径**，不属于待收敛债务；`@enums` 已零消费（其两枚举早入 barrel）。
+4. **测试 mock 同步**：`vi.mock()` 说明符是语义 import 路径——SUT 改从 `@vv/shared` import 后，mock 必须指向同一说明符，否则失去拦截；若被测模块从 barrel 同时消费多个导出，用单点 mock + `importOriginal` 展开覆盖（同模块声明两个 `vi.mock('@vv/shared')` 后者覆盖前者，2026-10-23 收敛时 2 个 spec 因此现形）。
+5. **收敛节奏**：不做大爆炸全量替换，按「热点优先」批次走——每批 = 只改带引号 import 说明符 + 三门禁（`pnpm type-check` / `pnpm check:aliases` / `pnpm test`）。首批已完成（2026-10-23）：`@utils/safeAsync`×15 / `@store/modules/app`×10 / `@store/modules/user`×7 + vi.mock 说明符×4，31 文件 36 处，一次性 codemod 脚本执行后即删。
 
 ---
 
