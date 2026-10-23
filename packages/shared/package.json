@@ -20,7 +20,7 @@
     "axios": "catalog:",
     "vue-i18n": "catalog:",
     "element-plus": "catalog:",
-    "lodash-es": "^4.18.1",
+    "lodash-es": "catalog:",
     "dayjs": "catalog:"
   },
   "devDependencies": {

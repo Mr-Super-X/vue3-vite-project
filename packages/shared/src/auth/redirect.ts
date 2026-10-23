@@ -26,17 +26,12 @@ export function redirectToAuthLogin(redirect: string): never {
   throw new Error('AUTH_REDIRECTING') // 中断当前守卫链（整页已发起）
 }
 
-/** auth 登录成功后回跳（校验同源前缀，防开放重定向） */
-export function resolvePostLoginRedirect(fallback = '/admin/'): string {
-  // 【CCDebug·临时】定位登录后回跳 404——打印实际 redirect 参数与回跳目标，修复后删除
+/** auth 登录成功后回跳（校验同源前缀，防开放重定向）。
+ *
+ * fallback 由调用方显式传入（登录后默认落地页）——本包不硬编码 app 名/部署形态
+ * （见文件头注），默认值曾因写死 '/admin/' 致 app 特性泄漏进纯库包（架构审查项）。 */
+export function resolvePostLoginRedirect(fallback: string): string {
   const raw = new URLSearchParams(window.location.search).get('redirect')
-  console.log(
-    '【CCDebug】resolvePostLoginRedirect search=',
-    window.location.search,
-    'redirect=',
-    raw
-  )
   if (raw && raw.startsWith('/') && !raw.startsWith('//')) return raw
-  console.log('【CCDebug】redirect 无效，用 fallback=', fallback)
   return fallback
 }

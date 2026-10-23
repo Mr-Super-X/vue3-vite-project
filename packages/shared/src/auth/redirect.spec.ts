@@ -48,21 +48,21 @@ describe('redirectToAuthLogin', () => {
 describe('resolvePostLoginRedirect', () => {
   it('redirect 参数合法（/ 开头且非 //）→ 原样返回', () => {
     fakeLocation.search = '?redirect=%2Fworkbench'
-    expect(resolvePostLoginRedirect()).toBe('/workbench')
+    expect(resolvePostLoginRedirect('/admin/')).toBe('/workbench')
   })
 
-  it('无 redirect 参数 → fallback（缺省 /admin/）', () => {
-    expect(resolvePostLoginRedirect()).toBe('/admin/')
+  it('无 redirect 参数 → fallback', () => {
+    expect(resolvePostLoginRedirect('/admin/')).toBe('/admin/')
   })
 
   it('// 开头的协议相对 URL → fallback（防开放重定向到外域）', () => {
     fakeLocation.search = '?redirect=%2F%2Fevil.com'
-    expect(resolvePostLoginRedirect()).toBe('/admin/')
+    expect(resolvePostLoginRedirect('/admin/')).toBe('/admin/')
   })
 
   it('绝对 URL → fallback（只允许同源路径）', () => {
     fakeLocation.search = `?redirect=${encodeURIComponent('https://evil.com/x')}`
-    expect(resolvePostLoginRedirect()).toBe('/admin/')
+    expect(resolvePostLoginRedirect('/admin/')).toBe('/admin/')
   })
 
   it('自定义 fallback 生效', () => {
