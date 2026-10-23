@@ -13,11 +13,15 @@
  */
 import { useAppRouter } from '@vv/shared'
 
-/** 支持的 HTTP 错误状态码 */
-type ErrorPageStatus = 403 | 404 | 500
+/** HTTP 状态码字面量（模板字符串形态 status="404"——6 app 消费方统一这么传）。
+ *  定义字符串联合而非数字——模板字符串字面量在 SFC prop 绑定中即 string 类型，
+ *  若定数字联合则 :status="'404'" 才通过、status="404" 报 TS2322（实测）。 */
+type ErrorPageStatus = '403' | '404' | '500'
+/** el-result icon 合法值（字面量联合，非 string——:icon 绑定需精确类型） */
+type ResultIcon = 'primary' | 'success' | 'info' | 'warning' | 'error'
 
 interface Props {
-  /** HTTP 状态码：403 无权访问 / 404 页面不存在 / 500 服务器错误 */
+  /** HTTP 状态码：403 无权访问 / 404 页面不存在 / 500 服务器错误（字符串字面量，如 "404"） */
   status: ErrorPageStatus
   /** 状态码下方的业务说明文案（el-result sub-title） */
   title: string
@@ -34,12 +38,15 @@ const props = defineProps<Props>()
 const { router } = useAppRouter()
 
 // 状态码 → el-result icon 映射：403 warning / 404 info / 500 error
-// （语义对齐迁移前 admin error 模块三视图的既有用法，保持一致体验）
-const ICON_MAP: Record<ErrorPageStatus, string> = {
-  403: 'warning',
-  404: 'info',
-  500: 'error',
-}
+// as const 保证值为字面量联合类型（满足 el-result :icon 精确类型）；键对齐字符串 status
+const ICON_MAP: Record<ErrorPageStatus, ResultIcon> = {
+  '403': 'warning',
+  '404': 'info',
+  '500': 'error',
+} as const
+
+// el-result icon：按 status 查表（status 已是 '404' 等字符串字面量）
+const resultIcon = ICON_MAP[props.status]
 
 async function goBack(): Promise<void> {
   await router.push(props.returnTo)
@@ -50,7 +57,7 @@ const bem = createNamespace('error-page')
 
 <template>
   <div :class="bem.b()">
-    <el-result :icon="ICON_MAP[status]" :title="String(status)" :sub-title="title">
+    <el-result :icon="resultIcon" :title="String(status)" :sub-title="title">
       <template #extra>
         <el-button type="primary" @click="goBack">{{ returnLabel }}</el-button>
       </template>
