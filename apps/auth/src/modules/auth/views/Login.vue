@@ -20,7 +20,7 @@
 // ElMessage 由 unplugin-auto-import 注入（importStyle 自动带样式，勿显式 import）
 import { User, Lock, View, Hide } from '@element-plus/icons-vue'
 import { useUserStore } from '@vv/shared'
-import { resolvePostLoginRedirect } from '@vv/shared'
+import { resolvePostLoginRedirect, withRepoPrefix } from '@vv/shared'
 
 // BEM 工具由 unplugin-auto-import 自动注入，无须显式 import
 const bem = createNamespace('login')
@@ -57,8 +57,8 @@ async function handleSubmit() {
     await userStore.login(form)
     ElMessage.success('登录成功')
     // 跨应用回跳：redirect 查询参数由来源 app 的 redirectToAuthLogin 写入；
-    // fallback '/admin/'（登录后默认回管理端落地页）
-    window.location.href = resolvePostLoginRedirect('/admin/')
+    // fallback 登录后默认回管理端落地页（经 withRepoPrefix 加部署前缀——gh-pages 不 404）
+    window.location.href = resolvePostLoginRedirect(withRepoPrefix('/admin/'))
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : '登录失败，请重试'
     ElMessage.error(msg)

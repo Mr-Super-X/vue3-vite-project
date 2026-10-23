@@ -26,6 +26,30 @@ export function resolveBasePath(): string {
 }
 
 /**
+ * 给跨应用跳转路径加部署前缀（同源 path 形态的仓库根）。
+ *
+ * 业务背景：跨 app 跳链（portal→管理后台、工作台能力演示导航到 h5/big 等）历史上
+ * 硬编码根路径（`/admin/`、`/h5/h5-demo`）——同域网关（VITE_BASE=`<app>/`）下正常，
+ * 但 gh-pages 形态（VITE_BASE=`<repo>/<app>/`，如 `/vue3-vite-project/admin/`）下全部
+ * 404（易用性审查 P0-2：跨 app 路径未随部署形态缩放）。
+ *
+ * 本函数从 VITE_BASE 推「仓库根」前缀：
+ * - 网关 `VITE_BASE=/admin/`     → 前缀 `/`          → `/admin/` 不变
+ * - gh-pages `VITE_BASE=/repo/admin/` → 前缀 `/repo/` → `/repo/admin/`（正确）
+ *
+ * 实现：取 VITE_BASE 去末段（当前 app 名）即仓库根；单段 base（如 `/admin/`）根为 `/`。
+ * 消费方：PortalHeader 管理后台跳链、workbench 能力演示 panelLinks、auth 登录 fallback。
+ */
+export function withRepoPrefix(path: string): string {
+  const base = resolveBasePath() // 形如 /<app>/ 或 /<repo>/<app>/
+  const segments = base.split('/').filter(Boolean) // ['admin'] 或 ['repo','admin']
+  segments.pop() // 去末段（当前 app 名）→ 仓库根段
+  const repoRoot = segments.length > 0 ? `/${segments.join('/')}/` : '/'
+  const cleanPath = path.startsWith('/') ? path : `/${path}`
+  return `${repoRoot}${cleanPath.slice(1)}`
+}
+
+/**
  * 创建各 app 统一的路由滚动行为。
  *
  * 业务语义：

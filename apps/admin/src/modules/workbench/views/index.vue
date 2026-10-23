@@ -9,6 +9,9 @@
  */
 defineOptions({ name: 'Workbench' })
 
+// withRepoPrefix：跨 app 跳链加部署前缀（gh-pages base=<repo>/<app>/ 下不 404，易用性审查 P0-2）
+import { withRepoPrefix } from '@vv/shared'
+
 const bem = createNamespace('workbench-home')
 
 const note = ref('')
@@ -49,9 +52,10 @@ const panelLinks: PanelLink[] = [
   { path: '/big/big-demo/state-demo', label: '大屏五态示范', desc: '成功/加载/错误/空/断连形态' },
 ]
 
-/** 跨应用整页跳转：新窗口打开目标 app（跨 app 无共享 router，须整页 location） */
+/** 跨应用整页跳转：新窗口打开目标 app（跨 app 无共享 router，须整页 location）。
+ *  path 经 withRepoPrefix 加部署前缀——gh-pages 形态（base=<repo>/<app>/）下不 404。 */
 function openPanel(path: string): void {
-  window.open(path, '_blank')
+  window.open(withRepoPrefix(path), '_blank')
 }
 </script>
 

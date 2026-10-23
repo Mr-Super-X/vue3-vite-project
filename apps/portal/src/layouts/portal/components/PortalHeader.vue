@@ -14,7 +14,7 @@
  * @see [`@vv/ui/composables/useLogout`](../../../../../../packages/ui/src/composables/useLogout.ts) 退出流程
  * @group 布局：Portal
  */
-import { useUserStore } from '@vv/shared'
+import { useUserStore, withRepoPrefix } from '@vv/shared'
 // useLogout 随 ProDialog 族已迁 @vv/ui（P1-4），包子路径经 exports "./*" 解析
 import { useLogout } from '@vv/ui/composables/useLogout'
 // 跨应用统一登录协议（P4）：portal 无登录路由，整页跳 apps/auth
@@ -83,7 +83,8 @@ async function onCommand(cmd: string) {
       <PortalNav :items="PORTAL_NAV" />
 
       <div :class="bem.e('actions')">
-        <a :class="bem.e('admin')" href="/admin/">管理后台</a>
+        <!-- 跨 app 跳链经 withRepoPrefix 加部署前缀——gh-pages（base=<repo>/<app>/）下不 404 -->
+        <a :class="bem.e('admin')" :href="withRepoPrefix('/admin/')">管理后台</a>
         <button
           v-if="!userStore.profile"
           type="button"

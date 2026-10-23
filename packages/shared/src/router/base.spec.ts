@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { RouteLocationNormalized } from 'vue-router'
-import { resolveBasePath, createDefaultScrollBehavior } from './base.ts'
+import { resolveBasePath, createDefaultScrollBehavior, withRepoPrefix } from './base.ts'
 
 beforeEach(() => {
   // bem.spec.ts 同款模式：每个用例前清掉 env 存根，避免用例间泄漏
@@ -31,6 +31,30 @@ describe('resolveBasePath', () => {
   it('裸路径只补头（首个分支即 return——忠实原 6 份拷贝的同构语义）', () => {
     vi.stubEnv('VITE_BASE', 'app')
     expect(resolveBasePath()).toBe('/app')
+  })
+})
+
+describe('withRepoPrefix（跨 app 跳链加部署前缀，gh-pages 不 404）', () => {
+  it('网关形态 VITE_BASE=/<app>/ → 仓库根 /，路径不变', () => {
+    vi.stubEnv('VITE_BASE', '/admin/')
+    expect(withRepoPrefix('/admin/')).toBe('/admin/')
+    expect(withRepoPrefix('/h5/h5-demo')).toBe('/h5/h5-demo')
+  })
+
+  it('gh-pages 形态 VITE_BASE=/<repo>/<app>/ → 前缀 /<repo>/', () => {
+    vi.stubEnv('VITE_BASE', '/vue3-vite-project/portal/')
+    expect(withRepoPrefix('/admin/')).toBe('/vue3-vite-project/admin/')
+    expect(withRepoPrefix('/big/big-demo')).toBe('/vue3-vite-project/big/big-demo')
+  })
+
+  it('单段 base（如 /admin/）根为 /（不叠 //）', () => {
+    vi.stubEnv('VITE_BASE', '/admin/')
+    expect(withRepoPrefix('/portal/home')).toBe('/portal/home')
+  })
+
+  it('不带 / 开头的 path 自动补', () => {
+    vi.stubEnv('VITE_BASE', '/repo/admin/')
+    expect(withRepoPrefix('admin/')).toBe('/repo/admin/')
   })
 })
 
