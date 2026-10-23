@@ -83,6 +83,7 @@ async function onCommand(cmd: string) {
       <PortalNav :items="PORTAL_NAV" />
 
       <div :class="bem.e('actions')">
+        <a :class="bem.e('admin')" href="/admin/">管理后台</a>
         <button
           v-if="!userStore.profile"
           type="button"
@@ -164,6 +165,21 @@ async function onCommand(cmd: string) {
     display: flex;
     align-items: center;
     flex-shrink: 0;
+    gap: 16px;
+  }
+
+  // 管理后台跳链：文字链，hover 下划线（区别于登录按钮的实心样式）
+  &__admin {
+    font-size: 14px;
+    color: var(--portal-ink);
+    text-decoration: none;
+    opacity: 0.75;
+    transition: opacity 0.2s ease;
+
+    &:hover {
+      opacity: 1;
+      text-decoration: underline;
+    }
   }
 
   // 未登录态：黑底白字按钮，hover 反白互换

@@ -45,9 +45,10 @@ describe('PortalHeader 企业官网顶栏', () => {
   it('1. 渲染品牌名与全部锚点导航', () => {
     const w = mount(PortalHeader, { global: { mocks: { $t: mockT } } })
     expect(w.text()).toContain('星澜科技')
-    // 品牌 logo 锚点(1) + 导航锚点(4)
-    expect(w.findAll('a')).toHaveLength(5)
+    // 品牌 logo 锚点(1) + 导航锚点(4) + 管理后台跳链(1)
+    expect(w.findAll('a')).toHaveLength(6)
     expect(w.text()).toContain('产品')
+    expect(w.text()).toContain('管理后台')
   })
 
   it('2. 未登录显示「登录」按钮，点击整页跳 apps/auth 统一登录（P4）', async () => {
