@@ -17,3 +17,6 @@ export * from './proxy.ts'
 export * from './postcss.ts'
 export * from './app-aliases.ts'
 export * from './create-vite-config.ts'
+// Vitest 配置工厂（2026-10-23：6 app vitest.config 的 test 块逐字同构收敛单源，
+// admin coverage 阈值块走参数注入）
+export * from './create-vitest-config.ts'

@@ -20,10 +20,6 @@ const appRoot = fileURLToPath(new URL('.', import.meta.url))
 export default createViteConfig({
   appRoot,
   appName: 'h5',
-  base: process.env.VITE_BASE ?? '/',
-  // vite-plugin-mock 以 isAbsPath 判定 mockPath（dist/index.mjs:224），绝对路径安全；
-  // mock 数据源在 @vv/mock 包（packages/mock/src），与 admin / docs 同源
-  mockPath: fileURLToPath(new URL('../../packages/mock/src', import.meta.url)),
   portOffset: 3,
   // h5 rem 适配：仅转换本 app src/layouts/h5 与 src/modules/h5-*（postcss.ts 约定）
   h5Rem: true,

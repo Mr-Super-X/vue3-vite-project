@@ -17,6 +17,8 @@
  */
 
 import type { RouteRecordRaw } from 'vue-router'
+// routeNames 提取收敛 @vv/shared 单源（2026-10-23 重复性审查：5 app 三份拷贝+变体+字面量统一）
+import { collectRouteNames } from '@vv/shared'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -34,19 +36,9 @@ const routes: RouteRecordRaw[] = [
 ]
 
 /**
- * 自动从 routes 数组提取所有 auth 路由名（供 auth 白名单吸收）。
- * 递归处理嵌套 children，输出扁平 name 列表。
+ * auth 全部路由 name（供 auth 白名单吸收）。
+ * 提取逻辑单源在 @vv/shared `collectRouteNames`（递归拍平 children，新增子路由自动跟随）。
  */
-export const routeNames: readonly string[] = (() => {
-  const names: string[] = []
-  const visit = (rs: RouteRecordRaw[]): void => {
-    for (const r of rs) {
-      if (typeof r.name === 'string') names.push(r.name)
-      if (r.children?.length) visit(r.children)
-    }
-  }
-  visit(routes)
-  return names
-})()
+export const routeNames: readonly string[] = collectRouteNames(routes)
 
 export default routes

@@ -86,9 +86,18 @@ export interface AppViteOptions {
   appRoot: string
   /** app 标识（注入 import.meta.env.VITE_APP_ID） */
   appName: string
-  /** vite base；CLI --base 优先级更高（gh-pages 演示构建走 CLI 注入，见 deploy.yml） */
+  /**
+   * vite base；缺省读 VITE_BASE 环境变量（`?? '/'`）。CLI --base 优先级更高（gh-pages
+   * 聚合构建 scripts/build-pages.ts 走 CLI 注入）。原 6 app 逐字同构的
+   * `process.env.VITE_BASE ?? '/'` 收敛为工厂缺省（2026-10-23 重复性审查）
+   */
   base?: string
-  /** mock 目录绝对路径；缺省则不挂 vite-plugin-mock（无 mock 依赖的 app） */
+  /**
+   * mock 目录绝对路径（vite-plugin-mock 以 isAbsPath 判定，dist/index.mjs:224，须绝对路径）；
+   * 缺省 `path.join(appRoot, '../../packages/mock/src')`（@vv/mock 包源码——6 app 均此值，
+   * 2026-10-23 收敛为工厂缺省）。无 mock 依赖的 app 传空串 '' 退出（falsy 不挂
+   * vite-plugin-mock 与 cleanMockBundled）
+   */
   mockPath?: string
   /** dev server 端口偏移（多 app 并行 dev 时区分，port = SERVER_DEFAULTS.port + portOffset） */
   portOffset?: number
@@ -106,8 +115,8 @@ export interface AppViteOptions {
 export function createViteConfig({
   appRoot,
   appName,
-  base = '/',
-  mockPath,
+  base = process.env.VITE_BASE ?? '/',
+  mockPath = path.join(appRoot, '../../packages/mock/src'),
   portOffset = 0,
   h5Rem = false,
   extraPlugins = [],

@@ -18,9 +18,9 @@
  */
 
 import type { RouteRecordRaw } from 'vue-router'
-
-/** 白名单吸收依据：本模块全部路由名（apps/big/src/router/whitelist.ts 消费，勿手改不同步） */
-export const routeNames = ['BigDemo', 'BigDemoWide', 'BigDemoStateDemo'] as const
+// routeNames 提取收敛 @vv/shared 单源（2026-10-23 重复性审查：原硬编码字面量在新增强
+// 路由时白名单不跟随，漂移面最大，改为从 routes 派生）
+import { collectRouteNames } from '@vv/shared'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -58,5 +58,12 @@ const routes: RouteRecordRaw[] = [
     ],
   },
 ]
+
+/**
+ * 白名单吸收依据：本模块全部路由 name（apps/big/src/router/whitelist.ts 消费）。
+ * 从 routes 派生（collectRouteNames 单源）：新增子路由时白名单自动跟随，
+ * 杜绝「路由已实现但白名单漏配」的漂移（check:routes 的 A 校验同源）。
+ */
+export const routeNames: readonly string[] = collectRouteNames(routes)
 
 export default routes

@@ -25,6 +25,8 @@
 import type { RouteRecordRaw } from 'vue-router'
 import type { Component } from 'vue'
 import { pascalCase, kebabCase, autoImport } from '@utils'
+// routeNames 提取收敛 @vv/shared 单源（2026-10-23 重复性审查：5 app 三份拷贝+变体+字面量统一）
+import { collectRouteNames } from '@vv/shared'
 
 // Vite import.meta.glob 扫描 examples 下所有 .vue 入口
 // 路径相对当前文件（routes/index.ts），examples 在父目录 → 用 '../examples/...'
@@ -100,19 +102,9 @@ const routes: RouteRecordRaw[] = [
 ]
 
 /**
- * 自动从 routes 数组提取所有 demo 路由名（供 whitelist 吸收）。
- * 递归处理嵌套 children，输出扁平 name 列表。
+ * 全部 demo 路由 name（供 docs 白名单吸收）。
+ * 提取逻辑单源在 @vv/shared `collectRouteNames`（递归拍平 children，新增 demo 自动跟随）。
  */
-export const routeNames: readonly string[] = (() => {
-  const names: string[] = []
-  const visit = (rs: RouteRecordRaw[]): void => {
-    for (const r of rs) {
-      if (typeof r.name === 'string') names.push(r.name)
-      if (r.children?.length) visit(r.children)
-    }
-  }
-  visit(routes)
-  return names
-})()
+export const routeNames: readonly string[] = collectRouteNames(routes)
 
 export default routes

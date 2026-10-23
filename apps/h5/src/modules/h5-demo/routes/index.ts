@@ -19,6 +19,9 @@
  */
 
 import type { RouteRecordRaw } from 'vue-router'
+// routeNames 提取收敛 @vv/shared 单源（2026-10-23 重复性审查：5 app 三份拷贝+变体+字面量统一）；
+// 原 flatMap 只看一层 children，collectRouteNames 递归拍平，语义是超集
+import { collectRouteNames } from '@vv/shared'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -46,8 +49,6 @@ export default routes
  *
  * 从 routes 派生而非手写第二份：新增子路由时白名单自动跟随，
  * 杜绝「路由已实现但白名单漏配」的漂移（check:routes 的 A 校验同源）。
+ * 提取逻辑单源在 @vv/shared `collectRouteNames`。
  */
-export const routeNames: readonly string[] = routes
-  .flatMap((route) => route.children ?? [])
-  .map((child) => child.name)
-  .filter((name): name is string => typeof name === 'string')
+export const routeNames: readonly string[] = collectRouteNames(routes)

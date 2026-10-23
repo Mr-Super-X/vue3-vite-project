@@ -4,6 +4,16 @@
 
 ## 未发布
 
+### 📦 Refactor | 第四轮五维审查 P1 收敛四连：AppShell 统一壳 / vitest 工厂 / vite 缺省下沉 / routeNames 单源（2026-10-23）
+
+> 背景：重复性审查 4 个 H 级发现——5 个非 admin App.vue 逐字同构（22 行×5）、6 份 vitest.config 的 test 块逐字同构、vite.config 的 base/mockPath 6 份逐字重复、routeNames 提取函数 3 份拷贝 + 1 份硬编码字面量（big 新增子路由白名单不跟随，漂移面最大）。
+
+- **AppShell 统一壳组件**（`packages/ui/src/components/common/AppShell.vue` 新增，全局自动注册）：ElConfigProvider（zh-cn + size default + 按钮两字间距，与 admin 同口径）+ ErrorBoundary + RouterView 单源化；auth/portal/h5/big/docs 的 App.vue 退化为 `<AppShell />` 单行 + 各自语义 JSDoc（净减约 90 行）；admin 刻意不在列——远程菜单骨架 + locale 同步是其独有编排
+- **createVitestConfig 工厂**（`packages/config/src/create-vitest-config.ts` 新增，挂 barrel）：6 份 vitest.config 的 test 六字段（environment/exclude/root/globals/deps.inline/css）单源化，`viteConfig as never` cast 收敛进工厂；admin 独有的 coverage 阈值块（基线 50/48/45/50）走参数注入（顺带消除原文件 v4.0/v5.0 注释重复行）；5 app 各保留「为何不配 coverage」说明注释
+- **createViteConfig 缺省下沉**：`base` 缺省改 `process.env.VITE_BASE ?? '/'`、`mockPath` 缺省 `path.join(appRoot, '../../packages/mock/src')`（6 app 原逐字同构传参收敛，无 mock 依赖的 app 传 `''` 退出）；6 份 vite.config 各净减 6-10 行
+- **collectRouteNames 单源**（`packages/shared/src/router/route-names.ts` 新增，挂 barrel）：auth/portal/docs 三份逐字相同的递归 visit IIFE + h5 flatMap 一层 children 变体 + big 硬编码字面量，统一为递归拍平 helper；**big 的字面量改 routes 派生后，新增强路由白名单自动跟随**（原漂移面消除）；5 个模块 routes 文件净减约 80 行
+- **验证**：`pnpm type-check` turbo 10/10 全绿；`pnpm test` turbo 9/9 全绿（ui 1924 用例零回归）；`check:routes` 6 app A-E + 网关 + 端口锁死全过；变更文件 eslint 0 error
+
 ### 🐛 Fixes | 架构审查 P0 四连修：mock→ui 反向依赖斩断 / §1.7 漏网 ×3 / 注册表反向校验 / 端口双写锁死（2026-10-23）
 
 > 背景：第四轮五维审计（易用性/可扩展性/可复用性/重复性/DX）产出 4 个 P0——mock 包经别名反向依赖 ui 源码违反 §2.1 单向铁律；admin 两处显式 import 全局组件违反 §1.7（v3.0.1 codemod 漏网）；apps/ 目录存在但 registry 漏登记时无任何脚本变红（静默失效）；registry.port 与 vite.config portOffset 双写无校验。

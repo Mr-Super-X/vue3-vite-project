@@ -35,6 +35,8 @@ export * from './router/base.ts'
 export * from './router/fallback.ts'
 // 路由创建编排工厂（P6 装配层收敛）：createRouter 配置 / registerAppRouter DI / 白名单守卫
 export * from './router/create-router.ts'
+// 模块 routeNames 递归提取单源（重复性审查：5 app 三份拷贝 + 变体 + 字面量收敛）
+export * from './router/route-names.ts'
 export * from './prod-mock.ts'
 // 首屏装配段（P5 骨架下沉）：品牌色 CSS 变量注入 / document.title 占位初始化
 // （6 app main.ts 逐字重复段单源化，默认标题由调用方传入）

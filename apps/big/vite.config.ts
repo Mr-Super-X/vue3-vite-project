@@ -20,10 +20,5 @@ const appRoot = fileURLToPath(new URL('.', import.meta.url))
 export default createViteConfig({
   appRoot,
   appName: 'big',
-  base: process.env.VITE_BASE ?? '/',
-  // vite-plugin-mock 以 isAbsPath 判定 mockPath（dist/index.mjs:224），绝对路径安全；
-  // mock 数据源在 @vv/mock 包（packages/mock/src）；big-demo 数据层为静态 mock（apis/index.ts），
-  // 保留 mockPath 只为与 docs 骨架同口径（工厂统一装配，prod 构建整分支 tree-shake）
-  mockPath: fileURLToPath(new URL('../../packages/mock/src', import.meta.url)),
   portOffset: 4,
 })

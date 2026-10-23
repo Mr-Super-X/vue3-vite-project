@@ -21,10 +21,5 @@ const appRoot = fileURLToPath(new URL('.', import.meta.url))
 export default createViteConfig({
   appRoot,
   appName: 'auth',
-  base: process.env.VITE_BASE ?? '/',
-  // vite-plugin-mock 以 isAbsPath 判定 mockPath（dist/index.mjs:224），绝对路径安全；
-  // mock 数据源在 @vv/mock 包（packages/mock/src）——auth 是登录接口的直接消费方
-  // （/api/auth/login 等 4 端点），mock 接线为必需
-  mockPath: fileURLToPath(new URL('../../packages/mock/src', import.meta.url)),
   portOffset: 5,
 })
