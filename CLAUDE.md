@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > 本文档是 `~/.claude/CLAUDE.md` 的项目级补充。所有全局规则（§一～§十一）自动适用，遇到冲突以**本文档为准**。
 >
-> **文档版本**：v3.0.0 | **生成日期**：2026-10-22 | **生效分支**：`feature/monorepo`
+> **文档版本**：v3.0.1 | **生成日期**：2026-10-22 | **生效分支**：`feature/monorepo`
 >
-> **最近更新**（2026-10-22）：P5-B Monorepo 工具链治理收尾
+> **最近更新**（2026-10-23）：架构审查「别名→包名迁移立场」——新增 §1.6.2 包消费约定
 >
 > - **v3.0.0 变更**（2026-10-22）：单应用 `src/` 正式升级为 pnpm workspace + turbo Monorepo（设计稿 `docs/superpowers/specs/2026-10-21-monorepo-migration-design.md`，评估 `docs/42`）——
 >   - **结构**：6 应用（`apps/admin` 中后台 / `apps/auth` 统一登录 / `apps/portal` 门户 / `apps/h5` 移动端 / `apps/big` 数据大屏 / `apps/docs` 组件示例文档）+ 4 包（`packages/config` vite 工厂 / `packages/mock` mock 数据 / `packages/shared` 网络层·store·composables / `packages/ui` 全局组件·弹窗族），详见 docs/43

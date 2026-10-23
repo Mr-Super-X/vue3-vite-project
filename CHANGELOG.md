@@ -11,7 +11,7 @@
 - **立场落地**（`CLAUDE.md` 升 v3.0.1，新增 §1.6.2「包消费约定」）：别名为「app 内部快捷方式」永久保留（`@/` 指自身 src 合法）；跨包消费公共能力一律走 `@vv/shared` / `@vv/ui` 包名 barrel；别名深层路径（`@utils/@store/@enums/@composables` 等直达包内部）定性为设计稿 D4 平滑迁移的**过渡态遗留**——新代码禁止新增、存量渐进收敛；`@api/@locales/@directives/@mock` 为 barrel 刻意不聚合的 sanctioned 既定路径，不属收敛范围；**别名定义原样保留**（app-aliases.ts 三处消费不动），收敛只改消费侧 import
 - **codemod 收敛首批热点**（31 文件 36 处，只改带引号模块说明符，注释/字符串天然免疫）：`@utils/safeAsync`×15（6 app `plugins/errorHandler.ts/.d.ts`）→ `@vv/shared`；`@store/modules/app`×10 + `@store/modules/user`×7（admin/portal/auth/docs 组件·守卫·布局）→ `@vv/shared`；vi.mock 说明符×4 同步（语义即 import 路径，不随行替换会失拦截）
 - **测试修复**：auth `Login.spec.ts` / portal `PortalHeader.spec.ts` 各存在两个 `vi.mock('@vv/shared')`（存量 barrel mock + codemod 迁移的 store mock 冲突，后者覆盖前者致真 store 逃逸报 `getActivePinia()` 错），合并为单点 mock + `importOriginal` 展开双覆盖模式
-- **门禁**：`pnpm type-check` turbo 全绿（10/10，auth/portal 冷跑）；`pnpm check:aliases` 6 app 全过（别名仍解析）；`pnpm lint` 0 error；`pnpm test` turbo 拓扑序 6 app + 4 包全绿
+- **门禁**：`pnpm type-check` turbo 10/10 全绿（auth/portal 冷跑）；`pnpm check:aliases` 6 app 全过（别名仍解析）；`pnpm test` turbo 9 任务全绿；变更文件 `eslint` 逐文件 0 error
 - 一次性脚本 `scripts/codemod-alias-hotspots.mjs` 执行后即删（沿用 cde3839 codemod-p1-3 先例），后续批次同模式：热点优先 + 只改说明符 + 三门禁
 
 ### ✨ Features | Monorepo P5-B：CI turbo affected + 六应用 Pages 聚合部署 + docker 同域网关 + 治理文档（2026-10-22）
