@@ -47,9 +47,16 @@ function readBody(req: IncomingMessage): Promise<Record<string, unknown>> {
   })
 }
 
-/** 模拟网络延迟后执行 handler */
-function withDelay(handler: () => void, ms: number): void {
-  setTimeout(handler, ms)
+/** 模拟网络延迟后执行 handler。
+ *  ⚠️ 2026-10-23 竞态修复：本函数必须**同步**调用 handler（原 setTimeout 延迟实现已废弃）。
+ *  原因：rawResponse 在 async 函数（login）里 await readBody 后调度 setTimeout 即返回，
+ *  connect 中间件认为 handler 完成、vite 走 SPA fallback 404——而 res.end 还在 setTimeout
+ *  里没执行（「资源不存在」根因，auth dev server 实测 invoke 日志有但前端 404）。
+ *  vite-plugin-mock 的 rawResponse 要求 res 在 handler 同步期内完结；模拟延迟交给
+ *  response 普通函数的 timeout 字段（rawResponse 不支持 timeout，故这里去掉延迟，
+ *  功能等价——mock 延迟本就非必须）。 */
+function withDelay(handler: () => void, _ms: number): void {
+  handler()
 }
 
 export default [
