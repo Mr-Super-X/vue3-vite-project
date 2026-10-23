@@ -1,17 +1,20 @@
 /**
- * E2E 关键路径 —— 搜索→列表（v3.5 PR1-A Task 12；2026-10-15 作用域修复）
+ * E2E 关键路径 —— 搜索→列表（v3.5 PR1-A Task 12；monorepo 版迁入 docs project）
  *
  * 路径：
- *   1. 打开 `/demo/pro-table-overview`
- *   2. 填搜索框 "用户-1" → 等 mock 返回 → 断言表格行数减少（127 → 1~19）
+ *   1. 打开 `/demo/pro-table-overview`（docs app 全站白名单公开，免登录直达）
+ *   2. 填搜索框 "用户-1" → 等 mock 返回 → 断言表格行数减少（127 → 39）
  *   3. 重置搜索 → 断言恢复分页行数
  *
- * 2026-10-15 修复（/autoplan 发布准备批）：
- *   - overview 页含两个 ProTable（主表 + 跨页选择演示表，src/modules/demo/examples/ProTable/ProTableOverview.vue），
- *     所有行数/搜索断言限定主表（第一个 .vv-pro-table）作用域，两表行数不再互相污染
- *   - 搜索列 label 为「姓名」（原用例按"名称"匹配是列名漂移）
+ * 迁移说明（2026-10-23）：
+ * - 蓝本为单应用 tests/e2e/protable/search-list.spec.ts，选择符原样沿用
+ *   （.vv-pro-table / [data-test=search-btn] / input[placeholder*=姓名] 均在 @vv/ui 包保留）；
+ *   仅 demo 模块物理归属从单应用 src/ 变为 apps/docs（路由 /demo/... 不变）。
+ * - overview 页含两个 ProTable（主表 + 跨页选择演示表），所有行数/搜索断言
+ *   限定主表（第一个 .vv-pro-table）作用域，两表行数不互相污染。
+ * - 搜索列 label 为「姓名」（按"名称"匹配是列名漂移）。
  *
- * dev server 由 playwright.config.ts 的 webServer 自动启动（pnpm dev:local）。
+ * dev server 由 playwright.config.ts docs project 的 webServer 自动启动。
  *
  * @group E2E 测试
  */

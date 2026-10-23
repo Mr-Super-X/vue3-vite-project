@@ -4,6 +4,14 @@
 
 ## 未发布
 
+### 🧪 Tests | Monorepo e2e 重建：projects 按 app 分组，补回 3 个拆分时丢失的业务 spec（2026-10-23）
+
+- **playwright.config.ts 改多 project**：admin 5174 / docs 5175 / h5 5177 / big 5178 各自独立 webServer（`pnpm -C apps/<a> dev:local`，reuseExistingServer + 120s 冷启动超时）；gateway project（:8080 同域网关）无 webServer、用例自探测网关可达性跳过——e2e 不硬依赖 docker
+- **spec 按归属重建**（目录 `tests/e2e/<app>/`）：`docs/protable-search-list` + `docs/protable-selection-batch`（蓝本单应用版原样迁移，demo 模块已迁 apps/docs 且全站白名单免登录，`.vv-pro-table` / `data-test=search-btn|selection-clear` 等选择符在 @vv/ui 包原样有效）；`h5/rem-activation`（rem 激活 + 离开 h5 layout 零残留，路由已迁 apps/h5）；`big/layout-scale`（stage scale 缩放 / 9000px 超宽 / 五态骨架块，路由已迁 apps/big）；`admin/workbench-panels`（能力演示导航卡五栖链接）；旧 `tests/e2e/panels|protable/` 单应用蓝本删除（已被新结构取代）
+- **admin project 登录路径改造**：admin 已无自有登录页（未登录守卫整页跳 auth app），spec 改走真实 mock 登录接口（`/api/auth/login` Set-Cookie）+ 注入 sessionStorage 登录标记（`vue3-vite-project:auth`，与手动登录后状态等价）
+- **gateway project 覆盖统一登录漫游**：未登录访问 `/admin/workbench` 整页跳 `/auth/login?redirect=` → 登录回跳 → 漫游 `/h5/h5-demo`、`/big/big-demo`、`/big/big-demo/state-demo` → TagsView 页签守恒（noTags 不污染）；修复一处时序坑——守卫是 `location.href` 整页跳转，goto 返回时 URL 未落稳须 `expect(page).toHaveURL` 轮询等待
+- **验证**：`pnpm test:e2e --list` 5 projects / 14 tests 全列出；本机实跑 gateway project 2/2 通过（docker 网关在线）；per-app 各 spec 选择符经临时脚本对网关模式 dev server 实测 7/7 通过（本机 5174-5179 被 dev:gateway 进程占用致 per-app project 暂无法独立复跑，CI 干净环境无此冲突）
+
 ### 📦 Refactor | Monorepo 包消费约定立场 + 别名深层热点收敛 codemod（2026-10-23）
 
 > 背景：架构审查发现别名单一来源机制优秀但消费比例严重失衡（docs 别名 145:2），包边界在消费代码中不可见，barrel 收敛公共 API 的能力被别名深层路径绕过。本轮给出明确立场并收敛热点，不大爆炸。

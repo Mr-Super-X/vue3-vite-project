@@ -1,16 +1,21 @@
 /**
- * E2E 关键路径 —— 选中→批量操作（v3.5 PR1-A Task 13；2026-10-15 作用域修复）
+ * E2E 关键路径 —— 选中→批量操作（v3.5 PR1-A Task 13；monorepo 版迁入 docs project）
  *
  * 路径：
- *   1. 打开 `/demo/pro-table-overview`
+ *   1. 打开 `/demo/pro-table-overview`（docs app 全站白名单公开，免登录直达）
  *   2. 勾选 3 行 → 断言 SelectionBar 出现 + 显示「已选 3 项」
  *   3. 验证 SelectionBar 的 role=status + aria-live=polite
  *   4. 点 SelectionBar 清除按钮 → 断言勾选清空 + SelectionBar 消失
  *
- * 2026-10-15 修复：overview 页现有两个 ProTable（主表 + 跨页选择演示表），
- * 勾选 / SelectionBar / 清除按钮断言全部限定主表（第一个 .vv-pro-table）作用域。
+ * 迁移说明（2026-10-23）：
+ * - 蓝本为单应用 tests/e2e/protable/selection-batch.spec.ts，选择符原样沿用
+ *   （:has(.el-checkbox__input) / [role=status][aria-live=polite] / [data-test=selection-clear]
+ *   均在 @vv/ui 包保留）；仅 demo 模块物理归属变为 apps/docs。
+ * - overview 页含两个 ProTable——第一个（主表）无多选列；多选/跨页选择/SelectionBar
+ *   在第二个表（474 行选择演示）。用 :has() 定位"含行 checkbox 的 ProTable"，
+ *   不依赖 DOM 顺序。
  *
- * dev server 由 playwright.config.ts 的 webServer 自动启动（pnpm dev:local）。
+ * dev server 由 playwright.config.ts docs project 的 webServer 自动启动。
  *
  * @group E2E 测试
  */

@@ -1,12 +1,10 @@
 /**
- * Hello World E2E 测试（v3.5 PR1-A）
+ * Hello World E2E 测试（v3.5 PR1-A；monorepo 版归入 admin project）
  *
- * 目的：验证 Playwright + dev server 基础链路通畅。
+ * 目的：验证 Playwright + admin dev server 基础链路通畅。
  * 步骤：
- *   1. 启动 dev server（pnpm dev），访问根路径
+ *   1. 启动 dev server（project webServer 自动拉起 apps/admin dev:local），访问根路径
  *   2. 断言页面有 Vue 挂载点（#app 存在）
- *
- * 跑通后即可继续 Task 12 / 13 的搜索→列表 / 选中→批量测试。
  *
  * @group E2E 测试
  */
