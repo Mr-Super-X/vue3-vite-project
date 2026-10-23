@@ -30,7 +30,8 @@ import { join, resolve } from 'node:path'
 
 const ROOT = resolve(import.meta.dirname, '..')
 const APPS_DIR = resolve(ROOT, 'apps')
-const MOCK_DIR = resolve(ROOT, 'mock')
+// mock 数据源已迁 @vv/mock 包（P1-2）；指向根 mock/ 残留目录生成的 mock 不被 vite 扫描（静默 404）
+const MOCK_DIR = resolve(ROOT, 'packages/mock/src')
 
 /**
  * 列出 apps/ 下所有含 src/modules/ 的合法目标应用（与 check-routes 同口径 discoverApps）。
