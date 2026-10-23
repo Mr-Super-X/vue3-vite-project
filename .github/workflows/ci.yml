@@ -2,11 +2,13 @@ name: CI
 
 # 触发条件：
 #   - push 到 master（主分支每次合入必跑，turbo 全量构建 6 app）
-#   - push 到 develop / PR 同步到 master、develop（turbo affected，只跑相对 origin/master 有变更的包及其下游）
+#   - push 到 develop / feature/** / PR 同步到 master、develop（turbo affected，只跑相对 origin/master 有变更的包及其下游）
 # 任何条件失败 → 阻止合入
+# feature/** 触发：架构审查发现 feature/monorepo 推送不触发 CI 致 lint 回归无声溜入——
+# 长生命周期特性分支必须在推送时即过门禁（非仅 PR 时）
 on:
   push:
-    branches: [master, develop]
+    branches: [master, develop, 'feature/**']
   pull_request:
     branches: [master, develop]
 
@@ -17,7 +19,7 @@ concurrency:
 
 jobs:
   ci:
-    name: Lint + Turbo(Build/Test) + CheckRoutes
+    name: Lint + Turbo(Build/Test) + CheckRoutes + CheckAliases + CheckDocCurrency
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
@@ -75,6 +77,22 @@ jobs:
       - name: Check routes consistency
         # 校验 RouteName 联合类型 + 实际 routes/*.ts + whitelist 三者一致（monorepo 版脚本，多包兼容）
         run: pnpm check:routes
+
+      - name: Check alias consistency
+        # 校验各 app tsconfig.app.json paths 与 @vv/config createAppAliases 单一来源一致
+        # （架构审查：CLAUDE.md 承诺「CI 阻断」但 ci.yml 原未接入——补挂兑现承诺）
+        run: pnpm check:aliases
+
+      - name: Check doc currency
+        # 校验 docs 硬数据（13 项：字段数/Props/行数/demo 数等）与代码一致，防文档漂移
+        # （架构审查：同承诺「CI 阻断」未接入——补挂）
+        run: pnpm check:doc-currency
+
+      - name: Check mock wiring
+        # 校验 @vv/mock 双接线一致（dev index.ts 聚合 vs prod mockProdServer.ts 模块清单）
+        # + MOCK_PERMISSIONS 权限码单源——消除历史上「注释约定手工同步」的漂移风险
+        # （架构审查健壮性项：全库最现实的 dev/prod 行为分叉风险点）
+        run: pnpm check:mock-wiring
 
       - name: Upload build artifact
         # 仅 master 全量构建后保留产物供调试（PR affected 无完整 dist 可传）；

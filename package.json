@@ -17,6 +17,7 @@
     "check:aliases": "node --experimental-strip-types scripts/check-aliases.ts",
     "generate:tsconfig-paths": "node --experimental-strip-types scripts/generate-tsconfig-paths.ts",
     "check:doc-currency": "node --experimental-strip-types scripts/check-doc-currency.ts",
+    "check:mock-wiring": "node --experimental-strip-types scripts/check-mock-wiring.ts",
     "new-module": "node --experimental-strip-types scripts/new-module.ts",
     "remove-module": "node --experimental-strip-types scripts/remove-module.ts",
     "analyze": "cross-env ANALYZE=true pnpm -C apps/admin build-only",
