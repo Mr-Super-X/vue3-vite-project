@@ -195,6 +195,17 @@ export function createViteConfig({
     server: {
       ...SERVER_DEFAULTS,
       port: SERVER_DEFAULTS.port + portOffset,
+      // HMR WebSocket 直连本 app dev server 端口，绕过 8080 nginx 网关——
+      // vite client 的 ws URL = ws://host:port/__HMR_BASE__（__HMR_BASE__=config.base=/<app>/），
+      // 经网关 8080 时 nginx 的 /<app>/ HTTP 反代把 ws upgrade 当普通请求转发，vite ws handler
+      // 收不到正确 upgrade（client:865 WebSocket connection to ws://localhost:8080/<app>/ failed）。
+      // 让 client 直连 5174-5179（vite 原生 ws 端点，hmrBase=/<app>/ 匹配），HMR 恢复。
+      // host 显式 localhost：避免 vite 默认取 network IP 致 client 连不通。
+      hmr: {
+        host: 'localhost',
+        port: SERVER_DEFAULTS.port + portOffset,
+        clientPort: SERVER_DEFAULTS.port + portOffset,
+      },
       // 联调真实后端时在 proxy.ts 内按需补充 _env 字段解析（当前返回 {} 占位）
       proxy: createProxyConfig(process.env),
     },
