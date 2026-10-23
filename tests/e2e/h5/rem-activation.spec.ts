@@ -37,6 +37,7 @@ test('离开 h5 layout 后 rem 零残留（font-size 被清除）', async ({ pag
   // h5 layout 卸载时应恢复 html font-size（apps/h5 rem.ts 的清理逻辑）
   await page.goto('/definitely-not-exists')
   await expect(page).toHaveURL(/\/404/)
-  await expect(page.locator('.vv-h5-not-found')).toBeVisible()
+  // 404 页根 class 归 @vv/ui ErrorPage 组件（vv-error-page），与 h5 私有写法解耦
+  await expect(page.locator('.vv-error-page')).toBeVisible()
   await expect.poll(async () => await htmlFontSize(page)).toBe('')
 })

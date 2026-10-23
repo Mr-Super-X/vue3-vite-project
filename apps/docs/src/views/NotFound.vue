@@ -1,28 +1,19 @@
 <script setup lang="ts">
 /**
- * docs 站内联 404（error 模块视图归 admin 私有，跨 app 不可复用，故 docs 自带最小版）。
+ * docs 站内联 404（白名单成员 + fallback catch-all 重定向目标）。
+ * 视觉与交互统一走 @vv/ui 的 <ErrorPage />（全局自动注册，无须 import），返回组件示例首页。
+ *
+ * @see [`../../router/index.ts`](../../router/index.ts) /404 注册
+ * @see [`../../../../packages/ui/src/components/common/ErrorPage/ErrorPage.vue`](../../../../packages/ui/src/components/common/ErrorPage/ErrorPage.vue) 共享错误页组件
  * @group 视图：兜底
  */
-// 项目 composable @composables/useAppRouter（unplugin-auto-import 全局注入）
-const { router } = useAppRouter()
-const bem = createNamespace('docs-not-found')
 </script>
 
 <template>
-  <div :class="bem.b()">
-    <h1>404</h1>
-    <p>页面不存在或已移除</p>
-    <ElButton type="primary" @click="router.push('/demo')">返回组件示例首页</ElButton>
-  </div>
+  <ErrorPage
+    status="404"
+    title="页面不存在或已移除"
+    return-to="/demo"
+    return-label="返回组件示例首页"
+  />
 </template>
-
-<style lang="scss">
-.#{$BEM_PREFIX}-docs-not-found {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
-  gap: 12px;
-}
-</style>

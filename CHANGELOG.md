@@ -4,6 +4,16 @@
 
 ## 未发布
 
+### ✨ Features | 共享 ErrorPage 组件统一 6 app 错误页（补 admin 返回按钮缺口）（2026-10-23）
+
+> 背景：6 app 错误页模式重复且不一致——5 端 404 各自手写 h1 + 返回按钮（el-result 用法未统一），admin 的 404/403/500 则完全没有行动按钮（体验最差）。
+
+- **新增共享组件** `@vv/ui` `ErrorPage`（`packages/ui/src/components/common/ErrorPage/ErrorPage.vue`，components/common 目录自动注册，模板直接用无须 import）：props `status`（403/404/500）+ `title` + `returnTo`（返回路径）+ `returnLabel`；icon 按状态码映射（403 warning / 404 info / 500 error，对齐 admin 既有语义）；`#extra` 内置 el-button 返回跳转（useAppRouter，与消费方原行为一致）；附 3 用例 spec（状态码渲染 / icon 三态 / 按钮跳转）
+- **admin 三页接入并补按钮缺口**：`apps/admin/src/modules/error/views/` NotFound / Forbidden / ServerError 改用 `<ErrorPage />`（return-to `/workbench`、label「返回工作台」）——admin 错误页从「无行动按钮」对齐其余 5 端
+- **5 端 404 统一**（行为不变：返回目标与文案原样保留）：portal → /home（返回官网首页）、h5 → /h5-demo、big → /big-demo、docs → /demo、auth → /login；手写 Flex 样式与各自 BEM 类由组件接管（`vv-error-page`）
+- **e2e 选择符同步**：`tests/e2e/h5/rem-activation.spec.ts` 断言 `.vv-h5-not-found` → `.vv-error-page`（404 页根 class 归组件）
+- **验证**：`pnpm type-check` turbo 10/10 全绿；`pnpm -C packages/ui test` 128 文件 / 1924 用例全过；`check:routes` 的 A-D 校验数据源（routes / whitelist / router）零改动
+
 ### 🧪 Tests | Monorepo e2e 重建：projects 按 app 分组，补回 3 个拆分时丢失的业务 spec（2026-10-23）
 
 - **playwright.config.ts 改多 project**：admin 5174 / docs 5175 / h5 5177 / big 5178 各自独立 webServer（`pnpm -C apps/<a> dev:local`，reuseExistingServer + 120s 冷启动超时）；gateway project（:8080 同域网关）无 webServer、用例自探测网关可达性跳过——e2e 不硬依赖 docker
