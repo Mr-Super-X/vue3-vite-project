@@ -418,6 +418,9 @@ importers:
 
   apps/admin:
     dependencies:
+      '@vv/mock':
+        specifier: workspace:*
+        version: link:../../packages/mock
       '@vv/shared':
         specifier: workspace:*
         version: link:../../packages/shared
