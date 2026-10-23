@@ -21,7 +21,8 @@
     "vue-i18n": "catalog:",
     "element-plus": "catalog:",
     "lodash-es": "catalog:",
-    "dayjs": "catalog:"
+    "dayjs": "catalog:",
+    "pinia-plugin-persistedstate": "catalog:"
   },
   "devDependencies": {
     "typescript": "~6.0.0",

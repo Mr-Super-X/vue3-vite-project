@@ -27,7 +27,10 @@
     "echarts": "^6.1.0",
     "vxe-table": "^4.21.7",
     "zod": "catalog:",
-    "sortablejs": "catalog:"
+    "sortablejs": "catalog:",
+    "@wangeditor/editor": "catalog:",
+    "@wangeditor/editor-for-vue": "catalog:",
+    "dompurify": "catalog:"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.7",

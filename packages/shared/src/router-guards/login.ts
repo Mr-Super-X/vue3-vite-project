@@ -58,7 +58,7 @@ export async function checkLoginState(
   // 未登录 → 读 sessionStorage 登录标记（hard refresh 场景标记可能仍在）
   const hasAuthMark = Session.get<boolean>('auth')
   if (!hasAuthMark) {
-    redirectToAuthLogin(to.fullPath)
+    redirectToAuthLogin(currentFullUrl())
   }
 
   // 有标记但 profile 未恢复 → 拉 profile，由后端通过 cookie 凭证完成真实校验
@@ -68,8 +68,21 @@ export async function checkLoginState(
   } catch {
     // 凭证失效（cookie 过期/被撤销）→ 清本地标记，下次重登
     userStore.resetLocalState()
-    redirectToAuthLogin(to.fullPath)
+    redirectToAuthLogin(currentFullUrl())
   }
 
   return null
+}
+
+/**
+ * 当前完整 URL 路径（含 vue-router base 前缀 + query）——用作登录后回跳目标。
+ *
+ * 为何不用 `to.fullPath`：vue-router 的 fullPath 不含 base（createWebHistory(base) 下
+ * 内部路径相对 base 解析），网关联调实证——admin 在 /admin/ base 下访问受保护页，
+ * to.fullPath 是 /user/list（丢 /admin 前缀），登录成功回跳 /user/list 经网关 404。
+ * window.location.pathname 含部署 base 前缀（与 PortalHeader.goAuthLogin 同源，
+ * redirect.ts 的消费契约即「同源 path 前缀」）。@see ../auth/redirect.ts
+ */
+function currentFullUrl(): string {
+  return `${window.location.pathname}${window.location.search}`
 }

@@ -56,8 +56,29 @@ describe('checkLoginState（httpOnly 登录标记模式）', () => {
     const store = makeStore()
     // mock 的 redirectToAuthLogin 抛 AUTH_REDIRECTING（与真实实现同形态）
     await expect(checkLoginState(to, store)).rejects.toThrow('AUTH_REDIRECTING')
-    expect(mockRedirectToAuthLogin).toHaveBeenCalledWith('/orders?page=1')
+    // P0 修复：redirect 改用 window.location.pathname+search（含 vue-router base 前缀，
+    // 网关形态下不丢 /admin 前缀）；jsdom 默认 location 为 '/'，故断言 '/'
+    expect(mockRedirectToAuthLogin).toHaveBeenCalledWith('/')
     expect(store.fetchProfile).not.toHaveBeenCalled()
+  })
+
+  it('网关 base 前缀不丢（P0 修复）：redirect 含 /admin/ 部署前缀', async () => {
+    // 模拟 vue-router base=/admin/ 下访问受保护页：window.location 含前缀，to.fullPath 不含
+    const originalLoc = window.location
+    vi.stubGlobal('location', {
+      ...originalLoc,
+      pathname: '/admin/user/list',
+      search: '?page=1',
+    })
+    try {
+      mockSessionGet.mockReturnValue(null)
+      const store = makeStore()
+      await expect(checkLoginState(to, store)).rejects.toThrow('AUTH_REDIRECTING')
+      // 关键断言：redirect 须含 /admin 前缀（网关联调实证 to.fullPath 会丢，致回跳 404）
+      expect(mockRedirectToAuthLogin).toHaveBeenCalledWith('/admin/user/list?page=1')
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 
   it('有标记但 profile 未恢复 → fetchProfile 成功后放行（hard refresh 恢复）', async () => {
@@ -76,6 +97,6 @@ describe('checkLoginState（httpOnly 登录标记模式）', () => {
     })
     await expect(checkLoginState(to, store)).rejects.toThrow('AUTH_REDIRECTING')
     expect(store.resetLocalState).toHaveBeenCalledTimes(1)
-    expect(mockRedirectToAuthLogin).toHaveBeenCalledWith('/orders?page=1')
+    expect(mockRedirectToAuthLogin).toHaveBeenCalledWith('/')
   })
 })

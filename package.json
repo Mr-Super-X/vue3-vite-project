@@ -22,7 +22,7 @@
     "remove-module": "node --experimental-strip-types scripts/remove-module.ts",
     "analyze": "cross-env ANALYZE=true pnpm -C apps/admin build-only",
     "build:pages": "node --experimental-strip-types scripts/build-pages.ts",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

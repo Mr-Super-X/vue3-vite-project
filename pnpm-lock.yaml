@@ -164,12 +164,21 @@ settings:
 
 catalogs:
   default:
+    '@wangeditor/editor':
+      specifier: ^5.1.23
+      version: 5.1.23
+    '@wangeditor/editor-for-vue':
+      specifier: ^5.1.12
+      version: 5.1.12
     axios:
       specifier: ^1.18.1
       version: 1.18.1
     dayjs:
       specifier: ^1.11.21
       version: 1.11.21
+    dompurify:
+      specifier: ^3.4.15
+      version: 3.4.15
     element-plus:
       specifier: ^2.14.3
       version: 2.14.3
@@ -179,6 +188,9 @@ catalogs:
     pinia:
       specifier: ^3.0.4
       version: 3.0.4
+    pinia-plugin-persistedstate:
+      specifier: ^4.7.1
+      version: 4.7.1
     sortablejs:
       specifier: ^1.15.7
       version: 1.15.7
@@ -603,6 +615,9 @@ importers:
       pinia:
         specifier: 'catalog:'
         version: 3.0.4(typescript@6.0.3)(vue@3.6.0-beta.17(typescript@6.0.3))
+      pinia-plugin-persistedstate:
+        specifier: 'catalog:'
+        version: 4.7.1(pinia@3.0.4(typescript@6.0.3)(vue@3.6.0-beta.17(typescript@6.0.3)))
       vue:
         specifier: beta
         version: 3.6.0-beta.17(typescript@6.0.3)
@@ -637,9 +652,18 @@ importers:
       '@vv/shared':
         specifier: workspace:*
         version: link:../shared
+      '@wangeditor/editor':
+        specifier: 'catalog:'
+        version: 5.1.23
+      '@wangeditor/editor-for-vue':
+        specifier: 'catalog:'
+        version: 5.1.12(@wangeditor/editor@5.1.23)(vue@3.6.0-beta.17(typescript@6.0.3))
       dayjs:
         specifier: 'catalog:'
         version: 1.11.21
+      dompurify:
+        specifier: 'catalog:'
+        version: 3.4.15
       echarts:
         specifier: ^6.1.0
         version: 6.1.0
