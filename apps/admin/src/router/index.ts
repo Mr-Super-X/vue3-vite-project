@@ -1,8 +1,28 @@
-import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router'
-import type { RouteRecordRaw } from 'vue-router'
-// registerAppRouter 归 @vv/shared 根 barrel；createDefaultScrollBehavior 自 P5 起单源化
-// （6 app 零差异段下沉裁决）——base 路径仍由 ./config 的 ROUTER_CONFIG.base 承担
-import { registerAppRouter, createDefaultScrollBehavior } from '@vv/shared'
+/**
+ * 路由入口（admin 中后台主干业务端）——装配收敛至 @vv/shared createAppRouter 工厂。
+ *
+ * 工厂单源化原逐字同构段（P6 装配编排层收敛）：createRouter 配置 /
+ * registerAppRouter DI / historyMode 接线。admin 私有守卫编排经 extraSetup
+ * 按序注入（顺序敏感）：
+ * 1. setupAuthGuard——白名单 → 可见性 → 登录态 → 远程菜单 → 权限 五段流水线
+ *    （P4 起未登录经 redirectToAuthLogin 整页跳 apps/auth）
+ * 2. setupRouterErrorBoundary——动态 import 失败 / 路由解析异常跳 /500 错误页
+ * 3. tags-view afterEach——路由切换后加入 visitedViews（必须在 setupAuthGuard
+ *    后，否则未登录的 redirect 会污染 visitedViews）
+ *
+ * 不传 isRouteWhiteListed：admin 的守卫链自管白名单（无任何公开页），
+ * 工厂不挂公开白名单守卫。/404 等错误页归 modules/error 路由（不经此注册），
+ * 故也不传 notFoundRoute。
+ *
+ * 根路径重定向：访问 `/` 时跳到工作台 /workbench（admin 登录后默认落地页，
+ * P3-1 起；redirect 后 vue-router 会对 /workbench 重新触发完整守卫链）。
+ *
+ * @see [`./auto-register.ts`](./auto-register.ts) 模块路由自动扫描
+ * @see [`./guards/auth.ts`](./guards/auth.ts) 守卫编排（5 段检查流水线）
+ * @group 路由：入口
+ */
+import type { Router } from 'vue-router'
+import { createAppRouter } from '@vv/shared'
 import { autoRegisteredRoutes } from './auto-register'
 import { fallbackRoute } from './fallback'
 import { setupAuthGuard } from './guards/auth'
@@ -10,64 +30,20 @@ import { setupRouterErrorBoundary } from './error-boundary'
 import { ROUTER_CONFIG } from './config'
 import { useTagsViewStore } from '@/store/modules/tags-view'
 
-/**
- * 根路径重定向：访问 `/` 时跳到工作台（admin 登录后的默认落地页）。
- *
- * 为什么不放 fallback：fallback 是 catch-all（`/:pathMatch(.*)*`），会把 `/` 也吞掉
- * 跳到 `/404` —— 与"打开站点应该看到首页"的预期不符
- *
- * 为什么不放业务模块的 `routes/index.ts`：根路径不属于任何业务模块，
- * 是全局级入口，集中在 `router/` 目录管理
- *
- * P3-1 变更：原落地页 /home（portal 布局官网）独立为 apps/portal，
- * admin 落地页改为 /workbench（workbench 是 default 布局验收模块的 index 子路由）。
- *
- * 守卫行为：redirect 后 vue-router 会对 `/workbench` 重新触发守卫链
- * （白名单 → 可见性 → 登录态 → 远程菜单 → 权限），未登录用户最终经
- * `redirectToAuthLogin` 整页跳 apps/auth 登录页（P4，admin 内已无 /login 路由）
- *
- * @group 路由：根重定向
- */
-const rootRedirect: RouteRecordRaw = {
-  path: '/',
-  redirect: '/workbench',
-}
-
-// 路由注册顺序：
-//   1. rootRedirect      根路径 → 工作台（先匹配，避免被 fallback 拦截）
-//   2. autoRegisteredRoutes：业务模块（src/modules/**/routes/index.ts），自动扫描
-//   3. fallbackRoute：catch-all 404 兜底（必须在最后，单独注册避免字典序问题）
-//
-// history 模式由 ROUTER_CONFIG.historyMode 决定：
-//   - web：主流，URL 干净（需要后端 SPA fallback）
-//   - hash：URL 带 #，无需后端配合，适合子路径部署 / 静态托管
-//   通过 .env.development 或 .env.production 设 VITE_HISTORY_MODE=hash|web 覆盖
-
-// 路由切换后的滚动行为统一走 @vv/shared createDefaultScrollBehavior：
-// 前进/后退用 savedPosition；hash 锚点平滑滚动；其余回页面顶部
-
-export const router = createRouter({
-  history:
-    ROUTER_CONFIG.historyMode === 'hash'
-      ? createWebHashHistory(ROUTER_CONFIG.base)
-      : createWebHistory(ROUTER_CONFIG.base),
-  routes: [rootRedirect, ...autoRegisteredRoutes, fallbackRoute],
-  scrollBehavior: createDefaultScrollBehavior(),
-})
-
-// 把实例注入 @vv/shared（useAppRouter / http 401 登出跳转经 DI 读取）；
-// 必须先于 setupAuthGuard——守卫链内 checkLoginState / 远程菜单加载会触发请求与跳转
-registerAppRouter(router)
-
-setupAuthGuard(router)
-
-// 错误边界：动态 import 失败 / 路由解析异常 → 跳 /500 错误页（见 error-boundary.ts）
-setupRouterErrorBoundary(router)
-
 // 多页签：每次路由切换后自动加入 visitedViews（layout 中通过 keep-alive :include 联动 cache）
 // 注意：必须在 setupAuthGuard 后调用，否则未登录的 redirect 会污染 visitedViews
-router.afterEach((to) => {
-  useTagsViewStore().addRouteView(to)
+const setupTagsViewSync = (router: Router): void => {
+  router.afterEach((to) => {
+    useTagsViewStore().addRouteView(to)
+  })
+}
+
+export const router = createAppRouter({
+  rootRedirect: '/workbench',
+  routes: autoRegisteredRoutes,
+  fallbackRoute,
+  historyMode: ROUTER_CONFIG.historyMode,
+  extraSetup: [setupAuthGuard, setupRouterErrorBoundary, setupTagsViewSync],
 })
 
 export default router

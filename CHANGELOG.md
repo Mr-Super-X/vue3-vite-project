@@ -4,6 +4,17 @@
 
 ## 未发布
 
+### 📦 Refactor | 装配编排层收敛：bootstrapApp / createAppRouter 工厂（main.ts + router/index.ts 6 份拷贝 → 单源）（2026-10-23）
+
+> 背景：P5-P6 已下沉纯函数段（品牌色/标题/prod-mock/骨架三件套/fallback/plugins），但装配「编排层」仍 6 份逐字拷贝——6 app 的 main.ts（约 70 行×6）与 router/index.ts（约 75 行×6）装配序列逐字一致，仅标题/插件 presence/守卫编排因地而异。本任务把编排层也收敛为工厂，顺序契约代码化（spec 锁定）。
+
+- **bootstrapApp 工厂**（`packages/shared/src/app-mount.ts`）：固化 main.ts 装配顺序契约——brandColor/title（createApp 之前防首屏闪烁）→ assertNoMockInProd → createApp → `await setupProdMockIfNeeded`（必须先于 use(router)，否则守卫首屏请求穿透静态服务器）→ use 序列（pinia→router→i18n→全局组件→指令→插件）→ setup 收尾（setDialogAppContext 依赖全部 use 后的 provides）→ mount。Directives/Plugins/createGlobalComponents/setDialogAppContext/@mock 加载回调一律参数注入（app 私有别名与 @vv/ui 产物 shared 不可硬编码，符合 §2.1 依赖方向铁律）；i18n 按 Plugin 结构类型接收（vue-i18n 的 Messages/Locale 泛型随各 app 文案类型不变变化，具体泛型实例不可作参数类型）
+- **createAppRouter 工厂**（`packages/shared/src/router/create-router.ts`）：固化 router/index.ts 编排——createRouter（rootRedirect→notFoundRoute?→业务路由→fallback catch-all 必须最后）→ registerAppRouter DI（先于一切守卫）→ extraSetup 私有装配按序 → 公开白名单守卫（白名单直通 + 兜底可见性）。两类消费形态：5 公开 app 传 notFoundRoute + 白名单谓词；admin 不传谓词（守卫链自管白名单），私有装配 `[setupAuthGuard, setupRouterErrorBoundary, setupTagsViewSync]` 经 extraSetup 注入——注册顺序与行为零变化，admin 无保留手写
+- **notFoundRoute 字面量刻意留在各 app router/index.ts**：`scripts/check-routes.ts` 按 `name:` 正则从该文件提取根级实现名单（NotFound 在 router 层注册而非 modules），收进工厂会让 A 校验误报——约束已固化在工厂 JSDoc
+- **6 app 收敛**：main.ts 约 70 行 → 约 33 行（纯数据 + bootstrapApp 单次调用），router/index.ts 约 75 行 → 约 40 行（JSDoc 保留各 app 裁剪语义：portal/auth/h5/big/docs 公开守卫形态、admin extraSetup 形态、big 省略 plugins）
+- **单测**（新增 15 用例）：`app-mount.spec.ts` 6 用例（use 序列固化 / plugins 数组与省略（big 形态）/ dev 不加载 prod-mock / PROD 命中时序先于 use:router / 首屏品牌色与标题占位 / setup 先于 mount 且 mount 生效）；`router/create-router.spec.ts` 9 用例（注册顺序 / admin 无 notFoundRoute 形态 / rootRedirect / fallback 重定向 / historyMode web-hash 判别与显式参数优先 / DI 注入 / extraSetup 序 / 白名单直通优先于可见性 + hidden 拦截 / admin 无公开守卫语义）。踩坑记录：hash history 的 `history.location` 是归一化路径不带 `#`，web/hash 判别须用 `router.resolve().href`（web `/x` vs hash `#/x`）
+- **验证**：`pnpm type-check` turbo 10/10 全绿；`pnpm test` turbo 9 任务全绿（shared 405 用例）；`pnpm check:routes` 6 app 分组 A-D + 网关校验全过；变更文件 eslint 0 error
+
 ### 📦 Refactor | plugins 三件套下沉 @vv/shared：errorHandler/webVitals 五份拷贝收敛 + createAppPlugins 工厂 + spec 单源（2026-10-23）
 
 > 背景：重复性审查 P0 漏网——P5 只下沉了 16 行 remAdaptation，同目录 errorHandler（85 行×5 逐字一致）与 webVitals（120 行×5 逐字一致）仍是全仓最大单块重复，且 errorHandler/webVitals/remAdaptation 三份 spec 仅有 admin（+h5）持有，4 app 跑同一份代码却零测试。

@@ -31,10 +31,15 @@ export * from './router-title.ts'
 export * from './router/base.ts'
 // catch-all 404 兜底路由工厂（原 6 app 逐字拷贝收敛，根治 h5 残留 docs 文案漂移）
 export * from './router/fallback.ts'
+// 路由创建编排工厂（P6 装配层收敛）：createRouter 配置 / registerAppRouter DI / 白名单守卫
+export * from './router/create-router.ts'
 export * from './prod-mock.ts'
 // 首屏装配段（P5 骨架下沉）：品牌色 CSS 变量注入 / document.title 占位初始化
 // （6 app main.ts 逐字重复段单源化，默认标题由调用方传入）
 export * from './app-bootstrap.ts'
+// 应用启动装配编排工厂（P6 装配层收敛）：main.ts createApp 前后编排段 6 份拷贝单源，
+// 顺序契约固化在工厂内（品牌色/title → prod-mock 先于 use(router) → use 序列 → setup 收尾 → mount）
+export * from './app-mount.ts'
 export * from './store/index.ts'
 export * from './router-guards/index.ts'
 // 跨应用统一登录协议（P4）：redirectToAuthLogin / resolvePostLoginRedirect
