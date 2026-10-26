@@ -134,6 +134,24 @@ location /api/ai/ {
 }
 ```
 
+> 本地 `pnpm dev:gateway` 的 node 网关（scripts/node-gateway.ts）流式 pipe 无缓冲，
+> 无需任何 SSE 专属配置——上表仅为「未来切回 nginx / 生产自建网关」的部署参考。
+
+#### dev 下的 SSE mock（2026-10-26 落地）
+
+`packages/mock/src/stream.ts` 提供 `POST /api/ai/chat/stream` 的流式 mock：`rawResponse`
+**挂起式**逐 chunk 推送（`await` 挂起期间 connect 中间件不返回、res 全程受控——
+Promise 在 res.end() 后才 resolve；客户端断连须监听 `req.on('close')` 清理定时器，
+两条约束同 mock/auth.ts 的 setTimeout 404 事故根因）。配套演示：**docs app
+`/docs/demo/stream-request`**（requestStream 打字机累积 / handle.cancel() 停止 /
+onError 重试三态）。
+
+**仅 dev 可用**：prod 的 `createProdMockServer` 是 mockjs XHR 劫持——不拦截
+stream.ts 的 fetch（且 rawResponse 在 client 侧被静默忽略），gh-pages 上流演示不可用
+（demo 组件以提示文案降级）。prod 豁免登记在 `scripts/check-mock-wiring.ts` 的
+`PROD_INLINE_EXEMPT`（豁免语义与 auth 的 rawResponse 一致且更彻底：fetch 穿透
+意味着内联 response 形态也无济于事）。
+
 ---
 
 ## 🆚 vs `request<T>()`

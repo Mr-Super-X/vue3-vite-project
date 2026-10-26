@@ -1,7 +1,25 @@
 // 类型挂钩（2026-10-26 测试审计 #2）：mock 数据与 @vv/shared api 层类型绑定——
 // 改 UserItem 契约时编译器即时报错，杜绝「api 层演化、mock 静默偏离」。
 // import type 编译期擦除，vite-plugin-mock 的 esbuild bundle 不含运行时依赖（同 pro-table 先例）
+import type { IncomingMessage } from 'node:http'
 import type { UserItem } from '@vv/shared'
+
+/** 读取请求 body JSON（rawResponse 模式下需手动解析，vite-plugin-mock 不代为处理） */
+export function readBody(req: IncomingMessage): Promise<Record<string, unknown>> {
+  return new Promise((resolve) => {
+    let raw = ''
+    req.on('data', (chunk) => {
+      raw += chunk
+    })
+    req.on('end', () => {
+      try {
+        resolve(JSON.parse(raw) as Record<string, unknown>)
+      } catch {
+        resolve({})
+      }
+    })
+  })
+}
 
 export function delay(ms = 300): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))

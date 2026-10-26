@@ -4,6 +4,17 @@
 
 ## 未发布
 
+### ⚙️ Infra | SSE 流式 mock 落地：requestStream 在 docs app 可演示（2026-10-26）
+
+> 背景：stream.ts（fetch + ReadableStream 流式请求）自 2026-07 起无演示数据源——vite-plugin-mock 的常规 response 模型是一次性返回，不支持流式。实测 dist 源码确认 rawResponse 的 Promise 被中间件 await 挂起（不 settle 不返回），即「挂起式推送」在 dev 下成立。
+
+- **`packages/mock/src/stream.ts` 新建**：`POST /api/ai/chat/stream` SSE mock——挂起式 rawResponse（定时器在 await Promise 内逐 chunk `res.write`，`[DONE]` 后 end + resolve；`req.on('close')` 清理断连），两个约束与 auth.ts setTimeout 404 事故同根因；`readBody` 抽至 `_utils.ts` 与 auth 共享
+- **`apps/docs StreamRequest demo`**：examples/ 下新建即自动注册 `/docs/demo/stream-request`（glob 派生，路由零改动）——打字机累积 / 停止生成（handle.cancel）/ onError 重试 / 卸载取消；requestStream 经 `@api/stream` 别名消费（shared barrel 刻意不聚合 ./api）
+- **prod 边界明示**：gh-pages 的 mockjs 只拦 XHR，stream.ts 的 fetch 穿透 + rawResponse client 忽略——流演示仅 dev 可用；`check-mock-wiring.ts` PROD_INLINE_EXEMPT 登记 'stream' 豁免（含根因注释）
+- **node 网关 SSE 零配置实证**：curl 经 8080 网关逐 chunk 到达（9 帧 + [DONE]），流式 pipe 无缓冲，无需 nginx 的 proxy_buffering off
+- **验证**：check:mock-wiring ✓ / type-check 10/10 ✓ / lint ✓；curl 逐 chunk 实测 + CDP 实测 demo 页渲染与侧边栏注册
+- **手动验证步骤**：`pnpm dev:gateway` → http://localhost:8080/docs/demo/stream-request → 发送 → 观察打字机逐段输出；点「停止生成」立即终止
+
 ### ⚙️ Infra | 本地同域网关 node 化：去除 docker/nginx 依赖（2026-10-26）
 
 > 背景：本地开发同域网关原为 docker compose + nginx:alpine 容器（:8080 反代宿主机 5174-5179），需 Docker Desktop 常驻 + 双终端两条命令，且 nginx 配置因无法 import app 注册表而存在静态配置双写漂移面（靠 check-gateway-conf 在 CI 校验兜底）。现整体替换为零依赖 node 原生方案。

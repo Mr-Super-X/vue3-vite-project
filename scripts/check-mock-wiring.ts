@@ -75,8 +75,11 @@ const prodImportedModules = parseLocalModuleImports(prodSrc)
 
 // 合理豁免：auth/dict 在 prod 走内联版（prodAuthMocks/prodDictMocks），不 import auth.ts/dict.ts——
 // 因 rawResponse（Set-Cookie 流）与路径参数 client 侧不支持（mockProdServer.ts 头注）。
-// 故 prod 缺 auth/dict import 是设计使然，但 index.ts 里若有 auth/dict，prod 必须有对应内联（由校验 2 兜底权限码，这里登记豁免语义）。
-const PROD_INLINE_EXEMPT = new Set(['auth', 'dict'])
+// stream 同为 rawResponse 且更彻底：prod 的 createProdMockServer 是 mockjs XHR 劫持，
+// 不拦截 stream.ts 的 fetch——即便内联 response 形态也无法生效（请求根本到不了拦截器），
+// 故 prod 无任何等价格可接，只能豁免（dev-only 能力，docs demo 在 gh-pages 上降级提示）。
+// 故 prod 缺 auth/dict/stream import 是设计使然，但 index.ts 里若有 auth/dict，prod 必须有对应内联（由校验 2 兜底权限码，这里登记豁免语义）。
+const PROD_INLINE_EXEMPT = new Set(['auth', 'dict', 'stream'])
 const expectedProdImports = devModules.filter((m) => !PROD_INLINE_EXEMPT.has(m))
 
 const missingInProd = expectedProdImports.filter((m) => !prodImportedModules.includes(m))

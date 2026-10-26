@@ -3,6 +3,8 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 // 类型挂钩（2026-10-26 测试审计 #2）：登录/profile 响应体与 api 层 LoginResult /
 // UserProfile 绑定——改契约时编译器即时报错（import type 编译期擦除，无运行时依赖）
 import type { LoginResult, UserProfile } from '@vv/shared'
+// readBody 自本文件抽取到 _utils（2026-10-26 stream mock 接入，与 auth 同款手动解析语义共享）
+import { readBody } from './_utils'
 
 // httpOnly cookie 模拟（2026-08-12 改造）：
 // 凭证由"后端"（本 mock）通过 Set-Cookie: HttpOnly 下发，前端 JS 不可读，
@@ -31,23 +33,6 @@ function sendJson(res: ServerResponse, body: unknown, statusCode = 200): void {
   res.setHeader('Content-Type', 'application/json; charset=utf-8')
   res.statusCode = statusCode
   res.end(JSON.stringify(body))
-}
-
-/** 读取请求 body JSON（rawResponse 模式下需手动解析） */
-function readBody(req: IncomingMessage): Promise<Record<string, unknown>> {
-  return new Promise((resolve) => {
-    let raw = ''
-    req.on('data', (chunk) => {
-      raw += chunk
-    })
-    req.on('end', () => {
-      try {
-        resolve(JSON.parse(raw) as Record<string, unknown>)
-      } catch {
-        resolve({})
-      }
-    })
-  })
 }
 
 /** 模拟网络延迟后执行 handler。
