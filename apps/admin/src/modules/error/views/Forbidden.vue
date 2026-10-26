@@ -11,5 +11,11 @@
 </script>
 
 <template>
-  <ErrorPage status="403" title="无权访问此页面" return-to="/workbench" return-label="返回工作台" />
+  <!-- title 走 error.403 i18n 键（2026-10-28 审计激活死键；zh 由「无权访问此页面」微调为键值「无权访问」，语义等价）；return-label 属业务文案保留硬编码 -->
+  <ErrorPage
+    status="403"
+    :title="$t('error.403')"
+    return-to="/workbench"
+    return-label="返回工作台"
+  />
 </template>

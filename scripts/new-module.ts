@@ -564,7 +564,7 @@ function printNextSteps(name: string, app: string): void {
   console.log(`  6. 启动 pnpm -C apps/${app} dev，本地访问 http://localhost:5173/${name}`)
   console.log('')
   console.log(
-    `  7. 给登录账号的 permissions 加 '${name}:view' 等权限码（如需路由级权限，见 apps/${app}/src/store/modules/user.ts）`
+    `  7. 给登录账号的 permissions 加 '${name}:view' 等权限码（如需路由级权限，admin 示例见 apps/admin/src/store/modules/user.ts——user store 仅 admin 持有，其余 app 无该文件）`
   )
   console.log('')
   console.log(

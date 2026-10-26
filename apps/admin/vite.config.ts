@@ -21,7 +21,7 @@ const appRoot = fileURLToPath(new URL('.', import.meta.url))
 export default createViteConfig({
   appRoot,
   appName: 'admin',
-  // P3-2 变更：h5-demo 模块与 h5 layout 已抽离到 apps/h5，rem 转换责任随迁
+  // h5-demo 模块与 h5 layout 已抽离到 apps/h5，rem 转换责任随迁
   // （postcss.ts 转换范围锚定各 appRoot，admin 关闭后零污染；apps/h5 开 h5Rem: true）
   h5Rem: false,
   extraPlugins: [

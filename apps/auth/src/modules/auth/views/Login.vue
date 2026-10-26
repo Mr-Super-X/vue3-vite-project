@@ -19,11 +19,16 @@
  */
 // ElMessage 由 unplugin-auto-import 注入（importStyle 自动带样式，勿显式 import）
 import { User, Lock, View, Hide } from '@element-plus/icons-vue'
+import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@vv/shared'
 import { resolvePostLoginRedirect, withRepoPrefix } from '@vv/shared'
 
 // BEM 工具由 unplugin-auto-import 自动注入，无须显式 import
 const bem = createNamespace('login')
+
+// i18n 接线（2026-10-28 i18n 审计 P0）：rules 校验文案在 script 层须经 useI18n 的 t()；
+// 模板层（label/placeholder/按钮）直接用全局 $t（i18n 全局安装）
+const { t } = useI18n()
 
 const userStore = useUserStore()
 
@@ -38,12 +43,12 @@ const appTitle = import.meta.env.VITE_APP_TITLE || '统一登录'
 
 const rules = {
   username: [
-    { required: true, message: '请输入账号', trigger: 'blur' },
-    { min: 3, message: '账号至少 3 位', trigger: 'blur' },
+    { required: true, message: t('auth.accountRequired'), trigger: 'blur' },
+    { min: 3, message: t('auth.accountMin'), trigger: 'blur' },
   ],
   password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码至少 6 位', trigger: 'blur' },
+    { required: true, message: t('auth.passwordRequired'), trigger: 'blur' },
+    { min: 6, message: t('auth.passwordMin'), trigger: 'blur' },
   ],
 }
 
@@ -105,29 +110,29 @@ async function handleSubmit() {
         label-position="top"
         @submit.prevent="handleSubmit"
       >
-        <el-form-item label="账号" prop="username">
+        <el-form-item :label="$t('auth.account')" prop="username">
           <el-input
             v-model="form.username"
             :prefix-icon="User"
-            placeholder="请输入账号"
+            :placeholder="$t('auth.accountRequired')"
             autocomplete="username"
             clearable
           />
         </el-form-item>
 
-        <el-form-item label="密码" prop="password">
+        <el-form-item :label="$t('auth.password')" prop="password">
           <el-input
             v-model="form.password"
             :prefix-icon="Lock"
             :type="showPassword ? 'text' : 'password'"
-            placeholder="请输入密码"
+            :placeholder="$t('auth.passwordRequired')"
             autocomplete="current-password"
           >
             <template #suffix>
               <button
                 type="button"
                 :class="bem.e('toggle-pwd')"
-                :aria-label="showPassword ? '隐藏密码' : '显示密码'"
+                :aria-label="showPassword ? $t('auth.hidePassword') : $t('auth.showPassword')"
                 @click="showPassword = !showPassword"
               >
                 <el-icon><component :is="showPassword ? Hide : View" /></el-icon>
@@ -137,13 +142,13 @@ async function handleSubmit() {
         </el-form-item>
 
         <div :class="bem.e('actions')">
-          <el-checkbox v-model="rememberMe">记住我</el-checkbox>
-          <a :class="bem.e('link')" href="#" @click.prevent>忘记密码？</a>
+          <el-checkbox v-model="rememberMe">{{ $t('auth.rememberMe') }}</el-checkbox>
+          <a :class="bem.e('link')" href="#" @click.prevent>{{ $t('auth.forgotPassword') }}</a>
         </div>
 
         <button type="button" :class="bem.e('submit')" :disabled="loading" @click="handleSubmit">
           <span v-if="loading" :class="bem.e('submit-spinner')" />
-          <span>{{ loading ? '登录中...' : '登 录' }}</span>
+          <span>{{ loading ? $t('auth.loggingIn') : $t('auth.loginSubmit') }}</span>
         </button>
       </el-form>
 

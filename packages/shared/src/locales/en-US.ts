@@ -11,7 +11,13 @@
  */
 export default {
   app: { title: 'Enterprise Admin' },
-  common: { confirm: 'Confirm', cancel: 'Cancel', retry: 'Retry', loading: 'Loading...' },
+  common: {
+    confirm: 'Confirm',
+    cancel: 'Cancel',
+    retry: 'Retry',
+    loading: 'Loading...',
+    empty: 'No data',
+  },
   auth: {
     login: 'Login',
     logout: 'Logout',
@@ -21,6 +27,18 @@ export default {
     logoutTitle: 'Notice',
     username: 'Username',
     password: 'Password',
+    /** Login page keys (wired 2026-10-28 i18n audit) */
+    account: 'Account',
+    accountRequired: 'Please enter your account',
+    accountMin: 'Account must be at least 3 characters',
+    passwordRequired: 'Please enter your password',
+    passwordMin: 'Password must be at least 6 characters',
+    rememberMe: 'Remember me',
+    forgotPassword: 'Forgot password?',
+    loggingIn: 'Signing in...',
+    loginSubmit: 'Sign In',
+    showPassword: 'Show password',
+    hidePassword: 'Hide password',
   },
   menu: {
     home: 'Dashboard',
@@ -31,7 +49,25 @@ export default {
     workbenchAnalysis: 'Analysis',
     workbenchMonitor: 'Monitor',
   },
-  error: { '403': 'Forbidden', '404': 'Not Found', '500': 'Server Error' },
+  error: {
+    '403': 'Forbidden',
+    '404': 'Not Found',
+    '500': 'Server Error',
+    /** HTTP status toast messages (http-errors.ts lookup table) */
+    http: {
+      '400': 'Bad request',
+      '401': 'Please sign in first',
+      '403': 'Access denied',
+      '404': 'Resource not found',
+      '500': 'Server error',
+      '502': 'Bad gateway',
+      '503': 'Service unavailable',
+      '504': 'Gateway timeout',
+      network: 'Network error, please retry later',
+      serverFallback: 'Service error, please retry later',
+      clientFallback: 'Request failed, please check and retry',
+    },
+  },
   /** Header chrome text (default layout replica, hot-reloads on language switch) */
   header: {
     collapse: 'Collapse menu',

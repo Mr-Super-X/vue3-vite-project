@@ -46,9 +46,31 @@ function isBenignError(err: unknown): boolean {
   return BENIGN_ERROR_PATTERNS.some((pattern) => pattern.test(message))
 }
 
+/** window 级监听引用（模块级持有）——install 幂等摘除用，防 HMR/重复 install 叠加泄漏 */
+type WindowErrorHandler = (event: ErrorEvent) => void
+type RejectionHandler = (event: PromiseRejectionEvent) => void
+let windowErrorHandler: WindowErrorHandler | null = null
+let unhandledRejectionHandler: RejectionHandler | null = null
+
+/** 摘除 window 级监听（install 前置调用，幂等） */
+function uninstallWindowListeners(): void {
+  if (windowErrorHandler) {
+    window.removeEventListener('error', windowErrorHandler)
+    windowErrorHandler = null
+  }
+  if (unhandledRejectionHandler) {
+    window.removeEventListener('unhandledrejection', unhandledRejectionHandler)
+    unhandledRejectionHandler = null
+  }
+}
+
 export default {
   install(app: App, options: ErrorHandlerOptions = {}): void {
     const { report, logToConsole = import.meta.env.DEV } = options
+
+    // 幂等守卫（2026-10-28 运行时审计 P1）：window 监听为模块级副作用，install 叠加
+    // （HMR / 重复 app.use）时匿名函数无法摘除会累积泄漏——先摘旧再挂新
+    uninstallWindowListeners()
 
     // 将 report 函数桥接到 safeAsync 模块，使两类错误走同一上报通道
     _bindErrorHandler(options)
@@ -68,8 +90,8 @@ export default {
       handle(err, 'vue', info)
     }
 
-    // 2. window 全局 JS 错误
-    window.addEventListener('error', (event) => {
+    // 2. window 全局 JS 错误（具名引用持有，供 uninstallWindowListeners 摘除）
+    windowErrorHandler = (event) => {
       const err = event.error ?? event.message
       // 良性噪声直接丢弃：不 console.error 也不上报（避免污染监控）
       if (isBenignError(err)) return
@@ -78,11 +100,13 @@ export default {
         lineno: event.lineno,
         colno: event.colno,
       })
-    })
+    }
+    window.addEventListener('error', windowErrorHandler)
 
     // 3. 未捕获的 Promise 拒绝
-    window.addEventListener('unhandledrejection', (event) => {
+    unhandledRejectionHandler = (event) => {
       handle(event.reason, 'unhandledrejection')
-    })
+    }
+    window.addEventListener('unhandledrejection', unhandledRejectionHandler)
   },
 }

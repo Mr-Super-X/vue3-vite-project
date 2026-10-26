@@ -11,5 +11,11 @@
 </script>
 
 <template>
-  <ErrorPage status="404" title="页面不存在" return-to="/workbench" return-label="返回工作台" />
+  <!-- title 走 error.404 i18n 键（2026-10-28 审计激活死键，zh 逐字相同） -->
+  <ErrorPage
+    status="404"
+    :title="$t('error.404')"
+    return-to="/workbench"
+    return-label="返回工作台"
+  />
 </template>

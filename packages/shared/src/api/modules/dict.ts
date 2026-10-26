@@ -6,8 +6,8 @@
  * - 免费获得 http 拦截器能力：30s GET 内存缓存（防抖池之前的第一层请求合并）、
  *   401 自动刷新重试、统一错误处理
  *
- * @see [`src/types/dict.ts`](../../types/dict.ts) DictItem 契约定义（前端主导）
- * @see [`src/composables/useDict.ts`](../../composables/useDict.ts) 业务侧推荐入口
+ * @see [`../../types/dict.ts`](../../types/dict.ts) DictItem 契约定义（前端主导）
+ * @see [`../../composables/useDict.ts`](../../composables/useDict.ts) 业务侧推荐入口
  * @group 业务 API：字典
  */
 

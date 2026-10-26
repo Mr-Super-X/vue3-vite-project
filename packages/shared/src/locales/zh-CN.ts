@@ -17,7 +17,13 @@
  */
 export default {
   app: { title: '企业中后台管理' },
-  common: { confirm: '确认', cancel: '取消', retry: '重试', loading: '加载中...' },
+  common: {
+    confirm: '确认',
+    cancel: '取消',
+    retry: '重试',
+    loading: '加载中...',
+    empty: '暂无数据',
+  },
   auth: {
     login: '登录',
     logout: '退出',
@@ -27,6 +33,18 @@ export default {
     logoutTitle: '提示',
     username: '用户名',
     password: '密码',
+    /** Login 页专属键（2026-10-28 i18n 审计接线；username 键为「用户名」，Login 页用「账号」故另立 account） */
+    account: '账号',
+    accountRequired: '请输入账号',
+    accountMin: '账号至少 3 位',
+    passwordRequired: '请输入密码',
+    passwordMin: '密码至少 6 位',
+    rememberMe: '记住我',
+    forgotPassword: '忘记密码？',
+    loggingIn: '登录中...',
+    loginSubmit: '登 录',
+    showPassword: '显示密码',
+    hidePassword: '隐藏密码',
   },
   menu: {
     // home 对应路由 meta.title「仪表盘」（/home 首页），非"首页"字样
@@ -38,7 +56,25 @@ export default {
     workbenchAnalysis: '分析页',
     workbenchMonitor: '监控页',
   },
-  error: { '403': '无权访问', '404': '页面不存在', '500': '服务器错误' },
+  error: {
+    '403': '无权访问',
+    '404': '页面不存在',
+    '500': '服务器错误',
+    /** HTTP 状态码 toast 文案（http-errors.ts 查表；2026-10-28 i18n 审计激活逻辑层硬编码） */
+    http: {
+      '400': '请求参数错误',
+      '401': '请先登录',
+      '403': '无权限访问',
+      '404': '资源不存在',
+      '500': '服务器错误',
+      '502': '网关错误',
+      '503': '服务暂不可用',
+      '504': '网关超时',
+      network: '网络异常，请稍后重试',
+      serverFallback: '服务异常，请稍后重试',
+      clientFallback: '请求失败，请检查后重试',
+    },
+  },
   /** 布局头部控件文案（default 布局复刻，切换中英文时热更新） */
   header: {
     collapse: '收起导航',

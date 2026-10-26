@@ -25,6 +25,12 @@ vi.mock('@vv/shared', async (importOriginal) => {
 
 import { useLogout } from './useLogout'
 
+// 替换先行：4 例直调全部改经 stub 组件 setup 执行（见文件尾 useLogoutWithSetup 定义）
+import { mount } from '@vue/test-utils'
+import { defineComponent } from 'vue'
+// i18n 实例经 @locales 别名（指 @vv/shared/src/locales；具名 default export 为 createI18n 实例）
+import i18n from '@locales'
+
 beforeEach(() => {
   mockStoreLogout.mockReset()
   mockUseConfirm.mockReset()
@@ -38,13 +44,13 @@ afterEach(() => {
 
 describe('useLogout', () => {
   it('初始 loggingOut 为 false', () => {
-    const { loggingOut } = useLogout()
+    const { loggingOut } = useLogoutWithSetup()
     expect(loggingOut.value).toBe(false)
   })
 
   it('confirm 取消时 logout 与跳转均不触发', async () => {
     mockUseConfirm.mockResolvedValueOnce(false)
-    const { loggingOut, confirmLogout } = useLogout()
+    const { loggingOut, confirmLogout } = useLogoutWithSetup()
     await confirmLogout()
     expect(mockStoreLogout).not.toHaveBeenCalled()
     expect(window.location.href).toBe('http://localhost/workbench')
@@ -54,7 +60,7 @@ describe('useLogout', () => {
   it('confirm 确认后：logout + 整页跳 apps/auth 登录页，loggingOut 复位（P4）', async () => {
     mockUseConfirm.mockResolvedValueOnce(true)
     mockStoreLogout.mockResolvedValueOnce(undefined)
-    const { loggingOut, confirmLogout } = useLogout()
+    const { loggingOut, confirmLogout } = useLogoutWithSetup()
     await confirmLogout()
     expect(mockStoreLogout).toHaveBeenCalledTimes(1)
     // 未注入 VITE_AUTH_ORIGIN 时回落 '/auth'（与 redirectToAuthLogin 同语义）
@@ -71,8 +77,28 @@ describe('useLogout', () => {
         throw new Error('boom')
       },
     })
-    const { loggingOut, confirmLogout } = useLogout()
+    const { loggingOut, confirmLogout } = useLogoutWithSetup()
     await expect(confirmLogout()).rejects.toThrow('boom')
     expect(loggingOut.value).toBe(false)
   })
 })
+
+/**
+ * useLogout 自 2026-10-28 接线 useI18n（弹窗文案 i18n 化）——useI18n 硬约束「须在 setup
+ * 顶部调用」，spec 直调 throw（SyntaxError: Must be called at the top of a setup function）。
+ * 本辅助把调用包进 stub 组件的 setup（挂真实 i18n 实例，zh-CN 默认），是命令式 composable
+ * 接线 i18n 后的标准 spec 形态。
+ */
+function useLogoutWithSetup(): ReturnType<typeof useLogout> {
+  let result!: ReturnType<typeof useLogout>
+  mount(
+    defineComponent({
+      setup() {
+        result = useLogout()
+        return () => null
+      },
+    }),
+    { global: { plugins: [i18n] } }
+  )
+  return result
+}

@@ -2,13 +2,15 @@
  * 字典数据表（单一事实来源）。
  *
  * 消费方：
- * - mock/dict.ts —— dev 动态路由 /api/dict/:code 按 query.code 查表
- * - mock/mockProdServer.ts —— prod（gh-pages）静态展开为逐条 url 注册；
+ * - src/dict.ts（本包）—— dev 动态路由 /api/dict/:code 按 query.code 查表
+ * - src/mockProdServer.ts —— prod（gh-pages）静态展开为逐条 url 注册；
  *   因 vite-plugin-mock client 的 wrapper 不从路径提取参数（query 仅来自 querystring），
  *   prod 无法复用 :code 动态路由，只能静态展开（2026-10-20 用户目检实锤）
  * @trigger 新增字典：只需在本表加键值，dev/prod 双端自动生效
  */
-import type { DictItem } from '../../shared/src/types/dict'
+// DictItem 经 @vv/shared 根 barrel 消费（§1.6.2）；原跨包相对路径 '../../shared/src/types/dict'
+// 是包化过渡态残留（2026-10-28 审计修正）
+import type { DictItem } from '@vv/shared'
 
 /**
  * 字典数据表：key = 字典 code（URL 路径参数）。

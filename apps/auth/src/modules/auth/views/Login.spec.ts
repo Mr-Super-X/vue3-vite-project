@@ -36,6 +36,11 @@ vi.mock('element-plus', async () => {
 
 // 引入被测组件（必须在 mock 之后）
 import Login from './Login.vue'
+// i18n 接线后组件 setup 依赖 useI18n——spec mount 须挂真实 i18n 实例（zh-CN 默认 locale，
+// $t 文案断言与 zh 硬编码逐字相同，行为零变化；2026-10-28 i18n 审计配套）
+import i18n from '@locales'
+
+const mountOptions = { global: { plugins: [i18n] } }
 
 describe('Login.vue（apps/auth 统一登录页）', () => {
   beforeEach(() => {
@@ -50,7 +55,7 @@ describe('Login.vue（apps/auth 统一登录页）', () => {
   })
 
   it('1. 渲染默认结构：品牌区 + 表单 + 按钮 + 版权', () => {
-    const w = mount(Login)
+    const w = mount(Login, mountOptions)
     expect(w.find('h1').exists()).toBe(true)
     expect(w.text()).toContain('统一登录')
     expect(w.findAll('input').length).toBeGreaterThanOrEqual(2)
@@ -59,7 +64,7 @@ describe('Login.vue（apps/auth 统一登录页）', () => {
   })
 
   it('2. 空表单提交触发校验（不调用 login）', async () => {
-    const w = mount(Login)
+    const w = mount(Login, mountOptions)
     // 清空默认值
     const usernameInput = w.find('input[autocomplete="username"]')
     const passwordInput = w.find('input[autocomplete="current-password"]')
@@ -79,7 +84,7 @@ describe('Login.vue（apps/auth 统一登录页）', () => {
     mockLogin.mockResolvedValueOnce({ profile: { id: 1, name: 'Admin' } })
     fakeLocation.search = '?redirect=%2Fworkbench'
     mockResolvePostLoginRedirect.mockReturnValueOnce('/workbench')
-    const w = mount(Login)
+    const w = mount(Login, mountOptions)
     await w.find('form').trigger('submit.prevent')
     await flushPromises()
     expect(mockLogin).toHaveBeenCalledWith({ username: 'admin', password: '123456' })
@@ -91,7 +96,7 @@ describe('Login.vue（apps/auth 统一登录页）', () => {
 
   it('4. 登录失败：toast error + 不回跳（无静默吞错）', async () => {
     mockLogin.mockRejectedValueOnce(new Error('密码错误'))
-    const w = mount(Login)
+    const w = mount(Login, mountOptions)
     await w.find('form').trigger('submit.prevent')
     await flushPromises()
     expect(ElMessage.error).toHaveBeenCalledWith('密码错误')
@@ -102,7 +107,7 @@ describe('Login.vue（apps/auth 统一登录页）', () => {
   it('5. 回跳 fallback 由 resolvePostLoginRedirect 承担（/admin/ 默认回管理端）', async () => {
     mockLogin.mockResolvedValueOnce({ profile: { id: 1, name: 'Admin' } })
     // 无 redirect 查询参数：组件固定传 '/admin/' 作 fallback，防开放重定向校验在 shared 层
-    const w = mount(Login)
+    const w = mount(Login, mountOptions)
     await w.find('form').trigger('submit.prevent')
     await flushPromises()
     expect(mockResolvePostLoginRedirect).toHaveBeenCalledWith('/admin/')
@@ -110,7 +115,7 @@ describe('Login.vue（apps/auth 统一登录页）', () => {
   })
 
   it('6. 密码显隐切换：点击 👁 后 input type 切换', async () => {
-    const w = mount(Login)
+    const w = mount(Login, mountOptions)
     const pwdInput = w.find('input[autocomplete="current-password"]')
     expect(pwdInput.exists()).toBe(true)
     expect(pwdInput.attributes('type')).toBe('password')
@@ -129,7 +134,7 @@ describe('Login.vue（apps/auth 统一登录页）', () => {
         resolveLogin = r
       })
     )
-    const w = mount(Login)
+    const w = mount(Login, mountOptions)
     await w.find('form').trigger('submit.prevent')
     // 等 validate 异步完成 + loading=true
     await flushPromises()

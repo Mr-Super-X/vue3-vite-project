@@ -111,7 +111,7 @@ export const useThemeStore = defineStore(
       setMode(next)
     }
 
-    // 初始化应用主题
+    // 初始化应用主题（复读代码型注释清理：applyTheme 自解释——2026-10-28 注释审计 L 级）
     applyTheme(mode.value)
 
     // 监听系统主题变化（仅 mode === 'auto' 时响应）

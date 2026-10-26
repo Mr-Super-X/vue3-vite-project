@@ -11,5 +11,11 @@
 </script>
 
 <template>
-  <ErrorPage status="500" title="服务器开小差了" return-to="/workbench" return-label="返回工作台" />
+  <!-- title 走 error.500 i18n 键（2026-10-28 审计激活死键；zh 由口语「服务器开小差了」统一为键值「服务器错误」）；return-label 属业务文案保留硬编码 -->
+  <ErrorPage
+    status="500"
+    :title="$t('error.500')"
+    return-to="/workbench"
+    return-label="返回工作台"
+  />
 </template>

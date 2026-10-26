@@ -24,19 +24,23 @@
 
 // 包内兄弟 composable 用显式相对导入（@vv/ui 包规范）；
 // app 侧消费本文件时 AutoImport 对显式导入的标识符跳过注入
+// 弹窗文案走 i18n auth.* 四键（与硬编码逐字对应——2026-10-28 i18n 审计 P0 接线，zh 行为零变化）
+import { useI18n } from 'vue-i18n'
 import { useConfirm } from './useConfirm.ts'
 import { useUserStore, resolveAuthOrigin } from '@vv/shared'
 
 export function useLogout() {
+  const { t } = useI18n()
   const userStore = useUserStore()
   const loggingOut = ref(false)
 
   async function confirmLogout(): Promise<void> {
     // useConfirm 取消时 resolve(false) 而非 reject，故此处无须 try/catch
     const confirmed = await useConfirm({
-      content: '确定退出登录吗？',
-      title: '提示',
-      confirmButtonText: '退出',
+      content: t('auth.logoutConfirm'),
+      title: t('auth.logoutTitle'),
+      confirmButtonText: t('auth.logoutConfirmButton'),
+      cancelButtonText: t('auth.logoutCancelButton'),
       type: 'warning',
     })
     if (!confirmed) return

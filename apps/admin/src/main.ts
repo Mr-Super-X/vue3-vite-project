@@ -38,7 +38,8 @@ await bootstrapApp({
   router,
   pinia,
   i18n,
-  title: '企业中后台管理',
+  // 首屏标题占位走 i18n app.title 键（2026-10-28 i18n 审计接线；登录后由路由 meta.title 覆盖）
+  title: i18n.global.t('app.title'),
   globalComponents: createGlobalComponents(),
   directives: Directives,
   plugins: Plugins,

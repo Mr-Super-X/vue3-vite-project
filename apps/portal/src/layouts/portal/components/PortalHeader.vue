@@ -109,7 +109,7 @@ async function onCommand(cmd: string) {
             <el-dropdown-menu>
               <el-dropdown-item command="logout" :disabled="loggingOut">
                 <el-icon class="el-icon--left"><SwitchButton /></el-icon>
-                <span>{{ loggingOut ? '退出中...' : $t('auth.logout') }}</span>
+                <span>{{ loggingOut ? $t('header.loggingOut') : $t('auth.logout') }}</span>
               </el-dropdown-item>
             </el-dropdown-menu>
           </template>

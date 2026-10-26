@@ -4,6 +4,23 @@
 
 ## 未发布
 
+### 🌐 i18n + 健壮性 | 第八轮双专项审计落地：框架壳双语接线（AsyncState/useLogout/错误页/Login/http 错误全链）/ errorHandler 监听幂等（2026-10-28）
+
+> 背景：双路新角度审计（.agent-reports/2026-10-28-runtime-audit.md / i18n-audit.md）——i18n 现状「框架壳双语已完成、业务层零覆盖」（47 键中 common.*/error.*/app.title 三命名空间零消费，切英文后外壳英文页面全中文）；运行时「生产路径零真泄漏」但 errorHandler 插件 window 监听叠加可泄漏。
+
+- **i18n P0 接线（审计估 2-3 天，本轮批量落地）**：
+  - **AsyncState 三态**（ui 包组件）：重试/暂无数据 → `common.retry`/`common.empty`（新增 empty 键双语）——所有 useRequest 页面的空态/重试随 locale 切换
+  - **useLogout 四键接线**：confirmLogout 的确定/提示/退出/取消 → `auth.logout*`（与硬编码逐字对应，zh 零变化）；顺带补显式 `cancelButtonText: t('auth.logoutCancelButton')`（原走 useConfirm 默认值，zh 同文、en 正确切换）
+  - **admin 错误三页**：`error.403/404/500` 死键激活（zh 语义等价微调：无权访问此页面→无权访问、服务器开小差了→服务器错误）
+  - **Login.vue 全文接线**：rules 4 条校验（script 层 useI18n t()）+ label/placeholder/checkbox/忘记密码/登录中/显隐密码 aria-label 12 处（模板 $t）——新增 `auth.account/accountRequired/accountMin/passwordRequired/passwordMin/rememberMe/forgotPassword/loggingIn/loginSubmit/showPassword/hidePassword` 11 键双语
+  - **http-errors.ts 全表 i18n 化**：12 条状态码 + 3 档 fallback 中文 toast → `error.http.*` 新命名空间（双语）；模块级 `i18n.global.t` 脱离 setup 可用（拦截器调用时 i18n 已初始化，无循环依赖）
+  - **既有键复用**：portal「退出中...」→ `header.loggingOut`；admin main.ts title → `app.title`
+  - **立场裁决落地**：按审计建议定调「中后台壳双语 + 演示内容中文」——docs（889 处）/portal/big 的静态文案豁免，修复聚焦 admin/auth 框架级 + shared/ui 包组件
+- **errorHandler 插件幂等化（运行时审计 P1）**：window error/unhandledrejection 匿名监听 → 模块级具名引用持有 + install 前置 `uninstallWindowListeners()`——HMR/重复 app.use 场景不再累积泄漏
+- **运行时其余发现裁决不改**（防过度设计）：theme/app store 的 mql 监听为 Pinia 单例语义（app 生命周期内不泄漏，HMR 残留 dev-only 可接受）；demo 3 处短窗口自清定时器；XFormDetailFill 竞态有 Vue 3 静默兜底——审计正面确认生产路径零真泄漏（26 监听 23 成对、Observer 全 disconnect、echarts/wangeditor 全 dispose）
+- **mock 类型挂钩收尾**：menu.ts `satisfies RemoteMenuItem[]`（shared barrel 补纯类型导出）+ dict-data.ts 跨包相对路径 import 归位 barrel + dict/api 注释口吻修正
+- **验证**：`pnpm type-check` 10/10；`pnpm test` 9/9 全绿——**过程修复**：i18n 接线暴露 useI18n 的 setup 硬约束——Login.spec 7 例 mount 挂真实 i18n 插件（`@locales` 别名，zh 文案断言零变化）；useLogout.spec 4 例直调 throw「Must be called at the top of a setup function」——新增 `useLogoutWithSetup()` 辅助（stub 组件 setup 内执行 + 挂 i18n），确立「命令式 composable 接线 i18n 后的标准 spec 形态」
+
 ### 📖 Docs+Style | 第七轮注释/导入双专项审计落地：脚手架生成即编译错修复 / 30+ 处断链 @see 清零 / 冗余 import 漏网清零 / 拓扑措辞修正（2026-10-27）
 
 > 背景：双路专项审计（.agent-reports/2026-10-27-comments-audit.md / imports-audit.md，22+10 条发现）——6 轮重构后注释漂移高发（@see 断链、旧路径教学、拓扑失真）与 AutoImport 冗余 import 漏网。

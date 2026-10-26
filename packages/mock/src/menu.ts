@@ -1,9 +1,12 @@
 import type { MockMethod } from 'vite-plugin-mock'
+// 类型挂钩（2026-10-28，docs/22 §2 约定）：菜单响应与 @vv/shared api 层
+// RemoteMenuItem 绑定——改契约时编译器即时报错（import type 编译期擦除无运行时依赖）
+import type { RemoteMenuItem } from '@vv/shared'
 
 // 注意：mock response 必须是**同步函数**。详见 mock/auth.ts 顶部注释。
 
 /**
- * 远程菜单 mock：与 src/router/types.ts 的 RemoteMenuItem[] 契约一致。
+ * 远程菜单 mock：与 @vv/shared api/modules/menu 的 RemoteMenuItem[] 契约一致。
  *
  * 覆盖 3 种典型场景：
  *   1. 单级菜单（Workbench）—— 顶层页面，admin 登录后落地页（P3-1 起；
@@ -20,7 +23,8 @@ import type { MockMethod } from 'vite-plugin-mock'
  * 拉到的 JSON 由 src/router/remote.ts:34 的 RemoteMenuItemSchema（zod）运行时校验；
  * 校验失败时守卫 console.warn + 逐项校验兜底（容错优先），不影响菜单加载。
  *
- * 字段说明详见 src/router/types.ts 中的 RemoteMenuItem 接口注释。
+ * 字段说明详见 @vv/shared api/modules/menu 中的 RemoteMenuItem 接口注释
+ * （JSDoc 原引 src/router/types.ts 为单应用时代路径，2026-10-28 审计修正）。
  */
 export default [
   {
@@ -58,7 +62,7 @@ export default [
             hidden: true, // 转换后守卫拦截直访，菜单也不渲染
           },
         },
-      ],
+      ] satisfies RemoteMenuItem[],
     }),
   },
 ] as MockMethod[]
