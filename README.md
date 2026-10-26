@@ -9,7 +9,7 @@
 > **最近更新**：2026-10-22 — **Monorepo 改造完成（pnpm workspace + turbo）**：
 >
 > - **六应用四包结构**（[docs/43-Monorepo结构与开发指引.md](docs/43-Monorepo结构与开发指引.md)，评估 [docs/42](docs/42-Monorepo多应用改造评估.md)）：`apps/admin`（中后台）/ `apps/auth`（统一登录）/ `apps/portal`（门户）/ `apps/h5`（移动端）/ `apps/big`（数据大屏）/ `apps/docs`（组件示例文档）+ `packages/config|mock|shared|ui` 共享包（源码直链 workspace 消费）
-> - **统一登录协议**：未登录守卫整页跳 `/auth/login?redirect=...`（`VITE_AUTH_ORIGIN` env 注入），cookie 同域漫游；本地经 docker 网关 :8080 复现（`pnpm dev:gateway` + `docker compose up`）
+> - **统一登录协议**：未登录守卫整页跳 `/auth/login?redirect=...`（`VITE_AUTH_ORIGIN` env 注入），cookie 同域漫游；本地经 node 网关 :8080 复现（`pnpm dev:gateway` 一体化单命令，零 docker 依赖）
 > - **CI/CD 改造**：ci.yml 走 turbo affected（PR 只构建变更波及 app，`.turbo` 缓存上 actions/cache）；deploy.yml 走 `pnpm build:pages` 六应用聚合发布 gh-pages（落地页 + 6 子目录）
 >
 > 上轮同步（2026-10-20）：门户企业官网 + gh-pages 一键部署 + 团队级图标体系，详见 [CHANGELOG.md](CHANGELOG.md)。
@@ -251,8 +251,7 @@ vue3-vite-project/            # pnpm workspace + turbo@2（Monorepo）
 │   ├── mock/                 # @vv/mock：vite-plugin-mock 数据源
 │   ├── shared/               # @vv/shared：网络层基建 + 全局 store + useAppRouter/useRequest/useAuth/useDict
 │   └── ui/                   # @vv/ui：全局组件三目录 + 弹窗族（useDialog/useConfirm/useLogout）+ 图标/样式
-├── scripts/                  # 工程脚本（check-routes/check-aliases/build-pages/dev-gateway/new-module…）
-├── docker/                   # 本地同域网关 nginx 配置（配合根 docker-compose.yml，见 docs/43 §6）
+├── scripts/                  # 工程脚本（check-routes/check-aliases/build-pages/dev-gateway/node-gateway/new-module…）
 ├── docs/                     # 项目规范文档（本文档体系）
 ├── .github/workflows/        # ci.yml（turbo affected）+ deploy.yml（build:pages 六应用聚合）
 └── 配置文件                  # package.json / turbo.json / pnpm-workspace.yaml / eslint.config.mjs / tsconfig*.json
@@ -304,10 +303,10 @@ pnpm dev:local
 | 场景                                      | 命令                                                                      | 访问                                                                   |
 | ----------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
 | 只改 admin 业务（免登录）                 | `pnpm -C apps/admin dev` + `.env.development` 加 `VITE_DEMO_NO_AUTH=true` | `localhost:5174/` → /workbench                                         |
-| 测统一登录跨应用漫游                      | `pnpm dev:gateway` + `docker compose up`                                  | `localhost:8080/admin/`（未登录自动跳 `:8080/auth/login`，登录后回跳） |
+| 测统一登录跨应用漫游                      | `pnpm dev:gateway`                                                        | `localhost:8080/admin/`（未登录自动跳 `:8080/auth/login`，登录后回跳） |
 | 单 app 独立调试（docs/portal 等公开应用） | `pnpm -C apps/<a> dev`                                                    | `localhost:<port>/`（docs 5175 等，白名单公开无需登录）                |
 
-> 统一登录全链路必须经同域网关 `:8080`（nginx 按 path 分流到对应 app）；详见 [docs/43](docs/43-Monorepo结构与开发指引.md) §5/§6 与 §9 排障。
+> 统一登录全链路必须经同域网关 `:8080`（node 网关按 path 前缀分流到对应 app）；详见 [docs/43](docs/43-Monorepo结构与开发指引.md) §5/§6 与 §9 排障。
 
 ### 常用脚本
 
@@ -317,7 +316,7 @@ pnpm dev:local
 | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | `pnpm dev`                         | 全量 dev（turbo 并行 6 个 app，remote 菜单模式；admin 含 vite-plugin-vue-devtools）                                   |
 | `pnpm -C apps/<a> dev`             | 单 app dev（如 `pnpm -C apps/admin dev`；`dev:local` 切本地菜单模式）                                                 |
-| `pnpm dev:gateway`                 | 同域网关 dev：6 app 以 `VITE_BASE=/<app>/` 并行起（配 `docker compose up` → http://localhost:8080，见 docs/43 §6）    |
+| `pnpm dev:gateway`                 | 同域网关 dev（单命令）：node 网关 :8080 + 6 app 以 `VITE_BASE=/<app>/` 串行起（见 docs/43 §6）                        |
 | `pnpm build`                       | 全量生产构建（turbo 拓扑序；各 app 内 `build-only` 生成声明 → `type-check:full` 全量门禁）                            |
 | `pnpm -C apps/<a> build-only`      | 单 app 仅 `vite build`（不含类型校验；调试构建产物用）                                                                |
 | `pnpm -C apps/<a> preview`         | 预览单 app 构建产物（本地起静态服务）                                                                                 |
@@ -335,7 +334,7 @@ pnpm dev:local
 | `pnpm check:routes`                | 校验 RouteName / component-registry / whitelist 一致性（pre-commit 强制 + CI 阶段强制）                               |
 | `pnpm check:aliases`               | alias 单一来源（`packages/config/src/app-aliases.ts`）与 tsconfig paths 一致性校验（pre-commit 强制 + CI 阶段强制）   |
 | `pnpm check:mock-wiring`           | mock 双接线一致性校验（mock 源文件清单 × 各 app prodServer 手动 import，CI 阶段强制）                                 |
-| `pnpm check:gateway-conf`          | 同域网关 nginx location / proxy_pass 与 apps-registry 端口名单一致性校验（CI 阶段强制，含端口双写锁死）               |
+| `pnpm test:gateway`                | 网关单测（node:test，HTTP 转发 / WS 透传 / 302 / 404 / 502 smoke，8 用例）                                            |
 | `pnpm check:doc-currency`          | 文档与代码硬数据一致性校验（13 项锁定；CI 阶段强制）                                                                  |
 | `pnpm generate:tsconfig-paths`     | 从 `packages/config/src/app-aliases.ts` 自动同步到各 app `tsconfig.app.json`（pre-commit 钩子自动）                   |
 | `pnpm new-module <name>`           | 一键生成业务模块骨架（kebab-case 名 → 6 个骨架文件）                                                                  |
@@ -553,7 +552,7 @@ app.use(Plugins, { errorHandler: { report: ... } })
 | 1   | `pnpm lint-staged`  | 暂存区文件 prettier + eslint 自动修复（仅变更文件，不全库扫描）   |
 | 2   | `pnpm check:routes` | 路由一致性检查（声明 / whitelist / 实际 routes 三者一致，防漏改） |
 
-> 各项一致性 check（check:aliases / check:mock-wiring / check:doc-currency / check:gateway-conf 含端口双写锁死）均在 CI 阶段随 check:routes 一并执行（见 ci.yml），不在 pre-commit（本地秒级提交体验优先）。原单应用时期的 5 步 pre-commit 链见 docs/03-Git工作流工具链.md 历史节。
+> 各项一致性 check（check:aliases / check:mock-wiring / check:doc-currency）均在 CI 阶段随 check:routes（内含端口双写锁死 + 注册表反向校验）一并执行（见 ci.yml），不在 pre-commit（本地秒级提交体验优先）。原单应用时期的 5 步 pre-commit 链见 docs/03-Git工作流工具链.md 历史节。
 
 | Hook     | 命令        | 作用                     |
 | -------- | ----------- | ------------------------ |
@@ -684,7 +683,7 @@ docker run -d --name vue3-vite-project -p 8080:80 vue3-vite-project:1.0.0
 | `ci.yml`     | push / PR 至 master、develop | 质量门禁 4 步：Lint + Build（`pnpm build` 内部 build-only → type-check:full）+ Unit tests + Check routes                                                                                                                         |
 | `deploy.yml` | push 至 master               | gh-pages 自动部署：`--base` 单源复用 env、构建四开关（VITE_BASE / VITE_HISTORY_MODE=hash / VITE_MENU_SOURCE=local / VITE_USE_MOCK=true）+ `VITE_DEMO_NO_AUTH` 演示模式，发布到 `https://Mr-Super-X.github.io/vue3-vite-project/` |
 
-> 一致性 checks 全部由 CI 执行（ci.yml）：check:routes（内含网关 location 校验 + 端口双写锁死）/ check:aliases / check:mock-wiring / check:doc-currency；本地可用同名 script 预跑。
+> 一致性 checks 全部由 CI 执行（ci.yml）：check:routes（内含端口双写锁死 + 注册表反向校验）/ check:aliases / check:mock-wiring / check:doc-currency；本地可用同名 script 预跑。
 > 首次启用需在仓库 Settings → Pages 把 Source 设为 "GitHub Actions"。设计文档：[docs/superpowers/specs/2026-10-20-gh-pages-deploy-design.md](docs/superpowers/specs/2026-10-20-gh-pages-deploy-design.md)。
 
 如需对接自己的部署环境（Nginx / Docker / 对象存储），下方保留一份通用模板参考：

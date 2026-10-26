@@ -22,8 +22,7 @@ vue3-vite-project（pnpm workspace + turbo@2）
 │   ├── mock    @vv/mock        vite-plugin-mock 数据源（原根 mock/ 职责）
 │   ├── shared  @vv/shared      网络层基建 + 全局 store + useAppRouter/useRequest/useAuth/useDict
 │   └── ui      @vv/ui          全局组件三目录 + 弹窗族（useDialog/useConfirm/useLogout）+ 图标/样式
-├── scripts/                    工程脚本（check-routes / build-pages / dev-gateway / new-module …）
-├── docker/ + docker-compose.yml  本地同域网关（见 §6）
+├── scripts/                    工程脚本（check-routes / build-pages / dev-gateway / node-gateway / new-module …）
 └── .github/workflows/          ci.yml（turbo affected）+ deploy.yml（六应用聚合 Pages）
 ```
 
@@ -40,7 +39,7 @@ vue3-vite-project（pnpm workspace + turbo@2）
 | big    | 5178     | mock / shared / ui                 | scale 适配，路由 `meta.bigScreen` 声明设计稿尺寸 |
 | auth   | 5179     | mock / shared / ui                 | 登录接口 mock 必需（4 端点）                     |
 
-端口 = `@vv/config` 的 `SERVER_DEFAULTS.port(5174) + portOffset`（各 app `vite.config.ts` 声明），`strictPort: true`——端口占用直接报错不漂移（docker 网关 location 与端口强绑定，漂移即 404 隐患）。
+端口 = `@vv/config` 的 `SERVER_DEFAULTS.port(5174) + portOffset`（各 app `vite.config.ts` 声明），`strictPort: true`——端口占用直接报错不漂移（漂移会让网关路由表反代落空，排查困难）。
 
 ## 3. 常用命令
 
@@ -68,7 +67,7 @@ vue3-vite-project（pnpm workspace + turbo@2）
 2. 新建 `vite.config.ts`：调 `createViteConfig({ appRoot, appName: '<name>', portOffset: <下一个空闲偏移>, ... })`（`base` / `mockPath` 走工厂缺省，6 app 同构已收敛进工厂；无 mock 依赖才显式传 `mockPath: ''`）
 3. `apps/<name>/src/` 最小骨架：`main.ts` / `App.vue` / `router/`（whitelist + fallback）/ `modules/<首模块>/`（views + routes）
 4. env 接线：`.env` 注入 `VITE_AUTH_ORIGIN=/auth`（统一登录回跳基址，缺省即 `/auth`）
-5. 端口登记两处同改：`portOffset` 与 `scripts/apps-registry.mjs` 的 `port` 字段（注册表是 dev-gateway / check-routes / eslint 边界规则三消费的单源；`check:gateway-conf` 的端口双写锁死会校验 `5174 + portOffset === port`，漏改即红）+ `docker/nginx.dev.conf` 的 location 块（check-gateway-conf 双向校验兜底）
+5. 端口登记两处同改：`portOffset` 与 `scripts/apps-registry.mjs` 的 `port` 字段（注册表是 dev-gateway / 网关路由表 / check-routes / eslint 边界规则多消费的单源；`check:routes` 的端口双写锁死会校验 `5174 + portOffset === port`，漏改即红）；node 网关路由表由 `scripts/node-gateway.ts` 的 `buildGatewayRoutes(APPS)` 代码派生，无需另改配置
 6. `pnpm install` 锁 workspace 链接 → `pnpm -C apps/<name> dev` 起服务 → `pnpm check:routes`（脚本自动发现新 app）
 7. gh-pages 无需改脚本：`scripts/build-pages.ts` 自动发现含 `vite.config.ts` 的 app 目录并聚合部署
 
@@ -90,34 +89,32 @@ vue3-vite-project（pnpm workspace + turbo@2）
 - `VITE_AUTH_ORIGIN` 由各 app `.env` 注入（生产缺省 `/auth`；子路径部署时按实际前缀改）；包内不硬编码 app 名。
 - dev 下**统一登录全链路必须走 §6 网关（:8080）**——单 app 起服务（如只起 admin）时 `VITE_AUTH_ORIGIN` 指向的 `/auth` 无路由可达，未登录跳 `/auth/login` **404 属预期**。注意全量 `pnpm dev` 也不可用：各 app 独立端口（5174-5179），`/auth` 是相对路径，在 5174 上跳 `/auth/login` 仍是 5174 的 404，不会跨端口到达 auth（5179）。
 
-## 6. 本地同域网关（docker compose）
+## 6. 本地同域网关（node 一体化，pnpm dev:gateway）
 
-复现生产「同域 path 部署」：nginx `:8080` 反代宿主机 6 个 vite dev server，浏览器只访问 `localhost:8080`（同 origin），cookie 漫游与重定向协议和生产一致。
+复现生产「同域 path 部署」：零依赖 node 反向代理（`scripts/node-gateway.ts`，`node:http` 原生）监听 `:8080`，按路径前缀反代 6 个 vite dev server（上游 `127.0.0.1:5174-5179`），浏览器只访问 `localhost:8080`（同 origin），cookie 漫游与重定向协议和生产一致。
 
 ```bash
-# 终端 1：6 个 app 以 base=/<app>/ 并行起 dev（注入 VITE_BASE；turbo 不支持 per-app env，故用 node 脚本）
-pnpm dev:gateway
-
-# 终端 2：起 nginx 网关
-docker compose up
+pnpm dev:gateway   # 唯一命令：网关 :8080 + 6 个 app 以 base=/<app>/ 串行起，Ctrl+C 一并退出
 ```
 
-| 网关路径                        | 反代目标（宿主机）          |
-| ------------------------------- | --------------------------- |
-| `http://localhost:8080/admin/`  | `host.docker.internal:5174` |
-| `http://localhost:8080/docs/`   | `host.docker.internal:5175` |
-| `http://localhost:8080/portal/` | `host.docker.internal:5176` |
-| `http://localhost:8080/h5/`     | `host.docker.internal:5177` |
-| `http://localhost:8080/big/`    | `host.docker.internal:5178` |
-| `http://localhost:8080/auth/`   | `host.docker.internal:5179` |
-| `http://localhost:8080/`        | 302 → `/portal/`            |
+| 网关路径                        | 反代目标（127.0.0.1）        |
+| ------------------------------- | ---------------------------- |
+| `http://localhost:8080/admin/`  | `:5174`                      |
+| `http://localhost:8080/docs/`   | `:5175`                      |
+| `http://localhost:8080/portal/` | `:5176`                      |
+| `http://localhost:8080/h5/`     | `:5177`                      |
+| `http://localhost:8080/big/`    | `:5178`                      |
+| `http://localhost:8080/auth/`   | `:5179`                      |
+| `http://localhost:8080/api/`    | `:5174`（admin mock 最全）   |
+| `http://localhost:8080/`        | 302 → `/portal/`（保留端口） |
 
-**两个关键语义**（`docker/nginx.dev.conf` 注释同步）：
+**三个关键语义**（实现见 `scripts/node-gateway.ts`）：
 
-1. `proxy_pass` 不带 URI 部分 → 保留原始路径前缀（`/admin/xxx` → 5174 的 `/admin/xxx`），与各 app dev 的 `VITE_BASE=/<app>/` 严格对齐；改写前缀 vite dev 404。
-2. `Upgrade`/`Connection` 头透传 → vite HMR websocket 经网关可用。
+1. 前缀匹配 + 原样路径转发（`/admin/xxx` → 5174 的 `/admin/xxx`），与各 app dev 的 `VITE_BASE=/<app>/` 严格对齐；路由表由 `buildGatewayRoutes(apps-registry)` 单源代码派生，不存在静态配置第二事实源。
+2. WS upgrade 透传（101 回写 + socket 双向 pipe）→ 任何 ws 场景经 8080 可用（注：`@vv/config` `server.hmr` 默认把 clientPort 固定到各 app 自身端口，HMR 流量实际多直连）。
+3. 根路径 302 用原始 Host 头（含端口）；上游不可达 502；不设超时（SSE 流式与 HMR 长连接友好）。
 
-`extra_hosts: host.docker.internal:host-gateway` 为 Linux 兼容；Docker Desktop（Win/Mac）内置该映射，本行 no-op。
+**演进史**：原为 `docker compose up`（nginx:alpine 容器，:8080 → host.docker.internal），2026-10-26 起由 node 网关替代并删除——去除 Docker Desktop 依赖与宿主 IP 字面量维护坑；`check-gateway-conf` 校验随之删除，`validatePortWiring`（端口双写锁死）迁入 `check-routes`。
 
 **验证**：`curl -I http://localhost:8080/admin/` 与 `http://localhost:8080/auth/login` 均 200（dev 起好后）。
 
@@ -137,30 +134,30 @@ docker compose up
 
 ## 9. 本地开发排障（高频 4 场景）
 
-> **前置（网关相关场景）**：需 Docker Desktop 已启动。Win/Mac 内置 `host.docker.internal` 映射；Linux 靠 `docker-compose.yml` 的 `extra_hosts: host-gateway`，无需额外配置。
+> **前置（网关相关场景）**：需 `pnpm dev:gateway` 在跑（一体化拉起 node 网关 :8080 + 6 dev server）。
 
 ### 9.1 dev 启动报 `Port 517X is already in use`
 
-`@vv/config` 的 `SERVER_DEFAULTS.strictPort: true`（`packages/config/src/server.ts`）——端口被占用**直接报错退出，不会自动漂移**（漂移会让 docker 网关 location 反代落空，排查困难）。端口表：
+`@vv/config` 的 `SERVER_DEFAULTS.strictPort: true`（`packages/config/src/server.ts`）——端口被占用**直接报错退出，不会自动漂移**（漂移会让网关路由表反代落空，排查困难）。端口表：
 
-| 端口 | 归属       | 端口 | 归属 |
-| ---- | ---------- | ---- | ---- |
-| 5174 | admin      | 5177 | h5   |
-| 5175 | docs       | 5178 | big  |
-| 5176 | portal     | 5179 | auth |
-| 8080 | nginx 网关 |      |      |
+| 端口 | 归属      | 端口 | 归属 |
+| ---- | --------- | ---- | ---- |
+| 5174 | admin     | 5177 | h5   |
+| 5175 | docs      | 5178 | big  |
+| 5176 | portal    | 5179 | auth |
+| 8080 | node 网关 |      |      |
 
-处置：先找到占用进程释放（Windows `netstat -ano | findstr 5174`，macOS/Linux `lsof -i:5174`）。确需换端口时**两处同改**：目标 app `vite.config.ts` 的 `portOffset` 与 `scripts/apps-registry.mjs` 的 `port` 字段（`check:gateway-conf` 端口双写锁死校验，漂移即红）+ `docker/nginx.dev.conf` 的 location。
+处置：先找到占用进程释放（Windows `netstat -ano | findstr 5174`，macOS/Linux `lsof -i:5174`）。确需换端口时**两处同改**：目标 app `vite.config.ts` 的 `portOffset` 与 `scripts/apps-registry.mjs` 的 `port` 字段（`check:routes` 端口双写锁死校验，漂移即红）；网关路由表由注册表自动派生，无需另改。
 
 ### 9.2 网关 502：`http://localhost:8080/admin/` 返回 Bad Gateway
 
-宿主 IP 漂移：Docker Desktop 的 host-gateway IP（默认 `192.168.65.254`，WSL 网段网关）在重启 / 换网卡后可能变化，nginx 容器内直连旧 IP 即 502。改法：查当前宿主 IP（`ipconfig` 找 `vEthernet (WSL)` 网段的网关地址，或 Docker Desktop → Settings → Resources → Network），替换 `docker/nginx.dev.conf` 中 **6 组** `proxy_pass http://192.168.65.254:51XX` 的宿主 IP（`/admin` 与 `/api` 同为 5174，文件头注释有背景说明），然后 `docker compose restart`。
+上游 dev server 未就绪：node 网关的 502 只在对应 app 的 dev server 未启动 / 已崩溃时出现——先看 `dev:gateway` 终端该 app 是否打印「✓ 就绪」；已就绪仍 502 则查端口双写是否漂移（`pnpm check:routes` 端口双写锁死会锁死注册表 port 与 vite.config portOffset 的一致性）。
 
 ### 9.3 mock 接口 404：`/api/auth/login` 等返回 404
 
 按序排查：
 
-1. **网关模式**：确认请求地址是 `:8080` 而非具体 app 端口——`/api/*` 由 `nginx.dev.conf` 的 `location /api/` 统一反代到 admin（5174，其 mock 最全：auth/user/menu 三模块）；不经网关直连单 app 端口时，由各 app 自己的 vite-plugin-mock 处理（同一 `@vv/mock` 数据源，响应一致）
+1. **网关模式**：确认请求地址是 `:8080` 而非具体 app 端口——`/api/*` 由 node 网关路由表统一反代到 admin（5174，其 mock 最全：auth/user/menu 三模块）；不经网关直连单 app 端口时，由各 app 自己的 vite-plugin-mock 处理（同一 `@vv/mock` 数据源，响应一致）
 2. **mock 文件位置**：mock 已迁 `packages/mock/src/`（**不是**根 `mock/`）；新建 mock 文件要放进该目录（或被 viteMockServe 扫描到的约定目录）才会生效
 3. **new-module 未带 `--with-mock`**：该选项可选，未传时只生成业务骨架、不生成 mock——接口自然 404，补一个 mock 文件即可
 4. **并行 dev 的 mock 竞态（`pnpm dev` 偶发全部 mock 404）**：6 app 共享同一 `@vv/mock` 源码目录，turbo 并行起 dev 时 vite-plugin-mock 的 bundle-require 会对 `_*.bundled_*.mjs` 临时文件无容错 unlink，并发编译下互相抢删会让某 app 的 mockData 静默清空（接口返回 index.html / 404）。**已内置修复**：`@vv/config` 的 `cleanMockBundled` 插件带 5 秒 mtime 门槛（只删创建超 5s 的陈旧临时文件，在飞文件不碰）；若老分支复现，重启该 app dev 即可，升级 `packages/config` 后根治
@@ -170,5 +167,5 @@ docker compose up
 经网关 dev 时，vite client 若把 ws 指向网关端口会握手失败（页面不热更）。**已内置修复**：`@vv/config` 工厂 `server.hmr` 段将 `port` / `clientPort` 固定为 app 自身端口（5174-5179），client 直连 vite 原生 ws 端点（与 `VITE_BASE=/<app>/` 的 hmrBase 匹配）。若仍报错，按序确认：
 
 1. app 由 `pnpm dev:gateway` 启动（带 `VITE_BASE=/<app>/`）——直连单 app dev 时同样生效，可用它区分是网关问题还是 vite 自身问题
-2. `docker/nginx.dev.conf` 的 `Upgrade` / `Connection` 头透传未被改动（server 级，丢失则 ws 经网关握手失败）
+2. node 网关内置 WS upgrade 透传（`scripts/node-gateway.ts` proxyWebSocket），无需任何配置；若经 8080 的 ws 仍握手失败，看 `dev:gateway` 终端启动日志确认网关已在 :8080 监听
 3. 浏览器代理 / 安全软件未拦截 5174-5179 的 websocket 连接

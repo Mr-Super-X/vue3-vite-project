@@ -4,9 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > 本文档是 `~/.claude/CLAUDE.md` 的项目级补充。所有全局规则（§一～§十一）自动适用，遇到冲突以**本文档为准**。
 >
-> **文档版本**：v3.0.1 | **生成日期**：2026-10-22 | **生效分支**：`feature/monorepo`
+> **文档版本**：v3.0.2 | **生成日期**：2026-10-26 | **生效分支**：`feature/monorepo`
 >
-> **最近更新**（2026-10-23）：架构审查「别名→包名迁移立场」——新增 §1.6.2 包消费约定
+> **最近更新**（2026-10-26）：本地同域网关 node 化——`docker-compose.yml` / `docker/nginx.dev.conf` / `check-gateway-conf` 整体移除
+>
+> - **v3.0.2 变更**（2026-10-26）：`scripts/node-gateway.ts`（零依赖 node:http 反向代理，路由表自 `apps-registry` 单源代码派生）+ `pnpm dev:gateway` 一体化单命令（网关 :8080 + 6 dev server 同起同退，替代原 docker compose 第二终端）；`validatePortWiring`（端口双写锁死）迁入 `check-routes`，CI 覆盖不变；新增 `pnpm test:gateway`（node:test，HTTP/WS/302/502 smoke 8 用例）；docs/43 §6 重写
+>
+> **v3.0.1 变更**（2026-10-23）：架构审查「别名→包名迁移立场」——新增 §1.6.2 包消费约定
 >
 > - **v3.0.0 变更**（2026-10-22）：单应用 `src/` 正式升级为 pnpm workspace + turbo Monorepo（设计稿 `docs/superpowers/specs/2026-10-21-monorepo-migration-design.md`，评估 `docs/42`）——
 >   - **结构**：6 应用（`apps/admin` 中后台 / `apps/auth` 统一登录 / `apps/portal` 门户 / `apps/h5` 移动端 / `apps/big` 数据大屏 / `apps/docs` 组件示例文档）+ 4 包（`packages/config` vite 工厂 / `packages/mock` mock 数据 / `packages/shared` 网络层·store·composables / `packages/ui` 全局组件·弹窗族），详见 docs/43
@@ -65,35 +69,35 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-| 任务                                                | 命令                                                                                   |
-| --------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| 安装依赖                                            | `pnpm install`                                                                         |
-| 启动 dev（turbo 并行全部 app，remote 菜单模式）     | `pnpm dev`                                                                             |
-| 启动单 app dev（如只起 admin）                      | `pnpm -C apps/<a> dev`（或 `dev:local` 本地菜单模式）                                  |
-| 同域网关 dev（6 app 带 base 并行，配 docker 网关）  | `pnpm dev:gateway`（另终端 `docker compose up` → :8080）                               |
-| 跑全部单测（turbo 拓扑序 6 app + 4 包）             | `pnpm test`                                                                            |
-| 跑单 app / 单文件单测                               | `pnpm -C apps/<a> test [path]`（如 `pnpm -C apps/admin test src/utils/dayjs.spec.ts`） |
-| 单测覆盖率 / UI 模式（admin 口径）                  | `pnpm test:coverage` / `pnpm test:ui`                                                  |
-| 跑基准测试（vitest bench，admin）                   | `pnpm bench`                                                                           |
-| 类型校验（turbo，各 app vue-tsc --build）           | `pnpm type-check`（单 app 增量）/ `pnpm -C apps/<a> type-check:full`（全量）           |
-| 构建生产包（turbo 拓扑序；含 type-check:full 门禁） | `pnpm build`                                                                           |
-| 单 app 仅构建（不门禁类型）                         | `pnpm -C apps/<a> build-only`                                                          |
-| 预览单 app 生产包                                   | `pnpm -C apps/<a> preview`                                                             |
-| gh-pages 六应用聚合构建（自动发现 apps/*）          | `pnpm build:pages`（产物根 `dist/<app>/` + 落地页）                                    |
-| 包体积分析（输出 dist/stats.html，admin）           | `pnpm analyze`                                                                         |
-| Lint 检查                                           | `pnpm lint`                                                                            |
-| Lint 自动修复                                       | `pnpm lint:fix`                                                                        |
-| Prettier 格式化                                     | `pnpm format` / `pnpm format:check`                                                    |
-| 路由一致性校验（CI 阶段强制）                       | `pnpm check:routes`（内含网关校验 + 端口双写锁死 + 注册表反向校验）                    |
-| alias 单一来源一致性校验（CI 阻断）                 | `pnpm check:aliases`                                                                   |
-| mock 双接线一致性校验（CI 阻断）                    | `pnpm check:mock-wiring`                                                               |
-| 文档与代码硬数据一致性校验（CI 阻断）               | `pnpm check:doc-currency`                                                              |
-| 从 app-aliases.ts 同步 tsconfig paths               | `pnpm generate:tsconfig-paths`（源：`packages/config/src/app-aliases.ts`）             |
-| 新建业务模块（自动生成 6 个骨架文件）               | `pnpm new-module <kebab-name>`                                                         |
-| 移除业务模块（默认 dry-run + 确认）                 | `pnpm remove-module <kebab-name>`                                                      |
-| 提交并推送（add + cz + push 一站式）                | `pnpm push`                                                                            |
-| 发布版本（bump + CHANGELOG + tag + push）           | `pnpm release`                                                                         |
-| 发布预览（dry-run，0 副作用）                       | `pnpm release:dry`                                                                     |
+| 任务                                                   | 命令                                                                                   |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| 安装依赖                                               | `pnpm install`                                                                         |
+| 启动 dev（turbo 并行全部 app，remote 菜单模式）        | `pnpm dev`                                                                             |
+| 启动单 app dev（如只起 admin）                         | `pnpm -C apps/<a> dev`（或 `dev:local` 本地菜单模式）                                  |
+| 同域网关 dev（node 网关 :8080 + 6 app 带 base 单命令） | `pnpm dev:gateway`（唯一命令 → http://localhost:8080）                                 |
+| 跑全部单测（turbo 拓扑序 6 app + 4 包）                | `pnpm test`                                                                            |
+| 跑单 app / 单文件单测                                  | `pnpm -C apps/<a> test [path]`（如 `pnpm -C apps/admin test src/utils/dayjs.spec.ts`） |
+| 单测覆盖率 / UI 模式（admin 口径）                     | `pnpm test:coverage` / `pnpm test:ui`                                                  |
+| 跑基准测试（vitest bench，admin）                      | `pnpm bench`                                                                           |
+| 类型校验（turbo，各 app vue-tsc --build）              | `pnpm type-check`（单 app 增量）/ `pnpm -C apps/<a> type-check:full`（全量）           |
+| 构建生产包（turbo 拓扑序；含 type-check:full 门禁）    | `pnpm build`                                                                           |
+| 单 app 仅构建（不门禁类型）                            | `pnpm -C apps/<a> build-only`                                                          |
+| 预览单 app 生产包                                      | `pnpm -C apps/<a> preview`                                                             |
+| gh-pages 六应用聚合构建（自动发现 apps/*）             | `pnpm build:pages`（产物根 `dist/<app>/` + 落地页）                                    |
+| 包体积分析（输出 dist/stats.html，admin）              | `pnpm analyze`                                                                         |
+| Lint 检查                                              | `pnpm lint`                                                                            |
+| Lint 自动修复                                          | `pnpm lint:fix`                                                                        |
+| Prettier 格式化                                        | `pnpm format` / `pnpm format:check`                                                    |
+| 路由一致性校验（CI 阶段强制）                          | `pnpm check:routes`（内含端口双写锁死 + 注册表反向校验）                               |
+| alias 单一来源一致性校验（CI 阻断）                    | `pnpm check:aliases`                                                                   |
+| mock 双接线一致性校验（CI 阻断）                       | `pnpm check:mock-wiring`                                                               |
+| 文档与代码硬数据一致性校验（CI 阻断）                  | `pnpm check:doc-currency`                                                              |
+| 从 app-aliases.ts 同步 tsconfig paths                  | `pnpm generate:tsconfig-paths`（源：`packages/config/src/app-aliases.ts`）             |
+| 新建业务模块（自动生成 6 个骨架文件）                  | `pnpm new-module <kebab-name>`                                                         |
+| 移除业务模块（默认 dry-run + 确认）                    | `pnpm remove-module <kebab-name>`                                                      |
+| 提交并推送（add + cz + push 一站式）                   | `pnpm push`                                                                            |
+| 发布版本（bump + CHANGELOG + tag + push）              | `pnpm release`                                                                         |
+| 发布预览（dry-run，0 副作用）                          | `pnpm release:dry`                                                                     |
 
 **环境要求**：Node `>=22.18` 或 `>=24.12`，pnpm `>=11.x`（`package.json:engines` + `preinstall` 硬强制 `only-allow pnpm`）。
 
@@ -339,22 +343,22 @@ const { data } = storeToRefs(useUserStore())
 
 **workspace 拓扑**（pnpm workspace + turbo@2，`pnpm-workspace.yaml` 声明 `apps/*` + `packages/*`）：
 
-| #   | 路径                 | 职责                                                                                                                              |
-| --- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `apps/admin`         | 中后台管理（`@vv-app/admin`，端口 5174）：user/reports/workbench/error 归位后的主干业务 app                                       |
-| 2   | `apps/auth`          | 统一登录（`@vv-app/auth`，端口 5179）：登录页 + 登出落地 + 跨应用重定向协议实现方                                                 |
-| 3   | `apps/portal`        | 门户企业官网（`@vv-app/portal`，端口 5176）：home 模块 + portal layout                                                            |
-| 4   | `apps/h5`            | H5 移动端（`@vv-app/h5`，端口 5177）：h5-demo + h5 layout + rem 适配                                                              |
-| 5   | `apps/big`           | 数据大屏（`@vv-app/big`，端口 5178）：big-demo + big layout + scale 适配                                                          |
-| 6   | `apps/docs`          | 组件示例文档（`@vv-app/docs`，端口 5175）：demo 模块 + DemoDocs 布局 + 全部组件示例                                               |
-| 7   | `packages/config`    | `@vv/config`：vite 工厂 `createViteConfig`（插件装配/别名/css 预处理/分包单点）+ server/postcss/proxy 等构建配置                  |
-| 8   | `packages/mock`      | `@vv/mock`：vite-plugin-mock 数据源（原 `mock/` 目录职责），admin/auth/h5/big/portal/docs 按需接线                                |
-| 9   | `packages/shared`    | `@vv/shared`：网络层基建（http/cache/retry/token-refresh）+ 全局 store + `useAppRouter`/`useRequest`/`useAuth`/`useDict` 等       |
-| 10  | `packages/ui`        | `@vv/ui`：全局组件（common/ProTable/form-schema 三目录）+ 弹窗族 composables（useDialog/useConfirm/useLogout）+ 图标/样式资产     |
-| 11  | `scripts/`           | 工程脚本（check-routes/check-aliases/build-pages/dev-gateway/new-module 等，`node --experimental-strip-types` 直跑）              |
-| 12  | `docker/`            | 本地同域网关 nginx 配置（配合根 `docker-compose.yml`，见 docs/43）                                                                |
-| 13  | `.github/workflows/` | ci.yml（turbo affected）+ deploy.yml（build:pages 六应用聚合）                                                                    |
-| 14  | 根配置文件           | `package.json`（turbo scripts）/ `turbo.json` / `pnpm-workspace.yaml`（catalog 单版本源）/ `eslint.config.mjs` / `tsconfig*.json` |
+| #   | 路径                      | 职责                                                                                                                              |
+| --- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `apps/admin`              | 中后台管理（`@vv-app/admin`，端口 5174）：user/reports/workbench/error 归位后的主干业务 app                                       |
+| 2   | `apps/auth`               | 统一登录（`@vv-app/auth`，端口 5179）：登录页 + 登出落地 + 跨应用重定向协议实现方                                                 |
+| 3   | `apps/portal`             | 门户企业官网（`@vv-app/portal`，端口 5176）：home 模块 + portal layout                                                            |
+| 4   | `apps/h5`                 | H5 移动端（`@vv-app/h5`，端口 5177）：h5-demo + h5 layout + rem 适配                                                              |
+| 5   | `apps/big`                | 数据大屏（`@vv-app/big`，端口 5178）：big-demo + big layout + scale 适配                                                          |
+| 6   | `apps/docs`               | 组件示例文档（`@vv-app/docs`，端口 5175）：demo 模块 + DemoDocs 布局 + 全部组件示例                                               |
+| 7   | `packages/config`         | `@vv/config`：vite 工厂 `createViteConfig`（插件装配/别名/css 预处理/分包单点）+ server/postcss/proxy 等构建配置                  |
+| 8   | `packages/mock`           | `@vv/mock`：vite-plugin-mock 数据源（原 `mock/` 目录职责），admin/auth/h5/big/portal/docs 按需接线                                |
+| 9   | `packages/shared`         | `@vv/shared`：网络层基建（http/cache/retry/token-refresh）+ 全局 store + `useAppRouter`/`useRequest`/`useAuth`/`useDict` 等       |
+| 10  | `packages/ui`             | `@vv/ui`：全局组件（common/ProTable/form-schema 三目录）+ 弹窗族 composables（useDialog/useConfirm/useLogout）+ 图标/样式资产     |
+| 11  | `scripts/`                | 工程脚本（check-routes/check-aliases/build-pages/dev-gateway/new-module 等，`node --experimental-strip-types` 直跑）              |
+| 12  | `scripts/node-gateway.ts` | 本地同域网关 node 实现（零依赖反向代理，:8080 反代 5174-5179，路由表自 apps-registry 代码派生，见 docs/43 §6）                    |
+| 13  | `.github/workflows/`      | ci.yml（turbo affected）+ deploy.yml（build:pages 六应用聚合）                                                                    |
+| 14  | 根配置文件                | `package.json`（turbo scripts）/ `turbo.json` / `pnpm-workspace.yaml`（catalog 单版本源）/ `eslint.config.mjs` / `tsconfig*.json` |
 
 **依赖方向铁律（比目录锁更优先）：**
 
