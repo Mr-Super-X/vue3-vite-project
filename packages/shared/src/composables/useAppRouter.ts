@@ -25,6 +25,9 @@ import { getAppRouter } from '../app-router.ts'
 import { resolveRouteTitle } from '../router-title.ts'
 // ElMessage 由 unplugin-auto-import 注入（importStyle 自动带样式，勿显式 import）
 import { useI18n } from 'vue-i18n'
+// handleRouterError 等模块级兜底 toast 无 setup 作用域的 t() 可用——引 i18n 实例走 global.t
+// （与 http-errors 同方案；useI18n 仅在函数体内有 setup 上下文处使用——2026-10-29）
+import { i18n } from '../locales/index.ts'
 import type { RouteLocationRaw, RouteLocationNamedRaw, RouteRecordRaw, Router } from 'vue-router'
 
 /**
@@ -236,7 +239,8 @@ export function useAppRouter(): {
     if (/Avoided redundant navigation/i.test(errMessage)) return
     console.error('[useAppRouter] 路由操作失败:', err)
     if (typeof ElMessage !== 'undefined') {
-      ElMessage.error('路由跳转失败')
+      // 逻辑层 toast 走 i18n.global.t（composable 内无 setup 上下文约束，同 http-errors 方案——2026-10-29）
+      ElMessage.error(i18n.global.t('common.routerPushFailed'))
     }
   }
 

@@ -13,6 +13,11 @@
  * 折叠态不依赖本组件：EP collapse 用 CSS 隐藏菜单项直接子 span（本组件根元素），
  * 折叠 tooltip 由 AppMenu 的 showCollapsedTooltip 分支另行处理。
  *
+ * 样式结构（2026-10-29 样式审计改造）：text-overflow 三件套走全局 utility
+ * `.vv-ellipsis`（@vv/ui custom.scss 单源，模板 class 挂载）——本组件 style 块
+ * 因此移除。块级化语义保留：ellipsis 需要块级盒，依赖 flex 父级（EP 菜单项 /
+ * 子菜单标题均为 flex 容器），脱离 flex 父级使用时由消费方自行块级化
+ *
  * @see [`./AppMenu.vue`](./AppMenu.vue) 主要消费方（菜单标题 4 处）
  * @group 布局：Default
  */
@@ -50,17 +55,7 @@ onUnmounted(() => observer?.disconnect())
 
 <template>
   <el-tooltip :content="text" placement="right" :disabled="!overflow">
-    <span ref="textEl" :class="bem.b()">{{ text }}</span>
+    <!-- 三件套改挂全局 utility class .vv-ellipsis（custom.scss 单源）——2026-10-29 样式审计示范改造 -->
+    <span ref="textEl" :class="[bem.b(), 'vv-ellipsis']">{{ text }}</span>
   </el-tooltip>
 </template>
-
-<style lang="scss">
-.#{$BEM_PREFIX}-overflow-text {
-  // ellipsis 需要块级盒：依赖 flex 父级（EP 菜单项 / 子菜单标题均为 flex 容器）
-  // 把 inline span 块级化后 overflow 裁剪才生效——本组件不提供 display，
-  // 脱离 flex 父级使用时由消费方自行块级化
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-</style>

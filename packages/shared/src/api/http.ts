@@ -30,6 +30,8 @@ import { Session } from '../utils/storage.ts'
 import type { ApiResponse } from './types/api.d'
 import { ApiError } from './types/error'
 import { resolveHttpStatusMessage } from './http-errors'
+// 拦截器层 toast/兜底文案走 i18n.global.t（无 setup 上下文；2026-10-29 逻辑层硬编码清零）
+import { i18n } from '../locales/index.ts'
 import { globalAbort, chainSignals } from './global-abort'
 import {
   buildBackendPageQuery,
@@ -215,7 +217,8 @@ function handleUnauthorized(
   body: ApiResponse<unknown>,
   response: AxiosResponse<ApiResponse<unknown>>
 ): never {
-  throw buildApiError(body, response, body.message || '登录已过期')
+  // 后端未返回 message 时按 401 语义兜底（正常后端总会带 message，此层为防御兜底——2026-10-29 i18n 化）
+  throw buildApiError(body, response, body.message || i18n.global.t('error.http.401'))
 }
 
 /**
@@ -225,7 +228,8 @@ function handleGenericError(
   body: ApiResponse<unknown> | null | undefined,
   response: AxiosResponse<ApiResponse<unknown>>
 ): never {
-  const message = body?.message || '请求失败'
+  // 后端 message 兜底（防御层）：业务错误正常带后端 message，无 message 时按通用客户端失败文案
+  const message = body?.message || i18n.global.t('error.http.clientFallback')
   ElMessage.error(message)
   throw buildApiError(body, response, message)
 }
@@ -246,7 +250,7 @@ function handleGenericError(
  * 前端只清无敏感信息的登录标记。
  */
 async function performLogout(): Promise<void> {
-  ElMessage.error('登录已过期，请重新登录')
+  ElMessage.error(i18n.global.t('auth.sessionExpired'))
   Session.remove('auth')
   try {
     redirectToAuthLogin(getAppRouter().currentRoute.value.fullPath)

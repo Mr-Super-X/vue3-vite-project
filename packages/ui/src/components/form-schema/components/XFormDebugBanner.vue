@@ -186,7 +186,7 @@ onUnmounted(() => {
   border: 1px solid var(--el-color-warning-light-5);
   border-radius: 6px;
   box-shadow: var(--el-box-shadow);
-  z-index: 9999;
+  z-index: var(--z-index-debug-banner);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace;
   font-size: 13px;
 }
@@ -253,7 +253,7 @@ onUnmounted(() => {
   font-size: 13px;
   cursor: pointer;
   box-shadow: var(--el-box-shadow);
-  z-index: 9999;
+  z-index: var(--z-index-debug-banner);
 }
 .fab:hover {
   background: var(--el-color-warning-dark-2);

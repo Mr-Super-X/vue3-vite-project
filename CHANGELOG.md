@@ -4,6 +4,18 @@
 
 ## 未发布
 
+### 🎨 Style+i18n+Docs | 第九轮三审计落地：样式 token 化 P0 / 逻辑层 i18n 清零 / docs 文档漂移 P0（22 文档 170 处）（2026-10-29）
+
+> 背景：三路新角度审计——SCSS 样式质量（20 项发现，架构层获「非常优秀」、问题集中在消费侧「建而不用」）、i18n 尾巴、docs 文档漂移（50+ 项：94 处旧路径 import 示例横跨 20 份文档 + 3 个根级伪命令）。docs P0 批由修复代理按审计对照表执行（146 次工具调用全路径文件系统核实）。
+
+- **样式 token 化 P0 四连**：① element-protable-overwrite 自我违反禁令修复（分页 `#f4f4f5/#606266/#409eff/#fff` → `var(--el-fill-color/text-color-regular/color-primary/color-white)`）② RichTextEditor 6 处出厂值映射 `--el-*`（暗色主题兼容——`#dcdfe6/#ebeef5/#c0c4cc/#fafafa/#606266` 五组）③ z-index 语义层补齐（variables.scss 新增 `--z-index-fullscreen/layout-overlay/debug-toast/debug-banner` 4 token + 分层约定注释；ProTable 1500 / LayoutSwitcher 4000 / XForm 9998/9999 共 5 处硬编码归位，值零变化）④ portal on-ink 反色系列（portal-tokens.scss 新增 5 token；SiteFooter 5 处 + PortalHeader 2 处 rgba/#fff 替换——svg stroke 属性留实色）
+- **ellipsis utility 激活示范**：OverflowText 手写三件套 → 模板挂 `.vv-ellipsis`（custom.scss 单源，经全局样式入口确认可用；style 块移除，块级化语义入 JSDoc；spec 的 vv-overflow-text 选择符保留 bem.b() 兼容）——其余 6 处手写点 + big/h5 tokens 文件新建（审计 #3/#4）记入批次遗留
+- **逻辑层 i18n 清零（审计 #4 收尾）**：Login.vue ElMessage 两处（`auth.loginSuccessRedirect`/`auth.loginFailed`）+ useAppRouter「路由跳转失败」+ copy 指令「复制成功/失败」+ http.ts 拦截器 3 处兜底（`error.http.401`/`clientFallback`/`auth.sessionExpired`）——统一 `i18n.global.t` 方案（无 setup 约束，新增 6 键双语）
+- **docs 文档漂移 P0 批（代理执行）**：22 份文档 170 处——94 处旧 import 路径示例清零（`@/api` → `@api`、`@/composables/` → `@vv/shared` 等 20 文档）、docs/04 三伪命令改 app 级口径、docs/22 §7 工厂化、docs/40 `build:pages`、docs/08 §6.1 别名口径 + spec 数实测重锚（199→208）、docs/10 清尾；**2 存疑死引用跳过**（`dict/internal`/`NormalConfirm` 全仓零命中，留人工裁决）；check-doc-currency 13/13 绿
+- **审计正面确认**：样式架构层「非常优秀」（scoped 0 残留、:deep() 0 使用、BEM 全合规）；docs/26 技术栈版本声明与 package.json 完全一致；33 条文档相对链接仅 1 死链（已修）；menu.home/demo 非死键（docs/portal 路由 titleKey 在用）
+- **有意不做**：aria-label 双语（9 处价值 < 键维护成本）；字号 60+ 处 token 化（审计建议 code review 把关而非大爆炸）
+- **验证**：`pnpm type-check` 10/10；`pnpm test` 9/9 全绿（admin 64 / shared 405 / ui 1924 含全部接线回归）
+
 ### 🌐 i18n + 健壮性 | 第八轮双专项审计落地：框架壳双语接线（AsyncState/useLogout/错误页/Login/http 错误全链）/ errorHandler 监听幂等（2026-10-28）
 
 > 背景：双路新角度审计（.agent-reports/2026-10-28-runtime-audit.md / i18n-audit.md）——i18n 现状「框架壳双语已完成、业务层零覆盖」（47 键中 common.*/error.*/app.title 三命名空间零消费，切英文后外壳英文页面全中文）；运行时「生产路径零真泄漏」但 errorHandler 插件 window 监听叠加可泄漏。

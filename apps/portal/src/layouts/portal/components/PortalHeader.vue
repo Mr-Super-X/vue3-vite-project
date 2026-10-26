@@ -188,7 +188,7 @@ async function onCommand(cmd: string) {
     height: 34px;
     padding: 0 18px;
     font-size: 14px;
-    color: #fff;
+    color: var(--portal-on-solid);
     background: var(--portal-ink);
     border: 1px solid var(--portal-ink);
     border-radius: 4px;
@@ -227,7 +227,7 @@ async function onCommand(cmd: string) {
     height: 26px;
     border-radius: 50%;
     background: var(--portal-ink);
-    color: #fff;
+    color: var(--portal-on-solid);
     display: grid;
     place-items: center;
     font-size: 12px;

@@ -33,7 +33,7 @@ const bem = createNamespace('site-footer')
 <style lang="scss">
 .#{$BEM_PREFIX}-site-footer {
   background: var(--portal-ink);
-  color: #fff;
+  color: var(--portal-on-solid);
 
   &__inner {
     max-width: var(--portal-max-width);
@@ -55,19 +55,19 @@ const bem = createNamespace('site-footer')
 
   &__slogan {
     font-size: 13px;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--portal-on-ink-2);
   }
 
   &__links {
     display: flex;
     gap: 24px;
     padding: 24px 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    border-top: 1px solid var(--portal-on-line);
   }
 
   &__link {
     font-size: 14px;
-    color: rgba(255, 255, 255, 0.75);
+    color: var(--portal-on-ink);
     text-decoration: none;
 
     &:hover {
@@ -81,7 +81,7 @@ const bem = createNamespace('site-footer')
     gap: 16px;
     flex-wrap: wrap;
     font-size: 12px;
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--portal-on-ink-3);
   }
 }
 </style>

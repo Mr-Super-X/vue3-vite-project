@@ -23,6 +23,9 @@ export default {
     retry: '重试',
     loading: '加载中...',
     empty: '暂无数据',
+    routerPushFailed: '路由跳转失败',
+    copySuccess: '复制成功',
+    copyFailed: '复制失败，请手动复制',
   },
   auth: {
     login: '登录',
@@ -43,6 +46,10 @@ export default {
     forgotPassword: '忘记密码？',
     loggingIn: '登录中...',
     loginSubmit: '登 录',
+    // 「登录成功，正在跳转…」是 65b3c96 易用性修复的刻意文案（存活到整页跳转覆盖白屏间隙）
+    loginSuccessRedirect: '登录成功，正在跳转…',
+    loginFailed: '登录失败，请重试',
+    sessionExpired: '登录已过期，请重新登录',
     showPassword: '显示密码',
     hidePassword: '隐藏密码',
   },

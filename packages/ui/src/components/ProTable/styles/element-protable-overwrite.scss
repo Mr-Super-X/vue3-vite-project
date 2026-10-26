@@ -112,14 +112,14 @@
     min-width: 30px;
     height: 28px;
     padding: 0 4px;
-    background: #f4f4f5;
-    color: #606266;
+    background: var(--el-fill-color);
+    color: var(--el-text-color-regular);
     border-radius: 2px;
     cursor: pointer;
   }
   .el-pagination ul.el-pager li.is-active {
-    background: #409eff;
-    color: #fff;
+    background: var(--el-color-primary);
+    color: var(--el-color-white);
   }
 
   /* ─────────── SearchForm 高级筛选按钮内 ElBadge 样式 ─────────── */

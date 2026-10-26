@@ -775,7 +775,7 @@ defineExpose({
   &.is-fullscreen {
     position: fixed;
     inset: 0;
-    z-index: 1500;
+    z-index: var(--z-index-fullscreen);
     padding: 16px;
     background: var(--el-bg-color);
     overflow: auto;

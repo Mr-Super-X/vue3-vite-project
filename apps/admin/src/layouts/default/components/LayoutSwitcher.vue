@@ -128,7 +128,7 @@ function closeOnBlur(event: FocusEvent) {
     position: absolute;
     top: calc(100% + 10px);
     right: 4px;
-    z-index: 4000;
+    z-index: var(--z-index-layout-overlay);
     display: grid;
     padding: 14px;
     pointer-events: none;

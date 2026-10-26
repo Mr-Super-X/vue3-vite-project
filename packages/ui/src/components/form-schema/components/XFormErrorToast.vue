@@ -143,7 +143,7 @@ onUnmounted(() => {
   position: fixed;
   top: 16px;
   right: 16px;
-  z-index: 9998;
+  z-index: var(--z-index-debug-toast);
   margin: 0;
   padding: 0;
   list-style: none;

@@ -80,6 +80,8 @@ $color-info: #909399;
   --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
 
   // ─── z-index 语义化层级 ────────────────────────────────────
+  // 局部层（组件内部叠放）用 1-100 自管；全局层按下列 token。2026-10-29 样式审计补充分层：
+  // toast(1080) 之上为「覆盖全屏/调试」场景——值沿用各组件历史硬编码（行为零变化），语义归位
   --z-index-dropdown: 1000;
   --z-index-sticky: 1020;
   --z-index-fixed: 1030;
@@ -88,6 +90,10 @@ $color-info: #909399;
   --z-index-popover: 1060;
   --z-index-tooltip: 1070;
   --z-index-toast: 1080;
+  --z-index-fullscreen: 1500; // ProTable 全屏：盖过常规 modal，低于覆盖层
+  --z-index-layout-overlay: 4000; // 布局设置面板（LayoutSwitcher）：高于全屏，低于调试层
+  --z-index-debug-toast: 9998; // XForm 调试错误 toast：调试信息须浮于业务 UI
+  --z-index-debug-banner: 9999; // XForm 调试 banner：全站最高（开发态专用）
 
   // ─── 动画时长 ─────────────────────────────────────────────
   --duration-fast: 150ms;

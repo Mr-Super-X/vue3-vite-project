@@ -11,4 +11,10 @@
   --portal-ink-2: #555555; // 次要文字
   --portal-line: #eeeeee; // 1px 细线
   --portal-z-index-header: 1000; // 顶栏 z-index
+  // 深底反色系列（2026-10-29 样式审计补充——SiteFooter 深色底 / PortalHeader 登录按钮等）
+  --portal-on-ink: rgba(255, 255, 255, 0.75); // 深底主文字
+  --portal-on-ink-2: rgba(255, 255, 255, 0.55); // 深底次要文字
+  --portal-on-ink-3: rgba(255, 255, 255, 0.45); // 深底弱化文字
+  --portal-on-line: rgba(255, 255, 255, 0.15); // 深底细线
+  --portal-on-solid: #ffffff; // 深底实色白（按钮字/头像字）
 }

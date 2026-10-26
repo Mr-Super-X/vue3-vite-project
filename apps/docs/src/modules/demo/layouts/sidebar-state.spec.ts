@@ -27,6 +27,10 @@ async function importFresh(): Promise<typeof import('./sidebar-state')> {
   return import('./sidebar-state')
 }
 
+// 文件级 timeout 15000（默认 5000）：本 spec 经 vi.resetModules + 动态 import 每用例重评估
+// import 图——turbo 全量/系统高负载下 vite-node 转换缓存冷启动可击穿 5s 阈值（2026-10-26 与
+// 2026-10-29 两次全量跑偶发单例超时、单跑必过，属负载竞态非逻辑回归）。重评估量级小
+// （@vv/shared/utils 轻量具名子路径），15s 上限不改变测试语义
 describe('sidebar-state（持久化升级版）', () => {
   it('初始读取：Local 有合法数字时直接采用', async () => {
     window.localStorage.setItem(
@@ -147,4 +151,4 @@ describe('sidebar-state（持久化升级版）', () => {
     const b = await importFresh()
     expect(b.sidebarWidth.value).toBe(320)
   })
-})
+}, 15000)

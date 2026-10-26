@@ -29,6 +29,8 @@
 
 import type { App, DirectiveBinding } from 'vue'
 import { ElMessage } from 'element-plus'
+// 指令 hook 无 setup 上下文——toast 文案经 i18n.global.t（2026-10-29，同 http-errors 方案）
+import { i18n } from '../locales/index.ts'
 import type { CopyValue, ElHTMLElement } from './copy.d'
 
 /**
@@ -129,9 +131,10 @@ async function handleCopy(text: string): Promise<void> {
   }
 
   if (success) {
-    ElMessage.success('复制成功')
+    // 指令 hook 无 setup 上下文——toast 文案走 i18n.global.t（同 http-errors 方案——2026-10-29）
+    ElMessage.success(i18n.global.t('common.copySuccess'))
   } else {
-    ElMessage.error('复制失败，请手动复制')
+    ElMessage.error(i18n.global.t('common.copyFailed'))
   }
 }
 

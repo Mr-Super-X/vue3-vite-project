@@ -353,13 +353,13 @@ defineExpose({
 // BEM 根选择器与 createNamespace('rich-text-editor') 严格对齐
 // 详见 §3 BEM 规范：非 scoped 样式 + .#{$BEM_PREFIX}- 前缀
 .#{$BEM_PREFIX}-rich-text-editor {
-  border: 1px solid #dcdfe6;
+  border: 1px solid var(--el-border-color);
   border-radius: 4px;
   overflow: hidden;
   background: #fff;
 
   &__toolbar {
-    border-bottom: 1px solid #ebeef5;
+    border-bottom: 1px solid var(--el-border-color-lighter);
   }
 
   &__editor {
@@ -367,7 +367,7 @@ defineExpose({
 
     // 覆盖 wangEditor 默认占位符颜色（与 EP 风格一致）
     .w-e-text-placeholder {
-      color: #c0c4cc;
+      color: var(--el-text-color-placeholder);
     }
 
     // 覆盖项目 reset.css 对字重/字形的全局重置（`*{font-weight:normal;font-style:normal}`）——
@@ -400,11 +400,11 @@ defineExpose({
   }
 
   &__footer {
-    border-top: 1px solid #ebeef5;
+    border-top: 1px solid var(--el-border-color-lighter);
     padding: 8px 12px;
-    background: #fafafa;
+    background: var(--el-fill-color-lighter);
     font-size: 13px;
-    color: #606266;
+    color: var(--el-text-color-regular);
   }
 }
 </style>
