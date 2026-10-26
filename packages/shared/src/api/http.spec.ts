@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { BusinessCode } from '../enums/httpEnum.ts'
 import { ApiError, isApiError } from './types/error'
+import { Session } from '../utils/storage.ts'
 import type { AxiosResponse } from 'axios'
 import type { ApiResponse } from './types/api.d'
 import { globalAbort } from './global-abort'
@@ -323,11 +324,30 @@ describe('http.ts 拦截器契约', () => {
         new ApiError({ code: 401, message: 'unauthorized', status: 401, url: '/x' })
       )
       mockRefreshSession.mockRejectedValueOnce(new Error('refresh failed'))
+      // 前置登录标记：2026-10-30 语义修正后 performLogout 仅在「有标记（会话曾建立）」时
+      // 走完整登出连锁——无标记的 401（如全公开 app 的登录态探测）静默（见下方反向用例）
+      Session.set('auth', '1')
 
       await expect(request({ url: '/x' })).rejects.toThrow('unauthorized')
 
       expect(mockRefreshSession).toHaveBeenCalledTimes(1)
       expect(mockRedirectToAuthLogin).toHaveBeenCalledWith('/x')
+      expect(mockRouterPush).not.toHaveBeenCalled()
+    })
+
+    it('refresh 失败且无登录标记时静默（不跳登录不清标记——全公开 app 探测场景，2026-10-30 bug 回归锁）', async () => {
+      const requestMock = httpInstance.request as ReturnType<typeof vi.fn>
+      requestMock.mockReset()
+      requestMock.mockRejectedValueOnce(
+        new ApiError({ code: 401, message: 'unauthorized', status: 401, url: '/x' })
+      )
+      mockRefreshSession.mockRejectedValueOnce(new Error('refresh failed'))
+      // 无 Session.set('auth') 前置——模拟 portal 等全公开 app 未登录用户的登录态探测
+
+      await expect(request({ url: '/x' })).rejects.toThrow('unauthorized')
+
+      expect(mockRefreshSession).toHaveBeenCalledTimes(1)
+      expect(mockRedirectToAuthLogin).not.toHaveBeenCalled()
       expect(mockRouterPush).not.toHaveBeenCalled()
     })
 

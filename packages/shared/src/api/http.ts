@@ -250,6 +250,11 @@ function handleGenericError(
  * 前端只清无敏感信息的登录标记。
  */
 async function performLogout(): Promise<void> {
+  // 无本地登录标记 = 本就未登录（2026-10-30 实测 bug：全公开 app（portal）登录态探测请求
+  // 401 时被整页踢去登录页——探测方没有可清的会话，清标记/跳登录是破坏公开页的多余动作）。
+  // 语义修正：仅在有标记（会话曾建立）时才走完整登出连锁；无标记静默返回，由调用方按
+  // 「未登录」自行处理（如 portal 头部保持登录按钮态）。有标记场景（凭证真过期）行为不变。
+  if (!Session.get('auth')) return
   ElMessage.error(i18n.global.t('auth.sessionExpired'))
   Session.remove('auth')
   try {

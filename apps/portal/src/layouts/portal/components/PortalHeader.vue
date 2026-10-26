@@ -28,6 +28,20 @@ const bem = createNamespace('portal-header')
 const userStore = useUserStore()
 const { loggingOut, confirmLogout } = useLogout()
 
+/**
+ * 登录态探测（2026-10-30 实测 bug 修复）：portal 是全公开 app，路由守卫为白名单直通形态、
+ * 不挂 checkLoginState——从不主动拉 profile，而头部双态判断依赖内存 profile（初始 null），
+ * 导致「admin 有登录态 → window.open 跳门户 → 门户仍显示登录按钮」。挂载时探测一次：
+ * cookie 同域自动携带，后端有会话则 200 写入 profile 显示用户态；401（未登录）时拦截器
+ * 按 Session 标记决定连锁（无标记静默——见 http.ts performLogout），此处保持登录按钮态。
+ */
+onMounted(() => {
+  if (userStore.profile) return
+  userStore.fetchProfile().catch(() => {
+    /* 未登录或凭证失效：保持登录按钮态（拦截器层已按 Session 标记处理登出连锁） */
+  })
+})
+
 /** 下拉面板展开态 —— popper teleport 到 body 后 focus-within 失效，且菜单未开时悬停不应旋转，须以 visible-change 事件同步 */
 const dropdownOpen = ref(false)
 

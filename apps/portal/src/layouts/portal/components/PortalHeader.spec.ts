@@ -8,12 +8,14 @@ const { mockRedirectToAuthLogin } = vi.hoisted(() => ({
   mockRedirectToAuthLogin: vi.fn(),
 }))
 
-// mock useUserStore（组件仅消费 profile）
+// mock useUserStore（组件消费 profile + fetchProfile——2026-10-30 登录态探测接线后组件
+// onMounted 会调用探测，mock 须提供该方法）
 const mockProfile = ref<{ name: string } | null>({ name: '张三' })
 const mockUserStore = reactive({
   profile: mockProfile,
   permissions: [] as string[],
   isLoggedIn: true,
+  fetchProfile: vi.fn().mockResolvedValue(undefined),
 })
 
 // 合并单点 mock @vv/shared 根 barrel：redirectToAuthLogin + useUserStore 双覆盖

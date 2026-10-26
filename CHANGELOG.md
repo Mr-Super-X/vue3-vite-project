@@ -4,6 +4,16 @@
 
 ## 未发布
 
+### 🐛 Fix | 门户登录态穿透：全公开 app 登录态探测 + performLogout 无标记静默守卫（2026-10-30 用户实测 bug）
+
+> 背景：用户实测——admin 有登录态，工作台点「能力演示导航 → 门户首页」（`window.open` 新标签）跳门户后**仍显示登录按钮**。根因双环：① portal 全公开 app 的守卫为白名单直通形态（不挂 checkLoginState），启动从不拉 profile，而 PortalHeader 双态判断依赖内存 profile（初始 null）→ 有登录态也显示登录按钮；② 探测方案的前置障碍——拦截器 401 链对**任何** refresh 失败都 performLogout（清标记 + 整页踢登录页），未登录用户打开 portal 会被误踢，破坏公开页。
+
+- **PortalHeader 登录态探测**：onMounted 时 `userStore.fetchProfile()`——cookie 同域自动携带，有会话则 200 写入 profile 显示用户态；失败 catch 保持登录按钮态（注释声明为预期分支，非静默吞错）
+- **performLogout 语义修正**（http.ts）：refresh 失败时先查 `Session.get('auth')`——**无标记（本就未登录，如全公开 app 探测 401）静默返回**，不 toast/清标记/跳登录；有标记（会话真建立过，凭证过期）完整登出连锁不变
+- **测试**：http.spec 原「refresh 失败跳登录」用例补 `Session.set('auth')` 前置对齐新语义；**新增反向回归锁**「无标记 401 静默不跳」——正是本 bug 场景的锁定
+- **验证**：shared 44 文件 406 用例全过（http 链全回归）；turbo type-check 10/10 + test 9/9
+- **手动验证步骤**：① `pnpm -C apps/admin dev:local` 登录进工作台；② 点「能力演示导航 → 门户首页」（新标签打开 portal）；③ 预期：portal 头部显示**用户头像/下拉**而非登录按钮；④ 无登录态直接开 portal（无痕窗口）→ 仍显示登录按钮且**不被踢去登录页**（修正②的守卫）
+
 ### 🎨 Refactor | 第十一轮收官：big/h5 视觉 token 单源化（83 处魔法值收敛）/ 错误处理规范正面确认（2026-10-30）
 
 > 背景：样式审计 #3/#4 遗留的 big/h5 魔法色值债（8 文件重复 rgba 三族 + vant 灰阶）+ 「基础建设」维度的错误处理规范落实核查。
