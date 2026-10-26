@@ -2,10 +2,12 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
+// 整页跳转断言夹具（@vv/shared test-utils 单源，2026-10-30 基建收敛）
+import { createFakeLocation, installFakeLocation } from '@vv/shared/test-utils/fakeLocation'
 
 // P4 跨应用统一登录协议：登录成功改整页 location.href 回跳（跨 app 无共享 router），
 // 不再有 vue-router push；jsdom 的 Location.href 不可拦截，经 stubGlobal 整体替换
-const fakeLocation = { href: 'http://localhost/login', search: '' }
+const fakeLocation = createFakeLocation('http://localhost/login')
 
 // 单点 mock @vv/shared 根 barrel：useUserStore + resolvePostLoginRedirect 双覆盖
 // （importOriginal 保留其余导出——createNamespace 等 AutoImport 注入标识符的真实实现不受影响）
@@ -47,7 +49,7 @@ describe('Login.vue（apps/auth 统一登录页）', () => {
     vi.clearAllMocks()
     fakeLocation.href = 'http://localhost/login'
     fakeLocation.search = ''
-    vi.stubGlobal('location', fakeLocation)
+    installFakeLocation(fakeLocation)
   })
 
   afterEach(() => {

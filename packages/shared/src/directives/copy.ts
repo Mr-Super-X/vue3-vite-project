@@ -168,7 +168,7 @@ function createContext(binding: DirectiveBinding<CopyValue>): CopyContext {
       const text = resolveCopyValue(ctx.binding.value)
       if (!text) {
         // 空字符串 / 函数返回空串：给用户明确提示，避免「点了没反应」的困惑
-        ElMessage.warning('复制内容为空')
+        ElMessage.warning(i18n.global.t('common.copyEmpty'))
         return
       }
       void handleCopy(text)

@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+// 整页跳转断言夹具（@vv/shared test-utils 单源，2026-10-30 基建收敛）
+import { createFakeLocation, installFakeLocation } from '@vv/shared/test-utils/fakeLocation'
 
 // P4 跨应用统一登录协议：登出改整页 location.href 跳 apps/auth（跨 app 无共享 router），
 // 不再有 useAppRouter.goLogin；jsdom 的 Location.href 不可拦截，经 stubGlobal 整体替换
-const fakeLocation = { href: 'http://localhost/workbench' }
+const fakeLocation = createFakeLocation('http://localhost/workbench')
 
 const { mockStoreLogout, mockUseConfirm } = vi.hoisted(() => ({
   mockStoreLogout: vi.fn(),
@@ -35,7 +37,7 @@ beforeEach(() => {
   mockStoreLogout.mockReset()
   mockUseConfirm.mockReset()
   fakeLocation.href = 'http://localhost/workbench'
-  vi.stubGlobal('location', fakeLocation)
+  installFakeLocation(fakeLocation)
 })
 
 afterEach(() => {

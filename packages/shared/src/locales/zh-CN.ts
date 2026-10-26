@@ -26,6 +26,7 @@ export default {
     routerPushFailed: '路由跳转失败',
     copySuccess: '复制成功',
     copyFailed: '复制失败，请手动复制',
+    copyEmpty: '复制内容为空',
   },
   auth: {
     login: '登录',

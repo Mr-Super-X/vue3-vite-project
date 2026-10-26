@@ -4,16 +4,18 @@
  * jsdom 的 Location 实例 href 为 non-configurable（不可 defineProperty 拦截），
  * 但 window.location 本身 configurable——经 `vi.stubGlobal('location', {...})`
  * 整体替换为普通对象做断言（探针验证过，2026-10-22）。
+ * 夹具收敛至 `@vv/shared/test-utils/fakeLocation` 单源（2026-10-30 基建）。
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { createFakeLocation, installFakeLocation } from '@vv/shared/test-utils/fakeLocation'
 import { redirectToAuthLogin, resolvePostLoginRedirect } from './redirect'
 
-const fakeLocation = { href: 'http://localhost/', search: '' }
+const fakeLocation = createFakeLocation()
 
 beforeEach(() => {
   fakeLocation.href = 'http://localhost/'
   fakeLocation.search = ''
-  vi.stubGlobal('location', fakeLocation)
+  installFakeLocation(fakeLocation)
 })
 
 afterEach(() => {

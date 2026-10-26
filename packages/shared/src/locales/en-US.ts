@@ -20,6 +20,7 @@ export default {
     routerPushFailed: 'Navigation failed',
     copySuccess: 'Copied',
     copyFailed: 'Copy failed, please copy manually',
+    copyEmpty: 'Nothing to copy',
   },
   auth: {
     login: 'Login',

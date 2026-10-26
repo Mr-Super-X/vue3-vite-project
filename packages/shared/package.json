@@ -9,6 +9,7 @@
     "./router-guards": "./src/router-guards/index.ts",
     "./utils": "./src/utils/index.ts",
     "./app-styles": "./src/app-styles.ts",
+    "./test-utils/fakeLocation": "./src/test-utils/fakeLocation.ts",
     "./*": "./src/*"
   },
   "scripts": {

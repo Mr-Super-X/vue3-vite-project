@@ -184,6 +184,9 @@ const editorConfig = computed<Partial<IEditorConfig>>(() => ({
         // 运行时变更不响应，无须 watch
         const uploadApi = props.uploadApi
         if (!uploadApi) {
+          // 开发者向配置警告（非终端用户文案）——按 i18n 豁免惯例不翻译（同 Vue/React 自身
+          // dev warning 固定语言的行业惯例）；ElMessage 中文拦截规则（2026-10-30 评估）因
+          // config-protection 钩子未落地，豁免靠 code review 约定 + 本注释声明
           ElMessage.warning('请先配置 uploadApi 以启用图片上传')
           return
         }
