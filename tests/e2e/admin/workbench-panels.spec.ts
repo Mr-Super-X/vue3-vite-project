@@ -19,7 +19,8 @@ const AUTH_MARK_KEY = 'vue3-vite-project:auth'
 
 test.beforeEach(async ({ page }) => {
   // 真实登录接口换 HttpOnly 凭证 cookie（page.request 与页面共享 cookie jar）
-  const loginRes = await page.request.post('/api/auth/login', {
+  // mock 统一前缀（2026-10-26）：登录端点注册在 /mock/*
+  const loginRes = await page.request.post('/mock/auth/login', {
     data: { username: 'admin', password: '123456' },
   })
   expect(loginRes.ok()).toBe(true)

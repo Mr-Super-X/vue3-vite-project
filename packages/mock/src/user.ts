@@ -6,7 +6,7 @@ const ALL_USERS = generateUsers(50)
 
 export default [
   {
-    url: '/api/user/list',
+    url: '/mock/user/list',
     method: 'get',
     timeout: 200,
     response: ({
@@ -26,7 +26,7 @@ export default [
     },
   },
   {
-    url: '/api/user/:id',
+    url: '/mock/user/:id',
     method: 'get',
     timeout: 100,
     response: ({ params }: { params: { id: string } }) => {

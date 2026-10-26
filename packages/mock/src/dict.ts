@@ -6,7 +6,7 @@
 // undefined → DICT_DATA[undefined] 抛 TypeError 打崩 dev server（已实测）。
 // 所以这里从 `query.code` 取，并对缺失做防御返回 404。
 //
-// 单条动态路由 /api/dict/:code 服务所有字典 —— 新增字典只需在 DICT_DATA 加键值
+// 单条动态路由 /mock/dict/:code 服务所有字典 —— 新增字典只需在 DICT_DATA 加键值
 //（字典数据表见 ./dict-data.ts，单源，prod 静态展开消费）。
 // viteMockServe 扫描整个 mock/ 目录自动注册，本文件无须在 src/index.ts 手动聚合。
 //
@@ -19,7 +19,7 @@ import { DICT_DATA } from './dict-data'
 
 export default [
   {
-    url: '/api/dict/:code',
+    url: '/mock/dict/:code',
     method: 'get',
     timeout: 100,
     // ⚠️ 从 query.code 取路径参数（vite-plugin-mock 把 :code 合并进 query，见文件头注释）

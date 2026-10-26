@@ -39,7 +39,7 @@ import user from './user'
  */
 const prodAuthMocks: MockMethod[] = [
   {
-    url: '/api/auth/login',
+    url: '/mock/auth/login',
     method: 'post',
     response: ({ body }: { body: { username?: string; password?: string } }) =>
       body.username === 'admin' && body.password === '123456'
@@ -47,7 +47,7 @@ const prodAuthMocks: MockMethod[] = [
         : { code: 401, message: '账号或密码错误', data: null },
   },
   {
-    url: '/api/auth/profile',
+    url: '/mock/auth/profile',
     method: 'get',
     response: () => ({
       code: 200,
@@ -61,12 +61,12 @@ const prodAuthMocks: MockMethod[] = [
     }),
   },
   {
-    url: '/api/auth/logout',
+    url: '/mock/auth/logout',
     method: 'post',
     response: () => ({ code: 200, message: 'ok', data: null }),
   },
   {
-    url: '/api/auth/refresh',
+    url: '/mock/auth/refresh',
     method: 'post',
     response: () => ({ code: 200, message: 'ok', data: null }),
   },
@@ -74,12 +74,12 @@ const prodAuthMocks: MockMethod[] = [
 
 /**
  * prod 版字典 mock——静态展开为逐条 url 注册。
- * 不能复用 dev 版 /api/dict/:code 动态路由：client wrapper 不从路径提取参数
+ * 不能复用 dev 版 /mock/dict/:code 动态路由：client wrapper 不从路径提取参数
  * （query 仅来自 querystring，:code 恒 undefined → 防御分支 400）。
  * 静态注册后每条 url 的 code 由闭包固化，数据直返 DICT_DATA[code]。
  */
 const prodDictMocks: MockMethod[] = Object.entries(DICT_DATA).map(([code, list]) => ({
-  url: `/api/dict/${code}`,
+  url: `/mock/dict/${code}`,
   method: 'get',
   response: () => ({ code: 200, message: 'ok', data: list }),
 }))

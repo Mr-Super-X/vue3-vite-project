@@ -2,7 +2,7 @@
  * 字典数据表（单一事实来源）。
  *
  * 消费方：
- * - src/dict.ts（本包）—— dev 动态路由 /api/dict/:code 按 query.code 查表
+ * - src/dict.ts（本包）—— dev 动态路由 /mock/dict/:code 按 query.code 查表
  * - src/mockProdServer.ts —— prod（gh-pages）静态展开为逐条 url 注册；
  *   因 vite-plugin-mock client 的 wrapper 不从路径提取参数（query 仅来自 querystring），
  *   prod 无法复用 :code 动态路由，只能静态展开（2026-10-20 用户目检实锤）

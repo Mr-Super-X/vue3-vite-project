@@ -26,7 +26,7 @@ import Icons from 'unplugin-icons/vite'
 import IconsResolver from 'unplugin-icons/resolver'
 import { FileSystemIconLoader } from 'unplugin-icons/loaders'
 import { viteMockServe } from 'vite-plugin-mock'
-import { defineConfig, type PluginOption } from 'vite'
+import { defineConfig, loadEnv, type PluginOption } from 'vite'
 
 // 包内相对导入必须带 .ts 扩展名（同 index.ts 注释：Node 原生 ESM 不补全扩展名）
 import { createAppAliases, resolvePkgFirst, UI_SRC_DIR } from './app-aliases.ts'
@@ -204,12 +204,20 @@ export function createViteConfig({
     ],
     define: {
       'import.meta.env.VITE_APP_ID': JSON.stringify(appName),
-      // 统一注入 API baseURL 默认值 '/api'——所有 app 的 axios baseURL 单一来源
-      // （packages/shared/src/api/http.ts getAPIBaseURL 读取 VITE_API_BASE_URL，未设时
-      // 回退当前 origin，导致登录等请求落在 /auth/login 无 /api 前缀 → mock 404「资源不存在」；
-      // P4 auth 独立后实测踩坑）。env 显式配置（.env 的 VITE_API_BASE_URL）优先于本默认值
-      // （import.meta.env 在运行时经 Vite env 加载合并，define 仅补缺省）。
-      'import.meta.env.VITE_API_BASE_URL': JSON.stringify(process.env.VITE_API_BASE_URL ?? '/api'),
+      // 统一注入 API baseURL——优先级：shell env > .env 文件 > '/api' 保底。
+      // ⚠️ 机制事实（2026-10-26 mock 前缀统一实测踩坑）：esbuild define 对
+      // `import.meta.env.X` 的精确键替换优先于 Vite 的 .env 注入——define 写死
+      // 保底值时 .env 里的同键配置永远不会生效（浏览器实测 baseURL 仍为保底值，
+      // 登录 404）。故 define 的值必须自行经 loadEnv 合并 .env 文件。
+      // 文件读取固定 mode='development'（dev 语义：mock 的 VITE_API_BASE_URL=/mock
+      // 配在 .env.development——prod 构建不读该文件，自然落 '/api' 保底；
+      // gh-pages 由 build-pages.ts 注入 shell env，优先级最高，不受影响）。
+      // 联调真实后端：shell env 显式覆盖（README §环境变量），与既有机制一致。
+      'import.meta.env.VITE_API_BASE_URL': JSON.stringify(
+        process.env.VITE_API_BASE_URL ??
+          loadEnv('development', appRoot, 'VITE_').VITE_API_BASE_URL ??
+          '/api'
+      ),
     },
     // 浏览器消费的 @vv/* 源码链接包禁止预打包（2026-10-22 P4 实证）：
     // esbuild 预打包不经 unplugin-auto-import 转换，shared store 内 auto-import 注入的

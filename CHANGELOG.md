@@ -4,6 +4,18 @@
 
 ## 未发布
 
+### ⚙️ Infra | mock 统一 /mock 前缀：Network 面板一眼区分 mock/真实后端（2026-10-26）
+
+> 背景：mock 路由原注册在 /api/*，与真实后端前缀同形——开发者在 Network 面板无法分辨响应来自 mock 还是真后端。现统一为 /mock 前缀（用户决策），前后端口径同步切换。
+
+- **mock 源 15 处 url /api/* → /mock/**（auth/dict/menu/user/stream + mockProdServer 内联 auth/dict），node 网关路由表加 /mock/ → admin（与 /api/ 同目标），e2e API 登录同步
+- **baseURL 解析链修正**（本次最深的坑）：esbuild define 对 `import.meta.env.X` 的精确键替换**优先于** .env 注入——工厂 define 写死保底值时 .env 同键配置永远不会生效（浏览器实测 baseURL 仍为保底值、登录 404）。工厂 define 改为 `loadEnv('development', appRoot)` 自行合并 .env 文件：**shell env > .env > 工厂保底 /api**；`create-vite-config.ts` 里「.env 优先于 define」的错误注释同步纠正
+- **6 app 的 .env.development 配 VITE_API_BASE_URL=/mock**（仅 dev 加载——prod 构建不读该文件自然落保底 /api；gh-pages 由 build-pages.ts 注入第六开关 shell env 覆盖）。`.env` 保持不出现该键（.env 全 mode 加载会污染 prod）
+- **顺带债务**：RichTextEditor/XFormBuilder 写死的 `/api/upload` → `/mock/upload`（仍无 mock 端点，404 为预期，前缀口径一致）
+- **vite 热重启盲区实锤**：workspace 链接的 @vv/config 工厂改动不触发 vite 自动重启——改工厂/别名/define 后须重启 dev server
+- **验证**：test:gateway / lint / type-check 10/10 / check:mock-wiring 全绿；curl 对照（/mock/auth/login 200+Set-Cookie、旧 /api 路径 404）；CDP 冷启动后真实登录 → /admin/workbench 落地
+- **手动验证步骤**：`pnpm dev:gateway`（须重启）→ 登录 admin → Network 面板可见登录请求为 `/mock/auth/login`；联调真实后端：`VITE_API_BASE_URL=http://real pnpm dev`（shell env 优先）
+
 ### ⚙️ Infra | SSE 流式 mock 落地：requestStream 在 docs app 可演示（2026-10-26）
 
 > 背景：stream.ts（fetch + ReadableStream 流式请求）自 2026-07 起无演示数据源——vite-plugin-mock 的常规 response 模型是一次性返回，不支持流式。实测 dist 源码确认 rawResponse 的 Promise 被中间件 await 挂起（不 settle 不返回），即「挂起式推送」在 dev 下成立。

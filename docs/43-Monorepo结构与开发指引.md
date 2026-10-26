@@ -97,16 +97,17 @@ vue3-vite-project（pnpm workspace + turbo@2）
 pnpm dev:gateway   # 唯一命令：网关 :8080 + 6 个 app 以 base=/<app>/ 串行起，Ctrl+C 一并退出
 ```
 
-| 网关路径                        | 反代目标（127.0.0.1）        |
-| ------------------------------- | ---------------------------- |
-| `http://localhost:8080/admin/`  | `:5174`                      |
-| `http://localhost:8080/docs/`   | `:5175`                      |
-| `http://localhost:8080/portal/` | `:5176`                      |
-| `http://localhost:8080/h5/`     | `:5177`                      |
-| `http://localhost:8080/big/`    | `:5178`                      |
-| `http://localhost:8080/auth/`   | `:5179`                      |
-| `http://localhost:8080/api/`    | `:5174`（admin mock 最全）   |
-| `http://localhost:8080/`        | 302 → `/portal/`（保留端口） |
+| 网关路径                        | 反代目标（127.0.0.1）                     |
+| ------------------------------- | ----------------------------------------- |
+| `http://localhost:8080/admin/`  | `:5174`                                   |
+| `http://localhost:8080/docs/`   | `:5175`                                   |
+| `http://localhost:8080/portal/` | `:5176`                                   |
+| `http://localhost:8080/h5/`     | `:5177`                                   |
+| `http://localhost:8080/big/`    | `:5178`                                   |
+| `http://localhost:8080/auth/`   | `:5179`                                   |
+| `http://localhost:8080/api/`    | `:5174`（admin mock 最全）                |
+| `http://localhost:8080/mock/`   | `:5174`（mock 统一前缀，与 /api/ 同目标） |
+| `http://localhost:8080/`        | 302 → `/portal/`（保留端口）              |
 
 **三个关键语义**（实现见 `scripts/node-gateway.ts`）：
 
@@ -153,11 +154,11 @@ pnpm dev:gateway   # 唯一命令：网关 :8080 + 6 个 app 以 base=/<app>/ �
 
 上游 dev server 未就绪：node 网关的 502 只在对应 app 的 dev server 未启动 / 已崩溃时出现——先看 `dev:gateway` 终端该 app 是否打印「✓ 就绪」；已就绪仍 502 则查端口双写是否漂移（`pnpm check:routes` 端口双写锁死会锁死注册表 port 与 vite.config portOffset 的一致性）。
 
-### 9.3 mock 接口 404：`/api/auth/login` 等返回 404
+### 9.3 mock 接口 404：`/mock/auth/login` 等返回 404
 
 按序排查：
 
-1. **网关模式**：确认请求地址是 `:8080` 而非具体 app 端口——`/api/*` 由 node 网关路由表统一反代到 admin（5174，其 mock 最全：auth/user/menu 三模块）；不经网关直连单 app 端口时，由各 app 自己的 vite-plugin-mock 处理（同一 `@vv/mock` 数据源，响应一致）
+1. **网关模式**：确认请求地址是 `:8080` 而非具体 app 端口——`/mock/*` 与 `/api/*` 由 node 网关路由表统一反代到 admin（5174，其 mock 最全：auth/user/menu 三模块）；不经网关直连单 app 端口时，由各 app 自己的 vite-plugin-mock 处理（同一 `@vv/mock` 数据源，响应一致）
 2. **mock 文件位置**：mock 已迁 `packages/mock/src/`（**不是**根 `mock/`）；新建 mock 文件要放进该目录（或被 viteMockServe 扫描到的约定目录）才会生效
 3. **new-module 未带 `--with-mock`**：该选项可选，未传时只生成业务骨架、不生成 mock——接口自然 404，补一个 mock 文件即可
 4. **并行 dev 的 mock 竞态（`pnpm dev` 偶发全部 mock 404）**：6 app 共享同一 `@vv/mock` 源码目录，turbo 并行起 dev 时 vite-plugin-mock 的 bundle-require 会对 `_*.bundled_*.mjs` 临时文件无容错 unlink，并发编译下互相抢删会让某 app 的 mockData 静默清空（接口返回 index.html / 404）。**已内置修复**：`@vv/config` 的 `cleanMockBundled` 插件带 5 秒 mtime 门槛（只删创建超 5s 的陈旧临时文件，在飞文件不碰）；若老分支复现，重启该 app dev 即可，升级 `packages/config` 后根治

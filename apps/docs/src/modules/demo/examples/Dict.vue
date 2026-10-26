@@ -74,7 +74,7 @@ async function onRefreshOrderType() {
     title="Dict 字典组件"
     source="src/components/common/DictSelect.vue + DictTag.vue"
     :introductions="[
-      '前端主导数据结构：DictItem 契约定义在 src/types/dict.ts，后端 /api/dict/:code 按契约返回数组。',
+      '前端主导数据结构：DictItem 契约定义在 src/types/dict.ts，后端 /mock/dict/:code 按契约返回数组。',
       'DictSelect / DictTag 传 dictCode 即可用，字典加载、缓存、并发合并内部完成（useDict + store 防抖池）。',
       '字典项支持 type（el-tag 主题）/ disabled（下拉禁选）/ cssClass（自定义样式钩子）扩展字段。',
     ]"

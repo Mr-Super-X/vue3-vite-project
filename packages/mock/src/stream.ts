@@ -50,7 +50,7 @@ function hasTokenCookie(req: IncomingMessage): boolean {
 
 export default [
   {
-    url: '/api/ai/chat/stream',
+    url: '/mock/ai/chat/stream',
     method: 'post',
     rawResponse: async (req: IncomingMessage, res: ServerResponse) => {
       const body = await readBody(req)
@@ -99,7 +99,7 @@ export default [
 
       // 日志仅 dev 可见：prompt 回显 + 凭证携带情况（便于排查 httpOnly 携带链路）
       console.log(
-        `[mock:stream] /api/ai/chat/stream prompt="${prompt.slice(0, 40)}" cookie=${hasTokenCookie(req) ? 'yes' : 'no'}`
+        `[mock:stream] /mock/ai/chat/stream prompt="${prompt.slice(0, 40)}" cookie=${hasTokenCookie(req) ? 'yes' : 'no'}`
       )
     },
   },

@@ -354,17 +354,17 @@ pnpm dev:local
 
 | 模块         | 接口                                                                                | 默认账号       |
 | ------------ | ----------------------------------------------------------------------------------- | -------------- |
-| auth         | `/api/auth/login`、`/api/auth/profile`、`/api/auth/logout`                          | admin / 123456 |
-| user         | `/api/user/list`、`/api/user/:id`                                                   | -              |
-| menu（远程） | `/api/menu`（远程菜单，remote 模式守卫调用）                                        | -              |
-| dict         | `/api/dict/:code`（字典，配合 `useDict`，见 docs/11）                               | -              |
+| auth         | `/mock/auth/login`、`/mock/auth/profile`、`/mock/auth/logout`                       | admin / 123456 |
+| user         | `/mock/user/list`、`/mock/user/:id`                                                 | -              |
+| menu（远程） | `/mock/menu`（远程菜单，remote 模式守卫调用）                                       | -              |
+| dict         | `/mock/dict/:code`（字典，配合 `useDict`，见 docs/11）                              | -              |
 | pro-table/   | 11 个具名导出 `xxxRequestApi`（ProTable 直连数据源，无 XHR 依赖，pro 环境同样可用） | -              |
 
-> `/api/menu`（远程菜单）在 remote 模式下由守卫调用。已内置 mock（Home / UserList + Reports 隐藏菜单），无需额外配置即可跑通端到端流程。
+> `/mock/menu`（远程菜单）在 remote 模式下由守卫调用。已内置 mock（Home / UserList + Reports 隐藏菜单），无需额外配置即可跑通端到端流程。
 
 **生产构建的 mock 接线（2026-10-20 新增）**：vite-plugin-mock@3.0.2 为纯 dev-server 插件（2.9.x 的 `prodEnabled` 已移除），`packages/mock/src/mockProdServer.ts` 通过 client 侧 `createProdMockServer` 手动接线 4 个模块（2 个 data 直引 menu/user + 2 组内联 prod 版 auth/dict）。挂接条件 `import.meta.env.PROD && VITE_USE_MOCK==='true'`（各 app `main.ts`，如 `apps/admin/src/main.ts`），常规生产构建整分支 tree-shake。配套 `VITE_DEMO_NO_AUTH=true` 演示模式：守卫跳过登录/权限校验，演示账号 Admin（admin/123456）全链路可点（gh-pages 线上 demo 方案）。**挂接时序硬约束**：必须在 `createApp` 后、`app.use(router)` 前 `await setupProdMockServer()`——router install 即触发初始导航，晚于 use 则守卫请求穿透拦截窗口。详见 [docs/22-mock使用规范.md](docs/22-mock使用规范.md) §15。
 
-常规生产构建（`VITE_USE_MOCK` 未设或非 `'true'`）不启用 mock；联调真实后端时同时设 `VITE_USE_MOCK=false` + `VITE_API_BASE_URL=<真实后端 URL>`，并使用 `pnpm build && pnpm preview` 验证生产路径。菜单加载方式仍由 `VITE_MENU_SOURCE` 控制。
+常规生产构建（`VITE_USE_MOCK` 未设或非 `'true'`）不启用 mock；联调真实后端时同时设 `VITE_USE_MOCK=false` + shell env `VITE_API_BASE_URL=<真实后端 URL>`（shell env 优先级最高，见下表），并使用 `pnpm build && pnpm preview` 验证生产路径。菜单加载方式仍由 `VITE_MENU_SOURCE` 控制。
 
 ### 路由架构（自动注册）
 
@@ -586,21 +586,21 @@ pnpm build
 
 ### 环境变量
 
-| 变量                     | 说明                                                                                                                                                                                                     | 默认值                 |
-| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| `VITE_APP_TITLE`         | 应用标题首屏占位（各 app `apps/<a>/src/main.ts` 初始化；登录后由路由 `meta.title` 覆盖）                                                                                                                 | 企业中后台管理         |
-| `VITE_APP_ID`            | 应用标识（由各 app `vite.config.ts` 的 `appName` 经 `@vv/config` 工厂 define 注入，无需手工配 env）：pinia persist 的 localStorage key 前缀（如 `admin:app-ui`），多 app 同域部署时隔离各 app 持久化数据 | 工厂注入，无回落 `app` |
-| `VITE_API_BASE_URL`      | API 基础 URL（`packages/shared/src/api/http.ts:108` `getAPIBaseURL()` 读取；**shell env 优先，未设时由 `@vv/config` 工厂 define 保底 `/api`**，`.env` 不生效，见 docs/43）                               | 工厂保底 `/api`        |
-| `VITE_USE_MOCK`          | mock 数据开关（`@vv/config` 工厂 config 期 `process.env` 读取，`.env` 无效；`true`/未设=启用，`false`=关闭用于联调真后端）                                                                               | dev 默认开启           |
-| `VITE_MENU_SOURCE`       | 菜单加载模式（`local` / `remote`，未设置时默认 `remote`）                                                                                                                                                | `remote`               |
-| `VITE_DEMO_NO_AUTH`      | 演示模式开关（prod + `VITE_USE_MOCK=true` 时生效）：守卫跳过登录/权限校验，演示账号 Admin（admin/123456）全链路可点；按钮级 v-auth 仍按真实 permissions 渲染                                             | 不设 = 关闭            |
-| `VITE_HISTORY_MODE`      | 路由历史模式（`web` / `hash`，用于子路径或静态托管部署）                                                                                                                                                 | `web`                  |
-| `VITE_BASE`              | 路由部署基础路径（必须以 `/` 开头和结尾；多应用聚合构建时由 `scripts/build-pages.ts` 内 `REPO_PREFIX` 按 app 注入，见 docs/43 §7）                                                                       | `/`                    |
-| `VITE_AUTH_ORIGIN`       | 统一登录重定向基址（`@vv/shared` redirect.ts 与各 app 守卫读取）：未登录整页跳 `${VITE_AUTH_ORIGIN}/login?redirect=...`，登出回跳同源；同域网关/子路径部署按实际前缀配置                                 | `/auth`                |
-| `VITE_STORAGE_NAMESPACE` | storage 命名空间（隔离多项目共用 localStorage）                                                                                                                                                          | `vue3-vite-project`    |
-| `VITE_BRAND_COLOR`       | 业务品牌色（HEX，覆盖 Element Plus 默认蓝 `#409eff`，含灯色阶联动，详见 [docs/06-主题管理规范.md](docs/06-主题管理规范.md)）                                                                             | `#409eff`              |
-| `VITE_QUIET_DEV`         | 关闭 dev 模式 GlobalComponents 自动注册徽章（专注调试时减少噪音，详见 `packages/ui/src/global-components.ts`）                                                                                           | 不设 = 输出徽章        |
-| `VITE_BEM_PREFIX`        | BEM 类名前缀（同时影响 TS 端 `createNamespace` 与 SCSS `bem mixin`；改一处即全站类名同步切换，详见 `packages/shared/src/utils/bem.ts` + `packages/ui/src/assets/styles/mixins/bem.scss`）                | `vv`                   |
+| 变量                     | 说明                                                                                                                                                                                                                                                                                            | 默认值                 |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| `VITE_APP_TITLE`         | 应用标题首屏占位（各 app `apps/<a>/src/main.ts` 初始化；登录后由路由 `meta.title` 覆盖）                                                                                                                                                                                                        | 企业中后台管理         |
+| `VITE_APP_ID`            | 应用标识（由各 app `vite.config.ts` 的 `appName` 经 `@vv/config` 工厂 define 注入，无需手工配 env）：pinia persist 的 localStorage key 前缀（如 `admin:app-ui`），多 app 同域部署时隔离各 app 持久化数据                                                                                        | 工厂注入，无回落 `app` |
+| `VITE_API_BASE_URL`      | API 基础 URL（`packages/shared/src/api/http.ts:108` `getAPIBaseURL()` 读取）。**优先级：shell env > `.env` 文件 > 工厂保底 `/api`**——mock 统一前缀方案（2026-10-26）下 6 app 的 `.env.development` 配 `/mock`（仅 dev 加载），Network 面板一眼区分 mock/真实响应；联调真实后端用 shell env 覆盖 | 工厂保底 `/api`        |
+| `VITE_USE_MOCK`          | mock 数据开关（`@vv/config` 工厂 config 期 `process.env` 读取，`.env` 无效；`true`/未设=启用，`false`=关闭用于联调真后端）                                                                                                                                                                      | dev 默认开启           |
+| `VITE_MENU_SOURCE`       | 菜单加载模式（`local` / `remote`，未设置时默认 `remote`）                                                                                                                                                                                                                                       | `remote`               |
+| `VITE_DEMO_NO_AUTH`      | 演示模式开关（prod + `VITE_USE_MOCK=true` 时生效）：守卫跳过登录/权限校验，演示账号 Admin（admin/123456）全链路可点；按钮级 v-auth 仍按真实 permissions 渲染                                                                                                                                    | 不设 = 关闭            |
+| `VITE_HISTORY_MODE`      | 路由历史模式（`web` / `hash`，用于子路径或静态托管部署）                                                                                                                                                                                                                                        | `web`                  |
+| `VITE_BASE`              | 路由部署基础路径（必须以 `/` 开头和结尾；多应用聚合构建时由 `scripts/build-pages.ts` 内 `REPO_PREFIX` 按 app 注入，见 docs/43 §7）                                                                                                                                                              | `/`                    |
+| `VITE_AUTH_ORIGIN`       | 统一登录重定向基址（`@vv/shared` redirect.ts 与各 app 守卫读取）：未登录整页跳 `${VITE_AUTH_ORIGIN}/login?redirect=...`，登出回跳同源；同域网关/子路径部署按实际前缀配置                                                                                                                        | `/auth`                |
+| `VITE_STORAGE_NAMESPACE` | storage 命名空间（隔离多项目共用 localStorage）                                                                                                                                                                                                                                                 | `vue3-vite-project`    |
+| `VITE_BRAND_COLOR`       | 业务品牌色（HEX，覆盖 Element Plus 默认蓝 `#409eff`，含灯色阶联动，详见 [docs/06-主题管理规范.md](docs/06-主题管理规范.md)）                                                                                                                                                                    | `#409eff`              |
+| `VITE_QUIET_DEV`         | 关闭 dev 模式 GlobalComponents 自动注册徽章（专注调试时减少噪音，详见 `packages/ui/src/global-components.ts`）                                                                                                                                                                                  | 不设 = 输出徽章        |
+| `VITE_BEM_PREFIX`        | BEM 类名前缀（同时影响 TS 端 `createNamespace` 与 SCSS `bem mixin`；改一处即全站类名同步切换，详见 `packages/shared/src/utils/bem.ts` + `packages/ui/src/assets/styles/mixins/bem.scss`）                                                                                                       | `vv`                   |
 
 > 环境变量读取：项目内显式通过 `import.meta.env.VITE_XXX` 访问。`baseURL` / `storage namespace` 单一来源在 `packages/shared/src/api/http.ts` 和 `packages/shared/src/utils/storage.ts`，不在各业务模块分散。
 

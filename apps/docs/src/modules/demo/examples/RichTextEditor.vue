@@ -130,7 +130,8 @@ async function uploadApi(file: File): Promise<{ url: string }> {
   const formData = new FormData()
   formData.append('file', file)
   // 业务代码请走 @api/_http 封装的 axios 实例（统一 baseURL/拦截器/token 刷新）
-  const { data } = await axios.post<{ url: string }>('/api/upload', formData)
+  // /mock/upload：mock 统一前缀（2026-10-26）——该端点暂无 mock 实现，演示环境 404 为预期
+  const { data } = await axios.post<{ url: string }>('/mock/upload', formData)
   return { url: data.url }
 }
 

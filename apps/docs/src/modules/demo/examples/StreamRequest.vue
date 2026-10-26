@@ -2,7 +2,7 @@
 /**
  * requestStream（SSE 流式请求）演示页。
  *
- * 数据源：packages/mock/src/stream.ts 的 SSE mock（/api/ai/chat/stream）——
+ * 数据源：packages/mock/src/stream.ts 的 SSE mock（/mock/ai/chat/stream）——
  * rawResponse 挂起式逐 chunk 推送（dev-only，gh-pages 的 mockjs 不拦 fetch，演示降级）。
  *
  * 演示点：
@@ -40,9 +40,9 @@ function send(): void {
   errorMsg.value = ''
   streaming.value = true
   handle = requestStream<ChatChunk>({
-    // url 不带 /api 前缀：与 axios 业务请求同约定（http.ts baseURL 统一注入 '/api'，
-    // viteMockServe 的 mock 路由注册在 /api/* 下）——stream.ts 内部拼
-    // `${VITE_API_BASE_URL}${url}`，多写前缀会成 /api/api/... 404（2026-10-26 实测踩坑）
+    // url 不带前缀：与 axios 业务请求同约定（http.ts baseURL 统一注入——mock 模式
+    // VITE_API_BASE_URL=/mock，viteMockServe 的 mock 路由注册在 /mock/* 下）——stream.ts
+    // 内部拼 `${VITE_API_BASE_URL}${url}`，多写前缀会成 /mock/mock/... 404（2026-10-26 实测踩坑）
     url: '/ai/chat/stream',
     method: 'POST',
     body: { prompt: text },
@@ -77,7 +77,7 @@ onUnmounted(() => {
     title="requestStream · SSE 流式请求"
     source="packages/shared/src/api/stream.ts"
     :introductions="[
-      '基于 fetch + ReadableStream 的流式请求（不走 axios）：POST /api/ai/chat/stream 由 mock 挂起式逐 chunk 推送',
+      '基于 fetch + ReadableStream 的流式请求（不走 axios）：POST /mock/ai/chat/stream 由 mock 挂起式逐 chunk 推送',
       '打字机效果 = onMessage 逐 chunk 累积；点「停止生成」调 handle.cancel() 立即终止（onMessage 不再触发）',
       '数据源 packages/mock/src/stream.ts：rawResponse 挂起 await 模拟 SSE（dev-only；gh-pages 的 mockjs 不拦 fetch，流演示不可用）',
     ]"

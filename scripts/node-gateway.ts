@@ -73,6 +73,10 @@ export function buildGatewayRoutes(apps: GatewayApp[]): GatewayRoute[] {
     throw new Error('apps-registry 缺少 admin 条目：/api/ 反代目标无法确定')
   }
   routes.push({ prefix: '/api/', target: { host: '127.0.0.1', port: admin.port } })
+  // /mock/ 与 /api/ 同目标（admin mock 最全）：mock 统一前缀方案（2026-10-26）——
+  // 前端 VITE_API_BASE_URL=/mock 时请求经此路由到 admin 的 mock 中间件，
+  // Network 面板以 /mock 前缀一眼区分 mock 响应与真实后端 /api 响应
+  routes.push({ prefix: '/mock/', target: { host: '127.0.0.1', port: admin.port } })
   return routes
 }
 

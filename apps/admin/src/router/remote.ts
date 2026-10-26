@@ -2,7 +2,7 @@
  * 接口加载菜单（remote 模式）。
  *
  * 工作流：
- * 1. `fetchRemoteRoutes()` 调用 `/api/menu` 拉取菜单 JSON（带超时 + 重试）
+ * 1. `fetchRemoteRoutes()` 调用 `/mock/menu` 拉取菜单 JSON（带超时 + 重试）
  * 2. `convertMenu()` 把 JSON 转换为 Vue Router 路由配置
  * 3. 在守卫中 `router.addRoute()` 注入
  *

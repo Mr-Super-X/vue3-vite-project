@@ -43,6 +43,9 @@ function buildApp(appName: string): void {
     VITE_HISTORY_MODE: 'hash',
     VITE_MENU_SOURCE: 'local',
     VITE_USE_MOCK: 'true',
+    // mock 统一前缀（2026-10-26）：prod 演示构建与 dev 同口径 /mock——
+    // 缺省则回退工厂 define 默认 /api，gh-pages 的 mockjs 按 /api 注册会全挂
+    VITE_API_BASE_URL: '/mock',
     VITE_DEMO_NO_AUTH: 'true',
   }
   const result = spawnSync('pnpm', ['-C', `apps/${appName}`, 'build-only'], {

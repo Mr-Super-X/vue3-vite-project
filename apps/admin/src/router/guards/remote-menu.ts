@@ -2,7 +2,7 @@
  * 守卫 —— 远程菜单懒加载（独立可测的纯函数）。
  *
  * 业务背景：
- * - remote 模式下，登录后从 `/api/menu` 拉菜单并 `router.addRoute()` 注入
+ * - remote 模式下，登录后从 `/mock/menu` 拉菜单并 `router.addRoute()` 注入
  * - 每个 token 周期只拉一次（`dynamicLoaded` 标记）
  * - 加载失败 / 返回空 → 保持 local 菜单（不影响用户当前页）
  *
@@ -42,7 +42,7 @@ let currentAuthState: boolean | null = null
  *
  * 行为：
  *  - local 模式 → 直接返回 null（无需加载）
- *  - remote 模式 + 未加载 → 拉 /api/menu，注入路由，重新触发守卫
+ *  - remote 模式 + 未加载 → 拉 /mock/menu，注入路由，重新触发守卫
  *  - 加载失败或返回空 → console.warn，保持 local（返回 null 放行）
  *
  * @returns null 表示可以继续走流程；RouteLocationRaw 表示需重新触发守卫

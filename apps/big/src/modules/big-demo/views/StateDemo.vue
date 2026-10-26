@@ -97,7 +97,7 @@ const updatedAt = '14:32:08'
       <!-- 错误：就地重试 -->
       <div v-else-if="current === 'error'" :class="[bem.e('notice'), bem.em('notice', 'error')]">
         <p :class="bem.e('notice-title')">数据加载失败</p>
-        <p :class="bem.e('notice-desc')">接口超时（GET /api/big-demo/kpis）</p>
+        <p :class="bem.e('notice-desc')">接口超时（GET /mock/big-demo/kpis）</p>
         <button type="button" :class="bem.e('notice-btn')" @click="simulateRecover">重试</button>
       </div>
 

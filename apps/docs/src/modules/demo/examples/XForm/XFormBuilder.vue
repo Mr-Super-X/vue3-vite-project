@@ -128,7 +128,7 @@ const schema: SchemaNode = {
     {
       ...xUpload('avatar')
         .label('头像上传')
-        .action('/api/upload')
+        .action('/mock/upload')
         .accept('image/*')
         .listType('picture-card')
         .multiple()

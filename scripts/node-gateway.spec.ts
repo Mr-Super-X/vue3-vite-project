@@ -33,6 +33,8 @@ test('buildGatewayRoutes：每 app 一条前缀路由，端口来自注册表', 
     { prefix: '/auth/', target: { host: '127.0.0.1', port: 5179 } },
     // /api/ 统一反代 admin（mock 最全：auth/user/menu 三模块），端口不写死
     { prefix: '/api/', target: { host: '127.0.0.1', port: 5174 } },
+    // /mock/ 与 /api/ 同目标：mock 统一前缀（Network 面板一眼区分 mock/真实）
+    { prefix: '/mock/', target: { host: '127.0.0.1', port: 5174 } },
   ])
 })
 

@@ -28,7 +28,7 @@ import type { RemoteMenuItem } from '@vv/shared'
  */
 export default [
   {
-    url: '/api/menu',
+    url: '/mock/menu',
     method: 'get',
     timeout: 200,
     response: () => ({

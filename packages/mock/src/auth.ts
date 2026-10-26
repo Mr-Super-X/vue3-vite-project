@@ -49,7 +49,7 @@ function withDelay(handler: () => void, _ms: number): void {
 
 export default [
   {
-    url: '/api/auth/login',
+    url: '/mock/auth/login',
     method: 'post',
     rawResponse: async (req: IncomingMessage, res: ServerResponse) => {
       const body = await readBody(req)
@@ -70,7 +70,7 @@ export default [
     },
   },
   {
-    url: '/api/auth/profile',
+    url: '/mock/auth/profile',
     method: 'get',
     rawResponse: (req: IncomingMessage, res: ServerResponse) => {
       withDelay(() => {
@@ -88,7 +88,7 @@ export default [
     },
   },
   {
-    url: '/api/auth/logout',
+    url: '/mock/auth/logout',
     method: 'post',
     rawResponse: (req: IncomingMessage, res: ServerResponse) => {
       withDelay(() => {
@@ -99,7 +99,7 @@ export default [
     },
   },
   {
-    url: '/api/auth/refresh',
+    url: '/mock/auth/refresh',
     method: 'post',
     rawResponse: (req: IncomingMessage, res: ServerResponse) => {
       withDelay(() => {
