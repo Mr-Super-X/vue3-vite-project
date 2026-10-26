@@ -38,6 +38,7 @@ const mockAuthFetchProfile = authApi.fetchProfile as ReturnType<typeof vi.fn>
 const mockAuthLogout = authApi.logout as ReturnType<typeof vi.fn>
 const mockSessionSet = Session.set as ReturnType<typeof vi.fn>
 const mockSessionRemove = Session.remove as ReturnType<typeof vi.fn>
+const mockSessionGet = Session.get as ReturnType<typeof vi.fn>
 const mockGlobalAbortAbort = globalAbort.abort as ReturnType<typeof vi.fn>
 const mockGlobalAbortReset = globalAbort.reset as ReturnType<typeof vi.fn>
 
@@ -55,6 +56,7 @@ beforeEach(() => {
   mockAuthLogout.mockReset()
   mockSessionSet.mockReset()
   mockSessionRemove.mockReset()
+  mockSessionGet.mockReset()
   mockGlobalAbortAbort.mockReset()
   mockGlobalAbortReset.mockReset()
   mockGuardResetHook.mockReset()
@@ -96,6 +98,42 @@ describe('userStore.login()', () => {
     expect(store.isLoggedIn).toBe(true)
     expect(warn).toHaveBeenCalled()
     warn.mockRestore()
+  })
+})
+
+describe('userStore.fetchProfile()（含跨端口登录标记对齐，2026-10-30）', () => {
+  it('探测成功且本 origin 无标记 → 补写登录标记（守卫同步判定依据）', async () => {
+    // 场景：用户在其它端口登录过，cookie 有效（不按端口隔离）但本 origin 的
+    // sessionStorage 无标记（按端口隔离）——portal 探测成功后跳 admin 的链路依赖此补写
+    mockSessionGet.mockReturnValue(null)
+    mockAuthFetchProfile.mockResolvedValueOnce({ id: 1, name: 'A', permissions: ['p1'] })
+    const store = useUserStore()
+
+    await store.fetchProfile()
+
+    expect(store.profile).toEqual({ id: 1, name: 'A', permissions: ['p1'] })
+    expect(store.permissions).toEqual(['p1'])
+    expect(mockSessionSet).toHaveBeenCalledWith('auth', true)
+  })
+
+  it('探测成功且标记已存在 → 幂等不重复写', async () => {
+    mockSessionGet.mockReturnValue(true)
+    mockAuthFetchProfile.mockResolvedValueOnce({ id: 1, name: 'A', permissions: [] })
+    const store = useUserStore()
+
+    await store.fetchProfile()
+
+    expect(mockSessionSet).not.toHaveBeenCalled()
+  })
+
+  it('探测失败（401）→ 不写标记', async () => {
+    mockSessionGet.mockReturnValue(null)
+    mockAuthFetchProfile.mockRejectedValueOnce(new Error('401'))
+    const store = useUserStore()
+
+    await expect(store.fetchProfile()).rejects.toThrow('401')
+
+    expect(mockSessionSet).not.toHaveBeenCalled()
   })
 })
 

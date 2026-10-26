@@ -61,6 +61,10 @@ export const useUserStore = defineStore('user', () => {
     const p = await authApi.fetchProfile()
     profile.value = p
     permissions.value = p.permissions
+    // 探测成功即证明 cookie 会话真实有效；本 origin 标记缺失时补写——cookie 不按
+    // 端口隔离而 sessionStorage 按端口隔离，跨端口/首次经网关访问时（portal 探测
+    // 成功后跳 admin），守卫（Session.get('auth')）才有同步判定依据
+    if (!Session.get<boolean>('auth')) Session.set('auth', true)
   }
 
   /**

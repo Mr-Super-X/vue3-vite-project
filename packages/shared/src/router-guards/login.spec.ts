@@ -23,6 +23,7 @@ import { Session } from '../utils/storage.ts'
 
 type UserStore = ReturnType<typeof useUserStore>
 const mockSessionGet = Session.get as ReturnType<typeof vi.fn>
+const mockSessionSet = Session.set as ReturnType<typeof vi.fn>
 
 const to = { path: '/orders', fullPath: '/orders?page=1', meta: {} } as RouteLocationNormalized
 
@@ -38,6 +39,7 @@ const makeStore = (overrides: Partial<UserStore> = {}): UserStore =>
 
 beforeEach(() => {
   mockSessionGet.mockReset()
+  mockSessionSet.mockReset()
   mockRedirectToAuthLogin.mockClear()
 })
 
@@ -51,15 +53,31 @@ describe('checkLoginState（httpOnly 登录标记模式）', () => {
     expect(store.fetchProfile).not.toHaveBeenCalled()
   })
 
-  it('无登录标记 → 整页跳 apps/auth 登录页并携带 redirect（P4）', async () => {
+  it('无登录标记但 cookie 会话有效（跨端口/首次经网关访问）→ 探测成功后放行并补写标记', async () => {
     mockSessionGet.mockReturnValue(null)
     const store = makeStore()
+    const result = await checkLoginState(to, store)
+    // 先探测而非直接踢登录页；成功则补标记 + 置登录态放行（2026-10-30 实测 bug 回归锁：
+    // portal 显示登录态（cookie 探测成功）但点管理后台被踢登录页——sessionStorage 按
+    // 端口隔离，本 origin 无标记 ≠ 会话无效）
+    expect(store.fetchProfile).toHaveBeenCalledTimes(1)
+    expect(mockSessionSet).toHaveBeenCalledWith('auth', true)
+    expect(store.authenticated).toBe(true)
+    expect(result).toBeNull()
+    expect(mockRedirectToAuthLogin).not.toHaveBeenCalled()
+  })
+
+  it('无登录标记且探测失败（真未登录）→ 整页跳 apps/auth 登录页并携带 redirect（P4）', async () => {
+    mockSessionGet.mockReturnValue(null)
+    const store = makeStore({
+      fetchProfile: vi.fn().mockRejectedValue(new Error('401')),
+    })
     // mock 的 redirectToAuthLogin 抛 AUTH_REDIRECTING（与真实实现同形态）
     await expect(checkLoginState(to, store)).rejects.toThrow('AUTH_REDIRECTING')
     // P0 修复：redirect 改用 window.location.pathname+search（含 vue-router base 前缀，
     // 网关形态下不丢 /admin 前缀）；jsdom 默认 location 为 '/'，故断言 '/'
     expect(mockRedirectToAuthLogin).toHaveBeenCalledWith('/')
-    expect(store.fetchProfile).not.toHaveBeenCalled()
+    expect(mockSessionSet).not.toHaveBeenCalled()
   })
 
   it('网关 base 前缀不丢（P0 修复）：redirect 含 /admin/ 部署前缀', async () => {
@@ -72,7 +90,10 @@ describe('checkLoginState（httpOnly 登录标记模式）', () => {
     })
     try {
       mockSessionGet.mockReturnValue(null)
-      const store = makeStore()
+      const store = makeStore({
+        // 无标记路径仅在探测失败时才跳登录页（2026-10-30 行为变更：先探测后决定）
+        fetchProfile: vi.fn().mockRejectedValue(new Error('401')),
+      })
       await expect(checkLoginState(to, store)).rejects.toThrow('AUTH_REDIRECTING')
       // 关键断言：redirect 须含 /admin 前缀（网关联调实证 to.fullPath 会丢，致回跳 404）
       expect(mockRedirectToAuthLogin).toHaveBeenCalledWith('/admin/user/list?page=1')

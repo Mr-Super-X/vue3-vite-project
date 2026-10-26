@@ -58,7 +58,19 @@ export async function checkLoginState(
   // 未登录 → 读 sessionStorage 登录标记（hard refresh 场景标记可能仍在）
   const hasAuthMark = Session.get<boolean>('auth')
   if (!hasAuthMark) {
-    redirectToAuthLogin(currentFullUrl())
+    // cookie 不按端口隔离、sessionStorage 按端口隔离：本 origin 无标记 ≠ 会话无效
+    // （2026-10-30 实测：portal 探测显示登录态，点管理后台却被踢登录页——用户此前
+    // 在其它端口登录过，cookie 有效但该 origin 的 sessionStorage 无标记）。先用
+    // cookie 探测一次：成功则标记已补写（fetchProfile 内部），设 authenticated 放行；
+    // 失败（401）才跳登录页——http.ts performLogout 对无标记探测静默，无 toast 噪音
+    try {
+      await userStore.fetchProfile()
+    } catch {
+      redirectToAuthLogin(currentFullUrl())
+    }
+    Session.set('auth', true)
+    userStore.authenticated = true
+    return null
   }
 
   // 有标记但 profile 未恢复 → 拉 profile，由后端通过 cookie 凭证完成真实校验
