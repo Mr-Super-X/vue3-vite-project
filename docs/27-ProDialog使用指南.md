@@ -387,8 +387,7 @@ const enabled = ref(true)
 ### 5.2 确认弹窗（命令式）
 
 ```ts
-import { NormalConfirm } from '@/components/common/NormalConfirm'
-// 或自己定义
+// 原示例引用的内部 NormalConfirm 组件已移除——任何自定义确认组件（如下面这个最小实现）都按此模式接入
 const ConfirmDialog = defineComponent({
   props: { message: { type: String, required: true } },
   emits: ['confirm'],

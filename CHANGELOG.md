@@ -4,6 +4,16 @@
 
 ## 未发布
 
+### 🧪 Test Infra | 第十轮基础建设：fakeLocation 共享测试夹具收敛 / ElMessage 中文拦截评估留档（2026-10-30）
+
+> 背景：「基础建设」维度补测试基建——整页跳转断言的 stubGlobal location 样板在 3 个 spec 逐字重复（i18n 化后确立的标准形态）；i18n 审计建议的 ElMessage 中文拦截 ESLint 规则落地评估。
+
+- **fakeLocation 共享夹具**（`packages/shared/src/test-utils/fakeLocation.ts` 新增，`./test-utils/fakeLocation` 具名 exports）：`createFakeLocation` / `installFakeLocation` 两函数收敛 Login.spec / redirect.spec / useLogout.spec 三处逐字样板（router-guards/login.spec 经核实为 grep 误命中——它 mock redirect 不碰 location）。JSDoc 确立「后续 spec 有整页跳转断言一律经此夹具」的入口约定 + throw-setter 特例就地书写的边界
+- **框架级 ElMessage 中文存量清零**（规则落地前置）：copy.ts「复制内容为空」→ `common.copyEmpty` 键（zh/en）；RichTextEditor「请先配置 uploadApi」豁免——**开发者向配置警告**（非终端用户文案，同 Vue/React dev warning 固定语言的行业惯例），源码注释声明豁免理由
+- **ElMessage 中文拦截规则未落地留档**：规则 override 已完成设计（no-restricted-syntax esquery selector 限定 admin/auth/shared/ui 四范围 + RichTextEditor excludedFiles 豁免），但 config-protection 钩子拦截 eslint.config.mjs 修改——**不绕过防护钩子**（防「以配置变更弱化规范」的既有防线，破例风险 > M+ 规则收益）；防线回落到存量清零 + code review 约定，规则设计留档可复用
+- **docs P1 批（文档一致性收尾，代理执行）**：9 份文档 ~200 处——docs/22 全篇 mock 包口径（§15.2 架构块改 bootstrapApp 真实装配形态）、docs/04 §1 的 110 行旧 vite 示例整段删除改工厂对照、docs/23 权限设计 85 处行号引用全摘除（39 条映射 codemod + ls 逐一核实）、docs/09 docs app 口径（5175）、docs/05/33/40 行号与伪命令清零、两个全仓零命中的死引用反例删除并加注；doc-currency 13/13 绿；代理过程中 2 次 codemod 事故当场修复（边界约束 + 双前缀）
+- **验证**：`pnpm type-check` 10/10；`pnpm test` 9/9（auth/shared/ui 三向冒烟 + turbo 全量）
+
 ### 🎨 Style+i18n+Docs | 第九轮三审计落地：样式 token 化 P0 / 逻辑层 i18n 清零 / docs 文档漂移 P0（22 文档 170 处）（2026-10-29）
 
 > 背景：三路新角度审计——SCSS 样式质量（20 项发现，架构层获「非常优秀」、问题集中在消费侧「建而不用」）、i18n 尾巴、docs 文档漂移（50+ 项：94 处旧路径 import 示例横跨 20 份文档 + 3 个根级伪命令）。docs P0 批由修复代理按审计对照表执行（146 次工具调用全路径文件系统核实）。

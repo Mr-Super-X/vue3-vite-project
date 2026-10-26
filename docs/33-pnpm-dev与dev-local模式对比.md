@@ -229,18 +229,18 @@ pnpm dev
 
 ### 6.2 核心差异
 
-| 维度         | `VITE_MENU_SOURCE`                         | `VITE_USE_MOCK`                                                                                                         |
-| ------------ | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| 解决的问题   | "菜单从哪来？"                             | "HTTP 请求被谁拦截？"                                                                                                   |
-| 作用域       | 仅 `/api/menu` 一个接口                    | **所有** `/api/*` 接口                                                                                                  |
-| 读取时机     | 客户端运行时（`import.meta.env`）          | 构建期（`process.env`）                                                                                                 |
-| 读取位置     | `src/router/config.ts:24`（已打入 bundle） | `vite.config.ts:91`（vite 启动时）                                                                                      |
-| 消费方       | `src/router/guards/remote-menu.ts` 守卫    | `vite-plugin-mock`（dev 阶段中间件）                                                                                    |
-| 生效阶段     | 运行时（应用代码逻辑分支）                 | 构建期（中间件是否挂载）                                                                                                |
-| 默认值       | `remote`（未设/非法→静默 fallback）        | `true`（`undefined !== 'false'` 判定为开）                                                                              |
-| 典型值       | `local` / `remote`                         | `true` / `false`                                                                                                        |
-| 关联命令     | `pnpm dev:local`（cross-env 注入）         | 无专属命令，需在 `.env.development` 设置                                                                                |
-| 生产构建影响 | 有（代码分支逻辑）                         | 常规构建**无**（tree-shake）；`true` 时经 `mockProdServer.ts` client 侧接线（gh-pages 演示，见 docs/22 §15 与 docs/40） |
+| 维度         | `VITE_MENU_SOURCE`                                 | `VITE_USE_MOCK`                                                                                                         |
+| ------------ | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| 解决的问题   | "菜单从哪来？"                                     | "HTTP 请求被谁拦截？"                                                                                                   |
+| 作用域       | 仅 `/api/menu` 一个接口                            | **所有** `/api/*` 接口                                                                                                  |
+| 读取时机     | 客户端运行时（`import.meta.env`）                  | 构建期（`process.env`）                                                                                                 |
+| 读取位置     | `apps/admin/src/router/config.ts`（已打入 bundle） | `@vv/config` 工厂 `packages/config/src/create-vite-config.ts`（vite 启动时）                                            |
+| 消费方       | `apps/admin/src/router/guards/remote-menu.ts` 守卫 | `vite-plugin-mock`（dev 阶段中间件）                                                                                    |
+| 生效阶段     | 运行时（应用代码逻辑分支）                         | 构建期（中间件是否挂载）                                                                                                |
+| 默认值       | `remote`（未设/非法→静默 fallback）                | `true`（`undefined !== 'false'` 判定为开）                                                                              |
+| 典型值       | `local` / `remote`                                 | `true` / `false`                                                                                                        |
+| 关联命令     | `pnpm dev:local`（cross-env 注入）                 | 无专属命令，需在 `.env.development` 设置                                                                                |
+| 生产构建影响 | 有（代码分支逻辑）                                 | 常规构建**无**（tree-shake）；`true` 时经 `mockProdServer.ts` client 侧接线（gh-pages 演示，见 docs/22 §15 与 docs/40） |
 
 ### 6.3 读取时机详解
 
@@ -250,7 +250,7 @@ pnpm dev
 | 应用初始化 | ✅ 已打入 bundle（`import.meta.env`） | ❌ 不再读取         |
 | 运行时     | ✅ 浏览器中可读                       | ❌ 不参与运行时     |
 
-> ⚠️ 因此**不能用** `process.env.VITE_MENU_SOURCE` 在 `vite.config.ts` 里读（虽然能读到），因为应用代码读到的是另一份。两边必须保持一致地"信任" dotenv 加载顺序。
+> ⚠️ 因此**不能用** `process.env.VITE_MENU_SOURCE` 在 `@vv/config` 工厂（`packages/config/src/create-vite-config.ts`）里读（虽然能读到），因为应用代码读到的是另一份。两边必须保持一致地"信任" dotenv 加载顺序。
 
 ### 6.4 4 种正交组合
 
@@ -322,24 +322,23 @@ enable: process.env.VITE_USE_MOCK !== 'false'
 
 ## 9. 相关代码与文档
 
-| 路径                                     | 职责                                                          |
-| ---------------------------------------- | ------------------------------------------------------------- |
-| `package.json:8-9`                       | script 定义                                                   |
-| `src/types/env.d.ts:32`                  | `VITE_MENU_SOURCE` 类型声明                                   |
-| `src/types/env.d.ts:17`                  | `VITE_USE_MOCK` 类型声明                                      |
-| `src/router/config.ts:22-28`             | `resolveMenuSource()` 解析                                    |
-| `vite.config.ts:89-93`                   | `viteMockServe` 中间件（读取 `process.env.VITE_USE_MOCK`）    |
-| `src/router/remote.ts`                   | `fetchRemoteRoutes` + Zod 校验 + `convertMenu`                |
-| `src/router/guards/remote-menu.ts:56`    | 模式分叉点（`if source !== 'remote' return null`）            |
-| `src/api/modules/menu.ts`                | `menuApi.getMenu` 接口定义                                    |
-| `src/layouts/default/config/menu.ts:117` | `buildMenuTree` 从 router 派生菜单树（local 模式核心）        |
-| `src/router/auto-register.ts`            | 本地路由注册（local 模式的"单一事实源"）                      |
-| `mock/*.ts`                              | `vite-plugin-mock` 数据源（auth/menu/dict/user/pro-table 等） |
-| `docs/07-路由模块设计.md` §107-114       | 路由菜单模式详细机制                                          |
-| `docs/22-mock使用规范.md` §257-277       | vite-plugin-mock 配置详解                                     |
-| `docs/23-权限设计.md` §588               | 权限矩阵（按命令维度）                                        |
-| `docs/04-构建与测试工具.md` §612         | 工具链表格（dev / dev:local 命令对照）                        |
-| `README.md` §574-575                     | 环境变量表                                                    |
+| 路径                                            | 职责                                                          |
+| ----------------------------------------------- | ------------------------------------------------------------- |
+| 各 app `package.json` 的 `dev` / `dev:local`    | script 定义                                                   |
+| `packages/shared/src/types/env.d.ts`            | `VITE_MENU_SOURCE` / `VITE_USE_MOCK` 类型声明（共享单源）     |
+| `apps/admin/src/router/config.ts`               | `resolveMenuSource()` 解析                                    |
+| `packages/config/src/create-vite-config.ts`     | `viteMockServe` 中间件（读取 `process.env.VITE_USE_MOCK`）    |
+| `apps/admin/src/router/remote.ts`               | `fetchRemoteRoutes` + Zod 校验 + `convertMenu`                |
+| `apps/admin/src/router/guards/remote-menu.ts`   | 模式分叉点（`if source !== 'remote' return null`）            |
+| `packages/shared/src/api/modules/menu.ts`       | `menuApi.getMenu` 接口定义                                    |
+| `apps/admin/src/layouts/default/config/menu.ts` | `buildMenuTree` 从 router 派生菜单树（local 模式核心）        |
+| `apps/admin/src/router/auto-register.ts`        | 本地路由注册（local 模式的"单一事实源"）                      |
+| `packages/mock/src/*.ts`                        | `vite-plugin-mock` 数据源（auth/menu/dict/user/pro-table 等） |
+| `docs/07-路由模块设计.md` §107-114              | 路由菜单模式详细机制                                          |
+| `docs/22-mock使用规范.md` §257-277              | vite-plugin-mock 配置详解                                     |
+| `docs/23-权限设计.md` §588                      | 权限矩阵（按命令维度）                                        |
+| `docs/04-构建与测试工具.md` §612                | 工具链表格（dev / dev:local 命令对照）                        |
+| `README.md` §574-575                            | 环境变量表                                                    |
 
 ---
 

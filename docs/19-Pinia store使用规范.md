@@ -249,8 +249,8 @@ const userWithTheme = computed(() => ({
 ### 5.3 不要直接 import 另一个 store 内部
 
 ```ts
-// ❌ 反例：穿透到 store 内部实现
-import { _internalDictCache } from '@/store/modules/dict/internal'
+// 原示例曾演示「import 内部实现」的反例（_internalDictCache）——该内部扩展点已随 Monorepo 治理移除，
+// 此处不再给出具体 import 路径；原则不变：一律通过 store 对外接口消费，禁止穿透内部文件
 
 // ✅ 正例：通过对外接口
 const dictStore = useDictStore()

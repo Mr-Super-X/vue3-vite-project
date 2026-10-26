@@ -107,15 +107,15 @@ flowchart TD
 
 ## 6. 故障排查（按命中率排序）
 
-| 症状                           | 根因                                                               | 解法                                                                                                             |
-| ------------------------------ | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
-| 部署后全站 404                 | Pages Source 未绑定 GitHub Actions                                 | Settings → Pages → Source 选 "GitHub Actions"（见 §1）                                                           |
-| 首次部署卡住等待批准           | `github-pages` Environment 白名单未初始化                          | 仓库 Settings → Environments → 批准首次部署（随默认分支初始化）                                                  |
-| 部署成功但页面空白/资源 404    | `VITE_BASE` 与仓库名不一致，或本地构建时 Git Bash 污染 `--base`    | 确认 `deploy.yml` 的 `VITE_BASE: /<repo>/`；本地模拟须 `MSYS2_ARG_CONV_EXCL='*' pnpm build-only --base=/<repo>/` |
-| 刷新/深层链接 404              | 误用 history 模式                                                  | `VITE_HISTORY_MODE=hash`（gh-pages 无 SPA fallback）                                                             |
-| 登录后立刻被弹回 / profile 401 | mock 挂接晚于 router install（拦截窗口穿透）                       | 确认 `src/main.ts` 挂接块在 `use(router)` 前且顶层 await（§5.1）                                                 |
-| dev 模式登录必挂               | PROD 守卫缺失导致 dev 双重劫持                                     | 挂接条件必须是 `PROD && VITE_USE_MOCK==='true'`（§5.2）                                                          |
-| 字典双 toast / 字典 400        | client wrapper 不支持路径参数，动态 `/api/dict/:code` 恒 undefined | 已由 `prodDictMocks` 静态展开根治（docs/22 §10）；回退检查 `mockProdServer.ts` 是否漏登记                        |
+| 症状                           | 根因                                                               | 解法                                                                                                                           |
+| ------------------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| 部署后全站 404                 | Pages Source 未绑定 GitHub Actions                                 | Settings → Pages → Source 选 "GitHub Actions"（见 §1）                                                                         |
+| 首次部署卡住等待批准           | `github-pages` Environment 白名单未初始化                          | 仓库 Settings → Environments → 批准首次部署（随默认分支初始化）                                                                |
+| 部署成功但页面空白/资源 404    | `VITE_BASE` 与仓库名不一致，或本地构建时 Git Bash 污染 `--base`    | 确认 `deploy.yml` 的 `VITE_BASE: /<repo>/`；本地模拟须 `MSYS2_ARG_CONV_EXCL='*' pnpm -C apps/admin build-only --base=/<repo>/` |
+| 刷新/深层链接 404              | 误用 history 模式                                                  | `VITE_HISTORY_MODE=hash`（gh-pages 无 SPA fallback）                                                                           |
+| 登录后立刻被弹回 / profile 401 | mock 挂接晚于 router install（拦截窗口穿透）                       | 确认 `src/main.ts` 挂接块在 `use(router)` 前且顶层 await（§5.1）                                                               |
+| dev 模式登录必挂               | PROD 守卫缺失导致 dev 双重劫持                                     | 挂接条件必须是 `PROD && VITE_USE_MOCK==='true'`（§5.2）                                                                        |
+| 字典双 toast / 字典 400        | client wrapper 不支持路径参数，动态 `/api/dict/:code` 恒 undefined | 已由 `prodDictMocks` 静态展开根治（docs/22 §10）；回退检查 `mockProdServer.ts` 是否漏登记                                      |
 
 ---
 
@@ -123,11 +123,12 @@ flowchart TD
 
 ```bash
 # Git Bash 用户必须带 MSYS2_ARG_CONV_EXCL，否则 --base 被转成 /Program Files/Git/...
-MSYS2_ARG_CONV_EXCL='*' pnpm build-only --base=/vue3-vite-project/
-pnpm preview
+# 根级无 build-only/preview——两个命令都在 app 内定义（以 admin 为例）
+MSYS2_ARG_CONV_EXCL='*' pnpm -C apps/admin build-only --base=/vue3-vite-project/
+pnpm -C apps/admin preview
 ```
 
-`pnpm preview` 起的是静态服务（无 dev 中间件），最接近 gh-pages 真实形态——登录、菜单、字典、ProTable 直连数据源都应工作。注意：preview 下 `VITE_USE_MOCK` 取自 `.env.production`，本地预演演示模式需在 `.env.production` 设 `VITE_USE_MOCK=true` + `VITE_DEMO_NO_AUTH=true`（勿提交该改动）。
+`pnpm -C apps/admin preview` 起的是静态服务（无 dev 中间件），最接近 gh-pages 真实形态——登录、菜单、字典、ProTable 直连数据源都应工作。注意：preview 下 `VITE_USE_MOCK` 取自 `.env.production`，本地预演演示模式需在 `.env.production` 设 `VITE_USE_MOCK=true` + `VITE_DEMO_NO_AUTH=true`（勿提交该改动）。
 
 ---
 

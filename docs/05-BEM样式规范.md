@@ -67,8 +67,8 @@
 
 ## 🛠️ 优先使用 `createNamespace()` 创建 BEM（必读）
 
-> `createNamespace()` 来自 `src/utils/bem.ts`（约 190 行）。
-> 由 `unplugin-auto-import`（`vite.config.ts` 第 83 行）自动注入到 `<script setup>` **全局作用域**。
+> `createNamespace()` 来自 `@vv/shared` 的 `packages/shared/src/utils/bem.ts`。
+> 由 `unplugin-auto-import`（`@vv/config` 工厂 `packages/config/src/create-vite-config.ts` 的 AutoImport 段）自动注入到 `<script setup>` **全局作用域**。
 > 禁止 `import { createNamespace } from '@utils/bem'`——会与自动注入冲突。
 
 ### API 一览（运行时拼接类名）
@@ -90,7 +90,7 @@
 ```vue
 <!-- 教学示例（user 模块当前无 components/UserCard.vue，模式适用于任意业务组件） -->
 <script setup lang="ts">
-// createNamespace 由 unplugin-auto-import 自动注入（vite.config.ts 第 83 行），
+// createNamespace 由 unplugin-auto-import 自动注入（@vv/config 工厂 AutoImport 段），
 // 无须显式 import。BEM 前缀来自 import.meta.env.VITE_BEM_PREFIX ?? 'vv'。
 const bem = createNamespace('user-card')
 </script>
@@ -434,16 +434,18 @@ const bem = createNamespace('user-card')
 
 ### 前缀可配置：`VITE_BEM_PREFIX`（两种方案共享）
 
-| 工具                     | 文件                                     | 读取方式                                                     |
-| ------------------------ | ---------------------------------------- | ------------------------------------------------------------ |
-| 运行时 TS 工具           | `src/utils/bem.ts` → `createNamespace()` | `import.meta.env.VITE_BEM_PREFIX ?? 'vv'`                    |
-| 编译期 SCSS 插值 / mixin | `<style lang="scss">` 块                 | 由 vite additionalData 用 sass `with` 语法注入 `$BEM_PREFIX` |
+| 工具                     | 文件                                                     | 读取方式                                                     |
+| ------------------------ | -------------------------------------------------------- | ------------------------------------------------------------ |
+| 运行时 TS 工具           | `packages/shared/src/utils/bem.ts` → `createNamespace()` | `import.meta.env.VITE_BEM_PREFIX ?? 'vv'`                    |
+| 编译期 SCSS 插值 / mixin | `<style lang="scss">` 块                                 | 由 vite additionalData 用 sass `with` 语法注入 `$BEM_PREFIX` |
 
-**vite 注入实现**（`vite.config.ts` 第 154 行）：
+**vite 注入实现**（`@vv/config` 工厂 scss 段，`packages/config/src/scss.ts` 的 `createScssPreprocessorOptions`）：
 
 ```ts
+// bem.scss 已随迁 @vv/ui 包（packages/ui/src/assets/styles/mixins/bem.scss）；
+// 经 sass loadPaths + 裸模块名 @use（绝对路径盘符冒号会被 sass 误判为 URL scheme，见 scss.ts 头注）
 scss: {
-  additionalData: `@use '@/assets/styles/mixins/bem' as * with ($BEM_PREFIX: '${process.env.VITE_BEM_PREFIX ?? 'vv'}');\n`,
+  additionalData: `@use 'bem' as * with ($BEM_PREFIX: '${process.env.VITE_BEM_PREFIX ?? 'vv'}');\n`,
 }
 ```
 
