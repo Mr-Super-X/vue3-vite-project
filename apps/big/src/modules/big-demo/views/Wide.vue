@@ -137,9 +137,10 @@ const activeDimension = ref<(typeof WIDE_DIMENSIONS)[number]>('按大区')
   width: 9000px;
   height: 1080px;
   padding: 0 100px 60px;
-  color: #d6e4ff;
+  color: var(--big-text);
   background:
-    radial-gradient(ellipse 4000px 600px at 50% -10%, rgba(43, 109, 224, 0.3), transparent), #06122b;
+    radial-gradient(ellipse 4000px 600px at 50% -10%, rgba(var(--big-blue-rgb), 0.3), transparent),
+    #06122b;
 
   &__header {
     position: relative;
@@ -166,7 +167,7 @@ const activeDimension = ref<(typeof WIDE_DIMENSIONS)[number]>('按大区')
     right: 0;
     margin: 0;
     font-size: 30px;
-    color: #5f7bab;
+    color: var(--big-text-3);
     font-variant-numeric: tabular-nums;
   }
 
@@ -217,15 +218,15 @@ const activeDimension = ref<(typeof WIDE_DIMENSIONS)[number]>('按大区')
     justify-content: center;
     height: 100%;
     font-size: 24px;
-    color: #5f7bab;
+    color: var(--big-text-3);
     background: rgba(10, 24, 48, 0.4);
-    border: 1px dashed rgba(62, 140, 255, 0.25);
+    border: 1px dashed rgba(var(--big-blue-mid-rgb), 0.25);
     border-radius: 12px;
   }
 
   &__map-fallback-text {
     margin: 0;
-    color: #f56c6c;
+    color: var(--el-color-danger);
   }
 
   &__map-retry {
@@ -233,12 +234,12 @@ const activeDimension = ref<(typeof WIDE_DIMENSIONS)[number]>('按大区')
     font-size: 20px;
     color: #ffffff;
     cursor: pointer;
-    background: rgba(77, 163, 255, 0.3);
-    border: 1px solid #4da3ff;
+    background: rgba(var(--big-blue-light-rgb), 0.3);
+    border: 1px solid var(--big-primary);
     border-radius: 6px;
 
     &:hover {
-      background: rgba(77, 163, 255, 0.5);
+      background: rgba(var(--big-blue-light-rgb), 0.5);
     }
   }
 
@@ -252,14 +253,14 @@ const activeDimension = ref<(typeof WIDE_DIMENSIONS)[number]>('按大区')
   &__metric {
     dt {
       font-size: 20px;
-      color: #8fa8d8;
+      color: var(--big-text-2);
     }
 
     dd {
       margin: 4px 0 0;
       font-size: 32px;
       font-weight: 700;
-      color: #4da3ff;
+      color: var(--big-primary);
       font-variant-numeric: tabular-nums;
     }
   }
@@ -285,19 +286,19 @@ const activeDimension = ref<(typeof WIDE_DIMENSIONS)[number]>('按大区')
     font-size: 18px;
     line-height: 32px;
     text-align: center;
-    color: #0a1830;
+    color: var(--big-text-deep);
     background: #3a5a8c;
     border-radius: 8px;
   }
 
   &__rank-name {
     flex: 1;
-    color: #d6e4ff;
+    color: var(--big-text);
   }
 
   &__rank-value {
     flex: none;
-    color: #8fa8d8;
+    color: var(--big-text-2);
     font-variant-numeric: tabular-nums;
   }
 
@@ -310,16 +311,16 @@ const activeDimension = ref<(typeof WIDE_DIMENSIONS)[number]>('按大区')
   &__dimension {
     padding: 10px 24px;
     font-size: 22px;
-    color: #d6e4ff;
+    color: var(--big-text);
     cursor: pointer;
-    background: rgba(43, 109, 224, 0.12);
-    border: 1px solid rgba(62, 140, 255, 0.35);
+    background: rgba(var(--big-blue-rgb), 0.12);
+    border: 1px solid rgba(var(--big-blue-mid-rgb), 0.35);
     border-radius: 8px;
 
     &--active {
       color: #ffffff;
-      background: rgba(77, 163, 255, 0.35);
-      border-color: #4da3ff;
+      background: rgba(var(--big-blue-light-rgb), 0.35);
+      border-color: var(--big-primary);
     }
   }
 
@@ -350,12 +351,12 @@ const activeDimension = ref<(typeof WIDE_DIMENSIONS)[number]>('按大区')
     }
 
     &--中 {
-      color: #0a1830;
+      color: var(--big-text-deep);
       background: rgba(247, 201, 72, 0.9);
     }
 
     &--低 {
-      color: #0a1830;
+      color: var(--big-text-deep);
       background: rgba(143, 168, 216, 0.75);
     }
   }
@@ -369,7 +370,7 @@ const activeDimension = ref<(typeof WIDE_DIMENSIONS)[number]>('按大区')
 
   &__alarm-time {
     flex: none;
-    color: #5f7bab;
+    color: var(--big-text-3);
     font-variant-numeric: tabular-nums;
   }
 }

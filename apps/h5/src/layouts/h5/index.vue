@@ -36,11 +36,14 @@ onUnmounted(deactivateRem)
 </template>
 
 <style lang="scss">
+// 非 scoped：h5-tokens 提供的 CSS 变量需对 h5-demo 子组件可见（同 portal/big-tokens 模式）
+@use './styles/h5-tokens.scss' as *;
+
 // 本文件在 postcss-pxtorem 转换范围内（src/layouts/h5/），直接写 828 设计稿 px 即可
 .#{$BEM_PREFIX}-h5-layout {
   min-height: 100vh;
   // 100dvh 渐进增强：规避 iOS Safari 地址栏收缩导致的 100vh 溢出（与 default 布局同策略）
   min-height: 100dvh;
-  background: #f7f8fa;
+  background: var(--h5-bg);
 }
 </style>

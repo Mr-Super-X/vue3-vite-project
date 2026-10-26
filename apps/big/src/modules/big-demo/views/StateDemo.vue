@@ -132,9 +132,9 @@ const updatedAt = '14:32:08'
   width: 1920px;
   height: 1080px;
   padding: 0 60px 40px;
-  color: #d6e4ff;
+  color: var(--big-text);
   background:
-    radial-gradient(ellipse 1200px 500px at 50% -10%, rgba(43, 109, 224, 0.25), transparent),
+    radial-gradient(ellipse 1200px 500px at 50% -10%, rgba(var(--big-blue-rgb), 0.25), transparent),
     #06122b;
 
   &__header {
@@ -163,16 +163,16 @@ const updatedAt = '14:32:08'
   &__tab {
     padding: 8px 28px;
     font-size: 18px;
-    color: #8fa8d8;
+    color: var(--big-text-2);
     cursor: pointer;
-    background: rgba(43, 109, 224, 0.1);
-    border: 1px solid rgba(62, 140, 255, 0.3);
+    background: rgba(var(--big-blue-rgb), 0.1);
+    border: 1px solid rgba(var(--big-blue-mid-rgb), 0.3);
     border-radius: 6px;
 
     &--active {
       color: #ffffff;
-      background: rgba(77, 163, 255, 0.35);
-      border-color: #4da3ff;
+      background: rgba(var(--big-blue-light-rgb), 0.35);
+      border-color: var(--big-primary);
     }
   }
 
@@ -186,7 +186,7 @@ const updatedAt = '14:32:08'
     margin-top: 24px;
     padding: 40px;
     background: rgba(10, 24, 48, 0.5);
-    border: 1px solid rgba(62, 140, 255, 0.18);
+    border: 1px solid rgba(var(--big-blue-mid-rgb), 0.18);
     border-radius: 12px;
   }
 
@@ -201,27 +201,27 @@ const updatedAt = '14:32:08'
   &__kpi {
     margin: 0;
     padding: 32px;
-    background: rgba(43, 109, 224, 0.08);
-    border: 1px solid rgba(62, 140, 255, 0.25);
+    background: rgba(var(--big-blue-rgb), 0.08);
+    border: 1px solid rgba(var(--big-blue-mid-rgb), 0.25);
     border-radius: 10px;
 
     dt {
       font-size: 20px;
-      color: #8fa8d8;
+      color: var(--big-text-2);
     }
 
     dd {
       margin: 12px 0 0;
       font-size: 44px;
       font-weight: 700;
-      color: #4da3ff;
+      color: var(--big-primary);
       font-variant-numeric: tabular-nums;
 
       small {
         margin-left: 8px;
         font-size: 18px;
         font-weight: 400;
-        color: #5f7bab;
+        color: var(--big-text-3);
       }
     }
   }
@@ -231,12 +231,12 @@ const updatedAt = '14:32:08'
     height: 154px;
     background: linear-gradient(
       90deg,
-      rgba(77, 163, 255, 0.06) 25%,
-      rgba(77, 163, 255, 0.16) 50%,
-      rgba(77, 163, 255, 0.06) 75%
+      rgba(var(--big-blue-light-rgb), 0.06) 25%,
+      rgba(var(--big-blue-light-rgb), 0.16) 50%,
+      rgba(var(--big-blue-light-rgb), 0.06) 75%
     );
     background-size: 200% 100%;
-    border: 1px solid rgba(62, 140, 255, 0.15);
+    border: 1px solid rgba(var(--big-blue-mid-rgb), 0.15);
     border-radius: 10px;
     animation: vv-state-demo-shimmer 1.4s linear infinite;
   }
@@ -244,7 +244,7 @@ const updatedAt = '14:32:08'
   &__updated {
     margin: 24px 0 0;
     font-size: 16px;
-    color: #5f7bab;
+    color: var(--big-text-3);
     font-variant-numeric: tabular-nums;
   }
 
@@ -260,7 +260,7 @@ const updatedAt = '14:32:08'
     &-desc {
       margin: 12px 0 24px;
       font-size: 18px;
-      color: #8fa8d8;
+      color: var(--big-text-2);
     }
 
     &-btn {
@@ -268,18 +268,18 @@ const updatedAt = '14:32:08'
       font-size: 18px;
       color: #ffffff;
       cursor: pointer;
-      background: rgba(77, 163, 255, 0.3);
-      border: 1px solid #4da3ff;
+      background: rgba(var(--big-blue-light-rgb), 0.3);
+      border: 1px solid var(--big-primary);
       border-radius: 6px;
 
       &:hover {
-        background: rgba(77, 163, 255, 0.5);
+        background: rgba(var(--big-blue-light-rgb), 0.5);
       }
     }
 
     // 错误态：红色系
     &--error &__notice-title {
-      color: #f56c6c;
+      color: var(--el-color-danger);
     }
 
     // 断连态：黄色系，与错误态视觉区分（中断 ≠ 失败）
@@ -289,7 +289,7 @@ const updatedAt = '14:32:08'
 
     // 空态：中性灰蓝
     &--empty &__notice-title {
-      color: #8fa8d8;
+      color: var(--big-text-2);
     }
   }
 
@@ -299,13 +299,13 @@ const updatedAt = '14:32:08'
     padding: 16px 24px;
     font-size: 17px;
     line-height: 1.7;
-    color: #8fa8d8;
+    color: var(--big-text-2);
     background: rgba(10, 24, 48, 0.4);
-    border-left: 3px solid #4da3ff;
+    border-left: 3px solid var(--big-primary);
     border-radius: 0 8px 8px 0;
 
     strong {
-      color: #d6e4ff;
+      color: var(--big-text);
     }
   }
 }

@@ -43,14 +43,14 @@ const bem = createNamespace('panel-box')
   box-sizing: border-box;
   padding: 16px 20px;
   background: rgba(13, 38, 76, 0.35);
-  border: 1px solid rgba(62, 140, 255, 0.25);
+  border: 1px solid rgba(var(--big-blue-mid-rgb), 0.25);
 
   &__corner {
     position: absolute;
     width: 18px;
     height: 18px;
     // 角高光色比边框亮一档，形成视觉焦点
-    border-color: #4da3ff;
+    border-color: var(--big-primary);
     border-style: solid;
     border-width: 0;
     pointer-events: none;
@@ -89,7 +89,7 @@ const bem = createNamespace('panel-box')
     padding-bottom: 12px;
     font-size: 18px;
     font-weight: 600;
-    color: #d6e4ff;
+    color: var(--big-text);
     letter-spacing: 1px;
   }
 

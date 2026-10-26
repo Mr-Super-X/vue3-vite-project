@@ -1,0 +1,19 @@
+// big 数据大屏视觉 token（2026-10-30 样式审计——big-demo 7 文件魔法色值收敛单源）
+// 科技蓝深色体系：文字三档 + 主蓝一族（实心值 + rgb 分量形态，供 rgba() 就地组合透明度）
+// 挂截点：layouts/big/index.vue 的 @use（非 scoped，CSS 变量对子组件可见——同 portal-tokens 模式）
+// 低频色保留就地（#143168 等背景层次色、EP 语义色经 var(--el-*) 消费）
+
+:root {
+  // 文字四档（深底浅色字为主，一档极深供浅底场景）
+  --big-text: #d6e4ff; // 主文字（面板标题 / 正文）
+  --big-text-2: #8fa8d8; // 次级文字（标签 / 维度名）
+  --big-text-3: #5f7bab; // 弱化文字（辅助说明）
+  --big-text-deep: #0a1830; // 极深文字（浅底上的标题、RankingList 序号等）
+  // 主蓝一族
+  --big-primary: #4da3ff; // 实心主蓝（高亮数值 / 激活态）
+  // rgb 分量 token：rgba(var(--big-blue-rgb), 0.25) 形态就地组合透明度——
+  // 大屏的 glow / 半透明边框 / 淡底背景本质是同族蓝的透明度变体，逐一命名不经济
+  --big-blue-rgb: 43, 109, 224; // 深主蓝（描边 / 强调 glow）
+  --big-blue-mid-rgb: 62, 140, 255; // 中主蓝（边框 / 中亮 glow）
+  --big-blue-light-rgb: 77, 163, 255; // 浅主蓝（大面积淡底 / 高亮 glow）
+}

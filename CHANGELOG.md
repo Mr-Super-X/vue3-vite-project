@@ -4,6 +4,15 @@
 
 ## 未发布
 
+### 🎨 Refactor | 第十一轮收官：big/h5 视觉 token 单源化（83 处魔法值收敛）/ 错误处理规范正面确认（2026-10-30）
+
+> 背景：样式审计 #3/#4 遗留的 big/h5 魔法色值债（8 文件重复 rgba 三族 + vant 灰阶）+ 「基础建设」维度的错误处理规范落实核查。
+
+- **big-tokens.scss 新建**（`apps/big/src/layouts/big/styles/`，portal-tokens 同款挂法——layout 根 @use 非 scoped）：文字四档（`--big-text/text-2/text-3/text-deep`）+ 主蓝一族实心（`--big-primary`）与 **rgb 分量 token**（`--big-blue-rgb/mid-rgb/light-rgb`——`rgba(var(--x), 透明度)` 就地组合，大屏 glow/半透明边框/淡底背景本质是同族蓝透明度变体，逐一命名不经济）；`#f56c6c` → `var(--el-color-danger)`（EP 语义色归位）。**语义经逐色现场核实修正**（审计原推断 #8fa8d8 为 border——实为次级文字色）。7 个 big-demo 文件 + StateDemo/Wide 共 **76 处**替换，残留 0，big build-only 实证过
+- **h5-tokens.scss 新建**（`apps/h5/src/layouts/h5/styles/`）：vant 灰阶四色（`--h5-text/text-2/line/bg`），h5 layout + h5-demo 共 **7 处**替换，残留 0
+- **错误处理规范正面确认**：全仓 catch 块扫描（自定义 AST 级行扫描，排除 spec）——**零静默吞错误、零仅 console.log catch**；3 处 `catch {` 均为合法刻意形态（JSON.stringify 循环引用降级 / ElMessage 用户提示 / useDialog 取消契约分支）
+- **验证**：big/h5 build-only 双实证 + turbo type-check 10/10 + test 9/9
+
 ### 🧪 Test Infra | 第十轮基础建设：fakeLocation 共享测试夹具收敛 / ElMessage 中文拦截评估留档（2026-10-30）
 
 > 背景：「基础建设」维度补测试基建——整页跳转断言的 stubGlobal location 样板在 3 个 spec 逐字重复（i18n 化后确立的标准形态）；i18n 审计建议的 ElMessage 中文拦截 ESLint 规则落地评估。

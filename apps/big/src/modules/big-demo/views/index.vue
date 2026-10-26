@@ -145,9 +145,9 @@ const regionItems: RankingItem[] = REGION_RANK.map((r) => ({ ...r }))
   width: 1920px;
   height: 1080px;
   padding: 0 30px 30px;
-  color: #d6e4ff;
+  color: var(--big-text);
   background:
-    radial-gradient(ellipse 1200px 500px at 50% -10%, rgba(43, 109, 224, 0.25), transparent),
+    radial-gradient(ellipse 1200px 500px at 50% -10%, rgba(var(--big-blue-rgb), 0.25), transparent),
     #06122b;
 
   &__header {
@@ -175,21 +175,21 @@ const regionItems: RankingItem[] = REGION_RANK.map((r) => ({ ...r }))
     justify-content: center;
     margin: 4px 0 0;
     font-size: 14px;
-    color: #5f7bab;
+    color: var(--big-text-3);
   }
 
   &__metrics-toggle {
     padding: 0 6px;
     font-size: 13px;
-    color: #4da3ff;
+    color: var(--big-primary);
     cursor: pointer;
     background: transparent;
-    border: 1px solid rgba(77, 163, 255, 0.35);
+    border: 1px solid rgba(var(--big-blue-light-rgb), 0.35);
     border-radius: 3px;
 
     &:hover {
       color: #8fc3ff;
-      border-color: rgba(77, 163, 255, 0.6);
+      border-color: rgba(var(--big-blue-light-rgb), 0.6);
     }
   }
 
@@ -253,7 +253,7 @@ const regionItems: RankingItem[] = REGION_RANK.map((r) => ({ ...r }))
     overflow: hidden;
     list-style: none;
     font-size: 15px;
-    color: #8fa8d8;
+    color: var(--big-text-2);
 
     li {
       padding: 6px 0;
@@ -263,7 +263,7 @@ const regionItems: RankingItem[] = REGION_RANK.map((r) => ({ ...r }))
 
   &__feed-time {
     margin-right: 12px;
-    color: #4da3ff;
+    color: var(--big-primary);
     font-variant-numeric: tabular-nums;
   }
 }

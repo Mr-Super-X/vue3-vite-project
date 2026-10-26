@@ -91,13 +91,13 @@ onUnmounted(() => {
     margin: 0 0 12px;
     font-size: 36px;
     font-weight: 600;
-    color: #1a1a1a;
+    color: var(--h5-text);
   }
 
   &__meta {
     margin: 0;
     font-size: 20px;
-    color: #646566;
+    color: var(--h5-text-2);
   }
 
   &__card {
@@ -128,7 +128,7 @@ onUnmounted(() => {
   &__text-sm {
     margin: 0;
     font-size: 20px;
-    color: #646566;
+    color: var(--h5-text-2);
   }
 
   &__box-width {
@@ -145,11 +145,11 @@ onUnmounted(() => {
     margin-bottom: 16px;
     padding: 20px;
     font-size: 20px;
-    color: #646566;
+    color: var(--h5-text-2);
     border-radius: 8px;
 
     &--hairline {
-      border: 1px solid #ebedf0;
+      border: 1px solid var(--h5-line);
     }
 
     &--scaled {
@@ -160,7 +160,7 @@ onUnmounted(() => {
   &__footer {
     padding: 16px 0 32px;
     font-size: 20px;
-    color: #646566;
+    color: var(--h5-text-2);
     text-align: center;
   }
 }

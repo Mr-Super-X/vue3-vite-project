@@ -49,16 +49,16 @@ function toggleSwitch(key: (typeof WIDE_SWITCHES)[number]['key']): void {
   &__switch {
     padding: 10px 24px;
     font-size: 22px;
-    color: #d6e4ff;
+    color: var(--big-text);
     cursor: pointer;
-    background: rgba(43, 109, 224, 0.12);
-    border: 1px solid rgba(62, 140, 255, 0.35);
+    background: rgba(var(--big-blue-rgb), 0.12);
+    border: 1px solid rgba(var(--big-blue-mid-rgb), 0.35);
     border-radius: 8px;
 
     &--on {
       color: #ffffff;
-      background: rgba(77, 163, 255, 0.35);
-      border-color: #4da3ff;
+      background: rgba(var(--big-blue-light-rgb), 0.35);
+      border-color: var(--big-primary);
     }
   }
 }

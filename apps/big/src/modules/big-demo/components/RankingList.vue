@@ -66,7 +66,7 @@ function medalColor(index: number): string {
     font-size: 14px;
     line-height: 24px;
     text-align: center;
-    color: #0a1830;
+    color: var(--big-text-deep);
     border-radius: 4px;
   }
 
@@ -74,7 +74,7 @@ function medalColor(index: number): string {
     flex: none;
     width: 96px;
     overflow: hidden;
-    color: #d6e4ff;
+    color: var(--big-text);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -83,14 +83,14 @@ function medalColor(index: number): string {
     flex: 1;
     height: 8px;
     overflow: hidden;
-    background: rgba(62, 140, 255, 0.12);
+    background: rgba(var(--big-blue-mid-rgb), 0.12);
     border-radius: 4px;
   }
 
   &__bar {
     display: block;
     height: 100%;
-    background: linear-gradient(90deg, #2b6de0, #4da3ff);
+    background: linear-gradient(90deg, #2b6de0, var(--big-primary));
     border-radius: 4px;
     transition: width 0.4s ease;
   }
@@ -99,7 +99,7 @@ function medalColor(index: number): string {
     flex: none;
     width: 80px;
     text-align: right;
-    color: #8fa8d8;
+    color: var(--big-text-2);
     font-variant-numeric: tabular-nums;
   }
 }

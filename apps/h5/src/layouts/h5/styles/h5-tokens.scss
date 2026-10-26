@@ -1,0 +1,10 @@
+// h5 移动端视觉 token（2026-10-30 样式审计——h5-demo vant 色系魔法值收敛单源）
+// vant 灰阶四色：文字两档 + 边框 + 页面底（h5 layout 与 h5-demo 模块共用）
+// 挂截点：layouts/h5/index.vue 的 @use（非 scoped，CSS 变量对子组件可见——同 portal/big-tokens 模式）
+
+:root {
+  --h5-text: #1a1a1a; // 主文字
+  --h5-text-2: #646566; // 次级文字
+  --h5-line: #ebedf0; // 边框 / 分割线
+  --h5-bg: #f7f8fa; // 页面底
+}

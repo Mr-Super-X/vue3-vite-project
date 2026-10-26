@@ -103,6 +103,9 @@ const stageStyle = computed(() => ({
 </template>
 
 <style lang="scss">
+// 非 scoped：big-tokens 提供的 CSS 变量需对 big-demo 子组件可见（同 portal-tokens 模式）
+@use './styles/big-tokens.scss' as *;
+
 // big layout 不走 postcss-pxtorem（仅 h5 前缀目录在转换范围），px 原样输出
 .#{$BEM_PREFIX}-big-layout {
   position: fixed;

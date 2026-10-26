@@ -50,11 +50,11 @@ const trendClass = computed(() => {
   box-sizing: border-box;
   padding: 16px 20px;
   background: rgba(13, 38, 76, 0.35);
-  border: 1px solid rgba(62, 140, 255, 0.2);
+  border: 1px solid rgba(var(--big-blue-mid-rgb), 0.2);
 
   &__label {
     font-size: 16px;
-    color: #8fa8d8;
+    color: var(--big-text-2);
   }
 
   &__value-row {
@@ -66,7 +66,7 @@ const trendClass = computed(() => {
   &__value {
     font-size: 36px;
     font-weight: 700;
-    color: #4da3ff;
+    color: var(--big-primary);
     // 等宽数字：多位数值跳动时列宽不抖
     font-variant-numeric: tabular-nums;
   }
@@ -74,7 +74,7 @@ const trendClass = computed(() => {
   &__unit {
     margin-left: 6px;
     font-size: 14px;
-    color: #8fa8d8;
+    color: var(--big-text-2);
   }
 
   &__trend {
@@ -82,7 +82,7 @@ const trendClass = computed(() => {
     font-size: 14px;
 
     &--up {
-      color: #f56c6c;
+      color: var(--el-color-danger);
     }
 
     &--down {
@@ -90,7 +90,7 @@ const trendClass = computed(() => {
     }
 
     &--flat {
-      color: #8fa8d8;
+      color: var(--big-text-2);
     }
   }
 }
