@@ -7,6 +7,8 @@
     ".": "./src/index.ts",
     "./store": "./src/store/index.ts",
     "./router-guards": "./src/router-guards/index.ts",
+    "./utils": "./src/utils/index.ts",
+    "./app-styles": "./src/app-styles.ts",
     "./*": "./src/*"
   },
   "scripts": {

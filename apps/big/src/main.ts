@@ -20,10 +20,7 @@ import Directives from '@directives'
 import { createGlobalComponents } from '@vv/ui'
 import { setDialogAppContext } from '@vv/ui/composables/useDialog'
 import { bootstrapApp } from '@vv/shared'
-
-import 'normalize.css'
-import 'virtual:uno.css'
-import '@assets/styles/index.scss'
+import '@vv/shared/app-styles'
 
 await bootstrapApp({
   rootComponent: App,

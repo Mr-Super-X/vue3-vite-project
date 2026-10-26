@@ -12,9 +12,11 @@ export default [
     response: ({
       query,
     }: {
-      query: { pageIndex?: string; pageSize?: string; keyword?: string }
+      // 分页参数契约与 @vv/shared api 层 UserListParams 对齐（2026-10-26 测试审计 H1）：
+      // api 发 page/pageSize，原 mock 读 pageIndex 致 mock 环境翻页永远第 1 页
+      query: { page?: string; pageSize?: string; keyword?: string }
     }) => {
-      const page = Number(query.pageIndex) || 1
+      const page = Number(query.page) || 1
       const pageSize = Number(query.pageSize) || 10
       const keyword = query.keyword?.toLowerCase() ?? ''
       const filtered = keyword

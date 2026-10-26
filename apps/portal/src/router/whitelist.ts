@@ -9,13 +9,12 @@
  * @group 路由：白名单
  */
 
-import { isWhiteListed } from '@vv/shared/router-guards'
+import { createWhiteList, isWhiteListed } from '@vv/shared/router-guards'
 import { routeNames as homeRouteNames } from '@/modules/home/routes'
 
-export const ROUTE_WHITE_LIST: ReadonlySet<string> = new Set<string>([
-  'NotFound', // 404 页面
-  ...homeRouteNames,
-])
+// 白名单构造样板经 @vv/shared createWhiteList 单源（2026-10-23 重复性审查收敛）；
+// check-routes 按 createWhiteList 调用提取名单，改名须同步脚本
+export const ROUTE_WHITE_LIST: ReadonlySet<string> = createWhiteList('NotFound', homeRouteNames)
 
 /**
  * 判定路由是否在 portal 白名单内（直通放行）。

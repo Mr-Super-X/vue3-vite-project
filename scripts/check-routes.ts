@@ -116,23 +116,21 @@ function extractImplementedNames(app: string): Set<string> {
 }
 
 /**
- * 提取 ROUTE_WHITE_LIST 生效名单（字面量 + routeNames 展开）。
+ * 提取 ROUTE_WHITE_LIST 生效名单（三种形态）。
  *
- * whitelist.ts 两种形态：
- *   1. 纯字面量（admin）：new Set<string>([ 'Forbidden', ... ])
- *   2. 吸收展开（auth/portal/h5/big/docs）：
+ * whitelist.ts 三种形态：
+ *   1. createWhiteList('NotFound', xxxRouteNames)——5 公开 app 收敛形态（2026-10-23），
+ *      字面量 + 数组引用混传（createWhiteList 拍平嵌套）
+ *   2. 吸收展开（遗留形态，与新 Set 同结构）：
  *        import { routeNames as authRouteNames } from '@/modules/auth/routes'
  *        new Set<string>([ 'NotFound', ...authRouteNames ])
+ *   3. 纯字面量（admin）：new Set<string>([ 'Forbidden', ... ])
  *
  * 展开条目按 import 表解析到具体模块，用该模块 routes 文件的实际 name 展开——
  * 与运行时"routeNames 全量吸收进白名单"的行为严格一致。
  */
 function extractWhitelist(content: string, app: string): Set<string> {
-  const setMatch = content.match(/new Set<[^>]+>\s*\(\s*\[([^\]]+)\]/s)
-  if (!setMatch) return new Set()
-
-  const body = setMatch[1]!
-  const names = new Set<string>([...body.matchAll(/'([A-Za-z][\w-]*)'/g)].map((m) => m[1]!))
+  const names = new Set<string>()
 
   // import { routeNames as <alias> } from '@/modules/<module>/routes'
   const aliasToModule = new Map<string, string>()
@@ -140,9 +138,9 @@ function extractWhitelist(content: string, app: string): Set<string> {
     /import\s*\{\s*routeNames\s+as\s+(\w+)\s*\}\s*from\s*'@\/modules\/([\w-]+)\/routes'/g
   for (const m of content.matchAll(importRe)) aliasToModule.set(m[1]!, m[2]!)
 
-  for (const m of body.matchAll(/\.\.\.(\w+)/g)) {
-    const moduleName = aliasToModule.get(m[1]!)
-    if (!moduleName) continue
+  const expandAlias = (alias: string): void => {
+    const moduleName = aliasToModule.get(alias)
+    if (!moduleName) return
     try {
       for (const n of extractRouteNames(
         readAppText(app, `src/modules/${moduleName}/routes/index.ts`)
@@ -153,6 +151,27 @@ function extractWhitelist(content: string, app: string): Set<string> {
       // 展开指向的模块无 routes 文件：运行时吸收为空集，此处同样忽略
     }
   }
+
+  // 形态 1：createWhiteList(...args)（参数区无嵌套括号，首个 ) 即闭合；去行注释后提取）
+  const clMatch = content.match(/createWhiteList\s*\(([^)]*)\)/s)
+  if (clMatch) {
+    const argsText = clMatch[1]!.replace(/\/\/[^\n]*/g, '')
+    for (const m of argsText.matchAll(/'([A-Za-z][\w-]*)'/g)) names.add(m[1]!)
+    // 数组引用形态（routeNames as xxx 直接传名）与遗留展开形态（...xxx）都要解析——
+    // 引号字面量内的词也会命中该正则，但 Map.get 未命中即跳过，无附带伤害
+    for (const m of argsText.matchAll(/\.\.\.(\w+)|(?<!['\w])([a-zA-Z_]\w*)(?!['\w])/g)) {
+      expandAlias(m[1] ?? m[2]!)
+    }
+    return names
+  }
+
+  // 形态 2/3：new Set<string>([...])
+  const setMatch = content.match(/new Set<[^>]+>\s*\(\s*\[([^\]]+)\]/s)
+  if (!setMatch) return names
+
+  const body = setMatch[1]!
+  for (const m of body.matchAll(/'([A-Za-z][\w-]*)'/g)) names.add(m[1]!)
+  for (const m of body.matchAll(/\.\.\.(\w+)/g)) expandAlias(m[1]!)
   return names
 }
 

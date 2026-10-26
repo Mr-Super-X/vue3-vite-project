@@ -8,10 +8,8 @@
  * 本文件只保留 app 差异数据：根组件 / router / pinia / i18n / 默认标题 / 插件 /
  * mock 加载回调 / setDialogAppContext 收尾。
  *
- * 浏览器基线（必须在所有自定义样式之前）：
- * - normalize.css：跨浏览器默认值统一
- * - virtual:uno.css：UnoCSS 按需原子类
- * - `@assets/styles/index.scss`：项目 SCSS 入口（物理位置在 @vv/ui 包）
+ * 浏览器样式基线三件套（normalize.css → virtual:uno.css → @assets/styles/index.scss）
+ * 已随 @vv/shared app-bootstrap 模块下沉单源（2026-10-23，原 6 app main.ts 逐字重复）；
  * Element Plus 样式由 vite.config.ts 的 ElementPlusResolver({ importStyle: 'css' }) 按需注入。
  *
  * @see [`./App.vue`](./App.vue) 根组件
@@ -32,10 +30,8 @@ import { createGlobalComponents } from '@vv/ui'
 import { setDialogAppContext } from '@vv/ui/composables/useDialog'
 // 装配编排工厂（P6 收敛：6 app main.ts 逐字同构段单源，顺序契约固化在工厂内）
 import { bootstrapApp } from '@vv/shared'
-
-import 'normalize.css'
-import 'virtual:uno.css'
-import '@assets/styles/index.scss'
+// 浏览器样式基线三件套（normalize/uno/全局 scss，顺序即契约）单源在 @vv/shared app-styles
+import '@vv/shared/app-styles'
 
 await bootstrapApp({
   rootComponent: App,
