@@ -8,7 +8,7 @@
  * @group 业务模块：BigDemo
  */
 import { onScopeDispose, readonly, ref, type Ref } from 'vue'
-import { dayjs } from '@utils/dayjs'
+import { dayjs } from '@vv/shared'
 
 const CLOCK_FORMAT = 'YYYY-MM-DD HH:mm:ss'
 

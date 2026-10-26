@@ -11,7 +11,7 @@
  * 7. $attrs 透传：size / effect 落到 el-tag
  * 8. dictCode 切换 → watch 补拉
  *
- * Mock 策略：vi.mock('@composables/useDict') 静态替身（与 DictSelect 同款）。
+ * Mock 策略：vi.mock('@vv/shared') 静态替身（与 DictSelect 同款）。
  *
  * EP 组件策略：直接使用真实 Element Plus 组件 + findComponent。
  * 原因与 DictSelect 一致：vitest inline: ['element-plus'] 让 EP 在测试环境自动注册，
@@ -28,9 +28,12 @@ const { dictStore, useDictMock } = vi.hoisted(() => ({
   useDictMock: vi.fn(),
 }))
 
-vi.mock('@composables/useDict', () => ({
-  useDict: useDictMock,
-}))
+// 说明符 '@composables/useDict' 经 codemod 收敛为 '@vv/shared' barrel（2026-10-26，
+// 与 DictSelect.spec 同款）——单点 mock 须 importOriginal 展开其余导出
+vi.mock('@vv/shared', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@vv/shared')>()
+  return { ...actual, useDict: useDictMock }
+})
 
 import DictTag from './DictTag.vue'
 

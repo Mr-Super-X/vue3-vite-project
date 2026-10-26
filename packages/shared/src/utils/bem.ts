@@ -2,7 +2,8 @@
  * 运行时 BEM 类名拼接工具（TypeScript 版本）。
  *
  * 角色：utils 工具模块，被 `unplugin-auto-import` 自动注入到 `<script setup>` 全局作用域，
- * 业务侧无须 `import { createNamespace } from '@utils/bem'`。
+ * 业务侧无须 `import { createNamespace } from '@vv/shared'`（注释示例随 codemod 批次 2
+ * 收敛为包名形态；@utils 深层别名已定性为过渡态遗留，见 CLAUDE.md §1.6.2）。
  *
  * 与 `src/assets/styles/mixins/bem.scss` 的 SCSS 编译期 mixin 互补：
  * - SCSS mixin：在编译期把 BEM 拼接写入 CSS（适合纯样式场景）

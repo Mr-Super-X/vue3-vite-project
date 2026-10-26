@@ -12,40 +12,46 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Local, Session } from '@vv/shared'
 import { readDraft, removeDraft, writeDraft } from './draft-storage'
 
-vi.mock('@utils/storage', () => ({
-  Local: {
-    storage: new Map<string, string>(),
-    get: vi.fn((key: string) => {
-      const map = (Local as unknown as { storage: Map<string, string> }).storage
-      const raw = map.get(key)
-      return raw ? JSON.parse(raw) : null
-    }),
-    set: vi.fn((key: string, value: unknown) => {
-      const map = (Local as unknown as { storage: Map<string, string> }).storage
-      map.set(key, JSON.stringify(value))
-    }),
-    remove: vi.fn((key: string) => {
-      const map = (Local as unknown as { storage: Map<string, string> }).storage
-      map.delete(key)
-    }),
-  },
-  Session: {
-    storage: new Map<string, string>(),
-    get: vi.fn((key: string) => {
-      const map = (Session as unknown as { storage: Map<string, string> }).storage
-      const raw = map.get(key)
-      return raw ? JSON.parse(raw) : null
-    }),
-    set: vi.fn((key: string, value: unknown) => {
-      const map = (Session as unknown as { storage: Map<string, string> }).storage
-      map.set(key, JSON.stringify(value))
-    }),
-    remove: vi.fn((key: string) => {
-      const map = (Session as unknown as { storage: Map<string, string> }).storage
-      map.delete(key)
-    }),
-  },
-}))
+// mock 说明符经 codemod 收敛为 '@vv/shared' barrel（2026-10-26）——单点 mock 须
+// importOriginal 展开其余导出（SUT 间接加载的 shared 模块依赖 barrel 其它具名）
+vi.mock('@vv/shared', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@vv/shared')>()
+  return {
+    ...actual,
+    Local: {
+      storage: new Map<string, string>(),
+      get: vi.fn((key: string) => {
+        const map = (Local as unknown as { storage: Map<string, string> }).storage
+        const raw = map.get(key)
+        return raw ? JSON.parse(raw) : null
+      }),
+      set: vi.fn((key: string, value: unknown) => {
+        const map = (Local as unknown as { storage: Map<string, string> }).storage
+        map.set(key, JSON.stringify(value))
+      }),
+      remove: vi.fn((key: string) => {
+        const map = (Local as unknown as { storage: Map<string, string> }).storage
+        map.delete(key)
+      }),
+    },
+    Session: {
+      storage: new Map<string, string>(),
+      get: vi.fn((key: string) => {
+        const map = (Session as unknown as { storage: Map<string, string> }).storage
+        const raw = map.get(key)
+        return raw ? JSON.parse(raw) : null
+      }),
+      set: vi.fn((key: string, value: unknown) => {
+        const map = (Session as unknown as { storage: Map<string, string> }).storage
+        map.set(key, JSON.stringify(value))
+      }),
+      remove: vi.fn((key: string) => {
+        const map = (Session as unknown as { storage: Map<string, string> }).storage
+        map.delete(key)
+      }),
+    },
+  }
+})
 
 describe('draft-storage', () => {
   beforeEach(() => {

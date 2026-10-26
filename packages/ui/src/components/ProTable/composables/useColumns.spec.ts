@@ -16,14 +16,20 @@ import { ref } from 'vue'
 import { useColumns } from './useColumns'
 import { Local } from '@vv/shared'
 
-// mock Local（plan critical review #5：Local 不在 auto-import，显式 mock 模块）
-vi.mock('@utils/storage', () => ({
-  Local: {
-    get: vi.fn().mockReturnValue(null),
-    set: vi.fn(),
-    remove: vi.fn(),
-  },
-}))
+// mock Local（plan critical review #5：Local 不在 auto-import，显式 mock 模块）；
+// 说明符 '@utils/storage' 经 codemod 收敛为 '@vv/shared' barrel（2026-10-26）——
+// 单点 mock 须 importOriginal 展开其余导出
+vi.mock('@vv/shared', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@vv/shared')>()
+  return {
+    ...actual,
+    Local: {
+      get: vi.fn().mockReturnValue(null),
+      set: vi.fn(),
+      remove: vi.fn(),
+    },
+  }
+})
 
 describe('useColumns', () => {
   const makeProps = () =>

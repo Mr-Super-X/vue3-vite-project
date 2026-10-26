@@ -4,6 +4,26 @@
 
 ## 未发布
 
+### ⚡ Perf | 重组件异步化：echarts/wangeditor 退出全 app 首帧（auth 等 4 app 产物 0 命中，admin 移出 modulepreload）（2026-10-26）
+
+> 背景：性能构建审计 H1——`createGlobalComponents` 的 eager glob 把 BaseChart（echarts 全量 ~1MB）+ RichTextEditor（@wangeditor ~1.33MB）无条件打进**每个** app：auth（仅登录页）entry gzip 1.06MB ≈ admin 1.15MB，且 auth 的 vendor-charts 与 admin 逐字节相同（hash CJ4vKtyr，1.1MB）——两依赖经 modulepreload 首帧强制下载。
+
+- **glob 否定排除 + 显式异步注册表**（`packages/ui/src/global-components.ts`）：glob pattern 排除 BaseChart.vue / RichTextEditor/**，新增 `lazyComponents` 注册表以 `defineAsyncComponent` 延迟加载——echarts/wangeditor 不再进任何 app 的 entry/preload，未用这些组件的页面（auth 登录/portal 官网/h5/big 演示）整个生命周期零下载；使用方（admin 图表页/docs RichText demo）首次渲染时一次性加载
+- **构建实证**：auth dist echarts/wang 命中 **0**（原 1.1MB vendor-charts 整组消除）；admin `index.html` modulepreload 清单已无 vendor-charts（chunk 保留在产物中按需加载，非图表页首屏 -1.1MB）；`index.spec.ts` 仅测 naming 工具不受注册数影响
+- **顺带发现**（未修，记录待观察）：vendor-utils fallback 把 wangeditor/axios/mockjs 混居 1.3MB 单体——重组件 async 化后 wangeditor 已自然切出独立 chunk；mockjs 进 vendor 仅演示构建形态，manualChunks 细化留待有实测收益再做（防过度设计）
+
+### 📦 Refactor | 第五轮审查落地六连：别名收敛 codemod 批次 2 / createWhiteList 工厂 / 样式基线下沉 / 分页契约修复 / vitest 依赖声明（2026-10-26）
+
+> 背景：复用性+扩展性遗留（@components/@utils/@composables 深层别名 127 处消费、5 whitelist 逐字同构、6 main.ts 样式三行逐字重复）与测试审计两个 H（mock 分页契约偏离 api 层、6 app vitest 幽灵解析）。
+
+- **别名收敛 codemod 批次 2**（`scripts/codemod-alias-round2.mjs`，验证后已删，同 hotspots 先例）——**裁决修正：`'@components/*'` 定性为既定例外**：实测 `@components/ProTable` 等目录 barrel / 无扩展 .ts 路径（125 处）经 package.json exports 通配 **TS 不可解析**（bundler resolution 不做目录索引/扩展名探测，TS2307 实证），而 `@vv/ui` 根 barrel 刻意不聚合 `components/**`（自动注册机制配套）——故回退为 sanctioned 别名消费（CLAUDE.md §1.6.2 表格已补例外行）。**实际收敛**：`'@utils/{autoImport,consoleBadge,dayjs,storage}'` + `'@composables/{useTheme,useAppRouter,useDict}'` → `'@vv/shared'` 根 barrel（13 处具名导入）；`'@components/**/*.vue'` 文件级（vi.mock / `?raw`）6 处 → `'@vv/ui/components/*.vue'`。**vi.mock 语义修复 ×5**（§1.6.2 第 4 条）：mock 说明符收敛到 barrel 后拦截面扩大，remote-menu / draft-storage / useColumns / DictSelect / DictTag 五处 mock factory 全部补 `importOriginal` 展开；测试审计 #6「vi.mock 巧合正确」4 处随收敛自然修正。shared exports 补具名子路径 `"./utils"` / `"./app-styles"`（踩坑：根 barrel 的 `export *` 图在 `vi.resetModules` + 动态 import 的 spec 密集重载下会不稳定超时——docs sidebar-state 实证，SUT 改走轻量具名子路径根治；`__uno.css` 虚拟模块在 vite-node 按文件路径解析报错——样式基线独立成 `app-styles.ts` 只被 main.ts 副作用 import，spec 零触达）
+- **createWhiteList 工厂**（`packages/shared/src/router-guards/whitelist.ts`）：5 公开 app 的 `new Set(['NotFound', ...routeNames])` 逐字同构收敛为 `createWhiteList('NotFound', xxxRouteNames)`（嵌套数组拍平）；**check-routes extractWhitelist 同步双形态支持**（createWhiteList 引用/展开 + new Set 字面量，admin 形态保留），auth 的 Login 提取回归验证 ✓
+- **样式基线三件套下沉**（`packages/shared/src/app-styles.ts` 新增）：6 main.ts 逐字重复的 `normalize.css → virtual:uno.css → @assets/styles/index.scss` 收敛为单行 `import '@vv/shared/app-styles'`。踩坑记录：原方案放 app-bootstrap.ts 顶部被一切 `import '@vv/shared'` 的 spec 间接加载，vitest 的 vite-node 把 `__uno.css` 虚拟 id 按文件路径解析炸 ERR_INVALID_ARG_VALUE——独立成模块后仅 main.ts 显式副作用 import（spec 零触达）根治
+- **mock 分页契约修复**（测试审计 H1）：`packages/mock/src/user.ts` 读 `query.pageIndex` 与 api 层 `UserListParams.page` 偏离，mock 环境翻页永远第 1 页——mock 对齐 api 契约改读 `page`
+- **6 app vitest 依赖声明补全**（测试审计 #8）：admin/auth/docs/h5/portal/big 的 devDependencies 补 `vitest ^4.1.9 + @vue/test-utils ^2.4.11 + jsdom ^29.1.1`——此前靠 root hoisting 幽灵解析，`pnpm -C apps/<a> exec vitest` MODULE_NOT_FOUND；声明后解析实证通过
+- **notFoundRoute 字面量 ×5 有意保留**：收敛需动 createAppRouter 工厂接口 + check-routes 实现提取双联动，风险收益比一般；字面量 JSDoc 有文档价值（NotFound 为何在 router 层注册）
+- **验证**：`pnpm type-check` turbo 全绿；`pnpm test` turbo 全绿（ui 128 文件 1924 用例 / admin 10 文件 64 用例含 5 处 importOriginal 改造回归）；`check:routes` 6 app 白名单提取正确（auth 含 Login）；auth/admin 构建实证
+
 ### 📦 Refactor | 第四轮五维审查 P2 余项：e2e projects 注册表派生 / 死参数删除 / 静默跳过清零（2026-10-23）
 
 > 背景：可扩展性 + 可复用性审计的 P2 批——playwright projects 硬编码 4 app（新 app e2e 须手动加段）、`extraAutoImports` 零消费死参数、`generate-tsconfig-paths` 对缺 tsconfig.app.json 的新 app 静默跳过、`VITE_APP_ID` 无文档、`@vv/shared` 双轨出口动机未显式化。

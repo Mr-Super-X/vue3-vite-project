@@ -9,7 +9,7 @@
  * 5. 空值 selectBind：modelValue=null/undefined 时不绑 modelValue
  * 6. dictCode 切换 → watch 触发 → 再次 useDict
  *
- * Mock 策略：vi.mock('@composables/useDict') 静态替身。
+ * Mock 策略：vi.mock('@vv/shared') 静态替身。
  * DictSelect 内部用 `useDict(props.dictCode)` 拿字典，测试用 dictStore[code].value 直接控制数据。
  *
  * EP 组件策略：直接使用真实 Element Plus 组件 + findComponent。
@@ -29,9 +29,12 @@ const { dictStore, useDictMock } = vi.hoisted(() => ({
   useDictMock: vi.fn(),
 }))
 
-vi.mock('@composables/useDict', () => ({
-  useDict: useDictMock,
-}))
+// 说明符 '@composables/useDict' 经 codemod 收敛为 '@vv/shared' barrel（2026-10-26）——
+// 单点 mock 须 importOriginal 展开其余导出（SUT 的 EP 组件依赖 barrel 其它具名）
+vi.mock('@vv/shared', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@vv/shared')>()
+  return { ...actual, useDict: useDictMock }
+})
 
 import DictSelect from './DictSelect.vue'
 

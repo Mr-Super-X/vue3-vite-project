@@ -1,5 +1,9 @@
 import { ref, watch } from 'vue'
-import { Local } from '@utils/storage'
+// 具名子路径而非根 barrel（2026-10-26 codemod 批次 2 踩坑修正）：本模块是 spec 密集
+// 重载对象（vi.resetModules + 动态 import 每用例重评估 import 图），走 '@vv/shared'
+// 根 barrel 会让 5000ms 用例在 vite-node 大模块图重载下不稳定超时；'@vv/shared/utils'
+// 只加载 utils 子树（与 './store' './router-guards' 具名出口同构）
+import { Local } from '@vv/shared/utils'
 
 /**
  * DocLayout sidebar 的模块级状态：

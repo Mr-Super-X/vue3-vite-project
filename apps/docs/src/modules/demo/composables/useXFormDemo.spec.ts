@@ -4,7 +4,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { ref, nextTick } from 'vue'
 import { useXFormDemo } from './useXFormDemo'
-import type { XFormExpose, SchemaNode } from '@components/form-schema/types'
+import type { XFormExpose, SchemaNode } from '@vv/ui/components/form-schema/types'
 
 // mock element-plus ElMessage（避免 toast 真弹）
 vi.mock('element-plus', () => ({

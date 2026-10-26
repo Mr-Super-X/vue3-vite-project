@@ -27,7 +27,8 @@ import { useUserStore } from '../store/modules/user.ts'
  * @example
  * ```vue
  * <script setup lang="ts">
- * import { useAuth } from '@composables/useAuth'
+ * // useAuth 由 unplugin-auto-import 从 '@vv/shared' 注入，无须显式 import；
+ * // 注释示例的包名形态随 codemod 批次 2 收敛（@composables 深层别名已废弃）
  * const { hasPerm, hasAnyPerm, isLoggedIn } = useAuth()
  * const canEdit = computed(() => hasPerm(['user:edit']))
  * </script>

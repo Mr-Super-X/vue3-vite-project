@@ -13,7 +13,7 @@ import DemoField from '../components/DemoField.vue'
 import ApiTable from '../components/ApiTable.vue'
 import { useDocToc } from '../composables/useDocToc'
 import { extractApi } from '../utils/extractApi'
-import appDynamicIconSource from '@components/common/AppDynamicIcon.vue?raw'
+import appDynamicIconSource from '@vv/ui/components/common/AppDynamicIcon.vue?raw'
 
 // BEM 工具（createNamespace）由 unplugin-auto-import 自动注入，详见 CLAUDE.md §3
 const bem = createNamespace('demo-icon-usage')

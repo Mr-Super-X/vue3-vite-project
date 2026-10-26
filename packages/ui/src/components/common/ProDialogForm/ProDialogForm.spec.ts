@@ -48,7 +48,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 // ProDialog 模块替换：defineComponent 在工厂内构造（vue 导入在工厂内可用）
-vi.mock('@components/common/ProDialog/ProDialog.vue', () => {
+vi.mock('@vv/ui/components/common/ProDialog/ProDialog.vue', () => {
   const ProDialogStub = defineComponent({
     name: 'ProDialog',
     props: ['modelValue', 'title', 'width'],
@@ -66,7 +66,7 @@ vi.mock('@components/common/ProDialog/ProDialog.vue', () => {
 })
 
 // XForm 模块替换：19 个方法从 hoisted mocks 拿
-vi.mock('@components/form-schema/components/XForm.vue', () => {
+vi.mock('@vv/ui/components/form-schema/components/XForm.vue', () => {
   const XFormStub = defineComponent({
     name: 'XForm',
     setup(_props, { slots, expose }) {

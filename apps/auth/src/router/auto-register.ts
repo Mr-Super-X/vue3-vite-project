@@ -18,7 +18,7 @@
  */
 
 import type { RouteRecordRaw } from 'vue-router'
-import { autoImport } from '@utils/autoImport'
+import { autoImport } from '@vv/shared'
 
 interface RouteModuleExport {
   default: RouteRecordRaw[]

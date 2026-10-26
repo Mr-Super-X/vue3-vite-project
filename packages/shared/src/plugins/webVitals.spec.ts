@@ -16,7 +16,7 @@ vi.mock('web-vitals', () => ({
   onTTFB: mockOnTTFB,
 }))
 
-// 单源后 consoleBadge 与插件同包，mock 走相对路径（原 app 侧 mock '@utils/consoleBadge'）
+// 单源后 consoleBadge 与插件同包，mock 走相对路径（原 app 侧 mock '@vv/shared'）
 vi.mock('../utils/consoleBadge.ts', () => ({ showBadge: vi.fn() }))
 
 import webVitals from './webVitals.ts'

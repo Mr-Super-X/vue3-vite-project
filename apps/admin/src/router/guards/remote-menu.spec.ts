@@ -10,7 +10,12 @@ const { mockFetchRemoteRoutes, mockRouterConfig } = vi.hoisted(() => ({
 
 vi.mock('../config', () => ({ ROUTER_CONFIG: mockRouterConfig }))
 vi.mock('../remote', () => ({ fetchRemoteRoutes: mockFetchRemoteRoutes }))
-vi.mock('@utils/consoleBadge', () => ({ showBadge: vi.fn() }))
+// mock 说明符经 codemod 收敛为 '@vv/shared' barrel（2026-10-26）——barrel 聚合整个包，
+// 单点 mock 必须 importOriginal 展开其余导出，否则间接加载的 shared 模块全取 undefined
+vi.mock('@vv/shared', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@vv/shared')>()
+  return { ...actual, showBadge: vi.fn() }
+})
 
 import { ensureRemoteMenuLoaded, resetAuthGuardState } from './remote-menu'
 

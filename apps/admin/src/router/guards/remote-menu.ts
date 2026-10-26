@@ -20,7 +20,7 @@
 import type { RouteLocationNormalized, RouteLocationRaw, Router } from 'vue-router'
 import type { useUserStore } from '@vv/shared'
 import type { useRouterStore } from '@/store/modules/router'
-import { showBadge } from '@utils/consoleBadge'
+import { showBadge } from '@vv/shared'
 import { ROUTER_CONFIG } from '../config'
 import { fetchRemoteRoutes } from '../remote'
 

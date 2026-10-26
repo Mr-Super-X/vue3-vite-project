@@ -13,7 +13,7 @@
  */
 import { Moon, Sunny } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
-import { useTheme } from '@composables/useTheme'
+import { useTheme } from '@vv/shared'
 import { defaultLayoutConfig } from '../config/app'
 import Collapse from './Collapse.vue'
 import Breadcrumb from './Breadcrumb.vue'
