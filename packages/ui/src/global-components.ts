@@ -18,6 +18,7 @@
  * @group 全局组件注册
  */
 import type { App, Component } from 'vue'
+import { defineAsyncComponent } from 'vue'
 import { isExcluded, resolveComponentName } from './components/common/_internal/naming.ts'
 import { autoImport, showBadge } from '@vv/shared'
 
@@ -25,10 +26,32 @@ import { autoImport, showBadge } from '@vv/shared'
  * 在 Vite 构建时同步内联 common 下所有 .vue 模块
  * eager: true 让导入在 build/dev 时立即求值，运行时无异步开销
  * 注意：glob 相对本文件位置解析（@vv/ui/src/），迁入包后必须带 components/ 段
+ *
+ * 重组件排除（2026-10-26 性能审查 H1）：BaseChart（echarts 全量 ~1MB）与
+ * RichTextEditor（@wangeditor ~1.33MB）经下方否定模式排除出 eager glob——
+ * 否则 6 个 app（含只有登录页的 auth）entry 全部无条件打包两大依赖。
  */
-const modules = import.meta.glob<{ default: Component }>('./components/common/**/*.{vue,Vue}', {
-  eager: true,
-})
+const modules = import.meta.glob<{ default: Component }>(
+  [
+    './components/common/**/*.{vue,Vue}',
+    '!./components/common/BaseChart.vue',
+    '!./components/common/RichTextEditor/**',
+  ],
+  { eager: true }
+)
+
+/**
+ * 重组件异步注册表 —— 与上方 glob 排除一一对应，键为注册名（文件名 PascalCase）。
+ *
+ * defineAsyncComponent 延迟加载：组件首次渲染时才请求对应 chunk，echarts/wangeditor
+ * 不再进任何 app 的 entry/preload——未使用这些组件的页面（auth 登录页 / portal 官网 /
+ * h5/big 演示页）整个生命周期都不会下载。使用方（admin 图表页 / docs RichText demo）
+ * 在组件渲染时获得一次性加载开销，属可接受权衡。
+ */
+const lazyComponents: Record<string, () => Promise<{ default: Component }>> = {
+  BaseChart: () => import('./components/common/BaseChart.vue'),
+  RichTextEditor: () => import('./components/common/RichTextEditor/RichTextEditor.vue'),
+}
 
 /**
  * 创建全局组件注册插件实例（每个 app 调用一次）。
@@ -41,6 +64,13 @@ export function createGlobalComponents(): { install: (app: App) => void } {
       let skipped = 0
       const registeredNames = new Set<string>()
       const skippedReasons: string[] = [] // 收集跳过组件的 filepath 或 name，便于排查
+
+      // 重组件先行注册（async 包装；若与 eager 名单重名，eager 跳过并记日志）
+      for (const [name, loader] of Object.entries(lazyComponents)) {
+        app.component(name, defineAsyncComponent(loader))
+        registeredNames.add(name)
+        registered++
+      }
 
       autoImport({
         modules,
