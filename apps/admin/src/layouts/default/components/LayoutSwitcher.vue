@@ -6,7 +6,7 @@
  * 布局结构缩略图（header/sidebar/content 色块）+ 选中对勾。
  * 选择后写入 appStore.setLayout，面板通过 focusout / Esc 关闭。
  *
- * @see [`@/store/modules/app`](../../../store/modules/app.ts) LayoutMode / setLayout
+ * @see `@vv/shared` store/modules/app —— LayoutMode / setLayout
  * @group 布局：Default
  */
 import { ArrowDown, Check, Menu as MenuIconEp } from '@element-plus/icons-vue'

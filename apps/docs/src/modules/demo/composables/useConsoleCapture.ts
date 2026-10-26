@@ -19,7 +19,8 @@
  * const { logs, clear } = useConsoleCapture('[XForm]')
  * ```
  */
-import { onUnmounted, ref, type Ref } from 'vue'
+// onUnmounted / ref 由 unplugin-auto-import 注入（§1.6）；类型 Ref 须显式 type import
+import type { Ref } from 'vue'
 
 export interface CapturedLog {
   level: 'error' | 'warn'

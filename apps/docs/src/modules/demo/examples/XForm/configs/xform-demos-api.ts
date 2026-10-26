@@ -3,7 +3,7 @@
  *
  * 原则：每个 demo 只列「该功能专属」的 API 面（schema 字段 / 配置项 / 相关方法），
  * 与 XForm 总览（xform-api.ts 的 Props/Events/Slots/实例方法）不重复。
- * 数据源：src/components/form-schema/types.ts 与各 composable 签名。
+ * 数据源：@vv/ui/components/form-schema/types.ts 与各 composable 签名。
  */
 import type { XFormApiItem } from './xform-api'
 

@@ -10,7 +10,8 @@
  *
  * @see layouts/DemoDocs.vue 消费方
  */
-import { onScopeDispose, shallowRef, type Ref } from 'vue'
+// onScopeDispose / shallowRef 由 unplugin-auto-import 注入（§1.6）；类型 Ref 须显式 type import
+import type { Ref } from 'vue'
 
 /** 单个锚点项（与 DocToc props.items 形态一致） */
 export interface DocTocItem {

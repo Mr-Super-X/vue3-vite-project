@@ -19,8 +19,8 @@
  * <DictTag dict-code="user_status" :value="row.status" />
  * ```
  *
- * @see [`@composables/useDict`](../../composables/useDict.ts) 内部字典数据源
- * @see [`src/types/dict.ts`](../../types/dict.ts) DictItem 契约（type / cssClass 字段）
+ * @see `@vv/shared` composables/useDict —— 内部字典数据源（包内 composables/ 仅 useDialog 族，2026-10-27 审计修断链）
+ * @see `@vv/shared` types/dict —— DictItem 契约（type / cssClass 字段；ui/src/types 不存在，原相对链接断链）
  * @group 字典组件
  */
 import type { Ref } from 'vue'

@@ -1,7 +1,7 @@
 /**
  * XForm demo 的 API 文档数据（Props / Events / Slots / 实例方法）
  *
- * 数据源：src/components/form-schema/types.ts（XFormProps / XFormExpose / SchemaNode）。
+ * 数据源：@vv/ui/components/form-schema/types.ts（XFormProps / XFormExpose / SchemaNode）。
  * 结构兼容 ApiTable 的 items 入参（TypeScript 结构化类型，无需显式依赖）。
  */
 

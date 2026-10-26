@@ -14,5 +14,5 @@ import { createAppPinia } from '@vv/shared/store'
 const pinia = createAppPinia()
 
 export default pinia
-// 共享 store re-export（与 admin 同 barrel 语义，消费方可经 '@/store' 或 '@store/*' 取用）
+// 共享 store re-export（与 admin 同 barrel 语义，消费方经 '@/store' 取用；'@store/*' 过渡态路径已收敛，不再教新用法——2026-10-27 注释审计）
 export * from '@vv/shared/store'

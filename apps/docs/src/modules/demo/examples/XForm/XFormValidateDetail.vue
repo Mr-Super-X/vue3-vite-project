@@ -11,7 +11,7 @@
  *   - validate() 只返回 boolean（true = 全部通过；false = 有错）
  *   - validateDetail() 返回 { isValid, errors: [{ keyPath, message }] }
  *
- * 关键差异（@see src/components/form-schema/types/xform.ts ValidateResult）：
+ * 关键差异（@see @vv/ui/components/form-schema/types/xform.ts ValidateResult）：
  *   - validate() —— 适合「提交按钮 loading / disabled」「是否允许下一步」快速判断
  *   - validateDetail() —— 适合「错误详情汇总弹窗」「自定义错误面板」「调试日志」场景
  *   - keyPath 是 (string | number)[]：字符串 = 字段名，number = 数组下标

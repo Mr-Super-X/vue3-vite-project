@@ -18,7 +18,7 @@
  * @see [`./components/PrimaryNav.vue`](./components/PrimaryNav.vue) 主导航
  * @see [`./components/TagsView.vue`](./components/TagsView.vue) 多页签
  * @see [`./config/menu.ts`](./config/menu.ts) 菜单树派生
- * @see [`@/store/modules/app`](../../store/modules/app.ts) layout / sidebarCollapsed / mobile
+ * @see `@vv/shared` store/modules/app —— layout / sidebarCollapsed / mobile
  * @group 布局
  */
 import { useAppStore } from '@vv/shared'

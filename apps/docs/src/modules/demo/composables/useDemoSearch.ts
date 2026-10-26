@@ -10,7 +10,8 @@
  * 使用方：DocLayout.vue。groups 字段类型为 Ref<DemoSearchGroup<T>[]>，
  * 既兼容 ComputedRef（DocLayout 现有 sidebarGroups）也兼容 ref。
  */
-import { computed, type ComputedRef, type Ref } from 'vue'
+// computed 由 unplugin-auto-import 注入（§1.6）；类型 Ref/ComputedRef 不在注入清单，须显式 type import
+import type { ComputedRef, Ref } from 'vue'
 
 export interface DemoSearchItem {
   /** demo 的组件名（PascalCase），如 XFormBeforeChange */

@@ -5,7 +5,7 @@
  * 项目 i18n 实例由 App.vue watch appStore.locale 统一同步（含 <html lang> 与
  * 刷新后回灌），本组件只负责写入 setLocale。
  *
- * @see [`@/store/modules/app`](../../../store/modules/app.ts) locale / setLocale
+ * @see `@vv/shared` store/modules/app —— locale / setLocale
  * @group 布局：Default
  */
 import { ArrowDown } from '@element-plus/icons-vue'

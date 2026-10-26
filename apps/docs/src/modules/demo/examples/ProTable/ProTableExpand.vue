@@ -10,7 +10,7 @@
  *
  * 技术要点：
  * - 展开行走 ProColumn type='expand'；展开列的 prop 名即插槽名（ElementTableBody 按 col.prop
- *   透传插槽，见 src/components/ProTable/components/ElementTableBody.vue），本 demo prop='expand'
+ *   透传插槽，见 @vv/ui/components/ProTable/components/ElementTableBody.vue），本 demo prop='expand'
  *   → 消费方写 <template #expand="{ row }">
  * - 展开面板用函数式组件（props 传 row），模板内以 <ExpandPanel :row="row" /> 挂载——
  *   SFC <template> 由 Vue 模板编译器处理，不支持 JSX 花括号调用 VNode 函数

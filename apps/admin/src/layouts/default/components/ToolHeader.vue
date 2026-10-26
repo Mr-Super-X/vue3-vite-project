@@ -8,7 +8,7 @@
  * 主题开关复用项目 useTheme（data-theme 属性），切换 light/dark。
  *
  * @see [`./LayoutSwitcher.vue`](./LayoutSwitcher.vue) 布局切换
- * @see [`@composables/useTheme`](../../../composables/useTheme.ts) 主题切换
+ * @see `@vv/shared` composables/useTheme —— 主题切换（app src 无 composables 目录，2026-10-27 审计修断链）
  * @group 布局：Default
  */
 import { Moon, Sunny } from '@element-plus/icons-vue'

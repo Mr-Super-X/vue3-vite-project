@@ -10,7 +10,7 @@
  * 说明：项目无 logo 图片资产，用内联 SVG 几何标代替（参考仓为 png 图）。
  *
  * @see [`../config/app.ts`](../config/app.ts) 标题文案来源
- * @see [`@/store/modules/app`](../../../store/modules/app.ts) layout / sidebarCollapsed
+ * @see `@vv/shared` store/modules/app —— layout / sidebarCollapsed
  * @group 布局：Default
  */
 import { useAppStore } from '@vv/shared'

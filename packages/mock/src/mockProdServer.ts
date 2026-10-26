@@ -10,7 +10,7 @@
  *
  * 模块清单说明：2 个 data 直引模块（menu/user）+ 2 个内联 prod 版
  * （prodAuthMocks / prodDictMocks——字典静态展开，client wrapper 不支持路径参数）。
- * mock/index.ts 只聚合 auth/user/menu（dev 模式 viteMockServe 按目录扫描不受此限）。
+ * src/index.ts 只聚合 auth/user/menu（dev 模式 viteMockServe 按目录扫描不受此限）。
  * pro-table/ 下 11 个文件是具名导出 xxxRequestApi（ProTableRequestApi 组件直连数据源，
  * 无 XHR 依赖），无需接线。
  *
@@ -22,9 +22,9 @@
  * 权限码字面量与 mock/auth.ts MOCK_PERMISSIONS 保持同步（两处无运行时共享，手工对齐）。
  * 拦截窗口时序问题已根治：main.ts 阻塞式挂接（createApp 后、app.use(router) 前
  * await setupProdMockServer——router install 即触发初始导航，挂接晚于 use 则守卫请求穿透）。
- * @trigger 新增 mock 路由模块时须同步登记本文件与 mock/index.ts（dev 聚合入口），两处清单不许分叉
+ * @trigger 新增 mock 路由模块时须同步登记本文件与 src/index.ts（dev 聚合入口），两处清单不许分叉
  * @see src/main.ts 入口挂接
- * @see src/router/guards/login.ts VITE_DEMO_NO_AUTH 演示模式守卫
+ * @see @vv/shared router-guards/login.ts —— VITE_DEMO_NO_AUTH 演示模式守卫
  */
 import type { MockMethod } from 'vite-plugin-mock'
 import { createProdMockServer } from 'vite-plugin-mock/client'

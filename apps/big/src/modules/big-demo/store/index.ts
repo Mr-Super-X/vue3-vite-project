@@ -1,5 +1,4 @@
-import { defineStore } from 'pinia'
-import { ref } from 'vue'
+// defineStore / ref 由 unplugin-auto-import 注入（CLAUDE.md §1.6；2026-10-27 导入审计修复漏网）
 
 /**
  * BigDemo 模块私有状态。

@@ -36,7 +36,7 @@ const model = reactive<Record<string, unknown>>({
 
 /**
  * 业务侧自定义 FormItemPlus（演示如何在 XForm 之外注册组件替代 ElFormItem）
- * 真实项目建议放在 src/components/common/FormItemPlus/，导出 Vue 组件
+ * 真实项目建议放在 @vv/ui/components/common/FormItemPlus/（或 app 私有 src/components/），导出 Vue 组件
  * 本 demo 内 inline 实现：透传 props + slots 到 ElFormItem，外加 highlight 视觉扩展
  */
 const FormItemPlus = defineComponent({

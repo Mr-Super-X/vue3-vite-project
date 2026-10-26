@@ -1,5 +1,5 @@
-import { defineStore } from 'pinia'
-import { ref } from 'vue'
+// defineStore / ref 由 unplugin-auto-import 注入（CLAUDE.md §1.6）——原显式 import
+// 是 v3.5 清理 65 处的漏网（2026-10-27 导入审计修复）
 
 /**
  * Workbench 模块私有状态。

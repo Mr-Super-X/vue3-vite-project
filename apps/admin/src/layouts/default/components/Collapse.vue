@@ -4,7 +4,7 @@
  *
  * 复刻参考仓 Collapse：纯按钮 + 图标切换（展开 Fold / 收起 Expand）。
  *
- * @see [`@/store/modules/app`](../../../store/modules/app.ts) sidebarCollapsed
+ * @see `@vv/shared` store/modules/app —— sidebarCollapsed（@/ 已不指 shared，注释路径随 Monorepo 迁移修正）
  * @group 布局：Default
  */
 import { Expand, Fold } from '@element-plus/icons-vue'

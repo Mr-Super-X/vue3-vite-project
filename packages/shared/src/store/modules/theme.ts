@@ -10,9 +10,9 @@
  *   useThemeStore().setMode('auto')   // 跟随系统
  *   useThemeStore().toggleMode()      // 智能切换（auto → 显式；light ↔ dark）
  *
- * 推荐在组件中使用 useTheme() composable（@composables/useTheme），更简洁。
+ * 推荐在组件中使用 useTheme() composable（本包 composables/useTheme），更简洁。
  *
- * @see [`@composables/useTheme`](../composables/useTheme.ts) 推荐消费入口
+ * @see `./composables/useTheme`（本包内文件）—— 推荐消费入口
  * @group 状态管理：主题
  */
 

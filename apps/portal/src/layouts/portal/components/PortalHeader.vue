@@ -15,8 +15,8 @@
  * @group 布局：Portal
  */
 import { useUserStore, withRepoPrefix } from '@vv/shared'
-// useLogout 随 ProDialog 族已迁 @vv/ui（P1-4），包子路径经 exports "./*" 解析
-import { useLogout } from '@vv/ui/composables/useLogout'
+// useLogout 由 unplugin-auto-import 从 '@vv/ui/composables/useLogout' 注入（§1.6；
+// 原显式 import 冗余——2026-10-27 导入审计修复，包路径说明保留备查）
 // 跨应用统一登录协议（P4）：portal 无登录路由，整页跳 apps/auth
 import { redirectToAuthLogin } from '@vv/shared'
 import { ArrowDown, SwitchButton } from '@element-plus/icons-vue'

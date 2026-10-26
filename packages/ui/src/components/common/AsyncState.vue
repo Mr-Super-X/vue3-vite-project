@@ -10,7 +10,7 @@
  *   - `empty`：默认 `<el-empty description="暂无数据" />`
  * - 状态优先级：loading > error > empty > 默认插槽
  *
- * @see [`@composables/useRequest`](../../composables/useRequest.ts) 配套的请求封装
+ * @see `@vv/shared` composables/useRequest —— 配套的请求封装（包内 composables/ 仅 useDialog 族，2026-10-27 审计修断链）
  * @group 通用组件
  */
 interface Props {

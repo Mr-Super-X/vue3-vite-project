@@ -7,7 +7,7 @@
  * - 退出流程走项目 useLogout().confirmLogout（二次确认 + loading 统一处理）
  *
  * @see `@vv/ui/composables/useLogout` 退出登录流程
- * @see [`@/store/modules/user`](../../../store/modules/user.ts) 用户登录态
+ * @see `@vv/shared` store/modules/user —— 用户登录态
  * @group 布局：Default
  */
 import { ArrowDown, SwitchButton } from '@element-plus/icons-vue'

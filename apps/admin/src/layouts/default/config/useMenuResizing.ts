@@ -9,12 +9,12 @@
  * 数据流：拖拽手柄（SidebarResizer）v-model 实时宽度 → liveWidth（非 null 即
  * "拖拽中"信号，布局壳据此绑 is-resizing 禁用 width 过渡，防橡皮筋滞后）；
  * 拖拽结束 commit 写入 store 持久化（store 字段为 null = 跟随 token 默认 224px，
- * 见 @/store/modules/app）。手柄在折叠/移动端不渲染（v-if），故 inline 宽度
+ * 见 @vv/shared store/modules/app）。手柄在折叠/移动端不渲染（v-if），故 inline 宽度
  * 同样只在展开态桌面端绑定，折叠宽度仍由 CSS is-collapsed 规则接管。
  *
  * @see [`../components/SidebarResizer.vue`](../components/SidebarResizer.vue) 交互发起方
  * @see [`./resize.ts`](./resize.ts) 钳制与常量
- * @see [`@/store/modules/app`](../../../store/modules/app.ts) sidebarWidth / secondaryWidth 持久化字段
+ * @see `@vv/shared` store/modules/app —— sidebarWidth / secondaryWidth 持久化字段
  * @group 布局：Default
  */
 import { useAppStore } from '@vv/shared'

@@ -279,8 +279,10 @@ function buildApisIndexTs(name: string, pascal: string): string {
 //   - 跨模块共享            → 迁到 packages/shared/src/api/modules/${name}.ts
 //
 // 自动应用 http.ts 基建：401 refresh、retry、cache、abort、pageAdapter 等。
+// @api 别名指 @vv/shared/src/api（sanctioned 既定路径，§1.6.2——api 不聚合 barrel）；
+// '@/api' 是单应用时代残留（app src 已无 api 目录），2026-10-27 注释审计修复
 
-import { request } from '@/api/http'
+import { request } from '@api/http'
 
 /** 业务实体类型定义（按需扩展） */
 export interface ${pascal}Item {
@@ -472,7 +474,8 @@ function syncI18nKeys(name: string, pascal: string, localesDir: string): void {
  * 参考 docs/17-useRequest使用规范.md 与 src/modules/user/views/List.vue（真实使用范例）。
  */
 function buildRequestComposable(name: string, pascal: string): string {
-  return `import { useRequest } from '@/composables/useRequest'
+  return `// useRequest 由 unplugin-auto-import 从 '@vv/shared' 注入 setup 全局作用域（CLAUDE.md §1.6），
+// 本文件无须显式 import
 import { ${name}Api, type ${pascal}ListParams, type ${pascal}ListResponse } from '../apis'
 
 /**

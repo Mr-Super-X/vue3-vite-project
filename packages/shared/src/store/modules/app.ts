@@ -10,7 +10,7 @@
  * - layout 四模式语义复刻自 vue-element-plus-admin：sidebar（经典侧边栏）/ top（顶部导航）/
  *   mixed（顶栏主导航 + 二级侧边栏）/ dual（双栏：图标 rail + 二级侧边栏）
  *
- * @see [`@composables/useAppRouter`](../composables/useAppRouter.ts) 路由跳转
+ * @see `@vv/shared` composables/useAppRouter —— 路由跳转（`@composables` 深层别名已定性过渡态，2026-10-27 注释审计修正）
  * @see [`../store/modules/user.ts`](./user.ts) 用户登录态
  * @see [`../../layouts/default/index.vue`](../../layouts/default/index.vue) 四模式布局消费方
  * @group 状态管理：App UI

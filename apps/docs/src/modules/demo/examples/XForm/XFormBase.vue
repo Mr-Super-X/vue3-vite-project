@@ -180,7 +180,7 @@ const schema: SchemaNode = {
       name: 'description',
       col: { span: 24 },
       // 不在 EL 组件集、未通过 :components 注册 —— 演示 resolveComponentFor 全局组件 fallback
-      // （unplugin-vue-components 把 src/components/common/** 自动注册到 GlobalComponents）
+      // （unplugin-vue-components 把 @vv/ui/components/common/**（包源码三目录）自动注册到 GlobalComponents）
       component: 'RichTextEditor',
       // RichTextEditor 内部 handleChange 已把「视觉为空」映射为 emit('')，业务方可直接用
       // 字符串 'required' 触发 el-form 标准校验（async-validator），无须自定义 validator

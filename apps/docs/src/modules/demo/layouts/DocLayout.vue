@@ -14,7 +14,7 @@
  * 边界：sidebar 在内容超长时保持 sticky；toc 同理。
  */
 import { ArrowDown, ArrowRight, Back, Search } from '@element-plus/icons-vue'
-import { useAppRouter } from '@vv/shared'
+// useAppRouter 由 unplugin-auto-import 从 '@vv/shared' 注入（§1.6），原显式 import 冗余（2026-10-27 导入审计修复）
 import { getSidebarGroup, getSidebarLabel, SIDEBAR_GROUPS } from '../config/sidebar-groups'
 import { useDemoSearch, type DemoSearchItem } from '../composables/useDemoSearch'
 import { collapsedGroups, sidebarWidth } from './sidebar-state'

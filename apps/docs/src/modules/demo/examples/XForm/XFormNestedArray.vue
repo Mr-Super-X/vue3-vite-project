@@ -15,7 +15,7 @@
  * 3. validate() 失败时 errors[].keyPath 含两层索引（如 ['orders', 0, 'items', 1, 'product']）
  *
  * P0-3 修复背景：嵌套 array 场景下 rewriteNamePath 加防重复前缀逻辑
- * （见 src/components/form-schema/composables/array-row-key.ts）
+ * （见 @vv/ui/components/form-schema/composables/array-row-key.ts）
  */
 import { ElMessage } from 'element-plus'
 import type { SchemaNode } from '@components/form-schema/types'

@@ -4,7 +4,7 @@
  * 不持久化：刷新页面回到初始空选择状态是符合预期的。
  *
  * @see [`../views/List.vue`](../views/List.vue) 列表页消费方
- * @see [`@/api/modules/user`](../../../api/modules/user.ts) 用户接口
+ * @see `@api`（别名指 @vv/shared/src/api）modules/user —— 用户接口
  * @group 业务模块：User
  */
 import type { UserItem } from '@api/modules/user'

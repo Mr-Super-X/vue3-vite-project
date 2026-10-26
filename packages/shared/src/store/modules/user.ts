@@ -8,8 +8,8 @@
  * - 复位钩子注入（P1-3 包化）：守卫状态 / 路由 UI store 归 app 私有，本包不反向依赖 app；
  *   app 侧经 `registerLocalStateResetHook` 挂接清理逻辑（admin 接线点：router/guards/auth.ts）
  *
- * @see [`@composables/useAuth`](../composables/useAuth.ts) 权限判断上层封装
- * @see [`@composables/useLogout`](../composables/useLogout.ts) 退出登录流程
+ * @see `./composables/useAuth`（本包内文件）—— 权限判断上层封装
+ * @see `@vv/ui/composables/useLogout` —— 退出登录流程（弹窗族在 ui 包，原 @composables 路径双重错误）
  * @see [`./dict.ts`](./dict.ts) 登录后字典预加载
  * @group 状态管理：用户登录
  */

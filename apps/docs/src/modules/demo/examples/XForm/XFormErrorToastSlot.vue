@@ -18,7 +18,7 @@
  *   业务单向接管即可；不传 slot 时 fallback 走默认 XFormErrorToast，行为与升级前一致
  *
  * @see ./utils/XFormElNotificationHost.vue （events → ElNotification 桥接实现）
- * @see src/components/form-schema/components/XForm.vue （slot 定义处）
+ * @see @vv/ui/components/form-schema/components/XForm.vue （slot 定义处）
  */
 import type { SchemaNode } from '@components/form-schema/types'
 import { useXFormDemo } from '../../composables/useXFormDemo'

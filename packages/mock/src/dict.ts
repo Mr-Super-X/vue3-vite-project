@@ -8,10 +8,10 @@
 //
 // 单条动态路由 /api/dict/:code 服务所有字典 —— 新增字典只需在 DICT_DATA 加键值
 //（字典数据表见 ./dict-data.ts，单源，prod 静态展开消费）。
-// viteMockServe 扫描整个 mock/ 目录自动注册，本文件无须在 mock/index.ts 手动聚合。
+// viteMockServe 扫描整个 mock/ 目录自动注册，本文件无须在 src/index.ts 手动聚合。
 //
 // 响应契约：{ code, message, data: DictItem[] }，data 即字典数组
-//（DictItem 定义见 src/types/dict.ts，前端主导、后端配合实现）。
+//（DictItem 定义见 @vv/shared types/dict.ts，前端主导、后端配合实现）。
 
 import type { MockMethod } from 'vite-plugin-mock'
 

@@ -7,9 +7,9 @@
  * - `loading` / `error` / `isEmpty`：驱动 AsyncState 三态切换
  * - `execute`：AsyncState 重试按钮触发 refetch
  *
- * @see [`@composables/useRequest`](../../../composables/useRequest.ts) 请求封装
+ * @see `@vv/shared` composables/useRequest —— 请求封装（@composables 深层别名已定性过渡态，注释路径修正）
  * @see `@vv/ui/components/common/AsyncState` 三态容器（全局自动注册，模板零 import）
- * @see [`@/api/modules/user`](../../../api/modules/user.ts) getList 接口
+ * @see `@api`（别名指 @vv/shared/src/api）modules/user —— getList 接口
  * @group 业务模块：User
  */
 import { userApi } from '@api/modules/user'

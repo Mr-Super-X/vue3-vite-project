@@ -14,7 +14,7 @@
  *
  * 业务侧不要直接调 dictApi.getDict，统一通过 useDict / 本 store。
  *
- * @see [`@composables/useDict`](../composables/useDict.ts) 业务侧消费封装
+ * @see `@vv/shared` composables/useDict —— 业务侧消费封装
  * @see [`./user.ts`](./user.ts) 登录后触发 preloadDict
  * @group 状态管理：字典
  */
