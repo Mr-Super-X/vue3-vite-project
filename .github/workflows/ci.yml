@@ -74,6 +74,13 @@ jobs:
         if: github.event_name == 'pull_request' || github.ref != 'refs/heads/master'
         run: pnpm exec turbo run build test "--filter=[origin/master]..." --cache-dir=.turbo
 
+      - name: Coverage threshold gate（admin 渐进基线）
+        # 测试审计（2026-10-26）#3：admin 覆盖率阈值 50/48/45/50 此前仅本地生效，
+        # CI 从不跑 coverage——阈值形同虚设。接入后低于基线的变更直接红。
+        # admin 口径（根 test:coverage → apps/admin vitest --coverage）；单 worker + 复用
+        # 上一步 turbo 缓存的构建产物，增量耗时可控（实测约 1-2 分钟）
+        run: pnpm test:coverage
+
       - name: Check routes consistency
         # 校验 RouteName 联合类型 + 实际 routes/*.ts + whitelist 三者一致（monorepo 版脚本，多包兼容）
         run: pnpm check:routes

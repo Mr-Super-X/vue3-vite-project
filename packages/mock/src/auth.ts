@@ -1,5 +1,8 @@
 import type { MockMethod } from 'vite-plugin-mock'
 import type { IncomingMessage, ServerResponse } from 'node:http'
+// 类型挂钩（2026-10-26 测试审计 #2）：登录/profile 响应体与 api 层 LoginResult /
+// UserProfile 绑定——改契约时编译器即时报错（import type 编译期擦除，无运行时依赖）
+import type { LoginResult, UserProfile } from '@vv/shared'
 
 // httpOnly cookie 模拟（2026-08-12 改造）：
 // 凭证由"后端"（本 mock）通过 Set-Cookie: HttpOnly 下发，前端 JS 不可读，
@@ -72,7 +75,8 @@ export default [
           sendJson(res, {
             code: 200,
             message: 'ok',
-            data: { profile: { id: 1, name: 'Admin' } },
+            // satisfies 挂钩 LoginResult：mock 响应契约与 api 层类型同源
+            data: { profile: { id: 1, name: 'Admin' } } satisfies LoginResult,
           })
         } else {
           sendJson(res, { code: 401, message: '账号或密码错误', data: null })
@@ -89,7 +93,7 @@ export default [
           sendJson(res, {
             code: 200,
             message: 'ok',
-            data: { id: 1, name: 'Admin', permissions: MOCK_PERMISSIONS },
+            data: { id: 1, name: 'Admin', permissions: MOCK_PERMISSIONS } satisfies UserProfile,
           })
         } else {
           // 无凭证 cookie → 401，触发前端守卫清标记跳登录

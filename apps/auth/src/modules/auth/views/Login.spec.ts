@@ -74,7 +74,9 @@ describe('Login.vue（apps/auth 统一登录页）', () => {
   })
 
   it('3. 登录成功：toast success + 整页回跳（resolvePostLoginRedirect 解析目标）', async () => {
-    mockLogin.mockResolvedValueOnce({ token: 'xxx' })
+    // mock 返回值对齐 httpOnly 契约 LoginResult（{ profile }）——SUT 不消费返回值，
+    // 但旧形态 { token } 是 token 落 localStorage 时代残留（2026-10-26 测试审计 #7）
+    mockLogin.mockResolvedValueOnce({ profile: { id: 1, name: 'Admin' } })
     fakeLocation.search = '?redirect=%2Fworkbench'
     mockResolvePostLoginRedirect.mockReturnValueOnce('/workbench')
     const w = mount(Login)
@@ -98,7 +100,7 @@ describe('Login.vue（apps/auth 统一登录页）', () => {
   })
 
   it('5. 回跳 fallback 由 resolvePostLoginRedirect 承担（/admin/ 默认回管理端）', async () => {
-    mockLogin.mockResolvedValueOnce({ token: 'xxx' })
+    mockLogin.mockResolvedValueOnce({ profile: { id: 1, name: 'Admin' } })
     // 无 redirect 查询参数：组件固定传 '/admin/' 作 fallback，防开放重定向校验在 shared 层
     const w = mount(Login)
     await w.find('form').trigger('submit.prevent')
@@ -135,7 +137,8 @@ describe('Login.vue（apps/auth 统一登录页）', () => {
     const submitBtn = w.find('button.vv-login__submit')
     expect(submitBtn.exists()).toBe(true)
     expect(submitBtn.attributes('disabled')).toBeDefined()
-    resolveLogin({ token: 'xxx' })
+    // 挂起态 resolve 也需契约形态（LoginResult），与用例 3/5 同因修正
+    resolveLogin({ profile: { id: 1, name: 'Admin' } })
     await flushPromises()
   })
 })

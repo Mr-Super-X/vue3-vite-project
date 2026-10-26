@@ -43,6 +43,7 @@ mock/
 - 每个业务模块一个 mock 文件，文件名与 `src/api/modules/<feature>.ts` 对应
 - `vite-plugin-mock` dev 模式自动扫描 `mock/**/*.ts`，无需手动注册；**prod 接线不受扫描机制保护，须手动在 `mockProdServer.ts` 登记（§15 的 @trigger 约定）**
 - 跨业务共享的 mock 抽到独立文件（如 `dict.ts` / `dict-data.ts`）
+- **响应体与 api 层类型挂钩（2026-10-26 测试审计 #2 立规）**：mock 数据 `import type` `@vv/shared` 的对应契约类型并 `satisfies` 标注（先例：`_utils.ts` 的 `generateUsers(): UserItem[]`、`auth.ts` 的 `satisfies LoginResult / UserProfile`、`dict-data.ts` 的 `DictItem`、`pro-table/` 的 `ProTableRequestApi`）——杜绝「api 层契约演化、mock 静默偏离」；`import type` 编译期擦除，不产生运行时依赖
 
 ---
 
@@ -429,6 +430,7 @@ mock 相关的路由约束靠约定兜底：远程菜单 mock 返回的 `name` �
 □ 6. 远程菜单 mock 的 name 能在 COMPONENT_REGISTRY 查到组件（与 modules/<m>/routes/index.ts 声明一致）？
 □ 7. prod 形态已确认：常规构建 tree-shake 不含 mock；演示构建（VITE_USE_MOCK=true）已同步登记 mockProdServer.ts（§15 的 @trigger 约定）？
 □ 8. 单测用 vi.mock 而非 mock-server？
+□ 9. 响应体已 `import type` + `satisfies` 挂钩 @vv/shared api 层契约类型（UserItem / LoginResult / UserProfile / DictItem / ProTableRequestApi 等，§2 约定）？
 ```
 
 ---

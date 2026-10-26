@@ -52,6 +52,11 @@ export * from './store/index.ts'
 export * from './router-guards/index.ts'
 // 跨应用统一登录协议（P4）：redirectToAuthLogin / resolvePostLoginRedirect
 export * from './auth/redirect.ts'
+// 契约类型侧例外（2026-10-26 测试审计 #2）：api 模块「值加载」有副作用（http.ts 建
+// axios 实例）故不聚合值导出；但 LoginResult / UserProfile / UserItem 等契约类型是纯
+// 类型——export type 编译期擦除零运行时成本，经 barrel 暴露给 mock 数据类型挂钩等消费方
+export type { LoginResult, UserProfile } from './api/modules/auth.ts'
+export type { UserItem, UserListParams } from './api/modules/user.ts'
 // REM 适配 viewport 幂等插件（P5 下沉：admin / h5 双拷贝收敛单源；模块加载无副作用，install 才碰 DOM）
 export { default as remAdaptationPlugin, ensureViewportMeta } from './plugins/remAdaptation.ts'
 // 全局插件族单源（P6 下沉：5 app errorHandler/webVitals 逐字拷贝收敛；模块加载无副作用，install 才接 DOM/指标库）

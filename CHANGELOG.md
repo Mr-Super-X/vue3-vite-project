@@ -4,6 +4,16 @@
 
 ## 未发布
 
+### 🧪 Tests | 测试质量审计落地：mock 契约类型挂钩立规 / CI coverage 门禁接入 / 旧契约 mock 清零（2026-10-26）
+
+> 背景：测试质量审计（报告 .agent-reports/2026-10-26-test-audit.md）4 项 H——mock 与 api 层类型完全脱钩（改 api 类型编译器零报错）、CI 不跑 coverage（阈值仅本地生效）、Login.spec 残留 token 时代旧契约 mock。本轮闭环前两项 + 第三项，其余（测试分布失衡/装配耗时）按专项排期。
+
+- **mock 响应体与 api 层类型挂钩立规**（测试审计 #2）：`packages/mock` 的裸对象字面量响应挂到 `@vv/shared` 契约类型——`_utils.ts` `generateUsers(): UserItem[]`、`auth.ts` 两处 `satisfies LoginResult / UserProfile`（`import type` 编译期擦除，esbuild bundle 零运行时依赖，同 pro-table 先例）；shared barrel 补**纯类型导出** `LoginResult / UserProfile / UserItem / UserListParams`（barrel 不聚合 api 值导出的决策不变——http.ts 建 axios 实例的副作用只针对值；`export type` 零运行时成本）；docs/22 §2 约定 + §13 评审 Checklist 第 9 条同步立规
+- **CI coverage 门禁接入**（测试审计 #3）：ci.yml Build+Test 后新增 `pnpm test:coverage` 步骤——admin 覆盖率阈值自此成为 CI 硬门禁。接入实证暴露**旧阈值已名存实亡**（50/48/45/50 是单应用时代口径，Monorepo 下沉后 admin src 仅剩装配外壳 + 业务 views，实测 34.03/20.22/31.56/35.01）——阈值重锚定为实测 floor **34/20/31/35**（防倒退基线，回升路线 = admin 业务模块补测试专项），docs/04 示例 + 说明段同步（并标注 vitest.config 示例已收敛为 createVitestConfig 工厂的旧形态说明）
+- **Login.spec 旧契约 mock 清零**（测试审计 #7）：3 处 `{ token: 'xxx' }`（token 落 localStorage 时代残留）改为现 httpOnly 契约 `LoginResult` 形态 `{ profile: { id: 1, name: 'Admin' } }`——SUT 虽不消费返回值，mock 形态即契约文档
+- **fakeLocation 共享夹具有意不做**：3 spec 各 ~6 行样板，下沉需新增包内模块 + exports 条目，收益 M- 属过度设计——审计建议记录备查
+- **验证**：`pnpm test:coverage` 阈值门禁绿（COV_EXIT=0）；mock 包 vue-tsc --force 0 error；docs 全量单测绿（Login.spec 7/7）；check:doc-currency 13/13
+
 ### ⚡ Perf | 重组件异步化：echarts/wangeditor 退出全 app 首帧（auth 等 4 app 产物 0 命中，admin 移出 modulepreload）（2026-10-26）
 
 > 背景：性能构建审计 H1——`createGlobalComponents` 的 eager glob 把 BaseChart（echarts 全量 ~1MB）+ RichTextEditor（@wangeditor ~1.33MB）无条件打进**每个** app：auth（仅登录页）entry gzip 1.06MB ≈ admin 1.15MB，且 auth 的 vendor-charts 与 admin 逐字节相同（hash CJ4vKtyr，1.1MB）——两依赖经 modulepreload 首帧强制下载。
