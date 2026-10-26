@@ -180,10 +180,10 @@ export const useThemeStore = defineStore(
 
 **不会自动应用到 pinia-plugin-persistedstate**——该插件直接用 `persist.key` 写 `localStorage[key]`，不会读取 `VITE_STORAGE_NAMESPACE`。
 
-> **2026-09-09 决策变更**：项目约定所有 persist key **必须**经 `namespacedStorageKey()`（`@/utils/storage` 导出）拼接 namespace，与 Local/Session 规则保持一致，避免多项目部署在同一域名下时 localStorage key 冲突：
+> **2026-09-09 决策变更**：项目约定所有 persist key **必须**经 `namespacedStorageKey()`（`@vv/shared` 导出）拼接 namespace，与 Local/Session 规则保持一致，避免多项目部署在同一域名下时 localStorage key 冲突：
 
 ```ts
-import { namespacedStorageKey } from '@/utils/storage'
+import { namespacedStorageKey } from '@vv/shared'
 
 defineStore('theme', setupFn, {
   persist: {
@@ -198,7 +198,7 @@ defineStore('theme', setupFn, {
 ### 4.5 手动清缓存
 
 ```ts
-import { useDictStore } from '@/store/modules/dict'
+import { useDictStore } from '@vv/shared'
 const dictStore = useDictStore()
 dictStore.clear() // 清空所有字典缓存（切换账号时调用）
 ```
@@ -232,9 +232,7 @@ export const useUserStore = defineStore('user', () => {
 
 ```vue
 <script setup lang="ts">
-import { useUserStore } from '@/store/modules/user'
-import { useDictStore } from '@/store/modules/dict'
-import { useThemeStore } from '@/store/modules/theme'
+import { useUserStore, useDictStore, useThemeStore } from '@vv/shared'
 
 const userStore = useUserStore()
 const dictStore = useDictStore()
@@ -303,14 +301,14 @@ describe('useThemeStore', () => {
 ### 案例 1：user store（跨模块，httpOnly 改造后无 token / 不持久化）
 
 ```ts
-// src/store/modules/user.ts（2026-08-12 改造后实际形态）
+// packages/shared/src/store/modules/user.ts（2026-08-12 改造后实际形态）
 // 凭证由后端 Set-Cookie 写入 httpOnly cookie，前端不可读；
 // 前端只持 sessionStorage 'auth' 标记供守卫同步判断，profile / permissions 每次拉取
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { authApi, type LoginPayload, type UserProfile } from '@/api/modules/auth'
-import { Session } from '@/utils/storage'
-import { globalAbort } from '@/api/global-abort'
+import { authApi, type LoginPayload, type UserProfile } from '@api/modules/auth'
+import { Session } from '@vv/shared'
+import { globalAbort } from '@api/global-abort'
 import { resetAuthGuardState } from '@/router/guards/auth'
 import { useDictStore } from './dict'
 import { useRouterStore } from './router'
@@ -398,7 +396,7 @@ export const useUserStore = defineStore('user', () => {
 | `token` 字段 + `pick: ['token']` 持久化        | `authenticated` 字段（sessionStorage `auth` 标记），**无 persist** | 凭证 cookie 由后端 Set，前端不可读也不持久化 |
 | `login()` 内 `Session.set('token', res.token)` | `Session.set('auth', true)` + `preloadDict()`                      | 不读 token，仅写登录标记 + 预热字典          |
 | `logout()` 内调 `router.push('/login')`        | `logout()` 只调 `resetLocalState()` + 后端 logout                  | 跳转归调用方，store 不持有 router            |
-| `import * as authApi from '@api/modules/auth'` | `import { authApi } from '@/api/modules/auth'`                     | 项目统一 named import + `@/...` 长路径       |
+| `import * as authApi from '@api/modules/auth'` | `import { authApi } from '@api/modules/auth'`                      | 项目统一 named import + `@api` 短别名        |
 
 ### 案例 2-3：theme / dict store
 

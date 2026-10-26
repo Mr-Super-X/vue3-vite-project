@@ -260,19 +260,22 @@ export default [
 
 ---
 
-## 7. vite-plugin-mock 配置（vite.config.ts）
+## 7. vite-plugin-mock 配置（@vv/config 工厂）
+
+mock 插件不在各 app `vite.config.ts` 手写——由 `packages/config/src/create-vite-config.ts` 工厂统一装配（各 app 只传 `appRoot` / `appName` / `mockPath` 等参数）：
 
 ```ts
-// vite.config.ts
-import { viteMockServe } from 'vite-plugin-mock'
-
-plugins: [
-  viteMockServe({
-    mockPath: 'mock',                          // mock 文件目录
-    enable: process.env.VITE_USE_MOCK !== 'false', // dev 默认开启（2026-07-27 切换）
-    watchFiles: true,                          // mock 文件变更热更新
-  }),
-],
+// packages/config/src/create-vite-config.ts（工厂内 viteMockServe 段，节选）
+...(mockPath
+  ? [
+      viteMockServe({
+        mockPath,                                    // 缺省 = <appRoot>/../../packages/mock/src（@vv/mock 包源码）
+        enable: process.env.VITE_USE_MOCK !== 'false', // dev 默认开启（2026-07-27 切换）
+        watchFiles: true,                             // mock 文件变更热更新
+      }),
+      cleanMockBundled(mockPath),                     // 清理 _*.bundled_*.mjs 临时文件（根治并行 dev 抢删竞态）
+    ]
+  : []),
 ```
 
 **注意**：
@@ -280,6 +283,7 @@ plugins: [
 - `enable: VITE_USE_MOCK !== 'false'` 保证 prod 打包不包含 mock（vite build 不读 `.env.development`，自然落入"关闭"分支）
 - `watchFiles: true` 让 mock 修改实时生效（无需重启 dev server）
 - dev 默认开启：clone 后未建 `.env.development` 时 `VITE_USE_MOCK=undefined` → `!== 'false'` 判定为 true，mock 自动启用
+- `mockPath` 必须是绝对路径（vite-plugin-mock 以 isAbsPath 判定，cwd 相对解析会静默空转）——工厂缺省已指向 `packages/mock/src`，各 app 无需覆写
 - 联调真后端：在 `.env.development` 设 `VITE_USE_MOCK=false` + `VITE_API_BASE_URL=<真实后端地址>`
 
 ---
@@ -452,7 +456,7 @@ mock 相关的路由约束靠约定兜底：远程菜单 mock 返回的 `name` �
 
 ## 15. 生产 mock 接线（mockProdServer.ts，gh-pages 静态部署用）
 
-> 2026-10-20 落地（git df9f19c + cb39d00 + 659cd6a + 6d0db79 连环修复终态）。设计文档：[docs/superpowers/specs/2026-10-20-gh-pages-deploy-design.md](../superpowers/specs/2026-10-20-gh-pages-deploy-design.md)；部署侧上下文见 docs/40。
+> 2026-10-20 落地（git df9f19c + cb39d00 + 659cd6a + 6d0db79 连环修复终态）。设计文档：[docs/superpowers/specs/2026-10-20-gh-pages-deploy-design.md](./superpowers/specs/2026-10-20-gh-pages-deploy-design.md)；部署侧上下文见 docs/40。
 
 ### 15.1 为什么需要
 

@@ -144,7 +144,7 @@ const uploadApi = async (file: File) => {
 ```vue
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
-import RichTextEditor from '@/components/common/RichTextEditor/RichTextEditor.vue'
+import RichTextEditor from '@vv/ui/components/common/RichTextEditor/RichTextEditor.vue' // 或由 unplugin 自动注册，模板免 import
 
 const form = reactive({ content: '' })
 

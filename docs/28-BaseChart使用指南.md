@@ -84,7 +84,7 @@ onMounted(() => {
 | `clear(): void`                  | 清空图表内容，**保留实例本身**（与 `dispose` 不同——dispose 会销毁实例，后续需重新 `init`）    |
 
 ```ts
-import BaseChart from '@/components/common/BaseChart.vue'
+import BaseChart from '@vv/ui/components/common/BaseChart.vue'
 
 const chartRef = ref<InstanceType<typeof BaseChart>>()
 
@@ -150,8 +150,8 @@ echarts.registerTheme('dark', darkTheme)
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRequest } from '@/composables/useRequest'
-import { dashboardApi } from '@/api/modules/dashboard'
+import { useRequest } from '@vv/shared' // 或由 AutoImport 自动注入，免 import
+import { dashboardApi } from '@api/modules/dashboard'
 
 const loading = ref(false)
 const option = computed(() => /* ... */)

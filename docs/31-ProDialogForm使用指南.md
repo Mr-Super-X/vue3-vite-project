@@ -111,8 +111,8 @@
 ```vue
 <script setup lang="ts">
 import { reactive } from 'vue'
-import ProDialogForm from '@/components/common/ProDialogForm/ProDialogForm.vue'
-import type { SchemaNode } from '@/components/form-schema/types'
+import ProDialogForm from '@vv/ui/components/common/ProDialogForm/ProDialogForm.vue' // 或由 unplugin 自动注册，模板免 import
+import type { SchemaNode } from '@vv/ui/components/form-schema/types'
 
 const visible = ref(false)
 const form = reactive({})
@@ -193,8 +193,8 @@ async function handleSaveAndAddNew(submit: () => Promise<void>) {
 ### 4.4 与 `useDialog` 命令式结合（动态唤起）
 
 ```typescript
-import { useDialog } from '@/composables/useDialog'
-import ProDialogForm from '@/components/common/ProDialogForm/ProDialogForm.vue'
+import { useDialog } from '@vv/ui/composables/useDialog' // AutoImport 也可省略
+import ProDialogForm from '@vv/ui/components/common/ProDialogForm/ProDialogForm.vue'
 
 const editDialog = useDialog(ProDialogForm, {
   title: '编辑用户',

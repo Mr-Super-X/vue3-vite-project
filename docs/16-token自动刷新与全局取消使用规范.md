@@ -114,7 +114,7 @@ const DEFAULT_CONFIG: Required<TokenRefreshConfig> = {
 
 ```ts
 // src/main.ts（应用启动时调一次）
-import { configureTokenRefresh } from '@/api/token-refresh'
+import { configureTokenRefresh } from '@api/token-refresh'
 
 configureTokenRefresh({
   url: '/v2/auth/refresh-token', // 后端实际端点
@@ -273,7 +273,7 @@ export function chainSignals(...signals: (AbortSignal | undefined)[]): AbortSign
 ### 4.1 基础用法
 
 ```ts
-import { createAbort, withAbort } from '@/api/cancel'
+import { createAbort, withAbort } from '@api/cancel'
 
 const ctrl = createAbort()
 const result = await request({ url: '/slow', method: 'get', ...withAbort(ctrl) })
@@ -285,7 +285,7 @@ ctrl.abort('user-cancelled')
 ### 4.2 路由切换 + 组件卸载双触发
 
 ```ts
-import { createAbort, linkAbort } from '@/api/cancel'
+import { createAbort, linkAbort } from '@api/cancel'
 import { onBeforeRouteLeave, onUnmounted } from 'vue-router'
 
 const localCtrl = createAbort()
@@ -307,8 +307,8 @@ async function fetchData() {
 ### 4.3 流式请求的 signal 联动
 
 ```ts
-import { requestStream } from '@/api/stream'
-import { createAbort, linkAbort } from '@/api/cancel'
+import { requestStream } from '@api/stream'
+import { createAbort, linkAbort } from '@api/cancel'
 
 const localCtrl = createAbort()
 const handle = requestStream({

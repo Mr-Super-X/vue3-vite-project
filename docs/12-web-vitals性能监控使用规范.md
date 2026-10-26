@@ -32,7 +32,7 @@ src/plugins/webVitals.ts 中转
 
 采集与上报**解耦**——本插件只采集并提供回调，业务方在 `main.ts` 一行决定怎么上报。
 
-> dev 模式默认 reporter 用 `@/utils/consoleBadge` 的 `showBadge`，输出形如
+> dev 模式默认 reporter 用 `@vv/shared`（`utils/consoleBadge`）的 `showBadge`，输出形如
 > `性能监控 · Web Vitals · LCP` + 数值 + 评级（good / needs-improvement / poor）的徽章，
 > 比 `console.info` 更便于视觉区分（颜色按 rating 切换：good 绿 / 需改进黄 / 差红）。
 

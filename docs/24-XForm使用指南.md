@@ -13,11 +13,11 @@
 
 ```ts
 // 方式一：Vue 插件（推荐）—— app.use 注册全局 <XForm> 组件
-import FormSchema from '@/components/form-schema'
+import FormSchema from '@vv/ui/components/form-schema'
 app.use(FormSchema)
 
-// 方式二：局部 import
-import XForm from '@/components/form-schema/XForm.vue'
+// 方式二：局部 import（常规场景不必——unplugin 已自动注册，模板直接用 <XForm>）
+import XForm from '@vv/ui/components/form-schema/components/XForm.vue'
 ```
 
 > 入口 `index.ts` 的具名导出：`validate` / `validateWithZod`（schema 静态校验）、`useFormPersist`（草稿持久化）、`resolveFunctionExpression` / `resolveElComponentName`（高级工具）、全部类型。
@@ -373,7 +373,7 @@ const { success, errors } = formRef.value!.validateWithZod()
 ### 5.5 schema 静态校验（工具函数）
 
 ```ts
-import { validate } from '@/components/form-schema'
+import { validate } from '@vv/ui/components/form-schema'
 const { isValid, errors } = validate(schemaNode, {
   knownComponents: { builtin: new Set(['Input', 'Select']), user: new Set(['MyComp']) },
 })
@@ -628,7 +628,7 @@ onMounted(() => {
 ## 12. 草稿持久化（useFormPersist）
 
 ```ts
-import { useFormPersist } from '@/components/form-schema'
+import { useFormPersist } from '@vv/ui/components/form-schema'
 
 const model = reactive<Record<string, unknown>>({})
 const persist = useFormPersist({
@@ -662,7 +662,7 @@ const persist = useFormPersist({
 > 复杂联动推荐对象字面量（可读性好）；类型安全要求高的场景用构建器。
 
 ```ts
-import { xInput, xSelect, xArray } from '@/components/form-schema/builders'
+import { xInput, xSelect, xArray } from '@vv/ui/components/form-schema/builders'
 
 const schema = {
   column: 2,
@@ -731,7 +731,7 @@ const schema = {
 `SchemaNode` 是宽类型（`props: Record<string, unknown>`），写错不会报错。**`SchemaNodeFor<C>` 按 component 字段推导 props 类型**：
 
 ```ts
-import type { SchemaNodeFor } from '@/components/form-schema'
+import type { SchemaNodeFor } from '@vv/ui/components/form-schema'
 
 const email: SchemaNodeFor<'Input'> = {
   component: 'Input',
@@ -745,7 +745,7 @@ const email: SchemaNodeFor<'Input'> = {
 
 ```ts
 // types/form-schema.d.ts
-declare module '@/components/form-schema/types' {
+declare module '@vv/ui/components/form-schema/types' {
   interface ComponentPropsRegistry {
     MyInput: MyInputProps
   }

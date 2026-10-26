@@ -29,7 +29,7 @@
 
 ```ts
 import { z } from 'zod'
-import { requestValidated } from '@/api/validator'
+import { requestValidated } from '@api/validator'
 
 const EquipmentSchema = z.object({
   id: z.number(),
@@ -71,7 +71,7 @@ export const EquipmentSchema = z.object({/* ... */})
 export type Equipment = z.infer<typeof EquipmentSchema>
 
 // 业务组件
-import { requestValidated } from '@/api/validator'
+import { requestValidated } from '@api/validator'
 import { EquipmentSchema, type Equipment } from '@/modules/equipment/types'
 
 const data: Equipment = await requestValidated(EquipmentSchema, { url: '/equipment/1' })
@@ -89,7 +89,7 @@ const data: Equipment = await requestValidated(EquipmentSchema, { url: '/equipme
 [validator] schema 验证失败: id: expected number, received string; status: invalid enum value
 ```
 
-> 实现细节（`src/api/validator.ts`）：错误信息取前 3 条 issue（避免堆栈过长），格式为 `<path>: <message>`；多条用 `; ` 拼接。
+> 实现细节（`packages/shared/src/api/validator.ts`）：错误信息取前 3 条 issue（避免堆栈过长），格式为 `<path>: <message>`；多条用 `; ` 拼接。
 
 业务侧 try/catch 即可拿到 ApiError：
 
@@ -130,8 +130,8 @@ const EquipmentSchema = z
 ### 3. 与 useRequest 组合
 
 ```ts
-import { useRequest } from '@/composables/useRequest'
-import { requestValidated } from '@/api/validator'
+import { useRequest } from '@vv/shared' // 或由 AutoImport 自动注入，免 import
+import { requestValidated } from '@api/validator'
 
 const { data, error, loading } = useRequest(() =>
   requestValidated(EquipmentSchema, { url: '/equipment/list' })
@@ -145,7 +145,7 @@ const { data, error, loading } = useRequest(() =>
 ```ts
 // 最小可运行示例
 import { z } from 'zod'
-import { requestValidated } from '@/api/validator'
+import { requestValidated } from '@api/validator'
 
 const UserSchema = z.object({ id: z.number(), name: z.string() })
 const user = await requestValidated(UserSchema, { url: '/user/1' })

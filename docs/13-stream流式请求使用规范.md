@@ -34,7 +34,7 @@
 ### SSE 流（AI chat）
 
 ```ts
-import { requestStream } from '@/api/stream'
+import { requestStream } from '@api/stream'
 
 const handle = requestStream<ChatChunk>({
   url: '/ai/chat/stream',
@@ -68,7 +68,7 @@ const handle = requestStream<LogEvent>({
 ### 取消外部 signal 联动
 
 ```ts
-import { createAbort, linkAbort } from '@/api/cancel'
+import { createAbort, linkAbort } from '@api/cancel'
 
 const localCtrl = createAbort()
 const handle = requestStream({
@@ -175,6 +175,6 @@ await handle.done
 
 ---
 
-_相关源码：`src/api/stream.ts`（180 行）+ `src/api/stream.spec.ts`_
-_相关能力：`@/api/cancel`（AbortController 工具）_
+_相关源码：`packages/shared/src/api/stream.ts` + `packages/shared/src/api/stream.spec.ts`_
+_相关能力：`@api/cancel`（AbortController 工具）_
 _相关待办：`stream.ts` Auth 改造（与 http.ts 对齐 httpOnly 模式）—— 见 §I1_

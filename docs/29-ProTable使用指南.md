@@ -38,9 +38,9 @@
 ```vue
 <script setup lang="ts">
 import { reactive } from 'vue'
-import ProTable from '@/components/ProTable/ProTable.vue'
-import type { ProColumn } from '@/components/ProTable/types'
-import { userApi } from '@/api/modules/user'
+import ProTable from '@vv/ui/components/ProTable/ProTable.vue' // 或由 unplugin 自动注册，模板免 import
+import type { ProColumn } from '@vv/ui/components/ProTable/types'
+import { userApi } from '@api/modules/user'
 
 interface UserRow {
   id: number
@@ -196,7 +196,7 @@ type FilterParamsAdapter = (filters: FilterValuesMap) => Record<string, unknown>
 ```vue
 <script setup lang="ts">
 import { ref } from 'vue'
-import ProTable from '@/components/ProTable/ProTable.vue'
+import ProTable from '@vv/ui/components/ProTable/ProTable.vue' // 取 defineExpose 类型（InstanceType）需显式 import
 
 const tableRef = ref<InstanceType<typeof ProTable>>()
 
@@ -895,7 +895,12 @@ slot 作用域比 `ToolbarCtx` 多一个 `clearSelection: () => void`。启用�
 ### 9.5 CSV 导入导出（零依赖 utils）
 
 ```ts
-import { exportCsv, importCsv, parseCsvText, type CsvColumn } from '@/components/ProTable/utils'
+import {
+  exportCsv,
+  importCsv,
+  parseCsvText,
+  type CsvColumn,
+} from '@vv/ui/components/ProTable/utils'
 
 // 导出：BOM 防 Excel 中文乱码 + RFC4180 引号转义（含逗号/换行字段安全往返）
 const res = await projectRequestApi({ pageNum: 1, pageSize: 1000 }) // 全量拉取归业务
@@ -1070,4 +1075,4 @@ const rows = tableRef.value?.getSelectedRows()
 
 > **主 demo 入口**：`/demo/pro-table-overview`（对应 `ProTableOverview.vue`）—— 查阅全部 prop、事件、实例方法的入口。其余 22 个 demo 按「基础 → 引擎 → 搜索 → 虚拟化 → 编辑 → 选择/拖拽/展开 → 树形/合并/汇总 → 工具栏/批量 → 导入导出 → 样式」分组覆盖各能力边界。
 >
-> **配套 mock**：`mock/pro-table/`（11 个具名导出 `xxxRequestApi` 文件，组件直连数据源无 XHR 依赖；big-data.ts 为 10 万行 × 10 列含固定列的大数据场景）。
+> **配套 mock**：`packages/mock/src/pro-table/`（11 个具名导出 `xxxRequestApi` 文件，组件直连数据源无 XHR 依赖；big-data.ts 为 10 万行 × 10 列含固定列的大数据场景）。

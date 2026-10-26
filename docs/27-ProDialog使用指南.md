@@ -84,7 +84,8 @@ ProDialog 是 ElDialog 的**扩展**而非替换：
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 
-// ProDialog 由 @/components/index.ts 自动扫描注册为全局组件，无需 import
+// ProDialog 由 unplugin-vue-components 自动扫描 @vv/ui 包组件目录注册为全局组件
+//（注册源见 packages/ui/src/global-components.ts），模板直接用，无需 import
 const visible = ref(false)
 
 function onConfirm() {
@@ -218,7 +219,7 @@ function onResize(width: number, height: number) {
 import { createApp } from 'vue'
 import App from './App.vue'
 // ... 其他 app.use(...)
-import { setDialogAppContext } from '@/composables/useDialog'
+import { setDialogAppContext } from '@vv/ui/composables/useDialog'
 
 const app = createApp(App)
 app.use(Pinia)
@@ -239,7 +240,7 @@ app.mount('#app')
 ```ts
 // src/views/UserList.vue
 <script setup lang="ts">
-import { useDialog } from '@/composables/useDialog' // AutoImport 也可省略
+import { useDialog } from '@vv/ui/composables/useDialog' // AutoImport 也可省略
 import { ElMessage } from 'element-plus'
 import EditUserForm from './EditUserForm.vue'
 
@@ -282,7 +283,7 @@ dlg.setProps({ title: '详情（已加载）', width: '800px' })
 ### 3.7 错误识别
 
 ```ts
-import { DialogCancelledError } from '@/composables/useDialog' // class 名不走 AutoImport
+import { DialogCancelledError } from '@vv/ui/composables/useDialog' // class 名不走 AutoImport
 
 try {
   await dlg.open()
@@ -381,7 +382,7 @@ const enabled = ref(true)
 </template>
 ```
 
-> 复杂校验建议用 `@/components/form-schema/XForm`（schema 驱动），见 `docs/24-XForm使用指南.md`。
+> 复杂校验建议用 `@vv/ui/components/form-schema` 的 `XForm`（schema 驱动；unplugin 自动注册，模板免 import），见 `docs/24-XForm使用指南.md`。
 
 ### 5.2 确认弹窗（命令式）
 

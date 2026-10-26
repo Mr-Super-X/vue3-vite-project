@@ -56,7 +56,7 @@ jobs:
     steps:
       # actions/checkout@v4 + pnpm/action-setup@v4 + actions/setup-node@v4（Node 24.12.0 + pnpm 缓存）
       - run: pnpm install --frozen-lockfile
-      - run: pnpm build # 内部 = build-only（生成声明+产物）→ type-check:full（全量门禁）
+      - run: pnpm build:pages # 六应用聚合构建（scripts/build-pages.ts 自动发现 apps/*，base 按 REPO_PREFIX/<app>/ 注入）
       - uses: actions/upload-pages-artifact@v3
   deploy:
     needs: build
@@ -87,7 +87,7 @@ gh-pages 静态托管没有 node 中间件，`vite-plugin-mock@3.0.2` 的 dev-se
 ```mermaid
 flowchart TD
     A[push master] --> B[deploy.yml build job]
-    B --> C[pnpm build<br/>VITE_USE_MOCK=true 进产物]
+    B --> C[pnpm build:pages<br/>VITE_USE_MOCK=true 进产物]
     C --> D[upload-pages-artifact]
     D --> E[deploy-pages]
     E --> F[浏览器访问线上 demo]
