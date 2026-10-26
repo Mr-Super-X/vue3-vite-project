@@ -42,7 +42,7 @@ css: {
 
 ### ② unplugin-auto-import 注入弹窗族（运行时生死线）
 
-包内 composable 源码无显式 `import { ref } from 'vue'`，依赖宿主 `unplugin-auto-import` 注入：
+包内 composable 源码按宿主装配契约书写——vue 高频 API 由宿主 `unplugin-auto-import` 注入，少数文件带显式 import 的系 §1.6.1 来源注释的刻意添加（2026-10-27 审计修正原「无显式 import」的绝对化表述）：
 
 | `from`                               | 必须注入的标识符                                                 |
 | ------------------------------------ | ---------------------------------------------------------------- |

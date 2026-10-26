@@ -9,7 +9,9 @@
  *
  * 刻意不聚合：
  * - `./components/**`（组件经 unplugin-vue-components 按目录扫描自动注册，模板零 import；
- *   类型消费走 app 侧 '@components/*' 别名或 '@components/*' 包子路径）
+ *   目录 barrel / 无扩展 .ts 类型消费走 '@components/*' 别名——§1.6.2 既定例外，package.json
+ *   exports 通配对目录/无扩展路径 TS 不可解析（2026-10-26 实证）；仅 '.vue' 文件级
+ *   （含 ?raw / vi.mock）可包名化 '@vv/ui/components/*.vue'）
  * - `./composables/{useDialog,useConfirm,useLogout}`（AutoImport 按 '@vv/ui/composables/*'
  *   子路径注入；收进根 barrel 会让全局组件注册插件随任意 import 副作用化）
  * - `./assets/**`（样式/图标为构建期资产，经 '@assets/*' 别名或 scss 入口消费）

@@ -4,6 +4,19 @@
 
 ## 未发布
 
+### 📖 Docs+Style | 第七轮注释/导入双专项审计落地：脚手架生成即编译错修复 / 30+ 处断链 @see 清零 / 冗余 import 漏网清零 / 拓扑措辞修正（2026-10-27）
+
+> 背景：双路专项审计（.agent-reports/2026-10-27-comments-audit.md / imports-audit.md，22+10 条发现）——6 轮重构后注释漂移高发（@see 断链、旧路径教学、拓扑失真）与 AutoImport 冗余 import 漏网。
+
+- **new-module 脚手架模板修复（H·生成即编译错）**：`scripts/new-module.ts` 模板教 `@/api/http`、`@/composables/useRequest`（app src 已无这些目录，生成即编译错）——改 `@api/http`（sanctioned 别名）+ 删 useRequest import（AutoImport 注入，模板补来源注释）
+- **@see 断链清零 30+ 处**：shared store 5 处（`../composables/*.ts` 层级错 + useLogout 跨包双错）、ui 三组件（AsyncState/DictSelect/DictTag 的 `../../composables/` + `../../types/dict.ts` 双重断链）、admin 布局 8 处（`@/store/modules/app|user` → `@vv/shared` 包名形态）、ToolHeader、auth store、user 模块 2 处——统一为「包名 + 路径」反引号文本形态（消除 6 层上探相对链接的维护噩梦），含我前五轮自己改的 List.vue 再修
+- **冗余 import 漏网清零（导入审计 H×2）**：3 个模块 store（workbench/h5-demo/big-demo）的 `defineStore/ref` 显式 import + docs demo 5 composable 的值 import（类型 Ref/ComputedRef 保留 type-only import——AutoImport 不注入类型，查证 auto-imports.d.ts 后精确处理）+ useClock + DocLayout 的 useAppRouter + PortalHeader 的 useLogout（均在 §1.6 注入清单）
+- **拓扑措辞修正（导入审计）**：CLAUDE.md §2.1/§4 #6 + docs/43 的「config → mock → shared → ui」四段链 → 「config ∥ shared → mock → ui」真实拓扑（mock 自 2026-10-23 消费 shared 契约类型）
+- **规范裁决与文档修正**：CLAUDE.md §1.6.2 新增第 6 条「与 §1.6 的优先级」（先判要不要 import 再判从哪 import，消张力）；§1.6.1 示例注释 @composables → @vv/shared；§4 #14 增补 docs demo 相对路径豁免（模块指南背书）；ui barrel 头注「'@components/*' 别名或 '@components/*' 包子路径」笔误修正 + 按 Round 5 实证重写（目录/无扩展走别名既定例外，仅 .vue 文件级可包名化）；ui README「无显式 import」绝对化表述修正；5 app store/index.ts 教 @store/* 过渡态的注释收敛；mock 5 处 + docs demo 8 处单应用时代路径注释修正
+- **有意不做**：fakeLocation 共享夹具（过度设计）；consistent-type-imports eslint 规则（config-protection 风险 > M- 收益）
+- **审计正面确认**：TODO/FIXME 全仓 0；运行时 import 零漂移；shared→ui / mock→ui 反向依赖零命中；codemod 别名零残留
+- **验证**：`pnpm type-check` turbo 10/10；`pnpm test` turbo 9/9 全绿
+
 ### 🧪 Tests | 测试质量审计落地：mock 契约类型挂钩立规 / CI coverage 门禁接入 / 旧契约 mock 清零（2026-10-26）
 
 > 背景：测试质量审计（报告 .agent-reports/2026-10-26-test-audit.md）4 项 H——mock 与 api 层类型完全脱钩（改 api 类型编译器零报错）、CI 不跑 coverage（阈值仅本地生效）、Login.spec 残留 token 时代旧契约 mock。本轮闭环前两项 + 第三项，其余（测试分布失衡/装配耗时）按专项排期。

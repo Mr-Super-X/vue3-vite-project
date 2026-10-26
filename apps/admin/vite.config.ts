@@ -7,6 +7,7 @@
  *
  * 历史：
  *   - 2026-09-10: 抽出 SRC_DIR_ALIASES / vendorChunks / server / scss 到 build/* 单一来源
+ *     （单应用时代；v3.0.0 Monorepo 迁移后该 build/ 目录已整体随迁为 @vv/config 包，见下条）
  *   - 2026-10-22: P1-1 收敛为 @vv/config 工厂消费（Monorepo 迁移）
  */
 import { fileURLToPath } from 'node:url'

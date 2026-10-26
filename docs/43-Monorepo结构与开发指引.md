@@ -27,7 +27,7 @@ vue3-vite-project（pnpm workspace + turbo@2）
 └── .github/workflows/          ci.yml（turbo affected）+ deploy.yml（六应用聚合 Pages）
 ```
 
-**依赖方向铁律**（CLAUDE.md §2.1）：`apps/* → packages/*`；包间 `config → mock → shared → ui` 单向；apps 互不依赖（跨 app 走整页跳转协议）；运行时依赖（vue/element-plus 等）一律 `peerDependencies` + `pnpm-workspace.yaml` catalog 单版本源。
+**依赖方向铁律**（CLAUDE.md §2.1）：`apps/* → packages/*`；包间 `config ∥ shared → mock → ui` 单向（mock 消费 shared 契约类型为 import type，无运行时依赖）；apps 互不依赖（跨 app 走整页跳转协议）；运行时依赖（vue/element-plus 等）一律 `peerDependencies` + `pnpm-workspace.yaml` catalog 单版本源。
 
 ## 2. 应用与包速查
 

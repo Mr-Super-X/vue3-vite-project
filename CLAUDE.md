@@ -258,7 +258,7 @@ AutoImport **未覆盖**以下内容，仍必须写 import：
 ```ts
 const bem = createNamespace('user-card')
 // 以下均为 unplugin-auto-import 全局注入（详见 CLAUDE.md §1.6）
-const router = useAppRouter() // 项目 composable @composables/useAppRouter
+const router = useAppRouter() // 项目 composable @vv/shared（vite 自动注入）
 const route = useRoute() // vue-router
 const count = ref(0)
 const { data } = storeToRefs(useUserStore()) // pinia 工具
@@ -299,6 +299,7 @@ const { data } = storeToRefs(useUserStore())
 3. **既有例外不要误伤**：`packages/shared/src/index.ts` 头注刻意不聚合 `./api`（模块加载即建 axios 实例）、`./directives`（import.meta.glob 注册插件）、`./locales`（createI18n 副作用）——这三类消费经别名是 **sanctioned 既定路径**，不属于待收敛债务；`@enums` 已零消费（其两枚举早入 barrel）。**`@components/*` 同属既定例外**（ui barrel 不聚合 components/** 是自动注册机制的配套设计，且目录/无扩展路径在 exports 通拍下 TS 不可解析）。
 4. **测试 mock 同步**：`vi.mock()` 说明符是语义 import 路径——SUT 改从 `@vv/shared` import 后，mock 必须指向同一说明符，否则失去拦截；若被测模块从 barrel 同时消费多个导出，用单点 mock + `importOriginal` 展开覆盖（同模块声明两个 `vi.mock('@vv/shared')` 后者覆盖前者，2026-10-23 收敛时 2 个 spec 因此现形）。
 5. **收敛节奏**：不做大爆炸全量替换，按「热点优先」批次走——每批 = 只改带引号 import 说明符 + 三门禁（`pnpm type-check` / `pnpm check:aliases` / `pnpm test`）。首批已完成（2026-10-23）：`@utils/safeAsync`×15 / `@store/modules/app`×10 / `@store/modules/user`×7 + vi.mock 说明符×4，31 文件 36 处，一次性 codemod 脚本执行后即删。**批次 2 已完成（2026-10-26）**：`@utils/{autoImport,consoleBadge,dayjs,storage}` + `@composables/{useTheme,useAppRouter,useDict}` → `@vv/shared` 根 barrel（13 处 + 5 处 vi.mock 补 importOriginal），另 `@components/**/*.vue` 文件级（含 `?raw`）6 处 → `@vv/ui/components/*.vue`；**`@components` 目录/无扩展路径 125 处经实证回退为既定例外**（见表格行）。
+6. **与 §1.6 的优先级（2026-10-27 导入审计裁决）**：AutoImport 注入清单内的标识符（useAppRouter / useRequest / useAuth / useDict / useDialog / useConfirm / useLogout 等）**一律不显式 import**——§1.6 优先；§1.6.2「首选 barrel」裁决的是**确需显式 import** 的场景（未注入标识符如 `useTheme`、mock 说明符、非注入的工具/类型）的来源选择。两节无冲突：先判「要不要 import」（§1.6 清单），再判「从哪 import」（§1.6.2）。
 
 ---
 
@@ -360,7 +361,9 @@ const { data } = storeToRefs(useUserStore())
 ```text
 apps/*  ──可依赖──▶  packages/*
 apps/*  ──✗ 互相依赖──  apps/*（跨 app 通信走整页跳转协议，见 docs/43 §统一登录协议）
-packages/*  ──单向──▶  config → mock → shared → ui（下游可引用上游；上游禁止反向依赖下游）
+packages/*  ──单向──▶  config ∥ shared（并列上游）→ mock → ui（下游可引用上游；上游禁止反向依赖下游）
+// 注：mock 自 2026-10-23 起消费 @vv/shared 契约类型（import type 编译期擦除，无运行时
+// 依赖）——真实拓扑非旧文档的 config→mock→shared→ui 四段链（2026-10-27 导入审计修正）
 packages/*  ──✗ 依赖──  apps/*；运行时依赖（vue/element-plus 等）一律 peerDependencies + catalog
 ```
 
@@ -479,23 +482,23 @@ const bem = createNamespace('form-engine') // kebab-case，必须与 sass 根选
 
 ## §4 Project Constraints
 
-| #   | 约束                                                                                                                                                              | 落地方式                                                                           |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| 1   | 包管理强制 pnpm                                                                                                                                                   | `package.json:scripts.preinstall` → `only-allow pnpm`                              |
-| 2   | 新增业务模块**必须**用 `pnpm new-module <kebab-name>`                                                                                                             | `scripts/new-module.ts`（自动追加 RouteName）                                      |
-| 3   | 业务代码**必须**用项目封装：`useAppRouter` / `useRequest` / `useAuth` / `useDict`（`@vv/shared`）+ `useDialog` / `useConfirm` / `useLogout`（`@vv/ui`）           | ESLint `no-restricted-imports`（P5-A 已落地 error 级）                             |
-| 4   | app 内模块间通信走 `modules/<m>/index.ts`；跨 app 通信走整页跳转协议（docs/43）                                                                                   | 见 §1.2 / §2.1                                                                     |
-| 5   | `@vv/ui` 组件不得 `import` 自任何 `apps/*`                                                                                                                        | 保护 tree-shake                                                                    |
-| 6   | workspace 依赖方向铁律（§2.1）：`apps/* → packages/*`，包间 config → mock → shared → ui 单向，运行时依赖 peerDependencies + catalog                               | turbo 拓扑 + code review                                                           |
-| 7   | `store/` 不存网络请求中间态                                                                                                                                       | loading 放组件 / composable                                                        |
-| 8   | 路由一致性校验：`pnpm check:routes`（monorepo 版，6 app 逐个校验）                                                                                                | CI 阶段强制                                                                        |
-| 9   | 类型校验：各 app `type-check:full`（`pnpm build` = turbo 拓扑序，内部 build-only 先生成声明再全量门禁）                                                           | `package.json:scripts`                                                             |
-| 10  | 第三方 npm 包引用前必先 `npm view <pkg>` 验证                                                                                                                     | 全局规则                                                                           |
-| 11  | 新增 composable / store / 类型必须带 `.spec.ts`（覆盖率 ≥ 80%）                                                                                                   | Vitest                                                                             |
-| 12  | 功能性变更同步 `CHANGELOG.md`（仅 typo 免记）                                                                                                                     | 项目约定                                                                           |
-| 13  | 编写 CSS 禁止使用 `!important` 解决问题                                                                                                                           | 仅当用户主动要求时才可使用；优先级应通过选择器特异性 / BEM 命名空间 / 源码顺序解决 |
-| 14  | app 内跨目录引用**优先 alias 路径**（`@/` 等，由 `packages/config/src/app-aliases.ts` 统一生成），禁止 `../../` 深层相对路径                                      | 项目约定                                                                           |
-| 15  | `@vv/ui` 三目录 + app 私有 `src/components/` 下所有 .vue 全局组件**不要显式 import**，依赖 `unplugin-vue-components` 自动注册获得 IDE hover 智能提示（详见 §1.7） | IDE 体验                                                                           |
+| #   | 约束                                                                                                                                                                                                                                                                                      | 落地方式                                                                           |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| 1   | 包管理强制 pnpm                                                                                                                                                                                                                                                                           | `package.json:scripts.preinstall` → `only-allow pnpm`                              |
+| 2   | 新增业务模块**必须**用 `pnpm new-module <kebab-name>`                                                                                                                                                                                                                                     | `scripts/new-module.ts`（自动追加 RouteName）                                      |
+| 3   | 业务代码**必须**用项目封装：`useAppRouter` / `useRequest` / `useAuth` / `useDict`（`@vv/shared`）+ `useDialog` / `useConfirm` / `useLogout`（`@vv/ui`）                                                                                                                                   | ESLint `no-restricted-imports`（P5-A 已落地 error 级）                             |
+| 4   | app 内模块间通信走 `modules/<m>/index.ts`；跨 app 通信走整页跳转协议（docs/43）                                                                                                                                                                                                           | 见 §1.2 / §2.1                                                                     |
+| 5   | `@vv/ui` 组件不得 `import` 自任何 `apps/*`                                                                                                                                                                                                                                                | 保护 tree-shake                                                                    |
+| 6   | workspace 依赖方向铁律（§2.1）：`apps/* → packages/*`，包间 config ∥ shared → mock → ui 单向，运行时依赖 peerDependencies + catalog                                                                                                                                                       | turbo 拓扑 + code review                                                           |
+| 7   | `store/` 不存网络请求中间态                                                                                                                                                                                                                                                               | loading 放组件 / composable                                                        |
+| 8   | 路由一致性校验：`pnpm check:routes`（monorepo 版，6 app 逐个校验）                                                                                                                                                                                                                        | CI 阶段强制                                                                        |
+| 9   | 类型校验：各 app `type-check:full`（`pnpm build` = turbo 拓扑序，内部 build-only 先生成声明再全量门禁）                                                                                                                                                                                   | `package.json:scripts`                                                             |
+| 10  | 第三方 npm 包引用前必先 `npm view <pkg>` 验证                                                                                                                                                                                                                                             | 全局规则                                                                           |
+| 11  | 新增 composable / store / 类型必须带 `.spec.ts`（覆盖率 ≥ 80%）                                                                                                                                                                                                                           | Vitest                                                                             |
+| 12  | 功能性变更同步 `CHANGELOG.md`（仅 typo 免记）                                                                                                                                                                                                                                             | 项目约定                                                                           |
+| 13  | 编写 CSS 禁止使用 `!important` 解决问题                                                                                                                                                                                                                                                   | 仅当用户主动要求时才可使用；优先级应通过选择器特异性 / BEM 命名空间 / 源码顺序解决 |
+| 14  | app 内跨目录引用**优先 alias 路径**（`@/` 等，由 `packages/config/src/app-aliases.ts` 统一生成），禁止 `../../` 深层相对路径——**豁免**：docs demo 模块（`apps/docs/src/modules/demo/`）经模块指南《如何写好一个 demo.md》明文背书用兄弟相对路径（demo 强调可移植自包含），不加 alias 约束 | 项目约定                                                                           |
+| 15  | `@vv/ui` 三目录 + app 私有 `src/components/` 下所有 .vue 全局组件**不要显式 import**，依赖 `unplugin-vue-components` 自动注册获得 IDE hover 智能提示（详见 §1.7）                                                                                                                         | IDE 体验                                                                           |
 
 ---
 
