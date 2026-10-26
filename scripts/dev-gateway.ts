@@ -1,12 +1,11 @@
 /**
- * 本地同域网关配套：串行启动 6 个 app 的 vite dev server（各自注入 VITE_BASE=/<app>/）。
+ * 本地同域网关（一体化单命令）：node 网关 :8080 + 串行启动 6 个 app 的 vite dev server。
  *
  * 背景（docs/43 §同域网关）：生产为同域 path 部署（统一登录 cookie 跨 app 漫游），
- * 单 app 以默认 base '/' 起 dev 无法复现；本脚本按 app 注入 base 后拉起全部 dev server，
- * 与 docker-compose 的 nginx 网关（:8080 反代 5174-5179）配套：
+ * 单 app 以默认 base '/' 起 dev 无法复现；本脚本内置 node 反向代理网关
+ * （scripts/node-gateway.ts，零依赖，替代原 docker-compose + nginx 双终端方案）：
  *
- *   终端 1：pnpm dev:gateway   # 6 个 dev server 前台常驻，Ctrl+C 一并退出
- *   终端 2：docker compose up  # nginx 网关
+ *   pnpm dev:gateway    # 唯一命令：网关 + 6 dev server 前台常驻，Ctrl+C 一并退出
  *   浏览器：http://localhost:8080/（302 → /portal/）
  *
  * ⚠️ 串行启动（非并行，2026-10-23 竞态修复）：6 app 共享 @vv/mock 数据源，
@@ -18,25 +17,37 @@
  * 见 packages/config/src/clean-mock-bundled.ts 头部事故记录）。
  * 串行（前一个端口就绪再启下一个）彻底消除并发编译窗口。
  *
+ * 启动顺序：先监听网关 8080（EADDRINUSE 立即报错——不浪费 6 个 dev 启动后才
+ * 发现端口冲突），再串行起 dev server。
+ *
  * 端口 = packages/config/src/server.ts SERVER_DEFAULTS.port(5174) + 各 app vite.config
- * portOffset；名单与端口单一事实源是 scripts/apps-registry.mjs——本脚本只注入 VITE_BASE。
- * 新增 app：注册表追加条目 + nginx.dev.conf 补 location 块（check-gateway-conf 校验兜底）。
+ * portOffset；名单与端口单一事实源是 scripts/apps-registry.mjs——本脚本只注入 VITE_BASE，
+ * 网关路由表由 scripts/node-gateway.ts 的 buildGatewayRoutes(APPS) 单源代码派生
+ * （原 nginx.dev.conf 的 check-gateway-conf 双写校验已随 node 网关方案删除）。
  *
  * 为什么不用 turbo run dev：turbo 不支持 per-app env 注入，而 base 按 app 而异。
  *
- * 用法：pnpm dev:gateway（配置一致性另跑 pnpm check:gateway-conf）
+ * 用法：pnpm dev:gateway（路由/端口一致性另跑 pnpm check:routes）
  */
 
 import { spawn, type ChildProcess } from 'node:child_process'
+import type { Server } from 'node:http'
 import { createConnection } from 'node:net'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
 import { APPS } from './apps-registry.mjs'
+import { buildGatewayRoutes, createGatewayServer } from './node-gateway.ts'
 
 const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url))
 
+/** 同域网关监听端口（与原 nginx 网关一致 :8080） */
+const GATEWAY_PORT = 8080
+
 const children: ChildProcess[] = []
+
+/** 网关 server（main 中赋值；shutdown 时关闭） */
+let gateway: Server | null = null
 
 /** 按进程树终止子进程：Windows 下 shell:true 拉起的是 cmd.exe，直接 kill 会孤儿化 vite */
 function killTree(child: ChildProcess): void {
@@ -50,7 +61,8 @@ function killTree(child: ChildProcess): void {
 
 /** 任一 dev server 异常退出（strictPort 端口冲突 / 编译失败）→ 整组停止，避免半活状态 */
 function shutdown(reason: string): void {
-  console.log(`\n🛑 ${reason}，正在停止 ${children.length} 个 dev server…`)
+  console.log(`\n🛑 ${reason}，正在停止网关与 ${children.length} 个 dev server…`)
+  gateway?.close()
   for (const child of children) {
     killTree(child)
   }
@@ -106,9 +118,32 @@ async function startApp(name: string, port: number): Promise<void> {
 
 async function main(): Promise<void> {
   console.log(
-    `🚀 同域网关模式：串行启动 ${APPS.length} 个 app dev（base=/<app>/，避免共享 mock 源并发编译竞态）…`
+    `🚀 同域网关模式：node 网关 :${GATEWAY_PORT} + 串行启动 ${APPS.length} 个 app dev（base=/<app>/，避免共享 mock 源并发编译竞态）…\n`
   )
-  console.log('   网关：docker compose up → http://localhost:8080/（302 → /portal/）\n')
+
+  // 先监听网关：8080 被占（如旧 docker 网关未关）立即失败，不浪费后续 6 个 dev 启动
+  gateway = createGatewayServer({
+    rootRedirect: '/portal/',
+    routes: buildGatewayRoutes(APPS),
+  })
+  try {
+    await new Promise<void>((resolve, reject) => {
+      gateway!.once('error', reject)
+      gateway!.listen(GATEWAY_PORT, () => resolve())
+    })
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'EADDRINUSE') {
+      console.error(
+        `✖ 网关端口 ${GATEWAY_PORT} 被占用：请确认旧 docker 网关已停止（docker compose down），或释放占用进程`
+      )
+      process.exit(1)
+    }
+    throw err
+  }
+  console.log(
+    `🌐 网关就绪：http://localhost:${GATEWAY_PORT}/（/api/ → admin，GET / 302 → /portal/）\n`
+  )
+
   // 串行：前一个 dev server 端口就绪（mock 编译完成）再启下一个，消除并发编译窗口
   for (const { name, port } of APPS) {
     try {
@@ -118,7 +153,7 @@ async function main(): Promise<void> {
       return
     }
   }
-  console.log(`\n🎉 ${APPS.length} 个 dev server 全部就绪，经网关 http://localhost:8080/ 访问`)
+  console.log(`\n🎉 全部就绪：经网关 http://localhost:${GATEWAY_PORT}/ 访问（Ctrl+C 一并退出）`)
   process.on('SIGINT', () => shutdown('收到 Ctrl+C'))
   process.on('SIGTERM', () => shutdown('收到 SIGTERM'))
 }

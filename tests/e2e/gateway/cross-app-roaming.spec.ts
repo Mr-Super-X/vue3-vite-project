@@ -1,7 +1,7 @@
 /**
  * 跨应用漫游 E2E（gateway project，蓝本为单应用时期 four-panels.spec.ts 用例 2/6 的跨 app 部分）。
  *
- * 覆盖（须 :8080 同域网关，docker compose up + pnpm dev:gateway）：
+ * 覆盖（须 :8080 同域网关，pnpm dev:gateway 一体化单命令拉起）：
  *   1. 未登录访问 /admin/workbench → 整页跳 /auth/login（统一登录协议）
  *   2. 登录后回跳 admin 工作台，TagsView 页签快照
  *   3. 漫游 h5/big 演示页（网关保留前缀：/h5/h5-demo、/big/big-demo、/big/big-demo/state-demo）
@@ -14,7 +14,7 @@
  */
 import { test, expect } from '@playwright/test'
 
-/** 网关可达性探测（docker 未启动时整个文件的用例跳过） */
+/** 网关可达性探测（dev:gateway 未启动时整个文件的用例跳过） */
 async function isGatewayUp(): Promise<boolean> {
   try {
     const res = await fetch('http://localhost:8080', { signal: AbortSignal.timeout(2000) })
@@ -25,7 +25,7 @@ async function isGatewayUp(): Promise<boolean> {
 }
 
 test.beforeEach(async ({}, testInfo) => {
-  testInfo.skip(!(await isGatewayUp()), '同域网关未启动（需 docker compose up + pnpm dev:gateway）')
+  testInfo.skip(!(await isGatewayUp()), '同域网关未启动（需 pnpm dev:gateway）')
 })
 
 test('未登录访问 admin → 整页跳统一登录 → 登录回跳工作台', async ({ page }) => {

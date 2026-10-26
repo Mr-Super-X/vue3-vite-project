@@ -14,7 +14,7 @@
 //       auth → ['Login', 'NotFound']（登录路由宿主 + 登出落地页匿名可达）
 //       admin → ['Forbidden', 'NotFound', 'ServerError']（系统错误页宿主）
 //       其余 app（docs/portal/h5/big）→ ['NotFound']（全公开 app 只有 404 兜底）
-//   - 路由检查收尾时自动复跑网关配置校验（check-gateway-conf 同一函数，CI 单点覆盖）
+//   - 路由检查收尾时自动复跑端口双写锁死校验（apps-registry port ↔ vite.config portOffset，CI 单点覆盖）
 //
 // 5 个校验（语义与单应用时代一致，逐 app 执行）：
 //   A. whitelist ⊆ implementedNames（白名单元素必须有 route 实现）
@@ -22,7 +22,9 @@
 //   C. 系统兜底名单 ⊆ implementedNames（兜底页面必须有真实路由）
 //   D. 双向一致性最终汇总
 //   E. 注册表反向校验：apps/ 下发现的应用必须登记 apps-registry.mjs（防静默失效）
-// 收尾另跑网关校验 + 端口双写锁死（check-gateway-conf 同函数，CI 单点覆盖）
+// 收尾另跑端口双写锁死（原 nginx 网关配置校验已随 node 网关方案删除——
+// 网关路由表由 scripts/node-gateway.ts 的 buildGatewayRoutes(APPS) 单源代码派生，
+// 不存在静态配置第二事实源；端口双写锁死与 nginx 无关故迁入本文件保留）
 //
 // 设计变更（2026-07-24 方案 A）：
 //   - 移除 RouteName 联合类型校验（types.ts RouteName 改为 string alias）
@@ -36,7 +38,9 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
 import { APPS } from './apps-registry.mjs'
-import { validateGatewayConf, validatePortWiring } from './check-gateway-conf.ts'
+// SERVER_DEFAULTS.port 是 portOffset 的推导基准（packages/config/src/server.ts 单源），
+// 与原 check-gateway-conf.ts 引用同先例（strip-types 直跑可 import ts）
+import { SERVER_DEFAULTS } from '../packages/config/src/server.ts'
 
 const ROOT = resolve(import.meta.dirname, '..')
 const APPS_DIR = resolve(ROOT, 'apps')
@@ -58,6 +62,42 @@ function discoverApps(): string[] {
  */
 function requiredFor(app: string): readonly string[] {
   return APPS.find((entry) => entry.name === app)?.requiredRoutes ?? []
+}
+
+/**
+ * 端口双写锁死：apps-registry.mjs 的绝对 port 与各 app vite.config.ts 的 portOffset
+ * 是同一事实的两处手写（port = SERVER_DEFAULTS.port + offset），历史上无任何静态
+ * 校验——dev 直启时实际端口与注册表漂移，表现是「某 app 经网关 404 / waitForPort 超时」
+ * 且报错现象指向网络层，排查成本高。此处静态锁死，漂移即 CI 红。
+ * （2026-10-26 自 scripts/check-gateway-conf.ts 迁入：nginx 网关配置校验随 node 网关
+ * 方案删除，本校验与 nginx 无关故保留）
+ */
+function validatePortWiring(): string[] {
+  const errors: string[] = []
+  const appsDir = resolve(ROOT, 'apps')
+  for (const { name, port } of APPS) {
+    const viteConfigPath = join(appsDir, name, 'vite.config.ts')
+    if (!existsSync(viteConfigPath)) {
+      errors.push(`apps/${name}/vite.config.ts 不存在（注册表登记了该 app 但无 vite 配置）`)
+      continue
+    }
+    const text = readFileSync(viteConfigPath, 'utf-8')
+    if (!text.includes('createViteConfig(')) {
+      errors.push(
+        `apps/${name}/vite.config.ts 未调用 createViteConfig 工厂（无法推导实际 dev 端口）`
+      )
+      continue
+    }
+    // 工厂缺省 portOffset = 0（SERVER_DEFAULTS.port 即 admin 实际端口），缺省声明合法
+    const offsetMatch = text.match(/portOffset:\s*(\d+)/)
+    const actual = SERVER_DEFAULTS.port + (offsetMatch ? Number(offsetMatch[1]) : 0)
+    if (actual !== port) {
+      errors.push(
+        `apps/${name} 端口双写不一致：apps-registry.mjs port=${port}，但 vite.config.ts portOffset=${offsetMatch[1]} → 实际 dev 端口 ${actual}（须同步两处）`
+      )
+    }
+  }
+  return errors
 }
 
 /**
@@ -260,19 +300,9 @@ for (const app of apps) {
   totalErrors += appErrors
 }
 
-// ─── 网关配置校验（同 apps-registry 单源，CI 单点覆盖）──────────
-// nginx.dev.conf 是静态配置无法 import 注册表，漏配 location/<port> 只在
-// dev:gateway 真机访问时才暴露——此处复跑同一校验函数把漂移前置到 CI 阶段。
-
-console.log('━━━ 网关配置（docker/nginx.dev.conf vs apps-registry）━━━')
-const gatewayErrors = validateGatewayConf()
-if (gatewayErrors.length === 0) {
-  console.log(`✓ 网关 location 名单与端口接线一致（${APPS.length} 个 app）`)
-} else {
-  for (const message of gatewayErrors) console.error(`✖ ${message}`)
-  totalErrors += gatewayErrors.length
-}
-console.log('')
+// ─── 端口双写锁死（apps-registry.mjs port ↔ vite.config.ts portOffset）──────────
+// node 网关路由表由 buildGatewayRoutes(APPS) 单源代码派生，无静态配置校验需求；
+// 注册表 port 与 vite.config portOffset 仍是两处手写，此处静态锁死，漂移即 CI 红。
 
 console.log('━━━ 端口双写锁死（apps-registry.mjs port ↔ vite.config.ts portOffset）━━━')
 const portErrors = validatePortWiring()

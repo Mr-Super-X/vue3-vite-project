@@ -7,8 +7,8 @@
  *     admin 5174 / docs 5175 / h5 5177 / big 5178（各 project 独立 webServer 自启 dev）。
  *   - docs（ProTable demo）/ h5 / big 全站白名单公开，spec 免登录直达；
  *     admin 无自有登录页（未登录整页跳 auth app），spec 走 API 登录 + 登录标记注入。
- *   - gateway project（:8080 同域网关，docker compose + dev:gateway）只承载真正
- *     跨应用漫游用例；无 docker 环境时用例自跳过（e2e 不硬依赖 docker）。
+ *   - gateway project（:8080 同域网关，pnpm dev:gateway 一体化单命令拉起）只承载真正
+ *     跨应用漫游用例；网关未启动时用例自跳过（spec 自动探测可达性，e2e 不硬依赖网关）。
  *
  * 变更记录（2026-10-23 晚，扩展性审查）：
  *   - app projects 从 scripts/apps-registry.mjs 单源派生（端口/名单与 dev-gateway /
@@ -16,7 +16,7 @@
  *     目录即自动纳入 e2e 覆盖，无须改本配置；webServer 统一 `dev:local`（不依赖
  *     remote 菜单后端，spec 可冷启动直跑）。
  *
- * 端口事实源：scripts/apps-registry.mjs（5174-5179，strictPort，check:gateway-conf 锁死）。
+ * 端口事实源：scripts/apps-registry.mjs（5174-5179，strictPort，check:routes 端口双写锁死）。
  *
  * 启动：pnpm test:e2e（首次需 pnpm test:e2e:install 下载 Chromium）
  * 单 project：pnpm test:e2e --project=docs
@@ -77,7 +77,7 @@ export default defineConfig({
     ...createAppProjects(),
     {
       // 跨应用漫游用例（统一登录 + TagsView 守恒）——依赖 :8080 同域网关
-      // （docker compose up + pnpm dev:gateway），e2e 不自动拉起 6 个 app，
+      // （pnpm dev:gateway 一体化拉起网关 + 6 dev server），e2e 不自动拉起，
       // 由 spec 内探测网关可达性后自跳过
       name: 'gateway',
       testMatch: 'tests/e2e/gateway/**/*.spec.ts',

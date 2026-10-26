@@ -4,6 +4,19 @@
 
 ## 未发布
 
+### ⚙️ Infra | 本地同域网关 node 化：去除 docker/nginx 依赖（2026-10-26）
+
+> 背景：本地开发同域网关原为 docker compose + nginx:alpine 容器（:8080 反代宿主机 5174-5179），需 Docker Desktop 常驻 + 双终端两条命令，且 nginx 配置因无法 import app 注册表而存在静态配置双写漂移面（靠 check-gateway-conf 在 CI 校验兜底）。现整体替换为零依赖 node 原生方案。
+
+- **`scripts/node-gateway.ts` 新建**：`node:http` 原生反向代理（HTTP 流式转发 + WS upgrade 透传 + GET / 302 保留 Host 端口 + 上游 502 + 转发头组），路由表由 `buildGatewayRoutes(apps-registry)` **单源代码派生**——静态配置第二事实源在结构上消失
+- **`pnpm dev:gateway` 一体化单命令**：先监听网关 :8080（EADDRINUSE 报错提示旧 docker 网关未关）→ 串行起 6 dev server（保留 mock 并发编译竞态防护）→ Ctrl+C 网关 + 进程树一并退出；原「另终端 docker compose up」流程删除
+- **`pnpm test:gateway` 新增**：node:test 8 用例（路由派生表驱动 + 假上游集成 smoke：HTTP 转发 / 302 / 404 / 502 / WS 双向 echo）；两个踩坑记录——undici WebSocket client 严格校验 `Sec-WebSocket-Accept`、服务端方向回发 masked 帧即断连（假上游须回合法帧），以及 fetch keep-alive 连接池需 `--test-force-exit`
+- **端口双写锁死保留**：`validatePortWiring` 自 `check-gateway-conf.ts` 迁入 `scripts/check-routes.ts` 内联，CI 单点覆盖不变（该校验与 nginx 无关，属 2026-10-23 扩展性审查 P0）
+- **删除清单**：`docker-compose.yml`、`docker/nginx.dev.conf`（docker/ 目录）、`scripts/check-gateway-conf.ts`、根 `check:gateway-conf` script
+- **文档同步**：docs/43 §6 重写（node 网关用法/语义/演进史）+ §9 排障更新；CLAUDE.md v3.0.2 变更记录 + Commands 表 + §2.1 拓扑表 #12；README 最近更新/场景表/常用脚本表/CI checks 说明；docs/04 server.ts 表行；apps-registry.mjs 头注；playwright.config.ts 与 cross-app-roaming.spec.ts 注释（e2e 逻辑零改动，仍是可达性探测自跳过）
+- **验证**：`pnpm check:routes` 绿（端口双写锁死迁移后）+ `pnpm test:gateway` 8/8 绿 + `pnpm type-check` 10/10 绿；dev:gateway 真实链路（302/六 app/HMR/登录漫游/API mock）手动验证交付用户
+- **手动验证步骤**：① `pnpm dev:gateway` 单命令启动；② `curl -I http://localhost:8080/` → 302 带端口 Location；③ 浏览器 `/admin/`、`/auth/login`、`/h5/h5-demo` 可达；④ `admin/123456` 登录后跳 `/portal/` 无登录按钮；⑤ 改 admin 任一 .vue 保存 → 浏览器热更新；⑥ Ctrl+C 全部退出、`netstat -ano | findstr 8080` 无残留
+
 ### 🐛 Fix | 门户登录态穿透：全公开 app 登录态探测 + performLogout 无标记静默守卫（2026-10-30 用户实测 bug）
 
 > 背景：用户实测——admin 有登录态，工作台点「能力演示导航 → 门户首页」（`window.open` 新标签）跳门户后**仍显示登录按钮**。根因双环：① portal 全公开 app 的守卫为白名单直通形态（不挂 checkLoginState），启动从不拉 profile，而 PortalHeader 双态判断依赖内存 profile（初始 null）→ 有登录态也显示登录按钮；② 探测方案的前置障碍——拦截器 401 链对**任何** refresh 失败都 performLogout（清标记 + 整页踢登录页），未登录用户打开 portal 会被误踢，破坏公开页。

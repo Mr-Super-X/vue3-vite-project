@@ -1,12 +1,15 @@
 /**
  * App 注册表 —— Monorepo「App 名单」单一事实来源
  *
- * 收敛 4 处硬编码（可扩展性审查第一崩点：新增第 7 个 app 原本要手改 4 处且无校验）：
+ * 收敛 3 处硬编码（可扩展性审查第一崩点：新增第 7 个 app 原本要手改多处且无校验；
+ * 原第 4 处 docker/nginx.dev.conf 已随 node 网关方案消灭——网关路由表由
+ * scripts/node-gateway.ts 的 buildGatewayRoutes(APPS) 单源代码派生，无第二事实源）：
  *   1. scripts/dev-gateway.ts 的 APPS 端口表（dev:gateway 串行拉起顺序）
  *   2. eslint.config.mjs 的 MONOREPO_APPS（boundary-apps-<a> 逐 app 边界规则粒度）
  *   3. scripts/check-routes.ts 的 REQUIRED_BY_APP（系统兜底路由 B/C 校验名单）
- *   4. docker/nginx.dev.conf 的 location /<app>/ 块（静态配置无法 import 本表，
- *      由 scripts/check-gateway-conf.ts 校验对齐，check-routes 汇总阶段自动复跑）
+ *
+ * 端口另有两处代码消费（同 import 本表，非硬编码）：scripts/node-gateway.ts 网关路由表、
+ * playwright.config.ts 的 app projects baseURL。
  *
  * 对照组 build-pages.ts / generate-tsconfig-paths.ts 走 readdirSync(apps) 自发现，不引用本表
  * （纯目录枚举、无端口/路由元数据诉求）。
@@ -15,8 +18,8 @@
  * --experimental-strip-types，读不了 .ts；故运行时单源必须是纯 ESM 形态，
  * 类型镜像在 apps-registry.d.mts（改字段时两处同步）。
  *
- * 新增第 7 个 app 的步骤：apps/<name> 目录 + 本表追加一条 + vite.config portOffset +
- * nginx.dev.conf 补 location 块（check-gateway-conf 校验兜底，漏补即红）。
+ * 新增第 7 个 app 的步骤：apps/<name> 目录 + 本表追加一条 + vite.config portOffset
+ * 同改（check-routes 端口双写锁死校验兜底，漏改即红）；网关路由表自动派生无需另改。
  */
 export const APPS = [
   {
