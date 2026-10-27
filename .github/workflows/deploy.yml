@@ -1,10 +1,13 @@
 # 职责：构建 gh-pages 产物并部署（不跑 lint/test/check:routes——同次 push 的 ci.yml 已做完整门禁，本 workflow 只构建 + 发布）
 name: Deploy to GitHub Pages
 
-# 触发条件：push 到 master 自动部署（仅 master 发布；develop 只过 CI 不发布，见 job 级 if 守卫）+ 手动兜底
+# 触发条件：push 到 master 自动部署（仅 master 发布；develop 只过 CI 不发布，见 job 级 if 守卫）
+# + gh-pages 分支（2026-10-27 预览通道）：把 feature 分支内容推到 gh-pages 即可触发构建发布，
+# 用于「未合入 master 前先在线验收」；Environment 白名单（Settings → Environments →
+# github-pages → Deployment branches）需同步放行 gh-pages 分支
 on:
   push:
-    branches: [master]
+    branches: [master, gh-pages]
   workflow_dispatch:
 
 permissions:
@@ -32,8 +35,9 @@ jobs:
   deploy:
     name: Build + Deploy
     # ref 守卫：workflow_dispatch 手动触发可选任意含本文件的分支，
-    # 无守卫会把 develop 等未发布分支构建推到 Pages（违背 master 即线上单一真相源）
-    if: github.ref == 'refs/heads/master'
+    # 无守卫会把 develop 等未发布分支构建推到 Pages（违背 master 即线上单一真相源）；
+    # gh-pages 为例外预览通道（2026-10-27）：该分支的 push 同样放行部署
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/gh-pages'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     environment:
