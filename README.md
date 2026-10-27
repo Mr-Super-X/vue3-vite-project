@@ -318,6 +318,7 @@ pnpm dev:local
 | `pnpm dev`                         | 全量 dev（turbo 并行 6 个 app，remote 菜单模式；admin 含 vite-plugin-vue-devtools）                                   |
 | `pnpm -C apps/<a> dev`             | 单 app dev（如 `pnpm -C apps/admin dev`；`dev:local` 切本地菜单模式）                                                 |
 | `pnpm dev:gateway`                 | 同域网关 dev（单命令）：node 网关 :8080 + 6 app 以 `VITE_BASE=/<app>/` 串行起（见 docs/43 §6）                        |
+| `pnpm dev:gateway admin auth`      | 子集模式（2026-10-27）：网关 + 仅起指定 app——日常中后台开发省一半启动时间与内存；根 302 跳子集第一个（防 502）        |
 | `pnpm build`                       | 全量生产构建（turbo 拓扑序；各 app 内 `build-only` 生成声明 → `type-check:full` 全量门禁）                            |
 | `pnpm -C apps/<a> build-only`      | 单 app 仅 `vite build`（不含类型校验；调试构建产物用）                                                                |
 | `pnpm -C apps/<a> preview`         | 预览单 app 构建产物（本地起静态服务）                                                                                 |

@@ -4,6 +4,20 @@
 
 ## 未发布
 
+### ⚙️ Infra | dev:gateway 子集启动：单命令拉起网关 + 指定 app（2026-10-27）
+
+> 背景：日常中后台开发（admin 为主）全量起 6 个 vite dev server 常驻 ≈ 1.2GB 内存 + 6×1.5s 串行就绪链，门户/大屏/文档 app 多数时间空跑。dev-gateway 的 startApp/waitForPort/killTree 全是通用机制，参数化成本极低。
+
+- **`scripts/dev-gateway.ts` 子集化**：`pnpm dev:gateway admin auth` —— 网关 :8080 + 仅起指定 app；同一入口地址（8080 同源），统一登录链路（守卫 302→login→回跳→cookie 漫游）零差异。未给参数 = 全量（零行为变化）
+- **根 302 动态判定**（`resolveRootRedirect`）：子集含 portal → `/portal/`；不含 → 子集第一个（`pnpm dev:gateway admin auth` 时根访问跳 `/admin/` 而非未起的 `/portal/` 落 502）
+- **未知 app 名抛错**：拼写错误（`admn`）立即报「可用名单」，不静默忽略
+- **路由表仍传全量 APPS**：未起 app 的前缀保留路由（上游未起即 502），与「单 app dev 跳 /auth/login 404 属预期」语义一致（docs/43 §5）
+- **测试环境守卫**：`dev-gateway.ts` 模块顶层加 `process.argv[1]?.endsWith('.spec.ts')` 判定——spec 用例动态 import 时跳过 `main()` 自执行（否则监听 8080 撞 EADDRINUSE）；node:test 下 `NODE_ENV`/`TEST_WORKER_ID` 均不存在，argv[1] 是唯一可靠判定源（实测探测）
+- **spec 补 3 用例**（node-gateway.spec.ts）：resolveAppSubset 全量/子集/顺序过滤 + 未知名抛错 + resolveRootRedirect 三态
+- **文档同步**：README 常用脚本表 + docs/43 §6 用法段
+- **验证**：`pnpm test:gateway` 11/11 绿
+- **手动验证步骤**：① `pnpm dev:gateway admin auth` → 终端打印「子集模式：仅起了 admin / auth」；② 浏览器 `http://localhost:8080/` → 302 跳 `/admin/`；③ `/admin/` 200（未登录跳 `/auth/login`，登录回跳正常）；④ `/portal/` 502（预期）；⑤ Ctrl+C 一并退出
+
 ### ⚙️ Infra | 网络层错误反馈事件化：拦截器发事件 + 网络级错误聚合 NetworkBanner 横幅（2026-10-27）
 
 > 背景：生产 portal 打开弹「网关错误」Toast 事件驱动改造。原 `onResponseRejected` 无条件 `ElMessage.error`——① 探测请求（登录态探测）失败无法静默（行业标准 silent/skipNotify 语义，对齐 vue-element-admin / Ant Design Pro）；② 后端宕机时连续操作触发 Toast 轰炸。用户拍板直接落地业界推荐架构：拦截器归一化错误 + 发事件，订阅方分流（业务 toast 兜底 / 网络级聚合横幅）。

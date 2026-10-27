@@ -98,7 +98,10 @@ vue3-vite-project（pnpm workspace + turbo@2）
 复现生产「同域 path 部署」：零依赖 node 反向代理（`scripts/node-gateway.ts`，`node:http` 原生）监听 `:8080`，按路径前缀反代 6 个 vite dev server（上游 `127.0.0.1:5174-5179`），浏览器只访问 `localhost:8080`（同 origin），cookie 漫游与重定向协议和生产一致。
 
 ```bash
-pnpm dev:gateway   # 唯一命令：网关 :8080 + 6 个 app 以 base=/<app>/ 串行起，Ctrl+C 一并退出
+pnpm dev:gateway             # 全量：网关 + 6 app，Ctrl+C 一并退出
+pnpm dev:gateway admin auth  # 子集模式（2026-10-27）：仅起指定 app——日常中后台开发
+                             # 省一半启动时间与内存；同一入口地址（8080 同源），
+                             # 根 302 跳子集第一个（未起 portal 时避免根落 502）
 ```
 
 | 网关路径                        | 反代目标（127.0.0.1）                     |

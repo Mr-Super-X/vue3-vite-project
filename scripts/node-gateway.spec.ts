@@ -175,3 +175,38 @@ test('WS 升级透传：双向 echo（HMR 场景最小复现）', async () => {
   gateway.close()
   upstream.close()
 })
+
+// ── dev-gateway 子集模式（2026-10-27）：参数解析 + 根 302 动态判定 ──
+
+test('resolveAppSubset：未给参数 → 全量；给子集 → 按注册表顺序过滤', async () => {
+  const { resolveAppSubset } = await import('./dev-gateway.ts')
+  const { APPS } = await import('./apps-registry.mjs')
+  assert.equal(resolveAppSubset([]).length, APPS.length)
+  // 传参顺序无关：按 APPS 顺序返回（保证输出与网关路由表一致）
+  const subset = resolveAppSubset(['auth', 'admin'])
+  assert.deepEqual(
+    subset.map((a) => a.name),
+    ['admin', 'auth']
+  )
+})
+
+test('resolveAppSubset：未知 app 名抛错（拼写错误不静默忽略）', async () => {
+  const { resolveAppSubset } = await import('./dev-gateway.ts')
+  assert.throws(() => resolveAppSubset(['admn']), /未知 app 名/)
+})
+
+test('resolveRootRedirect：子集含 portal → /portal/；不含 → 子集第一个', async () => {
+  const { resolveRootRedirect } = await import('./dev-gateway.ts')
+  const { APPS } = await import('./apps-registry.mjs')
+  // 全量/含 portal 子集：跳 portal
+  assert.equal(resolveRootRedirect(APPS), '/portal/')
+  assert.equal(
+    resolveRootRedirect(APPS.filter((a) => ['portal', 'admin'].includes(a.name))),
+    '/portal/'
+  )
+  // 不含 portal：跳子集第一个（避免根 302 落到未起 app 的 502）
+  assert.equal(
+    resolveRootRedirect(APPS.filter((a) => ['admin', 'auth'].includes(a.name))),
+    '/admin/'
+  )
+})

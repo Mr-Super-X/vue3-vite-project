@@ -8,6 +8,13 @@
  *   pnpm dev:gateway    # 唯一命令：网关 + 6 dev server 前台常驻，Ctrl+C 一并退出
  *   浏览器：http://localhost:8080/（302 → /portal/）
  *
+ *   pnpm dev:gateway admin auth   # 子集模式（2026-10-27）：网关 + 仅指定 app，
+ *   # 同一入口地址（8080 同源）——日常中后台开发省一半启动时间与内存
+ *
+ * 子集语义：未指定 app 的网关前缀仍保留路由（代码派生），上游未起时访问即 502
+ * （与「单 app dev」语义一致：统一登录全链路必须走网关）；根 302 动态判定——
+ * 子集含 portal 跳 /portal/，否则跳子集第一个（避免跳未起 app 落 502）。
+ *
  * ⚠️ 串行启动（非并行，2026-10-23 竞态修复）：6 app 共享 @vv/mock 数据源，
  * vite-plugin-mock 用 bundle-require 把 mock 源编译成 _*.bundled_*.mjs 临时文件
  * （落在 mock 源同目录）+ clean-mock-bundled 插件 configureServer 启动时抢删。
@@ -116,14 +123,41 @@ async function startApp(name: string, port: number): Promise<void> {
   console.log(`  ✓ [${name}] 就绪 → 网关路径 /${name}/（直查 http://localhost:${port}/${name}/）`)
 }
 
+/**
+ * 从命令行参数解析 app 子集（未给参数 → 全量）。
+ *
+ * @param argv process.argv.slice(2)（app 名列表，如 ['admin', 'auth']）
+ * @returns 按 APPS 顺序排序的子集（保持注册表顺序，保证输出与网关路由表一致）
+ * @throws 传了未知名即抛错——拼写错误（如 admn）静默忽略会让开发者以为起了实际没起
+ */
+export function resolveAppSubset(argv: string[]): typeof APPS {
+  if (argv.length === 0) return APPS
+  const known = new Set(APPS.map((a) => a.name))
+  const unknown = argv.filter((name) => !known.has(name))
+  if (unknown.length > 0) {
+    throw new Error(`未知 app 名：${unknown.join(', ')}（可用：${[...known].join(', ')}）`)
+  }
+  return APPS.filter((a) => argv.includes(a.name))
+}
+
+/** 根 302 目标动态判定：子集含 portal 跳 /portal/，否则跳子集第一个（未起 portal 时避免根 502） */
+export function resolveRootRedirect(subset: typeof APPS): string {
+  return subset.some((a) => a.name === 'portal') ? '/portal/' : `/${subset[0].name}/`
+}
+
 async function main(): Promise<void> {
+  const subset = resolveAppSubset(process.argv.slice(2))
+  const rootRedirect = resolveRootRedirect(subset)
+  const isSubset = subset.length < APPS.length
+
   console.log(
-    `🚀 同域网关模式：node 网关 :${GATEWAY_PORT} + 串行启动 ${APPS.length} 个 app dev（base=/<app>/，避免共享 mock 源并发编译竞态）…\n`
+    `🚀 同域网关模式：node 网关 :${GATEWAY_PORT} + 串行启动 ${subset.length} 个 app dev（base=/<app>/，避免共享 mock 源并发编译竞态）…\n`
   )
 
-  // 先监听网关：8080 被占（如旧 docker 网关未关）立即失败，不浪费后续 6 个 dev 启动
+  // 先监听网关：8080 被占（如旧 docker 网关未关）立即失败，不浪费后续 dev 启动
   gateway = createGatewayServer({
-    rootRedirect: '/portal/',
+    rootRedirect,
+    // 路由表仍传全量 APPS：未起 app 的前缀保留路由（上游未起即 502），与全量模式语义对齐
     routes: buildGatewayRoutes(APPS),
   })
   try {
@@ -134,18 +168,25 @@ async function main(): Promise<void> {
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === 'EADDRINUSE') {
       console.error(
-        `✖ 网关端口 ${GATEWAY_PORT} 被占用：请确认旧 docker 网关已停止（docker compose down），或释放占用进程`
+        `✖ 网关端口 ${GATEWAY_PORT} 被占用——常见占用者：` +
+          `\n  ① 生产容器未停：docker compose -f docker-compose.prod.yml down` +
+          `\n  ② 旧 dev:gateway 进程残留：Ctrl+C 或重启终端` +
+          `\n  ③ 其他进程：netstat -ano | findstr :${GATEWAY_PORT} 查占用者 PID`
       )
       process.exit(1)
     }
     throw err
   }
   console.log(
-    `🌐 网关就绪：http://localhost:${GATEWAY_PORT}/（/api/ → admin，GET / 302 → /portal/）\n`
+    `🌐 网关就绪：http://localhost:${GATEWAY_PORT}/（GET / 302 → ${rootRedirect}；/api/ → admin${
+      isSubset && !subset.some((a) => a.name === 'admin')
+        ? '（⚠️ 本模式未起 admin，/api/ 将 502）'
+        : ''
+    }）\n`
   )
 
   // 串行：前一个 dev server 端口就绪（mock 编译完成）再启下一个，消除并发编译窗口
-  for (const { name, port } of APPS) {
+  for (const { name, port } of subset) {
     try {
       await startApp(name, port)
     } catch (err) {
@@ -154,8 +195,19 @@ async function main(): Promise<void> {
     }
   }
   console.log(`\n🎉 全部就绪：经网关 http://localhost:${GATEWAY_PORT}/ 访问（Ctrl+C 一并退出）`)
+  if (isSubset) {
+    console.log(
+      `  ℹ️  子集模式：仅起了 ${subset.map((a) => a.name).join(' / ')}；其余前缀访问返回 502（预期）`
+    )
+  }
   process.on('SIGINT', () => shutdown('收到 Ctrl+C'))
   process.on('SIGTERM', () => shutdown('收到 SIGTERM'))
 }
 
-void main()
+// 测试环境守卫：spec 用例只消费 resolveAppSubset/resolveRootRedirect 纯函数，
+// 不触发 main() 自执行（否则监听 8080 撞 EADDRINUSE）。node:test runner 进程内
+// process.argv[1] 指向 spec 文件名（普通运行时是 undefined/脚本路径），据此判定
+const isTestRun = process.argv[1]?.endsWith('.spec.ts') === true
+if (!isTestRun) {
+  void main()
+}
