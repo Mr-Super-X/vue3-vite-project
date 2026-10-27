@@ -13,6 +13,7 @@
  */
 import { fileURLToPath } from 'node:url'
 import { createViteConfig } from '@vv/config'
+import { VantResolver } from 'unplugin-vue-components/resolvers'
 
 const appRoot = fileURLToPath(new URL('.', import.meta.url))
 
@@ -23,4 +24,9 @@ export default createViteConfig({
   portOffset: 3,
   // h5 rem 适配：仅转换本 app src/layouts/h5 与 src/modules/h5-*（postcss.ts 约定）
   h5Rem: true,
+  // vant 4 按需引入：经工厂 componentResolvers 扩展位注入（解析 <van-*> 前缀 +
+  // sideEffects 自动注入组件 CSS——vant/es/button/style/index 是 JS 入口内部 import css，
+  // 此前误判为路径不匹配，实测按需引入 + CSS 注入均正常）。
+  // 隔离：只在本 app 装配，其他 app 零感知
+  componentResolvers: [VantResolver()],
 })

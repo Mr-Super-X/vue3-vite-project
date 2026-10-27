@@ -22,6 +22,8 @@ import { createGlobalComponents } from '@vv/ui'
 import { setupUiAppContext } from '@vv/ui/composables/setup-ui-app-context'
 import { bootstrapApp } from '@vv/shared'
 import '@vv/shared/app-styles'
+// vant 4 主题覆盖（CSS 变量，vant 官方推荐方式；组件 CSS 由 VantResolver 按需注入）
+import '@layouts/h5/styles/vant-vars.scss'
 
 await bootstrapApp({
   rootComponent: App,

@@ -3,6 +3,18 @@
 > 适用：移动端 H5 页面开发。routes 挂 h5 layout 即获得 rem 适配能力，样式直接写设计稿 px。
 > 决策记录（为何自研 / 828 选型 / 范围限定根因）见 [docs/37-h5-rem适配决策记录.md](37-h5-rem适配决策记录.md)。
 
+## 0. Vant 4 集成（2026-10-27）
+
+h5 已集成 **vant 4** 作为基础组件库（按需引入 + CSS 变量主题覆盖）：
+
+- **按需引入**：模板直接用 `<van-button>` / `<van-cell>` 等——`apps/h5/vite.config.ts` 传 `componentResolvers: [VantResolver()]`（工厂扩展位，注入 Components 插件 resolvers 数组），组件解析 + CSS sideEffects 自动注入
+- **主题覆盖**：`apps/h5/src/layouts/h5/styles/vant-vars.scss` 全局覆盖 vant CSS 变量（品牌橙 `#ff6a00` / 圆角 / 尺寸）；如需局部覆盖用 vant 的 `ConfigProvider` 组件（官方文档：https://vant-ui.github.io/vant/#/zh-CN/config-provider）
+- **隔离保证**：vant 依赖只进 `apps/h5/package.json`，resolver 只在本 app 的 vite.config 装配，其他 app 零感知
+- **rem 适配兼容**：vant 组件内部尺寸是物理 px（不经 pxtorem 转换——`postcss.ts` 的 exclude 正则锚定 `appRoot/src/layouts/h5` 与 `modules/h5-*`，vant 样式在 `node_modules/vant/lib` 不匹配）；h5 自定义组件经 pxtorem 等比缩放，两者混用无冲突
+- **分包归属**：vant 产物归 `vendor-ui` chunk（与 element-plus 同组——同为 UI 库、按需后体量小不污染缓存；其他 app 不装 vant，pattern 只在本 app 命中）
+
+**验证页**：`pnpm dev:gateway h5` → `http://localhost:8080/h5/h5-demo/vant-test/`（按需引入 + 主题覆盖演示）
+
 ## 1. 快速上手
 
 ```ts

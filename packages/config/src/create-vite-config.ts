@@ -105,6 +105,22 @@ export interface AppViteOptions {
   h5Rem?: boolean
   /** app 私有插件（如 vite-plugin-vue-devtools / rollup-plugin-visualizer） */
   extraPlugins?: PluginOption[]
+  /**
+   * app 级组件库 resolver 扩展（2026-10-27 vant 集成引入）：注入到 Components 插件的
+   * resolvers 数组（ElementPlusResolver 之后、IconsResolver 之前——图标 resolver 只认
+   * i- 前缀，顺序不影响；EP resolver 只认 El 前缀，vant 的 Van 前缀无冲突）。
+   *
+   * 为什么不开 extraPlugins 加第二实例：vite 按插件 name 去重，两个同名
+   * unplugin-vue-components 实例后者被静默忽略（vant 集成实测踩坑——<van-button>
+   * 解析失败回退为原生自定义元素，组件不渲染）。
+   *
+   * @example h5 集成 vant 4
+   * ```ts
+   * import { VantResolver } from 'unplugin-vue-components/resolvers'
+   * createViteConfig({ ..., componentResolvers: [VantResolver()] })
+   * ```
+   */
+  componentResolvers?: Array<(name: string) => unknown> // unplugin-vue-components 的 Resolver 形态
 }
 
 export function createViteConfig({
@@ -115,6 +131,7 @@ export function createViteConfig({
   portOffset = 0,
   h5Rem = false,
   extraPlugins = [],
+  componentResolvers = [],
 }: AppViteOptions) {
   // 本地 app 图标集合（i-app-*）：P1-4 起命中 @vv/ui 包源码（existsSync 自动切换，
   // legacyRoot 回落仅作过渡兜底，P5 清理）
@@ -162,6 +179,9 @@ export function createViteConfig({
       Components({
         resolvers: [
           ElementPlusResolver({ importStyle: 'css' }),
+          // app 级组件库扩展位（如 h5 的 VantResolver）——注入在 EP 之后、图标之前；
+          // 前缀命名空间隔离（El / Van / i-）保证互不干扰，见 AppViteOptions.componentResolvers
+          ...componentResolvers,
           // 图标标签解析：只放行 ep / tabler / app 三个集合，
           // 写错集合名/图标名的 i-* 标签不被解析 → 构建期虚拟模块解析失败直接报错
           IconsResolver({

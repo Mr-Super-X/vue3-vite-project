@@ -38,6 +38,16 @@ const routes: RouteRecordRaw[] = [
           noTags: true, // workbench 直达的验收页，不污染 TagsView
         },
       },
+      {
+        path: 'vant-test',
+        name: 'H5VantTest',
+        component: () => import('../views/VantTest.vue'),
+        meta: {
+          title: 'Vant 4 验证',
+          requiresAuth: false,
+          noTags: true,
+        },
+      },
     ],
   },
 ]

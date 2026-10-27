@@ -18,8 +18,12 @@ describe('VENDOR_CHUNKS', () => {
     expect(byName('vendor-vue')?.patterns).toEqual(['/vue/', '/pinia/', '/@vue/'])
   })
 
-  it('vendor-ui 包含 element-plus / unplugin-vue-components', () => {
-    expect(byName('vendor-ui')?.patterns).toEqual(['/element-plus/', '/unplugin-vue-components/'])
+  it('vendor-ui 包含 element-plus / unplugin-vue-components / vant（h5 移动端 UI 库）', () => {
+    expect(byName('vendor-ui')?.patterns).toEqual([
+      '/element-plus/',
+      '/unplugin-vue-components/',
+      '/vant/',
+    ])
   })
 
   it('vendor-charts 包含 echarts（echarts 包体大，单拆利于缓存命中）', () => {

@@ -4,6 +4,21 @@
 
 ## 未发布
 
+### ✨ Feat | h5 集成 vant 4：按需引入 + CSS 变量主题覆盖（2026-10-27）
+
+> 背景：h5 移动端需要成熟的基础组件库（按钮/输入框/单元格等），vant 4 是 Vue 3 移动端事实标准。按隔离原则集成：依赖/插件/样式全部限定在 h5 app 内，其他 app 零感知。
+
+- **依赖隔离**：`vant@4.10.2` 只进 `apps/h5/package.json`（dependencies）+ `unplugin-vue-components`（devDependencies）；根/package.json 与其他 app 零改动
+- **工厂扩展位**：`createViteConfig` 新增 `componentResolvers` 入参——注入 Components 插件 resolvers 数组（EP 之后、图标之前）；h5 的 vite.config 传 `componentResolvers: [VantResolver()]` 即完成按需引入 + CSS 自动注入
+- **踩坑记录（两个）**：① 最初尝试 `extraPlugins` 加第二个 `Components` 实例——vite 按插件 name 去重，同名 unplugin-vue-components 第二实例被静默忽略，`<van-button>` 解析失败渲染为裸自定义元素（组件不渲染）；改工厂单实例扩展位后解决。② 中途误判 vant resolver 的 sideEffects 路径（`vant/es/button/style/index`）与实际 CSS 文件（`vant/es/button/index.css`）不匹配，手动全量引入 `vant/lib/index.css`——实测 sideEffects 路径是 JS 入口（内部 import css），按需注入本就正常，手动全量引入已回退
+- **主题覆盖**：`apps/h5/src/layouts/h5/styles/vant-vars.scss` 全局覆盖 vant CSS 变量（品牌橙 `#ff6a00` / 圆角 / 尺寸）；局部覆盖用 vant `ConfigProvider` 组件
+- **rem 适配兼容**：vant 组件内部尺寸是物理 px（不经 pxtorem 转换——`postcss.ts` 的 exclude 正则锚定 `appRoot/src/layouts/h5` 与 `modules/h5-*`，vant 样式在 `node_modules/vant/lib` 不匹配）；h5 自定义组件经 pxtorem 等比缩放，两者混用无冲突
+- **vendor 分包**：vant 归 `vendor-ui`（`vendor-chunks.ts` patterns 追加 `/vant/`）——vant 与 EP 同为 UI 库、按需后体量小（~30KB gzip）不污染缓存命中；此前落兜底 vendor-utils 是分组表没跟上新增 UI 库，非有意设计
+- **验证页**：`apps/h5/src/modules/h5-demo/views/VantTest.vue`（路由 `/h5/h5-demo/vant-test/`）——按需引入 + 主题覆盖演示
+- **文档**：docs/34 §2 新增「Vant 4 集成」章节
+- **验证**：`pnpm -C apps/h5 build-only` 成功；产物检查——vant 组件按需打包、CSS 变量覆盖生效（`--van-primary-color` 等）、`.van-button` 样式类入 vendor-ui CSS、vendor-utils 零残留、vant CSS 的 px 保持物理值（24px/12px 未被 rem 转换）；`pnpm -C packages/config test` 44/44 绿（vendor-chunks spec 断言同步）
+- **手动验证步骤**：`pnpm dev:gateway h5` → `http://localhost:8080/h5/h5-demo/vant-test/` → 三个按钮显示品牌橙/绿/红 + 单元格列表正常渲染
+
 ### ⚙️ Infra | dev:gateway 子集启动：单命令拉起网关 + 指定 app（2026-10-27）
 
 > 背景：日常中后台开发（admin 为主）全量起 6 个 vite dev server 常驻 ≈ 1.2GB 内存 + 6×1.5s 串行就绪链，门户/大屏/文档 app 多数时间空跑。dev-gateway 的 startApp/waitForPort/killTree 全是通用机制，参数化成本极低。

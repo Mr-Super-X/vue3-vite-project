@@ -17,12 +17,14 @@
   "dependencies": {
     "@vv/mock": "workspace:*",
     "@vv/shared": "workspace:*",
-    "@vv/ui": "workspace:*"
+    "@vv/ui": "workspace:*",
+    "vant": "^4.10.2"
   },
   "devDependencies": {
     "@vue/test-utils": "^2.4.11",
+    "@vv/config": "workspace:*",
     "jsdom": "^29.1.1",
-    "vitest": "^4.1.9",
-    "@vv/config": "workspace:*"
+    "unplugin-vue-components": "32.1.0",
+    "vitest": "^4.1.9"
   }
 }
