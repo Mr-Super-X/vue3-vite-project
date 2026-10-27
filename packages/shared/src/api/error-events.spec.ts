@@ -50,7 +50,7 @@ describe('错误事件广播', () => {
     onHttpError((e) => seen.push(e.error))
     emitHttpError(makeError(502))
     expect(seen).toHaveLength(1)
-    expect(seen[0].status).toBe(502)
+    expect(seen[0]?.status).toBe(502)
   })
 
   it('多订阅者各自收到；退订后不再收到', () => {

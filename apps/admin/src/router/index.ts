@@ -11,8 +11,13 @@
  *    后，否则未登录的 redirect 会污染 visitedViews）
  *
  * 不传 isRouteWhiteListed：admin 的守卫链自管白名单（无任何公开页），
- * 工厂不挂公开白名单守卫。/404 等错误页归 modules/error 路由（不经此注册），
- * 故也不传 notFoundRoute。
+ * 工厂不挂公开白名单守卫。
+ *
+ * 错误页内联注册（2026-10-27 形态统一）：原 modules/error 模块（views+routes 三件套）
+ * 拍平为 src/views/ + 本文件根级具名路由——错误页是纯展示页（ErrorPage 组件包圆逻辑，
+ * 无领域资产），模块制属过度分层；portal/docs/h5/big 同形态（views/NotFound.vue +
+ * router 内联），admin 对齐消灭双形态。check:routes 的正则提取兼容本文件根级路由
+ * （scripts/check-routes.ts 附加扫描 router/index.ts 的 name 字段）。
  *
  * 根路径重定向：访问 `/` 时跳到工作台 /workbench（admin 登录后默认落地页，
  * P3-1 起；redirect 后 vue-router 会对 /workbench 重新触发完整守卫链）。
@@ -21,7 +26,7 @@
  * @see [`./guards/auth.ts`](./guards/auth.ts) 守卫编排（5 段检查流水线）
  * @group 路由：入口
  */
-import type { Router } from 'vue-router'
+import type { Router, RouteRecordRaw } from 'vue-router'
 import { createAppRouter } from '@vv/shared'
 import { autoRegisteredRoutes } from './auto-register'
 import { fallbackRoute } from './fallback'
@@ -38,9 +43,35 @@ const setupTagsViewSync = (router: Router): void => {
   })
 }
 
+/**
+ * 错误页具名路由（/403 /404 /500）——根级注册，check:routes 正则从此提取名单。
+ * noTags：错误页不污染 TagsView。匿名可达性由守卫链的公开白名单判定（apps-registry
+ * requiredRoutes 语义：错误页必须匿名可达——未登录命中错误也要求可到达）。
+ */
+const errorRoutes: RouteRecordRaw[] = [
+  {
+    path: '/403',
+    name: 'Forbidden',
+    component: () => import('@/views/Forbidden.vue'),
+    meta: { title: '403', noTags: true },
+  },
+  {
+    path: '/404',
+    name: 'NotFound',
+    component: () => import('@/views/NotFound.vue'),
+    meta: { title: '404', noTags: true },
+  },
+  {
+    path: '/500',
+    name: 'ServerError',
+    component: () => import('@/views/ServerError.vue'),
+    meta: { title: '500', noTags: true },
+  },
+]
+
 export const router = createAppRouter({
   rootRedirect: '/workbench',
-  routes: autoRegisteredRoutes,
+  routes: [...errorRoutes, ...autoRegisteredRoutes],
   fallbackRoute,
   historyMode: ROUTER_CONFIG.historyMode,
   extraSetup: [setupAuthGuard, setupRouterErrorBoundary, setupTagsViewSync],

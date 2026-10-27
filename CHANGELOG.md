@@ -4,6 +4,16 @@
 
 ## 未发布
 
+### ♻️ Refactor | 错误页形态统一：admin modules/error 拍平为 src/views/（2026-10-27）
+
+> 背景：错误页双形态并存——admin 用 `modules/error/`（views+routes 模块三件套），portal/docs/h5/big 用 `src/views/NotFound.vue` + router 内联。错误页是纯展示页（ErrorPage 组件包圆逻辑，无领域资产），模块制属过度分层；拍平对齐多数派消灭双形态。
+
+- **admin 搬迁**：`modules/error/views/{Forbidden,NotFound,ServerError}.vue` → `src/views/`；三条具名路由（/403 /404 /500）内联进 `src/router/index.ts`（check:routes 附加扫描 router/index.ts 的 name 正则兼容，requiredRoutes 校验不破）；`modules/error/` 目录删除
+- **分流规则入档**（docs/18 §决策矩阵补充）：有领域资产的页面 → `modules/<m>/views/`；无领域资产的纯路由页面（错误页/关于页）→ `src/views/` 根级
+- **顺带修复（type-check 全量门禁暴露的存量错误）**：① `http.ts` silent 字段 `exactOptionalPropertyTypes` 兼容（`silent?: boolean | undefined`）；② `@vv/shared` / `@vv/ui` 包名裸路径补入 `app-aliases.ts` 单源（`@vv/shared`→shared/src、`@vv/ui`→ui/src）——vue-tsc --build 对 workspace 链接的 exports 深路径（`@vv/shared/api/error-events`、`@vv/ui/composables/setup-ui-app-context`）解析失败（vite/vitest 走 exports 正常，仅 TS 需 paths 兜底）；6 app tsconfig.app.json 由 `pnpm generate:tsconfig-paths` 重新派生（**首版曾手动 node 脚本注入，破坏单源派生契约致 check:aliases 全红——已回归生成器正路**）；ui 包 tsconfig 同步补 paths；③ config 包 `componentResolvers` 类型改官方 `ComponentResolver`（unplugin-vue-components/types）
+- **验证**：`pnpm check:routes` 6 app 全绿（admin requiredRoutes Forbidden/NotFound/ServerError 照常命中）；`pnpm type-check` turbo 10/10 绿；admin 构建成功（错误页 chunk 正常生成）
+- **手动验证步骤**：`pnpm dev:gateway admin auth` → 访问 `http://localhost:8080/admin/403` / `/404` / `/500` → ErrorPage 渲染正常（标题 i18n + 返回工作台按钮）
+
 ### ✨ Feat | h5 集成 vant 4：按需引入 + CSS 变量主题覆盖（2026-10-27）
 
 > 背景：h5 移动端需要成熟的基础组件库（按钮/输入框/单元格等），vant 4 是 Vue 3 移动端事实标准。按隔离原则集成：依赖/插件/样式全部限定在 h5 app 内，其他 app 零感知。

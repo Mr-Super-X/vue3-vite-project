@@ -20,6 +20,7 @@ import vueJsx from '@vitejs/plugin-vue-jsx'
 import UnoCSS from 'unocss/vite'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
+import type { ComponentResolver } from 'unplugin-vue-components/types'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 // unplugin-vue-components v32 已移除内置 IconsResolver，图标解析器改从 unplugin-icons/resolver 导入
 import Icons from 'unplugin-icons/vite'
@@ -120,7 +121,7 @@ export interface AppViteOptions {
    * createViteConfig({ ..., componentResolvers: [VantResolver()] })
    * ```
    */
-  componentResolvers?: Array<(name: string) => unknown> // unplugin-vue-components 的 Resolver 形态
+  componentResolvers?: ComponentResolver[]
 }
 
 export function createViteConfig({

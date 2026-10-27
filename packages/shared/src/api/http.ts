@@ -114,7 +114,7 @@ declare module 'axios' {
      * 但全局反馈层（toast/网络横幅）不感知。行业标准 silent/skipNotify 语义
      * （对齐 vue-element-admin errorHandle / Ant Design Pro skipErrorHandler）。
      */
-    silent?: boolean
+    silent?: boolean | undefined
   }
 }
 

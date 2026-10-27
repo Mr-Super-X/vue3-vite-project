@@ -26,7 +26,11 @@
       "@store": ["../../packages/shared/src/store/index.ts"],
       "@store/*": ["../../packages/shared/src/store/*"],
       "@utils": ["../../packages/shared/src/utils/index.ts"],
-      "@utils/*": ["../../packages/shared/src/utils/*"]
+      "@utils/*": ["../../packages/shared/src/utils/*"],
+      "@vv/shared": ["../../packages/shared/src/index.ts"],
+      "@vv/shared/*": ["../../packages/shared/src/*"],
+      "@vv/ui": ["../../packages/ui/src/index.ts"],
+      "@vv/ui/*": ["../../packages/ui/src/*"]
     }
   }
 }

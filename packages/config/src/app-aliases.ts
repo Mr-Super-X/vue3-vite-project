@@ -14,6 +14,10 @@ import { fileURLToPath } from 'node:url'
  *   - @api/@composables/@directives/@enums/@locales/@store/@utils → @vv/shared 包源码
  *   - @components/@assets → @vv/ui 包源码
  *   - @mock → @vv/mock 包源码（packages/mock/src）
+ *   - @vv/shared / @vv/ui → 包名裸路径（2026-10-27 补录）：vue-tsc --build 对 workspace
+ *     链接的 exports 深路径（'@vv/shared/api/error-events' 等）解析失败——vite/vitest
+ *     走 exports 正常，仅 TS 需 paths 兜底。alias 值指包 src 目录（生成器派生 bare→index.ts
+ *     + /*→src/* 两条 tsconfig 映射；vite 侧 alias 命中与 exports 指向同一文件，语义等价）
  *   - @、@modules、@layouts、@router、@plugins → 各 app 自身 src（app 私有，永不留包）
  *
  * 注：曾有的 '@types' 条目已删除（P1-4 结转）——'@types' 与 TS 的 @types 包解析命名空间
@@ -60,6 +64,10 @@ export function createAppAliases(appRoot: string, legacyRoot?: string): Record<s
     '@components': pick(path.join(UI_SRC_DIR, 'components'), 'src/components'),
     '@assets': pick(path.join(UI_SRC_DIR, 'assets'), 'src/assets'),
     '@mock': MOCK_ROOT_DIR,
+    // 包名裸路径兜底（vue-tsc 对 workspace exports 深路径解析失败时的 TS 侧出口，
+    // 见头注）；生成器按目录形态派生 '@vv/shared'→index.ts + '@vv/shared/*'→src/*
+    '@vv/shared': SHARED_SRC_DIR,
+    '@vv/ui': UI_SRC_DIR,
     '@modules': path.join(appRoot, 'src/modules'),
     '@layouts': path.join(appRoot, 'src/layouts'),
     '@router': path.join(appRoot, 'src/router'),
