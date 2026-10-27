@@ -27,9 +27,11 @@ afterEach(() => {
 })
 
 describe('createAppAliases', () => {
-  it('返回 15 条别名（@ + 7 shared + 2 ui + @mock + 4 app 私有）', () => {
-    // '@types' 条目已删除（P1-4 结转：TS6137 陷阱 + 零消费）
-    expect(Object.keys(createAppAliases(APP_ROOT, APP_ROOT))).toHaveLength(15)
+  it('返回 17 条别名（@ + 7 shared + 2 ui + @mock + 4 app 私有 + 2 包名裸路径）', () => {
+    // '@types' 条目已删除（P1-4 结转：TS6137 陷阱 + 零消费）；
+    // '@vv/shared' / '@vv/ui' 包名裸路径 2026-10-27 补录（vue-tsc 对 workspace exports
+    // 深路径解析失败的 paths 兜底，见 app-aliases.ts 头注）
+    expect(Object.keys(createAppAliases(APP_ROOT, APP_ROOT))).toHaveLength(17)
   })
 
   it('@ 与 app 私有别名指向 app 自身 src', () => {
@@ -68,6 +70,12 @@ describe('createAppAliases', () => {
     const aliases = createAppAliases(APP_ROOT, APP_ROOT)
     expect(aliases['@components']).toBe(path.join(UI_SRC_DIR, 'components'))
     expect(aliases['@assets']).toBe(path.join(UI_SRC_DIR, 'assets'))
+  })
+
+  it('包名裸路径恒指包 src 目录（@vv/shared / @vv/ui，不参与 existsSync 回落）', () => {
+    const aliases = createAppAliases(APP_ROOT, APP_ROOT)
+    expect(aliases['@vv/shared']).toBe(SHARED_SRC_DIR)
+    expect(aliases['@vv/ui']).toBe(UI_SRC_DIR)
   })
 
   it('过渡态回落：包目录不存在时（mock existsSync=false）@components/@assets 指向 legacyRoot', () => {
