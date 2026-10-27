@@ -32,9 +32,10 @@ jobs:
           fetch-depth: 0
 
       - name: Setup pnpm
+        # 不指定 version：由 package.json 的 packageManager 字段单源提供（pnpm@12.11.2）。
+        # 双写冲突实测（2026-10-27）：action-setup@v4 检测到 packageManager 与 version
+        # 同时存在即报错「Multiple versions of pnpm specified」，Setup pnpm 步骤直接失败
         uses: pnpm/action-setup@v4
-        with:
-          version: 12
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
