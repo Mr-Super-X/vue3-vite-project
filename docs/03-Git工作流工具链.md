@@ -402,6 +402,56 @@ git push origin HEAD + git push origin v${version}
 | 自上次 tag 后无新 commit | 报错，exit 1                                        |
 | tag v1.0.0 已存在        | 报错，exit 1，需手动选新版本号                      |
 
+### 发版时 CHANGELOG 处理（2026-10-27 起：纯手写，生成器下线）
+
+**形态变更**：`@release-it/conventional-changelog` 插件已从 `.release-it.json` 移除——CHANGELOG.md 为**纯手写文档**，release-it 不参与生成。
+
+**为什么弃用 plugin 形式**（2026-10-27 评估裁决）：
+
+- 插件生成的版本段是 commit 列表骨架（每行一条 conventional commit + hash 链接），全部信息可从 git log 一键再生——**零增量价值**
+- 本项目手写条目是五段式（背景引用块 / 变更清单 / 踩坑记录 / 验证证据 / 手动验证步骤）——「为什么这么做、踩了什么坑、怎么验证」无法从 git 历史再生，是接手者唯一需要的信息
+- 两套语义并存的实测代价：生成段插入顶部后「未发布」区残留成孤儿区块，且同版本内「骨架行 + 详细条目」双记录无法判断哪个权威
+- 结论：手写价值 ≫ 生成价值时，保留生成器只会制造合并负担——下线插件，release 回归「bump + tag + push」单一职责
+
+**发版操作流程**（`pnpm release` 完成后）：
+
+1. 把 `CHANGELOG.md` 顶部 `## 未发布` 标题改为版本段标题：`## v${version} (YYYY-MM-DD)`
+2. 在文件顶部「未发布」位置重新开一个空的 `## 未发布` 区（供下一轮手写积累）
+3. 提交：`git add CHANGELOG.md && git commit -m "docs(changelog): v${version} 归档"`——可 `--amend` 进 release commit 或独立提交
+
+**如何回退启用插件**（将来若想恢复自动生成）：
+
+1. `.release-it.json` 的 `hooks` 后加回 `plugins` 块（以下为下线前的完整配置，直接复制粘贴）：
+
+```json
+"plugins": {
+  "@release-it/conventional-changelog": {
+    "infile": "CHANGELOG.md",
+    "preset": {
+      "name": "conventionalcommits",
+      "header": "# 📋 更新历史 \n\n",
+      "types": [
+        { "type": "feat", "section": "✨ Features | 新特性" },
+        { "type": "fix", "section": "🐛 Bug Fixes | Bug 修复" },
+        { "type": "perf", "section": "⚡ Performance Improvements | 性能优化" },
+        { "type": "revert", "section": "⏪ Reverts | 代码回退" },
+        { "type": "chore", "section": "📦 Chores | 其余更新" },
+        { "type": "docs", "section": "📝 Documentation | 文档修改" },
+        { "type": "style", "section": "💄 Styles | 代码格式调整", "hidden": true },
+        { "type": "refactor", "section": "♻ Code Refactoring | 代码重构" },
+        { "type": "test", "section": "✅ Tests | 测试用例" },
+        { "type": "build", "section": "👷‍ Build System | 构建" },
+        { "type": "ci", "section": "🔧 Continuous Integration | CI 配置" }
+      ],
+      "commitUrlFormat": "{{host}}/{{owner}}/{{repository}}/-/commit/{{hash}}"
+    }
+  }
+}
+```
+
+2. 回退后形态变回「生成段 + 人工合并」：发版后把「未发布」区手写条目合并进生成段（按 commit type 对号入座、删骨架行、清空未发布区、单独 commit）
+3. 依赖未卸载：`@release-it/conventional-changelog` 仍在 devDependencies（回退零安装成本；确认永不回退时可 `pnpm remove` 清理）
+
 ### 关键设计决策
 
 - 范围：仅 Git 流程（不集成 GitLab Release API / npm publish）

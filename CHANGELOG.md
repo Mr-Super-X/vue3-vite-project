@@ -1,6 +1,8 @@
 # Changelog
 
 > **版本口径**（2026-10-15 起）：版本号唯一事实源为 `package.json` 与 git tag；开源首发 **v1.0.0**（仓库添加 MIT LICENSE 后的首个公开版本，以 `pnpm release` 发布的 tag 为准）。历史中 `v3.5` / `v3.6` 等 `v3.x` 段为内部开发期版本叙事，仅作开发历史保留，与现行 semver 无对应关系。fork 后的版本跟进与升级策略见 [docs/36-Fork升级与版本策略.md](docs/36-Fork升级与版本策略.md)。
+>
+> **维护方式**（2026-10-27 起）：本文件**纯手写维护**（五段式：背景/变更/踩坑/验证/手动验证步骤）——`@release-it/conventional-changelog` 插件已下线，release-it 只做 bump + tag + push，不重写本文件。发版时把「未发布」区标题改为版本段即可（规范见 docs/03 §发版时 CHANGELOG 处理，含弃用原因与回退方法）。
 
 ## 未发布
 
