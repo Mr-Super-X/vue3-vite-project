@@ -22,7 +22,10 @@ vue3-vite-project（pnpm workspace + turbo@2）
 │   ├── mock    @vv/mock        vite-plugin-mock 数据源（原根 mock/ 职责）
 │   ├── shared  @vv/shared      网络层基建 + 全局 store + useAppRouter/useRequest/useAuth/useDict
 │   └── ui      @vv/ui          全局组件三目录 + 弹窗族（useDialog/useConfirm/useLogout）+ 图标/样式
-├── scripts/                    工程脚本（check-routes / build-pages / dev-gateway / node-gateway / new-module …）
+├── scripts/                    工程脚本（check-routes / build-pages / build-prod / dev-gateway / node-gateway / new-module …）
+├── deploy/                     生产 nginx 模板（nginx.prod.conf.template，envsubst 渲染 API_UPSTREAM）
+├── Dockerfile                  生产多阶段镜像（build-prod 聚合 6 app → nginx:1.27-alpine）
+├── docker-compose.prod.yml     生产编排（本地模拟/单机部署，注入 API_UPSTREAM）
 └── .github/workflows/          ci.yml（turbo affected）+ deploy.yml（六应用聚合 Pages）
 ```
 
@@ -54,6 +57,7 @@ vue3-vite-project（pnpm workspace + turbo@2）
 | 单 app 测试 / 覆盖率 / UI            | `pnpm -C apps/admin test`、`test:coverage`、`test:ui`；根 `pnpm test:coverage` / `test:ui` 收容（admin 口径） |
 | 类型检查                             | `pnpm type-check`（turbo）/ `pnpm -C apps/<a> type-check:full`                                                |
 | gh-pages 六应用聚合构建              | `pnpm build:pages`（产物根 `dist/<app>/` + 落地页）                                                           |
+| 生产六应用聚合构建                   | `pnpm build:prod`（`base=/<app>/` + history + remote 菜单 + 真实后端，产物根 `dist-prod/<app>/`，见 §7）      |
 | 路由一致性（6 app 逐个校验）         | `pnpm check:routes`                                                                                           |
 | alias 与 tsconfig paths 同步         | `pnpm generate:tsconfig-paths` / `pnpm check:aliases`                                                         |
 
@@ -119,11 +123,14 @@ pnpm dev:gateway   # 唯一命令：网关 :8080 + 6 个 app 以 base=/<app>/ �
 
 **验证**：`curl -I http://localhost:8080/admin/` 与 `http://localhost:8080/auth/login` 均 200（dev 起好后）。
 
+**生产形态（2026-10-27 起）**：本地开发链路与生产部署链路分离——dev 走本节 node 网关（零依赖、单命令）；生产部署走根 `Dockerfile` + `docker-compose.prod.yml` + `deploy/nginx.prod.conf.template`（多阶段构建 6 app 产物至 `dist-prod/<app>/`，nginx 路径分发 + `/api/` envsubst 反代真实后端），路径语义与本节 dev 网关逐条对齐。详见 §7 与 README「生产 Docker 部署」。
+
 ## 7. CI/CD 与发布
 
 - **ci.yml**：lint 根全仓一次；Build/Test 走 turbo——master push 全量（`turbo run build test`），PR / develop push 走 affected（`--filter=[origin/master]...`，未变更 app 命中缓存或跳过）；turbo 本地缓存统一 `--cache-dir=.turbo` 并接 `actions/cache`；`check:routes` 保留。
 - **deploy.yml**（push master 自动）：`pnpm build:pages` 自动发现 6 app，逐个 spawn 注入演示五开关（`VITE_BASE` 由脚本内 `REPO_PREFIX` 按 `/vue3-vite-project/<app>/` 注入；自定义域改脚本常量），产物聚合根 `dist/<app>/` + 落地导航页，整目录发 GitHub Pages。
 - 顺序约束：turbo `build` 内含 `build-only`（unplugin 生成声明）→ `type-check:full`，CI 干净 checkout 下类型检查依赖 build 先生成声明，故不单独拆 type-check step。
+- **生产 docker 部署**（`docker-compose.prod.yml`，非 CI 内置）：根 `Dockerfile` 多阶段（corepack pnpm → `pnpm build:prod` 聚合 6 app → `nginx:1.27-alpine`），`API_UPSTREAM` env 注入反代真实后端（SSE 关缓冲）；产物 `dist-prod/<app>/` 与 gh-pages 的 `dist/` 隔离；本地模拟 / 单机服务器均适用。路径语义与 §6 dev 网关逐条对齐（根 302 `/portal/`、`/<app>/` SPA fallback），详见 README「生产 Docker 部署」。
 
 ## 8. 治理约束速查
 

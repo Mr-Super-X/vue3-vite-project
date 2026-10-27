@@ -4,6 +4,21 @@
 
 ## 未发布
 
+### ⚙️ Infra | 生产 Docker 部署链路：多阶段构建 + nginx 路径分发 + API 反代（2026-10-27）
+
+> 背景：2026-10-26 本地同域网关 node 化时删除的 docker-compose.yml + docker/nginx.dev.conf 是「本地开发」链路配置；生产部署链路当时从未存在（生产仅 gh-pages 静态托管）。本次落实「本地 node 网关 / 生产 docker+nginx」分离架构的生产侧：新增生产部署四件套，路径语义与 dev 网关逐条对齐。
+
+- **`scripts/build-prod.ts` 新建**（`pnpm build:prod`）：生产聚合构建（对照 build-pages.ts）——6 app 统一 `base=/<app>/` + 不注入 VITE_HISTORY_MODE（工厂缺省 web/history，nginx try_files 兜底）+ `VITE_MENU_SOURCE=remote` + `VITE_USE_MOCK=false` + `VITE_API_BASE_URL=/api`；产物聚合根 `dist-prod/<app>/`（与 gh-pages 的 `dist/` 隔离）；无落地页（生产根 302 由 nginx 承担）；复用 `build-only`——类型门禁由 CI turbo build 承担，Docker 内重复跑无收益（gh-pages 三连坑：干净环境 type-check 缺生成声明须 build 先行）
+- **根 `Dockerfile` 多阶段**：`node:22-alpine` corepack 按 packageManager 激活 pnpm@12.11.2（engines `>=11 <13`）→ `pnpm install --frozen-lockfile`（lockfile 不一致即失败，可复现构建）→ `build-prod` → `nginx:1.27-alpine` 托管；官方镜像 entrypoint envsubst 机制仅渲染容器 env 已定义变量（nginx 内置变量 `$host`/`$uri` 不受影响，无引号转义坑）
+- **`deploy/nginx.prod.conf.template`**：`/` → 302 `/portal/`（对齐 node-gateway rootRedirect）；6 app `alias` + `try_files` SPA fallback（fallback 走 root 拼 `/<app>/index.html`，与 `VITE_BASE` 严格对齐）；`/api/` `proxy_pass ${API_UPSTREAM}` 无 URI 部分原样透传 + SSE 三行（`proxy_buffering off` / `proxy_cache off` / 长读超时，docs/13 流式依赖）；assets 内容哈希 30d immutable 长缓存
+- **`docker-compose.prod.yml`**：`build .` + `8080:80` + 注入 `API_UPSTREAM`（默认 `host.docker.internal:8081`，真实服务器改内网服务名）；唯一按部署环境修改的变量
+- **`.dockerignore` 新建**：node_modules / 各 dist / docs / .git / 测试产物排除
+- **文档同步**：README 最近更新区 + 常用脚本表补 `build:prod` + 部署节虚构「Docker 部署」示例替换为真实方案（顺带对齐单应用时代遗留的「生产构建」产物描述——`pnpm build` 产物在各 `apps/<a>/dist/`）+ 删除被真实方案取代的通用静态部署模板段；docs/43 §1 目录树补 `deploy/` + Dockerfile + compose、§3 命令表、§6 生产形态段、§7 发布 bullet
+- **已知边界**：生产构建 JS chunk 仍含 `mockProdServer`（~3KB）——main.ts 静态 import 链携带，PROD 守卫不执行仅体积噪音；portal favicon 源是死路径 `/favicon.ico`（各 app index.html 存量差异），nginx 已配 `location = /favicon.ico` 302 → `/portal/favicon.ico` 兜底
+- **踩坑修复（302 丢端口）**：容器内 nginx 监听 80、对外映射 8080 时，`return 302 /portal/` 相对路径被 nginx 拼成 `http://localhost/portal/`（按 server 端口 80，非浏览器入站端口）——浏览器跟随即挂。与 2026-10-22 dev 网关 `e694986` 同根因。修复：`return 302 $scheme://$http_host/portal/`（$http_host = 浏览器原始 Host 含端口，与 node-gateway 的 `http://${req.headers.host}${rootRedirect}` 语义逐条对齐）；favicon 302 同改
+- **验证**：`pnpm build:prod` 6 app 全绿（产物 `dist-prod/{admin,auth,big,docs,h5,portal}`，index.html 资源前缀 `/<app>/` 注入正确）；ESLint 新增脚本过；docker compose 冒烟 9 项全绿——`/` 302（Location 含 :8080）、6 app 全 200、`/auth/login` SPA fallback 200、`/favicon.ico` 302、`/api/` 502（无后端预期，证明 proxy_pass 生效）、未匹配 404、容器内 `nginx -t` 语法过
+- **手动验证步骤**：① `docker compose -f docker-compose.prod.yml up --build`；② `curl -I http://localhost:8080/` → 302 `/portal/`；③ 浏览器 `/admin/`（未登录 → 跳 `/auth/login?redirect=...`）；④ 起真实后端后 `/api/` 反代 + SSE 流式逐 chunk 到达
+
 ### ⚙️ Infra | mock 统一 /mock 前缀：Network 面板一眼区分 mock/真实后端（2026-10-26）
 
 > 背景：mock 路由原注册在 /api/*，与真实后端前缀同形——开发者在 Network 面板无法分辨响应来自 mock 还是真后端。现统一为 /mock 前缀（用户决策），前后端口径同步切换。

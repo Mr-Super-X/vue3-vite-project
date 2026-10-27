@@ -6,8 +6,9 @@
 
 > 🆕 **新同事请先看 [docs/10-新手指引.md](docs/10-新手指引.md)** —— 30 分钟 5 任务，带你从 clone 到加新模块。
 >
-> **最近更新**：2026-10-22 — **Monorepo 改造完成（pnpm workspace + turbo）**：
+> **最近更新**：2026-10-27 — **生产 Docker 部署链路落地**（本地开发 node 网关 / 生产部署 docker+nginx 分离）：
 >
+> - **生产 Docker 部署**：根 `Dockerfile`（多阶段：corepack pnpm → `pnpm build:prod` 聚合 6 app → `nginx:1.27-alpine`）+ `docker-compose.prod.yml`（唯一环境变量 `API_UPSTREAM` 经 envsubst 渲染反代真实后端，SSE 关缓冲）；`pnpm build:prod` 生产聚合构建（`base=/<app>/` + history + remote 菜单 + `VITE_USE_MOCK=false`）；路径语义与 dev 网关逐条对齐（`/` → 302 `/portal/`），详见下方「生产 Docker 部署」节
 > - **六应用四包结构**（[docs/43-Monorepo结构与开发指引.md](docs/43-Monorepo结构与开发指引.md)，评估 [docs/42](docs/42-Monorepo多应用改造评估.md)）：`apps/admin`（中后台）/ `apps/auth`（统一登录）/ `apps/portal`（门户）/ `apps/h5`（移动端）/ `apps/big`（数据大屏）/ `apps/docs`（组件示例文档）+ `packages/config|mock|shared|ui` 共享包（源码直链 workspace 消费）
 > - **统一登录协议**：未登录守卫整页跳 `/auth/login?redirect=...`（`VITE_AUTH_ORIGIN` env 注入），cookie 同域漫游；本地经 node 网关 :8080 复现（`pnpm dev:gateway` 一体化单命令，零 docker 依赖）
 > - **CI/CD 改造**：ci.yml 走 turbo affected（PR 只构建变更波及 app，`.turbo` 缓存上 actions/cache）；deploy.yml 走 `pnpm build:pages` 六应用聚合发布 gh-pages（落地页 + 6 子目录）
@@ -321,6 +322,7 @@ pnpm dev:local
 | `pnpm -C apps/<a> build-only`      | 单 app 仅 `vite build`（不含类型校验；调试构建产物用）                                                                |
 | `pnpm -C apps/<a> preview`         | 预览单 app 构建产物（本地起静态服务）                                                                                 |
 | `pnpm build:pages`                 | gh-pages 六应用聚合构建（自动发现 `apps/*`，产物根 `dist/<app>/` + 落地导航页）                                       |
+| `pnpm build:prod`                  | 生产六应用聚合构建（`base=/<app>/` + history + remote 菜单 + 真实后端，产物根 `dist-prod/<app>/`，见部署节）          |
 | `pnpm analyze`                     | 生产构建 + 生成包体积分析报告（`dist/stats.html`，admin 口径）                                                        |
 | `pnpm test`                        | 全量单元测试（turbo 拓扑序，test 任务依赖上游 build）                                                                 |
 | `pnpm -C apps/<a> test [path]`     | 单 app / 单文件测试（如 `pnpm -C apps/admin test src/utils/dayjs.spec.ts`；watch 模式 `pnpm -C apps/<a> test:watch`） |
@@ -582,7 +584,7 @@ app.use(Plugins, { errorHandler: { report: ... } })
 pnpm build
 ```
 
-输出到 `dist/` 目录（包含 `index.html` + `js/` + `css/` + `img/` + `assets/`），按资源类型分目录（commit `492b539`）：js → `dist/js/`、css → `dist/css/`、图片 → `dist/img/`、字体等其它 → `dist/assets/`，可托管到任何静态文件服务器。
+turbo 拓扑序全量构建 6 app + 4 包（各 app 内 `build-only` 生成声明 → `type-check:full` 门禁），产物在各 `apps/<a>/dist/`。聚合托管形态见下方「生产 Docker 部署」（`dist-prod/<app>/`）与 gh-pages 部署（`dist/<app>/`）。
 
 ### 环境变量
 
@@ -650,29 +652,25 @@ server {
 }
 ```
 
-### Docker 部署
+### 生产 Docker 部署
 
-```dockerfile
-# Dockerfile（多阶段构建示例）
-FROM node:22-alpine AS builder
-WORKDIR /app
-COPY package.json pnpm-lock.yaml .npmrc pnpm-workspace.yaml ./
-RUN corepack enable && pnpm install --frozen-lockfile
-COPY . .
-RUN pnpm build
-
-FROM nginx:1.27-alpine
-COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
-```
+生产形态 = 多阶段构建 6 app 聚合产物 + nginx 静态托管 + `/api` 反代真实后端（SSE 关缓冲）。路径语义与 dev 网关逐条对齐（`/` → 302 `/portal/`、`/<app>/` 静态 + SPA fallback、`/api/` 反代），统一登录协议同构。
 
 ```bash
-# 构建并运行
-docker build -t vue3-vite-project:1.0.0 .
-docker run -d --name vue3-vite-project -p 8080:80 vue3-vite-project:1.0.0
+# 一键构建并运行（compose 注入 API_UPSTREAM → nginx envsubst 渲染进配置）
+docker compose -f docker-compose.prod.yml up --build
+# 浏览器 http://localhost:8080/（302 → /portal/）
 ```
+
+| 文件                              | 职责                                                                                                                               |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `Dockerfile`（根）                | 多阶段：`node:22-alpine` corepack(pnpm@12.11.2) + frozen-lockfile → `build-prod` → `nginx:1.27-alpine` 托管                        |
+| `docker-compose.prod.yml`         | 生产编排：`build .` + `8080:80` + 注入 `API_UPSTREAM`（唯一按部署环境修改的变量）                                                  |
+| `deploy/nginx.prod.conf.template` | 路径分发 + SPA fallback + `/api/` 反代模板（官方镜像 entrypoint envsubst，仅渲染容器 env 已定义变量）                              |
+| `scripts/build-prod.ts`           | 生产聚合构建：6 app `base=/<app>/` + history + remote 菜单 + `VITE_USE_MOCK=false` + `VITE_API_BASE_URL=/api`（`pnpm build:prod`） |
+| `.dockerignore`                   | 排除 node_modules / 各 dist / docs / .git                                                                                          |
+
+前置：真实后端可达 `API_UPSTREAM`（默认 `http://host.docker.internal:8081` 指宿主机；服务器部署改内网服务名如 `http://backend:8080`）。`VITE_MENU_SOURCE=remote` 需后端菜单接口就绪——无后端时页面菜单为空属预期。
 
 ### CI/CD（GitHub Actions）
 
@@ -686,29 +684,7 @@ docker run -d --name vue3-vite-project -p 8080:80 vue3-vite-project:1.0.0
 > 一致性 checks 全部由 CI 执行（ci.yml）：check:routes（内含端口双写锁死 + 注册表反向校验）/ check:aliases / check:mock-wiring / check:doc-currency；本地可用同名 script 预跑。
 > 首次启用需在仓库 Settings → Pages 把 Source 设为 "GitHub Actions"。设计文档：[docs/superpowers/specs/2026-10-20-gh-pages-deploy-design.md](docs/superpowers/specs/2026-10-20-gh-pages-deploy-design.md)。
 
-如需对接自己的部署环境（Nginx / Docker / 对象存储），下方保留一份通用模板参考：
-
-```yaml
-# 通用静态部署模板（非本项目 workflow，仅作接入参考）
-name: Deploy
-on:
-  push:
-    branches: [main]
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with: { version: 11 }
-      - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: pnpm }
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm test
-      - run: pnpm build
-      - uses: actions/upload-artifact@v4
-        with: { name: dist, path: dist/ }
-```
+如需对接自己的部署环境（对象存储 / CDN / 其它静态托管），以上「生产 Docker 部署」的 `Dockerfile` + `deploy/nginx.prod.conf.template` 即接入参考。
 
 ---
 
