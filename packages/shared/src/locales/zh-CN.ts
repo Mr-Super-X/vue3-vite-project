@@ -82,6 +82,11 @@ export default {
       serverFallback: '服务异常，请稍后重试',
       clientFallback: '请求失败，请检查后重试',
     },
+    /** 全局网络异常横幅（@vv/ui NetworkBanner）：持续故障聚合展示，替代逐请求 toast 轰炸 */
+    networkBanner: {
+      title: '网络连接异常，部分功能可能不可用',
+      dismiss: '关闭提示',
+    },
   },
   /** 布局头部控件文案（default 布局复刻，切换中英文时热更新） */
   header: {

@@ -18,7 +18,8 @@ import i18n from '@locales'
 import Directives from '@directives'
 import Plugins from '@plugins'
 import { createGlobalComponents } from '@vv/ui'
-import { setDialogAppContext } from '@vv/ui/composables/useDialog'
+// ui 全局运行时装配入口（弹窗 appContext + 网络错误反馈）
+import { setupUiAppContext } from '@vv/ui/composables/setup-ui-app-context'
 import { bootstrapApp } from '@vv/shared'
 import '@vv/shared/app-styles'
 
@@ -32,5 +33,5 @@ await bootstrapApp({
   directives: Directives,
   plugins: Plugins,
   loadMockServer: () => import('@mock/mockProdServer'),
-  setup: setDialogAppContext,
+  setup: setupUiAppContext,
 })

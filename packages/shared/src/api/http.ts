@@ -3,7 +3,10 @@
  *
  * 设计要点：
  * - 单一来源：所有 API url 都不带 /api 前缀，由 baseURL 统一拼装（避免 /api/api 双拼）
- * - 拦截器职责单一：响应只管副作用（toast + 401 跳转）+ 抛 ApiError
+ * - 拦截器职责单一（2026-10-27 事件化改造）：响应错误只归一化为 ApiError + 发
+ *   error-events 事件 + 抛错——不直接 toast。反馈决策权交给订阅方（@vv/ui
+ *   useNetworkBanner：业务错误 toast 兜底、网络类错误聚合横幅、config.silent
+ *   探测请求全程静默）；401 不 emit（refresh 重试链在 request 层处理，避免误报）
  * - 业务码解包与 data 提取下沉到 `request<T>()`，拦截器签名天然满足 AxiosInterceptorFulfilled 类型
  *   （AxiosResponse -> AxiosResponse），避免使用 `as any` / `as never` 逃类型
  * - 认证模式（2026-08-12 httpOnly 改造）：凭证 token 由后端 Set-Cookie: HttpOnly 下发，
@@ -30,6 +33,7 @@ import { Session } from '../utils/storage.ts'
 import type { ApiResponse } from './types/api.d'
 import { ApiError } from './types/error'
 import { resolveHttpStatusMessage } from './http-errors'
+import { emitHttpError, emitHttpRecoveredIfApplicable } from './error-events'
 // 拦截器层 toast/兜底文案走 i18n.global.t（无 setup 上下文；2026-10-29 逻辑层硬编码清零）
 import { i18n } from '../locales/index.ts'
 import { globalAbort, chainSignals } from './global-abort'
@@ -104,6 +108,13 @@ declare module 'axios' {
      * 业务模块不应设置此字段。
      */
     _retried?: boolean
+    /**
+     * 静默探测标记（2026-10-27 事件化改造）：登录态探测/预取类请求设为 true 后，
+     * 拦截器跳过错误事件广播——调用方 .catch 照常收到 ApiError 自行降级，
+     * 但全局反馈层（toast/网络横幅）不感知。行业标准 silent/skipNotify 语义
+     * （对齐 vue-element-admin errorHandle / Ant Design Pro skipErrorHandler）。
+     */
+    silent?: boolean
   }
 }
 
@@ -222,7 +233,9 @@ function handleUnauthorized(
 }
 
 /**
- * 其他业务错误：toast + 抛 ApiError。
+ * 其他业务错误：emit 错误事件 + 抛 ApiError。
+ * 事件由订阅方（@vv/ui useNetworkBanner）决定 toast 兜底——业务码错误属业务级，
+ * 走 ElMessage.error 默认通道，与拦截器事件化改造前的用户可见行为一致。
  */
 function handleGenericError(
   body: ApiResponse<unknown> | null | undefined,
@@ -230,8 +243,9 @@ function handleGenericError(
 ): never {
   // 后端 message 兜底（防御层）：业务错误正常带后端 message，无 message 时按通用客户端失败文案
   const message = body?.message || i18n.global.t('error.http.clientFallback')
-  ElMessage.error(message)
-  throw buildApiError(body, response, message)
+  const apiError = buildApiError(body, response, message)
+  emitHttpError(apiError)
+  throw apiError
 }
 
 /**
@@ -275,6 +289,10 @@ const BUSINESS_CODE_HANDLERS: Record<
 const onResponseFulfilled = (
   response: AxiosResponse<ApiResponse<unknown>>
 ): AxiosResponse<ApiResponse<unknown>> => {
+  // 网络恢复信号：末次错误后的首个 2xx 到达即网络已通（与业务码无关——
+  // 后端能返回业务码错误也说明网络活着），通知横幅通道收尾。常态零开销（时间戳比较）。
+  emitHttpRecoveredIfApplicable()
+
   const body = response.data
   if (response.status === 200 && body?.code === BusinessCode.SUCCESS) return response
   const handler = BUSINESS_CODE_HANDLERS[body?.code ?? -1]
@@ -283,28 +301,47 @@ const onResponseFulfilled = (
 }
 
 const onResponseRejected = (error: {
+  code?: string
   response?: AxiosResponse
-  config?: { url?: string }
+  config?: { url?: string; silent?: boolean }
   message?: string
 }): never => {
   const status = error.response?.status
   const message = resolveHttpStatusMessage(status)
-  // dev 模式调试日志（2026-07-24 审计补齐）：记录网络/超时/状态码异常
-  if (import.meta.env.DEV) {
-    console.debug('[HTTP][resp][error]', {
-      url: error.config?.url,
-      status,
-      message,
-    })
-  }
-  ElMessage.error(message)
-  throw new ApiError({
+  const apiError = new ApiError({
     code: status ?? -1,
     message,
     status,
     url: error.config?.url,
     cause: error,
   })
+
+  // ── 事件化反馈的三级过滤（2026-10-27；过滤顺序即判定优先级）──
+  // ① 主动取消（logout 的 globalAbort / 组件卸载 signal）不是错误：静默抛错。
+  //    修正事件化前的既有误报——取消请求的 error.response 为 undefined，
+  //    会被当成「网络异常」弹 toast（logout 瞬间整页跳走，误报长期未被察觉）。
+  if (error.code === 'ERR_CANCELED') {
+    throw apiError
+  }
+  // ② silent 探测请求：调用方自行 catch 降级，全局反馈层（toast/横幅）不感知。
+  if (error.config?.silent) {
+    throw apiError
+  }
+  // ③ 401 不 emit：request<T>() 层的 refresh 重试链会处理（重试成功则零反馈；
+  //    refresh 失败由 performLogout 弹「会话过期」并整页跳登录）。事件化前的
+  //    拦截器在此弹「请先登录」toast，refresh 成功也会误报一次——本过滤顺带修正。
+  if (status !== 401) {
+    // dev 模式调试日志（2026-07-24 审计补齐）：记录网络/超时/状态码异常
+    if (import.meta.env.DEV) {
+      console.debug('[HTTP][resp][error]', {
+        url: error.config?.url,
+        status,
+        message,
+      })
+    }
+    emitHttpError(apiError)
+  }
+  throw apiError
 }
 
 instance.interceptors.response.use(onResponseFulfilled, onResponseRejected)

@@ -48,9 +48,13 @@ export const authApi = {
    * 获取当前用户的 profile + 权限列表。
    * 路由守卫鉴权（`router/guards/permission.ts`）依赖此接口。
    *
+   * @param options.silent 静默探测标记：门户头部等「探测登录态」场景传 true——
+   *   请求失败（如无后端时 502）不触发全局错误反馈（toast/网络横幅），
+   *   由调用方 .catch 自行降级（保持登录按钮态）。守卫场景不传，错误照常上报。
    * @group 业务 API：认证
    */
-  fetchProfile: () => request<UserProfile>({ url: '/auth/profile', method: 'get' }),
+  fetchProfile: (options?: { silent?: boolean }) =>
+    request<UserProfile>({ url: '/auth/profile', method: 'get', silent: options?.silent }),
 
   /**
    * 登出。

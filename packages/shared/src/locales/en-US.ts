@@ -74,6 +74,11 @@ export default {
       serverFallback: 'Service error, please retry later',
       clientFallback: 'Request failed, please check and retry',
     },
+    /** Global network outage banner (@vv/ui NetworkBanner): aggregates persistent failures in place of per-request toast spam */
+    networkBanner: {
+      title: 'Network connection lost. Some features may be unavailable.',
+      dismiss: 'Dismiss',
+    },
   },
   /** Header chrome text (default layout replica, hot-reloads on language switch) */
   header: {

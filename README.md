@@ -134,7 +134,7 @@
 - **统一接管 3 类错误**：Vue 组件错误 / window 全局 JS 错误 / 未捕获 Promise 拒绝
 - **dev/prod 智能**：`logToConsole` 默认 dev=true / prod=false
 - **Sentry 扩展点**：`report(error, { source, extra })` 回调，生产环境对接日志服务
-- **API 错误**（HTTP 状态码）：HTTP 拦截器仍负责（401 跳登录、403/404/500 错误页、500+ Toast）
+- **API 错误**（HTTP 状态码）：拦截器归一化 ApiError 并发错误事件（2026-10-27 事件化改造）——401 跳登录由续期链负责；业务错误（4xx/500/业务码）toast 兜底；网络级错误（0/502/503/504）聚合为全局 NetworkBanner 横幅节流去重；探测请求 `silent` 全程静默
 
 ```ts
 // main.ts
@@ -661,6 +661,8 @@ server {
 docker compose -f docker-compose.prod.yml up --build
 # 浏览器 http://localhost:8080/（302 → /portal/）
 ```
+
+> ⚠️ **`--build` 不可省**（2026-10-27 实测踩坑）：compose 的 `up` 在镜像已存在时**直接复用旧镜像**——改代码后不带 `--build` 跑的仍是旧产物（现象：浏览器看到旧行为，疑似「缓存问题」实为镜像缓存）。日常重启容器用 `docker compose -f docker-compose.prod.yml up -d`，**改了代码必须 `up -d --build` 或先 `docker compose build`**。
 
 | 文件                              | 职责                                                                                                                               |
 | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |

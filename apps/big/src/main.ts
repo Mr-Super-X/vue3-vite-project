@@ -18,7 +18,8 @@ import pinia from './store'
 import i18n from '@locales'
 import Directives from '@directives'
 import { createGlobalComponents } from '@vv/ui'
-import { setDialogAppContext } from '@vv/ui/composables/useDialog'
+// ui 全局运行时装配入口（弹窗 appContext + 网络错误反馈）
+import { setupUiAppContext } from '@vv/ui/composables/setup-ui-app-context'
 import { bootstrapApp } from '@vv/shared'
 import '@vv/shared/app-styles'
 
@@ -32,5 +33,5 @@ await bootstrapApp({
   directives: Directives,
   // big 无 src/plugins 目录：省略 plugins 参数（工厂跳过该 use）
   loadMockServer: () => import('@mock/mockProdServer'),
-  setup: setDialogAppContext,
+  setup: setupUiAppContext,
 })

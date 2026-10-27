@@ -37,8 +37,10 @@ const { loggingOut, confirmLogout } = useLogout()
  */
 onMounted(() => {
   if (userStore.profile) return
-  userStore.fetchProfile().catch(() => {
-    /* 未登录或凭证失效：保持登录按钮态（拦截器层已按 Session 标记处理登出连锁） */
+  // silent：探测请求的失败（如生产无后端 502）不触发全局错误反馈——
+  // 拦截器层跳过 toast/网络横幅（http.ts 事件化过滤链），此处保持登录按钮态
+  userStore.fetchProfile({ silent: true }).catch(() => {
+    /* 未登录/凭证失效/后端不可达：保持登录按钮态（拦截器层已按 Session 标记处理登出连锁） */
   })
 })
 

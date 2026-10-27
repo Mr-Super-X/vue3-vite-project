@@ -57,8 +57,15 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  async function fetchProfile() {
-    const p = await authApi.fetchProfile()
+  /**
+   * 拉取 profile 并写回 store（含权限列表）。
+   *
+   * @param options.silent 透传 authApi：门户头部「探测登录态」场景传 true——
+   *   请求失败不触发全局错误反馈（toast/网络横幅），由调用方 .catch 降级。
+   *   守卫等强依赖场景不传，错误照常上报。
+   */
+  async function fetchProfile(options?: { silent?: boolean }) {
+    const p = await authApi.fetchProfile(options)
     profile.value = p
     permissions.value = p.permissions
     // 探测成功即证明 cookie 会话真实有效；本 origin 标记缺失时补写——cookie 不按

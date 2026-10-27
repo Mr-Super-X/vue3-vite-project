@@ -26,8 +26,8 @@ import Directives from '@directives'
 import Plugins from '@plugins'
 // 全局组件注册工厂归 @vv/ui；shared 不得反向依赖 ui，实例由 app 侧创建后经参数注入
 import { createGlobalComponents } from '@vv/ui'
-// 弹窗族 composable 归 @vv/ui（包子路径经 exports "./*" 解析），经 setup 收尾参数注入
-import { setDialogAppContext } from '@vv/ui/composables/useDialog'
+// ui 全局运行时装配入口（弹窗 appContext + 网络错误反馈），经 setup 收尾参数注入
+import { setupUiAppContext } from '@vv/ui/composables/setup-ui-app-context'
 // 装配编排工厂（P6 收敛：6 app main.ts 逐字同构段单源，顺序契约固化在工厂内）
 import { bootstrapApp } from '@vv/shared'
 // 浏览器样式基线三件套（normalize/uno/全局 scss，顺序即契约）单源在 @vv/shared app-styles
@@ -45,6 +45,6 @@ await bootstrapApp({
   plugins: Plugins,
   // @mock 别名仅 app 编译上下文可解析，模块加载以回调注入（同 prod-mock 下沉模式）
   loadMockServer: () => import('@mock/mockProdServer'),
-  // 命令式弹窗的全局 appContext 来源：必须在所有 app.use 之后（工厂收尾段保证）
-  setup: setDialogAppContext,
+  // ui 全局装配收尾：必须在所有 app.use 之后（工厂收尾段保证）
+  setup: setupUiAppContext,
 })

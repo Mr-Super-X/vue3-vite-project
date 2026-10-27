@@ -4,6 +4,20 @@
 
 ## 未发布
 
+### ⚙️ Infra | 网络层错误反馈事件化：拦截器发事件 + 网络级错误聚合 NetworkBanner 横幅（2026-10-27）
+
+> 背景：生产 portal 打开弹「网关错误」Toast 事件驱动改造。原 `onResponseRejected` 无条件 `ElMessage.error`——① 探测请求（登录态探测）失败无法静默（行业标准 silent/skipNotify 语义，对齐 vue-element-admin / Ant Design Pro）；② 后端宕机时连续操作触发 Toast 轰炸。用户拍板直接落地业界推荐架构：拦截器归一化错误 + 发事件，订阅方分流（业务 toast 兜底 / 网络级聚合横幅）。
+
+- **`packages/shared/src/api/error-events.ts` 新建**：零依赖 pub/sub 事件层——`http:error`（拦截器归一化后 emit）+ `http:recovered`（末次错误 10s 窗口内首个 2xx emit，常态成功请求零事件开销）；`isNetworkLevelError` 表驱动归类（undefined/0/502/503/504 → 横幅通道，其余 → toast 通道）
+- **`http.ts` 拦截器事件化**：`onResponseRejected`/`handleGenericError` 去 ElMessage → emitHttpError 照常 throw ApiError（调用方 catch 契约不变）；`AxiosRequestConfig` 扩展 `silent?: boolean`（探测请求跳过一切全局反馈）；**顺带修正两个存量误报**——`ERR_CANCELED`（logout 取消在途请求被当「网络异常」toast）与 401（refresh 重试成功也先弹「请先登录」），均改为静默抛错由后续链路接管
+- **`@vv/ui NetworkBanner` 落地**：`components/common/NetworkBanner.vue`（BEM，顶置横幅 + ×N 计数徽标 + 关闭按钮 + 具名过渡，z-index 1999 低于 EP Message）+ `composables/useNetworkBanner.ts` 模块级单例控制器——网络级错误聚合显示/计数递增（天然免疫轰炸）、恢复信号隐藏归零、手动 dismiss 30s 冷却（冷却内只计数不弹）；业务级错误 ElMessage.error 兜底（与事件化前用户可见行为逐字一致）；事件订阅挂模块顶层（import 即生效，与 UI 挂载时序解耦）
+- **装配收敛**：新增 `composables/setup-ui-app-context.ts`（setDialogAppContext + initNetworkBanner 组合入口），6 app `main.ts` 的 `setup` 统一改接——ui 侧新增全局运行时装配只改一处，6 app 零感知（OCP）
+- **探测静默接线**：`authApi.fetchProfile(options?: { silent?: boolean })` 透传链（user store → PortalHeader 探测传 `silent: true`）；守卫等强依赖调用不传，错误照常上报
+- **i18n**：`error.networkBanner` 双语文案（zh/en）入 `locales/zh-CN.ts` / `en-US.ts`
+- **文档同步**：README §5 错误处理兜底措辞、docs/23 §5.8.2 标题与注释（拦截器不再直接 toast）；http.ts/useDialog 头注交叉引用
+- **验证**：shared 428/428 + ui 1932/1932 全绿（新增 error-events 6 用例 + useNetworkBanner 8 用例）；`pnpm type-check` 全量绿；ESLint 全量改动文件零告警
+- **手动验证步骤**：① `docker compose -f docker-compose.prod.yml up`（无后端）→ 浏览器 `:8080/portal/`——**不再弹「网关错误」Toast**、头部登录按钮态正常、顶部出现「网络连接异常」横幅（探测请求经 silent 静默，横幅来自其余 /api 请求如菜单）；② 连续刷新/操作 → 横幅保持一条、×N 递增；③ 起后端后任请求成功 → 横幅自动消失；④ 点关闭 → 30s 内不再弹；⑤ `pnpm dev:gateway` 正常链路回归（mock 200 零横幅零误报）
+
 ### ⚙️ Infra | 生产 Docker 部署链路：多阶段构建 + nginx 路径分发 + API 反代（2026-10-27）
 
 > 背景：2026-10-26 本地同域网关 node 化时删除的 docker-compose.yml + docker/nginx.dev.conf 是「本地开发」链路配置；生产部署链路当时从未存在（生产仅 gh-pages 静态托管）。本次落实「本地 node 网关 / 生产 docker+nginx」分离架构的生产侧：新增生产部署四件套，路径语义与 dev 网关逐条对齐。
