@@ -60,6 +60,10 @@ jobs:
         # lint 保持根全仓一次（turbo 不拆 lint：规则跨包引用，拆包跑反而漏跨包问题）
         run: pnpm lint
 
+      - name: Test local ESLint rules
+        # scripts/eslint-rules 非 workspace 包、不经 turbo——node --test 直跑（同 test:gateway 形态）
+        run: pnpm test:eslint-rules
+
       - name: Build + Test (master 全量)
         # 仅 master push 全量（合入即发布候选，与 deploy.yml 同口径）。
         # 顺序强约束：turbo run build 内部 = build-only（unplugin 生成 auto-imports.d.ts /

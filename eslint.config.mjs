@@ -4,6 +4,7 @@ import { withVueTs, vueTsConfigs } from '@vue/eslint-config-typescript'
 import skipFormatting from '@vue/eslint-config-prettier/skip-formatting'
 
 import { APPS } from './scripts/apps-registry.mjs'
+import packageContract from './scripts/eslint-rules/package-contract.mjs'
 
 // 单一职责：组合 Vue/TS/Prettier 三层规则
 // Prettier 规则必须放最后，避免与 Prettier 冲突
@@ -46,6 +47,7 @@ export default withVueTs(
     name: 'app/files-to-ignore',
     ignores: [
       '**/dist/**',
+      '**/dist-prod/**',
       '**/dist-ssr/**',
       '**/coverage/**',
       '**/node_modules/**',
@@ -118,6 +120,15 @@ export default withVueTs(
         },
       ],
     },
+  },
+  // packages/* 依赖契约（P0 共享包自包含）：包消费的每个 npm 包必须在自身 package.json
+  // 声明（dependencies/peerDependencies；类型导入与 spec/config 文件允许 devDependencies），
+  // @vv/* 方向铁律（mock → shared、ui → shared）机械检查，防包间反向依赖漂移
+  {
+    name: 'app/package-contract',
+    files: ['packages/**/*.{ts,mts,tsx,vue}'],
+    plugins: { local: { rules: { 'package-contract': packageContract } } },
+    rules: { 'local/package-contract': 'error' },
   },
   // @vv/ui 两子系统目录边界：form-schema ⇄ ProTable 双向禁 import（防腐化，为后续按触发
   // 条件拆包（@vv/pro-table + @vv/form-schema）铺路——拆分评估确认两子系统编译期零互依，

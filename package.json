@@ -36,6 +36,7 @@
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install --with-deps chromium",
     "test:gateway": "node --test --experimental-strip-types --test-force-exit scripts/node-gateway.spec.ts",
+    "test:eslint-rules": "node --test scripts/eslint-rules/package-contract.spec.mjs",
     "bench": "pnpm -C apps/admin bench",
     "commit": "git add . && cz",
     "push": "git add . && cz && git push",
@@ -45,7 +46,7 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "@element-plus/icons-vue": "^2.3.2",
+    "@element-plus/icons-vue": "catalog:",
     "@wangeditor/editor-for-vue": "^5.1.12",
     "axios": "^1.18.1",
     "dayjs": "^1.11.21",
@@ -53,7 +54,7 @@
     "element-plus": "^2.14.3",
     "js-cookie": "^3.0.8",
     "lodash-es": "^4.18.1",
-    "normalize.css": "^8.0.1",
+    "normalize.css": "catalog:",
     "pinia": "^3.0.4",
     "sortablejs": "^1.15.7",
     "vue": "^3.5.38",
