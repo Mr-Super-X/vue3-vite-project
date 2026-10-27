@@ -27,7 +27,8 @@
     "dayjs": "catalog:",
     "pinia-plugin-persistedstate": "catalog:",
     "web-vitals": "catalog:",
-    "normalize.css": "catalog:"
+    "normalize.css": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@vue/test-utils": "^2.4.11",
@@ -35,7 +36,6 @@
     "typescript": "~6.0.0",
     "vitest": "^4.1.9",
     "vue-tsc": "^3.3.11",
-    "jsdom": "^29.1.1",
-    "zod": "catalog:"
+    "jsdom": "^29.1.1"
   }
 }
