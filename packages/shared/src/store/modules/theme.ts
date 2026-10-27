@@ -16,6 +16,9 @@
  * @group 状态管理：主题
  */
 
+import { ref } from 'vue'
+import { defineStore } from 'pinia'
+
 /** 主题模式：light（强制浅色）/ dark（强制深色）/ auto（跟随系统） */
 export type ThemeMode = 'light' | 'dark' | 'auto'
 

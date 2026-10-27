@@ -19,6 +19,8 @@
  * @group 状态管理：字典
  */
 
+import { ref } from 'vue'
+import { defineStore } from 'pinia'
 import { dictApi } from '../../api/modules/dict.ts'
 import type { DictItem } from '../../types/dict.ts'
 

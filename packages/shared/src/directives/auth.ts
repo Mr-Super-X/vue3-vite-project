@@ -18,6 +18,7 @@
  * @group 指令：权限
  */
 
+import { watchEffect } from 'vue'
 import type { App } from 'vue'
 import { useAuth } from '../composables/useAuth.ts'
 import type { ElHTMLElement, AuthBinding } from './auth.d'

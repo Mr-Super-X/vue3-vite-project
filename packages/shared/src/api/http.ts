@@ -27,7 +27,9 @@ import axios, {
   type AxiosResponse,
   type GenericAbortSignal,
 } from 'axios'
-// ElMessage 由 unplugin-auto-import 注入（importStyle 自动带样式，勿显式 import）
+import { ElMessage } from 'element-plus'
+// 显式 import 不经 AutoImport resolver 的 importStyle 注入，消息样式须自行携带
+import 'element-plus/es/components/message/style/css'
 import { BusinessCode } from '../enums/httpEnum.ts'
 import { Session } from '../utils/storage.ts'
 import type { ApiResponse } from './types/api.d'

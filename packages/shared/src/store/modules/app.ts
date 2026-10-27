@@ -16,6 +16,9 @@
  * @group 状态管理：App UI
  */
 
+import { ref } from 'vue'
+import { defineStore } from 'pinia'
+
 /** 布局模式：sidebar 经典侧边栏 / top 顶部导航 / mixed 顶栏+二级侧栏 / dual 双栏 rail */
 export type LayoutMode = 'sidebar' | 'top' | 'mixed' | 'dual'
 

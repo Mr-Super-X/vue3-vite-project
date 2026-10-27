@@ -29,6 +29,8 @@
 
 import type { App, DirectiveBinding } from 'vue'
 import { ElMessage } from 'element-plus'
+// 与 http.ts / useAppRouter.ts 同约定：显式 import 须自行携带消息样式
+import 'element-plus/es/components/message/style/css'
 // 指令 hook 无 setup 上下文——toast 文案经 i18n.global.t（2026-10-29，同 http-errors 方案）
 import { i18n } from '../locales/index.ts'
 import type { CopyValue, ElHTMLElement } from './copy.d'

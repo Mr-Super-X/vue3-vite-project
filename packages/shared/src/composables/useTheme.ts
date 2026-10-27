@@ -36,6 +36,7 @@
  * @group 主题组合式 API
  */
 
+import { storeToRefs } from 'pinia'
 import { useThemeStore } from '../store/modules/theme.ts'
 
 /**

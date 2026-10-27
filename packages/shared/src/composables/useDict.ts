@@ -38,6 +38,7 @@
  * @group 字典组合式 API
  */
 
+import { computed } from 'vue'
 import type { Ref } from 'vue'
 import { useDictStore } from '../store/modules/dict.ts'
 import type { DictItem } from '../types/dict.ts'

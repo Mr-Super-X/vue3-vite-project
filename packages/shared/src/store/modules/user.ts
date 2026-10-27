@@ -13,6 +13,8 @@
  * @see [`./dict.ts`](./dict.ts) 登录后字典预加载
  * @group 状态管理：用户登录
  */
+import { computed, ref } from 'vue'
+import { defineStore } from 'pinia'
 import { authApi, type LoginPayload, type UserProfile } from '../../api/modules/auth.ts'
 import { Session } from '../../utils/storage.ts'
 import { globalAbort } from '../../api/global-abort.ts'

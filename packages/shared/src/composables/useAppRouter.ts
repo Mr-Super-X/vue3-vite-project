@@ -21,9 +21,12 @@
  * @group 路由组合式 API
  */
 
+import { ElMessage } from 'element-plus'
+// 显式 import 不经 AutoImport resolver 的 importStyle 注入，消息样式须自行携带
+import 'element-plus/es/components/message/style/css'
 import { getAppRouter } from '../app-router.ts'
 import { resolveRouteTitle } from '../router-title.ts'
-// ElMessage 由 unplugin-auto-import 注入（importStyle 自动带样式，勿显式 import）
+// ElMessage 显式 import（packages 生产源码不依赖宿主 AutoImport，见 shared README「宿主装配契约」）
 import { useI18n } from 'vue-i18n'
 // handleRouterError 等模块级兜底 toast 无 setup 作用域的 t() 可用——引 i18n 实例走 global.t
 // （与 http-errors 同方案；useI18n 仅在函数体内有 setup 上下文处使用——2026-10-29）
