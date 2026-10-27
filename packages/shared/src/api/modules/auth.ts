@@ -11,7 +11,9 @@
  * @group 业务 API：认证
  */
 
+import { z } from 'zod'
 import { request } from '../http'
+import { requestValidated } from '../validator'
 
 export interface LoginPayload {
   username: string
@@ -19,19 +21,36 @@ export interface LoginPayload {
 }
 
 /**
- * 登录响应（httpOnly 模式）：
- * 凭证 token 由后端 Set-Cookie 下发，响应体不再携带 token。
+ * 登录响应 schema（httpOnly 模式）：
+ * 凭证 token 由后端 Set-Cookie 下发，响应体仅含必要的 profile 信息。
+ * `.passthrough()` 保留后端新增字段（前向兼容，不裁剪未知键）。
  *
  * @group 业务 API：认证
  */
-export interface LoginResult {
-  profile: { id: number; name: string }
-}
-export interface UserProfile {
-  id: number
-  name: string
-  permissions: string[]
-}
+export const loginResultSchema = z
+  .object({
+    profile: z.object({ id: z.number(), name: z.string() }).passthrough(),
+  })
+  .passthrough()
+
+/**
+ * 当前用户 profile + 权限列表 schema（路由守卫鉴权依赖此接口）。
+ * `.passthrough()` 保留后端新增字段。
+ *
+ * @group 业务 API：认证
+ */
+export const userProfileSchema = z
+  .object({
+    id: z.number(),
+    name: z.string(),
+    permissions: z.array(z.string()),
+  })
+  .passthrough()
+
+/** 登录响应类型（z.infer 推导，与 loginResultSchema 同源） */
+export type LoginResult = z.infer<typeof loginResultSchema>
+/** 当前用户 profile 类型（z.infer 推导，与 userProfileSchema 同源） */
+export type UserProfile = z.infer<typeof userProfileSchema>
 
 export const authApi = {
   /**
@@ -42,7 +61,8 @@ export const authApi = {
    *
    * @group 业务 API：认证
    */
-  login: (data: LoginPayload) => request<LoginResult>({ url: '/auth/login', method: 'post', data }),
+  login: (data: LoginPayload) =>
+    requestValidated(loginResultSchema, { url: '/auth/login', method: 'post', data }),
 
   /**
    * 获取当前用户的 profile + 权限列表。
@@ -54,7 +74,11 @@ export const authApi = {
    * @group 业务 API：认证
    */
   fetchProfile: (options?: { silent?: boolean }) =>
-    request<UserProfile>({ url: '/auth/profile', method: 'get', silent: options?.silent }),
+    requestValidated(userProfileSchema, {
+      url: '/auth/profile',
+      method: 'get',
+      silent: options?.silent,
+    }),
 
   /**
    * 登出。
