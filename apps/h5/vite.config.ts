@@ -20,8 +20,6 @@ const appRoot = fileURLToPath(new URL('.', import.meta.url))
 // https://vite.dev/config/
 export default createViteConfig({
   appRoot,
-  appName: 'h5',
-  portOffset: 3,
   // h5 rem 适配：仅转换本 app src/layouts/h5 与 src/modules/h5-*（postcss.ts 约定）
   h5Rem: true,
   // vant 4 按需引入：经工厂 componentResolvers 扩展位注入（解析 <van-*> 前缀 +

@@ -20,10 +20,16 @@ function fail(appDir, msg) {
   throw new Error(`[app-manifest] ${join(appDir, MANIFEST_FILE)}：${msg}`)
 }
 
+function dirBaseName(appDir) {
+  // appRoot 常带末尾分隔符（fileURLToPath(new URL('.', ...))），须先剥离再取目录名
+  const trimmed = appDir.replace(/[\\/]+$/, '')
+  return trimmed.split(/[\\/]/).pop()
+}
+
 function validate(appDir, raw) {
   if (typeof raw !== 'object' || raw === null) fail(appDir, '须为 JSON 对象')
   const { name, port, requiredRoutes } = raw
-  const dirName = appDir.split(/[\\/]/).pop()
+  const dirName = dirBaseName(appDir)
   if (typeof name !== 'string' || !/^[a-z][a-z0-9-]*$/.test(name)) {
     fail(appDir, `name 须为 kebab-case，当前 ${JSON.stringify(name)}`)
   }

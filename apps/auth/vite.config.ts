@@ -20,6 +20,4 @@ const appRoot = fileURLToPath(new URL('.', import.meta.url))
 // https://vite.dev/config/
 export default createViteConfig({
   appRoot,
-  appName: 'auth',
-  portOffset: 5,
 })

@@ -14,7 +14,8 @@
 //       auth → ['Login', 'NotFound']（登录路由宿主 + 登出落地页匿名可达）
 //       admin → ['Forbidden', 'NotFound', 'ServerError']（系统错误页宿主）
 //       其余 app（docs/portal/h5/big）→ ['NotFound']（全公开 app 只有 404 兜底）
-//   - 路由检查收尾时自动复跑端口双写锁死校验（apps-registry port ↔ vite.config portOffset，CI 单点覆盖）
+//   - 路由检查收尾时自动复跑 manifest 完整性校验（有 src 必有 app.manifest.json，CI 单点覆盖；
+//     原「端口双写锁死」随 P2 消灭——端口已单源到 manifest，无双写可锁）
 //
 // 5 个校验（语义与单应用时代一致，逐 app 执行）：
 //   A. whitelist ⊆ implementedNames（白名单元素必须有 route 实现）
@@ -22,9 +23,8 @@
 //   C. 系统兜底名单 ⊆ implementedNames（兜底页面必须有真实路由）
 //   D. 双向一致性最终汇总
 //   E. 注册表反向校验：apps/ 下发现的应用必须登记 apps-registry.mjs（防静默失效）
-// 收尾另跑端口双写锁死（原 nginx 网关配置校验已随 node 网关方案删除——
-// 网关路由表由 scripts/node-gateway.ts 的 buildGatewayRoutes(APPS) 单源代码派生，
-// 不存在静态配置第二事实源；端口双写锁死与 nginx 无关故迁入本文件保留）
+// 收尾另跑 manifest 完整性校验（原端口双写锁死已随 P2 消灭——端口单源到 app.manifest.json；
+// 网关路由表由 scripts/node-gateway.ts 的 buildGatewayRoutes(APPS) 单源代码派生，无第二事实源）
 //
 // 设计变更（2026-07-24 方案 A）：
 //   - 移除 RouteName 联合类型校验（types.ts RouteName 改为 string alias）
@@ -38,9 +38,6 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
 import { APPS } from './apps-registry.mjs'
-// SERVER_DEFAULTS.port 是 portOffset 的推导基准（packages/config/src/server.ts 单源），
-// 与原 check-gateway-conf.ts 引用同先例（strip-types 直跑可 import ts）
-import { SERVER_DEFAULTS } from '../packages/config/src/server.ts'
 
 const ROOT = resolve(import.meta.dirname, '..')
 const APPS_DIR = resolve(ROOT, 'apps')
@@ -72,29 +69,27 @@ function requiredFor(app: string): readonly string[] {
  * （2026-10-26 自 scripts/check-gateway-conf.ts 迁入：nginx 网关配置校验随 node 网关
  * 方案删除，本校验与 nginx 无关故保留）
  */
-function validatePortWiring(): string[] {
+/**
+ * manifest 完整性校验（P2，2026-10-27）：app 元数据单源是各 app 的 app.manifest.json——
+ * apps/ 下每个含 src 的 app 必须登记 manifest（否则 ESLint 边界/网关路由/requiredRoutes
+ * 校验静默跳过它）；有 manifest 但无 src 是孤儿。原「端口双写锁死」（apps-registry port ↔
+ * vite.config portOffset）随 P2 消灭：端口已单源到 manifest，无双写可锁。
+ */
+function validateManifestPresence(): string[] {
   const errors: string[] = []
   const appsDir = resolve(ROOT, 'apps')
-  for (const { name, port } of APPS) {
-    const viteConfigPath = join(appsDir, name, 'vite.config.ts')
-    if (!existsSync(viteConfigPath)) {
-      errors.push(`apps/${name}/vite.config.ts 不存在（注册表登记了该 app 但无 vite 配置）`)
-      continue
-    }
-    const text = readFileSync(viteConfigPath, 'utf-8')
-    if (!text.includes('createViteConfig(')) {
+  for (const entry of readdirSync(appsDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
+    const appDir = join(appsDir, entry.name)
+    const hasSrc = existsSync(join(appDir, 'src'))
+    const hasManifest = existsSync(join(appDir, 'app.manifest.json'))
+    if (hasSrc && !hasManifest) {
       errors.push(
-        `apps/${name}/vite.config.ts 未调用 createViteConfig 工厂（无法推导实际 dev 端口）`
+        `apps/${entry.name} 有 src 但缺 app.manifest.json（ESLint 边界 / 网关路由 / requiredRoutes 校验将静默跳过它）`
       )
-      continue
     }
-    // 工厂缺省 portOffset = 0（SERVER_DEFAULTS.port 即 admin 实际端口），缺省声明合法
-    const offsetMatch = text.match(/portOffset:\s*(\d+)/)
-    const actual = SERVER_DEFAULTS.port + (offsetMatch ? Number(offsetMatch[1]) : 0)
-    if (actual !== port) {
-      errors.push(
-        `apps/${name} 端口双写不一致：apps-registry.mjs port=${port}，但 vite.config.ts portOffset=${offsetMatch[1]} → 实际 dev 端口 ${actual}（须同步两处）`
-      )
+    if (!hasSrc && hasManifest) {
+      errors.push(`apps/${entry.name} 有 app.manifest.json 但无 src（孤儿 manifest）`)
     }
   }
   return errors
@@ -300,17 +295,17 @@ for (const app of apps) {
   totalErrors += appErrors
 }
 
-// ─── 端口双写锁死（apps-registry.mjs port ↔ vite.config.ts portOffset）──────────
-// node 网关路由表由 buildGatewayRoutes(APPS) 单源代码派生，无静态配置校验需求；
-// 注册表 port 与 vite.config portOffset 仍是两处手写，此处静态锁死，漂移即 CI 红。
+// ─── manifest 完整性（P2：app 元数据单源到 app.manifest.json）──────────────────
+// 原「端口双写锁死」随 P2 消灭——端口已单源到 manifest，无双写可锁；改为校验
+// 「有 src 必有 manifest，有 manifest 必有 src」，防 ESLint 边界/网关/requiredRoutes 静默跳过。
 
-console.log('━━━ 端口双写锁死（apps-registry.mjs port ↔ vite.config.ts portOffset）━━━')
-const portErrors = validatePortWiring()
-if (portErrors.length === 0) {
-  console.log(`✓ ${APPS.length} 个 app 的注册表端口与 vite.config portOffset 推导一致`)
+console.log('━━━ app.manifest.json 完整性（有 src 必有 manifest，反之亦然）━━━')
+const manifestErrors = validateManifestPresence()
+if (manifestErrors.length === 0) {
+  console.log(`✓ ${APPS.length} 个 app 的 app.manifest.json 与 src 目录一一对应`)
 } else {
-  for (const message of portErrors) console.error(`✖ ${message}`)
-  totalErrors += portErrors.length
+  for (const message of manifestErrors) console.error(`✖ ${message}`)
+  totalErrors += manifestErrors.length
 }
 console.log('')
 

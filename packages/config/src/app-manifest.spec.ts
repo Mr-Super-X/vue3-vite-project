@@ -42,6 +42,11 @@ describe('readAppManifest', () => {
     writeManifest('x', { name: 'y', port: 5200, requiredRoutes: ['NotFound'] })
     expect(() => readAppManifest(join(dir, 'x'))).toThrow(/与目录名/)
   })
+  it('appRoot 带末尾分隔符也能取对目录名（fileURLToPath new URL 形态）', () => {
+    writeManifest('admin', { name: 'admin', port: 5174, requiredRoutes: ['NotFound'] })
+    const withSep = join(dir, 'admin') + (process.platform === 'win32' ? '\\' : '/')
+    expect(readAppManifest(withSep).name).toBe('admin')
+  })
   it('JSON 语法错报错含文件名', () => {
     const appDir = join(dir, 'x')
     mkdirSync(appDir, { recursive: true })
