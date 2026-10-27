@@ -307,6 +307,17 @@ const { data } = storeToRefs(useUserStore())
 
 ---
 
+### 1.6.3 包源码自包含约定（packages/* 生产源码不使用 AutoImport）
+
+> 2026-10-27 P0 起：AutoImport 隐式注入只停留在**最终宿主（apps/\*）**，不穿过包边界。
+
+- `apps/*`：维持 §1.6 全部 AutoImport 规则不变（业务 DX 优先）
+- `packages/*` 生产源码：**一律显式 import**（含 vue/pinia/vue-router 高频 API 与 ElMessage 等），不依赖宿主转换才能运行；ElMessage 等组件的显式 import 须同时携带样式副作用（`element-plus/es/components/message/style/css`）
+- 依赖可见性：packages/* 消费的每个 npm 包必须声明在自身 package.json——本地规则 `local/package-contract`（error 级，`pnpm lint` + CI 机械检查）兜底，含 @vv/* 方向铁律（mock → shared、ui → shared；构建装配配置豁免方向检查）
+- `packages/ui` 存量注入式源码与其 `src/types/auto-globals.d.ts` 暂保留，收敛为独立批次（本约定对 ui 为新代码约束先行）
+
+---
+
 ### 1.7 组件全局注册与 IDE 智能提示（强约束）
 
 `unplugin-vue-components`（`packages/config/src/create-vite-config.ts` 的 `Components` 段）按 `dirs` 自动扫描**目录下所有 .vue 文件**（`deep: true`，含任意深度子目录）——`@vv/ui` 包源码三目录（`components/common` + `components/ProTable` + `components/form-schema`）+ 各 app 的 `src/components/`（若存在）——按文件名（PascalCase）注册到 `vue.GlobalComponents` 接口，输出 `apps/<a>/src/types/components.d.ts`。该文件由 `.gitignore` 屏蔽，**仅在 `pnpm dev` / `pnpm build` 时由 unplugin 重新生成**。

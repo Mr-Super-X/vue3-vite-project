@@ -6,6 +6,18 @@
 
 ## 未发布
 
+### ♻️ Refactor | 共享包自包含 P0：shared 显式导入 + packages 依赖契约机械检查（2026-10-27）
+
+> 背景：shared 生产源码依赖宿主 AutoImport 补齐 `ref/defineStore/ElMessage` 等自由变量——包「能 import」但「不能独立运行」，包测试要复制一套宿主插件装配、类型要靠手工全局声明闭合、dev 预构建要靠 optimizeDeps.exclude 特殊豁免。换宿主/冷启动排障成本高。
+
+- **P0-B 显式导入**：shared 13 个生产文件（5 composables + 4 store + 3 directives + http）补标准显式 import；`auto-globals.d.ts` 伪运行时全局退役，仅保留 `persistence-types.d.ts`（persistedstate 模块增强）；`vitest.config.ts` 摘除 AutoImport/ElementPlusResolver、改复用 `@vv/config` 工厂 createVitestConfig（css:true + EP inline 口径单源）——包测试零宿主插件依赖
+- **ElMessage 样式随行**：http.ts / useAppRouter.ts / copy.ts 三入口显式携带 `element-plus/es/components/message/style/css`（显式 import 不经 resolver importStyle 注入，防提示样式静默退化）
+- **P0-A 依赖契约**：新增本地规则 `local/package-contract`（error 级，`pnpm lint` + CI）——packages/* 值导入必须在自身 manifest 声明、类型导入/spec/bench/test-utils 允许 devDeps、@vv/* 方向铁律（mock → shared、ui → shared；构建装配配置豁免方向）机械检查；补齐 config（vite/vitest/unocss + 可选 iconify peers）/ ui（vue-i18n、@element-plus/icons-vue + @vue/test-utils/vitest-axe devDeps）/ shared（normalize.css、zod devDep、@vv/config workspace）声明；icons 与 normalize.css 收敛 catalog 单版本源
+- **lint 基建修复**：eslint.config.mjs 全局 ignore 补 `**/dist-prod/**`（消除既有 6.9 万条产物 lint 噪音，RED→GREEN 基线校正）
+- **边界不变**：apps/* 的 AutoImport DX 全保留；@vv/ui 注入式源码与 optimizeDeps.exclude 本批不动（后续独立批次）
+- **验证**：`pnpm test:eslint-rules` 21 用例绿；`pnpm lint` / `pnpm type-check`（全量，auto-globals 删除后零 TS2304）/ `pnpm -C packages/shared test`（428/428，无 AutoImport 插件）全绿
+- **手动验证步骤**：`pnpm dev:gateway admin auth` → ① 登录成功/失败提示样式正常；② 触发路由错误 toast 样式正常；③ v-copy 复制提示样式正常；④ 会话过期提示正常
+
 ### ♻️ Refactor | 错误页形态统一：admin modules/error 拍平为 src/views/（2026-10-27）
 
 > 背景：错误页双形态并存——admin 用 `modules/error/`（views+routes 模块三件套），portal/docs/h5/big 用 `src/views/NotFound.vue` + router 内联。错误页是纯展示页（ErrorPage 组件包圆逻辑，无领域资产），模块制属过度分层；拍平对齐多数派消灭双形态。

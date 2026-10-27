@@ -4,32 +4,28 @@
 
 > **消费形态（必读）**：本包是 pnpm workspace **源码直链包**（`workspace:*` 链接、`"private": true`），
 > **不是 npm 发布包**——不建 dist、不经打包发布，宿主构建期直接编译包内 `.ts` 源码。
-> 因此本包源码存在**编译期隐式契约**：`.ts` 文件里看不到 `import { ref } from 'vue'` /
-> `import { defineStore } from 'pinia'` 这类语句，运行时正确性依赖宿主 vite 装配还原注入。
-> **换宿主（拷到另一个 Vue3 工程，或将来转 npm 发布）前，必须逐项落实下文「宿主装配契约」**，
-> 否则模块求值即 `ReferenceError`。
+> 自 **P0（2026-10-27）共享包自包含改造**起，本包生产源码**全量显式 import**——
+> 不再依赖宿主 `unplugin-auto-import` 补齐 `ref/defineStore/ElMessage` 等自由变量，
+> 包级 Vitest 配置已摘除该插件（测试通过即运行时自包含的权威证明）。
+> **换宿主前只需具备 Vue3 + Vite（import.meta.env 体系）+ 下方依赖清单**，详见「宿主装配契约」。
 
-## 宿主装配契约（前置条件，缺一不可）
+## 宿主装配契约（前置条件）
 
-### ① unplugin-auto-import 按清单注入（运行时生死线）
+### ① 生产源码零注入依赖（2026-10-27 P0 起）
 
-包内 composable / store 源码依赖宿主 `unplugin-auto-import` 注入以下标识符，**缺任一项即 ReferenceError**：
+包内生产源码**全量显式 import**——不再依赖宿主 `unplugin-auto-import` 补齐自由变量；
+包级 Vitest 配置（`vitest.config.ts`）已无该插件，测试通过即运行时自包含的权威证明。
+宿主只需具备：Vue3 + Vite（`import.meta.env` 体系）+ 下方依赖清单。
+（历史：改造前本节前身为「unplugin-auto-import 按清单注入」，已随 P0 退役。）
 
-| `from`         | 必须注入的标识符                                                                                         | 说明                                                       |
-| -------------- | -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `'vue'`        | `ref` / `reactive` / `computed` / `watch` / `watchEffect` / `onMounted` / `onUnmounted` / `nextTick` / … | 走 preset 全量注入                                         |
-| `'vue-router'` | `useRoute` / `useRouter` / `useLink` / …                                                                 | 走 preset 全量注入                                         |
-| `'pinia'`      | `defineStore` / `storeToRefs` / `acceptHMRUpdate`                                                        | 走 preset 全量注入                                         |
-| `'@vv/shared'` | `useAppRouter` / `useRequest` / `useAuth` / `useDict` / `createNamespace`                                | 业务清单**显式列名**（勿用 dirs 扫描，会误扫 `*.spec.ts`） |
+### ② optimizeDeps.exclude（存量防退化，待验证收敛）
 
-> 单一事实来源：本仓库 `packages/config/src/create-vite-config.ts` 的 `VV_SOURCE_MODULES` 常量。
-> 注意：`useTheme` 不在注入清单（app 侧经 `@composables/useTheme` 别名显式 import 消费），
-> 若宿主也需要它，请显式 `import { useTheme } from '@vv/shared'`（根 barrel 已导出）。
-
-### ② optimizeDeps.exclude 逐条点名 @vv/*（dev 生死线）
+> P0 后 shared 源码已无注入式自由变量，本条对 shared 属**存量防退化配置**；
+> @vv/ui 仍是注入式源码（未迁移），整条 exclude 保留。待真实 dev 冷启动验证后另行评估删减。
 
 源码直链包**禁止 esbuild 预打包**：预打包不经过 auto-import 转换，包内被注入的
 `defineStore` / `ref` 会成为自由变量 → dev 冷缓存模块求值即 `ReferenceError`。
+（注：此风险对 P0 后的 @vv/shared 已消除——其源码已显式 import；本节主要为 @vv/ui 保留。）
 
 ```ts
 optimizeDeps: {
