@@ -20,3 +20,5 @@ export * from './create-vite-config.ts'
 // Vitest 配置工厂（2026-10-23：6 app vitest.config 的 test 块逐字同构收敛单源，
 // admin coverage 阈值块走参数注入）
 export * from './create-vitest-config.ts'
+// app.manifest.json 读取器（P2 应用 manifest 单源；apps-registry/new-app 等脚本侧消费）
+export * from './app-manifest.mjs'

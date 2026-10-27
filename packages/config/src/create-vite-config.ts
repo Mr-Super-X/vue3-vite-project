@@ -37,6 +37,7 @@ import { createProxyConfig } from './proxy.ts'
 import { createScssPreprocessorOptions } from './scss.ts'
 import { SERVER_DEFAULTS } from './server.ts'
 import { VENDOR_CHUNKS } from './vendor-chunks.ts'
+import { readAppManifest } from './app-manifest.mjs'
 
 /** auto-import 注入条目（unplugin-auto-import v21 数组语法：{ from, imports }） */
 interface VvAutoImportEntry {
@@ -85,8 +86,10 @@ const VV_SOURCE_MODULES: readonly VvAutoImportEntry[] = [
 export interface AppViteOptions {
   /** app 根目录（绝对路径，调用方用 fileURLToPath(new URL('.', import.meta.url))） */
   appRoot: string
-  /** app 标识（注入 import.meta.env.VITE_APP_ID） */
-  appName: string
+  /**
+   * app 标识与 dev/HMR 端口自 `appRoot/app.manifest.json` 单源派生（P2，2026-10-27），
+   * 不再由调用方传 appName/portOffset（消灭 vite.config ↔ apps-registry 双写）。
+   */
   /**
    * vite base；缺省读 VITE_BASE 环境变量（`?? '/'`）。CLI --base 优先级更高（gh-pages
    * 聚合构建 scripts/build-pages.ts 走 CLI 注入）。原 6 app 逐字同构的
@@ -100,8 +103,6 @@ export interface AppViteOptions {
    * vite-plugin-mock 与 cleanMockBundled）
    */
   mockPath?: string
-  /** dev server 端口偏移（多 app 并行 dev 时区分，port = SERVER_DEFAULTS.port + portOffset） */
-  portOffset?: number
   /** h5 rem 适配开关（postcss-pxtorem，作用域 appRoot/src/layouts/h5 与 src/modules/h5-*） */
   h5Rem?: boolean
   /** app 私有插件（如 vite-plugin-vue-devtools / rollup-plugin-visualizer） */
@@ -126,14 +127,16 @@ export interface AppViteOptions {
 
 export function createViteConfig({
   appRoot,
-  appName,
   base = process.env.VITE_BASE ?? '/',
   mockPath = path.join(appRoot, '../../packages/mock/src'),
-  portOffset = 0,
   h5Rem = false,
   extraPlugins = [],
   componentResolvers = [],
 }: AppViteOptions) {
+  // P2（2026-10-27）：appId 与 dev/HMR 端口自 app.manifest.json 单源派生（消灭 appName/portOffset 双写）
+  const manifest = readAppManifest(appRoot)
+  const appName = manifest.name
+  const devPort = manifest.port
   // 本地 app 图标集合（i-app-*）：P1-4 起命中 @vv/ui 包源码（existsSync 自动切换，
   // legacyRoot 回落仅作过渡兜底，P5 清理）
   const iconsDir = resolvePkgFirst(
@@ -251,7 +254,7 @@ export function createViteConfig({
     },
     server: {
       ...SERVER_DEFAULTS,
-      port: SERVER_DEFAULTS.port + portOffset,
+      port: devPort,
       // HMR WebSocket 直连本 app dev server 端口，绕过 8080 nginx 网关——
       // vite client 的 ws URL = ws://host:port/__HMR_BASE__（__HMR_BASE__=config.base=/<app>/），
       // 经网关 8080 时 nginx 的 /<app>/ HTTP 反代把 ws upgrade 当普通请求转发，vite ws handler
@@ -260,8 +263,8 @@ export function createViteConfig({
       // host 显式 localhost：避免 vite 默认取 network IP 致 client 连不通。
       hmr: {
         host: 'localhost',
-        port: SERVER_DEFAULTS.port + portOffset,
-        clientPort: SERVER_DEFAULTS.port + portOffset,
+        port: devPort,
+        clientPort: devPort,
       },
       // 联调真实后端时在 proxy.ts 内按需补充 _env 字段解析（当前返回 {} 占位）
       proxy: createProxyConfig(process.env),
