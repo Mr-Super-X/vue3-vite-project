@@ -6,6 +6,21 @@
 
 ## 未发布
 
+### ✨ Feat | API 契约单源试点：auth 响应 zod schema 化（2026-10-27）
+
+> 背景：此前 TS interface 只能编译期约束，真实响应与类型漂移要等运行时崩才暴露。复用现有
+> `requestValidated` + zod，让 login/profile 的类型与运行时校验同源。
+
+- `auth.ts` 同址声明 `loginResultSchema` / `userProfileSchema`（`.passthrough()` 保留后端新增字段），
+  `LoginResult` / `UserProfile` 改 `z.infer` 推导（类型与运行时校验同源）
+- `login` / `fetchProfile` 改 `requestValidated`——响应漂移在 API 边界抛 `ApiError(code=500)`、
+  不 toast、不打印密码/cookie；url/method/data/silent 原样透传，行为零变化；`logout` 保持 `request<void>`
+- `@vv/shared` 的 zod 升为 peerDependencies（生产运行时依赖）；mock 保持 `import type` 零运行时依赖
+- 新增 `auth.spec.ts` 5 例（schema 契约 + 透传），shared 全量 433/433 无回归
+
+验证：`pnpm -C packages/shared test` 433/433 / `type-check`（shared+mock）/ `pnpm lint` / `pnpm test`
+9 包全绿。待安全审查确认日志与错误反馈无敏感信息泄露。
+
 ### ♻️ Refactor | 共享包自包含 P0：shared 显式导入 + packages 依赖契约机械检查（2026-10-27）
 
 > 背景：shared 生产源码依赖宿主 AutoImport 补齐 `ref/defineStore/ElMessage` 等自由变量——包「能 import」但「不能独立运行」，包测试要复制一套宿主插件装配、类型要靠手工全局声明闭合、dev 预构建要靠 optimizeDeps.exclude 特殊豁免。换宿主/冷启动排障成本高。

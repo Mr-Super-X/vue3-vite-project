@@ -104,6 +104,18 @@ try {
 
 ---
 
+## ✅ 真实接入案例：auth 响应契约（P1，2026-10-27）
+
+`packages/shared/src/api/modules/auth.ts` 的 `login` / `fetchProfile` 已接入——schema 与 API **同址声明**（`loginResultSchema` / `userProfileSchema`），`LoginResult` / `UserProfile` 类型经 `z.infer` 推导（类型与运行时校验同源）。响应漂移在 API 边界抛 `ApiError(code=500)`（详细 issues 记 console.error，不 toast、不打印密码/cookie）。mock 经 `import type` 消费推导类型，保持零运行时依赖。
+
+要点：
+
+- 用 `.passthrough()` 保留后端新增字段（前向兼容，不裁剪未知键）——见上文「字段扩展」节的取舍
+- 只读响应接口适合首批发试点；菜单递归 schema（部分非法项跳过的容错语义）暂不接
+- `silent` 探测标记（`fetchProfile({ silent: true })`）原样透传 HTTP 层，schema 层不吞错误语义
+
+---
+
 ## 🧩 高级用法
 
 ### 1. zod 内置 transformer（类型转换）
