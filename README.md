@@ -341,6 +341,7 @@ pnpm dev:local
 | `pnpm check:doc-currency`          | 文档与代码硬数据一致性校验（13 项锁定；CI 阶段强制）                                                                  |
 | `pnpm generate:tsconfig-paths`     | 从 `packages/config/src/app-aliases.ts` 自动同步到各 app `tsconfig.app.json`（pre-commit 钩子自动）                   |
 | `pnpm new-module <name>`           | 一键生成业务模块骨架（kebab-case 名 → 6 个骨架文件）                                                                  |
+| `pnpm new-app <name>`              | 一键生成可 dev/build/test 的最小公开 app（元数据单源 `app.manifest.json`，注册表/网关/ESLint 自动派生零手改）         |
 | `pnpm remove-module <name>`        | 一键移除业务模块（默认 dry-run + y/N 确认；CI / 管道传 `--force`）                                                    |
 | `pnpm lint`                        | ESLint 检查全项目                                                                                                     |
 | `pnpm lint:fix`                    | ESLint 自动修复                                                                                                       |

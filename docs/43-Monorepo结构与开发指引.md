@@ -42,7 +42,7 @@ vue3-vite-project（pnpm workspace + turbo@2）
 | big    | 5178     | mock / shared / ui                 | scale 适配，路由 `meta.bigScreen` 声明设计稿尺寸 |
 | auth   | 5179     | mock / shared / ui                 | 登录接口 mock 必需（4 端点）                     |
 
-端口 = `@vv/config` 的 `SERVER_DEFAULTS.port(5174) + portOffset`（各 app `vite.config.ts` 声明），`strictPort: true`——端口占用直接报错不漂移（漂移会让网关路由表反代落空，排查困难）。
+端口 = 各 app `app.manifest.json` 的 `port` 字段（单源，P2 起），`strictPort: true`——端口占用直接报错不漂移（漂移会让网关路由表反代落空，排查困难）。
 
 ## 3. 常用命令
 
@@ -65,15 +65,20 @@ vue3-vite-project（pnpm workspace + turbo@2）
 
 ## 4. 新增应用流程
 
-> 属 CLAUDE.md §2.2 列管操作，**须先走 §2.4 修改申请获批**后按以下步骤执行：
+> 属 CLAUDE.md §2.2 列管操作，**须先走 §2.4 修改申请获批**后执行。P2 起（2026-10-27）一键脚手架：
 
-1. `mkdir apps/<name>` + 新建 `package.json`（name `@vv-app/<name>`，仿现有 6 app；dependencies 按需声明 `@vv/*` workspace 包）
-2. 新建 `vite.config.ts`：调 `createViteConfig({ appRoot, appName: '<name>', portOffset: <下一个空闲偏移>, ... })`（`base` / `mockPath` 走工厂缺省，6 app 同构已收敛进工厂；无 mock 依赖才显式传 `mockPath: ''`）
-3. `apps/<name>/src/` 最小骨架：`main.ts` / `App.vue` / `router/`（whitelist + fallback）/ `modules/<首模块>/`（views + routes）
-4. env 接线：`.env` 注入 `VITE_AUTH_ORIGIN=/auth`（统一登录回跳基址，缺省即 `/auth`）
-5. 端口登记两处同改：`portOffset` 与 `scripts/apps-registry.mjs` 的 `port` 字段（注册表是 dev-gateway / 网关路由表 / check-routes / eslint 边界规则多消费的单源；`check:routes` 的端口双写锁死会校验 `5174 + portOffset === port`，漏改即红）；node 网关路由表由 `scripts/node-gateway.ts` 的 `buildGatewayRoutes(APPS)` 代码派生，无需另改配置
-6. `pnpm install` 锁 workspace 链接 → `pnpm -C apps/<name> dev` 起服务 → `pnpm check:routes`（脚本自动发现新 app）
-7. gh-pages 无需改脚本：`scripts/build-pages.ts` 自动发现含 `vite.config.ts` 的 app 目录并聚合部署
+1. `pnpm new-app <kebab-name>`——预检（名称 / 目录不存在 / 端口 = 现有 manifest 最大 port + 1 自动分配跳网关 8080）全过才写盘，生成「可 dev/build/test 的最小公开应用」（公开 Home + 站内 404）。
+2. `pnpm install` 锁 workspace 链接 → `pnpm -C apps/<name> dev` 起服务 → `pnpm check:routes`（脚本自动发现新 app）。
+
+**app 元数据单源是各 app 的 `app.manifest.json`**（`{ name, port, requiredRoutes }`，JSON 无注释——字段说明见本节末尾表）。注册表（`scripts/apps-registry.mjs`）/ 网关路由表 / check-routes / eslint 边界规则均经 `packages/config` 的 `discoverAppManifests` **自动派生**，新增 app 零手改。dev/HMR 端口与 `VITE_APP_ID` 由 `createViteConfig` 读 manifest 注入——`vite.config.ts` 不再传 `appName`/`portOffset`。
+
+| 字段             | 约束                                                           |
+| ---------------- | -------------------------------------------------------------- |
+| `name`           | kebab-case，必须等于 app 目录名                                |
+| `port`           | 1-65535 整数，workspace 唯一，不与网关 8080 冲突               |
+| `requiredRoutes` | 非空字符串数组，必须含 `NotFound`（系统兜底路由 B/C 校验名单） |
+
+历史手动流程（脚手架落地前）：mkdir + package.json + vite.config + src 骨架 + env + 端口登记——已收敛为 `new-app` 模板，无特殊需求不要绕过。gh-pages 无需改脚本：`scripts/build-pages.ts` 自动发现含 `vite.config.ts` 的 app 目录并聚合部署。
 
 ## 5. 统一登录协议
 
@@ -158,11 +163,11 @@ pnpm dev:gateway admin auth  # 子集模式（2026-10-27）：仅起指定 app�
 | 5176 | portal    | 5179 | auth |
 | 8080 | node 网关 |      |      |
 
-处置：先找到占用进程释放（Windows `netstat -ano | findstr 5174`，macOS/Linux `lsof -i:5174`）。确需换端口时**两处同改**：目标 app `vite.config.ts` 的 `portOffset` 与 `scripts/apps-registry.mjs` 的 `port` 字段（`check:routes` 端口双写锁死校验，漂移即红）；网关路由表由注册表自动派生，无需另改。
+处置：先找到占用进程释放（Windows `netstat -ano | findstr 5174`，macOS/Linux `lsof -i:5174`）。确需换端口时改目标 app `app.manifest.json` 的 `port` 字段（单源）——`check:routes` 会校验 manifest 完整性（有 src 必有 manifest）；网关路由表由注册表自动派生，无需另改。
 
 ### 9.2 网关 502：`http://localhost:8080/admin/` 返回 Bad Gateway
 
-上游 dev server 未就绪：node 网关的 502 只在对应 app 的 dev server 未启动 / 已崩溃时出现——先看 `dev:gateway` 终端该 app 是否打印「✓ 就绪」；已就绪仍 502 则查端口双写是否漂移（`pnpm check:routes` 端口双写锁死会锁死注册表 port 与 vite.config portOffset 的一致性）。
+上游 dev server 未就绪：node 网关的 502 只在对应 app 的 dev server 未启动 / 已崩溃时出现——先看 `dev:gateway` 终端该 app 是否打印「✓ 就绪」；已就绪仍 502 则查 `pnpm check:routes`（manifest 完整性 + 路由一致性）是否红。
 
 ### 9.3 mock 接口 404：`/mock/auth/login` 等返回 404
 

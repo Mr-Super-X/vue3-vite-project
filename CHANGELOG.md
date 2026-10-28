@@ -6,6 +6,17 @@
 
 ## 未发布
 
+### ✨ Feat | 应用 manifest 与脚手架：app 元数据单源到 app.manifest.json + pnpm new-app（2026-10-28）
+
+> 背景：新增 app 原本要手动建目录/package.json/vite.config/src 骨架 + 端口登记两处（vite.config portOffset ↔ apps-registry.mjs port），漏改即 dev 网关 404 / check:routes 红，排查成本高。
+
+- **元数据单源**：各 app 的 `app.manifest.json`（`name`/`port`/`requiredRoutes`，JSON 无注释）。`packages/config` 新增 `.mjs` 读取器（`readAppManifest` 校验 + `discoverAppManifests` 发现 + 端口升序）。
+- **消灭端口双写**：`createViteConfig` 删 `appName`/`portOffset`，改读 manifest 派生 appId（注 VITE_APP_ID）与 dev/HMR 端口；`vite.config.ts` 只传 `appRoot` 等扩展参数。6 app 已迁移。
+- **注册表自动派生**：`scripts/apps-registry.mjs` 改 `discoverAppManifests` 派生同形 `APPS`（形状/端口升序不变）——dev-gateway / node-gateway / playwright / eslint 边界 / check-routes 五消费方业务逻辑零改动。`check-routes` 删端口双写锁死，转 manifest 完整性校验（有 src 必有 manifest + 孤儿 manifest 检测）。
+- **`pnpm new-app <kebab-name>`**：预检（名称/目录不存在/端口=max+1 跳 8080）全过才写盘，生成「可 dev/build/test 的最小公开应用」（公开 Home + 站内 404），23 文件模板 + node:test 9 用例。新增 app 零手改注册表/CI。
+
+验证：派生 APPS admin:5174→auth:5179 顺序对；check:routes / test:gateway / lint / type-check 全绿；admin dev 起 5174、VITE_APP_ID 注入正确；smoke app 实测 dev 5180（/ 与 /home 200）/ build / test 全过后删除。
+
 ### ✨ Feat | API 契约单源试点：auth 响应 zod schema 化（2026-10-27）
 
 > 背景：此前 TS interface 只能编译期约束，真实响应与类型漂移要等运行时崩才暴露。复用现有

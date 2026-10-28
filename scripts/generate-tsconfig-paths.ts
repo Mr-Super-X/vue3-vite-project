@@ -173,6 +173,9 @@ function main(): void {
   const configuredNames = new Set(appRoots.map((root) => path.basename(root)))
   const unconfigured = readdirSync(APPS_DIR, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && !configuredNames.has(entry.name))
+    // 只把「有 src 的目录」视为真 app——纯空壳 / 仅残留目录（如刚删除未释放句柄的
+    // smoke app）无 src 不算 app，跳过不报（与 check-routes 的「有 src 必有 X」守卫同口径）
+    .filter((entry) => existsSync(path.join(APPS_DIR, entry.name, 'src')))
     .map((entry) => entry.name)
   if (unconfigured.length > 0) {
     console.error(
