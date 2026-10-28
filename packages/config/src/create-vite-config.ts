@@ -56,6 +56,11 @@ interface VvAutoImportEntry {
  *     是双写漂移点，收敛后不可能再偏。
  * imports 为空的条目（'@vv/ui' 根包 / '@vv/mock'）只被显式 import（SFC 组件、mock 源），
  * 不经 auto-import 注入，仅参与 ① 的 exclude。
+ *
+ * 复杂度预算（2026-10-28 /autoplan C5 裁决）：本清单刻意显式——imports 列名不走
+ * dirs 自动扫描（避免误扫 *.spec.ts 与内部 API 污染 setup 全局作用域），故**不做
+ * 目录扫描/导出解析式派生化**。新增注入条目的门槛：必须附本注释同款事故记录
+ * （什么坑导致需要这条），条目总数超过 12 时触发「app 侧改显式 import」复审。
  */
 const VV_SOURCE_MODULES: readonly VvAutoImportEntry[] = [
   {
