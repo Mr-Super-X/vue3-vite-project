@@ -28,6 +28,8 @@
 //  11. ProTable 顶级 demo 数 —— docs/29-ProTable使用指南.md §概述「25 个演示」（24 能力 demo + ProTableOverview 主入口）
 //  12. XFormProps 字段数 —— docs/24 §2 + form-schema README「18 个」（三视角审查 Wave1-5 同步后的硬数据；Wave3-4 i18n +1 t；Wave3-6 交互增强 +2 size/showDirtyMark）
 //  13. XForm demo 数 —— docs/24 §19 示例索引「56 个」+ README（src/modules/demo/examples/XForm/ 下 .vue 数）
+//  14. docs 根级文档数预算（2026-10-28 /autoplan Round 2 R2-CEO-10：庄园冻结——新增须
+//      改 expected 并在 PR 说明理由，瘦身先合并/归档再降预算）
 //
 // 阈值调整原则：扩展字段 / 新增 composable 后，需同时更新本文档与 ARCHITECTURE.md。
 // 任何调整都需要在 PR 描述中显式说明（避免阈值被随意放宽）。
@@ -279,6 +281,19 @@ function countProTableDemos(): number {
   ).length
 }
 
+/**
+ * 数 docs/ 根级编号文档（.md 文件数；archive/audit/superpowers 子目录为历史档案
+ * 与设计稿，自然生长合理，不入口径）。
+ *
+ * 文档预算（2026-10-28 /autoplan Round 2 R2-CEO-10）：16k 行文档庄园只增不减，
+ * 本检查把庄园锁成「结构承重墙」——新增文档须把 expected +1 并在 PR 说明理由
+ * （有意识增长）；要瘦身则先合并/归档再降预算。冻结值 = 45（2026-10-28 实测）。
+ */
+function countDocs(): number {
+  const files = readdirSync(join(ROOT, 'docs'))
+  return files.filter((f) => f.endsWith('.md') && statSync(join(ROOT, 'docs', f)).isFile()).length
+}
+
 const checks: Check[] = [
   {
     // SchemaNode 实际 35 字段（ARCHITECTURE.md §2.1 已同步为 35）
@@ -368,6 +383,14 @@ const checks: Check[] = [
     name: 'XForm demo 数 (docs/24 §19「63 个」+ README)',
     actual: countXFormDemos,
     expected: 63,
+    tolerance: 0,
+  },
+  {
+    // 文档预算（2026-10-28 /autoplan Round 2 R2-CEO-10）：新增文档须把 expected +1
+    // 并在 PR 说明理由（有意识增长）；瘦身先合并/归档再降预算。冻结值 45 为当日实测。
+    name: 'docs 根级文档数预算（docs/ 庄园冻结）',
+    actual: countDocs,
+    expected: 45,
     tolerance: 0,
   },
 ]

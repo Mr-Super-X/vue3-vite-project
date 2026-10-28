@@ -358,7 +358,7 @@ pnpm dev
 | `pnpm check:aliases`               | alias 单一来源（`packages/config/src/app-aliases.ts`）与 tsconfig paths 一致性校验（pre-commit 强制 + CI 阶段强制）   |
 | `pnpm check:mock-wiring`           | mock 双接线一致性校验（mock 源文件清单 × 各 app prodServer 手动 import，CI 阶段强制）                                 |
 | `pnpm test:gateway`                | 网关单测（node:test，HTTP 转发 / WS 透传 / 302 / 404 / 502 smoke，8 用例）                                            |
-| `pnpm check:doc-currency`          | 文档与代码硬数据一致性校验（13 项锁定；CI 阶段强制）                                                                  |
+| `pnpm check:doc-currency`          | 文档与代码硬数据一致性校验（14 项锁定：13 项硬数据 + docs 文档数预算；CI 阶段强制）                                   |
 | `pnpm generate:tsconfig-paths`     | 从 `packages/config/src/app-aliases.ts` 自动同步到各 app `tsconfig.app.json`（pre-commit 钩子自动）                   |
 | `pnpm new-module <name>`           | 一键生成业务模块骨架（kebab-case 名 → 6 个骨架文件）                                                                  |
 | `pnpm new-app <name>`              | 一键生成可 dev/build/test 的最小公开 app（元数据单源 `app.manifest.json`，注册表/网关/ESLint 自动派生零手改）         |
