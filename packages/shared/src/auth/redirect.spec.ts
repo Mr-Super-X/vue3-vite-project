@@ -62,6 +62,18 @@ describe('resolvePostLoginRedirect', () => {
     expect(resolvePostLoginRedirect('/admin/')).toBe('/admin/')
   })
 
+  // 反斜杠双形态（2026-10-28 /autoplan E2 修复的回归网）：WHATWG URL 解析器将 \ 归一化为 /，
+  // `/\evil.com` 会按协议相对 URL 解析跳出——仅排除 // 前缀的校验可被绕过（实证 CWE-601）
+  it('含反斜杠的 redirect → fallback（/\\evil.com 归一化绕过）', () => {
+    fakeLocation.search = `?redirect=${encodeURIComponent(String.raw`/\evil.com`)}`
+    expect(resolvePostLoginRedirect('/admin/')).toBe('/admin/')
+  })
+
+  it('裸反斜杠开头（无 / 前缀）→ fallback', () => {
+    fakeLocation.search = `?redirect=${encodeURIComponent(String.raw`\evil.com`)}`
+    expect(resolvePostLoginRedirect('/admin/')).toBe('/admin/')
+  })
+
   it('绝对 URL → fallback（只允许同源路径）', () => {
     fakeLocation.search = `?redirect=${encodeURIComponent('https://evil.com/x')}`
     expect(resolvePostLoginRedirect('/admin/')).toBe('/admin/')

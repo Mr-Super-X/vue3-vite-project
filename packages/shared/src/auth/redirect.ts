@@ -32,12 +32,24 @@ export function redirectToAuthLogin(redirect: string): never {
   throw new Error('AUTH_REDIRECTING') // 中断当前守卫链（整页已发起）
 }
 
-/** auth 登录成功后回跳（校验同源前缀，防开放重定向）。
+/** auth 登录成功后回跳（校验同源，防开放重定向 CWE-601）。
+ *
+ * 校验策略（2026-10-28 /autoplan E2 修复，两道独立防线）：
+ * 1. 显式拒绝协议相对（//host）与含反斜杠的 redirect——WHATWG URL 解析器会将 \ 归一化为 /，
+ *    `/\evil.com` 会按协议相对 URL 解析跳出到外部域名（实证绕过，原仅排除 // 形态不够）；
+ * 2. origin 白名单比对：new URL 按当前 origin 解析后二次确认同源——覆盖所有未预见的
+ *    绝对/畸形形态，解析失败一律落 fallback。
  *
  * fallback 由调用方显式传入（登录后默认落地页）——本包不硬编码 app 名/部署形态
  * （见文件头注），默认值曾因写死 '/admin/' 致 app 特性泄漏进纯库包（架构审查项）。 */
 export function resolvePostLoginRedirect(fallback: string): string {
   const raw = new URLSearchParams(window.location.search).get('redirect')
-  if (raw && raw.startsWith('/') && !raw.startsWith('//')) return raw
+  if (!raw) return fallback
+  if (raw.startsWith('//') || raw.includes('\\')) return fallback
+  try {
+    if (new URL(raw, window.location.origin).origin === window.location.origin) return raw
+  } catch {
+    // 畸形 URL 形态解析失败 → 落 fallback
+  }
   return fallback
 }

@@ -15,7 +15,7 @@
 import { mergeConfig, defineConfig, configDefaults } from 'vitest/config'
 // vitest/config 不具名导出 UserConfig——test 字段由 vitest 的 `declare module 'vite'`
 // 类型增强挂到 vite 的 UserConfig 上（上方 values import 已拉入增强），类型侧统一从 'vite' 导入
-import type { UserConfig } from 'vite'
+import type { ConfigEnv, UserConfig } from 'vite'
 
 /** coverage 块类型（仅 admin 消费；阈值基线属 app 自有调参，工厂不预设缺省） */
 type CoverageOptions = NonNullable<NonNullable<UserConfig['test']>['coverage']>
@@ -23,8 +23,12 @@ type CoverageOptions = NonNullable<NonNullable<UserConfig['test']>['coverage']>
 export interface CreateVitestConfigOptions {
   /** app 根目录（绝对路径，调用方用 fileURLToPath(new URL('.', import.meta.url))） */
   appRoot: string
-  /** 同目录 vite.config.ts 的 default export（工厂内部与 test 块 merge，插件/别名全继承） */
-  viteConfig: UserConfig
+  /**
+   * 同目录 vite.config.ts 的 default export（工厂内部与 test 块 merge，插件/别名全继承）。
+   * 2026-10-28 E1 起 createViteConfig 是回调形式（按构建 mode 派生 define），此处同时接受
+   * 对象与函数——传函数时以 test 环境 env 求值后再 merge
+   */
+  viteConfig: UserConfig | ((env: ConfigEnv) => UserConfig)
   /**
    * coverage 配置（可选，仅 admin 传）。admin 阈值 50/48/45/50 是渐进路线图冻结基线
    * （v3.x 阶段；v4.0 目标 70/70/65/70），其他 app 经浏览器人工验收、不设阈值——
@@ -34,10 +38,13 @@ export interface CreateVitestConfigOptions {
 }
 
 export function createVitestConfig({ appRoot, viteConfig, coverage }: CreateVitestConfigOptions) {
+  // 回调形式先求值（vitest 环境的 mode='test'；loadEnv 无 .env.test 时落保底值，测试内一律 mock 环境变量）
+  const resolved =
+    typeof viteConfig === 'function' ? viteConfig({ command: 'serve', mode: 'test' }) : viteConfig
   return mergeConfig(
     // vite UserConfig 与 vitest 增强版 UserConfig 泛型不兼容（原 6 app 各自 cast 的根因），
     // cast 收敛进工厂后，调用方不再各自写 as never
-    viteConfig as never,
+    resolved as never,
     defineConfig({
       test: {
         environment: 'jsdom',

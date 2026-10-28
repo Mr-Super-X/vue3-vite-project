@@ -37,5 +37,11 @@ export function createFakeLocation(href = 'http://localhost/'): FakeLocation {
 
 /** 安装：stubGlobal 整体替换 window.location（在 spec 的 beforeEach 中调用，配合 afterEach 的 unstabAllGlobals） */
 export function installFakeLocation(fake: FakeLocation): void {
+  // 补齐 Location 标准属性 origin（2026-10-28 /autoplan E2）：redirect.ts 同源校验消费
+  // window.location.origin，而 fake 对象本身只有 href/search——不补则 origin undefined，
+  // new URL(path, undefined) 抛错让合法 redirect 误判落 fallback。
+  // 注意必须直接挂在 fake 上（保持引用）：spec 用例在 install 后仍对 fakeLocation.search 赋值驱动断言，
+  // 若浅拷贝 stub 会破坏该模式（stub 的是拷贝，赋值改不到 stub 对象上）。
+  fake.origin = new URL(fake.href).origin
   vi.stubGlobal('location', fake)
 }
