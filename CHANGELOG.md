@@ -6,6 +6,58 @@
 
 ## 未发布
 
+### 🔨 Refactor | /autoplan P2 批次：门禁自测网 + 依赖显式化 + DX 补强（2026-10-28）
+
+> 背景：P1 批次（4 任务）落地后的同批审查项。E2 安全修复独立成 commit，本批为其余 P2。
+
+#### E2 开放重定向修复（CWE-601，独立 commit）
+
+- `resolvePostLoginRedirect` 两道防线：显式拒绝反斜杠/协议相对形态（WHATWG 将 \ 归一化为
+  /，`/\evil.com` 可按协议相对解析跳出——实证绕过）+ origin 白名单二次比对；
+  redirect.spec 补 2 个反斜杠回归用例。
+- 基建 fakeLocation 补 origin 标准属性；createVitestConfig 兼容 E1 后的 vite.config
+  回调形式（修复前 apps/auth vitest 配置加载即炸）。
+
+#### E3 门禁脚本自测网（校验器假阳性守护）
+
+- check-mock-wiring / check-routes / check-doc-currency 三脚本核心判定纯函数化
+  （diffWirings 漂移比对提取等）+ CLI 守卫（realpath 模式），新增 3 个表驱动 spec
+  共 33 用例；新增 `pnpm test:check-scripts` + ci.yml CheckScriptSpecs step。
+- 收尾发现：generate-tsconfig-paths.spec 是孤儿 spec（无 runner 执行）——登记 TODOS。
+
+#### C2 根依赖 catalog 化（消除版本双源）
+
+- catalog 17 → 70 项；根 package.json 68 处字面区间全改 `catalog:` 引用，零版本冲突。
+
+#### C3 @components 例外清零
+
+- 91 文件 113 处目录索引 import → `@vv/ui/components/**` 显式路径（codemod 执行后即删）。
+  背景修正：批次 2「exports 通拍不解目录索引」实证只覆盖无扩展路径，显式
+  `.ts`/`index.ts` 完整路径可解析——「既定例外」自此清零（CLAUDE.md §1.6.2 三处同步）。
+
+#### C4 app 依赖显式声明（package-contract 扩展 apps/**）
+
+- 规则 locatePackage 双锚点 + apps 宿主方向豁免（@vv/* 方向铁律仍只约束 packages/*）；
+  6 app 按「显式 import 扫描 + AutoImport 隐式基座」补录 dependencies（全 catalog:）；
+  app devDependencies 统一测试基建 + config 专用项（h5 的 unplugin-vue-components、
+  admin 的 visualizer/vue-devtools）；catalog 补 vant。
+- 待办：eslint.config.mjs 的 files 扩展（`'apps/**/*.{ts,mts,tsx,vue}'`）被
+  config-protection hook 拦截，需人工补一行后规则方对 apps 生效。
+
+#### D3 postinstall 声明生成
+
+- 新脚本起 vite dev server 到 listening 即关（秒级，对比全量 build 分钟级）——消
+  「clone 后 IDE 满屏红」；CI 环境跳过；端口占用等失败不阻塞 install。
+- 实测修复：vite server.close() 后保活句柄致 install 挂起 8 分钟——CLI 完成后显式 exit(0)。
+
+#### D4 版本号叙事收敛
+
+- CLAUDE.md 头部「文档版本 v3.1.0」改注「内部迭代号」+ 对外 semver 唯一事实源
+  （package.json + git tag）映射说明——三套版本号（1.0.0 / v3.1.0 / v3.x）叙事对齐。
+
+验证：全批经 pnpm install / lint / type-check / test / test:check-scripts /
+test:eslint-rules 多轮验证（逐项见各 commit msg）。
+
 ### 🔧 Fix | /autoplan P1 批次：构建可复现 + 登录安全 + DX 入门摩擦（2026-10-28）
 
 > 背景：/autoplan 三阶段架构审查（CEO → Eng → DX，单模型双声音降级）产出 4 个 CRITICAL
