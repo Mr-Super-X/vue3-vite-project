@@ -6,7 +6,13 @@
 
 > 🆕 **新同事请先看 [docs/10-新手指引.md](docs/10-新手指引.md)** —— 30 分钟 5 任务，带你从 clone 到加新模块。
 >
-> **最近更新**：2026-10-27 — **生产 Docker 部署链路落地**（本地开发 node 网关 / 生产部署 docker+nginx 分离）：
+> **最近更新**：2026-10-28 — **三批次架构演进**（可复用性 / 契约单源 / 脚手架，全部真实验证通过）：
+>
+> - **P0 共享包自包含**：`packages/*` 生产源码全量显式 import——AutoImport 隐式注入只停留在最终宿主（apps/*），可复用包不再要求消费方「懂隐式契约」；新增本地 ESLint 规则 `local/package-contract`（依赖声明 + `@vv/*` 方向铁律机械检查）；详见 CLAUDE.md §1.6.3
+> - **P1 API 契约单源**：`@vv/shared` auth `login`/`fetchProfile` 同址 zod schema（`.passthrough()` 前向兼容）+ `requestValidated`——TS 类型与运行时校验同源，mock 保持 `import type` 零运行时依赖；security-reviewer 审查通过（可合并）
+> - **P2 应用 manifest 单源**：各 app `app.manifest.json`（`name/port/requiredRoutes`）单源；`createViteConfig` 删 `appName/portOffset` 改读 manifest；`apps-registry.mjs` 自动派生（dev-gateway/网关/Playwright/ESLint/check-routes 五消费方零改动）；新增 **`pnpm new-app <name>`** 一键生成可 dev/build/test 的最小公开应用（新增 app 零手改注册表/CI）
+>
+> **上轮更新**（2026-10-27）— **生产 Docker 部署链路落地**（本地开发 node 网关 / 生产部署 docker+nginx 分离）：
 >
 > - **生产 Docker 部署**：根 `Dockerfile`（多阶段：corepack pnpm → `pnpm build:prod` 聚合 6 app → `nginx:1.27-alpine`）+ `docker-compose.prod.yml`（唯一环境变量 `API_UPSTREAM` 经 envsubst 渲染反代真实后端，SSE 关缓冲）；`pnpm build:prod` 生产聚合构建（`base=/<app>/` + history + remote 菜单 + `VITE_USE_MOCK=false`）；路径语义与 dev 网关逐条对齐（`/` → 302 `/portal/`），详见下方「生产 Docker 部署」节
 > - **六应用四包结构**（[docs/43-Monorepo结构与开发指引.md](docs/43-Monorepo结构与开发指引.md)，评估 [docs/42](docs/42-Monorepo多应用改造评估.md)）：`apps/admin`（中后台）/ `apps/auth`（统一登录）/ `apps/portal`（门户）/ `apps/h5`（移动端）/ `apps/big`（数据大屏）/ `apps/docs`（组件示例文档）+ `packages/config|mock|shared|ui` 共享包（源码直链 workspace 消费）

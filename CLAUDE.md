@@ -4,9 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > 本文档是 `~/.claude/CLAUDE.md` 的项目级补充。所有全局规则（§一～§十一）自动适用，遇到冲突以**本文档为准**。
 >
-> **文档版本**：v3.0.2 | **生成日期**：2026-10-26 | **生效分支**：`feature/monorepo`
+> **文档版本**：v3.1.0 | **生成日期**：2026-10-28 | **生效分支**：`feature/monorepo`
 >
-> **最近更新**（2026-10-26）：本地同域网关 node 化——`docker-compose.yml` / `docker/nginx.dev.conf` / `check-gateway-conf` 整体移除
+> **最近更新**（2026-10-28）：三批次架构演进落地——共享包自包含（P0）+ API 契约单源（P1）+ 应用 manifest 单源与脚手架（P2）
+>
+> - **v3.1.0 变更**（2026-10-28）——三批次，全部真实验证（lint/type-check/test/build/check:routes/check:aliases/test:gateway + CDP 浏览器冒烟）：
+>   - **P0 共享包自包含**：`packages/*` 生产源码全量显式 import（AutoImport 隐式注入只停留在最终宿主 apps/*，不穿过包边界）；新增本地规则 `local/package-contract`（error 级，依赖声明 + `@vv/*` 方向铁律机械检查）；`@vv/shared` 的 `auto-globals.d.ts` 伪全局退役。详见 §1.6.3 + docs/26
+>   - **P1 API 契约单源**：`@vv/shared` auth `login`/`fetchProfile` 同址 zod schema（`.passthrough()` 前向兼容）+ `requestValidated`——类型与运行时校验同源，mock 保持 `import type` 零运行时依赖
+>   - **P2 应用 manifest 单源**：各 app `app.manifest.json`（`name/port/requiredRoutes`）单源；`createViteConfig` 删 `appName/portOffset` 改读 manifest；`apps-registry.mjs` 改 `discoverAppManifests` 派生（dev-gateway/node-gateway/playwright/eslint/check-routes 五消费方零改动）；`pnpm new-app <name>` 一键生成可 dev/build/test 的最小公开 app。新增 app 零手改注册表/CI
+>
+> 更早版本沿革（v3.0.2 及之前）见下方：
 >
 > - **v3.0.2 变更**（2026-10-26）：`scripts/node-gateway.ts`（零依赖 node:http 反向代理，路由表自 `apps-registry` 单源代码派生）+ `pnpm dev:gateway` 一体化单命令（网关 :8080 + 6 dev server 同起同退，替代原 docker compose 第二终端）；`validatePortWiring`（端口双写锁死）迁入 `check-routes`，CI 覆盖不变；新增 `pnpm test:gateway`（node:test，HTTP/WS/302/502 smoke 8 用例）；docs/43 §6 重写
 >
