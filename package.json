@@ -45,6 +45,8 @@
     "release": "release-it",
     "release:dry": "release-it --dry-run",
     "commitlint": "commitlint --edit",
+    "generate:declarations": "node --experimental-strip-types scripts/generate-declarations.ts",
+    "postinstall": "pnpm generate:declarations",
     "prepare": "husky"
   },
   "dependencies": {
