@@ -1,0 +1,203 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  DEFAULT_INTERVAL_MS,
+  createVersionPoller,
+  isChunkLoadErrorMessage,
+  parseVersionPayload,
+  shouldEnable,
+} from './versionCheck.ts'
+
+/** 构造 mock fetch：返回固定 buildId 的 version.json 响应 */
+const makeFetch = (buildId: string, ok = true) =>
+  vi.fn(
+    async () =>
+      ({
+        ok,
+        text: async () => JSON.stringify({ buildId, builtAt: '2026-10-28T00:00:00.000Z' }),
+      }) as unknown as Response
+  )
+
+describe('versionCheck — shouldEnable（dev 默认禁用裁决）', () => {
+  it('DEV=true 缺省不启用（HMR 即热更新）', () => {
+    expect(shouldEnable(true, undefined)).toBe(false)
+  })
+
+  it('DEV=true + enabled:true 强制启用（dev 调试路径）', () => {
+    expect(shouldEnable(true, { enabled: true })).toBe(true)
+  })
+
+  it('DEV=false 缺省启用（prod 默认开）', () => {
+    expect(shouldEnable(false, undefined)).toBe(true)
+  })
+
+  it('enabled:false 任何环境禁用', () => {
+    expect(shouldEnable(false, { enabled: false })).toBe(false)
+  })
+})
+
+describe('versionCheck — isChunkLoadErrorMessage（4 种浏览器 message 形态）', () => {
+  it.each([
+    ['ChunkLoadError（webpack 风格）', 'ChunkLoadError: Loading chunk 123 failed'],
+    [
+      'Failed to fetch dynamically imported module（vite/原生 ESM）',
+      'TypeError: Failed to fetch dynamically imported module: https://x/js/index-a.js',
+    ],
+    ['Importing a module script failed（Safari）', 'Importing a module script failed.'],
+    [
+      'error loading dynamically imported module（Firefox）',
+      'error loading dynamically imported module: ./js/index-b.js',
+    ],
+  ])('匹配 %s', (_label, msg) => {
+    expect(isChunkLoadErrorMessage(msg)).toBe(true)
+  })
+
+  it('不匹配普通错误（不误报）', () => {
+    expect(isChunkLoadErrorMessage('TypeError: Cannot read properties of undefined')).toBe(false)
+    expect(isChunkLoadErrorMessage('')).toBe(false)
+  })
+})
+
+describe('versionCheck — parseVersionPayload', () => {
+  it('合法载荷返回 buildId', () => {
+    expect(parseVersionPayload('{"buildId":"abc","builtAt":"2026-10-28T00:00:00Z"}')).toBe('abc')
+  })
+
+  it('JSON 非法返回 null（静默跳过）', () => {
+    expect(parseVersionPayload('not-json')).toBeNull()
+  })
+
+  it('缺 buildId 字段返回 null', () => {
+    expect(parseVersionPayload('{"builtAt":"2026-10-28T00:00:00Z"}')).toBeNull()
+  })
+
+  it('buildId 非字符串返回 null', () => {
+    expect(parseVersionPayload('{"buildId":123}')).toBeNull()
+  })
+})
+
+describe('versionCheck — createVersionPoller（fake timers）', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  const makePoller = (buildId: string, onUpdate = vi.fn()) => {
+    const fetchImpl = makeFetch(buildId)
+    const poller = createVersionPoller({
+      path: '/admin/version.json',
+      intervalMs: DEFAULT_INTERVAL_MS,
+      onUpdate,
+      fetchImpl,
+    })
+    return { poller, fetchImpl, onUpdate }
+  }
+
+  it('首次 poll 建立基线，不调 onUpdate', async () => {
+    const { poller, onUpdate } = makePoller('v1')
+    await poller.pollOnce()
+    expect(onUpdate).not.toHaveBeenCalled()
+    expect(poller.getBaseline()).toBe('v1')
+  })
+
+  it('基线相同不调；buildId 变化触发 onUpdate（source=poll，基线同步更新）', async () => {
+    const onUpdate = vi.fn()
+    const fetchImpl = makeFetch('v1')
+    const poller = createVersionPoller({
+      path: '/p',
+      intervalMs: DEFAULT_INTERVAL_MS,
+      onUpdate,
+      fetchImpl,
+    })
+    await poller.pollOnce()
+    await poller.pollOnce()
+    expect(onUpdate).not.toHaveBeenCalled()
+
+    fetchImpl.mockImplementation(
+      async () =>
+        ({
+          ok: true,
+          text: async () => JSON.stringify({ buildId: 'v2' }),
+        }) as unknown as Response
+    )
+    await poller.pollOnce()
+    expect(onUpdate).toHaveBeenCalledTimes(1)
+    expect(onUpdate).toHaveBeenCalledWith({ oldId: 'v1', newId: 'v2', source: 'poll' })
+    expect(poller.getBaseline()).toBe('v2')
+
+    // 基线已更新：同 newId 不再触发
+    await poller.pollOnce()
+    expect(onUpdate).toHaveBeenCalledTimes(1)
+  })
+
+  it('start 后定时器按 intervalMs 自动轮询', async () => {
+    const { poller, fetchImpl } = makePoller('v1')
+    poller.start()
+    await vi.advanceTimersByTimeAsync(DEFAULT_INTERVAL_MS)
+    expect(fetchImpl).toHaveBeenCalledTimes(1)
+    poller.stop()
+  })
+
+  it('自定义 intervalMs 生效', async () => {
+    const fetchImpl = makeFetch('v1')
+    const poller = createVersionPoller({
+      path: '/p',
+      intervalMs: 1000,
+      onUpdate: vi.fn(),
+      fetchImpl,
+    })
+    poller.start()
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(fetchImpl).toHaveBeenCalledTimes(1)
+    poller.stop()
+  })
+
+  it('fetch reject 静默不抛（网络抖动等下一轮）', async () => {
+    const fetchImpl = vi.fn(async () => {
+      throw new Error('network down')
+    })
+    const poller = createVersionPoller({
+      path: '/p',
+      intervalMs: DEFAULT_INTERVAL_MS,
+      onUpdate: vi.fn(),
+      fetchImpl,
+    })
+    await expect(poller.pollOnce()).resolves.toBeUndefined()
+  })
+
+  it('res.ok=false 静默跳过（404 等）', async () => {
+    const fetchImpl = makeFetch('v1', false)
+    const p2 = createVersionPoller({
+      path: '/p',
+      intervalMs: DEFAULT_INTERVAL_MS,
+      onUpdate: vi.fn(),
+      fetchImpl,
+    })
+    await p2.pollOnce()
+    expect(p2.getBaseline()).toBeNull()
+  })
+
+  it('请求带 cache:no-store 与 cache-busting query（防 gh-pages CDN 缓存）', async () => {
+    const fetchImpl = makeFetch('v1')
+    const poller = createVersionPoller({
+      path: '/admin/version.json',
+      intervalMs: DEFAULT_INTERVAL_MS,
+      onUpdate: vi.fn(),
+      fetchImpl,
+    })
+    await poller.pollOnce()
+    const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit]
+    expect(url.startsWith('/admin/version.json?_t=')).toBe(true)
+    expect(init.cache).toBe('no-store')
+  })
+
+  it('stop 后定时器不再触发', async () => {
+    const { poller, fetchImpl } = makePoller('v1')
+    poller.start()
+    poller.stop()
+    await vi.advanceTimersByTimeAsync(DEFAULT_INTERVAL_MS * 3)
+    expect(fetchImpl).not.toHaveBeenCalled()
+  })
+})
