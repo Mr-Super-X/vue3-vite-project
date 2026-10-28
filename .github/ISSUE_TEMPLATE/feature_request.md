@@ -5,6 +5,8 @@ title: '[idea] '
 labels: enhancement
 ---
 
+> 单人维护项目，issue 可提但响应不保证（定位见 docs/45）。好想法欢迎直接 PR。
+
 ## 场景
 
 <!-- 你在做什么时遇到了什么痛点 -->

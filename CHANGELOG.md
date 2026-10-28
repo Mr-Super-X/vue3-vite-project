@@ -6,6 +6,26 @@
 
 ## 未发布
 
+### 📝 Docs | /autoplan Round 2 叙事一致性批次：定位裁决制品对齐（2026-10-28）
+
+> 背景：CEO 审查 F8/F3/F10——定位裁决（开放底座）已落地但门面制品未跟上：
+> H1 仍自称「模板」而第 9 行 blockquote 否认模板级支持；EN README 零定位声明；
+> 技术栈表写 Vue ^3.5.38 而 overrides 钉 3.6.0-beta.17。
+
+- **README（CN）**：H1「四栖工程模板」→「四栖工程底座」+ 简介首句同步；技术栈表
+  Vue 行补钉版口径（catalog ^3.5.38 / overrides 钉 3.6.0-beta.17 + 回稳定线期限）；
+  line 456「更多模板」（路由配置模板）与 694（nginx template 文件名）保留——代码模板
+  含义与产品定位无关。
+- **README.en.md**：H1 去 Template 改 Engineering Base + 补定位 banner（与 CN 第 9 行
+  同口径互链 docs/45）+ 技术栈行钉版口径；Quick Start 修正两处漂移：`pnpm dev:local`
+  改与 CN 统一的 `pnpm -C apps/admin dev`、登录指引从「admin 内 /login」（统一登录后
+  已不存在，404 弯路）改为「取消 .env 注释直达 /workbench」。
+- **issue 模板 ×2**：frontmatter 后补「单人维护响应不保证 + 欢迎 PR」免责行
+  （期望管理写进邀请本身，/autoplan R2-CEO-9）。
+- 注：F6（VITE_BUILD_ID 接 deploy.yml）已随 P3 批次提前落地（43ad016）。
+
+验证：`pnpm check:doc-currency` 13 项全过 + prettier 双 README 格式修复。
+
 ### 🔧 Fix | /autoplan Round 2 P3 批次：测试补强 + 口径统一 + 小修包（2026-10-28）
 
 #### R2-E5 redirect 对抗用例 + 注释实证修正

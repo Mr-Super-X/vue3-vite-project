@@ -1,4 +1,4 @@
-# vue3-vite-project · 四栖工程模板
+# vue3-vite-project · 四栖工程底座
 
 [![CI](https://github.com/Mr-Super-X/vue3-vite-project/actions/workflows/ci.yml/badge.svg)](https://github.com/Mr-Super-X/vue3-vite-project/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) [![demo](https://img.shields.io/badge/demo-GitHub_Pages-brightgreen)](https://mr-super-x.github.io/vue3-vite-project/)
 
@@ -37,7 +37,7 @@
 
 ## 📋 项目简介
 
-基于 Vue 3 + Vite 8 + TypeScript 6 的 **Monorepo 多应用工程模板**（pnpm workspace + turbo）：一套代码仓拆为 **6 个独立应用 + 4 个共享包**，统一登录、独立构建、源码直链消费。
+基于 Vue 3 + Vite 8 + TypeScript 6 的 **Monorepo 多应用工程底座**（pnpm workspace + turbo）：一套代码仓拆为 **6 个独立应用 + 4 个共享包**，统一登录、独立构建、源码直链消费。
 
 | 应用          | 入口（dev 端口）     | 能力                                                                                                                       |
 | ------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------- |
@@ -64,28 +64,28 @@
 
 ## 🛠️ 技术栈
 
-| 维度         | 选型                        | 版本                                                                                     |
-| ------------ | --------------------------- | ---------------------------------------------------------------------------------------- |
-| 核心框架     | Vue                         | ^3.5.38                                                                                  |
-| 构建工具     | Vite                        | ^8.0.16                                                                                  |
-| 语言         | TypeScript                  | ~6.0.0（strict 模式）                                                                    |
-| 包管理器     | pnpm                        | >=11.x（workspace + catalog 单版本源）                                                   |
-| 编排构建     | Turborepo                   | ^2.11（`turbo run build/test` 拓扑序；CI 走 affected 只构建变更波及 app）                |
-| Node 要求    | -                           | >=22.18 或 >=24.12                                                                       |
-| UI 组件库    | Element Plus                | ^2.14.3                                                                                  |
-| 原子化 CSS   | UnoCSS                      | ^66.7.5（兼容 SCSS/LESS/原生 CSS）                                                       |
-| 状态管理     | Pinia                       | ^3.0.4                                                                                   |
-| 表格组件     | vxe-table                   | ^4.21.7（ProTable 双引擎：Element Plus / vxe-table 二选一，v3.5 起 Element Plus 为默认） |
-| 路由         | Vue Router                  | ^5.1.0                                                                                   |
-| 国际化       | Vue I18n                    | ^11.4.6                                                                                  |
-| 网络层       | Axios                       | ^1.18.1                                                                                  |
-| 浏览器基线   | normalize.css               | ^8.0.1                                                                                   |
-| 日期工具     | dayjs                       | ^1.11.21                                                                                 |
-| API Mock     | vite-plugin-mock            | ^3.0.2                                                                                   |
-| Cookie 工具  | js-cookie                   | ^3.0.8（仅非敏感偏好场景预留；凭证走 httpOnly cookie，JS 不可读写，严禁用其存 token）    |
-| 测试框架     | Vitest                      | ^4.1.9 + @vue/test-utils + jsdom                                                         |
-| 图标体系     | unplugin-icons              | ^24.0.0 + @iconify-json/ep + @iconify-json/tabler（编译期内联 SVG，见 docs/39）          |
-| Pinia 持久化 | pinia-plugin-persistedstate | ^4.7.1（仅 store 字段 pick 持久化）                                                      |
+| 维度         | 选型                        | 版本                                                                                               |
+| ------------ | --------------------------- | -------------------------------------------------------------------------------------------------- |
+| 核心框架     | Vue                         | catalog ^3.5.38（overrides 精确钉版 3.6.0-beta.17，2027-01-31 前回稳定线，见 pnpm-workspace.yaml） |
+| 构建工具     | Vite                        | ^8.0.16                                                                                            |
+| 语言         | TypeScript                  | ~6.0.0（strict 模式）                                                                              |
+| 包管理器     | pnpm                        | >=11.x（workspace + catalog 单版本源）                                                             |
+| 编排构建     | Turborepo                   | ^2.11（`turbo run build/test` 拓扑序；CI 走 affected 只构建变更波及 app）                          |
+| Node 要求    | -                           | >=22.18 或 >=24.12                                                                                 |
+| UI 组件库    | Element Plus                | ^2.14.3                                                                                            |
+| 原子化 CSS   | UnoCSS                      | ^66.7.5（兼容 SCSS/LESS/原生 CSS）                                                                 |
+| 状态管理     | Pinia                       | ^3.0.4                                                                                             |
+| 表格组件     | vxe-table                   | ^4.21.7（ProTable 双引擎：Element Plus / vxe-table 二选一，v3.5 起 Element Plus 为默认）           |
+| 路由         | Vue Router                  | ^5.1.0                                                                                             |
+| 国际化       | Vue I18n                    | ^11.4.6                                                                                            |
+| 网络层       | Axios                       | ^1.18.1                                                                                            |
+| 浏览器基线   | normalize.css               | ^8.0.1                                                                                             |
+| 日期工具     | dayjs                       | ^1.11.21                                                                                           |
+| API Mock     | vite-plugin-mock            | ^3.0.2                                                                                             |
+| Cookie 工具  | js-cookie                   | ^3.0.8（仅非敏感偏好场景预留；凭证走 httpOnly cookie，JS 不可读写，严禁用其存 token）              |
+| 测试框架     | Vitest                      | ^4.1.9 + @vue/test-utils + jsdom                                                                   |
+| 图标体系     | unplugin-icons              | ^24.0.0 + @iconify-json/ep + @iconify-json/tabler（编译期内联 SVG，见 docs/39）                    |
+| Pinia 持久化 | pinia-plugin-persistedstate | ^4.7.1（仅 store 字段 pick 持久化）                                                                |
 
 ---
 
