@@ -21,10 +21,12 @@ describe('packages/config version-check-vite — version.json 生成', () => {
   function runCloseBundle(outDir: string): void {
     const plugin = versionCheckVitePlugin()
     expect(plugin.apply).toBe('build')
-    plugin.configResolved?.({ build: { outDir } } as unknown as ResolvedConfig)
-    if (typeof plugin.closeBundle === 'function') {
-      plugin.closeBundle()
-    }
+    // 实现均为不依赖 this 的函数形态；as 剥离 vite 的 ObjectHook / PluginContext 类型（vue-tsc 校验）
+    const configResolved = plugin.configResolved as
+      ((this: void, config: ResolvedConfig) => void) | undefined
+    configResolved?.({ build: { outDir } } as unknown as ResolvedConfig)
+    const closeBundle = plugin.closeBundle as (this: void) => void
+    closeBundle()
   }
 
   it('closeBundle 往 outDir 写 version.json（schema：buildId + builtAt）', () => {
