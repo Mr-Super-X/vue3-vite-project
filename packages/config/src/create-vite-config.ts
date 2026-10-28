@@ -32,6 +32,7 @@ import { defineConfig, loadEnv, type PluginOption } from 'vite'
 // 包内相对导入必须带 .ts 扩展名（同 index.ts 注释：Node 原生 ESM 不补全扩展名）
 import { createAppAliases, resolvePkgFirst, UI_SRC_DIR } from './app-aliases.ts'
 import { cleanMockBundled } from './clean-mock-bundled.ts'
+import { versionCheckVitePlugin } from './version-check-vite.ts'
 import { createPostcssPlugins } from './postcss.ts'
 import { createProxyConfig } from './proxy.ts'
 import { createScssPreprocessorOptions } from './scss.ts'
@@ -224,6 +225,9 @@ export function createViteConfig({
             cleanMockBundled(mockPath),
           ]
         : []),
+      // 版本检测（构建侧）：build 时往 outDir 写 version.json（runtime 轮询消费，见
+      // packages/shared/src/plugins/versionCheck.ts）；apply: 'build'，dev serve 零开销
+      versionCheckVitePlugin(),
       ...extraPlugins,
     ],
     define: {
