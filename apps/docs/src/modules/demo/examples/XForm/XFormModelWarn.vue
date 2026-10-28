@@ -10,7 +10,7 @@
  * 验证方法：打开 DevTools Console 查看场景 1 的警告
  */
 import { ElMessage } from 'element-plus'
-import type { SchemaNode } from '@components/form-schema/types'
+import type { SchemaNode } from '@vv/ui/components/form-schema/types.ts'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import { useConsoleCapture } from '../../composables/useConsoleCapture'
 import ApiTable from '../../components/ApiTable.vue'

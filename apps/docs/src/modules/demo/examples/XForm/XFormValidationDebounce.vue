@@ -13,7 +13,7 @@
  *      element-plus 原生 async-validator（rule.validator）不走此路径，不受 debounce 影响
  */
 import { ElMessage } from 'element-plus'
-import type { SchemaNode } from '@components/form-schema/types'
+import type { SchemaNode } from '@vv/ui/components/form-schema/types.ts'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'

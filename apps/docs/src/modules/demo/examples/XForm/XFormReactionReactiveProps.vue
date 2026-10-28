@@ -7,7 +7,7 @@
  * props 返回完整对象；rules 用 {{ fn }} 表达式与 reaction 协同。
  */
 import { ElMessage } from 'element-plus'
-import type { SchemaNode } from '@components/form-schema/types'
+import type { SchemaNode } from '@vv/ui/components/form-schema/types.ts'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'

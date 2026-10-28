@@ -19,7 +19,7 @@
  * @group XForm demo 工具
  */
 import { ElNotification } from 'element-plus'
-import type { FormErrorEvent } from '@components/form-schema/composables/use-form-error-bus'
+import type { FormErrorEvent } from '@vv/ui/components/form-schema/composables/use-form-error-bus.ts'
 
 const { events } = defineProps<{
   /** errorBus 当前事件列表（XForm toastContainer slot 注入，shallowRef 整体替换） */

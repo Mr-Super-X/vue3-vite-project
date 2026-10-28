@@ -12,7 +12,7 @@
  * 2. 拖拽第 1 行到第 3 位 → 弹确认框
  * 3. 点「确定」→ 数据顺序变化；点「取消」→ 顺序不变
  */
-import type { ProColumn } from '@components/ProTable/types'
+import type { ProColumn } from '@vv/ui/components/ProTable/types/index.ts'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'

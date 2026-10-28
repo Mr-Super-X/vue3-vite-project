@@ -27,7 +27,7 @@
 // ref 由 unplugin-auto-import 注入（§1.6）；类型 Ref 须显式 type import
 import type { Ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import type { XFormExpose, SchemaNode } from '@components/form-schema/types'
+import type { XFormExpose, SchemaNode } from '@vv/ui/components/form-schema/types.ts'
 
 export interface UseXFormDemoOptions {
   /** 必填：demo 简称（用于 bem 命名空间 demo-x-form-{name} 与 formRef 标识） */

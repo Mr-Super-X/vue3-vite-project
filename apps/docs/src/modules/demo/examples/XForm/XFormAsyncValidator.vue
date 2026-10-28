@@ -10,8 +10,8 @@
  * 注：跨字段异步校验见 XFormCrossField demo（dependsOn + crossValidator 形式）
  */
 import { ElMessage } from 'element-plus'
-import type { SchemaNode } from '@components/form-schema/types'
-import { xInput } from '@components/form-schema/builders'
+import type { SchemaNode } from '@vv/ui/components/form-schema/types.ts'
+import { xInput } from '@vv/ui/components/form-schema/builders.ts'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoField from '../../components/DemoField.vue'

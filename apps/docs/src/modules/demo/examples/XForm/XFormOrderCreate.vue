@@ -24,9 +24,9 @@
  *   ⑦ 改任意字段 → isDirty=true（isDirty 与 getDirtyFields 实时同步）
  */
 import { ElMessage } from 'element-plus'
-import { useFormPersist } from '@components/form-schema'
-import type { SchemaNode } from '@components/form-schema/types'
-import { xArray } from '@components/form-schema/builders'
+import { useFormPersist } from '@vv/ui/components/form-schema/index.ts'
+import type { SchemaNode } from '@vv/ui/components/form-schema/types.ts'
+import { xArray } from '@vv/ui/components/form-schema/builders.ts'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'

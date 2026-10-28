@@ -12,7 +12,7 @@
  * 6. TreeSelect(树形选择):props.data/multiple
  */
 import { ElMessage } from 'element-plus'
-import type { SchemaNode, XFormExpose } from '@components/form-schema/types'
+import type { SchemaNode, XFormExpose } from '@vv/ui/components/form-schema/types.ts'
 import {
   xCascader,
   xUpload,
@@ -25,7 +25,7 @@ import {
   xCard,
   xInput,
   xInputNumber,
-} from '@components/form-schema/builders'
+} from '@vv/ui/components/form-schema/builders.ts'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'

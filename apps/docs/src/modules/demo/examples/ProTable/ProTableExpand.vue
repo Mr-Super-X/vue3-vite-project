@@ -22,7 +22,7 @@
  */
 import { ElButton, ElMessage, ElPopconfirm, ElProgress, ElTable, ElTableColumn } from 'element-plus'
 import { ArrowDown, View } from '@element-plus/icons-vue'
-import type { ProColumn, ProTableExpose } from '@components/ProTable'
+import type { ProColumn, ProTableExpose } from '@vv/ui/components/ProTable/index.ts'
 import type { OrderItem, ExpandOrder } from '@mock/pro-table/expand'
 import { expandRequestApi } from '@mock/pro-table/expand'
 import DemoFrame from '../../components/DemoFrame.vue'

@@ -19,7 +19,7 @@
  * 用法与 filterParamsAdapter 对称。本 demo 后端直接吃默认约定，无需额外 adapter。
  * 如需演示多列排序 / 自定义键名，可参考 filterParamsAdapter 写法。
  */
-import type { ProColumn } from '@components/ProTable/types'
+import type { ProColumn } from '@vv/ui/components/ProTable/types/index.ts'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'

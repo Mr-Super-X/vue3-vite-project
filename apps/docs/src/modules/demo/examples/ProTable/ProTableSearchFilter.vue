@@ -17,7 +17,7 @@
  *
  * 路由：自动注册为 /demo/pro-table-search-filter
  */
-import type { ProColumn } from '@components/ProTable/types'
+import type { ProColumn } from '@vv/ui/components/ProTable/types/index.ts'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'

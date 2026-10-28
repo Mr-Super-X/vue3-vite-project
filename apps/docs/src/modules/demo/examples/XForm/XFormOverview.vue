@@ -11,7 +11,7 @@
  */
 import { h } from 'vue'
 import { z } from 'zod'
-import type { SchemaNode } from '@components/form-schema/types'
+import type { SchemaNode } from '@vv/ui/components/form-schema/types.ts'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'

@@ -6,7 +6,7 @@
  * 本节核心：上级 on.change 闭包清空下级；下级 reaction.props 按上级值查字典动态切 options。
  */
 import { ElMessage } from 'element-plus'
-import type { SchemaNode } from '@components/form-schema/types'
+import type { SchemaNode } from '@vv/ui/components/form-schema/types.ts'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'

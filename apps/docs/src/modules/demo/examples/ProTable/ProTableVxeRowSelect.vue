@@ -27,7 +27,7 @@
  * 路由：自动注册为 /demo/pro-table-vxe-row-select
  */
 import { ElButton, ElMessage } from 'element-plus'
-import type { ProColumn, ProTableExpose } from '@components/ProTable'
+import type { ProColumn, ProTableExpose } from '@vv/ui/components/ProTable/index.ts'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'

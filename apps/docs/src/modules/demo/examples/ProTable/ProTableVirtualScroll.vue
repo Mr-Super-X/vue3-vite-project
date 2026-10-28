@@ -18,7 +18,7 @@
  * 7. console 演示：当 virtualized + enableSummary 命中时输出 warn
  */
 import { ElTag } from 'element-plus'
-import type { ProColumn } from '@components/ProTable'
+import type { ProColumn } from '@vv/ui/components/ProTable/index.ts'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'

@@ -14,7 +14,7 @@
  * - 右下角 Debug Banner（dev 模式）应显示红条 + 错误列表
  */
 import { ElMessage, ElInput } from 'element-plus'
-import type { SchemaNode, XFormProps } from '@components/form-schema/types'
+import type { SchemaNode, XFormProps } from '@vv/ui/components/form-schema/types.ts'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import { useConsoleCapture } from '../../composables/useConsoleCapture'
 import ApiTable from '../../components/ApiTable.vue'

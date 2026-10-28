@@ -16,7 +16,7 @@
  * 样式注意：本文件 <style> 非 scoped（项目 BEM 规范），:deep() 会被浏览器整条
  * 丢弃，分组样式必须直接写后代选择器（修复记录：v3.0.1 验证不通过根因）
  */
-import { type ProColumn } from '@components/ProTable'
+import { type ProColumn } from '@vv/ui/components/ProTable/index.ts'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'

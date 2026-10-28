@@ -20,7 +20,7 @@
  * @see ./utils/XFormElNotificationHost.vue （events → ElNotification 桥接实现）
  * @see @vv/ui/components/form-schema/components/XForm.vue （slot 定义处）
  */
-import type { SchemaNode } from '@components/form-schema/types'
+import type { SchemaNode } from '@vv/ui/components/form-schema/types.ts'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'

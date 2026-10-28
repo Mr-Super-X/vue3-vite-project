@@ -12,7 +12,7 @@
  * 2. 翻页 → 汇总行随当前页数据重算
  * 3. 翻到第 2 页（10 行后 11-20 行）→ 数量合计、平均单价变化（与第 1 页不同）
  */
-import type { ProColumn, ProTableExpose } from '@components/ProTable'
+import type { ProColumn, ProTableExpose } from '@vv/ui/components/ProTable/index.ts'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'

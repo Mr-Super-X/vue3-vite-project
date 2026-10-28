@@ -8,8 +8,8 @@
  *   3. 应用场景：批量导入、模板填充、撤销/重做、第三方按钮触发等
  */
 import { ElMessage } from 'element-plus'
-import type { SchemaNode } from '@components/form-schema/types'
-import { xArray } from '@components/form-schema/builders'
+import type { SchemaNode } from '@vv/ui/components/form-schema/types.ts'
+import { xArray } from '@vv/ui/components/form-schema/builders.ts'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'

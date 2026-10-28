@@ -19,7 +19,7 @@
  * - 行拖拽：双引擎均支持（v3.5 PR1-B 后 vxe 引擎补齐）
  * - vxe 引擎加载失败自动回退 element-plus（engine-fallback）
  */
-import type { ProColumn } from '@components/ProTable/types'
+import type { ProColumn } from '@vv/ui/components/ProTable/types/index.ts'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'

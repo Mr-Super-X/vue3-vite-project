@@ -7,7 +7,7 @@
  * 2. 自动保存节流(throttle):model 任意字段变化 → 最多 1 秒一次自动保存
  * 3. 普通反应式(default sync):开关切换 → 立即更新显示
  */
-import type { SchemaNode } from '@components/form-schema/types'
+import type { SchemaNode } from '@vv/ui/components/form-schema/types.ts'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'

@@ -22,7 +22,7 @@
  * - 第二个 XForm 中"权限码-可编辑"字段可正常输入；"权限码-只读"以只读纯文本显示；"权限码-管理员"在 DOM 中不出现
  */
 import { ElMessage } from 'element-plus'
-import type { SchemaNode } from '@components/form-schema/types'
+import type { SchemaNode } from '@vv/ui/components/form-schema/types.ts'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'

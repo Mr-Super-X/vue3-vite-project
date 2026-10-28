@@ -25,7 +25,7 @@ import {
   type UploadFile,
 } from 'element-plus'
 import { Download, Upload } from '@element-plus/icons-vue' // 显式 import（§1.6.1 来源注释）
-import { exportCsv, importCsv, type CsvColumn } from '@components/ProTable/utils'
+import { exportCsv, importCsv, type CsvColumn } from '@vv/ui/components/ProTable/utils/index.ts'
 import DemoFrame from '../../components/DemoFrame.vue'
 import DemoField from '../../components/DemoField.vue'
 import ApiTable from '../../components/ApiTable.vue'

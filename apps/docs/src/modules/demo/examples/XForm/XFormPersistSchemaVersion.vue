@@ -9,8 +9,8 @@
  *   4. 加载草稿时 restoreFilter 裁剪旧字段
  */
 import { ElMessage } from 'element-plus'
-import { useFormPersist } from '@components/form-schema'
-import type { SchemaNode } from '@components/form-schema/types'
+import { useFormPersist } from '@vv/ui/components/form-schema/index.ts'
+import type { SchemaNode } from '@vv/ui/components/form-schema/types.ts'
 import { useXFormDemo } from '../../composables/useXFormDemo'
 import ApiTable from '../../components/ApiTable.vue'
 import DemoFrame from '../../components/DemoFrame.vue'
