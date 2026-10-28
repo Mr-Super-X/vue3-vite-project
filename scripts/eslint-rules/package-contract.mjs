@@ -69,10 +69,15 @@ function packageNameOf(spec) {
   return spec.startsWith('@') ? `${segs[0]}/${segs[1]}` : segs[0]
 }
 
-/** 从文件路径定位所属 packages/<name>/ 并读取其 package.json（带缓存；读不到返回 null → 规则静默跳过） */
+/** 从文件路径定位所属 packages/<name>/ 或 apps/<name>/ 并读取其 package.json（带缓存；读不到返回 null → 规则静默跳过） */
 function locatePackage(filename) {
   const parts = path.resolve(filename).split(path.sep)
-  const idx = parts.lastIndexOf('packages')
+  // 锚点：packages 或 apps（2026-10-28 C4 扩展——app 消费侧同样纳入依赖声明契约）
+  let idx = -1
+  for (const anchor of ['packages', 'apps']) {
+    const i = parts.lastIndexOf(anchor)
+    if (i !== -1 && (idx === -1 || i < idx)) idx = i
+  }
   if (idx === -1 || idx >= parts.length - 1) return null
   const dir = parts.slice(0, idx + 2).join(path.sep)
   if (!manifestCache.has(dir)) {
@@ -83,7 +88,7 @@ function locatePackage(filename) {
     }
   }
   const manifest = manifestCache.get(dir)
-  return manifest ? { dirName: parts[idx + 1], manifest } : null
+  return manifest ? { dirName: parts[idx + 1], host: parts[idx], manifest } : null
 }
 
 /** 返回声明所在字段名；未声明返回 null。allowDev 时 devDependencies 也算合法 */
@@ -121,7 +126,8 @@ export default {
       if (isProjectAlias(spec)) return
       const pkgName = packageNameOf(spec)
       if (pkgName === ownName) return
-      if (pkgName.startsWith('@vv/') && !isConfigFile) {
+      // @vv/* 方向铁律只约束 packages/*（库间依赖）；apps/* 作为最终宿主可消费全部 @vv/*（2026-10-28 C4）
+      if (pkgName.startsWith('@vv/') && !isConfigFile && pkg.host === 'packages') {
         if (!(pkgName in VV_DIRECTION)) {
           context.report({ node, messageId: 'unknownVvPackage', data: { pkgName } })
           return

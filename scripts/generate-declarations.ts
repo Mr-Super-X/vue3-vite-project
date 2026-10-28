@@ -66,7 +66,12 @@ export async function main(): Promise<void> {
 const invokedDirectly =
   process.argv[1] !== undefined && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)
 if (invokedDirectly) {
-  main().catch((err: unknown) => {
-    console.error('[generate-declarations] 未预期错误（不阻塞安装）：', err)
-  })
+  // 2026-10-28 实测：vite server.close() 后仍有保活句柄（unocss config watcher 等），
+  // 事件循环不空致 postinstall 挂起——本脚本是 CLI 工具（非测试 runner），声明生成
+  // 完成后显式退出；best-effort 语义下错误也不阻塞 install（exit 0）
+  main()
+    .catch((err: unknown) => {
+      console.error('[generate-declarations] 未预期错误（不阻塞安装）：', err)
+    })
+    .finally(() => process.exit(0))
 }

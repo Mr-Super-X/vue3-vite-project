@@ -17,12 +17,23 @@
   "dependencies": {
     "@vv/mock": "workspace:*",
     "@vv/shared": "workspace:*",
-    "@vv/ui": "workspace:*"
+    "@vv/ui": "workspace:*",
+    "@element-plus/icons-vue": "catalog:",
+    "dayjs": "catalog:",
+    "dompurify": "catalog:",
+    "echarts": "catalog:",
+    "element-plus": "catalog:",
+    "highlight.js": "catalog:",
+    "lodash-es": "catalog:",
+    "pinia": "catalog:",
+    "vue": "catalog:",
+    "vue-router": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
-    "@vue/test-utils": "^2.4.11",
-    "jsdom": "^29.1.1",
-    "vitest": "^4.1.9",
+    "@vue/test-utils": "catalog:",
+    "jsdom": "catalog:",
+    "vitest": "catalog:",
     "@vv/config": "workspace:*"
   }
 }

@@ -17,12 +17,18 @@
   "dependencies": {
     "@vv/mock": "workspace:*",
     "@vv/shared": "workspace:*",
-    "@vv/ui": "workspace:*"
+    "@vv/ui": "workspace:*",
+    "@element-plus/icons-vue": "catalog:",
+    "element-plus": "catalog:",
+    "pinia": "catalog:",
+    "vue": "catalog:",
+    "vue-i18n": "catalog:",
+    "vue-router": "catalog:"
   },
   "devDependencies": {
-    "@vue/test-utils": "^2.4.11",
-    "jsdom": "^29.1.1",
-    "vitest": "^4.1.9",
+    "@vue/test-utils": "catalog:",
+    "jsdom": "catalog:",
+    "vitest": "catalog:",
     "@vv/config": "workspace:*"
   }
 }

@@ -92,6 +92,19 @@ ruleTester.run('package-contract', rule, {
       filename: 'packages/shared/src/test-utils/fakeLocation.ts',
       code: "import { vi } from 'vitest'",
     },
+    // ── apps/* 宿主侧（2026-10-28 C4 扩展）：方向铁律豁免（app 可消费全部 @vv/*），声明检查生效 ──
+    // 已声明的外部包（vue 在 admin dependencies，catalog: 引用）
+    { filename: 'apps/admin/src/main.ts', code: "import { createApp } from 'vue'" },
+    // app 消费全部 @vv/* 属宿主合法形态（方向检查仅约束 packages/* 库间依赖）
+    { filename: 'apps/admin/src/main.ts', code: "import { useAuth } from '@vv/shared'" },
+    // vant 在 h5 dependencies（catalog:）
+    { filename: 'apps/h5/src/main.ts', code: "import { Button } from 'vant'" },
+    // app spec 文件的测试基建（vitest 在 app devDependencies）
+    { filename: 'apps/admin/src/utils/x.spec.ts', code: "import { describe } from 'vitest'" },
+    // app 的 vite.config 消费 @vv/config 工厂（config 豁免方向 + devDependencies 声明）
+    { filename: 'apps/admin/vite.config.ts', code: "import { createViteConfig } from '@vv/config'" },
+    // 项目既定别名在 app 内同样跳过
+    { filename: 'apps/admin/src/main.ts', code: "import i18n from '@locales'" },
   ],
   invalid: [
     // 方向违规：shared → ui
@@ -140,6 +153,19 @@ ruleTester.run('package-contract', rule, {
     {
       filename: 'packages/ui/src/x.ts',
       code: "export { x } from 'left-pad-xyz-not-declared'",
+      errors: [{ messageId: 'undeclared' }],
+    },
+    // ── apps/* 宿主侧（C4）：声明检查生效，方向检查豁免 ──
+    // app 未声明的外部包 → undeclared（big 未声明 element-plus）
+    {
+      filename: 'apps/big/src/x.ts',
+      code: "import { ElMessage } from 'element-plus'",
+      errors: [{ messageId: 'undeclared' }],
+    },
+    // app 消费未声明的虚构包 → undeclared（方向豁免不覆盖声明检查）
+    {
+      filename: 'apps/admin/src/x.ts',
+      code: "import leftPad from 'left-pad-xyz-not-declared'",
       errors: [{ messageId: 'undeclared' }],
     },
   ],
