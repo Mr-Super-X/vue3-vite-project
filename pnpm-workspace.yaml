@@ -28,20 +28,25 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - vxe-table@4.21.7
 
+# vue 精确钉版（2026-10-28 /autoplan C1 决策）：原钉浮动 'beta' tag——lockfile 缺席时
+# （模板消费者复制配置 / pnpm update 重建）新解析出的 beta 构建与验证时不一致，
+# 克隆不可复现。钉 3.6.0-beta.17 = 当前 lockfile 验证版本，零行为变更。
+# TODO( Mr.Mickey, 2027-01-31 前 )：vue 3.6 稳定线发布后整体回稳定版并删除 overrides
+# 全段 + peerDependencyRules.allowAny——升级批次须过 6 app build + e2e 冒烟。
 overrides:
-  'vue': 'beta'
-  '@vue/compiler-core': 'beta'
-  '@vue/compiler-dom': 'beta'
-  '@vue/compiler-sfc': 'beta'
-  '@vue/compiler-ssr': 'beta'
-  '@vue/compiler-vapor': 'beta'
-  '@vue/reactivity': 'beta'
-  '@vue/runtime-core': 'beta'
-  '@vue/runtime-dom': 'beta'
-  '@vue/runtime-vapor': 'beta'
-  '@vue/server-renderer': 'beta'
-  '@vue/shared': 'beta'
-  '@vue/compat': 'beta'
+  'vue': '3.6.0-beta.17'
+  '@vue/compiler-core': '3.6.0-beta.17'
+  '@vue/compiler-dom': '3.6.0-beta.17'
+  '@vue/compiler-sfc': '3.6.0-beta.17'
+  '@vue/compiler-ssr': '3.6.0-beta.17'
+  '@vue/compiler-vapor': '3.6.0-beta.17'
+  '@vue/reactivity': '3.6.0-beta.17'
+  '@vue/runtime-core': '3.6.0-beta.17'
+  '@vue/runtime-dom': '3.6.0-beta.17'
+  '@vue/runtime-vapor': '3.6.0-beta.17'
+  '@vue/server-renderer': '3.6.0-beta.17'
+  '@vue/shared': '3.6.0-beta.17'
+  '@vue/compat': '3.6.0-beta.17'
 
 peerDependencyRules:
   allowAny:

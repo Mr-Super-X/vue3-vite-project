@@ -145,7 +145,7 @@ export function createViteConfig({
     path.join(appRoot, 'src/assets/icons')
   )
 
-  return defineConfig({
+  return defineConfig(({ mode }) => ({
     base,
     plugins: [
       vue(),
@@ -228,6 +228,25 @@ export function createViteConfig({
       // 版本检测（构建侧）：build 时往 outDir 写 version.json（runtime 轮询消费，见
       // packages/shared/src/plugins/versionCheck.ts）；apply: 'build'，dev serve 零开销
       versionCheckVitePlugin(),
+      // dev 启动引导（2026-10-28 D1）：打印访问地址与场景提示，消除「dev 起来后不知道打开哪、
+      // 为什么 404」的新人摩擦（README 快速开始已同步收敛为单一推荐路径）
+      {
+        name: 'vv-dev-welcome',
+        apply: 'serve',
+        configureServer(server) {
+          server.httpServer?.once('listening', () => {
+            const addr = server.httpServer?.address()
+            const port = typeof addr === 'object' && addr ? addr.port : devPort
+            console.log(
+              `\n  ➜ ${appName}: http://localhost:${port}${base}\n` +
+                '  ➜ 未登录跳 /auth/login 在单 app 模式 404 属预期（auth 独立端口）；跨应用登录用 pnpm dev:gateway\n' +
+                (appName === 'admin'
+                  ? '  ➜ admin 免登录演示：.env.development 加 VITE_DEMO_NO_AUTH=true 直达 /workbench\n'
+                  : '')
+            )
+          })
+        },
+      },
       ...extraPlugins,
     ],
     define: {
@@ -237,14 +256,15 @@ export function createViteConfig({
       // `import.meta.env.X` 的精确键替换优先于 Vite 的 .env 注入——define 写死
       // 保底值时 .env 里的同键配置永远不会生效（浏览器实测 baseURL 仍为保底值，
       // 登录 404）。故 define 的值必须自行经 loadEnv 合并 .env 文件。
-      // 文件读取固定 mode='development'（dev 语义：mock 的 VITE_API_BASE_URL=/mock
-      // 配在 .env.development——prod 构建不读该文件，自然落 '/api' 保底；
-      // gh-pages 由 build-pages.ts 注入 shell env，优先级最高，不受影响）。
+      // 文件读取按构建 mode 取对应 env 文件（2026-10-28 /autoplan E1 修复）：
+      // dev  mode='development' → .env.development（各 app 配 /mock）；
+      // prod mode='production'  → .env.production（无该键，落 '/api' 保底）。
+      // 修复前固定 mode='development' 且注释错称「prod 不读该文件」——实际 loadEnv 按
+      // 显式传入的 mode 读文件，致本地 pnpm build 产物把 /mock 打进生产包（构建不可复现）。
+      // gh-pages 由 build-pages.ts 注入 shell env，优先级最高，不受影响。
       // 联调真实后端：shell env 显式覆盖（README §环境变量），与既有机制一致。
       'import.meta.env.VITE_API_BASE_URL': JSON.stringify(
-        process.env.VITE_API_BASE_URL ??
-          loadEnv('development', appRoot, 'VITE_').VITE_API_BASE_URL ??
-          '/api'
+        process.env.VITE_API_BASE_URL ?? loadEnv(mode, appRoot, 'VITE_').VITE_API_BASE_URL ?? '/api'
       ),
     },
     // 浏览器消费的 @vv/* 源码链接包禁止预打包（2026-10-22 P4 实证）：
@@ -353,5 +373,5 @@ export function createViteConfig({
         },
       },
     },
-  })
+  }))
 }
