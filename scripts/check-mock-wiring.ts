@@ -20,7 +20,7 @@
  * 用法：node --experimental-strip-types scripts/check-mock-wiring.ts（exit 0 一致 / 1 漂移）
  */
 
-import { readFileSync } from 'node:fs'
+import { readFileSync, realpathSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 
@@ -28,7 +28,7 @@ const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url))
 const MOCK_SRC = path.join(REPO_ROOT, 'packages/mock/src')
 
 /** 解析数组字面量文本为权限码数组（如 ['a','b'] → ['a','b']） */
-function parseArrayLiteral(body: string): string[] {
+export function parseArrayLiteral(body: string): string[] {
   return [...body.matchAll(/['"]([^'"]+)['"]/g)].map((x) => x[1] ?? '')
 }
 
@@ -37,7 +37,7 @@ function parseArrayLiteral(body: string): string[] {
  *  ② 内联在响应 `permissions: [...]` 字段（mockProdServer.ts 的 prodAuthMocks 内联版，
  *     不定义变量、直接把权限码写在 profile 响应的 permissions 字段）
  * 取两者首个命中的。 */
-function extractPermissions(source: string): string[] {
+export function extractPermissions(source: string): string[] {
   const varDef = source.match(/const MOCK_PERMISSIONS\s*=\s*\[([\s\S]*?)\]/)
   if (varDef) return parseArrayLiteral(varDef[1] ?? '')
   const inlineField = source.match(/permissions:\s*\[([\s\S]*?)\]/)
@@ -46,84 +46,113 @@ function extractPermissions(source: string): string[] {
 }
 
 /** 从 import 语句提取具名本地模块引用（形如 `import x from './y'` 的 y） */
-function parseLocalModuleImports(source: string): string[] {
+export function parseLocalModuleImports(source: string): string[] {
   return [...source.matchAll(/import\s+\w+\s+from\s+'\.\/([\w-]+)'/g)].map((x) => x[1] ?? '')
 }
 
-let failures = 0
+/**
+ * prod 内联豁免集：auth/dict 在 prod 走内联版（prodAuthMocks/prodDictMocks），不 import
+ * auth.ts/dict.ts——因 rawResponse（Set-Cookie 流）与路径参数 client 侧不支持
+ * （mockProdServer.ts 头注）。stream 同为 rawResponse 且更彻底：prod 的 createProdMockServer
+ * 是 mockjs XHR 劫持，不拦截 stream.ts 的 fetch——即便内联 response 形态也无法生效
+ * （请求根本到不了拦截器），故 prod 无任何等价格可接，只能豁免（dev-only 能力，
+ * docs demo 在 gh-pages 上降级提示）。
+ */
+export const PROD_INLINE_EXEMPT = new Set(['auth', 'dict', 'stream'])
 
-function check(ok: boolean, label: string, detail = ''): void {
-  if (ok) {
-    console.log(`✓ ${label}`)
-  } else {
-    console.error(`✗ ${label}${detail ? `：${detail}` : ''}`)
-    failures++
+/** 双接线漂移比对结果（main 与 spec 共用——校验器假阳性守护的测试钩子） */
+export interface WiringDiff {
+  /** dev 聚合（豁免后）在 prod 缺失 import 的模块 */
+  missingInProd: string[]
+  /** prod import 了 dev 未聚合的意外模块 */
+  unexpectedInProd: string[]
+  /** 两处是否均定义了权限码 */
+  bothHavePerms: boolean
+  /** 两处权限码是否逐字一致 */
+  permsMatch: boolean
+  /** auth.ts 解析出的权限码（诊断输出用） */
+  authPerms: string[]
+  /** prod 内联版解析出的权限码（诊断输出用） */
+  prodPerms: string[]
+}
+
+/** 双接线漂移比对纯函数（2026-10-28 /autoplan E3 提取）——输入两接线源与 auth 源文本，
+ *  输出结构化漂移结果；process 无关，spec 可直接表驱动 */
+export function diffWirings(indexSrc: string, prodSrc: string, authSrc: string): WiringDiff {
+  const devModules = parseLocalModuleImports(indexSrc).sort()
+  // prod 接线 import 的模块（排除 './dict-data' 数据引用）
+  const prodImportedModules = parseLocalModuleImports(prodSrc)
+    .filter((m) => m !== 'dict-data')
+    .sort()
+  const expectedProdImports = devModules.filter((m) => !PROD_INLINE_EXEMPT.has(m))
+  const authPerms = extractPermissions(authSrc)
+  const prodPerms = extractPermissions(prodSrc)
+  return {
+    missingInProd: expectedProdImports.filter((m) => !prodImportedModules.includes(m)),
+    unexpectedInProd: prodImportedModules.filter((m) => !devModules.includes(m)),
+    bothHavePerms: authPerms.length > 0 && prodPerms.length > 0,
+    permsMatch: JSON.stringify(authPerms) === JSON.stringify(prodPerms),
+    authPerms,
+    prodPerms,
   }
 }
 
-// ---- 读取双接线源 ----
-const indexSrc = readFileSync(path.join(MOCK_SRC, 'index.ts'), 'utf-8')
-const prodSrc = readFileSync(path.join(MOCK_SRC, 'mockProdServer.ts'), 'utf-8')
+export function main(): void {
+  let failures = 0
 
-// ---- 校验 1：模块清单一致 ----
-// dev 聚合模块（index.ts 的 './x' import）
-const devModules = parseLocalModuleImports(indexSrc).sort()
-// prod 接线 import 的模块（mockProdServer.ts 的 './x' import，排除 './dict-data' 数据引用）
-const prodImportedModules = parseLocalModuleImports(prodSrc)
-  .filter((m) => m !== 'dict-data')
-  .sort()
+  function check(ok: boolean, label: string, detail = ''): void {
+    if (ok) {
+      console.log(`✓ ${label}`)
+    } else {
+      console.error(`✗ ${label}${detail ? `：${detail}` : ''}`)
+      failures++
+    }
+  }
 
-// 合理豁免：auth/dict 在 prod 走内联版（prodAuthMocks/prodDictMocks），不 import auth.ts/dict.ts——
-// 因 rawResponse（Set-Cookie 流）与路径参数 client 侧不支持（mockProdServer.ts 头注）。
-// stream 同为 rawResponse 且更彻底：prod 的 createProdMockServer 是 mockjs XHR 劫持，
-// 不拦截 stream.ts 的 fetch——即便内联 response 形态也无法生效（请求根本到不了拦截器），
-// 故 prod 无任何等价格可接，只能豁免（dev-only 能力，docs demo 在 gh-pages 上降级提示）。
-// 故 prod 缺 auth/dict/stream import 是设计使然，但 index.ts 里若有 auth/dict，prod 必须有对应内联（由校验 2 兜底权限码，这里登记豁免语义）。
-const PROD_INLINE_EXEMPT = new Set(['auth', 'dict', 'stream'])
-const expectedProdImports = devModules.filter((m) => !PROD_INLINE_EXEMPT.has(m))
+  // ---- 读取双接线源 ----
+  const indexSrc = readFileSync(path.join(MOCK_SRC, 'index.ts'), 'utf-8')
+  const prodSrc = readFileSync(path.join(MOCK_SRC, 'mockProdServer.ts'), 'utf-8')
+  const authSrc = readFileSync(path.join(MOCK_SRC, 'auth.ts'), 'utf-8')
 
-const missingInProd = expectedProdImports.filter((m) => !prodImportedModules.includes(m))
-const unexpectedInProd = prodImportedModules.filter((m) => !devModules.includes(m))
+  // ---- 校验 1+2：漂移比对（判定逻辑单源在 diffWirings，spec 表驱动守护） ----
+  const diff = diffWirings(indexSrc, prodSrc, authSrc)
 
-check(
-  missingInProd.length === 0,
-  `[1] 模块清单一致：dev 聚合的 ${JSON.stringify(expectedProdImports)} 在 prod 均 import`,
-  missingInProd.length ? `prod 缺 import：${missingInProd.join(', ')}` : ''
-)
-check(
-  unexpectedInProd.length === 0,
-  `[1] 模块清单一致：prod 无 dev 未聚合的意外模块`,
-  unexpectedInProd.length
-    ? `prod 多 import：${unexpectedInProd.join(', ')}（应同步登记进 dev index.ts 或确认豁免）`
-    : ''
-)
-
-// ---- 校验 2：MOCK_PERMISSIONS 单源 ----
-const authPerms = extractPermissions(readFileSync(path.join(MOCK_SRC, 'auth.ts'), 'utf-8'))
-const prodPerms = extractPermissions(prodSrc)
-
-check(
-  authPerms.length > 0 && prodPerms.length > 0,
-  `[2] MOCK_PERMISSIONS 两处均有定义`,
-  authPerms.length
-    ? prodPerms.length
-      ? ''
-      : 'prodAuthMocks 未定义 MOCK_PERMISSIONS'
-    : 'auth.ts 未定义 MOCK_PERMISSIONS'
-)
-check(
-  JSON.stringify(authPerms) === JSON.stringify(prodPerms),
-  `[2] MOCK_PERMISSIONS 单源（auth.ts 与 prodAuthMocks 权限码一致）`,
-  JSON.stringify(authPerms) !== JSON.stringify(prodPerms)
-    ? `auth=[${authPerms.join(',')}] vs prod=[${prodPerms.join(',')}]`
-    : ''
-)
-
-// ---- 汇总 ----
-if (failures > 0) {
-  console.error(
-    `\n✗ mock 双接线漂移 ${failures} 处——同步 packages/mock/src/index.ts 与 mockProdServer.ts（见脚本头注）`
+  check(
+    diff.missingInProd.length === 0,
+    `[1] 模块清单一致：dev 聚合的 ${JSON.stringify(parseLocalModuleImports(indexSrc).filter((m) => !PROD_INLINE_EXEMPT.has(m)))} 在 prod 均 import`,
+    diff.missingInProd.length ? `prod 缺 import：${diff.missingInProd.join(', ')}` : ''
   )
-  process.exit(1)
+  check(
+    diff.unexpectedInProd.length === 0,
+    `[1] 模块清单一致：prod 无 dev 未聚合的意外模块`,
+    diff.unexpectedInProd.length
+      ? `prod 多 import：${diff.unexpectedInProd.join(', ')}（应同步登记进 dev index.ts 或确认豁免）`
+      : ''
+  )
+  check(
+    diff.bothHavePerms,
+    `[2] MOCK_PERMISSIONS 两处均有定义`,
+    diff.bothHavePerms ? '' : 'auth.ts 或 prodAuthMocks 未定义 MOCK_PERMISSIONS'
+  )
+  check(
+    diff.permsMatch,
+    `[2] MOCK_PERMISSIONS 单源（auth.ts 与 prodAuthMocks 权限码一致）`,
+    !diff.permsMatch
+      ? `auth=[${diff.authPerms.join(',')}] vs prod=[${diff.prodPerms.join(',')}]`
+      : ''
+  )
+
+  // ---- 汇总 ----
+  if (failures > 0) {
+    console.error(
+      `\n✗ mock 双接线漂移 ${failures} 处——同步 packages/mock/src/index.ts 与 mockProdServer.ts（见脚本头注）`
+    )
+    process.exit(1)
+  }
+  console.log('\n✓ mock 双接线一致（模块清单 + MOCK_PERMISSIONS）')
 }
-console.log('\n✓ mock 双接线一致（模块清单 + MOCK_PERMISSIONS）')
+
+// CLI 守卫：被 spec import 时不执行 main（2026-10-28 /autoplan E3 可测化改造）
+const invokedDirectly =
+  process.argv[1] !== undefined && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)
+if (invokedDirectly) main()

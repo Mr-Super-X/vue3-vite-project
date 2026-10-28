@@ -34,8 +34,9 @@
 // 用法：pnpm check:routes
 // 失败退出码：1（可在 CI 阶段阻断）
 
-import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, realpathSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import { APPS } from './apps-registry.mjs'
 
@@ -46,7 +47,7 @@ const APPS_DIR = resolve(ROOT, 'apps')
  * 发现所有含 src/modules/ 的应用目录（apps/* 下的独立应用）。
  * docs/h5/big/portal/auth/admin 均在此列；未来新增 app 只要建了 src/modules 即自动纳入校验。
  */
-function discoverApps(): string[] {
+export function discoverApps(): string[] {
   return readdirSync(APPS_DIR, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && existsSync(join(APPS_DIR, entry.name, 'src/modules')))
     .map((entry) => entry.name)
@@ -57,7 +58,7 @@ function discoverApps(): string[] {
  * B/C 校验的系统兜底名单：由 app 注册表（scripts/apps-registry.mjs）派生，
  * 名单语义（可匿名访问的兜底路由）在注册表条目注释中说明；未登记的 app 不校验。
  */
-function requiredFor(app: string): readonly string[] {
+export function requiredFor(app: string): readonly string[] {
   return APPS.find((entry) => entry.name === app)?.requiredRoutes ?? []
 }
 
@@ -75,7 +76,7 @@ function requiredFor(app: string): readonly string[] {
  * 校验静默跳过它）；有 manifest 但无 src 是孤儿。原「端口双写锁死」（apps-registry port ↔
  * vite.config portOffset）随 P2 消灭：端口已单源到 manifest，无双写可锁。
  */
-function validateManifestPresence(): string[] {
+export function validateManifestPresence(): string[] {
   const errors: string[] = []
   const appsDir = resolve(ROOT, 'apps')
   for (const entry of readdirSync(appsDir, { withFileTypes: true })) {
@@ -101,19 +102,19 @@ function validateManifestPresence(): string[] {
  * 适用场景：动态/可选模块（docs 的 demo 路由虽经 routeNames 吸收全量白名单，
  * 仍保留豁免以兼容未来"故意不枚举"的可选模块）。新增同类模块时只需在此追加前缀。
  */
-const EXEMPT_PREFIXES: readonly string[] = ['Demo']
+export const EXEMPT_PREFIXES: readonly string[] = ['Demo']
 
-function isExempt(name: string): boolean {
+export function isExempt(name: string): boolean {
   return EXEMPT_PREFIXES.some((prefix) => name.startsWith(prefix))
 }
 
 /** 读取应用内文件统一换行符（Windows CRLF → LF），避免正则 ^ 锚点跨平台失效 */
-function readAppText(app: string, relativePath: string): string {
+export function readAppText(app: string, relativePath: string): string {
   return readFileSync(join(APPS_DIR, app, relativePath), 'utf-8').replace(/\r\n/g, '\n')
 }
 
 /** 提取 routes 文件中的所有 `name: 'Xxx'` 字段（兼容 `name: 'Xxx',` 与行尾无逗号） */
-function extractRouteNames(content: string): string[] {
+export function extractRouteNames(content: string): string[] {
   const matches = [...content.matchAll(/name:\s*'([A-Za-z][\w-]*)'/g)]
   return [...new Set(matches.map((m) => m[1]!))]
 }
@@ -128,7 +129,7 @@ function extractRouteNames(content: string): string[] {
  *     在 router/index.ts 注册（非 modules），不纳入会让 auth/portal 等全公开 app 的
  *     A 校验误报"白名单 NotFound 无实现"
  */
-function extractImplementedNames(app: string): Set<string> {
+export function extractImplementedNames(app: string): Set<string> {
   const names = new Set<string>()
   const modulesDir = join(APPS_DIR, app, 'src/modules')
   for (const moduleDir of readdirSync(modulesDir)) {
@@ -164,7 +165,7 @@ function extractImplementedNames(app: string): Set<string> {
  * 展开条目按 import 表解析到具体模块，用该模块 routes 文件的实际 name 展开——
  * 与运行时"routeNames 全量吸收进白名单"的行为严格一致。
  */
-function extractWhitelist(content: string, app: string): Set<string> {
+export function extractWhitelist(content: string, app: string): Set<string> {
   const names = new Set<string>()
 
   // import { routeNames as <alias> } from '@/modules/<module>/routes'
@@ -210,108 +211,115 @@ function extractWhitelist(content: string, app: string): Set<string> {
   return names
 }
 
-// ─── 主流程 ───────────────────────────────────────────────────
+export function main(): void {
+  // ─── 主流程 ───────────────────────────────────────────────────
 
-const apps = discoverApps()
-let totalErrors = 0
+  const apps = discoverApps()
+  let totalErrors = 0
 
-console.log(`🔍 检查路由配置一致性（${apps.length} 个应用）...\n`)
+  console.log(`🔍 检查路由配置一致性（${apps.length} 个应用）...\n`)
 
-// E. 注册表反向校验：apps/ 下发现的应用（含 src/modules）必须登记 apps-registry.mjs。
-//    漏登记是高危静默失效点（2026-10-23 扩展性审查 P0）——boundary-apps-<new> ESLint
-//    规则不会生成（新 app 引用兄弟 app 无 error 拦截），requiredFor 返回空集让 B/C
-//    校验静默跳过，网关校验也不覆盖它：三道防线同时失明，唯有反向校验能暴露。
-const registeredApps = new Set(APPS.map((entry) => entry.name))
-for (const app of apps) {
-  if (!registeredApps.has(app)) {
-    console.error(
-      `✖ [E] apps/${app} 存在 src/modules 但未登记 scripts/apps-registry.mjs（ESLint 边界规则 / B/C 兜底校验 / 网关校验将静默跳过它）`
-    )
-    totalErrors++
-  }
-}
-
-for (const app of apps) {
-  const whitelistedNames = extractWhitelist(readAppText(app, 'src/router/whitelist.ts'), app)
-  const implementedNames = extractImplementedNames(app)
-  const required = requiredFor(app)
-  const routesGlob = `apps/${app}/src/modules/**/routes/*.ts`
-
-  const checks: Array<[string, boolean]> = [
-    // A. whitelist 元素必须在实际 routes 中存在（豁免前缀跳过此检查）
-    ...[...whitelistedNames]
-      .filter((name) => !isExempt(name))
-      .map((name): [string, boolean] => [
-        `[A] whitelist 中的 '${name}' 必须在 ${routesGlob} 或 router/index.ts 中存在（当前${implementedNames.has(name) ? '✓' : '✗ 缺失'}）`,
-        implementedNames.has(name),
-      ]),
-
-    // B. 系统兜底名单必须在 whitelist 中（任何项目都必须能匿名访问的兜底）
-    ...required.map((name): [string, boolean] => [
-      `[B] 系统路由 '${name}' 必须在 whitelist 中（兜底页面必须能匿名访问）`,
-      whitelistedNames.has(name),
-    ]),
-
-    // C. 系统兜底名单必须在实际 routes 中实现
-    ...required.map((name): [string, boolean] => [
-      `[C] 系统路由 '${name}' 必须在 ${routesGlob} 或 router/index.ts 中实现（兜底页面必须有真实路由）`,
-      implementedNames.has(name),
-    ]),
-
-    // D. 双向一致性最终汇总（豁免前缀不参与对比）
-    [
-      (() => {
-        const whitelistedEffective = [...whitelistedNames].filter((n) => !isExempt(n))
-        const implementedEffective = [...implementedNames].filter((n) => !isExempt(n))
-        return `[D] 双向一致性：whitelisted(${whitelistedEffective.length}) ⊆ implemented(${implementedEffective.length})（已豁免前缀: ${EXEMPT_PREFIXES.join(', ')}）`
-      })(),
-      (() => {
-        const whitelistedEffective = new Set([...whitelistedNames].filter((n) => !isExempt(n)))
-        return [...whitelistedEffective].every((n) => implementedNames.has(n))
-      })(),
-    ],
-  ]
-
-  let appErrors = 0
-  console.log(`━━━ ${app} ━━━`)
-  for (const [message, ok] of checks) {
-    if (ok) {
-      console.log(`✓ ${message}`)
-    } else {
-      console.error(`✖ ${message}`)
-      appErrors++
+  // E. 注册表反向校验：apps/ 下发现的应用（含 src/modules）必须登记 apps-registry.mjs。
+  //    漏登记是高危静默失效点（2026-10-23 扩展性审查 P0）——boundary-apps-<new> ESLint
+  //    规则不会生成（新 app 引用兄弟 app 无 error 拦截），requiredFor 返回空集让 B/C
+  //    校验静默跳过，网关校验也不覆盖它：三道防线同时失明，唯有反向校验能暴露。
+  const registeredApps = new Set(APPS.map((entry) => entry.name))
+  for (const app of apps) {
+    if (!registeredApps.has(app)) {
+      console.error(
+        `✖ [E] apps/${app} 存在 src/modules 但未登记 scripts/apps-registry.mjs（ESLint 边界规则 / B/C 兜底校验 / 网关校验将静默跳过它）`
+      )
+      totalErrors++
     }
   }
 
+  for (const app of apps) {
+    const whitelistedNames = extractWhitelist(readAppText(app, 'src/router/whitelist.ts'), app)
+    const implementedNames = extractImplementedNames(app)
+    const required = requiredFor(app)
+    const routesGlob = `apps/${app}/src/modules/**/routes/*.ts`
+
+    const checks: Array<[string, boolean]> = [
+      // A. whitelist 元素必须在实际 routes 中存在（豁免前缀跳过此检查）
+      ...[...whitelistedNames]
+        .filter((name) => !isExempt(name))
+        .map((name): [string, boolean] => [
+          `[A] whitelist 中的 '${name}' 必须在 ${routesGlob} 或 router/index.ts 中存在（当前${implementedNames.has(name) ? '✓' : '✗ 缺失'}）`,
+          implementedNames.has(name),
+        ]),
+
+      // B. 系统兜底名单必须在 whitelist 中（任何项目都必须能匿名访问的兜底）
+      ...required.map((name): [string, boolean] => [
+        `[B] 系统路由 '${name}' 必须在 whitelist 中（兜底页面必须能匿名访问）`,
+        whitelistedNames.has(name),
+      ]),
+
+      // C. 系统兜底名单必须在实际 routes 中实现
+      ...required.map((name): [string, boolean] => [
+        `[C] 系统路由 '${name}' 必须在 ${routesGlob} 或 router/index.ts 中实现（兜底页面必须有真实路由）`,
+        implementedNames.has(name),
+      ]),
+
+      // D. 双向一致性最终汇总（豁免前缀不参与对比）
+      [
+        (() => {
+          const whitelistedEffective = [...whitelistedNames].filter((n) => !isExempt(n))
+          const implementedEffective = [...implementedNames].filter((n) => !isExempt(n))
+          return `[D] 双向一致性：whitelisted(${whitelistedEffective.length}) ⊆ implemented(${implementedEffective.length})（已豁免前缀: ${EXEMPT_PREFIXES.join(', ')}）`
+        })(),
+        (() => {
+          const whitelistedEffective = new Set([...whitelistedNames].filter((n) => !isExempt(n)))
+          return [...whitelistedEffective].every((n) => implementedNames.has(n))
+        })(),
+      ],
+    ]
+
+    let appErrors = 0
+    console.log(`━━━ ${app} ━━━`)
+    for (const [message, ok] of checks) {
+      if (ok) {
+        console.log(`✓ ${message}`)
+      } else {
+        console.error(`✖ ${message}`)
+        appErrors++
+      }
+    }
+
+    console.log('')
+    console.log(
+      `whitelist 白名单：${whitelistedNames.size} 个（${[...whitelistedNames].sort().join(', ')}）`
+    )
+    console.log(
+      `routes 实现：${implementedNames.size} 个（${[...implementedNames].sort().join(', ')}）`
+    )
+    console.log('')
+
+    totalErrors += appErrors
+  }
+
+  // ─── manifest 完整性（P2：app 元数据单源到 app.manifest.json）──────────────────
+  // 原「端口双写锁死」随 P2 消灭——端口已单源到 manifest，无双写可锁；改为校验
+  // 「有 src 必有 manifest，有 manifest 必有 src」，防 ESLint 边界/网关/requiredRoutes 静默跳过。
+
+  console.log('━━━ app.manifest.json 完整性（有 src 必有 manifest，反之亦然）━━━')
+  const manifestErrors = validateManifestPresence()
+  if (manifestErrors.length === 0) {
+    console.log(`✓ ${APPS.length} 个 app 的 app.manifest.json 与 src 目录一一对应`)
+  } else {
+    for (const message of manifestErrors) console.error(`✖ ${message}`)
+    totalErrors += manifestErrors.length
+  }
   console.log('')
-  console.log(
-    `whitelist 白名单：${whitelistedNames.size} 个（${[...whitelistedNames].sort().join(', ')}）`
-  )
-  console.log(
-    `routes 实现：${implementedNames.size} 个（${[...implementedNames].sort().join(', ')}）`
-  )
-  console.log('')
 
-  totalErrors += appErrors
+  if (totalErrors > 0) {
+    console.error(`✖ 共 ${totalErrors} 个错误`)
+    process.exit(1)
+  } else {
+    console.log(`✓ 所有应用的路由检查通过（${apps.join(' / ')}）`)
+  }
 }
 
-// ─── manifest 完整性（P2：app 元数据单源到 app.manifest.json）──────────────────
-// 原「端口双写锁死」随 P2 消灭——端口已单源到 manifest，无双写可锁；改为校验
-// 「有 src 必有 manifest，有 manifest 必有 src」，防 ESLint 边界/网关/requiredRoutes 静默跳过。
-
-console.log('━━━ app.manifest.json 完整性（有 src 必有 manifest，反之亦然）━━━')
-const manifestErrors = validateManifestPresence()
-if (manifestErrors.length === 0) {
-  console.log(`✓ ${APPS.length} 个 app 的 app.manifest.json 与 src 目录一一对应`)
-} else {
-  for (const message of manifestErrors) console.error(`✖ ${message}`)
-  totalErrors += manifestErrors.length
-}
-console.log('')
-
-if (totalErrors > 0) {
-  console.error(`✖ 共 ${totalErrors} 个错误`)
-  process.exit(1)
-} else {
-  console.log(`✓ 所有应用的路由检查通过（${apps.join(' / ')}）`)
-}
+// CLI 守卫：被 spec import 时不执行 main（2026-10-28 /autoplan E3 可测化改造）
+const invokedDirectly =
+  process.argv[1] !== undefined && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)
+if (invokedDirectly) main()

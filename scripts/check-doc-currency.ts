@@ -34,8 +34,9 @@
 //
 // 用法：pnpm check:doc-currency
 
-import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { readdirSync, readFileSync, realpathSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const ROOT = resolve(import.meta.dirname, '..')
 const FORM_SCHEMA = join(ROOT, 'packages/ui/src/components/form-schema')
@@ -46,6 +47,11 @@ interface Check {
   expected: number
   /** ±容差（默认 0）。composable / spec 数量允许小幅波动；核心字段数严格要求 */
   tolerance?: number
+}
+
+/** tolerance 区间判定纯函数（2026-10-28 /autoplan E3 提取——spec 表驱动守护边界） */
+export function inRange(actual: number, expected: number, tolerance = 0): boolean {
+  return actual >= expected - tolerance && actual <= expected + tolerance
 }
 
 /** 读取文件统一换行符（Windows CRLF → LF），避免正则 ^ 锚点跨平台失效 */
@@ -99,7 +105,7 @@ const SCHEMA_NODE_NAMESPACES = [
 ] as const
 
 /** 解析 interface 体内的字段数（精确：仅 interface body 内的字段声明） */
-function countInterfaceFields(content: string, interfaceName: string): number {
+export function countInterfaceFields(content: string, interfaceName: string): number {
   // 匹配 export interface Name { ... } —— 非贪婪，跨多行
   const re = new RegExp(`export interface ${interfaceName} \\{([\\s\\S]*?)\\n\\}`)
   const m = content.match(re)
@@ -366,26 +372,33 @@ const checks: Check[] = [
   },
 ]
 
-let failed = 0
+export function main(): void {
+  let failed = 0
 
-for (const check of checks) {
-  const actual = check.actual()
-  const tolerance = check.tolerance ?? 0
-  const lo = check.expected - tolerance
-  const hi = check.expected + tolerance
-  const ok = actual >= lo && actual <= hi
-  const status = ok ? '✓ PASS' : '✗ FAIL'
-  const range = tolerance === 0 ? `${check.expected}` : `${lo}-${hi}`
-  console.log(`${status}  ${check.name.padEnd(48)} actual=${actual}  expected=${range}`)
-  if (!ok) failed++
+  for (const check of checks) {
+    const actual = check.actual()
+    const tolerance = check.tolerance ?? 0
+    const lo = check.expected - tolerance
+    const hi = check.expected + tolerance
+    const ok = inRange(actual, check.expected, tolerance)
+    const status = ok ? '✓ PASS' : '✗ FAIL'
+    const range = tolerance === 0 ? `${check.expected}` : `${lo}-${hi}`
+    console.log(`${status}  ${check.name.padEnd(48)} actual=${actual}  expected=${range}`)
+    if (!ok) failed++
+  }
+
+  console.log('')
+  if (failed > 0) {
+    console.error(`[check-doc-currency] ${failed} 项校验失败`)
+    console.error(
+      '[check-doc-currency] 阈值调整需同时更新 ARCHITECTURE.md + 此脚本，并在 PR 描述中显式说明'
+    )
+    process.exit(1)
+  }
+  console.log(`[check-doc-currency] 全部 ${checks.length} 项校验通过`)
 }
 
-console.log('')
-if (failed > 0) {
-  console.error(`[check-doc-currency] ${failed} 项校验失败`)
-  console.error(
-    '[check-doc-currency] 阈值调整需同时更新 ARCHITECTURE.md + 此脚本，并在 PR 描述中显式说明'
-  )
-  process.exit(1)
-}
-console.log(`[check-doc-currency] 全部 ${checks.length} 项校验通过`)
+// CLI 守卫：被 spec import 时不执行 main（2026-10-28 /autoplan E3 可测化改造）
+const invokedDirectly =
+  process.argv[1] !== undefined && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)
+if (invokedDirectly) main()
