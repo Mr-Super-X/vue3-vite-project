@@ -40,6 +40,34 @@
 
 验证：派生 APPS admin:5174→auth:5179 顺序对；check:routes / test:gateway / lint / type-check 全绿；admin dev 起 5174、VITE_APP_ID 注入正确；smoke app 实测 dev 5180（/ 与 /home 200）/ build / test 全过后删除。
 
+### ✨ Feat | 可插拔版本检测插件：轮询 version.json + ChunkLoadError 兜底（2026-10-28）
+
+> 背景：gh-pages 六应用发布后，用户长时间停留在生产页面不感知新版本——点击新路由可能
+> 命中已被删除的旧 chunk 白屏；此前全仓无任何版本检测机制。
+
+- **构建侧**：`@vv/config` 新增 `version-check-vite` 插件（`apply: 'build'`）——`closeBundle`
+  往 outDir 写 `version.json`（`buildId` + `builtAt`，不经 rollup asset pipeline 保证与
+  index.html 同级的固定 URL）；`createViteConfig` 工厂装配，6 app 零改动；buildId 源
+  `VITE_BUILD_ID`（CI 可注入 git sha 可追溯）→ 兜底时间戳+随机
+- **runtime**：`@vv/shared` `plugins/versionCheck.ts`——`createAppPlugins` 工厂第 4 装配项
+  （默认开，`versionCheck: false` 可关）。双机制：① 轮询 `version.json` 比对 buildId
+  （默认 5min，`cache: 'no-store'` + cache-busting query，`visibilitychange` 暂停/恢复）
+  ② `ChunkLoadError` 兜底监听（error + unhandledrejection 双通道，匹配 4 种浏览器
+  message 形态）
+- **零 UI 依赖**：通知经 `onUpdate` / `onChunkError` 回调注入（缺省回落链 chunk-error →
+  onUpdate，source 字段区分），`@vv/shared` 不引入 Element Plus；dev 默认禁用（HMR 即
+  热更新），`enabled: true` 可强制调试
+- **测试**：vite 插件 4 例 + runtime 27 例（fake timers + mock fetch：基线建立/触发/静默
+  降级/兜底匹配/回落链）；config 57/57、shared 466/466 无回归
+- **文档**：docs/44 使用规范（接入示例 + CI 注入 + 排障）
+
+验证：`pnpm -C apps/admin build-only` 产物 version.json schema 合法；`pnpm build:pages`
+6 份 version.json 各自生成互不覆盖；lint / shared test 全绿。
+
+手动验证步骤：`pnpm -C apps/portal build-only && pnpm -C apps/portal preview` → Network
+面板见 `version.json?_t=...` 200（5min 间隔）；改 dist/version.json 的 buildId → 下轮
+轮询触发 onUpdate（dev 可 `enabled: true` + 短 `intervalMs` 加速观察）。
+
 ### ✨ Feat | API 契约单源试点：auth 响应 zod schema 化（2026-10-27）
 
 > 背景：此前 TS interface 只能编译期约束，真实响应与类型漂移要等运行时崩才暴露。复用现有

@@ -12,6 +12,10 @@
 > - **P1 API 契约单源**：`@vv/shared` auth `login`/`fetchProfile` 同址 zod schema（`.passthrough()` 前向兼容）+ `requestValidated`——TS 类型与运行时校验同源，mock 保持 `import type` 零运行时依赖；security-reviewer 审查通过（可合并）
 > - **P2 应用 manifest 单源**：各 app `app.manifest.json`（`name/port/requiredRoutes`）单源；`createViteConfig` 删 `appName/portOffset` 改读 manifest；`apps-registry.mjs` 自动派生（dev-gateway/网关/Playwright/ESLint/check-routes 五消费方零改动）；新增 **`pnpm new-app <name>`** 一键生成可 dev/build/test 的最小公开应用（新增 app 零手改注册表/CI）
 >
+> **本轮更新**（2026-10-28）— **可插拔版本检测插件**（生产页面资源更新检测）：
+>
+> - **双机制检测**：`@vv/shared` `versionCheck` runtime 插件（轮询 `version.json` 比对 buildId + `ChunkLoadError` 兜底监听，零 UI 依赖、回调注入通知）+ `@vv/config` `version-check-vite` 构建插件（`closeBundle` 生成 `version.json`，buildId 支持 `VITE_BUILD_ID` 注入 git sha 可追溯）；`createAppPlugins` / `createViteConfig` 工厂默认装配，6 app 零改动拥有检测能力，使用规范见 [docs/44](docs/44-版本检测插件使用规范.md)
+>
 > **上轮更新**（2026-10-27）— **生产 Docker 部署链路落地**（本地开发 node 网关 / 生产部署 docker+nginx 分离）：
 >
 > - **生产 Docker 部署**：根 `Dockerfile`（多阶段：corepack pnpm → `pnpm build:prod` 聚合 6 app → `nginx:1.27-alpine`）+ `docker-compose.prod.yml`（唯一环境变量 `API_UPSTREAM` 经 envsubst 渲染反代真实后端，SSE 关缓冲）；`pnpm build:prod` 生产聚合构建（`base=/<app>/` + history + remote 菜单 + `VITE_USE_MOCK=false`）；路径语义与 dev 网关逐条对齐（`/` → 302 `/portal/`），详见下方「生产 Docker 部署」节
@@ -771,6 +775,7 @@ pnpm bench                         # vitest bench 基准测试
 | 门户企业官网站点            | `docs/41-门户企业官网站点.md`                 | /home 门面：文案单源 site.ts + 锚点导航三处同步 + 白名单公开约定                         |
 | Monorepo 改造评估           | `docs/42-Monorepo多应用改造评估.md`           | 单应用拆 6 app 的收益/成本评估与风险清单（R1-R9）                                        |
 | **Monorepo 结构与开发指引** | `docs/43-Monorepo结构与开发指引.md`           | 6 app + 4 包拓扑 / 端口表 / 新增应用流程 / 统一登录协议 / 同域网关 / CI-CD 形态          |
+| 版本检测插件使用规范        | `docs/44-版本检测插件使用规范.md`             | 轮询 version.json + ChunkLoadError 双机制 / onUpdate 回调注入 / CI 注入 git sha          |
 
 ### 架构评估
 
