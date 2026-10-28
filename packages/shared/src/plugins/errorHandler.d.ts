@@ -6,6 +6,7 @@
 // remAdaptation 开关是否生效由 createAppPlugins 工厂的装配参数决定（见 ./index.ts）
 
 import type { WebVitalsOptions } from './webVitals.ts'
+import type { VersionCheckOptions } from './versionCheck.ts'
 
 // ErrorSource / ErrorContext / ErrorReporter 契约随 safeAsync 归 @vv/shared
 // （shared 不反向依赖 app 的 plugins）；此处 re-export 保持既有消费方零改动
@@ -33,4 +34,7 @@ export interface PluginsOptions {
   /** REM 适配（H5）：viewport meta 幂等确保；传 false 完全关闭。
    *  仅工厂以 remAdaptation: true 装配时生效（缺省不装配，等价无此项） */
   remAdaptation?: false
+  /** 版本检测（轮询 version.json + ChunkLoadError 兜底）；不传则按 app 环境默认启用
+   *  （dev 关闭 / prod 开启），传 false 完全关闭 */
+  versionCheck?: VersionCheckOptions | false
 }

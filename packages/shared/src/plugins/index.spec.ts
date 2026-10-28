@@ -1,15 +1,18 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { App } from 'vue'
 
-const { mockErrorHandlerInstall, mockWebVitalsInstall, mockRemInstall } = vi.hoisted(() => ({
-  mockErrorHandlerInstall: vi.fn(),
-  mockWebVitalsInstall: vi.fn(),
-  mockRemInstall: vi.fn(),
-}))
+const { mockErrorHandlerInstall, mockWebVitalsInstall, mockRemInstall, mockVersionCheckInstall } =
+  vi.hoisted(() => ({
+    mockErrorHandlerInstall: vi.fn(),
+    mockWebVitalsInstall: vi.fn(),
+    mockRemInstall: vi.fn(),
+    mockVersionCheckInstall: vi.fn(),
+  }))
 
 vi.mock('./errorHandler.ts', () => ({ default: { install: mockErrorHandlerInstall } }))
 vi.mock('./webVitals.ts', () => ({ default: { install: mockWebVitalsInstall } }))
 vi.mock('./remAdaptation.ts', () => ({ default: { install: mockRemInstall } }))
+vi.mock('./versionCheck.ts', () => ({ default: { install: mockVersionCheckInstall } }))
 
 import { createAppPlugins } from './index.ts'
 
@@ -31,15 +34,17 @@ beforeEach(() => {
   mockErrorHandlerInstall.mockReset()
   mockWebVitalsInstall.mockReset()
   mockRemInstall.mockReset()
+  mockVersionCheckInstall.mockReset()
 })
 
 describe('createAppPlugins 插件注册工厂', () => {
-  it('缺省装配 errorHandler + webVitals，不装配 remAdaptation', () => {
+  it('缺省装配 errorHandler + webVitals + versionCheck，不装配 remAdaptation', () => {
     const app = makeApp()
     createAppPlugins().install(app, {})
     expect(mockErrorHandlerInstall).toHaveBeenCalledTimes(1)
     expect(mockWebVitalsInstall).toHaveBeenCalledTimes(1)
     expect(mockRemInstall).not.toHaveBeenCalled()
+    expect(mockVersionCheckInstall).toHaveBeenCalledTimes(1)
   })
 
   it('remAdaptation: true 时装配 remAdaptation 插件', () => {
@@ -64,5 +69,18 @@ describe('createAppPlugins 插件注册工厂', () => {
     const app = makeApp()
     createAppPlugins().install(app, { errorHandler: { logToConsole: false } })
     expect(mockErrorHandlerInstall).toHaveBeenCalledWith(app, { logToConsole: false })
+  })
+
+  it('options.versionCheck === false 关闭 versionCheck', () => {
+    const app = makeApp()
+    createAppPlugins().install(app, { versionCheck: false })
+    expect(mockVersionCheckInstall).not.toHaveBeenCalled()
+  })
+
+  it('options.versionCheck 对象透传到插件 install', () => {
+    const app = makeApp()
+    const opts = { onUpdate: vi.fn() }
+    createAppPlugins().install(app, { versionCheck: opts })
+    expect(mockVersionCheckInstall).toHaveBeenCalledWith(app, opts)
   })
 })

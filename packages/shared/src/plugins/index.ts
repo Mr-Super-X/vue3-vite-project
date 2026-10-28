@@ -27,6 +27,7 @@ import type { App } from 'vue'
 import errorHandlerPlugin from './errorHandler.ts'
 import webVitalsPlugin from './webVitals.ts'
 import remAdaptationPlugin from './remAdaptation.ts'
+import versionCheckPlugin from './versionCheck.ts'
 import type { PluginsOptions } from './errorHandler.d'
 
 /** createAppPlugins 工厂参数：决定装配哪些 app 差异插件 */
@@ -66,6 +67,12 @@ export function createAppPlugins(factoryOptions: CreateAppPluginsOptions = {}): 
       //    默认启用，install 级关闭走 options.remAdaptation === false）
       if (withRemAdaptation && options.remAdaptation !== false) {
         app.use(remAdaptationPlugin)
+      }
+
+      // 4. 版本检测（默认启用；传 false 可关）——轮询 version.json 比对 buildId +
+      //    ChunkLoadError 兜底；dev 模式默认不启动（HMR 即热更新）
+      if (options.versionCheck !== false) {
+        app.use(versionCheckPlugin, options.versionCheck)
       }
     },
   }
