@@ -21,6 +21,7 @@
  * @see [`./index.ts`](./index.ts) createAppPlugins 装配入口
  * @group 插件：版本检测
  */
+import type { App } from 'vue'
 
 /** onUpdate 回调载荷（chunk-error 触发时无版本信息，id 可空） */
 export interface VersionInfo {
@@ -152,4 +153,77 @@ export function createVersionPoller(opts: PollerOptions): VersionPoller {
     pollOnce,
     getBaseline: () => baseline,
   }
+}
+
+/** 默认 onUpdate：dev console.warn，prod noop（与 webVitals defaultReporter 同风格） */
+function defaultOnUpdate(info: VersionInfo): void {
+  if (!import.meta.env.DEV) return
+  console.warn('[VersionCheck] 检测到资源更新：', info)
+}
+
+export default {
+  /**
+   * Vue 插件 install：装配轮询器 + visibilitychange 节能 + ChunkLoadError 兜底。
+   *
+   * @example 业务注入通知（ElNotification 等）经 main.ts 的 PluginsOptions.versionCheck 传入
+   */
+  install(_app: App, options: VersionCheckOptions = {}): void {
+    if (!shouldEnable(import.meta.env.DEV, options)) return
+
+    const onUpdate = options.onUpdate ?? defaultOnUpdate
+    const poller = createVersionPoller({
+      path: options.path ?? `${import.meta.env.BASE_URL}version.json`,
+      intervalMs: options.intervalMs ?? DEFAULT_INTERVAL_MS,
+      onUpdate,
+      fetchImpl: fetch,
+    })
+
+    // 页面 hidden 暂停定时器、visible 恢复并立即补一次（后台 tab 不浪费请求）
+    const onVisibility = (): void => {
+      if (document.hidden) {
+        poller.stop()
+      } else {
+        poller.start()
+        void poller.pollOnce()
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+
+    // ChunkLoadError 兜底：懒加载 chunk 被新版本删除 → 路由跳转 404 时提示刷新。
+    // 双监听（error + unhandledrejection）覆盖 4 种浏览器 message 形态；
+    // 回调自身异常吞掉，兜底层永不抛。
+    const chunkHandler =
+      options.onChunkError ??
+      ((_err: Error) =>
+        onUpdate({
+          oldId: null,
+          newId: null,
+          source: 'chunk-error',
+        }))
+    const onWindowError = (event: ErrorEvent): void => {
+      try {
+        const msg = event.message ?? ''
+        if (isChunkLoadErrorMessage(msg)) {
+          chunkHandler(event.error instanceof Error ? event.error : new Error(msg))
+        }
+      } catch {
+        /* 兜底层自身异常吞掉 */
+      }
+    }
+    const onRejection = (event: PromiseRejectionEvent): void => {
+      try {
+        const reason: unknown = event.reason
+        if (reason instanceof Error && isChunkLoadErrorMessage(reason.message)) {
+          chunkHandler(reason)
+        }
+      } catch {
+        /* 兜底层自身异常吞掉 */
+      }
+    }
+    window.addEventListener('error', onWindowError)
+    window.addEventListener('unhandledrejection', onRejection)
+
+    poller.start()
+    void poller.pollOnce()
+  },
 }
