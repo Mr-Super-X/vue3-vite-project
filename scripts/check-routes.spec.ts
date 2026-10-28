@@ -3,15 +3,18 @@
  *
  * 业务背景：check-routes 是 CI 阻断级门禁（A-D 一致性 + E 注册表反向校验 + manifest
  * 完整性），路由名/白名单的解析正则一旦漂移会让校验静默失效。本 spec 表驱动守护
- * 纯文本解析层：extractRouteNames（routes name 提取）/ extractWhitelist 的字面量形态
- * / isExempt / requiredFor。alias 展开形态依赖真实文件系统（readAppText），
- * 由 CLI 对真实仓库的每日运行天然覆盖，不在此重复。
+ * 纯文本解析层：extractRouteNames（routes name 提取）/ extractWhitelist 字面量形态
+ * / isExempt / requiredFor；alias 展开路径（importRe + expandAlias）经真实仓库
+ * portal/auth 文件做行为断言（/autoplan R2-E8——原「CLI 每日运行天然覆盖」论证不成立：
+ * CLI 全绿无法区分「真一致」与「解析退化为空集」）。
  *
  * 运行：pnpm test:check-scripts
  * @see scripts/check-routes.ts —— 被测实现
  */
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
+import { fileURLToPath } from 'node:url'
 
 import {
   EXEMPT_PREFIXES,
@@ -62,6 +65,32 @@ test('extractWhitelist：形态 3 new Set 纯字面量', () => {
 
 test('extractWhitelist：无匹配形态 → 空集', () => {
   assert.deepEqual([...extractWhitelist(`const x = 1`, 'app')], [])
+})
+
+// ── extractWhitelist：alias 展开路径（真实仓库行为断言，/autoplan R2-E8） ──
+// alias 展开正则（importRe + expandAlias）是运行时吸收行为的对齐点，回归会让
+// A/D 校验静默失效且纯字面量 spec 全绿。此处对真实仓库文件做行为断言：
+// portal/auth 的 whitelist 均为 `createWhiteList('NotFound', xxxRouteNames)` 形态，
+// 展开结果必须含模块 routes 的真实 name（Home / Login）。
+
+test('extractWhitelist：alias 展开吸收 portal home 模块路由名（真实仓库回归）', () => {
+  const whitelistPath = fileURLToPath(
+    new URL('../apps/portal/src/router/whitelist.ts', import.meta.url)
+  )
+  const content = readFileSync(whitelistPath, 'utf-8')
+  const names = extractWhitelist(content, 'portal')
+  assert.ok(names.has('NotFound'), '字面量 NotFound 应保留')
+  assert.ok(names.has('Home'), 'alias 展开应吸收 home 模块的 Home（check:routes 已证实运行时吸收）')
+})
+
+test('extractWhitelist：alias 展开吸收 auth 模块路由名（真实仓库回归）', () => {
+  const whitelistPath = fileURLToPath(
+    new URL('../apps/auth/src/router/whitelist.ts', import.meta.url)
+  )
+  const content = readFileSync(whitelistPath, 'utf-8')
+  const names = extractWhitelist(content, 'auth')
+  assert.ok(names.has('NotFound'), '字面量 NotFound 应保留')
+  assert.ok(names.has('Login'), 'alias 展开应吸收 auth 模块的 Login')
 })
 
 // ── isExempt / EXEMPT_PREFIXES ──────────────────────────────────

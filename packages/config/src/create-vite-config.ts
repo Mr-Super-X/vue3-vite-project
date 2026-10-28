@@ -215,8 +215,13 @@ export function createViteConfig({
         dts: path.join(appRoot, 'src/types/components.d.ts'),
       }),
       // mock 启用开关由 VITE_USE_MOCK 控制（2026-07-27 切换）。
-      // dev 默认开启：用户 clone 后未建 .env 时，VITE_USE_MOCK=undefined，
-      // `!== 'false'` 判定为 true；联调真实后端在 .env.development 设 VITE_USE_MOCK=false。
+      // dev 默认开启：VITE_USE_MOCK=undefined 时 `!== 'false'` 判定为 true。
+      // ⚠️ 此处读 process.env（config 装配期）——vite 的 .env 文件只注入
+      // import.meta.env，不进 process.env：.env 里设 VITE_USE_MOCK=false 对本开关
+      // **无效**（2026-10-28 /autoplan R2-E7 口径修正，README §环境变量表同口径）。
+      // 联调真实后端必须经 shell env：`VITE_USE_MOCK=false pnpm -C apps/<a> dev`。
+      // （import.meta.env.VITE_USE_MOCK 的另一消费点是 prod-mock.ts 的 PROD 判定，
+      // 只读 prod 构建态——与 dev 中间件开关互不干扰。）
       // mockPath 为绝对路径（vite-plugin-mock 以 isAbsPath 判定，dist/index.mjs:224）
       ...(mockPath
         ? [

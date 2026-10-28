@@ -173,6 +173,13 @@ function proxyHttp(req: IncomingMessage, res: ServerResponse, target: GatewayTar
     res.writeHead(502, { 'Content-Type': 'text/plain; charset=utf-8' })
     res.end(`502 Bad Gateway（上游 ${target.host}:${target.port} 不可达：${err.message}）`)
   })
+  // 客户端中途断开（导航离开 / SSE 断连）→ 掐断上游请求停止泵数据
+  // （2026-10-28 /autoplan R2-E6：WS 侧已有双端互拆，HTTP 侧原先漏了）
+  // 监听 res 而非 req 的 close：req close 在 POST 请求流正常结束也会触发（误杀
+  // 上游转发回 502）；res close + !writableFinished 才严格等于「响应未完成的断开」
+  res.on('close', () => {
+    if (!res.writableFinished && !proxyReq.destroyed) proxyReq.destroy()
+  })
   req.pipe(proxyReq)
 }
 

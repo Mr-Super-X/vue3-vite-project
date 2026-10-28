@@ -6,6 +6,52 @@
 
 ## 未发布
 
+### 🔧 Fix | /autoplan Round 2 P3 批次：测试补强 + 口径统一 + 小修包（2026-10-28）
+
+#### R2-E5 redirect 对抗用例 + 注释实证修正
+
+- `redirect.spec.ts` 补 2 用例：前导空格协议相对（`  //evil.com`）与 tab-scheme
+  （`java\tscript:`）——两形态只有 origin 白名单层能拦，锁定「第二层独立承重」回归网。
+- `redirect.ts` 校验策略注释修正：`/\evil.com` 经 WHATWG 实测为同源 path（不跳出），
+  反斜杠排除定性为纵深防御（原注释「按协议相对 URL 解析跳出」陈述不准确）。
+
+#### R2-E6 五项小修包
+
+- `dev-gateway.ts`：`shutdown` 幂等守卫（killTree 重入致二次 close 抛
+  ERR_SERVER_NOT_RUNNING）+ `main()` 用法错误只打 message 不再整栈噪声；
+- `node-gateway.ts`：HTTP 侧补客户端断连掐断（`res.on('close')` + `!writableFinished`——
+  首版误用 `req.on('close')` 被 gateway spec 的 POST 用例当场抓获：req close 在请求流
+  正常结束也触发，误杀上游转发回 502。测试网价值实证）；
+- `versionCheck.ts`：install 补 teardown（`app.onUnmount` 停轮询 + 摘 3 监听器）；
+- `deploy.yml`：接线 `VITE_BUILD_ID: sha-run_attempt`（修 F6 未接线 + P3-13 同 commit
+  重跑同 buildId）；docs/44 §4 同步推荐写法。
+
+#### R2-E7 VITE_USE_MOCK 口径统一
+
+- `create-vite-config.ts` mock 段注释修正：dev 中间件开关读 `process.env`（config 装配期），
+  `.env` 对该键无效，联调真后端须 shell env 前置；docs/22 §mock 机制 + docs/33 §6/§7
+  同口径修正（三处「在 .env.development 设 VITE_USE_MOCK=false」错误指引）。
+- admin `.env.development` 的 `VITE_USE_MOCK=true` 死配置键登记人工项（权限拦截区）。
+
+#### R2-E8 check-routes alias 展开回归网
+
+- `check-routes.spec.ts` 补 2 用例：对真实仓库 portal/auth whitelist 文件做 alias 展开
+  行为断言（importRe + expandAlias 回归会让 A/D 校验静默失效且纯字面量 spec 全绿——
+  原「CLI 每日运行天然覆盖」论证不成立：全绿无法区分「真一致」与「解析退化为空集」）。
+
+#### R2-E9 门槛与边界声明
+
+- `pnpm-workspace.yaml` overrides 段补清单完整性门槛（新增 @vue/* 依赖须同步 overrides，
+  否则与钉住的 3.6.0-beta.17 家族静默混版）；
+- `package-contract.mjs` 头注补已知边界（变量动态 import 静默放行的取舍理由 +
+  `#` subpath imports 的误报预警）。
+
+#### 验证
+
+`pnpm test:check-scripts` 42 绿（+2）/ `pnpm test:eslint-rules` 29 绿 /
+versionCheck 29 + redirect 12 全绿 / `pnpm test:gateway` 16 绿 / lint 定向 10 文件 EXIT 0 /
+type-check turbo 全量 EXIT 0。
+
 ### 🔧 Fix | /autoplan Round 2 P2 批次：复审发现修复（2026-10-28）
 
 > 背景：Round 2 复审（修复质量验证 + 新问题排查，档案 `~/.gstack/projects/Mr-Super-X-vue3-vite-project/2026-10-28-monorepo-architecture-review-round2.md`）——

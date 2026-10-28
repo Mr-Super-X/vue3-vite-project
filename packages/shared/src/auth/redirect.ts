@@ -34,11 +34,14 @@ export function redirectToAuthLogin(redirect: string): never {
 
 /** auth 登录成功后回跳（校验同源，防开放重定向 CWE-601）。
  *
- * 校验策略（2026-10-28 /autoplan E2 修复，两道独立防线）：
- * 1. 显式拒绝协议相对（//host）与含反斜杠的 redirect——WHATWG URL 解析器会将 \ 归一化为 /，
- *    `/\evil.com` 会按协议相对 URL 解析跳出到外部域名（实证绕过，原仅排除 // 形态不够）；
- * 2. origin 白名单比对：new URL 按当前 origin 解析后二次确认同源——覆盖所有未预见的
- *    绝对/畸形形态，解析失败一律落 fallback。
+ * 校验策略（2026-10-28 /autoplan E2 修复 + Round 2 注释实证修正，两道独立防线）：
+ * 1. 显式拒绝协议相对（//host）与含反斜杠的 redirect——纵深防御：WHATWG 实测
+ *    `/\evil.com` 按当前 origin 解析为同源 path（不跳出），但反斜杠在部分解析器
+ *    /历史浏览器中行为不一，防线 1 提前拒绝此类畸形形态；
+ * 2. origin 白名单比对：new URL 按当前 origin 解析后二次确认同源——真正的承重墙：
+ *    前导空格协议相对（`  //evil.com`，空格被剥离后跳出）、tab-scheme
+ *    （`java\tscript:`，tab 被剥离后成 javascript: 协议）等畸形形态均由本层拦截，
+ *    解析失败一律落 fallback。
  *
  * fallback 由调用方显式传入（登录后默认落地页）——本包不硬编码 app 名/部署形态
  * （见文件头注），默认值曾因写死 '/admin/' 致 app 特性泄漏进纯库包（架构审查项）。 */

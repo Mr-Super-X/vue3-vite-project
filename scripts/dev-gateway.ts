@@ -68,7 +68,13 @@ function killTree(child: ChildProcess): void {
 }
 
 /** 任一 dev server 异常退出（strictPort 端口冲突 / 编译失败）→ 整组停止，避免半活状态 */
+// 幂等守卫（2026-10-28 /autoplan R2-E6）：子进程非零 exit 触发本函数 → killTree
+// 又致这些子进程 exit 事件重入——二次 gateway.close() 对已关闭 server 抛
+// ERR_SERVER_NOT_RUNNING（退出过程 uncaught exception）
+let shuttingDown = false
 function shutdown(reason: string): void {
+  if (shuttingDown) return
+  shuttingDown = true
   console.log(`\n🛑 ${reason}，正在停止网关与 ${children.length} 个 dev server…`)
   gateway?.close()
   for (const child of children) {
@@ -214,5 +220,10 @@ async function main(): Promise<void> {
 const invokedDirectly =
   process.argv[1] !== undefined && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)
 if (invokedDirectly) {
-  void main()
+  // 用法错误（未知 app 名等）只打 message 后退出码 1——void main() 原形态下
+  // 未捕获 rejection 会打印整栈噪声（2026-10-28 /autoplan R2-E6）
+  main().catch((err: unknown) => {
+    console.error(err instanceof Error ? `✖ ${err.message}` : err)
+    process.exit(1)
+  })
 }

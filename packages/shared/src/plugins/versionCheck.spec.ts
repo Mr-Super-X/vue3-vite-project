@@ -19,6 +19,9 @@ const makeFetch = (buildId: string, ok = true) =>
       }) as unknown as Response
   )
 
+/** 构造最小 mock App：install 的 teardown 挂 app.onUnmount（R2-E6），空对象会 TypeError */
+const makeApp = () => ({ onUnmount: vi.fn() }) as unknown as App
+
 describe('versionCheck — shouldEnable（dev 默认禁用 + prod 无回调不启动裁决）', () => {
   it('DEV=true 缺省不启用（HMR 即热更新）', () => {
     expect(shouldEnable(true, undefined)).toBe(false)
@@ -219,7 +222,7 @@ describe('versionCheck — install 装配', () => {
     const fetchImpl = makeFetch('v1')
     vi.stubGlobal('fetch', fetchImpl)
     // vitest 下 import.meta.env.DEV === true，等价于 dev 缺省路径
-    versionCheckPlugin.install({} as App, { path: '/admin/version.json', intervalMs: 1000 })
+    versionCheckPlugin.install(makeApp(), { path: '/admin/version.json', intervalMs: 1000 })
     await vi.advanceTimersByTimeAsync(60_000)
     expect(fetchImpl).not.toHaveBeenCalled()
     vi.unstubAllGlobals()
@@ -231,7 +234,7 @@ describe('versionCheck — install 装配', () => {
     const fetchImpl = makeFetch('v1')
     vi.stubGlobal('fetch', fetchImpl)
     const onUpdate = vi.fn()
-    versionCheckPlugin.install({} as App, {
+    versionCheckPlugin.install(makeApp(), {
       path: '/admin/version.json',
       intervalMs: 1000,
       enabled: true,
@@ -248,7 +251,7 @@ describe('versionCheck — install 装配', () => {
 
   it('chunk-error 兜底：ErrorEvent 匹配 4 形态之一时触发 onChunkError', () => {
     const onChunkError = vi.fn()
-    versionCheckPlugin.install({} as App, { enabled: true, onChunkError })
+    versionCheckPlugin.install(makeApp(), { enabled: true, onChunkError })
     window.dispatchEvent(
       new ErrorEvent('error', { message: 'ChunkLoadError: Loading chunk 9 failed' })
     )
@@ -258,14 +261,14 @@ describe('versionCheck — install 装配', () => {
 
   it('chunk-error 兜底：普通错误不误报', () => {
     const onChunkError = vi.fn()
-    versionCheckPlugin.install({} as App, { enabled: true, onChunkError })
+    versionCheckPlugin.install(makeApp(), { enabled: true, onChunkError })
     window.dispatchEvent(new ErrorEvent('error', { message: 'TypeError: unrelated' }))
     expect(onChunkError).not.toHaveBeenCalled()
   })
 
   it('unhandledrejection：reason 为 chunk 加载失败 Error 时触发', () => {
     const onChunkError = vi.fn()
-    versionCheckPlugin.install({} as App, { enabled: true, onChunkError })
+    versionCheckPlugin.install(makeApp(), { enabled: true, onChunkError })
     const err = new Error('Failed to fetch dynamically imported module: ./js/x.js')
     window.dispatchEvent(
       new PromiseRejectionEvent('unhandledrejection', { reason: err, promise: Promise.resolve() })
@@ -275,7 +278,7 @@ describe('versionCheck — install 装配', () => {
 
   it('onChunkError 缺省回落 onUpdate（source=chunk-error，id 为 null）', () => {
     const onUpdate = vi.fn()
-    versionCheckPlugin.install({} as App, { enabled: true, onUpdate })
+    versionCheckPlugin.install(makeApp(), { enabled: true, onUpdate })
     window.dispatchEvent(new ErrorEvent('error', { message: 'ChunkLoadError: failed' }))
     expect(onUpdate).toHaveBeenCalledTimes(1)
     expect(onUpdate).toHaveBeenCalledWith({

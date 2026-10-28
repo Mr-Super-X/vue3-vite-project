@@ -285,7 +285,7 @@ mock 插件不在各 app `vite.config.ts` 手写——由 `packages/config/src/c
 - `watchFiles: true` 让 mock 修改实时生效（无需重启 dev server）
 - dev 默认开启：clone 后未建 `.env.development` 时 `VITE_USE_MOCK=undefined` → `!== 'false'` 判定为 true，mock 自动启用
 - `mockPath` 必须是绝对路径（vite-plugin-mock 以 isAbsPath 判定，cwd 相对解析会静默空转）——工厂缺省已指向 `packages/mock/src`，各 app 无需覆写
-- 联调真后端：在 `.env.development` 设 `VITE_USE_MOCK=false` + `VITE_API_BASE_URL=<真实后端地址>`
+- 联调真后端：经 **shell env** 设 `VITE_USE_MOCK=false` + `VITE_API_BASE_URL=<真实后端地址>`（如 `VITE_USE_MOCK=false pnpm -C apps/admin dev`）——dev 中间件开关读 `process.env`（config 装配期），`.env` 文件对该键**无效**（2026-10-28 口径修正）
 
 ---
 

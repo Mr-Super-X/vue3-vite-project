@@ -79,6 +79,18 @@ describe('resolvePostLoginRedirect', () => {
     expect(resolvePostLoginRedirect('/admin/')).toBe('/admin/')
   })
 
+  // 以下两形态只有第二层（origin 白名单）能拦——防线 1（// 前缀 + 反斜杠排除）均不命中
+  // （2026-10-28 /autoplan R2-E5：若未来有人「简化」掉 origin 白名单，这两个用例变红）
+  it('前导空格协议相对（"  //evil.com"）→ fallback（空格被 WHATWG 剥离后跳出，仅 origin 层可拦）', () => {
+    fakeLocation.search = `?redirect=${encodeURIComponent('  //evil.com')}`
+    expect(resolvePostLoginRedirect('/admin/')).toBe('/admin/')
+  })
+
+  it('tab-scheme（"java\\tscript:"）→ fallback（tab 被剥离后成 javascript: 协议，origin=null）', () => {
+    fakeLocation.search = `?redirect=${encodeURIComponent('java\tscript:alert(1)')}`
+    expect(resolvePostLoginRedirect('/admin/')).toBe('/admin/')
+  })
+
   it('自定义 fallback 生效', () => {
     expect(resolvePostLoginRedirect('/portal/')).toBe('/portal/')
   })

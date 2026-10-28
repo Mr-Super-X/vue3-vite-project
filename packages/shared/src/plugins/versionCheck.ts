@@ -178,7 +178,7 @@ export default {
    *
    * @example 业务注入通知（ElNotification 等）经 main.ts 的 PluginsOptions.versionCheck 传入
    */
-  install(_app: App, options: VersionCheckOptions = {}): void {
+  install(app: App, options: VersionCheckOptions = {}): void {
     if (!shouldEnable(import.meta.env.DEV, options)) return
 
     const onUpdate = options.onUpdate ?? defaultOnUpdate
@@ -236,5 +236,14 @@ export default {
 
     poller.start()
     void poller.pollOnce()
+
+    // teardown（2026-10-28 /autoplan R2-E6）：app 卸载时停轮询 + 摘全部监听器——
+    // 共享基建应有卸载路径（SPA 单例下概率低，但 6 app 复用场景的语义完整性要求）
+    app.onUnmount(() => {
+      poller.stop()
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('error', onWindowError)
+      window.removeEventListener('unhandledrejection', onRejection)
+    })
   },
 }

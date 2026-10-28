@@ -293,7 +293,7 @@ enable: process.env.VITE_USE_MOCK !== 'false'
 | `pnpm build`     | 未设 → `remote`        | `vite-plugin-mock` 自身禁用 |
 | `pnpm preview`   | 未设 → `remote`        | `vite-plugin-mock` 自身禁用 |
 
-注意：**没有** `dev:no-mock` 之类的命令。要在 dev 时关闭 mock，必须手动在 `.env.development` 加 `VITE_USE_MOCK=false` + `VITE_API_BASE_URL=<真后端 URL>`（参见 `README.md:361`）。
+注意：**没有** `dev:no-mock` 之类的命令。要在 dev 时关闭 mock，必须经 **shell env**：`VITE_USE_MOCK=false VITE_API_BASE_URL=<真后端 URL> pnpm -C apps/<a> dev`（dev 中间件开关读 `process.env`，`.env` 文件对该键无效——2026-10-28 口径修正，详见 README §环境变量表）。
 
 ---
 
@@ -316,7 +316,7 @@ enable: process.env.VITE_USE_MOCK !== 'false'
 3. **验证 `.env` 优先级**：在 `.env.development` 写 `VITE_MENU_SOURCE=local`，跑 `pnpm dev`，应与 `pnpm dev:local` 行为一致
 4. **验证 fallback**：故意把 `VITE_API_BASE_URL` 指向不存在的后端，跑 `pnpm dev`，应看到 console.warn + 徽章"0 个 · fallback"，菜单仍可见（用 local）
 5. **验证 mock 拦截**：跑 `pnpm dev`，DevTools Network 面板应看到 `/api/auth/login`、`/api/menu` 等被 vite-plugin-mock 拦截（response 来源是 mock/*.ts）
-6. **验证 mock 关闭**：在 `.env.development` 写 `VITE_USE_MOCK=false` + `VITE_API_BASE_URL=<真后端>`，跑 `pnpm dev`，DevTools 应看到所有请求直连真后端
+6. **验证 mock 关闭**：shell env 前置 `VITE_USE_MOCK=false VITE_API_BASE_URL=<真后端>` 跑 `pnpm dev`，DevTools 应看到所有请求直连真后端（该开关读 `process.env`，写 `.env` 无效）
 
 ---
 

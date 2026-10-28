@@ -87,6 +87,9 @@ minimumReleaseAgeExclude:
 # 克隆不可复现。钉 3.6.0-beta.17 = 当前 lockfile 验证版本，零行为变更。
 # TODO( Mr.Mickey, 2027-01-31 前 )：vue 3.6 稳定线发布后整体回稳定版并删除 overrides
 # 全段 + peerDependencyRules.allowAny——升级批次须过 6 app build + e2e 冒烟。
+# ⚠️ 清单完整性门槛（2026-10-28 /autoplan R2-E9）：新增任何 @vue/* 依赖时必须同步
+# 在此补一行 overrides——未枚举的同族包会按自身 range 解析到 3.5.x 稳定线，
+# 与钉住的 3.6.0-beta.17 家族静默混版。
 overrides:
   'vue': '3.6.0-beta.17'
   '@vue/compiler-core': '3.6.0-beta.17'

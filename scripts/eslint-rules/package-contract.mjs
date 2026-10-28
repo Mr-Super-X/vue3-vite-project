@@ -12,6 +12,12 @@
  *    自引用（@vv/x 内部 import '@vv/x/...'）合法
  * 3. 相对路径 / node builtins / virtual:* / 项目既定别名不是 npm 包，跳过
  *
+ * 已知边界（2026-10-28 /autoplan R2-E9，刻意取舍）：
+ * - 仅查字面量说明符：变量动态 import（`import(name)`）无法静态解析包名，
+ *   静默放行（spec 已固化为合法）——覆盖率换零误报；
+ * - `#` 前缀的 Node subpath imports 当前会被当包名误报 undeclared——本仓未启用
+ *   package.json imports 字段，启用时需先在包名解析处排除 `#` 前缀。
+ *
  * 为什么不引新依赖：规则只需「说明符 → 包名 → 读所属包 manifest」三步，Node 内置足够。
  */
 import { readFileSync } from 'node:fs'
