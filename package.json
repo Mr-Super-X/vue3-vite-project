@@ -25,6 +25,7 @@
     "check:doc-currency": "node --experimental-strip-types scripts/check-doc-currency.ts",
     "check:mock-wiring": "node --experimental-strip-types scripts/check-mock-wiring.ts",
     "new-module": "node --experimental-strip-types scripts/new-module.ts",
+    "new-app": "node --experimental-strip-types scripts/new-app.ts",
     "remove-module": "node --experimental-strip-types scripts/remove-module.ts",
     "analyze": "cross-env ANALYZE=true pnpm -C apps/admin build-only",
     "build:pages": "node --experimental-strip-types scripts/build-pages.ts",
