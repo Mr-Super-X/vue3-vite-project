@@ -126,7 +126,7 @@ export default withVueTs(
   // @vv/* 方向铁律（mock → shared、ui → shared）机械检查，防包间反向依赖漂移
   {
     name: 'app/package-contract',
-    files: ['packages/**/*.{ts,mts,tsx,vue}'],
+    files: ['packages/**/*.{ts,mts,tsx,vue}', 'apps/**/*.{ts,mts,tsx,vue}'],
     plugins: { local: { rules: { 'package-contract': packageContract } } },
     rules: { 'local/package-contract': 'error' },
   },

@@ -338,6 +338,9 @@ catalogs:
     unplugin-vue-components:
       specifier: ^32.1.0
       version: 32.1.0
+    vant:
+      specifier: ^4.10.2
+      version: 4.10.2
     vite:
       specifier: ^8.0.16
       version: 8.1.5
@@ -607,6 +610,9 @@ importers:
 
   apps/admin:
     dependencies:
+      '@element-plus/icons-vue':
+        specifier: 'catalog:'
+        version: 2.3.2(vue@3.6.0-beta.17(typescript@6.0.3))
       '@vv/mock':
         specifier: workspace:*
         version: link:../../packages/mock
@@ -616,22 +622,52 @@ importers:
       '@vv/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      element-plus:
+        specifier: 'catalog:'
+        version: 2.14.3(vue@3.6.0-beta.17(typescript@6.0.3))
+      pinia:
+        specifier: 'catalog:'
+        version: 3.0.4(typescript@6.0.3)(vue@3.6.0-beta.17(typescript@6.0.3))
+      vue:
+        specifier: 3.6.0-beta.17
+        version: 3.6.0-beta.17(typescript@6.0.3)
+      vue-i18n:
+        specifier: 'catalog:'
+        version: 11.4.6(vue@3.6.0-beta.17(typescript@6.0.3))
+      vue-router:
+        specifier: 'catalog:'
+        version: 5.2.0(@vue/compiler-sfc@3.6.0-beta.17)(esbuild@0.28.1)(pinia@3.0.4(typescript@6.0.3)(vue@3.6.0-beta.17(typescript@6.0.3)))(rolldown@1.1.5)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))(vue@3.6.0-beta.17(typescript@6.0.3))
+      zod:
+        specifier: 'catalog:'
+        version: 4.4.3
     devDependencies:
       '@vue/test-utils':
-        specifier: ^2.4.11
+        specifier: 'catalog:'
         version: 2.4.11(@vue/compiler-dom@3.6.0-beta.17)(@vue/server-renderer@3.6.0-beta.17(vue@3.6.0-beta.17(typescript@6.0.3)))(vue@3.6.0-beta.17(typescript@6.0.3))
       '@vv/config':
         specifier: workspace:*
         version: link:../../packages/config
       jsdom:
-        specifier: ^29.1.1
+        specifier: 'catalog:'
         version: 29.1.1
+      rollup-plugin-visualizer:
+        specifier: 'catalog:'
+        version: 7.0.1(rolldown@1.1.5)
+      unocss:
+        specifier: 'catalog:'
+        version: 66.7.5(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))
+      vite-plugin-vue-devtools:
+        specifier: 'catalog:'
+        version: 8.1.5(supports-color@7.2.0)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))(vue@3.6.0-beta.17(typescript@6.0.3))
       vitest:
-        specifier: ^4.1.9
+        specifier: 'catalog:'
         version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(@vitest/ui@4.1.12)(jsdom@29.1.1)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))
 
   apps/auth:
     dependencies:
+      '@element-plus/icons-vue':
+        specifier: 'catalog:'
+        version: 2.3.2(vue@3.6.0-beta.17(typescript@6.0.3))
       '@vv/mock':
         specifier: workspace:*
         version: link:../../packages/mock
@@ -641,18 +677,36 @@ importers:
       '@vv/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      element-plus:
+        specifier: 'catalog:'
+        version: 2.14.3(vue@3.6.0-beta.17(typescript@6.0.3))
+      pinia:
+        specifier: 'catalog:'
+        version: 3.0.4(typescript@6.0.3)(vue@3.6.0-beta.17(typescript@6.0.3))
+      vue:
+        specifier: 3.6.0-beta.17
+        version: 3.6.0-beta.17(typescript@6.0.3)
+      vue-i18n:
+        specifier: 'catalog:'
+        version: 11.4.6(vue@3.6.0-beta.17(typescript@6.0.3))
+      vue-router:
+        specifier: 'catalog:'
+        version: 5.2.0(@vue/compiler-sfc@3.6.0-beta.17)(esbuild@0.28.1)(pinia@3.0.4(typescript@6.0.3)(vue@3.6.0-beta.17(typescript@6.0.3)))(rolldown@1.1.5)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))(vue@3.6.0-beta.17(typescript@6.0.3))
     devDependencies:
       '@vue/test-utils':
-        specifier: ^2.4.11
+        specifier: 'catalog:'
         version: 2.4.11(@vue/compiler-dom@3.6.0-beta.17)(@vue/server-renderer@3.6.0-beta.17(vue@3.6.0-beta.17(typescript@6.0.3)))(vue@3.6.0-beta.17(typescript@6.0.3))
       '@vv/config':
         specifier: workspace:*
         version: link:../../packages/config
       jsdom:
-        specifier: ^29.1.1
+        specifier: 'catalog:'
         version: 29.1.1
+      unocss:
+        specifier: 'catalog:'
+        version: 66.7.5(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))
       vitest:
-        specifier: ^4.1.9
+        specifier: 'catalog:'
         version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(@vitest/ui@4.1.12)(jsdom@29.1.1)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))
 
   apps/big:
@@ -666,22 +720,40 @@ importers:
       '@vv/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      echarts:
+        specifier: 'catalog:'
+        version: 6.1.0
+      pinia:
+        specifier: 'catalog:'
+        version: 3.0.4(typescript@6.0.3)(vue@3.6.0-beta.17(typescript@6.0.3))
+      vue:
+        specifier: 3.6.0-beta.17
+        version: 3.6.0-beta.17(typescript@6.0.3)
+      vue-router:
+        specifier: 'catalog:'
+        version: 5.2.0(@vue/compiler-sfc@3.6.0-beta.17)(esbuild@0.28.1)(pinia@3.0.4(typescript@6.0.3)(vue@3.6.0-beta.17(typescript@6.0.3)))(rolldown@1.1.5)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))(vue@3.6.0-beta.17(typescript@6.0.3))
     devDependencies:
       '@vue/test-utils':
-        specifier: ^2.4.11
+        specifier: 'catalog:'
         version: 2.4.11(@vue/compiler-dom@3.6.0-beta.17)(@vue/server-renderer@3.6.0-beta.17(vue@3.6.0-beta.17(typescript@6.0.3)))(vue@3.6.0-beta.17(typescript@6.0.3))
       '@vv/config':
         specifier: workspace:*
         version: link:../../packages/config
       jsdom:
-        specifier: ^29.1.1
+        specifier: 'catalog:'
         version: 29.1.1
+      unocss:
+        specifier: 'catalog:'
+        version: 66.7.5(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))
       vitest:
-        specifier: ^4.1.9
+        specifier: 'catalog:'
         version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(@vitest/ui@4.1.12)(jsdom@29.1.1)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))
 
   apps/docs:
     dependencies:
+      '@element-plus/icons-vue':
+        specifier: 'catalog:'
+        version: 2.3.2(vue@3.6.0-beta.17(typescript@6.0.3))
       '@vv/mock':
         specifier: workspace:*
         version: link:../../packages/mock
@@ -691,18 +763,54 @@ importers:
       '@vv/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      dayjs:
+        specifier: 'catalog:'
+        version: 1.11.21
+      dompurify:
+        specifier: 'catalog:'
+        version: 3.4.15
+      echarts:
+        specifier: 'catalog:'
+        version: 6.1.0
+      element-plus:
+        specifier: 'catalog:'
+        version: 2.14.3(vue@3.6.0-beta.17(typescript@6.0.3))
+      highlight.js:
+        specifier: 'catalog:'
+        version: 11.11.1
+      lodash-es:
+        specifier: 'catalog:'
+        version: 4.18.1
+      pinia:
+        specifier: 'catalog:'
+        version: 3.0.4(typescript@6.0.3)(vue@3.6.0-beta.17(typescript@6.0.3))
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vue:
+        specifier: 3.6.0-beta.17
+        version: 3.6.0-beta.17(typescript@6.0.3)
+      vue-router:
+        specifier: 'catalog:'
+        version: 5.2.0(@vue/compiler-sfc@3.6.0-beta.17)(esbuild@0.28.1)(pinia@3.0.4(typescript@6.0.3)(vue@3.6.0-beta.17(typescript@6.0.3)))(rolldown@1.1.5)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))(vue@3.6.0-beta.17(typescript@6.0.3))
+      zod:
+        specifier: 'catalog:'
+        version: 4.4.3
     devDependencies:
       '@vue/test-utils':
-        specifier: ^2.4.11
+        specifier: 'catalog:'
         version: 2.4.11(@vue/compiler-dom@3.6.0-beta.17)(@vue/server-renderer@3.6.0-beta.17(vue@3.6.0-beta.17(typescript@6.0.3)))(vue@3.6.0-beta.17(typescript@6.0.3))
       '@vv/config':
         specifier: workspace:*
         version: link:../../packages/config
       jsdom:
-        specifier: ^29.1.1
+        specifier: 'catalog:'
         version: 29.1.1
+      unocss:
+        specifier: 'catalog:'
+        version: 66.7.5(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))
       vitest:
-        specifier: ^4.1.9
+        specifier: 'catalog:'
         version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(@vitest/ui@4.1.12)(jsdom@29.1.1)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))
 
   apps/h5:
@@ -716,28 +824,43 @@ importers:
       '@vv/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      pinia:
+        specifier: 'catalog:'
+        version: 3.0.4(typescript@6.0.3)(vue@3.6.0-beta.17(typescript@6.0.3))
       vant:
-        specifier: ^4.10.2
+        specifier: 'catalog:'
         version: 4.10.2(vue@3.6.0-beta.17(typescript@6.0.3))
+      vue:
+        specifier: 3.6.0-beta.17
+        version: 3.6.0-beta.17(typescript@6.0.3)
+      vue-router:
+        specifier: 'catalog:'
+        version: 5.2.0(@vue/compiler-sfc@3.6.0-beta.17)(esbuild@0.28.1)(pinia@3.0.4(typescript@6.0.3)(vue@3.6.0-beta.17(typescript@6.0.3)))(rolldown@1.1.5)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))(vue@3.6.0-beta.17(typescript@6.0.3))
     devDependencies:
       '@vue/test-utils':
-        specifier: ^2.4.11
+        specifier: 'catalog:'
         version: 2.4.11(@vue/compiler-dom@3.6.0-beta.17)(@vue/server-renderer@3.6.0-beta.17(vue@3.6.0-beta.17(typescript@6.0.3)))(vue@3.6.0-beta.17(typescript@6.0.3))
       '@vv/config':
         specifier: workspace:*
         version: link:../../packages/config
       jsdom:
-        specifier: ^29.1.1
+        specifier: 'catalog:'
         version: 29.1.1
+      unocss:
+        specifier: 'catalog:'
+        version: 66.7.5(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))
       unplugin-vue-components:
-        specifier: 32.1.0
+        specifier: 'catalog:'
         version: 32.1.0(esbuild@0.28.1)(rolldown@1.1.5)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))(vue@3.6.0-beta.17(typescript@6.0.3))
       vitest:
-        specifier: ^4.1.9
+        specifier: 'catalog:'
         version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(@vitest/ui@4.1.12)(jsdom@29.1.1)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))
 
   apps/portal:
     dependencies:
+      '@element-plus/icons-vue':
+        specifier: 'catalog:'
+        version: 2.3.2(vue@3.6.0-beta.17(typescript@6.0.3))
       '@vv/mock':
         specifier: workspace:*
         version: link:../../packages/mock
@@ -747,18 +870,36 @@ importers:
       '@vv/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      element-plus:
+        specifier: 'catalog:'
+        version: 2.14.3(vue@3.6.0-beta.17(typescript@6.0.3))
+      pinia:
+        specifier: 'catalog:'
+        version: 3.0.4(typescript@6.0.3)(vue@3.6.0-beta.17(typescript@6.0.3))
+      vue:
+        specifier: 3.6.0-beta.17
+        version: 3.6.0-beta.17(typescript@6.0.3)
+      vue-i18n:
+        specifier: 'catalog:'
+        version: 11.4.6(vue@3.6.0-beta.17(typescript@6.0.3))
+      vue-router:
+        specifier: 'catalog:'
+        version: 5.2.0(@vue/compiler-sfc@3.6.0-beta.17)(esbuild@0.28.1)(pinia@3.0.4(typescript@6.0.3)(vue@3.6.0-beta.17(typescript@6.0.3)))(rolldown@1.1.5)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))(vue@3.6.0-beta.17(typescript@6.0.3))
     devDependencies:
       '@vue/test-utils':
-        specifier: ^2.4.11
+        specifier: 'catalog:'
         version: 2.4.11(@vue/compiler-dom@3.6.0-beta.17)(@vue/server-renderer@3.6.0-beta.17(vue@3.6.0-beta.17(typescript@6.0.3)))(vue@3.6.0-beta.17(typescript@6.0.3))
       '@vv/config':
         specifier: workspace:*
         version: link:../../packages/config
       jsdom:
-        specifier: ^29.1.1
+        specifier: 'catalog:'
         version: 29.1.1
+      unocss:
+        specifier: 'catalog:'
+        version: 66.7.5(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))
       vitest:
-        specifier: ^4.1.9
+        specifier: 'catalog:'
         version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(@vitest/ui@4.1.12)(jsdom@29.1.1)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))
 
   packages/config:
