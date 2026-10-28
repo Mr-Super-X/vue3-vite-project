@@ -107,14 +107,24 @@ function parseArgs(argv: string[]): {
   const positional = rest.filter((a) => !a.startsWith('--'))
   const flags = new Set(rest.filter((a) => a.startsWith('--')))
   const name = positional[0]
-  if (!name) {
-    console.error(
-      '✖ 用法: pnpm new-module <kebab-case-name> [--app <app-name>] [--with-mock] [--with-store] [--with-i18n] [--with-request]'
-    )
-    console.error(
-      '  示例: pnpm new-module orders --app admin --with-mock --with-i18n --with-request'
-    )
-    process.exit(1)
+  // --help / -h / 无参：完整用法输出（/autoplan D8：原仅一行用法；help 本身是无害探索，exit 0）
+  if (flags.has('--help') || flags.has('-h') || !name) {
+    console.log(`用法: pnpm new-module <kebab-case-name> [选项]
+
+生成业务模块骨架（默认 apps/admin/src/modules/<name>/，6 个产物文件）。
+
+选项:
+  --app <app-name>    目标应用（默认 admin，须已存在 apps/<app>/src/modules）
+  --with-mock         生成 mock 数据文件（apis/mock.ts）
+  --with-store        生成模块私有 store
+  --with-i18n         生成 locales 词条
+  --with-request      生成 useRequest 三态示例
+  -h, --help          输出本帮助
+
+示例:
+  pnpm new-module orders
+  pnpm new-module user-profile --app portal --with-mock --with-i18n --with-request`)
+    process.exit(flags.has('--help') || flags.has('-h') ? 0 : 1)
   }
   if (!/^[a-z][a-z0-9-]*$/.test(name)) {
     console.error(`✖ 模块名必须是 kebab-case：以小写字母开头，仅含小写字母/数字/短横线`)

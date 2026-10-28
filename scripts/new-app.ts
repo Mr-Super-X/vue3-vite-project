@@ -179,11 +179,38 @@ function printNextSteps(name: string, port: number): void {
 
 // ─── 入口 ─────────────────────────────────────────────────────────
 
+/** 完整用法输出（/autoplan D8：原无参仅一行用法；--help / 无参均输出本帮助） */
+function printUsage(): void {
+  console.log(`用法: pnpm new-app <kebab-name>
+
+一键生成可 dev/build/test 的最小公开应用（公开 Home + 站内 404）。
+
+参数:
+  <kebab-name>        应用名（kebab-case，必须等于未来目录名）
+
+行为:
+  - 预检（名称合法 / 目录不存在 / 端口 = 现有 manifest 最大 port + 1 自动分配，
+    跳过网关 8080）全过才写盘
+  - 注册表 / 网关路由 / check-routes / eslint 边界经 discoverAppManifests 自动派生，
+    零手改注册
+
+示例:
+  pnpm new-app ops-center
+  pnpm install            # 锁 workspace 链接
+  pnpm -C apps/ops-center dev
+  pnpm check:routes       # manifest 完整性自动覆盖新 app
+
+详见 docs/43 §4 新增应用流程`)
+}
+
 function main(): void {
   const name = process.argv[2]
+  if (name === '--help' || name === '-h') {
+    printUsage()
+    process.exit(0)
+  }
   if (!name) {
-    console.error('✖ 用法: pnpm new-app <kebab-name>')
-    console.error('  示例: pnpm new-app ops-center')
+    printUsage()
     process.exit(1)
   }
   try {
