@@ -1,8 +1,12 @@
 # vue3-vite-project · 四栖工程模板
 
+[![CI](https://github.com/Mr-Super-X/vue3-vite-project/actions/workflows/ci.yml/badge.svg)](https://github.com/Mr-Super-X/vue3-vite-project/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) [![demo](https://img.shields.io/badge/demo-GitHub_Pages-brightgreen)](https://mr-super-x.github.io/vue3-vite-project/)
+
 **简体中文** | [English](./README.en.md)
 
 对内中后台 + 对外门户 + H5 移动端 + 数据大屏，一套代码四种面板。Feature-Sliced 风格，模块独立开发，不依赖后端即可联调。
+
+> 📌 **仓库定位**（2026-10-28 裁决，[docs/45](docs/45-仓库定位声明.md)）：单人维护的 opinionated 工程底座——**代码公开供参考、demo 在线可玩，不承诺模板级支持**（无 npm 包发布 / 无社区运营）。欢迎 fork 与借鉴，issue 可提但响应不保证。
 
 > 🆕 **新同事请先看 [docs/10-新手指引.md](docs/10-新手指引.md)** —— 30 分钟 5 任务，带你从 clone 到加新模块。
 >
