@@ -10,7 +10,7 @@
  */
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { createServer, type Server } from 'node:http'
+import { createServer, request, type IncomingMessage, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { test } from 'node:test'
 
@@ -118,6 +118,22 @@ test('GET / 302 到 rootRedirect，Location 保留 Host 端口', async () => {
   const res = await fetch(`http://127.0.0.1:${port}/`, { redirect: 'manual' })
   assert.equal(res.status, 302)
   assert.equal(res.headers.get('location'), `http://127.0.0.1:${port}/fake/`)
+  gateway.close()
+})
+
+test('GET / 302：伪造 Host（非 loopback）回落 localhost:8080——Host 头注入面无反射（/autoplan E11）', async () => {
+  const gateway = createGatewayServer(fakeGatewayOptions(1))
+  const port = await listen(gateway)
+  // 注意：node 内置 fetch（undici）会强制覆写 Host 头，伪造 Host 必须用 node:http request
+  const res = await new Promise<IncomingMessage>((resolve) => {
+    const req = request(
+      { host: '127.0.0.1', port, path: '/', headers: { host: 'evil.example.com' } },
+      resolve
+    )
+    req.end()
+  })
+  assert.equal(res.statusCode, 302)
+  assert.equal(res.headers.location, 'http://localhost:8080/fake/')
   gateway.close()
 })
 

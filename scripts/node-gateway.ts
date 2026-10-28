@@ -57,6 +57,9 @@ export interface GatewayOptions {
   routes: GatewayRoute[]
 }
 
+/** node 网关监听端口（根 302 的 Host 白名单外回落地址用） */
+const GATEWAY_PORT = 8080
+
 /**
  * 从 app 注册表派生网关路由表：每 app 一条 /<name>/ 前缀路由 + /api/ 特殊路由。
  *
@@ -102,9 +105,18 @@ export function createGatewayServer(options: GatewayOptions): Server {
   const server = createServer((req, res) => {
     const pathname = new URL(req.url ?? '/', 'http://localhost').pathname
 
-    // 根路径 302：Location 用原始 Host 头（含端口，对齐 nginx $http_host 防丢端口坑）
+    // 根路径 302：Location 的 Host 白名单限定 loopback（2026-10-28 /autoplan E11）——
+    // 原样反射 Host 头可被伪造（缓存投毒/钓鱼反射形态），但保留「防丢端口」原设计意图
+    // （localhost/127.0.0.1/[::1] 原样用，对齐 nginx $http_host 语义）；其余一律回落
+    // localhost:GATEWAY_PORT，伪造 Host 无注入面。局域网 IP 访问根路径会回落 localhost——
+    // 手机调试等场景请直接访问具体前缀（如 /admin/，不经根 302）
     if (req.method === 'GET' && pathname === '/') {
-      res.writeHead(302, { Location: `http://${req.headers.host ?? 'localhost'}${rootRedirect}` })
+      const host = req.headers.host
+      const safeHost =
+        host && /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host)
+          ? host
+          : `localhost:${GATEWAY_PORT}`
+      res.writeHead(302, { Location: `http://${safeHost}${rootRedirect}` })
       res.end()
       return
     }

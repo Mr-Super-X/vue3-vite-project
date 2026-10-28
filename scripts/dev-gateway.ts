@@ -38,6 +38,7 @@
  */
 
 import { spawn, type ChildProcess } from 'node:child_process'
+import { realpathSync } from 'node:fs'
 import type { Server } from 'node:http'
 import { createConnection } from 'node:net'
 import process from 'node:process'
@@ -142,6 +143,9 @@ export function resolveAppSubset(argv: string[]): typeof APPS {
 
 /** 根 302 目标动态判定：子集含 portal 跳 /portal/，否则跳子集第一个（未起 portal 时避免根 502） */
 export function resolveRootRedirect(subset: typeof APPS): string {
+  // 空子集防御（2026-10-28 /autoplan E8）：当前调用链（resolveAppSubset 对未知名抛错、
+  // 至少返回一个已知 app）不会传入空数组——防御未来新调用方传入空集致 subset[0] undefined
+  if (subset.length === 0) throw new Error('resolveRootRedirect：空子集无根 302 目标')
   return subset.some((a) => a.name === 'portal') ? '/portal/' : `/${subset[0].name}/`
 }
 
@@ -204,10 +208,11 @@ async function main(): Promise<void> {
   process.on('SIGTERM', () => shutdown('收到 SIGTERM'))
 }
 
-// 测试环境守卫：spec 用例只消费 resolveAppSubset/resolveRootRedirect 纯函数，
-// 不触发 main() 自执行（否则监听 8080 撞 EADDRINUSE）。node:test runner 进程内
-// process.argv[1] 指向 spec 文件名（普通运行时是 undefined/脚本路径），据此判定
-const isTestRun = process.argv[1]?.endsWith('.spec.ts') === true
-if (!isTestRun) {
+// CLI 守卫：与 check-* 脚本同一模式——被 import（spec / 工具链）时不触发 main()
+// （main 会监听 8080，误执行撞 EADDRINUSE；2026-10-28 E8 由 isTestRun 反模式统一为本模式，
+// 顺带移除原注释中「spec 用例只消费纯函数」的 stale 陈述——当时并无 spec 文件）
+const invokedDirectly =
+  process.argv[1] !== undefined && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)
+if (invokedDirectly) {
   void main()
 }

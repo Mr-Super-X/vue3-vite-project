@@ -5,6 +5,8 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { LoginResult, UserProfile } from '@vv/shared'
 // readBody 自本文件抽取到 _utils（2026-10-26 stream mock 接入，与 auth 同款手动解析语义共享）
 import { readBody } from './_utils'
+// 演示账号单源（/autoplan E12）：dev/prod 两形态口令自此同点修改，不再人肉双写
+import { MOCK_PASSWORD, MOCK_USERNAME } from './credentials'
 
 // httpOnly cookie 模拟（2026-08-12 改造）：
 // 凭证由"后端"（本 mock）通过 Set-Cookie: HttpOnly 下发，前端 JS 不可读，
@@ -54,7 +56,7 @@ export default [
     rawResponse: async (req: IncomingMessage, res: ServerResponse) => {
       const body = await readBody(req)
       withDelay(() => {
-        if (body.username === 'admin' && body.password === '123456') {
+        if (body.username === MOCK_USERNAME && body.password === MOCK_PASSWORD) {
           // 登录成功：凭证走 Set-Cookie（HttpOnly），响应体不再携带 token
           setTokenCookie(res, `mock-jwt-${Date.now()}`)
           sendJson(res, {

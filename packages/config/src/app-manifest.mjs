@@ -37,6 +37,10 @@ function validate(appDir, raw) {
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
     fail(appDir, `port 须为 1-65535 整数，当前 ${JSON.stringify(port)}`)
   }
+  // 2026-10-28 /autoplan E9：上方契约注释承诺「不与网关 8080 冲突」但实现缺失——
+  // 补齐特判（8080 是 node 网关占用端口，manifest 撞口要到 dev:gateway 启动时才
+  // EADDRINUSE，报错指向网络层排查成本高；fail fast 在源头）
+  if (port === 8080) fail(appDir, 'port 不得为 8080（node 网关占用端口）')
   if (
     !Array.isArray(requiredRoutes) ||
     requiredRoutes.length === 0 ||

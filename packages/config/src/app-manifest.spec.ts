@@ -57,6 +57,10 @@ describe('readAppManifest', () => {
     writeManifest('x', { name: 'x', port: '5174', requiredRoutes: ['NotFound'] })
     expect(() => readAppManifest(join(dir, 'x'))).toThrow(/port/)
   })
+  it('port 为 8080（node 网关占用端口）报错——契约注释承诺的实现补齐（/autoplan E9）', () => {
+    writeManifest('x', { name: 'x', port: 8080, requiredRoutes: ['NotFound'] })
+    expect(() => readAppManifest(join(dir, 'x'))).toThrow(/8080/)
+  })
 })
 
 describe('discoverAppManifests', () => {

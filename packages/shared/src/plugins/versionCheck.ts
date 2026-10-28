@@ -118,8 +118,12 @@ export function createVersionPoller(opts: PollerOptions): VersionPoller {
 
   async function pollOnce(): Promise<void> {
     try {
+      // AbortSignal.timeout（2026-10-28 /autoplan E10）：fetch 无超时——version.json
+      // 服务挂起（非拒绝）时每轮累积一个挂起连接，占满同源连接槽后业务请求被排队。
+      // 10s 远超静态文件合理响应时长，超时即本次跳过等下一轮
       const res = await opts.fetchImpl(`${opts.path}?_t=${Date.now()}`, {
         cache: 'no-store',
+        signal: AbortSignal.timeout(10_000),
       })
       if (!res.ok) return
       const buildId = parseVersionPayload(await res.text())

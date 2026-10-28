@@ -18,8 +18,9 @@
  * client 侧 createProdMockServer 只消费 response 函数（client.mjs 解构 4 字段，rawResponse 被
  * 静默忽略）——更深层原因是 rawResponse 模拟的 Set-Cookie HttpOnly 凭证流依赖真实网络栈，
  * mockjs 伪造响应写不进 cookie 也校验不了。故本文件内联 prod 版 auth（response 形态，无 cookie
- * 语义），供 VITE_DEMO_NO_AUTH 演示模式（守卫跳过登录校验但仍拉 profile）消费；
- * 权限码字面量与 mock/auth.ts MOCK_PERMISSIONS 保持同步（两处无运行时共享，手工对齐）。
+ * 语义），供 VITE_DEMO_NO_AUTH 演示模式（守卫跳过登录校验但仍拉 profile）消费。
+ * 演示账号（admin/123456）单源在 ./credentials（E12，两形态 import 消费）；权限码字面量
+ * 与 mock/auth.ts MOCK_PERMISSIONS 保持同步（两处无运行时共享，由 check:mock-wiring 机械守护）。
  * 拦截窗口时序问题已根治：main.ts 阻塞式挂接（createApp 后、app.use(router) 前
  * await setupProdMockServer——router install 即触发初始导航，挂接晚于 use 则守卫请求穿透）。
  * @trigger 新增 mock 路由模块时须同步登记本文件与 src/index.ts（dev 聚合入口），两处清单不许分叉
@@ -30,6 +31,8 @@ import type { MockMethod } from 'vite-plugin-mock'
 import { createProdMockServer } from 'vite-plugin-mock/client'
 
 import { DICT_DATA } from './dict-data'
+// 演示账号单源（/autoplan E12）：口令自此与 dev 形态（auth.ts）同点修改
+import { MOCK_PASSWORD, MOCK_USERNAME } from './credentials'
 import menu from './menu'
 import user from './user'
 
@@ -42,7 +45,7 @@ const prodAuthMocks: MockMethod[] = [
     url: '/mock/auth/login',
     method: 'post',
     response: ({ body }: { body: { username?: string; password?: string } }) =>
-      body.username === 'admin' && body.password === '123456'
+      body.username === MOCK_USERNAME && body.password === MOCK_PASSWORD
         ? { code: 200, message: 'ok', data: { profile: { id: 1, name: 'Admin' } } }
         : { code: 401, message: '账号或密码错误', data: null },
   },
