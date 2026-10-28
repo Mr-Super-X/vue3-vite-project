@@ -27,6 +27,7 @@
     "@vue/test-utils": "catalog:",
     "@vv/config": "workspace:*",
     "jsdom": "catalog:",
+    "unocss": "catalog:",
     "unplugin-vue-components": "catalog:",
     "vitest": "catalog:"
   }

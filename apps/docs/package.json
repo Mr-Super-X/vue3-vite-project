@@ -15,10 +15,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@element-plus/icons-vue": "catalog:",
     "@vv/mock": "workspace:*",
     "@vv/shared": "workspace:*",
     "@vv/ui": "workspace:*",
-    "@element-plus/icons-vue": "catalog:",
     "dayjs": "catalog:",
     "dompurify": "catalog:",
     "echarts": "catalog:",
@@ -26,14 +26,16 @@
     "highlight.js": "catalog:",
     "lodash-es": "catalog:",
     "pinia": "catalog:",
+    "typescript": "catalog:",
     "vue": "catalog:",
     "vue-router": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@vue/test-utils": "catalog:",
+    "@vv/config": "workspace:*",
     "jsdom": "catalog:",
-    "vitest": "catalog:",
-    "@vv/config": "workspace:*"
+    "unocss": "catalog:",
+    "vitest": "catalog:"
   }
 }

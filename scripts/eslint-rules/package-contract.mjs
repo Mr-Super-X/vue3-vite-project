@@ -48,14 +48,14 @@ const ALIAS_PREFIXES = [
 
 /** spec / 测试 / bench / 声明 / 配置 / test-utils 目录：测试与基准基建，允许消费 devDependencies */
 const DEV_OK_PATTERN =
-  /\.(spec|test|bench)\.[cm]?[jt]sx?$|\.d\.[cm]?ts$|(?:vite|vitest)\.config\.[cm]?[jt]s$|[/\\]test-utils[/\\]/
+  /\.(spec|test|bench)\.[cm]?[jt]sx?$|\.d\.[cm]?ts$|(?:vite|vitest|uno)\.config\.[cm]?[jt]s$|[/\\]test-utils[/\\]/
 
 /**
  * 构建装配配置（vite|vitest.config）：跑在 Node 工具链、不进浏览器产物——
  * 豁免 @vv/* 方向检查（vitest.config 消费 @vv/config 工厂是既定合法形态），
  * 但仍走声明检查。spec/test 文件不豁免（测试里的反向 import 同样腐蚀方向）。
  */
-const CONFIG_FILE_PATTERN = /(?:^|[/\\])(?:vite|vitest)\.config\.[cm]?[jt]s$/
+const CONFIG_FILE_PATTERN = /(?:^|[/\\])(?:vite|vitest|uno)\.config\.[cm]?[jt]s$/
 
 const manifestCache = new Map()
 
@@ -106,7 +106,7 @@ export default {
     schema: [],
     messages: {
       undeclared:
-        "包 '{{pkgName}}' 未声明：packages/{{dirName}}/package.json 的 dependencies / peerDependencies{{devHint}} 中均不存在",
+        "{{host}}/{{dirName}} 的 '{{pkgName}}' 未声明：dependencies / peerDependencies{{devHint}} 中均不存在",
       forbiddenDirection:
         "packages/{{dirName}} 禁止依赖 '{{pkgName}}'（@vv/* 方向铁律：mock → shared、ui → shared，其余组合禁止）",
       unknownVvPackage: "'{{pkgName}}' 不在 @vv/* 方向表（VV_DIRECTION）——新增包须先在本规则登记方向",
@@ -142,7 +142,7 @@ export default {
         context.report({
           node,
           messageId: 'undeclared',
-          data: { pkgName, dirName: pkg.dirName, devHint: allowDev ? ' / devDependencies' : '' },
+          data: { pkgName, dirName: pkg.dirName, host: pkg.host, devHint: allowDev ? ' / devDependencies' : '' },
         })
       }
     }

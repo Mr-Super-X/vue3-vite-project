@@ -25,8 +25,9 @@
   },
   "devDependencies": {
     "@vue/test-utils": "catalog:",
+    "@vv/config": "workspace:*",
     "jsdom": "catalog:",
-    "vitest": "catalog:",
-    "@vv/config": "workspace:*"
+    "unocss": "catalog:",
+    "vitest": "catalog:"
   }
 }
