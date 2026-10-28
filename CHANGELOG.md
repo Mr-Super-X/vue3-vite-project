@@ -6,6 +6,56 @@
 
 ## 未发布
 
+### 🔧 Fix | /autoplan P1 批次：构建可复现 + 登录安全 + DX 入门摩擦（2026-10-28）
+
+> 背景：/autoplan 三阶段架构审查（CEO → Eng → DX，单模型双声音降级）产出 4 个 CRITICAL
+> GAP 与 3 个 DX-P1。本批为全部 P1 项；审查档案与 23 项任务清单见
+> `~/.gstack/projects/Mr-Super-X-vue3-vite-project/2026-10-28-monorepo-architecture-review-baseline.md`。
+
+#### C1 vue 精确钉版（修复「克隆不可复现」）
+
+- `pnpm-workspace.yaml` overrides 12 项 `'beta'` 浮动 tag → 精确 `3.6.0-beta.17`
+  （= 当前 lockfile 验证版本，零行为变更）。
+- 浮动 tag 破口：模板消费者复制配置不带 lockfile 时 `pnpm install` 解析出与验证时不同的
+  beta 构建；`pnpm update` 重建 lockfile 让新 beta 不经人工评审直接进依赖图。
+- 注释含 TODO(Mr.Mickey, 2027-01-31 前)：vue 3.6 稳定线发布后整体回稳定版并删除
+  overrides 全段 + `peerDependencyRules.allowAny`——升级批次须过 6 app build + e2e 冒烟。
+
+#### E1 define 陷阱修复（CRITICAL：本地 build 产物 API 全打 /mock）
+
+- `createViteConfig` 的 `import.meta.env.VITE_API_BASE_URL` define 原固定
+  `loadEnv('development', …)`——无条件读 `.env.development`（6/6 app 配 `VITE_API_BASE_URL=/mock`），
+  本地 `pnpm build` 产物把 /mock 打进生产包；且注释错称「prod 不读该文件」——loadEnv 按
+  显式传入的 mode 读文件，与构建 mode 无关（注释本身成为谎言来源）。
+- 修复：`defineConfig` 改回调形式取 `mode`，`loadEnv(mode, …)` 按构建 mode 读对应 env 文件
+  （dev→.env.development 的 /mock；prod→.env.production 无该键→'/api' 保底）；注释重写为
+  正确机制陈述。
+- 验证：`pnpm -C apps/admin build-only` 产物内 `"/api"` 注入且无 `"/mock"`（grep PASS）；
+  双 mode 取值逻辑实测 dev→/mock、prod→/api 均正确。
+
+#### E7+D1 dev 入口语义收敛（DX-P1：新人首条命令 404 弯路）
+
+- 跨阶段高置信主题：CEO（并行资源成本）/ Eng（mock 共享竞态）/ DX（404 弯路）三阶段
+  各自独立命中 `pnpm dev` 入口问题。
+- README 快速开始收敛为单一推荐路径：`pnpm -C apps/admin dev` + 引导加
+  `VITE_DEMO_NO_AUTH=true` → 直达 /workbench；`pnpm dev` 降为进阶项并标注竞态警示；
+  CLAUDE.md Commands 表与 docs/43 §3 同步标记（指向 §9.3 竞态排障）。
+- `createViteConfig` 新增 `vv-dev-welcome` dev 插件：启动后打印访问地址 + 单 app 404 预期
+  提示 + admin 免登录演示引导——消除「dev 起来后不知道打开哪」的摩擦。
+
+#### D2 pre-push affected 化（DX-P1：日常循环减负）
+
+- `.husky/pre-push`：`pnpm test`（turbo dependsOn ^build → 每次 push 先全量 build 6 app +
+  4 包再全量测试）→ `turbo run test --filter=[origin/master]...`（与 CI PR 模式同参数，
+  只跑自 origin/master 以来变更的包）；master 全量测试网由 CI（无 filter 全量）兜底。
+- README Git 节披露钩子成本与 `git push --no-verify` 紧急逃生门。
+
+手动验证步骤：
+1. `pnpm install --frozen-lockfile` → PASS（lockfile 零漂移）
+2. `pnpm -C apps/admin build-only` → `grep -r '"/mock"' apps/admin/dist/` 无命中
+3. `pnpm -C apps/admin dev` → 终端打印 `➜ admin: http://localhost:5174` 与演示引导
+4. 下次 `git push` → pre-push 只跑变更包测试（秒级返回）
+
 ### 🐛 Fix | 登录失败误跳登录页：登录端点豁免 401 refresh 链（2026-10-28）
 
 > 背景：已登录用户（有残留登录标记）在登录页输错密码 → 页面整页重定向回

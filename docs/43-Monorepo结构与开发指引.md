@@ -46,20 +46,20 @@ vue3-vite-project（pnpm workspace + turbo@2）
 
 ## 3. 常用命令
 
-| 场景                                 | 命令                                                                                                          |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| 安装全 workspace 依赖                | `pnpm install`                                                                                                |
-| 全量 dev（turbo 并行 6 app）         | `pnpm dev`                                                                                                    |
-| 单 app dev                           | `pnpm -C apps/<a> dev`（`dev:local` = 本地菜单模式）                                                          |
-| 同域网关 dev（6 app 带 base，见 §6） | `pnpm dev:gateway`                                                                                            |
-| 全量构建（turbo 拓扑序 + 类型门禁）  | `pnpm build`                                                                                                  |
-| 全量单测（turbo，test 依赖 ^build）  | `pnpm test`                                                                                                   |
-| 单 app 测试 / 覆盖率 / UI            | `pnpm -C apps/admin test`、`test:coverage`、`test:ui`；根 `pnpm test:coverage` / `test:ui` 收容（admin 口径） |
-| 类型检查                             | `pnpm type-check`（turbo）/ `pnpm -C apps/<a> type-check:full`                                                |
-| gh-pages 六应用聚合构建              | `pnpm build:pages`（产物根 `dist/<app>/` + 落地页）                                                           |
-| 生产六应用聚合构建                   | `pnpm build:prod`（`base=/<app>/` + history + remote 菜单 + 真实后端，产物根 `dist-prod/<app>/`，见 §7）      |
-| 路由一致性（6 app 逐个校验）         | `pnpm check:routes`                                                                                           |
-| alias 与 tsconfig paths 同步         | `pnpm generate:tsconfig-paths` / `pnpm check:aliases`                                                         |
+| 场景                                                                        | 命令                                                                                                          |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| 安装全 workspace 依赖                                                       | `pnpm install`                                                                                                |
+| 全量 dev（⚠️ turbo 并行 6 app 有 mock 共享竞态 §9.3；日常首推 dev:gateway） | `pnpm dev`                                                                                                    |
+| 单 app dev                                                                  | `pnpm -C apps/<a> dev`（`dev:local` = 本地菜单模式）                                                          |
+| 同域网关 dev（6 app 带 base，见 §6）                                        | `pnpm dev:gateway`                                                                                            |
+| 全量构建（turbo 拓扑序 + 类型门禁）                                         | `pnpm build`                                                                                                  |
+| 全量单测（turbo，test 依赖 ^build）                                         | `pnpm test`                                                                                                   |
+| 单 app 测试 / 覆盖率 / UI                                                   | `pnpm -C apps/admin test`、`test:coverage`、`test:ui`；根 `pnpm test:coverage` / `test:ui` 收容（admin 口径） |
+| 类型检查                                                                    | `pnpm type-check`（turbo）/ `pnpm -C apps/<a> type-check:full`                                                |
+| gh-pages 六应用聚合构建                                                     | `pnpm build:pages`（产物根 `dist/<app>/` + 落地页）                                                           |
+| 生产六应用聚合构建                                                          | `pnpm build:prod`（`base=/<app>/` + history + remote 菜单 + 真实后端，产物根 `dist-prod/<app>/`，见 §7）      |
+| 路由一致性（6 app 逐个校验）                                                | `pnpm check:routes`                                                                                           |
+| alias 与 tsconfig paths 同步                                                | `pnpm generate:tsconfig-paths` / `pnpm check:aliases`                                                         |
 
 新增业务模块：`pnpm new-module <kebab-name>`（默认生成到 `apps/admin/src/modules/<name>/`，`--app <a>` 指定其他 app，`--with-mock` 等选项见脚本头注）。脚本以 `import.meta.dirname` 定位仓库根，**在任意目录执行均可**，无须先 `cd` 进 app 目录。
 
