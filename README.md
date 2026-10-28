@@ -303,13 +303,18 @@ cd vue3-vite-project
 # 2. 安装依赖
 pnpm install
 
-# 3. 启动开发服务器
-pnpm dev          # 全量 dev（turbo 并行 6 个 app，remote 菜单模式，端口 5174-5179）
-# 或只起 admin 单 app（local 模式，无需接口）
-pnpm dev:local
+# 3. 启动开发服务器（新人推荐第一条；全量并行见下方进阶）
+pnpm -C apps/admin dev
+# 首次体验免登录直达 /workbench：编辑 apps/admin/.env.development 加一行
+#   VITE_DEMO_NO_AUTH=true
+# 然后打开 http://localhost:5174
+
+# 进阶：全量 dev（turbo 并行 6 个 app，remote 菜单模式，端口 5174-5179；
+# ⚠️ 6 app 共享 @vv/mock 源码，turbo 并行编译存在已知竞态，首推下方 dev:gateway）
+pnpm dev
 ```
 
-> **单 app dev 的 404 预期**：登录是跨应用特性（登录页在 `apps/auth`，admin 内已无 `/login` 路由）。`pnpm dev:local`（= `pnpm -C apps/admin dev:local`）只起 admin（5174），未登录时守卫整页跳 `/auth/login` 会 **404**（auth 是独立端口 5179 的 app，`VITE_AUTH_ORIGIN=/auth` 相对路径跨端口不可达）——属预期。按场景选访问路径：
+> **单 app dev 的 404 预期**：登录是跨应用特性（登录页在 `apps/auth`，admin 内已无 `/login` 路由）。`pnpm -C apps/admin dev`（local 菜单模式）只起 admin（5174），未登录时守卫整页跳 `/auth/login` 会 **404**（auth 是独立端口 5179 的 app，`VITE_AUTH_ORIGIN=/auth` 相对路径跨端口不可达）——属预期，配 `VITE_DEMO_NO_AUTH=true` 即免登录直达。按场景选访问路径：
 
 | 场景                                      | 命令                                                                      | 访问                                                                   |
 | ----------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
@@ -568,11 +573,12 @@ app.use(Plugins, { errorHandler: { report: ... } })
 
 > 各项一致性 check（check:aliases / check:mock-wiring / check:doc-currency）均在 CI 阶段随 check:routes（内含端口双写锁死 + 注册表反向校验）一并执行（见 ci.yml），不在 pre-commit（本地秒级提交体验优先）。原单应用时期的 5 步 pre-commit 链见 docs/03-Git工作流工具链.md 历史节。
 
-| Hook     | 命令        | 作用                     |
-| -------- | ----------- | ------------------------ |
-| pre-push | `pnpm test` | 防止测试不通过的代码推送 |
+| Hook     | 命令                                                          | 作用                     |
+| -------- | ------------------------------------------------------------- | ------------------------ |
+| pre-push | `turbo run test --filter=[origin/master]...`（affected 子集） | 防止测试不通过的代码推送 |
 
-> 注：lint 未集成到 pre-commit 的**全量检查**（避免每次 commit 等待），开发期手动 `pnpm lint:fix`，CI 阶段跑 `pnpm lint`。
+> 注：pre-push 只跑自 origin/master 以来变更的包（与 CI PR 模式同参数），**master 全量测试网由 CI 兜底**（ci.yml `turbo run build test` 无 filter）。紧急逃生：`git push --no-verify` 跳过本钩子。
+> lint 未集成到 pre-commit 的**全量检查**（避免每次 commit 等待），开发期手动 `pnpm lint:fix`，CI 阶段跑 `pnpm lint`。
 
 ### Git 工作流
 
@@ -584,7 +590,7 @@ app.use(Plugins, { errorHandler: { report: ... } })
 | `pnpm commit`                      | `git add .` + `cz`                           | 仅需本地提交、暂不推送（如阶段性保存） |
 | `git commit -m "..."` + `git push` | 传统两步                                     | 已写好完整 commit message 时           |
 
-> `pnpm push` 仍受 husky `pre-commit`（lint-staged + type-check）与 `pre-push`（`pnpm test`）约束，提交失败会被自动拦截。
+> `pnpm push` 仍受 husky `pre-commit`（lint-staged + type-check）与 `pre-push`（affected 子集测试）约束，提交失败会被自动拦截。pre-push 只跑变更包，日常推送秒级返回；全量网在 CI。
 
 ---
 
