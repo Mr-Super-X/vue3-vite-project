@@ -50,6 +50,9 @@ import { cacheGet, cacheSet, buildCacheKey } from './cache'
 import { refreshSession, _getCurrentConfig } from './token-refresh'
 import { getAppRouter } from '../app-router.ts'
 import { redirectToAuthLogin } from '../auth/redirect.ts'
+// LOGIN_URL 单源自 api/modules/auth.ts（security-reviewer 审查项：防硬编码双写，后端契约
+// 变更漏匹配会让登录失败 bug 静默复发）
+import { LOGIN_URL } from './modules/auth.ts'
 
 /**
  * 扩展 AxiosRequestConfig：标记分页列表请求 / 内存缓存（一次性的可插拔能力）。
@@ -362,6 +365,24 @@ function isRefreshRequestUrl(url: string | undefined): boolean {
 }
 
 /**
+ * 检查 URL 是否指向登录端点（2026-10-28 bug 修复，security-reviewer 审查通过）。
+ *
+ * 为什么登录端点要豁免 401 refresh 链：密码错误的 401（业务码）没有可 refresh 的凭证，
+ * refresh 必失败 → 误走 performLogout 跳登录页；且 performLogout 仅靠 Session 登录标记
+ * 守卫，无法区分「真会话过期」与「上次登录残留标记」——已登录用户输错密码时守卫放行，
+ * 整页跳 /auth/login?redirect=<当前路由> 并吞掉「账号或密码错误」toast（本次 bug 根因）。
+ * 豁免后：登录 401 纯抛 ApiError，由 Login.vue catch 弹提示。
+ *
+ * 匹配口径：只用 endsWith 精确后缀。config.url 恒为相对路径 '/auth/login'；不模仿
+ * isRefreshRequestUrl 的 includes（宽松口径是 refresh 端点既有形态）——includes 会误豁免
+ * '/auth/login-status' 等已认证接口，导致其真凭证过期失去静默续期（security-reviewer HIGH 项）。
+ */
+function isLoginRequestUrl(url: string | undefined): boolean {
+  if (!url) return false
+  return url.endsWith(LOGIN_URL)
+}
+
+/**
  * 基础请求：返回 `body.data` 字段对应的强类型 T，错误归一为 ApiError。
  *
  * 包含以下自动能力：
@@ -401,7 +422,8 @@ export async function request<T>(config: AxiosRequestConfig): Promise<T> {
       err instanceof ApiError &&
       (err.code === 401 || err.code === BusinessCode.UNAUTHORIZED) &&
       !config._retried &&
-      !isRefreshRequestUrl(config.url)
+      !isRefreshRequestUrl(config.url) &&
+      !isLoginRequestUrl(config.url)
     ) {
       try {
         await refreshSession()

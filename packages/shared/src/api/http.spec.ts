@@ -362,5 +362,81 @@ describe('http.ts 拦截器契约', () => {
 
       expect(mockRefreshSession).not.toHaveBeenCalled()
     })
+
+    // ── 登录端点豁免 refresh 链（2026-10-28 bug 修复，security-reviewer 审查通过）──
+    // 根因：密码错误的业务码 401 没有可 refresh 的凭证，refresh 必失败 → 误走 performLogout
+    // 跳登录页；performLogout 仅靠 Session 标记守卫，已登录用户输错密码时守卫放行（残留标记），
+    // 整页跳 /auth/login?redirect=<当前路由> 并吞掉「账号或密码错误」toast。豁免后登录 401 纯抛。
+
+    it('登录端点 401 + 有残留登录标记 + 无凭证 → 不调 refresh、不跳登录、纯抛原 ApiError（本次 bug 核心回归）', async () => {
+      const requestMock = httpInstance.request as ReturnType<typeof vi.fn>
+      requestMock.mockReset()
+      requestMock.mockRejectedValueOnce(
+        new ApiError({ code: 401, message: '账号或密码错误', status: 401, url: '/auth/login' })
+      )
+      // 已登录用户输错密码：残留 auth 标记（上次登录留下），但凭证 cookie 已失效
+      Session.set('auth', '1')
+
+      await expect(
+        request({ url: '/auth/login', method: 'post', data: { username: 'a', password: 'wrong' } })
+      ).rejects.toThrow('账号或密码错误')
+
+      // 关键断言：不 refresh、不弹「会话过期」、不跳登录页——由 Login.vue catch 弹「账号或密码错误」
+      expect(mockRefreshSession).not.toHaveBeenCalled()
+      expect(mockRedirectToAuthLogin).not.toHaveBeenCalled()
+      expect(mockRouterPush).not.toHaveBeenCalled()
+    })
+
+    it('登录端点 401 + 无标记 → 直接抛（干净态不退化）', async () => {
+      const requestMock = httpInstance.request as ReturnType<typeof vi.fn>
+      requestMock.mockReset()
+      requestMock.mockRejectedValueOnce(
+        new ApiError({ code: 401, message: '账号或密码错误', url: '/auth/login' })
+      )
+      // 无 Session.set 前置——干净未登录态
+
+      await expect(request({ url: '/auth/login', method: 'post' })).rejects.toThrow(
+        '账号或密码错误'
+      )
+
+      expect(mockRefreshSession).not.toHaveBeenCalled()
+      expect(mockRedirectToAuthLogin).not.toHaveBeenCalled()
+    })
+
+    it('登录端点 401 + 已登录（cookie 有效）→ 不 refresh 不重发，直接抛（security-reviewer 要求覆盖）', async () => {
+      const requestMock = httpInstance.request as ReturnType<typeof vi.fn>
+      requestMock.mockReset()
+      requestMock.mockRejectedValueOnce(
+        new ApiError({ code: 401, message: '账号或密码错误', url: '/auth/login' })
+      )
+      Session.set('auth', '1')
+      // 凭证 cookie 有效（mock 不区分，这里只断言不 refresh 不重发——只调了一次 request）
+
+      await expect(request({ url: '/auth/login', method: 'post' })).rejects.toThrow(
+        '账号或密码错误'
+      )
+
+      expect(mockRefreshSession).not.toHaveBeenCalled()
+      expect(requestMock).toHaveBeenCalledTimes(1) // 不重发
+      expect(mockRedirectToAuthLogin).not.toHaveBeenCalled()
+    })
+
+    it('业务接口（/user/profile）401 + 有标记 → 仍走 refresh 续期链（真过期兜底不破）', async () => {
+      const requestMock = httpInstance.request as ReturnType<typeof vi.fn>
+      requestMock.mockReset()
+      // 第一次业务接口 401 → refresh 成功 → 重发成功
+      requestMock.mockRejectedValueOnce(
+        new ApiError({ code: 401, message: 'expired', status: 401, url: '/user/profile' })
+      )
+      requestMock.mockResolvedValueOnce({ data: { code: 0, message: 'ok', data: { id: 1 } } })
+      mockRefreshSession.mockResolvedValueOnce(undefined)
+      Session.set('auth', '1')
+
+      const result = await request({ url: '/user/profile' })
+
+      expect(mockRefreshSession).toHaveBeenCalledTimes(1)
+      expect(requestMock).toHaveBeenCalledTimes(2)
+      expect(result).toEqual({ id: 1 })
+    })
   })
 })

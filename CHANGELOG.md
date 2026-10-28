@@ -6,6 +6,29 @@
 
 ## 未发布
 
+### 🐛 Fix | 登录失败误跳登录页：登录端点豁免 401 refresh 链（2026-10-28）
+
+> 背景：已登录用户（有残留登录标记）在登录页输错密码 → 页面整页重定向回
+> `/auth/login?redirect=...`、登录失败 toast（"账号或密码错误"）被吞。干净浏览器状态
+> 输错密码则正常弹提示——基线对照与 CDP 复现证实为既有 bug（与 P0/P1/P2 三批次无关）。
+
+- **根因**：mock 登录失败返回业务码 401（HTTP 200），http.ts `request` 层对业务码 401
+  不区分语义——密码错误（无可 refresh 凭证）也走 refresh 链 → refresh 失败 →
+  `performLogout`；而 `performLogout` 仅靠 `Session` 登录标记守卫，无法区分「真会话过期」
+  与「上次登录残留标记」，已登录用户输错密码时守卫放行 → 误跳登录页吞 toast。
+- **修复**：`request` 层 refresh 链加 `isLoginRequestUrl` 判定——登录端点 `/auth/login`
+  豁免 refresh（密码错误纯抛 ApiError 给 Login.vue 弹提示）。`LOGIN_URL` 自 auth.ts 单源
+  导出（防硬编码双写）；匹配用 `endsWith` 精确后缀（不模仿 isRefreshRequestUrl 的 includes，
+  避免误豁免 `/auth/login-status` 等已认证接口，security-reviewer HIGH 项）。
+- **回归用例**：http.spec.ts 补 4 例（登录 401 有标记/无标记/已登录态不 refresh 不跳、
+  业务接口 401 续期链不破）。
+
+修复经 security-reviewer 审查通过（方案可采纳，无认证绕过风险；明确否决「登录失败先清
+残留标记」的备选——那会破坏真凭证过期的跳登录兜底）。
+
+验证：http.spec 20/20；CDP 浏览器双场景实测——干净态输错密码弹「账号或密码错误」停留，
+已登录态输错密码不再跳 `?redirect` 正常弹提示；shared test / lint / type-check 全绿。
+
 ### ✨ Feat | 应用 manifest 与脚手架：app 元数据单源到 app.manifest.json + pnpm new-app（2026-10-28）
 
 > 背景：新增 app 原本要手动建目录/package.json/vite.config/src 骨架 + 端口登记两处（vite.config portOffset ↔ apps-registry.mjs port），漏改即 dev 网关 404 / check:routes 红，排查成本高。

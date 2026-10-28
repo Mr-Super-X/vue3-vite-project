@@ -21,6 +21,13 @@ export interface LoginPayload {
 }
 
 /**
+ * 登录端点路径单源（2026-10-28，security-reviewer 审查项）：
+ * http.ts 的 401 refresh 链据此识别「登录端点」并豁免（密码错误的 401 无可 refresh 的
+ * 凭证，refresh 必失败——见 http.ts isLoginRequestUrl）。后端契约变更只改此处一处。
+ */
+export const LOGIN_URL = '/auth/login'
+
+/**
  * 登录响应 schema（httpOnly 模式）：
  * 凭证 token 由后端 Set-Cookie 下发，响应体仅含必要的 profile 信息。
  * `.passthrough()` 保留后端新增字段（前向兼容，不裁剪未知键）。
@@ -62,7 +69,7 @@ export const authApi = {
    * @group 业务 API：认证
    */
   login: (data: LoginPayload) =>
-    requestValidated(loginResultSchema, { url: '/auth/login', method: 'post', data }),
+    requestValidated(loginResultSchema, { url: LOGIN_URL, method: 'post', data }),
 
   /**
    * 获取当前用户的 profile + 权限列表。
