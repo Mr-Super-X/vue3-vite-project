@@ -164,9 +164,72 @@ settings:
 
 catalogs:
   default:
+    '@commitlint/cli':
+      specifier: ^21.2.1
+      version: 21.2.1
+    '@commitlint/config-conventional':
+      specifier: ^21.2.0
+      version: 21.2.0
+    '@commitlint/types':
+      specifier: ^21.2.0
+      version: 21.2.0
     '@element-plus/icons-vue':
       specifier: ^2.3.2
       version: 2.3.2
+    '@iconify-json/ep':
+      specifier: ^1.2.4
+      version: 1.2.4
+    '@iconify-json/tabler':
+      specifier: ^1.2.42
+      version: 1.2.42
+    '@playwright/test':
+      specifier: ^1.63.0
+      version: 1.63.0
+    '@release-it/conventional-changelog':
+      specifier: ^12.0.0
+      version: 12.0.0
+    '@tsconfig/node24':
+      specifier: ^24.0.4
+      version: 24.0.4
+    '@types/js-cookie':
+      specifier: ^3.0.6
+      version: 3.0.6
+    '@types/jsdom':
+      specifier: ^28.0.3
+      version: 28.0.3
+    '@types/lodash-es':
+      specifier: ^4.17.12
+      version: 4.17.12
+    '@types/node':
+      specifier: ^24.13.2
+      version: 24.13.3
+    '@types/postcss-pxtorem':
+      specifier: ^6.1.0
+      version: 6.1.0
+    '@vitejs/plugin-vue':
+      specifier: ^6.0.7
+      version: 6.0.8
+    '@vitejs/plugin-vue-jsx':
+      specifier: ^5.1.5
+      version: 5.1.6
+    '@vitest/coverage-v8':
+      specifier: ^4.1.10
+      version: 4.1.10
+    '@vitest/ui':
+      specifier: ^4.1.10
+      version: 4.1.12
+    '@vue/eslint-config-prettier':
+      specifier: ^10.2.0
+      version: 10.2.0
+    '@vue/eslint-config-typescript':
+      specifier: ^14.9.0
+      version: 14.9.0
+    '@vue/test-utils':
+      specifier: ^2.4.11
+      version: 2.4.11
+    '@vue/tsconfig':
+      specifier: ^0.9.1
+      version: 0.9.1
     '@wangeditor/editor':
       specifier: ^5.1.23
       version: 5.1.23
@@ -176,36 +239,132 @@ catalogs:
     axios:
       specifier: ^1.18.1
       version: 1.18.1
+    commitizen:
+      specifier: ^4.3.2
+      version: 4.3.2
+    cross-env:
+      specifier: ^10.1.0
+      version: 10.1.0
+    cz-customizable:
+      specifier: ^7.5.4
+      version: 7.5.4
     dayjs:
       specifier: ^1.11.21
       version: 1.11.21
     dompurify:
       specifier: ^3.4.15
       version: 3.4.15
+    echarts:
+      specifier: ^6.1.0
+      version: 6.1.0
     element-plus:
       specifier: ^2.14.3
       version: 2.14.3
+    eslint:
+      specifier: ^10.7.0
+      version: 10.7.0
+    eslint-plugin-vue:
+      specifier: ^10.9.2
+      version: 10.9.2
+    highlight.js:
+      specifier: 11.11.1
+      version: 11.11.1
+    husky:
+      specifier: ^9.1.7
+      version: 9.1.7
+    js-cookie:
+      specifier: ^3.0.8
+      version: 3.0.8
+    jsdom:
+      specifier: ^29.1.1
+      version: 29.1.1
+    lint-staged:
+      specifier: ^17.0.8
+      version: 17.0.8
     lodash-es:
       specifier: ^4.18.1
       version: 4.18.1
     normalize.css:
       specifier: ^8.0.1
       version: 8.0.1
+    npm-run-all2:
+      specifier: ^9.0.2
+      version: 9.0.2
+    only-allow:
+      specifier: ^1.2.2
+      version: 1.2.2
     pinia:
       specifier: ^3.0.4
       version: 3.0.4
     pinia-plugin-persistedstate:
       specifier: ^4.7.1
       version: 4.7.1
+    postcss:
+      specifier: 8.5.19
+      version: 8.5.19
+    postcss-pxtorem:
+      specifier: ^6.1.0
+      version: 6.1.0
+    prettier:
+      specifier: ^3.9.5
+      version: 3.9.5
+    release-it:
+      specifier: ^21.0.0
+      version: 21.0.0
+    rollup-plugin-visualizer:
+      specifier: ^7.0.1
+      version: 7.0.1
+    sass:
+      specifier: ^1.101.0
+      version: 1.101.0
     sortablejs:
       specifier: ^1.15.7
       version: 1.15.7
+    turbo:
+      specifier: ^2.11.0
+      version: 2.11.9
+    typescript:
+      specifier: ~6.0.0
+      version: 6.0.3
+    unocss:
+      specifier: ^66.7.5
+      version: 66.7.5
+    unplugin-auto-import:
+      specifier: ^21.0.0
+      version: 21.0.0
+    unplugin-icons:
+      specifier: ^24.0.0
+      version: 24.0.0
+    unplugin-vue-components:
+      specifier: ^32.1.0
+      version: 32.1.0
+    vite:
+      specifier: ^8.0.16
+      version: 8.1.5
+    vite-plugin-mock:
+      specifier: ^3.0.2
+      version: 3.0.2
+    vite-plugin-vue-devtools:
+      specifier: ^8.1.2
+      version: 8.1.5
+    vitest:
+      specifier: ^4.1.9
+      version: 4.1.10
+    vitest-axe:
+      specifier: ^0.1.0
+      version: 0.1.0
     vue-i18n:
       specifier: ^11.4.6
       version: 11.4.6
     vue-router:
       specifier: ^5.1.0
       version: 5.2.0
+    vue-tsc:
+      specifier: ^3.3.11
+      version: 3.3.11
+    vxe-table:
+      specifier: ^4.21.7
+      version: 4.21.7
     web-vitals:
       specifier: ^6.2.1
       version: 6.2.1
@@ -238,212 +397,212 @@ importers:
         specifier: 'catalog:'
         version: 2.3.2(vue@3.6.0-beta.17(typescript@6.0.3))
       '@wangeditor/editor-for-vue':
-        specifier: ^5.1.12
+        specifier: 'catalog:'
         version: 5.1.12(@wangeditor/editor@5.1.23)(vue@3.6.0-beta.17(typescript@6.0.3))
       axios:
-        specifier: ^1.18.1
+        specifier: 'catalog:'
         version: 1.18.1(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0)
       dayjs:
-        specifier: ^1.11.21
+        specifier: 'catalog:'
         version: 1.11.21
       echarts:
-        specifier: ^6.1.0
+        specifier: 'catalog:'
         version: 6.1.0
       element-plus:
-        specifier: ^2.14.3
+        specifier: 'catalog:'
         version: 2.14.3(vue@3.6.0-beta.17(typescript@6.0.3))
       js-cookie:
-        specifier: ^3.0.8
+        specifier: 'catalog:'
         version: 3.0.8
       lodash-es:
-        specifier: ^4.18.1
+        specifier: 'catalog:'
         version: 4.18.1
       normalize.css:
         specifier: 'catalog:'
         version: 8.0.1
       pinia:
-        specifier: ^3.0.4
+        specifier: 'catalog:'
         version: 3.0.4(typescript@6.0.3)(vue@3.6.0-beta.17(typescript@6.0.3))
       sortablejs:
-        specifier: ^1.15.7
+        specifier: 'catalog:'
         version: 1.15.7
       vue:
         specifier: 3.6.0-beta.17
         version: 3.6.0-beta.17(typescript@6.0.3)
       vue-i18n:
-        specifier: ^11.4.6
+        specifier: 'catalog:'
         version: 11.4.6(vue@3.6.0-beta.17(typescript@6.0.3))
       vue-router:
-        specifier: ^5.1.0
+        specifier: 'catalog:'
         version: 5.2.0(@vue/compiler-sfc@3.6.0-beta.17)(esbuild@0.28.1)(pinia@3.0.4(typescript@6.0.3)(vue@3.6.0-beta.17(typescript@6.0.3)))(rolldown@1.1.5)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))(vue@3.6.0-beta.17(typescript@6.0.3))
       vxe-table:
-        specifier: ^4.21.7
+        specifier: 'catalog:'
         version: 4.21.7(vue@3.6.0-beta.17(typescript@6.0.3))
       web-vitals:
-        specifier: ^6.2.1
+        specifier: 'catalog:'
         version: 6.2.1
       zod:
-        specifier: ^4.4.3
+        specifier: 'catalog:'
         version: 4.4.3
     devDependencies:
       '@commitlint/cli':
-        specifier: ^21.2.1
+        specifier: 'catalog:'
         version: 21.2.1(@types/node@24.13.3)(conventional-commits-filter@6.0.1)(conventional-commits-parser@7.1.0)(typescript@6.0.3)
       '@commitlint/config-conventional':
-        specifier: ^21.2.0
+        specifier: 'catalog:'
         version: 21.2.0
       '@commitlint/types':
-        specifier: ^21.2.0
+        specifier: 'catalog:'
         version: 21.2.0
       '@iconify-json/ep':
-        specifier: ^1.2.4
+        specifier: 'catalog:'
         version: 1.2.4
       '@iconify-json/tabler':
-        specifier: ^1.2.42
+        specifier: 'catalog:'
         version: 1.2.42
       '@playwright/test':
-        specifier: ^1.63.0
+        specifier: 'catalog:'
         version: 1.63.0
       '@release-it/conventional-changelog':
-        specifier: ^12.0.0
+        specifier: 'catalog:'
         version: 12.0.0(conventional-commits-filter@6.0.1)(conventional-commits-parser@7.1.0)(release-it@21.0.0(@types/node@24.13.3)(magicast@0.5.3)(supports-color@7.2.0))
       '@tsconfig/node24':
-        specifier: ^24.0.4
+        specifier: 'catalog:'
         version: 24.0.4
       '@types/js-cookie':
-        specifier: ^3.0.6
+        specifier: 'catalog:'
         version: 3.0.6
       '@types/jsdom':
-        specifier: ^28.0.3
+        specifier: 'catalog:'
         version: 28.0.3
       '@types/lodash-es':
-        specifier: ^4.17.12
+        specifier: 'catalog:'
         version: 4.17.12
       '@types/node':
-        specifier: ^24.13.2
+        specifier: 'catalog:'
         version: 24.13.3
       '@types/postcss-pxtorem':
-        specifier: ^6.1.0
+        specifier: 'catalog:'
         version: 6.1.0
       '@vitejs/plugin-vue':
-        specifier: ^6.0.7
+        specifier: 'catalog:'
         version: 6.0.8(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))(vue@3.6.0-beta.17(typescript@6.0.3))
       '@vitejs/plugin-vue-jsx':
-        specifier: ^5.1.5
+        specifier: 'catalog:'
         version: 5.1.6(supports-color@7.2.0)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))(vue@3.6.0-beta.17(typescript@6.0.3))
       '@vitest/coverage-v8':
-        specifier: ^4.1.10
+        specifier: 'catalog:'
         version: 4.1.10(vitest@4.1.10)
       '@vitest/ui':
-        specifier: ^4.1.10
+        specifier: 'catalog:'
         version: 4.1.12(vitest@4.1.10)
       '@vue/eslint-config-prettier':
-        specifier: ^10.2.0
+        specifier: 'catalog:'
         version: 10.2.0(eslint@10.7.0(jiti@2.7.0)(supports-color@7.2.0))(prettier@3.9.5)
       '@vue/eslint-config-typescript':
-        specifier: ^14.9.0
+        specifier: 'catalog:'
         version: 14.9.0(eslint-plugin-vue@10.9.2(@typescript-eslint/parser@8.64.0(eslint@10.7.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3))(eslint@10.7.0(jiti@2.7.0)(supports-color@7.2.0))(vue-eslint-parser@10.4.1(eslint@10.7.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)))(eslint@10.7.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3)
       '@vue/test-utils':
-        specifier: ^2.4.11
+        specifier: 'catalog:'
         version: 2.4.11(@vue/compiler-dom@3.6.0-beta.17)(@vue/server-renderer@3.6.0-beta.17(vue@3.6.0-beta.17(typescript@6.0.3)))(vue@3.6.0-beta.17(typescript@6.0.3))
       '@vue/tsconfig':
-        specifier: ^0.9.1
+        specifier: 'catalog:'
         version: 0.9.1(typescript@6.0.3)(vue@3.6.0-beta.17(typescript@6.0.3))
       '@wangeditor/editor':
-        specifier: ^5.1.23
+        specifier: 'catalog:'
         version: 5.1.23
       commitizen:
-        specifier: ^4.3.2
+        specifier: 'catalog:'
         version: 4.3.2(@types/node@24.13.3)(typescript@6.0.3)
       cross-env:
-        specifier: ^10.1.0
+        specifier: 'catalog:'
         version: 10.1.0
       cz-customizable:
-        specifier: ^7.5.4
+        specifier: 'catalog:'
         version: 7.5.4
       dompurify:
-        specifier: ^3.4.15
+        specifier: 'catalog:'
         version: 3.4.15
       eslint:
-        specifier: ^10.7.0
+        specifier: 'catalog:'
         version: 10.7.0(jiti@2.7.0)(supports-color@7.2.0)
       eslint-plugin-vue:
-        specifier: ^10.9.2
+        specifier: 'catalog:'
         version: 10.9.2(@typescript-eslint/parser@8.64.0(eslint@10.7.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3))(eslint@10.7.0(jiti@2.7.0)(supports-color@7.2.0))(vue-eslint-parser@10.4.1(eslint@10.7.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0))
       highlight.js:
-        specifier: 11.11.1
+        specifier: 'catalog:'
         version: 11.11.1
       husky:
-        specifier: ^9.1.7
+        specifier: 'catalog:'
         version: 9.1.7
       jsdom:
-        specifier: ^29.1.1
+        specifier: 'catalog:'
         version: 29.1.1
       lint-staged:
-        specifier: ^17.0.8
+        specifier: 'catalog:'
         version: 17.0.8
       npm-run-all2:
-        specifier: ^9.0.2
+        specifier: 'catalog:'
         version: 9.0.2
       only-allow:
-        specifier: ^1.2.2
+        specifier: 'catalog:'
         version: 1.2.2
       pinia-plugin-persistedstate:
-        specifier: ^4.7.1
+        specifier: 'catalog:'
         version: 4.7.1(pinia@3.0.4(typescript@6.0.3)(vue@3.6.0-beta.17(typescript@6.0.3)))
       postcss:
-        specifier: 8.5.19
+        specifier: 'catalog:'
         version: 8.5.19
       postcss-pxtorem:
-        specifier: ^6.1.0
+        specifier: 'catalog:'
         version: 6.1.0(postcss@8.5.19)
       prettier:
-        specifier: ^3.9.5
+        specifier: 'catalog:'
         version: 3.9.5
       release-it:
-        specifier: ^21.0.0
+        specifier: 'catalog:'
         version: 21.0.0(@types/node@24.13.3)(magicast@0.5.3)(supports-color@7.2.0)
       rollup-plugin-visualizer:
-        specifier: ^7.0.1
+        specifier: 'catalog:'
         version: 7.0.1(rolldown@1.1.5)
       sass:
-        specifier: ^1.101.0
+        specifier: 'catalog:'
         version: 1.101.0
       turbo:
-        specifier: ^2.11.0
+        specifier: 'catalog:'
         version: 2.11.9
       typescript:
-        specifier: ~6.0.0
+        specifier: 'catalog:'
         version: 6.0.3
       unocss:
-        specifier: ^66.7.5
+        specifier: 'catalog:'
         version: 66.7.5(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))
       unplugin-auto-import:
-        specifier: ^21.0.0
+        specifier: 'catalog:'
         version: 21.0.0(@vueuse/core@14.3.0(vue@3.6.0-beta.17(typescript@6.0.3)))
       unplugin-icons:
-        specifier: ^24.0.0
+        specifier: 'catalog:'
         version: 24.0.0(@vue/compiler-sfc@3.6.0-beta.17)(@vue/compiler-vapor@3.6.0-beta.17)(esbuild@0.28.1)(rolldown@1.1.5)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))
       unplugin-vue-components:
-        specifier: ^32.1.0
+        specifier: 'catalog:'
         version: 32.1.0(esbuild@0.28.1)(rolldown@1.1.5)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))(vue@3.6.0-beta.17(typescript@6.0.3))
       vite:
-        specifier: ^8.0.16
+        specifier: 'catalog:'
         version: 8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0)
       vite-plugin-mock:
-        specifier: ^3.0.2
+        specifier: 'catalog:'
         version: 3.0.2(esbuild@0.28.1)(mockjs@1.1.0)(supports-color@7.2.0)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))
       vite-plugin-vue-devtools:
-        specifier: ^8.1.2
+        specifier: 'catalog:'
         version: 8.1.5(supports-color@7.2.0)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))(vue@3.6.0-beta.17(typescript@6.0.3))
       vitest:
-        specifier: ^4.1.9
+        specifier: 'catalog:'
         version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(@vitest/ui@4.1.12)(jsdom@29.1.1)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(yaml@2.9.0))
       vitest-axe:
-        specifier: ^0.1.0
+        specifier: 'catalog:'
         version: 0.1.0(vitest@4.1.10)
       vue-tsc:
-        specifier: ^3.3.11
+        specifier: 'catalog:'
         version: 3.3.11(typescript@6.0.3)
 
   apps/admin:
