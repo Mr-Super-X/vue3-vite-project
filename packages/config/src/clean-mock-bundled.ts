@@ -22,6 +22,16 @@
  * import」竞争窗口，非临时方案——只要存在运行时抢删，文件数/磁盘时序就可能
  * 再次越过任何固定延迟阈值。
  *
+ * 根治边界（2026-10-28 /autoplan T-1 调研结论，防未来重提）：
+ * - bundle 输出目录/文件名（_<name>.bundled_<random>.mjs）由 vite-plugin-mock 内部
+ *   getOutputFile 写死，无配置可改——「按 app 隔离 bundle 目录」需 patch-package，拒；
+ * - configPath 单文件模式把 bundle 从 19 次/进程降到 1 次，但 watch 只盯单文件——
+ *   mock 子文件热更新失效（每日高频操作），为启动期低频竞态牺牲它不值，拒；
+ * - 预构建产物化 = 自研 mock 插件，拒。
+ * 现状组合（5s mtime 门槛 + dev:gateway 串行 + pnpm dev 文档标记）已是代价/收益最优。
+ * 残留窗口仅剩「单进程 import→unlink 序列 >5s 的极端卡顿」——可感知（接口 404）、
+ * 有明确 workaround（重启该 app dev），docs/43 §9.3 已载。
+ *
  * mockDir 入参（P1-1 包化修正）：bundled 文件落在 mock 源文件同目录，而 dev 的
  * cwd 是各 app 目录（apps/<app>），cwd 相对解析必错——P0-2 迁移后本插件曾因
  * resolve(cwd, 'mock') 指向 apps/admin/mock（不存在）而静默空转。改为由工厂

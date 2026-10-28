@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   ci:
-    name: Lint + Turbo(Build/Test) + CheckRoutes + CheckAliases + CheckDocCurrency + CheckScriptSpecs
+    name: Lint + Turbo(Build/Test) + Checks + CheckScriptSpecs + E2E
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
@@ -116,6 +116,25 @@ jobs:
         # + MOCK_PERMISSIONS 权限码单源——消除历史上「注释约定手工同步」的漂移风险
         # （架构审查健壮性项：全库最现实的 dev/prod 行为分叉风险点）
         run: pnpm check:mock-wiring
+
+      - name: Cache Playwright browsers
+        # e2e 入 CI（/autoplan T-2）：chromium 浏览器目录缓存（key 随 lockfile 失效——
+        # 版本升级时自动重装）；系统库依赖走 GitHub ubuntu 镜像预装，不进缓存
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm test:e2e:install
+
+      - name: E2E (Playwright)
+        # projects 按注册表派生（admin/docs/h5/big），webServer 自起 dev:local（本地菜单
+        # + mock 冷启动可直跑）；gateway project 探测可达性自跳过（不硬依赖网关）。
+        # 硬守护：关键用户流程（面板/五态/页签守恒）红即阻断
+        run: pnpm test:e2e
 
       - name: Upload build artifact
         # 仅 master 全量构建后保留产物供调试（PR affected 无完整 dist 可传）；

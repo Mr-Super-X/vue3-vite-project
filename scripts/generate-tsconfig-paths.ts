@@ -56,7 +56,10 @@ interface TsConfig {
  */
 export function aliasesToTsconfigPaths(
   aliases: Record<string, string>,
-  appRoot: string
+  appRoot: string,
+  // 2026-10-28 T-3：fs 探针注入——spec 传 stub 消除 mock 框架依赖（孤儿 spec 转 node:test
+  // 接入 test:check-scripts 链路）；processApp 调用方不传第三参即真实 fs
+  probe: { existsSync: (p: string) => boolean } = { existsSync }
 ): Record<string, string[]> {
   const paths: Record<string, string[]> = {}
   for (const [alias, absDir] of Object.entries(aliases)) {
@@ -68,7 +71,7 @@ export function aliasesToTsconfigPaths(
     }
     // 精确映射仅在目标 index.ts 真实存在时生成：悬空映射会让 vite（目录解析命中）
     // 与 tsconfig（指向不存在文件）分叉，首个 bare import 即编译错（P1-3 审查发现）
-    if (existsSync(path.join(absDir, 'index.ts'))) {
+    if (probe.existsSync(path.join(absDir, 'index.ts'))) {
       paths[alias] = [`${rel}/index.ts`]
     }
     paths[`${alias}/*`] = [`${rel}/*`]
