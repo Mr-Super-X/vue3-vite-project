@@ -27,6 +27,7 @@
 
 import { existsSync, mkdirSync, writeFileSync, readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { APPS } from './apps-registry.mjs'
 
 const ROOT = resolve(import.meta.dirname, '..')
 const APPS_DIR = resolve(ROOT, 'apps')
@@ -571,7 +572,15 @@ function printNextSteps(name: string, app: string): void {
     `  5. 跑 pnpm check:routes 验证路由一致性（whitelist ⊆ 实际 routes name + 系统路由必存在）`
   )
   console.log('')
-  console.log(`  6. 启动 pnpm -C apps/${app} dev，本地访问 http://localhost:5173/${name}`)
+  // 端口自 manifest 单源派生（apps-registry → discoverAppManifests）——不硬编码
+  // （2026-10-28 /autoplan R2-DX-1：曾硬编码 5173=单 app 时代 vite 默认端口，
+  // monorepo 后各 app 端口由 app.manifest.json 唯一决定，banner 打印死链）
+  const appPort = APPS.find((a) => a.name === app)?.port
+  console.log(
+    appPort !== undefined
+      ? `  6. 启动 pnpm -C apps/${app} dev，本地访问 http://localhost:${appPort}/${name}`
+      : `  6. 启动 pnpm -C apps/${app} dev（端口见 apps/${app}/app.manifest.json），路由路径 /${name}`
+  )
   console.log('')
   console.log(
     `  7. 给登录账号的 permissions 加 '${name}:view' 等权限码（如需路由级权限，admin 示例见 apps/admin/src/store/modules/user.ts——user store 仅 admin 持有，其余 app 无该文件）`

@@ -54,6 +54,8 @@ export default withVueTs(
       '**/.husky/**',
       '**/mock/**',
       '**/scripts/**/*.cjs',
+      '**/playwright-report/**',
+      '**/test-results/**'
     ],
   },
   // Vue 官方基础规则

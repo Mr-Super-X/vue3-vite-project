@@ -19,7 +19,7 @@ const makeFetch = (buildId: string, ok = true) =>
       }) as unknown as Response
   )
 
-describe('versionCheck — shouldEnable（dev 默认禁用裁决）', () => {
+describe('versionCheck — shouldEnable（dev 默认禁用 + prod 无回调不启动裁决）', () => {
   it('DEV=true 缺省不启用（HMR 即热更新）', () => {
     expect(shouldEnable(true, undefined)).toBe(false)
   })
@@ -28,12 +28,21 @@ describe('versionCheck — shouldEnable（dev 默认禁用裁决）', () => {
     expect(shouldEnable(true, { enabled: true })).toBe(true)
   })
 
-  it('DEV=false 缺省启用（prod 默认开）', () => {
-    expect(shouldEnable(false, undefined)).toBe(true)
+  it('DEV=false 缺省且无 onUpdate 不启用（无人消费的信号不采集，/autoplan R2-CEO-3）', () => {
+    expect(shouldEnable(false, undefined)).toBe(false)
+    expect(shouldEnable(false, {})).toBe(false)
+  })
+
+  it('DEV=false + onUpdate 注入即启用（注入回调 = 启用信号）', () => {
+    expect(shouldEnable(false, { onUpdate: () => {} })).toBe(true)
+  })
+
+  it('DEV=false + enabled:true 无回调也强制启用（显式优先，调试/自建采集）', () => {
+    expect(shouldEnable(false, { enabled: true })).toBe(true)
   })
 
   it('enabled:false 任何环境禁用', () => {
-    expect(shouldEnable(false, { enabled: false })).toBe(false)
+    expect(shouldEnable(false, { enabled: false, onUpdate: () => {} })).toBe(false)
   })
 })
 

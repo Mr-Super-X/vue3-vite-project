@@ -16,7 +16,7 @@
  * @see [`packages/shared/src/plugins/versionCheck.ts`](../../shared/src/plugins/versionCheck.ts) runtime 轮询消费方
  * @group 插件：版本检测（构建侧）
  */
-import { writeFileSync } from 'node:fs'
+import { existsSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import type { Plugin, ResolvedConfig } from 'vite'
 
@@ -54,10 +54,16 @@ export function versionCheckVitePlugin(): Plugin {
     name: 'vv:version-check',
     apply: 'build',
     configResolved(config: ResolvedConfig) {
-      // config.build.outDir 可能是相对路径（相对 app cwd），resolve 成绝对路径
-      outDir = resolve(config.build.outDir)
+      // config.build.outDir 可能相对——必须锚 config.root（vite 自身的解析锚点），
+      // 不能锚 process.cwd()（2026-10-28 /autoplan R2-E3）：经 `pnpm -C` / turbo
+      // 入口时 cwd 恰等于 appRoot 无差异，但仓库根直跑 `vite build -c apps/x/...`
+      // 会把 version.json 写进错误目录而产物正常——版本检测静默失效。
+      outDir = resolve(config.root, config.build.outDir)
     },
     closeBundle() {
+      // outDir 不存在 = 构建未产出（构建已失败）——静默跳过，不用 ENOENT
+      // 二次报错掩盖原始构建错误（2026-10-28 /autoplan R2-E3）
+      if (!existsSync(outDir)) return
       const payload = createVersionPayload()
       writeFileSync(resolve(outDir, 'version.json'), JSON.stringify(payload, null, 2))
     },

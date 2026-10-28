@@ -12,11 +12,18 @@
  *
  * 变量全集见 vant 官方文档「主题定制」章节；本文件只覆盖品牌色 + 常用尺寸。
  *
+ * 选择器 `:root:root` 双写（2026-10-28 /autoplan R2-E1）：vant 每个组件的 style
+ * 入口都 import 同一份 base.css（内含 `:root,:host{--van-*}` 默认值）。dev 下 CSS
+ * 按模块求值顺序注入 <style>，懒加载的 vant 组件 CSS 晚于 main.ts 静态引入的本文件，
+ * 双方特异度同为 (0,1,0) 时后注入者胜——裸 :root 在 dev 下被默认值压平（实测
+ * --van-primary-color 回落 #1989fa）。`:root:root` 提升特异度至 (0,2,0)，
+ * 不依赖注入顺序稳定生效；prod 构建产物顺序本正确，双写零行为变化。
+ *
  * @see https://vant-ui.github.io/vant/#/zh-CN/config-provider （主题定制官方文档）
  * @group h5 主题
  */
 
-:root {
+:root:root {
   /* 品牌色（vant 默认 #1989fa 蓝 → 本项目品牌橙） */
   --van-primary-color: #ff6a00;
   --van-success-color: #07c160;

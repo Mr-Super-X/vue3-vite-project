@@ -304,14 +304,15 @@ vue3-vite-project/            # pnpm workspace + turbo@2（Monorepo）
 git clone <your-repo-url> vue3-vite-project
 cd vue3-vite-project
 
-# 2. 安装依赖
+# 2. 安装依赖（postinstall 自动生成 admin 的 IDE 类型声明，约数秒属预期）
 pnpm install
 
-# 3. 启动开发服务器（新人推荐第一条；全量并行见下方进阶）
+# 3. 免登录演示开关：取消 apps/admin/.env 末尾 `# VITE_DEMO_NO_AUTH=true` 的注释
+#    （文件已在仓库内，自带引导行，取消注释即生效）
+
+# 4. 启动开发服务器（新人推荐第一条；全量并行见下方进阶）
 pnpm -C apps/admin dev
-# 首次体验免登录直达 /workbench：编辑 apps/admin/.env.development 加一行
-#   VITE_DEMO_NO_AUTH=true
-# 然后打开 http://localhost:5174
+# 然后打开 http://localhost:5174 → 免登录直达 /workbench
 
 # 进阶：全量 dev（turbo 并行 6 个 app，remote 菜单模式，端口 5174-5179；
 # ⚠️ 6 app 共享 @vv/mock 源码，turbo 并行编译存在已知竞态，首推下方 dev:gateway）
@@ -320,11 +321,11 @@ pnpm dev
 
 > **单 app dev 的 404 预期**：登录是跨应用特性（登录页在 `apps/auth`，admin 内已无 `/login` 路由）。`pnpm -C apps/admin dev`（local 菜单模式）只起 admin（5174），未登录时守卫整页跳 `/auth/login` 会 **404**（auth 是独立端口 5179 的 app，`VITE_AUTH_ORIGIN=/auth` 相对路径跨端口不可达）——属预期，配 `VITE_DEMO_NO_AUTH=true` 即免登录直达。按场景选访问路径：
 
-| 场景                                      | 命令                                                                      | 访问                                                                   |
-| ----------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| 只改 admin 业务（免登录）                 | `pnpm -C apps/admin dev` + `.env.development` 加 `VITE_DEMO_NO_AUTH=true` | `localhost:5174/` → /workbench                                         |
-| 测统一登录跨应用漫游                      | `pnpm dev:gateway`                                                        | `localhost:8080/admin/`（未登录自动跳 `:8080/auth/login`，登录后回跳） |
-| 单 app 独立调试（docs/portal 等公开应用） | `pnpm -C apps/<a> dev`                                                    | `localhost:<port>/`（docs 5175 等，白名单公开无需登录）                |
+| 场景                                      | 命令                                                                               | 访问                                                                   |
+| ----------------------------------------- | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| 只改 admin 业务（免登录）                 | `pnpm -C apps/admin dev` + 取消 `apps/admin/.env` 中 `VITE_DEMO_NO_AUTH=true` 注释 | `localhost:5174/` → /workbench                                         |
+| 测统一登录跨应用漫游                      | `pnpm dev:gateway`                                                                 | `localhost:8080/admin/`（未登录自动跳 `:8080/auth/login`，登录后回跳） |
+| 单 app 独立调试（docs/portal 等公开应用） | `pnpm -C apps/<a> dev`                                                             | `localhost:<port>/`（docs 5175 等，白名单公开无需登录）                |
 
 > 统一登录全链路必须经同域网关 `:8080`（node 网关按 path 前缀分流到对应 app）；详见 [docs/43](docs/43-Monorepo结构与开发指引.md) §5/§6 与 §9 排障。
 
@@ -707,6 +708,7 @@ docker compose -f docker-compose.prod.yml up --build
 
 > 一致性 checks 全部由 CI 执行（ci.yml）：check:routes（内含端口双写锁死 + 注册表反向校验）/ check:aliases / check:mock-wiring / check:doc-currency；本地可用同名 script 预跑。
 > 首次启用需在仓库 Settings → Pages 把 Source 设为 "GitHub Actions"。设计文档：[docs/superpowers/specs/2026-10-20-gh-pages-deploy-design.md](docs/superpowers/specs/2026-10-20-gh-pages-deploy-design.md)。
+> **分支保护建议**：Settings → Branches 为 master 开启保护（禁直推、必过 CI）——showroom 分级下（docs/big/h5 的 test 在 master push 被排除），直推 master 是三 showroom app 纯测试破坏的唯一静默通道，分支保护可将该通道关闭（/autoplan Round 2 R2-E4）。
 
 如需对接自己的部署环境（对象存储 / CDN / 其它静态托管），以上「生产 Docker 部署」的 `Dockerfile` + `deploy/nginx.prod.conf.template` 即接入参考。
 

@@ -6,6 +6,74 @@
 
 ## 未发布
 
+### 🔧 Fix | /autoplan Round 2 P2 批次：复审发现修复（2026-10-28）
+
+> 背景：Round 2 复审（修复质量验证 + 新问题排查，档案 `~/.gstack/projects/Mr-Super-X-vue3-vite-project/2026-10-28-monorepo-architecture-review-round2.md`）——
+> Round 1 的 23 项任务零遗漏落地且四项关键修复经对抗性复核全部 SOLID；本轮发现集中于
+> 修复后新引入的代码面（versionCheck 插件族 / postinstall / vant 集成）。P2 批次 8 项全部落地。
+
+#### R2-E1 h5 vant dev 主题失效修复（实证缺陷）
+
+- `vant-vars.scss` 根选择器 `:root` → `:root:root`：vant 每组件 style 入口都 import 同一份
+  base.css 默认值，dev 下懒加载组件 CSS 晚于本文件注入，同特异度 (0,1,0) 后注入者胜——
+  dev 下主题被压平回默认蓝（prod 因 link 排序侥幸正确）。双写提升至 (0,2,0) 与注入顺序解耦。
+- 验证：dev 环境 CDP 实证 `--van-primary-color` 计算值 `#ff6a00`、主按钮 `rgb(255,106,0)`。
+
+#### R2-E2 postinstall 不再触碰 mock 编译面
+
+- `generate-declarations.ts` 主流程入口显式 `VITE_USE_MOCK=false`：声明生成只需 unplugin
+  dts 钩子；原形态每次 install 都触发 vite-plugin-mock 的 bundle 编译与清理，install 与
+  运行中 dev server 并发时会踩中记录在案的 unlink 竞态（dev server mockData 静默清空）。
+
+#### R2-E3 version-check-vite 锚点与守卫
+
+- `configResolved` 改 `resolve(config.root, outDir)`（原锚 `process.cwd()`——非 `pnpm -C`
+  入口会把 version.json 写进错误目录而产物正常，版本检测静默失效）；
+- `closeBundle` 补 `existsSync` 守卫（构建失败时不再用 ENOENT 掩盖原始错误）；
+- spec 补 2 用例（root 锚定回归 / outDir 缺失静默跳过）。
+
+#### T1 versionCheck 缺省不启动（无人消费的信号不采集，R2-CEO-3）
+
+- `shouldEnable` prod 缺省从「默认开」改为「注入 `onUpdate` 才启动」——修复前 5/6 app
+  在 prod 每 tab 每 5min 轮询 version.json 后落入 prod noop 回调（纯死负载）；
+  `enabled: true` 显式强制开语义不变（dev 调试/自建采集路径保留）。
+- portal 已注入 ElNotification 通知，行为不变；spec 4 用例重写 + docs/44 三处同步。
+
+#### R2-DX 四项（new-module 死端口 / env 指引 / docs/10 陈旧 / check-routes 修复映射）
+
+- `new-module.ts` 成功 banner 端口从硬编码 `5173`（单 app 时代遗留）改为经
+  `apps-registry` manifest 单源派生（实证 admin:5174 正确输出）；
+- README 快速开始顺序调整为 env 先行 + 指引改指 `apps/admin/.env` 已有的
+  `# VITE_DEMO_NO_AUTH=true` 注释引导行（取消注释即开启，无需新建文件）；
+- docs/10 的 IDE 预警重写（postinstall 已生成 admin 声明，删除「先跑全量 pnpm dev」的
+  陈旧指引）+ 路径 A 首命令与 README 统一（`pnpm -C apps/admin dev`，dev:local 降脚注）；
+- `check-routes` 失败输出补每类检查的修复映射（对齐 check:aliases 的 what+why+fix 标杆）。
+
+#### R2-E4 showroom 直推洞封口（制度层）
+
+- ci.yml showroom 分级段补残留风险声明注释（直推 master 时 showroom 三 app 纯测试破坏
+  不在拦截面内）+ README CI 节补分支保护建议（Settings → Branches 禁直推）。
+
+#### 验证
+
+`pnpm lint`（改动 8 文件定向 EXIT 0）/ `pnpm type-check`（turbo 全量 EXIT 0）/
+`pnpm test`（shared 470 + config 60 全绿）/ `pnpm test:check-scripts`（40 绿）/
+`pnpm check:routes`（绿）/ `pnpm check:doc-currency`（13 项全过）/ h5 dev CDP 实证。
+
+#### 复核推翻记录（Trust but Verify 的价值）
+
+- DX 子代理「幽灵 env 文件」发现（称全仓无 `.env*`）经主代理复核**推翻**——Glob 工具
+  对 dotfile 默认不返回导致误判；git ls-files 证实 13 个 env 文件在跟踪中，且 admin
+  `.env` 已有演示模式注释引导行。修复方案随之从「新建 .env.example」修正为「指引指向
+  已有引导行」（成本更低且机制已存在）。
+
+#### 遗留（已登记 TODOS.md Round 2 区）
+
+- P3 批次 9 项 + 叙事一致性批次（README H1/EN banner/VITE_BUILD_ID 接线/issue 模板免责行）
+  + 治理议题三项（退役准则 / 文档预算门禁 / dev 命名演进登记）；
+- 人工项 ×2：eslint.config.mjs ignores 补 e2e 产物目录（config-protection 拦截）+
+  本地 playwright-report/ 产物目录手动删除。
+
 ### 📌 定位 | 仓库定位裁决：开放底座（2026-10-28，/autoplan C7）
 
 > 三阶段审查 CEO 层 CRITICAL 发现「定位悖论」（对外模板叙事 vs 个人底座制品证据）的处置：

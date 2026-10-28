@@ -313,6 +313,25 @@ export function main(): void {
 
   if (totalErrors > 0) {
     console.error(`✖ 共 ${totalErrors} 个错误`)
+    // 修复映射（2026-10-28 /autoplan R2-DX-4）：失败输出只报名单曾让首次踩坑者做
+    // 源码考古——每类检查补一行「怎么修」，与 check:aliases 的 what+why+fix 对齐
+    console.error('')
+    console.error('修复指引（按检查类对号入座）：')
+    console.error(
+      '  [A] whitelist 有但 routes 没有 → 在 apps/<app>/src/modules/<m>/routes/*.ts 补路由实现；或从 apps/<app>/src/router/whitelist.ts 移除该 name'
+    )
+    console.error(
+      '  [B] 系统路由不在 whitelist → 把该 name 加进 apps/<app>/src/router/whitelist.ts（兜底页必须可匿名访问）'
+    )
+    console.error(
+      '  [C] 系统路由未实现 → 在 routes 中实现该兜底路由（error 模块骨架可参照既有 app）'
+    )
+    console.error(
+      '  [D] 双向不一致 → 以 routes 实现为准对齐 whitelist；豁免前缀见 scripts/check-routes.ts 的 EXEMPT_PREFIXES'
+    )
+    console.error(
+      '  manifest 完整性 → apps/<app>/app.manifest.json 与 src/ 目录一一对应（新增 app 用 pnpm new-app 一键生成）'
+    )
     process.exit(1)
   } else {
     console.log(`✓ 所有应用的路由检查通过（${apps.join(' / ')}）`)

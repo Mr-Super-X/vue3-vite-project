@@ -14,7 +14,8 @@
  *   - 纯函数层（shouldEnable / isChunkLoadErrorMessage / parseVersionPayload /
  *     createVersionPoller）独立导出供单测；default export 只是薄装配
  *   - 基线存模块级变量，不落 localStorage——避免基线跨版本残留致「永远不提示」
- *   - dev 默认不启动（HMR 即热更新；enabled:true 可强制调试）
+ *   - dev 默认不启动（HMR 即热更新；enabled:true 可强制调试）；
+ *     prod 缺省需注入 onUpdate 才启动（无人消费的信号不采集，见 shouldEnable 头注）
  *   - 全部错误静默降级（网络抖动 / 404 / 解析失败均不抛），绝不影响业务
  *
  * @see [`../../config/src/version-check-vite.ts`](../../config/src/version-check-vite.ts) 构建侧 version.json 生成
@@ -39,7 +40,8 @@ export interface VersionCheckOptions {
   intervalMs?: number
   /**
    * 发现版本更新时回调（业务注入通知实现，如 ElNotification）。
-   * 缺省 noop；dev 模式缺省 console.warn。
+   * prod 缺省不注入 = 插件不启动（无人消费的信号不采集）；
+   * dev 强制开启（enabled:true）时缺省 console.warn。
    * chunk-error 兜底缺省也回落到此回调（source: 'chunk-error'，id 为 null）
    */
   onUpdate?: (info: VersionInfo) => void
@@ -57,12 +59,17 @@ export const DEFAULT_INTERVAL_MS = 5 * 60 * 1000
 /**
  * 启用裁决：DEV 缺省关闭（HMR 即热更新，dev server 无 version.json），
  * enabled:true 强制开（dev 调试路径）、enabled:false 强制关。
+ * prod 缺省需注入 onUpdate 回调才启动（2026-10-28 /autoplan R2-CEO-3）：
+ * 缺省 defaultOnUpdate 在 prod 是 noop——无回调即「采集了也无人消费」，
+ * 6 app 默认装配曾致 5/6 app 每 tab 每 5min 轮询 version.json 后丢弃结果
+ * （纯死负载）。有消费方才采集，注入 onUpdate 即启用信号。
  * 抽成纯函数以便测试（install 传入 import.meta.env.DEV）。
  */
 export function shouldEnable(dev: boolean, options?: VersionCheckOptions): boolean {
   if (options?.enabled === true) return true
   if (options?.enabled === false) return false
-  return !dev
+  if (dev) return false
+  return typeof options?.onUpdate === 'function'
 }
 
 /** ChunkLoadError 4 种浏览器 message 形态（i 标志忽略大小写） */

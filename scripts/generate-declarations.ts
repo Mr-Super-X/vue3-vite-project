@@ -46,6 +46,12 @@ export async function main(): Promise<void> {
     console.log('[generate-declarations] CI 环境跳过（build 步骤会生成声明）')
     return
   }
+  // 声明生成只需 unplugin 的 dts 钩子（buildStart 写文件），不需要 mock——显式关闭
+  // （2026-10-28 /autoplan R2-E2）：否则每次 install 都会触发 vite-plugin-mock 的
+  // bundle 编译与 _*.bundled_*.mjs 清理；install 与运行中的 dev server 并发时，
+  // bundle-require unlink 竞态会把 dev server 的 mockData 静默清空（docs/43 §9.3 在案）。
+  // shell env 是 VITE_USE_MOCK 优先链顶端（README §环境变量），进程内设置即可生效。
+  process.env.VITE_USE_MOCK = 'false'
   const apps = process.argv.slice(2)
   const targets = apps.length > 0 ? apps : DEFAULT_APPS
   for (const app of targets) {

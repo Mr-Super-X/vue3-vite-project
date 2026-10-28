@@ -5,9 +5,10 @@
  * plugins/index.ts 同构收敛）。portal 无 h5 布局（viewport meta 在 index.html
  * 静态声明），工厂缺省不装配 remAdaptation。
  *
- * versionCheck 通知注入（2026-10-28 试点）：工厂默认装配版本检测插件但
- * onUpdate 缺省 noop（prod）——门户站用户场景注入 ElNotification 通知，
- * buildId 变化 / ChunkLoadError 兜底统一提示刷新；间隔保持默认 5min。
+ * versionCheck 通知注入（2026-10-28 试点）：prod 缺省不注入 onUpdate 即不启动
+ * （无人消费的信号不采集，/autoplan R2-CEO-3）——门户站用户场景注入
+ * ElNotification 通知（注入即启用信号），buildId 变化 / ChunkLoadError 兜底
+ * 统一提示刷新；间隔保持默认 5min。
  * ElNotification 显式 import + 样式随行（apps 私有文件不受 AutoImport 兜底，
  * 与 @vv/shared http.ts 的 ElMessage 同范式）。
  *
