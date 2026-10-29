@@ -6,6 +6,32 @@
 
 ## 未发布
 
+### 🐛 Fix | dev:gateway 启动前预清 mock bundled 临时文件，根治「非正常关闭后重启全站 mock 404」（2026-10-29）
+
+> 背景：dev:gateway 启动后登录接口 404（实际全站 mock 404）。根因：vite-plugin-mock 的
+> getMockConfig glob 会匹配 mock 源目录下所有 ts/mjs/js 文件，上次非正常关闭（Ctrl+C 未跑
+> closeBundle / 启动中途被 tear down）残留的 `_*.bundled_*.mjs` 被当成 mock 源打包；
+> clean-mock-bundled 启动清理删除 >5s 旧文件时，glob/esbuild 已在飞（configResolved 先于
+> configureServer）→ esbuild 解析已删文件 → 该 app mockData 静默清空。网关 `/mock/` 只反代
+> admin，admin 挂 = 全站 mock 404。
+
+- **`scripts/dev-gateway.ts`**：新增 `cleanStaleMockBundled`（递归删除 mock 源目录全部
+  bundled 临时文件，命名硬约束与 clean-mock-bundled 同源），`main()` 启动任何 app 前调用——
+  此时无 dev server 在跑，无需 5s mtime 门槛，从源头消除触发条件；有残留时启动首行打印
+  「🧹 预清 N 个残留 mock bundled 临时文件」
+- **`scripts/dev-gateway.spec.ts`**：补 2 用例（递归删除 + 命名硬约束不误伤真实 mock 源、
+  幂等二次调用 / 目录不存在返回 0），test:gateway 16→18
+- **docs/43 §9.3**：新增第 5 条排障项（残留 bundled 文件形态 + 应急手法）
+
+> 踩坑：文件头注释里写 glob 字面量 `` `**/*.{ts,mjs,js}` ``——其中 `**/` 序列会提前闭合
+> 块注释，node --experimental-strip-types 直接报 ERR_INVALID_TYPESCRIPT_SYNTAX（注释内
+> 同样不能出现 `*/`）。
+
+验证：`pnpm test:gateway` 18 绿；端到端：植入 2 个模拟残留文件 → 启动日志「🧹 预清 2 个」
+→ 文件清零 → `POST :8080/mock/auth/login`（admin/123456）返回 200。
+
+手动验证：下次 `pnpm dev:gateway` 启动时，首行 🧹 日志仅在存在残留时出现（属预期）。
+
 ### 📚 Docs | 新增 docs/47-能力体验清单：架构/能力/排障操作手册（会用 → 会修 → 会教）（2026-10-29）
 
 > 背景：所有者需要一份「自己过完能教别人」的系统性清单——每条能力 = 一句话定位 + 可执行

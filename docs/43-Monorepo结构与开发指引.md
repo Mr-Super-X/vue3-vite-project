@@ -177,6 +177,7 @@ pnpm dev:gateway admin auth  # 子集模式（2026-10-27）：仅起指定 app�
 2. **mock 文件位置**：mock 已迁 `packages/mock/src/`（**不是**根 `mock/`）；新建 mock 文件要放进该目录（或被 viteMockServe 扫描到的约定目录）才会生效
 3. **new-module 未带 `--with-mock`**：该选项可选，未传时只生成业务骨架、不生成 mock——接口自然 404，补一个 mock 文件即可
 4. **并行 dev 的 mock 竞态（`pnpm dev` 偶发全部 mock 404）**：6 app 共享同一 `@vv/mock` 源码目录，turbo 并行起 dev 时 vite-plugin-mock 的 bundle-require 会对 `_*.bundled_*.mjs` 临时文件无容错 unlink，并发编译下互相抢删会让某 app 的 mockData 静默清空（接口返回 index.html / 404）。**已内置修复**：`@vv/config` 的 `cleanMockBundled` 插件带 5 秒 mtime 门槛（只删创建超 5s 的陈旧临时文件，在飞文件不碰）；若老分支复现，重启该 app dev 即可，升级 `packages/config` 后根治
+5. **上次非正常关闭残留的 bundled 文件（dev:gateway 启动后全部 mock 404，2026-10-29 根治）**：vite-plugin-mock 的 `getMockConfig` glob 会匹配 mock 源目录下所有 ts/mjs/js 文件——上次 Ctrl+C 未跑 closeBundle / 启动中途被 tear down 留下的 `_*.bundled_*.mjs` 会被当成 mock 源打包，与启动清理竞态后 esbuild 解析已删文件 → 该 app mockData 静默清空（admin 挂 = 经网关的全部 mock 404，典型症状：登录接口 404）。**已内置修复**：`dev:gateway` orchestrator 启动任何 app 前无条件预清全部 bundled 临时文件（`cleanStaleMockBundled`，无 5s 门槛——此时无 dev server 在跑，删除绝对安全），有残留时启动首行打印「🧹 预清 N 个」；老分支应急：停全部 dev → `find packages/mock/src -name '_*.bundled_*' -delete` → 重启
 
 ### 9.4 HMR 失效：console 报 `[vite] failed to connect to websocket ... client:865`
 

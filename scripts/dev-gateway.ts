@@ -24,6 +24,14 @@
  * 见 packages/config/src/clean-mock-bundled.ts 头部事故记录）。
  * 串行（前一个端口就绪再启下一个）彻底消除并发编译窗口。
  *
+ * ⚠️ 启动前预清（2026-10-29 登录 404 事故根治）：vite-plugin-mock 的 getMockConfig
+ * glob 会匹配 mock 源目录下所有 ts/mjs/js 文件——上次非正常关闭残留的 bundled
+ * 临时文件（同为 .mjs）会被当成 mock 源打包，与 clean-mock-bundled 的启动清理
+ * 形成窗口竞态 → esbuild 解析已删文件 → 该 app mockData 静默清空（网关 /mock/
+ * 只反代 admin，admin 挂 = 全站 mock 404）。main() 启动任何 app 前先无条件清空
+ * mock 源目录 bundled 文件——此时无 dev server 在跑，删除绝对安全，从源头消除
+ * 触发条件（cleanStaleMockBundled）。
+ *
  * 启动顺序：先监听网关 8080（EADDRINUSE 立即报错——不浪费 6 个 dev 启动后才
  * 发现端口冲突），再串行起 dev server。
  *
@@ -38,9 +46,10 @@
  */
 
 import { spawn, type ChildProcess } from 'node:child_process'
-import { realpathSync } from 'node:fs'
+import { existsSync, readdirSync, realpathSync, unlinkSync } from 'node:fs'
 import type { Server } from 'node:http'
 import { createConnection } from 'node:net'
+import { join } from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
@@ -107,6 +116,49 @@ function waitForPort(port: number, timeoutMs = 20000): Promise<void> {
   })
 }
 
+/** vite-plugin-mock bundle-require 临时文件硬约束（与 clean-mock-bundled 同源规则） */
+const MOCK_BUNDLED_RE = /^_.*\.bundled_.*\.(?:mjs|cjs)$/
+
+/** 递归收集 mockDir 下全部 bundled 临时文件的绝对路径 */
+function collectBundledFiles(dir: string, acc: string[] = []): string[] {
+  if (!existsSync(dir)) return acc
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name)
+    if (entry.isDirectory()) {
+      collectBundledFiles(full, acc)
+    } else if (entry.isFile() && MOCK_BUNDLED_RE.test(entry.name)) {
+      acc.push(full)
+    }
+  }
+  return acc
+}
+
+/**
+ * 无条件清空 mockDir 下全部 vite-plugin-mock bundled 临时文件，返回删除数。
+ *
+ * 与 clean-mock-bundled 的差异在调用时机与安全前提：orchestrator 启动任何 dev
+ * server 之前调用，此时无进程持有/即将 import 这些文件，故无需 5s mtime 门槛。
+ * 根治「残留 bundled 文件被 getMockConfig 的 glob（匹配目录下全部 ts/mjs/js）
+ * 拾取为 mock 源 → 启动清理与在飞 glob/esbuild 竞态 → mockData 静默清空」的
+ * 确定性触发源（2026-10-29 登录 404 事故，详见文件头注释与
+ * packages/config/src/clean-mock-bundled.ts）。
+ *
+ * @param mockDir @vv/mock 源目录绝对路径（packages/mock/src）
+ */
+export function cleanStaleMockBundled(mockDir: string): number {
+  let removed = 0
+  // collectBundledFiles 已按 MOCK_BUNDLED_RE 过滤文件名，这里直接删
+  for (const full of collectBundledFiles(mockDir)) {
+    try {
+      unlinkSync(full)
+      removed++
+    } catch {
+      // 文件可能已被其它进程删掉，吞 ENOENT
+    }
+  }
+  return removed
+}
+
 /**
  * 启动单个 app dev（异步）：注入 VITE_BASE=/<app>/ 后 spawn pnpm -C apps/<app> dev，
  * 等待其 dev server 端口就绪后 resolve——保证下一个 app 启动时，本 app 的
@@ -159,6 +211,13 @@ async function main(): Promise<void> {
   const subset = resolveAppSubset(process.argv.slice(2))
   const rootRedirect = resolveRootRedirect(subset)
   const isSubset = subset.length < APPS.length
+
+  // 预清 mock bundled 临时文件必须在任何 dev server 启动前（无 5s 门槛的安全前提），
+  // 先于网关监听也无妨：temp 文件随时可再生，即便随后因端口占用退出也无副作用
+  const removedBundled = cleanStaleMockBundled(join(REPO_ROOT, 'packages/mock/src'))
+  if (removedBundled > 0) {
+    console.log(`  🧹 预清 ${removedBundled} 个残留 mock bundled 临时文件（上次非正常关闭遗留）`)
+  }
 
   console.log(
     `🚀 同域网关模式：node 网关 :${GATEWAY_PORT} + 串行启动 ${subset.length} 个 app dev（base=/<app>/，避免共享 mock 源并发编译竞态）…\n`
