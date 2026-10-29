@@ -2,11 +2,12 @@
  * 版本检测插件（@vv/shared 单源）——生产页面资源更新检测。
  *
  * 文件角色：可插拔 Vue 插件，与 errorHandler / webVitals / remAdaptation 同体系
- * （createAppPlugins 工厂第 4 装配项，6 app 默认拥有）。双机制：
+ * （createAppPlugins 工厂第 4 装配项，6 app 默认拥有）。双机制（启用面不同，R3-E3）：
  *   - 主动轮询：定时 fetch version.json（构建侧 version-check-vite 插件生成，
- *     见 packages/config/src/version-check-vite.ts）比对 buildId
+ *     见 packages/config/src/version-check-vite.ts）比对 buildId——prod 缺省需注入
+ *     onUpdate 消费方才启动（无人消费的信号不采集，见 shouldEnable 头注）
  *   - 被动兜底：ChunkLoadError 监听（轮询间隔内用户刚好点到已被新版本删除的
- *     懒加载 chunk 的场景）
+ *     懒加载 chunk 的场景）——零网络零定时器成本，无条件装配（不受 shouldEnable 约束）
  *
  * 设计要点：
  *   - 零 UI 依赖（@vv/shared 不引入 Element Plus）：通知经 onUpdate 回调注入，
@@ -14,8 +15,8 @@
  *   - 纯函数层（shouldEnable / isChunkLoadErrorMessage / parseVersionPayload /
  *     createVersionPoller）独立导出供单测；default export 只是薄装配
  *   - 基线存模块级变量，不落 localStorage——避免基线跨版本残留致「永远不提示」
- *   - dev 默认不启动（HMR 即热更新；enabled:true 可强制调试）；
- *     prod 缺省需注入 onUpdate 才启动（无人消费的信号不采集，见 shouldEnable 头注）
+ *   - dev 默认不启动轮询（HMR 即热更新；enabled:true 可强制调试）；
+ *     prod 缺省需注入 onUpdate 才启动轮询（ChunkLoadError 兜底不受此约束，仍无条件装配）
  *   - 全部错误静默降级（网络抖动 / 404 / 解析失败均不抛），绝不影响业务
  *
  * @see [`../../config/src/version-check-vite.ts`](../../config/src/version-check-vite.ts) 构建侧 version.json 生成
@@ -57,7 +58,8 @@ export interface VersionCheckOptions {
 export const DEFAULT_INTERVAL_MS = 5 * 60 * 1000
 
 /**
- * 启用裁决：DEV 缺省关闭（HMR 即热更新，dev server 无 version.json），
+ * 轮询启用裁决（ChunkLoadError 兜底不受此约束，2026-10-29 R3-E3）：
+ * DEV 缺省关闭（HMR 即热更新，dev server 无 version.json），
  * enabled:true 强制开（dev 调试路径）、enabled:false 强制关。
  * prod 缺省需注入 onUpdate 回调才启动（2026-10-28 /autoplan R2-CEO-3）：
  * 缺省 defaultOnUpdate 在 prod 是 noop——无回调即「采集了也无人消费」，
@@ -179,30 +181,12 @@ export default {
    * @example 业务注入通知（ElNotification 等）经 main.ts 的 PluginsOptions.versionCheck 传入
    */
   install(app: App, options: VersionCheckOptions = {}): void {
-    if (!shouldEnable(import.meta.env.DEV, options)) return
-
     const onUpdate = options.onUpdate ?? defaultOnUpdate
-    const poller = createVersionPoller({
-      path: options.path ?? `${import.meta.env.BASE_URL}version.json`,
-      intervalMs: options.intervalMs ?? DEFAULT_INTERVAL_MS,
-      onUpdate,
-      fetchImpl: fetch,
-    })
 
-    // 页面 hidden 暂停定时器、visible 恢复并立即补一次（后台 tab 不浪费请求）
-    const onVisibility = (): void => {
-      if (document.hidden) {
-        poller.stop()
-      } else {
-        poller.start()
-        void poller.pollOnce()
-      }
-    }
-    document.addEventListener('visibilitychange', onVisibility)
-
-    // ChunkLoadError 兜底：懒加载 chunk 被新版本删除 → 路由跳转 404 时提示刷新。
-    // 双监听（error + unhandledrejection）覆盖 4 种浏览器 message 形态；
-    // 回调自身异常吞掉，兜底层永不抛。
+    // ChunkLoadError 兜底无条件装配（2026-10-29 /autoplan Round 3 R3-E3）：
+    // 被动监听零网络零定时器成本，不适用「无人消费的信号不采集」原则（该原则只约束
+    // 主动轮询）——R2 缺省关（shouldEnable 拦截整个 install）曾致 5/6 app 部署后旧
+    // chunk 命中白屏无提示（Round 3 R3-F3 / B4）。
     const chunkHandler =
       options.onChunkError ??
       ((_err: Error) =>
@@ -234,14 +218,38 @@ export default {
     window.addEventListener('error', onWindowError)
     window.addEventListener('unhandledrejection', onRejection)
 
-    poller.start()
-    void poller.pollOnce()
+    // 主动轮询：prod 缺省需注入 onUpdate 消费方才启动（shouldEnable 头注，R2-CEO-3）
+    let poller: ReturnType<typeof createVersionPoller> | null = null
+    let onVisibility: (() => void) | null = null
+    if (shouldEnable(import.meta.env.DEV, options)) {
+      poller = createVersionPoller({
+        path: options.path ?? `${import.meta.env.BASE_URL}version.json`,
+        intervalMs: options.intervalMs ?? DEFAULT_INTERVAL_MS,
+        onUpdate,
+        fetchImpl: fetch,
+      })
+
+      // 页面 hidden 暂停定时器、visible 恢复并立即补一次（后台 tab 不浪费请求）
+      onVisibility = (): void => {
+        if (!poller) return
+        if (document.hidden) {
+          poller.stop()
+        } else {
+          poller.start()
+          void poller.pollOnce()
+        }
+      }
+      document.addEventListener('visibilitychange', onVisibility)
+
+      poller.start()
+      void poller.pollOnce()
+    }
 
     // teardown（2026-10-28 /autoplan R2-E6）：app 卸载时停轮询 + 摘全部监听器——
     // 共享基建应有卸载路径（SPA 单例下概率低，但 6 app 复用场景的语义完整性要求）
     app.onUnmount(() => {
-      poller.stop()
-      document.removeEventListener('visibilitychange', onVisibility)
+      poller?.stop()
+      if (onVisibility) document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('error', onWindowError)
       window.removeEventListener('unhandledrejection', onRejection)
     })

@@ -69,6 +69,12 @@ jobs:
         # 判定纯函数表驱动守护——校验器假阳性（静默失效且绿色通过）是最危险的门禁失效模式
         run: pnpm test:check-scripts
 
+      - name: Test gateway specs
+        # /autoplan Round 3 R3-E1（2026-10-29）：node-gateway 8 用例（HTTP/WS/302/502 smoke）
+        # 自 v3.0.2 起只跑在本地——网关回归无 CI 守护（Round 3 R3-F1）。node --test 直跑，
+        # 用例内自起网关并自跳过端口占用场景，无需 turbo/build 前置
+        run: pnpm test:gateway
+
       - name: Build + Test (master 全量)
         # 仅 master push 全量（合入即发布候选，与 deploy.yml 同口径）。
         # 顺序强约束：turbo run build 内部 = build-only（unplugin 生成 auto-imports.d.ts /
@@ -120,6 +126,12 @@ jobs:
         # + MOCK_PERMISSIONS 权限码单源——消除历史上「注释约定手工同步」的漂移风险
         # （架构审查健壮性项：全库最现实的 dev/prod 行为分叉风险点）
         run: pnpm check:mock-wiring
+
+      - name: Check decisions ledger
+        # /autoplan Round 3 R3-G1（2026-10-29）：DECISIONS.md 台账纪律机检——「待实施」必须
+        # 登记 TODOS、「已落地」锚点必须存在。R2 实证 10 项 DX 决策 3 项未落地且全部未被
+        # 捕获（对账靠人工必漂移），本 step 把 R2 事故形态变成 CI 红
+        run: pnpm check:decisions
 
       - name: Cache Playwright browsers
         # e2e 入 CI（/autoplan T-2）：chromium 浏览器目录缓存（key 随 lockfile 失效——

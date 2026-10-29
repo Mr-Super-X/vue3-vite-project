@@ -103,6 +103,24 @@ ${links}
   console.log('✅ 落地导航页 dist/index.html 已生成')
 }
 
+/** GitHub Pages 安全头（2026-10-29 /autoplan Round 3 R3-E4）：Pages 无服务器配置能力，
+ *  安全头经发布根目录 _headers 文件生效。CSP 比 nginx 宽——script 允许 unsafe-inline
+ *  （演示构建存在内联脚本注入），定位是演示站基线而非生产级策略。 */
+function writePagesHeaders(): void {
+  writeFileSync(
+    path.join(OUT_DIR, '_headers'),
+    `/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' data:; frame-ancestors 'none'
+`,
+    'utf-8'
+  )
+  console.log('✅ Pages 安全头 dist/_headers 已生成')
+}
+
 function main(): void {
   const apps = findBuildableApps()
   if (apps.length === 0) {
@@ -119,7 +137,8 @@ function main(): void {
     copyDist(name)
   }
   writeLandingPage(apps)
-  console.log(`\n🎉 聚合完成：dist/ 下 ${apps.length} 个应用 + 落地页`)
+  writePagesHeaders()
+  console.log(`\n🎉 聚合完成：dist/ 下 ${apps.length} 个应用 + 落地页 + _headers`)
 }
 
 main()

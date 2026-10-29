@@ -39,6 +39,17 @@ function findBuildableApps(): string[] {
     .filter((name) => existsSync(path.join(APPS_DIR, name, 'vite.config.ts')))
 }
 
+/** version.json buildId：git short sha + 构建时间（对齐 deploy.yml 的 sha+run_attempt 语义）。
+ *  Docker context 排除 .git（.dockerignore）时 git 失败 → 'nogit' 前缀回落，仍可去重。 */
+function buildId(): string {
+  const sha = spawnSync('git', ['rev-parse', '--short', 'HEAD'], {
+    cwd: REPO_ROOT,
+    encoding: 'utf-8',
+    shell: true,
+  }).stdout?.trim()
+  return `${sha || 'nogit'}-${Date.now().toString(36)}`
+}
+
 /** 单 app 构建：注入生产 env 后跑 build-only（类型门禁由 CI 承担，见文件头注） */
 function buildApp(appName: string): void {
   const env = {
@@ -49,6 +60,10 @@ function buildApp(appName: string): void {
     VITE_MENU_SOURCE: 'remote',
     VITE_USE_MOCK: 'false',
     VITE_API_BASE_URL: '/api',
+    // version.json buildId（2026-10-29 /autoplan Round 3 R3-E5）：缺省随机值会在
+    // versionCheck 启用后造成「每次轮询都提示刷新」死循环——Docker 构建同须可追溯。
+    // sha 拼构建时间消「同 commit 重跑相同 buildId」（对齐 deploy.yml sha+run_attempt）
+    VITE_BUILD_ID: buildId(),
   }
   const result = spawnSync('pnpm', ['-C', `apps/${appName}`, 'build-only'], {
     cwd: REPO_ROOT,

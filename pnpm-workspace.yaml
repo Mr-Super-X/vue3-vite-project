@@ -65,7 +65,9 @@ catalog:
   vite-plugin-vue-devtools: '^8.1.2'
   vitest: '^4.1.9'
   vitest-axe: '^0.1.0'
-  vue: '^3.5.38'
+  # 精确钉版与 overrides 同源（2026-10-29 /autoplan Round 3 R3-E7）：catalog 写区间会被
+  # overrides 全覆盖，给读者「Vue 3.5」错误信号（叙事裂缝家族实证）——两处都钉精确值
+  vue: '3.6.0-beta.17'
   vue-i18n: '^11.4.6'
   vue-router: '^5.1.0'
   vue-tsc: '^3.3.11'

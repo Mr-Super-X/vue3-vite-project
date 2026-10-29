@@ -287,4 +287,22 @@ describe('versionCheck — install 装配', () => {
       source: 'chunk-error',
     })
   })
+
+  // T1（2026-10-29 /autoplan Round 3 R3-E3 回归网）：R2 缺省关曾拦截整个 install，
+  // 5/6 app 的 chunk-error 兜底随轮询一起失效（R3-F3）。若未来有人把兜底塞回
+  // shouldEnable 分支，本用例变红。
+  it('缺省禁用轮询时 chunk-error 兜底仍装配（被动兜底不受 shouldEnable 约束）', async () => {
+    vi.useFakeTimers()
+    const fetchImpl = makeFetch('v1')
+    vi.stubGlobal('fetch', fetchImpl)
+    const onChunkError = vi.fn()
+    // 缺省无 enabled / onUpdate = 轮询禁用路径（dev 缺省或 prod 无消费方同态）
+    versionCheckPlugin.install(makeApp(), { path: '/admin/version.json', onChunkError })
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(fetchImpl).not.toHaveBeenCalled() // 轮询仍禁用（R2-CEO-3 语义保持）
+    window.dispatchEvent(new ErrorEvent('error', { message: 'ChunkLoadError: failed' }))
+    expect(onChunkError).toHaveBeenCalledTimes(1) // 兜底无条件装配
+    vi.unstubAllGlobals()
+    vi.useRealTimers()
+  })
 })

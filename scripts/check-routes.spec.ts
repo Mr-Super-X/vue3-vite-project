@@ -22,7 +22,9 @@ import {
   extractWhitelist,
   isExempt,
   requiredFor,
+  validateNginxTemplateApps,
 } from './check-routes.ts'
+import { APPS } from './apps-registry.mjs'
 
 // ── extractRouteNames：routes 文件 name 提取 ───────────────────
 
@@ -113,4 +115,69 @@ test('requiredFor：已登记 app 返回注册表兜底名单', () => {
 
 test('requiredFor：未登记 app → 空集（B/C 校验静默跳过，靠 E 反向校验兜底）', () => {
   assert.deepEqual(requiredFor('ghost-app'), [])
+})
+
+// ── validateNginxTemplateApps：生产模板名单对账（/autoplan Round 3 R3-E2）──
+// 守护对象：deploy/nginx.prod.conf.template 手写 app 名单是 apps-registry 的平行
+// 事实源——解析正则漂移会让对账静默失效（CLI 全绿 ≠ 真一致，同 R2-E8 论证）。
+
+const FIXTURE_TEMPLATE = `
+    location ~* ^/(admin|auth|portal|h5|big|docs)/assets/.+\\.(js|css)$ {
+        expires 30d;
+    }
+    location /admin/ {
+        alias /usr/share/nginx/html/admin/;
+    }
+    location /auth/ {
+        alias /usr/share/nginx/html/auth/;
+    }
+    location /portal/ {
+        alias /usr/share/nginx/html/portal/;
+    }
+    location /h5/ {
+        alias /usr/share/nginx/html/h5/;
+    }
+    location /big/ {
+        alias /usr/share/nginx/html/big/;
+    }
+    location /docs/ {
+        alias /usr/share/nginx/html/docs/;
+    }
+`
+const SIX_APPS = ['admin', 'auth', 'portal', 'h5', 'big', 'docs']
+
+test('nginx 对账：模板名单与注册表一致 → 无错误', () => {
+  assert.deepEqual(validateNginxTemplateApps(FIXTURE_TEMPLATE, SIX_APPS), [])
+})
+
+test('nginx 对账：模板缺 app（第 7 app 未同步）→ 报错', () => {
+  const errors = validateNginxTemplateApps(FIXTURE_TEMPLATE, [...SIX_APPS, 'shop'])
+  assert.ok(errors.some((e) => e.includes('shop') && e.includes('生产 404')))
+})
+
+test('nginx 对账：模板多出手写 app（注册表已删）→ 报错', () => {
+  // 模板不变、期望名单缩掉 docs = 「模板残留已删除 app」的漂移形态
+  const errors = validateNginxTemplateApps(
+    FIXTURE_TEMPLATE,
+    SIX_APPS.filter((a) => a !== 'docs')
+  )
+  assert.ok(errors.some((e) => e.includes('docs') && e.includes('多出手写')))
+})
+
+test('nginx 对账：缺 location 块 → 逐 app 报错', () => {
+  const broken = FIXTURE_TEMPLATE.replace('location /big/ {', 'location /big/{\n')
+  const errors = validateNginxTemplateApps(broken, SIX_APPS)
+  assert.ok(errors.some((e) => e.includes('location /big/ 块')))
+})
+
+test('nginx 对账：assets 正则结构被改动 → 结构性报错（非静默空集）', () => {
+  const errors = validateNginxTemplateApps('location /admin/ {}', SIX_APPS)
+  assert.ok(errors.some((e) => e.includes('assets 缓存正则')))
+})
+
+test('nginx 对账：真实仓库模板与注册表一致（模板漂移即红——R3-E2 守护本体）', () => {
+  const templatePath = fileURLToPath(new URL('../deploy/nginx.prod.conf.template', import.meta.url))
+  const content = readFileSync(templatePath, 'utf-8')
+  const registryApps = APPS.map((entry) => entry.name)
+  assert.deepEqual(validateNginxTemplateApps(content, registryApps), [])
 })

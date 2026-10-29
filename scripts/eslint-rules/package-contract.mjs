@@ -112,7 +112,7 @@ export default {
     schema: [],
     messages: {
       undeclared:
-        "{{host}}/{{dirName}} 的 '{{pkgName}}' 未声明：dependencies / peerDependencies{{devHint}} 中均不存在",
+        "{{host}}/{{dirName}} 的 '{{pkgName}}' 未声明：dependencies / peerDependencies{{devHint}} 中均不存在 → 修复：把 '{{pkgName}}' 加进该 package.json 的 dependencies（apps 运行时依赖）或 peerDependencies（packages 库）",
       forbiddenDirection:
         "packages/{{dirName}} 禁止依赖 '{{pkgName}}'（@vv/* 方向铁律：mock → shared、ui → shared，其余组合禁止）",
       unknownVvPackage: "'{{pkgName}}' 不在 @vv/* 方向表（VV_DIRECTION）——新增包须先在本规则登记方向",

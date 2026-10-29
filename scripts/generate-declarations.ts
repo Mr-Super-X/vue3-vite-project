@@ -15,7 +15,7 @@
  *
  * 用法：pnpm generate:declarations [app...]（postinstall 自动调用，默认 admin）
  */
-import { existsSync, realpathSync } from 'node:fs'
+import { existsSync, realpathSync, statSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -54,7 +54,20 @@ export async function main(): Promise<void> {
   process.env.VITE_USE_MOCK = 'false'
   const apps = process.argv.slice(2)
   const targets = apps.length > 0 ? apps : DEFAULT_APPS
-  for (const app of targets) {
+  // 新鲜度短路（2026-10-29 /autoplan Round 3 R3-D3，补齐 R2-DX-5 残余）：声明比
+  // lockfile 新 = 依赖未变、声明有效，跳过重生成；缺文件（首次 install）不短路。
+  // 强制重生成：删掉 apps/<a>/src/types/auto-imports.d.ts 后重跑本脚本
+  const stale = targets.filter((app) => {
+    const dts = resolve(ROOT, `apps/${app}/src/types/auto-imports.d.ts`)
+    if (!existsSync(dts)) return true
+    return statSync(resolve(ROOT, 'pnpm-lock.yaml')).mtimeMs > statSync(dts).mtimeMs
+  })
+  if (stale.length === 0) {
+    console.log('[generate-declarations] 声明已新鲜（mtime 比对 lockfile），跳过')
+    return
+  }
+  console.log(`[generate-declarations] 正在生成 IDE 声明（${stale.join(' / ')}，秒级）…`)
+  for (const app of stale) {
     try {
       const ok = await generateForApp(app)
       if (ok) console.log(`[generate-declarations] ✓ ${app} 声明已生成`)

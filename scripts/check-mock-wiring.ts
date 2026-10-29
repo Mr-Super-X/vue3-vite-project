@@ -145,7 +145,7 @@ export function main(): void {
   // ---- 汇总 ----
   if (failures > 0) {
     console.error(
-      `\n✗ mock 双接线漂移 ${failures} 处——同步 packages/mock/src/index.ts 与 mockProdServer.ts（见脚本头注）`
+      `\n✗ mock 双接线漂移 ${failures} 处——删/加 mock 文件须三处同步：① index.ts import ② mockProdServer.ts 接线数组/内联模块 ③ 两处头注清单（细节见本脚本头注）`
     )
     process.exit(1)
   }

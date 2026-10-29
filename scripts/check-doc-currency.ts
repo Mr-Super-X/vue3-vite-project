@@ -387,10 +387,11 @@ const checks: Check[] = [
   },
   {
     // 文档预算（2026-10-28 /autoplan Round 2 R2-CEO-10）：新增文档须把 expected +1
-    // 并在 PR 说明理由（有意识增长）；瘦身先合并/归档再降预算。冻结值 45 为当日实测。
+    // 并在 PR 说明理由（有意识增长）；瘦身先合并/归档再降预算。冻结值 45 为当日实测；
+    // 2026-10-29 R3-D2：新增 docs/46-CI门禁速查.md（门禁失败恢复单页）→ 46，理由见该 PR。
     name: 'docs 根级文档数预算（docs/ 庄园冻结）',
     actual: countDocs,
-    expected: 45,
+    expected: 46,
     tolerance: 0,
   },
 ]

@@ -214,6 +214,8 @@ const routes: RouteRecordRaw[] = [
           title: '${pascal} 首页',
           titleKey: 'menu.${name}',
           icon: 'document',
+          // 声明性元数据：仅供 remote 菜单 zod 与类型声明消费——登录守卫不读此字段，
+          // 「公开免登录访问」唯一机制是 ROUTE_WHITE_LIST 白名单（见 docs/07）
           requiresAuth: true,
           // permissions: ['${name}:view'], // 可选：路由级权限，未配置则所有人可访问
         },

@@ -116,7 +116,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## §1 Architecture
 
-Feature-Sliced 风格的中后台门户前端（`vue3-vite-project`，企业中后台管理）：Vue 3.5 + TypeScript 6 + Vite 8 + Pinia 3 + Element Plus 2.14 + Vue Router 5。
+Feature-Sliced 风格的中后台门户前端（`vue3-vite-project`，企业中后台管理）：Vue 3.6（beta 精确钉版 3.6.0-beta.17，2027-01-31 前回稳定线，版本单源 pnpm-workspace.yaml catalog+overrides）+ TypeScript 6 + Vite 8 + Pinia 3 + Element Plus 2.14 + Vue Router 5。
 
 ### 1.1 分层视角
 

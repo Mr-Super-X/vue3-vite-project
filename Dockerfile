@@ -8,11 +8,12 @@
 ########################################################################
 # 阶段 1：生产聚合构建（产物 → /app/dist-prod/<app>/）
 ########################################################################
-FROM node:22-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /app
 
 # corepack 按 package.json packageManager 激活 pnpm@12.11.2（engines: >=11 <13）；
-# node:22-alpine 浮动 tag ≥ 22.18，满足 engines 与 --experimental-strip-types
+# node:24-alpine 对齐 CI（ci.yml/deploy.yml 24.12.0）——单一 major 消双版本测试面
+# （2026-10-29 /autoplan Round 3 R3-E9；engines 虽双允许 22/24，双版本无收益）
 RUN corepack enable
 
 # .dockerignore 已排除 node_modules / 各 dist / docs / .git，context 为纯源码

@@ -6,6 +6,44 @@
 
 ## 未发布
 
+### 🛡️ Chore | /autoplan Round 3 实施批次：生产面对账 + 决策台账机检 + versionCheck 拆分启用（2026-10-29）
+
+> 背景：Round 3 七维度审查（35 发现 → 15 任务终审「照单全收」）。最重三项：① 决策-落地
+> 对账断裂实证（R2 的 10 项 DX 决策 3 项未落地且未被捕获）；② R2「versionCheck 缺省关」
+> 连坐杀死 5/6 app 的 ChunkLoadError 白屏兜底；③ 生产部署面盲区——nginx 模板手写名单零对账。
+
+- **决策台账机检（R3-G1，最高优先）**：新增 `DECISIONS.md`（仓内决策唯一事实源，状态机
+  已落地/待实施/登记/关闭）+ `scripts/check-decisions.ts`（CI 阻断）——「待实施」必须登记
+  TODOS、「已落地」锚点必须存在，把 R2 静默遗漏形态变成 CI 红；spec 8 例守护解析层。
+  实施期自抓获 CLI 守卫 bug（import.meta.url 字符串比对在 Windows 永不命中 → main 静默
+  空跑 exit 0），已改 realpath 模式（与 generate-declisions 同）。
+- **versionCheck 拆分启用（R3-E3）**：ChunkLoadError 被动兜底改为无条件装配，主动轮询仍
+  需注入 onUpdate 才启动（R2-CEO-3 死轮询修复保持）；补「禁用时装监听器」回归 spec
+  （30 例全绿）。
+- **nginx 生产模板对账（R3-E2）**：`check:routes` 新增模板 app 名单 == apps-registry 双向
+  对账 + 逐 app location 块检查（第 7 app 上线即生产 404 的机检网，spec 6 例含真实模板
+  漂移守卫）；修复映射补 [Nginx] 行。
+- **test:gateway 入 CI（R3-E1）**：网关 16 用例自 v3.0.2 起只跑本地，补 CI step。
+- **生产安全 headers（R3-E4）**：nginx 模板 server 级 + assets 级双组（add_header 不跨层
+  继承，注释载案）+ `build-pages` 输出 Pages `_headers`（CSP 演示站基线，比 nginx 宽）。
+- **其余 P3 批次**：build-prod 注入 VITE_BUILD_ID（sha+构建时间，对齐 deploy.yml 语义）/
+  new-module 骨架 requiresAuth 教学注释 + golden 断言（R3-C1 教学矛盾）/ 叙事裂缝家族
+  根治（catalog vue 精确钉版 + CLAUDE.md §1 + README 表指针化）/ Dockerfile node:24-alpine
+  （对齐 CI 单一 major）/ postinstall 起始提示 + mtime 新鲜跳过（实跑验证「声明已新鲜，
+  跳过」）/ dev banner 补 dev:gateway 规范入口行 / package-contract 与 check-mock-wiring
+  报错补 fix 指引。
+- **docs**：新增 `docs/46-CI门禁速查.md`（13 门禁 × 触发/复跑/修复单页——文档预算
+  45→46 同批说明）；docs/10 补「任务 5：提交首个 PR（三门禁速查）」兑现标题承诺；
+  README 新手指引措辞同步。
+
+验证：`test:check-scripts` 58 绿 / `test:gateway` 16 绿 / `lint` 0 警告 / `type-check`
+10/10 / `check:routes`（含 nginx 对账节）/`check:mock-wiring` / `check:decisions`（24 条
+台账纪律全过）/`check:doc-currency` 14 项（46=46）全绿。
+
+手动验证：无（纯工程面变更）。遗留人工项：R3-E8（删除 `apps/admin/.env.development`
+的 `VITE_USE_MOCK=true` 死键——env 文件在权限拦截区，需手动）+ R3-人工-1（修复
+Codex 端点模型名）。
+
 ### 🛡️ Chore | /autoplan Round 2 治理批次：退役准则 + 文档预算 + keep/kill 裁决（2026-10-28）
 
 > 背景：CEO 审查 F11/F12/F13——11 个 CI 门禁只增不减无退役机制、16k 行文档庄园被

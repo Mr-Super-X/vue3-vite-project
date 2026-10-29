@@ -97,6 +97,51 @@ export function validateManifestPresence(): string[] {
 }
 
 /**
+ * nginx 生产模板 app 名单对账（/autoplan Round 3 R3-E2，2026-10-29）：
+ * deploy/nginx.prod.conf.template 手写 6 app 名单（assets 缓存正则 + 逐 app location 块），
+ * 是 apps-registry 之外的第二事实源——第 7 app 上线时模板未同步 = 该 app 生产 404
+ * （Round 3 R3-F2，子代理原话「dev 侧被单源消灭的双写在生产面完整保留」）。
+ * 从 assets 正则提取模板自认名单，与注册表名单双向比对；每个注册表 app 还须有
+ * 专属 location 块。模板文件不存在（fork 裁剪部署面）时由 main 跳过，不报错。
+ */
+export function validateNginxTemplateApps(
+  content: string,
+  expectedApps: readonly string[]
+): string[] {
+  const errors: string[] = []
+  // assets 缓存正则：location ~* ^/(admin|auth|portal|h5|big|docs)/assets/...
+  const assetsMatch = content.match(/location\s+~\*\s+\^\/\(([^)]+)\)\/assets\//)
+  if (!assetsMatch) {
+    errors.push(
+      'nginx 模板缺 assets 缓存正则（location ~* ^/(…)/assets/）——模板结构被改动，无法提取模板 app 名单'
+    )
+    return errors
+  }
+  const templateApps = assetsMatch[1]!
+    .split('|')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  const missingInTemplate = expectedApps.filter((a) => !templateApps.includes(a))
+  const extraInTemplate = templateApps.filter((a) => !expectedApps.includes(a))
+  if (missingInTemplate.length > 0) {
+    errors.push(
+      `nginx 模板缺 app：${missingInTemplate.join(' / ')} → assets 缓存正则与 location 块按注册表名单补齐（漏 = 该 app 生产 404）`
+    )
+  }
+  if (extraInTemplate.length > 0) {
+    errors.push(
+      `nginx 模板多出手写 app：${extraInTemplate.join(' / ')} → 注册表已无这些 app，从 assets 正则与 location 块删除`
+    )
+  }
+  for (const app of expectedApps) {
+    if (!content.includes(`location /${app}/ {`)) {
+      errors.push(`nginx 模板缺 location /${app}/ 块（静态托管 + history SPA fallback）`)
+    }
+  }
+  return errors
+}
+
+/**
  * 一致性豁免前缀——以这些字符串开头的路由 name 跳过 A/D 两处一致性校验。
  *
  * 适用场景：动态/可选模块（docs 的 demo 路由虽经 routeNames 吸收全量白名单，
@@ -311,6 +356,27 @@ export function main(): void {
   }
   console.log('')
 
+  // ─── nginx 生产模板 app 名单对账（Round 3 R3-E2：模板手写名单 vs 注册表单源）───
+  const nginxTemplatePath = resolve(ROOT, 'deploy/nginx.prod.conf.template')
+  if (existsSync(nginxTemplatePath)) {
+    console.log('━━━ nginx 生产模板 app 名单对账（模板 vs apps-registry 单源）━━━')
+    const nginxErrors = validateNginxTemplateApps(
+      readFileSync(nginxTemplatePath, 'utf-8'),
+      APPS.map((entry) => entry.name)
+    )
+    if (nginxErrors.length === 0) {
+      console.log(`✓ nginx 模板 ${APPS.length} 个 app 名单与注册表一致`)
+    } else {
+      for (const message of nginxErrors) console.error(`✖ ${message}`)
+      totalErrors += nginxErrors.length
+    }
+    console.log('')
+  } else {
+    // fork 裁剪部署面的场景：模板不存在则无从对账，显式声明跳过（非静默）
+    console.log('━━━ nginx 生产模板对账：跳过（deploy/nginx.prod.conf.template 不存在）━━━')
+    console.log('')
+  }
+
   if (totalErrors > 0) {
     console.error(`✖ 共 ${totalErrors} 个错误`)
     // 修复映射（2026-10-28 /autoplan R2-DX-4）：失败输出只报名单曾让首次踩坑者做
@@ -328,6 +394,9 @@ export function main(): void {
     )
     console.error(
       '  [D] 双向不一致 → 以 routes 实现为准对齐 whitelist；豁免前缀见 scripts/check-routes.ts 的 EXEMPT_PREFIXES'
+    )
+    console.error(
+      '  [Nginx] 模板 app 名单漂移 → deploy/nginx.prod.conf.template 的 assets 正则与 location 块按 apps-registry 名单补齐/删除（漏 = 生产 404）'
     )
     console.error(
       '  manifest 完整性 → apps/<app>/app.manifest.json 与 src/ 目录一一对应（新增 app 用 pnpm new-app 一键生成）'

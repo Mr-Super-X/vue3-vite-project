@@ -250,6 +250,7 @@ export function createViteConfig({
             console.log(
               `\n  ➜ ${appName}: http://localhost:${port}${base}\n` +
                 '  ➜ 未登录跳 /auth/login 在单 app 模式 404 属预期（auth 独立端口）；跨应用登录用 pnpm dev:gateway\n' +
+                '  ➜ 多应用同域规范入口：dev:gateway 起后 http://localhost:8080/（/ 302 → /portal/，对齐生产 nginx rootRedirect）\n' +
                 (appName === 'admin'
                   ? '  ➜ admin 免登录演示：.env.development 加 VITE_DEMO_NO_AUTH=true 直达 /workbench\n'
                   : '')
