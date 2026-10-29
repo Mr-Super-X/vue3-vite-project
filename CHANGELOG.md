@@ -6,6 +6,28 @@
 
 ## 未发布
 
+### 📚 Docs | 新增 docs/47-能力体验清单：架构/能力/排障操作手册（会用 → 会修 → 会教）（2026-10-29）
+
+> 背景：所有者需要一份「自己过完能教别人」的系统性清单——每条能力 = 一句话定位 + 可执行
+> 步骤 + 一句为什么；覆盖 A（业务踩坑修复）+ B（工程设施排障）+ C（模板化扩展）三类，与
+> docs/10 新手 30 分钟速览定位错开（10 是首次跑通，47 是全覆盖手册）。
+
+- **新增 `docs/47-能力体验清单.md`**：7 章 45 条——§1 启动与运行环境 / §2 workspace 拓扑
+  / §3 业务开发核心能力（new-module、useAppRouter、路由白名单、useRequest/useAuth/useDict/
+  useTheme、弹窗族、全局组件族、指令族、utils 工具族、i18n+图标、BEM）/ §4 布局与适配体系
+  （default/portal/h5/big/blank + rem + scale + tags-view）/ §5 Mock 与统一登录（含 stream
+  流式 + versionCheck 白屏兜底）/ §6 排障手册（7 条含 ChunkLoadError 排查）/ §7 扩展与发布
+  （new-app/remove-module/Lockdown/release/commitlint）；末尾「相关文档」索引 17 篇。
+  二轮对标补齐 5 处（v1.2.0）：ProTable 三引擎选型（tableEngine prop + virtualized 优先 +
+  vxe 三冲突降级）/ 错误边界三件套（ErrorBoundary 拦截恢复 + errorHandler 全局兜底单源 +
+  safeAsync 桥接）/ utils 表格加「什么时候必须用」列 / e2e 7 用例清单 / useRouterStore 实际
+  位置勘正（apps/admin/src/store/modules/router.ts，CLAUDE.md §1.3 单应用时代路径残留）。
+- **文档预算 46→47**：`check-doc-currency.ts` expected +1 同步（庄园冻结机制，§2.6-3）。
+
+验证：`pnpm check:doc-currency` 14 项全过（47=47）/ `pnpm test:check-scripts` 49 绿。
+
+手动验证：无（纯文档 + 预算计数变更）。
+
 ### ♻️ Chore | 决策台账机制当日退役：治理税归 AI，人工维护税归零（2026-10-29）
 
 > 背景：同日上文的 R3-G1（DECISIONS.md + check:decisions）落地后，所有者裁决退役——
