@@ -6,6 +6,24 @@
 
 ## 未发布
 
+### ♻️ Chore | 决策台账机制当日退役：治理税归 AI，人工维护税归零（2026-10-29）
+
+> 背景：同日上文的 R3-G1（DECISIONS.md + check:decisions）落地后，所有者裁决退役——
+> 「这些工作 AI 来干很快，但要我人工维护就是在为难我」。按 CLAUDE.md §2.6 精神执行：
+> 新增机制未经过一个完整周期即退役，理由是**机制本身构成人工维护税**（每轮登记/翻状态
+> 需要人类自觉），与 §2.6「连续零拦截」标准互补——「对人收税」本身就是退役理由。
+
+- **移除**：DECISIONS.md / scripts/check-decisions.ts（+spec）/ package.json
+  `check:decisions` script 与 test:check-scripts 条目 / ci.yml「Check decisions ledger」step
+  / docs/46 总表对应行 / docs/10 任务 5 门禁枚举中的「决策台账」。
+- **TODOS.md 改性质**：从「纪律文件」降为「AI 维护的被动记录」——无任何 CI 门禁依赖它，
+  审查/实施会话由 AI 自然更新；人工维护税为零。
+- **防遗漏责任回归**：决策对账回到 /autoplan 审查档案（~/.gstack）+ 审查轮 AI 全量对账
+  （Round 3 实证该形态能抓到遗漏——DX 子代理全量对账发现 R2 的 4 项遗漏）。
+
+验证：`test:check-scripts` 50 绿（-8 决策 spec）/ `check:doc-currency` 14 项（引用清理后
+文档数不变）/ 全仓 grep 无 DECISIONS.md / check:decisions 残留引用（CHANGELOG 历史段除外）。
+
 ### 🛡️ Chore | /autoplan Round 3 实施批次：生产面对账 + 决策台账机检 + versionCheck 拆分启用（2026-10-29）
 
 > 背景：Round 3 七维度审查（35 发现 → 15 任务终审「照单全收」）。最重三项：① 决策-落地

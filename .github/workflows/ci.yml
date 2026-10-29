@@ -127,12 +127,6 @@ jobs:
         # （架构审查健壮性项：全库最现实的 dev/prod 行为分叉风险点）
         run: pnpm check:mock-wiring
 
-      - name: Check decisions ledger
-        # /autoplan Round 3 R3-G1（2026-10-29）：DECISIONS.md 台账纪律机检——「待实施」必须
-        # 登记 TODOS、「已落地」锚点必须存在。R2 实证 10 项 DX 决策 3 项未落地且全部未被
-        # 捕获（对账靠人工必漂移），本 step 把 R2 事故形态变成 CI 红
-        run: pnpm check:decisions
-
       - name: Cache Playwright browsers
         # e2e 入 CI（/autoplan T-2）：chromium 浏览器目录缓存（key 随 lockfile 失效——
         # 版本升级时自动重装）；系统库依赖走 GitHub ubuntu 镜像预装，不进缓存
