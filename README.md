@@ -742,52 +742,56 @@ pnpm bench                         # vitest bench 基准测试
 
 ### 项目规范
 
-| 文档                        | 路径                                          | 说明                                                                                     |
-| --------------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| 工具兼容性踩坑              | `docs/01-工具兼容性问题踩坑记录.md`           | npm/pnpm/Node 兼容性问题 + 解决方案                                                      |
-| 代码质量工具链              | `docs/02-代码质量工具链.md`                   | ESLint 10 + Prettier 3.9 + lint-staged 17                                                |
-| Git 工作流工具链            | `docs/03-Git工作流工具链.md`                  | Husky + commitlint + cz-customizable                                                     |
-| 构建与测试工具              | `docs/04-构建与测试工具.md`                   | Vite 8 + Vitest 4 + UnoCSS 66 + alias 系统                                               |
-| BEM 样式规范                | `docs/05-BEM样式规范.md`                      | 命名约定 + 样式隔离三层防线 + mixin + 运行时工具                                         |
-| 主题管理规范                | `docs/06-主题管理规范.md`                     | 双主题架构 + CSS 变量速查 + useTheme API                                                 |
-| 路由模块设计                | `docs/07-路由模块设计.md`                     | 自动注册 + 白名单 + 远程菜单 + 3 步新增流程                                              |
-| **模块化架构总览**          | `docs/08-模块化架构总览.md`                   | 4 块公共范式（directives/plugins/components/utils）+ 扩展流程                            |
-| 组件示例站点开发指引        | `docs/09-组件示例站点开发指引.md`             | dev / gh-pages 演示双形态 demo 模块，1 文件 1 demo + 自动 API 提取                       |
-| **新手指引**                | `docs/10-新手指引.md`                         | 30 分钟 5 任务：clone → 加模块 → 加 API → 调常见问题                                     |
-| 字典使用规范                | `docs/11-字典使用规范.md`                     | 三层架构速查 + 业务侧用法 + 缓存策略 + 7 条常见坑                                        |
-| Web Vitals 使用规范         | `docs/12-web-vitals性能监控使用规范.md`       | LCP/INP/CLS/TTFB 采集 + 4 种上报端点接入示例                                             |
-| **流式请求规范**            | `docs/13-stream流式请求使用规范.md`           | SSE / NDJSON / auto 三格式 + 取消联动 + vs request 对比                                  |
-| **Zod 校验规范**            | `docs/14-zod请求参数校验使用规范.md`          | requestValidated + Zod schema + 失败行为 + 进阶用法                                      |
-| **缓存/合并/分页适配**      | `docs/15-请求层缓存-合并-分页适配使用规范.md` | cache + merge + pageAdapter 三件套速查 + 决策表                                          |
-| **Token 刷新与取消**        | `docs/16-token自动刷新与全局取消使用规范.md`  | 401 自动 refresh + globalAbort + AbortController 工具三件套                              |
-| **useRequest 三态**         | `docs/17-useRequest使用规范.md`               | VueUse 风格三态请求封装 + 与 AsyncState 组合 + 决策表                                    |
-| 代码组织决策表              | `docs/18-代码组织决策表.md`                   | utils / composable / store / api / plugin / directive 归属决策矩阵                       |
-| Pinia store 使用规范        | `docs/19-Pinia store使用规范.md`              | Setup Store 风格 + pick 持久化 + 模块边界                                                |
-| 测试编写入门                | `docs/20-测试编写入门.md`                     | Vitest 单测 + 覆盖率阈值 + AAA 模式                                                      |
-| i18n 使用规范               | `docs/21-i18n使用规范.md`                     | 多语言切换 + key 命名约定 + 按模块拆分                                                   |
-| mock 使用规范               | `docs/22-mock使用规范.md`                     | vite-plugin-mock + 自动扫描 + dev/prod 切换                                              |
-| 权限设计                    | `docs/23-权限设计.md`                         | 权限模型 + useAuth + v-permission + v-auth 双层组合                                      |
-| XForm 使用指南              | `docs/24-XForm使用指南.md`                    | Schema DSL 动态表单 + 11 Props / 19 方法 + 多查询条件联动                                |
-| XForm 架构与决策            | `docs/25-XForm架构与决策记录.md`              | SchemaField 容错 + 反应式依赖追踪 + 错误降级                                             |
-| 项目推荐说明                | `docs/26-项目推荐说明.md`                     | 项目定位 + 适用场景 + 与同类脚手架差异 + 组件级杀手锏速览                                |
-| **ProDialog 使用指南**      | `docs/27-ProDialog使用指南.md`                | 声明式 `<ProDialog>` + 命令式 `useDialog()` + 拖拽指令（v1.1 新增 `resizeMinToInitial`） |
-| BaseChart 使用指南          | `docs/28-BaseChart使用指南.md`                | ECharts 容器 + 主题/自适应 + 数据更新策略                                                |
-| **ProTable 使用指南**       | `docs/29-ProTable使用指南.md`                 | 配置驱动表格（v3.4 `searchLayout` + 双引擎 + 4 大能力 + v3.1 自动高度/状态保持）         |
-| RichTextEditor 指南         | `docs/30-RichTextEditor使用指南.md`           | wangEditor V5 封装 + 双向 sanitize + required 自定义校验（见 docs/30 §常见坑）           |
-| ProDialogForm 指南          | `docs/31-ProDialogForm使用指南.md`            | ProDialog + XForm 命令式弹窗表单组合                                                     |
-| 常用交互指令                | `docs/32-常用交互指令.md`                     | v-copy / v-draggable / v-auth 等 6 个指令速查                                            |
-| dev / dev:local 对比        | `docs/33-pnpm-dev与dev-local模式对比.md`      | remote / local 两种菜单模式的选择与差异                                                  |
-| H5 布局与 rem 适配          | `docs/34-H5布局与rem适配.md`                  | h5 layout + 编译时 postcss-pxtorem + 运行时 rem 双层适配                                 |
-| 大屏布局与 scale 适配       | `docs/35-大屏布局与scale适配.md`              | big layout + transform: scale 等比缩放（1920/2560/4K/9000px 拼接屏）                     |
-| Fork 升级与版本策略         | `docs/36-Fork升级与版本策略.md`               | 开源 MIT 后的版本口径 + fork 跟进上游策略                                                |
-| h5-rem 适配决策记录         | `docs/37-h5-rem适配决策记录.md`               | H5 双层适配 ADR                                                                          |
-| big-scale 适配决策记录      | `docs/38-big-scale适配决策记录.md`            | 大屏 scale ADR                                                                           |
-| 图标体系与使用规范          | `docs/39-图标体系与使用规范.md`               | unplugin-icons 双语法 + app 本地集合 + 去哪找图标                                        |
-| gh-pages 自动部署           | `docs/40-GitHubPages自动部署.md`              | push master 即发布线上 demo：workflow + 构建四开关 + 生产 mock 接线 + 排查               |
-| 门户企业官网站点            | `docs/41-门户企业官网站点.md`                 | /home 门面：文案单源 site.ts + 锚点导航三处同步 + 白名单公开约定                         |
-| Monorepo 改造评估           | `docs/42-Monorepo多应用改造评估.md`           | 单应用拆 6 app 的收益/成本评估与风险清单（R1-R9）                                        |
-| **Monorepo 结构与开发指引** | `docs/43-Monorepo结构与开发指引.md`           | 6 app + 4 包拓扑 / 端口表 / 新增应用流程 / 统一登录协议 / 同域网关 / CI-CD 形态          |
-| 版本检测插件使用规范        | `docs/44-版本检测插件使用规范.md`             | 轮询 version.json + ChunkLoadError 双机制 / onUpdate 回调注入 / CI 注入 git sha          |
+| 文档                             | 路径                                            | 说明                                                                                     |
+| -------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| 工具兼容性踩坑                   | `docs/01-工具兼容性问题踩坑记录.md`             | npm/pnpm/Node 兼容性问题 + 解决方案                                                      |
+| 代码质量工具链                   | `docs/02-代码质量工具链.md`                     | ESLint 10 + Prettier 3.9 + lint-staged 17                                                |
+| Git 工作流工具链                 | `docs/03-Git工作流工具链.md`                    | Husky + commitlint + cz-customizable                                                     |
+| 构建与测试工具                   | `docs/04-构建与测试工具.md`                     | Vite 8 + Vitest 4 + UnoCSS 66 + alias 系统                                               |
+| BEM 样式规范                     | `docs/05-BEM样式规范.md`                        | 命名约定 + 样式隔离三层防线 + mixin + 运行时工具                                         |
+| 主题管理规范                     | `docs/06-主题管理规范.md`                       | 双主题架构 + CSS 变量速查 + useTheme API                                                 |
+| 路由模块设计                     | `docs/07-路由模块设计.md`                       | 自动注册 + 白名单 + 远程菜单 + 3 步新增流程                                              |
+| **模块化架构总览**               | `docs/08-模块化架构总览.md`                     | 4 块公共范式（directives/plugins/components/utils）+ 扩展流程                            |
+| 组件示例站点开发指引             | `docs/09-组件示例站点开发指引.md`               | dev / gh-pages 演示双形态 demo 模块，1 文件 1 demo + 自动 API 提取                       |
+| **新手指引**                     | `docs/10-新手指引.md`                           | 30 分钟 5 任务：clone → 加模块 → 加 API → 调常见问题                                     |
+| 字典使用规范                     | `docs/11-字典使用规范.md`                       | 三层架构速查 + 业务侧用法 + 缓存策略 + 7 条常见坑                                        |
+| Web Vitals 使用规范              | `docs/12-web-vitals性能监控使用规范.md`         | LCP/INP/CLS/TTFB 采集 + 4 种上报端点接入示例                                             |
+| **流式请求规范**                 | `docs/13-stream流式请求使用规范.md`             | SSE / NDJSON / auto 三格式 + 取消联动 + vs request 对比                                  |
+| **Zod 校验规范**                 | `docs/14-zod请求参数校验使用规范.md`            | requestValidated + Zod schema + 失败行为 + 进阶用法                                      |
+| **缓存/合并/分页适配**           | `docs/15-请求层缓存-合并-分页适配使用规范.md`   | cache + merge + pageAdapter 三件套速查 + 决策表                                          |
+| **Token 刷新与取消**             | `docs/16-token自动刷新与全局取消使用规范.md`    | 401 自动 refresh + globalAbort + AbortController 工具三件套                              |
+| **useRequest 三态**              | `docs/17-useRequest使用规范.md`                 | VueUse 风格三态请求封装 + 与 AsyncState 组合 + 决策表                                    |
+| 代码组织决策表                   | `docs/18-代码组织决策表.md`                     | utils / composable / store / api / plugin / directive 归属决策矩阵                       |
+| Pinia store 使用规范             | `docs/19-Pinia store使用规范.md`                | Setup Store 风格 + pick 持久化 + 模块边界                                                |
+| 测试编写入门                     | `docs/20-测试编写入门.md`                       | Vitest 单测 + 覆盖率阈值 + AAA 模式                                                      |
+| i18n 使用规范                    | `docs/21-i18n使用规范.md`                       | 多语言切换 + key 命名约定 + 按模块拆分                                                   |
+| mock 使用规范                    | `docs/22-mock使用规范.md`                       | vite-plugin-mock + 自动扫描 + dev/prod 切换                                              |
+| 权限设计                         | `docs/23-权限设计.md`                           | 权限模型 + useAuth + v-permission + v-auth 双层组合                                      |
+| XForm 使用指南                   | `docs/24-XForm使用指南.md`                      | Schema DSL 动态表单 + 11 Props / 19 方法 + 多查询条件联动                                |
+| XForm 架构与决策                 | `docs/25-XForm架构与决策记录.md`                | SchemaField 容错 + 反应式依赖追踪 + 错误降级                                             |
+| 项目推荐说明                     | `docs/26-项目推荐说明.md`                       | 项目定位 + 适用场景 + 与同类脚手架差异 + 组件级杀手锏速览                                |
+| **ProDialog 使用指南**           | `docs/27-ProDialog使用指南.md`                  | 声明式 `<ProDialog>` + 命令式 `useDialog()` + 拖拽指令（v1.1 新增 `resizeMinToInitial`） |
+| BaseChart 使用指南               | `docs/28-BaseChart使用指南.md`                  | ECharts 容器 + 主题/自适应 + 数据更新策略                                                |
+| **ProTable 使用指南**            | `docs/29-ProTable使用指南.md`                   | 配置驱动表格（v3.4 `searchLayout` + 双引擎 + 4 大能力 + v3.1 自动高度/状态保持）         |
+| RichTextEditor 指南              | `docs/30-RichTextEditor使用指南.md`             | wangEditor V5 封装 + 双向 sanitize + required 自定义校验（见 docs/30 §常见坑）           |
+| ProDialogForm 指南               | `docs/31-ProDialogForm使用指南.md`              | ProDialog + XForm 命令式弹窗表单组合                                                     |
+| 常用交互指令                     | `docs/32-常用交互指令.md`                       | v-copy / v-draggable / v-auth 等 6 个指令速查                                            |
+| dev / dev:local 对比             | `docs/33-pnpm-dev与dev-local模式对比.md`        | remote / local 两种菜单模式的选择与差异                                                  |
+| H5 布局与 rem 适配               | `docs/34-H5布局与rem适配.md`                    | h5 layout + 编译时 postcss-pxtorem + 运行时 rem 双层适配                                 |
+| 大屏布局与 scale 适配            | `docs/35-大屏布局与scale适配.md`                | big layout + transform: scale 等比缩放（1920/2560/4K/9000px 拼接屏）                     |
+| Fork 升级与版本策略              | `docs/36-Fork升级与版本策略.md`                 | 开源 MIT 后的版本口径 + fork 跟进上游策略                                                |
+| h5-rem 适配决策记录              | `docs/37-h5-rem适配决策记录.md`                 | H5 双层适配 ADR                                                                          |
+| big-scale 适配决策记录           | `docs/38-big-scale适配决策记录.md`              | 大屏 scale ADR                                                                           |
+| 图标体系与使用规范               | `docs/39-图标体系与使用规范.md`                 | unplugin-icons 双语法 + app 本地集合 + 去哪找图标                                        |
+| gh-pages 自动部署                | `docs/40-GitHubPages自动部署.md`                | push master 即发布线上 demo：workflow + 构建四开关 + 生产 mock 接线 + 排查               |
+| 门户企业官网站点                 | `docs/41-门户企业官网站点.md`                   | /home 门面：文案单源 site.ts + 锚点导航三处同步 + 白名单公开约定                         |
+| Monorepo 改造评估                | `docs/42-Monorepo多应用改造评估.md`             | 单应用拆 6 app 的收益/成本评估与风险清单（R1-R9）                                        |
+| **Monorepo 结构与开发指引**      | `docs/43-Monorepo结构与开发指引.md`             | 6 app + 4 包拓扑 / 端口表 / 新增应用流程 / 统一登录协议 / 同域网关 / CI-CD 形态          |
+| 版本检测插件使用规范             | `docs/44-版本检测插件使用规范.md`               | 轮询 version.json + ChunkLoadError 双机制 / onUpdate 回调注入 / CI 注入 git sha          |
+| 仓库定位声明                     | `docs/45-仓库定位声明.md`                       | 单人维护 opinionated 底座裁决：做什么/不做什么/issue 边界                                |
+| CI 门禁速查                      | `docs/46-CI门禁速查.md`                         | 13 门禁 × 触发条件/复跑命令/修复指引单页                                                 |
+| 能力体验清单                     | `docs/47-能力体验清单.md`                       | 架构/能力/排障操作手册（会用 → 会修 → 会教），45 条可执行清单                            |
+| **单应用模式与Monorepo能力对比** | `docs/48-单应用模式与Monorepo多应用能力对比.md` | 双版逐项能力对比 + src/ 全目录归属映射 + 场景选型建议                                    |
 
 ### 架构评估
 
