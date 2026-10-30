@@ -63,7 +63,7 @@
 - 与特定业务强耦合
 - 删除模块时随模块一起删
 
-**实战定位**：Monorepo 后各 app 模块自包含——admin 当前内置模块（reports / user / workbench）下**未维护模块私有 store**；auth 归 apps/auth、home 归 apps/portal、demo 归 apps/docs；orders 与 error 模块已移除（error 拍平为 `apps/admin/src/views/{Forbidden,NotFound,ServerError}.vue`）。业务跨组件共享都直接走全局 store（`useUserStore` / `useDictStore` / `useTagsViewStore`）。**新增模块私有 store 应优先评估能否合入全局 store**；只有"删除模块时随模块一起删 + 跨模块根本不会用"的强场景才落 `apps/<a>/src/modules/<m>/store/`。
+**实战定位**：Monorepo 后各 app 模块自包含——admin 当前内置模块中仅 **user / workbench 维护模块私有 store**（`user/store/index.ts` 的 `useUserListStore` 承载列表 UI 态 keyword + selectedRows；`workbench/store/index.ts` 的 `useWorkbenchStore` 承载草稿 draft），reports 未维护；auth 归 apps/auth、home 归 apps/portal、demo 归 apps/docs；orders 与 error 模块已移除（error 拍平为 `apps/admin/src/views/{Forbidden,NotFound,ServerError}.vue`）。业务跨组件共享都直接走全局 store（`useUserStore` / `useDictStore` / `useTagsViewStore`）。**新增模块私有 store 应优先评估能否合入全局 store**；只有"删除模块时随模块一起删 + 跨模块根本不会用"的强场景才落 `apps/<a>/src/modules/<m>/store/`。
 
 > 历史文档曾以 `src/modules/order/store/{cart,draft}.ts` 作为案例，但该模块从未真实存在；若你的新模块需要，按 `apps/<a>/src/modules/<m>/index.ts` 对外接口 + `defineStore` setup 风格落地即可。
 

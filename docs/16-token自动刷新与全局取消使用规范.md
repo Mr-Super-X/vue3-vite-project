@@ -55,12 +55,12 @@
 
 | 事实                                                                         | 来源                                                         |
 | ---------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| 凭证 cookie **由后端 Set**，前端不持有、不读取、不存储                       | `packages/shared/src/utils/storage.ts:11-22`（storage 注释） |
-| 登录标记 key 是 `'auth'`（sessionStorage，boolean）                          | `packages/shared/src/utils/storage.ts:90-93`                 |
-| axios 实例 `withCredentials: true`                                           | `packages/shared/src/api/http.ts:102`                        |
-| **没有 `applyAuthHeader` 函数**（Bearer header 注入已被移除）                | `packages/shared/src/api/http.ts:106-173`（请求拦截器链）    |
-| login 响应体不再含 `token` 字段                                              | `packages/shared/src/api/modules/auth.ts:11-15`              |
-| user store **不持有 `token` 字段**，认证态用 `authenticated: boolean`        | `packages/shared/src/store/modules/user.ts:11-15`            |
+| 凭证 cookie **由后端 Set**，前端不持有、不读取、不存储                       | `packages/shared/src/utils/storage.ts:10-18`（storage 注释） |
+| 登录标记 key 是 `'auth'`（sessionStorage，boolean）                          | `packages/shared/src/utils/storage.ts:104-107`               |
+| axios 实例 `withCredentials: true`                                           | `packages/shared/src/api/http.ts:132`                        |
+| **没有 `applyAuthHeader` 函数**（Bearer header 注入已被移除）                | `packages/shared/src/api/http.ts:135-203`（请求拦截器链）    |
+| login 响应体不再含 `token` 字段                                              | `packages/shared/src/api/modules/auth.ts:6`（JSDoc）         |
+| user store **不持有 `token` 字段**，认证态用 `authenticated: boolean`        | `packages/shared/src/store/modules/user.ts:42`               |
 | `useUserStore` **没有 `persist` 字段**（httpOnly 凭证与 pinia persist 无关） | `packages/shared/src/store/modules/user.ts`                  |
 
 ---
@@ -83,15 +83,15 @@
 
 | 函数                         | 用途                                     | 文件:行号                                      |
 | ---------------------------- | ---------------------------------------- | ---------------------------------------------- |
-| `refreshSession()`           | 单例 refresh 入口（并发去重 + 失败传播） | `packages/shared/src/api/token-refresh.ts:86`  |
-| `configureTokenRefresh(cfg)` | 自定义 endpoint + refresh 函数           | `packages/shared/src/api/token-refresh.ts:64`  |
-| `_getCurrentConfig()`        | 读生效配置（refresh 端点 URL 判定）      | `packages/shared/src/api/token-refresh.ts:111` |
-| `_resetRefreshing()`         | 清空 refresh 状态（**仅测试用**）        | `packages/shared/src/api/token-refresh.ts:106` |
+| `refreshSession()`           | 单例 refresh 入口（并发去重 + 失败传播） | `packages/shared/src/api/token-refresh.ts:89`  |
+| `configureTokenRefresh(cfg)` | 自定义 endpoint + refresh 函数           | `packages/shared/src/api/token-refresh.ts:67`  |
+| `_getCurrentConfig()`        | 读生效配置（refresh 端点 URL 判定）      | `packages/shared/src/api/token-refresh.ts:114` |
+| `_resetRefreshing()`         | 清空 refresh 状态（**仅测试用**）        | `packages/shared/src/api/token-refresh.ts:109` |
 
 ### 2.3 默认配置
 
 ```ts
-// packages/shared/src/api/token-refresh.ts:34-50
+// packages/shared/src/api/token-refresh.ts:37-53
 const DEFAULT_CONFIG: Required<TokenRefreshConfig> = {
   url: '/auth/refresh', // 相对 baseURL
   refresh: async () => {
@@ -130,7 +130,7 @@ configureTokenRefresh({
 ### 2.5 自动 401 续期（`request<T>` 包裹层）
 
 ```ts
-// packages/shared/src/api/http.ts:328-348
+// packages/shared/src/api/http.ts:418-437（catch 块内 401 续期 + 单次 retry）
 try {
   const res = await instance.request(...)
   // ...
@@ -160,7 +160,7 @@ try {
 ### 2.6 并发去重
 
 ```ts
-// packages/shared/src/api/token-refresh.ts:75-103
+// packages/shared/src/api/token-refresh.ts:78-100（refreshingPromise 声明 + refreshSession）
 let refreshingPromise: Promise<void> | null = null
 
 export async function refreshSession(): Promise<void> {
@@ -219,7 +219,7 @@ export async function refreshSession(): Promise<void> {
 ### 3.2 工作流
 
 ```ts
-// packages/shared/src/api/http.ts:112-117（请求拦截器）
+// packages/shared/src/api/http.ts:142-147（applyAbortSignal，请求拦截器调用）
 function applyAbortSignal(config: AxiosRequestConfig): void {
   config.signal = chainSignals(
     config.signal as unknown as AbortSignal | undefined,
@@ -253,14 +253,14 @@ function resetLocalState(): void {
 
 | 方法             | 用途                                        | 文件:行号                                    |
 | ---------------- | ------------------------------------------- | -------------------------------------------- |
-| `signal`         | 给 axios 请求拦截器注入的合并 signal        | `packages/shared/src/api/global-abort.ts:10` |
-| `abort(reason?)` | 幂等取消（已 aborted 时再调用不抛错）       | `packages/shared/src/api/global-abort.ts:22` |
-| `reset()`        | 仅在 `aborted === true` 时创建新 controller | `packages/shared/src/api/global-abort.ts:15` |
+| `signal`         | 给 axios 请求拦截器注入的合并 signal        | `packages/shared/src/api/global-abort.ts:14` |
+| `abort(reason?)` | 幂等取消（已 aborted 时再调用不抛错）       | `packages/shared/src/api/global-abort.ts:26` |
+| `reset()`        | 仅在 `aborted === true` 时创建新 controller | `packages/shared/src/api/global-abort.ts:19` |
 
 ### 3.4 signal 合并工具
 
 ```ts
-// packages/shared/src/api/global-abort.ts:41-48
+// packages/shared/src/api/global-abort.ts:45-52
 export function chainSignals(...signals: (AbortSignal | undefined)[]): AbortSignal {
   const filtered = signals.filter((s): s is AbortSignal => s !== undefined)
   if (filtered.length === 0) return new AbortController().signal // 占位（永不 abort）

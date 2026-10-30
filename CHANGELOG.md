@@ -6,6 +6,27 @@
 
 ## 未发布
 
+### 🔍 Docs | 第二轮横切面审查：修复质量 + 数字/命令/引用对账（2026-10-30）
+
+> 背景：第一轮 48 篇对标大修按文档分组执行，存在结构性盲区——修复 diff 本身未独立审查、
+> 数字/命令/引用等横切面无人整体负责。本轮换视角复审（修复 diff 逐块审查 + 数字断言实测 +
+> 命令/引用对账 + 上轮存疑尾巴收尾）。
+
+- **审查**：4 份报告落盘 `.claude/agent-reports/2026-10-30-docs-r2-*.md`——修复 diff 46 文件
+  逐块过 / 数字断言 60+ 条实测 / 命令 56 个 + 引用 320+ 处对账 / 上轮存疑 7 项收尾 +
+  教学示例 60 处抽查
+- **修复**：23 文件 +67/-58——含第一轮修复引入的新错误（docs/25 useTopLevelFields 误改 7
+  回正为 11、docs/07 模板 B 归属 apps/auth、docs/20 AsyncState 目录树形态、README 文档表
+  docs/09/40 两行简介未随正文同步）与横切面漂移（docs/10 虚构 API `getValidToken`→
+  `refreshSession`、page-adapter 四键名勘误、docs/46 网关 12+6=18 用例、docs/48 api 基建
+  14 模块、docs/16 行号引用 15 处全量刷新、docs/37 spec 路径改挂 packages/shared 等）
+- **复核澄清**：README test:check-scripts 5 spec 与实际接线一致（文件总数 9 属口径误读）；
+  docs/29 table-key 前缀机制属实（VITE_STORAGE_NAMESPACE 在 @vv/shared Local 封装层）
+
+验证：`pnpm check:doc-currency` 14/14 绿；`pnpm lint` 零告警。
+
+手动验证：无（纯文档勘误）。
+
 ### 🐛 Fix | gh-pages 退出登录/未登录跳 404：build-pages 注入带 `#` 前缀的 VITE_AUTH_ORIGIN（2026-10-30）
 
 > 背景：gh-pages 部署后访问 admin/portal 正常，但退出登录（useLogout）、未登录守卫整页跳

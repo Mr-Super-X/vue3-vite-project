@@ -174,13 +174,13 @@ module.exports = {
 
 **核心设计**：
 
-| 模块                                 | 作用                                                          |
-| ------------------------------------ | ------------------------------------------------------------- |
-| `RULE_LABELS`                        | 13 条 commitlint 规则名 → 中文标签映射                        |
-| `TYPE_NAMES`                         | 11 种 type → 中文名（含 emoji 友好的简短标签）                |
-| `translateMessage(msg, ruleName)`    | 动态翻译错误消息（type-enum 列表 + header-max-length 完整句） |
-| `format(report, options)`            | commitlint 主函数，返回格式化字符串                           |
-| `try { pc = require('picocolors') }` | 颜色降级（picocolors 不可用时纯文本）                         |
+| 模块                                 | 作用                                                                                                      |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| `RULE_LABELS`                        | 14 条 commitlint 规则名 → 中文标签映射（源码 15 行含一处 `header-max-length` 重复键定义，运行时后者生效） |
+| `TYPE_NAMES`                         | 11 种 type → 中文名（含 emoji 友好的简短标签）                                                            |
+| `translateMessage(msg, ruleName)`    | 动态翻译错误消息（type-enum 列表 + header-max-length 完整句）                                             |
+| `format(report, options)`            | commitlint 主函数，返回格式化字符串                                                                       |
+| `try { pc = require('picocolors') }` | 颜色降级（picocolors 不可用时纯文本）                                                                     |
 
 **颜色方案**：
 
@@ -411,7 +411,7 @@ git push origin HEAD + git push origin v${version}
 | 自上次 tag 后无新 commit | 报错，exit 1                                        |
 | tag v1.0.0 已存在        | 报错，exit 1，需手动选新版本号                      |
 
-### 发版时 CHANGELOG 处理（2026-10-27 起：纯手写，生成器下线）
+### 发版时 CHANGELOG 处理（2026-10-27 起：纯手写，生成器运行时下线——配置已从 .release-it.json 移除，依赖仍留 catalog）
 
 **形态变更**：`@release-it/conventional-changelog` 插件已从 `.release-it.json` 移除——CHANGELOG.md 为**纯手写文档**，release-it 不参与生成。
 

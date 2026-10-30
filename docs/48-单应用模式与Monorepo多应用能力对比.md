@@ -109,7 +109,7 @@
 
 ### 3.4 工程脚本规模（scripts/ 目录）
 
-scripts/ 从 **8 → 27 个文件**。新增：apps-registry（注册表单源）/ dev-gateway / node-gateway / build-pages / build-prod / new-app / check-mock-wiring / generate-declarations / 多个脚本自带 spec（check-routes / check-doc-currency / new-module / new-app / dev-gateway / node-gateway 等）/ eslint-rules/ 子目录（本地规则源码）/ templates/（脚手架模板）。移除：vite-plugin-clean-mock.ts（迁入 `@vv/config` 为 clean-mock-bundled.ts）。**脚本自带 spec 成为新文化**（`test:check-scripts` 50+ 例）。
+scripts/ 从 **8 → 26 个文件**。新增：apps-registry（注册表单源）/ dev-gateway / node-gateway / build-pages / build-prod / new-app / check-mock-wiring / generate-declarations / 多个脚本自带 spec（check-routes / check-doc-currency / new-module / new-app / dev-gateway / node-gateway 等）/ eslint-rules/ 子目录（本地规则源码）/ templates/（脚手架模板）。移除：vite-plugin-clean-mock.ts（迁入 `@vv/config` 为 clean-mock-bundled.ts）。**脚本自带 spec 成为新文化**（`test:check-scripts` 50+ 例）。
 
 ## 4. 环境变量变化
 
@@ -225,7 +225,7 @@ monorepo 后每个 app 的装配文件从「手抄序列」变为「工厂声明
 
 四栖面板全部业务能力原样保留：ProTable 双引擎（EP/vxe）/ ProDialog / ProDialogForm / XForm / RichTextEditor / AsyncState 三态 / 弹窗族（useDialog/useConfirm/useLogout）/ 指令族（v-auth/v-copy/v-draggable/防抖）/ 字典 useDict / 主题 useTheme / i18n / 图标体系（unplugin-icons 双语法）/ BEM 规范（vv 前缀 + $BEM_PREFIX）/ rem 适配（h5）/ scale 适配（big）/ 错误边界三件套 / httpOnly cookie 会话 / pinia pick 持久化 / new-module/remove-module / commitlint + cz / release 发版流。
 
-逐项核实过的保留项：mock/pro-table **11 个具名数据源**（big-data/employee/expand/filter-orders/grouped-employees/orders/org-chart/sort-orders/style-override/summary-orders/tasks）/ `VITE_QUIET_DEV` 控制台徽章（@vv/ui global-components）/ webVitals 性能采集（下沉 shared/plugins，web-vitals catalog 化）/ ElementPlusResolver `importStyle: 'css'` 按需注入 / 样式资产 11 文件（reset/variables/theme/transition/element-overwrite/custom + mixins×3 完整平移 @vv/ui）/ api 基建 12 模块（http/cache/retry/stream/token-refresh/request-merger/cancel/global-abort/page-adapter/mock-guard/validator/types 完整平移 @vv/shared）/ App.vue 三层职责（ElConfigProvider + ErrorBoundary + AsyncState 骨架屏）/ README.en.md 英文门面（已同步 monorepo 口径与定位声明）/ `VITE_USE_MOCK` 等环境变量语义（见 §4）。
+逐项核实过的保留项：mock/pro-table **11 个具名数据源**（big-data/employee/expand/filter-orders/grouped-employees/orders/org-chart/sort-orders/style-override/summary-orders/tasks）/ `VITE_QUIET_DEV` 控制台徽章（@vv/ui global-components）/ webVitals 性能采集（下沉 shared/plugins，web-vitals catalog 化）/ ElementPlusResolver `importStyle: 'css'` 按需注入 / 样式资产 11 文件（reset/variables/theme/transition/element-overwrite/custom + mixins×3 完整平移 @vv/ui）/ api 基建 14 个模块文件 + types 目录（cache/cancel/error-events/global-abort/http/http-errors/mock-guard/page-adapter/request-id/request-merger/retry/stream/token-refresh/validator 完整平移 @vv/shared）/ App.vue 三层职责（ElConfigProvider + ErrorBoundary + AsyncState 骨架屏）/ README.en.md 英文门面（已同步 monorepo 口径与定位声明）/ `VITE_USE_MOCK` 等环境变量语义（见 §4）。
 
 ## 15. 使用习惯迁移速查（旧肌肉记忆 → 新动作）
 

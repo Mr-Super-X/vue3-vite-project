@@ -783,7 +783,7 @@ tableRef.value?.refreshChildren('org-1') // 重新加载 org-1 子节点
 
 ```ts
 <ProTable
-  table-key="user-list"  // localStorage key（{VITE_STORAGE_NAMESPACE}:user-list:columns，默认 vue3-vite-project 前缀）
+  table-key="user-list"  // 落盘 key 形如 vue3-vite-project:user-list:columns（@vv/shared Local 封装自动加 VITE_STORAGE_NAMESPACE 前缀）
   :columns="columns"
   :request-api="requestApi"
 />
@@ -987,6 +987,8 @@ ProTable 内部已与 `<AsyncState>` 集成：
 | `components/`（13 个 spec）                                  | VxeTableBody（引擎加载/事件翻译/筛选/选区清理）/ ElementTableBody / ElementTableV2Body（虚拟滚动）/ SearchForm / SelectedTags / SelectionBar / ToolbarRenderer / ColSetting / EditCell / CellContent / GroupedHeader / SummaryRow / TableHeader                                                  |
 | `adapters/`（5 个 spec）                                     | vxe-column 列映射 / cell-format 格式化预设 / cell-render / row-drag-adapter / tree-adapter                                                                                                                                                                                                       |
 | `utils/`（2 个 spec）                                        | exportCsv（BOM/RFC4180）/ importCsv（引号感知解析）                                                                                                                                                                                                                                              |
+| `types/__tests__/`（1 个 spec）                              | protable-types（类型契约快照）                                                                                                                                                                                                                                                                   |
+| `styles/`（1 个 spec）                                       | _a11y（可访问性断言）                                                                                                                                                                                                                                                                            |
 | 根目录（2 个 spec）                                          | ProTable.integration（端到端 mount 全链路）/ ProTable.engine（引擎分支与回退）                                                                                                                                                                                                                   |
 | `apps/docs/src/modules/demo/examples/ProTable/ProTable*.vue` | 25 个 demo 覆盖所有主路径 + 各能力边界（详见 §16 示例索引）                                                                                                                                                                                                                                      |
 

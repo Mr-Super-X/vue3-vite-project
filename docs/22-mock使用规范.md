@@ -418,7 +418,7 @@ vi.mock('@api/modules/user', () => ({
 
 ## 12. CI 验证
 
-`pnpm check:routes`（pre-commit + CI 强制）校验 whitelist ↔ 实际 routes 的 4 项一致性（A 白名单元素必须有 route 实现 / B 系统兜底路由必须在白名单 / C 系统兜底路由必须有真实实现 / D 双向一致性汇总，豁免前缀不参与对比）。**不再校验 RouteName 联合类型**——`types.ts` 的 `RouteName` 自 2026-07-24 方案 A 起已改为 string alias，组件注册经 `COMPONENT_REGISTRY` 派生，新增路由无须多处同步类型。
+`pnpm check:routes`（pre-commit + CI 强制）校验 whitelist ↔ 实际 routes 的 5 项一致性（A 白名单元素必须有 route 实现 / B 系统兜底路由必须在白名单 / C 系统兜底路由必须有真实实现 / D 双向一致性汇总，豁免前缀不参与对比 / E 注册表反向校验——apps/ 下发现的应用必须登记 apps-registry.mjs，防静默失效）。**不再校验 RouteName 联合类型**——`types.ts` 的 `RouteName` 自 2026-07-24 方案 A 起已改为 string alias，组件注册经 `COMPONENT_REGISTRY` 派生，新增路由无须多处同步类型。
 
 mock 相关的路由约束靠约定兜底：远程菜单 mock 返回的 `name` 必须能在 `COMPONENT_REGISTRY` 查到组件（§9）。
 
