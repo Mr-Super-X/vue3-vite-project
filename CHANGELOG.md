@@ -6,6 +6,32 @@
 
 ## 未发布
 
+### 🐛 Fix | gh-pages 退出登录/未登录跳 404：build-pages 注入带 `#` 前缀的 VITE_AUTH_ORIGIN（2026-10-30）
+
+> 背景：gh-pages 部署后访问 admin/portal 正常，但退出登录（useLogout）、未登录守卫整页跳
+> （redirectToAuthLogin）、401 刷新失败兜底（http.ts performLogout）三条协议线全部 404。
+> 根因双层：① gh-pages 构建注入清单（scripts/build-pages.ts）与 deploy.yml env 均无
+> `VITE_AUTH_ORIGIN`，产物回落 `.env` 的 `/auth`——丢了仓库子路径前缀，浏览器解析为
+> `/<host根>/auth/login`；② 即便补前缀，gh-pages 形态 auth 是 `createWebHashHistory`，
+> 登录页真实形态是 `/<repo>/auth/#/login`，history 形态拼法 `/<repo>/auth/login` 在静态
+> 托管上不是文件仍 404。
+
+- **修复（方案 A，构建注入）**：`scripts/build-pages.ts` 注入
+  `VITE_AUTH_ORIGIN=${REPO_PREFIX}/auth/#`——`#` 尾巴承载 auth 的 hash 路由形态，
+  协议拼接 `${origin}/login` 统一产出 `/<repo>/auth/#/login`，Pages 经 auth/index.html
+  接住；dev/生产 history 形态仍由各 app `.env` 的 `VITE_AUTH_ORIGIN` 承担（进程 env 优先）
+- **连带修复**：`resolvePostLoginRedirect` 原经 `window.location.search` 读回跳参数，
+  hash 模式下（`/#/login?redirect=...`）search 恒为空、redirect 永远落 fallback——
+  改为 search 为空时读 `location.hash` 的 query 段，两形态均可读
+- **测试**：redirect.spec.ts 补 3 例（# origin 拼接回归网 / hash query 读取 / hash 无
+  query 落 fallback），15/15 绿
+
+验证：`pnpm -C packages/shared vitest run src/auth/redirect.spec.ts` 15/15 绿。
+
+手动验证：push 后访问 gh-pages admin → 退出登录应落
+`https://Mr-Super-X.github.io/vue3-vite-project/auth/#/login` 而非 404；未登录新开
+`/vue3-vite-project/admin/` 应跳带 redirect 参数的同款地址，登录成功回跳原页面。
+
 ### 📚 Docs | 48 篇文档 + README 全量对标 monorepo 源码大修（2026-10-30）
 
 > 背景：v3.0.0 monorepo 化后大量文档残留单应用叙事（`src/` 裸路径、store 口径、persist key、

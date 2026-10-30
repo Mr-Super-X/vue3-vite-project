@@ -15,11 +15,13 @@ const fakeLocation = createFakeLocation()
 beforeEach(() => {
   fakeLocation.href = 'http://localhost/'
   fakeLocation.search = ''
+  fakeLocation.hash = ''
   installFakeLocation(fakeLocation)
 })
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
 })
 
 describe('redirectToAuthLogin', () => {
@@ -45,12 +47,34 @@ describe('redirectToAuthLogin', () => {
     // 赋值先于 throw（整页跳转已发起）
     expect(window.location.href).toBe('/auth/login?redirect=%2Fa')
   })
+
+  // gh-pages 演示形态回归网（2026-10-30 退出/未登录跳 404 修复）：build-pages 注入
+  // '/<repo>/auth/#'，origin 带 '#' 尾巴时拼接必须产出 hash 路由形态 /#/login——
+  // 不带 # 的 history 形态 /<repo>/auth/login 在 Pages 静态托管上不是文件，404
+  it('origin 带 # 尾巴（gh-pages 注入形态）拼出 /#/login + redirect 编码', () => {
+    vi.stubEnv('VITE_AUTH_ORIGIN', '/vue3-vite-project/auth/#')
+    expect(() => redirectToAuthLogin('/admin/')).toThrow('AUTH_REDIRECTING')
+    expect(window.location.href).toBe('/vue3-vite-project/auth/#/login?redirect=%2Fadmin%2F')
+  })
 })
 
 describe('resolvePostLoginRedirect', () => {
   it('redirect 参数合法（/ 开头且非 //）→ 原样返回', () => {
     fakeLocation.search = '?redirect=%2Fworkbench'
     expect(resolvePostLoginRedirect('/admin/')).toBe('/workbench')
+  })
+
+  // hash 形态回归网（2026-10-30 同上修复的连带修复）：gh-pages 演示形态登录页 URL 为
+  // /<repo>/auth/#/login?redirect=...，redirect 位于 location.hash 的 query 段，
+  // location.search 为空——读不到则回跳永远落 fallback
+  it('hash 模式：redirect 位于 location.hash query 段 → 原样返回', () => {
+    fakeLocation.hash = '#/login?redirect=%2Fworkbench'
+    expect(resolvePostLoginRedirect('/admin/')).toBe('/workbench')
+  })
+
+  it('hash 模式：hash 无 query 段 → fallback', () => {
+    fakeLocation.hash = '#/login'
+    expect(resolvePostLoginRedirect('/admin/')).toBe('/admin/')
   })
 
   it('无 redirect 参数 → fallback', () => {

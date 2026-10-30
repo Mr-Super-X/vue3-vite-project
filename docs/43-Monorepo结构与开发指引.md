@@ -95,7 +95,7 @@ vue3-vite-project（pnpm workspace + turbo@2）
 3. 登出（@vv/ui useLogout）→ 清会话 → ${VITE_AUTH_ORIGIN} 整页回跳
 ```
 
-- `VITE_AUTH_ORIGIN` 由各 app `.env` 注入（生产缺省 `/auth`；子路径部署时按实际前缀改）；包内不硬编码 app 名。
+- `VITE_AUTH_ORIGIN` 由各 app `.env` 注入（生产缺省 `/auth`；子路径部署时按实际前缀改）；包内不硬编码 app 名。**例外：gh-pages 演示形态由 `scripts/build-pages.ts` 统一注入 `${REPO_PREFIX}/auth/#`**（`#` 尾巴承载 auth 的 hash 路由形态）——进程 env 优先于 `.env`，退出/未登录跳才能拼出 Pages 可接住的 `/<repo>/auth/#/login`（2026-10-30 修复，此前三条协议线全 404）。
 - dev 下**统一登录全链路必须走 §6 网关（:8080）**——单 app 起服务（如只起 admin）时 `VITE_AUTH_ORIGIN` 指向的 `/auth` 无路由可达，未登录跳 `/auth/login` **404 属预期**。注意全量 `pnpm dev` 也不可用：各 app 独立端口（5174-5179），`/auth` 是相对路径，在 5174 上跳 `/auth/login` 仍是 5174 的 404，不会跨端口到达 auth（5179）。
 
 ## 6. 本地同域网关（node 一体化，pnpm dev:gateway）

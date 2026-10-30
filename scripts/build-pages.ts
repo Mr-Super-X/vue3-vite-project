@@ -47,6 +47,11 @@ function buildApp(appName: string): void {
     // 缺省则回退工厂 define 默认 /api，gh-pages 的 mockjs 按 /api 注册会全挂
     VITE_API_BASE_URL: '/mock',
     VITE_DEMO_NO_AUTH: 'true',
+    // 统一登录协议基址（2026-10-30 修复退出/未登录跳 404）：`#` 尾巴承载 auth app 的
+    // hash 路由形态（本构建注入 VITE_HISTORY_MODE=hash）——origin + '/login' 拼出
+    // /<repo>/auth/#/login，Pages 经 auth/index.html 接住；只注前缀不带 # 则 /auth/login
+    // 非静态文件仍 404。dev/history 形态由各 app .env 的 VITE_AUTH_ORIGIN 承担（进程 env 优先）
+    VITE_AUTH_ORIGIN: `${REPO_PREFIX}/auth/#`,
   }
   const result = spawnSync('pnpm', ['-C', `apps/${appName}`, 'build-only'], {
     cwd: REPO_ROOT,

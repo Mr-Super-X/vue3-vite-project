@@ -12,14 +12,18 @@
  * - apps/auth 登录页成功回调（回跳原 app）
  *
  * `VITE_AUTH_ORIGIN` 由各 app env 注入（本包不硬编码 app 名/部署形态）：
- * dev 缺省 '/auth'（同源子路径语义）；生产按部署形态覆盖（如 gh-pages 子路径
- * '/vue3-vite-project/auth' 或独立域名 'https://auth.example.com'）。
+ * dev 缺省 '/auth'（同源子路径语义）；生产按部署形态覆盖（history 形态
+ * '/vue3-vite-project/auth' 或独立域名；gh-pages 演示形态由 build-pages 注入
+ * '/vue3-vite-project/auth/#'——尾巴 '#' 承载 auth 的 hash 路由形态，
+ * origin + '/login' 拼出 /#/login，Pages 静态托管才能接住，见 scripts/build-pages.ts）。
  *
  * @group 跨应用登录协议
  */
 
 /** 解析统一登录应用 origin（缺省 '/auth' 同源子路径语义）——
- *  单源在此（redirectToAuthLogin 与 @vv/ui useLogout 共用，避免两处缺省值拷贝漂移）。 */
+ *  单源在此（redirectToAuthLogin 与 @vv/ui useLogout 共用，避免两处缺省值拷贝漂移）。
+ *  调用方一律拼 `${origin}/login`——gh-pages 演示形态注入值带 '#' 尾巴（见文件头注），
+ *  拼出 /#/login 的 hash 路由形态；history 形态注入值无 '#'，拼出常规 /login。 */
 export function resolveAuthOrigin(): string {
   return import.meta.env.VITE_AUTH_ORIGIN ?? '/auth'
 }
@@ -46,7 +50,12 @@ export function redirectToAuthLogin(redirect: string): never {
  * fallback 由调用方显式传入（登录后默认落地页）——本包不硬编码 app 名/部署形态
  * （见文件头注），默认值曾因写死 '/admin/' 致 app 特性泄漏进纯库包（架构审查项）。 */
 export function resolvePostLoginRedirect(fallback: string): string {
-  const raw = new URLSearchParams(window.location.search).get('redirect')
+  // hash 模式（gh-pages 演示形态）下 redirect 位于 location.hash 的 query 段
+  // （/#/login?redirect=...），location.search 为空——两形态都要能读到
+  const hash: string = window.location.hash ?? ''
+  const search =
+    window.location.search || (hash.includes('?') ? `?${hash.split('?').slice(1).join('?')}` : '')
+  const raw = new URLSearchParams(search).get('redirect')
   if (!raw) return fallback
   if (raw.startsWith('//') || raw.includes('\\')) return fallback
   try {

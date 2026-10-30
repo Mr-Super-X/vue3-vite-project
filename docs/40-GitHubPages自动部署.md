@@ -34,9 +34,11 @@ gh-pages 是纯静态托管（无 node 中间件、无 SPA fallback），`deploy
 | `VITE_DEMO_NO_AUTH` | `true`                                        | 演示模式：守卫跳过登录/权限校验，演示账号 Admin（admin/123456）全链路可点；按钮级 `v-auth` 仍按真实 permissions 渲染       |
 | `VITE_BUILD_ID`     | `${{ github.sha }}-${{ github.run_attempt }}` | 版本检测 buildId 注入——git sha 使产物可追溯，拼 run_attempt 消「同 commit 重跑产生相同 buildId」                           |
 
-> **base 不在 env 声明**：`VITE_BASE` 有意不在此声明——多应用聚合后 base 不再是单源，
-> `scripts/build-pages.ts` 内 `REPO_PREFIX`（默认 `/vue3-vite-project`）按 app 注入
-> `/vue3-vite-project/<app>/`；自定义域部署改脚本内 `REPO_PREFIX` 为 `/` 即可。
+> **base 与登录协议基址不在 env 声明**：两者均由 `scripts/build-pages.ts` 按 app 注入——
+> `VITE_BASE` 由 `REPO_PREFIX`（默认 `/vue3-vite-project`）拼 `/vue3-vite-project/<app>/`；
+> `VITE_AUTH_ORIGIN` 注入 `${REPO_PREFIX}/auth/#`（`#` 尾巴承载 auth 的 hash 路由形态，
+> 退出登录/未登录跳才能拼出 Pages 可接住的 `/<repo>/auth/#/login`，否则三条协议线全 404）。
+> 自定义域部署改脚本内 `REPO_PREFIX` 为 `/` 即可。
 
 > 常规生产构建（自有服务器 + 真后端）**不要**照搬这五值——history 模式 + remote 菜单 + 真后端接口才是常规形态，见 README §部署。
 
