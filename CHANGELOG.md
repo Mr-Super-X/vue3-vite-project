@@ -6,6 +6,42 @@
 
 ## 未发布
 
+### 🛡️ Chore | commit message 零 AI 痕迹三层防线：attribution 机制根治 + husky 宽拦兜底（2026-10-30）
+
+> 背景：owner 规定本项目 commit history 禁止出现 AI 协作痕迹。排查发现历史已污染——近 30 条中
+> `c49e9bd` / `8f7d569` 两条 body 带 `Co-Authored-By: Claude` 尾注（均已 push）；根因：全局 settings
+> 仅有 `CLAUDE_CODE_ATTRIBUTION_HEADER=0`（HTTP 上报开关，与 commit 尾注无关），`attribution` /
+> `includeCoAuthoredBy` 从未配置，harness 默认尾注注入一直生效。同时盘点其他 AI 工具署名形态：
+> Codex / Copilot / Gemini / Devin 等注入署名均走 `Co-Authored-By` trailer（或 "Generated with \<AI\>"
+> 类徽章），故拦截口径定为 trailer 宽拦。
+
+- **`.claude/settings.json`**（新建，入库）：`attribution.commit` / `pr` 置空 + `sessionUrl: false`
+  ——Claude Code 官方开关，机制层根治其内置尾注注入（含 web/Remote Control 会话的 `Claude-Session`
+  trailer），覆盖 Claude 生成 commit 与 PR 两个出口
+- **`scripts/check-commit-msg.sh`**（新建，独立可测）：AI 痕迹检查脚本——宽拦口径（owner
+  拍板）：① `Co-Authored-By` trailer 全拦——单人项目，真人协作属例外，走 `git commit --no-verify`；
+  ② 裸词结构化特征（`Generated with <AI>` / `<AI> 共创` / `anthropic`）防非 trailer 标注。
+  词表覆盖国外（claude/codex/copilot/gemini/openai/devin/windsurf/cursor/aider 等）+ 国产
+  （kimi/moonshot/qwen/deepseek/doubao/glm/ernie/spark/hunyuan/trae/codearts/lingma 等）；
+  只拦"工具名出现在生成/共创标注语境"，单独提及工具名（如"升级 deepseek 依赖"）不误伤
+- **`.husky/commit-msg`**：改为调用上述脚本（置于 commitlint 之前，红线优先报错）
+- **CLAUDE.md**：§4 新增 #16（约束 + 机制说明 + 工具清单）；§5「提交变更」行同步标注；头部最近
+  更新区记录
+
+> 踩坑：全局 `CLAUDE_CODE_ATTRIBUTION_HEADER=0` 在文档中被表述为「Attribution disabled
+> globally」，实际控制的是 HTTP attribution header 上报，**不影响** commit message 的
+> `Co-Authored-By` 尾注——两个机制同名异义；定位真根因靠的是 grep 全局/项目 settings 的
+> `includeCoAuthoredBy`/`attribution` 零命中 + system prompt 默认注入指令仍在。
+
+验证：`sh .husky/commit-msg <构造msg>` 11 场景实测——claude/codex/copilot/gemini/kimi/qwen/deepseek
+尾注与非 trailer 标注、真人署名 trailer 均 exit=1 拦截（提示语含 `--no-verify` 逃生指引）；干净消息
+与 2 类边界（标题含工具名单词、"自动生成"无工具词）exit=0 无误伤；独立脚本直测
+`sh scripts/check-commit-msg.sh` 命中 exit=1、无参 exit=2；原 commitlint 链（✓ Angular 规范）
+未破坏。
+
+手动验证：下次任意 `git commit` 可观察——命中违禁时首行即 ❌ 提示（不再等到 commitlint）；
+`.claude/settings.json` 为会话启动时加载，Claude Code 新会话完全生效，本会话已由 husky 兜底。
+
 ### 🐛 Fix | dev:gateway 启动前预清 mock bundled 临时文件，根治「非正常关闭后重启全站 mock 404」（2026-10-29）
 
 > 背景：dev:gateway 启动后登录接口 404（实际全站 mock 404）。根因：vite-plugin-mock 的
