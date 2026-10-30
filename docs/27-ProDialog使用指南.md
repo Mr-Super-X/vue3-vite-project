@@ -2,7 +2,7 @@
 
 > **文档版本**：v1.1.0 | **最后更新**：2026-09-17
 > **覆盖范围**：声明式组件 `<ProDialog>` + 命令式 Hook `useDialog()` / `useConfirm()` + 拖拽指令 `v-draggable`
-> **源码位置**：`src/components/common/ProDialog/`、`src/composables/useDialog.ts`、`src/composables/useConfirm.ts`、`src/directives/draggable.ts`
+> **源码位置**：`packages/ui/src/components/common/ProDialog/`、`packages/ui/src/composables/useDialog.ts`、`packages/ui/src/composables/useConfirm.ts`、`packages/shared/src/directives/draggable.ts`
 
 ---
 
@@ -17,7 +17,7 @@
 | 业务方既要模板 `v-model` 又要 `JS` 回调 | **双入口**：声明式 `<ProDialog>` + 命令式 `useDialog()`       |
 | 文本/HTML 二次确认（危险操作）          | 命令式 `useConfirm()`（取消 resolve `false`，无须 try/catch） |
 
-完整 demo 站：`src/modules/demo/examples/ProDialog/`（3 个 demo：`ProDialogOverview.vue` 声明式 + `ProDialogUseDialog.vue` 命令式 + `ProDialogResizable.vue` resizable + `resizeMinToInitial`），路由 `/demo/pro-dialog-<kebab>`。表单弹窗另见 `src/modules/demo/examples/ProDialogForm/ProDialogFormOverview.vue`。
+完整 demo 站：`apps/docs/src/modules/demo/examples/ProDialog/`（3 个 demo：`ProDialogOverview.vue` 声明式 + `ProDialogUseDialog.vue` 命令式 + `ProDialogResizable.vue` resizable + `resizeMinToInitial`），路由 `/demo/pro-dialog-<kebab>`。表单弹窗另见 `apps/docs/src/modules/demo/examples/ProDialogForm/ProDialogFormOverview.vue`。
 
 ---
 
@@ -71,11 +71,11 @@
 
 ProDialog 是 ElDialog 的**扩展**而非替换：
 
-- 显式声明的 Props 仅为 6 项（见 §2.1），其余 ElDialog Props（`width` / `top` / `modal` / `showClose` / `beforeClose` / `closeOnClickModal` / `closeOnPressEscape` / `destroyOnClose` / `center` / `alignCenter` / `appendToBody` 等）经 `$attrs` 原样透传到内部 `el-dialog`
+- 显式声明的 Props 仅为 7 项（见 §2.1），其余 ElDialog Props（`width` / `top` / `modal` / `showClose` / `beforeClose` / `closeOnClickModal` / `closeOnPressEscape` / `destroyOnClose` / `center` / `alignCenter` / `appendToBody` 等）经 `$attrs` 原样透传到内部 `el-dialog`
 - Events（除 §2.2 列出的 6 个扩展事件外）同样透传：`open` / `opened` / `close` / `closed` 等
 - 关闭逻辑：ProDialog 内部 header 的自绘关闭按钮会把 `show-close` 从 `$attrs` 剥离（kebab / camel 都识别），避免 EP 重复渲染原生 X；语义保持对齐原生 X（`beforeClose` 存在时交由它决定）
 
-**为什么不全量继承 ElDialog Props**：Vue 3.6 SFC 编译器无法对 `Partial<InstanceType<typeof ElDialog>['$props']>` 做编译期类型展开，强行写会丢失类型。`$attrs` 透传是当前最佳平衡（详见 `src/components/common/ProDialog/ProDialog.vue` 文件头 JSDoc）。
+**为什么不全量继承 ElDialog Props**：Vue 3.6 SFC 编译器无法对 `Partial<InstanceType<typeof ElDialog>['$props']>` 做编译期类型展开，强行写会丢失类型。`$attrs` 透传是当前最佳平衡（详见 `packages/ui/src/components/common/ProDialog/ProDialog.vue` 文件头 JSDoc）。
 
 ### 2.5 基础示例
 
@@ -449,13 +449,13 @@ async function handleDelete() {
 
 ## 8. 测试覆盖
 
-| 文件                                                | 用例数 | 覆盖范围                                                                                                        |
-| --------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------- |
-| `src/components/common/ProDialog/ProDialog.spec.ts` | 15     | resizable / **resizeMinToInitial 钳制初始 + 关闭回退** / beforeClose / show-close / 全屏×resize 交叉 / 内联清理 |
-| `src/composables/useDialog.spec.ts`                 | 6      | 确认 resolve + 容器销毁 / 取消 reject / X 关闭 reject / setProps 实时更新 / contentProps 透传 / close() 语义    |
-| `src/composables/useConfirm.spec.ts`                | 4      | 文本 / HTML 富文本 / 取消 resolve false / danger 预设 + 真实异常原样上抛                                        |
-| `src/directives/draggable.spec.ts`                  | 4      | 拖拽位移 / 边界钳制 / 禁用 / 动态恢复（clampPosition 边界数学覆盖）                                             |
-| demo（手动验证）                                    | 4 个   | ProDialogOverview / ProDialogUseDialog / ProDialogResizable / DemoField 4 区                                    |
+| 文件                                                            | 用例数 | 覆盖范围                                                                                                        |
+| --------------------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------- |
+| `packages/ui/src/components/common/ProDialog/ProDialog.spec.ts` | 15     | resizable / **resizeMinToInitial 钳制初始 + 关闭回退** / beforeClose / show-close / 全屏×resize 交叉 / 内联清理 |
+| `packages/ui/src/composables/useDialog.spec.ts`                 | 10     | 确认 resolve + 容器销毁 / 取消 reject / X 关闭 reject / setProps 实时更新 / contentProps 透传 / close() 语义    |
+| `packages/ui/src/composables/useConfirm.spec.ts`                | 16     | 文本 / HTML 富文本 / 取消 resolve false / danger 预设 + 真实异常原样上抛                                        |
+| `packages/shared/src/directives/draggable.spec.ts`              | 10     | 拖拽位移 / 边界钳制 / 禁用 / 动态恢复（clampPosition 边界数学覆盖）                                             |
+| demo（手动验证）                                                | 3 个   | ProDialogOverview / ProDialogUseDialog / ProDialogResizable                                                     |
 
 ---
 
@@ -491,8 +491,8 @@ await api.removeOrder(orderId)
 | 字段                | 默认值            | 来源                                                      |
 | ------------------- | ----------------- | --------------------------------------------------------- |
 | `title`             | `'系统提示'`      | `DEFAULT_TITLE` 常量（useConfirm.ts:18）                  |
-| `confirmButtonText` | `'确定'`          | useConfirm.ts:20                                          |
-| `cancelButtonText`  | `'取消'`          | useConfirm.ts:21                                          |
+| `confirmButtonText` | `'确定'`          | useConfirm.ts:19                                          |
+| `cancelButtonText`  | `'取消'`          | useConfirm.ts:20                                          |
 | `danger`            | `false`           | 显式开启后启用 `DANGER_PRESET`（确认按钮转红 + 警告图标） |
 | `type`              | 未设时不显示 icon | 仅 `danger: true` 时自动设 `'warning'`                    |
 
@@ -523,7 +523,7 @@ await useConfirm({
 
 - **仅文本/HTML**：业务组件表单内容请改用 `useDialog`
 - **`dangerouslyUseHTMLString: true` 须手动清洗**：传用户输入的 HTML 前务必 DOMPurify 处理，避免 XSS
-- **`beforeClose` 回调内抛出的业务异常原样上抛**：与取消 reject 的分流靠 EP 哨兵值 `'cancel' | 'close'`，详见 `src/composables/useConfirm.ts:16-18` 的 `CANCEL_ACTIONS` 注释
+- **`beforeClose` 回调内抛出的业务异常原样上抛**：与取消 reject 的分流靠 EP 哨兵值 `'cancel' | 'close'`，详见 `packages/ui/src/composables/useConfirm.ts:16-18` 的 `CANCEL_ACTIONS` 注释
 
 ---
 
@@ -553,9 +553,9 @@ try {
 
 ## 10. 相关文档
 
-- 组件源码：`src/components/common/ProDialog/ProDialog.vue`
-- 命令式 Hook：`src/composables/useDialog.ts`、`src/composables/useConfirm.ts`
-- 拖拽指令：`src/directives/draggable.ts`
-- 类型导出：`src/components/common/ProDialog/types.ts`
-- Demo 站：`src/modules/demo/examples/ProDialog/`
+- 组件源码：`packages/ui/src/components/common/ProDialog/ProDialog.vue`
+- 命令式 Hook：`packages/ui/src/composables/useDialog.ts`、`packages/ui/src/composables/useConfirm.ts`
+- 拖拽指令：`packages/shared/src/directives/draggable.ts`
+- 类型导出：`packages/ui/src/components/common/ProDialog/types.ts`
+- Demo 站：`apps/docs/src/modules/demo/examples/ProDialog/`
 - Element Plus 文档：https://element-plus.org/zh-CN/component/dialog.html

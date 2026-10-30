@@ -2,8 +2,8 @@
 
 > **文档版本**：v1.0.0 | **最后更新**：2026-09-17
 > **依赖版本**：ECharts 6.x（独立打包进 `vendor-charts` chunk，见 `docs/04` §v2.0）
-> **源码位置**：`src/components/common/BaseChart.vue`
-> **演示站**：`src/modules/demo/examples/BaseChart/`（5 个 demo，详见 §11）
+> **源码位置**：`packages/ui/src/components/common/BaseChart.vue`
+> **演示站**：`apps/docs/src/modules/demo/examples/BaseChart/`（5 个 demo，详见 §11）
 
 ---
 
@@ -61,7 +61,7 @@ onMounted(() => {
 
 ## 2. 设计要点（防止被「善意重构」破坏）
 
-> 这 5 点是 BaseChart 的核心设计决策，每一点都有具体坑支撑，改动前请先读 `src/components/common/BaseChart.vue` 文件头 JSDoc。
+> 这 5 点是 BaseChart 的核心设计决策，每一点都有具体坑支撑，改动前请先读 `packages/ui/src/components/common/BaseChart.vue` 文件头 JSDoc。
 
 | #   | 决策                                    | 为什么这样做                                                                                     |
 | --- | --------------------------------------- | ------------------------------------------------------------------------------------------------ |
@@ -259,11 +259,11 @@ onBeforeUnmount(() => {
 
 ## 8. 测试覆盖
 
-| 文件                                      | 覆盖范围                                                                                                   |
-| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `src/components/common/BaseChart.spec.ts` | 基础渲染 / option 切换 / loading 切换 / theme 重建 / autoResize 切换 / resize 兜底 / clear vs dispose 差异 |
+| 文件                                                  | 覆盖范围                                                                                                   |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `packages/ui/src/components/common/BaseChart.spec.ts` | 基础渲染 / option 切换 / loading 切换 / theme 重建 / autoResize 切换 / resize 兜底 / clear vs dispose 差异 |
 
-完整 demo：`src/modules/demo/examples/`（如已有对应示例，可在此处追加链接）。
+完整 demo：`apps/docs/src/modules/demo/examples/`（如已有对应示例，可在此处追加链接）。
 
 ---
 
@@ -298,7 +298,7 @@ chartRef.value?.getInstance()?.on('click', handler)
 
 ## 10. 相关文档
 
-- 组件源码：`src/components/common/BaseChart.vue`
+- 组件源码：`packages/ui/src/components/common/BaseChart.vue`
 - ECharts 官方文档：https://echarts.apache.org/zh/index.html
 - 类型导出：`echarts` 包 `EChartsCoreOption`
 - 主题注册：`echarts.registerTheme`
@@ -308,7 +308,7 @@ chartRef.value?.getInstance()?.on('click', handler)
 
 ## 11. 示例索引（5 个 demo + 1 个主入口）
 
-在线演示站点：`pnpm dev` → `/demo`（左侧「BaseChart 图表」分组），路由 = `/demo/base-chart-<kebab-case>`。所有 demo 源码位于 `src/modules/demo/examples/BaseChart/`（5 个 `.vue` 文件）。
+在线演示站点：`pnpm dev` → `/demo`（左侧「BaseChart 图表」分组），路由 = `/demo/base-chart-<kebab-case>`。所有 demo 源码位于 `apps/docs/src/modules/demo/examples/BaseChart/`（5 个 `.vue` 文件）。
 
 | 路由                           | 内容                                                     |
 | ------------------------------ | -------------------------------------------------------- |

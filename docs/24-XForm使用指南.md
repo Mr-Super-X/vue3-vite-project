@@ -1,6 +1,6 @@
 # 24-XForm 使用指南
 
-> 基于 schema DSL 的动态表单引擎（源码位于 `src/components/form-schema/`，组件名 `<XForm>`）。
+> 基于 schema DSL 的动态表单引擎（源码位于 `packages/ui/src/components/form-schema/`，组件名 `<XForm>`）。
 > 本文档依据当前代码逐项核对编写，权威性高于组件内 README 与任何旧文档。
 
 > **TL;DR**：用 JS 对象描述表单结构（schema），`<XForm :schema="schema" :model="form" />` 一行渲染。核心能力：schema 动态渲染、跨字段校验、reaction 联动（防抖/节流）、数组节点、异步选项、字段权限、服务端错误映射、脏状态追踪、草稿持久化、链式构建器与完整 TS 类型推导。适合：动态 schema（后端下发）、复杂联动（>3 字段）、跨表单复用校验。不适合：< 5 字段的极简固定表单、> 100 字段的性能敏感场景（用 element-plus 原生）。
@@ -117,7 +117,7 @@ interface ToastEvent {
   type: 'error' | 'warning' | 'info'
   trigger: 'blur' | 'change' | 'submit' | 'manual'
   createdAt: number // 时间戳
-  // ... 详见 src/components/form-schema/composables/use-form-error-bus.ts
+  // ... 详见 packages/ui/src/components/form-schema/composables/use-form-error-bus.ts
 }
 ```
 
@@ -224,7 +224,7 @@ if (res.success) formRef.value?.resetDirty()
 `resolveElComponentName(name)` 按序尝试：
 
 1. 命中 `components` prop 注册的自定义组件名 → 直接用
-2. 命中内置短名映射（29 个：`Input / Select / Option / Switch / DatePicker / TimePicker / TimeSelect / Upload / Transfer / TreeSelect / Autocomplete / Button / Icon / RadioGroup / Radio / CheckboxGroup / Checkbox / Cascader / InputNumber / InputPassword / InputTextArea / InputTag / ColorPicker / Mention / Rate / Slider / Card / FormItem / Form`）→ 转 `ElXxx` 全名
+2. 命中内置短名映射（33 个：`Input / Select / Option / Switch / DatePicker / TimePicker / TimeSelect / Upload / Transfer / TreeSelect / Autocomplete / Button / Icon / RadioGroup / Radio / CheckboxGroup / Checkbox / Cascader / InputNumber / InputPassword / InputTextArea / InputTag / ColorPicker / Mention / Rate / Slider / Card / Tabs / TabPane / Steps / Step / FormItem / Form`，另有 `ElInputPassword` / `ElInputTextArea` 两个 El 别名）→ 转 `ElXxx` 全名。映射表唯一真源为 `composables/resolve-component.ts` 的 `EL_COMPONENT_MAP`（35 键），`adapters/element-plus-adapter.ts` 从该表派生，禁止手写第二份
 3. 以 `El` 开头的全名 → 直通
 4. 全部未命中 → 降级渲染 `<div>` 占位（dev 模式 DebugBanner 会报 schema 校验错误）
 
@@ -698,7 +698,7 @@ const schema = {
 | `reaction(config)`                | 联动配置                                                             |
 | `build()`                         | 产出 `SchemaNodeFor<C>`                                              |
 
-### 13.2 27 个 builder 及特有方法
+### 13.2 29 个 builder 及特有方法
 
 | Builder                                                                                        | 特有链式方法                                                                                                         |
 | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
@@ -722,6 +722,8 @@ const schema = {
 | `xTransfer`                                                                                    | `data(items)` / `titles(l, r)` / `filterable()` / `buttonTexts(l, r)`                                                |
 | `xRadioGroup`                                                                                  | `options(opts)`（生成 Radio 子节点）                                                                                 |
 | `xCard`                                                                                        | `title(t)` / `column(c)` / `gutter(g)`                                                                               |
+| `xTabs`                                                                                        | `modelValue(v)` / `beforeLeave(fn)`                                                                                  |
+| `xSteps`                                                                                       | `active(n)` / `processStatus(s)`                                                                                     |
 | `xArray`                                                                                       | `item(schema)` / `initialLength(n)` / `minItems(n)` / `maxItems(n)` / `showActions(v)` / `labels(opts)` / `title(t)` |
 
 ---
@@ -741,7 +743,7 @@ const email: SchemaNodeFor<'Input'> = {
 }
 ```
 
-内置 28 个组件名均支持推导（`ComponentPropsRegistry`）。运行时短名另有 Button、Icon、Form 等完整映射；自定义组件通过 module augmentation 扩展：
+内置 30 个组件名均支持推导（`ComponentPropsRegistry`，另有 `ArrayNode` 占位条目）。运行时短名另有 Button、Icon、Form 等完整映射；自定义组件通过 module augmentation 扩展：
 
 ```ts
 // types/form-schema.d.ts
@@ -856,11 +858,11 @@ col: {
 
 ## 19. 示例索引（63 个 demo，含 1 个主入口）
 
-在线演示站点：`pnpm dev` → `/demo`（左侧「XForm 表单引擎」分组），路由 = `/demo/xform-<kebab-case>`。所有 demo 源码位于 `src/modules/demo/examples/XForm/`（63 个 `.vue` 文件 + 1 个 configs/ 工具 + 1 个 utils/ 工具）。
+在线演示站点：`pnpm dev` → `/demo`（左侧「XForm 表单引擎」分组），路由 = `/demo/xform-<kebab-case>`。所有 demo 源码位于 `apps/docs/src/modules/demo/examples/XForm/`（63 个 `.vue` 文件 + 5 个 configs/ 共享配置 + 2 个 utils/ 辅助文件）。
 
 | 路由                                    | 内容                                                                                   |
 | --------------------------------------- | -------------------------------------------------------------------------------------- |
-| `/demo/x-form`                          | **主 demo**：Props/Events/Slots 完整 API 表 + 实例方法演示（对应 `XFormOverview.vue`） |
+| `/demo/xform-overview`                  | **主 demo**：Props/Events/Slots 完整 API 表 + 实例方法演示（对应 `XFormOverview.vue`） |
 | `/demo/xform-minimum-demo`              | 最小示例（5 分钟上手）                                                                 |
 | `/demo/xform-base`                      | 基础用法（多字段 + 校验 + 重置）                                                       |
 | `/demo/xform-nested`                    | 复杂布局（Card 容器 + slots + 嵌套）                                                   |
@@ -924,9 +926,9 @@ col: {
 | `/demo/xform-zod`                       | Zod schema 校验                                                                        |
 | `/demo/xform-upload`                    | 文件上传（单文件/多文件/拖拽/图片墙/校验/回显）                                        |
 
-> **主 demo 入口**：`/demo/x-form`（对应 `XFormOverview.vue`）—— 查阅全部 prop、事件、实例方法的入口。其余 62 个 demo 按「基础 → 进阶 → 反应式联动 → 校验 → 异步 → 数组 → 样式与扩展」分组覆盖各能力边界。
+> **主 demo 入口**：`/demo/xform-overview`（对应 `XFormOverview.vue`）—— 查阅全部 prop、事件、实例方法的入口。其余 62 个 demo 按「基础 → 进阶 → 反应式联动 → 校验 → 异步 → 数组 → 样式与扩展」分组覆盖各能力边界。
 >
-> **配套工具**：`src/modules/demo/examples/XForm/configs/`（共享 schema 配置）+ `src/modules/demo/examples/XForm/utils/`（演示用工具函数）。
+> **配套工具**：`apps/docs/src/modules/demo/examples/XForm/configs/`（5 个共享 schema 配置）+ `apps/docs/src/modules/demo/examples/XForm/utils/`（2 个演示用辅助文件）。
 
 ---
 
@@ -934,4 +936,4 @@ col: {
 
 - `docs/25-XForm架构与决策记录.md` — 架构分层 / 渲染管线 / ADR 决策 / 调试教训（维护者视角）
 - `docs/superpowers/specs/2026-08-19-form-schema-design.md` — 引擎设计稿
-- `src/components/form-schema/README.md` — 组件内 README（如与本文冲突，以本文为准）
+- `packages/ui/src/components/form-schema/README.md` — 组件内 README（如与本文冲突，以本文为准）

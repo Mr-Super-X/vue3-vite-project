@@ -7,16 +7,17 @@
 
 ## 📋 工具一览
 
-| 工具                                   | 版本    | 作用                                                    | 触发时机                            |
-| -------------------------------------- | ------- | ------------------------------------------------------- | ----------------------------------- |
-| **only-allow**                         | ^1.2.2  | 强制只使用 pnpm                                         | `preinstall` 钩子                   |
-| **husky**                              | ^9.1.7  | Git hooks 管理                                          | git 操作触发                        |
-| **lint-staged**                        | ^17.0.8 | 暂存区文件检查/格式化                                   | pre-commit                          |
-| **commitlint**                         | ^21.2.1 | 校验 commit message 格式                                | commit-msg                          |
-| **commitizen**                         | ^4.3.2  | 交互式生成规范 commit                                   | `pnpm commit` / `pnpm push`         |
-| **cz-customizable**                    | ^7.5.4  | 自定义 commitizen 提问流程                              | commitizen 调用                     |
-| **release-it**                         | ^21.0.0 | 版本发布编排（bump + tag + push）                       | `pnpm release` / `pnpm release:dry` |
-| **@release-it/conventional-changelog** | ^12.0.0 | release-it 插件：CHANGELOG 按 conventional commits 生成 | release-it 内部调用                 |
+| 工具                                   | 版本     | 作用                                                                                       | 触发时机                                |
+| -------------------------------------- | -------- | ------------------------------------------------------------------------------------------ | --------------------------------------- |
+| **only-allow**                         | ^1.2.2   | 强制只使用 pnpm                                                                            | `preinstall` 钩子                       |
+| **husky**                              | ^9.1.7   | Git hooks 管理                                                                             | git 操作触发                            |
+| **lint-staged**                        | ^17.0.8  | 暂存区文件检查/格式化                                                                      | pre-commit                              |
+| **commitlint**                         | ^21.2.1  | 校验 commit message 格式                                                                   | commit-msg                              |
+| `scripts/check-commit-msg.sh`          | 项目脚本 | commit message AI 协作痕迹拦截（`Co-Authored-By` trailer + 生成/共创标注宽拦，含国产工具） | commit-msg（commitlint 之前，命中即拦） |
+| **commitizen**                         | ^4.3.2   | 交互式生成规范 commit                                                                      | `pnpm commit` / `pnpm push`             |
+| **cz-customizable**                    | ^7.5.4   | 自定义 commitizen 提问流程                                                                 | commitizen 调用                         |
+| **release-it**                         | ^21.0.0  | 版本发布编排（bump + tag + push）                                                          | `pnpm release` / `pnpm release:dry`     |
+| **@release-it/conventional-changelog** | ^12.0.0  | release-it 插件：CHANGELOG 按 conventional commits 生成                                    | release-it 内部调用                     |
 
 ---
 
@@ -41,8 +42,9 @@ pnpm push                ← 推荐：一站式（add + cz + push）
      的 turbo build（内含 type-check:full）+ check:aliases 等步骤在 CI 统一拦截。
      原单应用时期的 5 步链（generate:tsconfig-paths/type-check/check:aliases）见本文历史说明。
    ↓
-[husky commit-msg 触发]
-   └── pnpm exec commitlint --edit "$1"  ← 校验 Angular 规范（中文输出）
+[husky commit-msg 触发]（实跑 2 步）
+   ├── sh scripts/check-commit-msg.sh "$1"  ← AI 协作痕迹拦截（命中即 exit 1，不再执行 commitlint）
+   └── pnpm exec commitlint --edit "$1"     ← 校验 Angular 规范（中文输出）
        ├── 拒绝：无 type 前缀、空 subject、错误 type → 中文错误提示
        └── 通过：feat/fix/docs/style/refactor/perf/test/build/ci/chore/revert
    ↓
@@ -75,19 +77,24 @@ pnpm push                ← 推荐：一站式（add + cz + push）
 ### `.husky/pre-commit`
 
 ```sh
-# 【Monorepo 迁移期精简版】暂存区文件先自动格式化 + ESLint fix（lint-staged 仅处理变更文件，不全库扫描）
+# Monorepo 迁移期临时精简钩子（2026-10-21，P0 阶段启用）
+# 原五步链（generate:tsconfig-paths / type-check / check:aliases）假设单根 src/，
+# P0-P1 迁移期结构性不适用；完整多包门禁链在 P5 重建：
+# docs/superpowers/plans/2026-10-21-monorepo-migration.md（Task P5-1 / P5-5）
+# 暂存区文件先自动格式化 + ESLint fix（lint-staged 仅处理变更文件，不全库扫描）
 pnpm lint-staged
-# 路由一致性检查（6 app 的 RouteName + whitelist + 实际 routes 三者一致）
-pnpm check:routes
-# ⚠ type-check / check:aliases 不在本地 pre-commit（秒级提交体验优先），由 ci.yml
-#   的 turbo build（内含 type-check:full）+ check:aliases / mock-wiring / doc-currency
-#   在 CI 统一拦截。原单应用 5 步链见下方历史说明。
+# 路由一致性检查（P0-2 起已改指 apps/*/src/modules，P0 期间仍指 src/，均可用）
 pnpm check:routes
 ```
 
 ### `.husky/commit-msg`
 
 ```sh
+# 禁止 AI 协作痕迹进入 commit message（owner 规定 2026-10-30，CLAUDE.md §4 #16）
+# 检查逻辑独立在 scripts/check-commit-msg.sh（可单独执行/测试，词表含国外+国产 AI 工具）
+# 命中即 exit 1 并附 --no-verify 逃生指引，不再执行 commitlint
+sh scripts/check-commit-msg.sh "$1" || exit 1
+
 pnpm exec commitlint --edit "$1"
 ```
 
@@ -96,7 +103,12 @@ pnpm exec commitlint --edit "$1"
 ### `.husky/pre-push`
 
 ```sh
-pnpm test
+# affected 子集测试（2026-10-28 /autoplan D2 决策）：原 `pnpm test` 经 turbo dependsOn ^build
+# 会每次 push 先全量 build 6 app + 4 包再全量测试，日常循环被拖慢。
+# 与 CI PR 模式同参数（--filter=[origin/master]...）：只跑自 origin/master 以来
+# 变更的包及其依赖测试；master 全量网由 CI（turbo run test 无 filter）兜底。
+# 紧急逃生门：git push --no-verify（README Git 节已披露此成本与用法）。
+pnpm exec turbo run test --filter=[origin/master]...
 ```
 
 ### `.commitlintrc.cjs`（commitlint 21）
@@ -198,10 +210,13 @@ module.exports.default = format // 兼容 import default
 ### `.npmrc`（pnpm 配置）
 
 ```ini
-onlyBuiltDependencies[]=esbuild
-onlyBuiltDependencies[]=@parcel/watcher
-shamefully-hoist=true
+# 强制检查 package.json 中的 engines 字段，如果不满足条件则直接报错并退出安装/运行过程
+engine-strict=true
 ```
+
+> **pnpm 11 起项目级 `.npmrc` 配置不再被读取**——依赖构建许可（`allowBuilds`）与
+> hoisting（`publicHoistPattern`）等须写在 `pnpm-workspace.yaml`（见 :79-82 / :125-128
+> 及 :123 注释）。向 `.npmrc` 加 `shamefully-hoist=true` / `onlyBuiltDependencies` 无效。
 
 ---
 
@@ -244,12 +259,10 @@ shamefully-hoist=true
 
 **解决**：
 
-```bash
-# .npmrc 加 shamefully-hoist=true
-echo 'shamefully-hoist=true' >> .npmrc
-# 重新安装
-pnpm install
-```
+- 钩子与手动校验一律走 `pnpm exec commitlint`（根 devDependencies 已声明，pnpm exec
+  从 workspace 根解析 bin）——本项目 `.husky/commit-msg` 已是此写法
+- 确需调整 hoisting 时改 `pnpm-workspace.yaml` 的 `publicHoistPattern`（pnpm 11 项目级
+  `.npmrc` 不再被读取，写 `shamefully-hoist=true` 到 `.npmrc` 无效）
 
 ### 4. `npm install` 报 "Cannot read properties of null (reading 'matches')"
 
@@ -330,8 +343,6 @@ const RULE_LABELS = {
 
 ## 🔗 相关文档
 
-- 设计：`docs/superpowers/specs/2026-07-17-vue3-vite-tscaffold-design.md` §3.2 决策记录
-- 计划：`docs/superpowers/plans/2026-07-17-vue3-vite-tscaffold.md`
 - 代码质量：`docs/02-代码质量工具链.md`
 - 工具兼容性踩坑：`docs/01-工具兼容性问题踩坑记录.md`
 - commitlint 官方：https://github.com/conventional-changelog/commitlint
@@ -372,8 +383,6 @@ hook: before:init    → pnpm type-check
 hook: before:release → pnpm test --run
   ↓
 update version（package.json）
-  ↓
-[@release-it/conventional-changelog 插件] 重写 CHANGELOG.md
   ↓
 git commit -m "chore(release): v${version}"
   ↓
@@ -454,11 +463,11 @@ git push origin HEAD + git push origin v${version}
 
 ### 关键设计决策
 
-- 范围：仅 Git 流程（不集成 GitLab Release API / npm publish）
+- 范围：仅 Git 流程（GitHub Releases 由 `.release-it.json` 的 `github.release: true` 发布；不集成 npm publish）
 - 配置文件用 JSON 格式（与 `.commitlintrc` / `.lintstagedrc` 风格一致，避免 `package.json:type=module` 反复踩坑）
 - 保留 `pnpm push`（职责边界：`push` = 单 commit 推送；`release` = 版本发布）
-- 使用 `@release-it/conventional-changelog` 插件（替代 auto-changelog，集成更深）
-- commitUrlFormat 用 GitLab 风格 `/-/commit/{{hash}}`（项目远程是 GitLab，不是 GitHub）
+- 使用 `@release-it/conventional-changelog` 插件（替代 auto-changelog，集成更深；**该插件已于 2026-10-27 下线**，CHANGELOG 纯手写，见上方「发版时 CHANGELOG 处理」）
+- commitUrlFormat 原用 GitLab 风格 `/-/commit/{{hash}}`（历史配置遗留——项目远程是 **GitHub** `git@github.com:Mr-Super-X/vue3-vite-project.git`，插件下线后此配置不再生效）
 
 ### 故障排查
 

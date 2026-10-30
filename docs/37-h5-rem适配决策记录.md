@@ -45,12 +45,14 @@
 | UnoCSS rem 原子类      | uno 按 16px 基准生成 rem，与本仓 82.8 基准冲突（docs/34 限制 #3）                                                                        |
 | @media 断点            | `mediaQuery: false` 只跳过 @media 参数，块内声明仍 rem 化——断点不缩而内容缩，两者脱钩产生矛盾布局（docs/34 限制 #4）                     |
 
+> **修订记录（2026-10-27）**：「引入 vant 等移动 UI 库」否决已被集成事实撤销——vant 4 正式集成进 apps/h5（VantResolver 按需引入 + vant-vars.scss 主题覆盖，见 docs/34 §0），混用策略定为「vant 组件物理 px 不缩放 + 自定义组件 rem 缩放」。原否决记录保留作历史，其「双基准失调」技术事实由 §0 的混用约定吸收。
+
 ## 相关文件
 
-| 文件                           | 职责                                                                                                     |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| `build/postcss.ts`             | 编译时配置单一来源（常量 + 路径判定 + exclude 正则 + 插件数组）                                          |
-| `src/layouts/h5/config/rem.ts` | 运行时激活/恢复（快照模型 + 防抖 + bfcache）                                                             |
-| `src/layouts/h5/index.vue`     | 布局壳（setup 顶层激活）                                                                                 |
-| `src/plugins/remAdaptation.ts` | viewport meta 幂等                                                                                       |
-| 测试                           | `build/postcss.spec.ts`（含 T9 真实转换集成）/ `rem.spec.ts` / `remAdaptation.spec.ts` / `index.spec.ts` |
+| 文件                                   | 职责                                                                                                                                                                                            |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/config/src/postcss.ts`       | 编译时配置单一来源（常量 + 路径判定 + exclude 正则 + 插件数组）                                                                                                                                 |
+| `apps/h5/src/layouts/h5/config/rem.ts` | 运行时激活/恢复（快照模型 + 防抖 + bfcache）                                                                                                                                                    |
+| `apps/h5/src/layouts/h5/index.vue`     | 布局壳（setup 顶层激活）                                                                                                                                                                        |
+| `apps/h5/src/plugins/remAdaptation.ts` | viewport meta 幂等                                                                                                                                                                              |
+| 测试                                   | `packages/config/src/postcss.spec.ts`（含 T9 真实转换集成）/ `apps/h5/src/layouts/h5/config/rem.spec.ts` / `apps/h5/src/plugins/remAdaptation.spec.ts` / `apps/h5/src/layouts/h5/index.spec.ts` |

@@ -6,6 +6,30 @@
 
 ## 未发布
 
+### 📚 Docs | 48 篇文档 + README 全量对标 monorepo 源码大修（2026-10-30）
+
+> 背景：v3.0.0 monorepo 化后大量文档残留单应用叙事（`src/` 裸路径、store 口径、persist key、
+> 门禁清单等），check-doc-currency 的 14 项硬数据锁不住语义层漂移。本次以「6 并行只读审计 →
+> 6 并行定点修复 → 主代理终审补漏」编排，对 48 篇 docs + README 逐篇对标最新源码。
+
+- **审计**：6 份报告落盘 `.claude/agent-reports/2026-10-30-docs-audit-*.md`（工程基建/架构规范/
+  组件指南/网络数据层/端侧入门/README），200 条发现（P0×21 / P1×85 / P2×94）全部附源码证据
+- **修复**：45 文件（44 篇 docs + README）202 条落地零跳过；主代理终审再补 16 处审计漏网
+  （docs/06 persist key、docs/07/23 AutoImport 示例、docs/11/13/14/15 头注路径、docs/18 反例表、
+  docs/29 table-key 口径（`:columns` 后缀 + `VITE_STORAGE_NAMESPACE` 前缀）、README 指令/插件
+  范式段重写为 glob 自动注册 + `createAppPlugins` 工厂 + `bootstrapApp` 接入等）
+- **代表性修正**：store barrel 4 个 + admin 私有 2 个（tags-view/router）；persist key
+  `${VITE_APP_ID}:*` 前缀化；覆盖率阈值 34/20/31/35（2026-10-26 重锚定）；husky 三钩子实况
+  （commit-msg 含 check-commit-msg.sh）；deploy 五开关 + VITE_BASE 由 build-pages REPO_PREFIX
+  注入；demo 门控 isDemoRoutesEnabled 已删（docs/09 §8 重写）；docs/41 scroll-spy 对齐
+  PortalNav IntersectionObserver 实现；README docs/48 索引断链修复；docs/47 `build:prod` 笔误修正
+
+验证：`pnpm check:doc-currency` 14/14 绿；`pnpm lint` 零告警；裸 `src/` 路径与已收敛别名
+（`@utils/*`/`@store/*`/`@composables/*`）残留复扫清零（剩余命中均为 docs/42/37/38 历史快照
+语境，刻意保留）。
+
+手动验证：抽查 docs/20 §9 阈值表、docs/47 §1.5 命令族、README 文档索引表 docs/48 链接可点。
+
 ### 📚 Docs | 新增 docs/48-单应用模式与Monorepo多应用能力对比（2026-10-30）
 
 > 背景：所有者需要一份面向用户的「双版能力对比 + 选型参考」文档——回答「能力差在哪 /

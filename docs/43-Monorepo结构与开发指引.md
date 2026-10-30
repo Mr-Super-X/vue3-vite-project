@@ -135,7 +135,7 @@ pnpm dev:gateway admin auth  # 子集模式（2026-10-27）：仅起指定 app�
 
 ## 7. CI/CD 与发布
 
-- **ci.yml**：lint 根全仓一次；Build/Test 走 turbo——master push 全量（`turbo run build test`），PR / develop push 走 affected（`--filter=[origin/master]...`，未变更 app 命中缓存或跳过）；turbo 本地缓存统一 `--cache-dir=.turbo` 并接 `actions/cache`；`check:routes` 保留。
+- **ci.yml**：lint 根全仓一次；Build/Test 走 turbo——master push 全量（`turbo run build` 全量 + test **showroom 分级**排除 docs/big/h5 纯测试，构建保留全量由本网拦截），PR / develop push 走 affected（`--filter=[origin/master]...`，未变更 app 命中缓存或跳过）；turbo 本地缓存统一 `--cache-dir=.turbo` 并接 `actions/cache`；`check:routes` 保留。
 - **deploy.yml**（push master 自动）：`pnpm build:pages` 自动发现 6 app，逐个 spawn 注入演示五开关（`VITE_BASE` 由脚本内 `REPO_PREFIX` 按 `/vue3-vite-project/<app>/` 注入；自定义域改脚本常量），产物聚合根 `dist/<app>/` + 落地导航页，整目录发 GitHub Pages。
 - 顺序约束：turbo `build` 内含 `build-only`（unplugin 生成声明）→ `type-check:full`，CI 干净 checkout 下类型检查依赖 build 先生成声明，故不单独拆 type-check step。
 - **生产 docker 部署**（`docker-compose.prod.yml`，非 CI 内置）：根 `Dockerfile` 多阶段（corepack pnpm → `pnpm build:prod` 聚合 6 app → `nginx:1.27-alpine`），`API_UPSTREAM` env 注入反代真实后端（SSE 关缓冲）；产物 `dist-prod/<app>/` 与 gh-pages 的 `dist/` 隔离；本地模拟 / 单机服务器均适用。路径语义与 §6 dev 网关逐条对齐（根 302 `/portal/`、`/<app>/` SPA fallback），详见 README「生产 Docker 部署」。
@@ -146,7 +146,7 @@ pnpm dev:gateway admin auth  # 子集模式（2026-10-27）：仅起指定 app�
 - 全局组件不要显式 import（@vv/ui 三目录自动注册）：CLAUDE.md §1.7
 - AutoImport 标识符来源注释约定：CLAUDE.md §1.6.1
 - 单 app 使用场景（模板受众只取一个 app）：取 `apps/admin` + `packages/*` 即可，包与 app 间仅 workspace 链接耦合
-- **vue beta 警示（复用隐性地雷）**：`pnpm-workspace.yaml` 的 `overrides` 把 vue 及全部 `@vue/*` 子包钉在 `beta` tag（catalog 的 `^3.5.38` 被覆盖）——4 个包的全部开发 / 测试都跑在 Vue **beta** 上；包被其它 Vue3 工程复用（宿主用稳定版 vue）时兼容性**未经验证**，且包源码的宿主装配契约（auto-import / scss 注入 / dirs 扫描，见各包 README）也须一并复刻
+- **vue beta 警示（复用隐性地雷）**：`pnpm-workspace.yaml` 的 catalog 与 `overrides` **双钉精确值** `3.6.0-beta.17`（2026-10-28 C1 决策，原浮动 `beta` tag 已弃用——lockfile 缺席时克隆不可复现）——4 个包的全部开发 / 测试都跑在 Vue **beta** 上；包被其它 Vue3 工程复用（宿主用稳定版 vue）时兼容性**未经验证**，且包源码的宿主装配契约（auto-import / scss 注入 / dirs 扫描，见各包 README）也须一并复刻
 
 ## 9. 本地开发排障（高频 4 场景）
 

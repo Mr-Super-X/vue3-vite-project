@@ -2,7 +2,7 @@
 
 > **文档版本**：v3.4.0 | **最后更新**：2026-09-17
 > **覆盖版本**：v2.0（含 v2.1 vxe-table 引擎 + 服务端排序）
-> **源码位置**：`src/components/ProTable/`
+> **源码位置**：`packages/ui/src/components/ProTable/`
 > **demo 站**：`/demo/pro-table-overview`（25 个演示：24 个能力 demo + 主入口，完整清单见 §16 示例索引）
 
 ---
@@ -437,7 +437,7 @@ const adaptedRequestApi = (params: Record<string, unknown>) =>
 - reset 复位：搜索区「重置」同步清空 filterState + 双引擎列头筛选 UI（el-table `clearFilter()` / vxe `clearFilter()`），旧筛选条件不会「复活」；并补发一次 `filter-change`（payload 为清空后的 `{}`），父级靠事件维护的筛选快照 / 埋点随 reset 回同步。
 - 事件与快照：`filter-change` 事件 payload 为变化后的全表快照（父级可监听做 URL 同步 / 埋点）；`getFilterState()` expose 返回当前合并态。
 
-完整示例见 `src/modules/demo/examples/ProTable/ProTableServerFilter.vue`（`/demo/pro-table-server-filter`）。
+完整示例见 `apps/docs/src/modules/demo/examples/ProTable/ProTableServerFilter.vue`（`/demo/pro-table-server-filter`）。
 
 ---
 
@@ -783,7 +783,7 @@ tableRef.value?.refreshChildren('org-1') // 重新加载 org-1 子节点
 
 ```ts
 <ProTable
-  table-key="user-list"  // localStorage key（vue3-vite-project:user-list-cols）
+  table-key="user-list"  // localStorage key（{VITE_STORAGE_NAMESPACE}:user-list:columns，默认 vue3-vite-project 前缀）
   :columns="columns"
   :request-api="requestApi"
 />
@@ -981,16 +981,16 @@ ProTable 内部已与 `<AsyncState>` 集成：
 
 ## 13. 测试覆盖
 
-| 目录/文件                                          | 覆盖范围                                                                                                                                                                                                                                                                                         |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `composables/`（17 个 spec）                       | useSearch / useColumns / useTable（请求/分页/排序/筛选/持久化恢复）/ useCellSpan / useRowDrag / useRowEdit / useTreeData / useSummary / useStatePersist / useVirtualScroll / useEngineFallback / useProTableEvents / useTableCapabilities / useAutoHeight / useFullscreen / useTableEngineDom 等 |
-| `components/`（13 个 spec）                        | VxeTableBody（引擎加载/事件翻译/筛选/选区清理）/ ElementTableBody / ElementTableV2Body（虚拟滚动）/ SearchForm / SelectedTags / SelectionBar / ToolbarRenderer / ColSetting / EditCell / CellContent / GroupedHeader / SummaryRow / TableHeader                                                  |
-| `adapters/`（5 个 spec）                           | vxe-column 列映射 / cell-format 格式化预设 / cell-render / row-drag-adapter / tree-adapter                                                                                                                                                                                                       |
-| `utils/`（2 个 spec）                              | exportCsv（BOM/RFC4180）/ importCsv（引号感知解析）                                                                                                                                                                                                                                              |
-| 根目录（2 个 spec）                                | ProTable.integration（端到端 mount 全链路）/ ProTable.engine（引擎分支与回退）                                                                                                                                                                                                                   |
-| `src/modules/demo/examples/ProTable/ProTable*.vue` | 25 个 demo 覆盖所有主路径 + 各能力边界（详见 §16 示例索引）                                                                                                                                                                                                                                      |
+| 目录/文件                                                    | 覆盖范围                                                                                                                                                                                                                                                                                         |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `composables/`（17 个 composable，20 个 spec）               | useSearch / useColumns / useTable（请求/分页/排序/筛选/持久化恢复）/ useCellSpan / useRowDrag / useRowEdit / useTreeData / useSummary / useStatePersist / useVirtualScroll / useEngineFallback / useProTableEvents / useTableCapabilities / useAutoHeight / useFullscreen / useTableEngineDom 等 |
+| `components/`（13 个 spec）                                  | VxeTableBody（引擎加载/事件翻译/筛选/选区清理）/ ElementTableBody / ElementTableV2Body（虚拟滚动）/ SearchForm / SelectedTags / SelectionBar / ToolbarRenderer / ColSetting / EditCell / CellContent / GroupedHeader / SummaryRow / TableHeader                                                  |
+| `adapters/`（5 个 spec）                                     | vxe-column 列映射 / cell-format 格式化预设 / cell-render / row-drag-adapter / tree-adapter                                                                                                                                                                                                       |
+| `utils/`（2 个 spec）                                        | exportCsv（BOM/RFC4180）/ importCsv（引号感知解析）                                                                                                                                                                                                                                              |
+| 根目录（2 个 spec）                                          | ProTable.integration（端到端 mount 全链路）/ ProTable.engine（引擎分支与回退）                                                                                                                                                                                                                   |
+| `apps/docs/src/modules/demo/examples/ProTable/ProTable*.vue` | 25 个 demo 覆盖所有主路径 + 各能力边界（详见 §16 示例索引）                                                                                                                                                                                                                                      |
 
-完整 demo 站：`/demo/pro-table-overview` 等 9 个路径（auto-import 自动注册）。
+完整 demo 站：25 个 demo 路径（`/demo/pro-table-*`，auto-import 自动注册，完整清单见 §16）。
 
 ---
 
@@ -1030,11 +1030,11 @@ const rows = tableRef.value?.getSelectedRows()
 
 ## 15. 相关文档
 
-- 组件源码：`src/components/ProTable/ProTable.vue`
-- 类型导出：`src/components/ProTable/types/index.ts`
-- composables：`src/components/ProTable/composables/`
-- 引擎适配：`src/components/ProTable/adapters/`
-- Demo 站：`src/modules/demo/examples/ProTable/`（25 个 demo，详见 §16）
+- 组件源码：`packages/ui/src/components/ProTable/ProTable.vue`
+- 类型导出：`packages/ui/src/components/ProTable/types/index.ts`
+- composables：`packages/ui/src/components/ProTable/composables/`
+- 引擎适配：`packages/ui/src/components/ProTable/adapters/`
+- Demo 站：`apps/docs/src/modules/demo/examples/ProTable/`（25 个 demo，详见 §16）
 - Element Plus Table 文档：https://element-plus.org/zh-CN/component/table.html
 - vxe-table 文档：https://vxetable.cn/
 - 设计 spec：`docs/superpowers/specs/2026-09-07-protable-design.md` + `2026-09-08-protable-v2.1-vxe-engine-design.md`
@@ -1043,7 +1043,7 @@ const rows = tableRef.value?.getSelectedRows()
 
 ## 16. 示例索引（25 个 demo，含主入口）
 
-在线演示站点：`pnpm dev` → `/demo`（左侧「ProTable 企业级表格」分组），路由 = `/demo/pro-table-<kebab-case>`。所有 demo 源码位于 `src/modules/demo/examples/ProTable/`（25 个 `.vue` 文件）。
+在线演示站点：`pnpm dev` → `/demo`（左侧「ProTable 企业级表格」分组），路由 = `/demo/pro-table-<kebab-case>`。所有 demo 源码位于 `apps/docs/src/modules/demo/examples/ProTable/`（25 个 `.vue` 文件）。
 
 | 路由                              | 内容                                                                      |
 | --------------------------------- | ------------------------------------------------------------------------- |
@@ -1073,6 +1073,6 @@ const rows = tableRef.value?.getSelectedRows()
 | `/demo/pro-table-header-actions`  | 工具栏与批量操作（toolbar 配置式 API + SelectionBar 双通道，2026-09-18）  |
 | `/demo/pro-table-import-export`   | CSV 导入导出（零依赖 utils：BOM + RFC4180 + 表头映射，2026-09-18）        |
 
-> **主 demo 入口**：`/demo/pro-table-overview`（对应 `ProTableOverview.vue`）—— 查阅全部 prop、事件、实例方法的入口。其余 22 个 demo 按「基础 → 引擎 → 搜索 → 虚拟化 → 编辑 → 选择/拖拽/展开 → 树形/合并/汇总 → 工具栏/批量 → 导入导出 → 样式」分组覆盖各能力边界。
+> **主 demo 入口**：`/demo/pro-table-overview`（对应 `ProTableOverview.vue`）—— 查阅全部 prop、事件、实例方法的入口。其余 24 个 demo 按「基础 → 引擎 → 搜索 → 虚拟化 → 编辑 → 选择/拖拽/展开 → 树形/合并/汇总 → 工具栏/批量 → 导入导出 → 样式」分组覆盖各能力边界。
 >
 > **配套 mock**：`packages/mock/src/pro-table/`（11 个具名导出 `xxxRequestApi` 文件，组件直连数据源无 XHR 依赖；big-data.ts 为 10 万行 × 10 列含固定列的大数据场景）。

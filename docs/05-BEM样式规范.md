@@ -297,7 +297,7 @@ const bem = createNamespace('user-card')
 
 - 同一组件选择器数量 ≥ 20 个，sass 插值写法嵌套层级深、视觉臃肿
 - 习惯 SCSS mixin 心智模型（团队历史习惯）
-- 需要与 `src/assets/styles/mixins/bem.scss` 现存 mixin 复用
+- 需要与 `packages/ui/src/assets/styles/mixins/bem.scss` 现存 mixin 复用
 
 #### 何时仍选方案 A
 
@@ -305,7 +305,7 @@ const bem = createNamespace('user-card')
 - 团队以 sass 插值为默认风格（更直观、不依赖项目私有 mixin）
 - 直接用 createNamespace 命名约定更顺手的场景
 
-#### SCSS mixin 一览（来自 `src/assets/styles/mixins/bem.scss`）
+#### SCSS mixin 一览（来自 `packages/ui/src/assets/styles/mixins/bem.scss`）
 
 | mixin             | 用途                                      | 生成示例                                          |
 | ----------------- | ----------------------------------------- | ------------------------------------------------- |
@@ -470,21 +470,23 @@ scss: {
 | 第三方库样式（如 Element Plus `el-` 冲突） | Element Plus 自身用 BEM，统一约定                   |
 | 全局 `*` 重置误伤                          | 重置只影响 `html` / `body`，不进入 BEM 命名的组件类 |
 
-### 何时写全局样式（放在 `src/assets/styles/`）
+### 何时写全局样式（放在 `packages/ui/src/assets/styles/`）
 
-| 场景                       | 处理                                                                    |
-| -------------------------- | ----------------------------------------------------------------------- |
-| 全局 reset / 工具类        | 放在 `src/assets/styles/`，**不写 scoped**（无 BEM 命名）               |
-| Element Plus 主题覆盖      | 放在 `src/assets/styles/element-overwrite/`（目录，按组件维度拆分文件） |
-| 路由过渡 / fade keyframes  | 放在 `src/assets/styles/transition.scss`                                |
-| **禁止** Element Plus 穿透 | ❌ 禁止写 `:deep(.el-button)`——去掉 scoped 后 `:deep()` 非法            |
+| 场景                       | 处理                                                                                |
+| -------------------------- | ----------------------------------------------------------------------------------- |
+| 全局 reset / 工具类        | 放在 `packages/ui/src/assets/styles/`，**不写 scoped**（无 BEM 命名）               |
+| Element Plus 主题覆盖      | 放在 `packages/ui/src/assets/styles/element-overwrite/`（目录，按组件维度拆分文件） |
+| 路由过渡 / fade keyframes  | 放在 `packages/ui/src/assets/styles/transition.scss`                                |
+| **禁止** Element Plus 穿透 | ❌ 禁止写 `:deep(.el-button)`——去掉 scoped 后 `:deep()` 非法                        |
 
 ---
 
 ## 📁 文件组织
 
+> Monorepo 后全局样式资产归 @vv/ui 包（`packages/ui/src/assets/styles/`），全局组件归 @vv/ui（`packages/ui/src/components/`，unplugin-vue-components 自动注册，见 docs/08 §3.3）；各 app 私有组件放 `apps/<a>/src/components/`。
+
 ```
-src/assets/styles/
+packages/ui/src/assets/styles/
 ├── index.scss              # 入口：按顺序 @use reset/variables/theme/transition/element-overwrite/custom
 ├── reset.css               # 浏览器基线重置（normalize.css 替代）+ 全局滚动条样式
 ├── variables.scss          # 主题无关变量（品牌色 / 间距 / 圆角 / 字号 / 字重 / 行高 / 阴影 / z-index / 动画时长 / 缓动）
@@ -493,18 +495,18 @@ src/assets/styles/
 ├── element-overwrite/      # Element Plus 主题覆盖（目录，按组件维度拆分文件）
 ├── custom.scss             # 复合场景工具类（.vv-flex-center / .vv-flex-between / .vv-ellipsis-* 等）
 └── mixins/
-    ├── bem.scss            # BEM mixin（仅 v1 过渡用，v2 已弃用，保留以兼容旧组件）
+    ├── bem.scss            # BEM mixin（vite additionalData @use 注入源）
     ├── transitions.scss    # 过渡 mixin（3 个）
     └── responsive.scss     # 响应式断点 mixin（vv-responsive / vv-responsive-down）
 
-src/components/
-├── common/<Name>.vue       # 通用组件（自动注册为全局组件）
-└── layout/<Name>.vue       # 路由级布局组件
+packages/ui/src/components/   # @vv/ui 全局组件（components/common + ProTable + form-schema 三目录，自动注册）
+apps/<a>/src/components/      # app 私有全局组件（自动注册 dirs 扩展位）
+apps/<a>/src/layouts/<m>/     # 路由级布局（layout 私有子组件归各 app，如 apps/admin/src/layouts/default/）
 ```
 
 ### 规则
 
-1. **全局样式只放在 `src/assets/styles/`**：禁止在组件中写"全局生效"的样式
+1. **全局样式只放在 `packages/ui/src/assets/styles/`**：禁止在组件中写"全局生效"的样式
 2. **组件样式写在 SFC 内**：禁止拆出独立 `.scss` 文件（除非组件库对外发布，且行数超过 400）
 3. **跨组件复用的样式 → 抽到全局 `variables.css`**：禁止在组件内 `:root { --xxx: ... }` 散落定义
 
@@ -727,6 +729,6 @@ pnpm check:routes    # 如果改了 routes/* 跑一致性
 - 工具链：`docs/04-构建与测试工具.md` §Sass 配置
 - 代码评审：`docs/02-代码质量工具链.md` §ESLint flat config
 - 设计规范：`docs/superpowers/specs/2026-07-17-vue3-vite-ts-scaffold-design.md`
-- BEM 运行时工具：`src/utils/bem.ts`
-- BEM mixin（方案 B）：`src/assets/styles/mixins/bem.scss`
-- 示范组件：`src/layouts/default/components/ToolHeader.vue`、`src/components/common/AsyncState.vue`
+- BEM 运行时工具：`packages/shared/src/utils/bem.ts`
+- BEM mixin（方案 B）：`packages/ui/src/assets/styles/mixins/bem.scss`
+- 示范组件：`apps/admin/src/layouts/default/components/ToolHeader.vue`、`packages/ui/src/components/common/AsyncState.vue`

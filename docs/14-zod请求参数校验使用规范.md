@@ -1,7 +1,7 @@
 # Zod 请求校验使用规范
 
 > **文档版本**：v1.0.1 | **最后更新**：2026-09-04
-> **能力来源**：`src/api/validator.ts`（CHANGELOG 未记录，2026-07-24 审计补齐文档；2026-09-04 同步测试用例）
+> **能力来源**：`packages/shared/src/api/validator.ts`（CHANGELOG 未记录，2026-07-24 审计补齐文档；2026-09-04 同步测试用例）
 
 ---
 
@@ -66,7 +66,7 @@ const page = await requestValidated(EquipmentListSchema, {
 ### 复用 schema
 
 ```ts
-// src/modules/equipment/types.ts
+// apps/<a>/src/modules/equipment/types.ts
 export const EquipmentSchema = z.object({/* ... */})
 export type Equipment = z.infer<typeof EquipmentSchema>
 
@@ -176,12 +176,12 @@ const user = await requestValidated(UserSchema, { url: '/user/1' })
 
 ## 🧪 单测覆盖
 
-`src/api/validator.spec.ts` 5 例：
+`packages/shared/src/api/validator.spec.ts` 5 例：
 
 - validate（基础 4 例）：合法数据通过 / 非法数据抛 ApiError（code=500）/ 多层 path 错误格式化 / 多个错误只取前 3 个
 - requestValidated（包装 1 例）：mock http 模块后验证响应
 
 ---
 
-_相关源码：`src/api/validator.ts`（63 行）+ `src/api/validator.spec.ts`（5 例）_
+_相关源码：`packages/shared/src/api/validator.ts`（66 行）+ `packages/shared/src/api/validator.spec.ts`（5 例）_
 _相关依赖：[Zod](https://zod.dev) v4（`^4.4.3`，package.json）_

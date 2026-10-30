@@ -1,7 +1,7 @@
 # 流式请求使用规范
 
 > **文档版本**：v1.0.1 | **最后更新**：2026-09-04
-> **能力来源**：`src/api/stream.ts`（CHANGELOG 未记录，2026-07-24 审计补齐文档；2026-09-04 同步 httpOnly 改造）
+> **能力来源**：`packages/shared/src/api/stream.ts`（CHANGELOG 未记录，2026-07-24 审计补齐文档；2026-09-04 同步 httpOnly 改造）
 >
 > ⚠️ **已知不一致（2026-08-12 httpOnly 改造遗留）**：`requestStream` 当前仍走 `Authorization: Bearer <Session.get('token')>` 头，但 httpOnly 模式下 Session 不再持有 token（凭证由后端 `Set-Cookie: HttpOnly` 下发，前端 JS 不可读）。见 §2 与 §已知问题。
 
@@ -142,8 +142,8 @@ location /api/ai/ {
 `packages/mock/src/stream.ts` 提供 `POST /api/ai/chat/stream` 的流式 mock：`rawResponse`
 **挂起式**逐 chunk 推送（`await` 挂起期间 connect 中间件不返回、res 全程受控——
 Promise 在 res.end() 后才 resolve；客户端断连须监听 `req.on('close')` 清理定时器，
-两条约束同 mock/auth.ts 的 setTimeout 404 事故根因）。配套演示：**docs app
-`/docs/demo/stream-request`**（requestStream 打字机累积 / handle.cancel() 停止 /
+两条约束同 mock/auth.ts 的 setTimeout 404 事故根因）。配套演示：**docs app `<base>/demo/stream-request`**（base 取决于各 app VITE_BASE/base
+配置，`/docs` 仅为仓库目录名而非路由段；requestStream 打字机累积 / handle.cancel() 停止 /
 onError 重试三态）。
 
 **仅 dev 可用**：prod 的 `createProdMockServer` 是 mockjs XHR 劫持——不拦截
@@ -185,7 +185,7 @@ await handle.done
 ### I1. httpOnly 模式下 Auth 失效（2026-08-12 改造遗留）
 
 - **现象**：httpOnly 模式下调用 `requestStream`，后端收到请求但拿不到用户身份（cookie 未随 fetch 发出 + Session.get('token') 永远返回 null）
-- **根因**：`src/api/stream.ts:83-84` 仍走 `Session.get('token') + Authorization Bearer`，与 `http.ts` 已切换到 `withCredentials: true` 不一致
+- **根因**：`packages/shared/src/api/stream.ts:86-87` 仍走 `Session.get('token') + Authorization Bearer`，与 `http.ts` 已切换到 `withCredentials: true` 不一致
 - **临时方案**（按需评估）：
   - 业务侧在 url 上拼接 token query 参数（仅限可信内网，**不推荐公网**）
   - 或后端单独开放 SSE 端点的免鉴权白名单（适用于 AI 演示场景）
@@ -194,5 +194,5 @@ await handle.done
 ---
 
 _相关源码：`packages/shared/src/api/stream.ts` + `packages/shared/src/api/stream.spec.ts`_
-_相关能力：`@api/cancel`（AbortController 工具）_
+_相关能力：`@api/cancel`（AbortController 工具；`@api` 别名 → `packages/shared/src/api`，跨包根 barrel 刻意不聚合 api）_
 _相关待办：`stream.ts` Auth 改造（与 http.ts 对齐 httpOnly 模式）—— 见 §I1_

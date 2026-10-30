@@ -2,7 +2,7 @@
 
 > 本文由原 `26-XForm架构总览.md` 与 `27-XForm决策记录-ADR.md` 合并而来，数据按当前代码修正（2026-08-26）。
 > **使用指南见 `docs/24-XForm使用指南.md`**；本文面向维护者与接手引擎开发的人。
-> **完整设计规范见 `src/components/form-schema/ARCHITECTURE.md`**。
+> **完整设计规范见 `packages/ui/src/components/form-schema/ARCHITECTURE.md`**。
 
 > **TL;DR** — form-schema 引擎分四层：Schema 定义层 → Composable 编排层 → Render 渲染层 → Demo 应用层。当前规模：**66 个 `.spec.ts` + 2 个 `.test-d.ts` 测试文件、63 个 demo（全部位于 `examples/XForm/` 目录，`XForm.vue` 为主入口）** 覆盖全部关键能力。核心设计决策：schema 对象 DSL + 链式 Builder 双轨、自研跨字段 crossValidator（三路径执行语义统一于 `cross-rule-runner.ts`）、v-model 写入后主动触发（不依赖 watch）。
 
@@ -12,12 +12,12 @@
 
 ```text
 ┌──────────────────────────────────────────────────────────┐
-│ 应用层：src/modules/demo/examples/XForm*.vue            │
+│ 应用层：apps/docs/src/modules/demo/examples/XForm/        │
 │   （63 个 demo 文件，全部位于 XForm 目录）                │
 ├──────────────────────────────────────────────────────────┤
-│ 引擎层：src/components/form-schema/                      │
+│ 引擎层：packages/ui/src/components/form-schema/            │
 │                                                          │
-│   XForm.vue（顶层组件，121 行；P0 拆分 478→95、P2 后 121）│
+│   XForm.vue（顶层组件）                                    │
 │   ├─ useXFormComposer     顶层编排（11+ composable 装配） │
 │   │   ├─ useSchemaRenderer   编排 + cloneDeep + reaction │
 │   │   ├─ useSchemaIndex      schema 元数据索引（O(1)）   │
@@ -26,7 +26,7 @@
 │   │   ├─ useFormValidation   el-form.validate + crossValidator │
 │   │   ├─ useFormDirty        dirty 快照追踪             │
 │   │   ├─ useServerError      服务端错误适配             │
-│   │   ├─ useTopLevelFields   顶层 schema 字段（11 个）   │
+│   │   ├─ useTopLevelFields   顶层 schema 字段（7 个）     │
 │   │   ├─ useFormErrorBus     错误事件总线（OPT-7 OSD）   │
 │   │   └─ useCurrentBreakpoint 断点监听（xs~xl）           │
 │                                                          │
@@ -44,7 +44,9 @@
 │                                                          │
 │   types/（P1 拆 14 文件；SchemaNode 35 字段 + SchemaNodeFor）│
 │   builders/（29 个链式 builder 入口，含 ArrayBuilder）    │
-│   element-plus-adapter.ts（29 个短名映射 + 默认 props）   │
+│   adapters/element-plus-adapter.ts（默认 props；          │
+│   短名映射由 composables/resolve-component.ts 的           │
+│   EL_COMPONENT_MAP 单源派生，33 短名 + 2 El 别名）         │
 │   index.ts（插件 + 具名导出）                             │
 └──────────────────────────────────────────────────────────┘
 ```
@@ -205,4 +207,4 @@ setFieldError（阶段 3.1 重构后的双路径）
 
 - `docs/24-XForm使用指南.md` — 使用视角完整 API（本文的使用侧入口）
 - `docs/superpowers/specs/2026-08-19-form-schema-design.md` — 引擎设计稿（P0-P3 规划）
-- `src/components/form-schema/README.md` — 组件内 README
+- `packages/ui/src/components/form-schema/README.md` — 组件内 README

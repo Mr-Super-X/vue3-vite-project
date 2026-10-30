@@ -1,7 +1,7 @@
 # 会话续期、请求取消与全局兜底 使用规范
 
 > **文档版本**：v3.0.0 | **最后更新**：2026-09-04
-> **能力来源**：`src/api/token-refresh.ts` + `src/api/global-abort.ts` + `src/api/cancel.ts` + `src/store/modules/user.ts`
+> **能力来源**：`packages/shared/src/api/token-refresh.ts` + `packages/shared/src/api/global-abort.ts` + `packages/shared/src/api/cancel.ts` + `packages/shared/src/store/modules/user.ts`
 > **配套阅读**：`docs/19-Pinia store使用规范.md`（user store 字段）、`docs/07-路由模块设计.md`（守卫链）、`docs/23-权限设计.md`（权限链路）
 >
 > **v3.0 重写说明**：文件名沿用"token"是因为历史检索习惯；**项目 2026-08-12 已完成 httpOnly 改造，前端不再持有 token**。本文档按真实架构重写：标题改为"会话续期"，所有"token 注入/读取/存 Session"描述改为"凭证 cookie + sessionStorage 登录标记"。
@@ -29,7 +29,7 @@
        前端同时写 sessionStorage 登录标记（key: 'auth'，boolean，仅用于守卫同步判断）
 请求：axios withCredentials: true → 浏览器自动携带 cookie，前端 JS 不经手凭证
 续期：401 → refreshSession()（并发去重）→ 后端 Set-Cookie 新凭证 → 原请求重发（cookie 自动带新凭证）
-失效：refresh 失败 → performLogout() 兜底（toast + 清登录标记 + 动态 import router 跳 /login）
+失效：refresh 失败 → performLogout() 兜底（toast + 清登录标记 + 整页跳统一登录应用 `${VITE_AUTH_ORIGIN}/login?redirect=...`）
 退出：useUserStore().logout() 乐观退出（先清本地态 + abort + resetAuthGuard，后端 logout fire-and-forget）
 ```
 
@@ -53,15 +53,15 @@
 
 ### 1.3 关键事实清单（2026-09-04 校对）
 
-| 事实                                                                         | 来源                                         |
-| ---------------------------------------------------------------------------- | -------------------------------------------- |
-| 凭证 cookie **由后端 Set**，前端不持有、不读取、不存储                       | `src/utils/storage.ts:11-22`（storage 注释） |
-| 登录标记 key 是 `'auth'`（sessionStorage，boolean）                          | `src/utils/storage.ts:90-93`                 |
-| axios 实例 `withCredentials: true`                                           | `src/api/http.ts:102`                        |
-| **没有 `applyAuthHeader` 函数**（Bearer header 注入已被移除）                | `src/api/http.ts:106-173`（请求拦截器链）    |
-| login 响应体不再含 `token` 字段                                              | `src/api/modules/auth.ts:11-15`              |
-| user store **不持有 `token` 字段**，认证态用 `authenticated: boolean`        | `src/store/modules/user.ts:11-15`            |
-| `useUserStore` **没有 `persist` 字段**（httpOnly 凭证与 pinia persist 无关） | `src/store/modules/user.ts`                  |
+| 事实                                                                         | 来源                                                         |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| 凭证 cookie **由后端 Set**，前端不持有、不读取、不存储                       | `packages/shared/src/utils/storage.ts:11-22`（storage 注释） |
+| 登录标记 key 是 `'auth'`（sessionStorage，boolean）                          | `packages/shared/src/utils/storage.ts:90-93`                 |
+| axios 实例 `withCredentials: true`                                           | `packages/shared/src/api/http.ts:102`                        |
+| **没有 `applyAuthHeader` 函数**（Bearer header 注入已被移除）                | `packages/shared/src/api/http.ts:106-173`（请求拦截器链）    |
+| login 响应体不再含 `token` 字段                                              | `packages/shared/src/api/modules/auth.ts:11-15`              |
+| user store **不持有 `token` 字段**，认证态用 `authenticated: boolean`        | `packages/shared/src/store/modules/user.ts:11-15`            |
+| `useUserStore` **没有 `persist` 字段**（httpOnly 凭证与 pinia persist 无关） | `packages/shared/src/store/modules/user.ts`                  |
 
 ---
 
@@ -70,7 +70,7 @@
 ### 2.1 设计要点
 
 ```ts
-// src/api/token-refresh.ts:4-15（注释原文）
+// packages/shared/src/api/token-refresh.ts:4-15（注释原文）
 // - 并发去重：同一时刻只发一个 refresh 请求；并发 401 共享结果
 // - httpOnly 凭证：refresh 成功后新 token 由后端 Set-Cookie: HttpOnly 自动写入，
 //   前端 JS 拿不到也无需拿到 token 字符串——refreshSession 只负责"让凭证续期"，
@@ -81,17 +81,17 @@
 
 ### 2.2 关键函数
 
-| 函数                         | 用途                                     | 文件:行号                      |
-| ---------------------------- | ---------------------------------------- | ------------------------------ |
-| `refreshSession()`           | 单例 refresh 入口（并发去重 + 失败传播） | `src/api/token-refresh.ts:86`  |
-| `configureTokenRefresh(cfg)` | 自定义 endpoint + refresh 函数           | `src/api/token-refresh.ts:64`  |
-| `_getCurrentConfig()`        | 读生效配置（refresh 端点 URL 判定）      | `src/api/token-refresh.ts:111` |
-| `_resetRefreshing()`         | 清空 refresh 状态（**仅测试用**）        | `src/api/token-refresh.ts:106` |
+| 函数                         | 用途                                     | 文件:行号                                      |
+| ---------------------------- | ---------------------------------------- | ---------------------------------------------- |
+| `refreshSession()`           | 单例 refresh 入口（并发去重 + 失败传播） | `packages/shared/src/api/token-refresh.ts:86`  |
+| `configureTokenRefresh(cfg)` | 自定义 endpoint + refresh 函数           | `packages/shared/src/api/token-refresh.ts:64`  |
+| `_getCurrentConfig()`        | 读生效配置（refresh 端点 URL 判定）      | `packages/shared/src/api/token-refresh.ts:111` |
+| `_resetRefreshing()`         | 清空 refresh 状态（**仅测试用**）        | `packages/shared/src/api/token-refresh.ts:106` |
 
 ### 2.3 默认配置
 
 ```ts
-// src/api/token-refresh.ts:34-50
+// packages/shared/src/api/token-refresh.ts:34-50
 const DEFAULT_CONFIG: Required<TokenRefreshConfig> = {
   url: '/auth/refresh', // 相对 baseURL
   refresh: async () => {
@@ -113,7 +113,7 @@ const DEFAULT_CONFIG: Required<TokenRefreshConfig> = {
 ### 2.4 自定义 refresh 端点
 
 ```ts
-// src/main.ts（应用启动时调一次）
+// apps/admin/src/main.ts（应用启动时调一次，各 app 同理）
 import { configureTokenRefresh } from '@api/token-refresh'
 
 configureTokenRefresh({
@@ -130,7 +130,7 @@ configureTokenRefresh({
 ### 2.5 自动 401 续期（`request<T>` 包裹层）
 
 ```ts
-// src/api/http.ts:328-348
+// packages/shared/src/api/http.ts:328-348
 try {
   const res = await instance.request(...)
   // ...
@@ -141,7 +141,8 @@ try {
     err instanceof ApiError &&
     (err.code === 401 || err.code === BusinessCode.UNAUTHORIZED) &&
     !config._retried &&
-    !isRefreshRequestUrl(config.url) // refresh 端点本身 401 不再触发 refresh
+    !isRefreshRequestUrl(config.url) && // refresh 端点本身 401 不再触发 refresh
+    !isLoginRequestUrl(config.url) // 登录请求 401（如密码错误）不走 refresh 链（2026-10-28 修复）
   ) {
     try {
       await refreshSession()
@@ -159,7 +160,7 @@ try {
 ### 2.6 并发去重
 
 ```ts
-// src/api/token-refresh.ts:75-103
+// packages/shared/src/api/token-refresh.ts:75-103
 let refreshingPromise: Promise<void> | null = null
 
 export async function refreshSession(): Promise<void> {
@@ -181,10 +182,10 @@ export async function refreshSession(): Promise<void> {
 
 > 关键差异：两条路径**互不重叠**，文档必须分清。
 
-| 路径                          | 触发场景                               | 副作用                                                                                                          | 来源                              |
-| ----------------------------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------- | --------------------------------- |
-| `http.ts::performLogout()`    | refresh 失败（凭证彻底失效，无法续期） | toast + `Session.remove('auth')` + 动态 import router 跳 `/login`                                               | `src/api/http.ts:230-235`         |
-| `userStore.resetLocalState()` | logout 主动退出 / `fetchProfile` 401   | 清标记 + `globalAbort.abort('logout')` + `resetAuthGuardState()` + routerStore.$reset() + `globalAbort.reset()` | `src/store/modules/user.ts:44-57` |
+| 路径                          | 触发场景                               | 副作用                                                                                                                             | 来源                                               |
+| ----------------------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `http.ts::performLogout()`    | refresh 失败（凭证彻底失效，无法续期） | toast + `Session.remove('auth')` + 整页跳统一登录应用 `${VITE_AUTH_ORIGIN}/login?redirect=...`（auth/redirect.ts，非 router.push） | `packages/shared/src/api/http.ts:271-284`          |
+| `userStore.resetLocalState()` | logout 主动退出 / `fetchProfile` 401   | 清标记 + `globalAbort.abort('logout')` + 经 `registerLocalStateResetHook` 注入的复位钩子 + `globalAbort.reset()`                   | `packages/shared/src/store/modules/user.ts:86-102` |
 
 **为什么 http.ts 不直接调 `resetLocalState()`？**
 
@@ -209,7 +210,7 @@ export async function refreshSession(): Promise<void> {
 ### 3.1 设计要点
 
 ```ts
-// src/api/global-abort.ts:1-7
+// packages/shared/src/api/global-abort.ts:1-7
 // 全局 AbortController 单例 + signal 合并工具。
 // 用途：logout 等需要"一次性取消所有在途请求"的场景。
 // 单例 signal 注入 http.ts 请求拦截器，logout 时统一 abort()。
@@ -218,7 +219,7 @@ export async function refreshSession(): Promise<void> {
 ### 3.2 工作流
 
 ```ts
-// src/api/http.ts:112-117（请求拦截器）
+// packages/shared/src/api/http.ts:112-117（请求拦截器）
 function applyAbortSignal(config: AxiosRequestConfig): void {
   config.signal = chainSignals(
     config.signal as unknown as AbortSignal | undefined,
@@ -226,17 +227,23 @@ function applyAbortSignal(config: AxiosRequestConfig): void {
   ) as GenericAbortSignal
 }
 
-// src/store/modules/user.ts:44-57（logout 触发）
+// packages/shared/src/store/modules/user.ts:86-102（resetLocalState 经钩子注入，
+// 守卫状态 / 路由 UI store 复位不再内联——shared 包不反向依赖 app）
+// admin 接线点：apps/admin/src/router/guards/auth.ts:38-40（registerLocalStateResetHook）
 function resetLocalState(): void {
   Session.remove('auth')
   authenticated.value = false
   profile.value = null
   permissions.value = []
   globalAbort.abort('logout') // ← 所有在途请求立即取消
-  resetAuthGuardState()
-  const routerStore = useRouterStore()
-  if (typeof routerStore.$reset === 'function') {
-    routerStore.$reset()
+  // 逐个调用 app 侧经 registerLocalStateResetHook 注册的复位钩子
+  // （单钩子失败不阻断其余）
+  for (const hook of localStateResetHooks) {
+    try {
+      hook()
+    } catch (err) {
+      console.warn('[user] 登录态复位钩子执行失败（已跳过）:', err)
+    }
   }
   globalAbort.reset() // ← 为下次登录创建新 controller
 }
@@ -244,16 +251,16 @@ function resetLocalState(): void {
 
 ### 3.3 `globalAbort` 三方法
 
-| 方法             | 用途                                        | 文件:行号                    |
-| ---------------- | ------------------------------------------- | ---------------------------- |
-| `signal`         | 给 axios 请求拦截器注入的合并 signal        | `src/api/global-abort.ts:10` |
-| `abort(reason?)` | 幂等取消（已 aborted 时再调用不抛错）       | `src/api/global-abort.ts:22` |
-| `reset()`        | 仅在 `aborted === true` 时创建新 controller | `src/api/global-abort.ts:15` |
+| 方法             | 用途                                        | 文件:行号                                    |
+| ---------------- | ------------------------------------------- | -------------------------------------------- |
+| `signal`         | 给 axios 请求拦截器注入的合并 signal        | `packages/shared/src/api/global-abort.ts:10` |
+| `abort(reason?)` | 幂等取消（已 aborted 时再调用不抛错）       | `packages/shared/src/api/global-abort.ts:22` |
+| `reset()`        | 仅在 `aborted === true` 时创建新 controller | `packages/shared/src/api/global-abort.ts:15` |
 
 ### 3.4 signal 合并工具
 
 ```ts
-// src/api/global-abort.ts:41-48
+// packages/shared/src/api/global-abort.ts:41-48
 export function chainSignals(...signals: (AbortSignal | undefined)[]): AbortSignal {
   const filtered = signals.filter((s): s is AbortSignal => s !== undefined)
   if (filtered.length === 0) return new AbortController().signal // 占位（永不 abort）
@@ -365,6 +372,6 @@ onBeforeRouteLeave(() => ctrl.abort('route-leaving'))
 
 ---
 
-_相关源码：`src/api/token-refresh.ts` + `src/api/global-abort.ts` + `src/api/cancel.ts` + `src/store/modules/user.ts`_
-_相关测试：3 个 `.spec.ts` 共 23 用例_
+_相关源码：`packages/shared/src/api/token-refresh.ts` + `packages/shared/src/api/global-abort.ts` + `packages/shared/src/api/cancel.ts` + `packages/shared/src/store/modules/user.ts`_
+_相关测试：3 个 `.spec.ts` 共 28 用例（token-refresh 9 + cancel 7 + global-abort 12）_
 _当前限制：默认 refresh 端点是占位（`/auth/refresh`），后端契约确定后需调 `configureTokenRefresh()`_

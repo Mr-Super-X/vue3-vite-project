@@ -2,7 +2,7 @@
 
 > **文档版本**：v1.0.0 | **最后更新**：2026-09-17
 > **覆盖范围**：基于 WangEditor V5 的 v-model 富文本编辑器（含 XSS 防御 + 自定义图片上传 + 命令式 API）
-> **源码位置**：`src/components/common/RichTextEditor/`
+> **源码位置**：`packages/ui/src/components/common/RichTextEditor/`
 
 ---
 
@@ -144,7 +144,7 @@ const uploadApi = async (file: File) => {
 ```vue
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
-import RichTextEditor from '@vv/ui/components/common/RichTextEditor/RichTextEditor.vue' // 或由 unplugin 自动注册，模板免 import
+// RichTextEditor 由 unplugin-vue-components 自动注册（@vv/ui 包组件目录），模板免 import
 
 const form = reactive({ content: '' })
 
@@ -186,17 +186,17 @@ const uploadApi = async (file: File) => {
 
 ## 5. 测试覆盖
 
-| 文件                                                          | 用例数 | 覆盖范围                                                                                     |
-| ------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------- |
-| `src/components/common/RichTextEditor/RichTextEditor.spec.ts` | 12     | v-model 双向 + DOMPurify 清洗 + 视觉为空映射 + 防循环 + 命令式 API + onBeforeUnmount destroy |
+| 文件                                                                      | 用例数 | 覆盖范围                                                                                     |
+| ------------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------- |
+| `packages/ui/src/components/common/RichTextEditor/RichTextEditor.spec.ts` | 17     | v-model 双向 + DOMPurify 清洗 + 视觉为空映射 + 防循环 + 命令式 API + onBeforeUnmount destroy |
 
-完整 demo 站：`src/modules/demo/examples/RichTextEditor.vue` 单文件（按 tab 内嵌展示 XSS 防御演示 + 上传演示 + 详情只读模式三类场景），路由 `/demo/rich-text-editor`。
+完整 demo 站：`apps/docs/src/modules/demo/examples/RichTextEditor.vue` 单文件（按 tab 内嵌展示 XSS 防御演示 + 上传演示 + 详情只读模式三类场景），路由 `/demo/rich-text-editor`。
 
 ---
 
 ## 6. 相关文档
 
-- 组件源码：`src/components/common/RichTextEditor/RichTextEditor.vue`
-- 类型导出：`src/components/common/RichTextEditor/types.ts`
+- 组件源码：`packages/ui/src/components/common/RichTextEditor/RichTextEditor.vue`
+- 类型导出：`packages/ui/src/components/common/RichTextEditor/types.ts`
 - DOMPurify：[github.com/cure53/DOMPurify](https://github.com/cure53/DOMPurify)
 - WangEditor V5：[wangeditor.com](https://www.wangeditor.com/v5/)

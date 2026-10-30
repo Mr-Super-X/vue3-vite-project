@@ -2,7 +2,7 @@
 
 > **文档版本**：v1.0.0 | **最后更新**：2026-09-17
 > **覆盖范围**：`<ProDialogForm>` —— ProDialog + XForm 的弹窗表单组合（含内置校验 → 提交 → 自动关闭 → 关闭重置）
-> **源码位置**：`src/components/common/ProDialogForm/`
+> **源码位置**：`packages/ui/src/components/common/ProDialogForm/`
 
 ---
 
@@ -39,18 +39,19 @@
 
 ### 2.1 Props
 
-| Prop               | 类型                         | 默认值    | 说明                                            |
-| ------------------ | ---------------------------- | --------- | ----------------------------------------------- |
-| `modelValue`       | `boolean`                    | —         | v-model 显隐控制                                |
-| `title`            | `string`                     | —         | 弹窗标题                                        |
-| `schema`           | `SchemaNode \| SchemaNode[]` | —         | XForm schema（详见 `docs/24-XForm使用指南.md`） |
-| `model`            | `Record<string, unknown>`    | —         | 表单响应式数据（**必须 `reactive()` 包装**）    |
-| `rules`            | `Record<string, RuleItem>`   | `{}`      | 命名规则引用（XForm 的 `rules` prop）           |
-| `width`            | `string`                     | `'500px'` | 弹窗宽度                                        |
-| `submitButtonText` | `string`                     | `'确 定'` | 提交按钮文案                                    |
-| `cancelButtonText` | `string`                     | `'取 消'` | 取消按钮文案                                    |
-| `resetOnClose`     | `boolean`                    | `true`    | 关闭后是否重置表单（动画结束 300ms 后）         |
-| `xformProps`       | `Partial<XFormProps>`        | —         | XForm 扩展 props 透传入口（见下方说明）         |
+| Prop               | 类型                          | 默认值    | 说明                                                          |
+| ------------------ | ----------------------------- | --------- | ------------------------------------------------------------- |
+| `modelValue`       | `boolean`                     | —         | v-model 显隐控制                                              |
+| `title`            | `string`                      | —         | 弹窗标题                                                      |
+| `schema`           | `SchemaNode \| SchemaNode[]`  | —         | XForm schema（详见 `docs/24-XForm使用指南.md`）               |
+| `model`            | `Record<string, unknown>`     | —         | 表单响应式数据（**必须 `reactive()` 包装**）                  |
+| `onSubmit`         | `(model) => Promise<unknown>` | —（必填） | 提交回调：resolve = 成功自动关闭 / reject = 触发 submitFailed |
+| `rules`            | `Record<string, RuleItem>`    | `{}`      | 命名规则引用（XForm 的 `rules` prop）                         |
+| `width`            | `string \| number`            | `'500px'` | 弹窗宽度                                                      |
+| `submitButtonText` | `string`                      | `'确 定'` | 提交按钮文案                                                  |
+| `cancelButtonText` | `string`                      | `'取 消'` | 取消按钮文案                                                  |
+| `resetOnClose`     | `boolean`                     | `true`    | 关闭后是否重置表单（动画结束 300ms 后）                       |
+| `xformProps`       | `Partial<XFormProps>`         | —         | XForm 扩展 props 透传入口（见下方说明）                       |
 
 > **XForm 能力透传**：ProDialogForm 显式 props 只覆盖 XForm 的主数据契约（`schema` / `model` / `rules`），
 > 其余 XForm 能力 —— `components`（自定义组件）/ `zodSchema` / `beforeChange` / `directives` /
@@ -87,7 +88,7 @@
 
 ## 3. 暴露方法（`defineExpose`）
 
-通过 `buildXFormExposeProxy` 透传 XFormExpose **17 个方法**（详见 `docs/24-XForm使用指南.md` §3）：
+通过 `buildXFormExposeProxy` 透传 XFormExpose **19 个方法**（详见 `docs/24-XForm使用指南.md` §3）：
 
 | 分类       | 方法                                                                            |
 | ---------- | ------------------------------------------------------------------------------- |
@@ -257,17 +258,17 @@ catch (err) {
 
 | 文件                      | 用例数 | 覆盖范围                                   |
 | ------------------------- | ------ | ------------------------------------------ |
-| `useDialogSubmit.spec.ts` | 8      | 防重复 + 失败 loading 复位 + 不抛 err      |
-| `useResetOnClose.spec.ts` | 6      | 延时重置 + 重入保护 + onUnmounted 清 timer |
+| `useDialogSubmit.spec.ts` | 5      | 防重复 + 失败 loading 复位 + 不抛 err      |
+| `useResetOnClose.spec.ts` | 5      | 延时重置 + 重入保护 + onUnmounted 清 timer |
 
-完整 demo 站：`src/modules/demo/examples/ProDialogForm/ProDialogFormOverview.vue` 单 demo（基础用法 + 自定义 footer + 命令式 useDialog 集成三类场景在同一文件内分章节演示），路由 `/demo/pro-dialog-form-overview`。
+完整 demo 站：`apps/docs/src/modules/demo/examples/ProDialogForm/ProDialogFormOverview.vue` 单 demo（基础用法 + 自定义 footer + 命令式 useDialog 集成三类场景在同一文件内分章节演示），路由 `/demo/pro-dialog-form-overview`。
 
 ---
 
 ## 7. 相关文档
 
-- 组件源码：`src/components/common/ProDialogForm/ProDialogForm.vue`
-- 组合式：`composables/useDialogSubmit.ts` + `composables/useResetOnClose.ts` + `composables/buildXFormExposeProxy.ts`
+- 组件源码：`packages/ui/src/components/common/ProDialogForm/ProDialogForm.vue`
+- 组合式：`packages/ui/src/components/common/ProDialogForm/composables/useDialogSubmit.ts` + `useResetOnClose.ts` + `buildXFormExposeProxy.ts`
 - XForm 文档：[`docs/24-XForm使用指南.md`](24-XForm使用指南.md)（schema / 暴露方法定义）
 - ProDialog 文档：[`docs/27-ProDialog使用指南.md`](27-ProDialog使用指南.md)（基础弹窗能力）
 - useDialog 命令式：[`docs/27-ProDialog使用指南.md`](27-ProDialog使用指南.md) §3

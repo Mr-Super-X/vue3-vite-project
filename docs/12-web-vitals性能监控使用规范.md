@@ -13,7 +13,7 @@
 
 参考：[web.dev/vitals](https://web.dev/vitals/)（Google 官方权威定义）。
 
-> **FCP**（First Contentful Paint）：首字符渲染，可选加入；通过 `options.metrics: ['LCP', 'INP', 'CLS', 'TTFB', 'FCP']` 启用（当前插件默认 4 项，未含 FCP）。
+> **FCP**（First Contentful Paint）：**当前不支持**——`WebVitalName` 仅 `'LCP' | 'INP' | 'CLS' | 'TTFB'` 4 项，REGISTRY 也只注册这 4 项；传 FCP 会命中 `undefined` handler 被 catch warn。如需扩展：在 `WebVitalName` 联合类型加 `'FCP'` + REGISTRY 补 `FCP: onFCP` 一项。
 
 ## 2. 数据流向
 
@@ -22,7 +22,7 @@
   ↓
 web-vitals 库采集（PerformanceObserver API）
   ↓
-src/plugins/webVitals.ts 中转
+packages/shared/src/plugins/webVitals.ts 中转
   ├── dev: showBadge 控制台徽章（GitHub 风格，按 rating 切换颜色，默认）
   └── prod: 默认 noop，由 options.report 自定义
        ├── Sentry: setMeasurement
@@ -96,7 +96,7 @@ app.use(Plugins, {
 性能监控 · Web Vitals · TTFB  380ms · good               (绿底徽章)
 ```
 
-> 实现细节见 `src/plugins/webVitals.ts` 的 `defaultReporter`：用 `@utils/consoleBadge`
+> 实现细节见 `packages/shared/src/plugins/webVitals.ts` 的 `defaultReporter`：用 `packages/shared/src/utils/consoleBadge.ts`
 > 的 `showBadge(label, value, labelColor, valueColor)` 渲染（label 深紫 #6b21a8，性能监控语义）。
 
 prod 模式默认 noop，不会有任何外发请求。
@@ -160,4 +160,4 @@ E2E 自测（接入端点后）：用 Playwright 模拟导航 + 点击，断言 
 
 ---
 
-_文档版本：v1.0.1 | 编写日期：2026-07-23 | 最后更新：2026-09-04（dev 默认 reporter 已改为 showBadge 徽章）| 配套包：`web-vitals@6.0.0`_
+_文档版本：v1.0.1 | 编写日期：2026-07-23 | 最后更新：2026-09-04（dev 默认 reporter 已改为 showBadge 徽章）| 配套包：`web-vitals@^6.2.1`（pnpm catalog 单版本源）_

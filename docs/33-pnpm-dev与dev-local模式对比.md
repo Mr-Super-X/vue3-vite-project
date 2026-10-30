@@ -6,20 +6,22 @@
 
 ## TL;DR
 
-两个脚本**唯一差异**是一个环境变量 `VITE_MENU_SOURCE`，但它驱动了**完全不同的菜单加载路径**：
+两个命令**在 app 脚本层**的唯一差异是一个环境变量 `VITE_MENU_SOURCE`，但它驱动了**完全不同的菜单加载路径**：
 
-| 维度         | `pnpm dev`               | `pnpm dev:local`                |
-| ------------ | ------------------------ | ------------------------------- |
-| 菜单模式     | `remote`（默认）         | `local`                         |
-| 菜单来源     | 后端 `/api/menu` 接口    | 本地 `routes/index.ts` 静态路由 |
-| 是否需要后端 | **是**（无 mock 必失败） | **否**                          |
-| 适用阶段     | 联调真实后端 / 演示      | 离线开发 / 调试前端 / E2E       |
+| 维度         | `pnpm dev`（remote 菜单） | `pnpm dev:local`（local 菜单）  |
+| ------------ | ------------------------- | ------------------------------- |
+| 菜单模式     | `remote`（默认）          | `local`                         |
+| 菜单来源     | 后端 `/api/menu` 接口     | 本地 `routes/index.ts` 静态路由 |
+| 是否需要后端 | **是**（无 mock 必失败）  | **否**                          |
+| 适用阶段     | 联调真实后端 / 演示       | 离线开发 / 调试前端 / E2E       |
+
+> 根命令语境：`pnpm dev` = `turbo run dev` 并行起 **6 个 app**（全部 remote 模式），`pnpm dev:local` = `pnpm -C apps/admin dev:local` 只起 **admin** 一个 app。下表对比的是菜单加载模式差异；app 形态差异见 docs/43。
 
 切换命令一行：
 
 ```bash
-pnpm dev          # remote（默认）
-pnpm dev:local    # local（无需后端联调）
+pnpm dev          # 6 app 并行（remote，默认）
+pnpm dev:local    # 只起 admin（local，无需后端联调）
 ```
 
 ---
@@ -42,17 +44,21 @@ pnpm dev:local    # local（无需后端联调）
 ### 2.1 script 定义
 
 ```jsonc
-// package.json:8-9
+// 根 package.json:8-9（workspace 编排层——dev 起 6 app，dev:local 只起 admin）
+"dev":       "turbo run dev",
+"dev:local": "pnpm -C apps/admin dev:local",
+
+// apps/admin/package.json（vite 直跑形态只存在于 app 级）
 "dev":       "vite",
 "dev:local": "cross-env VITE_MENU_SOURCE=local vite"
 ```
 
-两个脚本**都跑同一个 `vite` 命令**，差异仅在 `cross-env` 是否注入 `VITE_MENU_SOURCE=local`（`cross-env` 用于跨平台兼容 Windows 的 cmd / PowerShell / Git Bash）。
+app 级两个脚本**都跑同一个 `vite` 命令**，差异仅在 `cross-env` 是否注入 `VITE_MENU_SOURCE=local`（`cross-env` 用于跨平台兼容 Windows 的 cmd / PowerShell / Git Bash）。
 
 ### 2.2 配置解析
 
 ```ts
-// src/router/config.ts:22-28
+// apps/admin/src/router/config.ts:22-28
 function resolveMenuSource(): MenuSource {
   const raw = import.meta.env.VITE_MENU_SOURCE
   if (raw === 'remote' || raw === 'local') return raw
@@ -69,7 +75,7 @@ function resolveMenuSource(): MenuSource {
 ### 2.3 分叉点
 
 ```ts
-// src/router/guards/remote-menu.ts:56
+// apps/admin/src/router/guards/remote-menu.ts:56
 export async function ensureRemoteMenuLoaded(to, userStore, routerStore, router) {
   if (ROUTER_CONFIG.source !== 'remote') return null // ← 唯一分叉点
   // ... 后续 remote 流程
@@ -111,16 +117,16 @@ router 注入
 
 ### 3.2 能力清单
 
-| 能力                      | 实现位置                              | 说明                                 |
-| ------------------------- | ------------------------------------- | ------------------------------------ |
-| 按角色动态菜单            | `menuApi.getMenu()` → 后端按权限过滤  | 不同账号看到不同菜单                 |
-| 网络故障自动重试          | `withRetry`（src/api/retry.ts）       | 指数退避，最多 3 次                  |
-| 单次超时控制              | `{ timeout: 5000 }`                   | 5s 超时                              |
-| 运行时安全                | Zod schema 校验（含递归 children）    | 后端返回结构异常时容错               |
-| 优雅降级                  | `validateAndConvertMenu` 返回 `[]`    | 守卫 fallback 到 local，console.warn |
-| 菜单不可见 → 路由不可访问 | `hidden:true` → `visible:false` 转换  | 守卫跳 `/404`                        |
-| 登录周期管理              | `dynamicLoaded` + `currentAuthState`  | 同一登录态只拉一次；切账号自动重置   |
-| 开发反馈                  | `showBadge('Router · 远程菜单', ...)` | 浏览器右下角 GitHub 风格徽章         |
+| 能力                      | 实现位置                                        | 说明                                 |
+| ------------------------- | ----------------------------------------------- | ------------------------------------ |
+| 按角色动态菜单            | `menuApi.getMenu()` → 后端按权限过滤            | 不同账号看到不同菜单                 |
+| 网络故障自动重试          | `withRetry`（packages/shared/src/api/retry.ts） | 指数退避，最多 3 次                  |
+| 单次超时控制              | `{ timeout: 5000 }`                             | 5s 超时                              |
+| 运行时安全                | Zod schema 校验（含递归 children）              | 后端返回结构异常时容错               |
+| 优雅降级                  | `validateAndConvertMenu` 返回 `[]`              | 守卫 fallback 到 local，console.warn |
+| 菜单不可见 → 路由不可访问 | `hidden:true` → `visible:false` 转换            | 守卫跳 `/404`                        |
+| 登录周期管理              | `dynamicLoaded` + `currentAuthState`            | 同一登录态只拉一次；切账号自动重置   |
+| 开发反馈                  | `showBadge('Router · 远程菜单', ...)`           | 浏览器右下角 GitHub 风格徽章         |
 
 ### 3.3 失败场景行为
 
@@ -141,7 +147,7 @@ router 注入
 ```text
 启动应用
   ↓
-src/router/auto-register.ts: 本地路由单一事实源
+apps/admin/src/router/auto-register.ts: 本地路由单一事实源
   ├─ 扫描 routes/index.ts + 各业务模块 routes/
   └─ 导出 COMPONENT_REGISTRY（name → component loader）
   ↓
@@ -150,7 +156,7 @@ routes/index.ts: 静态路由结构（业务模块根 + layout + children）
 守卫拦截：ensureRemoteMenuLoaded → 立即 return null  ← 完全跳过
   ↓
 layout 内渲染：从 router.getRoutes() 派生菜单树
-  └─ buildMenuTree(router)  ← src/layouts/default/config/menu.ts:117
+  └─ buildMenuTree(router)  ← apps/admin/src/layouts/default/config/menu.ts:117
        ├─ 过滤：visible !== false && requiresAuth !== false
        ├─ 过滤：白名单（Login/Forbidden/NotFound/ServerError）
        ├─ 过滤：动态段路径（:param / catch-all）
@@ -162,7 +168,7 @@ layout 内渲染：从 router.getRoutes() 派生菜单树
 | 能力           | 实现位置                                       | 说明                                  |
 | -------------- | ---------------------------------------------- | ------------------------------------- |
 | 零后端依赖     | remote 守卫直接 return null                    | 不发任何 `/api/menu` 请求             |
-| 本地单一事实源 | `src/router/auto-register.ts`                  | 路由结构 = 菜单结构（同一份 TS 代码） |
+| 本地单一事实源 | `apps/admin/src/router/auto-register.ts`       | 路由结构 = 菜单结构（同一份 TS 代码） |
 | 离线开发       | 不依赖 vite-plugin-mock                        | 没配 mock 也能跑                      |
 | 菜单实时可见   | `buildMenuTree(router)` 直接读 vue-router 实例 | 改 routes/index.ts → 刷新即生效       |
 | 编译期类型安全 | routes/index.ts 是 TS 写                       | 路由结构错改立刻类型报错              |
