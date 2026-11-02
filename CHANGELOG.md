@@ -6,6 +6,18 @@
 
 ## 未发布
 
+### 🛡️ Chore | 文档预算 49→50 同步（99c61ab docs/AGENTS.md 事后归因补记）（2026-11-02）
+
+> 背景：99c61ab「新增 16 个层级化 AGENTS.md 目录导航文档」在 docs/ 根级落了 docs/AGENTS.md，
+> 根级文档数 49→50；该提交未同步 `check:doc-currency` 第 14 项预算，自该提交起门禁存量红
+> （CI 失败）。本次按 §2.6-3 庄园冻结机制补预算 +1 并留痕归因。
+
+- `scripts/check-doc-currency.ts` 第 14 项 expected 49→50，注释行归因 99c61ab docs/AGENTS.md
+
+验证：`pnpm check:doc-currency` 14/14 绿。
+
+手动验证：无（纯门禁数值同步，无运行时代码变更）。
+
 ### 🎨 Style | 样式分层架构规范落地：docs/49 新增 + 审计小修 4 文件（2026-11-02）
 
 > 背景：全仓样式三 agent 普查（报告落盘 `.claude/agent-reports/2026-11-02-样式分层架构审计.md`）——

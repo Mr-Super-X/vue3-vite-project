@@ -394,9 +394,11 @@ const checks: Check[] = [
     // 承载 docs/42 评估/43 指引均无的「双版对比」视角）→ 48。
     // 2026-11-02：新增 docs/49-样式分层架构规范.md（五层分层 + monorepo 映射 + 端级归属裁决，
     // 承载当日样式审计报告的规范追认）→ 49。
+    // 2026-11-02（同日 99c61ab 第二批，事后归因补记）：新增 docs/AGENTS.md（16 个层级化
+    // AGENTS.md 目录导航之一）→ 50；该提交落地时未同步预算致第 14 项存量红，本次补齐。
     name: 'docs 根级文档数预算（docs/ 庄园冻结）',
     actual: countDocs,
-    expected: 49,
+    expected: 50,
     tolerance: 0,
   },
 ]
