@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > 本文档是 `~/.claude/CLAUDE.md` 的项目级补充。所有全局规则（§一～§十一）自动适用，遇到冲突以**本文档为准**。
 >
-> **文档版本**：v3.0.1 | **生成日期**：2026-10-22 | **生效分支**：`feature/monorepo`
+> **文档版本**：v3.0.1 | **生成日期**：2026-10-22 | **生效分支**：`feature/monorepo-nginx-dev`
 >
 > **最近更新**（2026-10-23）：架构审查「别名→包名迁移立场」——新增 §1.6.2 包消费约定
 >
