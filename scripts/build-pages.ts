@@ -76,12 +76,22 @@ function copyDist(appName: string): void {
   console.log(`✅ [${appName}] 产物已聚合 → dist/${appName}/`)
 }
 
+/** 落地页 app 中文名（口径对齐 README §项目简介；new-app 产物未收录时回落英文 app 名） */
+const APP_LABELS: Record<string, string> = {
+  admin: '管理后台',
+  auth: '统一登录',
+  big: '数据大屏',
+  docs: '组件示例文档',
+  h5: 'H5 移动端',
+  portal: '门户企业官网',
+}
+
 /** 落地导航页（根 dist/index.html）：列全部 app 入口 */
 function writeLandingPage(appNames: string[]): void {
   const links = appNames
     .map(
       (name) =>
-        `    <li><a href="${REPO_PREFIX}/${name}/">${name === 'admin' ? '管理后台' : name === 'docs' ? '组件示例文档' : name}（/${name}/）</a></li>`
+        `    <li><a href="${REPO_PREFIX}/${name}/">${APP_LABELS[name] ?? name}（/${name}/）</a></li>`
     )
     .join('\n')
   const html = `<!doctype html>

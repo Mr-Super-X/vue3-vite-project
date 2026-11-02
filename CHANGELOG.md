@@ -6,6 +6,19 @@
 
 ## 未发布
 
+### 🎨 Chore | gh-pages 落地导航页 app 名全中文统一（2026-10-30）
+
+> 背景：演示导航页链接文案中英混杂（管理后台/admin/组件示例文档为中文，portal/auth/big/h5
+> 落英文 app 名）——统一为中文名（口径对齐 README §项目简介），新增 app 未收录时回落英文 app 名。
+
+- `scripts/build-pages.ts`：`writeLandingPage` 的三元嵌套改 `APP_LABELS` 查表（6 app 中文名 +
+  `?? name` 兜底），文案与 href 前缀（REPO_PREFIX）逻辑不变
+
+验证：`pnpm build:pages` 全量构建通过，dist/index.html 六项全中文实测核对。
+
+手动验证：gh-pages 部署后根地址落地页各链接文案为「管理后台 / 统一登录 / 数据大屏 /
+组件示例文档 / H5 移动端 / 门户企业官网」+（/路径/）。
+
 ### 🔍 Docs | 第二轮横切面审查：修复质量 + 数字/命令/引用对账（2026-10-30）
 
 > 背景：第一轮 48 篇对标大修按文档分组执行，存在结构性盲区——修复 diff 本身未独立审查、
