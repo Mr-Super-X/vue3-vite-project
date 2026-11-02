@@ -410,7 +410,7 @@ packages/*  ──✗ 依赖──  apps/*；运行时依赖（vue/element-plus 
 - ❌ 违反 §2.1 依赖方向铁律（如 `@vv/shared` 反向 import `@vv/ui`、`apps/*` 互相 import）
 - ❌ 改变任何 app / 包内部一级目录的**职责定位**（如把 `packages/shared` 改成依赖 Element Plus）
 - ❌ 修改 `pnpm-workspace.yaml`、`turbo.json`、根 `package.json` scripts、各 app `vite.config.ts`、`packages/config` 工厂、根 `tsconfig.*`、`eslint.config.mjs` 中任何与 workspace 解析相关的配置
-- ❌ app 内部 `src/` 目录沿用单应用时期 Lockdown：一级目录（api/assets/components/composables/directives/enums/layouts/locales/modules/plugins/router/store/types/utils）不得增删改移动重命名
+- ❌ app 内部 `src/` 目录沿用单应用时期 Lockdown：一级目录（api/assets/components/composables/directives/enums/layouts/locales/modules/plugins/router/store/types/utils，以及 2026-11-02 端级样式层落地新增的 `styles/`——三件套骨架见 docs/49 §5）不得增删改移动重命名
 
 ### 2.3 例外条款
 
@@ -450,6 +450,7 @@ packages/*  ──✗ 依赖──  apps/*；运行时依赖（vue/element-plus 
 ## §3 组件 BEM 编写规范（强约束）
 
 > 所有 `.vue` 单文件组件必须按本节编写，与 §2 同为不可妥协硬规则。
+> 样式分层全局规范（五层架构 / tokens 命名 / z-index 分层 / EP 覆盖三级 / app 特性样式归属）见 [`docs/49-样式分层架构规范.md`](docs/49-样式分层架构规范.md)。
 
 ### 3.1 完整模板
 

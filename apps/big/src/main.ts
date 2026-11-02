@@ -22,6 +22,8 @@ import { createGlobalComponents } from '@vv/ui'
 import { setupUiAppContext } from '@vv/ui/composables/setup-ui-app-context'
 import { bootstrapApp } from '@vv/shared'
 import '@vv/shared/app-styles'
+// 端级样式层（tokens / UI 库覆盖骨架）：公共层之后的覆盖位，见 docs/49 §5
+import '@/styles/index.scss'
 
 await bootstrapApp({
   rootComponent: App,

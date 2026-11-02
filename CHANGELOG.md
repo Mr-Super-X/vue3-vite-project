@@ -6,6 +6,43 @@
 
 ## 未发布
 
+### 🎨 Style | 样式分层架构规范落地：docs/49 新增 + 审计小修 4 文件（2026-11-02）
+
+> 背景：全仓样式三 agent 普查（报告落盘 `.claude/agent-reports/2026-11-02-样式分层架构审计.md`）——
+> 五层结构全部有物理承载、191 个 style 块 scoped 清零、BEM 双轨覆盖，但规范从未成文，
+> 且审计发现若干语义漂移（z-index 撞值/未 token 化、注释腐烂、插值不一致）。
+
+- **规范落盘**：新增 `docs/49-样式分层架构规范.md`——五层分层与 monorepo 映射表、加载顺序强约束、
+  tokens 与 EP 变量「源/镜像」立场裁决（`$color-*` 编译期源经 theme-vars.scss 镜像写入 `--el-color-*`）、
+  UI 库覆盖三级形态（全局/端级/布局级）、app 特性样式「两级归属 + 就近原则」（端级 `--<app>-*` 前缀成文化）、
+  L5 豁免登记（`<style module>` 调试三件套 / 页面级 EP 定制 / demo 演示 / a11y 降级）
+- **CLAUDE.md §3** 新增 docs/49 互链一行
+- **小修**（`packages/ui`）：`variables.scss` 新增 `--z-index-banner: 1999` + `--color-info` 改插值写法
+  （值不变）；`NetworkBanner.vue` z-index 改消费 token、4 处色值改 EP warning 变量系（随主色联动，
+  肉眼难辨的 <3% 色阶差）；`custom.scss` 头注 3 处腐烂修正（错误文件名 + 与 §3 矛盾的 scoped 表述）
+- **小修**（`apps/portal`）：`portal-tokens.scss` 的 `--portal-z-index-header` 1000 →
+  `var(--z-index-fixed)`(1030)，消除与全局 dropdown(1000) 撞值
+- **端级样式层物理落地**（docs/49 §5「可选」升级为「标配骨架」）：6 app 各建
+  `src/styles/{index,tokens,ui-overwrite}.scss` 骨架（头注即归属约定，全注释零 CSS 产出），
+  6 个 main.ts 统一接线 `import '@/styles/index.scss'`（紧跟 app-styles 之后，「公共 → 端级」
+  层次在入口代码可见）；h5 的 vant 变量覆盖自 `layouts/h5/styles/vant-vars.scss` 归位至
+  `src/styles/ui-overwrite.scss`（`:root:root` 双写技巧原样保留，main.ts 直挂 import 摘除）；
+  `scripts/templates/app/` 脚手架同步自带三件套 + main.ts 接线（`__APP_NAME__` 占位），
+  `new-app.spec.ts` 必需文件清单 +3 断言锁定——新 app 自此自带分层结构
+
+验证：`sass` 编译入口通过（产物抽查 `--z-index-banner: 1999` / `--color-info: #909399` 正确）；
+`pnpm check:doc-currency` 14/14 绿（预算 48→49 注释留痕）；eslint 改动文件零告警；
+playwright 实测（dev:gateway + Offline 模拟）：NetworkBanner 渲染 z-index 1999（token 解析正确）、
+background `#fdf6ec`（warning-light-9）、color `#b88230`（dark-2 与原值零差异）、icon `#e6a23c`
+（零差异），恢复 Online 登录成功后横幅自动卸载；portal 顶栏 `--portal-z-index-header` 解析 1030
+（`var(--z-index-fixed)` 链接正确）、sticky 吸附正常。
+结构落地验证：6 端级入口 sass 编译全过（h5 产物含 `:root:root` vant 变量）；`new-app.spec` 9/9 绿
+（模板三件套 + 清单断言）；8 个 main.ts 系文件 eslint 零告警；h5 `type-check` 增量绿（`@/styles`
+解析正常）；dev:gateway 实测 h5 端 `:root` 上 `--van-primary-color: #ff6a00` 生效（归位后
+品牌橙未回落 vant 默认蓝）。
+
+手动验证：无遗留（浏览器实测已覆盖）。
+
 ### 📖 Docs | docs/48 + README 新增选型分支对照说明（2026-11-02）
 
 > 背景：仓库以 git 分支承载两种形态（单应用版 / Monorepo 多应用版），但此前全仓无任何文档

@@ -1,5 +1,8 @@
 /**
- * Vant 4 主题覆盖层 —— CSS 变量定制（vant 官方推荐方式）。
+ * 端级 UI 库覆盖 —— Vant 4 主题变量定制（vant 官方推荐的 CSS 变量方式）。
+ *
+ * 归位记录：自 layouts/h5/styles/vant-vars.scss 迁入（2026-11-02 样式分层落地，
+ * docs/49 §4「端级 UI 库覆盖」标准实例）；内容零改动。
  *
  * 背景：vant 4 的样式是 CSS 变量驱动（--van-button-height / --van-primary-color 等），
  * 不依赖 SCSS/Less 变量编译。覆盖方式两种：

@@ -10,7 +10,12 @@
 
 > 🆕 **新同事请先看 [docs/10-新手指引.md](docs/10-新手指引.md)** —— 30 分钟 5 任务，带你从 clone 到提交首个 PR。
 >
-> **最近更新**：2026-10-30 — **docs/46-48 收录 + commit message 零 AI 痕迹三层防线**，详见 [CHANGELOG.md](CHANGELOG.md)：
+> **最近更新**：2026-11-02 — **docs/49 样式分层架构规范落地 + 端级样式骨架全端就位**，详见 [CHANGELOG.md](CHANGELOG.md)：
+>
+> - **docs/49 新增**：样式分层架构规范（五层分层 + monorepo 映射 / tokens 与 EP 变量源-镜像立场 / EP 覆盖三级形态 / z-index 分层强约束 / L5 豁免登记）；CLAUDE.md §3 互链
+> - **端级样式层骨架**：6 app 各建 `src/styles/{index,tokens,ui-overwrite}.scss` + main.ts 统一接线（公共 → 端级层次入口可见）；h5 vant 主题覆盖归位 `src/styles/ui-overwrite.scss`；`pnpm new-app` 脚手架自带同构骨架
+>
+> **2026-10-30 更新** — **docs/46-48 收录 + commit message 零 AI 痕迹三层防线**：
 >
 > - **docs/48 新增**：单应用模式与 Monorepo 多应用能力对比（17 章双版对比 + src/ 全目录归属映射 + 选型建议）；README 文档表同步收录 docs/45-48
 > - **commit-msg 防线**（CLAUDE.md §4 #16）：`.claude/settings.json` attribution 空配置（机制层根治尾注注入）+ `scripts/check-commit-msg.sh` husky 宽拦（Co-Authored-By trailer / AI 署名全拦）+ commitlint——开源门面 commit history 零 AI 协作痕迹
@@ -270,8 +275,9 @@ vue3-vite-project/            # pnpm workspace + turbo@2（Monorepo）
 │   ├── h5/                   # H5 移动端（端口 5177）：h5-demo + rem 适配
 │   ├── big/                  # 数据大屏（端口 5178）：big-demo + scale 适配
 │   └── docs/                 # 组件示例文档（端口 5175）：demo 模块 + DemoDocs 布局
-│       └── src/              # app 私有：App.vue/main.ts + layouts/modules/plugins/router/store/views
-│                             # （docs 无 layouts、big 无 plugins；全局层 api/utils/store/... 全在 packages/*）
+│       └── src/              # app 私有：App.vue/main.ts + layouts/modules/plugins/router/store/views/styles
+│                             # （styles/ = 端级样式骨架三件套，docs/49 §5；docs 无 layouts、big 无 plugins；
+│                             #  全局层 api/utils/store/... 全在 packages/*）
 ├── packages/                 # 4 个共享包（workspace:* 源码直链消费，不建 dist）
 │   ├── config/               # @vv/config：vite 工厂 createViteConfig（插件/别名/css/分包单点）
 │   ├── mock/                 # @vv/mock：vite-plugin-mock 数据源
@@ -812,6 +818,7 @@ pnpm bench                         # vitest bench 基准测试
 | CI 门禁速查                            | `docs/46-CI门禁速查.md`                         | 13 门禁 × 触发条件/复跑命令/修复指引单页                                                 |
 | 能力体验清单                           | `docs/47-能力体验清单.md`                       | 架构/能力/排障操作手册（会用 → 会修 → 会教），45 条可执行清单                            |
 | **单应用模式与Monorepo多应用能力对比** | `docs/48-单应用模式与Monorepo多应用能力对比.md` | 双版逐项能力对比 + src/ 全目录归属映射 + 场景选型建议                                    |
+| **样式分层架构规范**                   | `docs/49-样式分层架构规范.md`                   | 五层分层 + monorepo 映射 / tokens 源-镜像立场 / EP 覆盖三级 / 端级骨架归属与豁免登记     |
 
 ### 架构评估
 
