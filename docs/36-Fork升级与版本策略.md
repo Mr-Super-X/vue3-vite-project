@@ -38,7 +38,7 @@ flowchart TD
     D -->|否| E[直接 merge upstream/master]
     D -->|是| F[先在本分支评估影响面<br/>对照 docs/ 相关指南]
     F --> E
-    E --> G[跑 pnpm test + type-check:full]
+    E --> G[跑 pnpm test + pnpm type-check]
     G --> H{全绿?}
     H -->|是| I[合并完成, 打 fork 增量 tag]
     H -->|否| J[按错误信息定位冲突<br/>多数为 CLAUDE.md 约定的目录级冲突]
@@ -47,7 +47,7 @@ flowchart TD
 要点：
 
 - **节奏建议**：上游是"能力波次"式发布（一次一个大特性），每 1-3 个月看一次 Releases 即可，不必追每次提交。
-- **合并策略**：上游仓库对 `src/` 有严格的目录职责约定（见 CLAUDE.md §2），冲突通常集中在 `src/modules/<你的业务模块>/` 与上游新增文件，极少波及你的业务代码。
+- **合并策略**：上游仓库对 workspace 有严格的 apps/packages 结构锁（见 CLAUDE.md §2 Architecture Lockdown），冲突通常集中在 `apps/<a>/src/modules/<你的业务模块>/` 与上游新增文件，极少波及你的业务代码。
 - **不建议 rebase 跟进**：fork 基线一旦被你的团队基于，rebase 会重写共享历史；merge 保留分叉点，回溯容易。
 
 ## 4. Breaking 政策（semver 约定）
@@ -66,18 +66,18 @@ flowchart TD
 ```bash
 # 前提：在 master 分支 + 工作区干净（dry-run 与正式 release 执行同一套前置校验）
 git switch master
-pnpm release:dry   # 干跑：预览版本号与 CHANGELOG 归档，0 副作用
-pnpm release       # 正式：type-check + test → bump → CHANGELOG 归档 → tag → push → GitHub Release
+pnpm release:dry   # 干跑：预览版本号与 hooks 校验，0 副作用
+pnpm release       # 正式：type-check + test → bump → tag → push → GitHub Release
 ```
 
 - release-it 配置（`.release-it.json`）：tag 名 `v${version}`；`npm.publish: false`（模板不走 npm 分发）；`github.release: true`（tag 推送后自动生成 GitHub Release，fork 者据此跟进）。
 - `requireBranch: ["master", "release/*"]` + `requireCleanWorkingDir` + `requireUpstream` **对 dry-run 同样生效**（release-it 的设计：预览即模拟真实发布的全部前置校验）。在 `feature/*` 分支或未提交改动状态下跑 `pnpm release:dry` 会报 `Must be on branch master,release/*`——这是保护在正常工作，不是故障。
-- CHANGELOG 的"## 未发布"段由 conventional commit 消息在发布时自动归档，**不要手工移动**。
+- CHANGELOG 纯手写（2026-10-27 起 `@release-it/conventional-changelog` 插件已下线，见 docs/03 §发版时 CHANGELOG 处理）：发版时**手工**把顶部 `## 未发布` 标题改为版本段（`## v${version} (YYYY-MM-DD)`）并单独 commit——release-it 不再参与生成，也不存在"自动归档"。
 
 ## 6. 相关文档
 
-| 文档                                  | 关系                                      |
-| ------------------------------------- | ----------------------------------------- |
-| [CHANGELOG.md](../CHANGELOG.md)       | 版本口径声明与本文件互为引用              |
-| [docs/10-新手指引.md](10-新手指引.md) | 新 fork 者的 30 分钟上手路径              |
-| [CLAUDE.md](../CLAUDE.md) §2          | `src/` 目录职责约定（预判合并冲突的依据） |
+| 文档                                  | 关系                                                      |
+| ------------------------------------- | --------------------------------------------------------- |
+| [CHANGELOG.md](../CHANGELOG.md)       | 版本口径声明与本文件互为引用                              |
+| [docs/10-新手指引.md](10-新手指引.md) | 新 fork 者的 30 分钟上手路径                              |
+| [CLAUDE.md](../CLAUDE.md) §2          | apps/packages Architecture Lockdown（预判合并冲突的依据） |

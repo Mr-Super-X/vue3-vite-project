@@ -1,8 +1,10 @@
-# vue3-vite-project · Four-Panel Engineering Template
+# vue3-vite-project · Four-Panel Engineering Base
 
 [简体中文](./README.md) | **English**
 
-A Vue 3 engineering template covering **four panel forms in one codebase**: internal admin, public portal, mobile H5, and data big-screen. Feature-Sliced architecture, fully mockable without a backend.
+> 📌 **Positioning** (verdict 2026-10-28, [docs/45](docs/45-仓库定位声明.md)): a single-maintainer opinionated engineering base — **code is public for reference, demo is playable online, but no template-level support is promised** (no npm packages, no community operations). Forks and borrowing are welcome; issues are accepted but responses are not guaranteed.
+
+A Vue 3 engineering base covering **four panel forms in one codebase**: internal admin, public portal, mobile H5, and data big-screen. Feature-Sliced architecture, fully mockable without a backend.
 
 | Panel            | Entry        | Capability                                                                                                       |
 | ---------------- | ------------ | ---------------------------------------------------------------------------------------------------------------- |
@@ -13,7 +15,7 @@ A Vue 3 engineering template covering **four panel forms in one codebase**: inte
 
 ## Tech Stack
 
-Vue 3.5 · TypeScript 6 (strict) · Vite 8 · Pinia 3 · Element Plus 2.14 · Vue Router 5 · UnoCSS 66 · pnpm 11
+Vue 3 (catalog `^3.5.38`, pinned to `3.6.0-beta.17` via pnpm overrides — back to stable before 2027-01-31, see pnpm-workspace.yaml) · TypeScript 6 (strict) · Vite 8 · Pinia 3 · Element Plus 2.14 · Vue Router 5 · UnoCSS 66 · pnpm 11
 
 Node `^22.18 || >=24.12` · pnpm `>=11 <13` (enforced via `only-allow` preinstall)
 
@@ -22,11 +24,13 @@ Node `^22.18 || >=24.12` · pnpm `>=11 <13` (enforced via `only-allow` preinstal
 ```bash
 git clone <your-fork-url> my-project
 cd my-project
-pnpm install
-pnpm dev:local        # mock mode, no backend needed → http://localhost:5174
+pnpm install             # postinstall generates admin IDE type declarations (a few seconds)
+pnpm -C apps/admin dev   # admin only (port 5174)
 ```
 
-Log in with **admin / 123456** at `/login`. After starting a real business module:
+For a no-login demo, uncomment `# VITE_DEMO_NO_AUTH=true` at the end of `apps/admin/.env` (the file ships with the guide line), then open <http://localhost:5174> → straight to `/workbench`. (Single-app dev without it redirects to `/auth/login` — the auth app lives on a separate port, so a 404 there is expected. Cross-app login flow: `pnpm dev:gateway` → <http://localhost:8080/admin/>, log in with **admin / 123456**.)
+
+After starting a real business module:
 
 ```bash
 pnpm new-module order     # scaffolds 6 files + route, menu appears automatically

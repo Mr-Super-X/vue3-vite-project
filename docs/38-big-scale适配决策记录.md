@@ -48,9 +48,9 @@
 
 ## 相关文件
 
-| 文件                                           | 职责                                                                                           |
-| ---------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `src/layouts/big/config/scale.ts`              | scale 纯计算 + meta 守卫 + inject 契约                                                         |
-| `src/layouts/big/index.vue`                    | 布局壳（setup 顶层初始化 + provide）                                                           |
-| `src/modules/big-demo/components/BigChart.vue` | dpr×scale 补偿 + 钳制                                                                          |
-| 测试                                           | `scale.spec.ts`（18 用例）/ `index.spec.ts` / `BigChart.spec.ts`（8 用例）/ `useClock.spec.ts` |
+| 文件                                                    | 职责                                                                                           |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `apps/big/src/layouts/big/config/scale.ts`              | scale 纯计算 + meta 守卫 + inject 契约                                                         |
+| `apps/big/src/layouts/big/index.vue`                    | 布局壳（setup 顶层初始化 + provide）                                                           |
+| `apps/big/src/modules/big-demo/components/BigChart.vue` | dpr×scale 补偿 + 钳制                                                                          |
+| 测试                                                    | `scale.spec.ts`（18 用例）/ `index.spec.ts` / `BigChart.spec.ts`（8 用例）/ `useClock.spec.ts` |

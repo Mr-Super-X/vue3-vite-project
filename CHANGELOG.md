@@ -1,8 +1,932 @@
 # Changelog
 
 > **版本口径**（2026-10-15 起）：版本号唯一事实源为 `package.json` 与 git tag；开源首发 **v1.0.0**（仓库添加 MIT LICENSE 后的首个公开版本，以 `pnpm release` 发布的 tag 为准）。历史中 `v3.5` / `v3.6` 等 `v3.x` 段为内部开发期版本叙事，仅作开发历史保留，与现行 semver 无对应关系。fork 后的版本跟进与升级策略见 [docs/36-Fork升级与版本策略.md](docs/36-Fork升级与版本策略.md)。
+>
+> **维护方式**（2026-10-27 起）：本文件**纯手写维护**（五段式：背景/变更/踩坑/验证/手动验证步骤）——`@release-it/conventional-changelog` 插件已下线，release-it 只做 bump + tag + push，不重写本文件。发版时把「未发布」区标题改为版本段即可（规范见 docs/03 §发版时 CHANGELOG 处理，含弃用原因与回退方法）。
 
 ## 未发布
+
+### 🎨 Chore | gh-pages 落地导航页 app 名全中文统一（2026-10-30）
+
+> 背景：演示导航页链接文案中英混杂（管理后台/admin/组件示例文档为中文，portal/auth/big/h5
+> 落英文 app 名）——统一为中文名（口径对齐 README §项目简介），新增 app 未收录时回落英文 app 名。
+
+- `scripts/build-pages.ts`：`writeLandingPage` 的三元嵌套改 `APP_LABELS` 查表（6 app 中文名 +
+  `?? name` 兜底），文案与 href 前缀（REPO_PREFIX）逻辑不变
+
+验证：`pnpm build:pages` 全量构建通过，dist/index.html 六项全中文实测核对。
+
+手动验证：gh-pages 部署后根地址落地页各链接文案为「管理后台 / 统一登录 / 数据大屏 /
+组件示例文档 / H5 移动端 / 门户企业官网」+（/路径/）。
+
+### 🔍 Docs | 第二轮横切面审查：修复质量 + 数字/命令/引用对账（2026-10-30）
+
+> 背景：第一轮 48 篇对标大修按文档分组执行，存在结构性盲区——修复 diff 本身未独立审查、
+> 数字/命令/引用等横切面无人整体负责。本轮换视角复审（修复 diff 逐块审查 + 数字断言实测 +
+> 命令/引用对账 + 上轮存疑尾巴收尾）。
+
+- **审查**：4 份报告落盘 `.claude/agent-reports/2026-10-30-docs-r2-*.md`——修复 diff 46 文件
+  逐块过 / 数字断言 60+ 条实测 / 命令 56 个 + 引用 320+ 处对账 / 上轮存疑 7 项收尾 +
+  教学示例 60 处抽查
+- **修复**：23 文件 +67/-58——含第一轮修复引入的新错误（docs/25 useTopLevelFields 误改 7
+  回正为 11、docs/07 模板 B 归属 apps/auth、docs/20 AsyncState 目录树形态、README 文档表
+  docs/09/40 两行简介未随正文同步）与横切面漂移（docs/10 虚构 API `getValidToken`→
+  `refreshSession`、page-adapter 四键名勘误、docs/46 网关 12+6=18 用例、docs/48 api 基建
+  14 模块、docs/16 行号引用 15 处全量刷新、docs/37 spec 路径改挂 packages/shared 等）
+- **复核澄清**：README test:check-scripts 5 spec 与实际接线一致（文件总数 9 属口径误读）；
+  docs/29 table-key 前缀机制属实（VITE_STORAGE_NAMESPACE 在 @vv/shared Local 封装层）
+
+验证：`pnpm check:doc-currency` 14/14 绿；`pnpm lint` 零告警。
+
+手动验证：无（纯文档勘误）。
+
+### 🐛 Fix | gh-pages 退出登录/未登录跳 404：build-pages 注入带 `#` 前缀的 VITE_AUTH_ORIGIN（2026-10-30）
+
+> 背景：gh-pages 部署后访问 admin/portal 正常，但退出登录（useLogout）、未登录守卫整页跳
+> （redirectToAuthLogin）、401 刷新失败兜底（http.ts performLogout）三条协议线全部 404。
+> 根因双层：① gh-pages 构建注入清单（scripts/build-pages.ts）与 deploy.yml env 均无
+> `VITE_AUTH_ORIGIN`，产物回落 `.env` 的 `/auth`——丢了仓库子路径前缀，浏览器解析为
+> `/<host根>/auth/login`；② 即便补前缀，gh-pages 形态 auth 是 `createWebHashHistory`，
+> 登录页真实形态是 `/<repo>/auth/#/login`，history 形态拼法 `/<repo>/auth/login` 在静态
+> 托管上不是文件仍 404。
+
+- **修复（方案 A，构建注入）**：`scripts/build-pages.ts` 注入
+  `VITE_AUTH_ORIGIN=${REPO_PREFIX}/auth/#`——`#` 尾巴承载 auth 的 hash 路由形态，
+  协议拼接 `${origin}/login` 统一产出 `/<repo>/auth/#/login`，Pages 经 auth/index.html
+  接住；dev/生产 history 形态仍由各 app `.env` 的 `VITE_AUTH_ORIGIN` 承担（进程 env 优先）
+- **连带修复**：`resolvePostLoginRedirect` 原经 `window.location.search` 读回跳参数，
+  hash 模式下（`/#/login?redirect=...`）search 恒为空、redirect 永远落 fallback——
+  改为 search 为空时读 `location.hash` 的 query 段，两形态均可读
+- **测试**：redirect.spec.ts 补 3 例（# origin 拼接回归网 / hash query 读取 / hash 无
+  query 落 fallback），15/15 绿
+
+验证：`pnpm -C packages/shared vitest run src/auth/redirect.spec.ts` 15/15 绿。
+
+手动验证：push 后访问 gh-pages admin → 退出登录应落
+`https://Mr-Super-X.github.io/vue3-vite-project/auth/#/login` 而非 404；未登录新开
+`/vue3-vite-project/admin/` 应跳带 redirect 参数的同款地址，登录成功回跳原页面。
+
+### 📚 Docs | 48 篇文档 + README 全量对标 monorepo 源码大修（2026-10-30）
+
+> 背景：v3.0.0 monorepo 化后大量文档残留单应用叙事（`src/` 裸路径、store 口径、persist key、
+> 门禁清单等），check-doc-currency 的 14 项硬数据锁不住语义层漂移。本次以「6 并行只读审计 →
+> 6 并行定点修复 → 主代理终审补漏」编排，对 48 篇 docs + README 逐篇对标最新源码。
+
+- **审计**：6 份报告落盘 `.claude/agent-reports/2026-10-30-docs-audit-*.md`（工程基建/架构规范/
+  组件指南/网络数据层/端侧入门/README），200 条发现（P0×21 / P1×85 / P2×94）全部附源码证据
+- **修复**：45 文件（44 篇 docs + README）202 条落地零跳过；主代理终审再补 16 处审计漏网
+  （docs/06 persist key、docs/07/23 AutoImport 示例、docs/11/13/14/15 头注路径、docs/18 反例表、
+  docs/29 table-key 口径（`:columns` 后缀 + `VITE_STORAGE_NAMESPACE` 前缀）、README 指令/插件
+  范式段重写为 glob 自动注册 + `createAppPlugins` 工厂 + `bootstrapApp` 接入等）
+- **代表性修正**：store barrel 4 个 + admin 私有 2 个（tags-view/router）；persist key
+  `${VITE_APP_ID}:*` 前缀化；覆盖率阈值 34/20/31/35（2026-10-26 重锚定）；husky 三钩子实况
+  （commit-msg 含 check-commit-msg.sh）；deploy 五开关 + VITE_BASE 由 build-pages REPO_PREFIX
+  注入；demo 门控 isDemoRoutesEnabled 已删（docs/09 §8 重写）；docs/41 scroll-spy 对齐
+  PortalNav IntersectionObserver 实现；README docs/48 索引断链修复；docs/47 `build:prod` 笔误修正
+
+验证：`pnpm check:doc-currency` 14/14 绿；`pnpm lint` 零告警；裸 `src/` 路径与已收敛别名
+（`@utils/*`/`@store/*`/`@composables/*`）残留复扫清零（剩余命中均为 docs/42/37/38 历史快照
+语境，刻意保留）。
+
+手动验证：抽查 docs/20 §9 阈值表、docs/47 §1.5 命令族、README 文档索引表 docs/48 链接可点。
+
+### 📚 Docs | 新增 docs/48-单应用模式与Monorepo多应用能力对比（2026-10-30）
+
+> 背景：所有者需要一份面向用户的「双版能力对比 + 选型参考」文档——回答「能力差在哪 /
+> 习惯改什么 / 我的场景怎么选」三问。内容源于当日多轮迭代审查（20+ 维度 + src/ 全目录
+> 逐项归属核查），由审查报告改写为用户选型口径沉淀。
+
+- **新增 `docs/48-单应用模式与Monorepo多应用能力对比.md`**：17 章——结构/启动/命令/
+  环境变量/登录协议/路由守卫/状态/消费方式/装配层工厂化/mock/测试门禁/部署/治理/
+  平移清单/习惯速查/选型建议；§1.1 为 src/ 16 项全目录归属映射表（逐项完整性证据：
+  零能力丢失）
+- **文档预算 47→48**：check-doc-currency 第 14 项 expected +1 同步（庄园冻结机制，§2.6-3）；
+  增长理由：双版对比视角在 docs/42（评估）/43（指引）中均无承载
+- **README 文档表**：补收录 docs/45/46/47/48 四行（45-47 为锁外漂移欠账，随 48 收录一并补齐）
+
+验证：`pnpm check:doc-currency` 48=48 过。
+
+手动验证：无（纯文档 + 预算计数变更）。
+
+### 🛡️ Chore | commit message 零 AI 痕迹三层防线：attribution 机制根治 + husky 宽拦兜底（2026-10-30）
+
+> 背景：owner 规定本项目 commit history 禁止出现 AI 协作痕迹。排查发现历史已污染——近 30 条中
+> `c49e9bd` / `8f7d569` 两条 body 带 `Co-Authored-By: Claude` 尾注（均已 push）；根因：全局 settings
+> 仅有 `CLAUDE_CODE_ATTRIBUTION_HEADER=0`（HTTP 上报开关，与 commit 尾注无关），`attribution` /
+> `includeCoAuthoredBy` 从未配置，harness 默认尾注注入一直生效。同时盘点其他 AI 工具署名形态：
+> Codex / Copilot / Gemini / Devin 等注入署名均走 `Co-Authored-By` trailer（或 "Generated with \<AI\>"
+> 类徽章），故拦截口径定为 trailer 宽拦。
+
+- **`.claude/settings.json`**（新建，入库）：`attribution.commit` / `pr` 置空 + `sessionUrl: false`
+  ——Claude Code 官方开关，机制层根治其内置尾注注入（含 web/Remote Control 会话的 `Claude-Session`
+  trailer），覆盖 Claude 生成 commit 与 PR 两个出口
+- **`scripts/check-commit-msg.sh`**（新建，独立可测）：AI 痕迹检查脚本——宽拦口径（owner
+  拍板）：① `Co-Authored-By` trailer 全拦——单人项目，真人协作属例外，走 `git commit --no-verify`；
+  ② 裸词结构化特征（`Generated with <AI>` / `<AI> 共创` / `anthropic`）防非 trailer 标注。
+  词表覆盖国外（claude/codex/copilot/gemini/openai/devin/windsurf/cursor/aider 等）+ 国产
+  （kimi/moonshot/qwen/deepseek/doubao/glm/ernie/spark/hunyuan/trae/codearts/lingma 等）；
+  只拦"工具名出现在生成/共创标注语境"，单独提及工具名（如"升级 deepseek 依赖"）不误伤
+- **`.husky/commit-msg`**：改为调用上述脚本（置于 commitlint 之前，红线优先报错）
+- **CLAUDE.md**：§4 新增 #16（约束 + 机制说明 + 工具清单）；§5「提交变更」行同步标注；头部最近
+  更新区记录
+
+> 踩坑：全局 `CLAUDE_CODE_ATTRIBUTION_HEADER=0` 在文档中被表述为「Attribution disabled
+> globally」，实际控制的是 HTTP attribution header 上报，**不影响** commit message 的
+> `Co-Authored-By` 尾注——两个机制同名异义；定位真根因靠的是 grep 全局/项目 settings 的
+> `includeCoAuthoredBy`/`attribution` 零命中 + system prompt 默认注入指令仍在。
+
+验证：`sh .husky/commit-msg <构造msg>` 11 场景实测——claude/codex/copilot/gemini/kimi/qwen/deepseek
+尾注与非 trailer 标注、真人署名 trailer 均 exit=1 拦截（提示语含 `--no-verify` 逃生指引）；干净消息
+与 2 类边界（标题含工具名单词、"自动生成"无工具词）exit=0 无误伤；独立脚本直测
+`sh scripts/check-commit-msg.sh` 命中 exit=1、无参 exit=2；原 commitlint 链（✓ Angular 规范）
+未破坏。
+
+手动验证：下次任意 `git commit` 可观察——命中违禁时首行即 ❌ 提示（不再等到 commitlint）；
+`.claude/settings.json` 为会话启动时加载，Claude Code 新会话完全生效，本会话已由 husky 兜底。
+
+### 🐛 Fix | dev:gateway 启动前预清 mock bundled 临时文件，根治「非正常关闭后重启全站 mock 404」（2026-10-29）
+
+> 背景：dev:gateway 启动后登录接口 404（实际全站 mock 404）。根因：vite-plugin-mock 的
+> getMockConfig glob 会匹配 mock 源目录下所有 ts/mjs/js 文件，上次非正常关闭（Ctrl+C 未跑
+> closeBundle / 启动中途被 tear down）残留的 `_*.bundled_*.mjs` 被当成 mock 源打包；
+> clean-mock-bundled 启动清理删除 >5s 旧文件时，glob/esbuild 已在飞（configResolved 先于
+> configureServer）→ esbuild 解析已删文件 → 该 app mockData 静默清空。网关 `/mock/` 只反代
+> admin，admin 挂 = 全站 mock 404。
+
+- **`scripts/dev-gateway.ts`**：新增 `cleanStaleMockBundled`（递归删除 mock 源目录全部
+  bundled 临时文件，命名硬约束与 clean-mock-bundled 同源），`main()` 启动任何 app 前调用——
+  此时无 dev server 在跑，无需 5s mtime 门槛，从源头消除触发条件；有残留时启动首行打印
+  「🧹 预清 N 个残留 mock bundled 临时文件」
+- **`scripts/dev-gateway.spec.ts`**：补 2 用例（递归删除 + 命名硬约束不误伤真实 mock 源、
+  幂等二次调用 / 目录不存在返回 0），test:gateway 16→18
+- **docs/43 §9.3**：新增第 5 条排障项（残留 bundled 文件形态 + 应急手法）
+
+> 踩坑：文件头注释里写 glob 字面量 `` `**/*.{ts,mjs,js}` ``——其中 `**/` 序列会提前闭合
+> 块注释，node --experimental-strip-types 直接报 ERR_INVALID_TYPESCRIPT_SYNTAX（注释内
+> 同样不能出现 `*/`）。
+
+验证：`pnpm test:gateway` 18 绿；端到端：植入 2 个模拟残留文件 → 启动日志「🧹 预清 2 个」
+→ 文件清零 → `POST :8080/mock/auth/login`（admin/123456）返回 200。
+
+手动验证：下次 `pnpm dev:gateway` 启动时，首行 🧹 日志仅在存在残留时出现（属预期）。
+
+### 📚 Docs | 新增 docs/47-能力体验清单：架构/能力/排障操作手册（会用 → 会修 → 会教）（2026-10-29）
+
+> 背景：所有者需要一份「自己过完能教别人」的系统性清单——每条能力 = 一句话定位 + 可执行
+> 步骤 + 一句为什么；覆盖 A（业务踩坑修复）+ B（工程设施排障）+ C（模板化扩展）三类，与
+> docs/10 新手 30 分钟速览定位错开（10 是首次跑通，47 是全覆盖手册）。
+
+- **新增 `docs/47-能力体验清单.md`**：7 章 45 条——§1 启动与运行环境 / §2 workspace 拓扑
+  / §3 业务开发核心能力（new-module、useAppRouter、路由白名单、useRequest/useAuth/useDict/
+  useTheme、弹窗族、全局组件族、指令族、utils 工具族、i18n+图标、BEM）/ §4 布局与适配体系
+  （default/portal/h5/big/blank + rem + scale + tags-view）/ §5 Mock 与统一登录（含 stream
+  流式 + versionCheck 白屏兜底）/ §6 排障手册（7 条含 ChunkLoadError 排查）/ §7 扩展与发布
+  （new-app/remove-module/Lockdown/release/commitlint）；末尾「相关文档」索引 17 篇。
+  二轮对标补齐 5 处（v1.2.0）：ProTable 三引擎选型（tableEngine prop + virtualized 优先 +
+  vxe 三冲突降级）/ 错误边界三件套（ErrorBoundary 拦截恢复 + errorHandler 全局兜底单源 +
+  safeAsync 桥接）/ utils 表格加「什么时候必须用」列 / e2e 7 用例清单 / useRouterStore 实际
+  位置勘正（apps/admin/src/store/modules/router.ts，CLAUDE.md §1.3 单应用时代路径残留）。
+- **文档预算 46→47**：`check-doc-currency.ts` expected +1 同步（庄园冻结机制，§2.6-3）。
+
+验证：`pnpm check:doc-currency` 14 项全过（47=47）/ `pnpm test:check-scripts` 49 绿。
+
+手动验证：无（纯文档 + 预算计数变更）。
+
+### ♻️ Chore | 决策台账机制当日退役：治理税归 AI，人工维护税归零（2026-10-29）
+
+> 背景：同日上文的 R3-G1（DECISIONS.md + check:decisions）落地后，所有者裁决退役——
+> 「这些工作 AI 来干很快，但要我人工维护就是在为难我」。按 CLAUDE.md §2.6 精神执行：
+> 新增机制未经过一个完整周期即退役，理由是**机制本身构成人工维护税**（每轮登记/翻状态
+> 需要人类自觉），与 §2.6「连续零拦截」标准互补——「对人收税」本身就是退役理由。
+
+- **移除**：DECISIONS.md / scripts/check-decisions.ts（+spec）/ package.json
+  `check:decisions` script 与 test:check-scripts 条目 / ci.yml「Check decisions ledger」step
+  / docs/46 总表对应行 / docs/10 任务 5 门禁枚举中的「决策台账」。
+- **TODOS.md 改性质**：从「纪律文件」降为「AI 维护的被动记录」——无任何 CI 门禁依赖它，
+  审查/实施会话由 AI 自然更新；人工维护税为零。
+- **防遗漏责任回归**：决策对账回到 /autoplan 审查档案（~/.gstack）+ 审查轮 AI 全量对账
+  （Round 3 实证该形态能抓到遗漏——DX 子代理全量对账发现 R2 的 4 项遗漏）。
+
+验证：`test:check-scripts` 50 绿（-8 决策 spec）/ `check:doc-currency` 14 项（引用清理后
+文档数不变）/ 全仓 grep 无 DECISIONS.md / check:decisions 残留引用（CHANGELOG 历史段除外）。
+
+### 🛡️ Chore | /autoplan Round 3 实施批次：生产面对账 + 决策台账机检 + versionCheck 拆分启用（2026-10-29）
+
+> 背景：Round 3 七维度审查（35 发现 → 15 任务终审「照单全收」）。最重三项：① 决策-落地
+> 对账断裂实证（R2 的 10 项 DX 决策 3 项未落地且未被捕获）；② R2「versionCheck 缺省关」
+> 连坐杀死 5/6 app 的 ChunkLoadError 白屏兜底；③ 生产部署面盲区——nginx 模板手写名单零对账。
+
+- **决策台账机检（R3-G1，最高优先）**：新增 `DECISIONS.md`（仓内决策唯一事实源，状态机
+  已落地/待实施/登记/关闭）+ `scripts/check-decisions.ts`（CI 阻断）——「待实施」必须登记
+  TODOS、「已落地」锚点必须存在，把 R2 静默遗漏形态变成 CI 红；spec 8 例守护解析层。
+  实施期自抓获 CLI 守卫 bug（import.meta.url 字符串比对在 Windows 永不命中 → main 静默
+  空跑 exit 0），已改 realpath 模式（与 generate-declisions 同）。
+- **versionCheck 拆分启用（R3-E3）**：ChunkLoadError 被动兜底改为无条件装配，主动轮询仍
+  需注入 onUpdate 才启动（R2-CEO-3 死轮询修复保持）；补「禁用时装监听器」回归 spec
+  （30 例全绿）。
+- **nginx 生产模板对账（R3-E2）**：`check:routes` 新增模板 app 名单 == apps-registry 双向
+  对账 + 逐 app location 块检查（第 7 app 上线即生产 404 的机检网，spec 6 例含真实模板
+  漂移守卫）；修复映射补 [Nginx] 行。
+- **test:gateway 入 CI（R3-E1）**：网关 16 用例自 v3.0.2 起只跑本地，补 CI step。
+- **生产安全 headers（R3-E4）**：nginx 模板 server 级 + assets 级双组（add_header 不跨层
+  继承，注释载案）+ `build-pages` 输出 Pages `_headers`（CSP 演示站基线，比 nginx 宽）。
+- **其余 P3 批次**：build-prod 注入 VITE_BUILD_ID（sha+构建时间，对齐 deploy.yml 语义）/
+  new-module 骨架 requiresAuth 教学注释 + golden 断言（R3-C1 教学矛盾）/ 叙事裂缝家族
+  根治（catalog vue 精确钉版 + CLAUDE.md §1 + README 表指针化）/ Dockerfile node:24-alpine
+  （对齐 CI 单一 major）/ postinstall 起始提示 + mtime 新鲜跳过（实跑验证「声明已新鲜，
+  跳过」）/ dev banner 补 dev:gateway 规范入口行 / package-contract 与 check-mock-wiring
+  报错补 fix 指引。
+- **docs**：新增 `docs/46-CI门禁速查.md`（13 门禁 × 触发/复跑/修复单页——文档预算
+  45→46 同批说明）；docs/10 补「任务 5：提交首个 PR（三门禁速查）」兑现标题承诺；
+  README 新手指引措辞同步。
+
+验证：`test:check-scripts` 58 绿 / `test:gateway` 16 绿 / `lint` 0 警告 / `type-check`
+10/10 / `check:routes`（含 nginx 对账节）/`check:mock-wiring` / `check:decisions`（24 条
+台账纪律全过）/`check:doc-currency` 14 项（46=46）全绿。
+
+手动验证：无（纯工程面变更）。遗留人工项：R3-E8（删除 `apps/admin/.env.development`
+的 `VITE_USE_MOCK=true` 死键——env 文件在权限拦截区，需手动）+ R3-人工-1（修复
+Codex 端点模型名）。
+
+### 🛡️ Chore | /autoplan Round 2 治理批次：退役准则 + 文档预算 + keep/kill 裁决（2026-10-28）
+
+> 背景：CEO 审查 F11/F12/F13——11 个 CI 门禁只增不减无退役机制、16k 行文档庄园被
+> 硬数据锁成结构承重墙、架构结构性偏向只增不减。
+
+- **CLAUDE.md §2.6 退役准则**（3 条）：门禁退役（新增须声明保护的事故史，连续两周期
+  零拦截列入评估）/ app keep/kill（全量验证窗口前回答「删掉损失什么」）/ 文档预算
+  （check:doc-currency 第 14 项冻结）。
+- **文档预算门禁**：`check:doc-currency` 新增第 14 项「docs 根级文档数 ≤ 45」——
+  新增文档须改预算值并在 PR 说明理由（有意识增长），瘦身先合并/归档再降预算；
+  README 常用脚本表与脚本头注清单同步 14 项口径。
+- **keep/kill 复审裁决**（所有者）：h5 / big / docs 三个全保留——docs 是 88 个
+  demo 的运行时载体与文档硬数据锚点来源，h5/big 是四栖差异化叙事两极，showroom
+  分级（CI test 排除、build 保留）已控制成本。
+
+验证：`pnpm check:doc-currency` 14 项全过（新增项 actual=45=expected）+ spec 42 绿。
+
+### 📝 Docs | /autoplan Round 2 叙事一致性批次：定位裁决制品对齐（2026-10-28）
+
+> 背景：CEO 审查 F8/F3/F10——定位裁决（开放底座）已落地但门面制品未跟上：
+> H1 仍自称「模板」而第 9 行 blockquote 否认模板级支持；EN README 零定位声明；
+> 技术栈表写 Vue ^3.5.38 而 overrides 钉 3.6.0-beta.17。
+
+- **README（CN）**：H1「四栖工程模板」→「四栖工程底座」+ 简介首句同步；技术栈表
+  Vue 行补钉版口径（catalog ^3.5.38 / overrides 钉 3.6.0-beta.17 + 回稳定线期限）；
+  line 456「更多模板」（路由配置模板）与 694（nginx template 文件名）保留——代码模板
+  含义与产品定位无关。
+- **README.en.md**：H1 去 Template 改 Engineering Base + 补定位 banner（与 CN 第 9 行
+  同口径互链 docs/45）+ 技术栈行钉版口径；Quick Start 修正两处漂移：`pnpm dev:local`
+  改与 CN 统一的 `pnpm -C apps/admin dev`、登录指引从「admin 内 /login」（统一登录后
+  已不存在，404 弯路）改为「取消 .env 注释直达 /workbench」。
+- **issue 模板 ×2**：frontmatter 后补「单人维护响应不保证 + 欢迎 PR」免责行
+  （期望管理写进邀请本身，/autoplan R2-CEO-9）。
+- 注：F6（VITE_BUILD_ID 接 deploy.yml）已随 P3 批次提前落地（43ad016）。
+
+验证：`pnpm check:doc-currency` 13 项全过 + prettier 双 README 格式修复。
+
+### 🔧 Fix | /autoplan Round 2 P3 批次：测试补强 + 口径统一 + 小修包（2026-10-28）
+
+#### R2-E5 redirect 对抗用例 + 注释实证修正
+
+- `redirect.spec.ts` 补 2 用例：前导空格协议相对（`  //evil.com`）与 tab-scheme
+  （`java\tscript:`）——两形态只有 origin 白名单层能拦，锁定「第二层独立承重」回归网。
+- `redirect.ts` 校验策略注释修正：`/\evil.com` 经 WHATWG 实测为同源 path（不跳出），
+  反斜杠排除定性为纵深防御（原注释「按协议相对 URL 解析跳出」陈述不准确）。
+
+#### R2-E6 五项小修包
+
+- `dev-gateway.ts`：`shutdown` 幂等守卫（killTree 重入致二次 close 抛
+  ERR_SERVER_NOT_RUNNING）+ `main()` 用法错误只打 message 不再整栈噪声；
+- `node-gateway.ts`：HTTP 侧补客户端断连掐断（`res.on('close')` + `!writableFinished`——
+  首版误用 `req.on('close')` 被 gateway spec 的 POST 用例当场抓获：req close 在请求流
+  正常结束也触发，误杀上游转发回 502。测试网价值实证）；
+- `versionCheck.ts`：install 补 teardown（`app.onUnmount` 停轮询 + 摘 3 监听器）；
+- `deploy.yml`：接线 `VITE_BUILD_ID: sha-run_attempt`（修 F6 未接线 + P3-13 同 commit
+  重跑同 buildId）；docs/44 §4 同步推荐写法。
+
+#### R2-E7 VITE_USE_MOCK 口径统一
+
+- `create-vite-config.ts` mock 段注释修正：dev 中间件开关读 `process.env`（config 装配期），
+  `.env` 对该键无效，联调真后端须 shell env 前置；docs/22 §mock 机制 + docs/33 §6/§7
+  同口径修正（三处「在 .env.development 设 VITE_USE_MOCK=false」错误指引）。
+- admin `.env.development` 的 `VITE_USE_MOCK=true` 死配置键登记人工项（权限拦截区）。
+
+#### R2-E8 check-routes alias 展开回归网
+
+- `check-routes.spec.ts` 补 2 用例：对真实仓库 portal/auth whitelist 文件做 alias 展开
+  行为断言（importRe + expandAlias 回归会让 A/D 校验静默失效且纯字面量 spec 全绿——
+  原「CLI 每日运行天然覆盖」论证不成立：全绿无法区分「真一致」与「解析退化为空集」）。
+
+#### R2-E9 门槛与边界声明
+
+- `pnpm-workspace.yaml` overrides 段补清单完整性门槛（新增 @vue/* 依赖须同步 overrides，
+  否则与钉住的 3.6.0-beta.17 家族静默混版）；
+- `package-contract.mjs` 头注补已知边界（变量动态 import 静默放行的取舍理由 +
+  `#` subpath imports 的误报预警）。
+
+#### 验证
+
+`pnpm test:check-scripts` 42 绿（+2）/ `pnpm test:eslint-rules` 29 绿 /
+versionCheck 29 + redirect 12 全绿 / `pnpm test:gateway` 16 绿 / lint 定向 10 文件 EXIT 0 /
+type-check turbo 全量 EXIT 0。
+
+### 🔧 Fix | /autoplan Round 2 P2 批次：复审发现修复（2026-10-28）
+
+> 背景：Round 2 复审（修复质量验证 + 新问题排查，档案 `~/.gstack/projects/Mr-Super-X-vue3-vite-project/2026-10-28-monorepo-architecture-review-round2.md`）——
+> Round 1 的 23 项任务零遗漏落地且四项关键修复经对抗性复核全部 SOLID；本轮发现集中于
+> 修复后新引入的代码面（versionCheck 插件族 / postinstall / vant 集成）。P2 批次 8 项全部落地。
+
+#### R2-E1 h5 vant dev 主题失效修复（实证缺陷）
+
+- `vant-vars.scss` 根选择器 `:root` → `:root:root`：vant 每组件 style 入口都 import 同一份
+  base.css 默认值，dev 下懒加载组件 CSS 晚于本文件注入，同特异度 (0,1,0) 后注入者胜——
+  dev 下主题被压平回默认蓝（prod 因 link 排序侥幸正确）。双写提升至 (0,2,0) 与注入顺序解耦。
+- 验证：dev 环境 CDP 实证 `--van-primary-color` 计算值 `#ff6a00`、主按钮 `rgb(255,106,0)`。
+
+#### R2-E2 postinstall 不再触碰 mock 编译面
+
+- `generate-declarations.ts` 主流程入口显式 `VITE_USE_MOCK=false`：声明生成只需 unplugin
+  dts 钩子；原形态每次 install 都触发 vite-plugin-mock 的 bundle 编译与清理，install 与
+  运行中 dev server 并发时会踩中记录在案的 unlink 竞态（dev server mockData 静默清空）。
+
+#### R2-E3 version-check-vite 锚点与守卫
+
+- `configResolved` 改 `resolve(config.root, outDir)`（原锚 `process.cwd()`——非 `pnpm -C`
+  入口会把 version.json 写进错误目录而产物正常，版本检测静默失效）；
+- `closeBundle` 补 `existsSync` 守卫（构建失败时不再用 ENOENT 掩盖原始错误）；
+- spec 补 2 用例（root 锚定回归 / outDir 缺失静默跳过）。
+
+#### T1 versionCheck 缺省不启动（无人消费的信号不采集，R2-CEO-3）
+
+- `shouldEnable` prod 缺省从「默认开」改为「注入 `onUpdate` 才启动」——修复前 5/6 app
+  在 prod 每 tab 每 5min 轮询 version.json 后落入 prod noop 回调（纯死负载）；
+  `enabled: true` 显式强制开语义不变（dev 调试/自建采集路径保留）。
+- portal 已注入 ElNotification 通知，行为不变；spec 4 用例重写 + docs/44 三处同步。
+
+#### R2-DX 四项（new-module 死端口 / env 指引 / docs/10 陈旧 / check-routes 修复映射）
+
+- `new-module.ts` 成功 banner 端口从硬编码 `5173`（单 app 时代遗留）改为经
+  `apps-registry` manifest 单源派生（实证 admin:5174 正确输出）；
+- README 快速开始顺序调整为 env 先行 + 指引改指 `apps/admin/.env` 已有的
+  `# VITE_DEMO_NO_AUTH=true` 注释引导行（取消注释即开启，无需新建文件）；
+- docs/10 的 IDE 预警重写（postinstall 已生成 admin 声明，删除「先跑全量 pnpm dev」的
+  陈旧指引）+ 路径 A 首命令与 README 统一（`pnpm -C apps/admin dev`，dev:local 降脚注）；
+- `check-routes` 失败输出补每类检查的修复映射（对齐 check:aliases 的 what+why+fix 标杆）。
+
+#### R2-E4 showroom 直推洞封口（制度层）
+
+- ci.yml showroom 分级段补残留风险声明注释（直推 master 时 showroom 三 app 纯测试破坏
+  不在拦截面内）+ README CI 节补分支保护建议（Settings → Branches 禁直推）。
+
+#### 验证
+
+`pnpm lint`（改动 8 文件定向 EXIT 0）/ `pnpm type-check`（turbo 全量 EXIT 0）/
+`pnpm test`（shared 470 + config 60 全绿）/ `pnpm test:check-scripts`（40 绿）/
+`pnpm check:routes`（绿）/ `pnpm check:doc-currency`（13 项全过）/ h5 dev CDP 实证。
+
+#### 复核推翻记录（Trust but Verify 的价值）
+
+- DX 子代理「幽灵 env 文件」发现（称全仓无 `.env*`）经主代理复核**推翻**——Glob 工具
+  对 dotfile 默认不返回导致误判；git ls-files 证实 13 个 env 文件在跟踪中，且 admin
+  `.env` 已有演示模式注释引导行。修复方案随之从「新建 .env.example」修正为「指引指向
+  已有引导行」（成本更低且机制已存在）。
+
+#### 遗留（已登记 TODOS.md Round 2 区）
+
+- P3 批次 9 项 + 叙事一致性批次（README H1/EN banner/VITE_BUILD_ID 接线/issue 模板免责行）
+  + 治理议题三项（退役准则 / 文档预算门禁 / dev 命名演进登记）；
+- 人工项 ×2：eslint.config.mjs ignores 补 e2e 产物目录（config-protection 拦截）+
+  本地 playwright-report/ 产物目录手动删除。
+
+### 📌 定位 | 仓库定位裁决：开放底座（2026-10-28，/autoplan C7）
+
+> 三阶段审查 CEO 层 CRITICAL 发现「定位悖论」（对外模板叙事 vs 个人底座制品证据）的处置：
+> 所有者裁决选项 C——以 A（个人工程底座）为体，保留低成本门面。
+
+- **README**：顶部定位声明（代码公开供参考、demo 在线可玩、不承诺模板级支持）+
+  badges 行（CI / MIT License / demo 站）
+- **门面降级版（D7）**：`.github/ISSUE_TEMPLATE/`（bug + feature 两模板）——
+  CONTRIBUTING / Code of Conduct / 在线试玩按定位不做
+- **docs/26**：推介文档定位脚注（工程思路与组件深度，非模板级支持承诺）
+- **docs/45-仓库定位声明**：定稿入档（草稿 → 已裁决），选项对照保留作决策档案
+
+### 🔨 Refactor | /autoplan P2 批次：门禁自测网 + 依赖显式化 + DX 补强（2026-10-28）
+
+> 背景：P1 批次（4 任务）落地后的同批审查项。E2 安全修复独立成 commit，本批为其余 P2。
+
+#### E2 开放重定向修复（CWE-601，独立 commit）
+
+- `resolvePostLoginRedirect` 两道防线：显式拒绝反斜杠/协议相对形态（WHATWG 将 \ 归一化为
+  /，`/\evil.com` 可按协议相对解析跳出——实证绕过）+ origin 白名单二次比对；
+  redirect.spec 补 2 个反斜杠回归用例。
+- 基建 fakeLocation 补 origin 标准属性；createVitestConfig 兼容 E1 后的 vite.config
+  回调形式（修复前 apps/auth vitest 配置加载即炸）。
+
+#### E3 门禁脚本自测网（校验器假阳性守护）
+
+- check-mock-wiring / check-routes / check-doc-currency 三脚本核心判定纯函数化
+  （diffWirings 漂移比对提取等）+ CLI 守卫（realpath 模式），新增 3 个表驱动 spec
+  共 33 用例；新增 `pnpm test:check-scripts` + ci.yml CheckScriptSpecs step。
+- 收尾发现：generate-tsconfig-paths.spec 是孤儿 spec（无 runner 执行）——登记 TODOS。
+
+#### C2 根依赖 catalog 化（消除版本双源）
+
+- catalog 17 → 70 项；根 package.json 68 处字面区间全改 `catalog:` 引用，零版本冲突。
+
+#### C3 @components 例外清零
+
+- 91 文件 113 处目录索引 import → `@vv/ui/components/**` 显式路径（codemod 执行后即删）。
+  背景修正：批次 2「exports 通拍不解目录索引」实证只覆盖无扩展路径，显式
+  `.ts`/`index.ts` 完整路径可解析——「既定例外」自此清零（CLAUDE.md §1.6.2 三处同步）。
+
+#### C4 app 依赖显式声明（package-contract 扩展 apps/**）
+
+- 规则 locatePackage 双锚点 + apps 宿主方向豁免（@vv/* 方向铁律仍只约束 packages/*）；
+  6 app 按「显式 import 扫描 + AutoImport 隐式基座」补录 dependencies（全 catalog:）；
+  app devDependencies 统一测试基建 + config 专用项（h5 的 unplugin-vue-components、
+  admin 的 visualizer/vue-devtools）；catalog 补 vant。
+- 待办：eslint.config.mjs 的 files 扩展（`'apps/**/*.{ts,mts,tsx,vue}'`）被
+  config-protection hook 拦截，需人工补一行后规则方对 apps 生效。
+
+#### D3 postinstall 声明生成
+
+- 新脚本起 vite dev server 到 listening 即关（秒级，对比全量 build 分钟级）——消
+  「clone 后 IDE 满屏红」；CI 环境跳过；端口占用等失败不阻塞 install。
+- 实测修复：vite server.close() 后保活句柄致 install 挂起 8 分钟——CLI 完成后显式 exit(0)。
+
+#### D4 版本号叙事收敛
+
+- CLAUDE.md 头部「文档版本 v3.1.0」改注「内部迭代号」+ 对外 semver 唯一事实源
+  （package.json + git tag）映射说明——三套版本号（1.0.0 / v3.1.0 / v3.x）叙事对齐。
+
+验证：全批经 pnpm install / lint / type-check / test / test:check-scripts /
+test:eslint-rules 多轮验证（逐项见各 commit msg）。
+
+### 🔧 Fix | /autoplan P1 批次：构建可复现 + 登录安全 + DX 入门摩擦（2026-10-28）
+
+> 背景：/autoplan 三阶段架构审查（CEO → Eng → DX，单模型双声音降级）产出 4 个 CRITICAL
+> GAP 与 3 个 DX-P1。本批为全部 P1 项；审查档案与 23 项任务清单见
+> `~/.gstack/projects/Mr-Super-X-vue3-vite-project/2026-10-28-monorepo-architecture-review-baseline.md`。
+
+#### C1 vue 精确钉版（修复「克隆不可复现」）
+
+- `pnpm-workspace.yaml` overrides 12 项 `'beta'` 浮动 tag → 精确 `3.6.0-beta.17`
+  （= 当前 lockfile 验证版本，零行为变更）。
+- 浮动 tag 破口：模板消费者复制配置不带 lockfile 时 `pnpm install` 解析出与验证时不同的
+  beta 构建；`pnpm update` 重建 lockfile 让新 beta 不经人工评审直接进依赖图。
+- 注释含 TODO(Mr.Mickey, 2027-01-31 前)：vue 3.6 稳定线发布后整体回稳定版并删除
+  overrides 全段 + `peerDependencyRules.allowAny`——升级批次须过 6 app build + e2e 冒烟。
+
+#### E1 define 陷阱修复（CRITICAL：本地 build 产物 API 全打 /mock）
+
+- `createViteConfig` 的 `import.meta.env.VITE_API_BASE_URL` define 原固定
+  `loadEnv('development', …)`——无条件读 `.env.development`（6/6 app 配 `VITE_API_BASE_URL=/mock`），
+  本地 `pnpm build` 产物把 /mock 打进生产包；且注释错称「prod 不读该文件」——loadEnv 按
+  显式传入的 mode 读文件，与构建 mode 无关（注释本身成为谎言来源）。
+- 修复：`defineConfig` 改回调形式取 `mode`，`loadEnv(mode, …)` 按构建 mode 读对应 env 文件
+  （dev→.env.development 的 /mock；prod→.env.production 无该键→'/api' 保底）；注释重写为
+  正确机制陈述。
+- 验证：`pnpm -C apps/admin build-only` 产物内 `"/api"` 注入且无 `"/mock"`（grep PASS）；
+  双 mode 取值逻辑实测 dev→/mock、prod→/api 均正确。
+
+#### E7+D1 dev 入口语义收敛（DX-P1：新人首条命令 404 弯路）
+
+- 跨阶段高置信主题：CEO（并行资源成本）/ Eng（mock 共享竞态）/ DX（404 弯路）三阶段
+  各自独立命中 `pnpm dev` 入口问题。
+- README 快速开始收敛为单一推荐路径：`pnpm -C apps/admin dev` + 引导加
+  `VITE_DEMO_NO_AUTH=true` → 直达 /workbench；`pnpm dev` 降为进阶项并标注竞态警示；
+  CLAUDE.md Commands 表与 docs/43 §3 同步标记（指向 §9.3 竞态排障）。
+- `createViteConfig` 新增 `vv-dev-welcome` dev 插件：启动后打印访问地址 + 单 app 404 预期
+  提示 + admin 免登录演示引导——消除「dev 起来后不知道打开哪」的摩擦。
+
+#### D2 pre-push affected 化（DX-P1：日常循环减负）
+
+- `.husky/pre-push`：`pnpm test`（turbo dependsOn ^build → 每次 push 先全量 build 6 app +
+  4 包再全量测试）→ `turbo run test --filter=[origin/master]...`（与 CI PR 模式同参数，
+  只跑自 origin/master 以来变更的包）；master 全量测试网由 CI（无 filter 全量）兜底。
+- README Git 节披露钩子成本与 `git push --no-verify` 紧急逃生门。
+
+手动验证步骤：
+1. `pnpm install --frozen-lockfile` → PASS（lockfile 零漂移）
+2. `pnpm -C apps/admin build-only` → `grep -r '"/mock"' apps/admin/dist/` 无命中
+3. `pnpm -C apps/admin dev` → 终端打印 `➜ admin: http://localhost:5174` 与演示引导
+4. 下次 `git push` → pre-push 只跑变更包测试（秒级返回）
+
+### 🐛 Fix | 登录失败误跳登录页：登录端点豁免 401 refresh 链（2026-10-28）
+
+> 背景：已登录用户（有残留登录标记）在登录页输错密码 → 页面整页重定向回
+> `/auth/login?redirect=...`、登录失败 toast（"账号或密码错误"）被吞。干净浏览器状态
+> 输错密码则正常弹提示——基线对照与 CDP 复现证实为既有 bug（与 P0/P1/P2 三批次无关）。
+
+- **根因**：mock 登录失败返回业务码 401（HTTP 200），http.ts `request` 层对业务码 401
+  不区分语义——密码错误（无可 refresh 凭证）也走 refresh 链 → refresh 失败 →
+  `performLogout`；而 `performLogout` 仅靠 `Session` 登录标记守卫，无法区分「真会话过期」
+  与「上次登录残留标记」，已登录用户输错密码时守卫放行 → 误跳登录页吞 toast。
+- **修复**：`request` 层 refresh 链加 `isLoginRequestUrl` 判定——登录端点 `/auth/login`
+  豁免 refresh（密码错误纯抛 ApiError 给 Login.vue 弹提示）。`LOGIN_URL` 自 auth.ts 单源
+  导出（防硬编码双写）；匹配用 `endsWith` 精确后缀（不模仿 isRefreshRequestUrl 的 includes，
+  避免误豁免 `/auth/login-status` 等已认证接口，security-reviewer HIGH 项）。
+- **回归用例**：http.spec.ts 补 4 例（登录 401 有标记/无标记/已登录态不 refresh 不跳、
+  业务接口 401 续期链不破）。
+
+修复经 security-reviewer 审查通过（方案可采纳，无认证绕过风险；明确否决「登录失败先清
+残留标记」的备选——那会破坏真凭证过期的跳登录兜底）。
+
+验证：http.spec 20/20；CDP 浏览器双场景实测——干净态输错密码弹「账号或密码错误」停留，
+已登录态输错密码不再跳 `?redirect` 正常弹提示；shared test / lint / type-check 全绿。
+
+### ✨ Feat | 应用 manifest 与脚手架：app 元数据单源到 app.manifest.json + pnpm new-app（2026-10-28）
+
+> 背景：新增 app 原本要手动建目录/package.json/vite.config/src 骨架 + 端口登记两处（vite.config portOffset ↔ apps-registry.mjs port），漏改即 dev 网关 404 / check:routes 红，排查成本高。
+
+- **元数据单源**：各 app 的 `app.manifest.json`（`name`/`port`/`requiredRoutes`，JSON 无注释）。`packages/config` 新增 `.mjs` 读取器（`readAppManifest` 校验 + `discoverAppManifests` 发现 + 端口升序）。
+- **消灭端口双写**：`createViteConfig` 删 `appName`/`portOffset`，改读 manifest 派生 appId（注 VITE_APP_ID）与 dev/HMR 端口；`vite.config.ts` 只传 `appRoot` 等扩展参数。6 app 已迁移。
+- **注册表自动派生**：`scripts/apps-registry.mjs` 改 `discoverAppManifests` 派生同形 `APPS`（形状/端口升序不变）——dev-gateway / node-gateway / playwright / eslint 边界 / check-routes 五消费方业务逻辑零改动。`check-routes` 删端口双写锁死，转 manifest 完整性校验（有 src 必有 manifest + 孤儿 manifest 检测）。
+- **`pnpm new-app <kebab-name>`**：预检（名称/目录不存在/端口=max+1 跳 8080）全过才写盘，生成「可 dev/build/test 的最小公开应用」（公开 Home + 站内 404），23 文件模板 + node:test 9 用例。新增 app 零手改注册表/CI。
+
+验证：派生 APPS admin:5174→auth:5179 顺序对；check:routes / test:gateway / lint / type-check 全绿；admin dev 起 5174、VITE_APP_ID 注入正确；smoke app 实测 dev 5180（/ 与 /home 200）/ build / test 全过后删除。
+
+### ✨ Feat | 可插拔版本检测插件：轮询 version.json + ChunkLoadError 兜底（2026-10-28）
+
+> 背景：gh-pages 六应用发布后，用户长时间停留在生产页面不感知新版本——点击新路由可能
+> 命中已被删除的旧 chunk 白屏；此前全仓无任何版本检测机制。
+
+- **构建侧**：`@vv/config` 新增 `version-check-vite` 插件（`apply: 'build'`）——`closeBundle`
+  往 outDir 写 `version.json`（`buildId` + `builtAt`，不经 rollup asset pipeline 保证与
+  index.html 同级的固定 URL）；`createViteConfig` 工厂装配，6 app 零改动；buildId 源
+  `VITE_BUILD_ID`（CI 可注入 git sha 可追溯）→ 兜底时间戳+随机
+- **runtime**：`@vv/shared` `plugins/versionCheck.ts`——`createAppPlugins` 工厂第 4 装配项
+  （默认开，`versionCheck: false` 可关）。双机制：① 轮询 `version.json` 比对 buildId
+  （默认 5min，`cache: 'no-store'` + cache-busting query，`visibilitychange` 暂停/恢复）
+  ② `ChunkLoadError` 兜底监听（error + unhandledrejection 双通道，匹配 4 种浏览器
+  message 形态）
+- **零 UI 依赖**：通知经 `onUpdate` / `onChunkError` 回调注入（缺省回落链 chunk-error →
+  onUpdate，source 字段区分），`@vv/shared` 不引入 Element Plus；dev 默认禁用（HMR 即
+  热更新），`enabled: true` 可强制调试
+- **测试**：vite 插件 4 例 + runtime 27 例（fake timers + mock fetch：基线建立/触发/静默
+  降级/兜底匹配/回落链）；config 57/57、shared 466/466 无回归
+- **文档**：docs/44 使用规范（接入示例 + CI 注入 + 排障）
+
+验证：`pnpm -C apps/admin build-only` 产物 version.json schema 合法；`pnpm build:pages`
+6 份 version.json 各自生成互不覆盖；lint / shared test 全绿。
+
+手动验证步骤：`pnpm -C apps/portal build-only && pnpm -C apps/portal preview` → Network
+面板见 `version.json?_t=...` 200（5min 间隔）；改 dist/version.json 的 buildId → 下轮
+轮询触发 onUpdate（dev 可 `enabled: true` + 短 `intervalMs` 加速观察）。
+
+### ✨ Feat | API 契约单源试点：auth 响应 zod schema 化（2026-10-27）
+
+> 背景：此前 TS interface 只能编译期约束，真实响应与类型漂移要等运行时崩才暴露。复用现有
+> `requestValidated` + zod，让 login/profile 的类型与运行时校验同源。
+
+- `auth.ts` 同址声明 `loginResultSchema` / `userProfileSchema`（`.passthrough()` 保留后端新增字段），
+  `LoginResult` / `UserProfile` 改 `z.infer` 推导（类型与运行时校验同源）
+- `login` / `fetchProfile` 改 `requestValidated`——响应漂移在 API 边界抛 `ApiError(code=500)`、
+  不 toast、不打印密码/cookie；url/method/data/silent 原样透传，行为零变化；`logout` 保持 `request<void>`
+- `@vv/shared` 的 zod 升为 peerDependencies（生产运行时依赖）；mock 保持 `import type` 零运行时依赖
+- 新增 `auth.spec.ts` 5 例（schema 契约 + 透传），shared 全量 433/433 无回归
+
+验证：`pnpm -C packages/shared test` 433/433 / `type-check`（shared+mock）/ `pnpm lint` / `pnpm test`
+9 包全绿。待安全审查确认日志与错误反馈无敏感信息泄露。
+
+### ♻️ Refactor | 共享包自包含 P0：shared 显式导入 + packages 依赖契约机械检查（2026-10-27）
+
+> 背景：shared 生产源码依赖宿主 AutoImport 补齐 `ref/defineStore/ElMessage` 等自由变量——包「能 import」但「不能独立运行」，包测试要复制一套宿主插件装配、类型要靠手工全局声明闭合、dev 预构建要靠 optimizeDeps.exclude 特殊豁免。换宿主/冷启动排障成本高。
+
+- **P0-B 显式导入**：shared 13 个生产文件（5 composables + 4 store + 3 directives + http）补标准显式 import；`auto-globals.d.ts` 伪运行时全局退役，仅保留 `persistence-types.d.ts`（persistedstate 模块增强）；`vitest.config.ts` 摘除 AutoImport/ElementPlusResolver、改复用 `@vv/config` 工厂 createVitestConfig（css:true + EP inline 口径单源）——包测试零宿主插件依赖
+- **ElMessage 样式随行**：http.ts / useAppRouter.ts / copy.ts 三入口显式携带 `element-plus/es/components/message/style/css`（显式 import 不经 resolver importStyle 注入，防提示样式静默退化）
+- **P0-A 依赖契约**：新增本地规则 `local/package-contract`（error 级，`pnpm lint` + CI）——packages/* 值导入必须在自身 manifest 声明、类型导入/spec/bench/test-utils 允许 devDeps、@vv/* 方向铁律（mock → shared、ui → shared；构建装配配置豁免方向）机械检查；补齐 config（vite/vitest/unocss + 可选 iconify peers）/ ui（vue-i18n、@element-plus/icons-vue + @vue/test-utils/vitest-axe devDeps）/ shared（normalize.css、zod devDep、@vv/config workspace）声明；icons 与 normalize.css 收敛 catalog 单版本源
+- **lint 基建修复**：eslint.config.mjs 全局 ignore 补 `**/dist-prod/**`（消除既有 6.9 万条产物 lint 噪音，RED→GREEN 基线校正）
+- **边界不变**：apps/* 的 AutoImport DX 全保留；@vv/ui 注入式源码与 optimizeDeps.exclude 本批不动（后续独立批次）
+- **验证**：`pnpm test:eslint-rules` 21 用例绿；`pnpm lint` / `pnpm type-check`（全量，auto-globals 删除后零 TS2304）/ `pnpm -C packages/shared test`（428/428，无 AutoImport 插件）全绿
+- **手动验证步骤**：`pnpm dev:gateway admin auth` → ① 登录成功/失败提示样式正常；② 触发路由错误 toast 样式正常；③ v-copy 复制提示样式正常；④ 会话过期提示正常
+
+### ♻️ Refactor | 错误页形态统一：admin modules/error 拍平为 src/views/（2026-10-27）
+
+> 背景：错误页双形态并存——admin 用 `modules/error/`（views+routes 模块三件套），portal/docs/h5/big 用 `src/views/NotFound.vue` + router 内联。错误页是纯展示页（ErrorPage 组件包圆逻辑，无领域资产），模块制属过度分层；拍平对齐多数派消灭双形态。
+
+- **admin 搬迁**：`modules/error/views/{Forbidden,NotFound,ServerError}.vue` → `src/views/`；三条具名路由（/403 /404 /500）内联进 `src/router/index.ts`（check:routes 附加扫描 router/index.ts 的 name 正则兼容，requiredRoutes 校验不破）；`modules/error/` 目录删除
+- **分流规则入档**（docs/18 §决策矩阵补充）：有领域资产的页面 → `modules/<m>/views/`；无领域资产的纯路由页面（错误页/关于页）→ `src/views/` 根级
+- **顺带修复（type-check 全量门禁暴露的存量错误）**：① `http.ts` silent 字段 `exactOptionalPropertyTypes` 兼容（`silent?: boolean | undefined`）；② `@vv/shared` / `@vv/ui` 包名裸路径补入 `app-aliases.ts` 单源（`@vv/shared`→shared/src、`@vv/ui`→ui/src）——vue-tsc --build 对 workspace 链接的 exports 深路径（`@vv/shared/api/error-events`、`@vv/ui/composables/setup-ui-app-context`）解析失败（vite/vitest 走 exports 正常，仅 TS 需 paths 兜底）；6 app tsconfig.app.json 由 `pnpm generate:tsconfig-paths` 重新派生（**首版曾手动 node 脚本注入，破坏单源派生契约致 check:aliases 全红——已回归生成器正路**）；ui 包 tsconfig 同步补 paths；③ config 包 `componentResolvers` 类型改官方 `ComponentResolver`（unplugin-vue-components/types）
+- **验证**：`pnpm check:routes` 6 app 全绿（admin requiredRoutes Forbidden/NotFound/ServerError 照常命中）；`pnpm type-check` turbo 10/10 绿；admin 构建成功（错误页 chunk 正常生成）
+- **手动验证步骤**：`pnpm dev:gateway admin auth` → 访问 `http://localhost:8080/admin/403` / `/404` / `/500` → ErrorPage 渲染正常（标题 i18n + 返回工作台按钮）
+
+### ✨ Feat | h5 集成 vant 4：按需引入 + CSS 变量主题覆盖（2026-10-27）
+
+> 背景：h5 移动端需要成熟的基础组件库（按钮/输入框/单元格等），vant 4 是 Vue 3 移动端事实标准。按隔离原则集成：依赖/插件/样式全部限定在 h5 app 内，其他 app 零感知。
+
+- **依赖隔离**：`vant@4.10.2` 只进 `apps/h5/package.json`（dependencies）+ `unplugin-vue-components`（devDependencies）；根/package.json 与其他 app 零改动
+- **工厂扩展位**：`createViteConfig` 新增 `componentResolvers` 入参——注入 Components 插件 resolvers 数组（EP 之后、图标之前）；h5 的 vite.config 传 `componentResolvers: [VantResolver()]` 即完成按需引入 + CSS 自动注入
+- **踩坑记录（两个）**：① 最初尝试 `extraPlugins` 加第二个 `Components` 实例——vite 按插件 name 去重，同名 unplugin-vue-components 第二实例被静默忽略，`<van-button>` 解析失败渲染为裸自定义元素（组件不渲染）；改工厂单实例扩展位后解决。② 中途误判 vant resolver 的 sideEffects 路径（`vant/es/button/style/index`）与实际 CSS 文件（`vant/es/button/index.css`）不匹配，手动全量引入 `vant/lib/index.css`——实测 sideEffects 路径是 JS 入口（内部 import css），按需注入本就正常，手动全量引入已回退
+- **主题覆盖**：`apps/h5/src/layouts/h5/styles/vant-vars.scss` 全局覆盖 vant CSS 变量（品牌橙 `#ff6a00` / 圆角 / 尺寸）；局部覆盖用 vant `ConfigProvider` 组件
+- **rem 适配兼容**：vant 组件内部尺寸是物理 px（不经 pxtorem 转换——`postcss.ts` 的 exclude 正则锚定 `appRoot/src/layouts/h5` 与 `modules/h5-*`，vant 样式在 `node_modules/vant/lib` 不匹配）；h5 自定义组件经 pxtorem 等比缩放，两者混用无冲突
+- **vendor 分包**：vant 归 `vendor-ui`（`vendor-chunks.ts` patterns 追加 `/vant/`）——vant 与 EP 同为 UI 库、按需后体量小（~30KB gzip）不污染缓存命中；此前落兜底 vendor-utils 是分组表没跟上新增 UI 库，非有意设计
+- **验证页**：`apps/h5/src/modules/h5-demo/views/VantTest.vue`（路由 `/h5/h5-demo/vant-test/`）——按需引入 + 主题覆盖演示
+- **文档**：docs/34 §2 新增「Vant 4 集成」章节
+- **验证**：`pnpm -C apps/h5 build-only` 成功；产物检查——vant 组件按需打包、CSS 变量覆盖生效（`--van-primary-color` 等）、`.van-button` 样式类入 vendor-ui CSS、vendor-utils 零残留、vant CSS 的 px 保持物理值（24px/12px 未被 rem 转换）；`pnpm -C packages/config test` 44/44 绿（vendor-chunks spec 断言同步）
+- **手动验证步骤**：`pnpm dev:gateway h5` → `http://localhost:8080/h5/h5-demo/vant-test/` → 三个按钮显示品牌橙/绿/红 + 单元格列表正常渲染
+
+### ⚙️ Infra | dev:gateway 子集启动：单命令拉起网关 + 指定 app（2026-10-27）
+
+> 背景：日常中后台开发（admin 为主）全量起 6 个 vite dev server 常驻 ≈ 1.2GB 内存 + 6×1.5s 串行就绪链，门户/大屏/文档 app 多数时间空跑。dev-gateway 的 startApp/waitForPort/killTree 全是通用机制，参数化成本极低。
+
+- **`scripts/dev-gateway.ts` 子集化**：`pnpm dev:gateway admin auth` —— 网关 :8080 + 仅起指定 app；同一入口地址（8080 同源），统一登录链路（守卫 302→login→回跳→cookie 漫游）零差异。未给参数 = 全量（零行为变化）
+- **根 302 动态判定**（`resolveRootRedirect`）：子集含 portal → `/portal/`；不含 → 子集第一个（`pnpm dev:gateway admin auth` 时根访问跳 `/admin/` 而非未起的 `/portal/` 落 502）
+- **未知 app 名抛错**：拼写错误（`admn`）立即报「可用名单」，不静默忽略
+- **路由表仍传全量 APPS**：未起 app 的前缀保留路由（上游未起即 502），与「单 app dev 跳 /auth/login 404 属预期」语义一致（docs/43 §5）
+- **测试环境守卫**：`dev-gateway.ts` 模块顶层加 `process.argv[1]?.endsWith('.spec.ts')` 判定——spec 用例动态 import 时跳过 `main()` 自执行（否则监听 8080 撞 EADDRINUSE）；node:test 下 `NODE_ENV`/`TEST_WORKER_ID` 均不存在，argv[1] 是唯一可靠判定源（实测探测）
+- **spec 补 3 用例**（node-gateway.spec.ts）：resolveAppSubset 全量/子集/顺序过滤 + 未知名抛错 + resolveRootRedirect 三态
+- **文档同步**：README 常用脚本表 + docs/43 §6 用法段
+- **验证**：`pnpm test:gateway` 11/11 绿
+- **手动验证步骤**：① `pnpm dev:gateway admin auth` → 终端打印「子集模式：仅起了 admin / auth」；② 浏览器 `http://localhost:8080/` → 302 跳 `/admin/`；③ `/admin/` 200（未登录跳 `/auth/login`，登录回跳正常）；④ `/portal/` 502（预期）；⑤ Ctrl+C 一并退出
+
+### ⚙️ Infra | 网络层错误反馈事件化：拦截器发事件 + 网络级错误聚合 NetworkBanner 横幅（2026-10-27）
+
+> 背景：生产 portal 打开弹「网关错误」Toast 事件驱动改造。原 `onResponseRejected` 无条件 `ElMessage.error`——① 探测请求（登录态探测）失败无法静默（行业标准 silent/skipNotify 语义，对齐 vue-element-admin / Ant Design Pro）；② 后端宕机时连续操作触发 Toast 轰炸。用户拍板直接落地业界推荐架构：拦截器归一化错误 + 发事件，订阅方分流（业务 toast 兜底 / 网络级聚合横幅）。
+
+- **`packages/shared/src/api/error-events.ts` 新建**：零依赖 pub/sub 事件层——`http:error`（拦截器归一化后 emit）+ `http:recovered`（末次错误 10s 窗口内首个 2xx emit，常态成功请求零事件开销）；`isNetworkLevelError` 表驱动归类（undefined/0/502/503/504 → 横幅通道，其余 → toast 通道）
+- **`http.ts` 拦截器事件化**：`onResponseRejected`/`handleGenericError` 去 ElMessage → emitHttpError 照常 throw ApiError（调用方 catch 契约不变）；`AxiosRequestConfig` 扩展 `silent?: boolean`（探测请求跳过一切全局反馈）；**顺带修正两个存量误报**——`ERR_CANCELED`（logout 取消在途请求被当「网络异常」toast）与 401（refresh 重试成功也先弹「请先登录」），均改为静默抛错由后续链路接管
+- **`@vv/ui NetworkBanner` 落地**：`components/common/NetworkBanner.vue`（BEM，顶置横幅 + ×N 计数徽标 + 关闭按钮 + 具名过渡，z-index 1999 低于 EP Message）+ `composables/useNetworkBanner.ts` 模块级单例控制器——网络级错误聚合显示/计数递增（天然免疫轰炸）、恢复信号隐藏归零、手动 dismiss 30s 冷却（冷却内只计数不弹）；业务级错误 ElMessage.error 兜底（与事件化前用户可见行为逐字一致）；事件订阅挂模块顶层（import 即生效，与 UI 挂载时序解耦）
+- **装配收敛**：新增 `composables/setup-ui-app-context.ts`（setDialogAppContext + initNetworkBanner 组合入口），6 app `main.ts` 的 `setup` 统一改接——ui 侧新增全局运行时装配只改一处，6 app 零感知（OCP）
+- **探测静默接线**：`authApi.fetchProfile(options?: { silent?: boolean })` 透传链（user store → PortalHeader 探测传 `silent: true`）；守卫等强依赖调用不传，错误照常上报
+- **i18n**：`error.networkBanner` 双语文案（zh/en）入 `locales/zh-CN.ts` / `en-US.ts`
+- **文档同步**：README §5 错误处理兜底措辞、docs/23 §5.8.2 标题与注释（拦截器不再直接 toast）；http.ts/useDialog 头注交叉引用
+- **验证**：shared 428/428 + ui 1932/1932 全绿（新增 error-events 6 用例 + useNetworkBanner 8 用例）；`pnpm type-check` 全量绿；ESLint 全量改动文件零告警
+- **手动验证步骤**：① `docker compose -f docker-compose.prod.yml up`（无后端）→ 浏览器 `:8080/portal/`——**不再弹「网关错误」Toast**、头部登录按钮态正常、顶部出现「网络连接异常」横幅（探测请求经 silent 静默，横幅来自其余 /api 请求如菜单）；② 连续刷新/操作 → 横幅保持一条、×N 递增；③ 起后端后任请求成功 → 横幅自动消失；④ 点关闭 → 30s 内不再弹；⑤ `pnpm dev:gateway` 正常链路回归（mock 200 零横幅零误报）
+
+### ⚙️ Infra | 生产 Docker 部署链路：多阶段构建 + nginx 路径分发 + API 反代（2026-10-27）
+
+> 背景：2026-10-26 本地同域网关 node 化时删除的 docker-compose.yml + docker/nginx.dev.conf 是「本地开发」链路配置；生产部署链路当时从未存在（生产仅 gh-pages 静态托管）。本次落实「本地 node 网关 / 生产 docker+nginx」分离架构的生产侧：新增生产部署四件套，路径语义与 dev 网关逐条对齐。
+
+- **`scripts/build-prod.ts` 新建**（`pnpm build:prod`）：生产聚合构建（对照 build-pages.ts）——6 app 统一 `base=/<app>/` + 不注入 VITE_HISTORY_MODE（工厂缺省 web/history，nginx try_files 兜底）+ `VITE_MENU_SOURCE=remote` + `VITE_USE_MOCK=false` + `VITE_API_BASE_URL=/api`；产物聚合根 `dist-prod/<app>/`（与 gh-pages 的 `dist/` 隔离）；无落地页（生产根 302 由 nginx 承担）；复用 `build-only`——类型门禁由 CI turbo build 承担，Docker 内重复跑无收益（gh-pages 三连坑：干净环境 type-check 缺生成声明须 build 先行）
+- **根 `Dockerfile` 多阶段**：`node:22-alpine` corepack 按 packageManager 激活 pnpm@12.11.2（engines `>=11 <13`）→ `pnpm install --frozen-lockfile`（lockfile 不一致即失败，可复现构建）→ `build-prod` → `nginx:1.27-alpine` 托管；官方镜像 entrypoint envsubst 机制仅渲染容器 env 已定义变量（nginx 内置变量 `$host`/`$uri` 不受影响，无引号转义坑）
+- **`deploy/nginx.prod.conf.template`**：`/` → 302 `/portal/`（对齐 node-gateway rootRedirect）；6 app `alias` + `try_files` SPA fallback（fallback 走 root 拼 `/<app>/index.html`，与 `VITE_BASE` 严格对齐）；`/api/` `proxy_pass ${API_UPSTREAM}` 无 URI 部分原样透传 + SSE 三行（`proxy_buffering off` / `proxy_cache off` / 长读超时，docs/13 流式依赖）；assets 内容哈希 30d immutable 长缓存
+- **`docker-compose.prod.yml`**：`build .` + `8080:80` + 注入 `API_UPSTREAM`（默认 `host.docker.internal:8081`，真实服务器改内网服务名）；唯一按部署环境修改的变量
+- **`.dockerignore` 新建**：node_modules / 各 dist / docs / .git / 测试产物排除
+- **文档同步**：README 最近更新区 + 常用脚本表补 `build:prod` + 部署节虚构「Docker 部署」示例替换为真实方案（顺带对齐单应用时代遗留的「生产构建」产物描述——`pnpm build` 产物在各 `apps/<a>/dist/`）+ 删除被真实方案取代的通用静态部署模板段；docs/43 §1 目录树补 `deploy/` + Dockerfile + compose、§3 命令表、§6 生产形态段、§7 发布 bullet
+- **已知边界**：生产构建 JS chunk 仍含 `mockProdServer`（~3KB）——main.ts 静态 import 链携带，PROD 守卫不执行仅体积噪音；portal favicon 源是死路径 `/favicon.ico`（各 app index.html 存量差异），nginx 已配 `location = /favicon.ico` 302 → `/portal/favicon.ico` 兜底
+- **踩坑修复（302 丢端口）**：容器内 nginx 监听 80、对外映射 8080 时，`return 302 /portal/` 相对路径被 nginx 拼成 `http://localhost/portal/`（按 server 端口 80，非浏览器入站端口）——浏览器跟随即挂。与 2026-10-22 dev 网关 `e694986` 同根因。修复：`return 302 $scheme://$http_host/portal/`（$http_host = 浏览器原始 Host 含端口，与 node-gateway 的 `http://${req.headers.host}${rootRedirect}` 语义逐条对齐）；favicon 302 同改
+- **验证**：`pnpm build:prod` 6 app 全绿（产物 `dist-prod/{admin,auth,big,docs,h5,portal}`，index.html 资源前缀 `/<app>/` 注入正确）；ESLint 新增脚本过；docker compose 冒烟 9 项全绿——`/` 302（Location 含 :8080）、6 app 全 200、`/auth/login` SPA fallback 200、`/favicon.ico` 302、`/api/` 502（无后端预期，证明 proxy_pass 生效）、未匹配 404、容器内 `nginx -t` 语法过
+- **手动验证步骤**：① `docker compose -f docker-compose.prod.yml up --build`；② `curl -I http://localhost:8080/` → 302 `/portal/`；③ 浏览器 `/admin/`（未登录 → 跳 `/auth/login?redirect=...`）；④ 起真实后端后 `/api/` 反代 + SSE 流式逐 chunk 到达
+
+### ⚙️ Infra | mock 统一 /mock 前缀：Network 面板一眼区分 mock/真实后端（2026-10-26）
+
+> 背景：mock 路由原注册在 /api/*，与真实后端前缀同形——开发者在 Network 面板无法分辨响应来自 mock 还是真后端。现统一为 /mock 前缀（用户决策），前后端口径同步切换。
+
+- **mock 源 15 处 url /api/* → /mock/**（auth/dict/menu/user/stream + mockProdServer 内联 auth/dict），node 网关路由表加 /mock/ → admin（与 /api/ 同目标），e2e API 登录同步
+- **baseURL 解析链修正**（本次最深的坑）：esbuild define 对 `import.meta.env.X` 的精确键替换**优先于** .env 注入——工厂 define 写死保底值时 .env 同键配置永远不会生效（浏览器实测 baseURL 仍为保底值、登录 404）。工厂 define 改为 `loadEnv('development', appRoot)` 自行合并 .env 文件：**shell env > .env > 工厂保底 /api**；`create-vite-config.ts` 里「.env 优先于 define」的错误注释同步纠正
+- **6 app 的 .env.development 配 VITE_API_BASE_URL=/mock**（仅 dev 加载——prod 构建不读该文件自然落保底 /api；gh-pages 由 build-pages.ts 注入第六开关 shell env 覆盖）。`.env` 保持不出现该键（.env 全 mode 加载会污染 prod）
+- **顺带债务**：RichTextEditor/XFormBuilder 写死的 `/api/upload` → `/mock/upload`（仍无 mock 端点，404 为预期，前缀口径一致）
+- **vite 热重启盲区实锤**：workspace 链接的 @vv/config 工厂改动不触发 vite 自动重启——改工厂/别名/define 后须重启 dev server
+- **验证**：test:gateway / lint / type-check 10/10 / check:mock-wiring 全绿；curl 对照（/mock/auth/login 200+Set-Cookie、旧 /api 路径 404）；CDP 冷启动后真实登录 → /admin/workbench 落地
+- **手动验证步骤**：`pnpm dev:gateway`（须重启）→ 登录 admin → Network 面板可见登录请求为 `/mock/auth/login`；联调真实后端：`VITE_API_BASE_URL=http://real pnpm dev`（shell env 优先）
+
+### ⚙️ Infra | SSE 流式 mock 落地：requestStream 在 docs app 可演示（2026-10-26）
+
+> 背景：stream.ts（fetch + ReadableStream 流式请求）自 2026-07 起无演示数据源——vite-plugin-mock 的常规 response 模型是一次性返回，不支持流式。实测 dist 源码确认 rawResponse 的 Promise 被中间件 await 挂起（不 settle 不返回），即「挂起式推送」在 dev 下成立。
+
+- **`packages/mock/src/stream.ts` 新建**：`POST /api/ai/chat/stream` SSE mock——挂起式 rawResponse（定时器在 await Promise 内逐 chunk `res.write`，`[DONE]` 后 end + resolve；`req.on('close')` 清理断连），两个约束与 auth.ts setTimeout 404 事故同根因；`readBody` 抽至 `_utils.ts` 与 auth 共享
+- **`apps/docs StreamRequest demo`**：examples/ 下新建即自动注册 `/docs/demo/stream-request`（glob 派生，路由零改动）——打字机累积 / 停止生成（handle.cancel）/ onError 重试 / 卸载取消；requestStream 经 `@api/stream` 别名消费（shared barrel 刻意不聚合 ./api）
+- **prod 边界明示**：gh-pages 的 mockjs 只拦 XHR，stream.ts 的 fetch 穿透 + rawResponse client 忽略——流演示仅 dev 可用；`check-mock-wiring.ts` PROD_INLINE_EXEMPT 登记 'stream' 豁免（含根因注释）
+- **node 网关 SSE 零配置实证**：curl 经 8080 网关逐 chunk 到达（9 帧 + [DONE]），流式 pipe 无缓冲，无需 nginx 的 proxy_buffering off
+- **验证**：check:mock-wiring ✓ / type-check 10/10 ✓ / lint ✓；curl 逐 chunk 实测 + CDP 实测 demo 页渲染与侧边栏注册
+- **手动验证步骤**：`pnpm dev:gateway` → http://localhost:8080/docs/demo/stream-request → 发送 → 观察打字机逐段输出；点「停止生成」立即终止
+
+### ⚙️ Infra | 本地同域网关 node 化：去除 docker/nginx 依赖（2026-10-26）
+
+> 背景：本地开发同域网关原为 docker compose + nginx:alpine 容器（:8080 反代宿主机 5174-5179），需 Docker Desktop 常驻 + 双终端两条命令，且 nginx 配置因无法 import app 注册表而存在静态配置双写漂移面（靠 check-gateway-conf 在 CI 校验兜底）。现整体替换为零依赖 node 原生方案。
+
+- **`scripts/node-gateway.ts` 新建**：`node:http` 原生反向代理（HTTP 流式转发 + WS upgrade 透传 + GET / 302 保留 Host 端口 + 上游 502 + 转发头组），路由表由 `buildGatewayRoutes(apps-registry)` **单源代码派生**——静态配置第二事实源在结构上消失
+- **`pnpm dev:gateway` 一体化单命令**：先监听网关 :8080（EADDRINUSE 报错提示旧 docker 网关未关）→ 串行起 6 dev server（保留 mock 并发编译竞态防护）→ Ctrl+C 网关 + 进程树一并退出；原「另终端 docker compose up」流程删除
+- **`pnpm test:gateway` 新增**：node:test 8 用例（路由派生表驱动 + 假上游集成 smoke：HTTP 转发 / 302 / 404 / 502 / WS 双向 echo）；两个踩坑记录——undici WebSocket client 严格校验 `Sec-WebSocket-Accept`、服务端方向回发 masked 帧即断连（假上游须回合法帧），以及 fetch keep-alive 连接池需 `--test-force-exit`
+- **端口双写锁死保留**：`validatePortWiring` 自 `check-gateway-conf.ts` 迁入 `scripts/check-routes.ts` 内联，CI 单点覆盖不变（该校验与 nginx 无关，属 2026-10-23 扩展性审查 P0）
+- **删除清单**：`docker-compose.yml`、`docker/nginx.dev.conf`（docker/ 目录）、`scripts/check-gateway-conf.ts`、根 `check:gateway-conf` script
+- **文档同步**：docs/43 §6 重写（node 网关用法/语义/演进史）+ §9 排障更新；CLAUDE.md v3.0.2 变更记录 + Commands 表 + §2.1 拓扑表 #12；README 最近更新/场景表/常用脚本表/CI checks 说明；docs/04 server.ts 表行；apps-registry.mjs 头注；playwright.config.ts 与 cross-app-roaming.spec.ts 注释（e2e 逻辑零改动，仍是可达性探测自跳过）
+- **验证**：`pnpm check:routes` 绿（端口双写锁死迁移后）+ `pnpm test:gateway` 8/8 绿 + `pnpm type-check` 10/10 绿；dev:gateway 真实链路（302/六 app/HMR/登录漫游/API mock）手动验证交付用户
+- **手动验证步骤**：① `pnpm dev:gateway` 单命令启动；② `curl -I http://localhost:8080/` → 302 带端口 Location；③ 浏览器 `/admin/`、`/auth/login`、`/h5/h5-demo` 可达；④ `admin/123456` 登录后跳 `/portal/` 无登录按钮；⑤ 改 admin 任一 .vue 保存 → 浏览器热更新；⑥ Ctrl+C 全部退出、`netstat -ano | findstr 8080` 无残留
+
+### 🐛 Fix | 门户登录态穿透：全公开 app 登录态探测 + performLogout 无标记静默守卫（2026-10-30 用户实测 bug）
+
+> 背景：用户实测——admin 有登录态，工作台点「能力演示导航 → 门户首页」（`window.open` 新标签）跳门户后**仍显示登录按钮**。根因双环：① portal 全公开 app 的守卫为白名单直通形态（不挂 checkLoginState），启动从不拉 profile，而 PortalHeader 双态判断依赖内存 profile（初始 null）→ 有登录态也显示登录按钮；② 探测方案的前置障碍——拦截器 401 链对**任何** refresh 失败都 performLogout（清标记 + 整页踢登录页），未登录用户打开 portal 会被误踢，破坏公开页。
+
+- **PortalHeader 登录态探测**：onMounted 时 `userStore.fetchProfile()`——cookie 同域自动携带，有会话则 200 写入 profile 显示用户态；失败 catch 保持登录按钮态（注释声明为预期分支，非静默吞错）
+- **performLogout 语义修正**（http.ts）：refresh 失败时先查 `Session.get('auth')`——**无标记（本就未登录，如全公开 app 探测 401）静默返回**，不 toast/清标记/跳登录；有标记（会话真建立过，凭证过期）完整登出连锁不变
+- **测试**：http.spec 原「refresh 失败跳登录」用例补 `Session.set('auth')` 前置对齐新语义；**新增反向回归锁**「无标记 401 静默不跳」——正是本 bug 场景的锁定
+- **验证**：shared 44 文件 406 用例全过（http 链全回归）；turbo type-check 10/10 + test 9/9
+- **手动验证步骤**：① `pnpm -C apps/admin dev:local` 登录进工作台；② 点「能力演示导航 → 门户首页」（新标签打开 portal）；③ 预期：portal 头部显示**用户头像/下拉**而非登录按钮；④ 无登录态直接开 portal（无痕窗口）→ 仍显示登录按钮且**不被踢去登录页**（修正②的守卫）
+
+### 🎨 Refactor | 第十一轮收官：big/h5 视觉 token 单源化（83 处魔法值收敛）/ 错误处理规范正面确认（2026-10-30）
+
+> 背景：样式审计 #3/#4 遗留的 big/h5 魔法色值债（8 文件重复 rgba 三族 + vant 灰阶）+ 「基础建设」维度的错误处理规范落实核查。
+
+- **big-tokens.scss 新建**（`apps/big/src/layouts/big/styles/`，portal-tokens 同款挂法——layout 根 @use 非 scoped）：文字四档（`--big-text/text-2/text-3/text-deep`）+ 主蓝一族实心（`--big-primary`）与 **rgb 分量 token**（`--big-blue-rgb/mid-rgb/light-rgb`——`rgba(var(--x), 透明度)` 就地组合，大屏 glow/半透明边框/淡底背景本质是同族蓝透明度变体，逐一命名不经济）；`#f56c6c` → `var(--el-color-danger)`（EP 语义色归位）。**语义经逐色现场核实修正**（审计原推断 #8fa8d8 为 border——实为次级文字色）。7 个 big-demo 文件 + StateDemo/Wide 共 **76 处**替换，残留 0，big build-only 实证过
+- **h5-tokens.scss 新建**（`apps/h5/src/layouts/h5/styles/`）：vant 灰阶四色（`--h5-text/text-2/line/bg`），h5 layout + h5-demo 共 **7 处**替换，残留 0
+- **错误处理规范正面确认**：全仓 catch 块扫描（自定义 AST 级行扫描，排除 spec）——**零静默吞错误、零仅 console.log catch**；3 处 `catch {` 均为合法刻意形态（JSON.stringify 循环引用降级 / ElMessage 用户提示 / useDialog 取消契约分支）
+- **验证**：big/h5 build-only 双实证 + turbo type-check 10/10 + test 9/9
+
+### 🧪 Test Infra | 第十轮基础建设：fakeLocation 共享测试夹具收敛 / ElMessage 中文拦截评估留档（2026-10-30）
+
+> 背景：「基础建设」维度补测试基建——整页跳转断言的 stubGlobal location 样板在 3 个 spec 逐字重复（i18n 化后确立的标准形态）；i18n 审计建议的 ElMessage 中文拦截 ESLint 规则落地评估。
+
+- **fakeLocation 共享夹具**（`packages/shared/src/test-utils/fakeLocation.ts` 新增，`./test-utils/fakeLocation` 具名 exports）：`createFakeLocation` / `installFakeLocation` 两函数收敛 Login.spec / redirect.spec / useLogout.spec 三处逐字样板（router-guards/login.spec 经核实为 grep 误命中——它 mock redirect 不碰 location）。JSDoc 确立「后续 spec 有整页跳转断言一律经此夹具」的入口约定 + throw-setter 特例就地书写的边界
+- **框架级 ElMessage 中文存量清零**（规则落地前置）：copy.ts「复制内容为空」→ `common.copyEmpty` 键（zh/en）；RichTextEditor「请先配置 uploadApi」豁免——**开发者向配置警告**（非终端用户文案，同 Vue/React dev warning 固定语言的行业惯例），源码注释声明豁免理由
+- **ElMessage 中文拦截规则未落地留档**：规则 override 已完成设计（no-restricted-syntax esquery selector 限定 admin/auth/shared/ui 四范围 + RichTextEditor excludedFiles 豁免），但 config-protection 钩子拦截 eslint.config.mjs 修改——**不绕过防护钩子**（防「以配置变更弱化规范」的既有防线，破例风险 > M+ 规则收益）；防线回落到存量清零 + code review 约定，规则设计留档可复用
+- **docs P1 批（文档一致性收尾，代理执行）**：9 份文档 ~200 处——docs/22 全篇 mock 包口径（§15.2 架构块改 bootstrapApp 真实装配形态）、docs/04 §1 的 110 行旧 vite 示例整段删除改工厂对照、docs/23 权限设计 85 处行号引用全摘除（39 条映射 codemod + ls 逐一核实）、docs/09 docs app 口径（5175）、docs/05/33/40 行号与伪命令清零、两个全仓零命中的死引用反例删除并加注；doc-currency 13/13 绿；代理过程中 2 次 codemod 事故当场修复（边界约束 + 双前缀）
+- **验证**：`pnpm type-check` 10/10；`pnpm test` 9/9（auth/shared/ui 三向冒烟 + turbo 全量）
+
+### 🎨 Style+i18n+Docs | 第九轮三审计落地：样式 token 化 P0 / 逻辑层 i18n 清零 / docs 文档漂移 P0（22 文档 170 处）（2026-10-29）
+
+> 背景：三路新角度审计——SCSS 样式质量（20 项发现，架构层获「非常优秀」、问题集中在消费侧「建而不用」）、i18n 尾巴、docs 文档漂移（50+ 项：94 处旧路径 import 示例横跨 20 份文档 + 3 个根级伪命令）。docs P0 批由修复代理按审计对照表执行（146 次工具调用全路径文件系统核实）。
+
+- **样式 token 化 P0 四连**：① element-protable-overwrite 自我违反禁令修复（分页 `#f4f4f5/#606266/#409eff/#fff` → `var(--el-fill-color/text-color-regular/color-primary/color-white)`）② RichTextEditor 6 处出厂值映射 `--el-*`（暗色主题兼容——`#dcdfe6/#ebeef5/#c0c4cc/#fafafa/#606266` 五组）③ z-index 语义层补齐（variables.scss 新增 `--z-index-fullscreen/layout-overlay/debug-toast/debug-banner` 4 token + 分层约定注释；ProTable 1500 / LayoutSwitcher 4000 / XForm 9998/9999 共 5 处硬编码归位，值零变化）④ portal on-ink 反色系列（portal-tokens.scss 新增 5 token；SiteFooter 5 处 + PortalHeader 2 处 rgba/#fff 替换——svg stroke 属性留实色）
+- **ellipsis utility 激活示范**：OverflowText 手写三件套 → 模板挂 `.vv-ellipsis`（custom.scss 单源，经全局样式入口确认可用；style 块移除，块级化语义入 JSDoc；spec 的 vv-overflow-text 选择符保留 bem.b() 兼容）——其余 6 处手写点 + big/h5 tokens 文件新建（审计 #3/#4）记入批次遗留
+- **逻辑层 i18n 清零（审计 #4 收尾）**：Login.vue ElMessage 两处（`auth.loginSuccessRedirect`/`auth.loginFailed`）+ useAppRouter「路由跳转失败」+ copy 指令「复制成功/失败」+ http.ts 拦截器 3 处兜底（`error.http.401`/`clientFallback`/`auth.sessionExpired`）——统一 `i18n.global.t` 方案（无 setup 约束，新增 6 键双语）
+- **docs 文档漂移 P0 批（代理执行）**：22 份文档 170 处——94 处旧 import 路径示例清零（`@/api` → `@api`、`@/composables/` → `@vv/shared` 等 20 文档）、docs/04 三伪命令改 app 级口径、docs/22 §7 工厂化、docs/40 `build:pages`、docs/08 §6.1 别名口径 + spec 数实测重锚（199→208）、docs/10 清尾；**2 存疑死引用跳过**（`dict/internal`/`NormalConfirm` 全仓零命中，留人工裁决）；check-doc-currency 13/13 绿
+- **审计正面确认**：样式架构层「非常优秀」（scoped 0 残留、:deep() 0 使用、BEM 全合规）；docs/26 技术栈版本声明与 package.json 完全一致；33 条文档相对链接仅 1 死链（已修）；menu.home/demo 非死键（docs/portal 路由 titleKey 在用）
+- **有意不做**：aria-label 双语（9 处价值 < 键维护成本）；字号 60+ 处 token 化（审计建议 code review 把关而非大爆炸）
+- **验证**：`pnpm type-check` 10/10；`pnpm test` 9/9 全绿（admin 64 / shared 405 / ui 1924 含全部接线回归）
+
+### 🌐 i18n + 健壮性 | 第八轮双专项审计落地：框架壳双语接线（AsyncState/useLogout/错误页/Login/http 错误全链）/ errorHandler 监听幂等（2026-10-28）
+
+> 背景：双路新角度审计（.agent-reports/2026-10-28-runtime-audit.md / i18n-audit.md）——i18n 现状「框架壳双语已完成、业务层零覆盖」（47 键中 common.*/error.*/app.title 三命名空间零消费，切英文后外壳英文页面全中文）；运行时「生产路径零真泄漏」但 errorHandler 插件 window 监听叠加可泄漏。
+
+- **i18n P0 接线（审计估 2-3 天，本轮批量落地）**：
+  - **AsyncState 三态**（ui 包组件）：重试/暂无数据 → `common.retry`/`common.empty`（新增 empty 键双语）——所有 useRequest 页面的空态/重试随 locale 切换
+  - **useLogout 四键接线**：confirmLogout 的确定/提示/退出/取消 → `auth.logout*`（与硬编码逐字对应，zh 零变化）；顺带补显式 `cancelButtonText: t('auth.logoutCancelButton')`（原走 useConfirm 默认值，zh 同文、en 正确切换）
+  - **admin 错误三页**：`error.403/404/500` 死键激活（zh 语义等价微调：无权访问此页面→无权访问、服务器开小差了→服务器错误）
+  - **Login.vue 全文接线**：rules 4 条校验（script 层 useI18n t()）+ label/placeholder/checkbox/忘记密码/登录中/显隐密码 aria-label 12 处（模板 $t）——新增 `auth.account/accountRequired/accountMin/passwordRequired/passwordMin/rememberMe/forgotPassword/loggingIn/loginSubmit/showPassword/hidePassword` 11 键双语
+  - **http-errors.ts 全表 i18n 化**：12 条状态码 + 3 档 fallback 中文 toast → `error.http.*` 新命名空间（双语）；模块级 `i18n.global.t` 脱离 setup 可用（拦截器调用时 i18n 已初始化，无循环依赖）
+  - **既有键复用**：portal「退出中...」→ `header.loggingOut`；admin main.ts title → `app.title`
+  - **立场裁决落地**：按审计建议定调「中后台壳双语 + 演示内容中文」——docs（889 处）/portal/big 的静态文案豁免，修复聚焦 admin/auth 框架级 + shared/ui 包组件
+- **errorHandler 插件幂等化（运行时审计 P1）**：window error/unhandledrejection 匿名监听 → 模块级具名引用持有 + install 前置 `uninstallWindowListeners()`——HMR/重复 app.use 场景不再累积泄漏
+- **运行时其余发现裁决不改**（防过度设计）：theme/app store 的 mql 监听为 Pinia 单例语义（app 生命周期内不泄漏，HMR 残留 dev-only 可接受）；demo 3 处短窗口自清定时器；XFormDetailFill 竞态有 Vue 3 静默兜底——审计正面确认生产路径零真泄漏（26 监听 23 成对、Observer 全 disconnect、echarts/wangeditor 全 dispose）
+- **mock 类型挂钩收尾**：menu.ts `satisfies RemoteMenuItem[]`（shared barrel 补纯类型导出）+ dict-data.ts 跨包相对路径 import 归位 barrel + dict/api 注释口吻修正
+- **验证**：`pnpm type-check` 10/10；`pnpm test` 9/9 全绿——**过程修复**：i18n 接线暴露 useI18n 的 setup 硬约束——Login.spec 7 例 mount 挂真实 i18n 插件（`@locales` 别名，zh 文案断言零变化）；useLogout.spec 4 例直调 throw「Must be called at the top of a setup function」——新增 `useLogoutWithSetup()` 辅助（stub 组件 setup 内执行 + 挂 i18n），确立「命令式 composable 接线 i18n 后的标准 spec 形态」
+
+### 📖 Docs+Style | 第七轮注释/导入双专项审计落地：脚手架生成即编译错修复 / 30+ 处断链 @see 清零 / 冗余 import 漏网清零 / 拓扑措辞修正（2026-10-27）
+
+> 背景：双路专项审计（.agent-reports/2026-10-27-comments-audit.md / imports-audit.md，22+10 条发现）——6 轮重构后注释漂移高发（@see 断链、旧路径教学、拓扑失真）与 AutoImport 冗余 import 漏网。
+
+- **new-module 脚手架模板修复（H·生成即编译错）**：`scripts/new-module.ts` 模板教 `@/api/http`、`@/composables/useRequest`（app src 已无这些目录，生成即编译错）——改 `@api/http`（sanctioned 别名）+ 删 useRequest import（AutoImport 注入，模板补来源注释）
+- **@see 断链清零 30+ 处**：shared store 5 处（`../composables/*.ts` 层级错 + useLogout 跨包双错）、ui 三组件（AsyncState/DictSelect/DictTag 的 `../../composables/` + `../../types/dict.ts` 双重断链）、admin 布局 8 处（`@/store/modules/app|user` → `@vv/shared` 包名形态）、ToolHeader、auth store、user 模块 2 处——统一为「包名 + 路径」反引号文本形态（消除 6 层上探相对链接的维护噩梦），含我前五轮自己改的 List.vue 再修
+- **冗余 import 漏网清零（导入审计 H×2）**：3 个模块 store（workbench/h5-demo/big-demo）的 `defineStore/ref` 显式 import + docs demo 5 composable 的值 import（类型 Ref/ComputedRef 保留 type-only import——AutoImport 不注入类型，查证 auto-imports.d.ts 后精确处理）+ useClock + DocLayout 的 useAppRouter + PortalHeader 的 useLogout（均在 §1.6 注入清单）
+- **拓扑措辞修正（导入审计）**：CLAUDE.md §2.1/§4 #6 + docs/43 的「config → mock → shared → ui」四段链 → 「config ∥ shared → mock → ui」真实拓扑（mock 自 2026-10-23 消费 shared 契约类型）
+- **规范裁决与文档修正**：CLAUDE.md §1.6.2 新增第 6 条「与 §1.6 的优先级」（先判要不要 import 再判从哪 import，消张力）；§1.6.1 示例注释 @composables → @vv/shared；§4 #14 增补 docs demo 相对路径豁免（模块指南背书）；ui barrel 头注「'@components/*' 别名或 '@components/*' 包子路径」笔误修正 + 按 Round 5 实证重写（目录/无扩展走别名既定例外，仅 .vue 文件级可包名化）；ui README「无显式 import」绝对化表述修正；5 app store/index.ts 教 @store/* 过渡态的注释收敛；mock 5 处 + docs demo 8 处单应用时代路径注释修正
+- **有意不做**：fakeLocation 共享夹具（过度设计）；consistent-type-imports eslint 规则（config-protection 风险 > M- 收益）
+- **审计正面确认**：TODO/FIXME 全仓 0；运行时 import 零漂移；shared→ui / mock→ui 反向依赖零命中；codemod 别名零残留
+- **验证**：`pnpm type-check` turbo 10/10；`pnpm test` turbo 9/9 全绿
+
+### 🧪 Tests | 测试质量审计落地：mock 契约类型挂钩立规 / CI coverage 门禁接入 / 旧契约 mock 清零（2026-10-26）
+
+> 背景：测试质量审计（报告 .agent-reports/2026-10-26-test-audit.md）4 项 H——mock 与 api 层类型完全脱钩（改 api 类型编译器零报错）、CI 不跑 coverage（阈值仅本地生效）、Login.spec 残留 token 时代旧契约 mock。本轮闭环前两项 + 第三项，其余（测试分布失衡/装配耗时）按专项排期。
+
+- **mock 响应体与 api 层类型挂钩立规**（测试审计 #2）：`packages/mock` 的裸对象字面量响应挂到 `@vv/shared` 契约类型——`_utils.ts` `generateUsers(): UserItem[]`、`auth.ts` 两处 `satisfies LoginResult / UserProfile`（`import type` 编译期擦除，esbuild bundle 零运行时依赖，同 pro-table 先例）；shared barrel 补**纯类型导出** `LoginResult / UserProfile / UserItem / UserListParams`（barrel 不聚合 api 值导出的决策不变——http.ts 建 axios 实例的副作用只针对值；`export type` 零运行时成本）；docs/22 §2 约定 + §13 评审 Checklist 第 9 条同步立规
+- **CI coverage 门禁接入**（测试审计 #3）：ci.yml Build+Test 后新增 `pnpm test:coverage` 步骤——admin 覆盖率阈值自此成为 CI 硬门禁。接入实证暴露**旧阈值已名存实亡**（50/48/45/50 是单应用时代口径，Monorepo 下沉后 admin src 仅剩装配外壳 + 业务 views，实测 34.03/20.22/31.56/35.01）——阈值重锚定为实测 floor **34/20/31/35**（防倒退基线，回升路线 = admin 业务模块补测试专项），docs/04 示例 + 说明段同步（并标注 vitest.config 示例已收敛为 createVitestConfig 工厂的旧形态说明）
+- **Login.spec 旧契约 mock 清零**（测试审计 #7）：3 处 `{ token: 'xxx' }`（token 落 localStorage 时代残留）改为现 httpOnly 契约 `LoginResult` 形态 `{ profile: { id: 1, name: 'Admin' } }`——SUT 虽不消费返回值，mock 形态即契约文档
+- **fakeLocation 共享夹具有意不做**：3 spec 各 ~6 行样板，下沉需新增包内模块 + exports 条目，收益 M- 属过度设计——审计建议记录备查
+- **验证**：`pnpm test:coverage` 阈值门禁绿（COV_EXIT=0）；mock 包 vue-tsc --force 0 error；docs 全量单测绿（Login.spec 7/7）；check:doc-currency 13/13
+
+### ⚡ Perf | 重组件异步化：echarts/wangeditor 退出全 app 首帧（auth 等 4 app 产物 0 命中，admin 移出 modulepreload）（2026-10-26）
+
+> 背景：性能构建审计 H1——`createGlobalComponents` 的 eager glob 把 BaseChart（echarts 全量 ~1MB）+ RichTextEditor（@wangeditor ~1.33MB）无条件打进**每个** app：auth（仅登录页）entry gzip 1.06MB ≈ admin 1.15MB，且 auth 的 vendor-charts 与 admin 逐字节相同（hash CJ4vKtyr，1.1MB）——两依赖经 modulepreload 首帧强制下载。
+
+- **glob 否定排除 + 显式异步注册表**（`packages/ui/src/global-components.ts`）：glob pattern 排除 BaseChart.vue / RichTextEditor/**，新增 `lazyComponents` 注册表以 `defineAsyncComponent` 延迟加载——echarts/wangeditor 不再进任何 app 的 entry/preload，未用这些组件的页面（auth 登录/portal 官网/h5/big 演示）整个生命周期零下载；使用方（admin 图表页/docs RichText demo）首次渲染时一次性加载
+- **构建实证**：auth dist echarts/wang 命中 **0**（原 1.1MB vendor-charts 整组消除）；admin `index.html` modulepreload 清单已无 vendor-charts（chunk 保留在产物中按需加载，非图表页首屏 -1.1MB）；`index.spec.ts` 仅测 naming 工具不受注册数影响
+- **顺带发现**（未修，记录待观察）：vendor-utils fallback 把 wangeditor/axios/mockjs 混居 1.3MB 单体——重组件 async 化后 wangeditor 已自然切出独立 chunk；mockjs 进 vendor 仅演示构建形态，manualChunks 细化留待有实测收益再做（防过度设计）
+
+### 📦 Refactor | 第五轮审查落地六连：别名收敛 codemod 批次 2 / createWhiteList 工厂 / 样式基线下沉 / 分页契约修复 / vitest 依赖声明（2026-10-26）
+
+> 背景：复用性+扩展性遗留（@components/@utils/@composables 深层别名 127 处消费、5 whitelist 逐字同构、6 main.ts 样式三行逐字重复）与测试审计两个 H（mock 分页契约偏离 api 层、6 app vitest 幽灵解析）。
+
+- **别名收敛 codemod 批次 2**（`scripts/codemod-alias-round2.mjs`，验证后已删，同 hotspots 先例）——**裁决修正：`'@components/*'` 定性为既定例外**：实测 `@components/ProTable` 等目录 barrel / 无扩展 .ts 路径（125 处）经 package.json exports 通配 **TS 不可解析**（bundler resolution 不做目录索引/扩展名探测，TS2307 实证），而 `@vv/ui` 根 barrel 刻意不聚合 `components/**`（自动注册机制配套）——故回退为 sanctioned 别名消费（CLAUDE.md §1.6.2 表格已补例外行）。**实际收敛**：`'@utils/{autoImport,consoleBadge,dayjs,storage}'` + `'@composables/{useTheme,useAppRouter,useDict}'` → `'@vv/shared'` 根 barrel（13 处具名导入）；`'@components/**/*.vue'` 文件级（vi.mock / `?raw`）6 处 → `'@vv/ui/components/*.vue'`。**vi.mock 语义修复 ×5**（§1.6.2 第 4 条）：mock 说明符收敛到 barrel 后拦截面扩大，remote-menu / draft-storage / useColumns / DictSelect / DictTag 五处 mock factory 全部补 `importOriginal` 展开；测试审计 #6「vi.mock 巧合正确」4 处随收敛自然修正。shared exports 补具名子路径 `"./utils"` / `"./app-styles"`（踩坑：根 barrel 的 `export *` 图在 `vi.resetModules` + 动态 import 的 spec 密集重载下会不稳定超时——docs sidebar-state 实证，SUT 改走轻量具名子路径根治；`__uno.css` 虚拟模块在 vite-node 按文件路径解析报错——样式基线独立成 `app-styles.ts` 只被 main.ts 副作用 import，spec 零触达）
+- **createWhiteList 工厂**（`packages/shared/src/router-guards/whitelist.ts`）：5 公开 app 的 `new Set(['NotFound', ...routeNames])` 逐字同构收敛为 `createWhiteList('NotFound', xxxRouteNames)`（嵌套数组拍平）；**check-routes extractWhitelist 同步双形态支持**（createWhiteList 引用/展开 + new Set 字面量，admin 形态保留），auth 的 Login 提取回归验证 ✓
+- **样式基线三件套下沉**（`packages/shared/src/app-styles.ts` 新增）：6 main.ts 逐字重复的 `normalize.css → virtual:uno.css → @assets/styles/index.scss` 收敛为单行 `import '@vv/shared/app-styles'`。踩坑记录：原方案放 app-bootstrap.ts 顶部被一切 `import '@vv/shared'` 的 spec 间接加载，vitest 的 vite-node 把 `__uno.css` 虚拟 id 按文件路径解析炸 ERR_INVALID_ARG_VALUE——独立成模块后仅 main.ts 显式副作用 import（spec 零触达）根治
+- **mock 分页契约修复**（测试审计 H1）：`packages/mock/src/user.ts` 读 `query.pageIndex` 与 api 层 `UserListParams.page` 偏离，mock 环境翻页永远第 1 页——mock 对齐 api 契约改读 `page`
+- **6 app vitest 依赖声明补全**（测试审计 #8）：admin/auth/docs/h5/portal/big 的 devDependencies 补 `vitest ^4.1.9 + @vue/test-utils ^2.4.11 + jsdom ^29.1.1`——此前靠 root hoisting 幽灵解析，`pnpm -C apps/<a> exec vitest` MODULE_NOT_FOUND；声明后解析实证通过
+- **notFoundRoute 字面量 ×5 有意保留**：收敛需动 createAppRouter 工厂接口 + check-routes 实现提取双联动，风险收益比一般；字面量 JSDoc 有文档价值（NotFound 为何在 router 层注册）
+- **验证**：`pnpm type-check` turbo 全绿；`pnpm test` turbo 全绿（ui 128 文件 1924 用例 / admin 10 文件 64 用例含 5 处 importOriginal 改造回归）；`check:routes` 6 app 白名单提取正确（auth 含 Login）；auth/admin 构建实证
+
+### 📦 Refactor | 第四轮五维审查 P2 余项：e2e projects 注册表派生 / 死参数删除 / 静默跳过清零（2026-10-23）
+
+> 背景：可扩展性 + 可复用性审计的 P2 批——playwright projects 硬编码 4 app（新 app e2e 须手动加段）、`extraAutoImports` 零消费死参数、`generate-tsconfig-paths` 对缺 tsconfig.app.json 的新 app 静默跳过、`VITE_APP_ID` 无文档、`@vv/shared` 双轨出口动机未显式化。
+
+- **playwright.config.ts 从注册表派生**（扩展性审查）：4 个 app project（admin/docs/h5/big）的硬编码段改为 `APPS.filter((app) => existsSync(tests/e2e/<name>))` 单源派生——端口/名单与 dev-gateway / check-routes / eslint 边界同一份事实（apps-registry.mjs）；新增 app 只要建 `tests/e2e/<name>/` 目录即自动纳入 e2e 覆盖，无须改配置。`--list` 冒烟 14 tests/7 files 与改造前一致
+- **删除 `extraAutoImports` 死参数**（可复用性审查）：`AppViteOptions` 中唯一零消费方的扩展点删除（YAGNI）——全仓 6 app vite.config 无一传参，`VV_SOURCE_MODULES` 单源已是完备注入清单；新增注入需求改工厂常量
+- **generate-tsconfig-paths 反向校验**：apps/ 下存在但缺 `tsconfig.app.json` 的目录由静默跳过改为报错退出（附骨架指引）——原行为让新 app 的 IDE 跳转 / type-check 静默劣化无任何信号
+- **README 环境变量表补 `VITE_APP_ID`**：工厂按 `appName` define 注入的 persist key 前缀（`admin:app-ui`），多 app 同域部署时隔离各 app 持久化数据——此前代码已用但文档无条目
+- **`@vv/shared` 双轨出口动机显式化**：barrel 头注补具名子路径出口（`./store` / `./router-guards`）说明——为历史深路径 import / vi.mock 说明符留兼容位，新代码一律走根 barrel（§1.6.2 立场）
+- **顺手修**：`create-vitest-config.ts` 类型导入修正（vitest/config 不具名导出 UserConfig，改从 vite 导入经增强的类型，--force 全量暴露）
+- **审计误报澄清**：`auto-globals.d.ts` 声明 `useTheme` 并非超集漂移——该文件属 shared 包，shared 的 `store/modules/theme.ts` 确有裸用，声明准确，不动
+- **验证**：`pnpm type-check` turbo 全绿；`pnpm test` turbo 9/9 全绿；`playwright --list` 14 tests；`generate:tsconfig-paths --check` 6 app 一致；eslint 0 error
+
+### 📦 Refactor | 第四轮五维审查 P1 收敛四连：AppShell 统一壳 / vitest 工厂 / vite 缺省下沉 / routeNames 单源（2026-10-23）
+
+> 背景：重复性审查 4 个 H 级发现——5 个非 admin App.vue 逐字同构（22 行×5）、6 份 vitest.config 的 test 块逐字同构、vite.config 的 base/mockPath 6 份逐字重复、routeNames 提取函数 3 份拷贝 + 1 份硬编码字面量（big 新增子路由白名单不跟随，漂移面最大）。
+
+- **AppShell 统一壳组件**（`packages/ui/src/components/common/AppShell.vue` 新增，全局自动注册）：ElConfigProvider（zh-cn + size default + 按钮两字间距，与 admin 同口径）+ ErrorBoundary + RouterView 单源化；auth/portal/h5/big/docs 的 App.vue 退化为 `<AppShell />` 单行 + 各自语义 JSDoc（净减约 90 行）；admin 刻意不在列——远程菜单骨架 + locale 同步是其独有编排
+- **createVitestConfig 工厂**（`packages/config/src/create-vitest-config.ts` 新增，挂 barrel）：6 份 vitest.config 的 test 六字段（environment/exclude/root/globals/deps.inline/css）单源化，`viteConfig as never` cast 收敛进工厂；admin 独有的 coverage 阈值块（基线 50/48/45/50）走参数注入（顺带消除原文件 v4.0/v5.0 注释重复行）；5 app 各保留「为何不配 coverage」说明注释
+- **createViteConfig 缺省下沉**：`base` 缺省改 `process.env.VITE_BASE ?? '/'`、`mockPath` 缺省 `path.join(appRoot, '../../packages/mock/src')`（6 app 原逐字同构传参收敛，无 mock 依赖的 app 传 `''` 退出）；6 份 vite.config 各净减 6-10 行
+- **collectRouteNames 单源**（`packages/shared/src/router/route-names.ts` 新增，挂 barrel）：auth/portal/docs 三份逐字相同的递归 visit IIFE + h5 flatMap 一层 children 变体 + big 硬编码字面量，统一为递归拍平 helper；**big 的字面量改 routes 派生后，新增强路由白名单自动跟随**（原漂移面消除）；5 个模块 routes 文件净减约 80 行
+- **验证**：`pnpm type-check` turbo 10/10 全绿；`pnpm test` turbo 9/9 全绿（ui 1924 用例零回归）；`check:routes` 6 app A-E + 网关 + 端口锁死全过；变更文件 eslint 0 error
+
+### 🐛 Fixes | 架构审查 P0 四连修：mock→ui 反向依赖斩断 / §1.7 漏网 ×3 / 注册表反向校验 / 端口双写锁死（2026-10-23）
+
+> 背景：第四轮五维审计（易用性/可扩展性/可复用性/重复性/DX）产出 4 个 P0——mock 包经别名反向依赖 ui 源码违反 §2.1 单向铁律；admin 两处显式 import 全局组件违反 §1.7（v3.0.1 codemod 漏网）；apps/ 目录存在但 registry 漏登记时无任何脚本变红（静默失效）；registry.port 与 vite.config portOffset 双写无校验。
+
+- **ProTable 契约类型下沉 @vv/shared**（`packages/shared/src/types/pro-table.ts` 新增）：`ProTableResponse` / `ProTableRequestApi` 两类型原定义于 ui 的 ProTable/types，mock 的 10 个 pro-table 数据源经 `'@components/ProTable/types'` 别名（tsconfig paths 直指 ui 源码）消费——包边界类型侧不可见，ui 内部文件位移即炸 mock type-check。现 ui 侧改 `import type` + `export type` re-export（对外 API 与存量消费方零改动），mock 10 文件改经 `'@vv/shared'` 包名消费；`@vv/mock` 新增 `@vv/shared` 依赖 + 3 个宿主装配 peer（vue-router/pinia/pinia-plugin-persistedstate，auto-globals 全局声明解析所需），tsconfig 的 `@components` paths 移除、`env.d.ts`/`auto-globals.d.ts` 纳入 include（与 ui 包同先例）
+- **§1.7 全局组件显式 import 清零**：`apps/admin/src/App.vue`（ErrorBoundary + AsyncState）与 `apps/admin/src/modules/user/views/List.vue`（AsyncState）删除显式 import——两组件本就在 unplugin-vue-components 自动注册 dirs（@vv/ui/components/common deep 扫描），显式 import 反令 IDE hover 丢失 DefineComponent 完整类型展开；JSDoc `@see` 同步订正为 @vv/ui 包路径
+- **注册表反向校验**（`scripts/check-routes.ts` 新增 E 校验）：`apps/` 下发现的应用（含 src/modules）必须登记 `scripts/apps-registry.mjs`——漏登记原有三道静默失效：boundary-apps-<new> ESLint 规则不生成（跨 app 引用逃逸无 error 拦截）、`requiredFor` 空集让 B/C 校验静默跳过、网关校验不覆盖；唯有反向校验能暴露，现 CI 红
+- **端口双写锁死**（`scripts/check-gateway-conf.ts` 新增 `validatePortWiring()`）：registry 绝对 port（5174-5179）与各 app `vite.config.ts` portOffset（缺省 0）是同一事实两处手写，漂移时表现是「经网关 404 / waitForPort 超时」且报错现象误导网络层——现静态锁死 `SERVER_DEFAULTS.port + offset === registry.port`，check:routes 收尾段复跑（CI 双保险）
+- **验证**：`check:routes` 6 app A-E + 网关 + 端口锁死全过；shared/ui/mock/admin vue-tsc --force 全绿（mock 首次暴露并修复 env.d.ts/auto-globals 宿主装配缺口）；ui 1924 用例全过（ProTable 类型 spec 零回归）
+
+### 📦 Refactor | 装配编排层收敛：bootstrapApp / createAppRouter 工厂（main.ts + router/index.ts 6 份拷贝 → 单源）（2026-10-23）
+
+> 背景：P5-P6 已下沉纯函数段（品牌色/标题/prod-mock/骨架三件套/fallback/plugins），但装配「编排层」仍 6 份逐字拷贝——6 app 的 main.ts（约 70 行×6）与 router/index.ts（约 75 行×6）装配序列逐字一致，仅标题/插件 presence/守卫编排因地而异。本任务把编排层也收敛为工厂，顺序契约代码化（spec 锁定）。
+
+- **bootstrapApp 工厂**（`packages/shared/src/app-mount.ts`）：固化 main.ts 装配顺序契约——brandColor/title（createApp 之前防首屏闪烁）→ assertNoMockInProd → createApp → `await setupProdMockIfNeeded`（必须先于 use(router)，否则守卫首屏请求穿透静态服务器）→ use 序列（pinia→router→i18n→全局组件→指令→插件）→ setup 收尾（setDialogAppContext 依赖全部 use 后的 provides）→ mount。Directives/Plugins/createGlobalComponents/setDialogAppContext/@mock 加载回调一律参数注入（app 私有别名与 @vv/ui 产物 shared 不可硬编码，符合 §2.1 依赖方向铁律）；i18n 按 Plugin 结构类型接收（vue-i18n 的 Messages/Locale 泛型随各 app 文案类型不变变化，具体泛型实例不可作参数类型）
+- **createAppRouter 工厂**（`packages/shared/src/router/create-router.ts`）：固化 router/index.ts 编排——createRouter（rootRedirect→notFoundRoute?→业务路由→fallback catch-all 必须最后）→ registerAppRouter DI（先于一切守卫）→ extraSetup 私有装配按序 → 公开白名单守卫（白名单直通 + 兜底可见性）。两类消费形态：5 公开 app 传 notFoundRoute + 白名单谓词；admin 不传谓词（守卫链自管白名单），私有装配 `[setupAuthGuard, setupRouterErrorBoundary, setupTagsViewSync]` 经 extraSetup 注入——注册顺序与行为零变化，admin 无保留手写
+- **notFoundRoute 字面量刻意留在各 app router/index.ts**：`scripts/check-routes.ts` 按 `name:` 正则从该文件提取根级实现名单（NotFound 在 router 层注册而非 modules），收进工厂会让 A 校验误报——约束已固化在工厂 JSDoc
+- **6 app 收敛**：main.ts 约 70 行 → 约 33 行（纯数据 + bootstrapApp 单次调用），router/index.ts 约 75 行 → 约 40 行（JSDoc 保留各 app 裁剪语义：portal/auth/h5/big/docs 公开守卫形态、admin extraSetup 形态、big 省略 plugins）
+- **单测**（新增 15 用例）：`app-mount.spec.ts` 6 用例（use 序列固化 / plugins 数组与省略（big 形态）/ dev 不加载 prod-mock / PROD 命中时序先于 use:router / 首屏品牌色与标题占位 / setup 先于 mount 且 mount 生效）；`router/create-router.spec.ts` 9 用例（注册顺序 / admin 无 notFoundRoute 形态 / rootRedirect / fallback 重定向 / historyMode web-hash 判别与显式参数优先 / DI 注入 / extraSetup 序 / 白名单直通优先于可见性 + hidden 拦截 / admin 无公开守卫语义）。踩坑记录：hash history 的 `history.location` 是归一化路径不带 `#`，web/hash 判别须用 `router.resolve().href`（web `/x` vs hash `#/x`）
+- **验证**：`pnpm type-check` turbo 10/10 全绿；`pnpm test` turbo 9 任务全绿（shared 405 用例）；`pnpm check:routes` 6 app 分组 A-D + 网关校验全过；变更文件 eslint 0 error
+
+### 📦 Refactor | plugins 三件套下沉 @vv/shared：errorHandler/webVitals 五份拷贝收敛 + createAppPlugins 工厂 + spec 单源（2026-10-23）
+
+> 背景：重复性审查 P0 漏网——P5 只下沉了 16 行 remAdaptation，同目录 errorHandler（85 行×5 逐字一致）与 webVitals（120 行×5 逐字一致）仍是全仓最大单块重复，且 errorHandler/webVitals/remAdaptation 三份 spec 仅有 admin（+h5）持有，4 app 跑同一份代码却零测试。
+
+- **单源下沉**（`packages/shared/src/plugins/`）：`errorHandler.ts`（+`errorHandler.d.ts` 类型）、`webVitals.ts`（+`webVitals.d.ts` vue 组件级配置类型增强，原仅 admin 持有）——原 5 app 逐字拷贝收敛，import 改相对路径（`../utils/safeAsync.ts` / `../utils/consoleBadge.ts`），barrel 新增 `errorHandlerPlugin` / `webVitalsPlugin` 命名导出
+- **plugins/index.ts 工厂化**：新增 `createAppPlugins({ remAdaptation?: boolean })`（P6）——auth/docs/portal 三份 29 行逐字一致 + admin（51 行）/ h5（39 行）的 remAdaptation 差异收敛为工厂参数；5 app plugins/index.ts 全部退化为单行薄封装；`PluginsOptions` 类型收敛为统一超集（`remAdaptation?: false` 仅工厂装配时生效）
+- **5 app 薄封装**：`apps/{admin,auth,portal,h5,docs}/src/plugins/{errorHandler,webVitals}.ts` 改为 `@vv/shared` re-export（保持 `./errorHandler` `./webVitals` 相对 import 路径不变，main.ts 零改动）；app 侧 5 份 `errorHandler.d.ts` + admin 独有 `webVitals.d.ts` 删除（类型归 shared）
+- **spec 随包单源**：errorHandler.spec（5 例）/ webVitals.spec（4 例）由 admin 迁入 shared（mock 由 `@vv/shared`/`@utils/consoleBadge` 改相对路径）；remAdaptation.spec 实为 admin/h5 双拷贝（0589f1c 未随迁），一并收敛单源；新增 `createAppPlugins` 工厂 spec（4 例：缺省装配/rem 装配/false 关闭/options 透传）——4 app 测试盲区补齐，6 app 同受益
+- **依赖接线**：`web-vitals` 入 pnpm-workspace catalog（`^6.2.1`）+ `@vv/shared` peerDependencies（沿用运行时依赖 peer + catalog 约定）
+- **顺手修存量测试偏差**：auth `Login.spec.ts` 断言对齐 65b3c96（『登录成功』→『登录成功，正在跳转…』，HEAD 即挂的存量失败，spec 未随迁所致）
+- **验证**：`pnpm type-check` turbo 10/10 全绿；`pnpm test` turbo 9 任务全绿（shared 42 文件 390 用例，含 plugins 4 文件 17 用例）；`check:routes` 6 app 全过；`check:doc-currency` 13/13 通过
+
+### ✨ Features | 共享 ErrorPage 组件统一 6 app 错误页（补 admin 返回按钮缺口）（2026-10-23）
+
+> 背景：6 app 错误页模式重复且不一致——5 端 404 各自手写 h1 + 返回按钮（el-result 用法未统一），admin 的 404/403/500 则完全没有行动按钮（体验最差）。
+
+- **新增共享组件** `@vv/ui` `ErrorPage`（`packages/ui/src/components/common/ErrorPage/ErrorPage.vue`，components/common 目录自动注册，模板直接用无须 import）：props `status`（403/404/500）+ `title` + `returnTo`（返回路径）+ `returnLabel`；icon 按状态码映射（403 warning / 404 info / 500 error，对齐 admin 既有语义）；`#extra` 内置 el-button 返回跳转（useAppRouter，与消费方原行为一致）；附 3 用例 spec（状态码渲染 / icon 三态 / 按钮跳转）
+- **admin 三页接入并补按钮缺口**：`apps/admin/src/modules/error/views/` NotFound / Forbidden / ServerError 改用 `<ErrorPage />`（return-to `/workbench`、label「返回工作台」）——admin 错误页从「无行动按钮」对齐其余 5 端
+- **5 端 404 统一**（行为不变：返回目标与文案原样保留）：portal → /home（返回官网首页）、h5 → /h5-demo、big → /big-demo、docs → /demo、auth → /login；手写 Flex 样式与各自 BEM 类由组件接管（`vv-error-page`）
+- **e2e 选择符同步**：`tests/e2e/h5/rem-activation.spec.ts` 断言 `.vv-h5-not-found` → `.vv-error-page`（404 页根 class 归组件）
+- **验证**：`pnpm type-check` turbo 10/10 全绿；`pnpm -C packages/ui test` 128 文件 / 1924 用例全过；`check:routes` 的 A-D 校验数据源（routes / whitelist / router）零改动
+
+### 🧪 Tests | Monorepo e2e 重建：projects 按 app 分组，补回 3 个拆分时丢失的业务 spec（2026-10-23）
+
+- **playwright.config.ts 改多 project**：admin 5174 / docs 5175 / h5 5177 / big 5178 各自独立 webServer（`pnpm -C apps/<a> dev:local`，reuseExistingServer + 120s 冷启动超时）；gateway project（:8080 同域网关）无 webServer、用例自探测网关可达性跳过——e2e 不硬依赖 docker
+- **spec 按归属重建**（目录 `tests/e2e/<app>/`）：`docs/protable-search-list` + `docs/protable-selection-batch`（蓝本单应用版原样迁移，demo 模块已迁 apps/docs 且全站白名单免登录，`.vv-pro-table` / `data-test=search-btn|selection-clear` 等选择符在 @vv/ui 包原样有效）；`h5/rem-activation`（rem 激活 + 离开 h5 layout 零残留，路由已迁 apps/h5）；`big/layout-scale`（stage scale 缩放 / 9000px 超宽 / 五态骨架块，路由已迁 apps/big）；`admin/workbench-panels`（能力演示导航卡五栖链接）；旧 `tests/e2e/panels|protable/` 单应用蓝本删除（已被新结构取代）
+- **admin project 登录路径改造**：admin 已无自有登录页（未登录守卫整页跳 auth app），spec 改走真实 mock 登录接口（`/api/auth/login` Set-Cookie）+ 注入 sessionStorage 登录标记（`vue3-vite-project:auth`，与手动登录后状态等价）
+- **gateway project 覆盖统一登录漫游**：未登录访问 `/admin/workbench` 整页跳 `/auth/login?redirect=` → 登录回跳 → 漫游 `/h5/h5-demo`、`/big/big-demo`、`/big/big-demo/state-demo` → TagsView 页签守恒（noTags 不污染）；修复一处时序坑——守卫是 `location.href` 整页跳转，goto 返回时 URL 未落稳须 `expect(page).toHaveURL` 轮询等待
+- **验证**：`pnpm test:e2e --list` 5 projects / 14 tests 全列出；本机实跑 gateway project 2/2 通过（docker 网关在线）；per-app 各 spec 选择符经临时脚本对网关模式 dev server 实测 7/7 通过（本机 5174-5179 被 dev:gateway 进程占用致 per-app project 暂无法独立复跑，CI 干净环境无此冲突）
+
+### 📦 Refactor | Monorepo 包消费约定立场 + 别名深层热点收敛 codemod（2026-10-23）
+
+> 背景：架构审查发现别名单一来源机制优秀但消费比例严重失衡（docs 别名 145:2），包边界在消费代码中不可见，barrel 收敛公共 API 的能力被别名深层路径绕过。本轮给出明确立场并收敛热点，不大爆炸。
+
+- **立场落地**（`CLAUDE.md` 升 v3.0.1，新增 §1.6.2「包消费约定」）：别名为「app 内部快捷方式」永久保留（`@/` 指自身 src 合法）；跨包消费公共能力一律走 `@vv/shared` / `@vv/ui` 包名 barrel；别名深层路径（`@utils/@store/@enums/@composables` 等直达包内部）定性为设计稿 D4 平滑迁移的**过渡态遗留**——新代码禁止新增、存量渐进收敛；`@api/@locales/@directives/@mock` 为 barrel 刻意不聚合的 sanctioned 既定路径，不属收敛范围；**别名定义原样保留**（app-aliases.ts 三处消费不动），收敛只改消费侧 import
+- **codemod 收敛首批热点**（31 文件 36 处，只改带引号模块说明符，注释/字符串天然免疫）：`@utils/safeAsync`×15（6 app `plugins/errorHandler.ts/.d.ts`）→ `@vv/shared`；`@store/modules/app`×10 + `@store/modules/user`×7（admin/portal/auth/docs 组件·守卫·布局）→ `@vv/shared`；vi.mock 说明符×4 同步（语义即 import 路径，不随行替换会失拦截）
+- **测试修复**：auth `Login.spec.ts` / portal `PortalHeader.spec.ts` 各存在两个 `vi.mock('@vv/shared')`（存量 barrel mock + codemod 迁移的 store mock 冲突，后者覆盖前者致真 store 逃逸报 `getActivePinia()` 错），合并为单点 mock + `importOriginal` 展开双覆盖模式
+- **门禁**：`pnpm type-check` turbo 10/10 全绿（auth/portal 冷跑）；`pnpm check:aliases` 6 app 全过（别名仍解析）；`pnpm test` turbo 9 任务全绿；变更文件 `eslint` 逐文件 0 error
+- 一次性脚本 `scripts/codemod-alias-hotspots.mjs` 执行后即删（沿用 cde3839 codemod-p1-3 先例），后续批次同模式：热点优先 + 只改说明符 + 三门禁
+
+### ✨ Features | Monorepo P5-B：CI turbo affected + 六应用 Pages 聚合部署 + docker 同域网关 + 治理文档（2026-10-22）
+
+> 背景：6 应用独立后 ci.yml/deploy.yml 仍是单应用形态（pnpm build / build-only --base=$VITE_BASE），本地无同域复现手段（统一登录 cookie 漫游验不了），CLAUDE.md §2 仍锁定旧 src/ 结构。本任务完成工具链治理收尾。
+
+- **ci.yml 改 turbo affected**（`.github/workflows/ci.yml`）：lint 保持根全仓一次；Build/Test 走 turbo——master push 全量（`turbo run build test`，内部含 build-only → type-check:full 顺序约束），PR / develop push 走 affected（`--filter=[origin/master]...`，未变更 app 命中 `.turbo` 缓存或跳过）；checkout `fetch-depth: 0` 供 affected 基线对比；turbo 本地缓存统一 `--cache-dir=.turbo` 并接 `actions/cache`；artifact 改 master 限定 + `apps/*/dist/`；`check:routes` 保留（P5-A 多包版）
+- **deploy.yml 改六应用聚合**（`.github/workflows/deploy.yml`）：Build 改 `pnpm build:pages`（`scripts/build-pages.ts` 自动发现 6 app，spawn 注入演示五开关，产物聚合根 `dist/<app>/` + 落地导航页）；`VITE_BASE` 移出 workflow env——base 不再单源，由脚本内 `REPO_PREFIX`（默认 `/vue3-vite-project`）按 app 注入，自定义域改脚本常量即可；四演示开关保留作 spawn 注入外兜底；删独立 type-check step（ci.yml 同次 push 已全量门禁）
+- **build-pages.ts 聚合目录预清**：构建前先 `rm -rf dist/`，防历史单应用产物（根 css/js/favicon）混入 Pages 发布包
+- **docker 本地同域网关**（`docker-compose.yml` + `docker/nginx.dev.conf` + `scripts/dev-gateway.ts` + 根 script `pnpm dev:gateway`）：nginx :8080 反代宿主机 5174-5179 六个 vite dev server，`proxy_pass` 无 URI 保留 base 前缀（与 `VITE_BASE=/<app>/` 严格对齐），Upgrade/Connection 透传支持 HMR websocket，`host.docker.internal:host-gateway` 兼容 Linux；`dev-gateway.ts` 因 turbo 不支持 per-app env 改 node 脚本并行 spawn 6 个 `pnpm -C apps/<a> dev` 并注入 `VITE_BASE`，任一异常退出整组停止，Windows `taskkill /T` 按进程树清理；`apps/admin/vite.config.ts` 补 `base: process.env.VITE_BASE ?? '/'` 与其余 5 app 同构
+- **脚本收容**：根 `package.json` 补 `test:coverage` / `test:ui`（admin 口径，`@vitest/ui` 入根 devDependencies）；`apps/admin/package.json` 补对应两 script（P0-1 审查登记的 Minor 关闭）
+- **治理文档**：`CLAUDE.md` 升 v3.0.0——§2 由「src/ Architecture Lockdown」改写为「apps/packages Architecture Lockdown」（workspace 拓扑表 + 依赖方向铁律 apps/*→packages/* 单向 + 例外/申请/验证机制保留，边界强制锚定 P5-A ESLint error 级规则）；§1.6 AutoImport 表改 `@vv/shared` / `@vv/ui` 包名形态；§1.6.1 / §1.7 同步包路径；§4 约束表 #3-#9/#14/#15 按多包口径修订；新增 `docs/43-Monorepo结构与开发指引.md`（6 app+4 包拓扑 / 端口表 / 新增应用流程 / 统一登录协议 / 同域网关用法 / CI-CD 形态）；README 顶部最近更新 + §目录结构（Monorepo 树）+ §常用脚本 + §环境变量补 `VITE_AUTH_ORIGIN` + 相关文档表补 42/43
+- **验证**：`docker compose config` 通过（daemon 未运行，nginx -t 待 Docker Desktop 启动后补跑）；`pnpm dev:gateway` 冒烟实测 6 dev 起后 `/admin/ /docs/ /portal/ /h5/ /big/ /auth/ /auth/login` 全部 200；`pnpm build:pages` 本地实测聚合 `dist/` 6 子目录 + 落地页（base 链接 `/vue3-vite-project/<app>/` 全部正确注入）
+
+### ✨ Features | Monorepo P5-A：工程脚本多包重写 + ESLint 包边界规则（2026-10-22）
+
+> 背景：6 应用（auth/portal/admin/h5/big/docs）独立后，`scripts/` 工程脚本仍锚定旧单应用路径（check-routes 只扫 admin、new/remove-module 无 app 概念、check-doc-currency 第 8 项已知 FAIL），ESLint 也无 Monorepo 包边界约束。本任务把工具链治理对齐多包结构。
+
+- **check-routes 多包化**（`scripts/check-routes.ts`）：自动发现 `apps/*` 下含 `src/modules/` 的应用，逐 app 独立校验 A/B/C/D 四规则并分组输出；whitelist 支持 `...xxxRouteNames` 展开的 import 表解析（与运行时吸收行为一致）；`src/router/index.ts` 根级具名路由（各 app 的 NotFound 兜底页）纳入实现集；系统兜底名单按 app 差异化——auth 查 Login、admin 查 Forbidden/NotFound/ServerError、portal/h5/big/docs 只查 NotFound
+- **new-module / remove-module 增加 `--app`**：目标路径参数化为 `apps/<app>/src/modules`（默认 admin），非法 app 拒绝并列出合法清单；模板注释与下一步指引中的 `src/modules` 路径同步改 `apps/<app>/src/modules`；`--with-i18n` 对无应用私有 locales 目录的目标跳过并告警（menu 文案已随 P1-3 迁 `packages/shared/src/locales`）
+- **check-doc-currency 13/13 全 PASS**：第 8 项「build/ 顶层模块数」锚定迁包后实际位置 `packages/config/src/`（9 模块：app-aliases / clean-mock-bundled / create-vite-config / index / postcss / proxy / scss / server / vendor-chunks），expected 7 → 9 消除迁移期已知 FAIL；其余 12 项路径逐一确认在新结构可达
+- **ESLint 包边界规则**（`eslint.config.mjs`，error 级）：`packages/**` 禁引用 app 私有别名（`@modules/*`/`@layouts/*`/`@router/*`/`@plugins/*`）+ 禁任何 `apps/**` 路径；逐 app 生成 `app/boundary-apps-<a>` 规则组，禁相对逃逸（`../<other-app>/` 深度 1-7 全覆盖，自身 app 名不参与 ban 防误伤）与绝对路径引用其他 5 个 app；顺带修复 business-wrap-rule 的 files glob（旧 `src/**` 在 Monorepo 下匹配不到任何文件，规则名存实亡，改为 `apps/*/src/{modules,components}/**`）
+- **探针验证**：`packages/shared` 引入 `apps/admin/...`、`apps/portal` 相对逃逸 `../../admin/...` 均被 error 拦截（消息指向 workspace 包出口），验后探针还原
+- **门禁**：`pnpm check:routes` 6 应用分组全过；`pnpm check:doc-currency` 13/13 PASS；`pnpm lint` 0 error；`pnpm test` 9 任务全绿（ui 1921 / shared 344 / admin 77 等）
+
+### ✨ Features | Monorepo P4：auth 应用独立 + 跨应用统一登录协议（2026-10-22）
+
+> 背景：Monorepo 迁移收官——admin 内的 auth 模块独立为第 6 应用 `apps/auth`（`@vv-app/auth`，portOffset 5 → dev 5179），admin 收敛为纯业务端（user/reports/workbench/error + default layout + tags-view + 远程菜单）。登录/登出统一收口 auth 应用，跨 app 跳转走整页 `location.href`（跨应用无共享 router 实例）。
+
+- **跨应用统一登录协议**（`packages/shared/src/auth/redirect.ts`，新增 + 8 例 spec）：`redirectToAuthLogin(redirect)`（`VITE_AUTH_ORIGIN` env 注入 origin/前缀、缺省 `/auth`、redirect 非 `/` 开头降级、赋 href 后抛 `AUTH_REDIRECTING` 中断守卫链）+ `resolvePostLoginRedirect(fallback='/admin/')`（同源前缀校验防开放重定向，`//` 协议相对 URL 与绝对 URL 均落 fallback）；`@vv/shared` 根 barrel 导出，`VITE_AUTH_ORIGIN` 类型声明入 `types/env.d.ts`
+- **3+1 消费点接线**：① `router-guards/login.ts` checkLoginState 未登录不再返回 app 内 `/login`（admin 内已无登录路由），改 `redirectToAuthLogin(to.fullPath)`；`composeGuards` 透传 `AUTH_REDIRECTING` 中断信号（其余错误仍吞并放行），admin `setupAuthGuard` catch 后 `return false` 静候整页跳转；② `http.ts` performLogout（refresh 失败）同改整页跳（中断信号内部吞掉，保持抛原 ApiError 契约）；③ `@vv/ui` useLogout 确认后 `location.href = ${VITE_AUTH_ORIGIN}/login`（终态操作不带 redirect 回跳参数）；④ portal 顶栏 PortalHeader 与 SiteHero 双 CTA 的 `goLogin` 悬空点（P3-1 登记，portal 无 Login 路由）改 `redirectToAuthLogin(window.location.pathname)`
+- **apps/auth 骨架**（照抄 apps/portal 同构）：登录页品牌改「统一登录 · 跨应用统一登录入口」（不再只挂 admin 产品名），登录成功 `window.location.href = resolvePostLoginRedirect('/admin/')`；自身守卫为白名单直通（登录页本身公开，routeNames 全量吸收 + NotFound）；mock 接线为必需（/api/auth/* 4 端点直接消费方）
+- **admin 摘除**：whitelist 移除 'Login'（admin 无任何公开页）；menu.ts `EXCLUDED_ROUTE_NAMES` 同步；auto-register.spec 修正 P3-1 残留的 `COMPONENT_REGISTRY.Home` 断言（基线实测 1 failed）+ 移除 Login 断言；tags-view/types.ts 注释中 Login 语义清理；`scripts/check-routes.ts` 系统兜底名单移除 'Login'
+- **env 接线**：admin(.env/.env.development) + portal/h5/big/docs(.env 新建) 注入 `VITE_AUTH_ORIGIN=/auth`；apps/auth 自带 `.env`（`VITE_API_BASE_URL=/api` + `VITE_APP_TITLE=统一登录`——无此前缀登录请求落 /auth/login 404，实测踩坑后补）
+- **vite 工程修复（P4 门禁实测拦截）**：`@vv/config` createViteConfig 新增 `optimizeDeps.exclude`（'@vv/shared' / '@vv/ui' / '@vv/mock' + '@vv/ui/composables/useDialog|useConfirm|useLogout' 逐条点名——rolldown-vite 扫描器把每个包子路径当独立 dep id，根包 exclude 不覆盖）；esbuild 预打包不经 unplugin-auto-import 转换，shared store 内 auto-import 注入的 `defineStore`/`ref` 在 bundle 里是自由变量 → 模块求值即 `ReferenceError: defineStore is not defined`（dev 冷缓存/锁文件变更重优化必现，portal/h5/big 旧缓存无此 bundle 是长期未爆原因）
+- **check-doc-currency 脚本修复（顺手修 P2 遗留崩溃）**：ProTable/XForm demo 计数扫描路径从已清空的 `apps/admin/src/modules/demo/examples/*` 随迁 `apps/docs/...`（原路径 ENOENT 直接崩溃，脚本未能跑到校验逻辑）；剩余 1 项 FAIL（build/ 顶层模块数 9 vs 7）为脚本注释明示的 P5-5 文档治理移交项，非本轮引入
+- **dev 冒烟实测（chrome-devtools 全链路证据）**：admin 5174 `/workbench` 未登录 → 整页跳 `/auth/login?redirect=%2Fworkbench%3Ffresh%3D2`；auth 5179 登录（mock admin/123456，`POST /api/auth/login` 200 + profile + 字典预加载全链）→ 回跳 redirect 参数 `/workbench`（无参时 fallback `/admin/`，document 请求链双重取证）；admin 内登录态（cookie + 标记）访问 /workbench 渲染 default 布局 → 用户下拉退出登录 → useConfirm 确认 → `POST /api/auth/logout` 200 → 整页跳 `/auth/login`
+- **门禁**：root `pnpm type-check` 10 包全绿；root `pnpm test` 9 任务全绿（ui 1921 用例 / shared 344 用例 / admin 77 / auth 7 / portal 12 等）；`check:aliases` / `check:routes` 通过；auth + admin 双构建通过
 
 ### ✨ Features | demo 文档站体验优化：路由级持久布局 + Element Plus 官网文档风（2026-10-21）
 

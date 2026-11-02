@@ -8,7 +8,7 @@
 ## 1. 快速上手
 
 ```ts
-// src/modules/big-xxx/routes/index.ts
+// apps/big/src/modules/big-xxx/routes/index.ts
 import type { RouteRecordRaw } from 'vue-router'
 
 const routes: RouteRecordRaw[] = [
@@ -30,8 +30,8 @@ const routes: RouteRecordRaw[] = [
 export default routes
 ```
 
-> **免登录提示**：`requiresAuth: false` 只是宽松标记，真正放行需在 `src/router/whitelist.ts`
-> 的 `ROUTE_WHITE_LIST` 字面量数组追加路由 name（如 `'BigXxx'`）。参照 big-demo 模块的写法。
+> **免登录提示**：`requiresAuth: false` 只是宽松标记，真正放行需在 `apps/big/src/router/whitelist.ts`
+> 的 `createWhiteList('NotFound', bigDemoRouteNames)` 调用中并入新模块的 `routeNames`（从 `@/modules/big-xxx/routes` 导出）。参照 big-demo 模块的写法。
 
 ```vue
 <script setup lang="ts">
@@ -53,10 +53,10 @@ const bem = createNamespace('big-xxx')
 
 ## 2. 适配原理
 
-| 阶段   | 规则                                                             | 位置                              |
-| ------ | ---------------------------------------------------------------- | --------------------------------- |
-| 编译时 | **无转换**——px 原样输出（big 目录不在 postcss-pxtorem 范围）     | —                                 |
-| 运行时 | `scale = min(vw/dw, vh/dh)`，容器 `translate(居中偏移) scale(s)` | `src/layouts/big/config/scale.ts` |
+| 阶段   | 规则                                                             | 位置                                       |
+| ------ | ---------------------------------------------------------------- | ------------------------------------------ |
+| 编译时 | **无转换**——px 原样输出（big 目录不在 postcss-pxtorem 范围）     | —                                          |
+| 运行时 | `scale = min(vw/dw, vh/dh)`，容器 `translate(居中偏移) scale(s)` | `apps/big/src/layouts/big/config/scale.ts` |
 
 各视口效果（默认 1920×1080 设计稿）：
 
@@ -122,7 +122,7 @@ const bem = createNamespace('big-xxx')
 
 1. `pnpm new-module big-xxx` 生成骨架
 2. routes/index.ts：父路由挂 `@/layouts/big/index.vue`，children 声明页面（异形尺寸加 `meta.bigScreen`）
-3. `src/router/whitelist.ts` 追加路由 name（需免登录时）
+3. `apps/big/src/router/whitelist.ts` 的 `createWhiteList` 调用中并入新模块 `routeNames`（需免登录时）
 4. 视图按 §3 约束编写（写死设计稿 px、显式 import 模块组件）
 5. `pnpm check:routes` 校验一致性
 6. （推荐）照抄五态实践：`/big-demo/state-demo` 集中示范异步数据在大屏场景的五种形态（成功/加载中/错误/空/断连，每态附设计要点）；Wide 页地图区是真实异步加载场景（GeoJSON 二级 chunk，页面壳先渲染、地图区就地呈现加载/失败态）
@@ -140,25 +140,27 @@ const bem = createNamespace('big-xxx')
 | wide↔标准 | 同 layout 跳转   | —          | meta watch 立即重算，无中间态                      |
 | 回归      | /h5-demo、/login | —          | h5 rem 正常（54px/540px 限宽），html 内联零残留    |
 
+> 注：本表为 2026-10-15（Monorepo 迁移前）单应用时代历史快照——`/h5-demo` 现属 apps/h5、`/login` 现属 apps/auth，回归语义以迁移后六 app 实测为准。
+
 console 全程零 error/warn；生产构建 Wide chunk 独立（GeoJSON 不拖累 1920 页）。
 
 ## 7. 相关文件索引
 
-| 文件                                              | 职责                                         |
-| ------------------------------------------------- | -------------------------------------------- |
-| `src/layouts/big/index.vue`                       | 纯壳布局（fixed 容器 + stage + provide）     |
-| `src/layouts/big/config/scale.ts`                 | scale 纯计算 + meta 守卫 + inject 契约       |
-| `src/layouts/big/config/scale.spec.ts`            | 18 用例（四视口/非法 meta/防御回退）         |
-| `src/modules/big-demo/views/index.vue`            | 1920 标准大屏                                |
-| `src/modules/big-demo/views/Wide.vue`             | 9000 超宽拼接屏                              |
-| `src/modules/big-demo/views/StateDemo.vue`        | 异步数据五态实践页（成功/加载/错误/空/断连） |
-| `src/modules/big-demo/components/BigChart.vue`    | ECharts 薄封装（dpr×scale 防模糊）           |
-| `src/modules/big-demo/components/PanelBox.vue`    | 四角装饰面板（高度契约见文件头）             |
-| `src/modules/big-demo/components/KpiCard.vue`     | 指标卡（trend 三态）                         |
-| `src/modules/big-demo/components/RankingList.vue` | 排名列表（1920 稿尺度）                      |
-| `src/modules/big-demo/components/SwitchGroup.vue` | 联动开关组（9000 页）                        |
-| `src/modules/big-demo/composables/useClock.ts`    | 实时时钟（onScopeDispose，带 spec）          |
-| `src/modules/big-demo/config/charts.ts`           | 1920 页三个图表 option                       |
-| `src/modules/big-demo/config/china-map.ts`        | 地图 option + GeoJSON 注册（独立 chunk）     |
-| `src/modules/big-demo/apis/index.ts`              | 静态 mock 数据层 + jitterValue 数值抖动      |
-| `src/modules/big-demo/store/index.ts`             | 模块私有 store（useBigDemoStore 草稿态）     |
+| 文件                                                       | 职责                                         |
+| ---------------------------------------------------------- | -------------------------------------------- |
+| `apps/big/src/layouts/big/index.vue`                       | 纯壳布局（fixed 容器 + stage + provide）     |
+| `apps/big/src/layouts/big/config/scale.ts`                 | scale 纯计算 + meta 守卫 + inject 契约       |
+| `apps/big/src/layouts/big/config/scale.spec.ts`            | 18 用例（四视口/非法 meta/防御回退）         |
+| `apps/big/src/modules/big-demo/views/index.vue`            | 1920 标准大屏                                |
+| `apps/big/src/modules/big-demo/views/Wide.vue`             | 9000 超宽拼接屏                              |
+| `apps/big/src/modules/big-demo/views/StateDemo.vue`        | 异步数据五态实践页（成功/加载/错误/空/断连） |
+| `apps/big/src/modules/big-demo/components/BigChart.vue`    | ECharts 薄封装（dpr×scale 防模糊）           |
+| `apps/big/src/modules/big-demo/components/PanelBox.vue`    | 四角装饰面板（高度契约见文件头）             |
+| `apps/big/src/modules/big-demo/components/KpiCard.vue`     | 指标卡（trend 三态）                         |
+| `apps/big/src/modules/big-demo/components/RankingList.vue` | 排名列表（1920 稿尺度）                      |
+| `apps/big/src/modules/big-demo/components/SwitchGroup.vue` | 联动开关组（9000 页）                        |
+| `apps/big/src/modules/big-demo/composables/useClock.ts`    | 实时时钟（onScopeDispose，带 spec）          |
+| `apps/big/src/modules/big-demo/config/charts.ts`           | 1920 页三个图表 option                       |
+| `apps/big/src/modules/big-demo/config/china-map.ts`        | 地图 option + GeoJSON 注册（独立 chunk）     |
+| `apps/big/src/modules/big-demo/apis/index.ts`              | 静态 mock 数据层 + jitterValue 数值抖动      |
+| `apps/big/src/modules/big-demo/store/index.ts`             | 模块私有 store（useBigDemoStore 草稿态）     |

@@ -1,8 +1,8 @@
 # useRequest 三态请求使用规范
 
 > **文档版本**：v1.2.0 | **最后更新**：2026-09-11
-> **能力来源**：`src/composables/useRequest.ts`（212 行）+ `src/composables/useRequest.spec.ts`
-> **状态**：v1.2 在 v1.1 基础上新增「快速重复点击竞态保护」机制说明 + 修正 `useRequestReturn.aborted` 字段（实际为 `Ref<boolean>`，旧版误写 `Ref<...>`） + 补全「与 useRequest 配合 AsyncState」最佳实践段。接口、返回值、行为细节以 `src/composables/useRequest.ts` 为准；如有差异以源码为准。
+> **能力来源**：`packages/shared/src/composables/useRequest.ts`（215 行）+ `packages/shared/src/composables/useRequest.spec.ts`
+> **状态**：v1.2 在 v1.1 基础上新增「快速重复点击竞态保护」机制说明 + 修正 `useRequestReturn.aborted` 字段（实际为 `Ref<boolean>`，旧版误写 `Ref<...>`） + 补全「与 useRequest 配合 AsyncState」最佳实践段。接口、返回值、行为细节以 `packages/shared/src/composables/useRequest.ts` 为准；如有差异以源码为准。
 
 ---
 
@@ -32,8 +32,8 @@
 
 ```vue
 <script setup lang="ts">
-import { useRequest } from '@/composables/useRequest'
-import { equipmentApi } from '@/api/modules/equipment'
+import { useRequest } from '@vv/shared' // 或由 AutoImport 自动注入，免 import
+import { equipmentApi } from '@api/modules/equipment'
 
 const { data, loading, error, isEmpty, refresh } = useRequest(() =>
   equipmentApi.getList({ page: 1, pageSize: 20 })
@@ -52,7 +52,7 @@ const { data, loading, error, isEmpty, refresh } = useRequest(() =>
 ```vue
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRequest } from '@/composables/useRequest'
+import { useRequest } from '@vv/shared' // 或由 AutoImport 自动注入，免 import
 
 const keyword = ref('')
 
@@ -176,6 +176,6 @@ const { data, loading, error, refresh } = useRequest(() => api.getList())
 
 ---
 
-_相关源码：`src/composables/useRequest.ts`（212 行）+ `src/composables/useRequest.spec.ts`_
+_相关源码：`packages/shared/src/composables/useRequest.ts` + `packages/shared/src/composables/useRequest.spec.ts`_
 _对齐参考：[VueUse useFetch](https://vueuse.org/core/usefetch/)_
-_配合使用：`<AsyncState>` 组件 / `@/api/validator` / `@/api/cancel`_
+_配合使用：`<AsyncState>` 组件 / `@api/validator` / `@api/cancel`_
