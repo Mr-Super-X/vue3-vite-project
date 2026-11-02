@@ -6,6 +6,21 @@
 
 ## 未发布
 
+### 📖 Docs | docs/48 + README 新增选型分支对照说明（2026-11-02）
+
+> 背景：仓库以 git 分支承载两种形态（单应用版 / Monorepo 多应用版），但此前全仓无任何文档
+> 明示「什么场景选哪个分支」，访客只能默认 master 一种形态。
+
+- `docs/48-单应用模式与Monorepo多应用能力对比.md` §16 选型建议新增「分支对照」表：对构建体积
+  不敏感 / 页面量小 / 追求快速开发部署 → 单应用版 `feature/single-page` 分支；项目大页面多 /
+  对构建体积敏感 → Monorepo 多应用版 `master` 分支
+- `README.md` 项目简介首段后新增「🔀 单应用 or Monorepo？」引导块，链到 docs/48
+- `README.en.md` 同步新增「🔀 Single-app or Monorepo?」对照块（英文门面与中文版口径一致）
+
+验证：`pnpm check:doc-currency` 通过。
+
+手动验证：docs/48 §16 顶部可见分支对照表；README / README.en.md 项目简介可见对照引导块。
+
 ### 🎨 Chore | gh-pages 落地导航页 app 名全中文统一（2026-10-30）
 
 > 背景：演示导航页链接文案中英混杂（管理后台/admin/组件示例文档为中文，portal/auth/big/h5
