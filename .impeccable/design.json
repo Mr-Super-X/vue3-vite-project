@@ -1,0 +1,567 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-02T00:00:00+08:00",
+  "title": "Design System: vue3-vite-project 四栖工程底座",
+  "extensions": {
+    "colorMeta": {
+      "brand-primary": {
+        "role": "primary",
+        "displayName": "EP 品牌蓝",
+        "canonical": "#409eff",
+        "tonalRamp": [
+          "oklch(15% 0.05 214)",
+          "oklch(24% 0.09 214)",
+          "oklch(34% 0.12 214)",
+          "oklch(46% 0.15 214)",
+          "oklch(60% 0.16 214)",
+          "oklch(72% 0.13 214)",
+          "oklch(84% 0.09 214)",
+          "oklch(94% 0.04 214)"
+        ]
+      },
+      "brand-success": {
+        "role": "primary",
+        "displayName": "语义成功绿",
+        "canonical": "#67c23a",
+        "tonalRamp": [
+          "oklch(15% 0.05 130)",
+          "oklch(25% 0.1 130)",
+          "oklch(35% 0.15 130)",
+          "oklch(47% 0.19 130)",
+          "oklch(60% 0.18 130)",
+          "oklch(72% 0.14 130)",
+          "oklch(84% 0.09 130)",
+          "oklch(94% 0.04 130)"
+        ]
+      },
+      "brand-warning": {
+        "role": "primary",
+        "displayName": "语义警告橙",
+        "canonical": "#e6a23c",
+        "tonalRamp": [
+          "oklch(16% 0.05 70)",
+          "oklch(26% 0.09 70)",
+          "oklch(38% 0.13 70)",
+          "oklch(50% 0.15 70)",
+          "oklch(63% 0.14 70)",
+          "oklch(74% 0.11 70)",
+          "oklch(85% 0.07 70)",
+          "oklch(94% 0.03 70)"
+        ]
+      },
+      "brand-danger": {
+        "role": "primary",
+        "displayName": "语义危险红",
+        "canonical": "#f56c6c",
+        "tonalRamp": [
+          "oklch(15% 0.06 25)",
+          "oklch(25% 0.11 25)",
+          "oklch(36% 0.15 25)",
+          "oklch(48% 0.17 25)",
+          "oklch(61% 0.15 25)",
+          "oklch(72% 0.11 25)",
+          "oklch(84% 0.06 25)",
+          "oklch(94% 0.02 25)"
+        ]
+      },
+      "brand-info": {
+        "role": "primary",
+        "displayName": "语义信息灰",
+        "canonical": "#909399",
+        "tonalRamp": [
+          "oklch(18% 0.005 270)",
+          "oklch(28% 0.006 270)",
+          "oklch(38% 0.007 270)",
+          "oklch(50% 0.008 270)",
+          "oklch(62% 0.008 270)",
+          "oklch(73% 0.007 270)",
+          "oklch(85% 0.005 270)",
+          "oklch(94% 0.002 270)"
+        ]
+      },
+      "ink-primary": {
+        "role": "neutral",
+        "displayName": "浅墨主文字",
+        "canonical": "#303133",
+        "tonalRamp": [
+          "oklch(15% 0.006 270)",
+          "oklch(25% 0.007 270)",
+          "oklch(35% 0.008 270)",
+          "oklch(47% 0.009 270)",
+          "oklch(60% 0.008 270)",
+          "oklch(72% 0.007 270)",
+          "oklch(84% 0.005 270)",
+          "oklch(94% 0.002 270)"
+        ]
+      },
+      "ink-regular": {
+        "role": "neutral",
+        "displayName": "浅墨常规文字",
+        "canonical": "#606266",
+        "tonalRamp": [
+          "oklch(15% 0.006 270)",
+          "oklch(25% 0.007 270)",
+          "oklch(35% 0.008 270)",
+          "oklch(47% 0.009 270)",
+          "oklch(60% 0.008 270)",
+          "oklch(72% 0.007 270)",
+          "oklch(84% 0.005 270)",
+          "oklch(94% 0.002 270)"
+        ]
+      },
+      "ink-secondary": {
+        "role": "neutral",
+        "displayName": "浅墨次要文字",
+        "canonical": "#909399",
+        "tonalRamp": [
+          "oklch(18% 0.005 270)",
+          "oklch(28% 0.006 270)",
+          "oklch(38% 0.007 270)",
+          "oklch(50% 0.008 270)",
+          "oklch(62% 0.008 270)",
+          "oklch(73% 0.007 270)",
+          "oklch(85% 0.005 270)",
+          "oklch(94% 0.002 270)"
+        ]
+      },
+      "ink-placeholder": {
+        "role": "neutral",
+        "displayName": "浅墨占位文字",
+        "canonical": "#c0c4cc",
+        "tonalRamp": [
+          "oklch(22% 0.005 270)",
+          "oklch(32% 0.006 270)",
+          "oklch(43% 0.007 270)",
+          "oklch(55% 0.008 270)",
+          "oklch(66% 0.008 270)",
+          "oklch(77% 0.006 270)",
+          "oklch(88% 0.004 270)",
+          "oklch(95% 0.002 270)"
+        ]
+      },
+      "paper-base": {
+        "role": "neutral",
+        "displayName": "纸面主背景",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "oklch(15% 0.005 270)",
+          "oklch(25% 0.006 270)",
+          "oklch(35% 0.007 270)",
+          "oklch(47% 0.008 270)",
+          "oklch(60% 0.008 270)",
+          "oklch(72% 0.006 270)",
+          "oklch(84% 0.004 270)",
+          "oklch(97% 0.001 270)"
+        ]
+      },
+      "paper-secondary": {
+        "role": "neutral",
+        "displayName": "纸面次背景",
+        "canonical": "#f5f7fa",
+        "tonalRamp": [
+          "oklch(15% 0.006 264)",
+          "oklch(25% 0.007 264)",
+          "oklch(35% 0.008 264)",
+          "oklch(47% 0.009 264)",
+          "oklch(59% 0.009 264)",
+          "oklch(71% 0.007 264)",
+          "oklch(83% 0.005 264)",
+          "oklch(95% 0.002 264)"
+        ]
+      },
+      "paper-tertiary": {
+        "role": "neutral",
+        "displayName": "纸面三级背景",
+        "canonical": "#fafafa",
+        "tonalRamp": [
+          "oklch(16% 0.004 270)",
+          "oklch(26% 0.005 270)",
+          "oklch(36% 0.006 270)",
+          "oklch(48% 0.007 270)",
+          "oklch(60% 0.006 270)",
+          "oklch(72% 0.005 270)",
+          "oklch(84% 0.003 270)",
+          "oklch(96% 0.001 270)"
+        ]
+      },
+      "line-base": {
+        "role": "neutral",
+        "displayName": "浅墨主边框",
+        "canonical": "#dcdfe6",
+        "tonalRamp": [
+          "oklch(20% 0.005 264)",
+          "oklch(30% 0.007 264)",
+          "oklch(41% 0.009 264)",
+          "oklch(53% 0.01 264)",
+          "oklch(64% 0.009 264)",
+          "oklch(75% 0.007 264)",
+          "oklch(86% 0.005 264)",
+          "oklch(95% 0.002 264)"
+        ]
+      },
+      "line-light": {
+        "role": "neutral",
+        "displayName": "浅墨浅边框",
+        "canonical": "#e4e7ed",
+        "tonalRamp": [
+          "oklch(21% 0.005 264)",
+          "oklch(32% 0.007 264)",
+          "oklch(43% 0.008 264)",
+          "oklch(55% 0.009 264)",
+          "oklch(66% 0.008 264)",
+          "oklch(77% 0.006 264)",
+          "oklch(88% 0.004 264)",
+          "oklch(96% 0.001 264)"
+        ]
+      },
+      "big-night": {
+        "role": "neutral",
+        "displayName": "大屏夜蓝底",
+        "canonical": "#06122b",
+        "tonalRamp": [
+          "oklch(8% 0.02 250)",
+          "oklch(12% 0.03 248)",
+          "oklch(17% 0.04 246)",
+          "oklch(23% 0.05 244)",
+          "oklch(30% 0.06 242)",
+          "oklch(39% 0.06 238)",
+          "oklch(50% 0.05 232)",
+          "oklch(63% 0.04 224)"
+        ]
+      },
+      "big-abyss": {
+        "role": "neutral",
+        "displayName": "大屏深渊填充",
+        "canonical": "#02040a",
+        "tonalRamp": [
+          "oklch(4% 0.01 250)",
+          "oklch(7% 0.015 248)",
+          "oklch(10% 0.02 246)",
+          "oklch(14% 0.025 244)",
+          "oklch(19% 0.03 242)",
+          "oklch(26% 0.035 238)",
+          "oklch(34% 0.04 232)",
+          "oklch(44% 0.04 224)"
+        ]
+      },
+      "big-data-blue": {
+        "role": "primary",
+        "displayName": "大屏数据蓝",
+        "canonical": "#4da3ff",
+        "tonalRamp": [
+          "oklch(16% 0.06 240)",
+          "oklch(26% 0.1 238)",
+          "oklch(37% 0.14 234)",
+          "oklch(49% 0.17 228)",
+          "oklch(62% 0.16 220)",
+          "oklch(73% 0.12 214)",
+          "oklch(84% 0.08 210)",
+          "oklch(93% 0.03 208)"
+        ]
+      },
+      "big-ice-text": {
+        "role": "neutral",
+        "displayName": "大屏冰蓝文字",
+        "canonical": "#d6e4ff",
+        "tonalRamp": [
+          "oklch(22% 0.04 250)",
+          "oklch(32% 0.06 250)",
+          "oklch(43% 0.08 250)",
+          "oklch(55% 0.1 250)",
+          "oklch(67% 0.11 250)",
+          "oklch(78% 0.09 250)",
+          "oklch(88% 0.06 250)",
+          "oklch(95% 0.02 250)"
+        ]
+      },
+      "big-mist-text": {
+        "role": "neutral",
+        "displayName": "大屏雾蓝辅助字",
+        "canonical": "#8fa8d8",
+        "tonalRamp": [
+          "oklch(19% 0.03 254)",
+          "oklch(28% 0.05 254)",
+          "oklch(38% 0.07 254)",
+          "oklch(49% 0.09 254)",
+          "oklch(60% 0.1 254)",
+          "oklch(70% 0.08 254)",
+          "oklch(81% 0.06 254)",
+          "oklch(91% 0.02 254)"
+        ]
+      },
+      "big-dim-text": {
+        "role": "neutral",
+        "displayName": "大屏暗蓝弱化字",
+        "canonical": "#5f7bab",
+        "tonalRamp": [
+          "oklch(16% 0.03 254)",
+          "oklch(24% 0.04 254)",
+          "oklch(33% 0.06 254)",
+          "oklch(43% 0.07 254)",
+          "oklch(53% 0.08 254)",
+          "oklch(63% 0.07 254)",
+          "oklch(74% 0.05 254)",
+          "oklch(86% 0.02 254)"
+        ]
+      },
+      "state-error": {
+        "role": "primary",
+        "displayName": "状态错误红",
+        "canonical": "#f56c6c",
+        "tonalRamp": [
+          "oklch(15% 0.06 25)",
+          "oklch(25% 0.11 25)",
+          "oklch(36% 0.15 25)",
+          "oklch(48% 0.17 25)",
+          "oklch(61% 0.15 25)",
+          "oklch(72% 0.11 25)",
+          "oklch(84% 0.06 25)",
+          "oklch(94% 0.02 25)"
+        ]
+      },
+      "state-offline": {
+        "role": "primary",
+        "displayName": "状态离线琥珀",
+        "canonical": "#f7c948",
+        "tonalRamp": [
+          "oklch(17% 0.06 90)",
+          "oklch(27% 0.11 90)",
+          "oklch(39% 0.15 90)",
+          "oklch(51% 0.16 90)",
+          "oklch(64% 0.14 90)",
+          "oklch(75% 0.1 90)",
+          "oklch(86% 0.06 90)",
+          "oklch(94% 0.02 90)"
+        ]
+      },
+      "h5-page": {
+        "role": "neutral",
+        "displayName": "H5 灰纸底",
+        "canonical": "#f7f8fa",
+        "tonalRamp": [
+          "oklch(16% 0.004 264)",
+          "oklch(26% 0.005 264)",
+          "oklch(36% 0.006 264)",
+          "oklch(48% 0.007 264)",
+          "oklch(60% 0.006 264)",
+          "oklch(72% 0.005 264)",
+          "oklch(84% 0.003 264)",
+          "oklch(96% 0.001 264)"
+        ]
+      },
+      "h5-ink": {
+        "role": "neutral",
+        "displayName": "H5 墨色文字",
+        "canonical": "#1a1a1a",
+        "tonalRamp": [
+          "oklch(12% 0.003 270)",
+          "oklch(20% 0.004 270)",
+          "oklch(29% 0.005 270)",
+          "oklch(39% 0.006 270)",
+          "oklch(50% 0.006 270)",
+          "oklch(62% 0.005 270)",
+          "oklch(75% 0.004 270)",
+          "oklch(88% 0.002 270)"
+        ]
+      },
+      "h5-line": {
+        "role": "neutral",
+        "displayName": "H5 浅灰线",
+        "canonical": "#ebedf0",
+        "tonalRamp": [
+          "oklch(21% 0.004 264)",
+          "oklch(32% 0.005 264)",
+          "oklch(43% 0.006 264)",
+          "oklch(55% 0.007 264)",
+          "oklch(66% 0.006 264)",
+          "oklch(77% 0.005 264)",
+          "oklch(88% 0.003 264)",
+          "oklch(96% 0.001 264)"
+        ]
+      },
+      "portal-ink": {
+        "role": "neutral",
+        "displayName": "门户近黑墨",
+        "canonical": "#111111",
+        "tonalRamp": [
+          "oklch(9% 0.002 270)",
+          "oklch(16% 0.003 270)",
+          "oklch(24% 0.004 270)",
+          "oklch(33% 0.005 270)",
+          "oklch(44% 0.005 270)",
+          "oklch(55% 0.004 270)",
+          "oklch(68% 0.003 270)",
+          "oklch(82% 0.002 270)"
+        ]
+      },
+      "portal-paper": {
+        "role": "neutral",
+        "displayName": "门户白纸底",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "oklch(15% 0.005 270)",
+          "oklch(25% 0.006 270)",
+          "oklch(35% 0.007 270)",
+          "oklch(47% 0.008 270)",
+          "oklch(60% 0.008 270)",
+          "oklch(72% 0.006 270)",
+          "oklch(84% 0.004 270)",
+          "oklch(97% 0.001 270)"
+        ]
+      },
+      "portal-line": {
+        "role": "neutral",
+        "displayName": "门户细线灰",
+        "canonical": "#eeeeee",
+        "tonalRamp": [
+          "oklch(22% 0.003 270)",
+          "oklch(33% 0.004 270)",
+          "oklch(44% 0.005 270)",
+          "oklch(56% 0.005 270)",
+          "oklch(67% 0.005 270)",
+          "oklch(78% 0.004 270)",
+          "oklch(89% 0.002 270)",
+          "oklch(96% 0.001 270)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "body": {
+        "displayName": "Body（系统栈）",
+        "purpose": "全部四栖的正文与 UI 文字；零自定义字体。"
+      },
+      "mono": { "displayName": "Mono（等宽）", "purpose": "大屏 KPI 等宽数字等。" }
+    },
+    "shadows": [
+      {
+        "name": "ambient-sm",
+        "value": "0 1px 2px rgba(0, 0, 0, 0.06)",
+        "purpose": "极浅卡片悬停、下拉容器。"
+      },
+      {
+        "name": "ambient-md",
+        "value": "0 2px 8px rgba(0, 0, 0, 0.1)",
+        "purpose": "弹层、浮起卡片的状态响应。"
+      },
+      {
+        "name": "ambient-lg",
+        "value": "0 4px 16px rgba(0, 0, 0, 0.15)",
+        "purpose": "Dialog / 抽屉等模态容器。"
+      }
+    ],
+    "motion": [
+      { "name": "duration-fast", "value": "150ms", "purpose": "hover / 焦点等微交互。" },
+      { "name": "duration-normal", "value": "300ms", "purpose": "默认状态过渡时长。" },
+      { "name": "duration-slow", "value": "500ms", "purpose": "主题切换等长过渡。" },
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "出场 / 展开默认缓动（物理感）。"
+      },
+      {
+        "name": "ease-in-out",
+        "value": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "对称过渡（主题切换等）。"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "品牌主色实心按钮，hover 走灯色阶变亮；EP 默认尺寸。",
+      "html": "<button class=\"ds-btn-primary\">主要操作</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; height: 32px; padding: 8px 15px; font-size: 14px; font-weight: 500; line-height: 1; color: #fff; background: var(--color-primary, #409eff); border: none; border-radius: 4px; cursor: pointer; transition: background-color 150ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 150ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-btn-primary:hover { background: color-mix(in srgb, var(--color-primary, #409eff) 80%, #ffffff); } .ds-btn-primary:active { background: color-mix(in srgb, var(--color-primary, #409eff) 90%, #000000); } .ds-btn-primary:focus-visible { outline: 2px solid color-mix(in srgb, var(--color-primary, #409eff) 60%, #ffffff); outline-offset: 2px; }"
+    },
+    {
+      "name": "Default Input",
+      "kind": "input",
+      "refersTo": "",
+      "description": "EP 默认输入框：白底灰框，focus 转主色描边。",
+      "html": "<input class=\"ds-input\" placeholder=\"请输入\" />",
+      "css": ".ds-input { height: 32px; padding: 0 12px; font-size: 14px; line-height: 32px; color: var(--text-primary, #303133); background: var(--bg-base, #ffffff); border: 1px solid var(--border-base, #dcdfe6); border-radius: 4px; outline: none; transition: border-color 150ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 150ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-input::placeholder { color: var(--text-placeholder, #c0c4cc); } .ds-input:hover { border-color: var(--text-placeholder, #c0c4cc); } .ds-input:focus { border-color: var(--color-primary, #409eff); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary, #409eff) 20%, transparent); }"
+    },
+    {
+      "name": "Tag",
+      "kind": "chip",
+      "refersTo": "",
+      "description": "EP 信息标签：浅底 + 同色文字，圆角 4px。",
+      "html": "<span class=\"ds-tag\">标签</span>",
+      "css": ".ds-tag { display: inline-flex; align-items: center; height: 24px; padding: 0 9px; font-size: 12px; line-height: 1; color: var(--color-info, #909399); background: color-mix(in srgb, var(--color-info, #909399) 12%, #ffffff); border: 1px solid color-mix(in srgb, var(--color-info, #909399) 30%, #ffffff); border-radius: 4px; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "",
+      "description": "静息扁平的纸面卡片：白底 + 浅边框，hover 才升阴影。",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-title\">卡片标题</div><div class=\"ds-card-body\">卡片内容，静息零阴影。</div></div>",
+      "css": ".ds-card { padding: 16px; background: var(--bg-base, #ffffff); border: 1px solid var(--border-light, #e4e7ed); border-radius: 8px; transition: box-shadow 150ms cubic-bezier(0.16, 1, 0.3, 1), transform 150ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-card:hover { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06); transform: translateY(-1px); } .ds-card-title { margin-bottom: 8px; font-size: 16px; font-weight: 600; color: var(--text-primary, #303133); } .ds-card-body { font-size: 14px; line-height: 1.5; color: var(--text-regular, #606266); }"
+    },
+    {
+      "name": "Portal Header Nav",
+      "kind": "nav",
+      "refersTo": "",
+      "description": "门户 sticky 顶栏：白纸底 + 近黑墨锚点导航，内容区居中 1200px。",
+      "html": "<header class=\"ds-portal-header\"><div class=\"ds-portal-header-inner\"><span class=\"ds-portal-logo\">vue3-vite-project</span><nav class=\"ds-portal-nav\"><a class=\"is-active\" href=\"#hero\">首页</a><a href=\"#features\">特性</a><a href=\"#contact\">联系</a></nav></div></header>",
+      "css": ".ds-portal-header { position: sticky; top: 0; z-index: 1020; height: 64px; background: var(--portal-paper, #ffffff); border-bottom: 1px solid var(--portal-line, #eeeeee); } .ds-portal-header-inner { max-width: 1200px; height: 64px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; } .ds-portal-logo { font-size: 16px; font-weight: 700; color: var(--portal-ink, #111111); letter-spacing: 0.02em; } .ds-portal-nav { display: flex; gap: 32px; } .ds-portal-nav a { font-size: 14px; font-weight: 500; color: var(--portal-ink, #111111); text-decoration: none; opacity: 0.75; transition: opacity 150ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-portal-nav a:hover { opacity: 1; } .ds-portal-nav a.is-active { opacity: 1; box-shadow: inset 0 -2px 0 var(--portal-ink, #111111); }"
+    },
+    {
+      "name": "Big KPI Panel",
+      "kind": "custom",
+      "refersTo": "",
+      "description": "大屏签名面板：夜蓝底 + 数据蓝描边 glow + 等宽 KPI 数值（44px）。",
+      "html": "<div class=\"ds-big-kpi\"><div class=\"ds-big-kpi-title\">今日订单量</div><div class=\"ds-big-kpi-value\">12,847</div><div class=\"ds-big-kpi-sub\">较昨日 +12.4%</div></div>",
+      "css": ".ds-big-kpi { padding: 20px 24px; background: linear-gradient(145deg, #0a1a38, #06122b); border: 1px solid rgba(43, 109, 224, 0.45); border-radius: 8px; box-shadow: inset 0 0 24px rgba(43, 109, 224, 0.18), 0 0 12px rgba(62, 140, 255, 0.12); } .ds-big-kpi-title { font-size: 15px; color: #8fa8d8; letter-spacing: 0.08em; } .ds-big-kpi-value { margin-top: 8px; font-family: 'Fira Code', Monaco, Consolas, monospace; font-size: 44px; font-weight: 700; line-height: 1.1; color: #4da3ff; text-shadow: 0 0 16px rgba(77, 163, 255, 0.45); } .ds-big-kpi-sub { margin-top: 8px; font-size: 14px; color: #5f7bab; }"
+    },
+    {
+      "name": "Network Banner (Offline)",
+      "kind": "custom",
+      "refersTo": "",
+      "description": "断连常驻横幅：琥珀黄语义——离线 ≠ 失败，刻意贴 ElMessage 之下。",
+      "html": "<div class=\"ds-offline-banner\" role=\"alert\">网络连接已断开，正在重试…</div>",
+      "css": ".ds-offline-banner { position: sticky; top: 0; z-index: 1999; padding: 8px 16px; font-size: 13px; line-height: 1.5; text-align: center; color: #7a5c00; background: color-mix(in srgb, #f7c948 18%, #ffffff); border-bottom: 1px solid color-mix(in srgb, #f7c948 45%, #ffffff); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "一套骨架，四种舱位",
+    "overview": "共享骨架是 packages/ui 全局 tokens + Element Plus 变量秩序 + BEM vv 命名空间 + 五层样式分层；四种舱位（中后台 / 门户 / H5 / 大屏）在同一骨架上长出各自的视觉语境。人格是工程秩序感优先于装饰：诚实、精确、可预期，品牌感藏在密度、对齐与语义化命名里。",
+    "keyCharacteristics": [
+      "双轨色彩：可换肤走 EP 变量体系，固定视觉 token 以 DESIGN.md 表为锚",
+      "四栖分化：一套 spacing/radius 骨架，四端各自色板与字号纪律",
+      "状态语义化：z-index 与状态色按语义命名（断连 ≠ 失败）",
+      "状态响应式深度：表面静息扁平，阴影与 glow 只为状态响应"
+    ],
+    "rules": [
+      {
+        "name": "The 离线非失败 Rule",
+        "body": "中断 / 断连用琥珀黄，错误 / 失败用红，两者永不混用。",
+        "section": "colors"
+      },
+      {
+        "name": "The 状态响应 Rule",
+        "body": "静息表面零阴影；阴影是状态的回声，不是结构的拐杖。",
+        "section": "elevation"
+      },
+      {
+        "name": "The 登记先行 Rule",
+        "body": "新增自有色值 / 字号 / 间距常量，先登记 DESIGN.md 再使用。",
+        "section": "colors"
+      }
+    ],
+    "dos": [
+      "新增自有 token 先登记 DESIGN.md 再使用",
+      "用 var(--bg-base) / var(--text-primary) 等主题感知变量写组件",
+      "中后台语义色优先 EP token，大屏语境复用 big-data-blue",
+      "深度优先用三级纸面分层，阴影留给状态"
+    ],
+    "donts": [
+      "不要写 !important（用特异性 / BEM / 源码顺序解决）",
+      "不要在非 scoped 样式里写 :deep() / ::v-deep（不编译）",
+      "不要混用离线黄与错误红",
+      "大屏 1920 稿正文不要 <14px，h5 生产正文不要 20px",
+      "不要硬编码 #fff / #000",
+      "不要显式 import 自动注册目录下的全局组件"
+    ]
+  }
+}
