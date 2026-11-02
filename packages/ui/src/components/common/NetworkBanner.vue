@@ -42,24 +42,25 @@ const { t } = useI18n()
 
 <style lang="scss">
 .#{$BEM_PREFIX}-network-banner {
-  /* z-index 1999：低于 EP ElMessage(2000+)——瞬时错误提示优先于常驻横幅 */
+  /* 层级走全局 token：贴 EP ElMessage(2000+) 之下——瞬时错误提示优先于常驻横幅 */
   position: fixed;
   inset: 0 0 auto 0;
-  z-index: 1999;
+  z-index: var(--z-index-banner);
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: #fef0e6;
-  color: #b88230;
-  border-bottom: 1px solid #f5d9b8;
+  /* 色板走 EP warning 系变量：主色变更经 theme-vars.scss 联动，不再硬编码 */
+  background: var(--el-color-warning-light-9);
+  color: var(--el-color-warning-dark-2);
+  border-bottom: 1px solid var(--el-color-warning-light-7);
   font-size: 13px;
   line-height: 1.5;
 
   &__icon {
     flex-shrink: 0;
     font-size: 16px;
-    color: #e6a23c;
+    color: var(--el-color-warning);
   }
 
   &__text {
