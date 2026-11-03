@@ -163,12 +163,18 @@ export function cleanStaleMockBundled(mockDir: string): number {
  * 启动单个 app dev（异步）：注入 VITE_BASE=/<app>/ 后 spawn pnpm -C apps/<app> dev，
  * 等待其 dev server 端口就绪后 resolve——保证下一个 app 启动时，本 app 的
  * vite-plugin-mock 已完成 mock 源编译（避免多进程并发编译同一 @vv/mock 源的 cleanup 竞态）。
+ *
+ * @param extraEnv 追加注入的 env（如 auth 的 VITE_POST_LOGIN_FALLBACK）；undefined 则不注入
  */
-async function startApp(name: string, port: number): Promise<void> {
+async function startApp(
+  name: string,
+  port: number,
+  extraEnv?: Record<string, string>
+): Promise<void> {
   // shell:true：Windows 下 pnpm 实为 pnpm.cmd，无 shell 无法解析
   const child = spawn('pnpm', ['-C', `apps/${name}`, 'dev'], {
     cwd: REPO_ROOT,
-    env: { ...process.env, VITE_BASE: `/${name}/` },
+    env: { ...process.env, VITE_BASE: `/${name}/`, ...extraEnv },
     stdio: 'inherit',
     shell: true,
   })
@@ -207,9 +213,22 @@ export function resolveRootRedirect(subset: typeof APPS): string {
   return subset.some((a) => a.name === 'portal') ? '/portal/' : `/${subset[0].name}/`
 }
 
+/**
+ * 登录 fallback 目标动态判定（语义对齐 resolveRootRedirect）：portal 优先，否则第一个非
+ * auth app。dev-gateway 启动 auth 时将其注入 VITE_POST_LOGIN_FALLBACK——Login.vue 在
+ * 无 ?redirect= 参数且 referrer 推断失败时消费，子集模式登录成功直达子集内同伴 app
+ * （auth+big → /big/；auth+h5 → /h5/）。全量模式同样注入（通常 → /portal/）。
+ * 单 auth 子集返回 undefined：不注入 env，前端保持 referrer 推断 + /auth/ 兜底原行为。
+ */
+export function resolvePostLoginFallback(subset: typeof APPS): string | undefined {
+  const target = subset.find((a) => a.name === 'portal') ?? subset.find((a) => a.name !== 'auth')
+  return target ? `/${target.name}/` : undefined
+}
+
 async function main(): Promise<void> {
   const subset = resolveAppSubset(process.argv.slice(2))
   const rootRedirect = resolveRootRedirect(subset)
+  const postLoginFallback = resolvePostLoginFallback(subset)
   const isSubset = subset.length < APPS.length
 
   // 预清 mock bundled 临时文件必须在任何 dev server 启动前（无 5s 门槛的安全前提），
@@ -250,11 +269,23 @@ async function main(): Promise<void> {
   console.log(
     `🌐 网关就绪：http://localhost:${GATEWAY_PORT}/（GET / 302 → ${rootRedirect}；/api/ 与 /mock/ → ${subset.some((a) => a.name === 'admin') ? 'admin' : subset[0].name}）\n`
   )
+  if (postLoginFallback) {
+    console.log(
+      `  🔐 auth 登录 fallback → ${postLoginFallback}（VITE_POST_LOGIN_FALLBACK 已注入 auth dev）`
+    )
+  }
 
   // 串行：前一个 dev server 端口就绪（mock 编译完成）再启下一个，消除并发编译窗口
   for (const { name, port } of subset) {
     try {
-      await startApp(name, port)
+      // 仅 auth 消费 VITE_POST_LOGIN_FALLBACK（resolvePostLoginFallback 语义见函数注释）
+      await startApp(
+        name,
+        port,
+        name === 'auth' && postLoginFallback
+          ? { VITE_POST_LOGIN_FALLBACK: postLoginFallback }
+          : undefined
+      )
     } catch (err) {
       shutdown(`[${name}] 启动超时：${err instanceof Error ? err.message : String(err)}`)
       return

@@ -9,7 +9,7 @@
  * 提交流程：
  * 1. `formRef.value.validate()` 同步校验账号 / 密码（≥3 / ≥6 位）
  * 2. 调用 `userStore.login(form)` 触发 authApi
- * 3. 成功后 `resolvePostLoginRedirect('/admin/')` 解析回跳目标（同源前缀校验，
+ * 3. 成功后 `resolvePostLoginRedirect(resolveDefaultFallback())` 解析回跳目标（同源前缀校验，
  *    防开放重定向），整页 `location.href` 跳回原 app——跨应用无共享 router 实例，
  *    不可 router.push（P4 跨应用统一登录协议，@vv/shared auth/redirect.ts）
  * 4. 失败统一 ElMessage.error，错误对象归一化（Error.message / '登录失败'）
@@ -98,8 +98,10 @@ async function handleSubmit() {
 /**
  * 动态识别默认落地 app（不写死）：
  * resolvePostLoginRedirect 已优先消费 ?redirect= 参数（redirectToAuthLogin 写入），
- * 本函数仅在无 redirect 参数时作 fallback——此时按 referrer 推断来源 app，
- * 最后兜底 auth 自身首页。绝不硬编码 admin/big 等 app 名。
+ * 本函数仅在无 redirect 参数时作 fallback，优先级：
+ * referrer 推断来源 app → dev:gateway 注入的 VITE_POST_LOGIN_FALLBACK（子集感知，
+ * 见 scripts/dev-gateway.ts resolvePostLoginFallback）→ auth 自身首页。
+ * 绝不硬编码 admin/big 等 app 名。
  */
 function resolveDefaultFallback(): string {
   // referrer 路径首段即来源 app 名（从 big 跳来 → /big/...；无 referrer 抛异常走兜底）
@@ -107,8 +109,12 @@ function resolveDefaultFallback(): string {
     const refSeg = new URL(document.referrer).pathname.split('/').filter(Boolean)[0]
     if (refSeg && refSeg !== 'auth') return `/${refSeg}/`
   } catch {
-    // referrer 为空（地址栏直开）或跨源——走兜底
+    // referrer 为空（地址栏直开）或跨源——走下两级兜底
   }
+  // 仅 dev:gateway 启动时注入（portal 优先 / 第一个非 auth app）；单 app 直起、
+  // gh-pages、生产构建均无此 env → undefined，走 /auth/ 兜底
+  const envFallback = import.meta.env.VITE_POST_LOGIN_FALLBACK
+  if (envFallback) return envFallback
   return '/auth/'
 }
 

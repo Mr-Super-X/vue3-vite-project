@@ -6,6 +6,34 @@
 
 ## 未发布
 
+### ✨ Feat | dev:gateway 子集感知登录回跳：登录成功直达子集内同伴 app（2026-11-03）
+
+> 背景：子集模式（如 `pnpm dev:gateway auth big`）下地址栏直开登录页，登录成功兜底回 auth
+> 自己——referrer 推断只覆盖「从同伴 app 被守卫跳来」入口，直开场景无 referrer，
+> 与「启动哪几个 app 就该跳回哪个 app」的直觉不符（用户主动提出的需求）。
+
+- **scripts/dev-gateway.ts**：新增 `resolvePostLoginFallback`（语义对齐 `resolveRootRedirect`：
+  portal 优先，否则第一个非 auth app；单 auth 子集返回 undefined 不注入）；
+  `startApp` 追加可选 `extraEnv` 参数，仅启动 auth 时注入 `VITE_POST_LOGIN_FALLBACK`；
+  网关就绪日志输出 fallback 目标一行。APPS 按 port 升序（big 5178 < auth 5179），
+  三例全命中：auth+big→`/big/`、auth+h5→`/h5/`、auth+admin→`/admin/`；全量 → `/portal/`。
+- **apps/auth Login.vue**：`resolveDefaultFallback` 兜底链插入 env 层——优先级
+  `?redirect=` 参数 → referrer 推断 → `VITE_POST_LOGIN_FALLBACK` → `/auth/`。
+  单 app 直起 / gh-pages / 生产构建无此 env，行为零变化。
+- **spec 脱节修复两处**（基线已红，非本次引入）：Login.spec 测试 3/5 断言残留旧硬编码
+  `/admin/`（上轮 referrer 推断重构漏更新）；node-gateway.spec「缺 admin 抛错」断言与
+  2026-10-28 子集回退语义相反，改为断言回退子集第一个 app。
+
+验证：`pnpm test:gateway` 22/22 全绿（新增 resolvePostLoginFallback 4 用例）；
+`pnpm -C apps/auth test src/modules/auth/views/Login.spec.ts` 9/9 全绿
+（修复 2 处脱节 + 新增 env fallback / referrer 优先 2 用例）；
+`pnpm -C apps/auth type-check` 零错误。
+
+手动验证：`pnpm dev:gateway auth big` 起后访问 `http://localhost:8080/auth/` 直开登录
+（admin / 123456），成功跳转 `/big/`；网关就绪日志输出
+「auth 登录 fallback → /big/（VITE_POST_LOGIN_FALLBACK 已注入 auth dev）」。
+`pnpm dev:gateway auth` 单 app 无该行注入，登录后回 auth 首页（原行为）。
+
 ### 🎨 Style | auth / big 双端整页重设计：暖米灰双栏 × 异星荧光森林（2026-11-03）
 
 > 背景：按 AGENTS.md「设计工作规范」走 impeccable 工序（concept-seed 决策轮 + 用户锁定）。
