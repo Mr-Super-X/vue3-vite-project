@@ -94,6 +94,18 @@
 - 非 scoped 样式下 `:deep()` / `::v-deep` / `:v-deep` 不会被编译——穿透第三方组件样式一律直接写后代选择器。
 - 每个组件只声明一份 `bem` 实例。
 
+## 设计工作规范
+
+> 视觉 / 设计任务的工序与工具搭配。impeccable 管体系与落地（PRODUCT.md / DESIGN.md / live 变体 / craft-floor 质量底线）；taste-skill（`design-taste-frontend`，用户自行安装）管艺术指导、开放档案真实图片与浏览器自检。两者职责不重叠：taste 定向与供材，impeccable 定规与落地。
+
+- 动任何视觉前先读根目录 `PRODUCT.md`、`DESIGN.md` 与对应端 token 表；新增自有色值 / 字号 / 间距**先登记 DESIGN.md 再使用**（The 登记先行 Rule）。
+- 按 surface mode 投入：Persuade / Experience 端（portal / big / docs）允许大胆整页实验；Operate / Read 端（admin / auth / h5 生产面）精确克制优先——taste 的 app 路线（quiet panels、数字对齐、色花在数据上）恰为 Operate 端默认气质。
+- 整页新视觉（showroom 端 / 新 surface）：走 taste 六步（brief → 三方向选一 → 一句创意 → 开放档案真实图片并署名 → 三宽浏览器自检 → 截图自修至多三轮），再经 impeccable 的 polish / critique / live 收尾；实验结论回登 DESIGN.md。
+- 既有面迭代：优先 impeccable scoped 命令（bolder / quieter / polish / layout / typeset 等）与 `/impeccable live` 变体模式；taste 仅作审计与方向参考，不直接重写既有页面。
+- 不拿 taste 的"三方向"推翻 DESIGN.md 既有锚与 Element Plus 基座：「无品牌约束」指无外部品牌资产，不指无视骨架；偏离骨架的 direction 必须先更新 DESIGN.md 并说明取舍。
+- 视觉完成以真实浏览器渲染为准（taste inspect / impeccable live 预览 / chrome-devtools 截图），禁止凭代码想象宣称"看起来没问题"；375 / 1440 / 1920 三宽度至少各看一眼（大屏另测其设计稿宽度）。
+- taste-skill 未安装时，以上涉及它的条款自动跳过——impeccable 单工具链路完整可用。
+
 ## 项目约束
 
 1. 包管理强制 pnpm。

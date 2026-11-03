@@ -254,3 +254,9 @@ const bem = createNamespace('form-engine') // kebab-case，必须与 sass 根选
 - 每次新增 / 修改 `.vue` 文件前，**逐条**比对 §3.2。
 - 合规简报必须附「本次 BEM 规范核查清单」：本次涉及的 `.vue` 文件路径 + §3.2 每条判定结果。
 - `pnpm lint` / `pnpm type-check:full` 无法自动检测此类违规时，以人工核查清单为准。
+
+---
+
+## 设计工作规范
+
+团队级设计工序与工具搭配（对任何 AI 工具成立）见根 `AGENTS.md`「设计工作规范」节——impeccable × taste-skill 分工、surface mode 化投入、浏览器三宽验收纪律；本文件不重复收录。配套产物：产品上下文 `PRODUCT.md`、视觉 token 锚点 `DESIGN.md`（均为 impeccable 体系维护，新增自有 token 先登记 DESIGN.md 再使用）。

@@ -6,6 +6,22 @@
 
 ## 未发布
 
+### 📋 Docs | 新增 AGENTS.md「设计工作规范」节：impeccable × taste-skill 搭配（2026-11-02）
+
+> 背景：设计任务工具链扩充——impeccable 已配 live（admin 端），taste-skill
+> （design-taste-frontend）待用户安装；需成文工序与验收纪律，避免两工具职责重叠
+> 或互相推翻（taste 三方向 vs DESIGN.md 既有锚）。
+
+- 根 AGENTS.md 新增「设计工作规范」节：前置阅读（PRODUCT.md / DESIGN.md / 端级 token 表）、
+  mode 化投入（showroom 大胆 / 生产面克制）、整页新视觉走 taste 六步 + impeccable 收尾、
+  既有面迭代走 impeccable scoped / live、「无品牌约束 ≠ 无视骨架」红线、
+  三宽浏览器验收纪律、taste 未安装时条款优雅跳过
+- CLAUDE.md「专题文档速查」新增一行互链
+
+验证：纯文档变更，`pnpm check:doc-currency` 14/14 绿。
+
+手动验证：无。
+
 ### 🛡️ Chore | 文档预算 49→50 同步（99c61ab docs/AGENTS.md 事后归因补记）（2026-11-02）
 
 > 背景：99c61ab「新增 16 个层级化 AGENTS.md 目录导航文档」在 docs/ 根级落了 docs/AGENTS.md，
