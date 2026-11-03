@@ -2,6 +2,10 @@
 /**
  * 登录页（blank 布局，apps/auth 统一登录入口）。
  *
+ * 视觉（2026-11-03 重设计 v2）：暖米灰双栏卡片——左品牌区 + 右表单区，
+ * 参考用户提供的 unified-login.html 风格。拆分为 LoginBrand + LoginForm 两个子组件。
+ * 样式见 [`../styles/login.scss`](../styles/login.scss)。
+ *
  * 提交流程：
  * 1. `formRef.value.validate()` 同步校验账号 / 密码（≥3 / ≥6 位）
  * 2. 调用 `userStore.login(form)` 触发 authApi
@@ -17,19 +21,16 @@
  * @see [`../styles/login.scss`](../styles/login.scss) 样式抽离
  * @group 业务模块：Auth
  */
-// ElMessage 由 unplugin-auto-import 注入（importStyle 自动带样式，勿显式 import）
-import { User, Lock, View, Hide } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@vv/shared'
 import { resolvePostLoginRedirect, withRepoPrefix } from '@vv/shared'
+import LoginBrand from '../components/LoginBrand.vue'
+import LoginForm from '../components/LoginForm.vue'
 
 // BEM 工具由 unplugin-auto-import 自动注入，无须显式 import
 const bem = createNamespace('login')
 
-// i18n 接线（2026-10-28 i18n 审计 P0）：rules 校验文案在 script 层须经 useI18n 的 t()；
-// 模板层（label/placeholder/按钮）直接用全局 $t（i18n 全局安装）
 const { t } = useI18n()
-
 const userStore = useUserStore()
 
 const formRef = ref()
@@ -37,8 +38,8 @@ const form = reactive({ username: 'admin', password: '123456' })
 const loading = ref(false)
 const showPassword = ref(false)
 const rememberMe = ref(false)
+const activeTab = ref('account')
 
-// 品牌文案统一走 VITE_APP_TITLE（与 main.ts 初始化 document.title 同源），避免硬编码业务名
 const appTitle = import.meta.env.VITE_APP_TITLE || '统一登录'
 
 const rules = {
@@ -52,23 +53,40 @@ const rules = {
   ],
 }
 
+// ─── Toast 轻提示 ───
+const toastVisible = ref(false)
+const toastMessage = ref('')
+let toastTimer: ReturnType<typeof setTimeout> | undefined
+
+function showToast(msg: string): void {
+  toastMessage.value = msg
+  toastVisible.value = true
+  clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => {
+    toastVisible.value = false
+  }, 2400)
+}
+
+onUnmounted(() => clearTimeout(toastTimer))
+
 async function handleSubmit() {
   if (!formRef.value) return
-  const valid = await formRef.value.validate().catch(() => false)
-  if (!valid) return
+  // validate 是 LoginForm 代理方法，内部已 catch 返回 boolean
+  const valid = await formRef.value.validate()
+  if (!valid) {
+    nextTick(() => {
+      if (!form.username) markFieldError('username')
+      if (!form.password) markFieldError('password')
+    })
+    return
+  }
 
   loading.value = true
   try {
     await userStore.login(form)
-    // 提示「正在跳转」而非「登录成功」——success toast 会被紧随的 location.href 整页跳转
-    // 即刻卸载（存活 <100ms 用户不可见），且 auth→目标 app 冷包加载期间用户看到白屏间隙。
-    // 「正在跳转…」提示存活到页面卸载，覆盖跳转过渡（易用性审查 H1）——文案走 i18n
     ElMessage.success(t('auth.loginSuccessRedirect'))
-    // 跨应用回跳：redirect 查询参数由来源 app 的 redirectToAuthLogin 写入；
-    // fallback 登录后默认回管理端落地页（经 withRepoPrefix 加部署前缀——gh-pages 不 404）
-    window.location.href = resolvePostLoginRedirect(withRepoPrefix('/admin/'))
+    window.location.href = resolvePostLoginRedirect(withRepoPrefix(resolveDefaultFallback()))
   } catch (err: unknown) {
-    // 错误优先用后端 message（可能是字段级校验文案），非 Error 兜底走 i18n 通用失败文案
     const msg = err instanceof Error ? err.message : t('auth.loginFailed')
     ElMessage.error(msg)
     console.error('[Login] 登录失败', err)
@@ -76,89 +94,75 @@ async function handleSubmit() {
     loading.value = false
   }
 }
+
+/**
+ * 动态识别默认落地 app（不写死）：
+ * resolvePostLoginRedirect 已优先消费 ?redirect= 参数（redirectToAuthLogin 写入），
+ * 本函数仅在无 redirect 参数时作 fallback——此时按 referrer 推断来源 app，
+ * 最后兜底 auth 自身首页。绝不硬编码 admin/big 等 app 名。
+ */
+function resolveDefaultFallback(): string {
+  // referrer 路径首段即来源 app 名（从 big 跳来 → /big/...；无 referrer 抛异常走兜底）
+  try {
+    const refSeg = new URL(document.referrer).pathname.split('/').filter(Boolean)[0]
+    if (refSeg && refSeg !== 'auth') return `/${refSeg}/`
+  } catch {
+    // referrer 为空（地址栏直开）或跨源——走兜底
+  }
+  return '/auth/'
+}
+
+function markFieldError(field: 'username' | 'password'): void {
+  const item = formRef.value?.fields?.find((f: { prop: string }) => f.prop === field)
+  const wrapper = item?.$el?.querySelector('.el-input__wrapper')
+  if (!wrapper) return
+  wrapper.classList.add('is-error')
+  setTimeout(() => wrapper.classList.remove('is-error'), 1600)
+}
 </script>
 
 <template>
   <div :class="bem.b()">
-    <!-- 背景层 -->
-    <div :class="bem.e('bg')" aria-hidden="true">
-      <div :class="bem.e('bg-grid')" />
-      <div :class="[bem.e('bg-orb'), bem.em('bg-orb', 'a')]" />
-      <div :class="[bem.e('bg-orb'), bem.em('bg-orb', 'b')]" />
-      <div :class="[bem.e('bg-orb'), bem.em('bg-orb', 'c')]" />
-    </div>
+    <div :class="[bem.e('blob'), bem.em('blob', 'a')]" aria-hidden="true" />
+    <div :class="[bem.e('blob'), bem.em('blob', 'b')]" aria-hidden="true" />
 
-    <!-- 卡片 -->
-    <el-card :class="bem.e('card')" shadow="never">
-      <!-- 品牌区 -->
-      <div :class="bem.e('brand')">
-        <div :class="bem.e('logo')" aria-hidden="true">
-          <span :class="bem.e('logo-piece')" />
-          <span :class="bem.e('logo-piece')" />
-          <span :class="bem.e('logo-piece')" />
-          <span :class="bem.e('logo-piece')" />
-        </div>
-        <h1 :class="bem.e('title')">{{ appTitle }}</h1>
-        <p :class="bem.e('subtitle')">跨应用统一登录入口</p>
+    <div :class="bem.e('scene')">
+      <div :class="bem.e('shell')">
+        <LoginBrand :app-title="appTitle" />
+        <LoginForm
+          ref="formRef"
+          v-model:form="form"
+          v-model:show-password="showPassword"
+          v-model:remember-me="rememberMe"
+          v-model:active-tab="activeTab"
+          :loading="loading"
+          :rules="rules"
+          @submit="handleSubmit"
+          @toast="showToast"
+        />
       </div>
 
-      <!-- 表单 -->
-      <el-form
-        ref="formRef"
-        :model="form"
-        :rules="rules"
-        :class="bem.e('form')"
-        label-position="top"
-        @submit.prevent="handleSubmit"
-      >
-        <el-form-item :label="$t('auth.account')" prop="username">
-          <el-input
-            v-model="form.username"
-            :prefix-icon="User"
-            :placeholder="$t('auth.accountRequired')"
-            autocomplete="username"
-            clearable
-          />
-        </el-form-item>
+      <footer :class="bem.e('footer')">
+        © 2026 统一身份认证平台 ·
+        <a href="#" @click.prevent="showToast('《统一认证服务协议》（演示）')">用户协议</a>
+        ·
+        <a href="#" @click.prevent="showToast('《隐私政策》（演示）')">隐私政策</a>
+        ·
+        <a href="#" @click.prevent="showToast('帮助中心（演示）')">帮助中心</a>
+        · ICP备2026001188号
+      </footer>
+    </div>
 
-        <el-form-item :label="$t('auth.password')" prop="password">
-          <el-input
-            v-model="form.password"
-            :prefix-icon="Lock"
-            :type="showPassword ? 'text' : 'password'"
-            :placeholder="$t('auth.passwordRequired')"
-            autocomplete="current-password"
-          >
-            <template #suffix>
-              <button
-                type="button"
-                :class="bem.e('toggle-pwd')"
-                :aria-label="showPassword ? $t('auth.hidePassword') : $t('auth.showPassword')"
-                @click="showPassword = !showPassword"
-              >
-                <el-icon><component :is="showPassword ? Hide : View" /></el-icon>
-              </button>
-            </template>
-          </el-input>
-        </el-form-item>
-
-        <div :class="bem.e('actions')">
-          <el-checkbox v-model="rememberMe">{{ $t('auth.rememberMe') }}</el-checkbox>
-          <a :class="bem.e('link')" href="#" @click.prevent>{{ $t('auth.forgotPassword') }}</a>
-        </div>
-
-        <button type="button" :class="bem.e('submit')" :disabled="loading" @click="handleSubmit">
-          <span v-if="loading" :class="bem.e('submit-spinner')" />
-          <span>{{ loading ? $t('auth.loggingIn') : $t('auth.loginSubmit') }}</span>
-        </button>
-      </el-form>
-
-      <p :class="bem.e('footer')">© 2026 {{ appTitle }}中心</p>
-    </el-card>
+    <div
+      :class="[bem.e('toast'), toastVisible && bem.em('toast', 'show')]"
+      role="status"
+      aria-live="polite"
+    >
+      {{ toastMessage }}
+    </div>
   </div>
 </template>
 
 <style lang="scss">
-// 样式抽离到 ./styles/login.scss（单文件行数铁律 ≤400）；与 portal/index.vue 引用外部 scss 的模式一致
 @use '../styles/login.scss';
 </style>

@@ -47,4 +47,14 @@
   --big-state-danger: rgba(245, 108, 108, 0.85); // 告警·高
   --big-state-warning: rgba(247, 201, 72, 0.9); // 告警·中
   --big-state-info: rgba(143, 168, 216, 0.75); // 告警·低
+
+  // ─── 异星荧光森林层（2026-11-03 登记——异星森林视觉世界的高光层，DESIGN.md 同名小节为单一事实源）───
+  --big-spore-cyan-rgb: 77, 163, 255; // 孢子青光晕（普通 KPI 株光芯 / 根脉脉动亮边）
+  --big-spore-lilac-rgb: 185, 140, 255; // 孢子丁香紫光晕（交替 KPI 株 / 排名条）
+  --big-bloom-rgb: 245, 248, 250; // 焦点白 bloom 芯（全页唯一最亮白光）
+  --big-root-vein: #0d264c; // 根脉网络线色（亮边）
+  --big-spore-dot-max: 0.7; // 孢子光点散布透明度三档（配合 mid 0.4 / min 0.2）
+  --big-spore-dot-mid: 0.4;
+  --big-spore-dot-min: 0.2;
+  --big-panel-glow-cyan-rgb: 13, 38, 76; // 面板底部根脉汇聚微亮区（radial-gradient 中心）
 }

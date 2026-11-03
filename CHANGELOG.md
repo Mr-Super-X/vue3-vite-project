@@ -6,6 +6,34 @@
 
 ## 未发布
 
+### 🎨 Style | auth / big 双端整页重设计：暖米灰双栏 × 异星荧光森林（2026-11-03）
+
+> 背景：按 AGENTS.md「设计工作规范」走 impeccable 工序（concept-seed 决策轮 + 用户锁定）。
+> auth 端最终采用用户提供的 unified-login.html 视觉风格（暖米灰双栏 + 莫兰迪绿 accent，v2
+> 方案，替代 v1 运输标签实验）；big 端跳出品类的默认形态（发光边框面板阵列）进入异星荧光森林。
+> surface brief 与 direction contract 落盘 `.impeccable/surfaces/apps-{auth,big}.md`。
+
+- **auth · 暖米灰双栏卡片**：左品牌区（深灰绿渐变 165° + 柔光 blob + 纯 CSS 设备插画
+  显示器/笔记本/手机 + 六端 chips + 三特性行 SSO/多因子/审计），右表单区（米灰卡 +
+  柔光字段 focus 白底 accent 描边 + accent 渐变按钮 letter-spacing 8px）。
+  不含端切换/短信/扫码功能（保留账号密码单流程）。`--login-*` 14 个 CSS 变量重写。
+- **big · 异星荧光森林**（第二轮 challenger 获胜）：数据如活物——KPI 是四株光晕主株
+  （青/丁香交替，焦点株独享白 bloom），面板为群落分区（细线分支边框 + 底部根脉汇聚微亮区），
+  根脉网络 SVG 自底部向各面板分支脉动，孢子光点 28 颗散布全屏。
+  标题改极细字重 300（34px 字距 8px）+ 光晕阴影，弃用渐变标题。
+  新增 7 个森林系 token（DESIGN.md 先登记后使用）：`--big-spore-cyan/lilac-rgb`、
+  `--big-bloom-rgb`、`--big-root-vein`、孢子透明度三档、`--big-panel-glow-cyan-rgb`。
+  KpiCard 新增 `variant` prop（cyan/lilac/focus），PanelBox 弃用四角 L 高光改分支角须。
+- **DESIGN.md 同步**：big 色板下新增「异星荧光森林层」子节（6 token 表）；
+  字号阶梯表补 auth / big 新端级规格。
+
+验证：`pnpm -C apps/{auth,big} type-check:full` 全绿；ESLint 全绿；impeccable detector 0 error
+（font-size advisory 经 DESIGN.md 字号阶梯登记消解）；playwright 实测
+（auth 375/1440、big 1440/1920）零塌零回归，截图在 `.impeccable/review/`。
+
+手动验证：dev 起后访问 `/login`（暖米灰双栏卡片 + 设备插画 + 六端 chips）与
+`/big-demo`（暗室森林光晕 + 根脉弧线 + 孢子光点），对照 `.impeccable/review/` 截图。
+
 ### 🎨 Style | 样式分层规则符合度修复：五目录骨架化 + 暗色全端接线 + 裸值收编 82 处（2026-11-03）
 
 > 背景：对照「值/用法分离」六条理想模型的深度审计（报告落盘

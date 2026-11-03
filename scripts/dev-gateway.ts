@@ -224,10 +224,11 @@ async function main(): Promise<void> {
   )
 
   // 先监听网关：8080 被占（如旧 docker 网关未关）立即失败，不浪费后续 dev 启动
+  // 路由表传 subset（非全量 APPS）：/api/ 与 /mock/ 目标动态选子集内第一个 app
+  // （admin 不在子集时不再 502——所有 app 共享同一 @vv/mock 源，mock 中间件等价）
   gateway = createGatewayServer({
     rootRedirect,
-    // 路由表仍传全量 APPS：未起 app 的前缀保留路由（上游未起即 502），与全量模式语义对齐
-    routes: buildGatewayRoutes(APPS),
+    routes: buildGatewayRoutes(subset),
   })
   try {
     await new Promise<void>((resolve, reject) => {
@@ -247,11 +248,7 @@ async function main(): Promise<void> {
     throw err
   }
   console.log(
-    `🌐 网关就绪：http://localhost:${GATEWAY_PORT}/（GET / 302 → ${rootRedirect}；/api/ → admin${
-      isSubset && !subset.some((a) => a.name === 'admin')
-        ? '（⚠️ 本模式未起 admin，/api/ 将 502）'
-        : ''
-    }）\n`
+    `🌐 网关就绪：http://localhost:${GATEWAY_PORT}/（GET / 302 → ${rootRedirect}；/api/ 与 /mock/ → ${subset.some((a) => a.name === 'admin') ? 'admin' : subset[0].name}）\n`
   )
 
   // 串行：前一个 dev server 端口就绪（mock 编译完成）再启下一个，消除并发编译窗口
