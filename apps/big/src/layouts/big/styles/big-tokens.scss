@@ -2,6 +2,9 @@
 // 科技蓝深色体系：文字三档 + 主蓝一族（实心值 + rgb 分量形态，供 rgba() 就地组合透明度）
 // 挂截点：layouts/big/index.vue 的 @use（非 scoped，CSS 变量对子组件可见——同 portal-tokens 模式）
 // 低频色保留就地（#143168 等背景层次色、EP 语义色经 var(--el-*) 消费）
+//
+// 主题策略：big 端为恒深色设计（拼接大屏物理场景即暗室环境），token 不随
+// [data-theme] 切换——故本文件无暗色覆盖段（2026-11-03 样式审计裁决，与 auth login 同例）
 
 :root {
   // 文字四档（深底浅色字为主，一档极深供浅底场景）
@@ -16,4 +19,32 @@
   --big-blue-rgb: 43, 109, 224; // 深主蓝（描边 / 强调 glow）
   --big-blue-mid-rgb: 62, 140, 255; // 中主蓝（边框 / 中亮 glow）
   --big-blue-light-rgb: 77, 163, 255; // 浅主蓝（大面积淡底 / 高亮 glow）
+
+  // ─── 底色（2026-11-03 裸值普查收编：同值跨 4 视图重复 3~4 次）───
+  --big-bg-layout: #02040a; // 布局深蓝黑底（比例不符时的留白填充）
+  --big-bg-page: #06122b; // 页面径向渐变底色
+  --big-panel-bg: rgba(13, 38, 76, 0.35); // KpiCard / PanelBox 面板底
+  --big-mask: rgba(10, 24, 48, 0.5); // 舞台弹层遮罩
+  --big-mask-light: rgba(10, 24, 48, 0.4); // 说明块 / 地图占位遮罩
+
+  // ─── 标题渐变（linear-gradient(180deg) 的两个色 stop）───
+  --big-title-from: #ffffff;
+  --big-title-to: #7db4ff;
+
+  // ─── 交互与分割 ───
+  --big-text-hover: #8fc3ff; // 文字 hover 提亮
+  --big-divider: rgba(143, 168, 216, 0.15); // 行分割线（dashed）
+
+  // ─── 排名/奖牌 ───
+  --big-medal-gold: #f7c948;
+  --big-medal-silver: #c0c8d8;
+  --big-medal-bronze: #d98e4a;
+  --big-rank-active: #3a5a8c; // 非奖牌名次底色
+  --big-rank-bar: #2b6de0; // 进度条渐变起点（终点为 --big-primary）
+
+  // ─── 状态 ───
+  --big-kpi-down: #2fd39a; // 指标下降态（下降 ≠ 错误，故不用 --el-color-danger）
+  --big-state-danger: rgba(245, 108, 108, 0.85); // 告警·高
+  --big-state-warning: rgba(247, 201, 72, 0.9); // 告警·中
+  --big-state-info: rgba(143, 168, 216, 0.75); // 告警·低
 }

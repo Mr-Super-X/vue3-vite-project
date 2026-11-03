@@ -30,6 +30,18 @@ colors:
   portal-ink: '#111111'
   portal-paper: '#ffffff'
   portal-line: '#eeeeee'
+  portal-dark-paper: '#111111'
+  portal-dark-ink: '#f5f5f5'
+  scrollbar-thumb: '#b8b8b8'
+  scrollbar-thumb-dark: '#4e4e52'
+  h5-text-title: '#323233'
+  h5-card-bg: '#ffffff'
+  big-panel-bg: 'rgba(13, 38, 76, 0.35)'
+  big-mask: 'rgba(10, 24, 48, 0.5)'
+  big-title-from: '#ffffff'
+  big-title-to: '#7db4ff'
+  big-medal-gold: '#f7c948'
+  big-kpi-down: '#2fd39a'
 typography:
   body:
     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
@@ -92,24 +104,59 @@ components:
 
 ### 数据大屏 big（深蓝科技风）
 
-| Token                | 值        | 用途                               | 实证                        |
-| -------------------- | --------- | ---------------------------------- | --------------------------- |
-| `big-bg-page`        | `#06122b` | 视图底色（径向渐变底）             | big-demo 两页、StateDemo    |
-| `big-bg-stage-mask`  | `#02040a` | layout 比例不符时的留白填充        | `src/layouts/big/index.vue` |
-| `big-primary`        | `#4da3ff` | 主数据色（KPI 数值 / 链接 / 强调） | big-demo、StateDemo         |
-| `big-text-primary`   | `#d6e4ff` | 主文字                             | big-demo 各页               |
-| `big-text-secondary` | `#8fa8d8` | 辅助文字（dt / 说明）              | big-demo 各页               |
-| `big-text-muted`     | `#5f7bab` | 弱化文字（时间戳 / 元信息）        | big-demo 各页               |
+| Token                              | 值                            | 用途                               | 实证                        |
+| ---------------------------------- | ----------------------------- | ---------------------------------- | --------------------------- |
+| `big-bg-page`                      | `#06122b`                     | 视图底色（径向渐变底）             | big-demo 两页、StateDemo    |
+| `big-bg-stage-mask`                | `#02040a`                     | layout 比例不符时的留白填充        | `src/layouts/big/index.vue` |
+| `big-primary`                      | `#4da3ff`                     | 主数据色（KPI 数值 / 链接 / 强调） | big-demo、StateDemo         |
+| `big-text-primary`                 | `#d6e4ff`                     | 主文字                             | big-demo 各页               |
+| `big-text-secondary`               | `#8fa8d8`                     | 辅助文字（dt / 说明）              | big-demo 各页               |
+| `big-text-muted`                   | `#5f7bab`                     | 弱化文字（时间戳 / 元信息）        | big-demo 各页               |
+| `big-panel-bg`                     | `rgba(13, 38, 76, 0.35)`      | KpiCard / PanelBox 面板底          | big-demo 组件               |
+| `big-mask` / `big-mask-light`      | `rgba(10,24,48,0.5/0.4)`      | 舞台弹层 / 说明块遮罩              | StateDemo、Wide             |
+| `big-title-from` → `big-title-to`  | `#ffffff` → `#7db4ff`         | 页标题渐变双色 stop                | big-demo 三视图             |
+| `big-text-hover`                   | `#8fc3ff`                     | 文字 hover 提亮                    | big-demo index              |
+| `big-divider`                      | `rgba(143,168,216,0.15)`      | 行分割线（dashed）                 | big-demo index、Wide        |
+| `big-medal-gold/silver/bronze`     | `#f7c948`/`#c0c8d8`/`#d98e4a` | 排名奖牌三色                       | RankingList                 |
+| `big-rank-active` / `big-rank-bar` | `#3a5a8c` / `#2b6de0`         | 非奖牌名次底 / 进度条渐变起点      | RankingList、Wide           |
+| `big-kpi-down`                     | `#2fd39a`                     | 指标下降态（下降 ≠ 错误）          | KpiCard                     |
+| `big-state-danger/warning/info`    | 见状态色表                    | 告警高/中/低                       | Wide 告警条                 |
+
+> big 端为恒深色设计（拼接大屏暗室场景），token 不随 `[data-theme]` 切换——big-tokens.scss 无暗色覆盖段（2026-11-03 审计裁决）。
 
 ### H5 移动端 h5
 
-| Token        | 值        | 用途     | 实证                       |
-| ------------ | --------- | -------- | -------------------------- |
-| `h5-bg-page` | `#f7f8fa` | 页面底色 | `src/layouts/h5/index.vue` |
+| Token            | 值                   | 用途                        | 实证                       |
+| ---------------- | -------------------- | --------------------------- | -------------------------- |
+| `h5-bg-page`     | `#f7f8fa`            | 页面底色                    | `src/layouts/h5/index.vue` |
+| `h5-text-title`  | `#323233`            | 卡片标题（vant 标题黑）     | h5-demo 卡片               |
+| `h5-card-bg`     | `#ffffff`            | 卡片底（暗色 `#262626`）    | h5-demo 卡片               |
+| `h5-shadow-card` | `rgba(0, 0, 0, .06)` | 卡片投影（暗色 0.3 透明度） | h5-demo 卡片               |
 
-### 中后台 default / 门户 portal
+> h5 tokens 已配 `[data-theme='dark']` + `prefers-color-scheme` 双主题覆盖（2026-11-03）。
+
+### 门户 portal（白纸极简）
+
+| Token                   | light     | dark      | 用途                   |
+| ----------------------- | --------- | --------- | ---------------------- |
+| `portal-bg`             | `#ffffff` | `#111111` | 页面底                 |
+| `portal-bg-alt`         | `#fafafa` | `#1c1c1c` | 分区底（特性区）       |
+| `portal-ink`            | `#111111` | `#f5f5f5` | 主文字                 |
+| `portal-ink-2`          | `#555555` | `#a3a3a3` | 次要文字               |
+| `portal-line`           | `#eeeeee` | `#2a2a2a` | 1px 细线               |
+| `portal-on-*`（深底族） | 不随主题  | 不随主题  | 深底反色文字/细线/实白 |
+
+> 黑白设计暗色反转（ink/bg 互换语义），2026-11-03 经 `portal-dark` mixin + `[data-theme]`/`prefers-color-scheme` 接线。
+
+### 中后台 default
 
 不定义自有色板——完全消费 Element Plus 变量 + docs/06 主题体系。新增中后台色值时优先用 EP token，确需自有值时登记到本节。
+
+### 滚动条（全局，base/reset.css 消费）
+
+| Token                                           | light                 | dark                  |
+| ----------------------------------------------- | --------------------- | --------------------- |
+| `--scrollbar-thumb` / `--scrollbar-thumb-hover` | `#b8b8b8` / `#878987` | `#4e4e52` / `#68686e` |
 
 ### 状态色（四栖通用）
 
@@ -231,7 +278,8 @@ components:
 
 ## 修订记录
 
-| 日期       | 变更                                                                                                                                                                                                                                                                      |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-11-02 | 合并 impeccable DESIGN.md 规范格式：新增 YAML frontmatter（机器可读 token）+ Overview（北极星「一套骨架，四种舱位」）+ Layout / Elevation & Depth / Shapes / Components / Do's and Don'ts 章节；既有四栖 token 表全量保留，状态色并入 Colors 子节；深度哲学定为状态响应式 |
-| 2026-10-15 | 初版（/autoplan TODOS #4）：big/h5 色板 + 状态色 + 字号阶梯 + 间距，全部取自代码实证值                                                                                                                                                                                    |
+| 日期       | 变更                                                                                                                                                                                                                                                                                                                              |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-03 | 样式分层规则符合度修复（审计报告 `.claude/agent-reports/2026-11-03-样式分层规则符合度审计.md`）：big 增补 19 token（面板/遮罩/标题渐变/奖牌/排名/状态）、h5 增补 3 token 并配暗色、portal 暗色反转接线（拆分独立小节，修正「不定义自有色板」漂移）、全局滚动条 token 化、Wide.vue 中文类名 `&--高/中/低` 改 `--high/mid/low` 映射 |
+| 2026-11-02 | 合并 impeccable DESIGN.md 规范格式：新增 YAML frontmatter（机器可读 token）+ Overview（北极星「一套骨架，四种舱位」）+ Layout / Elevation & Depth / Shapes / Components / Do's and Don'ts 章节；既有四栖 token 表全量保留，状态色并入 Colors 子节；深度哲学定为状态响应式                                                         |
+| 2026-10-15 | 初版（/autoplan TODOS #4）：big/h5 色板 + 状态色 + 字号阶梯 + 间距，全部取自代码实证值                                                                                                                                                                                                                                            |

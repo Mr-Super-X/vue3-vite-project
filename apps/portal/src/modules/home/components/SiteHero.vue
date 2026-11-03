@@ -150,7 +150,7 @@ const GRID_LINES = [100, 150, 200, 250, 300]
 
     &--primary {
       background: var(--portal-ink);
-      color: #fff;
+      color: var(--portal-on-solid);
       border: 1px solid var(--portal-ink);
 
       &:hover {
@@ -166,7 +166,7 @@ const GRID_LINES = [100, 150, 200, 250, 300]
 
       &:hover {
         background: var(--portal-ink);
-        color: #fff;
+        color: var(--portal-on-solid);
       }
     }
   }

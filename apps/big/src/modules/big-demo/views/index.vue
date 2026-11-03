@@ -148,7 +148,7 @@ const regionItems: RankingItem[] = REGION_RANK.map((r) => ({ ...r }))
   color: var(--big-text);
   background:
     radial-gradient(ellipse 1200px 500px at 50% -10%, rgba(var(--big-blue-rgb), 0.25), transparent),
-    #06122b;
+    var(--big-bg-page);
 
   &__header {
     flex: none;
@@ -162,7 +162,7 @@ const regionItems: RankingItem[] = REGION_RANK.map((r) => ({ ...r }))
     font-size: 36px;
     font-weight: 700;
     letter-spacing: 6px;
-    background: linear-gradient(180deg, #ffffff, #7db4ff);
+    background: linear-gradient(180deg, var(--big-title-from), var(--big-title-to));
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -188,7 +188,7 @@ const regionItems: RankingItem[] = REGION_RANK.map((r) => ({ ...r }))
     border-radius: 3px;
 
     &:hover {
-      color: #8fc3ff;
+      color: var(--big-text-hover);
       border-color: rgba(var(--big-blue-light-rgb), 0.6);
     }
   }
@@ -257,7 +257,7 @@ const regionItems: RankingItem[] = REGION_RANK.map((r) => ({ ...r }))
 
     li {
       padding: 6px 0;
-      border-bottom: 1px dashed rgba(143, 168, 216, 0.15);
+      border-bottom: 1px dashed var(--big-divider);
     }
   }
 

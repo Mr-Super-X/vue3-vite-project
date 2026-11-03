@@ -5,7 +5,7 @@
  * 业务侧无须 `import { createNamespace } from '@vv/shared'`（注释示例随 codemod 批次 2
  * 收敛为包名形态；@utils 深层别名已定性为过渡态遗留，见 CLAUDE.md §1.6.2）。
  *
- * 与 `src/assets/styles/mixins/bem.scss` 的 SCSS 编译期 mixin 互补：
+ * 与 `src/styles/tools/_bem.scss`（@vv/ui 包）的 SCSS 编译期 mixin 互补：
  * - SCSS mixin：在编译期把 BEM 拼接写入 CSS（适合纯样式场景）
  * - 本工具：在运行时拼接类名并返回字符串（适合 `:class` / `class` 动态控制场景）
  *
@@ -19,7 +19,7 @@
  * 前缀可通过环境变量 `VITE_BEM_PREFIX` 调整（如改为 `''` 输出无前缀类名）。
  * SCSS 端同名变量由 vite.config.ts 的 `additionalData` 同步注入，保证两套工具输出对齐。
  *
- * @see [`src/assets/styles/mixins/bem.scss`](../assets/styles/mixins/bem.scss) 编译期 SCSS 端 mixin
+ * @see [`@vv/ui styles/tools/_bem.scss`](../../../ui/src/styles/tools/_bem.scss) 编译期 SCSS 端 mixin
  * @see [`vite.config.ts`](../../vite.config.ts) `$BEM_PREFIX` 注入配置
  * @see [`src/types/auto-imports.d.ts`](../types/auto-imports.d.ts) 全局注入声明
  * @group BEM 类名

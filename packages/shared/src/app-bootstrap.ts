@@ -13,11 +13,17 @@
  */
 
 /**
- * 注入业务品牌色 CSS 变量 `--color-primary`。
+ * 注入品牌色 CSS 变量：`--color-primary`（业务消费）+ `--el-color-primary`（EP 组件消费）。
  *
- * 为什么必须在 createApp 之前调用：组件挂载后 CSS 变量再生效会导致首屏闪烁；
- * 配合 element-overwrite 的灯色阶 mixin，业务侧改品牌色即全局生效
- * （含 Element Plus 按钮/标签等组件）。
+ * 为什么必须在 createApp 之前调用：组件挂载后 CSS 变量再生效会导致首屏闪烁。
+ *
+ * 双变量的原因（2026-11-03 样式审计发现 #3 修复）：
+ * element-overwrite/theme-vars.scss 的 --el-color-primary 是编译期 color.mix 字面量
+ * （非 var(--color-primary) 引用链），只设 --color-primary 时 EP 组件不跟随品牌色，
+ * 此处运行时同步两变量。局限：--el-color-primary-light-3~9 灯色阶仍为编译期字面量，
+ * hover/active 浅色阶不随品牌色联动；完整联动须改编译期 $color-primary。
+ * 布局级品牌覆盖（如 admin default-tokens.scss 经 .vv-default-layout 容器施加的 mixin）
+ * 优先级高于本注入，不受影响；teleport 弹层（挂 body、容器外）消费本注入。
  *
  * 优先级：VITE_BRAND_COLOR > defaultColor（调用方传入）> '#409eff'（EP 默认蓝）。
  * 保留 `typeof document` 守卫是为 SSR 实验留兼容（与原 6 份内联段同语义，
@@ -29,7 +35,9 @@
 export function injectBrandColor(defaultColor?: string): void {
   const brandColor = import.meta.env.VITE_BRAND_COLOR || defaultColor || '#409eff'
   if (typeof document !== 'undefined') {
-    document.documentElement.style.setProperty('--color-primary', brandColor)
+    const rootStyle = document.documentElement.style
+    rootStyle.setProperty('--color-primary', brandColor)
+    rootStyle.setProperty('--el-color-primary', brandColor)
   }
 }
 

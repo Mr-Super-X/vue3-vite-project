@@ -51,6 +51,10 @@ onMounted(loadMap)
 
 // ─── 面板交互状态（内联控件：不使用 teleport 弹层组件）────────
 const activeDimension = ref<(typeof WIDE_DIMENSIONS)[number]>('按大区')
+
+// 告警等级 → 类名后缀映射：WIDE_ALARMS 的 level 是中文（显示文本），
+// CSS 类名须保持英文 kebab-case（中文类名不利于检索/协作，且无 BEM 英文惯例一致性）
+const ALARM_LEVEL_CLASS: Record<string, string> = { 高: 'high', 中: 'mid', 低: 'low' }
 </script>
 
 <template>
@@ -116,7 +120,12 @@ const activeDimension = ref<(typeof WIDE_DIMENSIONS)[number]>('按大区')
         <PanelBox title="实时告警" :class="[bem.e('block'), bem.em('block', 'grow')]">
           <ul :class="bem.e('alarms')">
             <li v-for="a in WIDE_ALARMS" :key="a.time + a.text">
-              <span :class="[bem.e('alarm-level'), bem.em('alarm-level', a.level)]">
+              <span
+                :class="[
+                  bem.e('alarm-level'),
+                  bem.em('alarm-level', ALARM_LEVEL_CLASS[a.level] ?? 'low'),
+                ]"
+              >
                 {{ a.level }}
               </span>
               <span :class="bem.e('alarm-text')">{{ a.text }}</span>
@@ -140,7 +149,7 @@ const activeDimension = ref<(typeof WIDE_DIMENSIONS)[number]>('按大区')
   color: var(--big-text);
   background:
     radial-gradient(ellipse 4000px 600px at 50% -10%, rgba(var(--big-blue-rgb), 0.3), transparent),
-    #06122b;
+    var(--big-bg-page);
 
   &__header {
     position: relative;
@@ -155,7 +164,7 @@ const activeDimension = ref<(typeof WIDE_DIMENSIONS)[number]>('按大区')
     font-size: 56px;
     font-weight: 700;
     letter-spacing: 16px;
-    background: linear-gradient(180deg, #ffffff, #7db4ff);
+    background: linear-gradient(180deg, var(--big-title-from), var(--big-title-to));
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -219,7 +228,7 @@ const activeDimension = ref<(typeof WIDE_DIMENSIONS)[number]>('按大区')
     height: 100%;
     font-size: 24px;
     color: var(--big-text-3);
-    background: rgba(10, 24, 48, 0.4);
+    background: var(--big-mask-light);
     border: 1px dashed rgba(var(--big-blue-mid-rgb), 0.25);
     border-radius: 12px;
   }
@@ -232,7 +241,7 @@ const activeDimension = ref<(typeof WIDE_DIMENSIONS)[number]>('按大区')
   &__map-retry {
     padding: 8px 32px;
     font-size: 20px;
-    color: #ffffff;
+    color: var(--el-color-white);
     cursor: pointer;
     background: rgba(var(--big-blue-light-rgb), 0.3);
     border: 1px solid var(--big-primary);
@@ -287,7 +296,7 @@ const activeDimension = ref<(typeof WIDE_DIMENSIONS)[number]>('按大区')
     line-height: 32px;
     text-align: center;
     color: var(--big-text-deep);
-    background: #3a5a8c;
+    background: var(--big-rank-active);
     border-radius: 8px;
   }
 
@@ -318,7 +327,7 @@ const activeDimension = ref<(typeof WIDE_DIMENSIONS)[number]>('按大区')
     border-radius: 8px;
 
     &--active {
-      color: #ffffff;
+      color: var(--el-color-white);
       background: rgba(var(--big-blue-light-rgb), 0.35);
       border-color: var(--big-primary);
     }
@@ -335,7 +344,7 @@ const activeDimension = ref<(typeof WIDE_DIMENSIONS)[number]>('按大区')
       gap: 16px;
       padding: 12px 0;
       font-size: 24px;
-      border-bottom: 1px dashed rgba(143, 168, 216, 0.15);
+      border-bottom: 1px dashed var(--big-divider);
     }
   }
 
@@ -345,19 +354,19 @@ const activeDimension = ref<(typeof WIDE_DIMENSIONS)[number]>('按大区')
     font-size: 22px;
     border-radius: 6px;
 
-    &--高 {
-      color: #fff;
-      background: rgba(245, 108, 108, 0.85);
+    &--high {
+      color: var(--el-color-white);
+      background: var(--big-state-danger);
     }
 
-    &--中 {
+    &--mid {
       color: var(--big-text-deep);
-      background: rgba(247, 201, 72, 0.9);
+      background: var(--big-state-warning);
     }
 
-    &--低 {
+    &--low {
       color: var(--big-text-deep);
-      background: rgba(143, 168, 216, 0.75);
+      background: var(--big-state-info);
     }
   }
 

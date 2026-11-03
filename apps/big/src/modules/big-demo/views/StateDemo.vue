@@ -135,7 +135,7 @@ const updatedAt = '14:32:08'
   color: var(--big-text);
   background:
     radial-gradient(ellipse 1200px 500px at 50% -10%, rgba(var(--big-blue-rgb), 0.25), transparent),
-    #06122b;
+    var(--big-bg-page);
 
   &__header {
     flex: none;
@@ -148,7 +148,7 @@ const updatedAt = '14:32:08'
     font-size: 36px;
     font-weight: 700;
     letter-spacing: 6px;
-    background: linear-gradient(180deg, #ffffff, #7db4ff);
+    background: linear-gradient(180deg, var(--big-title-from), var(--big-title-to));
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -170,7 +170,7 @@ const updatedAt = '14:32:08'
     border-radius: 6px;
 
     &--active {
-      color: #ffffff;
+      color: var(--el-color-white);
       background: rgba(var(--big-blue-light-rgb), 0.35);
       border-color: var(--big-primary);
     }
@@ -185,7 +185,7 @@ const updatedAt = '14:32:08'
     min-height: 0;
     margin-top: 24px;
     padding: 40px;
-    background: rgba(10, 24, 48, 0.5);
+    background: var(--big-mask);
     border: 1px solid rgba(var(--big-blue-mid-rgb), 0.18);
     border-radius: 12px;
   }
@@ -266,7 +266,7 @@ const updatedAt = '14:32:08'
     &-btn {
       padding: 10px 36px;
       font-size: 18px;
-      color: #ffffff;
+      color: var(--el-color-white);
       cursor: pointer;
       background: rgba(var(--big-blue-light-rgb), 0.3);
       border: 1px solid var(--big-primary);
@@ -284,7 +284,7 @@ const updatedAt = '14:32:08'
 
     // 断连态：黄色系，与错误态视觉区分（中断 ≠ 失败）
     &--offline &__notice-title {
-      color: #f7c948;
+      color: var(--big-medal-gold);
     }
 
     // 空态：中性灰蓝
@@ -300,7 +300,7 @@ const updatedAt = '14:32:08'
     font-size: 17px;
     line-height: 1.7;
     color: var(--big-text-2);
-    background: rgba(10, 24, 48, 0.4);
+    background: var(--big-mask-light);
     border-left: 3px solid var(--big-primary);
     border-radius: 0 8px 8px 0;
 

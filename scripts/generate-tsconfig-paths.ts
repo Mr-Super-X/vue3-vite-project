@@ -142,7 +142,12 @@ function processApp(appRoot: string, isCheck: boolean): boolean {
   const newContent = generateTsconfigContent(existing, expectedPaths)
   const currentContent = readFileSync(tsconfigApp, 'utf-8')
   const newHash = createHash('sha256').update(newContent).digest('hex')
-  const currentHash = createHash('sha256').update(currentContent).digest('hex')
+  // 行尾归一：Windows core.autocrlf=true 会把工作区 LF checkout 成 CRLF，
+  // 而 generateTsconfigContent 输出固定 LF——按字节比对会把纯行尾差误判为漂移
+  // （2026-11-03 本地 6 端全红实证；CI ubuntu 无此问题，故此前未暴露）
+  const currentHash = createHash('sha256')
+    .update(currentContent.replace(/\r\n/g, '\n'))
+    .digest('hex')
 
   if (isCheck) {
     if (newHash === currentHash) {

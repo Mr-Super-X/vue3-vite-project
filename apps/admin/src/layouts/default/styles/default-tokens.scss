@@ -10,8 +10,8 @@
 //        且折叠菜单弹层 teleports 到 body，必须在根级才能取到值。
 //   2. Element Plus 变量覆盖（--el-color-primary 紫色系 / --el-bg-color / --el-border-color / --el-text-color）
 //      → 以 mixin 形式导出（default-layout-ep-light / -dark），由 index.vue 施加在
-//        .vv-default-layout 容器上。原因：项目全局主色由 assets/styles 的 theme-vars.scss
-//        管理（portal 布局共用），直接覆盖 :root 会把整个工程主题改紫；
+//        .vv-default-layout 容器上。原因：项目全局主色由 @vv/ui 的 styles/element-overwrite/
+//        theme-vars.scss 管理（portal 布局共用），直接覆盖 :root 会把整个工程主题改紫；
 //        容器作用域只影响 default 布局子树（侧栏/顶栏/内容区），与复刻目标一致。
 //      已知偏差：teleport 到 body 的弹层（el-dialog / el-message 等）在 default 布局下
 //      仍用项目全局主色；菜单弹层（vv-app-menu-popper-* 为 default 专属类名）已单独处理。
@@ -40,6 +40,10 @@
   --layout-border-color: #e7eaf0;
   // 毛玻璃顶栏阴影：极浅的 slate 双层投影（参考仓标志性质感）
   --layout-shadow: 0 1px 2px rgb(15 23 42 / 4%), 0 8px 24px rgb(15 23 42 / 4%);
+
+  // 移动端抽屉（遮罩 + 投影；2026-11-03 裸值普查收编）
+  --app-mask: rgb(15 23 42 / 45%);
+  --app-drawer-shadow: rgb(15 23 42 / 25%);
 }
 
 @mixin default-layout-dark {
@@ -63,6 +67,10 @@
   --app-content-bg-color: #0b1120;
   --layout-border-color: #273244;
   --layout-shadow: 0 1px 2px rgb(0 0 0 / 18%), 0 10px 30px rgb(0 0 0 / 18%);
+
+  // 移动端抽屉（暗色下遮罩/投影加深一档，保持与亮底内容的层级分离）
+  --app-mask: rgb(0 0 0 / 55%);
+  --app-drawer-shadow: rgb(0 0 0 / 40%);
 }
 
 // ─── Element Plus 变量覆盖 mixin（容器作用域，由 index.vue 施加）────

@@ -42,7 +42,7 @@ const bem = createNamespace('panel-box')
   flex-direction: column;
   box-sizing: border-box;
   padding: 16px 20px;
-  background: rgba(13, 38, 76, 0.35);
+  background: var(--big-panel-bg);
   border: 1px solid rgba(var(--big-blue-mid-rgb), 0.25);
 
   &__corner {

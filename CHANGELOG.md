@@ -6,6 +6,61 @@
 
 ## 未发布
 
+### 🎨 Style | 样式分层规则符合度修复：五目录骨架化 + 暗色全端接线 + 裸值收编 82 处（2026-11-03）
+
+> 背景：对照「值/用法分离」六条理想模型的深度审计（报告落盘
+> `.claude/agent-reports/2026-11-03-样式分层规则符合度审计.md`）——骨架层近乎满分，
+> 但发现暗色主题三处「文档声称 ≠ 代码实现」漂移（useTheme.ts JSDoc 虚假声称
+> html.dark class / --el-color-primary 重算 / persist primaryColor；EP 暗色 5/6 端未接线；
+> injectBrandColor 对 EP 组件无效）+ 82 处裸色值（auth login 32 / big-demo 29 为重症区）。
+
+- **五目录骨架化**（`packages/ui/src/assets/styles/`）：tokens/（_colors/_spacing/_typography/_shadow/_z-index/_motion 六族 + index @forward）、themes/（_light/_dark mixin 与选择器分离）、base/（reset/transition/a11y）、tools/（原 mixins/，sass partial 化）、utilities/（原 custom.scss）；index.scss 七段顺序契约；全部 git mv 保历史；引用点全量更新（theme-vars / create-vite-config 与 vitest.config 的 bemPath / login×2 / 注释×5）
+- **EP 暗色全端接线**：app-styles 三件套扩四件套（+`element-plus/theme-chalk/dark/css-vars.css`）；theme store applyTheme 补 `classList` dark 联动（data-theme 业务轨道 + dark class EP 轨道双轨）；theme.spec 补断言 + 新增 auto 用例
+- **injectBrandColor 修复**：增补 `--el-color-primary` 同步注入（此前只设 `--color-primary`，EP 组件不跟随品牌色；灯色阶不联动局限写入 JSDoc）；useTheme.ts JSDoc 三处虚假声称同步修正
+- **base 层补全**：新建 `base/a11y.css`（`:focus-visible` 全局兜底 + `::selection` 品牌色选区）；reset.css 5 处裸值改 `var()`（html 底 / autofill 双色 / 滚动条双色，带原值兜底）；themes/ 新增 `--scrollbar-*` 双主题 token
+- **裸值收编 82 → 2**（仅余 blank 布局合规兜底值与注释文本）：login.scss 变量组扩充 10 token + 消费层 `var()` 化（含 login-bg.scss 光斑）；big-tokens.scss 增补 19 token（面板/遮罩/标题渐变/奖牌/排名/状态），big-demo 8 文件消重（RankingList 奖牌 JS 常量改 `var()` 引用）；portal / admin UserInfo / RichTextEditor / h5-demo / XForm 调试件等零星白字统一 `var(--el-color-white)` / `var(--portal-on-solid)`；PortalHeader logo SVG 色移入 CSS（暗色自动反色）
+- **端级暗色补齐**：portal-tokens.scss（黑白反转 5 值）/ h5-tokens.scss（7 值）配 `[data-theme='dark']` + `prefers-color-scheme` 覆盖；big / auth login 恒深色声明豁免
+- **中文类名修复**：Wide.vue 告警等级 `&--高/中/低` → `ALARM_LEVEL_CLASS` 映射 + `--high/mid/low`（全仓扫描确认唯一一处）
+- **文档**：docs/49 全面更新（五目录映射 / 七段顺序 / 暗色双轨勘误 / 端级暗色）；DESIGN.md 登记新增 token（登记先行 Rule）；昨日审计报告加勘误注记
+
+踩坑：EP 2.14 exports 的 `./*` 通配符不做扩展名补全——`element-plus/theme-chalk/dark/css-vars` 无 `.css` 后缀在 vite 8 严格解析下 500（dev 冒烟即暴露；官方文档的无后缀写法在本仓不可用，须写全 `css-vars.css`）。
+
+验证：sass 编译 5 文件绿；`pnpm type-check` / `pnpm lint` / `pnpm test` 全绿；playwright 实测 portal light/dark 反转、big 主视图与 Wide 页零回归（告警类名 `--high/--mid` 生效且背景精确命中 `var(--big-state-danger)`）、login 恒深色零回归、docs EP 组件暗色生效（`--el-bg-color=#141414`）。
+
+手动验证：
+
+1. `pnpm dev:gateway` → http://localhost:8080/portal/ ，控制台 `document.documentElement.classList.add('dark')` + `setAttribute('data-theme','dark')`——页面与 logo 应反转
+2. http://localhost:8080/docs/ 同法切暗色——EP 组件（表格/按钮）应变暗
+3. http://localhost:8080/big/big-demo/wide ——告警等级色块（高红/中黄/低灰蓝）正常
+
+**同日追加（第二轮：aliases 修复 + 包目录规范化 B/C）**：
+
+- **check:aliases 根因修复**：`generate-tsconfig-paths.ts` 比对前归一行尾——Windows `core.autocrlf=true` 把工作区 LF checkout 成 CRLF，而生成物固定 LF，按字节 sha256 比对将纯行尾差误判为漂移（本地 6 端全红实证；CI ubuntu 无感故此前未暴露）；spec 补「生成物 LF」锚定用例。修复后 `check:aliases` 6/6 绿
+- **styles/ 上移（B）**：`packages/ui/src/assets/styles/` → `packages/ui/src/styles/`——assets/ 语义纯化为静态资源（icons/svg），SCSS 源码归 src/ 源码目录；引用形态走既有 `@vv/ui/styles/*` 裸路径映射（**零新增别名**，符合 §1.6.2 收敛原则）；12 文件经 git rename 检测保完整历史链（mixins→tools→styles 三层迁移可追溯）
+- **AppDynamicIcon 目录化（C）**：`components/common/AppDynamicIcon/`——`registry.ts` + `registry.spec.ts` 自 `assets/icons/` 迁入与唯一消费方内聚（用户裁决：不放 icons/ 避免「静态资源」误导，不放 plugins/——非 Vue 插件）；`AppDynamicIcon.vue` + `AppDynamicIcon.spec.ts` 同迁（零业务显式 import，全局注册消费无影响）；`vi.mock` 说明符与组件 import 同步（`'./registry.ts'`）
+- **A 评估成文**：端级 layouts/styles 与 src/styles **不拆**五目录——docs/49 §5 补拆分触发条件（单文件 >200 行 / 第三主题 / 端级自有 mixin 需求）
+- **顺手勘误**：README:652 `VITE_BRAND_COLOR`「含灯色阶联动」虚假承诺（灯色阶为编译期字面量不联动）；docs/06 Q4「灯色阶主题切换自动跟随」同义勘误 + Q2 补 html.dark 双轨说明；docs/05/06/39/49、双 README 共 30+ 处路径引用同步
+- 引用更新面：`app-styles.ts`（`@vv/ui/styles/index.scss`）、bemPath×2、login×2、uno.config×7、main.ts 注释、IconUsage（import + `?raw` 源码路径）
+
+验证（第二轮）：`pnpm type-check` / `pnpm -C packages/ui test`（1932 用例）/ `pnpm test:check-scripts` / `pnpm check:aliases` 全绿；sass 冒烟通过；playwright 复验 login（`@vv/ui/styles/tools/bem` sass 解析）与 docs IconUsage（37 图标 + 5 动态图标渲染，registry 新路径）零回归。
+
+手动验证（追加）：
+
+4. 文件管理器确认 `packages/ui/src/assets/` 下只剩 `icons/`（2 个 svg）；`packages/ui/src/components/common/AppDynamicIcon/` 含 4 文件（vue/spec/registry/spec）
+5. Windows 本机 `pnpm check:aliases` 应绿（CRLF 工作区下不再误报）
+
+**同日追加（第三轮：app-styles 迁包——方向铁律物理消解）**：
+
+- **husky 拦截实证**：styles/ 上移后 app-styles.ts 的 `@vv/ui/styles/index.scss` 说明符触发 `local/package-contract` 方向铁律（shared 禁依赖 @vv/ui）——原 `@assets/styles` 路径系经 `ALIAS_PREFIXES` 掩蔽的既定形态，styles/ 移出 assets/ 后掩蔽失效
+- **迁包而非钻规则盲区**：`app-styles.ts` 自 `packages/shared/src/` 迁回 `packages/ui/src/`——四件套中两件（index.scss / EP dark css-vars）本是 ui 包资产；内部引用转包内相对路径 `./styles/index.scss`，shared→ui 依赖物理消失（非相对路径绕过规则）
+- **配套同步**：6 端 main.ts 说明符改 `import '@vv/ui/app-styles'`（ui 包 `"./*"` exports 通配承接，无需新增映射）；`shared/package.json` 摘除悬空 `./app-styles` exports；`ui/package.json` 补 `normalize.css: catalog:` 声明（声明跟着文件走）；6 端 + 脚手架模板 `styles/index.scss` 头注、docs/08/48/49 入口描述同步
+
+验证（第三轮）：`eslint packages/shared/src packages/ui/src --max-warnings 0` 通过（方向铁律 + 声明检查双绿）；`pnpm type-check` 绿。
+
+手动验证（第三轮）：
+
+6. `pnpm dev:gateway` 起服后访问任意端——四件套样式应完整（normalize 生效即页面不裸奔、dark 切换 EP 组件变暗）
+
 ### 📋 Docs | 新增 AGENTS.md「设计工作规范」节：impeccable × taste-skill 搭配（2026-11-02）
 
 > 背景：设计任务工具链扩充——impeccable 已配 live（admin 端），taste-skill

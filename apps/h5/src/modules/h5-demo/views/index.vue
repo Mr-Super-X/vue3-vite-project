@@ -103,16 +103,16 @@ onUnmounted(() => {
   &__card {
     margin-bottom: 24px;
     padding: 28px;
-    background: #ffffff;
+    background: var(--h5-card-bg);
     border-radius: 16px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 4px 16px var(--h5-shadow-card);
   }
 
   &__card-title {
     margin: 0 0 20px;
     font-size: 26px;
     font-weight: 600;
-    color: #323233;
+    color: var(--h5-text-title);
   }
 
   &__text-lg {
@@ -135,8 +135,8 @@ onUnmounted(() => {
     width: 200px;
     padding: 16px;
     font-size: 20px;
-    color: #ffffff;
-    background: var(--color-primary, #409eff);
+    color: var(--el-color-white);
+    background: var(--color-primary);
     border-radius: 8px;
     text-align: center;
   }
@@ -153,7 +153,7 @@ onUnmounted(() => {
     }
 
     &--scaled {
-      border: 2px solid var(--color-primary, #409eff);
+      border: 2px solid var(--color-primary);
     }
   }
 

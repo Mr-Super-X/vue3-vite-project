@@ -373,7 +373,7 @@ onUnmounted(clearLayoutScope)
     inset: 0;
     z-index: 25;
     cursor: pointer;
-    background: rgb(15 23 42 / 45%);
+    background: var(--app-mask);
     border: 0;
     backdrop-filter: blur(2px);
   }
@@ -405,7 +405,7 @@ body.#{$BEM_PREFIX}-resizing {
     inset: 0 auto 0 0;
     z-index: 30;
     width: min(82vw, var(--left-menu-max-width));
-    box-shadow: 20px 0 50px rgb(15 23 42 / 25%);
+    box-shadow: 20px 0 50px var(--app-drawer-shadow);
 
     &.is-collapsed {
       transform: translateX(-100%);

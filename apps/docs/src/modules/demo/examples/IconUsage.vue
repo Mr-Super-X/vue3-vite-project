@@ -7,13 +7,13 @@
  * 2. 「动态用法」区图标由数据驱动渲染，:size="20" 的齿轮明显小于其他。
  * 3. 「本地自定义集合」区按代码片段步骤可复刻出 app:logo 图标（新增流程见 docs/39 §3.2/§3.3）。
  */
-import type { AppIconName } from '@assets/icons/registry'
+import type { AppIconName } from '@vv/ui/components/common/AppDynamicIcon/registry'
 import DemoFrame from '../components/DemoFrame.vue'
 import DemoField from '../components/DemoField.vue'
 import ApiTable from '../components/ApiTable.vue'
 import { useDocToc } from '../composables/useDocToc'
 import { extractApi } from '../utils/extractApi'
-import appDynamicIconSource from '@vv/ui/components/common/AppDynamicIcon.vue?raw'
+import appDynamicIconSource from '@vv/ui/components/common/AppDynamicIcon/AppDynamicIcon.vue?raw'
 
 // BEM 工具（createNamespace）由 unplugin-auto-import 自动注入，详见 CLAUDE.md §3
 const bem = createNamespace('demo-icon-usage')
@@ -106,7 +106,7 @@ const syntaxItems = [
 <template>
   <DemoFrame
     title="IconUsage 图标体系"
-    source="src/assets/icons/registry.ts"
+    source="src/components/common/AppDynamicIcon/registry.ts"
     :introductions="[
       '一套语法、零体积焦虑、类型安全、离线可用：图标编译期内联 SVG，产物零 iconify API 请求。',
       '静态 <i-集合-图标 /> 覆盖 99% 场景；图标名来自数据时用 &lt;AppDynamicIcon name=&quot;集合:图标&quot; /&gt;。',
@@ -219,7 +219,7 @@ const syntaxItems = [
     <section id="demo-custom">
       <DemoField
         label="本地自定义集合 app:：新增与使用（完整流程）"
-        :code="`// ① 存入 SVG 资产（源文件规范见 docs/39 §4.3）\n// src/assets/icons/logo.svg\n\n// ② 静态用法：模板直接用\n<i-app-logo />\n\n// ③ 动态用法：registry.ts 登记一行\nimport AppLogo from 'virtual:icons/app/logo'\nconst registry = { /* ... */, 'app:logo': AppLogo } as const`"
+        :code="`// ① 存入 SVG 资产（源文件规范见 docs/39 §4.3）\n// src/assets/icons/logo.svg\n\n// ② 静态用法：模板直接用\n<i-app-logo />\n\n// ③ 动态用法：registry.ts 登记一行\n//    （位于 src/components/common/AppDynamicIcon/，与组件同目录内聚）\nimport AppLogo from 'virtual:icons/app/logo'\nconst registry = { /* ... */, 'app:logo': AppLogo } as const`"
       >
         <div :class="bem.e('grid')">
           <span :class="bem.e('cell')">

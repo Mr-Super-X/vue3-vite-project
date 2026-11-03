@@ -322,9 +322,11 @@ export function createViteConfig({
         // silenceDeprecations（'new-global' / 'if-function'）原因见 scss.ts。
         //
         // R-B：bemPath 用绝对路径（包化后 cwd 不再是注入参照系）；
-        // P1-4 起指 @vv/ui 包内路径（bem.scss 随 assets 迁包）
+        // P1-4 起指 @vv/ui 包内路径（bem.scss 随 assets 迁包）；
+        // 2026-11-03 样式目录骨架化：mixins/ 更名 tools/（sass partial _bem.scss）；
+        // 同日起 styles/ 自 assets/ 上移 src/styles/（assets/ 只留静态资源）
         scss: createScssPreprocessorOptions({
-          bemPath: path.join(UI_SRC_DIR, 'assets/styles/mixins/bem'),
+          bemPath: path.join(UI_SRC_DIR, 'styles/tools/bem'),
         }),
         less: { javascriptEnabled: true },
       },

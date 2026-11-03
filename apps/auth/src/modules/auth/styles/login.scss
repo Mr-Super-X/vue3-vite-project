@@ -1,20 +1,27 @@
 // 登录页样式（从 Login.vue 抽离，控制单文件行数 ≤400 的项目铁律）
 // BEM 根类：.#{$BEM_PREFIX}-login（与 Login.vue 的 createNamespace('Login') 对应）
 // 作为 @use 子模块不会获得 additionalData 注入，需自行引入 bem（不带 with，复用入口已配置的实例）
-@use '@assets/styles/mixins/bem' as *;
+@use '@vv/ui/styles/tools/bem' as *;
 @use './login-bg.scss';
 
 .#{$BEM_PREFIX}-login {
-  // ====== CSS 变量（仅本组件作用域） ======
+  // ====== CSS 变量（仅本组件作用域；docs/49 §5 就近原则：只服务登录页，留模块级） ======
+  // 登录页为固定深色设计，不随主题切换，故无 [data-theme] 暗色覆盖段
   --login-bg-base: #0a1428;
   --login-bg-deep: #050b1a;
   --login-bg-tint: #1e3a8a;
   --login-bg-grid: rgba(56, 189, 248, 0.06);
   --login-accent: #38bdf8;
+  --login-accent-deep: #0ea5e9;
   --login-accent-glow: rgba(56, 189, 248, 0.4);
   --login-accent-hover: #7dd3fc;
+  --login-accent-faint: rgba(56, 189, 248, 0.1);
+  --login-accent-shadow: rgba(56, 189, 248, 0.3);
+  --login-on-accent: #0a1428;
   --login-card-bg: rgba(15, 23, 42, 0.75);
+  --login-card-bg-solid: rgba(15, 23, 42, 0.95);
   --login-card-border: rgba(56, 189, 248, 0.18);
+  --login-card-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   --login-text-primary: #e2e8f0;
   --login-text-secondary: #94a3b8;
   --login-text-muted: #64748b;
@@ -22,6 +29,10 @@
   --login-input-border: rgba(56, 189, 248, 0.2);
   --login-input-focus: rgba(56, 189, 248, 0.4);
   --login-error: #f87171;
+  --login-spinner-track: rgba(10, 20, 40, 0.3);
+  --login-orb-a: rgba(56, 189, 248, 0.15);
+  --login-orb-b: rgba(99, 102, 241, 0.12);
+  --login-orb-c: rgba(14, 165, 233, 0.1);
 
   position: relative;
   min-height: 100vh;
@@ -53,15 +64,13 @@
     background: var(--login-card-bg);
     border: 1px solid var(--login-card-border);
     border-radius: 16px;
-    box-shadow:
-      0 20px 60px rgba(0, 0, 0, 0.5),
-      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    box-shadow: var(--login-card-shadow);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     animation: login-fade-in-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 
     @supports not (backdrop-filter: blur(1px)) {
-      background: rgba(15, 23, 42, 0.95);
+      background: var(--login-card-bg-solid);
     }
 
     .el-card__body {
@@ -102,7 +111,7 @@
     left: 50%;
     width: 20px;
     height: 20px;
-    background: linear-gradient(135deg, var(--login-accent) 0%, #0ea5e9 100%);
+    background: linear-gradient(135deg, var(--login-accent) 0%, var(--login-accent-deep) 100%);
     border-radius: 4px;
     transform-origin: center;
     box-shadow: 0 0 16px var(--login-accent-glow);
@@ -202,7 +211,7 @@
 
     &:hover {
       color: var(--login-accent);
-      background: rgba(56, 189, 248, 0.1);
+      background: var(--login-accent-faint);
     }
 
     &:focus-visible {
@@ -253,17 +262,17 @@
     width: 100%;
     height: 48px;
     padding: 0;
-    background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+    background: linear-gradient(135deg, var(--login-accent) 0%, var(--login-accent-deep) 100%);
     background-size: 200% 100%;
     background-position: left center;
-    color: #0a1428;
+    color: var(--login-on-accent);
     font-size: 15px;
     font-weight: 600;
     letter-spacing: 4px;
     border: 0;
     border-radius: 8px;
     cursor: pointer;
-    box-shadow: 0 4px 16px rgba(56, 189, 248, 0.3);
+    box-shadow: 0 4px 16px var(--login-accent-shadow);
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 
     &:hover:not(:disabled) {
@@ -274,7 +283,7 @@
 
     &:active:not(:disabled) {
       transform: translateY(0);
-      box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
+      box-shadow: 0 2px 8px var(--login-accent-shadow);
     }
 
     &:disabled {
@@ -292,8 +301,8 @@
     display: inline-block;
     width: 14px;
     height: 14px;
-    border: 2px solid rgba(10, 20, 40, 0.3);
-    border-top-color: #0a1428;
+    border: 2px solid var(--login-spinner-track);
+    border-top-color: var(--login-on-accent);
     border-radius: 50%;
     animation: login-spin 0.8s linear infinite;
   }

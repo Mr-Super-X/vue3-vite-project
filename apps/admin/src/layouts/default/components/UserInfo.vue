@@ -82,7 +82,7 @@ function onVisibleChange(visible: boolean) {
     height: 26px;
     font-size: 12px;
     font-weight: 600;
-    color: #fff;
+    color: var(--el-color-white);
     background: var(--el-color-primary);
     border-radius: 50%;
     place-items: center;

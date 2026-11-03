@@ -284,7 +284,7 @@ const bem = createNamespace('user-card')
 | --- | -------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | 1   | `<style lang="scss" scoped>` 或 `<style scoped>`         | 详见上方"为什么不写 scoped"。BEM 命名空间已隔离，scoped 冗余且与 `:deep()` 冲突        |
 | 2   | 硬编码 `.vv-user-card { ... }`（不带 `#{$BEM_PREFIX}-`） | 改 `VITE_BEM_PREFIX` 后失效，JS 端输出新前缀但 CSS 选择器不动 → 样式丢失               |
-| 3   | `@use '@/assets/styles/mixins/bem' as *;`                | vite additionalData 已通过 `@use ... with` 注入，重复引入会报 sass 编译错误            |
+| 3   | `@use '@vv/ui/styles/tools/bem' as *;`                   | vite additionalData 已通过 `@use ... with` 注入，重复引入会报 sass 编译错误            |
 | 4   | `:deep(.el-button) { ... }`                              | 无 scoped 时 `:deep()` 非法，浏览器忽略。靠 BEM 命名空间隔离即可穿透 element-plus 组件 |
 
 ---
@@ -297,7 +297,7 @@ const bem = createNamespace('user-card')
 
 - 同一组件选择器数量 ≥ 20 个，sass 插值写法嵌套层级深、视觉臃肿
 - 习惯 SCSS mixin 心智模型（团队历史习惯）
-- 需要与 `packages/ui/src/assets/styles/mixins/bem.scss` 现存 mixin 复用
+- 需要与 `packages/ui/src/styles/tools/_bem.scss` 现存 mixin 复用
 
 #### 何时仍选方案 A
 
@@ -305,7 +305,7 @@ const bem = createNamespace('user-card')
 - 团队以 sass 插值为默认风格（更直观、不依赖项目私有 mixin）
 - 直接用 createNamespace 命名约定更顺手的场景
 
-#### SCSS mixin 一览（来自 `packages/ui/src/assets/styles/mixins/bem.scss`）
+#### SCSS mixin 一览（来自 `packages/ui/src/styles/tools/_bem.scss`）
 
 | mixin             | 用途                                      | 生成示例                                          |
 | ----------------- | ----------------------------------------- | ------------------------------------------------- |
@@ -404,12 +404,12 @@ const bem = createNamespace('user-card')
 
 #### 方案 B 反模式（禁止）
 
-| #   | 反例                                                               | 原因                                                                        |
-| --- | ------------------------------------------------------------------ | --------------------------------------------------------------------------- |
-| 1   | `<style lang="scss" scoped>` 或 `<style scoped>`                   | 与方案 A 同理，BEM 命名空间已隔离                                           |
-| 2   | `@include b(vv-user-card)`（传完整前缀）                           | 会输出 `.vv-vv-user-card` 重复前缀                                          |
-| 3   | `@use '@/assets/styles/mixins/bem' as *;`（在 style 块中重复引入） | vite additionalData 已通过 `@use ... with` 注入，重复引入会报 sass 编译错误 |
-| 4   | `:deep(.el-button) { ... }`                                        | 无 scoped 时 `:deep()` 非法                                                 |
+| #   | 反例                                                            | 原因                                                                        |
+| --- | --------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| 1   | `<style lang="scss" scoped>` 或 `<style scoped>`                | 与方案 A 同理，BEM 命名空间已隔离                                           |
+| 2   | `@include b(vv-user-card)`（传完整前缀）                        | 会输出 `.vv-vv-user-card` 重复前缀                                          |
+| 3   | `@use '@vv/ui/styles/tools/bem' as *;`（在 style 块中重复引入） | vite additionalData 已通过 `@use ... with` 注入，重复引入会报 sass 编译错误 |
+| 4   | `:deep(.el-button) { ... }`                                     | 无 scoped 时 `:deep()` 非法                                                 |
 
 ---
 
@@ -442,7 +442,8 @@ const bem = createNamespace('user-card')
 **vite 注入实现**（`@vv/config` 工厂 scss 段，`packages/config/src/scss.ts` 的 `createScssPreprocessorOptions`）：
 
 ```ts
-// bem.scss 已随迁 @vv/ui 包（packages/ui/src/assets/styles/mixins/bem.scss）；
+// bem mixin 已随迁 @vv/ui 包（packages/ui/src/styles/tools/_bem.scss，2026-11-03 起
+// styles/ 自 assets/ 上移、mixins/ 更名 tools/）；
 // 经 sass loadPaths + 裸模块名 @use（绝对路径盘符冒号会被 sass 误判为 URL scheme，见 scss.ts 头注）
 scss: {
   additionalData: `@use 'bem' as * with ($BEM_PREFIX: '${process.env.VITE_BEM_PREFIX ?? 'vv'}');\n`,
@@ -470,34 +471,30 @@ scss: {
 | 第三方库样式（如 Element Plus `el-` 冲突） | Element Plus 自身用 BEM，统一约定                   |
 | 全局 `*` 重置误伤                          | 重置只影响 `html` / `body`，不进入 BEM 命名的组件类 |
 
-### 何时写全局样式（放在 `packages/ui/src/assets/styles/`）
+### 何时写全局样式（放在 `packages/ui/src/styles/`）
 
-| 场景                       | 处理                                                                                |
-| -------------------------- | ----------------------------------------------------------------------------------- |
-| 全局 reset / 工具类        | 放在 `packages/ui/src/assets/styles/`，**不写 scoped**（无 BEM 命名）               |
-| Element Plus 主题覆盖      | 放在 `packages/ui/src/assets/styles/element-overwrite/`（目录，按组件维度拆分文件） |
-| 路由过渡 / fade keyframes  | 放在 `packages/ui/src/assets/styles/transition.scss`                                |
-| **禁止** Element Plus 穿透 | ❌ 禁止写 `:deep(.el-button)`——去掉 scoped 后 `:deep()` 非法                        |
+| 场景                       | 处理                                                                                         |
+| -------------------------- | -------------------------------------------------------------------------------------------- |
+| 全局 reset / 工具类        | 放在 `packages/ui/src/styles/`（base/ 与 utilities/ 子目录），**不写 scoped**（无 BEM 命名） |
+| Element Plus 主题覆盖      | 放在 `packages/ui/src/styles/element-overwrite/`（目录，按组件维度拆分文件）                 |
+| 路由过渡 / fade keyframes  | 放在 `packages/ui/src/styles/base/transition.scss`                                           |
+| **禁止** Element Plus 穿透 | ❌ 禁止写 `:deep(.el-button)`——去掉 scoped 后 `:deep()` 非法                                 |
 
 ---
 
 ## 📁 文件组织
 
-> Monorepo 后全局样式资产归 @vv/ui 包（`packages/ui/src/assets/styles/`），全局组件归 @vv/ui（`packages/ui/src/components/`，unplugin-vue-components 自动注册，见 docs/08 §3.3）；各 app 私有组件放 `apps/<a>/src/components/`。
+> Monorepo 后全局样式资产归 @vv/ui 包（`packages/ui/src/styles/`——2026-11-03 起 styles/ 自 assets/ 上移，assets/ 只放静态资源），全局组件归 @vv/ui（`packages/ui/src/components/`，unplugin-vue-components 自动注册，见 docs/08 §3.3）；各 app 私有组件放 `apps/<a>/src/components/`。
 
 ```
-packages/ui/src/assets/styles/
-├── index.scss              # 入口：按顺序 @use reset/variables/theme/transition/element-overwrite/custom
-├── reset.css               # 浏览器基线重置（normalize.css 替代）+ 全局滚动条样式
-├── variables.scss          # 主题无关变量（品牌色 / 间距 / 圆角 / 字号 / 字重 / 行高 / 阴影 / z-index / 动画时长 / 缓动）
-├── theme.scss              # 主题感知变量（背景 / 文字 / 边框，light + dark 双主题）
-├── transition.scss         # 全局过渡动画（5 个 @keyframes + 3 个过渡工具类 + reduced-motion 适配）
-├── element-overwrite/      # Element Plus 主题覆盖（目录，按组件维度拆分文件）
-├── custom.scss             # 复合场景工具类（.vv-flex-center / .vv-flex-between / .vv-ellipsis-* 等）
-└── mixins/
-    ├── bem.scss            # BEM mixin（vite additionalData @use 注入源）
-    ├── transitions.scss    # 过渡 mixin（3 个）
-    └── responsive.scss     # 响应式断点 mixin（vv-responsive / vv-responsive-down）
+packages/ui/src/styles/      # 五目录骨架（docs/49）：值与用法分离
+├── index.scss               # 入口：七段顺序 @use（reset → tokens → themes → transition → a11y → element-overwrite → utilities）
+├── tokens/                  # 设计令牌六族：_colors/_spacing/_typography/_shadow/_z-index/_motion + index @forward
+├── themes/                  # 主题覆盖：_light/_dark mixin + index.scss 选择器应用点（[data-theme] + prefers-color-scheme）
+├── base/                    # reset.css（浏览器基线 + 滚动条）+ transition.scss（全局动画）+ a11y.css（:focus-visible/::selection）
+├── tools/                   # mixin 三件套：_bem/_responsive/_transitions（零 CSS 产出，SFC 按需 @use）
+├── utilities/custom.scss    # 复合场景工具类（.vv-flex-center / .vv-flex-between / .vv-ellipsis-* 等）
+└── element-overwrite/       # Element Plus 主题覆盖（目录，按组件维度拆分文件）
 
 packages/ui/src/components/   # @vv/ui 全局组件（components/common + ProTable + form-schema 三目录，自动注册）
 apps/<a>/src/components/      # app 私有全局组件（自动注册 dirs 扩展位）
@@ -506,9 +503,9 @@ apps/<a>/src/layouts/<m>/     # 路由级布局（layout 私有子组件归各 a
 
 ### 规则
 
-1. **全局样式只放在 `packages/ui/src/assets/styles/`**：禁止在组件中写"全局生效"的样式
+1. **全局样式只放在 `packages/ui/src/styles/`**：禁止在组件中写"全局生效"的样式
 2. **组件样式写在 SFC 内**：禁止拆出独立 `.scss` 文件（除非组件库对外发布，且行数超过 400）
-3. **跨组件复用的样式 → 抽到全局 `variables.css`**：禁止在组件内 `:root { --xxx: ... }` 散落定义
+3. **跨组件复用的样式 → 抽到 `tokens/` 对应族文件**：禁止在组件内 `:root { --xxx: ... }` 散落定义
 
 ---
 
@@ -528,7 +525,7 @@ apps/<a>/src/layouts/<m>/     # 路由级布局（layout 私有子组件归各 a
 □  9. 方案 A：根选择器是否用 .#{$BEM_PREFIX}-<kebab> 形式（不带硬编码前缀）？
 □ 10. 方案 A：element/modifier 是否用 &__xxx / &--yyy 嵌套（不写重复前缀）？
 □ 11. 方案 B：是否用 @include b(block-name) { @include e(elem) { ... } }（不传完整前缀）？
-□ 12. 方案 B：是否避免在 <style> 内 @use '@/assets/styles/mixins/bem' as *;（vite 已注入）？
+□ 12. 方案 B：是否避免在 <style> 内 @use '@vv/ui/styles/tools/bem' as *;（vite 已注入）？
 □ 13. 是否避开了命名禁区（缩写 / camelCase / PascalCase Block 名）？
 □ 14. 是否避免了深层嵌套（>4 层需重构成多个 Block）？
 □ 15. 是否避免了 .is-* 被硬编码到模板（应通过 bem.is() 切换）？
@@ -730,5 +727,5 @@ pnpm check:routes    # 如果改了 routes/* 跑一致性
 - 代码评审：`docs/02-代码质量工具链.md` §ESLint flat config
 - 设计规范：`docs/superpowers/specs/2026-07-17-vue3-vite-ts-scaffold-design.md`
 - BEM 运行时工具：`packages/shared/src/utils/bem.ts`
-- BEM mixin（方案 B）：`packages/ui/src/assets/styles/mixins/bem.scss`
+- BEM mixin（方案 B）：`packages/ui/src/styles/tools/_bem.scss`
 - 示范组件：`apps/admin/src/layouts/default/components/ToolHeader.vue`、`packages/ui/src/components/common/AsyncState.vue`

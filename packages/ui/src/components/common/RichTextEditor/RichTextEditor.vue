@@ -359,7 +359,7 @@ defineExpose({
   border: 1px solid var(--el-border-color);
   border-radius: 4px;
   overflow: hidden;
-  background: #fff;
+  background: var(--el-bg-color);
 
   &__toolbar {
     border-bottom: 1px solid var(--el-border-color-lighter);

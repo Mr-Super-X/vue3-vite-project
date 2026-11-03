@@ -60,6 +60,11 @@ describe('generateTsconfigContent', () => {
     )
     assert.ok(!result.includes('"exclude": [\n'))
   })
+
+  it('生成物为 LF 行尾（processApp 比对前归一 currentContent 行尾——Windows autocrlf 误判防线，2026-11-03 实证）', () => {
+    const result = generateTsconfigContent({ compilerOptions: {} }, { '@/*': ['./src/*'] })
+    assert.ok(!result.includes('\r'))
+  })
 })
 
 describe('aliasesToTsconfigPaths', () => {

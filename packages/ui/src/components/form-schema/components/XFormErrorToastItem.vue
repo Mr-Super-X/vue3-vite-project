@@ -135,7 +135,7 @@ const detailsWithMeta = computed<DetailWithMeta[]>(() =>
   justify-content: center;
   font-size: 12px;
   font-weight: 700;
-  color: #fff;
+  color: var(--el-color-white);
 }
 .error .icon {
   background: var(--el-color-danger);

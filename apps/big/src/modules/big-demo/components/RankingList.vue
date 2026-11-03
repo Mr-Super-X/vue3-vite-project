@@ -25,10 +25,14 @@ function barWidth(value: number): string {
   return `${Math.round((value / maxValue.value) * 100)}%`
 }
 
-/** 前三名奖牌色（金/银/铜），其余统一深蓝 */
-const MEDAL_COLORS = ['#f7c948', '#c0c8d8', '#d98e4a'] as const
+/** 前三名奖牌色（金/银/铜），其余统一深蓝；色值走 big-tokens（:style 绑定 var() 引用，运行时解析） */
+const MEDAL_COLORS = [
+  'var(--big-medal-gold)',
+  'var(--big-medal-silver)',
+  'var(--big-medal-bronze)',
+] as const
 function medalColor(index: number): string {
-  return MEDAL_COLORS[index] ?? '#3a5a8c'
+  return MEDAL_COLORS[index] ?? 'var(--big-rank-active)'
 }
 </script>
 
@@ -90,7 +94,7 @@ function medalColor(index: number): string {
   &__bar {
     display: block;
     height: 100%;
-    background: linear-gradient(90deg, #2b6de0, var(--big-primary));
+    background: linear-gradient(90deg, var(--big-rank-bar), var(--big-primary));
     border-radius: 4px;
     transition: width 0.4s ease;
   }

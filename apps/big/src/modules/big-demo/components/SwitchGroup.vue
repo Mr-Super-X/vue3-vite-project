@@ -56,7 +56,7 @@ function toggleSwitch(key: (typeof WIDE_SWITCHES)[number]['key']): void {
     border-radius: 8px;
 
     &--on {
-      color: #ffffff;
+      color: var(--el-color-white);
       background: rgba(var(--big-blue-light-rgb), 0.35);
       border-color: var(--big-primary);
     }

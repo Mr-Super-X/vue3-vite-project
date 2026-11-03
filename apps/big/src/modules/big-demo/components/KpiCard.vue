@@ -49,7 +49,7 @@ const trendClass = computed(() => {
 .#{$BEM_PREFIX}-kpi-card {
   box-sizing: border-box;
   padding: 16px 20px;
-  background: rgba(13, 38, 76, 0.35);
+  background: var(--big-panel-bg);
   border: 1px solid rgba(var(--big-blue-mid-rgb), 0.2);
 
   &__label {
@@ -86,7 +86,7 @@ const trendClass = computed(() => {
     }
 
     &--down {
-      color: #2fd39a;
+      color: var(--big-kpi-down);
     }
 
     &--flat {
