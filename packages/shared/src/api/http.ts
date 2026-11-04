@@ -318,6 +318,9 @@ const onResponseRejected = (error: {
     message,
     status,
     url: error.config?.url,
+    // 取消标记：status undefined + code -1 的取消错误与网络错误同形态，
+    // 无标记会被 withRetry 默认策略误判为可重试——logout/卸载被退避 sleep 延迟约 1s
+    canceled: error.code === 'ERR_CANCELED',
     cause: error,
   })
 

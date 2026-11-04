@@ -16,6 +16,8 @@ export class ApiError extends Error {
   public readonly code: number
   public readonly status: number | undefined
   public readonly url: string | undefined
+  /** 主动取消标记（axios ERR_CANCELED 归一化）：调用方据此跳过错误反馈与重试 */
+  public readonly canceled: boolean
   public override readonly cause: unknown
 
   constructor(init: {
@@ -23,6 +25,7 @@ export class ApiError extends Error {
     message: string
     status?: number | undefined
     url?: string | undefined
+    canceled?: boolean | undefined
     cause?: unknown
   }) {
     super(init.message)
@@ -30,6 +33,7 @@ export class ApiError extends Error {
     this.code = init.code
     this.status = init.status
     this.url = init.url
+    this.canceled = init.canceled ?? false
     this.cause = init.cause
   }
 }

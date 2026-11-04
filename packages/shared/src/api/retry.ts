@@ -4,7 +4,8 @@
  * 设计要点：
  * - 仅对幂等方法（GET/HEAD/OPTIONS）或显式 `idempotent: true` 的请求生效
  * - 默认重试 2 次（共 3 次调用），baseDelay 300ms，backoff 2
- * - 4xx 业务错误默认不重试（仅网络/5xx/超时）
+ * - 4xx 业务错误与主动取消（ApiError.canceled）不重试（仅网络/5xx/超时）
+ * - 退避 sleep 不可取消：取消在下次 fn() 调用时生效（axios 对已 abort 的 signal 立即 reject）
  *
  * 用法：
  *   const data = await withRetry(
@@ -24,13 +25,15 @@ export interface RetryOptions {
   baseDelay?: number
   /** 退避基数，默认 2（第 n 次重试延迟 = baseDelay * backoff^(n-1)） */
   backoff?: number
-  /** 网络/超时错误的判定函数，默认对所有抛错重试 */
+  /** 网络/超时错误的判定函数，默认仅 5xx / 网络错误重试（4xx 与主动取消不重试） */
   shouldRetry?: (err: unknown, attempt: number) => boolean
 }
 
 const IDEMPOTENT_METHODS = new Set(['get', 'head', 'options'])
 
 function defaultShouldRetry(err: unknown): boolean {
+  // 主动取消不重试：取消后应立即终止，退避 sleep 会延迟 logout/组件卸载流程约 1s
+  if (isApiError(err) && err.canceled) return false
   // ApiError 携带 status 时：仅 5xx + 网络错误重试
   if (isApiError(err) && err.status !== undefined) {
     return err.status >= 500
