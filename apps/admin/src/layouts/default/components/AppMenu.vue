@@ -421,9 +421,10 @@ function handleSelect(index: string): void {
   --el-menu-active-color: var(--el-color-primary);
 
   // teleport 到 body 取不到容器作用域的紫色主色（见 default-tokens.scss 作用域分层说明），
-  // 因该类名为 default 布局专属，在此局部定义 EP 主色变量（暗色覆盖见文件底部）
-  --el-color-primary: #5b5bd6;
-  --el-color-primary-light-9: #eeeeff;
+  // 因该类名为 default 布局专属，在此局部定义 EP 主色变量（暗色覆盖见文件底部；
+  // 值与 default-layout-ep-light 莫兰迪紫灯阶保持同步，2026-11-04 随亮色莫兰迪化更新）
+  --el-color-primary: #6a6180;
+  --el-color-primary-light-9: #ece9f4;
 
   &.el-menu--popup-container {
     // 子项极多时（demo 模块 60+ 页，实测弹层 2334px）会超出视口撑出 body 滚动条——

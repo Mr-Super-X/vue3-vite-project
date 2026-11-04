@@ -19,13 +19,13 @@
 // ─── 布局变量 mixin（light / dark 各写一次）────────────────
 
 @mixin default-layout-light {
-  // 侧栏（现代亮色系：白色侧栏 + 浅紫激活底，区别于经典深色 navy）
+  // 侧栏（莫兰迪紫亮色系：白色侧栏 + 薰衣草紫激活底，基色 #d1c4e9 主基调落位）
   --left-menu-bg-color: #fff; // 侧栏底色
   --left-menu-bg-light-color: #f8f9fc; // 折叠弹层 / 内嵌子菜单 / mixed 二级侧栏底色
-  --left-menu-bg-active-color: #eeeeff; // 激活态背景（浅紫）
-  --left-menu-text-color: #64748b; // 菜单文字
-  --left-menu-text-active-color: #5252c9; // 激活态文字（深紫）
-  --left-menu-collapse-bg-active-color: #eeeeff; // 折叠态弹层激活背景
+  --left-menu-bg-active-color: #d1c4e9; // 激活态背景（莫兰迪薰衣草紫）
+  --left-menu-text-color: #64748b; // 菜单文字（slate 中性，莫兰迪低饱和刻意不动）
+  --left-menu-text-active-color: #4f4763; // 激活态文字（深紫灰，在 #d1c4e9 底上对比 ~5.0）
+  --left-menu-collapse-bg-active-color: #d1c4e9; // 折叠态弹层激活背景
 
   // 顶栏 + 页签条
   --top-header-bg-color: #fff;
@@ -36,7 +36,7 @@
   --logo-title-text-color: #172033;
 
   // 内容区
-  --app-content-bg-color: #f6f7fb;
+  --app-content-bg-color: #f6f5fa; // 微紫调白（呼应主色族，原 #f6f7fb）
   --layout-border-color: #e7eaf0;
   // 毛玻璃顶栏阴影：极浅的 slate 双层投影（参考仓标志性质感）
   --layout-shadow: 0 1px 2px rgb(15 23 42 / 4%), 0 8px 24px rgb(15 23 42 / 4%);
@@ -46,8 +46,8 @@
   --app-drawer-shadow: rgb(15 23 42 / 25%);
 }
 
-// 莫兰迪雾霾蓝暗色（2026-11-03 由 slate 蓝黑切换；色值 token 登记见 DESIGN.md「中后台 default」节，
-// 亮色保持参考仓紫色主题不变——本 mixin 只服务 dark 与系统跟随两条路径）。
+// 莫兰迪雾霾蓝暗色（2026-11-03 由 slate 蓝黑切换；色值 token 登记见 DESIGN.md「中后台 default」节；
+// 亮色同为莫兰迪紫体系——明暗两套色板相互独立，各自服务 data-theme 两条路径）。
 @mixin default-layout-dark {
   // 侧栏
   --left-menu-bg-color: #161b21;
@@ -76,23 +76,25 @@
 }
 
 // ─── Element Plus 变量覆盖 mixin（容器作用域，由 index.vue 施加）────
-// 亮色沿用参考仓识别色（紫 #5b5bd6 + slate 文字色）；暗色为莫兰迪雾霾蓝
+// 亮色为莫兰迪紫（基色 #d1c4e9 落位 light-8，2026-11-04 由参考仓高饱和紫 #5b5bd6 切换；
+// 实心按钮底用深族 #6a6180 保证白字对比 ≥4.5）；暗色为莫兰迪雾霾蓝
 // 主色 #8fa6bc（2026-11-03 由 slate 蓝黑切换，见 DESIGN.md 中后台 default 节），
 // 文字与边框随主色系同步覆盖，保证布局内 el 组件视觉一致。
 
 @mixin default-layout-ep-light {
-  --el-color-primary: #5b5bd6;
-  --el-color-primary-light-3: #7c7cdf;
-  --el-color-primary-light-5: #9d9de8;
-  --el-color-primary-light-7: #c1c1f1;
-  --el-color-primary-light-8: #dadaf7;
-  --el-color-primary-light-9: #eeeeff;
-  --el-color-primary-dark-2: #4949b8;
+  // 莫兰迪紫灯阶（H 261° 族；色值登记见 DESIGN.md「中后台亮色 · 莫兰迪紫」）
+  --el-color-primary: #6a6180;
+  --el-color-primary-light-3: #9891ad;
+  --el-color-primary-light-5: #b4afc5;
+  --el-color-primary-light-7: #cfc9de;
+  --el-color-primary-light-8: #d1c4e9;
+  --el-color-primary-light-9: #ece9f4;
+  --el-color-primary-dark-2: #564e6e;
   --el-bg-color: #fff;
-  --el-bg-color-page: #f6f7fb;
+  --el-bg-color-page: #f6f5fa;
   --el-bg-color-overlay: #fff;
   --el-fill-color-blank: #fff;
-  --el-fill-color-light: #f5f6fa;
+  --el-fill-color-light: #f4f3f8;
   --el-border-color: #dfe3ea;
   --el-border-color-light: #e7eaf0;
   --el-border-color-lighter: #edf0f5;

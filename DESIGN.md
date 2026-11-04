@@ -48,6 +48,17 @@ colors:
   big-title-to: '#7db4ff'
   big-medal-gold: '#f7c948'
   big-kpi-down: '#2fd39a'
+  default-light-primary: '#6a6180'
+  default-light-primary-d2: '#564e6e'
+  default-light-primary-l3: '#9891ad'
+  default-light-primary-l5: '#b4afc5'
+  default-light-primary-l7: '#cfc9de'
+  default-light-primary-l8: '#d1c4e9'
+  default-light-primary-l9: '#ece9f4'
+  default-light-bg-page: '#f6f5fa'
+  default-light-fill-light: '#f4f3f8'
+  default-light-menu-active: '#d1c4e9'
+  default-light-menu-active-text: '#4f4763'
   default-dark-primary: '#8fa6bc'
   default-dark-primary-l3: '#7e94a9'
   default-dark-primary-l9: '#2b343d'
@@ -191,7 +202,25 @@ components:
 
 ### 中后台 default
 
-亮色不定义自有色板——完全消费 Element Plus 变量 + docs/06 主题体系（参考仓紫 #5b5bd6 识别色，`default-layout-ep-light` mixin 容器作用域覆盖）。**暗色为莫兰迪雾霾蓝固定视觉**（2026-11-03 起，由 slate 蓝黑切换），token 见下表。新增中后台色值时优先用 EP token，确需自有值时登记到本节。
+亮色为**莫兰迪紫固定视觉**（2026-11-04 起，基色 #d1c4e9，由参考仓高饱和紫 #5b5bd6 切换），token 见下表；暗色为莫兰迪雾霾蓝固定视觉（2026-11-03 起，由 slate 蓝黑切换），token 见下表。新增中后台色值时优先用 EP token，确需自有值时登记到本节。
+
+#### 中后台亮色 · 莫兰迪紫（2026-11-04 登记）
+
+> 落点：`apps/admin/src/layouts/default/styles/default-tokens.scss` 的 `default-layout-light`（布局变量）+ `default-layout-ep-light`（EP 覆盖）两个 mixin；经 `index.vue` / `element-overwrite.scss` 的 `[data-layout='default']` 容器与弹层双通道施加。基色 #d1c4e9 为浅色高亮位（EP light-8 / 侧栏激活底），实心按钮底用深族 #6a6180 保证白字对比 ≥4.5（莫兰迪低饱和下深色档必须压深，与暗色雾霾蓝提亮同理）。
+
+| Token                                           | 值                                | 用途                                             | 实证                      |
+| ----------------------------------------------- | --------------------------------- | ------------------------------------------------ | ------------------------- |
+| `default-light-primary`                         | `#6a6180`                         | 亮色主色（EP 覆盖 base，白字 ~5.6）              | `default-layout-ep-light` |
+| primary dark-2                                  | `#564e6e`                         | active 深档（白字 ~7.3）                         | 同上                      |
+| primary light-3/5/7                             | `#9891ad` / `#b4afc5` / `#cfc9de` | 灯阶（hover 文字 / 轨道填充）                    | 同上                      |
+| primary light-8                                 | `#d1c4e9`                         | **用户基色**：选中底 / 高亮位                    | 同上                      |
+| primary light-9                                 | `#ece9f4`                         | 最浅底（hover 底 / 条纹）                        | 同上                      |
+| menu active 底 / 折叠弹层激活底                 | `#d1c4e9`                         | 侧栏紫色识别（`--left-menu-bg-active-color` 等） | `default-layout-light`    |
+| menu active 文字                                | `#4f4763`                         | 激活文字（在 #d1c4e9 底上 ~5.0）                 | 同上                      |
+| `--el-bg-color-page` / `--app-content-bg-color` | `#f6f5fa`                         | 内容区底（微紫调白，原 #f6f7fb）                 | 两个 mixin                |
+| `--el-fill-color-light`                         | `#f4f3f8`                         | 浅填充（微紫调）                                 | `default-layout-ep-light` |
+
+> 中性 slate 文字 / 边框（#526077 系）刻意不动——本就是灰调低饱和，与紫族和谐（用户裁决 2026-11-04）。teleport 弹层局部变量：`AppMenu.vue` horizontal 弹层段（`--el-color-primary: #6a6180` / `light-9: #ece9f4`）随亮色莫兰迪化同步更新。
 
 #### 中后台暗色 · 莫兰迪雾霾蓝（2026-11-03 登记）
 
@@ -349,6 +378,7 @@ components:
 
 | 日期       | 变更                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-04 | admin 亮色主题莫兰迪紫化（用户指定基色 #d1c4e9）：亮色由参考仓高饱和紫 #5b5bd6 切换为莫兰迪紫灯阶（H 261° 族）——实心按钮底 #6a6180（白字 ~5.6）、active 深档 #564e6e、light-3/5/7 #9891ad/#b4afc5/#cfc9de、#d1c4e9 落位 light-8（选中高亮/侧栏激活底）、light-9 #ece9f4、激活文字 #4f4763（在基色底上 ~5.0）；内容区底/浅填充微紫调 #f6f5fa/#f4f3f8；中性 slate 文字边框不动（用户裁决）；AppMenu horizontal 弹层局部变量同步；落点 `default-tokens.scss` 亮布局 + 亮 EP 两 mixin，暗色雾霾蓝不受影响；frontmatter 增补 11 项亮色镜像                                                                                                                                                                                                          |
 | 2026-11-04 | portal 首页云灰改版（ui-style-skill 选型「云灰 · 极简留白」，seed 29060 锁定根 `style-tokens.json`）：portal token 由黑白极简改云灰板（页面底 #f6f6f4、ink 三档 #333638→#a3a6a8、line 两档 #e4e4e1/#cfd0cc），新增 brand 族（#5e6d7c/#445466/#e6ebf0）、accent 族（#b08d85/#f3e9e6）、bg-card、bg-inverse（恒深底 #2e3134，修复页脚/登录按钮 dark 反转缺陷）；暗色由黑白反转改云灰蓝黑化（brand 提亮参照中后台雾霾蓝 precedent）；全局圆角 4/8/12 → 6/12/20（用户裁决；存量组件零消费，portal 为首批消费方）；SiteHero/SiteFeatures/SiteStats/SiteAbout/SiteFooter/PortalHeader 全面接线 brand 族（实心按钮契约：brand 底 + 白字，双主题白字对比 ≥4.5）；特性区新增 CAPABILITIES 眉题（site.ts `SITE_FEATURES_EYEBROW`）；frontmatter 镜像同步 |
 | 2026-11-03 | admin 暗色主题莫兰迪化（用户选定色卡 A 方向）：default-tokens.scss 两个 dark mixin 由 slate 蓝黑切换为雾霾蓝系（主色 `#8fa6bc` / 页面底 `#12161a` / 卡片 `#1a1f26` / 文字 `#e8edf1→#8a97a5` 三级 / 边框 `#333d47→#232a32` 三级）；「中后台 default」节由"不定义自有色板"修正为暗色自有雾霾蓝 token 表（frontmatter 同步增补 12 项镜像）；亮色紫主题、全局 `--bg-base` 灰阶、其他端暗色均不受影响                                                                                                                                                                                                                                                                                                                                               |
 | 2026-11-03 | 样式分层规则符合度修复（审计报告 `.claude/agent-reports/2026-11-03-样式分层规则符合度审计.md`）：big 增补 19 token（面板/遮罩/标题渐变/奖牌/排名/状态）、h5 增补 3 token 并配暗色、portal 暗色反转接线（拆分独立小节，修正「不定义自有色板」漂移）、全局滚动条 token 化、Wide.vue 中文类名 `&--高/中/低` 改 `--high/mid/low` 映射                                                                                                                                                                                                                                                                                                                                                                                                              |

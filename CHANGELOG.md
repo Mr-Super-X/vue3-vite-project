@@ -6,6 +6,27 @@
 
 ## 未发布
 
+### 🎨 Style | admin 亮色主题莫兰迪紫化：#d1c4e9 基色灯阶替换参考仓高饱和紫（2026-11-04）
+
+> 背景：admin 亮色沿用参考仓识别色紫 #5b5bd6（S≈0.6 高饱和），与项目莫兰迪审美
+> 冲突；用户指定基色 #d1c4e9（淡薰衣草紫，H 261°）按莫兰迪色系重设计亮色主题。
+
+- **色板推导**：#d1c4e9 是浅高亮色（白字对比仅 ~2.2 不可用做实心按钮底），按 EP
+  灯阶结构派生深族——实心按钮底 #6a6180（白字 ~5.6）、active #564e6e（~7.3）、
+  light-3/5/7 #9891ad/#b4afc5/#cfc9de、#d1c4e9 落位 light-8（选中高亮 + 侧栏激活
+  底，主基调显眼位）、light-9 #ece9f4；激活文字 #4f4763（在 #d1c4e9 上 ~5.0）。
+- **default-tokens.scss**：`default-layout-light` 激活底/文字改 #d1c4e9/#4f4763、
+  内容区底 #f6f5fa 微紫调；`default-layout-ep-light` 七档灯阶 + fill 微紫调
+  #f4f3f8；中性 slate 文字/边框刻意不动（本就是灰调低饱和，用户裁决）。
+- **AppMenu.vue**：horizontal 弹层 teleport 局部变量同步 #6a6180/#ece9f4。
+- 暗色莫兰迪雾霾蓝不受影响；容器作用域 / 弹层双通道机制不变。
+
+验证：admin 单测 + type-check:full、eslint、verify_style.py 八项、
+check:doc-currency；DESIGN.md 中后台亮色 token 表 + frontmatter 镜像 + 修订记录同步。
+
+手动验证：`pnpm -C apps/admin dev` 亮色下确认——侧栏激活项薰衣草紫底 + 深紫灰
+字、主按钮灰紫底白字、内容区微紫调白；切 dark 仍为雾霾蓝不受影响。
+
 ### 🎨 Style | portal 首页云灰改版：黑白极简 → 云灰 · 极简留白（2026-11-04）
 
 > 背景：portal 端「白纸极简」视觉（纯黑白 + 细线）自 2026-10-20 企业官网改造起未迭代；
