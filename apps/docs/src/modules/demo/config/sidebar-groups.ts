@@ -19,6 +19,7 @@ export const SIDEBAR_GROUPS: readonly SidebarGroupConfig[] = [
   { title: 'ProDialog 弹窗组件', prefix: 'ProDialog' },
   { title: 'BaseChart 图表组件', prefix: 'BaseChart' },
   { title: '自定义指令', prefix: 'Directive' },
+  { title: '网络基建 API', prefix: 'Api' },
   { title: '通用组件', prefix: '' },
 ]
 
@@ -137,6 +138,10 @@ export const CN_NAMES: Record<string, string> = {
   DirectivePermission: '权限（兼容）',
   DirectiveInputDebounce: '输入防抖',
   DirectiveButtonDebounce: '按钮防抖',
+  // 网络基建 API
+  ApiConcurrent: '并发请求调度（分片上传）',
+  ApiRetry: '请求重试（指数退避）',
+  ApiMerge: '请求合并（时间窗去重）',
   // 通用组件
   AsyncState: '异步状态容器',
   ErrorBoundary: '错误边界',
