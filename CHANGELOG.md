@@ -6,6 +6,82 @@
 
 ## 未发布
 
+### ✨ Feat | mock 新增网络基建演示接口 net-tools：dev rawResponse 延迟 + prod 内联等价版（2026-11-04）
+
+> 背景：docs 三个网络基建 demo 需要 Network 面板可观察的真实 XHR——并发瀑布、
+> 重试序列、合并去重计数；rawResponse 延迟在 prod（mockjs 劫持）被静默忽略
+> （stream.ts 先例），故按 auth/dict 先例补 prod 内联等价版，gh-pages 可演示
+> （无延迟瀑布，计数/状态机逻辑等价）。
+
+- **dev 版** `packages/mock/src/net-tools.ts`：`POST /mock/demo-net/shard`
+  （300~700ms 随机延迟 + fail 注入 500）、`GET /mock/demo-net/retry`
+  （按 url 全串计数失败额度，nonce 隔离每轮演示）、`GET /mock/demo-net/merge`
+  （服务端真实计数 + reset 归零）；挂起式 rawResponse 遵守 stream.ts 两约束
+  （定时器在 await 的 Promise 内 / req close 清理）。
+- **prod 版** `mockProdServer.ts` 内联 `prodNetToolsMocks`（response 函数形态，
+  mockjs 恒 HTTP 200 → 失败走业务码通道，计数/状态机与 dev 版手工对齐）；
+  页面 alert 按环境区分文案（dev 瀑布 / prod 无延迟但功能可用）。
+- 接线口径：dev 走 viteMockServe 目录扫描（同 dict.ts，不进 index.ts 聚合）；
+  check-mock-wiring 校验通过（该校验只比对 index.ts import 清单）。
+
+验证：curl 三接口端到端——shard 200+0.46s 延迟 / 500 注入 ✓，retry 同 nonce
+500→500→200 状态机 ✓，merge reset→1→2→3 计数 ✓；check:mock-wiring 通过。
+
+手动验证：`pnpm -C apps/docs dev` 开 Network 面板筛选 `demo-net`——三个 demo 页
+请求真实可见；gh-pages 构建上无延迟但计数/状态机/合并去重正常工作。
+
+### ✨ Feat | docs 新增网络基建 API 演示三页：ApiConcurrent / ApiRetry / ApiMerge（2026-11-04）
+
+> 背景：shared 网络层新增并发调度器并强化重试/合并后，缺可视化验收入口；
+> 按「如何写好一个 demo.md」范式建三页，数据源为 @vv/mock 演示接口（见上节），
+> 让用户在浏览器 Network 面板观察真实请求过程。
+
+- `examples/ApiConcurrent.vue`：分片上传模拟（limit 滑块 / 12 分片状态格 /
+  进度条 / 取消按钮）、失败不中断对照（分片 5 注入失败）、异构并行组合。
+- `examples/ApiRetry.vue`：网络抖动恢复时间线（真实退避间隔）、4xx vs 5xx
+  重试对照（attempt 计数）、取消不重试对照、`isIdempotent` 附录；
+  重试判定按业务码（demoShouldRetry）统一 dev/prod 两环境行为。
+- `examples/ApiMerge.vue`：连点合并（服务端计数 3 次触发 1 次真实请求）、
+  窗口过后重发、mergeKey 归一化对照（Date 不同 key / FormData 退化不合并）。
+- `examples/api-demos-api.ts`：三页共享 ApiTable 数据；
+  `config/sidebar-groups.ts` 新增「网络基建 API」分组（prefix `Api`）。
+
+验证：type-check / ESLint / check:routes / sidebar 单测全过；三页行数均 ≤300，
+BEM 规范逐条对齐。
+
+手动验证：侧边栏「网络基建 API」组三页；Network 面板观察并发瀑布（限流批次数
+= limit）、重试退避间隔、合并去重（3 触发 1 请求）。
+
+### ✨ Feat | shared 新增并发请求调度器 runConcurrent，审查修复 retry / request-merger（2026-11-04）
+
+> 背景：大文件分片上传等场景缺并发闸门（request-merger 是相同请求合并、
+> cache 是缓存，均不控并发）；实现后走独立 code-reviewer 两轮回合审查
+> （REQUEST_CHANGES → 修复复验），顺带修复其依赖的 retry/merger 存量缺陷。
+
+- **新模块** `api/concurrent.ts`：`runConcurrent(items, task, opts)`——
+  worker-pool 按索引顺序领取任务，limit 限流（默认 3，非法值归一 1），
+  结果数组保序返回可辨识联合（fulfilled/rejected 互斥），失败不中断，
+  signal 取消关闸门（含末道闸门：取消发生在末任务运行期间仍 reject——
+  已 mutation 验证），可选 retry 复用 withRetry、onProgress 进度回调；
+  22 条单测覆盖全部边界。
+- **审查修复 retry.ts**：①取消错误被误重试（http.ts 归一化的取消 ApiError
+  无 status → 落默认可重试分支，logout/卸载被退避拖 ~1s）——ApiError 新增
+  `canceled` 标记（http.ts 归一化处打标），默认策略跳过；②shouldRetry
+  JSDoc 与实现矛盾修正；③补无 status 业务码可重试/取消不重试用例。
+- **审查修复 request-merger.ts**：①`fn({...config, signal})` 静默覆盖调用方
+  signal——改 linkAbort 两路链接（cancel.ts 模式）；②mergeKey 对 Date/FormData
+  等不可枚举对象序列化碰撞（不同 Date 的 GET 被错误合并）——Date 按时间戳
+  归一化，FormData/Blob/URLSearchParams/循环引用返回 null 退化为不合并；
+  ③清理 Bucket.abort 死代码；头注补窗口语义（settle 起算/失败共享）声明。
+- 顺带：`types/error.ts` ApiError 新增可选 `canceled`（默认 false，兼容变更，
+  下游 useNetworkBanner 等 11 处消费方零影响）。
+
+验证：type-check 0 错误；shared 全包 511 单测通过（concurrent 22 / retry 12 /
+merger 16）；ESLint 0 告警；取消末道闸门 mutation 验证（摘除即红）；high 修复
+均附回归用例。
+
+手动验证：`pnpm -C apps/docs dev` 经三页交互验收（见前两节手动验证步骤）。
+
 ### ✨ Feat | h5 新增拙衣商城首页模块 h5-mall，设为应用 rootRedirect 首页（2026-11-04）
 
 > 背景：用户给出服饰商城静态页 `h5-fashion-mall.html`（拙衣 ZHUOYI · 陶土秋季）与陶土 · 莫兰迪
