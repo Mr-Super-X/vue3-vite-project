@@ -6,6 +6,36 @@
 
 ## 未发布
 
+### 🐛 Fix | auth 登录回跳 gh-pages 双重前缀 404：referrer 剥部署前缀 + 构建注入 /admin/ 兜底（2026-11-04）
+
+> 背景：gh-pages 演示站（base=`/<repo>/<app>/`）从落地导航页进 auth 登录成功后
+> 404，地址栏出现 `/vue3-vite-project/vue3-vite-project/` 双重前缀（应落 admin 兜底）。
+
+- **根因**：`Login.vue resolveDefaultFallback` 的 referrer 推断直接取 pathname 首段
+  当来源 app 名——gh-pages 形态下首段是 repo 名（`vue3-vite-project`）而非 app 名，
+  误判返回 `/vue3-vite-project/` 再经 `withRepoPrefix` 二次加前缀拼出双重前缀。
+  dev 不炸是因 dev:gateway base 为 `/auth/` 单段、「首段即 app 名」的隐含假设恰好成立。
+- **packages/shared router/base.ts**：新增 `stripRepoPrefix(pathname)`
+  （`withRepoPrefix` 逆操作，同源 repo 根推导），配套 4 个 spec 用例（剥前缀 /
+  仓库根恰落 / 根部署恒等 / 异构来源原样返回）。
+- **Login.vue**：`resolveDefaultFallback` 改为 referrer pathname 先经
+  `stripRepoPrefix` 剥部署前缀再取 app 段，JSDoc 记录事故根因；gh-pages 下从
+  portal 跳 auth 的 referrer 推断恢复正确（→ `/portal/`）。
+- **scripts/build-pages.ts**：auth 构建注入 `VITE_POST_LOGIN_FALLBACK=/admin/`
+  （裸 app 路径，消费端 `withRepoPrefix` 加前缀）——落地导航页 / 地址栏直进 auth
+  （referrer 剥前缀后无 app 段）登录成功直达管理后台，语义对齐 dev-gateway 的
+  同名注入机制。
+- **Login.spec.ts**：补 gh-pages 回归用例 #10（referrer=`<repo>/portal/` → 推断
+  `/portal/`）与 #11（落地页 referrer → env fallback `/admin/`）。
+
+验证：base.spec 16/16、Login.spec 11/11、`apps/auth type-check:full`、
+`packages/shared type-check`、`check:routes`、`check:aliases` 全过。
+
+手动验证：`pnpm build:pages` 后静态托管 `dist/`，访问 `/<repo>/auth/#/login`
+（不带 redirect 参数）登录成功 → 落 `/<repo>/admin/`；从 `/<repo>/portal/`
+点「登录」→ 登录成功回 `/<repo>/portal/`；admin 受保护页未登录被守卫跳
+auth 登录（带 redirect 参数）→ 登录成功回 admin 原页（既有链路不回归）。
+
 ### 🎨 Style | admin 暗色主题莫兰迪化：slate 蓝黑 → 雾霾蓝灰调（2026-11-03）
 
 > 背景：admin 端暗色沿用 slate 蓝黑 + 靛紫主色（复刻 vue-element-plus-admin），

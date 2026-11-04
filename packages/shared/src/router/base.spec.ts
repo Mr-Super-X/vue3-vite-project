@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { RouteLocationNormalized } from 'vue-router'
-import { resolveBasePath, createDefaultScrollBehavior, withRepoPrefix } from './base.ts'
+import {
+  resolveBasePath,
+  createDefaultScrollBehavior,
+  withRepoPrefix,
+  stripRepoPrefix,
+} from './base.ts'
 
 beforeEach(() => {
   // bem.spec.ts 同款模式：每个用例前清掉 env 存根，避免用例间泄漏
@@ -55,6 +60,31 @@ describe('withRepoPrefix（跨 app 跳链加部署前缀，gh-pages 不 404）',
   it('不带 / 开头的 path 自动补', () => {
     vi.stubEnv('VITE_BASE', '/repo/admin/')
     expect(withRepoPrefix('admin/')).toBe('/repo/admin/')
+  })
+})
+
+describe('stripRepoPrefix（剥部署前缀：auth 登录 referrer 推断的逆操作）', () => {
+  it('gh-pages 形态 VITE_BASE=/<repo>/<app>/ → 剥掉 /<repo>/ 前缀', () => {
+    vi.stubEnv('VITE_BASE', '/vue3-vite-project/auth/')
+    expect(stripRepoPrefix('/vue3-vite-project/portal/')).toBe('/portal/')
+    expect(stripRepoPrefix('/vue3-vite-project/portal/home')).toBe('/portal/home')
+  })
+
+  it('pathname 恰落在仓库根（落地导航页 /<repo> 或 /<repo>/）→ 返回 /（无 app 段）', () => {
+    vi.stubEnv('VITE_BASE', '/vue3-vite-project/auth/')
+    expect(stripRepoPrefix('/vue3-vite-project/')).toBe('/')
+    expect(stripRepoPrefix('/vue3-vite-project')).toBe('/')
+  })
+
+  it('网关形态 VITE_BASE=/<app>/（根部署）→ 无前缀可剥，原样返回', () => {
+    vi.stubEnv('VITE_BASE', '/auth/')
+    expect(stripRepoPrefix('/portal/home')).toBe('/portal/home')
+    expect(stripRepoPrefix('/portal/')).toBe('/portal/')
+  })
+
+  it('不以 repo 根开头的 pathname（异构来源）原样返回，交由调用方判空兜底', () => {
+    vi.stubEnv('VITE_BASE', '/repo/auth/')
+    expect(stripRepoPrefix('/other-app/x')).toBe('/other-app/x')
   })
 })
 

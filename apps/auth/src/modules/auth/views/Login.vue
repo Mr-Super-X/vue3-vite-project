@@ -23,7 +23,7 @@
  */
 import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@vv/shared'
-import { resolvePostLoginRedirect, withRepoPrefix } from '@vv/shared'
+import { resolvePostLoginRedirect, stripRepoPrefix, withRepoPrefix } from '@vv/shared'
 import LoginBrand from '../components/LoginBrand.vue'
 import LoginForm from '../components/LoginForm.vue'
 
@@ -99,20 +99,27 @@ async function handleSubmit() {
  * 动态识别默认落地 app（不写死）：
  * resolvePostLoginRedirect 已优先消费 ?redirect= 参数（redirectToAuthLogin 写入），
  * 本函数仅在无 redirect 参数时作 fallback，优先级：
- * referrer 推断来源 app → dev:gateway 注入的 VITE_POST_LOGIN_FALLBACK（子集感知，
- * 见 scripts/dev-gateway.ts resolvePostLoginFallback）→ auth 自身首页。
+ * referrer 推断来源 app → dev:gateway / build-pages 注入的 VITE_POST_LOGIN_FALLBACK
+ * （子集感知，见 scripts/dev-gateway.ts resolvePostLoginFallback /
+ * scripts/build-pages.ts auth 构建注入）→ auth 自身首页。
  * 绝不硬编码 admin/big 等 app 名。
+ *
+ * referrer 推断必须先经 stripRepoPrefix 剥部署前缀再取首段——gh-pages 形态
+ * （VITE_BASE=/<repo>/<app>/）下 referrer pathname 首段是 repo 名而非 app 名，
+ * 直接取首段会把 repo 名误当来源 app，再经 withRepoPrefix 二次加前缀拼出
+ * /<repo>/<repo>/ 404（2026-11-04 线上事故根因）。
  */
 function resolveDefaultFallback(): string {
-  // referrer 路径首段即来源 app 名（从 big 跳来 → /big/...；无 referrer 抛异常走兜底）
+  // referrer 路径剥部署前缀后首段才是来源 app 名（dev 根部署下 strip 恒为恒等）
   try {
-    const refSeg = new URL(document.referrer).pathname.split('/').filter(Boolean)[0]
+    const refPath = stripRepoPrefix(new URL(document.referrer).pathname)
+    const refSeg = refPath.split('/').filter(Boolean)[0]
     if (refSeg && refSeg !== 'auth') return `/${refSeg}/`
   } catch {
     // referrer 为空（地址栏直开）或跨源——走下两级兜底
   }
-  // 仅 dev:gateway 启动时注入（portal 优先 / 第一个非 auth app）；单 app 直起、
-  // gh-pages、生产构建均无此 env → undefined，走 /auth/ 兜底
+  // dev:gateway / build-pages 构建注入（portal 优先或显式指定 / 第一个非 auth app）；
+  // 单 app 直起无注入 → undefined，走 /auth/ 兜底
   const envFallback = import.meta.env.VITE_POST_LOGIN_FALLBACK
   if (envFallback) return envFallback
   return '/auth/'

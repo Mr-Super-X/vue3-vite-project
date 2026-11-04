@@ -50,6 +50,31 @@ export function withRepoPrefix(path: string): string {
 }
 
 /**
+ * 从同源路径剥掉部署仓库根前缀（`withRepoPrefix` 的逆操作）。
+ *
+ * 业务背景：auth 登录页经 referrer 推断来源 app 时，referrer pathname 带部署
+ * 前缀——gh-pages 形态（VITE_BASE=/<repo>/<app>/）下首段是 repo 名而非 app 名，
+ * 直接取首段会把 repo 名误当来源 app，再经 withRepoPrefix 二次加前缀拼出
+ * /<repo>/<repo>/ 404（2026-11-04 线上事故根因）。先剥前缀再取 app 段才是稳态。
+ *
+ * 语义（与 withRepoPrefix 同源的 repo 根推导）：
+ * - 网关 `VITE_BASE=/auth/`          → 根为 `/`        → 任意 pathname 原样返回
+ * - gh-pages `VITE_BASE=/repo/auth/` → 根为 `/repo/`   → `/repo/portal/` → `/portal/`
+ * - pathname 恰落在仓库根（`/<repo>` 或 `/<repo>/`）→ 返回 `/`（无 app 段）
+ * - 不以 repo 根开头的 pathname（异构来源）原样返回，交由调用方判空兜底
+ */
+export function stripRepoPrefix(pathname: string): string {
+  const base = resolveBasePath() // 形如 /<app>/ 或 /<repo>/<app>/
+  const segments = base.split('/').filter(Boolean)
+  segments.pop() // 去末段（当前 app 名）→ 仓库根段
+  if (segments.length === 0) return pathname // 根部署：无前缀可剥
+  const repoRootNoSlash = `/${segments.join('/')}` // /repo
+  if (pathname === repoRootNoSlash) return '/'
+  if (pathname.startsWith(`${repoRootNoSlash}/`)) return pathname.slice(repoRootNoSlash.length)
+  return pathname
+}
+
+/**
  * 创建各 app 统一的路由滚动行为。
  *
  * 业务语义：
