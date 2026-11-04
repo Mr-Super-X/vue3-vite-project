@@ -10,6 +10,6 @@ describe('home 官网首页（smoke）', () => {
       expect(w.find(`#${id}`).exists()).toBe(true)
     }
     expect(w.find('footer').exists()).toBe(true)
-    expect(w.text()).toContain('星澜科技')
+    expect(w.text()).toContain('企业门户')
   })
 })

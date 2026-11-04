@@ -30,17 +30,18 @@ const bem = createNamespace('site-stats')
   &__inner {
     max-width: var(--portal-max-width);
     margin: 0 auto;
-    padding: 72px 24px;
+    padding: 96px 24px;
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 24px;
     text-align: center;
   }
 
+  // 数据高亮走主色文字（云灰品牌族点亮）
   &__value {
     font-size: 40px;
     font-weight: 700;
-    color: var(--portal-ink);
+    color: var(--portal-brand-deep);
     line-height: 1.2;
     margin-bottom: 8px;
     font-variant-numeric: tabular-nums;

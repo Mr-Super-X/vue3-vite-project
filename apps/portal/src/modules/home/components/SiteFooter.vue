@@ -32,7 +32,8 @@ const bem = createNamespace('site-footer')
 
 <style lang="scss">
 .#{$BEM_PREFIX}-site-footer {
-  background: var(--portal-ink);
+  // 深底不随主题反转：云灰 bg-inverse 柔和深灰（原 var(--portal-ink) 在 dark 下反转成浅色，属既有缺陷，一并修复）
+  background: var(--portal-bg-inverse);
   color: var(--portal-on-solid);
 
   &__inner {

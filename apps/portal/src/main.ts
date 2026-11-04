@@ -33,7 +33,7 @@ await bootstrapApp({
   router,
   pinia,
   i18n,
-  title: '星澜科技',
+  title: '企业门户',
   globalComponents: createGlobalComponents(),
   directives: Directives,
   plugins: Plugins,

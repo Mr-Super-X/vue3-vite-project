@@ -2,9 +2,9 @@
  * 路由入口（h5 移动端）——装配收敛至 @vv/shared createAppRouter 工厂。
  *
  * app 侧只保留差异数据：
- * - rootRedirect → /h5-demo（h5 layout 下唯一业务页，免登录方便真机扫码预览）
+ * - rootRedirect → /h5-mall（商城首页为应用门面，2026-11-04 用户裁决）
  * - notFoundRoute 字面量（check-routes 按 name 正则从本文件提取实现名单）
- * - 白名单谓词 isH5WhiteListed（h5-demo 路由名 + NotFound 已吸收）
+ * - 白名单谓词 isH5WhiteListed（h5-demo + h5-mall 路由名 + NotFound 已吸收）
  *
  * h5 全站公开：无登录 / 权限 / 远程菜单守卫，守卫只挂白名单直通 + 可见性检查；
  * 无 tags-view afterEach、无 /500 错误页。historyMode / base 由工厂读环境解析。
@@ -33,7 +33,9 @@ const notFoundRoute: RouteRecordRaw = {
 }
 
 export const router = createAppRouter({
-  rootRedirect: '/h5-demo',
+  // 商城首页是 h5 应用门面（用户裁决 2026-11-04：h5-fashion-mall.html 落地为首页）；
+  // /h5-demo 保留作 rem 适配验收页
+  rootRedirect: '/h5-mall',
   notFoundRoute,
   routes: autoRegisteredRoutes,
   fallbackRoute,

@@ -11,10 +11,15 @@
 
 import { createWhiteList, isWhiteListed } from '@vv/shared/router-guards'
 import { routeNames as h5DemoRouteNames } from '@/modules/h5-demo/routes'
+import { routeNames as h5MallRouteNames } from '@/modules/h5-mall/routes'
 
 // 白名单构造样板经 @vv/shared createWhiteList 单源（2026-10-23 重复性审查收敛）；
 // check-routes 按 createWhiteList 调用提取名单，改名须同步脚本
-export const ROUTE_WHITE_LIST: ReadonlySet<string> = createWhiteList('NotFound', h5DemoRouteNames)
+export const ROUTE_WHITE_LIST: ReadonlySet<string> = createWhiteList(
+  'NotFound',
+  h5DemoRouteNames,
+  h5MallRouteNames
+)
 
 /**
  * 判定路由是否在 h5 白名单内（直通放行）。

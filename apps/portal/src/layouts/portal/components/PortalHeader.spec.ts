@@ -50,7 +50,7 @@ describe('PortalHeader 企业官网顶栏', () => {
 
   it('1. 渲染品牌名与全部锚点导航', () => {
     const w = mount(PortalHeader, { global: { mocks: { $t: mockT } } })
-    expect(w.text()).toContain('星澜科技')
+    expect(w.text()).toContain('企业门户')
     // 品牌 logo 锚点(1) + 导航锚点(4) + 管理后台跳链(1)
     expect(w.findAll('a')).toHaveLength(6)
     expect(w.text()).toContain('产品')

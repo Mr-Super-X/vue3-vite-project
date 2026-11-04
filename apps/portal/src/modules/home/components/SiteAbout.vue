@@ -34,7 +34,7 @@ const bem = createNamespace('site-about')
   &__inner {
     max-width: var(--portal-max-width);
     margin: 0 auto;
-    padding: 96px 24px;
+    padding: 120px 24px;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 64px;
@@ -60,6 +60,11 @@ const bem = createNamespace('site-about')
 
     &:last-child {
       border-bottom: 1px solid var(--portal-line);
+    }
+
+    // 状态响应：整行 hover 时联系值点亮为主色（云灰品牌族反馈）
+    &:hover .#{$BEM_PREFIX}-site-about__contact-value {
+      color: var(--portal-brand-deep);
     }
   }
 

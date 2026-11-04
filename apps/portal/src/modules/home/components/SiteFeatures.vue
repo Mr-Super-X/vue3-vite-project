@@ -9,7 +9,7 @@
  * @see [`../config/site.ts`](../config/site.ts) SITE_FEATURES 数据单源
  * @group 业务模块：Home
  */
-import { SITE_FEATURES, SITE_FEATURES_HEADING } from '../config/site'
+import { SITE_FEATURES, SITE_FEATURES_EYEBROW, SITE_FEATURES_HEADING } from '../config/site'
 
 const bem = createNamespace('site-features')
 </script>
@@ -17,6 +17,7 @@ const bem = createNamespace('site-features')
 <template>
   <section id="features" :class="bem.b()">
     <div :class="bem.e('inner')">
+      <p :class="bem.e('eyebrow')">{{ SITE_FEATURES_EYEBROW }}</p>
       <h2 :class="bem.e('heading')">{{ SITE_FEATURES_HEADING }}</h2>
       <div :class="bem.e('grid')">
         <article :class="bem.e('card')">
@@ -41,12 +42,22 @@ const bem = createNamespace('site-features')
 
 <style lang="scss">
 .#{$BEM_PREFIX}-site-features {
-  background: var(--portal-bg-alt);
+  // 与页面同色：白卡片直接浮于纸面（云灰分区节奏，取消白/浅灰分区带）
+  background: var(--portal-bg);
 
   &__inner {
     max-width: var(--portal-max-width);
     margin: 0 auto;
-    padding: 96px 24px;
+    padding: 120px 24px;
+  }
+
+  &__eyebrow {
+    font-size: 12.5px;
+    letter-spacing: 3px;
+    font-weight: 600;
+    color: var(--portal-brand-deep);
+    margin: 0 0 8px;
+    text-align: center;
   }
 
   &__heading {
@@ -64,22 +75,34 @@ const bem = createNamespace('site-features')
   }
 
   &__card {
-    background: var(--portal-bg);
+    background: var(--portal-bg-card);
     border: 1px solid var(--portal-line);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     padding: 40px 32px;
-    transition: border-color 0.2s ease;
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease,
+      transform 0.2s ease;
 
+    // 状态响应式：静息零阴影，hover 浮起（DESIGN.md 状态响应 Rule）
     &:hover {
-      border-color: var(--portal-ink);
+      border-color: var(--portal-line-strong);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-3px);
     }
   }
 
+  // icon 块：浅主底圆角块 + 深主图标（云灰品牌族点亮）
   &__icon {
-    font-size: 36px;
-    color: var(--portal-ink);
-    display: inline-block;
-    margin-bottom: 24px;
+    width: 42px;
+    height: 42px;
+    font-size: 22px;
+    color: var(--portal-brand-deep);
+    background: var(--portal-brand-soft);
+    border-radius: var(--radius-sm);
+    display: grid;
+    place-items: center;
+    margin-bottom: 20px;
   }
 
   &__title {

@@ -6,6 +6,80 @@
 
 ## 未发布
 
+### ✨ Feat | h5 新增拙衣商城首页模块 h5-mall，设为应用 rootRedirect 首页（2026-11-04）
+
+> 背景：用户给出服饰商城静态页 `h5-fashion-mall.html`（拙衣 ZHUOYI · 陶土秋季）与陶土 · 莫兰迪
+> 设计 token（ui-style-skill 模板，seed 4877），要求转换为 h5 应用首页；用户裁决「新模块 +
+> 设为应用首页」（/h5-demo 保留作 rem 适配验收页）。
+
+- **新模块** `apps/h5/src/modules/h5-mall/`（`pnpm new-module` 脚手架，h5- 前缀自动接入
+  postcss-pxtorem 828 稿换算）：views/index.vue 组装 + components/ 13 个 BEM 区块组件
+  （公告 / 吸顶栏 / Banner / 金刚区 / 限时甄选 / 新品横滑 / 编辑专题 / 为你推荐 / 服务页脚 /
+  Tabbar / Toast / SVG sprite / 商品占位 MallPh）。
+- **陶土 token**：`--mall-*` 19 项挂 `.vv-h5-mall` 根选择器，仅模块子树生效（h5 布局与
+  vant 色系零污染，无暗色覆盖）；已按「登记先行」规则登记 DESIGN.md「H5 商城 h5-mall」节
+  + frontmatter 19 项镜像。
+- **交互**：购物袋计数（Tabbar 角标 99+ 封顶）、收藏集合、筛选 chips、限时倒计时
+  （指向每日 22:00，useCountdown）、入场渐显（useReveal，prefers-reduced-motion 降级）、
+  Toast（useToast）——容器持有状态、props 下传 emits 上报；3 个 composable 均带 spec。
+- **接线**：路由挂 layouts/h5（rem 适配）+ requiresAuth:false；whitelist 经 routeNames
+  吸收；rootRedirect /h5-demo → /h5-mall。字号遵守 h5 纪律（正文 34 / 辅助 28 / 最小 24，828 稿）。
+
+验证：h5-mall 5 个 spec 文件 22 条单测全过；check:routes 六应用通过；DESIGN.md 三处同步。
+
+手动验证：`pnpm -C apps/h5 dev` 打开自动跳转 /h5-mall——公告 + 吸顶栏 + 陶土 Banner、
+金刚区 6 宫格、限时甄选倒计时每秒走动、新品横滑吸附、chips 互斥切换、点「加入购物袋」
+角标 +1 并弹 Toast、收藏心形翻转、底部 Tabbar 选中态；375 真机/模拟器宽度无横向滚动。
+
+### 🎨 Style | admin 亮色主题莫兰迪紫化：#d1c4e9 基色灯阶替换参考仓高饱和紫（2026-11-04）
+
+> 背景：admin 亮色沿用参考仓识别色紫 #5b5bd6（S≈0.6 高饱和），与项目莫兰迪审美
+> 冲突；用户指定基色 #d1c4e9（淡薰衣草紫，H 261°）按莫兰迪色系重设计亮色主题。
+
+- **色板推导**：#d1c4e9 是浅高亮色（白字对比仅 ~2.2 不可用做实心按钮底），按 EP
+  灯阶结构派生深族——实心按钮底 #6a6180（白字 ~5.6）、active #564e6e（~7.3）、
+  light-3/5/7 #9891ad/#b4afc5/#cfc9de、#d1c4e9 落位 light-8（选中高亮 + 侧栏激活
+  底，主基调显眼位）、light-9 #ece9f4；激活文字 #4f4763（在 #d1c4e9 上 ~5.0）。
+- **default-tokens.scss**：`default-layout-light` 激活底/文字改 #d1c4e9/#4f4763、
+  内容区底 #f6f5fa 微紫调；`default-layout-ep-light` 七档灯阶 + fill 微紫调
+  #f4f3f8；中性 slate 文字/边框刻意不动（本就是灰调低饱和，用户裁决）。
+- **AppMenu.vue**：horizontal 弹层 teleport 局部变量同步 #6a6180/#ece9f4。
+- 暗色莫兰迪雾霾蓝不受影响；容器作用域 / 弹层双通道机制不变。
+
+验证：admin 单测 + type-check:full、eslint、verify_style.py 八项、
+check:doc-currency；DESIGN.md 中后台亮色 token 表 + frontmatter 镜像 + 修订记录同步。
+
+手动验证：`pnpm -C apps/admin dev` 亮色下确认——侧栏激活项薰衣草紫底 + 深紫灰
+字、主按钮灰紫底白字、内容区微紫调白；切 dark 仍为雾霾蓝不受影响。
+
+### 🎨 Style | portal 首页云灰改版：黑白极简 → 云灰 · 极简留白（2026-11-04）
+
+> 背景：portal 端「白纸极简」视觉（纯黑白 + 细线）自 2026-10-20 企业官网改造起未迭代；
+> 本次经 ui-style-skill 选型流程重设计首页五区块 + 顶栏（随机 3 候选：云灰/绛纱/燕麦，
+> 用户选定「云灰 · 极简留白」，seed 29060 锁定根 `style-tokens.json` 为风格源）。
+
+- **风格源**：根 `style-tokens.json` 锁定（云灰模板）——页面底 `#f6f6f4`、ink 三档
+  `#333638/#66696c/#a3a6a8`、云灰蓝 brand 族 `#5e6d7c/#445466/#e6ebf0`、陶粉点缀
+  `#b08d85/#f3e9e6`（面积 ≤10%）；圆角骨架全局 4/8/12 → 6/12/20（用户裁决，存量
+  组件零消费，portal 为首批消费方）。
+- **portal-tokens.scss**：云灰板重赋值 `--portal-*`，新增 brand/accent/bg-card/
+  bg-inverse/ink-3/line-strong 七项；`portal-dark` mixin 由黑白反转改云灰蓝黑化
+  （brand 提亮参照中后台雾霾蓝 precedent）；`--portal-bg-inverse` 恒深底修复
+  页脚/登录按钮 dark 下反转成浅底的既有缺陷。
+- **首页组件**：SiteHero（kicker pill 化、按钮 brand 化、SVG 示意图 brand 系）、
+  SiteFeatures（卡片白底浮出 + icon 品牌块 + hover 阴影 + CAPABILITIES 眉题）、
+  SiteStats（数值品牌高亮）、SiteAbout（contact hover 点亮）、SiteFooter（柔和深灰
+  `#2e3134`）、PortalHeader（logo/登录按钮/头像 brand 化）。
+- **实心按钮契约**（DESIGN.md portal 节登记）：brand 底 + 白字，亮面 `#5e6d7c` /
+  dark `#5e7488`，白字对比均 ≥4.5；浅色按钮 = brand-soft 底 + brand-deep 字。
+
+验证：portal 全部单测 + `type-check:full`、verify_style.py 8 项检查、DESIGN.md
+（portal 节/frontmatter/Shapes/修订记录）与 docs/06 同步。
+
+手动验证：`pnpm -C apps/portal dev` 打开首页，确认：页面底为暖灰白、卡片纯白浮出、
+按钮/图标/数据为云灰蓝、页脚柔和深灰；`data-theme="dark"` 或系统暗色下整页蓝黑协调、
+登录按钮白字清晰；375 窄屏无横向滚动。
+
 ### 🐛 Fix | auth 登录回跳 gh-pages 双重前缀 404：referrer 剥部署前缀 + 构建注入 /admin/ 兜底（2026-11-04）
 
 > 背景：gh-pages 演示站（base=`/<repo>/<app>/`）从落地导航页进 auth 登录成功后

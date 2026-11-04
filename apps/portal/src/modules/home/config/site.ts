@@ -1,5 +1,5 @@
 /**
- * 星澜科技企业官网 —— 站点文案与数据单源。
+ * 企业门户官网 —— 站点文案与数据单源。
  *
  * 设计：
  * - 所有区块（Hero/特性/数据/关于/页脚）的文案集中于此，组件只读渲染，不硬编码字符串
@@ -15,9 +15,9 @@
 
 /** 品牌标识（页脚消费；顶栏字标因模块边界有意双源，见文件头说明） */
 export const SITE_BRAND = {
-  name: '星澜科技',
+  name: '企业门户',
   /** 页脚品牌行英文小字 */
-  nameEn: 'XINGLAN TECH',
+  nameEn: 'ENTERPRISE PORTAL',
   slogan: '让数据成为企业增长的引擎',
 } as const
 
@@ -50,6 +50,9 @@ export const SITE_FEATURES = [
   },
 ] as const
 
+/** 特性区眉题（id=features 的 eyebrow；全大写小字，品牌族 pill 呈现） */
+export const SITE_FEATURES_EYEBROW = 'CAPABILITIES'
+
 /** 特性区区块标题（id=features 的 h2；与卡片数据分离因消费位置不同） */
 export const SITE_FEATURES_HEADING = '产品能力'
 
@@ -63,14 +66,14 @@ export const SITE_STATS = [
 
 /** 关于与联系（id=about） */
 export const SITE_ABOUT = {
-  heading: '关于星澜',
+  heading: '关于我们',
   /** 公司简介段落 */
   paragraphs: [
-    '星澜科技成立于 2016 年，专注于云端数据平台的研发与服务，帮助企业把复杂的数据基础设施化繁为简。',
+    '我们成立于 2016 年，专注于云端数据平台的研发与服务，帮助企业把复杂的数据基础设施化繁为简。',
     '我们相信数据是企业的核心资产，而优秀的平台能让每一位工程师都轻松驾驭它。',
   ] as const,
   contacts: [
-    { label: '商务合作', value: 'hello@xinglan.tech' },
+    { label: '商务合作', value: 'hello@example.com' },
     { label: '公司地址', value: '北京市海淀区中关村创业大街 1 号' },
     { label: '服务热线', value: '400-888-0000' },
   ] as const,

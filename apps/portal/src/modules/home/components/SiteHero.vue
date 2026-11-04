@@ -85,9 +85,9 @@ const GRID_LINES = [100, 150, 200, 250, 300]
           stroke-linecap="round"
           stroke-linejoin="round"
         />
-        <g fill="currentColor">
-          <circle cx="270" cy="110" r="4.5" />
-          <circle cx="410" cy="80" r="4.5" />
+        <g>
+          <circle cx="270" cy="110" r="4.5" :class="bem.e('art-dot')" />
+          <circle cx="410" cy="80" r="4.5" :class="bem.e('art-dot')" />
         </g>
       </svg>
     </div>
@@ -101,7 +101,7 @@ const GRID_LINES = [100, 150, 200, 250, 300]
   &__inner {
     max-width: var(--portal-max-width);
     margin: 0 auto;
-    padding: 96px 24px;
+    padding: 120px 24px;
     min-height: calc(100vh - var(--portal-header-h));
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -110,11 +110,16 @@ const GRID_LINES = [100, 150, 200, 250, 300]
     box-sizing: border-box;
   }
 
+  // 眉题：浅主底 pill + 深主字（云灰品牌族点亮，面积克制）
   &__kicker {
-    font-size: 13px;
+    display: inline-block;
+    font-size: 12.5px;
     letter-spacing: 2px;
-    color: var(--portal-ink-2);
-    margin: 0 0 20px;
+    color: var(--portal-brand-deep);
+    background: var(--portal-brand-soft);
+    border-radius: 999px;
+    padding: 6px 16px;
+    margin: 0 0 24px;
   }
 
   &__title {
@@ -142,31 +147,36 @@ const GRID_LINES = [100, 150, 200, 250, 300]
     height: 46px;
     padding: 0 28px;
     font-size: 15px;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
     transition:
-      background 0.2s ease,
-      color 0.2s ease;
+      filter 0.2s ease,
+      transform 0.2s ease,
+      box-shadow 0.2s ease,
+      background 0.2s ease;
 
+    // 实心按钮：brand 底（亮面 #5e6d7c / dark #5e7488，白字对比均 ≥4.5，见 tokens 用法契约）
     &--primary {
-      background: var(--portal-ink);
+      background: var(--portal-brand);
       color: var(--portal-on-solid);
-      border: 1px solid var(--portal-ink);
+      border: 1px solid var(--portal-brand);
 
       &:hover {
-        background: transparent;
-        color: var(--portal-ink);
+        filter: brightness(1.12);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
       }
     }
 
+    // 浅色按钮：浅主底 + 深主字（云灰浅色按钮契约）
     &--ghost {
-      background: transparent;
-      color: var(--portal-ink);
-      border: 1px solid var(--portal-ink);
+      background: var(--portal-brand-soft);
+      color: var(--portal-brand-deep);
+      border: 1px solid var(--portal-brand-soft);
 
       &:hover {
-        background: var(--portal-ink);
-        color: var(--portal-on-solid);
+        filter: brightness(0.97);
+        transform: translateY(-1px);
       }
     }
   }
@@ -174,7 +184,12 @@ const GRID_LINES = [100, 150, 200, 250, 300]
   &__art {
     width: 100%;
     height: auto;
-    color: var(--portal-ink);
+    color: var(--portal-brand);
+
+    // 折线顶点圆点点睛（面积 ≤10%，云灰点缀族）
+    &-dot {
+      fill: var(--portal-accent);
+    }
   }
 
   // 入场动画（全站唯一动效，克制）：文案子元素递增 delay
