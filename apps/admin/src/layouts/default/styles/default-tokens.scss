@@ -46,26 +46,28 @@
   --app-drawer-shadow: rgb(15 23 42 / 25%);
 }
 
+// 莫兰迪雾霾蓝暗色（2026-11-03 由 slate 蓝黑切换；色值 token 登记见 DESIGN.md「中后台 default」节，
+// 亮色保持参考仓紫色主题不变——本 mixin 只服务 dark 与系统跟随两条路径）。
 @mixin default-layout-dark {
   // 侧栏
-  --left-menu-bg-color: #111827;
-  --left-menu-bg-light-color: #151e30;
-  --left-menu-bg-active-color: #252e47;
-  --left-menu-text-color: #94a3b8;
-  --left-menu-text-active-color: #c7d2fe;
-  --left-menu-collapse-bg-active-color: #252e47;
+  --left-menu-bg-color: #161b21;
+  --left-menu-bg-light-color: #1b2128;
+  --left-menu-bg-active-color: #26303a;
+  --left-menu-text-color: #8a99a8;
+  --left-menu-text-active-color: #a8bacb;
+  --left-menu-collapse-bg-active-color: #26303a;
 
   // 顶栏 + 页签条
-  --top-header-bg-color: #111827;
-  --top-header-text-color: #cbd5e1;
-  --top-header-hover-color: #1c2638;
+  --top-header-bg-color: #161b21;
+  --top-header-text-color: #c2cbd4;
+  --top-header-hover-color: #20272f;
 
   // 品牌 Logo 标题
-  --logo-title-text-color: #f8fafc;
+  --logo-title-text-color: #e8edf1;
 
   // 内容区
-  --app-content-bg-color: #0b1120;
-  --layout-border-color: #273244;
+  --app-content-bg-color: #12161a;
+  --layout-border-color: #232a32;
   --layout-shadow: 0 1px 2px rgb(0 0 0 / 18%), 0 10px 30px rgb(0 0 0 / 18%);
 
   // 移动端抽屉（暗色下遮罩/投影加深一档，保持与亮底内容的层级分离）
@@ -74,8 +76,9 @@
 }
 
 // ─── Element Plus 变量覆盖 mixin（容器作用域，由 index.vue 施加）────
-// 紫色主色（亮 #5b5bd6 / 暗 #818cf8）是参考仓新版主题的核心识别色，
-// slate 文字色与浅灰边框同步覆盖，保证布局内 el 组件视觉一致。
+// 亮色沿用参考仓识别色（紫 #5b5bd6 + slate 文字色）；暗色为莫兰迪雾霾蓝
+// 主色 #8fa6bc（2026-11-03 由 slate 蓝黑切换，见 DESIGN.md 中后台 default 节），
+// 文字与边框随主色系同步覆盖，保证布局内 el 组件视觉一致。
 
 @mixin default-layout-ep-light {
   --el-color-primary: #5b5bd6;
@@ -99,31 +102,31 @@
 }
 
 @mixin default-layout-ep-dark {
-  --el-color-primary: #818cf8;
-  --el-color-primary-light-3: #747ee0;
-  --el-color-primary-light-5: #5e68bd;
-  --el-color-primary-light-7: #454e86;
-  --el-color-primary-light-8: #343c67;
-  --el-color-primary-light-9: #252c49;
-  --el-color-primary-dark-2: #9aa2fa;
-  --el-bg-color: #151e30;
-  --el-bg-color-page: #0b1120;
-  --el-bg-color-overlay: #1b2538;
-  --el-fill-color-blank: #151e30;
-  --el-fill-color-light: #1c2638;
+  --el-color-primary: #8fa6bc;
+  --el-color-primary-light-3: #7e94a9;
+  --el-color-primary-light-5: #64798c;
+  --el-color-primary-light-7: #4a5c6b;
+  --el-color-primary-light-8: #3a4754;
+  --el-color-primary-light-9: #2b343d;
+  --el-color-primary-dark-2: #a2b6c9;
+  --el-bg-color: #1a1f26;
+  --el-bg-color-page: #12161a;
+  --el-bg-color-overlay: #222831;
+  --el-fill-color-blank: #1a1f26;
+  --el-fill-color-light: #20272f;
   // fill 阶梯暗化必须完整到 lighter/extra-light：EP el-table stripe 条纹行用
   // --el-fill-color-lighter 作行底色，缺失时回落 EP 出厂亮色系 #fafafa——暗色下
   // 条纹行整块泛白、与深色表体强烈割裂（2026-09-10 /user/list 暗色实测）
-  --el-fill-color: #1a2436;
-  --el-fill-color-dark: #0f1726;
-  --el-fill-color-lighter: #232f45;
-  --el-fill-color-extra-light: #2c3a54;
-  --el-border-color: #344055;
-  --el-border-color-light: #2d394c;
-  --el-border-color-lighter: #273244;
-  --el-text-color-primary: #f1f5f9;
-  --el-text-color-regular: #cbd5e1;
-  --el-text-color-secondary: #94a3b8;
+  --el-fill-color: #20262e;
+  --el-fill-color-dark: #171c22;
+  --el-fill-color-lighter: #262e37;
+  --el-fill-color-extra-light: #2c3540;
+  --el-border-color: #333d47;
+  --el-border-color-light: #2b333c;
+  --el-border-color-lighter: #232a32;
+  --el-text-color-primary: #e8edf1;
+  --el-text-color-regular: #c2cbd4;
+  --el-text-color-secondary: #8a97a5;
 }
 
 // ─── 主题选择器（mixin 应用点）──────────────────────────────

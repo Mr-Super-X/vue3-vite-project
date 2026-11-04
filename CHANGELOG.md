@@ -6,6 +6,94 @@
 
 ## 未发布
 
+### 🎨 Style | admin 暗色主题莫兰迪化：slate 蓝黑 → 雾霾蓝灰调（2026-11-03）
+
+> 背景：admin 端暗色沿用 slate 蓝黑 + 靛紫主色（复刻 vue-element-plus-admin），
+> 冷硬感强。按用户要求按莫兰迪色系优化——先做四方向色卡（雾霾蓝 / 鼠尾草绿 /
+> 烟紫薰衣草 / 燕麦暖灰）经浏览器渲染对比，用户选定 A 方向雾霾蓝后实施。
+
+- **apps/admin default-tokens.scss**：`default-layout-dark`（布局变量 16 项）+
+  `default-layout-ep-dark`（EP 覆盖 24 项）两套 mixin 色值 slate→雾霾蓝——
+  主色 `#818cf8→#8fa6bc`（灯阶 3/5/7/8/9 同步去饱和、dark-2 hover 提亮 `#a2b6c9`）、
+  页面底 `#0b1120→#12161a`、卡片底 `#151e30→#1a1f26`、弹层底 `#1b2538→#222831`、
+  侧栏/顶栏 `#111827→#161b21`、文字 `#f1f5f9/#cbd5e1/#94a3b8→#e8edf1/#c2cbd4/#8a97a5`、
+  边框 `#344055/#2d394c/#273244→#333d47/#2b333c/#232a32`、
+  fill 阶梯 `#1c2638/#1a2436/#0f1726/#232f45/#2c3a54→#20272f/#20262e/#171c22/#262e37/#2c3540`；
+  亮色紫主题、施加机制（index.vue / element-overwrite.scss 容器作用域）、
+  中性阴影/遮罩全部不动。
+- **注释同步**：default-tokens.scss mixin 顶部「紫色主色是参考仓核心识别色」
+  与 index.vue 容器注释「紫色主色 + slate 文字色」在暗色雾霾蓝下过时，已改为
+  亮暗分述。
+- **DESIGN.md**：「中后台 default」节由"不定义自有色板"修正为暗色自有
+  雾霾蓝 token 表（frontmatter 镜像 +12 项），修订记录同步。
+
+验证：admin dev:local 免登录实测 4 页截图对比——亮色基线紫主题零变化；
+暗色 workbench / analysis（KPI 数字主色灯阶）/ user/list（表格 stripe 行
+`#262e37` 柔和分层、无泛白割裂）/ 游客下拉弹层（teleport 全局 EP dark
+`#141414` 系与内容区 `#12161a` 色差不可辨，维持改造前边界）。顶栏
+「切换深色主题」开关切换正常。
+
+手动验证：`pnpm -C apps/admin exec cross-env VITE_MENU_SOURCE=local
+VITE_DEMO_NO_AUTH=true vite` 起后访问 `http://localhost:5174/`，顶栏切暗色：
+侧栏底 `#161b21`、内容区 `#12161a`、主按钮/链接雾霾蓝 `#8fa6bc`、
+表格条纹行 `#262e37`；亮色模式视觉与改造前完全一致。
+
+### 🐛 Fix | admin 顶栏 el-dropdown 弹层主题色跟随：hover 不再回落全局蓝（2026-11-03）
+
+> 背景：莫兰迪暗色落地后用户实测发现——退出登录 / 中英文切换的 el-dropdown
+> 弹层 hover 仍是 Element Plus 默认蓝 #409eff，亮色（应紫）暗色（应雾霾蓝）
+> 双双未跟随。弹层 teleport 到 body，容器作用域的 --el-color-primary 覆盖
+> （index.vue .vv-default-layout）够不到 body 下的弹层，回落 :root 全局值。
+
+- **index.vue style 块**：新增 `.vv-default-header-popper` 补丁段（亮色
+  `@include default-layout-ep-light` / 暗色 `@include default-layout-ep-dark` /
+  系统跟随三条选择器），整 mixin 重放——值随 mixin 单点维护。放 index.vue
+  而非 default-tokens.scss：被 @use 模块不经 vite sass additionalData 注入，
+  `$BEM_PREFIX` 在其中未定义（首版补丁段放 default-tokens.scss  Sass 编译
+  500，已回退并迁移）。
+- **UserInfo.vue / LocaleDropdown.vue**：el-dropdown 增
+  `popper-class="vv-default-header-popper"` 挂上述通道。
+- **AppMenu.vue 关联修复**：horizontal 菜单弹层暗色段硬编码旧紫
+  `#818cf8`/`#252c49` 同步为雾霾蓝 `#8fa6bc`/`#2b343d`（2026-11-03 暗色
+  改造时遗漏漂移点），加注释指向 default-tokens.scss 单一事实源。
+- **DESIGN.md**：已知边界段同步——dropdown 弹层已建通道处理，其余
+  teleport 弹层（dialog/message）维持全局 EP dark 不单独处理。
+
+验证：浏览器 computed 实测——亮色弹层 `--el-color-primary #5b5bd6` /
+light-9 `#eeeeff`，暗色 `#8fa6bc` / `#2b343d`；hover 实截图：亮色语言
+下拉淡紫底、暗色退出登录深灰蓝底，均跟随主题。
+
+手动验证：同上下拉顶栏两个 dropdown，亮色 hover 淡紫、暗色 hover
+深灰蓝，不再是 EP 蓝。
+
+### 🐛 Fix | admin tags-view「更多页签操作」弹层主题色跟随（2026-11-04）
+
+> 背景：用户连续反馈第三处主题色未受控——tags-view 栏「更多页签操作」
+> 弹层（刷新 / 关闭 / 关闭左侧 / 关闭右侧 / 关闭其他 / 全部关闭）hover 仍
+> EP 默认蓝。同根因：弹层 teleport 到 body，容器作用域变量够不到。该弹层
+> 组件是 ContextMenu（基于 el-dropdown 的轻量封装，popperClass 计算属性
+> 产出 .vv-context-menu-popper），仅 TagsView 引用，此前未纳入弹层补丁通道。
+> 栏上「刷新当前页签」等按钮本体颜色本就受控（var(--el-color-primary)，
+> 容器内生效），不受控的只有弹层菜单项。
+
+- **index.vue style 块**：teleport 弹层补丁段选择器组纳入
+  `.vv-context-menu-popper`（亮 / 暗 / 系统跟随三组，整 mixin include
+  单点维护不变）；补丁段注释更新——通道语义从「顶栏 dropdown」升级为
+  「default 布局弹层」，说明新增弹层类的接入方式。ContextMenu.vue
+  无需改动（popperClass 计算属性已产出目标类名）。
+- **排查确认**：default 布局全部弹层类组件已清点——AppMenu 折叠弹层
+  （vertical 走 --el-menu-* 变量不受主色影响 / horizontal 已修）、
+  LayoutSwitcher（无 teleport 组件）无遗漏。
+- **DESIGN.md**：已知边界段同步——通道清单补 ContextMenu，并声明
+  业务页内全局弹层（el-dialog / el-select 等）维持全局 EP 主色
+  `#409eff` 的处理边界。
+
+验证：浏览器 computed 实测——亮色弹层 `--el-color-primary #5b5bd6` /
+light-9 `#eeeeff`，暗色 `#8fa6bc` / `#2b343d`，双主题受控。
+
+手动验证：起 dev 打开 tags-view 栏「更多页签操作」，亮/暗主题 hover
+各菜单项——亮色淡紫、暗色深灰蓝，不再 EP 蓝。
+
 ### ✨ Feat | dev:gateway 子集感知登录回跳：登录成功直达子集内同伴 app（2026-11-03）
 
 > 背景：子集模式（如 `pnpm dev:gateway auth big`）下地址栏直开登录页，登录成功兜底回 auth

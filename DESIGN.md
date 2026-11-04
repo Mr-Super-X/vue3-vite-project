@@ -42,6 +42,17 @@ colors:
   big-title-to: '#7db4ff'
   big-medal-gold: '#f7c948'
   big-kpi-down: '#2fd39a'
+  default-dark-primary: '#8fa6bc'
+  default-dark-primary-l3: '#7e94a9'
+  default-dark-primary-l9: '#2b343d'
+  default-dark-bg-page: '#12161a'
+  default-dark-bg-card: '#1a1f26'
+  default-dark-bg-menu: '#161b21'
+  default-dark-bg-overlay: '#222831'
+  default-dark-text-primary: '#e8edf1'
+  default-dark-text-regular: '#c2cbd4'
+  default-dark-text-secondary: '#8a97a5'
+  default-dark-border-base: '#333d47'
 typography:
   body:
     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
@@ -163,7 +174,30 @@ components:
 
 ### 中后台 default
 
-不定义自有色板——完全消费 Element Plus 变量 + docs/06 主题体系。新增中后台色值时优先用 EP token，确需自有值时登记到本节。
+亮色不定义自有色板——完全消费 Element Plus 变量 + docs/06 主题体系（参考仓紫 #5b5bd6 识别色，`default-layout-ep-light` mixin 容器作用域覆盖）。**暗色为莫兰迪雾霾蓝固定视觉**（2026-11-03 起，由 slate 蓝黑切换），token 见下表。新增中后台色值时优先用 EP token，确需自有值时登记到本节。
+
+#### 中后台暗色 · 莫兰迪雾霾蓝（2026-11-03 登记）
+
+> 落点：`apps/admin/src/layouts/default/styles/default-tokens.scss` 的 `default-layout-dark`（布局变量）+ `default-layout-ep-dark`（EP 覆盖）两个 mixin；经 `index.vue` / `element-overwrite.scss` 的 `[data-theme='dark']` 选择器容器施加。全局 `packages/ui/_dark.scss` 的 `--bg-base` 系不受影响（portal / docs / auth 暗色维持原灰阶）。
+
+| Token                                         | 值                                                | 用途                                         | 实证                     |
+| --------------------------------------------- | ------------------------------------------------- | -------------------------------------------- | ------------------------ |
+| `default-dark-primary`                        | `#8fa6bc`                                         | 暗色主色（EP 覆盖 base）                     | `default-layout-ep-dark` |
+| primary light-3/5/7/8/9                       | `#7e94a9`/`#64798c`/`#4a5c6b`/`#3a4754`/`#2b343d` | 暗色灯阶（逐级变暗）                         | 同上                     |
+| primary dark-2                                | `#a2b6c9`                                         | hover 提亮                                   | 同上                     |
+| `default-dark-bg-page`                        | `#12161a`                                         | 页面底（`--el-bg-color-page` / 内容区）      | 同上                     |
+| `default-dark-bg-card`                        | `#1a1f26`                                         | 卡片底（`--el-bg-color` / fill-blank）       | 同上                     |
+| `default-dark-bg-overlay`                     | `#222831`                                         | 弹层底（`--el-bg-color-overlay`）            | 同上                     |
+| fill 阶梯 light/fill/dark/lighter/extra-light | `#20272f`/`#20262e`/`#171c22`/`#262e37`/`#2c3540` | 填充阶梯（stripe 行用 lighter）              | 同上                     |
+| `default-dark-bg-menu`                        | `#161b21`                                         | 侧栏 / 顶栏底                                | `default-layout-dark`    |
+| menu active 底 / 文字 / 激活文字              | `#26303a` / `#8a99a8` / `#a8bacb`                 | 菜单激活态三级                               | 同上                     |
+| `default-dark-text-primary`                   | `#e8edf1`                                         | 主文字（`--el-text-color-primary`）          | `default-layout-ep-dark` |
+| `default-dark-text-regular`                   | `#c2cbd4`                                         | 正文（`--el-text-color-regular`）            | 同上                     |
+| `default-dark-text-secondary`                 | `#8a97a5`                                         | 辅助文字（`--el-text-color-secondary`）      | 同上                     |
+| `default-dark-border-base`                    | `#333d47`                                         | 边框 base                                    | 同上                     |
+| border light / lighter                        | `#2b333c` / `#232a32`                             | 边框浅档（布局 border-color 同步 `#232a32`） | 同上                     |
+
+> 已知边界：teleport 到 body 的弹层中，**default 布局弹层**经专属 popper-class 通道重放容器 EP 变量（补丁段在 `index.vue` style 块，整 mixin include 单点维护，亮色紫 / 暗色雾霾蓝均生效）：`.vv-default-header-popper`（UserInfo / LocaleDropdown，2026-11-03）与 `.vv-context-menu-popper`（TagsView 的"更多页签操作"与页签右键菜单，2026-11-04）——新增 default 布局弹层类加入该选择器组即可；其余全局弹层（el-dialog / el-message / 业务页内 el-select 等）仍走全局 EP 主色 `#409eff`，不单独处理。
 
 ### 滚动条（全局，base/reset.css 消费）
 
@@ -296,8 +330,9 @@ components:
 
 ## 修订记录
 
-| 日期       | 变更                                                                                                                                                                                                                                                                                                                              |
-| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-11-03 | 样式分层规则符合度修复（审计报告 `.claude/agent-reports/2026-11-03-样式分层规则符合度审计.md`）：big 增补 19 token（面板/遮罩/标题渐变/奖牌/排名/状态）、h5 增补 3 token 并配暗色、portal 暗色反转接线（拆分独立小节，修正「不定义自有色板」漂移）、全局滚动条 token 化、Wide.vue 中文类名 `&--高/中/低` 改 `--high/mid/low` 映射 |
-| 2026-11-02 | 合并 impeccable DESIGN.md 规范格式：新增 YAML frontmatter（机器可读 token）+ Overview（北极星「一套骨架，四种舱位」）+ Layout / Elevation & Depth / Shapes / Components / Do's and Don'ts 章节；既有四栖 token 表全量保留，状态色并入 Colors 子节；深度哲学定为状态响应式                                                         |
-| 2026-10-15 | 初版（/autoplan TODOS #4）：big/h5 色板 + 状态色 + 字号阶梯 + 间距，全部取自代码实证值                                                                                                                                                                                                                                            |
+| 日期       | 变更                                                                                                                                                                                                                                                                                                                                                                                             |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-11-03 | admin 暗色主题莫兰迪化（用户选定色卡 A 方向）：default-tokens.scss 两个 dark mixin 由 slate 蓝黑切换为雾霾蓝系（主色 `#8fa6bc` / 页面底 `#12161a` / 卡片 `#1a1f26` / 文字 `#e8edf1→#8a97a5` 三级 / 边框 `#333d47→#232a32` 三级）；「中后台 default」节由"不定义自有色板"修正为暗色自有雾霾蓝 token 表（frontmatter 同步增补 12 项镜像）；亮色紫主题、全局 `--bg-base` 灰阶、其他端暗色均不受影响 |
+| 2026-11-03 | 样式分层规则符合度修复（审计报告 `.claude/agent-reports/2026-11-03-样式分层规则符合度审计.md`）：big 增补 19 token（面板/遮罩/标题渐变/奖牌/排名/状态）、h5 增补 3 token 并配暗色、portal 暗色反转接线（拆分独立小节，修正「不定义自有色板」漂移）、全局滚动条 token 化、Wide.vue 中文类名 `&--高/中/低` 改 `--high/mid/low` 映射                                                                |
+| 2026-11-02 | 合并 impeccable DESIGN.md 规范格式：新增 YAML frontmatter（机器可读 token）+ Overview（北极星「一套骨架，四种舱位」）+ Layout / Elevation & Depth / Shapes / Components / Do's and Don'ts 章节；既有四栖 token 表全量保留，状态色并入 Colors 子节；深度哲学定为状态响应式                                                                                                                        |
+| 2026-10-15 | 初版（/autoplan TODOS #4）：big/h5 色板 + 状态色 + 字号阶梯 + 间距，全部取自代码实证值                                                                                                                                                                                                                                                                                                           |

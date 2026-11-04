@@ -465,17 +465,19 @@ function handleSelect(index: string): void {
   box-shadow: var(--layout-shadow);
 }
 
-// 暗色：水平弹层局部 EP 变量（与 theme store 的 data-theme 机制对齐）
+// 暗色：水平弹层局部 EP 变量（与 theme store 的 data-theme 机制对齐）。
+// 色值与 default-tokens.scss default-layout-ep-dark 单一事实源保持一致
+// （2026-11-03 暗色改雾霾蓝时此处硬编码遗漏致漂移，已同步；改 mixin 时须同步此处）。
 [data-theme='dark'] .#{$BEM_PREFIX}-app-menu-popper--horizontal {
-  --el-color-primary: #818cf8;
-  --el-color-primary-light-9: #252c49;
+  --el-color-primary: #8fa6bc;
+  --el-color-primary-light-9: #2b343d;
 }
 
 // 跟随系统：仅当用户未显式设置 data-theme
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) .#{$BEM_PREFIX}-app-menu-popper--horizontal {
-    --el-color-primary: #818cf8;
-    --el-color-primary-light-9: #252c49;
+    --el-color-primary: #8fa6bc;
+    --el-color-primary-light-9: #2b343d;
   }
 }
 </style>
