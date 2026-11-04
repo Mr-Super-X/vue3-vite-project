@@ -52,6 +52,10 @@ function buildApp(appName: string): void {
     // /<repo>/auth/#/login，Pages 经 auth/index.html 接住；只注前缀不带 # 则 /auth/login
     // 非静态文件仍 404。dev/history 形态由各 app .env 的 VITE_AUTH_ORIGIN 承担（进程 env 优先）
     VITE_AUTH_ORIGIN: `${REPO_PREFIX}/auth/#`,
+    // auth 登录成功兜底（gh-pages 演示形态）：落地导航页 / 地址栏直进 auth 时 referrer
+    // 剥前缀后无 app 段（推断不出来源），注入 /admin/ 登录后直达管理后台——语义对齐
+    // dev-gateway 的 VITE_POST_LOGIN_FALLBACK（裸 app 路径，消费端 withRepoPrefix 加前缀）
+    ...(appName === 'auth' ? { VITE_POST_LOGIN_FALLBACK: '/admin/' } : {}),
   }
   const result = spawnSync('pnpm', ['-C', `apps/${appName}`, 'build-only'], {
     cwd: REPO_ROOT,

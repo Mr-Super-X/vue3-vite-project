@@ -142,6 +142,37 @@ describe('Login.vue（apps/auth 统一登录页）', () => {
     expect(mockResolvePostLoginRedirect).toHaveBeenCalledWith('/h5/')
   })
 
+  // 2026-11-04 线上 404 根因回归：gh-pages 形态（VITE_BASE=/<repo>/<app>/）下 referrer
+  // pathname 首段是 repo 名——剥部署前缀后取 app 段，否则 repo 名被误当 app 名，
+  // 经 withRepoPrefix 二次加前缀拼出 /<repo>/<repo>/ 404
+  it('10. gh-pages 形态 referrer 剥部署前缀后推断来源 app（portal → /portal/）', async () => {
+    mockLogin.mockResolvedValueOnce({ profile: { id: 1, name: 'Admin' } })
+    vi.stubEnv('VITE_BASE', '/vue3-vite-project/auth/')
+    Object.defineProperty(document, 'referrer', {
+      value: 'https://mr-super-x.github.io/vue3-vite-project/portal/home',
+      configurable: true,
+    })
+    const w = mount(Login, mountOptions)
+    await w.find('form').trigger('submit.prevent')
+    await flushPromises()
+    // 断言传参为 withRepoPrefix('/portal/') 的真实计算结果（gh-pages 加前缀）
+    expect(mockResolvePostLoginRedirect).toHaveBeenCalledWith('/vue3-vite-project/portal/')
+  })
+
+  it('11. gh-pages 落地导航页 referrer（剥前缀后无 app 段）→ env fallback /admin/ 兜底', async () => {
+    mockLogin.mockResolvedValueOnce({ profile: { id: 1, name: 'Admin' } })
+    vi.stubEnv('VITE_BASE', '/vue3-vite-project/auth/')
+    vi.stubEnv('VITE_POST_LOGIN_FALLBACK', '/admin/')
+    Object.defineProperty(document, 'referrer', {
+      value: 'https://mr-super-x.github.io/vue3-vite-project/',
+      configurable: true,
+    })
+    const w = mount(Login, mountOptions)
+    await w.find('form').trigger('submit.prevent')
+    await flushPromises()
+    expect(mockResolvePostLoginRedirect).toHaveBeenCalledWith('/vue3-vite-project/admin/')
+  })
+
   it('6. 密码显隐切换：点击 👁 后 input type 切换', async () => {
     const w = mount(Login, mountOptions)
     const pwdInput = w.find('input[autocomplete="current-password"]')
