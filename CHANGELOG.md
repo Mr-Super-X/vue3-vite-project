@@ -6,6 +6,34 @@
 
 ## 未发布
 
+### 🎨 Style | portal 首页云灰改版：黑白极简 → 云灰 · 极简留白（2026-11-04）
+
+> 背景：portal 端「白纸极简」视觉（纯黑白 + 细线）自 2026-10-20 企业官网改造起未迭代；
+> 本次经 ui-style-skill 选型流程重设计首页五区块 + 顶栏（随机 3 候选：云灰/绛纱/燕麦，
+> 用户选定「云灰 · 极简留白」，seed 29060 锁定根 `style-tokens.json` 为风格源）。
+
+- **风格源**：根 `style-tokens.json` 锁定（云灰模板）——页面底 `#f6f6f4`、ink 三档
+  `#333638/#66696c/#a3a6a8`、云灰蓝 brand 族 `#5e6d7c/#445466/#e6ebf0`、陶粉点缀
+  `#b08d85/#f3e9e6`（面积 ≤10%）；圆角骨架全局 4/8/12 → 6/12/20（用户裁决，存量
+  组件零消费，portal 为首批消费方）。
+- **portal-tokens.scss**：云灰板重赋值 `--portal-*`，新增 brand/accent/bg-card/
+  bg-inverse/ink-3/line-strong 七项；`portal-dark` mixin 由黑白反转改云灰蓝黑化
+  （brand 提亮参照中后台雾霾蓝 precedent）；`--portal-bg-inverse` 恒深底修复
+  页脚/登录按钮 dark 下反转成浅底的既有缺陷。
+- **首页组件**：SiteHero（kicker pill 化、按钮 brand 化、SVG 示意图 brand 系）、
+  SiteFeatures（卡片白底浮出 + icon 品牌块 + hover 阴影 + CAPABILITIES 眉题）、
+  SiteStats（数值品牌高亮）、SiteAbout（contact hover 点亮）、SiteFooter（柔和深灰
+  `#2e3134`）、PortalHeader（logo/登录按钮/头像 brand 化）。
+- **实心按钮契约**（DESIGN.md portal 节登记）：brand 底 + 白字，亮面 `#5e6d7c` /
+  dark `#5e7488`，白字对比均 ≥4.5；浅色按钮 = brand-soft 底 + brand-deep 字。
+
+验证：portal 全部单测 + `type-check:full`、verify_style.py 8 项检查、DESIGN.md
+（portal 节/frontmatter/Shapes/修订记录）与 docs/06 同步。
+
+手动验证：`pnpm -C apps/portal dev` 打开首页，确认：页面底为暖灰白、卡片纯白浮出、
+按钮/图标/数据为云灰蓝、页脚柔和深灰；`data-theme="dark"` 或系统暗色下整页蓝黑协调、
+登录按钮白字清晰；375 窄屏无横向滚动。
+
 ### 🐛 Fix | auth 登录回跳 gh-pages 双重前缀 404：referrer 剥部署前缀 + 构建注入 /admin/ 兜底（2026-11-04）
 
 > 背景：gh-pages 演示站（base=`/<repo>/<app>/`）从落地导航页进 auth 登录成功后

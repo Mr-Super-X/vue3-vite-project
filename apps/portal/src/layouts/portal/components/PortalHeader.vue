@@ -74,7 +74,7 @@ async function onCommand(cmd: string) {
   <header :class="bem.b()" role="banner">
     <div :class="bem.e('inner')">
       <!-- 品牌文案与 modules/home/config/site.ts 的 SITE_BRAND 有意双源：§1.2 模块边界禁止 layouts 引用 modules/，改品牌名需同步两处 -->
-      <a :class="bem.e('brand')" href="#hero" aria-label="星澜科技 回到首页">
+      <a :class="bem.e('brand')" href="#hero" aria-label="企业门户 回到首页">
         <svg :class="bem.e('mark')" viewBox="0 0 32 32" aria-hidden="true">
           <rect width="32" height="32" rx="7" />
           <path d="M7 12c3-3 6 3 9 0s6 3 9 0" stroke-width="2" fill="none" stroke-linecap="round" />
@@ -86,7 +86,7 @@ async function onCommand(cmd: string) {
             opacity=".6"
           />
         </svg>
-        <span :class="bem.e('name')">星澜科技</span>
+        <span :class="bem.e('name')">企业门户</span>
       </a>
 
       <PortalNav :items="PORTAL_NAV" />
@@ -163,14 +163,13 @@ async function onCommand(cmd: string) {
     height: 28px;
     display: block;
 
-    // logo 色走 portal token（原 fill="#111" / stroke="#fff" 硬编码）：
-    // 暗色下 --portal-ink/--portal-bg 反转，logo 自动反色保持可见
+    // logo 色走 portal token（云灰改版：方块底品牌主色，暗色下 brand 为深档仍可见）
     rect {
-      fill: var(--portal-ink);
+      fill: var(--portal-brand);
     }
 
     path {
-      stroke: var(--portal-bg);
+      stroke: var(--portal-on-solid);
     }
   }
 
@@ -202,23 +201,20 @@ async function onCommand(cmd: string) {
     }
   }
 
-  // 未登录态：黑底白字按钮，hover 反白互换
+  // 未登录态：品牌主色实心（云灰契约：brand 底 + 白字；dark 下 brand 为深档，白字对比仍 ≥4.5）
   &__login {
     height: 34px;
     padding: 0 18px;
     font-size: 14px;
     color: var(--portal-on-solid);
-    background: var(--portal-ink);
-    border: 1px solid var(--portal-ink);
-    border-radius: 4px;
+    background: var(--portal-brand);
+    border: 1px solid var(--portal-brand);
+    border-radius: var(--radius-sm);
     cursor: pointer;
-    transition:
-      background 0.2s ease,
-      color 0.2s ease;
+    transition: filter 0.2s ease;
 
     &:hover {
-      background: transparent;
-      color: var(--portal-ink);
+      filter: brightness(1.12);
     }
   }
 
@@ -245,7 +241,7 @@ async function onCommand(cmd: string) {
     width: 26px;
     height: 26px;
     border-radius: 50%;
-    background: var(--portal-ink);
+    background: var(--portal-brand);
     color: var(--portal-on-solid);
     display: grid;
     place-items: center;

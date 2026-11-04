@@ -28,7 +28,7 @@ const CHUNK_INTERVAL_MS = 120
 /** 预置回复：按 token 粒度切成独立 chunk，客户端累积渲染为打字机效果 */
 const MOCK_REPLY_CHUNKS = [
   '你好！',
-  '我是星澜 AI 助手。',
+  '我是企业门户 AI 助手。',
   '\n\n',
   '这是一个由 mock 逐段推送的 SSE 流式响应，',
   '用来演示 requestStream 的接收 / 累积 / 取消能力。',

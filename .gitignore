@@ -82,3 +82,5 @@ test-results
 # review 截图 / quality-bar 参考图——均为本地工具生成物，不入库；
 # surface brief 的持久化版本如需共享经 code review 后再单独加白名单）
 **/.impeccable/
+# ui-style-skill 设计工具运行时产物
+ui-templates/

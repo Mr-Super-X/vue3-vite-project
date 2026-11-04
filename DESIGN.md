@@ -27,11 +27,17 @@ colors:
   h5-page: '#f7f8fa'
   h5-ink: '#1a1a1a'
   h5-line: '#ebedf0'
-  portal-ink: '#111111'
-  portal-paper: '#ffffff'
-  portal-line: '#eeeeee'
-  portal-dark-paper: '#111111'
-  portal-dark-ink: '#f5f5f5'
+  portal-ink: '#333638'
+  portal-paper: '#f6f6f4'
+  portal-line: '#e4e4e1'
+  portal-dark-paper: '#24272b'
+  portal-dark-ink: '#e8e9e7'
+  portal-brand: '#5e6d7c'
+  portal-brand-deep: '#445466'
+  portal-brand-soft: '#e6ebf0'
+  portal-accent: '#b08d85'
+  portal-bg-card: '#ffffff'
+  portal-bg-inverse: '#2e3134'
   scrollbar-thumb: '#b8b8b8'
   scrollbar-thumb-dark: '#4e4e52'
   h5-text-title: '#323233'
@@ -62,9 +68,9 @@ typography:
   mono:
     fontFamily: "'Fira Code', Monaco, Consolas, 'Courier New', monospace"
 rounded:
-  sm: '4px'
-  md: '8px'
-  lg: '12px'
+  sm: '6px'
+  md: '12px'
+  lg: '20px'
 spacing:
   xs: '4px'
   sm: '8px'
@@ -159,18 +165,29 @@ components:
 
 > h5 tokens 已配 `[data-theme='dark']` + `prefers-color-scheme` 双主题覆盖（2026-11-03）。
 
-### 门户 portal（白纸极简）
+### 门户 portal（云灰 · 极简留白，2026-11-04 改版）
 
-| Token                   | light     | dark      | 用途                   |
-| ----------------------- | --------- | --------- | ---------------------- |
-| `portal-bg`             | `#ffffff` | `#111111` | 页面底                 |
-| `portal-bg-alt`         | `#fafafa` | `#1c1c1c` | 分区底（特性区）       |
-| `portal-ink`            | `#111111` | `#f5f5f5` | 主文字                 |
-| `portal-ink-2`          | `#555555` | `#a3a3a3` | 次要文字               |
-| `portal-line`           | `#eeeeee` | `#2a2a2a` | 1px 细线               |
-| `portal-on-*`（深底族） | 不随主题  | 不随主题  | 深底反色文字/细线/实白 |
+> 风格源锁定自根 `style-tokens.json`（ui-style-skill 云灰模板，seed 29060）。值以 `apps/portal/src/layouts/portal/styles/portal-tokens.scss` 为实证。
+> 用法契约：实心按钮 = `--portal-brand` 底 + 白字（亮面 #5e6d7c / dark #5e7488，白字对比均 ≥4.5）；浅色按钮 / pill = `--portal-brand-soft` 底 + `--portal-brand-deep` 字；数据高亮文字 = `--portal-brand-deep`（dark 下为浅色主色文字，语义自洽）；点缀 `--portal-accent` 面积 ≤10%。
 
-> 黑白设计暗色反转（ink/bg 互换语义），2026-11-03 经 `portal-dark` mixin + `[data-theme]`/`prefers-color-scheme` 接线。
+| Token                           | light                 | dark                  | 用途                                                                  |
+| ------------------------------- | --------------------- | --------------------- | --------------------------------------------------------------------- |
+| `portal-bg`                     | `#f6f6f4`             | `#24272b`             | 页面底（原纯白黑白极简，云灰改版重赋值）                              |
+| `portal-bg-alt`                 | `#f1f1ef`             | `#2b2e33`             | hover 底 / 输入底（原分区底 #fafafa；特性区改与页面同色后服务交互态） |
+| `portal-bg-card`                | `#ffffff`             | `#2e3237`             | 卡片底                                                                |
+| `portal-bg-inverse`             | `#2e3134`             | 不随主题              | 恒深底（页脚），dark 保持深档                                         |
+| `portal-ink`                    | `#333638`             | `#e8e9e7`             | 主文字（原 #111111）                                                  |
+| `portal-ink-2`                  | `#66696c`             | `#a6a9ab`             | 次要文字（原 #555555）                                                |
+| `portal-ink-3`                  | `#a3a6a8`             | `#7c7f81`             | 弱化文字（新增）                                                      |
+| `portal-line`                   | `#e4e4e1`             | `#3a3d41`             | 1px 细线（原 #eeeeee）                                                |
+| `portal-line-strong`            | `#cfd0cc`             | `#4a4d51`             | 强调描边（hover / ghost 按钮边，新增）                                |
+| `portal-brand`                  | `#5e6d7c`             | `#5e7488`             | 品牌主色：实心按钮底 / logo 块                                        |
+| `portal-brand-deep`             | `#445466`             | `#a9bdd1`             | 主色文字：pill 字 / 浅按钮字 / 数据高亮（dark 语义反转为浅色文字）    |
+| `portal-brand-soft`             | `#e6ebf0`             | `#2e3740`             | 浅主底：pill 底 / icon 块 / 浅色按钮（dark 转深色底）                 |
+| `portal-accent` / `accent-soft` | `#b08d85` / `#f3e9e6` | `#c4a69e` / `#38302e` | 点缀（面积 ≤10%）                                                     |
+| `portal-on-*`（深底族）         | 不随主题              | 不随主题              | 深底反色文字/细线/实白                                                |
+
+> 暗色经 `portal-dark` mixin + `[data-theme]`/`prefers-color-scheme` 接线（2026-11-03 建立接线，2026-11-04 由黑白反转改云灰蓝黑化；提亮规则参照中后台莫兰迪雾霾蓝 precedent）。
 
 ### 中后台 default
 
@@ -268,7 +285,7 @@ components:
 
 ## Shapes
 
-- **圆角档位**：`--radius-sm/md/lg` = 4 / 8 / 12px。EP 组件默认 4px（按钮 / 输入），卡片 8px，浮层 12px——档位少而语义固定，禁止自创中间值。
+- **圆角档位**：`--radius-sm/md/lg` = 6 / 12 / 20px（2026-11-04 由 4/8/12 上调，portal 云灰改版裁决；双写在 `packages/ui/src/assets/styles/variables.scss` 与 `packages/ui/src/styles/tokens/_spacing.scss`）。项目自有组件：按钮/输入 6px，卡片 12px，浮层 20px——档位少而语义固定，禁止自创中间值；EP 组件圆角走 EP 自身变量（`--el-border-radius-*`）不受影响。
 - **BEM 命名空间**：前缀 `vv`（`$BEM_PREFIX`），所有组件 class 经 `createNamespace` 拼装，与 sass 根选择器 `.-{$BEM_PREFIX}-<kebab>` 严格对齐（CLAUDE.md §3）。
 - **样式块纪律**：`<style lang="scss">` 禁止 scoped（BEM 隔离已足够，scoped 会阻断 `:deep()` 编译）；穿透第三方组件直接写后代选择器。
 
@@ -294,7 +311,7 @@ components:
 ### Navigation
 
 - **中后台**: 侧栏 220px / 收起 64px，深色纸面 + `vv-` BEM 命名；顶栏 60px 白底；多页签(tags-view)刻意不持久化。
-- **门户**: sticky 顶栏 64px，白纸底 + `--portal-ink` 文字，锚点滚动导航，内容区居中 1200px。
+- **门户**: sticky 顶栏 64px，云灰纸面底 + `--portal-ink` 文字，品牌主色点亮（logo 块 / 登录按钮 brand 实心），锚点滚动导航，内容区居中 1200px。
 - **大屏**: 无导航组件，页标题 36px 渐变字 + 面包屑式说明（big-demo）。
 
 ### Signature Components（@vv/ui）
@@ -330,9 +347,10 @@ components:
 
 ## 修订记录
 
-| 日期       | 变更                                                                                                                                                                                                                                                                                                                                                                                             |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 2026-11-03 | admin 暗色主题莫兰迪化（用户选定色卡 A 方向）：default-tokens.scss 两个 dark mixin 由 slate 蓝黑切换为雾霾蓝系（主色 `#8fa6bc` / 页面底 `#12161a` / 卡片 `#1a1f26` / 文字 `#e8edf1→#8a97a5` 三级 / 边框 `#333d47→#232a32` 三级）；「中后台 default」节由"不定义自有色板"修正为暗色自有雾霾蓝 token 表（frontmatter 同步增补 12 项镜像）；亮色紫主题、全局 `--bg-base` 灰阶、其他端暗色均不受影响 |
-| 2026-11-03 | 样式分层规则符合度修复（审计报告 `.claude/agent-reports/2026-11-03-样式分层规则符合度审计.md`）：big 增补 19 token（面板/遮罩/标题渐变/奖牌/排名/状态）、h5 增补 3 token 并配暗色、portal 暗色反转接线（拆分独立小节，修正「不定义自有色板」漂移）、全局滚动条 token 化、Wide.vue 中文类名 `&--高/中/低` 改 `--high/mid/low` 映射                                                                |
-| 2026-11-02 | 合并 impeccable DESIGN.md 规范格式：新增 YAML frontmatter（机器可读 token）+ Overview（北极星「一套骨架，四种舱位」）+ Layout / Elevation & Depth / Shapes / Components / Do's and Don'ts 章节；既有四栖 token 表全量保留，状态色并入 Colors 子节；深度哲学定为状态响应式                                                                                                                        |
-| 2026-10-15 | 初版（/autoplan TODOS #4）：big/h5 色板 + 状态色 + 字号阶梯 + 间距，全部取自代码实证值                                                                                                                                                                                                                                                                                                           |
+| 日期       | 变更                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-04 | portal 首页云灰改版（ui-style-skill 选型「云灰 · 极简留白」，seed 29060 锁定根 `style-tokens.json`）：portal token 由黑白极简改云灰板（页面底 #f6f6f4、ink 三档 #333638→#a3a6a8、line 两档 #e4e4e1/#cfd0cc），新增 brand 族（#5e6d7c/#445466/#e6ebf0）、accent 族（#b08d85/#f3e9e6）、bg-card、bg-inverse（恒深底 #2e3134，修复页脚/登录按钮 dark 反转缺陷）；暗色由黑白反转改云灰蓝黑化（brand 提亮参照中后台雾霾蓝 precedent）；全局圆角 4/8/12 → 6/12/20（用户裁决；存量组件零消费，portal 为首批消费方）；SiteHero/SiteFeatures/SiteStats/SiteAbout/SiteFooter/PortalHeader 全面接线 brand 族（实心按钮契约：brand 底 + 白字，双主题白字对比 ≥4.5）；特性区新增 CAPABILITIES 眉题（site.ts `SITE_FEATURES_EYEBROW`）；frontmatter 镜像同步 |
+| 2026-11-03 | admin 暗色主题莫兰迪化（用户选定色卡 A 方向）：default-tokens.scss 两个 dark mixin 由 slate 蓝黑切换为雾霾蓝系（主色 `#8fa6bc` / 页面底 `#12161a` / 卡片 `#1a1f26` / 文字 `#e8edf1→#8a97a5` 三级 / 边框 `#333d47→#232a32` 三级）；「中后台 default」节由"不定义自有色板"修正为暗色自有雾霾蓝 token 表（frontmatter 同步增补 12 项镜像）；亮色紫主题、全局 `--bg-base` 灰阶、其他端暗色均不受影响                                                                                                                                                                                                                                                                                                                                               |
+| 2026-11-03 | 样式分层规则符合度修复（审计报告 `.claude/agent-reports/2026-11-03-样式分层规则符合度审计.md`）：big 增补 19 token（面板/遮罩/标题渐变/奖牌/排名/状态）、h5 增补 3 token 并配暗色、portal 暗色反转接线（拆分独立小节，修正「不定义自有色板」漂移）、全局滚动条 token 化、Wide.vue 中文类名 `&--高/中/低` 改 `--high/mid/low` 映射                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 2026-11-02 | 合并 impeccable DESIGN.md 规范格式：新增 YAML frontmatter（机器可读 token）+ Overview（北极星「一套骨架，四种舱位」）+ Layout / Elevation & Depth / Shapes / Components / Do's and Don'ts 章节；既有四栖 token 表全量保留，状态色并入 Colors 子节；深度哲学定为状态响应式                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| 2026-10-15 | 初版（/autoplan TODOS #4）：big/h5 色板 + 状态色 + 字号阶梯 + 间距，全部取自代码实证值                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
