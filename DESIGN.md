@@ -42,6 +42,24 @@ colors:
   scrollbar-thumb-dark: '#4e4e52'
   h5-text-title: '#323233'
   h5-card-bg: '#ffffff'
+  mall-bg-page: '#EFEBE5'
+  mall-bg-card: '#F8F6F2'
+  mall-bg-field: '#F3F0EA'
+  mall-bg-inverse: '#43473F'
+  mall-ink-1: '#3C403D'
+  mall-ink-2: '#6E7169'
+  mall-ink-3: '#A5A79F'
+  mall-line: '#E2DDD3'
+  mall-line-strong: '#CFC8BC'
+  mall-brand: '#B08D85'
+  mall-brand-deep: '#7E6159'
+  mall-brand-soft: '#F3E9E6'
+  mall-accent: '#7E97AC'
+  mall-accent-soft: '#E5EDF2'
+  mall-ok: '#5E8168'
+  mall-warn: '#97794B'
+  mall-err: '#A96A60'
+  mall-on-brand: '#FFFFFF'
   big-panel-bg: 'rgba(13, 38, 76, 0.35)'
   big-mask: 'rgba(10, 24, 48, 0.5)'
   big-title-from: '#ffffff'
@@ -175,6 +193,34 @@ components:
 | `h5-shadow-card` | `rgba(0, 0, 0, .06)` | 卡片投影（暗色 0.3 透明度） | h5-demo 卡片               |
 
 > h5 tokens 已配 `[data-theme='dark']` + `prefers-color-scheme` 双主题覆盖（2026-11-03）。
+
+### H5 商城 h5-mall（陶土 · 莫兰迪，2026-11-04 登记）
+
+> 风格源锁定自 ui-style-skill 陶土模板（seed 4877，根 `style-tokens.json` 选型；源页面 `h5-fashion-mall.html` 转换落地）。
+> 值以 `apps/h5/src/modules/h5-mall/styles/h5-mall-tokens.scss` 为实证（经 views/index.vue `@use` 单点引入）；变量挂在 `.vv-h5-mall` 上，**仅对 h5-mall 模块子树生效**，h5 布局与 vant 色系零污染（无暗色覆盖——商城页为恒定暖陶视觉，同 big 端先例）。
+> 用法契约（沿用 token notes）：实心按钮 / 角标 = `--mall-brand-deep` 底 + `--mall-on-brand` 白字；浅按钮 / pill = `--mall-brand-soft` 底 + `--mall-brand-deep` 字；强调 `--mall-accent` 只作点缀（眉题 / kicker），面积 ≤10%；正文 `--mall-ink-1`、辅助 `--mall-ink-2`、弱化 `--mall-ink-3`，禁用纯黑。
+
+| Token              | 值                                       | 用途                                         | 实证                                 |
+| ------------------ | ---------------------------------------- | -------------------------------------------- | ------------------------------------ |
+| `mall-bg-page`     | `#EFEBE5`                                | 页面底                                       | styles/h5-mall-tokens.scss           |
+| `mall-bg-card`     | `#F8F6F2`                                | 卡片 / 公告 / tabbar 底                      | 同上                                 |
+| `mall-bg-field`    | `#F3F0EA`                                | 搜索框底 / 奇数位金刚区圆环                  | 同上                                 |
+| `mall-bg-inverse`  | `#43473F`                                | 预留深底（本期未消费）                       | 同上                                 |
+| `mall-ink-1/2/3`   | `#3C403D` / `#6E7169` / `#A5A79F`        | 正文 / 辅助 / 弱化文字三级                   | 同上                                 |
+| `mall-line`        | `#E2DDD3`                                | 1px 细线（边框 / 分割线）                    | 同上                                 |
+| `mall-line-strong` | `#CFC8BC`                                | 强调描边（下划线 / chip 选中边）             | 同上                                 |
+| `mall-brand`       | `#B08D85`                                | 品牌点缀（公告圆点 / 插画）                  | 同上                                 |
+| `mall-brand-deep`  | `#7E6159`                                | 主色文字 / 实心按钮底 / 角标底 / 线稿色      | 同上                                 |
+| `mall-brand-soft`  | `#F3E9E6`                                | 浅主底（banner / pill / icon 圆环）          | 同上                                 |
+| `mall-accent`      | `#7E97AC`                                | 强调点缀（眉题 / kicker，面积 ≤10%）         | 同上                                 |
+| `mall-accent-soft` | `#E5EDF2`                                | 强调浅底（c 档商品色块 / 插画圆）            | 同上                                 |
+| `mall-ok/warn/err` | `#5E8168` / `#97794B` / `#A96A60`        | 状态三色（本期 ok 用于 toast 对勾）          | 同上                                 |
+| `mall-on-brand`    | `#FFFFFF`                                | 深底白字（实心按钮 / 购物袋角标）            | 同上                                 |
+| 圆角三档           | 18 / 31 / 49px（828 稿）                 | sm / md / lg（源 8/14/22 @375 稿 ×2.208）    | 同上（`--mall-r-sm/md/lg`）          |
+| 阴影               | `0 22px 57px -40px rgba(60,63,60,.20)`   | 仅 toast（状态响应式例外，源 shadow-2 换算） | 同上（`--mall-sh-2`）                |
+| 动效               | `.28s` + `cubic-bezier(.25,.46,.45,.94)` | 全模块统一过渡曲线                           | 同上（`--mall-dur` / `--mall-ease`） |
+
+> 字号（828 稿，h5 字号纪律满足）：正文 34、区块标题 49/38、卡片名 31/28、最小 24（角标 / en 眉题）——正文 ≥28px、辅助 ≥24px（DESIGN.md Typography 表）。
 
 ### 门户 portal（云灰 · 极简留白，2026-11-04 改版）
 
@@ -378,6 +424,7 @@ components:
 
 | 日期       | 变更                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-04 | h5-mall 商城首页落地（h5-fashion-mall.html 按陶土模板转换，seed 4877；用户裁决设为 h5 rootRedirect 首页）：新增「H5 商城 h5-mall」节（19 项 token + 圆角/阴影/动效 + 字号注记），实证 `apps/h5/src/modules/h5-mall/styles/h5-mall-tokens.scss`（views/index.vue `@use` 单点引入）；变量仅模块子树生效（无暗色覆盖，同 big 端先例）；frontmatter 增补 19 项镜像；token 落点由视图 style 块按用户裁决迁至模块 styles/ 单文件管理（对齐 layouts/portal tokens 先例）                                                                                                                                                                                                                                                                              |
 | 2026-11-04 | admin 亮色主题莫兰迪紫化（用户指定基色 #d1c4e9）：亮色由参考仓高饱和紫 #5b5bd6 切换为莫兰迪紫灯阶（H 261° 族）——实心按钮底 #6a6180（白字 ~5.6）、active 深档 #564e6e、light-3/5/7 #9891ad/#b4afc5/#cfc9de、#d1c4e9 落位 light-8（选中高亮/侧栏激活底）、light-9 #ece9f4、激活文字 #4f4763（在基色底上 ~5.0）；内容区底/浅填充微紫调 #f6f5fa/#f4f3f8；中性 slate 文字边框不动（用户裁决）；AppMenu horizontal 弹层局部变量同步；落点 `default-tokens.scss` 亮布局 + 亮 EP 两 mixin，暗色雾霾蓝不受影响；frontmatter 增补 11 项亮色镜像                                                                                                                                                                                                          |
 | 2026-11-04 | portal 首页云灰改版（ui-style-skill 选型「云灰 · 极简留白」，seed 29060 锁定根 `style-tokens.json`）：portal token 由黑白极简改云灰板（页面底 #f6f6f4、ink 三档 #333638→#a3a6a8、line 两档 #e4e4e1/#cfd0cc），新增 brand 族（#5e6d7c/#445466/#e6ebf0）、accent 族（#b08d85/#f3e9e6）、bg-card、bg-inverse（恒深底 #2e3134，修复页脚/登录按钮 dark 反转缺陷）；暗色由黑白反转改云灰蓝黑化（brand 提亮参照中后台雾霾蓝 precedent）；全局圆角 4/8/12 → 6/12/20（用户裁决；存量组件零消费，portal 为首批消费方）；SiteHero/SiteFeatures/SiteStats/SiteAbout/SiteFooter/PortalHeader 全面接线 brand 族（实心按钮契约：brand 底 + 白字，双主题白字对比 ≥4.5）；特性区新增 CAPABILITIES 眉题（site.ts `SITE_FEATURES_EYEBROW`）；frontmatter 镜像同步 |
 | 2026-11-03 | admin 暗色主题莫兰迪化（用户选定色卡 A 方向）：default-tokens.scss 两个 dark mixin 由 slate 蓝黑切换为雾霾蓝系（主色 `#8fa6bc` / 页面底 `#12161a` / 卡片 `#1a1f26` / 文字 `#e8edf1→#8a97a5` 三级 / 边框 `#333d47→#232a32` 三级）；「中后台 default」节由"不定义自有色板"修正为暗色自有雾霾蓝 token 表（frontmatter 同步增补 12 项镜像）；亮色紫主题、全局 `--bg-base` 灰阶、其他端暗色均不受影响                                                                                                                                                                                                                                                                                                                                               |

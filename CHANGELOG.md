@@ -6,6 +6,31 @@
 
 ## 未发布
 
+### ✨ Feat | h5 新增拙衣商城首页模块 h5-mall，设为应用 rootRedirect 首页（2026-11-04）
+
+> 背景：用户给出服饰商城静态页 `h5-fashion-mall.html`（拙衣 ZHUOYI · 陶土秋季）与陶土 · 莫兰迪
+> 设计 token（ui-style-skill 模板，seed 4877），要求转换为 h5 应用首页；用户裁决「新模块 +
+> 设为应用首页」（/h5-demo 保留作 rem 适配验收页）。
+
+- **新模块** `apps/h5/src/modules/h5-mall/`（`pnpm new-module` 脚手架，h5- 前缀自动接入
+  postcss-pxtorem 828 稿换算）：views/index.vue 组装 + components/ 13 个 BEM 区块组件
+  （公告 / 吸顶栏 / Banner / 金刚区 / 限时甄选 / 新品横滑 / 编辑专题 / 为你推荐 / 服务页脚 /
+  Tabbar / Toast / SVG sprite / 商品占位 MallPh）。
+- **陶土 token**：`--mall-*` 19 项挂 `.vv-h5-mall` 根选择器，仅模块子树生效（h5 布局与
+  vant 色系零污染，无暗色覆盖）；已按「登记先行」规则登记 DESIGN.md「H5 商城 h5-mall」节
+  + frontmatter 19 项镜像。
+- **交互**：购物袋计数（Tabbar 角标 99+ 封顶）、收藏集合、筛选 chips、限时倒计时
+  （指向每日 22:00，useCountdown）、入场渐显（useReveal，prefers-reduced-motion 降级）、
+  Toast（useToast）——容器持有状态、props 下传 emits 上报；3 个 composable 均带 spec。
+- **接线**：路由挂 layouts/h5（rem 适配）+ requiresAuth:false；whitelist 经 routeNames
+  吸收；rootRedirect /h5-demo → /h5-mall。字号遵守 h5 纪律（正文 34 / 辅助 28 / 最小 24，828 稿）。
+
+验证：h5-mall 5 个 spec 文件 22 条单测全过；check:routes 六应用通过；DESIGN.md 三处同步。
+
+手动验证：`pnpm -C apps/h5 dev` 打开自动跳转 /h5-mall——公告 + 吸顶栏 + 陶土 Banner、
+金刚区 6 宫格、限时甄选倒计时每秒走动、新品横滑吸附、chips 互斥切换、点「加入购物袋」
+角标 +1 并弹 Toast、收藏心形翻转、底部 Tabbar 选中态；375 真机/模拟器宽度无横向滚动。
+
 ### 🎨 Style | admin 亮色主题莫兰迪紫化：#d1c4e9 基色灯阶替换参考仓高饱和紫（2026-11-04）
 
 > 背景：admin 亮色沿用参考仓识别色紫 #5b5bd6（S≈0.6 高饱和），与项目莫兰迪审美
