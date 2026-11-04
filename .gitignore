@@ -55,6 +55,7 @@ __screenshots__/
 .claude/scheduled_tasks.lock
 .claude/settings.json
 .claude/settings.local.json
+.claude/mockups/
 .omc/state/
 .omc/sessions/
 .omc/notepad.md
@@ -73,6 +74,7 @@ __screenshots__/
 
 # Playwright产物
 .playwright-mcp/
+claude/
 playwright-report
 test-results
 
