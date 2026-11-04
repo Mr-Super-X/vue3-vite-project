@@ -10,7 +10,12 @@
 
 > 🆕 **新同事请先看 [docs/10-新手指引.md](docs/10-新手指引.md)** —— 30 分钟 5 任务，带你从 clone 到提交首个 PR。
 >
-> **最近更新**：2026-10-30 — **docs/46-48 收录 + commit message 零 AI 痕迹三层防线**，详见 [CHANGELOG.md](CHANGELOG.md)：
+> **最近更新**：2026-11-02 — **docs/49 样式分层架构规范落地 + 端级样式骨架全端就位**，详见 [CHANGELOG.md](CHANGELOG.md)：
+>
+> - **docs/49 新增**：样式分层架构规范（五层分层 + monorepo 映射 / tokens 与 EP 变量源-镜像立场 / EP 覆盖三级形态 / z-index 分层强约束 / L5 豁免登记）；CLAUDE.md §3 互链
+> - **端级样式层骨架**：6 app 各建 `src/styles/{index,tokens,ui-overwrite}.scss` + main.ts 统一接线（公共 → 端级层次入口可见）；h5 vant 主题覆盖归位 `src/styles/ui-overwrite.scss`；`pnpm new-app` 脚手架自带同构骨架
+>
+> **2026-10-30 更新** — **docs/46-48 收录 + commit message 零 AI 痕迹三层防线**：
 >
 > - **docs/48 新增**：单应用模式与 Monorepo 多应用能力对比（17 章双版对比 + src/ 全目录归属映射 + 选型建议）；README 文档表同步收录 docs/45-48
 > - **commit-msg 防线**（CLAUDE.md §4 #16）：`.claude/settings.json` attribution 空配置（机制层根治尾注注入）+ `scripts/check-commit-msg.sh` husky 宽拦（Co-Authored-By trailer / AI 署名全拦）+ commitlint——开源门面 commit history 零 AI 协作痕迹
@@ -43,6 +48,8 @@
 ## 📋 项目简介
 
 基于 Vue 3 + Vite 8 + TypeScript 6 的 **Monorepo 多应用工程底座**（pnpm workspace + turbo）：一套代码仓拆为 **6 个独立应用 + 4 个共享包**，统一登录、独立构建、源码直链消费。
+
+> 🔀 **单应用 or Monorepo？** 对构建体积不敏感、页面量小、追求快速开发部署 → 选**单应用版**（`release/single` 分支）；项目大页面多、对构建体积敏感 → 选 **Monorepo 多应用版**（`release/monorepo` 分支）。详细对比见 [docs/48](docs/48-单应用模式与Monorepo多应用能力对比.md)。
 
 | 应用          | 入口（dev 端口）     | 能力                                                                                                                       |
 | ------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------- |
@@ -268,8 +275,9 @@ vue3-vite-project/            # pnpm workspace + turbo@2（Monorepo）
 │   ├── h5/                   # H5 移动端（端口 5177）：h5-demo + rem 适配
 │   ├── big/                  # 数据大屏（端口 5178）：big-demo + scale 适配
 │   └── docs/                 # 组件示例文档（端口 5175）：demo 模块 + DemoDocs 布局
-│       └── src/              # app 私有：App.vue/main.ts + layouts/modules/plugins/router/store/views
-│                             # （docs 无 layouts、big 无 plugins；全局层 api/utils/store/... 全在 packages/*）
+│       └── src/              # app 私有：App.vue/main.ts + layouts/modules/plugins/router/store/views/styles
+│                             # （styles/ = 端级样式骨架三件套，docs/49 §5；docs 无 layouts、big 无 plugins；
+│                             #  全局层 api/utils/store/... 全在 packages/*）
 ├── packages/                 # 4 个共享包（workspace:* 源码直链消费，不建 dist）
 │   ├── config/               # @vv/config：vite 工厂 createViteConfig（插件/别名/css/分包单点）
 │   ├── mock/                 # @vv/mock：vite-plugin-mock 数据源
@@ -641,9 +649,9 @@ turbo 拓扑序全量构建 6 app + 4 包（各 app 内 `build-only` 生成声�
 | `VITE_BUILD_ID`          | 版本检测 buildId 注入（`packages/config/src/version-check-vite.ts` 构建插件 `process.env` 读取；CI 注入 `git sha-run_attempt` 使产物可追溯并消同 commit 重跑相同 buildId，见 docs/44）                                                                                                                               | 不设 = 插件默认                            |
 | `VITE_AUTH_ORIGIN`       | 统一登录重定向基址（`@vv/shared` redirect.ts 与各 app 守卫读取）：未登录整页跳 `${VITE_AUTH_ORIGIN}/login?redirect=...`，登出回跳同源；同域网关/子路径部署按实际前缀配置；**gh-pages 演示形态由 `scripts/build-pages.ts` 注入 `${REPO_PREFIX}/auth/#`**（`#` 尾巴承载 auth 的 hash 路由形态，否则退出/未登录跳 404） | `/auth`                                    |
 | `VITE_STORAGE_NAMESPACE` | storage 命名空间（隔离多项目共用 localStorage）                                                                                                                                                                                                                                                                      | `vue3-vite-project`                        |
-| `VITE_BRAND_COLOR`       | 业务品牌色（HEX，覆盖 Element Plus 默认蓝 `#409eff`，含灯色阶联动，详见 [docs/06-主题管理规范.md](docs/06-主题管理规范.md)）                                                                                                                                                                                         | `#409eff`                                  |
+| `VITE_BRAND_COLOR`       | 业务品牌色（HEX，运行时同步注入 `--color-primary` 与 `--el-color-primary` 覆盖 Element Plus 默认蓝 `#409eff`；灯色阶为编译期字面量不联动，详见 [docs/06-主题管理规范.md](docs/06-主题管理规范.md)）                                                                                                                  | `#409eff`                                  |
 | `VITE_QUIET_DEV`         | 关闭 dev 模式 GlobalComponents 自动注册徽章（专注调试时减少噪音，详见 `packages/ui/src/global-components.ts`）                                                                                                                                                                                                       | 不设 = 输出徽章                            |
-| `VITE_BEM_PREFIX`        | BEM 类名前缀（同时影响 TS 端 `createNamespace` 与 SCSS `bem mixin`；改一处即全站类名同步切换，详见 `packages/shared/src/utils/bem.ts` + `packages/ui/src/assets/styles/mixins/bem.scss`）                                                                                                                            | `vv`                                       |
+| `VITE_BEM_PREFIX`        | BEM 类名前缀（同时影响 TS 端 `createNamespace` 与 SCSS `bem mixin`；改一处即全站类名同步切换，详见 `packages/shared/src/utils/bem.ts` + `packages/ui/src/styles/tools/_bem.scss`）                                                                                                                                   | `vv`                                       |
 
 > 环境变量读取：项目内显式通过 `import.meta.env.VITE_XXX` 访问。`baseURL` / `storage namespace` 单一来源在 `packages/shared/src/api/http.ts` 和 `packages/shared/src/utils/storage.ts`，不在各业务模块分散。
 
@@ -810,6 +818,7 @@ pnpm bench                         # vitest bench 基准测试
 | CI 门禁速查                            | `docs/46-CI门禁速查.md`                         | 13 门禁 × 触发条件/复跑命令/修复指引单页                                                 |
 | 能力体验清单                           | `docs/47-能力体验清单.md`                       | 架构/能力/排障操作手册（会用 → 会修 → 会教），45 条可执行清单                            |
 | **单应用模式与Monorepo多应用能力对比** | `docs/48-单应用模式与Monorepo多应用能力对比.md` | 双版逐项能力对比 + src/ 全目录归属映射 + 场景选型建议                                    |
+| **样式分层架构规范**                   | `docs/49-样式分层架构规范.md`                   | 五层分层 + monorepo 映射 / tokens 源-镜像立场 / EP 覆盖三级 / 端级骨架归属与豁免登记     |
 
 ### 架构评估
 

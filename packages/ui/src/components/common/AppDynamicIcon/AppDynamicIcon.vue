@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { resolveAppIcon, type AppIconName } from '../../assets/icons/registry.ts'
+import { resolveAppIcon, type AppIconName } from './registry.ts'
 
 // BEM 工具（createNamespace）由 unplugin-auto-import 自动注入，详见 CLAUDE.md §3
 const bem = createNamespace('app-dynamic-icon')

@@ -54,6 +54,9 @@ describe('Login.vue（apps/auth 统一登录页）', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
+    // referrer 用例（#9）会改写 document.referrer，这里复位避免污染后续用例
+    Object.defineProperty(document, 'referrer', { value: '', configurable: true })
   })
 
   it('1. 渲染默认结构：品牌区 + 表单 + 按钮 + 版权', () => {
@@ -92,7 +95,8 @@ describe('Login.vue（apps/auth 统一登录页）', () => {
     expect(mockLogin).toHaveBeenCalledWith({ username: 'admin', password: '123456' })
     // 对齐 65b3c96 易用性修复：success toast 须存活到整页跳转，提示文案为「正在跳转…」
     expect(ElMessage.success).toHaveBeenCalledWith('登录成功，正在跳转…')
-    expect(mockResolvePostLoginRedirect).toHaveBeenCalledWith('/admin/')
+    // jsdom referrer 为空 → resolveDefaultFallback 走 /auth/ 兜底（env 未注入）
+    expect(mockResolvePostLoginRedirect).toHaveBeenCalledWith('/auth/')
     expect(window.location.href).toBe('/workbench')
   })
 
@@ -106,14 +110,36 @@ describe('Login.vue（apps/auth 统一登录页）', () => {
     expect(window.location.href).toBe('http://localhost/login')
   })
 
-  it('5. 回跳 fallback 由 resolvePostLoginRedirect 承担（/admin/ 默认回管理端）', async () => {
+  it('5. 无 redirect 参数且无 referrer：fallback 兜底 /auth/（对齐 referrer 推断实现）', async () => {
     mockLogin.mockResolvedValueOnce({ profile: { id: 1, name: 'Admin' } })
-    // 无 redirect 查询参数：组件固定传 '/admin/' 作 fallback，防开放重定向校验在 shared 层
+    // jsdom document.referrer 默认 '' → new URL('') 抛错 → env 未注入 → /auth/ 兜底
     const w = mount(Login, mountOptions)
     await w.find('form').trigger('submit.prevent')
     await flushPromises()
-    expect(mockResolvePostLoginRedirect).toHaveBeenCalledWith('/admin/')
+    expect(mockResolvePostLoginRedirect).toHaveBeenCalledWith('/auth/')
     expect(window.location.href).toBe('/admin/')
+  })
+
+  it('8. dev:gateway 注入 VITE_POST_LOGIN_FALLBACK：referrer 为空时经 env 兜底（子集模式）', async () => {
+    mockLogin.mockResolvedValueOnce({ profile: { id: 1, name: 'Admin' } })
+    vi.stubEnv('VITE_POST_LOGIN_FALLBACK', '/big/')
+    const w = mount(Login, mountOptions)
+    await w.find('form').trigger('submit.prevent')
+    await flushPromises()
+    expect(mockResolvePostLoginRedirect).toHaveBeenCalledWith('/big/')
+  })
+
+  it('9. referrer 推断优先于 env fallback（从 h5 跳来 → /h5/）', async () => {
+    mockLogin.mockResolvedValueOnce({ profile: { id: 1, name: 'Admin' } })
+    vi.stubEnv('VITE_POST_LOGIN_FALLBACK', '/big/')
+    Object.defineProperty(document, 'referrer', {
+      value: 'http://localhost/h5/demo',
+      configurable: true,
+    })
+    const w = mount(Login, mountOptions)
+    await w.find('form').trigger('submit.prevent')
+    await flushPromises()
+    expect(mockResolvePostLoginRedirect).toHaveBeenCalledWith('/h5/')
   })
 
   it('6. 密码显隐切换：点击 👁 后 input type 切换', async () => {

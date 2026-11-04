@@ -18,7 +18,8 @@ import process from 'node:process'
  *     报 "Can't find stylesheet to import"（vite 8 + sass 1.101 实测）
  *   - 回退方案 = loadPaths：把 bemPath 拆为「目录进 loadPaths + 裸模块名进 @use」，
  *     由 sass 的模块搜索路径机制解析，等价于别名解析且对包化后任意 appRoot 成立
- *   - P1-4 起工厂传入 @vv/ui 包内路径（bem.scss 随 assets 迁包，见 create-vite-config.ts）
+ *   - P1-4 起工厂传入 @vv/ui 包内路径（bem.scss 随 assets 迁包，见 create-vite-config.ts）；
+ *     2026-11-03 起为 src/styles/tools/_bem.scss（styles/ 自 assets/ 上移）
  */
 export interface ScssPreprocessorOptions {
   silenceDeprecations: Array<'new-global' | 'if-function'>
@@ -38,7 +39,7 @@ export function createScssPreprocessorOptions(options: {
   const sepIndex = normalized.lastIndexOf('/')
   if (sepIndex === -1) {
     throw new Error(
-      `[createScssPreprocessorOptions] bemPath 必须含目录段（如 'src/assets/styles/mixins/bem'），收到裸模块名: '${options.bemPath}'`
+      `[createScssPreprocessorOptions] bemPath 必须含目录段（如 'src/styles/tools/bem'），收到裸模块名: '${options.bemPath}'`
     )
   }
   const loadPath = normalized.slice(0, sepIndex)

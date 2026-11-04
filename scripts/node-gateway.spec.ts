@@ -38,8 +38,15 @@ test('buildGatewayRoutes：每 app 一条前缀路由，端口来自注册表', 
   ])
 })
 
-test('buildGatewayRoutes：缺少 admin 条目时抛错（/api/ 反代目标无法确定）', () => {
-  assert.throws(() => buildGatewayRoutes([{ name: 'portal', port: 5176 }]), /admin/)
+test('buildGatewayRoutes：缺少 admin 条目时回退第一个 app（子集模式 /api/ 不 502）', () => {
+  // 语义 2026-10-28 子集模式引入：admin 不在子集时 /api/、/mock/ 回退子集第一个 app
+  // （各 app 共享同一 @vv/mock 源，mock 中间件等价）——旧断言「缺 admin 抛错」已过时
+  const routes = buildGatewayRoutes([{ name: 'portal', port: 5176 }])
+  assert.deepEqual(routes, [
+    { prefix: '/portal/', target: { host: '127.0.0.1', port: 5176 } },
+    { prefix: '/api/', target: { host: '127.0.0.1', port: 5176 } },
+    { prefix: '/mock/', target: { host: '127.0.0.1', port: 5176 } },
+  ])
 })
 
 test('resolveRoute：前缀命中、先命中先赢、无尾斜杠不命中', () => {

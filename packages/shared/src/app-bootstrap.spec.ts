@@ -2,10 +2,12 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { injectBrandColor, initDocumentTitle } from './app-bootstrap.ts'
 
 const PRIMARY_VAR = '--color-primary'
+const EL_PRIMARY_VAR = '--el-color-primary'
 
 beforeEach(() => {
   vi.unstubAllEnvs()
   document.documentElement.style.removeProperty(PRIMARY_VAR)
+  document.documentElement.style.removeProperty(EL_PRIMARY_VAR)
   document.title = ''
 })
 
@@ -20,6 +22,14 @@ describe('injectBrandColor', () => {
     injectBrandColor()
 
     expect(document.documentElement.style.getPropertyValue(PRIMARY_VAR)).toBe('#ff0000')
+  })
+
+  it('同步注入 --el-color-primary（EP 组件跟随品牌色，审计发现 #3 回归锁）', () => {
+    vi.stubEnv('VITE_BRAND_COLOR', '#ff0000')
+
+    injectBrandColor()
+
+    expect(document.documentElement.style.getPropertyValue(EL_PRIMARY_VAR)).toBe('#ff0000')
   })
 
   it('VITE_BRAND_COLOR 缺省 → 回落调用方 defaultColor', () => {

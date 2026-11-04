@@ -35,6 +35,7 @@ function onVisibleChange(visible: boolean) {
   <el-dropdown
     :class="bem.b()"
     trigger="click"
+    popper-class="vv-default-header-popper"
     @command="confirmLogout"
     @visible-change="onVisibleChange"
   >
@@ -82,7 +83,7 @@ function onVisibleChange(visible: boolean) {
     height: 26px;
     font-size: 12px;
     font-weight: 600;
-    color: #fff;
+    color: var(--el-color-white);
     background: var(--el-color-primary);
     border-radius: 50%;
     place-items: center;

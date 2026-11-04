@@ -61,25 +61,31 @@ export interface GatewayOptions {
 const GATEWAY_PORT = 8080
 
 /**
- * 从 app 注册表派生网关路由表：每 app 一条 /<name>/ 前缀路由 + /api/ 特殊路由。
+ * 从 app 注册表派生网关路由表：每 app 一条 /<name>/ 前缀路由 + /api/、/mock/ 特殊路由。
  *
- * @param apps 注册表（scripts/apps-registry.mjs 的 APPS）
- * @throws 注册表缺少 admin 时抛错——/api/ 反代目标无法确定，静默兜底会埋 404
+ * /api/ 与 /mock/ 的目标端口动态选取：优先 admin（历史约定 mock 最全），
+ * admin 不在本次启动子集时回退到子集内第一个 app——所有 app 的 vite-plugin-mock
+ * 中间件共享同一 @vv/mock 源（2026-11-03 修复：子集不含 admin 时 /mock/* 不再 502）。
+ *
+ * @param apps 注册表（scripts/apps-registry.mjs 的 APPS）；传全量则 admin 必命中，
+ *             传子集则动态回退——调用方 dev-gateway.ts 传 subset
+ * @throws 注册表为空时抛错——无可用 /api/ 反代目标
  */
 export function buildGatewayRoutes(apps: GatewayApp[]): GatewayRoute[] {
   const routes = apps.map((app) => ({
     prefix: `/${app.name}/`,
     target: { host: '127.0.0.1', port: app.port },
   }))
-  const admin = apps.find((app) => app.name === 'admin')
-  if (!admin) {
-    throw new Error('apps-registry 缺少 admin 条目：/api/ 反代目标无法确定')
+  if (apps.length === 0) {
+    throw new Error('apps-registry 为空：/api/ 与 /mock/ 反代目标无法确定')
   }
-  routes.push({ prefix: '/api/', target: { host: '127.0.0.1', port: admin.port } })
-  // /mock/ 与 /api/ 同目标（admin mock 最全）：mock 统一前缀方案（2026-10-26）——
-  // 前端 VITE_API_BASE_URL=/mock 时请求经此路由到 admin 的 mock 中间件，
+  // 动态选取 /api/ 与 /mock/ 的目标：admin 优先，子集模式回退到第一个 app
+  const fallback = apps.find((app) => app.name === 'admin') ?? apps[0]
+  routes.push({ prefix: '/api/', target: { host: '127.0.0.1', port: fallback.port } })
+  // /mock/ 与 /api/ 同目标：mock 统一前缀方案（2026-10-26）——
+  // 前端 VITE_API_BASE_URL=/mock 时请求经此路由到 mock 中间件，
   // Network 面板以 /mock 前缀一眼区分 mock 响应与真实后端 /api 响应
-  routes.push({ prefix: '/mock/', target: { host: '127.0.0.1', port: admin.port } })
+  routes.push({ prefix: '/mock/', target: { host: '127.0.0.1', port: fallback.port } })
   return routes
 }
 

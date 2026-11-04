@@ -25,8 +25,8 @@ css: {
     scss: {
       // 每份 <style lang="scss"> 文件开头统一 @use（宿主文件不要再写 @use 'bem'，避免重复引入）
       additionalData: `@use 'bem' as * with ($BEM_PREFIX: '${process.env.VITE_BEM_PREFIX ?? 'vv'}');\n`,
-      // sass 模块搜索路径：指向本包 assets/styles/mixins 目录（bem.scss 所在目录）
-      loadPaths: ['<path-to>/@vv/ui/src/assets/styles/mixins'],
+      // sass 模块搜索路径：指向本包 styles/tools 目录（_bem.scss 所在目录）
+      loadPaths: ['<path-to>/@vv/ui/src/styles/tools'],
       // bem mixin 的 $block !global / if() 前缀拼接触发 Dart Sass 1.78+ deprecation，须静默否则 CI 红
       silenceDeprecations: ['new-global', 'if-function'],
     },
@@ -34,7 +34,7 @@ css: {
 }
 ```
 
-> 关键点：bem.scss 在**包内**（`packages/ui/src/assets/styles/mixins/bem.scss`），
+> 关键点：bem mixin 在**包内**（`packages/ui/src/styles/tools/_bem.scss`），
 > `loadPaths` 必须指向包内该目录；`@use` 用**裸模块名**（'bem'），不要把绝对路径写进
 > `@use`（盘符冒号会被 sass 解析为 URL scheme 报 "Can't find stylesheet to import"）。
 > `$BEM_PREFIX` 缺省 `'vv'`，与 TS 端 `createNamespace`（`import.meta.env.VITE_BEM_PREFIX`）
@@ -151,7 +151,7 @@ export default defineConfig({
     preprocessorOptions: {
       scss: {
         additionalData: `@use 'bem' as * with ($BEM_PREFIX: 'vv');\n`,
-        loadPaths: [`${UI}/src/assets/styles/mixins`],
+        loadPaths: [`${UI}/src/styles/tools`],
         silenceDeprecations: ['new-global', 'if-function'],
       },
     },

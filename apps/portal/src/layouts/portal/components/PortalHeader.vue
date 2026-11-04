@@ -76,17 +76,10 @@ async function onCommand(cmd: string) {
       <!-- 品牌文案与 modules/home/config/site.ts 的 SITE_BRAND 有意双源：§1.2 模块边界禁止 layouts 引用 modules/，改品牌名需同步两处 -->
       <a :class="bem.e('brand')" href="#hero" aria-label="星澜科技 回到首页">
         <svg :class="bem.e('mark')" viewBox="0 0 32 32" aria-hidden="true">
-          <rect width="32" height="32" rx="7" fill="#111" />
-          <path
-            d="M7 12c3-3 6 3 9 0s6 3 9 0"
-            stroke="#fff"
-            stroke-width="2"
-            fill="none"
-            stroke-linecap="round"
-          />
+          <rect width="32" height="32" rx="7" />
+          <path d="M7 12c3-3 6 3 9 0s6 3 9 0" stroke-width="2" fill="none" stroke-linecap="round" />
           <path
             d="M7 19c3-3 6 3 9 0s6 3 9 0"
-            stroke="#fff"
             stroke-width="2"
             fill="none"
             stroke-linecap="round"
@@ -169,6 +162,16 @@ async function onCommand(cmd: string) {
     width: 28px;
     height: 28px;
     display: block;
+
+    // logo 色走 portal token（原 fill="#111" / stroke="#fff" 硬编码）：
+    // 暗色下 --portal-ink/--portal-bg 反转，logo 自动反色保持可见
+    rect {
+      fill: var(--portal-ink);
+    }
+
+    path {
+      stroke: var(--portal-bg);
+    }
   }
 
   &__name {

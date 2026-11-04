@@ -80,6 +80,8 @@ export const useThemeStore = defineStore(
     /**
      * 把 mode 应用到 <html> 上：auto 移除属性（让 CSS @media 接管），
      * 其他值设置 data-theme 属性（CSS 选择器精确命中）。
+     * 同步维护 dark class——element-plus dark/css-vars 经 html.dark 识别（EP 组件
+     * 暗色轨道）；data-theme 驱动 themes/ 业务变量轨道。双轨同一 isDark 真值。
      */
     function applyTheme(value: ThemeMode) {
       if (typeof document === 'undefined') return // SSR 安全
@@ -89,9 +91,11 @@ export const useThemeStore = defineStore(
 
       if (value === 'auto') {
         root.removeAttribute('data-theme')
+        root.classList.toggle('dark', prefersDark)
         isDark.value = prefersDark
       } else {
         root.setAttribute('data-theme', value)
+        root.classList.toggle('dark', value === 'dark')
         isDark.value = value === 'dark'
       }
     }
@@ -122,6 +126,8 @@ export const useThemeStore = defineStore(
       const mql = window.matchMedia('(prefers-color-scheme: dark)')
       mql.addEventListener('change', (e) => {
         if (mode.value === 'auto') {
+          // data-theme 缺位时业务变量轨道由 CSS @media 自动跟随；dark class 需手动同步
+          document.documentElement.classList.toggle('dark', e.matches)
           isDark.value = e.matches
         }
       })

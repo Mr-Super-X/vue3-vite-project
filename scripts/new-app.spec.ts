@@ -150,6 +150,9 @@ test('scaffoldApp：真实模板渲染 —— manifest 可读 / 占位符零残�
     'src/modules/home/routes/index.ts',
     'src/modules/home/views/index.vue',
     'src/modules/home/routes/index.spec.ts',
+    'src/styles/index.scss',
+    'src/styles/tokens.scss',
+    'src/styles/ui-overwrite.scss',
   ]
   for (const rel of required) {
     assert.ok(existsSync(join(appDir, rel)), `缺文件：${rel}`)

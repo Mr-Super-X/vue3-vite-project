@@ -19,7 +19,7 @@
 | 共享代码            | `src/utils`、`src/composables`、`src/components/common` 等                                                               | 下沉 `@vv/shared`（网络层/store/composables/utils/locales/directives）、`@vv/ui`（组件三目录+弹窗族）、`@vv/config`（vite 工厂）、`@vv/mock`；**api 层连业务契约一起下沉**（`@vv/shared/api` 含 modules/{auth,dict,menu,user}，新增 `error-events.ts` 网络错误反馈事件） |
 | 包消费方式          | 目录别名（`@utils`、`@store` 等 15+1 个别名）                                                                            | workspace `workspace:*` **源码直链，不建 dist**；包名 `@vv/*`                                                                                                                                                                                                            |
 | 仓库定位            | 「四栖工程模板」                                                                                                         | 「四栖工程底座」（2026-10-28 裁决：单人维护 opinionated 底座，不做 npm 包发布/社区运营）                                                                                                                                                                                 |
-| app 内 src 一级目录 | 14 个目录（api/assets/components/composables/directives/enums/layouts/locales/modules/plugins/router/store/types/utils） | **admin/src 收缩为 7 个目录**：api/assets/components/composables/directives/enums/locales/utils 八项全下沉 packages/*；剩 layouts/modules/plugins（薄壳）/router/store/types/views                                                                                       |
+| app 内 src 一级目录 | 14 个目录（api/assets/components/composables/directives/enums/layouts/locales/modules/plugins/router/store/types/utils） | **admin/src 收缩为 8 个目录**：api/assets/components/composables/directives/enums/locales/utils 八项全下沉 packages/*；剩 layouts/modules/plugins（薄壳）/router/store/types/views + styles（2026-11-02 端级样式骨架三件套，docs/49 §5）                                 |
 | error 错误页        | `src/modules/error/` 独立模块                                                                                            | 拆分：`apps/admin/src/views/` 三视图（Forbidden/NotFound/ServerError）+ `@vv/ui` 共享 ErrorPage 组件统一 6 app 错误页                                                                                                                                                    |
 | 根级工程文件        | `.env`/`.env.development`/`.env.production` + `index.html` + `mock/` + `src/` 均在根级                                   | 根级 env/index.html **消失**：每 app 自持 `.env*`（如 admin 三件）与 `index.html` ×6；`mock/` → packages/mock；根级新增 `Dockerfile` / `docker-compose.prod.yml` / `deploy/`（详见 §12）                                                                                 |
 
@@ -172,7 +172,7 @@ monorepo 后每个 app 的装配文件从「手抄序列」变为「工厂声明
 | 文件               | 单应用版                                                                                                                                        | Monorepo 版                                                                                                                                                                                  |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `main.ts`          | ~90 行手动装配（brandColor → title → assertNoMockInProd → createApp → prod-mock → 6×app.use → setDialogAppContext → mount，顺序契约靠注释维护） | **声明式 `bootstrapApp({...})` 工厂**（@vv/shared）：6 app main.ts 只剩差异参数（rootComponent/router/pinia/i18n/title/plugins/loadMockServer/setup），顺序契约固化在工厂 JSDoc              |
-| 样式基线三件套     | main.ts 手写 `import 'normalize.css' / 'virtual:uno.css' / '@/assets/styles/index.scss'`                                                        | 一行 `import '@vv/shared/app-styles'`（单源下沉）                                                                                                                                            |
+| 样式基线四件套     | main.ts 手写 `import 'normalize.css' / 'virtual:uno.css' / '@/assets/styles/index.scss'`                                                        | 一行 `import '@vv/ui/app-styles'`（单源下沉；2026-11-03 起含 EP dark/css-vars）                                                                                                              |
 | `vite.config.ts`   | 260 行自装配（vue/jsx/devtools/UnoCSS/AutoImport/Components/Icons/mock/visualizer 全列）                                                        | **~40 行工厂调用**：`createViteConfig({ appRoot, h5Rem, extraPlugins })`；devtools/visualizer 仅 admin 以 extraPlugins 私有装配                                                              |
 | 根 `build/` 目录   | aliases/postcss/proxy/scss/server/vendor-chunks 六模块 + 各自 spec                                                                              | **目录消亡**，整体迁为 `@vv/config` 包（aliases.ts → app-aliases.ts；新增 app-manifest / clean-mock-bundled / version-check-vite）                                                           |
 | `vitest.config.ts` | 根单文件 `mergeConfig(viteConfig)` 手写                                                                                                         | `createVitestConfig({ appRoot, viteConfig, coverage })` 工厂，每 app/包独立配置文件                                                                                                          |
@@ -242,6 +242,13 @@ monorepo 后每个 app 的装配文件从「手抄序列」变为「工厂声明
 | 单 app 构建部署                          | `build:pages`（演示）/ `build:prod` + Dockerfile（生产）                |
 
 ## 16. 选型建议
+
+**分支对照**（两种形态在仓库中以 git 分支承载，clone 后切换分支即用）：
+
+| 你的场景                                        | 推荐形态                       | 对应分支           |
+| ----------------------------------------------- | ------------------------------ | ------------------ |
+| 对构建体积不敏感、页面量小、追求快速开发部署    | 单应用版（v2.x 形态）          | `release/single`   |
+| 项目大页面多、对构建体积敏感（按 app 独立构建） | Monorepo 多应用版（v3.x 形态） | `release/monorepo` |
 
 | 你的场景               | 建议                                                                                                                     |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------ |

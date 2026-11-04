@@ -21,9 +21,9 @@ import { createGlobalComponents } from '@vv/ui'
 // ui 全局运行时装配入口（弹窗 appContext + 网络错误反馈）
 import { setupUiAppContext } from '@vv/ui/composables/setup-ui-app-context'
 import { bootstrapApp } from '@vv/shared'
-import '@vv/shared/app-styles'
-// vant 4 主题覆盖（CSS 变量，vant 官方推荐方式；组件 CSS 由 VantResolver 按需注入）
-import '@layouts/h5/styles/vant-vars.scss'
+import '@vv/ui/app-styles'
+// 端级样式层（ui-overwrite.scss 承载 vant 4 主题变量覆盖，自 layouts/h5/styles/ 归位，docs/49 §5）
+import '@/styles/index.scss'
 
 await bootstrapApp({
   rootComponent: App,

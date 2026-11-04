@@ -8,8 +8,9 @@
  * 本文件只保留 app 差异数据：根组件 / router / pinia / i18n / 默认标题 / 插件 /
  * mock 加载回调 / setDialogAppContext 收尾。
  *
- * 浏览器样式基线三件套（normalize.css → virtual:uno.css → @assets/styles/index.scss）
- * 已随 @vv/shared app-bootstrap 模块下沉单源（2026-10-23，原 6 app main.ts 逐字重复）；
+ * 浏览器样式基线四件套（normalize.css → virtual:uno.css → @vv/ui/styles/index.scss
+ * → element-plus dark/css-vars.css）已随 @vv/shared app-styles 模块下沉单源
+ * （2026-10-23，原 6 app main.ts 逐字重复；2026-11-03 补第四件 EP 暗色变量）；
  * Element Plus 样式由 vite.config.ts 的 ElementPlusResolver({ importStyle: 'css' }) 按需注入。
  *
  * @see [`./App.vue`](./App.vue) 根组件
@@ -30,8 +31,10 @@ import { createGlobalComponents } from '@vv/ui'
 import { setupUiAppContext } from '@vv/ui/composables/setup-ui-app-context'
 // 装配编排工厂（P6 收敛：6 app main.ts 逐字同构段单源，顺序契约固化在工厂内）
 import { bootstrapApp } from '@vv/shared'
-// 浏览器样式基线三件套（normalize/uno/全局 scss，顺序即契约）单源在 @vv/shared app-styles
-import '@vv/shared/app-styles'
+// 浏览器样式基线四件套（normalize/uno/全局 scss/EP dark css-vars，顺序即契约）单源在 @vv/ui app-styles
+import '@vv/ui/app-styles'
+// 端级样式层（tokens / UI 库覆盖骨架）：公共层之后的覆盖位，见 docs/49 §5
+import '@/styles/index.scss'
 
 await bootstrapApp({
   rootComponent: App,

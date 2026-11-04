@@ -84,7 +84,7 @@ export default defineConfig({
   css: {
     preprocessorOptions: {
       scss: createScssPreprocessorOptions({
-        bemPath: path.join(srcDir, 'assets/styles/mixins/bem'),
+        bemPath: path.join(srcDir, 'styles/tools/bem'),
       }),
     },
   },

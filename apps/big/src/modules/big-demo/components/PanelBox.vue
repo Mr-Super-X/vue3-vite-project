@@ -24,10 +24,6 @@ const bem = createNamespace('panel-box')
 
 <template>
   <section :class="bem.b()">
-    <i :class="[bem.e('corner'), bem.em('corner', 'lt')]" />
-    <i :class="[bem.e('corner'), bem.em('corner', 'rt')]" />
-    <i :class="[bem.e('corner'), bem.em('corner', 'lb')]" />
-    <i :class="[bem.e('corner'), bem.em('corner', 'rb')]" />
     <header v-if="title" :class="bem.e('header')">{{ title }}</header>
     <div :class="bem.e('body')">
       <slot />
@@ -36,61 +32,51 @@ const bem = createNamespace('panel-box')
 </template>
 
 <style lang="scss">
+// 异星荧光森林语义：面板 = 群落分区——细线植物分支边框 + 底部根脉汇聚微亮区，无直角硬边框无四角高光
 .#{$BEM_PREFIX}-panel-box {
   position: relative;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   padding: 16px 20px;
-  background: rgba(13, 38, 76, 0.35);
-  border: 1px solid rgba(var(--big-blue-mid-rgb), 0.25);
+  // 底部根脉汇聚微亮区（上部透明，向下渐亮）
+  background: linear-gradient(
+    180deg,
+    transparent 30%,
+    rgba(var(--big-panel-glow-cyan-rgb), 0.55) 100%
+  );
+  // 顶部细线：群落与夜壤的分界（1px 植物分支线）
+  border-top: 1px solid rgba(var(--big-spore-cyan-rgb), 0.15);
 
-  &__corner {
+  // 分支角须：左右两缘中点各一根水平细线，模拟植物分支节点
+  &::before,
+  &::after {
     position: absolute;
-    width: 18px;
-    height: 18px;
-    // 角高光色比边框亮一档，形成视觉焦点
-    border-color: var(--big-primary);
-    border-style: solid;
-    border-width: 0;
-    pointer-events: none;
+    top: 50%;
+    width: 12px;
+    height: 1px;
+    content: '';
+    background: rgba(var(--big-spore-cyan-rgb), 0.25);
+    transform: translateY(-50%);
+  }
 
-    &--lt {
-      top: -1px;
-      left: -1px;
-      border-top-width: 2px;
-      border-left-width: 2px;
-    }
+  &::before {
+    left: 0;
+  }
 
-    &--rt {
-      top: -1px;
-      right: -1px;
-      border-top-width: 2px;
-      border-right-width: 2px;
-    }
-
-    &--lb {
-      bottom: -1px;
-      left: -1px;
-      border-bottom-width: 2px;
-      border-left-width: 2px;
-    }
-
-    &--rb {
-      right: -1px;
-      bottom: -1px;
-      border-right-width: 2px;
-      border-bottom-width: 2px;
-    }
+  &::after {
+    right: 0;
   }
 
   &__header {
     flex: none;
     padding-bottom: 12px;
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 600;
+    letter-spacing: 2px;
     color: var(--big-text);
-    letter-spacing: 1px;
+    // 标题左侧孢子光点（小光晕装饰）
+    border-bottom: 1px solid rgba(var(--big-spore-cyan-rgb), 0.08);
   }
 
   &__body {

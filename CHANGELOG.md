@@ -6,6 +6,285 @@
 
 ## 未发布
 
+### 🎨 Style | admin 暗色主题莫兰迪化：slate 蓝黑 → 雾霾蓝灰调（2026-11-03）
+
+> 背景：admin 端暗色沿用 slate 蓝黑 + 靛紫主色（复刻 vue-element-plus-admin），
+> 冷硬感强。按用户要求按莫兰迪色系优化——先做四方向色卡（雾霾蓝 / 鼠尾草绿 /
+> 烟紫薰衣草 / 燕麦暖灰）经浏览器渲染对比，用户选定 A 方向雾霾蓝后实施。
+
+- **apps/admin default-tokens.scss**：`default-layout-dark`（布局变量 16 项）+
+  `default-layout-ep-dark`（EP 覆盖 24 项）两套 mixin 色值 slate→雾霾蓝——
+  主色 `#818cf8→#8fa6bc`（灯阶 3/5/7/8/9 同步去饱和、dark-2 hover 提亮 `#a2b6c9`）、
+  页面底 `#0b1120→#12161a`、卡片底 `#151e30→#1a1f26`、弹层底 `#1b2538→#222831`、
+  侧栏/顶栏 `#111827→#161b21`、文字 `#f1f5f9/#cbd5e1/#94a3b8→#e8edf1/#c2cbd4/#8a97a5`、
+  边框 `#344055/#2d394c/#273244→#333d47/#2b333c/#232a32`、
+  fill 阶梯 `#1c2638/#1a2436/#0f1726/#232f45/#2c3a54→#20272f/#20262e/#171c22/#262e37/#2c3540`；
+  亮色紫主题、施加机制（index.vue / element-overwrite.scss 容器作用域）、
+  中性阴影/遮罩全部不动。
+- **注释同步**：default-tokens.scss mixin 顶部「紫色主色是参考仓核心识别色」
+  与 index.vue 容器注释「紫色主色 + slate 文字色」在暗色雾霾蓝下过时，已改为
+  亮暗分述。
+- **DESIGN.md**：「中后台 default」节由"不定义自有色板"修正为暗色自有
+  雾霾蓝 token 表（frontmatter 镜像 +12 项），修订记录同步。
+
+验证：admin dev:local 免登录实测 4 页截图对比——亮色基线紫主题零变化；
+暗色 workbench / analysis（KPI 数字主色灯阶）/ user/list（表格 stripe 行
+`#262e37` 柔和分层、无泛白割裂）/ 游客下拉弹层（teleport 全局 EP dark
+`#141414` 系与内容区 `#12161a` 色差不可辨，维持改造前边界）。顶栏
+「切换深色主题」开关切换正常。
+
+手动验证：`pnpm -C apps/admin exec cross-env VITE_MENU_SOURCE=local
+VITE_DEMO_NO_AUTH=true vite` 起后访问 `http://localhost:5174/`，顶栏切暗色：
+侧栏底 `#161b21`、内容区 `#12161a`、主按钮/链接雾霾蓝 `#8fa6bc`、
+表格条纹行 `#262e37`；亮色模式视觉与改造前完全一致。
+
+### 🐛 Fix | admin 顶栏 el-dropdown 弹层主题色跟随：hover 不再回落全局蓝（2026-11-03）
+
+> 背景：莫兰迪暗色落地后用户实测发现——退出登录 / 中英文切换的 el-dropdown
+> 弹层 hover 仍是 Element Plus 默认蓝 #409eff，亮色（应紫）暗色（应雾霾蓝）
+> 双双未跟随。弹层 teleport 到 body，容器作用域的 --el-color-primary 覆盖
+> （index.vue .vv-default-layout）够不到 body 下的弹层，回落 :root 全局值。
+
+- **index.vue style 块**：新增 `.vv-default-header-popper` 补丁段（亮色
+  `@include default-layout-ep-light` / 暗色 `@include default-layout-ep-dark` /
+  系统跟随三条选择器），整 mixin 重放——值随 mixin 单点维护。放 index.vue
+  而非 default-tokens.scss：被 @use 模块不经 vite sass additionalData 注入，
+  `$BEM_PREFIX` 在其中未定义（首版补丁段放 default-tokens.scss  Sass 编译
+  500，已回退并迁移）。
+- **UserInfo.vue / LocaleDropdown.vue**：el-dropdown 增
+  `popper-class="vv-default-header-popper"` 挂上述通道。
+- **AppMenu.vue 关联修复**：horizontal 菜单弹层暗色段硬编码旧紫
+  `#818cf8`/`#252c49` 同步为雾霾蓝 `#8fa6bc`/`#2b343d`（2026-11-03 暗色
+  改造时遗漏漂移点），加注释指向 default-tokens.scss 单一事实源。
+- **DESIGN.md**：已知边界段同步——dropdown 弹层已建通道处理，其余
+  teleport 弹层（dialog/message）维持全局 EP dark 不单独处理。
+
+验证：浏览器 computed 实测——亮色弹层 `--el-color-primary #5b5bd6` /
+light-9 `#eeeeff`，暗色 `#8fa6bc` / `#2b343d`；hover 实截图：亮色语言
+下拉淡紫底、暗色退出登录深灰蓝底，均跟随主题。
+
+手动验证：同上下拉顶栏两个 dropdown，亮色 hover 淡紫、暗色 hover
+深灰蓝，不再是 EP 蓝。
+
+### 🐛 Fix | admin tags-view「更多页签操作」弹层主题色跟随（2026-11-04）
+
+> 背景：用户连续反馈第三处主题色未受控——tags-view 栏「更多页签操作」
+> 弹层（刷新 / 关闭 / 关闭左侧 / 关闭右侧 / 关闭其他 / 全部关闭）hover 仍
+> EP 默认蓝。同根因：弹层 teleport 到 body，容器作用域变量够不到。该弹层
+> 组件是 ContextMenu（基于 el-dropdown 的轻量封装，popperClass 计算属性
+> 产出 .vv-context-menu-popper），仅 TagsView 引用，此前未纳入弹层补丁通道。
+> 栏上「刷新当前页签」等按钮本体颜色本就受控（var(--el-color-primary)，
+> 容器内生效），不受控的只有弹层菜单项。
+
+- **index.vue style 块**：teleport 弹层补丁段选择器组纳入
+  `.vv-context-menu-popper`（亮 / 暗 / 系统跟随三组，整 mixin include
+  单点维护不变）；补丁段注释更新——通道语义从「顶栏 dropdown」升级为
+  「default 布局弹层」，说明新增弹层类的接入方式。ContextMenu.vue
+  无需改动（popperClass 计算属性已产出目标类名）。
+- **排查确认**：default 布局全部弹层类组件已清点——AppMenu 折叠弹层
+  （vertical 走 --el-menu-* 变量不受主色影响 / horizontal 已修）、
+  LayoutSwitcher（无 teleport 组件）无遗漏。
+- **DESIGN.md**：已知边界段同步——通道清单补 ContextMenu，并声明
+  业务页内全局弹层（el-dialog / el-select 等）维持全局 EP 主色
+  `#409eff` 的处理边界。
+
+验证：浏览器 computed 实测——亮色弹层 `--el-color-primary #5b5bd6` /
+light-9 `#eeeeff`，暗色 `#8fa6bc` / `#2b343d`，双主题受控。
+
+手动验证：起 dev 打开 tags-view 栏「更多页签操作」，亮/暗主题 hover
+各菜单项——亮色淡紫、暗色深灰蓝，不再 EP 蓝。
+
+### ✨ Feat | dev:gateway 子集感知登录回跳：登录成功直达子集内同伴 app（2026-11-03）
+
+> 背景：子集模式（如 `pnpm dev:gateway auth big`）下地址栏直开登录页，登录成功兜底回 auth
+> 自己——referrer 推断只覆盖「从同伴 app 被守卫跳来」入口，直开场景无 referrer，
+> 与「启动哪几个 app 就该跳回哪个 app」的直觉不符（用户主动提出的需求）。
+
+- **scripts/dev-gateway.ts**：新增 `resolvePostLoginFallback`（语义对齐 `resolveRootRedirect`：
+  portal 优先，否则第一个非 auth app；单 auth 子集返回 undefined 不注入）；
+  `startApp` 追加可选 `extraEnv` 参数，仅启动 auth 时注入 `VITE_POST_LOGIN_FALLBACK`；
+  网关就绪日志输出 fallback 目标一行。APPS 按 port 升序（big 5178 < auth 5179），
+  三例全命中：auth+big→`/big/`、auth+h5→`/h5/`、auth+admin→`/admin/`；全量 → `/portal/`。
+- **apps/auth Login.vue**：`resolveDefaultFallback` 兜底链插入 env 层——优先级
+  `?redirect=` 参数 → referrer 推断 → `VITE_POST_LOGIN_FALLBACK` → `/auth/`。
+  单 app 直起 / gh-pages / 生产构建无此 env，行为零变化。
+- **spec 脱节修复两处**（基线已红，非本次引入）：Login.spec 测试 3/5 断言残留旧硬编码
+  `/admin/`（上轮 referrer 推断重构漏更新）；node-gateway.spec「缺 admin 抛错」断言与
+  2026-10-28 子集回退语义相反，改为断言回退子集第一个 app。
+
+验证：`pnpm test:gateway` 22/22 全绿（新增 resolvePostLoginFallback 4 用例）；
+`pnpm -C apps/auth test src/modules/auth/views/Login.spec.ts` 9/9 全绿
+（修复 2 处脱节 + 新增 env fallback / referrer 优先 2 用例）；
+`pnpm -C apps/auth type-check` 零错误。
+
+手动验证：`pnpm dev:gateway auth big` 起后访问 `http://localhost:8080/auth/` 直开登录
+（admin / 123456），成功跳转 `/big/`；网关就绪日志输出
+「auth 登录 fallback → /big/（VITE_POST_LOGIN_FALLBACK 已注入 auth dev）」。
+`pnpm dev:gateway auth` 单 app 无该行注入，登录后回 auth 首页（原行为）。
+
+### 🎨 Style | auth / big 双端整页重设计：暖米灰双栏 × 异星荧光森林（2026-11-03）
+
+> 背景：按 AGENTS.md「设计工作规范」走 impeccable 工序（concept-seed 决策轮 + 用户锁定）。
+> auth 端最终采用用户提供的 unified-login.html 视觉风格（暖米灰双栏 + 莫兰迪绿 accent，v2
+> 方案，替代 v1 运输标签实验）；big 端跳出品类的默认形态（发光边框面板阵列）进入异星荧光森林。
+> surface brief 与 direction contract 落盘 `.impeccable/surfaces/apps-{auth,big}.md`。
+
+- **auth · 暖米灰双栏卡片**：左品牌区（深灰绿渐变 165° + 柔光 blob + 纯 CSS 设备插画
+  显示器/笔记本/手机 + 六端 chips + 三特性行 SSO/多因子/审计），右表单区（米灰卡 +
+  柔光字段 focus 白底 accent 描边 + accent 渐变按钮 letter-spacing 8px）。
+  不含端切换/短信/扫码功能（保留账号密码单流程）。`--login-*` 14 个 CSS 变量重写。
+- **big · 异星荧光森林**（第二轮 challenger 获胜）：数据如活物——KPI 是四株光晕主株
+  （青/丁香交替，焦点株独享白 bloom），面板为群落分区（细线分支边框 + 底部根脉汇聚微亮区），
+  根脉网络 SVG 自底部向各面板分支脉动，孢子光点 28 颗散布全屏。
+  标题改极细字重 300（34px 字距 8px）+ 光晕阴影，弃用渐变标题。
+  新增 7 个森林系 token（DESIGN.md 先登记后使用）：`--big-spore-cyan/lilac-rgb`、
+  `--big-bloom-rgb`、`--big-root-vein`、孢子透明度三档、`--big-panel-glow-cyan-rgb`。
+  KpiCard 新增 `variant` prop（cyan/lilac/focus），PanelBox 弃用四角 L 高光改分支角须。
+- **DESIGN.md 同步**：big 色板下新增「异星荧光森林层」子节（6 token 表）；
+  字号阶梯表补 auth / big 新端级规格。
+
+验证：`pnpm -C apps/{auth,big} type-check:full` 全绿；ESLint 全绿；impeccable detector 0 error
+（font-size advisory 经 DESIGN.md 字号阶梯登记消解）；playwright 实测
+（auth 375/1440、big 1440/1920）零塌零回归，截图在 `.impeccable/review/`。
+
+手动验证：dev 起后访问 `/login`（暖米灰双栏卡片 + 设备插画 + 六端 chips）与
+`/big-demo`（暗室森林光晕 + 根脉弧线 + 孢子光点），对照 `.impeccable/review/` 截图。
+
+### 🎨 Style | 样式分层规则符合度修复：五目录骨架化 + 暗色全端接线 + 裸值收编 82 处（2026-11-03）
+
+> 背景：对照「值/用法分离」六条理想模型的深度审计（报告落盘
+> `.claude/agent-reports/2026-11-03-样式分层规则符合度审计.md`）——骨架层近乎满分，
+> 但发现暗色主题三处「文档声称 ≠ 代码实现」漂移（useTheme.ts JSDoc 虚假声称
+> html.dark class / --el-color-primary 重算 / persist primaryColor；EP 暗色 5/6 端未接线；
+> injectBrandColor 对 EP 组件无效）+ 82 处裸色值（auth login 32 / big-demo 29 为重症区）。
+
+- **五目录骨架化**（`packages/ui/src/assets/styles/`）：tokens/（_colors/_spacing/_typography/_shadow/_z-index/_motion 六族 + index @forward）、themes/（_light/_dark mixin 与选择器分离）、base/（reset/transition/a11y）、tools/（原 mixins/，sass partial 化）、utilities/（原 custom.scss）；index.scss 七段顺序契约；全部 git mv 保历史；引用点全量更新（theme-vars / create-vite-config 与 vitest.config 的 bemPath / login×2 / 注释×5）
+- **EP 暗色全端接线**：app-styles 三件套扩四件套（+`element-plus/theme-chalk/dark/css-vars.css`）；theme store applyTheme 补 `classList` dark 联动（data-theme 业务轨道 + dark class EP 轨道双轨）；theme.spec 补断言 + 新增 auto 用例
+- **injectBrandColor 修复**：增补 `--el-color-primary` 同步注入（此前只设 `--color-primary`，EP 组件不跟随品牌色；灯色阶不联动局限写入 JSDoc）；useTheme.ts JSDoc 三处虚假声称同步修正
+- **base 层补全**：新建 `base/a11y.css`（`:focus-visible` 全局兜底 + `::selection` 品牌色选区）；reset.css 5 处裸值改 `var()`（html 底 / autofill 双色 / 滚动条双色，带原值兜底）；themes/ 新增 `--scrollbar-*` 双主题 token
+- **裸值收编 82 → 2**（仅余 blank 布局合规兜底值与注释文本）：login.scss 变量组扩充 10 token + 消费层 `var()` 化（含 login-bg.scss 光斑）；big-tokens.scss 增补 19 token（面板/遮罩/标题渐变/奖牌/排名/状态），big-demo 8 文件消重（RankingList 奖牌 JS 常量改 `var()` 引用）；portal / admin UserInfo / RichTextEditor / h5-demo / XForm 调试件等零星白字统一 `var(--el-color-white)` / `var(--portal-on-solid)`；PortalHeader logo SVG 色移入 CSS（暗色自动反色）
+- **端级暗色补齐**：portal-tokens.scss（黑白反转 5 值）/ h5-tokens.scss（7 值）配 `[data-theme='dark']` + `prefers-color-scheme` 覆盖；big / auth login 恒深色声明豁免
+- **中文类名修复**：Wide.vue 告警等级 `&--高/中/低` → `ALARM_LEVEL_CLASS` 映射 + `--high/mid/low`（全仓扫描确认唯一一处）
+- **文档**：docs/49 全面更新（五目录映射 / 七段顺序 / 暗色双轨勘误 / 端级暗色）；DESIGN.md 登记新增 token（登记先行 Rule）；昨日审计报告加勘误注记
+
+踩坑：EP 2.14 exports 的 `./*` 通配符不做扩展名补全——`element-plus/theme-chalk/dark/css-vars` 无 `.css` 后缀在 vite 8 严格解析下 500（dev 冒烟即暴露；官方文档的无后缀写法在本仓不可用，须写全 `css-vars.css`）。
+
+验证：sass 编译 5 文件绿；`pnpm type-check` / `pnpm lint` / `pnpm test` 全绿；playwright 实测 portal light/dark 反转、big 主视图与 Wide 页零回归（告警类名 `--high/--mid` 生效且背景精确命中 `var(--big-state-danger)`）、login 恒深色零回归、docs EP 组件暗色生效（`--el-bg-color=#141414`）。
+
+手动验证：
+
+1. `pnpm dev:gateway` → http://localhost:8080/portal/ ，控制台 `document.documentElement.classList.add('dark')` + `setAttribute('data-theme','dark')`——页面与 logo 应反转
+2. http://localhost:8080/docs/ 同法切暗色——EP 组件（表格/按钮）应变暗
+3. http://localhost:8080/big/big-demo/wide ——告警等级色块（高红/中黄/低灰蓝）正常
+
+**同日追加（第二轮：aliases 修复 + 包目录规范化 B/C）**：
+
+- **check:aliases 根因修复**：`generate-tsconfig-paths.ts` 比对前归一行尾——Windows `core.autocrlf=true` 把工作区 LF checkout 成 CRLF，而生成物固定 LF，按字节 sha256 比对将纯行尾差误判为漂移（本地 6 端全红实证；CI ubuntu 无感故此前未暴露）；spec 补「生成物 LF」锚定用例。修复后 `check:aliases` 6/6 绿
+- **styles/ 上移（B）**：`packages/ui/src/assets/styles/` → `packages/ui/src/styles/`——assets/ 语义纯化为静态资源（icons/svg），SCSS 源码归 src/ 源码目录；引用形态走既有 `@vv/ui/styles/*` 裸路径映射（**零新增别名**，符合 §1.6.2 收敛原则）；12 文件经 git rename 检测保完整历史链（mixins→tools→styles 三层迁移可追溯）
+- **AppDynamicIcon 目录化（C）**：`components/common/AppDynamicIcon/`——`registry.ts` + `registry.spec.ts` 自 `assets/icons/` 迁入与唯一消费方内聚（用户裁决：不放 icons/ 避免「静态资源」误导，不放 plugins/——非 Vue 插件）；`AppDynamicIcon.vue` + `AppDynamicIcon.spec.ts` 同迁（零业务显式 import，全局注册消费无影响）；`vi.mock` 说明符与组件 import 同步（`'./registry.ts'`）
+- **A 评估成文**：端级 layouts/styles 与 src/styles **不拆**五目录——docs/49 §5 补拆分触发条件（单文件 >200 行 / 第三主题 / 端级自有 mixin 需求）
+- **顺手勘误**：README:652 `VITE_BRAND_COLOR`「含灯色阶联动」虚假承诺（灯色阶为编译期字面量不联动）；docs/06 Q4「灯色阶主题切换自动跟随」同义勘误 + Q2 补 html.dark 双轨说明；docs/05/06/39/49、双 README 共 30+ 处路径引用同步
+- 引用更新面：`app-styles.ts`（`@vv/ui/styles/index.scss`）、bemPath×2、login×2、uno.config×7、main.ts 注释、IconUsage（import + `?raw` 源码路径）
+
+验证（第二轮）：`pnpm type-check` / `pnpm -C packages/ui test`（1932 用例）/ `pnpm test:check-scripts` / `pnpm check:aliases` 全绿；sass 冒烟通过；playwright 复验 login（`@vv/ui/styles/tools/bem` sass 解析）与 docs IconUsage（37 图标 + 5 动态图标渲染，registry 新路径）零回归。
+
+手动验证（追加）：
+
+4. 文件管理器确认 `packages/ui/src/assets/` 下只剩 `icons/`（2 个 svg）；`packages/ui/src/components/common/AppDynamicIcon/` 含 4 文件（vue/spec/registry/spec）
+5. Windows 本机 `pnpm check:aliases` 应绿（CRLF 工作区下不再误报）
+
+**同日追加（第三轮：app-styles 迁包——方向铁律物理消解）**：
+
+- **husky 拦截实证**：styles/ 上移后 app-styles.ts 的 `@vv/ui/styles/index.scss` 说明符触发 `local/package-contract` 方向铁律（shared 禁依赖 @vv/ui）——原 `@assets/styles` 路径系经 `ALIAS_PREFIXES` 掩蔽的既定形态，styles/ 移出 assets/ 后掩蔽失效
+- **迁包而非钻规则盲区**：`app-styles.ts` 自 `packages/shared/src/` 迁回 `packages/ui/src/`——四件套中两件（index.scss / EP dark css-vars）本是 ui 包资产；内部引用转包内相对路径 `./styles/index.scss`，shared→ui 依赖物理消失（非相对路径绕过规则）
+- **配套同步**：6 端 main.ts 说明符改 `import '@vv/ui/app-styles'`（ui 包 `"./*"` exports 通配承接，无需新增映射）；`shared/package.json` 摘除悬空 `./app-styles` exports；`ui/package.json` 补 `normalize.css: catalog:` 声明（声明跟着文件走）；6 端 + 脚手架模板 `styles/index.scss` 头注、docs/08/48/49 入口描述同步
+
+验证（第三轮）：`eslint packages/shared/src packages/ui/src --max-warnings 0` 通过（方向铁律 + 声明检查双绿）；`pnpm type-check` 绿。
+
+手动验证（第三轮）：
+
+6. `pnpm dev:gateway` 起服后访问任意端——四件套样式应完整（normalize 生效即页面不裸奔、dark 切换 EP 组件变暗）
+
+### 📋 Docs | 新增 AGENTS.md「设计工作规范」节：impeccable × taste-skill 搭配（2026-11-02）
+
+> 背景：设计任务工具链扩充——impeccable 已配 live（admin 端），taste-skill
+> （design-taste-frontend）待用户安装；需成文工序与验收纪律，避免两工具职责重叠
+> 或互相推翻（taste 三方向 vs DESIGN.md 既有锚）。
+
+- 根 AGENTS.md 新增「设计工作规范」节：前置阅读（PRODUCT.md / DESIGN.md / 端级 token 表）、
+  mode 化投入（showroom 大胆 / 生产面克制）、整页新视觉走 taste 六步 + impeccable 收尾、
+  既有面迭代走 impeccable scoped / live、「无品牌约束 ≠ 无视骨架」红线、
+  三宽浏览器验收纪律、taste 未安装时条款优雅跳过
+- CLAUDE.md「专题文档速查」新增一行互链
+
+验证：纯文档变更，`pnpm check:doc-currency` 14/14 绿。
+
+手动验证：无。
+
+### 🛡️ Chore | 文档预算 49→50 同步（99c61ab docs/AGENTS.md 事后归因补记）（2026-11-02）
+
+> 背景：99c61ab「新增 16 个层级化 AGENTS.md 目录导航文档」在 docs/ 根级落了 docs/AGENTS.md，
+> 根级文档数 49→50；该提交未同步 `check:doc-currency` 第 14 项预算，自该提交起门禁存量红
+> （CI 失败）。本次按 §2.6-3 庄园冻结机制补预算 +1 并留痕归因。
+
+- `scripts/check-doc-currency.ts` 第 14 项 expected 49→50，注释行归因 99c61ab docs/AGENTS.md
+
+验证：`pnpm check:doc-currency` 14/14 绿。
+
+手动验证：无（纯门禁数值同步，无运行时代码变更）。
+
+### 🎨 Style | 样式分层架构规范落地：docs/49 新增 + 审计小修 4 文件（2026-11-02）
+
+> 背景：全仓样式三 agent 普查（报告落盘 `.claude/agent-reports/2026-11-02-样式分层架构审计.md`）——
+> 五层结构全部有物理承载、191 个 style 块 scoped 清零、BEM 双轨覆盖，但规范从未成文，
+> 且审计发现若干语义漂移（z-index 撞值/未 token 化、注释腐烂、插值不一致）。
+
+- **规范落盘**：新增 `docs/49-样式分层架构规范.md`——五层分层与 monorepo 映射表、加载顺序强约束、
+  tokens 与 EP 变量「源/镜像」立场裁决（`$color-*` 编译期源经 theme-vars.scss 镜像写入 `--el-color-*`）、
+  UI 库覆盖三级形态（全局/端级/布局级）、app 特性样式「两级归属 + 就近原则」（端级 `--<app>-*` 前缀成文化）、
+  L5 豁免登记（`<style module>` 调试三件套 / 页面级 EP 定制 / demo 演示 / a11y 降级）
+- **CLAUDE.md §3** 新增 docs/49 互链一行
+- **小修**（`packages/ui`）：`variables.scss` 新增 `--z-index-banner: 1999` + `--color-info` 改插值写法
+  （值不变）；`NetworkBanner.vue` z-index 改消费 token、4 处色值改 EP warning 变量系（随主色联动，
+  肉眼难辨的 <3% 色阶差）；`custom.scss` 头注 3 处腐烂修正（错误文件名 + 与 §3 矛盾的 scoped 表述）
+- **小修**（`apps/portal`）：`portal-tokens.scss` 的 `--portal-z-index-header` 1000 →
+  `var(--z-index-fixed)`(1030)，消除与全局 dropdown(1000) 撞值
+- **端级样式层物理落地**（docs/49 §5「可选」升级为「标配骨架」）：6 app 各建
+  `src/styles/{index,tokens,ui-overwrite}.scss` 骨架（头注即归属约定，全注释零 CSS 产出），
+  6 个 main.ts 统一接线 `import '@/styles/index.scss'`（紧跟 app-styles 之后，「公共 → 端级」
+  层次在入口代码可见）；h5 的 vant 变量覆盖自 `layouts/h5/styles/vant-vars.scss` 归位至
+  `src/styles/ui-overwrite.scss`（`:root:root` 双写技巧原样保留，main.ts 直挂 import 摘除）；
+  `scripts/templates/app/` 脚手架同步自带三件套 + main.ts 接线（`__APP_NAME__` 占位），
+  `new-app.spec.ts` 必需文件清单 +3 断言锁定——新 app 自此自带分层结构
+
+验证：`sass` 编译入口通过（产物抽查 `--z-index-banner: 1999` / `--color-info: #909399` 正确）；
+`pnpm check:doc-currency` 14/14 绿（预算 48→49 注释留痕）；eslint 改动文件零告警；
+playwright 实测（dev:gateway + Offline 模拟）：NetworkBanner 渲染 z-index 1999（token 解析正确）、
+background `#fdf6ec`（warning-light-9）、color `#b88230`（dark-2 与原值零差异）、icon `#e6a23c`
+（零差异），恢复 Online 登录成功后横幅自动卸载；portal 顶栏 `--portal-z-index-header` 解析 1030
+（`var(--z-index-fixed)` 链接正确）、sticky 吸附正常。
+结构落地验证：6 端级入口 sass 编译全过（h5 产物含 `:root:root` vant 变量）；`new-app.spec` 9/9 绿
+（模板三件套 + 清单断言）；8 个 main.ts 系文件 eslint 零告警；h5 `type-check` 增量绿（`@/styles`
+解析正常）；dev:gateway 实测 h5 端 `:root` 上 `--van-primary-color: #ff6a00` 生效（归位后
+品牌橙未回落 vant 默认蓝）。
+
+手动验证：无遗留（浏览器实测已覆盖）。
+
+### 📖 Docs | docs/48 + README 新增选型分支对照说明（2026-11-02）
+
+> 背景：仓库以 git 分支承载两种形态（单应用版 / Monorepo 多应用版），但此前全仓无任何文档
+> 明示「什么场景选哪个分支」，访客只能默认 master 一种形态。
+
+- `docs/48-单应用模式与Monorepo多应用能力对比.md` §16 选型建议新增「分支对照」表：对构建体积
+  不敏感 / 页面量小 / 追求快速开发部署 → 单应用版 `release/single` 分支；项目大页面多 /
+  对构建体积敏感 → Monorepo 多应用版 `release/monorepo` 分支
+- `README.md` 项目简介首段后新增「🔀 单应用 or Monorepo？」引导块，链到 docs/48
+- `README.en.md` 同步新增「🔀 Single-app or Monorepo?」对照块（英文门面与中文版口径一致）
+
+验证：`pnpm check:doc-currency` 通过。
+
+手动验证：docs/48 §16 顶部可见分支对照表；README / README.en.md 项目简介可见对照引导块。
+
 ### 🎨 Chore | gh-pages 落地导航页 app 名全中文统一（2026-10-30）
 
 > 背景：演示导航页链接文案中英混杂（管理后台/admin/组件示例文档为中文，portal/auth/big/h5

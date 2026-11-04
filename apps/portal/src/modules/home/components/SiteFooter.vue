@@ -71,7 +71,7 @@ const bem = createNamespace('site-footer')
     text-decoration: none;
 
     &:hover {
-      color: #fff;
+      color: var(--portal-on-solid);
     }
   }
 

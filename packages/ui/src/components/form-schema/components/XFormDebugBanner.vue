@@ -246,7 +246,7 @@ onUnmounted(() => {
   right: 16px;
   bottom: 16px;
   background: var(--el-color-warning);
-  color: #fff;
+  color: var(--el-color-white);
   border: none;
   border-radius: 20px;
   padding: 8px 16px;

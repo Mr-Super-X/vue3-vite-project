@@ -6,7 +6,7 @@ import AppDynamicIcon from './AppDynamicIcon.vue'
 /**
  * vitest 无法解析 unplugin-icons 的 virtual:icons 虚拟模块（Icons 插件不在测试管线），
  * 这里 mock 注册表：用透传 attrs 的 stub 组件替代真实 SVG 组件，验证「查表渲染 + 属性透传」行为本身。
- * mock 路径必须与组件内 import 的 '../../assets/icons/registry.ts' 一致才能命中。
+ * mock 路径必须与组件内 import 的 './registry.ts' 一致才能命中（registry 与组件同目录内聚）。
  */
 const stubPlus = defineComponent({
   name: 'StubPlus',
@@ -23,7 +23,7 @@ const stubHome = defineComponent({
       h('svg', attrs, 'home'),
 })
 
-vi.mock('../../assets/icons/registry.ts', () => ({
+vi.mock('./registry.ts', () => ({
   resolveAppIcon: (name: string) =>
     (({ 'ep:plus': stubPlus, 'tabler:home': stubHome }) as Record<string, unknown>)[name],
 }))

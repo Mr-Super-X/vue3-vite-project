@@ -4,11 +4,11 @@
 //
 // 注意：
 // - 全局 @keyframes 与过渡动画在 transition.scss
-// - Element Plus 主题覆盖在 element-plus.scss
-// - 全局 CSS 变量在 variables.css
+// - Element Plus 主题覆盖在 element-overwrite/ 目录
+// - 全局 CSS 变量在 variables.scss
 // - mixin 工具不在此文件（避免 SFC @use 时重复输出 CSS 类），
 //   按需在 SFC <style> 中 @use '@assets/styles/mixins/xxx'
-// - 不要写组件作用域样式（应写在 SFC <style scoped>）
+// - 不要写组件作用域样式（应写在 SFC <style> 块并以 BEM 命名空间隔离，见 CLAUDE.md §3）
 
 // ─── 复合场景工具类（UnoCSS 没覆盖）─────────────────────────────
 // 命名约定：全部 .vv- 前缀，与 BEM Block 前缀统一

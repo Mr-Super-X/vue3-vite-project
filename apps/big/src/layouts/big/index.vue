@@ -112,7 +112,7 @@ const stageStyle = computed(() => ({
   inset: 0;
   overflow: hidden;
   // 深蓝黑底：比例不符时的留白填充色，与大屏深色科技风一致
-  background: #02040a;
+  background: var(--big-bg-layout);
 
   &__stage {
     position: absolute;

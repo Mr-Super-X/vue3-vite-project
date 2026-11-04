@@ -10,11 +10,35 @@
   --portal-ink: #111111; // 主文字
   --portal-ink-2: #555555; // 次要文字
   --portal-line: #eeeeee; // 1px 细线
-  --portal-z-index-header: 1000; // 顶栏 z-index
+  --portal-z-index-header: var(
+    --z-index-fixed
+  ); // 顶栏层级挂靠全局 fixed 层(1030)，杜绝与全局 dropdown(1000) 撞值
   // 深底反色系列（2026-10-29 样式审计补充——SiteFooter 深色底 / PortalHeader 登录按钮等）
   --portal-on-ink: rgba(255, 255, 255, 0.75); // 深底主文字
   --portal-on-ink-2: rgba(255, 255, 255, 0.55); // 深底次要文字
   --portal-on-ink-3: rgba(255, 255, 255, 0.45); // 深底弱化文字
   --portal-on-line: rgba(255, 255, 255, 0.15); // 深底细线
   --portal-on-solid: #ffffff; // 深底实色白（按钮字/头像字）
+}
+
+// ─── 暗色覆盖（2026-11-03 样式审计补齐：黑白设计暗色反转，ink/bg 互换语义）───
+// on-* 深底反色族、布局尺寸、z-index 非色值不随主题变，无需覆盖
+
+@mixin portal-dark {
+  --portal-bg: #111111; // 页面底（与 light 的 ink 呼应）
+  --portal-bg-alt: #1c1c1c; // 分区底
+  --portal-ink: #f5f5f5; // 主文字（light 的 bg 呼应）
+  --portal-ink-2: #a3a3a3; // 次要文字
+  --portal-line: #2a2a2a; // 1px 细线
+}
+
+[data-theme='dark'] {
+  @include portal-dark;
+}
+
+// 跟随系统：仅当用户未显式设置 data-theme（与 themes/ 机制同构）
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    @include portal-dark;
+  }
 }

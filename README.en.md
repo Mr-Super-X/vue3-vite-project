@@ -6,6 +6,8 @@
 
 A Vue 3 engineering base covering **four panel forms in one codebase**: internal admin, public portal, mobile H5, and data big-screen. Feature-Sliced architecture, fully mockable without a backend.
 
+> 🔀 **Single-app or Monorepo?** Insensitive to bundle size, few pages, or aiming for fast dev & deployment → pick the **single-app version** (`release/single` branch). Large project with many pages, sensitive to bundle size (per-app independent builds) → pick the **Monorepo multi-app version** (`release/monorepo` branch). Full comparison: [docs/48](docs/48-单应用模式与Monorepo多应用能力对比.md).
+
 | Panel            | Entry        | Capability                                                                                                       |
 | ---------------- | ------------ | ---------------------------------------------------------------------------------------------------------------- |
 | Admin (internal) | `/workbench` | `default` layout: sidebar + header + multi-tabs                                                                  |

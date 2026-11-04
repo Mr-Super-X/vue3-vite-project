@@ -18,6 +18,7 @@ describe('useThemeStore', () => {
   beforeEach(() => {
     localStorage.clear()
     document.documentElement.removeAttribute('data-theme')
+    document.documentElement.classList.remove('dark')
     // jsdom 无 matchMedia，applyTheme 与系统主题监听都依赖它
     window.matchMedia = vi.fn().mockReturnValue({
       matches: false,
@@ -31,6 +32,7 @@ describe('useThemeStore', () => {
     const store = useThemeStore()
     expect(store.mode).toBe('dark')
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
+    expect(document.documentElement.classList.contains('dark')).toBe(true)
     expect(store.isDark).toBe(true)
   })
 
@@ -73,8 +75,20 @@ describe('useThemeStore', () => {
     const store = useThemeStore()
     store.setMode('dark')
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
+    expect(document.documentElement.classList.contains('dark')).toBe(true)
     store.toggleMode()
     expect(document.documentElement.getAttribute('data-theme')).toBe('light')
+    expect(document.documentElement.classList.contains('dark')).toBe(false)
     expect(store.isDark).toBe(false)
+  })
+
+  it('auto 模式按系统偏好维护 dark class（EP dark/css-vars 轨道）', () => {
+    window.matchMedia = vi.fn().mockReturnValue({ matches: true, addEventListener: vi.fn() })
+    const store = useThemeStore()
+    store.setMode('auto')
+    expect(document.documentElement.getAttribute('data-theme')).toBeNull()
+    expect(document.documentElement.classList.contains('dark')).toBe(true)
+    store.setMode('light')
+    expect(document.documentElement.classList.contains('dark')).toBe(false)
   })
 })

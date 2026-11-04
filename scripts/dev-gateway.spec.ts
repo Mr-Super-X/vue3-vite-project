@@ -2,7 +2,8 @@
  * dev-gateway 纯函数单测（node:test runner）——/autoplan E8。
  *
  * 覆盖：resolveAppSubset（未知 app 名抛错）/ resolveRootRedirect（portal 优先 + 空子集防御）/
- * cleanStaleMockBundled（启动前预清 mock bundled 临时文件，2026-10-29 登录 404 事故根治）。
+ * cleanStaleMockBundled（启动前预清 mock bundled 临时文件，2026-10-29 登录 404 事故根治）/
+ * resolvePostLoginFallback（登录 fallback：portal 优先 / 第一个非 auth / 单 auth 不注入）。
  * 守卫已统一为 invokedDirectly 模式（与 check-* 脚本一致），import 本模块不触发 main()。
  *
  * 运行：pnpm test:gateway（与 node-gateway.spec.ts 同批）
@@ -14,7 +15,12 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 
-import { cleanStaleMockBundled, resolveAppSubset, resolveRootRedirect } from './dev-gateway.ts'
+import {
+  cleanStaleMockBundled,
+  resolveAppSubset,
+  resolvePostLoginFallback,
+  resolveRootRedirect,
+} from './dev-gateway.ts'
 
 // 当前注册表形状（apps-registry 派生）：name/port 用于构造最小子集夹具
 type AppEntry = { name: string; port: number; requiredRoutes: string[] }
@@ -45,6 +51,28 @@ test('resolveRootRedirect：无 portal → 跳子集第一个', () => {
 
 test('resolveRootRedirect：空子集抛错（防御未来调用方）', () => {
   assert.throws(() => resolveRootRedirect([]), /空子集无根 302 目标/)
+})
+
+test('resolvePostLoginFallback：portal 优先于其他 app（全量语义一致）', () => {
+  assert.equal(
+    resolvePostLoginFallback([entry('admin', 5174), entry('portal', 5176), entry('auth', 5179)]),
+    '/portal/'
+  )
+})
+
+test('resolvePostLoginFallback：无 portal 取第一个非 auth（auth+big → /big/）', () => {
+  // 子集顺序按 APPS（port 升序）：big(5178) 在 auth(5179) 前，对齐 resolveAppSubset 契约
+  assert.equal(resolvePostLoginFallback([entry('big', 5178), entry('auth', 5179)]), '/big/')
+  assert.equal(resolvePostLoginFallback([entry('h5', 5177), entry('auth', 5179)]), '/h5/')
+  assert.equal(resolvePostLoginFallback([entry('admin', 5174), entry('auth', 5179)]), '/admin/')
+})
+
+test('resolvePostLoginFallback：子集不含 auth 时取第一个 app', () => {
+  assert.equal(resolvePostLoginFallback([entry('admin', 5174), entry('big', 5178)]), '/admin/')
+})
+
+test('resolvePostLoginFallback：单 auth 子集返回 undefined（不注入 env，前端走原兜底）', () => {
+  assert.equal(resolvePostLoginFallback([entry('auth', 5179)]), undefined)
 })
 
 test('cleanStaleMockBundled：递归删除全部 bundled 临时文件并返回删除数', (t) => {

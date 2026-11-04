@@ -1,34 +1,211 @@
-# DESIGN — 四栖视觉 Token 锚点
+---
+name: vue3-vite-project 四栖工程底座
+description: 一套骨架（共享 tokens + Element Plus 秩序）长出四种舱位语境——中后台 / 门户 / H5 / 数据大屏
+colors:
+  brand-primary: '#409eff'
+  brand-success: '#67c23a'
+  brand-warning: '#e6a23c'
+  brand-danger: '#f56c6c'
+  brand-info: '#909399'
+  ink-primary: '#303133'
+  ink-regular: '#606266'
+  ink-secondary: '#909399'
+  ink-placeholder: '#c0c4cc'
+  paper-base: '#ffffff'
+  paper-secondary: '#f5f7fa'
+  paper-tertiary: '#fafafa'
+  line-base: '#dcdfe6'
+  line-light: '#e4e7ed'
+  big-night: '#06122b'
+  big-abyss: '#02040a'
+  big-data-blue: '#4da3ff'
+  big-ice-text: '#d6e4ff'
+  big-mist-text: '#8fa8d8'
+  big-dim-text: '#5f7bab'
+  state-error: '#f56c6c'
+  state-offline: '#f7c948'
+  h5-page: '#f7f8fa'
+  h5-ink: '#1a1a1a'
+  h5-line: '#ebedf0'
+  portal-ink: '#111111'
+  portal-paper: '#ffffff'
+  portal-line: '#eeeeee'
+  portal-dark-paper: '#111111'
+  portal-dark-ink: '#f5f5f5'
+  scrollbar-thumb: '#b8b8b8'
+  scrollbar-thumb-dark: '#4e4e52'
+  h5-text-title: '#323233'
+  h5-card-bg: '#ffffff'
+  big-panel-bg: 'rgba(13, 38, 76, 0.35)'
+  big-mask: 'rgba(10, 24, 48, 0.5)'
+  big-title-from: '#ffffff'
+  big-title-to: '#7db4ff'
+  big-medal-gold: '#f7c948'
+  big-kpi-down: '#2fd39a'
+  default-dark-primary: '#8fa6bc'
+  default-dark-primary-l3: '#7e94a9'
+  default-dark-primary-l9: '#2b343d'
+  default-dark-bg-page: '#12161a'
+  default-dark-bg-card: '#1a1f26'
+  default-dark-bg-menu: '#161b21'
+  default-dark-bg-overlay: '#222831'
+  default-dark-text-primary: '#e8edf1'
+  default-dark-text-regular: '#c2cbd4'
+  default-dark-text-secondary: '#8a97a5'
+  default-dark-border-base: '#333d47'
+typography:
+  body:
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+    fontSize: '14px'
+    fontWeight: 400
+    lineHeight: 1.5
+  mono:
+    fontFamily: "'Fira Code', Monaco, Consolas, 'Courier New', monospace"
+rounded:
+  sm: '4px'
+  md: '8px'
+  lg: '12px'
+spacing:
+  xs: '4px'
+  sm: '8px'
+  md: '16px'
+  lg: '24px'
+  xl: '32px'
+components:
+  button-primary:
+    backgroundColor: '{colors.brand-primary}'
+    textColor: '#ffffff'
+    rounded: '{rounded.sm}'
+    padding: '8px 15px'
+    height: '32px'
+---
+
+# Design System: vue3-vite-project 四栖工程底座
 
 > 本文是**不经 Element Plus 的自有视觉 token** 单一事实源（硬编码色值 / 字号阶梯 / 间距常量）。
 > 运行时主题（明暗 / 品牌主色换肤）走 Element Plus 变量体系，见 [docs/06-主题管理规范.md](docs/06-主题管理规范.md)——两者分工：docs/06 管"可换肤"，本文管"四栖各自的固定视觉"。
 >
 > **维护规则**：新增色值 / 字号 / 间距常量，**先登记本文再使用**。check:doc-currency 管硬数据一致性，本文是语义级一致性的判定基准（/autoplan Cross-phase Theme 4 的解药）。
 
-## 1. 色板（按栖）
+## Overview
+
+**Creative North Star: "一套骨架，四种舱位"（One Hull, Four Decks）**
+
+共享骨架是 `packages/ui` 全局 tokens（颜色 / 间距 / 圆角 / 字号 / 阴影 / z-index / 动效）+ Element Plus 变量秩序 + BEM `vv` 命名空间 + 五层样式分层（docs/49）。四种舱位在同一骨架上长出各自的视觉语境：**中后台**（default，完全消费 EP 默认体系）、**门户**（portal，白纸极简官网）、**H5**（h5，Vant 灰阶移动端）、**数据大屏**（big，深蓝科技风固定视觉）。
+
+人格是工程秩序感优先于装饰：诚实、精确、可预期。没有 logo 与吉祥物，"品牌感"藏在细节里——密度、对齐、语义化的 z-index 与状态色。四个 showroom 端（portal / big / docs / auth）按演示标准投入视觉，admin / h5 按生产工具标准投入。
+
+**Key Characteristics:**
+
+- **双轨色彩**：可换肤部分（明暗 / 品牌主色）走 EP 变量体系；固定视觉 token 以本文 Colors / Typography 表为锚。
+- **四栖分化**：一套 spacing / radius 骨架，四端各自色板与字号纪律互不越界。
+- **状态语义化**：z-index 与状态色按语义命名（断连 ≠ 失败），命名即文档。
+- **状态响应式深度**：表面静息扁平，阴影与 glow 只在 hover / focus / 弹层等状态响应时出现。
+
+## Colors
+
+> 角色分组：Primary（品牌色）/ 各栖 Neutral（背景-文字-边框）/ 状态色。frontmatter `colors.*` 为机器可读镜像，值以本文表格与 `packages/ui/src/assets/styles/{variables,theme}.scss` 为准。
+
+### Primary（品牌色，四栖共用）
+
+| Token                                                                     | 值                                            | 用途                                                         | 实证             |
+| ------------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------ | ---------------- |
+| `--color-primary`                                                         | `#409eff`                                     | 品牌主色（可被 `VITE_BRAND_COLOR` 运行时覆盖，含 EP 灯色阶） | `variables.scss` |
+| `--color-success` / `--color-warning` / `--color-danger` / `--color-info` | `#67c23a` / `#e6a23c` / `#f56c6c` / `#909399` | EP 语义色，中后台语境专用                                    | `variables.scss` |
 
 ### 数据大屏 big（深蓝科技风）
 
-| Token                | 值        | 用途                               | 实证                        |
-| -------------------- | --------- | ---------------------------------- | --------------------------- |
-| `big-bg-page`        | `#06122b` | 视图底色（径向渐变底）             | big-demo 两页、StateDemo    |
-| `big-bg-stage-mask`  | `#02040a` | layout 比例不符时的留白填充        | `src/layouts/big/index.vue` |
-| `big-primary`        | `#4da3ff` | 主数据色（KPI 数值 / 链接 / 强调） | big-demo、StateDemo         |
-| `big-text-primary`   | `#d6e4ff` | 主文字                             | big-demo 各页               |
-| `big-text-secondary` | `#8fa8d8` | 辅助文字（dt / 说明）              | big-demo 各页               |
-| `big-text-muted`     | `#5f7bab` | 弱化文字（时间戳 / 元信息）        | big-demo 各页               |
+| Token                              | 值                            | 用途                               | 实证                        |
+| ---------------------------------- | ----------------------------- | ---------------------------------- | --------------------------- |
+| `big-bg-page`                      | `#06122b`                     | 视图底色（径向渐变底）             | big-demo 两页、StateDemo    |
+| `big-bg-stage-mask`                | `#02040a`                     | layout 比例不符时的留白填充        | `src/layouts/big/index.vue` |
+| `big-primary`                      | `#4da3ff`                     | 主数据色（KPI 数值 / 链接 / 强调） | big-demo、StateDemo         |
+| `big-text-primary`                 | `#d6e4ff`                     | 主文字                             | big-demo 各页               |
+| `big-text-secondary`               | `#8fa8d8`                     | 辅助文字（dt / 说明）              | big-demo 各页               |
+| `big-text-muted`                   | `#5f7bab`                     | 弱化文字（时间戳 / 元信息）        | big-demo 各页               |
+| `big-panel-bg`                     | `rgba(13, 38, 76, 0.35)`      | KpiCard / PanelBox 面板底          | big-demo 组件               |
+| `big-mask` / `big-mask-light`      | `rgba(10,24,48,0.5/0.4)`      | 舞台弹层 / 说明块遮罩              | StateDemo、Wide             |
+| `big-title-from` → `big-title-to`  | `#ffffff` → `#7db4ff`         | 页标题渐变双色 stop                | big-demo 三视图             |
+| `big-text-hover`                   | `#8fc3ff`                     | 文字 hover 提亮                    | big-demo index              |
+| `big-divider`                      | `rgba(143,168,216,0.15)`      | 行分割线（dashed）                 | big-demo index、Wide        |
+| `big-medal-gold/silver/bronze`     | `#f7c948`/`#c0c8d8`/`#d98e4a` | 排名奖牌三色                       | RankingList                 |
+| `big-rank-active` / `big-rank-bar` | `#3a5a8c` / `#2b6de0`         | 非奖牌名次底 / 进度条渐变起点      | RankingList、Wide           |
+| `big-kpi-down`                     | `#2fd39a`                     | 指标下降态（下降 ≠ 错误）          | KpiCard                     |
+| `big-state-danger/warning/info`    | 见状态色表                    | 告警高/中/低                       | Wide 告警条                 |
+
+#### 数据大屏 big · 异星荧光森林层（2026-11-03 登记）
+
+> 深蓝锚色板之上的森林系高光层。光晕 token 以 `*-rgb` 三通道分量形态登记，支持就地 `rgba()` 组合透明度（与 `--big-blue-rgb` 模式一致）。
+
+| Token                               | 值                 | 用途                                           | 实证                 |
+| ----------------------------------- | ------------------ | ---------------------------------------------- | -------------------- |
+| `big-spore-cyan-rgb`                | `77, 163, 255`     | 孢子青光晕（根脉脉动 / 普通 KPI 株光芯）       | KpiCard、index       |
+| `big-spore-lilac-rgb`               | `185, 140, 255`    | 孢子丁香紫光晕（交替 KPI 株 / 排名条）         | KpiCard、RankingList |
+| `big-bloom-rgb`                     | `245, 248, 250`    | 焦点白 bloom 芯（全页唯一最亮白光）            | KpiCard 焦点株       |
+| `big-root-vein`                     | `#0d264c`          | 根脉网络线色（亮边，配合外层透明光晕）         | index.vue SVG        |
+| `big-spore-dot-max` / `mid` / `min` | `.7` / `.4` / `.2` | 孢子光点散布透明度三档（青/丁香随机分配）      | index.vue            |
+| `big-panel-glow-cyan-rgb`           | `13, 38, 76`       | 面板底部根脉汇聚微亮区（radial-gradient 中心） | PanelBox             |
+
+> big 端为恒深色设计（拼接大屏暗室场景），token 不随 `[data-theme]` 切换——big-tokens.scss 无暗色覆盖段（2026-11-03 审计裁决）。
 
 ### H5 移动端 h5
 
-| Token        | 值        | 用途     | 实证                       |
-| ------------ | --------- | -------- | -------------------------- |
-| `h5-bg-page` | `#f7f8fa` | 页面底色 | `src/layouts/h5/index.vue` |
+| Token            | 值                   | 用途                        | 实证                       |
+| ---------------- | -------------------- | --------------------------- | -------------------------- |
+| `h5-bg-page`     | `#f7f8fa`            | 页面底色                    | `src/layouts/h5/index.vue` |
+| `h5-text-title`  | `#323233`            | 卡片标题（vant 标题黑）     | h5-demo 卡片               |
+| `h5-card-bg`     | `#ffffff`            | 卡片底（暗色 `#262626`）    | h5-demo 卡片               |
+| `h5-shadow-card` | `rgba(0, 0, 0, .06)` | 卡片投影（暗色 0.3 透明度） | h5-demo 卡片               |
 
-### 中后台 default / 门户 portal
+> h5 tokens 已配 `[data-theme='dark']` + `prefers-color-scheme` 双主题覆盖（2026-11-03）。
 
-不定义自有色板——完全消费 Element Plus 变量 + docs/06 主题体系。新增中后台色值时优先用 EP token，确需自有值时登记到本节。
+### 门户 portal（白纸极简）
 
-## 2. 状态色（四栖通用）
+| Token                   | light     | dark      | 用途                   |
+| ----------------------- | --------- | --------- | ---------------------- |
+| `portal-bg`             | `#ffffff` | `#111111` | 页面底                 |
+| `portal-bg-alt`         | `#fafafa` | `#1c1c1c` | 分区底（特性区）       |
+| `portal-ink`            | `#111111` | `#f5f5f5` | 主文字                 |
+| `portal-ink-2`          | `#555555` | `#a3a3a3` | 次要文字               |
+| `portal-line`           | `#eeeeee` | `#2a2a2a` | 1px 细线               |
+| `portal-on-*`（深底族） | 不随主题  | 不随主题  | 深底反色文字/细线/实白 |
+
+> 黑白设计暗色反转（ink/bg 互换语义），2026-11-03 经 `portal-dark` mixin + `[data-theme]`/`prefers-color-scheme` 接线。
+
+### 中后台 default
+
+亮色不定义自有色板——完全消费 Element Plus 变量 + docs/06 主题体系（参考仓紫 #5b5bd6 识别色，`default-layout-ep-light` mixin 容器作用域覆盖）。**暗色为莫兰迪雾霾蓝固定视觉**（2026-11-03 起，由 slate 蓝黑切换），token 见下表。新增中后台色值时优先用 EP token，确需自有值时登记到本节。
+
+#### 中后台暗色 · 莫兰迪雾霾蓝（2026-11-03 登记）
+
+> 落点：`apps/admin/src/layouts/default/styles/default-tokens.scss` 的 `default-layout-dark`（布局变量）+ `default-layout-ep-dark`（EP 覆盖）两个 mixin；经 `index.vue` / `element-overwrite.scss` 的 `[data-theme='dark']` 选择器容器施加。全局 `packages/ui/_dark.scss` 的 `--bg-base` 系不受影响（portal / docs / auth 暗色维持原灰阶）。
+
+| Token                                         | 值                                                | 用途                                         | 实证                     |
+| --------------------------------------------- | ------------------------------------------------- | -------------------------------------------- | ------------------------ |
+| `default-dark-primary`                        | `#8fa6bc`                                         | 暗色主色（EP 覆盖 base）                     | `default-layout-ep-dark` |
+| primary light-3/5/7/8/9                       | `#7e94a9`/`#64798c`/`#4a5c6b`/`#3a4754`/`#2b343d` | 暗色灯阶（逐级变暗）                         | 同上                     |
+| primary dark-2                                | `#a2b6c9`                                         | hover 提亮                                   | 同上                     |
+| `default-dark-bg-page`                        | `#12161a`                                         | 页面底（`--el-bg-color-page` / 内容区）      | 同上                     |
+| `default-dark-bg-card`                        | `#1a1f26`                                         | 卡片底（`--el-bg-color` / fill-blank）       | 同上                     |
+| `default-dark-bg-overlay`                     | `#222831`                                         | 弹层底（`--el-bg-color-overlay`）            | 同上                     |
+| fill 阶梯 light/fill/dark/lighter/extra-light | `#20272f`/`#20262e`/`#171c22`/`#262e37`/`#2c3540` | 填充阶梯（stripe 行用 lighter）              | 同上                     |
+| `default-dark-bg-menu`                        | `#161b21`                                         | 侧栏 / 顶栏底                                | `default-layout-dark`    |
+| menu active 底 / 文字 / 激活文字              | `#26303a` / `#8a99a8` / `#a8bacb`                 | 菜单激活态三级                               | 同上                     |
+| `default-dark-text-primary`                   | `#e8edf1`                                         | 主文字（`--el-text-color-primary`）          | `default-layout-ep-dark` |
+| `default-dark-text-regular`                   | `#c2cbd4`                                         | 正文（`--el-text-color-regular`）            | 同上                     |
+| `default-dark-text-secondary`                 | `#8a97a5`                                         | 辅助文字（`--el-text-color-secondary`）      | 同上                     |
+| `default-dark-border-base`                    | `#333d47`                                         | 边框 base                                    | 同上                     |
+| border light / lighter                        | `#2b333c` / `#232a32`                             | 边框浅档（布局 border-color 同步 `#232a32`） | 同上                     |
+
+> 已知边界：teleport 到 body 的弹层中，**default 布局弹层**经专属 popper-class 通道重放容器 EP 变量（补丁段在 `index.vue` style 块，整 mixin include 单点维护，亮色紫 / 暗色雾霾蓝均生效）：`.vv-default-header-popper`（UserInfo / LocaleDropdown，2026-11-03）与 `.vv-context-menu-popper`（TagsView 的"更多页签操作"与页签右键菜单，2026-11-04）——新增 default 布局弹层类加入该选择器组即可；其余全局弹层（el-dialog / el-message / 业务页内 el-select 等）仍走全局 EP 主色 `#409eff`，不单独处理。
+
+### 滚动条（全局，base/reset.css 消费）
+
+| Token                                           | light                 | dark                  |
+| ----------------------------------------------- | --------------------- | --------------------- |
+| `--scrollbar-thumb` / `--scrollbar-thumb-hover` | `#b8b8b8` / `#878987` | `#4e4e52` / `#68686e` |
+
+### 状态色（四栖通用）
 
 | Token           | 值        | 语义                                             | 实证                        |
 | --------------- | --------- | ------------------------------------------------ | --------------------------- |
@@ -38,33 +215,124 @@
 
 > 中后台语境的成功/警告色用 EP 语义色（`--el-color-success/warning`），不与上表混用。
 
-## 3. 字号阶梯（按栖，设计稿 px）
+**The 离线非失败 Rule.** 中断 / 断连用琥珀黄（`state-offline`），错误 / 失败用红（`state-error`），两者永不混用——"连不上"不是"做错了"，视觉必须区分。
 
-| 栖              | 层级          | 规格                                   | 规则来源                                            |
-| --------------- | ------------- | -------------------------------------- | --------------------------------------------------- |
-| big 1920 稿     | 页标题        | 36px（字距 6px 渐变字）                | big-demo                                            |
-| big 1920 稿     | KPI 数值      | 44px 粗体等宽数字                      | big-demo                                            |
-| big 1920 稿     | 正文 / 辅助   | 14–15px、18–20px（dt）                 | big-demo、StateDemo                                 |
-| big 9000 拼接稿 | 页标题 / 正文 | 56px / 22–30px                         | **×1.5~1.8 系数**（观看距离 5–15 米，docs/35 §3-8） |
-| h5 828 稿       | 正文          | **≥28px**                              | docs/34 §3.1（320 屏可读性推导）                    |
-| h5 828 稿       | 辅助说明      | **≥24px**；20px 仅为边界示范，生产禁用 | docs/34 §3.1 注记                                   |
-| default/portal  | 全层级        | Element Plus 默认字号体系              | 不自定义                                            |
+## Typography
 
-## 4. 间距与布局常量
+**Body Font:** 系统字体栈（-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif；`--font-family-base`）
+**Mono Font:** 'Fira Code', Monaco, Consolas, 'Courier New', monospace（`--font-family-mono`，等宽数值场景如大屏 KPI）
 
-| 场景                           | 值                          | 实证         |
-| ------------------------------ | --------------------------- | ------------ |
-| big 1920 稿：页边距 / 面板间距 | 30px / 20px（列 gap 16–30） | big-demo     |
-| big 9000 稿：页边距 / 面板间距 | 100px / 32–100px            | Wide.vue     |
-| BEM 前缀                       | `vv`（`$BEM_PREFIX`）       | CLAUDE.md §3 |
+**Character:** 无自定义字体——四栖全部使用系统栈，工程上是零依赖可预期，视觉上是"透明"的：字号阶梯与字重承担全部层级职责。字重档位 400 / 500 / 600 / 700（`--font-weight-*`），行高 1.25 / 1.5 / 1.75（tight / base / relaxed）。
 
-## 5. 与一致性校验的关系
+### 字号阶梯（按栖，设计稿 px）
+
+| 栖              | 层级          | 规格                                     | 规则来源                                             |
+| --------------- | ------------- | ---------------------------------------- | ---------------------------------------------------- |
+| big 1920 稿     | 页标题        | 34px（极细字重 300，字距 8px，光晕阴影） | big-demo（异星森林视觉）                             |
+| big 1920 稿     | KPI 数值      | 38px / 焦点株 44px 粗体等宽数字          | KpiCard（异星森林视觉）                              |
+| big 1920 稿     | 面板标题      | 17px 字距 2px                            | PanelBox（异星森林视觉）                             |
+| big 1920 稿     | 正文 / 辅助   | 12–15px                                  | big-demo、StateDemo（辅助 12–13px 为 mono 编码惯例） |
+| big 9000 拼接稿 | 页标题 / 正文 | 56px / 22–30px                           | **×1.5~1.8 系数**（观看距离 5–15 米，docs/35 §3-8）  |
+| h5 828 稿       | 正文          | **≥28px**                                | docs/34 §3.1（320 屏可读性推导）                     |
+| h5 828 稿       | 辅助说明      | **≥24px**；20px 仅为边界示范，生产禁用   | docs/34 §3.1 注记                                    |
+| default/portal  | 全层级        | Element Plus 默认字号体系                | 不自定义                                             |
+| auth 登录标签   | 批次号        | 56px 超粗等宽（极端字重对比层级）        | login.scss（运输标签视觉）                           |
+| auth 登录标签   | 标题          | 28px 字距 4px                            | login.scss（运输标签视觉）                           |
+| auth 登录标签   | 字段名 / 编码 | 11–13px 等宽 mono（印刷编码惯例）        | login.scss（运输标签视觉）                           |
+| auth 登录标签   | 检验章按钮    | 16px 字距 4px                            | login.scss（运输标签视觉）                           |
+
+## Layout
+
+间距骨架四栖共用：`--spacing-xs/sm/md/lg/xl` = 4 / 8 / 16 / 24 / 32px（步进 4）；圆角见 Shapes。
+
+| 场景                           | 值                                                                                         | 实证                 |
+| ------------------------------ | ------------------------------------------------------------------------------------------ | -------------------- |
+| big 1920 稿：页边距 / 面板间距 | 30px / 20px（列 gap 16–30）                                                                | big-demo             |
+| big 9000 稿：页边距 / 面板间距 | 100px / 32–100px                                                                           | Wide.vue             |
+| 中后台布局尺寸                 | 顶栏 60px（`--header-height`）/ 侧栏 220px、收起 64px（`--sidebar-width/collapsed-width`） | `variables.scss`     |
+| 门户布局                       | sticky 顶栏 64px（`--portal-header-h`）/ 内容区最大 1200px（`--portal-max-width`）         | `portal-tokens.scss` |
+
+端级布局行为：big 用 scale 适配（1920 设计稿等比缩放，9000 拼接稿另设 ×1.5~1.8 系数，docs/35）；h5 用 rem 适配（828 设计稿 + postcss-pxtorem，docs/34）；窄容器场景降级用 CSS container query 而非 EP 栅格（视口宽容器窄时栅格断点失效）。
+
+## Elevation & Depth
+
+**状态响应式**：表面静息时扁平，阴影只在状态响应时出现——hover 提升、弹层降临、焦点聚焦；常驻结构性阴影不用。唯一例外是四栖中的 big：深蓝科技风不用阴影表达深度，改用色调分层（`big-abyss` 填充 < `big-night` 面板 < 描边）+ 蓝色 glow（`--big-blue-*-rgb` 三档透明度光晕，叠在边框与高亮数值下）。
+
+### Shadow Vocabulary（中后台 / 门户 / docs / auth，EP 系）
+
+- **ambient-sm**（`--shadow-sm` = `0 1px 2px rgba(0,0,0,0.06)`）：极浅卡片悬停、下拉容器。
+- **ambient-md**（`--shadow-md` = `0 2px 8px rgba(0,0,0,0.1)`）：弹层、浮起卡片的状态响应。
+- **ambient-lg**（`--shadow-lg` = `0 4px 16px rgba(0,0,0,0.15)`）：Dialog / 抽屉等模态容器。
+
+**The 状态响应 Rule.** 静息表面零阴影；阴影是状态的回声，不是结构的拐杖。深度信息优先用色调分层（`--bg-base/secondary/tertiary` 三级纸面）传达。
+
+## Shapes
+
+- **圆角档位**：`--radius-sm/md/lg` = 4 / 8 / 12px。EP 组件默认 4px（按钮 / 输入），卡片 8px，浮层 12px——档位少而语义固定，禁止自创中间值。
+- **BEM 命名空间**：前缀 `vv`（`$BEM_PREFIX`），所有组件 class 经 `createNamespace` 拼装，与 sass 根选择器 `.-{$BEM_PREFIX}-<kebab>` 严格对齐（CLAUDE.md §3）。
+- **样式块纪律**：`<style lang="scss">` 禁止 scoped（BEM 隔离已足够，scoped 会阻断 `:deep()` 编译）；穿透第三方组件直接写后代选择器。
+
+## Components
+
+**性格一句话：精确克制的企业级默认**——Element Plus 的秩序感做底，自有封装（`@vv/ui`）在其上长出工程签名：配置化、高密度、可扫描。中后台 / docs / auth / portal 四端的按钮、输入、弹窗、表格全部消费 EP 组件，视觉差异由 `element-overwrite/`（按组件拆分的 SCSS，用 `color.mix` 计算品牌色灯阶 light-3/5/7/8/9）与 `ui-overwrite.scss`（端级覆盖）落地，不fork 组件。
+
+### Buttons
+
+- **Shape**: 4px 圆角（`--radius-sm`），高度 32px（EP 默认），padding 8px 15px。
+- **Primary**: 品牌主色实心（`--color-primary`），hover 走 EP 灯色阶变亮（`--el-color-primary-light-3`），active 变深。
+- **Secondary / Ghost**: EP 默认按钮（白底灰框），文字按钮无框；危险操作用 `danger` 语义色。
+
+### Inputs / Fields
+
+- **Style**: EP 默认——白底、`--border-base` 描边、4px 圆角、高度 32px；focus 边框转主色 + 外发光（EP `--el-input-focus-border-color`）。
+- **Error / Disabled**: 错误态 `--color-danger` 描边 + 下方红字；禁用态灰阶纸面。
+
+### Cards / Containers
+
+- **Corner Style**: 8px（`--radius-md`）。**Background**: `var(--bg-base)` 纸面（深色主题自动切深）。**Shadow Strategy**: 静息零阴影，hover 才升 ambient-sm。**Border**: 1px `var(--border-light)`（卡片与容器优先用边框而非阴影分层）。
+
+### Navigation
+
+- **中后台**: 侧栏 220px / 收起 64px，深色纸面 + `vv-` BEM 命名；顶栏 60px 白底；多页签(tags-view)刻意不持久化。
+- **门户**: sticky 顶栏 64px，白纸底 + `--portal-ink` 文字，锚点滚动导航，内容区居中 1200px。
+- **大屏**: 无导航组件，页标题 36px 渐变字 + 面包屑式说明（big-demo）。
+
+### Signature Components（@vv/ui）
+
+- **ProTable**: 表格双引擎（EP / vxe-table 可切），搜索区 + 工具栏 + 列设置一体；全屏态走 `--z-index-fullscreen`（1500）。
+- **XForm / form-schema**: 配置化表单引擎（schema 驱动渲染），ProDialogForm 弹窗表单组合。
+- **BaseChart**: ECharts 容器 + 主题 / 自适应，统一图表签名。
+- **NetworkBanner**: 常驻网络横幅，`--z-index-banner`（1999）——刻意贴 EP ElMessage（2000+）之下，瞬时错误优先于常驻横幅。
+- **AsyncState**: 异步三态（Loading / Error / Empty）渲染包装，全局三态纪律的组件化身。
+
+## Do's and Don'ts
+
+### Do:
+
+- **Do** 新增自有色值 / 字号 / 间距常量时**先登记本文再使用**（维护规则，CI 语义一致性基准）。
+- **Do** 用主题感知变量写组件（`var(--bg-base)` / `var(--text-primary)`），让明暗双主题零成本跟随（docs/06 场景 1）。
+- **Do** 中后台语境的语义色优先用 EP token（`--el-color-success/warning`），大屏语境复用 `big-data-blue`。
+- **Do** 深度优先用三级纸面分层（`--bg-base/secondary/tertiary`），阴影留给状态。
+
+### Don't:
+
+- **Don't** 在样式里写 `!important`（项目约束 #8，仅用户主动要求时例外）——用选择器特异性 / BEM 命名空间 / 源码顺序解决。
+- **Don't** 在非 scoped 样式里写 `:deep()` / `::v-deep`（不会被编译，规则直接丢弃）——穿透第三方组件直接写后代选择器。
+- **Don't** 混用离线黄与错误红（The 离线非失败 Rule）；不要把 EP 语义色带进大屏语境。
+- **Don't** 给大屏 1920 稿正文用 <14px、给 h5 生产环境用 20px 正文（h5 正文 ≥28px / 辅助 ≥24px，20px 仅边界示范）。
+- **Don't** 硬编码 `#fff` / `#000`（docs/06 评审 checklist）——用 `var(--bg-base)` / 纸面 token。
+- **Don't** 显式 import 自动注册目录下的全局组件（`@vv/ui` 三目录 + app `src/components/`）——模板直接用，import 会丢 IDE 类型展开。
+
+## 与一致性校验的关系
 
 - **硬数据**（字段数 / props 表 / 文件行数）→ `pnpm check:doc-currency`（CI 阻断）
-- **语义级**（本文 token 与代码实际值）→ 人工抽查；抽查清单以本文第 1–4 节为基准，发现漂移先改代码或本文，再同步对方
+- **语义级**（本文 token 与代码实际值）→ 人工抽查；抽查清单以本文 Colors / Typography / Layout / Elevation / Shapes 各表为基准，发现漂移先改代码或本文，再同步对方
 
-## 6. 修订记录
+## 修订记录
 
-| 日期       | 变更                                                                                   |
-| ---------- | -------------------------------------------------------------------------------------- |
-| 2026-10-15 | 初版（/autoplan TODOS #4）：big/h5 色板 + 状态色 + 字号阶梯 + 间距，全部取自代码实证值 |
+| 日期       | 变更                                                                                                                                                                                                                                                                                                                                                                                             |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-11-03 | admin 暗色主题莫兰迪化（用户选定色卡 A 方向）：default-tokens.scss 两个 dark mixin 由 slate 蓝黑切换为雾霾蓝系（主色 `#8fa6bc` / 页面底 `#12161a` / 卡片 `#1a1f26` / 文字 `#e8edf1→#8a97a5` 三级 / 边框 `#333d47→#232a32` 三级）；「中后台 default」节由"不定义自有色板"修正为暗色自有雾霾蓝 token 表（frontmatter 同步增补 12 项镜像）；亮色紫主题、全局 `--bg-base` 灰阶、其他端暗色均不受影响 |
+| 2026-11-03 | 样式分层规则符合度修复（审计报告 `.claude/agent-reports/2026-11-03-样式分层规则符合度审计.md`）：big 增补 19 token（面板/遮罩/标题渐变/奖牌/排名/状态）、h5 增补 3 token 并配暗色、portal 暗色反转接线（拆分独立小节，修正「不定义自有色板」漂移）、全局滚动条 token 化、Wide.vue 中文类名 `&--高/中/低` 改 `--high/mid/low` 映射                                                                |
+| 2026-11-02 | 合并 impeccable DESIGN.md 规范格式：新增 YAML frontmatter（机器可读 token）+ Overview（北极星「一套骨架，四种舱位」）+ Layout / Elevation & Depth / Shapes / Components / Do's and Don'ts 章节；既有四栖 token 表全量保留，状态色并入 Colors 子节；深度哲学定为状态响应式                                                                                                                        |
+| 2026-10-15 | 初版（/autoplan TODOS #4）：big/h5 色板 + 状态色 + 字号阶梯 + 间距，全部取自代码实证值                                                                                                                                                                                                                                                                                                           |

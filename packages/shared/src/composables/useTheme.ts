@@ -7,10 +7,12 @@
  * - **三态模式**：`mode` 取值 `'light'` / `'dark'` / `'auto'`；`auto` 模式下 `isDark` 跟随系统
  *   `prefers-color-scheme`（由 useThemeStore 通过 `matchMedia` 监听），业务方只需读 `isDark` 即可，
  *   无须关心当前是手动还是自动
- * - **副作用链**：`setMode` / `toggleMode` 写入 store 后触发 3 类联动：
- *   1. `document.documentElement.classList` 加/去 `dark` 类（element-plus dark 主题识别标志）
- *   2. CSS 变量 `--el-color-primary` 等根据 `VITE_BRAND_COLOR` 重算（浅色/深色阶联动，详见 docs/06）
- *   3. localStorage 持久化（`pinia-plugin-persistedstate` 的 `pick: ['mode', 'primaryColor']`）
+ * - **副作用链**：`setMode` / `toggleMode` 写入 store 后触发 2 类联动：
+ *   1. `document.documentElement` 双轨应用：`data-theme` 属性（themes/ 业务变量轨道）
+ *      + `classList` 加/去 `dark` 类（element-plus dark/css-vars 组件暗色轨道）
+ *   2. localStorage 持久化（`pinia-plugin-persistedstate`，`pick: ['mode']`）
+ * - **品牌色**：`--color-primary` / `--el-color-primary` 由 `injectBrandColor`
+ *   在应用启动时按 `VITE_BRAND_COLOR` 一次性注入（详见 docs/06），不随主题模式切换重算
  * - **与 BEM 前缀无关**：`mode` 切换不影响 `vv-*` 前缀（`VITE_BEM_PREFIX` 独立于主题）
  *
  * @example

@@ -15,6 +15,6 @@ export default defineConfig({
   // setTimeout 递归（页面白屏）——与 portal 排除 home 模块同因。
   exclude: [/src\/modules\/auth\/.*/],
   // 复合工具类（.vv-flex-* / .vv-ellipsis-* / .vv-clearfix 等）统一在
-  // @vv/ui 的 assets/styles/custom.scss 中定义（见 docs/05-BEM样式规范.md）。
+  // @vv/ui 的 src/styles/utilities/custom.scss 中定义（见 docs/05-BEM样式规范.md）。
   // 此处不定义 BEM 命名空间的快捷类，避免与项目样式规范冲突。
 })
