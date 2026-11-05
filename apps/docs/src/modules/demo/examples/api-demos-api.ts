@@ -1,5 +1,5 @@
 /**
- * 网络基建 API demo 的 ApiTable 数据源（三个页面共享，按主题拆分对齐 XForm configs 惯例）。
+ * 网络基建 API demo 的 ApiTable 数据源（四个页面共享，按主题拆分对齐 XForm configs 惯例）。
  * 纯数据导出，与 apps/docs/src/modules/demo/examples/*.vue 同级 import。
  */
 
@@ -105,5 +105,61 @@ export const mergeApiItems = [
     name: '调用方 signal',
     type: 'AbortSignal',
     description: '经 linkAbort 与本地控制器两路链接：任一中止都会中断底层请求',
+  },
+]
+
+/** ApiUpload.vue —— 分片上传引擎（uploader/chunk/progress） */
+export const uploadApiItems = [
+  {
+    name: 'createUploader(config)',
+    type: '(UploaderConfig) => Uploader',
+    description:
+      '上传编排引擎：hashing→checking→uploading→merging→done 状态机，组合 runConcurrent + withRetry',
+  },
+  {
+    name: 'config.adapter',
+    type: 'UploadAdapter',
+    description:
+      '后端适配器契约：init / uploadPart / complete / abort 四方法，业务页面不感知后端细节',
+  },
+  {
+    name: 'config.chunkSize / concurrency / partRetry',
+    type: 'number',
+    default: '1MB / 3 / 2',
+    description: '分片字节数（非法值归一 1MB）/ 并发分片数 / 单分片失败重试次数',
+  },
+  {
+    name: 'config.hashFile',
+    type: 'FileHasher',
+    description:
+      '可注入哈希器：引擎自带 createWorkerHasher()（hash-wasm 增量 Worker，大文件推荐）；默认主线程 WebCrypto 兜底',
+  },
+  {
+    name: 'uploader.upload(file)',
+    type: '(File) => Promise<CompleteUploadResult>',
+    description:
+      '启动/恢复上传：paused / error 后重入安全（init 按 fileHash 幂等，已收分片自动跳过）；运行期间重入抛错',
+  },
+  {
+    name: 'uploader.pause() / cancel()',
+    type: '() => void / () => Promise<void>',
+    description:
+      '暂停：AbortController 中止在途请求，服务端分片保留可续传；取消：中止 + adapter.abort 清理服务端',
+  },
+  {
+    name: 'uploader.subscribe(listener)',
+    type: '(UploaderSnapshot) => () => void',
+    description:
+      '快照订阅：state / progress（按已传输字节）/ doneParts / runningParts / failedParts / error',
+  },
+  {
+    name: 'planChunks(fileSize, chunkSize)',
+    type: '(number, number) => ChunkPlan[]',
+    description: '分片规划纯函数：partNumber 从 0 开始，末片允许不足 chunkSize',
+  },
+  {
+    name: 'UploadProgressTracker',
+    type: 'class',
+    description: '字节级进度：进行中分片实时已传计入分子，覆盖式更新天然支持重试清零',
   },
 ]
