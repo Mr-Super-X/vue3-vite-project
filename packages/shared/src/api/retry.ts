@@ -38,6 +38,9 @@ function defaultShouldRetry(err: unknown): boolean {
   if (isApiError(err) && err.status !== undefined) {
     return err.status >= 500
   }
+  // 业务码形态（mockjs 劫持等恒 HTTP 200、status undefined 的场景）：4xx 是确定性
+  // 失败（参数错/冲突/未齐全），与 HTTP 形态的 4xx 不重试对齐；5xx 业务码仍可重试
+  if (isApiError(err) && err.code >= 400 && err.code < 500) return false
   // 非 ApiError 视为网络/超时/序列化错误，允许重试
   return true
 }

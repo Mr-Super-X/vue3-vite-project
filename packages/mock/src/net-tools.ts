@@ -1,6 +1,6 @@
 import type { MockMethod } from 'vite-plugin-mock'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { readBody } from './_utils'
+import { readBody, respondAfter } from './_utils'
 
 /**
  * 网络基建演示 mock（apps/docs 的 ApiConcurrent / ApiRetry / ApiMerge 三个 demo 消费）。
@@ -16,10 +16,8 @@ import { readBody } from './_utils'
  * dev 加载走 viteMockServe 目录扫描（同 dict.ts，不进 src/index.ts 聚合——
  * check-mock-wiring 只比对 index.ts 的 import 清单，本文件不参与）。
  *
- * rawResponse 两个必须遵守的约束（stream.ts 头注同因）：
- * 1. 定时器跑在 await 的 Promise 内部，res.end() 后才 resolve——「调度后提前 return」
- *    会触发 vite SPA fallback 404。
- * 2. 客户端断连必须监听 req 'close' 清定时器 + 补 res.end()——否则 Promise 永不 settle。
+ * rawResponse 两个必须遵守的约束见 _utils.ts 的 respondAfter 头注（挂起式延迟 + 断连清理），
+ * 本文件与 stream.ts 的 rawResponse 调用方共用。
  */
 
 /** 分片上传随机延迟区间（ms）——模拟真实网络抖动，Network 瀑布可见 */
@@ -34,35 +32,6 @@ const retryCounters = new Map<string, number>()
 
 /** merge 真实请求计数器（demo 带 reset=1 归零重开一轮） */
 let mergeRequestCount = 0
-
-/**
- * 挂起式延迟响应：定时器在 await 的 Promise 内触发，res.end 后 resolve；
- * 客户端断连（取消/关页面）时补 end 并清定时器，防中间件挂起与定时器泄漏。
- */
-function respondAfter(
-  req: IncomingMessage,
-  res: ServerResponse,
-  ms: number,
-  status: number,
-  payload: unknown
-): Promise<void> {
-  return new Promise<void>((resolve) => {
-    let settled = false
-    const finish = (code: number, body: unknown): void => {
-      if (settled) return
-      settled = true
-      clearTimeout(timer)
-      if (!res.writableEnded) {
-        res.statusCode = code
-        res.setHeader('Content-Type', 'application/json; charset=utf-8')
-        res.end(JSON.stringify(body))
-      }
-      resolve()
-    }
-    const timer = setTimeout(() => finish(status, payload), ms)
-    req.on('close', () => finish(200, { code: 200, message: 'client closed', data: null }))
-  })
-}
 
 function parseQuery(req: IncomingMessage): URLSearchParams {
   return new URLSearchParams((req.url ?? '').split('?')[1] ?? '')

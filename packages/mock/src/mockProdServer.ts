@@ -132,11 +132,187 @@ const prodNetToolsMocks: MockMethod[] = [
   },
 ]
 
+/**
+ * prod 版分片上传 mock——状态机与 dev 版（upload.ts）手工对齐（同 net-tools 先例），
+ * 差异仅在 mockjs XHR 劫持的能力边界：
+ * - PUT 二进制 body 被字符串化为 "[object Blob]"，字节级大小/内容幂等校验豁免，
+ *   ETag 退化为 `etag-{partNumber}` 固定派生，幂等语义靠 parts 集合天然去重保留
+ * - 无合并延迟（mockjs timeout 恒 0），merging 状态一闪而过
+ * 动态路由 dev/prod 同用 path-to-regexp 编译（client.mjs 实证），可匹配；
+ * client wrapper 不传 params，路径段从 options.url 自行解析。
+ */
+interface ProdUploadSession {
+  fileHash: string
+  fileName: string
+  fileSize: number
+  chunkSize: number
+  totalChunks: number
+  parts: Set<number>
+  createdAt: number
+  status: 'active' | 'completed'
+  fileUrl: string | null
+}
+
+const prodUploadSessions = new Map<string, ProdUploadSession>()
+let prodUploadSeq = 0
+
+/** prod 版 GC：与 dev 版（upload.ts gcSessions）同口径——30min 过期 + 64 上限清最旧 */
+function gcProdUploadSessions(): void {
+  const now = Date.now()
+  prodUploadSessions.forEach((session, id) => {
+    if (session.createdAt + 30 * 60 * 1000 < now) prodUploadSessions.delete(id)
+  })
+  while (prodUploadSessions.size >= 64) {
+    const oldest = [...prodUploadSessions.entries()].sort(
+      (a, b) => a[1].createdAt - b[1].createdAt
+    )[0]
+    if (!oldest) break
+    prodUploadSessions.delete(oldest[0])
+  }
+}
+
+function parseProdUploadUrl(
+  url: string
+): { uploadId: string; partNumber?: number; complete?: boolean } | null {
+  const path = url.split('?')[0] ?? ''
+  const matched = path.match(/^\/mock\/demo-upload\/uploads\/([^/]+)(?:\/(parts\/\d+|complete))?$/)
+  if (!matched) return null
+  const uploadId = matched[1]!
+  const suffix = matched[2]
+  if (suffix === undefined) return { uploadId }
+  if (suffix === 'complete') return { uploadId, complete: true }
+  return { uploadId, partNumber: Number(suffix.slice('parts/'.length)) }
+}
+
+const prodUploadMocks: MockMethod[] = [
+  {
+    url: '/mock/demo-upload/uploads/init',
+    method: 'post',
+    response: ({ body }: { body: Record<string, unknown> }) => {
+      const fileName = typeof body.fileName === 'string' ? body.fileName : ''
+      const fileHash = typeof body.fileHash === 'string' ? body.fileHash : ''
+      const fileSize = Number(body.fileSize)
+      const chunkSize = Number(body.chunkSize)
+      const totalChunks = Number(body.totalChunks)
+      if (!fileName || !fileHash)
+        return { code: 400, message: 'fileName / fileHash 不能为空', data: null }
+      if (!Number.isFinite(fileSize) || fileSize <= 0)
+        return { code: 400, message: 'fileSize 必须为正数', data: null }
+      if (!Number.isFinite(chunkSize) || chunkSize <= 0)
+        return { code: 400, message: 'chunkSize 必须为正数', data: null }
+      const expectedChunks = Math.ceil(fileSize / chunkSize)
+      if (!Number.isInteger(totalChunks) || totalChunks !== expectedChunks) {
+        return {
+          code: 400,
+          message: `totalChunks 与实际分片数(${expectedChunks})不一致`,
+          data: null,
+        }
+      }
+      // fileHash 幂等复用（断点续传）
+      for (const [id, session] of prodUploadSessions) {
+        if (session.fileHash !== fileHash || session.status !== 'active') continue
+        const sameMeta =
+          session.fileSize === fileSize &&
+          session.chunkSize === chunkSize &&
+          session.totalChunks === totalChunks
+        if (!sameMeta) return { code: 409, message: '同文件哈希但元数据不一致', data: null }
+        return {
+          code: 200,
+          message: 'ok（复用会话，断点续传）',
+          data: {
+            uploadId: id,
+            uploadedParts: [...session.parts]
+              .sort((a, b) => a - b)
+              .map((partNumber) => ({ partNumber, etag: `etag-${partNumber}` })),
+          },
+        }
+      }
+      prodUploadSeq += 1
+      const uploadId = `up-${prodUploadSeq}`
+      gcProdUploadSessions()
+      prodUploadSessions.set(uploadId, {
+        fileHash,
+        fileName,
+        fileSize,
+        chunkSize,
+        totalChunks,
+        parts: new Set(),
+        createdAt: Date.now(),
+        status: 'active',
+        fileUrl: null,
+      })
+      return { code: 200, message: 'ok', data: { uploadId, uploadedParts: [] } }
+    },
+  },
+  {
+    url: '/mock/demo-upload/uploads/:uploadId/parts/:partNumber',
+    method: 'put',
+    response: ({ url }: { url: string }) => {
+      const parsed = parseProdUploadUrl(url)
+      if (!parsed || parsed.partNumber === undefined)
+        return { code: 400, message: 'URL 非法', data: null }
+      const session = prodUploadSessions.get(parsed.uploadId)
+      if (!session || session.status !== 'active') {
+        return { code: 404, message: `上传任务 ${parsed.uploadId} 不存在或已合并`, data: null }
+      }
+      const { partNumber } = parsed
+      if (!Number.isInteger(partNumber) || partNumber < 0 || partNumber >= session.totalChunks) {
+        return { code: 400, message: `分片编号越界：${partNumber}`, data: null }
+      }
+      // 字节级校验 prod 豁免（mockjs 承载不了二进制 body）；集合 add 天然幂等
+      session.parts.add(partNumber)
+      return { code: 200, message: 'ok', data: { partNumber, etag: `etag-${partNumber}` } }
+    },
+  },
+  {
+    url: '/mock/demo-upload/uploads/:uploadId/complete',
+    method: 'post',
+    response: ({ url }: { url: string }) => {
+      const parsed = parseProdUploadUrl(url)
+      if (!parsed?.complete) return { code: 400, message: 'URL 非法', data: null }
+      const session = prodUploadSessions.get(parsed.uploadId)
+      if (!session) return { code: 404, message: `上传任务 ${parsed.uploadId} 不存在`, data: null }
+      if (session.status === 'completed') {
+        return {
+          code: 200,
+          message: 'ok（已完成，幂等返回）',
+          data: { fileUrl: session.fileUrl, fileId: parsed.uploadId, size: session.fileSize },
+        }
+      }
+      const missing: number[] = []
+      for (let n = 0; n < session.totalChunks; n += 1) {
+        if (!session.parts.has(n)) missing.push(n)
+      }
+      if (missing.length > 0) {
+        return { code: 409, message: `分片未齐全，缺失 #${missing.join(', #')}`, data: { missing } }
+      }
+      session.status = 'completed'
+      session.fileUrl = `/mock/demo-upload/files/${parsed.uploadId}/${encodeURIComponent(session.fileName)}`
+      return {
+        code: 200,
+        message: 'ok',
+        data: { fileUrl: session.fileUrl, fileId: parsed.uploadId, size: session.fileSize },
+      }
+    },
+  },
+  {
+    url: '/mock/demo-upload/uploads/:uploadId',
+    method: 'delete',
+    response: ({ url }: { url: string }) => {
+      const parsed = parseProdUploadUrl(url)
+      if (!parsed) return { code: 400, message: 'URL 非法', data: null }
+      prodUploadSessions.delete(parsed.uploadId)
+      return { code: 200, message: 'ok', data: null }
+    },
+  },
+]
+
 /** 全量 mock 路由清单（data 直引模块 + prod 版 auth/dict 内联 + 网络基建演示内联） */
 const mockModules: MockMethod[] = [
   ...prodAuthMocks,
   ...prodDictMocks,
   ...prodNetToolsMocks,
+  ...prodUploadMocks,
   ...menu,
   ...user,
 ]
