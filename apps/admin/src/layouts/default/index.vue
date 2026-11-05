@@ -280,6 +280,12 @@ onUnmounted(clearLayoutScope)
 
     &.is-collapsed {
       width: var(--left-menu-min-width);
+
+      // 收起态标题隐藏，logo 水平居中（与 dual rail 同款处理）
+      .#{$BEM_PREFIX}-app-logo {
+        justify-content: center;
+        padding: 0;
+      }
     }
   }
 

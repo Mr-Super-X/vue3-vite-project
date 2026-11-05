@@ -47,14 +47,16 @@ src/modules/demo/
 │   └── useDemoSearch.ts # sidebar 搜索
 ├── config/
 │   └── sidebar-groups.ts  # 分组 + 中文名映射（新增 demo 必改）
-├── examples/            # demo 页面入口（自动注册路由）；当前 40 个：38 个 XForm demo + AsyncState + ErrorBoundary
+├── examples/            # demo 页面入口（自动注册路由）；数量与清单以目录实际为准
+│   │                    # （XForm 系列占多数，另有 AsyncState / ErrorBoundary / Dict /
+│   │                    # IconUsage / RichTextEditor / StreamRequest / 网络基建 Api* 等）
 │   ├── AsyncState.vue
 │   ├── ErrorBoundary.vue
-│   ├── XForm/             # XForm 38 个 demo 的集中目录（含 configs/ + utils/）
+│   ├── XForm/             # XForm 系列 demo 的集中目录（含 configs/ + utils/）
 │   │   ├── XFormOverview.vue
 │   │   ├── XFormBase.vue
 │   │   ├── XFormArray.vue
-│   │   └── ...（共 38 个 XForm*.vue）
+│   │   └── ...（其余 XForm*.vue，数量以目录实际为准）
 │   │   ├── configs/       # 纯数据 .ts（API 表格条目、字典、schema、代码片段）— 见 §三、1.1
 │   │   └── utils/         # 工具函数 .ts（如 mock 异步接口）— 见 §三、1.1
 ├── layouts/

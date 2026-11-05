@@ -67,11 +67,29 @@ describe('withRetry', () => {
     await expect(withRetry(fn500, { retries: 2, baseDelay: 1 })).resolves.toBe('recovered')
     expect(fn500).toHaveBeenCalledTimes(2)
 
+    // 4xx 必须带 status：无 status 的 ApiError 走「业务码默认可重试」分支（见下一条用例）
     const fn400 = vi
       .fn()
       .mockRejectedValue(new ApiError({ code: 400, message: 'bad', status: 400 }))
     await expect(withRetry(fn400, { retries: 2, baseDelay: 1 })).rejects.toBeInstanceOf(ApiError)
     expect(fn400).toHaveBeenCalledTimes(1)
+  })
+
+  it('无 status 的业务码 ApiError 默认可重试（行为锁定）', async () => {
+    const fn = vi
+      .fn()
+      .mockRejectedValueOnce(new ApiError({ code: -1, message: 'biz-fail' }))
+      .mockResolvedValueOnce('ok')
+    await expect(withRetry(fn, { retries: 2, baseDelay: 1 })).resolves.toBe('ok')
+    expect(fn).toHaveBeenCalledTimes(2)
+  })
+
+  it('取消标记（canceled）的 ApiError 不重试：注销/卸载流程不被退避延迟', async () => {
+    const fn = vi
+      .fn()
+      .mockRejectedValue(new ApiError({ code: -1, message: 'canceled', canceled: true }))
+    await expect(withRetry(fn, { retries: 5, baseDelay: 1 })).rejects.toBeInstanceOf(ApiError)
+    expect(fn).toHaveBeenCalledTimes(1)
   })
 
   it('指数退避：delay = baseDelay * backoff^attempt', async () => {

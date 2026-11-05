@@ -9,7 +9,9 @@
  * 常规生产构建（'false'）整分支被 tree-shake，产物不含 mock。
  *
  * 模块清单说明：2 个 data 直引模块（menu/user）+ 2 个内联 prod 版
- * （prodAuthMocks / prodDictMocks——字典静态展开，client wrapper 不支持路径参数）。
+ * （prodAuthMocks / prodDictMocks——字典静态展开，client wrapper 不支持路径参数）
+ * + 1 个内联 prod 版网络基建演示（prodNetToolsMocks——response 函数形态；
+ * dev 版 net-tools.ts 走 rawResponse 延迟，client 侧不支持，两处逻辑手工对齐）。
  * src/index.ts 只聚合 auth/user/menu（dev 模式 viteMockServe 按目录扫描不受此限）。
  * pro-table/ 下 11 个文件是具名导出 xxxRequestApi（ProTableRequestApi 组件直连数据源，
  * 无 XHR 依赖），无需接线。
@@ -87,8 +89,57 @@ const prodDictMocks: MockMethod[] = Object.entries(DICT_DATA).map(([code, list])
   response: () => ({ code: 200, message: 'ok', data: list }),
 }))
 
-/** 全量 mock 路由清单（data 直引模块 + prod 版 auth/dict 内联） */
-const mockModules: MockMethod[] = [...prodAuthMocks, ...prodDictMocks, ...menu, ...user]
+/**
+ * prod 版网络基建演示 mock（response 函数形态）——client wrapper 不支持 rawResponse，
+ * 延迟无法模拟（Network 瀑布在 gh-pages 挤在一起）；计数/失败状态机逻辑与 dev 版
+ * （net-tools.ts）等价，两处手工对齐（同 auth 先例）。接口形态：失败走业务码
+ * （mockjs 劫持恒 HTTP 200），demo 页 withRetry 按业务码判定重试。
+ */
+const prodRetryCounters = new Map<string, number>()
+let prodMergeCount = 0
+
+const prodNetToolsMocks: MockMethod[] = [
+  {
+    url: '/mock/demo-net/shard',
+    method: 'post',
+    response: ({ body }: { body: { index?: number; fail?: boolean } }) =>
+      body.fail === true
+        ? { code: 500, message: `shard ${body.index ?? -1} network error`, data: null }
+        : { code: 200, message: 'ok', data: { index: body.index ?? -1 } },
+  },
+  {
+    url: '/mock/demo-net/retry',
+    method: 'get',
+    response: ({ query }: { query: Record<string, string> }) => {
+      const failTimes = Number(query['failTimes'] ?? '0')
+      const failStatus = Number(query['status'] ?? '500')
+      const key = query['t'] ?? ''
+      const attempted = prodRetryCounters.get(key) ?? 0
+      prodRetryCounters.set(key, attempted + 1)
+      return attempted < failTimes
+        ? { code: failStatus, message: `attempt ${attempted + 1} failed`, data: null }
+        : { code: 200, message: 'ok', data: 'request-ok' }
+    },
+  },
+  {
+    url: '/mock/demo-net/merge',
+    method: 'get',
+    response: ({ query }: { query: Record<string, string> }) => {
+      if (query['reset'] === '1') prodMergeCount = 0
+      prodMergeCount += 1
+      return { code: 200, message: 'ok', data: { count: prodMergeCount } }
+    },
+  },
+]
+
+/** 全量 mock 路由清单（data 直引模块 + prod 版 auth/dict 内联 + 网络基建演示内联） */
+const mockModules: MockMethod[] = [
+  ...prodAuthMocks,
+  ...prodDictMocks,
+  ...prodNetToolsMocks,
+  ...menu,
+  ...user,
+]
 
 /**
  * 注册生产 mock（浏览器端 mockjs XHR 劫持）。

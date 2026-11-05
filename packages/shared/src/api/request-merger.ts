@@ -6,6 +6,10 @@
  * - 写操作（POST/PUT/PATCH/DELETE/OPTIONS）默认不合并，避免掩盖真实失败链路
  * - 调用方可显式传 `merge: 'never' | 'auto' | number` 覆盖窗口时长
  * - 窗口期内同 key 的请求共享 Promise，结果统一 resolve/reject
+ * - 窗口从「首个请求 settle」起算 windowMs；期间失败结果同样被共享（缓存失败而非仅去重），
+ *   调用方需要重试语义时应设 `merge: 'never'` 或缩短窗口
+ * - 负载归一化：Date 按时间戳参与 key；FormData/Blob/URLSearchParams 等不可枚举宿主对象
+ *   及循环引用无法安全归一化，该请求退化为不合并（错合并风险 > 漏合并损失）
  *
  * @example 三种接入方式（按使用场景选）
  *
@@ -45,6 +49,7 @@
  * @group 网络基建：请求合并
  */
 import type { AxiosRequestConfig } from 'axios'
+import { createAbort, linkAbort } from './cancel'
 
 const DEFAULT_MERGE_METHODS = new Set(['get', 'head'])
 const DEFAULT_WINDOW_MS = 50
@@ -64,20 +69,46 @@ export interface MergeableConfig extends AxiosRequestConfig {
 }
 
 /**
+ * 不可归一化负载标记：字段不可枚举或引用成环，继续合并有误合并风险，
+ * mergeKey 捕获后令该请求退化为不合并（见 withMerge）。
+ */
+class UnmergeablePayloadError extends Error {}
+
+/** 字段不可枚举、无法 JSON 安全表达的宿主对象（typeof 守卫：Node 侧无这些全局） */
+function isUnmergeableHostObject(value: object): boolean {
+  return (
+    (typeof FormData !== 'undefined' && value instanceof FormData) ||
+    (typeof Blob !== 'undefined' && value instanceof Blob) ||
+    (typeof URLSearchParams !== 'undefined' && value instanceof URLSearchParams)
+  )
+}
+
+/**
  * 构造请求的合并 key：method + url + params + data 序列化。
  * null/undefined 字段剔除，避免 { a: 1 } 与 { a: 1, b: undefined } 视为不同。
+ *
+ * 返回 null 表示本请求不参与合并（含不可归一化负载或循环引用）——
+ * Date 按时间戳归一化（不同时间不同 key）；FormData/Blob/URLSearchParams
+ * 等不可枚举宿主对象被显式拒绝（Object.keys 恒为 []，两个不同 FormData 会碰撞为同 key）。
  */
-export function mergeKey(config: MergeableConfig): string {
-  const method = (config.method ?? 'get').toLowerCase()
-  const url = config.url ?? ''
-  const params = config.params ? JSON.stringify(sortKeys(config.params)) : ''
-  const data = config.data ? JSON.stringify(sortKeys(config.data)) : ''
-  return `${method}|${url}|${params}|${data}`
+export function mergeKey(config: MergeableConfig): string | null {
+  try {
+    const method = (config.method ?? 'get').toLowerCase()
+    const url = config.url ?? ''
+    const params = config.params ? JSON.stringify(sortKeys(config.params)) : ''
+    const data = config.data ? JSON.stringify(sortKeys(config.data)) : ''
+    return `${method}|${url}|${params}|${data}`
+  } catch {
+    // 循环引用 JSON.stringify 抛 TypeError / 不可归一化宿主对象抛 UnmergeablePayloadError：不合并
+    return null
+  }
 }
 
 function sortKeys(value: unknown): unknown {
+  if (value instanceof Date) return value.getTime()
   if (Array.isArray(value)) return value.map(sortKeys)
   if (value && typeof value === 'object') {
+    if (isUnmergeableHostObject(value)) throw new UnmergeablePayloadError()
     return Object.keys(value as object)
       .sort()
       .reduce<Record<string, unknown>>((acc, k) => {
@@ -109,12 +140,8 @@ export function shouldMerge(config: MergeableConfig, options: MergeOptions = {})
   return Math.max(0, options.windowMs ?? DEFAULT_WINDOW_MS)
 }
 
-interface Bucket {
-  promise: Promise<unknown>
-  abort: AbortController
-}
-
-const buckets = new Map<string, Bucket>()
+/** 合并桶：key → 共享 Promise（模块加载期常驻，窗口过期由 finally 定时清理） */
+const buckets = new Map<string, Promise<unknown>>()
 
 /**
  * 包装一个请求函数，按窗口合并同参请求。
@@ -140,15 +167,23 @@ export function withMerge<T>(
     if (windowMs === 0) return fn(config)
 
     const key = mergeKey(config)
-    const existing = buckets.get(key)
-    if (existing) return existing.promise as Promise<T>
+    // 负载不可归一化（FormData/Blob/URLSearchParams/循环引用）：退化为不合并
+    if (key === null) return fn(config)
 
-    const controller = new AbortController()
-    const promise = fn({ ...config, signal: controller.signal }).finally(() => {
+    const existing = buckets.get(key)
+    if (existing) return existing as Promise<T>
+
+    const handle = createAbort()
+    // 两路 signal 链接：调用方自传的 signal 与本地控制器任一中止都会中断底层请求
+    // （修复前直接覆盖 config.signal，业务侧取消能力被静默丢弃）
+    // as 断言：axios 的 GenericAbortSignal 是兼容非 DOM fetch 的类型抽象，本仓库运行时
+    // 恒为浏览器/Node AbortController 产出的标准 AbortSignal
+    const linkedSignal = linkAbort(config.signal as AbortSignal | undefined, handle)
+    const promise = fn({ ...config, signal: linkedSignal }).finally(() => {
       // window 后清掉桶，让下一窗口重新发起
       setTimeout(() => buckets.delete(key), windowMs)
     })
-    buckets.set(key, { promise, abort: controller })
+    buckets.set(key, promise)
     return promise
   }
 }
