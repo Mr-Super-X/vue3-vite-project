@@ -6,6 +6,48 @@
 
 ## 未发布
 
+### ✨ Feat | h5-mall Tabbar 重构为 Trampoline Tabbar 凹槽抛球交互动画（2026-11-05）
+
+> 背景：按 `apps/h5/design/tabbar-animation-spec.md`（v2.0）将商城底部 tabbar 从静态
+> flex 列表重构为逐帧重建面板的抛球动画——点击 tab 时面板顶边如蹦床鼓起把球抛出，
+> 抛物线飞行落入目标凹槽、弹簧回弹、新图标浮入球心。spec 骨架为纯 vanilla JS，
+> 本次重写为 Vue 3 组件 + 纯函数引擎三层架构。
+
+- 新增 `composables/trampoline-geometry.ts`：凹槽剖面 dentAt（圆弧等隙包裹 + 三次
+  Hermite 过渡肩）、基础边 + 顶角融化、boxBlur（模糊只碰凹槽/鼓包分量，§5.3 圆角
+  保护）、每帧 path d 生成、球体变形（飞行拉伸/落地压扁）。
+- 新增 `composables/trampoline-engine.ts`：idle/ride/flight/dock 相位机 + 三弹簧
+  半隐式欧拉 + 抛物线末速度接力（§6.5 防落地顿挫）+ 图标浮入/浮出补间 +
+  instantSelect（reduced-motion 降级）。
+- 新增 `composables/useTrampolineTabbar.ts`（编排）+ `use-trampoline-loop.ts`
+  （rAF 启停，settled 自动停循环）+ `use-trampoline-fit.ts`（362 坐标系 scale 适配）。
+- 重写 `components/MallTabbar.vue`：v-model 受控（点击零延迟反馈 + watch 防回环）、
+  SVG sprite 图标粘球心、标签 pop（节点重建重放 keyframes，免 reflow hack）、
+  购物袋角标保留（用户裁决）、matchMedia reduced-motion 动态降级（用户裁决）。
+- 坐标系适配（关键坑）：动画几何锁定 spec 362×88 设计稿坐标，渲染层 JS scale 适配
+  容器宽——组件 `<style>` 禁写几何 px（postcss-pxtorem 会转 rem 与 JS scale 双重缩放），
+  全部几何尺寸 JS 内联；views/index.vue padding-bottom 212 → 307 稿 px。
+- 测试 +47（geometry/engine/loop/tabbar 四份 spec）：凹槽对称与间隙、顶角保护、
+  全相位流转、速度接力公式、追加抛掷、原地小跳、收敛归位、rAF 停循环、v-model 同步。
+- 浏览器实测修复 2 处：①球 transform 经 `:style` 数组字符串项绑定时被 Vue
+  parseStringStyle 错误解析（丢 transform），改为对象 `{ transform }` 绑定；
+  ②选中按钮 `z-index:30` 创建层叠上下文，内部图标 z=50 无法越过球（z=45）——
+  active 按钮整体提升至 50，球内图标可见（stacking context 陷阱）。
+- 闪动修复（连拍逐帧定位）：点击后面板 SVG 消失 1~3 帧——根因是面板 path 每帧
+  重建 + svg 常驻 `filter: drop-shadow()`，动画启动时 Chrome 反复创建/丢弃 filter
+  合成层；svg 加 `will-change: filter` 预建稳定合成层后消失不再出现（对照实验：
+  移除 filter 不消失 / 保留 filter 必现 / will-change 根治）。另给 buildPanelPath
+  加 NaN 防御（偶发非法帧沿用上一帧合法 path，含 NaN 的 d 会被 SVG 整元素丢弃，
+  回归测试锁定）。
+
+验证：h5 单测 63/63、type-check 零错误、ESLint 零告警；槽位映射已登记 DESIGN.md
+「H5 商城 h5-mall」节；playwright 真实浏览器逐帧断言初始落点/点击切换/追加抛/
+原地小跳四场景 + 三轮连拍确认点击后面板持续可见。
+
+手动验证步骤：① `pnpm -C apps/h5 dev` 打开 /h5-mall；② 点击「分类」观察球被抛入
+目标凹槽回弹、图标浮入球心；③ 飞行中快速连点「我的」验证追加抛掷；④ 点当前 tab
+验证原地小跳；⑤ 系统开启"减弱动态效果"后刷新，切换应瞬时完成无动画。
+
 ### 🔧 Fix | 分片上传二轮生产可用审查：READY_WITH_NITS 全项清零（2026-11-05）
 
 > 背景：第二轮独立 code-reviewer 按生产可用标准审查——前轮 7 项修复全部验证无回归；
