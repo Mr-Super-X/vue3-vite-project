@@ -43,6 +43,8 @@ const { visible: toastVisible, message: toastMessage, show } = useToast()
 const cartCount = ref(0)
 /** 已收藏商品 id 集合 */
 const favs = ref<number[]>([])
+/** Tabbar 选中 key（v-model 受控；切 tab 联动点见 MallTabbar emit 语义） */
+const activeTab = ref('home')
 
 function onAdd(): void {
   cartCount.value += 1
@@ -82,7 +84,7 @@ function onToggleFav(item: MallGoodsItem): void {
       />
     </main>
     <MallServeFooter class="rv" />
-    <MallTabbar :cart-count="cartCount" />
+    <MallTabbar v-model="activeTab" :cart-count="cartCount" />
     <MallToast :visible="toastVisible" :message="toastMessage" />
   </div>
 </template>
@@ -96,8 +98,9 @@ function onToggleFav(item: MallGoodsItem): void {
   min-height: 100vh;
   // 100dvh 渐进增强：规避 iOS Safari 地址栏收缩溢出（与 layouts/h5 同策略）
   min-height: 100dvh;
-  // 为 fixed tabbar 留出底部空间（源 96px @375 稿 × 2.208）
-  padding-bottom: 212px;
+  // 为 fixed tabbar 留出底部空间：容器高 TB_H(134)@362 稿 × (828/362) ≈ 307 稿 px；
+  // safe-area 由 tabbar 容器自身 padding 承担，此处不再叠加
+  padding-bottom: 307px;
   font-family: var(--mall-font-body);
   font-size: 34px;
   line-height: 1.7;
