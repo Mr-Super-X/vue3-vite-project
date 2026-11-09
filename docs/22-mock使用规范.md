@@ -270,9 +270,9 @@ mock 插件不在各 app `vite.config.ts` 手写——由 `packages/config/src/c
 ...(mockPath
   ? [
       viteMockServe({
-        mockPath,                                    // 缺省 = <appRoot>/../../packages/mock/src（@vv/mock 包源码）
-        enable: process.env.VITE_USE_MOCK !== 'false', // dev 默认开启（2026-07-27 切换）
-        watchFiles: true,                             // mock 文件变更热更新
+        mockPath,                          // 缺省 = <appRoot>/../../packages/mock/src（@vv/mock 包源码）
+        enable: env.mockEnabled,           // dev 默认开启；判定见 resolveBuildEnv（三层 merge 单源）
+        watchFiles: true,                  // mock 文件变更热更新
       }),
       cleanMockBundled(mockPath),                     // 清理 _*.bundled_*.mjs 临时文件（根治并行 dev 抢删竞态）
     ]
@@ -281,11 +281,11 @@ mock 插件不在各 app `vite.config.ts` 手写——由 `packages/config/src/c
 
 **注意**：
 
-- `enable: VITE_USE_MOCK !== 'false'` 保证 prod 打包不包含 mock（vite build 不读 `.env.development`，自然落入"关闭"分支）
+- `enable: env.mockEnabled`（判定 `VITE_USE_MOCK !== 'false'`）保证 prod 打包不包含 mock（vite build 不读 `.env.development`，自然落入"关闭"分支）
 - `watchFiles: true` 让 mock 修改实时生效（无需重启 dev server）
-- dev 默认开启：clone 后未建 `.env.development` 时 `VITE_USE_MOCK=undefined` → `!== 'false'` 判定为 true，mock 自动启用
+- dev 默认开启：未设 `VITE_USE_MOCK` 时 `!== 'false'` 判定为 true，mock 自动启用
 - `mockPath` 必须是绝对路径（vite-plugin-mock 以 isAbsPath 判定，cwd 相对解析会静默空转）——工厂缺省已指向 `packages/mock/src`，各 app 无需覆写
-- 联调真后端：经 **shell env** 设 `VITE_USE_MOCK=false` + `VITE_API_BASE_URL=<真实后端地址>`（如 `VITE_USE_MOCK=false pnpm -C apps/admin dev`）——dev 中间件开关读 `process.env`（config 装配期），`.env` 文件对该键**无效**（2026-10-28 口径修正）
+- 联调真后端：设 `VITE_USE_MOCK=false` 即可（baseURL 随之派生 `/api`；非标路径后端再显式 `VITE_API_BASE_URL=<地址>` 覆盖）。**`.env` 文件与 shell env 均生效**（2026-11-09 起工厂经 loadEnv 三层 merge 读取；此前「仅 shell env 有效」的口径已废弃）
 
 ---
 
@@ -395,7 +395,7 @@ export default [
 > **典型错误**：业务代码写 `request({ url: '/api/user/list' })` → 实际请求变成 `VITE_API_BASE_URL + /api/api/user/list`（`/api` 双拼，请求 404）。
 > 正确写法：`request({ url: '/user/list' })`。`baseURL` 已在 `packages/shared/src/api/http.ts` 统一配置。
 >
-> 关闭 mock 时设 `VITE_USE_MOCK=false` + `VITE_API_BASE_URL=<真实后端地址>`（详见 §"环境变量"段）。
+> 关闭 mock 时设 `VITE_USE_MOCK=false`，baseURL 自动派生 `/api`；非标路径后端再显式覆盖 `VITE_API_BASE_URL`（详见 §"环境变量"段）。
 
 ---
 

@@ -6,6 +6,46 @@
 
 ## 未发布
 
+### ♻️ Refactor | env 统一默认配置 + VITE_USE_MOCK 单开关派生 baseURL（2026-11-09）
+
+> 背景：6 app 的 `.env.development` 逐字重复 `VITE_API_BASE_URL=/mock`，跨 app 同构
+> 默认（BEM 前缀 / 缓存命名空间 / 历史模式 / 品牌色 / 菜单源 / auth origin）散落
+> 各 app 且与代码 fallback 双轨并存；`VITE_USE_MOCK` 与 `VITE_API_BASE_URL` 独立
+> 可变，可配出「中间件关但 baseURL 指 /mock」等矛盾态，错配漏配排查困难。
+
+- 新增仓库根 `.env`（跨 app 同构默认，一处维护）+ `.env.development`（mock 开关
+  统一说明），env 层级确立：shell env > app 私有 .env > 根共享默认 > 代码 fallback。
+- `packages/config` 工厂新增 `resolveBuildEnv`：loadEnv 双层 merge（loadEnv 自身
+  保证 shell 优先），mergedEnv 全量 define 注入（vite 原生 envDir 不读根文件，
+  不经 define client 侧拿不到根默认键）。
+- `VITE_API_BASE_URL` 改单开关派生：随 VITE_USE_MOCK + mode 自动得出（dev 开 →
+  `/mock`，关 → `/api`；prod `==='true'` → `/mock`，否则 `/api`）；shell env 显式
+  值仍为最高优先（非标路径后端逃生门）。6 份 app `.env.development` 全部退役删除。
+- `VITE_USE_MOCK` dev 中间件开关纳入 merge：`.env` 文件写 `false` 从此生效
+  （修正「只读 process.env、.env 无效」历史口径，消除 admin/.env.development
+  误导性注释）；三条消费链（dev 中间件 / prod mockjs / baseURL 派生）同源。
+- scss bem mixin 前缀改经工厂传参（`bemPrefix`），修复 TS 端走 .env / scss 端
+  只认 shell env 的双端分裂（.env 写自定义前缀时 class 名与 scss 选择器不一致）。
+- app 私有 .env 精简：portal/h5/big/docs 全私有键已上根默认（文件删除）；
+  admin/auth 只留 `VITE_APP_TITLE`；孤儿死注释（错位 API 路径注释等）清理。
+- 同步面：`env.d.ts` 两键注释、`build-pages.ts` / `build-prod.ts` 删冗余
+  `VITE_API_BASE_URL` 注入（派生接管，值不变）、README §环境变量表 + Mock 数据节、
+  docs/22 §7 代码示例与联调口径。
+
+验证：packages/config vue-tsc 零错误；场景矩阵复核（dev 默认 / dev 联调 /
+gh-pages / build-prod / 本地 build 五种形态派生值与现状逐一相等）；各键代码
+fallback 值与根默认写入值逐项核实一致（storage 'vue3-vite-project' / bem 'vv' /
+history 'web' / brand '#409eff' / menu 'remote' / auth '/auth'）。
+
+手动验证步骤：
+1. `pnpm -C apps/admin dev`——Network 面板请求仍打 `/mock/*`，mock 正常响应；
+2. `VITE_USE_MOCK=false pnpm -C apps/admin dev`——请求切 `/api/*`（无 mock 中间件，
+   联调真实后端时配合 proxy.ts 配置转发目标）；
+3. 根 `.env` 临时改 `VITE_BEM_PREFIX=xx` 重启 dev——页面 class 前缀与样式渲染
+   双端同步变化（验证同源修复，验毕改回）；
+4. `pnpm -C apps/admin build-only` 后 grep 产物 js 中 `VITE_API_BASE_URL` 注入
+   值为 `/api`（prod 常规形态）。
+
 ### 📖 Docs | AGENTS.md 新增「测试与验收规则（强制）」治理节（2026-11-06）
 
 > 背景：约束 AI 协作者的测试验收流程——「AI 自生成测试全绿」不构成正确性证据

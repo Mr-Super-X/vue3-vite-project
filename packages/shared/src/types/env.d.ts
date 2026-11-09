@@ -7,15 +7,21 @@ interface ImportMetaEnv {
   /** BEM 类名前缀；空串表示无前缀。详见 src/utils/bem.ts。 */
   readonly VITE_BEM_PREFIX?: string
   readonly VITE_APP_TITLE: string
+  /**
+   * axios baseURL（@vv/shared api/http.ts 消费）。由 @vv/config 工厂 define 注入。
+   * 2026-11-09 起「单开关派生」：随 VITE_USE_MOCK + mode 自动得出——
+   * dev 下 mock 开（!== 'false'）→ '/mock'，关 → '/api'；prod 下 === 'true' → '/mock'，
+   * 否则 '/api'。一般无需配置；仅联调非标路径后端时经 shell env 显式覆盖（最高优先）。
+   */
   readonly VITE_API_BASE_URL: string
   /**
-   * 是否启用 mock 数据（`vite.config.ts` viteMockServe.enable 读取，2026-07-27 接通）。
-   * - 未设置（undefined）/ `'true'` / 其他非 `'false'` 值 → 启用
-   * - `'false'` → 关闭（用于联调真实后端）
+   * mock 总开关（单一事实源，三条消费链共用）：
+   * - dev：viteMockServe 中间件 enable（!== 'false' 即开，缺省开）
+   * - prod：main.ts 浏览器端 mockjs 挂接（prod-mock.ts，=== 'true' 才挂，缺省关）
+   * - baseURL 派生（见 VITE_API_BASE_URL 注释）
    *
-   * 用户 clone 后未建 .env 文件时，dev 默认开启（与 NODE_ENV 历史行为一致）。
-   * 同时被 `import.meta.env.VITE_USE_MOCK` 与 `process.env.VITE_USE_MOCK` 两端读取：
-   * 前者在 client 端可见，后者 vite-config 在构建期读取。
+   * 2026-11-09 起 .env 文件（根共享默认 / app 私有）与 shell env 均生效
+   * （工厂经 loadEnv 三层 merge 读取）；此前 dev 中间件只认 shell env。
    */
   readonly VITE_USE_MOCK?: string
   /**

@@ -56,10 +56,10 @@ function buildApp(appName: string): void {
     ...process.env,
     // 路径分发：6 app 统一挂 / 下子前缀（portal 也在 /portal/，根 302 由 nginx 做）
     VITE_BASE: `/${appName}/`,
-    // 真实后端形态三开关（VITE_HISTORY_MODE 不注入 = 工厂缺省 web/history 模式）：
+    // 真实后端形态双开关（VITE_HISTORY_MODE 不注入 = 工厂缺省 web/history 模式）：
+    // VITE_USE_MOCK=false → prod 不挂 mockjs，baseURL 派生 /api（2026-11-09 单开关派生）
     VITE_MENU_SOURCE: 'remote',
     VITE_USE_MOCK: 'false',
-    VITE_API_BASE_URL: '/api',
     // version.json buildId（2026-10-29 /autoplan Round 3 R3-E5）：缺省随机值会在
     // versionCheck 启用后造成「每次轮询都提示刷新」死循环——Docker 构建同须可追溯。
     // sha 拼构建时间消「同 commit 重跑相同 buildId」（对齐 deploy.yml sha+run_attempt）

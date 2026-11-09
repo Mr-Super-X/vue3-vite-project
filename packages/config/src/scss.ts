@@ -1,5 +1,3 @@
-import process from 'node:process'
-
 /**
  * SCSS additionalData 注入 + silenceDeprecations 配置（工厂函数形态，R-B）
  *
@@ -33,6 +31,11 @@ export function createScssPreprocessorOptions(options: {
    *  必须含至少一个路径分隔符（'dir/bem' 形态）——裸模块名（'bem'）会丢失 loadPaths 锚点，
    *  sass 只能沿默认 cwd 解析，包化后行为不确定，故直接抛错 fail-fast */
   bemPath: string
+  /**
+   * BEM 类名前缀（与 TS 端 src/utils/bem.ts 的 VITE_BEM_PREFIX 同源）。
+   * 由调用方（createViteConfig 工厂）经 env 三层 merge 后传入；缺省 'vv'。
+   */
+  bemPrefix?: string
 }): ScssPreprocessorOptions {
   // 反斜杠归一为正斜杠：Windows 路径在 sass @use / loadPaths 字符串里会被当转义符
   const normalized = options.bemPath.replace(/\\/g, '/')
@@ -46,7 +49,7 @@ export function createScssPreprocessorOptions(options: {
   const moduleName = normalized.slice(sepIndex + 1)
   return {
     silenceDeprecations: ['new-global', 'if-function'],
-    additionalData: `@use '${moduleName}' as * with ($BEM_PREFIX: '${process.env.VITE_BEM_PREFIX ?? 'vv'}');\n`,
+    additionalData: `@use '${moduleName}' as * with ($BEM_PREFIX: '${options.bemPrefix ?? 'vv'}');\n`,
     loadPaths: [loadPath],
   }
 }

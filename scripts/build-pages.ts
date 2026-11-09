@@ -42,10 +42,9 @@ function buildApp(appName: string): void {
     VITE_BASE: `${REPO_PREFIX}/${appName}/`,
     VITE_HISTORY_MODE: 'hash',
     VITE_MENU_SOURCE: 'local',
+    // mock 总开关：prod 派生 baseURL → /mock（2026-11-09 单开关派生取代显式 VITE_API_BASE_URL，
+    // main.ts 按 === 'true' 挂浏览器端 mockjs，与 dev 中间件/派生 baseURL 同源）
     VITE_USE_MOCK: 'true',
-    // mock 统一前缀（2026-10-26）：prod 演示构建与 dev 同口径 /mock——
-    // 缺省则回退工厂 define 默认 /api，gh-pages 的 mockjs 按 /api 注册会全挂
-    VITE_API_BASE_URL: '/mock',
     VITE_DEMO_NO_AUTH: 'true',
     // 统一登录协议基址（2026-10-30 修复退出/未登录跳 404）：`#` 尾巴承载 auth app 的
     // hash 路由形态（本构建注入 VITE_HISTORY_MODE=hash）——origin + '/login' 拼出
