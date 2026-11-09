@@ -208,6 +208,9 @@ instance.interceptors.request.use((config) => {
 
 /**
  * 构造 ApiError：body 缺失时走 fallback。
+ * status 必须透传 response.status——fulfill 路径（HTTP 200 + 业务码错误）的
+ * response.status 恒存在；缺省则 undefined 会被 isNetworkLevelError 归为
+ * 「无 HTTP 响应」网络级，业务错误误投网络横幅（2026-11-09 修复）。
  */
 const buildApiError = (
   body: ApiResponse<unknown> | null | undefined,
@@ -217,6 +220,7 @@ const buildApiError = (
   new ApiError({
     code: body?.code ?? -1,
     message: body?.message || fallbackMessage,
+    status: response.status,
     url: response.config.url,
   })
 
