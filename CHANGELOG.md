@@ -6,6 +6,58 @@
 
 ## 未发布
 
+### 🐛 Fix | XForm array-node 行内 label 布局修复 + labelPosition 默认 right + textarea 默认字数统计（2026-11-12）
+
+> 背景：array node 行内字段的三处样式缺陷 —— ①数组形态 `itemSchema: SchemaNode[]`
+> 渲染为空（`{...数组}` 展开成数字 key 伪对象，行内容坍缩只剩操作按钮）；
+> ②无 label 字段被 EP 强制 `margin-left: 继承 labelWidth`（EP 源码 form-item.vue
+> contentStyle 实锤：label 空不渲染 label div，但 margin-left 仍在，"对齐其他字段"
+> 设计在 array 窄容器里变成空白压缩内容区）；③array 节点上配置的
+> labelWidth/labelPosition 从不被读取（行内字段只认字段自身配置或 el-form 顶层
+> 继承），"对 array node 配置宽度无效"。另应需求把 form-schema labelPosition 默认
+> 从 left 改 right（对齐 element-plus 原生默认，所有层级可覆盖），textarea 组合
+> 默认 show-word-limit。
+
+- render-array-node：数组形态 itemSchema 直传 `opts.render(数组)` 按元素分发（原
+  展开伪对象导致行空白）；新增第三参 `parentFieldCtx`，array 节点的 labelWidth /
+  labelPosition 合并进 `RenderFieldContext` 经 RenderFn 第二参数逐行传递。
+- 渲染链路全链路透传 `RenderFieldContext`（render-schema-node 调度入口 → formItem /
+  rowColumn / visual / tabs-steps / with-grid / render-root）—— 关键修正：初版用
+  opts 共享状态设置-恢复，浏览器实测证伪（容器型 itemSchema 的 children 渲染在
+  ElRow/ElCol slot 闭包里延迟执行，恢复时机早于 slot 执行）；改显式参数后闭包
+  捕获天然正确。
+- render-form-item：无 label 且无自定义 label slot 的字段显式注入 `labelWidth: 0`
+  （字段自身显式配置优先于归零）；`renderWithFormItem` 第四参 fieldDefaults 消费
+  ctx，优先级：字段自身 > array 注入 > el-form 顶层继承。
+- use-top-level-fields：labelPosition 默认 `'left'` → `'right'`（spec 3 处断言同步）。
+- adapters/element-plus-adapter：新增 `CONDITIONAL_COMPONENT_PROPS` 组合条件默认
+  表（Input + props.type:'textarea' → showWordLimit，El 别名自动展开）——与
+  BASE_DEFAULT_COMPONENT_PROPS 同处维护，数据驱动新增组合只加表项；
+  build-slots.getComponentDefaultProps 逻辑通用化（whenProps 多键匹配），删除初版
+  硬编码 Input 判断（开闭原则）。
+- 同步面：use-top-level-fields.spec（3 断言）、render-form-item.spec（+7 用例）、
+  render-array-node.spec（+5 用例）、build-slots.spec（+4 用例）、
+  element-plus-adapter.spec（+1 用例）、README labelPosition 默认值；
+  docs/24-XForm使用指南.md 与 docs demo ApiTable 默认值 3 处同步为 right。
+- opus 独立审查（WARNING，0 CRITICAL/HIGH）后续修复：build-slots 局部 RenderFn
+  类型补第二参 + renderChildren 的 map index 泄漏修复（`children.map((c) => render(c))`，
+  原裸传会把数组 index 当 fieldCtx 传入）；无 label 归零条件纳入 formItem.props.label
+  豁免（防 EP label prop 被 width:0 压扁）。
+
+验证：packages/ui vitest 66 文件 1237 用例全绿；vue-tsc 零错误；浏览器实测
+（docs dev :5175 /demo/xform-array 临时注入 array labelWidth:'120px'）——行内三
+字段 label 均 120px（改前自适应 50.5/50.5/74），无 label 字段 content margin-left
+0px 且占满列宽，默认 right 对齐（el-form--label-right）；实测后 demo 临时改动已
+git checkout 恢复。
+
+手动验证步骤：
+1. `pnpm -C apps/docs dev` 开 /demo/xform-array：行内字段 label 默认右对齐。
+2. 给 array 节点配 `labelWidth: '120px'`：行内所有字段 label 宽统一 120px。
+3. itemSchema children 里加无 label 字段：该字段内容区占满整列（无 label 空白）。
+4. /demo/xform-label-layout：labelPosition 三档切换仍正常（默认 right）。
+5. `component: 'Input'` + `props: { type: 'textarea', maxlength: 200 }`：右下角
+   出现字数统计（与 InputTextArea 快捷名行为一致）。
+
 ### ♻️ Refactor | env 统一默认配置 + VITE_USE_MOCK 单开关派生 baseURL（2026-11-09）
 
 > 背景：6 app 的 `.env.development` 逐字重复 `VITE_API_BASE_URL=/mock`，跨 app 同构

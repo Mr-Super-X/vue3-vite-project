@@ -212,7 +212,7 @@ if (res.success) formRef.value?.resetDirty()
 | 状态     | `permission`            | `ReactionValue<'view' \| 'edit' \| 'hidden'>`     | 字段权限（§10）。`'hidden'` 与 `hidden` 字段不同：**不渲染**                                                                                                                                                                                                                |
 | 状态     | `reaction`              | `ReactionConfig`                                  | 响应式联动（§6）                                                                                                                                                                                                                                                            |
 | 状态     | `readonly`              | `ReactionValue<boolean>`                          | **仅顶层 schema 生效**：`true` 时所有字段按 view 态纯文本展示（复用 `permission: 'view'` 渲染）；支持字面量/函数/表达式/reaction。字段级只读请用 `permission: 'view'`                                                                                                       |
-| 布局     | `labelPosition`         | `'left' \| 'right' \| 'top'`                      | **仅顶层容器 schema 生效**（el-form 实例级属性，element-plus 自身限制）。默认 `'left'`                                                                                                                                                                                      |
+| 布局     | `labelPosition`         | `'left' \| 'right' \| 'top'`                      | **仅顶层容器 schema 生效**（el-form 实例级属性，element-plus 自身限制）。默认 `'right'`                                                                                                                                                                                     |
 | 布局     | `labelWidth`            | `string \| number`                                | **仅顶层 schema 生效**：如 `'120px'` 或 `120`。数组形式 schema 无顶层节点，配置不生效                                                                                                                                                                                       |
 | 校验     | `scrollToError`         | `boolean`                                         | **仅顶层 schema 生效**：校验失败自动滚动到第一个错误字段（默认 false）。字段规则走 ElForm 原生；跨字段走 XForm 内部                                                                                                                                                         |
 | 校验     | `scrollIntoViewOptions` | `ScrollIntoViewOptions \| boolean`                | **仅顶层 schema 生效**：滚动行为选项，默认 true                                                                                                                                                                                                                             |
@@ -766,7 +766,7 @@ declare module '@vv/ui/components/form-schema/types' {
 const schema = {
   column: 2, // 每行 2 个字段（自动平均分配 span）
   row: { gutter: 24 },
-  labelPosition: 'top', // 'left' 默认 / 'right' / 'top'（响应式布局推荐 top）
+  labelPosition: 'top', // 'right' 默认 / 'left' / 'top'（响应式布局推荐 top）
   children: [/* ... */],
 }
 ```

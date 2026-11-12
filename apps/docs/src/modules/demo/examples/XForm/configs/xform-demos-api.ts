@@ -1250,9 +1250,9 @@ export const labelLayoutItems: XFormApiItem[] = [
   {
     name: 'labelPosition (顶层 + 字段级)',
     type: "'left' | 'right' | 'top'",
-    default: "'left'",
+    default: "'right'",
     description:
-      'label 位置：顶层配置为表单整体；字段级配置可 override 顶层（element-plus el-form-item 原生支持）',
+      'label 位置（默认 right，对齐 element-plus 原生默认）：顶层配置为表单整体；字段级配置可 override 顶层（element-plus el-form-item 原生支持）',
   },
   {
     name: 'labelWidth (顶层 + 字段级)',

@@ -284,13 +284,13 @@ formRef.value?.resetDirty() // 当前状态设为新基线（提交后归零）
 
 > 这些字段对应 element-plus `el-form` 实例级属性，必须从顶层 schema 派生而非 XForm props 配置。
 
-| 字段                    | 类型                               | 层级          | 说明                                                                                    |
-| ----------------------- | ---------------------------------- | ------------- | --------------------------------------------------------------------------------------- |
-| `labelPosition`         | `'left' \| 'right' \| 'top'`       | 顶层 + 字段级 | label 位置（顶层默认 `left`；字段级 override 顶层）；`'top'` 推荐用于响应式布局         |
-| `labelWidth`            | `string \| number`                 | 顶层 + 字段级 | label 宽度（如 `'120px'` 或 `120`）；字段级 override 顶层                               |
-| `scrollToError`         | `boolean`                          | **仅顶层**    | 校验失败自动滚动到第一个错误字段（默认 `false`；与 XForm props 同名，schema 优先）      |
-| `scrollIntoViewOptions` | `ScrollIntoViewOptions \| boolean` | **仅顶层**    | 滚动行为选项（默认 `true`）                                                             |
-| `debounceValidation`    | `number`                           | **仅顶层**    | 跨字段校验默认 debounce ms（`0` = 实时，默认 `0`；字段级 `rules[i].debounceMs` 可覆盖） |
+| 字段                    | 类型                               | 层级          | 说明                                                                                                         |
+| ----------------------- | ---------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------ |
+| `labelPosition`         | `'left' \| 'right' \| 'top'`       | 顶层 + 字段级 | label 位置（顶层默认 `right`，对齐 element-plus 原生默认；字段级 override 顶层）；`'top'` 推荐用于响应式布局 |
+| `labelWidth`            | `string \| number`                 | 顶层 + 字段级 | label 宽度（如 `'120px'` 或 `120`）；字段级 override 顶层                                                    |
+| `scrollToError`         | `boolean`                          | **仅顶层**    | 校验失败自动滚动到第一个错误字段（默认 `false`；与 XForm props 同名，schema 优先）                           |
+| `scrollIntoViewOptions` | `ScrollIntoViewOptions \| boolean` | **仅顶层**    | 滚动行为选项（默认 `true`）                                                                                  |
+| `debounceValidation`    | `number`                           | **仅顶层**    | 跨字段校验默认 debounce ms（`0` = 实时，默认 `0`；字段级 `rules[i].debounceMs` 可覆盖）                      |
 
 ### v-model 适配（1）
 
