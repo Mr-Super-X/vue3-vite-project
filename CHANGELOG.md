@@ -6,6 +6,34 @@
 
 ## 未发布
 
+### ✨ Feat | AI 架构遵循治理三件套：选型速查 docs/50 + prefer-wrapped-component 提醒规则 + 选型申请工序（2026-11-12）
+
+> 背景：全栈项目以本仓库为前端底座时，AI 做"加页面"类需求不消费 packages/ui
+> 既有封装，退回 EP 原始组件重复实现——现有机械防线只有 useRouter/axios 两条
+> no-restricted-imports，"该用封装却用原始组件"的语义违规零成本。
+
+- 新增 docs/50-页面开发组件选型速查.md：场景→首选封装→避免写法正面决策表
+  （样板指向 demo 站点真实示例 + 各组件使用指南）+ 合法例外清单 + 选型申请
+  需求模板 + 交付自检清单；配套登记根 AGENTS.md 速查节 / docs/AGENTS.md 篇数 /
+  check-doc-currency 文档预算 50→51。
+- 新增 local/prefer-wrapped-component（warn 级）：扫业务目录 .vue 模板的
+  el-table/el-form/el-dialog（含 PascalCase）与 ElMessageBox.confirm/alert/prompt
+  裸调，提示对应 @vv/ui 封装；豁免 demo 教学 / packages/ui 内部 / spec / test-utils。
+  实现走 vue-eslint-parser@10 的 services.defineTemplateBodyVisitor（v10 起
+  parseForESLint 不再返回 visitorKeys，且签名移除 context 第一参）；设计稿见
+  docs/superpowers/specs/2026-11-12-prefer-wrapped-component-design.md。
+- 选型申请工序（docs/50 §4）：向 AI 提"加页面"需求先要求输出组件选型说明、
+  确认后再编码——违规拦截从事后 review 前移到事前。
+
+> 验证：`node --test scripts/eslint-rules/prefer-wrapped-component.spec.mjs` 16/16 通过；
+> `pnpm check:doc-currency` 14 项全过。
+
+> 手动验证步骤：任一对 AI 提"在 admin 新增 X 列表页"，观察其是否先给选型说明。
+> lint 脚本 `--max-warnings 0` 下 warn 即阻断：存量债 3 文件（admin user/List、
+> workbench/Monitor、auth LoginForm）已集中豁免于
+> `app/prefer-wrapped-component-legacy-exempt` block，`pnpm lint` 保持绿；
+> 新增代码违规即时报错阻断，改造立项时同步移除豁免行。
+
 ### 🎨 Style | admin EP 语义色莫兰迪低饱和化（success / warning / danger）（2026-11-12）
 
 > 背景：用户反馈 el-tag 颜色太显眼——EP 默认鲜绿 #67c23a / 鲜橙 #e6a23c /
