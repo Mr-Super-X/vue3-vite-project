@@ -6,6 +6,19 @@
 
 ## 未发布
 
+### 🔧 Chore | lint:log 脚本：lint 输出落盘回显，规避终端渲染吞输出（2026-11-13）
+
+> 背景：部分终端（PowerShell + ConPTY）下原生子进程直接写 TTY 的输出会被
+> 渲染层吞掉/清屏；「重定向到文件再 cat」的输出路径稳定可见。
+
+- 新增 scripts/lint-log.mjs：spawn `pnpm run lint`（stderr 经 shell 的 2>&1 并入
+  stdout 单一管道，保证落盘顺序 = 真实输出时序），输出写入 lint.log
+  （.gitignore 的 *.log 已覆盖）后回显终端，退出码原样透传。
+- 根 package.json 注册 `lint:log`。
+
+> 验证：Analysis.vue 带 1 警告时 `pnpm lint:log` exit=1，终端回显完整问题列表
+> 且与 lint.log 内容一致。
+
 ### ✨ Feat | AI 架构遵循治理三件套：选型速查 docs/50 + prefer-wrapped-component 提醒规则 + 选型申请工序（2026-11-12）
 
 > 背景：全栈项目以本仓库为前端底座时，AI 做"加页面"类需求不消费 packages/ui
